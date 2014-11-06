@@ -1,0 +1,12 @@
+#FSP_TRACE_v2|||6/17/2010|||BUILD:OCC 1
+761415651||Trace buffers initialized||
+959803951||timer_routine loop %d||
+2017357799||PRCD Thread||
+3219055108||Main Thread||
+1049182497||timer: New maximum time of %d ticks (10 ticks = 6 ns?)||
+459971656||Procedure Number: %d completed||
+4171193265||First Critical Timer Tick||
+2775191224||>>PRCD_update_procedures||
+26695188||Exit: PRCD_update_procedures||
+481443942||PRCD Submit %d||
+

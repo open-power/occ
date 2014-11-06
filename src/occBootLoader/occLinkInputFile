@@ -1,0 +1,1 @@
+INPUT ( bootMain.o ../occ/occbuildname.o bootInit.o ../ssx/ppc32/savegpr.o )

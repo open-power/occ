@@ -1,0 +1,161 @@
+# *****************************************************************************
+# @file apss_meas_read_cont.S
+# @brief Continue reading power measurements from APSS
+#
+
+# *****************************************************************************
+#
+#       @page ChangeLogs Change Logs
+#       @section apss_meas_read_cont.S APSS_MEAS_READ_CONT.S
+#       @verbatim
+#
+#   Flag    Def/Fea    Userid    Date        Description
+#   ------- ---------- --------  ----------  ----------------------------------
+#   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
+#   @ly003  861535     lychen    11/19/2012  Remove APSS configuration/gathering of Altitude & Temperature
+#   @at023  910877     alvinwan  01/09/2014  Excessive fan increase requests error for mfg
+#   @gm026  916029     milesg    02/17/2014  revert back to auto2 mode without reading GPIO's
+#   @gm038  926761     milesg    05/16/2014  slowed SPI bus down from 12MHz to 10MHz on venice (8MHz on murano)																					
+#
+#  @endverbatim
+#
+# *****************************************************************************
+
+
+        //////////////////////////////////////////////////////////////////////
+        // Includes
+        //////////////////////////////////////////////////////////////////////
+        .nolist
+#include "pgp.h"
+#include "pgas.h"
+        .list
+
+        //////////////////////////////////////////////////////////////////////
+        // Define Address Space
+        //////////////////////////////////////////////////////////////////////
+        .oci
+
+        //////////////////////////////////////////////////////////////////////
+        // Define Symbols
+        //////////////////////////////////////////////////////////////////////
+
+#include <pss_constants.h>
+
+#define GPE_PROG_ID 0x0005
+
+        //////////////////////////////////////////////////////////////////////
+        // Define Structures
+        //////////////////////////////////////////////////////////////////////
+        
+        // Declare the offsets of the struct that will be passed to the 
+        // GPE program via the ETR register
+        //
+        // struct G_gpe_apss_continue_pwr_meas_read_args =
+        // {
+        .struct     0
+ERROR_RC:
+        .struct ERROR_RC + 8
+ERROR_FFDC:
+        .struct ERROR_FFDC + 8
+MEASUREMENTS:
+        // };
+        
+
+        //////////////////////////////////////////////////////////////////////
+        // Begin Program
+        //////////////////////////////////////////////////////////////////////
+
+        .text
+
+#include <gpe_macros.h>
+#include <pss_macros.h>
+
+      //--------------------------------------------------------------------
+      // PORE-GPE Routine Specification:
+      //
+      // Name: GPE_apss_continue_pwr_meas_read
+      //
+      // Description:  Kick of the power measurement from APSS
+      //
+      // Inputs:       G_gpe_continue_pwr_meas_read_args
+      //     struct {
+      //         PoreGpeErrorStruct error;
+      //         uint64_t meas_data[4]; // G_apss_pwr_meas (1st block of data) (output from APSS)
+      //     } G_gpe_continue_pwr_meas_read_args
+      //     struct {
+      //         uint64_t rc;          // This should be read as 63:32=addr, 31:0=rc
+      //         uint64_t ffdc;        // Whatever GPE program puts in for FFDC data
+      //     } PoreGpeErrorStruct;
+      //
+      // Outputs:      GPE_continue_pwr_meas_read (error on failure)
+      //
+      // Flow:  7/20/11    FN=GPE_apss_continue_pwr_meas_read
+      //
+      // References: APSS FUnctional Specification v0.7.18
+      //             GPE_apss_access_scoms.odt (summary of regisers/data)
+      //
+      // End PORE-GPE Routine Specification
+      //--------------------------------------------------------------------
+      .global GPE_apss_continue_pwr_meas_read
+GPE_apss_continue_pwr_meas_read:
+
+        // Copy passed Structure Pointer into A1
+        mr      A1, ETR
+
+        // Wait for up to 5us for spi op complete, else branch to error_timeout
+        _wait_for_adc_ops_complete 100, error_timeout
+
+        // Read/save first 32 bytes of data
+        _getscom SPIPSS_ADC_RDATA_REG0          // Verified
+        std D0, MEASUREMENTS, A1
+
+        _getscom SPIPSS_ADC_RDATA_REG1          // Verified
+        std D0, (MEASUREMENTS + 8), A1
+
+        _getscom SPIPSS_ADC_RDATA_REG2          // Verified
+        std D0, (MEASUREMENTS + 16), A1
+
+        _getscom SPIPSS_ADC_RDATA_REG3          // Verified
+        std D0, (MEASUREMENTS + 24), A1
+
+        // Commented out reading of GPIO data -- gm026
+        // Delay between frames. Interframe delay are all 5usec
+        // Without this delay, can't get correct gpio data
+        //waits (5 * MICROSECONDS) // @at023a
+        // Setup control regs
+        // frame_size=16, out_count=16, in_count=16
+        //_putscom SPIPSS_ADC_CTRL_REG0, 0x4000100000000000 // @at023c
+        // ADC FSM, clock_divider=7, frames=2 // @ly003c ignore temperature
+        //_putscom SPIPSS_ADC_CTRL_REG1, 0x8060400000000000
+        //_putscom SPIPSS_ADC_CTRL_REG1, 0x8074400000000000  //gm038
+        // ADC interframe delay (5usec)
+        //_putscom SPIPSS_ADC_CTRL_REG2, 0x0019000000000000
+
+        // APSS command to continue previous command
+        //_putscom SPIPSS_ADC_WDATA_REG, 0x0000000000000000
+
+        // Start SPI transaction
+        //_putscom SPIPSS_ADC_COMMAND_REG, 0x8000000000000000
+
+        halt    // End of GPE_apss_initialize_gpio
+
+
+error_statusreg:
+        // An error/reserved bit was set when reading adc status register...
+        // D0: ADC_STATUS_REG
+        _saveffdc GPE_PROG_ID, 0x0002
+        halt
+
+
+error_timeout:
+        // adc_ongoing bit was never cleared after several retries...
+        // D0: ADC_STATUS_REG
+        _saveffdc GPE_PROG_ID, 0x0001
+        halt
+
+
+        //////////////////////////////////////////////////////////////////////
+        // End of Program
+        //////////////////////////////////////////////////////////////////////
+
+

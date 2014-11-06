@@ -1,0 +1,609 @@
+#!/bin/bash
+################################################################################
+##  Simics automation using autosim
+##  2011-10-15  tgh modified to run occ in simics
+##
+##  Usage:
+##       autocitest [--quiet] <backing_build> <sandbox_name> <hbi_image>
+################################################################################
+function    waitkb()
+{
+
+    ##  wait for kbhit to continue
+    ## echo "Hit any key to continue"
+    ## read kb
+    echo "."
+}
+
+function   usage()
+{
+
+    echo    "usage:"
+    echo    "$0 [--quiet]  backing_tree_dir  sandbox_name  path_to_hbicore_test_img    "
+}
+
+
+function    stopsim()
+{
+    # Stop simics
+    echo "Stopping simics"
+    autosim $NOWIN $VERBOSE --stopsim
+    if [ $? -ne 0 ] ; then
+        echo "WARNING: Unable to stop simics cleanly"
+    fi
+}
+
+
+function    stopserver()
+{
+    # Stop simics server
+    echo "Stopping simics server"
+    autosim $NOWIN $VERBOSE --stopserver
+    if [ $? -ne 0 ] ; then
+        echo "WARNING: Unable to stop simics server cleanly"
+    fi
+}
+
+
+function    runsimics()
+{
+    # Stop simics server
+    echo "Starting simics server"
+    autosim $NOWIN $VERBOSE --simcmd "r"
+    if [ $? -ne 0 ] ; then
+        echo "WARNING: Unable to start simics server cleanly"
+    fi
+}
+
+function    loadocc()
+{
+    # Stop simics server
+    echo "Loading OCC"
+    autosim $NOWIN $VERBOSE --simcmd "run-command-file $sb/occc/405/occ/tools/occ_post_model_hook.simics" 1>> /tmp/totaltests3.log  2> /dev/null
+    if [ $? -ne 0 ] ; then
+        echo "WARNING: Unable to load OCC cleanly"
+    fi
+}
+
+function    simicsCmd()
+{
+    # Run a Simics command
+    echo "Running Simics Command -- $1"
+    autosim $NOWIN $VERBOSE --simcmd "$1" 1>> /tmp/totaltests2.log  2> /dev/null
+    if [ $? -ne 0 ] ; then
+        echo "WARNING: Unable to run Simics Command $1"
+    fi
+}
+
+function    fspCmd()
+{
+    # Run a FSP command
+    echo "Running Simics FSP Command -- $1"
+    autosim $NOWIN $VERBOSE --fspcmd "$1" 1>> /tmp/totaltests2.log  2> /dev/null
+    if [ $? -ne 0 ] ; then
+        echo "WARNING: Unable to run Simics FSP Command $1"
+    fi
+}
+
+function    simicsFspToOccCmd()
+{
+    # Stop simics server
+    echo "Running FSP->OCC Command -- $*"
+    # There must be a more eloquent way than this
+    case "$#" in
+       1)  autosim $NOWIN $VERBOSE --simcmd "@occ_fsp_command('$1')" 1>> /tmp/totaltests2.log  2> /dev/null
+           ;;
+       2)  autosim $NOWIN $VERBOSE --simcmd "@occ_fsp_command('$1', '$2')" 1>> /tmp/totaltests2.log  2> /dev/null
+           ;;
+       3)  autosim $NOWIN $VERBOSE --simcmd "@occ_fsp_command('$1', '$2', '$3')" 1>> /tmp/totaltests2.log  2> /dev/null
+           ;;
+       *)  echo "Num args not supported"
+           ;;
+    esac 
+    if [ $? -ne 0 ] ; then
+        echo "WARNING: Unable to run Simics Command $1"
+    fi
+    sleep 10;
+    autosim $NOWIN $VERBOSE --simcmd "@occ_fsp_response(128)" 1>> /tmp/totaltests2.log  2> /dev/null
+}
+
+function occTrace()
+{
+    TRAC_ADDR_TMP=`nm $sb/../obj/ppc/occc/405/occ/occ.out | \grep "g_trac_inf_buffer" | awk '{print $1}' | sed 's/^00000000/0x/g'`
+    TRAC_ADDR=`perl -e "printf(\"0x%08x\",$TRAC_ADDR_TMP - 0xfff80000)"`
+    TRAC_LEN="0x6000"
+
+    # Save off full OCC binary to generate code coverage from
+    echo "Collecting Trace"
+    rm $sb/../simics/occ_trace.bin
+    simicsCmd "p8Proc0.OccComplexSlot.OccSimpleSlot.sram_image.save occ_trace.bin $TRAC_ADDR $TRAC_LEN"
+
+    #Wait in case of filesystem sync issues
+    sleep 60
+    echo "Attempting a filesystem sync"
+    sync
+    sleep 10
+
+    # Parse
+    echo "Parsing Trace"
+    fsp-trace -s $sb/../obj/trexStringFile $sb/../simics/occ_trace.bin | strings | tee $sb/../simics/occ_trace.txt
+}
+
+function runTestApplet()
+{
+    applet=$1
+
+    if [ ! -d $sb/../unit_test ]; then
+        mkdir -p $sb/../unit_test
+    fi 
+
+    pushd $sb/../unit_test > /dev/null
+
+    rm $sb/../unit_test/*
+
+    echo "------------------------------------------"
+    echo "Running OCC Testcase Applet -- $applet"
+    echo "------------------------------------------"
+    testAppletFilename=$applet
+    split -b2k $testAppletFilename `basename $testAppletFilename`.
+    NN=0
+    for f in $(find . -xtype f -name "`basename $testAppletFilename`.*" -print | sed 's=.*/==')
+    do
+        SS=`printf "%02x" $NN`
+
+        simicsFspToOccCmd "40" "E0"$SS"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff" "$sb/../unit_test/$f" 
+
+        NN=$((NN+1))
+    done
+
+    simicsFspToOccCmd "40" "E0FF"
+
+    sleep 20
+
+    popd > /dev/null
+}
+
+
+##############################################################################
+##
+##  parse args
+##
+##############################################################################
+##  verbose is the default.
+VERBOSE=" --verbose"
+NOWIN="--nowin"                 ##  remote execution does not have a display
+COMPILE_GCOV=0
+GCOV=0
+FSPLESS_SIM=0
+UNIT_TEST=0
+WATCH_SIM=0
+ENABLE_VPM=""
+RUN_STANDARD_CMDS=1
+EXTEND_SCRIPT_ARRAY=()
+
+while [ "$1" ]
+do
+    case "$1" in
+        -m|--machine)  
+                       shift
+                       MACHINE=$1
+                       ;;
+        -g|--gcov)
+                       GCOV=1
+                       ;;
+        -u|--unit-test)
+                       UNIT_TEST=1
+                       ;;
+        -e|--extend-test)
+                       # This can be passed multiple times
+                       shift
+                       EXTEND_SCRIPT_ARRAY=("${EXTEND_SCRIPT_ARRAY[@]}" "$1") # Push
+                       ;;
+        -c|--compile-gcov)
+                       COMPILE_GCOV=1
+                       ;;
+        -f|--fspless)
+                       FSPLESS_SIM=1
+                       ;;
+        -n|--skip-std-cmds)
+                       RUN_STANDARD_CMDS=0
+                       ;;
+        -q|--quiet)
+                       VERBOSE=""
+                       ;;
+        -w|--show-window)
+                       NOWIN=""
+                       ;;
+        -t|--watch-sim)
+                       WATCH_SIM=1
+                       ;;
+        --enable-vpm)
+                       ENABLE_VPM=""
+                       ;;
+        *) 
+           echo "Usage:"
+           echo "   [-m | --machine] <machine>                 Specify machine type to run test on"
+           echo "   [-g | --gcov]                              Grab GCOV data"
+           echo "   [-u | --unit-test]                         Run UnitTests"
+           echo "   [-e | --extend-test] <path/to/fileOrDir>   Run tests from specified file"
+           echo "   [-c | --compile-gcov]                      Grab GCOV data"
+           echo "   [-f | --fspless]                           FSPLESS Sim Compile of OCC; no TMGT cmds"
+           echo "   [-n | --skip-std-cmds]                     Don't run standard FSP commands test"
+           echo "   [-q | --quiet]                             Don't dump so much output"
+           echo "   [-w | --show-window]                       Show a Simics Output xterm window"
+           echo "   [-t | --watch-sim]                         Watch Simics commands and output via tail -f"
+           echo "   [--enable-vpm]                             Tell VPM to run"
+           echo ""
+           echo "Example:"
+           echo "   # Run a test doign pretty much everything"
+           echo "   $0 -m tuleta -c -g -u -w -t -e \$sb/first_test.sh -e \$sb/test_dir/"
+           echo ""
+           echo ""
+           exit 1
+        ;; 
+    esac
+    shift
+done
+
+echo "Variables Passed:"
+echo "---------------------------"
+echo "MACHINE:      $MACHINE"
+echo "GCOV:         $GCOV"
+echo "FSPLESS_SIM:  $FSPLESS_SIM"
+echo "VERBOSE:      $VERBOSE"
+echo "COMPILE_GCOV: $COMPILE_GCOV"
+echo "UNIT_TEST:    $UNIT_TEST"
+echo "NOWIN:        $NOWIN"
+echo "ENABLE_VPM:   $ENABLE_VPM"
+echo "EXT_SCRIPT:   ${EXTEND_SCRIPT_ARRAY[@]}"
+echo ""
+
+# Quit if we aren't in a sandbox
+if [ -z $sb ]; then
+    exit 1
+fi
+
+waitkb
+
+##############################################################################
+##
+##  Compile for code coverage
+##
+##############################################################################
+if [ $COMPILE_GCOV -eq 1 ]
+then
+    pushd $sb/occc/405/
+
+    make clean && make FSPLESS_SIMICS=1 GCOV_CODE_COVERAGE=1 && make combineImage
+    
+    if [ $? -ne 0 ]; then
+        echo "Compile failed, exiting"
+        exit 1;
+    fi
+
+    # Compile Pstate Table
+    pushd $sb/occc/405/lib/test > /dev/null
+    make pss.bin
+    popd > /dev/null
+
+    if [ $? -ne 0 ]; then
+        echo "Pstate Compile failed, exiting"
+        exit 1;
+    else
+        if [ ! -d $sb/../obj/ppc/occc/405/occ ]; then
+            mkdir -p $sb/../obj/ppc/occc/405/occ
+        fi
+
+        echo "Copying output files to obj/ppc..."
+        cp -f $sb/occc/405/image.bin $sb/../obj/ppc/occc/405/
+        cp -f $sb/occc/405/occ/occ.out $sb/../obj/ppc/occc/405/occ/
+        cp -f $sb/occc/405/occApplet/testApplet/*.bin $sb/../obj/ppc/occc/405/occApplet/testApplet/
+    fi
+fi
+
+
+##############################################################################
+##
+##  set up
+##
+##############################################################################
+DEFAULT_OCC_MACHINE="occ_alone"
+
+MACHINE=${MACHINE:-$DEFAULT_OCC_MACHINE}
+export MACHINE
+
+timestamp=`date +'%H:%M:%S'`
+echo "$timestamp Starting autosample test..."
+
+waitkb
+
+# Run set up in current shell
+echo    "run autosimsetup.."
+. autosimsetup
+
+waitkb
+
+###### Start the simics server
+echo "Starting simics server in sandbox $SANDBOX on machine $MACHINE"
+autosim $NOWIN $VERBOSE --startserver --wp --sandbox $SANDBOX --machine $MACHINE
+if [ $? -ne 0 ] ; then
+        echo "ERROR: Unable to start simics server $?"
+        exit 1
+fi
+
+waitkb
+
+
+##############################################################################
+##
+## Start simics and wait for it to reach standby
+##
+##############################################################################
+echo "Starting simics"
+#autosim $VERBOSE --startsim --chkpt standby <<< chkpt not working yet
+autosim $NOWIN $VERBOSE --startsim --norun
+if [ $? -ne 0 ] ; then
+        echo "ERROR: Unable to start simics $?"
+        stopserver      ##  kill the server again.
+        exit 1
+fi
+
+
+waitkb
+
+if [ $WATCH_SIM -eq 1 ]; then
+    xterm -hold -e tail -f ~/autosim.log &
+fi
+
+##############################################################################
+##  
+## Load OCC and run it until steady state
+##
+##############################################################################
+
+loadocc
+runsimics
+
+## Need to wait here for OCC to get up to a steady state
+sleep 30
+
+# Print out Simulation Time
+simicsCmd 'ptime'
+
+waitkb
+
+##############################################################################
+##
+## Run FSP commands needed to get OCC into working Active State
+##
+##############################################################################
+
+#if [ -z $FSPLESS_SIM ]
+#then
+#  simicsFspToOccCmd "21" "03000000"  # Set Slave
+#  sleep 5
+#  simicsFspToOccCmd "21" "03010000"  # Set Master
+#  sleep 5
+#  simicsFspToOccCmd "20" "01030000"  # Set Active
+#fi
+
+##############################################################################
+##
+## Start running OCC testcases
+##
+##############################################################################
+
+if [ $RUN_STANDARD_CMDS -eq 1 ]; 
+then
+    # Poll
+    simicsFspToOccCmd "00" "01"
+
+    # QFL
+    simicsFspToOccCmd "01"
+
+    # ClearElog
+    simicsFspToOccCmd "12" "FF"
+
+    # CNFG -- Invalid
+    simicsFspToOccCmd "21" "05"
+    simicsFspToOccCmd "20" "00010000"  # Set Standby
+    simicsFspToOccCmd "21" "03000000"  # Set Slave
+    simicsFspToOccCmd "21" "03010000"  # Set Master
+    simicsFspToOccCmd "20" "00030000"  # Set Active
+    simicsFspToOccCmd "21" "04010000"  # APSS Config Data
+    simicsFspToOccCmd "21" "020003020C22030C33050C00"  # Freq Operation Points
+    if [ -f "$sb/occc/405/lib/test/pss.bin" ]; then
+        simicsFspToOccCmd "21" "01000000" "$sb/occc/405/lib/test/pss.bin" # PstateSuperStructure
+    fi
+
+    # Debug
+    simicsFspToOccCmd "40" "00"
+
+    # SMS
+    simicsFspToOccCmd "20" "01000000"   # SMS BadVersion
+    simicsFspToOccCmd "20" "00010000"   # NoChange, Standby
+    sleep 10
+    simicsFspToOccCmd "20" "00030100"   # Nominal, Active      
+    sleep 10
+    simicsFspToOccCmd "20" "00000200"   # Benchmark      
+    sleep 10
+    simicsFspToOccCmd "20" "00000300"   # Turbo    
+    sleep 10
+    simicsFspToOccCmd "20" "00000400"   # Safe      
+    sleep 10
+    simicsFspToOccCmd "20" "00000500"   # PowerSave      
+    sleep 10
+    simicsFspToOccCmd "20" "00000600"   # Dynamic PowerSave     
+    sleep 10
+    simicsFspToOccCmd "20" "00000700"   # Min Freq
+    sleep 10
+    simicsFspToOccCmd "20" "00000800"   # Invalid     
+    sleep 10
+    simicsFspToOccCmd "20" "00000900"   # Invalid      
+    sleep 10
+    simicsFspToOccCmd "20" "00000A00"   # Invalid      
+    sleep 10
+    simicsFspToOccCmd "20" "00000B00"   # FFO      
+    sleep 10
+    simicsFspToOccCmd "20" "00000C00"   # SuperTurbo      
+    sleep 10
+    simicsFspToOccCmd "20" "00000100"   # Nominal      
+
+    # AME Passthrough
+    simicsFspToOccCmd "41" "3C001C"          # AME component level constants
+    simicsFspToOccCmd "41" "3C001D"          # Just return 2 bytes of zero data
+    simicsFspToOccCmd "41" "3C0021"          # Clear Min/Max of all sensors
+    simicsFspToOccCmd "41" "3C0025"          # Get sensors info
+    simicsFspToOccCmd "41" "3C00FEAABBCCDD"  # Echo
+    simicsFspToOccCmd "41" "3C00FF0010"      # Return sequential bytes string
+    simicsFspToOccCmd "41" "3B0003"          # CPU Present bitmask
+
+fi
+
+
+##############################################################################
+##
+## Extend this script
+## * Extensions run in the order they are sent on the command line
+## * Within a directory, they are run in "sort" order, and only files that 
+##   have the executable bit set will be run
+##
+##############################################################################
+for index in "${EXTEND_SCRIPT_ARRAY[@]}"
+do
+    EXTEND_SCRIPT_FILENAME=$index
+    if [ ! -z $EXTEND_SCRIPT_FILENAME ]; then
+        if [ -d $EXTEND_SCRIPT_FILENAME ]; then
+            for extend in $(find $EXTEND_SCRIPT_FILENAME -xtype f -perm -001 | sort)
+            do
+                echo "---------------------------------------------"
+                echo "Running OCC Script Extension via Dir -- $extend"
+                echo " * Only runs files with executable bit set *"
+                echo "---------------------------------------------"
+                source $extend
+            done
+        elif [ -e $EXTEND_SCRIPT_FILENAME ]; then
+            echo "------------------------------------------"
+            echo "Running OCC Script Extension -- $EXTEND_SCRIPT_FILENAME"
+            echo "------------------------------------------"
+            source $EXTEND_SCRIPT_FILENAME
+        fi
+    fi
+done
+
+
+##############################################################################
+##
+## Automatic Unit Tests based on test Applets
+##
+##############################################################################
+if [ $UNIT_TEST -eq 1 ]
+then
+    for applet in $(find $sb/../obj/ppc/occc/405/occApplet/testApplet/ -xtype f \( -name "errl*.bin" -o -name "trace*.bin" -o -name "apss*.bin" \) )
+    do 
+        runTestApplet $applet
+    done
+
+fi
+
+##############################################################################
+##
+## Dump an OCC Trace
+##
+##############################################################################
+occTrace
+
+##############################################################################
+##
+## Code Coverage Processing
+##
+##############################################################################
+if [ $GCOV -eq 1 ]
+then
+    timestamp_gcov=`date +"%s"`
+    
+    # Save off full OCC binary to generate code coverage from
+    simicsCmd 'p8Proc0.OccComplexSlot.OccSimpleSlot.sram_image.save occ_gcov.bin'
+    #Wait in case of filesystem sync issues
+    sleep 10
+    # Build the syms file out of the occ.out file
+    pushd $sb/../obj/ppc/occc/405/occ > /dev/null
+    nm -n occ.out > occ.syms
+    popd > /dev/null
+
+    # Move old gcov output direcories if they exist 
+    for f in `find . -xtype d -name "gcov.output*" | xargs -n 1 basename`; do mv -v $f _$f; done
+    
+    #Delete any old gcda data files
+    pushd $sb/occc/405 > /dev/null
+    find . -xtype f -name "*.gcda" -exec rm {} +
+    popd > /dev/null
+    
+    # Build GCDA files out of occ_gcov.bin
+    $sb/occc/405/occ/tools/occGcov.pl
+
+    # Copy GCDA files into directory structure
+    for f in `find . -xtype d -name "gcov.output*" | xargs -n 1 basename`; 
+    do 
+        echo "GCOV data in $f"
+        pushd $f > /dev/null
+        echo "rsync -r -a -v .`readlink -f $sb`/occc/405/occ/ $sb/occc/405/occ/"
+        rsync -r -a -v .`readlink -f $sb`/occc/405/occ/ $sb/occc/405/occ/
+        popd > /dev/null
+    done
+
+    # Build up LCOV HTML output
+    pushd $sb/occc/405/occ > /dev/null
+    lcov -b . --capture --directory . --output-file coverage.info
+    genhtml coverage.info --output-directory /tmp/gcov_$SANDBOX_$timestamp_gcov
+    popd > /dev/null
+
+    # Open output in firefox 
+    firefox /tmp/gcov_$SANDBOX_$timestamp_gcov/index.html &
+fi
+
+waitkb
+
+
+##############################################################################
+##
+## Calculate test results if applicable
+##
+##############################################################################
+
+echo "====> dump totaltests..."
+autosim $NOWIN --simcmd   "(ptime -t)"     1> /tmp/totaltests.log  2> /dev/null
+if [ $? -ne 0 ] ; then
+        echo "ERROR: Unable to run $?"
+        stopsim
+        stopserver
+        exit 1
+fi
+totaltests=`cat /tmp/totaltests.log | xargs echo -n`
+
+
+##############################################################################
+##
+##  done.  Stop the simulation
+##
+##############################################################################
+stopsim
+
+
+## now stop the server.
+stopserver
+
+
+##############################################################################
+##
+##  Print out results in footer
+##
+##############################################################################
+timestamp_end=`date +'%H:%M:%S'`
+
+echo    "Started: $timestamp"
+echo    "Ended:   $timestamp_end"
+
+exit 0
+
+

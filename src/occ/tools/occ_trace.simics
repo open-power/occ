@@ -1,0 +1,3 @@
+# Simics script to pull trace data.  To run:
+#	run-command-file trace.simics
+pipe "oci_space.x (sym g_trac_main) (sym \"sizeof(g_trac_main_buffer)\")" fsp_trace_parse.pl

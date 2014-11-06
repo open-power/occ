@@ -1,0 +1,41 @@
+// $Id$
+
+/// \file pore_nop.S
+/// \brief A Quick NOP Program for PORE Model Timing
+///
+/// Used to generate the worst case timings for the AMEC 
+/// sensors.
+
+        .nolist
+#include "pgp.h"
+#include "pgas.h"
+        .list
+
+        .oci
+
+	.data
+        
+        .text
+
+        .global GPE_pore_nop
+        
+        /// Run a nop instruction and then halt GPE 
+GPE_pore_nop:
+        nop
+
+        /// -----------------------------------------------------
+        /// Only compile this in to test delaying PORE-GPE engine
+        .ifdef DELAY_PORE_NOP
+        li CTR, 120
+delay_loop:
+        waits    600
+        nop
+        loop    delay_loop
+done:
+        .endif
+        /// -----------------------------------------------------
+
+        halt	
+
+        .epilogue       GPE_pore_nop
+

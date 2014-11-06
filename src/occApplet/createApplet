@@ -1,0 +1,135 @@
+#!/usr/bin/perl
+#
+# Create a new applet source file from a template
+#
+#
+my $template;
+my $newfile = 0;
+my $typeflag = 0;
+my $feature = "";
+my $username = $ENV{USER};
+# version 2: Added applet id name support.
+# version 1: Created this file
+my $VERSION = "2";
+
+#template file path
+$template = $ENV{SANDBOXBASE} . "/src/occc/405/occApplet/template";
+
+#usage
+sub usage() 
+{
+
+	print "Usage: $0 -d <short_description_of_file> -f <functionNM> -i <unique applet Id String> <filename> \n";
+	print "\n";
+	print "-d:   short description for the file\n";
+	print "-f:   Entry point function name\n";
+	print "-i:   Unique Applet Id string(15 char long and must be unique within applets)\n";
+	print "-n:   Applet ID name from the OCC_APLT enumeration for this applet (eg: OCC_APLT_TEST)\n";
+	print "-V:   Version\n";
+	print "\n\n";
+
+	exit 1;
+}
+
+sub createfile(@) 
+{
+	
+	($newfile,$type,$shortDesc,$funcNm,$appIdStr,$appIdNm) = @_;
+	
+	open TEMPL, "<$template.$type" || die "Unable to open: $template.$type\n";
+	open NEWFILE, ">$newfile.$type" || die "Can't open: $newfile.$type\n";
+
+	read TEMPL, $buf, ( -s TEMPL ) || die "Unable to read template $template.$type\n";
+	close TEMPL;
+
+	# change the filename,function name, short description, applet id string
+	# and applet id
+	$upperNewFile = uc($newfile);
+	$upperFuncNm = uc($funcNm);
+	$buf =~ s/<filename.$type>/$newfile.$type/g;
+    $buf =~ s/<FILENAME.$type>/$upperNewFile.$type/g;
+    $buf =~ s/<shortDesc>/$shortDesc/g;
+    $buf =~ s/<funcNm>/$funcNm/g;
+    $buf =~ s/<FUNCNM>/$upperFuncNm/g;
+    $buf =~ s/<APPLET_ID_STR>/$appIdStr/g;
+    $buf =~ s/<APLT_ID>/$appIdNm/g;
+    
+	#change creation date
+	($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime;
+	$year = sprintf("%02s", $year % 100);
+	$mon  = sprintf("%02s", $mon + 1);
+	$mday  = sprintf("%02s", $mday);
+	$buf =~ s/MM\/DD\/YY/$mon\/$mday\/$year/;
+
+	#change the userid
+	$buf =~ s/USERID/$username/;
+	
+	#write the file
+	print NEWFILE $buf;
+
+	close NEWFILE;
+
+}
+
+while ($ARGV = shift) 
+{
+   
+    if ($ARGV =~ m/-V/) 
+    {
+        print "$0 version = $VERSION\n\n";
+        exit 0;  
+    }
+    elsif ($ARGV =~ m/-d/i) 
+    {
+        $desc = shift;
+        usage() if  $desc =~ m/(-f|-i)/;
+        $shortDesc = $desc;
+        $descFound = 1;
+   }
+   elsif ($ARGV =~ m/-f/i) 
+   {
+        $func = shift;
+        usage() if $func =~ m/(-i)/;
+        $funcNm = $func;
+   }
+   elsif ($ARGV =~ m/-i/i) 
+   {
+        $appIdStr = shift;
+        usage() if ! $appIdStr =~ m/\w+/;
+   }
+   elsif ($ARGV =~ m/-n/i)
+   {
+        $appIdNm = shift;
+        usage() if ! $appIdNm =~ m/\w+/;
+   }
+   elsif ($ARGV =~ m/\w+/) 
+   {
+        $newfile = $ARGV;
+   }
+}
+
+# check if all the expected inputs are received
+if ( ! $newfile || ! $desc || ! $func || ! $appIdStr || !$appIdNm) 
+{
+	usage();
+}
+
+if ( -e "$newfile.c" ) 
+{
+    print "File $newfile exists, clobber file? (y/n) [n] ";
+	$clobber = <STDIN>;
+	if ( $clobber !~ m/^y/i ) 
+	{
+		die "\nFile exists, cannot continue....\n";
+	}
+	else 
+	{
+		createfile($newfile,"c",$shortDesc,$funcNm,$appIdStr,$appIdNm);
+	}
+}
+else 
+{
+	createfile($newfile,"c",$shortDesc,$funcNm,$appIdStr,$appIdNm);
+}
+
+

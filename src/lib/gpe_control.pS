@@ -1,0 +1,160 @@
+// $Id: gpe_control.pS,v 1.1.1.1 2013/12/11 20:49:20 bcbrock Exp $
+// $Source: /afs/awd/projects/eclipz/KnowledgeBase/.cvsroot/eclipz/chips/p8/working/procedures/lib/gpe_control.pS,v $
+//-----------------------------------------------------------------------------
+// *! (C) Copyright International Business Machines Corp. 2013
+// *! All Rights Reserved -- Property of IBM
+// *! *** IBM Confidential ***
+//-----------------------------------------------------------------------------
+        
+/// \file gpe_control.S
+/// \brief GPE procedures for control
+
+        .nolist
+
+#include "ssx.h"
+#include "pgas.h"
+#include "gpe.h"
+#include "gpe_control.h"
+
+        .list
+
+        .oci
+        .text.pore
+
+/// \fn gpe_set_pstates(GpeSetPstatesParms *parms)
+/// \brief Set core chiplet Pstate registers
+///
+/// This routine loops through an array of PcbsPstateRegs structures
+/// holding the register images to be actuated.  A pointer to the array is
+/// provided as the \a registers parameter. For every core chiplet
+/// appearing in the \a cfg parameter, those registers marked in the \a select
+/// parameter are updated.
+///  
+/// When the PMBR is being updated, an option is provided to
+/// set PCBS_PCBSPM_MODE_REG[enable_pmax_sync_interrupt] around the
+/// update of PMBR.  This will cause a SYNC interrupt from each
+/// core. This mode currently does not set up the sync protocol in the PMC -
+/// the caller must do that.
+///
+/// Note that actuating the PMCR and PMICR using this method requires that the
+/// PCB Slave bit PMGP0_REG.pm_spr_override_en is set.
+#ifdef DOXYGEN_ONLY
+void gpe_set_pstates(GpeSetPstatesParms *parms);
+#endif
+/// \cond
+        
+        // Register usage:
+        //
+        // A1 :  Holds the (constant) pointer to the paramaters
+        // A0 :  Holds the (varying) pointer to the next register block
+        // D1 :  Holds the (varying) ChipConfig mask
+        // D0 :  Scratch
+        // P0 :  Holds the (varying) chiplet id
+
+        .global gpe_set_pstates
+
+gpe_set_pstates:
+                
+        // Set up registers.  The chiplet part of the ChipConfig is left
+        // justified in D1, which will be rotated on each loop.
+        
+        mr      A1, ETR
+        ld      D0, GPESETPSTATESPARMS_REGS, A1
+        mr      A0, D0
+        ld      D0, GPESETPSTATESPARMS_CONFIG, A1
+        mr      D1, D0
+        left_justify_core_config D1
+        lpcs    P0, 0x10000000  # Load P0 with core chiplet 0 address
+        ls      CTR, PGP_NCORES
+        bra     start_loop
+
+set_pstates_loop:
+        // If the chiplet is not configured, simply continue
+        
+        andi    D0, D1, 0x8000000000000000
+        braz    D0, set_pstates_continue
+
+        // Test/actuate each register in order
+
+        ldandi  D0, GPESETPSTATESPARMS_SELECT, A1, GPE_SET_PSTATES_PMBR
+        braz    D0, pmicr
+
+        // PMBR.  
+        
+        // If SYNCing, the register write is wrapped by a read-modify-write of
+        // the PCBS_PCBSPM_MODE_REG which enables the PMAX Sync
+        // acknowledge. Note that the original PCBSPM mode reg is saved and
+        // restored.
+pmbr:   
+        ldandi  D0, GPESETPSTATESPARMS_SELECT, A1, GPE_SET_PSTATES_SYNC
+        braz    D0, nosync
+
+sync:
+        ld      D0, PCBS_PCBSPM_MODE_REG, P0
+        la      A1, gsp_pcbs_pcbspm_mode_reg
+        std     D0, 0, A1
+        ori     D0, D0, PCBS_PCBSPM_MODE_REG_ENABLE_PMC_PMAX_SYNC_NOTIFICATION
+        std     D0, PCBS_PCBSPM_MODE_REG, P0
+
+        ld      D0, PCBSPSTATEREGS_PMBR, A0
+        std     D0, PCBS_POWER_MANAGEMENT_BOUNDS_REG, P0
+
+        ld      D0, 0, A1
+        std     D0, PCBS_PCBSPM_MODE_REG, P0
+        // restore A1
+        mr      A1, ETR
+        bra     pmicr   
+
+nosync: 
+        ld      D0, PCBSPSTATEREGS_PMBR, A0
+        std     D0, PCBS_POWER_MANAGEMENT_BOUNDS_REG, P0
+
+        // PMICR
+pmicr:
+        ldandi  D0, GPESETPSTATESPARMS_SELECT, A1, GPE_SET_PSTATES_PMICR
+        braz    D0, pmcr
+        ld      D0, PCBSPSTATEREGS_PMICR, A0
+        std     D0, PCBS_POWER_MANAGEMENT_IDLE_CONTROL_REG, P0
+
+        // PMCR
+pmcr:   
+        ldandi  D0, GPESETPSTATESPARMS_SELECT, A1, GPE_SET_PSTATES_PMCR
+        braz    D0, set_pstates_continue
+        ld      D0, PCBSPSTATEREGS_PMCR, A0
+        std     D0, PCBS_POWER_MANAGEMENT_CONTROL_REG, P0
+
+set_pstates_continue:   
+
+        // Increment the chiplet index and data pointer, then loop or halt. 
+
+        adds    P0, P0, 1
+        adds    A0, A0, SIZEOF_PCBSPSTATEREGS
+        rotldi  D1, D1, 1
+start_loop:             
+        loop    set_pstates_loop
+
+        halt
+
+        .epilogue gpe_set_pstates
+
+/// \endcond
+
+/// Data storage for procedures.
+/// Placing data in the .rodata section to prevent the 405 from stomping them.
+        .section .rodata
+        .balign 8
+/// data for gpe_set_pstates
+
+
+
+
+
+
+
+
+
+/// \cond
+
+gsp_pcbs_pcbspm_mode_reg:
+        .quad   0
+/// \endcond

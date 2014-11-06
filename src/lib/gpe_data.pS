@@ -1,0 +1,1585 @@
+// $Id: gpe_data.pS,v 820.1 2014/08/22 16:33:56 daviddu Exp $
+// $Source: /afs/awd/projects/eclipz/KnowledgeBase/.cvsroot/eclipz/chips/p8/fw820/procedures/lib/gpe_data.pS,v $
+//-----------------------------------------------------------------------------
+// *! (C) Copyright International Business Machines Corp. 2013
+// *! All Rights Reserved -- Property of IBM
+// *! *** IBM Confidential ***
+//-----------------------------------------------------------------------------
+        
+/// \file gpe_data.S
+/// \brief GPE procedures for raw data collection
+
+        .nolist
+
+#include "ssx.h"
+#include "pgas.h"
+#include "pgp_config.h"
+#include "gpe.h"
+#include "gpe_pba.h"
+#include "gpe_data.h"
+#include "gpe_scom.h"
+
+        .list
+
+        .oci
+        .text.pore
+
+        .revision_string G_gpe_data_pS_revision, "$Revision: 820.1 $"
+
+/// \cond
+
+////////////////////////////////////////////////////////////////////////////
+// Common Macros
+////////////////////////////////////////////////////////////////////////////            
+
+        // Get a full 64-bit SCOM and write to OCI space.  Clobbers a Data
+        // register. 
+
+        .macro get_scom, dx, scom, chiplet_base, oci_offset, oci_base
+
+        ld      (\dx), (\scom), (\chiplet_base)
+        std     (\dx), (\oci_offset), (\oci_base)
+
+        .endm
+
+
+        // Tag a data group with TOD[24..56]. This macro clobbers a data
+        // register. 
+
+        .macro tag_data_group, base, dx, oci_base, tod_chiplet
+
+        ld      (\dx), TOD_VALUE_REG, (\tod_chiplet)
+        extrdi  (\dx), (\dx), 32, 24  
+        std     (\dx), (\base), (\oci_base)
+
+        .endm
+
+
+        // An OCI - OCI copy.  Dx gets clobbered
+
+        .macro  ocicopy, dx, src_offset, src_base, dst_offset, dst_base
+
+        ld      (\dx), (\src_offset), (\src_base)
+        std     (\dx), (\dst_offset), (\dst_base)
+
+        .endm
+
+
+////////////////////////////////////////////////////////////////////////////
+// gpe_get_core_data()
+////////////////////////////////////////////////////////////////////////////            
+
+        // Macros for gpe_get_core_data().
+
+        // Tag a core data group with TOD[24..56], and optionally with the raw
+        // cycle count. Always clobbers D0 and D1.  If called with store=0, the
+        // tag ends up in D0.
+
+        .macro tag_core_data_group, base, oci_base, pc_chiplet, tod_chiplet, \
+                raw=1, store=1
+
+        ld      D0, TOD_VALUE_REG, (\tod_chiplet)
+        extrdi  D0, D0, 32, 24
+        .if     (\raw)
+                sti     PC_OCC_SPRC, (\pc_chiplet), SPRN_CORE_RAW_CYCLE
+                ld      D1, PC_OCC_SPRD, (\pc_chiplet)
+                rotldi  D1, D1, 32
+                or      D0, D0, D1
+        .endif
+        .if     (\store)
+                std     D0, (\base), (\oci_base)
+        .endif
+        .endm
+
+
+        // Get a pair of SCOMs from PC, packing them into a single 64-bit value
+        // and writing them to OCI space.  Clobbers D0 and D1.  Assumes that
+        // PC_OCC_SPRC is set up for autoincrement access as well.
+        //
+        // This macro takes advantage of the fact that PC-unit SCOMs only
+        // define the lower 32 bits, and the high-32 are 0.
+
+        .macro  get_pc_pair, offset, oci_base, chiplet_base
+
+        ld      D0, PC_OCC_SPRD, (\chiplet_base)
+        ld      D1, PC_OCC_SPRD, (\chiplet_base)
+        rotldi  D0, D0, 32
+        or      D0, D0, D1
+        std     D0, (\offset), (\oci_base)
+
+        .endm
+/// \endcond
+
+
+
+
+/// \fn gpe_get_core_data(GpeGetCoreDataParms *parms);
+/// \brief Get core chiplet raw data on performance/thermal timescale
+///
+/// This routine uses get_per_core_raw_data() to collect raw data for one or
+/// more cores.  The \a data field of the GpeGetCoreDataParms parameter
+/// contains a pointer to an array of CoreData* pointers.  Data for every core
+/// configured in the configuration mask is collected - it is assumed that the
+/// data area for the data exists.
+///
+/// This entry point is used by the lab thread 'coreData'.
+#ifdef DOXYGEN_ONLY
+void gpe_get_core_data(GpeGetCoreDataParms *parms);
+#endif
+/// \cond
+        
+        // Register usage:
+        //
+        // ETR   :  At entry, holds the parameter pointer.
+        // A1    :  Holds the pointer to the paramaters
+        // A0    :  Holds the (varying) pointer to the data area for the
+        //          current core.
+        // P1    :  Holds the (constant) chiplet id of the TOD
+        // P0    :  Holds the (varying) chiplet id of the current core
+        // SPRG0 :  Temporary storage of the chiplet mask as it rotates.
+        // CTR   :  Loops through core chiplets indices
+        // D1    :  Scratch
+        // D0    :  Scratch
+
+        .global gpe_get_core_data
+
+gpe_get_core_data:
+                
+        // Set up registers.  The chiplet part of the ChipConfig is left
+        // justified then stored in SPRG0, where it will be maintained as we
+        // rotate through it.  Note that SPRG0 is 32 bits, so it needs to be
+        // manipulated from the low-order portion of a data register.
+        
+        mr      D0, ETR
+        la      A1, core_data_parms
+        std     D0, 0, A1
+        mr      A1, D0
+
+        ld      D0, GPEGETCOREDATAPARMS_DATA, A1
+        mr      A0, D0
+        
+        ld      D0, GPEGETCOREDATAPARMS_CONFIG, A1
+        left_justify_core_config D0
+        rotldi  D0, D0, 32
+        mr      SPRG0, D0
+
+        lpcs    P1, TOD_VALUE_REG
+        ls      P0, 0x10
+        ls      CTR, (PGP_NCORES - 1) # PORE does test, then decr. and branch
+
+core_data_loop:
+        
+        // Load/test the chiplet mask, and store the rotated mask back to
+        // SPRG0. If the chiplet is not configured, simply continue.
+        
+        mr      D0, SPRG0
+        andi    D1, D0, 0x80000000
+        rotldi  D0, D0, 1
+        mr      SPRG0, D0
+        braz    D1, core_data_continue
+
+        // Collect Raw Data for Core specified by P0, stored at A0
+        
+        bsr     get_per_core_raw_data
+
+core_data_continue:     
+
+        // Increment the core chiplet index and data pointer, then loop or
+        // halt.
+
+        adds    P0, P0, 1
+        adds    A0, A0, CORE_DATA_SIZE
+        loop    core_data_loop
+
+        halt
+
+        .epilogue gpe_get_core_data
+
+/// \endcond
+
+
+
+/// \fn gpe_get_per_core_data(GpeGetCoreDataParms *parms);
+/// \brief Get core chiplet raw data for a single core
+///
+/// This routine uses get_per_core_raw_data() to collect raw data for a single
+/// core.  Regardless of the configuration mask setting, this routine exits
+/// after collecting data for a single core. The \a data field of the
+/// GpeGetCoreDataParms contains a pointer to a single CoreData object.
+///
+/// This entry point is used by OCC product firmware.
+#ifdef DOXYGEN_ONLY
+void gpe_get_per_core_data(GpeGetCoreDataParms *parms);
+#endif
+/// \cond
+        
+        // Register usage:
+        //
+        // A1    :  Holds the pointer to the paramaters
+        // A0    :  Holds the (varying) pointer to the data area for the
+        //          current core, as well as the data pointer-pointer while
+        //          searching for a configured core.
+        // P1    :  Holds the (constant) chiplet id of the TOD
+        // P0    :  Holds the (varying) chiplet id of the current core
+        // SPRG0 :  Temporary storage of the chiplet mask as it rotates.
+        // CTR   :  Loops through core chiplets indices
+        // D1    :  Scratch
+        // D0    :  Scratch
+
+        .global gpe_get_per_core_data
+
+gpe_get_per_core_data:
+                
+        // Set up registers.  A1 gets the parameters (which must also be
+        // stored in memory), the the ETR is replaced by the data
+        // pointer-pointer. The chiplet part of the ChipConfig is left
+        // justified then stored in SPRG0, where it will be maintained as we
+        // rotate through it.  Note that SPRG0 is 32 bits, so it needs to be
+        // manipulated from the low-order portion of a data register.
+        
+        mr      D0, ETR
+        la      A1, core_data_parms
+        std     D0, 0, A1
+        mr      A1, D0
+        
+        ld      D0, GPEGETCOREDATAPARMS_DATA, A1
+        mr      A0, D0
+        
+        ld      D0, GPEGETCOREDATAPARMS_CONFIG, A1
+        left_justify_core_config D0
+        rotldi  D0, D0, 32
+        mr      SPRG0, D0
+        
+        lpcs    P1, TOD_VALUE_REG
+        ls      P0, 0x10
+        ls      CTR, (PGP_NCORES - 1) # PORE does test, then decr. and branch
+
+per_core_data_loop:
+        
+        // Load/test the chiplet mask, and store the rotated mask back to
+        // SPRG0. If the chiplet is not configured, simply continue.
+        
+        mr      D0, SPRG0
+        andi    D1, D0, 0x80000000
+        rotldi  D0, D0, 1
+        mr      SPRG0, D0
+        braz    D1, per_core_data_continue
+
+        // Collect Raw Data for Core specified by P0, stored at A0
+        
+        bsr     get_per_core_raw_data
+
+        // Exit GPE after gathering data for one core 
+        bra per_core_data_complete
+
+per_core_data_continue:     
+
+        // Increment the core chiplet index and data pointer, then loop or
+        // halt.
+        adds    P0, P0, 1
+        loop    per_core_data_loop
+
+per_core_data_complete:
+        halt
+
+        .epilogue gpe_get_per_core_data
+
+/// \endcond
+
+/// \fn gpe_get_per_core_raw_data();
+/// \brief Get core chiplet raw data for one core
+///
+/// This routine collects raw data from the core designated by P0. Data is
+/// grouped into logical groups, and the collection of any group is enabled by
+/// a group select mask. All data and thread groups (except the PCB Slave
+/// group) are tagged with the TOD and raw cycle counts sampled immediately
+/// before the group data are sampled.
+///
+/// The final PCB Slave data group should always be selected (but \e is
+/// configurable) as it contains the PCB Slave Power Management history
+/// register.  This register value is required to determine how to interpret
+/// the other data items.
+///
+/// The PC counters are collected using the SPRC/SPRD autoincrement
+/// mechanism. Be very cautious about changing this code or the data layout
+/// because the counter order is fixed by hardware and the data layout
+/// reflects the most natural way to collect the data based on the
+/// hardware. Note that SPRC/SPRD autoincrement IS NOT OPTIONAL for the OCC
+/// registers, regardless of how it may be documented in the PC workbook, or
+/// the fact that the procedure redundantly sets up auto-increment.  That is,
+/// the hardware always does auto-increment for these SPRC/SPRD reads.
+///
+/// The data structure includes a TOD/Raw cycles word for each set of counters
+/// for each thread.  Due to the amount of time it may take to collect
+/// per-thread data for 8 threads, errors of 1% or more could accrue at thread
+/// 7 if each thread group were not individually tagged. To avoid having to
+/// SCOM the TOD plus a SCOMC/SCOMD pair to create each thread group header
+/// however, we instead tag thread0 with actual data, then tag the remaining
+/// thread groups with interpolated TOD/Raw cycle values computed by obtaining
+/// a tag at the end of all threads.  This takes only a little more time than
+/// the simpler expedient of copying the Tod/Raw Cycles count from thread0 to
+/// threads 1-7.
+///
+/// At the entry point of the routine, the code must go through the PC-ONLY
+/// special wakeup procedure to ensure that we can SCOM a napping core. This
+/// has to be done carefully as it's possible that SCOM access to the OHA will
+/// result in a 0x1 PIB response if the core is coming out of deep
+/// sleep/winkle. This PIB response would discombobulate the PORE engine so we
+/// have to run these SCOMs with error handling done manually.  If a core is
+/// inaccessible due to an idle state we clear all of the configured EMPATH
+/// counts, per-thread counts and DTS and CPM for the core. If the core is
+/// only asleep (not winkled) then we attempt to read the DTS and CPM for the
+/// L3.  Note that TOD timestamps are always collected, even if the data is
+/// simply zeroed.
+///
+/// A modified copy of the OHA_RO_STATUS_REG read during the PC-only SPWU
+/// protocol is stored with the data. Several low-order reserved bits of the
+/// register image are programmed with the following masks.  See the
+/// documentation for these bits for full details.
+///
+/// - CORE_DATA_CPM_HIST_RESET_ACCESS_FAILED
+/// - CORE_DATA_OHA_RO_STATUS_ACCESS_FAILED 
+/// - CORE_DATA_EMPATH_COLLECTED
+/// - CORE_DATA_CORE_SENSORS_COLLECTED
+/// - CORE_DATA_L3_SENSORS_COLLECTED
+/// - CORE_DATA_EXPECTED_EMPATH_ERROR
+/// - CORE_DATA_UNEXPECTED_EMPATH_ERROR
+///
+/// In the event of expected or unexpected errors during EMPATH data
+/// collection the 3-bit PCB error code will also be stored at bit
+/// CORE_DATA_EMPATH_ERROR_LOCATION.
+///
+/// This is the PC-ONLY Special Wakeup + processing Sequence
+///
+/// 1. Switch to manual error handling mode and disable PIB errors.
+///
+/// 2. Write OHA_CPM_HIST_RESET_REG.pconly_special_wakeup = 1.  If the write
+/// fails, note the failure and go to the bypass routine.
+///
+/// 3. Read OHA_RO_STATUS_REG. If the SCOM fails, access is impossible and
+/// noted. If the special wakeup complete is not immediately set that error is
+/// also noted. If either test fails then go to the bypass routine. Otherwise
+/// note success and continue. 
+///
+/// 4. Attempt to collect sensor (DTS/CPM) data for the core and L3. This must
+/// be done with manual error handling as these SCOMs are not protected by
+/// PC-only SPWU.
+///
+/// 5. Switch to a private error handling table setup that allows the
+/// procedure to catch PCB data errors during EMPATH processing. This is
+/// required as a workaround for HW280375.
+///
+/// 6. Collect EMPATH data.
+///
+/// 7. Restore error handling; Clear the PC-only SPWU bit.
+///
+/// 8. Collect PCB Slave data.
+///
+/// When the core is inaccessible a similar "bypass" sequence to the data
+/// collection sequence is run, however all data other than timestamps and the
+/// PCB Slave data are stored as 0, and the PC-Only SPWU bit is cleared before
+/// error handling is re-enabled.  The bypass routine will also take care of
+/// attempting to collect L3 DTS/CPM data for sleeping cores.
+///
+/// Note that the PCB slave data must be collected after the removal of
+/// PC-only special wakeup, otherwise a napping core will always appear to be
+/// in the run state.
+///
+/// Several global variables are required. Thus this procedure and its callers
+/// are not reentrant.
+#ifdef DOXYGEN_ONLY
+        void get_per_core_raw_data();
+#endif
+/// \cond
+
+get_per_core_raw_data:
+
+        // At entry:
+        //
+        // P0    : The chiplet to access (invariant)
+        // A0    : Pointer to the data area for the core (invariant)
+        // SPRG0 : Reserved to the caller (invariant)
+        // CTR   : Reserved to the caller (invariant)
+        //                
+        // core_data_parms: Holds the pointer to the parameters
+        //
+        // At exit:
+        //
+        // All other registers are scratched by this routine
+        
+        // (1) Switch to manual error handling mode and disable PIB errors.
+
+        mr      D0, EMR
+        la      A1, saved_emr
+        std     D0, 0, A1
+        
+        andi    D0, D0, ~(PORE_ERROR_MASK_ENABLE_ERR_HANDLER0 | \
+                          PORE_ERROR_MASK_ENABLE_ERR_OUTPUT0 | \
+                          PORE_ERROR_MASK_ENABLE_FATAL_ERR_OUTPUT0 | \
+                          PORE_ERROR_MASK_STOP_EXE_ON_ERROR0)
+        mr      EMR, D0
+        la      A1, manual_emr
+        std     D0, 0, A1        
+                
+
+        // (2) Write OHA_CPM_HIST_RESET_REG.pconly_special_wakeup = 1. If the
+        // write fails, note the failure and go to the bypass routine.
+              
+        sti     OHA_CPM_HIST_RESET_REG, P0, \
+                OHA_CPM_HIST_RESET_REG_PCONLY_SPECIAL_WAKEUP
+        tprcbz  D0, 3f
+
+        sti     CORE_DATA_OHA_RO_STATUS_REG, A0, \
+                CORE_DATA_CPM_HIST_RESET_ACCESS_FAILED
+        bra     bypass_core_data
+
+
+        // 3. Read OHA_RO_STATUS_REG. If the SCOM fails, access is impossible
+        // and noted. If the special wakeup complete is not immediately set
+        // that error is also noted. If either test fails then go to the
+        // bypass routine. Otherwise note success and continue.
+        
+3:      
+        ld      D0, OHA_RO_STATUS_REG, P0
+        tprcbz  D1, 31f
+        
+        sti     CORE_DATA_OHA_RO_STATUS_REG, A0, \
+                CORE_DATA_OHA_RO_STATUS_ACCESS_FAILED
+        bra     bypass_core_data
+
+31:      
+        std     D0, CORE_DATA_OHA_RO_STATUS_REG, A0
+                
+        // If either access is impossible we go to bypass.  The bypass code
+        // will read the L3 DTS/CPM data if it is possible.
+
+        andi    D1, D0, (OHA_RO_STATUS_REG_CORE_ACCESS_IMPOSSIBLE | \
+                         OHA_RO_STATUS_REG_ECO_ACCESS_IMPOSSIBLE)
+        branz   D1, bypass_core_data
+        
+        andi    D1, D0, OHA_RO_STATUS_REG_SPECIAL_WAKEUP_COMPLETED
+        braz    D1, bypass_core_data
+
+
+        // 4. Attempt to collect sensor (DTS/CPM) data. This must be done with
+        // manual error handling (in effect here) as these SCOMs are not
+        // protected by a PC-only SPWU. 
+
+        la      A1, core_data_parms
+        ld      D0, 0, A1
+        mr      A1, D0
+
+        bsr     getSensors
+
+
+        // 5. Switch to a private error handling table setup that allows the
+        // procedure to catch PCB errors during EMPATH processing.
+
+        // NB: We know that this is being run as a PoreFlex job from OCC FW on
+        // either GPE0 or GPE1. We also know that the default error mask does
+        // not handle any errors with a table.
+
+        tebngpe0 D0, 1f
+                la      A1, PORE_GPE0_TABLE_BASE_ADDR
+                bra     2f
+1:
+                la      A1, PORE_GPE1_TABLE_BASE_ADDR
+2:
+        la      D0, empathErrorHandlers
+        std     D0, 0, A1
+        
+        la      A1, saved_emr
+        ld      D0, 0, A1
+        ori     D0, D0, PORE_ERROR_MASK_ENABLE_ERR_HANDLER0
+        andi    D0, D0, ~(PORE_ERROR_MASK_ENABLE_ERR_OUTPUT0 | \
+                          PORE_ERROR_MASK_ENABLE_FATAL_ERR_OUTPUT0 | \
+                          PORE_ERROR_MASK_STOP_EXE_ON_ERROR0)
+        mr      EMR, D0
+
+#if INJECT_HW280375_ERRORS
+
+        // This code is used to test the workaround for HW280375. The
+        // undiagnosed hardware bug causes PCB error 4 to occur intermittantly
+        // when accessing EMPATH registers. The appearance of the defect is
+        // actually quite rare in practice, therefore this code remains in
+        // case future development and testing of this procedure is necessary.
+
+        // The test generates PCB error 4 by reading a non-existant OHA
+        // register of the current core, once every 1024 samples on
+        // average. The LFSR modifies A0 so we need to shuffle A0 <->
+        // A1. (Note the LFSR code is not delivered to OCC FW).
+
+        mr      A1, A0
+        
+        la      A0, testHw280375Lfsr
+        ld      D0, 0, A0
+        bsr     pore_rand64
+        la      A0, testHw280375Lfsr
+        std     D0, 0, A0
+
+        mr      A0, A1
+
+        andi    D0, D0, 0x3ff
+        branz   D0, 1f
+                ld      D0, 0x200ff, P0 # Force PCB error 4
+1:      
+
+#endif
+
+        // 6. Collect EMPATH data
+
+        // Test/collect each data group in order.  First reload the parameter
+        // pointer into A1.
+
+        la      A1, core_data_parms
+        ld      D0, 0, A1
+        mr      A1, D0
+
+        // EMPATH
+empath:
+        ldandi  D0, GPEGETCOREDATAPARMS_SELECT, A1, GPE_GET_CORE_DATA_EMPATH
+        braz    D0, 1f
+
+        .set    _BASE, CORE_DATA_EMPATH_BASE
+        tag_core_data_group _BASE, A0, P0, P1, raw=0
+
+        sti     PC_OCC_SPRC, P0, \
+                (SPRN_CORE_INSTRUCTION_DISPATCH | SPRN_PC_AUTOINCREMENT)
+
+        get_pc_pair (_BASE + 0x08), A0, P0
+        get_pc_pair (_BASE + 0x10), A0, P0
+        get_pc_pair (_BASE + 0x18), A0, P0
+        get_pc_pair (_BASE + 0x20), A0, P0
+
+        // Per-Core (partition) Memory Counters
+per_core_memory:
+1:      
+        ldandi  D0, GPEGETCOREDATAPARMS_SELECT, A1, GPE_GET_CORE_DATA_MEMORY
+        braz    D0, 1f
+
+        .set    _BASE, CORE_DATA_MEMORY_BASE
+        tag_core_data_group _BASE, A0, P0, P1
+
+        sti     PC_OCC_SPRC, P0, \
+                (SPRN_CORE_MEM_C_LPAR(0) | SPRN_PC_AUTOINCREMENT)
+
+        get_pc_pair (_BASE + 0x08), A0, P0
+        get_pc_pair (_BASE + 0x10), A0, P0
+
+        // Throttling Counters
+throttling:
+1:      
+        ldandi  D0, GPEGETCOREDATAPARMS_SELECT, A1, GPE_GET_CORE_DATA_THROTTLE
+        braz    D0, 1f
+
+        .set    _BASE, CORE_DATA_THROTTLE_BASE
+        tag_core_data_group _BASE, A0, P0, P1
+
+        sti     PC_OCC_SPRC, P0, \
+                (SPRN_IFU_THROTTLE_COUNTER | SPRN_PC_AUTOINCREMENT)
+
+        get_pc_pair (_BASE + 0x08), A0, P0
+        get_pc_pair (_BASE + 0x10), A0, P0
+
+        // Per-Thread Counters
+per_thread:
+1:      
+        ldandi  D0, GPEGETCOREDATAPARMS_SELECT, A1, GPE_GET_CORE_DATA_THREAD
+        braz    D0, 1f
+
+        .set    _BASE, CORE_DATA_THREAD_BASE(0)
+        tag_core_data_group _BASE, A0, P0, P1
+
+        sti     PC_OCC_SPRC, P0, \
+                (SPRN_THREAD_RUN_CYCLES(0) | SPRN_PC_AUTOINCREMENT)
+
+        get_pc_pair (_BASE + 0x08), A0, P0   # Run/Completion T0
+        get_pc_pair (_BASE + 0x10), A0, P0   # Mem A/B        T0
+        //          (_BASE + 0x18), A0, P0   # Tag            T1
+        get_pc_pair (_BASE + 0x20), A0, P0   # Run/Completion T1
+        get_pc_pair (_BASE + 0x28), A0, P0   # Mem A/B        T1
+        //          (_BASE + 0x30), A0, P0   # Tag            T2
+        get_pc_pair (_BASE + 0x38), A0, P0   # Run/Completion T2
+        get_pc_pair (_BASE + 0x40), A0, P0   # Mem A/B        T2
+        //          (_BASE + 0x48), A0, P0   # Tag            T3
+        get_pc_pair (_BASE + 0x50), A0, P0   # Run/Completion T3
+        get_pc_pair (_BASE + 0x58), A0, P0   # Mem A/B        T3
+        //          (_BASE + 0x60), A0, P0   # Tag            T4
+        get_pc_pair (_BASE + 0x68), A0, P0   # Run/Completion T4
+        get_pc_pair (_BASE + 0x70), A0, P0   # Mem A/B        T4
+        //          (_BASE + 0x78), A0, P0   # Tag            T5
+        get_pc_pair (_BASE + 0x80), A0, P0   # Run/Completion T5
+        get_pc_pair (_BASE + 0x88), A0, P0   # Mem A/B        T5
+        //          (_BASE + 0x90), A0, P0   # Tag            T6
+        get_pc_pair (_BASE + 0x98), A0, P0   # Run/Completion T6
+        get_pc_pair (_BASE + 0xa0), A0, P0   # Mem A/B        T6
+        //          (_BASE + 0xa8), A0, P0   # Tag            T7
+        get_pc_pair (_BASE + 0xb0), A0, P0   # Run/Completion T7
+        get_pc_pair (_BASE + 0xb8), A0, P0   # Mem A/B        T7
+
+
+        // Interpolation of TOD and Raw Cycles over 8 threads.  First collect
+        // a new tag, then compute the difference with the thread0 tag.  The
+        // differences are then divided by 8 to form the interpolation
+        // increment, and interpolation takes places in an unrolled loop.
+        //
+        // Note that we're doing parallel arithmetic here, and ignoring the
+        // fact that there may be a carry/borrow from the low-order TOD into
+        // the high-order cycle count.  A single LSB is noise for the cycle
+        // count, but would be significant for the TOD, which is why the
+        // TOD is placed in the low-order part of the doubleword. Given that
+        // a single LSB is noise for the cycle count there is no reason to
+        // expend the time/code space to do the arithmetic 'correctly'.
+
+interpolate: 
+        tag_core_data_group 0, 0, P0, P1, store=0 # D0 contains the _NOW_ tag
+        
+        ld      D1, CORE_DATA_THREAD_BASE(0), A0 # D1 will be used for interp.
+        sub     D0, D0, D1
+        andi    D0, D0, 0xfffffff8fffffff8 # Mask off bad bits and div. by 8.
+        rotrdi  D0, D0, 3
+
+        .macro  interpolate, thread
+        add     D1, D0, D1
+        std     D1, CORE_DATA_THREAD_BASE(\thread), A0
+        .endm
+
+        interpolate 1
+        interpolate 2
+        interpolate 3
+        interpolate 4
+        interpolate 5
+        interpolate 6
+        interpolate 7
+
+
+        // If we made it here there were no errors - Yippee! If we were asked
+        // to collect any EMPATH data then acknowledge that we did.
+1:              
+        ldandi  D0, GPEGETCOREDATAPARMS_SELECT, A1, \
+                (GPE_GET_CORE_DATA_EMPATH   | \
+                 GPE_GET_CORE_DATA_MEMORY   | \
+                 GPE_GET_CORE_DATA_THROTTLE | \
+                 GPE_GET_CORE_DATA_THREAD)
+        braz    D0, 1f
+
+        ld      D0, CORE_DATA_OHA_RO_STATUS_REG, A0
+        ori     D0, D0, CORE_DATA_EMPATH_COLLECTED
+        std     D0, CORE_DATA_OHA_RO_STATUS_REG, A0
+
+
+        // 7. Restore error handling; Clear the PC-Only SPWU bit
+1:      
+        la      A1, saved_emr
+        ld      D0, 0, A1
+        mr      EMR, D0
+        
+        sti     OHA_CPM_HIST_RESET_REG, P0, 0
+
+        la      A1, core_data_parms
+        ld      D0, 0, A1
+        mr      A1, D0
+
+
+        // 8. Collect PCB-Slave data
+pcb_slave:      
+
+        ldandi  D0, GPEGETCOREDATAPARMS_SELECT, A1, GPE_GET_CORE_DATA_PCB_SLAVE
+        braz    D0, 1f
+
+        .set    _BASE, CORE_DATA_PCB_SLAVE_BASE
+        tag_core_data_group _BASE, A0, P0, P1, raw=0
+        
+        get_scom D0, PCBS_POWER_MANAGEMENT_CONTROL_REG, P0, CORE_DATA_PMCR, A0
+        get_scom D0, PCBS_POWER_MANAGEMENT_STATUS_REG, P0, CORE_DATA_PMSR, A0
+        get_scom D0, PCBS_PMSTATEHISTOCC_REG, P0, CORE_DATA_PM_HISTORY, A0
+                   
+1:      
+        ret
+
+
+        //////////////////////////////////////////////////////////////////////
+        // getSensors
+        //////////////////////////////////////////////////////////////////////
+        //
+        // Try to get core and L3 sensor (DTS/CPM) data
+        //
+        // At Entry:
+        //
+        // We are in manual PIB error handling mode
+        // A0 : Base address of core data area
+        // A1 : Address of the parameter block
+        // P0 : Chiplet
+        //
+        // At exit:
+        //
+        // A0, P0 unchanged
+        // D0, D1 scratched
+        //
+        // Note that due to HW279433, we can not read the CPM sensors without
+        // the possiblity of a FIR bit being set due to a PCB timeout. Since
+        // the CPMs are currently not in plan for P8, these fields of the data
+        // structure are simply zeroed.
+
+getSensors:
+
+        ldandi  D0, GPEGETCOREDATAPARMS_SELECT, A1, GPE_GET_CORE_DATA_DTS_CPM
+        braz    D0, getSensorsDone
+        
+        // HW279433, see above
+        ls      D0, 0
+        std     D0, CORE_DATA_SENSOR_V8, A0
+        std     D0, CORE_DATA_SENSOR_V9, A0
+
+        .set    _BASE, CORE_DATA_DTS_CPM_BASE
+        tag_core_data_group _BASE, A0, P0, P1, raw=0
+        
+        // First try the core
+
+        ld      D0, SENSORS_CORE_V0, P0
+        tprcbnz D1, coreSensorsFailed
+        std     D0, CORE_DATA_SENSOR_V0, A0
+
+        ld      D0, CORE_DATA_OHA_RO_STATUS_REG, A0
+        ori     D0, D0, CORE_DATA_CORE_SENSORS_COLLECTED
+        std     D0, CORE_DATA_OHA_RO_STATUS_REG, A0
+
+        bra     tryL3
+
+coreSensorsFailed:
+
+        la      A1, G_ggcd_coreSensorFail
+        std     D1, 0, A1
+        la      A1, core_data_parms
+        ld      D0, 0, A1
+        mr      A1, D0
+
+        ls      D0, 0
+        std     D0, CORE_DATA_SENSOR_V0, A0
+        
+        // Now try the L3
+tryL3:
+        ld      D0, SENSORS_CORE_V1, P0
+        tprcbnz D1, l3SensorsFailed
+        std     D0, CORE_DATA_SENSOR_V1, A0
+
+        ld      D0, CORE_DATA_OHA_RO_STATUS_REG, A0
+        ori     D0, D0, CORE_DATA_L3_SENSORS_COLLECTED
+        std     D0, CORE_DATA_OHA_RO_STATUS_REG, A0
+
+        bra     getSensorsDone
+
+l3SensorsFailed:
+
+        la      A1, G_ggcd_l3SensorFail
+        std     D1, 0, A1
+        la      A1, core_data_parms
+        ld      D0, 0, A1
+        mr      A1, D0
+
+        ls      D0, 0
+        std     D0, CORE_DATA_SENSOR_V1, A0
+
+getSensorsDone:
+        ret
+                
+
+        //////////////////////////////////////////////////////////////////////
+        // gpcrdError0
+        //
+        // Trap error 0 during EMPATH processing, and set a bit indicating if
+        // this is an "expected" or "unexpected" error. The only expected
+        // error is a PCB error #4 due to HW280375.
+        //
+        // Note that PORE treats error branches as subroutine calls. We need
+        // to pop the HW stack before continuing. We assume we are running on
+        // either GPE0 or GPE1.
+        ////////////////////////////////////////////////////////////////////////////
+
+        .global empathErrorHandlers
+empathErrorHandlers:
+        bra     gpcrdError0
+        
+gpcrdError0:
+
+        // Set A1 for current engine
+
+        tebngpe0 D0, 1f
+                la      A1, PORE_GPE0_OCI_BASE
+                bra     2f
+1:
+                la      A1, PORE_GPE1_OCI_BASE
+2:
+                        
+        // Extract PCB parity error + 3-bit code and compare. Apparently the
+        // PCB error code is not set in the IFR when we take the error branch,
+        // so we have to get it from the debug register. The error code is
+        // used to decide if the error is "expected" or "unexpected".
+
+        ld      D0, PORE_DBG0_OFFSET, A1
+        extrdi  D0, D0, 4, 32
+
+        ld      D1, CORE_DATA_OHA_RO_STATUS_REG, A0
+        cmpibraeq D0, 1f, 4
+
+                // This error is "unexpected"
+
+                ori     D1, D1, CORE_DATA_UNEXPECTED_EMPATH_ERROR
+                bra     2f
+
+                // This error (#4) is "expected"
+1:                 
+                ori     D1, D1, CORE_DATA_EXPECTED_EMPATH_ERROR
+
+        // Insert the error code into the OHA_RO_STATUS image
+2:      
+        insrdi  D1, D0, \
+                CORE_DATA_EMPATH_ERROR_BITS, CORE_DATA_EMPATH_ERROR_LOCATION
+        std     D1, CORE_DATA_OHA_RO_STATUS_REG, A0
+
+        
+        // Pop the hardware stack. The easiest way to do this is to modify the
+        // current stack pointer and "return" to a local label.
+
+        la      D0, 1f
+        sldi    D0, D0, 16
+        std     D0, PORE_PC_STACK0_OFFSET, A1
+        ret
+1:
+
+        // Clear the debug registers.
+
+        ls      D0, 0
+        std     D0, PORE_DBG0_OFFSET, A1
+        std     D0, PORE_DBG1_OFFSET, A1
+
+        // Bypass EMPATH data (that routine will restore the default error
+        // handling and re-establish A1)
+        
+        bra     bypass_core_data
+
+
+        //////////////////////////////////////////////////////////////////////
+        // bypass_core_data
+        //////////////////////////////////////////////////////////////////////
+        //
+        // This entry point is used when the core is inaccessible due to idle
+        // modes or other conditions. At entry we are in manual SCOM error
+        // handling mode. The routine will first attempt to collect the 
+        // core and L3 DTS/CPM for Sleeping cores, then restore error
+        // handling and zero out the EMPATH data before collecting PCBS data.
+
+        // HW243646: We never read EMPATH counters here.  The
+        // counters are all zeroed and all calls of tag_core_data_group
+        // specify raw=0.
+
+bypass_core_data:
+
+        la      A1, core_data_parms
+        ld      D0, 0, A1
+        mr      A1, D0        
+        
+        bsr     getSensors
+
+        // Clear the PC-Only SPWU bit and restore SCOM error handling.  Then
+        // reload the parameter pointer into A1.
+        
+        sti     OHA_CPM_HIST_RESET_REG, P0, 0
+
+        la      A1, saved_emr
+        ld      D0, 0, A1
+        mr      EMR, D0
+
+        la      A1, core_data_parms
+        ld      D0, 0, A1
+        mr      A1, D0        
+        
+        // Bypass core data
+        
+        // EMPATH
+
+        ldandi  D0, GPEGETCOREDATAPARMS_SELECT, A1, GPE_GET_CORE_DATA_EMPATH
+        braz    D0, 1f
+
+        .set    _BASE, CORE_DATA_EMPATH_BASE
+        tag_core_data_group _BASE, A0, P0, P1, raw=0
+
+        ls      D0, 0
+        std     D0, (_BASE + 0x08), A0
+        std     D0, (_BASE + 0x10), A0
+        std     D0, (_BASE + 0x18), A0
+        std     D0, (_BASE + 0x20), A0
+
+
+        // Per-Core Memory Counters
+
+1:      
+        ldandi  D0, GPEGETCOREDATAPARMS_SELECT, A1, GPE_GET_CORE_DATA_MEMORY
+        braz    D0, 1f
+
+        .set    _BASE, CORE_DATA_MEMORY_BASE
+        tag_core_data_group _BASE, A0, P0, P1, raw=0
+
+        ls      D0, 0        
+        std     D0, (_BASE + 0x08), A0
+        std     D0, (_BASE + 0x10), A0
+
+
+        // Throttling Counters
+
+1:      
+        ldandi  D0, GPEGETCOREDATAPARMS_SELECT, A1, GPE_GET_CORE_DATA_THROTTLE
+        braz    D0, 1f
+
+        .set    _BASE, CORE_DATA_THROTTLE_BASE
+        tag_core_data_group _BASE, A0, P0, P1, raw=0
+
+        ls      D0, 0        
+        std     D0, (_BASE + 0x08), A0
+        std     D0, (_BASE + 0x10), A0
+
+
+        // Per-Thread Counters
+        
+1:      
+        ldandi  D0, GPEGETCOREDATAPARMS_SELECT, A1, GPE_GET_CORE_DATA_THREAD
+        braz    D0, 1f
+
+        .set    _BASE, CORE_DATA_THREAD_BASE(0)
+        tag_core_data_group _BASE, A0, P0, P1, raw=0
+
+        ls      D0, 0
+        std     D0, (_BASE + 0x08), A0   # Run/Completion T0
+        std     D0, (_BASE + 0x10), A0   # Mem A/B        T0
+        //          (_BASE + 0x18), A0   # Tag            T1
+        std     D0, (_BASE + 0x20), A0   # Run/Completion T1
+        std     D0, (_BASE + 0x28), A0   # Mem A/B        T1
+        //          (_BASE + 0x30), A0   # Tag            T2
+        std     D0, (_BASE + 0x38), A0   # Run/Completion T2
+        std     D0, (_BASE + 0x40), A0   # Mem A/B        T2
+        //          (_BASE + 0x48), A0   # Tag            T3
+        std     D0, (_BASE + 0x50), A0   # Run/Completion T3
+        std     D0, (_BASE + 0x58), A0   # Mem A/B        T3
+        //          (_BASE + 0x60), A0   # Tag            T4
+        std     D0, (_BASE + 0x68), A0   # Run/Completion T4
+        std     D0, (_BASE + 0x70), A0   # Mem A/B        T4
+        //          (_BASE + 0x78), A0   # Tag            T5
+        std     D0, (_BASE + 0x80), A0   # Run/Completion T5
+        std     D0, (_BASE + 0x88), A0   # Mem A/B        T5
+        //          (_BASE + 0x90), A0   # Tag            T6
+        std     D0, (_BASE + 0x98), A0   # Run/Completion T6
+        std     D0, (_BASE + 0xa0), A0   # Mem A/B        T6
+        //          (_BASE + 0xa8), A0   # Tag            T7
+        std     D0, (_BASE + 0xb0), A0   # Run/Completion T7
+        std     D0, (_BASE + 0xb8), A0   # Mem A/B        T7
+
+
+        // Interpolation of TOD and Raw Cycles over 8 threads.  First collect
+        // a new tag, then compute the difference with the thread0 tag.  The
+        // differences are then divided by 8 to form the interpolation
+        // increment, and interpolation takes places in an unrolled loop.
+        //
+        // Note that we're doing parallel arithmetic here, and ignoring the
+        // fact that there may be a carry/borrow from the low-order TOD into
+        // the high-order cycle count.  A single LSB is noise for the cycle
+        // count, but would be significant for the TOD, which is why the
+        // TOD is placed in the low-order part of the doubleword. Given that
+        // a single LSB is noise for the cycle count there is no reason to
+        // expend the time/code space to do the arithmetic 'correctly'.
+
+        tag_core_data_group 0, 0, P0, P1, raw=0, store=0 # D0 contains _NOW_ tag
+        
+        ld      D1, CORE_DATA_THREAD_BASE(0), A0 # D1 will be used for interp.
+        sub     D0, D0, D1
+        andi    D0, D0, 0xfffffff8fffffff8 # Mask off bad bits and div. by 8.
+        rotrdi  D0, D0, 3
+
+        interpolate 1
+        interpolate 2
+        interpolate 3
+        interpolate 4
+        interpolate 5
+        interpolate 6
+        interpolate 7
+
+
+        // Per-Core PCB Slave Registers
+get_pcbs_data:
+
+        ldandi  D0, GPEGETCOREDATAPARMS_SELECT, A1, GPE_GET_CORE_DATA_PCB_SLAVE
+        braz    D0, 1f
+
+        .set    _BASE, CORE_DATA_PCB_SLAVE_BASE
+        tag_core_data_group _BASE, A0, P0, P1, raw=0
+        
+        get_scom D0, PCBS_POWER_MANAGEMENT_CONTROL_REG, P0, CORE_DATA_PMCR, A0
+        get_scom D0, PCBS_POWER_MANAGEMENT_STATUS_REG, P0, CORE_DATA_PMSR, A0
+        get_scom D0, PCBS_PMSTATEHISTOCC_REG, P0, CORE_DATA_PM_HISTORY, A0
+
+1:
+        ret    
+        
+/// \endcond
+
+
+////////////////////////////////////////////////////////////////////////////
+// gpe_get_core_data_fast()
+////////////////////////////////////////////////////////////////////////////            
+
+/// \fn gpe_get_core_data_fast(GpeGetChipDataFastParms *parms);
+/// \brief Get chip raw data on fastest possible timescale
+///
+/// This routine collects raw data for the entire chip on the fastest possible
+/// timescale. Where chiplet data is collected, the configured chiplets are 
+/// specified in the configuration mask parameter. Data is grouped
+/// into logical groups, and the collection of any group is enabled by a group
+/// select mask. All data groups are tagged with the TOD.
+#ifdef DOXYGEN_ONLY
+void gpe_get_core_data_fast(GpeGetChipDataFastParms *parms);
+#endif
+/// \cond
+
+        // Register usage:
+        //
+        // A1 :  Holds the (constant) pointer to the paramaters
+        // A0 :  Holds the (varying) pointer to the data area for the current
+        //       data group or datum. 
+        // P1 :  Holds the (constant) chiplet id of the TOD
+        // P0 :  Holds the (varying) chiplet id of interest
+        // CTR :  Loops through chiplet indices
+        // D1 :  Holds/rotates configuration mask
+        // D0 :  Scratch
+
+        .global gpe_get_core_data_fast
+
+gpe_get_core_data_fast:
+
+        // Set up registers. A0 must follow the target OCI address as each core
+        // chiplet is considered. Since we're only doing a single
+        // getscom/putOCI, we can keep the chiplet mask in D1. The data group
+        // is tagged with the TOD.
+        
+        mr      A1, ETR
+        ld      D0, GPEGETCOREDATAFASTPARMS_CONFIG, A1
+        left_justify_core_config D0
+        mr      D1, D0
+        lpcs    P1, TOD_VALUE_REG
+        ld      D0, GPEGETCOREDATAFASTPARMS_DATA, A1
+        mr      A0, D0
+
+        tag_data_group CORE_DATA_FAST_FREQ_TARGET_BASE, D0, A0, P1
+        adds    A0, A0, 8
+
+        ls      P0, 0x10
+        ls      CTR, (PGP_NCORES - 1) # PORE does test, then decr. and branch
+        
+freq_target_loop:
+
+        // Test the chiplet mask. If the chiplet is not configured, simply
+        // continue.
+        
+        andi    D0, D1, 0x8000000000000000
+        rotldi  D1, D1, 1
+        braz    D0, freq_target_continue
+
+        get_scom D0, PCBS_LOCAL_PSTATE_FREQUENCY_TARGET_STATUS_REG, P0, \
+                0x00, A0
+
+freq_target_continue:   
+
+        // Increment the core chiplet index and data pointer, then loop or
+        // carry on.
+
+        adds    P0, P0, 1
+        adds    A0, A0, 8
+        loop    freq_target_loop
+        
+1:
+        halt
+
+/// \endcond
+        
+
+////////////////////////////////////////////////////////////////////////////
+// gpe_get_chip_data()
+////////////////////////////////////////////////////////////////////////////            
+
+/// \fn gpe_get_chip_data(GpeGetChipDataParms *parms);
+/// \brief Get chip-level raw data
+///
+/// This routine collects chip-level raw data.  Data is grouped into logical
+/// groups, and the collection of any group is enabled by a group select
+/// mask. All data groups are tagged with the TOD.
+#ifdef DOXYGEN_ONLY
+void gpe_get_chip_data(GpeGetChipDataParms *parms);
+#endif
+/// \cond
+
+        // Register usage:
+        //
+        // A0 :  Holds the (varying) pointer to the data area for the current
+        //       data group or datum. 
+        // P1 :  Holds the (constant) chiplet id of the TOD
+        // D1 :  Holds the (constant) select mask
+
+        .global gpe_get_chip_data
+
+gpe_get_chip_data:
+
+        // Set up registers.
+        
+        mr      A1, ETR
+        ld      D0, GPEGETCHIPDATAPARMS_SELECT, A1
+        mr      D1, D0
+        lpcs    P1, TOD_VALUE_REG
+        ld      D0, GPEGETCHIPDATAPARMS_DATA, A1
+        mr      A0, D0
+
+        // Overcommit data.
+
+        andi    D0, D1, GPE_GET_CHIP_DATA_OVERCOMMIT
+        braz    D0, 1f
+        tag_data_group CHIP_DATA_OVERCOMMIT_BASE, D0, A0, P1
+        
+        // Overcommit data consists of PBA_PBOCR(0)...PBA_PBOCR(5), all stored
+        // at 8-byte offsets
+        
+        la   A1, PBA_PBOCRN(0)
+        ocicopy D0, 0x00, A1, 0x08, A0
+        ocicopy D0, 0x08, A1, 0x10, A0
+        ocicopy D0, 0x10, A1, 0x18, A0
+        ocicopy D0, 0x18, A1, 0x20, A0
+        ocicopy D0, 0x20, A1, 0x28, A0
+        ocicopy D0, 0x28, A1, 0x30, A0
+        
+1:
+        halt
+
+        .epilogue gpe_get_chip_data
+
+/// \endcond
+
+
+////////////////////////////////////////////////////////////////////////////
+// gpe_get_mem_data()
+////////////////////////////////////////////////////////////////////////////            
+
+/// \fn gpe_get_mem_data(GpeGetMemDataParms *parms);
+/// \brief Get memory (MCS/Centaur) data for a particular MCS/Centaur
+///
+/// This routine collects data for the MCS/Centaur named (by instance ID,
+/// (0...PGP_NCENTAUR -1)) in the \a collect field of the \a parms parameter,
+/// unless \a collect is -1 in which case the data collection is bypassed.
+/// Once data has been collected, if the \a update field of the a \parms is
+/// not -1 then that numbered Centaur will be "poked" to start the sensor
+/// cache update. Once data collection (if any) and "poking" (if any) are
+/// finished the parameter block is timestamped with the TOD (at the standard
+/// 2MHz). This means that the TOD timestamp marks the "poke" time (when data
+/// collection starts), not the data collection time.
+///
+/// This procedure requires that the global G_centaurConfiguration structure
+/// must be present and have been properly initialized by
+/// centaur_configuration_create(). The procedure returns a return code -
+/// Either 0 for success, or a non zero value for failure.  The failure codes
+/// are documented here: \ref gpe_get_mem_data_rc. Since the parameter block
+/// is read and written by GPE code it is strongly recommended to allocate
+/// instances of this structure in non-cacheable data sections, with the
+/// caveat that data structures assigned to non-default data sections must
+/// always be initialized. For example:
+///
+/// \code
+///
+/// static GpeGetMemDataParms S_parms SECTION_ATTRIBUTE(".noncacheable") = {0};
+///
+/// \endcode
+///
+/// NB: SW273814 documents a request to be able to differentiate which of the 2
+/// Centaurs is responsible for a hard failure. That's why we take pains to
+/// set up the RC prior to collection/poking to enable recovery code to make
+/// this determination.
+#ifdef DOXYGEN_ONLY
+void gpe_get_mem_data(GpeGetMemDataParms *parms);
+#endif
+/// \cond
+
+        .global gpe_get_mem_data
+gpe_get_mem_data:
+
+        // At entry:    
+        //
+        // ETR : parms
+        //
+        // Invariants:
+        //
+        // ETR : parms
+        // A1  : parms (except when scratched by subroutines, always restored)
+
+        // Begin by marking the procedure as having died
+
+        mr      A1, ETR
+        sti     GPEGETMEMDATAPARMS_RC, A1, GPE_GET_MEM_DATA_DIED
+        
+        // Next check to make sure the G_centaurConfiguration is properly
+        // initialized (.configRc == 0).
+        //
+        // A1 :  parms
+
+        la      A0, G_centaurConfiguration
+        ld      D0, CENTAUR_CONFIGURATION_CONFIG_RC, A0
+        braz    D0, 1f
+
+                ls      D0, GPE_GET_MEM_DATA_NOT_CONFIGURED
+                bra     ggmdExit
+        
+1:
+        // Set up the PBA for Centaur sensor cache access
+        //
+        // A1 : parms
+        // A0 : &G_centaurConfiguration ==> &G_centaurConfiguration.dataParms;
+
+        adds    A0, A0, CENTAUR_CONFIGURATION_DATA_PARMS
+        bsr     gpe_pba_reset
+        bsr     gpe_pba_setup
+        mr      A1, ETR         # Re-establish invariant
+                        
+
+        // See if we're collecting data this pass. If so validate that the
+        // MCS/Centaur index is valid according to G_centaurConfiguration.
+        //
+        // A1 : parms
+
+        ld      D0, GPEGETMEMDATAPARMS_COLLECT, A1
+        cmpibraeq D0, ggmdUpdate, -1
+
+        bsr     ggmdDataSetup
+        mr      A1, ETR         # Re-establish invariant
+        braz    D0, 1f
+
+                ls      D0, GPE_GET_MEM_DATA_COLLECT_INVALID
+                bra     ggmdExit
+        
+1:
+        // A0 has the base address of the sensor cache as a PowerBus
+        // mapping. Load A1 with the user data pointer and collect the data.
+        //
+        // A1 : parms ==> &MemData
+
+        sti     GPEGETMEMDATAPARMS_RC, A1, GPE_GET_MEM_DATA_SENSOR_CACHE_FAILED
+
+        ld      D0, GPEGETMEMDATAPARMS_DATA, A1
+        mr      A1, D0
+        
+        ocicopy D0, 0x00, A0, 0x00, A1
+        ocicopy D0, 0x08, A0, 0x08, A1
+        ocicopy D0, 0x10, A0, 0x10, A1
+        ocicopy D0, 0x18, A0, 0x18, A1
+        ocicopy D0, 0x20, A0, 0x20, A1
+        ocicopy D0, 0x28, A0, 0x28, A1
+        ocicopy D0, 0x30, A0, 0x30, A1
+        ocicopy D0, 0x38, A0, 0x38, A1
+        ocicopy D0, 0x40, A0, 0x40, A1
+        ocicopy D0, 0x48, A0, 0x48, A1
+        ocicopy D0, 0x50, A0, 0x50, A1
+        ocicopy D0, 0x58, A0, 0x58, A1
+        ocicopy D0, 0x60, A0, 0x60, A1
+        ocicopy D0, 0x68, A0, 0x68, A1
+        ocicopy D0, 0x70, A0, 0x70, A1
+        ocicopy D0, 0x78, A0, 0x78, A1
+
+        mr      A1, ETR         # Re-establish invariant
+
+        sti     GPEGETMEMDATAPARMS_RC, A1, GPE_GET_MEM_DATA_DIED
+
+        // See if we're poking Centaur this pass. If so validate that the
+        // MCS/Centaur index is valid according to G_centaurConfiguration.
+        //
+        // A1 : parms
+ggmdUpdate:     
+
+        ld      D0, GPEGETMEMDATAPARMS_UPDATE, A1
+        cmpibraeq D0, ggmdTimestamp, -1
+
+        bsr     ggmdDataSetup
+        mr      A1, ETR         # Re-establish invariant
+        braz    D0, 1f
+
+                ls      D0, GPE_GET_MEM_DATA_UPDATE_INVALID
+                bra     ggmdExit
+                  
+1:
+        // Poke it
+
+        sti     GPEGETMEMDATAPARMS_RC, A1, GPE_GET_MEM_DATA_UPDATE_FAILED
+
+        ls      D0, 0
+        std     D0, 0, A0
+        
+        sti     GPEGETMEMDATAPARMS_RC, A1, GPE_GET_MEM_DATA_DIED
+
+        // Collect the timestamp and reduce the 64-bit 512MHz timestamp to a
+        // 32-bit 2MHz timestamp. Then we're out...
+        //
+        // A1 : parms
+ggmdTimestamp:
+
+        lpcs    P0, TOD_VALUE_REG
+        ld      D0, TOD_VALUE_REG, P0
+        extrdi  D0, D0, 32, 24
+        std     D0, GPEGETMEMDATAPARMS_PAD_TOD, A1
+
+
+        ////////////////////////////////////////////////////////////////////
+        // Not so fast... If this is Centaur DD1 then we did not actually
+        // collect the Centaur internal temperatures due to HW256773. So we
+        // will go collect them now "manually" by calling _gpe_scom_centaur
+        // with a hard-coded setup to collect SCOM 0x02050000.  We then
+        // splice this result into the accumulated cache-line data.
+        //
+        // A1 :  Parms
+        ////////////////////////////////////////////////////////////////////
+
+        // Nothing to do if we're not collecting data. Otherwise pull out the
+        // CFAM ID and compare for Centaur DD1
+
+        ld      D0, GPEGETMEMDATAPARMS_COLLECT, A1
+        cmpibraeq D0, ggmdCleanExit, -1
+
+        sldi    D0, D0, 3       # Multiply by 8 for a byte offset
+
+        la      D1, G_centaurConfiguration
+        adds    D1, D1, CENTAUR_CONFIGURATION_DEVICE_ID
+        add     D0, D0, D1
+        mr      A0, D0
+        ld      D0, 0, A0
+        extrdi  D0, D0, 32, 0
+        
+        cmpibrane D0, ggmdCleanExit, CFAM_CHIP_ID_CENTAUR_10
+
+        // This is DD1.  Set up the parameters and call _gpe_scom_centaur.
+        // Since we can only do 8-byte stores we read-modify-write the first
+        // entry of the scomList_t.  Then call for the SCOM. If it failed set
+        // the failure code. All registers must be restored after the
+        // subroutine call.
+        
+        la      A0, G_ggmdHw256773
+        ld      D0, SCOM_LIST_COMMAND, A0
+        ld      D1, GPEGETMEMDATAPARMS_COLLECT, A1
+        scom_list_set_instance_number D0, D1
+        std     D0, SCOM_LIST_COMMAND, A0
+
+        la      A0, G_hw256773
+        bsr     _gpe_scom_centaur
+
+        la      A0, G_hw256773
+        mr      A1, ETR
+
+        ld      D0, GPE_SCOM_PARMS_RC_ERROR_INDEX, A0
+        gpe_scom_parms_get_rc D0, D0
+        braz    D0, 1f
+
+                ls      D0, GPE_GET_MEM_DATA_HW256773_FAILED
+                bra     ggmdExit
+
+1:
+        // The SCOM succeeded.  The data needs to be moved from the
+        // gpe_scom_centaur data into the sensor-cache data area. Since there
+        // are only 32 bits we need to read-modify-write the SRAM. This is
+        // doubleword 12 of the sensor cache.  The 32 bits of the SCOM we need
+        // are the high-order bits, copied into the low-order bits of the
+        // sensor-cache doubleword. Finally fall through to the clean exit.
+
+        la      A0, G_ggmdHw256773
+        ld      D0, SCOM_LIST_DATA, A0
+        
+        ld      D1, GPEGETMEMDATAPARMS_DATA, A1
+        mr      A0, D1
+        ld      D1, 0x60, A0
+        rldimi  D1, D0, 32, 32, 63
+        std     D1, 0x60, A0
+
+
+ggmdCleanExit:
+        ls      D0, 0
+ggmdExit:               
+        std     D0, GPEGETMEMDATAPARMS_RC, A1
+        halt
+        
+
+        //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        // ggmdDataSetup
+        //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        //
+        // At entry:    
+        //
+        //     D0 : The Centaur instance number to set up
+        //
+        // At exit:     
+        //
+        //     A0  : On success, the OCI base address to use to access the
+        //           sensor cache.
+        //     D0  : 0 = Success; 1 = Failure - the caller will supply the
+        //           correct error code back to the user.
+        //     
+        // This routine checks the Centaur instance number for validity.  If
+        // the instance number is valid then the PBA is programmed to access
+        // the sensor cache address.  This requires reprogramming the PBA
+        // because part of the data address, which varies by Centaur, must be
+        // stored as the extended address field of the PBA slave control
+        // register. It is not necessary to reset the PBA slave for each data
+        // operation.
+ggmdDataSetup: 
+
+        // Check the Centaur instance number (D0) for validity.
+
+        ls      D1, PGP_NCENTAUR
+        sub     D1, D0, D1
+        tfbult  D1, 1f
+
+        ls      D0, 1
+        ret                     # Centaur instance too big
+
+1:
+        // Check to make sure the Centaur is configured by testing the base
+        // address for 0. The instance number is first multiplied by 8 to
+        // create an array offset.
+
+        sldi    D0, D0, 3
+        la      D1, G_centaurConfiguration
+        adds    D1, D1, CENTAUR_CONFIGURATION_BASE_ADDRESS
+        add     D0, D0, D1
+        mr      A0, D0
+        ld      D0, 0, A0
+        branz   D0, 1f
+
+        ls      D0, 1
+        ret                     # Base address is 0
+
+1:
+        // We have the Centaur base address in D0, and convert it to the full
+        // PowerBus address for the inband sensor cache access. Bit 27 is set
+        // to indicate OCC (vs. FSP) access. Bit 28 is set to indicate a
+        // sensor cache access. 
+
+        ori     D0, D0, 0x0000001800000000
+
+#if 1
+        la      A0, G_ggmd_lastDataAddress # Debug
+        std     D0, 0, A0
+#endif
+
+        // The OCI address is always 0, decorated with the PBA BAR number.
+
+        la      A0, (PBA_BAR_CENTAUR << 28)             
+
+        // Bits 23:36 of the address go into the extended address field (35:
+        // 48) of the PBA slave control register by a read-modify-write
+        // operation. Note: We're using rldimi explicitly here - not an
+        // extended mnemonic - to save having to justify the data.
+
+        la      A1, G_centaurConfiguration
+        ld      D1, \
+               (CENTAUR_CONFIGURATION_DATA_PARMS + \
+                 GPEPBAPARMS_SLVCTL_ADDRESS), \
+                 A1
+        mr      A1, D1
+        ld      D1, 0, A1
+        rldimi  D1, D0, 64 - (35 - 23), 35, 48
+        std     D1, 0, A1
+
+#if 1
+        la      A1, G_ggmd_lastSlaveControl # Debug
+        std     D1, 0, A1
+        mr      D1, A0
+        la      A1, G_ggmd_lastOciAddress
+        std     D1, 0, A1
+#endif
+        
+        // Clear D0 to signal success and we're out
+
+        ls      D0, 0
+        ret
+        .epilogue gpe_get_mem_data
+        
+/// \endcond
+
+
+////////////////////////////////////////////////////////////////////////////
+// Global Data
+////////////////////////////////////////////////////////////////////////////            
+
+        
+
+/// \cond
+
+        .data.pore
+
+        // Data storage for gpe_get_core_data()
+
+core_data_parms:
+        .quad   0
+saved_emr: 
+        .quad   0
+manual_emr:     
+        .quad   0
+hw243646:
+#if 0
+        .quad   0x3             # Determined + Required
+#else
+        .quad   0x2             # Determined + Not Required
+#endif  
+
+        // Used to debug the workaround for HW280375
+
+testHw280375Lfsr:               
+        .quad   0xdeadbeef      # Initial state of LFSR
+
+        // Debug/Info: Failure codes when sensor reads fail
+
+        .global G_ggcd_coreSensorFail
+G_ggcd_coreSensorFail:
+        .quad   0
+
+        .global G_ggcd_l3SensorFail
+G_ggcd_l3SensorFail:    
+        .quad   0
+
+
+        // Debug only, the last values computed by ggmdDataSetup.
+        
+        .global G_ggmd_lastDataAddress
+G_ggmd_lastDataAddress:
+        .quad   0
+
+        .global G_ggmd_lastSlaveControl
+G_ggmd_lastSlaveControl:
+        .quad   0
+
+        .global G_ggmd_lastOciAddress
+G_ggmd_lastOciAddress:
+        .quad   0
+
+
+        // Required for Centaur DD1.  This is an assembler layout of a
+        // GpeScomParms structure pointing to a scomList_t structure to read
+        // Centaur SCOM 0x02050000.  See the code comments for more details.
+
+        .global G_ggmdHw25773
+G_ggmdHw256773:
+        .long   0x02050000      # SCOM
+        .byte   0               # Reserved
+        .byte   0               # Error flags (output)
+        .byte   0               # Instance Number (input)
+        .byte   GPE_SCOM_READ   # Command
+        .quad   0               # Mask (unused)
+        .quad   0               # Data (output)
+
+        .global G_hw256773
+G_hw256773:
+        .long   0               # (32-bit addresses)
+        .long   G_ggmdHw256773  # scomList
+        .long   1               # Entries in the scomList
+        .long   0               # Options
+        .long   0               # rc (output)
+        .long   0               # errorIndex (output)
+        
+/// \endcond
