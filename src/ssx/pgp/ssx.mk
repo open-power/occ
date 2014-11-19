@@ -43,8 +43,6 @@
 #                      your .profile.
 
 # >> gitprep
-# Use fips tracepp
-TRACEPP = /afs/austin/projects/esw/fips820/Builds/built/tools/x86/tracepp
 export OCCROOT = $(dir $(lastword $(MAKEFILE_LIST)))../../
 
 ifndef SIMICS_ENVIRONMENT
@@ -54,16 +52,24 @@ endif
 
 ifndef GCC-TOOL-PREFIX
 # >> gitprep
-# The new compiler for GNU builds
+
+#CROSS_PREFIX may be set by
+#op-build/openpower/package/occ/occ.mk
+
+ifdef CROSS_PREFIX
+GCC-TOOL-PREFIX = $(CROSS_PREFIX)
+else
 GCC-TOOL-PREFIX = powerpc64-unknown-linux-gnu-
+endif
+
 endif
 
 ifndef HOST-PREFIX
 HOST-PREFIX = x86_64-pc-linux-gnu-
 endif
 
-JAIL    = $(HOST-PREFIX)jail
-CC_ASM  = $(GCC-TOOL-PREFIX)gcc          # Assembly still doesn't use tracepp
+JAIL    =  $(HOST-PREFIX)jail
+CC_ASM  = $(GCC-TOOL-PREFIX)gcc
 CC      = $(TRACEPP) $(GCC-TOOL-PREFIX)gcc
 AS      = $(JAIL) /usr/bin/as
 AR      = $(JAIL) /usr/bin/ar

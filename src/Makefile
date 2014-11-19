@@ -7,13 +7,16 @@ endif
 #*******************************************************************************
 # mk variable Declaration
 #*******************************************************************************
-SUBDIRS = occBootLoader occ occApplet
+SUBDIRS = tracepp occBootLoader occ occApplet
 COMBINE_IMAGE_SUBDIRS = occBootLoader occ occApplet
 CLEAN_SUBDIRS = occBootLoader occ occApplet ssx/pgp lib
 CLEANCMD = $(MAKE) clean -C $(dir); 
 ALLCMD = $(MAKE) -j6 -C $(dir);
 COMBINEIMAGE = $(MAKE) combineImage -C $(dir);
 IMAGEFILE = image.bin
+
+export TRACEPP = $(ROOTPATH)/tracepp/tracepp
+TRACEHASH = $(ROOTPATH)/tracepp/tracehash.pl
 
 #*******************************************************************************
 # Compilation 
@@ -41,13 +44,12 @@ combineImage:
 	cp ${IMAGEFILE} $(dir $(IMAGEFILE))/$@
 
 #*******************************************************************************
-# Create trexStringFile
+# Create occStringFile
 #*******************************************************************************
-# FIXME tracehash tool location unknown, references to sandboxes
+# FIXME depending on where .o files end up
 .PHONY : tracehash
 tracehash:
-	mkdir -p ${sb}/../obj
-	tracehash.pl -c -d ${SANDBOXBASE}/obj/ppc/occc/405/ -s ${SANDBOXBASE}/obj/trexStringFile
+	$(TRACEHASH) -c -d . -s $(ROOTPATH)/occStringFile
 
 #*******************************************************************************
 # Create occcSrcParse.C
