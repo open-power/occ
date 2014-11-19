@@ -762,7 +762,7 @@ void
 async_request_printk(AsyncRequest *request)
 {
     printk("----------------------------------------\n");
-    printk("-- AsyncRequest @ %p\n", request);
+    printk("-- AsyncRequest @@ %p\n", request);
     printk("--   deque            = %p\n", &(request->deque));
     printk("--   start_time       = 0x%016llx\n", request->start_time);
     printk("--   end_time         = 0x%016llx\n", request->end_time);
@@ -949,7 +949,7 @@ async_initialize()
 
     async_pore_initialize(&G_pore_gpe0_queue, ASYNC_ENGINE_PORE_GPE0);
     async_pore_initialize(&G_pore_gpe1_queue, ASYNC_ENGINE_PORE_GPE1);
-    async_pore_initialize(&G_pore_slw_queue, ASYNC_ENGINE_PORE_SLW);
+
 
 #if CONFIGURE_PTS
     // PTS
