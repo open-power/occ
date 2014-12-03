@@ -1,22 +1,25 @@
-/******************************************************************************
-// @file centaur_data_service_codes.h
-// @brief Error codes for cent component.
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _centaur_data_service_codes_h centaur_data_service_codes.h
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @th00c             thallet   03/14/2012  Created 
- *   @th031  878471     thallet   04/15/2013  Centaur Throttles
- *   @gm015  907601     milesg    12/06/2013  L4 Bank Delete circumvention and centaur i2c recovery
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/cent/centaur_data_service_codes.h $                   */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* COPYRIGHT International Business Machines Corp. 2011,2014              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
 #ifndef _CENTAUR_DATA_SERVICE_CODES_H_
 #define _CENTAUR_DATA_SERVICE_CODES_H_
