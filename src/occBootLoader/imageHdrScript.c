@@ -1,29 +1,25 @@
-/******************************************************************************
-// @file imageHdrScript.c
-// @brief Helper script to fix image header fields and other image related
-//        support
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section imageHdrScript.c IMAGEHDRSCRIPT.C
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @pb000             pbavari   06/28/2011  Created
- *   @pb001             pbavari   07/21/2011  Changed the way image is being
- *                                            combined to support applet images
- *   @pb006             pbavari   09/16/2011  Display object size support
- *   @pb00A             pbavari   11/17/2011  Added check for 128 bytes
- *                                            alignment for image size.
- *   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
- *   @pb010  D856284    pbavari   10/05/2012  Fix displaySize option
- *   @ai004             ailutsar  11/06/2012  Improvement for imageHdrScript help text
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occBootLoader/imageHdrScript.c $                          */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* COPYRIGHT International Business Machines Corp. 2011,2014              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
 //*************************************************************************
 // Includes
@@ -49,34 +45,28 @@
 #define CHECKSUM_FIELD_OFFSET   offsetof(imageHdr_t, checksum)
 #define CHECKSUM_FIELD_LEN      4
 #define IMAGE_SZ_FIELD_OFFSET   offsetof(imageHdr_t, image_size)
-#define IMAGE_SZ_FIELD_LEN       4
+#define IMAGE_SZ_FIELD_LEN      4
 #define FAILURE_RC              -1
-#define SUCCESS_RC               0
-#define EP_BRANCH_INST_LEN       4
+#define SUCCESS_RC              0
+#define EP_BRANCH_INST_LEN      4
 #define EP_BRANCH_INST_OFFSET   offsetof(imageHdr_t, ep_branch_inst)
 #define ADDRESS_OFFSET          offsetof(imageHdr_t, ep_addr)
-#define ADDRESS_LEN              4
+#define ADDRESS_LEN             4
 #define VERSION_OFFSET          offsetof(imageHdr_t, version)
-#define VERSION_LEN              4
-#define ID_STR_OFFSET            offsetof(imageHdr_t, image_id_str)
+#define VERSION_LEN             4
+#define ID_STR_OFFSET           offsetof(imageHdr_t, image_id_str)
 #define ID_STR_LEN              IMAGE_ID_STR_SZ
 #define ADDRESS_MASK            0x03FFFFFC
 #define BRANCH_MASK             0x48000002
 #define DUMP_HDR_STR            "dumpHdr"
 #define COMBINE_IMAGE_STR       "combineImage"
-
-// >> gitprep
 #define FILE_TO_WRITE_ODE       "/obj/ppc/occc/405/image.bin"
 #define FILE_TO_WRITE_GNU       "image.bin"
-// << gitprep
-
-//@pb006a - start
 #define DISPLAY_SIZE            "displaySize"
 #define READELF_CMD             "readelf -S "
 #define PIPE_CMD                " > elfdata "
 #define ELF_FILE                "elfdata"
 #define ELF_FILE_REMOVE_CMD     "rm elfdata"
-//@pb006a - end
 
 //*************************************************************************
 // Structures
@@ -94,15 +84,12 @@
 // Functions
 //*************************************************************************
 
-//@pb006a
 // Function Specification
 //
 // Name: displaySize
 //
 // Description: Display size of the object file
 //
-// Flow:            FN=None
-// 
 // End Function Specification
 int displaySize(char * i_file)
 {
@@ -184,7 +171,6 @@ int displaySize(char * i_file)
                 {
                     break;
                 }
-                //@pb010a - start
                 l_str = NULL;
                 // We need to parse 2 different options:
                 // 1) [ X] and 2) [XX] Where X is number.
@@ -209,7 +195,6 @@ int displaySize(char * i_file)
                            l_addr,(int)l_size,l_size);
                     l_totalSz += l_size;
                 }
-                //@pb010a - end
             }
         } // end while loop
         printf("===========================================================\n");
@@ -244,10 +229,8 @@ int displaySize(char * i_file)
 //
 // Name: combineImage
 //
-// Description: Append input image to $sb/src/image.bin
+// Description: Append input image to image.bin
 //
-// Flow:            FN=None
-// 
 // End Function Specification
 int combineImage(char * i_file1)
 {
@@ -256,9 +239,7 @@ int combineImage(char * i_file1)
     FILE * l_file = NULL;
     int l_rc = SUCCESS_RC;
     unsigned long int l_size = 0;
-    // >> gitprep
     bool l_odeBuild = TRUE;
-    // << gitprep
 
     do
     {
@@ -266,13 +247,10 @@ int combineImage(char * i_file1)
         if( l_sbPath != NULL)
         {
             l_size = strlen(l_sbPath);
-            // >> gitprep
             l_size += strlen(FILE_TO_WRITE_ODE);
-            // << gitprep
         }
         else
         {
-            // >> gitprep
             l_sbPath = getenv("OCCROOT");
             if(l_sbPath != NULL)
             {
@@ -286,12 +264,10 @@ int combineImage(char * i_file1)
                 l_rc = FAILURE_RC;
                 break;
             }
-            // << gitprep
         }
         char l_fileToWrite[l_size+1];
         strncpy(l_fileToWrite,l_sbPath,strlen(l_sbPath));
-        
-        // >> gitprep
+
         if ( TRUE == l_odeBuild )
         {
             strncpy(&l_fileToWrite[strlen(l_sbPath)],FILE_TO_WRITE_ODE,strlen(FILE_TO_WRITE_ODE));
@@ -300,11 +276,8 @@ int combineImage(char * i_file1)
         {
             strncpy(&l_fileToWrite[strlen(l_sbPath)],FILE_TO_WRITE_GNU,strlen(FILE_TO_WRITE_GNU));
         }
-        // << gitprep
         l_fileToWrite[l_size] = '\0';
-        // >> gitprep
         printf("l_fileToWrite: %s\t\tl_sbPath: %s\n", l_fileToWrite, l_sbPath);
-        // << gitprep
         // Open the file1
         l_file1 = fopen(i_file1, "r");
 
@@ -405,8 +378,6 @@ int combineImage(char * i_file1)
 //
 // Description: Dump image header
 //
-// Flow:            FN=None
-// 
 // End Function Specification
 int dumpHdr(char * i_fileStr)
 {
@@ -516,8 +487,6 @@ int dumpHdr(char * i_fileStr)
 //
 // Description: calculate image checksum
 //
-// Flow:            FN=None
-// 
 // End Function Specification
 unsigned long int calImageChecksum(FILE * i_filePtr)
 {
@@ -542,9 +511,7 @@ unsigned long int calImageChecksum(FILE * i_filePtr)
         l_val = fgetc(i_filePtr);
     }
 
-    // >> gitprep
     fprintf(stdout,"Checksum: 0x%08X\t\tSize: 0x%08X\n", l_checksum, l_counter);
-    // << gitprep
     return l_checksum;
 }
 
@@ -555,8 +522,6 @@ unsigned long int calImageChecksum(FILE * i_filePtr)
 //
 // Description: Write given data to file at given offset
 //
-// Flow:            FN=None
-// 
 // End Function Specification
 int write(FILE * i_filePtr,
           const void * i_dataPtr,
@@ -595,17 +560,12 @@ int write(FILE * i_filePtr,
 //
 // Description: script usage
 //
-// Flow:            FN=None
-// 
 // End Function Specification
 void printHelp()
 {
-    // @ai004M
     printf("Script Usage: imageHdrScript [FILE] [OPTIONS]\n\n");
-    
     printf("This OCC Image Header Script is used for handling different image header\n");
     printf("fields and combining different OCC images into single image.\n");
-    // >> gitprep
     if ( NULL != getenv("SANDBOXBASE") )
     {
         printf("The path to target image is $SANDBOXBASE%s\n\n", FILE_TO_WRITE_ODE);
@@ -614,13 +574,12 @@ void printHelp()
     {
         printf("The path to target image is $OCCROOT%s\n\n", FILE_TO_WRITE_GNU);
     }
-    // << gitprep
     printf("Option for ELF executable file (file type: *.out):\n");
     printf("    displaySize     check section sizes in input file\n");
     printf("Options for binary image file (file type: *.bin):\n");
     printf("    combineImage    append input image to the target image\n");
     printf("    dumpHdr         dump values of each header field in input image\n\n");
-    
+
     printf("If the option string is not equal to \"combineImage\", \"displaySize\", or\n");
     printf("\"dumpHdr\", the script will use that string as image version, and start to\n");
     printf("check/update image header fields.\n");
@@ -636,8 +595,6 @@ void printHelp()
 //
 // Description: main for the script
 //
-// Flow:            FN=None
-// 
 // End Function Specification
 int main(int argc, char* argv[])
 {
@@ -679,7 +636,7 @@ int main(int argc, char* argv[])
             }
             break;
         }
-        //@pb006a - display size
+
         if( (argc > 2) && (strcmp(argv[2],DISPLAY_SIZE)== 0))
         {
             l_rc = displaySize(argv[1]);
@@ -692,7 +649,7 @@ int main(int argc, char* argv[])
             break;
         }
 
-        // At this point we know there is atleast 1 argument to the program
+        // At this point we know there is at least 1 argument to the program
 
         // Open the file
         l_filePtr = fopen(argv[1], "r+");

@@ -1,48 +1,48 @@
-#  @file Makefile
+# IBM_PROLOG_BEGIN_TAG
+# This is an automatically generated prolog.
 #
-#  @brief bootloader Makefile
+# $Source: src/occBootLoader/Makefile$
 #
+# OpenPOWER OnChipController Project
+#
+# Contributors Listed Below - COPYRIGHT 2011,2014
+# [+] Google Inc.
+# [+] International Business Machines Corp.
+#
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# permissions and limitations under the License.
+#
+# IBM_PROLOG_END_TAG
 
-#  @page ChangeLogs Change Logs
-#  @section Makefile
-#  @verbatim
-#
-#
-# Change Log ******************************************************************
-# Flag     Defect/Feature  User        Date         Description
-# ------   --------------  ----------  ------------ -----------
-# @pb000                   pbavari     07/01/2011   Created
-# @pb001                   pbavari     07/16/2011   Changed to combine image
-#                                                   as separate command
-# @pb006                   pbavari     09/16/2011   Display size support
-# @pb004                   pbavari     09/20/2011   Added occ/ in include path
-# @pb007                   pbavari     09/29/2011   Added ppc405 in include path
-# @rc003                   rickylie    02/03/2012   Verify & Clean Up OCC Headers & Comments
-#
-# @endverbatim
-#
-
-# >> gitprep
 ifndef ROOTPATH
 ROOTPATH = $(shell pwd)/../
 export OCCROOT = $(ROOTPATH)
 endif
-# << gitprep
 
 #*******************************************************************************
-# mk variable Declaration
+# Variables
 #*******************************************************************************
 OCC = ../occ
 BOOTLOADER = .
 SSX = ../ssx
+
 #*******************************************************************************
 # Includes
 #*******************************************************************************
 include bootfiles.mk
 include ../ssx/pgp/ssx.mk
 
-INCLUDES = -I. -I$(SSX)/ppc32 -I$(SSX)/pgp -I$(OCC)/incl -I$(OCC)/ \
-           -I$(SSX)/ppc405
+INCLUDES = -I. -I$(SSX)/ppc32 -I$(SSX)/pgp -I$(OCC)/incl -I$(OCC)/ -I$(SSX)/ppc405
 
 #*******************************************************************************
 # Flags
@@ -52,39 +52,30 @@ EXECUTABLE = bootloader
 imageHdrScript = imageHdrScript
 imageHdrScript_CC = gcc
 
-#D = -DSIMICS_MAGIC_PANIC=1 \
-     -DINITIALIZE_SIMICS_IO=1
-
 DEFS += $(D)
 
 #*******************************************************************************
-# Compilation 
+# Compilation
 #*******************************************************************************
 
 all: ${BOOTLOADER_OBJECTS} imageHdrScript
 	$(CPP) -P $(DEFS) < linkboot.cmd > linkscript
-	# >> gitprep
-	# Add missing link and objcopy flags
-	$(LD)  ${BOOTLOADER_OBJECTS} \
-		-Tlinkscript $(LDFLAGS) -zmuldefs -Map $(EXECUTABLE).map -melf32ppc --oformat=elf32-powerpc -Bstatic -o \
-		$(EXECUTABLE).out
+	$(LD)  ${BOOTLOADER_OBJECTS} -Tlinkscript $(LDFLAGS) -zmuldefs -Map $(EXECUTABLE).map -melf32ppc --oformat=elf32-powerpc -Bstatic -o $(EXECUTABLE).out
 	$(OBJCOPY) -I elf32-powerpc -O binary $(EXECUTABLE).out $(EXECUTABLE).bin
-	# << gitprep
 	$(OBJDUMP) -d $(EXECUTABLE).out > $(EXECUTABLE).dis
 	$(BOOTLOADER)/$(imageHdrScript) $(EXECUTABLE).bin t1
-	
+
 .PHONY : combineImage
 combineImage:
 	 	$(BOOTLOADER)/imageHdrScript $(EXECUTABLE).bin combineImage
 	 	$(BOOTLOADER)/imageHdrScript $(EXECUTABLE).out displaySize
 
 imageHdrScript: imageHdrScript.c
-	$(imageHdrScript_CC) $(LDFLAGS) -I$(BOOTLOADER) -I$(OCC)/incl -I$(OCC)/ \
-	     imageHdrScript.c -o $@
-	
+	$(imageHdrScript_CC) $(LDFLAGS) -I$(BOOTLOADER) -I$(OCC)/incl -I$(OCC)/ imageHdrScript.c -o $@
+
 #*******************************************************************************
 # Clean
 #*******************************************************************************
-clean: 
+clean:
 	rm -f *.o *.d *.out *.bin *.srec *.dis *.map linkscript imageHdrScript
 	rm -rf $(EXECUTABLE) $(IMAGE_FILE)
