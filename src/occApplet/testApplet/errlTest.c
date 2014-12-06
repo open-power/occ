@@ -1,27 +1,25 @@
-/******************************************************************************
-// @file errlTest.c
-// @brief OCC errl component test applet
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section errlTest.c ERRLTEST.c
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @at002             alvinwan  02/10/2012  Created
- *   @nh001             neilhsu   05/23/2012  Add missing error log tags 
- *   @at012  868019     alvinwan  01/25/2014  TRAC_get_buffer_partial() can result in TLB Miss Exception
- *   @jh001  881996     joshych   05/07/2013  Support SRAM error log format
- *   @jh003  890574     joshych   15/07/2013  Fix errlTest Applet
- *   @rt001  901927     tapiar    10/02/2013  Update error log to use unique module id
- *   @fk006  914801     fmkassem  01/05/2013  Remove wrong reference to a reasoncode
- *   @sb100  916174     sbroyles  02/18/2014  Remove rand.h include for ssx release release20140214
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occApplet/testApplet/errlTest.c $                         */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* COPYRIGHT International Business Machines Corp. 2011,2014              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
 #define ERRL_DEBUG
 /*****************************************************************************/
@@ -32,7 +30,6 @@
 #include "ssx_io.h"         // For ERRL_DBGs
 #include <errl.h>
 #include <appletId.h>       // For applet ID
-// #include <rand.h> @sb100
 #include <trac.h>           // For traces
 #include <occ_service_codes.h> // Reason code
 #include <cmdh_fsp.h>       // Needed for rc codes.
@@ -60,7 +57,7 @@
 #define ERRLTESTMAIN_ID  "errl Test\0"
 #define TRAC_PATTERN 0x55
 #define MAX_BUFFER_SIZE MAX_ERRL_CALL_HOME_SZ
-#define TEST_MODULE_ID 0x1616                           // @nh001a
+#define TEST_MODULE_ID 0x1616
 
 // sensor test module ID enumeration
 typedef enum
@@ -82,7 +79,7 @@ typedef enum
 {
     SUCCESS_RC = 0x00000000,
 } errlTestRc;
-        
+
 //*************************************************************************
 // Structures
 //*************************************************************************
@@ -92,6 +89,7 @@ typedef enum
 //*************************************************************************
 // TRACE: Trace buffers initialized
 uint8_t G_data[ MAX_BUFFER_SIZE];
+
 //*************************************************************************
 // Function Prototypes
 //*************************************************************************
@@ -117,8 +115,6 @@ void ppdumpslot(void);
 // Name: sensorTestMain
 //
 // Description: Entry point function
-//
-// Flow:              FN=None
 //
 // End Function Specification
 errlHndl_t errlTestMain(void * i_arg)
@@ -205,15 +201,6 @@ errlHndl_t errlTestMain(void * i_arg)
             break;
         }
 
-        // @jh003c
-        // comment out the test case since we no longer add the alignment in addUsrDtlsToErrl
-        //l_rc = errlTestWordAlign(); 
-        //l_modId = TEST_ERRL_TEST_WORD_ALIGN ;
-        //if( l_rc != ERRL_RC_SUCCESS)
-        //{
-        //    TRAC_INFO("Failure on word alignment test");
-        //    break;
-        //}
     } while (0);
 
     if( l_rc != ERRL_RC_SUCCESS)
@@ -231,7 +218,7 @@ errlHndl_t errlTestMain(void * i_arg)
          * @devdesc        Failure executing test applet
          */
         l_err = createErrl(TEST_APLT_MODID_ERRLTEST,
-                           INTERNAL_FAILURE,        // @nh001c
+                           INTERNAL_FAILURE,
                            OCC_NO_EXTENDED_RC,
                            ERRL_SEV_INFORMATIONAL,
                            NULL,
@@ -258,8 +245,6 @@ errlHndl_t errlTestMain(void * i_arg)
 //
 // Description: errlTestErrorHandling
 //
-// Flow:              FN=None
-//
 // End Function Specification
 uint32_t errlTestErrorHandling()
 {
@@ -275,13 +260,13 @@ uint32_t errlTestErrorHandling()
         /****************************************************/
         // Test createErrl  with incorrect parameter
         // Set ERRL_SEVERITY to 0x04, out of range so log won't be created
-        l_errlHnd = createErrl(TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, 0x04, NULL, 0, 0x01, 0x02);        // @nh001c
+        l_errlHnd = createErrl(TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, 0x04, NULL, 0, 0x01, 0x02);
         CHECK_CONDITION( l_errlHnd == INVALID_ERR_HNDL, l_rc);
 
          /****************************************************/
         // Test addTraceToErrl  with incorrect parameter
         // Create a log
-        l_errlHnd = createErrl(TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, ERRL_SEV_PREDICTIVE, NULL, 0, 0x01, 0x02);        // @nh001c
+        l_errlHnd = createErrl(TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, ERRL_SEV_PREDICTIVE, NULL, 0, 0x01, 0x02);
         CHECK_CONDITION( l_errlHnd != INVALID_ERR_HNDL, l_rc);
 
         // i_trace = NULL, so entry size doesn't change
@@ -316,17 +301,17 @@ uint32_t errlTestErrorHandling()
         // io_err = INVALID_ERR_HNDL
         // We are making sure that this function
         // handles a INVALID_ERR_HNDL being passed, and that we can't verify if
-        // an error occured by checking anything. (It will just cause
+        // an error occurred by checking anything. (It will just cause
         // a TLB exception)
         l_errlHnd = INVALID_ERR_HNDL;
-        addTraceToErrl(g_trac_inf, 32, l_errlHnd); // @at012c
+        addTraceToErrl(g_trac_inf, 32, l_errlHnd);
 
         /****************************************************/
-        // Test commitErrl  with incorrect parameter
+        // Test commitErrl with incorrect parameter
         // io_err = NULL
         // We are making sure that this function
         // handles a NULL being passed, and that we can't verify if
-        // an error occured by checking anything. (It will just cause
+        // an error occurred by checking anything. (It will just cause
         // a TLB exception)
         commitErrl( NULL);
 
@@ -336,11 +321,11 @@ uint32_t errlTestErrorHandling()
         CHECK_CONDITION( l_errlHnd == NULL, l_rc);
 
         /****************************************************/
-        // Test deleteErrl  with incorrect parameter
+        // Test deleteErrl with incorrect parameter
         // io_err = NULL
         // We are making sure that this function
         // handles a NULL being passed, and that we can't verify if
-        // an error occured by checking anything. (It will just cause
+        // an error occurred by checking anything. (It will just cause
         // a TLB exception)
         deleteErrl( NULL);
 
@@ -350,38 +335,38 @@ uint32_t errlTestErrorHandling()
         CHECK_CONDITION( l_errlHnd == NULL, l_rc);
 
         /****************************************************/
-        // Test addCalloutToErrl  with incorrect parameter
+        // Test addCalloutToErrl with incorrect parameter
         // Set io_err to NULL
         // We are making sure that this function
         // handles a NULL being passed, and that we can't verify if
-        // an error occured by checking anything. (It will just cause
+        // an error occurred by checking anything. (It will just cause
         // a TLB exception)
-        addCalloutToErrl(NULL, ERRL_CALLOUT_TYPE_HUID, 0, ERRL_CALLOUT_PRIORITY_LOW); // @jh001c
+        addCalloutToErrl(NULL, ERRL_CALLOUT_TYPE_HUID, 0, ERRL_CALLOUT_PRIORITY_LOW);
 
         // Set io_err to INVALID_ERR_HNDL
         // We are making sure that this function
         // handles a INVALID_ERR_HNDL being passed, and that we can't verify if
-        // an error occured by checking anything. (It will just cause
+        // an error occurred by checking anything. (It will just cause
         // a TLB exception)
-        addCalloutToErrl(INVALID_ERR_HNDL, ERRL_CALLOUT_TYPE_HUID, 0, ERRL_CALLOUT_PRIORITY_LOW); // @jh001c
+        addCalloutToErrl(INVALID_ERR_HNDL, ERRL_CALLOUT_TYPE_HUID, 0, ERRL_CALLOUT_PRIORITY_LOW);
 
         /****************************************************/
         // Test addUsrDtlsToErrl with incorrect parameter
         // Create a log
-        l_errlHnd = createErrl(TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, ERRL_SEV_PREDICTIVE, NULL, 0, 0x01, 0x02);        // @nh001c
+        l_errlHnd = createErrl(TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, ERRL_SEV_PREDICTIVE, NULL, 0, 0x01, 0x02);
         CHECK_CONDITION( l_errlHnd != INVALID_ERR_HNDL, l_rc);
 
         // io_err = NULL
         // We are making sure that this function
         // handles a NULL being passed, and that we can't verify if
-        // an error occured by checking anything. (It will just cause
+        // an error occurred by checking anything. (It will just cause
         // a TLB exception)
         addUsrDtlsToErrl(NULL, l_dataPtr, 10, ERRL_USR_DTL_STRUCT_VERSION_1, ERRL_USR_DTL_TRACE_DATA);
 
         // io_err = INVALID_ERR_HNDL
         // We are making sure that this function
         // handles a INVALID_ERR_HNDL being passed, and that we can't verify if
-        // an error occured by checking anything. (It will just cause
+        // an error occurred by checking anything. (It will just cause
         // a TLB exception)
         addUsrDtlsToErrl(INVALID_ERR_HNDL, l_dataPtr, 10, ERRL_USR_DTL_STRUCT_VERSION_1, ERRL_USR_DTL_TRACE_DATA);
 
@@ -413,14 +398,14 @@ uint32_t errlTestErrorHandling()
         // Set io_err to NULL.
         // We are making sure that this function
         // handles a NULL being passed, and that we can't verify if
-        // an error occured by checking anything. (It will just cause
+        // an error occurred by checking anything. (It will just cause
         // a TLB exception)
         setErrlSevToInfo(NULL);
 
         // Set io_err to INVALID_ERR_HNDL
         // We are making sure that this function
         // handles a INVALID_ERR_HNDL being passed, and that we can't verify if
-        // an error occured by checking anything. (It will just cause
+        // an error occurred by checking anything. (It will just cause
         // a TLB exception)
         setErrlSevToInfo(INVALID_ERR_HNDL);
     }while(0);
@@ -434,8 +419,6 @@ uint32_t errlTestErrorHandling()
 //
 // Description: errlTestCreateCommitDeleteLog
 //
-// Flow:              FN=None
-//
 // End Function Specification
 uint32_t errlTestCreateCommitDeleteLog()
 {
@@ -447,7 +430,7 @@ uint32_t errlTestCreateCommitDeleteLog()
         /****************************************************/
         // Test create log
         errlHndl_t l_handle = NULL;
-        l_handle = createErrl( TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, ERRL_SEV_CALLHOME_DATA, g_trac_inf, 512, 0x1, 0x2);        // @nh001c @at012c
+        l_handle = createErrl( TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, ERRL_SEV_CALLHOME_DATA, g_trac_inf, 512, 0x1, 0x2);
         CHECK_CONDITION( l_handle != INVALID_ERR_HNDL, l_rc);
 
         ERRL_DBG("Slots after Creating call home log" );
@@ -485,8 +468,6 @@ uint32_t errlTestCreateCommitDeleteLog()
 //
 // Description: errlTestAddUsrDtlsToErrl
 //
-// Flow:              FN=None
-//
 // End Function Specification
 uint32_t errlTestAddUsrDtlsToErrl()
 {
@@ -502,9 +483,9 @@ uint32_t errlTestAddUsrDtlsToErrl()
         errlHndl_t l_handle2 = NULL;
         errlHndl_t l_handle3 = NULL;
 
-        l_handle = createErrl( TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, ERRL_SEV_UNRECOVERABLE, NULL, 512, 0x1, 0x2);        // @nh001c
-        l_handle2 = createErrl( TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, ERRL_SEV_CALLHOME_DATA, NULL, 512, 0x1, 0x2);        // @nh001c
-        l_handle3 = createErrl( TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, ERRL_SEV_INFORMATIONAL, NULL, 512, 0x1, 0x2);        // @nh001c
+        l_handle = createErrl( TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, ERRL_SEV_UNRECOVERABLE, NULL, 512, 0x1, 0x2);
+        l_handle2 = createErrl( TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, ERRL_SEV_CALLHOME_DATA, NULL, 512, 0x1, 0x2);
+        l_handle3 = createErrl( TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, ERRL_SEV_INFORMATIONAL, NULL, 512, 0x1, 0x2);
 
         // l_handle will set to NULL after calling the commitErrl, so we need to store it
         errlHndl_t l_handleX = l_handle;
@@ -518,7 +499,7 @@ uint32_t errlTestAddUsrDtlsToErrl()
                          (l_handle3 != INVALID_ERR_HNDL), l_rc);
 
         /****************************************************/
-        // Test sizelimit for addUsrDtlsToErrl
+        // Test size limit for addUsrDtlsToErrl
         // Add "user details" data that exceeds the max size for l_handle
         l_entrySizeBefore = l_handle->iv_userDetails.iv_entrySize;
         memset( G_data, 0xCC, sizeof( G_data ) );
@@ -562,9 +543,9 @@ uint32_t errlTestAddUsrDtlsToErrl()
         ppdumpslot();
 
         /****************************************************/
-        // Test sizelimit for addUsrDtlsToErrl with continuous calls
+        // Test size limit for addUsrDtlsToErrl with continuous calls
         // Create log with 512 bytes trace
-        l_handle = createErrl( TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, ERRL_SEV_PREDICTIVE, g_trac_inf, 512, 0x1, 0x2);        // @nh001c @at012c
+        l_handle = createErrl( TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, ERRL_SEV_PREDICTIVE, g_trac_inf, 512, 0x1, 0x2);
         CHECK_CONDITION( l_handle != INVALID_ERR_HNDL, l_rc);
 
         // l_handle will set to NULL after calling the commitErrl, so we need to store it
@@ -617,8 +598,6 @@ uint32_t errlTestAddUsrDtlsToErrl()
 //
 // Description: errlTestAddTraceToErrl
 //
-// Flow:              FN=None
-//
 // End Function Specification
 uint32_t errlTestAddTraceToErrl()
 {
@@ -631,7 +610,7 @@ uint32_t errlTestAddTraceToErrl()
     {
         // Create one err log
         errlHndl_t l_handle = NULL;
-        l_handle = createErrl( TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, ERRL_SEV_PREDICTIVE, NULL, 512, 0x1, 0x2);        // @nh001c
+        l_handle = createErrl( TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, ERRL_SEV_PREDICTIVE, NULL, 512, 0x1, 0x2);
         CHECK_CONDITION( l_handle != INVALID_ERR_HNDL, l_rc);
 
         // l_handle will set to NULL after calling the commitErrl, so we need to store it
@@ -640,12 +619,12 @@ uint32_t errlTestAddTraceToErrl()
         ppdumpslot();
 
         /****************************************************/
-        // Test sizelimit for addTraceToErrl
+        // Test size limit for addTraceToErrl
         // Add "trace" data that exceeds the max size
         l_entrySizeBefore = l_handle->iv_userDetails.iv_entrySize;
-        addTraceToErrl(g_trac_inf, MAX_BUFFER_SIZE, l_handle); // @at012c
+        addTraceToErrl(g_trac_inf, MAX_BUFFER_SIZE, l_handle);
         l_entrySizeAfter = l_handle->iv_userDetails.iv_entrySize;
-        CHECK_CONDITION( l_entrySizeAfter <= MAX_ERRL_ENTRY_SZ, l_rc); // @at012c
+        CHECK_CONDITION( l_entrySizeAfter <= MAX_ERRL_ENTRY_SZ, l_rc);
 
         dumpLog( l_handle, l_handle->iv_userDetails.iv_entrySize );
         commitErrl( &l_handle );
@@ -657,9 +636,9 @@ uint32_t errlTestAddTraceToErrl()
         ppdumpslot();
 
         /****************************************************/
-        // Test sizelimit for addTraceToErrl with continuous calls
+        // Test size limit for addTraceToErrl with continuous calls
         // Create log with 512 bytes trace
-        l_handle = createErrl( TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, ERRL_SEV_PREDICTIVE, g_trac_inf, 512, 0x1, 0x2);        // @nh001c @at012c
+        l_handle = createErrl( TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, ERRL_SEV_PREDICTIVE, g_trac_inf, 512, 0x1, 0x2);
         CHECK_CONDITION( l_handle != INVALID_ERR_HNDL, l_rc);
 
         // l_handle will set to NULL after calling the commitErrl, so we need to store it
@@ -673,7 +652,7 @@ uint32_t errlTestAddTraceToErrl()
         ERRL_DBG("Slots after create + 256 bytes" );
         ppdumpslot();
         // (header + 256) is the size that add to entry
-        CHECK_CONDITION( l_entrySizeAfter <= (l_entrySizeBefore+sizeof(ErrlUserDetailsEntry_t)+256), l_rc); // @at012c
+        CHECK_CONDITION( l_entrySizeAfter <= (l_entrySizeBefore+sizeof(ErrlUserDetailsEntry_t)+256), l_rc);
 
         // Add 512 bytes of trace (512+256+512)
         l_entrySizeBefore = l_handle->iv_userDetails.iv_entrySize;
@@ -681,7 +660,7 @@ uint32_t errlTestAddTraceToErrl()
         l_entrySizeAfter = l_handle->iv_userDetails.iv_entrySize;
         ERRL_DBG("Slots after create + 256 + 512 bytes");
         ppdumpslot();
-        CHECK_CONDITION( l_entrySizeAfter <= (l_entrySizeBefore+sizeof(ErrlUserDetailsEntry_t)+512), l_rc); // @at012c
+        CHECK_CONDITION( l_entrySizeAfter <= (l_entrySizeBefore+sizeof(ErrlUserDetailsEntry_t)+512), l_rc);
 
         // Add 1024 bytes of trace (512+256+512+1024), the entry size is more than 2048 now
         l_entrySizeBefore = l_handle->iv_userDetails.iv_entrySize;
@@ -689,7 +668,7 @@ uint32_t errlTestAddTraceToErrl()
         l_entrySizeAfter = l_handle->iv_userDetails.iv_entrySize;
         ERRL_DBG("Slots after create + 256 + 512 bytes");
         ppdumpslot();
-        CHECK_CONDITION( l_entrySizeAfter <= MAX_ERRL_ENTRY_SZ, l_rc); // @at012c
+        CHECK_CONDITION( l_entrySizeAfter <= MAX_ERRL_ENTRY_SZ, l_rc);
 
         commitErrl( &l_handle );
         deleteErrl(&l_handleX);
@@ -708,8 +687,6 @@ uint32_t errlTestAddTraceToErrl()
 //
 // Description: errlTestTime
 //
-// Flow:              FN=None
-//
 // End Function Specification
 uint32_t errlTestTime()
 {
@@ -727,7 +704,7 @@ uint32_t errlTestTime()
         // Check timeStamp
         // Create one log
         l_start = ssx_timebase_get();
-        l_handle = createErrl( 0x1716, 0x08, OCC_NO_EXTENDED_RC, ERRL_SEV_CALLHOME_DATA, g_trac_inf, 128, 0x1, 0x2);        // @nh001c @at012c
+        l_handle = createErrl( 0x1716, 0x08, OCC_NO_EXTENDED_RC, ERRL_SEV_CALLHOME_DATA, g_trac_inf, 128, 0x1, 0x2);
         CHECK_CONDITION( l_handle != INVALID_ERR_HNDL, l_rc);
 
 
@@ -761,11 +738,11 @@ uint32_t errlTestCreate2InfoCallhomeLog()
         // Create first Info log
         errlHndl_t l_handle = NULL;
         errlHndl_t l_handle2= NULL;
-        l_handle = createErrl( TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, ERRL_SEV_INFORMATIONAL,g_trac_inf, 32, 0x1, 0x2);        // @nh001c @at012c
+        l_handle = createErrl( TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, ERRL_SEV_INFORMATIONAL,g_trac_inf, 32, 0x1, 0x2);
         CHECK_CONDITION( l_handle != INVALID_ERR_HNDL, l_rc);
 
         // Create second Info log and it should fail
-        l_handle2 = createErrl( 0x2727, 0x19, OCC_NO_EXTENDED_RC, ERRL_SEV_INFORMATIONAL, g_trac_inf, 32, 0x2, 0x3);        // @nh001c @at012c
+        l_handle2 = createErrl( 0x2727, 0x19, OCC_NO_EXTENDED_RC, ERRL_SEV_INFORMATIONAL, g_trac_inf, 32, 0x2, 0x3);
         CHECK_CONDITION( l_handle2 == INVALID_ERR_HNDL, l_rc);
 
         deleteErrl(&l_handle);
@@ -775,11 +752,11 @@ uint32_t errlTestCreate2InfoCallhomeLog()
         // Create first Callhome log
         l_handle = NULL;
         l_handle2= NULL;
-        l_handle = createErrl( TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, ERRL_SEV_CALLHOME_DATA,g_trac_inf, 32, 0x1, 0x2);        // @nh001c @at012c
+        l_handle = createErrl( TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, ERRL_SEV_CALLHOME_DATA,g_trac_inf, 32, 0x1, 0x2);
         CHECK_CONDITION( l_handle != INVALID_ERR_HNDL, l_rc);
 
         // Create second Callhome log and it should fail
-        l_handle2 = createErrl( 0x2727, 0x19, OCC_NO_EXTENDED_RC, ERRL_SEV_CALLHOME_DATA, g_trac_inf, 32, 0x2, 0x3);        // @nh001c @at012c
+        l_handle2 = createErrl( 0x2727, 0x19, OCC_NO_EXTENDED_RC, ERRL_SEV_CALLHOME_DATA, g_trac_inf, 32, 0x2, 0x3);
         CHECK_CONDITION( l_handle2 == INVALID_ERR_HNDL, l_rc);
 
         deleteErrl(&l_handle);
@@ -795,8 +772,6 @@ uint32_t errlTestCreate2InfoCallhomeLog()
 // Name: errlTestCreateMaxLogs
 //
 // Description: errlTestCreateMaxLogs
-//
-// Flow:              FN=None
 //
 // End Function Specification
 uint32_t errlTestCreateMaxLogs()
@@ -820,7 +795,7 @@ uint32_t errlTestCreateMaxLogs()
 
             uint64_t l_time = ssx_timebase_get();
             l_sev = l_time%2 ? ERRL_SEV_PREDICTIVE : ERRL_SEV_UNRECOVERABLE;
-            l_handle = createErrl( TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, l_sev, g_trac_inf, 512, 0x1, l_index);        // @nh001c @at012c
+            l_handle = createErrl( TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, l_sev, g_trac_inf, 512, 0x1, l_index);
             CHECK_CONDITION( (l_handle != INVALID_ERR_HNDL) &&
                              (l_handle != NULL), l_rc);
 
@@ -836,10 +811,10 @@ uint32_t errlTestCreateMaxLogs()
         }
         // check if something wrong in for loop
         if(l_rc != 0)
-        	break;
+            break;
 
         // Create one more and it should fail
-        l_handle = createErrl( TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, l_sev, g_trac_inf, 512, 0x1, l_index);        // @nh001c @at012c
+        l_handle = createErrl( TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, l_sev, g_trac_inf, 512, 0x1, l_index);
         CHECK_CONDITION( l_handle == INVALID_ERR_HNDL, l_rc);
 
         // delete errl
@@ -853,7 +828,7 @@ uint32_t errlTestCreateMaxLogs()
         // Check log id overflow
          for(l_index = 0; l_index < 256; l_index++)
         {
-            l_handle = createErrl( TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, l_sev, g_trac_inf, 512, 0x1, l_index);        // @nh001c @at012c
+            l_handle = createErrl( TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, l_sev, g_trac_inf, 512, 0x1, l_index);
             CHECK_CONDITION( (l_handle != INVALID_ERR_HNDL) &&
                              (l_handle != NULL), l_rc);
 
@@ -872,10 +847,7 @@ uint32_t errlTestCreateMaxLogs()
 //
 // Description: errlTestCallouts
 //
-// Flow:              FN=None
-//
 // End Function Specification
-// @jh001c
 uint32_t errlTestCallouts()
 {
     uint32_t l_rc = 0;
@@ -888,7 +860,7 @@ uint32_t errlTestCallouts()
 
         /****************************************************/
         // Check max callouts
-        l_handle = createErrl( TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, ERRL_SEV_PREDICTIVE,g_trac_inf, 128, 0x1, 0x2);        // @nh001c @at012c
+        l_handle = createErrl( TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, ERRL_SEV_PREDICTIVE,g_trac_inf, 128, 0x1, 0x2);
         CHECK_CONDITION( l_handle != INVALID_ERR_HNDL, l_rc);
 
         ERRL_CALLOUT_PRIORITY l_array[8] = {
@@ -933,21 +905,21 @@ uint32_t errlTestCallouts()
         /****************************************************/
         // Check callouts after errl is committed
         // Create log
-        l_handle = createErrl( TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, ERRL_SEV_PREDICTIVE,g_trac_inf, 32, 0x1, 0x2);        // @nh001c @at012c
+        l_handle = createErrl( TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, ERRL_SEV_PREDICTIVE,g_trac_inf, 32, 0x1, 0x2);
         errlHndl_t l_log = l_handle;
         CHECK_CONDITION( l_handle != INVALID_ERR_HNDL, l_rc);
 
         // Commit log and add callout. But adding callout should fail
         commitErrl( &l_handle );
         addCalloutToErrl(l_handle,l_type[0],0,l_array[0]);
-        CHECK_CONDITION( l_log->iv_numCallouts == ERRL_MAX_CALLOUTS, l_rc); // @jh003c
+        CHECK_CONDITION( l_log->iv_numCallouts == ERRL_MAX_CALLOUTS, l_rc);
 
         deleteErrl(&l_log);
 
         /****************************************************/
         // Check addCalloutToErrl for ERRL_SEV_INFORMATIONAL log
         // Create ERRL_SEV_INFORMATIONAL log
-        l_handle = createErrl( TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, ERRL_SEV_INFORMATIONAL,g_trac_inf, 128, 0x1, 0x2);        // @nh001c @at012c
+        l_handle = createErrl( TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, ERRL_SEV_INFORMATIONAL,g_trac_inf, 128, 0x1, 0x2);
         CHECK_CONDITION( l_handle != INVALID_ERR_HNDL, l_rc);
         if(l_handle == INVALID_ERR_HNDL)
 
@@ -971,8 +943,6 @@ uint32_t errlTestCallouts()
 //
 // Description: errlTestSetErrlSevToInfo
 //
-// Flow:              FN=None
-//
 // End Function Specification
 uint32_t errlTestSetErrlSevToInfo()
 {
@@ -986,11 +956,11 @@ uint32_t errlTestSetErrlSevToInfo()
         /****************************************************/
         // Check setErrlSevToInfo
         // Create ERRL_SEV_PREDICTIVE log
-        l_handle = createErrl( TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, ERRL_SEV_PREDICTIVE,g_trac_inf, 128, 0x1, 0x2);        // @nh001c @at012c
+        l_handle = createErrl( TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, ERRL_SEV_PREDICTIVE,g_trac_inf, 128, 0x1, 0x2);
         CHECK_CONDITION( l_handle != INVALID_ERR_HNDL, l_rc);
 
         // Add callout
-        addCalloutToErrl(l_handle,ERRL_CALLOUT_TYPE_HUID,0x00,ERRL_CALLOUT_PRIORITY_LOW); // @jh001c
+        addCalloutToErrl(l_handle,ERRL_CALLOUT_TYPE_HUID,0x00,ERRL_CALLOUT_PRIORITY_LOW);
         CHECK_CONDITION( l_handle->iv_numCallouts == 1, l_rc);
 
         // Call setErrlSevToInfo. Callouts within log should be cleared and
@@ -1005,19 +975,19 @@ uint32_t errlTestSetErrlSevToInfo()
         /****************************************************/
         // Check setErrlSevToInfo after errl is committed
         // Create log
-        l_handle = createErrl( TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, ERRL_SEV_PREDICTIVE,g_trac_inf, 128, 0x1, 0x2);        // @nh001c @at012c
+        l_handle = createErrl( TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, ERRL_SEV_PREDICTIVE,g_trac_inf, 128, 0x1, 0x2);
         CHECK_CONDITION( l_handle != INVALID_ERR_HNDL, l_rc);
 
         errlHndl_t l_log = l_handle;
 
         // Add callout
-        addCalloutToErrl(l_handle,ERRL_CALLOUT_TYPE_HUID,0x00,ERRL_CALLOUT_PRIORITY_LOW); // @jh001c
+        addCalloutToErrl(l_handle,ERRL_CALLOUT_TYPE_HUID,0x00,ERRL_CALLOUT_PRIORITY_LOW);
         CHECK_CONDITION( l_handle->iv_numCallouts == 1, l_rc);
 
         // Commit log and call setErrlSevToInfo. But setErrlSevToInfo will do nothing
         commitErrl( &l_handle );
         setErrlSevToInfo(l_handle);
-        CHECK_CONDITION( (l_log->iv_numCallouts == ERRL_MAX_CALLOUTS) && // @jh003c
+        CHECK_CONDITION( (l_log->iv_numCallouts == ERRL_MAX_CALLOUTS) &&
                          (l_log->iv_severity == ERRL_SEV_PREDICTIVE), l_rc);
 
         deleteErrl(&l_log);
@@ -1034,8 +1004,6 @@ uint32_t errlTestSetErrlSevToInfo()
 //
 // Description: errlTestWordAlign
 //
-// Flow:              FN=None
-//
 // End Function Specification
 uint32_t errlTestWordAlign()
 {
@@ -1049,7 +1017,7 @@ uint32_t errlTestWordAlign()
         /****************************************************/
         // Test word align for addUsrDtlsToErrl
         // Create log
-        errlHndl_t l_handle = createErrl( TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, ERRL_SEV_PREDICTIVE, NULL, 0, 0x1, 0x2);        // @nh001c
+        errlHndl_t l_handle = createErrl( TEST_MODULE_ID, 0x08, OCC_NO_EXTENDED_RC, ERRL_SEV_PREDICTIVE, NULL, 0, 0x1, 0x2);
         CHECK_CONDITION( l_handle != INVALID_ERR_HNDL, l_rc);
 
         // l_handle will set to NULL after calling the commitErrl, so we need to store it
@@ -1075,7 +1043,7 @@ uint32_t errlTestWordAlign()
         ERRL_DBG("Slots after create + 21 bytes" );
         ppdumpslot();
         // (header + WORDALIGN(21)) is the size that add to entry
-        CHECK_CONDITION( l_entrySizeAfter <= (l_entrySizeBefore+sizeof(ErrlUserDetailsEntry_t)+24), l_rc); // @at012c
+        CHECK_CONDITION( l_entrySizeAfter <= (l_entrySizeBefore+sizeof(ErrlUserDetailsEntry_t)+24), l_rc);
 
         commitErrl( &l_handle );
         deleteErrl(&l_handleX);
@@ -1093,8 +1061,6 @@ uint32_t errlTestWordAlign()
 // Name: dumpLog
 //
 // Description: dumpLog
-//
-// Flow:              FN=None
 //
 // End Function Specification
 void dumpLog( errlHndl_t i_log, uint32_t i_len )
@@ -1167,8 +1133,6 @@ void dumpLog( errlHndl_t i_log, uint32_t i_len )
 // Name: ppdumpslot
 //
 // Description: ppdumpslot
-//
-// Flow:              FN=None
 //
 // End Function Specification
 void ppdumpslot(void)

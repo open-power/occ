@@ -1,37 +1,26 @@
-/******************************************************************************
-// @file sensorTest.c
-// @brief OCC Sensor test applet
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section sensorTest.c SENSORTEST.c
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *                      pbavari   08/17/2011  created
- *   @pb003             pbavari   08/31/2011  mini-sensor support
- *   @pb004             pbavari   09/14/2011  Changed to call sensor_init
- *                                            product applet
- *   @pb00A             pbavari   11/14/2011  Moved sensor_init from applet and
- *                                            updated with latest design change
- *   @th005             thallet   11/21/2011  #if'd out reset of sensor test so
- *                                            it would compile
- *   @dw000             dwoodham  12/12/2011  Update call to IMAGE_HEADER macro
- *   @at001             alvinwan  01/10/2012  Enable sensor test applet due to
- *                                            sensor interface design changes
- *   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
- *   @at003             alvinwan  03/19/2012  Add test case for querySensorList.
- *   @nh001             neilhsu   05/23/2012  Add missing error log tags 
- *   @ai003             ailutsar  11/06/2012  Fix OCC Test Applets so they don't crash OCC
- *   @th030             thallet   02/04/2013  Removed sensor list query b/c too big
- *   @gm002   885429    milesg    05/30/2013  change type/location to 16 bit bitmask
- *   @rt002   901927    tapiar    10/02/2013  update error log to use unique module id
- *   @fk009   942864    fmkassem  09/30/2014  BMC/HTMGT Poll command version 0x10 support.
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occApplet/testApplet/sensorTest.c $                       */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* COPYRIGHT International Business Machines Corp. 2011,2014              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
+
 #define SNSR_DEBUG
 //*************************************************************************
 // Includes
@@ -45,7 +34,7 @@
 #include <trac.h>           // For traces
 #include <appletManager.h>
 #include <sensorQueryList.h>
-#include <appletId.h>       // For applet ID @dw000a
+#include <appletId.h>       // For applet ID
 #include <aplt_service_codes.h>         // For test applet module ID
 #include <testApltId.h>     // For test applet ID
 
@@ -128,13 +117,12 @@ typedef enum
 //*************************************************************************
 // Globals
 //*************************************************************************
-// @ai003A
 // Stack size for test applet thread is only 4000 bytes,
-// put big structure here for prevent stack overflow
+// put big structure here to prevent stack overflow
 
-// @th030 -- ifdef'd out b/c the sensor list is too big to test in applet
+// ifdef'd out b/c the sensor list is too big to test in applet
 #if 0
-sensorQueryList_t G_snsrList[NUMBER_OF_SENSORS_IN_LIST];    
+sensorQueryList_t G_snsrList[NUMBER_OF_SENSORS_IN_LIST];
 #endif
 
 //*************************************************************************
@@ -156,8 +144,6 @@ uint32_t sensorTestQueryList();
 //
 // Description: Entry point function
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 errlHndl_t sensorTestMain(void * i_arg)
 {
@@ -192,7 +178,7 @@ errlHndl_t sensorTestMain(void * i_arg)
             TRAC_INFO("Failure on common test");
             break;
         }
-// @th030 - If'd out b/c the sensor list is too big for an applet
+// If'd out b/c the sensor list is too big for an applet
 #if 0
         l_rc = sensorTestQueryList();
         if( l_rc != SUCCESS_RC)
@@ -206,9 +192,9 @@ errlHndl_t sensorTestMain(void * i_arg)
 
     if( l_rc != SUCCESS_RC)
     {
-    	SNSR_DBG("**********************************************\n");
+        SNSR_DBG("**********************************************\n");
         SNSR_DBG("* Sensor Test Failed: ModId: 0x%x,l_rc: 0x%x\n",l_modId,l_rc);
-    	SNSR_DBG("**********************************************\n");
+        SNSR_DBG("**********************************************\n");
         /* @
          * @errortype
          * @moduleid       TEST_APLT_MODID_SENSORTEST
@@ -229,9 +215,9 @@ errlHndl_t sensorTestMain(void * i_arg)
     }
     else
     {
-    	SNSR_DBG("**********************************************\n");
-    	SNSR_DBG("* Sensor Test Passed\n");
-    	SNSR_DBG("**********************************************\n");
+        SNSR_DBG("**********************************************\n");
+        SNSR_DBG("* Sensor Test Passed\n");
+        SNSR_DBG("**********************************************\n");
     }
 
 
@@ -247,8 +233,6 @@ errlHndl_t sensorTestMain(void * i_arg)
 //
 // Description: SensorTestNullPointers
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 uint32_t sensorTestNullPointer()
 {
@@ -307,8 +291,6 @@ uint32_t sensorTestNullPointer()
 //
 // Description: SensorTestGetSensorByGsid
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 uint32_t sensorTestGetSensorByGsid()
 {
@@ -341,8 +323,6 @@ uint32_t sensorTestGetSensorByGsid()
 //
 // Description: printSensor
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 void printSensor(sensor_t i_snsr)
 {
@@ -387,8 +367,6 @@ void printSensor(sensor_t i_snsr)
 //
 // Description: sensorTestCommon
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 uint32_t sensorTestCommon()
 {
@@ -734,8 +712,8 @@ uint32_t sensorTestCommon()
         /****************************************************/
 
         //so far the source sensors of vector sensor are:
-            //   l_sensor2=12
-            //   l_sensor=5
+        //   l_sensor2=12
+        //   l_sensor=5
 
         // test updating vector element with status reset bit set and
         // average op
@@ -851,8 +829,6 @@ uint32_t sensorTestCommon()
 //
 // Description: querySensorList: Will call the SenosrQeryList product applet
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 errlHndl_t callQuerySensorList(const uint16_t i_startGsid,
                            const uint8_t i_present,
@@ -860,7 +836,7 @@ errlHndl_t callQuerySensorList(const uint16_t i_startGsid,
                            const uint16_t i_loc,
                            uint16_t * io_numOfSensors,
                            sensorQueryList_t * o_sensors,
-                           sensor_info_t * o_sensorInfoPtrs  // @at003A
+                           sensor_info_t * o_sensorInfoPtrs
                            )
 {
     OCC_APLT_STATUS_CODES l_status = OCC_APLT_SUCCESS;
@@ -873,13 +849,13 @@ errlHndl_t callQuerySensorList(const uint16_t i_startGsid,
             i_loc,
             io_numOfSensors,
             o_sensors,
-            o_sensorInfoPtrs  // @at003A
+            o_sensorInfoPtrs
     };
 
 
     //Call sensor query list applet
     runApplet(OCC_APLT_SNSR_QUERY,   // Applet enum Name
-    		  &l_querySensorListAppletArg,                 // Applet arguments
+              &l_querySensorListAppletArg,                 // Applet arguments
               TRUE,                 // Blocking call?
               NULL,                 // Applet finished semaphore
               &l_errl,              // Error log handle
@@ -896,17 +872,15 @@ errlHndl_t callQuerySensorList(const uint16_t i_startGsid,
 //
 // Description: printQuerySensor
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 void printQuerySensor( const uint16_t i_count,
                        sensorQueryList_t * i_sensors,
                        sensor_info_t * i_sensorInfos)
 {
     int i;
-    if(i_count!=0 &&                  // @at003M
-       ( (i_sensors!=NULL) ||         // @at003M
-         (i_sensorInfos!=NULL) ) )    // @at003M
+    if(i_count!=0 &&
+       ( (i_sensors!=NULL) ||
+         (i_sensorInfos!=NULL) ) )
     {
         // Print sensorQueryList_t
         if( i_sensors != NULL )
@@ -922,7 +896,6 @@ void printQuerySensor( const uint16_t i_count,
             SNSR_DBG("*******************************\n");
         }
 
-        // @at003A begin
         // Print sensor_info_t
         if ( i_sensorInfos != NULL )
         {
@@ -942,12 +915,11 @@ void printQuerySensor( const uint16_t i_count,
             SNSR_DBG("*******************************\n");
         }
     }
-    // @at003A end
 }
 
 
-// @th030 -- ifdef'd out b/c the sensor list is too big to test this in an applet
-#if 0  
+// ifdef'd out b/c the sensor list is too big to test this in an applet
+#if 0
 
 // Function Specification
 //
@@ -955,8 +927,6 @@ void printQuerySensor( const uint16_t i_count,
 //
 // Description: sensorTestQueryList
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 uint32_t sensorTestQueryList()
 {
@@ -967,11 +937,11 @@ uint32_t sensorTestQueryList()
     do
     {
         uint16_t l_numOfSensors = 0;
-        sensor_info_t l_sensorInfo;  // @at003M
+        sensor_info_t l_sensorInfo;
         /****************************************************/
         // Test with invalid GSID. Must return error
         l_err = callQuerySensorList(0xFFFF,1,SENSOR_TYPE_ALL,SENSOR_LOC_ALL,
-                                &l_numOfSensors,G_snsrList, NULL);  // @at003M  // @ai003M
+                                &l_numOfSensors,G_snsrList, NULL);
 
         if( NULL == l_err)
         {
@@ -979,7 +949,7 @@ uint32_t sensorTestQueryList()
             break;
         }
         else if( (l_err != INVALID_ERR_HNDL) &&
-                 (l_err->iv_reasonCode != INTERNAL_FAILURE))    // @nh001c
+                 (l_err->iv_reasonCode != INTERNAL_FAILURE))
         {
             l_rc = QUERY_LIST_FAILURE12;
             break;
@@ -991,7 +961,7 @@ uint32_t sensorTestQueryList()
         /****************************************************/
         // Test with NULL number of sensor pointer. Must return error
         l_err = callQuerySensorList(0,1,SENSOR_TYPE_ALL,SENSOR_LOC_ALL,
-                                NULL,G_snsrList, NULL);  // @at003M // @ai003M
+                                NULL,G_snsrList, NULL);
 
         if( NULL == l_err)
         {
@@ -999,7 +969,7 @@ uint32_t sensorTestQueryList()
             break;
         }
         else if( (l_err != INVALID_ERR_HNDL) &&
-                 (l_err->iv_reasonCode != INTERNAL_FAILURE))    // @nh001c
+                 (l_err->iv_reasonCode != INTERNAL_FAILURE))
         {
             l_rc = QUERY_LIST_FAILURE13;
             break;
@@ -1011,7 +981,7 @@ uint32_t sensorTestQueryList()
         /****************************************************/
         // Test with NULL sensor list pointer. Must return error
         l_err = callQuerySensorList(0,1,SENSOR_TYPE_ALL,SENSOR_LOC_ALL,
-                                &l_numOfSensors,NULL, NULL);  // @at003M
+                                &l_numOfSensors,NULL, NULL);
 
         if( NULL == l_err)
         {
@@ -1019,7 +989,7 @@ uint32_t sensorTestQueryList()
             break;
         }
         else if( (l_err != INVALID_ERR_HNDL) &&
-                 (l_err->iv_reasonCode != INTERNAL_FAILURE))    // @nh001c
+                 (l_err->iv_reasonCode != INTERNAL_FAILURE))
         {
             l_rc = QUERY_LIST_FAILURE14;
             break;
@@ -1031,7 +1001,7 @@ uint32_t sensorTestQueryList()
         /****************************************************/
         // Query 0 # of sensors. Must return 0 sensors and no error
         l_err = callQuerySensorList(0,1,SENSOR_TYPE_ALL,SENSOR_LOC_ALL,
-                                &l_numOfSensors,G_snsrList,NULL);  // @at003M   // @ai003M
+                                &l_numOfSensors,G_snsrList,NULL);
 
         if( (l_err != NULL) || (l_numOfSensors != 0))
         {
@@ -1043,7 +1013,7 @@ uint32_t sensorTestQueryList()
         // Query All sensors except last one. Must return no error
         l_numOfSensors = l_count -1; //(-1) to leave out last sensor
         l_err = callQuerySensorList(0,1,SENSOR_TYPE_ALL,SENSOR_LOC_ALL,
-                                &l_numOfSensors,G_snsrList, NULL);  // @at003M  // @ai003M
+                                &l_numOfSensors,G_snsrList, NULL);
 
 
         if( (l_err != NULL) || (l_numOfSensors > (l_count-1)))
@@ -1061,7 +1031,7 @@ uint32_t sensorTestQueryList()
         sensor_update(l_sensor, 10);
 
         l_err = callQuerySensorList(l_count-1,1,SENSOR_TYPE_ALL,
-                        SENSOR_LOC_ALL,&l_numOfSensors,G_snsrList, NULL);  // @at003M   // @ai003M
+                        SENSOR_LOC_ALL,&l_numOfSensors,G_snsrList, NULL);
 
         if( (l_err != NULL) || (l_numOfSensors != 1) ||
             (l_sensor->gsid!=l_count-1))
@@ -1075,8 +1045,8 @@ uint32_t sensorTestQueryList()
         // Query sensors that are not present Must return no error.
         l_numOfSensors = 10;
         l_err = callQuerySensorList(PROBE250US0,0,SENSOR_TYPE_ALL,
-                        SENSOR_LOC_ALL,&l_numOfSensors,G_snsrList, NULL);  // @at003M   // @ai003M
-        //printQuerySensor(l_numOfSensors,G_snsrList, NULL );   // @ai003M
+                        SENSOR_LOC_ALL,&l_numOfSensors,G_snsrList, NULL);
+        //printQuerySensor(l_numOfSensors,G_snsrList, NULL );
         if( (l_err != NULL) || (l_numOfSensors == 0))
         {
             l_rc = QUERY_LIST_FAILURE7;
@@ -1088,8 +1058,8 @@ uint32_t sensorTestQueryList()
         // does not match any. Must return no error and no sensors
         l_numOfSensors = 10;
         l_err = callQuerySensorList(PROBE250US0,1,0x0,0x0,
-                                    &l_numOfSensors,G_snsrList, NULL);  // @at003M  // @ai003M
-        printQuerySensor(l_numOfSensors,G_snsrList, NULL ); // @ai003M
+                                    &l_numOfSensors,G_snsrList, NULL);
+        printQuerySensor(l_numOfSensors,G_snsrList, NULL );
 
         if( (l_err != NULL) || (l_numOfSensors != 0))
         {
@@ -1103,7 +1073,7 @@ uint32_t sensorTestQueryList()
         l_numOfSensors = 10;
         l_err = callQuerySensorList(PROBE250US0,1,AMEC_SENSOR_TYPE_GENERIC,
                                     AMEC_SENSOR_LOC_OCC,
-        		                    &l_numOfSensors,G_snsrList, NULL);  // @at003M  // @ai003M
+                                    &l_numOfSensors,G_snsrList, NULL);
 
         if( (l_err != NULL) || (l_numOfSensors == 0))
         {
@@ -1117,7 +1087,7 @@ uint32_t sensorTestQueryList()
         l_numOfSensors = 10;
         l_err = callQuerySensorList(PROBE250US0,1,AMEC_SENSOR_TYPE_GENERIC,
                                     SENSOR_LOC_ALL,
-                                    &l_numOfSensors,G_snsrList, NULL);  // @at003M  // @ai003M
+                                    &l_numOfSensors,G_snsrList, NULL);
 
         if( (l_err != NULL) || (l_numOfSensors == 0))
         {
@@ -1131,7 +1101,7 @@ uint32_t sensorTestQueryList()
         l_numOfSensors = 10;
         l_err = callQuerySensorList(PROBE250US0,1,SENSOR_TYPE_ALL,
                                     AMEC_SENSOR_LOC_OCC,&l_numOfSensors,
-                                    G_snsrList, NULL);  // @at003M  // @ai003M
+                                    G_snsrList, NULL);
 
         if( (l_err != NULL) || (l_numOfSensors == 0))
         {
@@ -1139,21 +1109,19 @@ uint32_t sensorTestQueryList()
             break;
         }
 
-        // @at003A begin
         /****************************************************/
         // Query sensors to get sensor info,any type and
         // location=AMEC_SENSOR_LOC_OCC. Must return no error.
         l_numOfSensors = 1;
         l_err = callQuerySensorList(PROBE250US0,1,SENSOR_TYPE_ALL,
                                     SENSOR_LOC_ALL,&l_numOfSensors,
-                                    NULL, &l_sensorInfo);  // @at003M
+                                    NULL, &l_sensorInfo);
         if( (l_err != NULL) || (l_numOfSensors == 0))
         {
             l_rc = QUERY_LIST_FAILURE11;
             break;
         }
         printQuerySensor(l_numOfSensors,NULL, &l_sensorInfo );
-        // @at003A end
 
     }while(0);
 
@@ -1170,6 +1138,6 @@ uint32_t sensorTestQueryList()
 /*****************************************************************************/
 // Image Header
 /*****************************************************************************/
-// @dw000 - call macro with Applet ID arg
+// call macro with Applet ID arg
 IMAGE_HEADER (G_sensorTestMain,sensorTestMain,SENSORTESTMAIN_ID,OCC_APLT_TEST);
 

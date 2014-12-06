@@ -1,25 +1,26 @@
-/******************************************************************************
-// @file apsstest.c
-// @brief APSS test applet
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section apsstest.c APSSTEST.c
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *                      cjcain    08/30/2011  created
- *   @02                abagepa   10/03/2011  updated task signature
- *   @dw000             dwoodham  12/12/2011  Update call to IMAGE_HEADER macro
- *   @rc001             rickylie  01/10/2012  Change DEBUG_PRINTF to APSS_DBG
- *   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
- *
- *  @endverbatim
- *
- *///*************************************************************************/
- 
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occApplet/testApplet/apsstest.c $                         */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* COPYRIGHT International Business Machines Corp. 2011,2014              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
+
 //*************************************************************************
 // Includes
 //*************************************************************************
@@ -27,7 +28,7 @@
 #include <errl.h>           // For error handle
 #include "ssx_io.h"         // For printfs
 #include <apss.h>           // APSS Interfaces
-#include <appletId.h>       // For applet ID @dw000a
+#include <appletId.h>       // For applet ID
 #include <trac.h>           // For traces
 
 //*************************************************************************
@@ -64,15 +65,13 @@ extern PoreEntryPoint GPE_pore_nop; // Sleep for specified amount of time...
 //
 // Name: apssTestMain
 //
-// Description: 
+// Description:
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 errlHndl_t apssTestMain(void * i_arg)
 {
   APSS_DBG("Running apssTestMain\n");
-   errlHndl_t l_err = NULL;
+  errlHndl_t l_err = NULL;
   task_apss_start_pwr_meas(NULL);
 
   // Schedule GPE program to delay to ensure the data is available... (BLOCKING)
@@ -95,13 +94,13 @@ errlHndl_t apssTestMain(void * i_arg)
   task_apss_complete_pwr_meas(NULL);
 
   APSS_DBG("Done apssTestMain\n");
- 
+
   return l_err;
 }
 
 /*****************************************************************************/
 // Image Header
 /*****************************************************************************/
-// @dw000 - call macro with Applet ID arg
+// call macro with Applet ID arg
 IMAGE_HEADER (G_apssTestMain,apssTestMain,APSSTESTMAIN_ID,OCC_APLT_TEST);
 

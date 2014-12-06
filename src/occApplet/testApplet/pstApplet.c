@@ -1,22 +1,25 @@
-/******************************************************************************
-// @file pstApplet.c
-// @brief pstate_applet
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section pstApplet.c PSTAPPLET.c
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *                      prpulusa    02/05/14    created
- *   @gm043  928988     milesg      06/19/14    checked in to cmvc after some bug fixes.
- *
- *  @endverbatim
- *
- *///*************************************************************************/
-
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occApplet/testApplet/pstApplet.c $                        */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* COPYRIGHT International Business Machines Corp. 2011,2014              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
 //*************************************************************************
 // Includes
@@ -67,7 +70,7 @@ errlHndl_t myEntryPoint(void * i_arg)
 {
 
     TRAC_INFO("Enter");
-	//initialize variables
+    //initialize variables
     errlHndl_t l_err = NULL;
     int rc=0;
     GlobalPstateTable * l_gpst_ptr = NULL;
@@ -83,19 +86,19 @@ errlHndl_t myEntryPoint(void * i_arg)
     Pstate max_ps = gpst_pmax(l_gpst_ptr);
     int iterations;
     for(iterations=0;iterations<1000;iterations++){
-		//loop through the functioning cores
-		int core;
-		for (core = 0; core < PGP_NCORES; core++) {
-			if (deconfigured_cores & (0x80000000 >> core)) continue;
-			//go through all the valid power states
-			int ps;
-			for (ps=min_ps;ps<=max_ps;ps++){
+        //loop through the functioning cores
+        int core;
+        for (core = 0; core < PGP_NCORES; core++) {
+            if (deconfigured_cores & (0x80000000 >> core)) continue;
+            //go through all the valid power states
+            int ps;
+            for (ps=min_ps;ps<=max_ps;ps++){
 
-				//Issue scoms l
-				pmcr.fields.local_pstate_req=ps;
-				pmcr.fields.global_pstate_req=ps;
-				rc = _putscom(CORE_CHIPLET_ADDRESS(PCBS_POWER_MANAGEMENT_CONTROL_REG,core),pmcr.value, SCOM_TIMEOUT * 20);
-				if (rc) {
+                //Issue scoms l
+                pmcr.fields.local_pstate_req=ps;
+                pmcr.fields.global_pstate_req=ps;
+                rc = _putscom(CORE_CHIPLET_ADDRESS(PCBS_POWER_MANAGEMENT_CONTROL_REG,core),pmcr.value, SCOM_TIMEOUT * 20);
+                if (rc) {
                     if(trace_count[core] < 5)
                     {
                         trace_count[core]++;
@@ -106,13 +109,13 @@ errlHndl_t myEntryPoint(void * i_arg)
                     {
                         continue;
                     }
-					break;
-				}
-				//Wait 500us before changing the pstate
-				ssx_sleep(SSX_MICROSECONDS(500));
+                    break;
+                }
+                //Wait 500us before changing the pstate
+                ssx_sleep(SSX_MICROSECONDS(500));
 
-			}
-		}
+            }
+        }
     }
     TRAC_INFO("Exit");
     return l_err;
