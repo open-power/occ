@@ -1,34 +1,26 @@
-/******************************************************************************
-// @file cmdh_mnfg_intf.c
-// @brief Command Handling for Manufacturing Interface.
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _cmdh_mnfg_intf_c cmdh_mnfg_intf.c
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @gs004             gjsilva   05/15/2013  Created
- *   @gs005  883829     gjsilva   05/22/2013  Fix compilation issues
- *   @gm002  885429     milesg    05/30/2013  support for list/get sensors
- *   @gs006  884384     gjsilva   05/30/2013  Support for mnfg auto-slewing function
- *   @th040  887069     thallet   06/11/2013  Support Nom & FFO Freq Setting for Mnfg 
- *   @th042             thallet   07/22/2013  Fix a bug where sensor name was corrupted
- *   @gm004  892961     milesg    07/25/2013  Support memory auto slewing
- *   @gm012  905097     milesg    10/31/2013  Fix centaur enablement
- *   @gm013  907548     milesg    11/22/2013  Memory therm monitoring support
- *   @gm016  909061     milesg    12/10/2013  Support memory throttling due to temperature
- *   @gm017  909636     milesg    12/17/2013  changes from mem throttle review
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/cmdh/cmdh_mnfg_intf.c $                               */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* COPYRIGHT International Business Machines Corp. 2011,2014              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
-//*************************************************************************
-// Includes
-//*************************************************************************
 #include "cmdh_mnfg_intf.h"
 #include "cmdh_service_codes.h"
 #include "cmdh_fsp_cmds.h"
@@ -38,28 +30,11 @@
 #include "sensorQueryList.h"
 #include "amec_smh.h"
 #include "amec_master_smh.h"
-#include "centaur_data.h" //gm004
-#include "centaur_control.h" //gm004
-//*************************************************************************
-// Externs
-//*************************************************************************
-extern task_t G_task_table[TASK_END];  //gm004
+#include "centaur_data.h"
+#include "centaur_control.h"
+
+extern task_t G_task_table[TASK_END];
 extern centaur_throttle_t G_centaurThrottleLimits[MAX_NUM_CENTAURS][NUM_MBAS_PER_CENTAUR];
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
-
-//*************************************************************************
-// Globals
-//*************************************************************************
-
-//*************************************************************************
-// Function Declarations
-//*************************************************************************
-
-//*************************************************************************
-// Functions
-//*************************************************************************
 
 // Function Specification
 //
@@ -67,17 +42,11 @@ extern centaur_throttle_t G_centaurThrottleLimits[MAX_NUM_CENTAURS][NUM_MBAS_PER
 //
 // Description: This function handles the manufacturing command to start
 // or stop frequency autoslewing.
-//              
-//
-// Flow:  xx/xx/xx    FN=
 //
 // End Function Specification
 uint8_t cmdh_mnfg_run_stop_slew(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                       cmdh_fsp_rsp_t * o_rsp_ptr)
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
     uint8_t                     l_rc = ERRL_RC_SUCCESS;
     uint16_t                    l_fmin = 0;
     uint16_t                    l_fmax = 0;
@@ -86,10 +55,6 @@ uint8_t cmdh_mnfg_run_stop_slew(const cmdh_fsp_cmd_t * i_cmd_ptr,
     uint32_t                    l_temp = 0;
     mnfg_run_stop_slew_cmd_t    *l_cmd_ptr = (mnfg_run_stop_slew_cmd_t*) i_cmd_ptr;
     mnfg_run_stop_slew_rsp_t    *l_rsp_ptr = (mnfg_run_stop_slew_rsp_t*) o_rsp_ptr;
-
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
 
     do
     {
@@ -173,7 +138,7 @@ uint8_t cmdh_mnfg_run_stop_slew(const cmdh_fsp_cmd_t * i_cmd_ptr,
         }
         else
         {
-            l_step_size = 20;  //TODO: Need to find out the step size from Pstate table
+            l_step_size = 20;  // TODO: Need to find out the step size from Pstate table
 
             // Translate the step delay to internal OCC ticks
             l_temp = (l_cmd_ptr->step_delay * 1000) / AMEC_US_PER_TICK;
@@ -189,13 +154,13 @@ uint8_t cmdh_mnfg_run_stop_slew(const cmdh_fsp_cmd_t * i_cmd_ptr,
         AMEC_MST_SET_MNFG_FMAX(l_fmax);
         AMEC_MST_SET_MNFG_FSTEP(l_step_size);
         AMEC_MST_SET_MNFG_DELAY(l_step_delay);
-        
+
         // Reset the slew-counter before we start auto-slewing
         AMEC_MST_CUR_SLEW_COUNT() = 0;
-                
+
         // Wait a little bit for RTL to process above parameters
         ssx_sleep(SSX_MILLISECONDS(5));
-        
+
         // Send a signal to RTL to start auto-slewing
         AMEC_MST_START_AUTO_SLEW();
 
@@ -220,24 +185,14 @@ uint8_t cmdh_mnfg_run_stop_slew(const cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // Description: This function handles the manufacturing command to start
 // or stop memory autoslewing.
-//              
-//
-// Flow:  xx/xx/xx    FN=
 //
 // End Function Specification
 uint8_t cmdh_mnfg_mem_slew(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                  cmdh_fsp_rsp_t * o_rsp_ptr)
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
     uint8_t                l_rc = ERRL_RC_SUCCESS;
     mnfg_mem_slew_cmd_t    *l_cmd_ptr = (mnfg_mem_slew_cmd_t*) i_cmd_ptr;
     mnfg_mem_slew_rsp_t    *l_rsp_ptr = (mnfg_mem_slew_rsp_t*) o_rsp_ptr;
-
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
 
     do
     {
@@ -268,7 +223,7 @@ uint8_t cmdh_mnfg_mem_slew(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 l_rsp_ptr->slew_count = g_amec->mnfg_parms.mem_slew_counter;
             }
 
-            // zero out the slew count;
+            // Zero out the slew count;
             g_amec->mnfg_parms.mem_slew_counter = 0;
 
             TRAC_INFO("cmdh_mnfg_mem_slew: Auto-slewing has been stopped. Count[%u]",
@@ -281,12 +236,12 @@ uint8_t cmdh_mnfg_mem_slew(const cmdh_fsp_cmd_t * i_cmd_ptr,
         // If we made it here, that means we are starting up a slew run
         TRAC_INFO("cmdh_mnfg_mem_slew: We are about to start auto-slewing function");
 
-        // force activation of memory monitoring and control
-        if(!rtl_task_is_runnable(TASK_ID_CENTAUR_CONTROL)) 
+        // Force activation of memory monitoring and control
+        if(!rtl_task_is_runnable(TASK_ID_CENTAUR_CONTROL))
         {
             uint32_t l_cent, l_mba;
 
-            //only run initialization on an active OCC
+            // Only run initialization on an active OCC
             if(!IS_OCC_STATE_ACTIVE())
             {
                 TRAC_ERR("cmdh_mnfg_mem_slew: OCC must be active to start mem slewing");
@@ -294,14 +249,14 @@ uint8_t cmdh_mnfg_mem_slew(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 break;
             }
 
-            //Force all MBA's to be present
+            // Force all MBA's to be present
             G_configured_mbas = -1;
 
             TRAC_INFO("cmdh_mnfg_mem_slew: calling centaur_init()");
             centaur_init(); //no rc, handles errors internally
 
-            //check if centaur_init resulted in a reset
-            //since we don't have a return code from centaur_init.
+            // Check if centaur_init resulted in a reset
+            // since we don't have a return code from centaur_init.
             if(isSafeStateRequested())
             {
                 TRAC_ERR("cmdh_mnfg_mem_slew: OCC is being reset");
@@ -315,13 +270,13 @@ uint8_t cmdh_mnfg_mem_slew(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 {
                     continue;
                 }
-                
+
                 for(l_mba = 0; l_mba < NUM_MBAS_PER_CENTAUR; l_mba++)
                 {
-                    mem_throt_config_data_t * l_throt_ptr = 
+                    mem_throt_config_data_t * l_throt_ptr =
                                    &G_sysConfigData.mem_throt_limits[l_cent][l_mba];
 
-                    //Uses values seen on tuleta as defaults -- gm017
+                    // Uses values seen on tuleta as defaults
                     l_throt_ptr->min_ot_n_per_mba = 13;
                     l_throt_ptr->nom_n_per_mba = 72;
                     l_throt_ptr->nom_n_per_chip = 72;
@@ -330,18 +285,18 @@ uint8_t cmdh_mnfg_mem_slew(const cmdh_fsp_cmd_t * i_cmd_ptr,
                     l_throt_ptr->ovs_n_per_mba = 72;
                     l_throt_ptr->ovs_n_per_chip = 72;
                 }
-             
+
             }
 
 
-            //initialization was successful.
-            //Set task flags to allow centaur control task to run and
-            //also to prevent us from doing initialization again.
+            // Initialization was successful.
+            // Set task flags to allow centaur control task to run and
+            // also to prevent us from doing initialization again.
             G_task_table[TASK_ID_CENTAUR_DATA].flags = CENTAUR_DATA_RTL_FLAGS;
             G_task_table[TASK_ID_CENTAUR_CONTROL].flags = CENTAUR_CONTROL_RTL_FLAGS;
         }
 
-        // zero out the slew count
+        // Zero out the slew count
         g_amec->mnfg_parms.mem_slew_counter = 0;
 
         // Send a signal to RTL to start memory auto-slewing
@@ -369,24 +324,14 @@ uint8_t cmdh_mnfg_mem_slew(const cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // Description: This function handles the manufacturing command to emulate
 // oversubscription.
-//              
-//
-// Flow:  xx/xx/xx    FN=
 //
 // End Function Specification
 uint8_t cmdh_mnfg_emulate_oversub(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                         cmdh_fsp_rsp_t * o_rsp_ptr)
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
     uint8_t                     l_rc = 0;
     mnfg_emul_oversub_cmd_t     *l_cmd_ptr = (mnfg_emul_oversub_cmd_t*) i_cmd_ptr;
     mnfg_emul_oversub_rsp_t     *l_rsp_ptr = (mnfg_emul_oversub_rsp_t*) o_rsp_ptr;
-
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
 
     do
     {
@@ -437,17 +382,11 @@ uint8_t cmdh_mnfg_emulate_oversub(const cmdh_fsp_cmd_t * i_cmd_ptr,
 // Name:  cmdh_mnfg_list_sensors
 //
 // Description: Returns a list of selected sensors
-//             
-//
-// Flow:  xx/xx/xx    FN=
 //
 // End Function Specification
 uint8_t cmdh_mnfg_list_sensors(const cmdh_fsp_cmd_t * i_cmd_ptr,
                            cmdh_fsp_rsp_t * o_rsp_ptr)
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
     uint8_t                         l_rc = ERRL_RC_SUCCESS;
     uint16_t                        l_type = 0;
     uint16_t                        l_location = 0;
@@ -456,17 +395,13 @@ uint8_t cmdh_mnfg_list_sensors(const cmdh_fsp_cmd_t * i_cmd_ptr,
     uint16_t                        l_resp_data_length = 0;
     uint16_t                        l_datalength;
     uint16_t                        l_num_of_sensors = MFG_MAX_NUM_SENSORS + 1;
-    cmdh_mfg_list_sensors_query_t   *l_cmd_ptr = 
+    cmdh_mfg_list_sensors_query_t   *l_cmd_ptr =
                                     (cmdh_mfg_list_sensors_query_t*) i_cmd_ptr;
     cmdh_mfg_list_sensors_resp_t    *l_resp_ptr =
                                     (cmdh_mfg_list_sensors_resp_t*) o_rsp_ptr;
     sensorQueryList_t               l_sensor_list[MFG_MAX_NUM_SENSORS + 1];
     errlHndl_t                      l_err = NULL;
     OCC_APLT_STATUS_CODES           l_status = 0;
-
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
 
     do
     {
@@ -485,7 +420,7 @@ uint8_t cmdh_mnfg_list_sensors(const cmdh_fsp_cmd_t * i_cmd_ptr,
                           sizeof(cmdh_fsp_cmd_header_t)))
         {
             TRAC_ERR("cmdh_mnfg_list_sensors: incorrect data length. exp[%d] act[%d]",
-                     (sizeof(cmdh_mfg_list_sensors_query_t) - 
+                     (sizeof(cmdh_mfg_list_sensors_query_t) -
                       sizeof(cmdh_fsp_cmd_header_t)),
                      l_datalength);
             l_rc = ERRL_RC_INVALID_CMD_LEN;
@@ -512,7 +447,7 @@ uint8_t cmdh_mnfg_list_sensors(const cmdh_fsp_cmd_t * i_cmd_ptr,
                   l_location);
 
         // Initialize the Applet arguments
-        querySensorListAppletArg_t l_applet_arg = 
+        querySensorListAppletArg_t l_applet_arg =
         {
             l_start_gsid,           // i_startGsid - passed by the caller
             l_cmd_ptr->present,     // i_present - passed by the caller
@@ -562,7 +497,7 @@ uint8_t cmdh_mnfg_list_sensors(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 l_resp_ptr->truncated = 0;
             }
 
-            // Clear out the sensor fields - @th042
+            // Clear out the sensor fields
             memset((void*) &(l_resp_ptr->sensor[0]), 0, (sizeof(cmdh_dbug_sensor_list_t)*l_num_of_sensors) );
 
             // Populate the response data packet
@@ -592,23 +527,17 @@ uint8_t cmdh_mnfg_list_sensors(const cmdh_fsp_cmd_t * i_cmd_ptr,
 // Name:  cmdh_mnfg_get_sensor
 //
 // Description: Returns a list of selected sensors
-//             
-//
-// Flow:  xx/xx/xx    FN=
 //
 // End Function Specification
 uint8_t cmdh_mnfg_get_sensor(const cmdh_fsp_cmd_t * i_cmd_ptr,
                              cmdh_fsp_rsp_t * o_rsp_ptr)
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
     uint8_t                         l_rc = ERRL_RC_SUCCESS;
     uint16_t                        l_gsid;
     uint16_t                        l_resp_data_length = 0;
     uint16_t                        l_datalength;
     uint16_t                        l_num_of_sensors = 1;
-    cmdh_mfg_get_sensor_query_t     *l_cmd_ptr = 
+    cmdh_mfg_get_sensor_query_t     *l_cmd_ptr =
                                     (cmdh_mfg_get_sensor_query_t*) i_cmd_ptr;
     cmdh_mfg_get_sensor_resp_t      *l_resp_ptr =
                                     (cmdh_mfg_get_sensor_resp_t*) o_rsp_ptr;
@@ -616,10 +545,6 @@ uint8_t cmdh_mnfg_get_sensor(const cmdh_fsp_cmd_t * i_cmd_ptr,
     errlHndl_t                      l_err = NULL;
     OCC_APLT_STATUS_CODES           l_status = 0;
     sensor_t*                       l_sensor_ptr;
-
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
 
     do
     {
@@ -638,7 +563,7 @@ uint8_t cmdh_mnfg_get_sensor(const cmdh_fsp_cmd_t * i_cmd_ptr,
                           sizeof(cmdh_fsp_cmd_header_t)))
         {
             TRAC_ERR("cmdh_mnfg_get_sensor: incorrect data length. exp[%d] act[%d]",
-                     (sizeof(cmdh_mfg_get_sensor_query_t) - 
+                     (sizeof(cmdh_mfg_get_sensor_query_t) -
                       sizeof(cmdh_fsp_cmd_header_t)),
                      l_datalength);
             l_rc = ERRL_RC_INVALID_CMD_LEN;
@@ -661,7 +586,7 @@ uint8_t cmdh_mnfg_get_sensor(const cmdh_fsp_cmd_t * i_cmd_ptr,
         TRAC_INFO("cmdh_mnfg_get_sensor: gsid[0x%04x]", l_gsid);
 
         // Initialize the Applet arguments
-        querySensorListAppletArg_t l_applet_arg = 
+        querySensorListAppletArg_t l_applet_arg =
         {
             l_gsid,                 // i_startGsid - passed by the caller
             0,                      // i_present - passed by the caller
@@ -695,7 +620,7 @@ uint8_t cmdh_mnfg_get_sensor(const cmdh_fsp_cmd_t * i_cmd_ptr,
         {
             l_resp_ptr->gsid = l_gsid;
 
-            // some of the response comes from the sensor
+            // Some of the response comes from the sensor
             l_sensor_ptr = getSensorByGsid(l_gsid);
             if (l_sensor_ptr == NULL)
             {
@@ -716,7 +641,7 @@ uint8_t cmdh_mnfg_get_sensor(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 l_resp_ptr->status = *(uint8_t*)(&l_sensor_ptr->status);
             }
 
-            //the rest of the response comes from the sensor info
+            // The rest of the response comes from the sensor info
             memcpy(l_resp_ptr->name, l_sensor_info.name, sizeof(l_resp_ptr->name));
             memcpy(l_resp_ptr->units, l_sensor_info.sensor.units, sizeof(l_resp_ptr->units));
             l_resp_ptr->freq = l_sensor_info.sensor.freq;
@@ -742,30 +667,19 @@ uint8_t cmdh_mnfg_get_sensor(const cmdh_fsp_cmd_t * i_cmd_ptr,
 // Name:  cmdh_mnfg_test_parse
 //
 // Description:  This function parses the manufacturing commands sent via TMGT.
-//              
-//              
-//
-// Flow:  xx/xx/xx    FN=
 //
 // End Function Specification
 void cmdh_mnfg_test_parse (const cmdh_fsp_cmd_t * i_cmd_ptr,
                                  cmdh_fsp_rsp_t * o_rsp_ptr)
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
     uint8_t                     l_rc = 0;
     uint8_t                     l_sub_cmd = 0;
     errlHndl_t                  l_errl = NULL;
 
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
-
     // Sub-command is always first byte of data
     l_sub_cmd = i_cmd_ptr->data[0];
 
-    TRAC_INFO("cmdh_mnfg_test_parse: Mnfg sub-command [0x%02x]", l_sub_cmd); 
+    TRAC_INFO("cmdh_mnfg_test_parse: Mnfg sub-command [0x%02x]", l_sub_cmd);
 
     switch (l_sub_cmd)
     {

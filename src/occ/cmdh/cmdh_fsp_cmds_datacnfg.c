@@ -1,69 +1,32 @@
-/******************************************************************************
-// @file cmdh_fsp_cmds_datacnfg.c
-// @brief Command Handling for FSP Communication CNFG DATA commands.
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _cmdh_fsp_cmds_datacnfg_c cmdh_fsp_cmds_datacnfg.c
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @th022             thallet   10/03/2012  Created
- *   @at013  878755     alvinwan  04/17/2013  OCC power capping implementation
- *   @th032             thallet   04/15/2013  Tuleta HW Bringup
- *   @th036  881654     thallet   05/06/2013  New Poll Command Support
- *   @at014  882077     alvinwan  05/09/2013  Support APSS and System Config data from TMGT
- *   @ly007  882183     lychen    05/21/2013  Send APSS and System Configuration commands to OCC
- *   @th040  887069     thallet   06/11/2013  Support Nom & FFO Freq Setting for Mnfg 
- *   @fk001  879727     fmkassem  04/16/2013  OCC powercap support.
- *   @at015  885884     alvinwan  06/10/2013  Support Observation/Active state change
- *   @jh004  889884     joshych   07/24/2013  Support CPM param and updated frequency packet
- *   @ly008  894646     lychen    08/08/2013  Fix bugs in OCC handling of APSS tables for Brazos/Orlena
- *   @gs008  894661     gjsilva   08/08/2013  Initial support for DPS-FP mode
- *   @th046  894648     thallet   08/08/2013  Fix a coreq issue with TMGT
- *   @at017  895284     alvinwan  08/13/2013  Fix Poll status active ready bit
- *   @gm006  SW224414   milesg    09/16/2013  Reset and FFDC improvements
- *   @gs010  899888     gjsilva   09/24/2013  Process data format 0x13 from TMGT
- *   @gm008  SW226989   milesg    09/30/2013  Sapphire initial support
- *   @gs011  900661     gjsilva   09/30/2013  Make data format 0x13 required to go active
- *   @rt001  901927     tapiar    09/24/2013  remove cpm support format 0x1E
- *                                            Fix src tags 
- *   @rt002  902613     tapiar    10/10/2013  Support format 0x11 (IPS)
- *   @gm011  903410     milesg    10/22/2013  Support OCC_BACKUP_MASTER
- *   @gm012  905097     milesg    10/31/2013  support mem throttle & mem config packets
- *   @gs015  905166     gjsilva   11/04/2013  Full support for IPS function
- *   @fk002  905632     fmkassem  11/05/2013  Remove CriticalPathMonitor code
- *   @gm013  907548     milesg    11/22/2013  Memory therm monitoring support
- *   @gs019  908218     gjsilva   12/04/2013  Support cooling request architecture
- *   @rt004  908817     tapiar    12/11/2013  Add apps as part of required data
- *                                            Skip pcap and freq data configs on slaves
- *                                            Remove updating global mask for pcap data
- *                                            so that it happens in slave code (write_data_pcap) 
- *   @gm016  909061     milesg    12/10/2013  Support memory throttling due to temperature
- *   @gs026  915840     gjsilva   02/13/2014  Support for Nvidia GPU power measurement
- *   @gm028  911670     milesg    02/27/2014  Fixed compile errors from stradale
- *   @wb001  919163     wilbryan  03/06/2014  Updating error call outs, descriptions, and severities
- *   @gm037  925908     milesg    05/07/2014  Redundant OCC/APSS support
- *   @fk008  942864     fmkassem  09/15/2014  BMC - APSS config data
- *   @gs042  942940     gjsilva   10/24/2014  Support for data packets in BMC-based systems
- *   @gs043  943177     gjsilva   10/30/2014  Support for mem data packets in BMC-based systems
- *   @ms001  943532     spinler   10/30/2014  Version 0x10 of frequency config data packet
- *
- *  @endverbatim
- *
- *///*************************************************************************/
- 
-//*************************************************************************
-// Includes
-//*************************************************************************
-#include "ssx.h"		
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/cmdh/cmdh_fsp_cmds/datacnfg.c $                       */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* COPYRIGHT International Business Machines Corp. 2011,2014              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
+
+#include "ssx.h"
 #include "cmdh_service_codes.h"
 #include "errl.h"
 #include "trac.h"
 #include "rtls.h"
-#include "dcom.h"   
+#include "dcom.h"
 #include "occ_common.h"
 #include "state.h"
 #include "cmdh_fsp_cmds.h"
@@ -73,18 +36,11 @@
 #include "pstates.h"
 #include "proc_pstate.h"
 #include <amec_data.h>
-#include "amec_amester.h"        
+#include "amec_amester.h"
 #include "amec_service_codes.h"
 #include "amec_sys.h"
 #include <centaur_data.h>
 
-//*************************************************************************
-// Externs
-//*************************************************************************
-
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
 #define FREQ_FORMAT_PWR_MODE_NUM   6
 #define FREQ_FORMAT_BYTES_PER_MODE 3
 #define FREQ_FORMAT_BASE_DATA_SZ   (sizeof(cmdh_store_mode_freqs_t) - sizeof(cmdh_fsp_cmd_header_t))
@@ -99,15 +55,15 @@
 #define DATA_SYS_VERSION_0         0
 #define DATA_SYS_VERSION_10        0x10
 
-#define DATA_APSS_VERSION          0  // @at014a
-#define DATA_APSS_VERSION10     0x10  // @fk008a
+#define DATA_APSS_VERSION          0
+#define DATA_APSS_VERSION10     0x10
 
 #define DATA_THRM_THRES_VERSION_1  1
 #define DATA_THRM_THRES_VERSION_10 0x10
 #define THRM_THRES_BASE_DATA_SZ_1  4
 #define THRM_THRES_BASE_DATA_SZ_10 3
 
-#define DATA_IPS_VERSION           0  // @rt002a
+#define DATA_IPS_VERSION           0
 
 #define DATA_MEM_CFG_VERSION_1     1
 #define DATA_MEM_CFG_VERSION_10    0x10
@@ -115,70 +71,46 @@
 #define DATA_MEM_THROT_VERSION_1   1
 #define DATA_MEM_THROT_VERSION_10  0x10
 
-//*************************************************************************
-// Structures
-//*************************************************************************
-
-// 
 typedef struct data_req_table
 {
    uint32_t mask;
    uint8_t  format;
 } data_req_table_t;
 
-//*************************************************************************
-// Globals
-//*************************************************************************
-
-// 
 data_cnfg_t G_data_cnfg_static_obj = {0};
 
-// 
 data_cnfg_t * G_data_cnfg = &G_data_cnfg_static_obj;
 
-// 
 const data_req_table_t G_data_pri_table[] =
 {
-    {DATA_MASK_SYS_CNFG,              DATA_FORMAT_SYS_CNFG}, //Need this first so we can use correct huid's for callouts -- gm037
-    {DATA_MASK_APSS_CONFIG,           DATA_FORMAT_APSS_CONFIG}, //need apss config data prior to role data -- gm037
+    {DATA_MASK_SYS_CNFG,              DATA_FORMAT_SYS_CNFG}, //Need this first so we can use correct huid's for callouts
+    {DATA_MASK_APSS_CONFIG,           DATA_FORMAT_APSS_CONFIG}, //need apss config data prior to role data
     {DATA_MASK_SET_ROLE,              DATA_FORMAT_SET_ROLE},
     {DATA_MASK_MEM_CFG,               DATA_FORMAT_MEM_CFG},
     {DATA_MASK_PSTATE_SUPERSTRUCTURE, DATA_FORMAT_PSTATE_SUPERSTRUCTURE},
-    {DATA_MASK_FREQ_PRESENT,          DATA_FORMAT_FREQ}, //@gm006
-    {DATA_MASK_PCAP_PRESENT,          DATA_FORMAT_POWER_CAP}, // @at013a
-    {DATA_MASK_THRM_THRESHOLDS,       DATA_FORMAT_THRM_THRESHOLDS}, //@gs011
+    {DATA_MASK_FREQ_PRESENT,          DATA_FORMAT_FREQ},
+    {DATA_MASK_PCAP_PRESENT,          DATA_FORMAT_POWER_CAP},
+    {DATA_MASK_THRM_THRESHOLDS,       DATA_FORMAT_THRM_THRESHOLDS},
     {DATA_MASK_MEM_THROT,             DATA_FORMAT_MEM_THROT},
 };
 
-
-// rt002a
-// TODO: temporarily saving this off here not sure
-//       it it belongs somewhere more appropriate
-cmdh_ips_config_data_t G_ips_config_data = {0}; 
+// TODO: Temporarily saving this off here not sure
+//        it it belongs somewhere more appropriate
+cmdh_ips_config_data_t G_ips_config_data = {0};
 
 bool G_mem_monitoring_allowed = FALSE;
 
 // Global flag that indicates if VRMs are present. In the context of BMC-based
 // systems, if OCC doesn't get any VRM thermal control thresholds (data packet
-// 0x13), it should not attempt to talk to the VRMs. In the context of 
+// 0x13), it should not attempt to talk to the VRMs. In the context of
 // FSP-based systems, then we assume VRMs are always present.
 uint8_t G_vrm_present = 1;
-
-//*************************************************************************
-// Functions
-//*************************************************************************
-
 
 // Function Specification
 //
 // Name:  DATA_get_present_cnfgdata
 //
 // Description:  Accessor function for external access
-//              
-//              
-//              
-//
-// Flow:  xx/xx/xx    FN=
 //
 // End Function Specification
 uint32_t DATA_get_present_cnfgdata(void)
@@ -188,14 +120,8 @@ uint32_t DATA_get_present_cnfgdata(void)
 
 errlHndl_t DATA_get_thrm_thresholds(cmdh_thrm_thresholds_t **o_thrm_thresh)
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
     errlHndl_t                  l_err = NULL;
 
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
     if(G_data_cnfg->data_mask & DATA_MASK_THRM_THRESHOLDS)
     {
         *o_thrm_thresh = &(G_data_cnfg->thrm_thresh);
@@ -204,15 +130,14 @@ errlHndl_t DATA_get_thrm_thresholds(cmdh_thrm_thresholds_t **o_thrm_thresh)
     {
         TRAC_ERR("DATA_get_thrm_thresholds: Thermal Threshold data is unavailable! data_mask[0x%X]",
                  G_data_cnfg->data_mask);
-
         /* @
          * @errortype
          * @moduleid    DATA_GET_THRM_THRESHOLDS
          * @reasoncode  INTERNAL_FAILURE
          * @userdata1   data mask showing which data OCC has received
          * @userdata4   ERC_CMDH_THRM_DATA_MISSING
-         * @devdesc     Someone is asking for the thermal control threholds 
-         *              and OCC hasn't received them yet from the FSP! 
+         * @devdesc     Someone is asking for the thermal control threholds
+         *              and OCC hasn't received them yet from the FSP!
          */
         l_err = createErrl(DATA_GET_THRM_THRESHOLDS,
                            INTERNAL_FAILURE,
@@ -229,14 +154,8 @@ errlHndl_t DATA_get_thrm_thresholds(cmdh_thrm_thresholds_t **o_thrm_thresh)
 
 errlHndl_t DATA_get_ips_cnfg(cmdh_ips_config_data_t **o_ips_cnfg)
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
     errlHndl_t                  l_err = NULL;
 
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
     if(G_data_cnfg->data_mask & DATA_MASK_IPS_CNFG)
     {
         *o_ips_cnfg = &G_ips_config_data;
@@ -272,40 +191,28 @@ errlHndl_t DATA_get_ips_cnfg(cmdh_ips_config_data_t **o_ips_cnfg)
 //
 // Name:  DATA_request_cnfgdata
 //
-// Description:
-//              
-//              
-//              
-//
-// Flow:  xx/xx/xx    FN=
+// Description: TODO -- Add description
 //
 // End Function Specification
 uint8_t DATA_request_cnfgdata ()
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
-    uint8_t                        l_req         = 0x00; //data to ask for
+    uint8_t                        l_req         = 0x00; // Data to request
     uint16_t                       i             = 0;
     uint16_t                       l_array_size  = 0;
-
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
 
     l_array_size = sizeof(G_data_pri_table) / sizeof(data_req_table_t);
 
     for(i=0;i<l_array_size;i++)
     {
-        //Skip requesting memory throttle values if memory monitoring
-        //is not being allowed by TMGT.
+        // Skip requesting memory throttle values if memory monitoring
+        // is not being allowed by TMGT.
         if((G_data_pri_table[i].format == DATA_FORMAT_MEM_THROT) &&
             !G_mem_monitoring_allowed)
         {
             continue;
         }
-        
-        //Skip whenever we are trying to request pcap or freq as a slave @rt004a
+
+        // Skip whenever we are trying to request pcap or freq as a slave
         if(((G_data_pri_table[i].format == DATA_FORMAT_POWER_CAP) ||
             (G_data_pri_table[i].format == DATA_FORMAT_FREQ)) &&
             (G_occ_role == OCC_SLAVE))
@@ -325,17 +232,11 @@ uint8_t DATA_request_cnfgdata ()
     return(l_req);
 }
 
-
 // Functior Specification
 //
 // Name:  data_store_freq_data
 //
-// Description:
-//              
-//              
-//              
-//
-// Flow:  xx/xx/xx    FN=
+// Description: TODO Add description
 //
 // End Function Specification
 errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
@@ -350,7 +251,7 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
     uint32_t                        i;
     uint16_t                        l_freq = 0;
     uint8_t                         l_mode = 0;
-    uint8_t                         l_count = FREQ_FORMAT_PWR_MODE_NUM; // @jh004a
+    uint8_t                         l_count = FREQ_FORMAT_PWR_MODE_NUM;
     uint16_t                        l_table[OCC_MODE_COUNT] = {0};
 
     do
@@ -358,15 +259,14 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
         l_data_length  = CMDH_DATALEN_FIELD_UINT16(l_cmdp);
         l_mode_data_sz = l_data_length - FREQ_FORMAT_BASE_DATA_SZ;
 
-        //Sanity Checks
-        //if the datapacket is bigger than what we can store, OR
-        //if the version doesn't equal what we expect, OR
-        //if the expected data length does not agree with the actual data length, OR
-        //the format is 0x10 and we don't have room for the 3 2B frequencies
+        // Sanity Checks
+        // If the datapacket is bigger than what we can store, OR
+        // if the version doesn't equal what we expect, OR
+        // if the expected data length does not agree with the actual data length, OR
+        // the format is 0x10 and we don't have room for the 3 2B frequencies
         if((l_data_length < FREQ_FORMAT_BASE_DATA_SZ) ||
            ((l_cmdp->version != DATA_FREQ_VERSION_0) && (l_cmdp->version != DATA_FREQ_VERSION_10)) ||
            ((DATA_FREQ_VERSION_10 == l_cmdp->version) && (l_mode_data_sz != (FREQ_FORMAT_10_NUM_FREQS * 2))))
-
         {
             TRAC_ERR("Invalid Frequency Data packet: data_length[%u] version[%u] l_count[%u] l_mode_data_sz[%u]",
                      l_data_length, l_cmdp->version, l_count, l_mode_data_sz);
@@ -374,7 +274,7 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
             break;
         }
 
-        if(OCC_MASTER != G_occ_role) //gm037
+        if(OCC_MASTER != G_occ_role)
         {
             // We want to ignore this cnfg data if we are not the master.
             break;
@@ -390,7 +290,7 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 l_mode = l_buf[i];
                 l_freq = (l_buf[i+1] << 8 | l_buf[i+2]);
 
-                if(l_mode == OCC_MODE_NOMINAL && !l_freq) //@gm006
+                if(l_mode == OCC_MODE_NOMINAL && !l_freq)
                 {
                     TRAC_ERR("Received a frequency of 0 MHZ for nominal");
                     cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
@@ -410,18 +310,20 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
                         && ( OCC_MODE_FFO == l_mode ) )
                 {
                     l_req_freq = l_freq;
+
                     // Check and make sure that FFO freq >= Fmin, if not, log an error.
                     if( l_freq < l_table[OCC_MODE_MIN_FREQUENCY] )
                     {
                         l_freq = l_table[OCC_MODE_MIN_FREQUENCY];
                     }
-                    //// Check and make sure that FFO freq <= Fmax, if not, log an error.
+
+                    // Check and make sure that FFO freq <= Fmax, if not, log an error.
                     else if ( l_freq > l_table[OCC_MODE_TURBO] )
                     {
                         l_freq = l_table[OCC_MODE_TURBO];
                     }
 
-                    // log an error if we could not honor the requested FFO frequency, but keep going.
+                    // Log an error if we could not honor the requested FFO frequency, but keep going.
                     if(l_req_freq != l_freq)
                     {
                         TRAC_ERR("FFO Freq out of range. request=%d, limit=%d ",
@@ -459,10 +361,10 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 }
             }
         }
-        else //Version 0x10 - OpenPower
+        else // Version 0x10 - OpenPower
         {
-            //First Nominal Freq, then Max Freq, then Min Freq, which we'll
-            //store under the existing enums.
+            // First Nominal Freq, then Max Freq, then Min Freq, which we'll
+            // store under the existing enums.
 
             l_freq = (l_buf[0] << 8 | l_buf[1]);
             l_table[OCC_MODE_NOMINAL] = l_freq;
@@ -485,10 +387,10 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
     }while(0);
 
     // Change Data Request Mask to indicate we got this data
-    if(!l_err && (G_occ_role == OCC_MASTER)) //gm037
+    if(!l_err && (G_occ_role == OCC_MASTER))
     {
-        //copy all of the frequency updates to the global and notify
-        //dcom of the new frequenies.
+        // Copy all of the frequency updates to the global and notify
+        // dcom of the new frequenies.
         memcpy(G_sysConfigData.sys_mode_freq.table, l_table, sizeof(l_table));
         G_sysConfigData.sys_mode_freq.update_count++;
         G_data_cnfg->data_mask |= DATA_MASK_FREQ_PRESENT;
@@ -496,16 +398,11 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
     return l_err;
 }
 
-// @at014a - start
 // Function Specification
 //
 // Name:  apss_store_adc_channel
 //
-// Description:
-//
-//
-//
-//
+// Description: TODO Add description
 //
 // End Function Specification
 errlHndl_t apss_store_adc_channel(const eApssAdcChannelAssignments i_func_id, const uint8_t i_channel_num )
@@ -536,7 +433,7 @@ errlHndl_t apss_store_adc_channel(const eApssAdcChannelAssignments i_func_id, co
                            (uint32_t)i_func_id,
                            (uint32_t)i_channel_num);
 
-        // @wb001 -- Callout firmware
+        // Callout firmware
         addCalloutToErrl(l_err,
                          ERRL_CALLOUT_TYPE_COMPONENT_ID,
                          ERRL_COMPONENT_ID_FIRMWARE,
@@ -589,7 +486,7 @@ errlHndl_t apss_store_adc_channel(const eApssAdcChannelAssignments i_func_id, co
                 break;
 
             case ADC_12V_SENSE:
-                l_adc_function = &G_sysConfigData.apss_adc_map.sense_12v; // @ly008c
+                l_adc_function = &G_sysConfigData.apss_adc_map.sense_12v;
                 break;
 
             case ADC_GND_REMOTE_SENSE:
@@ -599,11 +496,10 @@ errlHndl_t apss_store_adc_channel(const eApssAdcChannelAssignments i_func_id, co
             case ADC_TOTAL_SYS_CURRENT:
                 l_adc_function = &G_sysConfigData.apss_adc_map.total_current_12v;
                 break;
-            // @ly008a - start
+
             case ADC_MEM_CACHE:
                 l_adc_function = &G_sysConfigData.apss_adc_map.mem_cache;
                 break;
-            // @ly008a - end
 
             case ADC_GPU_SENSE:
                 l_adc_function = &G_sysConfigData.apss_adc_map.gpu;
@@ -644,8 +540,8 @@ errlHndl_t apss_store_adc_channel(const eApssAdcChannelAssignments i_func_id, co
                                    DEFAULT_TRACE_SIZE,
                                    (uint32_t)i_func_id,
                                    (uint32_t)i_channel_num);
-                                   
-                // @wb001 -- Callout firmware
+
+                // Callout firmware
                 addCalloutToErrl(l_err,
                                  ERRL_CALLOUT_TYPE_COMPONENT_ID,
                                  ERRL_COMPONENT_ID_FIRMWARE,
@@ -657,18 +553,17 @@ errlHndl_t apss_store_adc_channel(const eApssAdcChannelAssignments i_func_id, co
     return l_err;
 }
 
-// @fk008a 
 // Function Specification
 //
 // Name:  apss_store_ipmi_sensor_id
 //
-// Description: Writes the given ipmi sensor ID provided by tmgt to the 
+// Description: Writes the given ipmi sensor ID provided by tmgt to the
 //              associated power sensor.
 //
 // End Function Specification
 void apss_store_ipmi_sensor_id(const apss_cfg_adc_v10_t *i_adc)
 {
-    //Get current processor id.
+    // Get current processor id.
     uint8_t l_proc  = G_pob_id.module_id;
 
     switch (i_adc->assignment)
@@ -682,7 +577,7 @@ void apss_store_ipmi_sensor_id(const apss_cfg_adc_v10_t *i_adc)
     case ADC_MEMORY_PROC_3:
       if (l_proc == (i_adc->assignment - ADC_MEMORY_PROC_0))
       {
-          AMECSENSOR_PTR(PWR250USMEM0)->ipmi_sid = i_adc->ipmisensorId; 
+          AMECSENSOR_PTR(PWR250USMEM0)->ipmi_sid = i_adc->ipmisensorId;
       }
       break;
 
@@ -692,7 +587,7 @@ void apss_store_ipmi_sensor_id(const apss_cfg_adc_v10_t *i_adc)
     case ADC_VDD_PROC_3:
       if (l_proc == (i_adc->assignment - ADC_VDD_PROC_0))
       {
-          AMECSENSOR_PTR(PWR250USVDD0)->ipmi_sid = i_adc->ipmisensorId;         
+          AMECSENSOR_PTR(PWR250USVDD0)->ipmi_sid = i_adc->ipmisensorId;
       }
 
       break;
@@ -703,7 +598,7 @@ void apss_store_ipmi_sensor_id(const apss_cfg_adc_v10_t *i_adc)
     case ADC_VCS_VIO_VPCIE_PROC_3:
       if (l_proc == (i_adc->assignment - ADC_VCS_VIO_VPCIE_PROC_0))
       {
-          AMECSENSOR_PTR(PWR250USVCS0)->ipmi_sid = i_adc->ipmisensorId;   
+          AMECSENSOR_PTR(PWR250USVCS0)->ipmi_sid = i_adc->ipmisensorId;
       }
       break;
 
@@ -712,7 +607,7 @@ void apss_store_ipmi_sensor_id(const apss_cfg_adc_v10_t *i_adc)
     case ADC_IO_C:
       if (i_adc->ipmisensorId != 0)
       {
-          AMECSENSOR_PTR(PWR250USIO)->ipmi_sid = i_adc->ipmisensorId;          
+          AMECSENSOR_PTR(PWR250USIO)->ipmi_sid = i_adc->ipmisensorId;
       }
       break;
 
@@ -720,7 +615,7 @@ void apss_store_ipmi_sensor_id(const apss_cfg_adc_v10_t *i_adc)
     case ADC_FANS_B:
       if (i_adc->ipmisensorId != 0)
       {
-          AMECSENSOR_PTR(PWR250USFAN)->ipmi_sid = i_adc->ipmisensorId; 
+          AMECSENSOR_PTR(PWR250USFAN)->ipmi_sid = i_adc->ipmisensorId;
       }
       break;
 
@@ -765,11 +660,7 @@ void apss_store_ipmi_sensor_id(const apss_cfg_adc_v10_t *i_adc)
 //
 // Name:  apss_store_gpio_pin
 //
-// Description:
-//
-//
-//
-//
+// Description: TODO Add description
 //
 // End Function Specification
 errlHndl_t apss_store_gpio_pin(const eApssGpioAssignments i_func_id, const uint8_t i_gpio_num )
@@ -799,8 +690,8 @@ errlHndl_t apss_store_gpio_pin(const eApssGpioAssignments i_func_id, const uint8
                            DEFAULT_TRACE_SIZE,
                            (uint32_t)i_func_id,
                            (uint32_t)i_gpio_num);
-                           
-        // @wb001 -- Callout firmware
+
+        // Callout firmware
         addCalloutToErrl(l_err,
                          ERRL_CALLOUT_TYPE_COMPONENT_ID,
                          ERRL_COMPONENT_ID_FIRMWARE,
@@ -837,7 +728,6 @@ errlHndl_t apss_store_gpio_pin(const eApssGpioAssignments i_func_id, const uint8
             case GPIO_VR_HOT_MEM_PROC_3:
                 l_gpio_function = &G_sysConfigData.apss_gpio_map.vr_fan[i_func_id-GPIO_VR_HOT_MEM_PROC_0];
                 break;
-            // @ly007a - start
             case GPIO_CENT_EN_VCACHE0:
             case GPIO_CENT_EN_VCACHE1:
             case GPIO_CENT_EN_VCACHE2:
@@ -859,7 +749,6 @@ errlHndl_t apss_store_gpio_pin(const eApssGpioAssignments i_func_id, const uint8
             case DOM_D_OC_LATCH:
                 l_gpio_function = &G_sysConfigData.apss_gpio_map.dom_oc_latch[i_func_id-DOM_A_OC_LATCH];
                 break;
-            // @ly007a - end
             default:
                 // It should never happen
                 TRAC_ERR("apss_store_gpio_pin: Invalid function ID: 0x%x", i_func_id);
@@ -875,7 +764,6 @@ errlHndl_t apss_store_gpio_pin(const eApssGpioAssignments i_func_id, const uint8
             }
             else
             {
-
                 TRAC_ERR("apss_store_gpio_pin: Function ID is duplicated (id:0x%x, pin:%d)", i_func_id, i_gpio_num);
 
                 /* @
@@ -895,8 +783,8 @@ errlHndl_t apss_store_gpio_pin(const eApssGpioAssignments i_func_id, const uint8
                                    DEFAULT_TRACE_SIZE,
                                    (uint32_t)i_func_id,
                                    (uint32_t)i_gpio_num);
-                                   
-                // @wb001 -- Callout firmware
+
+                // Callout firmware
                 addCalloutToErrl(l_err,
                                  ERRL_CALLOUT_TYPE_COMPONENT_ID,
                                  ERRL_COMPONENT_ID_FIRMWARE,
@@ -908,17 +796,11 @@ errlHndl_t apss_store_gpio_pin(const eApssGpioAssignments i_func_id, const uint8
     return l_err;
 }
 
-//@fk008a
 // Function Specification
 //
 // Name:  data_store_apss_config_v00
 //
-// Description:
-//              
-//              
-//              
-//
-// Flow:  xx/xx/xx    FN=
+// Description: TODO Add description
 //
 // End Function Specification
 errlHndl_t data_store_apss_config_v00(const cmdh_apss_config_v00_t * i_cmd_ptr,
@@ -959,12 +841,11 @@ errlHndl_t data_store_apss_config_v00(const cmdh_apss_config_v00_t * i_cmd_ptr,
                 l_err = apss_store_gpio_pin( i_cmd_ptr->gpio[l_port].assignment[l_pin],
                                              (l_port*NUM_OF_APSS_PINS_PER_GPIO_PORT)+l_pin);
 
-                // @fk001a
-                // @sb000 FIXME #cmdh_fsp_cmds_datacnfg_c_001
+                // TODO #cmdh_fsp_cmds_datacnfg_c_001
                 // This is only needed for an ITE which would have an OC
                 // sensor for a chassis power connector
                 // Assign this global the correct pins when the oc pins are passed in.
-                G_conn_oc_pins_bitmap = 0x0000;												 
+                G_conn_oc_pins_bitmap = 0x0000;
             }
 
         }
@@ -976,22 +857,15 @@ errlHndl_t data_store_apss_config_v00(const cmdh_apss_config_v00_t * i_cmd_ptr,
             TRAC_IMP("Got valid APSS Config data via TMGT");
         }
     }
-    
+
     return l_err;
 }
 
-
-//@fk008a
 // Function Specification
 //
 // Name:  data_store_apss_config_v10
 //
-// Description:
-//              
-//              
-//              
-//
-// Flow:  xx/xx/xx    FN=
+// Description: TODO Add description
 //
 // End Function Specification
 errlHndl_t data_store_apss_config_v10(const cmdh_apss_config_v10_t * i_cmd_ptr,
@@ -1019,7 +893,7 @@ errlHndl_t data_store_apss_config_v10(const cmdh_apss_config_v10_t * i_cmd_ptr,
             //Write sensor IDs to the powr sensors.
             if (i_cmd_ptr->adc[l_channel].ipmisensorId != 0)
             {
-                apss_store_ipmi_sensor_id(&(i_cmd_ptr->adc[l_channel])); 
+                apss_store_ipmi_sensor_id(&(i_cmd_ptr->adc[l_channel]));
             }
         }
 
@@ -1041,12 +915,11 @@ errlHndl_t data_store_apss_config_v10(const cmdh_apss_config_v10_t * i_cmd_ptr,
                 l_err = apss_store_gpio_pin( i_cmd_ptr->gpio[l_port].assignment[l_pin],
                                              (l_port*NUM_OF_APSS_PINS_PER_GPIO_PORT)+l_pin);
 
-                // @fk001a
-                // @sb000 FIXME #cmdh_fsp_cmds_datacnfg_c_001
+                // TODO #cmdh_fsp_cmds_datacnfg_c_001
                 // This is only needed for an ITE which would have an OC
                 // sensor for a chassis power connector
                 // Assign this global the correct pins when the oc pins are passed in.
-                G_conn_oc_pins_bitmap = 0x0000;												 
+                G_conn_oc_pins_bitmap = 0x0000;
             }
 
         }
@@ -1058,38 +931,31 @@ errlHndl_t data_store_apss_config_v10(const cmdh_apss_config_v10_t * i_cmd_ptr,
             TRAC_IMP("Got valid APSS Config data via TMGT");
         }
     }
-    
+
     return l_err;
 }
 
-
-//@fk008c
 // Function Specification
 //
 // Name:  data_store_apss_config
 //
-// Description:
-//              
-//              
-//              
-//
-// Flow:  xx/xx/xx    FN=
+// Description: TODO Add description
 //
 // End Function Specification
 errlHndl_t data_store_apss_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                         cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     errlHndl_t              l_err = NULL;
-    //Temporarly cast to version 0x10 struct just to get version number.
+    // Temporarly cast to version 0x10 struct just to get version number.
     cmdh_apss_config_v10_t *l_cmd_ptr = (cmdh_apss_config_v10_t *)i_cmd_ptr;
     uint16_t                l_data_length = CMDH_DATALEN_FIELD_UINT16(l_cmd_ptr); //Command length
     uint32_t                l_v00_data_sz = sizeof(cmdh_apss_config_v00_t) - sizeof(cmdh_fsp_cmd_header_t);
     uint32_t                l_v10_data_sz = sizeof(cmdh_apss_config_v10_t) - sizeof(cmdh_fsp_cmd_header_t);
-    
+
     if(!( ((l_cmd_ptr->version == DATA_APSS_VERSION) && (l_v00_data_sz == l_data_length)) ||
           ((l_cmd_ptr->version == DATA_APSS_VERSION10) && (l_v10_data_sz == l_data_length)) ) )
     {
-        TRAC_ERR("data_store_apss_config: Invalid System Data packet. Given Version:0x%X", 
+        TRAC_ERR("data_store_apss_config: Invalid System Data packet. Given Version:0x%X",
                  l_cmd_ptr->version);
 
         /* @
@@ -1110,16 +976,16 @@ errlHndl_t data_store_apss_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
                            l_data_length,
                            (uint32_t)l_cmd_ptr->version);
 
-        // @wb001 -- Callout firmware
+        // Callout firmware
         addCalloutToErrl(l_err,
                          ERRL_CALLOUT_TYPE_COMPONENT_ID,
                          ERRL_COMPONENT_ID_FIRMWARE,
                          ERRL_CALLOUT_PRIORITY_HIGH);
     }
-    else if (l_cmd_ptr->version == DATA_APSS_VERSION) //Version 0
+    else if (l_cmd_ptr->version == DATA_APSS_VERSION) // Version 0
     {
         l_err = data_store_apss_config_v00((cmdh_apss_config_v00_t *)i_cmd_ptr, o_rsp_ptr);
-    } else //Version 0x10
+    } else // Version 0x10
     {
         l_err = data_store_apss_config_v10(l_cmd_ptr, o_rsp_ptr);
     }
@@ -1127,20 +993,11 @@ errlHndl_t data_store_apss_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
     return l_err;
 }
 
-
-// @at014a - end
-
-
 // Function Specification
 //
 // Name:  data_store_pstate_super
 //
-// Description:
-//              
-//              
-//              
-//
-// Flow:  xx/xx/xx    FN=
+// Description: TODO Add description
 //
 // End Function Specification
 errlHndl_t data_store_pstate_super(const cmdh_fsp_cmd_t * i_cmd_ptr,
@@ -1153,7 +1010,7 @@ errlHndl_t data_store_pstate_super(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
     do
     {
-        // Command Length Check - make sure we have all the data 
+        // Command Length Check - make sure we have all the data
         if( CMDH_DATALEN_FIELD_UINT16(i_cmd_ptr) < CMDH_CNFGDATA_PSTATESS_DATALEN)
         {
             TRAC_ERR("data_store_pstate_super: Invalid command length! expected[%u] received[%u]",
@@ -1167,7 +1024,7 @@ errlHndl_t data_store_pstate_super(const cmdh_fsp_cmd_t * i_cmd_ptr,
         }
 
         // Only initialize Pstate once
-        if( G_gpsm_initialized == 0 ) // @at017a
+        if( G_gpsm_initialized == 0 )
         {
             // Initialze Pstate Table from PstateSuperStructure passed in
             // via the DATA in this command.
@@ -1188,29 +1045,18 @@ errlHndl_t data_store_pstate_super(const cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // Name:   data_store_role
 //
-// Description:
-//              
-//              
-//              
-//
-// Flow:  xx/xx/xx    FN=
+// Description: TODO Add description
 //
 // End Function Specification
-errlHndl_t data_store_role(const cmdh_fsp_cmd_t * i_cmd_ptr, 
+errlHndl_t data_store_role(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                  cmdh_fsp_rsp_t * o_rsp_ptr)
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
     errlHndl_t l_errlHndl = NULL;
     uint8_t    l_old_role = G_occ_role;
     uint8_t    l_new_role = OCC_SLAVE;
     uint8_t    l_fir_master = 0x00;
     ERRL_RC    l_rc       = ERRL_RC_SUCCESS;
 
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
     // Cast the command to the struct for this format
     cmdh_set_role_t * l_cmd_ptr = (cmdh_set_role_t *)i_cmd_ptr;
 
@@ -1236,7 +1082,7 @@ errlHndl_t data_store_role(const cmdh_fsp_cmd_t * i_cmd_ptr,
             rtl_clr_run_mask_deferred(RTL_FLAG_NOTMSTR);
             rtl_set_run_mask_deferred(RTL_FLAG_MSTR);
 
-            // Allow APSS tasks to run on OCC master -- gm037
+            // Allow APSS tasks to run on OCC master
             rtl_clr_run_mask_deferred(RTL_FLAG_APSS_NOT_INITD);
 
             TRAC_IMP("OCC Role set to Master via TMGT");
@@ -1246,9 +1092,9 @@ errlHndl_t data_store_role(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
             // Make sure return code is success
             l_rc = ERRL_RC_SUCCESS;
-        } 
+        }
         else if( (OCC_SLAVE == l_new_role ) ||
-                 (OCC_BACKUP_MASTER == l_new_role)) //gm011
+                 (OCC_BACKUP_MASTER == l_new_role))
         {
             if(OCC_MASTER == l_old_role)
             {
@@ -1261,17 +1107,13 @@ errlHndl_t data_store_role(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 // Slave code will automatically recognize we no longer
                 // have a master.
             }
-            //else{
-            // We must not have changed roles.  This is allowed.
-            // Specifically, when TMGT tells each OCC it's role 
-            // after reset.}
 
-            //If this is a backup master occ, we need to be checking the APSS health -- gm037
+            // If this is a backup master occ, we need to be checking the APSS health
             if(OCC_BACKUP_MASTER == l_new_role)
             {
                 OCC_APLT_STATUS_CODES l_status = OCC_APLT_SUCCESS;
 
-                //initialize APSS communication on the backup OCC (retries internally)
+                // Initialize APSS communication on the backup OCC (retries internally)
                 runApplet(OCC_APLT_APSS_INIT,   // Applet enum name
                           NULL,                 // Applet arguments
                           TRUE,                 // Blocking call?
@@ -1281,19 +1123,19 @@ errlHndl_t data_store_role(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
                 if(l_errlHndl || (l_status != OCC_APLT_SUCCESS))
                 {
-                    //don't request due to a backup apss failure. Just log the error.
+                    // Don't request due to a backup apss failure. Just log the error.
                     TRAC_ERR("APSS init applet returned error: l_status: 0x%x", l_status);
                     commitErrl(&l_errlHndl);
                 }
 
-                //Allow APSS tasks to run on OCC backup
+                // Allow APSS tasks to run on OCC backup
                 rtl_clr_run_mask_deferred(RTL_FLAG_APSS_NOT_INITD);
                 TRAC_IMP("OCC Role set to Backup Master via TMGT");
             }
             else
             {
-                //NOTE: slave initialization is done on all
-                //      OCC's during OCC initialization.
+                // NOTE: slave initialization is done on all
+                //       OCC's during OCC initialization.
                 TRAC_IMP("OCC Role set to Slave via TMGT");
             }
 
@@ -1351,13 +1193,13 @@ errlHndl_t data_store_role(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 NULL,                                     //Trace Buf
                 DEFAULT_TRACE_SIZE,                       //Trace Size
                 l_rc,                                     //userdata1
-                CURRENT_STATE());                           //userdata2
+                CURRENT_STATE());                         //userdata2
     }
-    
+
     if( ERRL_RC_SUCCESS != l_rc  )
     {
         // Send back an error response to TMGT
-        cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, l_rc, &l_errlHndl);   // @th036
+        cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, l_rc, &l_errlHndl);
     }
 
     return l_errlHndl;
@@ -1367,23 +1209,15 @@ errlHndl_t data_store_role(const cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // Name:  data_store_power_cap
 //
-// Description: This function should only be run by MASTER OCC when 
+// Description: This function should only be run by MASTER OCC when
 //              power cap data is received from TMGT.
-//              
-//
-//
-// Flow:  04/03/13    FN=data_store_format7.odg
-//
-// Changedby: @at013a @fk001c
 //
 // End Function Specification
 errlHndl_t data_store_power_cap(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                         cmdh_fsp_rsp_t * i_rsp_ptr)
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
     errlHndl_t                      l_err = NULL;
+
     // Cast the command to the struct for this format
     cmdh_pcap_config_t * l_cmd_ptr = (cmdh_pcap_config_t *)i_cmd_ptr;
     uint16_t                        l_data_length = 0;
@@ -1391,9 +1225,6 @@ errlHndl_t data_store_power_cap(const cmdh_fsp_cmd_t * i_cmd_ptr,
     static uint8_t                  L_pcap_count = 0;
     bool                            l_invalid_input = TRUE; //Assume bad input
 
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
     l_data_length = CONVERT_UINT8_ARRAY_UINT16(l_cmd_ptr->data_length[0], l_cmd_ptr->data_length[1]);
 
     // Check version and length
@@ -1441,8 +1272,8 @@ errlHndl_t data_store_power_cap(const cmdh_fsp_cmd_t * i_cmd_ptr,
                            0,
                            l_data_length,
                            ((uint32_t)l_cmd_ptr->version)<<16 | G_occ_role);
-                           
-        // @wb001 -- Callout firmware
+
+        // Callout firmware
         addCalloutToErrl(l_err,
                          ERRL_CALLOUT_TYPE_COMPONENT_ID,
                          ERRL_COMPONENT_ID_FIRMWARE,
@@ -1474,51 +1305,39 @@ errlHndl_t data_store_power_cap(const cmdh_fsp_cmd_t * i_cmd_ptr,
         // The last byte in G_master_pcap_data is a counter that needs to be incremented.
         // It tells the master and slave code that there is new
         // pcap data.  This should not be incremented until
-        // after the packet data has been copied into
-        // G_master_pcap_data.
+        // after the packet data has been copied into G_master_pcap_data.
         L_pcap_count++;
         G_master_pcap_data.pcap_data_count = L_pcap_count;
 
-        // Change Data Request Mask to indicate we got this data
-        //G_data_cnfg->data_mask |= DATA_MASK_PCAP_PRESENT;
-        //will update data mask when slave code acquires data @rt004d
+        // Change Data Request Mask to indicate we got the data
+        // G_data_cnfg->data_mask |= DATA_MASK_PCAP_PRESENT;
+        // will update data mask when slave code acquires data
         TRAC_IMP("data store pcap: Got valid PCAP Config data via TMGT. Count:%i, Data Cfg mask[%x]",G_master_pcap_data.pcap_data_count, G_data_cnfg->data_mask);
     }
 
     return l_err;
 }
 
-// @at014a - start
 // Function Specification
 //
 // Name:  data_store_sys_config
 //
-// Description:
-//
-//
-//
-//
-// Flow:  None
+// Description: TODO Add description
 //
 // End Function Specification
 errlHndl_t data_store_sys_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                        cmdh_fsp_rsp_t * o_rsp_ptr)
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
     errlHndl_t                      l_err = NULL;
+
     // Cast the command to the struct for this format
     cmdh_sys_config_t * l_cmd_ptr = (cmdh_sys_config_t *)i_cmd_ptr;
     uint16_t                        l_data_length = 0;
     uint32_t                        l_sys_data_sz = 0;
     bool                            l_invalid_input = TRUE; //Assume bad input
 
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
     l_data_length = CMDH_DATALEN_FIELD_UINT16(l_cmd_ptr);
-    
+
     // Check length and version
     if(l_cmd_ptr->version == DATA_SYS_VERSION_0)
     {
@@ -1560,8 +1379,8 @@ errlHndl_t data_store_sys_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
                            DEFAULT_TRACE_SIZE,
                            l_data_length,
                            (uint32_t)l_cmd_ptr->version);
-                           
-        // @wb001 -- Callout firmware
+
+        // Callout firmware
         addCalloutToErrl(l_err,
                          ERRL_CALLOUT_TYPE_COMPONENT_ID,
                          ERRL_COMPONENT_ID_FIRMWARE,
@@ -1572,7 +1391,7 @@ errlHndl_t data_store_sys_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
         if(l_cmd_ptr->version == DATA_SYS_VERSION_0)
         {
             // Copy data
-            G_sysConfigData.system_type.byte    = l_cmd_ptr->sys_config.system_type; //@gm008
+            G_sysConfigData.system_type.byte    = l_cmd_ptr->sys_config.system_type;
             G_sysConfigData.proc_huid           = l_cmd_ptr->sys_config.proc_huid;
             G_sysConfigData.backplane_huid      = l_cmd_ptr->sys_config.backplane_huid;
             G_sysConfigData.apss_huid           = l_cmd_ptr->sys_config.apss_huid;
@@ -1586,7 +1405,7 @@ errlHndl_t data_store_sys_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
             G_sysConfigData.backplane_huid      = l_cmd2_ptr->sys_config.backplane_sid;
             G_sysConfigData.apss_huid           = l_cmd2_ptr->sys_config.apss_sid;
 
-            //FIXME: Need to store the sensor IDs
+            //TODO: Need to store the sensor IDs
         }
 
         // Change Data Request Mask to indicate we got this data
@@ -1596,7 +1415,6 @@ errlHndl_t data_store_sys_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
     return l_err;
 }
-// @at014a - end
 
 // Function Specification
 //
@@ -1604,17 +1422,11 @@ errlHndl_t data_store_sys_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // Description: Store the thermal control thresholds sent by TMGT. This data is
 // sent to all OCCs.
-//             
-//
-// Flow:  xx/xx/xx    FN=
 //
 // End Function Specification
 errlHndl_t data_store_thrm_thresholds(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                             cmdh_fsp_rsp_t * o_rsp_ptr)
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
     errlHndl_t                      l_err = NULL;
     cmdh_thrm_thresholds_t*         l_cmd_ptr = (cmdh_thrm_thresholds_t*)i_cmd_ptr;
     uint16_t                        i = 0;
@@ -1626,9 +1438,6 @@ errlHndl_t data_store_thrm_thresholds(const cmdh_fsp_cmd_t * i_cmd_ptr,
     bool                            l_invalid_input = TRUE; //Assume bad input
     bool                            l_vrm_frutype = FALSE;
 
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
     do
     {
         l_data_length = CMDH_DATALEN_FIELD_UINT16(l_cmd_ptr);
@@ -1688,8 +1497,8 @@ errlHndl_t data_store_thrm_thresholds(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 if((l_frutype >= 0) && (l_frutype < DATA_FRU_MAX))
                 {
                     // Copy FRU data
-                    memcpy((void *)&G_data_cnfg->thrm_thresh.data[l_frutype], 
-                           (void *)&l_cmd_ptr->data[i], 
+                    memcpy((void *)&G_data_cnfg->thrm_thresh.data[l_frutype],
+                           (void *)&l_cmd_ptr->data[i],
                            sizeof(cmdh_thrm_thresholds_set_t));
 
                 // Useful trace for debugging
@@ -1797,17 +1606,11 @@ errlHndl_t data_store_thrm_thresholds(const cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // Description: Store the HUID's for centaurs and dimms. This data is
 // sent to each OCC individually.
-//             
-//
-// Flow:  xx/xx/xx    FN=
 //
 // End Function Specification
 errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                     cmdh_fsp_rsp_t * o_rsp_ptr)
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
     errlHndl_t                      l_err = NULL;
     cmdh_mem_cfg_t*                 l_cmd_ptr = (cmdh_mem_cfg_t*)i_cmd_ptr;
     uint16_t                        l_data_length = 0;
@@ -1817,9 +1620,6 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
     int                             i;
     bool                            l_invalid_input = TRUE; //Assume bad input
 
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
     do
     {
         l_data_length = CMDH_DATALEN_FIELD_UINT16((&l_cmd_ptr->header));
@@ -1865,11 +1665,11 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
         }
         else
         {
-            //This notifies other code that we need to request the mem throt packet
-            //and we need to enable memory monitoring when we enter observation state
+            // This notifies other code that we need to request the mem throt packet
+            // and we need to enable memory monitoring when we enter observation state
             G_mem_monitoring_allowed = TRUE;
 
-            //Require the mem throt packet for going to active and observation states
+            // Require the mem throt packet for going to active and observation states
             SMGR_VALIDATE_DATA_ACTIVE_MASK |= DATA_MASK_MEM_THROT;
             SMGR_VALIDATE_DATA_OBSERVATION_MASK |= DATA_MASK_MEM_THROT;
 
@@ -1883,10 +1683,10 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
             for(i=0; i<l_cmd_ptr->header.num_data_sets; i++)
             {
                 cmdh_mem_cfg_data_set_t* l_data_set = &l_cmd_ptr->data_set[i];
-                //validate the centaur and dimm #'s for this data set
+                // Validate the centaur and dimm #'s for this data set
                 if(l_data_set->centaur_num >= MAX_NUM_CENTAURS ||
                    (l_data_set->dimm_num != 0xFF &&
-                    l_data_set->dimm_num >= NUM_DIMMS_PER_CENTAUR)) 
+                    l_data_set->dimm_num >= NUM_DIMMS_PER_CENTAUR))
                 {
                     TRAC_ERR("data_store_mem_cfg: Invalid dimm or centaur number. entry=%d, cent=%d, dimm=%d",
                              i,
@@ -1896,7 +1696,7 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                     break;
                 }
 
-                //Per the spec, if dimm_num = 0xFF then this is a centaur HUID
+                // Per the spec, if dimm_num = 0xFF then this is a centaur HUID
                 if(l_data_set->dimm_num == 0xFF)
                 {
                     G_sysConfigData.centaur_huids[l_data_set->centaur_num] = l_data_set->huid;
@@ -1904,7 +1704,7 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 }
                 else
                 {
-                    G_sysConfigData.dimm_huids[l_data_set->centaur_num][l_data_set->dimm_num] = 
+                    G_sysConfigData.dimm_huids[l_data_set->centaur_num][l_data_set->dimm_num] =
                                                                                 l_data_set->huid;
                     l_num_dimms++;
                 }
@@ -1921,7 +1721,7 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 // Validate the centaur and dimm #'s for this data set
                 if(l_data_set->centaur_num >= MAX_NUM_CENTAURS ||
                    (l_data_set->dimm_num != 0xFF &&
-                    l_data_set->dimm_num >= NUM_DIMMS_PER_CENTAUR)) 
+                    l_data_set->dimm_num >= NUM_DIMMS_PER_CENTAUR))
                 {
                     TRAC_ERR("data_store_mem_cfg: Invalid dimm or centaur number. entry=%d, cent=%d, dimm=%d",
                              i,
@@ -1931,7 +1731,7 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                     break;
                 }
 
-                //Per the spec, if dimm_num = 0xFF then this is a centaur ID
+                // Per the spec, if dimm_num = 0xFF then this is a centaur ID
                 if(l_data_set->dimm_num == 0xFF)
                 {
                     // Store the hardware sensor ID
@@ -1978,17 +1778,11 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // Description: Store min/max mem throttle settings. This data is
 // sent to each OCC individually.
-//             
-//
-// Flow:  xx/xx/xx    FN=
 //
 // End Function Specification
 errlHndl_t data_store_mem_throt(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                       cmdh_fsp_rsp_t * o_rsp_ptr)
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
     errlHndl_t                      l_err = NULL;
     cmdh_mem_throt_t*               l_cmd_ptr = (cmdh_mem_throt_t*)i_cmd_ptr;
     uint16_t                        l_data_length = 0;
@@ -1997,9 +1791,6 @@ errlHndl_t data_store_mem_throt(const cmdh_fsp_cmd_t * i_cmd_ptr,
     uint16_t                        l_configured_mbas = 0;
     bool                            l_invalid_input = TRUE; //Assume bad input
 
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
     do
     {
         l_data_length = CMDH_DATALEN_FIELD_UINT16((&l_cmd_ptr->header));
@@ -2048,9 +1839,9 @@ errlHndl_t data_store_mem_throt(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 mem_throt_config_data_t    l_temp_set;
                 uint16_t * l_n_ptr;
 
-                //validate the centaur and mba #'s for this data set
+                // Validate the centaur and mba #'s for this data set
                 if(l_data_set->centaur_num >= MAX_NUM_CENTAURS ||
-                    l_data_set->mba_num >= NUM_MBAS_PER_CENTAUR) 
+                    l_data_set->mba_num >= NUM_MBAS_PER_CENTAUR)
                 {
                     TRAC_ERR("data_store_mem_throt: Invalid mba or centaur number. entry=%d, cent=%d, mba=%d",
                              i,
@@ -2060,10 +1851,10 @@ errlHndl_t data_store_mem_throt(const cmdh_fsp_cmd_t * i_cmd_ptr,
                     break;
                 }
 
-                //copy into a temporary buffer while we check for N values of 0
+                // Copy into a temporary buffer while we check for N values of 0
                 memcpy(&l_temp_set, &(l_data_set->min_ot_n_per_mba), sizeof(mem_throt_config_data_t));
-                
-                //a 0 for any N value is an error
+
+                // A 0 for any N value is an error
                 for(l_n_ptr = &l_temp_set.min_ot_n_per_mba; l_n_ptr <= &l_temp_set.ovs_n_per_chip; l_n_ptr++)
                 {
                     if(!(*l_n_ptr))
@@ -2097,9 +1888,9 @@ errlHndl_t data_store_mem_throt(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 mem_throt_config_data_t        l_temp_set;
                 uint16_t * l_n_ptr;
 
-                //validate the centaur and mba #'s for this data set
+                // Validate the centaur and mba #'s for this data set
                 if(l_data_set->centaur_num >= MAX_NUM_CENTAURS ||
-                    l_data_set->mba_num >= NUM_MBAS_PER_CENTAUR) 
+                    l_data_set->mba_num >= NUM_MBAS_PER_CENTAUR)
                 {
                     TRAC_ERR("data_store_mem_throt: Invalid mba or centaur number. entry=%d, cent=%d, mba=%d",
                              i,
@@ -2109,8 +1900,7 @@ errlHndl_t data_store_mem_throt(const cmdh_fsp_cmd_t * i_cmd_ptr,
                     break;
                 }
 
-                //copy into a temporary buffer while we check for N values of 0
-                //memcpy(&l_temp_set, &(l_data_set->min_ot_n_per_mba), sizeof(mem_throt_config_data_t));
+                // Copy into a temporary buffer while we check for N values of 0
                 l_temp_set.min_ot_n_per_mba = l_data_set->min_ot_n_per_mba;
                 l_temp_set.nom_n_per_mba = l_data_set->redupwr_n_per_mba;
                 l_temp_set.nom_n_per_chip = l_data_set->redupwr_n_per_chip;
@@ -2118,8 +1908,8 @@ errlHndl_t data_store_mem_throt(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 l_temp_set.turbo_n_per_chip = l_data_set->redupwr_n_per_chip;
                 l_temp_set.ovs_n_per_mba = l_data_set->ovs_n_per_mba;
                 l_temp_set.ovs_n_per_chip = l_data_set->ovs_n_per_chip;
-                
-                //a 0 for any N value is an error
+
+                // A 0 for any N value is an error
                 for(l_n_ptr = &l_temp_set.min_ot_n_per_mba; l_n_ptr <= &l_temp_set.ovs_n_per_chip; l_n_ptr++)
                 {
                     if(!(*l_n_ptr))
@@ -2143,7 +1933,7 @@ errlHndl_t data_store_mem_throt(const cmdh_fsp_cmd_t * i_cmd_ptr,
             }
         }
 
-    } while(0); 
+    } while(0);
 
     if(!l_err)
     {
@@ -2152,32 +1942,25 @@ errlHndl_t data_store_mem_throt(const cmdh_fsp_cmd_t * i_cmd_ptr,
         TRAC_IMP("data_store_mem_throt: Got valid mem throt packet. configured_mba_bitmap=0x%04x",
                  l_configured_mbas);
 
-        //update the configured mba bitmap
+        // Update the configured mba bitmap
         G_configured_mbas = l_configured_mbas;
     }
 
     return l_err;
 }
 
-
-// @rt002a - start
 // Function Specification
 //
 // Name:  data_store_ips_config
 //
-// Description:
-//
-//
-//
-//
-// Flow:  None
+// Description: TODO Add description
 //
 // End Function Specification
 errlHndl_t data_store_ips_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                        cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     errlHndl_t          l_err = NULL;
-    cmdh_ips_config_t   *l_cmd_ptr = (cmdh_ips_config_t *)i_cmd_ptr;// Cast the command to the struct for this format
+    cmdh_ips_config_t   *l_cmd_ptr = (cmdh_ips_config_t *)i_cmd_ptr; // Cast the command to the struct for this format
     uint16_t            l_data_length = CMDH_DATALEN_FIELD_UINT16(l_cmd_ptr);
     uint32_t            l_ips_data_sz = sizeof(cmdh_ips_config_t) - sizeof(cmdh_fsp_cmd_header_t);
 
@@ -2206,8 +1989,8 @@ errlHndl_t data_store_ips_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
                            DEFAULT_TRACE_SIZE,
                            l_data_length,
                            (uint32_t)l_cmd_ptr->iv_version);
-                           
-        // @wb001 -- Callout firmware
+
+        // Callout firmware
         addCalloutToErrl(l_err,
                          ERRL_CALLOUT_TYPE_COMPONENT_ID,
                          ERRL_COMPONENT_ID_FIRMWARE,
@@ -2221,7 +2004,7 @@ errlHndl_t data_store_ips_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
         // Change Data Request Mask to indicate we got this data
         G_data_cnfg->data_mask |= DATA_MASK_IPS_CNFG;
 
-        TRAC_IMP("Got valid Idle Power Save Config data via TMGT: ipsEnabled[%d] Delay Time to enter IPS[%d], exit IPS[%d]. Utilization to enter IPS[%d], exit IPS[%d]", 
+        TRAC_IMP("Got valid Idle Power Save Config data via TMGT: ipsEnabled[%d] Delay Time to enter IPS[%d], exit IPS[%d]. Utilization to enter IPS[%d], exit IPS[%d]",
                  l_cmd_ptr->iv_ips_config.iv_ipsEnabled,
                  l_cmd_ptr->iv_ips_config.iv_delayTimeforEntry,
                  l_cmd_ptr->iv_ips_config.iv_delayTimeforExit,
@@ -2231,33 +2014,19 @@ errlHndl_t data_store_ips_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
     return l_err;
 }
-// @rt002a - end
-
 // Function Specification
 //
 // Name:   DATA_store_cnfgdata
 //
-// Description:
-//              
-//              
-//              
-//
-// Flow:  xx/xx/xx    FN=
+// Description: TODO Add description
 //
 // End Function Specification
 errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
                                       cmdh_fsp_rsp_t * o_rsp_ptr)
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
     errlHndl_t                      l_errlHndl = NULL;
     UINT32                          l_new_data = 0;
     ERRL_RC                         l_rc       = ERRL_RC_INTERNAL_FAIL;
-
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
 
     memset(o_rsp_ptr,0,(size_t)(sizeof(cmdh_fsp_rsp_t)));
 
@@ -2265,69 +2034,52 @@ errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
     switch (i_cmd_ptr->data[0])
     {
-        //case DATA_FORMAT_TABLE_OFFSET:
-        //case DATA_FORMAT_ACTIVE_CORES:
-        //case DATA_FORMAT_PROC_IIC_ADDR: // This is not needed
-
-        //case DATA_FORMAT_TEMP:
-        //case DATA_FORMAT_VRM_SETPOINT:
-        //case DATA_FORMAT_AMBIENT:
-        //case DATA_FORMAT_ALTITUDE:
-        //case DATA_FORMAT_DYN_POWER:
-        //case DATA_FORMAT_FAN_CONTROL:
-        //case DATA_FORMAT_POWR_SUP_CALI:
-        //case DATA_FORMAT_GX_HOST_BRIDGE_TEMP:
-        //case DATA_FORMAT_ENVIRONMENT_WINDOW:
-        //case DATA_FORMAT_P7IOC_TEMPERATURE:
-        //case DATA_FORMAT_ETHERNET_TEMPERATURE:
-        //case DATA_FORMAT_AME_CIR_CALIB:
-
         case DATA_FORMAT_FREQ:
             l_errlHndl = data_store_freq_data(i_cmd_ptr , o_rsp_ptr);
             if(NULL == l_errlHndl)
             {
-                l_new_data = DATA_MASK_FREQ_PRESENT;                // @th015
+                l_new_data = DATA_MASK_FREQ_PRESENT;
             }
             break;
 
-        case DATA_FORMAT_PSTATE_SUPERSTRUCTURE:   // @th010
-            // Initialize the Pstate Table, based on the passed in 
+        case DATA_FORMAT_PSTATE_SUPERSTRUCTURE:
+            // Initialize the Pstate Table, based on the passed in
             // PstateSuperStructure.
 
             l_errlHndl = data_store_pstate_super(i_cmd_ptr, o_rsp_ptr);
             if(NULL == l_errlHndl)
             {
                 // Set this in case AMEC needs to know about this
-                l_new_data = DATA_MASK_PSTATE_SUPERSTRUCTURE;     // @th015
+                l_new_data = DATA_MASK_PSTATE_SUPERSTRUCTURE;
             }
             break;
 
         case DATA_FORMAT_SET_ROLE:
             // Initialze our role to either be a master of a slave
-            // We must be in Standby State for this command to be 
+            // We must be in Standby State for this command to be
             // accepted.
 
             l_errlHndl = data_store_role(i_cmd_ptr, o_rsp_ptr);
             if(NULL == l_errlHndl)
             {
                 // Set this in case AMEC needs to know about this
-                l_new_data = DATA_MASK_SET_ROLE;   
+                l_new_data = DATA_MASK_SET_ROLE;
             }
             break;
 
         case DATA_FORMAT_APSS_CONFIG:
             // Initialze APSS settings so that OCC can correctly interpret
             // the data that it gets from the APSS
-            l_errlHndl = data_store_apss_config(i_cmd_ptr, o_rsp_ptr);  // @at014a
+            l_errlHndl = data_store_apss_config(i_cmd_ptr, o_rsp_ptr);
 
             if(NULL == l_errlHndl)
             {
                 // Set this in case AMEC needs to know about this
-                l_new_data = DATA_MASK_APSS_CONFIG;   
+                l_new_data = DATA_MASK_APSS_CONFIG;
             }
             break;
 
-        case DATA_FORMAT_POWER_CAP: // @at013a
+        case DATA_FORMAT_POWER_CAP:
             // Store the pcap data in G_master_pcap_data
             l_errlHndl = data_store_power_cap(i_cmd_ptr, o_rsp_ptr);
 
@@ -2338,7 +2090,7 @@ errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
             }
             break;
 
-        case DATA_FORMAT_SYS_CNFG: // @at014a
+        case DATA_FORMAT_SYS_CNFG:
             // Store the system config data in G_sysConfigData
             l_errlHndl = data_store_sys_config(i_cmd_ptr, o_rsp_ptr);
 
@@ -2349,7 +2101,7 @@ errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
             }
             break;
 
-        case DATA_FORMAT_IPS_CNFG: // @rt002a
+        case DATA_FORMAT_IPS_CNFG:
             // Store the system config data in G_sysConfigData
             l_errlHndl = data_store_ips_config(i_cmd_ptr, o_rsp_ptr);
 
@@ -2369,11 +2121,12 @@ errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
                 // Set this in case AMEC needs to know about this
                 l_new_data = DATA_MASK_THRM_THRESHOLDS;
             }
-            break; 
+            break;
 
         case DATA_FORMAT_MEM_CFG:
             // Store HUID mapping for centaurs and dimms
             l_errlHndl = data_store_mem_cfg(i_cmd_ptr, o_rsp_ptr);
+
             if(NULL == l_errlHndl)
             {
                 l_new_data = DATA_MASK_MEM_CFG;
@@ -2383,12 +2136,13 @@ errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
         case DATA_FORMAT_MEM_THROT:
             // Store memory throttle limits
             l_errlHndl = data_store_mem_throt(i_cmd_ptr, o_rsp_ptr);
+
             if(NULL == l_errlHndl)
             {
                 l_new_data = DATA_MASK_MEM_THROT;
             }break;
 
-        case DATA_FORMAT_CLEAR_ALL: // @at015a
+        case DATA_FORMAT_CLEAR_ALL:
             // Make sure not in ACTIVE
             if(CURRENT_STATE() != OCC_STATE_ACTIVE)
             {
@@ -2397,7 +2151,7 @@ errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
                 G_data_cnfg->data_mask &= SMGR_VALIDATE_DATA_OBSERVATION_MASK;
 
                 // Clear the frequencies config data
-                memset(&G_sysConfigData.sys_mode_freq.table[0], 0, sizeof(G_sysConfigData.sys_mode_freq.table)); // @at017a
+                memset(&G_sysConfigData.sys_mode_freq.table[0], 0, sizeof(G_sysConfigData.sys_mode_freq.table));
 
             }
             else
@@ -2412,7 +2166,7 @@ errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
             // to generate the error log, it will get called again, below but
             // that's ok, as long as we set l_rc here.
             l_rc = ERRL_RC_INVALID_DATA;
-            cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, l_rc, &l_errlHndl);   // @th036
+            cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, l_rc, &l_errlHndl);
             break;
     }
 
@@ -2420,24 +2174,24 @@ errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
     {
         // Don't send a poll if we just received one or our periodic data
         // packets like supernova, dimm, or p5ioc temperatures.  This causes
-        // TMGT to wrap there trace with our attentions
+        // TMGT to wrap their trace with our attentions
         // For simplicity, don't poll if we don't have any new data to
         // request
         if(DATA_request_cnfgdata() != 0)
         {
-            //poll after we get new data to either inform the FSP that we need more,
-            //or inform the FSP that we have everything needed for a new state.
+            // Poll after we get new data to either inform the FSP that we need more,
+            // or inform the FSP that we have everything needed for a new state.
             cmdh_fsp_attention(OCC_ALERT_FSP_SERVICE_REQD);
         }
 
         // Notify AMEC component of new data
-        AMEC_data_change(l_new_data);     // @th015
+        AMEC_data_change(l_new_data);
     }
 
     if(l_errlHndl)
     {
         // Build Error Response packet
-        cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, l_rc, &l_errlHndl);   // @th036
+        cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, l_rc, &l_errlHndl);
     }
     else
     {

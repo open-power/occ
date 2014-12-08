@@ -1,25 +1,28 @@
-
-#*******************************************************************************
-# @file ll_ffdc.S
-# @brief save off registers to fsp response buffer
-#*******************************************************************************
-
-#*******************************************************************************
-# @page ChangeLogs Change Logs
-# @section _ll_ffdc_S ll_ffdc.S
-# @verbatim
+# IBM_PROLOG_BEGIN_TAG
+# This is an automatically generated prolog.
 #
-# Flag    Def/Fea    Userid    Date        Description
-# ------- ---------- --------  ----------  ----------------------------------
-# @gm010   901580    milesg    10/06/2013  Low Level FFDC support
-# @sb002   908891    sbroyles  12/09/2013  FFDC updates
-# @sb012   910394    sbroyles  01/10/2014  More FFDC updates
-# @sb023   913769    sbroyles  02/08/2014  Fix SPR capture
-# @sb040   916980    sbroyles  02/26/2014  Multiple fixes and additions
-# @endverbatim
-#*******************************************************************************
-
-// @sb002 Updated header and ffdc packet info text
+# $Source: src/occ/cmdh/ll_ffdc.S $
+#
+# OpenPOWER OnChipController Project
+#
+# Contributors Listed Below - COPYRIGHT 2011,2014
+# [+] Google Inc.
+# [+] International Business Machines Corp.
+#
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# permissions and limitations under the License.
+#
+# IBM_PROLOG_END_TAG
 
 /*****************************************************************************/
 // Includes
@@ -178,7 +181,7 @@
 # -----------------------------------------------------------------------------
 # Total size:       664 - 8 + 3 = 659
 #
-// @sb040 Lots of updates including a new struct for the FFDC buffer, diff to
+// Lots of updates including a new struct for the FFDC buffer, diff to
 // previous version to see all changes, individual line change tags left out to
 // reduce clutter.
 
@@ -409,8 +412,8 @@ END_OF_BUFFER:  .byte
 # Switch back to text section, .struct switched us to the absolute section
     .section    ".text"
 
-# @sb012 __save_ffdc_regs rewritten, __ssx_checkpoint_panic_and_save_ffdc added
-# @sb012 __panic_checkpoint tweaked, __occ_checkpoint_panic_and_save_ffdc added
+#  __save_ffdc_regs rewritten, __ssx_checkpoint_panic_and_save_ffdc added
+#  __panic_checkpoint tweaked, __occ_checkpoint_panic_and_save_ffdc added
 
 # Function Specification ******************************************************
 #
@@ -468,7 +471,7 @@ __occ_checkpoint_panic_and_save_ffdc:
     _stwi       %r3, %r5, LINK_REG
 
     # We can use r3 now...
-    # Save dbcr0 @sb002
+    # Save dbcr0
     mfdbcr0     %r3
     _stwi       %r3, %r5, DBCR0
 
@@ -569,7 +572,7 @@ __ssx_checkpoint_panic_and_save_ffdc:
     _stwi       %r3, %r5, LINK_REG
 
     # We can use r3 now...
-    # Save dbcr0 @sb002
+    # Save dbcr0
     mfdbcr0     %r3
     _stwi       %r3, %r5, DBCR0
 
@@ -606,7 +609,7 @@ __ssx_checkpoint_panic_and_save_ffdc:
     blr
 
 
-// @sb002 New function to save a panic checkpoint and return code to the ffdc
+// New function to save a panic checkpoint and return code to the ffdc
 // header before writing the ffdc data packet and going to halt.
 # Function Specification ******************************************************
 #
@@ -697,7 +700,7 @@ __panic_checkpoint:
 #
 # End Function Specification **************************************************
 
-# @sb002 updated to save new FFDC format
+# updated to save new FFDC format
 .global_function __save_ffdc_regs
 __save_ffdc_regs:
 
@@ -739,7 +742,7 @@ __save_ffdc_regs:
 
     # Move SPRs into the FFDC buffer, not going to use a gpr multi store so we
     # avoid altering r13, just brute force it for clarity
-    # @sb023 Change mfivpr to mfevpr
+    # Change mfivpr to mfevpr
     mfevpr      %r5
     _stwi       %r5, %r3, EVPR
     mfxer       %r5
@@ -752,18 +755,18 @@ __save_ffdc_regs:
     _stwi       %r5, %r3, SRR0
     mfsrr1      %r5
     _stwi       %r5, %r3, SRR1
-    # @sb023 Change mfcsrr0 to mfsrr2
+    # Change mfcsrr0 to mfsrr2
     mfsrr2      %r5
     _stwi       %r5, %r3, SRR2
-    # @sb023 Change mfcsrr1 to mfsrr3
+    # Change mfcsrr1 to mfsrr3
     mfsrr3      %r5
     _stwi       %r5, %r3, SRR3
     mfmcsr      %r5
     _stwi       %r5, %r3, MCSR
-    # @sb023 Change mfmcsrr0 to mfpid
+    # Change mfmcsrr0 to mfpid
     mfpid       %r5
     _stwi       %r5, %r3, PID
-    # @sb023 Change mfmcsrr0 to mfzpr
+    # Change mfmcsrr0 to mfzpr
     mfzpr       %r5
     _stwi       %r5, %r3, ZPR
     mfusprg0    %r5
@@ -795,26 +798,25 @@ __save_ffdc_regs:
 
     # Save debug control reg 1, debug status reg, interrupt status regs and
     # unconditional debug event registers
-    # Save dbcr1 @sb002
+    # Save dbcr1
     mfdbcr1     %r5
     _stwi       %r5, %r3, DBCR1
-    # Save dbsr @sb002
+    # Save dbsr
     mfdbsr      %r5
     _stwi       %r5, %r3, DBSR
-    # Save OISR0 @sb002
-    # >> @sb040 Use _lwzi instead of _liw
+    # Save OISR0
+    # Use _lwzi instead of _liw
     _lwzi       %r5, %r5, OCB_OISR0
     _stwi       %r5, %r3, OISR0
-    # Save OISR1 @sb002
+    # Save OISR1
     _lwzi       %r5, %r5, OCB_OISR1
     _stwi       %r5, %r3, OISR1
-    # Save OUDER0 @sb002
+    # Save OUDER0
     _lwzi       %r5, %r5, OCB_OUDER0
     _stwi       %r5, %r3, OUDER0
-    # Save OUDER1 @sb002
+    # Save OUDER1
     _lwzi       %r5, %r5, OCB_OUDER1
     _stwi       %r5, %r3, OUDER1
-    # << @sb040
     # Save OIMR0
     _lwzi       %r5, %r5, OCB_OIMR0
     _stwi       %r5, %r3, OIMR0
@@ -868,7 +870,7 @@ __save_ffdc_regs:
     li          %r5, 16
     bl          memcpy
 
-    # SCOM the OCCLFIR, both words, into the buffer @sb002
+    # SCOM the OCCLFIR, both words, into the buffer
     # The _getsom call will destroy r0 and r3-r11, but we restore all gprs at
     # the end before returning.
     # Make the scom timeout = __ssx_timebase_frequency_mhz * 10 usecs
@@ -928,7 +930,7 @@ __save_ffdc_regs:
     li          %r5, 8
     bl          ffdc_stack_unwind
 
-    # Mark the end of the buffer @sb002
+    # Mark the end of the buffer
     _liwa       %r5, FFDC_END_MARKER
     _stwi       %r5, %r3, FFDC_END
 
@@ -947,7 +949,7 @@ __save_ffdc_regs:
     _liwa       %r0, GPR0
     lwz         %r0, 0(%r0)
 
-    # @sb002 Ensure preceding memory access synchronization
+    # Ensure preceding memory access synchronization
     sync
 
     # Return to caller

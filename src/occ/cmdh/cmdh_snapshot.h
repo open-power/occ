@@ -1,41 +1,35 @@
-/**
- * @file cmdh_snapshot.h
- * @brief Header file for snapshot buffer interface.
- *
- *
-*/
-/**
- *      @page ChangeLogs Change Logs
- *      @section _cmdh_snapshot_h cmdh_snapshot.h
- *      @verbatim
- *
- *  Flag     Def/Fea    Userid    Date        Description
- *  -------- ---------- --------  ---------   ----------------------------------
- *  @fk004   907588     fmkassem  11/25/2013  Created
- *
- *  @endverbatim
- */
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/cmdh/cmdh_snapshot.h $                                */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* COPYRIGHT International Business Machines Corp. 2011,2014              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
+
 #ifndef CMDH_SNAPSHOT_H
 #define CMDH_SNAPSHOT_H
 
-//*************************************************************************
-// Includes
-//*************************************************************************
 #include "cmdh_fsp_cmds.h"
-
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
 
 /* snapshot buffer timer */
 extern SsxTimer G_snapshotTimer;
 
-
-//@fk004a
-/**************************************************************************
- * @struct cmdh_get_ssbuffer_req_t
- * @brief Struct used to parse get snapshot buffer request Command
- */
+// Struct used to parse get snapshot buffer request Command
 typedef struct __attribute__ ((packed)) 
 {
     struct    cmdh_fsp_cmd_header;  // Standard TMGT
@@ -55,11 +49,7 @@ typedef struct __attribute__ ((packed))
 #define CMDH_SNAPSHOT_MAX_INDEX (CMDH_SNAPSHOT_MAX - 1)
 #define CMDH_SNAPSHOT_SYNC_VERSION 0
 
-/**************************************************************************
- * @struct cmdh_snapshot_entry_t;
- * @brief Used by OCC to store sequenced snapshot entries. 16 
- *        bytes each
- */
+// Used by OCC to store sequenced snapshot entries. 16 bytes each
 typedef struct __attribute__ ((packed))
 {
     uint8_t                 seq_number;  //Snapshot Sequence number; 30 second time slice.
@@ -70,20 +60,15 @@ typedef struct __attribute__ ((packed))
     uint8_t                 reserved;    //reserved.
 }cmdh_snapshot_cimp_entry_t;
 
-/**************************************************************************
- * @struct cmdh_snapshot_entry_t;
- * @brief Contains all entries in a snapshot.
- */
+// Contains all entries in a snapshot.
 typedef struct __attribute__ ((packed))
 {
-    uint8_t  current_id;  // Snapshot buffer ID number of buffer data to follow, typically this should match id in request data, unless it's not available.
+    uint8_t  current_id;  // Snapshot buffer ID number of buffer data to follow, typically this 
+                          // should match id in request data, unless it's not available.
     cmdh_snapshot_cimp_entry_t   cim[CMDH_CIMP_MAX]; // Data collected for cimp
 }cmdh_snapshot_buffer_t;
 
-/**************************************************************************
- * @struct cmdh_get_snapshot_resp_v0_t;
- * @brief Used by OCC to respond to "GET_SNAPSHOT_BUFFER" nonite(version 0) cmd. 323 bytes
- */
+// Used by OCC to respond to "GET_SNAPSHOT_BUFFER" nonite(version 0) cmd. 323 bytes
 typedef struct __attribute__ ((packed))
 {
     struct                  cmdh_fsp_rsp_header;
@@ -93,30 +78,21 @@ typedef struct __attribute__ ((packed))
     uint8_t                 checksum[2]; // Checksum
 }cmdh_get_snapshot_resp_v0_t;
 
-/**************************************************************************
- * @struct cmdh_snapshot_sync_resp_t;
- * @brief Used by OCC to respond to "SNAPSHOT_SYNC" cmd.
- */
+// Used by OCC to respond to "SNAPSHOT_SYNC" cmd.
 typedef struct __attribute__ ((packed))
 {
     struct                  cmdh_fsp_rsp_header;
     UINT8                   checksum[2];
 }cmdh_snapshot_sync_resp_t;
 
-/**************************************************************************
- * @struct cmdh_snapshot_sync_query_t;
- * @brief structure of cmd packet received from tmgt.
- */
+// Structure of cmd packet received from tmgt.
 typedef struct __attribute__ ((packed))
 {
     struct                  cmdh_fsp_cmd_header;  // Standard TMGT
     UINT8                   version;
 } cmdh_snapshot_sync_query_t;
 
-/**************************************************************************
- * @struct pwr250us_over30sec_t
- * @brief structure of data that need to be maintained between snapshots.
- */
+// Structure of data that need to be maintained between snapshots.
 typedef struct __attribute__ ((packed))
 {
     uint32_t count;	 	//Count of number of samples taken.
@@ -126,9 +102,6 @@ typedef struct __attribute__ ((packed))
 } pwr250us_over30sec_t;
 
 extern pwr250us_over30sec_t g_pwr250us_over30sec;
-//*************************************************************************
-// Function Declarations
-//*************************************************************************
 
 errlHndl_t cmdh_get_snapshot_buffer(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                           cmdh_fsp_rsp_t * i_rsp_ptr);

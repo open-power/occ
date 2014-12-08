@@ -1,41 +1,30 @@
-/******************************************************************************
-// @file cmdh_fsp_cmds_datacnfg.h
-// @brief Command Handling for FSP Communication.
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _cmdh_fsp_cmds_datacnfg_h cmdh_fsp_cmds_datacnfg_h
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @th022             thallet   10/05/2012  Created
- *   @at013  878755     alvinwan  04/17/2013  OCC power capping implementation
- *   @at014  882077     alvinwan  05/09/2013  Support APSS and System Config data from TMGT
- *   @at015  885884     alvinwan  06/10/2013  Support Observation/Active state change
- *   @jh004  889884     joshych   07/24/2013  Support CPM param and updated frequency packet
- *   @th046  894648     thallet   08/08/2013  Fix Coreq problem with TMGT
- *   @gs010  899888     gjsilva   09/24/2013  Process data format 0x13 from TMGT
- *   @rt001  902613     tapiar    10/14/2013  Process data format 0x11 from TMGT
- *   @gm012  905097     milesg    10/31/2013  support mem throttle & mem config packets
- *   @gs015  905166     gjsilva   11/04/2013  Full support for IPS function
- *   @fk002  905632     fmkassem  11/05/2013  Remove CriticalPathMonitor code
- *   @fk008  942864     fmkassem  09/15/2014  BMC - APSS config data
- *   @gs042  942940     gjsilva   10/24/2014  Support for data packets in BMC-based systems
- *   @gs043  943177     gjsilva   10/30/2014  Support for mem data packets in BMC-based systems
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/cmdh/cmdh_fsp_cmds_datacnfg.h $                       */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* COPYRIGHT International Business Machines Corp. 2011,2014              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
 #ifndef _CMDH_FSP_CMDS_DATACNFG_H
 #define _CMDH_FSP_CMDS_DATACNFG_H
 
-//*************************************************************************
-// Includes
-//*************************************************************************
-#include "ssx.h"		
+#include "ssx.h"        
 #include "cmdh_service_codes.h" 
 #include "errl.h"             
 #include "trac.h"
@@ -46,25 +35,10 @@
 #include "gpsm.h"
 #include "pstates.h"
 #include "cmdh_fsp_cmds.h"
-#include "apss.h"  // @at014a
+#include "apss.h"
 
-//*************************************************************************
-// Externs
-//*************************************************************************
-
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
-
-//---------------------------------------------------------
-// ConfigData Store Command
-//---------------------------------------------------------
-
-/**
- * @enum eConfigDataFormatVersion
- * @brief Enum of the various CnfgData command formats that 
- *        are sent to OC over the TMGT<->OCC interface.  
- */
+// Enum of the various CnfgData command formats that 
+// are sent to OC over the TMGT<->OCC interface.
 typedef enum
 {
    DATA_FORMAT_PSTATE_SUPERSTRUCTURE = 0x01,
@@ -72,30 +46,27 @@ typedef enum
    DATA_FORMAT_SET_ROLE              = 0x03,
    DATA_FORMAT_APSS_CONFIG           = 0x04,
    DATA_FORMAT_MEM_CFG               = 0x05,
-   DATA_FORMAT_POWER_CAP             = 0x07,  // @at013a
-   DATA_FORMAT_SYS_CNFG              = 0x0f,  // @at014a
-   DATA_FORMAT_IPS_CNFG              = 0x11,  // @rt001a
+   DATA_FORMAT_POWER_CAP             = 0x07,
+   DATA_FORMAT_SYS_CNFG              = 0x0f,
+   DATA_FORMAT_IPS_CNFG              = 0x11,
    DATA_FORMAT_MEM_THROT             = 0x12,
-   DATA_FORMAT_THRM_THRESHOLDS       = 0x13,  // @gs010a
-   DATA_FORMAT_CLEAR_ALL             = 0xff,  // @at015a
+   DATA_FORMAT_THRM_THRESHOLDS       = 0x13,
+   DATA_FORMAT_CLEAR_ALL             = 0xff,
 } eConfigDataFormatVersion;
 
-/**
- * @enum eConfigDataPriorityMask
- * @brief Enum of the various Cnfg Data Masks that are used
- *        to signal that OCC has received cnfg data
- */
+// Enum of the various Cnfg Data Masks that are used
+// to signal that OCC has received cnfg data
 typedef enum
 {
    DATA_MASK_PSTATE_SUPERSTRUCTURE = 0x00000001,
    DATA_MASK_FREQ_PRESENT          = 0x00000002,
    DATA_MASK_SET_ROLE              = 0x00000004,
    DATA_MASK_APSS_CONFIG           = 0x00000008,
-   DATA_MASK_PCAP_PRESENT          = 0x00000010,  // @at013a
-   DATA_MASK_SYS_CNFG              = 0x00000020,  // @at014a
+   DATA_MASK_PCAP_PRESENT          = 0x00000010,
+   DATA_MASK_SYS_CNFG              = 0x00000020,
    //0x00000040 not assigned.
-   DATA_MASK_THRM_THRESHOLDS       = 0x00000080,  // @gs010a
-   DATA_MASK_IPS_CNFG              = 0x00000100,  // @rt001a
+   DATA_MASK_THRM_THRESHOLDS       = 0x00000080,
+   DATA_MASK_IPS_CNFG              = 0x00000100,
    DATA_MASK_MEM_CFG               = 0x00000200,
    DATA_MASK_MEM_THROT             = 0x00000400,
 } eConfigDataPriorityMask;
@@ -109,39 +80,25 @@ typedef enum
     DATA_FRU_MAX,
 } eConfigDataFruType;
 
-/**
- * @struct cmdh_store_cnfgdata_pstatess_t
- * @brief Used by TMGT to send OCC the PstateSuperStruct
- */
+// Used by TMGT to send OCC the PstateSuperStruct
 typedef struct __attribute__ ((packed))
 {
     struct    cmdh_fsp_cmd_header;
     uint8_t   format;
     uint8_t   reserved[3];
     PstateSuperStructure pstatess;
-}cmdh_store_cnfgdata_pstatess_t;  // @th010
+}cmdh_store_cnfgdata_pstatess_t;
 #define CMDH_CNFGDATA_PSTATESS_DATALEN (sizeof(PstateSuperStructure) + 4)
 
-/**
- * @struct cmdh_store_mode_freqs_t
- * @brief Used by TMGT to send OCC the frequencies for each mode.
- */
-typedef struct __attribute__ ((packed)) // @jh004c
+// Used by TMGT to send OCC the frequencies for each mode.
+typedef struct __attribute__ ((packed))
 {
     struct cmdh_fsp_cmd_header;
     uint8_t format;
     uint8_t version;
 }cmdh_store_mode_freqs_t;
 
-
-/// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-/// TODO: START of HACK for 889884
-/// 
-
-/**
- * @struct cmdh_store_mode_freqs_old_t
- * @brief Old way used by TMGT to send OCC the frequencies for each mode.
- */
+// Old way used by TMGT to send OCC the frequencies for each mode.
 typedef struct __attribute__ ((packed))
 {
     struct cmdh_fsp_cmd_header;
@@ -150,14 +107,7 @@ typedef struct __attribute__ ((packed))
     uint8_t mode_count;
 }cmdh_store_mode_freqs_old_t;
 
-///
-/// TODO: END of HACK
-/// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-/**
- * @struct cmdh_set_role_t
- * @brief Used by TMGT to tell OCC if it is a master or not
- */
+// Used by TMGT to tell OCC if it is a master or not
 typedef struct __attribute__ ((packed))
 {
     struct cmdh_fsp_cmd_header;
@@ -166,11 +116,7 @@ typedef struct __attribute__ ((packed))
     uint8_t reserved[2];
 }cmdh_set_role_t;
 
-/**
- * @struct apss_cfg_adc_t
- * @brief Used by TMGT to send OCC the APSS ADC Config Data
- */
-//@fk008c
+// Used by TMGT to send OCC the APSS ADC Config Data
 typedef struct  __attribute__ ((packed))
 {
   uint8_t  assignment;
@@ -179,7 +125,6 @@ typedef struct  __attribute__ ((packed))
   uint32_t offset;
 } apss_cfg_adc_v00_t; //Used by FSP
 
-//@fk008a
 typedef struct  __attribute__ ((packed))
 {
   uint8_t  assignment;
@@ -189,10 +134,7 @@ typedef struct  __attribute__ ((packed))
   uint32_t offset;
 } apss_cfg_adc_v10_t; //Used by Habanero
 
-/**
- * @struct apss_cfg_gpio_t
- * @brief Used by TMGT to send OCC the GPIO Config Data
- */
+// Used by TMGT to send OCC the GPIO Config Data
 typedef struct  __attribute__ ((packed))
 {
   uint8_t  mode;
@@ -200,22 +142,17 @@ typedef struct  __attribute__ ((packed))
   uint8_t  assignment[8];
 } apss_cfg_gpio_t; 
 
-/**
- * @struct cmdh_apss_config_t
- * @brief Used by TMGT to send OCC the full APSS config data.
- */
-//@fk008c
+// Used by TMGT to send OCC the full APSS config data.
 typedef struct __attribute__ ((packed))
 {
     struct cmdh_fsp_cmd_header;
     uint8_t              format;
-    uint8_t              version;     // @at014c
-    uint8_t              reserved[2]; // @at014c
-    apss_cfg_adc_v00_t   adc[MAX_APSS_ADC_CHANNELS]; // @at014c
-    apss_cfg_gpio_t      gpio[MAX_APSS_GPIO_PORTS];  // @at014c
-}cmdh_apss_config_v00_t; //Used by FSP
+    uint8_t              version;
+    uint8_t              reserved[2];
+    apss_cfg_adc_v00_t   adc[MAX_APSS_ADC_CHANNELS];
+    apss_cfg_gpio_t      gpio[MAX_APSS_GPIO_PORTS];
+}cmdh_apss_config_v00_t; // Used by FSP
 
-//@fk008a
 typedef struct __attribute__ ((packed))
 {
     struct cmdh_fsp_cmd_header;
@@ -226,11 +163,7 @@ typedef struct __attribute__ ((packed))
     apss_cfg_gpio_t      gpio[MAX_APSS_GPIO_PORTS];
 }cmdh_apss_config_v10_t; //Used by Habanero
 
-// @at013a - start
-/**
- * @struct cmdh_pcap_config_data_t
- * @brief Used by TMGT to send OCC the PCAP config data.
- */
+// Used by TMGT to send OCC the PCAP config data.
 typedef struct __attribute__ ((packed))
 {
     uint16_t current_pcap;     // Node power cap requested by customer (AEM) in 1W units
@@ -242,10 +175,7 @@ typedef struct __attribute__ ((packed))
     uint8_t  unthrottle;       // Only used on ITEs -- is indicated from CMM
 } cmdh_pcap_config_data_t;
 
-/**
- * @struct cmdh_pcap_config_t
- * @brief Used by TMGT to send OCC the PCAP config data.
- */
+// Used by TMGT to send OCC the PCAP config data.
 typedef struct __attribute__ ((packed))
 {
     struct cmdh_fsp_cmd_header;
@@ -253,7 +183,6 @@ typedef struct __attribute__ ((packed))
     uint8_t              version;
     cmdh_pcap_config_data_t   pcap_config;
 }cmdh_pcap_config_t;
-// @at013a - end
 
 typedef struct __attribute__ ((packed))
 {
@@ -270,11 +199,7 @@ typedef struct __attribute__ ((packed))
     cmdh_pcap_config_data_v10_t   pcap_config;
 }cmdh_pcap_config_v10_t;
 
-// @at014a - start
-/**
- * @struct cmdh_sys_config_data_t
- * @brief Used by TMGT to send OCC the System config data.
- */
+// Used by TMGT to send OCC the System config data.
 typedef struct __attribute__ ((packed))
 {
     uint8_t  system_type;     // OCC usage of this byte is TBD
@@ -284,10 +209,7 @@ typedef struct __attribute__ ((packed))
     uint64_t dpss_huid;       // DPSS HUID
 } cmdh_sys_config_data_t;
 
-/**
- * @struct cmdh_sys_config_t
- * @brief Used by TMGT to send OCC the system config data.
- */
+// Used by TMGT to send OCC the system config data.
 typedef struct __attribute__ ((packed))
 {
     struct cmdh_fsp_cmd_header;
@@ -295,12 +217,11 @@ typedef struct __attribute__ ((packed))
     uint8_t              version;
     cmdh_sys_config_data_t   sys_config;
 }cmdh_sys_config_t;
-// @at014a - end
 
 typedef struct __attribute__ ((packed))
 {
     uint8_t  system_type;     // General system type
-    uint16_t sensor_id[25];   // FIXME: Probably we need to break down into individual fields
+    uint16_t sensor_id[25];   // TODO: Probably we need to break down into individual fields
     uint16_t backplane_sid;   // Backplane Sensor ID
     uint16_t apss_sid;        // APSS Sensor ID
 } cmdh_sys_config_data_v10_t;
@@ -313,11 +234,7 @@ typedef struct __attribute__ ((packed))
     cmdh_sys_config_data_v10_t   sys_config;
 }cmdh_sys_config_v10_t;
 
-// @rt001a - start
-/**
- * @struct cmdh_ips_config_data_t
- * @brief Used by TMGT to send OCC the IPS config data.
- */
+// Used by TMGT to send OCC the IPS config data.
 typedef struct __attribute__ ((packed))
 {
     uint8_t     iv_ipsEnabled;          // Idle Power Save Enabled (0 or 1)
@@ -328,10 +245,7 @@ typedef struct __attribute__ ((packed))
 
 } cmdh_ips_config_data_t;
 
-/**
- * @struct cmdh_ips_config_t
- * @brief Used by TMGT to send OCC the IPS config data.
- */
+// Used by TMGT to send OCC the IPS config data.
 typedef struct __attribute__ ((packed))
 {
     struct                  cmdh_fsp_cmd_header;
@@ -342,13 +256,7 @@ typedef struct __attribute__ ((packed))
 
 extern cmdh_ips_config_data_t   G_ips_config_data;
 
-// @rt001a - end
-
-
-/**
- * @struct cmdh_thrm_thresholds_set_t
- * @brief Used by TMGT to send OCC thermal control thresholds
- */
+// Used by TMGT to send OCC thermal control thresholds
 typedef struct __attribute__ ((packed))
 {
     uint8_t              fru_type;
@@ -377,10 +285,7 @@ typedef struct __attribute__ ((packed))
     uint16_t             t_inc_zone8;
 }cmdh_thrm_thresholds_set_t;
 
-/**
- * @struct cmdh_thrm_thresholds_t
- * @brief Used by TMGT to send OCC thermal control thresholds
- */
+// Used by TMGT to send OCC thermal control thresholds
 typedef struct __attribute__ ((packed))
 {
     struct cmdh_fsp_cmd_header;
@@ -409,10 +314,7 @@ typedef struct __attribute__ ((packed))
 }cmdh_thrm_thresholds_v10_t;
 
 
-/**
- * @struct cmdh_mem_cfg_header_t
- * @brief header data for mem cfg packet
- */
+// Header data for mem cfg packet
 typedef struct __attribute__ ((packed))
 {
     struct cmdh_fsp_cmd_header;
@@ -421,11 +323,8 @@ typedef struct __attribute__ ((packed))
     uint8_t                    num_data_sets;
 }cmdh_mem_cfg_header_t;
 
-/**
- * @struct cmdh_mem_cfg_data_set_t
- * @brief Maps an HUID to a centaur or dimm
- * 0xFF for dimm means this is for a centaur
- */
+// Maps an HUID to a centaur or dimm
+// NOTE: 0xFF for dimm means this is for a centaur
 typedef struct __attribute__ ((packed))
 {
     uint64_t                   huid;
@@ -434,11 +333,8 @@ typedef struct __attribute__ ((packed))
     uint16_t                   reserved;
 }cmdh_mem_cfg_data_set_t;
 
-/**
- * @struct cmdh_mem_cfg_t
- * @brief config packet definition used by TMGT to
- * send HUID mappings for centaurs and dimms
- */
+// Config packet definition used by TMGT to
+// send HUID mappings for centaurs and dimms
 typedef struct __attribute__ ((packed))
 {
     cmdh_mem_cfg_header_t      header;
@@ -462,10 +358,7 @@ typedef struct __attribute__ ((packed))
 }cmdh_mem_cfg_v10_t;
 
 
-/**
- * @struct cmdh_mem_throt_header_t
- * @brief header data for mem throttle packet
- */
+// Header data for mem throttle packet
 typedef struct __attribute__ ((packed))
 {
     struct cmdh_fsp_cmd_header;
@@ -474,10 +367,7 @@ typedef struct __attribute__ ((packed))
     uint8_t                    num_data_sets;
 }cmdh_mem_throt_header_t;
 
-/**
- * @struct cmdh_mem_throt_data_set_t
- * @brief provides memory throttle min and max values
- */
+// Provides memory throttle min and max values
 typedef struct __attribute__ ((packed))
 {
     uint8_t                    centaur_num;
@@ -491,11 +381,8 @@ typedef struct __attribute__ ((packed))
     uint16_t                   ovs_n_per_chip;
 }cmdh_mem_throt_data_set_t;
 
-/**
- * @struct cmdh_mem_throt_t
- * @brief config packet definition used by TMGT to
- * send mem throttle min/max settings. 
- */
+// Config packet definition used by TMGT to
+// send mem throttle min/max settings. 
 typedef struct __attribute__ ((packed))
 {
     cmdh_mem_throt_header_t      header;
@@ -520,20 +407,12 @@ typedef struct __attribute__ ((packed))
 }cmdh_mem_throt_v10_t;
 
 
-/**
- * @struct data_cnfg_t
- * @brief Used to mark present the config data TMGT has sent us.
- */
+// Used to mark present the config data TMGT has sent us.
 typedef struct data_cnfg
 {
   uint32_t                      data_mask;
   cmdh_thrm_thresholds_t        thrm_thresh;
 } data_cnfg_t;
-
-
-/*******************************************************************/
-/* Function Definitions                                            */
-/*******************************************************************/
 
 errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
                                     cmdh_fsp_rsp_t * i_rsp_ptr);

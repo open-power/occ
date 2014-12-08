@@ -1,35 +1,31 @@
-/**
- * @file cmdh_mnfg_intf.h
- * @brief Header file for Manufacturing interface.
- *
- *
-*/
-/**
- *      @page ChangeLogs Change Logs
- *      @section _cmdh_mnfg_intf_h cmdh_mnfg_intf.h
- *      @verbatim
- *
- *  Flag     Def/Fea    Userid    Date        Description
- *  -------- ---------- --------  ---------   ----------------------------------
- *  @gs004              gjsilva   05/15/2013  Created
- *  @gm002   885429     milesg    05/30/2013  support for list/get sensors
- *  @gs006   884384     gjsilva   05/30/2013  Support for mnfg auto-slewing function
- *  @gm004   892961     milesg    07/25/2013  Support memory auto slewing
- *
- *  @endverbatim
- */
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/cmdh/cmdh_mnfg_intf.h $                               */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* COPYRIGHT International Business Machines Corp. 2011,2014              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
+
 #ifndef CMDH_MNFG_INTF_H
 #define CMDH_MNFG_INTF_H
 
-//*************************************************************************
-// Includes
-//*************************************************************************
 #include "cmdh_fsp.h"
 #include "sensor.h"
-
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
 
 typedef enum {
     MNFG_RUN_STOP_SLEW      = 0x02,
@@ -52,11 +48,7 @@ typedef enum {
 
 #define MNFG_INTF_RUN_STOP_SLEW_RSP_SIZE 6
 
-/**
- * @struct mnfg_run_stop_slew_cmd_t 
- * @brief Used by OCC to get mnfg run/stop slew
- *        command
- */
+// Used by OCC to get mnfg run/stop slew command
 typedef struct __attribute__ ((packed))
 {
     struct    cmdh_fsp_cmd_header;
@@ -71,11 +63,7 @@ typedef struct __attribute__ ((packed))
     uint8_t   step_delay;
 }mnfg_run_stop_slew_cmd_t;
 
-/**
- *  @struct mnfg_run_stop_slew_rsp_t
- *  @brief Used by OCC firmware to respond to mnfg run/stop
- *         slew command
- */
+// Used by OCC firmware to respond to mnfg run/stop slew command
 typedef struct __attribute__ ((packed))
 {
     struct    cmdh_fsp_rsp_header;
@@ -85,11 +73,7 @@ typedef struct __attribute__ ((packed))
     uint16_t  checksum;
 }mnfg_run_stop_slew_rsp_t;
 
-/**
- * @struct mnfg_mem_slew_cmd_t 
- * @brief Used by OCC to get mnfg memory slew
- *        command
- */
+// Used by OCC to get mnfg memory slew command
 typedef struct __attribute__ ((packed))
 {
     struct    cmdh_fsp_cmd_header;
@@ -100,11 +84,7 @@ typedef struct __attribute__ ((packed))
 
 #define MNFG_INTF_MEM_SLEW_RSP_SIZE 2
 
-/**
- *  @struct mnfg_mem_slew_rsp_t
- *  @brief Used by OCC firmware to respond to mnfg memory 
- *         slew command
- */
+// Used by OCC firmware to respond to mnfg memory slew command
 typedef struct __attribute__ ((packed))
 {
     struct    cmdh_fsp_rsp_header;
@@ -112,11 +92,7 @@ typedef struct __attribute__ ((packed))
     uint16_t  checksum;
 }mnfg_mem_slew_rsp_t;
 
-/**
- * @struct mnfg_emul_oversub_cmd_t 
- * @brief Used by OCC to get mnfg emulate oversubscription 
- *        command
- */
+// Used by OCC to get mnfg emulate oversubscription command
 typedef struct __attribute__ ((packed))
 {
     struct    cmdh_fsp_cmd_header;
@@ -126,11 +102,7 @@ typedef struct __attribute__ ((packed))
     uint8_t   reserved;
 }mnfg_emul_oversub_cmd_t;
 
-/**
- *  @struct mnfg_emul_oversub_rsp_t
- *  @brief Used by OCC firmware to respond to mnfg emulate
- *         oversubscription command
- */
+// Used by OCC firmware to respond to mnfg emulate oversubscription command
 typedef struct __attribute__ ((packed))
 {
     struct    cmdh_fsp_rsp_header;
@@ -139,11 +111,9 @@ typedef struct __attribute__ ((packed))
 }mnfg_emul_oversub_rsp_t;
 
 #define MFG_LIST_SENSOR_VERSION 0
-#define MFG_MAX_NUM_SENSORS 50 //20 bytes per sensor, 4k response packet (4k stack is limiting factor here).
-/**
- * @struct cmdh_mfg_list_sensor_query_t 
- * @brief Used by mfg to get sensor data 
- */
+#define MFG_MAX_NUM_SENSORS 50 // 20 bytes per sensor, 4k response packet (4k stack is limiting factor here).
+
+// Used by mfg to get sensor data
 typedef struct __attribute__ ((packed))
 {
     struct      cmdh_fsp_cmd_header;
@@ -162,12 +132,7 @@ typedef struct __attribute__ ((packed))
     uint16_t    sample;
 }cmdh_mfg_sensor_rec_t;
 
-/**
- *  @struct cmdh_mfg_list_sensors_resp_t
- *  @brief Used by OCC firmware to respond to the
- *         "MFG_LIST_SENSORS" mfg command.  Follows
- *         the TMGT/OCC specification.
- */
+// Used by OCC firmware to respond to the "MFG_LIST_SENSORS" mfg command.  Follows the TMGT/OCC specification.
 typedef struct __attribute__ ((packed))
 {
     struct                  cmdh_fsp_rsp_header;
@@ -178,10 +143,7 @@ typedef struct __attribute__ ((packed))
 }cmdh_mfg_list_sensors_resp_t;
 
 #define MFG_GET_SENSOR_VERSION 0
-/**
- * @struct cmdh_mfg_get_sensor_query_t 
- * @brief Used by mfg to get sensor data 
- */
+// Used by mfg to get sensor data
 typedef struct __attribute__ ((packed))
 {
     struct      cmdh_fsp_cmd_header;
@@ -190,12 +152,7 @@ typedef struct __attribute__ ((packed))
     uint16_t    gsid;
 }cmdh_mfg_get_sensor_query_t;
 
-/**
- *  @struct cmdh_mfg_get_sensor_resp_t
- *  @brief Used by OCC firmware to respond to the
- *         "MFG_GET_SENSOR" mfg command.  Follows
- *         the TMGT/OCC specification.
- */
+// Used by OCC firmware to respond to the "MFG_GET_SENSOR" mfg command. Follows the TMGT/OCC specification.
 typedef struct __attribute__ ((packed))
 {
     struct                  cmdh_fsp_rsp_header;
@@ -213,10 +170,6 @@ typedef struct __attribute__ ((packed))
     uint16_t                type;
     uint16_t                checksum;
 }cmdh_mfg_get_sensor_resp_t;
-
-/*******************************************************************/
-/* Function Definitions                                            */
-/*******************************************************************/
 
 void cmdh_mnfg_test_parse (const cmdh_fsp_cmd_t * i_cmd_ptr,
                                  cmdh_fsp_rsp_t * o_rsp_ptr);

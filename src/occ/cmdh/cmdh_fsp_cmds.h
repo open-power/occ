@@ -1,50 +1,30 @@
-/******************************************************************************
-// @file cmdh_fsp_cmds.h
-// @brief Command Handling for FSP Communication.
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _cmdh_fsp_cmds_h cmdh_fsp_cmds_h
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *                      thallet   04/05/2012  Created
- *   @th010             thallet   07/11/2012  Pstate Enablement
- *   @at008             alvinwan  08/09/2012  Support AME Pass Thru command from TMGT
- *   @th022             thallet   10/08/2012  Moved CNFG Data commands to diff file
- *   @ai006   863413    ailutsar  11/28/2012  Update occtool to grab a full trace log from OCC
- *   @nh004   864941    neilhsu   12/20/2012  Support get/delete errl & added trace info
- *   @th031   878471    thallet   04/15/2013  Centaur Throttles
- *   @gs003   878457    gjsilva   04/17/2013  Support for get_sensor option
- *   @th032             thallet   04/16/2013  Tuleta HW Bringup
- *   @th036   881677    thallet   05/06/2013  New Poll Command Support
- *   @gm002   885429    milesg    05/30/2013  support for 16 bit type and location
- *   @jh002   887903    joshych   06/17/2013  Support Get Field Debug Data command
- *   @at015   885884    alvinwan  06/10/2013  Support Observation/Active state change
- *   @jh005   894560    joshych   08/14/2013  Create call home data logs every 24 hours
- *   @rc006   906038    rickylie  11/11/2013  OCC: Investigate/Test OCC Tracing
- *   @gs017   905990    gjsilva   11/13/2013  Full support for tunable parameters
- *   @rt004   905638    tapiar    11/13/2013  Tunable parameters
- *   @fk002   905632    fmkassem  11/05/2013  Remove CriticalPathMonitor code
- *   @gs019   908218    gjsilva   12/04/2013  Support cooling request architecture
- *   @jh009   908383    joshych   12/04/2013  Generate error logs when required for Reset Prep command
- *   @gs025   913663    gjsilva   01/30/2014  Full fupport for soft frequency boundaries
- *   @wb000   916142    wilbryan  02/18/2014  Support "DVFS due to OT/Power" bits in OCC poll response
- *   @fk009   942864    fmkassem  09/22/2014  BMC/HTMGT Poll command 0x10 support
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/cmdh/cmdh_fsp_cmds.h $                                */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* COPYRIGHT International Business Machines Corp. 2011,2014              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
 #ifndef _CMDH_FSP_CMDS_H
 #define _CMDH_FSP_CMDS_H
 
-//*************************************************************************
-// Includes
-//*************************************************************************
-#include "ssx.h"		
+#include "ssx.h"        
 #include "cmdh_service_codes.h" 
 #include "errl.h"             
 #include "trac.h"
@@ -58,18 +38,7 @@
 #include "sensor.h"
 #include "thrm_thread.h"
 
-//*************************************************************************
-// Externs
-//*************************************************************************
-
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
-
-/**
- * @enum eCmdhCommands
- * @brief Enum of the various commands that TMGT may send to OCC
- */
+// Enum of the various commands that TMGT may send to OCC
 typedef enum
 {
     CMDH_POLL                   = 0x00,
@@ -94,7 +63,6 @@ typedef enum
     CMDH_TUNABLE_PARMS          = 0x60,
 } eCmdhCommands;
 
-//@fk009a
 #define SENSOR_TEMP "TEMP"
 #define SENSOR_FREQ "FREQ"
 #define SENSOR_POWR "POWR"
@@ -106,32 +74,26 @@ typedef enum
 
 // Length of Poll Response
 #define CMDH_POLL_RESP_LEN_V0  16 // version 0x00 is 16 bytes.
-#define CMDH_POLL_RESP_LEN_V10 40 // version 0x10 has at least 40 bytes. //@fk009a
+#define CMDH_POLL_RESP_LEN_V10 40 // version 0x10 has at least 40 bytes.
 // Poll Version 0
 #define CMDH_POLL_BASE_VERSION 0x00
-#define CMDH_POLL_VERSION10  0x10 //@fk009a
+#define CMDH_POLL_VERSION10  0x10
 
-/**
- * @struct cmdh_poll_query_t
- * @brief Struct used to parse Poll Cmd
- */
+// Struct used to parse Poll Cmd
 typedef struct __attribute__ ((packed)) cmdh_poll_query
 {
-    /// Standard TMGT 
+    // Standard TMGT 
     struct    cmdh_fsp_cmd_header;
-    /// Poll Version
+    // Poll Version
     uint8_t   version;
 }cmdh_poll_query_t;
 
-/**
- * @struct cmdh_poll_resp_v0_t
- * @brief Response packet used for Poll Cmd
- */
+// Response packet used for Poll Cmd
 typedef struct __attribute__ ((packed)) cmdh_poll_resp_v0
 {
-    /// Standard TMGT 
+    // Standard TMGT 
     struct    cmdh_fsp_rsp_header;
-    /// Status
+    // Status
     union
     {
         struct
@@ -147,91 +109,88 @@ typedef struct __attribute__ ((packed)) cmdh_poll_resp_v0
         };
         uint8_t word;
     } status;
-    /// Extended Status
+    // Extended Status
     union
     {
         struct
         {
-            uint8_t dvfs_due_to_ot  : 1;   /// @wb000
-            uint8_t dvfs_due_to_pwr : 1;   /// @wb000
-            uint8_t _reserved_5     : 1;   /// 
-            uint8_t _reserved_4     : 1;   /// 
-            uint8_t _reserved_3     : 1;   /// 
-            uint8_t sync_request    : 1;   /// In TMGT to TPMF interface spec, but not needed yet
-            uint8_t _reserved_1     : 1;   /// 
-            uint8_t cooling_request : 1;   /// 1:new fan speed, 0:no new fan speed
+            uint8_t dvfs_due_to_ot  : 1;
+            uint8_t dvfs_due_to_pwr : 1;
+            uint8_t _reserved_5     : 1;
+            uint8_t _reserved_4     : 1;
+            uint8_t _reserved_3     : 1;
+            uint8_t sync_request    : 1;   // In TMGT to TPMF interface spec, but not needed yet
+            uint8_t _reserved_1     : 1;
+            uint8_t cooling_request : 1;   // 1:new fan speed, 0:no new fan speed
         };
         uint8_t word; 
     } ext_status;
-    /// OCCs Present
+    // OCCs Present
     uint8_t   occ_pres_mask;
-    /// Config Data Requested
+    // Config Data Requested
     uint8_t   config_data;
-    /// Current OCC State
+    // Current OCC State
     uint8_t   state;
-    /// Current OCC Mode
+    // Current OCC Mode
     uint8_t   mode;
-    /// Current Idle Power Saver Status
+    // Current Idle Power Saver Status
     union
     {
         struct
         {
-            uint8_t _reserved_7     : 1;   /// 
-            uint8_t _reserved_6     : 1;   /// 
-            uint8_t _reserved_5     : 1;   /// 
-            uint8_t _reserved_4     : 1;   /// 
-            uint8_t _reserved_3     : 1;   /// 
-            uint8_t _reserved_2     : 1;   /// 
-            uint8_t ips_active      : 1;   /// 
-            uint8_t ips_enabled     : 1;   /// 
+            uint8_t _reserved_7     : 1;
+            uint8_t _reserved_6     : 1;
+            uint8_t _reserved_5     : 1;
+            uint8_t _reserved_4     : 1;
+            uint8_t _reserved_3     : 1;
+            uint8_t _reserved_2     : 1;
+            uint8_t ips_active      : 1;
+            uint8_t ips_enabled     : 1;
         };
         uint8_t word; 
     } ips_status;
-    /// Error Log ID
+    // Error Log ID
     uint8_t   errl_id;
-    /// Error Log Start Address
+    // Error Log Start Address
     uint32_t  errl_address;
-    /// Error Log Length
+    // Error Log Length
     uint16_t  errl_length;
-    /// Reserved
+    // Reserved
     uint8_t   _reserved[2];
-    /// Checksum
+    // Checksum
     uint8_t   checksum[2];
 }cmdh_poll_resp_v0_t;
 
-/**
- * @struct cmdh_poll_resp_v10_t
- * @brief Response packet used for Poll Cmd
- */
+// Response packet used for Poll Cmd
 typedef struct __attribute__ ((packed)) cmdh_poll_resp_v10
 {
-    /// Standard TMGT 
+    // Standard TMGT 
     struct    cmdh_fsp_rsp_header;
-    /// BYTE  1: Status
+    // BYTE  1: Status
     union
     {
         struct
         {
-            uint8_t master_occ     : 1;   /// 1 => master, 0 => slave
-            uint8_t fir_master     : 1;   /// 1 => fir master.
+            uint8_t master_occ     : 1;   // 1 => master, 0 => slave
+            uint8_t fir_master     : 1;   // 1 => fir master.
             uint8_t _reserved_5    : 1;   
             uint8_t _reserved_4    : 1;
-            uint8_t attn_enabled   : 1;   /// 1 => Attentions from OCC to Host are enabled.
+            uint8_t attn_enabled   : 1;   // 1 => Attentions from OCC to Host are enabled.
             uint8_t _reserved_2    : 1;
-            uint8_t obs_ready      : 1;   /// 1 => OCC received all data to support obs state.
-            uint8_t active_ready   : 1;   /// 1 => OCC received all data to support active state.
+            uint8_t obs_ready      : 1;   // 1 => OCC received all data to support obs state.
+            uint8_t active_ready   : 1;   // 1 => OCC received all data to support active state.
         };
         uint8_t word;
     } status;
-    /// BYTE  2: Extended Status
+    // BYTE  2: Extended Status
     union
     {
         struct
         {
-            uint8_t dvfs_due_to_ot  : 1;   /// 1 => OCC clipped max Pstate due to an over temp.
-            uint8_t dvfs_due_to_pwr : 1;   /// 1 => OCC clipped max Psate due to reaching pcap limit.
-            uint8_t mthrot_due_to_ot: 1;   /// 1 => OCC throttled memory due to an over temp.   
-            uint8_t n_power         : 1;   /// 1 => Server running without redundant power.
+            uint8_t dvfs_due_to_ot  : 1;   // 1 => OCC clipped max Pstate due to an over temp.
+            uint8_t dvfs_due_to_pwr : 1;   // 1 => OCC clipped max Psate due to reaching pcap limit.
+            uint8_t mthrot_due_to_ot: 1;   // 1 => OCC throttled memory due to an over temp.   
+            uint8_t n_power         : 1;   // 1 => Server running without redundant power.
             uint8_t _reserved_3     : 1;   
             uint8_t _reserved_2     : 1;   
             uint8_t _reserved_1     : 1;   
@@ -239,38 +198,36 @@ typedef struct __attribute__ ((packed)) cmdh_poll_resp_v10
         };
         uint8_t word; 
     } ext_status;
-    /// BYTE  3: OCCs Present
+    // BYTE  3: OCCs Present
     uint8_t   occ_pres_mask;
-    /// BYTE  4: Config Data Requested
+    // BYTE  4: Config Data Requested
     uint8_t   config_data;
-    /// BYTE  5: Current OCC State
+    // BYTE  5: Current OCC State
     uint8_t   state;
-    /// BYTE  6 - 7: Reserved
+    // BYTE  6 - 7: Reserved
     uint8_t   _reserved_6;
     uint8_t   _reserved_7; 
-    /// BYTE  8: Error Log ID
+    // BYTE  8: Error Log ID
     uint8_t   errl_id;
-    /// BYTES  9 - 12: Error Log Start Address
+    // BYTES  9 - 12: Error Log Start Address
     uint32_t  errl_address;
-    /// BYTES 13 - 14: Error Log Length
+    // BYTES 13 - 14: Error Log Length
     uint16_t  errl_length;
-    /// BYTES 15 - 16: Reserved
+    // BYTES 15 - 16: Reserved
     uint8_t   _reserved_15;
     uint8_t   _reserved_16;
-    /// BYTES 17 - 32 (16 bytes): OCC Code Level - ASCII string of OCC build level currently running.
+    // BYTES 17 - 32 (16 bytes): OCC Code Level - ASCII string of OCC build level currently running.
     uint8_t   occ_level[16];
-    /// BYTES 33 - 38 (6 bytes):  ASCII eye catcher "SENSOR"
+    // BYTES 33 - 38 (6 bytes):  ASCII eye catcher "SENSOR"
     uint8_t   sensor_ec[6];
-    /// BYTE  39: Number of sensor data blocks
+    // BYTE  39: Number of sensor data blocks
     uint8_t   sensor_dblock_count;
-    /// BYTE  40: Sensor Data Block Header Version
+    // BYTE  40: Sensor Data Block Header Version
     uint8_t   sensor_dblock_version;
-	///No need to include the 2 bytes for checksum since they get added prior to sending
-	///data back to tmgt.
+    // No need to include the 2 bytes for checksum since they get added prior to sending
+    // data back to tmgt.
 }cmdh_poll_resp_v10_fixed_t;
 
-
-//@fk009a
 typedef struct __attribute__ ((packed)) cmdh_poll_sensor_datablock
 {
     uint8_t eyecatcher[4];
@@ -280,124 +237,106 @@ typedef struct __attribute__ ((packed)) cmdh_poll_sensor_datablock
     uint8_t count;
 } cmdh_poll_sensor_db_t;
 
-//@fk009a
 typedef struct __attribute__ ((packed)) cmdh_poll_temp_sensor
 {
-    uint16_t id;     //Sensor id.
-    uint16_t value;  //current temperature sensor reading in degrees C
+    uint16_t id;     // Sensor id.
+    uint16_t value;  // current temperature sensor reading in degrees C
 } cmdh_poll_temp_sensor_t;
 
-//@fk009a
 typedef struct __attribute__ ((packed)) cmdh_poll_freq_sensor
 {
-    uint16_t id;     //Id to represent the frequency.
-    uint16_t value;  //current frequency in MHZ
+    uint16_t id;     // Id to represent the frequency.
+    uint16_t value;  // current frequency in MHZ
 } cmdh_poll_freq_sensor_t;
 
-//@fk009a
-//Only available from master occ.
+// Only available from master occ.
 typedef struct __attribute__ ((packed)) cmdh_poll_powr_sensor
 {
-    uint16_t id;        //Sensor id - to represent the power.
-    uint32_t update_tag; //Count of number of 250us samples represented by accumulator.
-    uint32_t accumul;   //Accumulation of 250us power readings
-    uint16_t current;   //Most recent 250us reading in watts.
+    uint16_t id;         // Sensor id - to represent the power.
+    uint32_t update_tag; // Count of number of 250us samples represented by accumulator.
+    uint32_t accumul;    // Accumulation of 250us power readings
+    uint16_t current;    // Most recent 250us reading in watts.
 } cmdh_poll_power_sensor_t;
 
-//@fk009a
-//Only available from master occ.
+// Only available from master occ.
 typedef struct __attribute__ ((packed)) cmdh_poll_caps_sensor
 {
-    cmdh_poll_sensor_db_t header; //Only one entry for powercap.
-    uint16_t current;   //Current power cap in 1W units.
-    uint16_t system;    //Current system power in 1W units.
-    uint16_t max;       //Maximum power cap in 1W units.
-    uint16_t min;       //Minimum power cap in 1W units.
-    uint16_t user;      //Power cap set by user in 1W units.
+    cmdh_poll_sensor_db_t header; // Only one entry for powercap.
+    uint16_t current;   // Current power cap in 1W units.
+    uint16_t system;    // Current system power in 1W units.
+    uint16_t max;       // Maximum power cap in 1W units.
+    uint16_t min;       // Minimum power cap in 1W units.
+    uint16_t user;      // Power cap set by user in 1W units.
 } cmdh_poll_pcaps_sensor_t;
-
-
 
 //---------------------------------------------------------
 // Query FW Level Command
 //---------------------------------------------------------
-/**
- * @struct cmdh_fw_resp_t
- * @brief Response packet used for Query Firmware Level Cmd
- */
+
+// Response packet used for Query Firmware Level Cmd
 #define CMDH_FW_QUERY_RESP_LEN 16
 typedef struct __attribute__ ((packed)) cmdh_fw_resp
 {
-    /// Standard TMGT 
+    // Standard TMGT 
     struct    cmdh_fsp_rsp_header;
-    /// Firmware Level (4 bytes)
+    // Firmware Level (4 bytes)
     uint8_t   fw_level[CMDH_FW_QUERY_RESP_LEN];
-    /// Checksum
+    // Checksum
     uint8_t   checksum[2];
 }cmdh_fw_resp_t;
-
 
 //---------------------------------------------------------
 // Set Mode And State Command
 //---------------------------------------------------------
-/**
- * @struct smgr_setmodestate_v0_query
- * @brief Query packet used by the FSP for setting the TPMF
- * state, version 0.
- */
+
+// Query packet used by the FSP for setting the TPMF state, version 0.
 struct smgr_setmodestate_v0_query
 {
-    /// Standard TMGT 
+    // Standard TMGT 
     struct    cmdh_fsp_cmd_header;
-    ///Version
+    // Version
     uint8_t       version;
-    ///New state from OCC_STATE_*
+    // New state from OCC_STATE_*
     uint8_t       occ_state;
-    ///New mode from OCC_MODE_*
+    // New mode from OCC_MODE_*
     uint8_t       occ_mode;
 } __attribute__ ((__packed__));
+
 typedef struct smgr_setmodestate_v0_query smgr_setmodestate_v0_query_t;
+
 #define SMGR_SETMODESTATE_CMD_LEN    3 
 
-/**
- * @struct smgr_setmodestate_resp
- * @brief Complete Response packet for a set mode / state command
- */
+// Complete Response packet for a set mode / state command
 #define SMGR_SETMODESTATE_RESP_LEN    0 
 typedef cmdh_fsp_rsp_t smgr_setmodestate_resp_t;
 
-///Set-mode-state TMGT command version
+// Set-mode-state TMGT command version
 #define SMGR_SMS_CMD_VERSION            0
-
 
 //---------------------------------------------------------
 // Clear Elog Command
 //---------------------------------------------------------
-/**
- * @struct cmdh_clear_elog_query_t;
- * @brief Used by TMGT to clear elog data state, version 0.
- */
+
+// Used by TMGT to clear elog data state, version 0.
 typedef struct __attribute__ ((packed))
 {
     struct    cmdh_fsp_cmd_header;
     uint8_t   elog_id;
 }cmdh_clear_elog_query_t;
 
-
 //---------------------------------------------------------
 // Get Elog Command
 //---------------------------------------------------------
-/**
- * @struct cmdh_get_elog_resp_t;
- * @brief Used by TMGT to response occ elog data, version 0.
- */
+
+// Used by TMGT to response occ elog data, version 0.
 typedef struct __attribute__ ((packed))
 {
     struct    cmdh_fsp_rsp_header;
     uint32_t  oci_address;
     uint8_t   elog_id;
-}cmdh_get_elog_resp_t;              // @nh004a
-#define CMDH_GET_ELOG_RESP_LEN 5    // @nh004a
+}cmdh_get_elog_resp_t;
+
+#define CMDH_GET_ELOG_RESP_LEN 5
 
 //---------------------------------------------------------
 // Reset Prep
@@ -409,40 +348,36 @@ typedef struct __attribute__ ((packed))
 // Version 0
 #define CMDH_RESET_PREP_VERSION 0
 
-/// Reason
+// Reason
 typedef enum
 {
-    /// Non-failure. Code update, external user request (i.e. to load
-    /// new pState table). No FFDC error logs should be generated.
+    // Non-failure. Code update, external user request (i.e. to load
+    // new pState table). No FFDC error logs should be generated.
     CMDH_PREP_NONFAILURE       = 0x00, 
-    /// Failure detected on this OCC. FFDC error log should be generated.
+    // Failure detected on this OCC. FFDC error log should be generated.
     CMDH_PREP_FAILON_THISOCC   = 0x01, 
-    /// Failure detected on a different OCC within same node.
-    /// FFDC log is optional, if this OCC is master OCC it may want to
-    /// generate FFDC log.
+    // Failure detected on a different OCC within same node.
+    // FFDC log is optional, if this OCC is master OCC it may want to
+    // generate FFDC log.
     CMDH_PREP_FAILON_OTHEROCC  = 0x02, 
-    /// Failure detected on a different OCC in different node. No
-    /// FFDC error log should be generated. Current assumption is that an
-    /// OCC in a different node should never be reason for an OCC failure.
+    // Failure detected on a different OCC in different node. No
+    // FFDC error log should be generated. Current assumption is that an
+    // OCC in a different node should never be reason for an OCC failure.
     CMDH_PREP_FAILON_OTHERNODE = 0x03, 
 } eCmdhResetPrepReason;
 
-#define CMDH_RESET_PREP_TRACE_SIZE 3072 // @jh009a
+#define CMDH_RESET_PREP_TRACE_SIZE 3072
 
-/**
- * @struct cmdh_reset_prep_t
- * @brief Struct used to parse Reset Prep Command
- */
+// Struct used to parse Reset Prep Command
 typedef struct __attribute__ ((packed)) cmdh_reset_prep
 {
-    /// Standard TMGT 
+    // Standard TMGT 
     struct    cmdh_fsp_cmd_header;
-    /// Poll Version
+    // Poll Version
     uint8_t   version;
-    /// Reason
+    // Reason
     uint8_t   reason;
 }cmdh_reset_prep_t;
-
 
 //---------------------------------------------------------
 // Get Cooling Request
@@ -464,10 +399,7 @@ typedef struct cmdh_get_cooling_data
     uint8_t                     reason;
 }cmdh_get_cooling_data_t;
 
-/**
- * @struct cmdh_get_cooling_resp_t;
- * @brief Used by OCC to respond to "GET_COOLING_REQUEST" cmd
- */
+// Used by OCC to respond to "GET_COOLING_REQUEST" cmd
 typedef struct __attribute__ ((packed))
 {
     struct                      cmdh_fsp_rsp_header;
@@ -477,25 +409,22 @@ typedef struct __attribute__ ((packed))
     uint8_t   checksum[2];
 }cmdh_get_cooling_resp_t;
 
-
 //---------------------------------------------------------
 // Debug Command
 //---------------------------------------------------------
-///Max string length of trace component name
-#define OCC_TRACE_NAME_SIZE     4   // @ai006a
 
-/**
- * @enum DBUG_CMD
- * @brief Enum of the various Debug commands that may be sent to OCC
- *        over the TMGT<->OCC interface.  
- */
+///Max string length of trace component name
+#define OCC_TRACE_NAME_SIZE     4
+
+// Enum of the various Debug commands that may be sent to OCC
+// over the TMGT<->OCC interface.
 typedef enum 
 {
     DBUG_READ_SCOM          = 0x01,
     DBUG_PUT_SCOM           = 0x02,
     DBUG_GET_TRACE          = 0x03,
     DBUG_CLEAR_TRACE        = 0x04,
-    // free  = 0x05,
+    // free = 0x05
     DBUG_SET_PEXE_EVENT     = 0x06,
     DBUG_GET_AME_SENSOR     = 0x07,
     // free = 0x08,
@@ -526,14 +455,10 @@ typedef enum
     DBUG_INVALIDATE_DCACHE  = 0x21,
     DBUG_CENTAUR_SENSOR_CACHE = 0x22,
     DBUG_DUMP_PROC_DATA     = 0x23,
-    DBUG_GEN_CHOM_LOG       = 0x24,     // @jh005a
+    DBUG_GEN_CHOM_LOG       = 0x24,
 } DBUG_CMD;
 
-// @ai006a - start
-/**
- * @struct cmdh_dbug_get_trace_query_t;
- * @brief Used by OCC tool to get trace, version 0.
- */
+// Used by OCC tool to get trace, version 0.
 typedef struct __attribute__ ((packed))
 {
     struct    cmdh_fsp_cmd_header;
@@ -542,23 +467,16 @@ typedef struct __attribute__ ((packed))
     int8_t    comp[OCC_TRACE_NAME_SIZE];
 }cmdh_dbug_get_trace_query_t;
 
-/**
- * @struct cmdh_dbug_get_trace_resp_t;
- * @brief Used by OCC to response "get trace" cmd, version 0.
- */
+// Used by OCC to response "get trace" cmd, version 0.
 typedef struct __attribute__ ((packed))
 {
     struct    cmdh_fsp_rsp_header;
-    uint8_t   data[0];  // @rc006c
+    uint8_t   data[0];
 }cmdh_dbug_get_trace_resp_t;
 
 #define CMDH_DBUG_GET_TRACE_RESP_LEN 6  // size_request(2) and occ_comp_sram_offset(4)
-// @ai006a - end
 
-/**
- * @struct cmdh_dbug_get_sensor_query_t 
- * @brief Used by occtool to get AME sensor data 
- */
+// Used by occtool to get AME sensor data
 typedef struct __attribute__ ((packed))
 {
     struct     cmdh_fsp_cmd_header;
@@ -574,7 +492,7 @@ typedef struct cmdh_dbug_sensor_list
     uint16_t    sample;
     uint16_t    sample_min;
     uint16_t    sample_max;
-    uint16_t    ipmi_sid; //@fk009a
+    uint16_t    ipmi_sid;
 }cmdh_dbug_sensor_list_t;
 
 // Max number of sensors that can be returned with cmdh_dbug_get_ame_sensor command
@@ -582,11 +500,7 @@ typedef struct cmdh_dbug_sensor_list
 // Size of standard response header (5 bytes) plus checksum (2 bytes)
 #define CMDH_DBUG_FSP_RESP_LEN     7
 
-/**
- *  @struct cmdh_dbug_get_sensor_resp_t
- *  @brief Used by OCC firmware to respond
- *         "cmdh_dbug_get_ame_sensor" debug command
- */
+// Used by OCC firmware to respond "cmdh_dbug_get_ame_sensor" debug command
 typedef struct __attribute__ ((packed))
 {
     struct                  cmdh_fsp_rsp_header;
@@ -596,16 +510,12 @@ typedef struct __attribute__ ((packed))
     uint16_t                checksum;
 }cmdh_dbug_get_sensor_resp_t;
 
-// @jh002 - start
 // Size of trace data for a trace buffer
 #define CMDH_FIELD_TRACE_DATA_SIZE  1024
 // Max number of sensors for field debug data
 #define CMDH_FIELD_MAX_NUM_SENSORS  50
 
-/**
- * @struct cmdh_get_field_debug_resp_t;
- * @brief Used by OCC to response "GET_FIELD_DEBUG_DATA" cmd
- */
+// Used by OCC to response "GET_FIELD_DEBUG_DATA" cmd
 typedef struct __attribute__ ((packed))
 {
     struct                  cmdh_fsp_rsp_header;
@@ -627,22 +537,14 @@ typedef struct __attribute__ ((packed))
     uint8_t   checksum[2];
 }cmdh_get_field_debug_data_resp_t;
 
-/**
- * @struct cmdh_get_field_debug_data_query_t
- * @brief Used by TMGT to get field debug data
- */
+// Used by TMGT to get field debug data
 typedef struct __attribute__ ((packed))
 {
     struct     cmdh_fsp_cmd_header;
     uint8_t    version;
 }cmdh_get_field_debug_data_query_t;
-// @jh002 -end
 
-
-/**
- * @struct cmdh_dbug_peek_t;
- * @brief Used by OCC to debug on real hardware
- */
+// Used by OCC to debug on real hardware
 typedef struct __attribute__ ((packed))
 {
     struct    cmdh_fsp_cmd_header;
@@ -652,10 +554,10 @@ typedef struct __attribute__ ((packed))
     uint32_t  oci_address;
 }cmdh_dbug_peek_t;
 
-
 //---------------------------------------------------------
 // Tunable Parameter Command
 //---------------------------------------------------------
+
 // Default number of tunable parameters available
 // NOTE: update this value if any new tunable parameter is added into the table
 #define CMDH_DEFAULT_TUNABLE_PARAM_NUM   9
@@ -675,20 +577,17 @@ typedef struct cmdh_tunable_param_table
 
 typedef struct cmdh_tunable_param_table_ext
 {
-    ///Default value for this parameter
+    // Default value for this parameter
     uint16_t            def_value;
-    ///Multiplier to convert the input value to correct internal resolution
+    // Multiplier to convert the input value to correct internal resolution
     uint16_t            multiplier;
-    ///Adjusted value for this parameter (adjusted for internal resolution)
+    // Adjusted value for this parameter (adjusted for internal resolution)
     uint16_t            adj_value;
 }cmdh_tunable_param_table_ext_t;
 
-extern uint8_t G_mst_tunable_parameter_overwrite; //@rt004a
-extern cmdh_tunable_param_table_ext_t G_mst_tunable_parameter_table_ext[CMDH_DEFAULT_TUNABLE_PARAM_NUM]; //@rt004a
-extern cmdh_tunable_param_table_t G_mst_tunable_parameter_table[CMDH_DEFAULT_TUNABLE_PARAM_NUM]; //@rt004a
-/*******************************************************************/
-/* Function Definitions                                            */
-/*******************************************************************/
+extern uint8_t G_mst_tunable_parameter_overwrite;
+extern cmdh_tunable_param_table_ext_t G_mst_tunable_parameter_table_ext[CMDH_DEFAULT_TUNABLE_PARAM_NUM];
+extern cmdh_tunable_param_table_t G_mst_tunable_parameter_table[CMDH_DEFAULT_TUNABLE_PARAM_NUM];
 
 errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                         cmdh_fsp_rsp_t * i_rsp_ptr);
@@ -697,12 +596,12 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
                           cmdh_fsp_rsp_t * i_rsp_ptr);
 
 errlHndl_t cmdh_tmgt_poll (const cmdh_fsp_cmd_t * i_cmd_ptr,
-                           cmdh_fsp_rsp_t * i_rsp_ptr);         // @th036
+                           cmdh_fsp_rsp_t * i_rsp_ptr);
 
-ERRL_RC cmdh_poll_v10 (cmdh_fsp_rsp_t * i_rsp_ptr); //@fk009a
+ERRL_RC cmdh_poll_v10 (cmdh_fsp_rsp_t * i_rsp_ptr);
 
 errlHndl_t cmdh_clear_elog (const cmdh_fsp_cmd_t * i_cmd_ptr,
-                                  cmdh_fsp_rsp_t * i_rsp_ptr);  // @nh004c
+                                  cmdh_fsp_rsp_t * i_rsp_ptr);
 
 void cmdh_tmgt_query_fw (const cmdh_fsp_cmd_t * i_cmd_ptr,
                                cmdh_fsp_rsp_t * i_rsp_ptr);
@@ -710,13 +609,13 @@ void cmdh_tmgt_query_fw (const cmdh_fsp_cmd_t * i_cmd_ptr,
 errlHndl_t cmdh_amec_pass_through(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                         cmdh_fsp_rsp_t * i_rsp_ptr);
 errlHndl_t cmdh_get_elog(const cmdh_fsp_cmd_t * i_cmd_ptr,
-                               cmdh_fsp_rsp_t * i_rsp_ptr);     //@nh004a
+                               cmdh_fsp_rsp_t * i_rsp_ptr);
 
 errlHndl_t cmdh_reset_prep(const cmdh_fsp_cmd_t * i_cmd_ptr,
-                                 cmdh_fsp_rsp_t * i_rsp_ptr);   // @th036
+                                 cmdh_fsp_rsp_t * i_rsp_ptr);
 
 errlHndl_t cmdh_tmgt_get_field_debug_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
-                                                cmdh_fsp_rsp_t * i_rsp_ptr);   // @jh002
+                                                cmdh_fsp_rsp_t * i_rsp_ptr);
 
 errlHndl_t cmdh_get_cooling_request(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                           cmdh_fsp_rsp_t * o_rsp_ptr);

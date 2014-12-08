@@ -1,49 +1,26 @@
-/******************************************************************************
-// @file cmdh_fsp.c
-// @brief Command Handling for FSP Communication.
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _cmdh_fsp_c cmdh_fsp.c
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *                      thallet   04/05/2012  Created
- *   @th013             thallet   07/24/2012  Minor changes for VPO/HW compile
- *   @at008             alvinwan  08/09/2012  Support AME Pass Thru command from TMGT
- *   @th022             thallet   10/08/2012  Moved data commands to separate file
- *   @nh004   864941    neilhsu   12/20/2012  Support get/delete errl & added trace info
- *   @th033   878894    thallet   04/17/2013  Mnfg AVP Support
- *   @th036   881677    thallet   05/06/2013  New TMGT Poll Command Support
- *   @gs004   883829    gjsilva   05/21/2013  Support for manufacturing commands
- *   @th037             thallet   05/28/2013  Do PCONLY Special Wakeup before accessing SCRATCH7
- *   @th038             thallet   06/03/2013  Disable Centaur since it isn't ready on HW yet
- *   @th039   887066    thallet   06/11/2013  Fix the way that command handler attentions work
- *   @jh002   887903    joshych   06/17/2013  Support Get Field Debug Data command
- *   @th042   892056    thallet   07/19/2013  Send OCC to safe mode if first APSS GPE fails
- *   @gm006  SW224414   milesg    09/16/2013  Reset and FFDC improvements
- *   @gm010   901580    milesg    10/06/2013  Low Level FFDC support
- *   @rt001   901927    tapiar    10/03/2013  Fix src tags
- *   @rt004   905638    tapiar    11/13/2013  Support for Tunable Parameters
- *   @gs019   908218    gjsilva   12/04/2013  Support cooling request architecture
- *   @fk004   907588    fmkassem  11/22/2013  OCC snapshot support.
- *   @sb012  910394     sbroyles  01/10/2014  More FFDC updates
- *   @gm020   912611    milesg    01/21/2014  Add special wakeup for scom'ing core chiplets
- *   @sbscr   919662    sbroyles  03/17/2014  Change SCR7 to SCR3
- *   @wb001  919163     wilbryan  03/06/2014  Updating error call outs, descriptions, and severities
- *   @gm033   920448    milesg    03/26/2014  use getscom/putscom ffdc wrapper
- *   @gs041   942203    gjsilva   10/17/2014  Support for HTMGT/BMC interface
- *   @gs042   942940    gjsilva   10/24/2014  Support for data packets in BMC-based systems
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/cmdh/cmdh_fsp.c $                                     */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* COPYRIGHT International Business Machines Corp. 2011,2014              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
-//*************************************************************************
-// Includes
-//*************************************************************************
 #include "ssx.h"
 #include "special_wakeup.h"
 #include "cmdh_service_codes.h"
@@ -56,23 +33,14 @@
 #include "cmdh_fsp.h"
 #include "cmdh_fsp_cmds.h"
 #include "cmdh_mnfg_intf.h"
-#include "cmdh_tunable_parms.h" //@rt004a
-#include "cmdh_snapshot.h"      //@fk004a
+#include "cmdh_tunable_parms.h"
+#include "cmdh_snapshot.h"
 #include "scom.h"
-
-//*************************************************************************
-// Externs
-//*************************************************************************
-
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
 
 // OCB Channel Setup Defines
 const int      OCB_CHANNEL_FSP_LINEAR          = 0;
 const int      OCB_CHANNEL_FSP_DOORBELL        = 1;
 const int      ALLOW_UNTRUSTED_ACCESS          = 1;
-
 
 // Do not change this without changing size of FSP Command Buffer
 // (and vice versa).  The Linear window requires an alignment on
@@ -83,12 +51,7 @@ const int      LOG_SIZEOF_FSP_CMD_BUFFER       = 12;   // 4096 = 2**12
 // Given to OCC from HWSV team, sent in FSI2Host Mailbox1 Message
 const uint32_t OCC_MSG_QUEUE_ID = 0x80000007;
 
-//*************************************************************************
-// Globals
-//*************************************************************************
-
-// The OCB Device Driver request that OCC uses to receive a doorbell from
-// FSP
+// The OCB Device Driver request that OCC uses to receive a doorbell from FSP
 OcbRequest G_fsp_doorbell_ocb_request;
 
 // Semaphore used to alert CMDH thread that a message was received from TMGT
@@ -109,13 +72,13 @@ fsp_msg_t G_fsp_msg = {
 };
 
 // This determines whether or not OCC can use MBOX for attentions
-eFsi2HostMboxState G_fsi2host_mbox_ready = FSI2HOST_MBOX_NOT_USEABLE;  // @th033
+eFsi2HostMboxState G_fsi2host_mbox_ready = FSI2HOST_MBOX_NOT_USEABLE;
 
 // Temporary storage used by our SSX_PANIC macro
 uint32_t __occ_panic_save_r3;
 uint32_t __occ_panic_save_r4;
 uint32_t __occ_panic_save_r5;
-uint32_t __occ_panic_save_msr; // @sb012
+uint32_t __occ_panic_save_msr;
 
 // Storage for commands coming from HTMGT
 DMA_BUFFER( fsp_cmd_t G_htmgt_cmd_buffer ) = {{{{0}}}};
@@ -128,27 +91,14 @@ cmdh_fsp_rsp_t G_tmp_rsp_buffer = {{0}};
 // 0x00 = use FSI2MBOX; 0x01 = use PSIHB complex
 uint8_t G_occ_interrupt_type = 0x00;
 
-//*************************************************************************
-// Function Declarations
-//*************************************************************************
 errlHndl_t cmdh_processTmgtRequest (const cmdh_fsp_cmd_t * i_cmd_ptr,
         cmdh_fsp_rsp_t * i_rsp_ptr);
-
-
-//*************************************************************************
-// Functions
-//*************************************************************************
 
 // Function Specification
 //
 // Name:  notifyCmdhWakeupCondition
 //
-// Description:
-//
-//
-//
-//
-// Flow:  xx/xx/xx    FN=
+// Description: Wake up command processing thread
 //
 // End Function Specification
 void notifyCmdhWakeupCondition(eCmdhWakeupThreadMask i_cond)
@@ -157,17 +107,11 @@ void notifyCmdhWakeupCondition(eCmdhWakeupThreadMask i_cond)
     ssx_semaphore_post(&G_cmdh_fsp_wakeup_thread);
 }
 
-
 // Function Specification
 //
 // Name:  clearCmdhWakeupCondition
 //
-// Description:
-//
-//
-//
-//
-// Flow:  xx/xx/xx    FN=
+// Description: TODO -- Add description
 //
 // End Function Specification
 void clearCmdhWakeupCondition(eCmdhWakeupThreadMask i_cond)
@@ -180,12 +124,7 @@ void clearCmdhWakeupCondition(eCmdhWakeupThreadMask i_cond)
 //
 // Name:  notifyFspDoorbellReceived
 //
-// Description:
-//
-//
-//
-//
-// Flow:  xx/xx/xx    FN=
+// Description: TODO -- Add description
 //
 // End Function Specification
 void notifyFspDoorbellReceived(void * i_arg)
@@ -198,12 +137,7 @@ void notifyFspDoorbellReceived(void * i_arg)
 //
 // Name:  cmdh_thread_wait_for_wakeup
 //
-// Description:
-//
-//
-//
-//
-// Flow:  xx/xx/xx    FN=
+// Description: TODO -- Add description
 //
 // End Function Specification
 int cmdh_thread_wait_for_wakeup(void)
@@ -219,7 +153,7 @@ int cmdh_thread_wait_for_wakeup(void)
         ocb_request_schedule(&G_fsp_doorbell_ocb_request);
     }
 
-    // Wait for someone to wakeup this thread - @th039 changed to WAIT_FOREVER
+    // Wait for someone to wakeup this thread
     l_rc = ssx_semaphore_pend(&G_cmdh_fsp_wakeup_thread, SSX_WAIT_FOREVER);
 
     return l_rc;
@@ -235,25 +169,18 @@ int cmdh_thread_wait_for_wakeup(void)
 //               to signal they are off the fsi2host mbox by clearing the
 //               SCRATCH7 scom from 'hostboot' to all zeros.
 //
-// @sbscr Moving the mbox check from scratch register 7 to scratch register 3.
-//
-// Flow:  xx/xx/xx    FN=
+// Moving the mbox check from scratch register 7 to scratch register 3.
 //
 // End Function Specification
 int cmdh_fsp_fsi2host_mbox_wait4free(void)
 {
-/// PC SCRATCH_REGISTER_7, used for locking FSI2HOST MBOX
-//#define PC_SCR7 0x1001328a
-
-// >> @sbscr
 // Scratch register 3
 #define PC_SCR3 0x10013286
-// << @sbscr
 
-/// Hostboot writes 'hostboot' as its magic number
+// Hostboot writes 'hostboot' as its magic number
 #define HOSTBOOT_RUNNING 0x686f7374626f6f74ULL
 
-/// Dan Crowell says -- I would say at least 1 min to be safe
+// Use at least 1 min to be safe
 #define FSI2HOST_TIMEOUT_IN_SECONDS 90
 
 #define SWAKEUP_TIMEOUT_MS  25 //use 25ms timeout (same as used in gpsm code)
@@ -269,18 +196,18 @@ int cmdh_fsp_fsi2host_mbox_wait4free(void)
     bool                            l_swakeup_failure = FALSE;
 
 
-    // query configured cores for special wakeup -- gm020
+    // query configured cores for special wakeup
     l_pcdr.value = in32(PMC_CORE_DECONFIGURATION_REG);
     l_cores = ~l_pcdr.fields.core_chiplet_deconf_vector;
 
     while(0 != l_timeout)
     {
-        /// Decrement Timeout Timer
+        // Decrement Timeout Timer
         l_timeout--;
 
         l_disable_swup = FALSE;
-        /// Enable special wakeup so following getscom doesn't
-        /// fail with CHIPLET_OFFLINE error on sleeping cores -- gm020
+        // Enable special wakeup so following getscom doesn't
+        // fail with CHIPLET_OFFLINE error on sleeping cores
         rc2 = occ_special_wakeup(TRUE,
                                 l_cores,
                                 SWAKEUP_TIMEOUT_MS,
@@ -296,20 +223,20 @@ int cmdh_fsp_fsi2host_mbox_wait4free(void)
 
         l_disable_swup = TRUE;
 
-        /// Read from all cores & OR together so we don't have
-        /// to figure out which is the hostboot 'master'
+        // Read from all cores & OR together so we don't have
+        // to figure out which is the hostboot 'master'
         rc = getscom_ffdc(MC_ADDRESS(PC_SCR3,
                     MC_GROUP_EX_CORE, PCB_MULTICAST_OR),
-                    &l_payload, NULL);                     //errors committed internally -- gm033
+                    &l_payload, NULL);                     //errors committed internally
 
         if (rc) {
-            TRAC_INFO("PC_SCR3 getscom fail rc=%x",rc); // @sbscr
+            TRAC_INFO("PC_SCR3 getscom fail rc=%x",rc);
             break;
         }
 
         if (HOSTBOOT_RUNNING == l_payload)
         {
-            /// Hostboot is still running on the Mailbox
+            // Hostboot is still running on the Mailbox
             if(0 == l_do_once)
             {
                 l_do_once = 1;
@@ -318,17 +245,14 @@ int cmdh_fsp_fsi2host_mbox_wait4free(void)
         }
         else if(0 == l_payload)
         {
-            /// Hostboot is off the mailbox
+            // Hostboot is off the mailbox
             rc = 0;
             break;
         }
         else
         {
-            /// This is maybe an error, but probably not.  Especially in AVP
-            /// mode.   // @th038
-            ///
-            /// Trace what we see in case someone tries to blame us for a defect.
-            TRAC_INFO("Hostboot is off FSI2HOST mbox, but PC_SCR3 = 0x%08x_%08x", // @sbscr
+            // This is maybe an error, but probably not.  Especially in AVP mode.
+            TRAC_INFO("Hostboot is off FSI2HOST mbox, but PC_SCR3 = 0x%08x_%08x",
                     (uint32_t) ((l_payload & 0xFFFFFFFF00000000ULL) >> 32),
                     (uint32_t) ((l_payload & 0x00000000FFFFFFFFULL) >> 0));
 
@@ -337,10 +261,10 @@ int cmdh_fsp_fsi2host_mbox_wait4free(void)
             break;
         }
 
-        if(l_disable_swup) //gm020
+        if(l_disable_swup)
         {
             l_disable_swup = FALSE;
-            /// clear special wakeup while we sleep
+            // clear special wakeup while we sleep
             rc2 = occ_special_wakeup(FALSE,
                                     l_cores,
                                     SWAKEUP_TIMEOUT_MS,
@@ -355,11 +279,11 @@ int cmdh_fsp_fsi2host_mbox_wait4free(void)
         }
 
 
-        /// Wait for 1 second until we try again
+        // Wait for 1 second until we try again
         ssx_sleep(SSX_SECONDS(1));
     }
 
-    //make sure we clear special wakeup before exiting this function -- gm020
+    //make sure we clear special wakeup before exiting this function
     if(l_disable_swup)
     {
         rc2 = occ_special_wakeup(FALSE,
@@ -380,7 +304,7 @@ int cmdh_fsp_fsi2host_mbox_wait4free(void)
     }
 
     //Since cores can be left in an unknown state after special wakeup fails
-    //Log an error and request a reset to possibly clean up the special wakeup -- gm020
+    //Log an error and request a reset to possibly clean up the special wakeup
     if(l_swakeup_failure)
     {
         /* @
@@ -418,12 +342,7 @@ int cmdh_fsp_fsi2host_mbox_wait4free(void)
 //
 // Name: cmdh_fsp_init
 //
-// Description:
-//
-//
-//
-//
-// Flow:  xx/xx/xx    FN=
+// Description: TODO -- Add description
 //
 // End Function Specification
 errlHndl_t cmdh_fsp_init(void)
@@ -460,21 +379,13 @@ errlHndl_t cmdh_fsp_init(void)
     // ----------------------------------------------------
     // Open Up Linear Window for FSP Communication
     // ----------------------------------------------------
-#if 0
-    ocb_allow_untrusted_initialize(OCB_CHANNEL_FSP_LINEAR,
-            ALLOW_UNTRUSTED_ACCESS);
-
-    ocb_linear_window_initialize(OCB_CHANNEL_FSP_LINEAR,
-            CMDH_LINEAR_WINDOW_BASE_ADDRESS,
-            LOG_SIZEOF_FSP_CMD_BUFFER);
-#endif
 
     if(G_occ_interrupt_type == 0x00)
     {
         // ----------------------------------------------------
         // Initialize FSI2Host Mailbox1 -- Attentions to FSP
         // ----------------------------------------------------
-        l_rc = cmdh_fsp_fsi2host_mbox_wait4free();   // @th033
+        l_rc = cmdh_fsp_fsi2host_mbox_wait4free();
         if(l_rc)
         {
             CHECKPOINT_FLAG(CF_FSI_MB_TIMEOUT);
@@ -506,7 +417,7 @@ errlHndl_t cmdh_fsp_init(void)
         else
         {
             CHECKPOINT(INIT_FSI_HOST_MBOX);
-            TRAC_INFO("HostBoot is off FSI2HOST mailbox.");   // @th033
+            TRAC_INFO("HostBoot is off FSI2HOST mailbox.");
 
             /// Initialize the FSI2HOST MBOX
             memset(&l_mbox_msg.word[0],0,sizeof(l_mbox_msg));
@@ -519,7 +430,7 @@ errlHndl_t cmdh_fsp_init(void)
             do
             {
                 // Initialize Headers -- Hardware Provided Header Area not used
-                // scom errors will be committed internally -- gm033
+                // scom errors will be committed internally
                 l_rc = putscom_ffdc(MAILBOX_1_HEADER_COMMAND_0_A_REGADDR,  0x0000000000000000ull, NULL);
                     if(l_rc)
                 {
@@ -535,34 +446,34 @@ errlHndl_t cmdh_fsp_init(void)
                 {
                     break;
                 }
-        
+
                 // Initialize Data Area -- 64 bytes
                 // Message ID & Message Queue ID
-                l_rc = putscom_ffdc(MAILBOX_1_DATA_AREA_A_0_REGADDR,  ((uint64_t) l_mbox_msg.fields.msg_id << 32), NULL);//l_mbox_msg.word[0]);
+                l_rc = putscom_ffdc(MAILBOX_1_DATA_AREA_A_0_REGADDR,  ((uint64_t) l_mbox_msg.fields.msg_id << 32), NULL);
                 if(l_rc)
                 {
                     break;
                 }
                 // Command Type & Flags
-                l_rc = putscom_ffdc(MAILBOX_1_DATA_AREA_A_1_REGADDR,  ((uint64_t) l_mbox_msg.fields.msg_queue_id << 32), NULL);//l_mbox_msg.word[1]);
+                l_rc = putscom_ffdc(MAILBOX_1_DATA_AREA_A_1_REGADDR,  ((uint64_t) l_mbox_msg.fields.msg_queue_id << 32), NULL);
                 if(l_rc)
                 {
                     break;
                 }
                 // Data[0]
-                l_rc = putscom_ffdc(MAILBOX_1_DATA_AREA_A_2_REGADDR,  ((uint64_t) l_mbox_msg.fields.msg_payload.type << 32), NULL); //l_mbox_msg.word[2]);
+                l_rc = putscom_ffdc(MAILBOX_1_DATA_AREA_A_2_REGADDR,  ((uint64_t) l_mbox_msg.fields.msg_payload.type << 32), NULL);
                 if(l_rc)
                 {
                     break;
                 }
                 // Data[1]
-                l_rc = putscom_ffdc(MAILBOX_1_DATA_AREA_A_3_REGADDR,  ((uint64_t) l_mbox_msg.fields.msg_payload.flags << 32), NULL); //l_mbox_msg.word[3]);
+                l_rc = putscom_ffdc(MAILBOX_1_DATA_AREA_A_3_REGADDR,  ((uint64_t) l_mbox_msg.fields.msg_payload.flags << 32), NULL);
                 if(l_rc)
                 {
                     break;
                 }
                 // (Void *) Extra Data
-                l_rc = putscom_ffdc(MAILBOX_1_DATA_AREA_A_4_REGADDR,  ((uint64_t) l_mbox_msg.fields.msg_payload.fsp_cmd_buffer_addr << 32), NULL); //l_mbox_msg.word[4]);
+                l_rc = putscom_ffdc(MAILBOX_1_DATA_AREA_A_4_REGADDR,  ((uint64_t) l_mbox_msg.fields.msg_payload.fsp_cmd_buffer_addr << 32), NULL);
                 if(l_rc)
                 {
                     break;
@@ -593,15 +504,15 @@ errlHndl_t cmdh_fsp_init(void)
                 {
                     break;
                 }
-        
-                G_fsi2host_mbox_ready = FSI2HOST_MBOX_INITIALIZED;   // @th033
+
+                G_fsi2host_mbox_ready = FSI2HOST_MBOX_INITIALIZED;
                 CHECKPOINT(FSI_HOST_MBOX_INITIALIZED);
             }while(0);
         }
     }
     else if(G_occ_interrupt_type == 0x01)
     {
-        // FIXME: For Phas 4 of Habanero, need to init this path
+        // TODO: For Phas 4 of Habanero, need to init this path
     }
 
     return l_errlHndl;
@@ -612,12 +523,7 @@ errlHndl_t cmdh_fsp_init(void)
 //
 // Name:  cmdh_fsp_attention
 //
-// Description:
-//
-//
-//
-//
-// Flow:  xx/xx/xx    FN=
+// Description: TODO -- Add description
 //
 // End Function Specification
 int cmdh_fsp_attention_withRetry(uint32_t i_type, int i_timeout_in_ms)
@@ -669,12 +575,7 @@ int cmdh_fsp_attention_withRetry(uint32_t i_type, int i_timeout_in_ms)
 //
 // Name:  cmdh_fsp_attention
 //
-// Description:
-//
-//
-//
-//
-// Flow:  xx/xx/xx    FN=
+// Description: TODO -- Add description
 //
 // End Function Specification
 int cmdh_fsp_attention(uint32_t i_type)
@@ -687,7 +588,7 @@ int cmdh_fsp_attention(uint32_t i_type)
     do
     {
         // Don't send attentions if the FSI2HOST Mailbox isn't ours
-        if( FSI2HOST_MBOX_NOT_USEABLE == G_fsi2host_mbox_ready ){break;}  // @th033
+        if( FSI2HOST_MBOX_NOT_USEABLE == G_fsi2host_mbox_ready ){break;}
 
         // Read Status Register for checks below
         l_rc = getscom_ffdc(MAILBOX_1_DOORBELL_STS_CTRL_REGADDR, (uint64_t *) &l_status.doubleword, &l_err);
@@ -717,14 +618,16 @@ int cmdh_fsp_attention(uint32_t i_type)
             l_mbox_msg.fields.msg_payload.type = i_type;
 
             // Send Command Type & Flags to Mailbox Register
-            l_rc = putscom_ffdc(MAILBOX_1_DATA_AREA_A_2_REGADDR,  ((uint64_t) l_mbox_msg.fields.msg_payload.type << 32), &l_err); //l_mbox_msg.word[2]);
+            l_rc = putscom_ffdc(MAILBOX_1_DATA_AREA_A_2_REGADDR,  ((uint64_t) l_mbox_msg.fields.msg_payload.type << 32), &l_err);
             if(l_rc){break;}
 
             // Set Attention Interrupt by setting "LBUS slave-A Pending (bit 28, intel notation)"
             l_status.lbus_slaveA_pending  = 1;
             l_status.lbus_slaveA_data_cnt = 0x28;
+
             // Clear Xup bit, it is set by FSP when it reads the OCC interrupt Mailbox
             l_status.xup = 0;
+
             // Write Status out to Doorbell Status/Control 1
             l_rc = putscom_ffdc(MAILBOX_1_DOORBELL_STS_CTRL_REGADDR, (uint64_t) l_status.doubleword, &l_err);
             if(l_rc){break;}
@@ -735,9 +638,10 @@ int cmdh_fsp_attention(uint32_t i_type)
 
     if(l_err)
     {
+        // TODO
         //can't commit errors from this function since committing an error will
         //cause another call to raise an attention and we could eventually run
-        //out of stack space -- gm033
+        //out of stack space
         deleteErrl(&l_err);
     }
     return l_rc;
@@ -748,12 +652,7 @@ int cmdh_fsp_attention(uint32_t i_type)
 //
 // Name:  checksum16
 //
-// Description:
-//
-//
-//
-//
-// Flow:  xx/xx/xx    FN=
+// Description: TODO -- Add description
 //
 // End Function Specification
 uint16_t checksum16(uint8_t * i_data, const uint16_t i_len)
@@ -814,10 +713,7 @@ uint16_t checksum16(uint8_t * i_data, const uint16_t i_len)
 //              Interface Architecture: TMGT to OCC -- contains further
 //              details on the "Error Response Data Packet."
 //
-// Flow:  xx/xx/xx    FN=
-//
 // End Function Specification
-// @th036 - rewrote this function
 void cmdh_build_errl_rsp(const cmdh_fsp_cmd_t * i_cmd_ptr,
                          cmdh_fsp_rsp_t       * o_rsp_ptr,
                          ERRL_RC                i_rc,
@@ -827,12 +723,12 @@ void cmdh_build_errl_rsp(const cmdh_fsp_cmd_t * i_cmd_ptr,
     errlHndl_t * l_errlHndlPtr           = io_errlHndl;
     uint8_t l_reason;
 
-    /// Make sure there is a error log pointer passed in so we don't
-    /// dereference a NULL pointer
+    // Make sure there is an error log pointer passed in so we don't
+    // dereference a NULL pointer
     if(NULL != l_errlHndlPtr)
     {
-        /// Check if we need to update the return code, we only need to update this
-        /// if no one has previously set it to an error rc due to a error log
+        // Check if we need to update the return code, we only need to update this
+        // if no one has previously set it to an error rc due to a error log
         if( (ERRL_RC_SUCCESS == l_errl_rsp_ptr->rc) || (NULL == *l_errlHndlPtr) )
         {
             if( (i_rc == ERRL_RC_SUCCESS) || (i_rc == ERRL_RC_CONDITIONAL_SUCCESS) )
@@ -848,7 +744,7 @@ void cmdh_build_errl_rsp(const cmdh_fsp_cmd_t * i_cmd_ptr,
             }
         }
 
-        /// If no error log was passed in to this function, create one
+        // If no error log was passed in to this function, create one
         if(NULL == *l_errlHndlPtr)
         {
             /* @
@@ -870,12 +766,12 @@ void cmdh_build_errl_rsp(const cmdh_fsp_cmd_t * i_cmd_ptr,
              * @devdesc     FSP to OCC packet is invalid
              */
             //For invalid data, use INVALID_INPUT_DATA reason code.  Use INTERNAL_FAILURE otherwise.
-            l_reason = (i_rc == ERRL_RC_INVALID_DATA)? INVALID_INPUT_DATA: INTERNAL_FAILURE; //@gm006
+            l_reason = (i_rc == ERRL_RC_INVALID_DATA)? INVALID_INPUT_DATA: INTERNAL_FAILURE;
             *l_errlHndlPtr = createErrl(
                     CMDH_GENERIC_CMD_FAILURE,           //modId
                     l_reason,                           //reasoncode
                     ERC_CMDH_INTERNAL_FAILURE,          //Extended reason code
-                    ERRL_SEV_UNRECOVERABLE,             //Severity //@wb001
+                    ERRL_SEV_UNRECOVERABLE,             //Severity
                     NULL,    //TODO: create trace       //Trace Buf
                     DEFAULT_TRACE_SIZE,                 //Trace Size
                     CONVERT_UINT8_ARRAY_UINT32(i_cmd_ptr->cmd_type,
@@ -884,14 +780,14 @@ void cmdh_build_errl_rsp(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                                i_cmd_ptr->data[2]), //userdata1
                     i_rc                                //userdata2
                     );
-                    
-            // @wb001 -- Callout firmware
+
+            // Callout firmware
             addCalloutToErrl(*l_errlHndlPtr,
                              ERRL_CALLOUT_TYPE_COMPONENT_ID,
                              ERRL_COMPONENT_ID_FIRMWARE,
                              ERRL_CALLOUT_PRIORITY_HIGH);
 
-            /// Copy in the first 32 bytes of the command that was sent
+            // Copy in the first 32 bytes of the command that was sent
             addUsrDtlsToErrl(*l_errlHndlPtr,                //io_err
                     (uint8_t *) i_cmd_ptr,         //i_dataPtr,
                     32,                            //i_size
@@ -899,13 +795,13 @@ void cmdh_build_errl_rsp(const cmdh_fsp_cmd_t * i_cmd_ptr,
                     ERRL_USR_DTL_BINARY_DATA);     //type
         }
 
-        /// Fill out the response lod_id with the error id
+        // Fill out the response lod_id with the error id
         l_errl_rsp_ptr->log_id = getErrlLogId(*l_errlHndlPtr);
     }
     else
     {
-        /// This is a firmware bug, TMGT will see it is a bad RC,
-        /// with no error log, pick up on this, and log its own error
+        // This is a firmware bug, TMGT will see it is a bad RC,
+        // with no error log, pick up on this, and log its own error
         l_errl_rsp_ptr->log_id = 0;  //ERRL_SLOT_INVALID
         l_errl_rsp_ptr->rc     = ERRL_RC_INTERNAL_FAIL;
     }
@@ -921,12 +817,7 @@ void cmdh_build_errl_rsp(const cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // Name:  cmdh_fsp_cmd_hndler
 //
-// Description:
-//
-//
-//
-//
-// Flow:  09/23/14    FN= cmdh_fsp_cmd_hndler.odg
+// Description: TODO -- Add description
 //
 // End Function Specification
 errlHndl_t cmdh_fsp_cmd_hndler(void)
@@ -985,7 +876,7 @@ errlHndl_t cmdh_fsp_cmd_hndler(void)
 
             break;
         }
-       
+
         // Determine which buffer to read based on the sender ID
         if(l_sender_id == ATTN_SENDER_ID_HTMGT)
         {
@@ -1006,15 +897,15 @@ errlHndl_t cmdh_fsp_cmd_hndler(void)
             if(l_ssxrc != SSX_OK)
             {
                 TRAC_ERR("cmdh_fsp_cmd_hndler: BCE request create failure rc=[%08X]", -l_ssxrc);
-                /* 
+                /*
                  * @errortype
                  * @moduleid    CMDH_GENERIC_CMD_FAILURE
                  * @reasoncode  SSX_GENERIC_FAILURE
-                 * @userdata1   RC for BCE block-copy engine 
+                 * @userdata1   RC for BCE block-copy engine
                  * @userdata2   Internal function check-point
                  * @userdata4   ERC_BCE_REQ_CREATE_READ_FAILURE
                  * @devdesc     SSX BCE related failure
-                 */   
+                 */
                 l_reasonCode = SSX_GENERIC_FAILURE;
                 l_extReasonCode = ERC_BCE_REQ_CREATE_READ_FAILURE;
                 l_userdata2 = 0x01;
@@ -1027,11 +918,11 @@ errlHndl_t cmdh_fsp_cmd_hndler(void)
             if(l_ssxrc != SSX_OK)
             {
                 TRAC_ERR("cmdh_fsp_cmd_hndler: BCE request schedule failure rc=[%08X]", -l_ssxrc);
-                /* 
+                /*
                  * @errortype
                  * @moduleid    CMDH_GENERIC_CMD_FAILURE
                  * @reasoncode  SSX_GENERIC_FAILURE
-                 * @userdata1   RC for BCE block-copy engine 
+                 * @userdata1   RC for BCE block-copy engine
                  * @userdata2   Internal function check-point
                  * @userdata4   ERC_BCE_REQ_SCHED_READ_FAILURE
                  * @devdesc     Failed to copy data by using DMA
@@ -1064,15 +955,15 @@ errlHndl_t cmdh_fsp_cmd_hndler(void)
             if(l_ssxrc != SSX_OK)
             {
                 TRAC_ERR("cmdh_fsp_cmd_hndler: BCE request create failure rc=[%08X]", -l_ssxrc);
-                /* 
+                /*
                  * @errortype
                  * @moduleid    CMDH_GENERIC_CMD_FAILURE
                  * @reasoncode  SSX_GENERIC_FAILURE
-                 * @userdata1   RC for BCE block-copy engine 
-                 * @userdata2   Internal function check-point 
+                 * @userdata1   RC for BCE block-copy engine
+                 * @userdata2   Internal function check-point
                  * @userdata4   ERC_BCE_REQ_CREATE_INPROG_FAILURE
                  * @devdesc     SSX BCE related failure
-                 */   
+                 */
                 l_reasonCode = SSX_GENERIC_FAILURE;
                 l_extReasonCode = ERC_BCE_REQ_CREATE_INPROG_FAILURE;
                 l_userdata2 = 0x03;
@@ -1085,12 +976,12 @@ errlHndl_t cmdh_fsp_cmd_hndler(void)
             if(l_ssxrc != SSX_OK)
             {
                 TRAC_ERR("cmdh_fsp_cmd_hndler: BCE request schedule failure rc=[%08X]", -l_ssxrc);
-                /* 
+                /*
                  * @errortype
                  * @moduleid    CMDH_GENERIC_CMD_FAILURE
                  * @reasoncode  SSX_GENERIC_FAILURE
-                 * @userdata1   RC for BCE block-copy engine 
-                 * @userdata2   Internal function check-point 
+                 * @userdata1   RC for BCE block-copy engine
+                 * @userdata2   Internal function check-point
                  * @userdata4   ERC_BCE_REQ_SCHED_INPROG_FAILURE
                  * @devdesc     Failed to copy data by using DMA
                  */
@@ -1164,15 +1055,15 @@ errlHndl_t cmdh_fsp_cmd_hndler(void)
             if(l_ssxrc != SSX_OK)
             {
                 TRAC_ERR("cmdh_fsp_cmd_hndler: BCE request create failure rc=[%08X]", -l_ssxrc);
-                /* 
+                /*
                  * @errortype
                  * @moduleid    CMDH_GENERIC_CMD_FAILURE
                  * @reasoncode  SSX_GENERIC_FAILURE
-                 * @userdata1   RC for BCE block-copy engine 
-                 * @userdata2   Internal function check-point 
+                 * @userdata1   RC for BCE block-copy engine
+                 * @userdata2   Internal function check-point
                  * @userdata4   ERC_BCE_REQ_CREATE_WRITE_FAILURE
                  * @devdesc     SSX BCE related failure
-                 */   
+                 */
                 l_reasonCode = SSX_GENERIC_FAILURE;
                 l_extReasonCode = ERC_BCE_REQ_CREATE_WRITE_FAILURE;
                 l_userdata2 = 0x05;
@@ -1185,12 +1076,12 @@ errlHndl_t cmdh_fsp_cmd_hndler(void)
             if(l_ssxrc != SSX_OK)
             {
                 TRAC_ERR("cmdh_fsp_cmd_hndler: BCE request schedule failure rc=[%08X]", -l_ssxrc);
-                /* 
+                /*
                  * @errortype
                  * @moduleid    CMDH_GENERIC_CMD_FAILURE
                  * @reasoncode  SSX_GENERIC_FAILURE
-                 * @userdata1   RC for BCE block-copy engine 
-                 * @userdata2   Internal function check-point 
+                 * @userdata1   RC for BCE block-copy engine
+                 * @userdata2   Internal function check-point
                  * @userdata4   ERC_BCE_REQ_SCHED_WRITE_FAILURE
                  * @devdesc     Failed to copy data by using DMA
                  */
@@ -1259,7 +1150,7 @@ errlHndl_t cmdh_fsp_cmd_hndler(void)
                 else
                 {
                     // Command is responsible for RC, Data Len, Data
-                    l_errlHndl = cmdh_processTmgtRequest (&G_fsp_msg.cmd->fields, 
+                    l_errlHndl = cmdh_processTmgtRequest (&G_fsp_msg.cmd->fields,
                                                           &G_fsp_msg.rsp->fields);
                 }
             }
@@ -1279,7 +1170,7 @@ errlHndl_t cmdh_fsp_cmd_hndler(void)
             G_fsp_msg.rsp->byte[l_cmd_len] = CONVERT_UINT16_UINT8_HIGH(l_cksm);
             G_fsp_msg.rsp->byte[l_cmd_len+1] = CONVERT_UINT16_UINT8_LOW(l_cksm);
 
-            // FIXME: Do we really need this?
+            // TODO: Do we really need this?
             // Set an ACK on doorbell (sanity check)
             //G_fsp_msg.doorbell[0] |= 0x80;
 
@@ -1303,7 +1194,7 @@ errlHndl_t cmdh_fsp_cmd_hndler(void)
             0,                            //Trace Size
             -l_ssxrc,                     //userdata1
             l_userdata2);                 //userdata2
-                                       
+
         // Callout firmware
         addCalloutToErrl(l_errlHndl,
                          ERRL_CALLOUT_TYPE_COMPONENT_ID,
@@ -1318,12 +1209,7 @@ errlHndl_t cmdh_fsp_cmd_hndler(void)
 //
 // Name:  cmdh_processTmgtRequest
 //
-// Description:
-//
-//
-//
-//
-// Flow:  xx/xx/xx    FN=
+// Description: TODO -- Add description
 //
 // End Function Specification
 errlHndl_t cmdh_processTmgtRequest (const cmdh_fsp_cmd_t * i_cmd_ptr,
@@ -1341,7 +1227,7 @@ errlHndl_t cmdh_processTmgtRequest (const cmdh_fsp_cmd_t * i_cmd_ptr,
     switch(l_cmd_type)
     {
         case CMDH_POLL:
-            l_err = cmdh_tmgt_poll (i_cmd_ptr,i_rsp_ptr);           // @th036
+            l_err = cmdh_tmgt_poll (i_cmd_ptr,i_rsp_ptr);
             break;
 
         case CMDH_QUERYFWLEVEL:
@@ -1361,19 +1247,19 @@ errlHndl_t cmdh_processTmgtRequest (const cmdh_fsp_cmd_t * i_cmd_ptr,
             break;
 
         case CMDH_CLEARERRL:
-            l_err = cmdh_clear_elog(i_cmd_ptr, i_rsp_ptr);          //@nh004c
+            l_err = cmdh_clear_elog(i_cmd_ptr, i_rsp_ptr);
             break;
 
         case CMDH_AME_PASS_THROUGH:
-            l_err = cmdh_amec_pass_through(i_cmd_ptr,i_rsp_ptr);   // @at008
+            l_err = cmdh_amec_pass_through(i_cmd_ptr,i_rsp_ptr);
             break;
 
         case CMDH_GETERRL:
-            l_err = cmdh_get_elog(i_cmd_ptr,i_rsp_ptr);             //@nh004a
+            l_err = cmdh_get_elog(i_cmd_ptr,i_rsp_ptr);
             break;
 
         case CMDH_RESET_PREP:
-            l_err = cmdh_reset_prep(i_cmd_ptr,i_rsp_ptr);          // @th036
+            l_err = cmdh_reset_prep(i_cmd_ptr,i_rsp_ptr);
             break;
 
         case CMDH_GET_COOLING_REQUEST:
@@ -1381,21 +1267,21 @@ errlHndl_t cmdh_processTmgtRequest (const cmdh_fsp_cmd_t * i_cmd_ptr,
             break;
 
         case CMDH_MFG_TEST_CMD:
-            cmdh_mnfg_test_parse(i_cmd_ptr,i_rsp_ptr);             //@gs004a
+            cmdh_mnfg_test_parse(i_cmd_ptr,i_rsp_ptr);
             break;
 
         case CMDH_GET_FIELD_DEBUG_DATA:
-            l_err = cmdh_tmgt_get_field_debug_data(i_cmd_ptr,i_rsp_ptr);   // @jh002a
+            l_err = cmdh_tmgt_get_field_debug_data(i_cmd_ptr,i_rsp_ptr);
             break;
 
-        case CMDH_TUNABLE_PARMS: //@rt004a
+        case CMDH_TUNABLE_PARMS:
             l_err = cmdh_tunable_parms(i_cmd_ptr,i_rsp_ptr);
             break;
         case CMDH_SNAPSHOT_SYNC:
-            l_err = cmdh_snapshot_sync(i_cmd_ptr,i_rsp_ptr); //@fk004a
+            l_err = cmdh_snapshot_sync(i_cmd_ptr,i_rsp_ptr);
             break;
         case CMDH_GET_SNAPSHOT_BUFFER:
-            l_err = cmdh_get_snapshot_buffer(i_cmd_ptr,i_rsp_ptr);  //@fk004a
+            l_err = cmdh_get_snapshot_buffer(i_cmd_ptr,i_rsp_ptr);
             break;
 
         //case CMDH_PWREXECPT:
@@ -1410,7 +1296,7 @@ errlHndl_t cmdh_processTmgtRequest (const cmdh_fsp_cmd_t * i_cmd_ptr,
             // -----------------------------------------------
             // Generate error response packet
             // -----------------------------------------------
-            cmdh_build_errl_rsp(i_cmd_ptr, i_rsp_ptr, ERRL_RC_INVALID_CMD, &l_err);  // @th042
+            cmdh_build_errl_rsp(i_cmd_ptr, i_rsp_ptr, ERRL_RC_INVALID_CMD, &l_err);
 
             break;
     } //end switch

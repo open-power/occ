@@ -1,61 +1,39 @@
-/******************************************************************************
-// @file cmdh_thread.c
-// @brief Command Handling for FSP Communication.
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _cmdh_fsp_c cmdh_fsp.c
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @th023             thallet   10/08/2012  Moved cmdh thread commands to this file
- *   @th033  878894     thallet   04/26/2013  AVP Moded changes
- *   @th032             thallet   04/26/2013  Tuleta HW Bringup
- *   @th039  887066     thallet   06/11/2013  FSP Comm Improvements - Attn
- *   @gm010  901580     milesg    10/06/2013  Low Level FFDC support
- *   @gs041  942203     gjsilva   10/17/2014  Support for HTMGT/BMC interface
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/cmdh/cmdh_thread.c $                                  */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* COPYRIGHT International Business Machines Corp. 2011,2014              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
-//*************************************************************************
-// Includes
-//*************************************************************************
 #include "ssx.h"
 #include "ssx_io.h"
 #include "simics_stdio.h"
-#include "errl.h"             
+#include "errl.h"
 #include "trac.h"
 #include <thread.h>
 #include <threadSch.h>
 #include "state.h"
 #include <cmdh_fsp.h>
 
-//*************************************************************************
-// Externs
-//*************************************************************************
-
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
-
-//*************************************************************************
-// Globals
-//*************************************************************************
 eCmdhWakeupThreadMask G_cmdh_thread_wakeup_mask;
 
 extern uint8_t G_occ_interrupt_type;
-
-//*************************************************************************
-// Function Declarations
-//*************************************************************************
-
-//*************************************************************************
-// Functions
-//*************************************************************************
 
 // Function Specification
 //
@@ -64,8 +42,6 @@ extern uint8_t G_occ_interrupt_type;
 // Description: This needs to be moved to separate file after we add cmd handler
 //              thread support
 //
-// Flow:
-// 
 // End Function Specification
 void Cmd_Hndl_thread_routine(void *arg)
 {
@@ -123,7 +99,7 @@ void Cmd_Hndl_thread_routine(void *arg)
                 // Handle the command that TMGT just sent to OCC
                 l_errlHndl = cmdh_fsp_cmd_hndler();
 
-                // Commit an error if we get one passed back, do it before 
+                // Commit an error if we get one passed back, do it before
                 // we tell the FSP we have a response ready
                 if(NULL != l_errlHndl)
                 {
@@ -138,7 +114,7 @@ void Cmd_Hndl_thread_routine(void *arg)
                     cmdh_fsp_attention_withRetry(OCC_ALERT_FSP_RESP_READY, 500);
                 }
             }
-            
+
             if (CMDH_WAKEUP_FSP_ATTENTION_ALERT & G_cmdh_thread_wakeup_mask)
             {
                 clearCmdhWakeupCondition(CMDH_WAKEUP_FSP_ATTENTION_ALERT);

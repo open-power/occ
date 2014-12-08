@@ -1,68 +1,32 @@
-/******************************************************************************
-// @file cmdh_fsp_cmds.c
-// @brief Command Handling for FSP Communication.
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _cmdh_fsp_cmds_c cmdh_fsp_cmds.c
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *                      thallet   04/05/2012  Created
- *   @th013             thallet   07/24/2012  Minor changes for VPO/HW compile
- *   @th010             thallet   07/11/2012  Pstate Enablement
- *   @th014             thallet   08/02/2012  SMS was returning rc=0x15
- *   @th015             thallet   08/03/2012  Changes to notify AMEC of data changes
- *   @at008             alvinwan  08/09/2012  Support AME Pass Thru command from TMGT
- *   @th022             thallet   10/03/2012  Changes for OCC coming up as slave    
- *   @ai006  863413     ailutsar  11/28/2012  Update occtool to grab a full trace log from OCC  
- *   @nh004  864941     neilhsu   12/20/2012  Support get/delete errl & added trace info
- *   @th029             thallet   01/23/2013  Test Applet stats & function via FSP commands
- *   @th031  878471     thallet   04/15/2013  Centaur Throttles
- *   @gs003  878457     gjsilva   04/17/2013  Support for get_sensor option
- *   @th032             thallet   04/16/2013  Tuleta HW Bringup
- *   @th036  881677     thallet   05/06/2013  New Poll Command Support
- *   @jh001  881996     joshych   05/07/2013  Support SRAM error log format
- *   @gm002  885429     milesg    05/30/2013  Support for 16 bit type and location
- *   @jh002  887903     joshych   06/17/2013  Support Get Field Debug Data command
- *   @at015  885884     alvinwan  06/10/2013  Support Observation/Active state change
- *   @th043  892554     thallet   07/23/2013  Automatic Nominal/Active state change
- *   @th046  894648     thallet   08/08/2013  Automatic Nominal/Active state change mod
- *   @jh005  894560     joshych   08/14/2013  Create call home data logs every 24 hours
- *   @cc001  897953     cjcain    09/06/2013  Removed Automatic Nominal/Active state change
- *   @gs013  901118     gjsilva   10/11/2013  Support for RESET_PREP command from TMGT
- *   @rt001  902613     tapiar    10/17/2013  IPS poll response info
- *   @gs015  905166     gjsilva   11/04/2013  Full support for IPS function
- *   @rc006  906038     rickylie  11/11/2013  OCC: Investigate/Test OCC Tracing
- *   @gs017  905990     gjsilva   11/13/2013  Full support for tunable parameters
- *   @fk002  905632     fmkassem  11/05/2013  Remove CriticalPathMonitor code
- *   @gs019   908218    gjsilva   12/04/2013  Support cooling request architecture
- *   @jh009   908383    joshych   12/04/2013  Generate error logs when required for Reset Prep command
- *   @at019  908390     alvinwan  12/05/2013  Disable DPS algorithms from running in Sapphire
- *   @ly010  908832     lychen    12/09/2013  Sapphire update status for reset
- *   @gm017  909636     milesg    12/17/2013  commented out too much trace
- *   @gm021  912805     milesg    01/21/2014  Support for test applets
- *   @gs025  913663     gjsilva   01/30/2014  Full fupport for soft frequency boundaries
- *   @gm025  915973     milesg    02/14/2014  Full support for sapphire (KVM) mode
- *   @wb000  916142     wilbryan  02/18/2014  Support "DVFS due to OT/Power" bits in OCC poll response
- *   @gm029  917998     milesg    03/06/2014  Send slave inbox while in standby state
- *   @fk009  942864     fmkassem  09/22/2014  BMC/HTMGT Poll command 0x10 support
- *
- *  @endverbatim
- *
- *///*************************************************************************/
- 
-//*************************************************************************
-// Includes
-//*************************************************************************
-#include "ssx.h"		
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/cmdh/cmdh_fsp_cmds.c $                                */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* COPYRIGHT International Business Machines Corp. 2011,2014              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
+
+#include "ssx.h"
 #include "cmdh_service_codes.h"
 #include "errl.h"
 #include "trac.h"
 #include "rtls.h"
-#include "dcom.h"   
+#include "dcom.h"
 #include "occ_common.h"
 #include "state.h"
 #include "cmdh_fsp_cmds.h"
@@ -74,33 +38,29 @@
 #include "gpe_data.h"
 #include "centaur_data.h"
 #include <amec_data.h>
-#include "amec_amester.h"        // @at008a
-#include "amec_service_codes.h"  // @at008a
-#include "amec_freq.h"  // @wb000
-#include "amec_sys.h"   // @wb000
+#include "amec_amester.h"
+#include "amec_service_codes.h"
+#include "amec_freq.h"
+#include "amec_sys.h"
 #include "sensor.h"
 #include "sensorQueryList.h"
-#include "chom.h" // @jh005a
+#include "chom.h"
 #include "amec_master_smh.h"
 #include "thrm_thread.h"
 
-//*************************************************************************
-// Externs
-//*************************************************************************
-
 // We need to have a small structure in non-Applet space to keep track
-// of success & failures when running test applets.  This needs to be 
+// of success & failures when running test applets.  This needs to be
 // kept as small as possible.
-typedef struct 
+typedef struct
 {
   uint16_t    successful; // Number of Sucessful Test Applets
   uint16_t    failed;     // Number of Failed Test Applets
   uint16_t    total;      // Total Number of Test Applets
   SsxTimebase duration;   // Total Duration of Test Applets
   errlHndl_t  errlHndl;   // Holds the first failure's errlHndl
-} testAppletStats_t;   // @th029a
+} testAppletStats_t;
 
-testAppletStats_t G_testAppletStats = {0};   /// @th029a
+testAppletStats_t G_testAppletStats = {0};
 
 // This table contains tunable parameter information that can be exposed to
 // customers (only Master OCC should access/control this table)
@@ -138,40 +98,20 @@ uint8_t G_mst_tunable_parameter_overwrite = 0;
 
 extern thrm_fru_data_t      G_thrm_fru_data[DATA_FRU_MAX];
 
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
-
-//*************************************************************************
-// Functions
-//*************************************************************************
-
 // Function Specification
 //
 // Name:  cmdh_tmgt_poll
 //
-// Description:
-//              
-//              
-//              
-//
-// Flow:  xx/xx/xx    FN=
+// Description: TODO -- Add description
 //
 // End Function Specification
 errlHndl_t cmdh_tmgt_poll (const cmdh_fsp_cmd_t * i_cmd_ptr,
                      cmdh_fsp_rsp_t * o_rsp_ptr)
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
     cmdh_poll_query_t *         l_poll_cmd  = (cmdh_poll_query_t *) i_cmd_ptr;
     errlHndl_t                  l_errlHndl  = NULL;
     ERRL_RC                     l_rc        = ERRL_RC_INTERNAL_FAIL;
     uint8_t                     k           = 0;
-
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
 
     do
     {
@@ -190,7 +130,6 @@ errlHndl_t cmdh_tmgt_poll (const cmdh_fsp_cmd_t * i_cmd_ptr,
             l_poll_rsp->state           = CURRENT_STATE();
             l_poll_rsp->ips_status.word = 0;
 
-            // @at019a - start
             if( G_sysConfigData.system_type.kvm )
             {
                 l_poll_rsp->mode = G_occ_external_req_mode_kvm;
@@ -199,9 +138,7 @@ errlHndl_t cmdh_tmgt_poll (const cmdh_fsp_cmd_t * i_cmd_ptr,
             {
                 l_poll_rsp->mode            = CURRENT_MODE();
             }
-            // @at019a - end
 
-            // @wb000 - start
             l_poll_rsp->ext_status.dvfs_due_to_ot = 0;
             l_poll_rsp->ext_status.dvfs_due_to_pwr = 0;
 
@@ -218,10 +155,8 @@ errlHndl_t cmdh_tmgt_poll (const cmdh_fsp_cmd_t * i_cmd_ptr,
                     l_poll_rsp->ext_status.dvfs_due_to_pwr = 1;
                 }
             }
-            // @wb000 - end
-            
-            // @rt001a
-            l_poll_rsp->ips_status.ips_enabled = G_ips_config_data.iv_ipsEnabled; 
+
+            l_poll_rsp->ips_status.ips_enabled = G_ips_config_data.iv_ipsEnabled;
             l_poll_rsp->ips_status.ips_active = AMEC_mst_get_ips_active_status();
 
 
@@ -249,7 +184,7 @@ errlHndl_t cmdh_tmgt_poll (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
     if(l_rc)
     {
-        /// Build Error Response packet
+        // Build Error Response packet
         cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, l_rc, &l_errlHndl);
     }
 
@@ -257,38 +192,30 @@ errlHndl_t cmdh_tmgt_poll (const cmdh_fsp_cmd_t * i_cmd_ptr,
     return l_errlHndl;
 }
 
-//@fk009a
 // Function Specification
 //
 // Name:  cmdh_poll_v10
 //
 // Description: Used for version 0x10 poll calls from BMC/HTMGT.
-//              
+//
 // End Function Specification
 
 ERRL_RC cmdh_poll_v10(cmdh_fsp_rsp_t * o_rsp_ptr)
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
     ERRL_RC                     l_rc  = ERRL_RC_INTERNAL_FAIL;
     uint8_t                     k, i  = 0;
     cmdh_poll_sensor_db_t       l_sensorHeader;
 
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
-
-    //Clear response buffer
+    // Clear response buffer
     memset(o_rsp_ptr, 0, (size_t)sizeof(cmdh_fsp_rsp_t));
 
-    //Set pointer to start of o_rsp_ptr
+    // Set pointer to start of o_rsp_ptr
     cmdh_poll_resp_v10_fixed_t * l_poll_rsp = (cmdh_poll_resp_v10_fixed_t *) o_rsp_ptr;
 
-    //Byte 1
-    l_poll_rsp->status.word     = SMGR_validate_get_valid_states(); //TODO: Need to set FIR master?
-    //Byte 2
-    l_poll_rsp->ext_status.word = 0;                                //TODO: what values to set for memthrotOT and n power?
+    // Byte 1
+    l_poll_rsp->status.word     = SMGR_validate_get_valid_states(); //TODO: Do we need to set FIR master?
+    // Byte 2
+    l_poll_rsp->ext_status.word = 0;                                //TODO: What values should we set for memthrotOT and n power?
 
     for ( k = 0; k < MAX_NUM_CORES; k++ )
     {
@@ -304,116 +231,110 @@ ERRL_RC cmdh_poll_v10(cmdh_fsp_rsp_t * o_rsp_ptr)
         }
     }
 
-    //Byte 3
+    // Byte 3
     l_poll_rsp->occ_pres_mask   = G_sysConfigData.is_occ_present;
-    //Byte 4
+    // Byte 4
     l_poll_rsp->config_data     = DATA_request_cnfgdata();
-    //Byte 5
+    // Byte 5
     l_poll_rsp->state           = CURRENT_STATE();
-    //Byte 6 - 7 reserved.
-    //Byte 8:
+    // Byte 6 - 7 reserved.
+    // Byte 8:
     l_poll_rsp->errl_id         = getOldestErrlID();
-    //Byte 9 - 12:
+    // Byte 9 - 12:
     l_poll_rsp->errl_address    = getErrlOCIAddrByID(l_poll_rsp->errl_id);
-    //Byte 13 - 14:
+    // Byte 13 - 14:
     l_poll_rsp->errl_length     = getErrlLengthByID(l_poll_rsp->errl_id);
-    //Byte 15 - 16: reserved.
-    //Byte 17 - 32 (16 bytes): OCC level
+    // Byte 15 - 16: reserved.
+    // Byte 17 - 32 (16 bytes): OCC level
     memcpy( (void *) l_poll_rsp->occ_level, (void *) &G_occ_buildname[0], 16);
-    //Byte 33 - 38:
+    // Byte 33 - 38:
     char l_sensor_ec[6] = "SENSOR";
     memcpy( (void *) l_poll_rsp->sensor_ec, (void *) &l_sensor_ec[0], (size_t) sizeof(l_sensor_ec));
-    //Byte 39: 
-    l_poll_rsp->sensor_dblock_count = 0;  
-    //Byte 40:
+    // Byte 39:
+    l_poll_rsp->sensor_dblock_count = 0;
+    // Byte 40:
     l_poll_rsp->sensor_dblock_version = 0x01;  //Currently only 0x01 is supported.
 
-    //TODO add sensor data at o_rsp_buffer location after sizeof cmdh_poll_resp_v10_fixed_t
+    // TODO add sensor data at o_rsp_buffer location after sizeof cmdh_poll_resp_v10_fixed_t
     uint16_t l_rsp_index = CMDH_POLL_RESP_LEN_V10;
 
-    //fmk009 - TODO improvement: Run applet to obtain list of sensors to return and generate the 
-    //         list dynamically instead.
+    // TODO improvement: Run applet to obtain list of sensors to return and generate the
+    //       list dynamically instead.
 
-    //Static list of sensors to return.  TEMP, FREQ, and Power 
+    // Static list of sensors to return.  TEMP, FREQ, and Power
     uint16_t l_tempSensors[]={TEMP2MSP0C0,TEMP2MSP0C1,TEMP2MSP0C2,TEMP2MSP0C3,TEMP2MSP0C4,TEMP2MSP0C5,TEMP2MSP0C6,TEMP2MSP0C7,TEMP2MSP0C8,TEMP2MSP0C9,TEMP2MSP0C10,TEMP2MSP0C11};
     uint8_t  l_tempSensorCount = sizeof(l_tempSensors)/sizeof(uint16_t);
     uint16_t l_freqSensors[]={FREQA2MSP0C0,FREQA2MSP0C1,FREQA2MSP0C2,FREQA2MSP0C3,FREQA2MSP0C4,FREQA2MSP0C5,FREQA2MSP0C6,FREQA2MSP0C7,FREQA2MSP0C8,FREQA2MSP0C9,FREQA2MSP0C10,FREQA2MSP0C11};
     uint8_t  l_freqSensorCount = sizeof(l_tempSensors)/sizeof(uint16_t);
-    uint16_t l_powrSensors[]={PWR250US,PWR250USFAN,PWR250USIO,PWR250USSTORE,PWR250USGPU,PWR250USP0,PWR250USVDD0,PWR250USVCS0,PWR250USMEM0}; 
+    uint16_t l_powrSensors[]={PWR250US,PWR250USFAN,PWR250USIO,PWR250USSTORE,PWR250USGPU,PWR250USP0,PWR250USVDD0,PWR250USVCS0,PWR250USMEM0};
     uint8_t  l_powrSensorCount = sizeof(l_powrSensors)/sizeof(uint16_t);
 
-    ////////////////////////////////////////
-    //Generate datablock header for temp sensors and sensor data.
+    // Generate datablock header for temp sensors and sensor data.
     memset((void*) &l_sensorHeader, 0, (size_t)sizeof(cmdh_poll_sensor_db_t));
     memcpy ((void *) &(l_sensorHeader.eyecatcher[0]), SENSOR_TEMP, 4);
-    l_sensorHeader.format = 0xbb; //???what is this supposed to be?
+    l_sensorHeader.format = 0xbb; // TODO: Verify this value
     l_sensorHeader.length = sizeof(cmdh_poll_temp_sensor_t);
     l_sensorHeader.count  = 0;
     if (l_tempSensorCount)
     {
-        //Generate sensor list.
+        // Generate sensor list.
         cmdh_poll_temp_sensor_t l_sensorlist[l_tempSensorCount];
         for (i = 0; i < l_tempSensorCount; i++)
         {
-            if (1) //G_amec_sensor_list[l_tempSensors[i]]->ipmi_sid != 0) //??? Do we only report those that have ipmisid and value?
+            if (1) // G_amec_sensor_list[l_tempSensors[i]]->ipmi_sid != 0) //TODO: Do we only report those that have ipmisid and value?
             {
                 l_sensorlist[l_sensorHeader.count].id = G_amec_sensor_list[l_tempSensors[i]]->ipmi_sid;
                 l_sensorlist[l_sensorHeader.count].value = G_amec_sensor_list[l_tempSensors[i]]->sample;
                 l_sensorHeader.count++;
             }
         }
-        //Write data to resp buffer if any.
+        // Write data to resp buffer if any.
         if (l_sensorHeader.count)
         {
             uint8_t l_sensordataSz = l_sensorHeader.count * l_sensorHeader.length;
-            //Copy header to response buffer.
+            // Copy header to response buffer.
             memcpy ((void *) &(o_rsp_ptr->data[l_rsp_index]), &l_sensorHeader, sizeof(l_sensorHeader));
-            //Increment index into response buffer.
-            l_rsp_index += sizeof(l_sensorHeader); 
-            //Copy sensor data into response buffer.
+            // Increment index into response buffer.
+            l_rsp_index += sizeof(l_sensorHeader);
+            // Copy sensor data into response buffer.
             memcpy ((void *) &(o_rsp_ptr->data[l_rsp_index]), l_sensorlist, l_sensordataSz);
-            //Increment index into response buffer.
+            // Increment index into response buffer.
             l_rsp_index += l_sensordataSz;
 
             l_poll_rsp->sensor_dblock_count +=1;
         }
     }
 
-    //TRAC_IMP("Added Temp Sensors. Current size of response: %i. count of tempsensors:%i.", l_rsp_index, 
-    //        l_sensorHeader.count);
-
-
-    ////////////////////////////////////////
-    //Generate datablock header for freq sensors and sensor data.
+    // Generate datablock header for freq sensors and sensor data.
     memset((void*) &l_sensorHeader, 0, (size_t)sizeof(cmdh_poll_sensor_db_t));
     memcpy ((void *) &(l_sensorHeader.eyecatcher[0]), SENSOR_FREQ, 4);
-    l_sensorHeader.format = 0xff; //???what is this supposed to be?
+    l_sensorHeader.format = 0xff; // TODO: Verify value
     l_sensorHeader.length = sizeof(cmdh_poll_freq_sensor_t);
     l_sensorHeader.count  = 0;
     if (l_freqSensorCount)
     {
-        //Generate sensor list.
+        // Generate sensor list.
         cmdh_poll_freq_sensor_t l_sensorlist[l_freqSensorCount];
         for (i = 0; i < l_freqSensorCount; i++)
         {
-            if (1) //G_amec_sensor_list[l_freqSensors[i]]->ipmi_sid != 0) //??? Do we only report those that have ipmisid and value?
+            if (1) // G_amec_sensor_list[l_freqSensors[i]]->ipmi_sid != 0) //TODO: Do we only report those that have ipmisid and value?
             {
                 l_sensorlist[l_sensorHeader.count].id = G_amec_sensor_list[l_freqSensors[i]]->ipmi_sid;
                 l_sensorlist[l_sensorHeader.count].value = G_amec_sensor_list[l_freqSensors[i]]->sample;
                 l_sensorHeader.count++;
             }
         }
-        //Write data to outbuffer if any.
+        // Write data to outbuffer if any.
         if (l_sensorHeader.count)
         {
             uint8_t l_sensordataSz = l_sensorHeader.count * l_sensorHeader.length;
-            //Copy header to response buffer.
+            // Copy header to response buffer.
             memcpy ((void *) &(o_rsp_ptr->data[l_rsp_index]), &l_sensorHeader, sizeof(l_sensorHeader));
             //Increment index into response buffer.
-            l_rsp_index += sizeof(l_sensorHeader); 
-            //Copy sensor data into response buffer.
+            l_rsp_index += sizeof(l_sensorHeader);
+            // Copy sensor data into response buffer.
             memcpy ((void *) &(o_rsp_ptr->data[l_rsp_index]), l_sensorlist, l_sensordataSz);
-            //Increment index into response buffer.
+            // Increment index into response buffer.
             l_rsp_index += l_sensordataSz;
 
             l_poll_rsp->sensor_dblock_count +=1;
@@ -421,26 +342,21 @@ ERRL_RC cmdh_poll_v10(cmdh_fsp_rsp_t * o_rsp_ptr)
 
     }
 
-    //TRAC_IMP("Added Freq Sensors.  Current size of response: %i. count of freqsensors:%i.", l_rsp_index, 
-    //        l_sensorHeader.count);
-
-
-    ////////////////////////////////////////
-    //Generate datablock header for power sensors and sensor data.  RETURNED by MASTER ONLY.
+    // Generate datablock header for power sensors and sensor data.  RETURNED by MASTER ONLY.
     if (G_occ_role == OCC_MASTER)
     {
         memset((void*) &l_sensorHeader, 0, (size_t)sizeof(cmdh_poll_sensor_db_t));
         memcpy ((void *) &(l_sensorHeader.eyecatcher[0]), SENSOR_POWR, 4);
-        l_sensorHeader.format = 0xff; //???what is this supposed to be?
+        l_sensorHeader.format = 0xff; // TODO: Verify value
         l_sensorHeader.length = sizeof(cmdh_poll_power_sensor_t);
         l_sensorHeader.count  = 0;
         if (l_powrSensorCount)
         {
-            //Generate sensor list.
+            // Generate sensor list.
             cmdh_poll_power_sensor_t l_sensorlist[l_powrSensorCount];
             for (i = 0; i < l_powrSensorCount; i++)
             {
-                if (1) //G_amec_sensor_list[l_powrSensors[i]]->ipmi_sid != 0) //??? Do we only report those that have ipmisid and value?
+                if (1) // G_amec_sensor_list[l_powrSensors[i]]->ipmi_sid != 0) // TODO: Do we only report those that have ipmisid and value?
                 {
                     l_sensorlist[l_sensorHeader.count].id = G_amec_sensor_list[l_powrSensors[i]]->ipmi_sid;
                     l_sensorlist[l_sensorHeader.count].current = G_amec_sensor_list[l_powrSensors[i]]->sample;
@@ -450,32 +366,29 @@ ERRL_RC cmdh_poll_v10(cmdh_fsp_rsp_t * o_rsp_ptr)
 
                 }
             }
-            //Write data to outbuffer if any.
+            // Write data to outbuffer if any.
             if (l_sensorHeader.count)
             {
                 uint8_t l_sensordataSz = l_sensorHeader.count * l_sensorHeader.length;
-                //Copy header to response buffer.
+                // Copy header to response buffer.
                 memcpy ((void *) &(o_rsp_ptr->data[l_rsp_index]), &l_sensorHeader, sizeof(l_sensorHeader));
-                //Increment index into response buffer.
-                l_rsp_index += sizeof(l_sensorHeader); 
-                //Copy sensor data into response buffer.
+                // Increment index into response buffer.
+                l_rsp_index += sizeof(l_sensorHeader);
+                // Copy sensor data into response buffer.
                 memcpy ((void *) &(o_rsp_ptr->data[l_rsp_index]), l_sensorlist, l_sensordataSz);
-                //Increment index into response buffer.
+                // Increment index into response buffer.
                 l_rsp_index += l_sensordataSz;
 
                 l_poll_rsp->sensor_dblock_count +=1;
             }
         }
-
-        //TRAC_IMP("Added Pwr Sensors. Current size of response: %i. count of powrsensors:%i.", l_rsp_index, 
-        //        l_sensorHeader.count);
     }
 
 
-    //fk009a - TODO add PowerCap data.!!!
+    // TODO add PowerCap data.!!!
 
 
-    l_poll_rsp->data_length[0] = CONVERT_UINT16_UINT8_HIGH(l_rsp_index); 
+    l_poll_rsp->data_length[0] = CONVERT_UINT16_UINT8_HIGH(l_rsp_index);
     l_poll_rsp->data_length[1] = CONVERT_UINT16_UINT8_LOW(l_rsp_index);
     l_rc                       = ERRL_RC_SUCCESS;
     l_poll_rsp->rc             = ERRL_RC_SUCCESS;
@@ -490,12 +403,7 @@ ERRL_RC cmdh_poll_v10(cmdh_fsp_rsp_t * o_rsp_ptr)
 //
 // Name:  cmdh_tmgt_query_fw
 //
-// Description:
-//              
-//              
-//              
-//
-// Flow:  xx/xx/xx    FN=
+// Description: TODO -- Add description
 //
 // End Function Specification
 void cmdh_tmgt_query_fw (const cmdh_fsp_cmd_t * i_cmd_ptr,
@@ -508,9 +416,9 @@ void cmdh_tmgt_query_fw (const cmdh_fsp_cmd_t * i_cmd_ptr,
     l_fw_data->data_length[1] = CMDH_FW_QUERY_RESP_LEN;
 
     // Copy the buildname into the response
-    memcpy( (void *) l_fw_data->fw_level, 
-            (void *) &G_occ_buildname[0], 
-            (size_t) CMDH_FW_QUERY_RESP_LEN);   // @th022
+    memcpy( (void *) l_fw_data->fw_level,
+            (void *) &G_occ_buildname[0],
+            (size_t) CMDH_FW_QUERY_RESP_LEN);
 
     return;
 }
@@ -520,28 +428,17 @@ void cmdh_tmgt_query_fw (const cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // Name:  cmdh_reset_prep_t
 //
-// Description:
-//              
-//              
-//              
-//
-// Flow:  xx/xx/xx    FN=
+// Description: TODO -- Add description
 //
 // End Function Specification
 errlHndl_t cmdh_reset_prep (const cmdh_fsp_cmd_t * i_cmd_ptr,
                             cmdh_fsp_rsp_t * o_rsp_ptr)
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
     cmdh_reset_prep_t *         l_cmd_ptr = (cmdh_reset_prep_t *) i_cmd_ptr;
     errlHndl_t                  l_errlHndl = NULL;
     ERRL_RC                     l_rc = ERRL_RC_SUCCESS;
-    bool                        l_ffdc = FALSE; // @jh009a
+    bool                        l_ffdc = FALSE;
 
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
     o_rsp_ptr->rc = ERRL_RC_SUCCESS;
     o_rsp_ptr->data_length[0] = 0;
     o_rsp_ptr->data_length[1] = 0;
@@ -574,13 +471,13 @@ errlHndl_t cmdh_reset_prep (const cmdh_fsp_cmd_t * i_cmd_ptr,
                 break;
 
             case CMDH_PREP_FAILON_THISOCC:
-                l_ffdc = TRUE; // @jh009a
+                l_ffdc = TRUE;
                 l_rc = ERRL_RC_SUCCESS;
                 break;
 
             case CMDH_PREP_FAILON_OTHEROCC:
                 // If OCC is master, we may want to generate FFDC log
-                if (G_occ_role == OCC_MASTER) // @jh009a
+                if (G_occ_role == OCC_MASTER)
                 {
                     l_ffdc = TRUE;
                 }
@@ -597,7 +494,6 @@ errlHndl_t cmdh_reset_prep (const cmdh_fsp_cmd_t * i_cmd_ptr,
                 break;
         }
 
-        // @jh009a - start
         // Generate FFDC error log if required
         if (TRUE == l_ffdc)
         {
@@ -627,11 +523,11 @@ errlHndl_t cmdh_reset_prep (const cmdh_fsp_cmd_t * i_cmd_ptr,
                 commitErrl(&l_errlHndl);
             }
         }
-        // @jh009a - end
+
         if (G_sysConfigData.system_type.kvm && isSafeStateRequested())
         {
-            //Notify dcom thread to update sapphire table
-            ssx_semaphore_post(&G_dcomThreadWakeupSem); //gm025
+            // Notify dcom thread to update sapphire table
+            ssx_semaphore_post(&G_dcomThreadWakeupSem);
         }
         if (CURRENT_STATE() != OCC_STATE_STANDBY)
         {
@@ -674,16 +570,11 @@ errlHndl_t cmdh_reset_prep (const cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // Name:  cmdh_tmgt_query_fw
 //
-// Description:
-//              
-//              
-//              
-//
-// Flow:  xx/xx/xx    FN=
+// Description: TODO Add description
 //
 // End Function Specification
 errlHndl_t cmdh_clear_elog (const   cmdh_fsp_cmd_t * i_cmd_ptr,
-                                    cmdh_fsp_rsp_t * o_rsp_ptr)  // @nh004c
+                                    cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     cmdh_clear_elog_query_t *l_cmd_ptr = (cmdh_clear_elog_query_t *) i_cmd_ptr;
     uint8_t l_SlotNum = ERRL_INVALID_SLOT;
@@ -692,14 +583,14 @@ errlHndl_t cmdh_clear_elog (const   cmdh_fsp_cmd_t * i_cmd_ptr,
 
     o_rsp_ptr->data_length[0] = 0;
     o_rsp_ptr->data_length[1] = 0;
-    
+
     // Get Errl Array index
     l_SlotNum = getErrSlotNumByErrId(l_cmd_ptr->elog_id);
-    
+
     // Get ERRL address
     l_oci_address = (errlHndl_t)getErrSlotOCIAddr(l_SlotNum);
-    
-    if ((l_oci_address != NULL) && // jh001c 
+
+    if ((l_oci_address != NULL) &&
         (l_oci_address != INVALID_ERR_HNDL))
     {
         // clear only one Errl by ID
@@ -713,35 +604,28 @@ errlHndl_t cmdh_clear_elog (const   cmdh_fsp_cmd_t * i_cmd_ptr,
     else
     {
         /// Build Error Response packet
-        cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);  // @th036
+        cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
     }
 
     return l_err;
 }
 
-// @ai006a
 // Function Specification
 //
 // Name:  cmdh_dbug_get_trace
 //
-// Description:
-//              
-//              
-//              
-//
-// Flow:  xx/xx/xx    FN=
+// Description: TODO Add description
 //
 // End Function Specification
 void cmdh_dbug_get_trace (const cmdh_fsp_cmd_t * i_cmd_ptr,
                                cmdh_fsp_rsp_t * o_rsp_ptr)
 {
-    UINT l_rc = 0;  // @rc006a
-    UINT l_trace_buffer_size = CMDH_FSP_RSP_SIZE-CMDH_DBUG_FSP_RESP_LEN-8;  // @rc006a - tmgt reserved 8 bytes
+    UINT l_rc = 0;
+    UINT l_trace_buffer_size = CMDH_FSP_RSP_SIZE-CMDH_DBUG_FSP_RESP_LEN-8;  // tmgt reserved 8 bytes
     UINT16 l_trace_size = 0;
     cmdh_dbug_get_trace_query_t *l_get_trace_query_ptr = (cmdh_dbug_get_trace_query_t*) i_cmd_ptr;
     cmdh_dbug_get_trace_resp_t *l_get_trace_resp_ptr = (cmdh_dbug_get_trace_resp_t*) o_rsp_ptr;
 
-    // @rc006c - get trace data
     tracDesc_t l_trace_ptr = TRAC_get_td((char *)l_get_trace_query_ptr->comp);
     l_rc = TRAC_get_buffer_partial(l_trace_ptr, l_get_trace_resp_ptr->data,&l_trace_buffer_size);
     l_trace_size = l_trace_buffer_size;
@@ -763,20 +647,12 @@ void cmdh_dbug_get_trace (const cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // Name:  cmdh_dbug_get_ame_sensor
 //
-// Description:
-//              
-//              
-//              
-//
-// Flow:  xx/xx/xx    FN=
+// Description: TODO Add description
 //
 // End Function Specification
 void cmdh_dbug_get_ame_sensor (const cmdh_fsp_cmd_t * i_cmd_ptr,
                                cmdh_fsp_rsp_t * o_rsp_ptr)
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
     uint8_t                      l_rc = ERRL_RC_SUCCESS;
     uint16_t                     l_type = 0;
     uint16_t                     l_location = 0;
@@ -789,10 +665,6 @@ void cmdh_dbug_get_ame_sensor (const cmdh_fsp_cmd_t * i_cmd_ptr,
     sensor_t                     *l_sensor_ptr = NULL;
     errlHndl_t                   l_err = NULL;
     OCC_APLT_STATUS_CODES        l_status = 0;
-
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
 
     do
     {
@@ -875,7 +747,7 @@ void cmdh_dbug_get_ame_sensor (const cmdh_fsp_cmd_t * i_cmd_ptr,
                 }
                 l_resp_ptr->sensor[i].sample_min = l_sensor_ptr->sample_min;
                 l_resp_ptr->sensor[i].sample_max = l_sensor_ptr->sample_max;
-                l_resp_ptr->sensor[i].ipmi_sid = l_sensor_ptr->ipmi_sid;  //@fk009a
+                l_resp_ptr->sensor[i].ipmi_sid = l_sensor_ptr->ipmi_sid;
             }
         }
 
@@ -893,12 +765,7 @@ void cmdh_dbug_get_ame_sensor (const cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // Name:  cmdh_dbug_peek
 //
-// Description:
-//              
-//              
-//              
-//
-// Flow:  xx/xx/xx    FN=
+// Description: TODO Add description
 //
 // End Function Specification
 void cmdh_dbug_peek (const cmdh_fsp_cmd_t * i_cmd_ptr,
@@ -907,8 +774,8 @@ void cmdh_dbug_peek (const cmdh_fsp_cmd_t * i_cmd_ptr,
     cmdh_dbug_peek_t * l_cmd_ptr = (cmdh_dbug_peek_t*) i_cmd_ptr;
     uint32_t           l_len     = l_cmd_ptr->size;
     uint8_t            l_type    = l_cmd_ptr->type;
-    uint32_t           l_addr    = l_cmd_ptr->oci_address;    
-    
+    uint32_t           l_addr    = l_cmd_ptr->oci_address;
+
     static Ppc405MmuMap       L_mmuMapHomer;
     static Ppc405MmuMap       L_mmuMapCommon;
 
@@ -920,8 +787,8 @@ void cmdh_dbug_peek (const cmdh_fsp_cmd_t * i_cmd_ptr,
             l_len = (l_len > CMDH_FSP_RSP_DATA_SIZE ) ? CMDH_FSP_RSP_DATA_SIZE : l_len;
 
             // Read the data
-            memcpy( (void *) &o_rsp_ptr->data[0], 
-                    (void *) l_addr, 
+            memcpy( (void *) &o_rsp_ptr->data[0],
+                    (void *) l_addr,
                     (size_t) l_len );
             break;
 
@@ -945,8 +812,8 @@ void cmdh_dbug_peek (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         case 0x05:   // MMU Map Mainstore
             // Map mainstore to oci space so that we can peek at it
-           
-            // HOMER Image 
+
+            // HOMER Image
             ppc405_mmu_map(0x00000000, // Mainstore address (BAR0, offset 0)
                            0x00000000, // OCI address 0x0 (BAR0)
                            0x400000,   // Size = 4 MB
@@ -964,7 +831,7 @@ void cmdh_dbug_peek (const cmdh_fsp_cmd_t * i_cmd_ptr,
             l_len = 0;
             break;
         case 0x06:   // MMU UnMap Mainstore
-            // HOMER Image 
+            // HOMER Image
             ppc405_mmu_unmap(&L_mmuMapHomer);
 
             // COMMON Image = Communal OCC Memory Map On Node
@@ -989,26 +856,21 @@ void cmdh_dbug_peek (const cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // Name:  cmdh_get_elog
 //
-// Description:
-//              
-//              
-//              
-//
-// Flow:  xx/xx/xx    FN=
+// Description: TODO Add description
 //
 // End Function Specification
 errlHndl_t cmdh_get_elog (const cmdh_fsp_cmd_t * i_cmd_ptr,
-                                cmdh_fsp_rsp_t * o_rsp_ptr)     // @nh004a
+                                cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     uint8_t l_lastID = getOldestErrlID();
     uint8_t l_SlotNum = 0;
     errlHndl_t l_errlHndl = INVALID_ERR_HNDL;
 
     cmdh_get_elog_resp_t    *l_rsp_ptr = (cmdh_get_elog_resp_t *) o_rsp_ptr;
-        
+
     l_rsp_ptr->data_length[0] = 0;
     l_rsp_ptr->data_length[1] = CMDH_GET_ELOG_RESP_LEN;
-        
+
     // Get slot num of last-Get-Err-log, return ERRL_INVALID_SLOT if not found
     l_SlotNum = getErrSlotNumByErrId(l_lastID);
 
@@ -1016,9 +878,9 @@ errlHndl_t cmdh_get_elog (const cmdh_fsp_cmd_t * i_cmd_ptr,
     {
         // clear error handle
         l_errlHndl = NULL;
-        
+
         l_rsp_ptr->rc = ERRL_RC_SUCCESS;
-        
+
         // Get and return OCI address of last-Get-Err-log, return NULL if not found
         l_rsp_ptr->oci_address = getErrSlotOCIAddr(l_SlotNum);
         l_rsp_ptr->elog_id = l_lastID;
@@ -1026,9 +888,9 @@ errlHndl_t cmdh_get_elog (const cmdh_fsp_cmd_t * i_cmd_ptr,
     else
     {
         l_errlHndl = NULL;
-        
+
         l_rsp_ptr->rc = ERRL_RC_CONDITIONAL_SUCCESS;
-        
+
         // no data should be returned
         l_rsp_ptr->oci_address = 0;
         l_rsp_ptr->elog_id = 0;
@@ -1042,33 +904,19 @@ errlHndl_t cmdh_get_elog (const cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // Name:  dbug_parse_cmd
 //
-// Description:
-//              
-//              
-//              
-//
-// Flow:  xx/xx/xx    FN=
+// Description: TODO Add description
 //
 // End Function Specification
 void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
                            cmdh_fsp_rsp_t * o_rsp_ptr)
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
     uint8_t                     l_rc = 0;
     uint8_t                     l_sub_cmd = 0;
-    uint8_t                     l_block_num = 0;  // @th029a
+    uint8_t                     l_block_num = 0;
     errl_generic_resp_t *       l_err_rsp_ptr =  (errl_generic_resp_t *) o_rsp_ptr;
     errlHndl_t                  l_errl = NULL;
-    //uint32_t                    l_addr = 0;
-    //uint8_t                     l_temp = 0;
     OCC_APLT_STATUS_CODES       l_status = OCC_APLT_SUCCESS;
     cmdhDbugCmdAppletArg_t      l_applet_args;
-
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
 
     // Sub Command for debug is always first byte of data
     l_sub_cmd = i_cmd_ptr->data[0];
@@ -1077,22 +925,22 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
     switch (l_sub_cmd)
     {
         // ----------------------------------------------------
-        // NOTE:  This for for TRACING only, any actual command 
+        // NOTE:  This for for TRACING only, any actual command
         //        handling goes in the switch statement below.
         // ----------------------------------------------------
-        case DBUG_GET_TRACE:       // FALLTHROUGH
-        case DBUG_GET_AME_SENSOR:  // FALLTHROUGH
+        case DBUG_GET_TRACE:
+        case DBUG_GET_AME_SENSOR:
             // Don't trace that we got these debug commands, they happen too
             // often, or are not destructive when they do occur.
             break;
 
         default:
             // Trace the rest of the debug commands.
-            TRAC_INFO("Debug Command: Sub:0x%02x\n", l_sub_cmd); 
+            TRAC_INFO("Debug Command: Sub:0x%02x\n", l_sub_cmd);
             break;
     }
 
-    /// Act on Debug Sub-Command
+    // Act on Debug Sub-Command
     switch ( l_sub_cmd )
     {
         // ------------------------------------------------
@@ -1109,12 +957,12 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
             // applet
             break;
 
-        case DBUG_GET_TRACE:    // @ai006a
+        case DBUG_GET_TRACE:
             // Get trace buffer SRAM address
             cmdh_dbug_get_trace(i_cmd_ptr, o_rsp_ptr);
             break;
 
-        case DBUG_CLEAR_TRACE:  // @ai006a
+        case DBUG_CLEAR_TRACE:
             // Call clear trace function
             TRAC_reset_buf();
             o_rsp_ptr->rc = ERRL_RC_SUCCESS;
@@ -1130,11 +978,11 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
             dcache_flush_all();
             break;
 
-        case DBUG_GEN_CHOM_LOG: // @jh005a
+        case DBUG_GEN_CHOM_LOG:
             chom_force_gen_log();
             break;
 
-        case 0xE0:  // Run Test Applet // @th029a - whole case
+        case 0xE0:  // Run Test Applet
             // TODO: Come in and clean this up later
 #define TEST_APPLET_MAX_BLOCK_NUMBER 8
 #define TEST_APPLET_START_APPLET     0xFF
@@ -1143,7 +991,7 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
             // We need to waste the OCC SRAM space to start these applets, but
             // lets try to use up as little code as possible
-            
+
             // Get the 2kB "Block Number" as passed in as the second data
             // byte of the command.
             l_block_num = i_cmd_ptr->data[1];
@@ -1154,9 +1002,11 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
             {
                 BceRequest pba_copy;
                 int l_ssxrc = SSX_OK;
+
                 // Calculate Address in Main Memory where we will put this block
                 uint32_t l_addr_in_mem = ( G_ApltAddressTable[OCC_APLT_TEST].iv_aplt_address
                                            + (l_block_num*2048));
+
                 // Can't copy to last 1024 bytes of SRAM
                 size_t l_size = (l_block_num == 0x07) ? 1024 : 2048;
 
@@ -1166,12 +1016,12 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
                 // Set up copy request
                 l_ssxrc = bce_request_create(
                         &pba_copy,                          // block copy object
-                        &G_pba_bcue_queue,                  // mainstore to sram copy engine 
+                        &G_pba_bcue_queue,                  // mainstore to sram copy engine
                         l_addr_in_mem,                      // mainstore address
                         (uint32_t) &i_cmd_ptr->data[124],   // sram starting address
-                        (size_t) l_size,                    // size of copy 
+                        (size_t) l_size,                    // size of copy
                         SSX_SECONDS(5),                     // no timeout
-                        NULL,                               // call back 
+                        NULL,                               // call back
                         NULL,                               // call back arguments
                         ASYNC_REQUEST_BLOCKING              // callback mask
                         );
@@ -1200,11 +1050,10 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
                 TRAC_INFO("Starting test applet");
                 OCC_APLT_STATUS_CODES l_status = OCC_APLT_SUCCESS;
                 errlHndl_t  l_errl = NULL;
-                //SsxTimebase l_start = ssx_timebase_get();
 
                 // ------------------------------------------
                 // Start Applet, and return
-                //  \_ Applet will auto-checksum itself, and 
+                //     Applet will auto-checksum itself, and
                 //     fail w/ errlHndl if it doesn't match
                 // ------------------------------------------
                 runApplet(OCC_APLT_TEST,        // Applet enum Name
@@ -1214,46 +1063,24 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
                           &l_errl,              // Error log handle
                           &l_status);           // Error status
 
-                // Increment total after it completes, fail or not 
-                //G_testAppletStats.total++;
-                //G_testAppletStats.duration += (ssx_timebase_get() - l_start);
-
                 if( (NULL != l_errl)  || (l_status !=  OCC_APLT_SUCCESS))
                 {
                     TRAC_ERR("Test applet failure. status=%d", l_status);
                     l_rc = ERRL_RC_INTERNAL_FAIL;
-                    // ------------------------------------
-                    // Test Failed
-                    // ------------------------------------
-                    
-                    // Copy returned errl into testcase global if there isn't
-                    // anything in there already.
-                    //if(NULL == G_testAppletStats.errlHndl){
-                    //    G_testAppletStats.errlHndl = l_errl;
-                    //}
-
-                    // Increment Testcase failed counter
-                    //G_testAppletStats.failed++;
                 }
                 else
                 {
                     TRAC_INFO("Test applet started");
-                    // ------------------------------------
-                    // Test Success
-                    // ------------------------------------
-
-                    // Increment Testcase success counter
-                    //G_testAppletStats.successful++;
                 }
             }
             else if(l_block_num == TEST_APPLET_GET_STATS)
             {
                 TRAC_INFO("Get applet stats");
-                // Get Applet Test Stats
             }
             else if(l_block_num == TEST_APPLET_RESET_STATS)
             {
                 TRAC_INFO("Resetting applet stats");
+
                 // Reset Applet Test Stats
                 G_testAppletStats.total      = 0;
                 G_testAppletStats.duration   = 0;
@@ -1309,12 +1136,11 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
               if( (NULL != l_errl)  || (l_status !=  OCC_APLT_SUCCESS))
               {
                  TRAC_ERR("Debug command applet returned error: l_status: 0x%x", l_status);
-                 // commit & delete. CommitErrl handles NULL error log handle
                  commitErrl( &l_errl );
               }
             break;
         default:
-            l_rc = ERRL_RC_INVALID_DATA;     //should NEVER get here...
+            l_rc = ERRL_RC_INVALID_DATA; //should NEVER get here...
             break;
     } //end switch
 
@@ -1334,12 +1160,7 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // Name:  SMGR_base_setmodestate_cmdh
 //
-// Description:
-//              
-//              
-//              
-//
-// Flow:  xx/xx/xx    FN=
+// Description: TODO Add description
 //
 // End Function Specification
 errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
@@ -1348,12 +1169,11 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
     errlHndl_t                      l_errlHndl     = NULL;
     smgr_setmodestate_v0_query_t*   l_cmd_ptr      = (smgr_setmodestate_v0_query_t *)i_cmd_ptr;
     ERRL_RC                         l_rc           = ERRL_RC_INTERNAL_FAIL;
-    SsxInterval                     l_timeout      = SSX_SECONDS(15);    // @th043
-    SsxTimebase                     l_start        = ssx_timebase_get(); // @at015a
-    OCC_STATE                       l_pre_state    = CURRENT_STATE();    // @at015a
-    OCC_MODE                        l_pre_mode     = CURRENT_MODE();     // @at015a
+    SsxInterval                     l_timeout      = SSX_SECONDS(15);
+    SsxTimebase                     l_start        = ssx_timebase_get();
+    OCC_STATE                       l_pre_state    = CURRENT_STATE();
+    OCC_MODE                        l_pre_mode     = CURRENT_MODE();
 
-    // @at019a
     // SAPPHIRE only accepts DPS-FE mode. In case OCC gets other modes, it should accept the request
     // and keep reporting back that it is in that mode.
     if(G_sysConfigData.system_type.kvm)
@@ -1381,7 +1201,7 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
         }
 
         // Command Length Check
-        if( CMDH_DATALEN_FIELD_UINT16(i_cmd_ptr) != 
+        if( CMDH_DATALEN_FIELD_UINT16(i_cmd_ptr) !=
                 (sizeof(smgr_setmodestate_v0_query_t) - sizeof(cmdh_fsp_cmd_header_t)))
         {
             l_rc = ERRL_RC_INVALID_CMD_LEN;
@@ -1389,7 +1209,7 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
         }
 
         // Can't send this command to a slave
-        if( OCC_SLAVE == G_occ_role )         // @th032
+        if( OCC_SLAVE == G_occ_role )
         {
             l_rc = ERRL_RC_INVALID_CMD;
             break;
@@ -1405,7 +1225,7 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         // TODO: Should we have a way to transition state even if
         // master slave comm isn't working?
-        // if(){ 
+        // if(){
         //     G_occ_master_state = l_cmd_ptr->occ_state;
         //     G_occ_master_mode  = l_cmd_ptr->occ_mode;
         // }
@@ -1413,7 +1233,6 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
         // We need to wait and see if all Slaves correctly make it to state/mode.
         // TODO: Also, if all slaves can't go to this mode (based on their state),
         // we need to return PRESENT_STATE_PROHIBITS and do nothing.
-        // @at015a - start
         do
         {
             uint8_t l_slv_idx = 0;
@@ -1441,7 +1260,7 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
             if(l_occ_num <= l_occ_passed_num)
             {
-                /// This means that all present OCCs have reached the desired state/mode
+                // This means that all present OCCs have reached the desired state/mode
                 TRAC_INFO("cmdh_tmgt_setmodestate: changed state from %d to %d, mode from %d to %d",
                           l_pre_state, G_occ_external_req_state, l_pre_mode, G_occ_external_req_mode);
                 l_rc = ERRL_RC_SUCCESS;
@@ -1467,13 +1286,13 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
                             CMDH_GENERIC_CMD_FAILURE,           //modId
                             INTERNAL_FAILURE,                   //reasoncode
                             OCC_NO_EXTENDED_RC,                 //Extended reason code
-                            ERRL_SEV_UNRECOVERABLE,             //Severity -- gm029
+                            ERRL_SEV_UNRECOVERABLE,             //Severity
                             NULL,                               //Trace Buf
                             DEFAULT_TRACE_SIZE,                 //Trace Size
                             l_occ_bitmap_present,               //userdata1
                             l_occ_bitmap_succeeded              //userdata2
                             );
-                    addCalloutToErrl(l_errlHndl,  //gm029
+                    addCalloutToErrl(l_errlHndl,
                                      ERRL_CALLOUT_TYPE_COMPONENT_ID,
                                      ERRL_COMPONENT_ID_FIRMWARE,
                                      ERRL_CALLOUT_PRIORITY_HIGH);
@@ -1482,23 +1301,21 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 }
                 else
                 {
-                    // Give OCCs a chance to get to active state. This 
+                    // Give OCCs a chance to get to active state. This
                     // timeout is arbitrary, but there's no point in making
-                    // it too small. 
-                    ssx_sleep(SSX_MILLISECONDS(100));  // @th043
+                    // it too small.
+                    ssx_sleep(SSX_MILLISECONDS(100));
                 }
             }
 
         }while( 1 );
-        // @at015a - end
 
     }while(0);
 
     if(l_rc)
     {
-
-        /// Build Error Response packet
-        cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, l_rc, &l_errlHndl);  // @th036
+        // Build Error Response packet
+        cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, l_rc, &l_errlHndl);
     }
 
     return l_errlHndl;
@@ -1509,29 +1326,18 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // Name:  cmdh_amec_pass_through
 //
-// Description:
-//
-//
-//
-//
-// Flow:  xx/xx/xx    FN=
+// Description: TODO Add description
 //
 // End Function Specification
 errlHndl_t cmdh_amec_pass_through(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                     cmdh_fsp_rsp_t * o_rsp_ptr)
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
     errlHndl_t                      l_errlHndl    = NULL;
     IPMIMsg_t                       l_IPMImsg;
     uint8_t                         l_rc          = 0;
     uint16_t                        l_rsp_data_length = CMDH_FSP_RSP_DATA_SIZE;
     errl_generic_resp_t*            l_err_resp_ptr = (errl_generic_resp_t*)o_rsp_ptr;
 
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
     do
     {
 
@@ -1562,13 +1368,13 @@ errlHndl_t cmdh_amec_pass_through(const cmdh_fsp_cmd_t * i_cmd_ptr,
         {
             TRAC_ERR("amester_entry_point failured, rc (ipmi completion code) = %d", l_rc);
 
-            // Per comment from Charles, just put the rc in the return packet and return success
+            // Just put the rc in the return packet and return success
             l_rsp_data_length = 1;
             o_rsp_ptr->data[0] = l_rc;
             l_rc = ERRL_RC_SUCCESS;
         }
 
-        //protect IPMI from overflowing a buffer
+        // Protect IPMI from overflowing a buffer
         if(l_rsp_data_length > IPMI_MAX_MSG_SIZE)
         {
             TRAC_ERR("amester_entry_point returned too much data. Got back %d bytes, but we only support sending %d bytes to IPMI",
@@ -1622,25 +1428,16 @@ errlHndl_t cmdh_amec_pass_through(const cmdh_fsp_cmd_t * i_cmd_ptr,
     return l_errlHndl;
 }
 
-// @jh002a
 // Function Specification
 //
-// Name: cmdh_tmgt_get_field_debug_data 
+// Name: cmdh_tmgt_get_field_debug_data
 //
-// Description:
-//
-//
-//
-//
-// Flow:  xx/xx/xx    FN=
+// Description: TODO Add description
 //
 // End Function Specification
 errlHndl_t cmdh_tmgt_get_field_debug_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                                 cmdh_fsp_rsp_t * o_rsp_ptr)
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
     uint16_t                          i                 = 0;
     UINT                              l_rtLen           = 0;
     uint16_t                          l_num_of_sensors  = CMDH_FIELD_MAX_NUM_SENSORS;
@@ -1652,9 +1449,6 @@ errlHndl_t cmdh_tmgt_get_field_debug_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
     uint16_t                          l_rsp_data_length = 0;
     ERRL_RC                           l_rc              = ERRL_RC_SUCCESS;
 
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
     do
     {
         // Function Inputs Sanity Check
@@ -1666,7 +1460,7 @@ errlHndl_t cmdh_tmgt_get_field_debug_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         // Add occ infomation so that we know where the debug data from
         l_resp_ptr->occ_node     = G_pob_id.node_id;
-        l_resp_ptr->occ_id       = 0; // TODO:add occ id info
+        l_resp_ptr->occ_id       = 0; // TODO: add occ id info
         l_resp_ptr->occ_role     = G_occ_role;
 
         // copy trace data
@@ -1677,7 +1471,7 @@ errlHndl_t cmdh_tmgt_get_field_debug_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
         TRAC_get_buffer_partial(TRAC_get_td("INF"), l_resp_ptr->trace_inf, &l_rtLen);
 
         // Initialize the Applet arguments
-        // TODO: Set "present" to 0 for testing (since no sensor presented now) 
+        // TODO: Set "present" to 0 for testing (since no sensor presented now)
         querySensorListAppletArg_t l_applet_arg = {
             0,                         // i_startGsid - start with sensor 0x0000
             0,                         // i_present
@@ -1748,7 +1542,7 @@ errlHndl_t cmdh_tmgt_get_field_debug_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
     if (l_rc)
     {
-        /// Build Error Response packet
+        // Build Error Response packet
         cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, l_rc, &l_err);
     }
 
@@ -1757,20 +1551,14 @@ errlHndl_t cmdh_tmgt_get_field_debug_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
 // Function Specification
 //
-// Name:  cmdh_get_cooling_request 
+// Name:  cmdh_get_cooling_request
 //
-// Description:
-//              
-//
-// Flow:  xx/xx/xx    FN=
+// Description: TODO Add description
 //
 // End Function Specification
 errlHndl_t cmdh_get_cooling_request(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                     cmdh_fsp_rsp_t * o_rsp_ptr)
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
     errlHndl_t                  l_errlHndl = NULL;
     cmdh_get_cooling_resp_t     *l_resp_ptr = (cmdh_get_cooling_resp_t*) o_rsp_ptr;
     ERRL_RC                     l_rc = ERRL_RC_SUCCESS;
@@ -1780,9 +1568,6 @@ errlHndl_t cmdh_get_cooling_request(const cmdh_fsp_cmd_t * i_cmd_ptr,
     uint8_t                     i = 0;
     uint8_t                     j = 0;
 
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
     do
     {
         // Command Length Check - make sure we at least have a version number
@@ -1798,10 +1583,6 @@ errlHndl_t cmdh_get_cooling_request(const cmdh_fsp_cmd_t * i_cmd_ptr,
             l_rc = ERRL_RC_INVALID_DATA;
             break;
         }
-
-        //too much trace -- gm017
-        //TRAC_INFO("cmdh_get_cooling_request: Get Cooling Request command received! version[0x%.2X]",
-        //          i_cmd_ptr->data[0]);
 
         // Loop through all Zones
         for (i=0; i<THRM_MAX_NUM_ZONES; i++)
@@ -1820,7 +1601,7 @@ errlHndl_t cmdh_get_cooling_request(const cmdh_fsp_cmd_t * i_cmd_ptr,
             }
             l_resp_ptr->zone_data[i].increment_value = l_max_increment;
             l_resp_ptr->zone_data[i].comp_type = l_fru_winner;
-            l_resp_ptr->zone_data[i].reason = 0x00; //Always hardcoded to 0x00
+            l_resp_ptr->zone_data[i].reason = 0x00; // Always hardcoded to 0x00
         }
 
         // Populate the response data header

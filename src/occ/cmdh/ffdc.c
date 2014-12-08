@@ -1,36 +1,27 @@
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/cmdh/ffdc.c $                                         */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* COPYRIGHT International Business Machines Corp. 2011,2014              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
-/******************************************************************************
- * @file ffdc.c
- * @brief FFDC support routines.
- ******************************************************************************/
-
-/******************************************************************************
- * @page ChangeLogs Change Logs
- * @section _ffdc_c ffdc.c
- * @verbatim
- *
- * Flag    Def/Fea    Userid    Date        Description
- * ------- ---------- --------  ----------  ------------------------------------
- *         916980     sbroyles  03/10/2014  Created
- * @endverbatim
- ******************************************************************************/
-
-//******************************************************************************
-// Includes
-//******************************************************************************
 #include "ffdc.h"
-
-//******************************************************************************
-// Externs
-//******************************************************************************
-
-//******************************************************************************
-// Defines/Enums
-//******************************************************************************
-
-//******************************************************************************
-// Functions
-//******************************************************************************
 
 // Function Specification //////////////////////////////////////////////////////
 //
@@ -38,11 +29,8 @@
 //
 // Description: Dump the state of the thread provided
 //
-// Flow:              FN=None
-//
 // End Function Specification //////////////////////////////////////////////////
-void
-ffdc_thread_dumper(SsxThread *i_thread, void *o_ffdc_buffer)
+void ffdc_thread_dumper(SsxThread *i_thread, void *o_ffdc_buffer)
 {
     // Format of data dumped into FFDC buffer.  The buffer space allocated must
     // match the size of the dump.  The dumped structure must agree with the
@@ -100,8 +88,6 @@ ffdc_thread_dumper(SsxThread *i_thread, void *o_ffdc_buffer)
 //
 // Description: Unwind the link registers from the provided stack pointer.
 //
-// Flow:              FN=None
-//
 // End Function Specification //////////////////////////////////////////////////
 void
 ffdc_stack_unwind(uint32_t *i_sptr, uint32_t *o_buffer, uint32_t i_frameCount)
@@ -138,8 +124,3 @@ ffdc_stack_unwind(uint32_t *i_sptr, uint32_t *o_buffer, uint32_t i_frameCount)
     }
 }
 // End of ffdc_stack_unwind
-
-
-//
-// End of ffdc.c
-//

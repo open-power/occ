@@ -1,39 +1,31 @@
-/******************************************************************************
-// @file cmdh_snapshot.c
-// @brief Command Handling for snapshot buffer Interface
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _cmdh_snapshot_c cmdh_snapshot.c
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @fk004  907588     fmkassem  11/25/2013  Created
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/cmdh/cmdh_snapshot.c $                                */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* COPYRIGHT International Business Machines Corp. 2011,2014              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
-//*************************************************************************
-// Includes
-//*************************************************************************
 #include "cmdh_snapshot.h"
 #include "cmdh_service_codes.h"
 #include "cmdh_fsp_cmds.h"
 #include "dcom.h"
 #include "threadSch.h"
-//*************************************************************************
-// Externs
-//*************************************************************************
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
-
-//*************************************************************************
-// Globals
-//*************************************************************************
 
 // Array of snapshot buffers to return to TMGT
 cmdh_snapshot_buffer_t g_cmdh_snapshot_array[CMDH_SNAPSHOT_MAX];
@@ -44,7 +36,7 @@ uint8_t g_cmdh_snapshot_cur_id = 0;
 // Current index into array for newest entry
 uint8_t g_cmdh_snapshot_cur_index = CMDH_SNAPSHOT_DEFAULT_CUR_INDEX;
 
-// This global is set to TRUE by default to get a clean start, and is also 
+// This global is set to TRUE by default to get a clean start, and is also
 // set to TRUE in case of a resync request.
 bool g_cmdh_snapshot_reset = TRUE;
 
@@ -53,10 +45,6 @@ SsxTimer G_snapshotTimer;
 // Max, min power, and accumulated frequency average over 30seconds
 pwr250us_over30sec_t  g_pwr250us_over30sec;
 
-//*************************************************************************
-// Functions
-//*************************************************************************
-
 // Function Specification
 //
 // Name: cmdh_snapshot_find_oldest_newest
@@ -64,47 +52,35 @@ pwr250us_over30sec_t  g_pwr250us_over30sec;
 // Description: Returns the index of the oldest and newest snapshot in the
 //              g_cmdh_snapshot_array.
 //
-//
-//
-//
-// Flow:  11/25/2013    FN=
-//
 // End Function Specification
 
 VOID cmdh_snapshot_find_oldest_newest(uint8_t  *o_oldest,
                                       uint8_t  *o_newest)
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
     uint8_t                 l_index = 0;
 
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
-    
     do
     {
         // We wont be called if no snapshots are available so we know at least
         // one is available
-        
+
         // If our current index is 0, it's id is 0, and the last entry has
         // an id of 0 then we know we haven't wrapped yet since 2 entries
-        // can not have the same current_id and 0 was what's written in 
+        // can not have the same current_id and 0 was what's written in
         // as an initializer
         if((g_cmdh_snapshot_cur_index == 0) &&
-           (g_cmdh_snapshot_array[0].current_id == 0) && 
+           (g_cmdh_snapshot_array[0].current_id == 0) &&
            (g_cmdh_snapshot_array[CMDH_SNAPSHOT_MAX_INDEX].current_id == 0))
         {
             TRAC_INFO("cmdh_snapshot_find_oldest_newest: Entry 0 is the oldest and newest");
             *o_oldest = 0;
             *o_newest = 0;
-            break;        
+            break;
         }
-        
+
         // Newest will be g_cmdh_snapshot_cur_index
         *o_newest = g_cmdh_snapshot_cur_index;
-        
+
         // n = newest, o=oldest, x=used, _=empty
         //________________________________________
         //|x|x|x|x|x|x|x|x|x|x|x|n|o|x|x|x|x|x|x|x|
@@ -131,32 +107,24 @@ VOID cmdh_snapshot_find_oldest_newest(uint8_t  *o_oldest,
         }
         // else oldest is just equal to l_index
         *o_oldest = l_index;
-    
-    }while(FALSE);
-    
 
-    return;    
+    }while(FALSE);
+
+
+    return;
 }
 
 
 // Function Specification
 //
-// Name: cmdh_snapshot_buffer_nonite 
+// Name: cmdh_snapshot_buffer_nonite
 //
 // Description: Returns the requested snapshot buffer to tmgt.
 //
-//
-//
-//
-// Flow:  11/25/2013    FN=
-//
 // End Function Specification
-ERRL_RC cmdh_snapshot_buffer_nonite(const cmdh_fsp_cmd_t *i_cmd_ptr, 
+ERRL_RC cmdh_snapshot_buffer_nonite(const cmdh_fsp_cmd_t *i_cmd_ptr,
                                           cmdh_fsp_rsp_t *o_rsp_ptr)
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
     cmdh_get_snapshot_query_t   *l_cmd_ptr      = (cmdh_get_snapshot_query_t *) i_cmd_ptr;
     ERRL_RC                     l_rc            = ERRL_RC_SUCCESS;
     cmdh_get_snapshot_resp_v0_t *l_rsp_ptr      = (cmdh_get_snapshot_resp_v0_t*) o_rsp_ptr;
@@ -164,35 +132,31 @@ ERRL_RC cmdh_snapshot_buffer_nonite(const cmdh_fsp_cmd_t *i_cmd_ptr,
     uint8_t                     l_oldest        = 0;
     uint8_t                     l_req_idx       = 0;
     uint8_t                     i               = 0;
-    
 
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
     do
     {
 
-        //Check case where there are no snapshot buffers available.
+        // Check case where there are no snapshot buffers available.
         if (g_cmdh_snapshot_cur_index == CMDH_SNAPSHOT_DEFAULT_CUR_INDEX)
         {
             TRAC_INFO("cmdh_snapshot_buffer_nonite: No snapshot buffer available.");
             break;
         }
 
-        //Determine newest and oldest buffer.
+        // Determine newest and oldest buffer.
         cmdh_snapshot_find_oldest_newest(&l_oldest, &l_newest);
 
         l_rsp_ptr->oldest_id = g_cmdh_snapshot_array[l_oldest].current_id;
         l_rsp_ptr->newest_id = g_cmdh_snapshot_array[l_newest].current_id;
-        
-        //Determine which snapshot buffer is requested by TMGT
+
+        // Determine which snapshot buffer is requested by TMGT
         if (l_cmd_ptr->getnewest)
         {
             l_req_idx = l_newest;
         }
         else
         {
-            //Find requested snapshot, or if not available grab latest.
+            // Find requested snapshot, or if not available grab latest.
             for (i =0; i< CMDH_SNAPSHOT_MAX; i++)
             {
                 if (g_cmdh_snapshot_array[i].current_id == l_cmd_ptr->requested_id)
@@ -210,16 +174,16 @@ ERRL_RC cmdh_snapshot_buffer_nonite(const cmdh_fsp_cmd_t *i_cmd_ptr,
             }
         }
 
-        //Copy the requested snapshot buffer into the response buffer.
+        // Copy the requested snapshot buffer into the response buffer.
         memcpy(&(l_rsp_ptr->snapshot),
                &(g_cmdh_snapshot_array[l_req_idx]),
                sizeof(cmdh_snapshot_buffer_t));
 
-        //Calculate returned data size.
-        uint16_t l_size = 2 + sizeof(cmdh_snapshot_buffer_t); //2bytes for newest and oldest + size of snapshots.
+        // Calculate returned data size.
+        uint16_t l_size = 2 + sizeof(cmdh_snapshot_buffer_t); // 2 bytes for newest and oldest + size of snapshots.
         o_rsp_ptr->data_length[0] = ((uint8_t *)&l_size)[0];
         o_rsp_ptr->data_length[1] = ((uint8_t *)&l_size)[1];
-    
+
 
     } while (0);
 
@@ -228,36 +192,24 @@ ERRL_RC cmdh_snapshot_buffer_nonite(const cmdh_fsp_cmd_t *i_cmd_ptr,
 
 // Function Specification
 //
-// Name: cmdh_get_snapshot_buffer 
+// Name: cmdh_get_snapshot_buffer
 //
 // Description: Returns requested snapshot buffer to tmgt when requested.
-//
-//
-//
-//
-// Flow:  11/21/2013    FN=
 //
 // End Function Specification
 errlHndl_t cmdh_get_snapshot_buffer(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                           cmdh_fsp_rsp_t * o_rsp_ptr)
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
     cmdh_get_snapshot_query_t   *l_cmd_ptr        = (cmdh_get_snapshot_query_t *) i_cmd_ptr;
     ERRL_RC                     l_rc              = ERRL_RC_SUCCESS;
     uint16_t                    l_query_sz        = 0;
     errlHndl_t                  l_err             = NULL;
-    
 
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
     do
     {
 
 
-        // command is only supported on Master OCC
+        // Command is only supported on Master OCC
         if (G_occ_role == OCC_SLAVE)
         {
             TRAC_ERR("cmdh_get_snapshot_buffer: Get snapshot buffer command not supported on Slave OCCs!");
@@ -272,7 +224,7 @@ errlHndl_t cmdh_get_snapshot_buffer(const cmdh_fsp_cmd_t * i_cmd_ptr,
             l_rc = ERRL_RC_INTERNAL_FAIL;
             break;
         }
-        
+
         l_query_sz = CMDH_DATALEN_FIELD_UINT16(i_cmd_ptr);
         // Command Length Check.  Should have 4 bytes total
         if(l_query_sz != CMDH_GET_SNAPSHOT_QUERY_DATALEN)
@@ -283,7 +235,7 @@ errlHndl_t cmdh_get_snapshot_buffer(const cmdh_fsp_cmd_t * i_cmd_ptr,
             break;
         }
 
-        //Call appropriate function based on version.
+        // Call appropriate function based on version.
         switch (l_cmd_ptr->version)
         {
             case CMDH_GET_SNAPSHOT_NONITE_VERSION:
@@ -301,7 +253,7 @@ errlHndl_t cmdh_get_snapshot_buffer(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
     if (l_rc)
     {
-        /// Build Error Response packet
+        // Build Error Response packet
         cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, l_rc, &l_err);
     }
 
@@ -312,31 +264,20 @@ errlHndl_t cmdh_get_snapshot_buffer(const cmdh_fsp_cmd_t * i_cmd_ptr,
 #define CMDH_SNAPSHOT_SYNC_DATA_SIZE    1
 // Function Specification
 //
-// Name: cmdh_snapshot_sync 
+// Name: cmdh_snapshot_sync
 //
 // Description: Resets the snapshot buffer array and starts a new snapshot buffer from time 0.
-// 
-// Flow:  11/25/2013    FN=
 //
 // End Function Specification
 errlHndl_t cmdh_snapshot_sync(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                     cmdh_fsp_rsp_t * o_rsp_ptr)
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
     cmdh_snapshot_sync_query_t      *l_cmd_ptr = (cmdh_snapshot_sync_query_t *) i_cmd_ptr;
     cmdh_snapshot_sync_resp_t       *l_resp_ptr = (cmdh_snapshot_sync_resp_t *) o_rsp_ptr;
     errlHndl_t                      l_err = NULL;
     uint8_t                         l_query_sz = 0;
     ERRL_RC                         l_rc = 0;
-    
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
 
-
-    
     do
     {
         l_query_sz = CMDH_DATALEN_FIELD_UINT16(i_cmd_ptr);
@@ -348,8 +289,8 @@ errlHndl_t cmdh_snapshot_sync(const cmdh_fsp_cmd_t * i_cmd_ptr,
             l_rc = ERRL_RC_INVALID_CMD_LEN;
             break;
         }
-        
-        l_cmd_ptr = (cmdh_snapshot_sync_query_t *)i_cmd_ptr;        
+
+        l_cmd_ptr = (cmdh_snapshot_sync_query_t *)i_cmd_ptr;
 
         // Check received packet version
         if (CMDH_SNAPSHOT_SYNC_VERSION != l_cmd_ptr->version)
@@ -360,32 +301,32 @@ errlHndl_t cmdh_snapshot_sync(const cmdh_fsp_cmd_t * i_cmd_ptr,
         }
 
         // Set the global reset flag, that will cause all saved data to be cleared in the
-        // next callback that is done every 30seconds via a timer.
+        // next callback that is done every 30 seconds via a timer.
         g_cmdh_snapshot_reset = TRUE;
 
         // Reset current index to stop any possible calls from tmgt to get snapshot buffers.
         g_cmdh_snapshot_cur_index = CMDH_SNAPSHOT_DEFAULT_CUR_INDEX;
-       
-        //Reset timer and start counting from now. This will cause a call to the snapshot_callback
-        //function below which will reset the other globals based on the fact that g_cmdh_snapshot_reset
-        //is set to true. 
-        l_rc = ssx_timer_schedule(&G_snapshotTimer, 0, SSX_SECONDS(30)); 
+
+        // Reset timer and start counting from now. This will cause a call to the snapshot_callback
+        // function below which will reset the other globals based on the fact that g_cmdh_snapshot_reset
+        // is set to true.
+        l_rc = ssx_timer_schedule(&G_snapshotTimer, 0, SSX_SECONDS(30));
         if (l_rc != SSX_OK)
         {
             TRAC_ERR("cmdh_snapshot_sync: reseting the snapshot timer failed.");
             break;
         }
-               
+
         TRAC_INFO("cmdh_snapshot_sync: Snapshot buffer has been reset!");
 
         l_resp_ptr->data_length[0] = 0;
         l_resp_ptr->data_length[1] = 0;
         l_resp_ptr->rc = 0;
     }while(FALSE);
-    
+
     if (l_rc)
     {
-        /// Build Error Response packet
+        // Build Error Response packet
         cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, l_rc, &l_err);
     }
     return(l_err);
@@ -396,19 +337,13 @@ errlHndl_t cmdh_snapshot_sync(const cmdh_fsp_cmd_t * i_cmd_ptr,
 // Name: cmdh_
 //
 // Description: Called from timer every 30seconds to store cimp data into
-//              an array of 20 cimp snapshots. Then it triggers the generation 
+//              an array of 20 cimp snapshots. Then it triggers the generation
 //              of a new snapshot in the g_cmdh_sna
-// 
-// Flow:  11/25/2013    FN=
 //
 // End Function Specification
 void cmdh_snapshot_callback(void * arg)
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
-
-    static cmdh_snapshot_cimp_entry_t L_cim_buf[CMDH_CIMP_MAX]; //Holds the earlier cim data snapshots.
+    static cmdh_snapshot_cimp_entry_t L_cim_buf[CMDH_CIMP_MAX]; // Holds the earlier cim data snapshots.
     static uint8_t  L_cim_seq_number = 0;       // Holds the next cim seq number to be used.
     static uint32_t L_prev_pwr_accum = 0;       // Holds the previous power sensor accumulator
     static uint32_t L_prev_pwr_update_tag = 0;  // Holds the previous power sensor update tag.
@@ -423,15 +358,12 @@ void cmdh_snapshot_callback(void * arg)
     uint16_t        l_avg_freq          = 0;
 
     cmdh_snapshot_cimp_entry_t  l_cim_buf_temp[CMDH_CIMP_MAX - 1];
-    cmdh_snapshot_buffer_t      l_30s_snapshot; //Used to temporarily hold new snapshot data.
-    
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
+    cmdh_snapshot_buffer_t      l_30s_snapshot; // Used to temporarily hold new snapshot data.
 
-    //Clear data that is calculated every 250us to prep for next callback in 30seconds.
-    //Reset max and min over 30 seconds.
-    memset(&g_pwr250us_over30sec,0,sizeof(g_pwr250us_over30sec)); 
+
+    // Clear data that is calculated every 250us to prep for next callback in 30seconds.
+    // Reset max and min over 30 seconds.
+    memset(&g_pwr250us_over30sec,0,sizeof(g_pwr250us_over30sec));
 
     if (g_cmdh_snapshot_reset)
     {
@@ -443,7 +375,7 @@ void cmdh_snapshot_callback(void * arg)
         L_cim_seq_number        = 0;
         L_prev_pwr_accum        = l_pwr_accum;
         L_prev_pwr_update_tag   = l_pwr_update_tag;
-        //Clear reset flag.  - This should be the only place that clears it.
+        // Clear reset flag.  - This should be the only place that clears it.
         g_cmdh_snapshot_reset   = FALSE;
         g_cmdh_snapshot_cur_index = CMDH_SNAPSHOT_DEFAULT_CUR_INDEX;
     }
@@ -451,9 +383,9 @@ void cmdh_snapshot_callback(void * arg)
     {
 
         uint32_t l_pwr_accum_diff =  0;
-        uint32_t l_pwr_uptag_diff =  0; 
+        uint32_t l_pwr_uptag_diff =  0;
 
-        //Calculate the accumulator difference.
+        // Calculate the accumulator difference.
         if(l_pwr_accum >= L_prev_pwr_accum)
         {
             l_pwr_accum_diff =  l_pwr_accum - L_prev_pwr_accum;
@@ -462,41 +394,41 @@ void cmdh_snapshot_callback(void * arg)
         {
             l_pwr_accum_diff = l_pwr_accum + (~L_prev_pwr_accum);
         }
-        
-        //Calculate the update tag difference.
+
+        // Calculate the update tag difference.
         if(l_pwr_update_tag >= L_prev_pwr_update_tag)
         {
             l_pwr_uptag_diff =  l_pwr_update_tag - L_prev_pwr_update_tag;
         }
-        else if(l_pwr_update_tag < L_prev_pwr_update_tag)   //accum must have wrapped.
+        else if(l_pwr_update_tag < L_prev_pwr_update_tag)   // accum must have wrapped.
         {
             l_pwr_uptag_diff = l_pwr_update_tag + (~L_prev_pwr_update_tag);
         }
-       
-        //Make sure we don't divide by 0 
+
+        // Make sure we don't divide by 0
         if(l_pwr_uptag_diff == 0)
         {
-            //This should never happen.
+            // This should never happen.
             TRAC_INFO("cmdh_snapshot_callback: update tag difference should not be 0. current:%i, previous:%i.",
                      l_pwr_update_tag, L_prev_pwr_update_tag);
             l_avg_pwr = 0;
         }
         else
         {
-            //Calculate average power since previous callback.
+            // Calculate average power since previous callback.
             l_avg_pwr = l_pwr_accum_diff / l_pwr_uptag_diff;
         }
 
         if(l_freq_cnt == 0)
         {
-            //This should never happen.
+            // This should never happen.
             TRAC_INFO("cmdh_snapshot_callback: No frequency data has been accumulated.  Returning 0 for frequency. count:%i.",
                       l_freq_cnt);
             l_avg_freq = 0;
         }
         else
         {
-            //Calculate average frequency of all Cores for the whole Node (all OCCs)
+            // Calculate average frequency of all Cores for the whole Node (all OCCs)
             l_avg_freq = (uint16_t)(l_freq_accum / l_freq_cnt);
         }
 
@@ -504,7 +436,7 @@ void cmdh_snapshot_callback(void * arg)
         L_prev_pwr_accum = l_pwr_accum;
         L_prev_pwr_update_tag = l_pwr_update_tag;
 
-        //Append the new cim buffer entry to the front of the local static array of cim buffers.
+        // Append the new cim buffer entry to the front of the local static array of cim buffers.
         memcpy(l_cim_buf_temp, L_cim_buf, sizeof(cmdh_snapshot_cimp_entry_t) * (CMDH_CIMP_MAX - 1));
 
         L_cim_buf[0].seq_number = L_cim_seq_number;
@@ -515,14 +447,14 @@ void cmdh_snapshot_callback(void * arg)
 
         memcpy(&(L_cim_buf[1]), l_cim_buf_temp, sizeof(cmdh_snapshot_cimp_entry_t) * (CMDH_CIMP_MAX - 1));
 
-        //Populate the local 30s snapshot buffer before writing it out to the global array.  Reason is
-        //we don't want the buffer data to be read by tmgt cmd while we are filling it.
-        
-        //Copy cim data to snapshot buffer.
-        memcpy(l_30s_snapshot.cim, L_cim_buf, sizeof(cmdh_snapshot_cimp_entry_t) * CMDH_CIMP_MAX);
-        l_30s_snapshot.current_id = g_cmdh_snapshot_cur_id; 
+        // Populate the local 30s snapshot buffer before writing it out to the global array.  Reason is
+        // we don't want the buffer data to be read by tmgt cmd while we are filling it.
 
-        //Increment current index to signify that we are going to add a new snapshot.
+        // Copy cim data to snapshot buffer.
+        memcpy(l_30s_snapshot.cim, L_cim_buf, sizeof(cmdh_snapshot_cimp_entry_t) * CMDH_CIMP_MAX);
+        l_30s_snapshot.current_id = g_cmdh_snapshot_cur_id;
+
+        // Increment current index to signify that we are going to add a new snapshot.
         g_cmdh_snapshot_cur_index++;
         if (g_cmdh_snapshot_cur_index > CMDH_SNAPSHOT_MAX_INDEX)
         {
@@ -530,13 +462,13 @@ void cmdh_snapshot_callback(void * arg)
             g_cmdh_snapshot_cur_index = 0;
         }
 
-        //Write buffer to the current index in the global array g_cmdh_snapshot_array.
+        // Write buffer to the current index in the global array g_cmdh_snapshot_array.
         memcpy(&(g_cmdh_snapshot_array[g_cmdh_snapshot_cur_index]),&l_30s_snapshot, sizeof(cmdh_snapshot_buffer_t));
 
-        //Increment snapshot id.
+        // Increment snapshot id.
         g_cmdh_snapshot_cur_id++;
 
-        //Increment sequence count.
+        // Increment sequence count.
         L_cim_seq_number ++;
     }
 }
