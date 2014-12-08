@@ -1,34 +1,29 @@
-/******************************************************************************
-// @file amec_amester.c
-// @brief Amester interface
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _amec_amester_c amec_amester.c
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @at003             alvinwan  03/19/2012  New file. Add amester interface.
- *   @pb00E             pbavari   03/11/2012  Added correct include file
- *   @at008             alvinwan  08/09/2012  Support AME Pass Thru command from TMGT
- *   @ry001  853436     ronda     09/14/2012  Added Amester sub command support (phase one)
- *   @gs014  903552     gjsilva   10/22/2013  Support for Amester parameter interface
- *   @mw584             mware     11/30/2013  Changed freq250us to be freqa2ms. Added IPMI command to set analytics scheduling.
- *   @mw643             mware     03/02/2014  Added IPMI command to control analytics thread modes.
- *   @gs027  918066     gjsilva   03/12/2014  Added trace buffer engine
- *   @mw662             mware     03/25/2014  Added IPMI command to control and read CPM calibration information.
- *   @mw671  933716     mware     05/17/2014  Added IPMI command to set the ambient temperature and fan speed sensors.
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/amec/amec_amester.c $                                 */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* COPYRIGHT International Business Machines Corp. 2011,2014              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
 //*************************************************************************
 // Includes
 //*************************************************************************
-//@pb00Ec - changed from common.h to occ_common.h for ODE support
 #include <occ_common.h>
 #include <ssx.h>
 #include <errl.h>               // Error logging
@@ -38,7 +33,7 @@
 #include <amec_smh.h>
 #include <amec_master_smh.h>
 #include <amec_amester.h>
-#include <amec_sys.h>           // @mw531
+#include <amec_sys.h>
 #include <trac.h>               // For traces
 #include <appletManager.h>
 #include <sensorQueryList.h>
@@ -90,35 +85,35 @@ DMA_BUFFER(UINT8 g_amec_tb_bytes[AMEC_TB_SIZE_BYTES]);
 DMA_BUFFER(amec_tb_t  g_amec_tb_list[AMEC_MAX_NUM_TB]) = {
     //trace 2ms
     [AMEC_TB_2MS] = {
-	"trace2ms", // name
-	AMEFP(500,0), // freq
-	(UINT8*)(UINT32)g_amec_tb_bytes, // bytes
-	AMEC_TB_2MS_SIZE_BYTES, // size
-	0, // entry_size
-	0, // entry_n
-	0, // write
-	0, // read
-	0, // sensors_n
-	0, // parm_n
-	{0}, // sensors_field[]
-	{0}, // sensors_num[]
-	{0} // parms_num[]
+        "trace2ms", // name
+        AMEFP(500,0), // freq
+        (UINT8*)(UINT32)g_amec_tb_bytes, // bytes
+        AMEC_TB_2MS_SIZE_BYTES, // size
+        0, // entry_size
+        0, // entry_n
+        0, // write
+        0, // read
+        0, // sensors_n
+        0, // parm_n
+        {0}, // sensors_field[]
+        {0}, // sensors_num[]
+        {0} // parms_num[]
     },
     // trace 250us
     [AMEC_TB_250US] = {
-	"trace250us",  // name
-	AMEFP(4000,0), // freq
-	(UINT8*)(UINT32)g_amec_tb_bytes+AMEC_TB_2MS_SIZE_BYTES, // bytes
-	AMEC_TB_250US_SIZE_BYTES, //size
-	0, // entry_size
-	0, // entry_n
-	0, // write
-	0, // read
-	0, // sensors_n
-	0, // parm_n
-	{0}, // sensors_field[]
-	{0}, // sensors_num[]
-	{0} // parms_num[]
+        "trace250us",  // name
+        AMEFP(4000,0), // freq
+        (UINT8*)(UINT32)g_amec_tb_bytes+AMEC_TB_2MS_SIZE_BYTES, // bytes
+        AMEC_TB_250US_SIZE_BYTES, //size
+        0, // entry_size
+        0, // entry_n
+        0, // write
+        0, // read
+        0, // sensors_n
+        0, // parm_n
+        {0}, // sensors_field[]
+        {0}, // sensors_num[]
+        {0} // parms_num[]
     }
 };
 
@@ -142,9 +137,6 @@ UINT8   g_amec_tb_continuous=0; //CL273
 // Name: amester_get_sensor_info
 //
 // Description: Returns name, units, update frequency, and scalefactor for a sensor
-//
-//
-// Flow:              FN=
 //
 // Task Flags:
 //
@@ -335,9 +327,6 @@ static uint8_t amester_get_sensor_info( uint8_t* o_resp, uint16_t* io_resp_lengt
 //
 // Description: amester entry point for ipmicommand 0x3C
 //
-//
-// Flow:              FN=
-//
 // Task Flags:
 //
 // End Function Specification
@@ -353,7 +342,7 @@ uint8_t amester_api( const IPMIMsg_t * i_msg,
     uint8_t l_sensor_type = 0; // sensor type
     uint16_t l_maxlen = 0, l_retlen = 0;  // for echo command and 0xff command
     uint16_t l_resp_length = *io_resp_length;
-    sensorrec_t SensorInfo; 
+    sensorrec_t SensorInfo;
 
     switch( i_msg->au8CmdData_ptr[0] )
     {
@@ -364,7 +353,7 @@ uint8_t amester_api( const IPMIMsg_t * i_msg,
             uint16_t l_in;              // input pointer
             uint16_t l_out=0;           // output pointer
             char *t;
-            int k; 
+            int k;
             l_rc = COMPCODE_NORMAL;;    // assume no error
 
             // Process each sensor in turn
@@ -399,7 +388,7 @@ uint8_t amester_api( const IPMIMsg_t * i_msg,
                 SensorInfo.value_min=l_sensor_ptr->sample_min;
                 SensorInfo.value_max=l_sensor_ptr->sample_max;
                 memcpy(&SensorInfo.status,&l_sensor_ptr->status,sizeof(uint16_t));
-                SensorInfo.test=0; //TODO: This field is not supported for now. Maybe need to change in the future.  
+                SensorInfo.test=0; //TODO: This field is not supported for now. Maybe need to change in the future.
 
                 // Copy to output buffer.
                 t=(char *)&SensorInfo;
@@ -411,14 +400,14 @@ uint8_t amester_api( const IPMIMsg_t * i_msg,
 
             break;
         };
-        
-	    case 0x0a:  // Get API version
-	        o_resp[0] = AME_API_MAJ;
-	        o_resp[1] = AME_API_MIN;  //TODO: should change AME_API_MIN to 26 in phase 2 if Amester tool souce is updated
-	        *io_resp_length = 2;
+
+        case 0x0a:  // Get API version
+            o_resp[0] = AME_API_MAJ;
+            o_resp[1] = AME_API_MIN;
+            *io_resp_length = 2;
             l_rc = COMPCODE_NORMAL;
             break;
-	
+
         //----------------------------------------------------------------------
         // AME 2.16 commands
         //----------------------------------------------------------------------
@@ -432,7 +421,6 @@ uint8_t amester_api( const IPMIMsg_t * i_msg,
                 l_rc = COMPCODE_PARAM_OUT_OF_RANGE;
                 break;
             }
-
             o_resp[0] = AME_API_MAJ;
             o_resp[1] = AME_API_MIN;
             o_resp[2] = AME_VERSION_MAJ;
@@ -456,7 +444,6 @@ uint8_t amester_api( const IPMIMsg_t * i_msg,
                 l_rc = COMPCODE_PARAM_OUT_OF_RANGE;
                 break;
             }
-
             o_resp[0] = 0;
             o_resp[1] = 0;
             *io_resp_length = 2;
@@ -500,7 +487,7 @@ uint8_t amester_api( const IPMIMsg_t * i_msg,
 
                 // max response length is IPMI_MAX_MSG_SIZE
                 if( ((l_final_length+(*io_resp_length)) < IPMI_MAX_MSG_SIZE) &&
-                    ((l_final_length+(*io_resp_length)) < l_resp_length )         ) // @at008a
+                    ((l_final_length+(*io_resp_length)) < l_resp_length ) )
                 {
                     memcpy( o_resp, l_temp_buffer, *io_resp_length); // Copy to final output buffer
                     o_resp += (*io_resp_length);
@@ -517,7 +504,7 @@ uint8_t amester_api( const IPMIMsg_t * i_msg,
         // Trace buffer commands
         // Get trace buffer configuration
         case 0x30:
-            amec_tb_cmd_info(i_msg,o_resp,io_resp_length,&l_rc);	
+            amec_tb_cmd_info(i_msg,o_resp,io_resp_length,&l_rc);
             break;
 
         // Configure TB
@@ -543,13 +530,13 @@ uint8_t amester_api( const IPMIMsg_t * i_msg,
             break;
 
         // Get sensor table, not support
-        case 0x35: //Not support
+        case 0x35: //No support
             *io_resp_length = 0;
             l_rc = COMPCODE_PARAM_OUT_OF_RANGE;
             break;
 
         // Get SCOM table, not support
-        case 0x36: //Not support
+        case 0x36: //No support
             *io_resp_length = 0;
             l_rc = COMPCODE_PARAM_OUT_OF_RANGE;
             break;
@@ -563,7 +550,7 @@ uint8_t amester_api( const IPMIMsg_t * i_msg,
         case 0x40:
             amec_parm_get_number(i_msg,o_resp,io_resp_length,&l_rc);
             break;
-           
+
         // Return configuration of parameters starting with a given guid
         case 0x41:
             amec_parm_get_config(i_msg,o_resp,io_resp_length,&l_rc);
@@ -580,7 +567,7 @@ uint8_t amester_api( const IPMIMsg_t * i_msg,
             break;
 
         // Partition management
-        case 0x50: //Not support
+        case 0x50: //No support
             *io_resp_length = 0;
             l_rc = COMPCODE_PARAM_OUT_OF_RANGE;
             break;
@@ -656,9 +643,6 @@ uint8_t amester_api( const IPMIMsg_t * i_msg,
 //
 // Description: Amester interface entry point for ipmicommand 0x3B
 //
-//
-// Flow:              FN=
-//
 // Task Flags:
 //
 // End Function Specification
@@ -670,10 +654,10 @@ uint8_t amester_manual_throttle( const IPMIMsg_t * i_msg,
     /*------------------------------------------------------------------------*/
     /* Local variables                                                        */
     /*------------------------------------------------------------------------*/
-    uint8_t  l_rc,temp1,temp2;                            // @mw531
+    uint8_t  l_rc,temp1,temp2;
     uint16_t l_resp_length = *io_resp_length;
     uint16_t i,j,cc,idx,temp16;
-    uint16_t k;                                          // @mw581
+    uint16_t k;
     uint32_t temp32a;
 
     /*------------------------------------------------------------------------*/
@@ -704,47 +688,47 @@ uint8_t amester_manual_throttle( const IPMIMsg_t * i_msg,
             l_rc = COMPCODE_PARAM_OUT_OF_RANGE;
             break;
 
-        case 0x05:    // Get AME enable/disable flag (old style interface...do not use), not support
+        case 0x05:    // Get AME enable/disable flag (old style interface...do not use), no support
             *io_resp_length = 0;
             l_rc = COMPCODE_PARAM_OUT_OF_RANGE;
             break;
 
-        case 0x06:    // Get new PTVR (Power Threshold Vector Request), not support
+        case 0x06:    // Get new PTVR (Power Threshold Vector Request), no support
             *io_resp_length = 0;
             l_rc = COMPCODE_PARAM_OUT_OF_RANGE;
             break;
 
-        case 0x07:    // Write individual AME parameters   
+        case 0x07:    // Write individual AME parameters
             switch (i_msg->au8CmdData_ptr[1])
             {
-                case 22:   // parameter 22: Analytics parameters    @mw584
+                case 22:   // parameter 22: Analytics parameters
                 {
                     g_amec->analytics_group=i_msg->au8CmdData_ptr[2];         // Set group
                     g_amec->analytics_chip=i_msg->au8CmdData_ptr[3];          // Select which chip to analyze
                     g_amec->analytics_option=i_msg->au8CmdData_ptr[4];        // Select which option
                     g_amec->analytics_total_chips=i_msg->au8CmdData_ptr[5];   // Select total number of chips
-                    g_amec->analytics_slot=i_msg->au8CmdData_ptr[6];          // Select time slot to read data                    
-                    o_resp[0]=i_msg->au8CmdData_ptr[2];          
-                    o_resp[1]=i_msg->au8CmdData_ptr[3]; 
-                    o_resp[2]=i_msg->au8CmdData_ptr[4];          
-                    o_resp[3]=i_msg->au8CmdData_ptr[5]; 
-                    o_resp[4]=i_msg->au8CmdData_ptr[6];         
+                    g_amec->analytics_slot=i_msg->au8CmdData_ptr[6];          // Select time slot to read data
+                    o_resp[0]=i_msg->au8CmdData_ptr[2];
+                    o_resp[1]=i_msg->au8CmdData_ptr[3];
+                    o_resp[2]=i_msg->au8CmdData_ptr[4];
+                    o_resp[3]=i_msg->au8CmdData_ptr[5];
+                    o_resp[4]=i_msg->au8CmdData_ptr[6];
                     *io_resp_length=5;
                     l_rc = COMPCODE_NORMAL;
                     break;
                   }
 
-                case 23:   // parameter 23: CPM calibration parameters    @mw662
+                case 23:   // parameter 23: CPM calibration parameters
                 {
                     // g_amec->cpms_enabled=i_msg->au8CmdData_ptr[2];           // Enable CPMs
-                    o_resp[0]=i_msg->au8CmdData_ptr[2];          
+                    o_resp[0]=i_msg->au8CmdData_ptr[2];
                     *io_resp_length=1;
                     l_rc = COMPCODE_NORMAL;
                     break;
                 }
 
 
-                case 24:   // parameter 24: set ambient and fan speed sensors   @mw671
+                case 24:   // parameter 24: set ambient and fan speed sensors
                 {
                     // Set ambient temperature (8 bits)
                     temp16=(uint16_t)i_msg->au8CmdData_ptr[2];
@@ -752,15 +736,15 @@ uint8_t amester_manual_throttle( const IPMIMsg_t * i_msg,
                     // Set average fan speed (16 bits)
                     temp16=((uint16_t)i_msg->au8CmdData_ptr[3]<<8)+(uint16_t)i_msg->au8CmdData_ptr[4];
                     sensor_update(AMECSENSOR_PTR(FANSPEEDAVG), temp16);
-                    o_resp[0]=i_msg->au8CmdData_ptr[2]; 
+                    o_resp[0]=i_msg->au8CmdData_ptr[2];
                     o_resp[1]=i_msg->au8CmdData_ptr[3];
-                    o_resp[2]=i_msg->au8CmdData_ptr[3];         
+                    o_resp[2]=i_msg->au8CmdData_ptr[3];
                      *io_resp_length=3;
                     l_rc = COMPCODE_NORMAL;
                     break;
                 }
 
-                case 29:   // parameter 29: Control vector recording modes and stream rates. 
+                case 29:   // parameter 29: Control vector recording modes and stream rates.
                 {
                     g_amec->stream_vector_rate=255; // First step is to set an invalid rate so no recording done at all
                     g_amec->stream_vector_mode=0; // Also is to assure NO recording during parameter changes
@@ -771,7 +755,7 @@ uint8_t amester_manual_throttle( const IPMIMsg_t * i_msg,
 
                     switch (g_amec->stream_vector_group)
                     {
-                        case 44:    // $mw581   group 44 decimal (amec_analytics support)
+                        case 44:    //group 44 decimal (amec_analytics support)
                             g_amec->stream_vector_map[0]=0;                     // Leave space for 250usec time stamp
                             k = 1;
                             for (i=0; i<=46; i++)
@@ -780,9 +764,9 @@ uint8_t amester_manual_throttle( const IPMIMsg_t * i_msg,
                             }
                             //gpEMP->stream_vector_map[48]=(void *) 0xffffffff;   // Termination of partial vector
                             g_amec->analytics_group=44;
-                            g_amec->analytics_bad_output_count=2;  // drop first 2 frames of output @mw587
+                            g_amec->analytics_bad_output_count=2;  // drop first 2 frames of output
                             break;
-									
+
                         default:
                             break;
                     }
@@ -795,7 +779,7 @@ uint8_t amester_manual_throttle( const IPMIMsg_t * i_msg,
                     break;
                 }
 
-                case 64:    // support for THREADMODE group 44 recording  // $mw643
+                case 64:    // support for THREADMODE group 44 recording
                     g_amec->analytics_threadmode=i_msg->au8CmdData_ptr[2];
                     g_amec->analytics_threadcountmax=i_msg->au8CmdData_ptr[3];
                     o_resp[0]=i_msg->au8CmdData_ptr[2];
@@ -803,7 +787,7 @@ uint8_t amester_manual_throttle( const IPMIMsg_t * i_msg,
                     *io_resp_length=2;
                     l_rc = COMPCODE_NORMAL;
                     break;
-   
+
                 default:
                     *io_resp_length = 0;
                     l_rc = COMPCODE_PARAM_OUT_OF_RANGE;
@@ -824,8 +808,8 @@ uint8_t amester_manual_throttle( const IPMIMsg_t * i_msg,
                     l_rc = COMPCODE_NORMAL;
                     break;
 
-                case 22:   // parameter 22: Analytics parameters    @mw584
-                    o_resp[0]=g_amec->analytics_group;         
+                case 22:   // parameter 22: Analytics parameters
+                    o_resp[0]=g_amec->analytics_group;
                     o_resp[1]=g_amec->analytics_chip;
                     o_resp[2]=g_amec->analytics_option;
                     o_resp[3]=g_amec->analytics_total_chips;
@@ -834,13 +818,13 @@ uint8_t amester_manual_throttle( const IPMIMsg_t * i_msg,
                     l_rc = COMPCODE_NORMAL;
                     break;
 
-                case 23:   // parameter 23: CPM parameters    @mw662
-		    //      o_resp[0]=g_amec->cpms_enabled;         
-                    //      o_resp[1]=g_amec->cpm_active_core;   
-                    //      o_resp[2]=g_amec->cpm_cal_state;          
-                    //      o_resp[3]=g_amec->cpm_core_state; 
+                case 23:   // parameter 23: CPM parameters
+                    //      o_resp[0]=g_amec->cpms_enabled;
+                    //      o_resp[1]=g_amec->cpm_active_core;
+                    //      o_resp[2]=g_amec->cpm_cal_state;
+                    //      o_resp[3]=g_amec->cpm_core_state;
                     //      o_resp[4]=g_amec->cpm_measure_state;
-                    //      o_resp[5]=g_amec->cpm_cal_count;          
+                    //      o_resp[5]=g_amec->cpm_cal_count;
                     *io_resp_length=6;
                     l_rc = COMPCODE_NORMAL;
                     break;
@@ -918,11 +902,11 @@ uint8_t amester_manual_throttle( const IPMIMsg_t * i_msg,
                     }
                     o_resp[1] = (uint8_t)(temp16 >> 8);
                     o_resp[2] = (uint8_t)(temp16 & 0xff);
-                    *io_resp_length = 3 + 2 * (10 * STREAM_VECTOR_SIZE_EX);  // # of bytes (STREAM_VECTOR_SIZE_EX is in 16 bit words) $mw134
+                    *io_resp_length = 3 + 2 * (10 * STREAM_VECTOR_SIZE_EX);  // # of bytes (STREAM_VECTOR_SIZE_EX is in 16 bit words)
                     l_rc = COMPCODE_NORMAL;
                     break;
 
-                case 64:    // support for THREADMODE group 44 recording  $mw643
+                case 64:    // support for THREADMODE group 44 recording
                     o_resp[0]=(uint8_t)(g_amec->analytics_threadmode);
                     o_resp[1]=(uint8_t)(g_amec->analytics_threadcountmax);
                     *io_resp_length=2;
@@ -935,7 +919,7 @@ uint8_t amester_manual_throttle( const IPMIMsg_t * i_msg,
                     break;
             }
             break;
-                                    
+
         default:
             *io_resp_length = 0;
             l_rc = COMPCODE_PARAM_OUT_OF_RANGE;
@@ -950,11 +934,8 @@ uint8_t amester_manual_throttle( const IPMIMsg_t * i_msg,
 // Name: AMEC_entry_point
 //
 // Description: Amester interface entry point
-//              
 //
-// Flow:              FN=
-//
-// Task Flags: 
+// Task Flags:
 //
 // End Function Specification
 uint8_t amester_entry_point( const IPMIMsg_t * i_msg,
@@ -1028,10 +1009,10 @@ void amec_tb_record(const AMEC_TB_GUID i_guid)
     /*------------------------------------------------------------------------*/
     UINT8                       *l_w; // pointer for tracebuffer writing
     UINT16                      l_i;
-    sensor_t              	*l_s;
-    UINT32		        l_totalbytes;
-    amec_parm_t			*l_parm;
-    UINT8			*l_src_ptr;
+    sensor_t                    *l_s;
+    UINT32                      l_totalbytes;
+    amec_parm_t                 *l_parm;
+    UINT8                       *l_src_ptr;
     AMEC_PARM_GUID              l_parm_guid;
 
     /*------------------------------------------------------------------------*/
@@ -1039,111 +1020,116 @@ void amec_tb_record(const AMEC_TB_GUID i_guid)
     /*------------------------------------------------------------------------*/
 
     // Record OCA from last 32 ms
-    if (G_dcom_slv_inbox_rx.tb_record)
+    if(G_dcom_slv_inbox_rx.tb_record)
     {
-	// Check for valid tb write entry index
-	if (g_amec_tb_list[i_guid].write < g_amec_tb_list[i_guid].entry_n)
+        // Check for valid tb write entry index
+        if(g_amec_tb_list[i_guid].write < g_amec_tb_list[i_guid].entry_n)
         {
-	    l_w = g_amec_tb_list[i_guid].bytes + g_amec_tb_list[i_guid].write * g_amec_tb_list[i_guid].entry_size;
-	    // Write the tracked sensors
-	    for (l_i=0; l_i< g_amec_tb_list[i_guid].sensors_n; l_i++)
+            l_w = g_amec_tb_list[i_guid].bytes + g_amec_tb_list[i_guid].write * g_amec_tb_list[i_guid].entry_size;
+            // Write the tracked sensors
+            for(l_i = 0; l_i < g_amec_tb_list[i_guid].sensors_n; l_i++)
             {
-		l_s = getSensorByGsid(g_amec_tb_list[i_guid].sensors_num[l_i]);
-		switch (g_amec_tb_list[i_guid].sensors_field[l_i])
+                l_s = getSensorByGsid(g_amec_tb_list[i_guid].sensors_num[l_i]);
+                switch(g_amec_tb_list[i_guid].sensors_field[l_i])
                 {
-		case 0:  {//value 
-		    *l_w++ = (UINT8)(l_s->sample >> 8);	
-		    *l_w++ = (UINT8)(l_s->sample);
-		    break;
-		}
-		case 1:  {//min 
-		    *l_w++ = (UINT8)(l_s->sample_min >> 8);	
-		    *l_w++ = (UINT8)(l_s->sample_min);
-		    break;
-		}
-		case 2:  {//max 
-		    *l_w++ = (UINT8)(l_s->sample_max >> 8);	
-		    *l_w++ = (UINT8)(l_s->sample_max);
-		    break;
-		}
-		case 3:  {//accumulator
-		    *l_w++ = (UINT8)(l_s->accumulator >> 24);	
-		    *l_w++ = (UINT8)(l_s->accumulator >> 16);	
-		    *l_w++ = (UINT8)(l_s->accumulator >> 8);	
-		    *l_w++ = (UINT8)(l_s->accumulator);
-		    break;
-		}
-		case 4:  {//update tag
-		    *l_w++ = (UINT8)(l_s->update_tag >> 24);	
-		    *l_w++ = (UINT8)(l_s->update_tag >> 16);	
-		    *l_w++ = (UINT8)(l_s->update_tag >> 8);	
-		    *l_w++ = (UINT8)(l_s->update_tag);
-		    break;
-		}
-		case 5:  {//test (not available in POWER8)
-		    *l_w++ = (UINT8)0;
-		    *l_w++ = (UINT8)0;
-		    break;
-		}
-		case 6:  {//rcnt 
-		    *l_w++ = (UINT8)(g_amec->r_cnt >> 24);	
-		    *l_w++ = (UINT8)(g_amec->r_cnt >> 16);	
-		    *l_w++ = (UINT8)(g_amec->r_cnt >> 8);	
-		    *l_w++ = (UINT8)(g_amec->r_cnt);
-		    break;
-		}
-		default:
-		    break;
-		}
-	    } // write sensors
-			
-	    // Write the tracked parameters
-	    for (l_i=0; l_i< g_amec_tb_list[i_guid].parm_n; l_i++)
-            {
-		l_parm_guid = g_amec_tb_list[i_guid].parm_num[l_i];
-		if (g_amec_parm_list[l_parm_guid].preread)
-		    amec_parm_preread(l_parm_guid); // get latest version
-		l_parm =&g_amec_parm_list[l_parm_guid]; //cl185
-		l_totalbytes = l_parm->length * l_parm->vector_length;
-		l_src_ptr = l_parm->value_ptr;
-		while(l_totalbytes--) {
-		    *l_w++ = *l_src_ptr++;
-		}
-	    }	
+                    case 0:
+                        { //value
+                            *l_w++ = (UINT8)(l_s->sample >> 8);
+                            *l_w++ = (UINT8)(l_s->sample);
+                            break;
+                        }
+                    case 1:
+                        { //min
+                            *l_w++ = (UINT8)(l_s->sample_min >> 8);
+                            *l_w++ = (UINT8)(l_s->sample_min);
+                            break;
+                        }
+                    case 2:
+                        { //max
+                            *l_w++ = (UINT8)(l_s->sample_max >> 8);
+                            *l_w++ = (UINT8)(l_s->sample_max);
+                            break;
+                        }
+                    case 3:
+                        { //accumulator
+                            *l_w++ = (UINT8)(l_s->accumulator >> 24);
+                            *l_w++ = (UINT8)(l_s->accumulator >> 16);
+                            *l_w++ = (UINT8)(l_s->accumulator >> 8);
+                            *l_w++ = (UINT8)(l_s->accumulator);
+                            break;
+                        }
+                    case 4:
+                        { //update tag
+                            *l_w++ = (UINT8)(l_s->update_tag >> 24);
+                            *l_w++ = (UINT8)(l_s->update_tag >> 16);
+                            *l_w++ = (UINT8)(l_s->update_tag >> 8);
+                            *l_w++ = (UINT8)(l_s->update_tag);
+                            break;
+                        }
+                    case 5:
+                        { //test (not available in POWER8)
+                            *l_w++ = (UINT8)0;
+                            *l_w++ = (UINT8)0;
+                            break;
+                        }
+                    case 6:
+                        { //rcnt
+                            *l_w++ = (UINT8)(g_amec->r_cnt >> 24);
+                            *l_w++ = (UINT8)(g_amec->r_cnt >> 16);
+                            *l_w++ = (UINT8)(g_amec->r_cnt >> 8);
+                            *l_w++ = (UINT8)(g_amec->r_cnt);
+                            break;
+                        }
+                    default:
+                        break;
+                }
+            } // write sensors
 
-	    // Advance the write pointer and decide if recording should stop
-	    g_amec_tb_list[i_guid].write++; // Signal this entry is ready for reading
-	    if(g_amec_tb_list[i_guid].write >= g_amec_tb_list[i_guid].entry_n)
-	    {
-		if(g_amec_tb_continuous)
-		{
-		    // Start at beginning of trace
-		    g_amec_tb_list[i_guid].write = 0;
-		}
-		else
-		{
-		    // Stop recording if this trace is configured
-		    if (g_amec_tb_list[i_guid].entry_n) g_amec_tb_record = 0;
-		}
-	    }
-	} // valid write index
+            // Write the tracked parameters
+            for(l_i = 0; l_i < g_amec_tb_list[i_guid].parm_n; l_i++)
+            {
+                l_parm_guid = g_amec_tb_list[i_guid].parm_num[l_i];
+                if(g_amec_parm_list[l_parm_guid].preread) amec_parm_preread(l_parm_guid); // get latest version
+                l_parm = &g_amec_parm_list[l_parm_guid];
+                l_totalbytes = l_parm->length * l_parm->vector_length;
+                l_src_ptr = l_parm->value_ptr;
+                while(l_totalbytes--)
+                {
+                    *l_w++ = *l_src_ptr++;
+                }
+            }
+
+            // Advance the write pointer and decide if recording should stop
+            g_amec_tb_list[i_guid].write++; // Signal this entry is ready for reading
+            if(g_amec_tb_list[i_guid].write >= g_amec_tb_list[i_guid].entry_n)
+            {
+                if(g_amec_tb_continuous)
+                {
+                    // Start at beginning of trace
+                    g_amec_tb_list[i_guid].write = 0;
+                } else
+                {
+                    // Stop recording if this trace is configured
+                    if(g_amec_tb_list[i_guid].entry_n) g_amec_tb_record = 0;
+                }
+            }
+        } // valid write index
     } // end if(record)}
 }
 
 
 // Get tb config.  Pack as many traces as possible
 void amec_tb_cmd_info(const IPMIMsg_t *i_psMsg,
-		      UINT8 *o_pu8Resp,
-		      UINT16 *o_pu16RespLength,
-		      UINT8 *o_retval)
+                      UINT8 *o_pu8Resp,
+                      UINT16 *o_pu16RespLength,
+                      UINT8 *o_retval)
 {
     /*------------------------------------------------------------------------*/
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
-
-    AMEC_TB_GUID	l_id;  // trace id
-    UINT16	        l_j; // size of return message
-    CHAR 		*l_src; //pointer for copying name
+    AMEC_TB_GUID                l_id;  // trace id
+    UINT16                      l_j; // size of return message
+    CHAR                        *l_src; //pointer for copying name
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
@@ -1151,239 +1137,250 @@ void amec_tb_cmd_info(const IPMIMsg_t *i_psMsg,
 
     l_id = (AMEC_TB_GUID) i_psMsg->au8CmdData_ptr[1];
     l_j = 0; // write index byte for response
-																			
-    for (; l_id < AMEC_TB_NUMBER_OF_TRACES; l_id++)
+
+    for(; l_id < AMEC_TB_NUMBER_OF_TRACES; l_id++)
     {
-	if (l_j + AMEC_TB_CONFIG_SIZE >= IPMI_MAX_MSG_SIZE) break; // end of response buffer
-		
-        l_src= g_amec_tb_list[l_id].name;
-        while (*l_src != 0)
+        if(l_j + AMEC_TB_CONFIG_SIZE >= IPMI_MAX_MSG_SIZE) break; // end of response buffer
+
+        l_src = g_amec_tb_list[l_id].name;
+        while(*l_src != 0)
         {
-	    o_pu8Resp[l_j++] = *l_src++;
+            o_pu8Resp[l_j++] = *l_src++;
         } /* copy string up until \0 */
         o_pu8Resp[l_j++] = '\0'; /* add string terminator */
 
-	o_pu8Resp[l_j++] = (UINT8)(g_amec_tb_list[l_id].freq>>24);
-	o_pu8Resp[l_j++] = (UINT8)(g_amec_tb_list[l_id].freq>>16);
-	o_pu8Resp[l_j++] = (UINT8)(g_amec_tb_list[l_id].freq>>8);
-	o_pu8Resp[l_j++] = (UINT8)(g_amec_tb_list[l_id].freq);
-	// has_scoms field from POWER7 is always 0 on POWER8
-	o_pu8Resp[l_j++] = 0;
-    }	
+        o_pu8Resp[l_j++] = (UINT8)(g_amec_tb_list[l_id].freq >> 24);
+        o_pu8Resp[l_j++] = (UINT8)(g_amec_tb_list[l_id].freq >> 16);
+        o_pu8Resp[l_j++] = (UINT8)(g_amec_tb_list[l_id].freq >> 8);
+        o_pu8Resp[l_j++] = (UINT8)(g_amec_tb_list[l_id].freq);
+        // has_scoms field from POWER7 is always 0 on POWER8
+        o_pu8Resp[l_j++] = 0;
+    }
     *o_pu16RespLength=l_j;
     *o_retval=COMPCODE_NORMAL;
     return;
 }
 
 
-void amec_tb_cmd_set_config(const IPMIMsg_t *i_psMsg, 
-			    UINT8 *o_pu8Resp,
-			    UINT16 *o_pu16RespLength,
-			    UINT8 *o_retval)
+void amec_tb_cmd_set_config(const IPMIMsg_t *i_psMsg,
+                            UINT8 *o_pu8Resp,
+                            UINT16 *o_pu16RespLength,
+                            UINT8 *o_retval)
 {
     /*------------------------------------------------------------------------*/
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
-		
-    UINT8       l_i;
-    UINT16	l_sensors_n;
-    UINT16	l_oca_n;
-    UINT16	l_num_index;
-    UINT16	l_field_index;
-    UINT16	l_oca_index;
-    UINT8	l_valid_sockets=0;
-    UINT32	l_socket_bitmap=0;
-    UINT16	l_parm_n;
-    UINT16	l_parm_index;
-    amec_parm_t *l_parm;
-    UINT8	l_count;
-    amec_tb_t   *l_trace;
+    UINT8                       l_i;
+    UINT16                      l_sensors_n;
+    UINT16                      l_oca_n;
+    UINT16                      l_num_index;
+    UINT16                      l_field_index;
+    UINT16                      l_oca_index;
+    UINT8                       l_valid_sockets = 0;
+    UINT32                      l_socket_bitmap = 0;
+    UINT16                      l_parm_n;
+    UINT16                      l_parm_index;
+    amec_parm_t                 *l_parm;
+    UINT8                       l_count;
+    amec_tb_t                   *l_trace;
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
     do
     {
-	*o_retval=COMPCODE_NORMAL;
-		
-	//Stop recording while setting up a trace.
-	g_amec_tb_record = 0;
-		
-	// 0. Parse input
-	l_trace = AMEC_tb_get_by_guid(i_psMsg->au8CmdData_ptr[1]);
-	l_sensors_n = CONVERT_UINT8_ARRAY_UINT16(
-	    i_psMsg->au8CmdData_ptr[2],
-	    i_psMsg->au8CmdData_ptr[3]
-	    );
-	l_parm_n = CONVERT_UINT8_ARRAY_UINT16(
-	    i_psMsg->au8CmdData_ptr[4],
-	    i_psMsg->au8CmdData_ptr[5]
-	    );
-	l_oca_n = CONVERT_UINT8_ARRAY_UINT16(
-	    i_psMsg->au8CmdData_ptr[6],
-	    i_psMsg->au8CmdData_ptr[7]
-	    );
-	l_socket_bitmap = CONVERT_UINT8_ARRAY_UINT32(
-	    i_psMsg->au8CmdData_ptr[8],
-	    i_psMsg->au8CmdData_ptr[9],
-	    i_psMsg->au8CmdData_ptr[10],
-	    i_psMsg->au8CmdData_ptr[11]
-	    );
-			
-	if (l_sensors_n > AMEC_TB_SENSORS_MAX) {
-	    *o_retval=COMPCODE_PARAM_OUT_OF_RANGE;
-	    o_pu8Resp[0] = 0;  // mark second byte is bad.
-	    o_pu8Resp[1] = 2;  // mark second byte is bad.
-	    *o_pu16RespLength = 2;
-	    break;
-	}
-		
-	if (l_parm_n > AMEC_TB_PARM_MAX) {
-	    *o_retval=COMPCODE_PARAM_OUT_OF_RANGE;
-	    o_pu8Resp[0] = 0;  // mark fourth byte is bad.
-	    o_pu8Resp[1] = 4;  // 
-	    *o_pu16RespLength = 2;
-	}
+        *o_retval = COMPCODE_NORMAL;
 
-	if (l_oca_n > OCA_MAX_ENTRIES) {
-	    *o_retval=COMPCODE_PARAM_OUT_OF_RANGE;
-	    o_pu8Resp[0] = 0;  // mark sixth byte is bad
-	    o_pu8Resp[1] = 6;
-	    *o_pu16RespLength = 2;
-	    break;
-	}
-		
-	// Count valid sockets
-	l_count = l_socket_bitmap;
-	while (l_count) {
-	    if (l_count & 0x01) {l_valid_sockets++;}
-	    l_count >>= 1;
-	}
-	if (l_valid_sockets > MAX_NUM_CHIPS) {l_valid_sockets = MAX_NUM_CHIPS;}
-		
-	l_trace->entry_size = 0;
-				
-	// Set pointers to input
-	l_num_index = 12; // start of sensor numbers
-	l_field_index = 12 + 2*l_sensors_n;  // start of sensor fields
-	l_parm_index = l_field_index + l_sensors_n;  // start of parameters
-	l_oca_index = l_parm_index + 2*l_parm_n;  // start of SCOMs
-		
-	// Read sensor configuration	
-	for (l_i=0; l_i<l_sensors_n; l_i++) {
-	    l_trace->sensors_num[l_i] = CONVERT_UINT8_ARRAY_UINT16(
-		i_psMsg->au8CmdData_ptr[l_num_index],
-            	i_psMsg->au8CmdData_ptr[l_num_index+1]
-		);
-	    l_trace->sensors_field[l_i] = i_psMsg->au8CmdData_ptr[l_field_index];
+        //Stop recording while setting up a trace.
+        g_amec_tb_record = 0;
 
-			if (l_trace->sensors_num[l_i] >= G_amec_sensor_count) {
-	     *o_retval=COMPCODE_PARAM_OUT_OF_RANGE;
-	     o_pu8Resp[0] = (UINT8)(l_num_index>>8);  // mark which byte input is bad
-	     o_pu8Resp[1] = (UINT8)(l_num_index);  // mark which byte input is bad
-	     *o_pu16RespLength = 2;
-	     break;
-	     }
+        // 0. Parse input
+        l_trace = AMEC_tb_get_by_guid(i_psMsg->au8CmdData_ptr[1]);
+        l_sensors_n = CONVERT_UINT8_ARRAY_UINT16(
+            i_psMsg->au8CmdData_ptr[2],
+            i_psMsg->au8CmdData_ptr[3]
+            );
+        l_parm_n = CONVERT_UINT8_ARRAY_UINT16(
+            i_psMsg->au8CmdData_ptr[4],
+            i_psMsg->au8CmdData_ptr[5]
+            );
+        l_oca_n = CONVERT_UINT8_ARRAY_UINT16(
+            i_psMsg->au8CmdData_ptr[6],
+            i_psMsg->au8CmdData_ptr[7]
+            );
+        l_socket_bitmap = CONVERT_UINT8_ARRAY_UINT32(
+            i_psMsg->au8CmdData_ptr[8],
+            i_psMsg->au8CmdData_ptr[9],
+            i_psMsg->au8CmdData_ptr[10],
+            i_psMsg->au8CmdData_ptr[11]
+            );
 
-	    if (l_trace->sensors_field[l_i] > 6) {
-		*o_retval=COMPCODE_PARAM_OUT_OF_RANGE;
-		o_pu8Resp[0] = (UINT8)(l_field_index>>8);  // mark which byte input is bad
-		o_pu8Resp[1] = (UINT8)(l_field_index);  // mark which byte input is bad
-		*o_pu16RespLength = 2;
-		return;
-	    }
-			
-	    switch (l_trace->sensors_field[l_i]) {
-	    case 0: // value
-	    case 1: // min
-	    case 2: // max
-		l_trace->entry_size += 2;
-		break;
-	    case 3: //acc
-		l_trace->entry_size += 4;
-		break;
-	    case 4: //updates
-		l_trace->entry_size += 4;
-		break;
-	    case 5: //test
-		l_trace->entry_size += 2;
-		break;
-	    case 6: //rcnt
-		l_trace->entry_size += 4;
-		break;
-	    default:
-		break;
-	    }
-			
-	    l_num_index += 2;
-	    l_field_index++;
-	}
-		
-	if (*o_retval) break;
+        if(l_sensors_n > AMEC_TB_SENSORS_MAX)
+        {
+            *o_retval = COMPCODE_PARAM_OUT_OF_RANGE;
+            o_pu8Resp[0] = 0;  // mark second byte is bad.
+            o_pu8Resp[1] = 2;  // mark second byte is bad.
+            *o_pu16RespLength = 2;
+            break;
+        }
 
-	// Record number of sensors in this trace
-	l_trace->sensors_n = l_sensors_n;
-		
-	// Read Parameter configuration
-	for (l_i=0; l_i<l_parm_n; l_i++) {
-	    l_trace->parm_num[l_i] = CONVERT_UINT8_ARRAY_UINT16(
-		i_psMsg->au8CmdData_ptr[l_parm_index],
-            	i_psMsg->au8CmdData_ptr[l_parm_index+1]
-		);
+        if(l_parm_n > AMEC_TB_PARM_MAX)
+        {
+            *o_retval = COMPCODE_PARAM_OUT_OF_RANGE;
+            o_pu8Resp[0] = 0;  // mark fourth byte is bad.
+            o_pu8Resp[1] = 4;  //
+            *o_pu16RespLength = 2;
+        }
 
-	    if (l_trace->parm_num[l_i] >= AMEC_PARM_NUMBER_OF_PARAMETERS) { //cl185
-		*o_retval=COMPCODE_PARAM_OUT_OF_RANGE;
-		o_pu8Resp[0] = (UINT8)(l_parm_index>>8);  // mark which byte input is bad
-		o_pu8Resp[1] = (UINT8)(l_parm_index);  // mark which byte input is bad
-		*o_pu16RespLength = 2;
-		break;
-	    }
-	    l_parm = &g_amec_parm_list[l_trace->parm_num[l_i]]; //cl185
-	    l_trace->entry_size += l_parm->length * l_parm->vector_length;
-	    l_parm_index += 2;
-			
-	}
-		
-	if (*o_retval) break;
-		
-	// Record this number of parameters in the trace
-	l_trace->parm_n = l_parm_n;
+        if(l_oca_n > OCA_MAX_ENTRIES)
+        {
+            *o_retval = COMPCODE_PARAM_OUT_OF_RANGE;
+            o_pu8Resp[0] = 0;  // mark sixth byte is bad
+            o_pu8Resp[1] = 6;
+            *o_pu16RespLength = 2;
+            break;
+        }
 
-	l_trace->entry_n = l_trace->size/l_trace->entry_size;		
-	l_trace->read = 0;
-	l_trace->write = 0;
+        // Count valid sockets
+        l_count = l_socket_bitmap;
+        while(l_count)
+        {
+            if(l_count & 0x01)
+            {l_valid_sockets++;}
+            l_count >>= 1;
+        }
+        if(l_valid_sockets > MAX_NUM_CHIPS)
+        {
+            l_valid_sockets = MAX_NUM_CHIPS;
+        }
 
-	*o_pu16RespLength = 0;
-    } while (0);
-	
+        l_trace->entry_size = 0;
+
+        // Set pointers to input
+        l_num_index = 12; // start of sensor numbers
+        l_field_index = 12 + 2 * l_sensors_n;  // start of sensor fields
+        l_parm_index = l_field_index + l_sensors_n;  // start of parameters
+        l_oca_index = l_parm_index + 2 * l_parm_n;  // start of SCOMs
+
+        // Read sensor configuration
+        for(l_i = 0; l_i < l_sensors_n; l_i++)
+        {
+            l_trace->sensors_num[l_i] = CONVERT_UINT8_ARRAY_UINT16(
+                i_psMsg->au8CmdData_ptr[l_num_index],
+                i_psMsg->au8CmdData_ptr[l_num_index + 1]
+                );
+            l_trace->sensors_field[l_i] = i_psMsg->au8CmdData_ptr[l_field_index];
+
+            if(l_trace->sensors_num[l_i] >= G_amec_sensor_count)
+            {
+                *o_retval = COMPCODE_PARAM_OUT_OF_RANGE;
+                o_pu8Resp[0] = (UINT8)(l_num_index >> 8);  // mark which byte input is bad
+                o_pu8Resp[1] = (UINT8)(l_num_index);  // mark which byte input is bad
+                *o_pu16RespLength = 2;
+                break;
+            }
+
+            if(l_trace->sensors_field[l_i] > 6)
+            {
+                *o_retval = COMPCODE_PARAM_OUT_OF_RANGE;
+                o_pu8Resp[0] = (UINT8)(l_field_index >> 8);  // mark which byte input is bad
+                o_pu8Resp[1] = (UINT8)(l_field_index);  // mark which byte input is bad
+                *o_pu16RespLength = 2;
+                return;
+            }
+
+            switch(l_trace->sensors_field[l_i])
+            {
+                case 0: // value
+                case 1: // min
+                case 2: // max
+                    l_trace->entry_size += 2;
+                    break;
+                case 3: //acc
+                    l_trace->entry_size += 4;
+                    break;
+                case 4: //updates
+                    l_trace->entry_size += 4;
+                    break;
+                case 5: //test
+                    l_trace->entry_size += 2;
+                    break;
+                case 6: //rcnt
+                    l_trace->entry_size += 4;
+                    break;
+                default:
+                    break;
+            }
+
+            l_num_index += 2;
+            l_field_index++;
+        }
+
+        if(*o_retval) break;
+
+        // Record number of sensors in this trace
+        l_trace->sensors_n = l_sensors_n;
+
+        // Read Parameter configuration
+        for(l_i = 0; l_i < l_parm_n; l_i++)
+        {
+            l_trace->parm_num[l_i] = CONVERT_UINT8_ARRAY_UINT16(
+                i_psMsg->au8CmdData_ptr[l_parm_index],
+                i_psMsg->au8CmdData_ptr[l_parm_index + 1]
+                );
+
+            if(l_trace->parm_num[l_i] >= AMEC_PARM_NUMBER_OF_PARAMETERS)
+            {
+                *o_retval = COMPCODE_PARAM_OUT_OF_RANGE;
+                o_pu8Resp[0] = (UINT8)(l_parm_index >> 8);  // mark which byte input is bad
+                o_pu8Resp[1] = (UINT8)(l_parm_index);  // mark which byte input is bad
+                *o_pu16RespLength = 2;
+                break;
+            }
+            l_parm = &g_amec_parm_list[l_trace->parm_num[l_i]];
+            l_trace->entry_size += l_parm->length * l_parm->vector_length;
+            l_parm_index += 2;
+        }
+
+        if(*o_retval) break;
+
+        // Record this number of parameters in the trace
+        l_trace->parm_n = l_parm_n;
+
+        l_trace->entry_n = l_trace->size / l_trace->entry_size;
+        l_trace->read = 0;
+        l_trace->write = 0;
+
+        *o_pu16RespLength = 0;
+    } while(0);
+
     return;
 }
 
 void amec_tb_cmd_start_recording(const IPMIMsg_t *i_psMsg,
-				 UINT8 *o_pu8Resp,
-				 UINT16 *o_pu16RespLength,
-				 UINT8 *o_retval)
+                                 UINT8 *o_pu8Resp,
+                                 UINT16 *o_pu16RespLength,
+                                 UINT8 *o_retval)
 {
     g_amec_tb_record = 1;
     *o_pu16RespLength = 0;
-    *o_retval=COMPCODE_NORMAL;		
+    *o_retval=COMPCODE_NORMAL;
 }
 
 void amec_tb_cmd_stop_recording(const IPMIMsg_t *i_psMsg,
-				UINT8 *o_pu8Resp,
-				UINT16 *o_pu16RespLength,
-				UINT8 *o_retval)
+                                UINT8 *o_pu8Resp,
+                                UINT16 *o_pu16RespLength,
+                                UINT8 *o_retval)
 {
     g_amec_tb_record = 0;
     *o_pu16RespLength = 0;
-    *o_retval=COMPCODE_NORMAL;		
+    *o_retval=COMPCODE_NORMAL;
 }
 
-
 void amec_tb_cmd_read(const IPMIMsg_t *i_psMsg,
-		      UINT8 *o_pu8Resp,
-		      UINT16 *o_pu16RespLength,
-		      UINT8 *o_retval)
+                      UINT8 *o_pu8Resp,
+                      UINT16 *o_pu16RespLength,
+                      UINT8 *o_retval)
 {
     /*------------------------------------------------------------------------*/
     /*  Local Variables                                                       */
@@ -1398,36 +1395,41 @@ void amec_tb_cmd_read(const IPMIMsg_t *i_psMsg,
     /*------------------------------------------------------------------------*/
     do
     {
-	*o_retval=COMPCODE_NORMAL; /* assume no error */
+        *o_retval = COMPCODE_NORMAL; /* assume no error */
 
-	// Parse input command
-	l_trace = AMEC_tb_get_by_guid(i_psMsg->au8CmdData_ptr[1]);
-	if (l_trace == NULL) {
-	    *o_retval=COMPCODE_PARAM_OUT_OF_RANGE;
-	    *o_pu16RespLength = 0;
-	    break;
-	}
-	l_j = CONVERT_UINT8_ARRAY_UINT32(
-	    i_psMsg->au8CmdData_ptr[2],
-	    i_psMsg->au8CmdData_ptr[3],
-	    i_psMsg->au8CmdData_ptr[4],
-    	    i_psMsg->au8CmdData_ptr[5]
-	    );
+        // Parse input command
+        l_trace = AMEC_tb_get_by_guid(i_psMsg->au8CmdData_ptr[1]);
+        if(l_trace == NULL)
+        {
+            *o_retval = COMPCODE_PARAM_OUT_OF_RANGE;
+            *o_pu16RespLength = 0;
+            break;
+        }
+        l_j = CONVERT_UINT8_ARRAY_UINT32(
+            i_psMsg->au8CmdData_ptr[2],
+            i_psMsg->au8CmdData_ptr[3],
+            i_psMsg->au8CmdData_ptr[4],
+            i_psMsg->au8CmdData_ptr[5]
+            );
 
-	// Copy bytes to be read into response buffer
-	for (l_i=0; l_i < l_maxresponse; l_i++, l_j++){
-	    if (l_j >= l_trace->size) {l_j = 0;} // wrap around to beginning of buffer.
-	    o_pu8Resp[l_i]=l_trace->bytes[l_j];
-	}
-	*o_pu16RespLength = l_i;
-    } while (0);
+        // Copy bytes to be read into response buffer
+        for(l_i = 0; l_i < l_maxresponse; l_i++, l_j++)
+        {
+            if(l_j >= l_trace->size) // wrap around to beginning of buffer.
+            {
+                l_j = 0;
+            }
+            o_pu8Resp[l_i] = l_trace->bytes[l_j];
+        }
+        *o_pu16RespLength = l_i;
+    } while(0);
 }
 
 
 void amec_tb_cmd_get_config(const IPMIMsg_t *i_psMsg,
-			    UINT8 *o_pu8Resp,
-			    UINT16 *o_pu16RespLength,
-			    UINT8 *o_retval)
+                            UINT8 *o_pu8Resp,
+                            UINT16 *o_pu16RespLength,
+                            UINT8 *o_retval)
 {
     /*------------------------------------------------------------------------*/
     /*  Local Variables                                                       */
@@ -1436,67 +1438,72 @@ void amec_tb_cmd_get_config(const IPMIMsg_t *i_psMsg,
     UINT8 l_i = 0;
 
     /*------------------------------------------------------------------------*/
-    /*  Code                                                       			  */
+    /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-	
+
     do
     {
-	*o_retval = COMPCODE_NORMAL;
+        *o_retval = COMPCODE_NORMAL;
 
-	l_trace = AMEC_tb_get_by_guid(i_psMsg->au8CmdData_ptr[1]);
-	if (l_trace == NULL) {
-	    *o_retval=COMPCODE_PARAM_OUT_OF_RANGE;
-	    *o_pu16RespLength = 0;
-	    break;
-	}
-		
-	o_pu8Resp[l_i++] = (UINT8)((UINT32)l_trace->bytes>>24);
-	o_pu8Resp[l_i++] = (UINT8)((UINT32)l_trace->bytes>>16);
-	o_pu8Resp[l_i++] = (UINT8)((UINT32)l_trace->bytes>>8);
-	o_pu8Resp[l_i++] = (UINT8)((UINT32)l_trace->bytes);
-	o_pu8Resp[l_i++] = (UINT8)(l_trace->size>>24);
-	o_pu8Resp[l_i++] = (UINT8)(l_trace->size>>16);
-	o_pu8Resp[l_i++] = (UINT8)(l_trace->size>>8);
-	o_pu8Resp[l_i++] = (UINT8)(l_trace->size);
-	o_pu8Resp[l_i++] = (UINT8)(l_trace->entry_size>>24);
-	o_pu8Resp[l_i++] = (UINT8)(l_trace->entry_size>>16);
-	o_pu8Resp[l_i++] = (UINT8)(l_trace->entry_size>>8);
-	o_pu8Resp[l_i++] = (UINT8)(l_trace->entry_size);
-	o_pu8Resp[l_i++] = (UINT8)(l_trace->entry_n>>24);
-	o_pu8Resp[l_i++] = (UINT8)(l_trace->entry_n>>16);
-	o_pu8Resp[l_i++] = (UINT8)(l_trace->entry_n>>8);
-	o_pu8Resp[l_i++] = (UINT8)(l_trace->entry_n);
-	// 32-bit oca_offset field is always 0 on POWER8
-	o_pu8Resp[l_i++] = 0;
-	o_pu8Resp[l_i++] = 0;
-	o_pu8Resp[l_i++] = 0;
-	o_pu8Resp[l_i++] = 0;
-	o_pu8Resp[l_i++] = (UINT8)((UINT32)l_trace->write>>24);
-	o_pu8Resp[l_i++] = (UINT8)((UINT32)l_trace->write>>16);
-	o_pu8Resp[l_i++] = (UINT8)((UINT32)l_trace->write>>8);
-	o_pu8Resp[l_i++] = (UINT8)((UINT32)l_trace->write);
-	// 32-bit write_oca field is always 0 on POWER8
-	o_pu8Resp[l_i++] = 0;
-	o_pu8Resp[l_i++] = 0;
-	o_pu8Resp[l_i++] = 0;
-	o_pu8Resp[l_i++] = 0;
-	o_pu8Resp[l_i++] = (UINT8)((UINT32)l_trace->read>>24);
-	o_pu8Resp[l_i++] = (UINT8)((UINT32)l_trace->read>>16);
-	o_pu8Resp[l_i++] = (UINT8)((UINT32)l_trace->read>>8);
-	o_pu8Resp[l_i++] = (UINT8)((UINT32)l_trace->read);
-	o_pu8Resp[l_i++] = l_trace->sensors_n;
-	o_pu8Resp[l_i++] = l_trace->parm_n;
-	// oca_n field from POWER7 is always 0 on POWER8
-	o_pu8Resp[l_i++] = 0;
-		
-	// FIXME: this should move to another command
-	o_pu8Resp[l_i++] = g_amec_tb_record;
-	o_pu8Resp[l_i++] = g_amec_tb_continuous;
-	o_pu8Resp[l_i++] = (UINT8)((UINT16)AMEC_TB_SENSORS_MAX);
-	o_pu8Resp[l_i++] = (UINT8)((UINT16)OCA_MAX_ENTRIES);
-	o_pu8Resp[l_i++] = (UINT8)(MAX_NUM_CHIPS);
-	o_pu8Resp[l_i++] = (UINT8)(AMEC_TB_PARM_MAX);
-	*o_pu16RespLength = l_i;
+        l_trace = AMEC_tb_get_by_guid(i_psMsg->au8CmdData_ptr[1]);
+        if(l_trace == NULL)
+        {
+            *o_retval = COMPCODE_PARAM_OUT_OF_RANGE;
+            *o_pu16RespLength = 0;
+            break;
+        }
 
-    } while (0);
+        o_pu8Resp[l_i++] = (UINT8)((UINT32)l_trace->bytes >> 24);
+        o_pu8Resp[l_i++] = (UINT8)((UINT32)l_trace->bytes >> 16);
+        o_pu8Resp[l_i++] = (UINT8)((UINT32)l_trace->bytes >> 8);
+        o_pu8Resp[l_i++] = (UINT8)((UINT32)l_trace->bytes);
+        o_pu8Resp[l_i++] = (UINT8)(l_trace->size >> 24);
+        o_pu8Resp[l_i++] = (UINT8)(l_trace->size >> 16);
+        o_pu8Resp[l_i++] = (UINT8)(l_trace->size >> 8);
+        o_pu8Resp[l_i++] = (UINT8)(l_trace->size);
+        o_pu8Resp[l_i++] = (UINT8)(l_trace->entry_size >> 24);
+        o_pu8Resp[l_i++] = (UINT8)(l_trace->entry_size >> 16);
+        o_pu8Resp[l_i++] = (UINT8)(l_trace->entry_size >> 8);
+        o_pu8Resp[l_i++] = (UINT8)(l_trace->entry_size);
+        o_pu8Resp[l_i++] = (UINT8)(l_trace->entry_n >> 24);
+        o_pu8Resp[l_i++] = (UINT8)(l_trace->entry_n >> 16);
+        o_pu8Resp[l_i++] = (UINT8)(l_trace->entry_n >> 8);
+        o_pu8Resp[l_i++] = (UINT8)(l_trace->entry_n);
+        // 32-bit oca_offset field is always 0 on POWER8
+        o_pu8Resp[l_i++] = 0;
+        o_pu8Resp[l_i++] = 0;
+        o_pu8Resp[l_i++] = 0;
+        o_pu8Resp[l_i++] = 0;
+        o_pu8Resp[l_i++] = (UINT8)((UINT32)l_trace->write >> 24);
+        o_pu8Resp[l_i++] = (UINT8)((UINT32)l_trace->write >> 16);
+        o_pu8Resp[l_i++] = (UINT8)((UINT32)l_trace->write >> 8);
+        o_pu8Resp[l_i++] = (UINT8)((UINT32)l_trace->write);
+        // 32-bit write_oca field is always 0 on POWER8
+        o_pu8Resp[l_i++] = 0;
+        o_pu8Resp[l_i++] = 0;
+        o_pu8Resp[l_i++] = 0;
+        o_pu8Resp[l_i++] = 0;
+        o_pu8Resp[l_i++] = (UINT8)((UINT32)l_trace->read >> 24);
+        o_pu8Resp[l_i++] = (UINT8)((UINT32)l_trace->read >> 16);
+        o_pu8Resp[l_i++] = (UINT8)((UINT32)l_trace->read >> 8);
+        o_pu8Resp[l_i++] = (UINT8)((UINT32)l_trace->read);
+        o_pu8Resp[l_i++] = l_trace->sensors_n;
+        o_pu8Resp[l_i++] = l_trace->parm_n;
+        // oca_n field from POWER7 is always 0 on POWER8
+        o_pu8Resp[l_i++] = 0;
+
+        // TODO: this should move to another command
+        o_pu8Resp[l_i++] = g_amec_tb_record;
+        o_pu8Resp[l_i++] = g_amec_tb_continuous;
+        o_pu8Resp[l_i++] = (UINT8)((UINT16)AMEC_TB_SENSORS_MAX);
+        o_pu8Resp[l_i++] = (UINT8)((UINT16)OCA_MAX_ENTRIES);
+        o_pu8Resp[l_i++] = (UINT8)(MAX_NUM_CHIPS);
+        o_pu8Resp[l_i++] = (UINT8)(AMEC_TB_PARM_MAX);
+        *o_pu16RespLength = l_i;
+
+    } while(0);
 }
+
+/*----------------------------------------------------------------------------*/
+/* End                                                                        */
+/*----------------------------------------------------------------------------*/
