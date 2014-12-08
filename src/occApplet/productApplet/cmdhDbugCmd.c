@@ -1,28 +1,27 @@
-/******************************************************************************
-// @file cmdhDebugCmd.c
-// @brief CMDH Debug Command
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section cmdhDbugCmd.c CMDHDEBUGCMD.c
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @th00d             thallet   04/25/2012  created
- *   @nh004   864941    neilhsu   12/20/2012  Support get/delete errl & added trace info
- *   @th031   878471    thallet   04/15/2013  Centaur Throttles
- *   @th032             thallet   04/26/2013  Tuleta HW Bringup
- *   @th036   881677    thallet   05/07/2013  Cleanup
- *   @gm006  SW224414   milesg    09/16/2013  Reset and FFDC improvements
- *   @rt001  897459     tapiar    10/02/2013  Update module ids with unique ids
- *   @fk002  905632     fmkassem  11/05/2013  Remove CriticalPathMonitor code
- *
- *  @endverbatim
- *
- *///*************************************************************************/
-
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occApplet/productApplet/cmdhDbugCmd.c $                   */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* COPYRIGHT International Business Machines Corp. 2011,2014              */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
 //*************************************************************************
 // Includes
@@ -53,7 +52,7 @@
 //*************************************************************************
 // Defines/Enums
 //*************************************************************************
-#define CMDH_DBUG_APPLET_ID  "Cmdh_Dbug_Aplt\0"
+#define CMDH_DBUG_APPLET_ID "Cmdh_Dbug_Aplt\0"
 
 //*************************************************************************
 // Structures
@@ -77,11 +76,9 @@
 //
 // Description: Injects an error
 //
-// Flow:  --/--/--    FN=
-//
 // End Function Specification
 void dbug_err_inject(const cmdh_fsp_cmd_t * i_cmd_ptr,
-                           cmdh_fsp_rsp_t * i_rsp_ptr)  // @nh004c
+                           cmdh_fsp_rsp_t * i_rsp_ptr)
 {
     errlHndl_t l_err;
     cmdh_dbug_inject_errl_query_t *l_cmd_ptr = (cmdh_dbug_inject_errl_query_t*) i_cmd_ptr;
@@ -90,7 +87,7 @@ void dbug_err_inject(const cmdh_fsp_cmd_t * i_cmd_ptr,
     i_rsp_ptr->data_length[1] = 0;
     i_rsp_ptr->rc = ERRL_RC_SUCCESS;
 
-    if(!strncmp(l_cmd_ptr->comp, "RST", OCC_TRACE_NAME_SIZE)) //@gm006
+    if(!strncmp(l_cmd_ptr->comp, "RST", OCC_TRACE_NAME_SIZE))
     {
         l_err = createErrl(TEST_APLT_MODID_ERRLTEST,     //modId
                            INTERNAL_FAILURE,             //reasoncode
@@ -151,11 +148,9 @@ void dbug_err_inject(const cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // Description: Injects an error
 //
-// Flow:  --/--/--    FN=
-//
 // End Function Specification
 void dbug_centaur_dump(const cmdh_fsp_cmd_t * i_cmd_ptr,
-                             cmdh_fsp_rsp_t * i_rsp_ptr)  // @nh004c
+                             cmdh_fsp_rsp_t * i_rsp_ptr)
 {
     uint16_t l_datalen = 0;
     uint8_t l_jj=0;
@@ -169,9 +164,9 @@ void dbug_centaur_dump(const cmdh_fsp_cmd_t * i_cmd_ptr,
         MemData * l_sensor_cache_ptr =
             cent_get_centaur_data_ptr(l_jj);
 
-        memcpy((void *) &(i_rsp_ptr->data[l_jj*sizeof(MemData)]),
-                (void *) l_sensor_cache_ptr,
-                sizeof(MemData));
+        memcpy((void *)&(i_rsp_ptr->data[l_jj*sizeof(MemData)]),
+               (void *)l_sensor_cache_ptr,
+               sizeof(MemData));
     }
 
     // Fill out the rest of the response data
@@ -179,18 +174,14 @@ void dbug_centaur_dump(const cmdh_fsp_cmd_t * i_cmd_ptr,
     i_rsp_ptr->data_length[1] = CONVERT_UINT16_UINT8_LOW(l_datalen);
     i_rsp_ptr->rc             = ERRL_RC_SUCCESS;
 
-
     return;
 }
-
 
 // Function Specification
 //
 // Name:  dbug_apss_dump
 //
 // Description: Dumps the APSS power measurement raw ADC / GPIO data
-//
-// Flow:  --/--/--    FN=
 //
 // End Function Specification
 void dbug_apss_dump(const cmdh_fsp_cmd_t * i_cmd_ptr,
@@ -202,26 +193,22 @@ void dbug_apss_dump(const cmdh_fsp_cmd_t * i_cmd_ptr,
     l_datalen = (sizeof(apssPwrMeasStruct_t));
 
     memcpy((void *) &(i_rsp_ptr->data[0]),
-                (void *) &G_apss_pwr_meas,
-                sizeof(apssPwrMeasStruct_t));
+           (void *) &G_apss_pwr_meas,
+           sizeof(apssPwrMeasStruct_t));
 
     // Fill out the rest of the response data
     i_rsp_ptr->data_length[0] = CONVERT_UINT16_UINT8_HIGH(l_datalen);
     i_rsp_ptr->data_length[1] = CONVERT_UINT16_UINT8_LOW(l_datalen);
     i_rsp_ptr->rc             = ERRL_RC_SUCCESS;
 
-
     return;
 }
-
 
 // Function Specification
 //
 // Name:  dbug_proc_data_dump
 //
 // Description: Dumps the processor core data
-//
-// Flow:  --/--/--    FN=
 //
 // End Function Specification
 void dbug_proc_data_dump(const cmdh_fsp_cmd_t * i_cmd_ptr,
@@ -240,15 +227,14 @@ void dbug_proc_data_dump(const cmdh_fsp_cmd_t * i_cmd_ptr,
             proc_get_bulk_core_data_ptr(l_jj);
 
         memcpy((void *) &(i_rsp_ptr->data[l_jj*sizeof(CoreData)]),
-                (void *) l_core_data_ptr,
-                sizeof(CoreData));
+               (void *) l_core_data_ptr,
+               sizeof(CoreData));
     }
 
     // Fill out the rest of the response data
     i_rsp_ptr->data_length[0] = CONVERT_UINT16_UINT8_HIGH(l_datalen);
     i_rsp_ptr->data_length[1] = CONVERT_UINT16_UINT8_LOW(l_datalen);
     i_rsp_ptr->rc             = ERRL_RC_SUCCESS;
-
 
     return;
 }
@@ -258,8 +244,6 @@ void dbug_proc_data_dump(const cmdh_fsp_cmd_t * i_cmd_ptr,
 // Name:  cmdhDbugCmd
 //
 // Description:   Entry-point for CMDH Debug Commands
-//
-// Flow: --/--/--    FN=
 //
 // End Function Specification
 errlHndl_t cmdhDbugCmd(void * i_arg)
@@ -281,7 +265,7 @@ errlHndl_t cmdhDbugCmd(void * i_arg)
     l_rsp_ptr->data_length[0] = 0;
     l_rsp_ptr->data_length[1] = 0;
 
-    switch ( l_sub_cmd )
+    switch (l_sub_cmd)
     {
         case DBUG_INJECT_ERRL:
             dbug_err_inject(l_cmd_ptr, l_rsp_ptr);
@@ -324,18 +308,12 @@ errlHndl_t cmdhDbugCmd(void * i_arg)
         default:
             l_rsp_ptr->rc = ERRL_RC_INVALID_DATA;
             break;
-    } //end switch
-
+    }
 
     return l_errl;
 }
 
-
-
-
-
 /*****************************************************************************/
 // Image Header
 /*****************************************************************************/
-IMAGE_HEADER (G_cmdhDbugCmd,cmdhDbugCmd,CMDH_DBUG_APPLET_ID,OCC_APLT_CMDH_DBUG);
-
+IMAGE_HEADER(G_cmdhDbugCmd, cmdhDbugCmd, CMDH_DBUG_APPLET_ID, OCC_APLT_CMDH_DBUG);

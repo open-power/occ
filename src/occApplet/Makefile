@@ -1,31 +1,35 @@
-#  @file Makefile
+# IBM_PROLOG_BEGIN_TAG
+# This is an automatically generated prolog.
 #
-#  @brief OCC Applet Makefile
+# $Source: src/occApplet/Makefile $
 #
+# OpenPOWER OnChipController Project
+#
+# Contributors Listed Below - COPYRIGHT 2011,2014
+# [+] Google Inc.
+# [+] International Business Machines Corp.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# permissions and limitations under the License.
+#
+# IBM_PROLOG_END_TAG
 
-#  @page ChangeLogs Change Logs
-#  @section Makefile
-#  @verbatim
-#
-#
-# Change Log ******************************************************************
-# Flag     Defect/Feature  User        Date         Description
-# ------   --------------  ----------  ------------ -----------
-#  @pb001                  pbavari     07/21/2011   Created
-#  @rc003                  rickylie    02/03/2012   Verify & Clean Up OCC Headers & Comments
-#
-# @endverbatim
-#
-
-# >> gitprep
 ifndef ROOTPATH
-ROOTPATH = $(shell pwd)/../    
+ROOTPATH = $(shell pwd)/../
 export OCCROOT = $(ROOTPATH)
 endif
-# << gitprep
 
 #*******************************************************************************
-# mk variable Declaration
+# Variables
 #*******************************************************************************
 SUBDIRS = productApplet testApplet
 CLEANCMD = $(MAKE) clean -C $(dir); 
@@ -44,10 +48,10 @@ all:
 .PHONY : combineImage
 combineImage:
 	 $(foreach dir,$(SUBDIRS),$(COMBINEIMAGE))
-	
+
 #*******************************************************************************
 # Clean
 #*******************************************************************************
 clean: 
 	$(foreach dir,$(SUBDIRS),$(CLEANCMD))
-	
+

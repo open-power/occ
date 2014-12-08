@@ -1,25 +1,28 @@
-/******************************************************************************
-// @file dpssInitApplet.c
-// @brief DPSS initialization product applet
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section dpssInitApplet.c DPSSINITAPPLET.c
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @at000             alvinwan  12/07/2011  created
- *   @dw000              dwoodham  12/16/2011  Update call to IMAGE_HEADER
- *   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
- *   @nh001             neilhsu   05/23/2012  Add missing error log tags 
- *
- *  @endverbatim
- *
- *///*************************************************************************/
- 
- 
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occApplet/productApplet/dpssInitApplet.c $                */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* COPYRIGHT International Business Machines Corp. 2011,2014              */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
+
 //*************************************************************************
 // Includes
 //*************************************************************************
@@ -28,10 +31,10 @@
 #include <dpss.h>
 #include <trac.h>               // For traces
 #include <occ_sys_config.h>
-#include <occ_service_codes.h>  // for SSX_GENERIC_FAILURE  // @nh001a
+#include <occ_service_codes.h>  // for SSX_GENERIC_FAILURE
 #include <pss_service_codes.h>
 #include <state.h>
-#include <appletId.h>           // For applet ID num dw000a
+#include <appletId.h>           // For applet ID num
 
 //*************************************************************************
 // Externs
@@ -72,8 +75,6 @@ extern gpeDpssCommandStream_t G_gpe_dpss_read_status;
 // Description: Initializes DPSS fans and oversubscription interrupt
 //   If errHndl is returned, caller should call this function again,
 //   one time only, in the hopes that it will work on the retry.
-//
-// Flow:  08/03/11    FN=dpss_initialize
 //
 // End Function Specification
 errlHndl_t dpss_initialize(void)
@@ -185,7 +186,6 @@ errlHndl_t dpss_initialize(void)
 
         // Check for errors and invalid DPSS responses.
         // (Valid DPSS responses should be an echo of the cmd & data passed in).
-
         if ( (l_gpe_dpss_stream_dpss_config[i].gpe_error.rc != 0) ||
              (l_gpe_dpss_stream_dpss_config[i].dpss_msg_stream.response[0] != l_gpe_dpss_stream_dpss_config[i].dpss_msg_stream.command[0]) ||
              (l_gpe_dpss_stream_dpss_config[i].dpss_msg_stream.response[1] != l_gpe_dpss_stream_dpss_config[i].dpss_msg_stream.command[1]) ||
@@ -225,7 +225,7 @@ errlHndl_t dpss_initialize(void)
     }
 
     return l_err;
-} // end dpss_initialize()
+}
 
 // Function Specification
 //
@@ -234,10 +234,6 @@ errlHndl_t dpss_initialize(void)
 // Description:
 // Entry-point for enabling DPSS functionality.
 // Initializes the DPSS chip.  Starts the "DPSS Read Status" RTLS task.
-//
-// Flow: 08/03/11    FN=dpss_initialize
-// Modified from original flow (approved, T. Hallett, 10/03/2011).
-// Further mods recommended in DPSS code review 10/19/2011.
 //
 // End Function Specification
 errlHndl_t dpssInitApplet(void * i_arg)
@@ -261,15 +257,13 @@ errlHndl_t dpssInitApplet(void * i_arg)
         if (l_errl)
         {
             TRAC_ERR("dpss_initialize failed again!  OCC will be reset.");
-
             // Log the error with its original unrecoverable severity
             commitErrl( &l_errl );
-
-            REQUEST_RESET();     // @th006
+            REQUEST_RESET();
         }
     }
 
-    if( !l_errl )
+    if (!l_errl)
     {
         TRAC_INFO("...DPSS initialized.");
         TRAC_INFO("Enabling DPSS Read Status RTLS task.");
@@ -289,16 +283,10 @@ errlHndl_t dpssInitApplet(void * i_arg)
     }
 
     return l_errl;
-} // end dpssInitApplet
-
-
-
-
+}
 
 /*****************************************************************************/
 // Image Header
 /*****************************************************************************/
-// @dw000 - Add applet ID arg to IMAGE_HEADER macro call
-// TODO: Change this if/when DPSS is enabled.
-IMAGE_HEADER (G_dpssInitApplet,dpssInitApplet,DPSSINITAPPLET_ID,OCC_APLT_INVALID);
+IMAGE_HEADER(G_dpssInitApplet, dpssInitApplet, DPSSINITAPPLET_ID, OCC_APLT_INVALID);
 

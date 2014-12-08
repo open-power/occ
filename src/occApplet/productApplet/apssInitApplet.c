@@ -1,31 +1,27 @@
-/******************************************************************************
-// @file apssInitApplet.c
-// @brief APSS initialization product applet
-*/
-
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section apssInitApplet.c APSSINITAPPLET.c
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @pb004             pbavari   09/13/2011  created
- *   @pb009             pbavari   10/31/2011  Moved apss_initialize retry
- *                                            inside applet
- *   @dw000             dwoodham  12/12/2011  Update call to IMAGE_HEADER
- *   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
- *   @nh001             neilhsu   05/23/2012  Add missing error log tags
- *   @at009  859308     alvinwan  10/15/2012  Added tracepp support
- *   @ly003  861535     lychen    11/19/2012  Remove APSS configuration/gathering of Altitude & Temperature
- *   @th042   892056    thallet   07/19/2013  Send OCC to safe mode if first APSS GPE fails
- *   @at023  910877     alvinwan  01/09/2014  Excessive fan increase requests error for mfg 
- *   @fk005  911760     fmkassem  01/21/2014  APSS retry support.
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occApplet/productApplet/apssInitApplet.c $                */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* COPYRIGHT International Business Machines Corp. 2011,2014              */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
 //*************************************************************************
 // Includes
@@ -33,10 +29,10 @@
 #include <common_types.h>       // imageHdr_t declaration and image header macro
 #include <errl.h>               // For error handle
 #include <trac.h>               // For traces
-#include <occ_service_codes.h>  // for SSX_GENERIC_FAILURE  // @nh001a
+#include <occ_service_codes.h>  // for SSX_GENERIC_FAILURE
 #include <pss_service_codes.h>  // APSS module ids
 #include <apss.h>               // APSS defines
-#include <appletId.h>           // For applet ID num dw000a
+#include <appletId.h>           // For applet ID num
 #include "ssx_io.h"             // For printf
 #include <state.h>
 
@@ -54,6 +50,7 @@ extern apss_complete_args_t G_gpe_complete_pwr_meas_read_args;
 extern PoreEntryPoint GPE_apss_start_pwr_meas_read;
 extern PoreEntryPoint GPE_apss_continue_pwr_meas_read;
 extern PoreEntryPoint GPE_apss_complete_pwr_meas_read;
+
 //*************************************************************************
 // Macros
 //*************************************************************************
@@ -79,7 +76,6 @@ extern PoreEntryPoint GPE_apss_complete_pwr_meas_read;
 // Functions
 //*************************************************************************
 
-
 // Function Specification
 //
 // Name:  apss_initialize
@@ -87,10 +83,6 @@ extern PoreEntryPoint GPE_apss_complete_pwr_meas_read;
 // Description: Completes all APSS initialization including GPIOs, altitude and
 //              mode
 //
-// Flow:  07/20/11    FN=apss_initialize
-//
-// changeTags: @fk005c, 
-// 
 // End Function Specification
 errlHndl_t apss_initialize()
 {
@@ -144,7 +136,6 @@ errlHndl_t apss_initialize()
     // Only continue if completed without errors...
     if (ASYNC_REQUEST_STATE_COMPLETE == request.request.completion_state)
     {
-        // @ly003c - start
         // Setup the composite mode structure to pass to the GPE program
         G_gpe_apss_set_composite_mode_args.error.error = 0;
         G_gpe_apss_set_composite_mode_args.error.ffdc = 0;
@@ -166,8 +157,6 @@ errlHndl_t apss_initialize()
         pore_flex_schedule(&request);
 
         // Check for a timeout, will create the error log later
-        // NOTE: As of 2013/07/16, simics will still fail here on a OCC reset
-
         if(ASYNC_REQUEST_STATE_TIMED_OUT == request.request.completion_state)
         {
             // For whatever reason, we hit a timeout.  It could be either
@@ -197,20 +186,19 @@ errlHndl_t apss_initialize()
                                INTERNAL_FAILURE,                // i_reasonCode,
                                ERC_PSS_COMPOSITE_MODE_FAIL,     // extended reason code
                                ERRL_SEV_UNRECOVERABLE,          // i_severity
-                               NULL,                            // TODO - tracDesc_t i_trace,
+                               NULL,                            // i_trace,
                                0x0000,                          // i_traceSz,
                                request.request.completion_state,       // i_userData1,
                                request.request.abort_state);           // i_userData2
             addUsrDtlsToErrl(l_err,
                              (uint8_t*)&G_gpe_apss_set_composite_mode_args,
                              sizeof(G_gpe_apss_set_composite_mode_args),
-                             ERRL_STRUCT_VERSION_1,             // TODO
+                             ERRL_STRUCT_VERSION_1,
                              ERRL_USR_DTL_TRACE_DATA);
 
             // Returning an error log will cause us to go to safe
             // state so we can report error to FSP
         }
-        // @ly003c - end
 
 
         TRAC_INFO("apss_initialize: Creating request G_meas_start_request.");
@@ -223,8 +211,8 @@ errlHndl_t apss_initialize()
                          NULL,                                        // callback
                          NULL,                                        // callback arg
                          ASYNC_CALLBACK_IMMEDIATE);                   // options
-						 
-        TRAC_INFO("apss_initialize: Creating request G_meas_cont_request.");						 
+
+        TRAC_INFO("apss_initialize: Creating request G_meas_cont_request.");
         //Create the request for measure continue. Scheduling will happen in apss.c
         pore_flex_create(&G_meas_cont_request,
                          &G_pore_gpe0_queue,                          // request
@@ -235,7 +223,7 @@ errlHndl_t apss_initialize()
                          NULL,                                        // callback arg
                          ASYNC_CALLBACK_IMMEDIATE);                   // options
 
-        TRAC_INFO("apss_initialize: Creating request G_meas_complete_request.");						 
+        TRAC_INFO("apss_initialize: Creating request G_meas_complete_request.");
         //Create the request for measure complete. Scheduling will happen in apss.c
         pore_flex_create(&G_meas_complete_request,
                          &G_pore_gpe0_queue,                          // queue
@@ -245,7 +233,7 @@ errlHndl_t apss_initialize()
                          (AsyncRequestCallback)reformat_meas_data,    // callback,
                          (void*)NULL,                                 // callback arg
                          ASYNC_CALLBACK_IMMEDIATE);                   // options
-						 
+
     }
     else
     {
@@ -269,7 +257,7 @@ errlHndl_t apss_initialize()
         addUsrDtlsToErrl(l_err,
                          (uint8_t*)&G_gpe_apss_initialize_gpio_args,
                          sizeof(G_gpe_apss_initialize_gpio_args),
-                         ERRL_STRUCT_VERSION_1,        // TODO
+                         ERRL_STRUCT_VERSION_1,
                          ERRL_USR_DTL_TRACE_DATA);
 
         // Returning an error log will cause us to go to safe
@@ -286,8 +274,6 @@ errlHndl_t apss_initialize()
 //
 //  Description: Entry point function
 //
-//  Flow: --/--/----     FN= None
-//
 // End Function Specification
 errlHndl_t apssInitApplet(void * i_arg)
 {
@@ -296,17 +282,17 @@ errlHndl_t apssInitApplet(void * i_arg)
     // Initialize APSS
     l_err = apss_initialize();
 
-    if( NULL != l_err)
+    if(NULL != l_err)
     {
-        TRAC_ERR("APSS Init failed! (retrying) ErrLog[%p]", l_err );
+        TRAC_ERR("APSS Init failed! (retrying) ErrLog[%p]", l_err);
         setErrlSevToInfo(l_err);
         // commit & delete
-        commitErrl( &l_err );
+        commitErrl(&l_err);
 
         // Retry one more time
         l_err = apss_initialize();
 
-        if( NULL != l_err)
+        if(NULL != l_err)
         {
             TRAC_ERR("APSS Init failed again! ErrLog[%p]",l_err);
         }
@@ -314,9 +300,9 @@ errlHndl_t apssInitApplet(void * i_arg)
 
     return l_err;
 }
+
 /*****************************************************************************/
 // Image Header
 /*****************************************************************************/
-// @dw000 - Add applet ID arg to IMAGE_HEADER macro call
-IMAGE_HEADER (G_apss_initialize,apssInitApplet,APSS_INITIALIZE_ID,OCC_APLT_APSS_INIT);
+IMAGE_HEADER(G_apss_initialize, apssInitApplet, APSS_INITIALIZE_ID, OCC_APLT_APSS_INIT);
 
