@@ -1,68 +1,40 @@
-/******************************************************************************
-// @file dpss.h
-// @brief OCC DPSS component header file.
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section  _dpss_h dpss.h
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *                      dwoodham  09/21/2011  Created
- *   @at000             atwang    12/07/2011  Moved start_dpss and dpss_initialize
- *                                            into a product applet
- *   @rc001             rickylie  01/02/2012  Moved debug trace defines to trac.h
- *   @rc002             rickylie  02/02/2012  Remove unused DPSS function
- *   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/pss/dpss.h $                                          */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
 #ifndef _DPSS_H
 #define _DPSS_H
 
-//*************************************************************************
-// Includes
-//*************************************************************************
 #include <errl.h>
 #include <rtls.h>
 
-//*************************************************************************
-// Externs
-//*************************************************************************
-
-//*************************************************************************
-// Macros
-//*************************************************************************
-
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
-
-//*************************************************************************
-// Structures
-//*************************************************************************
-
-//*************************************************************************
-// Globals
-//*************************************************************************
-
-//*************************************************************************
-// Function Prototypes
-//*************************************************************************
-// dpss_initialize is part of the dpss init applet @at000D
+// dpss_initialize is part of the dpss init applet
 
 // DPSS oversubscription IRQ handler
 void isr_dpss_oversubscription_handler_full(void *private, SsxIrqId irq, int priority);
 
 // Installs the DPSS oversubscription IRQ handler
 errlHndl_t dpss_oversubscription_irq_initialize();
-
-//*************************************************************************
-// Functions
-//*************************************************************************
 
 #endif //_DPSS_H

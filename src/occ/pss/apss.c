@@ -1,80 +1,49 @@
-/******************************************************************************
-// @file apss.c
-// @brief OCC APSS component
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _apss_c apss.c
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @cc000             cjcain    08/04/2011  Created             
- *   @pb004             pbavari   09/02/2011  Initialize section support
- *   @01                abagepa   09/14/2011  add global for dcom component
- *   @th002             thallet   11/01/2011  Misc Changes for Nov 1st Milestone
- *   @th006             thallet   11/21/2011  RESET_REQUEST substituted for todo's
- *   @rc001             rickylie  01/10/2012  Change DEBUG_PRINTF to APSS_DBG
- *   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
- *   @pb00E             pbavari   03/11/2012  Added correct include file
- *   @nh001             neilhsu   05/23/2012  Add missing error log tags
- *   @at009  859308     alvinwan  10/15/2012  Added tracepp support
- *   @ly003  861535     lychen    11/19/2012  Remove APSS configuration/gathering of Altitude & Temperature
- *   @th032             thallet   04/26/2013  Tuleta HW Bringup Changes
- *   @th042   892056    thallet   07/19/2013  Make GPE arg structs non-cacheable
- *   @gm006  SW224414   milesg    09/16/2013  Reset and FFDC improvements 
- *   @jh00a  909791     joshych   12/16/2013  Enhance APSS pwr meas trace
- *   @at023  910877     alvinwan  01/09/2014  Excessive fan increase requests error for mfg
- *   @fk005  911760     fmkassem  01/14/2014  APSS data collection retry support.
- *   @gm024  914291     milesg    02/10/2014  APSS data getting out of sync
- *   @gm025  915973     milesg    02/14/2014  Detect power data going to 0
- *   @gm032  918715     milesg    03/19/2014  Improved APSS recovery
- *   @gm035  921471     milesg    03/31/2014  Support retries after GPE times out
- *   @gm037  925908     milesg    05/07/2014  Redundant OCC/APSS support
- *   @gm039  922963     milesg    05/28/2014  Change redundant apss error to predictive
- *
- *  @endverbatim
- *
- *///*************************************************************************/
- 
-//*************************************************************************
-// Includes
-//*************************************************************************
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/pss/apss.c $                                              */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
+
 #include "ssx.h"
 
 #include <trac_interface.h>
 #include <apss.h>
-//@pb00Ec - changed from common.h to occ_common.h for ODE support
 #include <occ_common.h>
 #include <comp_ids.h>
 #include <pss_service_codes.h>
-#include <occ_service_codes.h>  // @nh001a
+#include <occ_service_codes.h>
 #include <trac.h>
 #include <state.h>
-#include <occ_sys_config.h> // @at023a
-#include <dcom.h> // @at023a
-#include "pss_constants.h" //gm024
+#include <occ_sys_config.h>
+#include <dcom.h>
+#include "pss_constants.h"
 
-//*************************************************************************
-// Externs
-//*************************************************************************
-
-//*************************************************************************
-// Macros
-//*************************************************************************
-
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
-
-// threshold for calling out the redundant APSS -- gm037
+// Threshold for calling out the redundant APSS
 #define MAX_BACKUP_FAILURES  8
 
 // Configure both GPIOs (directoin/drive/interrupts): All Input, All 1's, No Interrupts
 const apssGpioConfigStruct_t G_gpio_config[2] = { {0x00, 0xFF, 0x00}, {0x00, 0xFF, 0x00} };
 
-// Configure streaming of: 16 ADCs, 2 GPIOs // @ly003c @at023c
+// Configure streaming of: 16 ADCs, 2 GPIOs
 const apssCompositeConfigStruct_t G_apss_composite_config = { 16, 2 };
 
 // Power Measurements (read from APSS every RealTime loop)
@@ -83,56 +52,36 @@ apssPwrMeasStruct_t G_apss_pwr_meas = { {0} };
 GPE_BUFFER(initGpioArgs_t G_gpe_apss_initialize_gpio_args);
 GPE_BUFFER(setCompositeModeArgs_t G_gpe_apss_set_composite_mode_args);
 
-uint64_t G_gpe_apss_time_start; // @jh00aa
-uint64_t G_gpe_apss_time_end;   // @jh00aa
+uint64_t G_gpe_apss_time_start;
+uint64_t G_gpe_apss_time_end;
 
 // Flag for requesting APSS recovery when OCC detects all zeroes or data out of sync
-bool G_apss_recovery_requested = FALSE; //gm024
-
-//*************************************************************************
-// Structures
-//*************************************************************************
-
-
+bool G_apss_recovery_requested = FALSE;
 
 GPE_BUFFER(apss_start_args_t    G_gpe_start_pwr_meas_read_args);
 GPE_BUFFER(apss_continue_args_t G_gpe_continue_pwr_meas_read_args);
 GPE_BUFFER(apss_complete_args_t G_gpe_complete_pwr_meas_read_args);
 
-
-//*************************************************************************
-// Globals
-//*************************************************************************
 PoreEntryPoint GPE_apss_start_pwr_meas_read;
 PoreEntryPoint GPE_apss_continue_pwr_meas_read;
 PoreEntryPoint GPE_apss_complete_pwr_meas_read;
 
-// up/down counter for redundant apss failures -- gm037
+// Up / down counter for redundant apss failures
 uint32_t G_backup_fail_count = 0;
 
-// @01a
-// used to tell slave inbox that pwr meas is complete
-volatile bool G_ApssPwrMeasCompleted = FALSE;   // @th002
-
-//*************************************************************************
-// Function Prototypes
-//*************************************************************************
-
-//*************************************************************************
-// Functions
-//*************************************************************************
+// Used to tell slave inbox that pwr meas is complete
+volatile bool G_ApssPwrMeasCompleted = FALSE;
 
 // Function Specification
 //
 // Name: dumpHexString
 //
-// Description: 
+// Description: TODO Add description
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 #if ( (!defined(NO_TRAC_STRINGS)) && defined(TRAC_TO_SIMICS) )
-// utility function to dump hex data to screen
+
+// Utility function to dump hex data to screen
 void dumpHexString(const void *i_data, const unsigned int len, const char *string)
 {
   unsigned int i, j;
@@ -143,7 +92,7 @@ void dumpHexString(const void *i_data, const unsigned int len, const char *strin
   text[16] = '\0';
   if (string != NULL)
   {
-	  printf("%s\n", string);
+    printf("%s\n", string);
   }
 
   if (len > 0x0800) l_len = 0x800;
@@ -163,7 +112,7 @@ void dumpHexString(const void *i_data, const unsigned int len, const char *strin
   if ((i%16) != 0) {
     text[i%16] = '\0';
     for(j = (i % 16); j < 16; ++j) {
-    	printf("  ");
+      printf("  ");
       if (j % 4 == 0) printf(" ");
     }
   }
@@ -174,14 +123,12 @@ void dumpHexString(const void *i_data, const unsigned int len, const char *strin
 
 // Function Specification
 //
-// Name: do_apss_recovery 
+// Name: do_apss_recovery
 //
 // Description: Collect FFDC and attempt recovery for APSS failures
 //
-// Flow:  ???    FN= ???
-//
 // End Function Specification
-void do_apss_recovery(void) //gm037
+void do_apss_recovery(void)
 {
 #define PSS_START_COMMAND 0x8000000000000000ull
 #define PSS_RESET_COMMAND 0x4000000000000000ull
@@ -200,8 +147,8 @@ void do_apss_recovery(void) //gm037
              (uint32_t)(G_gpe_continue_pwr_meas_read_args.meas_data[0] & 0x00000000ffffffffull));
 
     do
-    {    
-        //collect SPI ADC FFDC data -- gm032
+    {
+        // Collect SPI ADC FFDC data
         l_scom_addr = SPIPSS_ADC_RESET_REG;
         l_scom_rc = _getscom(l_scom_addr, &l_spi_adc_reset, SCOM_TIMEOUT);
         if(l_scom_rc)
@@ -238,21 +185,21 @@ void do_apss_recovery(void) //gm037
         {
             break;
         }
-        
+
         TRAC_ERR("70000[%08x] 70001[%08x] 70002[%08x] 70003|70005[%08x] 70010[%08x]",
                 (uint32_t)(l_spi_adc_ctrl0 >> 32),
                 (uint32_t)(l_spi_adc_ctrl1 >> 32),
                 (uint32_t)(l_spi_adc_ctrl2 >> 32),
-                (uint32_t)((l_spi_adc_status >> 32) | (l_spi_adc_reset >> 48)), //stuff reset register in lower 16 bits
-                (uint32_t)(l_spi_adc_wdata >> 32)); 
+                (uint32_t)((l_spi_adc_status >> 32) | (l_spi_adc_reset >> 48)), // Stuff reset register in lower 16 bits
+                (uint32_t)(l_spi_adc_wdata >> 32));
 
-        //special error handling on OCC backup.  Keep an up/down counter of
-        //fail/success and log predictive error when we reach the limit.
+        // Special error handling on OCC backup. Keep an up/down counter of
+        // fail/success and log predictive error when we reach the limit.
         if(G_occ_role == OCC_SLAVE)
         {
             if(G_backup_fail_count < MAX_BACKUP_FAILURES)
             {
-                //increment the up/down counter
+                // Increment the up/down counter
                 G_backup_fail_count++;
             }
             else
@@ -276,28 +223,28 @@ void do_apss_recovery(void) //gm037
                 errlHndl_t l_err = createErrl(PSS_MID_DO_APSS_RECOVERY,
                                               REDUNDANT_APSS_GPE_FAILURE,
                                               OCC_NO_EXTENDED_RC,
-                                              ERRL_SEV_PREDICTIVE, //gm039
+                                              ERRL_SEV_PREDICTIVE,
                                               NULL,
                                               DEFAULT_TRACE_SIZE,
                                               0,
                                               0);
 
-                //apss callout
+                // APSS callout
                 addCalloutToErrl(l_err,
                                  ERRL_CALLOUT_TYPE_HUID,
                                  G_sysConfigData.apss_huid,
                                  ERRL_CALLOUT_PRIORITY_HIGH);
-                //processor callout
+                // Processor callout
                 addCalloutToErrl(l_err,
                                  ERRL_CALLOUT_TYPE_HUID,
                                  G_sysConfigData.proc_huid,
                                  ERRL_CALLOUT_PRIORITY_LOW);
-                //backplane callout
+                // Backplane callout
                 addCalloutToErrl(l_err,
                                  ERRL_CALLOUT_TYPE_HUID,
                                  G_sysConfigData.backplane_huid,
                                  ERRL_CALLOUT_PRIORITY_LOW);
-                //firmware callout
+                // Firmware callout
                 addCalloutToErrl(l_err,
                                  ERRL_CALLOUT_TYPE_COMPONENT_ID,
                                  ERRL_COMPONENT_ID_FIRMWARE,
@@ -311,7 +258,7 @@ void do_apss_recovery(void) //gm037
 
         TRAC_INFO("Starting APSS recovery.  fail_count=%d", G_backup_fail_count);
 
-        //reset the ADC engine -- gm032
+        // Reset the ADC engine
         l_scom_addr = SPIPSS_ADC_RESET_REG;
         l_scom_rc = _putscom(l_scom_addr, PSS_RESET_COMMAND, SCOM_TIMEOUT);
         if(l_scom_rc)
@@ -319,15 +266,15 @@ void do_apss_recovery(void) //gm037
             break;
         }
 
-        //zero out the reset register -- gm032
+        // Zero out the reset register
         l_scom_rc = _putscom(l_scom_addr, 0, SCOM_TIMEOUT);
         if(l_scom_rc)
         {
             break;
         }
 
-        //attempt recovery by sending the apss
-        //command that was set up earlier by initialization GPE
+        // Attempt recovery by sending the apss
+        // command that was set up earlier by initialization GPE
         l_scom_addr = SPIPSS_P2S_COMMAND_REG;
         l_scom_rc = _putscom(l_scom_addr, PSS_START_COMMAND, SCOM_TIMEOUT);
         if(l_scom_rc)
@@ -336,7 +283,7 @@ void do_apss_recovery(void) //gm037
         }
     }while(0);
 
-    //Just trace it if we get a scom failure trying to collect FFDC -- gm032
+    // Just trace it if we get a scom failure trying to collect FFDC
     if(l_scom_rc)
     {
         TRAC_ERR("apss recovery scom failure. addr=0x%08x, rc=0x%08x", l_scom_addr, l_scom_rc);
@@ -355,16 +302,14 @@ PoreFlex G_meas_start_request;
 //
 // Task Flags: RTL_FLAG_MSTR, RTL_FLAG_OBS, RTL_FLAG_ACTIVE, RTL_FLAG_APSS_PRES
 //
-// Flow:  07/20/11    FN=task_apss_start_pwr_meas
-//
 // End Function Specification
 void task_apss_start_pwr_meas(struct task *i_self)
 {
-    int             l_rc                = 0;     
+    int             l_rc                = 0;
     static bool     L_scheduled         = FALSE;
     static bool     L_idle_traced       = FALSE;
     static bool     L_ffdc_collected    = FALSE;
-  
+
     // Create/schedule GPE_start_pwr_meas_read (non-blocking)
     APSS_DBG("GPE_start_pwr_meas_read started\n");
 
@@ -374,16 +319,16 @@ void task_apss_start_pwr_meas(struct task *i_self)
         {
             if (!L_idle_traced)
             {
-                TRAC_ERR("task_apss_start_pwr_meas: request is not idle."); 
+                TRAC_ERR("task_apss_start_pwr_meas: request is not idle.");
                 L_idle_traced = TRUE;
             }
             break;
         }
 
-        //check if we need to try recovering the apss -- gm024
+        // Check if we need to try recovering the apss
         if(G_apss_recovery_requested)
         {
-            //do recovery then wait until next tick to do anything more.
+            // Do recovery then wait until next tick to do anything more.
             do_apss_recovery();
             break;
         }
@@ -397,13 +342,13 @@ void task_apss_start_pwr_meas(struct task *i_self)
                 //the APSS master to complete the last operation.  Just keep retrying until
                 //DCOM resets us due to not having valid power data.
                 TRAC_ERR("task_apss_start_pwr_meas: request is not complete or failed with an error(rc:0x%08X, ffdc:0x%08X%08X). " \
-                        "CompletionState:0x%X.", 
-                         G_gpe_start_pwr_meas_read_args.error.rc, 
+                        "CompletionState:0x%X.",
+                         G_gpe_start_pwr_meas_read_args.error.rc,
                          G_gpe_start_pwr_meas_read_args.error.ffdc >> 32,
                          G_gpe_start_pwr_meas_read_args.error.ffdc,
                          G_meas_start_request.request.completion_state);
 
-                //collect FFDC and log error once.
+                // Collect FFDC and log error once.
                 if (!L_ffdc_collected)
                 {
                     errlHndl_t l_err = NULL;
@@ -416,15 +361,15 @@ void task_apss_start_pwr_meas(struct task *i_self)
                      * @userdata4   ERC_APSS_COMPLETE_FAILURE
                      * @devdesc     Failure getting power measurement data from APSS
                      */
-                    l_err = createErrl(PSS_MID_APSS_START_MEAS,   // i_modId, 
-                                       APSS_GPE_FAILURE,          // i_reasonCode,
+                    l_err = createErrl(PSS_MID_APSS_START_MEAS,   // i_modId
+                                       APSS_GPE_FAILURE,          // i_reasonCode
                                        ERC_APSS_COMPLETE_FAILURE,
-                                       ERRL_SEV_INFORMATIONAL, 
-                                       NULL,                      
-                                       DEFAULT_TRACE_SIZE, 
+                                       ERRL_SEV_INFORMATIONAL,
+                                       NULL,
+                                       DEFAULT_TRACE_SIZE,
                                        G_gpe_start_pwr_meas_read_args.error.rc,
                                        0);
-                                     
+
                     addUsrDtlsToErrl(l_err,
                                      (uint8_t*)&G_meas_start_request.ffdc,
                                      sizeof(G_meas_start_request.ffdc),
@@ -434,19 +379,19 @@ void task_apss_start_pwr_meas(struct task *i_self)
                     // Commit Error
                     commitErrl(&l_err);
 
-                      //Set to true so that we don't log this error again.
+                      // Set to true so that we don't log this error again.
                     L_ffdc_collected = TRUE;
                 }
             }
         }
 
-        //clear these out prior to starting the GPE (GPE only sets them)
+        // Clear these out prior to starting the GPE (GPE only sets them)
         G_gpe_start_pwr_meas_read_args.error.error = 0;
         G_gpe_start_pwr_meas_read_args.error.ffdc = 0;
 
-        //submit the next request
+        // Submit the next request
         l_rc = pore_flex_schedule(&G_meas_start_request);
-        if (0 != l_rc) 
+        if (0 != l_rc)
         {
             errlHndl_t l_err = NULL;
 
@@ -471,22 +416,22 @@ void task_apss_start_pwr_meas(struct task *i_self)
                                l_rc,
                                0);
 
-            //Request reset since this should never happen.
+            // Request reset since this should never happen.
             REQUEST_RESET(l_err);
             L_scheduled = FALSE;
             break;
         }
 
         L_scheduled = TRUE;
-        
-       
-    }while (0); 
+
+
+    }while (0);
 
 
     APSS_DBG("GPE_start_pwr_meas_read finished w/rc=0x%08X\n", G_gpe_start_pwr_meas_read_args.error.rc);
-    APSS_DBG_HEXDUMP(&G_gpe_start_pwr_meas_read_args, sizeof(G_gpe_start_pwr_meas_read_args), "G_gpe_start_pwr_meas_read_args"); // @at009c
-    G_ApssPwrMeasCompleted = FALSE;  //Will complete when 3rd task is complete.
-    G_gpe_apss_time_start = ssx_timebase_get(); // @jh00aa
+    APSS_DBG_HEXDUMP(&G_gpe_start_pwr_meas_read_args, sizeof(G_gpe_start_pwr_meas_read_args), "G_gpe_start_pwr_meas_read_args");
+    G_ApssPwrMeasCompleted = FALSE;  // Will complete when 3rd task is complete.
+    G_gpe_apss_time_start = ssx_timebase_get();
 
 
 } // end task_apss_start_pwr_meas()
@@ -505,16 +450,14 @@ PoreFlex G_meas_cont_request;
 //
 // Task Flags: RTL_FLAG_MSTR, RTL_FLAG_OBS, RTL_FLAG_ACTIVE, RTL_FLAG_APSS_PRES
 //
-// Flow:  07/20/11    FN=task_apss_continue_pwr_meas
-//
 // End Function Specification
 void task_apss_continue_pwr_meas(struct task *i_self)
 {
-    int         l_rc                = 0;     
+    int         l_rc                = 0;
     static bool L_scheduled         = FALSE;
     static bool L_idle_traced       = FALSE;
     static bool L_ffdc_collected    = FALSE;
-  
+
     // Create/schedule GPE_apss_continue_pwr_meas_read (non-blocking)
     APSS_DBG("Calling task_apss_continue_pwr_meas.\n");
 
@@ -524,13 +467,13 @@ void task_apss_continue_pwr_meas(struct task *i_self)
         {
             if (!L_idle_traced)
             {
-                TRAC_ERR("task_apss_continue_pwr_meas: request is not idle."); 
+                TRAC_ERR("task_apss_continue_pwr_meas: request is not idle.");
                 L_idle_traced = TRUE;
             }
             break;
         }
 
-        //Don't run anything if apss recovery is in progress - gm024
+        //Don't run anything if apss recovery is in progress
         if(G_apss_recovery_requested)
         {
             break;
@@ -545,14 +488,14 @@ void task_apss_continue_pwr_meas(struct task *i_self)
                 //the APSS master to complete the last operation.  Just keep retrying until
                 //DCOM resets us due to not having valid power data.
                 TRAC_ERR("task_apss_continue_pwr_meas: request is not complete or failed with an error(rc:0x%08X, ffdc:0x%08X%08X). " \
-                        "CompletionState:0x%X.", 
-                         G_gpe_continue_pwr_meas_read_args.error.rc, 
+                        "CompletionState:0x%X.",
+                         G_gpe_continue_pwr_meas_read_args.error.rc,
                          G_gpe_continue_pwr_meas_read_args.error.ffdc >> 32,
                          G_gpe_continue_pwr_meas_read_args.error.ffdc,
                          G_meas_cont_request.request.completion_state);
 
 
-                //collect FFDC and log error once.
+                // Collect FFDC and log error once.
                 if (!L_ffdc_collected)
                 {
                     errlHndl_t l_err = NULL;
@@ -566,15 +509,15 @@ void task_apss_continue_pwr_meas(struct task *i_self)
                      * @userdata4   ERC_APSS_COMPLETE_FAILURE
                      * @devdesc     Failure getting power measurement data from APSS
                      */
-                    l_err = createErrl(PSS_MID_APSS_CONT_MEAS,   // i_modId, 
-                                       APSS_GPE_FAILURE,          // i_reasonCode,
+                    l_err = createErrl(PSS_MID_APSS_CONT_MEAS,   // i_modId
+                                       APSS_GPE_FAILURE,          // i_reasonCode
                                        ERC_APSS_COMPLETE_FAILURE,
-                                       ERRL_SEV_INFORMATIONAL, 
-                                       NULL,                      
-                                       DEFAULT_TRACE_SIZE, 
+                                       ERRL_SEV_INFORMATIONAL,
+                                       NULL,
+                                       DEFAULT_TRACE_SIZE,
                                        G_gpe_continue_pwr_meas_read_args.error.rc,
                                        0);
-                                     
+
                     addUsrDtlsToErrl(l_err,
                                      (uint8_t*)&G_meas_cont_request.ffdc,
                                      sizeof(G_meas_cont_request.ffdc),
@@ -584,19 +527,19 @@ void task_apss_continue_pwr_meas(struct task *i_self)
                     // Commit Error
                     commitErrl(&l_err);
 
-                      //Set to true so that we don't log this error again.
+                      // Set to true so that we don't log this error again.
                     L_ffdc_collected = TRUE;
                 }
             }
         }
 
-        //clear these out prior to starting the GPE (GPE only sets them)
+        // Clear these out prior to starting the GPE (GPE only sets them)
         G_gpe_continue_pwr_meas_read_args.error.error = 0;
         G_gpe_continue_pwr_meas_read_args.error.ffdc = 0;
 
-        //submit the next request
+        // Submit the next request
         l_rc = pore_flex_schedule(&G_meas_cont_request);
-        if (0 != l_rc) 
+        if (0 != l_rc)
         {
             errlHndl_t l_err = NULL;
 
@@ -621,22 +564,20 @@ void task_apss_continue_pwr_meas(struct task *i_self)
                                l_rc,
                                0);
 
-            //Request reset since this should never happen.
+            // Request reset since this should never happen.
             REQUEST_RESET(l_err);
             L_scheduled = FALSE;
             break;
         }
 
         L_scheduled = TRUE;
-        
-       
-    }while (0); 
+
+    }while (0);
 
     APSS_DBG("task_apss_continue_pwr_meas: finished w/rc=0x%08X\n", G_gpe_continue_pwr_meas_read_args.error.rc);
     APSS_DBG_HEXDUMP(&G_gpe_continue_pwr_meas_read_args, sizeof(G_gpe_continue_pwr_meas_read_args), "G_gpe_continue_pwr_meas_read_args");
 
 } // end task_apss_continue_pwr_meas
-
 
 // Function Specification
 //
@@ -646,15 +587,13 @@ void task_apss_continue_pwr_meas(struct task *i_self)
 //              This function is called when the GPE completes the final measurement
 //              collection for this loop.
 //
-// Flow:              FN=None
-//
 // End Function Specification
 #define APSS_ADC_SEQ_MASK 0xf000f000f000f000ull
 #define APSS_ADC_SEQ_CHECK 0x0000100020003000ull
 void reformat_meas_data()
 {
     APSS_DBG("GPE_complete_pwr_meas_read finished w/rc=0x%08X\n", G_gpe_complete_pwr_meas_read_args.error.rc);
-    APSS_DBG_HEXDUMP(&G_gpe_complete_pwr_meas_read_args, sizeof(G_gpe_complete_pwr_meas_read_args), "G_gpe_complete_pwr_meas_read_args"); // @at009c
+    APSS_DBG_HEXDUMP(&G_gpe_complete_pwr_meas_read_args, sizeof(G_gpe_complete_pwr_meas_read_args), "G_gpe_complete_pwr_meas_read_args");
 
     do
     {
@@ -666,34 +605,25 @@ void reformat_meas_data()
 
         // Check that the first 4 sequence nibbles are 0, 1, 2, 3 in the ADC data
         if (((G_gpe_continue_pwr_meas_read_args.meas_data[0] & APSS_ADC_SEQ_MASK) != APSS_ADC_SEQ_CHECK) ||
-             !(G_gpe_continue_pwr_meas_read_args.meas_data[0] & ~APSS_ADC_SEQ_MASK)) //gm025
+             !(G_gpe_continue_pwr_meas_read_args.meas_data[0] & ~APSS_ADC_SEQ_MASK))
         {
-            //recovery will begin on the next tick
+            // Recovery will begin on the next tick
             G_apss_recovery_requested = TRUE;
             break;
         }
 
-        //decrement up/down fail counter for backup on success.
+        // Decrement up/down fail counter for backup on success.
         if(G_backup_fail_count)
         {
             G_backup_fail_count--;
         }
 
-        //Don't do the copy unless this is the master OCC -- gm037
+        // Don't do the copy unless this is the master OCC
         if(G_occ_role == OCC_MASTER)
         {
 
-            //fail every 16 seconds
-            //if(!(CURRENT_TICK & 0x0000ffff))
-            //{
-            //    G_apss_recovery_requested = TRUE;
-            //}
-
+            // Fail every 16 seconds
             APSS_DBG("Populate meas data:\n");
-#if 0
-            APSS_DBG_HEXDUMP(G_gpe_continue_pwr_meas_read_args.meas_data, sizeof(G_gpe_continue_pwr_meas_read_args.meas_data), "G_gpe_continue_pwr_meas_read_args.meas_data"); // @at009c
-            APSS_DBG_HEXDUMP(G_gpe_complete_pwr_meas_read_args.meas_data, sizeof(G_gpe_complete_pwr_meas_read_args.meas_data), "G_gpe_complete_pwr_meas_read_args.meas_data"); // @at009c
-#endif
 
             // Merge continue/complete data into a single buffer
             const uint16_t l_continue_meas_length = sizeof(G_gpe_continue_pwr_meas_read_args.meas_data);
@@ -701,8 +631,8 @@ void reformat_meas_data()
             uint8_t l_buffer[l_continue_meas_length+l_complete_meas_length];
             memcpy(&l_buffer[                     0], G_gpe_continue_pwr_meas_read_args.meas_data, l_continue_meas_length);
             memcpy(&l_buffer[l_continue_meas_length], G_gpe_complete_pwr_meas_read_args.meas_data, l_complete_meas_length);
-            APSS_DBG_HEXDUMP(l_buffer, sizeof(l_buffer), "l_buffer"); // @at009c
-    
+            APSS_DBG_HEXDUMP(l_buffer, sizeof(l_buffer), "l_buffer");
+
             // Copy measurements into correct struction locations (based on composite config)
             uint16_t l_index = 0;
             memcpy(G_apss_pwr_meas.adc, &l_buffer[l_index], (G_apss_composite_config.numAdcChannelsToRead * 2));
@@ -710,15 +640,15 @@ void reformat_meas_data()
             memcpy(G_apss_pwr_meas.gpio, &l_buffer[l_index], (G_apss_composite_config.numGpioPortsToRead * 2));
             // TOD is always located at same offset
             memcpy(&G_apss_pwr_meas.tod, &l_buffer[l_continue_meas_length+l_complete_meas_length-8], 8);
-    
+
             APSS_DBG("...into structure: (%d ADC, %d GPIO)\n", G_apss_composite_config.numAdcChannelsToRead,
-                G_apss_composite_config.numGpioPortsToRead); // @ly003c
-            APSS_DBG_HEXDUMP(&G_apss_pwr_meas, sizeof(G_apss_pwr_meas), "G_apss_pwr_meas"); // @at009c
+                G_apss_composite_config.numGpioPortsToRead);
+            APSS_DBG_HEXDUMP(&G_apss_pwr_meas, sizeof(G_apss_pwr_meas), "G_apss_pwr_meas");
         }
-    
-        // mark apss pwr meas completed and valid
-        G_ApssPwrMeasCompleted = TRUE;    // @th002
-        G_gpe_apss_time_end = ssx_timebase_get(); // @jh00aa
+
+        // Mark apss pwr meas completed and valid
+        G_ApssPwrMeasCompleted = TRUE;
+        G_gpe_apss_time_end = ssx_timebase_get();
         APSS_DBG("APSS Completed - %d\n",(int) ssx_timebase_get());
   }while(0);
 }
@@ -735,18 +665,16 @@ PoreFlex G_meas_complete_request;
 // Description: Start GPE to collect 2nd block of power measurement data and TOD.
 //              If previous call had failed, commit the error and request reset
 //
-// Flow:  07/20/11    FN=task_apss_complete_pwr_meas
-//
 // Task Flags: RTL_FLAG_MSTR, RTL_FLAG_OBS, RTL_FLAG_ACTIVE, RTL_FLAG_APSS_PRES
 //
 // End Function Specification
 void task_apss_complete_pwr_meas(struct task *i_self)
 {
-    int         l_rc                = 0;     
+    int         l_rc                = 0;
     static bool L_scheduled         = FALSE;
     static bool L_idle_traced       = FALSE;
     static bool L_ffdc_collected    = FALSE;
-  
+
     // Create/schedule GPE_apss_complete_pwr_meas_read (non-blocking)
     APSS_DBG("Calling task_apss_complete_pwr_meas.\n");
 
@@ -756,36 +684,36 @@ void task_apss_complete_pwr_meas(struct task *i_self)
         {
             if (!L_idle_traced)
             {
-                TRAC_ERR("task_apss_complete_pwr_meas: request is not idle."); 
+                TRAC_ERR("task_apss_complete_pwr_meas: request is not idle.");
                 L_idle_traced = TRUE;
             }
             break;
         }
 
-        if(G_apss_recovery_requested) //gm024
+        if(G_apss_recovery_requested)
         {
-            //allow apss measurement to proceed on next tick
+            // Allow apss measurement to proceed on next tick
             G_apss_recovery_requested = FALSE;
             break;
         }
 
-        
+
         if (L_scheduled)
         {
             if ((ASYNC_REQUEST_STATE_COMPLETE != G_meas_complete_request.request.completion_state) ||
                 (0 != G_gpe_complete_pwr_meas_read_args.error.error))
             {
-                //error should only be non-zero in the case where the GPE timed out waiting for
-                //the APSS master to complete the last operation.  Just keep retrying until
-                //DCOM resets us due to not having valid power data.
+                // Error should only be non-zero in the case where the GPE timed out waiting for
+                // the APSS master to complete the last operation. Just keep retrying until
+                // DCOM resets us due to not having valid power data.
                 TRAC_ERR("task_apss_complete_pwr_meas: request is not complete or failed with an error(rc:0x%08X, ffdc:0x%08X%08X). " \
-                        "CompletionState:0x%X.", 
-                         G_gpe_complete_pwr_meas_read_args.error.rc, 
+                        "CompletionState:0x%X.",
+                         G_gpe_complete_pwr_meas_read_args.error.rc,
                          G_gpe_complete_pwr_meas_read_args.error.ffdc >> 32,
                          G_gpe_complete_pwr_meas_read_args.error.ffdc,
                          G_meas_complete_request.request.completion_state);
 
-                //collect FFDC and log error once.
+                // Collect FFDC and log error once.
                 if (!L_ffdc_collected)
                 {
                     errlHndl_t l_err = NULL;
@@ -799,15 +727,15 @@ void task_apss_complete_pwr_meas(struct task *i_self)
                      * @userdata4   ERC_APSS_COMPLETE_FAILURE
                      * @devdesc     Failure getting power measurement data from APSS
                      */
-                    l_err = createErrl(PSS_MID_APSS_COMPLETE_MEAS,   // i_modId, 
-                                       APSS_GPE_FAILURE,          // i_reasonCode,
+                    l_err = createErrl(PSS_MID_APSS_COMPLETE_MEAS,   // i_modId
+                                       APSS_GPE_FAILURE,          // i_reasonCode
                                        ERC_APSS_COMPLETE_FAILURE,
-                                       ERRL_SEV_INFORMATIONAL, 
-                                       NULL,                      
-                                       DEFAULT_TRACE_SIZE, 
+                                       ERRL_SEV_INFORMATIONAL,
+                                       NULL,
+                                       DEFAULT_TRACE_SIZE,
                                        G_gpe_complete_pwr_meas_read_args.error.rc,
                                        0);
-                                     
+
                     addUsrDtlsToErrl(l_err,
                                      (uint8_t*)&G_meas_complete_request.ffdc,
                                      sizeof(G_meas_complete_request.ffdc),
@@ -817,19 +745,19 @@ void task_apss_complete_pwr_meas(struct task *i_self)
                     // Commit Error
                     commitErrl(&l_err);
 
-                      //Set to true so that we don't log this error again.
+                    // Set to true so that we don't log this error again.
                     L_ffdc_collected = TRUE;
                 }
             }
         }
 
-        //clear these out prior to starting the GPE (GPE only sets them)
+        // Clear these out prior to starting the GPE (GPE only sets them)
         G_gpe_complete_pwr_meas_read_args.error.error = 0;
         G_gpe_complete_pwr_meas_read_args.error.ffdc = 0;
 
-        //submit the next request
+        // Submit the next request
         l_rc = pore_flex_schedule(&G_meas_complete_request);
-        if (0 != l_rc) 
+        if (0 != l_rc)
         {
             errlHndl_t l_err = NULL;
 
@@ -854,16 +782,16 @@ void task_apss_complete_pwr_meas(struct task *i_self)
                                l_rc,
                                0);
 
-            //Request reset since this should never happen.
+            // Request reset since this should never happen.
             REQUEST_RESET(l_err);
             L_scheduled = FALSE;
             break;
         }
 
         L_scheduled = TRUE;
-        
-       
-    }while (0); 
+
+
+    }while (0);
 
     APSS_DBG("task_apss_complete_pwr_meas: finished w/rc=0x%08X\n", G_gpe_complete_pwr_meas_read_args.error.rc);
     APSS_DBG_HEXDUMP(&G_gpe_complete_pwr_meas_read_args, sizeof(G_gpe_complete_pwr_meas_read_args), "G_gpe_complete_pwr_meas_read_args");
@@ -871,7 +799,6 @@ void task_apss_complete_pwr_meas(struct task *i_self)
 
 } // end task_apss_complete_pwr_meas
 
-// @at023a - start
 bool apss_gpio_get(uint8_t i_pin_number, uint8_t *o_pin_value)
 {
     bool l_valid = FALSE;
@@ -908,4 +835,4 @@ bool apss_gpio_get(uint8_t i_pin_number, uint8_t *o_pin_value)
     }
     return l_valid;
 }
-// @at023a - end
+

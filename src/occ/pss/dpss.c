@@ -1,40 +1,32 @@
-/******************************************************************************
-// @file dpss.c
-// @brief OCC DPSS component.
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _dpss_c dpss.c
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *                      dwoodham  09/21/2011  Created
- *   @th006             thallet   11/21/2011  Added REQUEST_RESET in place of todo's
- *   @at000             atwang    12/07/2011  Moved start_dpss and dpss_initialize
- *                                            into a product applet
- *   @rc001             rickylie  01/10/2012  Change DPSS_DEBUG_PRINTF to DPSS_DBG
- *   @rc002             rickylie  02/01/2012  Remove unused DPSS function
- *   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
- *   @pb00E             pbavari   03/11/2012  Added correct include file
- *   @nh001             neilhsu   05/23/2012  Add missing error log tags 
- *   @at010  859992     alvinwan  11/07/2012  Added oversubscription feature
- *   @th032             thallet   04/19/2013  Changed oversubscription to non-critical
- *   @gm036  917550     milesg    04/09/2014  Ignore phantom interrupts (log info error)
- *
- *  @endverbatim
- *
- *///*************************************************************************/
- 
-//*************************************************************************
-// Includes
-//*************************************************************************
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/pss/dpss.c $                                          */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
+
 #include "ssx.h"
 
 #include <dpss.h>
 #include <trac.h>
-//@pb00Ec - changed from common.h to occ_common.h for ODE support
 #include <occ_common.h>
 #include <comp_ids.h>
 #include <occ_sys_config.h>
@@ -42,41 +34,16 @@
 #include <occ_service_codes.h>
 #include <pss_service_codes.h>
 #include <state.h>
-#include <amec_oversub.h> // @at010a
-#include <ppc405_irq.h> //gm036
-//*************************************************************************
-// Externs
-//*************************************************************************
+#include <amec_oversub.h>
+#include <ppc405_irq.h>
 
-//*************************************************************************
-// Macros
-//*************************************************************************
-//Macro creates a 'bridge' handler that converts the initial fast-mode to full-
-//mode interrupt handler
+// Macro creates a 'bridge' handler that converts the initial fast-mode to full-
+// mode interrupt handler
 SSX_IRQ_FAST2FULL(isr_dpss_oversubscription_handler, isr_dpss_oversubscription_handler_full);
 
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
-
-//*************************************************************************
-// Structures
-//*************************************************************************
-
-//*************************************************************************
-// Globals
-//*************************************************************************
-// Increment a counter each time we see a phantom interrupt (used by health monitor thread) -- gm036
+// Increment a counter each time we see a phantom interrupt (used by health monitor thread)
 uint32_t G_occ_phantom_critical_count = 0;
 uint32_t G_occ_phantom_noncritical_count = 0;
-
-//*************************************************************************
-// Function Prototypes
-//*************************************************************************
-
-//*************************************************************************
-// Functions
-//*************************************************************************
 
 // Function Specification
 //
@@ -88,13 +55,11 @@ uint32_t G_occ_phantom_noncritical_count = 0;
 //              comment and no code besides clearing the irq and tracing the fact that
 //              we got an interrupt.
 //
-// Flow:  08/03/11    FN=isr_dpss_oversubscription
-//
 // End Function Specification
 void isr_dpss_oversubscription_handler_full(void *private, SsxIrqId irq, int priority)
 {
     SsxMachineContext ctx;
-    
+
     // disable further interrupts at this level
     ssx_irq_disable(irq);
 
@@ -123,10 +88,8 @@ void isr_dpss_oversubscription_handler_full(void *private, SsxIrqId irq, int pri
 // handler for an interrupt that fired and then went away before
 // we could read what it was.
 //
-// Flow:  ???    FN= ???
-//
 // End Function Specification
-void occ_phantom_irq_handler(void* i_arg, SsxIrqId i_irq, int i_critical) //gm036
+void occ_phantom_irq_handler(void* i_arg, SsxIrqId i_irq, int i_critical)
 {
     if(i_critical == SSX_CRITICAL)
     {
@@ -137,7 +100,7 @@ void occ_phantom_irq_handler(void* i_arg, SsxIrqId i_irq, int i_critical) //gm03
         G_occ_phantom_noncritical_count++;
     }
 }
-    
+
 // Function Specification
 //
 // Name:  dpss_oversubscription_irq_initialize
@@ -145,15 +108,12 @@ void occ_phantom_irq_handler(void* i_arg, SsxIrqId i_irq, int i_critical) //gm03
 // Description:
 // Installs the power oversubscription IRQ handler for the DPSS
 //
-// Flow:  08/03/11    FN=dpss_oversubscription_irq_initialize
-//
 // End Function Specification
 errlHndl_t dpss_oversubscription_irq_initialize()
 {
     int rc = 0;
     errlHndl_t l_err = NULL;
 
-    // override the default phantom interrupt handler -- gm036
     // NOTE:  It is believed that the oversubscription interrupt bounces
     // on and off as power supplies are re-inserted.  If it happens quickly enough
     // it will clear the interrupt before the code has a chance to see the cause
@@ -168,7 +128,7 @@ errlHndl_t dpss_oversubscription_irq_initialize()
     // Setup the IRQ
     rc = ssx_irq_setup(PGP_IRQ_EXTERNAL_TRAP,
                        SSX_IRQ_POLARITY_ACTIVE_LOW,
-                       SSX_IRQ_TRIGGER_LEVEL_SENSITIVE);  // @at010c
+                       SSX_IRQ_TRIGGER_LEVEL_SENSITIVE);
 
     if( rc ) {
         TRAC_ERR("%s: Failed IRQ setup.", __FUNCTION__);
@@ -181,13 +141,13 @@ errlHndl_t dpss_oversubscription_irq_initialize()
          * @userdata4  ERC_SSX_IRQ_SETUP_FAILURE
          * @devdesc    Firmware failure initializing DPSS IRQ
          */
-        l_err = createErrl( PSS_MID_DPSS_OVS_IRQ_INIT, // i_modId,
-                            SSX_GENERIC_FAILURE,       // i_reasonCode,
+        l_err = createErrl( PSS_MID_DPSS_OVS_IRQ_INIT, // i_modId
+                            SSX_GENERIC_FAILURE,       // i_reasonCode
                             ERC_SSX_IRQ_SETUP_FAILURE,
                             ERRL_SEV_PREDICTIVE,
-                            NULL,                      // tracDesc_t i_trace,
-                            0,                         // i_traceSz,
-                            rc,                        // i_userData1,
+                            NULL,                      // tracDesc_t i_trace
+                            0,                         // i_traceSz
+                            rc,                        // i_userData1
                             0);                        // i_userData2
     }
     else {
@@ -195,7 +155,7 @@ errlHndl_t dpss_oversubscription_irq_initialize()
         rc = ssx_irq_handler_set(PGP_IRQ_EXTERNAL_TRAP,
                                  isr_dpss_oversubscription_handler,
                                  NULL,
-                                 SSX_NONCRITICAL);    // @th032
+                                 SSX_NONCRITICAL);
 
         if( rc ) {
             TRAC_ERR("%s: Failed to set the IRQ handler.", __FUNCTION__);
@@ -208,13 +168,13 @@ errlHndl_t dpss_oversubscription_irq_initialize()
              * @userdata4  ERC_SSX_IRQ_HANDLER_SET_FAILURE
              * @devdesc    Firmware failure setting up DPSS routine
              */
-            l_err = createErrl( PSS_MID_DPSS_OVS_IRQ_INIT, // i_modId,
-                                SSX_GENERIC_FAILURE,       // i_reasonCode,
+            l_err = createErrl( PSS_MID_DPSS_OVS_IRQ_INIT, // i_modId
+                                SSX_GENERIC_FAILURE,       // i_reasonCode
                                 ERC_SSX_IRQ_HANDLER_SET_FAILURE,
                                 ERRL_SEV_PREDICTIVE,
-                                NULL,                      // tracDesc_t i_trace,
-                                0,                         // i_traceSz,
-                                rc,                        // i_userData1,
+                                NULL,                      // tracDesc_t i_trace
+                                0,                         // i_traceSz
+                                rc,                        // i_userData1
                                 0);                        // i_userData2
         }
         else {
@@ -226,8 +186,4 @@ errlHndl_t dpss_oversubscription_irq_initialize()
 
     return l_err;
 } // end dpss_oversubscription_irq_initialize
-
-
-
-
 

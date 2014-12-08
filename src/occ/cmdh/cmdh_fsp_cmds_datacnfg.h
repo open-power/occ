@@ -5,7 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* COPYRIGHT International Business Machines Corp. 2011,2014              */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -24,9 +26,9 @@
 #ifndef _CMDH_FSP_CMDS_DATACNFG_H
 #define _CMDH_FSP_CMDS_DATACNFG_H
 
-#include "ssx.h"        
-#include "cmdh_service_codes.h" 
-#include "errl.h"             
+#include "ssx.h"
+#include "cmdh_service_codes.h"
+#include "errl.h"
 #include "trac.h"
 #include "rtls.h"
 #include "occ_common.h"
@@ -37,8 +39,8 @@
 #include "cmdh_fsp_cmds.h"
 #include "apss.h"
 
-// Enum of the various CnfgData command formats that 
-// are sent to OC over the TMGT<->OCC interface.
+// Enum of the various CnfgData command formats that
+// are sent to OCC over the TMGT<->OCC interface.
 typedef enum
 {
    DATA_FORMAT_PSTATE_SUPERSTRUCTURE = 0x01,
@@ -382,7 +384,7 @@ typedef struct __attribute__ ((packed))
 }cmdh_mem_throt_data_set_t;
 
 // Config packet definition used by TMGT to
-// send mem throttle min/max settings. 
+// send mem throttle min/max settings.
 typedef struct __attribute__ ((packed))
 {
     cmdh_mem_throt_header_t      header;

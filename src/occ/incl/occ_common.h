@@ -1,49 +1,33 @@
-/******************************************************************************
-// @file occ_common.h
-// @brief OCC common functions
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section occ_common_h occ_common.h
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *                      TEAM      06/16/2010  Port
- *   @pb000             pbavari   07/07/2011  Added typedef for uint32_t and
- *                                            removed TPMD_code_header
- *   @01                tapiar    08/07/2011  Moved default trace size to this file
- *   @pb003             pbavari   09/08/2011  Added MAX_OCCS and MAX_CORES define
- *   @pb007             pbavari   09/30/2011  Added HALT_WITH_FIR_SET
- *   @th00a             thallet   02/03/2012  Worst case FW timings in AMEC Sensors
- *   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
- *   @th00b             thallet   02/03/2012  Added some convert macros
- *   @pb00E             pbavari   03/11/2012  File name changes
- *   @th00d             thallet   04/23/2012  Added linear window macros
- *   @ai009  865968     ailutsar  01/09/2013  OCC Error log and trace parser web tool enhancement
- *   @gm006  SW224414   milesg    09/16/2013  Reset and FFDC improvements
- *   @gm010  901580     milesg    10/06/2013  Low Level FFDC support
- *   @gm016  909061     milesg    12/10/2013  increased default trace size
- *   @sb002  908891     sbroyles  12/09/2013  FFDC updates
- *   @sb012  910394     sbroyles  01/10/2014  More FFDC updates
- *   @gm022  908890     milesg    01/23/2014  Halt OCC on OCCLFIR[38]
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/incl/occ_common.h $                                   */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
 #ifndef _OCC_COMMON_H
 #define _OCC_COMMON_H
 
-//*************************************************************************
-// Includes
-//*************************************************************************
 #include <common_types.h>
 #include <comp_ids.h>
-
-//*************************************************************************
-// Externs
-//*************************************************************************
 
 // From Linker Script
 extern void _LINEAR_WR_WINDOW_SECTION_BASE;
@@ -54,20 +38,16 @@ extern void _LINEAR_RD_WINDOW_SECTION_BASE;
 // From Linker Script
 extern void _LINEAR_RD_WINDOW_SECTION_SIZE;
 
-//*************************************************************************
-// Macros
-//*************************************************************************
-
-/// Declare aligned data structures for Async access in a noncacheable section
-///
-/// These macros declare aligned data structures in a noncacheable section, with
-/// the alignment that is needed by the specified device driver (or more
-/// accurately, as specified by the hardware device itself.)
-///
-/// All buffers should be initialized - an initialization declaration using
-/// these macros would look as follows:
-///    Example:  DMA_BUFFER(uint8_t g_bcue_test[1024]) = {0};
-///
+// Declare aligned data structures for Async access in a noncacheable section
+//
+// These macros declare aligned data structures in a noncacheable section, with
+// the alignment that is needed by the specified device driver (or more
+// accurately, as specified by the hardware device itself.)
+//
+// All buffers should be initialized - an initialization declaration using
+// these macros would look as follows:
+//    Example:  DMA_BUFFER(uint8_t g_bcue_test[1024]) = {0};
+//
 #define PBAX_BUFFER(declaration) \
         declaration __attribute__ ((__aligned__ (8))) __attribute__ ((section (".noncacheable")))
 
@@ -167,12 +147,7 @@ extern void _LINEAR_RD_WINDOW_SECTION_SIZE;
 #define WORDALIGN(n) \
         ((n + 3) & ~3)
 
-
-
-//#define UTIL_MUTEX_GET(I_MUTEX, I_TIMEOUT) ssx_semaphore_pend(I_MUTEX,I_TIMEOUT)
-//#define UTIL_MUTEX_PUT(I_MUTEX) ssx_semaphore_post(I_MUTEX)
-
-// @sb002 CHECKPOINT macros revamped a little to allow a little more reuse with
+// CHECKPOINT macros revamped a little to allow a little more reuse with
 // new return codes ('Ex'h).  Note that there is a special case version of this
 // code in ll_ffdc.S designed solely for writing an FFDC header in the SSX_PANIC
 // path.
@@ -215,8 +190,7 @@ extern void _LINEAR_RD_WINDOW_SECTION_SIZE;
     __CHECKPOINT(_flg, (G_fsp_msg.rsp->fields.data[1] << 8 | G_fsp_msg.rsp->fields.data[2]), G_fsp_msg.rsp->fields.rc);\
 }
 
-// @sb012 Minor rewrite and addition of assembler version
-// @sb002 A new OCC_HALT macro much like SSX_PANIC but for OCC code use.  The
+// A new OCC_HALT macro much like SSX_PANIC but for OCC code use.  The
 // ex_code parm is placed in the exception code of the FFDC header as opposed to
 // SSX_PANIC which sets the panic code.  OCC_HALT sets the panic code to 0 to
 // differentiate this halt from SSX initiated halts.  This macro mirrors what
@@ -250,11 +224,7 @@ do {                                                                           \
     .endm
 #endif /* __ASSEMBLER__ */
 
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
-
-//Unique checkpoints
+// Unique checkpoints
 enum
 {
     MAIN_STARTED                = 0x01ff,
@@ -283,23 +253,20 @@ enum
     INIT_FSI_HOST_MBOX          = 0x0e10,
     FSI_HOST_MBOX_INITIALIZED   = 0x0e20,
     FSP_COMM_INITIALIZED        = 0x0eff,
-    ABOUT_TO_HALT               = 0x0f00, // @sb002
+    ABOUT_TO_HALT               = 0x0f00,
     FIRST_FSP_ATTN_SENT         = 0xffff,
 };
 
-//Checkpoint flags (one byte bitmap)
+// Checkpoint flags (one byte bitmap)
 enum
 {
     CF_FSI_MB_TIMEOUT           = 0x01,
 };
 
-// @01a
-#define DEFAULT_TRACE_SIZE 1536 //@gm006
-//@pb003a - added defines
+#define DEFAULT_TRACE_SIZE 1536
 #define MAX_OCCS       8
 #define MAX_CORES      12
 
-//@pb007a - HALT with FIR bits set
 // TRAP instruction should also set FIR bits along with halting PPC405
 // Set DBCR0 to initial value (setting external debug event) so that
 // trap call also sets FIR bits and also does not invoke program interrupt.
@@ -323,32 +290,14 @@ enum
 #define DURATION_IN_MS_UNTIL_NOW_FROM(start_time) \
   (uint32_t) ((ssx_timebase_get() - (SsxTimebase) start_time) / ( SSX_TIMEBASE_FREQUENCY_HZ / 1000 ))
 
-// @ai009c
 // Skip this typedef in x86 environment
 #ifndef OCC_X86_PARSER
-//@pb000a - moved from common_types.h to here
 typedef uint32_t      size_t ;
 #endif
 
-
-//*************************************************************************
-// Structures
-//*************************************************************************
-//@pb000d - removed TPMD_code_header
-
-//*************************************************************************
-// Globals
-//*************************************************************************
 extern const char G_occ_buildname[16];
 
-//*************************************************************************
-// Function Prototypes
-//*************************************************************************
 int memcmp ( const void * ptr1, const void * ptr2, size_t num );
-
-//*************************************************************************
-// Functions
-//*************************************************************************
 
 #endif //_OCC_COMMON_H
 

@@ -1,66 +1,40 @@
-/******************************************************************************
-// @file apsstest.c
-// @brief OCC APSS TEST
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section apsstest.c APSSTEST.C
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *
- *   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/pss/test/apsstest.c $                                 */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
-//*************************************************************************
-// Includes
-//*************************************************************************
 #include "ssx.h"
 #include "ssx_io.h"
 #include "simics_stdio.h"
-//#include <trac_interface.h>
 #include <thread.h>
 #include <threadSch.h>
 #include <errl.h>
 #include <apss.h>
 
-//*************************************************************************
-// Externs
-//*************************************************************************
-//@pb000a - added
-//extern void __ssx_boot;
-
-//*************************************************************************
-// Image Header
-//*************************************************************************
-//@pb000a - added
-//@dw000c - call with Applet ID arg (in case it gets uncommented & reused).
-//IMAGE_HEADER (G_mainAppImageHdr,__ssx_boot,MAIN_APP_ID,OCC_APLT_TEST);
-
-//*************************************************************************
-// Macros
-//*************************************************************************
-
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
-/// Period in which to run #timer_routine
-#define TIMER_INTERVAL (SsxInterval) SSX_MICROSECONDS(5000) 
-//@pb000d - deleted TPMD_code_header as not used
+// Period in which to run #timer_routine
+#define TIMER_INTERVAL (SsxInterval) SSX_MICROSECONDS(5000)
 SsxSemaphore prcd_sem;
 
-//*************************************************************************
-// Structures
-//*************************************************************************
-
-//*************************************************************************
-// Globals
-//*************************************************************************
 int g_j = 0;
 int g_k = 0;
 
@@ -72,23 +46,14 @@ uint8_t critical_stack[CRITICAL_STACK_SIZE];
 
 SsxTimer G_test_timer;
 
-//*************************************************************************
-// Function Prototypes
-//*************************************************************************
 extern void timer_routine(void *private);
 extern void rtloop_ocb_init(void);
-
-//*************************************************************************
-// Functions
-//*************************************************************************
 
 // Function Specification
 //
 // Name:  pgp_validation_ssx_main_hook
 //
 // Description:
-//
-// Flow:              FN=None
 //
 // End Function Specification
 void pgp_validation_ssx_main_hook(void)
@@ -101,8 +66,6 @@ void pgp_validation_ssx_main_hook(void)
 // Name:  Cmd_Hndl_thread_routine
 //
 // Description:
-//
-// Flow:              FN=Cmd_Hndl_thread_routine
 //
 // End Function Specification
 //TODO placeholder
@@ -126,8 +89,6 @@ void Cmd_Hndl_thread_routine(void *arg)
 //
 // Description:
 //
-// Flow:              FN=None
-//
 // End Function Specification
 void App_thread_routine(void *arg)
 {
@@ -139,7 +100,6 @@ void App_thread_routine(void *arg)
         {
             z++;
         }
-        //printf("Thread A running");
     }while(1);
 
 }
@@ -149,8 +109,6 @@ void App_thread_routine(void *arg)
 // Name:  Thermal_Monitor_thread_routine
 //
 // Description:
-//
-// Flow:              FN=None
 //
 // End Function Specification
 void Thermal_Monitor_thread_routine(void *arg)
@@ -165,7 +123,7 @@ void Thermal_Monitor_thread_routine(void *arg)
         }
         //printf("Thread A running");
     }while(1);
- 
+
 }
 
 // Function Specification
@@ -174,13 +132,11 @@ void Thermal_Monitor_thread_routine(void *arg)
 //
 // Description:
 //
-// Flow:              FN=None
-//
 // End Function Specification
 void Hlth_Monitor_thread_routine(void *arg)
 {
        int z=0;
-     do
+    do
     {
         int x=0;
         for(x=0; x < 10000; x++)
@@ -198,13 +154,11 @@ void Hlth_Monitor_thread_routine(void *arg)
 //
 // Description:
 //
-// Flow:              FN=None
-//
 // End Function Specification
 void FFDC_thread_routine(void *arg)
 {
        int z=0;
-     do
+    do
     {
         int x=0;
         for(x=0; x < 10000; x++)
@@ -218,9 +172,9 @@ void FFDC_thread_routine(void *arg)
 
 /** PRCD Thread
  *
- * This thread loops as the highest priority thread, where it currently 
- * just 
- * 
+ * This thread loops as the highest priority thread, where it currently
+ * just
+ *
  */
 // Function Specification
 //
@@ -228,14 +182,12 @@ void FFDC_thread_routine(void *arg)
 //
 // Description:
 //
-// Flow:              FN=None
-//
 // End Function Specification
 void prcd_thread_routine(void *private)
 {
   while(1)
   {
-    // Just sit here until this semaphore is posted, which will never happen.  
+    // Just sit here until this semaphore is posted, which will never happen.
     ssx_semaphore_pend(&prcd_sem, SSX_WAIT_FOREVER);
 
     // Only trace the first XX times that this function loops
@@ -243,7 +195,7 @@ void prcd_thread_routine(void *private)
     {
       g_k = 0;
       g_j++;
-      
+
     }
   }
 }
@@ -254,8 +206,6 @@ void prcd_thread_routine(void *private)
 // Name:  apss_test_pwr_meas
 //
 // Description: Request the full power measurement data in a single function call for TESTING ONLY
-//
-// Flow:              FN=None
 //
 // End Function Specification
 extern PoreEntryPoint pore_test; // Sleep for specified amount of time...
@@ -290,23 +240,21 @@ void apss_test_pwr_meas(void)
  *
  * This thread currently just loops as the lowest priority thread, handling
  * the lowest priority tasks.
- * 
+ *
  */
 // Function Specification
 //
 // Name: main_thread_routine
 //
-// Description: 
+// Description:
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 void main_thread_routine(void *private)
 {
   // Start the critical 250uS timer
   ssx_timer_schedule(&timer, 1, TIMER_INTERVAL);
 
-  // Initialize APSS // @cc000a
+  // Initialize APSS
   errlHndl_t l_errl = apss_initialize();
   if (l_errl)
   {
@@ -351,14 +299,12 @@ void main_thread_routine(void *private)
 //
 // Name: dump_thread_info
 //
-// Description: 
+// Description:
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 void dump_thread_info(void *arg)
 {
-    
+
     printf("dumping thread info--------------------------\n");
     int l_rc = 0;
     SsxThreadState l_state = 0;
@@ -377,7 +323,7 @@ void dump_thread_info(void *arg)
                                                             l_pri,
                                                             l_runnable,
                                                             l_rc,
-                                                            G_threadSchedulerIndex);        
+                                                            G_threadSchedulerIndex);
 
     }
 
@@ -388,23 +334,21 @@ void dump_thread_info(void *arg)
  * main() currently initalizes our trace buffer along with creating threads
  * and timers for execution.  Note that once main runs ssx_start_threads, we
  * never return as the SSX kernel takes over.
- * 
+ *
  */
 // Function Specification
 //
 // Name: main
 //
-// Description: 
+// Description:
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 int main(int argc, char **argv)
 {
     //locals
     errlHndl_t  l_errl = NULL;
 
-    // Initialize Trace Buffers immediately, so they can be used 
+    // Initialize Trace Buffers immediately, so they can be used
     // from this point on.
     //TRAC_init_buffers();
 
@@ -414,35 +358,31 @@ int main(int argc, char **argv)
     stdout = (FILE *)(&simics_stdout);
     stderr = (FILE *)(&simics_stderr);
 
-    //@pb000a - added
     printf("Inside apsstest main\n");
 
     // Initialize SSX Stacks (note that this also reinitializes the time base to 0)
     ssx_initialize((SsxAddress)noncritical_stack, NONCRITICAL_STACK_SIZE,
-		   (SsxAddress)critical_stack, CRITICAL_STACK_SIZE,
-		   0);
-
-    // Create Timers
-    //ssx_timer_create(&timer, timer_routine, 0);
+           (SsxAddress)critical_stack, CRITICAL_STACK_SIZE,
+           0);
 
     // Create Global Semaphores
     ssx_semaphore_create(&prcd_sem, 0, 13);
 
     // Create Threads
-    ssx_thread_create(&main_thread, 
-		      main_thread_routine, 
-		      (void *)0,
-		      (SsxAddress)main_thread_stack,
-		      THREAD_STACK_SIZE,
-		      1);
+    ssx_thread_create(&main_thread,
+              main_thread_routine,
+              (void *)0,
+              (SsxAddress)main_thread_stack,
+              THREAD_STACK_SIZE,
+              1);
 
     // Create Threads
-    ssx_thread_create(&prcd_thread, 
-		      prcd_thread_routine, 
-		      (void *)0,
-		      (SsxAddress)prcd_thread_stack,
-		      THREAD_STACK_SIZE,
-		      0);
+    ssx_thread_create(&prcd_thread,
+              prcd_thread_routine,
+              (void *)0,
+              (SsxAddress)prcd_thread_stack,
+              THREAD_STACK_SIZE,
+              0);
 
     // Make Threads runnable
     ssx_thread_resume(&main_thread);
@@ -457,13 +397,10 @@ int main(int argc, char **argv)
 
         // TODO add trace
 
-        // commit log 
+        // commit log
         // NOTE: log should be deleted by reader mechanism
-        commitErrl( &l_errl ); 
+        commitErrl( &l_errl );
     }
-
-    // Initialize Realtime Loop Timer Interrupt
-    //rtloop_ocb_init();
 
     //kick off timer
     ssx_timer_create(&G_test_timer, dump_thread_info, 0);

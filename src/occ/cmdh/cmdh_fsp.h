@@ -5,7 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* COPYRIGHT International Business Machines Corp. 2011,2014              */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -107,7 +109,7 @@ typedef enum
 {
     FSI2HOST_MBOX_NOT_USEABLE = 0,
     FSI2HOST_MBOX_INITIALIZED = 1,
-} eFsi2HostMboxState;    // @th036
+} eFsi2HostMboxState;
 
 // Typedef of the various reasons why the cmdh thread wakes up
 typedef enum

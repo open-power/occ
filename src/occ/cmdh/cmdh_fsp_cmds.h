@@ -5,7 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* COPYRIGHT International Business Machines Corp. 2011,2014              */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -24,9 +26,9 @@
 #ifndef _CMDH_FSP_CMDS_H
 #define _CMDH_FSP_CMDS_H
 
-#include "ssx.h"        
-#include "cmdh_service_codes.h" 
-#include "errl.h"             
+#include "ssx.h"
+#include "cmdh_service_codes.h"
+#include "errl.h"
 #include "trac.h"
 #include "rtls.h"
 #include "occ_common.h"
@@ -82,7 +84,7 @@ typedef enum
 // Struct used to parse Poll Cmd
 typedef struct __attribute__ ((packed)) cmdh_poll_query
 {
-    // Standard TMGT 
+    // Standard TMGT
     struct    cmdh_fsp_cmd_header;
     // Poll Version
     uint8_t   version;
@@ -91,7 +93,7 @@ typedef struct __attribute__ ((packed)) cmdh_poll_query
 // Response packet used for Poll Cmd
 typedef struct __attribute__ ((packed)) cmdh_poll_resp_v0
 {
-    // Standard TMGT 
+    // Standard TMGT
     struct    cmdh_fsp_rsp_header;
     // Status
     union
@@ -164,7 +166,7 @@ typedef struct __attribute__ ((packed)) cmdh_poll_resp_v0
 // Response packet used for Poll Cmd
 typedef struct __attribute__ ((packed)) cmdh_poll_resp_v10
 {
-    // Standard TMGT 
+    // Standard TMGT
     struct    cmdh_fsp_rsp_header;
     // BYTE  1: Status
     union
@@ -173,7 +175,7 @@ typedef struct __attribute__ ((packed)) cmdh_poll_resp_v10
         {
             uint8_t master_occ     : 1;   // 1 => master, 0 => slave
             uint8_t fir_master     : 1;   // 1 => fir master.
-            uint8_t _reserved_5    : 1;   
+            uint8_t _reserved_5    : 1;
             uint8_t _reserved_4    : 1;
             uint8_t attn_enabled   : 1;   // 1 => Attentions from OCC to Host are enabled.
             uint8_t _reserved_2    : 1;
@@ -189,14 +191,14 @@ typedef struct __attribute__ ((packed)) cmdh_poll_resp_v10
         {
             uint8_t dvfs_due_to_ot  : 1;   // 1 => OCC clipped max Pstate due to an over temp.
             uint8_t dvfs_due_to_pwr : 1;   // 1 => OCC clipped max Psate due to reaching pcap limit.
-            uint8_t mthrot_due_to_ot: 1;   // 1 => OCC throttled memory due to an over temp.   
+            uint8_t mthrot_due_to_ot: 1;   // 1 => OCC throttled memory due to an over temp.
             uint8_t n_power         : 1;   // 1 => Server running without redundant power.
             uint8_t _reserved_3     : 1;   
             uint8_t _reserved_2     : 1;   
             uint8_t _reserved_1     : 1;   
             uint8_t _reserved_0     : 1;   
         };
-        uint8_t word; 
+        uint8_t word;
     } ext_status;
     // BYTE  3: OCCs Present
     uint8_t   occ_pres_mask;
@@ -277,7 +279,7 @@ typedef struct __attribute__ ((packed)) cmdh_poll_caps_sensor
 #define CMDH_FW_QUERY_RESP_LEN 16
 typedef struct __attribute__ ((packed)) cmdh_fw_resp
 {
-    // Standard TMGT 
+    // Standard TMGT
     struct    cmdh_fsp_rsp_header;
     // Firmware Level (4 bytes)
     uint8_t   fw_level[CMDH_FW_QUERY_RESP_LEN];
@@ -292,7 +294,7 @@ typedef struct __attribute__ ((packed)) cmdh_fw_resp
 // Query packet used by the FSP for setting the TPMF state, version 0.
 struct smgr_setmodestate_v0_query
 {
-    // Standard TMGT 
+    // Standard TMGT
     struct    cmdh_fsp_cmd_header;
     // Version
     uint8_t       version;
@@ -304,14 +306,14 @@ struct smgr_setmodestate_v0_query
 
 typedef struct smgr_setmodestate_v0_query smgr_setmodestate_v0_query_t;
 
-#define SMGR_SETMODESTATE_CMD_LEN    3 
+#define SMGR_SETMODESTATE_CMD_LEN    3
 
 // Complete Response packet for a set mode / state command
-#define SMGR_SETMODESTATE_RESP_LEN    0 
+#define SMGR_SETMODESTATE_RESP_LEN   0
 typedef cmdh_fsp_rsp_t smgr_setmodestate_resp_t;
 
 // Set-mode-state TMGT command version
-#define SMGR_SMS_CMD_VERSION            0
+#define SMGR_SMS_CMD_VERSION         0
 
 //---------------------------------------------------------
 // Clear Elog Command
@@ -353,17 +355,17 @@ typedef enum
 {
     // Non-failure. Code update, external user request (i.e. to load
     // new pState table). No FFDC error logs should be generated.
-    CMDH_PREP_NONFAILURE       = 0x00, 
+    CMDH_PREP_NONFAILURE       = 0x00,
     // Failure detected on this OCC. FFDC error log should be generated.
-    CMDH_PREP_FAILON_THISOCC   = 0x01, 
+    CMDH_PREP_FAILON_THISOCC   = 0x01,
     // Failure detected on a different OCC within same node.
     // FFDC log is optional, if this OCC is master OCC it may want to
     // generate FFDC log.
-    CMDH_PREP_FAILON_OTHEROCC  = 0x02, 
+    CMDH_PREP_FAILON_OTHEROCC  = 0x02,
     // Failure detected on a different OCC in different node. No
     // FFDC error log should be generated. Current assumption is that an
     // OCC in a different node should never be reason for an OCC failure.
-    CMDH_PREP_FAILON_OTHERNODE = 0x03, 
+    CMDH_PREP_FAILON_OTHERNODE = 0x03,
 } eCmdhResetPrepReason;
 
 #define CMDH_RESET_PREP_TRACE_SIZE 3072
@@ -371,7 +373,7 @@ typedef enum
 // Struct used to parse Reset Prep Command
 typedef struct __attribute__ ((packed)) cmdh_reset_prep
 {
-    // Standard TMGT 
+    // Standard TMGT
     struct    cmdh_fsp_cmd_header;
     // Poll Version
     uint8_t   version;
@@ -450,7 +452,7 @@ typedef enum
     DBUG_INJECT_ERR         = 0x1C,
     DBUG_VERIFY_V_F         = 0x1D,
     DBUG_DUMP_PPM_DATA      = 0x1E,
-    
+
     DBUG_FLUSH_DCACHE       = 0x20,
     DBUG_INVALIDATE_DCACHE  = 0x21,
     DBUG_CENTAUR_SENSOR_CACHE = 0x22,
