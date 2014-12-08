@@ -1,23 +1,26 @@
-/******************************************************************************
-// @file centaur_control.h
-// @brief Centaur external control functions & data.
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section  _centaur_control_h centaur_control.h
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @th031  878471     thallet   04/15/2013  Centaur Throttles
- *   @gm004  892961     milesg    07/25/2013  Removed centaur_control_init from init section
- *   @gm016  909061     milesg    12/10/2013  Support memory throttling due to temperature
- *
- *  @endverbatim
- *
- *///*************************************************************************/
- 
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/cent/centaur_control.h $                              */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* COPYRIGHT International Business Machines Corp. 2011,2014              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
+
 #ifndef _CENTAUR_CONTROL_H
 #define _CENTAUR_CONTROL_H
 
@@ -26,7 +29,7 @@
 //*************************************************************************
 #include <occ_common.h>
 #include <ssx.h>
-#include "rtls.h"	
+#include "rtls.h"
 #include "gpe_data.h"
 #include "occ_sys_config.h"
 
@@ -62,14 +65,14 @@ typedef enum
 struct centaur_control_task {
         uint8_t  startCentaur;
         uint8_t  prevCentaur;
-        uint8_t  curCentaur;     
+        uint8_t  curCentaur;
         uint8_t  endCentaur;
         uint8_t  traceThresholdFlags;
         PoreFlex gpe_req;
 } __attribute__ ((__packed__));
 typedef struct centaur_control_task centaur_control_task_t;
 
-//per mba throttle values -- gm016
+//per mba throttle values
 typedef struct
 {
    uint16_t max_n_per_mba;      //mode and OVS dependent, from config data
@@ -89,12 +92,12 @@ extern centaur_control_task_t G_centaur_control_task;
 // Function Prototypes
 //*************************************************************************
 
-//Collect centaur data for all centaur in specified range 
+//Collect centaur data for all centaur in specified range
 void task_centaur_control( task_t * i_task );
 
 //Initialize structures for collecting centaur data.
 //void centaur_control_init( void ) INIT_SECTION;
-void centaur_control_init( void ); //gm004
+void centaur_control_init( void );
 
 #endif //_CENTAUR_CONTROL_H
 

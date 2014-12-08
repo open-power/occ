@@ -1,53 +1,37 @@
-/******************************************************************************
-// @file  centaur_data.c
-// @brief Collection & Initialization of Centaur Chips/Procedures/Data.
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _centaur_data_c centaur_data.c
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @th00c             thallet   03/14/2012  Created
- *   @nh001             neilhsu   05/23/2012  Add missing error log tags
- *   @th012             thallet   07/17/2012  Changed centaur procedure to get
- *                                            MCS BaseAddress automatically
- *   @th013             thallet   07/17/2012  SW150201: OCC VPO: inbound scom 
- *   @th016             thallet   08/13/2012  Change tor only 4 Centaurs possible on Murano
- *   @th018  852950     thallet   09/12/2012  Added Centaur thermal readings       
- *   @th031  878471     thallet   04/15/2013  Centaur Throttles
- *   @th045  893135     thallet   07/26/2013  Updated for new Centaur Procedures
- *   @gm006  SW224414   milesg    09/16/2013  Reset and FFDC improvements 
- *   @rt001  901927     tapiar    10/03/2013  Fix src tags 
- *   @gm012  905097     milesg    10/31/2013  Fix Centaur enablement
- *   @gm013  907548     milesg    11/22/2013  Memory therm monitoring support
- *   @gm015  907601     milesg    12/06/2013  L4 Bank Delete circumvention and centaur i2c recovery
- *   @gm016  909061     milesg    12/10/2013  Support memory throttling due to temperature
- *   @gm019  910509     milesg    01/10/2014  Memory corruption problem
- *   @gm022  908890     milesg    01/23/2014  Enable centaur deadman timer
- *   @gm023  913865     milesg    01/31/2014  Centaur GPE times out
- *   @gm039  922963     milesg    05/28/2014  Handle centaur nest LFIR 6
- *   @gm041  928150     milesg    06/02/2014  log error in mfg if centaur lfir[6] bit is set
- *   @gm042  917016     milesg    06/04/2014  add delay between centaur i2c recovery operations
- *   @gs038  935559     gjsilva   08/26/2014  Support new RCs from gpe_get_mem_data procedure
- *
- *  @endverbatim
- *
- *///*************************************************************************/
- 
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/cent/centaur_data.c $                                 */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* COPYRIGHT International Business Machines Corp. 2011,2014              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
+
 //*************************************************************************
 // Includes
 //*************************************************************************
 #include "centaur_data.h"
 #include "centaur_control.h"
-#include "pgp_async.h"        
-#include "threadSch.h" 
+#include "pgp_async.h"
+#include "threadSch.h"
 #include "pmc_register_addresses.h"
 #include "centaur_data_service_codes.h"
-#include "occ_service_codes.h" 
-#include "errl.h"             
+#include "occ_service_codes.h"
+#include "errl.h"
 #include "trac.h"
 #include "rtls.h"
 #include "apss.h"
@@ -68,7 +52,7 @@
 // Defines/Enums
 //*************************************************************************
 
-// Enumerated list of possible centaur operations -- gm039
+// Enumerated list of possible centaur operations
 typedef enum
 {
     L4_LINE_DELETE,
@@ -79,7 +63,7 @@ typedef enum
     CLEAR_NEST_LFIR6,
     ENABLE_SC,
     NUM_CENT_OPS
-}cent_ops_enum; 
+}cent_ops_enum;
 
 
 #define MBCCFGQ_REG                 ((uint32_t)0x0201140ful)
@@ -103,8 +87,8 @@ typedef enum
 // Globals
 //*************************************************************************
 //Global array of centaur data buffers
-GPE_BUFFER(MemData G_centaur_data[NUM_CENTAUR_DATA_BUFF + 
-                                  NUM_CENTAUR_DOUBLE_BUF + 
+GPE_BUFFER(MemData G_centaur_data[NUM_CENTAUR_DATA_BUFF +
+                                  NUM_CENTAUR_DOUBLE_BUF +
                                   NUM_CENTAUR_DATA_EMPTY_BUF]);
 
 //pore request for scoming centaur registers
@@ -114,7 +98,7 @@ PoreFlex G_cent_scom_req;
 GPE_BUFFER(GpeScomParms G_cent_scom_gpe_parms);
 
 //scom command list entry
-GPE_BUFFER(scomList_t G_cent_scom_list_entry[NUM_CENT_OPS]); //gm039
+GPE_BUFFER(scomList_t G_cent_scom_list_entry[NUM_CENT_OPS]);
 
 //buffer for storing output from running gpe_scom_centaur()
 GPE_BUFFER(uint64_t G_cent_scom_data[MAX_NUM_CENTAURS]) = {0};
@@ -122,19 +106,19 @@ GPE_BUFFER(uint64_t G_cent_scom_data[MAX_NUM_CENTAURS]) = {0};
 cent_sensor_flags_t G_cent_enabled_sensors = {0};
 
 //Global array of centaur data pointers
-MemData * G_centaur_data_ptrs[MAX_NUM_CENTAURS] = { &G_centaur_data[0], 
-   &G_centaur_data[1], &G_centaur_data[2], &G_centaur_data[3], 
+MemData * G_centaur_data_ptrs[MAX_NUM_CENTAURS] = { &G_centaur_data[0],
+   &G_centaur_data[1], &G_centaur_data[2], &G_centaur_data[3],
    &G_centaur_data[4], &G_centaur_data[5], &G_centaur_data[6],
    &G_centaur_data[7]};
 
 //Global structures for gpe get mem data parms
 GPE_BUFFER(GpeGetMemDataParms G_centaur_data_parms);
 
-//Pore flex request for the GPE job that is used for centaur init. 
+//Pore flex request for the GPE job that is used for centaur init.
 PoreFlex G_centaur_reg_pore_req;
 
 //Centaur structures used for task data pointers.
-centaur_data_task_t G_centaur_data_task = { 
+centaur_data_task_t G_centaur_data_task = {
     .start_centaur = 0,
     .current_centaur = 0,
     .end_centaur = 7,
@@ -142,7 +126,7 @@ centaur_data_task_t G_centaur_data_task = {
     .centaur_data_ptr = &G_centaur_data[8]
 };
 
-//AMEC needs to know when data for a centaur has been collected. 
+//AMEC needs to know when data for a centaur has been collected.
 uint32_t G_updated_centaur_mask = 0;
 
 //Global G_present_centaurs is bitmask of all centaurs
@@ -152,12 +136,12 @@ uint32_t G_present_centaurs = 0;
 // Latch for a Trace Entry
 uint8_t G_centaur_queue_not_idle_traced = 0;
 
-// bitmap of centaurs requiring i2c recovery -- gm015
+// bitmap of centaurs requiring i2c recovery
 uint8_t      G_centaur_needs_recovery = 0;
 
 // bitmap of centaurs that have NEST LFIR6 asserted...
 // This tells amec code to treat the centaur temperature as invalid
-uint8_t      G_centaur_nest_lfir6 = 0; //gm039
+uint8_t      G_centaur_nest_lfir6 = 0;
 
 //*************************************************************************
 // Function Prototypes
@@ -173,8 +157,6 @@ uint8_t      G_centaur_nest_lfir6 = 0; //gm039
 //
 // Description: i2c recovery procedure and other hw workarounds
 //
-// Flow:  ???    FN= ???
-//
 // End Function Specification
 
 //number of times in a row we must go without needing i2c recovery
@@ -184,15 +166,15 @@ uint8_t      G_centaur_nest_lfir6 = 0; //gm039
 //threshold of times LFIR6 is asserted (up/down counter) before tracing
 #define NEST_LFIR6_MAX_COUNT 4
 
-//number of SC polls to wait between i2c recovery attempts (see SW248695) -- gm042
+//number of SC polls to wait between i2c recovery attempts
 #define CENT_SC_MAX_INTERVAL 32
 
-void cent_recovery(uint32_t i_cent) //gm015
+void cent_recovery(uint32_t i_cent)
 {
     int l_rc = 0;
     errlHndl_t    l_err   = NULL;
-    uint32_t l_prev_cent = G_cent_scom_list_entry[L4_LINE_DELETE].instanceNumber;  //gm039
-    uint8_t l_cent_mask = CENTAUR0_PRESENT_MASK >> l_prev_cent;  //gm039
+    uint32_t l_prev_cent = G_cent_scom_list_entry[L4_LINE_DELETE].instanceNumber;
+    uint8_t l_cent_mask = CENTAUR0_PRESENT_MASK >> l_prev_cent;
     static bool L_not_idle_traced = FALSE;
     static uint8_t L_cent_callouts = 0;
     static bool L_gpe_scheduled = FALSE;
@@ -200,8 +182,8 @@ void cent_recovery(uint32_t i_cent) //gm015
     static bool L_gpe_had_1_tick = FALSE;
     static uint8_t L_nest_lfir6_count[MAX_NUM_CENTAURS] = {0};
     static uint8_t L_nest_lfir6_traced = 0;
-    static uint8_t L_nest_lfir6_logged = 0; //gm041
-    static uint8_t L_i2c_recovery_delay[MAX_NUM_CENTAURS] = {0}; //gm042
+    static uint8_t L_nest_lfir6_logged = 0;
+    static uint8_t L_i2c_recovery_delay[MAX_NUM_CENTAURS] = {0};
 
     do
     {
@@ -215,7 +197,7 @@ void cent_recovery(uint32_t i_cent) //gm015
             if(!L_not_idle_traced && L_gpe_had_1_tick)
             {
                 TRAC_INFO("cent_recovery: Centaur recovery GPE is still running. cent[%d], entries[%d], state[0x%08x]",
-                          l_prev_cent, //gm039
+                          l_prev_cent,
                           G_cent_scom_gpe_parms.entries,
                           G_cent_scom_req.request.state);
                 L_not_idle_traced = TRUE;
@@ -231,7 +213,7 @@ void cent_recovery(uint32_t i_cent) //gm015
             if(L_not_idle_traced)
             {
                 TRAC_INFO("cent_recovery: GPE completed. cent[%d],",
-                          l_prev_cent);  //gm039
+                          l_prev_cent);
                 L_not_idle_traced = FALSE;
             }
         }
@@ -242,15 +224,15 @@ void cent_recovery(uint32_t i_cent) //gm015
         //but keep retrying.
         if(L_gpe_scheduled &&
            (!async_request_completed(&G_cent_scom_req.request) || G_cent_scom_gpe_parms.rc) &&
-           (!(L_cent_callouts & l_cent_mask))) //gm039
+           (!(L_cent_callouts & l_cent_mask)))
         {
             //Mark the centaur as being called out
-            L_cent_callouts |= l_cent_mask;  //gm039
+            L_cent_callouts |= l_cent_mask;
 
             // There was an error doing the recovery scoms
             TRAC_ERR("cent_recovery: gpe_scom_centaur failed. rc[0x%08x] cent[%d] entries[%d] errorIndex[0x%08X]",
                      G_cent_scom_gpe_parms.rc,
-                     l_prev_cent,  //gm039
+                     l_prev_cent,
                      G_cent_scom_gpe_parms.entries,
                      G_cent_scom_gpe_parms.errorIndex);
 
@@ -258,33 +240,33 @@ void cent_recovery(uint32_t i_cent) //gm015
              * @errortype
              * @moduleid    CENT_RECOVERY_MOD
              * @reasoncode  CENT_SCOM_ERROR
-             * @userdata1   rc - Return code of failing scom 
+             * @userdata1   rc - Return code of failing scom
              * @userdata2   index of failing scom
              * @userdata4   0
              * @devdesc     OCC to Centaur communication failure
-             */     
+             */
             l_err = createErrl(
                     CENT_RECOVERY_MOD,                      //modId
                     CENT_SCOM_ERROR,                        //reasoncode
-                    OCC_NO_EXTENDED_RC,                     //Extended reason code 
+                    OCC_NO_EXTENDED_RC,                     //Extended reason code
                     ERRL_SEV_PREDICTIVE,                    //Severity
                     NULL,                                   //Trace Buf
                     DEFAULT_TRACE_SIZE,                     //Trace Size
                     G_cent_scom_gpe_parms.rc,               //userdata1
-                    G_cent_scom_gpe_parms.errorIndex         //userdata2
+                    G_cent_scom_gpe_parms.errorIndex        //userdata2
                     );
 
             //dump ffdc contents collected by ssx
             addUsrDtlsToErrl(l_err,                                    //io_err
                      (uint8_t *) &(G_cent_scom_req.ffdc),              //i_dataPtr,
-                     sizeof(PoreFfdc),                                 //i_size 
-                     ERRL_USR_DTL_STRUCT_VERSION_1,                    //version 
+                     sizeof(PoreFfdc),                                 //i_size
+                     ERRL_USR_DTL_STRUCT_VERSION_1,                    //version
                      ERRL_USR_DTL_BINARY_DATA);                        //type
 
             //callout the centaur
             addCalloutToErrl(l_err,
                              ERRL_CALLOUT_TYPE_HUID,
-                             G_sysConfigData.centaur_huids[l_prev_cent], //gm039
+                             G_sysConfigData.centaur_huids[l_prev_cent],
                              ERRL_CALLOUT_PRIORITY_MED);
 
             //callout the processor
@@ -304,7 +286,7 @@ void cent_recovery(uint32_t i_cent) //gm015
 
         // check the centaur nest lfir register for parity errors from thermal (bit 6)
         // NOTE: recovery will occur 8 ticks from now so that all entries target the
-        // same centaur in a given tick (simplifies callouts) -- gm039
+        // same centaur in a given tick (simplifies callouts)
         if(G_cent_scom_list_entry[READ_NEST_LFIR6].data & CENT_NEST_LFIR6)
         {
             //Increment the per-centaur LFIR[6] threshold counter
@@ -313,7 +295,7 @@ void cent_recovery(uint32_t i_cent) //gm015
                 L_nest_lfir6_count[l_prev_cent]++;
 
                 //log an error the first time we see this.  Error will be predictive
-                //if mfg mode ipl and informational otherwise -- gm041
+                //if mfg mode ipl and informational otherwise
                 if(!(L_nest_lfir6_logged & l_cent_mask))
                 {
                     //only log error once
@@ -337,11 +319,11 @@ void cent_recovery(uint32_t i_cent) //gm015
                          * @userdata2   0
                          * @userdata4   OCC_NO_EXTENDED_RC
                          * @devdesc     Centaur has an unexpected FIR bit set
-                         */     
+                         */
                         l_err = createErrl(
                                 CENT_RECOVERY_MOD,                      //modId
                                 CENT_LFIR_ERROR,                        //reasoncode
-                                OCC_NO_EXTENDED_RC,                     //Extended reason code 
+                                OCC_NO_EXTENDED_RC,                     //Extended reason code
                                 ERRL_SEV_INFORMATIONAL,                 //Severity
                                 NULL,                                   //Trace Buf
                                 DEFAULT_TRACE_SIZE,                     //Trace Size
@@ -350,13 +332,13 @@ void cent_recovery(uint32_t i_cent) //gm015
 
                         //force severity to predictive if mfg ipl (allows callout to be added to info error)
                         setErrlActions(l_err, ERRL_ACTIONS_MANUFACTURING_ERROR);
-    
+
                         //add centaur callout
                         addCalloutToErrl(l_err,
                                          ERRL_CALLOUT_TYPE_HUID,
                                          G_sysConfigData.centaur_huids[l_prev_cent],
                                          ERRL_CALLOUT_PRIORITY_HIGH);
-    
+
                         commitErrl(&l_err);
                     }
                 }
@@ -388,13 +370,13 @@ void cent_recovery(uint32_t i_cent) //gm015
             G_centaur_nest_lfir6 &= ~l_cent_mask;
         }
 
-        //Now we can start working on the next centaur (i_cent) -- gm039
+        //Now we can start working on the next centaur (i_cent)
         l_cent_mask = CENTAUR0_PRESENT_MASK >> i_cent;
 
         //reset for next pass
         L_gpe_scheduled = FALSE;
 
-        //check if this centaur requires lfir6 recovery -- gm039
+        //check if this centaur requires lfir6 recovery
         if(G_centaur_nest_lfir6 & l_cent_mask)
         {
             //Set the command type from GPE_SCOM_NOP to GPE_SCOM_RMW
@@ -410,23 +392,23 @@ void cent_recovery(uint32_t i_cent) //gm015
             G_cent_scom_list_entry[CLEAR_NEST_LFIR6].commandType = GPE_SCOM_NOP;
         }
 
-        //Decrement the delay counter for centaur i2c recovery -- gm042
+        //Decrement the delay counter for centaur i2c recovery
         if(L_i2c_recovery_delay[i_cent])
         {
            L_i2c_recovery_delay[i_cent]--;
         }
         //check if this centaur requires i2c recovery (dimm sensor has error status bit set)
-        if(G_centaur_needs_recovery & l_cent_mask) //gm039
+        if(G_centaur_needs_recovery & l_cent_mask)
         {
-            //If the delay time is up, do the i2c recovery -- gm042
+            //If the delay time is up, do the i2c recovery
             if(!L_i2c_recovery_delay[i_cent])
-            { 
+            {
                 if(!L_i2c_rec_trc_throt)
                 {
                     TRAC_INFO("cent_recovery: Performing centaur i2c recovery procedure. required bitmap = 0x%02X", G_centaur_needs_recovery);
                 }
 
-                //restart the recovery delay -- gm042
+                //restart the recovery delay
                 L_i2c_recovery_delay[i_cent] = CENT_SC_MAX_INTERVAL;
 
                 //don't allow tracing for at least I2C_REC_TRC_THROT_COUNT calls to this function
@@ -434,11 +416,11 @@ void cent_recovery(uint32_t i_cent) //gm015
                 L_i2c_rec_trc_throt = I2C_REC_TRC_THROT_COUNT;
 
                 //clear the request for i2c recovery here
-                G_centaur_needs_recovery &= ~l_cent_mask; //gm039
+                G_centaur_needs_recovery &= ~l_cent_mask;
 
                 //Set the command type from GPE_SCOM_NOP to GPE_SCOM_RMW
-                //these entries will disable and re-enable the centuar sensor cache
-                //which will also cause the i2c master to be reset -- gm039
+                //these entries will disable and re-enable the centaur sensor cache
+                //which will also cause the i2c master to be reset
                 G_cent_scom_list_entry[DISABLE_SC].commandType = GPE_SCOM_RMW;
                 G_cent_scom_list_entry[ENABLE_SC].commandType = GPE_SCOM_RMW;
             }
@@ -458,7 +440,7 @@ void cent_recovery(uint32_t i_cent) //gm015
                 }
             }
 
-            //these ops aren't needed so disable them -- gm039
+            //these ops aren't needed so disable them
             G_cent_scom_list_entry[DISABLE_SC].commandType = GPE_SCOM_NOP;
             G_cent_scom_list_entry[ENABLE_SC].commandType = GPE_SCOM_NOP;
         }
@@ -474,7 +456,7 @@ void cent_recovery(uint32_t i_cent) //gm015
 
         // Set up GPE parameters
         G_cent_scom_gpe_parms.rc         = 0;
-        G_cent_scom_gpe_parms.entries    = NUM_CENT_OPS; //gm039
+        G_cent_scom_gpe_parms.entries    = NUM_CENT_OPS;
         G_cent_scom_gpe_parms.scomList   = (uint32_t) (&G_cent_scom_list_entry[0]);
         G_cent_scom_gpe_parms.options    = 0;
         G_cent_scom_gpe_parms.errorIndex = 0;
@@ -493,11 +475,11 @@ void cent_recovery(uint32_t i_cent) //gm015
              * @userdata2   0
              * @userdata4   0
              * @devdesc     Internal failure (code bug)
-             */     
+             */
             l_err = createErrl(
                     CENT_RECOVERY_MOD,                      //modId
                     SSX_GENERIC_FAILURE,                    //reasoncode
-                    OCC_NO_EXTENDED_RC,                     //Extended reason code 
+                    OCC_NO_EXTENDED_RC,                     //Extended reason code
                     ERRL_SEV_PREDICTIVE,                    //Severity
                     NULL,                                   //Trace Buf
                     DEFAULT_TRACE_SIZE,                     //Trace Size
@@ -517,16 +499,14 @@ void cent_recovery(uint32_t i_cent) //gm015
 //
 // Name: task_centaur_data
 //
-// Description: Collect centaur data. The task is used for centaur data 
+// Description: Collect centaur data. The task is used for centaur data
 //              collection
-//
-// Flow:  03/17/12    FN=task_centaur_data
 //
 // End Function Specification
 void task_centaur_data( task_t * i_task )
 {
     errlHndl_t    l_err   = NULL;    // Error handler
-    int           rc      = 0;       // Return code 
+    int           rc      = 0;       // Return code
     MemData  *    l_temp  = NULL;
     centaur_data_task_t * l_centaur_data_ptr = (centaur_data_task_t *)i_task->data_ptr;
     GpeGetMemDataParms  * l_parms = (GpeGetMemDataParms *)(l_centaur_data_ptr->gpe_req.parameter);
@@ -544,10 +524,10 @@ void task_centaur_data( task_t * i_task )
         //                     centaur.  It will be 'read from' during this tick.
         //
         // ->prev_centaur:     the one that was 'read from' during the last tick
-        //                     and will be used to update the 
+        //                     and will be used to update the
         //                     G_updated_centaur_mask during this tick.
         //
-        // ->centaur_data_ptr: points to G_centaur_data_ptrs[] for 
+        // ->centaur_data_ptr: points to G_centaur_data_ptrs[] for
         //                     the centaur that is referenced by prev_centaur
         //                     (the one that was just 'read')
 
@@ -577,32 +557,32 @@ void task_centaur_data( task_t * i_task )
             }
         }
 
-        //Need to complete collecting data for all assigned centaurs from 
+        //Need to complete collecting data for all assigned centaurs from
         //previous interval and tick 0 is the current tick before collect data again.
-        if( (l_centaur_data_ptr->current_centaur == l_centaur_data_ptr->end_centaur) 
+        if( (l_centaur_data_ptr->current_centaur == l_centaur_data_ptr->end_centaur)
             && ((CURRENT_TICK & (MAX_NUM_TICKS - 1)) != 0) )
         {
             CENT_DBG("Did not collect centaur data. Need to wait for tick.");
             break;
         }
 
-        //Check to see if the previous GPE request has succeeded. 
+        //Check to see if the previous GPE request has succeeded.
         //A request is not considered complete until both the engine job
-        //has finshed without error and any callback has run to completion.
+        //has finished without error and any callback has run to completion.
         if(L_gpe_scheduled)
         {
-            //Per Bishop, If the request is idle but not completed then there was an error
+            //If the request is idle but not completed then there was an error
             //(as long as the request was scheduled).
             if(!async_request_completed(&l_centaur_data_ptr->gpe_req.request) || l_parms->rc )
             {
-                //log an error the first time this happens but keep on truckin.
+                //log an error the first time this happens but keep on running.
                 //eventually, we will timeout on the dimm & centaur temps not being updated
                 //and fans will go to max speed (probably won't be able to throttle for
                 //same reason we can't access the centaur here).
                 if(!L_gpe_error_logged)
                 {
                     L_gpe_error_logged = TRUE;
-    
+
                     // There was an error collecting the centaur sensor cache
                     TRAC_ERR("task_centaur_data: gpe_get_mem_data failed. rc=0x%08x%08x, cur=%d, prev=%d",
                              (uint32_t)(l_parms->rc >> 32),
@@ -617,24 +597,24 @@ void task_centaur_data( task_t * i_task )
                      * @userdata2   0
                      * @userdata4   OCC_NO_EXTENDED_RC
                      * @devdesc     Failed to get centaur data
-                     */     
+                     */
                     l_err = createErrl(
                             CENT_TASK_DATA_MOD,                     //modId
                             CENT_SCOM_ERROR,                        //reasoncode
-                            OCC_NO_EXTENDED_RC,                     //Extended reason code 
+                            OCC_NO_EXTENDED_RC,                     //Extended reason code
                             ERRL_SEV_PREDICTIVE,                    //Severity
                             NULL,                                   //Trace Buf
                             DEFAULT_TRACE_SIZE,                     //Trace Size
                             l_parms->rc,                            //userdata1
                             0                                       //userdata2
                             );
-        
-                    addUsrDtlsToErrl(l_err,                                    //io_err
+
+                    addUsrDtlsToErrl(l_err,                                   //io_err
                             (uint8_t *) &(l_centaur_data_ptr->gpe_req.ffdc),  //i_dataPtr,
-                            sizeof(PoreFfdc),                                 //i_size 
-                            ERRL_USR_DTL_STRUCT_VERSION_1,                    //version 
+                            sizeof(PoreFfdc),                                 //i_size
+                            ERRL_USR_DTL_STRUCT_VERSION_1,                    //version
                             ERRL_USR_DTL_BINARY_DATA);                        //type
-           
+
                     //Callouts depend on the return code of the gpe_get_mem_data procedure
                     if(l_parms->rc == GPE_GET_MEM_DATA_DIED)
                     {
@@ -686,10 +666,10 @@ void task_centaur_data( task_t * i_task )
                                          ERRL_COMPONENT_ID_FIRMWARE,
                                          ERRL_CALLOUT_PRIORITY_MED);
                     }
-                    
+
                     commitErrl(&l_err);
                 }
-        
+
             }
             else
             {
@@ -697,15 +677,15 @@ void task_centaur_data( task_t * i_task )
                 //with the global one. The gpe routine will write new data into
                 //a buffer that is not being accessed by the RTLoop code.
                 l_temp = l_centaur_data_ptr->centaur_data_ptr;
-                l_centaur_data_ptr->centaur_data_ptr = 
+                l_centaur_data_ptr->centaur_data_ptr =
                     G_centaur_data_ptrs[l_centaur_data_ptr->current_centaur];
-                G_centaur_data_ptrs[l_centaur_data_ptr->prev_centaur] = l_temp;    // @th013
-    
-                //Centaur data has been collected so set the bit in global mask. 
+                G_centaur_data_ptrs[l_centaur_data_ptr->prev_centaur] = l_temp;
+
+                //Centaur data has been collected so set the bit in global mask.
                 //AMEC code will know which centaur to update sensors for. AMEC is
-                //reponsible for clearing the bit later on. 
+                //responsible for clearing the bit later on.
                 // prev centaur is the one that was just 'read from' in the last tick
-                if( CENTAUR_PRESENT(l_centaur_data_ptr->prev_centaur) )     // @th013
+                if( CENTAUR_PRESENT(l_centaur_data_ptr->prev_centaur) )
                 {
                     G_updated_centaur_mask |= CENTAUR_BY_MASK(l_centaur_data_ptr->prev_centaur);
                 }
@@ -713,22 +693,22 @@ void task_centaur_data( task_t * i_task )
         }//if(L_gpe_scheduled)
 
         // If the centaur is not present, then we need to point to the empty G_centaur_data
-        // so that we don't use old/stale data from a leftover G_centaur_data 
+        // so that we don't use old/stale data from a leftover G_centaur_data
         // (this is very handy for debug...)
-        if( !CENTAUR_PRESENT(l_centaur_data_ptr->current_centaur))                            
+        if( !CENTAUR_PRESENT(l_centaur_data_ptr->current_centaur))
         {
-            G_centaur_data_ptrs[l_centaur_data_ptr->current_centaur] = &G_centaur_data[9];          
+            G_centaur_data_ptrs[l_centaur_data_ptr->current_centaur] = &G_centaur_data[9];
         }
 
         //Update current centaur
         if ( l_centaur_data_ptr->current_centaur >= l_centaur_data_ptr->end_centaur )
         {
-            l_centaur_data_ptr->prev_centaur = l_centaur_data_ptr->current_centaur;    // @th013
+            l_centaur_data_ptr->prev_centaur = l_centaur_data_ptr->current_centaur;
             l_centaur_data_ptr->current_centaur = l_centaur_data_ptr->start_centaur;
         }
         else
         {
-            l_centaur_data_ptr->prev_centaur = l_centaur_data_ptr->current_centaur;    // @th013
+            l_centaur_data_ptr->prev_centaur = l_centaur_data_ptr->current_centaur;
             l_centaur_data_ptr->current_centaur++;
         }
 
@@ -737,40 +717,40 @@ void task_centaur_data( task_t * i_task )
         // ------------------------------------------
         // ->current_centaur:  the one that will be 'written' to in order to
         //                     kick off the sensor cache population in the
-        //                     centaur. 
+        //                     centaur.
         //
-        // ->prev_centaur:     the one that will be 'read from', meaning have 
-        //                     the sensor cache transferred from the Centaur 
+        // ->prev_centaur:     the one that will be 'read from', meaning have
+        //                     the sensor cache transferred from the Centaur
         //                     to l_centaur_data_ptr->centaur_data_ptr
         //
-        // ->centaur_data_ptr: points to G_centaur_data_ptrs[] for 
+        // ->centaur_data_ptr: points to G_centaur_data_ptrs[] for
         //                     the centaur that is referenced by prev_centaur
         //                     (the one that will be 'read')
 
-        //If centaur is not present then skip it. This task assigned to this centaur will 
+        //If centaur is not present then skip it. This task assigned to this centaur will
         //be idle during this time it would have collected the data.
         if( CENTAUR_PRESENT(l_centaur_data_ptr->current_centaur)
-            || CENTAUR_PRESENT(l_centaur_data_ptr->prev_centaur) )         // @th013
+            || CENTAUR_PRESENT(l_centaur_data_ptr->prev_centaur) )
         {
             // Setup the 'get centaur data' parms
             // ->config controls which Centaur we are reading from
-            if( CENTAUR_PRESENT(l_centaur_data_ptr->prev_centaur) ){       // @th013
+            if( CENTAUR_PRESENT(l_centaur_data_ptr->prev_centaur) ){
               // If prev centaur is present, do the read of the sensor cache
-              l_parms->collect = l_centaur_data_ptr->prev_centaur; 
+              l_parms->collect = l_centaur_data_ptr->prev_centaur;
             }
             else{
               // If prev centaur is not present, don't do the read of the sensor cache.
-              l_parms->collect       = -1;
+              l_parms->collect = -1;
             }
 
             // ->config_update controls which Centaur we are writing to
-            if( CENTAUR_PRESENT(l_centaur_data_ptr->current_centaur) ){    // @th013
+            if( CENTAUR_PRESENT(l_centaur_data_ptr->current_centaur) ){
               // If cur centaur is present, do the write to kick off the sensor cache collect
-              l_parms->update = l_centaur_data_ptr->current_centaur; 
+              l_parms->update = l_centaur_data_ptr->current_centaur;
             }
             else{
               // If cur centaur is not present, don't do the write to kick off the sensor cache collect
-              l_parms->update = -1;              
+              l_parms->update = -1;
             }
 
             l_parms->data = (uint32_t) l_centaur_data_ptr->centaur_data_ptr;
@@ -791,11 +771,11 @@ void task_centaur_data( task_t * i_task )
                  * @userdata2   0
                  * @userdata4   ERC_CENTAUR_PORE_FLEX_SCHEDULE_FAILURE
                  * @devdesc     Failed to get centaur data
-                 */     
+                 */
                 l_err = createErrl(
                         CENT_TASK_DATA_MOD,                     //modId
                         SSX_GENERIC_FAILURE,                    //reasoncode
-                        ERC_CENTAUR_PORE_FLEX_SCHEDULE_FAILURE, //Extended reason code 
+                        ERC_CENTAUR_PORE_FLEX_SCHEDULE_FAILURE, //Extended reason code
                         ERRL_SEV_PREDICTIVE,                    //Severity
                         NULL,                                   //Trace Buf
                         DEFAULT_TRACE_SIZE,                     //Trace Size
@@ -803,12 +783,12 @@ void task_centaur_data( task_t * i_task )
                         l_parms->rc                             //userdata2
                         );
 
-                addUsrDtlsToErrl(l_err,                                    //io_err
+                addUsrDtlsToErrl(l_err,                                   //io_err
                         (uint8_t *) &(l_centaur_data_ptr->gpe_req.ffdc),  //i_dataPtr,
-                        sizeof(PoreFfdc),                                 //i_size 
-                        ERRL_USR_DTL_STRUCT_VERSION_1,                    //version 
+                        sizeof(PoreFfdc),                                 //i_size
+                        ERRL_USR_DTL_STRUCT_VERSION_1,                    //version
                         ERRL_USR_DTL_BINARY_DATA);                        //type
-        
+
                 REQUEST_RESET(l_err);     //this will add firmware callout
                 break;
             }
@@ -818,7 +798,7 @@ void task_centaur_data( task_t * i_task )
 
     } while(0);
 
-    //handle centaur i2c recovery requests and centaur workaround -- gm015
+    //handle centaur i2c recovery requests and centaur workaround
     if(CENTAUR_PRESENT(l_centaur_data_ptr->current_centaur))
     {
         cent_recovery(l_centaur_data_ptr->current_centaur);
@@ -833,8 +813,6 @@ void task_centaur_data( task_t * i_task )
 //
 // Description: Reads
 //
-// Flow:  ???    FN= ???
-//
 // End Function Specification
 int cent_get_enabled_sensors()
 {
@@ -846,7 +824,7 @@ int cent_get_enabled_sensors()
         // Set up scom list entry (there's only 1)
         G_cent_scom_list_entry[0].scom  = CENTAUR_SENSCACHE_ENABLE;       //scom address
         G_cent_scom_list_entry[0].commandType = GPE_SCOM_READ_VECTOR;     //scom operation to perform
-        G_cent_scom_list_entry[0].instanceNumber = 0;                     //Ignored for READ_VECTOR operation 
+        G_cent_scom_list_entry[0].instanceNumber = 0;                     //Ignored for READ_VECTOR operation
         G_cent_scom_list_entry[0].pData = (uint64_t *) G_cent_scom_data;  //scom data will be stored here
 
         // Set up GPE parameters
@@ -900,8 +878,6 @@ int cent_get_enabled_sensors()
 //        needs to be run in occ main and before RTLoop started.
 //        This will also initialize the centaur watchdog.
 //
-// Flow:  03/17/12    FN=centaur_init
-//
 // End Function Specification
 void centaur_init( void )
 {
@@ -922,7 +898,7 @@ void centaur_init( void )
         /// Before anything else, we need to call this procedure to
         /// determine which Centaurs are out there, their config info.
         /// and Type/EC Level
-        
+
         rc = centaur_configuration_create();
         if( rc )
         {
@@ -939,7 +915,7 @@ void centaur_init( void )
             // Check if this centaur is even possible to be present
             // by ANDing it against ALL_CENTAURS_MASK in this macro
 
-            if( CENTAUR_BY_MASK(l_jj) )       // @th016
+            if( CENTAUR_BY_MASK(l_jj) )
             {
                 if( G_centaurConfiguration.baseAddress[l_jj] )
                 {
@@ -961,51 +937,50 @@ void centaur_init( void )
         // Set up recovery scom list entries
         G_cent_scom_list_entry[L4_LINE_DELETE].scom  = MBCCFGQ_REG;                //scom address
         G_cent_scom_list_entry[L4_LINE_DELETE].commandType = GPE_SCOM_RMW;         //scom operation to perform
-        G_cent_scom_list_entry[L4_LINE_DELETE].mask = LINE_DELETE_ON_NEXT_CE;      //mask of bits to chagne
+        G_cent_scom_list_entry[L4_LINE_DELETE].mask = LINE_DELETE_ON_NEXT_CE;      //mask of bits to change
         G_cent_scom_list_entry[L4_LINE_DELETE].data = LINE_DELETE_ON_NEXT_CE;      //scom data (always set the bit)
 
-        //one time init for reading LFIR6 -- gm039
+        //one time init for reading LFIR6
         G_cent_scom_list_entry[READ_NEST_LFIR6].scom  = CENT_NEST_LFIR_REG;         //scom address
         G_cent_scom_list_entry[READ_NEST_LFIR6].commandType = GPE_SCOM_READ;        //scom operation to perform
         G_cent_scom_list_entry[READ_NEST_LFIR6].mask = 0;                           //mask (not used for reads)
         G_cent_scom_list_entry[READ_NEST_LFIR6].data = 0;                           //scom data (initialize to 0)
 
-        //one time init for reading centaur thermal status register -- gm041
+        //one time init for reading centaur thermal status register
         G_cent_scom_list_entry[READ_THERM_STATUS].scom  = CENT_THRM_STATUS_REG;     //scom address
         G_cent_scom_list_entry[READ_THERM_STATUS].commandType = GPE_SCOM_READ;      //scom operation to perform
         G_cent_scom_list_entry[READ_THERM_STATUS].mask = 0;                         //mask (not used for reads)
         G_cent_scom_list_entry[READ_THERM_STATUS].data = 0;                         //scom data (initialize to 0)
 
-        //one time init to reset the centaur dts FSM -- gm039
+        //one time init to reset the centaur dts FSM
         G_cent_scom_list_entry[RESET_DTS_FSM].scom  = CENT_THRM_CTRL_REG;           //scom address
         G_cent_scom_list_entry[RESET_DTS_FSM].commandType = GPE_SCOM_NOP;           //init to no-op (only runs if needed)
         G_cent_scom_list_entry[RESET_DTS_FSM].mask = 0;                             //mask (not used for writes)
         G_cent_scom_list_entry[RESET_DTS_FSM].data = CENT_THRM_CTRL4;               //scom data (sets bit4)
 
-        //one time init to clear centaur NEST LFIR 6 -- gm039
+        //one time init to clear centaur NEST LFIR 6
         G_cent_scom_list_entry[CLEAR_NEST_LFIR6].scom  = CENT_NEST_LFIR_AND_REG;    //scom address
         G_cent_scom_list_entry[CLEAR_NEST_LFIR6].commandType = GPE_SCOM_NOP;        //init to no-op (only runs if needed)
         G_cent_scom_list_entry[CLEAR_NEST_LFIR6].mask = 0;                          //mask (not used for writes)
-        G_cent_scom_list_entry[CLEAR_NEST_LFIR6].data = ~CENT_NEST_LFIR6;           //scom data 
+        G_cent_scom_list_entry[CLEAR_NEST_LFIR6].data = ~CENT_NEST_LFIR6;           //scom data
 
         //one time init to disable centaur sensor cache
         G_cent_scom_list_entry[DISABLE_SC].scom  = SCAC_CONFIG_REG;                 //scom address
         G_cent_scom_list_entry[DISABLE_SC].commandType = GPE_SCOM_NOP;              //init to no-op (only runs if needed)
-        G_cent_scom_list_entry[DISABLE_SC].mask = SCAC_MASTER_ENABLE;               //mask of bits to chagne
+        G_cent_scom_list_entry[DISABLE_SC].mask = SCAC_MASTER_ENABLE;               //mask of bits to change
         G_cent_scom_list_entry[DISABLE_SC].data = 0;                                //scom data (disable sensor cache)
 
         //one time init to enable centaur sensor cache
         G_cent_scom_list_entry[ENABLE_SC].scom  = SCAC_CONFIG_REG;                  //scom address
         G_cent_scom_list_entry[ENABLE_SC].commandType = GPE_SCOM_NOP;               //init to no-op (only runs if needed)
-        G_cent_scom_list_entry[ENABLE_SC].mask = SCAC_MASTER_ENABLE;                //mask of bits to chagne
+        G_cent_scom_list_entry[ENABLE_SC].mask = SCAC_MASTER_ENABLE;                //mask of bits to change
         G_cent_scom_list_entry[ENABLE_SC].data = SCAC_MASTER_ENABLE;                //scom data (enable sensor cache)
 
 
 
-        /// Set up Centuar Scom Registers - array of Scoms 
+        /// Set up Centuar Scom Registers - array of Scoms
         ///   [0]:  Setup deadman timer
-        /// NOTE: According to Irving Baysah, centaur spec is incorrect by a factor of 16.
-        ///       max timeout is about 2 seconds.
+        /// NOTE: max timeout is about 2 seconds.
 
         L_scomList[0].scom        = CENTAUR_MBSCFGQ;
         L_scomList[0].commandType = GPE_SCOM_RMW_ALL;
@@ -1021,9 +996,9 @@ void centaur_init( void )
         l_mbscfg.fields.occ_deadman_timer_sel = CENT_DEADMAN_TIMER_2SEC;
         L_scomList[0].data = l_mbscfg.value;
 
-        /// Set up Centuar Scom Registers - array of Scoms 
+        /// Set up Centaur Scom Registers - array of Scoms
         ///   [1]: clear the emergency throttle bit
-        
+
         L_scomList[1].scom        = CENTAUR_MBSEMERTHROQ;
         L_scomList[1].commandType = GPE_SCOM_RMW_ALL;
 
@@ -1075,11 +1050,11 @@ void centaur_init( void )
            break;
         }
 
-        /// Set up the OCC Centuar Data Collection Procedure
+        /// Set up the OCC Centaur Data Collection Procedure
         /// Includes initializing the centaur procedure parameters
         /// to gather the 'centaur' data, but we will set them to
-        /// invalid (-1) util the task sets them up 
-        
+        /// invalid (-1) until the task sets them up
+
         G_centaur_data_parms.rc      =  0;
         G_centaur_data_parms.collect = -1;
         G_centaur_data_parms.update  = -1;
@@ -1090,7 +1065,7 @@ void centaur_init( void )
                 &G_pore_gpe1_queue,               //queue
                 gpe_get_mem_data,                 //entry point
                 (uint32_t) &G_centaur_data_parms, //parm for the task
-                SSX_WAIT_FOREVER,                 //gm023
+                SSX_WAIT_FOREVER,                 //
                 NULL,                             //callback
                 NULL,                             //callback argument
                 0 );                              //options
@@ -1106,7 +1081,7 @@ void centaur_init( void )
              &G_pore_gpe1_queue,                     // queue
              gpe_scom_centaur,                       // entry point
              (uint32_t) &G_cent_scom_gpe_parms,      // parm for the task
-             SSX_WAIT_FOREVER,                       // gm023
+             SSX_WAIT_FOREVER,                       //
              NULL,                                   // callback
              NULL,                                   // callback argument
              0);                                     // options
@@ -1115,9 +1090,9 @@ void centaur_init( void )
             TRAC_ERR("centaur_init: pore_flex_create failed for G_cent_scom_req. rc = 0x%08x", rc);
             break;
         }
-        
-        /// Initialization complete, Centaur Control & Data Collection 
-        /// Tasks can now run 
+
+        /// Initialization complete, Centaur Control & Data Collection
+        /// Tasks can now run
 
     } while(0);
 
@@ -1132,31 +1107,31 @@ void centaur_init( void )
          * @userdata2   Return code of failing GPE
          * @userdata4   OCC_NO_EXTENDED_RC
          * @devdesc     Failed to initialize Centaurs
-         */  
+         */
         l_err = createErrl(
                 CENTAUR_INIT_MOD,                           //modId
                 SSX_GENERIC_FAILURE,                        //reasoncode
-                OCC_NO_EXTENDED_RC,                         //Extended reason code 
+                OCC_NO_EXTENDED_RC,                         //Extended reason code
                 ERRL_SEV_PREDICTIVE,                        //Severity
                 NULL,                                       //Trace Buf
                 DEFAULT_TRACE_SIZE,                         //Trace Size
                 rc,                                         //userdata1
                 L_centaur_reg_parms.rc                      //userdata2
                 );
-        
+
         addUsrDtlsToErrl(l_err,                                          //io_err
                          (uint8_t *) &G_centaur_reg_pore_req.ffdc,       //i_dataPtr,
-                         sizeof(PoreFfdc),                               //i_size 
-                         ERRL_USR_DTL_STRUCT_VERSION_1,                  //version 
+                         sizeof(PoreFfdc),                               //i_size
+                         ERRL_USR_DTL_STRUCT_VERSION_1,                  //version
                          ERRL_USR_DTL_BINARY_DATA);                      //type
 
         REQUEST_RESET(l_err);
     }
     else
     {
-        // Only initalize the control structures if we haven't had
+        // Only initialize the control structures if we haven't had
         // any errors yet
-        centaur_control_init(); 
+        centaur_control_init();
     }
 
     return;
@@ -1167,16 +1142,14 @@ void centaur_init( void )
 //
 // Name: cent_get_centaur_data_ptr
 //
-// Description: Returns a pointer to the most up-to-date centaur data for 
-//              the centaur associated with the specified OCC centaur id. 
+// Description: Returns a pointer to the most up-to-date centaur data for
+//              the centaur associated with the specified OCC centaur id.
 //              Returns NULL for centaur ID outside the range of 0 to 7.
-//
-// Flow:              FN=None
 //
 // End Function Specification
 MemData * cent_get_centaur_data_ptr( const uint8_t i_occ_centaur_id )
 {
-    //The caller needs to send in a valid OCC centaur id. Since type is uchar 
+    //The caller needs to send in a valid OCC centaur id. Since type is uchar
     //so there is no need to check for case less than 0.
     //If centaur id is invalid then returns NULL.
     if( i_occ_centaur_id < MAX_NUM_CENTAURS )
