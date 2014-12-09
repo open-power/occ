@@ -1,36 +1,31 @@
-/******************************************************************************
-// @file sensor.c
-// @brief OCC sensor infrastructure interfaces
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section sensor.c SENSOR.C
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @pb002             pbavari   08/15/2011  Created
- *   @pb003             pbavari   08/31/2011  mini-sensor support
- *   @pb004             pbavari   09/02/2011  Initialize section support
- *   @pb00A             pbavari   11/14/2011  Moved sensor_init from applet and
- *                                            updated with latest design change
- *   @th005             thallet   11/23/2011  Sensor initialization changes   
- *   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
- *   @pb00E             pbavari   03/11/2012  Added correct include file
- *   @nh001             neilhsu   05/23/2012  Add missing error log tags
- *   @wb003  920760     wilbryan  03/25/2014  Update SRCs to match TPMD SRCs
- *
- *  @endverbatim
- *
- *///*************************************************************************/
- 
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/sensor/sensor.c $                                     */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
-//*************************************************************************
-// Includes
-//*************************************************************************
+
+
 #include <sensor.h>           // sensor structure and other defines
-//@pb00Ec - changed from common.h to occ_common.h for ODE support
 #include <occ_common.h>           // For size_t needed by memset
 #include <string.h>           // For memset
 #include "ssx_io.h"           // For sprintf
@@ -38,35 +33,12 @@
 #include <sensor_service_codes.h> // sensor module ids
 #include <trac.h>             // Trace macros
 
-//*************************************************************************
-// Externs
-//*************************************************************************
-
-//*************************************************************************
-// Macros
-//*************************************************************************
-
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
-
-//*************************************************************************
-// Structures
-//*************************************************************************
-
-//*************************************************************************
-// Globals
-//*************************************************************************
-
 #define UINT16_MIN                  0
 
 // Global sensor counter
 uint32_t G_amec_sensor_count = 0;
 
 
-//*************************************************************************
-// Function Prototypes
-//*************************************************************************
 void sensor_init(sensor_t * io_sensor_ptr,
                  const uint16_t i_gsid,
                  const uint16_t * i_miniSnsrPtr
@@ -74,23 +46,17 @@ void sensor_init(sensor_t * io_sensor_ptr,
 
 void sensor_init_all(void) INIT_SECTION;
 
-//*************************************************************************
-// Functions
-//*************************************************************************
-
 // Function Specification
 //
 //  Name: sensor_init
 //
 //  Description: Initialize global sensor list.
 //
-//  Flow: 11/15/2011     FN= sensor_init
-//
 // End Function Specification
 void sensor_init(sensor_t * io_sensor_ptr,
                  const uint16_t i_gsid,
                  const uint16_t * i_miniSnsrPtr
-                 ) 
+                 )
 {
     // check if input pointers are valid and global sensor count is
     // within range.
@@ -118,15 +84,13 @@ void sensor_init(sensor_t * io_sensor_ptr,
                "sensor is out of range. Current sensor count: 0x%x, "
                "max allowed: 0x%x",G_amec_sensor_count,MAX_AMEC_SENSORS);
     }
-} 
+}
 
 // Function Specification
 //
 //  Name: sensor_clear_minmax
 //
 //  Description: Clears minimum and maximum fields in the sensor structure.
-//
-//  Flow: 06/22/2011     FN= sensor_clear_minmax
 //
 // End Function Specification
 void sensor_clear_minmax( sensor_t * io_sensor_ptr)
@@ -155,8 +119,6 @@ void sensor_clear_minmax( sensor_t * io_sensor_ptr)
 //  Name: sensor_reset
 //
 //  Description: Reset sensor fields
-//
-//  Flow: 08/31/2011     FN= sensor_reset
 //
 // End Function Specification
 void sensor_reset( sensor_t * io_sensor_ptr)
@@ -189,8 +151,6 @@ void sensor_reset( sensor_t * io_sensor_ptr)
 //
 //  Description: vectorize sensor
 //
-//  Flow: 08/22/2011     FN= sensor_vectorize
-//
 // End Function Specification
 void sensor_vectorize( sensor_t * io_sensor_ptr,
                        vectorSensor_t * io_vec_sensor_ptr,
@@ -211,13 +171,11 @@ void sensor_vectorize( sensor_t * io_sensor_ptr,
 }
 
 
-// Function Specification 
+// Function Specification
 //
 //  Name: sensor_update
 //
 //  Description: Update sensor
-//
-//  Flow: 08/31/2011     FN= sensor_update
 //
 // End Function Specification
 void sensor_update( sensor_t * io_sensor_ptr, const uint16_t i_sensor_value)
@@ -265,13 +223,11 @@ void sensor_update( sensor_t * io_sensor_ptr, const uint16_t i_sensor_value)
 }
 
 
-// Function Specification 
+// Function Specification
 //
 //  Name: sensor_op_min
 //
 //  Description:  Perform min operation on vector sensor
-//
-//  Flow:               FN= None
 //
 // End Function Specification
 uint16_t sensor_op_min(const vectorSensor_t * i_vecSensorPtr,
@@ -302,13 +258,11 @@ uint16_t sensor_op_min(const vectorSensor_t * i_vecSensorPtr,
 }
 
 
-// Function Specification 
+// Function Specification
 //
 //  Name: sensor_op_max
 //
 //  Description:  Perform max operation for vector sensor
-//
-//  Flow:               FN= None
 //
 // End Function Specification
 uint16_t sensor_op_max(const vectorSensor_t * i_vecSensorPtr,
@@ -339,13 +293,11 @@ uint16_t sensor_op_max(const vectorSensor_t * i_vecSensorPtr,
 }
 
 
-// Function Specification 
+// Function Specification
 //
 //  Name: sensor_op_avg
 //
 //  Description:  Perform average operation for vector sensor
-//
-//  Flow:               FN= None
 //
 // End Function Specification
 uint16_t sensor_op_avg(const vectorSensor_t * i_vecSensorPtr,
@@ -389,9 +341,7 @@ uint16_t sensor_op_avg(const vectorSensor_t * i_vecSensorPtr,
 //
 //  Description: Update Vector Sensor
 //
-//  Flow: 08/31/2011     FN= sensor_vector_update
-//
-// End Function Specification 
+// End Function Specification
 void sensor_vector_update( sensor_t * io_sensor_ptr,const uint32_t i_threshold)
 {
     if( io_sensor_ptr != NULL)
@@ -468,15 +418,13 @@ void sensor_vector_update( sensor_t * io_sensor_ptr,const uint32_t i_threshold)
 }
 
 
-// Function Specification 
+// Function Specification
 //
 //  Name: getSensorByGsid
 //
 //  Description: Get sensor data using GSID (Global Sensor ID)
 //
-//  Flow: 07/15/2011     FN= getSensorByGsid
-//
-// End Function Specification 
+// End Function Specification
 sensor_t * getSensorByGsid( const uint16_t i_gsid)
 {
     sensor_t * l_sensorPtr = NULL;
@@ -499,9 +447,7 @@ sensor_t * getSensorByGsid( const uint16_t i_gsid)
 //  Description: Enable/disable vector sensor element. This interface can be
 //               used at runtime
 //
-//  Flow: 07/18/2011     FN= sensor_vector_elem_enable
-//
-// End Function Specification 
+// End Function Specification
 void sensor_vector_elem_enable( vectorSensor_t* io_sensor_vector_ptr,
                                 const uint8_t i_loc,
                                 const uint8_t i_enable)
@@ -534,9 +480,7 @@ void sensor_vector_elem_enable( vectorSensor_t* io_sensor_vector_ptr,
 //  Description: Add element to the vector sensor. If element at the given
 //  location is already present, it will be overwritten.
 //
-//  Flow: 08/17/2011     FN= sensor_vector_elem_add
-//
-// End Function Specification 
+// End Function Specification
 void sensor_vector_elem_add( vectorSensor_t* io_sensor_vector_ptr,
                              const uint8_t i_loc,
                              const sensor_t * i_elemPtr)
@@ -571,15 +515,13 @@ void sensor_vector_elem_add( vectorSensor_t* io_sensor_vector_ptr,
 
 
 
-// Function Specification 
+// Function Specification
 //
 //  Name: sensor_init_all
 //
 //  Description: Initialize all sensors in the global sensor list.
 //
-//  Flow: --/--/2011     FN=None
-//
-// End Function Specification 
+// End Function Specification
 void sensor_init_all(void)
 {
   int i;
@@ -593,7 +535,7 @@ void sensor_init_all(void)
   }
 
   // If G_amec_sensor_count doesn't match the number of sensors, we must have
-  // failed to initialize one or more sensors.  
+  // failed to initialize one or more sensors.
   if(NUMBER_OF_SENSORS_IN_LIST != G_amec_sensor_count)
   {
     TRAC_ERR("Sensor Initialization Failed to initialize all sensors");
@@ -610,7 +552,7 @@ void sensor_init_all(void)
       errlHndl_t l_err = createErrl(
           SENSOR_INITIALIZE,        // Module ID
           INTERNAL_FAILURE,         // Reason Code  // @wb003
-          OCC_NO_EXTENDED_RC,       // Extended reason code 
+          OCC_NO_EXTENDED_RC,       // Extended reason code
           ERRL_SEV_PREDICTIVE,      // Severity
           NULL,                     // Trace
           0,                        // Trace Size

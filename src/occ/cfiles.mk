@@ -1,40 +1,30 @@
-#  @file cfiles.mk
+# IBM_PROLOG_BEGIN_TAG
+# This is an automatically generated prolog.
 #
-#  @brief mk for c-object files for occ application
+# $Source: src/occ/cfiles.mk $
 #
-#  @page ChangeLogs Change Logs
-#  @section cfiles.mk
-#  @verbatim
+# OpenPOWER OnChipController Project
 #
+# Contributors Listed Below - COPYRIGHT 2011,2014
+# [+] Google Inc.
+# [+] International Business Machines Corp.
 #
-# Change Log ******************************************************************
-# Flag     Defect/Feature  User        Date         Description
-# ------   --------------  ----------  ------------ -----------
-# @pb00E                   pbavari     03/11/2012   Makefile ODE support
-# @th00c                   thallet     04/23/2012   Centaur files
-# @th022                   thallet     10/04/2012   Dcom & CnfgData additions
-# @at009   859308          alvinwan    10/15/2012   Added tracepp support
-# @ry002   862116          ronda       11/26/2012   Support thermal controller for processor
-# @at010   859992          alvinwan    11/07/2012   Added oversubscription feature
-# @gs004   883829          gjsilva     05/21/2013   Support for manufacturing commands
-# @fk001   879727          fmkassem    04/16/2013   OCC powercap support.
-# @jh005   894560          joshych     08/14/2013   Create call home data logs every 24 hours
-# @gm010   901580          milesg      10/06/2013   Low Level FFDC support
-# @gs012   903325          gjsilva     09/26/2013   Add health monitor files
-# @gs014   903552          gjsilva     10/22/2013   Support for Amester parameter interface
-#          905504          sbroyles    11/06/2013   Added homer.c
-# @rt004   905638          tapiar      11/13/2013   Support for Tunable Parameters
-# @gs019   908218          gjsilva     12/04/2013   Support cooling request architecture
-# @fk004   907588          fmkassem    11/25/2013   Add support for snapshot buffer.
-#          916980          sbroyles    03/10/2014   Added ffdc.c
-# @gs027   918066          gjsilva     03/12/2014   Added amec_analytics.c
-# @gm033   920448          milesg      03/26/2014   added scom.c
-# @endverbatim
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-
-##########################################################################
-# Object files
-##########################################################################
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# permissions and limitations under the License.
+#
+# IBM_PROLOG_END_TAG
+#
+#  Description: mk for c-object files for occ application
+#
 
 occ_CFILES = \
                 amec/amec_init.c \
@@ -57,7 +47,7 @@ occ_CFILES = \
                 amec/amec_health.c \
                 amec/amec_parm.c \
                 amec/amec_parm_table.c \
-		amec/amec_analytics.c \
+                amec/amec_analytics.c \
                 aplt/appletManager.c \
                 cent/centaur_data.c \
                 cent/centaur_control.c \

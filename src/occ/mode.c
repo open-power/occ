@@ -1,32 +1,28 @@
-/******************************************************************************
-// @file mode.c
-// @brief OCC Modes 
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section state.c STATE.C
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @th011             thallet   07/12/2012  Created
- *   @th015             thallet   08/03/2012  Amec freq range set on mode change
- *   @th022             thallet   10/03/2012  State/mode set by master occ   
- *   @th040  887069     thallet   06/11/2013  Support Nom & FFO Freq Setting for Mnfg
- *   @gs008  894661     gjsilva   08/08/2013  Initial support for DPS-FP mode
- *   @gs010  899888     gjsilva   09/24/2013  Process data format 0x13 from TMGT
- *   @gs011  900661     gjsilva   09/30/2013  Make data format 0x13 required to go active
- *   @at019  908390     alvinwan  12/05/2013  Disable DPS algorithms from running in Sapphire
- *   @wb001  919163     wilbryan  03/06/2014  Updating error call outs, descriptions, and severities
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/mode.c $                                              */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
-//*************************************************************************
-// Includes
-//*************************************************************************
 #include <occ_common.h>
 #include <common_types.h>
 #include "ssx_io.h"
@@ -38,25 +34,6 @@
 #include "amec_part.h"
 #include "amec_data.h"
 
-//*************************************************************************
-// Externs
-//*************************************************************************
-
-//*************************************************************************
-// Macros
-//*************************************************************************
-
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
-
-//*************************************************************************
-// Structures
-//*************************************************************************
-
-//*************************************************************************
-// Forward Declarations
-//*************************************************************************
 errlHndl_t SMGR_mode_transition_to_nominal();
 errlHndl_t SMGR_mode_transition_to_powersave();
 errlHndl_t SMGR_mode_transition_to_dynpowersave();
@@ -65,13 +42,8 @@ errlHndl_t SMGR_mode_transition_to_turbo();
 errlHndl_t SMGR_mode_transition_to_superturbo();
 errlHndl_t SMGR_mode_transition_to_ffo();
 
-
-//*************************************************************************
-// Globals
-//*************************************************************************
-
 // Mode that OCC is currently in
-OCC_MODE           G_occ_internal_mode      = OCC_MODE_NOCHANGE;  // @th040
+OCC_MODE           G_occ_internal_mode      = OCC_MODE_NOCHANGE;
 
 // Mode that OCC is requesting that TMGT put OCC into
 OCC_MODE           G_occ_internal_req_mode  = OCC_MODE_NOCHANGE;
@@ -80,11 +52,11 @@ OCC_MODE           G_occ_internal_req_mode  = OCC_MODE_NOCHANGE;
 OCC_MODE           G_occ_external_req_mode = OCC_MODE_NOCHANGE;
 
 // Mode that TMGT is requesting OCC go to in KVM
-OCC_MODE           G_occ_external_req_mode_kvm = OCC_MODE_NOCHANGE; // @at019a
+OCC_MODE           G_occ_external_req_mode_kvm = OCC_MODE_NOCHANGE;
 
-// Indicates if OCC must actually change the voltage / frequency during 
+// Indicates if OCC must actually change the voltage / frequency during
 // a mode change.
-SMGR_SMS_CMD_TYPE   G_occ_internal_sms       = SMGR_SMS_VF_INFO_ONLY;  
+SMGR_SMS_CMD_TYPE   G_occ_internal_sms       = SMGR_SMS_VF_INFO_ONLY;
 
 // Indicates if we are currently in a mode transition
 bool                G_mode_transition_occuring = FALSE;
@@ -96,23 +68,23 @@ OCC_MODE            G_occ_master_mode  = OCC_MODE_NOCHANGE;
 SsxSemaphore        G_smgrModeChangeSem;
 
 
-// Table that indicates which functions should be run for a given mode 
-// transition.  
+// Table that indicates which functions should be run for a given mode
+// transition.
 const smgr_state_trans_t G_smgr_mode_trans[] =
-{ 
+{
     /* ----- SPECIFIC CASE MODE TRANSITIONS ----- */
     /* These are specific mode transitions for when it matters what
      * mode we were in before the transition.  These must come before
-     * the agnostic mode transitions below, and will be run instead of 
-     * those catch-all transition functions. */           
+     * the agnostic mode transitions below, and will be run instead of
+     * those catch-all transition functions. */
 
     /* Current Mode         New Mode                    Transition Function */
     {OCC_MODE_STURBO,       OCC_MODE_NOMINAL,           NULL},
 
     /* ----- DEFAULT MODE TRANSITIONS ----- */
     /* These are default mode transitions for when it doesn't matter what
-     * mode we were in before the transition. */           
-    
+     * mode we were in before the transition. */
+
     /* Current Mode         New Mode                    Transition Function */
     {OCC_MODE_ALL,          OCC_MODE_NOMINAL,           &SMGR_mode_transition_to_nominal},
     {OCC_MODE_ALL,          OCC_MODE_PWRSAVE,           &SMGR_mode_transition_to_powersave},
@@ -125,18 +97,12 @@ const smgr_state_trans_t G_smgr_mode_trans[] =
 const uint8_t G_smgr_mode_trans_count = sizeof(G_smgr_mode_trans)/sizeof(smgr_state_trans_t);
 
 
-//*************************************************************************
-// Functions
-//*************************************************************************
-
 // Function Specification
 //
 // Name: SMGR_is_mode_transitioning
 //
-// Description: 
+// Description:
 //
-// Flow:             FN=
-// 
 // End Function Specification
 inline bool SMGR_is_mode_transitioning(void)
 {
@@ -148,10 +114,8 @@ inline bool SMGR_is_mode_transitioning(void)
 //
 // Name: SMGR_get_mode
 //
-// Description: 
+// Description:
 //
-// Flow:             FN=
-// 
 // End Function Specification
 inline OCC_MODE SMGR_get_mode(void)
 {
@@ -163,10 +127,8 @@ inline OCC_MODE SMGR_get_mode(void)
 //
 // Name: SMGR_set_mode
 //
-// Description: 
+// Description:
 //
-// Flow:             FN=
-// 
 // End Function Specification
 errlHndl_t SMGR_set_mode(const OCC_MODE i_mode,
                          const uint8_t i_sms_type)
@@ -188,22 +150,22 @@ errlHndl_t SMGR_set_mode(const OCC_MODE i_mode,
              * @userdata4   ERC_RUNNING_SEM_PENDING_FAILURE
              * @devdesc     SSX semaphore related failure
              */
-             l_errlHndl = createErrl(MAIN_MODE_TRANSITION_MID,        //modId
-                                        SSX_GENERIC_FAILURE,              //reasoncode 
-                                        ERC_RUNNING_SEM_PENDING_FAILURE,  //Extended reason code
-                                        ERRL_SEV_UNRECOVERABLE,           //Severity
-                                        NULL,                             //Trace Buf
-                                        DEFAULT_TRACE_SIZE,               //Trace Size
-                                        0,                                //userdata1
-                                        0);                               //userdata2
-                                        
-            // @wb001 -- Callout firmware
+             l_errlHndl = createErrl(MAIN_MODE_TRANSITION_MID,          //modId
+                                        SSX_GENERIC_FAILURE,            //reasoncode
+                                        ERC_RUNNING_SEM_PENDING_FAILURE,//Extended reason code
+                                        ERRL_SEV_UNRECOVERABLE,         //Severity
+                                        NULL,                           //Trace Buf
+                                        DEFAULT_TRACE_SIZE,             //Trace Size
+                                        0,                              //userdata1
+                                        0);                             //userdata2
+
+            // Callout firmware
             addCalloutToErrl(l_errlHndl,
                              ERRL_CALLOUT_TYPE_COMPONENT_ID,
                              ERRL_COMPONENT_ID_FIRMWARE,
                              ERRL_CALLOUT_PRIORITY_HIGH);
-            break;   
-         }  // @th022
+            break;
+         }
 
          //Check to see if we need to make a change
          if(l_mode == OCC_MODE_NOCHANGE)
@@ -211,7 +173,6 @@ errlHndl_t SMGR_set_mode(const OCC_MODE i_mode,
              break;
          }
 
-         // @at019 - start
          // SAPPHIRE only accepts DPS-FE mode. In case OCC gets other modes, it should accept the request
          // and keep reporting back that it is in that mode. However, internally we should not
          // initiate any mode transition, i.e., OCC should remain internally in DPS-FE mode.
@@ -224,7 +185,6 @@ errlHndl_t SMGR_set_mode(const OCC_MODE i_mode,
                  l_mode = OCC_MODE_DYN_POWER_SAVE;
              }
          }
-         // @at019 - start
 
          switch (l_mode)
          {
@@ -236,7 +196,7 @@ errlHndl_t SMGR_set_mode(const OCC_MODE i_mode,
              case OCC_MODE_STURBO:            // FALL THROUGH
              case OCC_MODE_FFO:               // FALL THROUGH
                  // Notify AMEC of mode change
-                 
+
                  // Change Mode via Transition Function
                  do
                  {
@@ -281,7 +241,7 @@ errlHndl_t SMGR_set_mode(const OCC_MODE i_mode,
              default:
                  //unsupported mode
                  break;
-         }  
+         }
 
          if(l_errlHndl)
          {
@@ -299,7 +259,7 @@ errlHndl_t SMGR_set_mode(const OCC_MODE i_mode,
 
      }while(0);
 
-     // If we have a mode change failure, Mode change flag needs to be set, 
+     // If we have a mode change failure, Mode change flag needs to be set,
      // otherwise, it needs be be cleared/unset.
      if(l_errlHndl)
      {
@@ -307,7 +267,7 @@ errlHndl_t SMGR_set_mode(const OCC_MODE i_mode,
      }
 
      // Unlock critical section
-     ssx_semaphore_post(&G_smgrModeChangeSem);     // @th022
+     ssx_semaphore_post(&G_smgrModeChangeSem);
 
 
      return l_errlHndl;
@@ -316,12 +276,10 @@ errlHndl_t SMGR_set_mode(const OCC_MODE i_mode,
 
 // Function Specification
 //
-// Name: 
+// Name: SMGR_mode_transition_to_nominal
 //
-// Description: 
+// Description:
 //
-// Flow:             FN=
-// 
 // End Function Specification
 errlHndl_t SMGR_mode_transition_to_nominal()
 {
@@ -330,8 +288,8 @@ errlHndl_t SMGR_mode_transition_to_nominal()
     TRAC_IMP("SMGR: Mode to Nominal Transition Started");
 
     // Set Freq Mode for AMEC to use
-    l_errlHndl = amec_set_freq_range(OCC_MODE_NOMINAL);  // @th015
-    
+    l_errlHndl = amec_set_freq_range(OCC_MODE_NOMINAL);
+
     CURRENT_MODE() = OCC_MODE_NOMINAL;
     TRAC_IMP("SMGR: Mode to Nominal Transition Completed");
 
@@ -341,12 +299,10 @@ errlHndl_t SMGR_mode_transition_to_nominal()
 
 // Function Specification
 //
-// Name: 
+// Name: SMGR_mode_transition_to_powersave
 //
-// Description: 
+// Description:
 //
-// Flow:             FN=
-// 
 // End Function Specification
 errlHndl_t SMGR_mode_transition_to_powersave()
 {
@@ -355,7 +311,7 @@ errlHndl_t SMGR_mode_transition_to_powersave()
     TRAC_IMP("SMGR: Mode to PowerSave Transition Started");
 
     // Set Freq Mode for AMEC to use
-    l_errlHndl = amec_set_freq_range(OCC_MODE_PWRSAVE);  // @th015
+    l_errlHndl = amec_set_freq_range(OCC_MODE_PWRSAVE);
 
     CURRENT_MODE() = OCC_MODE_PWRSAVE;
     TRAC_IMP("SMGR: Mode to PowerSave Transition Completed");
@@ -366,12 +322,10 @@ errlHndl_t SMGR_mode_transition_to_powersave()
 
 // Function Specification
 //
-// Name: 
+// Name: SMGR_mode_transition_to_dynpowersave
 //
-// Description: 
+// Description:
 //
-// Flow:             FN=
-// 
 // End Function Specification
 errlHndl_t SMGR_mode_transition_to_dynpowersave()
 {
@@ -380,7 +334,7 @@ errlHndl_t SMGR_mode_transition_to_dynpowersave()
     TRAC_IMP("SMGR: Mode to Dynamic PowerSave-Favor Energy Transition Started");
 
     // Set Freq Mode for AMEC to use
-    l_errlHndl = amec_set_freq_range(OCC_MODE_DYN_POWER_SAVE);  // @th015
+    l_errlHndl = amec_set_freq_range(OCC_MODE_DYN_POWER_SAVE);
 
     CURRENT_MODE() = OCC_MODE_DYN_POWER_SAVE;
     TRAC_IMP("SMGR: Mode to Dynamic PowerSave-Favor Energy Transition Completed");
@@ -390,12 +344,10 @@ errlHndl_t SMGR_mode_transition_to_dynpowersave()
 
 // Function Specification
 //
-// Name: 
+// Name: SMGR_mode_transition_to_dynpowersave_fp
 //
-// Description: 
+// Description:
 //
-// Flow:             FN=
-// 
 // End Function Specification
 errlHndl_t SMGR_mode_transition_to_dynpowersave_fp()
 {
@@ -415,12 +367,10 @@ errlHndl_t SMGR_mode_transition_to_dynpowersave_fp()
 
 // Function Specification
 //
-// Name: 
+// Name: SMGR_mode_transition_to_turbo
 //
-// Description: 
+// Description:
 //
-// Flow:             FN=
-// 
 // End Function Specification
 errlHndl_t SMGR_mode_transition_to_turbo()
 {
@@ -429,8 +379,8 @@ errlHndl_t SMGR_mode_transition_to_turbo()
     TRAC_IMP("SMGR: Mode to Turbo Transition Started");
 
     // Set Freq Mode for AMEC to use
-    l_errlHndl = amec_set_freq_range(OCC_MODE_TURBO);  // @th015
-    
+    l_errlHndl = amec_set_freq_range(OCC_MODE_TURBO);
+
     CURRENT_MODE() = OCC_MODE_TURBO;
     TRAC_IMP("SMGR: Mode to Turbo Transition Completed");
 
@@ -440,12 +390,10 @@ errlHndl_t SMGR_mode_transition_to_turbo()
 
 // Function Specification
 //
-// Name: 
+// Name: SMGR_mode_transition_to_superturbo
 //
-// Description: 
+// Description:
 //
-// Flow:             FN=
-// 
 // End Function Specification
 errlHndl_t SMGR_mode_transition_to_superturbo()
 {
@@ -454,8 +402,8 @@ errlHndl_t SMGR_mode_transition_to_superturbo()
     TRAC_IMP("SMGR: Mode to SuperTurbo Transition Started");
 
     // Set Freq Mode for AMEC to use
-    l_errlHndl = amec_set_freq_range(OCC_MODE_STURBO);  // @th015
-    
+    l_errlHndl = amec_set_freq_range(OCC_MODE_STURBO);
+
     CURRENT_MODE() = OCC_MODE_STURBO;
     TRAC_IMP("SMGR: Mode to SuperTurbo Transition Completed");
 
@@ -465,12 +413,10 @@ errlHndl_t SMGR_mode_transition_to_superturbo()
 
 // Function Specification
 //
-// Name: 
+// Name: SMGR_mode_transition_to_ffo
 //
-// Description: 
+// Description:
 //
-// Flow:             FN=
-// 
 // End Function Specification
 errlHndl_t SMGR_mode_transition_to_ffo()
 {
@@ -479,8 +425,8 @@ errlHndl_t SMGR_mode_transition_to_ffo()
     TRAC_IMP("SMGR: Mode to FFO Transition Started");
 
     // Set Freq Mode for AMEC to use
-    l_errlHndl = amec_set_freq_range(OCC_MODE_FFO);  // @th015
-    
+    l_errlHndl = amec_set_freq_range(OCC_MODE_FFO);
+
     CURRENT_MODE() = OCC_MODE_FFO;
     TRAC_IMP("SMGR: Mode to FFO Transition Completed");
 

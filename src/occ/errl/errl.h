@@ -1,57 +1,34 @@
-/******************************************************************************
-// @file errl.h
-// @brief OCC Errl Component header file
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _errl_h errl.h
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *                      tapiar    06/15/2011  Created errl methods
- *   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
- *   @pb00E             pbavari   03/11/2012  Added correct include file
- *   @nh001             neilhsu   05/23/2012  Add missing error log tags 
- *   @th022             thallet   10/08/2012  Add method to get errl logId
- *   @nh004   864941    neilhsu   12/20/2012  Support get/delete errl & added trace info
- *   @th032             thallet   04/26/2013  Tuleta HW Bringup
- *   @th036   881677    thallet   05/06/2013  Support for new poll command
- *   @jh001   881996    joshych   05/07/2013  Support SRAM error log format
- *   @jh002   883921    joshych   06/17/2013  Read OCC error log from SRAM
- *   @fk002   905632    fmkassem  11/05/2013  Remove CriticalPathMonitor code
- *   @gm028   911670    milesg    02/27/2014  Immediate safe mode on checkstop
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/errl/errl.h $                                         */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
 #ifndef _ERRL_H
 #define _ERRL_H
 
-/** \defgroup OCC Errl Component
- * 
- */
-
-//*************************************************************************
-// Includes
-//*************************************************************************
-//@pb00Ec - changed from common.h to occ_common.h for ODE support
 #include <occ_common.h>
 #include <trac_interface.h>
 
-//*************************************************************************
-// Externs
-//*************************************************************************
-
-//*************************************************************************
-// Macros
-//*************************************************************************
-
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
 // Used as default for invalid slot number
 static const uint8_t  ERRL_INVALID_SLOT = 0xFF;
 
@@ -61,8 +38,7 @@ static const uint32_t ERRL_SLOT_SHIFT = 0x80000000;
 // Used for defaulting handle to invalid
 static const uint32_t INVALID_ERR = 0xFFFFFFFF;
 
-/* Sizes constants                                                          */
-// Max size of non call home data logs (2048 bytes) 
+// Max size of non call home data logs (2048 bytes)
 #define MAX_ERRL_ENTRY_SZ 0x800
 
 // Max size of call home data log (3072 bytes)
@@ -84,30 +60,29 @@ static const uint32_t INVALID_ERR = 0xFFFFFFFF;
 // slot bit mask, we are able to get 7 slots for predictive/unrecoverable errors,
 // 1 slot for informational logs, and 1 slot for call home data log
 /* Slot Masks */
-typedef enum 
+typedef enum
 {
     ERRL_SLOT_MASK_DEFAULT        = 0xFFFFFFFF,
     ERRL_SLOT_MASK_INFORMATIONAL  = 0xFEFFFFFF,
-    ERRL_SLOT_MASK_PREDICTIVE     = 0x01FFFFFF, 
-    ERRL_SLOT_MASK_UNRECOVERABLE  = 0x01FFFFFF, 
+    ERRL_SLOT_MASK_PREDICTIVE     = 0x01FFFFFF,
+    ERRL_SLOT_MASK_UNRECOVERABLE  = 0x01FFFFFF,
     ERRL_SLOT_MASK_CALL_HOME_DATA = 0xFF7FFFFF,
 } ERRL_SLOT_MASK;
 
-// These are the possible severities that an error log can have.  
+// These are the possible severities that an error log can have.
 // Users must ONLY use these enum values for severity.
 /* Error Severity */
-typedef enum 
+typedef enum
 {
     ERRL_SEV_INFORMATIONAL  = 0x00,
-    ERRL_SEV_PREDICTIVE     = 0x01, 
-    ERRL_SEV_UNRECOVERABLE  = 0x02, 
+    ERRL_SEV_PREDICTIVE     = 0x01,
+    ERRL_SEV_UNRECOVERABLE  = 0x02,
     ERRL_SEV_CALLHOME_DATA  = 0x03,
 } ERRL_SEVERITY;
 
-// These are the possible actions that an error log can have.  
+// These are the possible actions that an error log can have.
 // Users must ONLY use these enum values for actions.
 /* Error Actions */
-// @jh001a
 typedef enum
 {
     ERRL_ACTIONS_CONSOLIDATE_ERRORS       = 0x01, //ignored by tmgt at this time
@@ -116,18 +91,18 @@ typedef enum
     ERRL_ACTIONS_RESET_REQUIRED           = 0x80, //permanent safe mode after 3 recovery attempts
 } ERRL_ACTIONS_MASK;
 
-// These are the possible callout priorities that a callout can have.  
+// These are the possible callout priorities that a callout can have.
 // Users must ONLY use these enum values for callout priority
 /* Callout Priority */
-typedef enum 
+typedef enum
 {
     ERRL_CALLOUT_PRIORITY_INVALID   = 0x00,
     ERRL_CALLOUT_PRIORITY_LOW       = 0x01,
-    ERRL_CALLOUT_PRIORITY_MED       = 0x02, 
-    ERRL_CALLOUT_PRIORITY_HIGH      = 0x03, 
+    ERRL_CALLOUT_PRIORITY_MED       = 0x02,
+    ERRL_CALLOUT_PRIORITY_HIGH      = 0x03,
 } ERRL_CALLOUT_PRIORITY;
 
-// These are the user detail types that a user details can have.  
+// These are the user detail types that a user details can have.
 // Users must ONLY use these enum values for user detail type
 /* User Detail Type */
 typedef enum
@@ -137,14 +112,13 @@ typedef enum
     ERRL_USR_DTL_BINARY_DATA    = 0x03,
 } ERRL_USR_DETAIL_TYPE;
 
-// These are the possible OCC States.  
+// These are the possible OCC States.
 /* OCC States */
 typedef enum
 {
     ERRL_OCC_STATE_INVALID          = 0xFF,
 } ERRL_OCC_STATE;
 
-//Versions
 /* Errl Structure Version */
 typedef enum
 {
@@ -165,7 +139,6 @@ typedef enum
 } ERRL_TRACE_VERSION;
 
 /* Type of Callout */
-// @jh001a
 typedef enum
 {
     ERRL_CALLOUT_TYPE_HUID          = 0x01,
@@ -173,7 +146,6 @@ typedef enum
 } ERRL_CALLOUT_TYPE;
 
 /* TMGT-OCC Component Ids */
-// @jh001a
 typedef enum
 {
     ERRL_COMPONENT_ID_FIRMWARE         = 0x01,
@@ -182,11 +154,7 @@ typedef enum
     ERRL_COMPONENT_ID_NONE             = 0xFF,
 } ERRL_COMPONENT_ID;
 
-//*************************************************************************
-// Structures
-//*************************************************************************
 /* Callout Structure */
-// @jh001c $
 // TMGT_OCC_INTERFACE_v1_2_1
 struct ErrlCallout
 {
@@ -203,10 +171,10 @@ struct ErrlCallout
 typedef struct ErrlCallout ErrlCallout_t;
 
 // The User Detail Entry Structure consists of the fields below followed
-// by the actual data the user is trying to collect. 
+// by the actual data the user is trying to collect.
 // NOTE: A data pointer field is NOT defined but rather inferred here.  In the
 //       error log contents, the user will see all the subsequent fields followed
-//       by the actual data 
+//       by the actual data
 /* User Detail Entry Structure */
 struct ErrlUserDetailsEntry
 {
@@ -222,7 +190,7 @@ typedef struct ErrlUserDetailsEntry ErrlUserDetailsEntry_t;
 // by each individual User Details Entry structure & data
 // NOTE: A data pointer field is NOT defined but rather inferred here.  In the
 //       error log contents, the user will see all the subsequent fields followed
-//       by each User Details Entry structure and its data 
+//       by each User Details Entry structure and its data
 /* User Detail Structure */
 struct ErrlUserDetails
 {
@@ -246,9 +214,8 @@ struct ErrlUserDetails
 typedef struct ErrlUserDetails ErrlUserDetails_t;
 
 /* Error Log Structure */
-// @jh001c 
 // TMGT_OCC_INTERFACE_v1_2_1
-struct ErrlEntry 
+struct ErrlEntry
 {
     // Log CheckSum
     uint16_t            iv_checkSum;
@@ -268,7 +235,7 @@ struct ErrlEntry
             uint8_t reset_required     : 1;  // Error is critical and requires OCC reset
             uint8_t safe_mode_required : 1;  // immediate permanent safe mode (used for checkstops)
             uint8_t reserved5          : 1;
-            uint8_t reserved4          : 1;  
+            uint8_t reserved4          : 1;
             uint8_t mfg_error          : 1;  // Fan go to max,oversubscription,core above warning,Throttled.
             uint8_t reserved2          : 1;
             uint8_t reserved1          : 1;
@@ -276,7 +243,7 @@ struct ErrlEntry
         };
         uint8_t word;
     } iv_actions;
-    // Reserved for extended reason code for uniquely identifying error if needed // @nh001c
+    // Reserved for extended reason code for uniquely identifying error if needed
     uint32_t            iv_userData4;
     // Log Callout Number
     uint8_t             iv_numCallouts;
@@ -292,9 +259,6 @@ typedef struct ErrlEntry ErrlEntry_t;
 /* Error Log Handle */
 typedef ErrlEntry_t* errlHndl_t;
 
-//*************************************************************************
-// Globals
-//*************************************************************************
 extern uint32_t     G_occErrSlotBits;
 extern uint8_t      G_occErrIdCounter;
 
@@ -311,17 +275,14 @@ extern uint8_t      G_errslot7[MAX_ERRL_ENTRY_SZ];
 extern uint8_t      G_infoslot[MAX_ERRL_ENTRY_SZ];
 extern uint8_t      G_callslot[MAX_ERRL_CALL_HOME_SZ];
 
-//*************************************************************************
-// Function Prototypes
-//*************************************************************************
 /* Create an Error Log */
-errlHndl_t createErrl( 
-            const uint16_t i_modId, 
+errlHndl_t createErrl(
+            const uint16_t i_modId,
             const uint8_t i_reasonCode,
-            const uint32_t i_extReasonCode,        // @nh001a
-            const ERRL_SEVERITY i_sev, 
-            const tracDesc_t i_trace, 
-            const uint16_t i_traceSz, 
+            const uint32_t i_extReasonCode,
+            const ERRL_SEVERITY i_sev,
+            const tracDesc_t i_trace,
+            const uint16_t i_traceSz,
             const uint32_t i_userData1,
             const uint32_t i_userData2
             );
@@ -330,7 +291,7 @@ errlHndl_t createErrl(
 /* Add Trace Data to Error Log */
 void addTraceToErrl(
             const tracDesc_t i_trace,
-            const uint16_t i_traceSz, 
+            const uint16_t i_traceSz,
             errlHndl_t io_errl
             );
 
@@ -342,7 +303,7 @@ errlHndl_t deleteErrl( errlHndl_t * io_err);
 
 /* Add Callout to Error Log */
 // @jh001c
-void addCalloutToErrl( 
+void addCalloutToErrl(
             errlHndl_t io_err,
             const ERRL_CALLOUT_TYPE i_type,
             const uint64_t i_calloutValue,
@@ -381,24 +342,7 @@ uint16_t getErrlLengthByID(const uint8_t i_id);
 /* Return Address of an Error Log based on ID, to send to TMGT */
 uint32_t getErrlOCIAddrByID(const uint8_t i_id);
 
-// @nh004a - end
-
-
 // NOTE: Not defining these in the .h since they are INTERNAL
 //       methods!
-
-/* Report the Error Log */
-//void reportErrorLog( errlHndl_t i_err, uint16_t i_entrySize ); 
-
-/* Get Error Log Slot Number and Error Id */
-//uint8_t getErrSlotNumAndErrId( 
-//            ERRL_SEVERITY i_severity, 
-//            uint8_t *o_errlId, 
-//            uint64_t *o_timeStamp
-//            );
-
-//*************************************************************************
-// Functions
-//*************************************************************************
 
 #endif //_ERRL_H

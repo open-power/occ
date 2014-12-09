@@ -1,49 +1,28 @@
-/******************************************************************************
-// @file state.c
-// @brief OCC States (including Reset)
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section state.c STATE.C
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @th003             thallet   11/08/2011  New file
- *   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
- *   @pb00E             pbavari   03/11/2012  Added correct include file
- *   @th00d             thallet   04/08/2012  Added SMGR function
- *   @th011             thallet   07/12/2012  Split Mode/State/Reset into sep files
- *   @th015             thallet   08/03/2012  Added RTL Flag setting
- *   @th022             thallet   10/03/2012  Changes to allow DCOM State/Mode setting
- *   @th036  881677     thallet   05/06/2013  Support for poll & reset_prep commands
- *   @at015  885884     alvinwan  06/10/2013  Support Observation/Active state change
- *   @th043  892554     thallet   07/23/2013  Automatic Nominal/Active state change
- *   @th046  894648     thallet   08/08/2013  Piggyback activeReady Fix on the coreq fix
- *   @ly009  895318     lychen    08/13/2013  OCC-Sapphire shared memory interface
- *   @gm006  SW224414   milesg    09/16/2013  Reset and FFDC improvements
- *   @gm008  SW226989   milesg    09/30/2013  Sapphire initial support
- *   @rt001  903366     tapiar    10/23/2013  Require pcap config for master to go active
- *   @gm013  907548     milesg    11/22/2013  Memory therm monitoring support
- *   @rt004  908817     tapiar    12/11/2013  remove workaround for pcap see @rt001
- *   @ly010  908832     lychen    12/09/2013  Sapphire update status for reset
- *   @gm016  909061     milesg    12/10/2013  Support memory throttling due to temperature
- *   @sb002  908891     sbroyles  12/09/2013  Enable watchdog timers
- *   @gm025  915973     milesg    02/14/2014  Full support for sapphire (KVM) mode
- *   @sb055  911966     sbroyles  02/27/2014  Enable PBCS heartbeat
- *   @wb001  919163     wilbryan  03/06/2014  Updating error call outs, descriptions, and severities
- *   @gm033  920448     milesg    03/26/2014  use getscom/putscom ffdc wrapper
- *   @gm034  920562     milesg    03/26/2014  more ffdc for pstate enablement failures
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/state.c $                                             */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
-//*************************************************************************
-// Includes
-//*************************************************************************
-//@pb00Ec - changed from common.h to occ_common.h for ODE support
 #include <occ_common.h>
 #include <common_types.h>
 #include <centaur_data.h>
@@ -56,33 +35,18 @@
 #include "proc_pstate.h"
 #include "cmdh_fsp_cmds_datacnfg.h"
 #include "cmdh_fsp.h"
-#include "proc_data.h" // @sb055
-#include "heartbeat.h" // @sb055
+#include "proc_data.h"
+#include "heartbeat.h"
 #include "scom.h"
 
-//*************************************************************************
-// Externs
-//*************************************************************************
-extern proc_gpsm_dcm_sync_occfw_t G_proc_dcm_sync_state; //@gm006
+
+extern proc_gpsm_dcm_sync_occfw_t G_proc_dcm_sync_state;
 extern bool G_mem_monitoring_allowed;
 extern task_t G_task_table[TASK_END];  // Global task table
-//*************************************************************************
-// Macros
-//*************************************************************************
 
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
 // Maximum allowed value approx. 16.3 ms
-#define PCBS_HEARBEAT_TIME_US 16320 // @sb055
+#define PCBS_HEARBEAT_TIME_US 16320
 
-//*************************************************************************
-// Structures
-//*************************************************************************
-
-//*************************************************************************
-// Forward Declarations
-//*************************************************************************
 errlHndl_t SMGR_standby_to_observation();
 errlHndl_t SMGR_standby_to_active();
 errlHndl_t SMGR_observation_to_standby();
@@ -91,10 +55,6 @@ errlHndl_t SMGR_active_to_observation();
 errlHndl_t SMGR_active_to_standby();
 errlHndl_t SMGR_all_to_safe();
 
-
-//*************************************************************************
-// Globals
-//*************************************************************************
 
 // State that OCC is currently in
 OCC_STATE          G_occ_internal_state     = OCC_STATE_STANDBY;
@@ -144,17 +104,11 @@ const uint8_t G_smgr_state_trans_count = sizeof(G_smgr_state_trans)/sizeof(smgr_
 uint32_t G_smgr_validate_data_active_mask = SMGR_VALIDATE_DATA_ACTIVE_MASK_HARDCODES;
 uint32_t G_smgr_validate_data_observation_mask = SMGR_VALIDATE_DATA_OBSERVATION_MASK_HARDCODES;
 
-//*************************************************************************
-// Functions
-//*************************************************************************
-
 // Function Specification
 //
 // Name: SMGR_is_mode_transitioning
 //
 // Description:
-//
-// Flow:             FN=
 //
 // End Function Specification
 inline bool SMGR_is_state_transitioning(void)
@@ -169,13 +123,11 @@ inline bool SMGR_is_state_transitioning(void)
 //
 // Description:
 //
-// Flow:             FN=
-//
 // End Function Specification
 errlHndl_t SMGR_standby_to_observation()
 {
     errlHndl_t              l_errlHndl = NULL;
-    static bool l_error_logged = FALSE;  // To prevent trace and error log happened over and over  // @at015a
+    static bool l_error_logged = FALSE;  // To prevent trace and error log happened over and over
 
     if( SMGR_MASK_OBSERVATION_READY ==
         (SMGR_validate_get_valid_states() & SMGR_MASK_OBSERVATION_READY))
@@ -241,7 +193,7 @@ errlHndl_t SMGR_standby_to_observation()
                                  DEFAULT_TRACE_SIZE,               //Trace Size
                                  0,                                //userdata1
                                  0);                               //userdata2
- 
+
         // @wb001 -- Callout firmware
         addCalloutToErrl(l_errlHndl,
                      ERRL_CALLOUT_TYPE_COMPONENT_ID,
@@ -257,8 +209,6 @@ errlHndl_t SMGR_standby_to_observation()
 // Name:
 //
 // Description:
-//
-// Flow:             FN=
 //
 // End Function Specification
 errlHndl_t SMGR_observation_to_standby()
@@ -288,13 +238,11 @@ errlHndl_t SMGR_observation_to_standby()
 //
 // Description:
 //
-// Flow:             FN=
-//
 // End Function Specification
 errlHndl_t SMGR_observation_to_active()
 {
     errlHndl_t      l_errlHndl = NULL;
-    static bool l_error_logged = FALSE;  // To prevent trace and error log happened over and over  // @at015a
+    static bool l_error_logged = FALSE;  // To prevent trace and error log happened over and over
     int                l_extRc = OCC_NO_EXTENDED_RC;
     int                l_rc = 0;
 
@@ -337,11 +285,11 @@ errlHndl_t SMGR_observation_to_active()
             proc_gpsm_dcm_sync_enable_pstates_smh();
             ssx_sleep(SSX_MICROSECONDS(500));
         }
-        if(proc_is_hwpstate_enabled() && G_sysConfigData.system_type.kvm) // @ly010c
+        if(proc_is_hwpstate_enabled() && G_sysConfigData.system_type.kvm)
         {
             TRAC_IMP("SMGR: Pstates are enabled, continuing with state trans");
         }
-    }  // @th043 -- whole if statement
+    }
 
     // Check if all conditions are met to transition to active state.  If
     // they aren't, then log an error and fail to change state.
@@ -350,7 +298,7 @@ errlHndl_t SMGR_observation_to_active()
         (SMGR_validate_get_valid_states() & SMGR_MASK_ACTIVE_READY))
             && proc_is_hwpstate_enabled() )
     {
-        l_error_logged = FALSE; // @at015a
+        l_error_logged = FALSE;
         TRAC_IMP("SMGR: Observation to Active Transition Started");
 
         // Set the RTL Flags to indicate which tasks can run
@@ -359,7 +307,6 @@ errlHndl_t SMGR_observation_to_active()
         rtl_clr_run_mask_deferred(RTL_FLAG_OBS);
         rtl_set_run_mask_deferred(RTL_FLAG_ACTIVE);
 
-        //@gm008
         // Ensure that the dpll override (enabled when mfg biases freq) has been disabled.
         int l_core;
         uint32_t l_configured_cores;
@@ -386,7 +333,6 @@ errlHndl_t SMGR_observation_to_active()
             CURRENT_STATE() = OCC_STATE_ACTIVE;
             TRAC_IMP("SMGR: Observation to Active Transition Completed");
 
-            // >> @sb055
             // Configure and enable the PCB slave heartbeat timer
             //
             // task_core_data is running in every RTL tick and scheduling a run
@@ -421,9 +367,8 @@ errlHndl_t SMGR_observation_to_active()
                          PCBS_HEARBEAT_TIME_US,
                          l_actual_pcbs_hb_time);
             }
-            // << @sb055
 
-            // >> @sb002 FIXME #state_c_001 Manually configuring the PMC
+            // TODO: #state_c_001 Manually configuring the PMC
             // heartbeat until pmc_hb_config is shown to be working
             // Reference SW238882 for more information on updates needed in
             // pmc_hb_config.  Note that if PMC parameter hangpulse pre-divider
@@ -452,7 +397,6 @@ errlHndl_t SMGR_observation_to_active()
             pohr.fields.pmc_occ_heartbeat_en = 1;
             out32(PMC_OCC_HEARTBEAT_REG, pohr.value);
             out32(PMC_OCC_HEARTBEAT_REG, pohr.value);
-            // << @sb002
         }
     }
     else
@@ -465,11 +409,11 @@ errlHndl_t SMGR_observation_to_active()
     {
         TRAC_ERR("SMGR: Observation to Active Transition Failed, cnfgdata=0x%08x, reqd=0x%08x",
                 DATA_get_present_cnfgdata(),
-                SMGR_VALIDATE_DATA_ACTIVE_MASK); //@gm006
+                SMGR_VALIDATE_DATA_ACTIVE_MASK);
     }
 
 
-    if(l_rc && FALSE == l_error_logged)// @at015a
+    if(l_rc && FALSE == l_error_logged)
     {
         l_error_logged = TRUE;
         /* @
@@ -487,10 +431,10 @@ errlHndl_t SMGR_observation_to_active()
                                  ERRL_SEV_UNRECOVERABLE,           //Severity
                                  NULL,                             //Trace Buf
                                  DEFAULT_TRACE_SIZE,               //Trace Size
-                                 SMGR_MASK_ACTIVE_READY,           //userdata1 - @gm006
-                                 SMGR_validate_get_valid_states());//userdata2 - @gm006
-                                 
-        // @wb001 -- Callout firmware
+                                 SMGR_MASK_ACTIVE_READY,           //userdata1
+                                 SMGR_validate_get_valid_states());//userdata2
+
+        // Callout firmware
         addCalloutToErrl(l_errlHndl,
                  ERRL_CALLOUT_TYPE_COMPONENT_ID,
                  ERRL_COMPONENT_ID_FIRMWARE,
@@ -505,8 +449,6 @@ errlHndl_t SMGR_observation_to_active()
 // Name:  SMGR_active_to_observation
 //
 // Description:
-//
-// Flow:             FN=
 //
 // End Function Specification
 errlHndl_t SMGR_active_to_observation()
@@ -536,8 +478,6 @@ errlHndl_t SMGR_active_to_observation()
 //
 // Description:
 //
-// Flow:             FN=
-//
 // End Function Specification
 errlHndl_t SMGR_active_to_standby()
 {
@@ -552,7 +492,7 @@ errlHndl_t SMGR_active_to_standby()
        l_errlHndl = SMGR_observation_to_standby();
     }
 
-    if(l_errlHndl) // @at015a
+    if(l_errlHndl)
     {
         TRAC_ERR("SMGR: Active to Standby Transition Failed");
     }
@@ -569,9 +509,8 @@ errlHndl_t SMGR_active_to_standby()
 //
 // Name:  SMGR_standby_to_active
 //
-// Description:
-//
-// Flow:             FN=
+// Description: Makes the appropriate calls when transitioning from
+//              standby to active.
 //
 // End Function Specification
 errlHndl_t SMGR_standby_to_active()
@@ -587,7 +526,7 @@ errlHndl_t SMGR_standby_to_active()
        l_errlHndl = SMGR_observation_to_active();
     }
 
-    if(l_errlHndl) // @at015a
+    if(l_errlHndl)
     {
         TRAC_ERR("SMGR: Standby to Active Transition Failed");
     }
@@ -605,8 +544,6 @@ errlHndl_t SMGR_standby_to_active()
 // Name:  SMGR_all_to_safe
 //
 // Description:
-//
-// Flow:             FN=
 //
 // End Function Specification
 errlHndl_t SMGR_all_to_safe()
@@ -659,20 +596,11 @@ errlHndl_t SMGR_all_to_safe()
 //
 // Description:
 //
-// Flow:             FN=
-//
 // End Function Specification
 errlHndl_t SMGR_set_state(OCC_STATE i_new_state)
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
     errlHndl_t l_transResult = NULL; //Was the transition successful?
     int jj=0;
-
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
 
     do
     {
@@ -703,7 +631,7 @@ errlHndl_t SMGR_set_state(OCC_STATE i_new_state)
                              ERRL_CALLOUT_PRIORITY_HIGH);
 
             break;
-        }  // @th022
+        }
 
         //If there is no change to the state, just exit
         if(i_new_state == OCC_STATE_NOCHANGE)
@@ -724,11 +652,11 @@ errlHndl_t SMGR_set_state(OCC_STATE i_new_state)
               if(NULL != G_smgr_state_trans[jj].trans_func_ptr)
               {
                   // Signal that we are now in a state transition
-                  G_state_transition_occuring = TRUE;   // @th011
+                  G_state_transition_occuring = TRUE;
                   // Run transition function
                   l_transResult = (G_smgr_state_trans[jj].trans_func_ptr)();
                   // Signal that we are done with the transition
-                  G_state_transition_occuring = FALSE;  // @th011
+                  G_state_transition_occuring = FALSE;
                   break;
               }
            }
@@ -739,7 +667,7 @@ errlHndl_t SMGR_set_state(OCC_STATE i_new_state)
         if(G_smgr_state_trans_count == jj)
         {
            TRAC_ERR("No transition (or NULL) found for the state change\n");
-           l_transResult = NULL;  //TODO: Create Error
+           l_transResult = NULL;
            break;
         }
 
@@ -764,14 +692,12 @@ errlHndl_t SMGR_set_state(OCC_STATE i_new_state)
 //
 // Description:
 //
-// Flow:             FN=
-//
 // End Function Specification
 uint8_t SMGR_validate_get_valid_states(void)
 {
     uint8_t l_valid_states = 0;
     uint32_t l_datamask = DATA_get_present_cnfgdata();
-    static BOOLEAN          l_throttle_traced = FALSE; //@rt004a
+    static BOOLEAN          l_throttle_traced = FALSE;
 
     // If we have everything we need to go to observation state
     if((l_datamask & SMGR_VALIDATE_DATA_OBSERVATION_MASK) ==

@@ -1,24 +1,28 @@
-/******************************************************************************
-// @file scom.c
-// @brief Wrapper functions for getscom/putscom
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section scom.c scom.C
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @gm033  920448     milesg    03/26/2014  New file
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/scom.c $                                              */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
-//*************************************************************************
-// Includes
-//*************************************************************************
 #include <occ_common.h>
 #include "ssx.h"
 #include "scom.h"
@@ -27,31 +31,8 @@
 #include "occ_sys_config.h"
 #include "polling.h"
 
-//*************************************************************************
-// Externs
-//*************************************************************************
-//*************************************************************************
-// Macros
-//*************************************************************************
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
 #define MAX_SCOM_FFDC_RETRIES 1
-//*************************************************************************
-// Structures
-//*************************************************************************
-//*************************************************************************
-// Forward Declarations
-//*************************************************************************
-//*************************************************************************
-// Globals
-//*************************************************************************
 
-//*************************************************************************
-// Functions
-//*************************************************************************
-
-// End Function Specification
 // Function Specification
 //
 // Name: getscom_ffdc
@@ -61,8 +42,6 @@
 //              If caller passes in NULL for o_errp, the error will be
 //              committed internally.  Otherwise, o_errp will point to the
 //              uncomitted error log.
-//
-// Flow:             FN=
 //
 // End Function Specification
 int getscom_ffdc(uint32_t i_addr, uint64_t* o_data, errlHndl_t* o_errp)
@@ -90,7 +69,7 @@ int getscom_ffdc(uint32_t i_addr, uint64_t* o_data, errlHndl_t* o_errp)
 
         l_retries++;
     }
-    
+
     if(l_rc)
     {
         //grab additional ffdc
@@ -155,8 +134,6 @@ int getscom_ffdc(uint32_t i_addr, uint64_t* o_data, errlHndl_t* o_errp)
 //              committed internally.  Otherwise, o_errp will point to the
 //              uncomitted error log.
 //
-// Flow:             FN=
-//
 // End Function Specification
 int putscom_ffdc(uint32_t i_addr, uint64_t i_data, errlHndl_t* o_errp)
 {
@@ -174,7 +151,7 @@ int putscom_ffdc(uint32_t i_addr, uint64_t i_data, errlHndl_t* o_errp)
             break;
         }
 
-        //_putscom returns immediately if the o2p interface was busy.  Instead, see if 
+        //_putscom returns immediately if the o2p interface was busy.  Instead, see if
         //it cleared after SCOM_TIMEOUT period.
         if(l_rc == -SCOM_PROTOCOL_ERROR_PUTSCOM_BUSY)
         {
@@ -183,7 +160,7 @@ int putscom_ffdc(uint32_t i_addr, uint64_t i_data, errlHndl_t* o_errp)
 
         l_retries++;
     }
-    
+
     if(l_rc)
     {
         //grab addtional ffdc

@@ -1,149 +1,73 @@
-/******************************************************************************
-// @file main.c
-// @brief OCC main
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section main.c MAIN.C
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @pb000             pbavari   07/08/2011  Added image header support
- *   @01                nguyenp   08/16/2011  Replaced rtloop_ocb_init with the
- *                                            new rtl_ocb_init in rtls directory
- *   @cc000             cjcain    08/18/2011  Added APSS communication code
- *   @02                tapiar    08/08/2011  Add Applet Manager code
- *   @th000             thallet   09/14/2011  Added SysConfig include
- *   @pb005             pbavari   09/15/2011  ifdef out apss_initialize call
- *   @th001             thallet   09/15/2011  Delete unused timer
- *   @pb004             pbavari   09/20/2011  Init section support
- *   @pb007             pbavari   09/27/2011  Watchdog timer support
- *   @03                tapiar    09/22/2011  add dcom support
- *   @04                nguyenp   09/28/2011  Added Proc core init call
- *   @dw000             dwoodham  10/21/2011  Add DPSS communication code
- *   @pb009             pbavari   10/20/2011  Main thread support
- *   @pb00A             pbavari   11/15/2011  Changed name of APSS_SUPPORT Flag
- *                                            to OCC_ALONE_SIMICS
- *   @th005             thallet   11/23/2011  Added sensor_init_all
- *   @th006             thallet   11/21/2011  RESET_REQUEST substituted
- *   @pb00B             pbavari   12/15/2011  Removed appletComplete semaphore
- *                                            from APSS_INIT Applet call
- *   @dw001             dwoodham  12/12/2011  Update call to IMAGE_HEADER macro
- *   @rc001             rickylie  01/10/2012  Changed TRAC_DBG to MAIN_DBG
- *   @th00a             thallet   02/03/2012  Worst case FW timings in AMEC Sensors
- *   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
- *   @th00b             thallet   02/28/2012  Moved slave_occ_init()
- *   @th00c             thallet   04/04/2012  Centaur Support
- *   @th00d             thallet   04/08/2012  OCC TMGT Communication Thread
- *   @nh001             neilhsu   05/23/2012  Add missing error log tags
- *   @th013             thallet   07/24/2012  Minor changes for VPO/HW compile
- *   @th010             thallet   07/11/2012  Pstate Enablemen
- *   @th022             thallet   10/05/2012  Master Init after TMGT command
- *   @at009  859308     alvinwan  10/15/2012  Added tracepp support
- *   @th029             thallet   01/23/2013  Added GCOV capability
- *   @th031  878471     thallet   04/15/2013  Centaur Throttles
- *   @th032             thallet   04/26/2013  Tuleta HW bup
- *   @th035  881654     thallet   05/06/2013  Tuleta bup Pstate Fixes
- *   @th038             thallet   06/03/2013  Disable Centaur since it isn't ready on HW yet
- *   @th045  893135     thallet   07/26/2013  Updated for new Centaur Procedures
- *   @jh005  894560     joshych   08/14/2013  Create call home data logs every 24 hours
- *   @gm006  SW224414   milesg    09/16/2013  Reset and FFDC improvements
- *   @gm010  901580     milesg    10/06/2013  Low Level FFDC support
- *   @sb000  905048     sbroyles  10/28/2013  Add tags for code cleanup,
- *                                            see RTC task 73327. Change tags are
- *                                            removed once resolved.
- *   @sb001  905504     sbroyles  11/06/2013  Resolve all fix tags.
- *   @gm013  907548     milesg    11/22/2013  Memory therm monitoring support
- *   @gs019  908218     gjsilva   12/04/2013  Support cooling request architecture
- *   @sb002  908891     sbroyles  12/09/2013  Enable watchdog timers
- *   @gs021  909855     gjsilva   12/18/2013  Support for processor OT condition
- *   @sb022  910404     sbroyles  01/06/2014  Extend watchdog timeout
- *   @gs023  912003     gjsilva   01/16/2014  Generate VRHOT signal and control loop
- *   @gm022  908890     milesg    01/23/2014  Halt OCC on OCCLFIR[38]
- *   @gm031  916489     milesg    03/07/2014  Additional handling for OISR0[2] and OISR0[9]
- *   @wb001  919163     wilbryan  03/06/2014  Updating error call outs, descriptions, and severities
- *   @wb001  919178     wilbryan  03/19/2014  Change nest frequency default when HOMER access fails
- *   @gm033  920448     milesg    03/26/2014  use getscom/putscom ffdc wrapper
- *   @gm036  917550     milesg    04/09/2014  Ignore phantom interrupts (log info error)
- *   @wb004  922138     wilbryan  04/07/2014  Ensure timely pstate completion
- *   @gs041  942203     gjsilva   10/17/2014  Support for HTMGT/BMC interface
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/main.c $                                              */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
-//*************************************************************************
-// Includes
-//*************************************************************************
 #include "ssx.h"
 #include "ssx_io.h"
 #include "simics_stdio.h"
-#include "heartbeat.h"          // @sb002 for heartbeat
+#include "heartbeat.h"
 #include <thread.h>
 #include <sensor.h>
 #include <threadSch.h>
 #include <errl.h>
 #include <apss.h>
-#include <appletManager.h>      // @02a Applet Manager
-#include <trac.h>               // @02a trace
-#include <occ_service_codes.h>  // @02a module ids
-#include <occ_sys_config.h>     // @th000 Added for sys config access
-#include <timer.h>              // @pb007a - watchdog timer init
-#include <dcom.h>               // @th000 Added for sys config access
-#include <rtls.h>               // @01a
-#include <proc_data.h>          // @04a proc core data
-#include <centaur_data.h>       //
-#include <dpss.h>               // @dw000a DPSS comm
+#include <appletManager.h>
+#include <trac.h>
+#include <occ_service_codes.h>
+#include <occ_sys_config.h>
+#include <timer.h>
+#include <dcom.h>
+#include <rtls.h>
+#include <proc_data.h>
+#include <centaur_data.h>
+#include <dpss.h>
 #include <state.h>
 #include <amec_sys.h>
 #include <cmdh_fsp.h>
 #include <proc_pstate.h>
 #include <vrm.h>
-#include <chom.h>               // @jh005a Call Home data
-#include <homer.h>              // @sb001
+#include <chom.h>
+#include <homer.h>
 #include <amec_health.h>
-#include <amec_freq.h>          // @wb004
+#include <amec_freq.h>
 #include <thrm_thread.h>
 #include "scom.h"
 
 #ifdef GCOV_CODE_COVERAGE
-#include "gcov.h"       // @th029a
+#include "gcov.h"
 #endif
 
-//*************************************************************************
-// Externs
-//*************************************************************************
-//@pb000a - added
 extern void __ssx_boot;
-extern uint32_t G_occ_phantom_critical_count; //gm036
-extern uint32_t G_occ_phantom_noncritical_count; //gm036
-extern uint8_t G_occ_interrupt_type; //@gs041
+extern uint32_t G_occ_phantom_critical_count;
+extern uint32_t G_occ_phantom_noncritical_count;
+extern uint8_t G_occ_interrupt_type;
 
-//*************************************************************************
-// Image Header
-//*************************************************************************
-//@pb000a - added
-//@dw001c - added arg: idNum = ID_NUM_INVALID
 IMAGE_HEADER (G_mainAppImageHdr,__ssx_boot,MAIN_APP_ID,ID_NUM_INVALID);
 
-//*************************************************************************
-// Macros
-//*************************************************************************
 //Set main thread timer for one second
 #define MAIN_THRD_TIMER_SLICE ((SsxInterval) SSX_SECONDS(1))
 
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
-
-//*************************************************************************
-// Structures
-//*************************************************************************
-
-//*************************************************************************
-// Globals
-//*************************************************************************
 // SIMICS printf/printk
 SimicsStdio G_simics_stdout;
 SimicsStdio G_simics_stderr;
@@ -168,26 +92,26 @@ SsxTimer G_mainThrdTimer;
 // @sb022 Variable holding main thread loop count
 uint32_t G_mainThreadLoopCounter = 0x0;
 
-//*************************************************************************
-// Function Prototypes
-//*************************************************************************
-void pmc_hw_error_isr(void *private, SsxIrqId irq, int priority); //gm031
+void pmc_hw_error_isr(void *private, SsxIrqId irq, int priority);
 
 //Macro creates a 'bridge' handler that converts the initial fast-mode to full
 //mode interrupt handler
-SSX_IRQ_FAST2FULL(pmc_hw_error_fast, pmc_hw_error_isr); //gm031
+SSX_IRQ_FAST2FULL(pmc_hw_error_fast, pmc_hw_error_isr);
 
-
-//*************************************************************************
-// Functions
-//*************************************************************************
-
-//gm016
-//Sets up the PBA so that there is no overlap in use of buffers between
-//GPE engines and other engines.  This came from Bishop Brock.
-//It should be pulled out after the procedure that sets up the PBA
-//has been fixed.  Without this workaround we see an invalid instruction
-//failure on the GPE.
+// TODO: Verify whether the workaround is still needed.
+/*
+ * Function Specification
+ *
+ * Name: workaround_HW258436
+ *
+ * Description: Sets up the PBA so that there is no overlap in use of buffers between
+ *              GPE engines and other engines.  This came from Bishop Brock.
+ *              It should be pulled out after the procedure that sets up the PBA
+ *              has been fixed.  Without this workaround we see an invalid instruction
+ *              failure on the GPE.
+ *
+ * End Function Specification
+ */
 void workaround_HW258436()
 {
     uint64_t l_scom_data = 0;
@@ -231,16 +155,26 @@ void workaround_HW258436()
 }
 
 
-//gm031
-//Handles IRQ for PMCLFIR bit being set.  Only bits that are unmasked (0x1010843) and
-//have action0 (0x1010846) set to 1 and action1 (0x1010847) set to 0 will cause this
-//interupt (OISR0[9]) to fire. This runs in a non critical context (tracing allowed).
+/*
+ * Function Specification
+ *
+ * Name: pmc_hw_error_isr
+ *
+ * Description: Handles IRQ for PMCLFIR bit being set.  Only bits that are
+ *              unmasked (0x1010843) and have action0 (0x1010846) set to 1
+ *              and action1 (0x1010847) set to 0 will cause this interupt
+ *              (OISR0[9]) to fire. This runs in a non critical context
+ *              (tracing allowed).
+ *
+ *
+ * End Function Specification
+ */
 void pmc_hw_error_isr(void *private, SsxIrqId irq, int priority)
 {
     errlHndl_t  l_err;
     pmc_ffdc_data_t l_pmc_ffdc;
     SsxMachineContext ctx;
-    
+
     // Mask this interrupt
     ssx_irq_disable(irq);
 
@@ -261,7 +195,7 @@ void pmc_hw_error_isr(void *private, SsxIrqId irq, int priority)
      * @userdata1  0
      * @userdata2  0
      * @userdata4  OCC_NO_EXTENDED_RC
-     * @devdesc    Failure detected in processor 
+     * @devdesc    Failure detected in processor
      *             power management controller (PMC)
      */
     l_err = createErrl( PMC_HW_ERROR_ISR,          // i_modId,
@@ -307,16 +241,23 @@ void pmc_hw_error_isr(void *private, SsxIrqId irq, int priority)
     ssx_critical_section_exit( &ctx );
 }
 
-//gm022
-//Handles IRQ for OCCLFIR bit being set.  Only bits that are unmasked (0x1010803) and
-//have action0 (0x1010806) set to 1 and action1 (0x1010807) set to 0 will cause this
-//interupt (OISR0[2]) to fire.  This runs in a critical context (no tracing!).
-//
+/*
+ * Function Specification
+ *
+ * Name: occ_hw_error_isr
+ *
+ * Description: Handles IRQ for OCCLFIR bit being set.  Only bits
+ *              that are unmasked (0x1010803) and have action0 (0x1010806)
+ *              set to 1 and action1 (0x1010807) set to 0 will cause this
+ *              interupt (OISR0[2]) to fire.  This runs in a critical
+ *              context (no tracing!).
+ *
+ * End Function Specification
+ */
 //NOTE: use "putscom pu 6B111 0 3 101 -ib -p1" to inject the error.
 #define OCC_LFIR_SPARE_BIT50 0x0000000000002000ull //gm031
 void occ_hw_error_isr(void *private, SsxIrqId irq, int priority)
 {
-    //gm031
     //set bit 50 of the OCC LFIR so that the PRDF component will log an error and callout the processor
     //TMGT will also see a problem and log an error but it will be informational.
     _putscom(OCB_OCCLFIR_OR, OCC_LFIR_SPARE_BIT50, SCOM_TIMEOUT);
@@ -325,7 +266,6 @@ void occ_hw_error_isr(void *private, SsxIrqId irq, int priority)
     OCC_HALT(ERRL_RC_OCC_HW_ERROR);
 }
 
-//gm022
 // Enable and register any ISR's that need to be set up as early as possible.
 void occ_irq_setup()
 {
@@ -366,7 +306,7 @@ void occ_irq_setup()
         ssx_irq_enable(PGP_IRQ_OCC_ERROR);
 
 
-        // ------------- PMC Error IRQ Setup ------------------ gm031
+        // ------------- PMC Error IRQ Setup ------------------
 
         // Disable the IRQ while we work on it
         ssx_irq_disable(PGP_IRQ_PMC_ERROR);
@@ -428,15 +368,15 @@ void occ_irq_setup()
     }
 }
 
-// Function Specification
-//
-// Name: hmon_routine
-//
-// Description: Runs various routines that check the health of the OCC
-//
-// Flow:
-//
-// End Function Specification
+/*
+ * Function Specification
+ *
+ * Name: hmon_routine
+ *
+ * Description: Runs various routines that check the health of the OCC
+ *
+ * End Function Specification
+ */
 void hmon_routine()
 {
     static uint32_t L_critical_phantom_count = 0;
@@ -445,10 +385,10 @@ void hmon_routine()
     static bool L_nc_phantom_logged = FALSE;
     bool l_log_phantom_error = FALSE;
 
-    //@rc001m - Modified to use MAIN debug traces
+    //use MAIN debug traces
     MAIN_DBG("HMON routine processing...");
 
-    //Check if we've had any phantom interrupts -- gm036
+    //Check if we've had any phantom interrupts
     if(L_critical_phantom_count != G_occ_phantom_critical_count)
     {
         L_critical_phantom_count = G_occ_phantom_critical_count;
@@ -518,33 +458,33 @@ void hmon_routine()
 }
 
 
-// Function Specification
-//
-// Name: master_occ_init
-//
-// Description: Master OCC specific initialization.
-//
-// Flow: 09/21/2011     FN= master_occ_init
-//
-// End Function Specification
+/*
+ * Function Specification
+ *
+ * Name: master_occ_init
+ *
+ * Description: Master OCC specific initialization.
+ *
+ * End Function Specification
+ */
 void master_occ_init()
 {
-    // >@dw000a
     // Init DPSS chip & start associated tasks.
     // At present, this is uses function which is part of the INIT_SEC so
     // it needs to be run before any applet runs. In future, we can make
     // this an applet
-    // @pb00B - Commented out below call since we are not going to have DPSS
+    // Commented out below call since we are not going to have DPSS
     // support in OCC. In future if we decide to support it, this call needs
     // to be changed to applet call as we have applet for initializing DPSS.
+
     // start_dpss();
-    // <@dw000a
 
     OCC_APLT_STATUS_CODES l_status = OCC_APLT_SUCCESS;
     errlHndl_t l_errl = NULL;
 
-    // Initialize APSS // @cc000a
-    // @pb005a - ifdef apss_initialize call temporary
+    // Initialize APSS
+    // TODO: Verify
+    // ifdef apss_initialize call temporary
     // until Bishop's simics model and Steve's simics model
     // are synced. Bishop's model does not have apss support
     // Steve's model does not have latest changes Bishop
@@ -561,27 +501,25 @@ void master_occ_init()
     {
         TRAC_ERR("APSS init applet returned error: l_status: 0x%x", l_status);
         // commit & delete. CommitErrl handles NULL error log handle
-        REQUEST_RESET(l_errl);      //@gm006
+        REQUEST_RESET(l_errl);
     }
 
     // Reinitialize the PBAX Queues
-    dcom_initialize_pbax_queues();    // @th022
+    dcom_initialize_pbax_queues();
 }
 
-// Function Specification
-//
-// Name: slave_occ_init
-//
-// Description: Slave OCC specific initialization.
-//
-// Flow: 09/21/2011     FN= slave_occ_init
-//
-// End Function Specification
+/*
+ * Function Specification
+ *
+ * Name: slave_occ_init
+ *
+ * Description: Slave OCC specific initialization.
+ *
+ * End Function Specification
+ */
 void slave_occ_init()
 {
-    // >@dw000a
     // Init the DPSS oversubscription IRQ handler
-    //@rc001m - Modified to use MAIN debug traces
     MAIN_DBG("Initializing Oversubscription IRQ...");
     errlHndl_t l_errl = dpss_oversubscription_irq_initialize();
 
@@ -597,32 +535,31 @@ void slave_occ_init()
     {
         TRAC_INFO("Oversubscription IRQ initialized");
     }
-    // <@dw000a
 
-    // @03a set up our doorbell queues
+    //Set up doorbell queues
     dcom_initialize_pbax_queues();
 
     // Run AMEC Slave Init Code
-    amec_slave_init();             // @th00a
+    amec_slave_init();
 
     // Initialize SMGR State Semaphores
     extern SsxSemaphore G_smgrModeChangeSem;
-    ssx_semaphore_create(&G_smgrModeChangeSem, 1, 1);    // @th022
+    ssx_semaphore_create(&G_smgrModeChangeSem, 1, 1);
 
     // Initialize SMGR Mode Semaphores
     extern SsxSemaphore G_smgrStateChangeSem;
-    ssx_semaphore_create(&G_smgrStateChangeSem, 1, 1);    // @th022
+    ssx_semaphore_create(&G_smgrStateChangeSem, 1, 1);
 }
 
-// Function Specification
-//
-// Name: mainThrdTimerCallback
-//
-// Description: Main thread timer to post semaphores handled by main thread
-//
-// Flow: 09/21/2011     FN= mainThrdTimerCallback
-//
-// End Function Specification
+/*
+ * Function Specification
+ *
+ * Name: mainThrdTimerCallback
+ *
+ * Description: Main thread timer to post semaphores handled by main thread
+ *
+ * End Function Specification
+ */
 void mainThrdTimerCallback(void * i_argPtr)
 {
     int l_rc = SSX_OK;
@@ -636,7 +573,7 @@ void mainThrdTimerCallback(void * i_argPtr)
             TRAC_ERR("Failure posting thermal semaphore: rc: 0x%x", l_rc);
             break;
         }
-        //@rc001m - Modified to use MAIN debug traces
+
         MAIN_DBG("posted thrmSem");
 
         // Post health monitor semaphore
@@ -647,7 +584,7 @@ void mainThrdTimerCallback(void * i_argPtr)
             TRAC_ERR("Failure posting HlTH monitor semaphore: rc: 0x%x", l_rc);
             break;
         }
-        //@rc001m - Modified to use MAIN debug traces
+
         MAIN_DBG("posted hmonSem");
 
         // Post FFDC semaphore
@@ -658,7 +595,7 @@ void mainThrdTimerCallback(void * i_argPtr)
             TRAC_ERR("Failure posting FFDC semaphore: rc: 0x%x", l_rc);
             break;
         }
-        //@rc001m - Modified to use MAIN debug traces
+
         MAIN_DBG("posted ffdcSem");
 
     }while(FALSE);
@@ -683,20 +620,21 @@ void mainThrdTimerCallback(void * i_argPtr)
                                       l_rc,                         //userdata1
                                       0);                           //userdata2
         // Commit Error
-        REQUEST_RESET(l_err);     // @gm006
+        REQUEST_RESET(l_err);
     }
 }
 
-// Function Specification
-//
-// Name: initMainThrdSemAndTimer
-//
-// Description: Helper function to create semaphores handled by main thread. It also
-//              creates and schedules timer used for posting main thread semaphores
-//
-// Flow:            FN=None
-//
-// End Function Specification
+/*
+ * Function Specification
+ *
+ * Name: initMainThrdSemAndTimer
+ *
+ * Description: Helper function to create semaphores handled by main thread. It also
+ *              creates and schedules timer used for posting main thread semaphores
+ *
+ *
+ * End Function Specification
+ */
 void initMainThrdSemAndTimer()
 {
     // create the thermal Semaphore, starting at 0 with a max count of 0
@@ -748,7 +686,7 @@ void initMainThrdSemAndTimer()
          * @devdesc     SSX semaphore related failure
          */
         errlHndl_t l_err = createErrl(MAIN_THRD_SEM_INIT_MID,       //modId
-                                      SSX_GENERIC_FAILURE,          //reasoncode    // @nh001c
+                                      SSX_GENERIC_FAILURE,          //reasoncode
                                       OCC_NO_EXTENDED_RC,           //Extended reason code
                                       ERRL_SEV_UNRECOVERABLE,       //Severity
                                       NULL,                         //Trace Buf
@@ -756,20 +694,20 @@ void initMainThrdSemAndTimer()
                                       l_thrmSemRc,                  //userdata1
                                       l_timerRc);                   //userdata2
 
-        REQUEST_RESET(l_err);     // @gm006
+        REQUEST_RESET(l_err);
     }
 }
 
-// Function Specification
-//
-// Name: Main_thread_routine
-//
-// Description: Main thread handling OCC initialization and thernal, health
-//              monitor and FFDC function semaphores
-//
-// Flow: 11/23/2011     FN= Main_thread_routine
-//
-// End Function Specification
+/*
+ * Function Specification
+ *
+ * Name: Main_thread_routine
+ *
+ * Description: Main thread handling OCC initialization and thernal, health
+ *              monitor and FFDC function semaphores
+ *
+ * End Function Specification
+ */
 void Main_thread_routine(void *private)
 {
     CHECKPOINT(MAIN_THREAD_STARTED);
@@ -816,15 +754,13 @@ void Main_thread_routine(void *private)
     CHECKPOINT(SLAVE_OCC_INITIALIZED);
 
 #ifndef OCC_SIMICS_RESPONDER
-    // $pb007a - Initialize watchdog timers. This needs to be right before
+    // Initialize watchdog timers. This needs to be right before
     // start rtl to make sure timer doesn't timeout. This timer is being
     // reset from the rtl task.
-    // @sb002 Enable watchdog timers
     TRAC_INFO("Initializing watchdog timers.");
     initWatchdogTimers();
     CHECKPOINT(WATCHDOG_INITIALIZED);
 
-    //@01a
     // Initialize Real time Loop Timer Interrupt
     rtl_ocb_init();
     CHECKPOINT(RTL_TIMER_INITIALIZED);
@@ -914,7 +850,7 @@ void Main_thread_routine(void *private)
             else
             {
                 // Only Master OCC will log call home data
-                if (OCC_MASTER == G_occ_role) // jh005c
+                if (OCC_MASTER == G_occ_role)
                 {
                     chom_main();
                 }
@@ -933,7 +869,7 @@ void Main_thread_routine(void *private)
              */
 
             errlHndl_t l_err = createErrl(MAIN_THRD_ROUTINE_MID,        //modId
-                                          SSX_GENERIC_FAILURE,          //reasoncode    // @nh001c
+                                          SSX_GENERIC_FAILURE,          //reasoncode
                                           OCC_NO_EXTENDED_RC,           //Extended reason code
                                           ERRL_SEV_UNRECOVERABLE,       //Severity
                                           NULL,                         //Trace Buf
@@ -941,20 +877,20 @@ void Main_thread_routine(void *private)
                                           -l_ssxrc,                     //userdata1
                                           0);                           //userdata2
 
-            REQUEST_RESET(l_err);     // @gm006
+            REQUEST_RESET(l_err);
         }
     } // while loop
 }
 
-// Function Specification
-//
-// Name: main
-//
-// Description: Entry point of the OCC application
-//
-// Flow: 10/25/2011     FN= main
-//
-// End Function Specification
+/*
+ * Function Specification
+ *
+ * Name: main
+ *
+ * Description: Entry point of the OCC application
+ *
+ * End Function Specification
+ */
 int main(int argc, char **argv)
 {
     int l_ssxrc;
@@ -964,12 +900,12 @@ int main(int argc, char **argv)
     // can write checkpoints into the fsp response buffer.
     // ----------------------------------------------------
     l_ssxrc = ppc405_mmu_map(
-            CMDH_OCC_RESPONSE_BASE_ADDRESS,   //
-            CMDH_OCC_RESPONSE_BASE_ADDRESS,   //
-            CMDH_FSP_RSP_SIZE,                //
-            0,                                //
-            TLBLO_WR | TLBLO_I,               //
-            NULL                              //
+            CMDH_OCC_RESPONSE_BASE_ADDRESS,
+            CMDH_OCC_RESPONSE_BASE_ADDRESS,
+            CMDH_FSP_RSP_SIZE,
+            0,
+            TLBLO_WR | TLBLO_I,
+            NULL
             );
     if(l_ssxrc != SSX_OK)
     {
@@ -978,12 +914,12 @@ int main(int argc, char **argv)
     }
 
     l_ssxrc = ppc405_mmu_map(
-            CMDH_LINEAR_WINDOW_BASE_ADDRESS,  //
-            CMDH_LINEAR_WINDOW_BASE_ADDRESS,  //
-            CMDH_FSP_CMD_SIZE,                //
-            0,                                //
-            TLBLO_I,                          //
-            NULL                              //
+            CMDH_LINEAR_WINDOW_BASE_ADDRESS,
+            CMDH_LINEAR_WINDOW_BASE_ADDRESS,
+            CMDH_FSP_CMD_SIZE,
+            0,
+            TLBLO_I,
+            NULL
             );
     if(l_ssxrc != SSX_OK)
     {
@@ -1000,18 +936,17 @@ int main(int argc, char **argv)
     simics_stderr_create(&G_simics_stderr);
     stdout = (FILE *)(&G_simics_stdout);
     stderr = (FILE *)(&G_simics_stderr);
-    ssxout = (FILE *)(&G_simics_stdout);  // @tgh001 - Adding to enable printk
+    ssxout = (FILE *)(&G_simics_stdout);
 #endif
 
 #ifdef GCOV_CODE_COVERAGE
-    extern void gcov_entry();   // @th029a
-    gcov_entry();               // @th029a
+    extern void gcov_entry();
+    gcov_entry();
 #endif
 
     // Initialize SSX Stacks
     // NOTE: This also reinitializes the time base to 0
 
-    // >> @sb001
     // Get proc_pb_frequency from HOMER host data and calculate the timebase
     // frequency for the OCC. Pass the timebase frequency to ssx_initialize.
     // The passed value must be in Hz. The occ 405 runs at 1/4 the proc
@@ -1036,9 +971,9 @@ int main(int argc, char **argv)
     else
     {
         // Default to 400MHz
-        l_tb_freq_hz = 400000000; // @wb002
+        l_tb_freq_hz = 400000000;
     }
-    // << @sb001
+
 
     // Get OCC interrupt type from HOMER host data area. This will tell OCC
     // which interrupt to Host it should be using.
@@ -1063,21 +998,20 @@ int main(int argc, char **argv)
                    (SsxAddress)G_critical_stack,
                    CRITICAL_STACK_SIZE,
                    0,
-                   l_tb_freq_hz); // @sb001
+                   l_tb_freq_hz);
 
     CHECKPOINT(SSX_INITIALIZED);
 
     // TRAC_XXX needs ssx service, so they can only be called after ssx_initialize
-    TRAC_init_buffers(); // @at009a6
+    TRAC_init_buffers();
 
     CHECKPOINT(TRACE_INITIALIZED);
 
-    TRAC_INFO("Inside OCC Main");  //@pb000a - added
+    TRAC_INFO("Inside OCC Main");
     // Trace what happened before ssx initialization
     TRAC_INFO("HOMER accessed, rc=%d, nest_freq=%d, int_type=%d, ssx_rc=%d",
               l_homerrc, l_tb_freq_hz, l_occ_int_type, l_ssxrc);
 
-    // >> @sb001
     // Catch and log the homer error after inits are done
     if (HOMER_SUCCESS != l_homerrc)
     {
@@ -1123,7 +1057,7 @@ int main(int argc, char **argv)
             errlHndl_t l_err = createErrl(MAIN_MID,                 //modId
                                           INTERNAL_FAILURE,         //reasoncode
                                           ERC_HOMER_MAIN_ACCESS_ERROR,//Extended reason code
-                                          ERRL_SEV_INFORMATIONAL,   //Severity // @wb001
+                                          ERRL_SEV_INFORMATIONAL,   //Severity
                                           NULL,                     //Trace Buf
                                           DEFAULT_TRACE_SIZE,       //Trace Size
                                           l_homerrc,                //userdata1
@@ -1131,12 +1065,11 @@ int main(int argc, char **argv)
             commitErrl(&l_err);
         }
     }
-    // >> @sb001
 
     // enable and register additional interrupt handlers
     CHECKPOINT(INITIALIZING_IRQS);
 
-    occ_irq_setup(); //gm022
+    occ_irq_setup();
 
     CHECKPOINT(IRQS_INITIALIZED);
 

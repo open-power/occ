@@ -1,61 +1,36 @@
-/******************************************************************************
-// @file errl.h
-// @brief OCC Errl Component
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _errl_c errl.c
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *                      tapiar    06/15/2011  Created errl methods
- *                      abagepa   08/15/2011  Add: a couple of trace statements
- *   @01                tapiar    10/05/2011  Add: a couple of trace statements
- *   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
- *   @pb00E             pbavari   03/11/2012  Added correct include file
- *   @nh001             neilhsu   05/23/2012  Add missing error log tags 
- *   @th022             thallet   10/04/2012  Add helper function to return slotId
- *   @nh004   864941    neilhsu   12/20/2012  Support get/delete errl & added trace info
- *   @at012   868019    alvinwan  01/25/2013  TRAC_get_buffer_partial() can result in TLB Miss Exception
- *   @th032             thallet   04/19/2013  Dcache_Flush so FSP can read from SRAM
- *   @th036   881677    thallet   05/06/2013  Support for new Poll Command
- *   @jh001   881996    joshych   05/07/2013  Support SRAM error log format
- *   @jh002   883921    joshych   06/17/2013  Read OCC error log from SRAM
- *   @gm006  SW224414   milesg    09/16/2013  Reset and FFDC improvements 
- *   @gm016  909061     milesg    12/10/2013  Allow traces to use all available space
- *   @gm028  911670     milesg    02/27/2014  Immediate safe mode on checkstop
- *   @gm041  928150     milesg    06/02/2014  allow callouts to be added to info errors if mfg action flag is set
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/errl/errl.c $                                         */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
-//*************************************************************************
-// Includes
-//*************************************************************************
 #include "ssx.h"
-
 #include <errl.h>
-//@pb00Ec - changed from common.h to occ_common.h for ODE support
 #include <occ_common.h>
 #include <comp_ids.h>
 #include <trac.h>
 #include <state.h>
 #include <dcom.h>
 
-//*************************************************************************
-// Externs
-//*************************************************************************
-
-//*************************************************************************
-// Macros
-//*************************************************************************
-
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
 uint32_t    G_occErrSlotBits = 0x000000000;
 uint8_t     G_occErrIdCounter= 0x00;
 
@@ -71,7 +46,7 @@ uint8_t     G_infoslot[MAX_ERRL_ENTRY_SZ] = {0};
 
 uint8_t     G_callslot[MAX_ERRL_CALL_HOME_SZ] = {0};
 
-errlHndl_t  G_occErrSlots[ERRL_MAX_SLOTS] = { 
+errlHndl_t  G_occErrSlots[ERRL_MAX_SLOTS] = {
                 (errlHndl_t) G_errslot1,
                 (errlHndl_t) G_errslot2,
                 (errlHndl_t) G_errslot3,
@@ -83,43 +58,25 @@ errlHndl_t  G_occErrSlots[ERRL_MAX_SLOTS] = {
                 (errlHndl_t) G_callslot
                 };
 
-//*************************************************************************
-// Structures
-//*************************************************************************
-
-//*************************************************************************
-// Globals
-//*************************************************************************
-
-//*************************************************************************
-// Function Prototypes
-//*************************************************************************
 void hexDumpLog( errlHndl_t i_log );
-
-//*************************************************************************
-// Functions
-//*************************************************************************
 
 // Function Specification
 //
 // Name:  getErrSlotNumAndErrId
 //
-// Description: Get Error Slot Number and Error Id 
-//
-// Flow:  06/06/11    FN=getErrSlotNumAndErrId
+// Description: Get Error Slot Number and Error Id
 //
 // End Function Specification
-uint8_t getErrSlotNumAndErrId( 
-            ERRL_SEVERITY i_severity, 
-            uint8_t *o_errlId, 
+uint8_t getErrSlotNumAndErrId(
+            ERRL_SEVERITY i_severity,
+            uint8_t *o_errlId,
             uint64_t *o_timeStamp
             )
 {
-    // Locals
     uint8_t     l_rc = ERRL_INVALID_SLOT;
     uint32_t    l_mask = ERRL_SLOT_MASK_DEFAULT;
 
-    switch ( i_severity ) 
+    switch ( i_severity )
     {
         case ERRL_SEV_INFORMATIONAL:
             l_mask = ERRL_SLOT_MASK_INFORMATIONAL;
@@ -143,8 +100,8 @@ uint8_t getErrSlotNumAndErrId(
         uint8_t             l_slot = ERRL_INVALID_SLOT;
         uint32_t            l_slotBitWord = ~(G_occErrSlotBits | l_mask);
         SsxMachineContext   l_ctx;
-       
-        // 2. use assembly cntlzw to get slot & (disable/enable interrupts) 
+
+        // 2. use assembly cntlzw to get slot & (disable/enable interrupts)
         ssx_critical_section_enter(SSX_NONCRITICAL, &l_ctx);
         __asm__ __volatile__ ( "cntlzw %0, %1;" : "=r" (l_slot) : "r" (l_slotBitWord));
         ssx_critical_section_exit(&l_ctx);
@@ -159,8 +116,8 @@ uint8_t getErrSlotNumAndErrId(
             // save of counter and then increment it
             // Note: Internal caller so assuming valid pointer
             *o_errlId = ((++G_occErrIdCounter) == 0) ? ++G_occErrIdCounter : G_occErrIdCounter;
-            
-            G_occErrSlotBits |= (ERRL_SLOT_SHIFT >> l_slot);    // @nh004c
+
+            G_occErrSlotBits |= (ERRL_SLOT_SHIFT >> l_slot);
             ssx_critical_section_exit(&l_ctx);
 
             l_rc =  l_slot;
@@ -176,14 +133,14 @@ uint8_t getErrSlotNumAndErrId(
 //
 // Name:  getErrSlotNumByErrId
 //
-// Description: Get Error Slot Num By Error Id 
+// Description: Get Error Slot Num By Error Id
 //
 // End Function Specification
-uint8_t getErrSlotNumByErrId(const uint8_t  i_errlId)   // @nh004a
+uint8_t getErrSlotNumByErrId(const uint8_t  i_errlId)
 {
     uint8_t l_SlotNum = ERRL_INVALID_SLOT;
     uint8_t i = 0;
-    
+
     // the errID should starting from 1 to 0xff
     if (i_errlId != 0)
     {
@@ -198,12 +155,12 @@ uint8_t getErrSlotNumByErrId(const uint8_t  i_errlId)   // @nh004a
             }
         }
     }
-    
+
     // return ERRL_INVALID_SLOT(0xff) if not found
     return l_SlotNum;
 }
-          
-          
+
+
 // Function Specification
 //
 // Name:  getErrSlotOCIAddr
@@ -211,15 +168,15 @@ uint8_t getErrSlotNumByErrId(const uint8_t  i_errlId)   // @nh004a
 // Description: Get Error Slot OCI address
 //
 // End Function Specification
-uint32_t getErrSlotOCIAddr(const uint8_t  i_SlotNum)   // @nh004a
+uint32_t getErrSlotOCIAddr(const uint8_t  i_SlotNum)
 {
     void *l_addr = 0;
-    
+
     if (i_SlotNum < ERRL_MAX_SLOTS)
     {
         l_addr = G_occErrSlots[i_SlotNum];
     }
-    
+
     return (uint32_t)l_addr;
 }
 
@@ -235,7 +192,7 @@ uint32_t getErrlOCIAddrByID(const uint8_t i_id)
 {
     // This function verifies the id is valid
     uint8_t l_slot = getErrSlotNumByErrId(i_id);
-    
+
     // This function verifies that slot is valid
     return getErrSlotOCIAddr(l_slot);
 }
@@ -252,7 +209,7 @@ uint16_t getErrlLengthByID(const uint8_t i_id)
 {
     uint16_t l_length = 0;
     uint8_t  l_slot   = getErrSlotNumByErrId(i_id);
-    
+
     /// check if error log is committed before returning length
     /// because after it is committed, length shouldn't change.
     if(l_slot < ERRL_MAX_SLOTS)
@@ -274,7 +231,7 @@ uint16_t getErrlLengthByID(const uint8_t i_id)
 // Description: Get the oldest Error ID
 //
 // End Function Specification
-uint8_t getOldestErrlID()   // @nh004a
+uint8_t getOldestErrlID()
 {
     uint8_t l_entryId = 0;
     uint8_t i = 0;
@@ -285,7 +242,7 @@ uint8_t getOldestErrlID()   // @nh004a
         if (G_occErrSlots[i]->iv_userDetails.iv_committed)
         {
             // Get the oldest entry by searching the Mininum Err entry ID
-            if ((l_timestamp == 0) || 
+            if ((l_timestamp == 0) ||
                 (G_occErrSlots[i]->iv_userDetails.iv_timeStamp <= l_timestamp) )
             {
                 l_timestamp = G_occErrSlots[i]->iv_userDetails.iv_timeStamp;
@@ -293,7 +250,7 @@ uint8_t getOldestErrlID()   // @nh004a
             }
         }
     }
-    
+
     return l_entryId;
 }
 
@@ -304,21 +261,18 @@ uint8_t getOldestErrlID()   // @nh004a
 //
 // Description: Create an Error Log
 //
-// Flow:  03/29/12    FN=createErrl
-//
 // End Function Specification
-errlHndl_t createErrl( 
-            const uint16_t i_modId, 
+errlHndl_t createErrl(
+            const uint16_t i_modId,
             const uint8_t i_reasonCode,
-			const uint32_t i_extReasonCode,		// @nh001a
-            const ERRL_SEVERITY i_sev, 
-            const tracDesc_t i_trace, 
-            const uint16_t i_traceSz, 
+            const uint32_t i_extReasonCode,
+            const ERRL_SEVERITY i_sev,
+            const tracDesc_t i_trace,
+            const uint16_t i_traceSz,
             const uint32_t i_userData1,
             const uint32_t i_userData2
             )
 {
-    // Locals
     errlHndl_t  l_rc = INVALID_ERR_HNDL;
     uint64_t    l_time = 0;
     uint8_t     l_id = 0;
@@ -327,30 +281,30 @@ errlHndl_t createErrl(
 
     if ( l_errSlot != ERRL_INVALID_SLOT )
     {
-        TRAC_INFO("Creating error log in slot [%d]", l_errSlot); 
+        TRAC_INFO("Creating error log in slot [%d]", l_errSlot);
 
         // get slot pointer
         l_rc = G_occErrSlots[ l_errSlot ];
 
         // save off default size
         l_rc->iv_userDetails.iv_entrySize = sizeof( ErrlEntry_t );
-    
+
         // add trace
         addTraceToErrl( i_trace, i_traceSz,  l_rc );
-        
-        // save off entry Id 
+
+        // save off entry Id
         l_rc->iv_entryId = l_id;
 
         //Save off version info
         l_rc->iv_version = ERRL_STRUCT_VERSION_1;
-        
+
         // save off time
         l_rc->iv_userDetails.iv_timeStamp = l_time;
-        
+
         // if its a call home error then set the sev to informational
         l_rc->iv_severity = (i_sev == ERRL_SEV_CALLHOME_DATA ? (uint8_t)ERRL_SEV_INFORMATIONAL : i_sev);
 
-        l_rc->iv_userData4 = i_extReasonCode;    // @nh001a
+        l_rc->iv_userData4 = i_extReasonCode;
 
         // save off user detail section version
         l_rc->iv_userDetails.iv_version = ERRL_USR_DTL_STRUCT_VERSION_1;
@@ -366,7 +320,7 @@ errlHndl_t createErrl(
 
         // save off occ fields
         //NOTE: Design does not exist for these fields
-        // TODO fix this when design is done!
+        //TODO: fix this when design is done!
         l_rc->iv_userDetails.iv_fwLevel = 0;
         l_rc->iv_userDetails.iv_occId = G_pob_id.chip_id;
         l_rc->iv_userDetails.iv_occRole = G_occ_role;
@@ -375,7 +329,7 @@ errlHndl_t createErrl(
     else
     {
         // TODO: put a threshold on this trace
-        TRAC_INFO("Error Logs are FULL  - Slot [%d]", l_errSlot); //@01a @nh004c
+        TRAC_INFO("Error Logs are FULL  - Slot [%d]", l_errSlot);
     }
 
     return l_rc;
@@ -386,17 +340,15 @@ errlHndl_t createErrl(
 //
 // Name:  addTraceToErrl
 //
-// Description: Add trace to an error log 
-//
-// Flow:  06/06/11    FN=addTraceToErrl
+// Description: Add trace to an error log
 //
 // End Function Specification
 void addTraceToErrl(
             const tracDesc_t i_trace,
-            const uint16_t i_traceSz, 
+            const uint16_t i_traceSz,
             errlHndl_t io_err)
 {
-    UINT l_expectLen = 0, l_rtLen = 0, l_bytes_left; //gm016
+    UINT l_expectLen = 0, l_rtLen = 0, l_bytes_left;
     void * l_traceAddr = io_err;
     uint16_t l_actualSizeOfUsrDtls = 0;
     pore_status_t l_gpe0_status;
@@ -421,32 +373,30 @@ void addTraceToErrl(
     if( (io_err != NULL) &&
         (io_err != INVALID_ERR_HNDL) &&
         (io_err->iv_userDetails.iv_committed == 0) &&
-        // @nh004d
-        (i_traceSz != 0) && 
+        (i_traceSz != 0) &&
         ((io_err->iv_userDetails.iv_entrySize + sizeof(ErrlUserDetailsEntry_t)) < MAX_ERRL_ENTRY_SZ ) &&
-        ((i_trace==g_trac_inf)||(i_trace==g_trac_err)||(i_trace==g_trac_imp)||(i_trace==NULL)) ) // @at012a
+        ((i_trace==g_trac_inf)||(i_trace==g_trac_err)||(i_trace==g_trac_imp)||(i_trace==NULL)) )
     {
-        //local copy of the usr details entry 
+        //local copy of the usr details entry
         ErrlUserDetailsEntry_t l_usrDtlsEntry;
         uint16_t l_headerSz = sizeof( l_usrDtlsEntry );
-        
+
         //adjust user details entry size to available size (word align )
         uint16_t l_availableSize = MAX_ERRL_ENTRY_SZ - (io_err->iv_userDetails.iv_entrySize + l_headerSz );
         l_usrDtlsEntry.iv_size = ( i_traceSz < l_availableSize ) ? i_traceSz : l_availableSize; // @jh001c
-        
+
         //set type
         l_usrDtlsEntry.iv_type = (uint8_t) ERRL_USR_DTL_TRACE_DATA;
-        
-        //set version 
+
+        //set version
         l_usrDtlsEntry.iv_version = ERRL_TRACE_VERSION_1;
-        
+
         //copy the data into error the offset is the size of the current errorlog
         void * l_p = io_err;
 
-        // @nh004a -- Start
         // Caculate trace data address. Starting from errl address + sizeof(ErrlEntry_t + ErrlUserDetailsEntry_t).
         l_traceAddr = l_p + io_err->iv_userDetails.iv_entrySize + l_headerSz;
-        
+
         // check if user request to add trace from a specific trace buffer
         if (i_trace != NULL)
         {
@@ -455,14 +405,14 @@ void addTraceToErrl(
             {
                 l_rtLen = l_usrDtlsEntry.iv_size;
                 TRAC_get_buffer_partial(i_trace, l_traceAddr, &l_rtLen);
-                
+
                 // Update data size
                 l_usrDtlsEntry.iv_size = l_rtLen;
             }
             else
             {
-                TRAC_IMP("addTraceToErrl: Not enough buffer size for trace, Avail[%d], Req[%d]\n", l_availableSize, l_usrDtlsEntry.iv_size); 
-                
+                TRAC_IMP("addTraceToErrl: Not enough buffer size for trace, Avail[%d], Req[%d]\n", l_availableSize, l_usrDtlsEntry.iv_size);
+
                 //Requested size is not able to fill in any trace info. Clear data length and give up.
                 l_usrDtlsEntry.iv_size = 0;
             }
@@ -471,7 +421,7 @@ void addTraceToErrl(
         {
             // User not specify which trace buffer to add.
             // We have three kinds of trace buffer.(INF/IMP/ERR).Get partial of them to fill in user detail section of this ERR Log.
-            l_bytes_left = l_usrDtlsEntry.iv_size; //gm016
+            l_bytes_left = l_usrDtlsEntry.iv_size;
             l_expectLen = l_bytes_left / NUM_OF_TRACE_TYPE;
 
             // Ensure the size are able to fill in at least one trace info.
@@ -480,14 +430,14 @@ void addTraceToErrl(
                 l_rtLen = l_expectLen;
                 TRAC_get_buffer_partial(TRAC_get_td("ERR"), l_traceAddr, &l_rtLen);
                 l_actualSizeOfUsrDtls += l_rtLen;
-                l_bytes_left -= l_rtLen; //gm016
+                l_bytes_left -= l_rtLen;
 
-                l_rtLen = l_bytes_left / 2; //gm016
+                l_rtLen = l_bytes_left / 2;
                 TRAC_get_buffer_partial(TRAC_get_td("IMP"), (l_traceAddr + l_actualSizeOfUsrDtls), &l_rtLen);
                 l_actualSizeOfUsrDtls += l_rtLen;
-                l_bytes_left -= l_rtLen; //gm016
+                l_bytes_left -= l_rtLen;
 
-                l_rtLen = l_bytes_left; //gm016
+                l_rtLen = l_bytes_left;
                 TRAC_get_buffer_partial(TRAC_get_td("INF"), (l_traceAddr + l_actualSizeOfUsrDtls), &l_rtLen);
                 l_actualSizeOfUsrDtls += l_rtLen;
 
@@ -500,7 +450,7 @@ void addTraceToErrl(
                 if (l_usrDtlsEntry.iv_size > sizeof (trace_buf_head_t))
                 {
                     l_rtLen = l_usrDtlsEntry.iv_size;
-                    
+
                     // Added only ERR trace info
                     TRAC_get_buffer_partial(TRAC_get_td("ERR"), l_traceAddr, &l_rtLen);
 
@@ -509,8 +459,8 @@ void addTraceToErrl(
                 }
                 else
                 {
-                    TRAC_IMP("addTraceToErrl: Not enough buffer size for trace, Avail[%d], Req[%d]\n", l_availableSize, l_usrDtlsEntry.iv_size);                 
-  
+                    TRAC_IMP("addTraceToErrl: Not enough buffer size for trace, Avail[%d], Req[%d]\n", l_availableSize, l_usrDtlsEntry.iv_size);
+
                     //We do not have enough size to fill in any trace info. Clear data length.
                     l_usrDtlsEntry.iv_size = 0;
                 }
@@ -521,10 +471,10 @@ void addTraceToErrl(
         {
             // Finally, cacluate entire data length including usrDtl header.
             l_actualSizeOfUsrDtls = l_usrDtlsEntry.iv_size + l_headerSz;
-            
-            // save of user detail header for trace buf section we just added. 
+
+            // save of user detail header for trace buf section we just added.
             // Address is starting from "errl address + sizeof(ErrlEntry_t)."
-            //     
+            //
             //  io_err  |----------------------------------------|
             //          | ErrlEntry_t                            |
             //          | {iv_userDetails.iv_userDetailEntrySize,| <== we may have more usrdtl sections, need to add length
@@ -533,14 +483,13 @@ void addTraceToErrl(
             //          | ErrlUserDetailsEntry_t                 | <== copy usrdtl header to here (l_usrDtlsEntry)
             //          |----------------------------------------|
             //trace buf | trace1(ex.INF)                         | <== trace already filled in at this moment.
-            //          | trace2(ex.INF&IMP&ERR)                 | 
+            //          | trace2(ex.INF&IMP&ERR)                 |
             //          |         ...                            |
             //
             l_p = memcpy( l_p+((io_err->iv_userDetails.iv_entrySize)),&l_usrDtlsEntry, l_headerSz );
         }
-        // @nh004a -- End
 
-        //update usr data entry size                               
+        //update usr data entry size
         io_err->iv_userDetails.iv_userDetailEntrySize += l_actualSizeOfUsrDtls;
 
         //update error log size
@@ -556,22 +505,20 @@ void addTraceToErrl(
 //
 // Description: report the log to tmgt
 //
-// Flow:              FN=None
-//
 // End Function Specification
 void reportErrorLog( errlHndl_t i_err, uint16_t i_entrySize )
 {
-    // report the log to tmgt
+    // report the log
     // will need to give them the address and size to read
-    
+
     // TODO: Guts still not defined yet
     TRAC_INFO("Reporting error @ %p with size %d",i_err, i_entrySize );
-    TRAC_INFO("ModID: 0x%08X, RC: 0x%08X, UserData1: 0x%08X, UserData2: 0x%08X",  
+    TRAC_INFO("ModID: 0x%08X, RC: 0x%08X, UserData1: 0x%08X, UserData2: 0x%08X",
            i_err->iv_userDetails.iv_modId, i_err->iv_reasonCode,
            i_err->iv_userDetails.iv_userData1, i_err->iv_userDetails.iv_userData2);
 
     // TODO: remove this when tracing is enabled
-    hexDumpLog( i_err ); 
+    hexDumpLog( i_err );
 }
 
 
@@ -580,8 +527,6 @@ void reportErrorLog( errlHndl_t i_err, uint16_t i_entrySize )
 // Name:  commitErrl
 //
 // Description: Commit an Error Log
-//
-// Flow:  06/06/11    FN=commitErrl
 //
 // End Function Specification
 void commitErrl( errlHndl_t *io_err )
@@ -612,7 +557,7 @@ void commitErrl( errlHndl_t *io_err )
 
             // if reset action bit is set force severity to unrecoverable and
             // make sure there is at least one callout
-            if((*io_err)->iv_actions.reset_required) //@gm006
+            if((*io_err)->iv_actions.reset_required)
             {
                 (*io_err)->iv_severity = ERRL_SEV_UNRECOVERABLE;
                 if(!(*io_err)->iv_numCallouts)
@@ -624,39 +569,39 @@ void commitErrl( errlHndl_t *io_err )
                 }
             }
 
-            // mark the last callout by zeroing out the next one 
+            // mark the last callout by zeroing out the next one
             if((*io_err)->iv_numCallouts < ERRL_MAX_CALLOUTS)
             {
-                memset(&(*io_err)->iv_callouts[(*io_err)->iv_numCallouts], 0, 
+                memset(&(*io_err)->iv_callouts[(*io_err)->iv_numCallouts], 0,
                         sizeof(ErrlCallout_t));
             }
 
             // number of callouts must be the max value as defined by the TMGT-OCC spec.
-            (*io_err)->iv_numCallouts = ERRL_MAX_CALLOUTS; // @jh002a
+            (*io_err)->iv_numCallouts = ERRL_MAX_CALLOUTS;
 
             // save off committed
             (*io_err)->iv_userDetails.iv_committed = 1;
-            
+
             // calculate checksum & save it off
             uint32_t    l_cnt = 2;  // starting point is after checksum field
-            uint32_t    l_sum = 0;          
+            uint32_t    l_sum = 0;
             uint32_t    l_size = (*io_err)->iv_userDetails.iv_entrySize;
             uint8_t *   l_p = (uint8_t *)*io_err;
- 
+
             for( ; l_cnt < l_size ; l_cnt++ )
-            { 
+            {
                 l_sum += *(l_p+l_cnt);
             }
-            
+
             (*io_err)->iv_checkSum = l_sum;
 
             // Flush error log out to SRAM since the FSP will directly read it
-            dcache_flush( *io_err, MAX_ERRL_ENTRY_SZ );    // @th032
+            dcache_flush( *io_err, MAX_ERRL_ENTRY_SZ );
 
             // report error to FSP
             reportErrorLog( *io_err, l_size );
         }
-        
+
         *io_err = (errlHndl_t) NULL;
     }
 }
@@ -668,8 +613,6 @@ void commitErrl( errlHndl_t *io_err )
 //
 // Description: Get Log Id from an Error Log
 //
-// Flow:  --/--/--    FN=
-//
 // End Function Specification
 uint8_t getErrlLogId( errlHndl_t io_err )
 {
@@ -677,7 +620,7 @@ uint8_t getErrlLogId( errlHndl_t io_err )
 
     // check if handle is valid and is NOT empty
     if ((io_err != NULL ) && ( io_err != INVALID_ERR_HNDL ))
-    {   
+    {
         l_logId = (io_err)->iv_entryId;
     }
 
@@ -691,19 +634,17 @@ uint8_t getErrlLogId( errlHndl_t io_err )
 //
 // Description: Delete an Error Log
 //
-// Flow:  06/06/11    FN=deleteErrl
-//
 // End Function Specification
-errlHndl_t deleteErrl( errlHndl_t *io_err)  // @nh004c
+errlHndl_t deleteErrl( errlHndl_t *io_err)
 {
     errlHndl_t l_err = INVALID_ERR_HNDL;
-    
+
     if (io_err != NULL)
-    { 
+    {
         // check if handle is valid and is NOT empty
-        if ((*io_err != NULL ) && 
+        if ((*io_err != NULL ) &&
             (*io_err != INVALID_ERR_HNDL ))
-        {   
+        {
 
             // find the slot number by traversing the global array
             uint32_t l_slot = 0;
@@ -720,25 +661,25 @@ errlHndl_t deleteErrl( errlHndl_t *io_err)  // @nh004c
                     // Disable interrupts
                     SsxMachineContext   l_ctx;
                     ssx_critical_section_enter(SSX_NONCRITICAL, &l_ctx);
-                    
+
                     //clear the error log slot bit for reuse
                     G_occErrSlotBits &= ~(ERRL_SLOT_SHIFT >> l_slot);
 
                     // Enable interrupts
                     ssx_critical_section_exit(&l_ctx);
-                    
+
                     l_err = NULL;
-                    
+
                     // done doing the work
                     break;
-                } 
-            } 
+                }
+            }
         } // end if valid error log handl
-    
-        //set the handle to null    
+
+        //set the handle to null
         *io_err = (errlHndl_t) NULL;
     }
-    
+
     return l_err;
 }
 
@@ -749,11 +690,8 @@ errlHndl_t deleteErrl( errlHndl_t *io_err)  // @nh004c
 //
 // Description: Add a callout to an Error Log
 //
-// Flow:  06/06/11    FN=addCalloutToErrl
-//
 // End Function Specification
-// @jh001c
-void addCalloutToErrl( 
+void addCalloutToErrl(
             errlHndl_t io_err,
             const ERRL_CALLOUT_TYPE i_type,
             const uint64_t i_calloutValue,
@@ -762,13 +700,13 @@ void addCalloutToErrl(
     // 1. check if handle is valid (not null or invalid)
     // 2. not committed
     // 3. severity is not informational (unless mfg action flag is set)
-    // 4. callouts still not full  
-    if ( (io_err != NULL ) && 
-         (io_err != INVALID_ERR_HNDL) && 
-        (io_err->iv_userDetails.iv_committed == 0) && 
-        (io_err->iv_actions.mfg_error || io_err->iv_severity != ERRL_SEV_INFORMATIONAL) &&  //gm041
+    // 4. callouts still not full
+    if ( (io_err != NULL ) &&
+         (io_err != INVALID_ERR_HNDL) &&
+        (io_err->iv_userDetails.iv_committed == 0) &&
+        (io_err->iv_actions.mfg_error || io_err->iv_severity != ERRL_SEV_INFORMATIONAL) &&
         (io_err->iv_numCallouts < ERRL_MAX_CALLOUTS) )
-    { 
+    {
         //set callout type
         io_err->iv_callouts[ io_err->iv_numCallouts ].iv_type = (uint8_t)i_type;
 
@@ -790,8 +728,6 @@ void addCalloutToErrl(
 //
 // Description: Add User Details to an Error Log
 //
-// Flow:  06/06/11    FN=addUsrDtlsToErrl
-//
 // End Function Specification
 void addUsrDtlsToErrl(
             errlHndl_t io_err,
@@ -803,42 +739,42 @@ void addUsrDtlsToErrl(
     // Locals
     uint16_t l_maxSize = (i_type == ERRL_USR_DTL_CALLHOME_DATA) ? MAX_ERRL_CALL_HOME_SZ : MAX_ERRL_ENTRY_SZ;
 
-    // 1.  check if handle is valid 
-    // 2.  NOT empty 
-    // 3.  not committed 
+    // 1.  check if handle is valid
+    // 2.  NOT empty
+    // 3.  not committed
     // 4.  size being passed in is valid
     // 5.  data pointer is valid
     // 6.  and we have enough size
-    if ((io_err != NULL ) && 
-        (io_err != INVALID_ERR_HNDL ) && 
-        (io_err->iv_userDetails.iv_committed == 0) && 
-        (i_size != 0) && 
-        (i_dataPtr != NULL) && 
+    if ((io_err != NULL ) &&
+        (io_err != INVALID_ERR_HNDL ) &&
+        (io_err->iv_userDetails.iv_committed == 0) &&
+        (i_size != 0) &&
+        (i_dataPtr != NULL) &&
         ((io_err->iv_userDetails.iv_entrySize) < l_maxSize))
     {
-        //local copy of the usr details entry 
+        //local copy of the usr details entry
         ErrlUserDetailsEntry_t l_usrDtlsEntry;
         uint16_t l_headerSz = sizeof( l_usrDtlsEntry );
-        
+
         //adjust user details entry size to available size (word align )
         uint16_t l_availableSize = l_maxSize - (io_err->iv_userDetails.iv_entrySize + l_headerSz );
-        l_usrDtlsEntry.iv_size = ( i_size < l_availableSize ) ? i_size : l_availableSize; // @jh001c
-        
+        l_usrDtlsEntry.iv_size = ( i_size < l_availableSize ) ? i_size : l_availableSize;
+
         //set type
         l_usrDtlsEntry.iv_type = (uint8_t)i_type;
-        
-        //set version 
+
+        //set version
         l_usrDtlsEntry.iv_version = i_version;
-        
-        //set the data 
-        uint16_t l_actualSizeOfUsrDtls = l_headerSz + l_usrDtlsEntry.iv_size; 
-        
+
+        //set the data
+        uint16_t l_actualSizeOfUsrDtls = l_headerSz + l_usrDtlsEntry.iv_size;
+
         //copy the data into error the offset is the size of the current errorlog
         void * l_p = io_err;
         l_p = memcpy( l_p+((io_err->iv_userDetails.iv_entrySize)),&l_usrDtlsEntry, l_headerSz );
         memcpy( l_p+l_headerSz, i_dataPtr, l_usrDtlsEntry.iv_size);
 
-        //update usr data entry size                               
+        //update usr data entry size
         io_err->iv_userDetails.iv_userDetailEntrySize += l_actualSizeOfUsrDtls;
 
         //update error log size
@@ -851,24 +787,22 @@ void addUsrDtlsToErrl(
 //
 // Name:  setErrlSevToInfo
 //
-// Description: Set Error Log Severity to Informational 
+// Description: Set Error Log Severity to Informational
 //              NOTE: Any callouts in the current error log will be DROPPED!
-//
-// Flow:  06/06/11    FN=setErrlSevToInfo
 //
 // End Function Specification
 void setErrlSevToInfo( errlHndl_t io_err )
 {
-    // check if handle is valid 
+    // check if handle is valid
     // NOT empty
-    // not committed 
-    if ( (io_err != NULL )  
+    // not committed
+    if ( (io_err != NULL )
          && ( io_err != INVALID_ERR_HNDL )
          && (io_err->iv_userDetails.iv_committed == 0) )
     {
         //set sev to informational
         io_err->iv_severity = ERRL_SEV_INFORMATIONAL;
-    
+
         //clear any callouts
         uint32_t l_sizeOfcallouts = sizeof(ErrlCallout_t)*(io_err->iv_numCallouts);
         memset(io_err->iv_callouts, 0,l_sizeOfcallouts );
@@ -884,8 +818,6 @@ void setErrlSevToInfo( errlHndl_t io_err )
 // Name:  setErrlActions
 //
 // Description: Set Actions to an Error Log
-//
-// Flow:  05/14/13    FN=setErrlActions
 //
 // End Function Specification
 // @jh001a
@@ -908,15 +840,12 @@ void setErrlActions(errlHndl_t io_err, const uint8_t i_mask)
 //
 // Name:  hexDumpLog
 //
-// Description: Hex Dump Log 
-//
-// Flow:              FN=None
+// Description: Hex Dump Log
 //
 // End Function Specification
 void hexDumpLog( errlHndl_t i_log )
-{  
+{
 #if 0
-    // Locals
     uint32_t    l_written = 0;
     uint32_t    l_counter = 0;
     uint8_t *   l_data = (uint8_t*) i_log;
@@ -926,9 +855,9 @@ void hexDumpLog( errlHndl_t i_log )
     {
         if (( i_log == NULL ) ||
             ( i_log == INVALID_ERR_HNDL ))
-        {   
+        {
             // break out if log is invalid
-            // do nothing 
+            // do nothing
             break;
         }
 
@@ -949,8 +878,8 @@ void hexDumpLog( errlHndl_t i_log )
 
         // Pad with spaces
         uint8_t l_space[64] = {0};
-        memset( l_space, 0x00, sizeof( l_space )); 
-        memset( l_space, ' ', 43-l_written); 
+        memset( l_space, 0x00, sizeof( l_space ));
+        memset( l_space, ' ', 43-l_written);
         printf("%s", l_space );
 
         // Display ASCII
@@ -976,8 +905,8 @@ void hexDumpLog( errlHndl_t i_log )
 
         // Pad with spaces
         uint8_t l_space2[64] = {0};
-        memset( l_space2, 0x00, sizeof( l_space2 )); 
-        memset( l_space2, ' ', 19-l_written); 
+        memset( l_space2, 0x00, sizeof( l_space2 ));
+        memset( l_space2, ' ', 19-l_written);
         printf("%s|\n", l_space2 );
     }
 #endif

@@ -1,53 +1,36 @@
-/******************************************************************************
-// @file sensor.h
-// @brief OCC Sensor structure and other common defines.
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section sensor.h SENSOR.H
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @pb002             pbavari   08/15/2011  Created
- *   @pb003             pbavari   08/31/2011  mini-sensor support
- *   @pb004             pbavari   09/02/2011  Initialize section support
- *   @pb00A             pbavari   11/14/2011  Moved sensor_init from applet and
- *                                            updated with latest design change
- *   @th005             thallet   11/23/2011  Sensor Initialization Changes
- *   @th00a             thallet   02/03/2012  Worst case FW timings in AMEC Sensors
- *   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
- *   @th00b             thallet   02/28/12    Added 2D macro                       
- *   @at003             alvinwan  03/19/2012  Move sensor_info_t from sensor_info.c
- *   @pb00E             pbavari   03/11/2012  Added correct include file
- *   @gm002   885429    milesg    05/30/2013  change type/location to 16 bit bitmask
- *   @fk002   905632    fmkassem  11/05/2013  Remove CriticalPathMonitor code
- *   @fk009   942864    fmkassem  09/30/2014  BMC/HTMGT Poll command version 0x10 support.
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/sensor/sensor.h $                                     */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
 #ifndef _sensor_h
 #define _sensor_h
 
-//*************************************************************************
-// Includes
-//*************************************************************************
 #include <common_types.h>        // defines for uint8_t,uint3_t..etc
 #include <errl.h>                // For errlHndl_t
-//@pb00Ec - changed from common.h to occ_common.h for ODE support
 #include <occ_common.h>              // Common OCC defines
 #include <sensor_enum.h>         // For Sensor Enum
 
-
-//*************************************************************************
-// Externs
-//*************************************************************************
-
-//*************************************************************************
-// Macros
-//*************************************************************************
 // Macro to get mini sensor value. It gives the mini sensor value for
 // the given occId at given the given field. If occId is out of range, it will
 // return 0.
@@ -61,10 +44,6 @@
 #define AMECSENSOR_PTR(sensor) G_amec_sensor_list[sensor]
 #define AMECSENSOR_ARRAY_PTR(sensor_base,idx) G_amec_sensor_list[sensor_base+idx]
 #define AMECSENSOR_2D_ARRAY_PTR(sensor_base,idx,idx2) G_amec_sensor_list[sensor_base+idx+idx2]
-
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
 
 #define AMEC_SENSOR_NONUM           0xFF
 #define SENSOR_TYPE_ALL             0xFFFF
@@ -86,7 +65,6 @@ typedef enum
     AMEC_SENSOR_TYPE_TIME       = 0x0020,
     AMEC_SENSOR_TYPE_FREQ       = 0x0040,
     AMEC_SENSOR_TYPE_POWER      = 0x0080,
-//    AMEC_SENSOR_TYPE_CPM        = 0x0100, //CPM - Commented out as requested by Malcolm
     AMEC_SENSOR_TYPE_PERF       = 0x0200,
     AMEC_SENSOR_TYPE_ALL        = 0xffff,
 }AMEC_SENSOR_TYPE;
@@ -114,10 +92,6 @@ typedef enum
 
 } VECTOR_SENSOR_OP;
 
-//*************************************************************************
-// Structures
-//*************************************************************************
-
 /*****************************************************************************/
 // Forward declaration as used in vectorSensor
 struct sensor;
@@ -139,7 +113,6 @@ struct vectorSensor
 
 typedef struct vectorSensor vectorSensor_t;
 
-//@at003A
 typedef struct
 {
   char name[MAX_SENSOR_NAME_SZ];
@@ -166,10 +139,6 @@ struct sensorStatus
 typedef struct sensorStatus sensorStatus_t;
 
 /*****************************************************************************/
-//@fk009c - added the ipmi_sid.
-//@pb003d - removed histogram pointer as it will be statically allocated
-//          outside of sensor structure
-//@pb003c - changed type of mini_sensor pointer to uint16 from uint8
 // Sensor structure
 struct sensor
 {
@@ -183,7 +152,7 @@ struct sensor
     uint32_t update_tag;      // Count of the number of 'ticks' that have passed
                               // between updates to this sensor (used for time-
                               // derived sensor)
-    uint16_t ipmi_sid;        // Ipmi sensor id obtained from mrw //@fk009
+    uint16_t ipmi_sid;        // Ipmi sensor id obtained from mrw
     vectorSensor_t * vector;  // Pointer to vector control structure. NULL if
                               // this is not a vector sensor.
     uint16_t * mini_sensor;   // Pointer to entry in mini-sensor table. NULL if
@@ -213,27 +182,19 @@ typedef sensor_t * sensor_ptr_t;
 // Global mini-sensor list type
 typedef uint16_t * minisensor_ptr_t;
 
-
-//*************************************************************************
-// Globals
-//*************************************************************************
-
 /*****************************************************************************/
-// These are used by the sensor init 
+// These are used by the sensor init
 // Global sensor counter
 extern uint32_t G_amec_sensor_count;
 
 // Contains array of pointers to sensors, indexed by GSID
 extern const sensor_ptr_t     G_amec_sensor_list[];
 
-extern const sensor_info_t    G_sensor_info[];  //@fk009a
+extern const sensor_info_t    G_sensor_info[];
 
 // Contains array of pointers to mini-sensors, indexed by GSID
 extern const minisensor_ptr_t G_amec_mini_sensor_list[];
 
-//*************************************************************************
-// Function Prototypes
-//*************************************************************************
 // sensor_init
 void sensor_init(sensor_t * io_sensor_ptr,
                  const uint16_t i_gsid,
@@ -269,13 +230,9 @@ void sensor_vector_elem_enable( vectorSensor_t* io_sensor_vector_ptr,
 void sensor_vector_elem_add( vectorSensor_t* io_sensor_vector_ptr,
                              const uint8_t i_loc,
                              const sensor_t * i_elemPtr);
-                           
+
 // Initialize all sensors
 void sensor_init_all(void);
-
-//*************************************************************************
-// Functions
-//*************************************************************************
 
 #endif // _sensor_h
 

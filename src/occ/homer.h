@@ -1,84 +1,63 @@
-/******************************************************************************
- * @file homer.h
- * @brief homer header file
- *****************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/homer.h $                                             */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section homer.h HOMER.H
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *           905504     sbroyles  11/06/13    Created
- *   @gs041  942203     gjsilva   10/17/2014  Support for HTMGT/BMC interface
- *
- *  @endverbatim
- *
- *****************************************************************************/
+// Description: homer header file
 
 #ifndef _homer_h
 #define _homer_h
 
-//*************************************************************************
-// Includes
-//*************************************************************************
 
-//*************************************************************************
-// Externs
-//*************************************************************************
-
-//*************************************************************************
-// Macros
-//*************************************************************************
-
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
-
-/*
- * Offset into the HOMER of the host data section and the size
- */
+// Offset into the HOMER of the host data section and the size
 #define HOMER_HD_OFFSET       0x00100000
 #define HOMER_HD_SZ           (128 * 1024)
-/*
- * Version of HOMER host data currently supported
- */
+
+// Version of HOMER host data currently supported
 #define HOMER_HD_VERSION_SUPPORT    2
 
-/*
- * ID of host data variables
- */
+// ID of host data variables
 typedef enum homer_read_var
 {
-    HOMER_VERSION,                  // 1
-    HOMER_NEST_FREQ,                // 2
-    HOMER_INT_TYPE,                 // 3
+    HOMER_VERSION,
+    HOMER_NEST_FREQ,
+    HOMER_INT_TYPE,
     HOMER_LAST_VAR
 } homer_read_var_t;
 
-/*
- * HOMER methods return codes
- */
+// HOMER methods return codes
 typedef enum homer_rc
 {
-    HOMER_SUCCESS,                  // 1
-    HOMER_UNSUPPORTED_HD_VERSION,   // 2
-    HOMER_BAD_PARM,                 // 3
-    HOMER_UNKNOWN_ID,               // 4
-    HOMER_SSX_MAP_ERR,              // 5
-    HOMER_SSX_UNMAP_ERR,            // 6
+    HOMER_SUCCESS,
+    HOMER_UNSUPPORTED_HD_VERSION,
+    HOMER_BAD_PARM,
+    HOMER_UNKNOWN_ID,
+    HOMER_SSX_MAP_ERR,
+    HOMER_SSX_UNMAP_ERR,
     HOMER_LAST_RC
 } homer_rc_t;
 
-//*************************************************************************
-// Structures
-//*************************************************************************
-
-/*
- * Current version of the layout for the Host Config Data section of the HOMER
- */
+// Current version of the layout for the Host Config Data section of the HOMER
 struct occHostConfigDataArea
 {
     uint32_t version;
@@ -88,18 +67,6 @@ struct occHostConfigDataArea
 }__attribute__ ((__packed__));
 typedef struct occHostConfigDataArea occHostConfigDataArea_t;
 
-//*************************************************************************
-// Globals
-//*************************************************************************
-
-//*************************************************************************
-// Function Prototypes
-//*************************************************************************
-
 homer_rc_t homer_hd_map_read_unmap(const homer_read_var_t, uint32_t *, int *);
-
-//*************************************************************************
-// Functions
-//*************************************************************************
 
 #endif // _homer_h

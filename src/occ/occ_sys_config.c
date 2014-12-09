@@ -1,96 +1,50 @@
-/******************************************************************************
-// @file occ_sys_config.c
-// @brief OCC System Configuration Variable Declaration & Initialization
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section occ_sys_config.c OCC_SYS_CONFIG.C
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @th000             thallet   09/14/2011  Added SysConfig Initialization
- *   @rc002             rickylie  02/02/2012  Remove unused DPSS function
- *   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
- *   @th00b             thallet   02/29/2012  Changed APSS ADC config to match spec
- *   @pb00E             pbavari   03/11/2012  Added correct include file
- *   @th010             thallet   07/11/2012  Pstate Enablement
- *   @th014             thallet   08/02/2012  Moved default PstateSS occ_sys_config
- *   @th019  853007     thallet   09/12/2012  Power Sensors
- *   @th022             thallet   10/03/2012  Dcom State/Mode changes
- *   @at010  859992     alvinwan  11/07/2012  Added oversubscription feature
- *   @th034  879027     thallet   04/18/2013  Broadcast critical power over PBAX
- *   @at013  878755     alvinwan  04/17/2013  OCC power capping implementation
- *   @th032             thallet   04/26/2013  Tuleta HW Bringup 
- *   @th035  881654     thallet   05/06/2013  Tuleta Bringup Pstate Fixes
- *   @at014  882077     alvinwan  05/09/2013  Support APSS and System Config data from TMGT
- *   @ly007  882183     lychen    05/21/2013  Send APSS and System Configuration commands to OCC
- *   @th040  887069     thallet   06/11/2013  Support Nom & FFO Freq Setting for Mnfg 
- *   @fk001  879727     fmkassem  04/16/2013  OCC powercap support.
- *   @th041  887658     thallet   06/17/2013  OCC default FFO Freq should be 0
- *   @jh004  889884     joshych   07/24/2013  Support CPM param and updated frequency packet
- *   @ly008  894646     lychen    08/08/2013  Fix bugs in OCC handling of APSS tables for Brazos/Orlena
- *   @gm012  905097     milesg    10/31/2013  support mem throttle & mem config packets
- *   @fk002  905632     fmkassem  11/05/2013  Remove CriticalPathMonitor code
- *   @gs026  915840     gjsilva   02/13/2014  Support for Nvidia GPU power measurement
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/occ_sys_config.c $                                    */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
-//*************************************************************************
-// Includes
-//*************************************************************************
-//@pb00Ec - changed from common.h to occ_common.h for ODE support
 #include <occ_common.h>
 #include <common_types.h>
 #include <occ_sys_config.h>
 
-//*************************************************************************
-// Externs
-//*************************************************************************
-
-//*************************************************************************
-// Macros
-//*************************************************************************
-
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
-// -----------------------------------------------------------
 // SysConfig Section Defines
-// -----------------------------------------------------------
-#define SYSCFG_DEFAULT_VERSION       0xff 
+#define SYSCFG_DEFAULT_VERSION       0xff
 
-// -----------------------------------------------------------
 // APSS Section Defines
-// -----------------------------------------------------------
-#define SYSCFG_ADC_1x_MULT           1000  
+#define SYSCFG_ADC_1x_MULT           1000
 
-// @rc002  - Remove unused DPSS Section Defines
-
-// -----------------------------------------------------------
 // Master/Slave Section Defines
-// -----------------------------------------------------------
 #define SYSCFG_MASTER_CAPABLE_000    0x01
 #define SYSCFG_DEFAULT_MASTER_000    0x00
 #define SYSCFG_ALL_OCCS_PRESENT      0xff
 #define SYSCFG_ZERO_OCCS_PRESENT     0x00
 
-//*************************************************************************
-// Structures
-//*************************************************************************
-
-//*************************************************************************
-// Globals
-//*************************************************************************
 // OCC System Configuration Data
 //
 // We will initialize everything to default values, so in that case that we
 // can't read the data from mainstore, we will still be able to *do something*
 // instead of crash.
-occSysConfigData_t G_sysConfigData = 
+occSysConfigData_t G_sysConfigData =
 {
     .version        = SYSCFG_DEFAULT_VERSION,
     .debug_reserved = {0},
@@ -98,12 +52,12 @@ occSysConfigData_t G_sysConfigData =
     // -----------------------------------------------------------
     // System Configuration Section Initializations
     // -----------------------------------------------------------
-    .sys_num_proc_present = 4,  //TODO: placeholder //fk001a
+    .sys_num_proc_present = 4,  //TODO: placeholder
 
     // -----------------------------------------------------------
     // System maximum frequencies (in MHz) for each mode
     // -----------------------------------------------------------
-    .sys_mode_freq.table = {  
+    .sys_mode_freq.table = {
         [OCC_MODE_NOMINAL]       3500,
         [OCC_MODE_TURBO]         3700,
         [OCC_MODE_PWRSAVE]       3000,
@@ -114,7 +68,7 @@ occSysConfigData_t G_sysConfigData =
     // -----------------------------------------------------------
     // APSS Section Initializations
     // -----------------------------------------------------------
-    .apss_cal = {  
+    .apss_cal = {
         [0]  {.gain = SYSCFG_ADC_1x_MULT, .offset = 0 , .gnd_select = 0},
         [1]  {.gain = SYSCFG_ADC_1x_MULT, .offset = 0 , .gnd_select = 0},
         [2]  {.gain = SYSCFG_ADC_1x_MULT, .offset = 0 , .gnd_select = 0},
@@ -133,7 +87,7 @@ occSysConfigData_t G_sysConfigData =
         [15] {.gain = SYSCFG_ADC_1x_MULT, .offset = 0 , .gnd_select = 0},
     },
 
-    .apss_gpio_map =  { 
+    .apss_gpio_map =  {
         .fans_watchdog_error = SYSCFG_INVALID_PIN,
         .fans_full_speed     = SYSCFG_INVALID_PIN,
         .fans_error          = SYSCFG_INVALID_PIN,
@@ -142,7 +96,6 @@ occSysConfigData_t G_sysConfigData =
         .vr_fan[1]           = SYSCFG_INVALID_PIN,
         .vr_fan[2]           = SYSCFG_INVALID_PIN,
         .vr_fan[3]           = SYSCFG_INVALID_PIN,
-        // @ly007a - start
         .cent_en_vcache[0]   = SYSCFG_INVALID_PIN,
         .cent_en_vcache[1]   = SYSCFG_INVALID_PIN,
         .cent_en_vcache[2]   = SYSCFG_INVALID_PIN,
@@ -153,10 +106,9 @@ occSysConfigData_t G_sysConfigData =
         .dom_oc_latch[1]     = SYSCFG_INVALID_PIN,
         .dom_oc_latch[2]     = SYSCFG_INVALID_PIN,
         .dom_oc_latch[3]     = SYSCFG_INVALID_PIN,
-        // @ly007a - end
     },
 
-    .apss_adc_map =   { 
+    .apss_adc_map =   {
         .memory[0]           = SYSCFG_INVALID_ADC_CHAN,
         .memory[1]           = SYSCFG_INVALID_ADC_CHAN,
         .memory[2]           = SYSCFG_INVALID_ADC_CHAN,
@@ -179,7 +131,7 @@ occSysConfigData_t G_sysConfigData =
         .total_current_12v   = SYSCFG_INVALID_ADC_CHAN,
         .sense_12v           = SYSCFG_INVALID_ADC_CHAN,
         .remote_gnd          = SYSCFG_INVALID_ADC_CHAN,
-        .mem_cache           = SYSCFG_INVALID_ADC_CHAN, // @ly008a
+        .mem_cache           = SYSCFG_INVALID_ADC_CHAN,
         .gpu                 = SYSCFG_INVALID_ADC_CHAN,
     },
 
@@ -196,7 +148,7 @@ occSysConfigData_t G_sysConfigData =
         .oversub_pcap  = 0,
         .system_pcap   = 0,
         .unthrottle    = 0,
-    },  // @th034
+    },
 
     // -----------------------------------------------------------
     // Master/Slave Section Initializations
@@ -206,7 +158,7 @@ occSysConfigData_t G_sysConfigData =
 
     .is_occ_present = SYSCFG_ZERO_OCCS_PRESENT,
 
-    .master_config = { 
+    .master_config = {
         .is_master_capable = SYSCFG_MASTER_CAPABLE_000,
         .default_master    = SYSCFG_DEFAULT_MASTER_000,
     },
@@ -214,10 +166,10 @@ occSysConfigData_t G_sysConfigData =
     // -----------------------------------------------------------
     // Oversubscription Initializations
     // -----------------------------------------------------------
-    .failsafe_enabled = FALSE, // @at010a
+    .failsafe_enabled = FALSE,
 
     //Master ppb_fmax calculated by Master OCC's slave.
-    .master_ppb_fmax = 0xFFFF, // @fk001a
+    .master_ppb_fmax = 0xFFFF,
 
     // -----------------------------------------------------------
     // Centaur/Dimm HUID initializations
@@ -228,7 +180,7 @@ occSysConfigData_t G_sysConfigData =
     // -----------------------------------------------------------
     // Memory Throttle Limits
     // -----------------------------------------------------------
-    .mem_throt_limits = {{{0},{0}},{{0},{0}},{{0},{0}},{{0},{0}},{{0},{0}},{{0},{0}},{{0},{0}},{{0},{0}}},  
+    .mem_throt_limits = {{{0},{0}},{{0},{0}},{{0},{0}},{{0},{0}},{{0},{0}},{{0},{0}},{{0},{0}},{{0},{0}}},
 };
 
 
@@ -238,19 +190,19 @@ occSysConfigData_t G_sysConfigData =
 // can't read the data from mainstore, we will still be able to *do something*
 // instead of crash.
 occModuleConfigData_t G_occModuleConfigData = {
-    0  // @th010 - Removed un-needed Pstate Table from this structure
+    0
 };
 
 
 // OCC Default PstateSuperStructure
 //
 // Default Pstate table, so that for testing we don't have to have TMGT
-// send one to us.  Placing this in this file because it is necessary 
-// configuration data for OCC to go to active state.  
+// send one to us.  Placing this in this file because it is necessary
+// configuration data for OCC to go to active state.
 //
 // This array was created with xxd -i pss.bin
 //
-// This can be removed or ifdef'd out to save space in the future.   
+// TODO: This can be removed or ifdef'd out to save space in the future.
 const unsigned char G_defaultOccPstateSuperStructure[] = {
   0x50, 0x53, 0x54, 0x41, 0x54, 0x45, 0x30, 0x31, 0x6e, 0x5e, 0x34, 0x44,
   0x24, 0x34, 0x00, 0xf3, 0x6d, 0x5d, 0x34, 0x44, 0x24, 0x34, 0x00, 0x9f,
@@ -412,10 +364,7 @@ const unsigned char G_defaultOccPstateSuperStructure[] = {
   0x00, 0x00, 0x00, 0x00
 };
 
-
-// @at013a @fk001c
 // Power Configuration Data
-//
 pcap_config_data_t G_master_pcap_data =
 {
     .current_pcap    = 0,
@@ -427,16 +376,9 @@ pcap_config_data_t G_master_pcap_data =
     .unthrottle      = 0,
     .pcap_data_count = 0,
 };
+
 // TODO:  Move this to a different file
 uint16_t    G_conn_oc_pins_bitmap = 0x0000;
-
-//*************************************************************************
-// Function Prototypes
-//*************************************************************************
-
-//*************************************************************************
-// Functions
-//*************************************************************************
 
 // Function Specification
 //
@@ -446,8 +388,6 @@ uint16_t    G_conn_oc_pins_bitmap = 0x0000;
 //              having a FSP, we need to have a way for OCC to automatically
 //              set itself up the way FSP would.  This is done via default
 //              config data, and this function.
-//
-// Flow:  --/--/--   FN=sysConfigFspLess
 //
 // End Function Specification
 #ifdef FSPLESS_SIMICS
@@ -471,17 +411,17 @@ void sysConfigFspLess(void)
         master_occ_init();
 
         // Turn off anything slave related since we are a master
-        rtl_clr_run_mask_deferred(RTL_FLAG_NOTMSTR);        
+        rtl_clr_run_mask_deferred(RTL_FLAG_NOTMSTR);
         rtl_set_run_mask_deferred(RTL_FLAG_MSTR);
 
-        // Set Final Mode & State.  OCC will transition through as 
+        // Set Final Mode & State.  OCC will transition through as
         // all requirements for state/mode become available.
         G_occ_external_req_state = OCC_STATE_ACTIVE;
         G_occ_external_req_mode  = OCC_MODE_NOMINAL;
     }
     else
     {
-        G_occ_role = OCC_SLAVE;  
+        G_occ_role = OCC_SLAVE;
 
         // Turn off anything master related since we are a slave
         rtl_clr_run_mask_deferred(RTL_FLAG_MSTR);
@@ -497,7 +437,7 @@ void sysConfigFspLess(void)
     }
 
     // ----------------------------------------------------
-    // Mark available all data we have hardcoded and 
+    // Mark available all data we have hardcoded and
     // correctly initialized.
     // ----------------------------------------------------
     extern data_cnfg_t * G_data_cnfg;
@@ -505,10 +445,10 @@ void sysConfigFspLess(void)
                                | DATA_MASK_FREQ_PRESENT
                                | DATA_MASK_SET_ROLE
                                | DATA_MASK_APSS_CONFIG
-                               | DATA_MASK_PCAP_PRESENT );  // @at013a
+                               | DATA_MASK_PCAP_PRESENT );
 
     // Install the Pstate Table
-    proc_gpsm_pstate_initialize((PstateSuperStructure*) G_defaultOccPstateSuperStructure);   
+    proc_gpsm_pstate_initialize((PstateSuperStructure*) G_defaultOccPstateSuperStructure);
 
 }
 

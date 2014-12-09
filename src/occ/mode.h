@@ -1,66 +1,49 @@
-/******************************************************************************
-// @file mode.h
-// @brief OCC Modes
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section state.h STATE.H
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @th011             thallet   07/13/2011  New file
- *   @th015             thallet   08/03/2012  Added 2 macros
- *   @th022             thallet   10/03/2012  Dcom State/Mode changes
- *   @th036  881677     thallet   05/06/2013  Support for new Poll Command
- *   @jh004  889884     joshych   07/24/2013  Support CPM param and updated frequency packet
- *   @fk002  905632     fmkassem  11/05/2013  Remove CriticalPathMonitor code
- *   @at019  908390     alvinwan  12/05/2013  Disable DPS algorithms from running in Sapphire
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/mode.h $                                              */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 #ifndef _mode_h
 #define _mode_h
 
-//*************************************************************************
-// Includes
-//*************************************************************************
 #include <occ_common.h>
 #include <common_types.h>
 #include "rtls.h"
 #include "errl.h"
 
-//*************************************************************************
-// Externs
-//*************************************************************************
 
-//*************************************************************************
-// Macros
-//*************************************************************************
-
-// Returns the current OCC Mode 
+// Returns the current OCC Mode
 #define CURRENT_MODE() G_occ_internal_mode
 
-// Returns the 'OCC Requested' OCC Mode 
+// Returns the 'OCC Requested' OCC Mode
 #define REQUESTED_MODE()  G_occ_internal_req_mode
 
-// Returns the 'Requested' SMS Mode 
+// Returns the 'Requested' SMS Mode
 #define CURRENT_SMS()  G_occ_internal_sms
 
-// Returns the 'Requested' SMS Mode 
+// Returns the 'Requested' SMS Mode
 #define VALID_MODE(mode)  ((mode < OCC_MODE_COUNT) ? 1 : 0)
 
-
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
-
-/**
- * @enum OCC_MODE
- * @brief Typedef of the various modes that TMGT can put OCC into.
- */
+// Typedef of the various modes that TMGT can put OCC into.
 typedef enum
 {
     OCC_MODE_NOCHANGE          = 0x00,
@@ -73,8 +56,8 @@ typedef enum
     OCC_MODE_MIN_FREQUENCY     = 0x07,
 
     // Mode 0x08-0x0A reserved by TMGT
-    // OCC_MODE_SAFE_LOW_POWER    = 0x09, 
-    OCC_MODE_DYN_POWER_SAVE_FP = 0x0A, 
+    // OCC_MODE_SAFE_LOW_POWER    = 0x09,
+    OCC_MODE_DYN_POWER_SAVE_FP = 0x0A,
     OCC_MODE_FFO               = 0x0B,
     OCC_MODE_STURBO            = 0x0C,
 
@@ -87,10 +70,7 @@ typedef enum
     OCC_MODE_INVALID          = 0xFF,
 } OCC_MODE;
 
-/**
- * @enum OCC_INTERNAL_MODE
- * @brief Typedef of the various internal modes that OCC can be in.
- */
+// Typedef of the various internal modes that OCC can be in.
 typedef enum
 {
     OCC_INTERNAL_MODE_NOM          = 0x00,
@@ -102,19 +82,11 @@ typedef enum
     OCC_INTERNAL_MODE_UNDEFINED    = 0xFF
 } OCC_INTERNAL_MODE;
 
-
-//*************************************************************************
-// Globals
-//*************************************************************************
 extern OCC_MODE           G_occ_internal_mode;
 extern OCC_MODE           G_occ_internal_req_mode;
-extern OCC_MODE           G_occ_external_req_mode;   // @th022
-extern OCC_MODE           G_occ_external_req_mode_kvm; // @at019a
-extern OCC_MODE           G_occ_master_mode;         // @th022
-
-//*************************************************************************
-// Functions
-//*************************************************************************
+extern OCC_MODE           G_occ_external_req_mode;
+extern OCC_MODE           G_occ_external_req_mode_kvm;
+extern OCC_MODE           G_occ_master_mode;
 
 // Returns true if we are in the middle of a mode transition
 inline bool SMGR_is_mode_transitioning(void);
@@ -128,6 +100,4 @@ errlHndl_t SMGR_set_mode(const OCC_MODE i_mode,
 
 
 
-
-
-#endif 
+#endif

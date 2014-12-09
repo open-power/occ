@@ -1,62 +1,39 @@
-/******************************************************************************
-// @file state.h
-// @brief OCC States (including Reset)
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section state.h STATE.H
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @th003             thallet   11/08/2011  New file
- *   @01                tapiar    11/10/2011  New state/mode macro/enums
- *   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
- *   @pb00E             pbavari   03/11/2012  Added correct include file
- *   @th00d             thallet   04/23/2012  SMGR States, Structs & Functions
- *   @th011             thallet   07/12/2012  Split State/Mode/Reset into sep files
- *   @th022             thallet   10/03/2012  Changes to allow DCOM State/Mode setting
- *   @th036  881677     thallet   05/06/2013  Support for new poll command
- *   @th042  892056     thallet   07/19/2013  Send OCC to safe mode if first APSS GPE fails
- *   @gm006  SW224414   milesg    09/16/2013  Reset and FFDC improvements
- *   @gs011  900661     gjsilva   09/30/2013  Make data format 0x13 required to go active
- *   @gm013  907548     milesg    11/22/2013  Memory therm monitoring support
- *   @rt004  908817     tapiar    12/11/2013  Add APSS & THRM Threshold config data as required for OBS
- *                                            Add PCAP config data as required for Active 
- *   @gm016  909061     milesg    12/10/2013  Support memory throttling due to temperature
- *   @jh00b  910184     joshych   01/10/2014  Add check for checkstop
- *   @gm028  911670     milesg    02/27/2014  Immediate safe mode on checkstop
- *   @gm037  925908     milesg    05/07/2014  Redundant OCC/APSS support
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/state.h $                                             */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 #ifndef _state_h
 #define _state_h
 
-//*************************************************************************
-// Includes
-//*************************************************************************
-//@pb00Ec - changed from common.h to occ_common.h for ODE support
 #include <occ_common.h>
 #include <common_types.h>
 #include "rtls.h"
 #include "errl.h"
 #include "mode.h"
 
-//*************************************************************************
-// Externs
-//*************************************************************************
 extern uint32_t G_smgr_validate_data_active_mask;
 extern uint32_t G_smgr_validate_data_observation_mask;
-//*************************************************************************
-// Macros
-//*************************************************************************
 
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
 enum eResetStates
 {
   RESET_NOT_REQUESTED = 0,
@@ -72,9 +49,9 @@ typedef enum
 {
     OCC_STATE_NOCHANGE           = 0x00,
     OCC_STATE_STANDBY            = 0x01,
-    OCC_STATE_OBSERVATION        = 0x02,  
+    OCC_STATE_OBSERVATION        = 0x02,
     OCC_STATE_ACTIVE             = 0x03,
-    OCC_STATE_SAFE               = 0x04, 
+    OCC_STATE_SAFE               = 0x04,
     OCC_STATE_RESET              = 0x05,  // Invalid State, TPMD Legacy
     OCC_STATE_STANDBYOBSERVATION = 0x06,  // Invalid State, TPMD Legacy
 
@@ -100,7 +77,7 @@ extern SMGR_SMS_CMD_TYPE   G_occ_internal_sms;  // TODO:  Move to state.c
 
 /**
  * @enum SMGR_SMS_STATUS_TYPE
- * @brief TMGT Poll contains a byte that indicates status based on this 
+ * @brief TMGT Poll contains a byte that indicates status based on this
  * bitmask
  */
 #define     SMGR_MASK_MASTER_OCC        0x80    ///This is the master OCC
@@ -115,17 +92,15 @@ extern SMGR_SMS_CMD_TYPE   G_occ_internal_sms;  // TODO:  Move to state.c
 /**
  * @enum SMGR_VALIDATE_STATES
  * @brief Config Data Formats needed from TMGT to trans. between states
- * 
+ *
  */
-// <TULETA HW BRINGUP>
+
 #define SMGR_VALIDATE_DATA_OBSERVATION_MASK_HARDCODES \
     (DATA_MASK_SYS_CNFG | \
      DATA_MASK_APSS_CONFIG | \
      DATA_MASK_SET_ROLE | \
      DATA_MASK_MEM_CFG | \
      DATA_MASK_THRM_THRESHOLDS )
-
-// </TULETA HW BRINGUP>
 
 #define SMGR_VALIDATE_DATA_ACTIVE_MASK  G_smgr_validate_data_active_mask
 #define SMGR_VALIDATE_DATA_OBSERVATION_MASK G_smgr_validate_data_observation_mask
@@ -136,10 +111,6 @@ extern SMGR_SMS_CMD_TYPE   G_occ_internal_sms;  // TODO:  Move to state.c
      DATA_MASK_FREQ_PRESENT | \
      DATA_MASK_PCAP_PRESENT )
 
-
-//*************************************************************************
-// Macros
-//*************************************************************************
 
 // Used by OCC FW to request an OCC Reset because of an error.
 // It's the action flag that actually requests the reset.
@@ -179,17 +150,12 @@ extern SMGR_SMS_CMD_TYPE   G_occ_internal_sms;  // TODO:  Move to state.c
 // Returns true if OCC State is active
 #define IS_OCC_STATE_ACTIVE()  ( (OCC_STATE_ACTIVE == G_occ_internal_state)? 1 : 0 )
 
-
-//*************************************************************************
-// Structures
-//*************************************************************************
-
 /**
  * @struct smgr_state_trans_t
  * @brief Used by the "Set State" command to call the correct transition
  * function, based on the current & new states.
  */
-typedef struct 
+typedef struct
 {
   uint8_t old_state;
   uint8_t new_state;
@@ -197,30 +163,23 @@ typedef struct
 } smgr_state_trans_t;
 
 
-//*************************************************************************
-// Globals
-//*************************************************************************
 extern OCC_STATE          G_occ_internal_state;
 extern OCC_STATE          G_occ_internal_req_state;
-extern SMGR_SMS_CMD_TYPE  G_occ_internal_sms; 
-extern OCC_STATE          G_occ_master_state;         // @th022
-extern OCC_STATE          G_occ_external_req_state;   // @th022
+extern SMGR_SMS_CMD_TYPE  G_occ_internal_sms;
+extern OCC_STATE          G_occ_master_state;
+extern OCC_STATE          G_occ_external_req_state;
 
-
-//*************************************************************************
-// Function Prototypes
-//*************************************************************************
 // Used by macro above to clear flag indicating to not halt OCC when a reset
 // is requested.
 inline void reset_disable_halt(void);
 
 // Used to see if anyone has requested reset/safe state
-bool isSafeStateRequested(void);   // @th042
+bool isSafeStateRequested(void);
 
 // Used by macros to request reset states extenally
 void reset_state_request(uint8_t i_request);
 
-// Task that will check for checkstop // @jh00bc
+// Task that will check for checkstop
 void task_check_for_checkstop(task_t *i_self);
 
 // Used to set OCC State

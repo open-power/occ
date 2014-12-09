@@ -1,39 +1,32 @@
-/******************************************************************************
-// @file ssx_app_cfg.h
-// @brief Common application configuration for OCC
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section ssx_app_cfg.h SSX_APP_CFG.H
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
- *   @th043  892554     thallet   07/23/2013  Automatic Nominal/Active state change
- *   @gm010  901580     milesg    10/06/2013  Low Level FFDC support
- *   @sb002  908891     sbroyles  12/09/2013  FFDC updates
- *   @sb012  910394     sbroyles  01/10/2014  More FFDC updates
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/ssx_app_cfg.h $                                       */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
+
 #ifndef __SSX_APP_CFG_H__
 #define __SSX_APP_CFG_H__
-//*************************************************************************
-// Includes
-//*************************************************************************
 
-//*************************************************************************
-// Externs
-//*************************************************************************
-
-//*************************************************************************
-// Macros
-//*************************************************************************
-
-// @sb012 These versions of SSX_PANIC are being changed so that they exactly
+// These versions of SSX_PANIC are being changed so that they exactly
 // mirror each other and are exactly structured at 8 instructions only and
 // make only one branch to outside code.
 #ifndef __ASSEMBLER__
@@ -46,7 +39,7 @@ do {                                                                \
     asm volatile ("stw  %r4, __occ_panic_save_r4@sda21(0)");        \
     asm volatile ("lis  %%r4, %0"::"i" (code >> 16));               \
     asm volatile ("ori  %%r4, %%r4, %0"::"i" (code & 0xffff));      \
-    asm volatile ("bl   __ssx_checkpoint_panic_and_save_ffdc");         \
+    asm volatile ("bl   __ssx_checkpoint_panic_and_save_ffdc");     \
     asm volatile ("trap");                                          \
     asm volatile (".long %0" : : "i" (code));                       \
 } while (0)
@@ -69,9 +62,6 @@ do {                                                                \
 #endif // SSX_PANIC
 #endif /* __ASSEMBLER__ */
 
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
 #define INIT_SEC_NM_STR     "initSection"
 #define INIT_SECTION __attribute__ ((section (INIT_SEC_NM_STR)))
 
@@ -81,22 +71,6 @@ do {                                                                \
 /// change the interval to be a uint64_t instead of a uint32_t so we don't
 /// hit the overflow condition
 #define SSX_TIME_INTERVAL_TYPE uint64_t
-
-//*************************************************************************
-// Structures
-//*************************************************************************
-
-//*************************************************************************
-// Globals
-//*************************************************************************
-
-//*************************************************************************
-// Function Prototypes
-//*************************************************************************
-
-//*************************************************************************
-// Functions
-//*************************************************************************
 
 #endif /* __SSX_APP_CFG_H__ */
 

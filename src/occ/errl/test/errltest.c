@@ -1,24 +1,28 @@
-/******************************************************************************
-// @file errltest.c
-// @brief OCC ERRL TEST
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section errltest.c ERRLTEST.C
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
- *
- *  @endverbatim
- *
- *///*************************************************************************/
- 
-//*************************************************************************
-// Includes
-//*************************************************************************
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/errl/test/errltest.c $                                */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
+
 #include "ssx.h"
 #include "ssx_io.h"
 #include "simics_stdio.h"
@@ -27,24 +31,11 @@
 #include <errl.h>
 #include <rand.h>
 
-//*************************************************************************
-// Externs
-//*************************************************************************
-
-//*************************************************************************
-// Macros
-//*************************************************************************
-
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
-
 uint8_t noncritical_stack[NONCRITICAL_STACK_SIZE];
 uint8_t critical_stack[CRITICAL_STACK_SIZE];
-/*@}*/  // Ending tag for stack module in doxygen
 
 /// Period in which to run #timer_routine
-#define TIMER_INTERVAL (SsxInterval) SSX_MICROSECONDS(100) 
+#define TIMER_INTERVAL (SsxInterval) SSX_MICROSECONDS(100)
 
 #define SevAsciiValue( _v_ ) \
     ( ( _v_ == ERRL_SEV_INFORMATIONAL ) ? "Informational" : \
@@ -52,39 +43,24 @@ uint8_t critical_stack[CRITICAL_STACK_SIZE];
       ( _v_ == ERRL_SEV_UNRECOVERABLE ) ? "Unrecovrable" : \
       ( _v_ == ERRL_SEV_CALLHOME_DATA ) ? "Call Home" : \
       "Unknown" )
-	  
+
 /*----------------------------------------------------------------------------*/
 /* SsxTimer and SsxThread Declarations and Priorities                         */
 /*----------------------------------------------------------------------------*/
-/** \defgroup TimersAndThreads Timer and Thread Information */ /*@{*/
 
 /// Our timer based on TIMER_INTERVAL that kicks off most of the work.  See #timer_routine
 SsxTimer timer;
 
-/// Our idle thread.  See #main_thread_routine  
+/// Our idle thread.  See #main_thread_routine
 SsxThread main_thread;
 
-/// \todo Goes away due to Bishop's device driver layer
-SsxThread prcd_thread;  
-
-/*@}*/  // Ending tag for TimersAndThreads module in doxygen
-
-
-
+/// TODO: Goes away due to Bishop's device driver layer
+SsxThread prcd_thread;
 
 /*----------------------------------------------------------------------------*/
 /* SsxSemaphore Declarations                                                  */
 /*----------------------------------------------------------------------------*/
 SsxSemaphore prcd_sem;
-
-
-//*************************************************************************
-// Structures
-//*************************************************************************
-
-//*************************************************************************
-// Globals
-//*************************************************************************
 
 int g_j = 0;
 int g_k = 0;
@@ -92,24 +68,15 @@ int g_k = 0;
 SimicsStdio simics_stdout;
 SimicsStdio simics_stderr;
 
-//*************************************************************************
-// Function Prototypes
-//*************************************************************************
 extern void timer_routine(void *private);
 extern void rtloop_ocb_init(void);
-
-//*************************************************************************
-// Functions
-//*************************************************************************
 
 // Function Specification
 //
 // Name: pgp_validation_ssx_main_hook
 //
-// Description: 
+// Description:
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 void pgp_validation_ssx_main_hook(void)
 {
@@ -120,10 +87,8 @@ void pgp_validation_ssx_main_hook(void)
 //
 // Name: Cmd_Hndl_thread_routine
 //
-// Description: 
+// Description:
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 //TODO placeholder
 void Cmd_Hndl_thread_routine(void *arg)
@@ -134,10 +99,8 @@ void Cmd_Hndl_thread_routine(void *arg)
 //
 // Name: App_thread_routine
 //
-// Description: 
+// Description:
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 void App_thread_routine(void *arg)
 {
@@ -147,10 +110,8 @@ void App_thread_routine(void *arg)
 //
 // Name: Thermal_Monitor_thread_routine
 //
-// Description: 
+// Description:
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 void Thermal_Monitor_thread_routine(void *arg)
 {
@@ -160,10 +121,8 @@ void Thermal_Monitor_thread_routine(void *arg)
 //
 // Name: Hlth_Monitor_thread_routine
 //
-// Description: 
+// Description:
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 void Hlth_Monitor_thread_routine(void *arg)
 {
@@ -173,10 +132,8 @@ void Hlth_Monitor_thread_routine(void *arg)
 //
 // Name: FFDC_thread_routine
 //
-// Description: 
+// Description:
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 void FFDC_thread_routine(void *arg)
 {
@@ -189,14 +146,12 @@ void FFDC_thread_routine(void *arg)
 //
 // Description: This thread loops as the highest priority thread, where it currently just
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 void prcd_thread_routine(void *private)
 {
   while(1)
   {
-    // Just sit here until this semaphore is posted, which will never happen.  
+    // Just sit here until this semaphore is posted, which will never happen.
     ssx_semaphore_pend(&prcd_sem, SSX_WAIT_FOREVER);
 
     // Only trace the first XX times that this function loops
@@ -204,7 +159,7 @@ void prcd_thread_routine(void *private)
     {
       g_k = 0;
       g_j++;
-      
+
     }
   }
 }
@@ -213,10 +168,8 @@ void prcd_thread_routine(void *private)
 //
 // Name: dumpLog
 //
-// Description: 
+// Description:
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 void dumpLog( errlHndl_t i_log, uint32_t i_len )
 {
@@ -248,8 +201,8 @@ void dumpLog( errlHndl_t i_log, uint32_t i_len )
 
         // Pad with spaces
         uint8_t l_space[64] = {0};
-        memset( l_space, 0x00, sizeof( l_space )); 
-        memset( l_space, ' ', 43-l_written); 
+        memset( l_space, 0x00, sizeof( l_space ));
+        memset( l_space, ' ', 43-l_written);
         printf("%s", l_space );
 
         // Display ASCII
@@ -275,8 +228,8 @@ void dumpLog( errlHndl_t i_log, uint32_t i_len )
 
         // Pad with spaces
         uint8_t l_space2[64] = {0};
-        memset( l_space2, 0x00, sizeof( l_space2 )); 
-        memset( l_space2, ' ', 19-l_written); 
+        memset( l_space2, 0x00, sizeof( l_space2 ));
+        memset( l_space2, ' ', 19-l_written);
         printf("%s\n", l_space2 );
     }
    printf("----------%p---------- \n", i_log );
@@ -287,10 +240,8 @@ void dumpLog( errlHndl_t i_log, uint32_t i_len )
 //
 // Name: ppdumpslot
 //
-// Description: 
+// Description:
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 void ppdumpslot(void)
 {
@@ -329,10 +280,8 @@ void ppdumpslot(void)
 //
 // Name: testsizelimit
 //
-// Description: 
+// Description:
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 void testsizelimit(const tracDesc_t i_trace)
 {
@@ -340,37 +289,37 @@ void testsizelimit(const tracDesc_t i_trace)
     errlHndl_t l_handle = NULL;
     errlHndl_t l_handle2 = NULL;
     errlHndl_t l_handle3 = NULL;
-    
-    l_handle = createErrl( 0x1616, 0x08, ERRL_SEV_PREDICTIVE, i_trace, 512, 0x1, 0x2);  
-    l_handle2 = createErrl( 0x1616, 0x08, ERRL_SEV_CALLHOME_DATA, i_trace, 512, 0x1, 0x2);  
-    l_handle3 = createErrl( 0x1616, 0x08, ERRL_SEV_INFORMATIONAL, i_trace, 512, 0x1, 0x2);  
+
+    l_handle = createErrl( 0x1616, 0x08, ERRL_SEV_PREDICTIVE, i_trace, 512, 0x1, 0x2);
+    l_handle2 = createErrl( 0x1616, 0x08, ERRL_SEV_CALLHOME_DATA, i_trace, 512, 0x1, 0x2);
+    l_handle3 = createErrl( 0x1616, 0x08, ERRL_SEV_INFORMATIONAL, i_trace, 512, 0x1, 0x2);
     errlHndl_t l_handleX = l_handle;
     errlHndl_t l_handle2X = l_handle2;
     errlHndl_t l_handle3X = l_handle3;
     printf("%s: Slots after Create - 3 slots should be used (one of each)\n", __FUNCTION__ );
     ppdumpslot();
- 
-    uint8_t l_data[ MAX_ERRL_CALL_HOME_SZ * 2 ]; 
- 
+
+    uint8_t l_data[ MAX_ERRL_CALL_HOME_SZ * 2 ];
+
     memset( l_data, 0xCC, sizeof( l_data ) );
-    
-    addUsrDtlsToErrl( l_handle, l_data, sizeof( l_data ), ERRL_USR_DTL_STRUCT_VERSION_1, ERRL_USR_DTL_TRACE_DATA );       
-    
+
+    addUsrDtlsToErrl( l_handle, l_data, sizeof( l_data ), ERRL_USR_DTL_STRUCT_VERSION_1, ERRL_USR_DTL_TRACE_DATA );
+
     memset( l_data, 0xEE, sizeof( l_data ) );
-    
-    addUsrDtlsToErrl( l_handle2, l_data, sizeof( l_data ), ERRL_USR_DTL_STRUCT_VERSION_1, ERRL_USR_DTL_CALLHOME_DATA );       
+
+    addUsrDtlsToErrl( l_handle2, l_data, sizeof( l_data ), ERRL_USR_DTL_STRUCT_VERSION_1, ERRL_USR_DTL_CALLHOME_DATA );
 
     memset( l_data, 0xDD, sizeof( l_data ) );
-    
-    addUsrDtlsToErrl( l_handle3, l_data, 76, ERRL_USR_DTL_STRUCT_VERSION_1, ERRL_USR_DTL_TRACE_DATA );       
+
+    addUsrDtlsToErrl( l_handle3, l_data, 76, ERRL_USR_DTL_STRUCT_VERSION_1, ERRL_USR_DTL_TRACE_DATA );
 
     dumpLog( l_handle, l_handle->iv_userDetails.iv_entrySize );
     dumpLog( l_handle2, l_handle2->iv_userDetails.iv_entrySize );
     dumpLog( l_handle3, l_handle3->iv_userDetails.iv_entrySize );
 
-    commitErrl( &l_handle );  
-    commitErrl( &l_handle2 );  
-    commitErrl( &l_handle3 );  
+    commitErrl( &l_handle );
+    commitErrl( &l_handle2 );
+    commitErrl( &l_handle3 );
     printf("%s: Slots after Commit -  3 slots should be used/committed \n", __FUNCTION__ );
     ppdumpslot();
 
@@ -386,48 +335,46 @@ void testsizelimit(const tracDesc_t i_trace)
 //
 // Name: testdtlsizelimit
 //
-// Description: 
+// Description:
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 void testdtlsizelimit(const tracDesc_t i_trace)
 {
     printf("%s: START \n", __FUNCTION__ );
     errlHndl_t l_handle = NULL;
-    
-    l_handle = createErrl( 0x1616, 0x08, ERRL_SEV_PREDICTIVE, i_trace, 512, 0x1, 0x2);  
+
+    l_handle = createErrl( 0x1616, 0x08, ERRL_SEV_PREDICTIVE, i_trace, 512, 0x1, 0x2);
     errlHndl_t l_handleX = l_handle;
     ppdumpslot();
- 
-    uint8_t l_data[ MAX_ERRL_CALL_HOME_SZ * 2 ]; 
-    
+
+    uint8_t l_data[ MAX_ERRL_CALL_HOME_SZ * 2 ];
+
     memset( l_data, 0xAA, sizeof( l_data ) );
-    addUsrDtlsToErrl( l_handle, l_data, 256, ERRL_USR_DTL_STRUCT_VERSION_1, ERRL_USR_DTL_TRACE_DATA );       
+    addUsrDtlsToErrl( l_handle, l_data, 256, ERRL_USR_DTL_STRUCT_VERSION_1, ERRL_USR_DTL_TRACE_DATA );
     //dumpLog( l_handle, l_handle->iv_userDetails.iv_entrySize );
     printf("%s: Slots after create + 256 bytes \n", __FUNCTION__ );
     ppdumpslot();
- 
+
     memset( l_data, 0xBB, sizeof( l_data ) );
-    addUsrDtlsToErrl( l_handle, l_data, 512, ERRL_USR_DTL_STRUCT_VERSION_1, ERRL_USR_DTL_TRACE_DATA );       
+    addUsrDtlsToErrl( l_handle, l_data, 512, ERRL_USR_DTL_STRUCT_VERSION_1, ERRL_USR_DTL_TRACE_DATA );
     //dumpLog( l_handle, l_handle->iv_userDetails.iv_entrySize );
     printf("%s: Slots after create + 256 + 512 bytes \n", __FUNCTION__ );
     ppdumpslot();
-    
+
     memset( l_data, 0xCC, sizeof( l_data ) );
-    addUsrDtlsToErrl( l_handle, l_data, 1024, ERRL_USR_DTL_STRUCT_VERSION_1, ERRL_USR_DTL_TRACE_DATA );       
+    addUsrDtlsToErrl( l_handle, l_data, 1024, ERRL_USR_DTL_STRUCT_VERSION_1, ERRL_USR_DTL_TRACE_DATA );
     //dumpLog( l_handle, l_handle->iv_userDetails.iv_entrySize );
     printf("%s: Slots after create + 256 + 512 +1024 bytes \n", __FUNCTION__ );
     ppdumpslot();
-    
+
     memset( l_data, 0xDD, sizeof( l_data ) );
-    addUsrDtlsToErrl( l_handle, l_data, 2048, ERRL_USR_DTL_STRUCT_VERSION_1, ERRL_USR_DTL_TRACE_DATA );       
+    addUsrDtlsToErrl( l_handle, l_data, 2048, ERRL_USR_DTL_STRUCT_VERSION_1, ERRL_USR_DTL_TRACE_DATA );
     printf("%s: Slots after create 2k should be full with DD having only 72 bytes \n", __FUNCTION__ );
     dumpLog( l_handle, l_handle->iv_userDetails.iv_entrySize );
     ppdumpslot();
 
 
-    commitErrl( &l_handle );  
+    commitErrl( &l_handle );
     deleteErrl(&l_handleX);
     printf("%s: Slots should now be empty \n", __FUNCTION__ );
     ppdumpslot();
@@ -438,10 +385,8 @@ void testdtlsizelimit(const tracDesc_t i_trace)
 //
 // Name: timetest
 //
-// Description: 
+// Description:
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 void timetest(const tracDesc_t i_trace)
 {
@@ -449,13 +394,13 @@ void timetest(const tracDesc_t i_trace)
     errlHndl_t l_handle = NULL;
     uint64_t l_start = 0;
     uint64_t l_end = 0;
-    
+
     l_start = ssx_timebase_get();
-    l_handle = createErrl( 0x1716, 0x08, ERRL_SEV_CALLHOME_DATA, i_trace, 128, 0x1, 0x2);  
+    l_handle = createErrl( 0x1716, 0x08, ERRL_SEV_CALLHOME_DATA, i_trace, 128, 0x1, 0x2);
     errlHndl_t l_handle2 = l_handle;
-    commitErrl( &l_handle ); 
+    commitErrl( &l_handle );
     l_end = ssx_timebase_get();
-    printf("%s: Time to create/delete secs[%d] \n",__FUNCTION__, (int)SSX_MICROSECONDS(l_end-l_start)); 
+    printf("%s: Time to create/delete secs[%d] \n",__FUNCTION__, (int)SSX_MICROSECONDS(l_end-l_start));
 
     deleteErrl(&l_handle2);
     printf("%s: END \n", __FUNCTION__ );
@@ -465,22 +410,20 @@ void timetest(const tracDesc_t i_trace)
 //
 // Name: createcommitdeletelog
 //
-// Description: 
+// Description:
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 void createcommitdeletelog(const tracDesc_t i_trace)
 {
     printf("%s: START \n", __FUNCTION__ );
     errlHndl_t l_handle = NULL;
-    l_handle = createErrl( 0x1616, 0x08, ERRL_SEV_CALLHOME_DATA, i_trace, 512, 0x1, 0x2);  
+    l_handle = createErrl( 0x1616, 0x08, ERRL_SEV_CALLHOME_DATA, i_trace, 512, 0x1, 0x2);
     printf("%s: Slots after Creating call home log \n", __FUNCTION__ );
     ppdumpslot();
-    
+
 
     errlHndl_t l_handle2 = l_handle;
-    commitErrl( &l_handle ); 
+    commitErrl( &l_handle );
     printf("%s: Slots after Commiting call home log \n ", __FUNCTION__ );
     dumpLog( l_handle2, l_handle2->iv_userDetails.iv_entrySize );
     ppdumpslot();
@@ -497,10 +440,8 @@ void createcommitdeletelog(const tracDesc_t i_trace)
 //
 // Name: create2infologtest
 //
-// Description: 
+// Description:
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 void create2infologtest(const tracDesc_t i_trace)
 {
@@ -509,9 +450,9 @@ void create2infologtest(const tracDesc_t i_trace)
     errlHndl_t l_handle = NULL;
     errlHndl_t l_handle2= NULL;
     l_handle = createErrl( 0x1616, 0x08, ERRL_SEV_INFORMATIONAL,i_trace, 5, 0x1, 0x2);
-    
+
     l_handle2 = createErrl( 0x2727, 0x19, ERRL_SEV_INFORMATIONAL, i_trace, 6, 0x2, 0x3);
-    
+
     if( l_handle2 == INVALID_ERR_HNDL )
     {
         printf("%s: Creating 2 info logs PASSED, only 1 was created @ %p \n", __FUNCTION__, l_handle );
@@ -524,7 +465,7 @@ void create2infologtest(const tracDesc_t i_trace)
         dumpLog( l_handle2, l_handle2->iv_userDetails.iv_entrySize );
         ppdumpslot();
     }
-    
+
     deleteErrl(&l_handle);
 
     printf("%s: END \n", __FUNCTION__ );
@@ -534,14 +475,12 @@ void create2infologtest(const tracDesc_t i_trace)
 //
 // Name: createMaxLogs
 //
-// Description: 
+// Description:
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 void createMaxLogs(const tracDesc_t i_trace)
 {
-    ERRL_SEVERITY l_sevs[4] = 
+    ERRL_SEVERITY l_sevs[4] =
     {
         ERRL_SEV_UNRECOVERABLE,
         ERRL_SEV_PREDICTIVE,
@@ -561,36 +500,36 @@ void createMaxLogs(const tracDesc_t i_trace)
     for(l_index =0; l_index < ERRL_MAX_SLOTS; l_index++)
     {
         uint32_t l_sev = (uint32_t)rand32(4);
-        uint32_t l_trace = (uint32_t)rand32( 512 ); 
+        uint32_t l_trace = (uint32_t)rand32( 512 );
         l_handle = createErrl( 0x1616, 0x08, l_sevs[ l_sev ], i_trace, l_trace, 0x1, 0x2);
-    
-        if( ( l_handle != INVALID_ERR_HNDL) && 
+
+        if( ( l_handle != INVALID_ERR_HNDL) &&
             ( l_handle != NULL ) )
         {
             printf("Log Created @ %p with Sev[%s]\n",l_handle, SevAsciiValue( l_sevs[ l_sev ]) );
-            
+
             uint8_t  l_ud = (uint8_t) rand32(2);
             if ( l_ud )
             {
-                uint8_t l_data[ (uint32_t) rand32( 512 ) ]; 
-                
+                uint8_t l_data[ (uint32_t) rand32( 512 ) ];
+
                 memset( l_data, l_chars[(uint8_t) rand32(6)], sizeof( l_data ) );
-                addUsrDtlsToErrl( l_handle, l_data, sizeof(l_data), ERRL_USR_DTL_STRUCT_VERSION_1, ERRL_USR_DTL_TRACE_DATA );       
+                addUsrDtlsToErrl( l_handle, l_data, sizeof(l_data), ERRL_USR_DTL_STRUCT_VERSION_1, ERRL_USR_DTL_TRACE_DATA );
             }
-    
+
             commitErrl( &l_handle );
         }
         else
         {
             printf("Could not create error log with Sev[%s]\n",SevAsciiValue( l_sevs[ l_sev ]) );
-    
+
             uint8_t  l_purge = (uint8_t) rand32(2);
-            
+
             if ( l_purge )
             {
                 uint32_t l_slots = (uint32_t)rand32(ERRL_MAX_SLOTS);
 
-                if ((G_occErrSlots[l_slots] != INVALID_ERR_HNDL) && 
+                if ((G_occErrSlots[l_slots] != INVALID_ERR_HNDL) &&
                     (G_occErrSlots[l_slots] != NULL ))
                 {
                     printf("Deleting log with id[%d] @ %p (slot %d)\n", G_occErrSlots[l_slots]->iv_entryId, G_occErrSlots[l_slots], l_slots );
@@ -598,23 +537,23 @@ void createMaxLogs(const tracDesc_t i_trace)
                     deleteErrl( &l_handle );
                 }
             }
-            
+
         }
-            
+
         uint8_t  l_dumpfile = (uint8_t) rand32(2);
-            
+
         if ( l_dumpfile )
         {
             uint32_t l_slots = (uint32_t)rand32(ERRL_MAX_SLOTS);
 
-            if ((G_occErrSlots[l_slots] != INVALID_ERR_HNDL) && 
+            if ((G_occErrSlots[l_slots] != INVALID_ERR_HNDL) &&
                 (G_occErrSlots[l_slots] != NULL ))
             {
                 errlHndl_t l_handle = G_occErrSlots[l_slots];
                 dumpLog( l_handle, l_handle->iv_userDetails.iv_entrySize );
             }
         }
-        
+
         ppdumpslot();
     }
 
@@ -626,20 +565,18 @@ void createMaxLogs(const tracDesc_t i_trace)
 //
 // Name: testcallouts
 //
-// Description: 
+// Description:
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 void testcallouts(const tracDesc_t i_trace)
 {
     printf("%s: START \n", __FUNCTION__ );
     errlHndl_t l_handle = NULL;
     printf("--------------------------------\n");
-    
+
     l_handle = createErrl( 0x1616, 0x08,ERRL_SEV_PREDICTIVE,i_trace, 5, 0x1, 0x2);
     errlHndl_t l_log = l_handle;
-    
+
     if(l_handle != INVALID_ERR_HNDL)
     {
 //             printf("Commiting log @p %p\n",l_handle);
@@ -668,7 +605,7 @@ void testcallouts(const tracDesc_t i_trace)
     {
         printf("could not create error log with [%s]\n",SevAsciiValue(ERRL_SEV_CALLHOME_DATA));
     }
-    
+
     ppdumpslot();
 
     deleteErrl( &l_log );
@@ -683,8 +620,6 @@ void testcallouts(const tracDesc_t i_trace)
 // Description: This thread currently just loops as the lowest priority thread, handling
 //              the lowest priority tasks.
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 void main_thread_routine(void *private)
 {
@@ -714,8 +649,6 @@ void main_thread_routine(void *private)
 //              and timers for execution.  Note that once main runs ssx_start_threads, we
 //              never return as the SSX kernel takes over.
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 int main(int argc, char **argv)
 {
@@ -728,8 +661,8 @@ int main(int argc, char **argv)
 
     // Initialize SSX Stacks (note that this also reinitializes the time base to 0)
     ssx_initialize((SsxAddress)noncritical_stack, NONCRITICAL_STACK_SIZE,
-		   (SsxAddress)critical_stack, CRITICAL_STACK_SIZE,
-		   0);
+                   (SsxAddress)critical_stack, CRITICAL_STACK_SIZE,
+                   0);
 
     // TRACE: Trace buffers initialized
     tracDesc_t g_trac_main = NULL;
@@ -739,15 +672,15 @@ int main(int argc, char **argv)
     //createcommitdeletelog(g_trac_main);
 
     //testsizelimit( g_trac_main );
-    
+
     //testdtlsizelimit( g_trac_main );
-    
+
     //create2infologtest(g_trac_main);
-    
+
     //createMaxLogs(g_trac_main);
-    
+
     //testcallouts(g_trac_main);
- 
+
 
     // Create Timers
     //ssx_timer_create(&timer, timer_routine, 0);
@@ -756,20 +689,20 @@ int main(int argc, char **argv)
     ssx_semaphore_create(&prcd_sem, 0, 13);
 
     // Create Threads
-    ssx_thread_create(&main_thread, 
-		      main_thread_routine, 
-		      (void *)0,
-		      (SsxAddress)main_thread_stack,
-		      THREAD_STACK_SIZE,
-		      1);
+    ssx_thread_create(&main_thread,
+                      main_thread_routine,
+                      (void *)0,
+                      (SsxAddress)main_thread_stack,
+                      THREAD_STACK_SIZE,
+                      1);
 
     // Create Threads
-    ssx_thread_create(&prcd_thread, 
-		      prcd_thread_routine, 
-		      (void *)0,
-		      (SsxAddress)prcd_thread_stack,
-		      THREAD_STACK_SIZE,
-		      0);
+    ssx_thread_create(&prcd_thread,
+                      prcd_thread_routine,
+                      (void *)0,
+                      (SsxAddress)prcd_thread_stack,
+                      THREAD_STACK_SIZE,
+                      0);
 
     // Make Threads runnable
     ssx_thread_resume(&main_thread);

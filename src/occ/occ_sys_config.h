@@ -1,76 +1,40 @@
-/******************************************************************************
-// @file occ_sys_config.h
-// @brief OCC System Configuration Structures sent down from HostBoot
-//
-// *** All config Structures *** must be defined in a completely self-contained
-// file (i.e no #includes) so that it can be used by both OCC & Host Boot.  
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section occ_sys_config.h OCC_SYS_CONFIG.H
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @th001             thallet   09/15/2011  Created
- *   @01                abagepa   09/17/2011  extern a global
- *   @pb008             pbavari   10/17/2011  Use Pstate define from SSX for
- *                                            OCC FW Compilation.
- *   @th005             thallet   11/23/2011  Sensor Initialization changes
- *   @rc002             rickylie  02/02/2012  Remove unused DPSS function 
- *   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
- *   @th00b             thallet   02/28/2011  APSS Spec Changes            
- *   @th010             thallet   07/11/2012  Pstate Enablement
- *   @th014             thallet   08/02/2012  Moved default PstateSS occ_sys_config
- *   @th018  852950     thallet   09/12/2012  Added Centaur thermal readings       
- *   @th019  853007     thallet   09/12/2012  Power Sensors
- *   @th022             thallet   10/08/2012  Added way to init OCC w/o FSP for Simics
- *   @at010  859992     alvinwan  11/07/2012  Added oversubscription feature
- *   @th030             thallet   02/04/2013  Fixed a enum problem before external use
- *   @th034             thallet   04/18/2013  Broadcast Critical Power over PBAX
- *   @at013  878755     alvinwan  04/17/2013  OCC power capping implementation
- *   @at014  882077     alvinwan  05/09/2013  Support APSS and System Config data from TMGT
- *   @ly007  882183     lychen    05/21/2013  Send APSS and System Configuration commands to OCC
- *   @th040  887069     thallet   06/11/2013  Support Nom & FFO Freq Setting for Mnfg 
- *   @fk001  879727     fmkassem  04/16/2013  OCC powercap support.
- *   @ly008  894646     lychen    08/08/2013  Fix bugs in OCC handling of APSS tables for Brazos/Orlena
- *   @at016  891144     alvinwan  06/10/2013  OCC Power Cap Testing
- *   @gm008  SW226989   milesg    09/30/2013  Sapphire initial support
- *   @gm012  905097     milesg    10/31/2013  support mem throttle & mem config packets
- *   @gs015  905166     gjsilva   11/04/2013  Full support for IPS function
- *   @gs026  915840     gjsilva   02/13/2014  Support for Nvidia GPU power measurement
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/occ_sys_config.h $                                    */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
 #ifndef _occ_sys_config_h
 #define _occ_sys_config_h
 
-//*************************************************************************
-// Includes
-//*************************************************************************
-//@pb008a - SSX defined Pstate in pgp_common.h file. Without below ifdef
-//compiler complains about redefinition for OCC.
+// SSX has Pstate defined in pgp_common.h file. Without below ifdef
+// compiler complains about redefinition for OCC.
 #ifdef OCC_FIRMWARE
 #include "pgp_common.h"
 #else
 #endif
 #include <state.h>
-#include <apss.h>  // @at014a
+#include <apss.h>
 
-//*************************************************************************
-// Externs
-//*************************************************************************
-
-//*************************************************************************
-// Macros
-//*************************************************************************
-
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
 #define MAX_NUM_OCC              8
 #define MAX_NUM_NODES            4
 #define MAX_NUM_CORES           12
@@ -84,7 +48,7 @@
 #define NUM_PROC_CHIPS_PER_OCC          1
 #define NUM_CENTAURS_PER_MEM_CONTROLLER 1
 #define NUM_PORT_PAIRS_PER_CENTAUR      2
-#define NUM_DIMMS_PER_CENTAUR           8    /* @th018 */
+#define NUM_DIMMS_PER_CENTAUR           8
 #define NUM_MBAS_PER_CENTAUR            2
 
 #define UPPER_LIMIT_PROC_FREQ_MHZ     6000
@@ -94,10 +58,8 @@
 //Time interval for averaging utilization and frequency (IPS algorithm)
 #define AMEC_IPS_AVRG_INTERVAL           3
 
-/*****************************************************************************/
 // System Structures
-/*****************************************************************************/
-typedef union // @gm008
+typedef union
 {
     struct
     {
@@ -109,9 +71,7 @@ typedef union // @gm008
     uint8_t byte;
 } eSystemType;
 
-/*****************************************************************************/
 // APSS Structures & Defines
-/*****************************************************************************/
 #define SYSCFG_INVALID_ADC_CHAN      0xff
 #define SYSCFG_INVALID_PIN           0xff
 
@@ -120,9 +80,9 @@ typedef union // @gm008
 #define MAX_ADC_IO_DOMAINS      3
 #define MAX_ADC_FAN_DOMAINS     2
 #define MAX_ADC_STORAGE_DOMAINS 2
-#define MAX_CENT_EN_VCACHE      4 // @ly007a
-#define MAX_DOM_OC_LATCH        4 // @ly007a
-#define MAX_CONN_OC_SIGNALS     5 // @fk001a
+#define MAX_CENT_EN_VCACHE      4
+#define MAX_DOM_OC_LATCH        4
+#define MAX_CONN_OC_SIGNALS     5
 
 typedef enum
 {
@@ -149,12 +109,12 @@ typedef enum
     ADC_12V_SENSE               = 0x14,
     ADC_GND_REMOTE_SENSE        = 0x15,
     ADC_TOTAL_SYS_CURRENT       = 0x16,
-    ADC_MEM_CACHE               = 0x17, // @ly008a
+    ADC_MEM_CACHE               = 0x17,
     ADC_GPU_SENSE               = 0x18,
     NUM_ADC_ASSIGNMENT_TYPES    // This should always be the last member
 } eApssAdcChannelAssignments;
 
-typedef enum 
+typedef enum
 {
     GPIO_RESERVED               = 0x0000,
     GPIO_FAN_WATCHDOG_ERROR     = 0x0001,
@@ -165,7 +125,6 @@ typedef enum
     GPIO_VR_HOT_MEM_PROC_1      = 0x0006,
     GPIO_VR_HOT_MEM_PROC_2      = 0x0007,
     GPIO_VR_HOT_MEM_PROC_3      = 0x0008,
-    // @ly007a - start
     GPIO_CENT_EN_VCACHE0        = 0x0009,
     GPIO_CENT_EN_VCACHE1        = 0x000A,
     GPIO_CENT_EN_VCACHE2        = 0x000B,
@@ -176,7 +135,6 @@ typedef enum
     DOM_B_OC_LATCH              = 0x0010,
     DOM_C_OC_LATCH              = 0x0011,
     DOM_D_OC_LATCH              = 0x0012,
-    // @ly007a - end
     NUM_GPIO_ASSIGNMENT_TYPES    // This should always be the last member
 } eApssGpioAssignments;
 
@@ -185,75 +143,64 @@ typedef struct
   // Gain and Offset, Stored in a exponent/mantissa format (like P7 PS Gain/Offset)
   uint32_t gain;        // Think "multiplier"
   uint32_t offset;      // Will probably always be 0, since APSS is so accurate
-  uint8_t  gnd_select;  // @at014a
+  uint8_t  gnd_select;
 } apssCalibrationData_t;
 
 typedef struct
 {
   // Value stored will be APSS GPIO Number, if not present, set to INVALID = xFF.
   // Example:  vr_fan[0] = 4; (VR_FAN is APSS GPIO #4)
-  // @ly007a - start
   uint8_t dom_oc_latch[MAX_DOM_OC_LATCH];
   uint8_t gnd_oc_n;
   uint8_t cme_throttle_n;
   uint8_t cent_en_vcache[MAX_CENT_EN_VCACHE];
-  // @ly007a - end
-  uint8_t vr_fan[MAX_VRFAN_SIGNALS];  
+  uint8_t vr_fan[MAX_VRFAN_SIGNALS];
   uint8_t fans_watchdog_error;
   uint8_t fans_full_speed;
   uint8_t fans_error;
-  uint8_t fans_reserved;  
+  uint8_t fans_reserved;
 } apssGpioPinData_t;
 
-typedef struct 
+typedef struct
 {
-  // Value stored will be APSS ADC Channel Number, if rail is not present, set 
+  // Value stored will be APSS ADC Channel Number, if rail is not present, set
   // to INVALID = xFF
-  uint8_t memory[MAX_NUM_CHIP_MODULES];  
+  uint8_t memory[MAX_NUM_CHIP_MODULES];
   uint8_t vdd[MAX_NUM_CHIP_MODULES];
   uint8_t io[MAX_ADC_IO_DOMAINS];
   uint8_t fans[MAX_ADC_FAN_DOMAINS];
   uint8_t storage_media[MAX_ADC_STORAGE_DOMAINS];
   uint8_t total_current_12v;
-  uint8_t vcs_vio_vpcie[MAX_NUM_CHIP_MODULES]; 
+  uint8_t vcs_vio_vpcie[MAX_NUM_CHIP_MODULES];
   uint8_t sense_12v;
   uint8_t remote_gnd;
-  uint8_t mem_cache; // @ly008a
+  uint8_t mem_cache;
   uint8_t gpu;
 } apssAdcChannelData_t;
 
-// @rc002  - Remove unused DPSS Structures & Defines
-
-/*****************************************************************************/
 // Master/Slave Configuration
-/*****************************************************************************/
 typedef struct
 {
-  // Bitmask that states if OCC is master capable 
+  // Bitmask that states if OCC is master capable
   // (i.e. 0x11 = Chip_Id 000 & Chip_Id 100 can both be masters)
-  uint8_t is_master_capable;  
-  
-  // Which Chip_Id should be initial master 
-  // (i.e. default_master = 0x00 for almost all cases) 
+  uint8_t is_master_capable;
+
+  // Which Chip_Id should be initial master
+  // (i.e. default_master = 0x00 for almost all cases)
   uint8_t default_master;
 
 } masterCapability_t;
 
 
-//*************************************************************************
 // System Frequency
-//*************************************************************************
 typedef struct
 {
     uint16_t table[OCC_MODE_COUNT];  // Table w/ freq for each mode
-    uint8_t  update_count;           //  
+    uint8_t  update_count;           //
     uint8_t  _reserved;              // Align to 2 b/c we may use it in PBAX broadcast
 } freqConfig_t;   // @th040
 
-//*************************************************************************
 // Power Cap Structures
-//*************************************************************************
-// @th034  @fk001c
 typedef struct
 {
     uint16_t current_pcap;     // Node power cap requested by customer (AEM) in 1W units
@@ -264,11 +211,9 @@ typedef struct
     uint16_t system_pcap;      // Fixed node power cap required by the system in 1W units
     uint8_t  unthrottle;       // Only used on ITEs -- is indicated from CMM
     uint8_t  pcap_data_count;  // Used by OCC only.  Initialized to 0 and incremented by 1 with every new packet.
-} pcap_config_data_t;          
+} pcap_config_data_t;
 
-//*************************************************************************
 // Memory Throttle settings
-//*************************************************************************
 typedef struct
 {
     uint16_t    min_ot_n_per_mba;   //minimum value
@@ -280,41 +225,38 @@ typedef struct
     uint16_t    ovs_n_per_chip;     //chip setting for oversubscription
 } mem_throt_config_data_t;
 
-//*************************************************************************
 // Sys Config Structure
-//*************************************************************************
 
 // Needs to be 128 bytes aligned so we can do a DMA to transfer this to SRAM from
 // Main Memory.
 
-// One global structure which is the same in all OCCs 
+// One global structure which is the same in all OCCs
 
-// TODO: If we cannot dynamically change this structure and have it 
-// picked up by host boot & occ, then we will want to add reserved 
+// TODO: If we cannot dynamically change this structure and have it
+// picked up by host boot & occ, then we will want to add reserved
 // fields for each 'section' of the structure for future-proofing
 
-typedef struct 
+typedef struct
 {
-  // ------------------------------------  
+  // ------------------------------------
   // Identification & Debug Flags
-  // ------------------------------------  
-  
-  // Gives us a version number of this structure for ease of debug 
+  // ------------------------------------
+
+  // Gives us a version number of this structure for ease of debug
   uint8_t version;
 
   // Gives us a lot of debug flags that we can use to change OCC behavior
-  // at startup.  
+  // at startup.
   uint8_t debug_reserved[7];
 
 
 
-  // ------------------------------------ 
-  // System Configuration 
+  // ------------------------------------
+  // System Configuration
   // ------------------------------------
 
-  // Instead of system-type, lets try to send all system attributes 
+  // Instead of system-type, lets try to send all system attributes
   // that matter instead of having tables in OCC code.
-  // @at014a - start
   eSystemType system_type;  // OCC usage of this byte is TBD
 
   // Processor HUID - HUID for this OCC processor, used by OCC for processor error call out
@@ -328,49 +270,48 @@ typedef struct
 
   // DPSS HUID - Used by OCC for DPSS error call out
   uint64_t dpss_huid;
-  // @at014a - end
 
   // Contains how many OCCs & how many proc modules are present.
   uint8_t sys_num_proc_present;
-  
+
   // ------------------------------------
   // Max Frequency for each mode
   // ------------------------------------
-  freqConfig_t sys_mode_freq;   // @th040
+  freqConfig_t sys_mode_freq;
 
-  // ------------------------------------  
+  // ------------------------------------
   // APSS Configuration Data
   // ------------------------------------
-  
-  // Holds the gain/offset needed to translate from raw ADC to actual power 
+
+  // Holds the gain/offset needed to translate from raw ADC to actual power
   // measurements
   apssCalibrationData_t apss_cal[MAX_APSS_ADC_CHANNELS];
 
-  // Holds the mapping of GPIO signals to APSS pins 
+  // Holds the mapping of GPIO signals to APSS pins
   apssGpioPinData_t apss_gpio_map;
 
-  // Holds the mapping of ADC signals to APSS adc channels 
+  // Holds the mapping of ADC signals to APSS adc channels
   apssAdcChannelData_t apss_adc_map;
 
   // GPIO Port Mode
-  uint8_t apssGpioPortsMode[MAX_APSS_GPIO_PORTS];  // @at014a
+  uint8_t apssGpioPortsMode[MAX_APSS_GPIO_PORTS];
 
   // ------------------------------------
   // Power Cap Configuration Data updated by Slaves
   // ------------------------------------
-  pcap_config_data_t pcap;   // @th034
+  pcap_config_data_t pcap;
 
   // ------------------------------------
   // Master/Slave OCC Configuration Data
   // ------------------------------------
 
   // Information Needed to translate from PowerBus ID to PBAX Id (OCC Id)
-  //   - Index = Powerbus Id will get you PBAX Id as value at that index 
+  //   - Index = Powerbus Id will get you PBAX Id as value at that index
   //   - Example pob2pbax_chip[1] = 4; (PowerBus ID 001 = PBAX ID 100
   uint8_t pob2pbax_chip[MAX_NUM_OCC];
   uint8_t pob2pbax_node[MAX_NUM_NODES];
 
-  // Bitmask that states if OCC is present 
+  // Bitmask that states if OCC is present
   // (i.e. 0x11 = Chip_Id 000 & Chip_Id 100 are only OCCs present)
   uint8_t is_occ_present;
 
@@ -381,10 +322,10 @@ typedef struct
   // Oversubscription Configuration Data
   // ------------------------------------
   // If it's ITE or non-ITE (enabled:ITE, non-enalbe: non-ITE)
-  uint8_t failsafe_enabled;  // @at010a
+  uint8_t failsafe_enabled;
 
   // ppb_fmax as set by Master OCC.  Initialized to 0xFFFF
-  uint32_t master_ppb_fmax;   // @fk001a @at016c
+  uint32_t master_ppb_fmax;
 
   // --------------------------------------
   // HUID's for centaurs and dimms
@@ -399,60 +340,37 @@ typedef struct
 
 } occSysConfigData_t;  __attribute__ ((__aligned__ (128)))
 
-// @01a
 extern occSysConfigData_t G_sysConfigData;
 
 
-//*************************************************************************
-// End of Sys Config Structure
-//*************************************************************************
-
-//*************************************************************************
 // Individual OCC Config Structure
-//*************************************************************************
-
 // Needs to be 128 bytes aligned so we can do a DMA to transfer this to SRAM from
 // Main Memory.
 
 // One global structure per OCC (so there will be 8 up in main memory)
 
-// TODO: If we cannot dynamically change this structure and have it 
-// picked up by host boot & occ, then we will want to add reserved 
+// TODO: If we cannot dynamically change this structure and have it
+// picked up by host boot & occ, then we will want to add reserved
 // fields for each 'section' of the structure for future-proofing
 
-typedef struct 
+typedef struct
 {
-  int dummy;  // @th010 - Removed un-needed Pstate Structure
+  int dummy;
 
 } occModuleConfigData_t;  __attribute__ ((__aligned__ (128)))
 
-//*************************************************************************
-// End of Individual OCC Config Structure
-//*************************************************************************
-
-//*************************************************************************
-// Globals
-//*************************************************************************
 
 // Default PstateSuperStructure that can be used instead of TMGT provided one.
 extern const unsigned char G_defaultOccPstateSuperStructure[];
 
-// MASTER PCAP values.  @at013a, @fk001c
+// MASTER PCAP values.
 extern pcap_config_data_t G_master_pcap_data;
 
-//
+
 extern uint16_t    G_conn_oc_pins_bitmap;
 
-//*************************************************************************
-// Function Prototypes
-//*************************************************************************
-
-//*************************************************************************
-// Functions
-//*************************************************************************
 #ifdef FSPLESS_SIMICS
 void sysConfigFspLess(void);
-#endif 
+#endif
 
-/*****************************************************************************/
 #endif // _occ_sys_config_h

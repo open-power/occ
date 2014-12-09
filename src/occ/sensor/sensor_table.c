@@ -1,50 +1,36 @@
-/******************************************************************************
-// @file sensor_table.c
-// @brief OCC sensor pointer tables
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section sensor_table.c SENSOR_TABLE.C
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @th005             thallet   11/23/2011  Created
- *   @th00a             thallet   02/03/2012  Worst case FW timings in AMEC Sensors 
- *   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
- *   @pb00E             pbavari   03/11/2012  Added correct include file
- *   @ly001  853751     lychen    09/17/2012  Support DPS algorithm
- *   @th026  865074     thallet   12/21/2012  Updated Centaur sensors
- *   @jh005  894560     joshych   08/14/2013  Create call home data logs every 24 hours
- *   @gs015  905166     gjsilva   11/04/2013  Full support for IPS function
- *   @fk002  905632     fmkassem  11/05/2013  Remove CriticalPathMonitor code
- *   @gm013  907548     milesg    11/22/2013  Memory therm monitoring support
- *   @gs026  915840     gjsilva   02/13/2014  Support for Nvidia GPU power measurement
- *   @gs027  918066     gjsilva   03/12/2014  Misc functions from ARL
- *   @mw682  933716     mware     07/28/2014  Renamed MCPIFD to be NOTBZE and MCPIFI to be NOTFIN.
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/sensor/sensor_table.c $                               */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
+
  
-//*************************************************************************
-// Includes
-//*************************************************************************
 #include <sensor.h>           // sensor structure and other defines
-//@pb00Ec - changed from common.h to occ_common.h for ODE support
 #include <occ_common.h>           // For size_t needed by memset
 #include <amec_sys.h>         // For pointers to amec_sys_t structures
 #include <dcom.h>             // For mini-sensor pointers
 
-//*************************************************************************
-// Externs
-//*************************************************************************
 extern amec_sys_t g_amec_sys;
 
-//*************************************************************************
-// Macros
-//*************************************************************************
 // Will create an entry in the G_amec_sensor_list with a pointer at the sensor
 // index (gsid) passed in by "sensor"
 #define SENSOR_PTR(sensor,ptr) [sensor] = ptr
@@ -206,10 +192,6 @@ extern amec_sys_t g_amec_sys;
   [SENSOR_W_CENTAUR_NUM(sensor, 7, 0, 0)] = NULL, \
   [SENSOR_W_CENTAUR_NUM(sensor, 7, 0, 1)] = NULL 
 
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
-
 //****************************************************************************
 // Sensor Pointer Table
 // ----------------------
@@ -267,14 +249,14 @@ const sensor_ptr_t G_amec_sensor_list[] =
   // ------------------------------------------------------
   // Processor Sensors
   // ------------------------------------------------------
-  SENSOR_PTR( FREQA2MSP0,           &g_amec_sys.proc[0].freqa2ms),      // @mw624
+  SENSOR_PTR( FREQA2MSP0,           &g_amec_sys.proc[0].freqa2ms),      
   SENSOR_PTR( IPS2MSP0,             &g_amec_sys.proc[0].ips2ms),
   SENSOR_PTR( MEMSP2MSP0,           &g_amec_sys.proc[0].memsp2ms),
   SENSOR_PTR( PWR250USP0,           &g_amec_sys.proc[0].pwr250us),
   SENSOR_PTR( PWR250USVDD0,         &g_amec_sys.proc[0].pwr250usvdd),
   SENSOR_PTR( CUR250USVDD0,         &g_amec_sys.proc[0].cur250usvdd),
   SENSOR_PTR( PWR250USVCS0,         &g_amec_sys.proc[0].pwr250usvcs),
-  SENSOR_PTR( PWR250USMEM0,         &g_amec_sys.proc[0].pwr250usmem),   //TODO:  should this be P0 or just 0
+  SENSOR_PTR( PWR250USMEM0,         &g_amec_sys.proc[0].pwr250usmem),   
   SENSOR_PTR( SLEEPCNT2MSP0,        &g_amec_sys.proc[0].sleepcnt2ms),
   SENSOR_PTR( WINKCNT2MSP0,         &g_amec_sys.proc[0].winkcnt2ms),
   SENSOR_PTR( SP250USP0,            &g_amec_sys.proc[0].sp250us),
@@ -287,9 +269,8 @@ const sensor_ptr_t G_amec_sensor_list[] =
   // ------------------------------------------------------
   // Core Sensors (12 of each)
   // ------------------------------------------------------
-//  CORE_SENSOR_PTRS( CPM2MSP0C ,     &g_amec_sys.proc[0].core, cpm2ms),  //CPM - Commented out as requested by Malcolm
   CORE_SENSOR_PTRS( FREQ250USP0C ,  &g_amec_sys.proc[0].core, freq250us),
-  CORE_SENSOR_PTRS( FREQA2MSP0C ,   &g_amec_sys.proc[0].core, freqa2ms),   // @mw624
+  CORE_SENSOR_PTRS( FREQA2MSP0C ,   &g_amec_sys.proc[0].core, freqa2ms), 
   CORE_SENSOR_PTRS( IPS2MSP0C ,     &g_amec_sys.proc[0].core, ips2ms),
   CORE_SENSOR_PTRS( NOTBZE2MSP0C ,  &g_amec_sys.proc[0].core, mcpifd2ms),
   CORE_SENSOR_PTRS( NOTFIN2MSP0C ,  &g_amec_sys.proc[0].core, mcpifi2ms),
@@ -340,7 +321,6 @@ const sensor_ptr_t G_amec_sensor_list[] =
   SENSOR_PTR( VOLT250USP0V0,        &g_amec_sys.proc[0].vrm[0].volt250us),
   SENSOR_PTR( VOLT250USP0V1,        &g_amec_sys.proc[0].vrm[1].volt250us),
 
-  // @ly001a - start
   // ------------------------------------------------------
   // Partition Sensors
   // ------------------------------------------------------
@@ -356,7 +336,6 @@ const sensor_ptr_t G_amec_sensor_list[] =
   SENSOR_PTR( UTIL2MSSLCG009,       &g_amec_sys.part_config.part_list[9].util2msslack),
   SENSOR_PTR( UTIL2MSSLCG010,       &g_amec_sys.part_config.part_list[10].util2msslack),
   SENSOR_PTR( UTIL2MSSLCG011,       &g_amec_sys.part_config.part_list[11].util2msslack),
-  // @ly001a - end
 
 };
 STATIC_ASSERT(   (NUMBER_OF_SENSORS_IN_LIST != (sizeof(G_amec_sensor_list)/sizeof(sensor_ptr_t)))   );
@@ -422,29 +401,28 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   // ------------------------------------------------------
   // Processor Sensors
   // ------------------------------------------------------
-  MINI_SENSOR_PTR(     FREQA2MSP0,  &G_dcom_slv_outbox_tx.freqa2msp0),  // @mw624
-  MINI_SENSOR_PTR(       IPS2MSP0,  &G_dcom_slv_outbox_tx.ips2msp0),  // @jh005c
+  MINI_SENSOR_PTR(     FREQA2MSP0,  &G_dcom_slv_outbox_tx.freqa2msp0),  
+  MINI_SENSOR_PTR(       IPS2MSP0,  &G_dcom_slv_outbox_tx.ips2msp0),  
   MINI_SENSOR_PTR(     MEMSP2MSP0,  NULL),
   MINI_SENSOR_PTR(     PWR250USP0,  &G_dcom_slv_outbox_tx.pwr250usp0),
   MINI_SENSOR_PTR(   PWR250USVDD0,  NULL),
   MINI_SENSOR_PTR(   CUR250USVDD0,  NULL),
   MINI_SENSOR_PTR(   PWR250USVCS0,  NULL),
-  MINI_SENSOR_PTR(   PWR250USMEM0,  &G_dcom_slv_outbox_tx.pwr250usmemp0),   //TODO:  should this be P0 or just 0
+  MINI_SENSOR_PTR(   PWR250USMEM0,  &G_dcom_slv_outbox_tx.pwr250usmemp0), 
   MINI_SENSOR_PTR(  SLEEPCNT2MSP0,  &G_dcom_slv_outbox_tx.sleepcnt2msp0),
   MINI_SENSOR_PTR(   WINKCNT2MSP0,  &G_dcom_slv_outbox_tx.winkcnt2msp0),
   MINI_SENSOR_PTR(      SP250USP0,  NULL),
   MINI_SENSOR_PTR(      TEMP2MSP0,  &G_dcom_slv_outbox_tx.temp2msp0),
   MINI_SENSOR_PTR(  TEMP2MSP0PEAK,  &G_dcom_slv_outbox_tx.temp2msp0peak),
-  MINI_SENSOR_PTR(      UTIL2MSP0,  &G_dcom_slv_outbox_tx.util2msp0), // @jh005c
+  MINI_SENSOR_PTR(      UTIL2MSP0,  &G_dcom_slv_outbox_tx.util2msp0), 
   MINI_SENSOR_PTR( VRFAN250USPROC,  &G_dcom_slv_outbox_tx.vrfan250usproc),
   MINI_SENSOR_PTR( VRHOT250USPROC,  NULL),
 
   // ------------------------------------------------------
   // Core Sensors (12 of each)
   // ------------------------------------------------------
-//  CORE_MINI_SENSOR_PTRS_NULL(     CPM2MSP0C ),  //CPM - Commented out as requested by Malcolm
   CORE_MINI_SENSOR_PTRS_NULL(  FREQ250USP0C ),
-  CORE_MINI_SENSOR_PTRS_NULL(   FREQA2MSP0C ),  // @mw624
+  CORE_MINI_SENSOR_PTRS_NULL(   FREQA2MSP0C ),
   CORE_MINI_SENSOR_PTRS(          IPS2MSP0C, &G_dcom_slv_outbox_tx.ips2msp0cy    ),
   CORE_MINI_SENSOR_PTRS(       NOTBZE2MSP0C, &G_dcom_slv_outbox_tx.mcpifd2msp0cy ),
   CORE_MINI_SENSOR_PTRS(       NOTFIN2MSP0C, &G_dcom_slv_outbox_tx.mcpifi2msp0cy ),
@@ -480,8 +458,8 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   PORTPAIR_MINI_SENSOR_PTRS_NULL(M4RD2MSP0M), 
   PORTPAIR_MINI_SENSOR_PTRS_NULL(M4WR2MSP0M), 
 
-  MINI_SENSOR_PTR( TEMP2MSCENT,     &G_dcom_slv_outbox_tx.temp2mscent), // @jh005c
-  MINI_SENSOR_PTR( TEMP2MSDIMM,     &G_dcom_slv_outbox_tx.temp2msdimm), // @jh005c
+  MINI_SENSOR_PTR( TEMP2MSCENT,     &G_dcom_slv_outbox_tx.temp2mscent), 
+  MINI_SENSOR_PTR( TEMP2MSDIMM,     &G_dcom_slv_outbox_tx.temp2msdimm), 
   MINI_SENSOR_PTR( MEMSP2MS,        NULL),      
 
   // ------------------------------------------------------
@@ -492,7 +470,6 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   MINI_SENSOR_PTR(  VOLT250USP0V0,  NULL),
   MINI_SENSOR_PTR(  VOLT250USP0V1,  NULL),
 
-  // @ly001a - start
   // ------------------------------------------------------
   // Partition Sensors
   // ------------------------------------------------------
@@ -508,23 +485,8 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   MINI_SENSOR_PTR( UTIL2MSSLCG009,  NULL),
   MINI_SENSOR_PTR( UTIL2MSSLCG010,  NULL),
   MINI_SENSOR_PTR( UTIL2MSSLCG011,  NULL),
-  // @ly001a - end
 };  
 STATIC_ASSERT(   (NUMBER_OF_SENSORS_IN_LIST != (sizeof(G_amec_mini_sensor_list)/sizeof(uint16_t *)))   );
 STATIC_ASSERT(   (MAX_AMEC_SENSORS < (sizeof(G_amec_mini_sensor_list)/sizeof(uint16_t *)))   );
 
-//*************************************************************************
-// Structures
-//*************************************************************************
 
-//*************************************************************************
-// Globals
-//*************************************************************************
-
-//*************************************************************************
-// Function Prototypes
-//*************************************************************************
-
-//*************************************************************************
-// Functions
-//*************************************************************************

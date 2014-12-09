@@ -1,28 +1,28 @@
-/******************************************************************************
-// @file reset.c
-// @brief OCC Reset States
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section reset.c reset.C
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @th011             thallet   07/16/2012  New file
- *   @th042   892056    thallet   07/19/2013  Send OCC to safe mode if first APSS GPE fails
- *   @th046  894648     thallet   08/08/2013  Piggyback a 1-liner on the coreq fix
- *   @jh00b  910184     joshych   01/10/2014  Add check for checkstop
- *   @gm028  911670     milesg    02/27/2014  Immediate safe mode on checkstop
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/reset.c $                                             */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
-//*************************************************************************
-// Includes
-//*************************************************************************
 #include <occ_common.h>
 #include <common_types.h>
 #include "ssx_io.h"
@@ -31,48 +31,19 @@
 #include "state.h"
 #include "dcom.h"
 
-//*************************************************************************
-// Externs
-//*************************************************************************
-
-//*************************************************************************
-// Macros
-//*************************************************************************
-
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
-
-//*************************************************************************
-// Structures
-//*************************************************************************
-
-//*************************************************************************
-// Forward Declarations
-//*************************************************************************
-
-//*************************************************************************
-// Globals
-//*************************************************************************
 // Holds the state of the reset state machine
 uint8_t G_reset_state = RESET_NOT_REQUESTED;
 
 // Flag indicating if we should halt on a reset request, or if we should
 // enter the reset state machine.  Default this to false
-bool G_halt_on_reset_request = FALSE;   // @th042
+bool G_halt_on_reset_request = FALSE;
 
-
-//*************************************************************************
-// Functions
-//*************************************************************************
 
 // Function Specification
 //
 // Name: reset_disable_halt
 //
 // Description: Clear Flag that indicates if OCC should call halt
-//
-// Flow:  10/25/11    FN=task_reset_state_machine
 //
 // End Function Specification
 inline void reset_disable_halt(void)
@@ -87,8 +58,6 @@ inline void reset_disable_halt(void)
 //
 // Description: Helper function for determining if we should go to safe state
 //
-// Flow:  --/--/--    FN=
-//
 // End Function Specification
 bool isSafeStateRequested(void)
 {
@@ -100,29 +69,27 @@ bool isSafeStateRequested(void)
 //
 // Name: reset_state_request
 //
-// Description: Request Reset States 
-//
-// Flow:  10/25/11    FN=task_reset_state_machine
+// Description: Request Reset States
 //
 // End Function Specification
 void reset_state_request(uint8_t i_request)
 {
-  //TODO:  This needs to be changed so that G_reset_state operations are 
+  //TODO:  This needs to be changed so that G_reset_state operations are
   // atomic.
 
   switch(i_request)
   {
     case RESET_REQUESTED_DUE_TO_ERROR:
-      // In case we want to just halt() if fw requests a reset, this is 
+      // In case we want to just halt() if fw requests a reset, this is
       // the place to do it.  It is disabled by default, and there is no
       // code to eanble it.
       if( G_halt_on_reset_request )
       {
           TRAC_ERR("Halt()");
-          
+
           // This isn't modeled very well in simics.  OCC will go into an
           // infinite loop, which eventually would crash Simics.
-          HALT_WITH_FIR_SET; 
+          HALT_WITH_FIR_SET;
       }
 
       // If we have TMGT comm, and we aren't already in reset, set the reset
@@ -132,12 +99,12 @@ void reset_state_request(uint8_t i_request)
         TRAC_ERR("Resetting via Reset State Machine");
 
         G_reset_state = RESET_REQUESTED_DUE_TO_ERROR;
-        
+
         // Post the semaphore to wakeup the thread that
         // will put us into SAFE state.
-        ssx_semaphore_post(&G_dcomThreadWakeupSem);  // @th042 
+        ssx_semaphore_post(&G_dcomThreadWakeupSem);
 
-        // Set RTL Flags here too, depending how urgent it is that we stop 
+        // Set RTL Flags here too, depending how urgent it is that we stop
         // running tasks.
         rtl_set_run_mask(RTL_FLAG_RST_REQ);
       }
@@ -179,10 +146,8 @@ void reset_state_request(uint8_t i_request)
 //
 // Description: Check for checkstop
 //
-// Flow:             FN=task_check_for_checkstop
-// 
 // End Function Specification
-void task_check_for_checkstop(task_t *i_self) // @jh00bc
+void task_check_for_checkstop(task_t *i_self)
 {
     pore_status_t l_gpe0_status;
     static bool L_gpe_halt_traced = FALSE;
