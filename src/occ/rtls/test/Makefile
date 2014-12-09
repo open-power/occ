@@ -1,26 +1,28 @@
-# $Id$
-
-#  @file Makefile
+# IBM_PROLOG_BEGIN_TAG
+# This is an automatically generated prolog.
 #
-#  @brief Makefile occ application
+# $Source: src/occ/rtls/test/Makefile $
 #
-
-#  @page ChangeLogs Change Logs
-#  @section Makefile
-#  @verbatim
+# OpenPOWER OnChipController Project
+#
+# Contributors Listed Below - COPYRIGHT 2011,2014
+# [+] Google Inc.
+# [+] International Business Machines Corp.
 #
 #
-# Change Log ******************************************************************
-# Flag     Defect/Feature  User        Date         Description
-# ------   --------------  ----------  ------------ -----------
-#                          np, dw      08/10/2011   created by nguyenp & dwoodham
-#                                                   borrowed from occ/thread/test/app.mk
-#  @dw000                  dwoodham    12/13/2011   compile with applet header & ID
-#  @rc003                  rickylie    02/03/2012   Verify & Clean Up OCC Headers & Comments
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# @endverbatim
+# http://www.apache.org/licenses/LICENSE-2.0
 #
-# Note: This compiles the _local_ test copy of rtls_tables.c, _NOT_ the production copy.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# permissions and limitations under the License.
+#
+# IBM_PROLOG_END_TAG
 
 rtlstest_CFILES = \
         ../../common.c \
@@ -43,16 +45,6 @@ APP_INCLUDES += -I../../aplt/incl
 APP_INCLUDES += -I. 
 
 D = -DOCC_FIRMWARE=1
-
-#D = -DVERIFICATION=1 \
-    -DSSX_STACK_CHECK=0 \
-    -DINITIALIZE_PMC=0 \
-    -DINITIALIZE_SIMICS_IO=0 \
-    -DINITIALIZE_RTX_IO=1 \
-    -DINITIALIZE_PBA=1 \
-    -DSIMICS_MAGIC_PANIC=1 \
-    -DSSX_KERNEL_TRACE_ENABLE=1
-
 
 SOURCES = ${all_cfiles} 
 MODE    = validation

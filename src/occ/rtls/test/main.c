@@ -1,26 +1,28 @@
-/******************************************************************************
-// @file main.c
-// @brief OCC RTLS COMPONENT TEST MAIN FUNCTION
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _main_c main.c
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *                      np, dw    08/10/2011  created by nguyenp & dwoodham
- *   @dw000             dwoodham  12/12/2011  Update call to IMAGE_HEADER
- *   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
- *
- *  @endverbatim
- *
- *///*************************************************************************/
- 
-//*************************************************************************
-// Includes
-//************************************************************************* 
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/rtls/test/main.c $                                    */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
+
 #include "ssx.h"
 #include "ssx_io.h"
 #include "simics_stdio.h"
@@ -28,46 +30,15 @@
 #include <errl.h>
 #include <rand.h>
 #include <rtls.h>
-#include <appletId.h>  // For applet ID @dw000a
+#include <appletId.h>  // For applet ID
 
-
-/** \mainpage OCC Overview
- *
- * Some general info.
- *
- * This manual is divided in the following sections:
- * - \subpage Timer
- */
-
-//*************************************************************************
-// Externs
-//*************************************************************************
 extern void __ssx_boot;
 
-//*************************************************************************
-// Image Header
-//*************************************************************************
-// @dw000c
 IMAGE_HEADER (G_mainAppImageHdr,__ssx_boot,MAIN_APP_ID,OCC_APLT_TEST);
 
-//*************************************************************************
-// Macros
-//*************************************************************************
+// Period in which to run #timer_routine
+#define TIMER_INTERVAL (SsxInterval) SSX_MICROSECONDS(5000)
 
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
-/// Period in which to run #timer_routine
-#define TIMER_INTERVAL (SsxInterval) SSX_MICROSECONDS(5000) 
-
-/*----------------------------------------------------------------------------*/
-/* SsxSemaphore Declarations                                                  */
-/*----------------------------------------------------------------------------*/
-
-
-/*----------------------------------------------------------------------------*/
-/* Globals                                                                    */
-/*----------------------------------------------------------------------------*/
 int g_j = 0;
 int g_k = 0;
 
@@ -97,29 +68,9 @@ uint8_t noncritical_stack[NONCRITICAL_STACK_SIZE];
 uint8_t critical_stack[CRITICAL_STACK_SIZE];
 uint8_t test_thread_stack[THREAD_STACK_SIZE];
 
-
-/*----------------------------------------------------------------------------*/
-/* Threads                                                                    */
-/*----------------------------------------------------------------------------*/
 SsxThread test_thread;
-
-
-/*----------------------------------------------------------------------------*/
-/* Timers                                                                     */
-/*----------------------------------------------------------------------------*/
 SsxTimer G_test_timer;
 
-//*************************************************************************
-// Structures
-//*************************************************************************
-
-//*************************************************************************
-// Globals
-//*************************************************************************
-
-//*************************************************************************
-// Function Prototypes
-//*************************************************************************
 // Inits the IRQ handler.
 extern void rtl_ocb_init( void );
 
@@ -155,21 +106,15 @@ void test_thread_routine(void *private);
 // The main routine.
 int main(int argc, char **argv);
 
-//*************************************************************************
-// Functions
-//*************************************************************************
-
 // Function Specification
 //
 // Name: rtl_run_max_ticks
 //
-// Description: 
+// Description:
 // Run the RTLS IRQ handler for at least MAX_NUM_TICKS, then stop.
 // Note: This function does not guarantee that the IRQ handler will run for
 // exactly MAX_NUM_TICKS ticks.  It does guarantee that the IRQ handler will
 // run for _at_least_ MAX_NUM_TICKS ticks (but could run for more).
-//
-// Flow:  08/09/11    FN=rtl_scheduler.odt
 //
 // End Function Specification
 
@@ -215,10 +160,8 @@ int rtl_run_max_ticks(void)
 //
 // Name: clear_task_data_bufs
 //
-// Description: 
+// Description:
 // Utility clears the data buffers in all tasks in the global task table.
-//
-// Flow:  08/09/11    FN=rtl_scheduler.odt
 //
 // End Function Specification
 
@@ -236,11 +179,9 @@ void clear_task_data_bufs(void)
 //
 // Name: clear_task_flags
 //
-// Description: 
+// Description:
 // Utility clears the flags in all tasks in the global task table.
 // Note: This sets all task flags to 0.
-//
-// Flow:  08/09/11    FN=rtl_scheduler.odt
 //
 // End Function Specification
 
@@ -253,16 +194,13 @@ void clear_task_flags(void)
     }
 }
 
-
 // Function Specification
 //
 // Name: write_task_flags
 //
-// Description: 
+// Description:
 // Utility writes the flags in the specified task to the specified value.
 // Note: This overwrites the prior flags value for the given task.
-//
-// Flow:  08/09/11    FN=rtl_scheduler.odt
 //
 // End Function Specification
 
@@ -281,11 +219,9 @@ void write_task_flags(task_id_t i_task_id, uint32_t new_flags)
 //
 // Name: dump_global_state
 //
-// Description: 
+// Description:
 // Utility to dump flags & data for all tasks in G_task_table, along with
 // the current values of G_run_mask and CURRENT_TICK.
-//
-// Flow:  08/09/11    FN=rtl_scheduler.odt
 //
 // End Function Specification
 
@@ -298,7 +234,6 @@ void dump_global_state(void)
         printf("  TASK_ID_%02d : flags [0x%08x] ; data_p [0x%p] ; data [0x%08x]\n", \
                 i, G_task_table[i].flags, G_task_table[i].data_ptr, *((uint32_t *)(G_task_table[i].data_ptr)) );
     }
-
     printf("\n");
 }
 
@@ -307,10 +242,8 @@ void dump_global_state(void)
 //
 // Name: test_1
 //
-// Description: 
+// Description:
 // This test is to stop ocb timer after complete 1 loop
-//
-// Flow:  08/09/11    FN=rtl_scheduler.odt
 //
 // End Function Specification
 
@@ -333,37 +266,32 @@ void test_1()
 //
 // Name: test_2
 //
-// Description: 
+// Description:
 // This test to set and clear the global run mask interfaces
 //
-// Flow:  08/09/11    FN=rtl_scheduler.odt
-//
 // End Function Specification
-
 void test_2()
 {
-        // Announce which test is running.
-        printf("\ntest_2:\n");
+    // Announce which test is running.
+    printf("\ntest_2:\n");
 
-	//test rtl_set_run_mask() interface
-	G_run_mask = 0x00000000;
-	printf("  Test_2_1: G_run_mask = 0x%08x before setting\n", G_run_mask);
+    //test rtl_set_run_mask() interface
+    G_run_mask = 0x00000000;
+    printf("  Test_2_1: G_run_mask = 0x%08x before setting\n", G_run_mask);
 
-	rtl_set_run_mask( RTL_FLAG_ACTIVE | RTL_FLAG_OBS );
-	printf("  Test_2_2: G_run_mask = 0x%08x after setting\n", G_run_mask);
+    rtl_set_run_mask( RTL_FLAG_ACTIVE | RTL_FLAG_OBS );
+    printf("  Test_2_2: G_run_mask = 0x%08x after setting\n", G_run_mask);
 
+    //test rtl_clr_run_mask() interface
+    G_run_mask = RTL_FLAG_MSTR | RTL_FLAG_NOTMSTR | RTL_FLAG_ACTIVE |
+                 RTL_FLAG_OBS | RTL_FLAG_RST_REQ |RTL_FLAG_NO_APSS ;
+    printf("  Test_2_3: G_run_mask = 0x%08x before clearing\n", G_run_mask);
 
-	//test rtl_clr_run_mask() interface
-	G_run_mask = RTL_FLAG_MSTR | RTL_FLAG_NOTMSTR | RTL_FLAG_ACTIVE | 
-			RTL_FLAG_OBS | RTL_FLAG_RST_REQ |RTL_FLAG_NO_APSS ;
-        printf("  Test_2_3: G_run_mask = 0x%08x before clearing\n", G_run_mask);
+    rtl_clr_run_mask( RTL_FLAG_ACTIVE | RTL_FLAG_OBS );
+    printf("  Test_2_4: G_run_mask = 0x%08x after clearing\n", G_run_mask);
 
-        rtl_clr_run_mask( RTL_FLAG_ACTIVE | RTL_FLAG_OBS );
-        printf("  Test_2_4: G_run_mask = 0x%08x after clearing\n", G_run_mask);
-
-	return;
+    return;
 }
-
 
 // Function Specification
 //
@@ -372,10 +300,7 @@ void test_2()
 // Description: Tests the global & task run flags, including the API that
 // reads & writes these flags.
 //
-// Flow:  08/09/11    FN=rtl_scheduler.odt
-//
 // End Function Specification
-
 void test_flags_api(void)
 {
     int i = 0;  // Counter
@@ -400,36 +325,41 @@ void test_flags_api(void)
 
     // Set 1/2 the tasks to run w/same mask as global, and the other 1/2 of the
     // tasks to run w/opposite mask from the global.
-    for (i = 0; i < TASK_END; i++) {
+    for (i = 0; i < TASK_END; i++)
+    {
         // Use i as i_task_id
-
-        if (i % 2) {
+        if (i % 2)
+        {
             // Task ID is odd
             write_task_flags((task_id_t) i, l_odd_run_mask);
         }
-        else {
+        else
+        {
             // Task ID is even
             write_task_flags((task_id_t) i, l_even_run_mask);
         }
     }
 
     // Use API to set all tasks as runnable.
-    for (i = 0; i < TASK_END; i++) {
-
+    for (i = 0; i < TASK_END; i++)
+    {
         rtl_start_task((task_id_t) i);
     }
 
-    // Use API to check which tasks are runnable.  
+    // Use API to check which tasks are runnable.
     // Expect all tasks to report as runnable.
     printf("  Before IRQ enable.  Using \'odd\' global mask.\n");
     printf("  Expect: All tasks report as runnable.\n");
     printf("  Actual: Tasks reporting as runnable: ");
 
-    for (i = 0; i < TASK_END; i++) {
-
+    for (i = 0; i < TASK_END; i++)
+    {
         l_result = rtl_task_is_runnable((task_id_t) i);
 
-        if (l_result) { printf("%d ", i); }
+        if (l_result)
+        {
+            printf("%d ", i);
+        }
     }
     printf("\n");
     dump_global_state();
@@ -483,8 +413,6 @@ void test_flags_api(void)
 //
 // Description: Tests the API function that indicates a task is NOT ready
 // to run: 'rtl_stop_task'.
-//
-// Flow:  08/09/11    FN=rtl_scheduler.odt
 //
 // End Function Specification
 
@@ -557,8 +485,6 @@ void test_task_stop_api(void)
 //
 // Description: Tests the API function that assigns a new data buffer to a
 // task in the global task list: 'rtl_set_task_data'.
-//
-// Flow:  08/09/11    FN=rtl_scheduler.odt
 //
 // End Function Specification
 
@@ -651,13 +577,11 @@ void test_set_data_api(void)
 //
 // Name: test_thread_routine
 //
-// Description: 
+// Description:
 // We run our tests in a thread so that, when a test re-enables the OCB timer for the RTLS,
 // the timer will actually interrupt the test, and run until it hits MAX_NUM_TICKS and
 // is re-disabled.  At that point, the test resumes its activity and dumps the results
 // of the RTLS IRQ's operation.
-//
-// Flow:  08/09/11    FN=rtl_scheduler.odt
 //
 // End Function Specification
 
@@ -674,7 +598,6 @@ void test_thread_routine(void *private)
     // ssx_irq_enable( PGP_IRQ_OCC_TIMER0 );
 }
 
-
 // Function Specification
 //
 // Name: main
@@ -682,13 +605,11 @@ void test_thread_routine(void *private)
 // Description: Entry point for running our tests.
 // Sets up our OCB timer and our test thread, then kicks them both off.
 //
-// Flow:  08/09/11    FN=rtl_scheduler.odt
-//
 // End Function Specification
 
 int main(int argc, char **argv)
 {
-    // Initialize Trace Buffers immediately, so they can be used 
+    // Initialize Trace Buffers immediately, so they can be used
     // from this point on.
 
     // Initialize stdout so we can do printf from within simics env
@@ -699,21 +620,21 @@ int main(int argc, char **argv)
 
     // Initialize SSX Stacks (note that this also reinitializes the time base to 0)
     ssx_initialize((SsxAddress)noncritical_stack, NONCRITICAL_STACK_SIZE,
-		   (SsxAddress)critical_stack, CRITICAL_STACK_SIZE,
-		   0);
+           (SsxAddress)critical_stack, CRITICAL_STACK_SIZE,
+           0);
 
     // Create our test thread
-    ssx_thread_create(&test_thread,  // thread control block (struct)
-                      test_thread_routine,  // thread function
-                      (void *)0,  // thread function arg
-                      (SsxAddress)test_thread_stack,  // stack to use for this thread
-                      THREAD_STACK_SIZE,  // size of this thread's stack
-                      THREAD_PRIORITY_0);  // this thread's priority (0 is highest)
+    ssx_thread_create(&test_thread,                 // Thread control block (struct)
+                      test_thread_routine,          // Thread function
+                      (void *)0,                    // Thread function arg
+                      (SsxAddress)test_thread_stack,// Stack to use for this thread
+                      THREAD_STACK_SIZE,            // Size of this thread's stack
+                      THREAD_PRIORITY_0);           // This thread's priority (0 is highest)
 
     // Make the test thread runnable
     ssx_thread_resume(&test_thread);
 
-    // start rtl code
+    // Start rtl code
     rtl_ocb_init();
 
     // Stop the interrupt handler and initialize CURRENT_TICK (just in case).
