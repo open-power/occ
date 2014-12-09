@@ -79,13 +79,6 @@ include $(SSXDIR)/ssxssxfiles.mk
 include $(PPC405)/ssxppc405files.mk
 include $(LIB)/libgpefiles.mk
 
-# Disable this for GNU builds
-# - If it's for OCC_FIRMWARE and non-PGAS_PPC build, the library gpefiles needs to be taken out of libssx.a
-#all_gpefiles += $(if $(filter -DOCC_FIRMWARE=1,$(DEFS)),\
-#                     $(if $(PGAS_PPC),,${addprefix ../lib/,${LIB_PSOBJECTS}}),\
-#                     )
-#
-# Use this instead:
 all_gpefiles += ${addprefix ../lib/,${LIB_PSOBJECTS}}
 
 GPE_OBJECTS = ${all_gpefiles}
@@ -125,18 +118,6 @@ GCC-DEFS += $(D)
 #*******************************************************************************
 # compilation
 #*******************************************************************************
-ifdef GCOV_CODE_COVERAGE
-${occ_cfiles}: CFLAGS += -fprofile-arcs -ftest-coverage
-endif
-
-# Disable for GNU builds
-#ifdef PGAS_PPC
-#all: $(OBJECTS) libssx.a
-#	$(MAKE) -w -C $(PGP) DEFS="$(DEFS)" -e
-#	$(CPP) -P $(DEFS) < $(OCC)/linkocc.cmd > linkscript
-#	$(LD) $(OBJECTS)  \
-#	-Tlinkscript $(LDFLAGS) $(LDARGS) -Map $(APP).map -Bstatic -o $(APP).out
-#else
 
 # Use complex method for linking pore and PPC objects
 all: $(OBJECTS) libssx.a
@@ -155,9 +136,6 @@ all: $(OBJECTS) libssx.a
 # Insert gpe binary to occ
 #   Don't link with -zmuldefs here so we get an error if PORE symbols
 #   clash with PowerPC ones.
-# $(OCC_OBJECTS) does nothing
-#	$(LD) -o occ_1.out $(OCC_OBJECTS) -R gpe_1.out \
-#	  -Tlinkscript $(LDFLAGS) $(LDARGS) -Map occ_1.map -Bstatic -b binary gpe_1.bin
 	$(LD) -o occ_1.out -R gpe_1.out \
 	  -Tlinkscript $(LDFLAGS) $(LDARGS) -Map occ_1.map -Bstatic -b binary gpe_1.bin
         # Find the address of gpe binary and create gpe binary with symbols relocated
@@ -173,17 +151,12 @@ all: $(OBJECTS) libssx.a
         # Insert the gpe binary to occ and relocate the symbols in occ
         #   Create gep_2.out that is used by OCC_OBJECTS to relocate the symboles in occ
         #   so we have all symboles relocated in both OCC_OBJECTS and gpe.bin
-# Add noinhibit
 	pore_base=`nm occ_1.out | grep _binary_gpe_1_bin_start | sed -e s', .*,,'`;$(PORE-LD) -o gpe_2.out \
 	  $(GPE_OBJECTS) -Ttext $$pore_base --no-warn-mismatch --accept-unknown-input-arch -noinhibit-exec -Map gpe_2.map -e 0
 
-# $(OCC_OBJECTS) does nothing
-#	$(LD) -o occ.out  $(OCC_OBJECTS) -R gpe_2.out \
-#	  -Tlinkscript $(LDFLAGS) $(LDARGS)  -Map occ.map -Bstatic -b binary gpe.bin
 	$(LD) -o occ.out -R gpe_2.out \
 	  -Tlinkscript $(LDFLAGS) $(LDARGS)  -Map occ.map -Bstatic -b binary gpe.bin
 
-#endif
 # Specify source object format as elf32-powerpc
 	$(OBJCOPY) -I elf32-powerpc -O binary $(APP).out $(APP).bin
 	$(OBJDUMP) -D $(APP).out > $(APP).dis

@@ -835,7 +835,7 @@ void setErrlActions(errlHndl_t io_err, const uint8_t i_mask)
     }
 }
 
-
+// TODO: Cleanup this function.
 // Function Specification
 //
 // Name:  hexDumpLog

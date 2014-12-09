@@ -54,7 +54,7 @@ SsxTimer timer;
 /// Our idle thread.  See #main_thread_routine
 SsxThread main_thread;
 
-/// TODO: Goes away due to Bishop's device driver layer
+/// TODO: Goes away due to device driver layer
 SsxThread prcd_thread;
 
 /*----------------------------------------------------------------------------*/

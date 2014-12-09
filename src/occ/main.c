@@ -54,10 +54,6 @@
 #include <thrm_thread.h>
 #include "scom.h"
 
-#ifdef GCOV_CODE_COVERAGE
-#include "gcov.h"
-#endif
-
 extern void __ssx_boot;
 extern uint32_t G_occ_phantom_critical_count;
 extern uint32_t G_occ_phantom_noncritical_count;
@@ -483,13 +479,6 @@ void master_occ_init()
     errlHndl_t l_errl = NULL;
 
     // Initialize APSS
-    // TODO: Verify
-    // ifdef apss_initialize call temporary
-    // until Bishop's simics model and Steve's simics model
-    // are synced. Bishop's model does not have apss support
-    // Steve's model does not have latest changes Bishop
-    // made for ssx. To make latest svn code usable for testing
-    // ifdef apss_initialize call
     runApplet(OCC_APLT_APSS_INIT,   // Applet enum Name
             NULL,                 // Applet arguments
             TRUE,                 // Blocking call?
@@ -937,11 +926,6 @@ int main(int argc, char **argv)
     stdout = (FILE *)(&G_simics_stdout);
     stderr = (FILE *)(&G_simics_stderr);
     ssxout = (FILE *)(&G_simics_stdout);
-#endif
-
-#ifdef GCOV_CODE_COVERAGE
-    extern void gcov_entry();
-    gcov_entry();
 #endif
 
     // Initialize SSX Stacks
