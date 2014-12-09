@@ -1,43 +1,31 @@
-/******************************************************************************
-// @file dcomSlaveTx.c
-// @brief Slave OCC to Master OCC communication handler
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section dcomSlaveTx.c DCOMSLAVETX.C
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @00                abagepa   10/10/2011  Created
- *   @th002             thallet   11/01/2011  Misc Changes for Nov 1st Milestone
- *   @th005             thallet   11/23/2011  Added STATIC_ASSERT checks
- *   @01                tapiar    11/12/2011  Stage 3 updates
- *   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
- *   @nh001             neilhsu   05/23/2012  Add missing error log tags
- *   @th010             thallet   07/11/2012  Pstate Enablement`
- *   @th022             thallet   10/08/2012  Changes for OCC Comm
- *   @rt001  897459     tapiar    08/19/2013  Upd: save active node pcap from doorbell
- *   @gm014  907707     milesg    12/05/2013  don't panic on pbax_send timeout failures
- *   @rt004  908817     tapiar    12/11/2013  Save of valid pcap field so master can use it
- *   @sb003  908290     sbroyles  12/18/2013  Test BCE request states
- *   @sb013  911625     sbroyles  01/15/2014  Fix to 908290 changes
- *   @wb001  919163     wilbryan  03/06/2014  Updating error call outs, descriptions, and severities
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/dcom/dcomSlaveTx.c $                                  */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
 #ifndef _DCOMSLAVETX_C
 #define _DCOMSLAVETX_C
 
-/** \defgroup Slave to Master Communication
- *
- */
-
-//*************************************************************************
-// Includes
-//*************************************************************************
 #include <pgp_pmc.h>
 #include "pgp_pba.h"
 #include <rtls.h>
@@ -47,27 +35,7 @@
 #include <occ_service_codes.h>
 #include <trac.h>
 #include <proc_pstate.h>
-#include <amec_sys.h>   // @rt001a
-
-//*************************************************************************
-// Externs
-//*************************************************************************
-
-//*************************************************************************
-// Macros
-//*************************************************************************
-
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
-
-//*************************************************************************
-// Structures
-//*************************************************************************
-
-//*************************************************************************
-// Globals
-//*************************************************************************
+#include <amec_sys.h>
 
 // SSX Block Copy Request for the Slave Outbox Transmit Queue
 BceRequest G_slv_outbox_tx_pba_request;
@@ -77,20 +45,11 @@ PbaxRequest G_pbax_unicast_request;
 
 // Used by the slave to house the doorbell data that is sent in
 // the slave unicast doorbell, stating that it put slave outbox in main memory.
-// *
 dcom_slv_outbox_doorbell_t G_dcom_slv_outbox_doorbell_tx;
 
 // Make sure that the Slave Outbox TX Buffer is 1kB, otherwise cause
 // error on the compile.
 STATIC_ASSERT(  (NUM_BYTES_IN_SLAVE_OUTBOX != (sizeof(G_dcom_slv_outbox_tx)))  );
-
-//*************************************************************************
-// Function Prototypes
-//*************************************************************************
-
-//*************************************************************************
-// Functions
-//*************************************************************************
 
 // Function Specification
 //
@@ -99,8 +58,6 @@ STATIC_ASSERT(  (NUM_BYTES_IN_SLAVE_OUTBOX != (sizeof(G_dcom_slv_outbox_tx)))  )
 // Description: The purpose of this function is to fill out the Sensor Data into the
 //              Slave Outbox Structures for transfer to the Master.
 //              Build the slave outboxes so slave can send to master
-//
-// Flow:  09/21/11    FN=dcom_build_slv_outbox
 //
 // End Function Specification
 
@@ -118,22 +75,21 @@ uint32_t dcom_build_slv_outbox(void)
 
     memset( G_dcom_slv_outbox_tx.occ_fw_mailbox, 0, sizeof( G_dcom_slv_outbox_tx.occ_fw_mailbox ));
 
-    G_dcom_slv_outbox_tx.counter++;   // @th002
+    G_dcom_slv_outbox_tx.counter++;
 
-    // @01
-    // call dcom_build_occfw_msg
+    // Call dcom_build_occfw_msg
     dcom_build_occfw_msg( SLAVE_OUTBOX );
 
     // Create message that will be sent to DCM peer
-    dcom_build_dcm_sync_msg( SLAVE_OUTBOX );   // @th010
+    dcom_build_dcm_sync_msg( SLAVE_OUTBOX );
 
     l_addr_of_slv_outbox_in_main_mem = dcom_which_buffer_slv_outbox();
 
     l_addr_of_slv_outbox_in_main_mem += G_pob_id.chip_id*sizeof(dcom_slv_outbox_t);
 
     G_dcom_slv_outbox_doorbell_tx.pob_id = G_pob_id;
-    G_dcom_slv_outbox_doorbell_tx.pcap_valid = g_amec->pcap_valid; //@rt004a
-    G_dcom_slv_outbox_doorbell_tx.active_node_pcap = g_amec->pcap.active_node_pcap; //@rt001a
+    G_dcom_slv_outbox_doorbell_tx.pcap_valid = g_amec->pcap_valid;
+    G_dcom_slv_outbox_doorbell_tx.active_node_pcap = g_amec->pcap.active_node_pcap;
     G_dcom_slv_outbox_doorbell_tx.addr_slv_outbox_buffer = l_addr_of_slv_outbox_in_main_mem;
 
 
@@ -149,16 +105,14 @@ uint32_t dcom_build_slv_outbox(void)
 //              or ping/pong to use. Basically alternates between
 //              returning the ping or the pong address
 //
-// Flow:  09/21/11    FN=dcom_which_buffer_slv_outbox
-//
 // End Function Specification
 
 uint32_t dcom_which_buffer_slv_outbox(void)
 {
-    //Locals
+    // Locals
     uint32_t l_mem_address = ADDR_SLAVE_OUTBOX_MAIN_MEM_PONG;
 
-    // switch back and forth based on tick
+    // Switch back and forth based on tick
     if( CURRENT_TICK & 1 )
     {
         l_mem_address = ADDR_SLAVE_OUTBOX_MAIN_MEM_PING;
@@ -173,8 +127,6 @@ uint32_t dcom_which_buffer_slv_outbox(void)
 // Name: dcom_calc_slv_outbox_addr
 //
 // Description: get slave outbox main memory address
-//
-// Flow:  09/20/11    FN=dcom_calc_slv_outbox_addr
 //
 // End Function Specification
 uint32_t dcom_calc_slv_outbox_addr( const dcom_slv_outbox_doorbell_t * i_doorbell, uint8_t * o_occ_id  )
@@ -191,8 +143,6 @@ uint32_t dcom_calc_slv_outbox_addr( const dcom_slv_outbox_doorbell_t * i_doorbel
 // Description: Copy slave outboxes from SRAM to main memory
 //              so slave can send data to master
 //
-// Flow:  09/21/11    FN=task_dcom_tx_slv_outbox
-//
 // Task Flags:  RTL_FLAG_NONMSTR, RTL_FLAG_MSTR, RTL_FLAG_OBS, RTL_FLAG_ACTIVE,
 //              RTL_FLAG_NOAPSS, RTL_FLAG_RUN, RTL_FLAG_MSTR_READY
 //
@@ -201,8 +151,8 @@ void task_dcom_tx_slv_outbox( task_t *i_self)
 {
     static bool l_error = FALSE;
     uint32_t    l_orc = OCC_SUCCESS_REASON_CODE;
-    uint32_t    l_orc_ext = OCC_NO_EXTENDED_RC;     // @nh001a
-    // @sb003 Use a static local bool to track whether the BCE request used
+    uint32_t    l_orc_ext = OCC_NO_EXTENDED_RC;
+    // Use a static local bool to track whether the BCE request used
     // here has ever been successfully created at least once
     static bool L_bce_slv_outbox_tx_request_created_once = FALSE;
 
@@ -210,11 +160,10 @@ void task_dcom_tx_slv_outbox( task_t *i_self)
 
     do
     {
-        // build/setup outbox
+        // Build/setup outbox
         uint32_t l_addr_in_mem = dcom_build_slv_outbox();
         uint32_t l_ssxrc = 0;
 
-        // @sb003
         // See dcomMasterRx.c/task_dcom_rx_slv_outboxes for details on the
         // checking done here before creating and scheduling the request.
         bool l_proceed_with_request_and_schedule = FALSE;
@@ -242,6 +191,7 @@ void task_dcom_tx_slv_outbox( task_t *i_self)
             // was scheduled but was canceled, killed or errored out.
             // Proceed with request create and schedule.
             l_proceed_with_request_and_schedule = TRUE;
+
             // Trace important information from the request
             TRAC_INFO("BCE slv outbox tx request idle but not complete, \
                       callback_rc=%d options=0x%x state=0x%x abort_state=0x%x \
@@ -266,6 +216,7 @@ void task_dcom_tx_slv_outbox( task_t *i_self)
             // represents a hang condition that we can't recover from.
             // DO NOT proceed with request create and schedule.
             l_proceed_with_request_and_schedule = FALSE;
+
             // Trace important information from the request
             TRAC_INFO("BCE slv outbox tx request not idle and not complete, \
                       callback_rc=%d options=0x%x state=0x%x abort_state=0x%x \
@@ -277,22 +228,25 @@ void task_dcom_tx_slv_outbox( task_t *i_self)
                       G_slv_outbox_tx_pba_request.request.completion_state);
             TRAC_INFO("NOT proceeding with BCE slv outbox tx request and schedule");
         }
-        // else {// This case can't happen, ignore it.}
+        else
+        {
+            // This case can't happen, ignore it.
+        }
 
-        // @sb003 Only proceed if the BCE request state checked out
+        // Only proceed if the BCE request state checked out
         if (l_proceed_with_request_and_schedule)
         {
             // set up outbox copy request
             l_ssxrc = bce_request_create(
-                            &G_slv_outbox_tx_pba_request,       // block copy object
-                            &G_pba_bcue_queue,                  // mainstore to sram copy engine
-                            l_addr_in_mem,                      // mainstore address
-                            (uint32_t) &G_dcom_slv_outbox_tx,   // sram starting address
-                            sizeof(G_dcom_slv_outbox_tx),       // size of copy
-                            SSX_WAIT_FOREVER,                   // no timeout
-                            (AsyncRequestCallback)dcom_tx_slv_outbox_doorbell, // call back
-                            NULL,                               // call back arguments
-                            ASYNC_CALLBACK_IMMEDIATE            // callback mask
+                            &G_slv_outbox_tx_pba_request,       // Block copy object
+                            &G_pba_bcue_queue,                  // Mainstore to sram copy engine
+                            l_addr_in_mem,                      // Mainstore address
+                            (uint32_t) &G_dcom_slv_outbox_tx,   // SRAM starting address
+                            sizeof(G_dcom_slv_outbox_tx),       // Size of copy
+                            SSX_WAIT_FOREVER,                   // No timeout
+                            (AsyncRequestCallback)dcom_tx_slv_outbox_doorbell, // Call back
+                            NULL,                               // Call back arguments
+                            ASYNC_CALLBACK_IMMEDIATE            // Callback mask
                             );
 
             if(l_ssxrc != SSX_OK)
@@ -306,14 +260,14 @@ void task_dcom_tx_slv_outbox( task_t *i_self)
                  * @devdesc     SSX BCE related failure
                  */
                 TRAC_ERR("PBA request create failure rc=[%08X]",l_ssxrc);
-                l_orc = SSX_GENERIC_FAILURE;                    // @nh001c
-                l_orc_ext = ERC_BCE_REQUEST_CREATE_FAILURE;     // @nh001a
+                l_orc = SSX_GENERIC_FAILURE;
+                l_orc_ext = ERC_BCE_REQUEST_CREATE_FAILURE;
                 break;
             }
 
-            // @sb003 Request created at least once
-            L_bce_slv_outbox_tx_request_created_once = TRUE; // @sb013
-            l_ssxrc = bce_request_schedule(&G_slv_outbox_tx_pba_request);   // actual copying
+            // Request created at least once
+            L_bce_slv_outbox_tx_request_created_once = TRUE;
+            l_ssxrc = bce_request_schedule(&G_slv_outbox_tx_pba_request);   // Actual copying
 
             if(l_ssxrc != SSX_OK)
             {
@@ -326,36 +280,35 @@ void task_dcom_tx_slv_outbox( task_t *i_self)
                  * @devdesc     SSX BCE related failure
                  */
                 TRAC_ERR("PBA request schedule failure rc=[%08X]",l_ssxrc);
-                l_orc = SSX_GENERIC_FAILURE;                    // @nh001c
-                l_orc_ext = ERC_BCE_REQUEST_SCHEDULE_FAILURE;   // @nh001a
+                l_orc = SSX_GENERIC_FAILURE;
+                l_orc_ext = ERC_BCE_REQUEST_SCHEDULE_FAILURE;
                 break;
             }
         }
 
     } while (0);
 
-
     if ( l_orc != OCC_SUCCESS_REASON_CODE && l_error == FALSE)
     {
-        // create and commit error
-        // see return code doxygen tags for error description
+        // Create and commit error
+        // See return code doxygen tags for error description
         errlHndl_t  l_errl = createErrl(
-                    DCOM_MID_TASK_TX_SLV_OUTBOX,    //modId
-                    l_orc,                          //reasoncode    // @nh001c
-                    l_orc_ext,                      //Extended reason code
+                    DCOM_MID_TASK_TX_SLV_OUTBOX,    //ModId
+                    l_orc,                          //Reasoncode
+                    l_orc_ext,                      //Extended reasoncode
                     ERRL_SEV_UNRECOVERABLE,         //Severity
                     NULL,                           //Trace Buf
                     DEFAULT_TRACE_SIZE,             //Trace Size
-                    0,                              //userdata1
-                    0                               //userdata2
+                    0,                              //Userdata1
+                    0                               //Userdata2
                     );
-                    
-        // @wb001 -- Callout firmware
+
+        // Callout firmware
         addCalloutToErrl(l_errl,
                          ERRL_CALLOUT_TYPE_COMPONENT_ID,
                          ERRL_COMPONENT_ID_FIRMWARE,
                          ERRL_CALLOUT_PRIORITY_HIGH);
-                         
+
         commitErrl( &l_errl );
 
         // TODO request a reset
@@ -364,15 +317,12 @@ void task_dcom_tx_slv_outbox( task_t *i_self)
 
 }
 
-
 // Function Specification
 //
 // Name: dcom_tx_slv_outbox_doorbell
 //
 // Description: transmit unicast doorbell to master
 //              from slaves
-//
-// Flow:  09/21/11    FN=dcom_tx_slv_outbox_doorbell
 //
 // End Function Specification
 void dcom_tx_slv_outbox_doorbell( void )
@@ -381,51 +331,22 @@ void dcom_tx_slv_outbox_doorbell( void )
     int         l_pbarc = 0;
     uint64_t    l_tmp =0;
 
-    // save into temp
+    // Save into temp
     memcpy( &l_tmp, &G_dcom_slv_outbox_doorbell_tx, sizeof(dcom_slv_outbox_doorbell_t));
 
-    // send unicast doorbell
-    l_pbarc = _pbax_send(    //gm014
+    // Send unicast doorbell
+    l_pbarc = _pbax_send(
                 &G_pbax_unicast_target,
                 l_tmp,
                 SSX_MICROSECONDS(15));
 
     if ( l_pbarc != 0 && l_error == FALSE )
     {
-        //failure occurred
-        //This is running in a critical interrupt context.  Tracing not allowed!
-        //TRAC_ERR("PBAX Send Failure in transimitting unicast doorbell - RC[%08X]", l_pbarc);
-
+        // Failure occurred
+        // This is running in a critical interrupt context.  Tracing not allowed!
         l_error = TRUE;
-
-        // create and commit error
-#if 0    //try again on the next tick
-        /* @
-         * @errortype
-         * @moduleid    DCOM_MID_SLV_OUTBOX_TX_DOORBELL
-         * @reasoncode  SSX_GENERIC_FAILURE
-         * @userdata1   N/A
-         * @userdata4   OCC_NO_EXTENDED_RC
-         * @devdesc     SSX PBAX related failure
-         */
-        errlHndl_t  l_errl = createErrl(
-                    DCOM_MID_SLV_OUTBOX_TX_DOORBELL,    //modId
-                    SSX_GENERIC_FAILURE,                //reasoncode    // @nh001c
-                    OCC_NO_EXTENDED_RC,                 //Extended reason code
-                    ERRL_SEV_UNRECOVERABLE,             //Severity
-                    NULL,                               //Trace Buf
-                    DEFAULT_TRACE_SIZE,                 //Trace Size
-                    0,                                  //userdata1
-                    0                                   //userdata2
-                    );
-
-        commitErrl( &l_errl );
-
-        //TODO request a reset
-#endif
     }
 }
-
 
 #endif //_DCOMSLAVETOMASTER_C
 

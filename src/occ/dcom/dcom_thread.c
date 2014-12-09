@@ -1,37 +1,31 @@
-/******************************************************************************
-// @file dcom_thread.c
-// @brief OCC to OCC communication handler thread
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section dcom_thread.c DCOM_THREAD.C
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @th022             thallet   07/11/2012  Pstate Enablement
- *   @th025  857856     thallet   10/16/2012  Dcom Master/Slave SMS part 2
- *   @th032             thallet   04/16/2013  Tuleta HW Bringup 
- *   @th035  881654     thallet   05/06/2013  Tuleta Bringup Pstate Fixes
- *   @at015  885884     alvinwan  06/10/2013  Support Observation/Active state change
- *   @th042   892056    thallet   07/19/2013  Send OCC to safe mode if first APSS GPE fails
- *   @gm025  915973     milesg    02/14/2014  Full support for sapphire (KVM) mode
- *
- *  @endverbatim
- *
- *///*************************************************************************/
- 
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/dcom/dcom_thread.c $                                  */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
+
 #ifndef _DCOM_THREAD_C
 #define _DCOM_THREAD_C
 
-/** \defgroup OCC-OCC Communication 
- * 
- */
- 
-//*************************************************************************
-// Includes
-//*************************************************************************
 #include <pgp_pmc.h>
 #include "pgp_pba.h"
 #include <rtls.h>
@@ -43,73 +37,42 @@
 #include <state.h>
 #include <proc_pstate.h>
 
-//*************************************************************************
-// Externs
-//*************************************************************************
-
-//*************************************************************************
-// Macros
-//*************************************************************************
-
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
-
-//*************************************************************************
-// Structures
-//*************************************************************************
-
-//*************************************************************************
-// Globals
-//*************************************************************************
-
 // Debug Counter to make sure dcom thread is running
 uint16_t G_dcom_thread_counter = 0;
 
-SsxSemaphore G_dcomThreadWakeupSem;   // @th025
-
-//*************************************************************************
-// Function Prototypes
-//*************************************************************************
-
-//*************************************************************************
-// Functions
-//*************************************************************************
-
+SsxSemaphore G_dcomThreadWakeupSem;
 
 // Function Specification
 //
 // Name:  Dcom_thread_routine
 //
-// Description: Purpose of this task is to handle messages passed from 
+// Description: Purpose of this task is to handle messages passed from
 //              Master to Slave and vice versa.
-//              
+//
 //              Nothing in this thread should be time-critical, but should
 //              happen more often than the 1-second that other threads run
 //              at.
 //
-//              This thread currently runs ~1ms, based on the RTL loop of 
-//              250us.  
+//              This thread currently runs ~1ms, based on the RTL loop of
+//              250us.
 //
 //              FWIW -- It is pointless to set this thread to run any more
 //              often than the length of the RTL loop, since it is acting
 //              on data passed back and forth via that loop.
-//
-// Flow:  XX-XX-XX    FN=
 //
 // End Function Specification
 void Dcom_thread_routine(void *arg)
 {
     OCC_STATE l_newOccState  = 0;
     OCC_MODE  l_newOccMode   = 0;
-    SsxTimer  l_timeout_timer; 
-    errlHndl_t l_errlHndl = NULL; // @at015a
+    SsxTimer  l_timeout_timer;
+    errlHndl_t l_errlHndl = NULL;
     // --------------------------------------------------
     // Create a timer that pops every 10 seconds to wake up
     // this thread, in case a semaphore never gets posted.
-    // TODO: Is this really needed?   @th035
+    // TODO: Is this really needed?
     // --------------------------------------------------
-    ssx_timer_create(&l_timeout_timer, 
+    ssx_timer_create(&l_timeout_timer,
                      (SsxTimerCallback) ssx_semaphore_post,
                      (void *) &G_dcomThreadWakeupSem);
     ssx_timer_schedule(&l_timeout_timer,
@@ -121,12 +84,12 @@ void Dcom_thread_routine(void *arg)
         // --------------------------------------------------
         // Wait on Semaphore until we get new data over DCOM
         // (signalled by sem_post() or timeout occurs.
-        // Sem timeout is designed to be the slowest 
+        // Sem timeout is designed to be the slowest
         // interval we will attempt to run this thread at.
         // --------------------------------------------------
 
         // Wait for sem_post before we run through this thread.
-        ssx_semaphore_pend(&G_dcomThreadWakeupSem, SSX_WAIT_FOREVER);    // @th035
+        ssx_semaphore_pend(&G_dcomThreadWakeupSem, SSX_WAIT_FOREVER);
 
         // --------------------------------------------------
         // Counter to ensure thread is running (can wrap)
@@ -136,7 +99,7 @@ void Dcom_thread_routine(void *arg)
         // --------------------------------------------------
         // Check if we need to update the sapphire table
         // --------------------------------------------------
-        if(G_sysConfigData.system_type.kvm) //gm025
+        if(G_sysConfigData.system_type.kvm)
         {
             proc_check_for_sapphire_updates();
         }
@@ -145,7 +108,7 @@ void Dcom_thread_routine(void *arg)
         // Set Mode and State Based on Master
         // --------------------------------------------------
         l_newOccState = (G_occ_master_state == CURRENT_STATE()) ? OCC_STATE_NOCHANGE : G_occ_master_state;
-        // @at019a
+
         if(G_sysConfigData.system_type.kvm)
         {
             l_newOccMode  = (G_occ_master_mode  == G_occ_external_req_mode_kvm ) ? OCC_MODE_NOCHANGE : G_occ_master_mode;
@@ -155,10 +118,10 @@ void Dcom_thread_routine(void *arg)
             l_newOccMode  = (G_occ_master_mode  == CURRENT_MODE() ) ? OCC_MODE_NOCHANGE : G_occ_master_mode;
         }
 
-        // Override State if SAFE state is requested -- @th042
+        // Override State if SAFE state is requested
         l_newOccState = ( isSafeStateRequested() ) ? OCC_STATE_SAFE : l_newOccState;
-        
-        // Override State if we are in SAFE state already -- @th042
+
+        // Override State if we are in SAFE state already
         l_newOccState = ( OCC_STATE_SAFE == CURRENT_STATE() ) ? OCC_STATE_NOCHANGE : l_newOccState;
 
         if( (OCC_STATE_NOCHANGE != l_newOccState)
@@ -166,7 +129,6 @@ void Dcom_thread_routine(void *arg)
         {
             // If we're active, then we should always process the mode change first
             // If we're not active, then we should always process the state change first
-            // @at015c - start
             if(OCC_STATE_ACTIVE == CURRENT_STATE())
             {
                 // Set the new mode
@@ -197,14 +159,13 @@ void Dcom_thread_routine(void *arg)
                     commitErrl(&l_errlHndl);
                 }
             }
-            // @at015c - end
         }
 
         // --------------------------------------------------
         // DCM PStates
         // \_ can do sem_post to increment through state machine
         // --------------------------------------------------
-        if(OCC_STATE_SAFE != CURRENT_STATE())   // @th042
+        if(OCC_STATE_SAFE != CURRENT_STATE())
         {
             proc_gpsm_dcm_sync_enable_pstates_smh();
         }
@@ -215,7 +176,7 @@ void Dcom_thread_routine(void *arg)
         // Even if semaphores are continually posted, there is no reason
         // for us to run this thread any more often than once every 250us
         // so we don't starve any other thread
-        ssx_sleep(SSX_MICROSECONDS(250));        // @th025
+        ssx_sleep(SSX_MICROSECONDS(250));
     }
 }
 
