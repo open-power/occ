@@ -1,30 +1,27 @@
-/******************************************************************************
-// @file amec_amester.h
-// @brief OCC AMEC AMESTER header file
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _amec_amester_h amec_amester.h
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @at003             alvinwan  03/19/2012  New file. Add amester interface.
- *   @pb00E             pbavari   03/11/2012  Added correct include file
- *   @at008             alvinwan  08/09/2012  Support AME Pass Thru command from TMGT
- *   @ry001  853436     ronda     09/14/2012  Added Amester sub command support (phase one)
- *   @th034  879027     thallet   04/18/2013  Bumped Amester API version number
- *   @mw531             mware     06/22/2013  Added stream vector recording support.
- *   @mw533             mware     06/27/2013  Increased stream vector buffer from 3,840 bytes to 38,400 bytes.
- *   @mw624             mware     01/24/2014  Decreased stream vector buffer back to 3840 bytes.
- *   @mw627             mware     01/27/2014  Temporarily increase the stream vector buffer size to 64 entries (*96=6,144 bytes.)
- *   @mw642  918066     mware     02/26/2014  Reduced stream vector buffer size down
- *   @gs037  933716     gjsilva   07/31/2014  Fix memory bandwidth sensor resolution
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/amec/amec_amester.h $                                 */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
 #ifndef _AMEC_AMESTER_H
 #define _AMEC_AMESTER_H
@@ -32,7 +29,6 @@
 //*************************************************************************
 // Includes
 //*************************************************************************
-//@pb00Ec - changed from common.h to occ_common.h for ODE support
 #include <occ_common.h>
 
 //*************************************************************************
@@ -73,11 +69,9 @@
 #define COMPCODE_UNSPECIFIED                0xFF
 
 #define     IPMI_MAX_MSG_SIZE   1024
-#define     AMEC_AME_CMD_HEADER_SZ 2  // @at008a
+#define     AMEC_AME_CMD_HEADER_SZ 2
 
-// *****************************************************************************
-// Begin: Autonomic Management of Energy (AME) Equates
-// Malcolm Ware Austin Research Lab
+// Autonomic Management of Energy (AME) Parameters
 #define AME_API_MAJ     2       // API version major
 #define AME_API_MIN     26      // API version minor
 
@@ -88,9 +82,9 @@
 #define AME_MONTH       7       // Month of Release (e.g. September=9)
 #define AME_DAY         28      // Day of Release
 
-#define AME_SDRS        22  // AME Sensor Data Record Size: 18 bytes
+#define AME_SDRS        22      // AME Sensor Data Record Size: 18 bytes
 
-/* AME data types for AME_GetInfo_*() functions */
+// AME data types for AME_GetInfo_*() functions
 #define AME_INFO_NAME   0
 #define AME_INFO_FREQ   1
 #define AME_INFO_UNITS  2
@@ -111,7 +105,7 @@
 #define SHIFT_VECTOR_SIZE        5    // Log base 2 of STREAM_VECTOR_SIZE for shifting
 #define INJECTION_BUFFER_SIZE   32    // Size of injection buffer (must be a power of 2)
 #define STREAM_VECTOR_SIZE_EX   48    // # of 16 bit elements in a stream vector
-#define STREAM_BUFFER_SIZE  (8*10*STREAM_VECTOR_SIZE_EX)  // Stream buffer size in 16 bit samples for recording real time data to stream to Amester $mw642
+#define STREAM_BUFFER_SIZE  (8*10*STREAM_VECTOR_SIZE_EX)  // Stream buffer size in 16 bit samples for recording real time data to stream to Amester
 #define MAX_SENSORS_ANALYTICS   76    //Maximum sensors making up the analytics group 44
 #define MSA                     MAX_SENSORS_ANALYTICS
 
@@ -119,13 +113,8 @@
 #define AMEC_TB_SENSORS_MAX     40
 #define AMEC_TB_PARM_MAX        40
 
-/**************************************************************************//**
- * @brief Macro for dividing two UINT32
- *
- * @param I_NUM The numerator of the division.
- * @param I_DEN The denominator of the division.
- * @return A 32-bit value with the quotient of the division.
- */
+// Macro for dividing two UINT32
+// Returns a 32-bit value with the quotient of the division.
 #define UTIL_DIV32(I_NUM, I_DEN) (((UINT32)(I_NUM)) / ((UINT32)(I_DEN)))
 
 //*************************************************************************
@@ -216,7 +205,7 @@ typedef struct sensorrec
                         //        if set to 0, this is a normal AME scalar
                         //        sensor.
 
-    uint16_t test;        // msw366
+    uint16_t test;
                         // if bit 15 is set to 1 in the status register, the
                         //        test register can only be used to support
                         //        the vector sensor. In this mode, the high 8
@@ -270,12 +259,11 @@ typedef struct amec_tb
     ///Update Frequency
     UINT32                      freq;
 
-    // Configurable properaties
-
+    /* Configurable properties */
     ///Pointer to raw bytes for trace buffer
     UINT8*                      bytes;
     ///Number of raw bytes
-    UINT32  size; /* Number of raw bytes. crl220 */
+    UINT32  size;
     ///Number of bytes in 1 trace record. Used to increment write pointer.
     UINT32  entry_size;
     ///Number of records that fit in the trace buffer. (0 to n-1 can be used)
@@ -301,7 +289,6 @@ typedef struct amec_tb
 // Globals
 //*************************************************************************
 
-
 //*************************************************************************
 // Function Prototypes
 //*************************************************************************
@@ -310,89 +297,29 @@ uint8_t amester_entry_point( const IPMIMsg_t * i_msg,
                              uint16_t   * o_resp_length,
                              uint8_t    * o_resp);
 
-/**
- * @brief Write sensor data to trace record 
- * @param i_trace The trace to write
- *
- * Called periodically to write next trace record with
- * sensor data.
- *
- */
+// Write sensor data to trace record 
+// Called periodically to write next trace record with sensor data.
 void amec_tb_record(const AMEC_TB_GUID i_guid);
 
-/**
- * @brief Get global information on traces (names, frequencies) 
- * @param i_psMsg IPMI command
- * @param o_pu8Resp Response string
- * @param o_pu8RespLength Response string length
- * @param o_retval Command response error code (=0 pass)
- *
- * Get a list of all available trace buffers in TPMD
- * and their frequencies.
- *
- */
+// Get global information on traces (names, frequencies) 
+// Get a list of all available trace buffers in OCC and their frequencies.
 void amec_tb_cmd_info(const IPMIMsg_t * i_psMsg, UINT8 *o_pu8Resp,UINT16 *o_pu16RespLength,UINT8 *o_retval);
 
-/**
- * @brief Set the configuration of a trace (which sensors to trace) 
- * @param i_psMsg IPMI command
- * @param o_pu8Resp Response string
- * @param o_pu8RespLength Response string length
- * @param o_retval Command response error code (=0 pass)
- *
- * Set the configuration of a trace. Choose which sensors
- * and SCOMs to trace. Choose size of trace buffer memory.
- *
- */
+// Set the configuration of a trace (which sensors to trace) 
+// Choose which sensors and SCOMs to trace. Choose size of trace buffer memory.
 void amec_tb_cmd_set_config(const IPMIMsg_t *i_psMsg, UINT8 *o_pu8Resp,UINT16 *o_pu16RespLength,UINT8 *o_retval);
 
-/**
- * @brief Begin recording all configured traces 
- * @param i_psMsg IPMI command
- * @param o_pu8Resp Response string
- * @param o_pu8RespLength Response string length
- * @param o_retval Command response error code (=0 pass)
- *
- * Start recording traces.
- *
- */
+// Begin recording all configured traces 
 void amec_tb_cmd_start_recording(const IPMIMsg_t *i_psMsg,UINT8 *o_pu8Resp,UINT16 *o_pu16RespLength,UINT8 *o_retval);
 
-/**
- * @brief Stop recording all traces 
- * @param i_psMsg IPMI command
- * @param o_pu8Resp Response string
- * @param o_pu8RespLength Response string length
- * @param o_retval Command response error code (=0 pass)
- *
- * Stop recording traces.
- *
- */
+// Stop recording all traces 
 void amec_tb_cmd_stop_recording(const IPMIMsg_t *i_psMsg,UINT8 *o_pu8Resp,UINT16 *o_pu16RespLength,UINT8 *o_retval);
 
-/**
- * @brief Get bytes from trace buffer memory 
- * @param i_psMsg IPMI command
- * @param o_pu8Resp Response string
- * @param o_pu8RespLength Response string length
- * @param o_retval Command response error code (=0 pass)
- *
- * Returns a maximum size packet starting at a given
- * index
- *
- */
+// Get bytes from trace buffer memory 
+// Returns a maximum size packet starting at a given index
 void amec_tb_cmd_read(const IPMIMsg_t *i_psMsg,UINT8 *o_pu8Resp,UINT16 *o_pu16RespLength,UINT8 *o_retval);
 
-/**
- * @brief Returns configuration of a trace 
- * @param i_psMsg IPMI command
- * @param o_pu8Resp Response string
- * @param o_pu8RespLength Response string length
- * @param o_retval Command response error code (=0 pass)
- *
- * Returns configuration of a trace.
- *
- */
+// Returns configuration of a trace 
 void amec_tb_cmd_get_config(const IPMIMsg_t *i_psMsg,UINT8 *o_pu8Resp,UINT16 *o_pu16RespLength,UINT8 *o_retval);
 
 #endif

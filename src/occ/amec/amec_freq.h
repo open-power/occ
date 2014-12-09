@@ -1,30 +1,28 @@
-/******************************************************************************
-// @file amec_freq.h
-// @brief AMEC frequency header file
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _amec_freq_h amec_freq.h
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @th015             thallet   08/03/2012  New file
- *   @gs001             gsilva    08/03/2012  New file
- *   @ry002  862116     ronda     12/06/2012  Added enum to store voting box reason codes 
- *   @ry003  870734     ronda     02/20/2013  Thermal controller for memory 
- *   @ry004  872358     ronda     02/27/2013  Added memory voting box
- *   @fk001  879727     fmkassem  04/16/2013  Power capping support.  
- *   @gm004  892961     milesg    07/25/2013  Support memory auto slewing
- *   @rt001  897459     tapiar    08/21/2013  Update amec voting enums to a bitmaskSupport memory auto slewing
- *   @gs014  903552     gjsilva   10/22/2013  Support for Amester parameter interface
- *   @gs015  905166     gjsilva   11/04/2013  Full support for IPS function
- *   @wb004  922138     wilbryan  04/03/2014  Ensure timely pstate completion
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/amec/amec_freq.h $                                    */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
+
 #ifndef _AMEC_FREQ_H
 #define _AMEC_FREQ_H
 
@@ -42,10 +40,9 @@
 //*************************************************************************
 // Externs
 //*************************************************************************
-// >> gitprep
 extern const uint32_t G_pmc_ffdc_scom_addrs[4];
 extern const uint32_t G_pmc_ffdc_oci_addrs[29];
-// << gitprep
+
 //*************************************************************************
 // Macros
 //*************************************************************************
@@ -53,7 +50,7 @@ extern const uint32_t G_pmc_ffdc_oci_addrs[29];
 //*************************************************************************
 // Defines/Enums
 //*************************************************************************
-#define FREQ_CHG_CHECK_TIME 4000 // @wb004
+#define FREQ_CHG_CHECK_TIME 4000
 
 // This is used by the Frequency State Machine
 typedef enum
@@ -65,21 +62,20 @@ typedef enum
 // This is reason code used by Voting box amec_slv_voting_box
 typedef enum
 {
-    // @rt001c
     AMEC_VOTING_REASON_INIT             = 0x00000000,
     AMEC_VOTING_REASON_PHYP             = 0x00000001,
     AMEC_VOTING_REASON_PLPM             = 0x00000002,
     AMEC_VOTING_REASON_LEGACY           = 0x00000004,
     AMEC_VOTING_REASON_SOFT_MIN         = 0x00000008,
-    AMEC_VOTING_REASON_SOFT_MAX         = 0x00000010,   
+    AMEC_VOTING_REASON_SOFT_MAX         = 0x00000010,
     AMEC_VOTING_REASON_CORE_CAP         = 0x00000020,
     AMEC_VOTING_REASON_PROC_THRM        = 0x00000040,
     AMEC_VOTING_REASON_GXHB_THRM        = 0x00000080,
     AMEC_VOTING_REASON_VRHOT_THRM       = 0x00000100,
     AMEC_VOTING_REASON_OVER_CURRENT     = 0x00000200,
     AMEC_VOTING_REASON_OVERRIDE         = 0x00000400,
-    AMEC_VOTING_REASON_CORE_GRP_MIN     = 0x00000800,    
-    AMEC_VOTING_REASON_PWR              = 0x00001000, // @fk001a
+    AMEC_VOTING_REASON_CORE_GRP_MIN     = 0x00000800,
+    AMEC_VOTING_REASON_PWR              = 0x00001000,
     AMEC_VOTING_REASON_PPB              = 0x00002000,
     AMEC_VOTING_REASON_PMAX             = 0x00004000,
     AMEC_VOTING_REASON_UTIL             = 0x00008000,
@@ -88,14 +84,12 @@ typedef enum
     AMEC_VOTING_REASON_IPS              = 0x00040000,
 }amec_freq_voting_reason_t;
 
-// rt001a
+
 #define NON_DPS_POWER_LIMITED ( AMEC_VOTING_REASON_PWR | \
                                 AMEC_VOTING_REASON_PPB | \
                                 AMEC_VOTING_REASON_PMAX  \
                               )
 
-
-// rt001a
 extern BOOLEAN G_non_dps_power_limited;
 
 // This is reason code used by Voting box amec_slv_mem_voting_box
@@ -104,17 +98,15 @@ typedef enum
     AMEC_MEM_VOTING_REASON_INIT         = 0,
     AMEC_MEM_VOTING_REASON_CENT         = 1,
     AMEC_MEM_VOTING_REASON_DIMM         = 2,
-    AMEC_MEM_VOTING_REASON_SLEW         = 3,   //gm004
+    AMEC_MEM_VOTING_REASON_SLEW         = 3,
 }amec_mem_voting_reason_t;
 
 //*************************************************************************
 // Structures
 //*************************************************************************
 
-#define PMC_FFDC_OCI_ADDRS_SIZE sizeof(G_pmc_ffdc_oci_addrs) // @wb004
-#define PMC_FFDC_SCOM_ADDRS_SIZE sizeof(G_pmc_ffdc_scom_addrs) // @wb004
-
-// @wb004 -- Moved the following three structures for accessibility
+#define PMC_FFDC_OCI_ADDRS_SIZE sizeof(G_pmc_ffdc_oci_addrs)
+#define PMC_FFDC_SCOM_ADDRS_SIZE sizeof(G_pmc_ffdc_scom_addrs)
 
 // scom ffdc format
 typedef struct __attribute__ ((packed))
@@ -130,24 +122,22 @@ typedef struct
     uint32_t    data;
 } pmc_ffdc_oci_entry_t;
 
-//PMC FFDC format for user detail section of error log -- gm031
+//PMC FFDC format for user detail section of error log
 typedef struct
 {
     pmc_ffdc_oci_entry_t oci_regs[PMC_FFDC_OCI_ADDRS_SIZE/sizeof(uint32_t)];
     pmc_ffdc_scom_entry_t scom_regs[PMC_FFDC_SCOM_ADDRS_SIZE/sizeof(uint32_t)];
 } pmc_ffdc_data_t;
 
-// @wb004
 typedef struct
 {
     pcbs_power_management_status_reg_t    data[MAX_NUM_CORES];
 } pmsr_ffdc_data_t;
 
-// @wb004
 typedef struct
 {
     pmc_ffdc_data_t     pmc_ffcdc_data;
-    pmsr_ffdc_data_t     pmsr_ffdc_data;
+    pmsr_ffdc_data_t    pmsr_ffdc_data;
 } pmc_pmsr_ffcdc_data_t;
 
 //*************************************************************************
@@ -157,11 +147,7 @@ typedef struct
 //*************************************************************************
 // Function Prototypes
 //*************************************************************************
-void fill_pmc_ffdc_buffer(pmc_ffdc_data_t* i_ffdc_ptr); // @wb004
-
-//*************************************************************************
-// Functions
-//*************************************************************************
+void fill_pmc_ffdc_buffer(pmc_ffdc_data_t* i_ffdc_ptr);
 
 // Used to set the freq range that amec can control between.
 errlHndl_t amec_set_freq_range(const OCC_MODE i_mode);
@@ -180,7 +166,6 @@ void amec_slv_check_perf(void);
 
 // Verifies that each core is at the correct frequency
 void amec_verify_pstate();
-
 
 #endif
 

@@ -1,43 +1,33 @@
-/******************************************************************************
-// @file amec_master_smh.c
-// @brief Master State Machine
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _amec_master_smh_c amec_master_smh.c
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *                      thallet   11/08/2011  New file
- *   @rc001             rickylie  01/10/2012  Added trac.h
- *   @th00a             thallet   02/03/2012  Worst case FW timings in AMEC Sensors
- *   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
- *   @pb00E             pbavari   03/11/2012  Added correct include file
- *   @gs006  884384     gjsilva   05/30/2013  Support for mnfg auto-slewing function
- *   @gs007  888247     gjsilva   06/19/2013  OCC mnfg support for frequency distribution
- *   @db001  897459     deepthib  08/03/2013  Power cap mismatch & under pcap functions
- *   @rt001  903366     tapiar    10/23/2013  Add more trace in case power cap mismatch occurs
- *   @gs015  905166     gjsilva   11/04/2013  Full support for IPS function
- *   @gs017  905990     gjsilva   11/13/2013  Full support for tunable parameters
- *   @rt004  908817     tapiar    12/11/2013  Expand G_active_slave_pcaps arrray to also carry
- *                                            valid pcap byte from slaves
- *   @gs025  913663     gjsilva   01/30/2014  Full fupport for soft frequency boundaries
- *   @gs026  915840     gjsilva   02/13/2014  Support for Nvidia GPU power measurement
- *   @wb001  919163     wilbryan  03/06/2014  Updating error call outs, descriptions, and severities
- *   @wb003  920760     wilbryan  03/27/2014  Update SRCs to match TPMD SRCs
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/amec/amec_master_smh.c $                              */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
 //*************************************************************************
 // Includes
 //*************************************************************************
-//@pb00Ec - changed from common.h to occ_common.h for ODE support
 #include <occ_common.h>
-#include <ssx.h>         
+#include <ssx.h>
 #include <errl.h>               // Error logging
 #include "rtls.h"
 #include "occ_service_codes.h"  // for SSX_GENERIC_FAILURE
@@ -46,7 +36,7 @@
 #include "amec_master_smh.h"
 #include <trac.h>               // For traces
 #include "amec_sys.h"
-#include "amec_service_codes.h" //For AMEC_MST_CHECK_PCAPS_MATCH @db001a
+#include "amec_service_codes.h" //For AMEC_MST_CHECK_PCAPS_MATCH
 #include "dcom.h"
 
 //*************************************************************************
@@ -61,10 +51,10 @@
 // Defines/Enums
 //*************************************************************************
 
-//Power cap mismatch threshold set to 8 ticks (2 milliseconds) @db001a
+//Power cap mismatch threshold set to 8 ticks (2 milliseconds)
 #define PCAPS_MISMATCH_THRESHOLD 8
 
-//Power cap failure threshold set to 32 (ticks) @db001a
+//Power cap failure threshold set to 32 (ticks)
 #define PCAP_FAILURE_THRESHOLD 32
 
 //*************************************************************************
@@ -74,17 +64,17 @@
 //*************************************************************************
 // Globals
 //*************************************************************************
-smh_state_t G_amec_mst_state = {AMEC_INITIAL_STATE, 
-                                AMEC_INITIAL_STATE, 
+smh_state_t G_amec_mst_state = {AMEC_INITIAL_STATE,
+                                AMEC_INITIAL_STATE,
                                 AMEC_INITIAL_STATE};
 
-//Array that stores active power cap values of all OCCs @db001a
-slave_pcap_info_t G_slave_active_pcaps[MAX_OCCS] = {{0}}; //@rt004c
+//Array that stores active power cap values of all OCCs
+slave_pcap_info_t G_slave_active_pcaps[MAX_OCCS] = {{0}};
 
-//OCC Power cap mismatch count @db001a
+//OCC Power cap mismatch count
 uint8_t G_pcaps_mismatch_count = 0;
 
-//OCC over power cap count @db001a
+//OCC over power cap count
 uint8_t G_over_cap_count = 0;
 
 //Array that stores the exit counts for the IPS algorithm
@@ -104,7 +94,7 @@ uint8_t  G_mst_violation_cnt[MAX_OCCS] = {0};
 // --------------------------------------------------------
 // Each function inside this state table runs once every 128ms.
 //
-const smh_tbl_t amec_mst_state_6_1_sub_substate_table[AMEC_SMH_STATES_PER_LVL] = 
+const smh_tbl_t amec_mst_state_6_1_sub_substate_table[AMEC_SMH_STATES_PER_LVL] =
 {
   {amec_mst_sub_substate_6_1_0, NULL},
   {amec_mst_sub_substate_6_1_1, NULL},
@@ -123,7 +113,7 @@ const smh_tbl_t amec_mst_state_6_1_sub_substate_table[AMEC_SMH_STATES_PER_LVL] =
 //
 // The 2 States are interleaved so each one runs every 4ms.
 //
-const smh_tbl_t amec_mst_state_0_substate_table[AMEC_SMH_STATES_PER_LVL] = 
+const smh_tbl_t amec_mst_state_0_substate_table[AMEC_SMH_STATES_PER_LVL] =
 {
   {amec_mst_substate_0_0, NULL},
   {amec_mst_substate_0_1, NULL},
@@ -142,7 +132,7 @@ const smh_tbl_t amec_mst_state_0_substate_table[AMEC_SMH_STATES_PER_LVL] =
 //
 // The 2 States are interleaved so each one runs every 4ms.
 //
-const smh_tbl_t amec_mst_state_3_substate_table[AMEC_SMH_STATES_PER_LVL] = 
+const smh_tbl_t amec_mst_state_3_substate_table[AMEC_SMH_STATES_PER_LVL] =
 
 {
   {amec_mst_substate_3_0, NULL},
@@ -162,7 +152,7 @@ const smh_tbl_t amec_mst_state_3_substate_table[AMEC_SMH_STATES_PER_LVL] =
 //
 // SubState1:  8 Sub-substates (128ms/sub-substate)
 //
-const smh_tbl_t amec_mst_state_6_substate_table[AMEC_SMH_STATES_PER_LVL] = 
+const smh_tbl_t amec_mst_state_6_substate_table[AMEC_SMH_STATES_PER_LVL] =
 {
   {amec_mst_substate_6_0, NULL},
   {amec_mst_substate_6_1, amec_mst_state_6_1_sub_substate_table},
@@ -182,8 +172,8 @@ const smh_tbl_t amec_mst_state_6_substate_table[AMEC_SMH_STATES_PER_LVL] =
 // State0:  2 Substates (4ms/substate)
 // State3:  2 Substates (4ms/substate)
 // State6:  8 Substates (16ms/substate)
-// 
-const smh_tbl_t amec_mst_state_table[AMEC_SMH_STATES_PER_LVL] = 
+//
+const smh_tbl_t amec_mst_state_table[AMEC_SMH_STATES_PER_LVL] =
 {
   {amec_mst_state_0, amec_mst_state_0_substate_table},
   {amec_mst_state_1, NULL},
@@ -195,7 +185,7 @@ const smh_tbl_t amec_mst_state_table[AMEC_SMH_STATES_PER_LVL] =
   {amec_mst_state_7, NULL},
 };
 
-// This sets up the function pointer that will be called to update the 
+// This sets up the function pointer that will be called to update the
 // fw timings when the AMEC master State Machine finishes.
 smh_state_timing_t G_amec_mst_state_timings = {amec_mst_update_smh_sensors};
 
@@ -211,20 +201,18 @@ smh_state_timing_t G_amec_mst_state_timings = {amec_mst_update_smh_sensors};
 //
 // Name: amec_mst_update_smh_sensors
 //
-// Description:  Update the sensor 
+// Description:  Update the sensor
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 void amec_mst_update_smh_sensors(int i_smh_state, uint32_t i_duration)
 {
     // Update the duration in the fw timing table
     if(G_fw_timing.amess_state != i_smh_state)
-    { 
+    {
       AMEC_DBG("Mismatch between Master and Slave AMEC states\n");
     }
-    
-    G_fw_timing.amess_dur   += i_duration;     // @th00a
+
+    G_fw_timing.amess_dur   += i_duration;
 }
 
 // Function Specification
@@ -233,11 +221,8 @@ void amec_mst_update_smh_sensors(int i_smh_state, uint32_t i_duration)
 //
 // Description: This function executes the auto-slewing of frequency based on
 //              manufacturing parameters.
-//              
 //
-// Flow: 06/19/13     FN= amec_master_auto_slew
-//
-// Task Flags: 
+// Task Flags:
 //
 // End Function Specification
 void amec_master_auto_slew(void)
@@ -254,7 +239,6 @@ void amec_master_auto_slew(void)
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-
     do
     {
         // Check if auto-slewing has been enabled
@@ -301,7 +285,7 @@ void amec_master_auto_slew(void)
             l_step_delay--;
             break;
         }
-        
+
         // Our delay counter has expired, reset it to its original value
         l_step_delay = g_amec->mnfg_parms.delay;
 
@@ -338,16 +322,12 @@ void amec_master_auto_slew(void)
     return;
 }
 
-// @db001a
 // Function Specification
 //
 // Name: amec_mst_check_pcaps_match
 //
 // Description: This function checks for mismatch in power caps between
-//		occs for 8 consecutive ticks.
-//
-//
-// Flow: 04/6/2013     			FN= amec_mst_check_pcaps_match
+//              occs for 8 consecutive ticks.
 //
 // End Function Specification
 void amec_mst_check_pcaps_match(void)
@@ -360,6 +340,7 @@ void amec_mst_check_pcaps_match(void)
     uint16_t l_prev_pcap = 0;
     bool l_pcap_mismatch = FALSE;
     errlHndl_t  l_err = NULL;
+
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
@@ -367,7 +348,7 @@ void amec_mst_check_pcaps_match(void)
     //Loop through all occs
     for(l_chip_id = 0; l_chip_id < MAX_OCCS; l_chip_id++)
     {
-        //if occ is present && its pcap data is considered valid @rt004c
+        //if occ is present && its pcap data is considered valid
         if((G_sysConfigData.is_occ_present & (1<< l_chip_id)) &&
            (G_slave_active_pcaps[l_chip_id].pcap_valid != 0))
         {
@@ -378,7 +359,7 @@ void amec_mst_check_pcaps_match(void)
             if(!l_prev_pcap_valid)
             {
                 //TRAC_INFO("First present occ - power cap info[%d]=%d(%d)",
-                //    l_chip_id, G_slave_active_pcaps[l_chip_id].active_pcap, G_slave_active_pcaps[l_chip_id].pcap_valid ); //@rt001a
+                //    l_chip_id, G_slave_active_pcaps[l_chip_id].active_pcap, G_slave_active_pcaps[l_chip_id].pcap_valid );
 
                 l_prev_pcap = G_slave_active_pcaps[l_chip_id].active_pcap;
                 l_prev_pcap_valid = TRUE;
@@ -391,10 +372,10 @@ void amec_mst_check_pcaps_match(void)
                 {
                     G_pcaps_mismatch_count++;
                     l_pcap_mismatch = TRUE;
-                        
+
                     TRAC_INFO("Mismatch in OCC power cap values: mismatch cnt=%d pcap=%d vs compared pcap[%d]=%d(%d)",
                         G_pcaps_mismatch_count, l_prev_pcap, l_chip_id, G_slave_active_pcaps[l_chip_id].active_pcap,
-                        G_slave_active_pcaps[l_chip_id].pcap_valid); //@rt001a
+                        G_slave_active_pcaps[l_chip_id].pcap_valid);
 
                     //If mismatch occurs for 8 consecutive ticks
                     //i.e 8 * 250 microsecs = 2 milliseconds,then reset occ
@@ -402,18 +383,17 @@ void amec_mst_check_pcaps_match(void)
                     {
                         TRAC_ERR("Mismatch in OCC power cap values: pcap=%d, slave_active_pcap[%d]=%d(%d)",
                             l_prev_pcap, l_chip_id, G_slave_active_pcaps[l_chip_id].active_pcap,
-                            G_slave_active_pcaps[l_chip_id].pcap_valid); //@rt001c
+                            G_slave_active_pcaps[l_chip_id].pcap_valid);
 
                         /* @
                          * @errortype
                          * @moduleid    AMEC_MST_CHECK_PCAPS_MATCH
-                         * @reasoncode	INTERNAL_FAILURE
+                         * @reasoncode  INTERNAL_FAILURE
                          * @userdata1   First OCC Power cap
                          * @userdata2   Mismatch OCC Power cap
                          * @devdesc     Internal max power limits mismatched
                          *
                          */
-
                         l_err = createErrl( AMEC_MST_CHECK_PCAPS_MATCH,
                                             INTERNAL_FAILURE,
                                             ERC_AMEC_PCAPS_MISMATCH_FAILURE,
@@ -426,7 +406,7 @@ void amec_mst_check_pcaps_match(void)
                         //Callout to OVS
                         addCalloutToErrl(l_err,
                                          ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                                         ERRL_COMPONENT_ID_FIRMWARE, // @wb001
+                                         ERRL_COMPONENT_ID_FIRMWARE,
                                          ERRL_CALLOUT_PRIORITY_HIGH);
 
                         //Callout to APSS
@@ -457,16 +437,12 @@ void amec_mst_check_pcaps_match(void)
 }
 
 
-// @db001a
 // Function Specification
 //
 // Name: amec_mst_check_under_pcap
 //
 // Description: This function checks if there is failure in maintaining power
-//		cap value.
-//
-//
-// Flow: 04/16/2013     			FN= amec_mst_check_under_pcap
+//              cap value.
 //
 // End Function Specification
 
@@ -515,9 +491,8 @@ void amec_mst_check_under_pcap(void)
              * @devdesc     Failure to maintain max power limits
              *
              */
-
             l_err = createErrl( AMEC_MST_CHECK_UNDER_PCAP,
-                                POWER_CAP_FAILURE,              // @wb003 -- Match TPMD
+                                POWER_CAP_FAILURE,
                                 ERC_AMEC_UNDER_PCAP_FAILURE,
                                 ERRL_SEV_PREDICTIVE,
                                 NULL,
@@ -539,7 +514,6 @@ void amec_mst_check_under_pcap(void)
 
             //Reset OCC
             REQUEST_RESET(l_err);
-
         }
     }
     else
@@ -559,10 +533,7 @@ void amec_mst_check_under_pcap(void)
 // Name: amec_mst_ips_main
 //
 // Description: This function executes the Idle Power Saver (IPS)
-// algorithm.
-//              
-//
-// Flow:               FN= 
+//              algorithm.
 //
 // End Function Specification
 void amec_mst_ips_main(void)
@@ -705,7 +676,7 @@ void amec_mst_ips_main(void)
                 {
                     // We have met the entry criteria, move IPS state to active
                     g_amec->mst_ips_parms.active = 1;
-                    
+
                     for (i=0; i<MAX_OCCS; i++)
                     {
                         if (!(G_sysConfigData.is_occ_present & (1<<i)))
@@ -855,7 +826,7 @@ void amec_mst_gen_soft_freq(void)
                 // For other system power modes, calculate the lowest Fwish sent
                 // by all slave OCCs
                 l_lowest_fwish = 0xFFFF;
-                for (i=0; i<MAX_OCCS; i++) 
+                for (i=0; i<MAX_OCCS; i++)
                 {
                     // Ignore OCCs that are sending zeros for factual or fwish
                     if ((G_dcom_slv_outbox_rx[i].factual == 0) ||
@@ -902,27 +873,24 @@ void amec_mst_gen_soft_freq(void)
 
 // Function Specification
 //
-// Name: amec_mst_cmmon_tasks_pre 
+// Name: amec_mst_cmmon_tasks_pre
 //
 // Description: master common tasks pre function
-//              
 //
-// Flow:              FN= amec_mst_common_tasks_pre  
-//
-// Task Flags: 
+// Task Flags:
 //
 // End Function Specification
-void amec_mst_common_tasks_pre(void) 
+void amec_mst_common_tasks_pre(void)
 {
   AMEC_DBG("\tAMEC Master Pre-State Common\n");
 
   // ------------------------------------------------------
-  // 
+  //
   // ------------------------------------------------------
 
 
   // ------------------------------------------------------
-  // 
+  //
   // ------------------------------------------------------
 }
 
@@ -932,9 +900,6 @@ void amec_mst_common_tasks_pre(void)
 // Name: amec_mst_cmmon_tasks_post
 //
 // Description: master common tasks post function
-//              
-//
-// Flow:              FN= amec_mst_common_tasks_post  
 //
 // End Function Specification
 void amec_mst_common_tasks_post(void)
@@ -947,14 +912,12 @@ void amec_mst_common_tasks_post(void)
       // Call the OCC auto-slew function
       amec_master_auto_slew();
 
-      //@db001a
-      //Call OCC pcaps mismatch function @db001a
+      //Call OCC pcaps mismatch function
       amec_mst_check_pcaps_match();
 
-      //Call check under power cap function @db001a
+      //Call check under power cap function
       amec_mst_check_under_pcap();
   }
-
 }
 
 
@@ -964,8 +927,6 @@ void amec_mst_common_tasks_post(void)
 //
 // Description: master state 0 ~ 7 functions
 //
-// Flow:              FN= None
-// 
 // End Function Specification
 void amec_mst_state_0(void){AMEC_DBG("\tAMEC Master State 0\n");}
 void amec_mst_state_1(void){AMEC_DBG("\tAMEC Master State 1\n");}
@@ -1027,8 +988,6 @@ void amec_mst_state_7(void){AMEC_DBG("\tAMEC Master State 7\n");}
 // Description: master substate amec_mst_substate_0_0
 //              master substate amec_mst_substate_0_1
 //
-// Flow:              FN= None
-// 
 // End Function Specification
 void amec_mst_substate_0_0(void){AMEC_DBG("\tAMEC Master SubState 0.0\n");}
 void amec_mst_substate_0_1(void){AMEC_DBG("\tAMEC Master SubState 0.1\n");}
@@ -1054,7 +1013,7 @@ void amec_mst_substate_0_1(void){AMEC_DBG("\tAMEC Master SubState 0.1\n");}
 //              master substate amec_mst_substate_6_7
 //
 // Flow:              FN= None
-// 
+//
 // End Function Specification
 void amec_mst_substate_6_0(void){AMEC_DBG("\tAMEC Master State 6.0\n");}
 void amec_mst_substate_6_1(void){AMEC_DBG("\tAMEC Master State 6.1\n");}
@@ -1074,7 +1033,7 @@ void amec_mst_substate_6_7(void){AMEC_DBG("\tAMEC Master State 6.7\n");}
 //              master substate amec_mst_substate_3_1
 //
 // Flow:              FN= None
-// 
+//
 // End Function Specification
 void amec_mst_substate_3_0(void){AMEC_DBG("\tAMEC Master State 3.0\n");}
 void amec_mst_substate_3_1(void){AMEC_DBG("\tAMEC Master State 3.1\n");}
@@ -1101,7 +1060,7 @@ void amec_mst_substate_3_1(void){AMEC_DBG("\tAMEC Master State 3.1\n");}
 //              master substate amec_mst_substate_6_1_7
 //
 // Flow:              FN= None
-// 
+//
 // End Function Specification
 void amec_mst_sub_substate_6_1_0(void){AMEC_DBG("\tAMEC Master State 6.1.0\n");}
 void amec_mst_sub_substate_6_1_1(void){AMEC_DBG("\tAMEC Master State 6.1.1\n");}
@@ -1112,3 +1071,6 @@ void amec_mst_sub_substate_6_1_5(void){AMEC_DBG("\tAMEC Master State 6.1.5\n");}
 void amec_mst_sub_substate_6_1_6(void){AMEC_DBG("\tAMEC Master State 6.1.6\n");}
 void amec_mst_sub_substate_6_1_7(void){AMEC_DBG("\tAMEC Master State 6.1.7\n");}
 
+/*----------------------------------------------------------------------------*/
+/* End                                                                        */
+/*----------------------------------------------------------------------------*/

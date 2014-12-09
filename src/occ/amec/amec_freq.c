@@ -1,61 +1,34 @@
-/******************************************************************************
-// @file amec_freq.c
-// @brief Amec Frequency Handling
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _amec_freq_c amec_freq.c
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @th015             thallet   08/03/2012  New file
- *   @gs001             gsilva    08/03/2012  New file
- *   @th017             thallet   08/30/2012  Added the sensor update in votebox
- *   @ai001  853751     ailutsar  09/12/2012  Support for per-core frequency votes
- *   @ry002  862116     ronda     11/16/2012  Support thermal controller for processor
- *   @ry003  870734     ronda     02/20/2013  Thermal controller for memory 
- *   @ry004             ronda     02/27/2013  Added slave memory voting box
- *   @th040  887069     thallet   06/11/2013  Support Nom & FFO Freq Setting for Mnfg 
- *   @fk001  879727     fmkassem  04/16/2013  Power capping support.
- *   @gs007  888247     gjsilva   06/19/2013  OCC mnfg support for frequency distribution
- *   @cl001             lefurgy   07/24/2013  Fix overflow in l_throttle
- *   @gm004  892961     milesg    07/25/2013  Support memory auto slewing
- *   @gs008  894661     gjsilva   08/08/2013  Initial support for DPS-FP mode
- *   @at016  891144     alvinwan  06/10/2013  OCC Power Cap Testing
- *   @gs009  897228     gjsilva   08/28/2013  Enablement of DPS-FP Mode
- *   @rt001  897459     tapiar    08/21/2013  health monitor changes
- *   @rt002  901927     tapiar    10/01/2013  fix src tags 
- *   @gs014  903552     gjsilva   10/22/2013  Support for Amester parameter interface
- *   @gm012  905097     milesg    10/31/2013  enhanced power cap tracing
- *   @gs015  905166     gjsilva   11/04/2013  Full support for IPS function
- *   @rt003  905677     tapiar    11/07/2013  revamp trace/error log for frequency limited due
- *                                            system pcap scenario
- *   @gs017  905990     gjsilva   11/13/2013  Full support for tunable parameters
- *   @gs018  907196     gjsilva   11/20/2013  Base support for soft frequency boundaries
- *   @at019  908390     alvinwan  12/05/2013  Disable DPS algorithms from running in Sapphire
- *   @gm016  909061     milesg    12/10/2013  Support memory throttling due to temperature
- *   @at020  908666     alvinwan  12/16/2013  Oversubscription Error Handling
- *   @at022  910758     alvinwan  01/08/2014  B1812A33 logged while in DPS mode
- *   @gs023  912003     gjsilva   01/16/2014  Generate VRHOT signal and control loop
- *   @gs025  913663     gjsilva   01/30/2014  Full fupport for soft frequency boundaries
- *   @gs026  915840     gjsilva   02/13/2014  Support for Nvidia GPU power measurement
- *   @gm025  915973     milesg    02/14/2014  Full support for sapphire (KVM) mode
- *   @wb003  920760     wilbryan  03/24/2014  Update SRCs to match TPMD SRCs
- *   @wb004  922138     wilbryan  04/03/2014  Ensure timely pstate completion
- *   @gs036  931408     gjsilva   07/09/2014  Do not log 2A61 in DPS-FP mode
- *
- *  @endverbatim
- *
- *///*************************************************************************/
- 
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/amec/amec_freq.c $                                    */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
+
 //*************************************************************************
 // Includes
 //*************************************************************************
 #include <occ_common.h>
-#include <ssx.h>         
-#include <errl.h> 
+#include <ssx.h>
+#include <errl.h>
 #include "sensor.h"
 #include "rtls.h"
 #include "occ_sys_config.h"
@@ -92,14 +65,11 @@ extern uint8_t G_dimm_temp_expired_bitmap;
 //*************************************************************************
 // Globals
 //*************************************************************************
-BOOLEAN G_non_dps_power_limited = FALSE;        //@rt001a
-uint8_t G_amec_kvm_throt_reason = NO_THROTTLE; //gm025
-uint16_t G_time_until_freq_check = FREQ_CHG_CHECK_TIME; // @wb004
+BOOLEAN G_non_dps_power_limited = FALSE;
+uint8_t G_amec_kvm_throt_reason = NO_THROTTLE;
+uint16_t G_time_until_freq_check = FREQ_CHG_CHECK_TIME;
 
-// >> gitprep
-// Moved following two structures because of multiple definitions error
-
-//FFDC SCOM addresses as requested by Greg Still in defect SW247927 -- gm031
+//FFDC SCOM addresses as requested by Greg Still in defect SW247927
 const uint32_t G_pmc_ffdc_scom_addrs[] =
 {
     PMC_LFIR_ERR_REG,
@@ -108,7 +78,7 @@ const uint32_t G_pmc_ffdc_scom_addrs[] =
     PBA_FIR
 };
 
-//FFDC OCI addresses as requested by Greg Still in defect SW247927 -- gm031
+//FFDC OCI addresses as requested by Greg Still in defect SW247927
 const uint32_t G_pmc_ffdc_oci_addrs[] =
 {
     PMC_MODE_REG,
@@ -141,7 +111,6 @@ const uint32_t G_pmc_ffdc_oci_addrs[] =
     PMC_O2S_WDATA_REG,
     0                           //0 marks last OCI address
 };
-// << gitprep
 
 //*************************************************************************
 // Function Prototypes
@@ -158,13 +127,10 @@ const uint32_t G_pmc_ffdc_oci_addrs[] =
 //
 // Description: Set the frequency range for AMEC
 //              This function will run on mode changes and cnfg_data changes
-//              
-//
-// Flow:              FN=
 //
 // Thread: RealTime Loop
 //
-// Task Flags: 
+// Task Flags:
 //
 // End Function Specification
 errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
@@ -177,7 +143,6 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
     uint16_t                    l_freq_max  = 0;
     uint32_t                    l_temp = 0;
     amec_mode_freq_t            l_ppm_freq[OCC_INTERNAL_MODE_MAX_NUM] = {{0}};
-    //uint16_t l_freq_nom  = 0;
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
@@ -185,7 +150,7 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
 
     // First set to Max Freq Range for this mode
     if( VALID_MODE(i_mode) )
-    { 
+    {
       l_freq_min = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
       l_freq_max = G_sysConfigData.sys_mode_freq.table[i_mode];
     }
@@ -197,9 +162,6 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
     // by power caps or thermal actuations)
     if(CURRENT_SMS() == SMGR_SMS_STATIC_VF_CHANGE_REQ)
     {
-        // I>amec_control_set_freq_range: Request that we pin freq to %u for mode 0x%X
-        //TRACE2(g_trac_amec,1775283132,l_freq_max,i_mode);
-
         l_freq_min = l_freq_max;
     }
 
@@ -242,23 +204,16 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
     return l_err;
 }
 
-
-
 // Function Specification
 //
 // Name: amec_slv_voting_box
 //
 // Description: Slave OCC's voting box that decides the frequency request.
 //              This function will run every tick.
-//              
-//
-// Flow: 10/22/13      FN= amec_slv_voting_box.odg
 //
 // Thread: RealTime Loop
 //
-// Changedby: @fk001c
-//
-// Task Flags: 
+// Task Flags:
 //
 // End Function Specification
 void amec_slv_voting_box(void)
@@ -269,11 +224,11 @@ void amec_slv_voting_box(void)
     uint16_t                        k = 0;
     uint16_t                        l_chip_fmax = g_amec->sys.fmax;
     uint16_t                        l_core_freq = 0;
-    uint32_t                        l_chip_reason = 0; //@rt001c
-    uint32_t                        l_core_reason = 0; //@rt001c
-    uint8_t                         l_kvm_throt_reason = NO_THROTTLE; //gm025
+    uint32_t                        l_chip_reason = 0;
+    uint32_t                        l_core_reason = 0;
+    uint8_t                         l_kvm_throt_reason = NO_THROTTLE;
     amec_part_t                     *l_part = NULL;
-    bool                            l_freq_req_changed = FALSE; // @wb004
+    bool                            l_freq_req_changed = FALSE;
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
@@ -291,7 +246,7 @@ void amec_slv_voting_box(void)
     {
         l_chip_fmax = g_amec->proc[0].pwr_votes.ppb_fmax;
         l_chip_reason = AMEC_VOTING_REASON_PPB;
-        l_kvm_throt_reason = POWERCAP; //gm025
+        l_kvm_throt_reason = POWERCAP;
     }
 
     // PMAX_CLIP_FREQ
@@ -299,7 +254,7 @@ void amec_slv_voting_box(void)
     {
         l_chip_fmax = g_amec->proc[0].pwr_votes.pmax_clip_freq;
         l_chip_reason = AMEC_VOTING_REASON_PMAX;
-        l_kvm_throt_reason = POWER_SUPPLY_FAILURE; //gm025
+        l_kvm_throt_reason = POWER_SUPPLY_FAILURE;
     }
 
     //THERMALPROC.FREQ_REQUEST
@@ -308,7 +263,7 @@ void amec_slv_voting_box(void)
     {
         l_chip_fmax = g_amec->thermalproc.freq_request;
         l_chip_reason = AMEC_VOTING_REASON_PROC_THRM;
-        l_kvm_throt_reason = CPU_OVERTEMP; //gm025
+        l_kvm_throt_reason = CPU_OVERTEMP;
     }
 
     // Controller request based on VRHOT signal from processor regulator
@@ -316,7 +271,7 @@ void amec_slv_voting_box(void)
     {
         l_chip_fmax = g_amec->vrhotproc.freq_request;
         l_chip_reason = AMEC_VOTING_REASON_VRHOT_THRM;
-        l_kvm_throt_reason = CPU_OVERTEMP; //gm025
+        l_kvm_throt_reason = CPU_OVERTEMP;
     }
 
     // CONN_OC_VOTE
@@ -324,7 +279,7 @@ void amec_slv_voting_box(void)
     {
         l_chip_fmax = g_amec->proc[0].pwr_votes.conn_oc_vote;
         l_chip_reason = AMEC_VOTING_REASON_CONN_OC;
-        l_kvm_throt_reason = OVERCURRENT; //gm025
+        l_kvm_throt_reason = OVERCURRENT;
     }
 
     for (k=0; k<MAX_NUM_CORES; k++)
@@ -334,7 +289,7 @@ void amec_slv_voting_box(void)
             l_core_freq = l_chip_fmax;
             l_core_reason = l_chip_reason;
 
-            // Disable DPS in KVM // @at019a
+            // Disable DPS in KVM
             if(!G_sysConfigData.system_type.kvm)
             {
                 l_part = amec_part_find_by_core(&g_amec->part_config, k);
@@ -357,7 +312,7 @@ void amec_slv_voting_box(void)
                                               AMEC_VOTING_REASON_VRHOT_THRM |
                                               AMEC_VOTING_REASON_PPB |
                                               AMEC_VOTING_REASON_PMAX |
-                                              AMEC_VOTING_REASON_CONN_OC))) //gm025
+                                              AMEC_VOTING_REASON_CONN_OC)))
                         {
                             l_core_freq = l_part->soft_fmin;
                             l_core_reason = AMEC_VOTING_REASON_SOFT_MIN;
@@ -378,7 +333,7 @@ void amec_slv_voting_box(void)
                 {
                     l_core_freq = g_amec->proc[0].pwr_votes.proc_pcap_nom_vote;
                     l_core_reason = AMEC_VOTING_REASON_PWR;
-                    l_kvm_throt_reason = POWERCAP; //gm025
+                    l_kvm_throt_reason = POWERCAP;
                 }
             }
             else
@@ -388,7 +343,7 @@ void amec_slv_voting_box(void)
                 {
                     l_core_freq = g_amec->proc[0].pwr_votes.proc_pcap_vote;
                     l_core_reason = AMEC_VOTING_REASON_PWR;
-                    l_kvm_throt_reason = POWERCAP; //gm025
+                    l_kvm_throt_reason = POWERCAP;
                 }
             }
 
@@ -428,7 +383,7 @@ void amec_slv_voting_box(void)
                 l_core_reason = AMEC_VOTING_REASON_OVERRIDE_CORE;
             }
 
-            // @wb004 -- If frequency has changed, set the flag
+            // If frequency has changed, set the flag
             if ( (l_core_freq != g_amec->proc[0].core[k].f_request) ||
                     (l_core_freq != g_amec->sys.fmax))
             {
@@ -441,11 +396,10 @@ void amec_slv_voting_box(void)
 
             // Update the Amester parameter telling us the reason. Needed for
             // parameter array.
-	        g_amec->proc[0].parm_f_reason[k] = l_core_reason;
-    
-            //@rt001a @at022c
+            g_amec->proc[0].parm_f_reason[k] = l_core_reason;
+
             //CURRENT_MODE() may be OCC_MODE_NOCHANGE because STATE change is processed
-            //before MODE change 
+            //before MODE change
             if ((CURRENT_MODE() != OCC_MODE_DYN_POWER_SAVE) &&
                 (CURRENT_MODE() != OCC_MODE_DYN_POWER_SAVE_FP) &&
                 (CURRENT_MODE() != OCC_MODE_NOCHANGE) &&
@@ -459,14 +413,14 @@ void amec_slv_voting_box(void)
             }
 
             // Update the sensor telling us what the requested frequency is
-            sensor_update( AMECSENSOR_ARRAY_PTR(FREQ250USP0C0,k), 
-                    (uint16_t) g_amec->proc[0].core[k].f_request);  // @th017
+            sensor_update( AMECSENSOR_ARRAY_PTR(FREQ250USP0C0,k),
+                    (uint16_t) g_amec->proc[0].core[k].f_request);
 
 #if 0
             /// TODO: This can be deleted if deemed useless
             /// This trace that can be used to debug the voting
-            /// box an control loops.  It will trace the reason why a 
-            /// controller is lowering the freq, but will only do it once in a 
+            /// box an control loops.  It will trace the reason why a
+            /// controller is lowering the freq, but will only do it once in a
             /// row for the specific freq it wants to control to.  It assumes
             /// that all cores will be controlled to same freq.
             if(l_chip_fmax != g_amec->sys.fmax){
@@ -490,7 +444,7 @@ void amec_slv_voting_box(void)
         }
     }//End of for loop
 
-    // @wb004 -- Check if the frequency is going to be changing
+    // Check if the frequency is going to be changing
     if( l_freq_req_changed == TRUE )
     {
         G_time_until_freq_check = FREQ_CHG_CHECK_TIME;
@@ -500,14 +454,14 @@ void amec_slv_voting_box(void)
         G_time_until_freq_check--;
     }
 
-    //convert POWERCAP reason to POWER_SUPPLY_FAILURE if ovs/failsafe is asserted -- gm025
+    //convert POWERCAP reason to POWER_SUPPLY_FAILURE if ovs/failsafe is asserted
     if((l_kvm_throt_reason == POWERCAP) &&
         (AMEC_INTF_GET_FAILSAFE() || AMEC_INTF_GET_OVERSUBSCRIPTION()))
     {
         l_kvm_throt_reason = POWER_SUPPLY_FAILURE;
     }
 
-    //check if we need to update the throttle reason in homer -- gm025
+    //check if we need to update the throttle reason in homer
     if(G_sysConfigData.system_type.kvm &&
        (l_kvm_throt_reason != G_amec_kvm_throt_reason))
     {
@@ -515,7 +469,6 @@ void amec_slv_voting_box(void)
         G_amec_kvm_throt_reason = l_kvm_throt_reason;
         ssx_semaphore_post(&G_dcomThreadWakeupSem);
     }
-
 }
 
 // Function Specification
@@ -524,13 +477,10 @@ void amec_slv_voting_box(void)
 //
 // Description: Slave OCC's frequency state machine.
 //              This function will run every tick.
-//              
-//
-// Flow:              FN=
 //
 // Thread: RealTime Loop
 //
-// Task Flags: 
+// Task Flags:
 //
 // End Function Specification
 void amec_slv_freq_smh(void)
@@ -555,7 +505,7 @@ void amec_slv_freq_smh(void)
 
                 // Fall through
             case AMEC_CORE_FREQ_PROCESS_STATE:
-                if(G_sysConfigData.system_type.kvm) //gm025
+                if(G_sysConfigData.system_type.kvm)
                 {
                     // update core bounds on kvm systems
                     proc_set_core_bounds(gpst_pmin(&G_global_pstate_table) + 1, (Pstate) l_pstate, k);
@@ -568,7 +518,6 @@ void amec_slv_freq_smh(void)
                 break;
         }
     }
-
 }
 
 // Function Specification
@@ -577,13 +526,10 @@ void amec_slv_freq_smh(void)
 //
 // Description: Slave OCC's voting box that decides the memory speed request.
 //              This function will run every tick.
-//              
-//
-// Flow:    2-20-12     FN=amec_slv_mem_voting_box.odg
 //
 // Thread: RealTime Loop
 //
-// Task Flags: 
+// Task Flags:
 //
 // End Function Specification
 void amec_slv_mem_voting_box(void)
@@ -618,7 +564,7 @@ void amec_slv_mem_voting_box(void)
         l_reason = AMEC_MEM_VOTING_REASON_DIMM;
     }
 
-    // Check if memory autoslewing is enabled - gm004
+    // Check if memory autoslewing is enabled
     if (g_amec->mnfg_parms.mem_autoslew)
     {
         //check if we've reached the max setting and need to start going down
@@ -643,17 +589,17 @@ void amec_slv_mem_voting_box(void)
     g_amec->mem_throttle_reason = l_reason;
     g_amec->mem_speed_request = l_vote;
 
-    //trace changes in memory throttling -- gm016
+    //trace changes in memory throttling
     if(l_reason != AMEC_MEM_VOTING_REASON_INIT)
     {
         if(!L_throttle_traced)
         {
             L_throttle_traced = TRUE;
             TRAC_INFO("Memory is being throttled. reason[%d] vote[%d] cent_expired[0x%02x] dimm_expired[0x%02x]",
-                       l_reason, 
-                       l_vote, 
-                       G_cent_temp_expired_bitmap, 
-                       G_dimm_temp_expired_bitmap); 
+                       l_reason,
+                       l_vote,
+                       G_cent_temp_expired_bitmap,
+                       G_dimm_temp_expired_bitmap);
         }
     }
     else
@@ -667,20 +613,16 @@ void amec_slv_mem_voting_box(void)
     return;
 }
 
-// @rt001a
 // Function Specification
 //
 // Name: amec_slv_check_perf
 //
 // Description: Slave OCC's Detect and log degraded performance errors
 //              This function will run every tick.
-//              
-//
-// Flow:    4-16-13     FN=amec_slv_check_perf.odg
 //
 // Thread: RealTime Loop
 //
-// Task Flags: 
+// Task Flags:
 //
 // End Function Specification
 void amec_slv_check_perf(void)
@@ -688,18 +630,18 @@ void amec_slv_check_perf(void)
     /*------------------------------------------------------------------------*/
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
-    static BOOLEAN          l_prev_failsafe_state = FALSE; 
-    static BOOLEAN          l_prev_ovs_state = FALSE; 
-    static BOOLEAN          l_prev_pcap_state = FALSE; 
-    static ERRL_SEVERITY    l_pcap_sev =  ERRL_SEV_PREDICTIVE; 
+    static BOOLEAN          l_prev_failsafe_state = FALSE;
+    static BOOLEAN          l_prev_ovs_state = FALSE;
+    static BOOLEAN          l_prev_pcap_state = FALSE;
+    static ERRL_SEVERITY    l_pcap_sev =  ERRL_SEV_PREDICTIVE;
     static BOOLEAN          l_throttle_traced = FALSE;
-    static uint64_t         l_time = 0; //@rt003a
+    static uint64_t         l_time = 0;
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
 
-    // @wb004 -- Verify that cores are at proper frequency
+    // Verify that cores are at proper frequency
     amec_verify_pstate();
 
     do
@@ -730,12 +672,12 @@ void amec_slv_check_perf(void)
                 l_prev_failsafe_state = TRUE;
 
                 TRAC_ERR("Frequency limited due to failsafe condition(mode:%d, state:%d)",
-                          CURRENT_MODE(), CURRENT_STATE()); // @at022c
+                          CURRENT_MODE(), CURRENT_STATE());
                 l_throttle_traced = TRUE;
-                l_time = ssx_timebase_get(); //rt003a
+                l_time = ssx_timebase_get();
 
-                // log error that calls out OVS procedure 
-                // set error severity to RRL_SEV_PREDICTIVE 
+                // log error that calls out OVS procedure
+                // set error severity to RRL_SEV_PREDICTIVE
 
                 /* @
                  * @errortype
@@ -748,12 +690,11 @@ void amec_slv_check_perf(void)
                 errlHndl_t l_errl = createErrl(AMEC_SLAVE_CHECK_PERFORMANCE, //modId
                                               INTERNAL_FAILURE,             //reasoncode
                                               ERC_AMEC_SLAVE_FAILSAFE_STATE,//Extended reason code
-                                              ERRL_SEV_PREDICTIVE,          //Severity // @at020a
+                                              ERRL_SEV_PREDICTIVE,          //Severity
                                               NULL,                         //Trace Buf
                                               DEFAULT_TRACE_SIZE,           //Trace Size
                                               l_prev_failsafe_state,        //userdata1
                                               0);                           //userdata2
-
 
                 addCalloutToErrl(   l_errl,
                                     ERRL_CALLOUT_TYPE_COMPONENT_ID,
@@ -761,10 +702,9 @@ void amec_slv_check_perf(void)
                                     ERRL_CALLOUT_PRIORITY_HIGH
                                 );
 
-
                 // and sets the consolidate action flag
                 setErrlActions( l_errl, ERRL_ACTIONS_CONSOLIDATE_ERRORS );
- 
+
                 // Commit Error
                 commitErrl(&l_errl);
 
@@ -773,7 +713,6 @@ void amec_slv_check_perf(void)
             }
         }
 
-        
         // frequency limited due to oversubscription condition ?
         if ( AMEC_INTF_GET_OVERSUBSCRIPTION() == TRUE )
         {
@@ -788,14 +727,14 @@ void amec_slv_check_perf(void)
                 l_prev_ovs_state = TRUE;
 
                 TRAC_ERR("Frequency limited due to oversubscription condition(mode:%d, state:%d)",
-                          CURRENT_MODE(), CURRENT_STATE()); // @at022c
+                          CURRENT_MODE(), CURRENT_STATE());
                 l_throttle_traced = TRUE;
-                l_time = ssx_timebase_get(); //@rt003a
+                l_time = ssx_timebase_get();
 
                 // log error that calls out OVS procedure
                 // set error severity to RRL_SEV_PREDICTIVE
 
-                // @wb003 -- Updated the RC to match the actual RC passed to createErrl()
+                // Updated the RC to match the actual RC passed to createErrl()
                 /* @
                  * @errortype
                  * @moduleid    AMEC_SLAVE_CHECK_PERFORMANCE
@@ -805,14 +744,13 @@ void amec_slv_check_perf(void)
                  * @devdesc     Frequency limited due to oversubscription condition
                  */
                 errlHndl_t l_errl = createErrl(AMEC_SLAVE_CHECK_PERFORMANCE, //modId
-                                              OVERSUB_LIMIT_ALERT,           //reasoncode  // @at020c
+                                              OVERSUB_LIMIT_ALERT,           //reasoncode
                                               ERC_AMEC_SLAVE_OVS_STATE,      //Extended reason code
-                                              ERRL_SEV_PREDICTIVE,           //Severity  // @at020c
+                                              ERRL_SEV_PREDICTIVE,           //Severity
                                               NULL,                          //Trace Buf
                                               DEFAULT_TRACE_SIZE,            //Trace Size
                                               l_prev_ovs_state,              //userdata1
                                               0);                            //userdata2
-
 
                 addCalloutToErrl(   l_errl,
                                     ERRL_CALLOUT_TYPE_COMPONENT_ID,
@@ -832,11 +770,11 @@ void amec_slv_check_perf(void)
             }
         }
 
-        uint16_t l_snrBulkPwr = AMECSENSOR_PTR(PWR250US)->sample; //@rt003a
+        uint16_t l_snrBulkPwr = AMECSENSOR_PTR(PWR250US)->sample;
 
         // frequency limited due to system power cap condition ?
-        if (( l_snrBulkPwr > (G_sysConfigData.pcap.system_pcap - PDROP_THRESH) ) //@rt003c
-            && 
+        if (( l_snrBulkPwr > (G_sysConfigData.pcap.system_pcap - PDROP_THRESH) )
+            &&
             ( G_sysConfigData.pcap.current_pcap == 0 ))
         {
             if ( l_prev_pcap_state == TRUE)
@@ -846,14 +784,14 @@ void amec_slv_check_perf(void)
             }
             else
             {
-                //@rt003c log this error ONLY ONCE per IPL 
+                //log this error ONLY ONCE per IPL
                 l_prev_pcap_state = TRUE;
-                
+
                 TRAC_ERR("Frequency limited due to power cap condition(mode:%d, state:%d)",
-                         CURRENT_MODE(), CURRENT_STATE()); // @at022c
+                         CURRENT_MODE(), CURRENT_STATE());
 
                 TRAC_ERR("SnrBulkPwr %d > Sys Pcap %d ",l_snrBulkPwr,
-                         G_sysConfigData.pcap.system_pcap ); //@rt003c @at022c
+                         G_sysConfigData.pcap.system_pcap );
 
                 TRAC_ERR("SnrFanPwr %d, SnrIOPwr %d, SnrStoragePwr %d, SnrGpuPrw %d ",
                         AMECSENSOR_PTR(PWR250USFAN)->sample,
@@ -865,20 +803,20 @@ void amec_slv_check_perf(void)
                         g_amec->proc_snr_pwr[0],
                         g_amec->proc_snr_pwr[1],
                         g_amec->proc_snr_pwr[2],
-                        g_amec->proc_snr_pwr[3] ); //@rt003a
+                        g_amec->proc_snr_pwr[3] );
 
                 TRAC_ERR("SnrMemPwr 0 %d, SnrMemPwr 1 %d, SnrMemPwr 2 %d, SnrMemPwr 3 %d",
                         g_amec->mem_snr_pwr[0],
                         g_amec->mem_snr_pwr[1],
                         g_amec->mem_snr_pwr[2],
-                        g_amec->mem_snr_pwr[3] ); //@rt003a
+                        g_amec->mem_snr_pwr[3] );
 
 
                 l_throttle_traced = TRUE;
                 l_time = ssx_timebase_get();
 
-                // log error that calls out firmware and APSS procedure 
-                // set error severity to l_pcap_sev 
+                // log error that calls out firmware and APSS procedure
+                // set error severity to l_pcap_sev
 
                 /* @
                  * @errortype
@@ -890,34 +828,32 @@ void amec_slv_check_perf(void)
                  * @devdesc     Frequency limited due to PowerCap  condition
                  */
                 errlHndl_t l_errl = createErrl(AMEC_SLAVE_CHECK_PERFORMANCE, //modId
-                                              PCAP_THROTTLE_POWER_LIMIT,     //reasoncode @rt003c
-                                              ERC_AMEC_SLAVE_POWERCAP,      //Extended reason code
-                                              l_pcap_sev,                   //Severity
-                                              NULL,                         //Trace Buf
-                                              DEFAULT_TRACE_SIZE,           //Trace Size
-                                              l_snrBulkPwr,                 //userdata1 @rt003c
-                                              G_sysConfigData.pcap.system_pcap);//userdata2 @rt003c
-
+                                              PCAP_THROTTLE_POWER_LIMIT,     //reasoncode
+                                              ERC_AMEC_SLAVE_POWERCAP,       //Extended reason code
+                                              l_pcap_sev,                    //Severity
+                                              NULL,                          //Trace Buf
+                                              DEFAULT_TRACE_SIZE,            //Trace Size
+                                              l_snrBulkPwr,                  //userdata1
+                                              G_sysConfigData.pcap.system_pcap);//userdata2
 
                 addCalloutToErrl(   l_errl,
                                     ERRL_CALLOUT_TYPE_COMPONENT_ID,
                                     ERRL_COMPONENT_ID_FIRMWARE,
                                     ERRL_CALLOUT_PRIORITY_HIGH
                                 );
-                
+
                 addCalloutToErrl(   l_errl,
                                     ERRL_CALLOUT_TYPE_HUID,
                                     G_sysConfigData.apss_huid,
                                     ERRL_CALLOUT_PRIORITY_HIGH
                                 );
 
-
                 // and sets the consolidate action flag
                 setErrlActions( l_errl, ERRL_ACTIONS_CONSOLIDATE_ERRORS );
- 
+
                 // then l_pcap_sev to informational
                 l_pcap_sev = ERRL_SEV_INFORMATIONAL;
-                
+
                 // Commit Error
                 commitErrl(&l_errl);
 
@@ -925,14 +861,14 @@ void amec_slv_check_perf(void)
                 break;
             }
         }
-        
-        // trottle trace to every 3600 seconds (1hr = 3600000) @rt003c
+
+        // trottle trace to every 3600 seconds (1hr = 3600000)
         if(!l_throttle_traced && ( DURATION_IN_MS_UNTIL_NOW_FROM(l_time) > 3600000 ) )
         {
             TRAC_INFO("Frequency power limited due to transient condition: PowerLimited=%x, FailSafe=%x, OverSubScription=%x CurrentBulkPwr=%x",
             G_non_dps_power_limited, AMEC_INTF_GET_FAILSAFE(), AMEC_INTF_GET_OVERSUBSCRIPTION(), l_snrBulkPwr );
             l_throttle_traced = TRUE;
-            
+
             l_time = ssx_timebase_get();
         }
     }
@@ -941,9 +877,8 @@ void amec_slv_check_perf(void)
     return;
 }
 
-// @wb004
-// Verifies that each core is at the correct frequency
-// after they have had time to stabilize
+// Verifies that each core is at the correct frequency after they have had
+// time to stabilize
 void amec_verify_pstate()
 {
     uint8_t                             l_core = 0;
@@ -1006,7 +941,7 @@ void amec_verify_pstate()
                                     TARGET_FREQ_FAILURE,       // i_reasonCode,
                                     OCC_NO_EXTENDED_RC,
                                     ERRL_SEV_UNRECOVERABLE,
-                                    NULL,                      // tracDesc_t i_trace,
+                                    NULL,                      // i_trace,
                                     DEFAULT_TRACE_SIZE,        // i_traceSz,
                                     0,                         // i_userData1,
                                     0);                        // i_userData2
@@ -1022,7 +957,6 @@ void amec_verify_pstate()
                         ERRL_CALLOUT_TYPE_HUID,
                         G_sysConfigData.proc_huid,
                         ERRL_CALLOUT_PRIORITY_MED);
-
             }
         }
 
@@ -1040,8 +974,6 @@ void amec_verify_pstate()
     }
 }
 
-// @wb004 -- Moved from main.c
-// gm031
 // Fills in a pmc ffdc buffer with lots of PMC related OCI and SCOM registers
 void fill_pmc_ffdc_buffer(pmc_ffdc_data_t* i_ffdc_ptr)
 {
@@ -1090,3 +1022,7 @@ void fill_pmc_ffdc_buffer(pmc_ffdc_data_t* i_ffdc_ptr)
         i_ffdc_ptr->scom_regs[i].data = l_data64;
     }
 }
+
+/*----------------------------------------------------------------------------*/
+/* End                                                                        */
+/*----------------------------------------------------------------------------*/

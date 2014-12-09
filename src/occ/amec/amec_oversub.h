@@ -1,31 +1,35 @@
-/******************************************************************************
-// @file amec_oversub.c
-// @brief Over-subscription
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _amec_oversub_h amec_oversub.h
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @at010  859992     alvinwan  11/07/2012  Added oversubscription feature
- *   @gs004  883829     gjsilva   05/21/2013  Emulate oversubscription macro
- *   @fk001  879727     fmkassem  04/16/2013  PCAP support.  
- *   @at020  908666     alvinwan  12/16/2013  Oversubscription Error Handling
- *   @gs023  912003     gjsilva   01/16/2014  Generate VRHOT signal and control loop
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/amec/amec_oversub.h $                                 */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
 #ifndef _AMEC_OVERSUB_H
 #define _AMEC_OVERSUB_H
+
 /*----------------------------------------------------------------------------*/
 /* Includes                                                                   */
 /*----------------------------------------------------------------------------*/
-#include <occ_sys_config.h>     // @at010a Added for sys config access
+#include <occ_sys_config.h>     // Added for sys config access
 #include <dcom.h>
 
 /*----------------------------------------------------------------------------*/
@@ -39,17 +43,14 @@
 /*----------------------------------------------------------------------------*/
 /* Defines                                                                    */
 /*----------------------------------------------------------------------------*/
-// @at020c
 #define AMEC_INTF_GET_OVERSUBSCRIPTION() \
 (G_sysConfigData.failsafe_enabled ? g_amec->oversub_status.cmeThrottlePinLive : \
                                    (g_amec->oversub_status.oversubPinLive || G_dcom_slv_inbox_rx.emulate_oversub))
 
 #define AMEC_INTF_GET_OVERSUBSCRIPTION_EMULATION() g_amec->oversub_status.oversubPinMnfg
 
-// @at020c
 #define AMEC_INTF_GET_FAILSAFE() \
 (G_sysConfigData.failsafe_enabled ? g_amec->oversub_status.oversubPinLive : 0)
-
 
 /*----------------------------------------------------------------------------*/
 /* Typedef / Enum                                                             */
@@ -101,37 +102,14 @@ typedef struct oversub_status
     uint32_t cmeThrottlePinMnfg     :1;
 }oversub_status_t;
 
-
 /*----------------------------------------------------------------------------*/
 /* Function Prototypes                                                        */
 /*----------------------------------------------------------------------------*/
 
-/**
- *  @brief  Oversubscription ISR
- *
- *  This function
- *
- *  @return No return from this function.
- */
 void amec_oversub_isr(void);
 
-
-/**
- *  @brief  Oversubscription check
- *
- *  This function
- *
- *  @return No return from this function.
- */
 void amec_oversub_check(void);
 
-/**
-  * @brief Oversubscription set Pmax clip
-  *
-  * This function will set the pmax clip register
-  * 
-  * @return No return from this function
-  */
 void amec_oversub_pmax_clip(Pstate i_pstate);
 
 bool apss_gpio_get(uint8_t i_pin_number, uint8_t *o_pin_value);

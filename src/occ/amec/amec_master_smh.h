@@ -1,37 +1,34 @@
-/******************************************************************************
-// @file amec_master_smh.h
-// @brief OCC AMEC Master SMH header file
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _amec_master_smh_h amec_master_smh.h
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *                      thallet   11/08/2011  New file
- *   @th00a             thallet   02/03/2012  Worst case FW timings in AMEC Sensors
- *   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
- *   @pb00E             pbavari   03/11/2012  Added correct include file
- *   @gs006  884384     gjsilva   05/30/2013  Support for mnfg auto-slewing function
- *   @db001  897459     deepthib  08/03/2013  Power cap mismatch & under pcap functions
- *   @gs015  905166     gjsilva   11/04/2013  Full support for IPS function
- *   @rt004  908817     tapiar    12/11/2013  Expand G_active_slave_pcaps arrray to also carry
- *                                            valid pcap byte from slaves
- *   @gs025  913663     gjsilva   01/30/2014  Full fupport for soft frequency boundaries
- *
- *  @endverbatim
- *
- *///*************************************************************************/
- 
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/amec/amec_master_smh.h $                              */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
+
 #ifndef _AMEC_MASTER_SMH_H
 #define _AMEC_MASTER_SMH_H
 
 //*************************************************************************
 // Includes
 //*************************************************************************
-//@pb00Ec - changed from common.h to occ_common.h for ODE support
 #include <occ_common.h>
 #include <ssx.h>
 #include <ssx_app_cfg.h>
@@ -84,9 +81,9 @@ typedef struct
     uint8_t  reserved;
 }slave_pcap_info_t;
 
-extern slave_pcap_info_t G_slave_active_pcaps[MAX_OCCS]; //@db001a @rt004c
-extern uint8_t G_pcaps_mismatch_count;          //@db001a
-extern uint8_t G_over_cap_count;                //@db001a
+extern slave_pcap_info_t G_slave_active_pcaps[MAX_OCCS];
+extern uint8_t G_pcaps_mismatch_count;
+extern uint8_t G_over_cap_count;
 extern uint16_t G_mst_soft_fmin;
 extern uint16_t G_mst_soft_fmax;
 
@@ -102,9 +99,9 @@ void amec_mst_common_tasks_post(void);
 
 // Master auto-slewing function
 void amec_master_auto_slew(void);
-// OCC Power cap mismatch function      @db001a
+// OCC Power cap mismatch function
 void amec_mst_check_pcaps_match(void);
-// Check if under power cap function    @db001a
+// Check if under power cap function
 void amex_mst_check_under_pcap(void);
 // Idle Power Saver main algorithm
 void amec_mst_ips_main(void);
@@ -139,7 +136,7 @@ void amec_mst_substate_3_7(void);
 void amec_mst_sub_substate_3_0_0(void);
 void amec_mst_sub_substate_3_0_1(void);
 void amec_mst_sub_substate_3_0_7(void);
-                                
+
 // Master SubState 6
 void amec_mst_substate_6_0(void);
 void amec_mst_substate_6_1(void);
@@ -149,7 +146,7 @@ void amec_mst_substate_6_4(void);
 void amec_mst_substate_6_5(void);
 void amec_mst_substate_6_6(void);
 void amec_mst_substate_6_7(void);
-                                
+
 void amec_mst_substate_3_0(void);
 void amec_mst_substate_3_1(void);
 
@@ -161,9 +158,5 @@ void amec_mst_sub_substate_6_1_4(void);
 void amec_mst_sub_substate_6_1_5(void);
 void amec_mst_sub_substate_6_1_6(void);
 void amec_mst_sub_substate_6_1_7(void);
-                                
-//*************************************************************************
-// Functions
-//*************************************************************************
 
 #endif

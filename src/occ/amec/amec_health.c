@@ -1,30 +1,27 @@
-/******************************************************************************
-// @file amec_health.c
-// @brief Health monitor for OCC firmware.
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section amec_health_c amec_health.c
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @gs012  903325     gjsilva   09/26/2013  Created
- *           903325     gjsilva   10/24/2013  Minor changes from code review
- *   @gm013  907548     milesg    11/22/2013  Memory therm monitoring support
- *   @gm015  907601     milesg    12/06/2013  L4 Bank Delete circumvention and centaur i2c recovery
- *   @gm017  909636     milesg    12/17/2013  Memory fan control
- *   @gs021  909855     gjsilva   12/18/2013  Support for processor OT condition
- *   @gs023  912003     gjsilva   01/16/2014  Generate VRHOT signal and control loop
- *   @gm028  911670     milesg    02/27/2014  Fixed compile fails from stradale
- *   @gs028  917695     gjsilva   03/04/2014  Check if cores are in a sleep state
- *   @gm038  926761     milesg    05/16/2014  Centaur temp timeout not logged
- *   @gm039  922963     milesg    05/28/2014  Fixed trace
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/amec/amec_health.c $                                  */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
 //*************************************************************************
 // Includes
@@ -41,6 +38,7 @@
 // Externs
 //*************************************************************************
 extern thrm_fru_data_t      G_thrm_fru_data[DATA_FRU_MAX];
+
 //*************************************************************************
 // Defines/Enums
 //*************************************************************************
@@ -95,7 +93,7 @@ uint64_t amec_mem_get_huid(uint8_t i_cent, uint8_t i_dimm)
         {
             //if we don't have a valid dimm huid, use the
             //centaur huid.
-            //FIXME: this will not work for ISDIMMS.
+            //TODO: this will not work for ISDIMMS.
             l_huid = G_sysConfigData.centaur_huids[i_cent];
         }
     }
@@ -105,8 +103,8 @@ uint64_t amec_mem_get_huid(uint8_t i_cent, uint8_t i_dimm)
 //If i_dimm is 0xff it is assumed that the caller wishes to
 //mark the centaur as being logged.  Otherwise, it is assumed
 //that the dimm should be marked.
-void amec_mem_mark_logged(uint8_t i_cent, 
-                          uint8_t i_dimm, 
+void amec_mem_mark_logged(uint8_t i_cent,
+                          uint8_t i_dimm,
                           uint8_t* i_clog_bitmap,
                           uint8_t* i_dlog_bitmap)
 {
@@ -178,9 +176,9 @@ void amec_health_check_dimm_temp()
 
             l_huid = amec_mem_get_huid(l_cent, l_dimm);
 
-            amec_mem_mark_logged(l_cent, 
-                                 l_dimm, 
-                                 &G_cent_overtemp_logged_bitmap, 
+            amec_mem_mark_logged(l_cent,
+                                 l_dimm,
+                                 &G_cent_overtemp_logged_bitmap,
                                  &G_dimm_overtemp_logged_bitmap.bytes[l_cent]);
 
             //If we don't have an error log for the callout, create one
@@ -197,13 +195,13 @@ void amec_health_check_dimm_temp()
                  *              temperature.
                  */
                 l_err = createErrl(AMEC_HEALTH_CHECK_DIMM_TEMP,    //modId
-                                    DIMM_ERROR_TEMP,                //reasoncode
-                                    OCC_NO_EXTENDED_RC,             //Extended reason code
-                                    ERRL_SEV_PREDICTIVE,            //Severity
-                                    NULL,                           //Trace Buf
-                                    DEFAULT_TRACE_SIZE,             //Trace Size
-                                    l_max_temp,                     //userdata1
-                                    l_ot_error);                    //userdata2
+                                    DIMM_ERROR_TEMP,               //reasoncode
+                                    OCC_NO_EXTENDED_RC,            //Extended reason code
+                                    ERRL_SEV_PREDICTIVE,           //Severity
+                                    NULL,                          //Trace Buf
+                                    DEFAULT_TRACE_SIZE,            //Trace Size
+                                    l_max_temp,                    //userdata1
+                                    l_ot_error);                   //userdata2
 
                 // Callout the "over temperature" procedure
                 addCalloutToErrl(l_err,
@@ -218,7 +216,7 @@ void amec_health_check_dimm_temp()
                              ERRL_CALLOUT_TYPE_HUID,
                              l_huid,
                              ERRL_CALLOUT_PRIORITY_MED);
-            
+
             l_callouts_count++;
 
             //If we've reached the max # of callouts for an error log
@@ -227,8 +225,8 @@ void amec_health_check_dimm_temp()
             {
                 commitErrl(&l_err);
             }
-            
-            //If we found all of the callouts for this centaur, go to the next one 
+
+            //If we found all of the callouts for this centaur, go to the next one
             if(!l_new_callouts)
             {
                 break;
@@ -287,9 +285,9 @@ void amec_health_check_cent_temp()
 
         l_huid = amec_mem_get_huid(l_cent, 0xff);
 
-        amec_mem_mark_logged(l_cent, 
-                             0xff, 
-                             &G_cent_overtemp_logged_bitmap, 
+        amec_mem_mark_logged(l_cent,
+                             0xff,
+                             &G_cent_overtemp_logged_bitmap,
                              &G_dimm_overtemp_logged_bitmap.bytes[l_cent]);
 
         //If we don't have an error log for the callout, create one
@@ -322,12 +320,12 @@ void amec_health_check_cent_temp()
             l_callouts_count = 1;
         }
 
-        // Callout centaur 
+        // Callout centaur
         addCalloutToErrl(l_err,
                          ERRL_CALLOUT_TYPE_HUID,
                          l_huid,
                          ERRL_CALLOUT_PRIORITY_MED);
-        
+
         l_callouts_count++;
 
         //If we've reached the max # of callouts for an error log
@@ -336,7 +334,7 @@ void amec_health_check_cent_temp()
         {
             commitErrl(&l_err);
         }
-        
+
     }//iterate over centaurs
 
     if(l_err)
@@ -355,7 +353,7 @@ void amec_health_check_dimm_timeout()
     uint32_t    l_callouts_count = 0;
     uint64_t    l_huid;
     static bool L_ran_once = FALSE;
-    
+
     do
     {
         //For every dimm sensor there are 3 cases to consider
@@ -363,7 +361,7 @@ void amec_health_check_dimm_timeout()
         //1) sensor is enabled and not updated (need to increment timer and check for timeout)
         //2) sensor is enabled and updated but wasn't updated on previous check (need to clear timer)
         //3) sensor is enabled and updated and was updated on previous check (do nothing)
-       
+
         //Grab snapshot of G_dimm_temp_updated_bitmap and clear it
         l_temp_update_bitmap.bigword = G_dimm_temp_updated_bitmap.bigword;
         G_dimm_temp_updated_bitmap.bigword = 0;
@@ -377,14 +375,13 @@ void amec_health_check_dimm_timeout()
         //save off the previous bitmap of updated sensors for next time
         L_temp_update_bitmap_prev.bigword = l_temp_update_bitmap.bigword;
 
-        //only go further if we actually have work to do here. 
+        //only go further if we actually have work to do here.
         if(!l_need_inc.bigword && !l_need_clr.bigword)
         {
             //nothing to do
             break;
         }
 
-        
         //iterate across all centaurs incrementing dimm sensor timers as needed
         for(l_cent = 0; l_cent < MAX_NUM_CENTAURS; l_cent++)
         {
@@ -429,7 +426,7 @@ void amec_health_check_dimm_timeout()
                 }
 
                 //check if the temperature reading is still useable
-                if(g_amec->thermaldimm.temp_timeout == 0xff || 
+                if(g_amec->thermaldimm.temp_timeout == 0xff ||
                    l_fru->sample_age < g_amec->thermaldimm.temp_timeout)
                 {
                     continue;
@@ -462,7 +459,7 @@ void amec_health_check_dimm_timeout()
                      * @userdata2   0
                      * @userdata4   OCC_NO_EXTENDED_RC
                      * @devdesc     Failed to read a memory DIMM temperature
-                     *              
+                     *
                      */
                     l_err = createErrl(AMEC_HEALTH_CHECK_DIMM_TIMEOUT,    //modId
                                        FRU_TEMP_TIMEOUT,                 //reasoncode
@@ -472,7 +469,7 @@ void amec_health_check_dimm_timeout()
                                        DEFAULT_TRACE_SIZE,                //Trace Size
                                        g_amec->thermaldimm.temp_timeout,  //userdata1
                                        0);                                //userdata2
-    
+
                     l_callouts_count = 0;
                 }
 
@@ -484,7 +481,7 @@ void amec_health_check_dimm_timeout()
                                  ERRL_CALLOUT_TYPE_HUID,
                                  l_huid,
                                  ERRL_CALLOUT_PRIORITY_MED);
-            
+
                 l_callouts_count++;
 
                 //If we've reached the max # of callouts for an error log
@@ -495,9 +492,9 @@ void amec_health_check_dimm_timeout()
                 }
 
                 //Mark dimm as logged so we don't log it more than once
-                amec_mem_mark_logged(l_cent, 
-                                     l_dimm, 
-                                     &G_cent_timeout_logged_bitmap, 
+                amec_mem_mark_logged(l_cent,
+                                     l_dimm,
+                                     &G_cent_timeout_logged_bitmap,
                                      &G_dimm_timeout_logged_bitmap.bytes[l_cent]);
             } //iterate over all dimms
 
@@ -546,13 +543,11 @@ void amec_health_check_dimm_timeout()
                 }
 
             }//iterate over all dimms
-
         }//iterate over all centaurs
     }while(0);
     L_ran_once = TRUE;
-    G_thrm_fru_data[DATA_FRU_DIMM].read_failure = G_dimm_temp_expired_bitmap; //gm017
+    G_thrm_fru_data[DATA_FRU_DIMM].read_failure = G_dimm_temp_expired_bitmap;
 }
-
 
 void amec_health_check_cent_timeout()
 {
@@ -572,7 +567,6 @@ void amec_health_check_cent_timeout()
         //1) centaur is present and not updated (need to increment timer and check for timeout)
         //2) centaur is present and updated but wasn't updated on previous check (need to clear timer)
         //3) centaur is present and updated and was updated on previous check (do nothing)
-       
 
         //Grab snapshot of G_cent_temp_update_bitmap and clear it
         l_temp_update_bitmap = G_cent_temp_updated_bitmap;
@@ -583,8 +577,8 @@ void amec_health_check_cent_timeout()
 
         //check if we need to clear any timers
         l_need_clr = l_temp_update_bitmap & ~L_temp_update_bitmap_prev;
-       
-        //only go further if we actually have work to do here. 
+
+        //only go further if we actually have work to do here.
         if(!l_need_inc && !l_need_clr)
         {
             //nothing to do
@@ -592,8 +586,8 @@ void amec_health_check_cent_timeout()
         }
 
         //save off the previous bitmap of updated sensors
-        L_temp_update_bitmap_prev = l_temp_update_bitmap; 
-        
+        L_temp_update_bitmap_prev = l_temp_update_bitmap;
+
         //iterate across all centaurs incrementing timers as needed
         for(l_cent = 0; l_cent < MAX_NUM_CENTAURS; l_cent++)
         {
@@ -624,12 +618,12 @@ void amec_health_check_cent_timeout()
             //info trace each transition to not having a new temperature
             if(l_fru->sample_age == 1)
             {
-                TRAC_INFO("Failed to read centaur temperature on cent[%d] temp[%d] flags[0x%02X]", //gm039
+                TRAC_INFO("Failed to read centaur temperature on cent[%d] temp[%d] flags[0x%02X]",
                               l_cent, l_fru->cur_temp, l_fru->flags);
             }
 
             //check if the temperature reading is still useable
-            if(g_amec->thermalcent.temp_timeout == 0xff || 
+            if(g_amec->thermalcent.temp_timeout == 0xff ||
                l_fru->sample_age < g_amec->thermalcent.temp_timeout)
             {
                 continue;
@@ -644,7 +638,7 @@ void amec_health_check_cent_timeout()
             }
 
             //If we've already logged an error for this FRU go to the next one.
-            if(G_cent_timeout_logged_bitmap & (CENTAUR0_PRESENT_MASK >> l_cent)) //gm038
+            if(G_cent_timeout_logged_bitmap & (CENTAUR0_PRESENT_MASK >> l_cent))
             {
                 continue;
             }
@@ -663,7 +657,7 @@ void amec_health_check_cent_timeout()
                  * @userdata4   OCC_NO_EXTENDED_RC
                  * @devdesc     Failed to read a centaur memory controller
                  *              temperature
-                 *              
+                 *
                  */
                 l_err = createErrl(AMEC_HEALTH_CHECK_CENT_TIMEOUT,    //modId
                                    FRU_TEMP_TIMEOUT,                  //reasoncode
@@ -677,7 +671,7 @@ void amec_health_check_cent_timeout()
                 l_callouts_count = 0;
             }
 
-            //Get the HUID for the centaur 
+            //Get the HUID for the centaur
             l_huid = amec_mem_get_huid(l_cent, 0xff);
 
             // Callout centaur
@@ -685,7 +679,7 @@ void amec_health_check_cent_timeout()
                              ERRL_CALLOUT_TYPE_HUID,
                              l_huid,
                              ERRL_CALLOUT_PRIORITY_MED);
-        
+
             l_callouts_count++;
 
             //If we've reached the max # of callouts for an error log
@@ -696,9 +690,9 @@ void amec_health_check_cent_timeout()
             }
 
             //Mark centaur as logged so we don't log it more than once
-            amec_mem_mark_logged(l_cent, 
-                                 0xff, 
-                                 &G_cent_timeout_logged_bitmap, 
+            amec_mem_mark_logged(l_cent,
+                                 0xff,
+                                 &G_cent_timeout_logged_bitmap,
                                  &G_dimm_timeout_logged_bitmap.bytes[l_cent]);
         } //iterate over all centaurs
 
@@ -738,7 +732,7 @@ void amec_health_check_cent_timeout()
         }//iterate over all centaurs
     }while(0);
     L_ran_once = TRUE;
-    G_thrm_fru_data[DATA_FRU_CENTAUR].read_failure = G_cent_temp_expired_bitmap; //gm017
+    G_thrm_fru_data[DATA_FRU_CENTAUR].read_failure = G_cent_temp_expired_bitmap;
 }
 
 
@@ -748,9 +742,6 @@ void amec_health_check_cent_timeout()
 //
 // Description: This function checks if the proc temperature has
 // exceeded the error temperature as define in data format 0x13.
-//              
-//
-// Flow:  10/18/13    FN=amec_health_check_proc_temp.odg
 //
 // End Function Specification
 void amec_health_check_proc_temp()
@@ -779,7 +770,7 @@ void amec_health_check_proc_temp()
         {
             // Increment the error counter for this FRU
             l_error_count++;
-            
+
             // Trace and log error the first time this occurs
             if (l_error_count == AMEC_HEALTH_ERROR_TIMER)
             {
@@ -791,21 +782,21 @@ void amec_health_check_proc_temp()
 
                 l_ot_error_logged = TRUE;
 
-                TRAC_ERR("amec_health_check_error_temp: processor has exceeded OT error! temp[%u] ot_error[%u]", 
+                TRAC_ERR("amec_health_check_error_temp: processor has exceeded OT error! temp[%u] ot_error[%u]",
                          l_sensor->sample,
                          l_ot_error);
 
                 // Log an OT error
                 /* @
-                   * @errortype
-                   * @moduleid    AMEC_HEALTH_CHECK_PROC_TEMP
-                   * @reasoncode  PROC_ERROR_TEMP
-                   * @userdata1   0
-                   * @userdata2   Fru peak temperature sensor
-                   * @devdesc     Processor FRU has reached error temperature 
-                   *              threshold and is called out in this error log. 
-                   * 
-                   */
+                 * @errortype
+                 * @moduleid    AMEC_HEALTH_CHECK_PROC_TEMP
+                 * @reasoncode  PROC_ERROR_TEMP
+                 * @userdata1   0
+                 * @userdata2   Fru peak temperature sensor
+                 * @devdesc     Processor FRU has reached error temperature
+                 *              threshold and is called out in this error log.
+                 *
+                 */
                 l_err = createErrl(AMEC_HEALTH_CHECK_PROC_TEMP,
                                    PROC_ERROR_TEMP,
                                    ERC_AMEC_PROC_ERROR_OVER_TEMPERATURE,
@@ -843,7 +834,7 @@ void amec_health_check_proc_temp()
             // Reset the error counter for this FRU
             l_error_count = 0;
         }
-    }while (0); 
+    }while (0);
 
 }
 
@@ -853,7 +844,6 @@ void amec_health_check_proc_temp()
 //
 // Description: This function checks if OCC has failed to read the processor
 // temperature and if it has exceeded the maximum allowed number of retries.
-//
 //
 // End Function Specification
 void amec_health_check_proc_timeout()
@@ -936,7 +926,7 @@ void amec_health_check_proc_timeout()
                  * @userdata2   0
                  * @userdata4   OCC_NO_EXTENDED_RC
                  * @devdesc     Failed to read processor temperature.
-                 *              
+                 *
                  */
                 l_err = createErrl(AMEC_HEALTH_CHECK_PROC_TIMEOUT,    //modId
                                    PROC_TEMP_TIMEOUT,                 //reasoncode
@@ -999,16 +989,16 @@ void amec_health_check_proc_vrhot()
                      l_sensor->sample);
 
             /* @
-               * @errortype
-               * @moduleid    AMEC_HEALTH_CHECK_PROC_VRHOT
-               * @reasoncode  VRM_ERROR_TEMP
-               * @userdata1   VRHOT error threshold
-               * @userdata2   0 
-               * @userdata4   OCC_NO_EXTENDED_RC 
-               * @devdesc     VRHOT signal has been asserted long enough to
-               *              exceed its error threshold. 
-               * 
-               */
+             * @errortype
+             * @moduleid    AMEC_HEALTH_CHECK_PROC_VRHOT
+             * @reasoncode  VRM_ERROR_TEMP
+             * @userdata1   VRHOT error threshold
+             * @userdata2   0
+             * @userdata4   OCC_NO_EXTENDED_RC
+             * @devdesc     VRHOT signal has been asserted long enough to
+             *              exceed its error threshold.
+             *
+             */
             l_err = createErrl(AMEC_HEALTH_CHECK_PROC_VRHOT,
                                VRM_ERROR_TEMP,
                                OCC_NO_EXTENDED_RC,
@@ -1035,3 +1025,7 @@ void amec_health_check_proc_vrhot()
         }
     }
 }
+
+/*----------------------------------------------------------------------------*/
+/* End                                                                        */
+/*----------------------------------------------------------------------------*/

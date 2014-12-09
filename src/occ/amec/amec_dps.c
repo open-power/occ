@@ -1,23 +1,27 @@
-/******************************************************************************
- * @file amec_dps.c
- * @brief AMEC Dynamic Power Saving (DPS) Algorithms
- ******************************************************************************/
-/******************************************************************************
- *
- *      @page ChangeLogs Change Logs
- *      @section _amec_dps_c amec_dps.c
- *      @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @ly001  853751     lychen    09/17/2012  Initial Revision
- *   @ry002  862116     ronda     11/26/2012  Moved speed to freq conversion function
- *   @gs009  897228     gjsilva   08/28/2013  Enablement of DPS-FP Mode
- *   @gs025  913663     gjsilva   01/30/2014  Full fupport for soft frequency boundaries
- *
- *  @endverbatim
- *
- ******************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/amec/amec_dps.c $                                     */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
 /*----------------------------------------------------------------------------*/
 /* Includes                                                                   */
@@ -30,7 +34,7 @@
 #include <amec_part.h>
 #include <amec_dps.h>
 #include <sensor.h>
-#include <amec_controller.h> 
+#include <amec_controller.h>
 
 /*----------------------------------------------------------------------------*/
 /* Constants                                                                  */
@@ -58,8 +62,6 @@
 //
 // Description: Update per-core utilization variables.
 //
-// Flow:              FN= None
-//
 // End Function Specification
 void amec_dps_update_core_util(void)
 {
@@ -76,7 +78,6 @@ void amec_dps_update_core_util(void)
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
 
-    // We no longer support the gpEMP structure in OCC firmware.
     // If g_amec->fw.dps_no_update_flag=1, no updating is allowed
     if (!g_amec->fw.dps_no_update_flag)
     {
@@ -142,8 +143,6 @@ void amec_dps_update_core_util(void)
 //
 // Description: Update utilization sensors for a core group.
 //
-// Flow:              FN= None
-//
 // End Function Specification
 void amec_dps_partition_update_sensors(const uint16_t i_part_id)
 {
@@ -194,8 +193,6 @@ void amec_dps_partition_update_sensors(const uint16_t i_part_id)
 //
 // Description: DPS algorithm function.
 //
-// Flow:              FN= None
-//
 // End Function Specification
 void amec_dps_partition_alg(const uint16_t i_part_id)
 {
@@ -215,7 +212,7 @@ void amec_dps_partition_alg(const uint16_t i_part_id)
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
 
-    // Begin: Switch on dps_type of the core group
+    // Switch on dps_type of the core group
     switch (g_amec->part_config.part_list[i_part_id].dpsalg.type)
     {
     case 0x00:
@@ -283,7 +280,6 @@ void amec_dps_partition_alg(const uint16_t i_part_id)
     default:
         break;
     }
-    // End: Switch on dps_type
 }
 
 // Function Specification
@@ -291,8 +287,6 @@ void amec_dps_partition_alg(const uint16_t i_part_id)
 // Name: amec_dps_main
 //
 // Description: Main DPS function.
-//
-// Flow:              FN= None
 //
 // End Function Specification
 void amec_dps_main(void)
@@ -344,13 +338,13 @@ void amec_dps_main(void)
     {
         // If this core group policy is one of the DPS modes, then send the
         // frequency request from the DPS algorithm
-        G_dcom_slv_outbox_tx.fwish = 
+        G_dcom_slv_outbox_tx.fwish =
             g_amec->part_config.part_list[0].dpsalg.freq_request;
     }
     else
     {
         // Else, send the nominal frequency of the system
-        G_dcom_slv_outbox_tx.fwish = 
+        G_dcom_slv_outbox_tx.fwish =
             g_amec->part_mode_freq[OCC_INTERNAL_MODE_NOM].fmax;
     }
     // We also need to send the Factual to the Master OCC

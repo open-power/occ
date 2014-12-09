@@ -1,23 +1,28 @@
-/**
- * @file amec_health.h
- * @brief Header file for OCC Health Monitor.
- *
- *
-*/
-/**
- *      @page ChangeLogs Change Logs
- *      @section _cmdh_mnfg_intf_h cmdh_mnfg_intf.h
- *      @verbatim
- *
- *  Flag     Def/Fea    Userid    Date        Description
- *  -------- ---------- --------  ---------   ----------------------------------
- *  @gs012   903325     gjsilva   09/26/2013  Created
- *  @gm013   907548     milesg    11/22/2013  Memory therm monitoring support
- *  @gs021   909855     gjsilva   12/18/2013  Support for processor OT condition
- *  @gs023   912003     gjsilva   01/16/2014  Generate VRHOT signal and control loop
- *
- *  @endverbatim
- */
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/amec/amec_health.h $                                  */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
+
 #ifndef AMEC_HEALTH_H
 #define AMEC_HEALTH_H
 

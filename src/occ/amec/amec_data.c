@@ -1,41 +1,34 @@
-/******************************************************************************
-// @file amec_data.c
-// @brief Amec Data Import/Export Handling
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _amec_data_c amec_data.c
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @th015             thallet   08/03/2012  New file
- *   @gs001             gsilva    08/03/2012  New file
- *   @fk001  879727     fmkassem  04/16/2013  OCC powercap support.
- *   @gs008  894661     gjsilva   08/08/2013  Initial support for DPS-FP mode
- *   @gs010  899888     gjsilva   09/24/2013  Process data format 0x13 from TMGT
- *   @gs012  903325     gjsilva   10/18/2013  Log Processor OT errors
- *   @gs015  905166     gjsilva   11/04/2013  Full support for IPS function
- *   @gm013  907548     milesg    11/22/2013  Memory therm monitoring support
- *   @gs019  908218     gjsilva   12/04/2013  Support cooling request architecture
- *   @rt004  908817     tapiar    12/11/2013  Update global data mask when master 
- *                                            code posts it to slave code (via data_write_pcap)
- *   @gs020  909320     gjsilva   12/12/2013  Support for VR_FAN thermal control
- *   @gm016  909061     milesg    12/10/2013  Support memory throttling due to temperature
- *   @gm017  909636     milesg    12/17/2013  Changes from mem throttle review
- *   @gs023  912003     gjsilva   01/16/2014  Generate VRHOT signal and control loop
- *
- *  @endverbatim
- *
- *///*************************************************************************/
- 
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/amec/amec_data.c $                                    */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
+
 //*************************************************************************
 // Includes
 //*************************************************************************
 #include <occ_common.h>
-#include <ssx.h>         
-#include <errl.h> 
+#include <ssx.h>
+#include <errl.h>
 #include "sensor.h"
 #include "rtls.h"
 #include "occ_sys_config.h"
@@ -85,14 +78,11 @@
 //
 // Name:  AMEC_data_write_fcurr
 //
-// Description: 
-//              
-//
-// Flow:              FN=
+// Description:
 //
 // Thread: RealTime Loop
 //
-// Task Flags: 
+// Task Flags:
 //
 // End Function Specification
 errlHndl_t AMEC_data_write_fcurr(const OCC_MODE i_mode)
@@ -100,9 +90,8 @@ errlHndl_t AMEC_data_write_fcurr(const OCC_MODE i_mode)
     /*------------------------------------------------------------------------*/
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
-    errlHndl_t                  l_err           = NULL;
-    //UINT16                      l_freq_nom      = 0;
-    OCC_MODE                   l_mode          = i_mode;
+    errlHndl_t                  l_err = NULL;
+    OCC_MODE                    l_mode = i_mode;
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
@@ -124,8 +113,6 @@ errlHndl_t AMEC_data_write_fcurr(const OCC_MODE i_mode)
 
         if(l_err)
         {
-            // E>AMEC_data_write_fcurr: Error in call to amec_control_set_freq_range() i_mode:0x%X l_freq:%u
-            //TRACE2(g_trac_amec,2118718763,i_mode,l_freq);
             //break;
         }
     }
@@ -141,13 +128,10 @@ errlHndl_t AMEC_data_write_fcurr(const OCC_MODE i_mode)
 // data packet (format 0x13) into g_amec structure. This function should be
 // called when OCC goes active or changes modes or goes in/out of Acoustic
 // mode (ITE-only mode).
-//              
-//
-// Flow:              FN=
 //
 // Thread: RealTime Loop
 //
-// Task Flags: 
+// Task Flags:
 //
 // End Function Specification
 errlHndl_t AMEC_data_write_thrm_thresholds(const OCC_MODE i_mode)
@@ -191,7 +175,7 @@ errlHndl_t AMEC_data_write_thrm_thresholds(const OCC_MODE i_mode)
         else
         {
             l_dvfs_temp = l_frudata[DATA_FRU_PROC].pm_dvfs;
-            if(i_mode == OCC_MODE_TURBO) //gm016
+            if(i_mode == OCC_MODE_TURBO)
             {
                 //Need to log an error if we dvfs in static turbo mode (for mfg)
                 l_error = l_dvfs_temp;
@@ -220,7 +204,7 @@ errlHndl_t AMEC_data_write_thrm_thresholds(const OCC_MODE i_mode)
         else
         {
             l_dvfs_temp = l_frudata[DATA_FRU_CENTAUR].pm_dvfs;
-            if(i_mode == OCC_MODE_TURBO) //gm016
+            if(i_mode == OCC_MODE_TURBO)
             {
                 //Need to log an error if we throttle in static turbo mode (for mfg)
                 l_error = l_dvfs_temp;
@@ -250,7 +234,7 @@ errlHndl_t AMEC_data_write_thrm_thresholds(const OCC_MODE i_mode)
         else
         {
             l_dvfs_temp = l_frudata[DATA_FRU_DIMM].pm_dvfs;
-            if(i_mode == OCC_MODE_TURBO) //gm016
+            if(i_mode == OCC_MODE_TURBO)
             {
                 //Need to log an error if we throttle in static turbo mode (for mfg)
                 l_error = l_dvfs_temp;
@@ -289,7 +273,6 @@ errlHndl_t AMEC_data_write_thrm_thresholds(const OCC_MODE i_mode)
 // Description: This function loads data from the IPS Config data packet
 // (format 0x11) into g_amec structure. This function should only by called by
 // Master OCC firmware.
-//              
 //
 // Thread: RealTime Loop
 //
@@ -338,14 +321,11 @@ errlHndl_t AMEC_data_write_ips_cnfg(void)
 //
 // Name: AMEC_data_change
 //
-// Description: 
-//              
-//
-// Flow: 03/04/13        FN= amec_data_change
+// Description:
 //
 // Thread: RealTime Loop
 //
-// Task Flags: 
+// Task Flags:
 //
 // End Function Specification
 errlHndl_t AMEC_data_change(const uint32_t i_data_mask)
@@ -354,8 +334,6 @@ errlHndl_t AMEC_data_change(const uint32_t i_data_mask)
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
     errlHndl_t                  l_err       = NULL;
-    //    UINT32                      l_req_data  = 0;
-    //    OCC_STATE                   l_cur_state = OCC_STATE_NOCHANGE;
     OCC_MODE                    l_cur_mode  = OCC_MODE_NOCHANGE;
 
     /*------------------------------------------------------------------------*/
@@ -364,20 +342,10 @@ errlHndl_t AMEC_data_change(const uint32_t i_data_mask)
     //l_cur_state = CURRENT_STATE();
     l_cur_mode = CURRENT_MODE();
 
-    //If we received the frequency from TMGT 
+    //If we received the frequency from TMGT
     if(i_data_mask & DATA_MASK_FREQ_PRESENT)
     {
-        // I>AMEC_data_change: We are active and receieved new freq packet!
-        //TRACE0(g_trac_amec,1905158999);
         l_err = AMEC_data_write_fcurr(l_cur_mode);
-        //if(l_err)
-        //{
-        //    E>AMEC_data_change: Error writing freq data! i_state_mask:0x%X i_mode:0x%X l_req_data:0x%X
-        //    TRACE3(g_trac_amec,2446643683,
-        //            l_cur_state,
-        //            l_cur_mode,
-        //            l_req_data);
-        //}
     }
     else if(i_data_mask & DATA_MASK_THRM_THRESHOLDS)
     {
@@ -401,7 +369,6 @@ errlHndl_t AMEC_data_change(const uint32_t i_data_mask)
     return l_err;
 }
 
-//////////////////////////
 // Function Specification
 //
 // Name: amec_data_write_pcap
@@ -411,13 +378,8 @@ errlHndl_t AMEC_data_change(const uint32_t i_data_mask)
 //              If a new packet is received from Master, it will be written to
 //              G_sysConfigData.pcap, and g_amec->pcap will be updated too.
 //              Otherwise nothing happens.
-//              
-//
-// Flow:  04/16/13    FN= amec_data_write_pcap
 //
 // Thread: Interrupt Handler
-//
-// Changedby: @fk001a
 //
 // End Function Specification
 void amec_data_write_pcap(void)
@@ -441,7 +403,7 @@ void amec_data_write_pcap(void)
 
         //Copy pcap data received from Master OCC to G_sysConfigData
         memcpy(&(G_sysConfigData.pcap),&(G_dcom_slv_inbox_doorbell_rx.pcap),
-               sizeof(pcap_config_data_t)); 
+               sizeof(pcap_config_data_t));
 
         //Affects ITE ONLY: Check if it's ok (1) to exit the oversubscribed state
         if(1 == G_sysConfigData.pcap.unthrottle)
@@ -450,7 +412,7 @@ void amec_data_write_pcap(void)
             g_amec->oversub_status.cmeThrottleLatchAmec = 0;
         }
 
-        //Check node power cap requested by customer/system.  
+        //Check node power cap requested by customer/system.
         // 0 means there is no pcap for that parameter.
         if(0 == G_sysConfigData.pcap.current_pcap)
         {
@@ -489,7 +451,7 @@ void amec_data_write_pcap(void)
             g_amec->pcap.ovs_node_pcap = G_sysConfigData.pcap.oversub_pcap;
         }
         else
-        { 
+        {
             g_amec->pcap.ovs_node_pcap = G_sysConfigData.pcap.hard_min_pcap;
         }
 
@@ -499,9 +461,13 @@ void amec_data_write_pcap(void)
             g_amec->pcap.ovs_node_pcap = l_customer;
         }
 
-        // update data mask notifying we got pcap information @rt004a
+        // update data mask notifying we got pcap information
         extern data_cnfg_t * G_data_cnfg;
         G_data_cnfg->data_mask |= DATA_MASK_PCAP_PRESENT;
         TRAC_IMP("amec_data_write: PCAP Config data: pcap[%d]: data_mask[%x]", g_amec->pcap.norm_node_pcap, G_data_cnfg->data_mask);
     }
 }
+
+/*----------------------------------------------------------------------------*/
+/* End                                                                        */
+/*----------------------------------------------------------------------------*/

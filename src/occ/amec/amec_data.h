@@ -1,24 +1,28 @@
-/******************************************************************************
-// @file amec_data.h
-// @brief AMEC Data header file
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _amec_data_h amec_data.h
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @th015             thallet   08/03/2012  New file
- *   @gs001             gsilva    08/03/2012  New file
- *   @fk001  879727     fmkassem  04/16/2013  OCC powercap support
- *   @gs010  899888     gjsilva   09/24/2013  Process data format 0x13 from TMGT
- *   @gs015  905166     gjsilva   11/04/2013  Full support for IPS function
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/amec/amec_data.h $                                    */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
+
 #ifndef _AMEC_DATA_H
 #define _AMEC_DATA_H
 
@@ -60,8 +64,7 @@
 // Functions
 //*************************************************************************
 
-// This is used to change the current Freq data AMEC
-// is using
+// This is used to change the current Freq data AMEC is using
 errlHndl_t AMEC_data_write_fcurr(const OCC_MODE i_mode);
 
 // This is used to store the thermal thresholds AMEC is using
@@ -70,12 +73,10 @@ errlHndl_t AMEC_data_write_thrm_thresholds(const OCC_MODE i_mode);
 // This is used to store the IPS config data AMEC is using
 errlHndl_t AMEC_data_write_ips_cnfg(void);
 
-// This is used to notify AMEC that there is a change
-// to the configuration data
+// This is used to notify AMEC that there is a change to the configuration data
 errlHndl_t AMEC_data_change(const uint32_t i_data_mask);
 
 // Writes pcap data sent by master to slave accessable structure.
 void amec_data_write_pcap();
 
 #endif
-

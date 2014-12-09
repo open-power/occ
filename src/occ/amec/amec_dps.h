@@ -1,21 +1,27 @@
-/******************************************************************************
- * @file amec_dps.h
- * @brief AMEC Dynamic Power Saving (DPS) Algorithms Header File
- ******************************************************************************/
-/******************************************************************************
- *
- *      @page ChangeLogs Change Logs
- *      @section _amec_dps_h amec_dps.h
- *      @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @ly001  853751     lychen    09/17/2012  Initial Revision
- *   @ry002  862116     ronda     11/26/2012  Moved speed to freq conversion function
- *
- *  @endverbatim
- *
- ******************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/amec/amec_dps.h $                                     */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
 #ifndef _AMEC_DPS_H
 #define _AMEC_DPS_H
@@ -69,48 +75,39 @@ typedef struct amec_dps
 /* Function Prototypes                                                        */
 /*----------------------------------------------------------------------------*/
 
-                         
 /**
- *  @brief  Update per-core utilization variables.
+ *  Update per-core utilization variables.
  *
  *  This function updates all the per-core utilization variables. These
  *  variables are used to populate the slack sensors.
  *
- *  @param void
- *  @return void
  */
 void amec_dps_update_core_util(void);
 
 /**
- *  @brief  Update utilization sensors for a core group.
+ *  Update utilization sensors for a core group.
  *
  *  This function updates the utilization (slack) sensors for a
  *  given core group.
  *
- *  @param i_part_id ID of the core group
- *  @return void
  */
 void amec_dps_partition_update_sensors(const uint16_t i_part_id);
 
 /**
- *  @brief  DPS algorithm function.
+ *  DPS algorithm function.
  *
  *  This function implements the different DPS algorithms for a
  *  given core group.
  *
- *  @param i_part_id ID of the core group
- *  @return void
  */
 void amec_dps_partition_alg(const uint16_t i_part_id);
 
 /**
- *  @brief  Main DPS function.
+ *  Main DPS function.
  *
  *  This function is the entry-point for running DPS algorithms
  *  and is aware of the different core groups defined.
  *
- *  @param void
- *  @return void
  */
 void amec_dps_main(void);
 

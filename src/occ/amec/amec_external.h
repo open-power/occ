@@ -1,31 +1,34 @@
-/******************************************************************************
-// @file amec_external.h
-// @brief OCC AMEC External header file
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _amec_external_h amec_external.h
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *                      thallet   11/08/2011  New file
- *   @rc001             rickylie  01/02/2011  Moved debug trace defines to trac.h
- *   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
- *   @pb00E             pbavari   03/11/2012  Added correct include file
- *
- *  @endverbatim
- *
- *///*************************************************************************/
- 
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/amec/amec_external.h $                                */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
+
 #ifndef _AMEC_EXTERNAL_H
 #define _AMEC_EXTERNAL_H
 
 //*************************************************************************
 // Includes
 //*************************************************************************
-//@pb00Ec - changed from common.h to occ_common.h for ODE support
 #include <occ_common.h>
 #include <ssx.h>
 #include <ssx_app_cfg.h>

@@ -1,32 +1,32 @@
-/******************************************************************************
-// @file amec_oversub.c
-// @brief Over-subscription
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _amec_oversub_c amec_oversub.c
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @at010  859992     alvinwan  11/07/2012  Added oversubscription feature
- *   @th028  867841     thallet   01/22/2013  Trace in oversubscription causes panic
- *   @fk001  879727     fmkassem  04/16/2013  PCAP support. 
- *   @at020  908666     alvinwan  12/16/2013  Oversubscription Error Handling
- *   @at023  910877     alvinwan  01/09/2014  Excessive fan increase requests error for mfg
- *   @gm026  916029     milesg    02/17/2014  revert back to auto2 mode without reading GPIO's
- *   @gm041  928150     milesg    06/02/2014  add callout for mfg oversubscription elog
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/amec/amec_oversub.c $                                 */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
 //*************************************************************************
 // Includes
 //*************************************************************************
 #include "ssx.h"
-
 #include <occ_common.h>
 #include <trac.h>
 #include <amec_sys.h>
@@ -34,6 +34,7 @@
 #include <dcom.h>
 #include <occ_sys_config.h>
 #include <amec_service_codes.h>
+
 //*************************************************************************
 // Externs
 //*************************************************************************
@@ -65,17 +66,11 @@
 // Functions
 //*************************************************************************
 
-
-
-
 // Function Specification
 //
 // Name: amec_oversub_pmax_clip
 //
 // Description: Set Pmax_Clip in PMC to lowest Pstate
-//
-//
-// Flow:              FN=
 //
 // Task Flags:
 //
@@ -86,28 +81,21 @@ void amec_oversub_pmax_clip(Pstate i_pstate)
 
     // Set Pmax_Clip in PMC to lowest Pstate
     prbr.value = in32(PMC_RAIL_BOUNDS_REGISTER);
-    prbr.fields.pmax_rail = i_pstate;   //@fk001c
+    prbr.fields.pmax_rail = i_pstate;
     out32(PMC_RAIL_BOUNDS_REGISTER, prbr.value);
 }
 
-
-//*************************************************************************
-// Functions
-//*************************************************************************
 // Function Specification
 //
 // Name: amec_oversub_isr
 //
 // Description: Oversubscription ISR
 //
-// Flow:              FN=
-//
 // Task Flags:
 //
 // Note: This function is only ever called from Critical interrupt context
 //
 // End Function Specification
-
 void amec_oversub_isr(void)
 {
     static uint32_t l_isr_count = 0;
@@ -123,7 +111,8 @@ void amec_oversub_isr(void)
         if(g_amec->oversub_status.oversubLatchAmec == 0)
         {
             // Set PMC Pmax_clip to Pmin and throttle all Cores via OCI write to PMC
-            amec_oversub_pmax_clip(gpst_pmin(&G_global_pstate_table));  //@fk001c
+            amec_oversub_pmax_clip(gpst_pmin(&G_global_pstate_table));
+
             // TODO: Throttle all Centaurs via PORE-GPE by setting 'Emergency Throttle'
 
             g_amec->oversub_status.oversubReasonLatchCount = OVERSUB_REASON_DELAY_4MS;
@@ -165,24 +154,19 @@ void amec_oversub_isr(void)
 //
 // Name: amec_oversub_check
 //
-// Description: Oversubscription check called in
-// amec_slv_common_tasks_pre()
-//
-//
-// Flow:              FN=
+// Description: Oversubscription check called in amec_slv_common_tasks_pre()
 //
 // Task Flags:
 //
 // End Function Specification
 void amec_oversub_check(void)
 {
-    //uint8_t l_cme_pin = G_sysConfigData.apss_gpio_map.cme_throttle_n; //gm026
-    uint8_t l_cme_pin_value = 1; // low active, so set default to high
-    static BOOLEAN          l_prev_ovs_state = FALSE;  // oversub happened // @at020a
+    uint8_t                     l_cme_pin_value = 1; // low active, so set default to high
+    static BOOLEAN              l_prev_ovs_state = FALSE;  // oversub happened
 
     // Get CME Pin state
-    // No longer reading gpio from APSS in GA1 due to instability in APSS composite mode -- gm026
-    //apss_gpio_get(l_cme_pin, &l_cme_pin_value); // @at020a
+    // No longer reading gpio from APSS in GA1 due to instability in APSS composite mode
+    //apss_gpio_get(l_cme_pin, &l_cme_pin_value);
 
     // Check CME Pin? OR CME Oversub Mnfg Active
     if( (l_cme_pin_value == 0) ||
@@ -198,7 +182,6 @@ void amec_oversub_check(void)
         g_amec->oversub_status.cmeThrottlePinLive = 0;
     }
 
-    // @at020a - start
     // oversubscription condition happened?
     if ( AMEC_INTF_GET_OVERSUBSCRIPTION() == TRUE )
     {
@@ -227,7 +210,7 @@ void amec_oversub_check(void)
             // set the mfg action flag (allows callout to be added to info error)
             setErrlActions(l_errl, ERRL_ACTIONS_MANUFACTURING_ERROR);
 
-            // add the oversubscription symbolic callout -- gm041
+            // add the oversubscription symbolic callout
             addCalloutToErrl(l_errl,
                              ERRL_CALLOUT_TYPE_COMPONENT_ID,
                              ERRL_COMPONENT_ID_OVERSUBSCRIPTION,
@@ -241,11 +224,6 @@ void amec_oversub_check(void)
     {
         l_prev_ovs_state = FALSE;
     }
-    // @at020a - end
-
-
-
-    // TODO: Set any more oversub based on APSS GPIO Pins (i.e. Orlena 12V OC pins)
 
     // Figure out the over-subscription reason
     if(g_amec->oversub_status.oversubReasonLatchCount > 1)
@@ -265,8 +243,10 @@ void amec_oversub_check(void)
 
             // If we can't figure it out, decrease oversubReasonLatchCount and we will try again in 250us
             g_amec->oversub_status.oversubReasonLatchCount--; // The unit of oversubReasonLatchCount is 250us
-
         }
     }
-
 }
+
+/*----------------------------------------------------------------------------*/
+/* End                                                                        */
+/*----------------------------------------------------------------------------*/
