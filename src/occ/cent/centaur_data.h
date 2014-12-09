@@ -6,6 +6,8 @@
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
 /* COPYRIGHT International Business Machines Corp. 2011,2014              */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -29,7 +31,7 @@
 //*************************************************************************
 #include <occ_common.h>
 #include <ssx.h>
-#include "rtls.h"	
+#include "rtls.h"
 #include "gpe_data.h"
 #include "occ_sys_config.h"
 
