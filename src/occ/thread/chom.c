@@ -1,29 +1,28 @@
-/******************************************************************************
-// @file chom.c
-// @brief OCC thread Component
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _chom_c chom.c
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @jh005  894560     joshych   08/14/2013  Create call home data logs every 24 hours
- *   @jh007  897706     joshych   09/17/2013  Updates to call-home data interface
- *   @fk002  905632     fmkassem  11/05/2013  Remove CriticalPathMonitor code
- *   @gm016  909061     milesg    12/10/2013  Changed trace from error to info
- *   @fk006  914801     fmkassem  02/05/2014  Modify reasoncode list
- *   @gs027  918066     gjsilva   03/12/2014  Misc functions from ARL
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/thread/chom.c $                                       */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
-//*************************************************************************
-// Includes
-//*************************************************************************
 #include <occ_common.h>
 #include <comp_ids.h>
 #include <sensor.h>
@@ -35,51 +34,34 @@
 #include <occ_service_codes.h>
 #include <thread_service_codes.h>
 
-//*************************************************************************
-// Externs
-//*************************************************************************
 extern amec_sys_t g_amec_sys;
 
-//*************************************************************************
-// Macros
-//*************************************************************************
 #define CHOM_SENSOR_DATA(index,data) [index] = data
 
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
-
-//*************************************************************************
-// Structures
-//*************************************************************************
-
-//*************************************************************************
-// Globals
-//*************************************************************************
-/* chom timer */
+// chom timer
 uint32_t g_chom_gen_periodic_log_timer;
-/* track which power mode has been during the polling period */
+// track which power mode has been during the polling period
 uint8_t  g_chom_pwr_modes[OCC_INTERNAL_MODE_MAX_NUM]; // Nominal, SPS, DPS, DPS-MP, FFO
-/* force immediate chom log flag*/
+// force immediate chom log flag
 uint8_t  g_chom_force;
-/* chom data log */
+// chom data log
 ChomLogData_t   g_chom_log;
 ChomLogData_t * g_chom = &g_chom_log;
 
-// Make sure that the size of chom log is less than 3kB 
+// Make sure that the size of chom log is less than 3kB
 // otherwise cause error on the compile.
 STATIC_ASSERT( sizeof(ChomLogData_t) > CHOM_LOG_DATA_MAX );
 
-/* chom sensors table
- * some of the chom sensors need multiple mini-sensor to calculate
- * the max, summstion of temperature or bandwidth
- * mark those mini-sensor "NULL" and will be updated
- * from "chom_update_sensors()"
- */
+// Chom Sensors Table
+//   Some of the chom sensors need multiple mini-sensor to calculate
+//   the max, summstion of temperature or bandwidth
+//   mark those mini-sensor "NULL" and will be updated
+//   from "chom_update_sensors()"
+
 const uint16_t * g_chom_sensor_table[CHOM_NUM_OF_SENSORS] =
-{   /* Node total power (DC) */
+{   // Node total power (DC)
     &g_amec_sys.sys.pwr250us.sample,
-    /* Socket power */ // This is only for tuleta 2S @jh007c
+    // Socket power
     &g_amec_sys.proc[0].pwr250us.sample,
     &G_dcom_slv_outbox_rx[2].pwr250usp0,
     NULL,
@@ -88,7 +70,7 @@ const uint16_t * g_chom_sensor_table[CHOM_NUM_OF_SENSORS] =
     NULL,
     NULL,
     NULL,
-    /* Memory power */   
+    // Memory power
     &G_dcom_slv_outbox_rx[0].pwr250usmemp0,
     &G_dcom_slv_outbox_rx[1].pwr250usmemp0,
     &G_dcom_slv_outbox_rx[2].pwr250usmemp0,
@@ -97,9 +79,9 @@ const uint16_t * g_chom_sensor_table[CHOM_NUM_OF_SENSORS] =
     &G_dcom_slv_outbox_rx[5].pwr250usmemp0,
     &G_dcom_slv_outbox_rx[6].pwr250usmemp0,
     &G_dcom_slv_outbox_rx[7].pwr250usmemp0,
-    /* Fan power */
-    &g_amec_sys.fan.pwr250usfan.sample, // @jh007a
-    /* Processor frequency */  // @mw624 
+    // Fan power
+    &g_amec_sys.fan.pwr250usfan.sample,
+    // Processor frequency
     &G_dcom_slv_outbox_rx[0].freqa2msp0,
     &G_dcom_slv_outbox_rx[1].freqa2msp0,
     &G_dcom_slv_outbox_rx[2].freqa2msp0,
@@ -108,7 +90,7 @@ const uint16_t * g_chom_sensor_table[CHOM_NUM_OF_SENSORS] =
     &G_dcom_slv_outbox_rx[5].freqa2msp0,
     &G_dcom_slv_outbox_rx[6].freqa2msp0,
     &G_dcom_slv_outbox_rx[7].freqa2msp0,
-    /* Processor utilization sensor */
+    // Processor utilization sensor
     &G_dcom_slv_outbox_rx[0].util2msp0,
     &G_dcom_slv_outbox_rx[1].util2msp0,
     &G_dcom_slv_outbox_rx[2].util2msp0,
@@ -117,41 +99,33 @@ const uint16_t * g_chom_sensor_table[CHOM_NUM_OF_SENSORS] =
     &G_dcom_slv_outbox_rx[5].util2msp0,
     &G_dcom_slv_outbox_rx[6].util2msp0,
     &G_dcom_slv_outbox_rx[7].util2msp0,
-    /* Max Core temperature for all processors in the node */
+    // Max Core temperature for all processors in the node
     NULL,
-    /* Max Centaur temperature for all Centaurs in the node */
+    // Max Centaur temperature for all Centaurs in the node
     NULL,
-    /* Max Dimm temperature for all Dimms in the node */
+    // Max Dimm temperature for all Dimms in the node
     NULL,
-    /* Instructions per second sensor */
+    // Instructions per second sensor
     NULL,
-    /* Memory bandwidth for process memory controller */
-    /* P0M0 ~ P0M7 */
+    // Memory bandwidth for process memory controller
+    // P0M0 ~ P0M7
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-    /* P1M0 ~ P1M7 */
+    // P1M0 ~ P1M7
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-    /* P2M0 ~ P2M7 */
+    // P2M0 ~ P2M7
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-    /* P3M0 ~ P3M7 */
+    // P3M0 ~ P3M7
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-    /* P4M0 ~ P4M7 */
+    // P4M0 ~ P4M7
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-    /* P5M0 ~ P5M7 */
+    // P5M0 ~ P5M7
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-    /* P6M0 ~ P6M7 */
+    // P6M0 ~ P6M7
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-    /* P7M0 ~ P7M7 */
+    // P7M0 ~ P7M7
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
 };
 
-//*************************************************************************
-// Function Prototypes
-//*************************************************************************
-
-
-//*************************************************************************
-// Functions
-//*************************************************************************
 // Function Specification
 //
 // Name: chom_data_init
@@ -161,13 +135,6 @@ const uint16_t * g_chom_sensor_table[CHOM_NUM_OF_SENSORS] =
 // End Function Specification
 void chom_data_init()
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
-
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
     // chom data reset
     chom_data_reset();
     // update eyecatcher
@@ -188,13 +155,6 @@ void chom_data_init()
 // End Function Specification
 void chom_data_reset()
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
-
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
     // reset chom data log
     memset(g_chom, 0x00, sizeof(*g_chom));
     // reset chom modes in log
@@ -213,27 +173,17 @@ void chom_data_reset()
 //
 // Description: Update chom sensor data
 //
-// Flow: 8-12-13 FN:chom_update_sensors.odg
-// 
 // End Function Specification
 void chom_update_sensors()
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
     uint16_t l_max_core_temp = 0;
     uint16_t l_max_cent_temp = 0;
     uint16_t l_max_dimm_temp = 0;
     uint16_t l_mips = 0;
     uint16_t l_mem_rw = 0;
     uint16_t l_sample = 0;
-    uint16_t i = 0;
-    uint16_t j = 0;
-    uint16_t k = 0;
+    uint16_t i = 0, j = 0, k = 0;
 
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
     // Is the current mode different than previous poll
     if (g_chom->nodeData.curPwrMode != CURRENT_MODE())
     {
@@ -383,15 +333,8 @@ void chom_collect_cpi_data(void)
 // End Function Specification
 void chom_gen_periodic_log()
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
     uint8_t        i                = 0;
     errlHndl_t     l_errlHndl       = NULL;
-
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
 
     TRAC_INFO("Enter chom_gen_periodic_log");
 
@@ -454,13 +397,6 @@ void chom_gen_periodic_log()
 // End Function Specification
 void chom_force_gen_log()
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
-
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
     g_chom_force = TRUE;
 }
 
@@ -471,19 +407,9 @@ void chom_force_gen_log()
 //
 // Description: Call home data routine
 //
-// Flow: 8-12-13  FN=chom_main.odg
-// 
 // End Function Specification
 void chom_main()
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
-
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
-    // @rc001m - Modified to use MAIN debug traces
     MAIN_DBG("CHOM routine processing...");
 
     // check if this is the first time we run

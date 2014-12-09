@@ -1,54 +1,45 @@
-/******************************************************************************
-// @file chom.h
-// @brief OCC thread Component header file
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _chom_h chom.h
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @jh005   894560    joshych   08/14/2013  Create call home data logs every 24 hours
- *   @jh007   897706    joshych   09/17/2013  Updates to call-home data interface
- *   @fk002   905632    fmkassem  11/05/2013  Remove CriticalPathMonitor code
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/thread/chom.h $                                       */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
 #ifndef _CHOM_H
 #define _CHOM_H
 
-/** \defgroup OCC thread Component
- * 
- */
-
-//*************************************************************************
-// Includes
-//*************************************************************************
 #include <occ_common.h>
 #include <trac_interface.h>
 
-//*************************************************************************
-// Macros
-//*************************************************************************
-
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
-#define  CHOM_GEN_LOG_PERIODIC_TIME     86400 // of seconds in a day
+#define  CHOM_GEN_LOG_PERIODIC_TIME     86400 // seconds in a day
 #define  CHOM_VERSION                   0x00
-/* max size of chom data log */
+// Max size of chom data log
 #define  CHOM_LOG_DATA_MAX              3072
 
 // List of call home sensors
 enum
 {
-    /* Node total power (DC) */
+    // Node total power (DC)
     CHOMPWR                = 0,
-    /* Socket power */ // @jh007c
+    // Socket power
     CHOMPWRP0,
     CHOMPWRP1,
     CHOMPWRP2,
@@ -57,7 +48,7 @@ enum
     CHOMPWRP5,
     CHOMPWRP6,
     CHOMPWRP7,
-    /* Memory power */
+    // Memory power
     CHOMPWRM0,
     CHOMPWRM1,
     CHOMPWRM2,
@@ -66,9 +57,9 @@ enum
     CHOMPWRM5,
     CHOMPWRM6,
     CHOMPWRM7,
-    /* Fan power */
-    CHOMPWRFAN, // @jh007a
-    /* Processor frequency */
+    // Fan power
+    CHOMPWRFAN,
+    // Processor frequency
     CHOMFREQP0,
     CHOMFREQP1,
     CHOMFREQP2,
@@ -77,7 +68,7 @@ enum
     CHOMFREQP5,
     CHOMFREQP6,
     CHOMFREQP7,
-    /* Processor utilization sensor */
+    // Processor utilization sensor
     CHOMUTILP0,
     CHOMUTILP1,
     CHOMUTILP2,
@@ -86,15 +77,15 @@ enum
     CHOMUTILP5,
     CHOMUTILP6,
     CHOMUTILP7,
-    /* Max core temperature for all processors in the node */
+    // Max core temperature for all processors in the node
     CHOMTEMPPROC,
-    /* Max Centaur temperature for all Centaurs in the node */
+    // Max Centaur temperature for all Centaurs in the node
     CHOMTEMPCENT,
-    /* Max Dimm temperature for all Dimms in the node */
+    // Max Dimm temperature for all Dimms in the node
     CHOMTEMPDIMM,
-    /* Instructions per second sensor */
+    // Instructions per second sensor
     CHOMIPS,
-    /* Memory bandwidth for process memory controller */
+    // Memory bandwidth for process memory controller
     CHOMBWP0M0,
     CHOMBWP0M1,
     CHOMBWP0M2,
@@ -160,14 +151,11 @@ enum
     CHOMBWP7M6,
     CHOMBWP7M7,
 
-    /* The number of chom sensors reported*/
+    // The number of chom sensors reported
     CHOM_NUM_OF_SENSORS
 };
 
-//*************************************************************************
-// Structures
-//*************************************************************************
-/* Call home sensor Structure */
+// Call home sensor Structure
 struct ChomSensor
 {
     uint16_t    sample;           // last sample value during the polling period
@@ -179,7 +167,7 @@ struct ChomSensor
 
 typedef struct ChomSensor ChomSensor_t;
 
-/* CPI data structure */
+// CPI data structure
 struct ChomCpiData
 {
     uint8_t     proc;
@@ -188,7 +176,7 @@ struct ChomCpiData
 
 typedef struct ChomCpiData ChomCpiData_t;
 
-/* Power mode structure */
+// Power mode structure
 struct ChomPwrMode
 {
     uint8_t     mode;            // OCC power mode
@@ -197,7 +185,7 @@ struct ChomPwrMode
 
 typedef struct ChomPwrMode ChomPwrMode_t;
 
-/* Call home data Structure */
+// Call home data structure
 struct ChomNodeData
 {
     uint32_t       eyecatcher;                    // "CHOM" will mark the beginning of the data
@@ -211,7 +199,7 @@ struct ChomNodeData
 
 typedef struct ChomNodeData ChomNodeData_t;
 
-/* Call home sensor data */
+// Call home sensor data
 struct ChomSensorData
 {
     ChomPwrMode_t   pwrMode;
@@ -220,7 +208,7 @@ struct ChomSensorData
 
 typedef struct ChomSensorData ChomSensorData_t;
 
-/* Call home log data */
+// Call home log data
 struct ChomLogData
 {
     ChomNodeData_t    nodeData;      // general node data
@@ -229,16 +217,10 @@ struct ChomLogData
 
 typedef struct ChomLogData ChomLogData_t;
 
-//*************************************************************************
-// Externs
-//*************************************************************************
 extern uint32_t g_chom_gen_periodic_log_timer;
 extern ChomLogData_t * g_chom;
 extern uint8_t g_chom_force;
 
-//*************************************************************************
-// Functions
-//*************************************************************************
 void chom_data_init();
 void chom_update_sensors();
 void chom_gen_periodic_log();

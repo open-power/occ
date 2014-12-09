@@ -1,49 +1,35 @@
-/******************************************************************************
-// @file thrm_thread.c
-// @brief OCC thermal thread firmware.
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _thrm_thread_c thrm_thread.c
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @gs019             gjsilva   11/21/2013  Created
- *   @gs020  909320     gjsilva   12/12/2013  Support for VR_FAN thermal control
- *   @gm017  909636     milesg    12/17/2013  Memory fan control
- *   @gs021  909855     gjsilva   12/18/2013  Support for processor OT condition
- *   @at023  910877     alvinwan  01/09/2014  Excessive fan increase requests error for mfg
- *   @gs025  913663     gjsilva   01/30/2014  Full fupport for soft frequency boundaries
- *   @gm026  916029     milesg    02/17/2014  revert back to auto2 mode without reading GPIO's
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/thread/thrm_thread.c $                                */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
-//*************************************************************************
-// Includes
-//*************************************************************************
 #include <cmdh_fsp_cmds_datacnfg.h>
 #include <thrm_thread.h>
 #include <trac.h>
 #include <state.h>
 #include <occ_service_codes.h>
 #include <thread_service_codes.h>
-#include <occ_sys_config.h> // @at023a
-
-//*************************************************************************
-// Externs
-//*************************************************************************
-
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
-
-//*************************************************************************
-// Globals
-//*************************************************************************
+#include <occ_sys_config.h>
 
 // Global for notifying the thermal thread if it needs to update its copy
 // of the thermal threshold data packet (format 0x13)
@@ -61,22 +47,12 @@ thrm_fru_control_t          G_thrm_fru_control[DATA_FRU_MAX];
 // Global array to store dynamic information for each FRU
 thrm_fru_data_t             G_thrm_fru_data[DATA_FRU_MAX];
 
-//*************************************************************************
-// Function Declarations
-//*************************************************************************
-
-//*************************************************************************
-// Functions
-//*************************************************************************
-
 // Function Specification
 //
 // Name:  THRM_thread_update_thresholds
 //
 // Description: Notify thermal thread to update its local copy of the
-// thermal threshold data packet.             
-//
-// Flow:  xx/xx/xx    FN=
+// thermal threshold data packet.
 //
 // End Function Specification
 void THRM_thread_update_thresholds()
@@ -91,8 +67,6 @@ void THRM_thread_update_thresholds()
 // Description: Get the status of the cooling request from the thermal
 // thread.
 //
-// Flow:  xx/xx/xx    FN=
-//
 // End Function Specification
 uint8_t THRM_thread_get_cooling_request()
 {
@@ -106,21 +80,12 @@ uint8_t THRM_thread_get_cooling_request()
 // Description: Read thermal thresholds sent by TMGT (data format 0x13)
 // and store them for thermal thread consumption.
 //
-// Flow:  xx/xx/xx    FN=
-//
 // End Function Specification
 errlHndl_t thrm_thread_load_thresholds()
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
     errlHndl_t                  l_err = NULL;
     cmdh_thrm_thresholds_t      *l_data = NULL;
     uint8_t                     i = 0;
-
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
 
     do
     {
@@ -160,7 +125,7 @@ errlHndl_t thrm_thread_load_thresholds()
 
             // Load data that depends on the system mode
             // Acoustic mode takes priority
-            if (0) // FIXME: Need to implement acoustic mode
+            if (0) // TODO: Need to implement acoustic mode
             {
                 G_thrm_fru_control[i].t_control = l_data->data[i].acoustic_t_control;
                 G_thrm_fru_control[i].error = l_data->data[i].acoustic_error;
@@ -182,14 +147,6 @@ errlHndl_t thrm_thread_load_thresholds()
                       G_thrm_fru_control[i].t_control,
                       G_thrm_fru_control[i].error,
                       i);
-
-            // For debug only...
-            //TRAC_INFO("DBUG: Zone1[%u] Zone2[%u] Zone3[%u] Zone4[%u] Zone5[%u]",
-            //          G_thrm_fru_control[i].t_inc_zone[0],
-            //          G_thrm_fru_control[i].t_inc_zone[1],
-            //          G_thrm_fru_control[i].t_inc_zone[2],
-            //          G_thrm_fru_control[i].t_inc_zone[3],
-            //          G_thrm_fru_control[i].t_inc_zone[4]);
         }
     }while(0);
 
@@ -206,25 +163,16 @@ errlHndl_t thrm_thread_load_thresholds()
 // Returns TRUE or FALSE depending whether we need to increase fan speeds
 // or not.
 //
-// Flow:  xx/xx/xx    FN=
-//
 // End Function Specification
 BOOLEAN thrm_thread_fan_control(const uint8_t i_fru_type,
                                 const uint16_t i_fru_temperature)
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
     eConfigDataFruType          k = i_fru_type;
     BOOLEAN                     l_IncreaseFans = FALSE;
     uint8_t                     i = 0;
     uint16_t                    l_delta_temp = 0;
 
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
-
-    //If there's a read error, assume temperature is t_control + 1 -- gm017
+    //If there's a read error, assume temperature is t_control + 1
     if(G_thrm_fru_data[k].read_failure)
     {
         G_thrm_fru_data[k].Tcurrent = G_thrm_fru_control[k].t_control + 1;
@@ -272,7 +220,7 @@ BOOLEAN thrm_thread_fan_control(const uint8_t i_fru_type,
 
     if (l_IncreaseFans == TRUE)
     {
-        for (i = 0; i < THRM_MAX_NUM_ZONES; i++) 
+        for (i = 0; i < THRM_MAX_NUM_ZONES; i++)
         {
             G_thrm_fru_data[k].FanIncZone[i] = l_delta_temp *
                 G_thrm_fru_control[k].t_inc_zone[i];
@@ -280,7 +228,7 @@ BOOLEAN thrm_thread_fan_control(const uint8_t i_fru_type,
     }
     else
     {
-        for (i = 0; i < THRM_MAX_NUM_ZONES; i++) 
+        for (i = 0; i < THRM_MAX_NUM_ZONES; i++)
         {
             G_thrm_fru_data[k].FanIncZone[i] = 0;
         }
@@ -301,22 +249,13 @@ BOOLEAN thrm_thread_fan_control(const uint8_t i_fru_type,
 // VR_FAN signal. Returns TRUE or FALSE depending whether we need to increase
 // fan speeds or not.
 //
-// Flow:  xx/xx/xx    FN=
-//
 // End Function Specification
 BOOLEAN thrm_thread_vrm_fan_control(const uint16_t i_vrfan)
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
     BOOLEAN                     l_IncreaseFans = FALSE;
     static BOOLEAN              L_error_logged = FALSE;
     uint8_t                     i = 0;
     errlHndl_t                  l_err = NULL;
-
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
 
     if ((i_vrfan == 1) || (G_thrm_fru_data[DATA_FRU_VRM].read_failure == 1))
     {
@@ -324,9 +263,9 @@ BOOLEAN thrm_thread_vrm_fan_control(const uint16_t i_vrfan)
         // for each zone to be controlled
         l_IncreaseFans = TRUE;
 
-        for (i = 0; i < THRM_MAX_NUM_ZONES; i++) 
+        for (i = 0; i < THRM_MAX_NUM_ZONES; i++)
         {
-            G_thrm_fru_data[DATA_FRU_VRM].FanIncZone[i] = 
+            G_thrm_fru_data[DATA_FRU_VRM].FanIncZone[i] =
                 G_thrm_fru_control[DATA_FRU_VRM].t_inc_zone[i];
         }
 
@@ -343,12 +282,12 @@ BOOLEAN thrm_thread_vrm_fan_control(const uint16_t i_vrfan)
                 /* @
                  * @errortype
                  * @moduleid    THRD_THERMAL_VRM_FAN_CONTROL
-                 * @reasoncode  VRM_VRFAN_ASSERTED 
+                 * @reasoncode  VRM_VRFAN_ASSERTED
                  * @userdata1   state of VR_FAN signal
                  * @userdata2   0
-                 * @userdata4   OCC_NO_EXTENDED_RC 
+                 * @userdata4   OCC_NO_EXTENDED_RC
                  * @devdesc     VR_FAN signal from regulator has been asserted.
-                 *              
+                 *
                  */
                 l_err = createErrl(THRD_THERMAL_VRM_FAN_CONTROL,  //modId
                                    VRM_VRFAN_ASSERTED,            //reasoncode
@@ -372,7 +311,7 @@ BOOLEAN thrm_thread_vrm_fan_control(const uint16_t i_vrfan)
         // If VR_FAN is de-asserted, don't send any cooling requests
         l_IncreaseFans = FALSE;
 
-        for (i = 0; i < THRM_MAX_NUM_ZONES; i++) 
+        for (i = 0; i < THRM_MAX_NUM_ZONES; i++)
         {
             G_thrm_fru_data[DATA_FRU_VRM].FanIncZone[i] = 0;
         }
@@ -386,26 +325,15 @@ BOOLEAN thrm_thread_vrm_fan_control(const uint16_t i_vrfan)
 // Name:  thrm_thread_main
 //
 // Description: Main thermal thread routine
-//             
-// 
-// Flow: OCC Fan Control Loop (TMGT to OCC Interface Architecture, Version 2.0,
-//       Section 4.2)
 //
 // End Function Specification
 void thrm_thread_main()
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
     errlHndl_t                  l_err = NULL;
     BOOLEAN                     l_IncreaseFans = FALSE;
     sensor_t                    *l_sensor = NULL;
     static uint8_t              L_counter = 0;
-    static BOOLEAN              L_full_speed_log = FALSE; // @at023a
-
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
+    static BOOLEAN              L_full_speed_log = FALSE;
 
     // Execute fan control loop if OCC is in observation state or active state
     // AND if we have received the thermal threshold data packet
@@ -446,7 +374,7 @@ void thrm_thread_main()
         }
 
         // Is it time to execute the fan control loop?
-        if (L_counter == G_thrm_loop_time) 
+        if (L_counter == G_thrm_loop_time)
         {
             // Reset our counter
             L_counter = 0;
@@ -461,21 +389,15 @@ void thrm_thread_main()
             l_IncreaseFans |= thrm_thread_fan_control(DATA_FRU_PROC,
                                                       l_sensor->sample);
 
-            // Determine if additional cooling is required for centaurs -- gm017
+            // Determine if additional cooling is required for centaurs
             l_sensor = getSensorByGsid(TEMP2MSCENT);
             l_IncreaseFans |= thrm_thread_fan_control(DATA_FRU_CENTAUR,
                                                       l_sensor->sample);
 
-            // Determine if additional cooling is required for dimms -- gm017
+            // Determine if additional cooling is required for dimms
             l_sensor = getSensorByGsid(TEMP2MSDIMM);
             l_IncreaseFans |= thrm_thread_fan_control(DATA_FRU_DIMM,
                                                       l_sensor->sample);
-
-            //For debug only...
-            //TRAC_INFO("DBUG: Cooling requests Zone1[%u] Zone2[%u] Zone3[%u]",
-            //          G_thrm_fru_data[0].FanIncZone[0], 
-            //          G_thrm_fru_data[0].FanIncZone[1], 
-            //          G_thrm_fru_data[0].FanIncZone[2]);
 
             // Do we need to request a fan increase?
             if (l_IncreaseFans == TRUE)
@@ -487,19 +409,18 @@ void thrm_thread_main()
                 // command
                 cmdh_fsp_attention(OCC_ALERT_FSP_SERVICE_REQD);
 
-                // @at023a - start
                 // Check if fans are currently already at max (known from APSS)
                 // log informational B1812A08 and have the "Manufacturing error"
                 // bit in the actions field set so that TMGT will flag this in manufacturing.
-                // ** No longer reading gpio from APSS in GA1 due to instability in APSS composite mode -- gm026
-                uint8_t l_full_speed = 1; //low active
-                //uint8_t l_full_speed_pin = G_sysConfigData.apss_gpio_map.fans_full_speed; //gm026
+                // ** No longer reading gpio from APSS in GA1 due to instability in APSS composite mode
+                uint8_t l_full_speed = 1; // low active
+                // TODO: Should we continue to not read gpio from APSS?
                 if( (L_full_speed_log == FALSE) &&
-                    FALSE) //apss_gpio_get(l_full_speed_pin,&l_full_speed) ) //gm026
+                    FALSE) //apss_gpio_get(l_full_speed_pin,&l_full_speed) )
                 {
                     if(l_full_speed == 0) //low active
                     {
-                        L_full_speed_log = TRUE; // log this error ONLY ONCE per IPLL
+                        L_full_speed_log = TRUE; // log this error ONLY ONCE per IPL
                         TRAC_ERR("thrm_thread_main: Request a fan increase and fan is already in full speed");
 
                         /* @
@@ -512,7 +433,7 @@ void thrm_thread_main()
                          * @devdesc     Request a fan increase and fan is already in full speed
                          *
                          */
-                        l_err = createErrl(THRD_THERMAL_MAIN,  //modId
+                        l_err = createErrl(THRD_THERMAL_MAIN,             //modId
                                            FAN_FULL_SPEED,                //reasoncode
                                            OCC_NO_EXTENDED_RC,            //Extended reason code
                                            ERRL_SEV_INFORMATIONAL,        //Severity
@@ -526,7 +447,7 @@ void thrm_thread_main()
                         commitErrl(&l_err);
                     }
                 }
-                // @at023a - end
+                //
             }
             else
             {

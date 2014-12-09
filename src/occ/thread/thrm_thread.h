@@ -1,36 +1,32 @@
-/**
- * @file thrm_thread.h
- * @brief Header file for thermal thread.
- *
- *
-*/
-/**
- *      @page ChangeLogs Change Logs
- *      @section _thrm_thread_h thrm_thread.h
- *      @verbatim
- *
- *  Flag     Def/Fea    Userid    Date        Description
- *  ------- ---------- --------  ---------   ----------------------------------
- *  @gs019             gjsilva   11/21/2013  Created
- *  @gs020  909320     gjsilva   12/12/2013  Support for VR_FAN thermal control
- *
- *  @endverbatim
- */
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/thread/thrm_thread.h $                                */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
+
 #ifndef THRM_THREAD_H
 #define THRM_THREAD_H
 
-//*************************************************************************
-// Includes
-//*************************************************************************
-
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
 #define THRM_MAX_NUM_ZONES  8
-
-//*************************************************************************
-// Structures
-//*************************************************************************
 
 typedef struct thrm_fru_control
 {
@@ -54,10 +50,6 @@ typedef struct thrm_fru_data
     // Flag to indicate if the temperature for this FRU is increasing or not
     BOOLEAN                     temp_increasing;
 }thrm_fru_data_t;
-
-/*******************************************************************/
-/* Function Definitions                                            */
-/*******************************************************************/
 
 errlHndl_t thrm_thread_load_thresholds();
 void THRM_thread_update_thresholds();

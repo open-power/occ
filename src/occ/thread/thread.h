@@ -1,52 +1,39 @@
-/******************************************************************************
-// @file thread.h
-// @brief OCC THREAD COMPONENT header file
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _thread_h thread.h
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *                      abagepa   07/15/2011  Created Threads definition header
- *   @pb004             pbavari   09/12/2011  Test applet thread support
- *   @pb009             pbavari   10/20/2011  Removed unused thread related data
- *   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
- *   @pb00E             pbavari   03/11/2012  Added correct include file
- *   @th022             thallet   10/03/2012  Changes to allow DCOM State/Mode setting
- *
- *  @endverbatim
- *
- *///*************************************************************************/
- 
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/thread/thread.h $                                     */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
+
 #ifndef _THREAD_H
 #define _THREAD_H
 
-//*************************************************************************
-// Includes
-//*************************************************************************
-//@pb00Ec - changed from common.h to occ_common.h for ODE support
 #include <occ_common.h>
 #include "ssx.h"
 
-//*************************************************************************
-// Externs
-//*************************************************************************
-
-//*************************************************************************
-// Macros
-//*************************************************************************
-
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
 // Thread priorities for Thread creation.
 typedef enum
 {
-    THREAD_PRIORITY_0, //reserved for high priority
-    THREAD_PRIORITY_1, //reserved for high priority
+    THREAD_PRIORITY_0, // Reserved for high priority
+    THREAD_PRIORITY_1, // Reserved for high priority
     THREAD_PRIORITY_2,
     THREAD_PRIORITY_3,
     THREAD_PRIORITY_4,
@@ -56,65 +43,38 @@ typedef enum
     THREAD_PRIORITY_8,
 }THREAD_PRIORITY;
 
-/*----------------------------------------------------------------------------*/
-/* Stack Size and Declaration                                                 */
-/*----------------------------------------------------------------------------*/
-
-/** \defgroup Stack Stack Information
- * Stack sizes are defined by entity
- * - Non-Critical Stack used by non-critical interrupt handlers, including timer callbacks
- * - Critical Stack used for critical interrupts
- * - Stacks for each thread
- */
-
+// NOTE: Stack sizes are defined by entity
+// - Non-Critical Stack used by non-critical interrupt handlers, including timer callbacks
+// - Critical Stack used for critical interrupts
+// - Stacks for each thread
 #define NONCRITICAL_STACK_SIZE 8192    // 8kB
 #define CRITICAL_STACK_SIZE    4096    // 4kB
 #define THREAD_STACK_SIZE      4096    // 4kB
 
-//*************************************************************************
-// Structures
-//*************************************************************************
-
-//*************************************************************************
-// Globals
-//*************************************************************************
-/*@{*/
 extern uint8_t main_thread_stack[THREAD_STACK_SIZE];
 extern uint8_t Cmd_hndl_thread_stack[THREAD_STACK_SIZE];
 extern uint8_t App_thread_stack[THREAD_STACK_SIZE];
-//@pb004a - added
 extern uint8_t testAppletThreadStack[THREAD_STACK_SIZE];
 
-/*@}*/  // Ending tag for stack module in doxygen
+/*----------------------------------------------------------*/
+/* SsxThread Declaration                                    */
+/*----------------------------------------------------------*/
 
-/*----------------------------------------------------------------------------*/
-/*SsxTimer and SsxThread Declarations                                         */
-/*----------------------------------------------------------------------------*/
-/** \defgroup TimersAndThreads Timer and Thread Information */ /*@{*/
-
-/// Our timer based on TIMER_INTERVAL that kicks off most of the work.  See #timer_routine
-//SsxTimer timer;  // @tgh001 -- unused
-
-/// Our idle thread.  See #main_thread_routine  
+// Our idle thread. See main_thread_routine
 extern SsxThread Main_thread;
 
-//Command handler thread
+// Command handler thread
 extern SsxThread Cmd_Hndl_thread;
 
-//Application manager thread  
-extern SsxThread App_thread;  
+// Application manager thread
+extern SsxThread App_thread;
 
-//@pb004a - Test applet thread
+// Test applet thread
 extern SsxThread TestAppletThread;
 
-//Application manager thread  
-extern SsxThread Dcom_thread;  
+// Application manager thread
+extern SsxThread Dcom_thread;
 
-/*@}*/  // Ending tag for TimersAndThreads module in doxygen
-
-//*************************************************************************
-// Function Prototypes
-//*************************************************************************
 void Main_thread_routine(void *private);
 
 void Cmd_Hndl_thread_routine(void *arg);
@@ -123,11 +83,6 @@ void App_thread_routine(void *arg);
 
 void Dcom_thread_routine(void *arg);
 
-//@pb004a -added
 void testAppletThreadRoutine(void *arg);
-
-//*************************************************************************
-// Functions
-//*************************************************************************
 
 #endif //_THREAD_H

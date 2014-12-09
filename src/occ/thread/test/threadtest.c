@@ -1,25 +1,28 @@
-/******************************************************************************
-// @file threadtest.c
-// @brief OCC THREAD TEST MAIN FUNCTION
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section threadtest.c THREADTEST.C
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @dw000             dwoodham  12/12/2011  Update call to IMAGE_HEADER; Added change log
- *   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/thread/test/threadtest.c $                            */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
-//*************************************************************************
-// Includes
-//*************************************************************************
 #include "ssx.h"
 #include "ssx_io.h"
 #include "simics_stdio.h"
@@ -27,51 +30,17 @@
 #include <rand.h>
 #include <thread.h>
 #include <threadSch.h>
-#include <appletId.h>  // @dw000a
+#include <appletId.h>
 
-
-/** \mainpage OCC Overview
- *
- * Some general info.
- *
- * This manual is divided in the following sections:
- * - \subpage Timer
- */
-
-//*************************************************************************
-// Externs
-//*************************************************************************
 extern void __ssx_boot;
 
-//*************************************************************************
-// Image Header
-//*************************************************************************
-// @dw000c
 IMAGE_HEADER (G_mainAppImageHdr,__ssx_boot,MAIN_APP_ID,OCC_APLT_TEST);
 
-//*************************************************************************
-// Macros
-//*************************************************************************
+// Period in which to run timer_routine
+#define TIMER_INTERVAL (SsxInterval) SSX_MICROSECONDS(5000)
 
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
-/// Period in which to run #timer_routine
-#define TIMER_INTERVAL (SsxInterval) SSX_MICROSECONDS(5000) 
-
-
-/*----------------------------------------------------------------------------*/
-/* SsxSemaphore Declarations                                                  */
-/*----------------------------------------------------------------------------*/
 SsxSemaphore prcd_sem;
 
-//*************************************************************************
-// Structures
-//*************************************************************************
-
-//*************************************************************************
-// Globals
-//*************************************************************************
 int g_j = 0;
 int g_k = 0;
 /*----------------------------------------------------------------------------*/
@@ -84,24 +53,16 @@ SimicsStdio simics_stderr;
 
 SsxTimer G_test_timer;
 
-//*************************************************************************
-// Function Prototypes
-//*************************************************************************
 extern void timer_routine(void *private);
 extern void rtloop_ocb_init(void);
 
-//*************************************************************************
-// Functions
-//*************************************************************************
 
 // Function Specification
 //
 // Name: pgp_validation_ssx_main_hook
 //
-// Description: 
+// Description: TODO Add description
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 void pgp_validation_ssx_main_hook(void)
 {
@@ -112,10 +73,8 @@ void pgp_validation_ssx_main_hook(void)
 //
 // Name: Cmd_Hndl_thread_routine
 //
-// Description: 
+// Description: TODO Add description
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 //TODO placeholder
 void Cmd_Hndl_thread_routine(void *arg)
@@ -127,7 +86,6 @@ void Cmd_Hndl_thread_routine(void *arg)
         {
 
         }
-        //printf("Thread A running");
     }while(1);
 
 }
@@ -136,10 +94,8 @@ void Cmd_Hndl_thread_routine(void *arg)
 //
 // Name: App_thread_routine
 //
-// Description: 
+// Description: TODO Add description
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 void App_thread_routine(void *arg)
 {
@@ -151,7 +107,6 @@ void App_thread_routine(void *arg)
         {
             z++;
         }
-        //printf("Thread A running");
     }while(1);
 
 }
@@ -160,10 +115,8 @@ void App_thread_routine(void *arg)
 //
 // Name: Thermal_Monitor_thread_routine
 //
-// Description: 
+// Description: TODO Add description
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 void Thermal_Monitor_thread_routine(void *arg)
 {
@@ -175,19 +128,16 @@ void Thermal_Monitor_thread_routine(void *arg)
         {
             z++;
         }
-        //printf("Thread A running");
     }while(1);
- 
+
 }
 
 // Function Specification
 //
 // Name: Hlth_Monitor_thread_routine
 //
-// Description: 
+// Description: TODO Add description
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 void Hlth_Monitor_thread_routine(void *arg)
 {
@@ -199,7 +149,6 @@ void Hlth_Monitor_thread_routine(void *arg)
         {
             z++;
         }
-        //printf("Thread A running");
     }while(1);
 
 }
@@ -208,10 +157,8 @@ void Hlth_Monitor_thread_routine(void *arg)
 //
 // Name: FFDC_thread_routine
 //
-// Description: 
+// Description: TODO Add description
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 void FFDC_thread_routine(void *arg)
 {
@@ -223,26 +170,17 @@ void FFDC_thread_routine(void *arg)
         {
             z++;
         }
-        //printf("Thread A running");
     }while(1);
 
 }
 
-
-/** Main Thread
- *
- * This thread currently just loops as the lowest priority thread, handling
- * the lowest priority tasks.
- * 
- */
 // Function Specification
 //
 // Name: main_thread_routine
 //
-// Description: 
+// Description: This thread currently just looks as the lowest priority thread,
+//              handling the lowest priority tasks.
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 void main_thread_routine(void *private)
 {
@@ -268,10 +206,8 @@ void main_thread_routine(void *private)
 //
 // Name: timer_routine
 //
-// Description: 
+// Description: TODO Add description
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 void  timer_routine (void *arg)
 {
@@ -282,14 +218,12 @@ void  timer_routine (void *arg)
 //
 // Name: dump_thread_info
 //
-// Description: 
+// Description: TODO Add description
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 void dump_thread_info(void *arg)
 {
-    
+
     printf("dumping thread info--------------------------\n");
     int l_rc = 0;
     SsxThreadState l_state = 0;
@@ -308,34 +242,27 @@ void dump_thread_info(void *arg)
                                                             l_pri,
                                                             l_runnable,
                                                             l_rc,
-                                                            G_threadSchedulerIndex);        
+                                                            G_threadSchedulerIndex);
 
     }
 
 }
 
-/** Entry point for OCC execution
- *
- * main() currently initalizes our trace buffer along with creating threads
- * and timers for execution.  Note that once main runs ssx_start_threads, we
- * never return as the SSX kernel takes over.
- * 
- */
 // Function Specification
 //
 // Name: main
 //
-// Description: 
+// Description: Initializes the trace buffer, along with creating threads and timers
+//              for execution. Note that once main runs with ssx_start_threads, we
+//              never return as the SSX kernel takes over.
 //
-// Flow:              FN=None
-// 
 // End Function Specification
 int main(int argc, char **argv)
 {
-    //locals
+    // Locals
     errlHndl_t  l_errl = INVALID_ERR_HNDL;
 
-    // Initialize Trace Buffers immediately, so they can be used 
+    // Initialize Trace Buffers immediately, so they can be used
     // from this point on.
 
     // Initialize stdout so we can do printf from within simics env
@@ -346,46 +273,38 @@ int main(int argc, char **argv)
 
     // Initialize SSX Stacks (note that this also reinitializes the time base to 0)
     ssx_initialize((SsxAddress)noncritical_stack, NONCRITICAL_STACK_SIZE,
-		   (SsxAddress)critical_stack, CRITICAL_STACK_SIZE,
-		   0);
-
-    
+                   (SsxAddress)critical_stack, CRITICAL_STACK_SIZE, 0);
 
     // Create Global Semaphores
     ssx_semaphore_create(&prcd_sem, 0, 13);
 
     ssx_timer_create(&timer, timer_routine, 0);
 
-//     //create thread with already mapped priority
-//         // Create Threads
-    ssx_thread_create(&main_thread, 
-		      main_thread_routine, 
-		      (void *)0,
-		      (SsxAddress)main_thread_stack,
-		      THREAD_STACK_SIZE,
-		      0);
-
+    // Create thread with already mapped priority
+    // Create Threads
+    ssx_thread_create(&main_thread,
+              main_thread_routine,
+              (void *)0,
+              (SsxAddress)main_thread_stack,
+              THREAD_STACK_SIZE,
+              0);
 
     // Make Threads runnable
     ssx_thread_resume(&main_thread);
-
 
     //Initialize the thread scheduler
     l_errl = initThreadScheduler();
 
     if(l_errl)
     {
-        // Trace and commit error
+        // TODO Trace the error
 
-        // TODO add trace
-
-        // commit log 
+        // Commit log
         // NOTE: log should be deleted by reader mechanism
-        commitErrl( &l_errl ); 
+        commitErrl( &l_errl );
     }
 
-
-    //kick off timer
+    // Kick off timer
     ssx_timer_create(&G_test_timer, dump_thread_info, 0);
     ssx_timer_schedule(&G_test_timer, 1, 500000000);
 
