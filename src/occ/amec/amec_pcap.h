@@ -1,21 +1,28 @@
-/******************************************************************************
-// @file amec_pcap.h
-// @brief AMEC power cap header file
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _amec_pcap_h amec_pcap.h
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @fk001  879727     fmkassem  04/24/2013  New file
- *   @rt001  897459     tapiar    08/20/2013  moved PDROP_THRESH to .h
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/amec/amec_pcap.h $                                    */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
+
 #ifndef _AMEC_PCAP_H
 #define _AMEC_PCAP_H
 
@@ -37,7 +44,7 @@
 // Defines/Enums
 //*************************************************************************
 
-//Number of watts power must be below the node power cap before raising 
+//Number of watts power must be below the node power cap before raising
 //ppb_fmax
 #define PDROP_THRESH        0   //TODO: need better value.
 

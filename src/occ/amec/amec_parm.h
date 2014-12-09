@@ -1,22 +1,27 @@
-/**
- * @file amec_parm.h
- * @brief Header file for AMEC Parameter interface.
- *
- *
-*/
-/**
- *      @page ChangeLogs Change Logs
- *      @section _amec_parm_h amec_parm.h
- *      @verbatim
- *
- *  Flag     Def/Fea    Userid    Date        Description
- *  -------- ---------- --------  ---------   ----------------------------------
- *  @cl002   903552     lefurgy   08/02/2013  Created
- *  @gs018   907196     gjsilva   11/20/2013  Base support for soft frequency boundaries
- *  @gs027   918066     gjsilva   03/12/2014  Misc functions from ARL
- *
- *  @endverbatim
- */
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/amec/amec_parm.h $                                    */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
 /*
   This interface takes named memory objects (such as global variables)
@@ -117,13 +122,7 @@ extern amec_parm_t  g_amec_parm_list[];
 /*******************************************************************/
 
 /**
- * @brief Get number of parameters 
- * @param i_psMsg IPMI command
- * @param o_pu8Resp Response string
- * @param o_pu8RespLength Response string length
- * @param o_retval Command response error code (=0 pass)
- *
- * Return number of parameters tracked by TPMD
+ * Get number of parameters tracked by OCC
  *
  */
 void amec_parm_get_number(const IPMIMsg_t *i_psMsg,
@@ -132,13 +131,7 @@ void amec_parm_get_number(const IPMIMsg_t *i_psMsg,
                           UINT8 *o_retval);
 
 /**
- * @brief Get parameter configuration (names, types, size, etc.)
- * @param i_psMsg IPMI command
- * @param o_pu8Resp Response string
- * @param o_pu8RespLength Response string length
- * @param o_retval Command response error code (=0 pass)
- *
- * Get the configuration of the parameters (names, size, type, etc.)
+ * Get parameter configuration (names, types, size, etc.)
  *
  */
 void amec_parm_get_config(const IPMIMsg_t *i_psMsg,
@@ -147,13 +140,7 @@ void amec_parm_get_config(const IPMIMsg_t *i_psMsg,
                           UINT8 *o_retval);
 
 /**
- * @brief Get parameter value 
- * @param i_psMsg IPMI command
- * @param o_pu8Resp Response string
- * @param o_pu8RespLength Response string length
- * @param o_retval Command response error code (=0 pass)
- *
- * Read a parameter value
+ * Read a parameter value 
  *  
  */
 void amec_parm_read(const IPMIMsg_t *const i_psMsg,
@@ -162,12 +149,6 @@ void amec_parm_read(const IPMIMsg_t *const i_psMsg,
                     UINT8 *const o_retval);
 
 /**
- * @brief Set a parameter value
- * @param i_psMsg IPMI command
- * @param o_pu8Resp Response string
- * @param o_pu8RespLength Response string length
- * @param o_retval Command response error code (=0 pass)
- *
  * Write a value to a parameter
  *
  */
@@ -177,8 +158,7 @@ void amec_parm_write(const IPMIMsg_t *const i_psMsg,
                      UINT8 *const o_retval);
 
 /**
- * @brief Update parameter value before reading
- * @param i_parm_guid The parameter number
+ * Update parameter value before reading
  *
  * Some parameters need to be updated before reading.
  * For example, a parameter that points to double-buffered 
@@ -190,8 +170,7 @@ void amec_parm_write(const IPMIMsg_t *const i_psMsg,
 void amec_parm_preread(AMEC_PARM_GUID i_parm_guid);
 
 /**
- * @brief Update parameter value before reading
- * @param i_parm_guid The parameter number
+ * Update parameter value after writing 
  *
  * Some parameters trigger actions after writing.
  * This routine only needs to be called when the parameter

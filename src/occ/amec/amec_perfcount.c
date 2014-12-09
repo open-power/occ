@@ -1,23 +1,27 @@
-/******************************************************************************
- * @file amec_perfcount.c
- * @brief AMEC Performance Counter Code
- *
- * Structure Definition / Helper Functions for Performance Counter Calculations
- *
- ******************************************************************************/
-/******************************************************************************
- *
- *      @page ChangeLogs Change Logs
- *      @section _amec_perfcount_c amec_perfcount.c
- *      @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @ly001  853751     lychen    09/17/2012  Initial Revision
- *
- *  @endverbatim
- *
- ******************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/amec/amec_perfcount.c $                               */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
 /*----------------------------------------------------------------------------*/
 /* Includes                                                                   */
@@ -50,8 +54,6 @@
 // Name: amec_calc_dps_util_counters
 //
 // Description: Calculate the performance counter for a core.
-//
-// Flow:              FN= None
 //
 // End Function Specification
 void amec_calc_dps_util_counters(const uint8_t i_core_id)
@@ -98,8 +100,6 @@ void amec_calc_dps_util_counters(const uint8_t i_core_id)
 //
 // Description: Build the performance counter for a core.
 //
-// Flow:              FN= None
-//
 // End Function Specification
 amec_core_perf_counter_t* amec_core_perf_counter_ctor(amec_core_perf_counter_t* i_this_ptr,
                                                       const uint8_t i_proc_id,
@@ -108,7 +108,7 @@ amec_core_perf_counter_t* amec_core_perf_counter_ctor(amec_core_perf_counter_t* 
     /*------------------------------------------------------------------------*/
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
-    
+
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/

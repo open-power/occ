@@ -1,22 +1,27 @@
-/******************************************************************************
-// @file amec_parm_table.c
-// @brief OCC Amester parameter table.
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section amec_parm_table_c amec_parm_table.c
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @cl002  903552     lefurgy   08/02/2013  Created
- *   @gs018  907196     gjsilva   11/20/2013  Base support for soft frequency boundaries
- *   @gs027  918066     gjsilva   03/12/2014  Misc functions from ARL
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/amec/amec_parm_table.c $                              */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
 //*************************************************************************
 // Includes
@@ -36,56 +41,55 @@
 
 // Macros for parameters based on simple variables (read-write, not vectors)
 /**
- * @brief Create or update a parameter
+ * Create or update a parameter
  *
- * @param i_name Name of parameter.  If this name is the name of an
- * 				 existing parameter, then the existing parameter fields
- *				 will be updated
- * @param i_vaule A pointer to the bytes representing the value of the parameter
- * @param i_length The length in bytes of the parameter value
- * @param n The number of elements if this parameter is a vector, otherwise = 1.
+ * i_name: Name of parameter.  If this name is the name of an existing
+ * parameter, then the existing parameter fields will be updated
+ * i_value: A pointer to the bytes representing the value of the parameter
+ * i_length: The length in bytes of the parameter value
+ * n: The number of elements if this parameter is a vector, otherwise = 1.
  */
-#define AMEC_PARM_UINT8(i_num, i_name, i_value)				\
+#define AMEC_PARM_UINT8(i_num, i_name, i_value)             \
     [i_num] = {i_name,(void*)i_value,1,1,AMEC_PARM_TYPE_UINT8,0}
-#define AMEC_PARM_UINT16(i_num, i_name, i_value)			\
+#define AMEC_PARM_UINT16(i_num, i_name, i_value)            \
     [i_num] = {i_name,(void*)i_value,2,1,AMEC_PARM_TYPE_UINT16,0}
-#define AMEC_PARM_UINT32(i_num, i_name, i_value)			\
+#define AMEC_PARM_UINT32(i_num, i_name, i_value)            \
     [i_num] = {i_name,(void*)i_value,4,1,AMEC_PARM_TYPE_UINT32,0}
-#define AMEC_PARM_UINT64(i_num, i_name, i_value)			\
+#define AMEC_PARM_UINT64(i_num, i_name, i_value)            \
     [i_num] = {i_name,(void*)i_value,8,1,AMEC_PARM_TYPE_UINT64,0}
-#define AMEC_PARM_INT8(i_num, i_name, i_value)			\
+#define AMEC_PARM_INT8(i_num, i_name, i_value)          \
     [i_num] = {i_name,(void*)i_value,1,1,AMEC_PARM_TYPE_INT8,0}
-#define AMEC_PARM_INT16(i_num, i_name, i_value)				\
+#define AMEC_PARM_INT16(i_num, i_name, i_value)             \
     [i_num] = {i_name,(void*)i_value,2,1,AMEC_PARM_TYPE_INT16,0}
-#define AMEC_PARM_INT32(i_num, i_name, i_value)				\
+#define AMEC_PARM_INT32(i_num, i_name, i_value)             \
     [i_num] = {i_name,(void*)i_value,4,1,AMEC_PARM_TYPE_INT32,0}
-#define AMEC_PARM_INT64(i_num, i_name, i_value)			\
+#define AMEC_PARM_INT64(i_num, i_name, i_value)         \
     [i_num] = {i_name,(void*)i_value,8,1,AMEC_PARM_TYPE_IN64,0}
-#define AMEC_PARM_STRING(i_num, i_name, i_value, i_length)		\
+#define AMEC_PARM_STRING(i_num, i_name, i_value, i_length)      \
     [i_num] = {i_name,(void*)i_value,i_length,1,AMEC_PARM_TYPE_STRING,0}
-#define AMEC_PARM_RAW(i_num, i_name, i_value, i_length)			\
+#define AMEC_PARM_RAW(i_num, i_name, i_value, i_length)         \
     [i_num] = {i_name,(void*)i_value,i_length,1,AMEC_PARM_TYPE_RAW,0}
 
-//Use these macros when the parameter is an array of values. 
-#define AMEC_PARM_UINT8_ARRAY(i_num, i_name, i_value, n)		\
+//Use these macros when the parameter is an array of values.
+#define AMEC_PARM_UINT8_ARRAY(i_num, i_name, i_value, n)        \
     [i_num] = {i_name,(void*)i_value,1,n,AMEC_PARM_TYPE_UINT8,0}
-#define AMEC_PARM_UINT16_ARRAY(i_num, i_name, i_value, n)		\
+#define AMEC_PARM_UINT16_ARRAY(i_num, i_name, i_value, n)       \
     [i_num] = {i_name,(void*)i_value,2,n,AMEC_PARM_TYPE_UINT16,0}
-#define AMEC_PARM_UINT32_ARRAY(i_num, i_name, i_value, n)		\
+#define AMEC_PARM_UINT32_ARRAY(i_num, i_name, i_value, n)       \
     [i_num] = {i_name,(void*)i_value,4,n,AMEC_PARM_TYPE_UINT32,0}
-#define AMEC_PARM_UINT64_ARRAY(i_num, i_name, i_value, n)		\
+#define AMEC_PARM_UINT64_ARRAY(i_num, i_name, i_value, n)       \
     [i_num] = {i_name,(void*)i_value,8,n,AMEC_PARM_TYPE_UINT64,0}
-#define AMEC_PARM_INT8_ARRAY(i_num, i_name, i_value, n)		\
+#define AMEC_PARM_INT8_ARRAY(i_num, i_name, i_value, n)     \
     [i_num] = {i_name,(void*)i_value,1,n,AMEC_PARM_TYPE_INT8,0}
-#define AMEC_PARM_INT16_ARRAY(i_num, i_name, i_value, n)		\
+#define AMEC_PARM_INT16_ARRAY(i_num, i_name, i_value, n)        \
     [i_num] = {i_name,(void*)i_value,2,n,AMEC_PARM_TYPE_INT16,0}
-#define AMEC_PARM_INT32_ARRAY(i_num, i_name, i_value, n)		\
+#define AMEC_PARM_INT32_ARRAY(i_num, i_name, i_value, n)        \
     [i_num] = {i_name,(void*)i_value,4,n,AMEC_PARM_TYPE_INT32,0}
-#define AMEC_PARM_INT64_ARRAY(i_num, i_name, i_value, n)	\
+#define AMEC_PARM_INT64_ARRAY(i_num, i_name, i_value, n)    \
     [i_num] = {i_name,(void*)i_value,8,n,AMEC_PARM_TYPE_IN64,0}
-#define AMEC_PARM_STRING_ARRAY(i_num, i_name, i_value, i_length, n)	\
+#define AMEC_PARM_STRING_ARRAY(i_num, i_name, i_value, i_length, n) \
     [i_num] = {i_name,(void*)i_value,i_length,n,AMEC_PARM_TYPE_STRING,0}
-#define AMEC_PARM_RAW_ARRAY(i_num, i_name, i_value, i_length, n)	\
+#define AMEC_PARM_RAW_ARRAY(i_num, i_name, i_value, i_length, n)    \
     [i_num] = {i_name,(void*)i_value,i_length,n,AMEC_PARM_TYPE_RAW,0}
 
 //*************************************************************************
@@ -105,7 +109,7 @@ extern amec_sys_t g_amec_sys;
 // This is the list of all parameters seen by Amester
 //
 // Note: The parameters must be in the same order as in AMEC_PARM_ENUM
-// in amec_parm.h 
+// in amec_parm.h
 //
 // Future optimization: This table could be placed in main memory, not
 // the SRAM tank, since slow access to it is OK.
@@ -158,3 +162,7 @@ void amec_parm_postwrite(AMEC_PARM_GUID i_parm_guid)
         break;
     }
 }
+
+/*----------------------------------------------------------------------------*/
+/* End                                                                        */
+/*----------------------------------------------------------------------------*/

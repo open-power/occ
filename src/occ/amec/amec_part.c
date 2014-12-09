@@ -1,27 +1,27 @@
-/******************************************************************************
- * @file amec_part.c
- * @brief Partition Level Power Management
- ******************************************************************************/
-/******************************************************************************
- *
- *      @page ChangeLogs Change Logs
- *      @section _amec_part_c amec_part.c
- *      @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @ly001  853751     lychen    09/17/2012  Initial Revision
- *   @ly002  860316     lychen    11/07/2012  Rename adding a core group function
- *   @gs008  894661     gjsilva   08/08/2013  Initial support for DPS-FP mode
- *   @gs009  897228     gjsilva   08/28/2013  Enablement of DPS-FP Mode
- *   @gs017  905990     gjsilva   11/13/2013  Full support for tunable parameters
- *   @gs018  907196     gjsilva   11/20/2013  Base support for soft frequency boundaries
- *   @gs031  924042     gjsilva   04/21/2014  Support for DPS-FP mode in Brazos
- *   @gs037  933716     gjsilva   07/31/2014  Fix alpha_up and alpha_down resolution
- *
- *  @endverbatim
- *
- ******************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/amec/amec_part.c $                                    */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
 /*----------------------------------------------------------------------------*/
 /* Includes                                                                   */
@@ -46,15 +46,11 @@
 /*----------------------------------------------------------------------------*/
 
 /*----------------------------------------------------------------------------*/
-/* Internal Function Prototypes                                               */
-/*----------------------------------------------------------------------------*/
-
-/*----------------------------------------------------------------------------*/
 /* Code                                                                       */
 /*----------------------------------------------------------------------------*/
 
 // Given partition id, return pointer to existing partition or NULL
-static amec_part_t* amec_part_find_by_id(amec_part_config_t* i_config, 
+static amec_part_t* amec_part_find_by_id(amec_part_config_t* i_config,
                                          const uint8_t i_id)
 {
     /*------------------------------------------------------------------------*/
@@ -62,19 +58,19 @@ static amec_part_t* amec_part_find_by_id(amec_part_config_t* i_config,
     /*------------------------------------------------------------------------*/
     amec_part_t *l_part = NULL;
     uint16_t l_idx = 0;
+
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-
     for (l_idx=0; l_idx<AMEC_PART_MAX_PART; l_idx++)
     {
-        if (i_config->part_list[l_idx].id == i_id && i_config->part_list[l_idx].valid) 
+        if (i_config->part_list[l_idx].id == i_id && i_config->part_list[l_idx].valid)
         {
             l_part = &(i_config->part_list[l_idx]);
             break;
         }
     }
-    
+
     return l_part;
 }
 
@@ -83,8 +79,6 @@ static amec_part_t* amec_part_find_by_id(amec_part_config_t* i_config,
 // Name: amec_isr_speed_to_freq
 //
 // Description: Given a core, return a valid partition that owns it, or NULL.
-//
-// Flow:              FN= None
 //
 // End Function Specification
 amec_part_t* amec_part_find_by_core(amec_part_config_t* i_config,
@@ -99,18 +93,18 @@ amec_part_t* amec_part_find_by_core(amec_part_config_t* i_config,
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    do 
+    do
     {
-        if (i_core_index >= MAX_NUM_CORES) 
+        if (i_core_index >= MAX_NUM_CORES)
         {
-            break; // illegal core number 
+            break; // illegal core number
         }
         l_part_index = i_config->core2part[i_core_index];
         if (l_part_index >= AMEC_PART_MAX_PART)
         {
             break; // illegal partition number
         }
-        if (i_config->part_list[l_part_index].valid) 
+        if (i_config->part_list[l_part_index].valid)
         {
             l_part = (amec_part_t*) &(i_config->part_list[l_part_index]);
         }
@@ -119,14 +113,11 @@ amec_part_t* amec_part_find_by_core(amec_part_config_t* i_config,
     return l_part;
 }
 
-// @ly002c
 // Function Specification
 //
 // Name: amec_part_add
 //
 // Description: Add a core group.
-//
-// Flow:              FN= None
 //
 // End Function Specification
 void amec_part_add(uint8_t i_id)
@@ -152,20 +143,20 @@ void amec_part_add(uint8_t i_id)
         // Find new slot
         for (l_idx=0; l_idx<AMEC_PART_MAX_PART; l_idx++)
         {
-            if (!g_amec->part_config.part_list[l_idx].valid) 
+            if (!g_amec->part_config.part_list[l_idx].valid)
             {
                 l_part = &g_amec->part_config.part_list[l_idx];
                 break;
             }
         }
-        
+
         if (l_part == NULL)
         {
             // This should never happen, since table should be large enough
             // to hold as many partitions as can be created on system.
             break;
         }
-        
+
         // Enter new partition into table with default values
         l_part->id = i_id;
         l_part->valid = 1;  //Mark them as valid
@@ -175,7 +166,7 @@ void amec_part_add(uint8_t i_id)
             l_part->core_list[l_idx] = AMEC_PART_NUM_CORES;
         }
 
-        // TODO: For now, create a single partition with all cores assigned to it
+        // For now, create a single partition with all cores assigned to it
         // until we write the interface to talk to PHYP
         if (i_id == 0)
         {
@@ -189,7 +180,7 @@ void amec_part_add(uint8_t i_id)
         // Set default soft frequency boundaries to use full frequency range
         l_part->soft_fmin = 0x0000;
         l_part->soft_fmax = 0xFFFF;
-        
+
         // Set default values for DPS parameters (Favor Energy)
         l_part->dpsalg.step_up = 8;
         l_part->dpsalg.step_down = 8;
@@ -205,7 +196,7 @@ void amec_part_add(uint8_t i_id)
         l_part->follow_sysmode = TRUE;
     }
     while (0);
-    
+
     return;
 }
 
@@ -219,20 +210,20 @@ void amec_part_init()
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    // Initial core to partition mapping. Cores point to an invalid core group 
-    // id. 
-    // TODO: For now, we assume a single partition (id 0) with all cores
-    // assigned to it. Once the PHYP interface has been written, we can remove
-    // this assumption.
+    // Initial core to partition mapping. Cores point to an invalid core group
+    // id.
+    // For now, we assume a single partition (id 0) with all cores assigned to
+    // it. Once the PHYP interface has been written, we can remove this
+    // assumption.
     for (l_idx=0; l_idx<MAX_NUM_CORES; l_idx++)
     {
         g_amec->part_config.core2part[l_idx] = 0; // AMEC_PART_INVALID_ID;
     }
-    
+
     for (l_idx=0; l_idx<AMEC_PART_MAX_PART; l_idx++)
     {
         // Creating all possible partitions
-        amec_part_add(l_idx); // @ly002c
+        amec_part_add(l_idx);
 
         g_amec->part_config.part_list[l_idx].dpsalg.util_speed_request = g_amec->sys.fmax;
     }
@@ -283,7 +274,7 @@ void amec_part_update_dps_parameters(amec_part_t* io_part)
         io_part->dpsalg.alpha_down = 9990;
         io_part->dpsalg.type = 41;
 
-        // Check if this is a multi-node system (e.g., Brazos)
+        // Check if this is a multi-node system
         if (G_sysConfigData.system_type.single == 0)
         {
             // These parameter values will result in static turbo frequency
@@ -346,7 +337,7 @@ void amec_part_update_perf_settings(amec_part_t* io_part)
                 g_amec->proc[0].core[l_core_index % MAX_NUM_CORES]
                     .core_perf.dps_freq_request = UINT16_MAX;
             }
-            break; 
+            break;
     }
 }
 

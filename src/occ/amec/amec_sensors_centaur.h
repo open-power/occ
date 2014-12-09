@@ -1,31 +1,36 @@
-/******************************************************************************
-// @file amec_sensors_centaur.h
-// @brief OCC AMEC Sensors Derived from Centaur
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section amec_sensors_centaur.h AMEC_SENSORS_CENTAUR.H
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @th018  852950     thallet   09/12/2012  Added Centaur thermal readings       
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/amec/amec_sensors_centaur.h $                         */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
 #ifndef _AMEC_SENSORS_CENTAUR_H
 #define _AMEC_SENSORS_CENTAUR_H
-
 
 //*************************************************************************
 // Function Prototypes
 //*************************************************************************
 void amec_update_centaur_sensors(uint8_t i_centaur);
 void amec_update_centaur_temp_sensors(void);
-
 
 #endif
 
