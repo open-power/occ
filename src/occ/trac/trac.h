@@ -1,30 +1,28 @@
-/******************************************************************************
-// @file trac.h
-// @brief OCC trace defines
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section trac.h TRAC.H
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @pb002             pbavari   08/26/2011  Created
- *   @01                tapiar    08/29/2011  fix trac_inf and trac_imp
- *   @th002             thallet   09/19/2011  Added ifdef to strip strings from
- *                                            compile.
- *   @pb009             pbavari   10/20/2011  Added TRAC_DBG
- *   @rc001             rickylie  12/30/2011  Added <compNm>_DEBUG
- *   @pb00C             pbavari   01/20/2012  Fixed SNR_DBG for the else part
- *   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
- *   @th00c             thallet   04/19/2012  Added cent debug  
- *   @th013             thallet   07/24/2012  Minor changes for VPO/HW compile
- *   @at009  859308     alvinwan  10/15/2012  Added tracepp support
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/trac/trac.h $                                         */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
+
 #ifndef _trac_h
 #define _trac_h
 //*************************************************************************
@@ -72,12 +70,11 @@
 
 extern void dumpHexString(const void *i_data, const unsigned int len, const char *string);
 #define DEBUG_HEXDUMP(data, len, string)  \
-	    dumpHexString(data, len, string)
+        dumpHexString(data, len, string)
 //TODO: Do we want to have one buffer for tracing binary
 
 #else  //TRAC_TO_SIMICS
 
-// @at009a - start
 #define TRAC_ERR(frmt,args...)  \
         TRACE(g_trac_err,ERR_MRK frmt,##args)
 #define TRAC_INFO(frmt,args...)  \
@@ -87,13 +84,11 @@ extern void dumpHexString(const void *i_data, const unsigned int len, const char
 #define DBG_PRINT(fmt,args...)  \
         TRACE(g_trac_inf,DBG_MRK fmt,##args)
 #define DEBUG_HEXDUMP(data, len, string)  \
-		TRACEBIN(g_trac_inf, string, data,len)
+        TRACEBIN(g_trac_inf, string, data,len)
 
-// @at009a - end
 #endif  //TRAC_TO_SIMICS
 
 
-//<@rc001a @at009c
 #ifdef MAIN_DEBUG
   #define MAIN_DBG(frmt,args...)  \
           DBG_PRINT(frmt,##args)
@@ -233,7 +228,6 @@ extern void dumpHexString(const void *i_data, const unsigned int len, const char
   #define TMER_DBG(frmt,args...)
   #define TMER_DBG_HEXDUMP(data, len, string)
 #endif
-//>@rc001a @at009c
 
 #else // NO_TRAC_STRINGS
 
@@ -241,7 +235,6 @@ extern void dumpHexString(const void *i_data, const unsigned int len, const char
 #define TRAC_INFO(frmt,args...)
 #define TRAC_IMP(frmt,args...)
 
-//<@rc001a @at009c
 #define MAIN_DBG(frmt,args...)
 #define RTLS_DBG(frmt,args...)
 #define PROC_DBG(frmt,args...)
@@ -272,9 +265,6 @@ extern void dumpHexString(const void *i_data, const unsigned int len, const char
 #define SNSR_DBG_HEXDUMP(frmt,args...)
 #define TMER_DBG_HEXDUMP(frmt,args...)
 
-
-//>@rc001a @at009c
-
 #endif
 
 //*************************************************************************
@@ -294,5 +284,3 @@ extern void dumpHexString(const void *i_data, const unsigned int len, const char
 //*************************************************************************
 
 #endif // _trac_h
-
-
