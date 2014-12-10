@@ -1,45 +1,31 @@
-/******************************************************************************
-// @file gpe_export.h
-// @brief This file contains structures, etc, that are needed
-//        by applications external to the GPE
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section gpe_export.h GPE_EXPORT.H
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @cc000             cjcain    08/04/2011  Created      
- *   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
- *
- *  @endverbatim
- *
- *///*************************************************************************/
- 
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/gpe/gpe_exports.h $                                   */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
+
 #ifndef _GPE_EXPORT_H
 #define _GPE_EXPORT_H
 
-//*************************************************************************
-// Includes
-//*************************************************************************
-
-//*************************************************************************
-// Externs
-//*************************************************************************
-
-//*************************************************************************
-// Macros
-//*************************************************************************
-
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
-
-//*************************************************************************
-// Structures
-//*************************************************************************
 typedef struct {
      union
      {
@@ -51,17 +37,5 @@ typedef struct {
      };
      uint64_t ffdc;
 } PoreGpeErrorStruct;  // Same for every GPE program
-
-//*************************************************************************
-// Globals
-//*************************************************************************
-
-//*************************************************************************
-// Function Prototypes
-//*************************************************************************
-
-//*************************************************************************
-// Functions
-//*************************************************************************
 
 #endif //_GPE_EXPORT_H
