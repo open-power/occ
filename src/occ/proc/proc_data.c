@@ -1,43 +1,28 @@
-/******************************************************************************
-// @file proc_data.c
-// @brief Data codes for proc component.
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _proc_data_c proc_data.c
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *                      nguyenp    09/27/2011 Created
- *                      nguyenp    09/27/2011 Added bulk core data and proc core
- *                                            initialization code.
- *   @01                nguyenp    10/19/2011 Added fast core data colect code.
- *                                            Added new interfaces to gain access to
- *                                            bulk core and fast core data.
- *                                            Change OCC core id numbering scheme.
- *   @th006             thallet   11/21/2011  RESET_REQUEST substituted for todo's
- *   @rc001             rickylie  12/30/2011  Moved debug trace defines to trac.h
- *   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
- *   @th00b             thallet   02/28/2012  Minor changes to make proc collection work.
- *   @th00f             thallet   06/27/2012  Changed to use CoreData as provided by HW team
- *   @nh001             neilhsu   05/23/2012  Add missing error log tags
- *   @th010             thallet   07/11/2012  Pstate Enablement
- *   @th032             thallet   04/26/2013  Tuleta HW Bringup
- *   @th043  892554     thallet   07/23/2013  Automatic Nominal/Active state change
- *   @gm006  SW224414   milesg    09/16/2013  Reset and FFDC improvements
- *   @gm022  908890     milesg    01/23/2014  update global core presence mask from pmc deconfig register
- *   @sb055  911966     sbroyles  02/27/2014  Enable PBCS heartbeat
- *   @sbpde  922027     sbroyles  04/04/2014  Add error check to GPE proc data
- *                                            collection.
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/proc/proc_data.c $                                    */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
-//*************************************************************************
-// Includes
-//*************************************************************************
 #include "proc_data.h"
 #include "pgp_async.h"
 #include "threadSch.h"
@@ -51,29 +36,9 @@
 #include "state.h"
 #include "proc_data_control.h"
 
-//*************************************************************************
-// Externs
-//*************************************************************************
-
-//*************************************************************************
-// Macros
-//*************************************************************************
-
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
-
-//*************************************************************************
-// Structures
-//*************************************************************************
-
-//*************************************************************************
-// Globals
-//*************************************************************************
 //Global array of core data buffers
-GPE_BUFFER(gpe_bulk_core_data_t G_core_data[MAX_NUM_FW_CORES+NUM_CORE_DATA_DOUBLE_BUF+NUM_CORE_DATA_EMPTY_BUF]) = {{{0}}};  // @th00b @th00f
+GPE_BUFFER(gpe_bulk_core_data_t G_core_data[MAX_NUM_FW_CORES+NUM_CORE_DATA_DOUBLE_BUF+NUM_CORE_DATA_EMPTY_BUF]) = {{{0}}};
 
-//@01c Changed OCC core id numbering scheme
 //Global array of core data pointers
 gpe_bulk_core_data_t * G_core_data_ptrs[MAX_NUM_FW_CORES] = { &G_core_data[0], &G_core_data[1],
    &G_core_data[2], &G_core_data[3], &G_core_data[4], &G_core_data[5], &G_core_data[6],
@@ -83,7 +48,6 @@ gpe_bulk_core_data_t * G_core_data_ptrs[MAX_NUM_FW_CORES] = { &G_core_data[0], &
 GPE_BUFFER(GpeGetCoreDataParms G_low_cores_data_parms);
 GPE_BUFFER(GpeGetCoreDataParms G_high_cores_data_parms);
 
-//@01c Changed core data structure to fit the new core id numbering scheme
 //We will have separate bulk core data structure for low and high cores.
 //Global low and high cores structures used for task data pointers.
 bulk_core_data_task_t G_low_cores = { 0, 0, 5, &G_core_data[12] };
@@ -92,18 +56,15 @@ bulk_core_data_task_t G_high_cores = { 6, 6, 11, &G_core_data[13] };
 //AMEC needs to know when data for a core has been collected.
 uint32_t G_updated_core_mask = 0;
 
-// >> @sbpde
 // Mask to indicate when an empath error has been detected and empath data
 // should be ignored.  Core bits are cleared when empath data is collected
 // without error.
 uint32_t G_empath_error_core_mask = 0;
-// << @sbpde
 
 //Global G_present_cores is bitmask of all cores
 //(1 = present, 0 = not present. Core 0 has the most significant bit)
 uint32_t G_present_cores = 0;
 
-//>@01a
 //Global double buffering for fast core data collection.
 GPE_BUFFER(gpe_fast_core_data_t G_fast_core_data[NUM_FAST_CORE_DATA_BUFF]) = {{0}};
 
@@ -115,7 +76,7 @@ GPE_BUFFER(gpe_fast_core_data_t * G_write_fast_core_data_ptr) = { &G_fast_core_d
 
 //Globals structure for gpe get chip data fast parms.
 //The Gpe parameter fields are set up each time before collect data start.
-GPE_BUFFER(GpeGetChipDataFastParms G_chip_data_fast_parms);                // @th008c
+GPE_BUFFER(GpeGetChipDataFastParms G_chip_data_fast_parms);
 
 //Pore flex request for GPE job. The initialization
 //will be done one time during pore flex create.
@@ -138,27 +99,17 @@ bool    G_queue_not_idle_traced = FALSE;
 //Flag to keep tract of one time trace for GPE running case
 //for Fast core data.
 bool    G_fast_core_queue_not_idle_traced = FALSE;
-//<@01a
 
-// >> @sb055
 // Global to track the maximum time elapsed between pore flex schedules of
 // per core get_per_core_data tasks.  The array is indexed by core number.
 uint32_t G_get_per_core_data_max_schedule_intervals[MAX_NUM_HW_CORES] = {0,};
-// << @sb055
 
-//*************************************************************************
-// Function Prototypes
-//*************************************************************************
-//@rc001a - debug function declaration
+// Declaration of debug functions
 #ifdef PROC_DEBUG
 void print_core_data_sensors(uint8_t core);
 void print_core_status(uint8_t core);
 void print_fast_core_data(void);
 #endif
-
-//*************************************************************************
-// Functions
-//*************************************************************************
 
 // Function Specification
 //
@@ -169,7 +120,6 @@ void print_fast_core_data(void);
 //              individual task instances. The task function is the same but it needs
 //              to gather data for different sets of cores.
 //
-// Flow:  10/18/11    FN=task_core_data
 //
 // End Function Specification
 
@@ -206,7 +156,6 @@ void task_core_data( task_t * i_task )
             &&
             ((CURRENT_TICK & (MAX_NUM_TICKS - 1)) != 0) )
         {
-            //@rc001m
             PROC_DBG("Not collect data. Need to wait for tick.\n");
             break;
         }
@@ -223,7 +172,6 @@ void task_core_data( task_t * i_task )
             //with the global one. The gpe routine will write new data into
             //a buffer that is not being accessed by the RTLoop code.
 
-            //@rc001m
             PROC_DBG( "Swap core_data_ptr [%x] with the global one\n",
                      l_bulk_core_data_ptr->current_core );
 
@@ -241,9 +189,8 @@ void task_core_data( task_t * i_task )
             //Core data has been collected so set the bit in global mask.
             //AMEC code will know which cores to update sensors for. AMEC is
             //responsible for clearing the bit later on.
-            G_updated_core_mask |= CORE0_PRESENT_MASK >> (l_bulk_core_data_ptr->current_core); // @th00b
+            G_updated_core_mask |= CORE0_PRESENT_MASK >> (l_bulk_core_data_ptr->current_core);
 
-            // >> @sbpde
             // Presumptively clear the empath error mask
             G_empath_error_core_mask &=
                     ~(CORE0_PRESENT_MASK >> (l_bulk_core_data_ptr->current_core));
@@ -348,13 +295,12 @@ void task_core_data( task_t * i_task )
                 }
             }
         }
-        // << @sbpde
 
         // If the core is not present, then we need to point to the empty G_core_data
         // so that we don't use old/stale data from a leftover G_core_data
-        if( !CORE_PRESENT(l_bulk_core_data_ptr->current_core)) // @th00b
+        if( !CORE_PRESENT(l_bulk_core_data_ptr->current_core))
         {
-            G_core_data_ptrs[l_bulk_core_data_ptr->current_core] = &G_core_data[14]; // @th00b
+            G_core_data_ptrs[l_bulk_core_data_ptr->current_core] = &G_core_data[14];
         }
 
         //Update current core
@@ -371,20 +317,19 @@ void task_core_data( task_t * i_task )
         //be idle during this time it would have collected the data.
         if( CORE_PRESENT(l_bulk_core_data_ptr->current_core) )
         {
-            //@rc001m
             PROC_DBG("Schedule PoreFlex OCC core [%x] or HW core [%x]\n",
                       l_bulk_core_data_ptr->current_core, CORE_OCC2HW(l_bulk_core_data_ptr->current_core));
 
             //1. Setup the get core data parms
             l_parms->config =
-                    ((uint64_t) CORE0_PRESENT_MASK_GPE) >> (CORE_OCC2HW(l_bulk_core_data_ptr->current_core)); // @th008c
+                    ((uint64_t) CORE0_PRESENT_MASK_GPE) >> (CORE_OCC2HW(l_bulk_core_data_ptr->current_core));
 
             if( (cfam_id() == CFAM_CHIP_ID_MURANO_10)
                 || (cfam_id() == CFAM_CHIP_ID_MURANO_11)
                 || (cfam_id() == CFAM_CHIP_ID_MURANO_12) )
             {
                 // Due to HW243646 & HW243942 fallout, we will not be collecting EX core
-                // activity counter scoms until Murano DD1.3   @th032
+                // activity counter scoms until Murano DD1.3
                 l_parms->select = GPE_GET_CORE_DATA_DTS_CPM | GPE_GET_CORE_DATA_PCB_SLAVE;
             }
             else
@@ -394,7 +339,6 @@ void task_core_data( task_t * i_task )
 
             l_parms->data = (uint32_t) l_bulk_core_data_ptr->core_data_ptr;
 
-            // >> @sb055
             // Static array to record the last timestamp a get_per_core_data task was
             // scheduled for a core.
             static SsxTimebase L_last_get_per_core_data_scheduled_time[MAX_NUM_HW_CORES] = {0,};
@@ -443,7 +387,6 @@ void task_core_data( task_t * i_task )
             //uint64_t l_dont_care = 0;
             //uint32_t core = CORE_CHIPLET_ADDRESS(PCBS_PMSTATEHISTOCC_REG, ???);
             //getscom(address???, &l_dont_care);
-            // << @sb055
 
             //2. Port flex schedule gpe_get_per_core_data
             //   Check pore_flex_schedule return code if error
@@ -465,7 +408,7 @@ void task_core_data( task_t * i_task )
                 */
                 l_err = createErrl(
                         PROC_TASK_CORE_DATA_MOD,            //modId
-                        SSX_GENERIC_FAILURE,                //reasoncode    // @nh001c
+                        SSX_GENERIC_FAILURE,                //reasoncode
                         OCC_NO_EXTENDED_RC,                 //Extended reason code
                         ERRL_SEV_PREDICTIVE,                //Severity
                         l_trace, //TODO: create l_trace     //Trace Buf
@@ -475,7 +418,7 @@ void task_core_data( task_t * i_task )
                 );
 
                 // commit error log
-                REQUEST_RESET(l_err);     // @gm006
+                REQUEST_RESET(l_err);
                 break;
             }
         }
@@ -493,8 +436,6 @@ void task_core_data( task_t * i_task )
 // Description: Initialize structure for collecting core data. It
 //                needs to be run in occ main and before RTLoop started.
 //
-// Flow:  09-27-11    FN=proc_core_init
-//
 // End Function Specification
 
 void proc_core_init( void )
@@ -509,7 +450,6 @@ void proc_core_init( void )
     //are present and configured. We have a register that has information
     //of all cores that have been deconfigured in the chip so we need to read that.
 
-    //>@01a
     G_present_hw_cores = in32(PMC_CORE_DECONFIGURATION_REG);
 
     //Inverse the bitmask of the deconfigured register to get present
@@ -519,15 +459,14 @@ void proc_core_init( void )
     //Convert hardware core numering to OCC core numering.
     G_present_cores = ((G_present_hw_cores & LO_CORES_MASK) << 1) |
                 ((G_present_hw_cores & HI_CORES_MASK) << 3);
-    //@rc001m
+
     PROC_DBG("G_present_hw_cores =[%x] and G_present_cores =[%x] \n",
             G_present_hw_cores, G_present_cores);
-    //<@01a
 
     //Initializes low cores data PoreFlex object
     rc = pore_flex_create(  &G_low_cores.gpe_req,   //gpe_req for the task
                             &G_pore_gpe0_queue,     //queue
-                            gpe_get_per_core_data,  //entry point   // @th00b
+                            gpe_get_per_core_data,  //entry point
                                                     //parm for the task
                             (uint32_t) &G_low_cores_data_parms,
                             SSX_WAIT_FOREVER,       // no timeout
@@ -549,7 +488,7 @@ void proc_core_init( void )
          */
         l_err = createErrl(
                 PROC_CORE_INIT_MOD,                     //modId
-                SSX_GENERIC_FAILURE,                    //reasoncode    // @nh001c
+                SSX_GENERIC_FAILURE,                    //reasoncode
                 ERC_LOW_CORE_PORE_FLEX_CREATE_FAILURE,  //Extended reason code
                 ERRL_SEV_PREDICTIVE,                    //Severity
                 l_trace,    //TODO: create l_trace      //Trace Buf
@@ -559,14 +498,14 @@ void proc_core_init( void )
         );
 
         // commit error log
-        REQUEST_RESET(l_err);     // @gm006
+        REQUEST_RESET(l_err);
         break;
     }
 
     //Initializes existing PoreFlex object for high cores data
     rc = pore_flex_create(  &G_high_cores.gpe_req,      //gpe_req for the task
                             &G_pore_gpe0_queue,         //queue
-                            gpe_get_per_core_data,      //entry point  // @th00b
+                            gpe_get_per_core_data,      //entry point
                                                         //parm for the task
                             (uint32_t) &G_high_cores_data_parms,
                             SSX_WAIT_FOREVER,           //no timeout
@@ -588,7 +527,7 @@ void proc_core_init( void )
          */
         l_err = createErrl(
                             PROC_CORE_INIT_MOD,                     //modId
-                            SSX_GENERIC_FAILURE,                    //reasoncode    // @nh001c
+                            SSX_GENERIC_FAILURE,                    //reasoncode
                             ERC_HIGH_CORE_PORE_FLEX_CREATE_FAILURE, //Extended reason code
                             ERRL_SEV_PREDICTIVE,                    //Severity
                             l_trace,    //TODO: create l_trace      //Trace Buf
@@ -598,11 +537,10 @@ void proc_core_init( void )
         );
 
         // commit error log
-        REQUEST_RESET(l_err);     // @gm006
+        REQUEST_RESET(l_err);
         break;
     }
 
-        //>@01a
         //Initializes PoreFlex object for fast core data
         rc = pore_flex_create( &G_fast_cores_req,               //gpe_req for the task
                                 &G_pore_gpe0_queue,             //queue
@@ -628,7 +566,7 @@ void proc_core_init( void )
              */
             l_err = createErrl(
                             PROC_CORE_INIT_MOD,                     //modId
-                            SSX_GENERIC_FAILURE,                    //reasoncode    // @nh001c
+                            SSX_GENERIC_FAILURE,                    //reasoncode
                             ERC_FAST_CORE_PORE_FLEX_CREATE_FAILURE, //Extended reason code
                             ERRL_SEV_PREDICTIVE,                    //Severity
                             l_trace, //TODO: create l_trace point   //Trace Buf
@@ -638,27 +576,23 @@ void proc_core_init( void )
             );
 
             // commit error log
-            REQUEST_RESET(l_err);     // @gm006
+            REQUEST_RESET(l_err);
             break;
         }
-        //<@01a
 
     } while(0);
 
     // Initialize the core data control structures at the same time
-    proc_core_data_control_init();   // @th010
+    proc_core_data_control_init();
 
     return;
 }
 
-//>@01a
 // Function Specification
 //
 // Name: task_fast_core_data
 //
 // Description: Collect fast core data for all configured cores on every tick.
-//
-// Flow:  10/18/11    FN=task_fast_core_data
 //
 // End Function Specification
 
@@ -671,14 +605,14 @@ void task_fast_core_data( task_t * i_task )
     gpe_fast_core_data_t  * l_temp = NULL;
     uint32_t    l_pres_hw_cores;
 
-    //poll the pmc deconfig register for newly deconfigured cores -- gm022
+    //poll the pmc deconfig register for newly deconfigured cores
     l_pres_hw_cores = (~in32(PMC_CORE_DECONFIGURATION_REG)) & HW_CORES_MASK;
     if(l_pres_hw_cores != G_present_hw_cores)
     {
         TRAC_IMP("Present cores changed. old_hw_mask[0x%04x] new_hw_mask[0x%04x]",
                 G_present_hw_cores, l_pres_hw_cores);
 
-        //update our global core presence masks -- gm022
+        //update our global core presence masks
         G_present_hw_cores = l_pres_hw_cores;
         G_present_cores = ((l_pres_hw_cores & LO_CORES_MASK) << 1) |
                 ((l_pres_hw_cores & HI_CORES_MASK) << 3);
@@ -705,7 +639,6 @@ void task_fast_core_data( task_t * i_task )
             //If the previous GPE request succeeded then swap the
             //G_read_fast_core_data_ptr with the G_write_fast_core_data_ptr.
 
-            //@rc001m
             PROC_DBG("Fast core data GPE request has been succeeded.\n");
 
             #ifdef  PROC_DEBUG
@@ -718,8 +651,8 @@ void task_fast_core_data( task_t * i_task )
         }
 
     //Setup the get fast core data parms
-    G_chip_data_fast_parms.config = (uint64_t) (((uint64_t) G_present_hw_cores) << 32);    // @th008c
-    G_chip_data_fast_parms.select = GPE_GET_CORE_DATA_FAST_FREQ_TARGET;                    // @th008c
+    G_chip_data_fast_parms.config = (uint64_t) (((uint64_t) G_present_hw_cores) << 32);
+    G_chip_data_fast_parms.select = GPE_GET_CORE_DATA_FAST_FREQ_TARGET;
     G_chip_data_fast_parms.data = (uint32_t) G_write_fast_core_data_ptr;
 
     //Port flex schedule gpe_get_core_data_fast
@@ -742,7 +675,7 @@ void task_fast_core_data( task_t * i_task )
          */
         l_err = createErrl(
             PROC_TASK_FAST_CORE_DATA_MOD,           //modId
-            SSX_GENERIC_FAILURE,                    //reasoncode    // @nh001c
+            SSX_GENERIC_FAILURE,                    //reasoncode
             OCC_NO_EXTENDED_RC,                     //Extended reason code
             ERRL_SEV_PREDICTIVE,                    //Severity
             l_trace, //TODO: create l_trace point   //Trace Buf
@@ -751,7 +684,7 @@ void task_fast_core_data( task_t * i_task )
             0 );                                    //userdata2
 
         // commit error log
-        REQUEST_RESET(l_err);     // @gm006
+        REQUEST_RESET(l_err);
         break;
     }
     } while(0);
@@ -766,8 +699,6 @@ void task_fast_core_data( task_t * i_task )
 // Description: Returns a pointer to the most up-to-date bulk core data for
 //              the core associated with the specified OCC core id. Returns
 //              NULL for core ID outside the range of 0 to 11.
-//
-// Flow:              FN=None
 //
 // End Function Specification
 gpe_bulk_core_data_t * proc_get_bulk_core_data_ptr( const uint8_t i_occ_core_id )
@@ -795,8 +726,6 @@ gpe_bulk_core_data_t * proc_get_bulk_core_data_ptr( const uint8_t i_occ_core_id 
 //
 // Description: Returns a pointer to the most up-to-date fast core data
 //
-// Flow:              FN=None
-//
 // End Function Specification
 gpe_fast_core_data_t * proc_get_fast_core_data_ptr( void )
 {
@@ -805,9 +734,6 @@ gpe_fast_core_data_t * proc_get_fast_core_data_ptr( void )
 
     return G_read_fast_core_data_ptr;
 }
-//<@01a
-
-
 
 #ifdef PROC_DEBUG
 // Function Specification
@@ -815,8 +741,6 @@ gpe_fast_core_data_t * proc_get_fast_core_data_ptr( void )
 // Name: print_core_data_sensors
 //
 // Description: Print out sensors data of a specified core in the chip
-//
-// Flow:              FN=None
 //
 // End Function Specification
 
@@ -826,22 +750,20 @@ void print_core_data_sensors(uint8_t core)
 
     if( l_core_data != NULL )
     {
-    //@rc001m
-    PROC_DBG("\n-------------------------------\n");
-       PROC_DBG("Core [%x] Sensors Data \n", core);
-        // @th008 -- commented these out b/c they take too long to run in task.
-        //        -- maybe with some creative coding they could be moved to an applet
-    //dumpHexString(&l_core_data->sensors_tod, sizeof(l_core_data->sensors_tod), "Sensor TOD");
+        PROC_DBG("\n-------------------------------\n");
+        PROC_DBG("Core [%x] Sensors Data \n", core);
+        // TODO: Commented these out b/c they take too long to run in task.
+        //       Consider moving this to an applet
+        //dumpHexString(&l_core_data->sensors_tod, sizeof(l_core_data->sensors_tod), "Sensor TOD");
         //dumpHexString(&l_core_data->sensors_v0, sizeof(l_core_data->sensors_v0), "Sensor VO");
-    //dumpHexString(&l_core_data->sensors_v1, sizeof(l_core_data->sensors_v1), "Sensor V1");
-    //dumpHexString(&l_core_data->sensors_v8, sizeof(l_core_data->sensors_v8), "Sensor V8");
-    //dumpHexString(&l_core_data->sensors_v9, sizeof(l_core_data->sensors_v9), "Sensor V9");
-       PROC_DBG("\n");
+        //dumpHexString(&l_core_data->sensors_v1, sizeof(l_core_data->sensors_v1), "Sensor V1");
+        //dumpHexString(&l_core_data->sensors_v8, sizeof(l_core_data->sensors_v8), "Sensor V8");
+        //dumpHexString(&l_core_data->sensors_v9, sizeof(l_core_data->sensors_v9), "Sensor V9");
+        PROC_DBG("\n");
     }
     else
     {
-    //@rc001m
-    PROC_DBG("\n G_core_data_ptrs[%x] is NULL. This should not happen.\n", core);
+        PROC_DBG("\n G_core_data_ptrs[%x] is NULL. This should not happen.\n", core);
     }
     return;
 }
@@ -852,8 +774,6 @@ void print_core_data_sensors(uint8_t core)
 //
 // Description: Print out information of a specified core in the chip
 //
-// Flow:              FN=None
-//
 // End Function Specification
 
 void print_core_status(uint8_t core)
@@ -862,40 +782,35 @@ void print_core_status(uint8_t core)
 
     if( l_core_data != NULL )
     {
-    //@rc001m
         PROC_DBG("\n-------------------------\n");
         PROC_DBG("Core [%x] status \n", core);
-        // @th008 -- commented these out b/c they take too long to run in task.
-        //        -- maybe with some creative coding they could be moved to an applet
+        // TODO: Commented these out b/c they take too long to run in task.
+        //       Consider moving this to an applet
         //dumpHexString(&l_core_data->core_tod, sizeof(l_core_data->core_tod), "Core TOD");
         //dumpHexString(&l_core_data->core_raw_cycles, sizeof(l_core_data->core_raw_cycles), "Core Raw Cycles");
         //dumpHexString(&l_core_data->core_run_cycles, sizeof(l_core_data->core_run_cycles), "Run Cycles");
         //dumpHexString(&l_core_data->core_dispatch, sizeof(l_core_data->core_dispatch), "Core Dispatch");
         //dumpHexString(&l_core_data->core_completion, sizeof(l_core_data->core_completion), "Core Completion");
-    //dumpHexString(&l_core_data->core_workrate, sizeof(l_core_data->core_workrate), "Core Workrate");
-    //dumpHexString(&l_core_data->core_spurr, sizeof(l_core_data->core_spurr), "Core Spurr");
-    //dumpHexString(&l_core_data->core_mem_hler_a, sizeof(l_core_data->core_mem_hler_a), "Mem A");
-    //dumpHexString(&l_core_data->core_mem_hler_b, sizeof(l_core_data->core_mem_hler_b), "Mem B");
-    //dumpHexString(&l_core_data->mem_tod, sizeof(l_core_data->mem_tod), "Mem TOD");
-    //dumpHexString(&l_core_data->mem_raw_cycles, sizeof(l_core_data->mem_raw_cycles), "Mem Raw Cycles");
+        //dumpHexString(&l_core_data->core_workrate, sizeof(l_core_data->core_workrate), "Core Workrate");
+        //dumpHexString(&l_core_data->core_spurr, sizeof(l_core_data->core_spurr), "Core Spurr");
+        //dumpHexString(&l_core_data->core_mem_hler_a, sizeof(l_core_data->core_mem_hler_a), "Mem A");
+        //dumpHexString(&l_core_data->core_mem_hler_b, sizeof(l_core_data->core_mem_hler_b), "Mem B");
+        //dumpHexString(&l_core_data->mem_tod, sizeof(l_core_data->mem_tod), "Mem TOD");
+        //dumpHexString(&l_core_data->mem_raw_cycles, sizeof(l_core_data->mem_raw_cycles), "Mem Raw Cycles");
         PROC_DBG("\n");
     }
     else
     {
-    //@rc001m
         PROC_DBG("\n G_core_data_ptrs[%x] is NULL. This should not happen.\n", core);
     }
     return;
 }
 
-//>@01a
 // Function Specification
 //
 // Name: print_fast_core_data
 //
 // Description: Print out fast core data of the chip
-//
-// Flow:              FN=None
 //
 // End Function Specification
 
@@ -905,21 +820,18 @@ void print_fast_core_data(void)
 
     if( l_fast_core_data != NULL )
     {
-    //@rc001m
         PROC_DBG("\n---------------------------\n");
-        // @th008 -- commented these out b/c they take too long to run in task.
-        //        -- maybe with some creative coding they could be moved to an applet
+        // TODO: Commented these out b/c they take too long to run in task.
+        //       Consider moving this to an applet
         //dumpHexString(&l_fast_core_data->tod, sizeof(l_fast_core_data->tod), "Fast Core Data TOD");
-    //dumpHexString(&l_fast_core_data->core_data, sizeof(fast_core_data_t) * MAX_NUM_HW_CORES, "Fast Core Data");
+        //dumpHexString(&l_fast_core_data->core_data, sizeof(fast_core_data_t) * MAX_NUM_HW_CORES, "Fast Core Data");
         PROC_DBG("\n");
     }
     else
     {
-    //@rc001m
         PROC_DBG("\n G_read_fast_core_data_ptr is NULL. This should not happen.\n");
     }
     return;
 }
-//<@01a
 #endif
 

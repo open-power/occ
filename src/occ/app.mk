@@ -180,10 +180,6 @@ clean_all:
 	$(MAKE) clean
 	$(MAKE) -C $(PGP) clean
 
-.PHONY : doc
-doc:
-	doxygen doc/Doxyfile
-
 ifneq ($(MAKECMDGOALS),clean)
 include $(OBJECTS:.o=.d)
 endif

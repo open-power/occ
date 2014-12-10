@@ -1,35 +1,29 @@
-/******************************************************************************
-// @file main.c
-// @brief OCC PROC TEST MAIN
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _main_c main.c
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *                      nguyenp   10/03/2011  Created
- *                                            To run the test, first need to enable
- *                                            the PROC_DBG define in proc_data.h and
- *                                            replace this main.c in occ 
- *                                            directory with this main.c
- *   @pb00A             pbavari   11/15/2011  changed name from APSS_SUPPORT to
- *                                            OCC_ALONE_SIMICS
- *   @dw000             dwoodham  12/12/2011  Update call to IMAGE_HEADER
- *   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
- *   @nh001             neilhsu   05/23/2012  Add missing error log tags 
- *   @fk003  907687     fmkassem  11/25/2013  Fix name of extended reason code  
- *   @wb001  919163     wilbryan  03/06/2014  Updating error call outs, descriptions, and severities
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/proc/test/main.c $                                    */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
- //*************************************************************************
-// Includes
-//*************************************************************************
+
 #include "ssx.h"
 #include "ssx_io.h"
 #include "simics_stdio.h"
@@ -37,43 +31,21 @@
 #include <threadSch.h>
 #include <errl.h>
 #include <apss.h>
-#include <appletManager.h>     
-#include <trac.h>            
-#include <occ_service_codes.h>  
-#include <occ_sys_config.h>    
+#include <appletManager.h>
+#include <trac.h>
+#include <occ_service_codes.h>
+#include <occ_sys_config.h>
 #include <proc_data.h>
-#include <timer.h>            
-#include <dcom.h>           
+#include <timer.h>
+#include <dcom.h>
 #include <rtls.h>
 
-//*************************************************************************
-// Externs
-//*************************************************************************
 extern void __ssx_boot;
 
-//*************************************************************************
-// Image Header
-//*************************************************************************
-// @dw000c
 IMAGE_HEADER (G_mainAppImageHdr,__ssx_boot,MAIN_APP_ID,OCC_APLT_TEST);
 
-//*************************************************************************
-// Macros
-//*************************************************************************
-
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
-/// Period in which to run #timer_routine
-#define TIMER_INTERVAL (SsxInterval) SSX_MICROSECONDS(5000) 
-
-//*************************************************************************
-// Structures
-//*************************************************************************
-
-//*************************************************************************
-// Globals
-//*************************************************************************
+// Period in which to run #timer_routine
+#define TIMER_INTERVAL (SsxInterval) SSX_MICROSECONDS(5000)
 
 int g_j = 0;
 int g_k = 0;
@@ -81,28 +53,14 @@ int g_k = 0;
 SimicsStdio simics_stdout;
 SimicsStdio simics_stderr;
 
-/*----------------------------------------------------------------------------*/
-/* Critical/Non-Critical stack                                                */
-/*----------------------------------------------------------------------------*/
-
 uint8_t noncritical_stack[NONCRITICAL_STACK_SIZE];
 uint8_t critical_stack[CRITICAL_STACK_SIZE];
 
-//*************************************************************************
-// Function Prototypes
-//*************************************************************************
-
-//*************************************************************************
-// Functions
-//*************************************************************************
-
 // Function Specification
 //
-// Name: pgp_validation_ssx_main_hook 
+// Name: pgp_validation_ssx_main_hook
 //
 // Description:
-//
-// Flow:              FN=None
 //
 // End Function Specification
 void pgp_validation_ssx_main_hook(void)
@@ -112,11 +70,9 @@ void pgp_validation_ssx_main_hook(void)
 
 // Function Specification
 //
-// Name: Cmd_Hndl_thread_routine 
+// Name: Cmd_Hndl_thread_routine
 //
 // Description:
-//
-// Flow:              FN=None
 //
 // End Function Specification
 void Cmd_Hndl_thread_routine(void *arg)
@@ -126,11 +82,9 @@ void Cmd_Hndl_thread_routine(void *arg)
 
 // Function Specification
 //
-// Name: Thermal_Monitor_thread_routine 
+// Name: Thermal_Monitor_thread_routine
 //
 // Description:
-//
-// Flow:              FN=None
 //
 // End Function Specification
 void Thermal_Monitor_thread_routine(void *arg)
@@ -140,11 +94,9 @@ void Thermal_Monitor_thread_routine(void *arg)
 
 // Function Specification
 //
-// Name: Hlth_Monitor_thread_routine 
+// Name: Hlth_Monitor_thread_routine
 //
 // Description:
-//
-// Flow:              FN=None
 //
 // End Function Specification
 void Hlth_Monitor_thread_routine(void *arg)
@@ -154,11 +106,9 @@ void Hlth_Monitor_thread_routine(void *arg)
 
 // Function Specification
 //
-// Name: FFDC_thread_routine 
+// Name: FFDC_thread_routine
 //
 // Description:
-// 
-// Flow:              FN=None
 //
 // End Function Specification
 void FFDC_thread_routine(void *arg)
@@ -168,11 +118,9 @@ void FFDC_thread_routine(void *arg)
 
 // Function Specification
 //
-// Name: get_core_info 
+// Name: get_core_info
 //
 // Description:
-// 
-// Flow:              FN=None
 //
 // End Function Specification
 void get_core_info()
@@ -186,27 +134,19 @@ void get_core_info()
    l_deconfigured_cores = in32(PMC_CORE_DECONFIGURATION_REG);
    PROC_DEBUG( "Deconfigured cores in the chip [0x%x]\n", l_deconfigured_cores);
 
-   
+
    l_configured_cores = ~l_deconfigured_cores & ALL_CORES_MASK;
    PROC_DEBUG( "Configured cores in the chip [0x%x]\n", l_configured_cores);
 
    return;
 }
 
-/** Main Thread
- *
- * This thread currently just loops as the lowest priority thread, handling
- * the lowest priority tasks.
- * 
- */
 // Function Specification
 //
-// Name: main_thread_routine 
+// Name: main_thread_routine
 //
 // Description: This thread currently just loops as the lowest priority thread, handling
 //              the lowest priority tasks.
-//
-// Flow:              FN=None
 //
 // End Function Specification
 void main_thread_routine(void *private)
@@ -220,18 +160,12 @@ void main_thread_routine(void *private)
     int             l_ssxrc = 0;
 
    // Start the critical 250uS timer
-   //ssx_timer_schedule(&timer, 1, TIMER_INTERVAL); 
+   //ssx_timer_schedule(&timer, 1, TIMER_INTERVAL);
 
     // Initialize applet semaphore
     l_ssxrc = ssx_semaphore_create(&l_appletComplete, 0, 1);
 
-    // Initialize APSS // @cc000a
-    //$pb005a - ifdef apss_initialize call temporary
-    // until Bishop's simics model and Steve's simics model
-    // are synced. Bishop's model does not have apss support
-    // Steve's model does not have latest changes Bishop
-    // made for ssx. To make latest svn code usable for testing
-    // ifdef apss_initialize call
+    // Initialize APSS
 #ifdef OCC_ALONE_SIMICS
     l_rc = runApplet(OCC_APLT_APSS_INIT,   // Applet enum Name
                      NULL,                 // Applet arguments
@@ -280,20 +214,14 @@ void main_thread_routine(void *private)
 }
 
 
-/** Entry point for OCC execution
- *
- * main() currently initalizes our trace buffer along with creating threads
- * and timers for execution.  Note that once main runs ssx_start_threads, we
- * never return as the SSX kernel takes over.
- * 
- */
 // Function Specification
 //
-// Name: main 
+// Name: main
 //
 // Description: Entry point for OCC execution
-//
-// Flow:              FN=None
+//              Currently initalizes our trace buffer along with creating threads
+//              and timers for execution.  Note that once main runs ssx_start_threads,
+//              we never return as the SSX kernel takes over.
 //
 // End Function Specification
 int main(int argc, char **argv)
@@ -303,7 +231,7 @@ int main(int argc, char **argv)
     simics_stderr_create(&simics_stderr);
     stdout = (FILE *)(&simics_stdout);
     stderr = (FILE *)(&simics_stderr);
-    ssxout = (FILE *)(&simics_stdout); 
+    ssxout = (FILE *)(&simics_stdout);
 
     TRAC_INFO("Inside OCC Main");
 
@@ -313,8 +241,8 @@ int main(int argc, char **argv)
            0);
 
     // Create Threads
-    ssx_thread_create(&main_thread, 
-              main_thread_routine, 
+    ssx_thread_create(&main_thread,
+              main_thread_routine,
               (void *)0,
               (SsxAddress)main_thread_stack,
               THREAD_STACK_SIZE,
@@ -333,13 +261,13 @@ int main(int argc, char **argv)
         // Trace and commit error
         TRAC_ERR("init thread Scheduler failure");
 
-        // commit log 
+        // commit log
         // NOTE: log should be deleted by reader mechanism
-        commitErrl( &l_errl ); 
+        commitErrl( &l_errl );
     }
-    
+
     // lets map mainstore to oci space only once
-    // NOTE:  This will stay mapped for remainder of occ life 
+    // NOTE:  This will stay mapped for remainder of occ life
     // TODO:  This sounds like a temporary solution and may
     //        end up moving to simics environment setup
     // TODO: This map needs to be unmapped after done accessing
@@ -350,13 +278,13 @@ int main(int argc, char **argv)
                 0,              //OCI address 0x0
                 1048576,        //Max size = 1 Mb
                 0,              //
-                0,              //no TLBIE permissions only need to read  
+                0,              //no TLBIE permissions only need to read
                 &pba_mmu_map
                 );
-        
+
     if ( l_ssxrc1 != SSX_OK )
     {
-        tracDesc_t  l_trace = NULL; 
+        tracDesc_t  l_trace = NULL;
 
         TRAC_ERR("mmu map failure SsxRc[0x%08X]", -l_ssxrc1 );
 
@@ -370,29 +298,29 @@ int main(int argc, char **argv)
          */
         l_errl = createErrl(
                     MAIN_MID,               //modId
-                    SSX_GENERIC_FAILURE,    //reasoncode    // @nh001c
-                    ERC_MMU_MAP_FAILURE,    //Extended reason code  //@fk003c
+                    SSX_GENERIC_FAILURE,    //reasoncode
+                    ERC_MMU_MAP_FAILURE,    //Extended reason code
                     ERRL_SEV_UNRECOVERABLE, //Severity
                     l_trace,                //Trace Buf
                     DEFAULT_TRACE_SIZE,     //Trace Size
                     l_ssxrc1,               //userdata1
                     0                       //userdata2
                     );
-                    
-        // @wb001 -- Callout firmware
+
+        // Callout firmware
         addCalloutToErrl(l_errl,
                          ERRL_CALLOUT_TYPE_COMPONENT_ID,
                          ERRL_COMPONENT_ID_FIRMWARE,
                          ERRL_CALLOUT_PRIORITY_HIGH);
-                     
-        // commit log 
+
+        // commit log
         commitErrl( &l_errl );
-        
-        // TODO request a reset of OCC since applet manager will 
+
+        // TODO request a reset of OCC since applet manager will
         // be toast without this working correctly
     }
- 
-    //Initialize the Applet Manager @02a
+
+    //Initialize the Applet Manager
     l_errl = initAppletManager();
 
     if( l_errl )
@@ -400,13 +328,12 @@ int main(int argc, char **argv)
         // Trace and commit error
         TRAC_ERR("init Applet Manager failure");
 
-        // commit log 
+        // commit log
         commitErrl( &l_errl );
-        
-        // TODO request a reset of OCC since applet manager will
-        // be toast without this working correctly
-    }
 
+        // TODO: request a reset of OCC since applet manager will
+        //       be toast without this working correctly
+    }
 
     //Initialize structures for collecting core data.
     //It needs to run before RTLoop start.
@@ -415,37 +342,11 @@ int main(int argc, char **argv)
     get_core_info();
 
     // Initialize Realtime Loop Timer Interrupt
-    rtl_ocb_init(); 
-
-//>@paulng
-/////////////////////////////////////////////////////////////////////////////////////////
-//Proc core data testing notes:
-//
-//proc data gathering data testing are imbeded in the proc_data.c file
-//Only need to enable proc debug flag in the header file then test will be run.
-//
-//Tests cover the following:
-//Test case 1: I tested the G_core_presents and verified the deconfigured registry value.
-//
-//Test case 2: I verified the porflex get created successfully during initilization.
-//
-//Test case 3: I tested the "GPE request still running" case by modified the Ticks table
-//             to let same set cores task run back to back.
-//
-//Test case 4: I tested GPE request has been succeeded for each core
-//             and verified the data pointers get swapped properly.
-//
-//Test case 5: I tested and verified the poreflex scheduled correctly.
-//
-//Test case 6: I tested and verified the RTL Tick table that has the both task core data
-//             for low/high set core ran properly.
-//
-/////////////////////////////////////////////////////////////////////////////////////////
-//<@paulng
+    rtl_ocb_init();
 
     // Enter SSX Kernel
     ssx_start_threads();
-            
+
     return 0;
 }
 

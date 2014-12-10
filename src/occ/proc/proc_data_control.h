@@ -1,41 +1,35 @@
-/******************************************************************************
-// @file proc_data_control.h
-// @brief Data codes for proc component.
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section  _proc_data_h proc_data.h
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @th010             thallet   07/11/2012  Created
- *   @th015             thallet   08/03/2012  Function to set core Pstates
- *   @gm025  915973     milesg    02/14/2014  Full support for sapphire (KVM) mode
- *
- *  @endverbatim
- *
- *///*************************************************************************/
- 
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/proc/proc_data_control.h $                            */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
+
 #ifndef _PROC_DATA_CONTROL_H
 #define _PROC_DATA_CONTROL_H
 
-//*************************************************************************
-// Includes
-//*************************************************************************
 #include <occ_common.h>
 #include <ssx.h>
-#include "rtls.h"	
+#include "rtls.h"
 #include "gpe_control.h"
-
-//*************************************************************************
-// Externs
-//*************************************************************************
-
-//*************************************************************************
-// Macros
-//*************************************************************************
 
 // Initialze the structures used by the GPE
 void proc_core_data_control_init( void );

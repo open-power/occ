@@ -1,50 +1,34 @@
-/******************************************************************************
-// @file proc_pstate.c
-// @brief OCC Handling of Pstates
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _proc_pstate_c proc_pstate.c
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @th010             thallet   07/10/2012  Created
- *   @th014             thallet   08/02/2012  Updated PstateSS & TODO flags added
- *   @th015             thallet   08/03/2012  Bounds checking on freq2pstate
- *   @th025  857856     thallet   10/16/2012  Dcom Master Slave SMS part 2
- *   @th032             thallet   04/26/2013  Tuleta HW Bringup Changes   
- *   @th035  881654     thallet   05/06/2013  Tuleta Bringup Pstate Fixes
- *   @th036  881677     thallet   05/07/2013  Cleanup
- *   @th040  887069     thalllet  06/11/2013  Support Nom & FFO Freq Setting for Mnfg
- *   @fk001  879727     fmkassem  04/16/2013  PCAP support. 
- *   @ly009  895318     lychen    08/13/2013  OCC-Sapphire shared memory interface
- *   @gm006  SW224414   milesg    09/16/2013  Reset and FFDC improvements 
- *   @gm011  903410     milesg    10/22/2013  Fail on murano dd10 or dd11 chips
- *   @ly010  908832     lychen    12/09/2013  Sapphire update status for reset
- *   @gm022  908890     milesg    01/23/2014  Fixed pstate table traces
- *   @gm025  915973     milesg    02/14/2014  Full support for sapphire (KVM) mode
- *   @wb001  919163     wilbryan  03/06/2014  Updating error call outs, descriptions, and severities
- *   @wb003  920760     wilbryan  03/25/2014  Update SRCs to match TPMD SRCs
- *   @gm033  920448     milesg    03/26/2014  use getscom/putscom ffdc wrapper
- *   @gs032  925755     gjsilva   05/07/2014  Optimize freq2pstate function
- *   @gs033  929049     gjsilva   06/13/2014  Fix computation of pstate
- *   @gs044  943766     gjsilva   11/03/2014  Clear bit 11 of PCBS_PMGP1_REG during KVM setup
- *
- *  @endverbatim
- *
- *///*************************************************************************/
- 
-//*************************************************************************
-// Includes
-//*************************************************************************
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/proc/proc_pstate.c $                                  */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
+
 #include "ssx.h"		
-#include "proc_data_service_codes.h" 
-#include "errl.h"             
+#include "proc_data_service_codes.h"
+#include "errl.h"
 #include "trac.h"
 #include "rtls.h"
-#include "dcom.h"  
+#include "dcom.h"
 #include "occ_common.h"
 #include "state.h"
 #include "cmdh_fsp_cmds.h"
@@ -56,11 +40,8 @@
 #include "proc_pstate.h"
 #include "scom.h"
 
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
 // GPSM DCM Synchronization States
-typedef enum 
+typedef enum
 {
   PROC_GPSM_SYNC_NO_PSTATE_TABLE        = 0,
   PROC_GPSM_SYNC_PSTATE_TABLE_INSTALLED = 1,
@@ -74,17 +55,7 @@ typedef enum
 } eProcGpsmDcmSyncStates;
 
 
-//*************************************************************************
-// Macros
-//*************************************************************************
-
-
-
-//*************************************************************************
-// Globals 
-//*************************************************************************
-
-// Instance of the PState Table in OCC SRAM.  Should be placed in RO section 
+// Instance of the PState Table in OCC SRAM.  Should be placed in RO section
 // so that OCC FW can't corrupt it
 GLOBAL_PSTATE_TABLE(G_global_pstate_table);
 
@@ -104,14 +75,10 @@ int8_t   G_proc_gpst_pmax = 0;
 bool G_isDcm      = FALSE;
 
 // Used for Sapphire
-DMA_BUFFER( sapphire_table_t G_sapphire_table ) = {{0}}; // @ly009a
+DMA_BUFFER( sapphire_table_t G_sapphire_table ) = {{0}};
 
 //KVM throttle reason coming from the frequency voting box.
 extern uint8_t G_amec_kvm_throt_reason;
-
-//*************************************************************************
-// Forward Declarations
-//*************************************************************************
 
 // Set DCM Sync State
 void proc_gpsm_dcm_sync_set_state(eProcGpsmDcmSyncStates i_dcm_sync_state);
@@ -119,22 +86,14 @@ void proc_gpsm_dcm_sync_set_state(eProcGpsmDcmSyncStates i_dcm_sync_state);
 // Tracing out pstate table when it gets installed
 void proc_trace_pstate_table_quick(void);
 
-//*************************************************************************
-// Functions
-//*************************************************************************
-
-
 // Function Specification
 //
 // Name:  proc_is_hwpstate_enabled
 //
-// Description:  Checks DCM Master (or SCM) state to see if Pstate HW Mode 
-//               is enabled.  We can check the DCM master state, since DCM 
-//               slave also knows the master and DCM master can't be in this 
+// Description:  Checks DCM Master (or SCM) state to see if Pstate HW Mode
+//               is enabled.  We can check the DCM master state, since DCM
+//               slave also knows the master and DCM master can't be in this
 //               state if DCM slave isn't in HW mode
-//              
-//
-// Flow:  xx/xx/xx    FN=
 //
 // End Function Specification
 bool proc_is_hwpstate_enabled(void)
@@ -147,12 +106,10 @@ bool proc_is_hwpstate_enabled(void)
 //
 // Name:  proc_gpsm_dcm_sync_update_from_mbox
 //
-// Description:  Updates the global variable used for DCM sync based on the 
+// Description:  Updates the global variable used for DCM sync based on the
 //               data that was received via the master/slave mailbox.
-//              
-// Thread:  Interrupt; Callback when Slave Inbox is received 
 //
-// Flow:  xx/xx/xx    FN=
+// Thread:  Interrupt; Callback when Slave Inbox is received
 //
 // End Function Specification
 void proc_gpsm_dcm_sync_update_from_mbox(proc_gpsm_dcm_sync_occfw_t * i_dcm_sync_state)
@@ -175,11 +132,6 @@ void proc_gpsm_dcm_sync_update_from_mbox(proc_gpsm_dcm_sync_occfw_t * i_dcm_sync
 // Name:  proc_gpsm_dcm_sync_get_state
 //
 // Description:  Return the global variable used for DCM sync
-//              
-//              
-//              
-//
-// Flow:  xx/xx/xx    FN=
 //
 // End Function Specification
 inline proc_gpsm_dcm_sync_occfw_t proc_gpsm_dcm_sync_get_state(void)
@@ -193,16 +145,11 @@ inline proc_gpsm_dcm_sync_occfw_t proc_gpsm_dcm_sync_get_state(void)
 // Name:  proc_is_dcm
 //
 // Description:  Return if we are a DCM or not
-//              
-//              
-//              
-//
-// Flow:  xx/xx/xx    FN=
 //
 // End Function Specification
 inline bool proc_is_dcm(void)
 {
-  return G_isDcm;  
+  return G_isDcm;
 }
 
 
@@ -211,11 +158,8 @@ inline bool proc_is_dcm(void)
 // Name:  proc_gpsm_dcm_sync_set_state
 //
 // Description:  Set the state of global variable used for DCM sync
-//               Differnt nybble will get set depending on if we are 
+//               Differnt nybble will get set depending on if we are
 //               DCM Master or DCM Slave
-//              
-//
-// Flow:  xx/xx/xx    FN=
 //
 // End Function Specification
 inline void proc_gpsm_dcm_sync_set_state(eProcGpsmDcmSyncStates i_dcm_sync_state)
@@ -227,7 +171,7 @@ inline void proc_gpsm_dcm_sync_set_state(eProcGpsmDcmSyncStates i_dcm_sync_state
     else
     {
         G_proc_dcm_sync_state.sync_state_slave = i_dcm_sync_state;
-    } 
+    }
 }
 
 
@@ -236,9 +180,6 @@ inline void proc_gpsm_dcm_sync_set_state(eProcGpsmDcmSyncStates i_dcm_sync_state
 // Name:  proc_gpsm_dcm_sync_get_state
 //
 // Description:  Return the state of global variable used for DCM sync
-//              
-//
-// Flow:  xx/xx/xx    FN=
 //
 // End Function Specification
 eProcGpsmDcmSyncStates proc_gpsm_dcm_sync_get_my_state(void)
@@ -250,20 +191,17 @@ eProcGpsmDcmSyncStates proc_gpsm_dcm_sync_get_my_state(void)
     else
     {
         return G_proc_dcm_sync_state.sync_state_slave;
-    } 
-}  // Added @th025
+    }
+}
 
 
 // Function Specification
 //
 // Name:  proc_trace_pstate_table_quick
 //
-// Description:  Debug Function to Print portion of Pstate Table 
+// Description:  Debug Function to Print portion of Pstate Table
 //               Eventually, this should trace key elements of Pstate
 //               table to Trace Buffer.
-//              
-//
-// Flow:  xx/xx/xx    FN=
 //
 // End Function Specification
 void proc_trace_pstate_table_quick(void)
@@ -271,25 +209,25 @@ void proc_trace_pstate_table_quick(void)
     GlobalPstateTable * l_gpst_ptr = NULL;
 
     l_gpst_ptr = gpsm_gpst();
-    // Check the pointer since it may not have been installed on chips with 0 configured cores -- gm011
+    // Check the pointer since it may not have been installed on chips with 0 configured cores
     if(l_gpst_ptr == &G_global_pstate_table)
     {
         TRAC_IMP("GPST Installed:  Pstate[0]: %d kHz, Step: %d kHz, Entries: %d, Pvsafe[%d], Psafe[%d]",
-                l_gpst_ptr->pstate0_frequency_khz, 
+                l_gpst_ptr->pstate0_frequency_khz,
                 l_gpst_ptr->frequency_step_khz,
                 (int8_t) l_gpst_ptr->entries,
-                (int8_t) l_gpst_ptr->pvsafe, 
-                (int8_t) l_gpst_ptr->psafe 
+                (int8_t) l_gpst_ptr->pvsafe,
+                (int8_t) l_gpst_ptr->psafe
                 );
 
         TRAC_IMP("Pmin[%d]: %d kHz, Pmax[%d]: %d kHz",
-                (int8_t) l_gpst_ptr->pmin, 
+                (int8_t) l_gpst_ptr->pmin,
                 (l_gpst_ptr->pstate0_frequency_khz + ((int8_t) l_gpst_ptr->pmin) * l_gpst_ptr->frequency_step_khz),
                 ((int8_t) l_gpst_ptr->pmin + l_gpst_ptr->entries - 1),
                 (l_gpst_ptr->pstate0_frequency_khz + ((int8_t) l_gpst_ptr->pmin + l_gpst_ptr->entries - 1) * l_gpst_ptr->frequency_step_khz)
                 );
     }
-    else //gm011
+    else
     {
         //This likely means that the processor has no configured cores (may not be an error scenario)
         TRAC_IMP("GPST not installed.  hw pointer= 0x%08x, present cores= 0x%08x", (uint32_t)l_gpst_ptr, G_present_cores);
@@ -302,11 +240,6 @@ void proc_trace_pstate_table_quick(void)
 // Name:  proc_pstate2freq
 //
 // Description:  Convert Pstate to Frequency
-//              
-//              
-//              
-//
-// Flow:  xx/xx/xx    FN=
 //
 // End Function Specification
 uint32_t proc_pstate2freq(Pstate i_pstate)
@@ -341,7 +274,7 @@ uint32_t proc_pstate2freq(Pstate i_pstate)
             i_pstate = l_pmax;
         }
 
-        // Calculate Frequency based on Pstate 
+        // Calculate Frequency based on Pstate
         l_freq = (l_gpst_ptr->pstate0_frequency_khz + ((int8_t) i_pstate) * l_gpst_ptr->frequency_step_khz);
         l_freq /= 1000;  // Convert to MHz
     }
@@ -356,11 +289,6 @@ uint32_t proc_pstate2freq(Pstate i_pstate)
 // Name:  proc_freq2pstate
 //
 // Description:  Convert Frequency to Nearest Pstate
-//              
-//              
-//              
-//
-// Flow:  xx/xx/xx    FN=
 //
 // End Function Specification
 Pstate proc_freq2pstate(uint32_t i_freq_mhz)
@@ -403,7 +331,7 @@ Pstate proc_freq2pstate(uint32_t i_freq_mhz)
             {
                 // We need to substract a full step (minus 1) to make sure we
                 // are keeping things safe
-                l_temp_freq -= (l_gpst_ptr->frequency_step_khz - 1); 
+                l_temp_freq -= (l_gpst_ptr->frequency_step_khz - 1);
             }
 
             // Next, calculate how many Pstate steps there are in that delta
@@ -429,11 +357,8 @@ Pstate proc_freq2pstate(uint32_t i_freq_mhz)
 // Name:   proc_gpsm_pstate_initialize
 //
 // Description:  Initialize Pstate Table (and the rest of the Pstate
-//               SuperStructure).  Also, initialize Global variables 
+//               SuperStructure).  Also, initialize Global variables
 //               that will speed up the proc_freq2pstate function.
-//              
-//
-// Flow:  xx/xx/xx    FN=
 //
 // End Function Specification
 errlHndl_t proc_gpsm_pstate_initialize(const PstateSuperStructure* i_pss)
@@ -446,12 +371,12 @@ errlHndl_t proc_gpsm_pstate_initialize(const PstateSuperStructure* i_pss)
     {
         /// Because early EC's of the Murano chip did not have valid #V data,
         /// we need to exclude them from loading a pstate table created by a
-        /// hardware procedure.  If we run a table created from a #V on these 
+        /// hardware procedure.  If we run a table created from a #V on these
         /// chips, we could crash the box (or worse, burn something up!)
-        if ( (cfam_id() == CFAM_CHIP_ID_MURANO_10) 
+        if ( (cfam_id() == CFAM_CHIP_ID_MURANO_10)
                 || (cfam_id() == CFAM_CHIP_ID_MURANO_11) )
         {
-            TRAC_ERR("OCC not supported on murano dd10 or dd11 due to bad #V data.  chip id = 0x%08x"); //gm011
+            TRAC_ERR("OCC not supported on murano dd10 or dd11 due to bad #V data.  chip id = 0x%08x");
             // Create Error Log and return to caller
             /* @
              * @errortype
@@ -464,7 +389,7 @@ errlHndl_t proc_gpsm_pstate_initialize(const PstateSuperStructure* i_pss)
              */
             l_errlHndl = createErrl(
                     PROC_GPST_INIT_FAILURE_MOD,         //modId
-                    INTERNAL_FAILURE,                   //reasoncode // @wb003
+                    INTERNAL_FAILURE,                   //reasoncode
                     OCC_NO_EXTENDED_RC,                 //Extended reason code
                     ERRL_SEV_UNRECOVERABLE,             //Severity
                     NULL,                               //Trace Buf
@@ -489,9 +414,9 @@ errlHndl_t proc_gpsm_pstate_initialize(const PstateSuperStructure* i_pss)
         // Get Pstate Table Ptr
         l_gpst_ptr = gpsm_gpst();
 
-        if(l_rc || (l_gpst_ptr != &G_global_pstate_table)) //gm011
+        if(l_rc || (l_gpst_ptr != &G_global_pstate_table))
         {
-            TRAC_ERR("gpsm_initialize failed with rc=0x%08x or  l_gpstr_ptr=0x%08x", l_rc, l_gpst_ptr); 
+            TRAC_ERR("gpsm_initialize failed with rc=0x%08x or  l_gpstr_ptr=0x%08x", l_rc, l_gpst_ptr);
 
             // Create Error Log and return to caller
             /* @
@@ -505,7 +430,7 @@ errlHndl_t proc_gpsm_pstate_initialize(const PstateSuperStructure* i_pss)
              */
             l_errlHndl = createErrl(
                     PROC_GPST_INIT_FAILURE_MOD,         //modId
-                    INTERNAL_FAILURE,                   //reasoncode // @wb003
+                    INTERNAL_FAILURE,                   //reasoncode
                     ERC_PROC_PSTATE_INSTALL_FAILURE,    //Extended reason code
                     ERRL_SEV_UNRECOVERABLE,             //Severity
                     NULL,                               //Trace Buf
@@ -526,18 +451,18 @@ errlHndl_t proc_gpsm_pstate_initialize(const PstateSuperStructure* i_pss)
         }
 
 
-        // set up key globals based on the pstate table.  
-        
+        // set up key globals based on the pstate table.
+
         // Set the pstate state (state machine will start enabling pstates
         // when it sees this)
         proc_gpsm_dcm_sync_set_state(PROC_GPSM_SYNC_PSTATE_TABLE_INSTALLED);
 
         // Set up Key Globals for use by proc_freq2pstate functions
-        G_proc_gpst_fmax = l_gpst_ptr->pstate0_frequency_khz 
-            + (((int8_t) l_gpst_ptr->pmin + l_gpst_ptr->entries - 1) 
+        G_proc_gpst_fmax = l_gpst_ptr->pstate0_frequency_khz
+            + (((int8_t) l_gpst_ptr->pmin + l_gpst_ptr->entries - 1)
                     * l_gpst_ptr->frequency_step_khz);
-        G_proc_gpst_fmin = l_gpst_ptr->pstate0_frequency_khz 
-            + (((int8_t) l_gpst_ptr->pmin) 
+        G_proc_gpst_fmin = l_gpst_ptr->pstate0_frequency_khz
+            + (((int8_t) l_gpst_ptr->pmin)
                     * l_gpst_ptr->frequency_step_khz);
         G_proc_gpst_pmax = l_gpst_ptr->pmin + l_gpst_ptr->entries - 1;
 
@@ -548,19 +473,16 @@ errlHndl_t proc_gpsm_pstate_initialize(const PstateSuperStructure* i_pss)
         G_mhz_per_pstate = (l_gpst_ptr->frequency_step_khz)/1000;
 
     }while(0);
-                                                                                                                               
+
     return l_errlHndl;
 }
 
 
-// gm025
 // Function Specification
 //
 // Name:  proc_pstate_kvm_setup
 //
 // Description: Get everything set up for KVM mode
-//
-// Flow:  xx/xx/xx    FN=
 //
 // End Function Specification
 void proc_pstate_kvm_setup()
@@ -590,7 +512,7 @@ void proc_pstate_kvm_setup()
 
             //do read-modify-write to allow pmax clip to also clip voltage (not just frequency)
             l_rc = getscom_ffdc(CORE_CHIPLET_ADDRESS(PCBS_PCBSPM_MODE_REG, l_core),
-                       &(l_ppmr.value), NULL); //commit errors internally -- gm033
+                       &(l_ppmr.value), NULL); //commit errors internally
             if(l_rc)
             {
                 TRAC_ERR("proc_pstate_kvm_setup: getscom(PCBS_PCBSPM_MODE_REG) failed. rc=%d, hw_core=%d",
@@ -599,7 +521,7 @@ void proc_pstate_kvm_setup()
             }
             l_ppmr.fields.enable_clipping_of_global_pstate_req = 1;
             l_rc = putscom_ffdc(CORE_CHIPLET_ADDRESS(PCBS_PCBSPM_MODE_REG, l_core),
-                 l_ppmr.value, NULL); //commit errors internally -- gm033
+                 l_ppmr.value, NULL); //commit errors internally
             if(l_rc)
             {
                 TRAC_ERR("proc_pstate_kvm_setup: putscom(PCBS_PCBSPM_MODE_REG) failed. rc=%d, hw_core=%d",
@@ -624,7 +546,7 @@ void proc_pstate_kvm_setup()
             l_pmbr.fields.pmin_clip = gpst_pmin(&G_global_pstate_table)+1; //Per David Du, we must use pmin+1 to avoid gpsa hang
             l_pmbr.fields.pmax_clip = gpst_pmax(&G_global_pstate_table);
             l_rc = putscom_ffdc(CORE_CHIPLET_ADDRESS(PCBS_POWER_MANAGEMENT_BOUNDS_REG, l_core),
-                           l_pmbr.value, NULL); //commit errors internally -- gm033
+                           l_pmbr.value, NULL); //commit errors internally
             if(l_rc)
             {
                 TRAC_ERR("proc_pstate_kvm_setup: putscom(PCBS_POWER_MANAGEMENT_BOUNDS_REG) failed. rc=0x%08x, hw_core=%d",
@@ -696,11 +618,9 @@ void proc_pstate_kvm_setup()
 // Name:  proc_gpsm_dcm_sync_enable_pstates_smh
 //
 // Description:  Step through all the states & synch needed to enable
-//               Pstates on both master & slave on a DCM.  This also 
+//               Pstates on both master & slave on a DCM.  This also
 //               works for a SCM, which will act as DCM master (as far
 //               as this function is concerned.)
-//
-// Flow:  xx/xx/xx    FN=
 //
 // End Function Specification
 void proc_gpsm_dcm_sync_enable_pstates_smh(void)
@@ -710,7 +630,7 @@ void proc_gpsm_dcm_sync_enable_pstates_smh(void)
     static Pstate l_voltage_pstate, l_freq_pstate;
 
     // Local Variables
-    int l_rc = 0; 
+    int l_rc = 0;
     errlHndl_t l_errlHndl = NULL;
 
     if(!gpsm_dcm_slave_p())
@@ -731,7 +651,7 @@ void proc_gpsm_dcm_sync_enable_pstates_smh(void)
                     if( G_proc_dcm_sync_state.sync_state_slave == PROC_GPSM_SYNC_PSTATE_TABLE_INSTALLED)
                     {
                         // Move to next state in state machine
-                        G_proc_dcm_sync_state.sync_state_master = PROC_GPSM_SYNC_READY_TO_ENABLE_MASTER;               
+                        G_proc_dcm_sync_state.sync_state_master = PROC_GPSM_SYNC_READY_TO_ENABLE_MASTER;
                     }
                 }
                 else
@@ -755,8 +675,8 @@ void proc_gpsm_dcm_sync_enable_pstates_smh(void)
                 }
                 TRAC_IMP("MSTR: Initial Pstates: V: %d, F: %d\n",l_voltage_pstate, l_freq_pstate);
 
-                // DCM SYNC (Master2Slave):  Send V & F Pstate to slave 
-                G_proc_dcm_sync_state.dcm_pair_id = G_pob_id.chip_id;   
+                // DCM SYNC (Master2Slave):  Send V & F Pstate to slave
+                G_proc_dcm_sync_state.dcm_pair_id = G_pob_id.chip_id;
                 G_proc_dcm_sync_state.pstate_v = l_voltage_pstate;
                 G_proc_dcm_sync_state.pstate_f = l_freq_pstate;
 
@@ -814,14 +734,14 @@ void proc_gpsm_dcm_sync_enable_pstates_smh(void)
 
             case PROC_GPSM_SYNC_PSTATE_HW_MODE:
                 PROC_DBG("GPST DCM Master State %d\n",G_proc_dcm_sync_state.sync_state_master);
-                // DCM SYNC (Master2Slave): Wait for Slave to Enter HW Mode 
+                // DCM SYNC (Master2Slave): Wait for Slave to Enter HW Mode
                 if(gpsm_dcm_mode_p()){
                     if( G_proc_dcm_sync_state.sync_state_slave == PROC_GPSM_SYNC_PSTATE_HW_MODE)
                     {
                         TRAC_INFO("MSTR: Completed DCM Pstate Enable");
                         G_proc_dcm_sync_state.sync_state_master = PROC_GPSM_SYNC_PSTATE_HW_MODE_ENABLED;
 
-                        //do additional setup if in kvm mode -- gm025
+                        //do additional setup if in kvm mode
                         proc_pstate_kvm_setup();
                     }
                 }
@@ -830,7 +750,7 @@ void proc_gpsm_dcm_sync_enable_pstates_smh(void)
                     G_proc_dcm_sync_state.sync_state_master = PROC_GPSM_SYNC_PSTATE_HW_MODE_ENABLED;
                     TRAC_INFO("MSTR: Completed SCM Pstate Enable");
 
-                    //do additional setup if in kvm mode -- gm025
+                    //do additional setup if in kvm mode
                     proc_pstate_kvm_setup();
                 }
                 break;
@@ -863,11 +783,11 @@ void proc_gpsm_dcm_sync_enable_pstates_smh(void)
                break;
 
            case PROC_GPSM_SYNC_PSTATE_TABLE_INSTALLED:
-               // Pstate table has been installed, but slave needs to wait 
+               // Pstate table has been installed, but slave needs to wait
                // for master before it can do anything else.
 
-               // DCM SYNC (SlaveWaitForMaster):  Send V & F Pstate to slave 
-               // Wait for Master to complete gpsm_enable_pstates_master() 
+               // DCM SYNC (SlaveWaitForMaster):  Send V & F Pstate to slave
+               // Wait for Master to complete gpsm_enable_pstates_master()
                // before running gpsm_enable_pstates_slave()
                if( G_proc_dcm_sync_state.sync_state_master == PROC_GPSM_SYNC_PSTATE_MASTER_ENABLED)
                {
@@ -879,11 +799,11 @@ void proc_gpsm_dcm_sync_enable_pstates_smh(void)
 
            case PROC_GPSM_SYNC_PSTATE_MASTER_ENABLED:
                PROC_DBG("GPST DCM Slave State %d\n",G_proc_dcm_sync_state.sync_state_slave);
-               // Read the initial Pstates from the data DCM master sent  
+               // Read the initial Pstates from the data DCM master sent
                l_voltage_pstate = G_proc_dcm_sync_state.pstate_v;
                l_freq_pstate = G_proc_dcm_sync_state.pstate_f;
 
-               // NULL is passed to this function when run on dcm slave   
+               // NULL is passed to this function when run on dcm slave
                l_rc = gpsm_enable_pstates_slave(NULL, l_voltage_pstate, l_freq_pstate);
                if(l_rc)
                {
@@ -894,9 +814,9 @@ void proc_gpsm_dcm_sync_enable_pstates_smh(void)
                }
                TRAC_INFO("SLV: Completed DCM Pstate Slave Init\n");
 
-               // DCM SYNC (Slave2Master):  
+               // DCM SYNC (Slave2Master):
                // Tell Master that slave has run gpsm_enable_pstates_slave()
-               
+
                // Go to next state
                G_proc_dcm_sync_state.sync_state_slave = PROC_GPSM_SYNC_PSTATE_SLAVE_ENABLED;
                break;
@@ -916,7 +836,7 @@ void proc_gpsm_dcm_sync_enable_pstates_smh(void)
                    }
 
                    // DCM SYNC (Slave2Master): Tell master that DCM slave made it to HW mode
-                   
+
                    // Go to next state
                    G_proc_dcm_sync_state.sync_state_slave = PROC_GPSM_SYNC_PSTATE_HW_MODE;
                }
@@ -929,7 +849,7 @@ void proc_gpsm_dcm_sync_enable_pstates_smh(void)
                    G_proc_dcm_sync_state.sync_state_slave = PROC_GPSM_SYNC_PSTATE_HW_MODE_ENABLED;
                    TRAC_INFO("SLV: Completed DCM Pstate Enable");
 
-                   //do additional setup if in kvm mode -- gm025
+                   //do additional setup if in kvm mode
                    proc_pstate_kvm_setup();
                }
                break;
@@ -951,12 +871,12 @@ void proc_gpsm_dcm_sync_enable_pstates_smh(void)
     }
 
     // If we are in the process of running through the state machine,
-    // we will do a sem_post to speed up the DCOM Thread and step us 
+    // we will do a sem_post to speed up the DCOM Thread and step us
     // through faster.
     if( PROC_GPSM_SYNC_NO_PSTATE_TABLE != proc_gpsm_dcm_sync_get_my_state()
         && !proc_is_hwpstate_enabled() )
     {
-       ssx_semaphore_post(&G_dcomThreadWakeupSem);   // @th025
+       ssx_semaphore_post(&G_dcomThreadWakeupSem);
     }
 
     // If we broke out of loops above because of an error, create an
@@ -972,7 +892,7 @@ void proc_gpsm_dcm_sync_enable_pstates_smh(void)
          * @userdata4   OCC_NO_EXTENDED_RC
          * @devdesc     Failed to install Pstate Table
          */
-        l_errlHndl = createErrl(   //@gm006
+        l_errlHndl = createErrl(
                 PROC_ENABLE_PSTATES_SMH_MOD,        //modId
                 SSX_GENERIC_FAILURE,                //reasoncode
                 OCC_NO_EXTENDED_RC,                 //Extended reason code
@@ -995,15 +915,11 @@ void proc_gpsm_dcm_sync_enable_pstates_smh(void)
     return;
 }
 
-
-// @ly010a
 // Function Specification
 //
 // Name:  populate_pstate_to_sapphire_tbl
 //
 // Description:
-//              
-// Flow:  xx/xx/xx    FN=
 //
 // End Function Specification
 void populate_pstate_to_sapphire_tbl()
@@ -1017,8 +933,8 @@ void populate_pstate_to_sapphire_tbl()
     const int8_t l_pmax = (int8_t) l_gpst_ptr->pmin + l_gpst_ptr->entries - 1;
     G_sapphire_table.config.valid = 1; // default 0x01
     G_sapphire_table.config.version = 1; // default 0x01
-    G_sapphire_table.config.throttle = NO_THROTTLE; // defult 0x00
-    G_sapphire_table.config.pmin = gpst_pmin(&G_global_pstate_table)+1; //Per David Du, we must use pmin+1 to avoid gpsa hang -- gm025
+    G_sapphire_table.config.throttle = NO_THROTTLE; // default 0x00
+    G_sapphire_table.config.pmin = gpst_pmin(&G_global_pstate_table)+1; //Per David Du, we must use pmin+1 to avoid gpsa hang
     G_sapphire_table.config.pnominal = (int8_t)proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL]);
     G_sapphire_table.config.pmax = gpst_pmax(&G_global_pstate_table);
     const uint16_t l_entries = G_sapphire_table.config.pmax - G_sapphire_table.config.pmin + 1;
@@ -1027,7 +943,7 @@ void populate_pstate_to_sapphire_tbl()
     for (i = 0; i < l_entries; i++)
     {
         G_sapphire_table.data[i].pstate = (int8_t) l_pmax - i;
-        G_sapphire_table.data[i].flag = 0; // defult 0x00
+        G_sapphire_table.data[i].flag = 0; // default 0x00
         if (i < l_gpst_ptr->entries)
         {
             G_sapphire_table.data[i].evid_vdd = l_gpst_ptr->pstate[i].fields.evid_vdd;
@@ -1037,22 +953,18 @@ void populate_pstate_to_sapphire_tbl()
         {
             // leave the VDD & VCS Vids the same as the "Pstate Table Pmin"
             G_sapphire_table.data[i].evid_vdd = l_gpst_ptr->pstate[l_idx].fields.evid_vdd;
-            G_sapphire_table.data[i].evid_vcs = l_gpst_ptr->pstate[l_idx].fields.evid_vcs;     
+            G_sapphire_table.data[i].evid_vcs = l_gpst_ptr->pstate[l_idx].fields.evid_vcs;
         }
         // extrapolate the frequency
         G_sapphire_table.data[i].freq_khz = l_gpst_ptr->pstate0_frequency_khz + (G_sapphire_table.data[i].pstate * l_gpst_ptr->frequency_step_khz);
     }
 }
 
-
-// @ly009a @ly010c
 // Function Specification
 //
 // Name:  populate_sapphire_tbl_to_mem
 //
 // Description:
-//              
-// Flow:  xx/xx/xx    FN=
 //
 // End Function Specification
 void populate_sapphire_tbl_to_mem()
@@ -1067,12 +979,12 @@ void populate_sapphire_tbl_to_mem()
         BceRequest pba_copy;
         // Set up copy request
         l_ssxrc = bce_request_create(&pba_copy,                          // block copy object
-                                     &G_pba_bcue_queue,                  // sram to mainstore copy engine 
+                                     &G_pba_bcue_queue,                  // sram to mainstore copy engine
                                      SAPPHIRE_OFFSET_IN_HOMER,           // mainstore address
                                      (uint32_t) &G_sapphire_table,       // sram starting address
-                                     (size_t) sizeof(G_sapphire_table),  // size of copy 
+                                     (size_t) sizeof(G_sapphire_table),  // size of copy
                                      SSX_WAIT_FOREVER,                   // no timeout
-                                     NULL,                               // call back 
+                                     NULL,                               // call back
                                      NULL,                               // call back arguments
                                      ASYNC_REQUEST_BLOCKING              // callback mask
                                      );
@@ -1080,14 +992,14 @@ void populate_sapphire_tbl_to_mem()
         if(l_ssxrc != SSX_OK)
         {
             TRAC_ERR("populate_sapphire_tbl_to_mem: PBA request create failure rc=[%08X]", -l_ssxrc);
-            /* 
+            /*
              * @errortype
              * @moduleid    MAIN_STATE_TRANSITION_MID
              * @reasoncode  SSX_GENERIC_FAILURE
              * @userdata1   RC for PBA block-copy engine
              * @userdata4   ERC_BCE_REQUEST_CREATE_FAILURE
              * @devdesc     SSX BCE related failure
-             */   
+             */
             l_reasonCode = SSX_GENERIC_FAILURE;
             l_extReasonCode = ERC_BCE_REQUEST_CREATE_FAILURE;
             break;
@@ -1099,7 +1011,7 @@ void populate_sapphire_tbl_to_mem()
         if(l_ssxrc != SSX_OK)
         {
             TRAC_ERR("populate_sapphire_tbl_to_mem: PBA request schedule failure rc=[%08X]", -l_ssxrc);
-            /* 
+            /*
              * @errortype
              * @moduleid    MAIN_STATE_TRANSITION_MID
              * @reasoncode  SSX_GENERIC_FAILURE
@@ -1123,8 +1035,8 @@ void populate_sapphire_tbl_to_mem()
                                        0,                            //Trace Size
                                        -l_ssxrc,                     //userdata1
                                        0);                           //userdata2
-                                       
-        // @wb001 -- Callout firmware
+
+        // Callout firmware
         addCalloutToErrl(l_errl,
                          ERRL_CALLOUT_TYPE_COMPONENT_ID,
                          ERRL_COMPONENT_ID_FIRMWARE,
@@ -1134,15 +1046,12 @@ void populate_sapphire_tbl_to_mem()
     }
 }
 
-// gm025
 // Function Specification
 //
-// Name: proc_check_for_sapphire_updates 
+// Name: proc_check_for_sapphire_updates
 //
 // Description: Checks if the sapphire table needs an update
 //              and updates if necessary.
-//              
-// Flow:  xx/xx/xx    FN=
 //
 // End Function Specification
 void proc_check_for_sapphire_updates()

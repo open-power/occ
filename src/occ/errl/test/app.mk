@@ -24,9 +24,7 @@
 # IBM_PROLOG_END_TAG
 
 
-#  @file app.mk
-#
-#  @brief mk occ application
+#  Description: mk occ application
 #
 #  This Makefile is included-ed into application Makefiles and
 #  encapsulates the steps necessary to create application images.
@@ -103,9 +101,5 @@ clean:
 clean_all:
 	$(MAKE) clean
 	$(MAKE) -C $(PGP) clean
-
-.PHONY : doc
-doc:
-	doxygen doc/Doxyfile
 
 include $(OBJECTS:.o=.d) 
