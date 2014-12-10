@@ -27,15 +27,15 @@
 proctest_CFILES = \
         ../../common.c \
         ../../errl/errl.c \
-	../../pss/apss.c \
+        ../../pss/apss.c \
         ../../rtls/rtls.c \
-	../../thread/threadSch.c \
-	../../aplt/appletManager.c \
+        ../../thread/threadSch.c \
+        ../../aplt/appletManager.c \
         ../proc_data.c \
         ../../rtls/rtls_tables.c \
-	../../timer/timer.c \
+        ../../timer/timer.c \
         ../../dcom/dcom.c \
-	../../occ_sys_config.c \
+        ../../occ_sys_config.c \
         main.c
 all_cfiles = ${proctest_CFILES}
 

@@ -23,7 +23,7 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-#include "ssx.h"		
+#include "ssx.h"
 #include "proc_data_service_codes.h"
 #include "errl.h"
 #include "trac.h"
