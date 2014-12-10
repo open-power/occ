@@ -5,13 +5,10 @@
 #
 # This makefile creates the libppc32.a library.
 
-# >> gitprep
-# Path cleanup for GNU builds
 SSX = ..
 PGP = $(SSX)/pgp
 
 include $(PGP)/ssx.mk
-# << gitprep
 include ssxppc32files.mk
 
 

@@ -37,24 +37,18 @@
 #                      the GCC cross-development tools to use.  The default is 
 #                      "ppcnf-mcp5-"
 #
-# CTEPATH            : This variable defaults to the afs/awd CTE tool
-#                      installation - The PORE binutils are stored there. If
-#                      you are not in Austin be sure to define CTEPATH in
-#                      your .profile.
+# POREPATH           : Overrideable path to the PORE binutils
 
-# >> gitprep
 export OCCROOT = $(dir $(lastword $(MAKEFILE_LIST)))../../
 
 ifndef SIMICS_ENVIRONMENT
 SIMICS_ENVIRONMENT=0
 endif
-# << gitprep
 
 ifndef GCC-TOOL-PREFIX
-# >> gitprep
 
-#CROSS_PREFIX may be set by
-#op-build/openpower/package/occ/occ.mk
+# CROSS_PREFIX may be set by
+# op-build/openpower/package/occ/occ.mk
 
 ifdef CROSS_PREFIX
 GCC-TOOL-PREFIX = $(CROSS_PREFIX)
@@ -68,27 +62,33 @@ ifndef HOST-PREFIX
 HOST-PREFIX = x86_64-pc-linux-gnu-
 endif
 
-JAIL    =  $(HOST-PREFIX)jail
 CC_ASM  = $(GCC-TOOL-PREFIX)gcc
 CC      = $(TRACEPP) $(GCC-TOOL-PREFIX)gcc
-AS      = $(JAIL) /usr/bin/as
-AR      = $(JAIL) /usr/bin/ar
 LD      = $(GCC-TOOL-PREFIX)ld
 OBJDUMP = $(GCC-TOOL-PREFIX)objdump
+
+JAIL    = $(HOST-PREFIX)jail
+
+ifndef OCC_OP_BUILD
+AS      = $(JAIL) /usr/bin/as
+AR      = $(JAIL) /usr/bin/ar
 OBJCOPY = $(JAIL) /usr/bin/objcopy
 CPP     = $(JAIL) /usr/bin/cpp
-# << gitprep
-
-
-ifndef CTEPATH
-$(warning The CTEPATH variable is not defined; Defaulting to /afs/awd)
-CTEPATH = /afs/awd/projects/cte
+else
+AS      = $(GCC-TOOL-PREFIX)as
+AR      = $(GCC-TOOL-PREFIX)ar
+OBJCOPY = $(GCC-TOOL-PREFIX)objcopy
+CPP     = $(GCC-TOOL-PREFIX)cpp
 endif
 
-PORE-AS      = $(CTEPATH)/tools/porebinutils/prod/bin/pore-elf64-as
-PORE-AS      = $(CTEPATH)/tools/porebinutils/prod/bin/pore-elf64-as
-PORE-LD      = $(CTEPATH)/tools/porebinutils/prod/bin/pore-elf64-ld
-PORE-OBJCOPY = $(CTEPATH)/tools/porebinutils/prod/bin/pore-elf64-objcopy
+ifndef POREPATH
+$(warning The POREPATH variable is not defined; Defaulting to current PATH)
+endif
+
+PORE-AS      = $(POREPATH)pore-elf64-as
+PORE-AS      = $(POREPATH)pore-elf64-as
+PORE-LD      = $(POREPATH)pore-elf64-ld
+PORE-OBJCOPY = $(POREPATH)pore-elf64-objcopy
 
 ifeq "$(SSX)" ""
 SSX = ..
@@ -118,9 +118,7 @@ ifndef GCC-O-LEVEL
 GCC-O-LEVEL = -Os
 endif
 
-# >> gitprep
 GCC-DEFS += -DSIMICS_ENVIRONMENT=$(SIMICS_ENVIRONMENT)
-# << gitprep
 GCC-DEFS += -DSSX_TIMER_SUPPORT=$(SSX_TIMER_SUPPORT) 
 GCC-DEFS += -DSSX_THREAD_SUPPORT=$(SSX_THREAD_SUPPORT) 
 GCC-DEFS += -DPPC405_MMU_SUPPORT=$(PPC405_MMU_SUPPORT)
@@ -136,20 +134,14 @@ INCLUDES += $(APP_INCLUDES) \
 
 PIPE-CFLAGS = -pipe -Wa,-m405
 
-# >> gitprep
-# Update compile flags for GNU build, allow warnings
 GCC-CFLAGS += -g -Wall -fsigned-char -msoft-float  \
 	-m32 -mcpu=405 -mmultiple -mstring \
 	-meabi -msdata=eabi -ffreestanding -fno-common \
 	-fno-inline-functions-called-once
-# << gitprep
 
 CFLAGS      =  -c $(GCC-CFLAGS) $(PIPE-CFLAGS) $(GCC-O-LEVEL) $(INCLUDES) 
 PORE-CFLAGS =  -E $(GCC-CFLAGS) $(OPT) $(INCLUDES) 
-# >> gitprep
-# Add compile flags needed for the GNU build
 CPPFLAGS += -m32 -mcpu=405 -msdata=eabi -meabi -mstring -mmultiple
-# << gitprep
 
 ############################################################################
 
@@ -185,11 +177,7 @@ include $(MAKE_PORE_HOOKS)
 else
 
 %.o: %.pS
-# >> gitprep
-# Force use of PORE assembler for GNU builds
-#	$(CC_ASM) -x assembler-with-cpp $(CFLAGS) $(DEFS) -o $@ $<
 	$(CC_ASM) -x assembler-with-cpp $(PORE-CFLAGS) $(PORE-DEFS)  $< | $(PORE-AS) - -o $@
-# << gitprep
 endif
 
 %.lst: %.pS

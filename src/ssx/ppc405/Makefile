@@ -3,13 +3,10 @@
 # This Makefile is designed to be invoked with the -I argument set to
 # the location of the "ssx.mk" for the build
 
-# >> gitprep
-# Path cleanup for GNU builds
 SSX = ..
 PGP = $(SSX)/pgp
 
 include $(PGP)/ssx.mk
-# << gitprep
 include ssxppc405files.mk
 
 ifeq "$(SSX_TIMER_SUPPORT)" "1"

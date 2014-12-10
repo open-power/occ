@@ -23,14 +23,6 @@ INCLUDES =
 
 include $(PGP)/ssx.mk
 
-# >> gitprep
-# Disabled for GNU builds
-#If it's for OCC_FIRMWARE and non-PGAS_PPC build, the library gpefiles needs to be taken out of libssx.a
-#LIBSSX_OBJECTS += $(if $(filter -DOCC_FIRMWARE=1,$(DEFS)),\
-#                     $(if $(PGAS_PPC),$(LIB_PSOBJECTS),),\
-#                     $(LIB_PSOBJECTS))
-# << gitprep
-
 libssx.a: $(LIBSSX_OBJECTS)
 	$(AR) crs libssx.a $(LIBSSX_OBJECTS)
 
