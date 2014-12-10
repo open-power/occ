@@ -1,50 +1,33 @@
-/******************************************************************************
-// @file amec_slave_smh.c
-// @brief Slave State Machine
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _amec_slave_smh_c amec_slave_smh.c
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *                      thallet   11/08/2011  New file
- *   @rc001             rickylie  01/10/2012  Added trac.h
- *   @th00a             thallet   02/03/2012  Worst case FW timings in AMEC Sensors
- *   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
- *   @th00b             thallet   02/28/12    Changed every function for the 
- *                                            Reading/Calc of AMEC Sensors 
- *   @pb00E             pbavari   03/11/2012  Added correct include file
- *   @gs001             gjsilva   08/03/2012  Added AMEC Slave Vote & SMH
- *   @th018  852950     thallet   09/12/2012  Added Centaur thermal readings       
- *   @gs002  854460     gjsilva   09/25/2012  Support for slave state machine 
- *   @ly001  853751     lychen    09/17/2012  Initial Revision
- *   @ry002  862112     ronda     11/26/2012  Support thermal controller for processor
- *   @th026  865074     thallet   12/21/2012  Updated Centaur sensors
- *   @at010  859992     alvinwan  11/07/2012  Added oversubscription feature
- *   @ry003  870734     ronda     02/20/2013  Thermal controller for memory 
- *   @fk001  879727     fmkassem  04/16/2013  OCC powercap support.
- *   @rt001  897459     tapiar    08/19/2013  Upd: add slave performance check
- *   @gs012  903325     gjsilva   10/18/2013  Log Processor OT errors
- *   @gm013  907548     milesg    11/22/2013  Memory therm monitoring support
- *   @gs020  909320     gjsilva   12/12/2013  Support for VR_FAN thermal control
- *   @mw633  918066     mware     01/09/2014  Added call to amec_analytics every 2msec in state 3.
- *   @gs023  912003     gjsilva   01/16/2014  Generate VRHOT signal and control loop
- *   @gm027  917208     milesg    02/25/2014  removed redundant (unvalidated) call to amec_data_write_pcap
- *   @gs042  942940     gjsilva   10/24/2014  Support for data packets in BMC-based systems
- *
- *  @endverbatim
- *
- *///*************************************************************************/
- 
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/amec/amec_slave_smh.c $                               */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
+
 //*************************************************************************
 // Includes
 //*************************************************************************
-//@pb00Ec - changed from common.h to occ_common.h for ODE support
 #include <occ_common.h>
-#include <ssx.h>         
+#include <ssx.h>
 #include <errl.h>               // Error logging
 #include "sensor.h"
 #include "rtls.h"
@@ -67,9 +50,9 @@
 #include <amec_data.h>
 #include <centaur_data.h>
 #include <amec_amester.h>
-#include <amec_oversub.h> // @at010a
+#include <amec_oversub.h>
 #include <amec_health.h>
-#include <amec_analytics.h>  // @mw633
+#include <amec_analytics.h>
 
 //*************************************************************************
 // Externs
@@ -84,13 +67,12 @@ extern uint8_t G_vrm_present;
 //*************************************************************************
 // Defines/Enums
 //*************************************************************************
-smh_state_t G_amec_slv_state = {AMEC_INITIAL_STATE, 
-                                AMEC_INITIAL_STATE, 
+smh_state_t G_amec_slv_state = {AMEC_INITIAL_STATE,
+                                AMEC_INITIAL_STATE,
                                 AMEC_INITIAL_STATE};
 
 // Number of ticks for periodically updating VRM-related data
 #define AMEC_UPDATE_VRM_TICKS   4000
-
 
 // --------------------------------------------------------
 // AMEC Slave State 6 Substate Table
@@ -99,7 +81,7 @@ smh_state_t G_amec_slv_state = {AMEC_INITIAL_STATE,
 //
 // No Substates
 //
-const smh_tbl_t amec_slv_state_6_substate_table[AMEC_SMH_STATES_PER_LVL] = 
+const smh_tbl_t amec_slv_state_6_substate_table[AMEC_SMH_STATES_PER_LVL] =
 {
   {amec_slv_substate_6_0, NULL},
   {amec_slv_substate_6_1, NULL},
@@ -118,7 +100,7 @@ const smh_tbl_t amec_slv_state_6_substate_table[AMEC_SMH_STATES_PER_LVL] =
 //
 // No Substates
 //
-const smh_tbl_t amec_slv_state_7_substate_table[AMEC_SMH_STATES_PER_LVL] = 
+const smh_tbl_t amec_slv_state_7_substate_table[AMEC_SMH_STATES_PER_LVL] =
 {
   {amec_slv_substate_7_0, NULL},
   {amec_slv_substate_7_1, NULL},
@@ -137,7 +119,7 @@ const smh_tbl_t amec_slv_state_7_substate_table[AMEC_SMH_STATES_PER_LVL] =
 //
 // No Substates
 //
-const smh_tbl_t amec_slv_state_table[AMEC_SMH_STATES_PER_LVL] = 
+const smh_tbl_t amec_slv_state_table[AMEC_SMH_STATES_PER_LVL] =
 {
   {amec_slv_state_0, NULL},
   {amec_slv_state_1, NULL},
@@ -149,11 +131,10 @@ const smh_tbl_t amec_slv_state_table[AMEC_SMH_STATES_PER_LVL] =
   {amec_slv_state_7, amec_slv_state_7_substate_table},
 };
 
-
-// This sets up the function pointer that will be called to update the 
+// This sets up the function pointer that will be called to update the
 // fw timings when the AMEC Slave State Machine finishes.
 smh_state_timing_t G_amec_slv_state_timings = {amec_slv_update_smh_sensors};
-								
+
 //*************************************************************************
 // Structures
 //*************************************************************************
@@ -176,15 +157,8 @@ smh_state_timing_t G_amec_slv_state_timings = {amec_slv_update_smh_sensors};
 //
 // Description: Runs all the functions that need to run pre-AMEC-State-Machine
 //              This function will run every tick.
-//              
-//
-// Flow: 03/04/13     FN= amec_slv_common_tasks_pre
 //
 // Thread: RealTime Loop
-//
-// Changedby: @..., @fk001c
-//
-// Task Flags: 
 //
 // End Function Specification
 void amec_slv_common_tasks_pre(void)
@@ -193,34 +167,34 @@ void amec_slv_common_tasks_pre(void)
 
   AMEC_DBG("\tAMEC Slave Pre-State Common\n");
 
-  // Update the FW Worst Case sensors every tick 
-  amec_update_fw_sensors(); 
+  // Update the FW Worst Case sensors every tick
+  amec_update_fw_sensors();
 
   // Update the fast core data sensors every tick
-  amec_update_fast_core_data_sensors(); 
+  amec_update_fast_core_data_sensors();
 
   // Update the sensors that come from the APSS every tick
-  amec_update_apss_sensors(); 
+  amec_update_apss_sensors();
 
   // Call the stream buffer recording function
   amec_analytics_sb_recording();
-  
+
   // Update the sensors that come from the VRM
   L_counter++;
   if (L_counter == AMEC_UPDATE_VRM_TICKS)
   {
       if (G_vrm_present)
       {
-          amec_update_vrm_sensors(); 
+          amec_update_vrm_sensors();
       }
       L_counter = 0;
   }
 
   // Update the external voltage sensors
-  amec_update_external_voltage();      
+  amec_update_external_voltage();
 
   // Over-subscription check
-  amec_oversub_check(); // @at010a
+  amec_oversub_check();
 }
 
 
@@ -230,15 +204,8 @@ void amec_slv_common_tasks_pre(void)
 //
 // Description: Runs all the functions that need to run post-AMEC-State-Machine
 //              This function will run every tick.
-//              
-//
-// Flow: 02/26/13     FN= amec_slv_common_tasks_post
 //
 // Thread: RealTime Loop
-//
-// Changedby: @..., @fk001c
-//
-// Task Flags: 
 //
 // End Function Specification
 void amec_slv_common_tasks_post(void)
@@ -246,7 +213,7 @@ void amec_slv_common_tasks_post(void)
   AMEC_DBG("\tAMEC Slave Post-State Common\n");
 
   // Only execute if OCC is in the active state
-  if ( IS_OCC_STATE_ACTIVE() )         // @gs001
+  if ( IS_OCC_STATE_ACTIVE() )
   {
       // Call amec_power_control
       amec_power_control();
@@ -255,14 +222,14 @@ void amec_slv_common_tasks_post(void)
 
       // Call the frequency state machine
       amec_slv_freq_smh();
-      
+
       // Call the OCC slave's memory voting box
       amec_slv_mem_voting_box();
 
-      // Call the OCC slave's performance check @rt001a
-      amec_slv_check_perf();    
+      // Call the OCC slave's performance check
+      amec_slv_check_perf();
 
-      // Call the 250us trace recording if it has been configured via Amester. 
+      // Call the 250us trace recording if it has been configured via Amester.
       // If not configured, this call will return immediately.
       amec_tb_record(AMEC_TB_250US);
   }
@@ -275,9 +242,6 @@ void amec_slv_common_tasks_post(void)
 // Name: amec_slv_state_0
 //
 // Description: AMEC Slave State Machine State
-//              
-//
-// Flow:              FN= 
 //
 // End Function Specification
 void amec_slv_state_0(void)
@@ -285,35 +249,33 @@ void amec_slv_state_0(void)
   AMEC_DBG("\tAMEC Slave State 0\n");
 
   //-------------------------------------------------------
-  // Update Proc Core sensors (for this tick) 
+  // Update Proc Core sensors (for this tick)
   //-------------------------------------------------------
   amec_update_proc_core_sensors(CORE_0);
   amec_update_proc_core_sensors(CORE_8);
-  
-  //-------------------------------------------------------
-  // Update Centaur sensors (for this tick) 
-  //-------------------------------------------------------
-  amec_update_centaur_sensors(CENTAUR_0);   // @th026
 
+  //-------------------------------------------------------
+  // Update Centaur sensors (for this tick)
+  //-------------------------------------------------------
+  amec_update_centaur_sensors(CENTAUR_0);
 
   //-------------------------------------------------------
   // Update Sleep Count & Winkle Count Sensors
   //-------------------------------------------------------
-  sensor_update(AMECSENSOR_PTR(SLEEPCNT2MSP0),  
+  sensor_update(AMECSENSOR_PTR(SLEEPCNT2MSP0),
                 __builtin_popcount( g_amec->proc[0].sleep_cnt));
   g_amec->proc[0].sleep_cnt  = 0;
 
-  sensor_update(AMECSENSOR_PTR(WINKCNT2MSP0),   
+  sensor_update(AMECSENSOR_PTR(WINKCNT2MSP0),
                 __builtin_popcount(g_amec->proc[0].winkle_cnt));
   g_amec->proc[0].winkle_cnt = 0;
-
 
   //-------------------------------------------------------
   // Update vector sensors
   //-------------------------------------------------------
   sensor_vector_update(AMECSENSOR_PTR(TEMP2MSP0),    1);
   sensor_vector_update(AMECSENSOR_PTR(TEMP2MSP0PEAK),1);
-  sensor_vector_update(AMECSENSOR_PTR(FREQA2MSP0),   1);     // @mw626
+  sensor_vector_update(AMECSENSOR_PTR(FREQA2MSP0),   1);
   sensor_vector_update(AMECSENSOR_PTR(IPS2MSP0),     1);
   sensor_vector_update(AMECSENSOR_PTR(UTIL2MSP0),    1);
 
@@ -328,13 +290,8 @@ void amec_slv_state_0(void)
 // Name: amec_slv_state_1
 //
 // Description: AMEC Slave State Machine State
-//              
-//
-// Flow:              FN= 
 //
 // Thread: RealTime Loop
-//
-// Task Flags: 
 //
 // End Function Specification
 void amec_slv_state_1(void)
@@ -342,13 +299,13 @@ void amec_slv_state_1(void)
   AMEC_DBG("\tAMEC Slave State 1\n");
 
   //-------------------------------------------------------
-  // Update Proc Core sensors (for this tick) 
+  // Update Proc Core sensors (for this tick)
   //-------------------------------------------------------
   amec_update_proc_core_sensors(CORE_1);
   amec_update_proc_core_sensors(CORE_9);
 
   //-------------------------------------------------------
-  // Update Centaur sensors (for this tick) 
+  // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
   amec_update_centaur_sensors(CENTAUR_1);
 
@@ -364,9 +321,6 @@ void amec_slv_state_1(void)
 // Name: amec_slv_state_2
 //
 // Description: AMEC Slave State Machine State
-//              
-//
-// Flow:              FN= 
 //
 // End Function Specification
 void amec_slv_state_2(void)
@@ -374,13 +328,13 @@ void amec_slv_state_2(void)
   AMEC_DBG("\tAMEC Slave State 2\n");
 
   //-------------------------------------------------------
-  // Update Proc Core sensors (for this tick) 
+  // Update Proc Core sensors (for this tick)
   //-------------------------------------------------------
   amec_update_proc_core_sensors(CORE_2);
   amec_update_proc_core_sensors(CORE_10);
 
   //-------------------------------------------------------
-  // Update Centaur sensors (for this tick) 
+  // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
   amec_update_centaur_sensors(CENTAUR_2);
 }
@@ -391,13 +345,8 @@ void amec_slv_state_2(void)
 // Name: amec_slv_state_3
 //
 // Description: AMEC Slave State Machine State
-//              
-//
-// Flow:              FN= 
 //
 // Thread: RealTime Loop
-//
-// Task Flags: 
 //
 // End Function Specification
 void amec_slv_state_3(void)
@@ -405,13 +354,13 @@ void amec_slv_state_3(void)
   AMEC_DBG("\tAMEC Slave State 3\n");
 
   //-------------------------------------------------------
-  // Update Proc Core sensors (for this tick) 
+  // Update Proc Core sensors (for this tick)
   //-------------------------------------------------------
   amec_update_proc_core_sensors(CORE_3);
   amec_update_proc_core_sensors(CORE_11);
 
   //-------------------------------------------------------
-  // Update Centaur sensors (for this tick) 
+  // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
   amec_update_centaur_sensors(CENTAUR_3);
 
@@ -427,13 +376,8 @@ void amec_slv_state_3(void)
 // Name: amec_slv_state_4
 //
 // Description: AMEC Slave State Machine State
-//              
-//
-// Flow:              FN= 
 //
 // Thread: RealTime Loop
-//
-// Task Flags: 
 //
 // End Function Specification
 void amec_slv_state_4(void)
@@ -441,15 +385,14 @@ void amec_slv_state_4(void)
   AMEC_DBG("\tAMEC Slave State 4\n");
 
   //-------------------------------------------------------
-  // Update Proc Core sensors (for this tick) 
+  // Update Proc Core sensors (for this tick)
   //-------------------------------------------------------
   amec_update_proc_core_sensors(CORE_4);
 
   //-------------------------------------------------------
-  // Update Centaur sensors (for this tick) 
+  // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
   amec_update_centaur_sensors(CENTAUR_4);
-
 }
 
 
@@ -458,13 +401,8 @@ void amec_slv_state_4(void)
 // Name: amec_slv_state_5
 //
 // Description: AMEC Slave State Machine State
-//              
-//
-// Flow:              FN= 
 //
 // Thread: RealTime Loop
-//
-// Task Flags: 
 //
 // End Function Specification
 void amec_slv_state_5(void)
@@ -472,19 +410,19 @@ void amec_slv_state_5(void)
   AMEC_DBG("\tAMEC Slave State 5\n");
 
   //-------------------------------------------------------
-  // Update Proc Core sensors (for this tick) 
+  // Update Proc Core sensors (for this tick)
   //-------------------------------------------------------
   amec_update_proc_core_sensors(CORE_5);
 
   //-------------------------------------------------------
-  // Update Centaur sensors (for this tick) 
+  // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
   amec_update_centaur_sensors(CENTAUR_5);
 
   //-------------------------------------------------------
-  // Update partition sensors for DPS algorithms (for this tick) 
+  // Update partition sensors for DPS algorithms (for this tick)
   //-------------------------------------------------------
-  amec_dps_main(); // @ly001a
+  amec_dps_main();
 }
 
 
@@ -493,13 +431,8 @@ void amec_slv_state_5(void)
 // Name: amec_slv_state_6
 //
 // Description: AMEC Slave State Machine State
-//              
-//
-// Flow:              FN= 
 //
 // Thread: RealTime Loop
-//
-// Task Flags: 
 //
 // End Function Specification
 void amec_slv_state_6(void)
@@ -507,12 +440,12 @@ void amec_slv_state_6(void)
   AMEC_DBG("\tAMEC Slave State 6\n");
 
   //-------------------------------------------------------
-  // Update Proc Core sensors (for this tick) 
+  // Update Proc Core sensors (for this tick)
   //-------------------------------------------------------
   amec_update_proc_core_sensors(CORE_6);
 
   //-------------------------------------------------------
-  // Update Centaur sensors (for this tick) 
+  // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
   amec_update_centaur_sensors(CENTAUR_6);
 }
@@ -523,9 +456,6 @@ void amec_slv_state_6(void)
 // Name: amec_slv_state_7
 //
 // Description: AMEC Slave State Machine State
-//              
-//
-// Flow:              FN= 
 //
 // End Function Specification
 void amec_slv_state_7(void)
@@ -533,12 +463,12 @@ void amec_slv_state_7(void)
   AMEC_DBG("\tAMEC Slave State 7\n");
 
   //-------------------------------------------------------
-  // Update Proc Core sensors (for this tick) 
+  // Update Proc Core sensors (for this tick)
   //-------------------------------------------------------
   amec_update_proc_core_sensors(CORE_7);
 
   //-------------------------------------------------------
-  // Update Centaur sensors (for this tick) 
+  // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
   amec_update_centaur_sensors(CENTAUR_7);
 }
@@ -563,8 +493,6 @@ void amec_slv_state_7(void)
 //              slave substate amec_slv_substate_6_6
 //              slave substate amec_slv_substate_6_7
 //
-// Flow:              FN= None
-// 
 // End Function Specification
 void amec_slv_substate_6_0(void)
 {
@@ -578,7 +506,7 @@ void amec_slv_substate_6_0(void)
     AMEC_DBG("\tAMEC Slave State 6.0\n");
 
     // Call processor-based thermal controller
-    amec_controller_proc_thermal();  
+    amec_controller_proc_thermal();
 }
 
 void amec_slv_substate_6_1(void)
@@ -623,8 +551,6 @@ void amec_slv_substate_6_7(void){AMEC_DBG("\tAMEC Slave State 6.7\n");}
 //              slave substate amec_slv_substate_7_6
 //              slave substate amec_slv_substate_7_7
 //
-// Flow:              FN= None
-// 
 // End Function Specification
 void amec_slv_substate_7_0(void)
 {
@@ -632,15 +558,14 @@ void amec_slv_substate_7_0(void)
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
 
-
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
     AMEC_DBG("\tAMEC Slave State 7.0\n");
-    
+
     // Call memory thermal controller based on DIMM temperature
     amec_controller_dimm_thermal();
-    
+
     // Call memory thermal controller based on Centaur temperature
     amec_controller_centaur_thermal();
 }
@@ -658,7 +583,6 @@ void amec_slv_substate_7_7(void)
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
 
-
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
@@ -667,3 +591,7 @@ void amec_slv_substate_7_7(void)
     // Call health monitor to check for processor error temperature conditions
     amec_health_check_proc_temp();
 }
+
+/*----------------------------------------------------------------------------*/
+/* End                                                                        */
+/*----------------------------------------------------------------------------*/

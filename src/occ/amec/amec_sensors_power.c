@@ -1,40 +1,31 @@
-/******************************************************************************
-// @file amec_sensors_power.c
-// @brief AMEC Power Sensor Calculations
-*/
-/**
- *      @page ChangeLogs Change Logs
- *      @section _amec_sensors_power_c amec_sensors_power.c
- *      @verbatim
- *
- *  Flag     Def/Fea    Userid    Date      Description
- *  -------- ---------- --------  --------  --------------------------------------
- *                      thallet   02/24/2012  New file
- *   @pb00E             pbavari   03/11/2012  Added correct include file
- *   @th019  835007     thallet   09/11/2012  Added power sensors
- *   @th044  892742     thallet   07/24/2013  Added module ID
- *   @ly008  894646     lychen    08/08/2013  Fix bugs in OCC handling of APSS tables for Brazos/Orlena
- *   @at016  891144     alvinwan  06/10/2013  OCC Power Cap Testing
- *   @sb000  905048     sbroyles  10/28/2013  Add tags for code cleanup,
- *                                            see RTC task 73327.
- *   @rt003  905677     tapiar    11/07/2013  save of proc/mem sensor data
- *   @sb001  906360     sbroyles  11/12/2013  Resolve fix tags
- *   @fk004  907588     fmkassem  11/27/2013  Add support for snapshot buffer.
- *   @gs020  909320     gjsilva   12/12/2013  Support for VR_FAN thermal control
- *   @gs021  909855     gjsilva   12/18/2013  Support for processor OT condition
- *   @gs023  912003     gjsilva   01/16/2014  Generate VRHOT signal and control loop
- *   @mw634             mware     02/09/2014  Added in call to amec_controller_centaur for stream recording
- *   @gs026  915840     gjsilva   02/13/2014  Support for Nvidia GPU power measurement
- *   @gm026  916029     milesg    02/17/2014  revert back to auto2 mode without reading GPIO's
- *   @gs027  918066     gjsilva   03/12/2014  Misc functions from ARL
- *   @gm034  920562     milesg    03/28/2014  fix voltage sensors
- *  @endverbatim
- */
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/amec/amec_sensors_power.c $                           */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
 /******************************************************************************/
 /* Includes                                                                   */
 /******************************************************************************/
-//@pb00Ec - changed from common.h to occ_common.h for ODE support
 #include <occ_common.h>
 #include <ssx.h>
 #include <errl.h>               // Error logging
@@ -51,10 +42,13 @@
 #include "sensor_enum.h"
 #include "amec_service_codes.h"
 #include <amec_sensors_power.h>
-#include <cmdh_snapshot.h>        //@fk004a
+#include <cmdh_snapshot.h>
 #include <vrm.h>
 #include "amec_oversub.h"
 
+/******************************************************************************/
+/* Globals                                                                    */
+/******************************************************************************/
 // This holds the converted ADC Reads
 uint32_t G_lastValidAdcValue[MAX_APSS_ADC_CHANNELS] = {0};
 
@@ -63,17 +57,17 @@ extern thrm_fru_data_t      G_thrm_fru_data[DATA_FRU_MAX];
 #define ADC_CONVERTED_VALUE(i_chan) \
     ((i_chan < MAX_APSS_ADC_CHANNELS) ? G_lastValidAdcValue[i_chan] : 0)
 
+//*************************************************************************
+// Code
+//*************************************************************************
+
 // Function Specification
 //
 // Name: amec_sensor_from_apss_adc
 //
 // Description: Calculates sensor from raw ADC value
 //
-// Flow:    FN=
-//
 // Thread: RealTime Loop
-//
-// Task Flags:
 //
 // End Function Specification
 uint32_t amec_value_from_apss_adc(uint8_t i_chan)
@@ -86,8 +80,6 @@ uint32_t amec_value_from_apss_adc(uint8_t i_chan)
     if(i_chan != SYSCFG_INVALID_ADC_CHAN)
     {
         /*
-         * @sb001 Several changes made under this tag, see occ810 version 1.9
-         * for previous version.
          * The APSS value is in mV or mA depending on the channel and the raw
          * reading from the APSS must be decoded using the following info:
          *
@@ -173,22 +165,17 @@ uint32_t amec_value_from_apss_adc(uint8_t i_chan)
 //
 // Description: Calculates sensor from raw ADC value
 //
-// Flow:    FN=
-//
 // Thread: RealTime Loop
-//
-// Task Flags:
 //
 // End Function Specification
 void amec_update_apss_sensors(void)
 {
     /*
-     * @sb001 Removed fake apss config data, do not reuse, the old hardcoded
+     * Removed fake apss config data, do not reuse, the old hardcoded
      * values will not work with the new code used in processing APSS channel
-     * data.  See occ810 version 1.9 of this file for the hardcoded values that
-     * were removed.
-     * Code is in place to receive command code 0x21 SET CONFIG DATA from the
-     * FSP which should popluate the ADC and GPIO maps as well as the APSS
+     * data.
+     * Code is in place to receive command code 0x21 SET CONFIG DATA
+     * which should popluate the ADC and GPIO maps as well as the APSS
      * calibration data for all 16 ADC channels.
      */
 
@@ -220,14 +207,14 @@ void amec_update_apss_sensors(void)
             l_bulk_current_sum += G_lastValidAdcValue[l_idx];
         }
 
-        // ----------------------------------------------------
+        // --------------------------------------------------------------
         // Convert 12Vsense into interim value - this has to happen first
-        // ----------------------------------------------------
+        // --------------------------------------------------------------
         uint32_t l_bulk_voltage = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.sense_12v);
 
-        // ----------------------------------------------------
+        // ----------------------------------------------------------
         // Convert Raw Vdd/Vcs/Vio/Vpcie Power from APSS into sensors
-        // ----------------------------------------------------
+        // ----------------------------------------------------------
         // Some sensor values are in Watts so after getting the mA readings we
         // multiply by the bulk voltage (mVs) which requires us to then divide
         // by 1000000 to get W (A.V), ie.
@@ -235,14 +222,13 @@ void amec_update_apss_sensors(void)
         //  divide by   10000 to get it to centiUnits      (0.01)
         //  divide by  100000 to get it to deciUnits       (0.1)
         //  divide by 1000000 to get it to Units           (1)
-        #define ADCMULT_TO_UNITS 1000000 // @at016a
-        #define ADCMULT_ROUND ADCMULT_TO_UNITS/2       // @mw580
+        #define ADCMULT_TO_UNITS 1000000
+        #define ADCMULT_ROUND ADCMULT_TO_UNITS/2
         uint32_t l_vdd = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.vdd[l_proc]);
         uint32_t l_vcs_vio_vpcie = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.vcs_vio_vpcie[l_proc]);
-        temp32 = ((l_vcs_vio_vpcie + l_vdd) * l_bulk_voltage)/ADCMULT_TO_UNITS; // @at016c
+        temp32 = ((l_vcs_vio_vpcie + l_vdd) * l_bulk_voltage)/ADCMULT_TO_UNITS;
         sensor_update(AMECSENSOR_PTR(PWR250USP0), (uint16_t) temp32);
         // Save off the combined power from all modules
-        //@rt003a
         for (l_idx=0; l_idx < MAX_NUM_CHIP_MODULES; l_idx++)
         {
             uint32_t l_vd = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.vdd[l_idx]);
@@ -256,14 +242,14 @@ void amec_update_apss_sensors(void)
         //  divide by   10 to get it to centiUnits      (0.01)
         //  divide by  100 to get it to deciUnits       (0.1)
         //  divide by 1000 to get it to Units           (1)
-        #define ADCSINGLE_TO_CENTIUNITS 100                // @mw580
+        #define ADCSINGLE_TO_CENTIUNITS 100
         // Vdd has both a power and a current sensor, we convert the Vdd power
         // to Watts and the current to centiAmps
-        temp32 = ((l_vdd * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS; // @at016c   @mw580
+        temp32 = ((l_vdd * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
         sensor_update( AMECSENSOR_PTR(PWR250USVDD0), (uint16_t)temp32);
         temp32 = (l_vdd)/ADCSINGLE_TO_CENTIUNITS; // Current is in 0.01 Amps,
         sensor_update( AMECSENSOR_PTR(CUR250USVDD0), l_vdd);
-        temp32 = ((l_vcs_vio_vpcie * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS; // @at016c  @mw580
+        temp32 = ((l_vcs_vio_vpcie * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
         sensor_update( AMECSENSOR_PTR(PWR250USVCS0), (uint16_t)temp32);
 
         // ----------------------------------------------------
@@ -273,32 +259,31 @@ void amec_update_apss_sensors(void)
         // Fans
         temp32  = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.fans[0]);
         temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.fans[1]);
-        temp32  = ((temp32  * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS; // @at016c   @mw580
+        temp32  = ((temp32  * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
         sensor_update( AMECSENSOR_PTR(PWR250USFAN), (uint16_t)temp32);
 
         // I/O
         temp32  = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.io[0]);
         temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.io[1]);
         temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.io[2]);
-        temp32 = ((temp32  * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS; // @at016c    @mw580
+        temp32 = ((temp32  * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
         sensor_update( AMECSENSOR_PTR(PWR250USIO), (uint16_t)temp32);
 
         // Memory
         temp32 = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.memory[l_proc]);
-        temp32 = ((temp32  * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS; // @at016c    @mw580
+        temp32 = ((temp32  * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
         sensor_update( AMECSENSOR_PTR(PWR250USMEM0), (uint16_t)temp32);
         // Save off the combined power from all memory
-        //@rt003a
         for (l_idx=0; l_idx < MAX_NUM_CHIP_MODULES; l_idx++)
         {
             uint32_t l_temp = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.memory[l_idx]);
-            g_amec->mem_snr_pwr[l_idx] = ((l_temp  * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;   //  @mw580
+            g_amec->mem_snr_pwr[l_idx] = ((l_temp  * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
         }
 
         // Storage/Media
         temp32  = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.storage_media[0]);
         temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.storage_media[1]);
-        temp32  = ((temp32  * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS; // @at016c   @mw580
+        temp32  = ((temp32  * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
         sensor_update( AMECSENSOR_PTR(PWR250USSTORE), (uint16_t)temp32);
 
         // GPU adapter
@@ -309,11 +294,11 @@ void amec_update_apss_sensors(void)
         // ----------------------------------------------------
         // Convert Raw Bulk Power from APSS into sensors
         // ----------------------------------------------------
-        // We don't get this adc channel in Tuleta, we have to add it manually.
+        // We don't get this adc channel in some systems, we have to add it manually.
         // With valid sysconfig data the code here should automatically use what
         // is provided by the APSS if it is available, or manually sum it up if not.
         temp32 = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.total_current_12v);
-        temp32 = ((temp32 * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;  // @at016c   @mw580
+        temp32 = ((temp32 * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
 
         // To calculated the total 12V current based on a sum of all ADC channels,
         // Subract adc channels that don't measure power
@@ -324,16 +309,16 @@ void amec_update_apss_sensors(void)
         // the ADC sum instead
         if(0 == temp32)
         {
-            temp32 = ((l_bulk_current_sum * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS; // @at016c   @mw580
+            temp32 = ((l_bulk_current_sum * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
         }
         sensor_update(AMECSENSOR_PTR(PWR250US), (uint16_t)temp32);
 
-        //@fk004a - Calculate average frequency of all OCCs.
+        // Calculate average frequency of all OCCs.
         uint32_t    l_allOccAvgFreqOver250us = 0;
         uint8_t     l_presentOCCs = 0;
         uint8_t     l_occCount = 0;
-        
-		// Add up the average freq from all OCCs.
+
+        // Add up the average freq from all OCCs.
         for (l_occCount = 0; l_occCount < MAX_OCCS; l_occCount++)
         {
             if (G_sysConfigData.is_occ_present & (1<< l_occCount))
@@ -342,38 +327,35 @@ void amec_update_apss_sensors(void)
                 l_presentOCCs++;
             }
         }
-		//Calculate average of all the OCCs.
+        //Calculate average of all the OCCs.
         l_allOccAvgFreqOver250us /= l_presentOCCs;
 
-        // @fk004a
-		// Save the max and min pwr250us sensors and keep
-		// an accumulator of the average frequency over 30 seconds.
+        // Save the max and min pwr250us sensors and keep an accumulator of the
+        // average frequency over 30 seconds.
         if (g_pwr250us_over30sec.count == 0)
         {
             //The counter has been reset, therefore initialize the stored values.
             g_pwr250us_over30sec.max = (uint16_t) temp32;
             g_pwr250us_over30sec.min = (uint16_t) temp32;
             g_pwr250us_over30sec.freqaAccum = l_allOccAvgFreqOver250us;
-            
         }
         else
         {
-			//Check for max.
-            if (temp32 > g_pwr250us_over30sec.max) 
+            //Check for max.
+            if (temp32 > g_pwr250us_over30sec.max)
             {
                 g_pwr250us_over30sec.max = (uint16_t) temp32;
             }
-			//Check for min.
+            //Check for min.
             if (temp32 < g_pwr250us_over30sec.min)
             {
                 g_pwr250us_over30sec.min = (uint16_t) temp32;
             }
-			//Average frequency accumulator.
+            //Average frequency accumulator.
             g_pwr250us_over30sec.freqaAccum += l_allOccAvgFreqOver250us;
-            
         }
-		
-		//Count of number of updates.
+
+        //Count of number of updates.
         g_pwr250us_over30sec.count++;
 
         // ----------------------------------------------------
@@ -396,11 +378,7 @@ void amec_update_apss_sensors(void)
 // Description: Updates sensors that use data from the VRMs
 // (e.g., VR_FAN, FANS_FULL_SPEED, VR_HOT).
 //
-// Flow:    FN=
-//
 // Thread: RealTime Loop
-//
-// Task Flags:
 //
 // End Function Specification
 void amec_update_vrm_sensors(void)
@@ -447,7 +425,8 @@ void amec_update_vrm_sensors(void)
             // Obtain the 'fan_full_speed' GPIO from APSS
             l_pin = G_sysConfigData.apss_gpio_map.fans_full_speed;
 
-            // No longer reading gpio from APSS in GA1 due to instability in APSS composite mode -- gm026
+            // No longer reading gpio from APSS in GA1 due to instability in
+            // APSS composite mode
             //apss_gpio_get(l_pin, &l_pin_value);
 
             // VR_HOT sensor is a counter of number of times the VRHOT signal
@@ -496,12 +475,12 @@ void amec_update_vrm_sensors(void)
                 /* @
                  * @errortype
                  * @moduleid    AMEC_HEALTH_CHECK_VRFAN_TIMEOUT
-                 * @reasoncode  VRM_VRFAN_TIMEOUT 
-                 * @userdata1   timeout value 
+                 * @reasoncode  VRM_VRFAN_TIMEOUT
+                 * @userdata1   timeout value
                  * @userdata2   0
-                 * @userdata4   OCC_NO_EXTENDED_RC 
+                 * @userdata4   OCC_NO_EXTENDED_RC
                  * @devdesc     Failed to read VR_FAN signal from regulator.
-                 *              
+                 *
                  */
                 l_err = createErrl(AMEC_HEALTH_CHECK_VRFAN_TIMEOUT,  //modId
                                    VRM_VRFAN_TIMEOUT,                //reasoncode
@@ -525,7 +504,7 @@ void amec_update_vrm_sensors(void)
     }
 
     if( 1 )
-    {     
+    {
         sensor_update( AMECSENSOR_PTR(VRFAN250USMEM), 0 );
         sensor_update( AMECSENSOR_PTR(VRHOT250USMEM), 0 );
     }
@@ -536,13 +515,8 @@ void amec_update_vrm_sensors(void)
 // Name: amec_update_external_voltage
 //
 // Description: Measure actual external voltage
-//              
-//
-// Flow:              FN= 
 //
 // Thread: RealTime Loop
-//
-// Task Flags: 
 //
 // End Function Specification
 void amec_update_external_voltage()
@@ -559,7 +533,7 @@ void amec_update_external_voltage()
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
     // Collect the external voltage data
-    l_data = in32(PMC_GLOBAL_ACTUAL_VOLTAGE_REG); //gm034 (at malcolm's request)
+    l_data = in32(PMC_GLOBAL_ACTUAL_VOLTAGE_REG);
 
     // Extract the Vdd vid code and convert to voltage
     l_temp = (l_data & 0xFF000000) >>24;
@@ -572,3 +546,7 @@ void amec_update_external_voltage()
     sensor_update( AMECSENSOR_PTR(VOLT250USP0V0), (uint16_t) l_vdd);
     sensor_update( AMECSENSOR_PTR(VOLT250USP0V1), (uint16_t) l_vcs);
 }
+
+/*----------------------------------------------------------------------------*/
+/* End                                                                        */
+/*----------------------------------------------------------------------------*/

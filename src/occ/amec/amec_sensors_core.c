@@ -1,44 +1,31 @@
-/******************************************************************************
-// @file amec_sensors_core.c
-// @brief AMEC Core Sensor Calculations
-*/
-/**
- *      @page ChangeLogs Change Logs
- *      @section _amec_sensors_core_c amec_sensors_core.c
- *      @verbatim
- *
- *  Flag     Def/Fea    Userid    Date      Description
- *  -------- ---------- --------  --------  --------------------------------------
- *  @th00b              thallet   02/24/2012  New file
- *  @pb00E              pbavari   03/11/2012  Added correct include file
- *  @th00f              thallet   06/27/2012  Changed to use CoreData as provided by HW team
- *  @ly001   853751     lychen    09/17/2012  Support DPS algorithm
- *  @gs015   905166     gjsilva   11/04/2013  Full support for IPS function
- *  @fk002   905632     fmkassem  11/05/2013  Remove CriticalPathMonitor code
- *  @cl007   907196     lefurgy   11/15/2013  Fix freqa and ips sensors
- *  @gs021   909855     gjsilva   12/18/2013  Support for processor OT condition
- *  @gs022   910702     gjsilva   01/13/2014  Update thermal data if cores are in deep sleep
- *           910702     gjsilva   01/14/2014  Changes from code review
- *  @gs024   912700     gjsilva   01/22/2014  Identify fast/deep winkle states
- *  @sb100   916174     sbroyles  02/17/2014  Literal updates for SSX import of release20140214
- *  @sb055   911966     sbroyles  02/27/2014  Fixed wrong mask after import
- *  @gs028   917695     gjsilva   03/04/2014  Check if cores are in a sleep state
- *           917695     gjsilva   03/05/2014  Changes from code review
- *  @mw656              mware     03/11/2014  Fixed TODclock sensors
- *  @gs027   918066     gjsilva   03/12/2014  Misc functions from ARL
- *  @mw664              mware     03/26/2014  Fixed TOD clock sensors to use apss_tod
- *  @gs029   919478     gjsilva   03/26/2014  Fixed wrong values for sleep/winkle counters
- *  @gs030   921720     gjsilva   04/04/2014  Fixed high values in utilization sensors
- *  @sbpde   922027     sbroyles  04/04/2014  Skip updates on empath errors.
- *  @mw682   933716     mware     07/28/2014  Changed MCPIFD to be NOTBZE and MCPIFI to be NOTFIN.
- *
- *  @endverbatim
- */
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/amec/amec_sensors_core.c $                            */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
 /******************************************************************************/
-/* includes                                                                   */
+/* Includes                                                                   */
 /******************************************************************************/
-//@pb00Ec - changed from common.h to occ_common.h for ODE support
 #include <occ_common.h>
 #include <ssx.h>
 #include <errl.h>               // Error logging
@@ -55,12 +42,11 @@
 #include "sensor_enum.h"
 #include "amec_service_codes.h"
 #include <amec_sensors_core.h>
-#include "amec_perfcount.h" // @ly001a
+#include "amec_perfcount.h"
 
 /******************************************************************************/
 /* Globals                                                                    */
 /******************************************************************************/
-
 
 /******************************************************************************/
 /* Forward Declarations                                                       */
@@ -71,18 +57,18 @@ void amec_calc_freq_and_util_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uin
 void amec_calc_ips_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_core);
 void amec_calc_spurr(uint8_t i_core);
 
+//*************************************************************************
+// Code
+//*************************************************************************
 
 // Function Specification
 //
 // Name: amec_update_fast_core_data_sensors
 //
-// Description: Updates sensors taht have data grabbed by the fast core data
-//
-// Flow:    FN=
+// Description: Updates sensors that have data grabbed by the fast core data
+// task.
 //
 // Thread: RealTime Loop
-//
-// Task Flags:
 //
 // End Function Specification
 void amec_update_fast_core_data_sensors(void)
@@ -93,10 +79,11 @@ void amec_update_fast_core_data_sensors(void)
   // SensorNameCx  = PCBS Local Pstate Freq Target (per core)
   // TODclock      = TOD Clock?
 
-  // @mw656 Need to comment this out because l_tod is always zero, which messes
+  // Need to comment this out because l_tod is always zero, which messes
   // up proper sensor updates. Proper updating is done below in the core level
   // sensor updates.
-  //gpe_fast_core_data_t * l_core = proc_get_fast_core_data_ptr(); // @mw656
+
+  //gpe_fast_core_data_t * l_core = proc_get_fast_core_data_ptr();
   // uint32_t l_tod = l_core->tod;
 
   //if( l_core != NULL)
@@ -122,23 +109,17 @@ void amec_update_fast_core_data_sensors(void)
 //
 // Description: Update all the sensors for a given proc
 //
-//
-// Flow:              FN=
-//
 // Thread: RealTime Loop
-//
-// Task Flags:
 //
 // End Function Specification
 void amec_update_proc_core_sensors(uint8_t i_core)
 {
   gpe_bulk_core_data_t * l_core_data_ptr;
   int i;
-  uint16_t               l_temp16 = 0;   // @mw656
-  uint32_t               l_temp32 = 0;   // @mw656
+  uint16_t               l_temp16 = 0;
+  uint32_t               l_temp32 = 0;
 
-  // Make sure the core is present, and that it has updated
-  // data.
+  // Make sure the core is present, and that it has updated data.
   if(CORE_PRESENT(i_core) && CORE_UPDATED(i_core))
   {
     // Clear flag indicating core was updated by proc task
@@ -160,32 +141,26 @@ void amec_update_proc_core_sensors(uint8_t i_core)
     //-------------------------------------------------------
     // Util / Freq
     //-------------------------------------------------------
-    // >> @sbpde
     // Skip this update if there was an empath collection error
     if (!CORE_EMPATH_ERROR(i_core))
     {
         amec_calc_freq_and_util_sensors(l_core_data_ptr,i_core);
     }
-    // << @sbpde
 
-    // @ly001a - start
     //-------------------------------------------------------
     // Performance counter - This function should be called
     // after amec_calc_freq_and_util_sensors().
     //-------------------------------------------------------
     amec_calc_dps_util_counters(i_core);
-    // @ly001a - end
 
     //-------------------------------------------------------
     // IPS
     //-------------------------------------------------------
-    // >> @sbpde
     // Skip this update if there was an empath collection error
     if (!CORE_EMPATH_ERROR(i_core))
     {
         amec_calc_ips_sensors(l_core_data_ptr,i_core);
     }
-    // << @sbpde
 
     //-------------------------------------------------------
     // SPURR
@@ -195,25 +170,23 @@ void amec_update_proc_core_sensors(uint8_t i_core)
     // ------------------------------------------------------
     // Update PREVIOUS values for next time
     // ------------------------------------------------------
-    g_amec->proc[0].core[i_core].prev_PC_RAW_Th_CYCLES = l_core_data_ptr->per_thread[0].raw_cycles;   // @th00f
+    g_amec->proc[0].core[i_core].prev_PC_RAW_Th_CYCLES = l_core_data_ptr->per_thread[0].raw_cycles;
 
-    // >> @sbpde
     // Skip empath updates if there was an empath collection error on this core
     if (!CORE_EMPATH_ERROR(i_core))
     {
-        g_amec->proc[0].core[i_core].prev_PC_RAW_CYCLES    = l_core_data_ptr->empath.raw_cycles;          // @th00f
-        g_amec->proc[0].core[i_core].prev_PC_RUN_CYCLES    = l_core_data_ptr->empath.run_cycles;          // @th00f
+        g_amec->proc[0].core[i_core].prev_PC_RAW_CYCLES    = l_core_data_ptr->empath.raw_cycles;
+        g_amec->proc[0].core[i_core].prev_PC_RUN_CYCLES    = l_core_data_ptr->empath.run_cycles;
         g_amec->proc[0].core[i_core].prev_PC_COMPLETED     = l_core_data_ptr->empath.completion;
         g_amec->proc[0].core[i_core].prev_PC_DISPATCH      = l_core_data_ptr->empath.dispatch;
         g_amec->proc[0].core[i_core].prev_tod_2mhz         = l_core_data_ptr->empath.tod_2mhz;
-        g_amec->proc[0].core[i_core].prev_FREQ_SENS_BUSY   = l_core_data_ptr->empath.freq_sens_busy;      // @mw644
-        g_amec->proc[0].core[i_core].prev_FREQ_SENS_FINISH = l_core_data_ptr->empath.freq_sens_finish;    // @mw644
+        g_amec->proc[0].core[i_core].prev_FREQ_SENS_BUSY   = l_core_data_ptr->empath.freq_sens_busy;
+        g_amec->proc[0].core[i_core].prev_FREQ_SENS_FINISH = l_core_data_ptr->empath.freq_sens_finish;
     }
-    // << @sbpde
 
     for(i=0; i<MAX_THREADS_PER_CORE; i++)
     {
-      g_amec->proc[0].core[i_core].thread[i].prev_PC_RUN_Th_CYCLES = l_core_data_ptr->per_thread[i].run_cycles;  // @th00f
+      g_amec->proc[0].core[i_core].thread[i].prev_PC_RUN_Th_CYCLES = l_core_data_ptr->per_thread[i].run_cycles;
     }
 
     // Final step is to update TOD sensors
@@ -236,10 +209,8 @@ void amec_update_proc_core_sensors(uint8_t i_core)
 //
 // Name: amec_calc_dts_sensors
 //
-// Description: Called every 2ms/core
-//
-//
-// Flow:              FN=
+// Description: Compute core temperature. This function is called every
+// 2ms/core.
 //
 // Thread: RealTime Loop
 //
@@ -255,18 +226,17 @@ void amec_calc_dts_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_cor
   uint16_t l_dts[DTS_PER_CORE];
   BOOLEAN  l_update_sensor = FALSE;
 
-
   // Build up array of DTS values
   // DTS sensors are in the format of     uint64_t dts0 : 12;
-  //                                    uint64_t thermal_trip0 : 2;
+  //                             uint64_t thermal_trip0 : 2;
   //                                    uint64_t spare0 : 1;
   //                                    uint64_t valid0 : 1;
   //
   // so we will need to convert them before they are used in loop below.
-  l_dts[0] = i_core_data_ptr->dts_cpm.sensors_v0.fields.dts0; // @th00f
-  l_dts[1] = i_core_data_ptr->dts_cpm.sensors_v0.fields.dts1; // @th00f
-  l_dts[2] = i_core_data_ptr->dts_cpm.sensors_v0.fields.dts2; // @th00f
-  l_dts[3] = i_core_data_ptr->dts_cpm.sensors_v1.fields.dts4; // @th00f
+  l_dts[0] = i_core_data_ptr->dts_cpm.sensors_v0.fields.dts0;
+  l_dts[1] = i_core_data_ptr->dts_cpm.sensors_v0.fields.dts1;
+  l_dts[2] = i_core_data_ptr->dts_cpm.sensors_v0.fields.dts2;
+  l_dts[3] = i_core_data_ptr->dts_cpm.sensors_v1.fields.dts4;
 
   // Read the low-order bytes of the OHA Status register
   l_oha_status_reg = i_core_data_ptr->oha.oha_ro_status_reg.words.low_order;
@@ -275,7 +245,7 @@ void amec_calc_dts_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_cor
   l_pm_state_hist_reg = i_core_data_ptr->pcb_slave.pm_history.words.high_order;
 
   // Check if we were able to collect core data
-  if(l_oha_status_reg & CORE_DATA_CORE_SENSORS_COLLECTED) // @sb100
+  if(l_oha_status_reg & CORE_DATA_CORE_SENSORS_COLLECTED)
   {
       // Check if all DTS readings in the core are valid. The field sensors_v0
       // contains core-related data
@@ -287,7 +257,7 @@ void amec_calc_dts_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_cor
       }
   }
   // Check if we were able to collect L3 data
-  if(l_oha_status_reg & CORE_DATA_L3_SENSORS_COLLECTED) // @sb100
+  if(l_oha_status_reg & CORE_DATA_L3_SENSORS_COLLECTED)
   {
       // Check if DTS reading in the L3 is valid. The field sensors_v1 contains
       // L3-related data
@@ -324,8 +294,8 @@ void amec_calc_dts_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_cor
         {
             l_core_hot = l_dts[k];
         }
-        // Assume 0 degrees to mean bad sensor and
-        // don't let it bring the average reading down.
+        // Assume 0 degrees to mean bad sensor and don't let it bring the
+        // average reading down.
         else if(l_dts[k] == 0)
         {
             l_sensor_count--;
@@ -334,15 +304,14 @@ void amec_calc_dts_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_cor
 
       if(l_sensor_count == DTS_PER_CORE)
       {
-        //For the common case,
-        //compiler converts this to a fast multiplication operation
-        //when one of the operands is a constant.
+        //For the common case, compiler converts this to a fast multiplication
+        //operation when one of the operands is a constant.
         l_core_avg /= DTS_PER_CORE;
       }
       else if(l_sensor_count) //prevent div by 0 if all sensors are zero
       {
-        //otherwise, use the slower division routine
-        //when both operands are unknown at compile time.
+        //otherwise, use the slower division routine when both operands are
+        //unknown at compile time.
         l_core_avg /= l_sensor_count;
       }
 
@@ -354,8 +323,6 @@ void amec_calc_dts_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_cor
 
 
 //CPM - Commented out as requested by Malcolm
-//
-// End Function Specification
 /* void amec_calc_cpm_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_core)
 {
 #define CPM_PER_CORE     4
@@ -363,10 +330,10 @@ void amec_calc_dts_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_cor
   uint32_t k, l_cpm_min = 0xffffffff;
   uint16_t l_cpm[CPM_PER_CORE];
 
-  l_cpm[0] = i_core_data_ptr->dts_cpm.sensors_v8.fields.encoded_cpm0; // @th00f
-  l_cpm[1] = i_core_data_ptr->dts_cpm.sensors_v8.fields.encoded_cpm1; // @th00f
-  l_cpm[2] = i_core_data_ptr->dts_cpm.sensors_v8.fields.encoded_cpm2; // @th00f
-  l_cpm[3] = i_core_data_ptr->dts_cpm.sensors_v9.fields.encoded_cpm4; // @th00f
+  l_cpm[0] = i_core_data_ptr->dts_cpm.sensors_v8.fields.encoded_cpm0;
+  l_cpm[1] = i_core_data_ptr->dts_cpm.sensors_v8.fields.encoded_cpm1;
+  l_cpm[2] = i_core_data_ptr->dts_cpm.sensors_v8.fields.encoded_cpm2;
+  l_cpm[3] = i_core_data_ptr->dts_cpm.sensors_v9.fields.encoded_cpm4;
 
   //calculate min CPM from all CPM's for this core
   for(k = 0; k < CPM_PER_CORE; k++)
@@ -385,10 +352,8 @@ void amec_calc_dts_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_cor
 //
 // Name: amec_calc_freq_and_util_sensors
 //
-// Description: Called every 2ms/core
-//
-//
-// Flow:              FN=
+// Description: Compute the frequency and utilization sensors for a given core.
+// This function is called every 2ms/core.
 //
 // Thread: RealTime Loop
 //
@@ -433,16 +398,15 @@ void amec_calc_freq_and_util_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uin
   // </amec_formula>
 
   // Compute Delta in PC_RAW_CYCLES
-  temp32  = i_core_data_ptr->empath.raw_cycles;                // @th00f
+  temp32  = i_core_data_ptr->empath.raw_cycles;
   temp32a = g_amec->proc[0].core[i_core].prev_PC_RAW_CYCLES;
   temp32  = l_cycles2ms = temp32 - temp32a;
 
-  // @cl007 fix freqa
   if( (cfam_id() == CFAM_CHIP_ID_MURANO_10)
       || (cfam_id() == CFAM_CHIP_ID_MURANO_11)
       || (cfam_id() == CFAM_CHIP_ID_MURANO_12) )
   {
-      temp32a = AMEC_US_PER_SMH_PERIOD; // using fixed 2000 us is showing 3% error.
+      temp32a = AMEC_US_PER_SMH_PERIOD; // using fixed 2000us is showing 3% error.
       temp32  = temp32 / temp32a;
   }
   else
@@ -483,7 +447,7 @@ void amec_calc_freq_and_util_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uin
   // </amec_formula>
 
   // Compute Delta in PC_RUN_CYCLES
-  temp32 = i_core_data_ptr->empath.run_cycles;                // @th00f
+  temp32 = i_core_data_ptr->empath.run_cycles;
   temp32a = g_amec->proc[0].core[i_core].prev_PC_RUN_CYCLES;
   temp32 = temp32 - temp32a;
 
@@ -530,14 +494,14 @@ void amec_calc_freq_and_util_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uin
   // </amec_formula>
 
   // Get RAW CYCLES for Thread
-  temp32  = i_core_data_ptr->per_thread[0].raw_cycles;                // @th00f
+  temp32  = i_core_data_ptr->per_thread[0].raw_cycles;
   temp32a = g_amec->proc[0].core[i_core].prev_PC_RAW_Th_CYCLES;
   temp32 = l_cycles2ms = temp32 - temp32a;
 
   for(i=0; i<MAX_THREADS_PER_CORE; i++)
   {
     // Get Run Counters for Thread
-    temp32 = i_core_data_ptr->per_thread[i].run_cycles;                // @th00f
+    temp32 = i_core_data_ptr->per_thread[i].run_cycles;
     temp32a = g_amec->proc[0].core[i_core].thread[i].prev_PC_RUN_Th_CYCLES;
     temp32 = temp32 - temp32a;
 
@@ -547,7 +511,7 @@ void amec_calc_freq_and_util_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uin
     temp32 = ((uint32_t)temp16a)*((uint32_t)temp16);
 
     temp32a = l_cycles2ms;
-    temp32a = temp32a >> 8;     // Drop non-significant bits
+    temp32a = temp32a >> 8;      // Drop non-significant bits
 
     // Calculate Utilization
     temp32 = temp32 / temp32a;
@@ -655,7 +619,7 @@ void amec_calc_freq_and_util_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uin
       g_amec->proc[0].core[i_core].avg_util = temp32;
 
       // Increase resolution of the FREQA accumulator by two decimal places
-      temp32 = AMECSENSOR_ARRAY_PTR(FREQA2MSP0C0,i_core)->accumulator * 100;   // @mw626
+      temp32 = AMECSENSOR_ARRAY_PTR(FREQA2MSP0C0,i_core)->accumulator * 100;
       // Calculate average frequency of this core
       temp32 = temp32 / g_amec->proc[0].core[i_core].sample_count;
       g_amec->proc[0].core[i_core].avg_freq = temp32;
@@ -669,6 +633,7 @@ void amec_calc_freq_and_util_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uin
       temp32 = temp32 + l_core_util*100;
       g_amec->proc[0].core[i_core].avg_util = temp32 / l_time_interval;
 
+      // Could be needed for increase accuracy
       //if(g_amec->proc[0].core[i_core].avg_util > 9000)
       //{ This rounds up only!
         //g_amec->proc[0].core[i_core].avg_util = (temp32+ (1500-1)) / 1500;
@@ -711,10 +676,10 @@ void amec_calc_ips_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_cor
 {
 #define     TWO_PWR_24_MASK                 0x00FFFFFF
 #define     TWO_PWR_20_MASK                 0x000FFFFF
+
   /*------------------------------------------------------------------------*/
   /*  Local Variables                                                       */
   /*------------------------------------------------------------------------*/
-
   INT32                       cyc1 = 0;   //cycle counts
   INT32                       cyc2 = 0;
   UINT32                      fin1 = 0;   //finished instruction counts
@@ -729,40 +694,34 @@ void amec_calc_ips_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_cor
   /*------------------------------------------------------------------------*/
 
   // Get Run Cycles
-  cyc1 = i_core_data_ptr->empath.run_cycles;                // @th00f
+  cyc1 = i_core_data_ptr->empath.run_cycles;
   cyc2 = g_amec->proc[0].core[i_core].prev_PC_RUN_CYCLES;
   cyc2 = cyc1 - cyc2;
+
+  // Following lines look bogus...the counters are supposed to be 32-bit
   // since we are doing 24-bit unsigned math, we need to account for the
   // overflow case. If this occurs, we mask off the "overflow" to make it behave
-  // like a 32-bit subtraction overflow would.
-  // @cl007 This looks bogus...the counters are supposed to be 32-bit
-  // since we are doing 24-bit unsigned math, we need to account for the
-  // overflow case. If this occurs, we mask off the "overflow" to make it behave
-  // like a 32-bit subtraction overflow would.
+  // like a 32-bit subtraction overflow would. Commenting them out.
   //if ( cyc2 < 0 )
   //{
   //  cyc2 &= TWO_PWR_24_MASK;
   //}
 
-  //AMEC_PERFCNT_PERFSCOM_GET_CNTA(fin1, l_scom_ptr->scom_prev);
-  fin1 =  i_core_data_ptr->empath.completion;                // @th00f
-  //AMEC_PERFCNT_PERFSCOM_GET_CNTA(fin2, l_scom_ptr->scom_current);
+  fin1 =  i_core_data_ptr->empath.completion;
   fin2 = g_amec->proc[0].core[i_core].prev_PC_COMPLETED;
   fin2 = fin1 - fin2;
-  // see the above 2^24 comment
-  // cl007 Is this counting every completed instruction or 1 of every 16?
-  //       Why are we masking 20 bits of a 32-bit counter?
+
+  // Is this counting every completed instruction or 1 of every 16?
+  // Why are we masking 20 bits of a 32-bit counter? Commenting these lines out.
   //if ( fin2 < 0 )
   //{
   //  fin2 &= TWO_PWR_20_MASK;
   //}
 
-  //AMEC_PERFCNT_PERFSCOM_GET_CNTB(disp1, l_scom_ptr->scom_prev);
-  disp1 = i_core_data_ptr->empath.dispatch;                // @th00f
-  //AMEC_PERFCNT_PERFSCOM_GET_CNTB(disp2, l_scom_ptr->scom_current);
+  disp1 = i_core_data_ptr->empath.dispatch;
   disp2 = g_amec->proc[0].core[i_core].prev_PC_DISPATCH;
   disp2 = disp1 - disp2;
-  //see the above 2^24 comment
+
   if ( disp2 < 0 )
   {
     disp2 &= TWO_PWR_20_MASK;
@@ -784,7 +743,7 @@ void amec_calc_ips_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_cor
   //          IPC(in 0.01 IPC) = (ipc_delta * 100) / run_cycles
   // </amec_formula>
   temp32 = (fin2 * 100);  // In units of IPS
-  temp32 = temp32 / cyc2;  // In units of 0.01 DPC
+  temp32 = temp32 / cyc2; // In units of 0.01 DPC
   g_amec->proc[0].core[i_core].ipc = temp32;
 
 
@@ -843,7 +802,6 @@ void amec_calc_ips_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_cor
   // Note: For best resolution do multiply first and division last.
   // </amec_formula>
 
-  //cl007 fix ips calculation
   ticks_2mhz = i_core_data_ptr->empath.tod_2mhz -
       g_amec->proc[0].core[i_core].prev_tod_2mhz;
   temp32 = (fin2 << 1) / ticks_2mhz;
@@ -857,17 +815,12 @@ void amec_calc_ips_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_cor
 //
 // Description: Do SPURR calculation.  Must run after FreqA is calculated.
 //
-//
-// Flow:              FN=
-//
 // Thread: RealTime Loop
-//
-// Task Flags:
 //
 // End Function Specification
 void amec_calc_spurr(uint8_t i_core)
 {
-   uint16_t l_actual_freq = AMECSENSOR_ARRAY_PTR(FREQA2MSP0C0, i_core)->sample;    // @mw626
+   uint16_t l_actual_freq = AMECSENSOR_ARRAY_PTR(FREQA2MSP0C0, i_core)->sample;
    uint16_t l_nominal = 2790;
    uint32_t temp32;
 
@@ -883,4 +836,6 @@ void amec_calc_spurr(uint8_t i_core)
    }
 }
 
-
+/*----------------------------------------------------------------------------*/
+/* End                                                                        */
+/*----------------------------------------------------------------------------*/

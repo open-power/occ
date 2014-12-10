@@ -1,23 +1,27 @@
-/******************************************************************************
-// @file amec_smh.h
-// @brief OCC AMEC SMH header file
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _amec_smh_h amec_smh.h
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *                      thallet   11/08/2011  New file
- *   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
- *   @th00b             thallet   02/28/2012  Added defines for scalable tick times
- *   @pb00E             pbavari   03/11/2012  Added correct include file
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/amec/amec_smh.h $                                     */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
 #ifndef _AMEC_SMH_H
 #define _AMEC_SMH_H
@@ -25,7 +29,6 @@
 //*************************************************************************
 // Includes
 //*************************************************************************
-//@pb00Ec - changed from common.h to occ_common.h for ODE support
 #include <occ_common.h>
 #include <ssx.h>
 #include <ssx_app_cfg.h>
@@ -57,12 +60,10 @@
 
 // Number of uS in 1 RTL tick (250=250us)
 #define AMEC_US_PER_TICK         MICS_PER_TICK
-// Number of uS in 1 full period of the AMEC State Machine (2000=2mS, 8 RTL ticks) 
+// Number of uS in 1 full period of the AMEC State Machine (2000=2mS, 8 RTL ticks)
 #define AMEC_US_PER_SMH_PERIOD   (AMEC_SMH_STATES_PER_LVL * MICS_PER_TICK)
 // Number of <AMEC_US_PER_SMH_PERIOD> that happen in 1 second
 #define AMEC_SMH_PERIODS_IN_1SEC (10000000 / AMEC_US_PER_SMH_PERIOD)
-
-
 
 //*************************************************************************
 // Structures
@@ -95,9 +96,5 @@ typedef struct
 // Function Prototypes
 //*************************************************************************
 void amec_generic_smh(const smh_tbl_t * i_smh_tbl, smh_state_t * i_smh_state, smh_state_timing_t * i_smh_timing);
-
-//*************************************************************************
-// Functions
-//*************************************************************************
 
 #endif //_AMEC_SMH_H
