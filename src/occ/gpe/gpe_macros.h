@@ -26,30 +26,30 @@
 #ifndef _GPE_MACROS_H
 #define _GPE_MACROS_H
 
-    //--------------------------------------------------------------------
-    // Macro Specification:
-    //
-    // Name: _saveffdc
-    //
-    // Description:  Save FFDC into error structure
-    //
-    //     struct {
-    //         uint64_t rc;          // This should be read as 63:32=addr, 31:0=rc
-    //         uint64_t ffdc;        // Whatever GPE program puts in for FFDC data
-    //     } PoreGpeErrorStruct;
-    //
-    //               - Copy D0 into PoreGpeErrorStruct->ffdc
-    //               - Copy \gpe_id into PoreGpeErrorStruct->rc[63:32]
-    //               - Copy \rc into PoreGpeErrorStruct->rc[31:0]
-    //
-    // Inputs:       \gpe_id - Unique GPE program number to identify what prog failed
-    //               \rc - Unique GPE error code that will indicate failure
-    //               ETR         - Assumed to be set to base address of
-    //                             passed argument structure
-    //
-    // End Macro Specification
-    //--------------------------------------------------------------------
-    .macro _saveffdc, gpe_id, rc
+//--------------------------------------------------------------------
+// Macro Specification:
+//
+// Name: _saveffdc
+//
+// Description:  Save FFDC into error structure
+//
+//     struct {
+//         uint64_t rc;          // This should be read as 63:32=addr, 31:0=rc
+//         uint64_t ffdc;        // Whatever GPE program puts in for FFDC data
+//     } PoreGpeErrorStruct;
+//
+//               - Copy D0 into PoreGpeErrorStruct->ffdc
+//               - Copy \gpe_id into PoreGpeErrorStruct->rc[63:32]
+//               - Copy \rc into PoreGpeErrorStruct->rc[31:0]
+//
+// Inputs:       \gpe_id - Unique GPE program number to identify what prog failed
+//               \rc - Unique GPE error code that will indicate failure
+//               ETR         - Assumed to be set to base address of
+//                             passed argument structure
+//
+// End Macro Specification
+//--------------------------------------------------------------------
+.macro _saveffdc, gpe_id, rc
 
     // Make sure passed Structure Pointer is loaded into A1
     mr      A1, ETR
@@ -86,71 +86,66 @@
     ld      D0, 0, A1
 
 1:
-    .endm
+.endm
 
 
-    //--------------------------------------------------------------------
-    // Macro Specification:
-    //
-    // Name: _getscom
-    //
-    // Description:  Get a SCOM based on passed in Address, put it in D0
-    //
-    // Inputs:       SCOM Address
-    //
-    // Outputs:      D0 - Result of SCOM
-    //
-    // End Macro Specification
-    //--------------------------------------------------------------------
-    .macro _getscom, address
-
-    lpcs    P0, \address
-        ld      D0, \address, P0
-
-    .endm
-
-    //--------------------------------------------------------------------
-    // Macro Specification:
-    //
-    // Name: _putscom
-    //
-    // Description:  Store data into SCOM based on passed in Address
-    //
-    // Inputs:       SCOM Address, Data
-    //
-    // Outputs:      None
-    //
-    // End Macro Specification
-    //--------------------------------------------------------------------
-    .macro _putscom, address, data
+//--------------------------------------------------------------------
+// Macro Specification:
+//
+// Name: _getscom
+//
+// Description:  Get a SCOM based on passed in Address, put it in D0
+//
+// Inputs:       SCOM Address
+//
+// Outputs:      D0 - Result of SCOM
+//
+// End Macro Specification
+//--------------------------------------------------------------------
+.macro _getscom, address
 
     lpcs    P0, \address
-        li      D0, \data
-        std     D0, \address, P0
+    ld      D0, \address, P0
+.endm
 
-    .endm
-
-    //--------------------------------------------------------------------
-    // Macro Specification:
-    //
-    // Name: _putscom_d0
-    //
-    // Description:  Store D0 into SCOM based on passed in Address
-    //
-    // Inputs:       SCOM Address
-    //
-    // Outputs:      None
-    //
-    // End Macro Specification
-    //--------------------------------------------------------------------
-    .macro _putscom_d0, address
-
+//--------------------------------------------------------------------
+// Macro Specification:
+//
+// Name: _putscom
+//
+// Description:  Store data into SCOM based on passed in Address
+//
+// Inputs:       SCOM Address, Data
+//
+// Outputs:      None
+//
+// End Macro Specification
+//--------------------------------------------------------------------
+.macro _putscom, address, data
     lpcs    P0, \address
-        std     D0, \address, P0
+    li      D0, \data
+    std     D0, \address, P0
+.endm
 
-    .endm
+//--------------------------------------------------------------------
+// Macro Specification:
+//
+// Name: _putscom_d0
+//
+// Description:  Store D0 into SCOM based on passed in Address
+//
+// Inputs:       SCOM Address
+//
+// Outputs:      None
+//
+// End Macro Specification
+//--------------------------------------------------------------------
+.macro _putscom_d0, address
+    lpcs    P0, \address
+    std     D0, \address, P0
+.endm
 
-#define TOD_VALUE_REG                 0x00040020
+#define TOD_VALUE_REG 0x00040020
 
 // Constant for use in wait statments: waits (5 * MICROSECONDS)
 #define MICROSECONDS 600

@@ -43,12 +43,9 @@
 //
 // Modifies:     CTR, D0, D1
 //--------------------------------------------------------------------
-
-    .macro _wait_for_spi_ops_complete, timeout, timeout_label
-
+.macro _wait_for_spi_ops_complete, timeout, timeout_label
     _wait_for_ops_complete SPIPSS_P2S_STATUS_REG, \timeout, \timeout_label
-
-    .endm
+.endm
 
 
 //--------------------------------------------------------------------
@@ -68,13 +65,9 @@
 //
 // Modifies:     CTR, D0, D1
 //--------------------------------------------------------------------
-
-    .macro _wait_for_adc_ops_complete, timeout, timeout_label
-
+.macro _wait_for_adc_ops_complete, timeout, timeout_label
     _wait_for_ops_complete SPIPSS_ADC_STATUS_REG, \timeout, \timeout_label
-
-
-    .endm
+.endm
 
 
 //--------------------------------------------------------------------
@@ -95,9 +88,7 @@
 //
 // Modifies:     CTR, D0, D1
 //--------------------------------------------------------------------
-
-    .macro _wait_for_ops_complete, register, timeout, timeout_label
-
+.macro _wait_for_ops_complete, register, timeout, timeout_label
     // Load CTR with approximate timeout value (1usec delay per retry)
     li CTR, (\timeout - 1)
 1:
@@ -120,13 +111,10 @@
     // Timeout waiting for spiadc_p2s_ongoing
     bra     \timeout_label
 2:
-    .endm
+.endm
 
 
-
-// TODO: Subroutine would be more efficient than macro, however:
-// Subroutines do not currently clear the stack after a halt
-// so we can NOT use subroutine (SCOM error, branch on fail, etc..)
+// TODO Clean this up if it isn't required
 #if 0
 //--------------------------------------------------------------------
 // Name: sub_wait_for_spi_ops_complete (SUBROUTINE)
@@ -171,4 +159,4 @@ ops_are_complete:
 #endif
 
 #endif  //_PSS_MACROS_H
-      
+
