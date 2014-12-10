@@ -1,21 +1,27 @@
-/******************************************************************************
-// @file cmdhDbugCmd.h
-// @brief Header Applet Args -- CMDH Debug Command
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section cmdhDbugCmd.h CMDHDBUGCMD.H
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @th00d             thallet   04/22/2011  New file
- *   @nh004   864941    neilhsu   12/20/2012  Support get/delete errl & added trace info
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/aplt/incl/cmdhDbugCmd.h $                             */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
 #ifndef _CMDHDBUGCMD_H
 #define _CMDHDBUGCMD_H
@@ -25,7 +31,7 @@
 //*************************************************************************
 #include <occ_common.h>
 #include <cmdh_fsp.h>
-#include <cmdh_fsp_cmds.h>      // @nh004a
+#include <cmdh_fsp_cmds.h>
 
 //*************************************************************************
 // Externs
@@ -52,15 +58,15 @@ typedef struct
 
 
 /**
- * @struct cmdh_dbug_inject_errl_query_t;
- * @brief Used by debug applet to create elog, version 0.
+ * struct cmdh_dbug_inject_errl_query_t;
+ * Used by debug applet to create elog, version 0.
  */
 typedef struct __attribute__ ((packed))
 {
     struct      cmdh_fsp_cmd_header;
     uint8_t     sub_cmd;
     char        comp[OCC_TRACE_NAME_SIZE];
-}cmdh_dbug_inject_errl_query_t;     // @nh004a
+}cmdh_dbug_inject_errl_query_t;
 
 //*************************************************************************
 // Globals

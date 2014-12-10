@@ -1,25 +1,27 @@
-/******************************************************************************
-// @file aplt_service_codes.h
-// @brief Error codes for aplt component.
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _aplt_service_codes_h aplt_service_codes.h
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *                      TEAM      08/16/2010  Created new file    
- *   @pb009             pbavari   10/20/2011  Added APLT_MID_INIT_APPLET_ADDR
- *   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
- *   @pb00E             pbavari   03/11/2012  Added correct include file
- *   @nh001             neilhsu   05/23/2012  Add missing error log tags 
- *   @rt001  901927     tapiar    10/01/2013  Add new/missing module ids
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/aplt/aplt_service_codes.h $                           */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
 #ifndef _APLT_SERVICE_CODES_H_
 #define _APLT_SERVICE_CODES_H_
@@ -47,8 +49,8 @@ enum apltModuleId
     APLT_MNGR_THREAD                =  APLT_COMP_ID | 0x03,
     APLT_MID_INIT_APPLET_ADDR       =  APLT_COMP_ID | 0x04,
 
-    TEST_APLT_MODID_ERRLTEST        =  APLT_COMP_ID | 0xF0,   //@nh001a @rt001c
-    TEST_APLT_MODID_SENSORTEST      =  APLT_COMP_ID | 0xF1,   //@rt001a
+    TEST_APLT_MODID_ERRLTEST        =  APLT_COMP_ID | 0xF0,
+    TEST_APLT_MODID_SENSORTEST      =  APLT_COMP_ID | 0xF1,
 };
 
 //*************************************************************************

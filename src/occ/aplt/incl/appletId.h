@@ -1,23 +1,27 @@
-/******************************************************************************
-// @file appletId.h
-// @brief Applet ID numbers
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section sensorQueryList.h SENSORQUERYLIST.H
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @dw000             dwoodham  12/13/2011  New file
- *   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments 
- *   @pb00E             pbavari   03/11/2012  Added correct include file
- *   @th00d             thallet   04/25/2012  Added CMDH Debug Applet
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/aplt/incl/appletId.h $                                */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
 #ifndef _APPLET_ID_H
 #define _APPLET_ID_H
@@ -25,7 +29,6 @@
 //*************************************************************************
 // Includes
 //*************************************************************************
-//@pb00Ec - changed from common.h to occ_common.h for ODE support
 #include <occ_common.h>
 
 //*************************************************************************
@@ -40,10 +43,7 @@
 // Defines/Enums
 //*************************************************************************
 // Original code & comments from occ/aplt/appletManager.h
-// These are the current applets which exist. 
-//@pb004a - Added OCC_APLT_RTL_INIT,OCC_APLT_APSS_INIT,OCC_APLT_SNSR_INIT and
-//          OCC_APLT_TEST
-//@pb00Ad - Removed sensor init applet init as it is not an applet anymore.
+// These are the current applets which exist.
 typedef enum
 {
     OCC_APLT_APSS_INIT      = 0x00,

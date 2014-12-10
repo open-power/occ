@@ -1,24 +1,27 @@
-/******************************************************************************
-// @file sensorQueryList.h
-// @brief Header Applet Args -- Query Sensor List for AMESTER or MNFG
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section sensorQueryList.h SENSORQUERYLIST.H
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   @th005             thallet   11/22/2011  New file
- *   @rc003             rickylie  02/07/2012  Verify & Clean Up OCC Headers & Comments
- *   @at003             alvinwan  03/19/2012  Add o_sensorInfoPtrs to querySensorListAppletArg_t
- *   @pb00E             pbavari   03/11/2012  Added correct include file
- *   @gm002   885429    milesg    04/30/2013  change location/type to 16 bit bitmasks
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/aplt/incl/sensorQueryList.h $                         */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
 #ifndef _SENSORQUERYLIST_H
 #define _SENSORQUERYLIST_H
@@ -26,7 +29,6 @@
 //*************************************************************************
 // Includes
 //*************************************************************************
-//@pb00Ec - changed from common.h to occ_common.h for ODE support
 #include <occ_common.h>
 
 //*************************************************************************
@@ -50,11 +52,11 @@ typedef struct
 {
   uint16_t            i_startGsid;
   uint8_t             i_present;
-  uint16_t            i_type;           //gm002
-  uint16_t            i_loc;            //gm002
+  uint16_t            i_type;
+  uint16_t            i_loc;
   uint16_t *          io_numOfSensors;
   sensorQueryList_t * o_sensors;
-  sensor_info_t * o_sensorInfoPtrs;  //@at002A
+  sensor_info_t * o_sensorInfoPtrs;
 } querySensorListAppletArg_t;
 
 //*************************************************************************

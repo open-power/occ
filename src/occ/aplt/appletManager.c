@@ -1,43 +1,27 @@
-/******************************************************************************
-// @file appletManager.c
-// @brief OCC Applet Manager
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _appletManager_c appletManager.c
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *                      tapiar    08/15/2011  Created applet manager
- *   @pb004             pbavari   09/12/2011  Test Applet support
- *   @02                tapiar    10/03/2011  Changed BOOLEAN to bool
- *   @pb009             pbavari   10/20/2011  Added mmu_map/unmap to
- *                                            initAppletManager function
- *   @pb00A             pbavari   11/15/2011  Changed applets base address and
- *                                            other misc. fixes
- *   @th006             thallet   11/21/2011  RESET_REQUEST substituted for todo's
- *   @pb00B             pbavari   12/13/2011  Fixed runApplet non-blocking call
- *   @dw000             dwoodham  12/13/2011  Update applet verification
- *   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
- *   @pb00E             pbavari   03/11/2012  Added correct include file
- *   @pb00F             pbavari   06/11/2012  Added pgp.h for applet address defines
- *   @at005             alvinwan  05/03/2012  Fix Compile Errors/Warnings in mcp7 gcc compile
- *   @nh001             neilhsu   05/23/2012  Add missing error log tags
- *   @th013             thallet   07/24/2012  Minor changes for VPO/HW compile
- *   @ai002             ailutsar  07/24/2012  Fix data tlb miss in startApplet
- *   @th029             thallet   01/23/2013  Enable version check on test Applets
- *   @th032             thallet   04/16/2013  Tuleta HW Bringup Fixes
- *   @th041   887656    thallet   06/17/2013  OCC Crash when accessing a full size applet
- *   @gm006  SW224414   milesg    09/16/2013  Reset and FFDC improvements 
- *   @gm010   901580    milesg    10/06/2013  Low Level FFDC support
- *   @rt001  901927     tapiar    10/01/2013  Fix src tags 
- *   @wb001  919163     wilbryan  03/06/2014  Updating error call outs, descriptions, and severities
- *
- *  @endverbatim
- *
- *///*************************************************************************/
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/aplt/appletManager.c $                                */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* [+] Google Inc.                                                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
 //*************************************************************************
 // Includes
@@ -47,7 +31,6 @@
 #include <appletManager.h>
 #include <aplt_service_codes.h>
 #include <occ_service_codes.h>
-//@pb00Ec - changed from common.h to occ_common.h for ODE support
 #include <occ_common.h>
 #include <comp_ids.h>
 #include <thread.h>
@@ -72,13 +55,12 @@
 //*************************************************************************
 // Defines/Enums
 //*************************************************************************
-//@pb009a - Added
 #define TEST_APPLET_ADDR      (uint32_t)&_APPLET1_SECTION_BASE
 #define PRDT_APPLET_ADDR      (uint32_t)&_APPLET0_SECTION_BASE
 #define TEST_APPLET_MAX_SIZE  (uint32_t)&_APPLET1_SECTION_SIZE
-#define PRDT_APPLET_MAX_SIZE  (uint32_t)&_APPLET0_SECTION_SIZE  // @dw000a
-#define APPLET_IMG_SIZE_ALIGN 256  // @dw000a
-#define APPLET_RO_SIZE_ALIGN 1024  // @dw000a
+#define PRDT_APPLET_MAX_SIZE  (uint32_t)&_APPLET0_SECTION_SIZE
+#define APPLET_IMG_SIZE_ALIGN 256
+#define APPLET_RO_SIZE_ALIGN 1024
 #define SRAM_START_ADDRESS              0xFFF80000
 
 //*************************************************************************
@@ -94,13 +76,12 @@ typedef struct
     SsxSemaphore    Finished;
 } ApltSem_t;
 
-// @th029 - Moved ApltAddress_t to header file
-
-//@pb00Ba - Added callerSem to hold caller semaphore parameter to the
-// runApplet call. This semaphore will be used by startApplet to notify
-// user of completion of the applet execution
 // Applet information structure
-// @pb00Ba - Added status to get back error status from startApplet and
+//
+// Added callerSem to hold caller semaphore parameter to the
+// runApplet call. This semaphore will be used by startApplet to notify
+// user of completion of the applet execution.
+// Added status to get back error status from startApplet and
 // return it to the caller for the blocking call.
 struct ApltInfo
 {
@@ -110,8 +91,8 @@ struct ApltInfo
     OCC_APLT        previousAppId;
     errlHndl_t      errorHandle;
     // Applet has readonly and writable sections
-    Ppc405MmuMap    mmuMapWritePermission;   //@ai002c
-    Ppc405MmuMap    mmuMapReadPermission;    //@ai002a
+    Ppc405MmuMap    mmuMapWritePermission;
+    Ppc405MmuMap    mmuMapReadPermission;
     SsxSemaphore *  callerSem;
     OCC_APLT_STATUS_CODES status;
 } __attribute__ ((__packed__));
@@ -128,7 +109,6 @@ ApltSem_t G_TestApltSemaphore;
 // Applet Id global array
 ApltAddress_t   G_ApltAddressTable[ OCC_APLT_LAST];
 
-//@pb00Ba - added callerSem and status
 // Global product applet information with defaults
 ApltInfo_t  G_ApltInfo =
 {
@@ -137,13 +117,12 @@ ApltInfo_t  G_ApltInfo =
     .appId = OCC_APLT_INVALID,
     .previousAppId = OCC_APLT_INVALID,
     .errorHandle = NULL,
-    .mmuMapWritePermission = 0, //@ai002c
-    .mmuMapReadPermission = 0,  //@ai002a
+    .mmuMapWritePermission = 0,
+    .mmuMapReadPermission = 0,
     .callerSem = NULL,
     .status = OCC_APLT_SUCCESS
 };
 
-//@pb00Ba - added callerSem and status
 // Global test applet information with defaults
 ApltInfo_t G_TestApltInfo =
 {
@@ -152,8 +131,8 @@ ApltInfo_t G_TestApltInfo =
     .appId = OCC_APLT_INVALID,
     .previousAppId = OCC_APLT_INVALID,
     .errorHandle = NULL,
-    .mmuMapWritePermission = 0, //@ai002c
-    .mmuMapReadPermission = 0,  //@ai002a
+    .mmuMapWritePermission = 0,
+    .mmuMapReadPermission = 0,
     .callerSem = NULL,
     .status = OCC_APLT_SUCCESS
 };
@@ -163,22 +142,18 @@ ApltInfo_t G_TestApltInfo =
 //*************************************************************************
 // Have to have this declaration here so the pre-processor handles the
 // section attribute correctly.
-errlHndl_t initAppletAddr( void ) INIT_SECTION;  // @dw000a
+errlHndl_t initAppletAddr( void ) INIT_SECTION;
 
 //*************************************************************************
 // Functions
 //*************************************************************************
 
-// >@dw000c
 // Function Specification
 //
 // Name:  initAppletAddr
 //
 // Description: initialize the Applet address by traversing through OCC signed
 //              image in main memory
-//
-// Flow:  10/24/11    FN=initAppletAddr
-// Flow:  12/09/11    FN=initAppletAddr
 //
 // End Function Specification
 errlHndl_t initAppletAddr( void )
@@ -237,23 +212,23 @@ errlHndl_t initAppletAddr( void )
             uint32_t l_srr_0 = CONVERT_UINT8_ARRAY_UINT32(l_appHeader->sram_repair_reserved[0],
                                                           l_appHeader->sram_repair_reserved[1],
                                                           l_appHeader->sram_repair_reserved[2],
-                                                          l_appHeader->sram_repair_reserved[3]);  // @at005c
+                                                          l_appHeader->sram_repair_reserved[3]);
 
             uint32_t l_srr_1 = CONVERT_UINT8_ARRAY_UINT32(l_appHeader->sram_repair_reserved[4],
                                                           l_appHeader->sram_repair_reserved[5],
                                                           l_appHeader->sram_repair_reserved[6],
-                                                          l_appHeader->sram_repair_reserved[7]);  // @at005c
+                                                          l_appHeader->sram_repair_reserved[7]);
 
             uint32_t l_srr_2 = CONVERT_UINT8_ARRAY_UINT32(l_appHeader->sram_repair_reserved[8],
                                                           l_appHeader->sram_repair_reserved[9],
                                                           l_appHeader->sram_repair_reserved[10],
-                                                          l_appHeader->sram_repair_reserved[11]);  // @at005c
+                                                          l_appHeader->sram_repair_reserved[11]);
 
             uint32_t l_srr_3 = CONVERT_UINT8_ARRAY_UINT32(l_appHeader->sram_repair_reserved[12],
                                                           l_appHeader->sram_repair_reserved[13],
                                                           l_appHeader->sram_repair_reserved[14],
-                                                          l_appHeader->sram_repair_reserved[15]);  // @at005c
-            
+                                                          l_appHeader->sram_repair_reserved[15]);
+
             TRAC_ERR("wrong magic number.  applet count: %d, header addr: %p, magic no: 0x%08x%08x%08x%08x",
                       l_cnt, l_appHeader, l_srr_0, l_srr_1, l_srr_2, l_srr_3);
 #endif
@@ -320,7 +295,7 @@ errlHndl_t initAppletAddr( void )
         }
 
         // 5i. we haven't already seen this applet before
-        //     (note the '!' at the start of the test condition)   
+        //     (note the '!' at the start of the test condition)
         if( !((G_ApltAddressTable[l_appHeader->aplt_id].iv_aplt_address == 0x00000000) &&
              (G_ApltAddressTable[l_appHeader->aplt_id].iv_size == 0x00000000)) )
         {
@@ -354,7 +329,7 @@ errlHndl_t initAppletAddr( void )
             l_errApltId = l_appHeader->aplt_id;
         }
 
-        /* @
+        /*
          * @errortype
          * @moduleid    APLT_MID_INIT_APPLET_ADDR
          * @reasoncode  INTERNAL_FAILURE
@@ -364,7 +339,7 @@ errlHndl_t initAppletAddr( void )
          * @devdesc     Internal initialization failure in energy management
          */
         l_err = createErrl(APLT_MID_INIT_APPLET_ADDR,        //modId
-                           INTERNAL_FAILURE,                 //reasoncode    //@ nh001c
+                           INTERNAL_FAILURE,                 //reasoncode
                            ERC_APLT_INIT_FAILURE,            //Extended reason code
                            ERRL_SEV_UNRECOVERABLE,           //Severity
                            NULL,                             //Trace Buf
@@ -372,7 +347,7 @@ errlHndl_t initAppletAddr( void )
                            l_errApltId,                      //userdata1
                            (uint32_t)l_appHeader);           //userdata2
 
-        // @wb001 -- Callout to firmware
+        // Callout to firmware
         addCalloutToErrl(l_err,
                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
                         ERRL_COMPONENT_ID_FIRMWARE,
@@ -386,29 +361,25 @@ errlHndl_t initAppletAddr( void )
         G_ApltAddressTable[OCC_APLT_TEST].iv_size = TEST_APPLET_MAX_SIZE;
     }
 
-    // @ai002a
     // copy SSX mmu map to ApltInfo structure
     // startApplet() will use it to clear tlb entry
     G_ApltInfo.mmuMapWritePermission = G_applet0_mmu_map;
     G_TestApltInfo.mmuMapWritePermission = G_applet1_mmu_map;
 
-    // Clear SSX mmu map. 
-    // The original tlb indexes may point to different SRAM regions when OCC runs 
+    // Clear SSX mmu map.
+    // The original tlb indexes may point to different SRAM regions when OCC runs
     // mmu map/unmap several times.
     G_applet0_mmu_map = 0;
     G_applet1_mmu_map = 0;
 
     return l_err;
 }
-// <@dw000c
 
 // Function Specification
 //
 // Name:  initAppletManager
 //
 // Description: initialize the Applet Manager, called by main
-//
-// Flow:  10/31/11    FN=initAppletManager
 //
 // End Function Specification
 void initAppletManager( void )
@@ -445,7 +416,7 @@ void initAppletManager( void )
             TRAC_INFO("Wakeup   Test Semaphore SsxRc[0x%08X]", -l_ssxrc5 );
             TRAC_INFO("Finished Test Semaphore SsxRc[0x%08X]", -l_ssxrc6 );
 
-            /* @
+            /*
              * @errortype
              * @moduleid    APLT_MID_INIT_APPLET_MNGR
              * @reasoncode  SSX_GENERIC_FAILURE
@@ -455,7 +426,7 @@ void initAppletManager( void )
              * @devdesc     SSX semaphore related failure
              */
             l_rc = createErrl(APLT_MID_INIT_APPLET_MNGR,        //modId
-                              SSX_GENERIC_FAILURE,              //reasoncode    // @nh001c
+                              SSX_GENERIC_FAILURE,              //reasoncode
                               ERC_CREATE_SEM_FAILURE,           //Extended reason code
                               ERRL_SEV_UNRECOVERABLE,           //Severity
                               NULL,                             //Trace Buf
@@ -480,7 +451,7 @@ void initAppletManager( void )
         {
             TRAC_ERR("mmu map failure SsxRc[0x%08X]", -l_ssxRc );
 
-            /* @
+            /*
              * @errortype
              * @moduleid    APLT_MID_INIT_APPLET_MNGR
              * @reasoncode  SSX_GENERIC_FAILURE
@@ -489,7 +460,7 @@ void initAppletManager( void )
              * @devdesc     Failure mapping OCI space
              */
             l_rc = createErrl(APLT_MID_INIT_APPLET_MNGR,        //modId
-                              SSX_GENERIC_FAILURE,              //reasoncode    // @nh001c
+                              SSX_GENERIC_FAILURE,              //reasoncode
                               ERC_MMU_MAP_FAILURE,              //Extended reason code
                               ERRL_SEV_UNRECOVERABLE,           //Severity
                               NULL,                             //Trace Buf
@@ -532,7 +503,7 @@ void initAppletManager( void )
         {
             TRAC_ERR("mmu unmap failure SsxRc[0x%08X]", -l_ssxRc );
 
-            /* @
+            /*
              * @errortype
              * @moduleid    APLT_MID_INIT_APPLET_MNGR
              * @reasoncode  SSX_GENERIC_FAILURE
@@ -565,7 +536,7 @@ void initAppletManager( void )
 
     if( NULL != l_rc )
     {
-        REQUEST_RESET(l_rc);    // @gm006
+        REQUEST_RESET(l_rc);
     }
 
 }
@@ -575,10 +546,7 @@ void initAppletManager( void )
 //
 // Name:  runApplet
 //
-// Description: run an Applet 
-//
-// Flow:  06/06/11    FN=runApplet
-// Flow:  12/15/11    FN=runApplet
+// Description: run an Applet
 //
 // End Function Specification
 void runApplet( OCC_APLT                i_applet,
@@ -589,7 +557,7 @@ void runApplet( OCC_APLT                i_applet,
                 OCC_APLT_STATUS_CODES   *o_status )
 {
     uint32_t l_reasonCode = 0;
-    uint32_t l_extReasonCode = 0;   // @nh001a
+    uint32_t l_extReasonCode = 0;
     int      l_ssxrc = 0;
     bool     l_postStartFailure = FALSE;
 
@@ -614,8 +582,8 @@ void runApplet( OCC_APLT                i_applet,
          * @devdesc     SSX semaphore related failure
          */
         TRAC_ERR("Running Semaphore Pending Failure on blocking caller: SsxRc[0x%08X]", -l_ssxrc );
-        l_reasonCode = SSX_GENERIC_FAILURE;             // @nh001c 
-        l_extReasonCode = ERC_RUNNING_SEM_PENDING_FAILURE;  // @nh001a
+        l_reasonCode = SSX_GENERIC_FAILURE;
+        l_extReasonCode = ERC_RUNNING_SEM_PENDING_FAILURE;
         l_info->status = OCC_APLT_PRE_START_FAILURE;
     }
     else
@@ -631,10 +599,10 @@ void runApplet( OCC_APLT                i_applet,
         // save off pointer to parameters
          l_info->param = i_parms;
 
-         //@pb00Ba - Point callerSem to the caller passed in semaphore
+        // Point callerSem to the caller passed in semaphore
          l_info->callerSem = io_appletComplete;
 
-        // clean out the handle 
+        // clean out the handle
         l_info->errorHandle = NULL;
 
         l_info->status = OCC_APLT_SUCCESS;
@@ -645,7 +613,7 @@ void runApplet( OCC_APLT                i_applet,
         // Post wakeup semaphore so that applet manager can start
         // applet
         l_ssxrc = ssx_semaphore_post( &l_sem->Wakeup );
-        if ( l_ssxrc != SSX_OK )    
+        if ( l_ssxrc != SSX_OK )
         {
             /*
              * @errortype
@@ -655,16 +623,16 @@ void runApplet( OCC_APLT                i_applet,
              * @userdata2   Caller parameter to determine block or not.
              * @userdata4   ERC_WAKEUP_SEM_POSTING_FAILURE
              * @devdesc     SSX semaphore related failure
-             */        
+             */
             TRAC_ERR("Wakeup Semaphore Post Failure: SsxRc[0x%08X]", -l_ssxrc );
-            l_reasonCode = SSX_GENERIC_FAILURE;             // @nh001c 
-            l_extReasonCode = ERC_WAKEUP_SEM_POSTING_FAILURE;   // @nh001a
-            
+            l_reasonCode = SSX_GENERIC_FAILURE;
+            l_extReasonCode = ERC_WAKEUP_SEM_POSTING_FAILURE;
+
             //post on Running Semaphore so that user can retry
             l_ssxrc = ssx_semaphore_post( &l_sem->Running );
             if ( l_ssxrc != SSX_OK )
             {
-                /*
+               /*
                 * @errortype
                 * @moduleid    APLT_MID_RUN_APPLET
                 * @reasoncode  SSX_GENERIC_FAILURE
@@ -672,10 +640,10 @@ void runApplet( OCC_APLT                i_applet,
                 * @userdata2   Caller parameter to determine block or not.
                 * @userdata4   ERC_RUNNING_SEM_POSTING_FAILURE
                 * @devdesc     SSX semaphore related failure
-                */                    
+                */
                 TRAC_ERR("Error posting the Applet running semaphore rc=[%08X]",l_ssxrc);
-                l_reasonCode = SSX_GENERIC_FAILURE;             // @nh001c 
-                l_extReasonCode = ERC_RUNNING_SEM_POSTING_FAILURE;  // @nh001a
+                l_reasonCode = SSX_GENERIC_FAILURE;
+                l_extReasonCode = ERC_RUNNING_SEM_POSTING_FAILURE;
             }
             // set rc to failed to start
             l_info->status = OCC_APLT_PRE_START_FAILURE;
@@ -686,9 +654,9 @@ void runApplet( OCC_APLT                i_applet,
         else if ( i_block )
         {
             l_ssxrc = ssx_semaphore_pend(&l_sem->Finished, SSX_WAIT_FOREVER);
-            if ( l_ssxrc != SSX_OK )    
+            if ( l_ssxrc != SSX_OK )
             {
-                /* 
+                /*
                  * @errortype
                  * @moduleid    APLT_MID_RUN_APPLET
                  * @reasoncode  SSX_GENERIC_FAILURE
@@ -696,10 +664,10 @@ void runApplet( OCC_APLT                i_applet,
                  * @userdata2   Caller parameter to determine block or not.
                  * @userdata4   ERC_FINISHED_SEM_PENDING_FAILURE
                  * @devdesc     SSX semaphore related failure
-                 */            
+                 */
                 TRAC_ERR("Finished Semaphore Pending Failure: SsxRc[0x%08X]", -l_ssxrc );
-                l_reasonCode = SSX_GENERIC_FAILURE;                 // @nh001c 
-                l_extReasonCode = ERC_FINISHED_SEM_PENDING_FAILURE;     // @nh001a
+                l_reasonCode = SSX_GENERIC_FAILURE;
+                l_extReasonCode = ERC_FINISHED_SEM_PENDING_FAILURE;
                 // set flag to return post start failure status
                 l_postStartFailure = TRUE;
             }
@@ -709,18 +677,18 @@ void runApplet( OCC_APLT                i_applet,
     if ( (l_reasonCode != 0) && (o_errHndl != NULL))
     {
         // TODO use correct trace
-        tracDesc_t  l_trace = NULL; 
+        tracDesc_t  l_trace = NULL;
         // Error from runApplet
         *o_errHndl = createErrl(APLT_MID_RUN_APPLET,        //modId
-                                l_reasonCode,               //reasoncode    // @nh001c
+                                l_reasonCode,               //reasoncode
                                 l_extReasonCode,            //Extended reason code
                                 ERRL_SEV_UNRECOVERABLE,     //Severity
                                 l_trace,                    //Trace Buf
                                 DEFAULT_TRACE_SIZE,         //Trace Size
                                 i_applet,                   //userdata1
                                 i_block);                   //userdata2
- 
-        // @wb001 -- Callout firmware
+
+        // Callout firmware
         addCalloutToErrl(*o_errHndl,
                          ERRL_CALLOUT_TYPE_COMPONENT_ID,
                          ERRL_COMPONENT_ID_FIRMWARE,
@@ -748,17 +716,14 @@ void runApplet( OCC_APLT                i_applet,
     }
 
     //Running, Finished/user passed in semaphore is posted by start applet
-};  
+};
 
 
 // Function Specification
 //
 // Name:  startApplet
 //
-// Description: Start Applet  
-//
-// Flow:  06/30/11    FN=startApplet
-// Flow:  12/15/11    FN=startApplet
+// Description: Start Applet
 //
 // End Function Specification
 void startApplet( const OCC_APLT_TYPE i_isTestAplt )
@@ -766,7 +731,7 @@ void startApplet( const OCC_APLT_TYPE i_isTestAplt )
     errlHndl_t  l_rc = NULL;
     int         l_ssxrc = 0;
     uint32_t    l_reasonCode = 0;
-    uint32_t    l_extReasonCode = 0;    // @nh001a
+    uint32_t    l_extReasonCode = 0;
     // Depending on i_isTestAplt use product or test applet globals
     ApltInfo_t * l_info =
                     (i_isTestAplt == TRUE ? &G_TestApltInfo : &G_ApltInfo);
@@ -775,61 +740,60 @@ void startApplet( const OCC_APLT_TYPE i_isTestAplt )
 
     OCC_APLT_STATUS_CODES l_status = OCC_APLT_SUCCESS;
 
-    // Get defaut applet section size for mmu @ai002
-    size_t l_applet_section_size = 
-           (i_isTestAplt == TRUE ? (size_t)&_APPLET1_SECTION_SIZE : (size_t)&_APPLET0_SECTION_SIZE);   // @th041
-    
+    // Get default applet section size for mmu
+    size_t l_applet_section_size =
+           (i_isTestAplt == TRUE ? (size_t)&_APPLET1_SECTION_SIZE : (size_t)&_APPLET0_SECTION_SIZE);
+
     // For storing applet readonly size, this value is located in applet header in SRAM.
     // The value should be stored in another place before unmapping the applet memory region.
     size_t l_applet_readonly_size = 0;
-    
-    // 1. set tlb protection to write to SRAM: 
+
+    // 1. set tlb protection to write to SRAM:
     //    currently already writable
-    
+
     do
-    {   
+    {
         // Get SRAM applet address depending on the applet type
         uint32_t  l_apltSramAddress =
                  (i_isTestAplt == TRUE? TEST_APPLET_ADDR: PRDT_APPLET_ADDR);
 
         // Set header to point to SRAM address
-        imageHdr_t * l_apltHeader     = (void *) l_apltSramAddress;   // @th029
-        imageHdr_t *l_mainAppHeader   = (void *) SRAM_START_ADDRESS;  // @th029
-            
+        imageHdr_t * l_apltHeader     = (void *) l_apltSramAddress;
+        imageHdr_t *l_mainAppHeader   = (void *) SRAM_START_ADDRESS;
+
         // This happens too often, we cannot trace it
         //TRAC_INFO("Attempting to run applet at address [0x%08X], size: 0x%x",
         //          G_ApltAddressTable[l_info->appId].iv_aplt_address,
         //          G_ApltAddressTable[l_info->appId].iv_size);
 
         // check that we are not calling what is already saved off
-        // @dw000c re-load the test applet every time since they all use the same applet ID.
+        // re-load the test applet every time since they all use the same applet ID.
         if ( (l_info->appId == OCC_APLT_TEST) || (l_info->appId != l_info->previousAppId) )
         {
-        	// @ai002a
             // 1a. check applet read-only/executable permissions, unmap it if existed.
             //     whole applet memory region in SRAM should be free first, then set it to
             //     writable for copyimage and calculate checksum.
             if ( l_info->mmuMapReadPermission != 0 )
             {
                 l_ssxrc = ppc405_mmu_unmap(&l_info->mmuMapReadPermission);
-                
+
                 if(l_ssxrc)
                 {
                     TRAC_ERR("Error unmapping/changing permissions on applet text/data section rc=[%08X]", -l_ssxrc);
-                    
-                    /* 
+
+                    /*
                      * @errortype
                      * @moduleid    APLT_MID_START_APPLET
                      * @reasoncode  SSX_GENERIC_FAILURE
                      * @userdata1   Applet start status
                      * @userdata4   ERC_MMU_UNMAP_APPLET_READ_FAILURE
                      * @devdesc     Failure unmapping applet read-only/executable permissions
-                     */                       
+                     */
                     l_reasonCode = SSX_GENERIC_FAILURE;
-                    l_extReasonCode = ERC_MMU_UNMAP_APPLET_READ_FAILURE;   // @ai002
-                    
+                    l_extReasonCode = ERC_MMU_UNMAP_APPLET_READ_FAILURE;
+
                     // bail out
-                    break; 
+                    break;
                 }
             }
 
@@ -839,32 +803,32 @@ void startApplet( const OCC_APLT_TYPE i_isTestAplt )
             if ( l_info->mmuMapWritePermission != 0 )
             {
                 l_ssxrc = ppc405_mmu_unmap(&l_info->mmuMapWritePermission);
-                
+
                 if(l_ssxrc)
                 {
                     TRAC_ERR("Error unmapping/changing permissions on applet text/data section rc=[%08X]", -l_ssxrc);
-                    
-                    /* 
+
+                    /*
                      * @errortype
                      * @moduleid    APLT_MID_START_APPLET
                      * @reasoncode  SSX_GENERIC_FAILURE
                      * @userdata1   Applet start status
                      * @userdata4   ERC_MMU_UNMAP_APPLET_WRITE_FAILURE
                      * @devdesc     Failure unmapping applet rwdata section permissions
-                     */                       
+                     */
                     l_reasonCode = SSX_GENERIC_FAILURE;
-                    l_extReasonCode = ERC_MMU_UNMAP_APPLET_WRITE_FAILURE;   // @ai002
-                    
+                    l_extReasonCode = ERC_MMU_UNMAP_APPLET_WRITE_FAILURE;
+
                     // bail out
-                    break; 
+                    break;
                 }
             }
-           
-            //1c. set SRAM applet region to writeable for copying image and calculating checksum
-            
+
+            //1c. set SRAM applet region to writable for copying image and calculating checksum
+
             l_ssxrc = ppc405_mmu_map(
-                        l_apltSramAddress,              // 
-                        l_apltSramAddress,              // 
+                        l_apltSramAddress,              //
+                        l_apltSramAddress,              //
                         l_applet_section_size,          // set whole applet including writable section
                         0,                              //
                         TLBLO_WR,
@@ -873,23 +837,23 @@ void startApplet( const OCC_APLT_TYPE i_isTestAplt )
             if(l_ssxrc != SSX_OK)
             {
                 TRAC_ERR("Error mapping SRAM with execute permissions rc=[%08X]",l_ssxrc);
-                
-                /* 
+
+                /*
                  * @errortype
                  * @moduleid    APLT_MID_START_APPLET
                  * @reasoncode  SSX_GENERIC_FAILURE
                  * @userdata1   Applet start status
                  * @userdata4   ERC_MMU_MAP_APPLET_OVERWRITE_FAILURE
                  * @devdesc     Failure mapping applet memory region permissions
-                 */  
+                 */
                 l_reasonCode = SSX_GENERIC_FAILURE;
-                l_extReasonCode = ERC_MMU_MAP_APPLET_OVERWRITE_FAILURE; // @ai002
+                l_extReasonCode = ERC_MMU_MAP_APPLET_OVERWRITE_FAILURE;
                 break;
             }
-            
+
             // 2. read applet header info
             // 3. copy applet image to SRAM using DMA
-            
+
             BceRequest pba_copy;
             l_ssxrc = bce_request_create(&pba_copy,                // block copy object
                                          &G_pba_bcde_queue,        // mainstore to sram copy engine
@@ -904,28 +868,28 @@ void startApplet( const OCC_APLT_TYPE i_isTestAplt )
             if(l_ssxrc != SSX_OK)
             {
                 TRAC_ERR("PBA request create failure rc=[%08X]",l_ssxrc);
-                
-                /* 
+
+                /*
                  * @errortype
                  * @moduleid    APLT_MID_START_APPLET
                  * @reasoncode  SSX_GENERIC_FAILURE
                  * @userdata1   Applet start status
                  * @userdata4   ERC_BCE_REQUEST_CREATE_FAILURE
                  * @devdesc     SSX BCE related failure
-                 */   
-                l_reasonCode = SSX_GENERIC_FAILURE;             // @nh001c
-                l_extReasonCode = ERC_BCE_REQUEST_CREATE_FAILURE;   // @nh001a
+                 */
+                l_reasonCode = SSX_GENERIC_FAILURE;
+                l_extReasonCode = ERC_BCE_REQUEST_CREATE_FAILURE;
                 break;
             }
 
             // actual copying
             l_ssxrc = bce_request_schedule(&pba_copy);
-            
+
             if(l_ssxrc != SSX_OK)
             {
                 TRAC_ERR("PBA request schedule failure rc=[%08X]",l_ssxrc);
-                
-                /* 
+
+                /*
                  * @errortype
                  * @moduleid    APLT_MID_START_APPLET
                  * @reasoncode  SSX_GENERIC_FAILURE
@@ -933,15 +897,14 @@ void startApplet( const OCC_APLT_TYPE i_isTestAplt )
                  * @userdata4   ERC_BCE_REQUEST_SCHEDULE_FAILURE
                  * @devdesc     Failure to copy applet image using DMA
                  */
-                l_reasonCode = SSX_GENERIC_FAILURE;                 // @nh001c
-                l_extReasonCode = ERC_BCE_REQUEST_SCHEDULE_FAILURE;     // @nh001a
+                l_reasonCode = SSX_GENERIC_FAILURE;
+                l_extReasonCode = ERC_BCE_REQUEST_SCHEDULE_FAILURE;
                 break;
             }
 
             // --------------------------------------------------
             // Verify the applet version matches the main version
             // --------------------------------------------------
-            // @th029A - whole if statement
             if(l_mainAppHeader->version != l_apltHeader->version)
             {
                    TRAC_ERR("Applet not loaded b/c of version mismatch Main[%08x]:Applet[%08x]",
@@ -950,27 +913,27 @@ void startApplet( const OCC_APLT_TYPE i_isTestAplt )
                  * @errortype
                  * @moduleid    APLT_MID_START_APPLET
                  * @reasoncode  INTERNAL_FAILURE
-                 * @userdata1   Applet start status 
+                 * @userdata1   Applet start status
                  * @userdata4   ERC_APLT_START_VERSION_MISMATCH
                  * @devdesc     Internal failure in energy management
                  */
-                l_reasonCode = INTERNAL_FAILURE;        
-                l_extReasonCode = ERC_APLT_START_VERSION_MISMATCH;     
+                l_reasonCode = INTERNAL_FAILURE;
+                l_extReasonCode = ERC_APLT_START_VERSION_MISMATCH;
                 break;
 
             }
 
             // 3b. invalidate the data cache
             //     ie: clean up data cache in case stuff is left
-            //         from previous applet 
-            dcache_invalidate((void *) l_apltHeader, l_applet_section_size);   // @th032
+            //         from previous applet
+            dcache_invalidate((void *) l_apltHeader, l_applet_section_size);
 
             // 4. Verify checksum of applet
             uint32_t    l_counter = 0;
             uint8_t *   l_srcPtr = (uint8_t *) (l_apltHeader);
             uint32_t    l_checksum = 0;
             uint32_t    l_headerChecksum = l_apltHeader->checksum;
-          
+
             while (l_counter < l_apltHeader->image_size )
             {
                 l_checksum += (*(l_srcPtr + l_counter));
@@ -987,70 +950,69 @@ void startApplet( const OCC_APLT_TYPE i_isTestAplt )
                 //error
                 TRAC_ERR("Checksum verification failure header chksum=[%08X] calculated chksum =[%08X] ",
                             l_headerChecksum, l_checksum);
-                
+
                 /*
                  * @errortype
                  * @moduleid    APLT_MID_START_APPLET
                  * @reasoncode  INTERNAL_FAILURE
-                 * @userdata1   Applet start status 
+                 * @userdata1   Applet start status
                  * @userdata4   ERC_APLT_START_CHECKSUM_MISMATCH
                  * @devdesc     Internal failure in energy management
                  */
-                l_reasonCode = INTERNAL_FAILURE;            // @nh001c
-                l_extReasonCode = ERC_APLT_START_CHECKSUM_MISMATCH;       // @nh001a
+                l_reasonCode = INTERNAL_FAILURE;
+                l_extReasonCode = ERC_APLT_START_CHECKSUM_MISMATCH;
                 break;
             }
-            
+
             // 5. flush complete I cache
             //    ie: ensure execution of current applet is clean
             icache_invalidate_all();
-        
 
-    
+
             // 5a. flush part of data cache
             //     ie: clean up data cache in case stuff is left
-            //         from previous applet 
+            //         from previous applet
             // TODO: need to ensure this will work correctly on HW
             //       may require tweaking, based on results
             dcache_invalidate((void *)l_apltHeader->zero_data_addr,
                               l_apltHeader->zero_data_size );
 
             // size of readonly section is located in applet memory section
-			// get it for next step to protect text and data section
-            l_applet_readonly_size = l_apltHeader->readonly_size; // @ai002a
+            // get it for next step to protect text and data section
+            l_applet_readonly_size = l_apltHeader->readonly_size;
 
             // 5b. unmap (remove permissions) on SRAM applet after copying applet image.
             //     permissions should be set correctly in SRAM rodata/rwdata section in next step.
-            if ( l_info->mmuMapWritePermission != 0 )   // @ai002a
+            if ( l_info->mmuMapWritePermission != 0 )
             {
                 l_ssxrc = ppc405_mmu_unmap(&(l_info->mmuMapWritePermission));
-                
+
                 if(l_ssxrc)
                 {
                     TRAC_ERR("Error unmapping/changing permissions on SRAM applet section rc=[%08X]", -l_ssxrc);
-                    
-                    /* 
+
+                    /*
                      * @errortype
                      * @moduleid    APLT_MID_START_APPLET
                      * @reasoncode  SSX_GENERIC_FAILURE
                      * @userdata1   Applet start status
                      * @userdata4   ERC_MMU_UNMAP_APPLET_OVERWRITE_FAILURE
                      * @devdesc     Failure unmapping applet memory region permissions
-                     */                       
-                    l_reasonCode = SSX_GENERIC_FAILURE;         // @nh001c
-                    l_extReasonCode = ERC_MMU_UNMAP_APPLET_OVERWRITE_FAILURE;   // @ai002
-                    
+                     */
+                    l_reasonCode = SSX_GENERIC_FAILURE;
+                    l_extReasonCode = ERC_MMU_UNMAP_APPLET_OVERWRITE_FAILURE;
+
                     // bail out
-                    break; 
+                    break;
                 }
             }
-            
-			// 6 mapping mmu tlb permission (read-only section and writable section)
+
+            // 6 mapping mmu tlb permission (read-only section and writable section)
             // 6a. protect applet text in SRAM (tlbie)
             l_ssxrc = ppc405_mmu_map(
                         l_apltSramAddress,
                         l_apltSramAddress,
-                        l_applet_readonly_size,         // protect the text and data section    // @ai002c
+                        l_applet_readonly_size,         // protect the text and data section
                         0,
                         TLBLO_EX,
                         &(l_info->mmuMapReadPermission)
@@ -1058,22 +1020,21 @@ void startApplet( const OCC_APLT_TYPE i_isTestAplt )
             if(l_ssxrc != SSX_OK)
             {
                 TRAC_ERR("Error mapping SRAM with execute permissions rc=[%08X]",l_ssxrc);
-                
-                /* 
+
+                /*
                  * @errortype
                  * @moduleid    APLT_MID_START_APPLET
                  * @reasoncode  SSX_GENERIC_FAILURE
                  * @userdata1   Applet start status
                  * @userdata4   ERC_MMU_MAP_APPLET_READ_FAILURE
                  * @devdesc     Failure mapping applet read-only/executable permissions
-                 */  
+                 */
                 l_reasonCode = SSX_GENERIC_FAILURE;
-                l_extReasonCode = ERC_MMU_MAP_APPLET_READ_FAILURE;  // @ai002
+                l_extReasonCode = ERC_MMU_MAP_APPLET_READ_FAILURE;
                 break;
             }
-            
+
             // 6b. map applet rwdata section in SRAM as writable (tlbie)
-            // @ai002a
             if(0 != l_apltHeader->boot_writeable_size)
             {
                 l_ssxrc = ppc405_mmu_map(
@@ -1087,17 +1048,17 @@ void startApplet( const OCC_APLT_TYPE i_isTestAplt )
                 if(l_ssxrc != SSX_OK)
                 {
                     TRAC_ERR("Error mapping SRAM with execute permissions rc=[%08X]",l_ssxrc);
-                    
-                    /* 
+
+                    /*
                     * @errortype
                     * @moduleid    APLT_MID_START_APPLET
                     * @reasoncode  SSX_GENERIC_FAILURE
                     * @userdata1   Applet start status
                     * @userdata4   ERC_MMU_MAP_APPLET_WRITE_FAILURE
                     * @devdesc     Failure mapping applet rwdata section permissions
-                    */  
+                    */
                     l_reasonCode = SSX_GENERIC_FAILURE;
-                    l_extReasonCode = ERC_MMU_MAP_APPLET_WRITE_FAILURE;     // @ai002
+                    l_extReasonCode = ERC_MMU_MAP_APPLET_WRITE_FAILURE;
                     break;
                 }
             }
@@ -1108,19 +1069,19 @@ void startApplet( const OCC_APLT_TYPE i_isTestAplt )
             //       before saving off the current applet id into previous applet id var
             l_info->previousAppId = l_info->appId;
 
-        }//end if 
-            
-        // 7. Copy entry point address from applet header 
+        }//end if
+
+        // 7. Copy entry point address from applet header
         //    and start executing from that address
         errlHndl_t (*execute_app)(void *) =(void *) l_apltHeader->ep_addr;
         errlHndl_t l_applog = (*execute_app)(l_info->param);
-        // check if applet return an error log 
+        // check if applet return an error log
         if ( l_applog )
         {
             TRAC_ERR("Error found from applet function see error @%p",l_applog);
- 
+
             if ( l_info->isBlocking )
-            { 
+            {
                 // if applet caller wanted us to block
                 // save off the error and status
                 l_info->errorHandle = l_applog;
@@ -1131,7 +1092,7 @@ void startApplet( const OCC_APLT_TYPE i_isTestAplt )
                 // non blocker, so commit the error
                 commitErrl(&l_applog);
             }
-        } 
+        }
 
     }while(0); // end of do while loop
 
@@ -1144,7 +1105,7 @@ void startApplet( const OCC_APLT_TYPE i_isTestAplt )
         tracDesc_t  l_trace = NULL;
 
         l_rc = createErrl(APLT_MID_START_APPLET,        //modId
-                          l_reasonCode,                 //reasoncode    // @nh001c  
+                          l_reasonCode,                 //reasoncode
                           l_extReasonCode,              //Extended reason code
                           ERRL_SEV_UNRECOVERABLE,       //Severity
                           l_trace,                      //Trace Buf
@@ -1152,7 +1113,7 @@ void startApplet( const OCC_APLT_TYPE i_isTestAplt )
                           l_status,                     //userdata1
                           0);                           //userdata2
 
-        // @wb001 -- Callout to firmware
+        // Callout to firmware
         addCalloutToErrl(l_rc,
                          ERRL_CALLOUT_TYPE_COMPONENT_ID,
                          ERRL_COMPONENT_ID_FIRMWARE,
@@ -1178,14 +1139,14 @@ void startApplet( const OCC_APLT_TYPE i_isTestAplt )
         // Get status only if call is blocking AND no error executing applet
         l_info->status = l_status;
     }
-    // @pb00B - Moved posting of semaphores outside of while loop so that
+    // Moved posting of semaphores outside of while loop so that
     // in the error paths semaphores gets posted and not blocked forever.
     // 8. post on Finished Semaphore if caller wanted us to block them
     if ( l_info->isBlocking )
     {
         l_ssxrc = ssx_semaphore_post( &l_sem->Finished );
-        
-        if ( l_ssxrc != SSX_OK )    
+
+        if ( l_ssxrc != SSX_OK )
         {
             /*
             * @errortype
@@ -1193,10 +1154,10 @@ void startApplet( const OCC_APLT_TYPE i_isTestAplt )
             * @reasoncode  SSX_GENERIC_FAILURE
             * @userdata4   ERC_FINISHED_SEM_POSTING_FAILURE
             * @devdesc     SSX semaphore related failure
-            */         
+            */
             TRAC_ERR("Error posting the Applet finished semaphore rc=[%08X]",l_ssxrc);
-            l_reasonCode = SSX_GENERIC_FAILURE;                 // @nh001c
-            l_extReasonCode = ERC_FINISHED_SEM_POSTING_FAILURE;     // @nh001a
+            l_reasonCode = SSX_GENERIC_FAILURE;
+            l_extReasonCode = ERC_FINISHED_SEM_POSTING_FAILURE;
         }
     }
     // If caller passed in semaphore post it as caller might be blocked on
@@ -1213,10 +1174,10 @@ void startApplet( const OCC_APLT_TYPE i_isTestAplt )
             * @reasoncode  SSX_GENERIC_FAILURE
             * @userdata4   ERC_CALLER_SEM_POSTING_FAILURE
             * @devdesc     SSX semaphore related failure
-            */         
+            */
             TRAC_ERR("Error posting the Applet complete semaphore rc=[%08X]",l_ssxrc);
-            l_reasonCode = SSX_GENERIC_FAILURE;             // @nh001c
-            l_extReasonCode = ERC_CALLER_SEM_POSTING_FAILURE;   // @nh001a
+            l_reasonCode = SSX_GENERIC_FAILURE;
+            l_extReasonCode = ERC_CALLER_SEM_POSTING_FAILURE;
         }
     }
 
@@ -1230,10 +1191,10 @@ void startApplet( const OCC_APLT_TYPE i_isTestAplt )
          * @reasoncode  SSX_GENERIC_FAILURE
          * @userdata4   ERC_RUNNING_SEM_POSTING_FAILURE
          * @devdesc     SSX semaphore related failure
-         */    
+         */
         TRAC_ERR("Error posting the Applet running semaphore rc=[%08X]",l_ssxrc);
-        l_reasonCode = SSX_GENERIC_FAILURE;                 // @nh001c
-        l_extReasonCode = ERC_RUNNING_SEM_POSTING_FAILURE;      // @nh001a
+        l_reasonCode = SSX_GENERIC_FAILURE;
+        l_extReasonCode = ERC_RUNNING_SEM_POSTING_FAILURE;
     }
 
     if( l_reasonCode != 0)
@@ -1242,20 +1203,20 @@ void startApplet( const OCC_APLT_TYPE i_isTestAplt )
         tracDesc_t  l_trace = NULL;
 
         l_rc = createErrl(APLT_MID_START_APPLET,        //modId
-                          l_reasonCode,                 //reasoncode    // @nh001c       
+                          l_reasonCode,                 //reasoncode
                           l_extReasonCode,              //Extended reason code
                           ERRL_SEV_UNRECOVERABLE,       //Severity
                           l_trace,                      //Trace Buf
                           DEFAULT_TRACE_SIZE,           //Trace Size
                           0,                            //userdata1
                           0);                           //userdata2
-                          
-        // @wb001 -- Callout to firmware
+
+        // Callout to firmware
         addCalloutToErrl(l_rc,
                          ERRL_CALLOUT_TYPE_COMPONENT_ID,
                          ERRL_COMPONENT_ID_FIRMWARE,
                          ERRL_CALLOUT_PRIORITY_HIGH);
-                         
+
         // Error posting semaphores so commit it.
         commitErrl(&l_rc);
     }
@@ -1266,9 +1227,7 @@ void startApplet( const OCC_APLT_TYPE i_isTestAplt )
 //
 // Name:  App_thread_routine
 //
-// Description: Applet Thread  
-//
-// Flow:  06/06/11    FN=App_thread_routine
+// Description: Applet Thread
 //
 // End Function Specification
 void App_thread_routine(void *i_arg)
@@ -1280,11 +1239,11 @@ void App_thread_routine(void *i_arg)
     OCC_APLT_TYPE l_type =  APLT_TYPE_INVALID;
     // TODO use correct trace
     tracDesc_t  l_trace = NULL;
-    
+
     if( i_arg == NULL)
     {
         TRAC_ERR("Invalid parameter");
-        /* 
+        /*
          * @errortype
          * @moduleid    APLT_MNGR_THREAD
          * @reasoncode  INTERNAL_FAILURE
@@ -1293,7 +1252,7 @@ void App_thread_routine(void *i_arg)
          * @devdesc     Internal failure in energy management
          */
         l_errl = createErrl(APLT_MNGR_THREAD,           //modId
-                            INTERNAL_FAILURE,           //reasoncode    // @nh001c
+                            INTERNAL_FAILURE,           //reasoncode
                             ERC_INVALID_INPUT_DATA,     //Extended reason code
                             ERRL_SEV_UNRECOVERABLE,     //Severity
                             l_trace,                    //Trace Buf
@@ -1301,7 +1260,7 @@ void App_thread_routine(void *i_arg)
                             l_type,                     //userdata1
                             0);                         //userdata2
 
-        // @wb001 -- Callout to firmware
+        // Callout to firmware
         addCalloutToErrl(l_errl,
                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
                         ERRL_COMPONENT_ID_FIRMWARE,
@@ -1336,7 +1295,7 @@ void App_thread_routine(void *i_arg)
             if ( l_ssxrc != SSX_OK )
             {
                 TRAC_ERR("WakeUp Semaphore Failure SsxRc[0x%08X]", -l_ssxrc );
-                
+
                 /*
                  * @errortype
                  * @moduleid    APLT_MNGR_THREAD
@@ -1347,8 +1306,8 @@ void App_thread_routine(void *i_arg)
                  * @devdesc     SSX semaphore related failure
                  */
                 l_errl = createErrl(APLT_MNGR_THREAD,               //modId
-                                    SSX_GENERIC_FAILURE,            //reasoncode    // @nh001c
-                                    ERC_WAKEUP_SEM_PENDING_FAILURE,             //Extended reason code 
+                                    SSX_GENERIC_FAILURE,            //reasoncode
+                                    ERC_WAKEUP_SEM_PENDING_FAILURE, //Extended reason code
                                     ERRL_SEV_UNRECOVERABLE,         //Severity
                                     l_trace,                        //Trace Buf
                                     DEFAULT_TRACE_SIZE,             //Trace Size
@@ -1356,7 +1315,7 @@ void App_thread_routine(void *i_arg)
                                     l_type);                        //userdata2
 
                 // commit log
-                REQUEST_RESET(l_errl);    // @gm006
+                REQUEST_RESET(l_errl);
                 break;
             }
 
@@ -1364,8 +1323,6 @@ void App_thread_routine(void *i_arg)
 
         } // end while loop
     }
-    
-    TRAC_IMP("Applet Thread Routine [%d] Ended Unexpectedly.", l_type);   // @tgh32
+
+    TRAC_IMP("Applet Thread Routine [%d] Ended Unexpectedly.", l_type);
 }
-
-
