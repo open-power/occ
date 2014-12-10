@@ -1,24 +1,33 @@
-# *****************************************************************************
-# @file pore_test_error.S
-# @brief A Quick Test Program for PORE Model
-# Delays for X (passed in) uS before halting PORE-GPE 
-# program.  Always sets an error
+# IBM_PROLOG_BEGIN_TAG
+# This is an automatically generated prolog.
+#
+# $Source: src/occ/gpe/pore_test_error.pS $
+#
+# OpenPOWER OnChipController Project
+#
+# Contributors Listed Below - COPYRIGHT 2011,2014
+# [+] Google Inc.
+# [+] International Business Machines Corp.
+#
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# permissions and limitations under the License.
+#
+# IBM_PROLOG_END_TAG
 
-# *****************************************************************************
-#
-#       @page ChangeLogs Change Logs
-#       @section pore_test_error.S PORE_TEST_ERROR.S
-#       @verbatim
-#
-#   Flag    Def/Fea    Userid    Date        Description
-#   ------- ---------- --------  ----------  ----------------------------------
-#   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
-#
-#  @endverbatim
-#
-# *****************************************************************************
-
-
+// A Test Program for PORE Modeling
+// Delays for X (passed in) uS before halting PORE-GPE
+// program.  Always sets an error.
+//
 // Input:
 //     struct {
 //         uint64_t rc;          // This should be read as 63:32=addr, 31:0=rc
@@ -30,37 +39,35 @@
 //         uint32_t pore_delay;
 //     } PoreSimpleArgs;
 //
-//
-//
 
-        //////////////////////////////////////////////////////////////////////
-        // Includes
-        //////////////////////////////////////////////////////////////////////
-        .nolist
+//////////////////////////////////////////////////////////////////////
+// Includes
+//////////////////////////////////////////////////////////////////////
+.nolist
 #include "pgp.h"
 #include "pgas.h"
-        .list
+.list
 
-        //////////////////////////////////////////////////////////////////////
-        // Define Address Space
-        //////////////////////////////////////////////////////////////////////
-        .oci
+//////////////////////////////////////////////////////////////////////
+// Define Address Space
+//////////////////////////////////////////////////////////////////////
+.oci
 
-        //////////////////////////////////////////////////////////////////////
-        // Define Symbols
-        //////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
+// Define Symbols
+//////////////////////////////////////////////////////////////////////
 #define TOD_VALUE_REG                 0x00040020
 #define SPIPSS_REGISTER_BASE          0x00020000
-#define SPIPSS_ADC_CTRL_REG0          (SPIPSS_REGISTER_BASE + 0x00) 
-#define SPIPSS_ADC_CTRL_REG1          (SPIPSS_REGISTER_BASE + 0x01) 
-#define SPIPSS_ADC_CTRL_REG2          (SPIPSS_REGISTER_BASE + 0x02) 
+#define SPIPSS_ADC_CTRL_REG0          (SPIPSS_REGISTER_BASE + 0x00)
+#define SPIPSS_ADC_CTRL_REG1          (SPIPSS_REGISTER_BASE + 0x01)
+#define SPIPSS_ADC_CTRL_REG2          (SPIPSS_REGISTER_BASE + 0x02)
 #define SPIPSS_ADC_STATUS_REG         (SPIPSS_REGISTER_BASE + 0x03)
 #define SPIPSS_ADC_COMMAND_REG        (SPIPSS_REGISTER_BASE + 0x04)
-#define SPIPSS_ADC_WDATA_REG          (SPIPSS_REGISTER_BASE + 0x10) 
-#define SPIPSS_ADC_RDATA_REG0         (SPIPSS_REGISTER_BASE + 0x20) 
-#define SPIPSS_ADC_RDATA_REG1         (SPIPSS_REGISTER_BASE + 0x21) 
-#define SPIPSS_ADC_RDATA_REG2         (SPIPSS_REGISTER_BASE + 0x22) 
-#define SPIPSS_ADC_RDATA_REG3         (SPIPSS_REGISTER_BASE + 0x23) 
+#define SPIPSS_ADC_WDATA_REG          (SPIPSS_REGISTER_BASE + 0x10)
+#define SPIPSS_ADC_RDATA_REG0         (SPIPSS_REGISTER_BASE + 0x20)
+#define SPIPSS_ADC_RDATA_REG1         (SPIPSS_REGISTER_BASE + 0x21)
+#define SPIPSS_ADC_RDATA_REG2         (SPIPSS_REGISTER_BASE + 0x22)
+#define SPIPSS_ADC_RDATA_REG3         (SPIPSS_REGISTER_BASE + 0x23)
 #define SPIPSS_P2S_CTRL_REG0          (SPIPSS_REGISTER_BASE + 0x40)
 #define SPIPSS_P2S_CTRL_REG1          (SPIPSS_REGISTER_BASE + 0x41)
 #define SPIPSS_P2S_CTRL_REG2          (SPIPSS_REGISTER_BASE + 0x42)
@@ -69,178 +76,172 @@
 #define SPIPSS_P2S_WDATA_REG          (SPIPSS_REGISTER_BASE + 0x50)
 #define SPIPSS_P2S_RDATA_REG          (SPIPSS_REGISTER_BASE + 0x60)
 
+.set GPE_PROG_ID, 100
+.set GPE_ERROR_CODE, 0xAA55AA55
+.set GPE_ERROR_RC, 0xBEEFCAFE
 
-        .set    GPE_PROG_ID, 100
-        .set    GPE_ERROR_CODE, 0xAA55AA55
-        .set    GPE_ERROR_RC, 0xBEEFCAFE
+//////////////////////////////////////////////////////////////////////
+// Define Structures
+//////////////////////////////////////////////////////////////////////
 
-        //////////////////////////////////////////////////////////////////////
-        // Define Structures
-        //////////////////////////////////////////////////////////////////////
-        
-        // Declare the offsets of the struct that will be passed to the 
-        // GPE program via the ETR register
-        //
-        // struct PoreSimpleArgs =
-        // {
-        .struct     0
+// Declare the offsets of the struct that will be passed to the
+// GPE program via the ETR register
+//
+// struct PoreSimpleArgs =
+// {
+.struct     0
 RETURN_CODE:
-        .struct RETURN_CODE + 8
+    .struct RETURN_CODE + 8
 FFDC:
-        .struct FFDC + 8
+    .struct FFDC + 8
 PORE_DELAY:
-        // };
-        
-        //////////////////////////////////////////////////////////////////////
-        // Begin Program
-        //////////////////////////////////////////////////////////////////////
+// };
 
-        .text
+//////////////////////////////////////////////////////////////////////
+// Begin Program
+//////////////////////////////////////////////////////////////////////
 
-        //--------------------------------------------------------------------
-        // Macro Specification:
-        // 
-        // Name: _saveffdc
-        //
-        // Description:  Save off RC, FFDC & Address when there is an error 
-        //               in a GPE program.
-        //               
-        //               - Copy D0 into PoreGpeErrorStruct->ffdc
-        //               - Copy D1[63:32] into PoreGpeErrorStruct->rc[63:32]
-        //               - Copy \error_code into PoreGpeErrorStruct->rc[31:0]
-        //
-        // Inputs:       \error_code - Unique GPE error code that will
-        //                             indicate the failure mode of the GPE
-        //                             program.
-        //               D0          - Set to FFDC data that will be copied to
-        //                             PoreGpeErrorStruct->ffdc
-        //               D1          - Bits[63:32] set to address that will be
-        //                             copied to PoreGpeErrorStruct->rc[63:32]
-        //               ETR         - Assumed to be set to base address of 
-        //                             passed argument structure
-        //
-        // End Macro Specification
-        //--------------------------------------------------------------------
-        .macro _saveffdc, error_code
+.text
 
-        // Make sure passed Structure Pointer is loaded into A1
-        mr      A1, ETR
-        
-        // First save off D0 into FFDC
-        std     D0, FFDC, A1  
+//--------------------------------------------------------------------
+// Macro Specification:
+//
+// Name: _saveffdc
+//
+// Description:  Save off RC, FFDC & Address when there is an error
+//               in a GPE program.
+//
+//               - Copy D0 into PoreGpeErrorStruct->ffdc
+//               - Copy D1[63:32] into PoreGpeErrorStruct->rc[63:32]
+//               - Copy \error_code into PoreGpeErrorStruct->rc[31:0]
+//
+// Inputs:       \error_code - Unique GPE error code that will
+//                             indicate the failure mode of the GPE
+//                             program.
+//               D0          - Set to FFDC data that will be copied to
+//                             PoreGpeErrorStruct->ffdc
+//               D1          - Bits[63:32] set to address that will be
+//                             copied to PoreGpeErrorStruct->rc[63:32]
+//               ETR         - Assumed to be set to base address of
+//                             passed argument structure
+//
+// End Macro Specification
+//--------------------------------------------------------------------
+.macro _saveffdc, error_code
 
-        // Then save off SPRG0 into the lower 32 bits of D0
-        // TODO:  SPRG0 doesn't work in Simics....switching to D1 for now
-        mr      D0, D1
+    // Make sure passed Structure Pointer is loaded into A1
+    mr      A1, ETR
 
-        // Save off the address of the start of the GPE program into the 
-        // upper 32 bits of D0
-        li      D1, \error_code
-        sldi    D1, D1, 32
-        or      D0, D0, D1
+    // First save off D0 into FFDC
+    std     D0, FFDC, A1
 
-        // Save register off into code_addr 
-        std     D0, RETURN_CODE, A1
+    // Then save off SPRG0 into the lower 32 bits of D0
+    // TODO:  SPRG0 doesn't work in Simics....switching to D1 for now
+    mr      D0, D1
 
-        .endm
+    // Save off the address of the start of the GPE program into the
+    // upper 32 bits of D0
+    li      D1, \error_code
+    sldi    D1, D1, 32
+    or      D0, D0, D1
 
+    // Save register off into code_addr
+    std     D0, RETURN_CODE, A1
 
-        //--------------------------------------------------------------------
-        // Macro Specification:
-        // 
-        // Name: _getscom
-        // 
-        // Description:  Get a SCOM based on passed in Address, put it in D0
-        //
-        // Inputs:       SCOM Address
-        //
-        // Outputs:      D0 - Result of SCOM
-        //
-        // End Macro Specification
-        //--------------------------------------------------------------------
-	.macro _getscom, address
-
-	lpcs	P0, \address
-        ld      D0, \address, P0
-
-	.endm
-
-        //--------------------------------------------------------------------
-        // Macro Specification:
-        // 
-        // Name: _putscom
-        // 
-        // Description:  Get a SCOM based on passed in Address, put it in D0
-        //
-        // Inputs:       SCOM Address, Data
-        //
-        // Outputs:      None
-        //
-        // End Macro Specification
-        //--------------------------------------------------------------------
-	.macro _putscom, address, data
-
-	lpcs	P0, \address
-        li      D0, \data
-        std     D0, \address, P0
-
-	.endm
+.endm
 
 
-        //--------------------------------------------------------------------
-        // PORE-GPE Routine Specification:
-        //
-        // Name: pore_test_error
-        // 
-        // Description:  Delays for X (passed in) uS before halting PORE-GPE
-        //               routine.  Always sets the ffdc to indicate an error
-        //               with a RC of 0xDEADBEEF
-        //
-        // Inputs:       PoreSimpleArgs - FFDC & uS to delay.
-        //
-        // Outputs:      None (except FFDC on failure)
-        //
-        // End PORE-GPE Routine Specification
-        //--------------------------------------------------------------------
-        .global pore_test_error
+//--------------------------------------------------------------------
+// Macro Specification:
+//
+// Name: _getscom
+//
+// Description:  Get a SCOM based on passed in Address, put it in D0
+//
+// Inputs:       SCOM Address
+//
+// Outputs:      D0 - Result of SCOM
+//
+// End Macro Specification
+//--------------------------------------------------------------------
+.macro _getscom, address
+
+    lpcs    P0, \address
+    ld      D0, \address, P0
+
+.endm
+
+
+//--------------------------------------------------------------------
+// Macro Specification:
+//
+// Name: _putscom
+//
+// Description:  Get a SCOM based on passed in Address, put it in D0
+//
+// Inputs:       SCOM Address, Data
+//
+// Outputs:      None
+//
+// End Macro Specification
+//--------------------------------------------------------------------
+.macro _putscom, address, data
+
+    lpcs    P0, \address
+    li      D0, \data
+    std     D0, \address, P0
+
+.endm
+
+
+//--------------------------------------------------------------------
+// PORE-GPE Routine Specification:
+//
+// Name: pore_test_error
+//
+// Description:  Delays for X (passed in) uS before halting PORE-GPE
+//               routine.  Always sets the ffdc to indicate an error
+//               with a RC of 0xDEADBEEF
+//
+// Inputs:       PoreSimpleArgs - FFDC & uS to delay.
+//
+// Outputs:      None (except FFDC on failure)
+//
+// End PORE-GPE Routine Specification
+//--------------------------------------------------------------------
+.global pore_test_error
 pore_test_error:
-        // Copy passed Structure Pointer into A1
-        mr      A1, ETR
+    // Copy passed Structure Pointer into A1
+    mr      A1, ETR
 
-        // Read pore_delay parameter into D0 
-        ld      D0, PORE_DELAY, A1
-        
-        // Shift Right so that we only use the upper 32 bits
-        // (not passed in as 64 bit value)
-        srdi    D0, D0, 32
-        
-        // Copy pore_delay into CTR so that we can loop
-        mr      CTR, D0
+    // Read pore_delay parameter into D0
+    ld      D0, PORE_DELAY, A1
 
-        // Set D0 to a value for some fake operation we are testing out
-        li      D0, GPE_ERROR_CODE
-        li      D1, GPE_ERROR_CODE
+    // Shift Right so that we only use the upper 32 bits
+    // (not passed in as 64 bit value)
+    srdi    D0, D0, 32
 
-        trap
+    // Copy pore_delay into CTR so that we can loop
+    mr      CTR, D0
+
+    // Set D0 to a value for some fake operation we are testing out
+    li      D0, GPE_ERROR_CODE
+    li      D1, GPE_ERROR_CODE
+
+    trap
 delay_loop:
-        waits    600
-        nop
-        loop    delay_loop
-        trap
+    waits    600
+    nop
+    loop    delay_loop
+    trap
 
-        //bra     done
 error:
-        _getscom TOD_VALUE_REG
-
-        _saveffdc 0xDEADBEEF
+    _getscom TOD_VALUE_REG
+    _saveffdc 0xDEADBEEF
 
 done:
-        
+    halt
 
-
-        halt				// End of pore_test
-
-        //////////////////////////////////////////////////////////////////////
-        // End of Program
-        //////////////////////////////////////////////////////////////////////
-
+//////////////////////////////////////////////////////////////////////
+// End of Program
+//////////////////////////////////////////////////////////////////////

@@ -1,74 +1,84 @@
-# *****************************************************************************
-# @file pore_test.S
-# @brief A Quick Test Program for PORE Model
-# Delays for X (passed in) uS before halting PORE-GPE 
-# program.  
+# IBM_PROLOG_BEGIN_TAG
+# This is an automatically generated prolog.
+#
+# $Source: src/occ/gpe/pore_test.pS $
+#
+# OpenPOWER OnChipController Project
+#
+# Contributors Listed Below - COPYRIGHT 2011,2014
+# [+] Google Inc.
+# [+] International Business Machines Corp.
+#
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# permissions and limitations under the License.
+#
+# IBM_PROLOG_END_TAG
 
-# *****************************************************************************
-#
-#       @page ChangeLogs Change Logs
-#       @section pore_test.S PORE_TEST.S
-#       @verbatim
-#
-#   Flag    Def/Fea    Userid    Date        Description
-#   ------- ---------- --------  ----------  ----------------------------------
-#   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
-#
-#  @endverbatim
-#
-# *****************************************************************************
+// Test Program for PORE Model
+// Delays for X (passed in) uS before halting PORE-GPE program.
 
-
-        .nolist
+.nolist
 #include "pgp.h"
 #include "pgas.h"
-        .list
+.list
 
-        .oci
+.oci
 
 // Parameter offsets
 
-	.data
+.data
 
-	.global jmptable
-	.align 	3
-jmptable:				// Error Handlers are replaced with Halts
-	.quad 	0x0200000000000000	// Halt on Error 0
-	.quad	0x0000000002000000	// Halt on Error 1
-	.quad	0x0000000000000000
-	.quad	0x0200000000000000	// Halt on error 2
-	.quad	0x0000000002000000	// Halt on error 3
-	.quad	0x0000000000000000	
-	.quad	0x0200000000000000	// Halt on Error 4
-	.quad	0x0000000002000000	// Halt on error 5
-	.quad	0x0000000000000000	
-	.quad	0x0200000000000000	// Halt on Error 6
-	.quad	0x0000000002000000	// Halt on error 7
-	.quad	0x0000000000000000	
-	.quad	0xA200000000003fff	// BRAI pore_test
-	.quad	0xc146000000000000	// second word is not used
-	
-	.global	scratchspace
-	.align	3
+.global jmptable
+.align     3
+jmptable:   // Error Handlers are replaced with Halts
+    .quad   0x0200000000000000    // Halt on Error 0
+    .quad   0x0000000002000000    // Halt on Error 1
+    .quad   0x0000000000000000
+    .quad   0x0200000000000000    // Halt on error 2
+    .quad   0x0000000002000000    // Halt on error 3
+    .quad   0x0000000000000000
+    .quad   0x0200000000000000    // Halt on Error 4
+    .quad   0x0000000002000000    // Halt on error 5
+    .quad   0x0000000000000000
+    .quad   0x0200000000000000    // Halt on Error 6
+    .quad   0x0000000002000000    // Halt on error 7
+    .quad   0x0000000000000000
+    .quad   0xA200000000003fff    // BRAI pore_test
+    .quad   0xc146000000000000    // second word is not used
+
+    .global scratchspace
+    .align  3
 scratchspace:
-	.quad 	0x0000000000000010	// Data scratch space
-	.quad	0x0000000000000020
-	.quad	0x0000000000000030
-	.quad	0x0000000000000040
-        
-        .text
+    .quad   0x0000000000000010    // Data scratch space
+    .quad   0x0000000000000020
+    .quad   0x0000000000000030
+    .quad   0x0000000000000040
 
-        .global pore_test
+.text
+
+.global pore_test
+
 pore_test:
 
-        // Read parameter into CTR 
-        mr      CTR, ETR
+    // Read parameter into CTR
+    mr      CTR, ETR
 delay_loop:
-        waits    600
-        nop
-        loop    delay_loop
+    waits    600
+    nop
+    loop    delay_loop
 done:
-        halt				// End of main
+    halt
 
-//        .epilogue       pore_test
-
+//////////////////////////////////////////////////////////////////////
+// End of Program
+//////////////////////////////////////////////////////////////////////

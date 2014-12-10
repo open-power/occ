@@ -1,143 +1,130 @@
-# *****************************************************************************
-# @file apss_meas_read_complete.S
-# @brief Finish reading power measurements from APSS
+# IBM_PROLOG_BEGIN_TAG
+# This is an automatically generated prolog.
 #
+# $Source: src/occ/gpe/apss_meas_read_complete.pS $
+#
+# OpenPOWER OnChipController Project
+#
+# Contributors Listed Below - COPYRIGHT 2011,2014
+# [+] Google Inc.
+# [+] International Business Machines Corp.
+#
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# permissions and limitations under the License.
+#
+# IBM_PROLOG_END_TAG
 
-# *****************************************************************************
-#
-#       @page ChangeLogs Change Logs
-#       @section apss_meas_read_complete.S APSS_MEAS_READ_COMPLETE.S
-#       @verbatim
-#
-#   Flag    Def/Fea    Userid    Date        Description
-#   ------- ---------- --------  ----------  ----------------------------------
-#   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
-#   @at023  910877     alvinwan  01/09/2014  Excessive fan increase requests error for mfg
-#   @gm026  916029     milesg    02/17/2014  revert back to auto2 mode without reading GPIO's
-#
-#  @endverbatim
-#
-# *****************************************************************************
-
-
-        //////////////////////////////////////////////////////////////////////
-        // Includes
-        //////////////////////////////////////////////////////////////////////
-        .nolist
+//////////////////////////////////////////////////////////////////////
+// Includes
+//////////////////////////////////////////////////////////////////////
+.nolist
 #include "pgp.h"
 #include "pgas.h"
-        .list
+.list
 
-        //////////////////////////////////////////////////////////////////////
-        // Define Address Space
-        //////////////////////////////////////////////////////////////////////
-        .oci
+//////////////////////////////////////////////////////////////////////
+// Define Address Space
+//////////////////////////////////////////////////////////////////////
+.oci
 
-        //////////////////////////////////////////////////////////////////////
-        // Define Symbols
-        //////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
+// Define Symbols
+//////////////////////////////////////////////////////////////////////
 
 #include <pss_constants.h>
 
 #define GPE_PROG_ID 0x0006
 
-        //////////////////////////////////////////////////////////////////////
-        // Define Structures
-        //////////////////////////////////////////////////////////////////////
-        
-        // Declare the offsets of the struct that will be passed to the 
-        // GPE program via the ETR register
-        //
-        // struct G_gpe_apss_continue_pwr_meas_read_args =
-        // {
-        .struct     0
+//////////////////////////////////////////////////////////////////////
+// Define Structures
+//////////////////////////////////////////////////////////////////////
+
+// Declare the offsets of the struct that will be passed to the
+// GPE program via the ETR register
+//
+// struct G_gpe_apss_continue_pwr_meas_read_args =
+// {
+.struct     0
 ERROR_RC:
-        .struct ERROR_RC + 8
+    .struct ERROR_RC + 8
 ERROR_FFDC:
-        .struct ERROR_FFDC + 8
+    .struct ERROR_FFDC + 8
 MEASUREMENTS:
-        .struct MEASUREMENTS + 24
+    .struct MEASUREMENTS + 24
 MEASUREMENTS_TOD:
-        // };
-        
+// };
 
-        //////////////////////////////////////////////////////////////////////
-        // Begin Program
-        //////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
+// Begin Program
+//////////////////////////////////////////////////////////////////////
 
-        .text
+.text
 
 #include <gpe_macros.h>
 #include <pss_macros.h>
 
-      //--------------------------------------------------------------------
-      // PORE-GPE Routine Specification:
-      //
-      // Name: GPE_apss_complete_pwr_meas_read
-      //
-      // Description:  Kick of the power measurement from APSS
-      //
-      // Inputs:       G_gpe_complete_pwr_meas_read_args
-      //     struct {
-      //         PoreGpeErrorStruct error;
-      //         ApssPwrMeas_t meas;
-      //         uint64_t meas_data[4]; // G_apss_pwr_meas (2nd block of data) (output from APSS)
-      //     } G_gpe_complete_pwr_meas_read_args
-      //     struct {
-      //         uint64_t rc;          // This should be read as 63:32=addr, 31:0=rc
-      //         uint64_t ffdc;        // Whatever GPE program puts in for FFDC data
-      //     } PoreGpeErrorStruct;
-      //
-      // Outputs:      ApssPwrMeas (measurement data)
-      //               GPE_complete_pwr_meas_read (error on failure)
-      //
-      // Flow:  7/20/11    FN=GPE_apss_complete_pwr_meas_read
-      //
-      // References: APSS FUnctional Specification v0.7.18
-      //             GPE_apss_access_scoms.odt (summary of regisers/data)
-      //
-      // End PORE-GPE Routine Specification
-      //--------------------------------------------------------------------
-      .global GPE_apss_complete_pwr_meas_read
+//--------------------------------------------------------------------
+// PORE-GPE Routine Specification:
+//
+// Name: GPE_apss_complete_pwr_meas_read
+//
+// Description:  Complete a read of the power measurement from APSS
+//
+// Inputs:       G_gpe_complete_pwr_meas_read_args
+//     struct {
+//         PoreGpeErrorStruct error;
+//         ApssPwrMeas_t meas;
+//         uint64_t meas_data[4]; // G_apss_pwr_meas (2nd block of data) (output from APSS)
+//     } G_gpe_complete_pwr_meas_read_args
+//     struct {
+//         uint64_t rc;          // This should be read as 63:32=addr, 31:0=rc
+//         uint64_t ffdc;        // Whatever GPE program puts in for FFDC data
+//     } PoreGpeErrorStruct;
+//
+// Outputs:      ApssPwrMeas (measurement data)
+//               GPE_complete_pwr_meas_read (error on failure)
+//
+// End PORE-GPE Routine Specification
+//--------------------------------------------------------------------
+.global GPE_apss_complete_pwr_meas_read
 GPE_apss_complete_pwr_meas_read:
 
-        // Copy passed Structure Pointer into A1
-        mr      A1, ETR
+    // Copy passed Structure Pointer into A1
+    mr      A1, ETR
 
-        // Wait for up to 5us for spi op complete, else branch to error_timeout
-        _wait_for_adc_ops_complete 100, error_timeout
+    // Wait for up to 5us for spi op complete, else branch to error_timeout
+    _wait_for_adc_ops_complete 100, error_timeout
 
-        // Read/save last 32 bytes of data and Time of Day
-        //_getscom SPIPSS_ADC_RDATA_REG0
-        //std D0, MEASUREMENTS, A1 //gm026
+    // Read/save Time of Day
+    _getscom TOD_VALUE_REG
+    std D0, MEASUREMENTS_TOD, A1
 
-        //_getscom SPIPSS_ADC_RDATA_REG1
-        //std D0, (MEASUREMENTS + 8), A1 //gm026
-        
-        // REG2,3 not needed (all measurements fit in above data)
-
-        _getscom TOD_VALUE_REG
-        std D0, MEASUREMENTS_TOD, A1
-
-        halt    // End of GPE_apss_complete_pwr_meas_read
+    halt
 
 
 error_statusreg:
-        // An error/reserved bit was set when reading adc status register...
-        // D0: ADC_STATUS_REG
-        _saveffdc GPE_PROG_ID, 0x0002
-        halt
+    // An error/reserved bit was set when reading adc status register...
+    // D0: ADC_STATUS_REG
+    _saveffdc GPE_PROG_ID, 0x0002
+    halt
 
 
 error_timeout:
-        // adc_ongoing bit was never cleared after several retries...
-        // D0: ADC_STATUS_REG
-        _saveffdc GPE_PROG_ID, 0x0001
-        halt
+    // adc_ongoing bit was never cleared after several retries...
+    // D0: ADC_STATUS_REG
+    _saveffdc GPE_PROG_ID, 0x0001
+    halt
 
-
-        //////////////////////////////////////////////////////////////////////
-        // End of Program
-        //////////////////////////////////////////////////////////////////////
-
-
+//////////////////////////////////////////////////////////////////////
+// End of Program
+//////////////////////////////////////////////////////////////////////

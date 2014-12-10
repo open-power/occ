@@ -1,144 +1,135 @@
-# *****************************************************************************
-# @file apss_meas_read_start.S
-# @brief Kick of the reading of power measurement from APSS
+# IBM_PROLOG_BEGIN_TAG
+# This is an automatically generated prolog.
 #
+# $Source: src/occ/gpe/apss_meas_read_start.pS $
+#
+# OpenPOWER OnChipController Project
+#
+# Contributors Listed Below - COPYRIGHT 2011,2014
+# [+] Google Inc.
+# [+] International Business Machines Corp.
+#
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# permissions and limitations under the License.
+#
+# IBM_PROLOG_END_TAG
 
-# *****************************************************************************
-#
-#       @page ChangeLogs Change Logs
-#       @section apss_meas_read_start.S APSS_MEAS_READ_START.S
-#       @verbatim
-#
-#   Flag    Def/Fea    Userid    Date        Description
-#   ------- ---------- --------  ----------  ----------------------------------
-#   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
-#   @gm038  926761     milesg    05/16/2014  slowed SPI bus down from 12MHz to 10MHz on venice (8MHz on murano)
-#   @gs039  936836     gjsilva   08/28/2014  slowed SPI bus down from 10MHz to 8MHz on venice (~6MHz on murano)
-#
-#  @endverbatim
-#
-# *****************************************************************************
-
-
-        //////////////////////////////////////////////////////////////////////
-        // Includes
-        //////////////////////////////////////////////////////////////////////
-        .nolist
+//////////////////////////////////////////////////////////////////////
+// Includes
+//////////////////////////////////////////////////////////////////////
+.nolist
 #include "pgp.h"
 #include "pgas.h"
-        .list
+.list
 
-        //////////////////////////////////////////////////////////////////////
-        // Define Address Space
-        //////////////////////////////////////////////////////////////////////
-        .oci
+//////////////////////////////////////////////////////////////////////
+// Define Address Space
+//////////////////////////////////////////////////////////////////////
+.oci
 
-        //////////////////////////////////////////////////////////////////////
-        // Define Symbols
-        //////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
+// Define Symbols
+//////////////////////////////////////////////////////////////////////
 
 #include <pss_constants.h>
 
 #define GPE_PROG_ID 0x0004
 
-        //////////////////////////////////////////////////////////////////////
-        // Define Structures
-        //////////////////////////////////////////////////////////////////////
-        
-        // Declare the offsets of the struct that will be passed to the 
-        // GPE program via the ETR register
-        //
-        // struct G_gpe_apss_start_pwr_meas_read_args =
-        // {
-        .struct     0
+//////////////////////////////////////////////////////////////////////
+// Define Structures
+//////////////////////////////////////////////////////////////////////
+
+// Declare the offsets of the struct that will be passed to the
+// GPE program via the ETR register
+//
+// struct G_gpe_apss_start_pwr_meas_read_args =
+// {
+.struct     0
 ERROR_RC:
-          .struct ERROR_RC + 8
+    .struct ERROR_RC + 8
 ERROR_FFDC:
-          .struct ERROR_FFDC + 8
-        // };
-        
+    .struct ERROR_FFDC + 8
+// };
 
-        //////////////////////////////////////////////////////////////////////
-        // Begin Program
-        //////////////////////////////////////////////////////////////////////
 
-        .text
+//////////////////////////////////////////////////////////////////////
+// Begin Program
+//////////////////////////////////////////////////////////////////////
+
+.text
 
 #include <gpe_macros.h>
 #include <pss_macros.h>
 
-      //--------------------------------------------------------------------
-      // PORE-GPE Routine Specification:
-      //
-      // Name: GPE_apss_start_pwr_meas_read
-      //
-      // Description:  Kick of the power measurement from APSS
-      //
-      // Inputs:       G_gpe_apss_start_pwr_meas_read_args
-      //     struct {
-      //         PoreGpeErrorStruct error;
-      //     } G_gpe_apss_start_pwr_meas_read_args
-      //     struct {
-      //         uint64_t rc;          // This should be read as 63:32=addr, 31:0=rc
-      //         uint64_t ffdc;        // Whatever GPE program puts in for FFDC data
-      //     } PoreGpeErrorStruct;
-      //
-      // Outputs:      GPE_start_pwr_meas_read (error on failure)
-      //
-      // Flow:  7/20/11    FN=GPE_apss_start_pwr_meas_read
-      //
-      // References: APSS FUnctional Specification v0.7.18
-      //             GPE_apss_access_scoms.odt (summary of regisers/data)
-      //
-      // End PORE-GPE Routine Specification
-      //--------------------------------------------------------------------
-      .global GPE_apss_start_pwr_meas_read
+//--------------------------------------------------------------------
+// PORE-GPE Routine Specification:
+//
+// Name: GPE_apss_start_pwr_meas_read
+//
+// Description:  Start a read of the power measurement from APSS
+//
+// Inputs:       G_gpe_apss_start_pwr_meas_read_args
+//     struct {
+//         PoreGpeErrorStruct error;
+//     } G_gpe_apss_start_pwr_meas_read_args
+//     struct {
+//         uint64_t rc;          // This should be read as 63:32=addr, 31:0=rc
+//         uint64_t ffdc;        // Whatever GPE program puts in for FFDC data
+//     } PoreGpeErrorStruct;
+//
+// Outputs:      GPE_start_pwr_meas_read (error on failure)
+//
+// End PORE-GPE Routine Specification
+//--------------------------------------------------------------------
+.global GPE_apss_start_pwr_meas_read
 GPE_apss_start_pwr_meas_read:
 
-        // Copy passed Structure Pointer into A1
-        mr      A1, ETR
+    // Copy passed Structure Pointer into A1
+    mr      A1, ETR
 
-        // Wait for up to 5us for spi op complete, else branch to error_timeout
-        _wait_for_adc_ops_complete 5, error_timeout
+    // Wait for up to 5us for spi op complete, else branch to error_timeout
+    _wait_for_adc_ops_complete 5, error_timeout
 
-        // Setup control regs
-        // frame_size=16, out_count=16, in_count=16
-        ////_putscom SPIPSS_ADC_CTRL_REG0, 0x4100100000000000
-        _putscom SPIPSS_ADC_CTRL_REG0, 0x4000100000000000     // Verified
-        // ADC FSM, clock_divider=7, frames=16
-        ////_putscom SPIPSS_ADC_CTRL_REG1, 0x801FC00000000000
-        ////_putscom SPIPSS_ADC_CTRL_REG1, 0x8063c00000000000     // Verified
-        //_putscom SPIPSS_ADC_CTRL_REG1, 0x8077c00000000000     //gm038
-        _putscom SPIPSS_ADC_CTRL_REG1, 0x8093c00000000000  //@gs039
-        // ADC interframe delay (5usec)
-        ////_putscom SPIPSS_ADC_CTRL_REG2, 0x0019000000000000
-        _putscom SPIPSS_ADC_CTRL_REG2, 0x0019000000000000     // Verified
+    // Setup control regs
+    // frame_size=16, out_count=16, in_count=16
+    _putscom SPIPSS_ADC_CTRL_REG0, 0x4000100000000000
+    // ADC FSM, clock_divider=7, frames=16
+    _putscom SPIPSS_ADC_CTRL_REG1, 0x8093c00000000000
+    // ADC interframe delay (5usec)
+    _putscom SPIPSS_ADC_CTRL_REG2, 0x0019000000000000
 
-        // APSS command to continue previous command
-        _putscom SPIPSS_ADC_WDATA_REG, 0x0000000000000000     // Verified
+    // APSS command to continue previous command
+    _putscom SPIPSS_ADC_WDATA_REG, 0x0000000000000000
 
-        // Start SPI transaction
-        _putscom SPIPSS_ADC_COMMAND_REG, 0x8000000000000000     // Verified
+    // Start SPI transaction
+    _putscom SPIPSS_ADC_COMMAND_REG, 0x8000000000000000
 
-        halt        // End of GPE_apss_initialize_gpio
+    halt
 
 
 error_statusreg:
-        // An error/reserved bit was set when reading adc status register...
-        // D0: ADC_STATUS_REG
-        _saveffdc GPE_PROG_ID, 0x0002
-        halt
+    // An error/reserved bit was set when reading adc status register...
+    // D0: ADC_STATUS_REG
+    _saveffdc GPE_PROG_ID, 0x0002
+    halt
 
 
 error_timeout:
-        // adc_ongoing bit was never cleared after several retries...
-        // D0: ADC_STATUS_REG
-        _saveffdc GPE_PROG_ID, 0x0001
-        halt
+    // adc_ongoing bit was never cleared after several retries...
+    // D0: ADC_STATUS_REG
+    _saveffdc GPE_PROG_ID, 0x0001
+    halt
 
-
-        //////////////////////////////////////////////////////////////////////
-        // End of Program
-        //////////////////////////////////////////////////////////////////////
-
-
+//////////////////////////////////////////////////////////////////////
+// End of Program
+//////////////////////////////////////////////////////////////////////

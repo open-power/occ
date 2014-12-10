@@ -1,41 +1,61 @@
-// $Id$
+# IBM_PROLOG_BEGIN_TAG
+# This is an automatically generated prolog.
+#
+# $Source: src/occ/gpe/pore_nop.pS $
+#
+# OpenPOWER OnChipController Project
+#
+# Contributors Listed Below - COPYRIGHT 2011,2014
+# [+] Google Inc.
+# [+] International Business Machines Corp.
+#
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# permissions and limitations under the License.
+#
+# IBM_PROLOG_END_TAG
 
-/// \file pore_nop.S
-/// \brief A Quick NOP Program for PORE Model Timing
-///
-/// Used to generate the worst case timings for the AMEC 
-/// sensors.
+// A No-Op Program for PORE Model Timing
+//
+// Used to generate the worst case timings for the AMEC
+// sensors.
 
-        .nolist
+.nolist
 #include "pgp.h"
 #include "pgas.h"
-        .list
+.list
 
-        .oci
+.oci
 
-	.data
-        
-        .text
+.data
 
-        .global GPE_pore_nop
-        
-        /// Run a nop instruction and then halt GPE 
+.text
+
+.global GPE_pore_nop
+
+/// Run a nop instruction and then halt GPE
 GPE_pore_nop:
-        nop
+    nop
 
-        /// -----------------------------------------------------
-        /// Only compile this in to test delaying PORE-GPE engine
-        .ifdef DELAY_PORE_NOP
-        li CTR, 120
+    // Only compile this in to test delaying PORE-GPE engine
+    .ifdef DELAY_PORE_NOP
+    li CTR, 120
 delay_loop:
-        waits    600
-        nop
-        loop    delay_loop
+    waits    600
+    nop
+    loop    delay_loop
 done:
-        .endif
-        /// -----------------------------------------------------
+    .endif
 
-        halt	
+    halt
 
-        .epilogue       GPE_pore_nop
-
+.epilogue GPE_pore_nop
