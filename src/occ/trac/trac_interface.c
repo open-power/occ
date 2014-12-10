@@ -961,7 +961,6 @@ UINT TRAC_get_buffer_partial(const tracDesc_t i_td_ptr,
 
             if(l_head->next_free > *io_size)
             {
-                // remove duplicate case
                 l_part_size = *io_size - l_head->hdr_len;
 
                 memcpy((UCHAR *)io_data+l_head->hdr_len,
