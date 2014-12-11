@@ -1,0 +1,155 @@
+# IBM_PROLOG_BEGIN_TAG
+# This is an automatically generated prolog.
+#
+# $Source: src/occ/gpe/apss_composite.pS $
+#
+# OpenPOWER OnChipController Project
+#
+# Contributors Listed Below - COPYRIGHT 2011,2014
+# [+] Google Inc.
+# [+] International Business Machines Corp.
+#
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# permissions and limitations under the License.
+#
+# IBM_PROLOG_END_TAG
+
+//////////////////////////////////////////////////////////////////////
+// Includes
+//////////////////////////////////////////////////////////////////////
+.nolist
+#include "pgp.h"
+#include "pgas.h"
+.list
+
+//////////////////////////////////////////////////////////////////////
+// Define Address Space
+//////////////////////////////////////////////////////////////////////
+.oci
+
+//////////////////////////////////////////////////////////////////////
+// Define Symbols
+//////////////////////////////////////////////////////////////////////
+
+#include <pss_constants.h>
+
+#define GPE_PROG_ID 0x0003
+
+//////////////////////////////////////////////////////////////////////
+// Define Structures
+//////////////////////////////////////////////////////////////////////
+
+// Declare the offsets of the struct that will be passed to the
+// GPE program via the ETR register
+//
+// struct G_gpe_apss_read_altitude_args =
+// {
+.struct     0
+ERROR_RC:
+    .struct ERROR_RC + 8
+ERROR_FFDC:
+    .struct ERROR_FFDC + 8
+CONFIG:
+// };
+
+
+//////////////////////////////////////////////////////////////////////
+// Begin Program
+//////////////////////////////////////////////////////////////////////
+
+.text
+
+#include <gpe_macros.h>
+#include <pss_macros.h>
+
+//--------------------------------------------------------------------
+// PORE-GPE Routine Specification:
+//
+// Name: GPE_apss_set_composite_mode
+//
+// Description:  Set APSS into composite mode so OCC can read ADC, Temp & GPIO data
+//
+// Inputs:       G_gpe_apss_set_composite_mode_args
+//     struct {
+//         PoreGpeErrorStruct error;
+//         apssCompositeConfigStruct_t config; // G_apss_composite_config (input to APSS)
+//     } G_gpe_apss_set_composite_mode_args;
+//     struct {
+//         uint64_t rc;          // This should be read as 63:32=addr, 31:0=rc
+//         uint64_t ffdc;        // Whatever GPE program puts in for FFDC data
+//     } PoreGpeErrorStruct;
+//     struct {
+//         uint8_t numAdcChannelsToRead;
+//         uint8_t numGpioPortsToRead;
+//     } apssCompositeConfigStruct
+//
+// Outputs:      None (except FFDC on failure)
+//
+// End PORE-GPE Routine Specification
+//--------------------------------------------------------------------
+.global GPE_apss_set_composite_mode
+GPE_apss_set_composite_mode:
+
+    // Copy passed Structure Pointer into A1
+    mr      A1, ETR
+
+    // Wait for SPI operations to be complete (10usec timeout)
+    _wait_for_spi_ops_complete 10, error_timeout
+
+    // Setup control regs
+    // frame size=16, out_count1=16, in_delay1=never, in_count2=16
+    _putscom SPIPSS_P2S_CTRL_REG0, 0x4100000000000000
+    // bridge_enable, clock_divider=7, 1 frame
+    _putscom SPIPSS_P2S_CTRL_REG1, 0x8090000000000000
+    // inter_frame_delay=25 (2.5usec)
+    _putscom SPIPSS_P2S_CTRL_REG2, 0x0019000000000000
+
+    // APSS command to set composite data streaming mode (APSS cmd 0x8xxx, reserved bits are 1)
+    li   D0, 0x8C00000000000000
+    // last ADC channel address (0 = 1 ADC, etc)
+    ldandi D1, CONFIG, A1, 0x1F00000000000000
+    srdi D1, D1, 56
+    subs D1, D1, 1
+    sldi D1, D1, 54
+    or   D0, D0, D1
+    // number of GPIO ports to return (0 = 0 GPIOs, etc...)
+    ldandi D1, CONFIG, A1, 0x0003000000000000
+    or   D0, D0, D1
+    // use auto2 mode (more reliable than composite mode)
+    _putscom SPIPSS_P2S_WDATA_REG, 0x3FC0000000000000
+
+    // Start SPI transaction
+    _putscom SPIPSS_P2S_COMMAND_REG, 0x8000000000000000
+
+    // Wait 20usec for apss becoming ready to send out the frame of composite mode
+    waits (20 * MICROSECONDS)
+
+    halt
+
+
+error_statusreg:
+    // An error/reserved bit was set when reading p2s status register...
+    // D0: P2S_STATUS_REG
+    _saveffdc GPE_PROG_ID, 0x0002
+    halt
+
+
+error_timeout:
+    // p2s_ongoing bit was never cleared after several retries...
+    // D0: P2S_STATUS_REG
+    _saveffdc GPE_PROG_ID, 0x0001
+    halt
+
+//////////////////////////////////////////////////////////////////////
+// End of Program
+//////////////////////////////////////////////////////////////////////

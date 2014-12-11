@@ -1,0 +1,437 @@
+# IBM_PROLOG_BEGIN_TAG
+# This is an automatically generated prolog.
+#
+# $Source: src/occ/gpe/pore_test_pss.pS $
+#
+# OpenPOWER OnChipController Project
+#
+# Contributors Listed Below - COPYRIGHT 2011,2014
+# [+] Google Inc.
+# [+] International Business Machines Corp.
+#
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# permissions and limitations under the License.
+#
+# IBM_PROLOG_END_TAG
+
+// Input:
+//     struct {
+//         uint64_t rc;          // This should be read as 63:32=addr, 31:0=rc
+//         uint64_t ffdc;        // Whatever GPE program puts in for FFDC data
+//     } PoreGpeErrorStruct;
+//
+//     struct {
+//         PoreGpeErrorStruct error;
+//         uint64_t adc[4];
+//         uint64_t tod;
+//     } PoreSimpleArgs;
+//
+
+//////////////////////////////////////////////////////////////////////
+// Includes
+//////////////////////////////////////////////////////////////////////
+.nolist
+#include "pgp.h"
+#include "pgas.h"
+.list
+
+//////////////////////////////////////////////////////////////////////
+// Define Address Space
+//////////////////////////////////////////////////////////////////////
+.oci
+
+//////////////////////////////////////////////////////////////////////
+// Define Symbols
+//////////////////////////////////////////////////////////////////////
+#define TOD_VALUE_REG                 0x00040020
+#define SPIPSS_REGISTER_BASE          0x00020000
+#define SPIPSS_ADC_CTRL_REG0          (SPIPSS_REGISTER_BASE + 0x00)
+#define SPIPSS_ADC_CTRL_REG1          (SPIPSS_REGISTER_BASE + 0x01)
+#define SPIPSS_ADC_CTRL_REG2          (SPIPSS_REGISTER_BASE + 0x02)
+#define SPIPSS_ADC_STATUS_REG         (SPIPSS_REGISTER_BASE + 0x03)
+#define SPIPSS_ADC_COMMAND_REG        (SPIPSS_REGISTER_BASE + 0x04)
+#define SPIPSS_ADC_WDATA_REG          (SPIPSS_REGISTER_BASE + 0x10)
+#define SPIPSS_ADC_RDATA_REG0         (SPIPSS_REGISTER_BASE + 0x20)
+#define SPIPSS_ADC_RDATA_REG1         (SPIPSS_REGISTER_BASE + 0x21)
+#define SPIPSS_ADC_RDATA_REG2         (SPIPSS_REGISTER_BASE + 0x22)
+#define SPIPSS_ADC_RDATA_REG3         (SPIPSS_REGISTER_BASE + 0x23)
+#define SPIPSS_P2S_CTRL_REG0          (SPIPSS_REGISTER_BASE + 0x40)
+#define SPIPSS_P2S_CTRL_REG1          (SPIPSS_REGISTER_BASE + 0x41)
+#define SPIPSS_P2S_CTRL_REG2          (SPIPSS_REGISTER_BASE + 0x42)
+#define SPIPSS_P2S_STATUS_REG         (SPIPSS_REGISTER_BASE + 0x43)
+#define SPIPSS_P2S_COMMAND_REG        (SPIPSS_REGISTER_BASE + 0x44)
+#define SPIPSS_P2S_WDATA_REG          (SPIPSS_REGISTER_BASE + 0x50)
+#define SPIPSS_P2S_RDATA_REG          (SPIPSS_REGISTER_BASE + 0x60)
+
+#define GPE_PROG_ID 0xDEAD
+
+#define GPE_ERROR_P2S_ONGOING_TIMEOUT 0x0001
+#define GPE_ERROR_PIB_TIMEOUT         0xFF00
+
+.set GPE_ERROR_CODE, 0xAA55AA55
+.set GPE_ERROR_RC, 0xBEEFCAFE
+
+//////////////////////////////////////////////////////////////////////
+// Define Structures
+//////////////////////////////////////////////////////////////////////
+
+// Declare the offsets of the struct that will be passed to the
+// GPE program via the ETR register
+//
+// struct PoreSimpleArgs =
+// {
+.struct     0
+RETURN_CODE:
+    .struct RETURN_CODE + 8
+FFDC:
+    .struct FFDC + 8
+ADC0:
+    .struct ADC0 + 8
+ADC1:
+    .struct ADC1 + 8
+ADC2:
+    .struct ADC2 + 8
+ADC3:
+    .struct ADC3 + 8
+TOD:
+// };
+
+//////////////////////////////////////////////////////////////////////
+// Begin Program
+//////////////////////////////////////////////////////////////////////
+
+.text
+
+//--------------------------------------------------------------------
+// Macro Specification:
+//
+// Name: _saveffdc
+//
+// Description:  Save off RC, FFDC & Address when there is an error
+//               in a GPE program.
+//
+//               - Copy D0 into PoreGpeErrorStruct->ffdc
+//               - Copy D1[63:32] into PoreGpeErrorStruct->rc[63:32]
+//               - Copy \error_code into PoreGpeErrorStruct->rc[31:0]
+//
+// Inputs:       \error_code - Unique GPE error code that will
+//                             indicate the failure mode of the GPE
+//                             program.
+//               D0          - Set to FFDC data that will be copied to
+//                             PoreGpeErrorStruct->ffdc
+//               D1          - Bits[63:32] set to address that will be
+//                             copied to PoreGpeErrorStruct->rc[63:32]
+//               ETR         - Assumed to be set to base address of
+//                             passed argument structure
+//
+// End Macro Specification
+//--------------------------------------------------------------------
+.macro _saveffdc, error_code
+    // Make sure passed Structure Pointer is loaded into A1
+    mr      A1, ETR
+
+// TODO Follow up on Simics SPRG0 support
+//.ifdef  SIMICS_SPRG0_WORKING
+// Copy D1[32:63] into SPRG0
+    mr      D1, SPRG0
+
+    // Now Read RETURN_CODE into D1, check to see if it is 0
+    ld      D1, RETURN_CODE, A1
+
+    // If it is not 0, then don't save off any FFDC
+    branz   D1, 1f
+//.endif
+
+    // Copy SPRG0 into D1[32:63]
+    mr      SPRG0, D1
+
+    // First save off D0 into FFDC
+    std     D0, FFDC, A1
+
+    // Then save off D1[32:63] into the lower 32 bits [32:63] of D0
+    mr      D0, D1
+
+    // Save off the passed \error_code into the upper 32 bits of D0
+    li      D1, \error_code
+    sldi    D1, D1, 32
+    or      D0, D0, D1
+
+    // Save register off into code_addr
+    std     D0, RETURN_CODE, A1
+1:
+.endm
+
+//--------------------------------------------------------------------
+// Macro Specification:
+//
+// Name: _saveffdc3
+//
+// Description:  Get a SCOM based on passed in Address, put it in D0
+//
+// Inputs:       SCOM Address
+//
+// Outputs:      D0 - Result of SCOM
+//
+// End Macro Specification
+//--------------------------------------------------------------------
+.macro _saveffdc3, gpe_id, error_code
+
+    // This will cause an "Invalid Instruction Code" Error in the PORE-GPE
+    // which will cause an "error event 2" interrupt to the PPC405
+    .long 0xAABBCCDD
+
+    // The PPC405 will then be able to read the "Invalid Instruction Code"
+    // out of the IBUF_01 Register, which will contain the AABBCCDD opcode
+    // as well as the \gpe_id and \error_code.
+    .short \gpe_id
+    .short \error_code
+
+    // The PPC405 ISR will then grab & place into PoreRequestStruct:
+    // IBUF_01[32:63] (32b)
+    // DBG0           (64b)
+    // DBG1           (64b)
+    // D0             (64b)
+    // D1[32:63]      (32b)
+    // A0 & A1        (64b)
+    // --------       -----
+    // Total          40 Bytes
+.endm
+
+
+
+//--------------------------------------------------------------------
+// Macro Specification:
+//
+// Name: _getscom
+//
+// Description:  Get a SCOM based on passed in Address, put it in D0
+//
+// Inputs:       SCOM Address
+//
+// Outputs:      D0 - Result of SCOM
+//
+// End Macro Specification
+//--------------------------------------------------------------------
+.macro _getscom, address
+
+    lpcs    P0, \address
+    ld      D0, \address, P0
+
+.endm
+
+//--------------------------------------------------------------------
+// Macro Specification:
+//
+// Name: _putscom
+//
+// Description:  Put Data in a SCOM address
+//
+// Inputs:       SCOM Address, Data
+//
+// Outputs:      None
+//
+// End Macro Specification
+//--------------------------------------------------------------------
+.macro _putscom, address, data
+
+    lpcs    P0, \address
+    li      D0, \data
+    std     D0, \address, P0
+
+.endm
+
+//--------------------------------------------------------------------
+// Macro Specification:
+//
+// Name: _spin_on_bitclear_scom
+//
+// Description:  Wait for Bit to get cleared in scom register
+//
+// Inputs:       SCOM Address, Mask
+//
+// Outputs:      None
+//
+// End Macro Specification
+//--------------------------------------------------------------------
+.macro _spin_on_bitclear_scom, address, mask
+1:
+    _getscom  \address
+    andi      D0, D0, \mask
+    branz     D0, 1b
+
+.endm
+
+//--------------------------------------------------------------------
+// PORE-GPE Routine Specification:
+//
+// Name: pore_test_pss
+//
+// Description:  Delays for X (passed in) uS before halting PORE-GPE
+//               routine.  Always sets the ffdc to indicate an error
+//               with a RC of 0xDEADBEEF
+//
+// Inputs:       PoreSimpleArgs - FFDC & uS to delay.
+//
+// Outputs:      None (except FFDC on failure)
+//
+// End PORE-GPE Routine Specification
+//--------------------------------------------------------------------
+.global pore_test_pss
+pore_test_pss:
+    // Copy passed Structure Pointer into A1
+    mr      A1, ETR
+
+    trap
+
+.ifdef APSS_MODEL_INCLUDED
+    _spin_on_bitclear_scom SPIPSS_P2S_STATUS_REG 0x8000000000000000
+    _spin_on_bitclear_scom SPIPSS_P2S_STATUS_REG 0x8000000000000000
+.endif
+
+    trap
+    _getscom 0x01000000
+
+.ifdef APSS_MODEL_INCLUDED
+    //////////////////////////////////////////////////
+    // Test out a Auto-2 Mode Setup
+    //////////////////////////////////////////////////
+    _putscom SPIPSS_P2S_CTRL_REG0,    0x410FC00004000000
+    _putscom SPIPSS_P2S_CTRL_REG1,    0x001C000000000000
+    _putscom SPIPSS_P2S_CTRL_REG2,    0x000C800000000000
+    _putscom SPIPSS_P2S_WDATA_REG,    0x3FC0000000000000
+    _putscom SPIPSS_P2S_COMMAND_REG,  0x8000000000000000
+    waits 4000
+    _getscom SPIPSS_P2S_RDATA_REG
+    trap
+.endif
+
+.ifdef APSS_MODEL_INCLUDED
+    //////////////////////////////////////////////////
+    // Test out a GPIO Mode Setup - all High-Z
+    //////////////////////////////////////////////////
+    _putscom SPIPSS_P2S_CTRL_REG0,    0x410FC00004000000
+    _putscom SPIPSS_P2S_CTRL_REG2,    0x000C800000000000
+    _putscom SPIPSS_P2S_WDATA_REG,    0x50FF000000000000
+    _putscom SPIPSS_P2S_COMMAND_REG,  0x8000000000000000
+    waits 4000
+    _getscom SPIPSS_P2S_RDATA_REG
+    trap
+.endif
+
+.ifdef APSS_MODEL_INCLUDED
+    //////////////////////////////////////////////////
+    // Test out ADC FSM
+    //////////////////////////////////////////////////
+    _putscom SPIPSS_ADC_CTRL_REG0,    0x4100100000000000
+    _putscom SPIPSS_ADC_CTRL_REG1,    0x801FC00000000000
+    _putscom SPIPSS_ADC_CTRL_REG2,    0x0019000000000000
+    _putscom SPIPSS_ADC_WDATA_REG,    0x0000000000000000
+    _putscom SPIPSS_ADC_COMMAND_REG,  0x8000000000000000
+    waits 30000
+    _getscom SPIPSS_ADC_RDATA_REG0
+    std     D0, ADC0, A1
+    _getscom SPIPSS_ADC_RDATA_REG1
+    std     D0, ADC1, A1
+    _getscom SPIPSS_ADC_RDATA_REG2
+    std     D0, ADC2, A1
+    _getscom SPIPSS_ADC_RDATA_REG3
+    std     D0, ADC3, A1
+    _getscom TOD_VALUE_REG
+    std     D0, TOD, A1
+    trap
+.endif
+
+.ifdef APSS_MODEL_INCLUDED
+    //////////////////////////////////////////////////
+    // Test out a GPIO Port 0 Read from APSS
+    //////////////////////////////////////////////////
+    _putscom SPIPSS_P2S_CTRL_REG0,    0x410FC00004000000
+    _putscom SPIPSS_P2S_CTRL_REG1,    0x001C400000000000
+    _putscom SPIPSS_P2S_CTRL_REG2,    0x000C800000000000
+    _putscom SPIPSS_P2S_WDATA_REG,    0x7000000000000000
+    _putscom SPIPSS_P2S_COMMAND_REG,  0x8000000000000000
+    waits 4000
+    _getscom SPIPSS_P2S_RDATA_REG
+    trap
+.endif
+
+.ifdef DPSS_MODEL_INCLUDED
+    //////////////////////////////////////////////////
+    // Test out a Fan RPM 7 Read from DPSS
+    //////////////////////////////////////////////////
+    _putscom SPIPSS_P2S_CTRL_REG0,    0x410FC00004000000
+    _putscom SPIPSS_P2S_CTRL_REG1,    0x401C400000000000
+    _putscom SPIPSS_P2S_CTRL_REG2,    0x000C800000000000
+    _putscom SPIPSS_P2S_WDATA_REG,    0x3200000000000000
+    _putscom SPIPSS_P2S_COMMAND_REG,  0x8000000000000000
+    waits 4000
+    _getscom SPIPSS_P2S_RDATA_REG
+    trap
+.endif
+
+.ifdef DPSS_MODEL_INCLUDED
+.print "Building in DPSS Support"
+    //////////////////////////////////////////////////
+    // Test out a Stream of commands to the DPSS
+    //////////////////////////////////////////////////
+
+    // Send First(32) & Second(33) command
+    // Get Response to First command
+    _putscom SPIPSS_P2S_CTRL_REG0,    0x4104004004000000
+    _putscom SPIPSS_P2S_CTRL_REG1,    0xC01C400000000000
+    _putscom SPIPSS_P2S_CTRL_REG2,    0x000C800000000000
+    _putscom SPIPSS_P2S_WDATA_REG,    0x2B002C0000000000
+    _putscom SPIPSS_P2S_COMMAND_REG,  0x8000000000000000
+    waits 4000
+    _spin_on_bitclear_scom SPIPSS_P2S_STATUS_REG 0x8000000000000000
+    _getscom SPIPSS_P2S_RDATA_REG
+    trap
+
+    // Send Third (34)& Forth (35) Command
+    // Get Response to Second & third
+    _putscom SPIPSS_P2S_CTRL_REG0,    0x4100104004000000
+    _putscom SPIPSS_P2S_CTRL_REG1,    0xC01C400000000000
+    _putscom SPIPSS_P2S_CTRL_REG2,    0x000C800000000000
+    _putscom SPIPSS_P2S_WDATA_REG,    0x2D002E0000000000
+    _putscom SPIPSS_P2S_COMMAND_REG,  0x8000000000000000
+    waits 4000
+    _getscom SPIPSS_P2S_RDATA_REG
+    trap
+    _spin_on_bitclear_scom SPIPSS_P2S_STATUS_REG 0x8000000000000000
+
+    // Send Fifth (36)& Last (00) Command
+    // Get Response to Forth & Fifth
+    _putscom SPIPSS_P2S_CTRL_REG0,    0x4100104004000000
+    _putscom SPIPSS_P2S_CTRL_REG1,    0xC01C400000000000
+    _putscom SPIPSS_P2S_CTRL_REG2,    0x000C800000000000
+    _putscom SPIPSS_P2S_WDATA_REG,    0x2F00000000000000
+    _putscom SPIPSS_P2S_COMMAND_REG,  0x8000000000000000
+    waits 4000
+    _getscom SPIPSS_P2S_RDATA_REG
+    trap
+    _spin_on_bitclear_scom SPIPSS_P2S_STATUS_REG 0x8000000000000000
+    trap
+
+    _saveffdc3 GPE_PROG_ID GPE_ERROR_P2S_ONGOING_TIMEOUT
+.endif
+    bra done
+
+error:
+    _saveffdc 0xDEADBEEF
+
+done:
+    halt
+
+//////////////////////////////////////////////////////////////////////
+// End of Program
+//////////////////////////////////////////////////////////////////////

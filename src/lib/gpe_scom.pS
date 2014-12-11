@@ -1,0 +1,709 @@
+// $Id: gpe_scom.pS,v 1.2 2013/12/13 23:04:33 bcbrock Exp $
+// $Source: /afs/awd/projects/eclipz/KnowledgeBase/.cvsroot/eclipz/chips/p8/working/procedures/lib/gpe_scom.pS,v $
+//-----------------------------------------------------------------------------
+// *! (C) Copyright International Business Machines Corp. 2013
+// *! All Rights Reserved -- Property of IBM
+// *! *** IBM Confidential ***
+//-----------------------------------------------------------------------------
+        
+/// \file gpe_scom.pS
+/// \brief Generic SCOM procedures for PORE-GPE
+
+        .nolist
+
+#include "ssx.h"
+#include "pgas.h"
+#include "pgp_config.h"
+#include "gpe.h"
+#include "gpe_pba.h"
+#include "gpe_scom.h"
+
+        .list
+
+        .oci
+        .text.pore
+
+        
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// Common Routines
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+        //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        // gsWait
+        //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        //
+        // The wait loop is implemented as a decrement and branch guaranteed
+        // to hit in the I-cache. This is used both by gpe_scom_centaur() and
+        // gpe_scom_p8(). 
+gsWait:
+        ld      D0, SCOM_LIST_DATA, A1
+        braz    D0, gsWaitDone
+        bra     gsWaitLoop
+
+        .set    PORE_INSTRUCTION_BUFFER_SIZE, 8 # Should be global?
+        .balign PORE_INSTRUCTION_BUFFER_SIZE
+gsWaitLoop:
+        subs    D0, D0, 1
+        branz   D0, gsWaitLoop
+
+gsWaitDone:
+        ret
+
+
+        //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        // gsTod
+        //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+gsTod:
+        lpcs    P0, TOD_VALUE_REG
+        ld      D0, TOD_VALUE_REG, P0
+        std     D0, SCOM_LIST_DATA, A1
+        ret
+        
+
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// gpe_scom_centaur
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+// gpe_scom_centaur() has 2 entry points: The first, gpe_scom_centaur(), is for
+// the "normal" case that the job is kicked off by the async drivers.  The
+// second, _gpe_scom_centaur() is for use as a subroutine call.
+
+// Implementation note: Correctness requires that gpe_scom_centaur() maintins
+// strict control over the PBA slave as the command list is processed. At
+// entry the slave is reset, and then set up to do the cache-inibited partial
+// writes used for Centaur inband SCOM. Prior to every access the extended
+// address portion of the slave control register needs to be modified as it
+// contains part of the address that actually goes out on the PowerBus.  For
+// reads there is no issue with setting the extended address at any
+// time. Since cache-inhibited partial reads are not prefetched, once a read
+// completes to the GPE the extended address is no longer in play.  This is
+// not the case for writes. Just because a write completes on the OCI does not
+// mean that the write has completed at Centaur, and it is possible that
+// modifying the extended address before the write completes at Centaur can
+// cause a write to be corrrupted.  The means that in general we need to reset
+// the slave prior to modifying the extended address to guarantee that any
+// outstanding write has made it to Centaur. As a run-time optimization we
+// only reset the slave after doing write operations.
+
+// At entry (gpe_scom_centaur):
+//
+//     ETR : Contains a pointer to the GpeScomParms structure to interpret.
+//
+// At entry (_gpe_scom_centaur):
+//
+//     A0  : Contains a pointer to the GpeScomParms structure to interpret.
+//
+//     The caller should assume that all register state is destroyed by
+//     calling _gpe_scom_centaur
+
+        .macro  gscExit
+        la      A0, gscCalledAsSubroutine
+        ld      D0, 0, A0
+        braz    D0, 4723948f
+        ret
+4723948:
+        halt
+        .endm
+
+
+        .global gpe_scom_centaur
+        .global _gpe_scom_centaur
+
+gpe_scom_centaur:
+        mr      D0, ETR
+        ls      D1, 0
+        bra     gpe_scom_centaur_begin
+
+_gpe_scom_centaur:
+        mr      D0, A0
+        ls      D1, 1
+
+gpe_scom_centaur_begin:
+        la      A0, gscParameters
+        std     D0, 0, A0
+        la      A0, gscCalledAsSubroutine
+        std     D1, 0, A0
+        mr      A1, D0
+
+        // Establish the "invalid argument" return code and check that the
+        // global centaur configuration is valid and the number of entries is
+        // non-zero and the pointer to the scomList is non-zero.
+
+        la      A0, G_centaurConfiguration
+
+        ls      D0, GPE_SCOM_INVALID_ARGUMENT
+        gpe_scom_parms_set_rc D1, D0
+        ls      D0, -1
+        gpe_scom_parms_set_error_index D1, D0
+        std     D1, GPE_SCOM_PARMS_RC_ERROR_INDEX, A1
+
+        ld      D0, CENTAUR_CONFIGURATION_CONFIG_RC, A0
+        braz    D0, 1f
+        gscExit                    # Configuration RC != 0 (Structure is invalid)
+
+1:
+        ld      D0, GPE_SCOM_PARMS_ENTRIES_OPTIONS, A1
+        gpe_scom_parms_get_entries D1, D0
+        branz   D1, 1f
+        gscExit                    # entries == 0
+
+1:      
+        ld      D0, GPE_SCOM_PARMS_SCOM_LIST, A1
+        branz   D1, 1f
+        gscExit                    # scomList == 0
+
+1:
+        // Establish the "setup error" return code and error index for the PBA
+        // Slave reset, then reset the slave. 
+        //
+        // At entry:
+        //
+        //     A0 = &G_centaurConfiguration
+        //     A1 = &GpeScomParms
+
+        ls      D0, GPE_SCOM_SETUP_ERROR
+        gpe_scom_parms_set_rc D1, D0
+        ls      D0, -1
+        gpe_scom_parms_set_error_index D1, D0
+        std     D1, GPE_SCOM_PARMS_RC_ERROR_INDEX, A1
+        
+        adds    A0, A0, CENTAUR_CONFIGURATION_SCOM_PARMS
+        bsr     gpe_pba_reset
+        bsr     gpe_pba_setup
+
+
+        // Establish the "procedure died" return code, establish variables
+        // used during the iteration over the scomList, then begin iteration:
+        //
+        // GpeScomParms.[rc, errorIndex]
+        // CTR         : The number of entries left to process.
+        // A1          : The address of the scomList_t being processed
+
+        la      A0, gscParameters
+        ld      D0, 0, A0
+        mr      A0, D0
+
+        ls      D0, GPE_SCOM_DIED
+        gpe_scom_parms_set_rc D1, D0
+        ls      D0, 0
+        gpe_scom_parms_set_error_index D1, D0
+        std     D1, GPE_SCOM_PARMS_RC_ERROR_INDEX, A0
+
+        ld      D0, GPE_SCOM_PARMS_SCOM_LIST, A0
+        mr      A1, D0
+
+        ld      D0, GPE_SCOM_PARMS_ENTRIES_OPTIONS, A0
+        gpe_scom_parms_get_entries D0, D0
+        mr      CTR, D0
+        loop    gscLoop         # We know CTR != 0, so this is a branch to
+                                # gscLoop w/side effect of CTR--
+
+        // Loop over the scomList, dispatching the commands.  
+        //
+        // Loop invariants:
+        //
+        //     GpeScomParms.entries has the number of entries processed so
+        //     far.
+        //
+        //     A1  : The address of the scomList_t being processed
+        //
+        //     CTR : Counting down the entries left to process.
+        //
+        // Command dispatch invariants
+        //
+        //     A1 : Holds the pointer to the scomList being processed
+gscLoop:
+        ld      D1, SCOM_LIST_COMMAND, A1
+        scom_list_get_command_type D0, D1
+
+        // Commands listed in rough order of expected use
+
+        cmpibraeq D0, gscReadVector,  GPE_SCOM_READ_VECTOR
+        cmpibraeq D0, gscWriteAll,    GPE_SCOM_WRITE_ALL
+        cmpibraeq D0, gscRMWAll,      GPE_SCOM_RMW_ALL
+        cmpibraeq D0, gscRead,        GPE_SCOM_READ
+        cmpibraeq D0, gscSyncAll,     GPE_SCOM_CENTAUR_SYNC_ALL
+        cmpibraeq D0, gscWrite,       GPE_SCOM_WRITE
+        cmpibraeq D0, gscRMW,         GPE_SCOM_RMW
+        cmpibraeq D0, gscSync,        GPE_SCOM_CENTAUR_SYNC
+        cmpibraeq D0, gscTod,         GPE_SCOM_TOD
+        cmpibraeq D0, gscWait,        GPE_SCOM_WAIT
+        cmpibraeq D0, gscContinue,    GPE_SCOM_NOP
+
+        bra     gscInvalidCommand
+
+
+        // Continue the loop. Update the index number and scomList pointer.
+gscContinue:
+        la      A0, gscParameters
+        ld      D0, 0, A0
+        mr      A0, D0
+
+        ld      D0, GPE_SCOM_PARMS_RC_ERROR_INDEX, A0
+        adds    D0, D0, 1       # errorIndex is in low-order word
+        std     D0, GPE_SCOM_PARMS_RC_ERROR_INDEX, A0
+
+        adds    A1, A1, SIZEOF_SCOM_LIST_T
+
+        loop    gscLoop
+
+        // We completed successfully. Set the final rc to 0 and halt.
+
+        ls      D0, 0
+        std     D0, GPE_SCOM_PARMS_RC_ERROR_INDEX, A0
+        gscExit
+
+
+        //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        // gscWrite
+        //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        //
+        // Do a single Centaur in-band SCOM write.  The actual SCOM write is
+        // coded as a subroutine for use by the write-all as well.
+gscWrite:
+        ld      D0, SCOM_LIST_COMMAND, A1
+        scom_list_get_instance_number D0, D0
+        bsr     gscScomSetup
+        branz   D0, gscInvalidCentaur
+
+        bsr     gscWrite1
+        bsr     gscResetSlave
+        bra     gscContinue
+        
+
+gscWrite1:      
+        ld      D0, SCOM_LIST_DATA, A1
+        std     D0, 0, A0
+        ret
+        
+
+        //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        // gscWriteAll
+        //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        //
+        // It is simplest here to simply unroll a loop that does the SCOM
+        // write for all Centaur indices that pass as being valid.
+gscWriteAll:
+        .set     __CENTAUR__, 0
+        .rept    PGP_NCENTAUR
+                ls      D0, __CENTAUR__
+                bsr     gscScomSetup
+                branz   D0, 1f
+                        bsr     gscWrite1
+                        bsr     gscResetSlave
+1:      
+               .set    __CENTAUR__, __CENTAUR__ + 1
+        .endr
+
+        bra     gscContinue
+        
+
+        //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        // gscRMW
+        //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        //
+        // Do a single Centaur in-band SCOM read-modify-write. SCOM data is
+        // ANDed with the inverted mask, then the new data is OR-ed in and
+        // stored back to SCOM. The actual RMW is coded as a subroutine for
+        // use by the RMW-all as well.
+gscRMW:
+        ld      D0, SCOM_LIST_COMMAND, A1
+        scom_list_get_instance_number D0, D0
+        bsr     gscScomSetup
+        branz   D0, gscInvalidCentaur
+
+        bsr     gscRMW1
+        bsr     gscResetSlave                
+        bra     gscContinue
+
+
+gscRMW1:        
+        ld      D0, 0, A0
+        ld      D1, SCOM_LIST_MASK, A1
+        xori    D1, D1, 0xffffffffffffffff
+        and     D0, D0, D1
+        ld      D1, SCOM_LIST_DATA, A1
+        or      D0, D0, D1
+        std     D0, 0, A0
+        
+        ret                
+        
+
+        //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        // gscRMWAll
+        //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        //
+        // It is simplest here to simply unroll a loop that does the SCOM
+        // RMW for all Centaur indices that pass as being valid.
+gscRMWAll:
+        .set     __CENTAUR__, 0
+        .rept    PGP_NCENTAUR
+                ls      D0, __CENTAUR__
+                bsr     gscScomSetup
+                branz   D0, 1f
+                        bsr     gscRMW1
+                        bsr     gscResetSlave
+1:      
+               .set    __CENTAUR__, __CENTAUR__ + 1
+        .endr
+
+        bra     gscContinue
+        
+
+        //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        // gscRead
+        //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        //
+        // Do a single Centaur in-band SCOM read
+gscRead:
+        ld      D0, SCOM_LIST_COMMAND, A1
+        scom_list_get_instance_number D0, D0
+        bsr     gscScomSetup
+        branz   D0, gscInvalidCentaur
+
+        ld      D0, 0, A0
+        std     D0, SCOM_LIST_DATA, A1
+        bra     gscContinue
+
+
+        //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        // gscReadVector
+        //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        //
+        // It is simplest here to simply unroll a loop that does the SCOM
+        // read for all Centaur indices that pass as being valid.
+gscReadVector:
+        .set     __CENTAUR__, 0
+        .rept    PGP_NCENTAUR
+                ls      D0, __CENTAUR__
+                bsr     gscScomSetup
+                ls      D1, __CENTAUR__ * 8 # Byte offset
+                bsr     gscReadVector1
+               .set    __CENTAUR__, __CENTAUR__ + 1
+        .endr
+
+        bra     gscContinue
+
+
+gscReadVector1: 
+        // At entry, A1 points to the scomList_t, and D1 has the index of the
+        // Centaur being processed.  If D0 == 0 then the read is indicated and
+        // A0 contains the address to dereference to accomplish the read. If
+        // D0 != 0, then the Centaur is invalid and we'll zero the data.
+
+        braz    D0, 1f
+
+        // No read indicated.  Load the data pointer, convert to an indexed
+        // address and store a 0. We can scratch A0 here.
+
+        ld      D0, SCOM_LIST_DATA, A1
+        add     D0, D0, D1
+        mr      A0, D0
+        ls      D0, 0
+        std     D0, 0, A0
+        ret     
+        
+        // A read is indicated.   Load the data pointer and convert to an
+        // indexed address in D1. Then load the SCOM data into D0 and store it
+        // back at the indexed address.
+1:      
+        ld      D0, SCOM_LIST_DATA, A1
+        add     D1, D0, D1
+        ld      D0, 0, A0
+        mr      A0, D1
+        std     D0, 0, A0
+        ret
+        
+
+        //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        // gscSync
+        // gscSyncAll
+        //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        //
+        // These commands only differ in whether the user fills in the mask of
+        // valid Centaurs or the procedure fills in the mask of valid Centaurs
+        // from the global configuration.  The extended address needed for the
+        // sync is stored in the global data structure, and it is only
+        // necessary to update the slave and store to the base address of the
+        // PBA BAR to accomplish the SYNC.
+gscSync:
+        bsr     gscSyncSetup
+        ld      D0, SCOM_LIST_DATA, A1
+        bra     gscSyncContinue
+        
+gscSyncAll:
+        bsr     gscSyncSetup
+        la      A0, G_centaurConfiguration
+        ld      D0, CENTAUR_CONFIGURATION_CONFIG, A0
+        left_justify_centaur_config D0
+        ld      D1, SCOM_LIST_DATA, A1 
+        or      D0, D0, D1
+        bra     gscSyncContinue
+        
+
+        // To set up the SYNC we only have to update the extended address
+        // field (bits 35:48) of the slave control register from the slave
+        // control register image held in the G_centaurConfiguration. We can't
+        // destroy A1 so it's a little tedious as we have to load the slave
+        // control register address twice.
+gscSyncSetup:
+        la      A0, G_centaurConfiguration
+        ld      D1, \
+                (CENTAUR_CONFIGURATION_SCOM_PARMS + \
+                GPEPBAPARMS_SLVCTL_ADDRESS), \
+                A0
+        mr      A0, D1
+        ld      D0, 0, A0
+
+        la      A0, G_centaurConfiguration
+        ld      D1, CENTAUR_CONFIGURATION_SYNC_SLAVE_CONTROL, A0
+        rldimi  D0, D1, 0, 35, 48
+
+        la      A0, G_centaurConfiguration
+        ld      D1, \
+                (CENTAUR_CONFIGURATION_SCOM_PARMS + \
+                GPEPBAPARMS_SLVCTL_ADDRESS), \
+                A0
+        mr      A0, D1
+        std     D0, 0, A0
+
+        ret
+
+        
+        // Once it's set up, simply issue a store to complete the sync.  The
+        // caller has placed the correct data in D0.
+gscSyncContinue:
+        la      A0, (PBA_BAR_CENTAUR << 28)
+        std     D0, 0, A0
+        bsr     gscResetSlave
+        bra     gscContinue   
+        
+
+        //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        // gscWait
+        //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+gscWait:        
+        bsr     gsWait
+        bra     gscContinue
+
+
+        //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        // gscTod
+        //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+gscTod:        
+        bsr     gsTod
+        bra     gscContinue
+
+
+        //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        // gscScomSetup
+        //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        //
+        // At entry:    
+        //
+        //     A1 : The address of the scomList_t being processed
+        //     D0 : The Centaur instance number to set up
+        //
+        // At exit:     
+        //
+        //     PBA : Programmed to do the SCOM
+        //     A1  : The address of the scomList_t being processed
+        //     A0  : On success, the OCI address to load/store to do the SCOM
+        //     D0  : 0 = Success, otherwise an error code
+        //     
+        // This routine checks the Centaur instance number for validity.  If
+        // the instance number is valid then the PBA is programmed to access
+        // the SCOM address held in the scomList_t.  This requires
+        // reprogramming the PBA because part of the SCOM address must be
+        // stored as the extended address field of the PBA slave control
+        // register. It is not necessary to reset the PBA slave for each SCOM
+        // operation. The way SCOM operations are set up they "complete
+        // immediately" in the PBA so there is no issue with lingering state.
+        //
+        // Note:  this routine is written this way (separating setup from
+        // execution) to support the Centaur "multicast" and read-modify-write
+        // operations. The multicast loop simply tries all Centaur and ignores
+        // the ones that fail.
+gscScomSetup: 
+        
+        // Check the Centaur instance number (D0) for validity.
+
+        ls      D1, PGP_NCENTAUR
+        sub     D1, D0, D1
+        tfbult  D1, 1f
+
+        ls      D0, GPE_SCOM_INVALID_ARGUMENT
+        ret                     # Centaur instance too big
+
+1:
+        // Check to make sure the Centaur is configured by testing the base
+        // address for 0. The instance number is first multiplied by 8 to
+        // create an array offset.
+
+        rotldi  D0, D0, 3
+        la      D1, G_centaurConfiguration
+        adds    D1, D1, CENTAUR_CONFIGURATION_BASE_ADDRESS
+        add     D0, D0, D1
+        mr      A0, D0
+        ld      D0, 0, A0
+        branz   D0, 1f
+
+        ls      D0, GPE_SCOM_INVALID_ARGUMENT
+        ret                     # Base address is 0
+
+1:
+        // We have the Centaur base address in D0, and convert it to the full
+        // PowerBus address for the inband SCOM. Bit 27 is set to indicate OCC
+        // (vs. FSP) access. Bit 28 remains 0 to indicate a SCOM (vs. sensor
+        // cache) access. Bits 29:60 are the SCOM address. (The SCOM address
+        // is shifted up by 3 bit positions). We need to save A1 to SPRG0 to
+        // continue from here.
+
+        ori     D0, D0, 0x0000001000000000
+        ld      D1, SCOM_LIST_COMMAND, A1
+        scom_list_get_scom D1, D1
+        rotldi  D1, D1, 3
+        or      D0, D0, D1
+
+        mr      SPRG0, A1
+
+#if 1
+        la      A1, G_gsc_lastScomAddress # Debug
+        std     D0, 0, A1
+#endif
+
+        // The low-order 27 bits of the PowerBus address are OR-ed with the
+        // PBA BAR base address and go into A0 as the returned OCI address.
+
+        andi    D1, D0, 0x7ffffff
+        ori     D1, D1, (PBA_BAR_CENTAUR << 28)
+        mr      A0, D1
+
+        // Bits 23:36 of the address go into the extended address field (35:
+        // 48) of the PBA slave control register by a read-modify-write
+        // operation. Note: We're using rldimi explicitly here - not an
+        // extended mnemonic - to save having to justify the data.
+
+        la      A1, G_centaurConfiguration
+        ld      D1, \
+                (CENTAUR_CONFIGURATION_SCOM_PARMS + \
+                 GPEPBAPARMS_SLVCTL_ADDRESS), \
+                 A1
+        mr      A1, D1
+        ld      D1, 0, A1
+        rldimi  D1, D0, 64 - (35 - 23), 35, 48
+        std     D1, 0, A1
+
+#if 1
+        la      A1, G_gsc_lastSlaveControl # Debug
+        std     D1, 0, A1
+        mr      D1, A0
+        la      A1, G_gsc_lastOciAddress
+        std     D1, 0, A1
+#endif
+        
+        // Restore A1 to its invariant state, clear D0 to signal success and 
+        // we're out
+
+        mr      A1, SPRG0
+        ls      D0, 0
+        ret
+                 
+
+        //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        // gscResetSlave
+        //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        //
+        // Reset the PBA slave after a write. This requires saving and
+        // restoring A1. To avoid PORE stack overflow we have to inline
+        // gpe_pba_reset() here.  See the file gpe_pba_pgas.pS for comments on
+        // why the slave reset is written like this.
+
+gscResetSlave:
+        la      A0, gscSaveA1
+        mr      D0, A1
+        std     D0, 0, A0
+
+        la      A0, G_centaurConfiguration + CENTAUR_CONFIGURATION_SCOM_PARMS
+        bra     gscGpePbaReset
+
+        .balign 128
+gscGpePbaReset:
+                la      A1, PBA_SLVRST
+                ld      D0, GPEPBAPARMS_SLVRST, A0
+                std     D0, 0, A1
+
+                ld      D0, GPEPBAPARMS_SLVRST_IN_PROGRESS, A0
+                ld      D1, 0, A1
+                and     D0, D0, D1
+        branz   D0, gscGpePbaReset
+ 
+        la      A0, gscSaveA1
+        ld      D0, 0, A0
+        mr      A1, D0
+
+        ret
+
+
+        //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        // gscInvalidCommand
+        // gscInvalidCentaur
+        //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        //
+        // Set the rc field.  The errorIndex has already been set.
+
+gscInvalidCommand:
+        ls      D1, GPE_SCOM_INVALID_COMMAND
+        bra     1f
+gscInvalidCentaur:      
+        ls      D1, GPE_SCOM_INVALID_CENTAUR
+1:      
+        la      A0, gscParameters
+        ld      D0, 0, A0
+        mr      A0, D0
+
+        ld      D0, GPE_SCOM_PARMS_RC_ERROR_INDEX, A0
+        gpe_scom_parms_set_rc D0, D1
+        std     D0, GPE_SCOM_PARMS_RC_ERROR_INDEX, A0
+        gscExit
+
+        
+        //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        // gpe_scom_centaur Global Data
+        //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+        .data.pore
+
+        // Set to 0/1 when gpe_scom_centaur() is called via
+        // gpe_scom_centaur (ASYNC) / _gpe_scom_centaur (Subroutine)
+
+gscCalledAsSubroutine:  
+        .quad   0
+
+
+        // Used to store the parameter block pointer
+
+gscParameters:
+        .quad   0
+
+
+        // Used to store A1 during the inner loop when we need to reset the
+        // slave after a write
+
+gscSaveA1:
+        .quad   0
+
+
+        // Debug only, the last values computed by gscScomSetup.
+        
+        .global G_gsc_lastSlaveControl
+G_gsc_lastSlaveControl:
+        .quad   0
+
+        .global G_gsc_lastScomAddress
+G_gsc_lastScomAddress:
+        .quad   0
+
+        .global G_gsc_lastOciAddress
+G_gsc_lastOciAddress:
+        .quad   0
