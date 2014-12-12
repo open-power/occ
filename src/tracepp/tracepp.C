@@ -50,6 +50,7 @@
 #include <fcntl.h>
 #include <map>
 #include <vector>
+#include <unistd.h>
 
 #include <sys/types.h>
 typedef u_int32_t u32 ;
