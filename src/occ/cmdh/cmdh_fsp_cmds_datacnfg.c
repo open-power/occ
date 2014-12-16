@@ -384,6 +384,9 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
             TRAC_INFO("Min frequency = %d", l_freq);
 
+            // Store the Fmax and Fmin for AMEC (OpenPower environment only)
+            g_amec->sys.fmax = l_table[OCC_MODE_TURBO];
+            g_amec->sys.fmin = l_table[OCC_MODE_MIN_FREQUENCY];
         }
 
     }while(0);
