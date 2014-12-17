@@ -914,9 +914,12 @@ void amec_health_check_proc_timeout()
                 TRAC_ERR("OHA_Status_Reg[0x%08X] PM_State_Hist_Reg[0x%08X]",
                          l_core_data_ptr->oha.oha_ro_status_reg.words.low_order,
                          l_core_data_ptr->pcb_slave.pm_history.words.high_order);
-                TRAC_ERR("SensorV0[0x%016X] SensorV1[0x%016X]",
-                         l_core_data_ptr->dts_cpm.sensors_v0.value,
-                         l_core_data_ptr->dts_cpm.sensors_v1.value);
+
+                TRAC_ERR("SensorV0[0x%08X%08X] SensorV1[0x%08X%08X]",
+                         (uint32_t)(l_core_data_ptr->dts_cpm.sensors_v0.value >> 32),
+                         (uint32_t)(l_core_data_ptr->dts_cpm.sensors_v0.value & 0x00000000ffffffffull),
+                         (uint32_t)(l_core_data_ptr->dts_cpm.sensors_v1.value >> 32),
+                         (uint32_t)(l_core_data_ptr->dts_cpm.sensors_v1.value & 0x00000000ffffffffull));
 
                 /* @
                  * @errortype

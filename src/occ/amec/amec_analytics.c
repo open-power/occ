@@ -162,14 +162,19 @@ void amec_analytics_main(void)
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
 
+    // This functions is disabled by default. Need to enable analytics via
+    // Amester.
+    if (g_amec->stream_vector_rate == 0xFF)
+    {
+        return;
+    }
+
     g_amec->packednapsleep[0] = (g_amec->proc[0].winkcnt2ms.sample<<8) +
         g_amec->proc[0].sleepcnt2ms.sample;
-    g_amec->packednapsleep[1] = (g_amec->proc[1].winkcnt2ms.sample<<8) +
-        g_amec->proc[1].sleepcnt2ms.sample;
-    g_amec->packednapsleep[2] = (g_amec->proc[2].winkcnt2ms.sample<<8) +
-        g_amec->proc[2].sleepcnt2ms.sample;
-    g_amec->packednapsleep[3] = (g_amec->proc[3].winkcnt2ms.sample<<8) +
-        g_amec->proc[3].sleepcnt2ms.sample;
+    // There are no other elements in proc[] array other than element 0
+    g_amec->packednapsleep[1] = 0;
+    g_amec->packednapsleep[2] = 0;
+    g_amec->packednapsleep[3] = 0;
 
     switch (g_amec->analytics_group)
     {
@@ -442,33 +447,8 @@ void amec_analytics_main(void)
                 tempaccum = g_amec->proc[0].pwr250usmem.accumulator - tempaccum;    // total accumulation over 2msec
                 tempaccum = tempaccum >> g_amec->stream_vector_rate;
 
-                tempreg = ((UINT16)tempaccum) << 8;   // upper byte
-
-                tempaccum = g_amec->proc[1].pwr250usmem.src_accum_snapshot;     // load accumulator from last 2msec
-                g_amec->proc[1].pwr250usmem.src_accum_snapshot = g_amec->proc[1].pwr250usmem.accumulator;  // save current accum state for next 2msec
-                tempaccum = g_amec->proc[1].pwr250usmem.accumulator - tempaccum;    // total accumulation over 2msec
-                tempaccum = tempaccum >> g_amec->stream_vector_rate;
-                tempaccum = 0;                                                  // force to 0 until master OCC collects
-
-                tempreg = tempreg | (0xff & ((UINT16)tempaccum));
-                g_amec->analytics_array[7] = tempreg;
-
-                tempaccum = g_amec->proc[2].pwr250usmem.src_accum_snapshot;     // load accumulator from last 2msec
-                g_amec->proc[2].pwr250usmem.src_accum_snapshot = g_amec->proc[2].pwr250usmem.accumulator;  // save current accum state for next 2msec
-                tempaccum = g_amec->proc[2].pwr250usmem.accumulator - tempaccum;    // total accumulation over 2msec
-                tempaccum = tempaccum >> g_amec->stream_vector_rate;
-                tempaccum = 0;                                                  // force to 0 until master OCC collects
-
-                tempreg = ((UINT16)tempaccum) << 8;   // upper byte
-
-                tempaccum = g_amec->proc[3].pwr250usmem.src_accum_snapshot;     // load accumulator from last 2msec
-                g_amec->proc[3].pwr250usmem.src_accum_snapshot = g_amec->proc[3].pwr250usmem.accumulator;  // save current accum state for next 2msec
-                tempaccum = g_amec->proc[3].pwr250usmem.accumulator - tempaccum;    // total accumulation over 2msec
-                tempaccum = tempaccum >> g_amec->stream_vector_rate;
-                tempaccum = 0;                                                  // force to 0 until master OCC collects
-
-                tempreg = tempreg | (0xff & ((UINT16)tempaccum));
-                g_amec->analytics_array[8] = tempreg;
+                g_amec->analytics_array[7] = (UINT16)tempaccum;
+                g_amec->analytics_array[8] = 0;
 
                 // Now begins the per processor unique data
                 tempreg = (g_amec->analytics_total_chips) << 8;   // upper byte

@@ -201,16 +201,16 @@ void amec_generic_smh(const smh_tbl_t * i_smh_tbl,
   // Increment the state(s) of the AMEC State Machine
   // ------------------------------------------------------
 
-  // Bump the states as final undertaking before task ends
-  i_smh_state->state = AMEC_STATE_NEXT(i_smh_state);
+  // Bump the state as final undertaking before task ends
+  AMEC_STATE_NEXT(i_smh_state);
   if(AMEC_INITIAL_STATE == i_smh_state->state)
   {
     // Only bump the substate when "state" has wrapped
-    i_smh_state->substate = AMEC_SUBSTATE_NEXT(i_smh_state);
+    AMEC_SUBSTATE_NEXT(i_smh_state);
     if(AMEC_INITIAL_STATE == i_smh_state->substate)
     {
       // Only bump the substate when "state" & "substate" have wrapped
-      i_smh_state->sub_substate = AMEC_SUB_SUBSTATE_NEXT(i_smh_state);
+      AMEC_SUB_SUBSTATE_NEXT(i_smh_state);
     }
   }
 
