@@ -1,0 +1,12 @@
+*.bin
+*.o
+*.d
+*.out
+*.hash
+*.map
+*.a
+*.dis
+linkscript
+imageHdrScript
+occStringFile
+
