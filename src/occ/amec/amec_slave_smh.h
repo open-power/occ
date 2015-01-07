@@ -64,10 +64,12 @@
 extern const smh_tbl_t amec_slv_state_table[AMEC_SMH_STATES_PER_LVL];
 extern smh_state_t G_amec_slv_state;
 extern smh_state_timing_t G_amec_slv_state_timings;
+extern bool G_apss_lower_pmax_rail;
 
 //*************************************************************************
 // Function Prototypes
 //*************************************************************************
+void amec_slv_check_apss_fail(void);
 // PRE: slave common tasks
 void amec_slv_common_tasks_pre(void);
 // POST: slave common tasks

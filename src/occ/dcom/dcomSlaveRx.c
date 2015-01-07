@@ -54,6 +54,9 @@ dcom_slv_inbox_doorbell_t G_dcom_slv_inbox_doorbell_rx;
 // error on the compile.
 STATIC_ASSERT(  (NUM_BYTES_IN_SLAVE_INBOX != (sizeof(G_dcom_slv_inbox_rx)))  );
 
+// Indicate if we need to lower the Pmax_rail
+bool     G_apss_lower_pmax_rail = FALSE;
+
 // Function Specification
 //
 // Name: dcom_calc_slv_inbox_addr
@@ -107,11 +110,11 @@ void task_dcom_rx_slv_inbox( task_t *i_self)
 
     do
     {
+        // Doorbell from the master OCC
         l_bytes =  dcom_rx_slv_inbox_doorbell();
-        // Doorbell from the master
+
         if(l_bytes >= sizeof(G_dcom_slv_inbox_doorbell_rx))
         {
-
             // Looks like we got a valid doorbell so notify slave
             // code of pcap info
             amec_data_write_pcap();
@@ -457,9 +460,10 @@ void task_dcom_wait_for_master( task_t *i_self)
     static bool         L_first_doorbell_rcvd   = FALSE;
     static bool         L_queue_enabled         = FALSE;
     static uint32_t     L_pobid_retries_left    = POBID_RETRIES;
+    static uint16_t     L_no_master_doorbell_cnt = 0;
+    static bool         L_log_first_fail        = FALSE;
 
     DCOM_DBG("0. Wait for Master\n");
-
 
     do
     {
@@ -477,8 +481,119 @@ void task_dcom_wait_for_master( task_t *i_self)
 
         if(l_num_read < sizeof(G_dcom_slv_inbox_doorbell_rx))
         {
-            // Don't log an error if we don't get doorbell within any certain timeout
-            // period. This will be taken care of by another function.
+            if (L_first_doorbell_rcvd)
+            {
+                // We didn't get a doorbell from the Master, increment our 
+                // counter
+                L_no_master_doorbell_cnt++;
+
+                if (L_no_master_doorbell_cnt >= APSS_DATA_FAIL_PMAX_RAIL)
+                {
+                    // If we fail to receive the Master doorbell for this long, take
+                    // action
+                    TRAC_INFO("task_dcom_wait_for_master: experiencing data collection problems! fail_count=%i",
+                              L_no_master_doorbell_cnt);
+
+                    // Inform AMEC that Pmax_rail needs to change
+                    G_apss_lower_pmax_rail = TRUE;
+
+                    if (!L_log_first_fail)
+                    {
+                        // Create and commit this error only once.
+                        L_log_first_fail = TRUE;
+                        TRAC_ERR("Detected a problem with slave data collection: soft time-out[%d]. Lowering Pmax_rail!",
+                                 APSS_DATA_FAIL_PMAX_RAIL);
+
+                        /* @
+                         * @errortype
+                         * @moduleid    DCOM_MID_TASK_WAIT_FOR_MASTER
+                         * @reasoncode  APSS_SLV_SHORT_TIMEOUT
+                         * @userdata1   Time-out value
+                         * @userdata4   OCC_NO_EXTENDED_RC
+                         * @devdesc     Detected a problem with APSS data collection (short time-out)
+                         */
+                        errlHndl_t  l_errl = createErrl(
+                                    DCOM_MID_TASK_WAIT_FOR_MASTER,  //modId
+                                    APSS_SLV_SHORT_TIMEOUT,         //reasoncode
+                                    OCC_NO_EXTENDED_RC,             //Extended reason code
+                                    ERRL_SEV_INFORMATIONAL,         //Severity
+                                    NULL,                           //Trace Buf
+                                    DEFAULT_TRACE_SIZE,             //Trace Size
+                                    APSS_DATA_FAIL_PMAX_RAIL,       //userdata1
+                                    0                               //userdata2
+                                    );
+
+                        // Callout to firmware
+                        addCalloutToErrl(l_errl,
+                                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                                         ERRL_COMPONENT_ID_FIRMWARE,
+                                         ERRL_CALLOUT_PRIORITY_MED);
+
+                        // Callout to processor
+                        addCalloutToErrl(l_errl,
+                                         ERRL_CALLOUT_TYPE_HUID,
+                                         G_sysConfigData.proc_huid,
+                                         ERRL_CALLOUT_PRIORITY_LOW);
+
+                        // Callout to APSS
+                        addCalloutToErrl(l_errl,
+                                         ERRL_CALLOUT_TYPE_HUID,
+                                         G_sysConfigData.apss_huid,
+                                         ERRL_CALLOUT_PRIORITY_LOW);
+
+                        setErrlActions(l_errl, ERRL_ACTIONS_MANUFACTURING_ERROR);
+                        commitErrl(&l_errl);
+                    }
+                }
+
+                if (L_no_master_doorbell_cnt == APSS_DATA_FAIL_MAX) 
+                {
+                    // If we still don't get a doorbell from the Master for this
+                    // long, we will request a reset
+                    TRAC_ERR("Detected a problem with slave data collection: hard time-out[%d]. Requesting a reset!",
+                             APSS_DATA_FAIL_MAX);
+
+                    /* @
+                     * @errortype
+                     * @moduleid    DCOM_MID_TASK_WAIT_FOR_MASTER
+                     * @reasoncode  APSS_SLV_LONG_TIMEOUT
+                     * @userdata1   Time-out value
+                     * @userdata4   OCC_NO_EXTENDED_RC
+                     * @devdesc     Detected a problem with APSS data collection (long time-out)
+                     */
+                    errlHndl_t  l_errl = createErrl(
+                                    DCOM_MID_TASK_WAIT_FOR_MASTER,  //modId
+                                    APSS_SLV_LONG_TIMEOUT,          //reasoncode
+                                    OCC_NO_EXTENDED_RC,             //Extended reason code
+                                    ERRL_SEV_INFORMATIONAL,         //Severity
+                                    NULL,                           //Trace Buf
+                                    DEFAULT_TRACE_SIZE,             //Trace Size
+                                    APSS_DATA_FAIL_MAX,             //userdata1
+                                    0                               //userdata2
+                                    );
+
+                    // Callout to firmware
+                    addCalloutToErrl(l_errl,
+                                     ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                                     ERRL_COMPONENT_ID_FIRMWARE,
+                                     ERRL_CALLOUT_PRIORITY_MED);
+
+                    // Callout to processor
+                    addCalloutToErrl(l_errl,
+                                     ERRL_CALLOUT_TYPE_HUID,
+                                     G_sysConfigData.proc_huid,
+                                     ERRL_CALLOUT_PRIORITY_LOW);
+
+                    // Callout to APSS
+                    addCalloutToErrl(l_errl,
+                                     ERRL_CALLOUT_TYPE_HUID,
+                                     G_sysConfigData.apss_huid,
+                                     ERRL_CALLOUT_PRIORITY_LOW);
+
+                    REQUEST_RESET(l_errl);
+                }
+            }
+
             break;
         }
 
@@ -581,6 +696,11 @@ void task_dcom_wait_for_master( task_t *i_self)
         else
         {
              TRAC_INFO("[%d] Restablished contact via doorbell from Master",(int) G_pob_id.chip_id);
+
+             // Inform AMEC that Pmax_rail doesn't need to be lowered and reset
+             // the no_master_doorbell counter
+             G_apss_lower_pmax_rail = FALSE;
+             L_no_master_doorbell_cnt = 0;
         }
 
         // Got a multicast doorbell

@@ -197,7 +197,9 @@ void amec_update_fw_sensors(void)
         }
         else if(L_consec_trace_count < MAX_CONSEC_TRACE)
         {
+            uint64_t l_dbg0;
             uint64_t l_dbg1;
+            uint64_t l_status;
 
             // Reset will eventually be requested due to not having power measurement
             // data after X ticks, but add some additional FFDC to the trace that
@@ -205,16 +207,30 @@ void amec_update_fw_sensors(void)
             if(!l_gpe0_idle)
             {
                 l_dbg1 = in64(PORE_GPE0_DBG1);
-                TRAC_ERR("GPE0 programs did not complete within one tick. DBG1[0x%08x%08x]",
-                          l_dbg1 >> 32,
-                          l_dbg1 & 0x00000000ffffffffull);
+                l_dbg0 = in64(PORE_GPE0_DBG0);
+                l_status = in64(PORE_GPE0_STATUS);
+                TRAC_ERR("GPE0 programs did not complete within one tick. DBG0[0x%08x%08x] DBG1[0x%08x%08x]",
+                         (uint32_t)(l_dbg0 >> 32),
+                         (uint32_t)(l_dbg0 & 0x00000000ffffffffull),
+                         (uint32_t)(l_dbg1 >> 32),
+                         (uint32_t)(l_dbg1 & 0x00000000ffffffffull));
+                TRAC_ERR("Additional GPE0 debug data: STATUS[0x%08x%08x]",
+                         (uint32_t)(l_status >> 32),
+                         (uint32_t)(l_status & 0x00000000ffffffffull));
             }
             if(!l_gpe1_idle)
             {
                 l_dbg1 = in64(PORE_GPE1_DBG1);
-                TRAC_ERR("GPE1 programs did not complete within one tick. DBG1[0x%08x%08x]",
-                          l_dbg1 >> 32,
-                          l_dbg1 & 0x00000000ffffffffull);
+                l_dbg0 = in64(PORE_GPE1_DBG0);
+                l_status = in64(PORE_GPE1_STATUS);
+                TRAC_ERR("GPE1 programs did not complete within one tick. DBG0[0x%08x%08x] DBG1[0x%08x%08x]",
+                         (uint32_t)(l_dbg0 >> 32),
+                         (uint32_t)(l_dbg0 & 0x00000000ffffffffull),
+                         (uint32_t)(l_dbg1 >> 32),
+                         (uint32_t)(l_dbg1 & 0x00000000ffffffffull));
+                TRAC_ERR("Additional GPE1 debug data: STATUS[0x%08x%08x]",
+                         (uint32_t)(l_status >> 32),
+                         (uint32_t)(l_status & 0x00000000ffffffffull));
             }
             L_consec_trace_count++;
         }

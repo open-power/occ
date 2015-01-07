@@ -217,15 +217,15 @@ void task_dcom_rx_slv_outboxes( task_t *i_self)
                     // DO NOT proceed with request create and schedule.
                     l_proceed_with_request_and_schedule = FALSE;
                     // Trace important information from the request
-                    TRAC_INFO("BCE slv outbox rx request not idle and not complete, \
-                              callback_rc=%d options=0x%x state=0x%x abort_state=0x%x \
-                              completion_state=0x%x",
+                    TRAC_INFO("BCE slv outbox rx request not idle and not complete, callback_rc[%d] options[0x%x] state[0x%x] abort_state[0x%x] completion_state[0x%x]",
                               G_slv_outbox_rx_pba_request[l_slv].request.callback_rc,
                               G_slv_outbox_rx_pba_request[l_slv].request.options,
                               G_slv_outbox_rx_pba_request[l_slv].request.state,
                               G_slv_outbox_rx_pba_request[l_slv].request.abort_state,
                               G_slv_outbox_rx_pba_request[l_slv].request.completion_state);
-                    TRAC_INFO("NOT proceeding with BCE slv outbox rx request and schedule");
+
+                    TRAC_INFO("NOT proceeding with BCE slv outbox rx request and schedule for slave[0x%02X]",
+                              l_slv);
                 }
                 else
                 {
@@ -244,7 +244,7 @@ void task_dcom_rx_slv_outboxes( task_t *i_self)
                                     sizeof(dcom_slv_outbox_t),                       // size of copy
                                     SSX_WAIT_FOREVER,                                // no timeout
                                     (AsyncRequestCallback)setbit_slvoutbox_complete, // call back
-                                    &l_slv,                                          // call back arguments
+                                    (void *)&l_slv,                                  // call back arguments
                                     ASYNC_CALLBACK_IMMEDIATE                         // blocking request
                                     );
                     if(l_ssxrc != SSX_OK)

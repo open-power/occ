@@ -420,6 +420,11 @@ typedef struct
   //Maximum frequency allowed on this chip by the connector overcurrent algorithm.
   //Set by amec_conn_oc_controller.
   uint16_t conn_oc_vote;
+
+  //Maximum frequency allowed on this chip by the Pmax_clip register.
+  //Set by amec_slv_check_apss_fail
+  uint16_t apss_pmax_clip_freq;
+
 } amec_proc_pwr_votes_t;
 
 //-------------------------------------------------------------

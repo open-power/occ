@@ -153,6 +153,64 @@ smh_state_timing_t G_amec_slv_state_timings = {amec_slv_update_smh_sensors};
 
 // Function Specification
 //
+// Name: amec_slv_check_apss_fail
+//
+// Description: This function checks if there are APSS failures and takes
+// action accordingly. If there are APSS failures, it will lower the Pmax_rail
+// to nominal. Else, if will release the Pmax_rail.
+//
+// End Function Specification
+void amec_slv_check_apss_fail(void)
+{
+    /*------------------------------------------------------------------------*/
+    /*  Local Variables                                                       */
+    /*------------------------------------------------------------------------*/
+    uint32_t                    l_pmax_rail_freq = g_amec->proc[0].pwr_votes.apss_pmax_clip_freq;
+    Pstate                      l_pstate = 0;
+    static bool                 L_lower_pmax_rail = FALSE;
+    static bool                 L_raise_pmax_rail = TRUE;
+
+    /*------------------------------------------------------------------------*/
+    /*  Code                                                                  */
+    /*------------------------------------------------------------------------*/
+
+    if (G_apss_lower_pmax_rail == TRUE)
+    {
+        if (L_lower_pmax_rail == FALSE)
+        {
+            // Lower the Pmax_rail to nominal
+            l_pmax_rail_freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL];
+            l_pstate = proc_freq2pstate(l_pmax_rail_freq);
+
+            // Set the Pmax_rail register via OCI write
+            amec_oversub_pmax_clip(l_pstate);
+
+            L_lower_pmax_rail = TRUE;
+            L_raise_pmax_rail = FALSE;
+        }
+    }
+    else
+    {
+        if (L_raise_pmax_rail == FALSE)
+        {
+            // Raise the Pmax rail back
+            l_pmax_rail_freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
+            l_pstate = proc_freq2pstate(l_pmax_rail_freq);
+
+            // Set the Pmax_rail register via OCI write
+            amec_oversub_pmax_clip(l_pstate);
+
+            L_lower_pmax_rail = FALSE;
+            L_raise_pmax_rail = TRUE;
+        }
+    }
+
+    // Store the frequency vote for the voting box
+    g_amec->proc[0].pwr_votes.apss_pmax_clip_freq = l_pmax_rail_freq;
+}
+
+// Function Specification
+//
 // Name: amec_slv_common_tasks_pre
 //
 // Description: Runs all the functions that need to run pre-AMEC-State-Machine
@@ -215,6 +273,10 @@ void amec_slv_common_tasks_post(void)
   // Only execute if OCC is in the active state
   if ( IS_OCC_STATE_ACTIVE() )
   {
+      // Check if we need to change Pmax_clip register setting due to not
+      // getting any APSS data from Master
+      amec_slv_check_apss_fail();
+
       // Call amec_power_control
       amec_power_control();
       // Call the OCC slave's voting box

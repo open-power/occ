@@ -93,6 +93,12 @@ enum occReasonCode
     /// Connector overcurrent pin still asserted.
     CONNECTOR_OC_PINS_WARNING       = 0xC1,
     CONNECTOR_OC_PINS_FAILURE       = 0xC2,
+    /// Slave OCC failed to receive new APSS data over a short time interval
+    APSS_SLV_SHORT_TIMEOUT          = 0xC3,
+    /// Slave OCC failed to receive new APSS data over a long time interval
+    APSS_SLV_LONG_TIMEOUT           = 0xC4,
+    /// APSS failed to return data or returned bad data over a long time interval
+    APSS_HARD_FAILURE               = 0xC5,
     ///  Request to read redundant APSS data failed
     REDUNDANT_APSS_GPE_FAILURE      = 0xCB,
     /// Success!

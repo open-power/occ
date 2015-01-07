@@ -43,17 +43,15 @@
 void dumpHexString(const void *i_data, const unsigned int len, const char *string);
 #endif
 
-#define APSS_DATA_FAIL_MAX     32  //Number of steps we reach before reseting OCC.  This should allow for 4ms/16ticks with no APSS data.
-#define APSS_DATA_FAILURE_STEP 2   //Number of steps to increment FAIL_COUNT due to a failed APSS data collection.
-#define APSS_DATA_SUCCESS_STEP 1   //Number of steps to decrement the FAIL_COUNT due to successful APSS data collection.
+#define APSS_DATA_FAIL_PMAX_RAIL  16  //Number of steps before we lower Pmax_rail to nominal. This should allow for 4ms/16ticks with no APSS data.
+#define APSS_DATA_FAIL_MAX       400  //Number of steps we reach before reseting OCC.  This should allow for 100ms/400ticks with no APSS data.
+#define APSS_DATA_FAILURE_STEP     1  //Number of steps to increment FAIL_COUNT due to a failed APSS data collection.
 #define APSS_ERRORLOG_RESET_THRESHOLD 16 //When to allow apss tasks to log another error if count goes back to 0 again.
 
-extern uint8_t G_apss_fail_updown_count;           //Used to keep count of number of APSS data collection fails.
+extern uint16_t G_apss_fail_updown_count;     //Used to keep count of number of APSS data collection fails.
 
-//Decrement APSS_FAIL_COUNT by APSS_DATA_SUCCESS_STEP to a minimum of 0.
-#define APSS_SUCCESS() {(G_apss_fail_updown_count >= APSS_DATA_SUCCESS_STEP)? \
-                        (G_apss_fail_updown_count -= APSS_DATA_SUCCESS_STEP): \
-                        (G_apss_fail_updown_count = 0);}
+//Decrement APSS_FAIL_COUNT to 0.
+#define APSS_SUCCESS() {(G_apss_fail_updown_count = 0);}
 
 // Increment APSS_FAIL_COUNT by APSS_DATA_FAILURE_STEP to a maximum of APSS_DATA_FAIL_MAX.
 #define APSS_FAIL()   {((APSS_DATA_FAIL_MAX - G_apss_fail_updown_count) >= APSS_DATA_FAILURE_STEP)? \

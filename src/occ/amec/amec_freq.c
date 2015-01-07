@@ -75,7 +75,8 @@ const uint32_t G_pmc_ffdc_scom_addrs[] =
     PMC_LFIR_ERR_REG,
     PMC_LFIR_ERR_MASK_REG,
     OCB_OCCLFIR,
-    PBA_FIR
+    PBA_FIR,
+    TOD_VALUE_REG
 };
 
 //FFDC OCI addresses as requested by Greg Still in defect SW247927
@@ -109,6 +110,11 @@ const uint32_t G_pmc_ffdc_oci_addrs[] =
     PMC_O2S_STATUS_REG,
     PMC_O2S_COMMAND_REG,
     PMC_O2S_WDATA_REG,
+    PMC_CORE_DECONFIGURATION_REG,
+    PMC_FSMSTATE_STATUS_REG,
+    PMC_GPSA_ACK_COLLECTION_REG,
+    PMC_GPSA_ACK_COLLECTION_MASK_REG,
+    PMC_OCC_HEARTBEAT_REG,
     0                           //0 marks last OCI address
 };
 
@@ -254,6 +260,14 @@ void amec_slv_voting_box(void)
     {
         l_chip_fmax = g_amec->proc[0].pwr_votes.pmax_clip_freq;
         l_chip_reason = AMEC_VOTING_REASON_PMAX;
+        l_kvm_throt_reason = POWER_SUPPLY_FAILURE;
+    }
+
+    // Pmax_clip frequency request if there is an APSS failure
+    if(g_amec->proc[0].pwr_votes.apss_pmax_clip_freq < l_chip_fmax)
+    {
+        l_chip_fmax = g_amec->proc[0].pwr_votes.apss_pmax_clip_freq;
+        l_chip_reason = AMEC_VOTING_REASON_APSS_PMAX;
         l_kvm_throt_reason = POWER_SUPPLY_FAILURE;
     }
 
@@ -752,12 +766,26 @@ void amec_slv_check_perf(void)
                                               l_prev_ovs_state,              //userdata1
                                               0);                            //userdata2
 
+                // Callout to Oversubscription
                 addCalloutToErrl(   l_errl,
                                     ERRL_CALLOUT_TYPE_COMPONENT_ID,
                                     ERRL_COMPONENT_ID_OVERSUBSCRIPTION,
                                     ERRL_CALLOUT_PRIORITY_HIGH
                                 );
 
+                // Callout to APSS
+                addCalloutToErrl(   l_errl,
+                                    ERRL_CALLOUT_TYPE_HUID,
+                                    G_sysConfigData.apss_huid,
+                                    ERRL_CALLOUT_PRIORITY_MED
+                                );
+
+                // Callout to Firmware
+                addCalloutToErrl(   l_errl,
+                                    ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                                    ERRL_COMPONENT_ID_FIRMWARE,
+                                    ERRL_CALLOUT_PRIORITY_LOW
+                                );
 
                 // and sets the consolidate action flag
                 setErrlActions( l_errl, ERRL_ACTIONS_CONSOLIDATE_ERRORS );

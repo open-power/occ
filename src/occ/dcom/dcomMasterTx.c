@@ -56,7 +56,7 @@ uint32_t G_pbax_rc = 0;
 uint32_t G_pbax_packet = 0xffffffff;
 
 // Used to keep count of number of APSS data collection fails.
-uint8_t G_apss_fail_updown_count = 0x00;
+uint16_t G_apss_fail_updown_count = 0x0000;
 
 // Function Specification
 //
@@ -326,9 +326,7 @@ void task_dcom_tx_slv_inbox( task_t *i_self)
                 l_proceed_with_request_and_schedule = FALSE;
 
                 // Trace important information from the request
-                TRAC_INFO("BCE slv inbox tx request not idle and not complete, \
-                          callback_rc=%d options=0x%x state=0x%x abort_state=0x%x \
-                          completion_state=0x%x",
+                TRAC_INFO("BCE slv inbox tx request not idle and not complete: callback_rc[%d] options[0x%x] state[0x%x] abort_state[0x%x] completion_state[0x%x]",
                           G_slv_inbox_tx_pba_request.request.callback_rc,
                           G_slv_inbox_tx_pba_request.request.options,
                           G_slv_inbox_tx_pba_request.request.state,
@@ -422,16 +420,16 @@ void task_dcom_tx_slv_inbox( task_t *i_self)
                     /* @
                      * @errortype
                      * @moduleid    DCOM_MID_TASK_TX_SLV_INBOX
-                     * @reasoncode  INTERNAL_FAILURE
+                     * @reasoncode  APSS_HARD_FAILURE
                      * @userdata1   N/A
                      * @userdata4   OCC_NO_EXTENDED_RC
-                     * @devdesc     Time out waiting on power measurement completion
+                     * @devdesc     Time out waiting on power measurement completion (hard time-out)
                      */
                     TRAC_ERR("Timed out waiting apss meas completion (dcom_start:%d us, apss_start:%d us, apss_end:%d us)",
                              (int) ((l_start)/(SSX_TIMEBASE_FREQUENCY_HZ/1000000)),
                              (int) ((G_gpe_apss_time_start)/(SSX_TIMEBASE_FREQUENCY_HZ/1000000)),
                              (int) ((G_gpe_apss_time_end)/(SSX_TIMEBASE_FREQUENCY_HZ/1000000)));
-                    l_orc = INTERNAL_FAILURE;
+                    l_orc = APSS_HARD_FAILURE;
                     l_orc_ext = OCC_NO_EXTENDED_RC;
                     l_request_reset = TRUE;
 

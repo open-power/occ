@@ -82,6 +82,7 @@ typedef enum
     AMEC_VOTING_REASON_CONN_OC          = 0x00010000,
     AMEC_VOTING_REASON_OVERRIDE_CORE    = 0x00020000,
     AMEC_VOTING_REASON_IPS              = 0x00040000,
+    AMEC_VOTING_REASON_APSS_PMAX        = 0x00080000,
 }amec_freq_voting_reason_t;
 
 
