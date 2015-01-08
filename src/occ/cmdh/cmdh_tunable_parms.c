@@ -114,6 +114,11 @@ uint8_t cmdh_tunable_parms_write(   const cmdh_fsp_cmd_t * i_cmd_ptr,
                 // Save off value
                 G_mst_tunable_parameter_table[l_id-1].value = CONVERT_UINT8_ARRAY_UINT16(l_cmd_ptr->data[i].value[0], l_cmd_ptr->data[i].value[1]);
                 G_mst_tunable_parameter_table_ext[l_id-1].adj_value = G_mst_tunable_parameter_table[l_id-1].value*G_mst_tunable_parameter_table_ext[l_id-1].multiplier;
+
+                TRAC_INFO("New tunable parameter value received: id[%u] value[%u] adj_value[%u]",
+                          l_id,
+                          G_mst_tunable_parameter_table[l_id-1].value,
+                          G_mst_tunable_parameter_table_ext[l_id-1].adj_value);
             }
             else
             {

@@ -443,6 +443,8 @@ void AMEC_part_overwrite_dps_parameters(void)
         l_part->dpsalg.step_down = G_dcom_slv_inbox_rx.step_down;
         l_part->dpsalg.epsilon_perc = G_dcom_slv_inbox_rx.epsilon_perc;
         l_part->dpsalg.tlutil = G_dcom_slv_inbox_rx.tlutil;
+        // The algorithm type cannot be selected by customer, hardcoded here.
+        l_part->dpsalg.type = 41;
 
         // Update internal performance settings for each core on this partition
         for (j=0; j<l_part->ncores; j++)
