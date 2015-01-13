@@ -9,4 +9,6 @@
 linkscript
 imageHdrScript
 occStringFile
+.project
+.cproject
 
