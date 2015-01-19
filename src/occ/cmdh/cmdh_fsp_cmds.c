@@ -1622,3 +1622,82 @@ errlHndl_t cmdh_get_cooling_request(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
     return l_errlHndl;
 }
+
+
+// Function Specification
+//
+// Name:  cmdh_set_user_pcap
+//
+// Description: Implements the Set Use Power Cap command.
+//
+// End Function Specification
+errlHndl_t cmdh_set_user_pcap(const cmdh_fsp_cmd_t * i_cmd_ptr,
+                                    cmdh_fsp_rsp_t * o_rsp_ptr)
+{
+    errlHndl_t l_err = NULL;
+    ERRL_RC  l_rc = ERRL_RC_SUCCESS;
+
+
+    o_rsp_ptr->rc = ERRL_RC_SUCCESS;
+    o_rsp_ptr->data_length[0] = 0;
+    o_rsp_ptr->data_length[1] = 0;
+
+    do
+    {
+        // Can't send this command to a slave
+        if (OCC_SLAVE == G_occ_role)
+        {
+            l_rc = ERRL_RC_INVALID_CMD;
+            break;
+        }
+
+        if (CMDH_DATALEN_FIELD_UINT16(i_cmd_ptr) != CMDH_SET_USER_PCAP_DATALEN)
+        {
+            l_rc = ERRL_RC_INVALID_CMD_LEN;
+            break;
+        }
+
+        uint16_t l_pcap = CONVERT_UINT8_ARRAY_UINT16(i_cmd_ptr->data[0],
+                                                     i_cmd_ptr->data[1]);
+
+        //A value of 0 means this pcap has been deactivated, otherwise
+        //make sure it's within the min & max.
+        if ((l_pcap != 0) && (l_pcap < G_master_pcap_data.hard_min_pcap))
+        {
+            TRAC_ERR("User PCAP %d is below the minimum allowed (%d)",
+                      l_pcap, G_master_pcap_data.hard_min_pcap);
+
+            l_rc = ERRL_RC_INVALID_DATA;
+            break;
+        }
+        else if ((l_pcap > G_master_pcap_data.system_pcap) &&
+                 (G_master_pcap_data.system_pcap != 0))
+        {
+            TRAC_ERR("User PCAP %d is above the maximum allowed (%d)",
+                      l_pcap, G_master_pcap_data.system_pcap);
+
+            l_rc = ERRL_RC_INVALID_DATA;
+            break;
+        }
+        else
+        {
+            G_master_pcap_data.current_pcap = l_pcap;
+
+            //Indicate there is new PCAP data available
+            G_master_pcap_data.pcap_data_count++;
+        }
+
+        TRAC_INFO("User selected power limit = %d",
+                  G_master_pcap_data.current_pcap);
+
+    } while (0);
+
+
+    if (ERRL_RC_SUCCESS != l_rc)
+    {
+        // Build Error Response packet
+        cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, l_rc, &l_err);
+    }
+
+    return l_err;
+}

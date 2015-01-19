@@ -49,6 +49,7 @@ typedef enum
     CMDH_CLEARERRL              = 0x12,
     CMDH_SETMODESTATE           = 0x20,
     CMDH_SETCONFIGDATA          = 0x21,
+    CMDH_SET_USER_PCAP          = 0x22,
     CMDH_SET_THERMAL_THROTTLE   = 0x23,
     CMDH_RESET_PREP             = 0x25,
     CMDH_SNAPSHOT_SYNC          = 0x26,
@@ -591,6 +592,8 @@ extern uint8_t G_mst_tunable_parameter_overwrite;
 extern cmdh_tunable_param_table_ext_t G_mst_tunable_parameter_table_ext[CMDH_DEFAULT_TUNABLE_PARAM_NUM];
 extern cmdh_tunable_param_table_t G_mst_tunable_parameter_table[CMDH_DEFAULT_TUNABLE_PARAM_NUM];
 
+#define CMDH_SET_USER_PCAP_DATALEN 2
+
 errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                         cmdh_fsp_rsp_t * i_rsp_ptr);
 
@@ -621,6 +624,9 @@ errlHndl_t cmdh_tmgt_get_field_debug_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
 errlHndl_t cmdh_get_cooling_request(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                           cmdh_fsp_rsp_t * o_rsp_ptr);
+
+errlHndl_t cmdh_set_user_pcap(const cmdh_fsp_cmd_t * i_cmd_ptr,
+                                    cmdh_fsp_rsp_t * o_rsp_ptr);
 
 #endif
 

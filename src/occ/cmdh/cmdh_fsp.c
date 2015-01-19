@@ -1285,6 +1285,9 @@ errlHndl_t cmdh_processTmgtRequest (const cmdh_fsp_cmd_t * i_cmd_ptr,
         case CMDH_GET_SNAPSHOT_BUFFER:
             l_err = cmdh_get_snapshot_buffer(i_cmd_ptr,i_rsp_ptr);
             break;
+        case CMDH_SET_USER_PCAP:
+            l_err = cmdh_set_user_pcap(i_cmd_ptr, i_rsp_ptr);
+            break;
 
         //case CMDH_PWREXECPT:
         case CMDH_SET_THERMAL_THROTTLE:
