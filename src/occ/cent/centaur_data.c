@@ -64,12 +64,14 @@ typedef enum
     DISABLE_SC,
     CLEAR_NEST_LFIR6,
     ENABLE_SC,
+    READ_SCAC_LFIR,
     NUM_CENT_OPS
 }cent_ops_enum;
 
 
 #define MBCCFGQ_REG                 ((uint32_t)0x0201140ful)
 #define LINE_DELETE_ON_NEXT_CE      ((uint64_t)0x0080000000000000ull)
+#define SCAC_LFIR_REG               ((uint32_t)0x020115c0ul)
 #define SCAC_CONFIG_REG             ((uint32_t)0x020115ceul)
 #define SCAC_MASTER_ENABLE          ((uint64_t)0x8000000000000000ull)
 #define CENT_NEST_LFIR_REG          ((uint32_t)0x0204000aul)
@@ -169,7 +171,7 @@ uint8_t      G_centaur_nest_lfir6 = 0;
 #define NEST_LFIR6_MAX_COUNT 4
 
 //number of SC polls to wait between i2c recovery attempts
-#define CENT_SC_MAX_INTERVAL 32
+#define CENT_SC_MAX_INTERVAL 256
 
 void cent_recovery(uint32_t i_cent)
 {
@@ -185,7 +187,8 @@ void cent_recovery(uint32_t i_cent)
     static uint8_t L_nest_lfir6_count[MAX_NUM_CENTAURS] = {0};
     static uint8_t L_nest_lfir6_traced = 0;
     static uint8_t L_nest_lfir6_logged = 0;
-    static uint8_t L_i2c_recovery_delay[MAX_NUM_CENTAURS] = {0};
+    static uint16_t L_i2c_recovery_delay[MAX_NUM_CENTAURS] = {0};
+    static bool L_i2c_finish_recovery[MAX_NUM_CENTAURS] = {FALSE};
 
     do
     {
@@ -372,6 +375,19 @@ void cent_recovery(uint32_t i_cent)
             G_centaur_nest_lfir6 &= ~l_cent_mask;
         }
 
+        // Check if the previous centaur is in the process of recovery
+        if(L_i2c_finish_recovery[l_prev_cent] == TRUE)
+        {
+            // Capture the scac_lfir as ffdc but only once
+            if(L_i2c_recovery_delay[l_prev_cent] == CENT_SC_MAX_INTERVAL)
+            {
+                TRAC_ERR("cent_recovery: centaur[%d] scac_lfir[0x%08x%08x]", 
+                         l_prev_cent,
+                         (uint32_t)(G_cent_scom_list_entry[READ_SCAC_LFIR].data >> 32),
+                         (uint32_t)(G_cent_scom_list_entry[READ_SCAC_LFIR].data));
+            }
+        }
+
         //Now we can start working on the next centaur (i_cent)
         l_cent_mask = CENTAUR0_PRESENT_MASK >> i_cent;
 
@@ -407,7 +423,8 @@ void cent_recovery(uint32_t i_cent)
             {
                 if(!L_i2c_rec_trc_throt)
                 {
-                    TRAC_INFO("cent_recovery: Performing centaur i2c recovery procedure. required bitmap = 0x%02X", G_centaur_needs_recovery);
+                    TRAC_INFO("cent_recovery: Performing centaur[%d] i2c recovery procedure. required bitmap = 0x%02X",
+                              i_cent, G_centaur_needs_recovery);
                 }
 
                 //restart the recovery delay
@@ -421,10 +438,13 @@ void cent_recovery(uint32_t i_cent)
                 G_centaur_needs_recovery &= ~l_cent_mask;
 
                 //Set the command type from GPE_SCOM_NOP to GPE_SCOM_RMW
-                //these entries will disable and re-enable the centaur sensor cache
-                //which will also cause the i2c master to be reset
+                //this entry will disable the centaur sensor cache and
+                //set a flag to finish the recovery in a later call of this
+                //function (cent_recovery for a given centaur is called every
+                //2 msec)
                 G_cent_scom_list_entry[DISABLE_SC].commandType = GPE_SCOM_RMW;
-                G_cent_scom_list_entry[ENABLE_SC].commandType = GPE_SCOM_RMW;
+                G_cent_scom_list_entry[ENABLE_SC].commandType = GPE_SCOM_NOP;
+                L_i2c_finish_recovery[i_cent] = TRUE;
             }
         }
         else
@@ -445,6 +465,22 @@ void cent_recovery(uint32_t i_cent)
             //these ops aren't needed so disable them
             G_cent_scom_list_entry[DISABLE_SC].commandType = GPE_SCOM_NOP;
             G_cent_scom_list_entry[ENABLE_SC].commandType = GPE_SCOM_NOP;
+
+            // Finish the i2c recovery if it was started for this centaur
+            if(L_i2c_finish_recovery[i_cent] == TRUE)
+            {
+                TRAC_INFO("cent_recovery: Finishing centaur[%d] i2c centaur recovery procedure",
+                          i_cent);
+
+                //clear the finish_recovery flag for this centaur
+                L_i2c_finish_recovery[i_cent] = FALSE;
+
+                //Set the command type from GPE_SCOM_NOP to GPE_SCOM_RMW
+                //this entry will re-enable the centaur sensor cache
+                //which will also cause the i2c master to be reset
+                G_cent_scom_list_entry[DISABLE_SC].commandType = GPE_SCOM_NOP;
+                G_cent_scom_list_entry[ENABLE_SC].commandType = GPE_SCOM_RMW;
+            }
         }
 
         //Set the target centaur for all ops
@@ -455,6 +491,7 @@ void cent_recovery(uint32_t i_cent)
         G_cent_scom_list_entry[CLEAR_NEST_LFIR6].instanceNumber = i_cent;
         G_cent_scom_list_entry[DISABLE_SC].instanceNumber = i_cent;
         G_cent_scom_list_entry[ENABLE_SC].instanceNumber = i_cent;
+        G_cent_scom_list_entry[READ_SCAC_LFIR].instanceNumber = i_cent;
 
         // Set up GPE parameters
         G_cent_scom_gpe_parms.rc         = 0;
@@ -462,7 +499,6 @@ void cent_recovery(uint32_t i_cent)
         G_cent_scom_gpe_parms.scomList   = (uint32_t) (&G_cent_scom_list_entry[0]);
         G_cent_scom_gpe_parms.options    = 0;
         G_cent_scom_gpe_parms.errorIndex = 0;
-
 
         // Submit Pore GPE without blocking
         l_rc = pore_flex_schedule(&G_cent_scom_req);
@@ -978,7 +1014,11 @@ void centaur_init( void )
         G_cent_scom_list_entry[ENABLE_SC].mask = SCAC_MASTER_ENABLE;                //mask of bits to change
         G_cent_scom_list_entry[ENABLE_SC].data = SCAC_MASTER_ENABLE;                //scom data (enable sensor cache)
 
-
+        //one time init for reading centaur sensor cache lfir
+        G_cent_scom_list_entry[READ_SCAC_LFIR].scom  = SCAC_LFIR_REG;               //scom address
+        G_cent_scom_list_entry[READ_SCAC_LFIR].commandType = GPE_SCOM_READ;         //scom operation to perform
+        G_cent_scom_list_entry[READ_SCAC_LFIR].mask = 0;                            //mask (not used for reads)
+        G_cent_scom_list_entry[READ_SCAC_LFIR].data = 0;                            //scom data (initialize to 0)
 
         /// Set up Centuar Scom Registers - array of Scoms
         ///   [0]:  Setup deadman timer
