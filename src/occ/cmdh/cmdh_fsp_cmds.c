@@ -68,9 +68,9 @@ testAppletStats_t G_testAppletStats = {0};
 // customers (only Master OCC should access/control this table)
 cmdh_tunable_param_table_t G_mst_tunable_parameter_table[CMDH_DEFAULT_TUNABLE_PARAM_NUM] =
 {
-    {1,   "Utilization threshold for increasing frequency",              3,  0,  999,  0,    1000},
-    {2,   "Utilization threshold for decreasing frequency",              3,  0,  999,  0,    1000},
-    {3,   "Number of samples for computing utilization statistics",      4,  0,  4,    1,    1024},
+    {1,   "Utilization threshold for increasing frequency",              3,  0,  980,  0,    1000},
+    {2,   "Utilization threshold for decreasing frequency",              3,  0,  980,  0,    1000},
+    {3,   "Number of samples for computing utilization statistics",      4,  0,  16,   1,    1024},
     {4,   "Step size for going up in frequency",                         3,  0,  8,    1,    1000},
     {5,   "Step size for going down in frequency",                       3,  0,  8,    1,    1000},
     {6,   "Delta percentage for determining active cores",               2,  0,  18,   0,    100 },
@@ -83,9 +83,9 @@ cmdh_tunable_param_table_t G_mst_tunable_parameter_table[CMDH_DEFAULT_TUNABLE_PA
 // and mutipliers.
 cmdh_tunable_param_table_ext_t G_mst_tunable_parameter_table_ext[CMDH_DEFAULT_TUNABLE_PARAM_NUM] =
 {
-    {999, 10,  9990},
-    {999, 10,  9990},
-    {4,   1,   4   },
+    {980, 10,  9800},
+    {980, 10,  9800},
+    {16,  1,   16  },
     {8,   1,   8   },
     {8,   1,   8   },
     {18,  100, 1800},

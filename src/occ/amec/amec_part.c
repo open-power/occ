@@ -185,10 +185,10 @@ void amec_part_add(uint8_t i_id)
         l_part->dpsalg.step_up = 8;
         l_part->dpsalg.step_down = 8;
         l_part->dpsalg.tlutil = 9800;
-        l_part->dpsalg.sample_count_util = 4;
+        l_part->dpsalg.sample_count_util = 16;
         l_part->dpsalg.epsilon_perc = 1800;
-        l_part->dpsalg.alpha_up = 9999;
-        l_part->dpsalg.alpha_down = 9999;
+        l_part->dpsalg.alpha_up = 9800;
+        l_part->dpsalg.alpha_down = 9800;
         l_part->dpsalg.type = 0; //No algorithm is selected yet
         l_part->dpsalg.freq_request = UINT16_MAX;
 
@@ -256,10 +256,10 @@ void amec_part_update_dps_parameters(amec_part_t* io_part)
     io_part->dpsalg.step_up = 8;
     io_part->dpsalg.step_down = 8;
     io_part->dpsalg.tlutil = 9800;
-    io_part->dpsalg.sample_count_util = 4;
+    io_part->dpsalg.sample_count_util = 16;
     io_part->dpsalg.epsilon_perc = 1800;
-    io_part->dpsalg.alpha_up = 9990;
-    io_part->dpsalg.alpha_down = 9990;
+    io_part->dpsalg.alpha_up = 9800;
+    io_part->dpsalg.alpha_down = 9800;
     io_part->dpsalg.type = 41;
 
     // If core group policy is DPS-Favor Performance, then write those settings
