@@ -126,7 +126,7 @@ typedef struct __attribute__ ((packed)) cmdh_poll_resp_v0
             uint8_t _reserved_1     : 1;
             uint8_t cooling_request : 1;   // 1:new fan speed, 0:no new fan speed
         };
-        uint8_t word; 
+        uint8_t word;
     } ext_status;
     // OCCs Present
     uint8_t   occ_pres_mask;
@@ -150,7 +150,7 @@ typedef struct __attribute__ ((packed)) cmdh_poll_resp_v0
             uint8_t ips_active      : 1;
             uint8_t ips_enabled     : 1;
         };
-        uint8_t word; 
+        uint8_t word;
     } ips_status;
     // Error Log ID
     uint8_t   errl_id;
@@ -194,10 +194,10 @@ typedef struct __attribute__ ((packed)) cmdh_poll_resp_v10
             uint8_t dvfs_due_to_pwr : 1;   // 1 => OCC clipped max Psate due to reaching pcap limit.
             uint8_t mthrot_due_to_ot: 1;   // 1 => OCC throttled memory due to an over temp.
             uint8_t n_power         : 1;   // 1 => Server running without redundant power.
-            uint8_t _reserved_3     : 1;   
-            uint8_t _reserved_2     : 1;   
-            uint8_t _reserved_1     : 1;   
-            uint8_t _reserved_0     : 1;   
+            uint8_t _reserved_3     : 1;
+            uint8_t _reserved_2     : 1;
+            uint8_t _reserved_1     : 1;
+            uint8_t _reserved_0     : 1;
         };
         uint8_t word;
     } ext_status;
@@ -209,7 +209,7 @@ typedef struct __attribute__ ((packed)) cmdh_poll_resp_v10
     uint8_t   state;
     // BYTE  6 - 7: Reserved
     uint8_t   _reserved_6;
-    uint8_t   _reserved_7; 
+    uint8_t   _reserved_7;
     // BYTE  8: Error Log ID
     uint8_t   errl_id;
     // BYTES  9 - 12: Error Log Start Address
@@ -264,9 +264,9 @@ typedef struct __attribute__ ((packed)) cmdh_poll_powr_sensor
 // Only available from master occ.
 typedef struct __attribute__ ((packed)) cmdh_poll_caps_sensor
 {
-    cmdh_poll_sensor_db_t header; // Only one entry for powercap.
     uint16_t current;   // Current power cap in 1W units.
     uint16_t system;    // Current system power in 1W units.
+    uint16_t n;         // Oversubscription; output pcap limit when theres no redundant power.
     uint16_t max;       // Maximum power cap in 1W units.
     uint16_t min;       // Minimum power cap in 1W units.
     uint16_t user;      // Power cap set by user in 1W units.
@@ -421,7 +421,7 @@ typedef struct __attribute__ ((packed))
 
 // Enum of the various Debug commands that may be sent to OCC
 // over the TMGT<->OCC interface.
-typedef enum 
+typedef enum
 {
     DBUG_READ_SCOM          = 0x01,
     DBUG_PUT_SCOM           = 0x02,

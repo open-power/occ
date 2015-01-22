@@ -49,6 +49,7 @@
 #include "chom.h"
 #include "amec_master_smh.h"
 #include "thrm_thread.h"
+#include <proc_data.h>
 
 // We need to have a small structure in non-Applet space to keep track
 // of success & failures when running test applets.  This needs to be
@@ -205,7 +206,7 @@ errlHndl_t cmdh_tmgt_poll (const cmdh_fsp_cmd_t * i_cmd_ptr,
 ERRL_RC cmdh_poll_v10(cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     ERRL_RC                     l_rc  = ERRL_RC_INTERNAL_FAIL;
-    uint8_t                     k, i  = 0;
+    uint8_t                     k = 0;
     cmdh_poll_sensor_db_t       l_sensorHeader;
 
     // Clear response buffer
@@ -249,6 +250,7 @@ ERRL_RC cmdh_poll_v10(cmdh_fsp_rsp_t * o_rsp_ptr)
     // Byte 15 - 16: reserved.
     // Byte 17 - 32 (16 bytes): OCC level
     memcpy( (void *) l_poll_rsp->occ_level, (void *) &G_occ_buildname[0], 16);
+
     // Byte 33 - 38:
     char l_sensor_ec[6] = "SENSOR";
     memcpy( (void *) l_poll_rsp->sensor_ec, (void *) &l_sensor_ec[0], (size_t) sizeof(l_sensor_ec));
@@ -257,138 +259,198 @@ ERRL_RC cmdh_poll_v10(cmdh_fsp_rsp_t * o_rsp_ptr)
     // Byte 40:
     l_poll_rsp->sensor_dblock_version = 0x01;  //Currently only 0x01 is supported.
 
-    // TODO add sensor data at o_rsp_buffer location after sizeof cmdh_poll_resp_v10_fixed_t
     uint16_t l_rsp_index = CMDH_POLL_RESP_LEN_V10;
 
-    // TODO improvement: Run applet to obtain list of sensors to return and generate the
-    //       list dynamically instead.
-
-    // Static list of sensors to return.  TEMP, FREQ, and Power
-    uint16_t l_tempSensors[]={TEMP2MSP0C0,TEMP2MSP0C1,TEMP2MSP0C2,TEMP2MSP0C3,TEMP2MSP0C4,TEMP2MSP0C5,TEMP2MSP0C6,TEMP2MSP0C7,TEMP2MSP0C8,TEMP2MSP0C9,TEMP2MSP0C10,TEMP2MSP0C11};
-    uint8_t  l_tempSensorCount = sizeof(l_tempSensors)/sizeof(uint16_t);
-    uint16_t l_freqSensors[]={FREQA2MSP0C0,FREQA2MSP0C1,FREQA2MSP0C2,FREQA2MSP0C3,FREQA2MSP0C4,FREQA2MSP0C5,FREQA2MSP0C6,FREQA2MSP0C7,FREQA2MSP0C8,FREQA2MSP0C9,FREQA2MSP0C10,FREQA2MSP0C11};
-    uint8_t  l_freqSensorCount = sizeof(l_tempSensors)/sizeof(uint16_t);
-    uint16_t l_powrSensors[]={PWR250US,PWR250USFAN,PWR250USIO,PWR250USSTORE,PWR250USGPU,PWR250USP0,PWR250USVDD0,PWR250USVCS0,PWR250USMEM0};
-    uint8_t  l_powrSensorCount = sizeof(l_powrSensors)/sizeof(uint16_t);
-
+    ////////////////////
+    // TEMP sensors:
     // Generate datablock header for temp sensors and sensor data.
     memset((void*) &l_sensorHeader, 0, (size_t)sizeof(cmdh_poll_sensor_db_t));
     memcpy ((void *) &(l_sensorHeader.eyecatcher[0]), SENSOR_TEMP, 4);
-    l_sensorHeader.format = 0xbb; // TODO: Verify this value
+    l_sensorHeader.format = 0x01;
     l_sensorHeader.length = sizeof(cmdh_poll_temp_sensor_t);
     l_sensorHeader.count  = 0;
-    if (l_tempSensorCount)
-    {
-        // Generate sensor list.
-        cmdh_poll_temp_sensor_t l_sensorlist[l_tempSensorCount];
-        for (i = 0; i < l_tempSensorCount; i++)
-        {
-            if (1) // G_amec_sensor_list[l_tempSensors[i]]->ipmi_sid != 0) //TODO: Do we only report those that have ipmisid and value?
-            {
-                l_sensorlist[l_sensorHeader.count].id = G_amec_sensor_list[l_tempSensors[i]]->ipmi_sid;
-                l_sensorlist[l_sensorHeader.count].value = G_amec_sensor_list[l_tempSensors[i]]->sample;
-                l_sensorHeader.count++;
-            }
-        }
-        // Write data to resp buffer if any.
-        if (l_sensorHeader.count)
-        {
-            uint8_t l_sensordataSz = l_sensorHeader.count * l_sensorHeader.length;
-            // Copy header to response buffer.
-            memcpy ((void *) &(o_rsp_ptr->data[l_rsp_index]), &l_sensorHeader, sizeof(l_sensorHeader));
-            // Increment index into response buffer.
-            l_rsp_index += sizeof(l_sensorHeader);
-            // Copy sensor data into response buffer.
-            memcpy ((void *) &(o_rsp_ptr->data[l_rsp_index]), l_sensorlist, l_sensordataSz);
-            // Increment index into response buffer.
-            l_rsp_index += l_sensordataSz;
 
-            l_poll_rsp->sensor_dblock_count +=1;
+    //Initialize to max number of possible temperature sensors.
+    cmdh_poll_temp_sensor_t l_tempSensorList[MAX_NUM_CORES + MAX_NUM_MEM_CONTROLLERS + (MAX_NUM_MEM_CONTROLLERS * NUM_DIMMS_PER_CENTAUR)];
+    memset(l_tempSensorList, 0x00, sizeof(l_tempSensorList));
+
+    for (k=0; k<MAX_NUM_CORES; k++)
+    {
+        if(CORE_PRESENT(k))
+        {
+            l_tempSensorList[l_sensorHeader.count].id = G_amec_sensor_list[TEMP2MSP0C0 + k]->ipmi_sid;
+            l_tempSensorList[l_sensorHeader.count].value = G_amec_sensor_list[TEMP2MSP0C0 + k]->sample;
+            l_sensorHeader.count++;
         }
     }
 
+    uint8_t l_cent, l_dimm = 0;
+    for (l_cent=0; l_cent < MAX_NUM_MEM_CONTROLLERS; l_cent++)
+    {
+        if (CENTAUR_PRESENT(l_cent))
+        {
+            //Add entry for centaurs.
+            l_tempSensorList[l_sensorHeader.count].id = g_amec->proc[0].memctl[l_cent].centaur.temp_sid;
+            if (G_cent_timeout_logged_bitmap & (CENTAUR0_PRESENT_MASK >> l_cent))
+            {
+                l_tempSensorList[l_sensorHeader.count].value = 0xFFFF;
+            }
+            else
+            {
+                l_tempSensorList[l_sensorHeader.count].value = g_amec->proc[0].memctl[l_cent].centaur.centaur_hottest.cur_temp;
+            }
+            l_sensorHeader.count++;
+
+            //Add entries for present dimms associated with current centaur l_cent.
+            for(l_dimm=0; l_dimm < NUM_DIMMS_PER_CENTAUR; l_dimm++)
+            {
+                if (g_amec->proc[0].memctl[l_cent].centaur.dimm_temps[l_dimm].temp_sid != 0)
+                {
+                    l_tempSensorList[l_sensorHeader.count].id = g_amec->proc[0].memctl[l_cent].centaur.dimm_temps[l_dimm].temp_sid;
+                    //If a dimm timed out long enough, we should return 0xFFFF for that sensor.
+                    if (G_dimm_timeout_logged_bitmap.bytes[l_cent] & (DIMM_SENSOR0 >> l_dimm))
+                    {
+                        l_tempSensorList[l_sensorHeader.count].value = 0xFFFF;
+                    }
+                    else
+                    {
+                        l_tempSensorList[l_sensorHeader.count].value = g_amec->proc[0].memctl[l_cent].centaur.dimm_temps[l_dimm].cur_temp;
+                    }
+
+                    l_sensorHeader.count++;
+
+                }
+
+            }
+        }
+    }
+
+    // Copy header first.
+    memcpy ((void *) &(o_rsp_ptr->data[l_rsp_index]), (void *)&l_sensorHeader, sizeof(l_sensorHeader));
+    // Increment index into response buffer.
+    l_rsp_index += sizeof(l_sensorHeader);
+    l_poll_rsp->sensor_dblock_count +=1;
+    // Write data to resp buffer if any.
+    if (l_sensorHeader.count)
+    {
+        uint8_t l_sensordataSz = l_sensorHeader.count * l_sensorHeader.length;
+        // Copy sensor data into response buffer.
+        memcpy ((void *) &(o_rsp_ptr->data[l_rsp_index]), (void *)l_tempSensorList, l_sensordataSz);
+        // Increment index into response buffer.
+        l_rsp_index += l_sensordataSz;
+
+    }
+
+    ///////////////////
+    // FREQ Sensors:
     // Generate datablock header for freq sensors and sensor data.
     memset((void*) &l_sensorHeader, 0, (size_t)sizeof(cmdh_poll_sensor_db_t));
     memcpy ((void *) &(l_sensorHeader.eyecatcher[0]), SENSOR_FREQ, 4);
-    l_sensorHeader.format = 0xff; // TODO: Verify value
+    l_sensorHeader.format = 0x01;
     l_sensorHeader.length = sizeof(cmdh_poll_freq_sensor_t);
     l_sensorHeader.count  = 0;
-    if (l_freqSensorCount)
+
+    cmdh_poll_freq_sensor_t l_freqSensorList[MAX_NUM_CORES];
+    for (k=0; k<MAX_NUM_CORES; k++)
     {
-        // Generate sensor list.
-        cmdh_poll_freq_sensor_t l_sensorlist[l_freqSensorCount];
-        for (i = 0; i < l_freqSensorCount; i++)
+        if(CORE_PRESENT(k))
         {
-            if (1) // G_amec_sensor_list[l_freqSensors[i]]->ipmi_sid != 0) //TODO: Do we only report those that have ipmisid and value?
-            {
-                l_sensorlist[l_sensorHeader.count].id = G_amec_sensor_list[l_freqSensors[i]]->ipmi_sid;
-                l_sensorlist[l_sensorHeader.count].value = G_amec_sensor_list[l_freqSensors[i]]->sample;
-                l_sensorHeader.count++;
-            }
+            l_freqSensorList[l_sensorHeader.count].id = G_amec_sensor_list[FREQA2MSP0C0 + k]->ipmi_sid;
+            l_freqSensorList[l_sensorHeader.count].value = G_amec_sensor_list[FREQA2MSP0C0 + k]->sample;
+            l_sensorHeader.count++;
         }
-        // Write data to outbuffer if any.
-        if (l_sensorHeader.count)
-        {
-            uint8_t l_sensordataSz = l_sensorHeader.count * l_sensorHeader.length;
-            // Copy header to response buffer.
-            memcpy ((void *) &(o_rsp_ptr->data[l_rsp_index]), &l_sensorHeader, sizeof(l_sensorHeader));
-            //Increment index into response buffer.
-            l_rsp_index += sizeof(l_sensorHeader);
-            // Copy sensor data into response buffer.
-            memcpy ((void *) &(o_rsp_ptr->data[l_rsp_index]), l_sensorlist, l_sensordataSz);
-            // Increment index into response buffer.
-            l_rsp_index += l_sensordataSz;
-
-            l_poll_rsp->sensor_dblock_count +=1;
-        }
-
     }
 
+    // Copy header to response buffer.
+    memcpy ((void *) &(o_rsp_ptr->data[l_rsp_index]), (void *)&l_sensorHeader, sizeof(l_sensorHeader));
+    //Increment index into response buffer.
+    l_rsp_index += sizeof(l_sensorHeader);
+    l_poll_rsp->sensor_dblock_count +=1;
+    // Write data to outbuffer if any.
+    if (l_sensorHeader.count)
+    {
+        uint8_t l_sensordataSz = l_sensorHeader.count * l_sensorHeader.length;
+        // Copy sensor data into response buffer.
+        memcpy ((void *) &(o_rsp_ptr->data[l_rsp_index]), (void *)l_freqSensorList, l_sensordataSz);
+        // Increment index into response buffer.
+        l_rsp_index += l_sensordataSz;
+    }
+
+    /////////////////////
+    // POWR Sensors:
     // Generate datablock header for power sensors and sensor data.  RETURNED by MASTER ONLY.
     if (G_occ_role == OCC_MASTER)
     {
         memset((void*) &l_sensorHeader, 0, (size_t)sizeof(cmdh_poll_sensor_db_t));
         memcpy ((void *) &(l_sensorHeader.eyecatcher[0]), SENSOR_POWR, 4);
-        l_sensorHeader.format = 0xff; // TODO: Verify value
+        l_sensorHeader.format = 0x01;
         l_sensorHeader.length = sizeof(cmdh_poll_power_sensor_t);
         l_sensorHeader.count  = 0;
-        if (l_powrSensorCount)
+
+        // Generate sensor list.
+        cmdh_poll_power_sensor_t l_pwrSensorList[MAX_APSS_ADC_CHANNELS];
+        for (k = 0; k < MAX_APSS_ADC_CHANNELS; k++)
         {
-            // Generate sensor list.
-            cmdh_poll_power_sensor_t l_sensorlist[l_powrSensorCount];
-            for (i = 0; i < l_powrSensorCount; i++)
+            if (G_amec_sensor_list[PWRAPSSCH0 + k]->ipmi_sid != 0)
             {
-                if (1) // G_amec_sensor_list[l_powrSensors[i]]->ipmi_sid != 0) // TODO: Do we only report those that have ipmisid and value?
-                {
-                    l_sensorlist[l_sensorHeader.count].id = G_amec_sensor_list[l_powrSensors[i]]->ipmi_sid;
-                    l_sensorlist[l_sensorHeader.count].current = G_amec_sensor_list[l_powrSensors[i]]->sample;
-                    l_sensorlist[l_sensorHeader.count].accumul = G_amec_sensor_list[l_powrSensors[i]]->accumulator;
-                    l_sensorlist[l_sensorHeader.count].update_tag  = G_amec_sensor_list[l_powrSensors[i]]->update_tag;
-                    l_sensorHeader.count++;
-
-                }
+                l_pwrSensorList[l_sensorHeader.count].id = G_amec_sensor_list[PWRAPSSCH0 + k]->ipmi_sid;
+                l_pwrSensorList[l_sensorHeader.count].current = G_amec_sensor_list[PWRAPSSCH0 + k]->sample;
+                l_pwrSensorList[l_sensorHeader.count].accumul = G_amec_sensor_list[PWRAPSSCH0 + k]->accumulator;
+                l_pwrSensorList[l_sensorHeader.count].update_tag  = G_amec_sensor_list[PWRAPSSCH0 + k]->update_tag;
+                l_sensorHeader.count++;
             }
-            // Write data to outbuffer if any.
-            if (l_sensorHeader.count)
-            {
-                uint8_t l_sensordataSz = l_sensorHeader.count * l_sensorHeader.length;
-                // Copy header to response buffer.
-                memcpy ((void *) &(o_rsp_ptr->data[l_rsp_index]), &l_sensorHeader, sizeof(l_sensorHeader));
-                // Increment index into response buffer.
-                l_rsp_index += sizeof(l_sensorHeader);
-                // Copy sensor data into response buffer.
-                memcpy ((void *) &(o_rsp_ptr->data[l_rsp_index]), l_sensorlist, l_sensordataSz);
-                // Increment index into response buffer.
-                l_rsp_index += l_sensordataSz;
+        }
 
-                l_poll_rsp->sensor_dblock_count +=1;
-            }
+        // Copy header to response buffer.
+        memcpy ((void *) &(o_rsp_ptr->data[l_rsp_index]), (void *)&l_sensorHeader, sizeof(l_sensorHeader));
+        // Increment index into response buffer.
+        l_rsp_index += sizeof(l_sensorHeader);
+        l_poll_rsp->sensor_dblock_count +=1;
+        // Write data to resp buffer if any.
+        if (l_sensorHeader.count)
+        {
+            uint8_t l_sensordataSz = l_sensorHeader.count * l_sensorHeader.length;
+            // Copy sensor data into response buffer.
+            memcpy ((void *) &(o_rsp_ptr->data[l_rsp_index]), (void *)l_pwrSensorList, l_sensordataSz);
+            // Increment index into response buffer.
+            l_rsp_index += l_sensordataSz;
         }
     }
 
+    ////////////////////////
+    // POWER CAPS:
+    // Generate datablock header for power caps.  RETURNED by MASTER ONLY.
+    if (G_occ_role == OCC_MASTER)
+    {
+        memset((void*) &l_sensorHeader, 0, (size_t)sizeof(cmdh_poll_sensor_db_t));
+        memcpy ((void *) &(l_sensorHeader.eyecatcher[0]), SENSOR_CAPS, 4);
+        l_sensorHeader.format = 0x01;
+        l_sensorHeader.length = sizeof(cmdh_poll_pcaps_sensor_t);
 
-    // TODO add PowerCap data.!!!
 
+        cmdh_poll_pcaps_sensor_t l_pcapData;
+        l_pcapData.current = G_sysConfigData.pcap.system_pcap;
+        l_pcapData.system = G_amec_sensor_list[PWR250US]->sample;
+        l_pcapData.n = G_sysConfigData.pcap.oversub_pcap;
+        l_pcapData.max = G_sysConfigData.pcap.max_pcap;
+        l_pcapData.min = G_sysConfigData.pcap.hard_min_pcap;
+        l_pcapData.user = G_sysConfigData.pcap.current_pcap;
+        l_sensorHeader.count  = 1;
+
+        // Copy header to response buffer.
+        memcpy ((void *) &(o_rsp_ptr->data[l_rsp_index]), (void *)&l_sensorHeader, sizeof(l_sensorHeader));
+        // Increment index into response buffer.
+        l_rsp_index += sizeof(l_sensorHeader);
+
+        uint8_t l_sensordataSz = l_sensorHeader.count * l_sensorHeader.length;
+        // Copy sensor data into response buffer.
+        memcpy ((void *) &(o_rsp_ptr->data[l_rsp_index]), (void *)&(l_pcapData), l_sensordataSz);
+        // Increment index into response buffer.
+        l_rsp_index += l_sensordataSz;
+
+        l_poll_rsp->sensor_dblock_count +=1;
+
+    }
 
     l_poll_rsp->data_length[0] = CONVERT_UINT16_UINT8_HIGH(l_rsp_index);
     l_poll_rsp->data_length[1] = CONVERT_UINT16_UINT8_LOW(l_rsp_index);

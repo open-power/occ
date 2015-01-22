@@ -146,6 +146,12 @@ extern cent_sensor_flags_t G_dimm_overtemp_bitmap;
 //global bitmap of dimms temps that have been updated
 extern cent_sensor_flags_t G_dimm_temp_updated_bitmap;
 
+//global bitmap flagging the dimms which we already calledout due to timeout (bitmap of dimms)
+extern cent_sensor_flags_t G_dimm_timeout_logged_bitmap;
+
+//global bitmap flagging the centaurs which we already calledout due to timeout (bitmap of centaurs)
+extern uint8_t G_cent_timeout_logged_bitmap;
+
 //global bitmap of centaurs that have ever gone over the error temperature
 extern uint8_t G_cent_overtemp_bitmap;
 

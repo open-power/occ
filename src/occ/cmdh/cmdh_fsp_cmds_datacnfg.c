@@ -457,9 +457,18 @@ errlHndl_t apss_store_adc_channel(const eApssAdcChannelAssignments i_func_id, co
             case ADC_MEMORY_PROC_1:
             case ADC_MEMORY_PROC_2:
             case ADC_MEMORY_PROC_3:
-                l_adc_function = &G_sysConfigData.apss_adc_map.memory[i_func_id-ADC_MEMORY_PROC_0];
+                l_adc_function = &G_sysConfigData.apss_adc_map.memory[i_func_id-ADC_MEMORY_PROC_0][0];
                 break;
 
+            case ADC_MEMORY_PROC_0_0:
+                l_adc_function = &G_sysConfigData.apss_adc_map.memory[0][1];
+                break;
+            case ADC_MEMORY_PROC_0_1:
+                l_adc_function = &G_sysConfigData.apss_adc_map.memory[0][2];
+                break;
+            case ADC_MEMORY_PROC_0_2:
+                l_adc_function = &G_sysConfigData.apss_adc_map.memory[0][3];
+                break;
             case ADC_VDD_PROC_0:
             case ADC_VDD_PROC_1:
             case ADC_VDD_PROC_2:
@@ -566,100 +575,115 @@ errlHndl_t apss_store_adc_channel(const eApssAdcChannelAssignments i_func_id, co
 //              associated power sensor.
 //
 // End Function Specification
-void apss_store_ipmi_sensor_id(const apss_cfg_adc_v10_t *i_adc)
+void apss_store_ipmi_sensor_id(const uint16_t i_channel, const apss_cfg_adc_v10_t *i_adc)
 {
     // Get current processor id.
     uint8_t l_proc  = G_pob_id.module_id;
 
     switch (i_adc->assignment)
     {
-    case ADC_RESERVED:
-      // Do nothing
-      break;
-    case ADC_MEMORY_PROC_0:
-    case ADC_MEMORY_PROC_1:
-    case ADC_MEMORY_PROC_2:
-    case ADC_MEMORY_PROC_3:
-      if (l_proc == (i_adc->assignment - ADC_MEMORY_PROC_0))
-      {
-          AMECSENSOR_PTR(PWR250USMEM0)->ipmi_sid = i_adc->ipmisensorId;
-      }
-      break;
+        case ADC_RESERVED:
+            // Do nothing; given channel is not utilized.
+            break;
+        case ADC_MEMORY_PROC_0:
+        case ADC_MEMORY_PROC_1:
+        case ADC_MEMORY_PROC_2:
+        case ADC_MEMORY_PROC_3:
+            if (l_proc == (i_adc->assignment - ADC_MEMORY_PROC_0))
+            {
+                AMECSENSOR_PTR(PWR250USMEM0)->ipmi_sid = i_adc->ipmisensorId;
+            }
+            break;
+        case ADC_VDD_PROC_0:
+        case ADC_VDD_PROC_1:
+        case ADC_VDD_PROC_2:
+        case ADC_VDD_PROC_3:
+            if (l_proc == (i_adc->assignment - ADC_VDD_PROC_0))
+            {
+                AMECSENSOR_PTR(PWR250USVDD0)->ipmi_sid = i_adc->ipmisensorId;
+            }
 
-    case ADC_VDD_PROC_0:
-    case ADC_VDD_PROC_1:
-    case ADC_VDD_PROC_2:
-    case ADC_VDD_PROC_3:
-      if (l_proc == (i_adc->assignment - ADC_VDD_PROC_0))
-      {
-          AMECSENSOR_PTR(PWR250USVDD0)->ipmi_sid = i_adc->ipmisensorId;
-      }
+            break;
 
-      break;
+        case ADC_VCS_VIO_VPCIE_PROC_0:
+        case ADC_VCS_VIO_VPCIE_PROC_1:
+        case ADC_VCS_VIO_VPCIE_PROC_2:
+        case ADC_VCS_VIO_VPCIE_PROC_3:
+            if (l_proc == (i_adc->assignment - ADC_VCS_VIO_VPCIE_PROC_0))
+            {
+                AMECSENSOR_PTR(PWR250USVCS0)->ipmi_sid = i_adc->ipmisensorId;
+            }
+            break;
 
-    case ADC_VCS_VIO_VPCIE_PROC_0:
-    case ADC_VCS_VIO_VPCIE_PROC_1:
-    case ADC_VCS_VIO_VPCIE_PROC_2:
-    case ADC_VCS_VIO_VPCIE_PROC_3:
-      if (l_proc == (i_adc->assignment - ADC_VCS_VIO_VPCIE_PROC_0))
-      {
-          AMECSENSOR_PTR(PWR250USVCS0)->ipmi_sid = i_adc->ipmisensorId;
-      }
-      break;
+        case ADC_IO_A:
+        case ADC_IO_B:
+        case ADC_IO_C:
+            if (i_adc->ipmisensorId != 0)
+            {
+                AMECSENSOR_PTR(PWR250USIO)->ipmi_sid = i_adc->ipmisensorId;
+            }
+            break;
 
-    case ADC_IO_A:
-    case ADC_IO_B:
-    case ADC_IO_C:
-      if (i_adc->ipmisensorId != 0)
-      {
-          AMECSENSOR_PTR(PWR250USIO)->ipmi_sid = i_adc->ipmisensorId;
-      }
-      break;
+        case ADC_FANS_A:
+        case ADC_FANS_B:
+            if (i_adc->ipmisensorId != 0)
+            {
+                AMECSENSOR_PTR(PWR250USFAN)->ipmi_sid = i_adc->ipmisensorId;
+            }
+            break;
 
-    case ADC_FANS_A:
-    case ADC_FANS_B:
-      if (i_adc->ipmisensorId != 0)
-      {
-          AMECSENSOR_PTR(PWR250USFAN)->ipmi_sid = i_adc->ipmisensorId;
-      }
-      break;
+        case ADC_STORAGE_A:
+        case ADC_STORAGE_B:
+            if (i_adc->ipmisensorId != 0)
+            {
+                AMECSENSOR_PTR(PWR250USSTORE)->ipmi_sid = i_adc->ipmisensorId;
+            }
+            break;
 
-    case ADC_STORAGE_A:
-    case ADC_STORAGE_B:
-      if (i_adc->ipmisensorId != 0)
-      {
-          AMECSENSOR_PTR(PWR250USSTORE)->ipmi_sid = i_adc->ipmisensorId;
-      }
-      break;
+        case ADC_12V_SENSE:
+            //None
+            break;
 
-    case ADC_12V_SENSE:
-      //None
-      break;
+        case ADC_GND_REMOTE_SENSE:
+            //None
+            break;
 
-    case ADC_GND_REMOTE_SENSE:
-      //None
-      break;
+        case ADC_TOTAL_SYS_CURRENT:
+            //None
+            break;
+        case ADC_MEM_CACHE:
+            //None
+            break;
 
-    case ADC_TOTAL_SYS_CURRENT:
-      //None
-      break;
-    case ADC_MEM_CACHE:
-      //None
-      break;
+        case ADC_GPU_SENSE:
+            if (i_adc->ipmisensorId != 0)
+            {
+                AMECSENSOR_PTR(PWR250USGPU)->ipmi_sid = i_adc->ipmisensorId;
+            }
+            break;
 
-    case ADC_GPU_SENSE:
-      if (i_adc->ipmisensorId != 0)
-      {
-          AMECSENSOR_PTR(PWR250USGPU)->ipmi_sid = i_adc->ipmisensorId;
-      }
-      break;
+        default:
+            break;
+    }
 
-    default:
-      break;
+    //Write sensor ID to channel sensors.  If the assignment(function id) is 0, that means
+    //the channel is not being utilized.
+    if ((i_channel < MAX_APSS_ADC_CHANNELS) && (i_adc->assignment != ADC_RESERVED))
+    {
+        if (i_adc->ipmisensorId == 0)
+        {
+            TRAC_ERR("apss_store_ipmi_sensor_id: Missing Sensor ID for channel %i.",i_channel);
+            //We need to generate a generic sensor ID if we want channels with functionIDs but
+            //no sensor IDs to be reported in the poll command.
+        }
+
+        //Only store sensor ids for power sensors.  12V sensor and gnd remote sensors do not report power used.
+        if ((i_adc->assignment != ADC_12V_SENSE) && (i_adc->assignment != ADC_GND_REMOTE_SENSE))
+        {
+            AMECSENSOR_PTR(PWRAPSSCH0 + i_channel)->ipmi_sid = i_adc->ipmisensorId;
+        }
     }
 }
-
-
 
 // Function Specification
 //
@@ -895,11 +919,8 @@ errlHndl_t data_store_apss_config_v10(const cmdh_apss_config_v10_t * i_cmd_ptr,
         l_err = apss_store_adc_channel(i_cmd_ptr->adc[l_channel].assignment, l_channel);
         if (l_err == NULL)
         {
-            //Write sensor IDs to the powr sensors.
-            if (i_cmd_ptr->adc[l_channel].ipmisensorId != 0)
-            {
-                apss_store_ipmi_sensor_id(&(i_cmd_ptr->adc[l_channel]));
-            }
+            //Write sensor IDs to the appropriate powr sensors.
+            apss_store_ipmi_sensor_id(l_channel, &(i_cmd_ptr->adc[l_channel]));
         }
 
     }
@@ -1340,6 +1361,7 @@ errlHndl_t data_store_sys_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
     uint16_t                        l_data_length = 0;
     uint32_t                        l_sys_data_sz = 0;
     bool                            l_invalid_input = TRUE; //Assume bad input
+    uint8_t                         l_coreIndex = 0;
 
     l_data_length = CMDH_DATALEN_FIELD_UINT16(l_cmd_ptr);
 
@@ -1409,8 +1431,15 @@ errlHndl_t data_store_sys_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
             G_sysConfigData.system_type.byte    = l_cmd2_ptr->sys_config.system_type;
             G_sysConfigData.backplane_huid      = l_cmd2_ptr->sys_config.backplane_sid;
             G_sysConfigData.apss_huid           = l_cmd2_ptr->sys_config.apss_sid;
+            G_sysConfigData.proc_huid           = l_cmd2_ptr->sys_config.proc_sid;
 
-            //TODO: Need to store the sensor IDs
+            //Write core temp and freq sensor ids
+            //Core Temp and Freq sensors are always in sequence in the table
+            for (l_coreIndex = 0; l_coreIndex < MAX_CORES; l_coreIndex++)
+            {
+                AMECSENSOR_PTR(TEMP2MSP0C0 + l_coreIndex)->ipmi_sid = l_cmd2_ptr->sys_config.core_sid[(l_coreIndex * 2)];
+                AMECSENSOR_PTR(FREQA2MSP0C0 + l_coreIndex)->ipmi_sid = l_cmd2_ptr->sys_config.core_sid[(l_coreIndex * 2) + 1];
+            }
         }
 
         // Change Data Request Mask to indicate we got this data

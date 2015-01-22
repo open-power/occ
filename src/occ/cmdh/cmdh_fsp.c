@@ -91,7 +91,7 @@ cmdh_fsp_rsp_t G_tmp_rsp_buffer = {{0}};
 
 // This determines how OCC will send an interrupt to Host:
 // 0x00 = use FSI2MBOX; 0x01 = use PSIHB complex
-uint8_t G_occ_interrupt_type = 0x00;
+uint8_t G_occ_interrupt_type = FSP_SUPPORTED_OCC;
 
 errlHndl_t cmdh_processTmgtRequest (const cmdh_fsp_cmd_t * i_cmd_ptr,
         cmdh_fsp_rsp_t * i_rsp_ptr);
@@ -382,7 +382,7 @@ errlHndl_t cmdh_fsp_init(void)
     // Open Up Linear Window for FSP Communication
     // ----------------------------------------------------
 
-    if(G_occ_interrupt_type == 0x00)
+    if(G_occ_interrupt_type == FSP_SUPPORTED_OCC)
     {
         // ----------------------------------------------------
         // Initialize FSI2Host Mailbox1 -- Attentions to FSP
@@ -512,7 +512,7 @@ errlHndl_t cmdh_fsp_init(void)
             }while(0);
         }
     }
-    else if(G_occ_interrupt_type == 0x01)
+    else
     {
         // TODO: For Phas 4 of Habanero, need to init this path
     }

@@ -142,7 +142,7 @@ typedef struct  __attribute__ ((packed))
   uint8_t  mode;
   uint8_t  __reserved;
   uint8_t  assignment[8];
-} apss_cfg_gpio_t; 
+} apss_cfg_gpio_t;
 
 // Used by TMGT to send OCC the full APSS config data.
 typedef struct __attribute__ ((packed))
@@ -223,7 +223,8 @@ typedef struct __attribute__ ((packed))
 typedef struct __attribute__ ((packed))
 {
     uint8_t  system_type;     // General system type
-    uint16_t sensor_id[25];   // TODO: Probably we need to break down into individual fields
+    uint16_t proc_sid;        // Processor Sensor ID
+    uint16_t core_sid[24];    // 12 cores. 2 bytes for Temp, followed by 2 bytes for Frequency.
     uint16_t backplane_sid;   // Backplane Sensor ID
     uint16_t apss_sid;        // APSS Sensor ID
 } cmdh_sys_config_data_v10_t;

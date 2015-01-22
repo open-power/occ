@@ -68,7 +68,7 @@ void Cmd_Hndl_thread_routine(void *arg)
     CHECKPOINT(FSP_COMM_INITIALIZED);
 
     // Only send this first attention if FSP is present
-    if(G_occ_interrupt_type == 0x00)
+    if(G_occ_interrupt_type == FSP_SUPPORTED_OCC)
     {
         // ------------------------------------------------
         // Send 'Service' Attention to signal that we are

@@ -23,7 +23,7 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
- 
+
 #include <sensor.h>           // sensor structure and other defines
 #include <occ_common.h>           // For size_t needed by memset
 #include <amec_sys.h>         // For pointers to amec_sys_t structures
@@ -59,7 +59,7 @@ extern amec_sys_t g_amec_sys;
   [SENSOR_W_NUM(sensor,10)] = ptrbase[10].ptrmember, \
   [SENSOR_W_NUM(sensor,11)] = ptrbase[11].ptrmember
 
-// Will define a set of "memory controller sensor pointers" by passing in 
+// Will define a set of "memory controller sensor pointers" by passing in
 // base sensor nameand ptr to [0] entry of array of 8 memcontroller sensors
 #define MEMCONTROL_SENSOR_PTRS(sensor,ptrbase,ptrmember) \
   [SENSOR_W_NUM(sensor, 0)] = ptrbase[0].ptrmember, \
@@ -71,7 +71,7 @@ extern amec_sys_t g_amec_sys;
   [SENSOR_W_NUM(sensor, 6)] = ptrbase[6].ptrmember, \
   [SENSOR_W_NUM(sensor, 7)] = ptrbase[7].ptrmember
 
-// Will define a set of "centaur_port_pair sensor pointers" by passing in 
+// Will define a set of "centaur_port_pair sensor pointers" by passing in
 // base sensor nameand ptr to [0] entry of array of 16 memcontroller sensors
 #define PORTPAIR_SENSOR_PTRS(sensor,ptrbase,ptrmember,ptrsnsr) \
   [SENSOR_W_CENTAUR_NUM(sensor, 0, 0, 0)] = ptrbase[0].ptrmember[0].ptrsnsr, \
@@ -92,11 +92,11 @@ extern amec_sys_t g_amec_sys;
   [SENSOR_W_CENTAUR_NUM(sensor, 7, 0, 1)] = ptrbase[7].ptrmember[1].ptrsnsr
 
 
-// Will create an entry in the G_amec_mini_sensor_list with a pointer at 
+// Will create an entry in the G_amec_mini_sensor_list with a pointer at
 // the sensor index (gsid) passed in by "sensor"
-#define MINI_SENSOR_PTR(sensor,ptr) [sensor] = ptr  
+#define MINI_SENSOR_PTR(sensor,ptr) [sensor] = ptr
 
-// Will define a set of "core mini-sensor pointers" by passing in base 
+// Will define a set of "core mini-sensor pointers" by passing in base
 // sensor name and ptr to [0] entry of array of core sensors
 #define CORE_MINI_SENSOR_PTRS(sensor,ptr) \
   [SENSOR_W_NUM(sensor, 0)] = ptr[ 0], \
@@ -128,7 +128,7 @@ extern amec_sys_t g_amec_sys;
   [SENSOR_W_NUM(sensor,10)] = NULL, \
   [SENSOR_W_NUM(sensor,11)] = NULL
 
-// Will define a set of "memory controller mini sensor ptrs" by passing in 
+// Will define a set of "memory controller mini sensor ptrs" by passing in
 // base sensor nameand ptr to [0] entry of array of 8 memcontroller sensors
 #define MEMCONTROL_MINI_SENSOR_PTRS(sensor,ptr) \
   [SENSOR_W_NUM(sensor, 0)] = ptr[ 0], \
@@ -138,7 +138,7 @@ extern amec_sys_t g_amec_sys;
   [SENSOR_W_NUM(sensor, 4)] = ptr[ 4], \
   [SENSOR_W_NUM(sensor, 5)] = ptr[ 5], \
   [SENSOR_W_NUM(sensor, 6)] = ptr[ 6], \
-  [SENSOR_W_NUM(sensor, 7)] = ptr[ 7] 
+  [SENSOR_W_NUM(sensor, 7)] = ptr[ 7]
 
 // Will define a set of "memc mini-sensor pointers" as NULL, since not
 // every sensor must have a mini-sensor.
@@ -150,9 +150,9 @@ extern amec_sys_t g_amec_sys;
   [SENSOR_W_NUM(sensor, 4)] = NULL, \
   [SENSOR_W_NUM(sensor, 5)] = NULL, \
   [SENSOR_W_NUM(sensor, 6)] = NULL, \
-  [SENSOR_W_NUM(sensor, 7)] = NULL 
+  [SENSOR_W_NUM(sensor, 7)] = NULL
 
-// Will define a set of "memory controller mini sensor ptrs" by passing in 
+// Will define a set of "memory controller mini sensor ptrs" by passing in
 // base sensor nameand ptr to [0] entry of array of 8 memcontroller sensors
 #define PORTPAIR_MINI_SENSOR_PTRS(sensor,ptr) \
   [SENSOR_W_CENTAUR_NUM(sensor, 0, 0, 0)] = ptr[ 0], \
@@ -170,7 +170,7 @@ extern amec_sys_t g_amec_sys;
   [SENSOR_W_CENTAUR_NUM(sensor, 6, 0, 0)] = ptr[12], \
   [SENSOR_W_CENTAUR_NUM(sensor, 6, 0, 1)] = ptr[13], \
   [SENSOR_W_CENTAUR_NUM(sensor, 7, 0, 0)] = ptr[14], \
-  [SENSOR_W_CENTAUR_NUM(sensor, 7, 0, 1)] = ptr[15] 
+  [SENSOR_W_CENTAUR_NUM(sensor, 7, 0, 1)] = ptr[15]
 
 // Will define a set of "memc mini-sensor pointers" as NULL, since not
 // every sensor must have a mini-sensor.
@@ -190,14 +190,14 @@ extern amec_sys_t g_amec_sys;
   [SENSOR_W_CENTAUR_NUM(sensor, 6, 0, 0)] = NULL, \
   [SENSOR_W_CENTAUR_NUM(sensor, 6, 0, 1)] = NULL, \
   [SENSOR_W_CENTAUR_NUM(sensor, 7, 0, 0)] = NULL, \
-  [SENSOR_W_CENTAUR_NUM(sensor, 7, 0, 1)] = NULL 
+  [SENSOR_W_CENTAUR_NUM(sensor, 7, 0, 1)] = NULL
 
 //****************************************************************************
 // Sensor Pointer Table
 // ----------------------
 //   - Indexed by GSID
 //   - Resident in SRAM
-//   - Must contain every sensor in enum, or STATIC_ASSERT will give compile 
+//   - Must contain every sensor in enum, or STATIC_ASSERT will give compile
 //     failure.
 //****************************************************************************
 const sensor_ptr_t G_amec_sensor_list[] =
@@ -237,7 +237,23 @@ const sensor_ptr_t G_amec_sensor_list[] =
   SENSOR_PTR( PWR250USIO,           &g_amec_sys.io.pwr250usio),
   SENSOR_PTR( PWR250USSTORE,        &g_amec_sys.storage.pwr250usstore),
   SENSOR_PTR( PWR250USGPU,          &g_amec_sys.sys.pwr250usgpu),
-  SENSOR_PTR( FANSPEEDAVG,          &g_amec_sys.fan.fanspeedavg),  
+  SENSOR_PTR( FANSPEEDAVG,          &g_amec_sys.fan.fanspeedavg),
+  SENSOR_PTR( PWRAPSSCH0,           &g_amec_sys.sys.pwrapssch[0]),
+  SENSOR_PTR( PWRAPSSCH1,           &g_amec_sys.sys.pwrapssch[1]),
+  SENSOR_PTR( PWRAPSSCH2,           &g_amec_sys.sys.pwrapssch[2]),
+  SENSOR_PTR( PWRAPSSCH3,           &g_amec_sys.sys.pwrapssch[3]),
+  SENSOR_PTR( PWRAPSSCH4,           &g_amec_sys.sys.pwrapssch[4]),
+  SENSOR_PTR( PWRAPSSCH5,           &g_amec_sys.sys.pwrapssch[5]),
+  SENSOR_PTR( PWRAPSSCH6,           &g_amec_sys.sys.pwrapssch[6]),
+  SENSOR_PTR( PWRAPSSCH7,           &g_amec_sys.sys.pwrapssch[7]),
+  SENSOR_PTR( PWRAPSSCH8,           &g_amec_sys.sys.pwrapssch[8]),
+  SENSOR_PTR( PWRAPSSCH9,           &g_amec_sys.sys.pwrapssch[9]),
+  SENSOR_PTR( PWRAPSSCH10,          &g_amec_sys.sys.pwrapssch[10]),
+  SENSOR_PTR( PWRAPSSCH11,          &g_amec_sys.sys.pwrapssch[11]),
+  SENSOR_PTR( PWRAPSSCH12,          &g_amec_sys.sys.pwrapssch[12]),
+  SENSOR_PTR( PWRAPSSCH13,          &g_amec_sys.sys.pwrapssch[13]),
+  SENSOR_PTR( PWRAPSSCH14,          &g_amec_sys.sys.pwrapssch[14]),
+  SENSOR_PTR( PWRAPSSCH15,          &g_amec_sys.sys.pwrapssch[15]),
 
   // ------------------------------------------------------
   // Chip Sensors
@@ -249,14 +265,14 @@ const sensor_ptr_t G_amec_sensor_list[] =
   // ------------------------------------------------------
   // Processor Sensors
   // ------------------------------------------------------
-  SENSOR_PTR( FREQA2MSP0,           &g_amec_sys.proc[0].freqa2ms),      
+  SENSOR_PTR( FREQA2MSP0,           &g_amec_sys.proc[0].freqa2ms),
   SENSOR_PTR( IPS2MSP0,             &g_amec_sys.proc[0].ips2ms),
   SENSOR_PTR( MEMSP2MSP0,           &g_amec_sys.proc[0].memsp2ms),
   SENSOR_PTR( PWR250USP0,           &g_amec_sys.proc[0].pwr250us),
   SENSOR_PTR( PWR250USVDD0,         &g_amec_sys.proc[0].pwr250usvdd),
   SENSOR_PTR( CUR250USVDD0,         &g_amec_sys.proc[0].cur250usvdd),
   SENSOR_PTR( PWR250USVCS0,         &g_amec_sys.proc[0].pwr250usvcs),
-  SENSOR_PTR( PWR250USMEM0,         &g_amec_sys.proc[0].pwr250usmem),   
+  SENSOR_PTR( PWR250USMEM0,         &g_amec_sys.proc[0].pwr250usmem),
   SENSOR_PTR( SLEEPCNT2MSP0,        &g_amec_sys.proc[0].sleepcnt2ms),
   SENSOR_PTR( WINKCNT2MSP0,         &g_amec_sys.proc[0].winkcnt2ms),
   SENSOR_PTR( SP250USP0,            &g_amec_sys.proc[0].sp250us),
@@ -270,7 +286,7 @@ const sensor_ptr_t G_amec_sensor_list[] =
   // Core Sensors (12 of each)
   // ------------------------------------------------------
   CORE_SENSOR_PTRS( FREQ250USP0C ,  &g_amec_sys.proc[0].core, freq250us),
-  CORE_SENSOR_PTRS( FREQA2MSP0C ,   &g_amec_sys.proc[0].core, freqa2ms), 
+  CORE_SENSOR_PTRS( FREQA2MSP0C ,   &g_amec_sys.proc[0].core, freqa2ms),
   CORE_SENSOR_PTRS( IPS2MSP0C ,     &g_amec_sys.proc[0].core, ips2ms),
   CORE_SENSOR_PTRS( NOTBZE2MSP0C ,  &g_amec_sys.proc[0].core, mcpifd2ms),
   CORE_SENSOR_PTRS( NOTFIN2MSP0C ,  &g_amec_sys.proc[0].core, mcpifi2ms),
@@ -347,7 +363,7 @@ STATIC_ASSERT(   (MAX_AMEC_SENSORS < (sizeof(G_amec_sensor_list)/sizeof(sensor_p
 // ----------------------
 //   - Indexed by GSID
 //   - Resident in initSection of SRAM, and will be deleted after sensor init
-//   - Must contain every sensor in enum, or STATIC_ASSERT will give compile 
+//   - Must contain every sensor in enum, or STATIC_ASSERT will give compile
 //     failure.
 //   - Pointers to mini-sensors can be NULL, but they must still be in array.
 //   - The reason why this is a separate table is so that we can put this
@@ -389,7 +405,7 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   MINI_SENSOR_PTR(     PWR250USIO,  NULL),
   MINI_SENSOR_PTR(  PWR250USSTORE,  NULL),
   MINI_SENSOR_PTR(    PWR250USGPU,  NULL),
-  MINI_SENSOR_PTR(    FANSPEEDAVG,  NULL),  
+  MINI_SENSOR_PTR(    FANSPEEDAVG,  NULL),
 
   // ------------------------------------------------------
   // Chip Sensors
@@ -401,20 +417,20 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   // ------------------------------------------------------
   // Processor Sensors
   // ------------------------------------------------------
-  MINI_SENSOR_PTR(     FREQA2MSP0,  &G_dcom_slv_outbox_tx.freqa2msp0),  
-  MINI_SENSOR_PTR(       IPS2MSP0,  &G_dcom_slv_outbox_tx.ips2msp0),  
+  MINI_SENSOR_PTR(     FREQA2MSP0,  &G_dcom_slv_outbox_tx.freqa2msp0),
+  MINI_SENSOR_PTR(       IPS2MSP0,  &G_dcom_slv_outbox_tx.ips2msp0),
   MINI_SENSOR_PTR(     MEMSP2MSP0,  NULL),
   MINI_SENSOR_PTR(     PWR250USP0,  &G_dcom_slv_outbox_tx.pwr250usp0),
   MINI_SENSOR_PTR(   PWR250USVDD0,  NULL),
   MINI_SENSOR_PTR(   CUR250USVDD0,  NULL),
   MINI_SENSOR_PTR(   PWR250USVCS0,  NULL),
-  MINI_SENSOR_PTR(   PWR250USMEM0,  &G_dcom_slv_outbox_tx.pwr250usmemp0), 
+  MINI_SENSOR_PTR(   PWR250USMEM0,  &G_dcom_slv_outbox_tx.pwr250usmemp0),
   MINI_SENSOR_PTR(  SLEEPCNT2MSP0,  &G_dcom_slv_outbox_tx.sleepcnt2msp0),
   MINI_SENSOR_PTR(   WINKCNT2MSP0,  &G_dcom_slv_outbox_tx.winkcnt2msp0),
   MINI_SENSOR_PTR(      SP250USP0,  NULL),
   MINI_SENSOR_PTR(      TEMP2MSP0,  &G_dcom_slv_outbox_tx.temp2msp0),
   MINI_SENSOR_PTR(  TEMP2MSP0PEAK,  &G_dcom_slv_outbox_tx.temp2msp0peak),
-  MINI_SENSOR_PTR(      UTIL2MSP0,  &G_dcom_slv_outbox_tx.util2msp0), 
+  MINI_SENSOR_PTR(      UTIL2MSP0,  &G_dcom_slv_outbox_tx.util2msp0),
   MINI_SENSOR_PTR( VRFAN250USPROC,  &G_dcom_slv_outbox_tx.vrfan250usproc),
   MINI_SENSOR_PTR( VRHOT250USPROC,  NULL),
 
@@ -448,19 +464,19 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   MEMCONTROL_MINI_SENSOR_PTRS_NULL(MLP2P0M),
 
   PORTPAIR_MINI_SENSOR_PTRS_NULL(MAC2MSP0M),
-  PORTPAIR_MINI_SENSOR_PTRS_NULL(MPU2MSP0M),  
-  PORTPAIR_MINI_SENSOR_PTRS_NULL(MIRB2MSP0M), 
-  PORTPAIR_MINI_SENSOR_PTRS_NULL(MIRL2MSP0M), 
-  PORTPAIR_MINI_SENSOR_PTRS_NULL(MIRM2MSP0M), 
-  PORTPAIR_MINI_SENSOR_PTRS_NULL(MIRH2MSP0M), 
-  PORTPAIR_MINI_SENSOR_PTRS_NULL(MTS2MSP0M),  
-  PORTPAIR_MINI_SENSOR_PTRS_NULL(MEMSP2MSPM), 
-  PORTPAIR_MINI_SENSOR_PTRS_NULL(M4RD2MSP0M), 
-  PORTPAIR_MINI_SENSOR_PTRS_NULL(M4WR2MSP0M), 
+  PORTPAIR_MINI_SENSOR_PTRS_NULL(MPU2MSP0M),
+  PORTPAIR_MINI_SENSOR_PTRS_NULL(MIRB2MSP0M),
+  PORTPAIR_MINI_SENSOR_PTRS_NULL(MIRL2MSP0M),
+  PORTPAIR_MINI_SENSOR_PTRS_NULL(MIRM2MSP0M),
+  PORTPAIR_MINI_SENSOR_PTRS_NULL(MIRH2MSP0M),
+  PORTPAIR_MINI_SENSOR_PTRS_NULL(MTS2MSP0M),
+  PORTPAIR_MINI_SENSOR_PTRS_NULL(MEMSP2MSPM),
+  PORTPAIR_MINI_SENSOR_PTRS_NULL(M4RD2MSP0M),
+  PORTPAIR_MINI_SENSOR_PTRS_NULL(M4WR2MSP0M),
 
-  MINI_SENSOR_PTR( TEMP2MSCENT,     &G_dcom_slv_outbox_tx.temp2mscent), 
-  MINI_SENSOR_PTR( TEMP2MSDIMM,     &G_dcom_slv_outbox_tx.temp2msdimm), 
-  MINI_SENSOR_PTR( MEMSP2MS,        NULL),      
+  MINI_SENSOR_PTR( TEMP2MSCENT,     &G_dcom_slv_outbox_tx.temp2mscent),
+  MINI_SENSOR_PTR( TEMP2MSDIMM,     &G_dcom_slv_outbox_tx.temp2msdimm),
+  MINI_SENSOR_PTR( MEMSP2MS,        NULL),
 
   // ------------------------------------------------------
   // Regulator Sensors
@@ -485,7 +501,7 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   MINI_SENSOR_PTR( UTIL2MSSLCG009,  NULL),
   MINI_SENSOR_PTR( UTIL2MSSLCG010,  NULL),
   MINI_SENSOR_PTR( UTIL2MSSLCG011,  NULL),
-};  
+};
 STATIC_ASSERT(   (NUMBER_OF_SENSORS_IN_LIST != (sizeof(G_amec_mini_sensor_list)/sizeof(uint16_t *)))   );
 STATIC_ASSERT(   (MAX_AMEC_SENSORS < (sizeof(G_amec_mini_sensor_list)/sizeof(uint16_t *)))   );
 

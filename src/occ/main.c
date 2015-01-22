@@ -972,7 +972,7 @@ int main(int argc, char **argv)
     }
     else
     {
-        G_occ_interrupt_type = 0x00;
+        G_occ_interrupt_type = FSP_SUPPORTED_OCC;
     }
 
     CHECKPOINT(SSX_STARTING);

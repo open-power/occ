@@ -84,6 +84,22 @@ enum e_gsid
     PWR250USSTORE,     // Storage Subsys Power (from APSS)
     PWR250USGPU,       // GPU Subsystem Power (from APSS) e.g. Nvidia GPU
     FANSPEEDAVG,       // Average Fan Speed (from DPSS)
+    PWRAPSSCH0,        // These PWRAPSSCH sensors are used to report the power
+    PWRAPSSCH1,        // provided by each of the 16 APSS channels.
+    PWRAPSSCH2,
+    PWRAPSSCH3,
+    PWRAPSSCH4,
+    PWRAPSSCH5,
+    PWRAPSSCH6,
+    PWRAPSSCH7,
+    PWRAPSSCH8,
+    PWRAPSSCH9,
+    PWRAPSSCH10,
+    PWRAPSSCH11,
+    PWRAPSSCH12,
+    PWRAPSSCH13,
+    PWRAPSSCH14,
+    PWRAPSSCH15,
 
     // ------------------------------------------------------
     // Chip Sensors
@@ -102,7 +118,7 @@ enum e_gsid
     PWR250USVDD0,
     CUR250USVDD0,
     PWR250USVCS0,
-    PWR250USMEM0,   //TODO:  should this be P0 or just 0
+    PWR250USMEM0,
     SLEEPCNT2MSP0,
     WINKCNT2MSP0,
     SP250USP0,

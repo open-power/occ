@@ -267,6 +267,9 @@ enum
 #define MAX_OCCS       8
 #define MAX_CORES      12
 
+//Used by G_occ_interrupt_type to distinguish between FSP supported OCCs and other servers.
+#define FSP_SUPPORTED_OCC 0x00
+
 // TRAP instruction should also set FIR bits along with halting PPC405
 // Set DBCR0 to initial value (setting external debug event) so that
 // trap call also sets FIR bits and also does not invoke program interrupt.

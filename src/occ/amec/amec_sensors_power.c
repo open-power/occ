@@ -54,8 +54,12 @@ uint32_t G_lastValidAdcValue[MAX_APSS_ADC_CHANNELS] = {0};
 
 extern thrm_fru_data_t      G_thrm_fru_data[DATA_FRU_MAX];
 
+// There are only MAX_APSS_ADC_CHANNELS channels.  Therefore if the channel value
+// is greater then the MAX, then there was no channel associated with the function id.
 #define ADC_CONVERTED_VALUE(i_chan) \
     ((i_chan < MAX_APSS_ADC_CHANNELS) ? G_lastValidAdcValue[i_chan] : 0)
+
+extern uint8_t G_occ_interrupt_type;
 
 //*************************************************************************
 // Code
@@ -158,12 +162,37 @@ uint32_t amec_value_from_apss_adc(uint8_t i_chan)
     return l_temp;
 }
 
+#define ADCMULT_TO_UNITS 1000000
+#define ADCMULT_ROUND ADCMULT_TO_UNITS/2
+#define ADCSINGLE_TO_CENTIUNITS 100
+// Function Specification
+//
+// Name: amec_update_channel_sensor
+//
+// Description: Used to calculate power based on raw data obtained from APSS
+//
+// End Function Specification
+void amec_update_channel_sensor(const uint8_t i_channel)
+{
+    if (i_channel < MAX_APSS_ADC_CHANNELS)
+    {
+        if(AMECSENSOR_PTR(PWRAPSSCH0 + i_channel)->ipmi_sid != 0)
+        {
+            uint32_t l_bulk_voltage = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.sense_12v);
+
+            uint32_t l_temp32 = ADC_CONVERTED_VALUE(i_channel);
+            l_temp32  = ((l_temp32  * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
+            sensor_update(AMECSENSOR_PTR(PWRAPSSCH0 + i_channel), (uint16_t) l_temp32);
+        }
+    }
+}
+
 
 // Function Specification
 //
 // Name: amec_update_apss_sensors
 //
-// Description: Calculates sensor from raw ADC value
+// Description: Calculates sensor from raw ADC values obtained from APSS
 //
 // Thread: RealTime Loop
 //
@@ -178,14 +207,9 @@ void amec_update_apss_sensors(void)
      * which should popluate the ADC and GPIO maps as well as the APSS
      * calibration data for all 16 ADC channels.
      */
-
-    // ------------------------------------------------------
-    // APSS Data Collection & Sensorization
-    // ------------------------------------------------------
-
     // Need to check to make sure APSS data has been received
     // via slave inbox first
-    if(G_slv_inbox_received)
+    if (G_slv_inbox_received)
     {
         uint8_t l_proc  = G_pob_id.module_id;
         uint32_t temp32 = 0;
@@ -195,7 +219,7 @@ void amec_update_apss_sensors(void)
         // ----------------------------------------------------
         // Convert all ADC Channels immediately
         // ----------------------------------------------------
-        for(l_idx=0; l_idx < MAX_APSS_ADC_CHANNELS; l_idx++)
+        for (l_idx = 0; l_idx < MAX_APSS_ADC_CHANNELS; l_idx++)
         {
             // These values returned are gain adjusted. The APSS readings for
             // the remote ground and 12V sense are returned in mVs, all other
@@ -205,6 +229,32 @@ void amec_update_apss_sensors(void)
             // Add up all channels now, we will subtract ones later that don't
             // count towards the system power
             l_bulk_current_sum += G_lastValidAdcValue[l_idx];
+        }
+
+        //Only for FSP-LESS systems do we update channel sensors.
+        if (FSP_SUPPORTED_OCC != G_occ_interrupt_type)
+        {
+            amec_update_channel_sensor(G_sysConfigData.apss_adc_map.memory[l_proc][0]);
+            for (l_idx = 1; l_idx < MAX_PROC_CENT_CH; l_idx++)
+            {
+                amec_update_channel_sensor(G_sysConfigData.apss_adc_map.memory[l_proc][l_idx]);
+            }
+            amec_update_channel_sensor(G_sysConfigData.apss_adc_map.vdd[l_proc]);
+            amec_update_channel_sensor(G_sysConfigData.apss_adc_map.vcs_vio_vpcie[l_proc]);
+
+            if (OCC_MASTER == G_occ_role)
+            {
+                amec_update_channel_sensor(G_sysConfigData.apss_adc_map.io[0]);
+                amec_update_channel_sensor(G_sysConfigData.apss_adc_map.io[1]);
+                amec_update_channel_sensor(G_sysConfigData.apss_adc_map.io[2]);
+                amec_update_channel_sensor(G_sysConfigData.apss_adc_map.fans[0]);
+                amec_update_channel_sensor(G_sysConfigData.apss_adc_map.fans[1]);
+                amec_update_channel_sensor(G_sysConfigData.apss_adc_map.storage_media[0]);
+                amec_update_channel_sensor(G_sysConfigData.apss_adc_map.storage_media[1]);
+                amec_update_channel_sensor(G_sysConfigData.apss_adc_map.total_current_12v);
+                amec_update_channel_sensor(G_sysConfigData.apss_adc_map.mem_cache);
+                amec_update_channel_sensor(G_sysConfigData.apss_adc_map.gpu);
+            }
         }
 
         // --------------------------------------------------------------
@@ -222,12 +272,14 @@ void amec_update_apss_sensors(void)
         //  divide by   10000 to get it to centiUnits      (0.01)
         //  divide by  100000 to get it to deciUnits       (0.1)
         //  divide by 1000000 to get it to Units           (1)
-        #define ADCMULT_TO_UNITS 1000000
-        #define ADCMULT_ROUND ADCMULT_TO_UNITS/2
+
+        //Update channel specific sensors based on saved pairing between function Ids and Channels.
+
         uint32_t l_vdd = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.vdd[l_proc]);
         uint32_t l_vcs_vio_vpcie = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.vcs_vio_vpcie[l_proc]);
         temp32 = ((l_vcs_vio_vpcie + l_vdd) * l_bulk_voltage)/ADCMULT_TO_UNITS;
         sensor_update(AMECSENSOR_PTR(PWR250USP0), (uint16_t) temp32);
+
         // Save off the combined power from all modules
         for (l_idx=0; l_idx < MAX_NUM_CHIP_MODULES; l_idx++)
         {
@@ -242,7 +294,6 @@ void amec_update_apss_sensors(void)
         //  divide by   10 to get it to centiUnits      (0.01)
         //  divide by  100 to get it to deciUnits       (0.1)
         //  divide by 1000 to get it to Units           (1)
-        #define ADCSINGLE_TO_CENTIUNITS 100
         // Vdd has both a power and a current sensor, we convert the Vdd power
         // to Watts and the current to centiAmps
         temp32 = ((l_vdd * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
@@ -256,27 +307,34 @@ void amec_update_apss_sensors(void)
         // Convert Other Raw Misc Power from APSS into sensors
         // ----------------------------------------------------
 
-        // Fans
+        // Fans: Add up all Fan channels
         temp32  = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.fans[0]);
         temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.fans[1]);
         temp32  = ((temp32  * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
         sensor_update( AMECSENSOR_PTR(PWR250USFAN), (uint16_t)temp32);
 
-        // I/O
+        // I/O: Add up all I/O channels
         temp32  = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.io[0]);
         temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.io[1]);
         temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.io[2]);
         temp32 = ((temp32  * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
         sensor_update( AMECSENSOR_PTR(PWR250USIO), (uint16_t)temp32);
 
-        // Memory
-        temp32 = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.memory[l_proc]);
+        // Memory: Add up all channels for the same processor.
+        temp32 = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.memory[l_proc][0]);
+        temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.memory[l_proc][1]);
+        temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.memory[l_proc][2]);
+        temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.memory[l_proc][3]);
         temp32 = ((temp32  * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
         sensor_update( AMECSENSOR_PTR(PWR250USMEM0), (uint16_t)temp32);
+
         // Save off the combined power from all memory
         for (l_idx=0; l_idx < MAX_NUM_CHIP_MODULES; l_idx++)
         {
-            uint32_t l_temp = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.memory[l_idx]);
+            uint32_t l_temp = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.memory[l_idx][0]);
+            l_temp += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.memory[l_idx][1]);
+            l_temp += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.memory[l_idx][2]);
+            l_temp += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.memory[l_idx][3]);
             g_amec->mem_snr_pwr[l_idx] = ((l_temp  * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
         }
 

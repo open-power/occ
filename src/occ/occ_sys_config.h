@@ -83,7 +83,12 @@ typedef union
 #define MAX_CENT_EN_VCACHE      4
 #define MAX_DOM_OC_LATCH        4
 #define MAX_CONN_OC_SIGNALS     5
+#define MAX_PROC_CENT_CH        4
 
+// List of all possible APSS Channel assignments (Function IDs)
+// Each channel in the APSS will be associated with only one of these
+// function ids for each system type as defined in the mrw.
+// If a channel is assigned a 0x00, that means it's not assigned.
 typedef enum
 {
     ADC_RESERVED                = 0x00,
@@ -111,6 +116,9 @@ typedef enum
     ADC_TOTAL_SYS_CURRENT       = 0x16,
     ADC_MEM_CACHE               = 0x17,
     ADC_GPU_SENSE               = 0x18,
+    ADC_MEMORY_PROC_0_0         = 0x19, //NOTE: On Habanero, the processor has 4 centaurs with 1 APSS channel
+    ADC_MEMORY_PROC_0_1         = 0x1A, //      assigned to each one of them. ADC_MEMORY_PROC_0 will be used
+    ADC_MEMORY_PROC_0_2         = 0x1B, //      for the first one and these are for the other 3.
     NUM_ADC_ASSIGNMENT_TYPES    // This should always be the last member
 } eApssAdcChannelAssignments;
 
@@ -165,7 +173,7 @@ typedef struct
 {
   // Value stored will be APSS ADC Channel Number, if rail is not present, set
   // to INVALID = xFF
-  uint8_t memory[MAX_NUM_CHIP_MODULES];
+  uint8_t memory[MAX_NUM_CHIP_MODULES][MAX_PROC_CENT_CH];
   uint8_t vdd[MAX_NUM_CHIP_MODULES];
   uint8_t io[MAX_ADC_IO_DOMAINS];
   uint8_t fans[MAX_ADC_FAN_DOMAINS];
