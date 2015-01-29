@@ -11,4 +11,7 @@ imageHdrScript
 occStringFile
 .project
 .cproject
+customrc
+env.bash
+src/build/
 
