@@ -58,6 +58,8 @@ errlHndl_t  G_occErrSlots[ERRL_MAX_SLOTS] = {
                 (errlHndl_t) G_callslot
                 };
 
+extern uint8_t G_occ_interrupt_type;
+
 void hexDumpLog( errlHndl_t i_log );
 
 // Function Specification
@@ -508,6 +510,8 @@ void addTraceToErrl(
 // End Function Specification
 void reportErrorLog( errlHndl_t i_err, uint16_t i_entrySize )
 {
+    ocb_occmisc_t l_reg;
+
     // report the log
     // will need to give them the address and size to read
 
@@ -517,8 +521,17 @@ void reportErrorLog( errlHndl_t i_err, uint16_t i_entrySize )
            i_err->iv_userDetails.iv_modId, i_err->iv_reasonCode,
            i_err->iv_userDetails.iv_userData1, i_err->iv_userDetails.iv_userData2);
 
-    // TODO: remove this when tracing is enabled
-    hexDumpLog( i_err );
+    // If this system is using PSIHB complex, send an interrupt to Host so that
+    // Host can inform HTMGT to collect the error log
+    if (G_occ_interrupt_type == PSIHB_INTERRUPT)
+    {
+        // From OCC OpenPower Interface v1.1, OCC needs to set bits 0 and 1 of
+        // the OCB_OCCMISC register
+        l_reg.fields.core_ext_intr = 1;
+        l_reg.fields.reason_intr = 1;
+
+        out32(OCB_OCCMISC_OR, l_reg.value);
+    }
 }
 
 

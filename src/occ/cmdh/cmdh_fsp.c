@@ -512,9 +512,17 @@ errlHndl_t cmdh_fsp_init(void)
             }while(0);
         }
     }
+    else if(G_occ_interrupt_type == PSIHB_INTERRUPT)
+    {
+        // For systems like Habanero, OCC will use the PSIHB complex to
+        // send an interrupt to Host. This is done via a simple SCOM
+        // register, so there is nothing to initialize here.
+    }
     else
     {
-        // TODO: For Phas 4 of Habanero, need to init this path
+        // Invalid interrupt type
+        TRAC_ERR("cmdh_fsp_init: Invalid OCC interrupt type was detected! interrupt_type[%d]",
+                 G_occ_interrupt_type);
     }
 
     return l_errlHndl;
