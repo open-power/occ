@@ -68,7 +68,9 @@
 #define COMPCODE_CUR_NOT_SUPPORT            0xD5
 #define COMPCODE_UNSPECIFIED                0xFF
 
-#define     IPMI_MAX_MSG_SIZE   1024
+//Habanero uses IPMI, which is constrained to 256 Byte IPMI response.
+//This will slow down the Amester connection on FSP-based systems
+#define     IPMI_MAX_MSG_SIZE      246
 #define     AMEC_AME_CMD_HEADER_SZ 2
 
 // Autonomic Management of Energy (AME) Parameters
@@ -76,11 +78,11 @@
 #define AME_API_MIN     26      // API version minor
 
 #define AME_VERSION_MAJ 6       // Major Version (e.g. Ver. 1.4 has MAJ=1)
-#define AME_VERSION_MIN 82      // Minor Version (e.g. Ver. 1.4 has MIN=4)
+#define AME_VERSION_MIN 83      // Minor Version (e.g. Ver. 1.4 has MIN=4)
 
-#define AME_YEAR        2014    // Year of Release (e.g. 2006)
-#define AME_MONTH       7       // Month of Release (e.g. September=9)
-#define AME_DAY         28      // Day of Release
+#define AME_YEAR        2015    // Year of Release (e.g. 2006)
+#define AME_MONTH       2       // Month of Release (e.g. September=9)
+#define AME_DAY         10      // Day of Release
 
 #define AME_SDRS        22      // AME Sensor Data Record Size: 18 bytes
 
