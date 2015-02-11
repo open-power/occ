@@ -63,7 +63,7 @@ DEFS += $(D)
 DEFS += -DOCC=1 -DUSE_SSX_APP_CFG_H=1
 
 GCC-CFLAGS = -c -g -Wall -fsigned-char -msoft-float -pipe \
--m32 -Wa,-m405 -mcpu=405 -mmultiple -mstring -meabi \
+-m32 -mbig-endian -Wa,-m405 -mcpu=405 -mmultiple -mstring -meabi \
 -ffreestanding -Os -mno-sdata 
 
 #*******************************************************************************

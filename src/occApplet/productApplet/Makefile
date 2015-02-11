@@ -71,7 +71,7 @@ DEFS += -DUSE_SSX_APP_CFG_H=1
 
 # Note: Do not use SDA sections for product applets
 GCC-CFLAGS = -c -g -Wall -fsigned-char -msoft-float -pipe \
--Wa,-m405 -m32 -mcpu=405 -mmultiple -mstring -meabi -ffreestanding -Os -mno-sdata
+-Wa,-m405 -mbig-endian -m32 -mcpu=405 -mmultiple -mstring -meabi -ffreestanding -Os -mno-sdata
 
 #*******************************************************************************
 # Compilation
