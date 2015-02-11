@@ -10,9 +10,9 @@ endif
 SUBDIRS = tracepp occBootLoader occ occApplet
 COMBINE_IMAGE_SUBDIRS = occBootLoader occ occApplet
 CLEAN_SUBDIRS = occBootLoader occ occApplet ssx/pgp lib
-CLEANCMD = $(MAKE) clean -C $(dir); 
-ALLCMD = $(MAKE) -C $(dir);
-COMBINEIMAGE = $(MAKE) combineImage -C $(dir);
+CLEANCMD = $(MAKE) clean -C $(dir)
+ALLCMD = $(MAKE) -C $(dir)
+COMBINEIMAGE = $(MAKE) combineImage -C $(dir)
 IMAGEFILE = image.bin
 
 export TRACEPP = $(ROOTPATH)/tracepp/tracepp
@@ -22,7 +22,7 @@ TRACEHASH = $(ROOTPATH)/tracepp/tracehash.pl
 # Compilation 
 #*******************************************************************************
 all:
-	$(foreach dir,$(SUBDIRS),$(ALLCMD))
+	$(foreach dir,$(SUBDIRS),$(ALLCMD) &&) true
 
 #*******************************************************************************
 # Combine Objects/Executables into OCC Image
@@ -30,7 +30,7 @@ all:
 .PHONY : combineImage
 combineImage:
 	 rm -rf $(IMAGEFILE)
-	 $(foreach dir,$(COMBINE_IMAGE_SUBDIRS),$(COMBINEIMAGE))
+	 $(foreach dir,$(COMBINE_IMAGE_SUBDIRS),$(COMBINEIMAGE) &&) true
 
 #*******************************************************************************
 # Create lid or ruhx out of OCC Image
@@ -63,6 +63,6 @@ srcPluginFile:
 # Clean
 #*******************************************************************************
 clean: 
-	$(foreach dir,$(CLEAN_SUBDIRS),$(CLEANCMD))
+	$(foreach dir,$(CLEAN_SUBDIRS),$(CLEANCMD) &&) true
 	rm -rf image.bin
 	

@@ -43,13 +43,13 @@ LDFLAGS = -L $(SSX)/ssx -L $(SSX)/ppc32 -L $(SSX)/ppc405 -L $(SSX)/pgp \
 -L $(OCC) -L $(LIB) -lssx -lppc32 --oformat=elf32-powerpc -melf32ppc
 
 buildImage = $(LD) -R $(OCC)/occ.out $(obj) -Tlinkscript $(LDFLAGS) \
--Map $(basename $(obj)).map -Bstatic -o $(basename $(obj)).out; \
-$(OBJCOPY) -I elf32-powerpc -O binary $(basename $(obj)).out $(basename $(obj)).bin; \
-$(OBJDUMP) -d $(basename $(obj)).out > $(basename $(obj)).dis; \
-$(BOOTLOADER)/imageHdrScript $(basename $(obj)).bin `md5sum $(OCC)/occ.out | cut -c 1-4`;
+-Map $(basename $(obj)).map -Bstatic -o $(basename $(obj)).out && \
+$(OBJCOPY) -I elf32-powerpc -O binary $(basename $(obj)).out $(basename $(obj)).bin && \
+$(OBJDUMP) -d $(basename $(obj)).out > $(basename $(obj)).dis && \
+$(BOOTLOADER)/imageHdrScript $(basename $(obj)).bin `md5sum $(OCC)/occ.out | cut -c 1-4`
 
-image = $(BOOTLOADER)/imageHdrScript $(basename $(obj)).bin combineImage; \
-$(BOOTLOADER)/imageHdrScript $(basename $(obj)).out displaySize;
+image = $(BOOTLOADER)/imageHdrScript $(basename $(obj)).bin combineImage && \
+$(BOOTLOADER)/imageHdrScript $(basename $(obj)).out displaySize
 
 #*******************************************************************************
 # Includes
@@ -78,14 +78,14 @@ GCC-CFLAGS = -c -g -Wall -fsigned-char -msoft-float -pipe \
 #*******************************************************************************
 all: $(PRDTAPLT_OBJECTS)
 	 $(CPP) -P $(DEFS) < linkProductApplet.cmd > linkscript
-	 $(foreach obj,$(PRDTAPLT_OBJECTS),$(buildImage))
+	 $(foreach obj,$(PRDTAPLT_OBJECTS),$(buildImage) &&) true
 
 #*******************************************************************************
 # combineImage
 #*******************************************************************************
 .PHONY : combineImage
 combineImage:
-	 $(foreach obj,$(PRDTAPLT_OBJECTS),$(image))
+	 $(foreach obj,$(PRDTAPLT_OBJECTS),$(image) &&) true
 
 #*******************************************************************************
 # Clean

@@ -32,26 +32,26 @@ endif
 # Variables
 #*******************************************************************************
 SUBDIRS = productApplet testApplet
-CLEANCMD = $(MAKE) clean -C $(dir); 
-ALLCMD = $(MAKE) -C $(dir);
-COMBINEIMAGE = $(MAKE) combineImage -C $(dir);
+CLEANCMD = $(MAKE) clean -C $(dir)
+ALLCMD = $(MAKE) -C $(dir)
+COMBINEIMAGE = $(MAKE) combineImage -C $(dir)
 
 #*******************************************************************************
 # Compilation 
 #*******************************************************************************
 all:
-	$(foreach dir,$(SUBDIRS),$(ALLCMD))
+	$(foreach dir,$(SUBDIRS),$(ALLCMD) &&) true
 
 #*******************************************************************************
 # combineImage 
 #*******************************************************************************
 .PHONY : combineImage
 combineImage:
-	 $(foreach dir,$(SUBDIRS),$(COMBINEIMAGE))
+	 $(foreach dir,$(SUBDIRS),$(COMBINEIMAGE) &&) true
 
 #*******************************************************************************
 # Clean
 #*******************************************************************************
 clean: 
-	$(foreach dir,$(SUBDIRS),$(CLEANCMD))
+	$(foreach dir,$(SUBDIRS),$(CLEANCMD) &&) true
 
