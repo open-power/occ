@@ -11,7 +11,7 @@ SUBDIRS = tracepp occBootLoader occ occApplet
 COMBINE_IMAGE_SUBDIRS = occBootLoader occ occApplet
 CLEAN_SUBDIRS = occBootLoader occ occApplet ssx/pgp lib
 CLEANCMD = $(MAKE) clean -C $(dir); 
-ALLCMD = $(MAKE) -j6 -C $(dir);
+ALLCMD = $(MAKE) -C $(dir);
 COMBINEIMAGE = $(MAKE) combineImage -C $(dir);
 IMAGEFILE = image.bin
 

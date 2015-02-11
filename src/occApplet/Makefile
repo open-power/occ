@@ -33,7 +33,7 @@ endif
 #*******************************************************************************
 SUBDIRS = productApplet testApplet
 CLEANCMD = $(MAKE) clean -C $(dir); 
-ALLCMD = $(MAKE) -j6 -C $(dir);
+ALLCMD = $(MAKE) -C $(dir);
 COMBINEIMAGE = $(MAKE) combineImage -C $(dir);
 
 #*******************************************************************************
