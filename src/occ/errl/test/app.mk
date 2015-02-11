@@ -102,4 +102,4 @@ clean_all:
 	$(MAKE) clean
 	$(MAKE) -C $(PGP) clean
 
-include $(OBJECTS:.o=.d) 
+-include $(OBJECTS:.o=.d) 

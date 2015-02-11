@@ -77,4 +77,4 @@ clean_all:
 doc:
 	doxygen doc/Doxyfile
 
-include $(OBJECTS:.o=.d) 
+-include $(OBJECTS:.o=.d) 

@@ -40,10 +40,10 @@ LIB = ../../lib
 LDFLAGS += --oformat=elf32-powerpc -melf32ppc
 
 buildImage = $(LD) -R $(OCC)/occ.out $(obj) -Tlinkscript $(LDFLAGS) \
--Map $(basename $(obj)).map -Bstatic -o $(basename $(obj)).out; \
-$(OBJCOPY) -I elf32-powerpc -O binary $(basename $(obj)).out $(basename $(obj)).bin; \
-$(OBJDUMP) -d $(basename $(obj)).out > $(basename $(obj)).dis; \
-$(BOOTLOADER)/imageHdrScript $(basename $(obj)).bin `md5sum $(OCC)/occ.out | cut -c 1-4`; \
+-Map $(basename $(obj)).map -Bstatic -o $(basename $(obj)).out && \
+$(OBJCOPY) -I elf32-powerpc -O binary $(basename $(obj)).out $(basename $(obj)).bin && \
+$(OBJDUMP) -d $(basename $(obj)).out > $(basename $(obj)).dis && \
+$(BOOTLOADER)/imageHdrScript $(basename $(obj)).bin `md5sum $(OCC)/occ.out | cut -c 1-4`
 
 #*******************************************************************************
 # Includes
@@ -63,7 +63,7 @@ DEFS += $(D)
 DEFS += -DOCC=1 -DUSE_SSX_APP_CFG_H=1
 
 GCC-CFLAGS = -c -g -Wall -fsigned-char -msoft-float -pipe \
--m32 -Wa,-m405 -mcpu=405 -mmultiple -mstring -meabi \
+-m32 -mbig-endian -Wa,-m405 -mcpu=405 -mmultiple -mstring -meabi \
 -ffreestanding -Os -mno-sdata 
 
 #*******************************************************************************
@@ -71,7 +71,7 @@ GCC-CFLAGS = -c -g -Wall -fsigned-char -msoft-float -pipe \
 #*******************************************************************************
 all: $(TESTAPLT_OBJECTS) 
 	 $(CPP) -P $(DEFS) < linkTestApplet.cmd > linkscript
-	 $(foreach obj,$(TESTAPLT_OBJECTS),$(buildImage))
+	 $(foreach obj,$(TESTAPLT_OBJECTS),$(buildImage) &&) true
 
 #*******************************************************************************
 # combineImage 
