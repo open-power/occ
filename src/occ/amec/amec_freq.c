@@ -70,7 +70,8 @@ uint8_t G_amec_kvm_throt_reason = NO_THROTTLE;
 uint16_t G_time_until_freq_check = FREQ_CHG_CHECK_TIME;
 
 //FFDC SCOM addresses as requested by Greg Still in defect SW247927
-const uint32_t G_pmc_ffdc_scom_addrs[] =
+//If new SCOM addresses are added, update the size of the array.
+const uint32_t G_pmc_ffdc_scom_addrs[PMC_FFDC_SCOM_ADDRS_SIZE] =
 {
     PMC_LFIR_ERR_REG,
     PMC_LFIR_ERR_MASK_REG,
@@ -80,7 +81,8 @@ const uint32_t G_pmc_ffdc_scom_addrs[] =
 };
 
 //FFDC OCI addresses as requested by Greg Still in defect SW247927
-const uint32_t G_pmc_ffdc_oci_addrs[] =
+//If new OCI addresses are added, update the size of the array.
+const uint32_t G_pmc_ffdc_oci_addrs[PMC_FFDC_OCI_ADDRS_SIZE] =
 {
     PMC_MODE_REG,
     PMC_PSTATE_MONITOR_AND_CTRL_REG,
@@ -1013,7 +1015,7 @@ void fill_pmc_ffdc_buffer(pmc_ffdc_data_t* i_ffdc_ptr)
     memset(i_ffdc_ptr, 0, sizeof(pmc_ffdc_data_t));
 
     //first get the OCI accessible FFDC data
-    for(i = 0; i < sizeof(G_pmc_ffdc_oci_addrs)/sizeof(uint32_t); i++)
+    for(i = 0; i < PMC_FFDC_OCI_ADDRS_SIZE; i++)
     {
         l_addr = G_pmc_ffdc_oci_addrs[i];
         if(l_addr)
@@ -1032,7 +1034,7 @@ void fill_pmc_ffdc_buffer(pmc_ffdc_data_t* i_ffdc_ptr)
     }
 
     //then get the SCOM accessible FFDC data
-    for(i = 0; i < sizeof(G_pmc_ffdc_scom_addrs)/sizeof(uint32_t); i++)
+    for(i = 0; i < PMC_FFDC_SCOM_ADDRS_SIZE; i++)
     {
         l_addr = G_pmc_ffdc_scom_addrs[i];
         l_rc = (uint32_t)_getscom(l_addr, &l_data64, SCOM_TIMEOUT);

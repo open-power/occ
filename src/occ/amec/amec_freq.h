@@ -40,8 +40,6 @@
 //*************************************************************************
 // Externs
 //*************************************************************************
-extern const uint32_t G_pmc_ffdc_scom_addrs[4];
-extern const uint32_t G_pmc_ffdc_oci_addrs[29];
 
 //*************************************************************************
 // Macros
@@ -106,8 +104,8 @@ typedef enum
 // Structures
 //*************************************************************************
 
-#define PMC_FFDC_OCI_ADDRS_SIZE sizeof(G_pmc_ffdc_oci_addrs)
-#define PMC_FFDC_SCOM_ADDRS_SIZE sizeof(G_pmc_ffdc_scom_addrs)
+#define PMC_FFDC_OCI_ADDRS_SIZE 34
+#define PMC_FFDC_SCOM_ADDRS_SIZE 5
 
 // scom ffdc format
 typedef struct __attribute__ ((packed))
@@ -126,8 +124,8 @@ typedef struct
 //PMC FFDC format for user detail section of error log
 typedef struct
 {
-    pmc_ffdc_oci_entry_t oci_regs[PMC_FFDC_OCI_ADDRS_SIZE/sizeof(uint32_t)];
-    pmc_ffdc_scom_entry_t scom_regs[PMC_FFDC_SCOM_ADDRS_SIZE/sizeof(uint32_t)];
+    pmc_ffdc_oci_entry_t oci_regs[PMC_FFDC_OCI_ADDRS_SIZE];
+    pmc_ffdc_scom_entry_t scom_regs[PMC_FFDC_SCOM_ADDRS_SIZE];
 } pmc_ffdc_data_t;
 
 typedef struct
