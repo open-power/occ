@@ -181,5 +181,5 @@ clean_all:
 	$(MAKE) -C $(PGP) clean
 
 ifneq ($(MAKECMDGOALS),clean)
-include $(OBJECTS:.o=.d)
+-include $(OBJECTS:.o=.d)
 endif
