@@ -245,20 +245,20 @@ int combineImage(char * i_file1)
 
     do
     {
-        char * l_sbPath = getenv("SANDBOXBASE");
+        char * l_sbPath = getenv("OCCROOT");
         if( l_sbPath != NULL)
         {
             l_size = strlen(l_sbPath);
-            l_size += strlen(FILE_TO_WRITE_ODE);
+            l_size += strlen(FILE_TO_WRITE_GNU);
+            l_odeBuild = FALSE;
         }
         else
         {
-            l_sbPath = getenv("OCCROOT");
+            l_sbPath = getenv("SANDBOXBASE");
             if(l_sbPath != NULL)
             {
                 l_size = strlen(l_sbPath);
-                l_size += strlen(FILE_TO_WRITE_GNU);
-                l_odeBuild = FALSE;
+                l_size += strlen(FILE_TO_WRITE_ODE);
             }
             else
             {
@@ -279,7 +279,8 @@ int combineImage(char * i_file1)
             strncpy(&l_fileToWrite[strlen(l_sbPath)],FILE_TO_WRITE_GNU,strlen(FILE_TO_WRITE_GNU));
         }
         l_fileToWrite[l_size] = '\0';
-        printf("l_fileToWrite: %s\t\tl_sbPath: %s\n", l_fileToWrite, l_sbPath);
+        printf("Writing to file: %s\n", l_fileToWrite);
+
         // Open the file1
         l_file1 = fopen(i_file1, "r");
 
