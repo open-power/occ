@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -42,5 +42,6 @@ enum occCmdhModuleId
     DATA_STORE_IPS_DATA                 =  CMDH_COMP_ID | 0x09,
     DATA_GET_IPS_DATA                   =  CMDH_COMP_ID | 0x0A,
     DATA_GET_RESET_PREP_ERRL            =  CMDH_COMP_ID | 0x0B,
+    CMDH_OCC_INTERRUPT_TYPE             =  CMDH_COMP_ID | 0x0C,
 };
 #endif

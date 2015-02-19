@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -515,7 +515,6 @@ void reportErrorLog( errlHndl_t i_err, uint16_t i_entrySize )
     // report the log
     // will need to give them the address and size to read
 
-    // TODO: Guts still not defined yet
     TRAC_INFO("Reporting error @ %p with size %d",i_err, i_entrySize );
     TRAC_INFO("ModID: 0x%08X, RC: 0x%08X, UserData1: 0x%08X, UserData2: 0x%08X",
            i_err->iv_userDetails.iv_modId, i_err->iv_reasonCode,

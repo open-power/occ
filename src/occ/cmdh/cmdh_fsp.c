@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -523,6 +523,26 @@ errlHndl_t cmdh_fsp_init(void)
         // Invalid interrupt type
         TRAC_ERR("cmdh_fsp_init: Invalid OCC interrupt type was detected! interrupt_type[%d]",
                  G_occ_interrupt_type);
+
+        /* @
+         * @errortype
+         * @moduleid    CMDH_OCC_INTERRUPT_TYPE
+         * @reasoncode  EXTERNAL_INTERFACE_FAILURE
+         * @userdata1   OCC Interrupt Type
+         * @userdata2   0
+         * @userdata4   OCC_NO_EXTENDED_RC
+         * @devdesc     Invalid OCC interrupt type was detected
+         */
+        l_errlHndl = createErrl(
+                CMDH_OCC_INTERRUPT_TYPE,           // modId
+                EXTERNAL_INTERFACE_FAILURE,        // reasoncode
+                OCC_NO_EXTENDED_RC,                // Extended reason code
+                ERRL_SEV_PREDICTIVE,               // Severity
+                NULL,                              // Trace Buf
+                DEFAULT_TRACE_SIZE,                // Trace Size
+                G_occ_interrupt_type,              // userdata1
+                0                                  // userdata2
+                );
     }
 
     return l_errlHndl;
