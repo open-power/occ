@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -53,8 +53,7 @@ enum occReasonCode
     PROC_ERROR_TEMP                 = 0x10,
     /// Timed out reading processor temperature
     PROC_TEMP_TIMEOUT               = 0x11,
-    /// @wb003 -- Removed PROCESSOR_NOT_SUPPORTED and changed error to INTERNAL_FAILURE
-    /// Processor SCOM failure -- gm025
+    /// Processor SCOM failure
     PROC_SCOM_ERROR                 = 0x16,
     /// Any failure coming from the SSX RTOS code
     SSX_GENERIC_FAILURE             = 0x17,
@@ -88,6 +87,8 @@ enum occReasonCode
     INTERNAL_INVALID_INPUT_DATA     = 0xB3,
     /// A core was not at the expected frequency
     TARGET_FREQ_FAILURE             = 0xB4,
+    /// RTL detected a system checkstop
+    OCC_SYSTEM_HALTED               = 0xB5,
     ///  Request to read APSS data failed.
     APSS_GPE_FAILURE                = 0xC0,
     /// Connector overcurrent pin still asserted.
@@ -182,6 +183,8 @@ enum occExtReasonCode
 
     ERC_CHIP_IDS_INVALID                        = 0x00000050,
     ERC_GETSCOM_FAILURE                         = 0x00000051,
+    ERC_GETSCOM_TPC_GP0_FAILURE                 = 0x00000052,
+    ERC_PNOR_OWNERSHIP_NOT_AVAILABLE            = 0x00000053,
 
     ERC_HOMER_MAIN_ACCESS_ERROR                 = 0x00000060,
     ERC_HOMER_MAIN_SSX_ERROR                    = 0x00000061,
@@ -210,13 +213,14 @@ enum occModuleId
     MAIN_THRD_SEM_INIT_MID          =  MAIN_COMP_ID | 0x04,
     MAIN_STATE_TRANSITION_MID       =  MAIN_COMP_ID | 0x05,
     MAIN_MODE_TRANSITION_MID        =  MAIN_COMP_ID | 0x06,
-    MAIN_GPE_HALTED_MID             =  MAIN_COMP_ID | 0x07,
+    MAIN_SYSTEM_HALTED_MID          =  MAIN_COMP_ID | 0x07,
     OCC_IRQ_SETUP                   =  MAIN_COMP_ID | 0x08,
     PMC_HW_ERROR_ISR                =  MAIN_COMP_ID | 0x09,
     GETSCOM_FFDC_MID                =  MAIN_COMP_ID | 0x0a,
     PUTSCOM_FFDC_MID                =  MAIN_COMP_ID | 0x0b,
     HMON_ROUTINE_MID                =  MAIN_COMP_ID | 0x0c,
-	AMEC_VERIFY_FREQ_MID            =  MAIN_COMP_ID | 0x0d,
+    AMEC_VERIFY_FREQ_MID            =  MAIN_COMP_ID | 0x0d,
+    FIR_DATA_MID                    =  MAIN_COMP_ID | 0x0e,
 };
 
 enum occUserDataType

@@ -216,9 +216,10 @@ ERRL_RC cmdh_poll_v10(cmdh_fsp_rsp_t * o_rsp_ptr)
     cmdh_poll_resp_v10_fixed_t * l_poll_rsp = (cmdh_poll_resp_v10_fixed_t *) o_rsp_ptr;
 
     // Byte 1
-    l_poll_rsp->status.word     = SMGR_validate_get_valid_states(); //TODO: Do we need to set FIR master?
+    l_poll_rsp->status.word = SMGR_validate_get_valid_states();
     // Byte 2
-    l_poll_rsp->ext_status.word = 0;                                //TODO: What values should we set for memthrotOT and n power?
+    //TODO: What values should we set for memthrotOT and n power?
+    l_poll_rsp->ext_status.word = 0;
 
     for ( k = 0; k < MAX_NUM_CORES; k++ )
     {

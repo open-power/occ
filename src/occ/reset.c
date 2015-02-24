@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -96,7 +96,7 @@ void reset_state_request(uint8_t i_request)
       // state to reset to enter the reset state machine.
       if(G_reset_state < RESET_REQUESTED_DUE_TO_ERROR)
       {
-        TRAC_ERR("Resetting via Reset State Machine");
+        TRAC_IMP("Activating reset required state.");
 
         G_reset_state = RESET_REQUESTED_DUE_TO_ERROR;
 
@@ -150,50 +150,74 @@ void reset_state_request(uint8_t i_request)
 void task_check_for_checkstop(task_t *i_self)
 {
     pore_status_t l_gpe0_status;
-    static bool L_gpe_halt_traced = FALSE;
+    ocb_oisr0_t l_oisr0_status;
+    static bool L_checkstop_traced = FALSE;
+    uint8_t l_reason_code = 0;
 
     do
     {
-        //only do this once
-        if(L_gpe_halt_traced)
+        // This check is disabled once a checkstop or frozen GPE is detected
+        if(L_checkstop_traced)
         {
             break;
         }
 
-        L_gpe_halt_traced = TRUE;
-
+        // Looked for a frozen GPE, a sign that the chip has stopped working or
+        // check-stopped.  This check also looks for an interrupt status flag that
+        // indicates if the system has check-stopped.
         l_gpe0_status.value = in64(PORE_GPE0_STATUS);
+        l_oisr0_status.value = in32(OCB_OISR0);
 
-        if (l_gpe0_status.fields.freeze_action)
+        if (l_gpe0_status.fields.freeze_action
+            ||
+            l_oisr0_status.fields.check_stop)
         {
-            errlHndl_t     l_err = NULL;
+            errlHndl_t l_err = NULL;
 
-            TRAC_ERR("task_check_for_checkstop: OCC GPE halted due to checkstop");
+            if (l_gpe0_status.fields.freeze_action)
+            {
+                TRAC_IMP("Frozen GPE0 detected by RTL");
+                l_reason_code = OCC_GPE_HALTED;
+            }
+
+            if (l_oisr0_status.fields.check_stop)
+            {
+                TRAC_IMP("System checkstop detected by RTL");
+                l_reason_code = OCC_SYSTEM_HALTED;
+            }
+
+            L_checkstop_traced = TRUE;
 
             /*
              * @errortype
-             * @moduleid    MAIN_GPE_HALTED_MID
+             * @moduleid    MAIN_SYSTEM_HALTED_MID
              * @reasoncode  OCC_GPE_HALTED
-             * @userdata1   0
-             * @userdata2   0
-             * @devdesc     OCC GPE halted due to checkstop
+             * @userdata1   High order word of PORE_GPE0_STATUS
+             * @userdata2   OCB_OISR0
+             * @devdesc     OCC detected frozen GPE0
              */
-             l_err = createErrl(MAIN_GPE_HALTED_MID,
-                                OCC_GPE_HALTED,
+            /*
+             * @errortype
+             * @moduleid    MAIN_SYSTEM_HALTED_MID
+             * @reasoncode  OCC_SYSTEM_HALTED
+             * @userdata1   High order word of PORE_GPE0_STATUS
+             * @userdata2   OCB_OISR0
+             * @devdesc     OCC detected system checkstop
+             */
+             l_err = createErrl(MAIN_SYSTEM_HALTED_MID,
+                                l_reason_code,
                                 OCC_NO_EXTENDED_RC,
                                 ERRL_SEV_INFORMATIONAL,
                                 NULL,
                                 DEFAULT_TRACE_SIZE,
-                                0,
-                                0);
+                                l_gpe0_status.words.high_order,
+                                l_oisr0_status.value);
 
-             //This will request safe mode under the covers due to the GPE being halted.
+             // The commit code will check for the frozen GPE0 and system
+             // checkstop conditions and take appropriate actions.
              commitErrl(&l_err);
         }
-
-    } while (0);
+    }
+    while(0);
 }
-
-
-
 

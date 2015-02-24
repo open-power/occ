@@ -1073,7 +1073,10 @@ errlHndl_t data_store_pstate_super(const cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // Name:   data_store_role
 //
-// Description: TODO Add description
+// Description: Tell the OCC if it should run as a master or slave.  HTMGT knows
+//              which OCC is the master from the MRW.  To be the master OCC
+//              requires a connection to the APSS.  Until an OCC is told a role
+//              it should default to running as a slave
 //
 // End Function Specification
 errlHndl_t data_store_role(const cmdh_fsp_cmd_t * i_cmd_ptr,
@@ -1082,17 +1085,13 @@ errlHndl_t data_store_role(const cmdh_fsp_cmd_t * i_cmd_ptr,
     errlHndl_t l_errlHndl = NULL;
     uint8_t    l_old_role = G_occ_role;
     uint8_t    l_new_role = OCC_SLAVE;
-    uint8_t    l_fir_master = 0x00;
     ERRL_RC    l_rc       = ERRL_RC_SUCCESS;
 
     // Cast the command to the struct for this format
     cmdh_set_role_t * l_cmd_ptr = (cmdh_set_role_t *)i_cmd_ptr;
 
-    // With BMC-based systems, there is a FIR Master bit
-    l_fir_master = l_cmd_ptr->role >> 7;
-
-    // Mask off the FIR Master bit
-    l_new_role = l_cmd_ptr->role & 0x7F;
+    // Mask off the OCC role
+    l_new_role = l_cmd_ptr->role & OCC_ROLE_MASTER_MASK;
 
 
     // Must be in standby state before we can change roles

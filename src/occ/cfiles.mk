@@ -91,7 +91,20 @@ occ_CFILES = \
                 occbuildname.c \
                 common.c \
 
+occ_CFILES += firdata/ecc.c
+occ_CFILES += firdata/fir_data_collect.c
+occ_CFILES += firdata/firData.c
+occ_CFILES += firdata/fsi.c
+occ_CFILES += firdata/lpc.c
+occ_CFILES += firdata/native.c
+occ_CFILES += firdata/nor_micron.c
+occ_CFILES += firdata/pnor_util.c
+occ_CFILES += firdata/scom_trgt.c
+occ_CFILES += firdata/scom_util.c
+occ_CFILES += firdata/sfc_ast2400.c
+
 occ_SFILES = cmdh/ll_ffdc.S
+
 
 occ_cfiles = ${occ_CFILES:.c=.o}
 occ_Sfiles = ${occ_SFILES:.S=.o}

@@ -59,6 +59,7 @@ errlHndl_t  G_occErrSlots[ERRL_MAX_SLOTS] = {
                 };
 
 extern uint8_t G_occ_interrupt_type;
+extern bool G_fir_collection_required;
 
 void hexDumpLog( errlHndl_t i_log );
 
@@ -354,7 +355,9 @@ void addTraceToErrl(
     void * l_traceAddr = io_err;
     uint16_t l_actualSizeOfUsrDtls = 0;
     pore_status_t l_gpe0_status;
+    ocb_oisr0_t l_oisr0_status;
     static bool L_gpe_halt_traced = FALSE;
+    static bool L_sys_checkstop_traced = FALSE;
 
 
     // check if GPE was frozen due to a checkstop
@@ -362,9 +365,19 @@ void addTraceToErrl(
     if(l_gpe0_status.fields.freeze_action && !L_gpe_halt_traced)
     {
         L_gpe_halt_traced = TRUE;
-        TRAC_ERR("addTraceToErrl: OCC GPE halted due to checkstop. GPE0 status[0x%08x%08x]",
-                  l_gpe0_status.words.high_order, l_gpe0_status.words.low_order);
+        TRAC_IMP("addTraceToErrl: Frozen GPE0 detected. GPE0 status[0x%08x%08x]",
+                 l_gpe0_status.words.high_order,
+                 l_gpe0_status.words.low_order);
     }
+
+    // Check if there is a system checkstop
+    l_oisr0_status.value = in32(OCB_OISR0);
+    if (l_oisr0_status.fields.check_stop && !L_sys_checkstop_traced)
+    {
+        L_sys_checkstop_traced = TRUE;
+        TRAC_IMP("addTraceToErrl: System checkstop detected");
+    }
+
 
     // 1. Check if error log is not null
     // 2. error log is not invalid
@@ -520,16 +533,20 @@ void reportErrorLog( errlHndl_t i_err, uint16_t i_entrySize )
            i_err->iv_userDetails.iv_modId, i_err->iv_reasonCode,
            i_err->iv_userDetails.iv_userData1, i_err->iv_userDetails.iv_userData2);
 
-    // If this system is using PSIHB complex, send an interrupt to Host so that
-    // Host can inform HTMGT to collect the error log
-    if (G_occ_interrupt_type == PSIHB_INTERRUPT)
+    // Defer the interrupt if FIR collection is required
+    if (!G_fir_collection_required)
     {
-        // From OCC OpenPower Interface v1.1, OCC needs to set bits 0 and 1 of
-        // the OCB_OCCMISC register
-        l_reg.fields.core_ext_intr = 1;
-        l_reg.fields.reason_intr = 1;
+        // If this system is using PSIHB complex, send an interrupt to Host so that
+        // Host can inform HTMGT to collect the error log
+        if (G_occ_interrupt_type == PSIHB_INTERRUPT)
+        {
+            // From OCC OpenPower Interface v1.1, OCC needs to set bits 0 and 1 of
+            // the OCB_OCCMISC register
+            l_reg.fields.core_ext_intr = 1;
+            l_reg.fields.reason_intr = 1;
 
-        out32(OCB_OCCMISC_OR, l_reg.value);
+            out32(OCB_OCCMISC_OR, l_reg.value);
+        }
     }
 }
 
@@ -544,16 +561,33 @@ void reportErrorLog( errlHndl_t i_err, uint16_t i_entrySize )
 void commitErrl( errlHndl_t *io_err )
 {
     pore_status_t l_gpe0_status;
+    ocb_oisr0_t l_oisr0_status;
+    static bool L_log_commits_suspended_by_safe_mode = FALSE;
 
-    if ( io_err != NULL )
+    if (!L_log_commits_suspended_by_safe_mode && io_err != NULL)
     {
         // check if handle is valid and is NOT empty
         if ((*io_err != NULL ) && ( *io_err != INVALID_ERR_HNDL ))
         {
-            // check if GPE was frozen due to a checkstop
+            // Check if the GPE is frozen or if a system
+            // checkstop has occurred
             l_gpe0_status.value = in64(PORE_GPE0_STATUS);
-            if(l_gpe0_status.fields.freeze_action)
+            l_oisr0_status.value = in32(OCB_OISR0);
+
+            if (l_gpe0_status.fields.freeze_action
+                ||
+                l_oisr0_status.fields.check_stop)
             {
+                if (l_gpe0_status.fields.freeze_action)
+                {
+                    TRAC_IMP("Frozen GPE0 detected by commitErrl");
+                }
+
+                if (l_oisr0_status.fields.check_stop)
+                {
+                    TRAC_IMP("System checkstop detected by commitErrl");
+                }
+
                 //Go to the reset state to minimize errors
                 reset_state_request(RESET_REQUESTED_DUE_TO_ERROR);
 
@@ -565,6 +599,14 @@ void commitErrl( errlHndl_t *io_err )
 
                 //set callouts to 0
                 (*io_err)->iv_numCallouts = 0;
+
+                TRAC_IMP("SAFE mode required, suspending error log commits. FIR capture required.");
+
+                // Suspend all error log commits
+                L_log_commits_suspended_by_safe_mode = TRUE;
+
+                // Motivate FIR data collection
+                G_fir_collection_required = TRUE;
             }
 
             // if reset action bit is set force severity to unrecoverable and

@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -38,7 +38,7 @@
 #include "proc_data.h"
 #include "heartbeat.h"
 #include "scom.h"
-
+#include <fir_data_collect.h>
 
 extern proc_gpsm_dcm_sync_occfw_t G_proc_dcm_sync_state;
 extern bool G_mem_monitoring_allowed;
@@ -54,7 +54,6 @@ errlHndl_t SMGR_observation_to_active();
 errlHndl_t SMGR_active_to_observation();
 errlHndl_t SMGR_active_to_standby();
 errlHndl_t SMGR_all_to_safe();
-
 
 // State that OCC is currently in
 OCC_STATE          G_occ_internal_state     = OCC_STATE_STANDBY;
@@ -615,16 +614,15 @@ errlHndl_t SMGR_set_state(OCC_STATE i_new_state)
              * @userdata4   ERC_RUNNING_SEM_PENDING_FAILURE
              * @devdesc     SSX semaphore related failure
              */
-             l_transResult = createErrl(MAIN_STATE_TRANSITION_MID,        //modId
-                                        SSX_GENERIC_FAILURE,              //reasoncode
-                                        ERC_RUNNING_SEM_PENDING_FAILURE,  //Extended reason code
-                                        ERRL_SEV_UNRECOVERABLE,           //Severity
-                                        NULL,                             //Trace Buf
-                                        DEFAULT_TRACE_SIZE,               //Trace Size
-                                        0,                                //userdata1
-                                        0);                               //userdata2
+            l_transResult = createErrl(MAIN_STATE_TRANSITION_MID,        //modId
+                                       SSX_GENERIC_FAILURE,              //reasoncode
+                                       ERC_RUNNING_SEM_PENDING_FAILURE,  //Extended reason code
+                                       ERRL_SEV_UNRECOVERABLE,           //Severity
+                                       NULL,                             //Trace Buf
+                                       DEFAULT_TRACE_SIZE,               //Trace Size
+                                       0,                                //userdata1
+                                       0);                               //userdata2
 
-            // @wb001 -- Callout firmware
             addCalloutToErrl(l_transResult,
                              ERRL_CALLOUT_TYPE_COMPONENT_ID,
                              ERRL_COMPONENT_ID_FIRMWARE,
@@ -643,32 +641,34 @@ errlHndl_t SMGR_set_state(OCC_STATE i_new_state)
         // transition function that matches the transition we need to do.
         for(jj=0; jj<G_smgr_state_trans_count; jj++)
         {
-           if( ((G_smgr_state_trans[jj].old_state == G_occ_internal_state)
-                       || (G_smgr_state_trans[jj].old_state == OCC_STATE_ALL) )
-                && (G_smgr_state_trans[jj].new_state == i_new_state) )
-           {
-              // We found the transtion that matches, now run the function
-              // that is associated with that state transition.
-              if(NULL != G_smgr_state_trans[jj].trans_func_ptr)
-              {
-                  // Signal that we are now in a state transition
-                  G_state_transition_occuring = TRUE;
-                  // Run transition function
-                  l_transResult = (G_smgr_state_trans[jj].trans_func_ptr)();
-                  // Signal that we are done with the transition
-                  G_state_transition_occuring = FALSE;
-                  break;
-              }
-           }
+            if(((G_smgr_state_trans[jj].old_state == G_occ_internal_state)
+                ||
+                (G_smgr_state_trans[jj].old_state == OCC_STATE_ALL))
+               &&
+               (G_smgr_state_trans[jj].new_state == i_new_state))
+            {
+                // We found the transtion that matches, now run the function
+                // that is associated with that state transition.
+                if(NULL != G_smgr_state_trans[jj].trans_func_ptr)
+                {
+                    // Signal that we are now in a state transition
+                    G_state_transition_occuring = TRUE;
+                    // Run transition function
+                    l_transResult = (G_smgr_state_trans[jj].trans_func_ptr)();
+                    // Signal that we are done with the transition
+                    G_state_transition_occuring = FALSE;
+                    break;
+                }
+            }
         }
 
         // Check if we hit the end of the table without finding a valid
         // state transition.  If we did, log an internal error.
         if(G_smgr_state_trans_count == jj)
         {
-           TRAC_ERR("No transition (or NULL) found for the state change\n");
-           l_transResult = NULL;
-           break;
+            TRAC_ERR("No transition (or NULL) found for the state change");
+            l_transResult = NULL;
+            break;
         }
 
         // If the state OCC requested from TMGT is the state we are now in,
@@ -690,14 +690,15 @@ errlHndl_t SMGR_set_state(OCC_STATE i_new_state)
 //
 // Name:  SMGR_validate_get_valid_states
 //
-// Description:
+// Description: Return a byte of status masks that correspond to the v10 poll
+//              response definition status byte.
 //
 // End Function Specification
 uint8_t SMGR_validate_get_valid_states(void)
 {
-    uint8_t l_valid_states = 0;
-    uint32_t l_datamask = DATA_get_present_cnfgdata();
-    static BOOLEAN          l_throttle_traced = FALSE;
+    uint8_t         l_valid_states = 0;
+    uint32_t        l_datamask = DATA_get_present_cnfgdata();
+    static BOOLEAN  l_throttle_traced = FALSE;
 
     // If we have everything we need to go to observation state
     if((l_datamask & SMGR_VALIDATE_DATA_OBSERVATION_MASK) ==
@@ -729,6 +730,12 @@ uint8_t SMGR_validate_get_valid_states(void)
     if(OCC_MASTER == G_occ_role)
     {
        l_valid_states |= SMGR_MASK_MASTER_OCC;
+    }
+
+    // Indicate if this OCC is the FIR master.
+    if (OCC_IS_FIR_MASTER())
+    {
+        l_valid_states |= OCC_ROLE_FIR_MASTER_MASK;
     }
 
     return l_valid_states;

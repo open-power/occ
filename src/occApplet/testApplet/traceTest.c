@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* COPYRIGHT International Business Machines Corp. 2011,2014              */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -76,6 +76,10 @@ extern SsxSemaphore    g_trac_mutex;
 //*************************************************************************
 // Globals
 //*************************************************************************
+#ifdef TRACE_BUFFER_SIZE
+#undef TRACE_BUFFER_SIZE
+#define TRACE_BUFFER_SIZE 8192
+#endif
 char G_trac_buffer[TRACE_BUFFER_SIZE + 100];
 
 //*************************************************************************

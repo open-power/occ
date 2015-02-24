@@ -84,6 +84,10 @@ typedef enum
     DATA_FRU_MAX,
 } eConfigDataFruType;
 
+// Set OCC Role Masks
+#define OCC_ROLE_MASTER_MASK        0x01
+#define OCC_ROLE_FIR_MASTER_MASK    0x40
+
 // Used by TMGT to send OCC the PstateSuperStruct
 typedef struct __attribute__ ((packed))
 {

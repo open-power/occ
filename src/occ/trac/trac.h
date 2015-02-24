@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -71,7 +71,6 @@
 extern void dumpHexString(const void *i_data, const unsigned int len, const char *string);
 #define DEBUG_HEXDUMP(data, len, string)  \
         dumpHexString(data, len, string)
-//TODO: Do we want to have one buffer for tracing binary
 
 #else  //TRAC_TO_SIMICS
 

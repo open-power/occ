@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -31,12 +31,11 @@
 
 // From Linker Script
 extern void _LINEAR_WR_WINDOW_SECTION_BASE;
-// From Linker Script
 extern void _LINEAR_WR_WINDOW_SECTION_SIZE;
-// From Linker Script
 extern void _LINEAR_RD_WINDOW_SECTION_BASE;
-// From Linker Script
 extern void _LINEAR_RD_WINDOW_SECTION_SIZE;
+extern void _FIR_PARMS_SECTION_BASE;
+extern void _FIR_HEAP_SECTION_BASE;
 
 // Declare aligned data structures for Async access in a noncacheable section
 //
@@ -60,6 +59,12 @@ extern void _LINEAR_RD_WINDOW_SECTION_SIZE;
 #define GPE_BUFFER(declaration) \
         declaration __attribute__ ((__aligned__ (8))) __attribute__ ((section (".noncacheable")))
 
+#define FIR_HEAP_BUFFER(declaration) \
+        declaration __attribute__ ((section (".firHeap")))
+
+#define FIR_PARMS_BUFFER(declaration) \
+        declaration __attribute__ ((section (".firParms")))
+
 #define LINEAR_WINDOW_WR_BUFFER(declaration) \
         declaration __attribute__ ((section (".linear_wr")))
 
@@ -74,6 +79,9 @@ extern void _LINEAR_RD_WINDOW_SECTION_SIZE;
 #define LINEAR_WR_WINDOW_SECTION_SIZE   ((uint32_t) &_LINEAR_WR_WINDOW_SECTION_SIZE)
 #define CMDH_OCC_RESPONSE_BASE_ADDRESS  ((uint32_t) &_LINEAR_RD_WINDOW_SECTION_BASE)
 #define LINEAR_RD_WINDOW_SECTION_SIZE   ((uint32_t) &_LINEAR_RD_WINDOW_SECTION_SIZE)
+#define FIR_PARMS_SECTION_BASE_ADDRESS  ((uint32_t) &_FIR_PARMS_SECTION_BASE)
+#define FIR_HEAP_SECTION_BASE_ADDRESS   ((uint32_t) &_FIR_HEAP_SECTION_BASE)
+
 
 // Conversion Macro's
 
@@ -231,6 +239,7 @@ enum
     SSX_STARTING                = 0x0210,
     SSX_INITIALIZED             = 0x02ff,
     TRACE_INITIALIZED           = 0x0310,
+    HOMER_ACCESS_INITS          = 0x0318,
     INITIALIZING_IRQS           = 0x0320,
     IRQS_INITIALIZED            = 0x032f,
     MAIN_THREAD_STARTED         = 0x03ff,

@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -53,6 +53,7 @@
 #include <amec_freq.h>
 #include <thrm_thread.h>
 #include "scom.h"
+#include <fir_data_collect.h>
 
 extern void __ssx_boot;
 extern uint32_t G_occ_phantom_critical_count;
@@ -67,7 +68,6 @@ IMAGE_HEADER (G_mainAppImageHdr,__ssx_boot,MAIN_APP_ID,ID_NUM_INVALID);
 // SIMICS printf/printk
 SimicsStdio G_simics_stdout;
 SimicsStdio G_simics_stderr;
-
 
 //  Critical /non Critical Stacks
 uint8_t G_noncritical_stack[NONCRITICAL_STACK_SIZE];
@@ -85,8 +85,14 @@ SsxSemaphore G_ffdcSem;
 // Timer for posting thermal, health monitor and FFDC semaphore
 SsxTimer G_mainThrdTimer;
 
-// @sb022 Variable holding main thread loop count
+// Variable holding main thread loop count
 uint32_t G_mainThreadLoopCounter = 0x0;
+// Global flag indicating FIR collection is required
+bool G_fir_collection_required = FALSE;
+
+extern uint8_t g_trac_inf_buffer[];
+extern uint8_t g_trac_imp_buffer[];
+extern uint8_t g_trac_err_buffer[];
 
 void pmc_hw_error_isr(void *private, SsxIrqId irq, int priority);
 
@@ -337,7 +343,7 @@ void occ_irq_setup()
     if(l_rc)
     {
         //single error for all error cases, just look at trace to see where it failed.
-        /*@
+        /* @
          * @moduleid   OCC_IRQ_SETUP
          * @reasonCode SSX_GENERIC_FAILURE
          * @severity   ERRL_SEV_UNRECOVERABLE
@@ -703,7 +709,7 @@ void Main_thread_routine(void *private)
 
     TRAC_INFO("Main Thread Started ... " );
 
-    workaround_HW258436(); //gm016
+    workaround_HW258436();
 
     // NOTE: At present, we are not planning to use any config data from
     // mainstore. OCC Role will be provided by FSP after FSP communication
@@ -711,7 +717,6 @@ void Main_thread_routine(void *private)
     // dcom_initialize_roles. If in future design changes, we will make
     // change to use config_data_init at that time.
     // Default role initialization and determine OCC/Chip Id
-    // @03a get our role
     dcom_initialize_roles();
     CHECKPOINT(ROLES_INITIALIZED);
 
@@ -721,16 +726,9 @@ void Main_thread_routine(void *private)
     sensor_init_all();
     CHECKPOINT(SENSORS_INITIALIZED);
 
-    // SPIVID Initialization
-    // Must be done before Pstates
-    // @sb001 Removed SPIVID inits
+    // SPIVID Initialization must be done before Pstates
     // All SPIVID inits are done by Hostboot, remove this section.
-    //#if 0
-    //    o2s_initialize();
-    //    spivid_initialize(7);
-    //#endif
 
-    //@04a
     //Initialize structures for collecting core data.
     //It needs to run before RTLoop start as pore initialization needs to be
     // done before task to collect core data starts.
@@ -739,10 +737,9 @@ void Main_thread_routine(void *private)
 
     // Run slave OCC init on all OCCs. Master-only initialization will be
     // done after determining actual role. By default all OCCs are slave.
-    slave_occ_init();   // @th00b - Moved after proc core init
+    slave_occ_init();
     CHECKPOINT(SLAVE_OCC_INITIALIZED);
 
-#ifndef OCC_SIMICS_RESPONDER
     // Initialize watchdog timers. This needs to be right before
     // start rtl to make sure timer doesn't timeout. This timer is being
     // reset from the rtl task.
@@ -753,18 +750,13 @@ void Main_thread_routine(void *private)
     // Initialize Real time Loop Timer Interrupt
     rtl_ocb_init();
     CHECKPOINT(RTL_TIMER_INITIALIZED);
-#else
-    TRAC_ERR("---------------------------------");
-    TRAC_ERR(" OCC Responder for Simics");
-    TRAC_ERR("---------------------------------");
-#endif
 
     // Initialize semaphores and timer for handling thermal, health monitor and
     // FFDC functions.
     initMainThrdSemAndTimer();
     CHECKPOINT(SEMS_AND_TIMERS_INITIALIZED);
 
-    //Initialize the Applet Manager @02a
+    //Initialize the Applet Manager
     // This needs to be done before initThreadScheduler because command line
     // handler thread might start using applet as soon as it starts. Command
     // line handler thread is started as part of the initThreadScheduler along
@@ -778,27 +770,56 @@ void Main_thread_routine(void *private)
     // through cmd handler thread in middle of the initialization.
     initThreadScheduler();
 
-#ifdef FSPLESS_SIMICS
-    // In order to avoid having to run a ton of separate commands to each
-    // occ when we want to test in Simics w/o FSP, we can run with a FSPLESS
-    // config, using hardcoded default data from occ_sys_config.c
-    sysConfigFspLess();
-#endif
-
     int l_ssxrc = SSX_OK;
-    // @sb022 initWatchdogTimers called before will start running the timer but
+    // initWatchdogTimers called before will start running the timer but
     // the interrupt handler will just restart the timer until we use this
     // enable switch to actually start the watchdog function.
     ENABLE_WDOG;
 
     while (TRUE)
     {
-        // @sb022 Count each loop so the watchdog can tell the main thread is
+        // Count each loop so the watchdog can tell the main thread is
         // running.
         G_mainThreadLoopCounter++;
 
+        // Flush the loop counter and trace buffers on each loop, this makes
+        // debug easier if the cmd interface doesn't respond
+        dcache_flush_line(&G_mainThreadLoopCounter);
+        dcache_flush(g_trac_inf_buffer, TRACE_BUFFER_SIZE);
+        dcache_flush(g_trac_imp_buffer, TRACE_BUFFER_SIZE);
+        dcache_flush(g_trac_err_buffer, TRACE_BUFFER_SIZE);
+
         // Wait for thermal semaphore
         l_ssxrc = ssx_semaphore_pend(&G_thrmSem,SSX_WAIT_FOREVER);
+
+        static bool L_fir_collection_completed = FALSE;
+        // Look for FIR collection flag and status
+        if (G_fir_collection_required && !L_fir_collection_completed)
+        {
+            // If this OCC is the FIR master and PNOR access is allowed perform
+            // FIR collection
+            if (OCC_IS_FIR_MASTER() && pnor_access_allowed())
+            {
+                fir_data_collect();
+                L_fir_collection_completed = TRUE;
+            }
+
+            G_fir_collection_required = FALSE;
+            // Error reporting is skipped while FIR collection is required so we
+            // don't get reset in flight.  If anyone is listening send the
+            // error alert now.
+            // If this system is using PSIHB complex, send an interrupt to Host so that
+            // Host can inform HTMGT to collect the error log
+            if (G_occ_interrupt_type == PSIHB_INTERRUPT)
+            {
+                // From OCC OpenPower Interface v1.1, OCC needs to set bits 0 and 1 of
+                // the OCB_OCCMISC register
+                ocb_occmisc_t l_occmiscreg;
+                l_occmiscreg.fields.core_ext_intr = 1;
+                l_occmiscreg.fields.reason_intr = 1;
+                out32(OCB_OCCMISC_OR, l_occmiscreg.value);
+            }
+        }
 
         if ( l_ssxrc != SSX_OK )
         {
@@ -883,6 +904,7 @@ void Main_thread_routine(void *private)
 int main(int argc, char **argv)
 {
     int l_ssxrc;
+    int l_ssxrc2;
 
     // ----------------------------------------------------
     // Initialize TLB for Linear Window access here so we
@@ -896,6 +918,7 @@ int main(int argc, char **argv)
             TLBLO_WR | TLBLO_I,
             NULL
             );
+
     if(l_ssxrc != SSX_OK)
     {
         //failure means we can't talk to FSP.
@@ -910,26 +933,58 @@ int main(int argc, char **argv)
             TLBLO_I,
             NULL
             );
+
     if(l_ssxrc != SSX_OK)
     {
         //failure means we can't talk to FSP.
         SSX_PANIC(0x01000002);
     }
 
+    // Setup the TLB for writing to the FIR parms section
+    l_ssxrc = ppc405_mmu_map(FIR_PARMS_SECTION_BASE_ADDRESS,
+                             FIR_PARMS_SECTION_BASE_ADDRESS,
+                             FIR_PARMS_SECTION_SIZE,
+                             0,
+                             TLBLO_WR | TLBLO_I,
+                             NULL);
+
+    if (l_ssxrc != SSX_OK)
+    {
+        // Panic, this section is required for FIR collection on checkstops
+        SSX_PANIC(0x01000003);
+    }
+
+    // Setup the TLB for writing to the FIR heap section
+    l_ssxrc = ppc405_mmu_map(FIR_HEAP_SECTION_BASE_ADDRESS,
+                             FIR_HEAP_SECTION_BASE_ADDRESS,
+                             FIR_HEAP_SECTION_SIZE,
+                             0,
+                             TLBLO_WR | TLBLO_I,
+                             NULL);
+
+    if (l_ssxrc != SSX_OK)
+    {
+        // Panic, this section is required for FIR collection on checkstops
+        SSX_PANIC(0x01000004);
+    }
+
     CHECKPOINT_INIT();
     CHECKPOINT(MAIN_STARTED);
 
-    // Initialize stdout so we can do printf from within simics env
-#ifdef OCC_SIMICS_RESPONDER
-    simics_stdout_create(&G_simics_stdout);
-    simics_stderr_create(&G_simics_stderr);
-    stdout = (FILE *)(&G_simics_stdout);
-    stderr = (FILE *)(&G_simics_stderr);
-    ssxout = (FILE *)(&G_simics_stdout);
-#endif
+    homer_rc_t l_homerrc = HOMER_SUCCESS;
+    homer_rc_t l_homerrc2 = HOMER_SUCCESS;
 
-    // Initialize SSX Stacks
-    // NOTE: This also reinitializes the time base to 0
+    // Get the homer version
+    uint32_t l_homer_version = 0;
+    l_homerrc = homer_hd_map_read_unmap(HOMER_VERSION,
+                                        &l_homer_version,
+                                        &l_ssxrc);
+
+    if ((HOMER_SUCCESS != l_homerrc) && (HOMER_SSX_UNMAP_ERR != l_homerrc))
+    {
+        // Attempt to use max version if we can't read the homer.
+        l_homer_version = HOMER_VERSION_MAX;
+    }
 
     // Get proc_pb_frequency from HOMER host data and calculate the timebase
     // frequency for the OCC. Pass the timebase frequency to ssx_initialize.
@@ -937,16 +992,19 @@ int main(int argc, char **argv)
     // frequency so the passed value is 1/4 of the proc_pb_frequency from the
     // HOMER, ie. if the MRW says that proc_pb_frequency is 2400 MHz, then
     // pass 600000000 (600MHz)
+
     // The offset from the start of the HOMER is 0x00100000, we will need to
     // create a temporary mapping to this section of the HOMER with ppc405_mmu_map
     // (at address 0x00000000) read the value, convert it, and then unmap.
-    homer_rc_t l_homerrc = HOMER_SUCCESS;
+    
+    // Don't do a version check before reading the nest freq, it's present in
+    // all HOMER versions.
     uint32_t l_tb_freq_hz = 0;
-    l_homerrc = homer_hd_map_read_unmap(HOMER_NEST_FREQ,
-                                        &l_tb_freq_hz,
-                                        &l_ssxrc);
+    l_homerrc2 = homer_hd_map_read_unmap(HOMER_NEST_FREQ,
+                                         &l_tb_freq_hz,
+                                         &l_ssxrc2);
 
-    if ((HOMER_SUCCESS == l_homerrc) || (HOMER_SSX_UNMAP_ERR == l_homerrc))
+    if ((HOMER_SUCCESS == l_homerrc2) || (HOMER_SSX_UNMAP_ERR == l_homerrc2))
     {
         // Data is in Mhz upon return and needs to be converted to Hz and then
         // quartered.
@@ -958,25 +1016,9 @@ int main(int argc, char **argv)
         l_tb_freq_hz = 400000000;
     }
 
-
-    // Get OCC interrupt type from HOMER host data area. This will tell OCC
-    // which interrupt to Host it should be using.
-    uint32_t l_occ_int_type = 0;
-    l_homerrc = homer_hd_map_read_unmap(HOMER_INT_TYPE,
-                                        &l_occ_int_type,
-                                        &l_ssxrc);
-
-    if ((HOMER_SUCCESS == l_homerrc) || (HOMER_SSX_UNMAP_ERR == l_homerrc))
-    {
-        G_occ_interrupt_type = (uint8_t) l_occ_int_type;
-    }
-    else
-    {
-        G_occ_interrupt_type = FSP_SUPPORTED_OCC;
-    }
-
     CHECKPOINT(SSX_STARTING);
 
+    // Initialize SSX Stacks.  This also reinitializes the time base to 0
     ssx_initialize((SsxAddress)G_noncritical_stack,
                    NONCRITICAL_STACK_SIZE,
                    (SsxAddress)G_critical_stack,
@@ -986,67 +1028,104 @@ int main(int argc, char **argv)
 
     CHECKPOINT(SSX_INITIALIZED);
 
-    // TRAC_XXX needs ssx service, so they can only be called after ssx_initialize
+    // TRAC_XXX needs ssx services, traces can only be done after ssx_initialize
     TRAC_init_buffers();
 
     CHECKPOINT(TRACE_INITIALIZED);
 
     TRAC_INFO("Inside OCC Main");
     // Trace what happened before ssx initialization
-    TRAC_INFO("HOMER accessed, rc=%d, nest_freq=%d, int_type=%d, ssx_rc=%d",
-              l_homerrc, l_tb_freq_hz, l_occ_int_type, l_ssxrc);
+    TRAC_INFO("HOMER accessed, rc=%d, version=%d, ssx_rc=%d",
+              l_homerrc, l_homer_version, l_ssxrc);
 
-    // Catch and log the homer error after inits are done
-    if (HOMER_SUCCESS != l_homerrc)
+    TRAC_INFO("HOMER accessed, rc=%d, nest_freq=%d, ssx_rc=%d",
+              l_homerrc2, l_tb_freq_hz, l_ssxrc2);
+
+    // Handle any errors from the version access
+    homer_log_access_error(l_homerrc,
+                           l_ssxrc,
+                           l_homer_version);
+
+    // Handle any errors from the nest freq access
+    homer_log_access_error(l_homerrc2,
+                           l_ssxrc2,
+                           l_tb_freq_hz);
+
+    // Time to access any initialization data needed from the HOMER (besides the
+    // nest frequency which was required above to enable SSX and tracing).
+    CHECKPOINT(HOMER_ACCESS_INITS);
+
+    if (l_homer_version >= HOMER_VERSION_2)
     {
-        // We could potentially have both an internal error dealing with the
-        // homer and an SSX error, for example we could find an unsupported
-        // version number in the homer and then have an ssx error trying to
-        // unmap the homer address space.  This in catches all those cases
-        if (SSX_OK != l_ssxrc)
+        // Get OCC interrupt type from HOMER host data area. This will tell OCC
+        // which interrupt to Host it should be using.
+        uint32_t l_occ_int_type = 0;
+        l_homerrc = homer_hd_map_read_unmap(HOMER_INT_TYPE,
+                                            &l_occ_int_type,
+                                            &l_ssxrc);
+
+        if ((HOMER_SUCCESS == l_homerrc) || (HOMER_SSX_UNMAP_ERR == l_homerrc))
         {
-            /* @
-             * @errortype
-             * @moduleid    MAIN_MID
-             * @reasoncode  SSX_GENERIC_FAILURE
-             * @userdata1   HOMER and SSX return codes
-             * @userdata2   Timebase frequency applied
-             * @userdata4   ERC_HOMER_MAIN_SSX_ERROR
-             * @devdesc     An SSX error ocurred mapping the HOMER host data
-             *              into the OCC address space. User word 1 contains
-             *              both the internal and SSX return codes returned
-             *              by the method used to access the HOMER data.
-             */
-            errlHndl_t l_err = createErrl(MAIN_MID,                 //modId
-                                          SSX_GENERIC_FAILURE,      //reasoncode
-                                          ERC_HOMER_MAIN_SSX_ERROR, //Extended reason code
-                                          ERRL_SEV_PREDICTIVE,      //Severity
-                                          NULL,                     //Trace Buf
-                                          DEFAULT_TRACE_SIZE,       //Trace Size
-                                          (l_homerrc << 16) | (0xFFFF & (uint32_t)l_ssxrc), //userdata1
-                                          l_tb_freq_hz);            //userdata2
-            commitErrl(&l_err);
+            G_occ_interrupt_type = (uint8_t) l_occ_int_type;
         }
         else
         {
-            /* @
-             * @errortype
-             * @moduleid    MAIN_MID
-             * @reasoncode  INTERNAL_FAILURE
-             * @userdata1   HOMER return code
-             * @userdata2   Default timebase frequency applied
-             * @userdata4   ERC_HOMER_MAIN_ACCESS_ERROR
-             * @devdesc     Error accessing initialization data
-             */
-            errlHndl_t l_err = createErrl(MAIN_MID,                 //modId
-                                          INTERNAL_FAILURE,         //reasoncode
-                                          ERC_HOMER_MAIN_ACCESS_ERROR,//Extended reason code
-                                          ERRL_SEV_INFORMATIONAL,   //Severity
-                                          NULL,                     //Trace Buf
-                                          DEFAULT_TRACE_SIZE,       //Trace Size
-                                          l_homerrc,                //userdata1
-                                          l_tb_freq_hz);            //userdata2
-            commitErrl(&l_err);
+            G_occ_interrupt_type = FSP_SUPPORTED_OCC;
+        }
+
+        TRAC_INFO("HOMER accessed, rc=%d, host interrupt type=%d, ssx_rc=%d",
+                  l_homerrc, l_occ_int_type, l_ssxrc);
+
+        // Handle any errors from the interrupt type access
+        homer_log_access_error(l_homerrc,
+                               l_ssxrc,
+                               l_occ_int_type);
+    }
+
+    if (l_homer_version >= HOMER_VERSION_3)
+    {
+        // Get the FIR Master indicator
+        uint32_t l_fir_master = FIR_OCC_NOT_FIR_MASTER;
+        l_homerrc = homer_hd_map_read_unmap(HOMER_FIR_MASTER,
+                                            &l_fir_master,
+                                            &l_ssxrc);
+
+        if (((HOMER_SUCCESS == l_homerrc) || (HOMER_SSX_UNMAP_ERR == l_homerrc))
+            &&
+            (FIR_OCC_IS_FIR_MASTER == l_fir_master))
+        {
+            OCC_SET_FIR_MASTER(FIR_OCC_IS_FIR_MASTER);
+        }
+        else
+        {
+            OCC_SET_FIR_MASTER(FIR_OCC_NOT_FIR_MASTER);
+        }
+
+        TRAC_INFO("HOMER accessed, rc=%d, FIR master=%d, ssx_rc=%d",
+                  l_homerrc, l_fir_master, l_ssxrc);
+
+        // Handle any errors from the FIR master access
+        homer_log_access_error(l_homerrc,
+                               l_ssxrc,
+                               l_fir_master);
+
+        // If this OCC is the FIR master read in the FIR collection parms
+        if (OCC_IS_FIR_MASTER())
+        {
+            TRAC_IMP("I am the FIR master");
+
+            // Read the FIR parms buffer
+            l_homerrc = homer_hd_map_read_unmap(HOMER_FIR_PARMS,
+                                                &G_fir_data_parms[0],
+                                                &l_ssxrc);
+
+            TRAC_INFO("HOMER accessed, rc=%d, FIR parms buffer 0x%x, ssx_rc=%d",
+                      l_homerrc, &G_fir_data_parms[0], l_ssxrc);
+
+            // Handle any errors from the FIR master access
+            homer_log_access_error(l_homerrc,
+                                   l_ssxrc,
+                                   (uint32_t)&G_fir_data_parms[0]);
         }
     }
 
@@ -1086,7 +1165,7 @@ int main(int argc, char **argv)
                                       -l_rc,                    //userdata1
                                       0);                       //userdata2
         // Commit Error log
-        REQUEST_RESET(l_err);     // @gm006
+        REQUEST_RESET(l_err);
     }
 
     // Enter SSX Kernel

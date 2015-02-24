@@ -1,27 +1,27 @@
-// IBM_PROLOG_BEGIN_TAG
-// This is an automatically generated prolog.
-//
-// $Source: src/occ/linkocc.cmd $
-//
-// OpenPOWER OnChipController Project
-//
-// Contributors Listed Below - COPYRIGHT 2011,2014
-// [+] Google Inc.
-// [+] International Business Machines Corp.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-// implied. See the License for the specific language governing
-// permissions and limitations under the License.
-//
-// IBM_PROLOG_END_TAG
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ/linkocc.cmd $                                         */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
 // Description
 
@@ -546,12 +546,32 @@ SECTIONS
     __WRITEABLE_DATA_LEN__ = . - __WRITEABLE_DATA_ADDR__ ;
     _EX_FREE_SECTION_SIZE = 0 - _EX_FREE_SECTION_BASE;
 #else
-    _DATA_SECTION_SIZE = _LINEAR_WR_WINDOW_SECTION_BASE - _DATA_SECTION_BASE;
-    __WRITEABLE_DATA_LEN__ = _LINEAR_WR_WINDOW_SECTION_BASE - __WRITEABLE_DATA_ADDR__ ;
+    _DATA_SECTION_SIZE = _FIR_HEAP_SECTION_BASE - _DATA_SECTION_BASE;
+    __WRITEABLE_DATA_LEN__ = _FIR_HEAP_SECTION_BASE - __WRITEABLE_DATA_ADDR__ ;
     _EX_FREE_SECTION_SIZE = 0;
 #endif
 
-    _SSX_FREE_END   = _LINEAR_WR_WINDOW_SECTION_BASE - 1;
+    _SSX_FREE_END   = _FIR_HEAP_SECTION_BASE - 1;
+
+    ////////////////////////////////
+    // FIR data heap section
+    ////////////////////////////////
+    __CUR_COUNTER__ = .;
+    _FIR_HEAP_SECTION_BASE = 0xffff2000;
+    _FIR_HEAP_SECTION_SIZE = 0x3000;
+    . = _FIR_HEAP_SECTION_BASE;
+    .firHeap . : {*(firHeap) . = ALIGN(1024);} > sram
+    . = __CUR_COUNTER__;
+
+    ////////////////////////////////
+    // FIR data parms section
+    ////////////////////////////////
+    __CUR_COUNTER__ = .;
+    _FIR_PARMS_SECTION_BASE = 0xffff5000;
+    _FIR_PARMS_SECTION_SIZE = 0x1000;
+    . = _FIR_PARMS_SECTION_BASE;
+    .firParms . : {*(firParms) . = ALIGN(1024);} > sram
+    . = __CUR_COUNTER__;
 
     ////////////////////////////////
     // FSP Command Buffer

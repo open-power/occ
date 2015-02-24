@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -26,6 +26,9 @@
 // Description: HOMER specific functions.
 
 #include "ssx.h"
+#include <errl.h>
+#include <occ_service_codes.h>
+#include <occ_common.h>
 #include <homer.h>
 
 /*
@@ -49,26 +52,22 @@
  */
 
 homer_rc_t homer_hd_map_read_unmap(const homer_read_var_t  i_id,
-                                   uint32_t                *o_host_data,
-                                   int                     *o_ssx_rc)
+                                   void                    * const o_host_data,
+                                   int                     * const o_ssx_rc)
 {
-    // Locals
     Ppc405MmuMap l_mmuMapHomer = 0;
     homer_rc_t l_rc = HOMER_SUCCESS;
     occHostConfigDataArea_t *l_hdcfg_data = 0x00000000;
-    *o_ssx_rc = SSX_OK;
 
-    // Validate the parms and id
-    if (!o_host_data)
+    // Validate the pointers
+    if (!o_host_data || !o_ssx_rc || ((uint32_t)o_host_data % 4))
     {
         l_rc = HOMER_BAD_PARM;
     }
-    else if (HOMER_LAST_VAR <= i_id)
-    {
-        l_rc = HOMER_UNKNOWN_ID;
-    }
     else
     {
+        *o_ssx_rc = SSX_OK;
+
         /*
          * Map to mainstore at HOMER host data offset. The first parameter is
          * the effective address where the data can be accessed once mapped, the
@@ -88,31 +87,79 @@ homer_rc_t homer_hd_map_read_unmap(const homer_read_var_t  i_id,
         }
         else
         {
-            // Check version, if ok return data requested. We need to support
+            // Check version, if ok handle ID requested. We need to support
             // current version as well as older ones
-            if (HOMER_HD_VERSION_SUPPORT < l_hdcfg_data->version)
+            if ((HOMER_VERSION_MIN > l_hdcfg_data->version)
+                ||
+                (HOMER_VERSION_MAX < l_hdcfg_data->version))
             {
                 l_rc = HOMER_UNSUPPORTED_HD_VERSION;
             }
             else
             {
-                switch (i_id)
+                // Version guaranteed to be within supported range
+
+                // HOMER Version 1 support
+                if (HOMER_VERSION_1 == l_hdcfg_data->version)
                 {
-                    case HOMER_VERSION:
-                        *o_host_data = l_hdcfg_data->version;
-                        break;
-                    case HOMER_NEST_FREQ:
-                        *o_host_data = l_hdcfg_data->nestFrequency;
-                        break;
-                    case HOMER_INT_TYPE:
-                        *o_host_data = l_hdcfg_data->occInterruptType;
-                        break;
-                    default:
-                        // Nothing to do, range checked above
-                        break;
+                    switch (i_id)
+                    {
+                        case HOMER_VERSION:
+                            *(uint32_t *)o_host_data = l_hdcfg_data->version;
+                            break;
+                        case HOMER_NEST_FREQ:
+                            *(uint32_t *)o_host_data = l_hdcfg_data->nestFrequency;
+                            break;
+                        default:
+                            l_rc = HOMER_UNKNOWN_ID;
+                            break;
+                    }
+                }
+                else if (HOMER_VERSION_2 == l_hdcfg_data->version)
+                {
+                    switch (i_id)
+                    {
+                        case HOMER_VERSION:
+                            *(uint32_t *)o_host_data = l_hdcfg_data->version;
+                            break;
+                        case HOMER_NEST_FREQ:
+                            *(uint32_t *)o_host_data = l_hdcfg_data->nestFrequency;
+                            break;
+                        case HOMER_INT_TYPE:
+                            *(uint32_t *)o_host_data = l_hdcfg_data->occInterruptType;
+                            break;
+                        default:
+                            l_rc = HOMER_UNKNOWN_ID;
+                            break;
+                    }
+                }
+                else if (HOMER_VERSION_3 == l_hdcfg_data->version)
+                {
+                    switch (i_id)
+                    {
+                        case HOMER_VERSION:
+                            *(uint32_t *)o_host_data = l_hdcfg_data->version;
+                            break;
+                        case HOMER_NEST_FREQ:
+                            *(uint32_t *)o_host_data = l_hdcfg_data->nestFrequency;
+                            break;
+                        case HOMER_INT_TYPE:
+                            *(uint32_t *)o_host_data = l_hdcfg_data->occInterruptType;
+                            break;
+                        case HOMER_FIR_MASTER:
+                            *(uint32_t *)o_host_data = l_hdcfg_data->firMaster;
+                            break;
+                        case HOMER_FIR_PARMS:
+                            memcpy(o_host_data, &(l_hdcfg_data->firParms[0]), HOMER_FIR_PARM_SIZE);
+                            break;
+                        default:
+                            l_rc = HOMER_UNKNOWN_ID;
+                            break;
+                    }
                 }
             }
 
+            // Unmap the HOMER before returning to caller
             *o_ssx_rc = ppc405_mmu_unmap(&l_mmuMapHomer);
             if ((SSX_OK != *o_ssx_rc) && (HOMER_SUCCESS == l_rc))
             {
@@ -124,5 +171,76 @@ homer_rc_t homer_hd_map_read_unmap(const homer_read_var_t  i_id,
     return l_rc;
 }
 // End of homer_hd_map_read_unmap
+
+
+/*
+ * Function Specification
+ *
+ * Name: homer_log_access_error
+ *
+ * Description: Utility function to log an error that occurred while accessing
+ *              the HOMER.
+ *
+ * End Function Specification
+ */
+void homer_log_access_error(const homer_rc_t i_homer_rc,
+                            const int i_ssx_rc,
+                            const uint32_t i_usr_data2)
+{
+    // Catch and log the homer error
+    if (HOMER_SUCCESS != i_homer_rc)
+    {
+        // We could potentially have both an internal error dealing with the
+        // homer and an SSX error, for example we could find an unsupported
+        // version number in the homer and then have an ssx error trying to
+        // unmap the homer address space.  This check catches all those cases.
+        if (SSX_OK != i_ssx_rc)
+        {
+            /* @
+             * @errortype
+             * @moduleid    MAIN_MID
+             * @reasoncode  SSX_GENERIC_FAILURE
+             * @userdata1   HOMER and SSX return codes
+             * @userdata2   Host interrupt type used
+             * @userdata4   ERC_HOMER_MAIN_SSX_ERROR
+             * @devdesc     An SSX error occurred mapping the HOMER host data
+             *              into the OCC address space. User word 1 contains
+             *              both the internal and SSX return codes returned
+             *              by the method used to access the HOMER data.
+             */
+            errlHndl_t l_err = createErrl(MAIN_MID,                 //modId
+                                          SSX_GENERIC_FAILURE,      //reasoncode
+                                          ERC_HOMER_MAIN_SSX_ERROR, //Extended reason code
+                                          ERRL_SEV_PREDICTIVE,      //Severity
+                                          NULL,                     //Trace Buf
+                                          DEFAULT_TRACE_SIZE,       //Trace Size
+                                          (i_homer_rc << 16) | (0xFFFF & (uint32_t)i_ssx_rc), //userdata1
+                                          i_usr_data2);             //userdata2
+            commitErrl(&l_err);
+        }
+        else
+        {
+            /* @
+             * @errortype
+             * @moduleid    MAIN_MID
+             * @reasoncode  INTERNAL_FAILURE
+             * @userdata1   HOMER return code
+             * @userdata2   Default host interrupt type used.
+             * @userdata4   ERC_HOMER_MAIN_ACCESS_ERROR
+             * @devdesc     Error accessing initialization data
+             */
+            errlHndl_t l_err = createErrl(MAIN_MID,                 //modId
+                                          INTERNAL_FAILURE,         //reasoncode
+                                          ERC_HOMER_MAIN_ACCESS_ERROR,//Extended reason code
+                                          ERRL_SEV_INFORMATIONAL,   //Severity
+                                          NULL,                     //Trace Buf
+                                          DEFAULT_TRACE_SIZE,       //Trace Size
+                                          i_homer_rc,               //userdata1
+                                          i_usr_data2);             //userdata2
+            commitErrl(&l_err);
+        }
+    }
+}
+// End of homer_log_access_error
 
 // End of homer.c

@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/homer.h $                                             */
+/* $Source: src/occ/firdata/occ_const.H $                                 */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2015                             */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -23,63 +23,53 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-// Description: homer header file
+#ifndef __firDataConst_common_h
+#define __firDataConst_common_h
 
-#ifndef _homer_h
-#define _homer_h
+/** NOTE: This file is common between OCC and Hosboot. Any change to this file
+ *        must be mirrored to both repositories. */
 
+#include <stdint.h>
 
-// Offset into the HOMER of the host data section and the size
-#define HOMER_HD_OFFSET       0x00100000
-#define HOMER_HD_SZ           (128 * 1024)
-#define HOMER_FIR_PARM_SIZE   (3 * 1024)
-
-// Version(s) of HOMER host data currently supported
-typedef enum homer_version
+/** Target types for all supported targets. */
+typedef enum
 {
-    HOMER_VERSION_MIN   = 1,
-    HOMER_VERSION_1     = 1,
-    HOMER_VERSION_2     = 2,
-    HOMER_VERSION_3     = 3,
-    HOMER_VERSION_MAX   = 3,
-} homer_version_t;
+    /* NOTE: These will be used as array indexes. */
+    FIRST_TRGT = 0,
+    PROC       = FIRST_TRGT,
+    EX,
+    MCS,
+    MEMB,
+    MBA,
+    MAX_TRGTS,
 
-// ID of host data variables
-typedef enum homer_read_var
+} TrgtType_t;
+
+/** Boundary/position ranges for each target type. */
+typedef enum
 {
-    HOMER_VERSION,
-    HOMER_NEST_FREQ,
-    HOMER_INT_TYPE,
-    HOMER_FIR_MASTER,
-    HOMER_FIR_PARMS,
-    HOMER_LAST_VAR
-} homer_read_var_t;
+    MAX_PROC_PER_NODE = 8,
+    MAX_EX_PER_PROC   = 16,
+    MAX_MCS_PER_PROC  = 8,
+    MAX_MEMB_PER_PROC = MAX_MCS_PER_PROC,
+    MAX_MEMB_PER_NODE = MAX_MEMB_PER_PROC * MAX_PROC_PER_NODE,
+    MAX_MBA_PER_MEMB  = 2,
+    MAX_MBA_PER_PROC  = MAX_MEMB_PER_PROC * MAX_MBA_PER_MEMB,
 
-// HOMER methods return codes
-typedef enum homer_rc
+} TrgtPos_t;
+
+/** All register types. */
+typedef enum
 {
-    HOMER_SUCCESS,
-    HOMER_UNSUPPORTED_HD_VERSION,
-    HOMER_BAD_PARM,
-    HOMER_UNKNOWN_ID,
-    HOMER_SSX_MAP_ERR,
-    HOMER_SSX_UNMAP_ERR,
-    HOMER_LAST_RC
-} homer_rc_t;
+    /* NOTE: These will be used as array indexes. */
+    FIRST_REG = 0,
+    GLBL      = FIRST_REG,
+    FIR,
+    REG,
+    IDFIR,
+    IDREG,
+    MAX_REGS,
 
-// Current version of the layout for the Host Config Data section of the HOMER
-struct occHostConfigDataArea
-{
-    uint32_t version;
-    uint32_t nestFrequency;
-    uint32_t occInterruptType;
-    uint32_t firMaster;
-    uint8_t  firParms[HOMER_FIR_PARM_SIZE];
-    uint8_t  __reserved[HOMER_HD_SZ - (4 * sizeof(uint32_t)) - HOMER_FIR_PARM_SIZE];
-}__attribute__ ((__packed__));
-typedef struct occHostConfigDataArea occHostConfigDataArea_t;
+} RegType_t;
 
-homer_rc_t homer_hd_map_read_unmap(const homer_read_var_t, void * const, int * const);
-void homer_log_access_error(const homer_rc_t, const int, const uint32_t);
-
-#endif // _homer_h
+#endif /* __firDataConst_common_h */
