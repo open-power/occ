@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* COPYRIGHT International Business Machines Corp. 2011,2014              */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -302,51 +302,56 @@ void task_centaur_control( task_t * i_task )
         {
             if(!async_request_completed(&l_centControlTask->gpe_req.request) || l_parms->rc)
             {
-
                 if(!(L_gpe_fail_logged & (CENTAUR0_PRESENT_MASK >> l_cent)))
                 {
-                    L_gpe_fail_logged |= CENTAUR0_PRESENT_MASK >> l_cent;
-                    TRAC_ERR("task_centaur_control: gpe_scom_centaur failed. l_cent=%d rc=%x, index=0x%08x", l_cent, l_parms->rc, l_parms->errorIndex);
+                    // Check if the centaur has a channel checkstop. If it does,
+                    // then do not log any errors. We also don't want to throttle
+                    // a centaur that is in this condition.
+                    if(!(cent_chan_checkstop(l_cent)))
+                    {
+                        L_gpe_fail_logged |= CENTAUR0_PRESENT_MASK >> l_cent;
+                        TRAC_ERR("task_centaur_control: gpe_scom_centaur failed. l_cent=%d rc=%x, index=0x%08x", l_cent, l_parms->rc, l_parms->errorIndex);
 
-                    /* @
-                     * @errortype
-                     * @moduleid    CENT_TASK_CONTROL_MOD
-                     * @reasoncode  CENT_SCOM_ERROR
-                     * @userdata1   rc - Return code of scom operation
-                     * @userdata2   index of scom operation that failed
-                     * @userdata4   OCC_NO_EXTENDED_RC
-                     * @devdesc     OCC access to centaur failed
-                     */
-                    l_err = createErrl(
-                            CENT_TASK_CONTROL_MOD,                  // modId
-                            CENT_SCOM_ERROR,                        // reasoncode
-                            OCC_NO_EXTENDED_RC,                     // Extended reason code
-                            ERRL_SEV_PREDICTIVE,                    // Severity
-                            NULL,                                   // Trace Buf
-                            DEFAULT_TRACE_SIZE,                     // Trace Size
-                            l_parms->rc,                            // userdata1
-                            l_parms->errorIndex                     // userdata2
-                            );
+                        /* @
+                         * @errortype
+                         * @moduleid    CENT_TASK_CONTROL_MOD
+                         * @reasoncode  CENT_SCOM_ERROR
+                         * @userdata1   rc - Return code of scom operation
+                         * @userdata2   index of scom operation that failed
+                         * @userdata4   OCC_NO_EXTENDED_RC
+                         * @devdesc     OCC access to centaur failed
+                         */
+                        l_err = createErrl(
+                                CENT_TASK_CONTROL_MOD,                  // modId
+                                CENT_SCOM_ERROR,                        // reasoncode
+                                OCC_NO_EXTENDED_RC,                     // Extended reason code
+                                ERRL_SEV_PREDICTIVE,                    // Severity
+                                NULL,                                   // Trace Buf
+                                DEFAULT_TRACE_SIZE,                     // Trace Size
+                                l_parms->rc,                            // userdata1
+                                l_parms->errorIndex                     // userdata2
+                                );
 
-                    addUsrDtlsToErrl(l_err,                                  //io_err
-                            (uint8_t *) &(l_centControlTask->gpe_req.ffdc),  //i_dataPtr,
-                            sizeof(PoreFfdc),                                //i_size
-                            ERRL_USR_DTL_STRUCT_VERSION_1,                   //version
-                            ERRL_USR_DTL_BINARY_DATA);                       //type
+                        addUsrDtlsToErrl(l_err,                                  //io_err
+                                (uint8_t *) &(l_centControlTask->gpe_req.ffdc),  //i_dataPtr,
+                                sizeof(PoreFfdc),                                //i_size
+                                ERRL_USR_DTL_STRUCT_VERSION_1,                   //version
+                                ERRL_USR_DTL_BINARY_DATA);                       //type
 
-                    //callout the centaur
-                    addCalloutToErrl(l_err,
-                                     ERRL_CALLOUT_TYPE_HUID,
-                                     G_sysConfigData.centaur_huids[l_cent],
-                                     ERRL_CALLOUT_PRIORITY_MED);
+                        //callout the centaur
+                        addCalloutToErrl(l_err,
+                                         ERRL_CALLOUT_TYPE_HUID,
+                                         G_sysConfigData.centaur_huids[l_cent],
+                                         ERRL_CALLOUT_PRIORITY_MED);
 
-                    //callout the processor
-                    addCalloutToErrl(l_err,
-                                     ERRL_CALLOUT_TYPE_HUID,
-                                     G_sysConfigData.proc_huid,
-                                     ERRL_CALLOUT_PRIORITY_MED);
+                        //callout the processor
+                        addCalloutToErrl(l_err,
+                                         ERRL_CALLOUT_TYPE_HUID,
+                                         G_sysConfigData.proc_huid,
+                                         ERRL_CALLOUT_PRIORITY_MED);
 
-                    commitErrl(&l_err);
+                        commitErrl(&l_err);
+                    }
                 }//if(l_gpe_fail_logged & (CENTAUR0_PRESENT_MASK >> l_cent))
 
                 //Request failed. Keep count of failures and request a reset if we reach a

@@ -1,7 +1,31 @@
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/ssx/pgp/registers/mcs_firmware_registers.h $              */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 #ifndef __MCS_FIRMWARE_REGISTERS_H__
 #define __MCS_FIRMWARE_REGISTERS_H__
 
-// $Id: mcs_firmware_registers.h,v 1.1.1.1 2013/12/11 21:03:23 bcbrock Exp $
+// $Id: mcs_firmware_registers.h,v 1.4 2015/01/27 17:56:30 daviddu Exp $
 // $Source: /afs/awd/projects/eclipz/KnowledgeBase/.cvsroot/eclipz/chips/p8/working/procedures/ssx/pgp/registers/mcs_firmware_registers.h,v $
 //-----------------------------------------------------------------------------
 // *! (C) Copyright International Business Machines Corp. 2013
@@ -155,6 +179,31 @@ typedef union mcsmode0 {
 #define MCSMODE0_WRITE_DATA_BUFFER_ECC_CHECK_DISABLE SIXTYFOUR_BIT_CONSTANT(0x0000000000000002)
 #define MCSMODE0_WRITE_DATA_BUFFER_ECC_CORRECT_DISABLE SIXTYFOUR_BIT_CONSTANT(0x0000000000000001)
 #ifndef __ASSEMBLER__
+
+typedef union mcifir {
+
+    uint64_t value;
+    struct {
+#ifdef _BIG_ENDIAN
+        uint32_t high_order;
+        uint32_t low_order;
+#else
+        uint32_t low_order;
+        uint32_t high_order;
+#endif // _BIG_ENDIAN
+    } words;
+    struct {
+#ifdef _BIG_ENDIAN
+    uint64_t _reserved0 : 30;
+    uint64_t channel_fail_signal_active : 1;
+    uint64_t _reserved1 : 33;
+#else
+    uint64_t _reserved1 : 33;
+    uint64_t channel_fail_signal_active : 1;
+    uint64_t _reserved0 : 30;
+#endif // _BIG_ENDIAN
+    } fields;
+} mcifir_t;
 
 #endif // __ASSEMBLER__
 #endif // __MCS_FIRMWARE_REGISTERS_H__

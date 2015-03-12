@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* COPYRIGHT International Business Machines Corp. 2011,2014              */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -173,6 +173,60 @@ uint8_t      G_centaur_nest_lfir6 = 0;
 //number of SC polls to wait between i2c recovery attempts
 #define CENT_SC_MAX_INTERVAL 256
 
+//determine scom address of MCIFIR register for given Centaur n
+#define MCS0_MCIFIR_N(n) \
+        ( (n<4)? (MCS0_MCIFIR + ((MCS1_MCIFIR - MCS0_MCIFIR) * (n))) : (MCS4_MCIFIR + ((MCS5_MCIFIR - MCS4_MCIFIR) * (n-4))) )
+
+//mask for channel checkstop
+#define MCIFIR_CHAN_CKSTOP_MASK 0x0000000100000000
+
+bool cent_chan_checkstop(const uint8_t i_cent)
+{
+    uint32_t l_scom_addr = 0;
+    bool     l_rc = FALSE;
+    uint64_t l_data;
+    int      l_scom_rc = 0;
+
+    // Determine scom address of MCIFIR register
+    l_scom_addr = MCS0_MCIFIR_N(i_cent);
+
+    // Do a getscom on MCIFIR register for i_cent
+    l_scom_rc = getscom_ffdc(l_scom_addr, &l_data, 0);
+    if(!l_scom_rc)
+    {
+        //check for channel checkstop (bit 31)
+        if(l_data & MCIFIR_CHAN_CKSTOP_MASK)
+        {
+            l_rc = TRUE;
+
+            if(CENTAUR_PRESENT(i_cent))
+            {
+                //remove checkstopped centaur from presence bitmap
+                G_present_centaurs &= ~(CENTAUR_BY_MASK(i_cent));
+
+                //remove the dimm temperature sensors behind this centaur from presence bitmap
+                G_cent_enabled_sensors.bytes[i_cent] = 0x00;
+
+                TRAC_IMP("Channel checkstop detected on Centaur[%d] scom_addr[0x%08X] G_present_centaurs[0x%08X]",
+                         i_cent,
+                         l_scom_addr,
+                         G_present_centaurs);
+
+                TRAC_IMP("Updated bitmap of enabled dimm temperature sensors: 0x%08X %08X",
+                         G_cent_enabled_sensors.words[0],
+                         G_cent_enabled_sensors.words[1]);
+            }
+        }
+    }
+    else
+    {
+        TRAC_ERR("cent_chan_checkstop: Error accessing MCIFIR register for Centaur[%d] scom_addr[0x%08X]",
+                 i_cent,
+                 l_scom_addr);
+    }
+    return l_rc;
+}
+
 void cent_recovery(uint32_t i_cent)
 {
     int l_rc = 0;
@@ -231,55 +285,60 @@ void cent_recovery(uint32_t i_cent)
            (!async_request_completed(&G_cent_scom_req.request) || G_cent_scom_gpe_parms.rc) &&
            (!(L_cent_callouts & l_cent_mask)))
         {
-            //Mark the centaur as being called out
-            L_cent_callouts |= l_cent_mask;
+            // Check if the centaur has a channel checkstop. If it does, then do not
+            // log any errors
+            if(!(cent_chan_checkstop(l_prev_cent)))
+            {
+                //Mark the centaur as being called out
+                L_cent_callouts |= l_cent_mask;
 
-            // There was an error doing the recovery scoms
-            TRAC_ERR("cent_recovery: gpe_scom_centaur failed. rc[0x%08x] cent[%d] entries[%d] errorIndex[0x%08X]",
-                     G_cent_scom_gpe_parms.rc,
-                     l_prev_cent,
-                     G_cent_scom_gpe_parms.entries,
-                     G_cent_scom_gpe_parms.errorIndex);
+                // There was an error doing the recovery scoms
+                TRAC_ERR("cent_recovery: gpe_scom_centaur failed. rc[0x%08x] cent[%d] entries[%d] errorIndex[0x%08X]",
+                         G_cent_scom_gpe_parms.rc,
+                         l_prev_cent,
+                         G_cent_scom_gpe_parms.entries,
+                         G_cent_scom_gpe_parms.errorIndex);
 
-            /* @
-             * @errortype
-             * @moduleid    CENT_RECOVERY_MOD
-             * @reasoncode  CENT_SCOM_ERROR
-             * @userdata1   rc - Return code of failing scom
-             * @userdata2   index of failing scom
-             * @userdata4   0
-             * @devdesc     OCC to Centaur communication failure
-             */
-            l_err = createErrl(
-                    CENT_RECOVERY_MOD,                      //modId
-                    CENT_SCOM_ERROR,                        //reasoncode
-                    OCC_NO_EXTENDED_RC,                     //Extended reason code
-                    ERRL_SEV_PREDICTIVE,                    //Severity
-                    NULL,                                   //Trace Buf
-                    DEFAULT_TRACE_SIZE,                     //Trace Size
-                    G_cent_scom_gpe_parms.rc,               //userdata1
-                    G_cent_scom_gpe_parms.errorIndex        //userdata2
-                    );
+                /* @
+                 * @errortype
+                 * @moduleid    CENT_RECOVERY_MOD
+                 * @reasoncode  CENT_SCOM_ERROR
+                 * @userdata1   rc - Return code of failing scom
+                 * @userdata2   index of failing scom
+                 * @userdata4   0
+                 * @devdesc     OCC to Centaur communication failure
+                 */
+                l_err = createErrl(
+                        CENT_RECOVERY_MOD,                      //modId
+                        CENT_SCOM_ERROR,                        //reasoncode
+                        OCC_NO_EXTENDED_RC,                     //Extended reason code
+                        ERRL_SEV_PREDICTIVE,                    //Severity
+                        NULL,                                   //Trace Buf
+                        DEFAULT_TRACE_SIZE,                     //Trace Size
+                        G_cent_scom_gpe_parms.rc,               //userdata1
+                        G_cent_scom_gpe_parms.errorIndex        //userdata2
+                        );
 
-            //dump ffdc contents collected by ssx
-            addUsrDtlsToErrl(l_err,                                    //io_err
-                     (uint8_t *) &(G_cent_scom_req.ffdc),              //i_dataPtr,
-                     sizeof(PoreFfdc),                                 //i_size
-                     ERRL_USR_DTL_STRUCT_VERSION_1,                    //version
-                     ERRL_USR_DTL_BINARY_DATA);                        //type
+                //dump ffdc contents collected by ssx
+                addUsrDtlsToErrl(l_err,                                    //io_err
+                         (uint8_t *) &(G_cent_scom_req.ffdc),              //i_dataPtr,
+                         sizeof(PoreFfdc),                                 //i_size
+                         ERRL_USR_DTL_STRUCT_VERSION_1,                    //version
+                         ERRL_USR_DTL_BINARY_DATA);                        //type
 
-            //callout the centaur
-            addCalloutToErrl(l_err,
-                             ERRL_CALLOUT_TYPE_HUID,
-                             G_sysConfigData.centaur_huids[l_prev_cent],
-                             ERRL_CALLOUT_PRIORITY_MED);
+                //callout the centaur
+                addCalloutToErrl(l_err,
+                                 ERRL_CALLOUT_TYPE_HUID,
+                                 G_sysConfigData.centaur_huids[l_prev_cent],
+                                 ERRL_CALLOUT_PRIORITY_MED);
 
-            //callout the processor
-            addCalloutToErrl(l_err,
-                             ERRL_CALLOUT_TYPE_HUID,
-                             G_sysConfigData.proc_huid,
-                             ERRL_CALLOUT_PRIORITY_MED);
-            commitErrl(&l_err);
+                //callout the processor
+                addCalloutToErrl(l_err,
+                                 ERRL_CALLOUT_TYPE_HUID,
+                                 G_sysConfigData.proc_huid,
+                                 ERRL_CALLOUT_PRIORITY_MED);
+                commitErrl(&l_err);
+            }
         }
 
 #if 0   //set this to 1 for testing hard failures
@@ -381,7 +440,7 @@ void cent_recovery(uint32_t i_cent)
             // Capture the scac_lfir as ffdc but only once
             if(L_i2c_recovery_delay[l_prev_cent] == CENT_SC_MAX_INTERVAL)
             {
-                TRAC_ERR("cent_recovery: centaur[%d] scac_lfir[0x%08x%08x]", 
+                TRAC_ERR("cent_recovery: centaur[%d] scac_lfir[0x%08x%08x]",
                          l_prev_cent,
                          (uint32_t)(G_cent_scom_list_entry[READ_SCAC_LFIR].data >> 32),
                          (uint32_t)(G_cent_scom_list_entry[READ_SCAC_LFIR].data));
@@ -588,7 +647,7 @@ void task_centaur_data( task_t * i_task )
         {
             //Request is idle
             L_gpe_had_1_tick = FALSE;
-            if( G_centaur_queue_not_idle_traced)
+            if(G_centaur_queue_not_idle_traced)
             {
                 TRAC_INFO("task_centaur_data: GPE completed");
                 G_centaur_queue_not_idle_traced = FALSE;
@@ -613,101 +672,105 @@ void task_centaur_data( task_t * i_task )
             //(as long as the request was scheduled).
             if(!async_request_completed(&l_centaur_data_ptr->gpe_req.request) || l_parms->rc )
             {
-                //log an error the first time this happens but keep on running.
-                //eventually, we will timeout on the dimm & centaur temps not being updated
-                //and fans will go to max speed (probably won't be able to throttle for
-                //same reason we can't access the centaur here).
-                if(!L_gpe_error_logged)
+                // Check if the centaur has a channel checkstop. If it does, then do not
+                // log any errors
+                if(!(cent_chan_checkstop(l_centaur_data_ptr->prev_centaur)))
                 {
-                    L_gpe_error_logged = TRUE;
-
-                    // There was an error collecting the centaur sensor cache
-                    TRAC_ERR("task_centaur_data: gpe_get_mem_data failed. rc=0x%08x%08x, cur=%d, prev=%d",
-                             (uint32_t)(l_parms->rc >> 32),
-                             (uint32_t)(l_parms->rc),
-                             l_centaur_data_ptr->current_centaur,
-                             l_centaur_data_ptr->prev_centaur);
-                    /* @
-                     * @errortype
-                     * @moduleid    CENT_TASK_DATA_MOD
-                     * @reasoncode  CENT_SCOM_ERROR
-                     * @userdata1   l_parms->rc
-                     * @userdata2   0
-                     * @userdata4   OCC_NO_EXTENDED_RC
-                     * @devdesc     Failed to get centaur data
-                     */
-                    l_err = createErrl(
-                            CENT_TASK_DATA_MOD,                     //modId
-                            CENT_SCOM_ERROR,                        //reasoncode
-                            OCC_NO_EXTENDED_RC,                     //Extended reason code
-                            ERRL_SEV_PREDICTIVE,                    //Severity
-                            NULL,                                   //Trace Buf
-                            DEFAULT_TRACE_SIZE,                     //Trace Size
-                            l_parms->rc,                            //userdata1
-                            0                                       //userdata2
-                            );
-
-                    addUsrDtlsToErrl(l_err,                                   //io_err
-                            (uint8_t *) &(l_centaur_data_ptr->gpe_req.ffdc),  //i_dataPtr,
-                            sizeof(PoreFfdc),                                 //i_size
-                            ERRL_USR_DTL_STRUCT_VERSION_1,                    //version
-                            ERRL_USR_DTL_BINARY_DATA);                        //type
-
-                    //Callouts depend on the return code of the gpe_get_mem_data procedure
-                    if(l_parms->rc == GPE_GET_MEM_DATA_DIED)
+                    //log an error the first time this happens but keep on running.
+                    //eventually, we will timeout on the dimm & centaur temps not being updated
+                    //and fans will go to max speed (probably won't be able to throttle for
+                    //same reason we can't access the centaur here).
+                    if(!L_gpe_error_logged)
                     {
-                        //callout the processor
-                        addCalloutToErrl(l_err,
-                                         ERRL_CALLOUT_TYPE_HUID,
-                                         G_sysConfigData.proc_huid,
-                                         ERRL_CALLOUT_PRIORITY_LOW);
-                    }
-                    else if(l_parms->rc == GPE_GET_MEM_DATA_SENSOR_CACHE_FAILED)
-                    {
-                        //callout the previous centaur if present
-                        if(CENTAUR_PRESENT(l_centaur_data_ptr->prev_centaur))
+                        L_gpe_error_logged = TRUE;
+
+                        // There was an error collecting the centaur sensor cache
+                        TRAC_ERR("task_centaur_data: gpe_get_mem_data failed. rc=0x%08x%08x, cur=%d, prev=%d",
+                                 (uint32_t)(l_parms->rc >> 32),
+                                 (uint32_t)(l_parms->rc),
+                                 l_centaur_data_ptr->current_centaur,
+                                 l_centaur_data_ptr->prev_centaur);
+                        /* @
+                         * @errortype
+                         * @moduleid    CENT_TASK_DATA_MOD
+                         * @reasoncode  CENT_SCOM_ERROR
+                         * @userdata1   l_parms->rc
+                         * @userdata2   0
+                         * @userdata4   OCC_NO_EXTENDED_RC
+                         * @devdesc     Failed to get centaur data
+                         */
+                        l_err = createErrl(
+                                CENT_TASK_DATA_MOD,                     //modId
+                                CENT_SCOM_ERROR,                        //reasoncode
+                                OCC_NO_EXTENDED_RC,                     //Extended reason code
+                                ERRL_SEV_PREDICTIVE,                    //Severity
+                                NULL,                                   //Trace Buf
+                                DEFAULT_TRACE_SIZE,                     //Trace Size
+                                l_parms->rc,                            //userdata1
+                                0                                       //userdata2
+                                );
+
+                        addUsrDtlsToErrl(l_err,                                   //io_err
+                                (uint8_t *) &(l_centaur_data_ptr->gpe_req.ffdc),  //i_dataPtr,
+                                sizeof(PoreFfdc),                                 //i_size
+                                ERRL_USR_DTL_STRUCT_VERSION_1,                    //version
+                                ERRL_USR_DTL_BINARY_DATA);                        //type
+
+                        //Callouts depend on the return code of the gpe_get_mem_data procedure
+                        if(l_parms->rc == GPE_GET_MEM_DATA_DIED)
                         {
+                            //callout the processor
                             addCalloutToErrl(l_err,
                                              ERRL_CALLOUT_TYPE_HUID,
-                                             G_sysConfigData.centaur_huids[l_centaur_data_ptr->prev_centaur],
-                                             ERRL_CALLOUT_PRIORITY_HIGH);
+                                             G_sysConfigData.proc_huid,
+                                             ERRL_CALLOUT_PRIORITY_LOW);
                         }
-
-                        //callout the processor
-                        addCalloutToErrl(l_err,
-                                         ERRL_CALLOUT_TYPE_HUID,
-                                         G_sysConfigData.proc_huid,
-                                         ERRL_CALLOUT_PRIORITY_LOW);
-                    }
-                    else if(l_parms->rc == GPE_GET_MEM_DATA_UPDATE_FAILED)
-                    {
-                        //callout the current centaur if present
-                        if(CENTAUR_PRESENT(l_centaur_data_ptr->current_centaur))
+                        else if(l_parms->rc == GPE_GET_MEM_DATA_SENSOR_CACHE_FAILED)
                         {
+                            //callout the previous centaur if present
+                            if(CENTAUR_PRESENT(l_centaur_data_ptr->prev_centaur))
+                            {
+                                addCalloutToErrl(l_err,
+                                                 ERRL_CALLOUT_TYPE_HUID,
+                                                 G_sysConfigData.centaur_huids[l_centaur_data_ptr->prev_centaur],
+                                                 ERRL_CALLOUT_PRIORITY_HIGH);
+                            }
+
+                            //callout the processor
                             addCalloutToErrl(l_err,
                                              ERRL_CALLOUT_TYPE_HUID,
-                                             G_sysConfigData.centaur_huids[l_centaur_data_ptr->current_centaur],
-                                             ERRL_CALLOUT_PRIORITY_HIGH);
+                                             G_sysConfigData.proc_huid,
+                                             ERRL_CALLOUT_PRIORITY_LOW);
+                        }
+                        else if(l_parms->rc == GPE_GET_MEM_DATA_UPDATE_FAILED)
+                        {
+                            //callout the current centaur if present
+                            if(CENTAUR_PRESENT(l_centaur_data_ptr->current_centaur))
+                            {
+                                addCalloutToErrl(l_err,
+                                                 ERRL_CALLOUT_TYPE_HUID,
+                                                 G_sysConfigData.centaur_huids[l_centaur_data_ptr->current_centaur],
+                                                 ERRL_CALLOUT_PRIORITY_HIGH);
+                            }
+
+                            //callout the processor
+                            addCalloutToErrl(l_err,
+                                             ERRL_CALLOUT_TYPE_HUID,
+                                             G_sysConfigData.proc_huid,
+                                             ERRL_CALLOUT_PRIORITY_LOW);
+                        }
+                        else
+                        {
+                            //callout the firmware
+                            addCalloutToErrl(l_err,
+                                             ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                                             ERRL_COMPONENT_ID_FIRMWARE,
+                                             ERRL_CALLOUT_PRIORITY_MED);
                         }
 
-                        //callout the processor
-                        addCalloutToErrl(l_err,
-                                         ERRL_CALLOUT_TYPE_HUID,
-                                         G_sysConfigData.proc_huid,
-                                         ERRL_CALLOUT_PRIORITY_LOW);
+                        commitErrl(&l_err);
                     }
-                    else
-                    {
-                        //callout the firmware
-                        addCalloutToErrl(l_err,
-                                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                                         ERRL_COMPONENT_ID_FIRMWARE,
-                                         ERRL_CALLOUT_PRIORITY_MED);
-                    }
-
-                    commitErrl(&l_err);
                 }
-
             }
             else
             {

@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* COPYRIGHT International Business Machines Corp. 2011,2014              */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -160,6 +160,7 @@ extern uint8_t G_cent_temp_updated_bitmap;
 
 //bitmap of configured MBA's (2 per centaur, lsb is centaur0/mba0)
 extern uint16_t G_configured_mbas;
+
 //*************************************************************************
 // Function Prototypes
 //*************************************************************************
@@ -173,6 +174,10 @@ void centaur_init( void );
 
 //handles centaur i2c recovery and other workarounds
 void cent_recovery(uint32_t i_cent);
+
+//Determines if a centaur has a channel checkstop (returns TRUE is it has a
+//channel checkstop, FALSE otherwise)
+bool cent_chan_checkstop(const uint8_t i_cent);
 
 //Returns a pointer to the most up-to-date centaur data for the centaur
 //associated with the specified OCC centaur id.

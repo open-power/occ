@@ -1,4 +1,28 @@
-// $Id: pgp_centaur.c,v 1.2 2013/12/13 23:01:15 bcbrock Exp $
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/ssx/pgp/pgp_centaur.c $                                   */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
+// $Id: pgp_centaur.c,v 1.6 2015/01/27 17:56:26 daviddu Exp $
 // $Source: /afs/awd/projects/eclipz/KnowledgeBase/.cvsroot/eclipz/chips/p8/working/procedures/ssx/pgp/pgp_centaur.c,v $
 //-----------------------------------------------------------------------------
 // *! (C) Copyright International Business Machines Corp. 2013
@@ -103,6 +127,7 @@ _centaur_configuration_create(int i_bar, int i_slave, int i_setup)
     int i, designatedSync, diffInit;
     int64_t rc;                 /* Must be copied to global struct. */
     mcfgpr_t mcfgpr;
+    mcifir_t mcifir;
     mcsmode0_t mcsmode0;
     pba_slvctln_t slvctl;
     uint64_t diffMask, addrAccum, bar, mask, base;
@@ -161,6 +186,28 @@ _centaur_configuration_create(int i_bar, int i_slave, int i_setup)
         // where some of the "valid" MCS are not in the simulation models.
 
         for (i = 0; i < PGP_NCENTAUR; i++) {
+
+            // SW273928: New function added for FW820, when centaur has channel
+            // checkstop, we consider centaur is not usable so treat it as 
+            // deconfigured. Note that the current implementation assumes when 
+            // centaur is dead, its mcs is also dead, which is wrong. However,
+            // it only concerns when MCS happens to be the SYNC master because 
+            // the gpe procedure only tries to talk to centaurs regardless what 
+            // MCS status it knows about. In this particular case,
+            // the procedure will turn on SYNC on a different MCS with
+            // valid centaur. According to Eric Retter, it would be ok for 
+            // HW to have more MCS turned on as SYNC master as long as FW
+            // only send SYNC command to one of them. 
+
+            rc = _getscom(MCS_ADDRESS(MCIFIR, i), &(mcifir.value),
+                          SCOM_TIMEOUT);
+            if (rc) {
+                rc = 0;
+                config.baseAddress[i] = 0;
+                continue;
+            }
+
+            if (mcifir.fields.channel_fail_signal_active) continue;
 
             rc = _getscom(MCS_ADDRESS(MCFGPR, i), &(mcfgpr.value),
                           SCOM_TIMEOUT);
