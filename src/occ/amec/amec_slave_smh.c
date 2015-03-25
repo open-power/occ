@@ -54,6 +54,7 @@
 #include <amec_health.h>
 #include <amec_analytics.h>
 #include <common.h>
+#include <amec_wof.h>
 
 //*************************************************************************
 // Externs
@@ -339,6 +340,11 @@ void amec_slv_common_tasks_pre(void)
   // Update the sensors that come from the APSS every tick
   amec_update_apss_sensors();
 
+  // Update the external voltage sensors
+  amec_update_external_voltage();
+
+  amec_wof_common(); // Common sensors for both WOF enabled and disabled.
+
   // Call the stream buffer recording function
   amec_analytics_sb_recording();
 
@@ -357,7 +363,6 @@ void amec_slv_common_tasks_pre(void)
   amec_update_external_voltage();
 
   // Update estimate of Vdd regulator output current
-
   amec_update_current_sensor(); // Compute estimate for Vdd output current
 
   // Over-subscription check
@@ -400,6 +405,10 @@ void amec_slv_common_tasks_post(void)
 
       // Call the OCC slave's performance check
       amec_slv_check_perf();
+
+      // WOF: workload-optimized frequency selection. Select WOF vote.
+      // This should be after the frequency selection amec_slv_freq_smh().
+      amec_wof_250us();  //@cl020
 
       // Call the 250us trace recording if it has been configured via Amester.
       // If not configured, this call will return immediately.
@@ -450,9 +459,6 @@ void amec_slv_state_0(void)
   sensor_vector_update(AMECSENSOR_PTR(IPS2MSP0),     1);
   sensor_vector_update(AMECSENSOR_PTR(UTIL2MSP0),    1);
 
-  // Call the trace function for 2ms tracing if it has been configured via
-  // Amester. If not configured, this call will return immediately.
-  amec_tb_record(AMEC_TB_2MS);
 }
 
 
@@ -564,6 +570,21 @@ void amec_slv_state_4(void)
   // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
   amec_update_centaur_sensors(CENTAUR_4);
+
+  if ( IS_OCC_STATE_ACTIVE() )
+  {
+      // Need turbo speed known before WOF can safely set the
+      // turbo setting.  I assume OCC ACTIVE is sufficient for this.
+      // FIX: For safety, as soon as turbo is known, the WOF vote should
+      // be set to this to avoid the system coming on at ultraturbo, all cores.
+      
+      // WOF: workload-optimized frequency selection
+      amec_wof();  //@cl020
+  }
+  
+  // Call the trace function for 2ms tracing if it has been configured via
+  // Amester. If not configured, this call will return immediately.
+  amec_tb_record(AMEC_TB_2MS);
 }
 
 

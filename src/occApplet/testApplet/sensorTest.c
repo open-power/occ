@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* COPYRIGHT International Business Machines Corp. 2011,2014              */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -387,7 +387,7 @@ uint32_t sensorTestCommon()
     sensor_t *l_sensor=getSensorByGsid(PROBE250US0);
     sensor_t *l_sensor1=getSensorByGsid(PROBE250US1);
     sensor_t *l_sensor2=getSensorByGsid(PROBE250US4);
-    sensor_t *l_sensor3=getSensorByGsid(PROBE250US7);
+    sensor_t *l_sensor3=getSensorByGsid(PROBE250US4);  // @cl020 no probe7, so use probe4 again.
     do
     {
         // make sure getSensorByGsid did not return NULL pointer.
@@ -404,7 +404,7 @@ uint32_t sensorTestCommon()
         if((l_sensor->gsid!=PROBE250US0) ||
            (l_sensor1->gsid!=PROBE250US1) ||
            (l_sensor2->gsid!=PROBE250US4) ||
-           (l_sensor3->gsid!=PROBE250US7)     )
+           (l_sensor3->gsid!=PROBE250US4)     )  // @cl020
         {
             l_rc = GET_SNSR_FAILURE1;
             break;

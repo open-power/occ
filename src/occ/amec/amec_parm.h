@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -56,6 +56,7 @@ typedef enum
 {
     PARM_SYS_FMAX,
     PARM_SYS_FMIN,
+    PARM_DCOM_POBID, // @cl020
     PARM_GPST,
     PARM_PSTATE_MHZ,
     PARM_FREQ_REASON,
@@ -69,6 +70,31 @@ typedef enum
     PARM_SOFT_FMIN,
     PARM_SOFT_FMAX,
     PARM_TOD,
+    PARM_WOF_VDD_EFF, // @cl020
+    PARM_WOF_CUR_OUT,
+    PARM_WOF_LOADLINE,
+    PARM_WOF_V_CHIP,
+    PARM_WOF_IDDQ_I,
+    PARM_WOF_IDDQ85C,
+    PARM_WOF_IDDQ,
+    PARM_WOF_AC,
+    PARM_WOF_CEFF_TDP,
+    PARM_WOF_CEFF,
+    PARM_WOF_CEFF_RATIO,
+    PARM_WOF_F_UPLIFT,
+    PARM_WOF_F_VOTE,
+    PARM_WOF_ERROR,
+    PARM_WOF_STATE,
+    PARM_WOF_ENABLE,
+    PARM_WOF_CORES_ON,
+    PARM_WOF_WAKE_MASK,
+    PARM_WOF_PM_STATE,
+    PARM_WOF_PSTATE_50,
+    PARM_WOF_PSTATE_MAKE_CHECK,
+    PARM_WOF_PSTATE_CHECK,
+    PARM_WOF_PSTATE_TABLE,
+    PARM_WOF_PSTATE_READY,
+    PARM_WOF_THREAD_COUNT,
     AMEC_PARM_NUMBER_OF_PARAMETERS
 } AMEC_PARM_ENUM;
 

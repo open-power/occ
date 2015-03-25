@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -75,6 +75,9 @@ extern SsxThread TestAppletThread;
 // Application manager thread
 extern SsxThread Dcom_thread;
 
+//WOF thread  @cl020
+extern SsxThread amec_wof_thread;  
+
 void Main_thread_routine(void *private);
 
 void Cmd_Hndl_thread_routine(void *arg);
@@ -84,5 +87,7 @@ void App_thread_routine(void *arg);
 void Dcom_thread_routine(void *arg);
 
 void testAppletThreadRoutine(void *arg);
+
+void amec_wof_thread_routine(void *arg);
 
 #endif //_THREAD_H

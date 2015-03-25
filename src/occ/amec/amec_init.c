@@ -40,6 +40,7 @@
 #include <amec_sys.h>
 #include <proc_data.h>
 #include <sensor.h>
+#include <amec_wof.h>
 
 //*************************************************************************
 // Externs
@@ -429,6 +430,7 @@ void amec_slave_init()
 
   // Initialize AMEC internal parameters
   amec_init_gamec_struct();
+
 }
 
 /*----------------------------------------------------------------------------*/

@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -28,6 +28,7 @@
 #include <occ_common.h>           // For size_t needed by memset
 #include <amec_sys.h>         // For pointers to amec_sys_t structures
 #include <dcom.h>             // For mini-sensor pointers
+#include <amec_wof.h>         // For WOF sensors
 
 extern amec_sys_t g_amec_sys;
 
@@ -219,9 +220,9 @@ const sensor_ptr_t G_amec_sensor_list[] =
   SENSOR_PTR(   PROBE250US2,        &g_amec_sys.fw.probe250us[2]),
   SENSOR_PTR(   PROBE250US3,        &g_amec_sys.fw.probe250us[3]),
   SENSOR_PTR(   PROBE250US4,        &g_amec_sys.fw.probe250us[4]),
-  SENSOR_PTR(   PROBE250US5,        &g_amec_sys.fw.probe250us[5]),
-  SENSOR_PTR(   PROBE250US6,        &g_amec_sys.fw.probe250us[6]),
-  SENSOR_PTR(   PROBE250US7,        &g_amec_sys.fw.probe250us[7]),
+  SENSOR_PTR(   WOFCOREWAKE,        &g_amec_wof_core_wake_sensor),
+  SENSOR_PTR(   WOFCEFFRATIO,       &g_amec_wof_ceff_ratio_sensor),
+  SENSOR_PTR(   WOF250USVDDS,       &g_amec_wof_vdd_sense_sensor),
 
   SENSOR_PTR(   GPEtickdur0,        &g_amec_sys.fw.gpetickdur[0]),
   SENSOR_PTR(   GPEtickdur1,        &g_amec_sys.fw.gpetickdur[1]),
@@ -388,9 +389,6 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   MINI_SENSOR_PTR(    PROBE250US2,  NULL),
   MINI_SENSOR_PTR(    PROBE250US3,  NULL),
   MINI_SENSOR_PTR(    PROBE250US4,  NULL),
-  MINI_SENSOR_PTR(    PROBE250US5,  NULL),
-  MINI_SENSOR_PTR(    PROBE250US6,  NULL),
-  MINI_SENSOR_PTR(    PROBE250US7,  NULL),
   MINI_SENSOR_PTR(    GPEtickdur0,  NULL),
   MINI_SENSOR_PTR(    GPEtickdur1,  NULL),
   MINI_SENSOR_PTR(     RTLtickdur,  NULL),

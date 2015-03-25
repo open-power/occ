@@ -330,7 +330,9 @@ typedef struct
   uint32_t avg_util;
   // Average frequency over a fixed time interval
   uint32_t avg_freq;
-
+  // bits 0:7 from SCOM 110f0112 PM State History Register for OCC 
+  uint8_t pm_state_hist;
+    
   // ---------------------------------
   // Frequency State Machine variables
   // ---------------------------------
@@ -473,7 +475,8 @@ typedef struct
   uint16_t sleep_cnt;
   uint16_t winkle_cnt;
 
-  uint16_t core_max_freq;               // Maximum requested freq for all cores on chip.
+  uint16_t core_max_freq;        // Maximum requested freq for all cores on chip.
+  uint16_t core_max_freq_actual; // Freq cap enforced after GPE runs.
 
   // Parameters used through Amester interface
   // Note: keep core arrays here, not in per-cores structure so one parameter

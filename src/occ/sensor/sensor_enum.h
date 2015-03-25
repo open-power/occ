@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -65,9 +65,10 @@ enum e_gsid
     PROBE250US2,       // Internal Sensor for debug via AMESTER
     PROBE250US3,       // Internal Sensor for debug via AMESTER
     PROBE250US4,       // Internal Sensor for debug via AMESTER
-    PROBE250US5,       // Internal Sensor for debug via AMESTER
-    PROBE250US6,       // Internal Sensor for debug via AMESTER
-    PROBE250US7,       // Internal Sensor for debug via AMESTER
+
+    WOFCOREWAKE,       // Number of cores waking up this round
+    WOFCEFFRATIO,      // WOF C_EFF ratio
+    WOF250USVDDS,      // WOF estimate of Vdd sense
 
     GPEtickdur0,       // Duration on the GPE0 Engine
     GPEtickdur1,       // Duration on the GPE1 Engine

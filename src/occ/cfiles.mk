@@ -48,6 +48,8 @@ occ_CFILES = \
                 amec/amec_parm.c \
                 amec/amec_parm_table.c \
                 amec/amec_analytics.c \
+		amec/amec_wof.c \
+		amec/amec_wof_thread.c \
                 aplt/appletManager.c \
                 cent/centaur_data.c \
                 cent/centaur_control.c \
