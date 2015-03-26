@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -193,6 +193,14 @@ occSysConfigData_t G_sysConfigData =
     // Memory Throttle Limits
     // -----------------------------------------------------------
     .mem_throt_limits = {{{0},{0}},{{0},{0}},{{0},{0}},{{0},{0}},{{0},{0}},{{0},{0}},{{0},{0}},{{0},{0}}},
+
+    // --------------------------------------
+    // Vdd/Vcs Uplift vid codes
+    // --------------------------------------
+    .vdd_vid_uplift_cur = 0,
+    .vdd_vid_delta = 0,
+    .vcs_vid_uplift_cur = 0,
+    .vcs_vid_delta = 0,
 };
 
 

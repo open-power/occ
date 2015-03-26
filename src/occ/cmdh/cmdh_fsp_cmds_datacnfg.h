@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -53,6 +53,7 @@ typedef enum
    DATA_FORMAT_IPS_CNFG              = 0x11,
    DATA_FORMAT_MEM_THROT             = 0x12,
    DATA_FORMAT_THRM_THRESHOLDS       = 0x13,
+   DATA_FORMAT_VOLT_UPLIFT           = 0x20,
    DATA_FORMAT_CLEAR_ALL             = 0xff,
 } eConfigDataFormatVersion;
 
@@ -71,6 +72,7 @@ typedef enum
    DATA_MASK_IPS_CNFG              = 0x00000100,
    DATA_MASK_MEM_CFG               = 0x00000200,
    DATA_MASK_MEM_THROT             = 0x00000400,
+   DATA_MASK_VOLT_UPLIFT           = 0x00000800,
 } eConfigDataPriorityMask;
 
 typedef enum
@@ -416,6 +418,16 @@ typedef struct data_cnfg
   uint32_t                      data_mask;
   cmdh_thrm_thresholds_t        thrm_thresh;
 } data_cnfg_t;
+
+// Used by TMGT to send OCC the Vdd and Vcs uplift values
+typedef struct __attribute__ ((packed))
+{
+    struct               cmdh_fsp_cmd_header;
+    uint8_t              format;
+    uint8_t              version;
+    uint8_t              vdd_vid_uplift; //Only positive uplift values are supported
+    uint8_t              vcs_vid_uplift; //Only positive uplift values are supported
+}cmdh_uplift_config_t;
 
 errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
                                     cmdh_fsp_rsp_t * i_rsp_ptr);

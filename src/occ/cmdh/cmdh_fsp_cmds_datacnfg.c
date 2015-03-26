@@ -1,13 +1,13 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/cmdh/cmdh_fsp_cmds/datacnfg.c $                       */
+/* $Source: src/occ/cmdh/cmdh_fsp_cmds_datacnfg.c $                       */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -72,6 +72,8 @@
 
 #define DATA_MEM_THROT_VERSION_1   1
 #define DATA_MEM_THROT_VERSION_10  0x10
+
+#define DATA_VOLT_UPLIFT_VERSION   0
 
 typedef struct data_req_table
 {
@@ -2048,6 +2050,105 @@ errlHndl_t data_store_ips_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
     return l_err;
 }
+
+// Function Specification
+//
+// Name:  data_store_volt_uplift
+//
+// Description: Store the Vdd and Vcd vid values sent by TMGT. This data
+//              is sent to each OCC.
+//
+// End Function Specification
+errlHndl_t data_store_volt_uplift(const cmdh_fsp_cmd_t * i_cmd_ptr,
+                                        cmdh_fsp_rsp_t * o_rsp_ptr)
+{
+    errlHndl_t             l_err = NULL;
+    cmdh_uplift_config_t   *l_cmd_ptr = (cmdh_uplift_config_t *)i_cmd_ptr; // Cast the command to the struct for this format
+    uint16_t               l_actual_sz = CMDH_DATALEN_FIELD_UINT16(l_cmd_ptr);
+    uint32_t               l_expected_sz = sizeof(cmdh_uplift_config_t) - sizeof(cmdh_fsp_cmd_header_t);
+    int8_t                 l_vdd_delta = 0;
+    int8_t                 l_vcs_delta = 0;
+
+    // Check length and version
+    if((l_cmd_ptr->version != DATA_VOLT_UPLIFT_VERSION) ||
+       (l_actual_sz != l_expected_sz))
+    {
+        TRAC_ERR("Invalid Vdd/Vcs Uplift Data packet Version[0x%02X] Size[%d] Expected[%d]",
+                 l_cmd_ptr->version,
+                 l_actual_sz,
+                 l_expected_sz);
+
+        /* @
+         * @errortype
+         * @moduleid    DATA_STORE_VOLT_UPLIFT
+         * @reasoncode  INVALID_INPUT_DATA
+         * @userdata1   data size
+         * @userdata2   packet version
+         * @userdata4   OCC_NO_EXTENDED_RC
+         * @devdesc     OCC recieved an invalid data packet from the FSP
+         */
+        l_err = createErrl(DATA_STORE_VOLT_UPLIFT,
+                           INVALID_INPUT_DATA,
+                           OCC_NO_EXTENDED_RC,
+                           ERRL_SEV_UNRECOVERABLE,
+                           NULL,
+                           DEFAULT_TRACE_SIZE,
+                           l_actual_sz,
+                           (uint32_t)l_cmd_ptr->version);
+
+        // Callout firmware
+        addCalloutToErrl(l_err,
+                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                         ERRL_COMPONENT_ID_FIRMWARE,
+                         ERRL_CALLOUT_PRIORITY_HIGH);
+    }
+    else
+    {
+        // Check if the new uplift value for Vdd is zero. That means that they
+        // are asking OCC to reset the Pstate table to its original state.
+        if(l_cmd_ptr->vdd_vid_uplift == 0)
+        {
+            // Restore original state by using the current Vdd VID uplift
+            l_vdd_delta = -(G_sysConfigData.vdd_vid_uplift_cur);
+        }
+        else
+        {
+            // Compute the delta uplift that needs to be applied to Vdd
+            l_vdd_delta = -(l_cmd_ptr->vdd_vid_uplift) - G_sysConfigData.vdd_vid_uplift_cur;
+        }
+
+        // Check if the new uplift value for Vcs is zero. That means that they
+        // are asking OCC to reset the Pstate table to its original state.
+        if(l_cmd_ptr->vcs_vid_uplift == 0)
+        {
+            // Restore original state by using the current Vcs VID uplift
+            l_vcs_delta = -(G_sysConfigData.vcs_vid_uplift_cur);
+        }
+        else
+        {
+            // Compute the delta uplift that needs to be applied to Vcs
+            l_vcs_delta = -(l_cmd_ptr->vcs_vid_uplift) - G_sysConfigData.vcs_vid_uplift_cur;
+        }
+
+        // Store the new current Vdd and Vcs VID uplift values
+        G_sysConfigData.vdd_vid_uplift_cur = -(l_cmd_ptr->vdd_vid_uplift);
+        G_sysConfigData.vcs_vid_uplift_cur = -(l_cmd_ptr->vcs_vid_uplift);
+
+        // Store the Vdd and Vcs VID deltas to be applied to the Pstate table
+        G_sysConfigData.vdd_vid_delta = l_vdd_delta;
+        G_sysConfigData.vcs_vid_delta = l_vcs_delta;
+
+        // Change Data Request Mask to indicate we got this data
+        G_data_cnfg->data_mask |= DATA_MASK_VOLT_UPLIFT;
+
+        TRAC_IMP("Got valid Vdd/Vcs Uplift Config data: Vdd_vid_delta[%d] Vcs_vid_delta[%d]",
+                 G_sysConfigData.vdd_vid_delta,
+                 G_sysConfigData.vcs_vid_delta);
+    }
+
+    return l_err;
+}
+
 // Function Specification
 //
 // Name:   DATA_store_cnfgdata
@@ -2174,7 +2275,16 @@ errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
             if(NULL == l_errlHndl)
             {
                 l_new_data = DATA_MASK_MEM_THROT;
-            }break;
+            }
+            break;
+
+        case DATA_FORMAT_VOLT_UPLIFT:
+            l_errlHndl = data_store_volt_uplift(i_cmd_ptr , o_rsp_ptr);
+            if(NULL == l_errlHndl)
+            {
+                l_new_data = DATA_MASK_VOLT_UPLIFT;
+            }
+            break;
 
         case DATA_FORMAT_CLEAR_ALL:
             // Make sure not in ACTIVE

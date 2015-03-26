@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -257,8 +257,6 @@ typedef struct
   // at startup.
   uint8_t debug_reserved[7];
 
-
-
   // ------------------------------------
   // System Configuration
   // ------------------------------------
@@ -345,6 +343,18 @@ typedef struct
   // Memory Throttle limits
   // --------------------------------------
   mem_throt_config_data_t mem_throt_limits[MAX_NUM_CENTAURS][NUM_MBAS_PER_CENTAUR];
+
+  // --------------------------------------
+  // Vdd/Vcs Uplift vid codes
+  // --------------------------------------
+  // Current Vdd VID Uplift
+  int8_t vdd_vid_uplift_cur;
+  // Vdd VID delta to be applied to Pstate table
+  int8_t vdd_vid_delta;
+  // Current VCS VID Uplift request
+  int8_t vcs_vid_uplift_cur;
+  // Vcs VID delta to be applied to Pstate table
+  int8_t vcs_vid_delta;
 
 } occSysConfigData_t;  __attribute__ ((__aligned__ (128)))
 
