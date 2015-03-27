@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -22,6 +22,7 @@
 /* permissions and limitations under the License.                         */
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
+
 
 //*************************************************************************
 // Includes
@@ -50,6 +51,7 @@
 //*************************************************************************
 // Globals
 //*************************************************************************
+extern uint8_t G_occ_interrupt_type;
 
 //*************************************************************************
 // Function Prototypes
@@ -178,7 +180,7 @@ void amec_analytics_main(void)
 
     switch (g_amec->analytics_group)
     {
-        case 44:  // Group 44
+        case 45:  // Group 45
 
             // Every 2msec (250usec * 2^stream_rate, default stream_rate=3), perform averaging of sensors.
             // Averaging is required because many sensors are updated every
@@ -248,44 +250,67 @@ void amec_analytics_main(void)
                     tempaccum/100;
                 g_amec->g44_avg[(i*MSA)+15] = g_amec->g44_avg[(i*MSA)+15] +
                     (UINT32)g_amec->proc[i].temp2ms.sample;    // hottest processor core temperature (average??)
-                g_amec->g44_avg[(i*MSA)+16] = g_amec->g44_avg[(i*MSA)+16] +
-                    (UINT32)(g_amec->proc[i].memctl[4].mrd2ms.sample/78); // memory read bandwidth
-                g_amec->g44_avg[(i*MSA)+17] = g_amec->g44_avg[(i*MSA)+17] +
-                    (UINT32)(g_amec->proc[i].memctl[4].mwr2ms.sample/78); // memory write bandwidth
-                g_amec->g44_avg[(i*MSA)+18] = g_amec->g44_avg[(i*MSA)+18] +
-                    (UINT32)(g_amec->proc[i].memctl[5].mrd2ms.sample/78); // memory read bandwidth
-                g_amec->g44_avg[(i*MSA)+19] = g_amec->g44_avg[(i*MSA)+19] +
-                    (UINT32)(g_amec->proc[i].memctl[5].mwr2ms.sample/78); // memory write bandwidth
 
-                g_amec->g44_avg[(i*MSA)+20] = g_amec->g44_avg[(i*MSA)+20] |
-                    (UINT32)g_amec->proc[i].winkcnt2ms.sample;    // winkle bitmap for all cores (OR of all 2msec)
-                g_amec->g44_avg[(i*MSA)+21] = g_amec->g44_avg[(i*MSA)+21] |
-                    (UINT32)g_amec->proc[i].sleepcnt2ms.sample;   // sleep bitmap for all cores (OR of all 2msec)
+// major changes below to accommodate Group 45
 
-                g_amec->g44_avg[(i*MSA)+22] = g_amec->g44_avg[(i*MSA)+22] +
-                    (UINT32)(g_amec->proc[i].memctl[6].mrd2ms.sample/78); // memory read bandwidth
-                g_amec->g44_avg[(i*MSA)+23] = g_amec->g44_avg[(i*MSA)+23] +
-                    (UINT32)(g_amec->proc[i].memctl[6].mwr2ms.sample/78); // memory write bandwidth
-                g_amec->g44_avg[(i*MSA)+24] = g_amec->g44_avg[(i*MSA)+24] +
-                    (UINT32)(g_amec->proc[i].memctl[7].mrd2ms.sample/78); // memory read bandwidth
-                g_amec->g44_avg[(i*MSA)+25] = g_amec->g44_avg[(i*MSA)+25] +
-                    (UINT32)(g_amec->proc[i].memctl[7].mwr2ms.sample/78); // memory write bandwidth
+                l=16;                   // l = index offset
+                for (j=0; j<8; j++)     // Group 45 supports all 8 Centaurs per OCC
+                {
+                  g_amec->g44_avg[(i*MSA)+l] = g_amec->g44_avg[(i*MSA)+l] +
+                    (UINT32)(g_amec->proc[i].memctl[j].mrd2ms.sample/78); // memory read bandwidth
+                  l=l+1;
+                }
+                for (j=0; j<8; j++)     // Group 45 supports all 8 Centaurs per OCC
+                {
+                  g_amec->g44_avg[(i*MSA)+l] = g_amec->g44_avg[(i*MSA)+l] +
+                    (UINT32)(g_amec->proc[i].memctl[j].mwr2ms.sample/78); // memory write bandwidth
+                  l=l+1;
+                }
+
+                for (j=0; j<8; j++)     // Group 45 supports all 8 L4 caches per OCC
+                {
+                  temp16 = g_amec->proc[i].memctl[j].centaur.portpair[0].perf.l4rd2ms;
+                    temp16 = temp16 + g_amec->proc[i].memctl[j].centaur.portpair[1].perf.l4rd2ms;
+                  g_amec->g44_avg[(i*MSA)+l] = g_amec->g44_avg[(i*MSA)+l] +
+                    (UINT32)(temp16/156);                                 // L4 read bandwidth (/156 because two portpairs added together)
+                  l=l+1;
+                }
+
+                for (j=0; j<8; j++)     // Group 45 supports all 8 L4 caches per OCC
+                {
+                  temp16 = g_amec->proc[i].memctl[j].centaur.portpair[0].perf.l4wr2ms;
+                    temp16 = temp16 + g_amec->proc[i].memctl[j].centaur.portpair[1].perf.l4wr2ms;
+                  g_amec->g44_avg[(i*MSA)+l] = g_amec->g44_avg[(i*MSA)+l] +
+                    (UINT32)(temp16/156);                                 // L4 write bandwidth (/156 because two portpairs added together)
+                  l=l+1;
+                }
+
+                g_amec->g44_avg[(i*MSA)+48] = g_amec->g44_avg[(i*MSA)+48] +
+                    (UINT32)(g_amec->proc[i].winkcnt2ms.sample<<3);       // counter of cores that entered winkle for at least part of the 2msec interval: 1/8th resolution
+                g_amec->g44_avg[(i*MSA)+49] = g_amec->g44_avg[(i*MSA)+49] +
+                    (UINT32)(g_amec->proc[i].sleepcnt2ms.sample<<3);      // counter of cores that entered sleep for at least part of the 2msec interval: 1/8th resolution
+
 
                 m=0;                     // counter for actual configured # of cores - 1.
-                for (j=0; j<12; j++)     // WARNING: Only 8 cores are allowed to be configured per OCC chip
+                for (j=0; j<12; j++)     // Group 45 supports up to 12 cores to be configured per OCC chip
                 {
                     if (CORE_PRESENT(j))
                     {
-                        //average frequency for this core
-                        g_amec->g44_avg[(i*MSA)+30+m] = g_amec->g44_avg[(i*MSA)+30+m] +
-                            (UINT32)g_amec->proc[i].core[j].freqa2ms.sample/28;
+                        //average frequency for this core (apply rounding for frequency for maximum 8 bit resolution): 20MHz resolution (Power8 is actually 33.25MHz steps)
+                        temp32 = (UINT32)g_amec->proc[i].core[j].freqa2ms.sample/10;     // 10MHz resolution
+                        temp16 = (UINT16)temp32;
+                        temp32 = temp32 >>1;                                // convert to 20MHz resolution
+                        if (temp16 & 1) temp32 = temp32+1;                  // if LSBit of 10MHz resolution value is a 1, then round the 20MHz resolution value up by 1
+
+                        g_amec->g44_avg[(i*MSA)+50+m] = g_amec->g44_avg[(i*MSA)+50+m] + temp32;
+
                         m++;              // increment configured core counter
-                        if (m > 7) j=12;  // safeguard in case more than 8 configured cores.
+                        if (m > 11) j=12;  // safeguard in case more than 12 configured cores.
                     }
                 }
 
                 m=0;                     // counter for actual configured # of cores - 1.
-                for (j=0; j<12; j++)     // WARNING: Only 8 cores are allowed to be configured per OCC chip
+                for (j=0; j<12; j++)     // Group 45 supports up to 12 cores to be configured per OCC chip
                 {
                     if (CORE_PRESENT(j))
                     {
@@ -307,7 +332,7 @@ void amec_analytics_main(void)
                             temp16 = temp16 + 1;
                         }
                         }
-                        g_amec->g44_avg[(i*MSA)+38+m] = g_amec->g44_avg[(i*MSA)+38+m] +
+                        g_amec->g44_avg[(i*MSA)+62+m] = g_amec->g44_avg[(i*MSA)+62+m] +
                             (UINT32)(g_amec->proc[i].core[j].util2ms.sample/50);  // accumulate util sensor that feeds IPS and DPS algorithms for this core
 
                         if (g_amec->analytics_threadmode == 2)
@@ -326,34 +351,22 @@ void amec_analytics_main(void)
                             // accumulate average finish latency counter for this core
                             temp16 = ((g_amec->proc[i].core[j].mcpifi2ms.sample) >>1);
                         }
-                        if (g_amec->analytics_threadmode == 4)
-                        {
-                            if ((m&1) == 0)       // Capture L4 read traffic
-                            {
-                                temp16 = g_amec->proc[0].memctl[(m/2)+4].centaur.portpair[0].perf.l4rd2ms;
-                                temp16 = temp16 + g_amec->proc[0].memctl[(m/2)+4].centaur.portpair[1].perf.l4rd2ms;
-                                temp16 = temp16 >> 1;
-                            }
-                            else
-                            {
-                                temp16 = g_amec->proc[0].memctl[(m/2)+4].centaur.portpair[0].perf.l4wr2ms;
-                                temp16 = temp16 + g_amec->proc[0].memctl[(m/2)+4].centaur.portpair[1].perf.l4wr2ms;
-                                temp16 = temp16 >> 1;
-                            }
-                        }
 
-                        g_amec->g44_avg[(i * MSA) + 46 + m] = g_amec->g44_avg[(i * MSA) + 46 + m] +
-                            (UINT32)(temp16 / 50);   // accumulate average utilization or individual threads for this core or finish latency counter or L4 read/write counters
-                        g_amec->g44_avg[(i * MSA) + 54 + m] = g_amec->g44_avg[(i * MSA) + 54 + m] +
+                        temp32 = (UINT32)(temp16/25);                       // 0.25% utilization resolution
+                        temp32 = temp32 >>1;                                // convert to 0.5% utilization resolution
+                        if (temp16 & 1) temp32 = temp32+1;                  // if LSBit of 0.25% utilization resolution value is a 1, then round the 0.5% utilization resolution value up by 1
+                        g_amec->g44_avg[(i * MSA) + 74 + m] = g_amec->g44_avg[(i * MSA) + 74 + m] +
+                            (UINT32)(temp32);          // accumulate average utilization or individual threads for this core or finish latency counter
+                        g_amec->g44_avg[(i * MSA) + 86 + m] = g_amec->g44_avg[(i * MSA) + 86 + m] +
                             (UINT32)(g_amec->proc[i].core[j].ips2ms.sample / 50);  // accumulate average MIPS for this core
-                        g_amec->g44_avg[(i * MSA) + 62 + m] = g_amec->g44_avg[(i * MSA) + 62 + m] +
+                        g_amec->g44_avg[(i * MSA) + 98 + m] = g_amec->g44_avg[(i * MSA) + 98 + m] +
                             (UINT32)g_amec->proc[i].core[j].temp2ms.sample; // accumulate average temperature for this core
-                        g_amec->g44_avg[(i * MSA) + 70 + m] = g_amec->g44_avg[(i * MSA) + 70 + m] +
-                            (UINT32)((g_amec->proc[i].core[j].cmbw2ms.sample) / 78); // accumulate average memory bandwidth for this core
+                        g_amec->g44_avg[(i * MSA) + 110 + m] = g_amec->g44_avg[(i * MSA) + 110 + m] +
+                            (UINT32)((g_amec->proc[i].core[j].cmbw2ms.sample) / 156); // accumulate average memory bandwidth for this core //@mw713 /156, was /78 (overflow issues)
                         temp16 = ((g_amec->proc[i].core[j].mcpifd2ms.sample) / 100);    // accumulate average busy latency counter for this core
-                        g_amec->g44_avg[(i * MSA) + 78 + m] = g_amec->g44_avg[(i * MSA) + 78 + m] + (UINT32)temp16;
+                        g_amec->g44_avg[(i * MSA) + 122 + m] = g_amec->g44_avg[(i * MSA) + 122 + m] + (UINT32)temp16;
                         m++;              // increment configured core counter
-                        if (m > 7) j = 12;   // safeguard in case more than 8 configured cores.
+                        if (m > 11) j = 12;   // safeguard in case more than 12 configured cores.
                     }
                 }  // End loop processing each core
             } // End loop processing each chip
@@ -365,7 +378,7 @@ void amec_analytics_main(void)
             // Have we completed this interval so that we can output?
             if (temp16 == 0)
             {
-                // Now, update Group 44 analytics packed array
+                // Now, update Group 45 analytics packed array
                 switch (g_amec->analytics_thermal_offset)
                 {
                     case 0:
@@ -447,7 +460,8 @@ void amec_analytics_main(void)
                 tempaccum = g_amec->proc[0].pwr250usmem.accumulator - tempaccum;    // total accumulation over 2msec
                 tempaccum = tempaccum >> g_amec->stream_vector_rate;
 
-                g_amec->analytics_array[7] = (UINT16)tempaccum;
+                tempreg = ((UINT16)tempaccum) << 8;   // upper byte
+                g_amec->analytics_array[7] = tempreg;
                 g_amec->analytics_array[8] = 0;
 
                 // Now begins the per processor unique data
@@ -484,7 +498,7 @@ void amec_analytics_main(void)
                 g_amec->analytics_array[11] = (UINT16)(g_amec->g44_avg[(j * MSA) + 11] >> k);  // the first two averages are 16 bits
                 g_amec->g44_avg[(j * MSA) + 11] = 0;                                // reset average for this sensor to 0
 
-                for (i = 12; i <= 15; i++)
+                for (i = 12; i <= 72; i++)
                 {
                     temp16 = (UINT16)(g_amec->g44_avg[(j * MSA) + l] >> k);
                     tempreg = temp16 << 8;                 // upper byte
@@ -497,64 +511,7 @@ void amec_analytics_main(void)
                     l = l + 2;
                 }
 
-                // Now copy over sleep and nap sensors.
-                // WARNING--> no division as these sensors are "OR"ed together
-                // every 32msec: "OR" keeps deepest state reached
-                temp16 = (UINT16)g_amec->g44_avg[(j * MSA) + l];
-                tempreg = temp16 << 8;                 // upper byte
-                temp16 = (UINT16)g_amec->g44_avg[(j * MSA) + l + 1];
-                tempreg = tempreg | (0xff & temp16);
-                g_amec->analytics_array[i] = tempreg;
-                g_amec->g44_avg[(j * MSA) + l] = 0;   // Reset all indicators of cores napping to begin next N intervals
-                g_amec->g44_avg[(j * MSA) + l + 1] = 0; // Reset all indicators of cores sleeping to begin next N intervals
-                i = i + 1;
-                l = l + 2;
-
-                // Now process CPM data...instead of computing the average, the
-                // worst case (minimum) CPM value was maintained. Just copy it
-                // over. Then reset each CPM to be 15 (maximum value) to start next
-                // monitoring interval
-                // for (i=17; i<=18; i++)
-                // {
-                //    tempreg=(UINT16)g_amec->g44_avg[(j*MSA)+l]<<12;                        // hi nybble
-                //    tempreg=tempreg | ((0xf & ((UINT16)g_amec->g44_avg[(j*MSA)+l+1]))<<8); // mid-hi nybble
-                //    tempreg=tempreg | ((0xf & ((UINT16)g_amec->g44_avg[(j*MSA)+l+2]))<<4); // mid-lo nybble
-                //    tempreg=tempreg | ((0xf & ((UINT16)g_amec->g44_avg[(j*MSA)+l+3])));    // lo nybble
-                //    g_amec->analytics_array[i]=tempreg;
-                //    g_amec->g44_avg[(j*MSA)+l] = 15;     // Reset all CPM indicators to 15
-                //    g_amec->g44_avg[(j*MSA)+l+1] = 15;   // Reset all CPM indicators to 15
-                //    g_amec->g44_avg[(j*MSA)+l+2] = 15;   // Reset all CPM indicators to 15
-                //    g_amec->g44_avg[(j*MSA)+l+3] = 15;   // Reset all CPM indicators to 15
-                //    l=l+4;
-                // }
-
-                // process last 2 Centaurs' memory bandwidth sensors
-                for (i = 17; i <= 18; i++)
-                {
-                    temp16 = (UINT16)(g_amec->g44_avg[(j * MSA) + l] >> k);
-                    tempreg = temp16 << 8;                 // upper byte
-                    temp16 = (UINT16)(g_amec->g44_avg[(j * MSA) + l + 1] >> k);
-                    tempreg = tempreg | (0xff & temp16);
-                    g_amec->analytics_array[i] = tempreg;
-                    g_amec->g44_avg[(j * MSA) + l] = 0;   // Reset average for this sensor to 0
-                    g_amec->g44_avg[(j * MSA) + l + 1] = 0; // Reset average for this sensor to 0
-                    l = l + 2;
-                }
-
-                for (i = 19; i <= 46; i++)
-                {
-                    temp16 = (UINT16)(g_amec->g44_avg[(j * MSA) + l] >> k);
-                    tempreg = temp16 << 8;                 // upper byte
-                    temp16 = (UINT16)(g_amec->g44_avg[(j * MSA) + l + 1] >> k);
-                    tempreg = tempreg | (0xff & temp16);
-                    g_amec->analytics_array[i] = tempreg;
-                    g_amec->g44_avg[(j * MSA) + l] = 0;   // Reset average for this sensor to 0
-                    g_amec->g44_avg[(j * MSA) + l + 1] = 0; // Reset average for this sensor to 0
-
-                    l = l + 2;
-                }
-
-                // Final processing for Group 44: determine if cycling through all
+                // Final processing for Group 45: determine if cycling through all
                 // chips or just monitoring one chip
                 if (g_amec->analytics_option == 0)
                 {

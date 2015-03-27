@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -70,19 +70,19 @@
 
 //Habanero uses IPMI, which is constrained to 256 Byte IPMI response.
 //This will slow down the Amester connection on FSP-based systems
-#define     IPMI_MAX_MSG_SIZE      246
+#define     IPMI_MAX_MSG_SIZE      246     // BMC size
 #define     AMEC_AME_CMD_HEADER_SZ 2
 
 // Autonomic Management of Energy (AME) Parameters
 #define AME_API_MAJ     2       // API version major
 #define AME_API_MIN     26      // API version minor
 
-#define AME_VERSION_MAJ 6       // Major Version (e.g. Ver. 1.4 has MAJ=1)
-#define AME_VERSION_MIN 83      // Minor Version (e.g. Ver. 1.4 has MIN=4)
+#define AME_VERSION_MAJ 7       // Major Version (e.g. Ver. 1.4 has MAJ=1)
+#define AME_VERSION_MIN 27      // Minor Version (e.g. Ver. 1.4 has MIN=4)
 
 #define AME_YEAR        2015    // Year of Release (e.g. 2006)
-#define AME_MONTH       2       // Month of Release (e.g. September=9)
-#define AME_DAY         10      // Day of Release
+#define AME_MONTH       4       // Month of Release (e.g. September=9)
+#define AME_DAY         2       // Day of Release
 
 #define AME_SDRS        22      // AME Sensor Data Record Size: 18 bytes
 
@@ -100,15 +100,15 @@
 #define AME_COMPONENT_LEVEL_RSPCMD_LEN 11
 
 // Histogram copy interval in milliseconds (default to 8 seconds)
-#define AME_HISTOGRAM_COPY_INTERVAL     8000  
+#define AME_HISTOGRAM_COPY_INTERVAL     8000
 
 // WARNING -> STREAM_BUFFER_SIZE must be a perfect multiple of the vector size.
 #define STREAM_VECTOR_SIZE      32    // # of 16 bit elements in a stream vector-> must be a power of 2
 #define SHIFT_VECTOR_SIZE        5    // Log base 2 of STREAM_VECTOR_SIZE for shifting
 #define INJECTION_BUFFER_SIZE   32    // Size of injection buffer (must be a power of 2)
-#define STREAM_VECTOR_SIZE_EX   48    // # of 16 bit elements in a stream vector
-#define STREAM_BUFFER_SIZE  (8*10*STREAM_VECTOR_SIZE_EX)  // Stream buffer size in 16 bit samples for recording real time data to stream to Amester
-#define MAX_SENSORS_ANALYTICS   76    //Maximum sensors making up the analytics group 44
+#define STREAM_VECTOR_SIZE_EX   74    // # of 16 bit elements in a stream vector
+#define STREAM_BUFFER_SIZE  (40*1*STREAM_VECTOR_SIZE_EX)  // Stream buffer size in 16 bit samples for recording real time data to stream to Amester
+#define MAX_SENSORS_ANALYTICS   134   // Maximum sensors making up the analytics group 45 (includes all Centaur data & L4 data & supports 12 cores)
 #define MSA                     MAX_SENSORS_ANALYTICS
 
 #define OCA_MAX_ENTRIES         0 // no POWER7 OCA on POWER8
@@ -299,29 +299,29 @@ uint8_t amester_entry_point( const IPMIMsg_t * i_msg,
                              uint16_t   * o_resp_length,
                              uint8_t    * o_resp);
 
-// Write sensor data to trace record 
+// Write sensor data to trace record
 // Called periodically to write next trace record with sensor data.
 void amec_tb_record(const AMEC_TB_GUID i_guid);
 
-// Get global information on traces (names, frequencies) 
+// Get global information on traces (names, frequencies)
 // Get a list of all available trace buffers in OCC and their frequencies.
 void amec_tb_cmd_info(const IPMIMsg_t * i_psMsg, UINT8 *o_pu8Resp,UINT16 *o_pu16RespLength,UINT8 *o_retval);
 
-// Set the configuration of a trace (which sensors to trace) 
+// Set the configuration of a trace (which sensors to trace)
 // Choose which sensors and SCOMs to trace. Choose size of trace buffer memory.
 void amec_tb_cmd_set_config(const IPMIMsg_t *i_psMsg, UINT8 *o_pu8Resp,UINT16 *o_pu16RespLength,UINT8 *o_retval);
 
-// Begin recording all configured traces 
+// Begin recording all configured traces
 void amec_tb_cmd_start_recording(const IPMIMsg_t *i_psMsg,UINT8 *o_pu8Resp,UINT16 *o_pu16RespLength,UINT8 *o_retval);
 
-// Stop recording all traces 
+// Stop recording all traces
 void amec_tb_cmd_stop_recording(const IPMIMsg_t *i_psMsg,UINT8 *o_pu8Resp,UINT16 *o_pu16RespLength,UINT8 *o_retval);
 
-// Get bytes from trace buffer memory 
+// Get bytes from trace buffer memory
 // Returns a maximum size packet starting at a given index
 void amec_tb_cmd_read(const IPMIMsg_t *i_psMsg,UINT8 *o_pu8Resp,UINT16 *o_pu16RespLength,UINT8 *o_retval);
 
-// Returns configuration of a trace 
+// Returns configuration of a trace
 void amec_tb_cmd_get_config(const IPMIMsg_t *i_psMsg,UINT8 *o_pu8Resp,UINT16 *o_pu16RespLength,UINT8 *o_retval);
 
 #endif

@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -256,7 +256,7 @@ const sensor_info_t G_sensor_info[]   =
   SENS_CORE_ENTRY_SET(     NUTIL3SP0C ,   "%\0",    AMEC_SENSOR_TYPE_UTIL, AMEC_SENSOR_LOC_CORE, AMEC_SENSOR_NONUM,    AMEEFP_3S_IN_HZ,   AMEFP(  1,-2)  ),
   SENS_CORE_ENTRY_SET(     MSTL2MSP0C , "cpi\0",    AMEC_SENSOR_TYPE_PERF, AMEC_SENSOR_LOC_CORE, AMEC_SENSOR_NONUM,   AMEEFP_2MS_IN_HZ,   AMEFP(  1, 0)  ),
   SENS_CORE_ENTRY_SET(      CMT2MSP0C ,   "%\0",    AMEC_SENSOR_TYPE_PERF, AMEC_SENSOR_LOC_CORE, AMEC_SENSOR_NONUM,   AMEEFP_2MS_IN_HZ,   AMEFP(  1, 0)  ),
-  SENS_CORE_ENTRY_SET(     CMBW2MSP0C , "GBs\0",    AMEC_SENSOR_TYPE_PERF, AMEC_SENSOR_LOC_CORE, AMEC_SENSOR_NONUM,   AMEEFP_2MS_IN_HZ,   AMEFP(  128, -5)  ),
+  SENS_CORE_ENTRY_SET(     CMBW2MSP0C , "GBs\0",    AMEC_SENSOR_TYPE_PERF, AMEC_SENSOR_LOC_CORE, AMEC_SENSOR_NONUM,   AMEEFP_2MS_IN_HZ,   AMEFP(  256, -5)  ),
   SENS_CORE_ENTRY_SET(        PPICP0C ,   "%\0",    AMEC_SENSOR_TYPE_PERF, AMEC_SENSOR_LOC_CORE, AMEC_SENSOR_NONUM,   AMEEFP_2MS_IN_HZ,   AMEFP(  1, 0)  ),
   SENS_CORE_ENTRY_SET(  PWRPX250USP0C ,   "W\0",   AMEC_SENSOR_TYPE_POWER, AMEC_SENSOR_LOC_CORE, AMEC_SENSOR_NONUM, AMEEFP_250US_IN_HZ,   AMEFP(  1, 0)  ),
 

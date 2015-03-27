@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -515,6 +515,12 @@ void amec_calc_freq_and_util_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uin
 
     // Calculate Utilization
     temp32 = temp32 / temp32a;
+
+    // Update per thread value for this core
+    if(l_core_sleep_winkle)
+    {
+        temp32 = 0;
+    }
     g_amec->proc[0].core[i_core].thread[i].util2ms_thread = (uint16_t) temp32;
   }
 
@@ -568,6 +574,11 @@ void amec_calc_freq_and_util_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uin
   // Divide by two due to a bug in the hardware
   temp32 = temp32/2;
 
+  // See if core is sleeping/winkled
+  if(l_core_sleep_winkle)
+    {
+        temp32 = 0;
+    }
   // Update Sensor for this core
   sensor_update( AMECSENSOR_ARRAY_PTR(CMBW2MSP0C0,i_core), (uint16_t) temp32);
 
@@ -579,6 +590,12 @@ void amec_calc_freq_and_util_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uin
   temp32 = temp32 - temp32a;
   temp32 = temp32 >> 8;
 
+  // See if core is sleeping/winkled
+  if(l_core_sleep_winkle)
+    {
+        temp32 = 0;
+    }
+
   // Update Sensor for this core
   sensor_update( AMECSENSOR_ARRAY_PTR(NOTBZE2MSP0C0,i_core), (uint16_t) temp32);
 
@@ -586,6 +603,12 @@ void amec_calc_freq_and_util_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uin
   temp32a = g_amec->proc[0].core[i_core].prev_FREQ_SENS_FINISH;
   temp32 = temp32 - temp32a;
   temp32 = temp32 >> 8;
+
+  // See if core is sleeping/winkled
+  if(l_core_sleep_winkle)
+    {
+        temp32 = 0;
+    }
 
   // Update Sensor for this core
   sensor_update( AMECSENSOR_ARRAY_PTR(NOTFIN2MSP0C0,i_core), (uint16_t) temp32);
@@ -688,6 +711,19 @@ void amec_calc_ips_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_cor
   INT32                       disp2 = 0;
   UINT32                      temp32 = 0;
   UINT32                      ticks_2mhz = 0; // IPS sensor interval in 2mhz ticks
+  BOOLEAN                     l_core_sleep_winkle = FALSE;
+  uint32_t                    l_pm_state_hist_reg = 0;
+
+
+  // Read the high-order bytes of PM State History register for this core
+  l_pm_state_hist_reg = i_core_data_ptr->pcb_slave.pm_history.words.high_order;
+
+  // If core is in fast/deep sleep mode or fast/winkle mode, then set a flag
+  // indicating this
+  if(l_pm_state_hist_reg & OCC_PAST_CORE_CLK_STOP)
+  {
+      l_core_sleep_winkle = TRUE;
+  }
 
   /*------------------------------------------------------------------------*/
   /*  Code                                                                  */
@@ -805,6 +841,11 @@ void amec_calc_ips_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_cor
   ticks_2mhz = i_core_data_ptr->empath.tod_2mhz -
       g_amec->proc[0].core[i_core].prev_tod_2mhz;
   temp32 = (fin2 << 1) / ticks_2mhz;
+  // See if core is sleeping/winkled
+  if(l_core_sleep_winkle)
+    {
+        temp32 = 0;
+    }
   sensor_update( AMECSENSOR_ARRAY_PTR(IPS2MSP0C0,i_core), (uint16_t) temp32);
 }
 

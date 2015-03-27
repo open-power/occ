@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -53,5 +53,9 @@ void amec_update_vrm_sensors(void);
 // Function that is called by AMEC State Machine that will update the AMEC
 // sensors for external voltage measurement
 void amec_update_external_voltage(void);
+
+// Function that is called by AMEC State Machine that will update the AMEC
+// sensor for the Vdd output current estimation.
+void amec_update_current_sensor(void);
 
 #endif // _AMEC_SENSORS_POWER_H

@@ -651,6 +651,7 @@ typedef struct
   uint32_t      r_cnt;
   // array holding sensor ptrs for writing to stream vector
   void          *stream_vector_map[STREAM_VECTOR_SIZE_EX];
+  void          * ptr_probe250us[NUM_AMEC_FW_PROBES];       // array holding ptrs to data that is read by probe250us sensors
   // 32-bit ptr to streaming buffer which contains 16 bit elements
   uint16_t      *ptr_stream_buffer;
   // 32-bit index for next write into streaming buffer
@@ -704,11 +705,14 @@ typedef struct
   // Which of 8 time slots that amec_analytics is called in
   uint8_t       analytics_slot;
   // Used to hold selected analytics group
-  uint16_t      analytics_array[48];
+  uint16_t      analytics_array[STREAM_VECTOR_SIZE_EX];
   // for group 44 support core bit maps of their napping cores (upper byte) and sleeping cores (lower byte)
   uint16_t      packednapsleep[MAX_NUM_CHIP_MODULES];
   // holds the sum of all the memory power sensors (32msec)
   uint16_t      total_memory_power;
+  uint16_t  probetemp[NUM_AMEC_FW_PROBES];                  // array holding temporary probe data
+  uint8_t       size_probe250us[NUM_AMEC_FW_PROBES];        // size of object pointed at by each probe (1 byte, 2 bytes, or 4 bytes)
+  uint8_t       index_probe250us[NUM_AMEC_FW_PROBES];       // index offset to read object pointed to by each probe (only valid for size > 2)
 
 } amec_sys_t;
 

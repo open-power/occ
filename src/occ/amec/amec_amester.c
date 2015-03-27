@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -661,7 +661,7 @@ uint8_t amester_manual_throttle( const IPMIMsg_t * i_msg,
     uint16_t i,j,cc,idx,temp16;
     uint16_t k;
     uint32_t temp32a;
-
+    uint32_t *temp32;
     /*------------------------------------------------------------------------*/
     /* Code                                                                   */
     /*------------------------------------------------------------------------*/
@@ -703,6 +703,38 @@ uint8_t amester_manual_throttle( const IPMIMsg_t * i_msg,
         case 0x07:    // Write individual AME parameters
             switch (i_msg->au8CmdData_ptr[1])
             {
+
+                case 20:    // parameter 20: Set Probe Parameters
+                {
+                        if (i_msg->au8CmdData_ptr[2]> (NUM_AMEC_FW_PROBES-1))
+                        {
+                            o_resp[0]=i_msg->au8CmdData_ptr[2];
+                            *io_resp_length=1;
+                            l_rc=COMPCODE_PARAM_OUT_OF_RANGE;
+                            break;
+                        }
+                        if (i_msg->au8CmdData_ptr[3] < 1)
+                        {
+                            o_resp[0]=i_msg->au8CmdData_ptr[2];
+                            *io_resp_length=1;
+                            l_rc=COMPCODE_PARAM_OUT_OF_RANGE;
+                            break;
+                        }
+
+                        temp32a=((uint32_t)i_msg->au8CmdData_ptr[4]<<24)+((uint32_t)i_msg->au8CmdData_ptr[5]<<16);
+                        temp32a=temp32a+((uint32_t)i_msg->au8CmdData_ptr[6]<<8)+((uint32_t)i_msg->au8CmdData_ptr[7]);
+                        temp32=(uint32_t*)temp32a;
+
+                        g_amec->ptr_probe250us[i_msg->au8CmdData_ptr[2]]=temp32;
+                        g_amec->size_probe250us[i_msg->au8CmdData_ptr[2]]=i_msg->au8CmdData_ptr[3];
+                        g_amec->index_probe250us[i_msg->au8CmdData_ptr[2]]=0;   // Reset index
+
+                        o_resp[0]=i_msg->au8CmdData_ptr[2];     // Return probe #
+                        *io_resp_length=1;
+                        l_rc = COMPCODE_NORMAL;
+                        break;
+                    };
+
                 case 22:   // parameter 22: Analytics parameters
                 {
                     g_amec->analytics_group=i_msg->au8CmdData_ptr[2];         // Set group
@@ -746,6 +778,7 @@ uint8_t amester_manual_throttle( const IPMIMsg_t * i_msg,
                     break;
                 }
 
+
                 case 29:   // parameter 29: Control vector recording modes and stream rates.
                 {
                     g_amec->stream_vector_rate=255; // First step is to set an invalid rate so no recording done at all
@@ -757,15 +790,15 @@ uint8_t amester_manual_throttle( const IPMIMsg_t * i_msg,
 
                     switch (g_amec->stream_vector_group)
                     {
-                        case 44:    //group 44 decimal (amec_analytics support)
+                        case 45:    //group 45 decimal (amec_analytics support)
                             g_amec->stream_vector_map[0]=0;                     // Leave space for 250usec time stamp
                             k = 1;
-                            for (i=0; i<=46; i++)
+                            for (i=0; i<=(STREAM_VECTOR_SIZE_EX-2); i++)
                             {
                                 g_amec->stream_vector_map[k++] =  &g_amec->analytics_array[i];
                             }
-                            //gpEMP->stream_vector_map[48]=(void *) 0xffffffff;   // Termination of partial vector
-                            g_amec->analytics_group=44;
+                            //gpEMP->stream_vector_map[64]=(void *) 0xffffffff;   // Termination of partial vector
+                            g_amec->analytics_group=45;
                             g_amec->analytics_bad_output_count=2;  // drop first 2 frames of output
                             break;
 
@@ -810,6 +843,28 @@ uint8_t amester_manual_throttle( const IPMIMsg_t * i_msg,
                     l_rc = COMPCODE_NORMAL;
                     break;
 
+               case 20:    // parameter 20: Read Probe Parameters
+                    {
+                        if (i_msg->au8CmdData_ptr[2]> (NUM_AMEC_FW_PROBES-1))
+                        {
+                            o_resp[0]=i_msg->au8CmdData_ptr[2];
+                            *io_resp_length=1;
+                            l_rc=COMPCODE_PARAM_OUT_OF_RANGE;
+                            break;
+                        }
+                        o_resp[1]=g_amec->size_probe250us[i_msg->au8CmdData_ptr[2]];   // Return size of object read by probe in bytes
+                        temp32=g_amec->ptr_probe250us[i_msg->au8CmdData_ptr[2]];       // Get copy of 32 bit probe ptr
+                        temp32a=(uint32_t)temp32;
+                        o_resp[5]=(uint8_t)temp32a;
+                        o_resp[4]=(uint8_t)((uint32_t)temp32a>>8);
+                        o_resp[3]=(uint8_t)((uint32_t)temp32a>>16);
+                        o_resp[2]=(uint8_t)((uint32_t)temp32a>>24);
+                        o_resp[0]=i_msg->au8CmdData_ptr[2];     // Return probe #
+                        *io_resp_length=6;
+                        l_rc=COMPCODE_NORMAL;
+                        break;
+                    };
+
                 case 22:   // parameter 22: Analytics parameters
                     o_resp[0]=g_amec->analytics_group;
                     o_resp[1]=g_amec->analytics_chip;
@@ -847,7 +902,7 @@ uint8_t amester_manual_throttle( const IPMIMsg_t * i_msg,
                     g_amec->read_stream_index=(uint32_t)((i_msg->au8CmdData_ptr[2]<<8)+i_msg->au8CmdData_ptr[3]);
                     temp1=i_msg->au8CmdData_ptr[4];
                     temp2=i_msg->au8CmdData_ptr[5];
-                    if (g_amec->read_stream_index > (STREAM_BUFFER_SIZE-10*STREAM_VECTOR_SIZE_EX))
+                    if (g_amec->read_stream_index > (STREAM_BUFFER_SIZE-1*STREAM_VECTOR_SIZE_EX))
                     {
                         o_resp[0]=i_msg->au8CmdData_ptr[2];
                         *io_resp_length=1;
@@ -876,7 +931,7 @@ uint8_t amester_manual_throttle( const IPMIMsg_t * i_msg,
                     {
                         temp32a=STREAM_BUFFER_SIZE+g_amec->write_stream_index-g_amec->read_stream_index;
                     }
-                    if (temp32a < 10*STREAM_VECTOR_SIZE_EX)
+                    if (temp32a < 1*STREAM_VECTOR_SIZE_EX)
                     {
                         o_resp[0]=1;   // Indicate insufficient data, but return a zero return code
                         *io_resp_length=STREAM_VECTOR_SIZE_EX+3;  // # of bytes (STREAM_VECTOR_SIZE is in 16 bit words)
@@ -885,7 +940,7 @@ uint8_t amester_manual_throttle( const IPMIMsg_t * i_msg,
                     }
                     o_resp[0]=0;   // Indicate sufficient data
                     i=0;
-                    j=10*STREAM_VECTOR_SIZE_EX;
+                    j=1*STREAM_VECTOR_SIZE_EX;                   //  used to be 10*STREAM_VECTOR_SIZE_EX
                     cc=3;  // Begin just past return code and time stamp
 
                     for(idx = i; idx < j; idx++) // Skip first 1 entry: either write_index and time stamp
@@ -904,11 +959,11 @@ uint8_t amester_manual_throttle( const IPMIMsg_t * i_msg,
                     }
                     o_resp[1] = (uint8_t)(temp16 >> 8);
                     o_resp[2] = (uint8_t)(temp16 & 0xff);
-                    *io_resp_length = 3 + 2 * (10 * STREAM_VECTOR_SIZE_EX);  // # of bytes (STREAM_VECTOR_SIZE_EX is in 16 bit words)
+                    *io_resp_length = 3 + 2 * (1 * STREAM_VECTOR_SIZE_EX);  // # of bytes (STREAM_VECTOR_SIZE_EX is in 16 bit words)
                     l_rc = COMPCODE_NORMAL;
                     break;
 
-                case 64:    // support for THREADMODE group 44 recording
+                case 64:    // support for THREADMODE group 45 recording
                     o_resp[0]=(uint8_t)(g_amec->analytics_threadmode);
                     o_resp[1]=(uint8_t)(g_amec->analytics_threadcountmax);
                     *io_resp_length=2;

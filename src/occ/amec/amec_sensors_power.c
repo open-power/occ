@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -164,7 +164,6 @@ uint32_t amec_value_from_apss_adc(uint8_t i_chan)
 
 #define ADCMULT_TO_UNITS 1000000
 #define ADCMULT_ROUND ADCMULT_TO_UNITS/2
-#define ADCSINGLE_TO_CENTIUNITS 100
 // Function Specification
 //
 // Name: amec_update_channel_sensor
@@ -298,8 +297,6 @@ void amec_update_apss_sensors(void)
         // to Watts and the current to centiAmps
         temp32 = ((l_vdd * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
         sensor_update( AMECSENSOR_PTR(PWR250USVDD0), (uint16_t)temp32);
-        temp32 = (l_vdd)/ADCSINGLE_TO_CENTIUNITS; // Current is in 0.01 Amps,
-        sensor_update( AMECSENSOR_PTR(CUR250USVDD0), l_vdd);
         temp32 = ((l_vcs_vio_vpcie * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
         sensor_update( AMECSENSOR_PTR(PWR250USVCS0), (uint16_t)temp32);
 
@@ -325,6 +322,11 @@ void amec_update_apss_sensors(void)
         temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.memory[l_proc][1]);
         temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.memory[l_proc][2]);
         temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.memory[l_proc][3]);
+        //Only for FSP-LESS systems do we add in Centaur power because it is measured on its own A/D channel, but is part of memory power
+        if (FSP_SUPPORTED_OCC != G_occ_interrupt_type)
+        {
+            temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.mem_cache);
+        }
         temp32 = ((temp32  * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
         sensor_update( AMECSENSOR_PTR(PWR250USMEM0), (uint16_t)temp32);
 
@@ -603,6 +605,62 @@ void amec_update_external_voltage()
 
     sensor_update( AMECSENSOR_PTR(VOLT250USP0V0), (uint16_t) l_vdd);
     sensor_update( AMECSENSOR_PTR(VOLT250USP0V1), (uint16_t) l_vcs);
+}
+
+// Function Specification
+//
+// Name: amec_update_current_sensor
+//
+// Description: Estimates Vdd output current based on input power and Vdd voltage setting.
+//   Compute CUR250USVDD0 (current out of Vdd regulator)
+//
+// Flow:
+//
+// Thread: RealTime Loop
+//
+// Changedby:
+//
+// Task Flags:
+//
+// End Function Specification
+void amec_update_current_sensor(void)
+{
+    uint8_t i;
+    uint32_t result32; //temporary result
+    uint16_t l_pow_reg_input_dW = AMECSENSOR_PTR(PWR250USVDD0)->sample * 10; // convert to dW by *10.
+    uint16_t l_vdd_reg = AMECSENSOR_PTR(VOLT250USP0V0)->sample;
+    uint32_t l_pow_reg_output_mW;
+    uint32_t l_curr_output;
+
+
+    /* Step 1 */
+
+    // 1. Get PWR250USVDD0  (the input power to regulator)
+    // 2. Look up efficiency using PWR250USVDD0 as index (and interpolate)
+    // 3. Calculate output power = PWR250USVDD0 * efficiency
+    // 4. Calculate output current = output power / Vdd set point
+
+    /* Determine regulator efficiency */
+    // use 85% efficiency all the time
+    result32 = 8500;
+
+    // Compute regulator output power.  out = in * efficiency
+    //    in: min=0W max=300W = 3000dW
+    //    eff: min=0 max=10000=100% (.01% units)
+    //    p_out: max=3000dW * 10000 = 30,000,000 (dW*0.0001) < 2^25, fits in 25 bits
+    l_pow_reg_output_mW = (uint32_t)l_pow_reg_input_dW * (uint32_t)result32;
+    // Scale up p_out by 10x to give better resolution for the following division step
+    //    p_out: max=30M (dW*0.0001) in 25 bits
+    //    * 10    = 300M (dW*0.00001) in 29 bits
+    l_pow_reg_output_mW *= 10;
+    // Compute current out of regulator.  curr_out = power_out (*10 scaling factor) / voltage_out
+    //    p_out: max=300M (dW*0.00001) in 29 bits
+    //    v_out: min=5000 (0.0001 V)  max=16000(0.0001 V) in 14 bits
+    //    i_out: max = 300M/5000 = 60000 (dW*0.00001/(0.0001V)= 0.01A), in 16 bits.
+    // VOLT250USP0V0 in units of 0.0001 V = 0.1 mV. (multiply by 0.1 to get mV)
+    l_curr_output = l_pow_reg_output_mW / l_vdd_reg;
+    sensor_update(AMECSENSOR_PTR(CUR250USVDD0), l_curr_output);
+
 }
 
 /*----------------------------------------------------------------------------*/
