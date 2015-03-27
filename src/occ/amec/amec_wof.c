@@ -150,9 +150,10 @@ extern SsxSemaphore G_amec_wof_thread_wakeup_sem; // in amec_wof_thread.c
 #define PDEMR 0x62092
 
 // For prototype, one and only one of the following defines must be 1
+#define HAB19
 //#define TUL183
 /* Need to update with CEFF calcs from Tul183 10 core */
-#define TUL183_5_CORE_PER_CHIP 
+//#define TUL183_5_CORE_PER_CHIP 
 //#define TUL237
 
 typedef enum 
@@ -179,12 +180,98 @@ sensor_t g_amec_wof_ceff_ratio_sensor;
 sensor_t g_amec_wof_core_wake_sensor;
 sensor_t g_amec_wof_vdd_sense_sensor;
 
+#ifdef HAB19
+
+#ifdef WOF_SYSTEM
+#error "WOF algorithm already defined"
+#endif
+#define WOF_SYSTEM 1
+
+// From 2015-03-12 WOF meeting
+#define AMEC_WOF_LOADLINE_ACTIVE 550  // Active loadline in micro ohms
+#define AMEC_WOF_LOADLINE_PASSIVE 0 // Passive loadline in micro ohms
+
+#define WOF_MAX_CORES_PER_CHIP 12
+
+// NOTE: Prototype uses Nominal operation point for C_EFF_TDP, since P8 prototype does not have ultra-turbo
+//
+//   Estimate IDDQ@RDP(95C)@Vnom P0 = IDDQ@85C * 1.25 ^ ([95-85]/10) = 35.84 * 1.25 = 44.8 A
+//
+//   NM_Idd@RDP P0 = 151 A
+//
+//   P0: (151 A - 44.8 A) / 1.22 * 1.05 = 91.40 A TDP
+//
+//   C_eff    = I / (V^3 * F)
+//   C_eff_tdp_P0 = 91.40 A / (0.9 V ^1.3) / 2561 MHz = 40.9 nF
+//
+//   C_EFF_TDP_P0 = 9140 (0.01A) * 10000/ 9000(100mV)^1.3 * 10000 / 2561(MHz) = 2582
+//
+//   Note: C_EFF_TDP_P0 / 10000 / 10000 * 10000^1.3 == C_eff_tdp_P0
+//
+
+uint16_t g_amec_wof_rdp_idd_nom[MAX_NUM_CHIP_MODULES] = {15700, 0, 0, 0}; // 0.01 A units of RDP@Vnom
+
+// Effective capacitance for TDP workload @ Turbo. FIXME: Put in p-state table superstructure.
+uint32_t g_amec_wof_ceff_tdp_module[MAX_NUM_CHIP_MODULES] = {2582, 1, 1, 1}; // 4 modules max. Value 1 to avoid divide by 0.
+
+//Based on DMIW data for tul237P0 ID=B1935398. I extrapolate beyond 1.0V
+uint16_t amec_wof_iddq_table[][5] = {
+    //0.0001 V, 0.01 A x4 (for 4 modules).  Data corrected to 85C conditions.
+    {9000,   3584, 0, 0, 0},
+    {10000,  5194, 0, 0, 0},
+    {11000,  7507, 0, 0, 0},
+    {12000, 10734, 0, 0, 0},
+    {12500, 12696, 0, 0, 0}
+};
+#define AMEC_WOF_IDDQ_TABLE_N 5
+
+//Table from Victor on 3/26/2015 assuming Nominal-UltraTurbo range and deep-winkle.
+// 14 is for 1 column of ratio, 13 columns of uplift by # cores turned on
+int16_t amec_wof_uplift_table[][14] = {
+    // First column is the Ceff ratio. The other colums are clock speed in MHz.
+    // Make sure ratio=0 is here, since search algorithm expects input index to be >= first table element.
+    //    Number of active cores
+    //    0     1     2     3     4     5     6     7     8     9     10    11    12
+    {  0, 4023, 4023, 4023, 4023, 4023, 4023, 4023, 4023, 4023, 4023, 4023, 4023, 4023 },
+    { 50, 4023, 4023, 4023, 4023, 4023, 4023, 3993, 3875, 3757, 3629, 3486, 3347, 3224 },
+    { 55, 4023, 4023, 4023, 4023, 4023, 4023, 3952, 3829, 3703, 3555, 3404, 3268, 3142 },
+    { 60, 4023, 4023, 4023, 4023, 4023, 4023, 3913, 3783, 3642, 3478, 3327, 3191, 3066 },
+    { 65, 4023, 4023, 4023, 4023, 4023, 4018, 3875, 3736, 3575, 3404, 3252, 3117, 2994 },
+    { 70, 4023, 4023, 4023, 4023, 4023, 3985, 3836, 3685, 3506, 3334, 3183, 3048, 2925 },
+    { 75, 4023, 4023, 4023, 4023, 4023, 3949, 3795, 3629, 3439, 3268, 3117, 2981, 2858 },
+    { 80, 4023, 4023, 4023, 4023, 4023, 3916, 3754, 3570, 3375, 3204, 3053, 2920, 2797 },
+    { 85, 4023, 4023, 4023, 4023, 4023, 3885, 3711, 3509, 3314, 3142, 2994, 2858, 2735 },
+    { 90, 4023, 4023, 4023, 4023, 4023, 3852, 3665, 3450, 3255, 3083, 2935, 2799, 2674 },
+    { 95, 4023, 4023, 4023, 4023, 4005, 3816, 3616, 3391, 3199, 3027, 2879, 2743, 2617 },
+    {100, 4023, 4023, 4023, 4023, 3977, 3783, 3565, 3337, 3142, 2973, 2825, 2689, 2561 },   
+
+};
+
+#define AMEC_WOF_UPLIFT_TABLE_N 12
+
+#endif //HAB19
+
 #ifdef TUL183
 
 #ifdef WOF_SYSTEM
 #error "WOF algorithm already defined"
 #endif
 #define WOF_SYSTEM 1
+
+//  Tuleta 2u and 4u use this loadline:
+//    Vreg = Vvpd + Ivpd * (R_line + R_drop)
+//    vdd r_line = 570uOhm  aka Active Loadline (from V_vrm_out to Vsense in mnfgvapi -r) PROC_R_LOADLINE_VDD
+//    vdd r_drop = 150uOhm  aka Passive Loadline  (to in2Hdr: cheesit name and test point) PROC_R_DISTLOSS_VDD
+//    vcs r_line = 570uOhm
+//    vcs r_drop = 1400uOhm
+//
+//    r_sum = 720uOhm
+
+// Early Feb 2015 meeting decision was made to use Vdd_rdrop of 120uOhm
+// Therefore, r_sum = 690uOhm
+
+#define AMEC_WOF_LOADLINE_ACTIVE 750  // Active loadline in micro ohms
+#define AMEC_WOF_LOADLINE_PASSIVE 120 // Passive loadline in micro ohms
 
 #define WOF_MAX_CORES_PER_CHIP 10
 
@@ -237,7 +324,7 @@ uint16_t amec_wof_iddq_table[][5] = {
 #define AMEC_WOF_IDDQ_TABLE_N 5
 
 // 13 is for 1 column of ratio, 12 columns of uplift by # cores turned on
-int16_t amec_wof_uplift_table[][13] = {
+int16_t amec_wof_uplift_table[][14] = {
     //ratio*100, frequency offsets
     //{0, -100},
     //{90, -100},
@@ -247,16 +334,16 @@ int16_t amec_wof_uplift_table[][13] = {
 
     // From Victor's e-mail of 12/03/2014
     // Make sure 0 is here, since search algorithm expects input index to be >= first table element.
-    //    1     2     3     4     5     6     7     8     9     10    11    12
-    {  0, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, },
-    { 75, 3699,	3699, 3699, 3699, 3699,	3699, 3699, 3699, 3699,	3699, 3699, 3699, },
-    { 80, 3665,	3665, 3665, 3665, 3665,	3665, 3665, 3665, 3665,	3665, 3665, 3665, },
-    { 85, 3596, 3596, 3596, 3596, 3596, 3596, 3596, 3596, 3596, 3596, 3596, 3596, },
-    { 90, 3528, 3528, 3528, 3528, 3528, 3528, 3528, 3528, 3528, 3528, 3528, 3528, },
-    { 95, 3494, 3494, 3494, 3494, 3494, 3494, 3494, 3494, 3494, 3494, 3494, 3494, },
-    {100, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, },
-    {110, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, },
-    {120, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, }
+    //    0     1     2     3     4     5     6     7     8     9     10    11    12
+    {  0, 3699,	3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, },
+    { 75, 3699,	3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, },
+    { 80, 3665,	3665, 3665, 3665, 3665, 3665, 3665, 3665, 3665, 3665, 3665, 3665, 3665, },
+    { 85, 3596,	3596, 3596, 3596, 3596, 3596, 3596, 3596, 3596, 3596, 3596, 3596, 3596, },
+    { 90, 3528,	3528, 3528, 3528, 3528, 3528, 3528, 3528, 3528, 3528, 3528, 3528, 3528, },
+    { 95, 3494,	3494, 3494, 3494, 3494, 3494, 3494, 3494, 3494, 3494, 3494, 3494, 3494, },
+    {100, 3425,	3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, },
+    {110, 3425,	3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, },
+    {120, 3425,	3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, }
 
 };
 #define AMEC_WOF_UPLIFT_TABLE_N 8
@@ -269,6 +356,9 @@ int16_t amec_wof_uplift_table[][13] = {
 #error "WOF algorithm already defined"
 #endif
 #define WOF_SYSTEM 1
+
+#define AMEC_WOF_LOADLINE_ACTIVE 750  // Active loadline in micro ohms
+#define AMEC_WOF_LOADLINE_PASSIVE 120 // Passive loadline in micro ohms
 
 #define WOF_MAX_CORES_PER_CHIP 5
 
@@ -289,22 +379,22 @@ uint16_t amec_wof_iddq_table[][5] = {
 };
 #define AMEC_WOF_IDDQ_TABLE_N 5
 
-// 13 is for 1 column of ratio, 12 columns of uplift by # cores turned on
-int16_t amec_wof_uplift_table[][13] = {
+// 14 is for 1 column of ratio, 13 columns of uplift by # cores turned on
+int16_t amec_wof_uplift_table[][14] = {
     // From Victor's e-mail of 12/03/2014
     // Make sure 0 is here, since search algorithm expects input index to be >= first table element.
     // For 5 core, just increase frequency by 66.5MHz per core in winkle for testing.
     // Make sure 0 is here, since search algorithm expects input index to be >= first table element.
-    //    1     2     3     4     5     6     7     8     9     10    11    12
-    {  0, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, },
-    { 75, 3699,	3699, 3699, 3699, 3699,	3699, 3699, 3699, 3699,	3699, 3699, 3699, },
-    { 80, 3699,	3669, 3699, 3699, 3665,	3665, 3665, 3665, 3665,	3665, 3665, 3665, },
-    { 85, 3699, 3699, 3699, 3665, 3596, 3596, 3596, 3596, 3596, 3596, 3596, 3596, },
-    { 90, 3699, 3699, 3665, 3596, 3528, 3528, 3528, 3528, 3528, 3528, 3528, 3528, },
-    { 95, 3699, 3665, 3596, 3528, 3494, 3494, 3494, 3494, 3494, 3494, 3494, 3494, },
-    {100, 3665, 3596, 3528, 3494, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, },
-    {110, 3665, 3596, 3528, 3494, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, },
-    {120, 3665, 3596, 3528, 3494, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, }
+    //    0     1     2     3     4     5     6     7     8     9     10    11    12
+    {  0, 3699,	3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, },
+    { 75, 3699,	3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, },
+    { 80, 3699,	3699, 3669, 3699, 3699, 3665, 3665, 3665, 3665, 3665, 3665, 3665, 3665, },
+    { 85, 3699,	3699, 3699, 3699, 3665, 3596, 3596, 3596, 3596, 3596, 3596, 3596, 3596, },
+    { 90, 3699,	3699, 3699, 3665, 3596, 3528, 3528, 3528, 3528, 3528, 3528, 3528, 3528, },
+    { 95, 3699,	3699, 3665, 3596, 3528, 3494, 3494, 3494, 3494, 3494, 3494, 3494, 3494, },
+    {100, 3665,	3665, 3596, 3528, 3494, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, },
+    {110, 3665,	3665, 3596, 3528, 3494, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, },
+    {120, 3665,	3665, 3596, 3528, 3494, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, }
 };
 #define AMEC_WOF_UPLIFT_TABLE_N 8
 
@@ -317,6 +407,9 @@ int16_t amec_wof_uplift_table[][13] = {
 #error "WOF algorithm already defined"
 #endif
 #define WOF_SYSTEM 1
+
+#define AMEC_WOF_LOADLINE_ACTIVE 750  // Active loadline in micro ohms
+#define AMEC_WOF_LOADLINE_PASSIVE 120 // Passive loadline in micro ohms
 
 // NOTE: Prototype uses Nominal operation point for C_EFF_TDP, since P8 prototype does not have ultra-turbo
 // C_EFF_TDP for tul237p0: I=7200 (in 0.01 A), V=10000 (=1V in 100 microV), F=3425 (MHz). V^1.3=158489
@@ -410,27 +503,7 @@ uint16_t amec_wof_iddq_mult_table[][2] = {
 
 
 
-//FIXME: Something is wrong with the VPD data: 72 A at nominal is smaller than the predicted leakage current of 102.79 A at 1.0 V, 85 C.
-// Double check the leakage data for the chip
-
-
-// WOF
-    //  Tuleta 2u and 4u use this loadline:
-    //    Vreg = Vvpd + Ivpd * (R_line + R_drop)
-    //    vdd r_line = 570uOhm  aka Active Loadline (from V_vrm_out to Vsense in mnfgvapi -r) PROC_R_LOADLINE_VDD
-    //    vdd r_drop = 150uOhm  aka Passive Loadline  (to in2Hdr: cheesit name and test point) PROC_R_DISTLOSS_VDD
-    //    vcs r_line = 570uOhm
-    //    vcs r_drop = 1400uOhm
-    //
-    //    r_sum = 720uOhm
-
-// Early Feb 2015 meeting decision was made to use Vdd_rdrop of 120uOhm
-// Therefore, r_sum = 690uOhm
-
-//For Tuleta 2u
 uint16_t g_amec_wof_loadline;         // Total loadline resistance in micro-ohm (R_ll + R_drop)
-#define AMEC_WOF_LOADLINE_ACTIVE 750  // Active loadline in micro ohms
-#define AMEC_WOF_LOADLINE_PASSIVE 120 // Passive loadline in micro ohms
 
 uint16_t g_amec_wof_vdd_eff; // Vdd regulator efficiency in 0.01% units
 uint16_t g_amec_wof_cur_out;  // chip Vdd current in 0.01 A (out of regulator) @cl020
@@ -1569,16 +1642,24 @@ void amec_wof_common_alg2(void)
     {
 	if (amec_wof_uplift_table[i][0] <= (int16_t) g_amec_wof_ceff_ratio && amec_wof_uplift_table[i+1][0] >= (int16_t)g_amec_wof_ceff_ratio) break;
     }
-    if (i >= AMEC_WOF_UPLIFT_TABLE_N - 1) 
-	i = AMEC_WOF_UPLIFT_TABLE_N - 2;
 
-    //Linear interpolate using the neighboring entries.  y = m(x-x1)+y1   m=(y2-y1)/(x2-x1)
-    //FIXME: add rounding step after multiplication
-    //FIXME: pre-compute m, since table is static
-    result32 = ((int32_t)g_amec_wof_ceff_ratio - (int32_t)amec_wof_uplift_table[i][0]) 
-	* ((int32_t)amec_wof_uplift_table[i+1][l_pstatetable_cores_next] - (int32_t)amec_wof_uplift_table[i][l_pstatetable_cores_next])
-	/ ((int32_t)amec_wof_uplift_table[i+1][0] - (int32_t)amec_wof_uplift_table[i][0])
-	+ (int32_t)amec_wof_uplift_table[i][l_pstatetable_cores_next];
+    if (i >= AMEC_WOF_UPLIFT_TABLE_N - 1) 
+    {
+	// Out of table, so clip to 100%
+	result32 = amec_wof_uplift_table[AMEC_WOF_UPLIFT_TABLE_N - 1][l_pstatetable_cores_next+1];
+    }
+    else
+    {
+	// Ratio is within uplift table
+
+	//Linear interpolate using the neighboring entries.  y = m(x-x1)+y1   m=(y2-y1)/(x2-x1)
+	//FIXME: add rounding step after multiplication
+	//FIXME: pre-compute m, since table is static
+	result32 = ((int32_t)g_amec_wof_ceff_ratio - (int32_t)amec_wof_uplift_table[i][0]) 
+	    * ((int32_t)amec_wof_uplift_table[i+1][l_pstatetable_cores_next+1] - (int32_t)amec_wof_uplift_table[i][l_pstatetable_cores_next+1])
+	    / ((int32_t)amec_wof_uplift_table[i+1][0] - (int32_t)amec_wof_uplift_table[i][0])
+	    + (int32_t)amec_wof_uplift_table[i][l_pstatetable_cores_next+1];
+    }
 
     g_amec_wof_f_uplift = result32;
 }
