@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -381,6 +381,17 @@ void amec_slv_voting_box(void)
                     // Override the frequency on all cores if Master OCC sends
                     // a non-zero request
                     l_core_freq = g_amec->foverride;
+                    l_core_reason = AMEC_VOTING_REASON_OVERRIDE;
+                }
+            }
+
+            if(g_amec->pstate_foverride_enable)
+            {
+                if(g_amec->pstate_foverride != 0)
+                {
+                    // Override the frequency on all cores if the Global Pstate
+                    // table has been modified
+                    l_core_freq = g_amec->pstate_foverride;
                     l_core_reason = AMEC_VOTING_REASON_OVERRIDE;
                 }
             }

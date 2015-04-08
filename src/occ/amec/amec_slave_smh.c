@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -53,6 +53,7 @@
 #include <amec_oversub.h>
 #include <amec_health.h>
 #include <amec_analytics.h>
+#include <common.h>
 
 //*************************************************************************
 // Externs
@@ -211,6 +212,107 @@ void amec_slv_check_apss_fail(void)
 
 // Function Specification
 //
+// Name: amec_slv_pstate_uplift_check
+//
+// Description: This function checks if the Global Pstate table needs to be
+// modified with a voltage uplift. If an uplift has been requested, it will
+// proceed to update every entry of the table.
+//
+// End Function Specification
+void amec_slv_pstate_uplift_check(void)
+{
+    /*------------------------------------------------------------------------*/
+    /*  Local Variables                                                       */
+    /*------------------------------------------------------------------------*/
+    Pstate                      l_pmin = 0;
+    Pstate                      l_pmax = 0;
+    uint16_t                    i = 0;
+
+    /*------------------------------------------------------------------------*/
+    /*  Code                                                                  */
+    /*------------------------------------------------------------------------*/
+
+    // Check if a new uplift request for Vdd has been made
+    if ((G_sysConfigData.vdd_vid_delta != 0) ||
+        (G_sysConfigData.vcs_vid_delta != 0))
+    {
+        TRAC_INFO("Updating Global Pstate table with requested uplift values!");
+
+        // STEP 1:
+        // Prevent any Pstate changes by locking the PMC Rail so that
+        // Pmax_rail = Pmin_rail + 1
+        l_pmin = gpst_pmin(&G_global_pstate_table) + 1;
+
+        // Set the Pmax_rail register via OCI write
+        amec_oversub_pmax_clip(l_pmin);
+
+        // STEP 2:
+        // Update all entries of the Global Pstate table using uplift provided
+        for (i=0; i<G_global_pstate_table.entries; i++)
+        {
+            // Modify the fields associated with Vdd. Per HW procedure team,
+            // the evid_vdd_eff and max_reg_vdd should get decremented
+            G_global_pstate_table.pstate[i].fields.evid_vdd += G_sysConfigData.vdd_vid_delta;
+            G_global_pstate_table.pstate[i].fields.evid_vdd_eff -= G_sysConfigData.vdd_vid_delta;
+            G_global_pstate_table.pstate[i].fields.maxreg_vdd -= G_sysConfigData.vdd_vid_delta;
+
+            // Modify the fields associated with Vcs. Per HW procedure team,
+            // the evid_vcs_eff and max_reg_vcs should get decremented
+            G_global_pstate_table.pstate[i].fields.evid_vcs += G_sysConfigData.vcs_vid_delta;
+            G_global_pstate_table.pstate[i].fields.evid_vcs_eff -= G_sysConfigData.vcs_vid_delta;
+            G_global_pstate_table.pstate[i].fields.maxreg_vcs -= G_sysConfigData.vcs_vid_delta;
+
+            // Compute the ECC for this entry
+            G_global_pstate_table.pstate[i].fields.ecc =
+                gpstCheckByte(G_global_pstate_table.pstate[i].value);
+        }
+
+        // STEP 3:
+        // Release the lock on the PMC Rail from Step 1
+        l_pmax = gpst_pmax(&G_global_pstate_table);
+
+        // Set the Pmax_rail register via OCI write
+        amec_oversub_pmax_clip(l_pmax);
+
+        // STEP 4:
+        // In order to inform the HW about the new Global Pstate table, perform
+        // a single +1 Pstate jump
+        g_amec->pstate_foverride_enable = 1;
+        if (g_amec->proc[0].core_max_freq ==
+            G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO])
+        {
+            // If we are at turbo frequency, then perform a single -1 Pstate
+            // jump instead
+            g_amec->pstate_foverride = g_amec->proc[0].core_max_freq -
+                (uint16_t)(G_global_pstate_table.frequency_step_khz / 1000);
+        }
+        else
+        {
+            g_amec->pstate_foverride = g_amec->proc[0].core_max_freq +
+            (uint16_t)(G_global_pstate_table.frequency_step_khz / 1000);
+        }
+
+        // After updating Global Pstate table, reset the delta to 0
+        G_sysConfigData.vdd_vid_delta = 0;
+        G_sysConfigData.vcs_vid_delta = 0;
+    }
+    else
+    {
+        // Check if we updated the Global Pstate table
+        if (g_amec->pstate_foverride_enable)
+        {
+            // STEP 5:
+            // Go back to the initial Pstate by disabling the override enable
+            // and maxing out the frequency request so it doesn't influence
+            // the final vote in the voting box
+            g_amec->pstate_foverride_enable = 0;
+            g_amec->pstate_foverride = 0xFFFF;
+        }
+    }
+}
+
+// Function Specification
+//
 // Name: amec_slv_common_tasks_pre
 //
 // Description: Runs all the functions that need to run pre-AMEC-State-Machine
@@ -224,6 +326,9 @@ void amec_slv_common_tasks_pre(void)
   static uint16_t L_counter = 0;
 
   AMEC_DBG("\tAMEC Slave Pre-State Common\n");
+
+  // Check if we need to apply a voltage uplift to the Global Pstate table
+  amec_slv_pstate_uplift_check();
 
   // Update the FW Worst Case sensors every tick
   amec_update_fw_sensors();
@@ -279,6 +384,7 @@ void amec_slv_common_tasks_post(void)
 
       // Call amec_power_control
       amec_power_control();
+
       // Call the OCC slave's voting box
       amec_slv_voting_box();
 
@@ -295,7 +401,6 @@ void amec_slv_common_tasks_post(void)
       // If not configured, this call will return immediately.
       amec_tb_record(AMEC_TB_250US);
   }
-
 }
 
 

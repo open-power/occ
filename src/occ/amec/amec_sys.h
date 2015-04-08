@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -562,10 +562,15 @@ typedef struct
   // Global memory speed request
   uint16_t              mem_speed_request;
 
-  // Flag to enable frequency override in the voting box
+  // Flag to enable frequency override in the voting box due to Master OCC request
   uint8_t               foverride_enable;
-  // Override frequency to be used by the voting box
+  // Override frequency to be used by the voting box due to Master OCC request
   uint16_t              foverride;
+  // Flag to enable frequency override in the voting box due to a Pstate table update
+  uint8_t               pstate_foverride_enable;
+  // Override frequency to be used by the voting box due to a Pstate table update
+  uint16_t              pstate_foverride;
+
   // Idle Power Saver frequency request sent by Master OCC
   uint16_t              slv_ips_freq_request;
   // Flag to indicate that the DPS parameters were overwritten by user

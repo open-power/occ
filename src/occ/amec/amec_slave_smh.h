@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -70,6 +70,8 @@ extern bool G_apss_lower_pmax_rail;
 // Function Prototypes
 //*************************************************************************
 void amec_slv_check_apss_fail(void);
+void amec_slv_pstate_uplift_check(void);
+
 // PRE: slave common tasks
 void amec_slv_common_tasks_pre(void);
 // POST: slave common tasks
