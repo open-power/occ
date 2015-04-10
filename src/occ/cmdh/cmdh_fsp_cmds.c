@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -429,7 +429,7 @@ ERRL_RC cmdh_poll_v10(cmdh_fsp_rsp_t * o_rsp_ptr)
 
 
         cmdh_poll_pcaps_sensor_t l_pcapData;
-        l_pcapData.current = G_sysConfigData.pcap.system_pcap;
+        l_pcapData.current = g_amec->pcap.active_node_pcap;
         l_pcapData.system = G_amec_sensor_list[PWR250US]->sample;
         l_pcapData.n = G_sysConfigData.pcap.oversub_pcap;
         l_pcapData.max = G_sysConfigData.pcap.max_pcap;

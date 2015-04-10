@@ -150,6 +150,11 @@ uint32_t amec_value_from_apss_adc(uint8_t i_chan)
         {
             l_raw += l_offset;
         }
+        //Check to see if l_raw is negative.  If so, set raw to 0
+        if (l_raw & 0x8000)
+        {
+            l_raw = 0;
+        }
 
         l_temp = ((uint32_t)l_raw * l_gain);
         // Reduce value back to mA or mV
