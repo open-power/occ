@@ -273,10 +273,6 @@ bool FirData_addFirsToPnor( FirData_t * io_fd, PNOR_Trgt_t * io_pTrgt,
                                          &tmp );
             if ( full ) break;
         }
-
-        /* Add WOF */
-        full = FirData_addRegToPnor( io_fd, io_pTrgt, i_sTrgt, addr + 8, &tmp );
-        if ( full ) break;
     }
 
     return full;
@@ -363,11 +359,6 @@ bool FirData_addIdFirsToPnor( FirData_t * io_fd, PNOR_Trgt_t * io_pTrgt,
                                            addr + 0x700000000ll, &tmp );
             if ( full ) break;
         }
-
-        /* Add WOF */
-        full = FirData_addIdRegToPnor( io_fd, io_pTrgt, i_sTrgt,
-                                       addr + 0x800000000ll, &tmp );
-        if ( full ) break;
     }
 
     return full;
@@ -492,7 +483,6 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
         {
             /* Check if the PROC is configured. */
             if ( 0 == (io_fd->hData->procMask & (0x80 >> p)) ) continue;
-            TRACFCOMP("proc %d",p);
 
             /* Check if this PROC is the master PROC and get the FSI base addr. */
             isM = ( p == io_fd->hData->masterProc );
@@ -508,7 +498,6 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
             {
                 /* Check if the EX is configured. */
                 if ( 0 == (io_fd->hData->exMasks[p] & (0x8000 >> u)) ) continue;
-                TRACFCOMP("ex %d",u);
 
                 /* Add this EX to the PNOR. */
                 sTrgt = SCOM_Trgt_getTrgt(EX, p, u, fsi, isM);
@@ -522,7 +511,6 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
             {
                 /* Check if the MCS is configured. */
                 if ( 0 == (io_fd->hData->mcsMasks[p] & (0x80 >> u)) ) continue;
-                TRACFCOMP("mcs %d",u);
 
                 /* Add this MCS to the PNOR. */
                 sTrgt = SCOM_Trgt_getTrgt(MCS, p, u, fsi, isM);
@@ -544,7 +532,6 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
 
             /* Check if the MEMB is configured. */
             if ( 0 == (io_fd->hData->membMasks[p] & (0x80 >> u)) ) continue;
-            TRACFCOMP("memb %d",u);
 
             /* Get the FSI base address. */
             fsi = io_fd->hData->membFsiBaseAddr[p][u];
@@ -562,7 +549,6 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
                 /* Check if the MBA is configured. */
                 if ( 0 == (io_fd->hData->mbaMasks[p] & (0x8000 >> mu)) )
                     continue;
-                TRACFCOMP("mba %d",mu);
 
                 /* Add this MBA to the PNOR. */
                 sTrgt = SCOM_Trgt_getTrgt(MBA, p, mu, fsi, false);
@@ -704,7 +690,6 @@ int32_t FirData_init( FirData_t * io_fd,
     #undef FUNC
 }
 
-
 /*------------------------------------------------------------------------------ */
 /* External functions */
 /*------------------------------------------------------------------------------ */
@@ -713,7 +698,7 @@ int32_t FirData_captureCsFirData( uint8_t * i_hBuf, uint32_t i_hBufSize,
                                   uint8_t * i_pBuf, uint32_t i_pBufSize )
 {
     #define FUNC "[FirData_captureCsFirData] "
-    TRACFCOMP( "FirData_captureCsFirData> hBuf=%p, hBufSize=%X, pBuf=%p, pBufSize=%.8X", i_hBuf, i_hBufSize, i_pBuf, i_pBufSize );
+
     int32_t rc = SUCCESS;
 
     do
@@ -730,7 +715,8 @@ int32_t FirData_captureCsFirData( uint8_t * i_hBuf, uint32_t i_hBufSize,
         /* Check for valid HOMER data. */
         if ( HOMER_FIR1 != fd.hData->header )
         {
-            TRACFCOMP( FUNC"No HOMER data=%.8X",fd.hData->header );
+            TRACFCOMP( FUNC"No HOMER data detected: header=0x%08x",
+                       fd.hData->header );
             break; /* nothing to analyze. */
         }
 
@@ -746,6 +732,12 @@ int32_t FirData_captureCsFirData( uint8_t * i_hBuf, uint32_t i_hBufSize,
         }
 
     } while (0);
+
+    if ( SUCCESS != rc )
+    {
+        TRACFCOMP( FUNC"Failed: i_hBuf=%p, i_hBufSize=0x%08x, i_pBuf=%p, "
+                   "i_pBufSize=%08x", i_hBuf, i_hBufSize, i_pBuf, i_pBufSize );
+    }
 
     return rc;
 

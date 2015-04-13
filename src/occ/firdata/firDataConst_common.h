@@ -27,7 +27,8 @@
 #define __firDataConst_common_h
 
 /** NOTE: This file is common between OCC and Hosboot. Any change to this file
- *        must be mirrored to both repositories. */
+ *        must be mirrored to both repositories. Also, this must be C, not C++,
+ *        because OCC strictly uses C. */
 
 #include <stdint.h>
 

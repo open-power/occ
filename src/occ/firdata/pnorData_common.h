@@ -27,7 +27,8 @@
 #define __pnorData_common_h
 
 /** NOTE: This file is common between OCC and Hosboot. Any change to this file
- *        must be mirrored to both repositories. */
+ *        must be mirrored to both repositories. Also, this must be C, not C++,
+ *        because OCC strictly uses C. */
 
 #include <firDataConst_common.h>
 
@@ -47,8 +48,8 @@
  *      - Registers with SCOM errors will not be captured, however, the number
  *        of SCOM errors detected should be stored in each PNOR_Trgt_t struct.
  *      - If the value of a FIR (or ID FIR) is zero, do not capture the
- *        associated ACT0 and ACT1 registers. Note that the associated MASK and
- *        WOF registers are still needed.
+ *        associated ACT0 and ACT1 registers. Note that the associated MASK
+ *        register is still needed for FFDC.
  *      - Each target type may have associated global registers. If none exist,
  *        simply capture all registers for that type. However, if they do exist
  *        and the values of ALL the global registers are zero, skip capturing
@@ -93,7 +94,7 @@ static inline PNOR_Data_t PNOR_getData()
 };
 
 /** These values will match the corresponding bit fields in PNOR_Trgt_t. */
-typedef enum RegLimits
+typedef enum
 {
     PNOR_Trgt_MAX_REGS_PER_TRGT    = 511, /* Currently expect 266 on the PROC */
     PNOR_Trgt_MAX_ID_REGS_PER_TRGT =  15, /* Currently expect 9 on the MBA */
@@ -148,17 +149,5 @@ typedef struct __attribute__((packed))
 
 } PNOR_IdReg_t;
 
-/** @return An initialized PNOR_IdReg_t struct. */
-inline
-PNOR_IdReg_t PNOR_getIdReg()
-{
-    PNOR_IdReg_t r = {
-        .addr = 0,
-        .val  = 0,
-    };
-
-    return r;
-};
-
-#endif /* __pnorData_common_h */
+#endif // __pnorData_common_h
 

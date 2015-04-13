@@ -27,7 +27,8 @@
 #define __homerData_common_h
 
 /** NOTE: This file is common between OCC and Hosboot. Any change to this file
- *        must be mirrored to both repositories. */
+ *        must be mirrored to both repositories. Also, this must be C, not C++,
+ *        because OCC strictly uses C. */
 
 #include <firDataConst_common.h>
 #include <string.h>
@@ -65,15 +66,16 @@
  *          - MASK (FIR address + 3)
  *          - ACT0 (FIR address + 6)
  *          - ACT1 (FIR address + 7)
- *          - WOF  (FIR address + 8)
  *      - ID FIR
  *          - ID MASK (ID FIR address + 0x300000000ll)
  *          - ID ACT0 (ID FIR address + 0x600000000ll)
  *          - ID ACT1 (ID FIR address + 0x700000000ll)
- *          - ID WOF  (ID FIR address + 0x800000000ll)
+ *  Note that not all FIRs have a corresponding WOF register. So any WOFs needed
+ *  for analysis will need to be explicitly listed in the corresponding
+ *  'Registers' lists.
  */
 
-typedef enum Version
+typedef enum
 {
     HOMER_FIR1 = 0x46495231, /*/< FIR data version 1 ("FIR1" in ascii) */
 
