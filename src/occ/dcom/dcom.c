@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -43,6 +43,8 @@
 #define PBAX_CONFIGURE_RCV_GROUP_MASK 0xff
 
 #define PBAX_BROADCAST_GROUP 0xFF
+
+extern uint8_t G_occ_interrupt_type;
 
 dcom_timing_t G_dcomTime;
 
@@ -226,6 +228,19 @@ void dcom_initialize_roles(void)
                 {
                     G_pob_id.chip_id = (l_tp_gp0_read.fields.tc_chip_id_dc) ? 1 : 3;
                 }
+            }
+
+            // If this is a FSP-less system, then use the node ID as the
+            // chip ID. This is because the HW assigns the OCCs as being in
+            // different nodes with the same chip IDs.
+            if (G_occ_interrupt_type != FSP_SUPPORTED_OCC)
+            {
+                G_pob_id.node_id = 0;
+                G_pob_id.chip_id = l_tp_gp0_read.fields.tc_node_id_dc;
+
+                TRAC_IMP("dcom_initialize_roles: Overriding chip_id[%d] with node_id[%d]",
+                         l_tp_gp0_read.fields.tc_chip_id_dc,
+                         l_tp_gp0_read.fields.tc_node_id_dc);
             }
 
             // Save off low 2 bits of chip ID as module ID.  Won't be
