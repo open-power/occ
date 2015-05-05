@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -63,13 +63,13 @@ const uint16_t * g_chom_sensor_table[CHOM_NUM_OF_SENSORS] =
     &g_amec_sys.sys.pwr250us.sample,
     // Socket power
     &g_amec_sys.proc[0].pwr250us.sample,
+    &G_dcom_slv_outbox_rx[1].pwr250usp0,
     &G_dcom_slv_outbox_rx[2].pwr250usp0,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
+    &G_dcom_slv_outbox_rx[3].pwr250usp0,
+    &G_dcom_slv_outbox_rx[4].pwr250usp0,
+    &G_dcom_slv_outbox_rx[5].pwr250usp0,
+    &G_dcom_slv_outbox_rx[6].pwr250usp0,
+    &G_dcom_slv_outbox_rx[7].pwr250usp0,
     // Memory power
     &G_dcom_slv_outbox_rx[0].pwr250usmemp0,
     &G_dcom_slv_outbox_rx[1].pwr250usmemp0,
@@ -290,8 +290,22 @@ void chom_update_sensors()
     for (i = 0 ; i<CHOM_NUM_OF_SENSORS ; i++)
     {   // update sample, min, max, average sensor data
         if (NULL != g_chom_sensor_table[i])
-        {   // directly mapping to mini-sensor
-            g_chom->sensorData[0].sensor[i].sample = *g_chom_sensor_table[i];
+        {
+            //Report all sensors listed in g_chom_sensor_table, unless
+            //we have a Murano (DCM), then we only report the power from the
+            //OCC_DCM_MASTER occ. The DCM occ pairs (OCC_DCM_MASTER,OCC_DCM_SLAVE) are
+            //((0,1),(2,3),(4,5),(6,7)).
+            if( ((i >= CHOMPWRS0) && (i <= CHOMPWRS7)) &&
+                (CFAM_CHIP_TYPE_MURANO == cfam_chip_type()) &&
+                (((i-CHOMPWRS0) % 2) == 1) )
+            {
+                //Do nothing
+            }
+            else
+            {
+                // directly mapping to mini-sensor
+                g_chom->sensorData[0].sensor[i].sample = *g_chom_sensor_table[i];
+            }
         }
 
         l_sample = g_chom->sensorData[0].sensor[i].sample;

@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -40,14 +40,14 @@ enum
     // Node total power (DC)
     CHOMPWR                = 0,
     // Socket power
-    CHOMPWRP0,
-    CHOMPWRP1,
-    CHOMPWRP2,
-    CHOMPWRP3,
-    CHOMPWRP4,
-    CHOMPWRP5,
-    CHOMPWRP6,
-    CHOMPWRP7,
+    CHOMPWRS0,
+    CHOMPWRS1,
+    CHOMPWRS2,
+    CHOMPWRS3,
+    CHOMPWRS4,
+    CHOMPWRS5,
+    CHOMPWRS6,
+    CHOMPWRS7,
     // Memory power
     CHOMPWRM0,
     CHOMPWRM1,
