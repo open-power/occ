@@ -55,26 +55,43 @@
 //*************************************************************************
 // Externs
 //*************************************************************************
+
 //WOF parameters defined in amec_wof.c
-extern uint16_t g_amec_wof_vdd_eff; // Vdd regulator efficiency in 0.01% units
-extern uint16_t g_amec_wof_loadline; // Total loadline resistance in micro-ohm (R_ll + R_drop)
-extern uint16_t g_amec_wof_cur_out;  // chip Vdd current in 0.01 A (out of regulator) @cl020
-extern uint16_t g_amec_wof_v_chip; // Voltage at chip silicon (Vreg - V_loadline_droop)
-extern uint8_t g_amec_wof_iddq_i; // first index into iddq table for interpolation
-extern uint16_t g_amec_wof_iddq85c; // check interpolation of iddq table
-extern uint16_t g_amec_wof_iddq; // I_DC_extracted is the estimated temperature-corrected leakage current
-extern uint16_t g_amec_wof_ac; // I_AC_extracted
+
+// Vdd regulator efficiency in 0.01% units
+extern uint16_t g_amec_wof_vdd_eff;
+// Total loadline resistance in micro-ohm (R_ll + R_drop)
+extern uint16_t g_amec_wof_loadline;
+// chip Vdd current in 0.01 A (out of regulator) @cl020
+extern uint16_t g_amec_wof_cur_out;
+// Voltage at chip silicon (Vreg - V_loadline_droop)
+extern uint16_t g_amec_wof_v_chip;
+// first index into iddq table for interpolation
+extern uint8_t g_amec_wof_iddq_i;
+// check interpolation of iddq table
+extern uint16_t g_amec_wof_iddq85c;
+// I_DC_extracted is the estimated temperature-corrected leakage current
+extern uint16_t g_amec_wof_iddq;
+// I_AC_extracted
+extern uint16_t g_amec_wof_ac;
 extern uint32_t g_amec_wof_ceff_tdp;
 extern uint32_t g_amec_wof_ceff;
+extern uint32_t g_amec_wof_ceff_old;
 extern uint16_t g_amec_wof_ceff_ratio;
 extern int16_t g_amec_wof_f_uplift; // uplift frequency adjustment
 extern uint16_t g_amec_wof_f_vote; // frequency vote
+extern uint16_t g_amec_wof_vote_vreg; // voltage associated with wof vote
+// voltage at chip associated with wof vote at present current.
+extern uint16_t g_amec_wof_vote_vchip;
 extern uint8_t g_amec_wof_error; // non-zero is a WOF error flag
 // User changes the WOF algorithm (and enable/disable) by setting
-// g_amec_wof_enable_parm from the Amester parameter interface.
-// OCC will check this against the current setting (g_amec_wof_enable) and 
-// within 250us, do initialization for the next setting and start the new WOF algorithm.
-extern uint8_t g_amec_wof_enable_parm; // parameter-set next state: 0=No WOF, 1 or higher = WOF algorithm. 0xff is uninitialized state.
+// g_amec_wof_enable_parm from the Amester parameter interface.  OCC
+// will check this against the current setting (g_amec_wof_enable) and
+// within 250us, do initialization for the next setting and start the
+// new WOF algorithm.
+// parameter-set next state: 0=No WOF, 1 or higher = WOF algorithm.
+// 0xff is uninitialized state.
+extern uint8_t g_amec_wof_enable_parm;
 extern uint8_t g_amec_wof_cores_on; // Count number of cores on
 extern uint8_t g_amec_wof_state; // WOF state
 extern sensor_t g_amec_wof_ceff_ratio_sensor;

@@ -359,12 +359,6 @@ void amec_slv_common_tasks_pre(void)
       L_counter = 0;
   }
 
-  // Update the external voltage sensors
-  amec_update_external_voltage();
-
-  // Update estimate of Vdd regulator output current
-  amec_update_current_sensor(); // Compute estimate for Vdd output current
-
   // Over-subscription check
   amec_oversub_check();
 }

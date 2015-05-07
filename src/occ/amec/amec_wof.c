@@ -193,6 +193,11 @@ sensor_t g_amec_wof_vdd_sense_sensor;
 
 #define WOF_MAX_CORES_PER_CHIP 12
 
+//
+// Need to update 1.05 (raw to tdp conversion) for Wyatt to be
+//  1.12 for Turismo
+//
+
 // NOTE: Prototype uses Nominal operation point for C_EFF_TDP, since P8 prototype does not have ultra-turbo
 //
 //   Estimate IDDQ@RDP(95C)@Vnom P0 = IDDQ@85C * 1.25 ^ ([95-85]/10) = 35.84 * 1.25 = 44.8 A
@@ -202,17 +207,21 @@ sensor_t g_amec_wof_vdd_sense_sensor;
 //   P0: (151 A - 44.8 A) / 1.22 * 1.05 = 91.40 A TDP
 //
 //   C_eff    = I / (V^3 * F)
-//   C_eff_tdp_P0 = 91.40 A / (0.9 V ^1.3) / 2561 MHz = 40.9 nF
+//   C_eff_tdp_P0 = 91.40 A / (0.9 V ^1.3) / 2561 MHz = 0.0409 microF =  40.9 nF
 //
-//   C_EFF_TDP_P0 = 9140 (0.01A) * 10000/ 9000(100mV)^1.3 * 10000 / 2561(MHz) = 2582
+//   C_EFF_TDP_P0 = 9140 (0.01A) * 16384 / 9000(100uV)^1.3 * 16384 / 2561(MHz)
+//                = 6932
 //
-//   Note: C_EFF_TDP_P0 / 10000 / 10000 * 10000^1.3 == C_eff_tdp_P0
+//   Note: C_EFF_TDP_P0 / 100 / 16384 / 16384 * 10000^1.3 * 1000
+//                = C_eff_tdp_P0 in nF
 //
 
-uint16_t g_amec_wof_rdp_idd_nom[MAX_NUM_CHIP_MODULES] = {15700, 0, 0, 0}; // 0.01 A units of RDP@Vnom
+// 0.01 A units of RDP@Vnom
+uint16_t g_amec_wof_rdp_idd_nom[MAX_NUM_CHIP_MODULES] = {15700, 0, 0, 0};
 
 // Effective capacitance for TDP workload @ Turbo. FIXME: Put in p-state table superstructure.
-uint32_t g_amec_wof_ceff_tdp_module[MAX_NUM_CHIP_MODULES] = {2582, 1, 1, 1}; // 4 modules max. Value 1 to avoid divide by 0.
+// 4 modules max. Value 1 to avoid divide by 0.
+uint32_t g_amec_wof_ceff_tdp_module[MAX_NUM_CHIP_MODULES] = {6932, 1, 1, 1};
 
 //Based on DMIW data for tul237P0 ID=B1935398. I extrapolate beyond 1.0V
 uint16_t amec_wof_iddq_table[][5] = {
@@ -515,9 +524,16 @@ uint16_t g_amec_wof_iddq; // I_DC_extracted is the estimated temperature-correct
 uint16_t g_amec_wof_ac; // I_AC extracted
 uint32_t g_amec_wof_ceff_tdp; // Effective capacitance for TDP workload @ Turbo.
 uint32_t g_amec_wof_ceff; // Effective capacitance right now.
+uint32_t g_amec_wof_ceff_old; // Effective capacitance right now.
 uint16_t g_amec_wof_ceff_ratio; // Effective capacitance ratio
 int16_t g_amec_wof_f_uplift; // uplift frequency adjustment
 uint16_t g_amec_wof_f_vote=0; // frequency vote. Lowest vote, until WOF is initialized with safe Turbo freq.
+//Pstate g_amec_wof_vote_pstate; // pstate associate with wof vote
+//uint8_t g_amec_wof_vote_vid; // VID associated with wof vote
+// voltage set at regulator associated with wof vote
+uint16_t g_amec_wof_vote_vreg;
+// voltage at chip associated with wof vote at present current.
+uint16_t g_amec_wof_vote_vchip;
 uint8_t g_amec_wof_error = AMEC_WOF_ERROR_NONE; // non-zero is a WOF error flag
 // User changes the WOF algorithm (and enable/disable) by setting
 // g_amec_wof_enable_parm from the Amester parameter interface.
@@ -972,210 +988,6 @@ gpst_create(GlobalPstateTable *gpst,
 }
 */
 
-//Calculation of check byte in Global P-state Table Entry
-//From ekb/eclipz/chips/p8/working/procedures/ipl/fapi/gpstCheckByte.c
-
-#define BIT(x, n) (((x) >> (63 - (n))) & 1)
-
-uint8_t
-gpstCheckByte(uint64_t gpstEntry)
-{
-    int cb[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-
-    cb[0] ^= BIT(gpstEntry, 0);
-    cb[0] ^= BIT(gpstEntry, 1);
-    cb[0] ^= BIT(gpstEntry, 2);
-    cb[0] ^= BIT(gpstEntry, 3);
-    cb[0] ^= BIT(gpstEntry, 4);
-    cb[0] ^= BIT(gpstEntry, 5);
-    cb[0] ^= BIT(gpstEntry, 6);
-    cb[0] ^= BIT(gpstEntry, 7);
-    cb[0] ^= BIT(gpstEntry, 24);
-    cb[0] ^= BIT(gpstEntry, 25);
-    cb[0] ^= BIT(gpstEntry, 26);
-    cb[0] ^= BIT(gpstEntry, 28);
-    cb[0] ^= BIT(gpstEntry, 33);
-    cb[0] ^= BIT(gpstEntry, 38);
-    cb[0] ^= BIT(gpstEntry, 42);
-    cb[0] ^= BIT(gpstEntry, 43);
-    cb[0] ^= BIT(gpstEntry, 44);
-    cb[0] ^= BIT(gpstEntry, 45);
-    cb[0] ^= BIT(gpstEntry, 52);
-    cb[0] ^= BIT(gpstEntry, 53);
-    cb[0] ^= BIT(gpstEntry, 54);
-    cb[0] ^= BIT(gpstEntry, 55);
-    cb[1] ^= BIT(gpstEntry, 0);
-    cb[1] ^= BIT(gpstEntry, 3);
-    cb[1] ^= BIT(gpstEntry, 4);
-    cb[1] ^= BIT(gpstEntry, 7);
-    cb[1] ^= BIT(gpstEntry, 8);
-    cb[1] ^= BIT(gpstEntry, 9);
-    cb[1] ^= BIT(gpstEntry, 10);
-    cb[1] ^= BIT(gpstEntry, 11);
-    cb[1] ^= BIT(gpstEntry, 12);
-    cb[1] ^= BIT(gpstEntry, 13);
-    cb[1] ^= BIT(gpstEntry, 14);
-    cb[1] ^= BIT(gpstEntry, 15);
-    cb[1] ^= BIT(gpstEntry, 32);
-    cb[1] ^= BIT(gpstEntry, 33);
-    cb[1] ^= BIT(gpstEntry, 34);
-    cb[1] ^= BIT(gpstEntry, 36);
-    cb[1] ^= BIT(gpstEntry, 41);
-    cb[1] ^= BIT(gpstEntry, 46);
-    cb[1] ^= BIT(gpstEntry, 50);
-    cb[1] ^= BIT(gpstEntry, 51);
-    cb[1] ^= BIT(gpstEntry, 52);
-    cb[1] ^= BIT(gpstEntry, 53);
-    cb[2] ^= BIT(gpstEntry, 4);
-    cb[2] ^= BIT(gpstEntry, 5);
-    cb[2] ^= BIT(gpstEntry, 6);
-    cb[2] ^= BIT(gpstEntry, 7);
-    cb[2] ^= BIT(gpstEntry, 8);
-    cb[2] ^= BIT(gpstEntry, 11);
-    cb[2] ^= BIT(gpstEntry, 12);
-    cb[2] ^= BIT(gpstEntry, 15);
-    cb[2] ^= BIT(gpstEntry, 16);
-    cb[2] ^= BIT(gpstEntry, 17);
-    cb[2] ^= BIT(gpstEntry, 18);
-    cb[2] ^= BIT(gpstEntry, 19);
-    cb[2] ^= BIT(gpstEntry, 20);
-    cb[2] ^= BIT(gpstEntry, 21);
-    cb[2] ^= BIT(gpstEntry, 22);
-    cb[2] ^= BIT(gpstEntry, 23);
-    cb[2] ^= BIT(gpstEntry, 40);
-    cb[2] ^= BIT(gpstEntry, 41);
-    cb[2] ^= BIT(gpstEntry, 42);
-    cb[2] ^= BIT(gpstEntry, 44);
-    cb[2] ^= BIT(gpstEntry, 49);
-    cb[2] ^= BIT(gpstEntry, 54);
-    cb[3] ^= BIT(gpstEntry, 2);
-    cb[3] ^= BIT(gpstEntry, 3);
-    cb[3] ^= BIT(gpstEntry, 4);
-    cb[3] ^= BIT(gpstEntry, 5);
-    cb[3] ^= BIT(gpstEntry, 12);
-    cb[3] ^= BIT(gpstEntry, 13);
-    cb[3] ^= BIT(gpstEntry, 14);
-    cb[3] ^= BIT(gpstEntry, 15);
-    cb[3] ^= BIT(gpstEntry, 16);
-    cb[3] ^= BIT(gpstEntry, 19);
-    cb[3] ^= BIT(gpstEntry, 20);
-    cb[3] ^= BIT(gpstEntry, 23);
-    cb[3] ^= BIT(gpstEntry, 24);
-    cb[3] ^= BIT(gpstEntry, 25);
-    cb[3] ^= BIT(gpstEntry, 26);
-    cb[3] ^= BIT(gpstEntry, 27);
-    cb[3] ^= BIT(gpstEntry, 28);
-    cb[3] ^= BIT(gpstEntry, 29);
-    cb[3] ^= BIT(gpstEntry, 30);
-    cb[3] ^= BIT(gpstEntry, 31);
-    cb[3] ^= BIT(gpstEntry, 48);
-    cb[3] ^= BIT(gpstEntry, 49);
-    cb[3] ^= BIT(gpstEntry, 50);
-    cb[3] ^= BIT(gpstEntry, 52);
-    cb[4] ^= BIT(gpstEntry, 1);
-    cb[4] ^= BIT(gpstEntry, 6);
-    cb[4] ^= BIT(gpstEntry, 10);
-    cb[4] ^= BIT(gpstEntry, 11);
-    cb[4] ^= BIT(gpstEntry, 12);
-    cb[4] ^= BIT(gpstEntry, 13);
-    cb[4] ^= BIT(gpstEntry, 20);
-    cb[4] ^= BIT(gpstEntry, 21);
-    cb[4] ^= BIT(gpstEntry, 22);
-    cb[4] ^= BIT(gpstEntry, 23);
-    cb[4] ^= BIT(gpstEntry, 24);
-    cb[4] ^= BIT(gpstEntry, 27);
-    cb[4] ^= BIT(gpstEntry, 28);
-    cb[4] ^= BIT(gpstEntry, 31);
-    cb[4] ^= BIT(gpstEntry, 32);
-    cb[4] ^= BIT(gpstEntry, 33);
-    cb[4] ^= BIT(gpstEntry, 34);
-    cb[4] ^= BIT(gpstEntry, 35);
-    cb[4] ^= BIT(gpstEntry, 36);
-    cb[4] ^= BIT(gpstEntry, 37);
-    cb[4] ^= BIT(gpstEntry, 38);
-    cb[4] ^= BIT(gpstEntry, 39);
-    cb[5] ^= BIT(gpstEntry, 0);
-    cb[5] ^= BIT(gpstEntry, 1);
-    cb[5] ^= BIT(gpstEntry, 2);
-    cb[5] ^= BIT(gpstEntry, 4);
-    cb[5] ^= BIT(gpstEntry, 9);
-    cb[5] ^= BIT(gpstEntry, 14);
-    cb[5] ^= BIT(gpstEntry, 18);
-    cb[5] ^= BIT(gpstEntry, 19);
-    cb[5] ^= BIT(gpstEntry, 20);
-    cb[5] ^= BIT(gpstEntry, 21);
-    cb[5] ^= BIT(gpstEntry, 28);
-    cb[5] ^= BIT(gpstEntry, 29);
-    cb[5] ^= BIT(gpstEntry, 30);
-    cb[5] ^= BIT(gpstEntry, 31);
-    cb[5] ^= BIT(gpstEntry, 32);
-    cb[5] ^= BIT(gpstEntry, 35);
-    cb[5] ^= BIT(gpstEntry, 36);
-    cb[5] ^= BIT(gpstEntry, 39);
-    cb[5] ^= BIT(gpstEntry, 40);
-    cb[5] ^= BIT(gpstEntry, 41);
-    cb[5] ^= BIT(gpstEntry, 42);
-    cb[5] ^= BIT(gpstEntry, 43);
-    cb[5] ^= BIT(gpstEntry, 44);
-    cb[5] ^= BIT(gpstEntry, 45);
-    cb[5] ^= BIT(gpstEntry, 46);
-    cb[5] ^= BIT(gpstEntry, 47);
-    cb[6] ^= BIT(gpstEntry, 8);
-    cb[6] ^= BIT(gpstEntry, 9);
-    cb[6] ^= BIT(gpstEntry, 10);
-    cb[6] ^= BIT(gpstEntry, 12);
-    cb[6] ^= BIT(gpstEntry, 17);
-    cb[6] ^= BIT(gpstEntry, 22);
-    cb[6] ^= BIT(gpstEntry, 26);
-    cb[6] ^= BIT(gpstEntry, 27);
-    cb[6] ^= BIT(gpstEntry, 28);
-    cb[6] ^= BIT(gpstEntry, 29);
-    cb[6] ^= BIT(gpstEntry, 36);
-    cb[6] ^= BIT(gpstEntry, 37);
-    cb[6] ^= BIT(gpstEntry, 38);
-    cb[6] ^= BIT(gpstEntry, 39);
-    cb[6] ^= BIT(gpstEntry, 40);
-    cb[6] ^= BIT(gpstEntry, 43);
-    cb[6] ^= BIT(gpstEntry, 44);
-    cb[6] ^= BIT(gpstEntry, 47);
-    cb[6] ^= BIT(gpstEntry, 48);
-    cb[6] ^= BIT(gpstEntry, 49);
-    cb[6] ^= BIT(gpstEntry, 50);
-    cb[6] ^= BIT(gpstEntry, 51);
-    cb[6] ^= BIT(gpstEntry, 52);
-    cb[6] ^= BIT(gpstEntry, 53);
-    cb[6] ^= BIT(gpstEntry, 54);
-    cb[6] ^= BIT(gpstEntry, 55);
-    cb[7] ^= BIT(gpstEntry, 16);
-    cb[7] ^= BIT(gpstEntry, 17);
-    cb[7] ^= BIT(gpstEntry, 18);
-    cb[7] ^= BIT(gpstEntry, 20);
-    cb[7] ^= BIT(gpstEntry, 25);
-    cb[7] ^= BIT(gpstEntry, 30);
-    cb[7] ^= BIT(gpstEntry, 34);
-    cb[7] ^= BIT(gpstEntry, 35);
-    cb[7] ^= BIT(gpstEntry, 36);
-    cb[7] ^= BIT(gpstEntry, 37);
-    cb[7] ^= BIT(gpstEntry, 44);
-    cb[7] ^= BIT(gpstEntry, 45);
-    cb[7] ^= BIT(gpstEntry, 46);
-    cb[7] ^= BIT(gpstEntry, 47);
-    cb[7] ^= BIT(gpstEntry, 48);
-    cb[7] ^= BIT(gpstEntry, 51);
-    cb[7] ^= BIT(gpstEntry, 52);
-    cb[7] ^= BIT(gpstEntry, 55);
-    return 
-        (cb[0] << 7) |
-        (cb[1] << 6) |
-        (cb[2] << 5) |
-        (cb[3] << 4) |
-        (cb[4] << 3) |
-        (cb[5] << 2) |
-        (cb[6] << 1) |
-        (cb[7] << 0);
-}
-
-
 void amec_wof_init(void)
 {
     // Initialize DCOM Thread Sem
@@ -1449,10 +1261,12 @@ void amec_wof_v1(void)
 
     // Step 4: Computer ratio of computed workload AC to TDP
 
-    result32 = g_amec_wof_ac * 10000;
+    result32 = g_amec_wof_ac << 14; // * 16384
+    // estimate g_amec_wof_v_chip^1.3 using equation:
+    // = 21374 * (X in 0.1 mV) - 50615296
     result32v = (21374 * g_amec_wof_v_chip - 50615296) >> 10;
     result32 = result32 / result32v;
-    result32 = result32 * 10000;
+    result32 = result32 << 14; // * 16384
     if (l_freq != 0) { // avoid divide by 0
 	result32 = result32 / (uint32_t) l_freq;
     }
@@ -1511,6 +1325,9 @@ void amec_wof_common_alg2(void)
 
     //Step 4
     uint16_t l_freq = AMECSENSOR_PTR(FREQA2MSP0)->sample;
+    // pstate that corresponds to wof vote. Find associated voltage.
+    Pstate wof_vote_pstate;
+    uint8_t wof_vote_vid; // Vdd regulator VID associated with WOF vote.
 
     if (g_amec_wof_state != 0) return;
     if (g_amec_wof_pstatetable_cores_next != g_amec_wof_pstatetable_cores_current)
@@ -1614,7 +1431,7 @@ void amec_wof_common_alg2(void)
 
     //Compute 2ms current average
     //Divide the 250us accumulator by 8 samples to get 2ms average
-    g_amec_wof_cur_out = (g_amec_wof_cur_out_last - l_accum) >> 3; // 0.01 A
+    g_amec_wof_cur_out = (l_accum - g_amec_wof_cur_out_last) >> 3; // 0.01 A
     g_amec_wof_cur_out_last = l_accum;
 
 
@@ -1623,14 +1440,41 @@ void amec_wof_common_alg2(void)
 
     // Step 4: Computer ratio of computed workload AC to TDP
 
-    result32 = g_amec_wof_ac * 10000;
-    result32v = (21374 * g_amec_wof_v_chip - 50615296) >> 10;
+    //Victor and Josh request to use WOF freq/volt from last WOF vote
+    //(4/14/2015 e-mail exchange)
+
+    // Get voltage associated with prior WOF vote
+    wof_vote_pstate = proc_freq2pstate(g_amec_wof_f_vote);
+    wof_vote_vid =
+        G_global_pstate_table.pstate[wof_vote_pstate].fields.evid_vdd;
+    g_amec_wof_vote_vreg = 16125 - ((uint32_t)wof_vote_vid * 625)/10;
+    //Calculate voltage at chip if pstate changed to wof vote instantly
+    g_amec_wof_vote_vchip = g_amec_wof_vote_vreg - (uint32_t) g_amec_wof_cur_out
+        * (uint32_t) g_amec_wof_loadline / (uint32_t)10000;
+
+    result32 = g_amec_wof_ac << 14; // * 16384
+    // estimate g_amec_wof_v_chip^1.3 using equation:
+    // = 21374 * (X in 0.1 mV) - 50615296
+    result32v = (21374 * g_amec_wof_vote_vchip - 50615296) >> 10;
     result32 = result32 / result32v;
-    result32 = result32 * 10000;
-    if (l_freq != 0) { // avoid divide by 0
-	result32 = result32 / (uint32_t) l_freq;
+    result32 = result32 << 14; // * 16384
+    if (g_amec_wof_f_vote != 0) { // avoid divide by 0
+        result32 = result32 / (uint32_t) g_amec_wof_f_vote;
     }
     g_amec_wof_ceff = result32;
+
+    //Previous c_eff calcualtion (before Josh/Victor correction)
+    result32 = g_amec_wof_ac << 14; // * 16384
+    // estimate g_amec_wof_v_chip^1.3 using equation:
+    // = 21374 * (X in 0.1 mV) - 50615296
+    result32v = (21374 * g_amec_wof_v_chip - 50615296) >> 10;
+    result32 = result32 / result32v;
+    result32 = result32 << 14; // * 16384
+    if (l_freq != 0) { // avoid divide by 0
+        result32 = result32 / (uint32_t) l_freq;
+    }
+    g_amec_wof_ceff_old = result32;
+
 
     g_amec_wof_ceff_ratio = result32 * 100 / g_amec_wof_ceff_tdp;
     if (g_amec_wof_ceff_ratio > 100) g_amec_wof_ceff_ratio = 100; // max freq must be turbo or higher by design
