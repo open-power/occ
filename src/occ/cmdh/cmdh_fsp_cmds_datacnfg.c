@@ -47,9 +47,11 @@
 #define FREQ_FORMAT_BYTES_PER_MODE 3
 #define FREQ_FORMAT_BASE_DATA_SZ   (sizeof(cmdh_store_mode_freqs_t) - sizeof(cmdh_fsp_cmd_header_t))
 #define FREQ_FORMAT_10_NUM_FREQS   3
+#define FREQ_FORMAT_11_NUM_FREQS   4
 
 #define DATA_FREQ_VERSION_0        0
 #define DATA_FREQ_VERSION_10       0x10
+#define DATA_FREQ_VERSION_11       0x11
 
 #define DATA_PCAP_VERSION_0        0
 #define DATA_PCAP_VERSION_10       0x10
@@ -267,10 +269,13 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
         // If the datapacket is bigger than what we can store, OR
         // if the version doesn't equal what we expect, OR
         // if the expected data length does not agree with the actual data length, OR
-        // the format is 0x10 and we don't have room for the 3 2B frequencies
+        // the format is 0x10 and we don't have room for the 3 2B frequencies, OR
+        // the format is 0x11 and we don;t have room for the 4 2B frequencies.
         if((l_data_length < FREQ_FORMAT_BASE_DATA_SZ) ||
-           ((l_cmdp->version != DATA_FREQ_VERSION_0) && (l_cmdp->version != DATA_FREQ_VERSION_10)) ||
-           ((DATA_FREQ_VERSION_10 == l_cmdp->version) && (l_mode_data_sz != (FREQ_FORMAT_10_NUM_FREQS * 2))))
+           ((l_cmdp->version != DATA_FREQ_VERSION_0) && (l_cmdp->version != DATA_FREQ_VERSION_10) &&
+            (l_cmdp->version != DATA_FREQ_VERSION_11)) ||
+           ((DATA_FREQ_VERSION_10 == l_cmdp->version) && (l_mode_data_sz != (FREQ_FORMAT_10_NUM_FREQS * 2))) ||
+           ((DATA_FREQ_VERSION_11 == l_cmdp->version) && (l_mode_data_sz != (FREQ_FORMAT_11_NUM_FREQS * 2))))
         {
             TRAC_ERR("Invalid Frequency Data packet: data_length[%u] version[%u] l_count[%u] l_mode_data_sz[%u]",
                      l_data_length, l_cmdp->version, l_count, l_mode_data_sz);
@@ -284,9 +289,8 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
             break;
         }
 
-        if (DATA_FREQ_VERSION_0 == l_cmdp->version)
+        if(DATA_FREQ_VERSION_0 == l_cmdp->version)
         {
-
             // parse the packed 3-byte data entries and store them
             // in the global data structure.
             for(i = 0; i < l_mode_data_sz; i += FREQ_FORMAT_BYTES_PER_MODE)
@@ -365,11 +369,10 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 }
             }
         }
-        else // Version 0x10 - OpenPower
+        else if(DATA_FREQ_VERSION_10 == l_cmdp->version) // Version 0x10 - OpenPower
         {
             // First Nominal Freq, then Max Freq, then Min Freq, which we'll
             // store under the existing enums.
-
             l_freq = (l_buf[0] << 8 | l_buf[1]);
             l_table[OCC_MODE_NOMINAL] = l_freq;
 
@@ -385,6 +388,31 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
             l_table[OCC_MODE_MIN_FREQUENCY] = l_freq;
 
             TRAC_INFO("Min frequency = %d", l_freq);
+
+            // Store the Fmax and Fmin for AMEC (OpenPower environment only)
+            g_amec->sys.fmax = l_table[OCC_MODE_TURBO];
+            g_amec->sys.fmin = l_table[OCC_MODE_MIN_FREQUENCY];
+        }
+        else if(DATA_FREQ_VERSION_11 == l_cmdp->version) // Version 0x11 - OpenPower
+        {
+            // First Nominal Freq, then Max Freq, then Min Freq, which we'll
+            // store under the existing enums.
+
+            l_freq = (l_buf[0] << 8 | l_buf[1]);
+            l_table[OCC_MODE_NOMINAL] = l_freq;
+            TRAC_INFO("Nominal frequency = %d", l_freq);
+
+            l_freq = (l_buf[2] << 8 | l_buf[3]);
+            l_table[OCC_MODE_TURBO] = l_freq;
+            TRAC_INFO("Turbo frequency = %d", l_freq);
+
+            l_freq = (l_buf[4] << 8 | l_buf[5]);
+            l_table[OCC_MODE_PWRSAVE] = l_freq;
+            l_table[OCC_MODE_MIN_FREQUENCY] = l_freq;
+            TRAC_INFO("Minimum frequency = %d", l_freq);
+
+            l_freq = (l_buf[6] << 8 | l_buf[7]);
+            TRAC_INFO("UT frequency = %d", l_freq);
 
             // Store the Fmax and Fmin for AMEC (OpenPower environment only)
             g_amec->sys.fmax = l_table[OCC_MODE_TURBO];
