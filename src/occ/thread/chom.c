@@ -380,7 +380,7 @@ void chom_gen_periodic_log()
             THRD_MID_GEN_CALLHOME_LOG,    // modId
             GEN_CALLHOME_LOG,             // reasoncode
             OCC_NO_EXTENDED_RC,           // Extended reason code
-            ERRL_SEV_INFORMATIONAL,       // Severity
+            ERRL_SEV_CALLHOME_DATA,       // Severity; will be changed to informational in errl.c
             NULL,                         // Trace Buf
             0,                            // Trace Size
             0,                            // userdata1

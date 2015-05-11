@@ -167,6 +167,19 @@ errlHndl_t cmdh_tmgt_poll (const cmdh_fsp_cmd_t * i_cmd_ptr,
             l_poll_rsp->errl_address   = getErrlOCIAddrByID(l_poll_rsp->errl_id);
             l_poll_rsp->errl_length    = getErrlLengthByID(l_poll_rsp->errl_id);
 
+            //If errl_id is not 0, then neither address or length should be zero.
+            //This should not happen, but if it does tmgt will create an error log that
+            //includes the data at the errl slot address given.
+            //NOTE: One cause for a false errlog id is corruption of data in one errl slot
+            //      due to writing data greater than the size of the previous slot.  For
+            //      example writing the CallHome errorlog (3kb) into a regular sized (2kb) slot.
+            if ( (l_poll_rsp->errl_id != 0) &&
+                 ((l_poll_rsp->errl_address == 0) || (l_poll_rsp->errl_length == 0)))
+            {
+                TRAC_ERR("An error ID has been sent via poll but the address or size is 0. "
+                         "ErrlId:0x%X, sz:0x%X, address:0x%X.",
+                         l_poll_rsp->errl_id, l_poll_rsp->errl_length, l_poll_rsp->errl_address);
+            }
             l_poll_rsp->data_length[0] = CONVERT_UINT16_UINT8_HIGH(CMDH_POLL_RESP_LEN_V0);
             l_poll_rsp->data_length[1] = CONVERT_UINT16_UINT8_LOW(CMDH_POLL_RESP_LEN_V0);
             l_rc                       = ERRL_RC_SUCCESS;
@@ -248,6 +261,22 @@ ERRL_RC cmdh_poll_v10(cmdh_fsp_rsp_t * o_rsp_ptr)
     l_poll_rsp->errl_address    = getErrlOCIAddrByID(l_poll_rsp->errl_id);
     // Byte 13 - 14:
     l_poll_rsp->errl_length     = getErrlLengthByID(l_poll_rsp->errl_id);
+
+            //If errl_id is not 0, then neither address or length should be zero.
+            //This should not happen, but if it does tmgt will create an error log that
+            //includes the data at the errl slot address given that can be used for debug.
+            //NOTE: One cause for a false errlog id is corruption of data in one errl slot
+            //      due to writing data greater than the size of the previous slot.  For
+            //      example writing the CallHome errorlog (3kb) into a regular sized (2kb) slot.
+            //      Make sure to verify the order of the memory allocation for the errl slots.
+    if ( (l_poll_rsp->errl_id != 0) &&
+         ((l_poll_rsp->errl_address == 0) || (l_poll_rsp->errl_length == 0)))
+    {
+        TRAC_ERR("An error ID has been sent via poll but the address or size is 0. "
+                 "ErrlId:0x%X, sz:0x%X, address:0x%X.",
+                 l_poll_rsp->errl_id, l_poll_rsp->errl_length, l_poll_rsp->errl_address);
+    }
+
     // Byte 15 - 16: reserved.
     // Byte 17 - 32 (16 bytes): OCC level
     memcpy( (void *) l_poll_rsp->occ_level, (void *) &G_occ_buildname[0], 16);
@@ -260,6 +289,7 @@ ERRL_RC cmdh_poll_v10(cmdh_fsp_rsp_t * o_rsp_ptr)
     // Byte 40:
     l_poll_rsp->sensor_dblock_version = 0x01;  //Currently only 0x01 is supported.
 
+    //l_rsp_index is used as an index into o_rsp_ptr
     uint16_t l_rsp_index = CMDH_POLL_RESP_LEN_V10;
 
     ////////////////////

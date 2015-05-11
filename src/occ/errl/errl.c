@@ -79,6 +79,8 @@ uint8_t getErrSlotNumAndErrId(
     uint8_t     l_rc = ERRL_INVALID_SLOT;
     uint32_t    l_mask = ERRL_SLOT_MASK_DEFAULT;
 
+    //Use severity to determine what slots are available for the given
+    //type of errorlog severity.
     switch ( i_severity )
     {
         case ERRL_SEV_INFORMATIONAL:
@@ -100,16 +102,18 @@ uint8_t getErrSlotNumAndErrId(
     if ( l_mask != ERRL_SLOT_MASK_DEFAULT )
     {
         // 1.  Find an available slot
+        //     l_slotBitWord represents the available slots given the severity type.
         uint8_t             l_slot = ERRL_INVALID_SLOT;
         uint32_t            l_slotBitWord = ~(G_occErrSlotBits | l_mask);
         SsxMachineContext   l_ctx;
 
-        // 2. use assembly cntlzw to get slot & (disable/enable interrupts)
+        // 2. use assembly cntlzw (count leading zeros) to get available slot based on
+        // severity type, and (disable/enable interrupts)
         ssx_critical_section_enter(SSX_NONCRITICAL, &l_ctx);
         __asm__ __volatile__ ( "cntlzw %0, %1;" : "=r" (l_slot) : "r" (l_slotBitWord));
         ssx_critical_section_exit(&l_ctx);
 
-        // slot is valid
+        // A slot is available and valid
         if ( l_slot < ERRL_MAX_SLOTS )
         {
             ssx_critical_section_enter(SSX_NONCRITICAL, &l_ctx);
@@ -118,8 +122,11 @@ uint8_t getErrSlotNumAndErrId(
             *o_timeStamp = ssx_timebase_get();
             // save of counter and then increment it
             // Note: Internal caller so assuming valid pointer
+
+            //Provide next ErrorId; G_occErrIdCounter should never be 0.
             *o_errlId = ((++G_occErrIdCounter) == 0) ? ++G_occErrIdCounter : G_occErrIdCounter;
 
+            //Set slot bit in list of used up slots.
             G_occErrSlotBits |= (ERRL_SLOT_SHIFT >> l_slot);
             ssx_critical_section_exit(&l_ctx);
 
