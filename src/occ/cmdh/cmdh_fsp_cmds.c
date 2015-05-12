@@ -230,10 +230,11 @@ ERRL_RC cmdh_poll_v10(cmdh_fsp_rsp_t * o_rsp_ptr)
 
     // Byte 1
     l_poll_rsp->status.word = SMGR_validate_get_valid_states();
+
     // Byte 2
-    //TODO: What values should we set for memthrotOT and n power?
     l_poll_rsp->ext_status.word = 0;
 
+    //SET DVFS bits
     for ( k = 0; k < MAX_NUM_CORES; k++ )
     {
         uint32_t l_freq_reason = g_amec->proc[0].core[k].f_reason;
@@ -246,6 +247,19 @@ ERRL_RC cmdh_poll_v10(cmdh_fsp_rsp_t * o_rsp_ptr)
         {
             l_poll_rsp->ext_status.dvfs_due_to_pwr = 1;
         }
+    }
+
+    //If memory is being throttled due to OverTemp or due to Failure to read sensors set mthrot_due_to_ot bit.
+    if (((g_amec->mem_throttle_reason == AMEC_MEM_VOTING_REASON_DIMM) ||
+         (g_amec->mem_throttle_reason == AMEC_MEM_VOTING_REASON_CENT)))
+    {
+        l_poll_rsp->ext_status.mthrot_due_to_ot = 1;
+    }
+
+    //If we are in oversubscription, set the N_power bit.
+    if( AMEC_INTF_GET_OVERSUBSCRIPTION() )
+    {
+        l_poll_rsp->ext_status.n_power = 1;
     }
 
     // Byte 3
