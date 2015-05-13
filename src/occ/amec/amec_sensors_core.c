@@ -533,7 +533,7 @@ void amec_calc_freq_and_util_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uin
   // Get Current Idle State of Chiplet
   // The SLEEPCNT and WINKLECNT sensors are updated in amec_slv_state_0() function
   temp16 = CONVERT_UINT64_UINT16_UPPER(i_core_data_ptr->pcb_slave.pm_history.value);
-  g_amec->proc[0].core[i_core].pm_state_hist = temp16>>8; // @cl020 WOF
+  g_amec->proc[0].core[i_core].pm_state_hist = temp16>>8;
   temp16 = temp16 & 0xE000;
   temp16 = temp16 >> 13;
   switch(temp16)

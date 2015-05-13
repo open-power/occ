@@ -40,7 +40,6 @@
 #include <amec_sys.h>
 #include <proc_data.h>
 #include <sensor.h>
-#include <amec_wof.h>
 
 //*************************************************************************
 // Externs

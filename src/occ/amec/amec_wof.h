@@ -22,24 +22,7 @@
 /* permissions and limitations under the License.                         */
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
-/******************************************************************************
-// @file amec_wof.h
-// @brief Slave State Machine header file
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _amec_wof_h amec_wof.h
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   cl020              lefurgy   10/15/2014  New file
- *
- *  @endverbatim
- *
- *///*************************************************************************/
- 
+
 #ifndef _AMEC_WOF_H
 #define _AMEC_WOF_H
 
@@ -130,10 +113,10 @@ extern SsxSemaphore G_amecWOFThreadWakeupSem;
 //*************************************************************************
 // Function Prototypes
 //*************************************************************************
-void amec_wof(void);
-void amec_wof_250us(void);
+void amec_wof_main(void);
+void amec_wof_helper(void);
 void amec_wof_init(void) INIT_SECTION;
-void amec_wof_common();
+void amec_update_wof_sensors(void);
 
 
 #endif

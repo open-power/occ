@@ -22,24 +22,7 @@
 /* permissions and limitations under the License.                         */
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
-/******************************************************************************
-// @file amec_wof.c
-// @brief Workload Optimized Frequency
-*/
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _amec_wof_c amec_wof.c
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *   cl020              lefurgy   10/15/2014  New file
- *
- *  @endverbatim
- *
- *///*************************************************************************/
- 
+
 //
 // Data about tul237 prototype
 //
@@ -109,9 +92,6 @@ Test PCIe Current       8 A
 
 */
 
-
-
-
 //*************************************************************************
 // Includes
 //*************************************************************************
@@ -153,10 +133,10 @@ extern SsxSemaphore G_amec_wof_thread_wakeup_sem; // in amec_wof_thread.c
 #define HAB19
 //#define TUL183
 /* Need to update with CEFF calcs from Tul183 10 core */
-//#define TUL183_5_CORE_PER_CHIP 
+//#define TUL183_5_CORE_PER_CHIP
 //#define TUL237
 
-typedef enum 
+typedef enum
 {
     AMEC_WOF_ERROR_NONE,
     AMEC_WOF_ERROR_SCOM_1,
@@ -167,7 +147,7 @@ typedef enum
     AMEC_WOF_ERROR_UNKNOWN_STATE
 } AMEC_WOF_ERROR_ENUM;
 
-								
+
 //*************************************************************************
 // Structures
 //*************************************************************************
@@ -252,7 +232,7 @@ int16_t amec_wof_uplift_table[][14] = {
     { 85, 4023, 4023, 4023, 4023, 4023, 3885, 3711, 3509, 3314, 3142, 2994, 2858, 2735 },
     { 90, 4023, 4023, 4023, 4023, 4023, 3852, 3665, 3450, 3255, 3083, 2935, 2799, 2674 },
     { 95, 4023, 4023, 4023, 4023, 4005, 3816, 3616, 3391, 3199, 3027, 2879, 2743, 2617 },
-    {100, 4023, 4023, 4023, 4023, 3977, 3783, 3565, 3337, 3142, 2973, 2825, 2689, 2561 },   
+    {100, 4023, 4023, 4023, 4023, 3977, 3783, 3565, 3337, 3142, 2973, 2825, 2689, 2561 },
 
 };
 
@@ -344,15 +324,15 @@ int16_t amec_wof_uplift_table[][14] = {
     // From Victor's e-mail of 12/03/2014
     // Make sure 0 is here, since search algorithm expects input index to be >= first table element.
     //    0     1     2     3     4     5     6     7     8     9     10    11    12
-    {  0, 3699,	3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, },
-    { 75, 3699,	3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, },
-    { 80, 3665,	3665, 3665, 3665, 3665, 3665, 3665, 3665, 3665, 3665, 3665, 3665, 3665, },
-    { 85, 3596,	3596, 3596, 3596, 3596, 3596, 3596, 3596, 3596, 3596, 3596, 3596, 3596, },
-    { 90, 3528,	3528, 3528, 3528, 3528, 3528, 3528, 3528, 3528, 3528, 3528, 3528, 3528, },
-    { 95, 3494,	3494, 3494, 3494, 3494, 3494, 3494, 3494, 3494, 3494, 3494, 3494, 3494, },
-    {100, 3425,	3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, },
-    {110, 3425,	3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, },
-    {120, 3425,	3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, }
+    {  0, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, },
+    { 75, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, },
+    { 80, 3665, 3665, 3665, 3665, 3665, 3665, 3665, 3665, 3665, 3665, 3665, 3665, 3665, },
+    { 85, 3596, 3596, 3596, 3596, 3596, 3596, 3596, 3596, 3596, 3596, 3596, 3596, 3596, },
+    { 90, 3528, 3528, 3528, 3528, 3528, 3528, 3528, 3528, 3528, 3528, 3528, 3528, 3528, },
+    { 95, 3494, 3494, 3494, 3494, 3494, 3494, 3494, 3494, 3494, 3494, 3494, 3494, 3494, },
+    {100, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, },
+    {110, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, },
+    {120, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, }
 
 };
 #define AMEC_WOF_UPLIFT_TABLE_N 8
@@ -395,15 +375,15 @@ int16_t amec_wof_uplift_table[][14] = {
     // For 5 core, just increase frequency by 66.5MHz per core in winkle for testing.
     // Make sure 0 is here, since search algorithm expects input index to be >= first table element.
     //    0     1     2     3     4     5     6     7     8     9     10    11    12
-    {  0, 3699,	3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, },
-    { 75, 3699,	3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, },
-    { 80, 3699,	3699, 3669, 3699, 3699, 3665, 3665, 3665, 3665, 3665, 3665, 3665, 3665, },
-    { 85, 3699,	3699, 3699, 3699, 3665, 3596, 3596, 3596, 3596, 3596, 3596, 3596, 3596, },
-    { 90, 3699,	3699, 3699, 3665, 3596, 3528, 3528, 3528, 3528, 3528, 3528, 3528, 3528, },
-    { 95, 3699,	3699, 3665, 3596, 3528, 3494, 3494, 3494, 3494, 3494, 3494, 3494, 3494, },
-    {100, 3665,	3665, 3596, 3528, 3494, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, },
-    {110, 3665,	3665, 3596, 3528, 3494, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, },
-    {120, 3665,	3665, 3596, 3528, 3494, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, }
+    {  0, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, },
+    { 75, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, },
+    { 80, 3699, 3699, 3669, 3699, 3699, 3665, 3665, 3665, 3665, 3665, 3665, 3665, 3665, },
+    { 85, 3699, 3699, 3699, 3699, 3665, 3596, 3596, 3596, 3596, 3596, 3596, 3596, 3596, },
+    { 90, 3699, 3699, 3699, 3665, 3596, 3528, 3528, 3528, 3528, 3528, 3528, 3528, 3528, },
+    { 95, 3699, 3699, 3665, 3596, 3528, 3494, 3494, 3494, 3494, 3494, 3494, 3494, 3494, },
+    {100, 3665, 3665, 3596, 3528, 3494, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, },
+    {110, 3665, 3665, 3596, 3528, 3494, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, },
+    {120, 3665, 3665, 3596, 3528, 3494, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, }
 };
 #define AMEC_WOF_UPLIFT_TABLE_N 8
 
@@ -424,8 +404,8 @@ int16_t amec_wof_uplift_table[][14] = {
 // C_EFF_TDP for tul237p0: I=7200 (in 0.01 A), V=10000 (=1V in 100 microV), F=3425 (MHz). V^1.3=158489
 //     C_EFF_TDP = I * 10,000 / V^1.3 * 10,000 / F) = 1289.
 // Error in above (didn't subtract out leakage current and then apply victors math to adjust the RDP AC to TDP AC)
-//  
-#define AMEC_WOF_C_EFF_TDP 1289    
+//
+#define AMEC_WOF_C_EFF_TDP 1289
 
 
 //Based on DMIW data for tul237P0 ID=B1935398. I extrapolate beyond 1.0V
@@ -455,8 +435,6 @@ int16_t amec_wof_uplift_table[][2] = {
     {100, 3425},
     {110, 3425},
     {120, 3425}
-    
-
 };
 #define AMEC_WOF_UPLIFT_TABLE_N 6
 
@@ -467,27 +445,27 @@ int16_t amec_wof_uplift_table[][2] = {
    Efficiency is in units of 1/100 of 1%.  (Divide by 10000 to get percent)
 */
 uint32_t amec_wof_vdd_eff[][2] = {
-    {124 ,	8018}, //0  (12.397 W, 80.18% efficiency)
-    {318 ,	8804}, //1
-    {417 ,	8889}, //2
-    {515 ,	8937}, //3
-    {608 ,	9031}, //4
-    {702 ,	9065}, //5
-    {789 ,	9155}, //6
-    {895 ,	9021}, //7
-    {989 ,	9022}, //8
-    {1075,	9066}, //9
-    {1182,	8940}, //10
-    {1271,	8937}, //11
-    {1369,	8875}, //12
-    {1457,	8883}, //13
-    {1549,	8851}, //14
-    {1640,	8820}, //15
-    {1734,	8773}, //16
-    {1837,	8677}, //17
-    {1914,	8705}, //18
-    {2015,	8620}, //19
-    {2093,	8640}, //20
+    {124 ,  8018}, //0  (12.397 W, 80.18% efficiency)
+    {318 ,  8804}, //1
+    {417 ,  8889}, //2
+    {515 ,  8937}, //3
+    {608 ,  9031}, //4
+    {702 ,  9065}, //5
+    {789 ,  9155}, //6
+    {895 ,  9021}, //7
+    {989 ,  9022}, //8
+    {1075,  9066}, //9
+    {1182,  8940}, //10
+    {1271,  8937}, //11
+    {1369,  8875}, //12
+    {1457,  8883}, //13
+    {1549,  8851}, //14
+    {1640,  8820}, //15
+    {1734,  8773}, //16
+    {1837,  8677}, //17
+    {1914,  8705}, //18
+    {2015,  8620}, //19
+    {2093,  8640}, //20
 };
 #define AMEC_WOF_VDD_EFF_N 21   /*Number of amec_wof_add_eff entried*/
 
@@ -537,7 +515,7 @@ uint16_t g_amec_wof_vote_vchip;
 uint8_t g_amec_wof_error = AMEC_WOF_ERROR_NONE; // non-zero is a WOF error flag
 // User changes the WOF algorithm (and enable/disable) by setting
 // g_amec_wof_enable_parm from the Amester parameter interface.
-// OCC will check this against the current setting (g_amec_wof_enable) and 
+// OCC will check this against the current setting (g_amec_wof_enable) and
 // within 250us, do initialization for the next setting and start the new WOF algorithm.
 uint8_t g_amec_wof_enable_parm = 0; // parameter-set next state: 1=WOF runs. 0=WOF selects highest frequency.
 uint8_t g_amec_wof_enable = 0xff; // Current state: 1=WOF runs. 0=WOF selects highest frequency. 0xff=invalid...will cause init of enable_parm setting.
@@ -573,12 +551,12 @@ uint8_t g_amec_wof_pstate_table_ready = 0;
 // Functions
 //*************************************************************************
 
-/* 
+/*
 
         //Do across each operating point:
-	//Calculate max load-line current to set voltage
-	g_amec_wof_current_reduction = g_amec_wof_rdp_idd_nom[G_pob_id.module_id] 
-	    * g_amec_wof_pstatetable_cores_next / WOF_MAX_CORES_PER_CHIP;
+    //Calculate max load-line current to set voltage
+    g_amec_wof_current_reduction = g_amec_wof_rdp_idd_nom[G_pob_id.module_id]
+        * g_amec_wof_pstatetable_cores_next / WOF_MAX_CORES_PER_CHIP;
 
 
 //
@@ -589,7 +567,7 @@ uint8_t g_amec_wof_pstate_table_ready = 0;
 ///
 /// VPD operating points are stored without load-line correction.  Frequencies
 /// are in MHz, voltages are specified in units of 5mV, and characterization
-/// currents are specified in units of 500mA. 
+/// currents are specified in units of 500mA.
 ///
 /// \bug The assumption is that the 'maxreg' points for the iVRM will also be
 /// supplied in the VPD in units of 5mv.  If they are supplied in some other
@@ -694,7 +672,7 @@ typedef struct {
 /// \bug Confirm if the 1.6125V offset is still valid for PgP
 
 // Recall that VRM11 is inverted; rounding a VID code up rounds down the
-// voltage. 
+// voltage.
 
 int
 vuv2vrm11(uint32_t v_uv, int round, uint8_t *vrm11_vid)
@@ -766,15 +744,15 @@ gpst_entry_create(gpst_entry_t *entry, OperatingPoint *op)
     if (rc) break;                                  \
     gpe.fields.gpe_field = vid;
 
-        __SET(vrm11, ROUND_VOLTAGE_UP, evid_vdd, vdd_corrected_uv); 
-        __SET(vrm11, ROUND_VOLTAGE_UP, evid_vcs, vcs_corrected_uv); 
-        __SET(ivid, ROUND_VOLTAGE_DOWN, evid_vdd_eff, vdd_ivrm_effective_uv); 
-        __SET(ivid, ROUND_VOLTAGE_DOWN, evid_vcs_eff, vcs_ivrm_effective_uv); 
-        __SET(ivid, ROUND_VOLTAGE_DOWN, maxreg_vdd, vdd_maxreg_uv);  
-        __SET(ivid, ROUND_VOLTAGE_DOWN, maxreg_vcs, vcs_maxreg_uv); 
+        __SET(vrm11, ROUND_VOLTAGE_UP, evid_vdd, vdd_corrected_uv);
+        __SET(vrm11, ROUND_VOLTAGE_UP, evid_vcs, vcs_corrected_uv);
+        __SET(ivid, ROUND_VOLTAGE_DOWN, evid_vdd_eff, vdd_ivrm_effective_uv);
+        __SET(ivid, ROUND_VOLTAGE_DOWN, evid_vcs_eff, vcs_ivrm_effective_uv);
+        __SET(ivid, ROUND_VOLTAGE_DOWN, maxreg_vdd, vdd_maxreg_uv);
+        __SET(ivid, ROUND_VOLTAGE_DOWN, maxreg_vcs, vcs_maxreg_uv);
 
-       ;  
-        
+       ;
+
         // Add the check byte
 
         uint8_t gpstCheckByte(uint64_t gpstEntry);
@@ -885,7 +863,7 @@ gpst_create(GlobalPstateTable *gpst,
         // Check the ordering constraints
 
        for (i = 1; i < points; i++) {
-       
+
             if ((ops[i].pstate < ops[i - 1].pstate)  ||
                 (ops[i].vdd_uv < ops[i - 1].vdd_uv) ||    // jwy allow them to be equal
                 (ops[i].vcs_uv < ops[i - 1].vcs_uv)) {    // jwy allow them to be equal
@@ -899,11 +877,11 @@ gpst_create(GlobalPstateTable *gpst,
         // pstate0_frequency_code (fNom) to the 'nominal' code and set the
         // DPLL bias to 0.
 
-        gpst->pstate0_frequency_khz = 
+        gpst->pstate0_frequency_khz =
             revle32(characterization->parameters->pstate0_frequency_khz);
-        gpst->frequency_step_khz = 
+        gpst->frequency_step_khz =
             revle32(characterization->parameters->frequency_step_khz);
-      
+
         // Now we can interpolate the operating points to build the
         // table. Interpolation is done by creating (or using) an
         // OperatingPoint for each intermediate (or characterized) Pstate.
@@ -913,7 +891,7 @@ gpst_create(GlobalPstateTable *gpst,
 
         gpst->pmin    = pmin;
         gpst->entries = pmax - pmin + 1;
- 
+
         // Set the Pmin Pstate
         entry = 0;
         if (gpst_entry_create(&(gpst->pstate[entry]), &(ops[0]))) {
@@ -974,7 +952,7 @@ gpst_create(GlobalPstateTable *gpst,
             gpst->pstate0_frequency_code[i] = revle16(fNom);
             gpst->dpll_fmax_bias[i] = 0;
         }
-        
+
         // Hardcode the vrm delay settings for GA1
         // This should be set by gpst_stepping_setup() in the future.
         gpst->pstate_stepsize = pstate_stepsize;
@@ -992,8 +970,8 @@ void amec_wof_init(void)
 {
     // Initialize DCOM Thread Sem
     ssx_semaphore_create( &G_amecWOFThreadWakeupSem, // Semaphore
-                          1,                      // Initial Count
-                          0);                     // No Max Count     @th035
+                          1,                         // Initial Count
+                          0);                        // No Max Count
 
     // Avoid recomputing total
     g_amec_wof_loadline = AMEC_WOF_LOADLINE_ACTIVE + AMEC_WOF_LOADLINE_PASSIVE;
@@ -1020,20 +998,20 @@ uint8_t amec_wof_set_algorithm(uint8_t algorithm)
     //Start WOF in safe state.
     if (! (G_data_cnfg->data_mask | DATA_MASK_FREQ_PRESENT))
     {
-	// Frequency table is not loaded, don't know safe turbo for WOF.
-	return 1; //Initialization not yet possible. Try again later.
+    // Frequency table is not loaded, don't know safe turbo for WOF.
+    return 1; //Initialization not yet possible. Try again later.
     }
-    
+
     g_amec_wof_f_vote = G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL]; //fix: TURBO
 
     //Make sure the vote is enforced before continuing.
     //If vote is not enforced, then exit and return again in next 250us interval.
-    if (g_amec->proc[0].core_max_freq > g_amec_wof_f_vote) 
+    if (g_amec->proc[0].core_max_freq > g_amec_wof_f_vote)
     {
-	g_amec_wof_enable = 0xff; //invalid algorithm
-	return 1; //Initialization not finished. Try again later.
+    g_amec_wof_enable = 0xff; //invalid algorithm
+    return 1; //Initialization not finished. Try again later.
     }
-    
+
     // At this point, all cores are at Turbo or lower.
     // We may turn off the inhibit-wake signal.
 
@@ -1043,10 +1021,10 @@ uint8_t amec_wof_set_algorithm(uint8_t algorithm)
     switch(algorithm)
     {
     case 3:
-	// Copy pstate-table to WOF
-	// Move these to where G_global_pstate_table is initialized, so it is not in real-time loop
-	memcpy(&g_amec_wof_pstate_table_0, &G_global_pstate_table, sizeof(GlobalPstateTable));
-	memcpy(&g_amec_wof_pstate_table_1, &G_global_pstate_table, sizeof(GlobalPstateTable));
+    // Copy pstate-table to WOF
+    // Move these to where G_global_pstate_table is initialized, so it is not in real-time loop
+    memcpy(&g_amec_wof_pstate_table_0, &G_global_pstate_table, sizeof(GlobalPstateTable));
+    memcpy(&g_amec_wof_pstate_table_1, &G_global_pstate_table, sizeof(GlobalPstateTable));
 
         ppr1.value = in32(PMC_PARAMETER_REG1);
         ppr1.fields.ba_sram_pstate_table =
@@ -1054,28 +1032,28 @@ uint8_t amec_wof_set_algorithm(uint8_t algorithm)
         ppr1.fields.pvsafe = g_amec_wof_pstate_table_0.pvsafe;
         out32(PMC_PARAMETER_REG1, ppr1.value);
 
-	// FALL-THROUGH
+    // FALL-THROUGH
 
     case 2: // WOF algorithm 2
-	
-	g_amec_wof_state = 0; // WOF state
-	// Set pstate table to MAX_NUM_CORES;
-	// Conservatively assume all cores are on for next interval
-	g_amec_wof_pstatetable_cores_current = MAX_NUM_CORES;
-	g_amec_wof_pstatetable_cores_next = MAX_NUM_CORES;
 
-	/* Fall through */
+    g_amec_wof_state = 0; // WOF state
+    // Set pstate table to MAX_NUM_CORES;
+    // Conservatively assume all cores are on for next interval
+    g_amec_wof_pstatetable_cores_current = MAX_NUM_CORES;
+    g_amec_wof_pstatetable_cores_next = MAX_NUM_CORES;
+
+    /* Fall through */
 
     case 0: // No WOF
     case 1: // WOF algorithm 1
-	
-	// Do not inhibit core wakeup (in case of transition out of alg. 2)
-	l_data64 = 0xffff000000000000ull;
-	l_rc = _putscom(PDEMR, l_data64, SCOM_TIMEOUT);
-	if (l_rc != 0) {
-	    g_amec_wof_error = AMEC_WOF_ERROR_SCOM_4;
-	}
-	break;
+
+    // Do not inhibit core wakeup (in case of transition out of alg. 2)
+    l_data64 = 0xffff000000000000ull;
+    l_rc = _putscom(PDEMR, l_data64, SCOM_TIMEOUT);
+    if (l_rc != 0) {
+        g_amec_wof_error = AMEC_WOF_ERROR_SCOM_4;
+    }
+    break;
     }
 
     // Success, set the new algorithm
@@ -1087,23 +1065,16 @@ uint8_t amec_wof_set_algorithm(uint8_t algorithm)
 
 // Function Specification
 //
-// Name: amec_wof_common
+// Name: amec_update_wof_sensors
 //
 // Description: Common for WOF/non-WOF.
 //   Compute CUR250USVDD0 (current out of Vdd regulator)
 //   Compute voltage at chip input
-//              
-//
-// Flow: 
 //
 // Thread: RealTime Loop
 //
-// Changedby: 
-//
-// Task Flags: 
-//
 // End Function Specification
-void amec_wof_common(void) 
+void amec_update_wof_sensors(void)
 {
     uint8_t i;
     uint32_t result32; //temporary result
@@ -1124,23 +1095,33 @@ void amec_wof_common(void)
     /* Determine regulator efficiency */
 
     //Search table and point i to the lower entry the target value falls between.
-    if (l_pow_reg_input_dW < amec_wof_vdd_eff[0][0]) i = 0; // value is before table starts. Use first two entries.
-    else {
-	for (i=0; i<AMEC_WOF_VDD_EFF_N-1; i++)
-	{
-	    if (amec_wof_vdd_eff[i][0] <= l_pow_reg_input_dW && amec_wof_vdd_eff[i+1][0] >= l_pow_reg_input_dW) break;
-	}
+    if (l_pow_reg_input_dW < amec_wof_vdd_eff[0][0])
+    {
+        i = 0; // value is before table starts. Use first two entries.
     }
-    if (i >= AMEC_WOF_VDD_EFF_N - 1) 
-	i = AMEC_WOF_VDD_EFF_N - 2;
+    else
+    {
+        for (i=0; i<AMEC_WOF_VDD_EFF_N-1; i++)
+        {
+            if (amec_wof_vdd_eff[i][0] <= l_pow_reg_input_dW &&
+                amec_wof_vdd_eff[i+1][0] >= l_pow_reg_input_dW)
+            {
+                break;
+            }
+        }
+    }
+    if (i >= AMEC_WOF_VDD_EFF_N - 1)
+    {
+        i = AMEC_WOF_VDD_EFF_N - 2;
+    }
 
     //Linear interpolate using the neighboring entries.  y = m(x-x1)+y1   m=(y2-y1)/(x2-x1)
     //FIXME: add rounding step after multiplication
     //FIXME: pre-compute m, since table is static
-    result32 = ((int32_t)l_pow_reg_input_dW - (int32_t)amec_wof_vdd_eff[i][0]) 
-	* ((int32_t)amec_wof_vdd_eff[i+1][1] - (int32_t)amec_wof_vdd_eff[i][1])
-	/ ((int32_t)amec_wof_vdd_eff[i+1][0] - (int32_t)amec_wof_vdd_eff[i][0])
-	+ (int32_t)amec_wof_vdd_eff[i][1];
+    result32 = ((int32_t)l_pow_reg_input_dW - (int32_t)amec_wof_vdd_eff[i][0])
+    * ((int32_t)amec_wof_vdd_eff[i+1][1] - (int32_t)amec_wof_vdd_eff[i][1])
+    / ((int32_t)amec_wof_vdd_eff[i+1][0] - (int32_t)amec_wof_vdd_eff[i][0])
+    + (int32_t)amec_wof_vdd_eff[i][1];
 
     // For Frank, just use 95% efficiency all the time
     result32 = 9500;
@@ -1163,7 +1144,6 @@ void amec_wof_common(void)
     // VOLT250USP0V0 in units of 0.0001 V = 0.1 mV. (multiply by 0.1 to get mV)
     l_curr_output = l_pow_reg_output_mW / l_vdd_reg;
     sensor_update(AMECSENSOR_PTR(CUR250USVDD0), l_curr_output);
-    
 
     //1c. Compute Vdd load at chip
     //    V_reg = V_chip + I_chip * (R_loadline)
@@ -1186,18 +1166,11 @@ void amec_wof_common(void)
 // Name: amec_wof_v1
 //
 // Description: Run WOF version 1
-//              
-//
-// Flow: 
 //
 // Thread: RealTime Loop
 //
-// Changedby: 
-//
-// Task Flags: 
-//
 // End Function Specification
-void amec_wof_v1(void) 
+void amec_wof_v1(void)
 {
     uint8_t i;
     uint32_t result32; //temporary result
@@ -1217,42 +1190,42 @@ void amec_wof_v1(void)
     //Search table and point i to the lower entry the target value falls between.
     if (l_v_chip < amec_wof_iddq_table[0][0]) i=0; // voltage is lower than table, so use first two entries.
     else {
-	for (i=0; i<AMEC_WOF_IDDQ_TABLE_N-1; i++)
-	{
-	    if (amec_wof_iddq_table[i][0] <= l_v_chip && amec_wof_iddq_table[i+1][0] >= l_v_chip) break;
-	}
+    for (i=0; i<AMEC_WOF_IDDQ_TABLE_N-1; i++)
+    {
+        if (amec_wof_iddq_table[i][0] <= l_v_chip && amec_wof_iddq_table[i+1][0] >= l_v_chip) break;
+    }
     }
     if (i >= AMEC_WOF_IDDQ_TABLE_N - 1) // voltage is higher than table, so use last two entries.
-	i = AMEC_WOF_IDDQ_TABLE_N - 2;
+    i = AMEC_WOF_IDDQ_TABLE_N - 2;
 
     g_amec_wof_iddq_i = i;
 
     //Linear interpolate using the neighboring entries.  y = m(x-x1)+y1   m=(y2-y1)/(x2-x1)
     //FIXME: add rounding step after multiplication
     //FIXME: pre-compute m, since table is static
-    result32 = ((int32_t)l_v_chip - (int32_t)amec_wof_iddq_table[i][0]) 
-	* ((int32_t)amec_wof_iddq_table[i+1][G_pob_id.module_id+1] - (int32_t)amec_wof_iddq_table[i][G_pob_id.module_id+1])
-	/ ((int32_t)amec_wof_iddq_table[i+1][0] - (int32_t)amec_wof_iddq_table[i][0])
-	+ (int32_t)amec_wof_iddq_table[i][G_pob_id.module_id+1];
+    result32 = ((int32_t)l_v_chip - (int32_t)amec_wof_iddq_table[i][0])
+    * ((int32_t)amec_wof_iddq_table[i+1][G_pob_id.module_id+1] - (int32_t)amec_wof_iddq_table[i][G_pob_id.module_id+1])
+    / ((int32_t)amec_wof_iddq_table[i+1][0] - (int32_t)amec_wof_iddq_table[i][0])
+    + (int32_t)amec_wof_iddq_table[i][G_pob_id.module_id+1];
 
     g_amec_wof_iddq85c = (uint16_t)result32;  // expose to parameter
 
     //Temperature correction
     if (l_temp < amec_wof_iddq_mult_table[0][0]) i=0; // index is lower than table, so use first two entries.
     else {
-	for (i=0; i<AMEC_WOF_IDDQ_MULT_TABLE_N-1; i++)
-	{
-	    if (amec_wof_iddq_mult_table[i][0] <= l_temp && amec_wof_iddq_mult_table[i+1][0] >= l_temp) break;
-	}
+    for (i=0; i<AMEC_WOF_IDDQ_MULT_TABLE_N-1; i++)
+    {
+        if (amec_wof_iddq_mult_table[i][0] <= l_temp && amec_wof_iddq_mult_table[i+1][0] >= l_temp) break;
     }
-    if (i >= AMEC_WOF_IDDQ_MULT_TABLE_N - 1) 
-	i = AMEC_WOF_IDDQ_MULT_TABLE_N - 2;
-    
-    uint32_t l_mult = ((int32_t)l_temp - (int32_t)amec_wof_iddq_mult_table[i][0]) 
-	* ((int32_t)amec_wof_iddq_mult_table[i+1][1] - (int32_t)amec_wof_iddq_mult_table[i][1])
-	/ ((int32_t)amec_wof_iddq_mult_table[i+1][0] - (int32_t)amec_wof_iddq_mult_table[i][0])
-	+ (int32_t)amec_wof_iddq_mult_table[i][1];
-    
+    }
+    if (i >= AMEC_WOF_IDDQ_MULT_TABLE_N - 1)
+    i = AMEC_WOF_IDDQ_MULT_TABLE_N - 2;
+
+    uint32_t l_mult = ((int32_t)l_temp - (int32_t)amec_wof_iddq_mult_table[i][0])
+    * ((int32_t)amec_wof_iddq_mult_table[i+1][1] - (int32_t)amec_wof_iddq_mult_table[i][1])
+    / ((int32_t)amec_wof_iddq_mult_table[i+1][0] - (int32_t)amec_wof_iddq_mult_table[i][0])
+    + (int32_t)amec_wof_iddq_mult_table[i][1];
+
     result32 = (result32*l_mult) >> 10;
     g_amec_wof_iddq = result32;
 
@@ -1268,7 +1241,7 @@ void amec_wof_v1(void)
     result32 = result32 / result32v;
     result32 = result32 << 14; // * 16384
     if (l_freq != 0) { // avoid divide by 0
-	result32 = result32 / (uint32_t) l_freq;
+    result32 = result32 / (uint32_t) l_freq;
     }
     g_amec_wof_ceff = result32;
 
@@ -1280,23 +1253,21 @@ void amec_wof_v1(void)
     //Search table and point i to the lower entry the target value falls between.
     for (i=0; i<AMEC_WOF_UPLIFT_TABLE_N-1; i++)
     {
-	if (amec_wof_uplift_table[i][0] <= (int16_t) g_amec_wof_ceff_ratio && amec_wof_uplift_table[i+1][0] >= (int16_t)g_amec_wof_ceff_ratio) break;
+    if (amec_wof_uplift_table[i][0] <= (int16_t) g_amec_wof_ceff_ratio && amec_wof_uplift_table[i+1][0] >= (int16_t)g_amec_wof_ceff_ratio) break;
     }
-    if (i >= AMEC_WOF_UPLIFT_TABLE_N - 1) 
-	i = AMEC_WOF_UPLIFT_TABLE_N - 2;
+    if (i >= AMEC_WOF_UPLIFT_TABLE_N - 1)
+    i = AMEC_WOF_UPLIFT_TABLE_N - 2;
 
     //Linear interpolate using the neighboring entries.  y = m(x-x1)+y1   m=(y2-y1)/(x2-x1)
     //FIXME: add rounding step after multiplication
     //FIXME: pre-compute m, since table is static
-    result32 = ((int32_t)g_amec_wof_ceff_ratio - (int32_t)amec_wof_uplift_table[i][0]) 
-	* ((int32_t)amec_wof_uplift_table[i+1][1] - (int32_t)amec_wof_uplift_table[i][1])
-	/ ((int32_t)amec_wof_uplift_table[i+1][0] - (int32_t)amec_wof_uplift_table[i][0])
-	+ (int32_t)amec_wof_uplift_table[i][1];
+    result32 = ((int32_t)g_amec_wof_ceff_ratio - (int32_t)amec_wof_uplift_table[i][0])
+    * ((int32_t)amec_wof_uplift_table[i+1][1] - (int32_t)amec_wof_uplift_table[i][1])
+    / ((int32_t)amec_wof_uplift_table[i+1][0] - (int32_t)amec_wof_uplift_table[i][0])
+    + (int32_t)amec_wof_uplift_table[i][1];
 
     g_amec_wof_f_uplift = result32;
     g_amec_wof_f_vote = g_amec_wof_f_uplift; // + l_freq;
-
-    
 }
 
 void amec_wof_common_alg2(void)
@@ -1332,12 +1303,12 @@ void amec_wof_common_alg2(void)
     if (g_amec_wof_state != 0) return;
     if (g_amec_wof_pstatetable_cores_next != g_amec_wof_pstatetable_cores_current)
     {
-	g_amec_wof_error = AMEC_WOF_ERROR_CORE_COUNT;
-	return;
+    g_amec_wof_error = AMEC_WOF_ERROR_CORE_COUNT;
+    return;
     }
 
     if (g_amec_wof_make_check) {
-	g_amec_wof_check = gpstCheckByte(g_amec_wof_pstate_table_0.pstate[50].value);
+    g_amec_wof_check = gpstCheckByte(g_amec_wof_pstate_table_0.pstate[50].value);
     }
 
     //Count number of cores that are turned on.
@@ -1346,34 +1317,34 @@ void amec_wof_common_alg2(void)
 
     for (i=0; i<MAX_NUM_CORES; i++)
     {
-	g_amec_wof_pm_state[i] = g_amec_sys.proc[0].core[i].pm_state_hist;
-	if (!CORE_PRESENT(i)) continue;
-	// A core is "on" if it is not in deep sleep or deep winkle
-	switch(g_amec_sys.proc[0].core[i].pm_state_hist >> 5)
-	{
-	case 5: //deep sleep
-	    //FIXME: Prototype only uses deep winkle. Add deep sleep when we can inhibit it.
-	    //l_cores_on++;
-	    break;
-	case 7: //deep winkle
-	    break;
-	default: 
-	    l_cores_on++;
-	    break;
-	}
+    g_amec_wof_pm_state[i] = g_amec_sys.proc[0].core[i].pm_state_hist;
+    if (!CORE_PRESENT(i)) continue;
+    // A core is "on" if it is not in deep sleep or deep winkle
+    switch(g_amec_sys.proc[0].core[i].pm_state_hist >> 5)
+    {
+    case 5: //deep sleep
+        //FIXME: Prototype only uses deep winkle. Add deep sleep when we can inhibit it.
+        //l_cores_on++;
+        break;
+    case 7: //deep winkle
+        break;
+    default:
+        l_cores_on++;
+        break;
+    }
     }
     g_amec_wof_cores_on = l_cores_on;
     l_rc = _getscom(PMCWIRVR3, &g_amec_wof_wake_mask, SCOM_TIMEOUT);
     if (l_rc != 0) {
-	g_amec_wof_error = AMEC_WOF_ERROR_SCOM_1;
-	return;
+    g_amec_wof_error = AMEC_WOF_ERROR_SCOM_1;
+    return;
     }
     // Save non-zero wake mask for debugging
     if (g_amec_wof_wake_mask != 0) g_amec_wof_wake_mask_save = g_amec_wof_wake_mask;
     l_data64 = g_amec_wof_wake_mask >> 48;
     for(i=0; i<MAX_NUM_CORES; i++) {
-	if (l_data64 & 0x1) l_cores_waking++;
-	l_data64 >>= 1; // shift right
+    if (l_data64 & 0x1) l_cores_waking++;
+    l_data64 >>= 1; // shift right
     }
     sensor_update(AMECSENSOR_PTR(WOFCOREWAKE), l_cores_waking);
 
@@ -1387,23 +1358,23 @@ void amec_wof_common_alg2(void)
     //Search table and point i to the lower entry the target value falls between.
     if (l_v_chip < amec_wof_iddq_table[0][0]) i=0; // voltage is lower than table, so use first two entries.
     else {
-	for (i=0; i<AMEC_WOF_IDDQ_TABLE_N-1; i++)
-	{
-	    if (amec_wof_iddq_table[i][0] <= l_v_chip && amec_wof_iddq_table[i+1][0] >= l_v_chip) break;
-	}
+    for (i=0; i<AMEC_WOF_IDDQ_TABLE_N-1; i++)
+    {
+        if (amec_wof_iddq_table[i][0] <= l_v_chip && amec_wof_iddq_table[i+1][0] >= l_v_chip) break;
+    }
     }
     if (i >= AMEC_WOF_IDDQ_TABLE_N - 1) // voltage is higher than table, so use last two entries.
-	i = AMEC_WOF_IDDQ_TABLE_N - 2;
+    i = AMEC_WOF_IDDQ_TABLE_N - 2;
 
     g_amec_wof_iddq_i = i;
 
     //Linear interpolate using the neighboring entries.  y = m(x-x1)+y1   m=(y2-y1)/(x2-x1)
     //FIXME: add rounding step after multiplication
     //FIXME: pre-compute m, since table is static
-    result32 = ((int32_t)l_v_chip - (int32_t)amec_wof_iddq_table[i][0]) 
-	* ((int32_t)amec_wof_iddq_table[i+1][G_pob_id.module_id+1] - (int32_t)amec_wof_iddq_table[i][G_pob_id.module_id+1])
-	/ ((int32_t)amec_wof_iddq_table[i+1][0] - (int32_t)amec_wof_iddq_table[i][0])
-	+ (int32_t)amec_wof_iddq_table[i][G_pob_id.module_id+1];
+    result32 = ((int32_t)l_v_chip - (int32_t)amec_wof_iddq_table[i][0])
+    * ((int32_t)amec_wof_iddq_table[i+1][G_pob_id.module_id+1] - (int32_t)amec_wof_iddq_table[i][G_pob_id.module_id+1])
+    / ((int32_t)amec_wof_iddq_table[i+1][0] - (int32_t)amec_wof_iddq_table[i][0])
+    + (int32_t)amec_wof_iddq_table[i][G_pob_id.module_id+1];
 
 
     result32 = result32 * l_cores_on / WOF_MAX_CORES_PER_CHIP;
@@ -1413,19 +1384,19 @@ void amec_wof_common_alg2(void)
     //Temperature correction
     if (l_temp < amec_wof_iddq_mult_table[0][0]) i=0; // index is lower than table, so use first two entries.
     else {
-	for (i=0; i<AMEC_WOF_IDDQ_MULT_TABLE_N-1; i++)
-	{
-	    if (amec_wof_iddq_mult_table[i][0] <= l_temp && amec_wof_iddq_mult_table[i+1][0] >= l_temp) break;
-	}
+    for (i=0; i<AMEC_WOF_IDDQ_MULT_TABLE_N-1; i++)
+    {
+        if (amec_wof_iddq_mult_table[i][0] <= l_temp && amec_wof_iddq_mult_table[i+1][0] >= l_temp) break;
     }
-    if (i >= AMEC_WOF_IDDQ_MULT_TABLE_N - 1) 
-	i = AMEC_WOF_IDDQ_MULT_TABLE_N - 2;
-    
-    uint32_t l_mult = ((int32_t)l_temp - (int32_t)amec_wof_iddq_mult_table[i][0]) 
-	* ((int32_t)amec_wof_iddq_mult_table[i+1][1] - (int32_t)amec_wof_iddq_mult_table[i][1])
-	/ ((int32_t)amec_wof_iddq_mult_table[i+1][0] - (int32_t)amec_wof_iddq_mult_table[i][0])
-	+ (int32_t)amec_wof_iddq_mult_table[i][1];
-    
+    }
+    if (i >= AMEC_WOF_IDDQ_MULT_TABLE_N - 1)
+    i = AMEC_WOF_IDDQ_MULT_TABLE_N - 2;
+
+    uint32_t l_mult = ((int32_t)l_temp - (int32_t)amec_wof_iddq_mult_table[i][0])
+    * ((int32_t)amec_wof_iddq_mult_table[i+1][1] - (int32_t)amec_wof_iddq_mult_table[i][1])
+    / ((int32_t)amec_wof_iddq_mult_table[i+1][0] - (int32_t)amec_wof_iddq_mult_table[i][0])
+    + (int32_t)amec_wof_iddq_mult_table[i][1];
+
     result32 = (result32*l_mult) >> 10;
     g_amec_wof_iddq = result32;
 
@@ -1484,25 +1455,25 @@ void amec_wof_common_alg2(void)
     //Search table and point i to the lower entry the target value falls between.
     for (i=0; i<AMEC_WOF_UPLIFT_TABLE_N-1; i++)
     {
-	if (amec_wof_uplift_table[i][0] <= (int16_t) g_amec_wof_ceff_ratio && amec_wof_uplift_table[i+1][0] >= (int16_t)g_amec_wof_ceff_ratio) break;
+    if (amec_wof_uplift_table[i][0] <= (int16_t) g_amec_wof_ceff_ratio && amec_wof_uplift_table[i+1][0] >= (int16_t)g_amec_wof_ceff_ratio) break;
     }
 
-    if (i >= AMEC_WOF_UPLIFT_TABLE_N - 1) 
+    if (i >= AMEC_WOF_UPLIFT_TABLE_N - 1)
     {
-	// Out of table, so clip to 100%
-	result32 = amec_wof_uplift_table[AMEC_WOF_UPLIFT_TABLE_N - 1][l_pstatetable_cores_next+1];
+    // Out of table, so clip to 100%
+    result32 = amec_wof_uplift_table[AMEC_WOF_UPLIFT_TABLE_N - 1][l_pstatetable_cores_next+1];
     }
     else
     {
-	// Ratio is within uplift table
+    // Ratio is within uplift table
 
-	//Linear interpolate using the neighboring entries.  y = m(x-x1)+y1   m=(y2-y1)/(x2-x1)
-	//FIXME: add rounding step after multiplication
-	//FIXME: pre-compute m, since table is static
-	result32 = ((int32_t)g_amec_wof_ceff_ratio - (int32_t)amec_wof_uplift_table[i][0]) 
-	    * ((int32_t)amec_wof_uplift_table[i+1][l_pstatetable_cores_next+1] - (int32_t)amec_wof_uplift_table[i][l_pstatetable_cores_next+1])
-	    / ((int32_t)amec_wof_uplift_table[i+1][0] - (int32_t)amec_wof_uplift_table[i][0])
-	    + (int32_t)amec_wof_uplift_table[i][l_pstatetable_cores_next+1];
+    //Linear interpolate using the neighboring entries.  y = m(x-x1)+y1   m=(y2-y1)/(x2-x1)
+    //FIXME: add rounding step after multiplication
+    //FIXME: pre-compute m, since table is static
+    result32 = ((int32_t)g_amec_wof_ceff_ratio - (int32_t)amec_wof_uplift_table[i][0])
+        * ((int32_t)amec_wof_uplift_table[i+1][l_pstatetable_cores_next+1] - (int32_t)amec_wof_uplift_table[i][l_pstatetable_cores_next+1])
+        / ((int32_t)amec_wof_uplift_table[i+1][0] - (int32_t)amec_wof_uplift_table[i][0])
+        + (int32_t)amec_wof_uplift_table[i][l_pstatetable_cores_next+1];
     }
 
     g_amec_wof_f_uplift = result32;
@@ -1513,32 +1484,25 @@ void amec_wof_common_alg2(void)
 // Name: amec_wof_v2
 //
 // Description: Run WOF version 2. Core-count aware.
-//              
-//
-// Flow: 
 //
 // Thread: RealTime Loop
 //
-// Changedby: 
-//
-// Task Flags: 
-//
 // End Function Specification
-void amec_wof_v2(void) 
+void amec_wof_v2(void)
 {
     amec_wof_common_alg2();
 
     g_amec_wof_f_vote = g_amec_wof_f_uplift;
 
-    if (g_amec_wof_pstatetable_cores_next > g_amec_wof_pstatetable_cores_current) 
+    if (g_amec_wof_pstatetable_cores_next > g_amec_wof_pstatetable_cores_current)
     {
-	// Cores turning on.
-	g_amec_wof_state = 1;
+        // Cores turning on.
+        g_amec_wof_state = 1;
     }
     else if (g_amec_wof_pstatetable_cores_next < g_amec_wof_pstatetable_cores_current)
     {
-	// Cores turning off.
-	g_amec_wof_state = 3;
+        // Cores turning off.
+        g_amec_wof_state = 3;
     }
 }
 
@@ -1548,50 +1512,44 @@ void amec_wof_v2(void)
 // Name: amec_wof_v3
 //
 // Description: Run WOF version 2. Core-count aware. Re-calculate load-line.
-//              
-//
-// Flow: 
 //
 // Thread: RealTime Loop
 //
-// Changedby: 
-//
-// Task Flags: 
-//
 // End Function Specification
-void amec_wof_v3(void) 
+void amec_wof_v3(void)
 {
     amec_wof_common_alg2();
 
     // calculate current reduction from all cores on
-    
 
-    if (g_amec_wof_pstatetable_cores_next > g_amec_wof_pstatetable_cores_current) 
+
+    if (g_amec_wof_pstatetable_cores_next > g_amec_wof_pstatetable_cores_current)
     {
-	// Cores turning on.  Increase p-state voltage.
-	// Move frequency to safe region so turbo voltage can be optimized.
-	// Go to Turbo - 1 MHz so we get p-state below Turbo.
-	g_amec_wof_f_vote = G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL] - 1; // FIXME: turbo
+        // Cores turning on.  Increase p-state voltage.
+        // Move frequency to safe region so turbo voltage can be optimized.
+        // Go to Turbo - 1 MHz so we get p-state below Turbo.
+        g_amec_wof_f_vote = G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL] - 1; // FIXME: turbo
 
-	g_amec_wof_pstate_table_ready = 0; // signal new pstate table generation required
-	ssx_semaphore_post(&G_amecWOFThreadWakeupSem);
-	g_amec_wof_state = 1;
+        g_amec_wof_pstate_table_ready = 0; // signal new pstate table generation required
+        ssx_semaphore_post(&G_amecWOFThreadWakeupSem);
+        g_amec_wof_state = 1;
     }
     else if (g_amec_wof_pstatetable_cores_next < g_amec_wof_pstatetable_cores_current)
     {
-	// Cores turning off. Decrease p-state voltage.
-	// Move frequency to safe region so turbo voltage can be optimized.
-	// Go to Turbo - 1 MHz so we get p-state below Turbo.
-	g_amec_wof_f_vote = G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL] - 1; // FIXME: turbo
-	g_amec_wof_pstate_table_ready = 0; // signal new pstate table generation required
-	ssx_semaphore_post(&G_amecWOFThreadWakeupSem);
-	g_amec_wof_state = 3;
-    } else {
-	// No change.  Just adjust WOF frequency.
-	g_amec_wof_f_vote = g_amec_wof_f_uplift;
+        // Cores turning off. Decrease p-state voltage.
+        // Move frequency to safe region so turbo voltage can be optimized.
+        // Go to Turbo - 1 MHz so we get p-state below Turbo.
+        g_amec_wof_f_vote = G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL] - 1; // FIXME: turbo
+        g_amec_wof_pstate_table_ready = 0; // signal new pstate table generation required
+        ssx_semaphore_post(&G_amecWOFThreadWakeupSem);
+        g_amec_wof_state = 3;
+    }
+    else
+    {
+        // No change.  Just adjust WOF frequency.
+        g_amec_wof_f_vote = g_amec_wof_f_uplift;
     }
 }
-
 
 
 // Run this in every 250us state. Allows cores to wake-up as soon as WOF outcome is ready.
@@ -1602,130 +1560,124 @@ void amec_wof_250us_v3(void)
 
     switch (g_amec_wof_state) {
     case 0: {
-	// Apply the WOF vote in 2ms WOF procedure.  Assume p-state tables are already set up
-	break;
+        // Apply the WOF vote in 2ms WOF procedure.  Assume p-state tables are already set up
+        break;
     }
-    case 1: { 
+    case 1: {
         // Check WOF frequency is applied
-	// Check if GPE is applying a new frequency (request != actual)
-	if (g_amec->proc[0].core_max_freq_actual != g_amec->proc[0].core_max_freq) break;
-	// Check if actual clips are above WOF frequency
-	if (g_amec->proc[0].core_max_freq_actual > g_amec_wof_f_vote) break;
-	// Wait until p-state table is ready
-	if (g_amec_wof_pstate_table_ready == 0) break;
+        // Check if GPE is applying a new frequency (request != actual)
+        if (g_amec->proc[0].core_max_freq_actual != g_amec->proc[0].core_max_freq) break;
+        // Check if actual clips are above WOF frequency
+        if (g_amec->proc[0].core_max_freq_actual > g_amec_wof_f_vote) break;
+        // Wait until p-state table is ready
+        if (g_amec_wof_pstate_table_ready == 0) break;
 
-	// If we reach this point, then we can be assured that 
-	// 1) GPE has applied the latest frequency selection, including WOF vote
-	// 2) The true frequency is not above the WOF frequency
-	// 3) The p-state table is ready
+        // If we reach this point, then we can be assured that
+        // 1) GPE has applied the latest frequency selection, including WOF vote
+        // 2) The true frequency is not above the WOF frequency
+        // 3) The p-state table is ready
 
-	// FIXME: Turn on the p-state table (flip address of table)
-	// FIXME: new WOF vote
+        // FIXME: Turn on the p-state table (flip address of table)
+        // FIXME: new WOF vote
 
-	// Now new table is installed, so allow WOF turbo frequency
-	g_amec_wof_f_vote = g_amec_wof_f_uplift;
+        // Now new table is installed, so allow WOF turbo frequency
+        g_amec_wof_f_vote = g_amec_wof_f_uplift;
 
-	g_amec_wof_state = 2;
+        g_amec_wof_state = 2;
 
-	// FALL THROUGH
-
+        // FALL THROUGH
     }
     case 2: {
-	// Signal waking cores to turn on. Go to state 0.
+        // Signal waking cores to turn on. Go to state 0.
 
-	//Quickly toggle waking core inhibit bits
-	//Uninhibit cores waking up
-	l_rc = _putscom(PDEMR, ~g_amec_wof_wake_mask, SCOM_TIMEOUT);
-	if (l_rc != 0) {
-	    g_amec_wof_error = AMEC_WOF_ERROR_SCOM_2;
-	    break;
-	}	
-	//Inhibit all cores
-	//putscom pu 62092 ffff000000000000
-	l_data64 = 0xffff000000000000ull;
-	l_rc = _putscom(PDEMR, l_data64, SCOM_TIMEOUT);
-	if (l_rc != 0) {
-	    g_amec_wof_error = AMEC_WOF_ERROR_SCOM_3;
-	    break;
-	}
+        //Quickly toggle waking core inhibit bits
+        //Uninhibit cores waking up
+        l_rc = _putscom(PDEMR, ~g_amec_wof_wake_mask, SCOM_TIMEOUT);
+        if (l_rc != 0) {
+            g_amec_wof_error = AMEC_WOF_ERROR_SCOM_2;
+            break;
+        }
+        //Inhibit all cores
+        //putscom pu 62092 ffff000000000000
+        l_data64 = 0xffff000000000000ull;
+        l_rc = _putscom(PDEMR, l_data64, SCOM_TIMEOUT);
+        if (l_rc != 0) {
+            g_amec_wof_error = AMEC_WOF_ERROR_SCOM_3;
+            break;
+        }
 
-	g_amec_wof_pstatetable_cores_current = g_amec_wof_pstatetable_cores_next;
-	g_amec_wof_state = 0;
+        g_amec_wof_pstatetable_cores_current = g_amec_wof_pstatetable_cores_next;
+        g_amec_wof_state = 0;
 
-
-	break;
+        break;
     }
+
     case 3: {
         // Check WOF frequency is applied
-	// Check if GPE is applying a new frequency (request != actual)
-	if (g_amec->proc[0].core_max_freq_actual != g_amec->proc[0].core_max_freq) break;
-	// Check if actual clips are above WOF frequency
-	if (g_amec->proc[0].core_max_freq_actual > g_amec_wof_f_vote) break;
-	// Wait until p-state table is ready
-	if (g_amec_wof_pstate_table_ready == 0) break;
+        // Check if GPE is applying a new frequency (request != actual)
+        if (g_amec->proc[0].core_max_freq_actual != g_amec->proc[0].core_max_freq) break;
+        // Check if actual clips are above WOF frequency
+        if (g_amec->proc[0].core_max_freq_actual > g_amec_wof_f_vote) break;
+        // Wait until p-state table is ready
+        if (g_amec_wof_pstate_table_ready == 0) break;
 
-	// If we reach this point, then we can be assured that 
-	// 1) GPE has applied the latest frequency selection, including WOF vote
-	// 2) The true frequency is not above the WOF frequency
-	// 3) The p-state table is ready
+        // If we reach this point, then we can be assured that
+        // 1) GPE has applied the latest frequency selection, including WOF vote
+        // 2) The true frequency is not above the WOF frequency
+        // 3) The p-state table is ready
 
-	// FIXME: Turn on the p-state table (flip address of table)
-	// FIXME: new WOF vote
+        // FIXME: Turn on the p-state table (flip address of table)
+        // FIXME: new WOF vote
 
-	// Now new table is installed, so allow WOF turbo frequency
-	g_amec_wof_f_vote = g_amec_wof_f_uplift;
+        // Now new table is installed, so allow WOF turbo frequency
+        g_amec_wof_f_vote = g_amec_wof_f_uplift;
 
-	g_amec_wof_pstatetable_cores_current = g_amec_wof_pstatetable_cores_next;
-	g_amec_wof_state = 0;
-	break;
+        g_amec_wof_pstatetable_cores_current = g_amec_wof_pstatetable_cores_next;
+        g_amec_wof_state = 0;
+        break;
     }
+
     default:
-	g_amec_wof_error = AMEC_WOF_ERROR_UNKNOWN_STATE;
-	break;
+        g_amec_wof_error = AMEC_WOF_ERROR_UNKNOWN_STATE;
+        break;
     }
 }
 
 // Function Specification
 //
-// Name: amec_wof
+// Name: amec_wof_main
 //
 // Description: Run the main WOF algorithm
-//              
-//
-// Flow: 
 //
 // Thread: RealTime Loop
 //
-// Changedby: 
-//
-// Task Flags: 
-//
 // End Function Specification
-void amec_wof(void) 
+void amec_wof_main(void)
 {
     uint8_t err=0;
 
     /* If new algorithm selected, then initialize it. If
      * initialization fails, then do not run algorithm */
-    if (g_amec_wof_enable_parm != g_amec_wof_enable) {
-	err = amec_wof_set_algorithm(g_amec_wof_enable_parm);
-	if (err) return;
+    if (g_amec_wof_enable_parm != g_amec_wof_enable)
+    {
+        err = amec_wof_set_algorithm(g_amec_wof_enable_parm);
+        if (err) return;
     }
 
     /* Run the current WOF algorithm */
     switch (g_amec_wof_enable)
     {
     case 1:
-	amec_wof_v1();
-	break;
+        amec_wof_v1();
+        break;
     case 2:
-	amec_wof_v2();
-	break;
+        amec_wof_v2();
+        break;
     case 3:
-	amec_wof_v3();
-	break;
+        amec_wof_v3();
+        break;
     default: /*Do nothing. WOF Disabled*/
-	break;
+        break;
     }
 }
 
@@ -1737,89 +1689,86 @@ void amec_wof_250us_v2(void)
 
     switch (g_amec_wof_state) {
     case 0: {
-	// Apply the WOF vote in 2ms WOF procedure.  Assume p-state tables are already set up
-	break;
+        // Apply the WOF vote in 2ms WOF procedure.  Assume p-state tables are already set up
+        break;
     }
+
     case 1: { // Check WOF frequency is applied
-	//If  (current clip > WOF clip), stay at this state.
-	//FIXME: How are we certain that the clip was applied to the SCOM at this point?
-	// Check if GPE is applying a new frequency (request != actual)
-	if (g_amec->proc[0].core_max_freq_actual != g_amec->proc[0].core_max_freq) break;
-	// Check if actual clips are above WOF frequency
-	if (g_amec->proc[0].core_max_freq_actual > g_amec_wof_f_vote) break;
+        //If  (current clip > WOF clip), stay at this state.
+        //FIXME: How are we certain that the clip was applied to the SCOM at this point?
+        // Check if GPE is applying a new frequency (request != actual)
+        if (g_amec->proc[0].core_max_freq_actual != g_amec->proc[0].core_max_freq) break;
+        // Check if actual clips are above WOF frequency
+        if (g_amec->proc[0].core_max_freq_actual > g_amec_wof_f_vote) break;
 
-	// If we reach this point, then we can be assured that 
-	// 1) GPE has applied the latest frequency selection, including WOF vote
-	// 2) The true frequency is not above the WOF frequency
-	// Therefore, proceed to next state (wake cores up)
-	g_amec_wof_state = 2;
+        // If we reach this point, then we can be assured that
+        // 1) GPE has applied the latest frequency selection, including WOF vote
+        // 2) The true frequency is not above the WOF frequency
+        // Therefore, proceed to next state (wake cores up)
+        g_amec_wof_state = 2;
 
-	// FALL THROUGH
+        // FALL THROUGH
     }
+
     case 2: {
-	// Signal waking cores to turn on. Go to state 0.
+        // Signal waking cores to turn on. Go to state 0.
 
-	//Quickly toggle waking core inhibit bits
-	//Uninhibit cores waking up
-	l_rc = _putscom(PDEMR, ~g_amec_wof_wake_mask, SCOM_TIMEOUT);
-	if (l_rc != 0) {
-	    g_amec_wof_error = AMEC_WOF_ERROR_SCOM_2;
-	    break;
-	}	
-	//Inhibit all cores
-	//putscom pu 62092 ffff000000000000
-	l_data64 = 0xffff000000000000ull;
-	l_rc = _putscom(PDEMR, l_data64, SCOM_TIMEOUT);
-	if (l_rc != 0) {
-	    g_amec_wof_error = AMEC_WOF_ERROR_SCOM_3;
-	    break;
-	}
+        //Quickly toggle waking core inhibit bits
+        //Uninhibit cores waking up
+        l_rc = _putscom(PDEMR, ~g_amec_wof_wake_mask, SCOM_TIMEOUT);
+        if (l_rc != 0) {
+            g_amec_wof_error = AMEC_WOF_ERROR_SCOM_2;
+            break;
+        }
+        //Inhibit all cores
+        //putscom pu 62092 ffff000000000000
+        l_data64 = 0xffff000000000000ull;
+        l_rc = _putscom(PDEMR, l_data64, SCOM_TIMEOUT);
+        if (l_rc != 0) {
+            g_amec_wof_error = AMEC_WOF_ERROR_SCOM_3;
+            break;
+        }
 
-	g_amec_wof_pstatetable_cores_current = g_amec_wof_pstatetable_cores_next;
-	g_amec_wof_state = 0;
+        g_amec_wof_pstatetable_cores_current = g_amec_wof_pstatetable_cores_next;
+        g_amec_wof_state = 0;
 
-
-	break;
+        break;
     }
+
     case 3: {
-	// Go to state 0.
-	g_amec_wof_pstatetable_cores_current = g_amec_wof_pstatetable_cores_next;
-	g_amec_wof_state = 0;
-	break;
+        // Go to state 0.
+        g_amec_wof_pstatetable_cores_current = g_amec_wof_pstatetable_cores_next;
+        g_amec_wof_state = 0;
+        break;
     }
+
     default:
-	g_amec_wof_error = AMEC_WOF_ERROR_UNKNOWN_STATE;
-	break;
+        g_amec_wof_error = AMEC_WOF_ERROR_UNKNOWN_STATE;
+        break;
     }
 }
 
 
 // Function Specification
 //
-// Name: amec_wof_250us
+// Name: amec_wof_helper
 //
 // Description: Do WOF tasks required on 250us intervals
 //              (e.g. States in algorithm #2)
 //
-// Flow: 
-//
 // Thread: RealTime Loop
 //
-// Changedby: 
-//
-// Task Flags: 
-//
 // End Function Specification
-void amec_wof_250us(void) 
+void amec_wof_helper(void)
 {
     switch (g_amec_wof_enable)
     {
     case 2:
-	amec_wof_250us_v2();
-	break;
+        amec_wof_250us_v2();
+        break;
     case 3:
-	amec_wof_250us_v3();
-	break;
+        amec_wof_250us_v3();
+        break;
     }
 }
 

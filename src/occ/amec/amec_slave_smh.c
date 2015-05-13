@@ -343,7 +343,8 @@ void amec_slv_common_tasks_pre(void)
   // Update the external voltage sensors
   amec_update_external_voltage();
 
-  amec_wof_common(); // Common sensors for both WOF enabled and disabled.
+  // Update critical sensors for WOF algorithm
+  amec_update_wof_sensors();
 
   // Call the stream buffer recording function
   amec_analytics_sb_recording();
@@ -400,9 +401,9 @@ void amec_slv_common_tasks_post(void)
       // Call the OCC slave's performance check
       amec_slv_check_perf();
 
-      // WOF: workload-optimized frequency selection. Select WOF vote.
-      // This should be after the frequency selection amec_slv_freq_smh().
-      amec_wof_250us();  //@cl020
+      // Call helper function for the WOF algorithm. This should be done after
+      // the frequency selection in amec_slv_freq_smh().
+      amec_wof_helper();
 
       // Call the 250us trace recording if it has been configured via Amester.
       // If not configured, this call will return immediately.
@@ -567,15 +568,11 @@ void amec_slv_state_4(void)
 
   if ( IS_OCC_STATE_ACTIVE() )
   {
-      // Need turbo speed known before WOF can safely set the
-      // turbo setting.  I assume OCC ACTIVE is sufficient for this.
-      // FIX: For safety, as soon as turbo is known, the WOF vote should
-      // be set to this to avoid the system coming on at ultraturbo, all cores.
-      
-      // WOF: workload-optimized frequency selection
-      amec_wof();  //@cl020
+      // Execute the main WOF algorithm (Workload-Optimized Frequency
+      // selection)
+      amec_wof_main();
   }
-  
+
   // Call the trace function for 2ms tracing if it has been configured via
   // Amester. If not configured, this call will return immediately.
   amec_tb_record(AMEC_TB_2MS);

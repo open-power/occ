@@ -330,9 +330,9 @@ typedef struct
   uint32_t avg_util;
   // Average frequency over a fixed time interval
   uint32_t avg_freq;
-  // bits 0:7 from SCOM 110f0112 PM State History Register for OCC 
+  // PM State History Register for OCC
   uint8_t pm_state_hist;
-    
+
   // ---------------------------------
   // Frequency State Machine variables
   // ---------------------------------
