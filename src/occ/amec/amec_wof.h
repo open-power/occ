@@ -40,49 +40,11 @@
 //*************************************************************************
 
 //WOF parameters defined in amec_wof.c
-
-// Vdd regulator efficiency in 0.01% units
-extern uint16_t g_amec_wof_vdd_eff;
-// Total loadline resistance in micro-ohm (R_ll + R_drop)
-extern uint16_t g_amec_wof_loadline;
-// chip Vdd current in 0.01 A (out of regulator) @cl020
-extern uint16_t g_amec_wof_cur_out;
-// Voltage at chip silicon (Vreg - V_loadline_droop)
-extern uint16_t g_amec_wof_v_chip;
-// first index into iddq table for interpolation
-extern uint8_t g_amec_wof_iddq_i;
-// check interpolation of iddq table
-extern uint16_t g_amec_wof_iddq85c;
-// I_DC_extracted is the estimated temperature-corrected leakage current
-extern uint16_t g_amec_wof_iddq;
-// I_AC_extracted
-extern uint16_t g_amec_wof_ac;
-extern uint32_t g_amec_wof_ceff_tdp;
-extern uint32_t g_amec_wof_ceff;
-extern uint32_t g_amec_wof_ceff_old;
-extern uint16_t g_amec_wof_ceff_ratio;
-extern int16_t g_amec_wof_f_uplift; // uplift frequency adjustment
-extern uint16_t g_amec_wof_f_vote; // frequency vote
-extern uint16_t g_amec_wof_vote_vreg; // voltage associated with wof vote
-// voltage at chip associated with wof vote at present current.
-extern uint16_t g_amec_wof_vote_vchip;
-extern uint8_t g_amec_wof_error; // non-zero is a WOF error flag
-// User changes the WOF algorithm (and enable/disable) by setting
-// g_amec_wof_enable_parm from the Amester parameter interface.  OCC
-// will check this against the current setting (g_amec_wof_enable) and
-// within 250us, do initialization for the next setting and start the
-// new WOF algorithm.
-// parameter-set next state: 0=No WOF, 1 or higher = WOF algorithm.
-// 0xff is uninitialized state.
-extern uint8_t g_amec_wof_enable_parm;
-extern uint8_t g_amec_wof_cores_on; // Count number of cores on
-extern uint8_t g_amec_wof_state; // WOF state
 extern sensor_t g_amec_wof_ceff_ratio_sensor;
 extern sensor_t g_amec_wof_core_wake_sensor;
 extern sensor_t g_amec_wof_vdd_sense_sensor;
 extern uint64_t g_amec_wof_wake_mask;
 extern uint64_t g_amec_wof_wake_mask_save;
-extern uint8_t g_amec_wof_pm_state[MAX_NUM_CORES];
 extern uint8_t g_amec_wof_make_check;
 extern uint8_t g_amec_wof_check;
 extern GlobalPstateTable g_amec_wof_pstate_table_0;
@@ -90,9 +52,7 @@ extern GlobalPstateTable g_amec_wof_pstate_table_1;
 extern uint8_t g_amec_wof_current_pstate_table;
 extern uint8_t g_amec_wof_pstate_table_ready;
 extern uint16_t G_amec_wof_thread_counter;
-
 extern SsxSemaphore G_amecWOFThreadWakeupSem;
-
 
 //*************************************************************************
 // Macros
@@ -101,10 +61,77 @@ extern SsxSemaphore G_amecWOFThreadWakeupSem;
 //*************************************************************************
 // Defines/Enums
 //*************************************************************************
+typedef enum
+{
+    AMEC_WOF_ERROR_NONE,
+    AMEC_WOF_ERROR_SCOM_1,
+    AMEC_WOF_ERROR_SCOM_2,
+    AMEC_WOF_ERROR_SCOM_3,
+    AMEC_WOF_ERROR_SCOM_4,
+    AMEC_WOF_ERROR_CORE_COUNT,
+    AMEC_WOF_ERROR_UNKNOWN_STATE
+} AMEC_WOF_ERROR_ENUM;
 
 //*************************************************************************
 // Structures
 //*************************************************************************
+
+//Structure used in g_amec
+typedef struct amec_wof
+{
+    // Total loadline resistance in micro-ohm (R_ll + R_drop)
+    uint16_t            loadline;
+    // Vdd regulator efficiency in 0.01% units
+    uint16_t            vdd_eff;
+    // Chip Vdd current in 0.01 A (out of regulator)
+    uint16_t            cur_out;
+    // Last Vdd current accumulator to compute 2ms average
+    uint32_t            cur_out_last;
+    // Voltage at chip silicon (Vreg - V_loadline_droop)
+    uint16_t            v_chip;
+    // First index into iddq table for interpolation
+    uint8_t             iddq_i;
+    // Check interpolation of iddq table
+    uint16_t            iddq85c;
+    // I_DC_extracted is the estimated temperature-corrected leakage current
+    uint16_t            iddq;
+    // I_AC extracted
+    uint16_t            ac;
+    // Effective capacitance for TDP workload @ Turbo.
+    uint32_t            ceff_tdp;
+    // Effective capacitance right now.
+    uint32_t            ceff;
+    // Effective capacitance old.
+    uint32_t            ceff_old;
+    // Effective capacitance ratio
+    uint16_t            ceff_ratio;
+    // Uplift frequency adjustment
+    int16_t             f_uplift;
+    // Frequency vote. Lowest vote, until WOF is initialized with safe Turbo freq.
+    uint16_t            f_vote;
+    // Voltage set at regulator associated with wof vote
+    uint16_t            vote_vreg;
+    // Voltage at chip associated with wof vote at present current.
+    uint16_t            vote_vchip;
+    // Non-zero is a WOF error flag
+    uint8_t             error;
+    // User changes the WOF algorithm (and enable/disable) by setting
+    // g_amec->wof.enable_parm from the Amester parameter interface.
+    // OCC will check this against the current setting (g_amec->wof.enable) and
+    // within 250us, do initialization for the next setting and start the new WOF algorithm.
+    // Parameter-set next state: 1=WOF runs. 0=WOF selects highest frequency.
+    uint8_t             enable_parm;
+    // Current state: 1=WOF runs. 0=WOF selects highest frequency.
+    //                0xFF=invalid (will cause init of enable_parm setting)
+    uint8_t             enable;
+    // Count number of cores on
+    uint8_t             cores_on;
+    // WOF state
+    uint8_t             state;
+    // pmstate for debugging
+    uint8_t             pm_state[MAX_NUM_CORES];
+
+} amec_wof_t;
 
 //*************************************************************************
 // Globals

@@ -39,6 +39,7 @@
 #include <amec_oversub.h>
 #include <amec_amester.h>
 #include <amec_pcap.h>
+#include <amec_wof.h>
 
 //*************************************************************************
 // Externs
@@ -644,6 +645,9 @@ typedef struct
 
   // save off when pcap is considered valid
   uint8_t               pcap_valid;
+
+  // WOF structure
+  amec_wof_t            wof;
 
   //---------------------------------------------------------
   //
