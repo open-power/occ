@@ -22,4 +22,18 @@
 /* permissions and limitations under the License.                         */
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
+
+// BUILD_FIPS is a compiler environment variable that will be set by the
+// build team when compiling code for FSP supported systems.
+// Otherwise an open power occ version will be assigned below when code is
+// pushed up to github.
+
+#ifdef BUILD_FIPS
+
+volatile const char G_occ_buildname[16] __attribute__((section(".buildname"))) = /*<BuildName>*/  BUILD_FIPS  /*</BuildName>*/ ;
+
+#else
+
 volatile const char G_occ_buildname[16] __attribute__((section(".buildname"))) = /*<BuildName>*/  "op_occ_150424a\0"  /*</BuildName>*/ ;
+
+#endif
