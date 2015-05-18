@@ -39,6 +39,8 @@
  */
 uint32_t poll_for_complete( void )
 {
+    int32_t rc = SUCCESS;
+
     enum { MAX_OPB_TIMEOUT_NS = 10*NS_PER_MSEC }; /*=10ms */
 
     /* poll for complete */
@@ -46,11 +48,15 @@ uint32_t poll_for_complete( void )
     uint64_t elapsed_time_ns = 0;
     do
     {
-        read_data = xscom_read(OPB_REG_STAT);
+        rc = xscom_read( OPB_REG_STAT, &read_data );
+        if ( SUCCESS != rc )
+        {
+            return FSIFAIL;
+        }
+
         /* check for completion or xscom error */
         /*   note: not checking for FSI errors */
-        if( ((read_data & OPB_STAT_BUSY) == 0)  /*not busy */
-            || (read_data == SCOMFAIL) ) /*scom error */
+        if ( (read_data & OPB_STAT_BUSY) == 0 )  /*not busy */
         {
             break;
         }
@@ -71,6 +77,8 @@ uint32_t poll_for_complete( void )
  */
 uint32_t getfsi( SCOM_Trgt_t i_target, uint32_t i_address )
 {
+    int32_t rc = SUCCESS;
+
     uint32_t fsi_base = i_target.fsiBaseAddr;
     uint32_t fsi_addr = fsi_base | i_address;
 
@@ -79,8 +87,12 @@ uint32_t getfsi( SCOM_Trgt_t i_target, uint32_t i_address )
     uint64_t fsi_cmd = fsi_addr | 0x60000000; /*011=Read Full Word */
     fsi_cmd <<= 32; /* Command is in the upper word of the scom */
 
-    /* write the OPB command register to trigger the read */
-    xscom_write( OPB_REG_CMD, fsi_cmd );
+    /* Write the OPB command register to trigger the read */
+    rc = xscom_write( OPB_REG_CMD, fsi_cmd );
+    if ( SUCCESS != rc )
+    {
+        return FSIFAIL;
+    }
 
     /* poll for complete and get the data back */
     uint32_t out_data = poll_for_complete();
@@ -96,6 +108,8 @@ void putfsi( SCOM_Trgt_t i_target,
              uint32_t i_address,
              uint32_t i_data )
 {
+    int32_t rc = SUCCESS;
+
     uint32_t fsi_base = i_target.fsiBaseAddr;
     uint32_t fsi_addr = fsi_base | i_address;
 
@@ -105,8 +119,12 @@ void putfsi( SCOM_Trgt_t i_target,
     fsi_cmd <<= 32; /* Command is in the upper word of the scom */
     fsi_cmd |= i_data; /* Data is in the bottom 32-bits */
 
-    /* write the OPB command register to trigger the read */
-    xscom_write( OPB_REG_CMD, fsi_cmd );
+    /* Write the OPB command register to trigger the read */
+    rc = xscom_write( OPB_REG_CMD, fsi_cmd );
+    if ( SUCCESS != rc )
+    {
+        return;
+    }
 
     /* poll for complete */
     poll_for_complete();

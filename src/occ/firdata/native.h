@@ -87,10 +87,10 @@ typedef uint32_t errorHndl_t;
 /*================================================ */
 
 /* XSCOM Read */
-uint64_t xscom_read( uint32_t i_address );
+int32_t xscom_read( uint32_t i_address, uint64_t * o_data );
 
 /* XSCOM Write */
-void xscom_write( uint32_t i_address, uint64_t i_data );
+int32_t xscom_write( uint32_t i_address, uint64_t i_data );
 
 /* Sleep */
 void sleep( SsxInterval i_nanoseconds );

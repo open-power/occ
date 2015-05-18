@@ -151,7 +151,7 @@ errorHndl_t pollComplete(const ControlReg_t* i_ctrl,
         uint64_t loop = 0;
         do
         {
-            o_stat->data64 = xscom_read( ECCB_STAT_REG );
+            xscom_read( ECCB_STAT_REG, &(o_stat->data64) );
             LPC_TRACFCOMP( "writeLPC> Poll on ECCB Status, "
                            "poll_time=0x%.16x, stat=0x%.16x",
                            poll_time,

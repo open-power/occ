@@ -242,17 +242,22 @@ uint32_t translate_scom( SCOM_Trgt_t i_target,
 uint64_t getscomraw( SCOM_Trgt_t i_chip,
                      uint32_t i_address )
 {
-    /* Scoms to the master chip are done via xscom */
-    if( i_chip.isMaster )
+    int32_t rc = SUCCESS;
+
+    uint64_t scomdata = SCOMFAIL;
+
+    /* SCOMs to the master chip are done via XSCOM. */
+    if ( i_chip.isMaster )
     {
-        return xscom_read(i_address);
+        rc = xscom_read( i_address, &scomdata );
+        if ( SUCCESS != rc ) scomdata = SCOMFAIL;
+        return scomdata;
     }
 
     /*1) send the command to do the scom read */
     putfsi( i_chip, COMMAND_REG, i_address );
     /*2) check status next -- TODO */
     /*3) read the two data regs */
-    uint64_t scomdata = SCOMFAIL;
     uint32_t data = getfsi( i_chip, DATA0_REG );
     if( data == FSIFAIL )
     {
@@ -278,11 +283,13 @@ void putscomraw( SCOM_Trgt_t i_chip,
                  uint32_t i_address,
                  uint64_t i_data )
 {
-    /* Scoms to the master chip are done via xscom */
-    if( i_chip.isMaster )
+    int32_t rc = SUCCESS;
+
+    /* SCOMs to the master chip are done via XSCOM. */
+    if ( i_chip.isMaster )
     {
-        xscom_write( i_address, i_data );
-        return;
+        rc = xscom_write( i_address, i_data );
+        return; // TODO: Will need to return rc.
     }
 
     /*1) write the two data regs */

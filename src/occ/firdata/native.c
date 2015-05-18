@@ -34,35 +34,43 @@ void sleep( SsxInterval i_nanoseconds )
 
 int TRACE_XSCOM=0;
 
-uint64_t xscom_read( uint32_t i_address )
+int32_t xscom_read( uint32_t i_address, uint64_t * o_data )
 {
-    uint64_t l_data = 0;
-    int l_rc = 0;
+    int32_t rc = SUCCESS;
 
-    l_rc = getscom_ffdc(i_address,
-                        &l_data,
-                        NULL);
-    if (l_rc)
+    *o_data = 0;
+
+    rc = getscom_ffdc( i_address, o_data, NULL );
+    if ( SUCCESS != rc )
     {
-        TRAC_ERR("SCOM error in xscom_read wrapper, rc=%d", l_rc);
+        TRAC_ERR( "SCOM error in xscom_read wrapper, rc=%d", rc );
     }
 
-    if(TRACE_XSCOM){TRACFCOMP("xscom_read (%.8X)=%.8X%.8X", i_address, (uint32_t)(l_data>>32), (uint32_t)l_data);}
-    return l_data;
+    if ( TRACE_XSCOM )
+    {
+        TRACFCOMP( "xscom_read(%08X)=%08X%08X", i_address,
+                   (uint32_t)(*o_data>>32), (uint32_t)(*o_data) );
+    }
+
+    return rc;
 }
 
-void xscom_write( uint32_t i_address, uint64_t i_data )
+int32_t xscom_write( uint32_t i_address, uint64_t i_data )
 {
-    int l_rc = 0;
+    int32_t rc = SUCCESS;
 
-    l_rc = putscom_ffdc(i_address,
-                        i_data,
-                        NULL);
-
-    if (l_rc)
+    rc = putscom_ffdc( i_address, i_data, NULL );
+    if ( SUCCESS != rc )
     {
-        TRAC_ERR("SCOM error in xscom_write wrapper, rc=%d", l_rc);
+        TRAC_ERR( "SCOM error in xscom_write wrapper, rc=%d", rc );
     }
-    if(TRACE_XSCOM){TRACFCOMP("xscom_write(%.8X)=%.8X%.8X", i_address, (uint32_t)(i_data>>32), (uint32_t)i_data);}
+
+    if ( TRACE_XSCOM )
+    {
+        TRACFCOMP( "xscom_write(%08X)=%08X%08X", i_address,
+                   (uint32_t)(i_data>>32), (uint32_t)i_data);
+    }
+
+    return rc;
 }
 
