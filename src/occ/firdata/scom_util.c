@@ -73,108 +73,111 @@ enum {
     IND_MBA_BASEADDR =     0x800000000301143f,
 };
 
-
-
 /**
- * @brief Translate a relative unit address to a real physical address
- * @param[in] Chip/unit to scom
- * @param[in] Address to scom, unit0's address for unit scoms
- * @return Physical address
+ * @brief  Translates a relative unit address to a real physical address
+ * @param  i_trgt Chip/unit to SCOM.
+ * @param  i_addr Address to SCOM (the unit's 0th address for unit SCOMs).
+ * @param  o_addr Return address.
+ * @return Non-SUCCESS if an internal function fails. SUCCESS otherwise.
  */
-uint32_t translate_scom( SCOM_Trgt_t i_target,
-                         uint32_t i_address )
+int32_t translate_addr( SCOM_Trgt_t i_trgt, uint64_t i_addr, uint64_t * o_addr )
 {
-    TrgtType_t l_type = i_target.type;
-    uint32_t l_addr = i_address;
+    #define FUNC "[translate_addr] "
+
+    int32_t rc = SUCCESS;
+
+    TrgtType_t l_type = i_trgt.type;
+
+    *o_addr = i_addr;
 
     /* No translation needed for non-unit scoms */
     if( (l_type == PROC) || (l_type == MEMB) )
     {
-        l_addr = i_address;
+        *o_addr = i_addr;
     }
     else /* it is a Unit */
     {
-        uint8_t l_num = SCOM_Trgt_getChipUnitPos(i_target);
+        uint8_t l_num = SCOM_Trgt_getChipUnitPos(i_trgt);
 
         if( l_type == EX )
         {
             /*first byte is 0x10, second nibble of that byte is the EX number */
-            l_addr |= (l_num << 24);
+            *o_addr |= (l_num << 24);
         }
         else if( l_type == MCS )
         {
             /*Non-DMI address */
-            if( (i_address & MCS_MASK) == MCS_BASEADDR )
+            if( (i_addr & MCS_MASK) == MCS_BASEADDR )
             {
-                /* MC0 MCS0   = 0x02011800   MCS-0    range 0 */
-                /* MC0 MCS1   = 0x02011880   MCS-1    range 0 + remainder */
-                /* MC1 MCS0   = 0x02011900   MCS-2    range 1 */
-                /* MC1 MCS0   = 0x02011980   MCS-3    range 1 + remainder */
-                /* MC2 MCS0   = 0x02011C00   MCS-4     range 2 */
-                /* MC2 MCS1   = 0x02011C80   MCS-5     range 2 + remainder */
-                /* MC3 MCS0   = 0x02011D00   MCS-6     range 3 */
-                /* MC3 MCS1   = 0x02011D80   MCS-7     range 3 + remainder */
+                /* MC0 MCS0 = 0x02011800  MCS-0  range 0             */
+                /* MC0 MCS1 = 0x02011880  MCS-1  range 0 + remainder */
+                /* MC1 MCS0 = 0x02011900  MCS-2  range 1             */
+                /* MC1 MCS0 = 0x02011980  MCS-3  range 1 + remainder */
+                /* MC2 MCS0 = 0x02011C00  MCS-4  range 2             */
+                /* MC2 MCS1 = 0x02011C80  MCS-5  range 2 + remainder */
+                /* MC3 MCS0 = 0x02011D00  MCS-6  range 3             */
+                /* MC3 MCS1 = 0x02011D80  MCS-7  range 3 + remainder */
                 if( (l_num / 2) == 1) /*range 1 */
                 {
-                    l_addr += 0x100;
+                    *o_addr |= 0x100;
                 }
                 else if( (l_num / 2) == 2)  /*range 2 */
                 {
-                    l_addr += 0x400;
+                    *o_addr |= 0x400;
                 }
                 else if( (l_num / 2) == 3)  /*range 3 */
                 {
-                    l_addr += 0x500;
+                    *o_addr |= 0x500;
                 }
 
                 /* Add 0x80 for the odd numbers */
                 if( l_num % 2)
                 {
-                    l_addr += 0x80;
+                    *o_addr |= 0x80;
                 }
             }
-            else if( (i_address & MCS_MASK) == MCS_DMI_BASEADDR )
+            else if( (i_addr & MCS_MASK) == MCS_DMI_BASEADDR )
             {
-                /* 0x00000000_02011A00      MCS      0-3 # MCS/DMI0 Direct SCOM */
-                /* 0x00000000_02011E00      MCS      4-7 # MCS/DMI4 Direct SCOM */
+                /* 0x00000000_02011A00  MCS 0-3  # MCS/DMI0 Direct SCOM */
+                /* 0x00000000_02011E00  MCS 4-7  # MCS/DMI4 Direct SCOM */
                 if( l_num > 3 )
                 {
-                    l_addr |= 0x400; /* A00->E00 */
+                    *o_addr |= 0x400; /* A00->E00 */
                 }
             }
-            else if( (i_address & MCS_MASK) == IND_MCS_DMI_BASEADDR )
+            else if( (i_addr & MCS_MASK) == IND_MCS_DMI_BASEADDR )
             {
-                /*   0x80000060_02011A3F      MCS   0  # DMI0 Indirect SCOM RX3 */
-                /*   0x80000040_02011A3F      MCS   1  # DMI1 Indirect SCOM RX2 */
-                /*   0x80000000_02011A3F      MCS   2  # DMI3 Indirect SCOM RX0 */
-                /*   0x80000020_02011A3F      MCS   3  # DMI2 Indirect SCOM RX1 */
-                /* */
-                /*   0x80000060_02011E3F      MCS   4  # DMI4 Indirect SCOM RX3 */
-                /*   0x80000040_02011E3F      MCS   5  # DMI5 Indirect SCOM RX2 */
-                /*   0x80000000_02011E3F      MCS   6  # DMI7 Indirect SCOM RX0 */
-                /*   0x80000020_02011E3F      MCS   7  # DMI6 Indirect SCOM RX1 */
-                /* */
-                /*   0x80000460_02011A3F      MCS   0  # DMI0 Indirect SCOM TX3 */
-                /*   0x80000440_02011A3F      MCS   1  # DMI1 Indirect SCOM TX2 */
-                /*   0x80000400_02011A3F      MCS   2  # DMI3 Indirect SCOM TX0 */
-                /*   0x80000420_02011A3F      MCS   3  # DMI2 Indirect SCOM TX1 */
-                /* */
-                /*   0x80000460_02011E3F      MCS   4  # DMI4 Indirect SCOM TX3 */
-                /*   0x80000440_02011E3F      MCS   5  # DMI5 Indirect SCOM TX2 */
-                /*   0x80000400_02011E3F      MCS   6  # DMI7 Indirect SCOM TX0 */
-                /*   0x80000420_02011E3F      MCS   7  # DMI6 Indirect SCOM TX1 */
+                /* 0x80000060_02011A3F  MCS 0  # DMI0 Indirect SCOM RX3 */
+                /* 0x80000040_02011A3F  MCS 1  # DMI1 Indirect SCOM RX2 */
+                /* 0x80000000_02011A3F  MCS 2  # DMI3 Indirect SCOM RX0 */
+                /* 0x80000020_02011A3F  MCS 3  # DMI2 Indirect SCOM RX1 */
+
+                /* 0x80000060_02011E3F  MCS 4  # DMI4 Indirect SCOM RX3 */
+                /* 0x80000040_02011E3F  MCS 5  # DMI5 Indirect SCOM RX2 */
+                /* 0x80000000_02011E3F  MCS 6  # DMI7 Indirect SCOM RX0 */
+                /* 0x80000020_02011E3F  MCS 7  # DMI6 Indirect SCOM RX1 */
+
+                /* 0x80000460_02011A3F  MCS 0  # DMI0 Indirect SCOM TX3 */
+                /* 0x80000440_02011A3F  MCS 1  # DMI1 Indirect SCOM TX2 */
+                /* 0x80000400_02011A3F  MCS 2  # DMI3 Indirect SCOM TX0 */
+                /* 0x80000420_02011A3F  MCS 3  # DMI2 Indirect SCOM TX1 */
+
+                /* 0x80000460_02011E3F  MCS 4  # DMI4 Indirect SCOM TX3 */
+                /* 0x80000440_02011E3F  MCS 5  # DMI5 Indirect SCOM TX2 */
+                /* 0x80000400_02011E3F  MCS 6  # DMI7 Indirect SCOM TX0 */
+                /* 0x80000420_02011E3F  MCS 7  # DMI6 Indirect SCOM TX1 */
 
                 /* zero out the instance bits */
-                l_addr &= 0xFFFFFF9FFFFFFFFF;
+                *o_addr &= 0xFFFFFF9FFFFFFFFF;
                 switch( l_num )
                 {
                     case(0):
                     case(4):
-                        l_addr |= 0x0000006000000000;
+                        *o_addr |= 0x0000006000000000;
                         break;
                     case(1):
                     case(5):
-                        l_addr |= 0x0000004000000000;
+                        *o_addr |= 0x0000004000000000;
                         break;
                     case(2):
                     case(6):
@@ -182,175 +185,204 @@ uint32_t translate_scom( SCOM_Trgt_t i_target,
                         break;
                     case(3):
                     case(7):
-                        l_addr |= 0x0000002000000000;
+                        *o_addr |= 0x0000002000000000;
                         break;
                     default:
-                        l_addr = SCOMFAIL;
+                        TRAC_ERR(FUNC"unsupported MCS unit position %d", l_num);
+                        rc = FAIL;
                 }
                 if( l_num > 3 )
                 {
-                    l_addr |= 0x400; /* A00->E00 */
+                    *o_addr |= 0x400; /* A00->E00 */
                 }
             }
         }
         else if( l_type == MBA )
         {
-            if( (i_address & MBA_MASK) == MBA_BASEADDR )
+            if( (i_addr & MBA_MASK) == MBA_BASEADDR )
             {
-                /* 0x00000000_03010400   MBA 0   # MBA01 */
-                /* 0x00000000_03010C00   MBA 1   # MBA23 */
+                /* 0x00000000_03010400  MBA 0  # MBA01 */
+                /* 0x00000000_03010C00  MBA 1  # MBA23 */
                 if( l_num == 1 )
                 {
-                    l_addr |= 0x00000800;
+                    *o_addr |= 0x00000800;
                 }
             }
-            else if( (i_address & MBA_MASK) == TCM_MBA_BASEADDR )
+            else if( (i_addr & MBA_MASK) == TCM_MBA_BASEADDR )
             {
-                /* 0x00000000_03010880   MBA 0    # Trace for MBA01 */
-                /* 0x00000000_030110C0   MBA 1    # Trace for MBA23 */
-                l_addr += (l_num * 0x840);
+                /* 0x00000000_03010880  MBA 0  # Trace for MBA01 */
+                /* 0x00000000_030110C0  MBA 1  # Trace for MBA23 */
+                *o_addr |= (l_num * 0x840);
             }
-            else if( (i_address & MBA_MASK) == IND_MBA_BASEADDR )
+            else if( (i_addr & MBA_MASK) == IND_MBA_BASEADDR )
             {
-                /* 0x00000000_03011400   MBA 0   # DPHY01 (indirect addressing) */
-                /* 0x00000000_03011800   MBA 1   # DPHY23 (indirect addressing) */
-                /* 0x80000000_0301143f   MBA  0  # DPHY01 (indirect addressing) */
-                /* 0x80000000_0301183f   MBA  1  # DPHY23 (indirect addressing) */
-                /* 0x80000000_0701143f   MBA 0   # DPHY01 (indirect addressing) */
-                /* 0x80000000_0701183f   MBA 1   # DPHY23 (indirect addressing) */
+                /* 0x00000000_03011400  MBA 0  # DPHY01 (indirect addressing) */
+                /* 0x00000000_03011800  MBA 1  # DPHY23 (indirect addressing) */
+                /* 0x80000000_0301143f  MBA 0  # DPHY01 (indirect addressing) */
+                /* 0x80000000_0301183f  MBA 1  # DPHY23 (indirect addressing) */
+                /* 0x80000000_0701143f  MBA 0  # DPHY01 (indirect addressing) */
+                /* 0x80000000_0701183f  MBA 1  # DPHY23 (indirect addressing) */
                 if( l_num == 1 )
                 {
                     /* 030114zz->030118zz */
-                    l_addr &= 0xFFFFFFFFFFFFFBFF;
-                    l_addr |= 0x0000000000000800;
+                    *o_addr &= 0xFFFFFFFFFFFFFBFF;
+                    *o_addr |= 0x0000000000000800;
                 }
             }
         }
         else
         {
-            l_addr = SCOMFAIL;
+            TRAC_ERR( FUNC"unsupported unit type %d", l_type );
+            rc = FAIL;
         }
     }
 
-    return l_addr;
+    return rc;
+
+    #undef FUNC
 }
 
 /**
- * @brief Perform a getscom operation with no address translation
+ * @brief  Performs a getscom operation with no address translation.
+ * @param  i_chip Chip to SCOM.
+ * @param  i_addr Address to SCOM.
+ * @param  o_val  Returned value.
+ * @return Non-SUCCESS if an internal function fails. SUCCESS otherwise.
  */
-uint64_t getscomraw( SCOM_Trgt_t i_chip,
-                     uint32_t i_address )
+int32_t getscomraw( SCOM_Trgt_t i_chip, uint32_t i_addr, uint64_t * o_val )
 {
     int32_t rc = SUCCESS;
 
-    uint64_t scomdata = SCOMFAIL;
+    *o_val = 0;
 
     /* SCOMs to the master chip are done via XSCOM. */
     if ( i_chip.isMaster )
     {
-        rc = xscom_read( i_address, &scomdata );
-        if ( SUCCESS != rc ) scomdata = SCOMFAIL;
-        return scomdata;
+        return xscom_read( i_addr, o_val );
     }
 
     /* 1) Sent the command to do the SCOM read. */
-    rc = putfsi( i_chip, COMMAND_REG, i_address );
-    if ( SUCCESS != rc ) return SCOMFAIL;
+    rc = putfsi( i_chip, COMMAND_REG, i_addr );
+    if ( SUCCESS != rc ) return rc;
 
-    /*2) check status next -- TODO */
+    /* 2) Check status next -- TODO */
 
     /* 3) Read the two data registers. */
     uint32_t data0, data1;
 
     rc = getfsi( i_chip, DATA0_REG, &data0 );
-    if ( SUCCESS != rc ) return SCOMFAIL;
+    if ( SUCCESS != rc ) return rc;
 
     rc = getfsi( i_chip, DATA1_REG, &data1 );
-    if ( SUCCESS != rc ) return SCOMFAIL;
+    if ( SUCCESS != rc ) return rc;
 
-    scomdata = ((uint64_t)data0 << 32) | (uint64_t)data1;
+    *o_val = ((uint64_t)data0 << 32) | (uint64_t)data1;
 
-    return scomdata;
+    return rc;
 }
 
 /**
- * @brief Perform a scom operation with no address translation
+ * @brief  Perform a putscom operation with no address translation.
+ * @param  i_chip Chip to SCOM.
+ * @param  i_addr Address to SCOM.
+ * @param  i_val  Value to write.
+ * @return Non-SUCCESS if an internal function fails. SUCCESS otherwise.
  */
-void putscomraw( SCOM_Trgt_t i_chip,
-                 uint32_t i_address,
-                 uint64_t i_data )
+int32_t putscomraw( SCOM_Trgt_t i_chip, uint32_t i_addr, uint64_t i_val )
 {
     int32_t rc = SUCCESS;
 
     /* SCOMs to the master chip are done via XSCOM. */
     if ( i_chip.isMaster )
     {
-        rc = xscom_write( i_address, i_data );
-        return; // TODO: Will need to return rc.
+        return xscom_write( i_addr, i_val );
     }
 
     /* 1) Write the two data registers. */
-    rc = putfsi( i_chip, DATA0_REG, i_data >> 32 );
-    if ( SUCCESS != rc ) return;
+    rc = putfsi( i_chip, DATA0_REG, i_val >> 32 );
+    if ( SUCCESS != rc ) return rc;
 
-    rc = putfsi( i_chip, DATA1_REG, (uint32_t)i_data );
-    if ( SUCCESS != rc ) return;
+    rc = putfsi( i_chip, DATA1_REG, (uint32_t)i_val );
+    if ( SUCCESS != rc ) return rc;
 
     /* 2) Send the command to do the SCOM write. */
-    rc = putfsi( i_chip, COMMAND_REG, i_address | 0x80000000 );
-    if ( SUCCESS != rc ) return;
+    rc = putfsi( i_chip, COMMAND_REG, i_addr | 0x80000000 );
+    if ( SUCCESS != rc ) return rc;
 
-    /*3) check status next -- TODO */
-}
-
-/**
- * @brief Execute standard getscom and return result
- */
-int32_t SCOM_getScom( SCOM_Trgt_t i_trgt, uint32_t i_addr, uint64_t * o_val )
-{
-    int32_t rc = SUCCESS;
-
-    /* Translate the input args into physical addr/chip */
-    uint32_t real_addr = translate_scom( i_trgt, i_addr );
-    SCOM_Trgt_t chip_targ = SCOM_Trgt_getParentChip(i_trgt);
-
-    /* Do the scom */
-    *o_val = getscomraw( chip_targ, real_addr );
-    if ( SCOMFAIL == *o_val ) { rc = FAIL; }
+    /* 3) Check status next -- TODO */
 
     return rc;
 }
 
 /**
- * @brief Execute indirect getscom and return result
+ * @brief  Executes standard getscom.
+ * @param  i_trgt Chip to SCOM.
+ * @param  i_addr Address to SCOM.
+ * @param  o_val  Returned value.
+ * @return Non-SUCCESS if an internal function fails. SUCCESS otherwise.
  */
-int32_t SCOM_getIdScom( SCOM_Trgt_t i_trgt, uint64_t i_addr, uint32_t * o_val )
+int32_t SCOM_getScom( SCOM_Trgt_t i_trgt, uint32_t i_addr, uint64_t * o_val )
 {
     int32_t rc = SUCCESS;
 
-    /* First translate the address */
-    uint64_t trans_addr = translate_scom( i_trgt, i_addr );
+    /* Get the parent chip. */
     SCOM_Trgt_t chip_targ = SCOM_Trgt_getParentChip(i_trgt);
 
-    /* An indirect scom is performed by putting the top of the */
-    /*  64-bit address into the first data word of the scom */
+    /* Get the address relative to the parent chip. */
+    uint64_t trans_addr;
+    rc = translate_addr( i_trgt, i_addr, &trans_addr );
+    if ( SUCCESS == rc )
+    {
+        /* Do the SCOM. */
+        rc = getscomraw( chip_targ, trans_addr, o_val );
+    }
 
-    /* zero out the indirect address from the buffer.. */
-    /* bit 0-31 - indirect area.. */
+    return rc;
+}
+
+/**
+ * @brief  Execute indirect getscom.
+ * @param  i_trgt Chip to SCOM.
+ * @param  i_addr Address to SCOM.
+ * @param  o_val  Returned value.
+ * @return Non-SUCCESS if an internal function fails. SUCCESS otherwise.
+ */
+int32_t SCOM_getIdScom( SCOM_Trgt_t i_trgt, uint64_t i_addr, uint32_t * o_val )
+{
+    #define FUNC "[SCOM_getIdScom] "
+
+    int32_t rc = SUCCESS;
+
+    *o_val = 0;
+
+    /* Get the parent chip */
+    SCOM_Trgt_t chip_targ = SCOM_Trgt_getParentChip(i_trgt);
+
+    /* Get the address relative to the parent chip. */
+    uint64_t trans_addr;
+    rc = translate_addr( i_trgt, i_addr, &trans_addr );
+    if ( SUCCESS != rc ) return rc;
+
+    /* An indirect SCOM is performed by putting the top of the 64-bit address
+     * into the first data word of the SCOM */
+
+    /* Zero out the indirect address from the buffer. */
+    /* bit 0-31 - indirect area. */
     /* bit 32 - always 0 */
     /* bit 33-47 - bcast/chipletID/port */
     /* bit 48-63 - local addr */
     uint32_t phys_addr = trans_addr & 0x000000007FFFFFFF;
 
-    /* To do a read we need to do a write first */
+    /* To do a read we need to do a write first. */
 
-    /* start with the 20bit indirect address */
+    /* Start with the 20bit indirect address */
     uint64_t data_buffer = trans_addr & 0x001FFFFF00000000;
-    /* turn the read bit on. */
+    /* Turn the read bit on. */
     data_buffer |= 0x8000000000000000;
 
     /* perform write before the read with the new */
-    putscomraw( i_trgt, phys_addr, data_buffer );
+    rc = putscomraw( i_trgt, phys_addr, data_buffer );
+    if ( SUCCESS != rc ) return rc;
 
     // Loop on read until we see done, error, or we timeout
     IndirectScom_t scomout;
@@ -359,35 +391,37 @@ int32_t SCOM_getIdScom( SCOM_Trgt_t i_trgt, uint64_t i_addr, uint32_t * o_val )
     {
         /* Now perform the op requested using the passed in */
         /* IO_Buffer to pass the read data back to caller. */
-        scomout.data64 = getscomraw( chip_targ, phys_addr );
-        if( scomout.data64 == SCOMFAIL )
+        rc = getscomraw( chip_targ, phys_addr, &(scomout.data64) );
+        if ( SUCCESS != rc ) return rc;
+
+        /* Check for PIB error. */
+        if ( scomout.piberr )
         {
-            break;
+            TRAC_ERR( FUNC"ID SCOM PIB error: phys_addr=0x%08x "
+                      "trans_addr=0x%08x%08x", phys_addr,
+                      (uint32_t)(trans_addr >> 32), (uint32_t)trans_addr );
+            return FAIL;
         }
 
-        /* jump out on done or error */
-        if( scomout.done || scomout.piberr )
-        {
-            break;
-        }
+        /* Jump out when done. */
+        if ( scomout.done ) break;
 
-        sleep( 10000 ); /*sleep for 10,000 ns */
+        sleep( 10000 ); /* sleep for 10,000 ns */
         elapsed_indScom_time_ns += 10000;
 
-    } while( elapsed_indScom_time_ns <= 100000 ); /*wait for .1ms */
+    } while ( elapsed_indScom_time_ns <= 100000 ); /* wait for .1ms */
 
-    if( (scomout.data64 == SCOMFAIL)
-        || (scomout.piberr)
-        || !(scomout.done) )
+    if ( !scomout.done )
     {
-        *o_val = SCOMFAIL;
-    }
-    else
-    {
-        *o_val = scomout.data;
+        TRAC_ERR( FUNC"ID SCOM loop timeout exceeded: phys_addr=0x%08x "
+                      "trans_addr=0x%08x%08x", phys_addr,
+                      (uint32_t)(trans_addr >> 32), (uint32_t)trans_addr );
+        return FAIL;
     }
 
-    if ( SCOMFAIL == *o_val ) { rc = FAIL; }
+    *o_val = scomout.data;
 
     return rc;
+
+    #undef FUNC
 }
