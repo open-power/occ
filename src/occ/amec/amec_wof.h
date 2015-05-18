@@ -72,6 +72,14 @@ typedef enum
     AMEC_WOF_ERROR_UNKNOWN_STATE
 } AMEC_WOF_ERROR_ENUM;
 
+typedef enum
+{
+    AMEC_WOF_NO_CORE_CHANGE,
+    AMEC_WOF_CORE_REQUEST_TURN_ON,
+    AMEC_WOF_TRANSITION,
+    AMEC_WOF_CORE_REQUEST_TURN_OFF
+} AMEC_WOF_STATE_MACHINE;
+
 //*************************************************************************
 // Structures
 //*************************************************************************
@@ -115,15 +123,16 @@ typedef struct amec_wof
     uint16_t            vote_vchip;
     // Non-zero is a WOF error flag
     uint8_t             error;
-    // User changes the WOF algorithm (and enable/disable) by setting
-    // g_amec->wof.enable_parm from the Amester parameter interface.
-    // OCC will check this against the current setting (g_amec->wof.enable) and
-    // within 250us, do initialization for the next setting and start the new WOF algorithm.
-    // Parameter-set next state: 1=WOF runs. 0=WOF selects highest frequency.
+    // The WOF algorithm can be selected (and enabled/disabled) by setting
+    // g_amec->wof.enable_parm (either automatically from frequency data
+    // packet or manually from the Amester parameter interface).
+    // OCC will check this against the current setting (g_amec->wof.algo_type)
+    // and within 250us, do initialization for the next setting and start the
+    // new WOF algorithm.
     uint8_t             enable_parm;
-    // Current state: 1=WOF runs. 0=WOF selects highest frequency.
-    //                0xFF=invalid (will cause init of enable_parm setting)
-    uint8_t             enable;
+    // Current algorithm type: 0xFF=invalid (will cause init of enable_parm
+    // setting)
+    uint8_t             algo_type;
     // Count number of cores on
     uint8_t             cores_on;
     // WOF state
@@ -144,6 +153,11 @@ void amec_wof_main(void);
 void amec_wof_helper(void);
 void amec_wof_init(void) INIT_SECTION;
 void amec_update_wof_sensors(void);
-
+uint8_t amec_wof_set_algorithm(const uint8_t i_algorithm);
+void amec_wof_alg_v2(void);
+void amec_wof_alg_v3(void);
+void amec_wof_common_steps(void);
+void amec_wof_helper_v2(void);
+void amec_wof_helper_v3(void);
 
 #endif

@@ -412,7 +412,19 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
             TRAC_INFO("Minimum frequency = %d", l_freq);
 
             l_freq = (l_buf[6] << 8 | l_buf[7]);
+            l_table[OCC_MODE_STURBO] = l_freq;
             TRAC_INFO("UT frequency = %d", l_freq);
+
+            if(l_freq == 0)
+            {
+                // UltraTurbo frequency is zero, WOF is not supported
+                g_amec->wof.enable_parm = 0;
+            }
+            else
+            {
+                // Enable WOF algorithm
+                g_amec->wof.enable_parm = 2;
+            }
 
             // Store the Fmax and Fmin for AMEC (OpenPower environment only)
             g_amec->sys.fmax = l_table[OCC_MODE_TURBO];

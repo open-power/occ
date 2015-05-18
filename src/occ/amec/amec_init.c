@@ -304,12 +304,12 @@ void amec_init_gamec_struct(void)
   g_amec->proc[0].pwr_votes.apss_pmax_clip_freq = 0xFFFF;
 
   //Initialize fields associated with WOF algorithm
-  g_amec->wof.f_vote = 0;
+  g_amec->wof.f_vote = -1;
   g_amec->wof.error = AMEC_WOF_ERROR_NONE;
   g_amec->wof.enable_parm = 0;
-  g_amec->wof.enable = 0xFF;
+  g_amec->wof.algo_type = 0;
   g_amec->wof.cores_on = 0;
-  g_amec->wof.state = 0;
+  g_amec->wof.state = AMEC_WOF_NO_CORE_CHANGE;
 
   //Initialize stream buffer recording parameters
   g_amec->recordflag=0;      // Never enable recording until requested via Amester API call
