@@ -114,8 +114,14 @@ bool FirData_addRegToPnor( FirData_t * io_fd, PNOR_Trgt_t * io_pTrgt,
         rc = SCOM_getScom( i_sTrgt, i_addr, &(reg.val) );
         if ( SUCCESS != rc )
         {
+            TRAC_ERR( "[FirData_addRegToPnor] t=%d p=%d u=%d rc=%d "
+                      "addr=0x%08x val=0x%08x%08x", i_sTrgt.type,
+                      i_sTrgt.procPos, i_sTrgt.procUnitPos, rc, i_addr,
+                      (uint32_t)(reg.val >> 32), (uint32_t)reg.val );
+
             if ( io_pTrgt->scomErrs < PNOR_Trgt_MAX_SCOM_ERRORS )
                 io_pTrgt->scomErrs++;
+
             break;
         }
 
@@ -627,8 +633,8 @@ int32_t FirData_init( FirData_t * io_fd,
         /* Check HOMER header data size. */
         if ( io_fd->maxHBufSize < sz_hData )
         {
-            TRACFCOMP( FUNC"HOMER header data size %d is larger than HOMER "
-                       "data buffer %d", sz_hData, io_fd->maxHBufSize );
+            TRAC_ERR( FUNC"HOMER header data size %d is larger than HOMER "
+                      "data buffer %d", sz_hData, io_fd->maxHBufSize );
             rc = FAIL;
             break;
         }
@@ -649,7 +655,7 @@ int32_t FirData_init( FirData_t * io_fd,
         full = FirData_addDataToPnor( io_fd, &pData, sizeof(pData) );
         if ( full )
         {
-            TRACFCOMP( FUNC"Unable to add header to PNOR buffer" );
+            TRAC_ERR( FUNC"Unable to add header to PNOR buffer" );
             rc = FAIL;
             break;
         }
@@ -670,8 +676,8 @@ int32_t FirData_init( FirData_t * io_fd,
         /* Homer buffer. */
         if ( io_fd->maxHBufSize - sz_hData < curIdx )
         {
-            TRACFCOMP( FUNC"HOMER list size %d is larger than HOMER data "
-                       "buffer %d", curIdx, io_fd->maxHBufSize - sz_hData );
+            TRAC_ERR( FUNC"HOMER list size %d is larger than HOMER data "
+                      "buffer %d", curIdx, io_fd->maxHBufSize - sz_hData );
             rc = FAIL;
             break;
         }
@@ -712,15 +718,15 @@ int32_t FirData_captureCsFirData( uint8_t * i_hBuf, uint32_t i_hBufSize,
         rc = FirData_init( &fd, i_hBuf, i_hBufSize, i_pBuf, i_pBufSize );
         if ( SUCCESS != rc )
         {
-            TRACFCOMP( FUNC"Failed to init FIR data" );
+            TRAC_ERR( FUNC"Failed to init FIR data" );
             break;
         }
 
         /* Check for valid HOMER data. */
         if ( HOMER_FIR1 != fd.hData->header )
         {
-            TRACFCOMP( FUNC"No HOMER data detected: header=0x%08x",
-                       fd.hData->header );
+            TRAC_ERR( FUNC"No HOMER data detected: header=0x%08x",
+                      fd.hData->header );
             break; /* nothing to analyze. */
         }
 
@@ -731,7 +737,7 @@ int32_t FirData_captureCsFirData( uint8_t * i_hBuf, uint32_t i_hBufSize,
         rc = PNOR_writeFirData( fd.hData->pnorInfo, fd.pBuf, fd.pBufSize );
         if ( SUCCESS != rc )
         {
-            TRACFCOMP( FUNC"Failed to process FIR data" );
+            TRAC_ERR( FUNC"Failed to process FIR data" );
             break;
         }
 
@@ -739,8 +745,8 @@ int32_t FirData_captureCsFirData( uint8_t * i_hBuf, uint32_t i_hBufSize,
 
     if ( SUCCESS != rc )
     {
-        TRACFCOMP( FUNC"Failed: i_hBuf=%p, i_hBufSize=0x%08x, i_pBuf=%p, "
-                   "i_pBufSize=%08x", i_hBuf, i_hBufSize, i_pBuf, i_pBufSize );
+        TRAC_ERR( FUNC"Failed: i_hBuf=%p, i_hBufSize=0x%08x, i_pBuf=%p, "
+                  "i_pBufSize=%08x", i_hBuf, i_hBufSize, i_pBuf, i_pBufSize );
     }
 
     return rc;
