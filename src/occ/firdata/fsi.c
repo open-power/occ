@@ -27,8 +27,9 @@
 #include <scom_util.h>
 #include <native.h>
 
-#define OPB_REG_CMD  0x00020000
-#define OPB_REG_STAT  0x00020001
+#define OPB_REG_CMD   0x00020010
+#define OPB_REG_STAT  0x00020011
+#define OPB_REG_RES   0x00020014
 #define OPB_STAT_BUSY  0x0001000000000000 /**< 15 is the Busy bit */
 #define NS_PER_MSEC (1000000ull)
 
