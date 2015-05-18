@@ -34,6 +34,23 @@
 #define NS_PER_MSEC (1000000ull)
 
 
+void fsi_recovery()
+{
+    int32_t rc = SUCCESS;
+
+    /* Clear out OPB error */
+    uint64_t scom_data = 0;
+    scom_data = 0x8000000000000000; /*0=Unit Reset*/
+    rc |= xscom_write( OPB_REG_RES,  scom_data );
+    rc |= xscom_write( OPB_REG_STAT, scom_data );
+
+    /* Check if we have any errors left */
+    rc |= xscom_read( OPB_REG_STAT, &scom_data );
+
+    TRACFCOMP( "PIB2OPB Status after cleanup = %08X%08X (rc=%d)",
+               (uint32_t)(scom_data >> 32), (uint32_t)scom_data, rc );
+}
+
 /**
  * @brief  Poll for completion of a FSI operation, return data on read
  */
@@ -52,6 +69,7 @@ int32_t poll_for_complete( uint32_t * o_val )
         rc = xscom_read( OPB_REG_STAT, &read_data );
         if ( SUCCESS != rc )
         {
+            fsi_recovery(); /* Try to recover the engine. */
             return rc;
         }
 
@@ -92,6 +110,7 @@ int32_t getfsi( SCOM_Trgt_t i_trgt, uint32_t i_addr, uint32_t * o_val )
     rc = xscom_write( OPB_REG_CMD, fsi_cmd );
     if ( SUCCESS != rc )
     {
+        fsi_recovery(); /* Try to recover the engine. */
         return rc;
     }
 
@@ -120,6 +139,7 @@ int32_t putfsi( SCOM_Trgt_t i_trgt, uint32_t i_addr, uint32_t i_val )
     rc = xscom_write( OPB_REG_CMD, fsi_cmd );
     if ( SUCCESS != rc )
     {
+        fsi_recovery(); /* Try to recover the engine. */
         return rc;
     }
 
