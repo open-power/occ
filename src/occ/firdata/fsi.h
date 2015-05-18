@@ -27,21 +27,21 @@
 
 #include <scom_trgt.h>
 
-#define FSIFAIL 0xDEADBEEF
+/**
+ * @brief  Read a FSI register.
+ * @param  i_trgt Chip/unit to read from.
+ * @param  i_addr FSI address to read, relative to slave's base address.
+ * @param  o_val  Returned value.
+ * @return Non-SUCCESS if an internal function fails. SUCCESS otherwise.
+ */
+int32_t getfsi( SCOM_Trgt_t i_trgt, uint32_t i_addr, uint32_t * o_val );
 
 /**
- * @brief Read a FSI register
- * @param[in] Chip/unit to read from
- * @param[in] FSI address to read, relative to slave's base address
- * @return FSI data on success, FSIFAIL on error
+ * @brief  Write a FSI register.
+ * @param  i_trgt Chip/unit to write to.
+ * @param  i_addr FSI address to write, relative to slave's base address.
+ * @param  o_val  Value to write.
+ * @return Non-SUCCESS if an internal function fails. SUCCESS otherwise.
  */
-uint32_t getfsi( SCOM_Trgt_t i_target, uint32_t i_address );
-
-/**
- * @brief Write a FSI register
- * @param[in] Chip/unit to write to
- * @param[in] FSI address to write, relative to slave's base address
- * @param[in] Data to write
- */
-void putfsi( SCOM_Trgt_t i_target, uint32_t i_address, uint32_t i_data );
+int32_t putfsi( SCOM_Trgt_t i_trgt, uint32_t i_addr, uint32_t i_val );
 

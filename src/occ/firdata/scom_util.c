@@ -235,7 +235,6 @@ uint32_t translate_scom( SCOM_Trgt_t i_target,
     return l_addr;
 }
 
-
 /**
  * @brief Perform a getscom operation with no address translation
  */
@@ -254,27 +253,25 @@ uint64_t getscomraw( SCOM_Trgt_t i_chip,
         return scomdata;
     }
 
-    /*1) send the command to do the scom read */
-    putfsi( i_chip, COMMAND_REG, i_address );
+    /* 1) Sent the command to do the SCOM read. */
+    rc = putfsi( i_chip, COMMAND_REG, i_address );
+    if ( SUCCESS != rc ) return SCOMFAIL;
+
     /*2) check status next -- TODO */
-    /*3) read the two data regs */
-    uint32_t data = getfsi( i_chip, DATA0_REG );
-    if( data == FSIFAIL )
-    {
-        return SCOMFAIL;
-    }
-    scomdata = data;
-    scomdata <<= 32;
-    data = getfsi( i_chip, DATA1_REG );
-    if( data == FSIFAIL )
-    {
-        return SCOMFAIL;
-    }
-    scomdata |= (uint64_t)data;
+
+    /* 3) Read the two data registers. */
+    uint32_t data0, data1;
+
+    rc = getfsi( i_chip, DATA0_REG, &data0 );
+    if ( SUCCESS != rc ) return SCOMFAIL;
+
+    rc = getfsi( i_chip, DATA1_REG, &data1 );
+    if ( SUCCESS != rc ) return SCOMFAIL;
+
+    scomdata = ((uint64_t)data0 << 32) | (uint64_t)data1;
 
     return scomdata;
 }
-
 
 /**
  * @brief Perform a scom operation with no address translation
@@ -292,16 +289,19 @@ void putscomraw( SCOM_Trgt_t i_chip,
         return; // TODO: Will need to return rc.
     }
 
-    /*1) write the two data regs */
-    putfsi( i_chip, DATA0_REG, i_data >> 32 );
-    putfsi( i_chip, DATA1_REG, (uint32_t)i_data );
+    /* 1) Write the two data registers. */
+    rc = putfsi( i_chip, DATA0_REG, i_data >> 32 );
+    if ( SUCCESS != rc ) return;
 
-    /*2) send the command to do the scom write */
-    putfsi( i_chip, COMMAND_REG, i_address | 0x80000000 );
+    rc = putfsi( i_chip, DATA1_REG, (uint32_t)i_data );
+    if ( SUCCESS != rc ) return;
+
+    /* 2) Send the command to do the SCOM write. */
+    rc = putfsi( i_chip, COMMAND_REG, i_address | 0x80000000 );
+    if ( SUCCESS != rc ) return;
 
     /*3) check status next -- TODO */
 }
-
 
 /**
  * @brief Execute standard getscom and return result

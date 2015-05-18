@@ -37,98 +37,96 @@
 /**
  * @brief  Poll for completion of a FSI operation, return data on read
  */
-uint32_t poll_for_complete( void )
+int32_t poll_for_complete( uint32_t * o_val )
 {
     int32_t rc = SUCCESS;
 
     enum { MAX_OPB_TIMEOUT_NS = 10*NS_PER_MSEC }; /*=10ms */
 
-    /* poll for complete */
-    uint64_t read_data = FSIFAIL;
+    *o_val = 0;
+
+    uint64_t read_data = 0;
     uint64_t elapsed_time_ns = 0;
     do
     {
         rc = xscom_read( OPB_REG_STAT, &read_data );
         if ( SUCCESS != rc )
         {
-            return FSIFAIL;
+            return rc;
         }
 
-        /* check for completion or xscom error */
-        /*   note: not checking for FSI errors */
-        if ( (read_data & OPB_STAT_BUSY) == 0 )  /*not busy */
-        {
-            break;
-        }
-        else
-        {
-            read_data = FSIFAIL;
-        }
+        /* Check for completion. Note: not checking for FSI errors. */
+        if ( (read_data & OPB_STAT_BUSY) == 0 ) break; /* Not busy */
 
-        sleep( 10000 ); /*sleep for 10,000 ns */
+        sleep( 10000 ); /* sleep for 10,000 ns */
         elapsed_time_ns += 10000;
-    } while( elapsed_time_ns <= MAX_OPB_TIMEOUT_NS );
 
-    return (uint32_t)read_data; /*data in the bottom half */
+    } while ( elapsed_time_ns <= MAX_OPB_TIMEOUT_NS );
+
+    if ( MAX_OPB_TIMEOUT_NS < elapsed_time_ns )
+    {
+        TRAC_ERR( "[poll_for_complete] FSI request timed out." );
+        return FAIL;
+    }
+
+    *o_val = (uint32_t)read_data; /* Data in the bottom half. */
+
+    return rc;
 }
 
 /**
  * @brief Read a FSI register
  */
-uint32_t getfsi( SCOM_Trgt_t i_target, uint32_t i_address )
+int32_t getfsi( SCOM_Trgt_t i_trgt, uint32_t i_addr, uint32_t * o_val )
 {
     int32_t rc = SUCCESS;
 
-    uint32_t fsi_base = i_target.fsiBaseAddr;
-    uint32_t fsi_addr = fsi_base | i_address;
+    uint32_t fsi_addr = i_trgt.fsiBaseAddr | i_addr;
 
     /* setup the OPB command register */
     /*  only supporting 4-byte access */
-    uint64_t fsi_cmd = fsi_addr | 0x60000000; /*011=Read Full Word */
+    uint64_t fsi_cmd = fsi_addr | 0x60000000; /* 011=Read Full Word */
     fsi_cmd <<= 32; /* Command is in the upper word of the scom */
 
     /* Write the OPB command register to trigger the read */
     rc = xscom_write( OPB_REG_CMD, fsi_cmd );
     if ( SUCCESS != rc )
     {
-        return FSIFAIL;
+        return rc;
     }
 
-    /* poll for complete and get the data back */
-    uint32_t out_data = poll_for_complete();
+    /* Poll for complete and get the data back. */
+    rc = poll_for_complete( o_val );
 
-    return out_data;
+    return rc;
 }
-
 
 /**
  * @brief Write a FSI register
  */
-void putfsi( SCOM_Trgt_t i_target,
-             uint32_t i_address,
-             uint32_t i_data )
+int32_t putfsi( SCOM_Trgt_t i_trgt, uint32_t i_addr, uint32_t i_val )
 {
     int32_t rc = SUCCESS;
 
-    uint32_t fsi_base = i_target.fsiBaseAddr;
-    uint32_t fsi_addr = fsi_base | i_address;
+    uint32_t fsi_addr = i_trgt.fsiBaseAddr | i_addr;
 
     /* setup the OPB command register */
     /*  only supporting 4-byte access */
     uint64_t fsi_cmd = fsi_addr | 0xE0000000; /* 111=Write Full Word */
-    fsi_cmd <<= 32; /* Command is in the upper word of the scom */
-    fsi_cmd |= i_data; /* Data is in the bottom 32-bits */
+    fsi_cmd <<= 32;   /* Command is in the upper word of the scom */
+    fsi_cmd |= i_val; /* Data is in the bottom 32-bits */
 
     /* Write the OPB command register to trigger the read */
     rc = xscom_write( OPB_REG_CMD, fsi_cmd );
     if ( SUCCESS != rc )
     {
-        return;
+        return rc;
     }
 
-    /* poll for complete */
-    poll_for_complete();
+    /* Poll for complete */
+    uint32_t junk = 0; // Not used.
+    rc = poll_for_complete( &junk );
 
-    return;
+    return rc;
 }
 
