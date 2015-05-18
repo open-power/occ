@@ -382,7 +382,7 @@ bool FirData_addIdRegsToPnor( FirData_t * io_fd, PNOR_Trgt_t * io_pTrgt,
 
     uint32_t i = 0;
 
-    uint32_t addr    = 0;
+    uint64_t addr    = 0;
     bool     tmp     = false; /* ignored, not used */
 
     for ( i = 0; i < cnt; i++ )
@@ -416,6 +416,10 @@ bool FirData_addTrgtToPnor( FirData_t * io_fd, SCOM_Trgt_t i_sTrgt,
                                           i_sTrgt.procUnitPos );
 
     *o_noAttn = false; /* Must be false if there are no global regs. */
+
+    TRAC_IMP( "FIRDATA: t=%d p=%d u=%d FSI=0x%08x isM=%c", i_sTrgt.type,
+              i_sTrgt.procPos, i_sTrgt.procUnitPos, i_sTrgt.fsiBaseAddr,
+              i_sTrgt.isMaster ? 'T' : 'F' );
 
     do
     {
