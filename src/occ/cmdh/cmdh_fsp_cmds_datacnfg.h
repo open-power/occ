@@ -54,6 +54,8 @@ typedef enum
    DATA_FORMAT_MEM_THROT             = 0x12,
    DATA_FORMAT_THRM_THRESHOLDS       = 0x13,
    DATA_FORMAT_VOLT_UPLIFT           = 0x20,
+   DATA_FORMAT_WOF_CORE_FREQ         = 0x30,
+   DATA_FORMAT_WOF_VRM_EFF           = 0x31,
    DATA_FORMAT_CLEAR_ALL             = 0xff,
 } eConfigDataFormatVersion;
 

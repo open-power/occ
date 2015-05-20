@@ -2313,6 +2313,14 @@ errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
             }
             break;
 
+        case DATA_FORMAT_WOF_CORE_FREQ:
+            // FIXME: Need to add proper support for this data packet
+            break;
+
+        case DATA_FORMAT_WOF_VRM_EFF:
+            // FIXME: Need to add proper support for this data packet
+            break;
+
         case DATA_FORMAT_CLEAR_ALL:
             // Make sure not in ACTIVE
             if(CURRENT_STATE() != OCC_STATE_ACTIVE)
