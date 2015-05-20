@@ -80,6 +80,11 @@ typedef enum
     AMEC_WOF_CORE_REQUEST_TURN_OFF
 } AMEC_WOF_STATE_MACHINE;
 
+//Definition of types of wof tables
+typedef enum {
+    AMEC_WOF_CORE_FREQ_TBL = 0x01,
+    AMEC_WOF_VRM_EFF_TBL   = 0x02
+} wof_tbl_type_t;
 //*************************************************************************
 // Structures
 //*************************************************************************
@@ -159,5 +164,10 @@ void amec_wof_alg_v3(void);
 void amec_wof_common_steps(void);
 void amec_wof_helper_v2(void);
 void amec_wof_helper_v3(void);
+
+int amec_wof_writeToTable(wof_tbl_type_t i_tblType ,
+                          const uint16_t i_size,
+                          const uint8_t i_clmnCount,
+                          uint8_t *i_data_ptr);
 
 #endif

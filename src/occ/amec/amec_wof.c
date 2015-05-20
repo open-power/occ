@@ -136,6 +136,11 @@ extern SsxSemaphore G_amec_wof_thread_wakeup_sem; // in amec_wof_thread.c
 //#define TUL183_5_CORE_PER_CHIP
 //#define TUL237
 
+//MAX number of rows in the uplift and VRM eff tables
+#define AMEC_WOF_UPLIFT_TBL_ROWS    0x16
+#define AMEC_WOF_UPLIFT_TBL_CLMS    0x0D
+#define AMEC_WOF_VRM_EFF_TBL_ROWS   0x03
+#define AMEC_WOF_VRM_EFF_TBL_CLMS   0x0E
 
 //*************************************************************************
 // Structures
@@ -148,6 +153,9 @@ extern SsxSemaphore G_amec_wof_thread_wakeup_sem; // in amec_wof_thread.c
 sensor_t g_amec_wof_ceff_ratio_sensor;
 sensor_t g_amec_wof_core_wake_sensor;
 sensor_t g_amec_wof_vdd_sense_sensor;
+
+uint16_t G_amec_wof_uplift_table[AMEC_WOF_UPLIFT_TBL_ROWS][AMEC_WOF_UPLIFT_TBL_CLMS];
+uint16_t G_amec_wof_vrm_eff_table[AMEC_WOF_VRM_EFF_TBL_ROWS][AMEC_WOF_VRM_EFF_TBL_CLMS];
 
 #ifdef HAB19
 
@@ -1326,4 +1334,71 @@ void amec_wof_main(void)
         default: /*Do nothing. WOF Disabled*/
             break;
     }
+}
+
+// Function Specification
+//
+// Name:  amec_wof_writeToTable
+//
+// Description: Writes wof data given in a one dimensional
+//              array to a two dimensional predefined tables.
+//
+// End Function Specification
+int amec_wof_writeToTable(wof_tbl_type_t i_tblType ,
+                              const uint16_t i_size,
+                              const uint8_t i_clmnCount,
+                              uint8_t *i_data_ptr)
+{
+
+    int     l_rc = 0;
+
+    uint16_t l_tblIndex = 0;
+
+    for (l_tblIndex = 0; l_tblIndex < i_size / 2; l_tblIndex++)
+    {
+        //Get table row and column to write the entry into.
+        uint8_t l_tblRow = l_tblIndex / i_clmnCount;
+        uint8_t l_tblClmn = l_tblIndex % i_clmnCount;
+
+        if (AMEC_WOF_CORE_FREQ_TBL == i_tblType)
+        {
+            //Even though this check should have been made by the
+            //calling function, make sure we don't attempt to write
+            //beyond table limits.
+            if ((l_tblClmn < AMEC_WOF_UPLIFT_TBL_CLMS) &&
+                (l_tblRow  < AMEC_WOF_UPLIFT_TBL_ROWS) )
+            {
+                //Write each two bytes of data into each cell.
+                G_amec_wof_uplift_table[l_tblRow][l_tblClmn] = (i_data_ptr[l_tblIndex * 2] << 8) | (i_data_ptr[(l_tblIndex * 2) + 1]);
+            }
+            else
+            {
+                TRAC_ERR("amec_wof_writeToTable: WOF Core Freq Data given is larger than we can fit in table. "
+                         "Attempting to write cell at [%i,%i] location.", l_tblRow, l_tblClmn);
+            }
+        }
+        else if (AMEC_WOF_VRM_EFF_TBL == i_tblType)
+        {
+            //Even though this check should have been made by the
+            //calling function, make sure we don't attempt to write
+            //beyond table limits.
+            if ((l_tblClmn < AMEC_WOF_VRM_EFF_TBL_CLMS) &&
+                (l_tblRow  < AMEC_WOF_VRM_EFF_TBL_ROWS) )
+            {
+                //Write each two bytes of data into each cell.
+                G_amec_wof_vrm_eff_table[l_tblRow][l_tblClmn] = (i_data_ptr[l_tblIndex * 2] << 8) | (i_data_ptr[(l_tblIndex * 2) + 1]);
+            }
+            else
+            {
+                TRAC_ERR("amec_wof_writeToTable: WOF VRM Eff Data given is larger than we can fit in table. "
+                         "Attempting to write cell at [%i,%i] location.", l_tblRow, l_tblClmn);
+            }
+        }
+        else
+        {
+            TRAC_ERR("amec_wof_writeToTable: Invalid table type.");
+        }
+    }
+
+    return l_rc;
 }
