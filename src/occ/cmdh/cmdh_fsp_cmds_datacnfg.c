@@ -1067,10 +1067,11 @@ errlHndl_t data_store_pstate_super(const cmdh_fsp_cmd_t * i_cmd_ptr,
     do
     {
         // Command Length Check - make sure we have all the data
-        if( CMDH_DATALEN_FIELD_UINT16(i_cmd_ptr) < CMDH_CNFGDATA_PSTATESS_DATALEN)
+        // Lenght check depends on the version of the Pstate Superstructure
+        if( CMDH_DATALEN_FIELD_UINT16(i_cmd_ptr) < CMDH_CNFGDATA_PSTATESS_MIN_DATALEN)
         {
             TRAC_ERR("data_store_pstate_super: Invalid command length! expected[%u] received[%u]",
-                     CMDH_CNFGDATA_PSTATESS_DATALEN,
+                     CMDH_CNFGDATA_PSTATESS_MIN_DATALEN,
                      CMDH_DATALEN_FIELD_UINT16(i_cmd_ptr));
 
             // Build Error Response packet, it will get 'rebuilt' later, but
@@ -1082,7 +1083,7 @@ errlHndl_t data_store_pstate_super(const cmdh_fsp_cmd_t * i_cmd_ptr,
         // Only initialize Pstate once
         if( G_gpsm_initialized == 0 )
         {
-            // Initialze Pstate Table from PstateSuperStructure passed in
+            // Initialize Pstate Table from PstateSuperStructure passed in
             // via the DATA in this command.
             l_errlHndl = proc_gpsm_pstate_initialize(&l_cmd_ptr->pstatess);
         }
@@ -1091,6 +1092,11 @@ errlHndl_t data_store_pstate_super(const cmdh_fsp_cmd_t * i_cmd_ptr,
         {
             // Change Data Request Mask to indicate we got this data
             G_data_cnfg->data_mask |= DATA_MASK_PSTATE_SUPERSTRUCTURE;
+
+            TRAC_IMP("Pstate SuperStructure is valid: Magic_number[0x%08X%08X] Size[%d]",
+                     (uint32_t)(l_cmd_ptr->pstatess.magic >> 32),
+                     (uint32_t)(l_cmd_ptr->pstatess.magic & 0x00000000ffffffffull),
+                     CMDH_DATALEN_FIELD_UINT16(i_cmd_ptr) - 4);
         }
     } while(0);
 

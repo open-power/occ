@@ -1,7 +1,7 @@
 #ifndef __PSTATES_H__
 #define __PSTATES_H__
 
-// $Id: pstates.h,v 1.3 2014/05/27 15:35:05 daviddu Exp $
+// $Id: pstates.h,v 1.5 2015/05/18 15:56:07 daviddu Exp $
 // $Source: /afs/awd/projects/eclipz/KnowledgeBase/.cvsroot/eclipz/chips/p8/working/procedures/lib/pstates.h,v $
 //-----------------------------------------------------------------------------
 // *! (C) Copyright International Business Machines Corp. 2013
@@ -46,6 +46,42 @@
 ///  CPM Inflection Points
 #define CPM_RANGES 8
 
+/// VPD #V Operating Points
+#define VPD_PV_POINTS 4
+#define VPD_PV_ORDER_STR {"PowerSave", "Nominal    ", "Turbo    ", "UltraTurbo"}
+#define POWERSAVE   0
+#define NOMINAL     1
+#define TURBO       2
+#define ULTRA       3
+
+/// IDDQ readings
+#define CORE_IDDQ_MEASUREMENTS 6
+#define CHIP_IDDQ_MEASUREMENTS 1
+
+#define CORE_IDDQ_ARRAY_VOLTAGES {0.80, 0.90, 1.00, 1.10, 1.20, 1.25}
+#define CHIP_IDDQ_ARRAY_VOLTAGES {1.10}
+
+/// Iddq LRPx and CRPx elements
+#define LRP_IDDQ_RECORDS    CORE_IDDQ_MEASUREMENTS
+#define CRP_IDDQ_RECORDS    CHIP_IDDQ_MEASUREMENTS
+#define IDDQ_READINGS_PER_IQ 2
+
+/// LRPx mapping to Core measurements      1      2      3      4      5       6
+///    Index                               0      1      2      3      4       5
+#define CORE_IDDQ_MEASUREMENTS_ORDER   {   1,     2,     3,     4,     5,      0}
+#define CORE_IDDQ_MEASUREMENT_VOLTAGES {"0.90", "1.00", "1.10", "1.20", "1.25", "0.80"}
+#define CORE_IDDQ_VALIDITY_CHECK       {   1,     1,     1,     1,     1,      0}
+#define CORE_IDDQ_VALID_SECOND         {   1,     1,     1,     1,     1,      0}
+
+// CRPx mapping to Chip measurements       0
+#define CHIP_IDDQ_MEASUREMENTS_ORDER    {  0 }
+#define CHIP_IDDQ_MEASUREMENT_VOLTAGES  {"1.10"}
+#define CHIP_IDDQ_VALID_SECOND          {  0 }
+
+/// WOF Items
+#define NUM_ACTIVE_CORES 12
+#define MAX_UT_PSTATES   64     // Oversized
+
 // Error/Panic codes for support routines
 
 #define VRM11_INVALID_VOLTAGE               0x00876101
@@ -89,12 +125,13 @@
 /// This magic number identifies a particular version of the
 /// PstateSuperStructure and its substructures.  The version number should be
 /// kept up to date as changes are made to the layout or contents of the
-/// structure. 
+/// structure.
 
-#define PSTATE_SUPERSTRUCTURE_MAGIC 0x5053544154453033ull /* PSTATE03 */
+#define PSTATE_SUPERSTRUCTURE_MAGIC 0x5053544154453034ull /* PSTATE04 */
 #define PSTATE_SUPERSTRUCTURE_GOOD1 0x5053544154453031ull /* PSTATE01 */
 #define PSTATE_SUPERSTRUCTURE_GOOD2 0x5053544154453032ull /* PSTATE02 */
 #define PSTATE_SUPERSTRUCTURE_GOOD3 0x5053544154453033ull /* PSTATE03 */
+#define PSTATE_SUPERSTRUCTURE_GOOD4 0x5053544154453034ull /* PSTATE03 */
 
 
 /// \defgroup pstate_options Pstate Options
@@ -124,6 +161,10 @@
 /// is not working correctly during initial bringup.  This forces Pstate mode
 /// to come up at a low frequency.
 #define PSTATE_FORCE_INITIAL_PMIN 0x10
+
+/// Flag to indicated that the 0.8V readings in the IDDQ Table are valid
+#define PSTATE_IDDQ_0P80V_VALID   0x20
+#define PSTATE_IDDQ_0P80V_INVALID ~PSTATE_IDDQ_0P80V_VALID
 
 /// @}
 
@@ -208,7 +249,7 @@ typedef union lpst_entry {
         uint64_t vdd_eco_pwrratio  : 6;
         uint64_t vcs_eco_pwrratio  : 6;
         uint64_t ps1_vid_incr      : 3;
-        uint64_t ps2_vid_incr      : 3; 
+        uint64_t ps2_vid_incr      : 3;
         uint64_t ps3_vid_incr      : 3;
         uint64_t reserved47        : 7;
         uint64_t inc_step          : 3;
@@ -220,7 +261,7 @@ typedef union lpst_entry {
         uint64_t inc_step          : 3;
         uint64_t reserved47        : 7;
         uint64_t ps3_vid_incr      : 3;
-        uint64_t ps2_vid_incr      : 3; 
+        uint64_t ps2_vid_incr      : 3;
         uint64_t ps1_vid_incr      : 3;
         uint64_t vcs_eco_pwrratio  : 6;
         uint64_t vdd_eco_pwrratio  : 6;
@@ -386,11 +427,29 @@ typedef struct {
     /// The Pstate for minimum core frequency in the system, defined by MRW
     uint8_t pfloor;
 
+    /// The Pstate representing the Turbo VPD point
+    Pstate turbo_ps;
+
+    /// The Pstate representing the Nominal VPD point
+    Pstate nominal_ps;
+
+    /// The Pstate representing the PowerSave VPD point
+    Pstate powersave_ps;
+
+    /// The Pstate within the GPST which is the maximum for which iVRMs are
+    /// defined.  This allows WOF Pstate and iVRM Pstates to be non-overlapping
+    /// to simplify characterization.
+    Pstate ivrm_max_ps;
+
+    /// The number of entries over which iVRM enablement is possible.  The
+    /// starting entry is PMin.
+    uint8_t ivrm_entries;
+
 } GlobalPstateTable;
 
 
 /// This macro creates a properly-aligned Global Pstate table structure as a
-/// static initialization.  
+/// static initialization.
 
 #define GLOBAL_PSTATE_TABLE(x)                                  \
     GlobalPstateTable x                                         \
@@ -505,6 +564,175 @@ typedef union {
 } CpmPstateModeRanges;
 
 
+/// A VPD operating point
+///
+/// VPD operating points are stored without load-line correction.  Frequencies
+/// are in MHz, voltages are specified in units of 5mV, and characterization
+/// currents are specified in units of 500mA.
+///
+/// \bug The assumption is that the 'maxreg' points for the iVRM will also be
+/// supplied in the VPD in units of 5mv.  If they are supplied in some other
+/// form then chip_characterization_create() will need to be modified.
+
+typedef struct {
+
+    uint32_t vdd_5mv;
+    uint32_t vcs_5mv;
+    uint32_t vdd_maxreg_5mv;
+    uint32_t vcs_maxreg_5mv;
+    uint32_t idd_500ma;
+    uint32_t ics_500ma;
+    uint32_t frequency_mhz;
+
+} VpdOperatingPoint;
+
+/// System Power Distribution Paramenters
+///
+/// Parameters set by system design that influence the power distribution
+/// for a rail to the processor module.  This values are typically set in the
+/// system machine readable workbook and are used in the generation of the
+/// Global Pstate Table.  This values are carried in the Pstate SuperStructure
+/// for use and/or reference by OCC firmware (eg the WOF algorithm)
+
+typedef struct {
+
+    /// Loadline
+    ///   Impedance (binary microOhms) of the load line from a processor VDD VRM
+    ///   to the Processor Module pins.
+    uint32_t loadline_uohm;
+
+    /// Distribution Loss
+    ///   Impedance (binary in microOhms) of the VDD distribution loss sense point
+    ///   to the circuit.
+    uint32_t distloss_uohm;
+
+    /// Distribution Offset
+    ///   Offset voltage (binary in microvolts) to apply to the rail VRM
+    ///   distribution to the processor module.
+    uint32_t distoffset_uv;
+
+} SysPowerDistParms;
+
+
+
+/// IDDQ Reading Type
+/// Each entry is 2 bytes. The values are in 10mA units; this allow for a
+/// maximum value of 655.36A represented.
+///
+typedef uint16_t iddq_entry_t;
+
+/// IDDQ Reading
+///
+/// Structure with "raw" and "temperature corrected" values.  See VPD
+/// documentation for the correction function that is applied to the raw
+/// value to load the corrected value.
+///
+typedef union {
+    uint32_t value;
+    struct {
+#ifdef _BIG_ENDIAN
+        iddq_entry_t iddq_raw_value;
+        iddq_entry_t iddq_corrected_value;
+#else
+        iddq_entry_t iddq_corrected_value;
+        iddq_entry_t iddq_raw_value;
+#endif // _BIG_ENDIAN
+    } fields;
+
+} IddqReading;
+
+/// Iddq Table
+///
+/// A set of arrays of leakage values (Iddq) collected at various voltage
+/// conditions during manufacturing test that will feed into the Workload
+/// Optimized Frequency algorithms on the OCC.  These values are not installed
+/// in any hardware facilities.
+///
+typedef struct {
+
+    /// IDDQ version
+    uint8_t     iddq_version;
+
+    /// VDD IDDQ readings
+    IddqReading iddq_vdd[CORE_IDDQ_MEASUREMENTS];
+
+    /// VCS IDDQ readings
+    IddqReading iddq_vcs[CORE_IDDQ_MEASUREMENTS];
+
+    /// VIO IDDQ readings
+    IddqReading iddq_vio[CHIP_IDDQ_MEASUREMENTS];
+
+} IddqTable;
+
+
+
+/// UltraTurbo Segment VIDs by Core Count
+typedef struct {
+
+    /// Number of Segment Pstates
+    uint8_t     ut_segment_pstates;
+
+    /// Maximum number of core possibly active
+    uint8_t     ut_max_cores;
+
+    /// VDD VID modification
+    ///      1 core active  = offset 0
+    ///      2 cores active = offset 1
+    ///         ...
+    ///      12 cores active = offset 11
+    uint8_t ut_segment_vdd_vid[MAX_UT_PSTATES][NUM_ACTIVE_CORES];
+
+    /// VCS VID modification
+    ///      1 core active  = offset 0
+    ///      2 cores active = offset 1
+    ///         ...
+    ///      12 cores active = offset 11
+    uint8_t ut_segment_vcs_vid[MAX_UT_PSTATES][NUM_ACTIVE_CORES];
+
+} VIDModificationTable;
+
+/// Workload Optimized Frequency (WOF) Elements
+///
+/// Structure defining various control elements needed by the WOF algorithm
+/// firmware running on the OCC.
+///
+typedef struct {
+
+    /// WOF Enablement
+    uint8_t wof_enabled;
+
+    /// Operating points
+    ///
+    /// VPD operating points are stored without load-line correction.  Frequencies
+    /// are in MHz, voltages are specified in units of 5mV, and currents are
+    /// in units of 500mA.
+    VpdOperatingPoint operating_points[VPD_PV_POINTS];
+
+    /// Loadlines and Distribution values for the VDD rail
+    SysPowerDistParms vdd_sysparm;
+
+    /// Loadlines and Distribution values for the VCS rail
+    SysPowerDistParms vcs_sysparm;
+
+    /// TDP<>RDP Current Factor
+    ///   Value read from ??? VPD
+    ///   Defines the scaling factor that converts current (amperage) value from
+    ///   the Thermal Design Point to the Regulator Design Point (RDP) as input
+    ///   to the Workload Optimization Frequency (WOF) OCC algorithm.
+    ///
+    ///   This is a ratio value and has a granularity of 0.01 decimal.  Data
+    ///   is held in hexidecimal (eg 1.22 is represented as 122 and then converted
+    ///   to hex 0x7A).
+    uint32_t tdp_rdp_factor;
+
+    /// UltraTurbo Segment VIDs by Core Count
+    VIDModificationTable ut_vid_mod;
+
+    uint8_t pad[4];
+
+} WOFElements;
+
+
 /// The layout of the data created by the Pstate table creation firmware
 ///
 /// This structure is only used for passing Pstate data from the FSP into OCC,
@@ -533,6 +761,12 @@ typedef struct {
     /// CPM Pstate ranges
     CpmPstateModeRanges cpmranges;
 
+    /// Iddq Table
+    IddqTable iddq;
+
+    /// WOF Controls
+    WOFElements wof;
+
 } PstateSuperStructure;
 
 
@@ -549,8 +783,8 @@ int
 bias_vid11(Vid11 vid, int bias, Vid11* biased_fcode);
 
 int
-gpst_entry(const GlobalPstateTable* gpst, 
-           const Pstate pstate, 
+gpst_entry(const GlobalPstateTable* gpst,
+           const Pstate pstate,
            const int bias,
            gpst_entry_t* entry);
 
@@ -560,8 +794,8 @@ gpst_frequency2pstate(const GlobalPstateTable* gpst,
                       Pstate* pstate);
 
 int
-gpst_vdd2pstate(const GlobalPstateTable* gpst, 
-                const uint8_t vdd, 
+gpst_vdd2pstate(const GlobalPstateTable* gpst,
+                const uint8_t vdd,
                 Pstate* pstate,
                 gpst_entry_t* entry);
 
