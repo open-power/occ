@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -103,6 +103,18 @@ errlHndl_t AMEC_data_write_fcurr(const OCC_MODE i_mode)
        (i_mode == OCC_MODE_DYN_POWER_SAVE_FP))
     {
         l_mode = OCC_MODE_TURBO;
+    }
+
+    // Check the UltraTurbo frequency to see if WOF function is supported
+    if(G_sysConfigData.sys_mode_freq.table[OCC_MODE_STURBO] == 0)
+    {
+        // UltraTurbo frequency is zero, WOF is not supported
+        g_amec->wof.enable_parm = 0;
+    }
+    else
+    {
+        // Enable WOF algorithm
+        g_amec->wof.enable_parm = 2;
     }
 
     // If we're active we need to load this new range into DVFS MIN/MAX

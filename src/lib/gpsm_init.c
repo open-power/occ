@@ -1,4 +1,28 @@
-// $Id: gpsm_init.c,v 1.9 2014/06/10 19:14:57 daviddu Exp $
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/lib/gpsm_init.c $                                         */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
+// $Id: gpsm_init.c,v 1.10 2015/05/16 17:43:12 daviddu Exp $
 // $Source: /afs/awd/projects/eclipz/KnowledgeBase/.cvsroot/eclipz/chips/p8/working/procedures/lib/gpsm_init.c,v $
 //-----------------------------------------------------------------------------
 // *! (C) Copyright International Business Machines Corp. 2013
@@ -25,7 +49,7 @@
 /// GlobalPstateTable *gpst;
 /// GpsmEnablePstatesMasterInfo info;
 /// Pstate voltage_pstate, frequency_pstate;
-/// 
+///
 /// gpsm_initialize(pss, gpst);
 /// gpsm_enable_pstates_master(&info, &voltage_pstate, &frequency_pstate);
 /// gpsm_enable_pstates_slave(&info, voltage_pstate, frequency_pstate);
@@ -48,12 +72,12 @@
 /// GlobalPstateTable *gpst;
 /// GpsmEnablePstatesMasterInfo info;
 /// Pstate voltage_pstate, frequency_pstate;
-/// 
+///
 /// gpsm_initialize(pss, gpst);
 /// gpsm_enable_pstates_master(&info, &voltage_pstate, &frequency_pstate);
 ///
 /// <em> Send voltage_pstate and frequency_pstate to the slave and wait for
-/// confirmation that the procedure has completed. </em> 
+/// confirmation that the procedure has completed. </em>
 ///
 /// gpsm_enable_pstates_slave(&info, voltage_pstate, frequency_pstate);
 /// gpsm_hw_mode();
@@ -67,11 +91,11 @@
 /// PstateSuperStructure* pss;
 /// GlobalPstateTable *gpst;
 /// Pstate voltage_pstate, frequency_pstate;
-/// 
+///
 /// gpsm_initialize(pss, gpst);
 ///
 /// <em> Receive voltage_pstate and frequency_pstate from the masterand wait for
-/// confirmation that the procedure has completed. </em> 
+/// confirmation that the procedure has completed. </em>
 ///
 /// gpsm_enable_pstates_slave(0, voltage_pstate, frequency_pstate);
 ///
@@ -91,7 +115,7 @@
 ///
 /// - CPM-DPLL mode should be disabled, and all undervolting controls are
 /// assumed to be at their nominal values.  Correctness can not guaranteed
-/// otherwise. 
+/// otherwise.
 ///
 /// - iVRM mode should be disabled prior to calling this procedure.
 /// Correctness can not be guaranteed otherwise.
@@ -106,7 +130,7 @@
 /// 'nominal_frequency_khz' field of the Global Pstate table.
 ///
 /// - All core chiplet frequencies will be under the control of the PMCR Local
-/// Pstate. 
+/// Pstate.
 ///
 /// - The Global Actual Pstate immediately prior to the final entry of Pstate
 /// mode is the Pstate that most closely matches an arbitrary snapshot of the
@@ -115,7 +139,7 @@
 /// - The PMCR and PMICR are not modified, therefore the Global Pstate
 /// subsequent to the release of Hardware Pstate mode is arbitrary.
 ///
-/// - The PMC_RAIL_BOUNDS register is set to the maximum legal bounds allowed 
+/// - The PMC_RAIL_BOUNDS register is set to the maximum legal bounds allowed
 /// by Global Pstate Table
 ///
 /// - IVRM is setup and enabled if Local Pstate Table is installed.
@@ -180,7 +204,7 @@ uint8_t G_gpsm_initialized = 0;
 ///
 /// - Installs a pointer to the Global Pstate Table in the PMC hardware.
 ///
-/// - Sets up the PMC Pstate clipping bounds. 
+/// - Sets up the PMC Pstate clipping bounds.
 ///
 /// - Sets up the Pstate stepping parameters from the GlobalPstateTable
 ///
@@ -202,7 +226,7 @@ uint8_t G_gpsm_initialized = 0;
 /// \retval -GPSM_INVALID_ARGUMENT_GPST_INSTALL The Global Pstate table argument
 /// was either NULL (0) or improperly aligned, or the \a source was NULL (0).
 ///
-/// \retval -GPSM_ILLEGAL_MODE_GPST_INSTALL The PMC does not indicate that the 
+/// \retval -GPSM_ILLEGAL_MODE_GPST_INSTALL The PMC does not indicate that the
 //  system is in Firmware Pstate Mode, or the heartbeat is enabled.
 
 int
@@ -226,13 +250,13 @@ gpsm_gpst_install(GlobalPstateTable* o_gpst,
         // Optional bypass of the procedure
 
         if (i_source->options.options & PSTATE_NO_INSTALL_GPST) {
-            
+
             rc = 0;
             break;
         }
 
         // Check presence and alignment of the Pstate table, and proper Pstate
-        // and heartbeat modes. 
+        // and heartbeat modes.
 
         if ((o_gpst == 0) ||
             ((unsigned long)o_gpst % POW2_32(GLOBAL_PSTATE_TABLE_ALIGNMENT))) {
@@ -369,7 +393,7 @@ gpsm_gpst_install(GlobalPstateTable* o_gpst,
 /// then only as part of the gpsm_initialize() procedure.  The procedure:
 ///
 /// - Power on PFET Voltage Reference Circuit
-/// 
+///
 /// - Perform the binary search for IVRM Calibration
 ///
 /// - Uploads the LocalPstateArray to every core using multicast.
@@ -394,13 +418,13 @@ gpsm_gpst_install(GlobalPstateTable* o_gpst,
 ///
 /// \retval 0 Success
 ///
-/// \retval -GPSM_INVALID_ARGUMENT_LPST_INSTALL The Local Pstate array argument 
+/// \retval -GPSM_INVALID_ARGUMENT_LPST_INSTALL The Local Pstate array argument
 /// was NULL (0).
 ///
-/// \retval -GPSM_ILLEGAL_MODE_LPST_INSTALL iVRM mode, CPM-DPLL mode, or the 
+/// \retval -GPSM_ILLEGAL_MODE_LPST_INSTALL iVRM mode, CPM-DPLL mode, or the
 /// local heartbeat appears to be enabled in at least one core.
 ///
-/// \retval -GPSM_IVRM_CALIBRATION_TIMEOUT, if IVRM Calibration does not 
+/// \retval -GPSM_IVRM_CALIBRATION_TIMEOUT, if IVRM Calibration does not
 /// complete in time.
 ///
 /// \retval -GPSM_IVRM_GROSS_OR_FINE, if ivrm_gross_or_fine_err is set
@@ -408,7 +432,7 @@ gpsm_gpst_install(GlobalPstateTable* o_gpst,
 /// \retval -GPSM_PSTATE_ENABLED, if pstate is enabled before enabling IVRM
 ///
 /// \retval others This API may also return non-0 codes from
-/// getscom()/putscom() 
+/// getscom()/putscom()
 
 int
 gpsm_lpsa_install(const LocalPstateArray* i_lpsa,
@@ -435,7 +459,7 @@ gpsm_lpsa_install(const LocalPstateArray* i_lpsa,
 
         // Optional bypass of this procedure
 
-        if ((i_options != 0) && 
+        if ((i_options != 0) &&
             (i_options->options & PSTATE_NO_INSTALL_LPSA)) {
 
             rc = 0;
@@ -454,7 +478,7 @@ gpsm_lpsa_install(const LocalPstateArray* i_lpsa,
             rc = 0;
             break;
         }
-       
+
         // Check the array for existence.  Do an OR-combining multicast read
         // to see if any of the cores have iVRM enabled, have the heartbeat
         // enabled, or any cores are running in CPM-DPLL mode.
@@ -472,13 +496,13 @@ gpsm_lpsa_install(const LocalPstateArray* i_lpsa,
                      &(pdcpr.value));
         if (rc) _BREAK;
 
-        if (picsr.fields.ivrm_fsm_enable || 
+        if (picsr.fields.ivrm_fsm_enable ||
             pdcpr.fields.cpm_filter_enable) {
             rc = -GPSM_ILLEGAL_MODE_LPST_INSTALL;
             _BREAK;
         }
 
-        // In case cores are in deep winkle so that ivrm caliburation 
+        // In case cores are in deep winkle so that ivrm caliburation
         // will fail, insert special wakeup first
         pcdr.value = in32(PMC_CORE_DECONFIGURATION_REG);
         cores = ~pcdr.fields.core_chiplet_deconf_vector;
@@ -505,7 +529,7 @@ gpsm_lpsa_install(const LocalPstateArray* i_lpsa,
 
         // Check IVRM Calibration is completed
         // Poll for up to 100us for done before erroring out
-        timeout_rc = -GPSM_IVRM_CALIBRATION_TIMEOUT;           
+        timeout_rc = -GPSM_IVRM_CALIBRATION_TIMEOUT;
         timeout = ssx_timebase_get() + SSX_MICROSECONDS(100);
         while (ssx_timebase_get() < timeout) {
             rc = getscom(MC_ADDRESS(PCBS_IVRM_CONTROL_STATUS_REG,
@@ -533,17 +557,17 @@ gpsm_lpsa_install(const LocalPstateArray* i_lpsa,
         if (rc) _BREAK;
         if (ppr.fields.pcbs_ivrm_gross_or_fine_err) {
             rc = -GPSM_IVRM_GROSS_OR_FINE;
-            _BREAK;     
+            _BREAK;
         }
 
         // Deassert Special Wakeup
         rc = occ_special_wakeup(0, cores, 25, &wakedup);
         if (rc) _BREAK;
-        
+
         // Upload the Local Pstate Array.  The array is loaded via multicast,
         // using the built-in auto-increment mechanism.  Then upload the
         // Pstate bounds register via multicast. Pstate clipping is not
-        // modified. 
+        // modified.
 
         rc = putscom(MC_ADDRESS(PCBS_PSTATE_TABLE_CTRL_REG,
                                 MC_GROUP_EX, PCB_MULTICAST_WRITE),
@@ -580,14 +604,14 @@ gpsm_lpsa_install(const LocalPstateArray* i_lpsa,
 
         pivcr0.value = 0;
         if (i_lpsa->stepdelay_rising)
-            pivcr0.fields.ivrm_req_pstate_stepdelay_rising = 
+            pivcr0.fields.ivrm_req_pstate_stepdelay_rising =
                                          i_lpsa->stepdelay_rising;
-        else 
+        else
             pivcr0.fields.ivrm_req_pstate_stepdelay_rising = 0xFF;
         if (i_lpsa->stepdelay_lowering)
-            pivcr0.fields.ivrm_req_pstate_stepdelay_lowering = 
+            pivcr0.fields.ivrm_req_pstate_stepdelay_lowering =
                                          i_lpsa->stepdelay_lowering;
-        else 
+        else
             pivcr0.fields.ivrm_req_pstate_stepdelay_lowering = 0XFF;
         rc = putscom(MC_ADDRESS(PCBS_IVRM_VID_CONTROL_REG0,
                                 MC_GROUP_EX, PCB_MULTICAST_WRITE),
@@ -653,9 +677,9 @@ gpsm_lpsa_install(const LocalPstateArray* i_lpsa,
 
     } while (0);
 
-    if (timeout_rc && !rc) 
+    if (timeout_rc && !rc)
         return timeout_rc;
-    else             
+    else
         return rc;
 }
 
@@ -674,7 +698,7 @@ gpsm_lpsa_install(const LocalPstateArray* i_lpsa,
 /// - Initializes the Pstate resonance range limits in the register
 /// PCBS_RESONANT_CLOCK_CONTROL_REG1 by multicast.
 ///
-/// - Setup parameters in PCBS_RESONANT_CLOCK_CONTROL_REG0 and turn on 
+/// - Setup parameters in PCBS_RESONANT_CLOCK_CONTROL_REG0 and turn on
 /// Resonant Clock in Hardware Pstate Mode.
 ///
 /// \note The caller is responsible for the mode-correctness of this
@@ -686,14 +710,14 @@ gpsm_lpsa_install(const LocalPstateArray* i_lpsa,
 ///
 /// \retval 0 Success
 ///
-/// \retval -GPSM_INVALID_ARGUMENT_RCLK_INSTALL The ResonantClockingSetup 
+/// \retval -GPSM_INVALID_ARGUMENT_RCLK_INSTALL The ResonantClockingSetup
 /// argument was NULL (0).
 ///
-/// \retval -GPSM_ILLEGAL_MODE_RCLK_INSTALL Resonant clocking appears to be 
+/// \retval -GPSM_ILLEGAL_MODE_RCLK_INSTALL Resonant clocking appears to be
 /// enabled or not in manual mode in at least one configured core.
 ///
 /// \retval others This API may also return non-0 codes from
-/// getscom()/putscom() 
+/// getscom()/putscom()
 
 int
 gpsm_resclk_install(const ResonantClockingSetup* i_resclk,
@@ -751,7 +775,7 @@ gpsm_resclk_install(const ResonantClockingSetup* i_resclk,
             _BREAK;
         }
 
-        
+
         // Resonant clocking is specified such that it must be enabled (in a
         // benign manual mode) in order to be set up.
 
@@ -761,7 +785,7 @@ gpsm_resclk_install(const ResonantClockingSetup* i_resclk,
 
         if (!SIMICS_ENVIRONMENT) {
 
-            rc = putscom(MC_ADDRESS(0x100f0013, MC_GROUP_EX, 
+            rc = putscom(MC_ADDRESS(0x100f0013, MC_GROUP_EX,
                                     PCB_MULTICAST_WRITE),
                          ~0x0000020000000000ull);
             if (rc) _BREAK;
@@ -769,7 +793,7 @@ gpsm_resclk_install(const ResonantClockingSetup* i_resclk,
 
         // Write the PCBS_RESONANT_CLOCK_CONTROL_REG1 with the
         // Pstate setup, clearing all manual fields.
-       
+
         // If at least one resonant clocking parm was 0 in PstateSuperStructure
         // write the register with default values
         // Low Band  : 2 GHZ to 3.2 GHz
@@ -782,9 +806,9 @@ gpsm_resclk_install(const ResonantClockingSetup* i_resclk,
         gpst_frequency2pstate(i_gpst, 9999999, &(d_resclk.res_high_upper_ps));
 
         prccr1.value = 0;
-        if (!(i_resclk->full_csb_ps && 
+        if (!(i_resclk->full_csb_ps &&
               i_resclk->res_low_lower_ps &&
-              i_resclk->res_low_upper_ps && 
+              i_resclk->res_low_upper_ps &&
               i_resclk->res_high_lower_ps &&
               i_resclk->res_high_upper_ps)) {
             prccr1.fields.full_csb_ps       = d_resclk.full_csb_ps;
@@ -814,7 +838,7 @@ gpsm_resclk_install(const ResonantClockingSetup* i_resclk,
 
         if (!SIMICS_ENVIRONMENT) {
 
-            rc = putscom(MC_ADDRESS(0x100f0014, MC_GROUP_EX, 
+            rc = putscom(MC_ADDRESS(0x100f0014, MC_GROUP_EX,
                                     PCB_MULTICAST_WRITE),
                          0x0000020000000000ull);
             if (rc) _BREAK;
@@ -851,7 +875,7 @@ gpsm_resclk_install(const ResonantClockingSetup* i_resclk,
     return rc;
 }
 
-        
+
 /// Initialize the GPSM procedure mechanism
 ///
 /// \param[in] i_pss A pointer to the PstateSuperStructure containing the
@@ -888,7 +912,7 @@ gpsm_resclk_install(const ResonantClockingSetup* i_resclk,
 /// master.
 ///
 /// The GPSM driver makes few assumptions about how the system firmware has
-/// set up the PMC, but does require some critical setup.  
+/// set up the PMC, but does require some critical setup.
 ///
 /// - It is assumed that for DCM configurations the system firmware will have
 /// set the PMC_MODE_REG.enable_interchip_interface (to indicate a DCM
@@ -915,15 +939,15 @@ gpsm_resclk_install(const ResonantClockingSetup* i_resclk,
 /// \retval -GPSM_INVALID_MAGIC The 'magic number' of the PstateSuperStructure
 /// is different from that expected.
 ///
-/// \retval -GPSM_ILLEGAL_MODE_GPSM_INIT Either the PMC indicates a Pstate mode 
-/// is active, one or more cores appear to have iVRM enabled, or one or more 
+/// \retval -GPSM_ILLEGAL_MODE_GPSM_INIT Either the PMC indicates a Pstate mode
+/// is active, one or more cores appear to have iVRM enabled, or one or more
 /// cores appear to have resonant clocking enabled.
 ///
 /// \retval others This API may also return codes from gpsm_gpst_install(),
 /// gpsm_lpsa_install() and gpsm_resclk_install().
 
 int
-gpsm_initialize(const PstateSuperStructure* i_pss, 
+gpsm_initialize(const PstateSuperStructure* i_pss,
                 GlobalPstateTable* o_gpst)
 {
     pmc_mode_reg_t pmr;
@@ -942,8 +966,9 @@ gpsm_initialize(const PstateSuperStructure* i_pss,
         }
 
         if (i_pss->magic != PSTATE_SUPERSTRUCTURE_GOOD1 &&
-            i_pss->magic != PSTATE_SUPERSTRUCTURE_GOOD2 && 
-            i_pss->magic != PSTATE_SUPERSTRUCTURE_GOOD3 ) {
+            i_pss->magic != PSTATE_SUPERSTRUCTURE_GOOD2 &&
+            i_pss->magic != PSTATE_SUPERSTRUCTURE_GOOD3 &&
+            i_pss->magic != PSTATE_SUPERSTRUCTURE_GOOD4) {
 
             rc = -GPSM_INVALID_MAGIC;
             _BREAK;
@@ -959,7 +984,7 @@ gpsm_initialize(const PstateSuperStructure* i_pss,
             _BREAK;
         }
         if (!pmr.fields.enable_fw_pstate_mode) {
-        
+
             pmr.fields.enable_fw_pstate_mode = 1;
             out32(PMC_MODE_REG, pmr.value);
         }
@@ -968,7 +993,7 @@ gpsm_initialize(const PstateSuperStructure* i_pss,
         pmr.fields.halt_pstate_master_fsm = 0;
         out32(PMC_MODE_REG, pmr.value);
 
-        
+
         // Initialize interrupt handling
 
         ssx_semaphore_create(&G_gpsm_protocol_semaphore, 0, 1);
@@ -1011,12 +1036,12 @@ gpsm_initialize(const PstateSuperStructure* i_pss,
         rc = gpsm_gpst_install(o_gpst, &(i_pss->gpst));
         if (rc) _BREAK;
 
-        rc = gpsm_lpsa_install(&i_pss->lpsa, 
+        rc = gpsm_lpsa_install(&i_pss->lpsa,
                                &(i_pss->gpst.options));
         if (rc) _BREAK;
 
         rc = gpsm_resclk_install(&i_pss->resclk,
-                                 &(i_pss->gpst), 
+                                 &(i_pss->gpst),
                                  &(i_pss->gpst.options));
         if (rc) _BREAK;
 
@@ -1050,9 +1075,9 @@ gpsm_initialize(const PstateSuperStructure* i_pss,
 // Racall that the inputs are VID codes (lower VID --> higher voltage)
 
 static int
-_manual_step_voltage(const uint8_t i_currentVdd, 
+_manual_step_voltage(const uint8_t i_currentVdd,
                      const uint8_t i_currentVcs,
-                     const uint8_t i_targetVdd, 
+                     const uint8_t i_targetVdd,
                      const uint8_t i_targetVcs)
 {
     int rc, parity;
@@ -1110,12 +1135,12 @@ _manual_step_voltage(const uint8_t i_currentVdd,
             out32(PMC_GLOBAL_ACTUAL_VOLTAGE_REG, pgavr.value);
         }
         if (rc) _BREAK;
-        
+
         rc = gpsm_quiesce();
         if (rc) _BREAK;
 
     } while (0);
-        
+
     return rc;
 }
 
@@ -1124,8 +1149,8 @@ _manual_step_voltage(const uint8_t i_currentVdd,
 // initialization of Pstates.  The set of cores to operate on is taken from
 // the current value of the PMC_CORE_DECONFIGURATION_REG.
 //
-// At entry it assumed that iVRM and CPM-DPLL are disabled. It also clears 
-// possible safe mode dails before enable pstate. 
+// At entry it assumed that iVRM and CPM-DPLL are disabled. It also clears
+// possible safe mode dails before enable pstate.
 //
 // At exit, the following will be true for all configured cores:
 //
@@ -1146,7 +1171,7 @@ _manual_step_voltage(const uint8_t i_currentVdd,
 // in the PMCR are not modified.
 
 static int
-_enable_pstates_core_prologue(const GlobalPstateTable* i_gpst, 
+_enable_pstates_core_prologue(const GlobalPstateTable* i_gpst,
                               const Pstate i_frequency_pstate,
                               const gpst_entry_t i_entry)
 {
@@ -1167,7 +1192,7 @@ _enable_pstates_core_prologue(const GlobalPstateTable* i_gpst,
 
         /* In the event of no configured cores, FW requested to not error out */
         //rc = -GPSM_CONFIGURATION_ERROR;
-        rc = 0; 
+        rc = 0;
 
         // Do for each core chiplet...
         configured_cores = ~in32(PMC_CORE_DECONFIGURATION_REG);
@@ -1175,7 +1200,7 @@ _enable_pstates_core_prologue(const GlobalPstateTable* i_gpst,
         // Turn off possible safe mode so we can move pstate
         pcbs_hb_config(0, configured_cores, 0, 0, 0, &bogus);
         pmc_hb_config(0, 0, 0, &bogus);
-         
+
         for (core = 0; core < PGP_NCORES; core++, configured_cores <<= 1) {
 
             if (!(configured_cores & 0x80000000)) continue;
@@ -1209,7 +1234,7 @@ _enable_pstates_core_prologue(const GlobalPstateTable* i_gpst,
 
 
             // Update Fmin, Fmax, Fmax bias and Pstate0 frequency.
-        
+
             pfcr.value = 0;
             pfcr.fields.dpll_fmin = fPstate;
             pfcr.fields.dpll_fmax = fPstate;
@@ -1234,29 +1259,29 @@ _enable_pstates_core_prologue(const GlobalPstateTable* i_gpst,
             // _local_ pstate table.
 
             // \bug Workaround, since pre_vret_pstate is set to pmin currently
-            // until pstate super structure and pstate data block procedure 
+            // until pstate super structure and pstate data block procedure
             // support an entry as non-functional pstate, need to set lower
-            // clip bound to be the pstate one above pmin to make pmin 
+            // clip bound to be the pstate one above pmin to make pmin
             // essentially a non-functional pstate for now
-            
+
             ppmbr.value = 0;
             ppmbr.fields.pmin_clip = gpst_pmin(i_gpst)+1;
             ppmbr.fields.pmax_clip = gpst_pmax(i_gpst);
 
             // This fix is added per SW260911
             // Minimum Frequency in the system is given by MRW attribute
-            // PState Datablock procedure will read the attribute then  
-            // convert it into pstate _pfloor_ and put it into 
-            // Global Pstate Table. GPSM here consumes the value 
+            // PState Datablock procedure will read the attribute then
+            // convert it into pstate _pfloor_ and put it into
+            // Global Pstate Table. GPSM here consumes the value
             // and set both lower bounds: pmin_rail(PMC) and pmin_clip(PCBS)
             // and two safe pstates: pvsafe(PMc) and psafe(PCBS) to be
             // _pfloor_ if _pfloor_ is higher than their default(gpst_pmin)
-            // so that we should never run with frequency below the floor 
+            // so that we should never run with frequency below the floor
             // even in safe mode
             if (ppmbr.fields.pmin_clip < i_gpst->pfloor && i_gpst->pfloor != 0)
                 ppmbr.fields.pmin_clip = i_gpst->pfloor;
 
-            rc = putscom(CORE_CHIPLET_ADDRESS(PCBS_POWER_MANAGEMENT_BOUNDS_REG, 
+            rc = putscom(CORE_CHIPLET_ADDRESS(PCBS_POWER_MANAGEMENT_BOUNDS_REG,
                                               core),
                          ppmbr.value);
             if (rc) _BREAK;
@@ -1284,7 +1309,7 @@ _enable_pstates_core_prologue(const GlobalPstateTable* i_gpst,
                          &(ppvcr.value));
             if (rc) _BREAK;
 
-            ppvcr.fields.pglobal_actual = i_frequency_pstate; 
+            ppvcr.fields.pglobal_actual = i_frequency_pstate;
             ppvcr.fields.maxregvcs = i_entry.fields.maxreg_vdd;
             ppvcr.fields.maxregvdd = i_entry.fields.maxreg_vcs;
             ppvcr.fields.evidvcs_eff = i_entry.fields.evid_vdd_eff;
@@ -1294,7 +1319,7 @@ _enable_pstates_core_prologue(const GlobalPstateTable* i_gpst,
                          ppvcr.value);
             if (rc) _BREAK;
 
-           
+
             // Enable Pstate in PCB Slave
 
             rc = getscom(CORE_CHIPLET_ADDRESS(PCBS_PCBSPM_MODE_REG, core),
@@ -1341,7 +1366,7 @@ _enable_pstates_core_prologue(const GlobalPstateTable* i_gpst,
 // Actual. This procedure releases frequency override mode and core-level
 // Pstate operations commence.
 //
-// retval -GPSM_BABYSTEPPER_SYNC_TIMEOUT, if baby stepper sync 
+// retval -GPSM_BABYSTEPPER_SYNC_TIMEOUT, if baby stepper sync
 // local_pstate_actual times out
 //
 static int
@@ -1359,21 +1384,21 @@ _enable_pstates_core_epilogue(void)
 
         configured_cores = ~in32(PMC_CORE_DECONFIGURATION_REG);
         for (core = 0; core < PGP_NCORES; core++, configured_cores <<= 1) {
-    
+
             if (!(configured_cores & 0x80000000)) continue;
-    
+
             pmgp1.value = 0;
             pmgp1.fields.dpll_freq_override_enable = 1;
-    
+
             rc = putscom(CORE_CHIPLET_ADDRESS(PCBS_PMGP1_REG_AND, core),
                          ~pmgp1.value);
             if (rc) _BREAK;
         }
         if (rc) _BREAK;
-        
+
         // For Babystepper to catch up sync the local_pstate_actual
         // Poll for up to 300us for done before erroring out
-    
+
         timeout_rc = -GPSM_BABYSTEPPER_SYNC_TIMEOUT;
         timeout = ssx_timebase_get() + SSX_MICROSECONDS(300);
         while (ssx_timebase_get() < timeout) {
@@ -1381,7 +1406,7 @@ _enable_pstates_core_epilogue(void)
                                     MC_GROUP_EX, PCB_MULTICAST_AND),
                          &(ppmsr.value));
             if (rc) _BREAK;
-            if (ppmsr.fields.local_pstate_actual == 
+            if (ppmsr.fields.local_pstate_actual ==
                 ppmsr.fields.global_pstate_actual) {
                 timeout_rc = 0;
                 break;
@@ -1391,9 +1416,9 @@ _enable_pstates_core_epilogue(void)
 
     } while(0);
 
-    if (timeout_rc && !rc) 
+    if (timeout_rc && !rc)
         return timeout_rc;
-    else                   
+    else
         return rc;
 
 }
@@ -1457,16 +1482,16 @@ gpsm_enable_pstates_master(GpsmEnablePstatesMasterInfo* o_info,
         // the PMIN frequency prior to starting Pstate operations.  It is
         // always safe to change the Pstate from "PMIN", regardless of the
         // actual external voltage, since the PMIN frequency is safe at any
-        // voltage. 
+        // voltage.
 
         if (!(gpst->options.options & PSTATE_FORCE_INITIAL_PMIN)) {
 
-            rc = vrm_voltage_read(SPIVRM_PORT(0), 
-                                  VRM_RD_VDD_RAIL, 
+            rc = vrm_voltage_read(SPIVRM_PORT(0),
+                                  VRM_RD_VDD_RAIL,
                                   &(o_info->currentVdd));
             if (rc) _BREAK;
-            rc = vrm_voltage_read(SPIVRM_PORT(0), 
-                                  VRM_RD_VCS_RAIL, 
+            rc = vrm_voltage_read(SPIVRM_PORT(0),
+                                  VRM_RD_VCS_RAIL,
                                   &(o_info->currentVcs));
             if (rc) _BREAK;
 
@@ -1476,14 +1501,14 @@ gpsm_enable_pstates_master(GpsmEnablePstatesMasterInfo* o_info,
             if (rc) {
                 SSX_PANIC(GPSM_BUG); /* This can't happen */
             }
-            
+
             o_info->currentVdd = voltage_entry.fields.evid_vdd;
             o_info->currentVcs = voltage_entry.fields.evid_vcs;
         }
-        
-        search_rc = gpst_vdd2pstate(gpst, o_info->currentVdd, 
+
+        search_rc = gpst_vdd2pstate(gpst, o_info->currentVdd,
                                     o_voltage_pstate, &voltage_entry);
-        if (search_rc && 
+        if (search_rc &&
             (search_rc != -GPST_PSTATE_CLIPPED_LOW_GPST_V2P) &&
             (search_rc != -GPST_PSTATE_CLIPPED_HIGH_GPST_V2P)) {
             rc = search_rc;
@@ -1506,7 +1531,7 @@ gpsm_enable_pstates_master(GpsmEnablePstatesMasterInfo* o_info,
 
         if ((search_rc == 0)||(search_rc = -GPST_PSTATE_CLIPPED_LOW_GPST_V2P)) {
 
-            rc = _manual_step_voltage(o_info->currentVdd, o_info->currentVcs, 
+            rc = _manual_step_voltage(o_info->currentVdd, o_info->currentVcs,
                                       o_info->targetVdd, o_info->targetVcs);
             if (rc) _BREAK;
 
@@ -1532,7 +1557,7 @@ gpsm_enable_pstates_master(GpsmEnablePstatesMasterInfo* o_info,
 /// \param[in] i_info This structure is populated by
 /// gpsm_enable_pstates_master(), and only required in an SCM or DCM master.
 /// When this API is called on a DCM slave the parameter may be passed as NULL
-/// (0). 
+/// (0).
 ///
 /// \param[in] i_voltage_pstate This parameter is computed by
 /// gpsm_enable_pstates_master(), and is required in every case.
@@ -1565,7 +1590,7 @@ gpsm_enable_pstates_slave(const GpsmEnablePstatesMasterInfo* i_info,
         // guarantees that the GPSM is quiesced at this point for the slave;
         // the master must already be quiesced.  Recover a pointer to the
         // Pstate table from PMC.
-            
+
         if (gpsm_dcm_slave_p()) {
 
             rc = gpsm_fw_mode();
@@ -1587,28 +1612,28 @@ gpsm_enable_pstates_slave(const GpsmEnablePstatesMasterInfo* i_info,
 
         gpst = gpsm_gpst();
         gpst_entry(gpst, i_voltage_pstate, 0, &voltage_entry);
-        
+
         // Execute the core prologue.  An SCM or DCM master may need to move
         // voltage after the frequency move.  Since this is guaranteed to be a
         // safe downward move (otherwise we would have moved voltage already),
         // it is safe for the DCM slave to go ahead and finish its Pstate
         // setup before the master has moved the voltage.
 
-        rc = _enable_pstates_core_prologue(gpst, i_frequency_pstate, 
+        rc = _enable_pstates_core_prologue(gpst, i_frequency_pstate,
                                                  voltage_entry);
         if (rc) _BREAK;
 
         if (!gpsm_dcm_slave_p()) {
 
-            rc = _manual_step_voltage(i_info->currentVdd, i_info->currentVcs, 
+            rc = _manual_step_voltage(i_info->currentVdd, i_info->currentVcs,
                                       i_info->targetVdd, i_info->targetVcs);
             if (rc) _BREAK;
         }
 
-        
+
         // The Voltage and Frequency state is now consistent in the cores and
         // in PMC. Make sure that PMC modes are set correctly for Hardware
-        // Pstate Mode.  
+        // Pstate Mode.
 
         pmr.value = in32(PMC_MODE_REG);
         pmr.fields.enable_pstate_voltage_changes = 1;

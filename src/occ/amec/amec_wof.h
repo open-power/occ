@@ -85,6 +85,7 @@ typedef enum {
     AMEC_WOF_CORE_FREQ_TBL = 0x01,
     AMEC_WOF_VRM_EFF_TBL   = 0x02
 } wof_tbl_type_t;
+
 //*************************************************************************
 // Structures
 //*************************************************************************
@@ -106,11 +107,11 @@ typedef struct amec_wof
     uint8_t             iddq_i;
     // Check interpolation of iddq table
     uint16_t            iddq85c;
-    // I_DC_extracted is the estimated temperature-corrected leakage current
+    // I_DC_extracted is the estimated temperature-corrected leakage current in which units????
     uint16_t            iddq;
-    // I_AC extracted
+    // I_AC extracted in which units????
     uint16_t            ac;
-    // Effective capacitance for TDP workload @ Turbo.
+    // Effective capacitance for TDP workload @ Turbo in which units???
     uint32_t            ceff_tdp;
     // Effective capacitance right now.
     uint32_t            ceff;
@@ -164,6 +165,7 @@ void amec_wof_alg_v3(void);
 void amec_wof_common_steps(void);
 void amec_wof_helper_v2(void);
 void amec_wof_helper_v3(void);
+uint32_t amec_wof_compute_c_eff(void);
 
 int amec_wof_writeToTable(wof_tbl_type_t i_tblType ,
                           const uint16_t i_size,

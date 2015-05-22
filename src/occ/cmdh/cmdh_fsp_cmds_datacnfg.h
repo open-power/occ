@@ -96,7 +96,12 @@ typedef struct __attribute__ ((packed))
     uint8_t   reserved[3];
     PstateSuperStructure pstatess;
 }cmdh_store_cnfgdata_pstatess_t;
+
 #define CMDH_CNFGDATA_PSTATESS_DATALEN (sizeof(PstateSuperStructure) + 4)
+
+// At a minimum, OCC expects this size: Pstate superstructure for versions
+// PSTATE01, PSTATE02, or PSTATE03, plus 4 bytes (from format and reserved bytes)
+#define CMDH_CNFGDATA_PSTATESS_MIN_DATALEN   (1904 + 4)
 
 // Used by TMGT to send OCC the frequencies for each mode.
 typedef struct __attribute__ ((packed))

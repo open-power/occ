@@ -23,75 +23,6 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-//
-// Data about tul237 prototype
-//
-
-// $ svpdMFGtool --cc=pf
-// RID: 0x1000,  CCIN: 54BC
-// RID: 0x1001,  CCIN: 54BC
-// RID: 0x1002,  CCIN: 54BC
-// RID: 0x1003,  CCIN: 54BC
-
-// $ findchips_nc
-// Starting findchips...
-// Probing SCAN Engines
-// /dev/scan/L02C0E13:L3C0E12:L3C0E03P00> CENTAUR-DD2.0 (0x260E9049)
-// /dev/scan/L02C0E13:L3C0E12:L2C0E03P00> CENTAUR-DD2.0 (0x260E9049)
-// /dev/scan/L02C0E13:L3C0E12:L1C0E03P00> CENTAUR-DD2.0 (0x260E9049)
-// /dev/scan/L02C0E13:L3C0E12:L0C0E03P00> CENTAUR-DD2.0 (0x260E9049)
-// /dev/scan/L02C0E13:L3C0E03P00> MURANO-DD2.0 (0x220EF049)
-// /dev/scan/L02C0E13:L2C0E12:L3C0E03P00> CENTAUR-DD2.0 (0x260E9049)
-// /dev/scan/L02C0E13:L2C0E12:L2C0E03P00> CENTAUR-DD2.0 (0x260E9049)
-// /dev/scan/L02C0E13:L2C0E12:L1C0E03P00> CENTAUR-DD2.0 (0x260E9049)
-// /dev/scan/L02C0E13:L2C0E12:L0C0E03P00> CENTAUR-DD2.0 (0x260E9049)
-// /dev/scan/L02C0E13:L2C0E03P00> MURANO-DD2.0 (0x220EF049)
-// /dev/scan/L02C0E13:L1C0E12:L3C0E03P00> CENTAUR-DD2.0 (0x260E9049)
-// /dev/scan/L02C0E13:L1C0E12:L2C0E03P00> CENTAUR-DD2.0 (0x260E9049)
-// /dev/scan/L02C0E13:L1C0E12:L1C0E03P00> CENTAUR-DD2.0 (0x260E9049)
-// /dev/scan/L02C0E13:L1C0E12:L0C0E03P00> CENTAUR-DD2.0 (0x260E9049)
-// /dev/scan/L02C0E13:L1C0E03P00> MURANO-DD2.0 (0x220EF049)
-// /dev/scan/L02C0E12:L3C0E03P00> CENTAUR-DD2.0 (0x260E9049)
-// /dev/scan/L02C0E12:L2C0E03P00> CENTAUR-DD2.0 (0x260E9049)
-// /dev/scan/L02C0E12:L1C0E03P00> CENTAUR-DD2.0 (0x260E9049)
-// /dev/scan/L02C0E12:L0C0E03P00> CENTAUR-DD2.0 (0x260E9049)
-// /dev/scan/L02C0E03P00> MURANO-DD2.0 (0x220EF049)
-// scandir: No such file or directory
-// ...done
-
-//tul237 data
-/*
-$ mnfgGetNominalFreqValues -r=1000 -R=LRP4
-
-RID: 1000, Record Name: LRP4
-Nominal Frequency       3524 MHz
-Nominal Nest Voltage    1000 mV
-Nominal Nest Current    72 A
-Nominal CS Voltage      1100 mV
-Nominal CS Current      7 A
-PowerSave Frequency     2028 MHz
-PowerSave Nest Voltage  940 mV
-PowerSave Nest Current  60 A
-PowerSave CS Voltage    1040 mV
-PowerSave CS Current    6 A
-Turbo Frequency         3724 MHz
-Turbo Nest Voltage      1050 mV
-Turbo Nest Current      80 A
-Turbo CS Voltage        1150 mV
-Turbo CS Current        8 A
-CPmin Frequency         2268 MHz
-CPmin Nest Voltage      960 mV
-CPmin Nest Current      60 A
-CPmin CS Voltage        1050 mV
-CPmin CS Current        6 A
-Test Frequency          4508 MHz
-Test IO Voltage         1100 mV
-Test IO Current         80 A
-Test PCIe Voltage       1190 mV
-Test PCIe Current       8 A
-
-*/
-
 //*************************************************************************
 // Includes
 //*************************************************************************
@@ -131,10 +62,6 @@ extern SsxSemaphore G_amec_wof_thread_wakeup_sem; // in amec_wof_thread.c
 
 // For prototype, one and only one of the following defines must be 1
 #define HAB19
-//#define TUL183
-/* Need to update with CEFF calcs from Tul183 10 core */
-//#define TUL183_5_CORE_PER_CHIP
-//#define TUL237
 
 //MAX number of rows in the uplift and VRM eff tables
 #define AMEC_WOF_UPLIFT_TBL_ROWS    0x16
@@ -170,39 +97,13 @@ uint16_t G_amec_wof_vrm_eff_table[AMEC_WOF_VRM_EFF_TBL_ROWS][AMEC_WOF_VRM_EFF_TB
 
 #define WOF_MAX_CORES_PER_CHIP 12
 
-//
-// Need to update 1.05 (raw to tdp conversion) for Wyatt to be
-//  1.12 for Turismo
-//
-
-// NOTE: Prototype uses Nominal operation point for C_EFF_TDP, since P8 prototype does not have ultra-turbo
-//
-//   Estimate IDDQ@RDP(95C)@Vnom P0 = IDDQ@85C * 1.25 ^ ([95-85]/10) = 35.84 * 1.25 = 44.8 A
-//
-//   NM_Idd@RDP P0 = 151 A
-//
-//   P0: (151 A - 44.8 A) / 1.22 * 1.05 = 91.40 A TDP
-//
-//   C_eff    = I / (V^3 * F)
-//   C_eff_tdp_P0 = 91.40 A / (0.9 V ^1.3) / 2561 MHz = 0.0409 microF =  40.9 nF
-//
-//   C_EFF_TDP_P0 = 9140 (0.01A) * 16384 / 9000(100uV)^1.3 * 16384 / 2561(MHz)
-//                = 6932
-//
-//   Note: C_EFF_TDP_P0 / 100 / 16384 / 16384 * 10000^1.3 * 1000
-//                = C_eff_tdp_P0 in nF
-//
-
 // 0.01 A units of RDP@Vnom
 uint16_t g_amec_wof_rdp_idd_nom[MAX_NUM_CHIP_MODULES] = {15700, 0, 0, 0};
-
-// Effective capacitance for TDP workload @ Turbo. FIXME: Put in p-state table superstructure.
-// 4 modules max. Value 1 to avoid divide by 0.
-uint32_t g_amec_wof_ceff_tdp_module[MAX_NUM_CHIP_MODULES] = {6932, 1, 1, 1};
 
 //Based on DMIW data for tul237P0 ID=B1935398. I extrapolate beyond 1.0V
 uint16_t amec_wof_iddq_table[][5] = {
     //0.0001 V, 0.01 A x4 (for 4 modules).  Data corrected to 85C conditions.
+    //100 uV, 0.01 Amps
     {9000,   3584, 0, 0, 0},
     {10000,  5194, 0, 0, 0},
     {11000,  7507, 0, 0, 0},
@@ -237,205 +138,6 @@ int16_t amec_wof_uplift_table[][14] = {
 
 #endif //HAB19
 
-#ifdef TUL183
-
-#ifdef WOF_SYSTEM
-#error "WOF algorithm already defined"
-#endif
-#define WOF_SYSTEM 1
-
-//  Tuleta 2u and 4u use this loadline:
-//    Vreg = Vvpd + Ivpd * (R_line + R_drop)
-//    vdd r_line = 570uOhm  aka Active Loadline (from V_vrm_out to Vsense in mnfgvapi -r) PROC_R_LOADLINE_VDD
-//    vdd r_drop = 150uOhm  aka Passive Loadline  (to in2Hdr: cheesit name and test point) PROC_R_DISTLOSS_VDD
-//    vcs r_line = 570uOhm
-//    vcs r_drop = 1400uOhm
-//
-//    r_sum = 720uOhm
-
-// Early Feb 2015 meeting decision was made to use Vdd_rdrop of 120uOhm
-// Therefore, r_sum = 690uOhm
-
-#define AMEC_WOF_LOADLINE_ACTIVE 750  // Active loadline in micro ohms
-#define AMEC_WOF_LOADLINE_PASSIVE 120 // Passive loadline in micro ohms
-
-#define WOF_MAX_CORES_PER_CHIP 10
-
-// NOTE: Prototype uses Nominal operation point for C_EFF_TDP, since P8 prototype does not have ultra-turbo
-// C_EFF_TDP for tul183p0: I=14800 (in 0.01 A), V=9500 (=1V in 100 microV), F=3524 (MHz). V^1.3=
-//     C_EFF_TDP = I * 10,000 / V^1.3 * 10,000 / F) = 1289.
-// Error in above (didn't subtract out leakage current and then apply victors math to adjust the RDP AC to TDP AC)
-//
-//   Estimate IDDQ@RDP(95C)@Vnom P0 = 18.87 A for 10 core (From Frank's 2-degree poly trend)
-//   Estimate IDDQ@RDP(95C)@Vnom P1 = 21.77 A for 10 core
-//
-//   NM_Idd@RDP P0 = 148 A
-//   NM_Idd@RDP P1 = 147 A
-//
-//   P0: (148A - 18.87 A) / 1.22 * 1.05 = 111.14 A TDP
-//   P1: (147A - 21.77 A) / 1.22 * 1.05 = 107.78 A TDP
-//
-//   C_eff    = I / (V^3 * F)
-//   C_eff_tdp_P0 = 111.14 A / (0.950 V ^1.3) / 3425 MHz =  34.69 nF
-//   C_eff_tdp_P1 = 107.78 A / (0.895 V ^1.3) / 3425 MHz =  36.35 nF
-//
-//   C_EFF_TDP_P0 = 11114(0.01A) * 10000/ 9500(100mV)^1.3 * 10000 / 3425(MHz) = 2189
-//   C_EFF_TDP_P1 = 10778(0.01A) * 10000/ 8950(100mV)^1.3 * 10000 / 3425(MHz) = 2293
-//
-//   Note: C_EFF_TDP_P0 / 10000 / 10000 * 10000^1.3 == C_eff_tdp_P0
-//
-
-uint16_t g_amec_wof_rdp_idd_nom[MAX_NUM_CHIP_MODULES] = {14800, 14700, 0, 0}; // 0.01 A units of RDP@Vnom
-
-// Effective capacitance for TDP workload @ Turbo. FIXME: Put in p-state table superstructure.
-uint32_t g_amec_wof_ceff_tdp_module[MAX_NUM_CHIP_MODULES] = {2189, 2293, 1, 1}; // 4 modules max. Value 1 to avoid divide by 0.
-
-//Based on DMIW data for tul237P0 ID=B1935398. I extrapolate beyond 1.0V
-uint16_t amec_wof_iddq_table[][5] = {
-    //0.0001 V, 0.01 A x4 (for 4 modules).  Data corrected to 85C conditions.
-    //10 core data (says Frank)
-    {9000,  1248, 1793, 0, 0},
-    {10000, 1831, 2618, 0, 0},
-    {11000, 2753, 3903, 0, 0},
-    {12000, 4222, 5861, 0, 0},
-    {12500, 5223, 7161, 0, 0}
-
-    //12 core data (says Frank)
-//     {9000, 1498, 2151, 0, 0},
-//     {10000, 2197, 3142, 0, 0},
-//     {11000, 3303, 4683, 0, 0},
-//     {12000, 5066, 7033, 0, 0},
-//     {12500, 6268, 8593, 0, 0}
-};
-#define AMEC_WOF_IDDQ_TABLE_N 5
-
-// 13 is for 1 column of ratio, 12 columns of uplift by # cores turned on
-int16_t amec_wof_uplift_table[][14] = {
-    //ratio*100, frequency offsets
-    //{0, -100},
-    //{90, -100},
-    //{100, 0},
-    //{110, 100},
-    //{120, 200}
-
-    // From Victor's e-mail of 12/03/2014
-    // Make sure 0 is here, since search algorithm expects input index to be >= first table element.
-    //    0     1     2     3     4     5     6     7     8     9     10    11    12
-    {  0, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, },
-    { 75, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, },
-    { 80, 3665, 3665, 3665, 3665, 3665, 3665, 3665, 3665, 3665, 3665, 3665, 3665, 3665, },
-    { 85, 3596, 3596, 3596, 3596, 3596, 3596, 3596, 3596, 3596, 3596, 3596, 3596, 3596, },
-    { 90, 3528, 3528, 3528, 3528, 3528, 3528, 3528, 3528, 3528, 3528, 3528, 3528, 3528, },
-    { 95, 3494, 3494, 3494, 3494, 3494, 3494, 3494, 3494, 3494, 3494, 3494, 3494, 3494, },
-    {100, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, },
-    {110, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, },
-    {120, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, }
-
-};
-#define AMEC_WOF_UPLIFT_TABLE_N 8
-
-#endif //TUL183
-
-#ifdef TUL183_5_CORE_PER_CHIP
-
-#ifdef WOF_SYSTEM
-#error "WOF algorithm already defined"
-#endif
-#define WOF_SYSTEM 1
-
-#define AMEC_WOF_LOADLINE_ACTIVE 750  // Active loadline in micro ohms
-#define AMEC_WOF_LOADLINE_PASSIVE 120 // Passive loadline in micro ohms
-
-#define WOF_MAX_CORES_PER_CHIP 5
-
-uint16_t g_amec_wof_rdp_idd_nom[MAX_NUM_CHIP_MODULES] = {74, 73, 0, 0};
-
-// For 5 cores/chip, use 50% of 10 cores/chip.
-uint32_t g_amec_wof_ceff_tdp_module[MAX_NUM_CHIP_MODULES] = {1095, 1146, 1, 1}; // 4 modules max. Value 1 to avoid divide by 0.
-
-//Based on DMIW data for tul237P0 ID=B1935398. I extrapolate beyond 1.0V
-uint16_t amec_wof_iddq_table[][5] = {
-    //0.0001 V, 0.01 A x4 (for 4 modules).  Data corrected to 85C conditions.
-    // 50% of 10 core data
-    {9000, 624, 897, 0, 0},
-    {10000, 916, 1309, 0, 0},
-    {11000, 1377, 1952, 0, 0},
-    {12000, 2111, 2931, 0, 0},
-    {12500, 2612, 3581, 0, 0}
-};
-#define AMEC_WOF_IDDQ_TABLE_N 5
-
-// 14 is for 1 column of ratio, 13 columns of uplift by # cores turned on
-int16_t amec_wof_uplift_table[][14] = {
-    // From Victor's e-mail of 12/03/2014
-    // Make sure 0 is here, since search algorithm expects input index to be >= first table element.
-    // For 5 core, just increase frequency by 66.5MHz per core in winkle for testing.
-    // Make sure 0 is here, since search algorithm expects input index to be >= first table element.
-    //    0     1     2     3     4     5     6     7     8     9     10    11    12
-    {  0, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, },
-    { 75, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, 3699, },
-    { 80, 3699, 3699, 3669, 3699, 3699, 3665, 3665, 3665, 3665, 3665, 3665, 3665, 3665, },
-    { 85, 3699, 3699, 3699, 3699, 3665, 3596, 3596, 3596, 3596, 3596, 3596, 3596, 3596, },
-    { 90, 3699, 3699, 3699, 3665, 3596, 3528, 3528, 3528, 3528, 3528, 3528, 3528, 3528, },
-    { 95, 3699, 3699, 3665, 3596, 3528, 3494, 3494, 3494, 3494, 3494, 3494, 3494, 3494, },
-    {100, 3665, 3665, 3596, 3528, 3494, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, },
-    {110, 3665, 3665, 3596, 3528, 3494, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, },
-    {120, 3665, 3665, 3596, 3528, 3494, 3425, 3425, 3425, 3425, 3425, 3425, 3425, 3425, }
-};
-#define AMEC_WOF_UPLIFT_TABLE_N 8
-
-#endif //TUL183_5_CORE_PER_CHIP
-
-
-#ifdef TUL237
-
-#ifdef WOF_SYSTEM
-#error "WOF algorithm already defined"
-#endif
-#define WOF_SYSTEM 1
-
-#define AMEC_WOF_LOADLINE_ACTIVE 750  // Active loadline in micro ohms
-#define AMEC_WOF_LOADLINE_PASSIVE 120 // Passive loadline in micro ohms
-
-// NOTE: Prototype uses Nominal operation point for C_EFF_TDP, since P8 prototype does not have ultra-turbo
-// C_EFF_TDP for tul237p0: I=7200 (in 0.01 A), V=10000 (=1V in 100 microV), F=3425 (MHz). V^1.3=158489
-//     C_EFF_TDP = I * 10,000 / V^1.3 * 10,000 / F) = 1289.
-// Error in above (didn't subtract out leakage current and then apply victors math to adjust the RDP AC to TDP AC)
-//
-#define AMEC_WOF_C_EFF_TDP 1289
-
-
-//Based on DMIW data for tul237P0 ID=B1935398. I extrapolate beyond 1.0V
-uint16_t amec_wof_iddq_table[][5] = {
-    //0.0001 V, 0.01 A.  Data corrected to 85C conditions.
-    {8000, 1914, 0, 0, 0},
-    {9000, 2769, 0, 0, 0},
-    {10000, 3905, 0, 0, 0},
-    {11000, 5195, 0, 0, 0},
-    {12000, 6395, 0, 0, 0},
-    {12500, 6840, 0, 0, 0}
-};
-#define AMEC_WOF_IDDQ_TABLE_N 6
-
-int16_t amec_wof_uplift_table[][2] = {
-    //ratio*100, frequency offset
-    //{0, -100},
-    //{90, -100},
-    //{100, 0},
-    //{110, 100},
-    //{120, 200}
-
-    // Make sure 0 is here, since search algorithm expects input index to be >= first table element.
-    {  0, 3724},
-    { 80, 3724},
-    { 90, 3624},
-    {100, 3425},
-    {110, 3425},
-    {120, 3425}
-};
-#define AMEC_WOF_UPLIFT_TABLE_N 6
-
-#endif //TUL237
 
 /* A conversion table from Vdd regulator input power to conversion efficiency.
    Power is in units of dW (Watts * 10).
@@ -536,6 +238,104 @@ void amec_wof_init(void)
     g_amec->wof.loadline = AMEC_WOF_LOADLINE_ACTIVE + AMEC_WOF_LOADLINE_PASSIVE;
 }
 
+uint32_t amec_wof_compute_c_eff(void)
+{
+    //   Estimate IDDQ@RDP(95C)@Vnom P0 = IDDQ@85C * 1.25 ^ ([95-85]/10) = 35.84 * 1.25 = 44.8 A <-- Leakage current
+    //
+    //   NM_Idd@RDP P0 = 151 A
+    //
+    //   P0: (151 A - 44.8 A) / 1.22 * 1.12 = 91.40 A @TDP
+    //
+    //   C_eff    = I / (V^3 * F)
+    //
+    //   C is ??? in 0.01 Amps
+    //   V is the silicon voltage from the operating point data in 100 uVolts
+    //   F is Turbo frequency in MHz
+    //
+    //   C_eff_tdp_P0 = 91.40 A / (0.9 V ^1.3) / 2561 MHz = 0.0409 microF =  40.9 nF
+    //
+    //   C_EFF_TDP_P0 = 9140 (0.01A) * 16384 / 9000(100uV)^1.3 * 16384 / 2561(MHz)
+    //                = 6932
+    //
+    //   Note: C_EFF_TDP_P0 / 100 / 16384 / 16384 * 10000^1.3 * 1000
+    //                = C_eff_tdp_P0 in nF
+    //
+
+    iddq_entry_t        l_i_leak = 0;
+    uint8_t             i = 0;
+    uint32_t            m = 0;
+    uint32_t            l_curr_diff = 0;
+    uint32_t            l_v_chip = 0;
+    uint32_t            l_temp = 0;
+    uint32_t            l_c_eff_tdp = 0;
+    uint16_t            l_iddq_measurements[CORE_IDDQ_MEASUREMENTS] = {8000, 9000, 10000, 11000, 12000, 12500};
+
+    // STEP 1: Acquire the silicon voltage from the operating point data and
+    // convert it to 100 uV units
+    l_v_chip = G_sysConfigData.wof_parms.operating_points[TURBO].vdd_5mv * 1000 / 5;
+
+    // STEP 2: Search through the iddq_vdd array for the closest value to our
+    // silicon voltage and interpolate to compute the leakage current
+    if (l_v_chip < l_iddq_measurements[0])
+    {
+        // Voltage is lower than any element in the array, so use first two
+        // entries
+        i = 0;
+    }
+    else
+    {
+        for (i=0; i<CORE_IDDQ_MEASUREMENTS-1; i++)
+        {
+            if (l_v_chip >= l_iddq_measurements[i] &&
+                l_v_chip <= l_iddq_measurements[i+1])
+            {
+                break;
+            }
+        }
+    }
+    if (i >= CORE_IDDQ_MEASUREMENTS-1)
+    {
+        // Voltage is higher than the table, so use last two entries
+        i = CORE_IDDQ_MEASUREMENTS - 2;
+    }
+
+    // Do linear interpolation using the neighboring entries:
+    // Y = m*(X - x1) + y1, where m = (y2-y1) / (x2-x1)
+    // FIXME: Can we expect m to be negative?
+    m = ((int32_t)G_sysConfigData.iddq_table.iddq_vdd[i+1].fields.iddq_raw_value -
+         (int32_t)G_sysConfigData.iddq_table.iddq_vdd[i].fields.iddq_raw_value) /
+        ((int32_t)l_iddq_measurements[i+1] - (int32_t)l_iddq_measurements[i]);
+    l_i_leak = (l_v_chip - l_iddq_measurements[i])*m +
+        G_sysConfigData.iddq_table.iddq_vdd[i].fields.iddq_raw_value;
+
+    // STEP 3: Correct the leakage current computed in the previous step for
+    // temperature by multiplying by 1.25
+    l_i_leak = l_i_leak * 125 / 100;
+
+    // STEP 4: Compute current differential at RDP
+    l_curr_diff = (G_sysConfigData.wof_parms.operating_points[TURBO].idd_500ma /
+                   50) - l_i_leak;
+
+    // STEP 5: Translate to TDP
+    // FIXME: Isn't this suppose to be rdp_tdp_factor???
+    l_curr_diff = l_curr_diff * G_sysConfigData.wof_parms.tdp_rdp_factor / 100;
+
+    // STEP 6: Compute V^1.3 using a best-fit equation:
+    // Y = 21374 * (X in 0.1 mV) - 50615296
+    l_v_chip = l_v_chip << 14; // *16384
+    l_temp = (21374 * l_v_chip - 50615296) >> 10;
+
+    // STEP 7: Compute I / (V^1.3)
+    l_temp = l_curr_diff / l_temp;
+    l_temp = l_temp << 14; // *16384
+
+    // STEP 8: Divide by turbo frequency I / (V^1.3) / F
+    l_c_eff_tdp = l_temp /
+        G_sysConfigData.wof_parms.operating_points[TURBO].frequency_mhz;
+
+    return l_c_eff_tdp;
+}
+
 // Function Specification
 //
 // Name: amec_wof_set_algorithm
@@ -589,8 +389,8 @@ uint8_t amec_wof_set_algorithm(const uint8_t i_algorithm)
         // At this point, all cores are at Turbo or lower.
         // We may turn off the inhibit-wake signal.
 
-        // Set common things
-        g_amec->wof.ceff_tdp = g_amec_wof_ceff_tdp_module[G_pob_id.module_id];
+        // Calculate ceff_tdp from static data in the Pstate SuperStructure
+        g_amec->wof.ceff_tdp = amec_wof_compute_c_eff();
 
         switch(i_algorithm)
         {
@@ -634,6 +434,14 @@ uint8_t amec_wof_set_algorithm(const uint8_t i_algorithm)
         // Success, set the new algorithm
         g_amec->wof.algo_type = g_amec->wof.enable_parm;
         l_rc = 0;
+
+        TRAC_INFO("WOF algorithm has been successfully initialized: algo_type[%d] C_eff_tdp[%d]",
+                  g_amec->wof.algo_type,
+                  g_amec->wof.ceff_tdp);
+
+        //FIXME: As a precaution, do not enable WOF until input data has been validated
+        g_amec->wof.algo_type = 0;
+        g_amec->wof.enable_parm = 0;
 
     } while (0);
 

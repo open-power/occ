@@ -415,17 +415,6 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
             l_table[OCC_MODE_STURBO] = l_freq;
             TRAC_INFO("UT frequency = %d", l_freq);
 
-            if(l_freq == 0)
-            {
-                // UltraTurbo frequency is zero, WOF is not supported
-                g_amec->wof.enable_parm = 0;
-            }
-            else
-            {
-                // Enable WOF algorithm
-                g_amec->wof.enable_parm = 2;
-            }
-
             // Store the Fmax and Fmin for AMEC (OpenPower environment only)
             g_amec->sys.fmax = l_table[OCC_MODE_TURBO];
             g_amec->sys.fmin = l_table[OCC_MODE_MIN_FREQUENCY];
@@ -1079,10 +1068,12 @@ errlHndl_t data_store_pstate_super(const cmdh_fsp_cmd_t * i_cmd_ptr,
     do
     {
         // Command Length Check - make sure we have all the data
-        if( CMDH_DATALEN_FIELD_UINT16(i_cmd_ptr) < CMDH_CNFGDATA_PSTATESS_DATALEN)
+        // Lenght check depends on the version of the Pstate Superstructure
+        if((CMDH_DATALEN_FIELD_UINT16(i_cmd_ptr) < CMDH_CNFGDATA_PSTATESS_MIN_DATALEN) ||
+           (CMDH_DATALEN_FIELD_UINT16(i_cmd_ptr) > CMDH_CNFGDATA_PSTATESS_DATALEN))
         {
             TRAC_ERR("data_store_pstate_super: Invalid command length! expected[%u] received[%u]",
-                     CMDH_CNFGDATA_PSTATESS_DATALEN,
+                     CMDH_CNFGDATA_PSTATESS_MIN_DATALEN,
                      CMDH_DATALEN_FIELD_UINT16(i_cmd_ptr));
 
             // Build Error Response packet, it will get 'rebuilt' later, but
@@ -1094,7 +1085,7 @@ errlHndl_t data_store_pstate_super(const cmdh_fsp_cmd_t * i_cmd_ptr,
         // Only initialize Pstate once
         if( G_gpsm_initialized == 0 )
         {
-            // Initialze Pstate Table from PstateSuperStructure passed in
+            // Initialize Pstate Table from PstateSuperStructure passed in
             // via the DATA in this command.
             l_errlHndl = proc_gpsm_pstate_initialize(&l_cmd_ptr->pstatess);
         }
@@ -1103,6 +1094,17 @@ errlHndl_t data_store_pstate_super(const cmdh_fsp_cmd_t * i_cmd_ptr,
         {
             // Change Data Request Mask to indicate we got this data
             G_data_cnfg->data_mask |= DATA_MASK_PSTATE_SUPERSTRUCTURE;
+
+            // Store IDDQ table and WOF control parameters
+            memcpy(&G_sysConfigData.iddq_table, &l_cmd_ptr->pstatess.iddq,
+                   sizeof(IddqTable));
+            memcpy(&G_sysConfigData.wof_parms, &l_cmd_ptr->pstatess.wof,
+                   sizeof(WOFElements));
+
+            TRAC_IMP("Pstate SuperStructure is valid: Magic_number[0x%08X%08X] Size[%d]",
+                     (uint32_t)(l_cmd_ptr->pstatess.magic >> 32),
+                     (uint32_t)(l_cmd_ptr->pstatess.magic & 0x00000000ffffffffull),
+                     CMDH_DATALEN_FIELD_UINT16(i_cmd_ptr) - 4);
         }
     } while(0);
 
