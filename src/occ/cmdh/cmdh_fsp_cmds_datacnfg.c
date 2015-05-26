@@ -77,6 +77,8 @@
 
 #define DATA_VOLT_UPLIFT_VERSION   0
 
+extern uint8_t G_occ_interrupt_type;
+
 typedef struct data_req_table
 {
    uint32_t mask;
@@ -1124,8 +1126,15 @@ errlHndl_t data_store_role(const cmdh_fsp_cmd_t * i_cmd_ptr,
     // Cast the command to the struct for this format
     cmdh_set_role_t * l_cmd_ptr = (cmdh_set_role_t *)i_cmd_ptr;
 
-    // Mask off the OCC role
-    l_new_role = l_cmd_ptr->role & OCC_ROLE_MASTER_MASK;
+    // Mask off the OCC role if this is an FSPLESS system only.
+    if(G_occ_interrupt_type == FSP_SUPPORTED_OCC)
+    {
+        l_new_role = l_cmd_ptr->role;
+    }
+    else
+    {
+        l_new_role = l_cmd_ptr->role & OCC_ROLE_MASTER_MASK;
+    }
 
 
     // Must be in standby state before we can change roles
