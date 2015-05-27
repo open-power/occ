@@ -630,7 +630,6 @@ void amec_update_external_voltage()
 // End Function Specification
 void amec_update_current_sensor(void)
 {
-    uint8_t i;
     uint32_t result32; //temporary result
     uint16_t l_pow_reg_input_dW = AMECSENSOR_PTR(PWR250USVDD0)->sample * 10; // convert to dW by *10.
     uint16_t l_vdd_reg = AMECSENSOR_PTR(VOLT250USP0V0)->sample;

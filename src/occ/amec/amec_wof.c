@@ -91,9 +91,8 @@ uint16_t G_amec_wof_vrm_eff_table[AMEC_WOF_VRM_EFF_TBL_ROWS][AMEC_WOF_VRM_EFF_TB
 #endif
 #define WOF_SYSTEM 1
 
-// From 2015-03-12 WOF meeting
 #define AMEC_WOF_LOADLINE_ACTIVE 550  // Active loadline in micro ohms
-#define AMEC_WOF_LOADLINE_PASSIVE 0 // Passive loadline in micro ohms
+#define AMEC_WOF_LOADLINE_PASSIVE 50 // Passive loadline in micro ohms
 
 #define WOF_MAX_CORES_PER_CHIP 12
 
@@ -139,34 +138,26 @@ int16_t amec_wof_uplift_table[][14] = {
 #endif //HAB19
 
 
-/* A conversion table from Vdd regulator input power to conversion efficiency.
-   Power is in units of dW (Watts * 10).
+/* A conversion table from Vdd regulator output current (A) power to conversion efficiency.
    Efficiency is in units of 1/100 of 1%.  (Divide by 10000 to get percent)
 */
-uint32_t amec_wof_vdd_eff[][2] = {
-    {124 ,  8018}, //0  (12.397 W, 80.18% efficiency)
-    {318 ,  8804}, //1
-    {417 ,  8889}, //2
-    {515 ,  8937}, //3
-    {608 ,  9031}, //4
-    {702 ,  9065}, //5
-    {789 ,  9155}, //6
-    {895 ,  9021}, //7
-    {989 ,  9022}, //8
-    {1075,  9066}, //9
-    {1182,  8940}, //10
-    {1271,  8937}, //11
-    {1369,  8875}, //12
-    {1457,  8883}, //13
-    {1549,  8851}, //14
-    {1640,  8820}, //15
-    {1734,  8773}, //16
-    {1837,  8677}, //17
-    {1914,  8705}, //18
-    {2015,  8620}, //19
-    {2093,  8640}, //20
+uint32_t amec_wof_vdd_eff[][3] = {
+    {    0,     0,    0}, //0 
+    { 2000,  8877, 8890}, //1 (20.00 A, 88.77% @ 0.85 V, 88.90% @ 1.2 V)
+    { 4000,  8936, 9211}, //2
+    { 6000,  9047, 9135}, //3
+    { 8000,  8926, 9075}, //4
+    {10000,  8861, 9009}, //5
+    {12000,  8751, 8944}, //6
+    {14000,  8694, 9034}, //7
+    {16000,  8676, 8903}, //8
+    {18000,  8575, 8757}, //9
+    {20000,  8419, 8805}, //10
+    {22000,  8249, 8644}, //11
+    {24000,  8283, 8649}, //12
+    {26000,  8096, 8632}, //13
 };
-#define AMEC_WOF_VDD_EFF_N 21   /*Number of amec_wof_add_eff entried*/
+#define AMEC_WOF_VDD_EFF_N 14   /*Number of amec_wof_add_eff entried*/
 
 
 
@@ -226,6 +217,115 @@ uint8_t g_amec_wof_pstate_table_ready = 0;
 
 
 */
+
+/*
+  Input: i_power_in, Vdd input power 0.1 W units (deci-watts)
+         i_v_set, Vdd setpoint voltage in 0.0001 V units
+  Output: o_current_out, Vdd current out (0.01 A units)
+          o_v_sense, Voltage at Vdd remote sense (0.0001 V units)
+ */
+int32_t g_amec_eff_vlow, g_amec_eff_vhigh;
+uint32_t g_amec_wof_iout;
+void amec_wof_vdd_current_out(uint16_t i_power_in,
+                    uint16_t i_v_set,
+		    uint16_t *o_current_out,
+                    uint16_t *o_v_sense)
+{
+    uint8_t iteration;
+    uint8_t i;
+
+    // Stuff that can be pre-computed when efficiency table is read
+    int32_t v_min = 8500; //0.8500 V = min from efficiency table
+    int32_t v_max = 12500; // 1.2500 V = max from efficiency table
+    int32_t v_diff = v_max - v_min; // max voltage - min voltage from efficiency table
+
+    // helper variables
+    int32_t x2minusx1, xminusx1; 
+    int32_t l_eff_vlow, l_eff_vhigh, v_offset;
+    int32_t l_v_sense;
+
+    // Set initial guesses before iteration part of algorithm
+
+    uint32_t l_eff = 8500; //initial guess efficiency=85.00%
+
+    // Compute regulator output power.  out = in * efficiency
+    //    power_in: min=0W max=300W = 3000dW
+    //    eff: min=0 max=10000=100% (.01% units)
+    //    power_in*eff: max=3000dW * 10000 = 30,000,000 (dW*0.0001) 
+    //                  is under 2^25, fits in 25 bits
+    //    *10 = 300M (dW*0.00001) in 29 bits
+    uint32_t l_pout = i_power_in * l_eff * 10;
+
+    // Compute current out of regulator.  
+    // curr_out = power_out (*10 scaling factor) / voltage_out
+    //    p_out: max=300M (dW*0.00001) in 29 bits
+    //    v_set: min=5000 (0.0001 V)  max=16000(0.0001 V) in 14 bits
+    //     iout: max = 300M/5000 = 60000 (dW*0.00001/(0.0001V)= 0.01A), in 16 bits.
+    uint32_t l_iout = l_pout/i_v_set; //initial iout
+    g_amec_wof_iout = l_iout; //debugging
+
+    for(iteration=0; iteration<2; iteration++)  // iterate twice
+    {
+	for (i=0; i<AMEC_WOF_VDD_EFF_N; i++)
+        {
+            if (l_iout >= amec_wof_vdd_eff[i][0] &&
+                l_iout <= amec_wof_vdd_eff[i+1][0])
+            {
+                break;
+            }
+        }
+	// if beyond table, use last 2 entries
+	if (i >= AMEC_WOF_VDD_EFF_N-1)
+	{
+	    i = AMEC_WOF_VDD_EFF_N - 2; 
+	}
+	
+	// i points to the first index
+	
+	// Compute efficiency at lower voltage (0.85 V)
+
+        //Linear interpolate using the neighboring entries.  
+	// y = (x-x1)m+y1   m=(y2-y1)/(x2-x1)
+	// x2minusx1 = difference in current between entries
+	// xminusx1
+
+	// x2minusx1 in units of 0.01 A
+	x2minusx1 = ((int32_t)amec_wof_vdd_eff[i+1][0] - (int32_t)amec_wof_vdd_eff[i][0]);
+	// xminusx1 in units of 0.01 A
+	xminusx1 = (int32_t)l_iout - (int32_t)amec_wof_vdd_eff[i][0];
+        l_eff_vlow = xminusx1
+            * ((int32_t)amec_wof_vdd_eff[i+1][1] - (int32_t)amec_wof_vdd_eff[i][1])
+            / x2minusx1
+            + (int32_t)amec_wof_vdd_eff[i][1];
+
+	g_amec_eff_vlow = l_eff_vlow;//debug
+
+	//Reuse same x2minusx1 and xminusx1 because efficiency curves use common current_in values
+        l_eff_vhigh = xminusx1
+            * ((int32_t)amec_wof_vdd_eff[i+1][2] - (int32_t)amec_wof_vdd_eff[i][2])
+            / x2minusx1
+            + (int32_t)amec_wof_vdd_eff[i][2];
+
+	g_amec_eff_vhigh = l_eff_vhigh;//debug
+
+	v_offset = i_v_set - v_min;
+	l_eff = ((l_eff_vhigh - l_eff_vlow) * v_offset) / v_diff + l_eff_vlow;
+        //    V_droop = I_chip (0.01 A) * R_loadline (0.000001 ohm) => (in 0.00000001 V)
+        //    V_droop = V_droop / 10000 => (in 0.0001 V)
+        //    V_sense = V_reg - V_droop  => (in 0.0001 V)
+        l_v_sense = i_v_set - AMEC_WOF_LOADLINE_ACTIVE * l_iout / 10000;
+	l_pout = i_power_in * l_eff * 10; // See l_pout above for *10 note
+	l_iout = l_pout/l_v_sense;
+    }
+
+    //FIXME: Uplift for broken habanero Vdd input power sensor. Delete when HW fixed.
+    l_iout = 153 * l_iout / 100;
+    l_v_sense = i_v_set - AMEC_WOF_LOADLINE_ACTIVE * l_iout / 10000;
+
+    *o_v_sense = l_v_sense;
+    *o_current_out = l_iout;
+    g_amec->wof.vdd_eff = l_eff; //debugging
+}
 
 void amec_wof_init(void)
 {
@@ -462,76 +562,20 @@ uint8_t amec_wof_set_algorithm(const uint8_t i_algorithm)
 // End Function Specification
 void amec_update_wof_sensors(void)
 {
-    uint8_t             i;
-    uint32_t            l_result32; //temporary result
     uint16_t            l_pow_reg_input_dW = AMECSENSOR_PTR(PWR250USVDD0)->sample * 10; // convert to dW by *10.
     uint16_t            l_vdd_reg = AMECSENSOR_PTR(VOLT250USP0V0)->sample;
-    uint32_t            l_pow_reg_output_mW;
-    uint32_t            l_curr_output;
+    uint16_t            l_curr_output;
     uint32_t            l_v_droop;
     uint32_t            l_v_chip;
+    uint16_t            l_v_sense;
 
-    /* Step 1 */
+    /* Step 1: Calculate voltage at chip */
 
-    // 1. Get PWR250USVDD0  (the input power to regulator)
-    // 2. Look up efficiency using PWR250USVDD0 as index (and interpolate)
-    // 3. Calculate output power = PWR250USVDD0 * efficiency
-    // 4. Calculate output current = output power / Vdd set point
-    /* Determine regulator efficiency */
-
-    //Search table and point i to the lower entry the target value falls between.
-    if (l_pow_reg_input_dW < amec_wof_vdd_eff[0][0])
-    {
-        i = 0; // value is before table starts. Use first two entries.
-    }
-    else
-    {
-        for (i=0; i<AMEC_WOF_VDD_EFF_N-1; i++)
-        {
-            if (amec_wof_vdd_eff[i][0] <= l_pow_reg_input_dW &&
-                amec_wof_vdd_eff[i+1][0] >= l_pow_reg_input_dW)
-            {
-                break;
-            }
-        }
-    }
-    if (i >= AMEC_WOF_VDD_EFF_N - 1)
-    {
-        i = AMEC_WOF_VDD_EFF_N - 2;
-    }
-
-    //Linear interpolate using the neighboring entries.  y = m(x-x1)+y1   m=(y2-y1)/(x2-x1)
-    //FIXME: add rounding step after multiplication
-    //FIXME: pre-compute m, since table is static
-    l_result32 = ((int32_t)l_pow_reg_input_dW - (int32_t)amec_wof_vdd_eff[i][0])
-        * ((int32_t)amec_wof_vdd_eff[i+1][1] - (int32_t)amec_wof_vdd_eff[i][1])
-        / ((int32_t)amec_wof_vdd_eff[i+1][0] - (int32_t)amec_wof_vdd_eff[i][0])
-        + (int32_t)amec_wof_vdd_eff[i][1];
-
-    // For Frank, just use 95% efficiency all the time
-    // FIXME: Need to determine efficiency from tables sent by TMGT
-    l_result32 = 9500;
-
-    g_amec->wof.vdd_eff = l_result32;
-
-    // Compute regulator output power.  out = in * efficiency
-    //    in: min=0W max=300W = 3000dW
-    //    eff: min=0 max=10000=100% (.01% units)
-    //    p_out: max=3000dW * 10000 = 30,000,000 (dW*0.0001) < 2^25, fits in 25 bits
-    l_pow_reg_output_mW = (uint32_t)l_pow_reg_input_dW * (uint32_t)l_result32;
-
-    // Scale up p_out by 10x to give better resolution for the following division step
-    //    p_out: max=30M (dW*0.0001) in 25 bits
-    //    * 10    = 300M (dW*0.00001) in 29 bits
-    l_pow_reg_output_mW *= 10;
-
-    // Compute current out of regulator.  curr_out = power_out (*10 scaling factor) / voltage_out
-    //    p_out: max=300M (dW*0.00001) in 29 bits
-    //    v_out: min=5000 (0.0001 V)  max=16000(0.0001 V) in 14 bits
-    //    i_out: max = 300M/5000 = 60000 (dW*0.00001/(0.0001V)= 0.01A), in 16 bits.
-    // VOLT250USP0V0 in units of 0.0001 V = 0.1 mV. (multiply by 0.1 to get mV)
-    l_curr_output = l_pow_reg_output_mW / l_vdd_reg;
+    amec_wof_vdd_current_out(l_pow_reg_input_dW,l_vdd_reg,&l_curr_output,&l_v_sense);
     sensor_update(AMECSENSOR_PTR(CUR250USVDD0), l_curr_output);
+
+    // Save Vsense estimate for WOF validation
+    sensor_update(AMECSENSOR_PTR(WOF250USVDDS), l_v_sense);
 
     //1c. Compute Vdd load at chip
     //    V_reg = V_chip + I_chip * (R_loadline)
@@ -542,10 +586,6 @@ void amec_update_wof_sensors(void)
     l_v_chip = l_vdd_reg - l_v_droop;
     g_amec->wof.v_chip = l_v_chip; // expose in parameter
 
-    // Compute Vsense estimate for WOF validation
-    l_v_droop = (uint32_t) l_curr_output * (uint32_t) AMEC_WOF_LOADLINE_ACTIVE / (uint32_t) 10000;
-    l_v_chip = l_vdd_reg - l_v_droop;
-    sensor_update(AMECSENSOR_PTR(WOF250USVDDS), l_v_chip);
 }
 
 void amec_wof_common_steps(void)

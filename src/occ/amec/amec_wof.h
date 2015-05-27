@@ -172,4 +172,9 @@ int amec_wof_writeToTable(wof_tbl_type_t i_tblType ,
                           const uint8_t i_clmnCount,
                           uint8_t *i_data_ptr);
 
+void amec_wof_vdd_current_out(uint16_t i_power_in,
+                              uint16_t i_v_set,
+                              uint16_t *o_current_out,
+                              uint16_t *o_v_sense);
+
 #endif

@@ -37,6 +37,9 @@
 // Externs
 //*************************************************************************
 
+extern int32_t g_amec_eff_vlow;
+extern int32_t g_amec_eff_vhigh;
+extern uint32_t g_amec_wof_iout;
 //*************************************************************************
 // Macros
 //*************************************************************************
@@ -173,7 +176,10 @@ amec_parm_t g_amec_parm_list[] = {
     AMEC_PARM_UINT8(PARM_WOF_PSTATE_CHECK,"wof_check",&g_amec_wof_check),
     AMEC_PARM_UINT8(PARM_WOF_PSTATE_TABLE,"wof_ps_table",&g_amec_wof_current_pstate_table),
     AMEC_PARM_UINT8(PARM_WOF_PSTATE_READY,"wof_ps_ready",&g_amec_wof_pstate_table_ready),
-    AMEC_PARM_UINT16(PARM_WOF_THREAD_COUNT,"wof_thd_cnt",&G_amec_wof_thread_counter)
+    AMEC_PARM_UINT16(PARM_WOF_THREAD_COUNT,"wof_thd_cnt",&G_amec_wof_thread_counter),
+    AMEC_PARM_INT32(PARM_WOF_EFFVLOW,     "wof_effvlow",&g_amec_eff_vlow),
+    AMEC_PARM_INT32(PARM_WOF_EFFVHIGH,     "wof_effvhigh",&g_amec_eff_vlow),
+    AMEC_PARM_UINT32(PARM_WOF_IOUT,"wof_iout",&g_amec_wof_iout)
 };
 
 //Throw a compiler error when the enum and array are not both updated
