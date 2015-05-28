@@ -82,8 +82,8 @@ typedef enum
 
 //Definition of types of wof tables
 typedef enum {
-    AMEC_WOF_CORE_FREQ_TBL = 0x01,
-    AMEC_WOF_VRM_EFF_TBL   = 0x02
+    AMEC_WOF_CORE_FREQ_TBL = 0x00,
+    AMEC_WOF_VRM_EFF_TBL   = 0x01
 } wof_tbl_type_t;
 
 //*************************************************************************
@@ -167,10 +167,19 @@ void amec_wof_helper_v2(void);
 void amec_wof_helper_v3(void);
 uint32_t amec_wof_compute_c_eff(void);
 
-int amec_wof_writeToTable(wof_tbl_type_t i_tblType ,
+void amec_wof_writeToTable(wof_tbl_type_t i_tblType,
                           const uint16_t i_size,
                           const uint8_t i_clmnCount,
                           uint8_t *i_data_ptr);
+
+void amec_wof_store_core_freq(const uint8_t i_max_good_cores,
+                              const uint16_t i_size,
+                              const uint8_t i_clmnCount,
+                              uint8_t *i_data_ptr);
+
+void amec_wof_store_vrm_eff( const uint16_t i_size,
+                             const uint8_t i_clmnCount,
+                             uint8_t *i_data_ptr);
 
 void amec_wof_vdd_current_out(uint16_t i_power_in,
                               uint16_t i_v_set,

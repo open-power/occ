@@ -54,6 +54,8 @@ typedef enum
    DATA_FORMAT_MEM_THROT             = 0x12,
    DATA_FORMAT_THRM_THRESHOLDS       = 0x13,
    DATA_FORMAT_VOLT_UPLIFT           = 0x20,
+   DATA_FORMAT_WOF_CORE_FREQ         = 0x30,
+   DATA_FORMAT_WOF_VRM_EFF           = 0x31,
    DATA_FORMAT_CLEAR_ALL             = 0xff,
 } eConfigDataFormatVersion;
 
@@ -73,6 +75,8 @@ typedef enum
    DATA_MASK_MEM_CFG               = 0x00000200,
    DATA_MASK_MEM_THROT             = 0x00000400,
    DATA_MASK_VOLT_UPLIFT           = 0x00000800,
+   DATA_MASK_WOF_CORE_FREQ         = 0x00001000,
+   DATA_MASK_WOF_VRM_EFF           = 0x00002000,
 } eConfigDataPriorityMask;
 
 typedef enum
@@ -437,6 +441,46 @@ typedef struct __attribute__ ((packed))
     uint8_t              vdd_vid_uplift; //Only positive uplift values are supported
     uint8_t              vcs_vid_uplift; //Only positive uplift values are supported
 }cmdh_uplift_config_t;
+
+
+#define DATA_WOF_VRM_EFF_VERSION    0x10
+#define AMEC_WOF_VRM_EFF_TBL_ROWS   0x03
+#define AMEC_WOF_VRM_EFF_TBL_CLMS   0x0E
+#define AMEC_WOF_VRM_EFF_MAX_SZ     AMEC_WOF_VRM_EFF_TBL_ROWS * AMEC_WOF_VRM_EFF_TBL_CLMS * 2
+
+#define DATA_WOF_FREQ_DATA_VERSION  0x10
+#define AMEC_WOF_UPLIFT_TBL_ROWS    0x16
+#define AMEC_WOF_UPLIFT_TBL_CLMS    0x0D
+#define AMEC_WOF_CORE_FREQ_MAX_SZ   AMEC_WOF_UPLIFT_TBL_ROWS  * AMEC_WOF_UPLIFT_TBL_CLMS * 2
+
+
+// Used to send OCC the WOF Core Frequency Data.
+typedef struct __attribute__ ((packed))
+{
+    struct cmdh_fsp_cmd_header;
+    uint8_t             format;         // Format = 0x30
+    uint8_t             version;        // Version = 0x10
+    uint8_t             max_good_cores; // Includes de-configured cores
+    uint8_t             reserved[3];
+    uint8_t             rowCount;       // # of rows of 2byte values. 0 if WOF is not supported.
+    uint8_t             columnCount;    // # of columns of 2byte values. 0 if WOF is not supported.
+    uint8_t             data[AMEC_WOF_CORE_FREQ_MAX_SZ];
+}cmdh_wof_core_freq_cnfg_t;
+#define CMDH_WOF_CORE_FREQ_HEAD_SZ 8    //Number of bytes not including data block.
+
+
+
+typedef struct __attribute__ ((packed))
+{
+    struct cmdh_fsp_cmd_header;
+    uint8_t             format;         // Format = 0x31
+    uint8_t             version;        // Version = 0x10
+    uint8_t             reserved[4];
+    uint8_t             rowCount;       // # of rows of 2byte values. 0 if WOF is not supported.
+    uint8_t             columnCount;    // # of columns of 2byte values. 0 if WOF is not supported.
+    uint8_t             data[AMEC_WOF_VRM_EFF_MAX_SZ];
+}cmdh_wof_vrm_eff_cnfg_t;
+#define CMDH_WOF_VRM_EFF_HEAD_SZ   8    //Number of bytes not including data block.
 
 errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
                                     cmdh_fsp_rsp_t * i_rsp_ptr);

@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -54,7 +54,7 @@ enum occAmecModuleId
     AMEC_AMESTER_INTERFACE           =    AMEC_COMP_ID | 0x03,
     AMEC_PCAP_CONN_OC_CONTROLLER     =    AMEC_COMP_ID | 0x04,
     AMEC_MST_CHECK_PCAPS_MATCH       =    AMEC_COMP_ID | 0x05,
-    AMEC_MST_CHECK_UNDER_PCAP  	     = 	  AMEC_COMP_ID | 0x06,
+    AMEC_MST_CHECK_UNDER_PCAP        =    AMEC_COMP_ID | 0x06,
     AMEC_SLAVE_CHECK_PERFORMANCE     =    AMEC_COMP_ID | 0x07,
     AMEC_HEALTH_CHECK_PROC_TEMP      =    AMEC_COMP_ID | 0x08,
     AMEC_HEALTH_CHECK_DIMM_TEMP      =    AMEC_COMP_ID | 0x09,

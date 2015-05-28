@@ -35,6 +35,7 @@
 #include <ssx_api.h> // SsxSemaphore
 #include <amec_wof.h> // For wof semaphore in amec_wof_thread.c
 #include <common.h>
+#include <cmdh_fsp_cmds_datacnfg.h>
 
 //*************************************************************************
 // Externs
@@ -63,12 +64,6 @@ extern SsxSemaphore G_amec_wof_thread_wakeup_sem; // in amec_wof_thread.c
 // For prototype, one and only one of the following defines must be 1
 #define HAB19
 
-//MAX number of rows in the uplift and VRM eff tables
-#define AMEC_WOF_UPLIFT_TBL_ROWS    0x16
-#define AMEC_WOF_UPLIFT_TBL_CLMS    0x0D
-#define AMEC_WOF_VRM_EFF_TBL_ROWS   0x03
-#define AMEC_WOF_VRM_EFF_TBL_CLMS   0x0E
-
 //*************************************************************************
 // Structures
 //*************************************************************************
@@ -81,8 +76,16 @@ sensor_t g_amec_wof_ceff_ratio_sensor;
 sensor_t g_amec_wof_core_wake_sensor;
 sensor_t g_amec_wof_vdd_sense_sensor;
 
-uint16_t G_amec_wof_uplift_table[AMEC_WOF_UPLIFT_TBL_ROWS][AMEC_WOF_UPLIFT_TBL_CLMS];
-uint16_t G_amec_wof_vrm_eff_table[AMEC_WOF_VRM_EFF_TBL_ROWS][AMEC_WOF_VRM_EFF_TBL_CLMS];
+//Rows    - Output voltage in hundredths of a volt (i.e. 100 = 1V)
+//Columns - Output current in AMPs.
+uint16_t G_amec_wof_vrm_eff_table[AMEC_WOF_VRM_EFF_TBL_ROWS][AMEC_WOF_VRM_EFF_TBL_CLMS] = {{0},{0}};
+
+//Rows    - is the AC reduction (current efficiency) in hundredths of a percent. (i.e 100 = 1%)
+//Columns - is the number of active cores.
+uint16_t G_amec_wof_corefreq_table[AMEC_WOF_UPLIFT_TBL_ROWS][AMEC_WOF_UPLIFT_TBL_CLMS] = {{0},{0}};
+
+
+uint8_t G_wof_max_cores_per_chip = 12; //defaulted to 12 for now
 
 #ifdef HAB19
 
@@ -94,7 +97,6 @@ uint16_t G_amec_wof_vrm_eff_table[AMEC_WOF_VRM_EFF_TBL_ROWS][AMEC_WOF_VRM_EFF_TB
 #define AMEC_WOF_LOADLINE_ACTIVE 550  // Active loadline in micro ohms
 #define AMEC_WOF_LOADLINE_PASSIVE 50 // Passive loadline in micro ohms
 
-#define WOF_MAX_CORES_PER_CHIP 12
 
 // 0.01 A units of RDP@Vnom
 uint16_t g_amec_wof_rdp_idd_nom[MAX_NUM_CHIP_MODULES] = {15700, 0, 0, 0};
@@ -142,7 +144,7 @@ int16_t amec_wof_uplift_table[][14] = {
    Efficiency is in units of 1/100 of 1%.  (Divide by 10000 to get percent)
 */
 uint32_t amec_wof_vdd_eff[][3] = {
-    {    0,     0,    0}, //0 
+    {    0,     0,    0}, //0
     { 2000,  8877, 8890}, //1 (20.00 A, 88.77% @ 0.85 V, 88.90% @ 1.2 V)
     { 4000,  8936, 9211}, //2
     { 6000,  9047, 9135}, //3
@@ -213,7 +215,7 @@ uint8_t g_amec_wof_pstate_table_ready = 0;
         //Do across each operating point:
     //Calculate max load-line current to set voltage
     g_amec_wof_current_reduction = g_amec_wof_rdp_idd_nom[G_pob_id.module_id]
-        * g_amec_wof_pstatetable_cores_next / WOF_MAX_CORES_PER_CHIP;
+        * g_amec_wof_pstatetable_cores_next / G_wof_max_cores_per_chip;
 
 
 */
@@ -228,7 +230,7 @@ int32_t g_amec_eff_vlow, g_amec_eff_vhigh;
 uint32_t g_amec_wof_iout;
 void amec_wof_vdd_current_out(uint16_t i_power_in,
                     uint16_t i_v_set,
-		    uint16_t *o_current_out,
+            uint16_t *o_current_out,
                     uint16_t *o_v_sense)
 {
     uint8_t iteration;
@@ -240,7 +242,7 @@ void amec_wof_vdd_current_out(uint16_t i_power_in,
     int32_t v_diff = v_max - v_min; // max voltage - min voltage from efficiency table
 
     // helper variables
-    int32_t x2minusx1, xminusx1; 
+    int32_t x2minusx1, xminusx1;
     int32_t l_eff_vlow, l_eff_vhigh, v_offset;
     int32_t l_v_sense;
 
@@ -251,12 +253,12 @@ void amec_wof_vdd_current_out(uint16_t i_power_in,
     // Compute regulator output power.  out = in * efficiency
     //    power_in: min=0W max=300W = 3000dW
     //    eff: min=0 max=10000=100% (.01% units)
-    //    power_in*eff: max=3000dW * 10000 = 30,000,000 (dW*0.0001) 
+    //    power_in*eff: max=3000dW * 10000 = 30,000,000 (dW*0.0001)
     //                  is under 2^25, fits in 25 bits
     //    *10 = 300M (dW*0.00001) in 29 bits
     uint32_t l_pout = i_power_in * l_eff * 10;
 
-    // Compute current out of regulator.  
+    // Compute current out of regulator.
     // curr_out = power_out (*10 scaling factor) / voltage_out
     //    p_out: max=300M (dW*0.00001) in 29 bits
     //    v_set: min=5000 (0.0001 V)  max=16000(0.0001 V) in 14 bits
@@ -266,7 +268,7 @@ void amec_wof_vdd_current_out(uint16_t i_power_in,
 
     for(iteration=0; iteration<2; iteration++)  // iterate twice
     {
-	for (i=0; i<AMEC_WOF_VDD_EFF_N; i++)
+    for (i=0; i<AMEC_WOF_VDD_EFF_N; i++)
         {
             if (l_iout >= amec_wof_vdd_eff[i][0] &&
                 l_iout <= amec_wof_vdd_eff[i+1][0])
@@ -274,48 +276,48 @@ void amec_wof_vdd_current_out(uint16_t i_power_in,
                 break;
             }
         }
-	// if beyond table, use last 2 entries
-	if (i >= AMEC_WOF_VDD_EFF_N-1)
-	{
-	    i = AMEC_WOF_VDD_EFF_N - 2; 
-	}
-	
-	// i points to the first index
-	
-	// Compute efficiency at lower voltage (0.85 V)
+    // if beyond table, use last 2 entries
+    if (i >= AMEC_WOF_VDD_EFF_N-1)
+    {
+        i = AMEC_WOF_VDD_EFF_N - 2;
+    }
 
-        //Linear interpolate using the neighboring entries.  
-	// y = (x-x1)m+y1   m=(y2-y1)/(x2-x1)
-	// x2minusx1 = difference in current between entries
-	// xminusx1
+    // i points to the first index
 
-	// x2minusx1 in units of 0.01 A
-	x2minusx1 = ((int32_t)amec_wof_vdd_eff[i+1][0] - (int32_t)amec_wof_vdd_eff[i][0]);
-	// xminusx1 in units of 0.01 A
-	xminusx1 = (int32_t)l_iout - (int32_t)amec_wof_vdd_eff[i][0];
+    // Compute efficiency at lower voltage (0.85 V)
+
+        //Linear interpolate using the neighboring entries.
+    // y = (x-x1)m+y1   m=(y2-y1)/(x2-x1)
+    // x2minusx1 = difference in current between entries
+    // xminusx1
+
+    // x2minusx1 in units of 0.01 A
+    x2minusx1 = ((int32_t)amec_wof_vdd_eff[i+1][0] - (int32_t)amec_wof_vdd_eff[i][0]);
+    // xminusx1 in units of 0.01 A
+    xminusx1 = (int32_t)l_iout - (int32_t)amec_wof_vdd_eff[i][0];
         l_eff_vlow = xminusx1
             * ((int32_t)amec_wof_vdd_eff[i+1][1] - (int32_t)amec_wof_vdd_eff[i][1])
             / x2minusx1
             + (int32_t)amec_wof_vdd_eff[i][1];
 
-	g_amec_eff_vlow = l_eff_vlow;//debug
+    g_amec_eff_vlow = l_eff_vlow;//debug
 
-	//Reuse same x2minusx1 and xminusx1 because efficiency curves use common current_in values
+    //Reuse same x2minusx1 and xminusx1 because efficiency curves use common current_in values
         l_eff_vhigh = xminusx1
             * ((int32_t)amec_wof_vdd_eff[i+1][2] - (int32_t)amec_wof_vdd_eff[i][2])
             / x2minusx1
             + (int32_t)amec_wof_vdd_eff[i][2];
 
-	g_amec_eff_vhigh = l_eff_vhigh;//debug
+    g_amec_eff_vhigh = l_eff_vhigh;//debug
 
-	v_offset = i_v_set - v_min;
-	l_eff = ((l_eff_vhigh - l_eff_vlow) * v_offset) / v_diff + l_eff_vlow;
+    v_offset = i_v_set - v_min;
+    l_eff = ((l_eff_vhigh - l_eff_vlow) * v_offset) / v_diff + l_eff_vlow;
         //    V_droop = I_chip (0.01 A) * R_loadline (0.000001 ohm) => (in 0.00000001 V)
         //    V_droop = V_droop / 10000 => (in 0.0001 V)
         //    V_sense = V_reg - V_droop  => (in 0.0001 V)
         l_v_sense = i_v_set - AMEC_WOF_LOADLINE_ACTIVE * l_iout / 10000;
-	l_pout = i_power_in * l_eff * 10; // See l_pout above for *10 note
-	l_iout = l_pout/l_v_sense;
+    l_pout = i_power_in * l_eff * 10; // See l_pout above for *10 note
+    l_iout = l_pout/l_v_sense;
     }
 
     //FIXME: Uplift for broken habanero Vdd input power sensor. Delete when HW fixed.
@@ -723,7 +725,7 @@ void amec_wof_common_steps(void)
     / ((int32_t)amec_wof_iddq_table[i+1][0] - (int32_t)amec_wof_iddq_table[i][0])
     + (int32_t)amec_wof_iddq_table[i][G_pob_id.module_id+1];
 
-    l_result32 = l_result32 * l_cores_on / WOF_MAX_CORES_PER_CHIP;
+    l_result32 = l_result32 * l_cores_on / G_wof_max_cores_per_chip;
 
     g_amec->wof.iddq85c = (uint16_t)l_result32;  // expose to parameter
 
@@ -1189,64 +1191,125 @@ void amec_wof_main(void)
 // Name:  amec_wof_writeToTable
 //
 // Description: Writes wof data given in a one dimensional
-//              array to a two dimensional predefined tables.
+//              array to a two dimensional predefined table.
+//
+// PREREQ: This function expects that all data validation has been done.
 //
 // End Function Specification
-int amec_wof_writeToTable(wof_tbl_type_t i_tblType ,
+void amec_wof_writeToTable(wof_tbl_type_t i_tblType ,
                               const uint16_t i_size,
                               const uint8_t i_clmnCount,
                               uint8_t *i_data_ptr)
 {
 
-    int     l_rc = 0;
-
     uint16_t l_tblIndex = 0;
 
-    for (l_tblIndex = 0; l_tblIndex < i_size / 2; l_tblIndex++)
+    if (i_clmnCount > 0)
     {
-        //Get table row and column to write the entry into.
-        uint8_t l_tblRow = l_tblIndex / i_clmnCount;
-        uint8_t l_tblClmn = l_tblIndex % i_clmnCount;
+        //walk the array of data given
+        for (l_tblIndex = 0; l_tblIndex < i_size / 2; l_tblIndex++)
+        {
+            //Get table row and column to write the entry into.
+            uint8_t l_tblRow = l_tblIndex / i_clmnCount;
+            uint8_t l_tblClmn = l_tblIndex % i_clmnCount;
 
-        if (AMEC_WOF_CORE_FREQ_TBL == i_tblType)
-        {
-            //Even though this check should have been made by the
-            //calling function, make sure we don't attempt to write
-            //beyond table limits.
-            if ((l_tblClmn < AMEC_WOF_UPLIFT_TBL_CLMS) &&
-                (l_tblRow  < AMEC_WOF_UPLIFT_TBL_ROWS) )
+            if (i_tblType == AMEC_WOF_CORE_FREQ_TBL)
             {
-                //Write each two bytes of data into each cell.
-                G_amec_wof_uplift_table[l_tblRow][l_tblClmn] = (i_data_ptr[l_tblIndex * 2] << 8) | (i_data_ptr[(l_tblIndex * 2) + 1]);
+                //Reset global table
+                if (0 == l_tblIndex)
+                {
+                    memset(&G_amec_wof_corefreq_table, 0, sizeof(G_amec_wof_corefreq_table));
+                }
+                //Even though this check should have been made by the
+                //calling function, make sure we don't attempt to write
+                //beyond table limits.
+                if ((l_tblClmn < AMEC_WOF_UPLIFT_TBL_CLMS) &&
+                    (l_tblRow  < AMEC_WOF_UPLIFT_TBL_ROWS) )
+                {
+                    //Write each two bytes of data into each cell.
+                    G_amec_wof_corefreq_table[l_tblRow][l_tblClmn] = (i_data_ptr[l_tblIndex * 2] << 8) | (i_data_ptr[(l_tblIndex * 2) + 1]);
+                }
+                else
+                {
+                    TRAC_ERR("amec_wof_writeToTable: WOF Core Freq Data given is larger than we can fit in table. "
+                             "Attempting to write cell at [%i,%i] location.", l_tblRow, l_tblClmn);
+                }
+            }
+            else if (i_tblType == AMEC_WOF_VRM_EFF_TBL)
+            {
+                //Reset data buffer
+                if (0 == l_tblIndex)
+                {
+                    memset(&G_amec_wof_vrm_eff_table, 0, sizeof(G_amec_wof_vrm_eff_table));
+                }
+                //Even though this check should have been made by the
+                //calling function, make sure we don't attempt to write
+                //beyond table limits.
+                if ((l_tblClmn < AMEC_WOF_VRM_EFF_TBL_CLMS) &&
+                    (l_tblRow  < AMEC_WOF_VRM_EFF_TBL_ROWS) )
+                {
+                    //Write each two bytes of data into each cell.
+                    G_amec_wof_vrm_eff_table[l_tblRow][l_tblClmn] = (i_data_ptr[l_tblIndex * 2] << 8) | (i_data_ptr[(l_tblIndex * 2) + 1]);
+                }
+                else
+                {
+                    TRAC_ERR("amec_wof_writeToTable: WOF VRM Eff Data given is larger than we can fit in table. "
+                             "Attempting to write cell at [%i,%i] location.", l_tblRow, l_tblClmn);
+                }
             }
             else
             {
-                TRAC_ERR("amec_wof_writeToTable: WOF Core Freq Data given is larger than we can fit in table. "
-                         "Attempting to write cell at [%i,%i] location.", l_tblRow, l_tblClmn);
+                TRAC_ERR("amec_wof_writeToTable: Invalid table type.");
             }
-        }
-        else if (AMEC_WOF_VRM_EFF_TBL == i_tblType)
-        {
-            //Even though this check should have been made by the
-            //calling function, make sure we don't attempt to write
-            //beyond table limits.
-            if ((l_tblClmn < AMEC_WOF_VRM_EFF_TBL_CLMS) &&
-                (l_tblRow  < AMEC_WOF_VRM_EFF_TBL_ROWS) )
-            {
-                //Write each two bytes of data into each cell.
-                G_amec_wof_vrm_eff_table[l_tblRow][l_tblClmn] = (i_data_ptr[l_tblIndex * 2] << 8) | (i_data_ptr[(l_tblIndex * 2) + 1]);
-            }
-            else
-            {
-                TRAC_ERR("amec_wof_writeToTable: WOF VRM Eff Data given is larger than we can fit in table. "
-                         "Attempting to write cell at [%i,%i] location.", l_tblRow, l_tblClmn);
-            }
-        }
-        else
-        {
-            TRAC_ERR("amec_wof_writeToTable: Invalid table type.");
         }
     }
+    else
+    {
+        TRAC_ERR("amec_wof_writeToTable: column size given is 0.");
+    }
 
-    return l_rc;
 }
+
+// Function Specification
+//
+// Name:  amec_wof_store_vrm_eff
+//
+// Description: Parses and handles all data passed to OCC via data
+//              config format 0x31.
+//
+// Prereq: Data size has been verified.
+//
+// End Function Specification
+void amec_wof_store_vrm_eff( const uint16_t i_size,
+                             const uint8_t i_clmnCount,
+                             uint8_t *i_data_ptr)
+{
+    //Store given data into global table.
+    amec_wof_writeToTable(AMEC_WOF_VRM_EFF_TBL, i_size, i_clmnCount, i_data_ptr);
+}
+
+// Function Specification
+//
+// Name:  amec_wof_store_core_freq
+//
+// Description: Parses and handles all data passed to OCC via data
+//              config format 0x30.
+//
+// Prereq: Data size has been verified.
+//
+// End Function Specification
+void amec_wof_store_core_freq(const uint8_t i_max_good_cores,
+                              const uint16_t i_size,
+                              const uint8_t i_clmnCount,
+                              uint8_t *i_data_ptr)
+{
+
+    //Store max good cores
+    G_wof_max_cores_per_chip = i_max_good_cores;
+
+    //Store given data into global table.
+    amec_wof_writeToTable(AMEC_WOF_CORE_FREQ_TBL, i_size, i_clmnCount, i_data_ptr);
+
+}
+
+

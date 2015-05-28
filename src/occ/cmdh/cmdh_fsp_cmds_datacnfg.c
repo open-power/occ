@@ -98,6 +98,7 @@ const data_req_table_t G_data_pri_table[] =
     {DATA_MASK_PCAP_PRESENT,          DATA_FORMAT_POWER_CAP},
     {DATA_MASK_THRM_THRESHOLDS,       DATA_FORMAT_THRM_THRESHOLDS},
     {DATA_MASK_MEM_THROT,             DATA_FORMAT_MEM_THROT},
+//    {DATA_MASK_WOF_CORE_FREQ,         DATA_FORMAT_WOF_CORE_FREQ},  //Do not make this required yet.
 };
 
 // TODO: Temporarily saving this off here not sure
@@ -1378,9 +1379,9 @@ errlHndl_t data_store_power_cap(const cmdh_fsp_cmd_t * i_cmd_ptr,
         L_pcap_count++;
         G_master_pcap_data.pcap_data_count = L_pcap_count;
 
-        // Change Data Request Mask to indicate we got the data
-        // G_data_cnfg->data_mask |= DATA_MASK_PCAP_PRESENT;
-        // will update data mask when slave code acquires data
+        // Data mask for pcap_present will be updated when slave code
+        // acquires the data. G_data_cnfg->data_mask will be updated then.
+
         TRAC_IMP("data store pcap: Got valid PCAP Config data via TMGT. Count:%i, Data Cfg mask[%x]",G_master_pcap_data.pcap_data_count, G_data_cnfg->data_mask);
     }
 
@@ -2192,6 +2193,179 @@ errlHndl_t data_store_volt_uplift(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
 // Function Specification
 //
+// Name:  cmdh_store_wof_core_freq
+//
+// Description: Store the WOF core Frequency table sent by TMGT. This data
+//              is sent to each OCC.
+//
+// End Function Specification
+errlHndl_t cmdh_store_wof_core_freq(const cmdh_fsp_cmd_t * i_cmd_ptr,
+                                    cmdh_fsp_rsp_t * o_rsp_ptr)
+{
+    errlHndl_t                  l_err = NULL;
+    cmdh_wof_core_freq_cnfg_t  *l_cmd_ptr = (cmdh_wof_core_freq_cnfg_t *)i_cmd_ptr;
+    uint16_t                    l_data_length = CMDH_DATALEN_FIELD_UINT16(l_cmd_ptr);
+    uint16_t                    l_actualDataSz = l_data_length - CMDH_WOF_CORE_FREQ_HEAD_SZ;
+    uint8_t                     l_returnErr = 0;
+
+    //Check Version and make sure we have the minimum required size for this packet;
+    //header + all bytes but the freq data array.
+    if( !( (l_cmd_ptr->version == DATA_WOF_FREQ_DATA_VERSION) &&
+           (l_data_length >= CMDH_WOF_CORE_FREQ_HEAD_SZ)))
+    {
+        TRAC_ERR("data_store_wof_core_freq: Invalid config data packet version or length. Version:0x%X, "
+                 "DataLength:%d. minSz:%d.", l_cmd_ptr->version, l_data_length, CMDH_WOF_CORE_FREQ_HEAD_SZ);
+        l_returnErr = 1;
+    }
+    else
+    {
+        //Verify that given data row and column count doesn't exceed the max possible,
+        //and that freq data given is of valid size.
+        if( !( (AMEC_WOF_UPLIFT_TBL_ROWS >= l_cmd_ptr->rowCount) &&
+               (AMEC_WOF_UPLIFT_TBL_CLMS >= l_cmd_ptr->columnCount) &&
+               (l_actualDataSz == (l_cmd_ptr->rowCount * l_cmd_ptr->columnCount * 2)) ))
+        {
+
+            TRAC_ERR("data_store_wof_core_freq: Invalid config data packet. Given "
+                     "dataLength:%d, rowCount:%d, columnCount:%d, ActualDataSz:%d,"
+                     "ExpectedDataSz:%d.",
+                     l_data_length, l_cmd_ptr->rowCount, l_cmd_ptr->columnCount,
+                     l_actualDataSz, (l_cmd_ptr->rowCount * l_cmd_ptr->columnCount * 2));
+            l_returnErr = 2;
+        }
+    }
+
+    if (l_returnErr)
+    {
+        /* @
+         * @errortype
+         * @moduleid    DATA_STORE_WOF_FREQ_CORE_DATA
+         * @reasoncode  INVALID_INPUT_DATA
+         * @userdata1   data size
+         * @userdata2   packet version
+         * @userdata4   OCC_NO_EXTENDED_RC
+         * @devdesc     OCC recieved an invalid data packet from the FSP
+         */
+        l_err = createErrl(DATA_STORE_WOF_FREQ_CORE_DATA,
+                           INVALID_INPUT_DATA,
+                           OCC_NO_EXTENDED_RC,
+                           ERRL_SEV_UNRECOVERABLE,
+                           NULL,
+                           DEFAULT_TRACE_SIZE,
+                           l_data_length,
+                           (uint32_t)l_cmd_ptr->version);
+
+        // Callout firmware
+        addCalloutToErrl(l_err,
+                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                         ERRL_COMPONENT_ID_FIRMWARE,
+                         ERRL_CALLOUT_PRIORITY_HIGH);
+    }
+    else
+    {
+        if ((l_cmd_ptr->columnCount != 0) && (l_cmd_ptr->rowCount != 0))
+        {
+            amec_wof_store_core_freq(l_cmd_ptr->max_good_cores, l_actualDataSz, l_cmd_ptr->columnCount, &l_cmd_ptr->data[0]);
+        }
+        else
+        {
+            TRAC_INFO("cmdh_store_wof_vrm_eff: received empty packet for format 0x31.");
+        }
+    }
+
+    return l_err;
+}
+
+// Function Specification
+//
+// Name:  cmdh_store_wof_vrm_eff
+//
+// Description: Store the VRM efficiency table sent by TMGT. This data
+//              is sent to each OCC.
+//
+// End Function Specification
+errlHndl_t cmdh_store_wof_vrm_eff(const cmdh_fsp_cmd_t * i_cmd_ptr,
+                                        cmdh_fsp_rsp_t * o_rsp_ptr)
+{
+    errlHndl_t                  l_err = NULL;
+    cmdh_wof_vrm_eff_cnfg_t    *l_cmd_ptr = (cmdh_wof_vrm_eff_cnfg_t *)i_cmd_ptr;
+    uint16_t                    l_data_length = CMDH_DATALEN_FIELD_UINT16(l_cmd_ptr);
+    uint16_t                    l_actualDataSz = l_data_length - CMDH_WOF_VRM_EFF_HEAD_SZ;
+    uint8_t                     l_returnErr = 0;
+
+    //Check Version and make sure we have the minimum required size for this packet;
+    //header + all bytes but the freq data array.
+    if( !( (l_cmd_ptr->version == DATA_WOF_VRM_EFF_VERSION) &&
+           (l_data_length >= CMDH_WOF_VRM_EFF_HEAD_SZ)))
+    {
+        TRAC_ERR("cmdh_store_wof_vrm_eff: Invalid config data packet version or length. Version:0x%X, "
+                 "DataLength:%d. minSz:%d.", l_cmd_ptr->version, l_data_length, CMDH_WOF_VRM_EFF_HEAD_SZ);
+        l_returnErr = 1;
+    }
+    else
+    {
+        //Verify that given data row and column count doesn't exceed the max possible,
+        //and that freq data given is of valid size.
+        if( !( (AMEC_WOF_VRM_EFF_TBL_ROWS >= l_cmd_ptr->rowCount) &&
+               (AMEC_WOF_VRM_EFF_TBL_CLMS >= l_cmd_ptr->columnCount) &&
+               (l_actualDataSz == (l_cmd_ptr->rowCount * l_cmd_ptr->columnCount * 2)) ))
+        {
+
+            TRAC_ERR("cmdh_store_wof_vrm_eff: Invalid config data packet. Given "
+                     "dataLength:%d, rowCount:%d, columnCount:%d, ActualDataSz:%d,"
+                     "ExpectedDataSz:%d.",
+                     l_data_length, l_cmd_ptr->rowCount, l_cmd_ptr->columnCount,
+                     l_actualDataSz, (l_cmd_ptr->rowCount * l_cmd_ptr->columnCount * 2));
+            l_returnErr = 2;
+        }
+    }
+
+    if (l_returnErr)
+    {
+        /* @
+         * @errortype
+         * @moduleid    DATA_STORE_WOF_VRM_EFF_DATA
+         * @reasoncode  INVALID_INPUT_DATA
+         * @userdata1   data size
+         * @userdata2   packet version
+         * @userdata4   OCC_NO_EXTENDED_RC
+         * @devdesc     OCC recieved an invalid data packet from the FSP
+         */
+        l_err = createErrl(DATA_STORE_WOF_VRM_EFF_DATA,
+                           INVALID_INPUT_DATA,
+                           OCC_NO_EXTENDED_RC,
+                           ERRL_SEV_UNRECOVERABLE,
+                           NULL,
+                           DEFAULT_TRACE_SIZE,
+                           l_data_length,
+                           (uint32_t)l_cmd_ptr->version);
+
+        // Callout firmware
+        addCalloutToErrl(l_err,
+                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                         ERRL_COMPONENT_ID_FIRMWARE,
+                         ERRL_CALLOUT_PRIORITY_HIGH);
+    }
+    else
+    {
+
+        if ((l_cmd_ptr->columnCount != 0) && (l_cmd_ptr->rowCount != 0))
+        {
+            amec_wof_store_vrm_eff(l_actualDataSz, l_cmd_ptr->columnCount, &l_cmd_ptr->data[0]);
+        }
+        else
+        {
+            TRAC_INFO("cmdh_store_wof_vrm_eff: received empty packet for format 0x31.");
+        }
+    }
+
+    return l_err;
+}
+
+
+
+// Function Specification
+//
 // Name:   DATA_store_cnfgdata
 //
 // Description: TODO Add description
@@ -2203,174 +2377,200 @@ errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
     errlHndl_t                      l_errlHndl = NULL;
     UINT32                          l_new_data = 0;
     ERRL_RC                         l_rc       = ERRL_RC_INTERNAL_FAIL;
+    uint16_t                        l_data_length = CMDH_DATALEN_FIELD_UINT16(i_cmd_ptr);
 
     memset(o_rsp_ptr,0,(size_t)(sizeof(cmdh_fsp_rsp_t)));
 
-    TRAC_IMP("Data Config Packet Received Type: 0x%02x",i_cmd_ptr->data[0]);
-
-    switch (i_cmd_ptr->data[0])
+    //There should be at least a data config format byte.
+    if (l_data_length > 0)
     {
-        case DATA_FORMAT_FREQ:
-            l_errlHndl = data_store_freq_data(i_cmd_ptr , o_rsp_ptr);
-            if(NULL == l_errlHndl)
-            {
-                l_new_data = DATA_MASK_FREQ_PRESENT;
-            }
-            break;
+        TRAC_IMP("Data Config Packet Received Type: 0x%02x", i_cmd_ptr->data[0]);
 
-        case DATA_FORMAT_PSTATE_SUPERSTRUCTURE:
-            // Initialize the Pstate Table, based on the passed in
-            // PstateSuperStructure.
-
-            l_errlHndl = data_store_pstate_super(i_cmd_ptr, o_rsp_ptr);
-            if(NULL == l_errlHndl)
-            {
-                // Set this in case AMEC needs to know about this
-                l_new_data = DATA_MASK_PSTATE_SUPERSTRUCTURE;
-            }
-            break;
-
-        case DATA_FORMAT_SET_ROLE:
-            // Initialze our role to either be a master of a slave
-            // We must be in Standby State for this command to be
-            // accepted.
-
-            l_errlHndl = data_store_role(i_cmd_ptr, o_rsp_ptr);
-            if(NULL == l_errlHndl)
-            {
-                // Set this in case AMEC needs to know about this
-                l_new_data = DATA_MASK_SET_ROLE;
-            }
-            break;
-
-        case DATA_FORMAT_APSS_CONFIG:
-            // Initialze APSS settings so that OCC can correctly interpret
-            // the data that it gets from the APSS
-            l_errlHndl = data_store_apss_config(i_cmd_ptr, o_rsp_ptr);
-
-            if(NULL == l_errlHndl)
-            {
-                // Set this in case AMEC needs to know about this
-                l_new_data = DATA_MASK_APSS_CONFIG;
-            }
-            break;
-
-        case DATA_FORMAT_POWER_CAP:
-            // Store the pcap data in G_master_pcap_data
-            l_errlHndl = data_store_power_cap(i_cmd_ptr, o_rsp_ptr);
-
-            if(NULL == l_errlHndl)
-            {
-                // Set this in case AMEC needs to know about this
-                l_new_data = DATA_MASK_PCAP_PRESENT;
-            }
-            break;
-
-        case DATA_FORMAT_SYS_CNFG:
-            // Store the system config data in G_sysConfigData
-            l_errlHndl = data_store_sys_config(i_cmd_ptr, o_rsp_ptr);
-
-            if(NULL == l_errlHndl)
-            {
-                // Set this in case AMEC needs to know about this
-                l_new_data = DATA_MASK_SYS_CNFG;
-            }
-            break;
-
-        case DATA_FORMAT_IPS_CNFG:
-            // Store the system config data in G_sysConfigData
-            l_errlHndl = data_store_ips_config(i_cmd_ptr, o_rsp_ptr);
-
-            if(NULL == l_errlHndl)
-            {
-                // Set this in case AMEC needs to know about this
-                l_new_data = DATA_MASK_IPS_CNFG;
-            }
-            break;
-
-        case DATA_FORMAT_THRM_THRESHOLDS:
-            // Store the thermal control thresholds sent by TMGT
-            l_errlHndl = data_store_thrm_thresholds(i_cmd_ptr, o_rsp_ptr);
-
-            if(NULL == l_errlHndl)
-            {
-                // Set this in case AMEC needs to know about this
-                l_new_data = DATA_MASK_THRM_THRESHOLDS;
-            }
-            break;
-
-        case DATA_FORMAT_MEM_CFG:
-            // Store HUID mapping for centaurs and dimms
-            l_errlHndl = data_store_mem_cfg(i_cmd_ptr, o_rsp_ptr);
-
-            if(NULL == l_errlHndl)
-            {
-                l_new_data = DATA_MASK_MEM_CFG;
-            }
-            break;
-
-        case DATA_FORMAT_MEM_THROT:
-            // Store memory throttle limits
-            l_errlHndl = data_store_mem_throt(i_cmd_ptr, o_rsp_ptr);
-
-            if(NULL == l_errlHndl)
-            {
-                l_new_data = DATA_MASK_MEM_THROT;
-            }
-            break;
-
-        case DATA_FORMAT_VOLT_UPLIFT:
-            l_errlHndl = data_store_volt_uplift(i_cmd_ptr , o_rsp_ptr);
-            if(NULL == l_errlHndl)
-            {
-                l_new_data = DATA_MASK_VOLT_UPLIFT;
-            }
-            break;
-
-        case DATA_FORMAT_CLEAR_ALL:
-            // Make sure not in ACTIVE
-            if(CURRENT_STATE() != OCC_STATE_ACTIVE)
-            {
-                // Clear all configuration data except for any data needed to support observation
-                TRAC_INFO("Clear all active configuration data");
-                G_data_cnfg->data_mask &= SMGR_VALIDATE_DATA_OBSERVATION_MASK;
-
-                // Clear the frequencies config data
-                memset(&G_sysConfigData.sys_mode_freq.table[0], 0, sizeof(G_sysConfigData.sys_mode_freq.table));
-
-            }
-            else
-            {
-                TRAC_ERR("Failed to clear all active configuration data because we are in ACTIVE state");
-                l_rc = ERRL_RC_INVALID_STATE;
-            }
-            break;
-
-        default:
-            // Build Error Response packet, we are calling this here
-            // to generate the error log, it will get called again, below but
-            // that's ok, as long as we set l_rc here.
-            l_rc = ERRL_RC_INVALID_DATA;
-            cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, l_rc, &l_errlHndl);
-            break;
-    }
-
-    if((!l_errlHndl) && (l_new_data))
-    {
-        // Don't send a poll if we just received one or our periodic data
-        // packets like supernova, dimm, or p5ioc temperatures.  This causes
-        // TMGT to wrap their trace with our attentions
-        // For simplicity, don't poll if we don't have any new data to
-        // request
-        if(DATA_request_cnfgdata() != 0)
+        switch (i_cmd_ptr->data[0])
         {
-            // Poll after we get new data to either inform the FSP that we need more,
-            // or inform the FSP that we have everything needed for a new state.
-            cmdh_fsp_attention(OCC_ALERT_FSP_SERVICE_REQD);
+            case DATA_FORMAT_FREQ:
+                l_errlHndl = data_store_freq_data(i_cmd_ptr , o_rsp_ptr);
+                if(NULL == l_errlHndl)
+                {
+                    l_new_data = DATA_MASK_FREQ_PRESENT;
+                }
+                break;
+
+            case DATA_FORMAT_PSTATE_SUPERSTRUCTURE:
+                // Initialize the Pstate Table, based on the passed in
+                // PstateSuperStructure.
+
+                l_errlHndl = data_store_pstate_super(i_cmd_ptr, o_rsp_ptr);
+                if(NULL == l_errlHndl)
+                {
+                    // Set this in case AMEC needs to know about this
+                    l_new_data = DATA_MASK_PSTATE_SUPERSTRUCTURE;
+                }
+                break;
+
+            case DATA_FORMAT_SET_ROLE:
+                // Initialze our role to either be a master of a slave
+                // We must be in Standby State for this command to be
+                // accepted.
+
+                l_errlHndl = data_store_role(i_cmd_ptr, o_rsp_ptr);
+                if(NULL == l_errlHndl)
+                {
+                    // Set this in case AMEC needs to know about this
+                    l_new_data = DATA_MASK_SET_ROLE;
+                }
+                break;
+
+            case DATA_FORMAT_APSS_CONFIG:
+                // Initialze APSS settings so that OCC can correctly interpret
+                // the data that it gets from the APSS
+                l_errlHndl = data_store_apss_config(i_cmd_ptr, o_rsp_ptr);
+
+                if(NULL == l_errlHndl)
+                {
+                    // Set this in case AMEC needs to know about this
+                    l_new_data = DATA_MASK_APSS_CONFIG;
+                }
+                break;
+
+            case DATA_FORMAT_POWER_CAP:
+                // Store the pcap data in G_master_pcap_data
+                l_errlHndl = data_store_power_cap(i_cmd_ptr, o_rsp_ptr);
+
+                if(NULL == l_errlHndl)
+                {
+                    // Set this in case AMEC needs to know about this
+                    l_new_data = DATA_MASK_PCAP_PRESENT;
+                }
+                break;
+
+            case DATA_FORMAT_SYS_CNFG:
+                // Store the system config data in G_sysConfigData
+                l_errlHndl = data_store_sys_config(i_cmd_ptr, o_rsp_ptr);
+
+                if(NULL == l_errlHndl)
+                {
+                    // Set this in case AMEC needs to know about this
+                    l_new_data = DATA_MASK_SYS_CNFG;
+                }
+                break;
+
+            case DATA_FORMAT_IPS_CNFG:
+                // Store the system config data in G_sysConfigData
+                l_errlHndl = data_store_ips_config(i_cmd_ptr, o_rsp_ptr);
+
+                if(NULL == l_errlHndl)
+                {
+                    // Set this in case AMEC needs to know about this
+                    l_new_data = DATA_MASK_IPS_CNFG;
+                }
+                break;
+
+            case DATA_FORMAT_THRM_THRESHOLDS:
+                // Store the thermal control thresholds sent by TMGT
+                l_errlHndl = data_store_thrm_thresholds(i_cmd_ptr, o_rsp_ptr);
+
+                if(NULL == l_errlHndl)
+                {
+                    // Set this in case AMEC needs to know about this
+                    l_new_data = DATA_MASK_THRM_THRESHOLDS;
+                }
+                break;
+
+            case DATA_FORMAT_MEM_CFG:
+                // Store HUID mapping for centaurs and dimms
+                l_errlHndl = data_store_mem_cfg(i_cmd_ptr, o_rsp_ptr);
+
+                if(NULL == l_errlHndl)
+                {
+                    l_new_data = DATA_MASK_MEM_CFG;
+                }
+                break;
+
+            case DATA_FORMAT_MEM_THROT:
+                // Store memory throttle limits
+                l_errlHndl = data_store_mem_throt(i_cmd_ptr, o_rsp_ptr);
+
+                if(NULL == l_errlHndl)
+                {
+                    l_new_data = DATA_MASK_MEM_THROT;
+                }
+                break;
+
+            case DATA_FORMAT_VOLT_UPLIFT:
+                l_errlHndl = data_store_volt_uplift(i_cmd_ptr , o_rsp_ptr);
+                if(NULL == l_errlHndl)
+                {
+                    l_new_data = DATA_MASK_VOLT_UPLIFT;
+                }
+                break;
+
+            case DATA_FORMAT_WOF_CORE_FREQ:
+
+                //Store core frequencies required for WOF.
+                l_errlHndl = cmdh_store_wof_core_freq(i_cmd_ptr, o_rsp_ptr);
+                if(NULL == l_errlHndl)
+                {
+                    // Set this in case AMEC needs to know about this
+                    l_new_data = DATA_MASK_WOF_CORE_FREQ;
+                }
+                break;
+            case DATA_FORMAT_WOF_VRM_EFF:
+
+                //Store wof vrm effeciency.
+                l_errlHndl = cmdh_store_wof_vrm_eff(i_cmd_ptr, o_rsp_ptr);
+                if(NULL == l_errlHndl)
+                {
+                    // Set this in case AMEC needs to know about this
+                    l_new_data = DATA_MASK_WOF_VRM_EFF;
+                }
+                break;
+            case DATA_FORMAT_CLEAR_ALL:
+                // Make sure not in ACTIVE
+                if(CURRENT_STATE() != OCC_STATE_ACTIVE)
+                {
+                    // Clear all configuration data except for any data needed to support observation
+                    TRAC_INFO("Clear all active configuration data");
+                    G_data_cnfg->data_mask &= SMGR_VALIDATE_DATA_OBSERVATION_MASK;
+
+                    // Clear the frequencies config data
+                    memset(&G_sysConfigData.sys_mode_freq.table[0], 0, sizeof(G_sysConfigData.sys_mode_freq.table));
+
+                }
+                else
+                {
+                    TRAC_ERR("Failed to clear all active configuration data because we are in ACTIVE state");
+                    l_rc = ERRL_RC_INVALID_STATE;
+                }
+                break;
+
+            default:
+                // Build Error Response packet, we are calling this here
+                // to generate the error log, it will get called again, below but
+                // that's ok, as long as we set l_rc here.
+                l_rc = ERRL_RC_INVALID_DATA;
+                cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, l_rc, &l_errlHndl);
+                break;
         }
 
-        // Notify AMEC component of new data
-        AMEC_data_change(l_new_data);
+        if((!l_errlHndl) && (l_new_data))
+        {
+            // Don't send a poll if we just received one or our periodic data
+            // packets like supernova, dimm, or p5ioc temperatures.  This causes
+            // TMGT to wrap their trace with our attentions
+            // For simplicity, don't poll if we don't have any new data to
+            // request
+            if(DATA_request_cnfgdata() != 0)
+            {
+                // Poll after we get new data to either inform the FSP that we need more,
+                // or inform the FSP that we have everything needed for a new state.
+                cmdh_fsp_attention(OCC_ALERT_FSP_SERVICE_REQD);
+            }
+
+            // Notify AMEC component of new data
+            AMEC_data_change(l_new_data);
+        }
+
     }
 
     if(l_errlHndl)
