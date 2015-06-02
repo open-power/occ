@@ -28,11 +28,11 @@
 //*************************************************************************
 #include <occ_common.h>
 #include <proc_data.h> // for CORE_PRESENT
-#include <errl.h>               // Error logging
+#include <errl.h>      // Error logging
 #include <sensor.h>
 #include <amec_sys.h>
 #include <cmdh_fsp_cmds_datacnfg.h>
-#include <ssx_api.h> // SsxSemaphore
+#include <ssx_api.h>  // SsxSemaphore
 #include <amec_wof.h> // For wof semaphore in amec_wof_thread.c
 #include <common.h>
 #include <cmdh_fsp_cmds_datacnfg.h>
@@ -82,39 +82,21 @@ uint16_t G_amec_wof_vrm_eff_table[AMEC_WOF_VRM_EFF_TBL_ROWS][AMEC_WOF_VRM_EFF_TB
 
 //Rows    - is the AC reduction (current efficiency) in hundredths of a percent. (i.e 100 = 1%)
 //Columns - is the number of active cores.
-uint16_t G_amec_wof_corefreq_table[AMEC_WOF_UPLIFT_TBL_ROWS][AMEC_WOF_UPLIFT_TBL_CLMS] = {{0},{0}};
+uint16_t G_amec_wof_uplift_table[AMEC_WOF_UPLIFT_TBL_ROWS][AMEC_WOF_UPLIFT_TBL_CLMS] = {{0},{0}};
 
+// Core IDDQ voltages array from pstates.h (voltages in 100uV)
+uint16_t G_iddq_voltages[CORE_IDDQ_MEASUREMENTS] = {8000, 9000, 10000, 11000, 12000, 12500};
 
 uint8_t G_wof_max_cores_per_chip = 12; //defaulted to 12 for now
 
 #ifdef HAB19
 
-#ifdef WOF_SYSTEM
-#error "WOF algorithm already defined"
-#endif
-#define WOF_SYSTEM 1
-
 #define AMEC_WOF_LOADLINE_ACTIVE 550  // Active loadline in micro ohms
 #define AMEC_WOF_LOADLINE_PASSIVE 50 // Passive loadline in micro ohms
 
-
-// 0.01 A units of RDP@Vnom
-uint16_t g_amec_wof_rdp_idd_nom[MAX_NUM_CHIP_MODULES] = {15700, 0, 0, 0};
-
-//Based on DMIW data for tul237P0 ID=B1935398. I extrapolate beyond 1.0V
-uint16_t amec_wof_iddq_table[][5] = {
-    //0.0001 V, 0.01 A x4 (for 4 modules).  Data corrected to 85C conditions.
-    //100 uV, 0.01 Amps
-    {9000,   3584, 0, 0, 0},
-    {10000,  5194, 0, 0, 0},
-    {11000,  7507, 0, 0, 0},
-    {12000, 10734, 0, 0, 0},
-    {12500, 12696, 0, 0, 0}
-};
-#define AMEC_WOF_IDDQ_TABLE_N 5
-
 //Table from Victor on 3/26/2015 assuming Nominal-UltraTurbo range and deep-winkle.
 // 14 is for 1 column of ratio, 13 columns of uplift by # cores turned on
+/*
 int16_t amec_wof_uplift_table[][14] = {
     // First column is the Ceff ratio. The other colums are clock speed in MHz.
     // Make sure ratio=0 is here, since search algorithm expects input index to be >= first table element.
@@ -136,13 +118,12 @@ int16_t amec_wof_uplift_table[][14] = {
 };
 
 #define AMEC_WOF_UPLIFT_TABLE_N 12
-
+*/
 #endif //HAB19
 
 
 /* A conversion table from Vdd regulator output current (A) power to conversion efficiency.
    Efficiency is in units of 1/100 of 1%.  (Divide by 10000 to get percent)
-*/
 uint32_t amec_wof_vdd_eff[][3] = {
     {    0,     0,    0}, //0
     { 2000,  8877, 8890}, //1 (20.00 A, 88.77% @ 0.85 V, 88.90% @ 1.2 V)
@@ -159,9 +140,8 @@ uint32_t amec_wof_vdd_eff[][3] = {
     {24000,  8283, 8649}, //12
     {26000,  8096, 8632}, //13
 };
-#define AMEC_WOF_VDD_EFF_N 14   /*Number of amec_wof_add_eff entried*/
-
-
+#define AMEC_WOF_VDD_EFF_N 14   //Number of amec_wof_add_eff entried
+*/
 
 //Approximate y=1.25^((T-85)/10).
 //Interpolate T in the table below to find m
@@ -202,6 +182,11 @@ GLOBAL_PSTATE_TABLE(g_amec_wof_pstate_table_1);
 uint8_t g_amec_wof_current_pstate_table = 0;
 uint8_t g_amec_wof_pstate_table_ready = 0;
 
+// Useful globals for debug
+int32_t  g_amec_eff_vlow = 0;
+int32_t  g_amec_eff_vhigh = 0;;
+uint32_t g_amec_wof_iout = 0;
+
 //*************************************************************************
 // Function Prototypes
 //*************************************************************************
@@ -211,43 +196,47 @@ uint8_t g_amec_wof_pstate_table_ready = 0;
 //*************************************************************************
 
 /*
-
-        //Do across each operating point:
+    //Do across each operating point:
     //Calculate max load-line current to set voltage
     g_amec_wof_current_reduction = g_amec_wof_rdp_idd_nom[G_pob_id.module_id]
         * g_amec_wof_pstatetable_cores_next / G_wof_max_cores_per_chip;
-
-
 */
 
-/*
-  Input: i_power_in, Vdd input power 0.1 W units (deci-watts)
-         i_v_set, Vdd setpoint voltage in 0.0001 V units
-  Output: o_current_out, Vdd current out (0.01 A units)
-          o_v_sense, Voltage at Vdd remote sense (0.0001 V units)
- */
-int32_t g_amec_eff_vlow, g_amec_eff_vhigh;
-uint32_t g_amec_wof_iout;
-void amec_wof_vdd_current_out(uint16_t i_power_in,
-                    uint16_t i_v_set,
-            uint16_t *o_current_out,
-                    uint16_t *o_v_sense)
+// Function Specification
+//
+// Name: amec_wof_vdd_current_out
+//
+// Description:
+// Calculate Vdd output current and voltage at Vdd remote sense.
+//
+// Inputs:
+// i_power_in: Vdd input power 0.1 W units (deci-watts)
+// i_v_set: Vdd setpoint voltage in 0.0001 V units
+//
+// Outputs:
+// o_current_out: Vdd current out (0.01 A units)
+// o_v_sense: Voltage at Vdd remote sense (0.0001 V units)
+//
+// End Function Specification
+void amec_wof_vdd_current_out(const uint16_t i_power_in,
+                              const uint16_t i_v_set,
+                              uint16_t *o_current_out,
+                              uint16_t *o_v_sense)
 {
-    uint8_t iteration;
+    uint8_t l_iteration;
     uint8_t i;
 
     // Stuff that can be pre-computed when efficiency table is read
-    int32_t v_min = 8500; //0.8500 V = min from efficiency table
-    int32_t v_max = 12500; // 1.2500 V = max from efficiency table
+    int32_t v_min = G_amec_wof_vrm_eff_table[1][0] * 100; //0.8500 V = min from efficiency table
+    int32_t v_max = G_amec_wof_vrm_eff_table[2][0] * 100; //1.2500 V = max from efficiency table
     int32_t v_diff = v_max - v_min; // max voltage - min voltage from efficiency table
 
     // helper variables
-    int32_t x2minusx1, xminusx1;
-    int32_t l_eff_vlow, l_eff_vhigh, v_offset;
+    int32_t l_x2minusx1, l_xminusx1;
+    int32_t l_eff_vlow, l_eff_vhigh, l_v_offset;
     int32_t l_v_sense;
 
     // Set initial guesses before iteration part of algorithm
-
     uint32_t l_eff = 8500; //initial guess efficiency=85.00%
 
     // Compute regulator output power.  out = in * efficiency
@@ -264,60 +253,58 @@ void amec_wof_vdd_current_out(uint16_t i_power_in,
     //    v_set: min=5000 (0.0001 V)  max=16000(0.0001 V) in 14 bits
     //     iout: max = 300M/5000 = 60000 (dW*0.00001/(0.0001V)= 0.01A), in 16 bits.
     uint32_t l_iout = l_pout/i_v_set; //initial iout
-    g_amec_wof_iout = l_iout; //debugging
+    g_amec_wof_iout = l_iout; //for debugging
 
-    for(iteration=0; iteration<2; iteration++)  // iterate twice
+    for(l_iteration=0; l_iteration<2; l_iteration++)  // iterate twice
     {
-    for (i=0; i<AMEC_WOF_VDD_EFF_N; i++)
+        for (i=1; i<AMEC_WOF_VRM_EFF_TBL_CLMS; i++)
         {
-            if (l_iout >= amec_wof_vdd_eff[i][0] &&
-                l_iout <= amec_wof_vdd_eff[i+1][0])
+            if (l_iout >= G_amec_wof_vrm_eff_table[0][i] &&
+                l_iout <= G_amec_wof_vrm_eff_table[0][i+1])
             {
                 break;
             }
         }
-    // if beyond table, use last 2 entries
-    if (i >= AMEC_WOF_VDD_EFF_N-1)
-    {
-        i = AMEC_WOF_VDD_EFF_N - 2;
-    }
+        // if beyond table, use last 2 entries
+        if (i >= AMEC_WOF_VRM_EFF_TBL_CLMS-1)
+        {
+            i = AMEC_WOF_VRM_EFF_TBL_CLMS - 2;
+        }
 
-    // i points to the first index
+        // i points to the first index
 
-    // Compute efficiency at lower voltage (0.85 V)
+        // Compute efficiency at lower voltage (0.85 V)
+        // Linear interpolate using the neighboring entries.
+        // y = (x-x1)m+y1   m=(y2-y1)/(x2-x1)
+        // x2minusx1 = difference in current between entries
 
-        //Linear interpolate using the neighboring entries.
-    // y = (x-x1)m+y1   m=(y2-y1)/(x2-x1)
-    // x2minusx1 = difference in current between entries
-    // xminusx1
+        // x2minusx1 in units of 0.01 A
+        l_x2minusx1 = ((int32_t)G_amec_wof_vrm_eff_table[0][i+1] -
+                       (int32_t)G_amec_wof_vrm_eff_table[0][i]);
+        // xminusx1 in units of 0.01 A
+        l_xminusx1 = (int32_t)l_iout - (int32_t)G_amec_wof_vrm_eff_table[0][i];
+        l_eff_vlow = l_xminusx1 * ((int32_t)G_amec_wof_vrm_eff_table[1][i+1] -
+                                   (int32_t)G_amec_wof_vrm_eff_table[1][i]) /
+            l_x2minusx1 + (int32_t)G_amec_wof_vrm_eff_table[1][i];
 
-    // x2minusx1 in units of 0.01 A
-    x2minusx1 = ((int32_t)amec_wof_vdd_eff[i+1][0] - (int32_t)amec_wof_vdd_eff[i][0]);
-    // xminusx1 in units of 0.01 A
-    xminusx1 = (int32_t)l_iout - (int32_t)amec_wof_vdd_eff[i][0];
-        l_eff_vlow = xminusx1
-            * ((int32_t)amec_wof_vdd_eff[i+1][1] - (int32_t)amec_wof_vdd_eff[i][1])
-            / x2minusx1
-            + (int32_t)amec_wof_vdd_eff[i][1];
+        g_amec_eff_vlow = l_eff_vlow;//for debug
 
-    g_amec_eff_vlow = l_eff_vlow;//debug
+        // Reuse same x2minusx1 and xminusx1 because efficiency curves use
+        // common current_in values
+        l_eff_vhigh = l_xminusx1 * ((int32_t)G_amec_wof_vrm_eff_table[2][i+1] -
+                                    (int32_t)G_amec_wof_vrm_eff_table[2][i]) /
+            l_x2minusx1 + (int32_t)G_amec_wof_vrm_eff_table[2][i];
 
-    //Reuse same x2minusx1 and xminusx1 because efficiency curves use common current_in values
-        l_eff_vhigh = xminusx1
-            * ((int32_t)amec_wof_vdd_eff[i+1][2] - (int32_t)amec_wof_vdd_eff[i][2])
-            / x2minusx1
-            + (int32_t)amec_wof_vdd_eff[i][2];
+        g_amec_eff_vhigh = l_eff_vhigh;// for debug
 
-    g_amec_eff_vhigh = l_eff_vhigh;//debug
-
-    v_offset = i_v_set - v_min;
-    l_eff = ((l_eff_vhigh - l_eff_vlow) * v_offset) / v_diff + l_eff_vlow;
-        //    V_droop = I_chip (0.01 A) * R_loadline (0.000001 ohm) => (in 0.00000001 V)
-        //    V_droop = V_droop / 10000 => (in 0.0001 V)
-        //    V_sense = V_reg - V_droop  => (in 0.0001 V)
+        l_v_offset = i_v_set - v_min;
+        l_eff = ((l_eff_vhigh - l_eff_vlow) * l_v_offset) / v_diff + l_eff_vlow;
+        // V_droop = I_chip (0.01 A) * R_loadline (0.000001 ohm) => (in 0.00000001 V)
+        // V_droop = V_droop / 10000 => (in 0.0001 V)
+        // V_sense = V_reg - V_droop  => (in 0.0001 V)
         l_v_sense = i_v_set - AMEC_WOF_LOADLINE_ACTIVE * l_iout / 10000;
-    l_pout = i_power_in * l_eff * 10; // See l_pout above for *10 note
-    l_iout = l_pout/l_v_sense;
+        l_pout = i_power_in * l_eff * 10; // See l_pout above for *10 note
+        l_iout = l_pout/l_v_sense;
     }
 
     //FIXME: Uplift for broken habanero Vdd input power sensor. Delete when HW fixed.
@@ -326,7 +313,7 @@ void amec_wof_vdd_current_out(uint16_t i_power_in,
 
     *o_v_sense = l_v_sense;
     *o_current_out = l_iout;
-    g_amec->wof.vdd_eff = l_eff; //debugging
+    g_amec->wof.vdd_eff = l_eff; //for debugging
 }
 
 void amec_wof_init(void)
@@ -340,45 +327,120 @@ void amec_wof_init(void)
     g_amec->wof.loadline = AMEC_WOF_LOADLINE_ACTIVE + AMEC_WOF_LOADLINE_PASSIVE;
 }
 
+
+bool amec_wof_validate_input_data(void)
+{
+    bool                l_valid_data = TRUE;
+
+    // Check operating point at turbo
+    TRAC_IMP("WOF Operating Turbo point: vdd_5mv[%d] Iddq_500ma[%d] frequency_mhz[%d]",
+             G_sysConfigData.wof_parms.operating_points[TURBO].vdd_5mv,
+             G_sysConfigData.wof_parms.operating_points[TURBO].idd_500ma,
+             G_sysConfigData.wof_parms.operating_points[TURBO].frequency_mhz);
+
+    // RDP to TDP conversion factor and Max number of cores for this chip
+    TRAC_IMP("WOF rdp_tdp_factor[%d] max_cores_per_chip[%d]",
+             G_sysConfigData.wof_parms.tdp_rdp_factor,
+             G_wof_max_cores_per_chip);
+
+    // IDDQ table
+    TRAC_IMP("WOF IDDQ Vdd current: 0.80V[%d] 0.90V[%d] 1.00V[%d] 1.10V[%d] 1.20V[%d] 1.25V[%d]",
+             G_sysConfigData.iddq_table.iddq_vdd[0].fields.iddq_raw_value,
+             G_sysConfigData.iddq_table.iddq_vdd[1].fields.iddq_raw_value,
+             G_sysConfigData.iddq_table.iddq_vdd[2].fields.iddq_raw_value,
+             G_sysConfigData.iddq_table.iddq_vdd[3].fields.iddq_raw_value,
+             G_sysConfigData.iddq_table.iddq_vdd[4].fields.iddq_raw_value,
+             G_sysConfigData.iddq_table.iddq_vdd[5].fields.iddq_raw_value);
+
+    // Uplift table
+    TRAC_IMP("WOF Uplift Freqs: Row_1[%d] 1cor[%d] 2cor[%d] 3cor[%d] 12cor[%d]",
+             G_amec_wof_uplift_table[1][0],
+             G_amec_wof_uplift_table[1][1],
+             G_amec_wof_uplift_table[1][2],
+             G_amec_wof_uplift_table[1][3],
+             G_amec_wof_uplift_table[1][12]);
+    TRAC_IMP("WOF Uplift Freqs: Row_2[%d] 1cor[%d] 2cor[%d] 3cor[%d] 12cor[%d]",
+             G_amec_wof_uplift_table[2][0],
+             G_amec_wof_uplift_table[2][1],
+             G_amec_wof_uplift_table[2][2],
+             G_amec_wof_uplift_table[2][3],
+             G_amec_wof_uplift_table[2][12]);
+    TRAC_IMP("WOF Uplift Freqs: Row11[%d] 1cor[%d] 2cor[%d] 3cor[%d] 12cor[%d]",
+             G_amec_wof_uplift_table[11][0],
+             G_amec_wof_uplift_table[11][1],
+             G_amec_wof_uplift_table[11][2],
+             G_amec_wof_uplift_table[11][3],
+             G_amec_wof_uplift_table[11][12]);
+    TRAC_IMP("WOF Uplift Freqs: LastR[%d] 1cor[%d] 2cor[%d] 3cor[%d] 12cor[%d]",
+             G_amec_wof_uplift_table[AMEC_WOF_UPLIFT_TBL_ROWS-1][0],
+             G_amec_wof_uplift_table[AMEC_WOF_UPLIFT_TBL_ROWS-1][1],
+             G_amec_wof_uplift_table[AMEC_WOF_UPLIFT_TBL_ROWS-1][2],
+             G_amec_wof_uplift_table[AMEC_WOF_UPLIFT_TBL_ROWS-1][3],
+             G_amec_wof_uplift_table[AMEC_WOF_UPLIFT_TBL_ROWS-1][12]);
+
+    // VRM Efficiency Table
+    TRAC_IMP("WOF VRM Effic: Current_10mA 1[%d] 2[%d] 3[%d] ... 12[%d] 13[%d]",
+             G_amec_wof_vrm_eff_table[0][1],
+             G_amec_wof_vrm_eff_table[0][2],
+             G_amec_wof_vrm_eff_table[0][3],
+             G_amec_wof_vrm_eff_table[0][12],
+             G_amec_wof_vrm_eff_table[0][13]);
+    TRAC_IMP("WOF VRM Effic: Lo_volt[%d] 20A[%d] 40A[%d] 60A[%d] 260A[%d]",
+             G_amec_wof_vrm_eff_table[1][0],
+             G_amec_wof_vrm_eff_table[1][1],
+             G_amec_wof_vrm_eff_table[1][2],
+             G_amec_wof_vrm_eff_table[1][3],
+             G_amec_wof_vrm_eff_table[1][13]);
+    TRAC_IMP("WOF VRM Effic: Hi_volt[%d] 20A[%d] 40A[%d] 60A[%d] 260A[%d]",
+             G_amec_wof_vrm_eff_table[2][0],
+             G_amec_wof_vrm_eff_table[2][1],
+             G_amec_wof_vrm_eff_table[2][2],
+             G_amec_wof_vrm_eff_table[2][3],
+             G_amec_wof_vrm_eff_table[2][13]);
+
+    return l_valid_data;
+}
+
 uint32_t amec_wof_compute_c_eff(void)
 {
-    //   Estimate IDDQ@RDP(95C)@Vnom P0 = IDDQ@85C * 1.25 ^ ([95-85]/10) = 35.84 * 1.25 = 44.8 A <-- Leakage current
+    // Estimate IDDQ@RDP(95C)@Vnom P0:
+    // IDDQ@85C * 1.25 ^ ([95-85]/10) = 35.84 * 1.25 = 44.8 A (Leakage current)
     //
-    //   NM_Idd@RDP P0 = 151 A
+    // NM_Idd@RDP P0 = 151 A
     //
-    //   P0: (151 A - 44.8 A) / 1.22 * 1.12 = 91.40 A @TDP
+    // P0: (151 A - 44.8 A) / 1.22 * 1.12 = 97.50 A @TDP
     //
-    //   C_eff    = I / (V^3 * F)
+    // C_eff    = I / (V^3 * F)
     //
-    //   C is ??? in 0.01 Amps
-    //   V is the silicon voltage from the operating point data in 100 uVolts
+    //   I is ??? in 0.01 Amps (or 10 mA)
+    //   V is the silicon voltage from the operating point data in 100 uV
     //   F is Turbo frequency in MHz
+    //   C_eff is in nF
     //
-    //   C_eff_tdp_P0 = 91.40 A / (0.9 V ^1.3) / 2561 MHz = 0.0409 microF =  40.9 nF
+    // C_eff_tdp_P0 = 97.50 A / (0.9 V ^1.3) / 3226 MHz = 0.0347 microF = 34.7 nF
     //
-    //   C_EFF_TDP_P0 = 9140 (0.01A) * 16384 / 9000(100uV)^1.3 * 16384 / 2561(MHz)
-    //                = 6932
+    // C_EFF_TDP_P0 = 9750 (0.01A) * 16384 / 9000(100uV)^1.3 * 16384 / 3226(MHz)
+    //                = 5870 (0.005904 nF)
     //
-    //   Note: C_EFF_TDP_P0 / 100 / 16384 / 16384 * 10000^1.3 * 1000
-    //                = C_eff_tdp_P0 in nF
+    // Note: C_EFF_TDP_P0 / 100 / 16384 / 16384 * 10000^1.3 * 1000
+    //       = C_eff_tdp_P0 in nF
     //
 
     iddq_entry_t        l_i_leak = 0;
     uint8_t             i = 0;
-    uint32_t            m = 0;
     uint32_t            l_curr_diff = 0;
     uint32_t            l_v_chip = 0;
     uint32_t            l_temp = 0;
+    uint32_t            l_temp_curr = 0;
     uint32_t            l_c_eff_tdp = 0;
-    uint16_t            l_iddq_measurements[CORE_IDDQ_MEASUREMENTS] = {8000, 9000, 10000, 11000, 12000, 12500};
 
     // STEP 1: Acquire the silicon voltage from the operating point data and
-    // convert it to 100 uV units
-    l_v_chip = G_sysConfigData.wof_parms.operating_points[TURBO].vdd_5mv * 1000 / 5;
+    // convert it to 100uV units
+    l_v_chip = G_sysConfigData.wof_parms.operating_points[TURBO].vdd_5mv * 5 * 10;
 
     // STEP 2: Search through the iddq_vdd array for the closest value to our
     // silicon voltage and interpolate to compute the leakage current
-    if (l_v_chip < l_iddq_measurements[0])
+    if (l_v_chip < G_iddq_voltages[0])
     {
         // Voltage is lower than any element in the array, so use first two
         // entries
@@ -388,8 +450,8 @@ uint32_t amec_wof_compute_c_eff(void)
     {
         for (i=0; i<CORE_IDDQ_MEASUREMENTS-1; i++)
         {
-            if (l_v_chip >= l_iddq_measurements[i] &&
-                l_v_chip <= l_iddq_measurements[i+1])
+            if (l_v_chip >= G_iddq_voltages[i] &&
+                l_v_chip <= G_iddq_voltages[i+1])
             {
                 break;
             }
@@ -404,31 +466,30 @@ uint32_t amec_wof_compute_c_eff(void)
     // Do linear interpolation using the neighboring entries:
     // Y = m*(X - x1) + y1, where m = (y2-y1) / (x2-x1)
     // FIXME: Can we expect m to be negative?
-    m = ((int32_t)G_sysConfigData.iddq_table.iddq_vdd[i+1].fields.iddq_raw_value -
+    l_i_leak = (l_v_chip - G_iddq_voltages[i]) *
+        ((int32_t)G_sysConfigData.iddq_table.iddq_vdd[i+1].fields.iddq_raw_value -
          (int32_t)G_sysConfigData.iddq_table.iddq_vdd[i].fields.iddq_raw_value) /
-        ((int32_t)l_iddq_measurements[i+1] - (int32_t)l_iddq_measurements[i]);
-    l_i_leak = (l_v_chip - l_iddq_measurements[i])*m +
+        ((int32_t)G_iddq_voltages[i+1] - (int32_t)G_iddq_voltages[i]) +
         G_sysConfigData.iddq_table.iddq_vdd[i].fields.iddq_raw_value;
 
     // STEP 3: Correct the leakage current computed in the previous step for
     // temperature by multiplying by 1.25
     l_i_leak = l_i_leak * 125 / 100;
 
-    // STEP 4: Compute current differential at RDP
-    l_curr_diff = (G_sysConfigData.wof_parms.operating_points[TURBO].idd_500ma /
-                   50) - l_i_leak;
+    // STEP 4: Compute current differential in 10mA units at RDP
+    l_curr_diff = (G_sysConfigData.wof_parms.operating_points[TURBO].idd_500ma *
+                   500 / 10) - l_i_leak;
 
-    // STEP 5: Translate to TDP
-    // FIXME: Isn't this suppose to be rdp_tdp_factor???
-    l_curr_diff = l_curr_diff * G_sysConfigData.wof_parms.tdp_rdp_factor / 100;
+    // STEP 5: Translate to TDP using factor sent in Pstate superstructure
+    l_curr_diff = l_curr_diff * G_sysConfigData.wof_parms.tdp_rdp_factor / 10000;
 
     // STEP 6: Compute V^1.3 using a best-fit equation:
-    // Y = 21374 * (X in 0.1 mV) - 50615296
-    l_v_chip = l_v_chip << 14; // *16384
+    // Y = 21374 * (X in 100 uV) - 50615296
     l_temp = (21374 * l_v_chip - 50615296) >> 10;
 
     // STEP 7: Compute I / (V^1.3)
-    l_temp = l_curr_diff / l_temp;
+    l_temp_curr = l_curr_diff << 14; // *16384
+    l_temp = l_temp_curr / l_temp;
     l_temp = l_temp << 14; // *16384
 
     // STEP 8: Divide by turbo frequency I / (V^1.3) / F
@@ -473,8 +534,7 @@ uint8_t amec_wof_set_algorithm(const uint8_t i_algorithm)
         }
 
         // Vote for a safe frequency (turbo frequency)
-        g_amec->wof.f_vote =
-            G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
+        g_amec->wof.f_vote = G_sysConfigData.sys_mode_freq.table[OCC_MODE_STURBO];
 
         // Make sure the vote is enforced before continuing.
         // If vote is not enforced, then exit and return again in next 250us
@@ -490,6 +550,9 @@ uint8_t amec_wof_set_algorithm(const uint8_t i_algorithm)
 
         // At this point, all cores are at Turbo or lower.
         // We may turn off the inhibit-wake signal.
+
+        // Validate input data to the WOF algorithm
+        amec_wof_validate_input_data();
 
         // Calculate ceff_tdp from static data in the Pstate SuperStructure
         g_amec->wof.ceff_tdp = amec_wof_compute_c_eff();
@@ -541,10 +604,6 @@ uint8_t amec_wof_set_algorithm(const uint8_t i_algorithm)
                   g_amec->wof.algo_type,
                   g_amec->wof.ceff_tdp);
 
-        //FIXME: As a precaution, do not enable WOF until input data has been validated
-        g_amec->wof.algo_type = 0;
-        g_amec->wof.enable_parm = 0;
-
     } while (0);
 
     return l_rc;
@@ -571,9 +630,11 @@ void amec_update_wof_sensors(void)
     uint32_t            l_v_chip;
     uint16_t            l_v_sense;
 
-    /* Step 1: Calculate voltage at chip */
-
-    amec_wof_vdd_current_out(l_pow_reg_input_dW,l_vdd_reg,&l_curr_output,&l_v_sense);
+    // Step 1: Calculate voltage at chip
+    amec_wof_vdd_current_out(l_pow_reg_input_dW,
+                             l_vdd_reg,
+                             &l_curr_output,
+                             &l_v_sense);
     sensor_update(AMECSENSOR_PTR(CUR250USVDD0), l_curr_output);
 
     // Save Vsense estimate for WOF validation
@@ -587,7 +648,6 @@ void amec_update_wof_sensors(void)
     l_v_droop = (uint32_t) l_curr_output * (uint32_t) g_amec->wof.loadline / (uint32_t)10000;
     l_v_chip = l_vdd_reg - l_v_droop;
     g_amec->wof.v_chip = l_v_chip; // expose in parameter
-
 }
 
 void amec_wof_common_steps(void)
@@ -603,18 +663,16 @@ void amec_wof_common_steps(void)
     Pstate              l_wof_vote_pstate; // pstate that corresponds to wof
                                            // vote. Find associated voltage.
     uint8_t             l_wof_vote_vid; // Vdd regulator VID associated with WOF vote.
+    uint16_t            l_temp = 0;   //Processor temperature
+    uint16_t            l_freq = 0;   //Actual processor frequency
+    uint32_t            l_accum = 0;  //Vdd current accumulator
+    uint32_t            l_v_chip = 0; //Voltage at chip silicon
 
-    //Step 1c
-    uint32_t l_v_chip = g_amec->wof.v_chip; //from common
-
-    //Step 2
-    uint16_t l_temp = AMECSENSOR_PTR(TEMP2MSP0)->sample;
-
-    //Step 3
-    uint32_t l_accum = AMECSENSOR_PTR(CUR250USVDD0)->accumulator;
-
-    //Step 4
-    uint16_t l_freq = AMECSENSOR_PTR(FREQA2MSP0)->sample;
+    // Acquire important sensor data
+    l_temp = AMECSENSOR_PTR(TEMP2MSP0)->sample;
+    l_freq = AMECSENSOR_PTR(FREQA2MSP0)->sample;
+    l_accum = AMECSENSOR_PTR(CUR250USVDD0)->accumulator;
+    l_v_chip = g_amec->wof.v_chip; //from amec_update_wof_sensors()
 
     if (g_amec->wof.state != AMEC_WOF_NO_CORE_CHANGE)
     {
@@ -691,39 +749,40 @@ void amec_wof_common_steps(void)
     g_amec_wof_pstatetable_cores_next = l_pstatetable_cores_next;
 
     // Step 2
-
     // Search table and point i to the lower entry the target value falls
     // between.
-    if (l_v_chip < amec_wof_iddq_table[0][0])
+    if (l_v_chip < G_iddq_voltages[0])
     {
         i=0; // voltage is lower than table, so use first two entries.
     }
     else
     {
-        for (i=0; i<AMEC_WOF_IDDQ_TABLE_N-1; i++)
+        for (i=0; i<CORE_IDDQ_MEASUREMENTS-1; i++)
         {
-            if (amec_wof_iddq_table[i][0] <= l_v_chip &&
-                amec_wof_iddq_table[i+1][0] >= l_v_chip)
+            if (G_iddq_voltages[i] <= l_v_chip &&
+                G_iddq_voltages[i+1] >= l_v_chip)
             {
                 break;
             }
         }
     }
-    if (i >= AMEC_WOF_IDDQ_TABLE_N - 1)
+    if (i >= CORE_IDDQ_MEASUREMENTS - 1)
     {
         // Voltage is higher than table, so use last two entries.
-        i = AMEC_WOF_IDDQ_TABLE_N - 2;
+        i = CORE_IDDQ_MEASUREMENTS - 2;
     }
 
     g_amec->wof.iddq_i = i;
 
-    //Linear interpolate using the neighboring entries.  y = m(x-x1)+y1   m=(y2-y1)/(x2-x1)
+    // Linear interpolate using the neighboring entries:
+    // y = m(x-x1)+y1   m=(y2-y1)/(x2-x1)
     //FIXME: add rounding step after multiplication
     //FIXME: pre-compute m, since table is static
-    l_result32 = ((int32_t)l_v_chip - (int32_t)amec_wof_iddq_table[i][0])
-    * ((int32_t)amec_wof_iddq_table[i+1][G_pob_id.module_id+1] - (int32_t)amec_wof_iddq_table[i][G_pob_id.module_id+1])
-    / ((int32_t)amec_wof_iddq_table[i+1][0] - (int32_t)amec_wof_iddq_table[i][0])
-    + (int32_t)amec_wof_iddq_table[i][G_pob_id.module_id+1];
+    l_result32 = ((int32_t)l_v_chip - (int32_t)G_iddq_voltages[i])
+        * ((int32_t)G_sysConfigData.iddq_table.iddq_vdd[i+1].fields.iddq_raw_value -
+           (int32_t)G_sysConfigData.iddq_table.iddq_vdd[i].fields.iddq_raw_value)
+        / ((int32_t)G_iddq_voltages[i+1] - (int32_t)G_iddq_voltages[i])
+        + (int32_t)G_sysConfigData.iddq_table.iddq_vdd[i].fields.iddq_raw_value;
 
     l_result32 = l_result32 * l_cores_on / G_wof_max_cores_per_chip;
 
@@ -763,8 +822,8 @@ void amec_wof_common_steps(void)
     g_amec->wof.cur_out = (l_accum - g_amec->wof.cur_out_last) >> 3; // 0.01 A
     g_amec->wof.cur_out_last = l_accum;
 
-    // Step 3: Compute AC portion of chip Vdd current
-    g_amec->wof.ac = g_amec->wof.cur_out - l_result32;  // Units of 0.01 A.
+    // Step 3: Compute AC portion of chip Vdd current (units of 0.01 A)
+    g_amec->wof.ac = g_amec->wof.cur_out - g_amec->wof.iddq;
 
     // Step 4: Computer ratio of computed workload AC to TDP
 
@@ -818,31 +877,32 @@ void amec_wof_common_steps(void)
     // Step 5: frequency uplift table
     // Search table and point i to the lower entry the target value falls
     // between.
-    for (i=0; i<AMEC_WOF_UPLIFT_TABLE_N-1; i++)
+    for (i=1; i<AMEC_WOF_UPLIFT_TBL_ROWS-1; i++)
     {
-        if (amec_wof_uplift_table[i][0] <= (int16_t) g_amec->wof.ceff_ratio &&
-            amec_wof_uplift_table[i+1][0] >= (int16_t)g_amec->wof.ceff_ratio)
+        if (G_amec_wof_uplift_table[i][0] <= (int16_t) g_amec->wof.ceff_ratio &&
+            G_amec_wof_uplift_table[i+1][0] >= (int16_t)g_amec->wof.ceff_ratio)
         {
             break;
         }
     }
 
-    if (i >= AMEC_WOF_UPLIFT_TABLE_N - 1)
+    if (i >= AMEC_WOF_UPLIFT_TBL_ROWS - 1)
     {
         // Out of table, so clip to 100%
-        l_result32 = amec_wof_uplift_table[AMEC_WOF_UPLIFT_TABLE_N - 1][l_pstatetable_cores_next+1];
+        l_result32 = G_amec_wof_uplift_table[AMEC_WOF_UPLIFT_TBL_ROWS-1][l_pstatetable_cores_next+1];
     }
     else
     {
         // Ratio is within uplift table
-
-        //Linear interpolate using the neighboring entries.  y = m(x-x1)+y1   m=(y2-y1)/(x2-x1)
+        // Linear interpolate using the neighboring entries:
+        // y = m(x-x1)+y1   m=(y2-y1)/(x2-x1)
         //FIXME: add rounding step after multiplication
         //FIXME: pre-compute m, since table is static
-        l_result32 = ((int32_t)g_amec->wof.ceff_ratio - (int32_t)amec_wof_uplift_table[i][0])
-            * ((int32_t)amec_wof_uplift_table[i+1][l_pstatetable_cores_next+1] - (int32_t)amec_wof_uplift_table[i][l_pstatetable_cores_next+1])
-            / ((int32_t)amec_wof_uplift_table[i+1][0] - (int32_t)amec_wof_uplift_table[i][0])
-            + (int32_t)amec_wof_uplift_table[i][l_pstatetable_cores_next+1];
+        l_result32 = ((int32_t)g_amec->wof.ceff_ratio - (int32_t)G_amec_wof_uplift_table[i][0])
+            * ((int32_t)G_amec_wof_uplift_table[i+1][l_pstatetable_cores_next] -
+               (int32_t)G_amec_wof_uplift_table[i][l_pstatetable_cores_next])
+            / ((int32_t)G_amec_wof_uplift_table[i+1][0] - (int32_t)G_amec_wof_uplift_table[i][0])
+            + (int32_t)G_amec_wof_uplift_table[i][l_pstatetable_cores_next];
     }
 
     g_amec->wof.f_uplift = l_result32;
@@ -1203,6 +1263,7 @@ void amec_wof_writeToTable(wof_tbl_type_t i_tblType ,
 {
 
     uint16_t l_tblIndex = 0;
+    uint32_t l_temp = 0;
 
     if (i_clmnCount > 0)
     {
@@ -1218,7 +1279,7 @@ void amec_wof_writeToTable(wof_tbl_type_t i_tblType ,
                 //Reset global table
                 if (0 == l_tblIndex)
                 {
-                    memset(&G_amec_wof_corefreq_table, 0, sizeof(G_amec_wof_corefreq_table));
+                    memset(&G_amec_wof_uplift_table, 0, sizeof(G_amec_wof_uplift_table));
                 }
                 //Even though this check should have been made by the
                 //calling function, make sure we don't attempt to write
@@ -1227,7 +1288,16 @@ void amec_wof_writeToTable(wof_tbl_type_t i_tblType ,
                     (l_tblRow  < AMEC_WOF_UPLIFT_TBL_ROWS) )
                 {
                     //Write each two bytes of data into each cell.
-                    G_amec_wof_corefreq_table[l_tblRow][l_tblClmn] = (i_data_ptr[l_tblIndex * 2] << 8) | (i_data_ptr[(l_tblIndex * 2) + 1]);
+                    l_temp = (i_data_ptr[l_tblIndex * 2] << 8) | (i_data_ptr[(l_tblIndex * 2) + 1]);
+
+                    if ((l_tblClmn != 0) &&
+                        (l_tblRow != 0))
+                    {
+                        // Translate each entry from 1/100% to frequency in MHz
+                        l_temp = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO] * (10000 + l_temp) / 10000;
+                    }
+                    G_amec_wof_uplift_table[l_tblRow][l_tblClmn] = (uint16_t)l_temp;
+
                 }
                 else
                 {
@@ -1248,8 +1318,17 @@ void amec_wof_writeToTable(wof_tbl_type_t i_tblType ,
                 if ((l_tblClmn < AMEC_WOF_VRM_EFF_TBL_CLMS) &&
                     (l_tblRow  < AMEC_WOF_VRM_EFF_TBL_ROWS) )
                 {
+                    l_temp = (i_data_ptr[l_tblIndex * 2] << 8) | (i_data_ptr[(l_tblIndex * 2) + 1]);
+
+                    if (l_tblRow == 0)
+                    {
+                        // Translate entries from first row Output Current in
+                        // Amps to 10mA resolution
+                        l_temp = l_temp * 100;
+                    }
+
                     //Write each two bytes of data into each cell.
-                    G_amec_wof_vrm_eff_table[l_tblRow][l_tblClmn] = (i_data_ptr[l_tblIndex * 2] << 8) | (i_data_ptr[(l_tblIndex * 2) + 1]);
+                    G_amec_wof_vrm_eff_table[l_tblRow][l_tblClmn] = (uint16_t)l_temp;
                 }
                 else
                 {
@@ -1306,6 +1385,8 @@ void amec_wof_store_core_freq(const uint8_t i_max_good_cores,
 
     //Store max good cores
     G_wof_max_cores_per_chip = i_max_good_cores;
+
+    //FIXME: Need to know the number of rows with valid data
 
     //Store given data into global table.
     amec_wof_writeToTable(AMEC_WOF_CORE_FREQ_TBL, i_size, i_clmnCount, i_data_ptr);

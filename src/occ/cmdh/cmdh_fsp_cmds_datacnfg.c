@@ -398,13 +398,15 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
         {
             // First Nominal Freq, then Max Freq, then Min Freq, which we'll
             // store under the existing enums.
-
             l_freq = (l_buf[0] << 8 | l_buf[1]);
             l_table[OCC_MODE_NOMINAL] = l_freq;
             TRAC_INFO("Nominal frequency = %d", l_freq);
 
             l_freq = (l_buf[2] << 8 | l_buf[3]);
-            l_table[OCC_MODE_TURBO] = l_freq;
+            // FIXME: Is there a better way to handle this?
+            // Temporarily store the turbo frequency in the OCC_MODE_STURBO
+            // entry of the frequency table
+            l_table[OCC_MODE_STURBO] = l_freq;
             TRAC_INFO("Turbo frequency = %d", l_freq);
 
             l_freq = (l_buf[4] << 8 | l_buf[5]);
@@ -413,7 +415,18 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
             TRAC_INFO("Minimum frequency = %d", l_freq);
 
             l_freq = (l_buf[6] << 8 | l_buf[7]);
-            l_table[OCC_MODE_STURBO] = l_freq;
+            // Check if the UltraTurbo frequency is not zero
+            if(l_freq != 0)
+            {
+                // The new maximum frequency is the UltraTurbo frequency
+                l_table[OCC_MODE_TURBO] = l_freq;
+            }
+            else
+            {
+                // The new maximum frequency is the Turbo frequency
+                l_table[OCC_MODE_TURBO] = l_table[OCC_MODE_STURBO];
+                l_table[OCC_MODE_STURBO] = 0;
+            }
             TRAC_INFO("UT frequency = %d", l_freq);
 
             // Store the Fmax and Fmin for AMEC (OpenPower environment only)

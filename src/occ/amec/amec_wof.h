@@ -107,11 +107,11 @@ typedef struct amec_wof
     uint8_t             iddq_i;
     // Check interpolation of iddq table
     uint16_t            iddq85c;
-    // I_DC_extracted is the estimated temperature-corrected leakage current in which units????
+    // I_DC_extracted is the estimated temperature-corrected leakage current in 0.01 Amps
     uint16_t            iddq;
-    // I_AC extracted in which units????
+    // I_AC extracted in 0.01 Amps
     uint16_t            ac;
-    // Effective capacitance for TDP workload @ Turbo in which units???
+    // Effective capacitance for TDP workload @ Turbo in 0.005904 nF
     uint32_t            ceff_tdp;
     // Effective capacitance right now.
     uint32_t            ceff;
@@ -181,9 +181,11 @@ void amec_wof_store_vrm_eff( const uint16_t i_size,
                              const uint8_t i_clmnCount,
                              uint8_t *i_data_ptr);
 
-void amec_wof_vdd_current_out(uint16_t i_power_in,
-                              uint16_t i_v_set,
+void amec_wof_vdd_current_out(const uint16_t i_power_in,
+                              const uint16_t i_v_set,
                               uint16_t *o_current_out,
                               uint16_t *o_v_sense);
+
+bool amec_wof_validate_input_data(void);
 
 #endif

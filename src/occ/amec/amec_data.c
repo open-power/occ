@@ -110,11 +110,15 @@ errlHndl_t AMEC_data_write_fcurr(const OCC_MODE i_mode)
     {
         // UltraTurbo frequency is zero, WOF is not supported
         g_amec->wof.enable_parm = 0;
+        g_amec->wof.f_vote = -1;
     }
     else
     {
         // Enable WOF algorithm
         g_amec->wof.enable_parm = 2;
+
+        // Initialize WOF frequency request to be turbo
+        g_amec->wof.f_vote = G_sysConfigData.sys_mode_freq.table[OCC_MODE_STURBO];
     }
 
     // If we're active we need to load this new range into DVFS MIN/MAX
