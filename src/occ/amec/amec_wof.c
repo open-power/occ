@@ -345,12 +345,12 @@ bool amec_wof_validate_input_data(void)
 
     // IDDQ table
     TRAC_IMP("WOF IDDQ Vdd current: 0.80V[%d] 0.90V[%d] 1.00V[%d] 1.10V[%d] 1.20V[%d] 1.25V[%d]",
-             G_sysConfigData.iddq_table.iddq_vdd[0].fields.iddq_raw_value,
-             G_sysConfigData.iddq_table.iddq_vdd[1].fields.iddq_raw_value,
-             G_sysConfigData.iddq_table.iddq_vdd[2].fields.iddq_raw_value,
-             G_sysConfigData.iddq_table.iddq_vdd[3].fields.iddq_raw_value,
-             G_sysConfigData.iddq_table.iddq_vdd[4].fields.iddq_raw_value,
-             G_sysConfigData.iddq_table.iddq_vdd[5].fields.iddq_raw_value);
+             G_sysConfigData.iddq_table.iddq_vdd[0].fields.iddq_corrected_value,
+             G_sysConfigData.iddq_table.iddq_vdd[1].fields.iddq_corrected_value,
+             G_sysConfigData.iddq_table.iddq_vdd[2].fields.iddq_corrected_value,
+             G_sysConfigData.iddq_table.iddq_vdd[3].fields.iddq_corrected_value,
+             G_sysConfigData.iddq_table.iddq_vdd[4].fields.iddq_corrected_value,
+             G_sysConfigData.iddq_table.iddq_vdd[5].fields.iddq_corrected_value);
 
     // Uplift table
     TRAC_IMP("WOF Uplift Freqs: Row_1[%d] 1cor[%d] 2cor[%d] 3cor[%d] 12cor[%d]",
@@ -467,10 +467,10 @@ uint32_t amec_wof_compute_c_eff(void)
     // Y = m*(X - x1) + y1, where m = (y2-y1) / (x2-x1)
     // FIXME: Can we expect m to be negative?
     l_i_leak = (l_v_chip - G_iddq_voltages[i]) *
-        ((int32_t)G_sysConfigData.iddq_table.iddq_vdd[i+1].fields.iddq_raw_value -
-         (int32_t)G_sysConfigData.iddq_table.iddq_vdd[i].fields.iddq_raw_value) /
+        ((int32_t)G_sysConfigData.iddq_table.iddq_vdd[i+1].fields.iddq_corrected_value -
+         (int32_t)G_sysConfigData.iddq_table.iddq_vdd[i].fields.iddq_corrected_value) /
         ((int32_t)G_iddq_voltages[i+1] - (int32_t)G_iddq_voltages[i]) +
-        G_sysConfigData.iddq_table.iddq_vdd[i].fields.iddq_raw_value;
+        G_sysConfigData.iddq_table.iddq_vdd[i].fields.iddq_corrected_value;
 
     // STEP 3: Correct the leakage current computed in the previous step for
     // temperature by multiplying by 1.25
@@ -655,6 +655,7 @@ void amec_wof_common_steps(void)
     uint8_t             i;
     uint32_t            l_result32; //temporary result
     uint32_t            l_result32v;
+    uint32_t            l_result32i;
     uint8_t             l_cores_on = 0;
     uint8_t             l_cores_waking = 0;
     uint8_t             l_pstatetable_cores_next=0;
@@ -779,10 +780,10 @@ void amec_wof_common_steps(void)
     //FIXME: add rounding step after multiplication
     //FIXME: pre-compute m, since table is static
     l_result32 = ((int32_t)l_v_chip - (int32_t)G_iddq_voltages[i])
-        * ((int32_t)G_sysConfigData.iddq_table.iddq_vdd[i+1].fields.iddq_raw_value -
-           (int32_t)G_sysConfigData.iddq_table.iddq_vdd[i].fields.iddq_raw_value)
+        * ((int32_t)G_sysConfigData.iddq_table.iddq_vdd[i+1].fields.iddq_corrected_value -
+           (int32_t)G_sysConfigData.iddq_table.iddq_vdd[i].fields.iddq_corrected_value)
         / ((int32_t)G_iddq_voltages[i+1] - (int32_t)G_iddq_voltages[i])
-        + (int32_t)G_sysConfigData.iddq_table.iddq_vdd[i].fields.iddq_raw_value;
+        + (int32_t)G_sysConfigData.iddq_table.iddq_vdd[i].fields.iddq_corrected_value;
 
     l_result32 = l_result32 * l_cores_on / G_wof_max_cores_per_chip;
 
@@ -839,11 +840,11 @@ void amec_wof_common_steps(void)
     g_amec->wof.vote_vchip = g_amec->wof.vote_vreg - (uint32_t) g_amec->wof.cur_out
         * (uint32_t) g_amec->wof.loadline / (uint32_t)10000;
 
-    l_result32 = g_amec->wof.ac << 14; // * 16384
+    l_result32i = g_amec->wof.ac << 14; // * 16384
     // estimate g_amec->wof.v_chip^1.3 using equation:
     // = 21374 * (X in 0.1 mV) - 50615296
     l_result32v = (21374 * g_amec->wof.vote_vchip - 50615296) >> 10;
-    l_result32 = l_result32 / l_result32v;
+    l_result32 = l_result32i / l_result32v;
     l_result32 = l_result32 << 14; // * 16384
     if (g_amec->wof.f_vote != 0)
     {
@@ -852,27 +853,29 @@ void amec_wof_common_steps(void)
     }
     g_amec->wof.ceff = l_result32;
 
-    // Previous c_eff calcualtion (before Josh/Victor correction)
-    l_result32 = g_amec->wof.ac << 14; // * 16384
+    // Try using the present voltage, since the voltage calculated
+    // using the WOF frequency causes Ceff to be too low.
     // estimate g_amec->wof.v_chip^1.3 using equation:
     // = 21374 * (X in 0.1 mV) - 50615296
     l_result32v = (21374 * g_amec->wof.v_chip - 50615296) >> 10;
-    l_result32 = l_result32 / l_result32v;
+    l_result32 = l_result32i / l_result32v;
     l_result32 = l_result32 << 14; // * 16384
-    if (l_freq != 0)
+    if (g_amec->wof.f_vote != 0)
     {
         // avoid divide by 0
-        l_result32 = l_result32 / (uint32_t) l_freq;
+        l_result32 = l_result32 / (uint32_t) g_amec->wof.f_vote;
     }
     g_amec->wof.ceff_old = l_result32;
 
-    g_amec->wof.ceff_ratio = l_result32 * 100 / g_amec->wof.ceff_tdp;
-    if (g_amec->wof.ceff_ratio > 100)
+    g_amec->wof.ceff_ratio = g_amec->wof.ceff_old * 10000 / g_amec->wof.ceff_tdp;
+    if (g_amec->wof.ceff_ratio > 10000)
     {
         // max freq must be turbo or higher by design
-        g_amec->wof.ceff_ratio = 100;
+        g_amec->wof.ceff_ratio = 10000;
     }
     sensor_update(AMECSENSOR_PTR(WOFCEFFRATIO),g_amec->wof.ceff_ratio);
+
+
 
     // Step 5: frequency uplift table
     // Search table and point i to the lower entry the target value falls
@@ -1294,7 +1297,7 @@ void amec_wof_writeToTable(wof_tbl_type_t i_tblType ,
                         (l_tblRow != 0))
                     {
                         // Translate each entry from 1/100% to frequency in MHz
-                        l_temp = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO] * (10000 + l_temp) / 10000;
+                        l_temp = G_sysConfigData.sys_mode_freq.table[OCC_MODE_STURBO] * (10000 + l_temp) / 10000;
                     }
                     G_amec_wof_uplift_table[l_tblRow][l_tblClmn] = (uint16_t)l_temp;
 
