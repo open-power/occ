@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* COPYRIGHT International Business Machines Corp. 2011,2014              */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -56,7 +56,6 @@ IMAGE_HEADER(G_bootImageHdr,__boot_low_level_init,BOOT_LOADER_ID,
 //*************************************************************************
 // Globals
 //*************************************************************************
-
 //*************************************************************************
 // Function Prototypes
 //*************************************************************************
@@ -80,51 +79,55 @@ uint32_t calChecksum(const uint32_t i_startAddr ,const uint32_t i_sz);
 void main()
 {
     uint32_t l_rc = 0;
-    // set checkpoint to boot test SRAM
-    WRITE_TO_SPRG0(BOOT_TEST_SRAM_CHKPOINT);
+
+    //retrieve the ipl time flag from SRAM.
+    imageHdr_t *l_hdrPtr = (imageHdr_t *) SRAM_START_ADDRESS;
+    bool l_ipl_time = l_hdrPtr->occ_flags.flag_bits.ipl_time_flag;
+
+    if(!l_ipl_time)
+    {
+        // set checkpoint to boot test SRAM
+        WRITE_TO_SPRG0(BOOT_TEST_SRAM_CHKPOINT);
 
 #ifndef VPO
-    // This is ifdef'd out b/c it takes too long to run in VPO
-    // Test SRAM
-    l_rc = boot_test_sram();
+        // This is ifdef'd out b/c it takes too long to run in VPO
+        // Test SRAM
+        l_rc = boot_test_sram();
 #endif
 
-    // If failed to test SRAM, write failed return code to SPRG1 and halt
-    if(0 != l_rc)
-    {
-        WRITE_TO_SPRG1_AND_HALT(l_rc);
-    }
+        // If failed to test SRAM, write failed return code to SPRG1 and halt
+        if(0 != l_rc)
+        {
+            WRITE_TO_SPRG1_AND_HALT(l_rc);
+        }
 
-    // set imageHdr_t pointer to point to boot image header to get to boot
-    // image size. This way we can get to main application image header.
-    imageHdr_t *l_hdrPtr = (imageHdr_t *)(G_bootImageHdr.start_addr +
+        // set imageHdr_t pointer to point to boot image header to get to boot
+        // image size. This way we can get to main application image header.
+        l_hdrPtr = (imageHdr_t *)(G_bootImageHdr.start_addr +
                                           G_bootImageHdr.image_size);
 
-    // set checkpoint to boot load main application image to SRAM
-    WRITE_TO_SPRG0(BOOT_LOAD_IMAGE_CHKPOINT);
+        // set checkpoint to boot load main application image to SRAM
+        WRITE_TO_SPRG0(BOOT_LOAD_IMAGE_CHKPOINT);
 
-    // Load main application image to SRAM including main application header
-    l_rc = boot_load_image(l_hdrPtr);
+        // Load main application image to SRAM including main application header
+        l_rc = boot_load_image(l_hdrPtr);
 
-    // If failed to load image, write failed return code to SPRG1 and halt
-    if(0 != l_rc)
-    {
-        WRITE_TO_SPRG1_AND_HALT(l_rc);
+        // If failed to load image, write failed return code to SPRG1 and halt
+        if(0 != l_rc)
+        {
+            WRITE_TO_SPRG1_AND_HALT(l_rc);
+        }
+        // calculate checksum for the SRAM main application image
+        uint32_t l_checksum = calChecksum(l_hdrPtr->start_addr,
+                                          l_hdrPtr->image_size);
+
+        // If checksum does not match, store bad checksum into SPRG1 and halt
+        if(l_checksum != l_hdrPtr->checksum)
+        {
+          WRITE_TO_SPRG1_AND_HALT(l_checksum);
+        }
+
     }
-
-    // set checkpoint to calculate checksum
-    WRITE_TO_SPRG0(BOOT_CALCULTE_CHKSUM_CHKPOINT);
-
-    // calculate checksum for the SRAM main application image
-    uint32_t l_checksum = calChecksum(l_hdrPtr->start_addr,
-                                      l_hdrPtr->image_size);
-
-    // If checksum does not match, store bad checksum into SPRG1 and halt
-    if(l_checksum != l_hdrPtr->checksum)
-    {
-        WRITE_TO_SPRG1_AND_HALT(l_checksum);
-    }
-
     // set checkpoint to get nest frequency
     WRITE_TO_SPRG0(BOOT_GET_NEST_FREQ_CHKPOINT);
 
@@ -139,7 +142,12 @@ void main()
     // set checkpoint to return from ssx_boot. This should never happen so
     // halt at this point.
     WRITE_TO_SPRG0(BOOT_SSX_RETURNED_CHKPOINT);
+
+
     WRITE_TO_SPRG1_AND_HALT(l_hdrPtr->ep_addr);
+
+
+
 }
 
 // Function Specification

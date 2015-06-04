@@ -70,15 +70,24 @@ typedef enum
 
 #define SRAM_REPAIR_RESERVE_SZ  64
 #define IMAGE_ID_STR_SZ         16
-#define RESERVED_SZ             14
+#define RESERVED_SZ              8
 #define TRAP_INST               0x7FE00004
 #define ID_NUM_INVALID          0xFFFF
+#define KILOBYTE                1024
 
 // Magic number set for applet headers
 #define APLT_MAGIC_NUMBER {0x1A,0x2B,0x3C,0x4D, 0x5E,0x6F,0x7A,0x8B, 0x9C,0xAD,0xAE,0x9F, 0x8A,0x7B,0x6C,0x5D, 0x4E,0x3F,0x2A,0x1B,\
                            0x1A,0x2B,0x3C,0x4D, 0x5E,0x6F,0x7A,0x8B, 0x9C,0xAD,0xAE,0x9F, 0x8A,0x7B,0x6C,0x5D, 0x4E,0x3F,0x2A,0x1B,\
                            0x1A,0x2B,0x3C,0x4D, 0x5E,0x6F,0x7A,0x8B, 0x9C,0xAD,0xAE,0x9F, 0x8A,0x7B,0x6C,0x5D, 0x4E,0x3F,0x2A,0x1B, 0x12,0x34,0xAB,0xCD}
 #define SRAM_HEADER_HACK   0x48000042
+
+//Struct containing various OCC flags
+struct OCC_FLAGS
+{
+    uint8_t ipl_time_flag : 1;
+};
+
+
 #ifndef __ASSEMBLER__
 
 // Structure for the common image header
@@ -124,6 +133,12 @@ struct image_header
     uint32_t version;                   // image version
     char image_id_str[IMAGE_ID_STR_SZ]; // image id string
     uint16_t aplt_id;                   // type: enum OCC_APLT
+    union
+    {
+        uint16_t flags;
+        struct OCC_FLAGS flag_bits;
+    } occ_flags;                        // bit field for occ flags
+    uint32_t nest_frequency;            // nest frequency
     uint8_t reserved[RESERVED_SZ];      // reserved for future use
 } __attribute__ ((__packed__));
 
@@ -176,6 +191,8 @@ const volatile imageHdr_t nameStr  __attribute__((section("imageHeader")))= \
     0,                                  /* version (filled in later by imageHdrScript) */ \
     IdStr,                              /* image_id_str */ \
     (uint16_t)IdNum,                    /* aplt_id */ \
+    0,                                  /* occ flags bit field */ \
+    0,                                  /* nest_frequency */ \
     {0}                                 /* reserved */ \
 };
 
