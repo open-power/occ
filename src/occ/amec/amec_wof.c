@@ -1396,4 +1396,40 @@ void amec_wof_store_core_freq(const uint8_t i_max_good_cores,
 
 }
 
+// Function Specification
+//
+// Name:  amec_wof_get_max_freq
+//
+// Description: Parses and handles all data passed to OCC via data
+//              config format 0x30.
+//
+// Prereq: Data size has been verified.
+//
+// End Function Specification
+uint16_t amec_wof_get_max_freq(const uint8_t i_cores)
+{
 
+    uint16_t        l_maxFreq = 0;
+    uint8_t         l_clmn = 0;
+    uint8_t         l_row = 0;
+
+    //find the correct column for the given number of cores.
+    for (l_clmn = 1; l_clmn < AMEC_WOF_UPLIFT_TBL_CLMS; l_clmn++)
+    {
+        if (i_cores == G_amec_wof_uplift_table[0][l_clmn])
+        {
+            //Find the largest frequency in this column
+            for (l_row = 1; l_row < AMEC_WOF_UPLIFT_TBL_ROWS; l_row++)
+            {
+                if (G_amec_wof_uplift_table[l_row][l_clmn] > l_maxFreq)
+                {
+                    l_maxFreq = G_amec_wof_uplift_table[l_row][l_clmn];
+                }
+            }
+
+            break; //out of for loop.
+        }
+    }
+
+    return l_maxFreq;
+}

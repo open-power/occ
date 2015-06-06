@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -39,6 +39,7 @@
 #include "proc_data.h"
 #include "proc_pstate.h"
 #include "scom.h"
+#include "amec_sys.h"
 
 // GPSM DCM Synchronization States
 typedef enum
@@ -924,20 +925,24 @@ void proc_gpsm_dcm_sync_enable_pstates_smh(void)
 // End Function Specification
 void populate_pstate_to_sapphire_tbl()
 {
-    uint8_t i = 0;
-    GlobalPstateTable * l_gpst_ptr = NULL;
+    uint8_t                 i = 0;
+    GlobalPstateTable      *l_gpst_ptr = NULL;
+    uint16_t                l_turboFreq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
 
     memset(&G_sapphire_table, 0, sizeof(sapphire_table_t));
 
     l_gpst_ptr = gpsm_gpst();
     const int8_t l_pmax = (int8_t) l_gpst_ptr->pmin + l_gpst_ptr->entries - 1;
-    G_sapphire_table.config.valid = 1; // default 0x01
-    G_sapphire_table.config.version = 1; // default 0x01
+    G_sapphire_table.config.valid = 0x01; // default 0x01
+    G_sapphire_table.config.version = 0x02; // default 0x02
     G_sapphire_table.config.throttle = NO_THROTTLE; // default 0x00
     G_sapphire_table.config.pmin = gpst_pmin(&G_global_pstate_table)+1; //Per David Du, we must use pmin+1 to avoid gpsa hang
     G_sapphire_table.config.pnominal = (int8_t)proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL]);
-    G_sapphire_table.config.pmax = gpst_pmax(&G_global_pstate_table);
-    const uint16_t l_entries = G_sapphire_table.config.pmax - G_sapphire_table.config.pmin + 1;
+    G_sapphire_table.config.turbo = (int8_t) proc_freq2pstate(l_turboFreq);
+    G_sapphire_table.config.ultraTurbo = (int8_t) proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_STURBO]);
+
+    int8_t l_tempPmax = gpst_pmax(&G_global_pstate_table);
+    const uint16_t l_entries = l_tempPmax - G_sapphire_table.config.pmin + 1;
     const uint8_t l_idx = l_gpst_ptr->entries-1;
 
     for (i = 0; i < l_entries; i++)
@@ -957,6 +962,30 @@ void populate_pstate_to_sapphire_tbl()
         }
         // extrapolate the frequency
         G_sapphire_table.data[i].freq_khz = l_gpst_ptr->pstate0_frequency_khz + (G_sapphire_table.data[i].pstate * l_gpst_ptr->frequency_step_khz);
+    }
+
+    uint8_t l_core = 0;
+    uint16_t l_maxFreq = l_turboFreq;
+
+    //Write the max pstate for each possible number of active cores.
+    for (l_core = 1; l_core <= MAX_CORES; l_core++)
+    {
+        //If wof is enabled, then use the wof uplift table to find the max freq for given # of active cores.
+        if (g_amec->wof.enable_parm != 0)
+        {
+            l_maxFreq = amec_wof_get_max_freq(l_core);
+        }
+
+        //If the l_core (# of Active cores) is greater than G_wof_max_cores_per_chip
+        //then return 0xFF for Pstate.
+        if (l_core > G_wof_max_cores_per_chip)
+        {
+            G_sapphire_table.activeCore_max_pstate[l_core - 1] = 0xFF;
+        }
+        else
+        {
+            G_sapphire_table.activeCore_max_pstate[l_core - 1] = (int8_t)proc_freq2pstate((uint32_t)l_maxFreq);
+        }
     }
 }
 

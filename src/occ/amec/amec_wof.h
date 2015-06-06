@@ -53,7 +53,7 @@ extern uint8_t g_amec_wof_current_pstate_table;
 extern uint8_t g_amec_wof_pstate_table_ready;
 extern uint16_t G_amec_wof_thread_counter;
 extern SsxSemaphore G_amecWOFThreadWakeupSem;
-
+extern uint8_t G_wof_max_cores_per_chip;
 //*************************************************************************
 // Macros
 //*************************************************************************
@@ -188,4 +188,5 @@ void amec_wof_vdd_current_out(const uint16_t i_power_in,
 
 bool amec_wof_validate_input_data(void);
 
+uint16_t amec_wof_get_max_freq(const uint8_t i_cores);
 #endif
