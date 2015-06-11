@@ -927,7 +927,19 @@ void populate_pstate_to_sapphire_tbl()
 {
     uint8_t                 i = 0;
     GlobalPstateTable      *l_gpst_ptr = NULL;
-    uint16_t                l_turboFreq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
+    uint16_t                l_turboFreq = 0;
+    uint16_t                l_ultraturboFreq = 0;
+
+    if(G_sysConfigData.sys_mode_freq.table[OCC_MODE_STURBO] == 0)
+    {
+        l_turboFreq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
+        l_ultraturboFreq = 0;
+    }
+    else
+    {
+        l_turboFreq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_STURBO];
+        l_ultraturboFreq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
+    }
 
     memset(&G_sapphire_table, 0, sizeof(sapphire_table_t));
 
@@ -939,7 +951,7 @@ void populate_pstate_to_sapphire_tbl()
     G_sapphire_table.config.pmin = gpst_pmin(&G_global_pstate_table)+1; //Per David Du, we must use pmin+1 to avoid gpsa hang
     G_sapphire_table.config.pnominal = (int8_t)proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL]);
     G_sapphire_table.config.turbo = (int8_t) proc_freq2pstate(l_turboFreq);
-    G_sapphire_table.config.ultraTurbo = (int8_t) proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_STURBO]);
+    G_sapphire_table.config.ultraTurbo = (int8_t) proc_freq2pstate(l_ultraturboFreq);
 
     int8_t l_tempPmax = gpst_pmax(&G_global_pstate_table);
     const uint16_t l_entries = l_tempPmax - G_sapphire_table.config.pmin + 1;
@@ -1102,8 +1114,8 @@ void proc_check_for_sapphire_updates()
     {
         TRAC_INFO("proc_check_for_sapphire_updates: throttle reason changed to %d", l_latest_throttle_reason);
         G_sapphire_table.config.throttle = l_latest_throttle_reason;
-        G_sapphire_table.config.version = 1; // default 0x01
-        G_sapphire_table.config.valid = 1; //default 0x01
+        G_sapphire_table.config.version = 0x02; // default 0x02
+        G_sapphire_table.config.valid = 0x01; //default 0x01
         populate_sapphire_tbl_to_mem();
     }
 }
