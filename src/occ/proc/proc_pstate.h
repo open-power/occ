@@ -92,6 +92,8 @@ enum {
     POWER_SUPPLY_FAILURE = 0x03,
     OVERCURRENT = 0x04,
     OCC_RESET = 0x05,
+    PCAP_ABOVE_TURBO = 0x06,           //Exceeded PCAP while at or above Turbo Pstate. For debug only.
+    CPU_OT_ABOVE_TURBO = 0x07          //Processer over temperature at or above Turbo Pstate. For debug only.
 };
 
 extern GlobalPstateTable G_global_pstate_table;

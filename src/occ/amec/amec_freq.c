@@ -492,11 +492,39 @@ void amec_slv_voting_box(void)
         G_time_until_freq_check--;
     }
 
-    //convert POWERCAP reason to POWER_SUPPLY_FAILURE if ovs/failsafe is asserted
-    if((l_kvm_throt_reason == POWERCAP) &&
-        (AMEC_INTF_GET_FAILSAFE() || AMEC_INTF_GET_OVERSUBSCRIPTION()))
+
+    if (l_kvm_throt_reason == POWERCAP)
     {
-        l_kvm_throt_reason = POWER_SUPPLY_FAILURE;
+        //convert POWERCAP reason to POWER_SUPPLY_FAILURE if ovs/failsafe is asserted
+        if((AMEC_INTF_GET_FAILSAFE() || AMEC_INTF_GET_OVERSUBSCRIPTION()))
+        {
+            l_kvm_throt_reason = POWER_SUPPLY_FAILURE;
+        }
+        else
+        {
+            //OCC_MODE_STURBO is used to store turbo freq when we have an ultraTurboFreq available, therefore
+            //to check whether an ultraTurboFreq is provided we check the Sturbo freq.
+            //    If ultraTurboFreq is provided AND  core_max_freq for processor >= Turbo Frequency
+            //       return throttle_reason as 0x06 instead of POWERCAP
+            if ((G_sysConfigData.sys_mode_freq.table[OCC_MODE_STURBO] != 0) &&
+                (g_amec->proc[0].core_max_freq >= G_sysConfigData.sys_mode_freq.table[OCC_MODE_STURBO]) )
+            {
+                l_kvm_throt_reason = PCAP_ABOVE_TURBO;
+            }
+        }
+    }
+
+    if (l_kvm_throt_reason == CPU_OVERTEMP)
+    {
+        //OCC_MODE_STURBO is used to store turbo freq when we have an ultraTurboFreq available, therefore
+        //to check whether an ultraTurboFreq is provided we check the Sturbo freq.
+        //    If ultraTurboFreq is provided AND  core_max_freq for processor >= Turbo Frequency
+        //       return throttle_reason as 0x07 instead of CPU_OT_ABOVE_TURBO
+        if ((G_sysConfigData.sys_mode_freq.table[OCC_MODE_STURBO] != 0) &&
+            (g_amec->proc[0].core_max_freq >= G_sysConfigData.sys_mode_freq.table[OCC_MODE_STURBO]) )
+        {
+            l_kvm_throt_reason = CPU_OT_ABOVE_TURBO;
+        }
     }
 
     //check if we need to update the throttle reason in homer
