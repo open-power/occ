@@ -391,9 +391,6 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
             TRAC_INFO("Min frequency = %d", l_freq);
 
-            // Store the Fmax and Fmin for AMEC (OpenPower environment only)
-            g_amec->sys.fmax = l_table[OCC_MODE_TURBO];
-            g_amec->sys.fmin = l_table[OCC_MODE_MIN_FREQUENCY];
         }
         else if(DATA_FREQ_VERSION_11 == l_cmdp->version) // Version 0x11 - OpenPower
         {
@@ -416,9 +413,6 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
             l_freq = (l_buf[6] << 8 | l_buf[7]);
             TRAC_INFO("UT frequency = %d", l_freq);
 
-            // Store the Fmax and Fmin for AMEC (OpenPower environment only)
-            g_amec->sys.fmax = l_table[OCC_MODE_TURBO];
-            g_amec->sys.fmin = l_table[OCC_MODE_MIN_FREQUENCY];
         }
 
     }while(0);

@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -64,6 +64,7 @@
 //*************************************************************************
 // Globals
 //*************************************************************************
+extern uint8_t G_occ_interrupt_type;
 
 //*************************************************************************
 // Function Prototypes
@@ -115,6 +116,18 @@ errlHndl_t AMEC_data_write_fcurr(const OCC_MODE i_mode)
         {
             //break;
         }
+    }
+
+    // If we are in OpenPower environment, load this new range into DVFS
+    // min/max for AMEC component
+    if(G_occ_interrupt_type != FSP_SUPPORTED_OCC)
+    {
+        g_amec->sys.fmax = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
+        g_amec->sys.fmin = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
+
+        TRAC_INFO("AMEC_data_write_fcurr: New frequency range Fmin[%u] Fmax[%u]",
+                  g_amec->sys.fmin,
+                  g_amec->sys.fmax);
     }
 
     return l_err;
