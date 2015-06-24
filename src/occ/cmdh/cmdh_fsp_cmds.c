@@ -99,6 +99,9 @@ cmdh_tunable_param_table_ext_t G_mst_tunable_parameter_table_ext[CMDH_DEFAULT_TU
 // (=0: no new values available; =1: new values need to be written; =2: restore defaults)
 uint8_t G_mst_tunable_parameter_overwrite = 0;
 
+//Reverse association of channel to function.
+uint8_t G_apss_ch_to_function[MAX_APSS_ADC_CHANNELS] = {0};
+
 extern thrm_fru_data_t      G_thrm_fru_data[DATA_FRU_MAX];
 
 // Function Specification
@@ -1008,6 +1011,59 @@ errlHndl_t cmdh_get_elog (const cmdh_fsp_cmd_t * i_cmd_ptr,
     return l_errlHndl;
 }
 
+// Function Specification
+//
+// Name:  cmdh_dbug_get_apss_data
+//
+// Description: TODO Add description
+//
+// End Function Specification
+void cmdh_dbug_get_apss_data (const cmdh_fsp_cmd_t * i_cmd_ptr,
+                              cmdh_fsp_rsp_t * o_rsp_ptr)
+{
+    uint8_t                      l_rc = ERRL_RC_SUCCESS;
+    uint16_t                     i = 0;
+    uint16_t                     l_resp_data_length = 0;
+    cmdh_dbug_apss_data_resp_t  *l_resp_ptr = (cmdh_dbug_apss_data_resp_t*) o_rsp_ptr;
+
+    do
+    {
+        memset(o_rsp_ptr, 0, sizeof(cmdh_dbug_apss_data_resp_t));
+        // Do sanity check on the function inputs
+        if ((NULL == i_cmd_ptr) || (NULL == o_rsp_ptr))
+        {
+            l_rc = ERRL_RC_INTERNAL_FAIL;
+            break;
+        }
+
+        //Get the data for each channel individually and write it to
+        for (i = 0; i < MAX_APSS_ADC_CHANNELS; i++)
+        {
+
+            if(AMECSENSOR_PTR(PWRAPSSCH0 + i)->ipmi_sid != 0)
+            {
+                l_resp_ptr->ApssCh[i].gain = G_sysConfigData.apss_cal[i].gain;
+                l_resp_ptr->ApssCh[i].offset = G_sysConfigData.apss_cal[i].offset;
+                l_resp_ptr->ApssCh[i].raw = G_dcom_slv_inbox_rx.adc[i];
+                l_resp_ptr->ApssCh[i].calculated = AMECSENSOR_PTR(PWRAPSSCH0 + i)->sample;
+                l_resp_ptr->ApssCh[i].func = G_apss_ch_to_function[i];
+                l_resp_ptr->ApssCh[i].ipmi_sid = AMECSENSOR_PTR(PWRAPSSCH0 + i)->ipmi_sid;
+
+                TRAC_IMP("DBG__APSS Ch[%02d]:  Raw[0x%04x], Offset[0x%08x], Gain[0x%08x],",
+                         i, l_resp_ptr->ApssCh[i].raw, l_resp_ptr->ApssCh[i].offset, l_resp_ptr->ApssCh[i].gain);
+                TRAC_IMP("                     Pwr[0x%04x], FuncID[0x%02x], IPMI_sensorID[0x%X]",
+                         l_resp_ptr->ApssCh[i].calculated, l_resp_ptr->ApssCh[i].func, l_resp_ptr->ApssCh[i].ipmi_sid);
+            }
+        }
+
+    }while(0);
+
+    // Populate the response data header
+    l_resp_data_length = sizeof(cmdh_dbug_apss_data_resp_t) - CMDH_DBUG_FSP_RESP_LEN;
+    o_rsp_ptr->rc = l_rc;
+    o_rsp_ptr->data_length[0] = ((uint8_t *)&l_resp_data_length)[0];
+    o_rsp_ptr->data_length[1] = ((uint8_t *)&l_resp_data_length)[1];
+}
 
 // Function Specification
 //
@@ -1247,6 +1303,10 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
                  TRAC_ERR("Debug command applet returned error: l_status: 0x%x", l_status);
                  commitErrl( &l_errl );
               }
+            break;
+
+        case DBUG_DUMP_APSS_DATA:
+            cmdh_dbug_get_apss_data(i_cmd_ptr, o_rsp_ptr);
             break;
         default:
             l_rc = ERRL_RC_INVALID_DATA; //should NEVER get here...

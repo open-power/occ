@@ -557,6 +557,7 @@ errlHndl_t apss_store_adc_channel(const eApssAdcChannelAssignments i_func_id, co
             if( SYSCFG_INVALID_ADC_CHAN == *l_adc_function)
             {
                 *l_adc_function = i_channel_num;
+                G_apss_ch_to_function[i_channel_num] = i_func_id;
             }
             else
             {

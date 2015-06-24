@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -39,6 +39,7 @@
 #include "cmdh_fsp_cmds_datacnfg.h"
 #include "sensor.h"
 #include "thrm_thread.h"
+#include "apss.h"
 
 // Enum of the various commands that TMGT may send to OCC
 typedef enum
@@ -288,6 +289,7 @@ typedef struct __attribute__ ((packed)) cmdh_fw_resp
     uint8_t   checksum[2];
 }cmdh_fw_resp_t;
 
+extern uint8_t G_apss_ch_to_function[MAX_APSS_ADC_CHANNELS];
 //---------------------------------------------------------
 // Set Mode And State Command
 //---------------------------------------------------------
@@ -459,6 +461,7 @@ typedef enum
     DBUG_CENTAUR_SENSOR_CACHE = 0x22,
     DBUG_DUMP_PROC_DATA     = 0x23,
     DBUG_GEN_CHOM_LOG       = 0x24,
+    DBUG_DUMP_APSS_DATA     = 0x25
 } DBUG_CMD;
 
 // Used by OCC tool to get trace, version 0.
@@ -556,6 +559,24 @@ typedef struct __attribute__ ((packed))
     uint16_t  size;
     uint32_t  oci_address;
 }cmdh_dbug_peek_t;
+
+typedef struct __attribute__ ((packed))
+{
+    uint8_t     func;
+    uint16_t    raw;
+    uint16_t    calculated;
+    uint16_t    ipmi_sid;
+    uint32_t    offset;
+    uint32_t    gain;
+}cmdh_dbug_apss_data_t;
+
+// Used to get the APSS raw values
+typedef struct __attribute__ ((packed))
+{
+    struct                  cmdh_fsp_rsp_header;
+    cmdh_dbug_apss_data_t   ApssCh[MAX_APSS_ADC_CHANNELS];
+    uint8_t                 checksum[2];
+} cmdh_dbug_apss_data_resp_t;
 
 //---------------------------------------------------------
 // Tunable Parameter Command
