@@ -932,8 +932,10 @@ void populate_pstate_to_sapphire_tbl()
 
     if(G_sysConfigData.sys_mode_freq.table[OCC_MODE_STURBO] == 0)
     {
+        // In this case, there is no UltraTurbo frequency defined. For OPAL-OCC
+        // interface, make UltraTurbo = Turbo frequency
         l_turboFreq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
-        l_ultraturboFreq = 0;
+        l_ultraturboFreq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
     }
     else
     {
@@ -989,15 +991,22 @@ void populate_pstate_to_sapphire_tbl()
         }
 
         //If the l_core (# of Active cores) is greater than G_wof_max_cores_per_chip
-        //then return 0xFF for Pstate.
+        //then return 0x01 for Pstate.
         if (l_core > G_wof_max_cores_per_chip)
         {
-            G_sapphire_table.activeCore_max_pstate[l_core - 1] = 0xFF;
+            G_sapphire_table.activeCore_max_pstate[l_core - 1] = 0x01;
         }
         else
         {
             G_sapphire_table.activeCore_max_pstate[l_core - 1] = (int8_t)proc_freq2pstate((uint32_t)l_maxFreq);
         }
+    }
+
+    //For Version 0x02 of the interface, we need to make the first four reserved bytes
+    //equal to 0x01 to prevent confusion
+    for(i=0; i<4; i++)
+    {
+        G_sapphire_table.pad[i] = 0x01;
     }
 }
 

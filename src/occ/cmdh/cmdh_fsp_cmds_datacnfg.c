@@ -2282,7 +2282,7 @@ errlHndl_t cmdh_store_wof_core_freq(const cmdh_fsp_cmd_t * i_cmd_ptr,
         }
         else
         {
-            TRAC_INFO("cmdh_store_wof_vrm_eff: received empty packet for format 0x31.");
+            TRAC_INFO("cmdh_store_wof_core_freq: received empty packet for format 0x30.");
         }
     }
 
@@ -2530,7 +2530,7 @@ errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
                 break;
             case DATA_FORMAT_WOF_VRM_EFF:
 
-                //Store wof vrm effeciency.
+                //Store wof vrm efficiency.
                 l_errlHndl = cmdh_store_wof_vrm_eff(i_cmd_ptr, o_rsp_ptr);
                 if(NULL == l_errlHndl)
                 {

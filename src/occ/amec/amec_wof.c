@@ -307,8 +307,6 @@ void amec_wof_vdd_current_out(const uint16_t i_power_in,
         l_iout = l_pout/l_v_sense;
     }
 
-    //FIXME: Uplift for broken habanero Vdd input power sensor. Delete when HW fixed.
-    l_iout = 153 * l_iout / 100;
     l_v_sense = i_v_set - AMEC_WOF_LOADLINE_ACTIVE * l_iout / 10000;
 
     *o_v_sense = l_v_sense;
@@ -727,6 +725,10 @@ void amec_wof_common_steps(void)
         g_amec->wof.error = AMEC_WOF_ERROR_SCOM_1;
         return;
     }
+
+    // FIXME: Whenever deep sleep works:
+    // Need to do a getscom of register PMCSIRV3 to find the deep sleep cores
+    // that want to wake up. Then do an OR with the mask g_amec_wof_wake_mask.
 
     // Save non-zero wake mask for debugging
     if (g_amec_wof_wake_mask != 0)
