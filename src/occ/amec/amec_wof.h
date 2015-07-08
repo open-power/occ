@@ -43,8 +43,6 @@
 extern sensor_t g_amec_wof_ceff_ratio_sensor;
 extern sensor_t g_amec_wof_core_wake_sensor;
 extern sensor_t g_amec_wof_vdd_sense_sensor;
-extern uint64_t g_amec_wof_wake_mask;
-extern uint64_t g_amec_wof_wake_mask_save;
 extern uint8_t g_amec_wof_make_check;
 extern uint8_t g_amec_wof_check;
 extern GlobalPstateTable g_amec_wof_pstate_table_0;
@@ -54,6 +52,7 @@ extern uint8_t g_amec_wof_pstate_table_ready;
 extern uint16_t G_amec_wof_thread_counter;
 extern SsxSemaphore G_amecWOFThreadWakeupSem;
 extern uint8_t G_wof_max_cores_per_chip;
+
 //*************************************************************************
 // Macros
 //*************************************************************************
@@ -61,6 +60,17 @@ extern uint8_t G_wof_max_cores_per_chip;
 //*************************************************************************
 // Defines/Enums
 //*************************************************************************
+
+//SCOM address
+//PMC Winkle Interrupt Request Vector Register 3 (PMCWIRVR3)
+#define PMCWIRVR3 0x6208b
+
+//PMC Deep Exit Mask Register (PDEMR)
+//The PDEMR register masks the ability for a given chiplet to exit from Deep
+//Sleep or Winkle state. NOTE that this register is to be used by the OCC for
+//implementing power shift algorithms
+#define PDEMR     0x62092
+
 typedef enum
 {
     AMEC_WOF_ERROR_NONE,
@@ -68,6 +78,7 @@ typedef enum
     AMEC_WOF_ERROR_SCOM_2,
     AMEC_WOF_ERROR_SCOM_3,
     AMEC_WOF_ERROR_SCOM_4,
+    AMEC_WOF_ERROR_SCOM_5,
     AMEC_WOF_ERROR_CORE_COUNT,
     AMEC_WOF_ERROR_UNKNOWN_STATE
 } AMEC_WOF_ERROR_ENUM;
@@ -145,6 +156,11 @@ typedef struct amec_wof
     uint8_t             state;
     // pmstate for debugging
     uint8_t             pm_state[MAX_NUM_CORES];
+    // Bit mask of the sleeping cores that want to wake up
+    uint64_t            wake_up_mask;
+    // Copy of previous bit mask for debugging
+    uint64_t            wake_up_mask_save;
+
 
 } amec_wof_t;
 

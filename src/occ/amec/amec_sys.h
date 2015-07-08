@@ -477,7 +477,7 @@ typedef struct
   uint16_t winkle_cnt;
 
   uint16_t core_max_freq;        // Maximum requested freq for all cores on chip.
-  uint16_t core_max_freq_actual; // Freq cap enforced after GPE runs.
+  uint16_t core_max_freq_actual; // Actual maximum frequency enforced after GPE runs.
 
   // Parameters used through Amester interface
   // Note: keep core arrays here, not in per-cores structure so one parameter

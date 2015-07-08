@@ -30,8 +30,8 @@
 #include <amec_parm.h>
 #include <amec_sys.h>
 #include <proc_pstate.h> //global pstate table parameter
-#include <amec_wof.h> // externs for WOF parameters @cl020
-#include <pstates.h> // for global pstate table @cl020
+#include <amec_wof.h>    // externs for WOF parameters
+#include <pstates.h>     // for global pstate table
 
 //*************************************************************************
 // Externs
@@ -122,7 +122,7 @@ amec_parm_t g_amec_parm_list[] = {
     // System fmin and fmax
     AMEC_PARM_UINT16(PARM_SYS_FMAX,"sys_fmax",&g_amec_sys.sys.fmax),
     AMEC_PARM_UINT16(PARM_SYS_FMIN,"sys_fmin",&g_amec_sys.sys.fmin),
-    AMEC_PARM_RAW(PARM_DCOM_POBID,"dcom_pobid",&G_pob_id,sizeof(pob_id_t)), // @cl020 debug wof
+    AMEC_PARM_RAW(PARM_DCOM_POBID,"dcom_pobid",&G_pob_id,sizeof(pob_id_t)),
     // Global Pstate table
     AMEC_PARM_RAW(PARM_GPST,"gpst",&G_global_pstate_table,sizeof(GlobalPstateTable)),
     // MHz per pstate
@@ -167,7 +167,7 @@ amec_parm_t g_amec_parm_list[] = {
     AMEC_PARM_UINT8(PARM_WOF_STATE,"wof_state",&g_amec_sys.wof.state),
     AMEC_PARM_UINT8(PARM_WOF_ENABLE,"wof_enable",&g_amec_sys.wof.enable_parm),
     AMEC_PARM_UINT8(PARM_WOF_CORES_ON,"wof_cores_on",&g_amec_sys.wof.cores_on),
-    AMEC_PARM_RAW(PARM_WOF_WAKE_MASK,"wof_wake_mask",&g_amec_wof_wake_mask_save,sizeof(uint64_t)),
+    AMEC_PARM_RAW(PARM_WOF_WAKE_MASK,"wof_wake_mask",&g_amec_sys.wof.wake_up_mask_save,sizeof(uint64_t)),
     AMEC_PARM_RAW(PARM_WOF_PM_STATE,"wof_pm_state",&g_amec_sys.wof.pm_state,sizeof(uint8_t)*MAX_NUM_CORES),
     // fastest p-state for tul183
     //AMEC_PARM_RAW(PARM_WOF_PSTATE_50,"wof_pstate_50",&G_global_pstate_table.pstate[50],sizeof(gpst_entry_t)),

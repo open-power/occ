@@ -53,14 +53,6 @@ extern SsxSemaphore G_amec_wof_thread_wakeup_sem; // in amec_wof_thread.c
 // Defines/Enums
 //*************************************************************************
 
-//
-//SCOM address
-//
-//PMC Winkle Interrupt Request Vector Register (PMCWIRVR3)
-#define PMCWIRVR3 0x6208b
-//The PDEMR register masks the ability for a given chiplet to exit from Deep Sleep or Winkle state. NOTE that this register is to be used by the OCC for implementing power shift algorithms
-#define PDEMR 0x62092
-
 // For prototype, one and only one of the following defines must be 1
 #define HAB19
 
@@ -94,54 +86,8 @@ uint8_t G_wof_max_cores_per_chip = 12; //defaulted to 12 for now
 #define AMEC_WOF_LOADLINE_ACTIVE 550  // Active loadline in micro ohms
 #define AMEC_WOF_LOADLINE_PASSIVE 50 // Passive loadline in micro ohms
 
-//Table from Victor on 3/26/2015 assuming Nominal-UltraTurbo range and deep-winkle.
-// 14 is for 1 column of ratio, 13 columns of uplift by # cores turned on
-/*
-int16_t amec_wof_uplift_table[][14] = {
-    // First column is the Ceff ratio. The other colums are clock speed in MHz.
-    // Make sure ratio=0 is here, since search algorithm expects input index to be >= first table element.
-    //    Number of active cores
-    //    0     1     2     3     4     5     6     7     8     9     10    11    12
-    {  0, 4023, 4023, 4023, 4023, 4023, 4023, 4023, 4023, 4023, 4023, 4023, 4023, 4023 },
-    { 50, 4023, 4023, 4023, 4023, 4023, 4023, 3993, 3875, 3757, 3629, 3486, 3347, 3224 },
-    { 55, 4023, 4023, 4023, 4023, 4023, 4023, 3952, 3829, 3703, 3555, 3404, 3268, 3142 },
-    { 60, 4023, 4023, 4023, 4023, 4023, 4023, 3913, 3783, 3642, 3478, 3327, 3191, 3066 },
-    { 65, 4023, 4023, 4023, 4023, 4023, 4018, 3875, 3736, 3575, 3404, 3252, 3117, 2994 },
-    { 70, 4023, 4023, 4023, 4023, 4023, 3985, 3836, 3685, 3506, 3334, 3183, 3048, 2925 },
-    { 75, 4023, 4023, 4023, 4023, 4023, 3949, 3795, 3629, 3439, 3268, 3117, 2981, 2858 },
-    { 80, 4023, 4023, 4023, 4023, 4023, 3916, 3754, 3570, 3375, 3204, 3053, 2920, 2797 },
-    { 85, 4023, 4023, 4023, 4023, 4023, 3885, 3711, 3509, 3314, 3142, 2994, 2858, 2735 },
-    { 90, 4023, 4023, 4023, 4023, 4023, 3852, 3665, 3450, 3255, 3083, 2935, 2799, 2674 },
-    { 95, 4023, 4023, 4023, 4023, 4005, 3816, 3616, 3391, 3199, 3027, 2879, 2743, 2617 },
-    {100, 4023, 4023, 4023, 4023, 3977, 3783, 3565, 3337, 3142, 2973, 2825, 2689, 2561 },
-
-};
-
-#define AMEC_WOF_UPLIFT_TABLE_N 12
-*/
 #endif //HAB19
 
-
-/* A conversion table from Vdd regulator output current (A) power to conversion efficiency.
-   Efficiency is in units of 1/100 of 1%.  (Divide by 10000 to get percent)
-uint32_t amec_wof_vdd_eff[][3] = {
-    {    0,     0,    0}, //0
-    { 2000,  8877, 8890}, //1 (20.00 A, 88.77% @ 0.85 V, 88.90% @ 1.2 V)
-    { 4000,  8936, 9211}, //2
-    { 6000,  9047, 9135}, //3
-    { 8000,  8926, 9075}, //4
-    {10000,  8861, 9009}, //5
-    {12000,  8751, 8944}, //6
-    {14000,  8694, 9034}, //7
-    {16000,  8676, 8903}, //8
-    {18000,  8575, 8757}, //9
-    {20000,  8419, 8805}, //10
-    {22000,  8249, 8644}, //11
-    {24000,  8283, 8649}, //12
-    {26000,  8096, 8632}, //13
-};
-#define AMEC_WOF_VDD_EFF_N 14   //Number of amec_wof_add_eff entried
-*/
 
 //Approximate y=1.25^((T-85)/10).
 //Interpolate T in the table below to find m
@@ -160,8 +106,6 @@ uint16_t amec_wof_iddq_mult_table[][2] = {
 };
 #define AMEC_WOF_IDDQ_MULT_TABLE_N 8
 
-//Pstate g_amec_wof_vote_pstate; // pstate associate with wof vote
-//uint8_t g_amec_wof_vote_vid; // VID associated with wof vote
 
 //For testing updating the p-state table
 //If wof_make_check != 0, then compute check byte for GPST[50] and place into g_amec_wof_check
@@ -172,9 +116,6 @@ uint8_t g_amec_wof_check=0;
 uint8_t g_amec_wof_pstatetable_cores_current = MAX_NUM_CORES;
 //The next pstate table max number of cores
 uint8_t g_amec_wof_pstatetable_cores_next = MAX_NUM_CORES;
-
-uint64_t g_amec_wof_wake_mask = 0;
-uint64_t g_amec_wof_wake_mask_save = 0;
 
 //Algorithm 3 (aka WOF 2.1)
 GLOBAL_PSTATE_TABLE(g_amec_wof_pstate_table_0);
@@ -581,15 +522,23 @@ uint8_t amec_wof_set_algorithm(const uint8_t i_algorithm)
                 g_amec_wof_pstatetable_cores_current = MAX_NUM_CORES;
                 g_amec_wof_pstatetable_cores_next = MAX_NUM_CORES;
 
-                // FALL-THROUGH
-
-            case 0: // No WOF
-                // Do not inhibit core wakeup (in case of transition out of alg. 2)
+                // Inhibit cores from waking up
                 l_data64 = 0xffff000000000000ull;
                 l_rc = _putscom(PDEMR, l_data64, SCOM_TIMEOUT);
                 if (l_rc != 0)
                 {
                     g_amec->wof.error = AMEC_WOF_ERROR_SCOM_4;
+                }
+                break;
+
+            case 0: // No WOF
+                // Do not inhibit core wakeup anymore (in case of transitioning
+                // out of algorithm 2)
+                l_data64 = 0x0000000000000000ull;
+                l_rc = _putscom(PDEMR, l_data64, SCOM_TIMEOUT);
+                if (l_rc != 0)
+                {
+                    g_amec->wof.error = AMEC_WOF_ERROR_SCOM_5;
                 }
                 break;
         }
@@ -657,7 +606,7 @@ void amec_wof_common_steps(void)
     uint8_t             l_cores_on = 0;
     uint8_t             l_cores_waking = 0;
     uint8_t             l_pstatetable_cores_next=0;
-    uint64_t            l_data64; // For SCOM access
+    uint64_t            l_data64 = 0; // For SCOM access
     uint32_t            l_rc;
     Pstate              l_wof_vote_pstate; // pstate that corresponds to wof
                                            // vote. Find associated voltage.
@@ -703,7 +652,7 @@ void amec_wof_common_steps(void)
         switch(g_amec_sys.proc[0].core[i].pm_state_hist >> 5)
         {
             case 5: //deep sleep
-                // FIXME: Prototype only uses deep winkle. Add deep sleep when
+                // FIXME: P8 only uses deep winkle. Add deep sleep when
                 // we can inhibit it.
                 //l_cores_on++;
                 break;
@@ -719,7 +668,7 @@ void amec_wof_common_steps(void)
 
     g_amec->wof.cores_on = l_cores_on;
 
-    l_rc = _getscom(PMCWIRVR3, &g_amec_wof_wake_mask, SCOM_TIMEOUT);
+    l_rc = _getscom(PMCWIRVR3, &g_amec->wof.wake_up_mask, SCOM_TIMEOUT);
     if (l_rc != 0)
     {
         g_amec->wof.error = AMEC_WOF_ERROR_SCOM_1;
@@ -728,14 +677,16 @@ void amec_wof_common_steps(void)
 
     // FIXME: Whenever deep sleep works:
     // Need to do a getscom of register PMCSIRV3 to find the deep sleep cores
-    // that want to wake up. Then do an OR with the mask g_amec_wof_wake_mask.
+    // that want to wake up. Then do an OR with the mask wake_up_mask.
 
-    // Save non-zero wake mask for debugging
-    if (g_amec_wof_wake_mask != 0)
+    // Save non-zero wake up mask for debugging
+    if (g_amec->wof.wake_up_mask != 0)
     {
-        g_amec_wof_wake_mask_save = g_amec_wof_wake_mask;
+        g_amec->wof.wake_up_mask_save = g_amec->wof.wake_up_mask;
     }
-    l_data64 = g_amec_wof_wake_mask >> 48;
+
+    // Count the number of cores that want to wake up
+    l_data64 = g_amec->wof.wake_up_mask >> 48;
     for(i=0; i<MAX_NUM_CORES; i++)
     {
         if (l_data64 & 0x1)
@@ -1029,18 +980,20 @@ void amec_wof_helper_v3(void)
         {
             // Signal waking cores to turn on. Go to state 0.
 
-            //Quickly toggle waking core inhibit bits
-            //Uninhibit cores waking up
-            l_rc = _putscom(PDEMR, ~g_amec_wof_wake_mask, SCOM_TIMEOUT);
-            if (l_rc != 0) {
+            // Quickly toggle waking core inhibit bits. This will allow cores
+            // that want to wake up to actually wake up.
+            l_rc = _putscom(PDEMR, ~g_amec->wof.wake_up_mask, SCOM_TIMEOUT);
+            if (l_rc != 0)
+            {
                 g_amec->wof.error = AMEC_WOF_ERROR_SCOM_2;
                 break;
             }
-            //Inhibit all cores
-            //putscom pu 62092 ffff000000000000
+
+            // Now, go back to inhibiting all cores
             l_data64 = 0xffff000000000000ull;
             l_rc = _putscom(PDEMR, l_data64, SCOM_TIMEOUT);
-            if (l_rc != 0) {
+            if (l_rc != 0)
+            {
                 g_amec->wof.error = AMEC_WOF_ERROR_SCOM_3;
                 break;
             }
@@ -1095,8 +1048,8 @@ void amec_wof_helper_v3(void)
 // End Function Specification
 void amec_wof_helper_v2(void)
 {
-    uint64_t            l_data64;
-    uint32_t            l_rc;
+    uint64_t            l_data64 = 0;
+    uint32_t            l_rc = 0;
 
     switch (g_amec->wof.state)
     {
@@ -1109,10 +1062,8 @@ void amec_wof_helper_v2(void)
 
         case AMEC_WOF_CORE_REQUEST_TURN_ON:
         {
-            // Check WOF frequency is applied
-            //If  (current clip > WOF clip), stay at this state.
-            //FIXME: How are we certain that the clip was applied to the SCOM at this point?
-            // Check if GPE is applying a new frequency (request != actual)
+            // We need to be certain that the GPE has applied the last frequency
+            // request from the voting box: (actual != request)
             if (g_amec->proc[0].core_max_freq_actual != g_amec->proc[0].core_max_freq)
             {
                 break;
@@ -1134,18 +1085,18 @@ void amec_wof_helper_v2(void)
 
         case AMEC_WOF_TRANSITION:
         {
-            // Signal waking cores to turn on. Go to state 0.
+            // Signal waking cores to turn on and go back to initial state.
 
-            // Quickly toggle waking core inhibit bits
-            // Uninhibit cores waking up
-            l_rc = _putscom(PDEMR, ~g_amec_wof_wake_mask, SCOM_TIMEOUT);
+            // Quickly toggle waking core inhibit bits to let those cores
+            // wake up (uninhibit cores waking up)
+            l_rc = _putscom(PDEMR, ~g_amec->wof.wake_up_mask, SCOM_TIMEOUT);
             if (l_rc != 0)
             {
                 g_amec->wof.error = AMEC_WOF_ERROR_SCOM_2;
                 break;
             }
-            // Inhibit all cores
-            // putscom pu 62092 ffff000000000000
+
+            // Next, inhibit all cores again
             l_data64 = 0xffff000000000000ull;
             l_rc = _putscom(PDEMR, l_data64, SCOM_TIMEOUT);
             if (l_rc != 0)
