@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -156,7 +156,15 @@ errlHndl_t initAppletAddr( void ) INIT_SECTION;
 //              image in main memory
 //
 // End Function Specification
-errlHndl_t initAppletAddr( void )
+//
+
+// NOTE: Optimization of O1 is needed for this function due to the l_bootLoaderHeader pointer
+// pointing to a 0 address (which is considered NULL by the compiler) and thus with newer
+// gcc compilers (4.9.0 and above), a new optimization flag issolate-erroneous-paths-dereference
+// the compiler will set a trap in the code that will stop it from running.
+// Setting the Optimization to 1 will disable this flag when compiling with gcc 4.9 and above.
+
+errlHndl_t __attribute__((optimize("O1"))) initAppletAddr( void )
 {
     errlHndl_t l_err = NULL;
     // 1. Applets count = OCC_APLT_TEST
@@ -164,7 +172,7 @@ errlHndl_t initAppletAddr( void )
     // 3. Skip first 2 ( boot, main ) addresses
     imageHdr_t *l_bootLoaderHeader = (void *) 0;
     imageHdr_t *l_mainAppHeader = (void *)l_bootLoaderHeader +
-                    l_bootLoaderHeader-> image_size;
+                    l_bootLoaderHeader->image_size;
     imageHdr_t *l_appHeader = (void *) l_mainAppHeader +
                     l_mainAppHeader->image_size;
 
@@ -181,7 +189,7 @@ errlHndl_t initAppletAddr( void )
         // 5a. Value of l_appHeader should be reasonable.
         //     Means that image sizes should be non-zero.
         //     TODO: Check l_appHeader vs. max. sane memory address.
-        if( l_bootLoaderHeader-> image_size == 0 )
+        if( l_bootLoaderHeader->image_size == 0 )
         {
             l_foundInvalid =  TRUE;
             TRAC_ERR("Bad image size in boot loader header.  applet count: %d", l_cnt);

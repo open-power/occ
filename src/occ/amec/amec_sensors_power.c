@@ -457,7 +457,6 @@ void amec_update_vrm_sensors(void)
     int                         l_minus_np1_regmode = 0;
     int                         l_minus_n_regmode = 0;
     static uint8_t              L_error_count = 0;
-    uint8_t                     l_pin = 0;
     uint8_t                     l_pin_value = 1; // active low, so set default to high
     uint8_t                     l_vrhot_count = 0;
     errlHndl_t                  l_err = NULL;
@@ -486,9 +485,6 @@ void amec_update_vrm_sensors(void)
             // read VR_FAN signal)
             L_error_count = 0;
             G_thrm_fru_data[DATA_FRU_VRM].read_failure = 0;
-
-            // Obtain the 'fan_full_speed' GPIO from APSS
-            l_pin = G_sysConfigData.apss_gpio_map.fans_full_speed;
 
             // No longer reading gpio from APSS in GA1 due to instability in
             // APSS composite mode
@@ -630,7 +626,6 @@ void amec_update_external_voltage()
 // End Function Specification
 void amec_update_current_sensor(void)
 {
-    uint8_t i;
     uint32_t result32; //temporary result
     uint16_t l_pow_reg_input_dW = AMECSENSOR_PTR(PWR250USVDD0)->sample * 10; // convert to dW by *10.
     uint16_t l_vdd_reg = AMECSENSOR_PTR(VOLT250USP0V0)->sample;

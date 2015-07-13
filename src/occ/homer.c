@@ -51,7 +51,13 @@
  * End Function Specification
  */
 
-homer_rc_t homer_hd_map_read_unmap(const homer_read_var_t  i_id,
+// NOTE: Optimization of O1 is needed for this function due to the l_bootLoaderHeader pointer
+// pointing to a 0 address (which is considered NULL by the compiler) and thus with newer
+// gcc compilers (4.9.0 and above), a new optimization flag issolate-erroneous-paths-dereference
+// the compiler will set a trap in the code that will stop it from running.
+// Setting the Optimization to 1 will disable this flag when compiling with gcc 4.9 and above.
+
+homer_rc_t __attribute__((optimize("O1"))) homer_hd_map_read_unmap(const homer_read_var_t  i_id,
                                    void                    * const o_host_data,
                                    int                     * const o_ssx_rc)
 {

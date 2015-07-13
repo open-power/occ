@@ -1232,7 +1232,6 @@ void amec_tb_cmd_set_config(const IPMIMsg_t *i_psMsg,
     UINT16                      l_oca_n;
     UINT16                      l_num_index;
     UINT16                      l_field_index;
-    UINT16                      l_oca_index;
     UINT8                       l_valid_sockets = 0;
     UINT32                      l_socket_bitmap = 0;
     UINT16                      l_parm_n;
@@ -1317,7 +1316,6 @@ void amec_tb_cmd_set_config(const IPMIMsg_t *i_psMsg,
         l_num_index = 12; // start of sensor numbers
         l_field_index = 12 + 2 * l_sensors_n;  // start of sensor fields
         l_parm_index = l_field_index + l_sensors_n;  // start of parameters
-        l_oca_index = l_parm_index + 2 * l_parm_n;  // start of SCOMs
 
         // Read sensor configuration
         for(l_i = 0; l_i < l_sensors_n; l_i++)

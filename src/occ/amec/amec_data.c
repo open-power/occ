@@ -92,19 +92,10 @@ errlHndl_t AMEC_data_write_fcurr(const OCC_MODE i_mode)
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
     errlHndl_t                  l_err = NULL;
-    OCC_MODE                    l_mode = i_mode;
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    // We'll never actually get a dynamic power save data package so just
-    // use turbo as our mode if in dynamic power save since it
-    // will have appropriate frequency.
-    if((i_mode == OCC_MODE_DYN_POWER_SAVE) ||
-       (i_mode == OCC_MODE_DYN_POWER_SAVE_FP))
-    {
-        l_mode = OCC_MODE_TURBO;
-    }
 
     // If we're active we need to load this new range into DVFS MIN/MAX
     if(CURRENT_STATE() == OCC_STATE_ACTIVE)
