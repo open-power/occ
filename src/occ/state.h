@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -119,6 +119,7 @@ extern SMGR_SMS_CMD_TYPE   G_occ_internal_sms;  // TODO:  Move to state.c
 {\
     reset_state_request(RESET_REQUESTED_DUE_TO_ERROR);\
     setErrlActions(error_log, ERRL_ACTIONS_RESET_REQUIRED);\
+    reset_wof_clear_inhibit();\
     commitErrl(&error_log);\
 }
 
@@ -178,6 +179,9 @@ bool isSafeStateRequested(void);
 
 // Used by macros to request reset states extenally
 void reset_state_request(uint8_t i_request);
+
+// Used by macros to clear inhibit bits set by WOF function
+void reset_wof_clear_inhibit();
 
 // Task that will check for checkstop
 void task_check_for_checkstop(task_t *i_self);

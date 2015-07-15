@@ -5,8 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2011,2014
-# [+] Google Inc.
+# Contributors Listed Below - COPYRIGHT 2011,2015
 # [+] International Business Machines Corp.
 #
 #
@@ -14,7 +13,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-# http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -899,6 +898,16 @@ __save_ffdc_regs:
     _liwa       %r3, PBA_FIR
     _liwa       %r4, PBAFIR
     bl          _getscom
+
+    # Clear the inhibit bits set by the WOF function
+    _lwzsd      %r3, __ssx_timebase_frequency_mhz
+    li          %r4, 17
+    li          %r7, 0
+    mullw       %r8, %r3, %r4
+    _liwa       %r3, 0x62092
+    li          %r5, 0
+    li          %r6, 0
+    bl          _putscom
 
     # Save core (de)configuration
     _liw        %r5, PMC_CORE_DECONFIGURATION_REG

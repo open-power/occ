@@ -30,6 +30,7 @@
 #include "rtls.h"
 #include "state.h"
 #include "dcom.h"
+#include "amec_wof.h"
 
 // Holds the state of the reset state machine
 uint8_t G_reset_state = RESET_NOT_REQUESTED;
@@ -142,6 +143,34 @@ void reset_state_request(uint8_t i_request)
 
 // Function Specification
 //
+// Name: reset_wof_clear_inhibit
+//
+// Description: This function clears the inhibit bits that are
+// set as part of the WOF function
+//
+// End Function Specification
+void reset_wof_clear_inhibit()
+{
+    uint64_t l_data64 = 0;
+    uint32_t l_rc = 0;
+
+    // Do not inhibit core wakeup anymore
+    l_data64 = 0x0000000000000000ull;
+    l_rc = _putscom(PDEMR, l_data64, SCOM_TIMEOUT);
+    if (l_rc != 0)
+    {
+        TRAC_ERR("reset_wof_clear_inhibit: Error writing to PDEMR register! addr[0x%08X] rc[0x%08X]",
+                 PDEMR,
+                 l_rc);
+    }
+    else
+    {
+        TRAC_IMP("reset_wof_clear_inhibit: PDEMR register has been successfully cleared");
+    }
+}
+
+// Function Specification
+//
 // Name: task_check_for_checkstop
 //
 // Description: Check for checkstop
@@ -220,4 +249,3 @@ void task_check_for_checkstop(task_t *i_self)
     }
     while(0);
 }
-

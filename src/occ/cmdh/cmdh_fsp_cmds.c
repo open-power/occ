@@ -626,6 +626,9 @@ errlHndl_t cmdh_reset_prep (const cmdh_fsp_cmd_t * i_cmd_ptr,
         }
         if (CURRENT_STATE() != OCC_STATE_STANDBY)
         {
+            // Clear the inhibit bits set by the WOF function
+            reset_wof_clear_inhibit();
+
             // Put OCC in stand-by state
             l_errlHndl = SMGR_set_state(OCC_STATE_STANDBY);
         }
