@@ -91,33 +91,26 @@ errlHndl_t AMEC_data_write_fcurr(const OCC_MODE i_mode)
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
     errlHndl_t                  l_err = NULL;
-    OCC_MODE                    l_mode = i_mode;
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    // We'll never actually get a dynamic power save data package so just
-    // use turbo as our mode if in dynamic power save since it
-    // will have appropriate frequency.
-    if((i_mode == OCC_MODE_DYN_POWER_SAVE) ||
-       (i_mode == OCC_MODE_DYN_POWER_SAVE_FP))
-    {
-        l_mode = OCC_MODE_TURBO;
-    }
 
     // Check the UltraTurbo frequency to see if WOF function is supported
     if(G_sysConfigData.sys_mode_freq.table[OCC_MODE_STURBO] == 0)
     {
         // UltraTurbo frequency is zero, WOF is not supported
         g_amec->wof.enable_parm = 0;
-        g_amec->wof.f_vote = -1;
+	// Set WOF to safe turbo vote, since WOF vote is always active, even when WOF off.
+        g_amec->wof.f_vote = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
     }
     else
     {
         // Enable WOF algorithm
         g_amec->wof.enable_parm = 2;
 
-        // Initialize WOF frequency request to be turbo
+        // Initialize WOF frequency request to be turbo.
+	// Note: Ultraturbo frequency is stored in OCC_MODE_TURBO
         g_amec->wof.f_vote = G_sysConfigData.sys_mode_freq.table[OCC_MODE_STURBO];
     }
 
