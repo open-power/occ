@@ -473,19 +473,19 @@ uint8_t amec_wof_set_algorithm(const uint8_t i_algorithm)
         }
 
         // Vote for a safe frequency (turbo frequency)
-	// Check the UltraTurbo frequency to see if WOF function is supported
-	if(G_sysConfigData.sys_mode_freq.table[OCC_MODE_STURBO] == 0)
-	{
-	    // UltraTurbo frequency is zero, WOF is not supported
-	    // Set WOF to safe turbo vote, since WOF vote is always active, even when WOF off.
-	    g_amec->wof.f_vote = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
-	}
-	else
-	{
-	    // Initialize WOF frequency request to be turbo.
-	    // Note: Ultraturbo frequency is stored in OCC_MODE_TURBO
-	    g_amec->wof.f_vote = G_sysConfigData.sys_mode_freq.table[OCC_MODE_STURBO];
-	}
+        // Check the UltraTurbo frequency to see if WOF function is supported
+        if(G_sysConfigData.sys_mode_freq.table[OCC_MODE_STURBO] == 0)
+        {
+            // UltraTurbo frequency is zero, WOF is not supported
+            // Set WOF to safe turbo vote, since WOF vote is always active, even when WOF off.
+            g_amec->wof.f_vote = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
+        }
+        else
+        {
+            // Initialize WOF frequency request to be turbo.
+            // Note: Ultraturbo frequency is stored in OCC_MODE_TURBO
+            g_amec->wof.f_vote = G_sysConfigData.sys_mode_freq.table[OCC_MODE_STURBO];
+        }
 
         // Make sure the vote is enforced before continuing.
         // If vote is not enforced, then exit and return again in next 250us

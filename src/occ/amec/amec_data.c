@@ -101,7 +101,7 @@ errlHndl_t AMEC_data_write_fcurr(const OCC_MODE i_mode)
     {
         // UltraTurbo frequency is zero, WOF is not supported
         g_amec->wof.enable_parm = 0;
-	// Set WOF to safe turbo vote, since WOF vote is always active, even when WOF off.
+        // Set WOF to safe turbo vote, since WOF vote is always active, even when WOF off.
         g_amec->wof.f_vote = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
     }
     else
@@ -110,7 +110,7 @@ errlHndl_t AMEC_data_write_fcurr(const OCC_MODE i_mode)
         g_amec->wof.enable_parm = 2;
 
         // Initialize WOF frequency request to be turbo.
-	// Note: Ultraturbo frequency is stored in OCC_MODE_TURBO
+        // Note: Ultraturbo frequency is stored in OCC_MODE_TURBO
         g_amec->wof.f_vote = G_sysConfigData.sys_mode_freq.table[OCC_MODE_STURBO];
     }
 
