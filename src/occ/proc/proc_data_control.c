@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -141,6 +141,7 @@ void proc_core_data_control_init( void )
 
     do
     {
+        //FIXME: Need to move this object to the PGPE (later phase)
         //Initializes PoreFlex object for fast core data
         rc = pore_flex_create( &G_core_data_control_req,  //gpe_req for the task
                 &G_pore_gpe0_queue,                       //queue

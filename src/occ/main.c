@@ -709,7 +709,9 @@ void Main_thread_routine(void *private)
 
     TRAC_INFO("Main Thread Started ... " );
 
-    workaround_HW258436();
+    //FIXME: Need to investigate if we need this workaround for P9
+    //Owner: Wael
+    //workaround_HW258436();
 
     // NOTE: At present, we are not planning to use any config data from
     // mainstore. OCC Role will be provided by FSP after FSP communication
@@ -827,8 +829,9 @@ void Main_thread_routine(void *private)
         }
         else
         {
+            // For Simics phase 1, we don't want to call the thermal thread
             // Call thermal routine that executes fan control
-            thrm_thread_main();
+            //thrm_thread_main();
         }
 
         if( l_ssxrc == SSX_OK)
@@ -843,8 +846,9 @@ void Main_thread_routine(void *private)
             }
             else
             {
+                // For Simics phase 1, we don't want to call the health monitor thread
                 // call health monitor routine
-                hmon_routine();
+                //hmon_routine();
             }
         }
 
@@ -859,10 +863,11 @@ void Main_thread_routine(void *private)
             }
             else
             {
+                // For Simics phase 1, we don't want to call the call-home thread
                 // Only Master OCC will log call home data
                 if (OCC_MASTER == G_occ_role)
                 {
-                    chom_main();
+                    //chom_main();
                 }
             }
         }
@@ -976,14 +981,17 @@ int main(int argc, char **argv)
 
     // Get the homer version
     uint32_t l_homer_version = 0;
-    l_homerrc = homer_hd_map_read_unmap(HOMER_VERSION,
-                                        &l_homer_version,
-                                        &l_ssxrc);
+    //l_homerrc = homer_hd_map_read_unmap(HOMER_VERSION,
+    //                                    &l_homer_version,
+    //                                    &l_ssxrc);
 
-    if ((HOMER_SUCCESS != l_homerrc) && (HOMER_SSX_UNMAP_ERR != l_homerrc))
+    //if ((HOMER_SUCCESS != l_homerrc) && (HOMER_SSX_UNMAP_ERR != l_homerrc))
     {
         // Attempt to use max version if we can't read the homer.
-        l_homer_version = HOMER_VERSION_MAX;
+        //l_homer_version = HOMER_VERSION_MAX;
+
+        // For Simics, assume Homer version 2 (no FIR support)
+        l_homer_version = HOMER_VERSION_2;
     }
 
     // Get proc_pb_frequency from HOMER host data and calculate the timebase
@@ -1000,11 +1008,12 @@ int main(int argc, char **argv)
     // Don't do a version check before reading the nest freq, it's present in
     // all HOMER versions.
     uint32_t l_tb_freq_hz = 0;
-    l_homerrc2 = homer_hd_map_read_unmap(HOMER_NEST_FREQ,
-                                         &l_tb_freq_hz,
-                                         &l_ssxrc2);
+    //l_homerrc2 = homer_hd_map_read_unmap(HOMER_NEST_FREQ,
+    //                                     &l_tb_freq_hz,
+    //                                     &l_ssxrc2);
 
-    if ((HOMER_SUCCESS == l_homerrc2) || (HOMER_SSX_UNMAP_ERR == l_homerrc2))
+    //if ((HOMER_SUCCESS == l_homerrc2) || (HOMER_SSX_UNMAP_ERR == l_homerrc2))
+    if(0)
     {
         // Data is in Mhz upon return and needs to be converted to Hz and then
         // quartered.
@@ -1060,17 +1069,20 @@ int main(int argc, char **argv)
         // Get OCC interrupt type from HOMER host data area. This will tell OCC
         // which interrupt to Host it should be using.
         uint32_t l_occ_int_type = 0;
-        l_homerrc = homer_hd_map_read_unmap(HOMER_INT_TYPE,
-                                            &l_occ_int_type,
-                                            &l_ssxrc);
+        //l_homerrc = homer_hd_map_read_unmap(HOMER_INT_TYPE,
+        //                                    &l_occ_int_type,
+        //                                    &l_ssxrc);
 
-        if ((HOMER_SUCCESS == l_homerrc) || (HOMER_SSX_UNMAP_ERR == l_homerrc))
+        //if ((HOMER_SUCCESS == l_homerrc) || (HOMER_SSX_UNMAP_ERR == l_homerrc))
+        if(0)
         {
             G_occ_interrupt_type = (uint8_t) l_occ_int_type;
         }
         else
         {
-            G_occ_interrupt_type = FSP_SUPPORTED_OCC;
+            // For Simics we are assuming the BMC communication path
+            //G_occ_interrupt_type = FSP_SUPPORTED_OCC;
+            G_occ_interrupt_type = PSIHB_INTERRUPT;
         }
 
         TRAC_INFO("HOMER accessed, rc=%d, host interrupt type=%d, ssx_rc=%d",
