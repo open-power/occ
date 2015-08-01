@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -149,6 +149,9 @@ extern SMGR_SMS_CMD_TYPE   G_occ_internal_sms;  // TODO:  Move to state.c
 
 // Returns true if OCC State is active
 #define IS_OCC_STATE_ACTIVE()  ( (OCC_STATE_ACTIVE == G_occ_internal_state)? 1 : 0 )
+
+// Returns true if OCC State is in observation mode
+#define IS_OCC_STATE_OBSERVATION()  ( (OCC_STATE_OBSERVATION == G_occ_internal_state)? 1 : 0 )
 
 /**
  * @struct smgr_state_trans_t

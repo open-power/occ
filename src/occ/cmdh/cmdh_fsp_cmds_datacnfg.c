@@ -2325,10 +2325,14 @@ errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         case DATA_FORMAT_WOF_CORE_FREQ:
             // FIXME: Need to add proper support for this data packet
+            // Until then, let the BMC/HTMGT know that it is not supportedxs
+            TRAC_INFO("DATA_FORMAT_WOF_CORE_FREQ not supported.");
             break;
 
         case DATA_FORMAT_WOF_VRM_EFF:
             // FIXME: Need to add proper support for this data packet
+            // Until then, let the BMCC/HTMGT know that it is not supported
+            TRAC_INFO("DATA_FORMAT_WOF_VRM_EFF not supported.");
             break;
 
         case DATA_FORMAT_CLEAR_ALL:
