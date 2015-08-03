@@ -1,0 +1,35 @@
+files and includes are deleted:
+
+//is gone in p9, parmenantly deleted
+oha_ 
+
+//not within occ, never included, files deleted
+sbe_     
+pibmem_  
+fasti2c_
+i2cengine_
+icp_
+
+//in core domain but not in occ, commented out in occhw_core.h, files deleted
+sensors_ 
+pc_     
+
+//in centaur but not in occ, commented out in occhw.h, files deleted
+centaur_ 
+mcs_    
+
+//needs replacement, commented out or never included, files deleted
+pcbs_ gone but needs ppm replacement, commented out in occhw.h
+pore_ gone but needs ppe replacement, not included
+tod_ commented out in occhw.h         
+
+
+//files and includes stays but needs review:
+sramctl_     stay and included in occhw_sramctl.h
+plb_arbiter_ stay and included
+pmc_  gone but needs ocb replacement, still stay and included
+pba_  needs to renew for p9, still stay and included
+ocb_  already renewed for p9
+tpc_ stay and included in occhw_id, needs renew for p9
+
+
