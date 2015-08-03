@@ -1,10 +1,32 @@
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/ssx/ppc405/ppc405_context.h $                             */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 #ifndef __PPC405_CONTEXT_H__
 #define __PPC405_CONTEXT_H__
 
-// $Id: ppc405_context.h,v 1.1.1.1 2013/12/11 21:03:27 bcbrock Exp $
-// $Source: /afs/awd/projects/eclipz/KnowledgeBase/.cvsroot/eclipz/chips/p8/working/procedures/ssx/ppc405/ppc405_context.h,v $
 //-----------------------------------------------------------------------------
-// *! (C) Copyright International Business Machines Corp. 2013
+// *! (C) Copyright International Business Machines Corp. 2014
 // *! All Rights Reserved -- Property of IBM
 // *! *** IBM Confidential ***
 //-----------------------------------------------------------------------------
@@ -105,7 +127,7 @@
 //
 // When SSX is initialized USPRG0 is initialized to 0.  When thread-mode is
 // entered (by ssx_start_threads()) bit 24 is set to 1.  In order to support
-// PgP/OCC firmware, once initialized (with ssx_initialize()) SSX can simply
+// OCC firmware, once initialized (with ssx_initialize()) SSX can simply
 // handle interrupts, reverting back to the non-thread-mode idle loop when
 // there's nothing to do.
 //      
@@ -337,11 +359,11 @@
 
         .macro  _save_update_kernel_context critical, irqreg, ctxreg
 
-        .if     \critical
-        SSX_TRACE_CRITICAL_IRQ_ENTRY \irqreg, \ctxreg
-        .else
-        SSX_TRACE_NONCRITICAL_IRQ_ENTRY \irqreg, \ctxreg
-        .endif          
+        //.if     \critical
+        //SSX_TRACE_CRITICAL_IRQ_ENTRY \irqreg, \ctxreg
+        //.else
+        //SSX_TRACE_NONCRITICAL_IRQ_ENTRY \irqreg, \ctxreg
+        //.endif          
 
         mfusprg0 \ctxreg
         stw     \ctxreg, SSX_FAST_CTX_KERNEL_CTX(%r1)
@@ -363,13 +385,13 @@
 
         .macro  _ssx_fast_ctx_pop_exit critical
 
-        .if     SSX_KERNEL_TRACE_ENABLE
-        .if     \critical
-        bl      __ssx_trace_critical_irq_exit
-        .else
-        bl      __ssx_trace_noncritical_irq_exit
-        .endif
-        .endif
+        //.if     SSX_KERNEL_TRACE_ENABLE
+        //.if     \critical
+        //bl      __ssx_trace_critical_irq_exit
+        //.else
+        //bl      __ssx_trace_noncritical_irq_exit
+        //.endif
+        //.endif
 
         lwz     %r3, SSX_FAST_CTX_KERNEL_CTX(%r1)
         mtusprg0 %r3

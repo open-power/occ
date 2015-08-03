@@ -1,10 +1,32 @@
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/ssx/ssx/ssx_api.h $                                       */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 #ifndef __SSX_API_H__
 #define __SSX_API_H__
 
-// $Id: ssx_api.h,v 1.2 2014/02/03 01:30:44 daviddu Exp $
-// $Source: /afs/awd/projects/eclipz/KnowledgeBase/.cvsroot/eclipz/chips/p8/working/procedures/ssx/ssx/ssx_api.h,v $
 //-----------------------------------------------------------------------------
-// *! (C) Copyright International Business Machines Corp. 2013
+// *! (C) Copyright International Business Machines Corp. 2014
 // *! All Rights Reserved -- Property of IBM
 // *! *** IBM Confidential ***
 //-----------------------------------------------------------------------------
@@ -341,39 +363,79 @@
 #endif
 
 
-// Application and kernel tracing.  Tracing can only be enabled if the port
-// defines the trace macros in that case.
-
-/// Enable SSX application tracing
+/// Enable SSX application tracing (enabled by default)
 #ifndef SSX_TRACE_ENABLE
-#define SSX_TRACE_ENABLE 0
+#define SSX_TRACE_ENABLE 1
 #endif
 
-/// Enable SSX kernel tracing
+/// Enable SSX kernel tracing (disabled by default)
 #ifndef SSX_KERNEL_TRACE_ENABLE
 #define SSX_KERNEL_TRACE_ENABLE 0
 #endif
 
 #if !SSX_TRACE_ENABLE
-#define SSX_TRACE(event)
+#define SSX_TRACE(...)
+#define SSX_TRACE_BIN(str, bufp, buf_size)
+#else
+#define SSX_TRACE(...) SSXTRACE(__VA_ARGS__)
+#define SSX_TRACE_BIN(str, bufp, buf_size) SSXTRACE_BIN(str, bufp, buf_size)
 #endif
 
+//Kernel trace macros
 #if !SSX_KERNEL_TRACE_ENABLE
-
-#define SSX_TRACE_THREAD_SLEEP(priority)
-#define SSX_TRACE_THREAD_WAKEUP(priority)
-#define SSX_TRACE_THREAD_SEMAPHORE_PEND(priority)
-#define SSX_TRACE_THREAD_SEMAPHORE_POST(priority)
-#define SSX_TRACE_THREAD_SEMAPHORE_TIMEOUT(priority)
-#define SSX_TRACE_THREAD_SUSPENDED(priority)
-#define SSX_TRACE_THREAD_DELETED(priority)
-#define SSX_TRACE_THREAD_COMPLETED(priority)
-#define SSX_TRACE_THREAD_MAPPED_RUNNABLE(priority)
-#define SSX_TRACE_THREAD_MAPPED_SEMAPHORE_PEND(priority)
-#define SSX_TRACE_THREAD_MAPPED_SLEEPING(priority)
-
-
+#define SSX_KERN_TRACE(...)
+#define SSX_KERN_TRACE_ASM16(...)
+#else
+#define SSX_KERN_TRACE(...) SSX_TRACE(__VA_ARGS__)
+#define SSX_KERN_TRACE_ASM16(...) SSX_TRACE_ASM16(__VA_ARGS__)
 #endif  /* SSX_KERNEL_TRACE_ENABLE */
+
+
+/// Add a string to the trace buffer with an optional register holding a 16bit value
+/// WARNING: This calls a c function which may clobber any of the volatile registers
+#if (SSX_TRACE_SUPPORT && SSX_TIMER_SUPPORT)
+#define SSX_TRACE_ASM16(...) TRACE_ASM_HELPER16(VARG_COUNT(__VA_ARGS__), __VA_ARGS__)
+#else
+#define SSX_TRACE_ASM16(...)
+#endif /* SSX_TRACE_SUPPORT */
+
+/// The following macros are helper macros for tracing.  They should not be called
+/// directly.
+#define VARG_COUNT_HELPER(_0, _1, _2, _3, _4, _5, _6, _7, N, ...) N
+#define VARG_COUNT(...) VARG_COUNT_HELPER(, ##__VA_ARGS__, 7, 6, 5, 4, 3, 2, 1, 0)
+
+#ifdef __ASSEMBLER__
+#define TRACE_ASM_HELPER16_CALL(count, ...) TINY_TRACE_ASM ## count (__VA_ARGS__)
+#define TRACE_ASM_HELPER16(count, ...) TRACE_ASM_HELPER16_CALL(count, __VA_ARGS__)
+
+#define TINY_TRACE_ASM0()   .error "format string required"
+#define TINY_TRACE_ASM1(str) \
+    .tiny_trace_asm1 trace_ppe_hash(str, SSX_TRACE_HASH_PREFIX)
+#define TINY_TRACE_ASM2(str, reg) \
+    .tiny_trace_asm2 trace_ppe_hash(str, SSX_TRACE_HASH_PREFIX), reg
+#define TINY_TRACE_ASM3()   .error "too many parameters"
+#define TINY_TRACE_ASM4()   .error "too many parameters"
+#define TINY_TRACE_ASM5()   .error "too many parameters"
+#define TINY_TRACE_ASM6()   .error "too many parameters"
+#define TINY_TRACE_ASM7()   .error "too many parameters"
+
+//TODO: add support for tracing more than 1 parameter and binary data in assembly
+
+    .global ssx_trace_tiny
+
+    .macro  .tiny_trace_asm1 hash16
+        lis     %r3, \hash16
+        bl      ssx_trace_tiny
+    .endm
+
+    .macro .tiny_trace_asm2 hash16, parm16
+        clrlwi  %r3, \parm16, 16
+        oris    %r3, %r3, \hash16
+        bl      ssx_trace_tiny
+    .endm
+        
+#endif /*__ASSEMBLER__*/
+
 
 
 #ifndef __ASSEMBLER__
@@ -436,6 +498,45 @@ typedef struct {
 #define SSX_SEMAPHORE(sem, initial_count, max_count)                    \
     SsxSemaphore sem = SSX_SEMAPHORE_INITIALIZATION(initial_count, max_count)
 
+/// Trace macros for C functions
+#define HASH_ARG_COMBO(str, arg) \
+    ((((uint32_t)trace_ppe_hash(str, SSX_TRACE_HASH_PREFIX)) << 16) | ((uint32_t)(arg) & 0x0000ffff))
+
+#define SSXTRACE0(...) ssx_trace_tiny() //will fail at compile time
+
+#define SSXTRACE1(str) \
+    ssx_trace_tiny((trace_ppe_hash(str, SSX_TRACE_HASH_PREFIX) << 16))
+
+#define SSXTRACE2(str, parm0) \
+    ((sizeof(parm0) <= 2)? \
+        ssx_trace_tiny(HASH_ARG_COMBO(str, parm0)): \
+        ssx_trace_big(HASH_ARG_COMBO(str, 1), ((uint64_t)parm0) << 32, 0))
+
+#define SSXTRACE3(str, parm0, parm1) \
+        ssx_trace_big(HASH_ARG_COMBO(str, 2), ((((uint64_t)parm0) << 32) | parm1), 0)
+
+#define SSXTRACE4(str, parm0, parm1, parm2) \
+        ssx_trace_big(HASH_ARG_COMBO(str, 3), ((((uint64_t)parm0) << 32) | parm1),\
+                                             ((uint64_t)parm2) << 32 )
+        
+#define SSXTRACE5(str, parm0, parm1, parm2, parm3) \
+        ssx_trace_big(HASH_ARG_COMBO(str, 4), ((((uint64_t)parm0) << 32) | parm1),\
+                                             ((((uint64_t)parm2) << 32) | parm3) )
+
+#define SSXTRACE6(...) ssx_trace_tiny() //will fail at compile time
+#define SSXTRACE7(...) ssx_trace_tiny() //will fail at compile time
+
+#define SSXTRACE_HELPER2(count, ...) SSXTRACE ## count (__VA_ARGS__)
+#define SSXTRACE_HELPER(count, ...) SSXTRACE_HELPER2(count, __VA_ARGS__)
+
+#if (SSX_TRACE_SUPPORT && SSX_TIMER_SUPPORT)
+#define SSXTRACE(...) SSXTRACE_HELPER(VARG_COUNT(__VA_ARGS__), __VA_ARGS__)
+#define SSXTRACE_BIN(str, bufp, buf_size) \
+        ssx_trace_binary(((buf_size < 255)? HASH_ARG_COMBO(str, buf_size): HASH_ARG_COMBO(str, 255)), bufp)
+#else
+#define SSXTRACE(...)
+#define SSXTRACE_BIN(str, bufp, buf_size)
+#endif //SSX_TRACE_SUPPORT
 
 /// A generic doubly-linked list object
 ///
@@ -578,6 +679,18 @@ ssx_initialize(SsxAddress  noncritical_stack,
 SsxTimebase
 ssx_timebase_get(void);
 
+#if APPCFG_USE_EXT_TIMEBASE_FOR_TRACE
+// Retrieve an external timebase
+SsxTimebase
+ssx_ext_timebase_get(void);
+#else
+static inline SsxTimebase
+ssx_ext_timebase_get(void)
+{
+    return ssx_timebase_get();
+}
+#endif /* APPCFG_USE_EXT_TIMEBASE_FOR_TRACE */
+
 void
 ssx_timebase_set(SsxTimebase timebase);
 
@@ -707,8 +820,26 @@ ssx_halt() __attribute__ ((noreturn));
 int 
 ssx_deque_sentinel_create(SsxDeque *deque);
 
+#define SSX_DEQUE_SENTINEL_INIT(dq_addr) \
+{\
+    .next = dq_addr, \
+    .previous = dq_addr \
+}
+
+#define SSX_DEQUE_SENTINEL_STATIC_CREATE(deque) \
+    SsxDeque deque = SSX_DEQUE_SENTINEL_INIT(&deque)
+
 int 
 ssx_deque_element_create(SsxDeque *element);
+
+#define SSX_DEQUE_ELEMENT_INIT() \
+{\
+    .next = 0, \
+    .previous = 0 \
+}
+
+#define SSX_DEQUE_ELEMENT_STATIC_CREATE(deque) \
+    SsxDeque deque = SSX_DEQUE_ELEMENT_INIT()
 
 
 /// Check for an empty SsxDeque
@@ -822,10 +953,29 @@ ssx_deque_delete(SsxDeque *element)
 }
 
 
+//Trace function prototypes
+void ssx_trace_tiny(uint32_t i_parm);
+void ssx_trace_big(uint32_t i_hash_and_count,
+                   uint64_t i_parm1, uint64_t i_parm2);
+void ssx_trace_binary(uint32_t i_hash_and_size, void* bufp);
+void ssx_trace_set_timebase(SsxTimebase timebase);
+void ssx_trace_init(uint32_t timebase_frequency_hz,
+                    SsxTimebase initial_timebase);
+
+
+
 /// Cast a pointer to another type, in a way that won't cause warnings
 
 #define SSX_CAST_POINTER(t, p) ((t)((SsxAddress)(p)))
         
+// Static Assert Macro for Compile time assertions.
+//   - This macro can be used both inside and outside of a function.
+//   - A value of false will cause the ASSERT to produce this error
+//   - This will show up on a compile fail as:
+//      <file>:<line> error: size of array '_static_assert' is negative
+//   - It would be trivial to use the macro to paste a more descriptive
+//     array name for each assert, but we will leave it like this for now.
+#define SSX_STATIC_ASSERT(cond) extern uint8_t _static_assert[(cond) ? 1 : -1]  __attribute__ ((unused))
 
 /// \page ssx_errors SSX API and Kernel Error Handling
 ///

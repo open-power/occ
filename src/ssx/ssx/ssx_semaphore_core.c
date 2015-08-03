@@ -1,7 +1,29 @@
-// $Id: ssx_semaphore_core.c,v 1.2 2014/02/03 01:30:44 daviddu Exp $
-// $Source: /afs/awd/projects/eclipz/KnowledgeBase/.cvsroot/eclipz/chips/p8/working/procedures/ssx/ssx/ssx_semaphore_core.c,v $
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/ssx/ssx/ssx_semaphore_core.c $                            */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 //-----------------------------------------------------------------------------
-// *! (C) Copyright International Business Machines Corp. 2013
+// *! (C) Copyright International Business Machines Corp. 2014
 // *! All Rights Reserved -- Property of IBM
 // *! *** IBM Confidential ***
 //-----------------------------------------------------------------------------
@@ -61,7 +83,7 @@ ssx_semaphore_post(SsxSemaphore *semaphore)
         __ssx_thread_queue_delete(&(semaphore->pending_threads), priority);
         __ssx_thread_queue_insert(&__ssx_run_queue, priority);
 
-        SSX_TRACE_THREAD_SEMAPHORE_POST(priority);
+        SSX_KERN_TRACE("THREAD_SEMAPHORE_POST(%d)", priority);
 
         __ssx_schedule();
 
@@ -183,7 +205,7 @@ ssx_semaphore_pend(SsxSemaphore *semaphore,
         thread->semaphore = semaphore;
         thread->flags |= SSX_THREAD_FLAG_SEMAPHORE_PEND;
 
-        SSX_TRACE_THREAD_SEMAPHORE_PEND(priority);
+        SSX_KERN_TRACE("THREAD_SEMAPHORE_PEND(%d)", priority);
 
         if (timeout != SSX_WAIT_FOREVER) {
             timer = &(thread->timer);
@@ -200,6 +222,7 @@ ssx_semaphore_pend(SsxSemaphore *semaphore,
         if (thread->flags & SSX_THREAD_FLAG_TIMER_PEND) {
             if (thread->flags & SSX_THREAD_FLAG_TIMED_OUT) {
                 rc = -SSX_SEMAPHORE_PEND_TIMED_OUT;
+                __ssx_thread_queue_delete(&(semaphore->pending_threads), thread->priority);
             } else {
                 __ssx_timer_cancel(timer);
             }

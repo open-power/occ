@@ -1,7 +1,29 @@
-// $Id: ppc405_exceptions.S,v 1.1.1.1 2013/12/11 21:03:27 bcbrock Exp $
-// $Source: /afs/awd/projects/eclipz/KnowledgeBase/.cvsroot/eclipz/chips/p8/working/procedures/ssx/ppc405/ppc405_exceptions.S,v $
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/ssx/ppc405/ppc405_exceptions.S $                          */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 //-----------------------------------------------------------------------------
-// *! (C) Copyright International Business Machines Corp. 2013
+// *! (C) Copyright International Business Machines Corp. 2014
 // *! All Rights Reserved -- Property of IBM
 // *! *** IBM Confidential ***
 //-----------------------------------------------------------------------------
@@ -24,7 +46,7 @@
 ///
 /// .vectors_0000 - Empty section for adding image header
 ///
-/// .vectors_0100 - From 0x0100 to 0x0bff.  The beginning of the table through
+/// .vectors_0100 - From 0x0100 to 0x081f.  The beginning of the table through
 ///                 the large space prior to the system call vector.
 /// 
 /// .vectors_0c00 - From 0x0c00 to 0x0eff.  This is a moderately large area
@@ -47,6 +69,9 @@
         .nolist
 #include "ssx.h"
         .list
+
+## declare and initializes global variables that hold external irq config data
+        .occhw_irq_cfg_bitmaps
         
 ### ****************************************************************************
 ### .vectors_0000 - Empty section ( Image header will be placed in this section
@@ -58,6 +83,10 @@
         .global __vectors_0000
 __vectors:
 __vectors_0000:
+
+        // FIXME: This is just a quick hack to get SSX running on simics -- grm
+        .global __ssx_boot
+        b __ssx_boot
 
 ### ****************************************************************************
 ### .vectors_0100
@@ -341,7 +370,7 @@ __ssx_idle_thread:
 __ssx_idle_thread_from_bootloader:      
 
         li      %r3, SSX_THREADS
-        SSX_TRACE_THREAD_SWITCH %r3, %r4
+        //SSX_TRACE_THREAD_SWITCH %r3, %r4
         _lwzsd  %r3, __ssx_thread_machine_context_default
         _oriwa  %r3, %r3, MSR_WE
         mtmsr   %r3
@@ -587,6 +616,11 @@ __fpu_unavailable:
 
         .org    __fpu_unavailable + 0x20
 
+### ****************************************************************************
+### .irq_exit_traces
+### ****************************************************************************
+
+        .section .irq_exit_traces, "ax", @progbits
 
         ## Exit traces are moved here because the code area (0x100 bytes)
         ## reserved for individual interrupts is overflowing when tracing is
@@ -595,11 +629,11 @@ __fpu_unavailable:
         ## where we can use any of the fast registers.
 
 __ssx_trace_critical_irq_exit:  
-        SSX_TRACE_CRITICAL_IRQ_EXIT %r3, %r4
+        //SSX_TRACE_CRITICAL_IRQ_EXIT %r3, %r4
         blr
         
 __ssx_trace_noncritical_irq_exit:       
-        SSX_TRACE_NONCRITICAL_IRQ_EXIT %r3, %r4
+        //SSX_TRACE_NONCRITICAL_IRQ_EXIT %r3, %r4
         blr
         
         ## >>>>>>>>>> Pack .vectors_0100 here. Room for ~900 bytes. <<<<<<<<<<
@@ -673,7 +707,7 @@ __ssx_next_thread_resume:
         _ssx_vol_fast_ctx_pop   SSX_THREAD_CONTEXT, SSX_NONCRITICAL
         
         _lbzsd  %r3, __ssx_next_priority
-        SSX_TRACE_THREAD_SWITCH %r3, %r4
+        //SSX_TRACE_THREAD_SWITCH %r3, %r4
         ori     %r3, %r3, PPC405_THREAD_MODE            
         mtusprg0 %r3
 

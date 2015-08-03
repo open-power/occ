@@ -1,7 +1,29 @@
-// $Id: ppc405_core.c,v 1.1.1.1 2013/12/11 21:03:27 bcbrock Exp $
-// $Source: /afs/awd/projects/eclipz/KnowledgeBase/.cvsroot/eclipz/chips/p8/working/procedures/ssx/ppc405/ppc405_core.c,v $
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/ssx/ppc405/ppc405_core.c $                                */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 //-----------------------------------------------------------------------------
-// *! (C) Copyright International Business Machines Corp. 2013
+// *! (C) Copyright International Business Machines Corp. 2014
 // *! All Rights Reserved -- Property of IBM
 // *! *** IBM Confidential ***
 //-----------------------------------------------------------------------------
@@ -16,6 +38,57 @@
 #define __PPC405_CORE_C__
 
 #include "ssx.h"
+
+// Even though the external timebase is only a 32 bit register, we emulate
+// a 64 bit timebase by keeping the upper 32 bits in SRAM.
+volatile SsxTimebase  ppc405_64bit_ext_timebase = 0;
+
+#if APPCFG_USE_EXT_TIMEBASE_FOR_TRACE
+typedef union
+{
+    struct
+    {
+        uint32_t tbu;
+        uint32_t tbl;
+    };
+    SsxTimebase tb64;
+} SsxExtTimebase;
+
+
+SsxTimebase ssx_ext_timebase_get(void)
+{
+    SsxExtTimebase              snapshot;
+    volatile SsxExtTimebase     *cur_tb = (SsxExtTimebase*)&ppc405_64bit_ext_timebase;
+    uint32_t                    tbr;
+    uint32_t                    high;
+
+    //read our in-memory timebase accumulator.
+    //NOTE: 64 bit reads are not atomic on the ppc405.  This means that the
+    //accumulator can be updated between reading the upper 32 bits and lower
+    //32 bits.  It's ok if only the lower 32 bits changed, but if the upper
+    //32 bits changed, then we will report the wrong time stamp.  Therefore,
+    //we check the upper 32 bits after reading the lower 32 bits to make sure
+    //it hasn't changed.
+    do
+    {
+        snapshot.tbu = cur_tb->tbu;
+        snapshot.tbl = cur_tb->tbl; 
+        high = cur_tb->tbu;
+    }while(snapshot.tbu != high);
+
+    //Now read the external timebase register
+    tbr = in32(OCB_OTBR);
+
+    //Check if we need to increment the upper 32 bits
+    if(tbr < snapshot.tbl)
+    {
+        snapshot.tbu++;
+    }
+    snapshot.tbl = tbr;
+    return snapshot.tb64;
+}
+
+#endif /* APPCFG_USE_EXT_TIMEBASE_FOR_TRACE */
 
 /// Get the 64-bit timebase following the PowerPC protocol
 ///
@@ -161,6 +234,10 @@ __ssx_schedule_hardware_timeout(SsxTimebase timeout)
         }
 
         mtspr(SPRN_PIT, pit);
+
+#if APPCFG_USE_EXT_TIMEBASE_FOR_TRACE
+        ppc405_64bit_ext_timebase = ssx_ext_timebase_get();
+#endif /* APPCFG_USE_EXT_TIMEBASE_FOR_TRACE */
     }
 }
 

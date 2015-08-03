@@ -1,7 +1,29 @@
-// $Id: ssx_thread_core.c,v 1.2 2014/02/03 01:30:44 daviddu Exp $
-// $Source: /afs/awd/projects/eclipz/KnowledgeBase/.cvsroot/eclipz/chips/p8/working/procedures/ssx/ssx/ssx_thread_core.c,v $
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/ssx/ssx/ssx_thread_core.c $                               */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 //-----------------------------------------------------------------------------
-// *! (C) Copyright International Business Machines Corp. 2013
+// *! (C) Copyright International Business Machines Corp. 2014
 // *! All Rights Reserved -- Property of IBM
 // *! *** IBM Confidential ***
 //-----------------------------------------------------------------------------
@@ -98,11 +120,11 @@ __ssx_thread_map(SsxThread* thread)
 
     if (SSX_KERNEL_TRACE_ENABLE) {
         if (__ssx_thread_is_runnable(thread)) {
-            SSX_TRACE_THREAD_MAPPED_RUNNABLE(priority);
+            SSX_KERN_TRACE("THREAD_MAPPED_RUNNABLE(%d)", priority);
         } else if (thread->flags & SSX_THREAD_FLAG_SEMAPHORE_PEND) {
-            SSX_TRACE_THREAD_MAPPED_SEMAPHORE_PEND(priority);
+            SSX_KERN_TRACE("THREAD_MAPPED_SEMAPHORE_PEND(%d)", priority);
         } else {
-            SSX_TRACE_THREAD_MAPPED_SLEEPING(priority);
+            SSX_KERN_TRACE("THREAD_MAPPED_SLEEPING(%d)", priority);
         }
     }
 }            
@@ -216,9 +238,9 @@ __ssx_thread_delete(SsxThread *thread, SsxThreadState final_state)
 
         if (SSX_KERNEL_TRACE_ENABLE) {
             if (final_state == SSX_THREAD_STATE_DELETED) {
-                SSX_TRACE_THREAD_DELETED(thread->priority);
+                SSX_KERN_TRACE("THREAD_DELETED(%d)", thread->priority);
             } else {
-                SSX_TRACE_THREAD_COMPLETED(thread->priority);
+                SSX_KERN_TRACE("THREAD_COMPLETED(%d)", thread->priority);
             }
         }                
     
@@ -471,7 +493,7 @@ ssx_thread_suspend(SsxThread *thread)
 
     if (__ssx_thread_is_mapped(thread)) {
 
-        SSX_TRACE_THREAD_SUSPENDED(thread->priority);
+        SSX_KERN_TRACE("THREAD_SUSPENDED(%d)", thread->priority);
         __ssx_thread_unmap(thread);
         __ssx_schedule();
     }
@@ -606,7 +628,7 @@ ssx_sleep_absolute(SsxTimebase time)
 
     current->flags |= SSX_THREAD_FLAG_TIMER_PEND;
 
-    SSX_TRACE_THREAD_SLEEP(current->priority);
+    SSX_KERN_TRACE("THREAD_SLEEP(%d)", current->priority);
 
     __ssx_thread_queue_delete(&__ssx_run_queue, current->priority);
     __ssx_schedule();

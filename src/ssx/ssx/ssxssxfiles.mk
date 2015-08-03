@@ -1,11 +1,33 @@
-# $Id: ssxssxfiles.mk,v 1.2 2014/06/26 13:02:00 cmolsen Exp $
-# $Source: /afs/awd/projects/eclipz/KnowledgeBase/.cvsroot/eclipz/chips/p8/working/procedures/ssx/ssx/ssxssxfiles.mk,v $
-#  @file ssxpgpfiles.mk
+# IBM_PROLOG_BEGIN_TAG
+# This is an automatically generated prolog.
 #
-#  @brief mk for including pgp object files
+# $Source: src/ssx/ssx/ssxssxfiles.mk $
+#
+# OpenPOWER OnChipController Project
+#
+# Contributors Listed Below - COPYRIGHT 2014,2015
+# [+] International Business Machines Corp.
+#
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# permissions and limitations under the License.
+#
+# IBM_PROLOG_END_TAG
+#  @file ssxssxfiles.mk
+#
+#  @brief mk for including ssx object files
 #
 #  @page ChangeLogs Change Logs
-#  @section ssxpgpfiles.mk
+#  @section ssxssxfiles.mk
 #  @verbatim
 #
 #
@@ -24,7 +46,7 @@
 ##########################################################################
 # Object Files 
 ##########################################################################
-SSX-C-SOURCES = ssx_core.c ssx_init.c ssx_stack_init.c
+SSX-C-SOURCES = ssx_core.c ssx_init.c ssx_stack_init.c ssx_debug_ptrs.c
 
 SSX-TIMER-C-SOURCES += ssx_timer_core.c ssx_timer_init.c
 

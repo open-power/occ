@@ -1,10 +1,32 @@
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/ssx/ppc405/ppc405.h $                                     */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 #ifndef __PPC405_H__
 #define __PPC405_H__
 
-// $Id: ppc405.h,v 1.3 2014/02/03 01:30:42 daviddu Exp $
-// $Source: /afs/awd/projects/eclipz/KnowledgeBase/.cvsroot/eclipz/chips/p8/working/procedures/ssx/ppc405/ppc405.h,v $
 //-----------------------------------------------------------------------------
-// *! (C) Copyright International Business Machines Corp. 2013
+// *! (C) Copyright International Business Machines Corp. 2014
 // *! All Rights Reserved -- Property of IBM
 // *! *** IBM Confidential ***
 //-----------------------------------------------------------------------------
@@ -19,7 +41,7 @@
 // documentation on the D-cache tag sizes doesn't make any sense to me - it
 // claims the tag size is constant regardless of the size of the cache.
 // However the Xilinx documentation for their 405 core (which has the same
-// 16KB cache as PgP) is consistent with the way the DCACHE_TAG_MASK is
+// 16KB cache as OCCHW) is consistent with the way the DCACHE_TAG_MASK is
 // defined here.
 
 #define CACHE_LINE_SIZE     32
@@ -37,7 +59,7 @@
 #define DCACHE_TAG_MASK \
     ((0xffffffff << (LOG_DCACHE_SIZE - LOG_DCACHE_WAYS)) & 0xffffffff)
 
-#ifdef CHIP_PGP
+#ifdef HWMACRO_OCC
 
 #define ICACHE_SIZE  (16 * 1024)
 #define DCACHE_SIZE  (16 * 1024)
@@ -68,8 +90,8 @@
 #endif
 
 
-#ifdef CHIP_PGP
-#include "pgp.h"
+#ifdef HWMACRO_OCC
+#include "occhw.h"
 #endif
 
 #include "ppc32.h"
