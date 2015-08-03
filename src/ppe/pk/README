@@ -1,0 +1,8 @@
+Subdirectories are organized as follows:
+
+kernel: Architecture-independent kernel code
+ppe42:  Kernel code that is common for all ppe42 instances
+std:    External interrupt support for standard ppe42 instances (SBE, CME, etc.)
+gpe:    External interrupt support for ppe42 instances residing in the OCC complex
+ppe:    Support for ppe42 instances that do not require or have external interrupts
+trace:  Kernel trace support
