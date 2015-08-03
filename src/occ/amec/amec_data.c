@@ -107,7 +107,7 @@ errlHndl_t AMEC_data_write_fcurr(const OCC_MODE i_mode)
     else
     {
         // Enable WOF algorithm
-        g_amec->wof.enable_parm = 2;
+        g_amec->wof.enable_parm = 3;
 
         // Initialize WOF frequency request to be turbo.
         // Note: Ultraturbo frequency is stored in OCC_MODE_TURBO

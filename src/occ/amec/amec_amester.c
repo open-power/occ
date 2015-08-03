@@ -1024,6 +1024,8 @@ uint8_t amester_entry_point( const IPMIMsg_t * i_msg,
 
             default:
                 l_rc = COMPCODE_CMD_UNKNOWN;
+                TRAC_ERR("amester_entry_point: Unknown command was sent! Cmd[0x%02X]"
+                         i_msg->u8Cmd);
                 break;
         }
     } while (0);

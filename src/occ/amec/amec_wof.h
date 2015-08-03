@@ -43,11 +43,6 @@
 extern sensor_t g_amec_wof_ceff_ratio_sensor;
 extern sensor_t g_amec_wof_core_wake_sensor;
 extern sensor_t g_amec_wof_vdd_sense_sensor;
-extern uint8_t g_amec_wof_make_check;
-extern uint8_t g_amec_wof_check;
-extern GlobalPstateTable g_amec_wof_pstate_table_0;
-extern GlobalPstateTable g_amec_wof_pstate_table_1;
-extern uint8_t g_amec_wof_current_pstate_table;
 extern uint8_t g_amec_wof_pstate_table_ready;
 extern uint16_t G_amec_wof_thread_counter;
 extern SsxSemaphore G_amecWOFThreadWakeupSem;
@@ -160,7 +155,10 @@ typedef struct amec_wof
     uint64_t            wake_up_mask;
     // Copy of previous bit mask for debugging
     uint64_t            wake_up_mask_save;
-
+    // The current number of cores Pstate table allows
+    uint8_t             pstatetable_cores_current;
+    //The next pstate table max number of cores
+    uint8_t             pstatetable_cores_next;
 
 } amec_wof_t;
 
@@ -176,6 +174,7 @@ void amec_wof_helper(void);
 void amec_wof_init(void) INIT_SECTION;
 void amec_update_wof_sensors(void);
 uint8_t amec_wof_set_algorithm(const uint8_t i_algorithm);
+void amec_wof_update_pstate_table(void);
 void amec_wof_alg_v2(void);
 void amec_wof_alg_v3(void);
 void amec_wof_common_steps(void);
