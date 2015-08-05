@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -82,7 +82,7 @@
 #define NUM_ENTRIES_PBAX_QUEUE0 32
 #define NUM_ENTRIES_PBAX_QUEUE1 16
 
-// Wait for defines number of retries for task 
+// Wait for defines number of retries for task
 #define MAX_WAIT_FOR_SLAVES 400
 #define MAX_WAIT_FOR_MASTER 400
 
@@ -99,12 +99,12 @@
 #define DCOM_1S_GAP 4000
 
 // POB Id structure
-typedef struct 
-{ 
+typedef struct
+{
     uint8_t module_id  :2;
     uint8_t node_id    :3;
     uint8_t chip_id    :3;
-} pob_id_t; 
+} pob_id_t;
 
 // TODO may change in the future
 // For now pbax structure is same as pob id structure
@@ -152,7 +152,7 @@ typedef struct
     uint8_t  pad;                                                   // [127] - 1 bytes
     uint16_t soft_fmax;                                             // [128] - 2 bytes
 
-    // Reserved Bytes 
+    // Reserved Bytes
     union
     {
       struct
@@ -176,7 +176,7 @@ typedef struct
 
 // SLAVE OUTBOX structure
 typedef struct __attribute__ ((packed))
-{ 
+{
     // Packet Type & Sequence Information
     uint8_t  seq;                                                //   [0]
     uint8_t  version;                                            //   [1]
@@ -212,7 +212,7 @@ typedef struct __attribute__ ((packed))
     // Factual (i.e., actual frequency requested by this OCC slave)
     uint16_t factual;                                            // [228] - 2 bytes
 
-    // Reserved Bytes 
+    // Reserved Bytes
     union
     {
         uint8_t  reserved[SLV_OUTBOX_RSV_SIZE];                  // [230] - 758 bytes
@@ -235,7 +235,7 @@ typedef struct __attribute__ ((packed))
 //   This must be aligned to 8 bytes since that is the unit
 //   that the PBAX unit uses to send
 typedef struct
-{ 
+{
     union
     {
         struct
@@ -323,7 +323,7 @@ typedef struct
         // How many Master Doorbell Broadcasts have been sent
         uint32_t    doorbellNumSent;
         // What is our "send" phase in relation to our SsxTimebase
-        uint16_t    doorbellPhase;  
+        uint16_t    doorbellPhase;
         // The Most Recent Master Doorbell Broadcast sequence number
         uint8_t     doorbellSeq;
         // Masks of the current status of the slaves
@@ -378,13 +378,13 @@ extern dcom_timing_t G_dcomTime;
 
 // Used to tell AMEC code that the slave inbox has been received.
 // This could just be a flag, doesn't have to be semaphore, since
-// the RTL Loop task can't block on Semaphore, it would just have 
+// the RTL Loop task can't block on Semaphore, it would just have
 // to loop until it got a good return code.
 extern bool G_slv_inbox_received;
 
 // Used to tell AMEC code that the slave outbox has been received.
 // This could just be a flag, doesn't have to be semaphore, since
-// the RTL Loop task can't block on Semaphore, it would just have 
+// the RTL Loop task can't block on Semaphore, it would just have
 // to loop until it got a good return code.
 extern uint8_t G_slv_outbox_complete;
 
@@ -426,7 +426,7 @@ extern SsxSemaphore G_dcomThreadWakeupSem;
 
 // Used to house the actuation & power measurement data from the master
 // before it is DMA'd to Main Memory from SRAM.
-extern dcom_slv_inbox_t  G_dcom_slv_inbox_tx[MAX_OCCS];  
+extern dcom_slv_inbox_t  G_dcom_slv_inbox_tx[MAX_OCCS];
 
 // Used to house the Slave Outboxes with the mini-sensor data in in the master
 // after it is DMA'd from main memory.
@@ -470,7 +470,7 @@ uint32_t dcom_calc_slv_inbox_addr(void);
 // Get address of slave outbox in main memory
 uint32_t dcom_calc_slv_outbox_addr( const dcom_slv_outbox_doorbell_t * i_doorbell, uint8_t * o_occ_id);
 
-// Determine if we are master or slave 
+// Determine if we are master or slave
 void dcom_initialize_roles(void) INIT_SECTION;
 
 // Copy slave inbox from main memory to sram

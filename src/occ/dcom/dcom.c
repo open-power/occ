@@ -232,8 +232,12 @@ void dcom_initialize_roles(void)
 
             // If this is a FSP-less system, then use the node ID as the
             // chip ID. This is because the HW assigns the OCCs as being in
-            // different nodes with the same chip IDs.
-            if (G_occ_interrupt_type != FSP_SUPPORTED_OCC)
+            // different nodes with the same chip IDs.  This is known to be
+            // true for the Firestone chipset.
+            // Naples chip (Garrison) use chipID.
+            if ((G_occ_interrupt_type != FSP_SUPPORTED_OCC) &&
+                (CFAM_CHIP_TYPE_NAPLES != cfam_chip_type()) )
+
             {
                 G_pob_id.node_id = 0;
                 G_pob_id.chip_id = l_tp_gp0_read.fields.tc_node_id_dc;

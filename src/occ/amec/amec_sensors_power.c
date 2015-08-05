@@ -173,7 +173,8 @@ uint32_t amec_value_from_apss_adc(uint8_t i_chan)
 //
 // Name: amec_update_channel_sensor
 //
-// Description: Used to calculate power based on raw data obtained from APSS
+// Description: Updates the APSS channel sensors only.  Used to calculate power based
+//              on raw data obtained from APSS
 //
 // End Function Specification
 void amec_update_channel_sensor(const uint8_t i_channel)
@@ -218,6 +219,7 @@ void amec_update_apss_sensors(void)
         uint8_t l_proc  = G_pob_id.module_id;
         uint32_t temp32 = 0;
         uint8_t  l_idx   = 0;
+        uint8_t  l_occIdx = 0;
         uint32_t l_bulk_current_sum = 0;
 
         // ----------------------------------------------------
@@ -238,13 +240,22 @@ void amec_update_apss_sensors(void)
         //Only for FSP-LESS systems do we update channel sensors.
         if (FSP_SUPPORTED_OCC != G_occ_interrupt_type)
         {
-            amec_update_channel_sensor(G_sysConfigData.apss_adc_map.memory[l_proc][0]);
-            for (l_idx = 1; l_idx < MAX_PROC_CENT_CH; l_idx++)
+            //Calculate power for all processors if we are the Master OCC and
+            // a channel is associated with them, otherwise if not Master then calculate power
+            // only for the given proc.
+            for (l_occIdx = 0; l_occIdx < MAX_NUM_CHIP_MODULES; l_occIdx++)
             {
-                amec_update_channel_sensor(G_sysConfigData.apss_adc_map.memory[l_proc][l_idx]);
+                if ((l_occIdx == l_proc) || (OCC_MASTER == G_occ_role) )
+                {
+                    amec_update_channel_sensor(G_sysConfigData.apss_adc_map.memory[l_occIdx][0]);
+                    for (l_idx = 1; l_idx < MAX_PROC_CENT_CH; l_idx++)
+                    {
+                        amec_update_channel_sensor(G_sysConfigData.apss_adc_map.memory[l_occIdx][l_idx]);
+                    }
+                    amec_update_channel_sensor(G_sysConfigData.apss_adc_map.vdd[l_occIdx]);
+                    amec_update_channel_sensor(G_sysConfigData.apss_adc_map.vcs_vio_vpcie[l_occIdx]);
+                }
             }
-            amec_update_channel_sensor(G_sysConfigData.apss_adc_map.vdd[l_proc]);
-            amec_update_channel_sensor(G_sysConfigData.apss_adc_map.vcs_vio_vpcie[l_proc]);
 
             if (OCC_MASTER == G_occ_role)
             {

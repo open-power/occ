@@ -1,3 +1,27 @@
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/ssx/pgp/pgp_id.h $                                        */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 #ifndef __PGP_ID_H__
 #define __PGP_ID_H__
 
@@ -32,7 +56,7 @@
 /// For example, to identify a chip as Murano DD1.0, one could use either
 /// method shown below:
 ///
-/// \code 
+/// \code
 ///
 /// if (cfam_id() == CFAM_CHIP_ID_MURANO_10) { ... }
 ///
@@ -66,19 +90,19 @@ uint8_t node_id(void);
 uint8_t chip_id(void);
 
 /// Get the CFAM Chip Id
-/// 
+///
 /// \returns A 32-bit value to be compared against the enumeration of known
 /// CFAM ids.  See \ref pgp_cfam_chip_ids.
 uint32_t cfam_id(void);
 
 /// Get the CFAM Chip Type
-/// 
+///
 /// \returns An 8-bit value to be compared against the enumeration of known
 /// CFAM chip types.  See \ref pgp_cfam_chip_types.
 uint8_t cfam_chip_type(void);
 
 /// Get the CFAM Chip EC Level
-/// 
+///
 /// \returns An 8-bit value; The high-order nibble is the major EC level and
 /// the low-order nibble is the minor EC level. Fore example a value of 0x21
 /// indicates DD 2.1.
@@ -110,6 +134,7 @@ core_configuration(void);
 #define CFAM_CHIP_TYPE_CENTAUR 0xe9
 #define CFAM_CHIP_TYPE_VENICE  0xea
 #define CFAM_CHIP_TYPE_MURANO  0xef
+#define CFAM_CHIP_TYPE_NAPLES  0xd3
 
 /// @}
 
@@ -117,9 +142,9 @@ core_configuration(void);
 /// \defgroup pgp_cfam_chip_ids PGP CFAM Chip Ids (Including Centaur)
 ///
 /// The CFAM Chip ID is a 32-bit value that uniquely identfies a chip and its
-/// EC level. 
+/// EC level.
 ///
-/// The reference: 
+/// The reference:
 ///
 /// - https://eclipz.pok.ibm.com/sys/ras/docs/cfam_ids.txt
 ///

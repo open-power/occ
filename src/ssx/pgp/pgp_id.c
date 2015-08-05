@@ -1,3 +1,27 @@
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/ssx/pgp/pgp_id.c $                                        */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 // $Id: pgp_id.c,v 1.2 2014/02/03 01:30:35 daviddu Exp $
 // $Source: /afs/awd/projects/eclipz/KnowledgeBase/.cvsroot/eclipz/chips/p8/working/procedures/ssx/pgp/pgp_id.c,v $
 //-----------------------------------------------------------------------------
@@ -58,7 +82,7 @@ cfam_id(void)
     return G_cfam_id;
 }
 
-uint8_t 
+uint8_t
 cfam_chip_type(void)
 {
     return G_cfam_chip_type;
@@ -79,7 +103,7 @@ cfam_ec_level(void)
 
 // Note: Ex-chiplets start at chiplet 16 and are left-justified in the
 // ChipConfig.
-    
+
 
 ChipConfig G_chip_configuration SECTION_ATTRIBUTE(".noncacheable") = 0;
 uint64_t G_core_configuration SECTION_ATTRIBUTE(".noncacheable") = 0;
@@ -98,24 +122,24 @@ _pgp_get_chip_configuration(void)
         pmc_core_deconfiguration_reg_t pcdr;
 
         pcdr.value = in32(PMC_CORE_DECONFIGURATION_REG);
-        G_chip_configuration = 
-            ~((uint64_t)(pcdr.fields.core_chiplet_deconf_vector) << 48); 
+        G_chip_configuration =
+            ~((uint64_t)(pcdr.fields.core_chiplet_deconf_vector) << 48);
 
     } else {
 
         uint64_t select, configuration;
         int rc;
-    
+
         rc = getscom(0x000f0008, &select); /* TP CHIPLET SELECT */
         if (rc) SSX_PANIC(PGP_ID_SCOM_ERROR_SELECT);
         if (select != 0) SSX_PANIC(PGP_ID_SELECT_ERROR);
-    
-        rc = getscom(MC_ADDRESS(0x000f0012, 
-                                MC_GROUP_EX_CORE, 
-                                PCB_MULTICAST_SELECT), 
+
+        rc = getscom(MC_ADDRESS(0x000f0012,
+                                MC_GROUP_EX_CORE,
+                                PCB_MULTICAST_SELECT),
                      &configuration);
         if (rc) SSX_PANIC(PGP_ID_SCOM_ERROR_CONFIG);
-    
+
         G_chip_configuration = (configuration << 16) & 0xffff000000000000ull;
     }
 
@@ -128,8 +152,8 @@ uint32_t core_configuration(void)
     return G_core_configuration >> 32;
 }
 
-    
 
-    
 
-    
+
+
+

@@ -1039,21 +1039,17 @@ void cmdh_dbug_get_apss_data (const cmdh_fsp_cmd_t * i_cmd_ptr,
         //Get the data for each channel individually and write it to
         for (i = 0; i < MAX_APSS_ADC_CHANNELS; i++)
         {
+            l_resp_ptr->ApssCh[i].gain = G_sysConfigData.apss_cal[i].gain;
+            l_resp_ptr->ApssCh[i].offset = G_sysConfigData.apss_cal[i].offset;
+            l_resp_ptr->ApssCh[i].raw = G_dcom_slv_inbox_rx.adc[i];
+            l_resp_ptr->ApssCh[i].calculated = AMECSENSOR_PTR(PWRAPSSCH0 + i)->sample;
+            l_resp_ptr->ApssCh[i].func = G_apss_ch_to_function[i];
+            l_resp_ptr->ApssCh[i].ipmi_sid = AMECSENSOR_PTR(PWRAPSSCH0 + i)->ipmi_sid;
 
-            if(AMECSENSOR_PTR(PWRAPSSCH0 + i)->ipmi_sid != 0)
-            {
-                l_resp_ptr->ApssCh[i].gain = G_sysConfigData.apss_cal[i].gain;
-                l_resp_ptr->ApssCh[i].offset = G_sysConfigData.apss_cal[i].offset;
-                l_resp_ptr->ApssCh[i].raw = G_dcom_slv_inbox_rx.adc[i];
-                l_resp_ptr->ApssCh[i].calculated = AMECSENSOR_PTR(PWRAPSSCH0 + i)->sample;
-                l_resp_ptr->ApssCh[i].func = G_apss_ch_to_function[i];
-                l_resp_ptr->ApssCh[i].ipmi_sid = AMECSENSOR_PTR(PWRAPSSCH0 + i)->ipmi_sid;
-
-                TRAC_IMP("DBG__APSS Ch[%02d]:  Raw[0x%04x], Offset[0x%08x], Gain[0x%08x],",
-                         i, l_resp_ptr->ApssCh[i].raw, l_resp_ptr->ApssCh[i].offset, l_resp_ptr->ApssCh[i].gain);
-                TRAC_IMP("                     Pwr[0x%04x], FuncID[0x%02x], IPMI_sensorID[0x%X]",
-                         l_resp_ptr->ApssCh[i].calculated, l_resp_ptr->ApssCh[i].func, l_resp_ptr->ApssCh[i].ipmi_sid);
-            }
+            TRAC_IMP("DBG__APSS Ch[%02d]:  Raw[0x%04x], Offset[0x%08x], Gain[0x%08x],",
+                     i, l_resp_ptr->ApssCh[i].raw, l_resp_ptr->ApssCh[i].offset, l_resp_ptr->ApssCh[i].gain);
+            TRAC_IMP("                     Pwr[0x%04x], FuncID[0x%02x], IPMI_sensorID[0x%X]",
+                     l_resp_ptr->ApssCh[i].calculated, l_resp_ptr->ApssCh[i].func, l_resp_ptr->ApssCh[i].ipmi_sid);
         }
 
     }while(0);
