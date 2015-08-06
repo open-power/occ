@@ -1,11 +1,11 @@
 # IBM_PROLOG_BEGIN_TAG
 # This is an automatically generated prolog.
 #
-# $Source: src/occ_405/gpefiles.mk $
+# $Source: src/occ_405/topfiles.mk $
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2011,2015
+# Contributors Listed Below - COPYRIGHT 2015
 # [+] International Business Machines Corp.
 #
 #
@@ -22,15 +22,25 @@
 # permissions and limitations under the License.
 #
 # IBM_PROLOG_END_TAG
+TOP-C-SOURCES = aplt/appletManager.c \
+                cmdh/cmdh_fsp.c \
+                cmdh/cmdh_fsp_cmds_datacnfg.c \
+                errl/errl.c \
+                homer.c \
+                main.c \
+                occ_sys_config.c \
+                occbuildname.c \
+                pss/apss.c \
+                reset.c \
+                rtls/rtls.c \
+                rtls/rtls_tables.c \
+                scom.c \
+                state.c \
+                thread/threadSch.c \
+                timer/timer.c \
+                trac/trac_interface.c \
 
-# Using .pS for gnu assembler.
+TOP-S-SOURCES = 
 
-occ_GPEFILES = gpe/apss_init.pS \
-               gpe/apss_composite.pS \
-               gpe/apss_meas_read_start.pS \
-               gpe/apss_meas_read_cont.pS \
-               gpe/pore_nop.pS \
-               gpe/apss_meas_read_complete.pS
 
-all_gpefiles = ${occ_GPEFILES:.pS=.o}
-
+TOP_OBJECTS = $(TOP-C-SOURCES:.c=.o) $(TOP-S-SOURCES:.S=.o)

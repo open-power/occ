@@ -1,11 +1,11 @@
 # IBM_PROLOG_BEGIN_TAG
 # This is an automatically generated prolog.
 #
-# $Source: src/occ/Makefile $
+# $Source: src/occ_405/Makefile $
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2011,2015
+# Contributors Listed Below - COPYRIGHT 2015
 # [+] International Business Machines Corp.
 #
 #
@@ -22,70 +22,96 @@
 # permissions and limitations under the License.
 #
 # IBM_PROLOG_END_TAG
+# This Makefile compiles all of the SSX code required for the P9 port
+# of SSX.  See the "img_defs.mk" file in this directory.
 
-include cfiles.mk
-include gpefiles.mk
+#Pull in the definitions that affect all makefiles for this image
+include img_defs.mk
 
-APP = occ
-APP_INCLUDES += -I../ssx
-APP_INCLUDES += -I../lib 
-APP_INCLUDES += -I./incl 
-APP_INCLUDES += -I./trac 
-APP_INCLUDES += -I./async
-APP_INCLUDES += -I./errl
-APP_INCLUDES += -I./gpe 
-APP_INCLUDES += -I./thread
-APP_INCLUDES += -I./aplt
-APP_INCLUDES += -I./aplt/incl
-APP_INCLUDES += -I./rtls
-APP_INCLUDES += -I./dcom
-APP_INCLUDES += -I./sensor
-APP_INCLUDES += -I./pss
-APP_INCLUDES += -I./proc
-APP_INCLUDES += -I./cent
-APP_INCLUDES += -I./cmdh
-APP_INCLUDES += -I./amec
-APP_INCLUDES += -I. 
-APP_INCLUDES += -I../occ 
-APP_INCLUDES += -I../../occ 
-APP_INCLUDES += -I./timer
-APP_INCLUDES += -I./firdata
+#Pull in object file names for the top directory
+include topfiles.mk
 
-export APP_INCLUDES
+SSX_MAKE_DIR := $(SSX_SRCDIR)/occhw
+OBJS := $(addprefix $(OBJDIR)/, $(TOP_OBJECTS))
+OBJDIRS = $(dir ${OBJS})
+SSXLIB := $(OBJDIR)/ssx/libssx.a
+COMMONLIB := $(OBJDIR)/common/libcommon.a
+OCCLIB := $(OBJDIR)/occlib/libocc.a
+PPC405LIB := $(OBJDIR)/ppc405lib/libppc405.a
+LINK_OBJS = $(OBJS) $(SSXLIB) $(COMMONLIB) $(OCCLIB) $(PPC405LIB)
+LINK_SCRIPT = $(addprefix $(OBJDIR)/, linkscript)
+LDFLAGS += --oformat=elf32-powerpc -melf32ppc
+LIB_DIRS =  -L$(OBJDIR)/ssx \
+            -L$(OBJDIR)/ssx/ppc405 \
+            -L$(OBJDIR)/ssx/ppc32 \
+            -L$(OBJDIR)/commonlib \
+            -L$(OBJDIR)/occlib \
+            -L$(OBJDIR)/ppc405lib \
+            -L$(OBJDIR) \
+            -L$(OBJDIR)/aplt \
+            -L$(OBJDIR)/cmdh \
+            -L$(OBJDIR)/dcom \
+            -L$(OBJDIR)/errl \
+            -L$(OBJDIR)/pss \
+            -L$(OBJDIR)/rtls \
+            -L$(OBJDIR)/thread \
+            -L$(OBJDIR)/timer \
+            -L$(OBJDIR)/trac \
 
-D += -DOCC_FIRMWARE=1 \
-     -DSIMICS_MAGIC_PANIC=1 \
-     -DOCC=1 \
-     -DNONCACHEABLE_SUPPORT=1 \
-     -DUSE_SSX_APP_CFG_H=1     
+#default target is to make a binary application image
+#This removes all unecessary headers from the ELF executable
+$(OBJDIR)/$(IMAGE_NAME).bin $(OBJDIR)/$(IMAGE_NAME).dis: $(OBJDIR)/$(IMAGE_NAME).out
+	$(OBJCOPY) -O binary  $< $(OBJDIR)/$(IMAGE_NAME).bin
+	$(OBJDUMP) -S $< > $(OBJDIR)/$(IMAGE_NAME).dis
 
-# TODO: Needs section comment on default values for compile defs and info on what defs do
-#D = -DVERIFICATION=1 \
-    -DSSX_STACK_CHECK=0 \
-    -DINITIALIZE_PMC=0 \
-    -DINITIALIZE_SIMICS_IO=0 \
-    -DINITIALIZE_RTX_IO=1 \
-    -DINITIALIZE_PBA=1 \
-    -DSIMICS_MAGIC_PANIC=1 \
-    -DSSX_KERNEL_TRACE_ENABLE=1
+#create a linked ELF executable
+$(OBJDIR)/$(IMAGE_NAME).out: $(LINK_OBJS) $(LINK_SCRIPT)
+	$(LD) -e __ssx_boot -T$(LINK_SCRIPT) $(LDFLAGS) -Map $(OBJDIR)/$(IMAGE_NAME).map -Bstatic -o $(OBJDIR)/$(IMAGE_NAME).out $(LIB_DIRS) -lssx -locc -lppc405 -lcommon
 
-# TODO: Aren't trace strings hashed out of the image already?
-# If this makefile is called as "make NO_TRAC_STRINGS=1" then trace strings 
-# won't be built into the image.  This will be used for metrics regarded to the 
-# realistic OCC Code Size. Note that "make clean" must be run before this define
-# will be picked up by the compiler, otherwise previously compiled objects will 
-# be used.  You can also see the space used by strings by running: 
-# strings occ.bin | \grep "ERR\|INF\|IMP" | sed 's/^...: %s: //g' | wc -m
-ifdef NO_TRAC_STRINGS
-D += -DNO_TRAC_STRINGS=1
+#pass the link command file through the C preprocessor to evaluate macros and remove comments
+$(LINK_SCRIPT): linkocc.cmd
+	$(CPP) -E -x c -P $(DEFS) linkocc.cmd -o $(LINK_SCRIPT)
+
+#Create an obj directory if needed
+$(LINK_OBJS) $(OBJS) $(OBJS:.o=.d): | $(OBJDIRS)
+
+$(OBJDIRS):
+	mkdir -p $(OBJDIRS)
+	
+
+#Build the SSX kernel library
+$(SSXLIB):
+	$(MAKE) -I $(IMAGE_SRCDIR) -C $(SSX_MAKE_DIR)
+
+#Build the code that is common for all processors (PPE's and 405)
+$(COMMONLIB):
+	$(MAKE) -I $(IMAGE_SRCDIR) -C $(COMMONLIB_SRCDIR)
+
+#Build the code that is common for all OCC processors (GPEs and 405)
+$(OCCLIB):
+	$(MAKE) -I $(IMAGE_SRCDIR) -C $(OCCLIB_SRCDIR)
+
+#Build the library code that only works on the ppc405
+$(PPC405LIB):
+	$(MAKE) -I $(IMAGE_SRCDIR) -C $(PPC405LIB_SRCDIR)
+
+# collect all of the trace hash files for this image into a single trexStringFile
+.PHONY : tracehash
+tracehash:
+	mkdir -p $(OBJDIR)
+	$(THASH) -c -d $(OBJDIR) -s $(OBJDIR)/trexStringFile
+
+# load and run the 405 image in simics
+run: $(OBJDIR)/$(IMAGE_NAME).out
+	$(SIMICS_WS)/simics \
+		-e '$$occ_405_binary_to_load=$(OBJDIR)/$(IMAGE_NAME).out' modelsetup.simics
+
+#clean out all generated files
+.PHONY : clean
+clean:
+	rm -fr $(OBJDIR)
+
+#Add dependencies to header files
+ifneq ($(MAKECMDGOALS),clean)
+include $(OBJS:.o=.d) 
 endif
-
-SOURCES = ${all_cfiles} ${all_gpefiles}
-MODE = validation
-PGP_ASYNC_SUPPORT = 1
-
-include ./app.mk
-
-pgas: 
-	 $(CC) $(CFLAGS) -c -Wa,-al -Wa,--listing-cont-lines='10' ${all_gpefiles}
-

@@ -22,71 +22,75 @@
 # permissions and limitations under the License.
 #
 # IBM_PROLOG_END_TAG
-
-ifndef ROOTPATH
-ROOTPATH = $(shell pwd)
-export OCCROOT = $(ROOTPATH)
+ifndef BASE_OBJDIR
+BASE_OBJDIR = $(abspath ../obj)
 endif
 
-#*******************************************************************************
-# mk variable Declaration
-#*******************************************************************************
-SUBDIRS = tracepp occBootLoader occ_405 occApplet
-COMBINE_IMAGE_SUBDIRS = occBootLoader occ_405 occApplet
-CLEAN_SUBDIRS = occBootLoader occ_405 occApplet ssx/pgp lib
-CLEANCMD = $(MAKE) clean -C $(dir)
-ALLCMD = $(MAKE) -C $(dir)
-COMBINEIMAGE = $(MAKE) combineImage -C $(dir)
-IMAGEFILE = image.bin
+ifndef BASE_SRCDIR
+BASE_SRCDIR = $(abspath ./)
+endif
 
-export TRACEPP = $(ROOTPATH)/tracepp/tracepp
-TRACEHASH = $(ROOTPATH)/tracepp/tracehash.pl
+OBJDIR = $(BASE_OBJDIR)$(SUB_OBJDIR)
+SRCDIR = $(BASE_SRCDIR)$(SUB_SRCDIR)
 
-#*******************************************************************************
-# Compilation 
-#*******************************************************************************
-all:
-	$(foreach dir,$(SUBDIRS),$(ALLCMD) &&) true
+ifndef PPETRACEPP_DIR
+export PPETRACEPP_DIR = $(abspath ppe/tools/ppetracepp)
+endif
 
-#*******************************************************************************
-# Combine Objects/Executables into OCC Image
-#*******************************************************************************
-.PHONY : combineImage
-combineImage:
-	 rm -rf $(IMAGEFILE)
-	 $(foreach dir,$(COMBINE_IMAGE_SUBDIRS),$(COMBINEIMAGE) &&) true
+THASH	= $(PPETRACEPP_DIR)/tracehash.pl
 
-#*******************************************************************************
-# Create lid or ruhx out of OCC Image
-#*******************************************************************************
-.PHONY : 81e004%.ruhx
-81e004%.ruhx:
-	occgenlid.pl -i ${IMAGEFILE} -l $(basename $@)
+OCC_405_IMAGE_NAME = occ_405
+OCC_GPE0_IMAGE_NAME = occ_gpe0
+OCC_GPE1_IMAGE_NAME = occ_gpe1
+OCC_GPE2_IMAGE_NAME = occ_gpe2
+OCC_GPE3_IMAGE_NAME = occ_gpe3
 
-.PHONY : 81e004%.lid
-81e004%.lid:
-	cp ${IMAGEFILE} $(dir $(IMAGEFILE))/$@
+NEEDED_IMAGES = \
+     $(OBJDIR)/$(OCC_405_IMAGE_NAME)/$(OCC_405_IMAGE_NAME).out \
+     $(OBJDIR)/$(OCC_GPE0_IMAGE_NAME)/$(OCC_GPE0_IMAGE_NAME).out \
+#     $(OBJDIR)/$(OCC_GPE1_IMAGE_NAME)/$(OCC_GPE1_IMAGE_NAME).out \
+#     $(OBJDIR)/$(OCC_GPE2_IMAGE_NAME)/$(OCC_GPE2_IMAGE_NAME).out \
+#     $(OBJDIR)/$(OCC_GPE3_IMAGE_NAME)/$(OCC_GPE3_IMAGE_NAME).out
 
-#*******************************************************************************
-# Create occStringFile
-#*******************************************************************************
-# FIXME depending on where .o files end up
+#SIMICS_WS = /gsa/ausgsa/home/d/a/davidy/work/simics-ppeWork
+
+#default is to build images
+needed_images: $(NEEDED_IMAGES)
+
+run: $(NEEDED_IMAGES)
+	$(SIMICS_WS)/simics \
+	           -e '$$occ_405_binary_to_load=$(OBJDIR)/$(OCC_405_IMAGE_NAME)/$(OCC_405_IMAGE_NAME).out' \
+	           -e '$$occ_gpe0_binary_to_load=$(OBJDIR)/$(OCC_GPE0_IMAGE_NAME)/$(OCC_GPE0_IMAGE_NAME).out' \
+#	           -e '$$occ_gpe1_binary_to_load=$(OBJDIR)/$(OCC_GPE1_IMAGE_NAME)/$(OCC_GPE1_IMAGE_NAME).out' \
+#	           -e '$$occ_gpe2_binary_to_load=$(OBJDIR)/$(OCC_GPE2_IMAGE_NAME)/$(OCC_GPE2_IMAGE_NAME).out' \
+#	           -e '$$occ_gpe3_binary_to_load=$(OBJDIR)/$(OCC_GPE3_IMAGE_NAME)/$(OCC_GPE3_IMAGE_NAME).out' \
+	           modelsetup.simics
+
+
+
+#clean the obj directory
+clean:
+	rm -fr $(OBJDIR)
+
+#make binary application images
+$(OBJDIR)/$(OCC_405_IMAGE_NAME)/$(OCC_405_IMAGE_NAME).out:
+	(cd $(SRCDIR)/$(OCC_405_IMAGE_NAME) && make)
+
+$(OBJDIR)/$(OCC_GPE0_IMAGE_NAME)/$(OCC_GPE0_IMAGE_NAME).out:
+	(cd $(SRCDIR)/$(OCC_GPE0_IMAGE_NAME) && make)
+
+$(OBJDIR)/$(OCC_GPE1_IMAGE_NAME)/$(OCC_GPE1_IMAGE_NAME).out:
+#	(cd $(SRCDIR)/$(OCC_GPE1_IMAGE_NAME) && make)
+
+$(OBJDIR)/$(OCC_GPE2_IMAGE_NAME)/$(OCC_GPE2_IMAGE_NAME).out:
+#	(cd $(SRCDIR)/$(OCC_GPE2_IMAGE_NAME) && make)
+
+$(OBJDIR)/$(OCC_GPE3_IMAGE_NAME)/$(OCC_GPE3_IMAGE_NAME).out:
+#	(cd $(SRCDIR)/$(OCC_GPE3_IMAGE_NAME) && make)
+
+# collect all of the trace hash files for all OCC images into a single trexStringFile
 .PHONY : tracehash
 tracehash:
-	$(TRACEHASH) -c -d . -s $(ROOTPATH)/occStringFile
+	mkdir -p $(BASE_OBJDIR)
+	$(THASH) -c -d $(BASE_OBJDIR) -s $(BASE_OBJDIR)/combStringFile
 
-#*******************************************************************************
-# Create occcSrcParse.C
-#*******************************************************************************
-# FIXME error log parser plugins not relevant to OpenPOWER, tool location unknown
-.PHONY : srcPluginFile
-srcPluginFile:
-	scanforsrcs.pl
-
-#*******************************************************************************
-# Clean
-#*******************************************************************************
-clean: 
-	$(foreach dir,$(CLEAN_SUBDIRS),$(CLEANCMD) &&) true
-	rm -rf image.bin
-	

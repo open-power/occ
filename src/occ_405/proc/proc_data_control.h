@@ -29,7 +29,7 @@
 #include <occ_common.h>
 #include <ssx.h>
 #include "rtls.h"
-#include "gpe_control.h"
+//#include "gpe_control.h"
 
 // Initialze the structures used by the GPE
 void proc_core_data_control_init( void );

@@ -25,6 +25,7 @@
 
 #include "ssx.h"
 
+#include <occhw_async.h>
 #include <trac_interface.h>
 #include <apss.h>
 #include <occ_common.h>
@@ -62,9 +63,10 @@ GPE_BUFFER(apss_start_args_t    G_gpe_start_pwr_meas_read_args);
 GPE_BUFFER(apss_continue_args_t G_gpe_continue_pwr_meas_read_args);
 GPE_BUFFER(apss_complete_args_t G_gpe_complete_pwr_meas_read_args);
 
-PoreEntryPoint GPE_apss_start_pwr_meas_read;
-PoreEntryPoint GPE_apss_continue_pwr_meas_read;
-PoreEntryPoint GPE_apss_complete_pwr_meas_read;
+// TEMP -- NO MORE PORE
+//PoreEntryPoint GPE_apss_start_pwr_meas_read;
+//PoreEntryPoint GPE_apss_continue_pwr_meas_read;
+//PoreEntryPoint GPE_apss_complete_pwr_meas_read;
 
 // Up / down counter for redundant apss failures
 uint32_t G_backup_fail_count = 0;
@@ -186,16 +188,19 @@ void do_apss_recovery(void)
             break;
         }
 
+/* TEMP -- UNRESOLVED TRACE ERRORS
         TRAC_ERR("70000[%08x] 70001[%08x] 70002[%08x] 70003|70005[%08x] 70010[%08x]",
                 (uint32_t)(l_spi_adc_ctrl0 >> 32),
                 (uint32_t)(l_spi_adc_ctrl1 >> 32),
                 (uint32_t)(l_spi_adc_ctrl2 >> 32),
                 (uint32_t)((l_spi_adc_status >> 32) | (l_spi_adc_reset >> 48)), // Stuff reset register in lower 16 bits
                 (uint32_t)(l_spi_adc_wdata >> 32));
-
+*/
         // Special error handling on OCC backup. Keep an up/down counter of
         // fail/success and log predictive error when we reach the limit.
-        if(G_occ_role == OCC_SLAVE)
+//        if(G_occ_role == OCC_SLAVE)
+// TEMP -- IN PHASE 1 WE ARE ALWAYS MASTER
+        if (FALSE)
         {
             if(G_backup_fail_count < MAX_BACKUP_FAILURES)
             {
@@ -292,7 +297,8 @@ void do_apss_recovery(void)
 
 // Note: The complete request must be global, since it must stick around until after the
 //       GPE program has completed (in order to do the callback).
-PoreFlex G_meas_start_request;
+// TEMP -- NO MORE PORE
+//PoreFlex G_meas_start_request;
 // Function Specification
 //
 // Name:  task_apss_start_pwr_meas
@@ -315,6 +321,7 @@ void task_apss_start_pwr_meas(struct task *i_self)
 
     do
     {
+/* TEMP -- NO MORE PORE
         if (!async_request_is_idle(&G_meas_start_request.request))
         {
             if (!L_idle_traced)
@@ -324,7 +331,7 @@ void task_apss_start_pwr_meas(struct task *i_self)
             }
             break;
         }
-
+*/
         // Check if we need to try recovering the apss
         if(G_apss_recovery_requested)
         {
@@ -335,7 +342,8 @@ void task_apss_start_pwr_meas(struct task *i_self)
 
         if (L_scheduled)
         {
-            if ((ASYNC_REQUEST_STATE_COMPLETE != G_meas_start_request.request.completion_state) ||
+// TEMP -- UNCOMMENT ONCE G_meas_start_request is defined again
+/*            if ((ASYNC_REQUEST_STATE_COMPLETE != G_meas_start_request.request.completion_state) ||
                 (0 != G_gpe_start_pwr_meas_read_args.error.error))
             {
                 //error should only be non-zero in the case where the GPE timed out waiting for
@@ -360,7 +368,7 @@ void task_apss_start_pwr_meas(struct task *i_self)
                      * @userdata1   GPE returned rc code
                      * @userdata4   ERC_APSS_COMPLETE_FAILURE
                      * @devdesc     Failure getting power measurement data from APSS
-                     */
+                     */ /*
                     l_err = createErrl(PSS_MID_APSS_START_MEAS,   // i_modId
                                        APSS_GPE_FAILURE,          // i_reasonCode
                                        ERC_APSS_COMPLETE_FAILURE,
@@ -383,6 +391,7 @@ void task_apss_start_pwr_meas(struct task *i_self)
                     L_ffdc_collected = TRUE;
                 }
             }
+*/
         }
 
         // Clear these out prior to starting the GPE (GPE only sets them)
@@ -390,7 +399,8 @@ void task_apss_start_pwr_meas(struct task *i_self)
         G_gpe_start_pwr_meas_read_args.error.ffdc = 0;
 
         // Submit the next request
-        l_rc = pore_flex_schedule(&G_meas_start_request);
+// TEMP -- NO MORE PORE
+//        l_rc = pore_flex_schedule(&G_meas_start_request);
         if (0 != l_rc)
         {
             errlHndl_t l_err = NULL;
@@ -439,7 +449,8 @@ void task_apss_start_pwr_meas(struct task *i_self)
 
 // Note: The complete request must be global, since it must stick around until after the
 //       GPE program has completed (in order to do the callback).
-PoreFlex G_meas_cont_request;
+// TEMP -- NO MORE PORE
+//PoreFlex G_meas_cont_request;
 // Function Specification
 //
 // Name:  task_apss_continue_pwr_meas
@@ -463,6 +474,7 @@ void task_apss_continue_pwr_meas(struct task *i_self)
 
     do
     {
+/* TEMP -- NO MORE PORE
         if (!async_request_is_idle(&G_meas_cont_request.request))
         {
             if (!L_idle_traced)
@@ -472,7 +484,7 @@ void task_apss_continue_pwr_meas(struct task *i_self)
             }
             break;
         }
-
+*/
         //Don't run anything if apss recovery is in progress
         if(G_apss_recovery_requested)
         {
@@ -481,6 +493,7 @@ void task_apss_continue_pwr_meas(struct task *i_self)
 
         if (L_scheduled)
         {
+/* TEMP -- UNCOMMENT ONCE G_meas_cont_request IS DEFINED AGAIN
             if ((ASYNC_REQUEST_STATE_COMPLETE != G_meas_cont_request.request.completion_state) ||
                 (0 != G_gpe_continue_pwr_meas_read_args.error.error))
             {
@@ -508,7 +521,7 @@ void task_apss_continue_pwr_meas(struct task *i_self)
                      * @userdata2   0
                      * @userdata4   ERC_APSS_COMPLETE_FAILURE
                      * @devdesc     Failure getting power measurement data from APSS
-                     */
+                     */ /*
                     l_err = createErrl(PSS_MID_APSS_CONT_MEAS,   // i_modId
                                        APSS_GPE_FAILURE,          // i_reasonCode
                                        ERC_APSS_COMPLETE_FAILURE,
@@ -531,6 +544,7 @@ void task_apss_continue_pwr_meas(struct task *i_self)
                     L_ffdc_collected = TRUE;
                 }
             }
+*/
         }
 
         // Clear these out prior to starting the GPE (GPE only sets them)
@@ -538,6 +552,7 @@ void task_apss_continue_pwr_meas(struct task *i_self)
         G_gpe_continue_pwr_meas_read_args.error.ffdc = 0;
 
         // Submit the next request
+/* TEMP -- UNCOMMENT ONCE G_meas_cont_request IS DEFINED AGAIN
         l_rc = pore_flex_schedule(&G_meas_cont_request);
         if (0 != l_rc)
         {
@@ -554,7 +569,7 @@ void task_apss_continue_pwr_meas(struct task *i_self)
              * @userdata2   0
              * @userdata4   ERC_APSS_SCHEDULE_FAILURE
              * @devdesc     task_apss_continue_pwr_meas schedule failed
-             */
+             */ /*
             l_err = createErrl(PSS_MID_APSS_CONT_MEAS,
                                SSX_GENERIC_FAILURE,
                                ERC_APSS_SCHEDULE_FAILURE,
@@ -571,7 +586,7 @@ void task_apss_continue_pwr_meas(struct task *i_self)
         }
 
         L_scheduled = TRUE;
-
+*/
     }while (0);
 
     APSS_DBG("task_apss_continue_pwr_meas: finished w/rc=0x%08X\n", G_gpe_continue_pwr_meas_read_args.error.rc);
@@ -619,7 +634,9 @@ void reformat_meas_data()
         }
 
         // Don't do the copy unless this is the master OCC
-        if(G_occ_role == OCC_MASTER)
+//        if(G_occ_role == OCC_MASTER)
+        // TEMP -- IN PHASE 1 WE ARE ALWAYS MASTER
+        if (TRUE)
         {
 
             // Fail every 16 seconds
@@ -656,7 +673,8 @@ void reformat_meas_data()
 
 // Note: The complete request must be global, since it must stick around until after the
 //       GPE program has completed (in order to do the callback).
-PoreFlex G_meas_complete_request;
+// TEMP -- NO MORE PORE
+//PoreFlex G_meas_complete_request;
 
 // Function Specification
 //
@@ -680,6 +698,8 @@ void task_apss_complete_pwr_meas(struct task *i_self)
 
     do
     {
+// TEMP -- UNCOMMENT ONCE G_meas_complete_request IS DEFINED AGAIN
+/*
         if (!async_request_is_idle(&G_meas_complete_request.request))
         {
             if (!L_idle_traced)
@@ -689,7 +709,7 @@ void task_apss_complete_pwr_meas(struct task *i_self)
             }
             break;
         }
-
+*/
         if(G_apss_recovery_requested)
         {
             // Allow apss measurement to proceed on next tick
@@ -700,6 +720,8 @@ void task_apss_complete_pwr_meas(struct task *i_self)
 
         if (L_scheduled)
         {
+// TEMP -- UNCOMMENT ONCE G_meas_complete_request IS DEFINED AGAIN
+/*
             if ((ASYNC_REQUEST_STATE_COMPLETE != G_meas_complete_request.request.completion_state) ||
                 (0 != G_gpe_complete_pwr_meas_read_args.error.error))
             {
@@ -726,7 +748,7 @@ void task_apss_complete_pwr_meas(struct task *i_self)
                      * @userdata2   0
                      * @userdata4   ERC_APSS_COMPLETE_FAILURE
                      * @devdesc     Failure getting power measurement data from APSS
-                     */
+                     */ /*
                     l_err = createErrl(PSS_MID_APSS_COMPLETE_MEAS,   // i_modId
                                        APSS_GPE_FAILURE,          // i_reasonCode
                                        ERC_APSS_COMPLETE_FAILURE,
@@ -749,6 +771,7 @@ void task_apss_complete_pwr_meas(struct task *i_self)
                     L_ffdc_collected = TRUE;
                 }
             }
+*/
         }
 
         // Clear these out prior to starting the GPE (GPE only sets them)
@@ -756,7 +779,9 @@ void task_apss_complete_pwr_meas(struct task *i_self)
         G_gpe_complete_pwr_meas_read_args.error.ffdc = 0;
 
         // Submit the next request
-        l_rc = pore_flex_schedule(&G_meas_complete_request);
+// TEMP -- UNCOMMENT ONCE G_meas_complete_request IS DEFINED AGAIN
+/*
+      l_rc = pore_flex_schedule(&G_meas_complete_request);
         if (0 != l_rc)
         {
             errlHndl_t l_err = NULL;
@@ -772,7 +797,7 @@ void task_apss_complete_pwr_meas(struct task *i_self)
              * @userdata2   0
              * @userdata4   ERC_APSS_SCHEDULE_FAILURE
              * @devdesc     task_apss_complete_pwr_meas schedule failed
-             */
+             */ /*
             l_err = createErrl(PSS_MID_APSS_COMPLETE_MEAS,
                                SSX_GENERIC_FAILURE,
                                ERC_APSS_SCHEDULE_FAILURE,
@@ -787,7 +812,7 @@ void task_apss_complete_pwr_meas(struct task *i_self)
             L_scheduled = FALSE;
             break;
         }
-
+*/
         L_scheduled = TRUE;
 
 
@@ -809,6 +834,8 @@ bool apss_gpio_get(uint8_t i_pin_number, uint8_t *o_pin_value)
         // The default value is all 0, so check if it's no-zero
         bool l_dcom_data_valid = FALSE;
         int i=0;
+// TEMP -- NO DCOM IN PHASE1
+/*
         for(;i<sizeof(G_dcom_slv_inbox_rx);i++)
         {
             if( ((char*)&G_dcom_slv_inbox_rx)[i] != 0 )
@@ -817,7 +844,7 @@ bool apss_gpio_get(uint8_t i_pin_number, uint8_t *o_pin_value)
               break;
             }
         }
-
+*/
         if( l_dcom_data_valid == TRUE)
         {
             uint8_t l_gpio_port = i_pin_number/NUM_OF_APSS_PINS_PER_GPIO_PORT;

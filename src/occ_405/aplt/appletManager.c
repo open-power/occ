@@ -23,9 +23,9 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-//*************************************************************************
+//*************************************************************************/
 // Includes
-//*************************************************************************
+//*************************************************************************/
 #include "ssx.h"
 #include <trac_interface.h>
 #include <appletManager.h>
@@ -38,23 +38,23 @@
 #include <errl.h>
 #include <state.h>
 #include "pba_firmware_registers.h"
-#include "pgp_pba.h"
-#include "pgp_async.h"
+#include "occhw_pba.h"
+#include "occhw_async.h"
 #include "ppc405_mmu.h"
-#include "pgp.h"
+#include "occhw.h"
 #include "cmdh_fsp.h"
 
-//*************************************************************************
+//*************************************************************************/
 // Externs
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Macros
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Defines/Enums
-//*************************************************************************
+//*************************************************************************/
 #define TEST_APPLET_ADDR      (uint32_t)&_APPLET1_SECTION_BASE
 #define PRDT_APPLET_ADDR      (uint32_t)&_APPLET0_SECTION_BASE
 #define TEST_APPLET_MAX_SIZE  (uint32_t)&_APPLET1_SECTION_SIZE
@@ -237,8 +237,9 @@ errlHndl_t __attribute__((optimize("O1"))) initAppletAddr( void )
                                                           l_appHeader->sram_repair_reserved[14],
                                                           l_appHeader->sram_repair_reserved[15]);
 
-            TRAC_ERR("wrong magic number.  applet count: %d, header addr: %p, magic no: 0x%08x%08x%08x%08x",
-                      l_cnt, l_appHeader, l_srr_0, l_srr_1, l_srr_2, l_srr_3);
+            // TEMP -- SSX ONLY SUPPORTS MAX OF 5 PARAMS
+            //TRAC_ERR("wrong magic number.  applet count: %d, header addr: %p, magic no: 0x%08x%08x%08x%08x",
+            //          l_cnt, l_appHeader, l_srr_0, l_srr_1, l_srr_2, l_srr_3);
 #endif
             break;
         }
@@ -247,8 +248,9 @@ errlHndl_t __attribute__((optimize("O1"))) initAppletAddr( void )
         if( l_appHeader->aplt_id >= OCC_APLT_TEST )
         {
             l_foundInvalid =  TRUE;
-            TRAC_ERR("applet ID out of range.  applet count: %d, header addr: %p, id: %d",
-                      l_cnt, l_appHeader, l_appHeader->aplt_id);
+// TEMP -- ERROR TRACING THE POINTER FOR SOME REASON
+//            TRAC_ERR("applet ID out of range.  applet count: %d, header addr: %p, id: %d",
+//                      l_cnt, l_appHeader, l_appHeader->aplt_id);
             break;
         }
 
@@ -256,8 +258,9 @@ errlHndl_t __attribute__((optimize("O1"))) initAppletAddr( void )
         if( (l_appHeader->image_size == 0) || (l_appHeader->image_size > PRDT_APPLET_MAX_SIZE) )
         {
             l_foundInvalid =  TRUE;
-            TRAC_ERR("bad image_size.  applet count: %d, applet ID: 0x%02x, header addr: %p, image_size: %d, avail space: %d",
-                      l_cnt, l_appHeader->aplt_id, l_appHeader, l_appHeader->image_size, PRDT_APPLET_MAX_SIZE);
+// TEMP --- TRACE ERRORS
+//            TRAC_ERR("bad image_size.  applet count: %d, applet ID: 0x%02x, header addr: %p, image_size: %d, avail space: %d",
+//                      l_cnt, l_appHeader->aplt_id, l_appHeader, l_appHeader->image_size, PRDT_APPLET_MAX_SIZE);
             break;
         }
 
@@ -285,8 +288,9 @@ errlHndl_t __attribute__((optimize("O1"))) initAppletAddr( void )
         if( l_appHeader->start_addr != PRDT_APPLET_ADDR )
         {
             l_foundInvalid =  TRUE;
-            TRAC_ERR("bad start_addr.  applet count: %d, applet ID: 0x%02x, header addr: %p, expected addr: 0x%08x, actual addr: 0x%08x",
-                      l_cnt, l_appHeader->aplt_id, l_appHeader, PRDT_APPLET_ADDR, l_appHeader->start_addr);
+// TEMP -- TRACE ERROR
+//            TRAC_ERR("bad start_addr.  applet count: %d, applet ID: 0x%02x, header addr: %p, expected addr: 0x%08x, actual addr: 0x%08x",
+//                      l_cnt, l_appHeader->aplt_id, l_appHeader, PRDT_APPLET_ADDR, l_appHeader->start_addr);
             break;
         }
 
@@ -297,8 +301,9 @@ errlHndl_t __attribute__((optimize("O1"))) initAppletAddr( void )
         if( (l_appHeader->ep_addr < l_ep_addr_min) || (l_appHeader->ep_addr >= l_ep_addr_max) )
         {
             l_foundInvalid =  TRUE;
-            TRAC_ERR("entry point out of range.  applet count: %d, applet ID: 0x%02x, header addr: %p, ep_addr: 0x%08x, ep_range: 0x%08x - 0x%08x",
-                      l_cnt, l_appHeader->aplt_id, l_appHeader, l_appHeader->ep_addr, l_ep_addr_min, l_ep_addr_max);
+// TEMP -- TOO MANY ARGS FOR TRACE
+//            TRAC_ERR("entry point out of range.  applet count: %d, applet ID: 0x%02x, header addr: %p, ep_addr: 0x%08x, ep_range: 0x%08x - 0x%08x",
+//                      l_cnt, l_appHeader->aplt_id, l_appHeader, l_appHeader->ep_addr, l_ep_addr_min, l_ep_addr_max);
             break;
         }
 

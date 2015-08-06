@@ -32,7 +32,7 @@
 #include <occ_common.h>
 #include <ssx.h>
 #include "rtls.h"
-#include "gpe_data.h"
+//#include "gpe_data.h"
 #include "occ_sys_config.h"
 
 //*************************************************************************
@@ -106,6 +106,8 @@ enum eOccCentaurs
 //*************************************************************************
 
 //Centaur data collect structures used for task data pointers
+// TEMP -- PORE ISSUES
+/*
 struct centaur_data_task {
         uint8_t start_centaur;
         uint8_t current_centaur;
@@ -115,6 +117,7 @@ struct centaur_data_task {
         PoreFlex gpe_req;
 } __attribute__ ((__packed__));
 typedef struct centaur_data_task centaur_data_task_t;
+*/
 
 typedef union
 {
@@ -129,7 +132,8 @@ typedef union
 //*************************************************************************
 
 //Global centaur structures used for task data pointers
-extern centaur_data_task_t G_centaur_data_task;
+// TEMP -- COMMENTED OUT DUE TO PORE ISSUES
+//extern centaur_data_task_t G_centaur_data_task;
 
 //Global is bitmask of centaurs
 extern uint32_t G_present_centaurs;
@@ -181,7 +185,8 @@ bool cent_chan_checkstop(const uint8_t i_cent);
 
 //Returns a pointer to the most up-to-date centaur data for the centaur
 //associated with the specified OCC centaur id.
-MemData * cent_get_centaur_data_ptr( const uint8_t i_centaur_id );
+// TEMP -- WHERE IS MemData ??
+//MemData * cent_get_centaur_data_ptr( const uint8_t i_centaur_id );
 
 #endif //_CENTAUR_DATA_H
 

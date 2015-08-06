@@ -34,8 +34,8 @@
 #include "occ_common.h"
 #include "state.h"
 #include "cmdh_fsp.h"
-#include "gpsm.h"
-#include "pstates.h"
+//#include "gpsm.h"
+//#include "pstates.h"
 #include "cmdh_fsp_cmds.h"
 #include "apss.h"
 
@@ -91,6 +91,8 @@ typedef enum
 #define OCC_ROLE_FIR_MASTER_MASK    0x40
 
 // Used by TMGT to send OCC the PstateSuperStruct
+// TEMP -- NO PStateSuperStructure anymore?
+/*
 typedef struct __attribute__ ((packed))
 {
     struct    cmdh_fsp_cmd_header;
@@ -98,7 +100,7 @@ typedef struct __attribute__ ((packed))
     uint8_t   reserved[3];
     PstateSuperStructure pstatess;
 }cmdh_store_cnfgdata_pstatess_t;
-
+*/
 #define CMDH_CNFGDATA_PSTATESS_DATALEN (sizeof(PstateSuperStructure) + 4)
 
 //At a minimum, OCC expects this size: Pstate superstructure for versions

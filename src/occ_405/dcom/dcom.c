@@ -26,8 +26,8 @@
 #ifndef _DCOM_C
 #define _DCOM_C
 
-#include <pgp_pmc.h>
-#include "pgp_pba.h"
+//#include <pgp_pmc.h>
+#include "occhw_pba.h"
 #include <rtls.h>
 #include <apss.h>
 #include <dcom.h>
@@ -72,7 +72,8 @@ bool        G_slv_inbox_received      = FALSE;
 // Counters to debug Master/Slave communication errors
 dcom_fail_count_t G_dcomSlvInboxCounter = {0};
 
-uint8_t     G_occ_role                = OCC_SLAVE;
+uint8_t     G_occ_role = OCC_SLAVE;
+
 
 uint8_t     G_dcm_occ_role            = OCC_DCM_SLAVE;
 

@@ -27,17 +27,17 @@
 #define PROC_PSTATE_H
 
 #include "ssx.h"
-#include "cmdh_service_codes.h"
+//#include "cmdh_service_codes.h"
 #include "errl.h"
 #include "trac.h"
 #include "rtls.h"
 #include "occ_common.h"
 #include "state.h"
-#include "cmdh_fsp_cmds.h"
-#include "cmdhDbugCmd.h"
+//#include "cmdh_fsp_cmds.h"
+//#include "cmdhDbugCmd.h"
 #include "appletManager.h"
-#include "gpsm.h"
-#include "pstates.h"
+//#include "gpsm.h"
+//#include "pstates.h"
 
 // GPSM DCM Synchronization - used by MBOX to transfer between DCM M & S
 typedef struct
@@ -90,29 +90,32 @@ enum {
     OCC_RESET = 0x05,
 }; 
 
-extern GlobalPstateTable G_global_pstate_table; 
+//extern GlobalPstateTable G_global_pstate_table; 
 
 extern uint32_t    G_mhz_per_pstate;            
 
 extern sapphire_table_t G_sapphire_table;       
 
 // Initialize PState Table
-errlHndl_t proc_gpsm_pstate_initialize(const PstateSuperStructure* i_pss);
+// TEMP -- PstateSuperStructure no longer exists
+//errlHndl_t proc_gpsm_pstate_initialize(const PstateSuperStructure* i_pss);
 
 // Entry function for enabling Pstates once table is installed
-void proc_gpsm_dcm_sync_enable_pstates_smh(void);
+//void proc_gpsm_dcm_sync_enable_pstates_smh(void);
 
 // Get DCM Sync State
-proc_gpsm_dcm_sync_occfw_t proc_gpsm_dcm_sync_get_state(void);
+//proc_gpsm_dcm_sync_occfw_t proc_gpsm_dcm_sync_get_state(void);
 
 // Pull down DCM pair's Sync State & Info via Mbox
 void proc_gpsm_dcm_sync_update_from_mbox(proc_gpsm_dcm_sync_occfw_t * i_dcm_sync_state);
 
 // Helper function to translate from Frequency to nearest Pstate
-Pstate proc_freq2pstate(uint32_t i_freq_mhz);
+// TEMP -- Pstate no longer exists
+//Pstate proc_freq2pstate(uint32_t i_freq_mhz);
 
 // Helper function to translate from Pstate to nearest Frequency
-uint32_t proc_pstate2freq(Pstate i_pstate);
+// TEMP -- Pstate no longer exists
+//uint32_t proc_pstate2freq(Pstate i_pstate);
 
 // Helper function to determine if we are a DCM
 inline bool proc_is_dcm();

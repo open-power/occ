@@ -24,7 +24,7 @@
 /* IBM_PROLOG_END_TAG                                                     */
 
 #include "ssx.h"
-#include "special_wakeup.h"
+//#include "special_wakeup.h" // lib/special_wakeup.h doesn't exist
 #include "cmdh_service_codes.h"
 #include "errl.h"
 #include "trac.h"
@@ -105,8 +105,9 @@ errlHndl_t cmdh_processTmgtRequest (const cmdh_fsp_cmd_t * i_cmd_ptr,
 // End Function Specification
 void notifyCmdhWakeupCondition(eCmdhWakeupThreadMask i_cond)
 {
-    G_cmdh_thread_wakeup_mask |= i_cond;
-    ssx_semaphore_post(&G_cmdh_fsp_wakeup_thread);
+// TEMP -- NO CMD Handler thread in Phase1
+//    G_cmdh_thread_wakeup_mask |= i_cond;
+//    ssx_semaphore_post(&G_cmdh_fsp_wakeup_thread);
 }
 
 // Function Specification
@@ -118,7 +119,8 @@ void notifyCmdhWakeupCondition(eCmdhWakeupThreadMask i_cond)
 // End Function Specification
 void clearCmdhWakeupCondition(eCmdhWakeupThreadMask i_cond)
 {
-    G_cmdh_thread_wakeup_mask &= ~i_cond;
+// TEMP -- NO CMD Handler thread in Phase1
+//    G_cmdh_thread_wakeup_mask &= ~i_cond;
 }
 
 
@@ -144,8 +146,9 @@ void notifyFspDoorbellReceived(void * i_arg)
 // End Function Specification
 int cmdh_thread_wait_for_wakeup(void)
 {
-    int l_rc;
-
+    int l_rc = 0;
+// TEMP -- NO CMD Handler thread in Phase1
+/*
     // Check if we already have a pending wait for a doorbell,
     // if we do, don't schedule another one, that would result
     // in either undefined behavior or a race condition
@@ -157,7 +160,7 @@ int cmdh_thread_wait_for_wakeup(void)
 
     // Wait for someone to wakeup this thread
     l_rc = ssx_semaphore_pend(&G_cmdh_fsp_wakeup_thread, SSX_WAIT_FOREVER);
-
+*/
     return l_rc;
 }
 
@@ -210,10 +213,12 @@ int cmdh_fsp_fsi2host_mbox_wait4free(void)
         l_disable_swup = FALSE;
         // Enable special wakeup so following getscom doesn't
         // fail with CHIPLET_OFFLINE error on sleeping cores
-        rc2 = occ_special_wakeup(TRUE,
+// TEMP -- NO special_wakeup.h anymore!
+/*        rc2 = occ_special_wakeup(TRUE,
                                 l_cores,
                                 SWAKEUP_TIMEOUT_MS,
                                 &l_swup_timedout);
+*/
         if(rc2 || l_swup_timedout)
         {
             TRAC_ERR("cmdh_fsp_fsi2host_mbox_wait4free: enable occ_special_wakeup failed with rc=%d, timeout=0x%04x, cores=0x%04x",
@@ -267,10 +272,12 @@ int cmdh_fsp_fsi2host_mbox_wait4free(void)
         {
             l_disable_swup = FALSE;
             // clear special wakeup while we sleep
-            rc2 = occ_special_wakeup(FALSE,
+// TEMP -- NO special_wakeup.h anymore!
+/*            rc2 = occ_special_wakeup(FALSE,
                                     l_cores,
                                     SWAKEUP_TIMEOUT_MS,
                                     &l_swup_timedout);
+*/
             if(rc2)
             {
                 TRAC_ERR("cmdh_fsp_fsi2host_mbox_wait4free: clear occ_special_wakeup failed with rc=%d, cores=0x%04x",
@@ -288,10 +295,13 @@ int cmdh_fsp_fsi2host_mbox_wait4free(void)
     //make sure we clear special wakeup before exiting this function
     if(l_disable_swup)
     {
+// TEMP -- NO special_wakeup.h anymore
+/*
         rc2 = occ_special_wakeup(FALSE,
                                 l_cores,
                                 SWAKEUP_TIMEOUT_MS,
                                 &l_swup_timedout);
+*/
         if(rc2)
         {
             TRAC_ERR("cmdh_fsp_fsi2host_mbox_wait4free: clear occ_special_wakeup failed with rc=%d, cores=0x%04x",
@@ -349,10 +359,12 @@ int cmdh_fsp_fsi2host_mbox_wait4free(void)
 // End Function Specification
 errlHndl_t cmdh_fsp_init(void)
 {
+// TEMP -- NO CMD Handler thread in Phase1
+
     int l_rc;
     errlHndl_t l_errlHndl = NULL;
     mbox_data_area_regs_t l_mbox_msg;
-
+/*
     CHECKPOINT(INIT_OCB);
 
     // ----------------------------------------------------
@@ -404,7 +416,7 @@ errlHndl_t cmdh_fsp_init(void)
              * @userdata2   0
              * @userdata4   ERC_CMDH_MBOX_REQST_FAILURE
              * @devdesc     Failed to get permission to use fsi2host mbox
-             */
+             */ /*
             l_errlHndl = createErrl(
                     CMDH_FSI2HOST_MBOX_UNAVAIL,             // modId
                     EXTERNAL_INTERFACE_FAILURE,             // reasoncode
@@ -532,7 +544,7 @@ errlHndl_t cmdh_fsp_init(void)
          * @userdata2   0
          * @userdata4   OCC_NO_EXTENDED_RC
          * @devdesc     Invalid OCC interrupt type was detected
-         */
+         */ /*
         l_errlHndl = createErrl(
                 CMDH_OCC_INTERRUPT_TYPE,           // modId
                 EXTERNAL_INTERFACE_FAILURE,        // reasoncode
@@ -544,7 +556,7 @@ errlHndl_t cmdh_fsp_init(void)
                 0                                  // userdata2
                 );
     }
-
+*/
     return l_errlHndl;
 }
 
@@ -1253,7 +1265,11 @@ errlHndl_t cmdh_processTmgtRequest (const cmdh_fsp_cmd_t * i_cmd_ptr,
     i_rsp_ptr->data_length[1] = 0;
     i_rsp_ptr->rc             = ERRL_RC_SUCCESS;
 
+    TRAC_INFO("Commands are not supported yet!");
+
     // Run command function based on cmd_type
+    // TEMP -- PHASE 1 NO SUPPORT
+/*
     switch(l_cmd_type)
     {
         case CMDH_POLL:
@@ -1333,7 +1349,7 @@ errlHndl_t cmdh_processTmgtRequest (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
             break;
     } //end switch
-
+*/
     return l_err;
 }
 

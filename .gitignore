@@ -15,4 +15,4 @@ customrc
 env.bash
 src/build/
 *.sw*
-
+obj/

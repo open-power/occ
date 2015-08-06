@@ -32,6 +32,8 @@
 #include "rtls.h"
 #include "occ_common.h"
 #include "state.h"
+#include "occhw_async.h"
+#include "chip_config.h"
 
 // Register Addresses for Mailbox 1 Doorbell Status/Control
 #define MAILBOX_1_DOORBELL_STS_CTRL_REGADDR   0x00050020

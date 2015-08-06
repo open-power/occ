@@ -27,8 +27,8 @@
 #include "rtls_service_codes.h"
 #include "threadSch.h"          // for DEFAULT_TRACE_SIZE
 #include "occ_service_codes.h"  // for SSX_GENERIC_FAILURE
-#include <pgp_common.h>         // OCB interrupt controller
-#include <pgp_ocb.h>            // OCB timer
+#include <occhw_common.h>         // OCB interrupt controller
+#include <occhw_ocb.h>            // OCB timer
 #include <errl.h>               // Error logging
 #include "amec_external.h"
 #include <trac.h>               // Traces
@@ -51,7 +51,8 @@ uint32_t G_run_mask_deferred = GLOBAL_RUN_MASK;
 uint32_t G_current_tick = 0xFFFFFFFF;
 
 // The durations measured within the current tick
-fw_timing_t G_fw_timing;
+// TEMP -- PORE ISSUES
+//fw_timing_t G_fw_timing;
 
 // The global TICK table
 // See notes regarding this table in rtls_tables.c.
@@ -303,7 +304,8 @@ void rtl_do_tick( void *private, SsxIrqId irq, int priority )
     CURRENT_TICK++;
 
     // Save off start time of RTL tick
-    G_fw_timing.rtl_start = l_start;
+// TEMP -- COMMENTED OUT DUE TO PORE ISSUES
+//    G_fw_timing.rtl_start = l_start;
 
     // Set global run mask point to deferred mask so that any modification
     // to the deferred mask flag is taken into effect for this tick.
@@ -312,7 +314,8 @@ void rtl_do_tick( void *private, SsxIrqId irq, int priority )
     RTLS_DBG("#### Tick %d ####\n",CURRENT_TICK);
 
     // Execute ARL Test Code before we run any tasks.  TODO: Remove when no longer needed.
-    arl_test();
+// TEMP -- DON'T THINK THIS IS NEEDED IN PHASE1
+//    arl_test();
 
     // Index into the tick table to get a pointer to the tick sequence for the current tick.
     l_taskid_ptr = G_tick_table[ (MAX_NUM_TICKS - 1) & CURRENT_TICK ];
@@ -386,7 +389,8 @@ void rtl_do_tick( void *private, SsxIrqId irq, int priority )
     } while(TRUE);
 
     // Save timing of RTL tick
-    G_fw_timing.rtl_dur = DURATION_IN_US_UNTIL_NOW_FROM(l_start);
+// TEMP -- PORE ISSUES
+//    G_fw_timing.rtl_dur = DURATION_IN_US_UNTIL_NOW_FROM(l_start);
 
     RTLS_DBG("RTL Tick Duration: %d us\n",(int)G_fw_timing.rtl_dur);
 

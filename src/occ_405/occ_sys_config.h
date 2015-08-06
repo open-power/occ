@@ -29,7 +29,7 @@
 // SSX has Pstate defined in pgp_common.h file. Without below ifdef
 // compiler complains about redefinition for OCC.
 #ifdef OCC_FIRMWARE
-#include "pgp_common.h"
+#include "occhw_common.h"
 #else
 #endif
 #include <state.h>

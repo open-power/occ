@@ -26,7 +26,7 @@
 #include "ssx.h"
 #include "ssx_io.h"
 #include "simics_stdio.h"
-#include "heartbeat.h"
+//#include "heartbeat.h"
 #include <thread.h>
 #include <sensor.h>
 #include <threadSch.h>
@@ -46,14 +46,14 @@
 #include <amec_sys.h>
 #include <cmdh_fsp.h>
 #include <proc_pstate.h>
-#include <vrm.h>
+//#include <vrm.h>
 #include <chom.h>
 #include <homer.h>
-#include <amec_health.h>
-#include <amec_freq.h>
+//#include <amec_health.h>
+//#include <amec_freq.h>
 #include <thrm_thread.h>
 #include "scom.h"
-#include <fir_data_collect.h>
+//#include <fir_data_collect.h>
 
 extern void __ssx_boot;
 extern uint32_t G_occ_phantom_critical_count;
@@ -174,7 +174,7 @@ void workaround_HW258436()
 void pmc_hw_error_isr(void *private, SsxIrqId irq, int priority)
 {
     errlHndl_t  l_err;
-    pmc_ffdc_data_t l_pmc_ffdc;
+    //pmc_ffdc_data_t l_pmc_ffdc;
     SsxMachineContext ctx;
 
     // Mask this interrupt
@@ -187,7 +187,7 @@ void pmc_hw_error_isr(void *private, SsxIrqId irq, int priority)
     ssx_irq_status_clear(irq);
 
     // dump a bunch of FFDC registers
-    fill_pmc_ffdc_buffer(&l_pmc_ffdc);
+    //fill_pmc_ffdc_buffer(&l_pmc_ffdc);
 
     TRAC_ERR("PMC Failure detected through OISR0[9]!!!");
     /* @
@@ -200,6 +200,8 @@ void pmc_hw_error_isr(void *private, SsxIrqId irq, int priority)
      * @devdesc    Failure detected in processor
      *             power management controller (PMC)
      */
+    // TEMP -- NO ERRL YET
+/*
     l_err = createErrl( PMC_HW_ERROR_ISR,          // i_modId,
                         PMC_FAILURE,               // i_reasonCode,
                         OCC_NO_EXTENDED_RC,
@@ -208,14 +210,17 @@ void pmc_hw_error_isr(void *private, SsxIrqId irq, int priority)
                         DEFAULT_TRACE_SIZE,        // i_traceSz,
                         0,                         // i_userData1,
                         0);                        // i_userData2
-
+*/
     //Add our register dump to the error log
-    addUsrDtlsToErrl(l_err,
+    /*addUsrDtlsToErrl(l_err,
             (uint8_t*) &l_pmc_ffdc,
             sizeof(l_pmc_ffdc),
             ERRL_USR_DTL_STRUCT_VERSION_1,
             ERRL_USR_DTL_BINARY_DATA);
+    */
 
+// TEMP -- NO ERRL YET
+/*
     //Add firmware callout
     addCalloutToErrl(l_err,
             ERRL_CALLOUT_TYPE_COMPONENT_ID,
@@ -235,7 +240,7 @@ void pmc_hw_error_isr(void *private, SsxIrqId irq, int priority)
             ERRL_CALLOUT_PRIORITY_LOW);
 
     REQUEST_RESET(l_err);
-
+*/
     // Unmask this interrupt
     ssx_irq_enable(irq);
 
@@ -265,7 +270,9 @@ void occ_hw_error_isr(void *private, SsxIrqId irq, int priority)
     _putscom(OCB_OCCLFIR_OR, OCC_LFIR_SPARE_BIT50, SCOM_TIMEOUT);
 
     //Halt occ so that hardware will enter safe mode
-    OCC_HALT(ERRL_RC_OCC_HW_ERROR);
+    TRAC_ERR("Should have halted here...");
+// TEMP -- NOT SUPPORTED IN PHASE1
+//    OCC_HALT(ERRL_RC_OCC_HW_ERROR);
 }
 
 // Enable and register any ISR's that need to be set up as early as possible.
@@ -280,66 +287,68 @@ void occ_irq_setup()
         // ------------- OCC Error IRQ Setup ------------------
 
         // Disable the IRQ while we work on it
-        ssx_irq_disable(PGP_IRQ_OCC_ERROR);
+        ssx_irq_disable(OCCHW_IRQ_OCC_ERROR);
 
         // Set up the IRQ
-        l_rc = ssx_irq_setup(PGP_IRQ_OCC_ERROR,
+        l_rc = ssx_irq_setup(OCCHW_IRQ_OCC_ERROR,
                              SSX_IRQ_POLARITY_ACTIVE_HIGH,
                              SSX_IRQ_TRIGGER_EDGE_SENSITIVE);
         if(l_rc)
         {
-            TRAC_ERR("occ_irq_setup: ssx_irq_setup(PGP_IRQ_OCC_ERROR) failed with rc=0x%08x", l_rc);
+            TRAC_ERR("occ_irq_setup: ssx_irq_setup(OCCHW_IRQ_OCC_ERROR) failed with rc=0x%08x", l_rc);
             break;
         }
 
         // Register the IRQ handler with SSX
-        l_rc = ssx_irq_handler_set(PGP_IRQ_OCC_ERROR,
+        l_rc = ssx_irq_handler_set(OCCHW_IRQ_OCC_ERROR,
                                    occ_hw_error_isr,
                                    NULL,
                                    SSX_CRITICAL);
         if(l_rc)
         {
-            TRAC_ERR("occ_irq_setup: ssx_irq_handler_set(PGP_IRQ_OCC_ERROR) failed with rc=0x%08x", l_rc);
+            TRAC_ERR("occ_irq_setup: ssx_irq_handler_set(OCCHW_IRQ_OCC_ERROR) failed with rc=0x%08x", l_rc);
             break;
         }
 
         //enable the IRQ
-        ssx_irq_status_clear(PGP_IRQ_OCC_ERROR);
-        ssx_irq_enable(PGP_IRQ_OCC_ERROR);
+        ssx_irq_status_clear(OCCHW_IRQ_OCC_ERROR);
+        ssx_irq_enable(OCCHW_IRQ_OCC_ERROR);
 
 
         // ------------- PMC Error IRQ Setup ------------------
+/* TEMP -- IS THIS NO LONGER A THING IN P9??
 
         // Disable the IRQ while we work on it
-        ssx_irq_disable(PGP_IRQ_PMC_ERROR);
+        ssx_irq_disable(OCCHW_IRQ_PMC_ERROR);
 
         // Set up the IRQ
-        l_rc = ssx_irq_setup(PGP_IRQ_PMC_ERROR,
+        l_rc = ssx_irq_setup(OCCHW_IRQ_PMC_ERROR,
                              SSX_IRQ_POLARITY_ACTIVE_HIGH,
                              SSX_IRQ_TRIGGER_EDGE_SENSITIVE);
         if(l_rc)
         {
-            TRAC_ERR("occ_irq_setup: ssx_irq_setup(PGP_IRQ_PMC_ERROR) failed with rc=0x%08x", l_rc);
+            TRAC_ERR("occ_irq_setup: ssx_irq_setup(OCCHW_IRQ_PMC_ERROR) failed with rc=0x%08x", l_rc);
             break;
         }
 
         // Register the IRQ handler with SSX
-        l_rc = ssx_irq_handler_set(PGP_IRQ_PMC_ERROR,
+        l_rc = ssx_irq_handler_set(OCCHW_IRQ_PMC_ERROR,
                                    pmc_hw_error_fast,
                                    NULL,
                                    SSX_NONCRITICAL);
         if(l_rc)
         {
-            TRAC_ERR("occ_irq_setup: ssx_irq_handler_set(PGP_IRQ_PMC_ERROR) failed with rc=0x%08x", l_rc);
+            TRAC_ERR("occ_irq_setup: ssx_irq_handler_set(OCCHW_IRQ_PMC_ERROR) failed with rc=0x%08x", l_rc);
             break;
         }
 
         //enable the IRQ
-        ssx_irq_status_clear(PGP_IRQ_PMC_ERROR);
-        ssx_irq_enable(PGP_IRQ_PMC_ERROR);
+        ssx_irq_status_clear(OCCHW_IRQ_PMC_ERROR);
+        ssx_irq_enable(OCCHW_IRQ_PMC_ERROR);
+END TEMP */
     }while(0);
 
-
+/* TEMP -- NO ERRL YET
     if(l_rc)
     {
         //single error for all error cases, just look at trace to see where it failed.
@@ -350,7 +359,7 @@ void occ_irq_setup()
          * @userdata1  SSX return code
          * @userdata4  OCC_NO_EXTENDED_RC
          * @devdesc    Firmware failure initializing IRQ
-         */
+         */ /*
         l_err = createErrl( OCC_IRQ_SETUP,             // i_modId,
                             SSX_GENERIC_FAILURE,       // i_reasonCode,
                             OCC_NO_EXTENDED_RC,
@@ -368,6 +377,7 @@ void occ_irq_setup()
 
         commitErrl(&l_err);
     }
+*/
 }
 
 /*
@@ -379,6 +389,7 @@ void occ_irq_setup()
  *
  * End Function Specification
  */
+/* TEMP -- NOT SUPPORTED IN PHASE1
 void hmon_routine()
 {
     static uint32_t L_critical_phantom_count = 0;
@@ -426,7 +437,7 @@ void hmon_routine()
          * @userdata2   non-critical count
          * @userdata4   OCC_NO_EXTENDED_RC
          * @devdesc     interrupt with unknown source was detected
-         */
+         */ /*
         errlHndl_t l_err = createErrl(HMON_ROUTINE_MID,             //modId
                                       INTERNAL_FAILURE,             //reasoncode
                                       OCC_NO_EXTENDED_RC,           //Extended reason code
@@ -458,6 +469,7 @@ void hmon_routine()
         amec_health_check_dimm_temp();
     }
 }
+*/
 
 
 /*
@@ -496,11 +508,13 @@ void master_occ_init()
     {
         TRAC_ERR("APSS init applet returned error: l_status: 0x%x", l_status);
         // commit & delete. CommitErrl handles NULL error log handle
-        REQUEST_RESET(l_errl);
+        // TEMP -- NO ERRL / RESET YET
+        //REQUEST_RESET(l_errl);
     }
 
     // Reinitialize the PBAX Queues
-    dcom_initialize_pbax_queues();
+    // TEMP -- NO DCOM YET
+    //dcom_initialize_pbax_queues();
 }
 
 /*
@@ -512,11 +526,13 @@ void master_occ_init()
  *
  * End Function Specification
  */
+/* TEMP -- NO SLAVES YET
 void slave_occ_init()
 {
     // Init the DPSS oversubscription IRQ handler
     MAIN_DBG("Initializing Oversubscription IRQ...");
-    errlHndl_t l_errl = dpss_oversubscription_irq_initialize();
+    // TEMP -- NO DPSS/ERRL YET
+    //errlHndl_t l_errl = dpss_oversubscription_irq_initialize();
 
     if( l_errl )
     {
@@ -524,7 +540,8 @@ void slave_occ_init()
         TRAC_ERR("Initialization of Oversubscription IRQ handler failed");
 
         // commit log ... log should be deleted by reader mechanism
-        commitErrl( &l_errl );
+        // TEMP -- NO ERRL YET
+        //commitErrl( &l_errl );
     }
     else
     {
@@ -532,10 +549,12 @@ void slave_occ_init()
     }
 
     //Set up doorbell queues
-    dcom_initialize_pbax_queues();
+    // TEMP -- NO DCOM YET
+    //dcom_initialize_pbax_queues();
 
     // Run AMEC Slave Init Code
-    amec_slave_init();
+    // TEMP -- NO AMEC YET
+    //amec_slave_init();
 
     // Initialize SMGR State Semaphores
     extern SsxSemaphore G_smgrModeChangeSem;
@@ -545,6 +564,7 @@ void slave_occ_init()
     extern SsxSemaphore G_smgrStateChangeSem;
     ssx_semaphore_create(&G_smgrStateChangeSem, 1, 1);
 }
+*/
 
 /*
  * Function Specification
@@ -606,6 +626,8 @@ void mainThrdTimerCallback(void * i_argPtr)
          * @userdata4   OCC_NO_EXTENDED_RC
          * @devdesc     SSX semaphore related failure
          */
+        // TEMP -- NO ERRL YET
+/*
         errlHndl_t l_err = createErrl(MAIN_THRD_TIMER_MID,          //modId
                                       SSX_GENERIC_FAILURE,          //reasoncode
                                       OCC_NO_EXTENDED_RC,           //Extended reason code
@@ -614,8 +636,10 @@ void mainThrdTimerCallback(void * i_argPtr)
                                       DEFAULT_TRACE_SIZE,           //Trace Size
                                       l_rc,                         //userdata1
                                       0);                           //userdata2
+*/
         // Commit Error
-        REQUEST_RESET(l_err);
+        // TEMP - NO RESET YET
+//        REQUEST_RESET(l_err);
     }
 }
 
@@ -680,6 +704,8 @@ void initMainThrdSemAndTimer()
          * @userdata4   OCC_NO_EXTENDED_RC
          * @devdesc     SSX semaphore related failure
          */
+        // TEMP -- NO ERRL OR RESET YET
+/*
         errlHndl_t l_err = createErrl(MAIN_THRD_SEM_INIT_MID,       //modId
                                       SSX_GENERIC_FAILURE,          //reasoncode
                                       OCC_NO_EXTENDED_RC,           //Extended reason code
@@ -690,6 +716,7 @@ void initMainThrdSemAndTimer()
                                       l_timerRc);                   //userdata2
 
         REQUEST_RESET(l_err);
+*/
     }
 }
 
@@ -719,13 +746,16 @@ void Main_thread_routine(void *private)
     // dcom_initialize_roles. If in future design changes, we will make
     // change to use config_data_init at that time.
     // Default role initialization and determine OCC/Chip Id
-    dcom_initialize_roles();
+
+    // TEMP -- NO DCOM YET
+    //dcom_initialize_roles();
     CHECKPOINT(ROLES_INITIALIZED);
 
     // Sensor Initialization
     // All Master & Slave Sensor are initialized here, it is up to the
     // rest of the firmware if it uses them or not.
-    sensor_init_all();
+// TEMP -- NO SENSORS YET
+//    sensor_init_all();
     CHECKPOINT(SENSORS_INITIALIZED);
 
     // SPIVID Initialization must be done before Pstates
@@ -734,19 +764,22 @@ void Main_thread_routine(void *private)
     //Initialize structures for collecting core data.
     //It needs to run before RTLoop start as pore initialization needs to be
     // done before task to collect core data starts.
-    proc_core_init();
+// TEMP -- NOT NEEDED IN PHASE1
+//    proc_core_init();
     CHECKPOINT(PROC_CORE_INITIALIZED);
 
     // Run slave OCC init on all OCCs. Master-only initialization will be
     // done after determining actual role. By default all OCCs are slave.
-    slave_occ_init();
+// TEMP -- SLAVES NOT SUPPORTED YET
+//    slave_occ_init();
     CHECKPOINT(SLAVE_OCC_INITIALIZED);
 
     // Initialize watchdog timers. This needs to be right before
     // start rtl to make sure timer doesn't timeout. This timer is being
     // reset from the rtl task.
-    TRAC_INFO("Initializing watchdog timers.");
-    initWatchdogTimers();
+// TEMP -- watchdog timers not enabled yet
+//    TRAC_INFO("Initializing watchdog timers.");
+//    initWatchdogTimers();
     CHECKPOINT(WATCHDOG_INITIALIZED);
 
     // Initialize Real time Loop Timer Interrupt
@@ -793,7 +826,7 @@ void Main_thread_routine(void *private)
 
         // Wait for thermal semaphore
         l_ssxrc = ssx_semaphore_pend(&G_thrmSem,SSX_WAIT_FOREVER);
-
+/* TEMP -- FIR DATA IS NOT SUPPORTED IN PHASE1
         static bool L_fir_collection_completed = FALSE;
         // Look for FIR collection flag and status
         if (G_fir_collection_required && !L_fir_collection_completed)
@@ -822,7 +855,7 @@ void Main_thread_routine(void *private)
                 out32(OCB_OCCMISC_OR, l_occmiscreg.value);
             }
         }
-
+*/
         if ( l_ssxrc != SSX_OK )
         {
             TRAC_ERR("thermal Semaphore pending failure RC[0x%08X]", -l_ssxrc );
@@ -872,6 +905,7 @@ void Main_thread_routine(void *private)
             }
         }
 
+/* TEMP -- NO ERRL OR RESET YET
         if( l_ssxrc != SSX_OK)
         {
             /* @
@@ -881,7 +915,7 @@ void Main_thread_routine(void *private)
              * @userdata1   semaphore pending return code
              * @userdata4   OCC_NO_EXTENDED_RC
              * @devdesc     SSX semaphore related failure
-             */
+             */ /*
 
             errlHndl_t l_err = createErrl(MAIN_THRD_ROUTINE_MID,        //modId
                                           SSX_GENERIC_FAILURE,          //reasoncode
@@ -894,6 +928,7 @@ void Main_thread_routine(void *private)
 
             REQUEST_RESET(l_err);
         }
+*/
     } // while loop
 }
 
@@ -945,6 +980,7 @@ int main(int argc, char **argv)
         SSX_PANIC(0x01000002);
     }
 
+/* TEMP -- NO FIR SUPPORT IN PHASE1
     // Setup the TLB for writing to the FIR parms section
     l_ssxrc = ppc405_mmu_map(FIR_PARMS_SECTION_BASE_ADDRESS,
                              FIR_PARMS_SECTION_BASE_ADDRESS,
@@ -972,7 +1008,7 @@ int main(int argc, char **argv)
         // Panic, this section is required for FIR collection on checkstops
         SSX_PANIC(0x01000004);
     }
-
+*/
     CHECKPOINT_INIT();
     CHECKPOINT(MAIN_STARTED);
 
@@ -1093,7 +1129,8 @@ int main(int argc, char **argv)
                                l_ssxrc,
                                l_occ_int_type);
     }
-
+/*
+    //TEMP -- NO FIR SUPPORT
     if (l_homer_version >= HOMER_VERSION_3)
     {
         // Get the FIR Master indicator
@@ -1140,7 +1177,7 @@ int main(int argc, char **argv)
                                    (uint32_t)&G_fir_data_parms[0]);
         }
     }
-
+*/
     // enable and register additional interrupt handlers
     CHECKPOINT(INITIALIZING_IRQS);
 
@@ -1156,10 +1193,11 @@ int main(int argc, char **argv)
                                            THREAD_STACK_SIZE,
                                            THREAD_PRIORITY_2);
 
+
     if( SSX_OK != l_rc)
     {
         TRAC_ERR("Failure creating/resuming main thread: rc: 0x%x", -l_rc);
-
+/* TEMP -- NO ERRL OR RESET YET
         /* @
          * @errortype
          * @moduleid    MAIN_MID
@@ -1167,7 +1205,7 @@ int main(int argc, char **argv)
          * @userdata1   return code
          * @userdata4   OCC_NO_EXTENDED_RC
          * @devdesc     Firmware internal error creating thread
-         */
+         */ /*
         errlHndl_t l_err = createErrl(MAIN_MID,                 //modId
                                       SSX_GENERIC_FAILURE,      //reasoncode
                                       OCC_NO_EXTENDED_RC,       //Extended reason code
@@ -1178,6 +1216,7 @@ int main(int argc, char **argv)
                                       0);                       //userdata2
         // Commit Error log
         REQUEST_RESET(l_err);
+*/
     }
 
     // Enter SSX Kernel

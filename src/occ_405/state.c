@@ -1,4 +1,4 @@
-/* IBM_PROLOG_BEGIN_TAG                                                   */
+\/* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
 /* $Source: src/occ/state.c $                                             */
@@ -36,9 +36,11 @@
 #include "cmdh_fsp_cmds_datacnfg.h"
 #include "cmdh_fsp.h"
 #include "proc_data.h"
-#include "heartbeat.h"
+// TEMP -- Doesn't exist anymore
+//#include "heartbeat.h"
 #include "scom.h"
-#include <fir_data_collect.h>
+// TEMP -- Not supported in phase1
+//#include <fir_data_collect.h>
 
 extern proc_gpsm_dcm_sync_occfw_t G_proc_dcm_sync_state;
 extern bool G_mem_monitoring_allowed;
@@ -241,6 +243,7 @@ errlHndl_t SMGR_observation_to_standby()
 errlHndl_t SMGR_observation_to_active()
 {
     errlHndl_t      l_errlHndl = NULL;
+/* TEMP -- UNNECCESSARY IN PHASE1
     static bool l_error_logged = FALSE;  // To prevent trace and error log happened over and over
     int                l_extRc = OCC_NO_EXTENDED_RC;
     int                l_rc = 0;
@@ -271,17 +274,20 @@ errlHndl_t SMGR_observation_to_active()
             {
                 if(FALSE == l_error_logged)
                 {
+/* TEMP -- UNRESOLVED TRACE ERRORS
                     TRAC_ERR("SMGR: Timeout waiting for Pstates to be enabled, master state=%d, slave state=%d, pmc_mode[%08x], chips_present[%02x], pmc_deconfig[%08x]", //gm034
                             G_proc_dcm_sync_state.sync_state_master,
                             G_proc_dcm_sync_state.sync_state_slave,
                             in32(PMC_MODE_REG),
                             G_sysConfigData.is_occ_present,
                             in32(PMC_CORE_DECONFIGURATION_REG));
+*/ /*
                 }
                 l_extRc = ERC_GENERIC_TIMEOUT;
                 break;
             }
-            proc_gpsm_dcm_sync_enable_pstates_smh();
+// TEMP -- We don't support Pstates in Phase1
+//            proc_gpsm_dcm_sync_enable_pstates_smh();
             ssx_sleep(SSX_MICROSECONDS(500));
         }
         if(proc_is_hwpstate_enabled() && G_sysConfigData.system_type.kvm)
@@ -306,6 +312,7 @@ errlHndl_t SMGR_observation_to_active()
         rtl_clr_run_mask_deferred(RTL_FLAG_OBS);
         rtl_set_run_mask_deferred(RTL_FLAG_ACTIVE);
 
+/* TEMP -- NOT SUPPORTED IN PHASE1
         // Ensure that the dpll override (enabled when mfg biases freq) has been disabled.
         int l_core;
         uint32_t l_configured_cores;
@@ -324,7 +331,7 @@ errlHndl_t SMGR_observation_to_active()
                 break;
             }
         }
-
+*/ /*
         if(!l_rc)
         {
 
@@ -344,6 +351,8 @@ errlHndl_t SMGR_observation_to_active()
             TRAC_IMP("Configuring PCBS heartbeat for configured cores=0x%8.8x", l_cfgd_cores);
             TRAC_IMP("OCC configuration view: G_present_hw_cores=0x%8.8x, G_present_cores=0x%8.8x",
                     G_present_hw_cores, G_present_cores);
+
+/* TEMP -- NOT SUPPORTED IN PHASE1
             // Setup the pcbs heartbeat timer
             l_rc = pcbs_hb_config(1, // enable = yes
                                   l_cfgd_cores,
@@ -366,7 +375,7 @@ errlHndl_t SMGR_observation_to_active()
                          PCBS_HEARBEAT_TIME_US,
                          l_actual_pcbs_hb_time);
             }
-
+*/ /*
             // TODO: #state_c_001 Manually configuring the PMC
             // heartbeat until pmc_hb_config is shown to be working
             // Reference SW238882 for more information on updates needed in
@@ -381,11 +390,13 @@ errlHndl_t SMGR_observation_to_active()
             // This combined with the hang pulse count and pre-divider yields
             // about a 2 second timeout
             pohr.fields.pmc_occ_heartbeat_time = 0xffff;
+/* TEMP -- UNRESOLVED TRACE ERROR: "sizeof applied to a bitfield"
             TRAC_IMP("Configure PMC heartbeat, heartbeat_time=0x%x",
                     pohr.fields.pmc_occ_heartbeat_time);
             ppr0.fields.hangpulse_predivider = 1;
             TRAC_IMP("Configure PMC parm reg predivider=%d",
                     ppr0.fields.hangpulse_predivider);
+*/ /*
             // Write registers twice, known issue with heartbeat reg
             out32(PMC_OCC_HEARTBEAT_REG, pohr.value);
             out32(PMC_OCC_HEARTBEAT_REG, pohr.value);
@@ -423,7 +434,7 @@ errlHndl_t SMGR_observation_to_active()
          * @userdata2   valid states
          * @userdata4   ERC_STATE_FROM_OBS_TO_STB_FAILURE
          * @devdesc     Failed changing from observation to standby
-         */
+         */ /*
          l_errlHndl = createErrl(MAIN_STATE_TRANSITION_MID,        //modId
                                  INTERNAL_FAILURE,                 //reasoncode
                                  l_extRc,                          //Extended reason code
@@ -439,6 +450,7 @@ errlHndl_t SMGR_observation_to_active()
                  ERRL_COMPONENT_ID_FIRMWARE,
                  ERRL_CALLOUT_PRIORITY_HIGH);
     }
+*/
     return l_errlHndl;
 }
 
@@ -553,7 +565,9 @@ errlHndl_t SMGR_all_to_safe()
 
     // If we are master, make sure we are broadcasting that the requested
     // state is "safe state"
-    if (OCC_MASTER == G_occ_role)
+// TEMP -- IN PHASE1 WE ARE ALWAYS MASTER
+//    if (OCC_MASTER == G_occ_role)
+    if (TRUE)
     {
        G_occ_external_req_state = OCC_STATE_SAFE;
     }
@@ -697,6 +711,7 @@ errlHndl_t SMGR_set_state(OCC_STATE i_new_state)
 uint8_t SMGR_validate_get_valid_states(void)
 {
     uint8_t         l_valid_states = 0;
+/* TEMP -- NOT SUPPORTED IN PHASE1
     uint32_t        l_datamask = DATA_get_present_cnfgdata();
     static BOOLEAN  l_throttle_traced = FALSE;
 
@@ -727,7 +742,9 @@ uint8_t SMGR_validate_get_valid_states(void)
     }
 
     // If we are master OCC, set this bit
-    if(OCC_MASTER == G_occ_role)
+// TEMP -- IN PHASE 1 WE ARE ALWAYS MASTER
+//    if(OCC_MASTER == G_occ_role)
+    if (TRUE)
     {
        l_valid_states |= SMGR_MASK_MASTER_OCC;
     }
@@ -737,7 +754,7 @@ uint8_t SMGR_validate_get_valid_states(void)
     {
         l_valid_states |= OCC_ROLE_FIR_MASTER_MASK;
     }
-
+*/
     return l_valid_states;
 }
 

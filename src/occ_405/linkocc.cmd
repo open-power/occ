@@ -83,6 +83,10 @@ OUTPUT_FORMAT(elf32-powerpc);
 #define writethrough_offset 0x10000000
 #define writethrough_origin (origin - 0x10000000)
 
+// This is the offset from the ppc405 EVPR where the debug pointers can be
+// found.
+#define SSX_DEBUG_PTRS_OFFSET   0x820
+
 //  main()'s stack starts just below the boot branch.  The bootloader will
 //  align this address as needed.
 
@@ -180,22 +184,22 @@ ppc405_mmu_asm.o(.text)
 #endif
 
 #define text_2000 \
-pgp_irq_init.o(.text) \
+occhw_irq_init.o(.text) \
 ppc405_cache_init.o(.text) \
 ppc405_breakpoint.o(.text) \
-pgp_cache.o(.text) \
+occhw_cache.o(.text) \
 ssx_stack_init.o(.text) \
 thread_text \
 mmu_text \
-pgp_async.o(.text) \
-pgp_async_pore.o(.text) \
-pgp_async_ocb.o(.text) \
-pgp_async_pba.o(.text) \
-pgp_pmc.o(.text) \
-pgp_ocb.o(.text) \
-pgp_pba.o(.text) \
-pgp_id.o(.text) \
-pgp_centaur.o(.text) \
+occhw_async.o(.text) \
+//occhw_async_pore.o(.text) \
+occhw_async_ocb.o(.text) \
+occhw_async_pba.o(.text) \
+occhw_pmc.o(.text) \
+occhw_ocb.o(.text) \
+occhw_pba.o(.text) \
+occhw_id.o(.text) \
+//occhw_centaur.o(.text) \
 ppc405_lib_core.o(.text) \
 ssx_core.o(.text)
 
@@ -241,7 +245,7 @@ ssx_core.o(.text)
 ssx_init.o(.text) \
 ppc405_boot.o(.text) \
 ppc405_init.o(.text) \
-pgp_init.o(.text)
+occhw_init.o(.text)
 
 #ifndef PPC405_MMU_SUPPORT
 ASSERT((0), "OCC Application Firmware can not be compiled without \
@@ -289,10 +293,13 @@ SECTIONS
 
     .exceptions . : {
          ___vectors = .;
-    ppc405_exceptions.o(.vectors_0000)
+         ppc405_exceptions.o(.vectors_0000)
          pack_0000
          . = ___vectors + 0x0100;
          ppc405_exceptions.o(.vectors_0100)
+         . = ___vectors + SSX_DEBUG_PTRS_OFFSET;
+         *(.debug_ptrs)
+         ppc405_exceptions.o(.irq_exit_traces)
          pack_0100
          . = ___vectors + 0x0c00;
          ppc405_exceptions.o(.vectors_0c00)

@@ -102,7 +102,8 @@ void reset_state_request(uint8_t i_request)
 
         // Post the semaphore to wakeup the thread that
         // will put us into SAFE state.
-        ssx_semaphore_post(&G_dcomThreadWakeupSem);
+// TEMP -- THIS THREAD ISN"T ACTUALLY RUNNING IN PHASE1
+//        ssx_semaphore_post(&G_dcomThreadWakeupSem);
 
         // Set RTL Flags here too, depending how urgent it is that we stop
         // running tasks.
@@ -149,7 +150,8 @@ void reset_state_request(uint8_t i_request)
 // End Function Specification
 void task_check_for_checkstop(task_t *i_self)
 {
-    pore_status_t l_gpe0_status;
+// TEMP -- NO MORE PORE
+//    pore_status_t l_gpe0_status;
     ocb_oisr0_t l_oisr0_status;
     static bool L_checkstop_traced = FALSE;
     uint8_t l_reason_code = 0;
@@ -165,6 +167,7 @@ void task_check_for_checkstop(task_t *i_self)
         // Looked for a frozen GPE, a sign that the chip has stopped working or
         // check-stopped.  This check also looks for an interrupt status flag that
         // indicates if the system has check-stopped.
+/* TEMP -- NO MORE PORE / check_stop field no longer exists
         l_gpe0_status.value = in64(PORE_GPE0_STATUS);
         l_oisr0_status.value = in32(OCB_OISR0);
 
@@ -203,7 +206,7 @@ void task_check_for_checkstop(task_t *i_self)
              * @userdata1   High order word of PORE_GPE0_STATUS
              * @userdata2   OCB_OISR0
              * @devdesc     OCC detected system checkstop
-             */
+             */ /*
              l_err = createErrl(MAIN_SYSTEM_HALTED_MID,
                                 l_reason_code,
                                 OCC_NO_EXTENDED_RC,
@@ -217,6 +220,7 @@ void task_check_for_checkstop(task_t *i_self)
              // checkstop conditions and take appropriate actions.
              commitErrl(&l_err);
         }
+*/
     }
     while(0);
 }

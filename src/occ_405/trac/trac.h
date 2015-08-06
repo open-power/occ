@@ -58,6 +58,7 @@
 //      TRAC_DBG must be used for debug purpose only. This traces will be
 //               turned OFF with product code.
 #ifdef TRAC_TO_SIMICS
+
 #define TRAC_ERR(frmt,args...)  \
         printf(ERR_MRK "%s: "frmt "\n",__FUNCTION__,##args)
 #define TRAC_INFO(frmt,args...)  \
@@ -74,6 +75,7 @@ extern void dumpHexString(const void *i_data, const unsigned int len, const char
 
 #else  //TRAC_TO_SIMICS
 
+/*
 #define TRAC_ERR(frmt,args...)  \
         TRACE(g_trac_err,ERR_MRK frmt,##args)
 #define TRAC_INFO(frmt,args...)  \
@@ -84,7 +86,12 @@ extern void dumpHexString(const void *i_data, const unsigned int len, const char
         TRACE(g_trac_inf,DBG_MRK fmt,##args)
 #define DEBUG_HEXDUMP(data, len, string)  \
         TRACEBIN(g_trac_inf, string, data,len)
-
+*/
+#define TRAC_ERR SSX_TRACE
+#define TRAC_INFO SSX_TRACE
+#define TRAC_IMP SSX_TRACE
+#define DBG_PRINT SSX_TRACE
+#define DEBUG_HEXDUMP SSX_TRACE_BIN
 #endif  //TRAC_TO_SIMICS
 
 

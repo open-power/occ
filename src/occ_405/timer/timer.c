@@ -23,35 +23,35 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-//*************************************************************************
+//*************************************************************************/
 // Includes
-//*************************************************************************
+//*************************************************************************/
 #include <timer.h>                  // timer defines
 #include "ssx.h"
 #include <trac.h>                   // Trace macros
-#include <pgp_common.h>             // PGP common defines
-#include <pgp_ocb.h>                // OCB timer interfaces
+#include <occhw_common.h>             // PGP common defines
+#include <occhw_ocb.h>                // OCB timer interfaces
 #include <occ_service_codes.h>      // Reason codes
 #include <timer_service_codes.h>    // Module Id
 #include <cmdh_fsp.h>               // for RCs in the checkpoint macros
 
-//*************************************************************************
+//*************************************************************************/
 // Externs
-//*************************************************************************
+//*************************************************************************/
 // Variable holding main thread loop count
 extern uint32_t G_mainThreadLoopCounter;
 
-//*************************************************************************
+//*************************************************************************/
 // Macros
-//*************************************************************************
+//*************************************************************************/
 // PPC405 watchdog timer handler
 SSX_IRQ_FAST2FULL(ppc405WDTHndler, ppc405WDTHndlerFull);
 // OCB timer handler
 SSX_IRQ_FAST2FULL(ocbTHndler, ocbTHndlerFull);
 
-//*************************************************************************
+//*************************************************************************/
 // Defines/Enums
-//*************************************************************************
+//*************************************************************************/
 // Change watchdog reset control to take no action on state TSR[WIS]=1
 // and TSR[ENW]=1
 // Watchdog reset control set to "No reset"
@@ -61,22 +61,22 @@ SSX_IRQ_FAST2FULL(ocbTHndler, ocbTHndlerFull);
 // 4ms represented in nanoseconds
 #define OCB_TIMER_TIMOUT    4000000
 
-//*************************************************************************
+//*************************************************************************/
 // Structures
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Globals
-//*************************************************************************
+//*************************************************************************/
 bool G_wdog_enabled = FALSE;
 
-//*************************************************************************
+//*************************************************************************/
 // Function Prototypes
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Functions
-//*************************************************************************
+//*************************************************************************/
 
 // Function Specification
 //
@@ -215,7 +215,10 @@ void ppc405WDTHndlerFull(void * i_arg, SsxIrqId i_irq, int i_priority)
             }
             else
             {
-                OCC_HALT(ERRL_RC_WDOG_TIMER);
+
+// TEMP -- NOT SUPPORTED IN PHASE1
+//                OCC_HALT(ERRL_RC_WDOG_TIMER);
+TRAC_ERR("Should have halted here due to WDOG");
             }
         }
     }
@@ -231,5 +234,7 @@ void ppc405WDTHndlerFull(void * i_arg, SsxIrqId i_irq, int i_priority)
 void ocbTHndlerFull(void * i_arg, SsxIrqId i_irq, int i_priority)
 {
     // OCC_HALT with exception code passed in.
-    OCC_HALT(ERRL_RC_OCB_TIMER);
+// TEMP -- NOT SUPPORTED IN PHASE1
+//    OCC_HALT(ERRL_RC_OCB_TIMER);
+TRAC_ERR("Should have halted here due to THndlerFull");
 }

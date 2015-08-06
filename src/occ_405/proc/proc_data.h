@@ -29,7 +29,7 @@
 #include <occ_common.h>
 #include <ssx.h>
 #include "rtls.h"
-#include "gpe_data.h"
+//#include "gpe_data.h"
 
 //Returns 0 if the specified core is not present. Otherwise, returns none-zero.
 #define CORE_PRESENT(occ_core_id) \
@@ -84,10 +84,13 @@ enum eOccProcCores
   CORE_11 = 11,
 };
 
-typedef CoreData gpe_bulk_core_data_t;
+// TEMP -- CoreData no longer exists
+//typedef CoreData gpe_bulk_core_data_t;
 
 //Processor data collect structures used for task data pointers
 //gpe_req.request.parameter points to GpeGetCoreDataParms
+// TEMP -- CoreData / PoreFlex objects no longer exist
+/*
 struct bulk_core_data_task {
         uint8_t start_core;
         uint8_t current_core;
@@ -96,6 +99,7 @@ struct bulk_core_data_task {
         PoreFlex gpe_req;
 } __attribute__ ((__packed__));
 typedef struct bulk_core_data_task bulk_core_data_task_t;
+*/
 
 //Only PCBS_LOCAL_PSTATE_FREQ_TARGET_STATUS_REG register is being
 //collected at this time. Other register will be added when needed.
@@ -113,8 +117,9 @@ struct gpe_fast_core_data {
 typedef struct gpe_fast_core_data gpe_fast_core_data_t;
 
 //Global low and high cores structures used for task data pointers
-extern bulk_core_data_task_t G_low_cores;
-extern bulk_core_data_task_t G_high_cores;
+// TEMP -- CoreData / PoreFlex objects no longer exist
+//extern bulk_core_data_task_t G_low_cores;
+//extern bulk_core_data_task_t G_high_cores;
 
 //Global G_present_cores is bitmask of all OCC core numbering
 extern uint32_t G_present_cores;
@@ -171,9 +176,11 @@ void task_fast_core_data( task_t * i_task );
 
 //Returns a pointer to the most up-to-date bulk core data for the core
 //associated with the specified OCC core id.
-gpe_bulk_core_data_t * proc_get_bulk_core_data_ptr( const uint8_t i_occ_core_id );
+// TEMP -- CoreData / PoreFlex objects no longer exist
+//gpe_bulk_core_data_t * proc_get_bulk_core_data_ptr( const uint8_t i_occ_core_id );
 
 //Returns a pointer to the most up-to-date fast core data
-gpe_fast_core_data_t * proc_get_fast_core_data_ptr( void );
+// TEMP -- CoreData / PoreFlex objects no longer exist
+//gpe_fast_core_data_t * proc_get_fast_core_data_ptr( void );
 
 #endif //_PROC_DATA_H

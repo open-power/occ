@@ -89,24 +89,38 @@
 task_t G_task_table[TASK_END] = {
     // flags,                      func_ptr,                       data_ptr,// task_id_t
     { FLAGS_APSS_START_MEAS,       task_apss_start_pwr_meas,       NULL },  // TASK_ID_APSS_START
-    { FLAGS_LOW_CORES_DATA,        task_core_data,                 (void *) &G_low_cores},
+// TEMP -- PORE ISSUES
+//    { FLAGS_LOW_CORES_DATA,        task_core_data,                 (void *) &G_low_cores},
     { FLAGS_APSS_CONT_MEAS,        task_apss_continue_pwr_meas,    NULL },  // TASK_ID_APSS_CONT
-    { FLAGS_HIGH_CORES_DATA,       task_core_data,                 (void *) &G_high_cores},
+// TEMP -- PORE ISSUES
+//    { FLAGS_HIGH_CORES_DATA,       task_core_data,                 (void *) &G_high_cores},
     { FLAGS_APSS_DONE_MEAS,        task_apss_complete_pwr_meas,    NULL },  // TASK_ID_APSS_DONE
-    { FLAGS_FAST_CORES_DATA,       task_fast_core_data,            NULL },
-    { FLAGS_DCOM_RX_SLV_INBX,      task_dcom_rx_slv_inbox,         NULL },  // TASK_ID_DCOM_RX_INBX
-    { FLAGS_DCOM_TX_SLV_INBX,      task_dcom_tx_slv_inbox,         NULL },  // TASK_ID_DCOM_TX_INBX
+// TEMP -- NOT SUPPORTED YET IN PHASE1
+//    { FLAGS_FAST_CORES_DATA,       task_fast_core_data,            NULL },
+// TEMP -- NOT SUPPORTED YET IN PHASE1
+//    { FLAGS_DCOM_RX_SLV_INBX,      task_dcom_rx_slv_inbox,         NULL },  // TASK_ID_DCOM_RX_INBX
+// TEMP -- NOT SUPPORTED YET IN PHASE1
+//    { FLAGS_DCOM_TX_SLV_INBX,      task_dcom_tx_slv_inbox,         NULL },  // TASK_ID_DCOM_TX_INBX
     { FLAGS_POKE_WDT,              task_poke_watchdogs,            NULL },  // TASK_ID_POKE_WDT
-    { FLAGS_DCOM_WAIT_4_MSTR,      task_dcom_wait_for_master,      NULL },  // TASK_ID_DCOM_WAIT_4_MSTR
-    { FLAGS_DCOM_RX_SLV_OUTBOX,    task_dcom_rx_slv_outboxes,      NULL },  // TASK_ID_DCOM_RX_OUTBX
-    { FLAGS_DCOM_TX_SLV_OUTBOX,    task_dcom_tx_slv_outbox,        NULL },  // TASK_ID_DCOM_TX_OUTBX
-    { FLAGS_DCOM_PARSE_OCC_FW_MSG, task_dcom_parse_occfwmsg,       NULL },  // TASK_ID_DCOM_PARSE_FW_MSG
+// TEMP -- NOT SUPPORTED YET IN PHASE1
+//    { FLAGS_DCOM_WAIT_4_MSTR,      task_dcom_wait_for_master,      NULL },  // TASK_ID_DCOM_WAIT_4_MSTR
+// TEMP -- NOT SUPPORTED YET IN PHASE1
+//    { FLAGS_DCOM_RX_SLV_OUTBOX,    task_dcom_rx_slv_outboxes,      NULL },  // TASK_ID_DCOM_RX_OUTBX
+// TEMP -- NOT SUPPORTED YET IN PHASE1
+//    { FLAGS_DCOM_TX_SLV_OUTBOX,    task_dcom_tx_slv_outbox,        NULL },  // TASK_ID_DCOM_TX_OUTBX
+// TEMP -- NOT SUPPORTED YET IN PHASE1
+//    { FLAGS_DCOM_PARSE_OCC_FW_MSG, task_dcom_parse_occfwmsg,       NULL },  // TASK_ID_DCOM_PARSE_FW_MSG
     { FLAGS_CHECK_FOR_CHECKSTOP,   task_check_for_checkstop,       NULL },  // TASK_ID_CHECK_FOR_CHECKSTOP
-    { FLAGS_AMEC_SLAVE,            task_amec_slave,                NULL },  // TASK_ID_AMEC_SLAVE
-    { FLAGS_AMEC_MASTER,           task_amec_master,               NULL },  // TASK_ID_AMEC_MASTER
-    { FLAGS_CENTAUR_DATA,          task_centaur_data,              (void *) &G_centaur_data_task}, // TASK_ID_CENTAUR_DATA
-    { FLAGS_CORE_DATA_CONTROL,     task_core_data_control,         NULL },  // TASK_ID_CORE_DATA_CONTROL
-    { FLAGS_CENTAUR_CONTROL,       task_centaur_control,           (void *) &G_centaur_control_task },  // TASK_ID_CENTAUR_CONTROL
+// TEMP -- NOT SUPPORTED YET IN PHASE1
+//    { FLAGS_AMEC_SLAVE,            task_amec_slave,                NULL },  // TASK_ID_AMEC_SLAVE
+// TEMP -- NOT SUPPORTED YET IN PHASE1
+//    { FLAGS_AMEC_MASTER,           task_amec_master,               NULL },  // TASK_ID_AMEC_MASTER
+// TEMP -- PORE ISSUES
+//    { FLAGS_CENTAUR_DATA,          task_centaur_data,              (void *) &G_centaur_data_task}, // TASK_ID_CENTAUR_DATA
+// TEMP -- NOT SUPPORTED YET IN PHASE1
+//    { FLAGS_CORE_DATA_CONTROL,     task_core_data_control,         NULL },  // TASK_ID_CORE_DATA_CONTROL
+// TEMP -- PORE ISSUES
+//    { FLAGS_CENTAUR_CONTROL,       task_centaur_control,           (void *) &G_centaur_control_task },  // TASK_ID_CENTAUR_CONTROL
 };
 
 const uint8_t G_tick0_seq[] = {

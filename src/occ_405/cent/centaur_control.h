@@ -32,7 +32,7 @@
 #include <occ_common.h>
 #include <ssx.h>
 #include "rtls.h"
-#include "gpe_data.h"
+//#include "gpe_data.h"
 #include "occ_sys_config.h"
 
 //*************************************************************************
@@ -64,6 +64,8 @@ typedef enum
 } eCentaurControlTraceFlags;
 
 //Centaur data collect structures used for task data pointers
+// TEMP -- PORE ISSUES
+/*
 struct centaur_control_task {
         uint8_t  startCentaur;
         uint8_t  prevCentaur;
@@ -73,6 +75,7 @@ struct centaur_control_task {
         PoreFlex gpe_req;
 } __attribute__ ((__packed__));
 typedef struct centaur_control_task centaur_control_task_t;
+*/
 
 //per mba throttle values
 typedef struct
@@ -88,7 +91,8 @@ typedef struct
 //*************************************************************************
 
 //Global centaur structures used for task data pointers
-extern centaur_control_task_t G_centaur_control_task;
+// TEMP -- PORE ISSUES
+//extern centaur_control_task_t G_centaur_control_task;
 
 //*************************************************************************
 // Function Prototypes

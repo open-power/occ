@@ -466,7 +466,8 @@ UINT trac_write_int(tracDesc_t io_td,const trace_hash_val i_hash,
                 l_entry_size = l_entry_size + ((1 - i_num_args)*4);
 
                 // fill trace field
-                l_entry.head.hash = trace_adal_hash("IMP: ISR Circular Buffer is full, %d entries lost", -1);
+// TEMP -- I don't think we use this...
+//                l_entry.head.hash = trace_adal_hash("IMP: ISR Circular Buffer is full, %d entries lost", -1);
                 l_entry.head.line = __LINE__;
 
                 // one argument for this trace

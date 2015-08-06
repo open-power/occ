@@ -81,7 +81,7 @@ export GLOBAL_INCLUDES = -I$(IMAGE_SRCDIR)/..
 endif
 
 ifndef BASE_OBJDIR
-export BASE_OBJDIR = $(abspath ../../../obj)
+export BASE_OBJDIR = $(abspath ../../obj)
 endif
 
 export IMG_OBJDIR = $(BASE_OBJDIR)/$(IMAGE_NAME)
