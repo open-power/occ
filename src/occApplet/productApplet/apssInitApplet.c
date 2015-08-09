@@ -35,21 +35,19 @@
 #include <appletId.h>           // For applet ID num
 #include "ssx_io.h"             // For printf
 #include <state.h>
+#include "occhw_async.h"            //async (GPE, OCB, etc) interfaces
 
 //*************************************************************************
 // Externs
 //*************************************************************************
-extern PoreEntryPoint GPE_apss_initialize_gpio;
-extern PoreEntryPoint GPE_apss_set_composite_mode;
-extern PoreFlex G_meas_start_request;
-extern PoreFlex G_meas_cont_request;
-extern PoreFlex G_meas_complete_request;
+//extern PoreEntryPoint GPE_apss_initialize_gpio;
+//extern PoreEntryPoint GPE_apss_set_composite_mode;
+extern GpeRequest G_meas_start_request;
+extern GpeRequest G_meas_cont_request;
+extern GpeRequest G_meas_complete_request;
 extern apss_start_args_t    G_gpe_start_pwr_meas_read_args;
 extern apss_continue_args_t G_gpe_continue_pwr_meas_read_args;
 extern apss_complete_args_t G_gpe_complete_pwr_meas_read_args;
-extern PoreEntryPoint GPE_apss_start_pwr_meas_read;
-extern PoreEntryPoint GPE_apss_continue_pwr_meas_read;
-extern PoreEntryPoint GPE_apss_complete_pwr_meas_read;
 
 //*************************************************************************
 // Macros
@@ -87,7 +85,7 @@ extern PoreEntryPoint GPE_apss_complete_pwr_meas_read;
 errlHndl_t apss_initialize()
 {
     errlHndl_t l_err = NULL;
-    PoreFlex request;
+    GpeRequest request;
 
     // Setup the GPIO init structure to pass to the GPE program
     G_gpe_apss_initialize_gpio_args.error.error = 0;
@@ -106,8 +104,8 @@ errlHndl_t apss_initialize()
 
     // Create/schedule GPE_apss_initialize_gpio and wait for it to complete (BLOCKING)
     TRAC_INFO("Creating request for GPE_apss_initialize_gpio");
-    pore_flex_create(&request,                                  // request
-                     &G_pore_gpe0_queue,                        // queue
+    gpe_request_create(&request,                                  // request
+                      &G_async_gpe_queue0,                        // queue
                      (void*)GPE_apss_initialize_gpio,           // GPE entry_point
                      (uint32_t)&G_gpe_apss_initialize_gpio_args,// GPE argument_ptr
                      SSX_SECONDS(5),                            // timeout
@@ -115,7 +113,7 @@ errlHndl_t apss_initialize()
                      NULL,                                      // callback arg
                      ASYNC_REQUEST_BLOCKING);                   // options
     // Schedule the request to be executed
-    pore_flex_schedule(&request);
+    gpe_request_schedule(&request);
 
     // Check for a timeout, will create the error log later
     // NOTE: As of 2013/07/16, simics will still fail here on a OCC reset
@@ -146,15 +144,15 @@ errlHndl_t apss_initialize()
 
         // Create/schedule GPE_apss_set_composite_mode and wait for it to complete (BLOCKING)
         TRAC_INFO("Creating request for GPE_apss_set_composite_mode");
-        pore_flex_create(&request,                                    // request
-                         &G_pore_gpe0_queue,                          // queue
+        gpe_request_create(&request,                                    // request
+                           &G_async_gpe_queue0,                          // queue
                          (void*)GPE_apss_set_composite_mode,          // GPE entry_point
                          (uint32_t)&G_gpe_apss_set_composite_mode_args,// GPE argument_ptr
                          SSX_SECONDS(5),                              // timeout
                          NULL,                                        // callback
                          NULL,                                        // callback arg
                          ASYNC_REQUEST_BLOCKING);                     // options
-        pore_flex_schedule(&request);
+        gpe_request_schedule(&request);
 
         // Check for a timeout, will create the error log later
         if(ASYNC_REQUEST_STATE_TIMED_OUT == request.request.completion_state)
@@ -203,9 +201,9 @@ errlHndl_t apss_initialize()
 
         TRAC_INFO("apss_initialize: Creating request G_meas_start_request.");
         //Create the request for measure start. Scheduling will happen in apss.c
-        pore_flex_create(&G_meas_start_request,
-                         &G_pore_gpe0_queue,                          // queue
-                         (void*)GPE_apss_start_pwr_meas_read,         // entry_point
+        gpe_request_create(&G_meas_start_request,
+                           &G_async_gpe_queue0,                       // queue
+                           IPC_ST_APSS_START_PWR_MEAS_READ_FUNCID,    // entry_point
                          (uint32_t)&G_gpe_start_pwr_meas_read_args,   // entry_point arg
                          SSX_WAIT_FOREVER,                            // no timeout
                          NULL,                                        // callback
@@ -214,9 +212,9 @@ errlHndl_t apss_initialize()
 
         TRAC_INFO("apss_initialize: Creating request G_meas_cont_request.");
         //Create the request for measure continue. Scheduling will happen in apss.c
-        pore_flex_create(&G_meas_cont_request,
-                         &G_pore_gpe0_queue,                          // request
-                         (void*)GPE_apss_continue_pwr_meas_read,      // entry_point
+        gpe_request_create(&G_meas_cont_request,
+                           &G_async_gpe_queue0,                        // request
+                           IPC_ST_APSS_CONTINUE_PWR_MEAS_READ_FUNCID,  // entry_point
                          (uint32_t)&G_gpe_continue_pwr_meas_read_args, // entry_point arg
                          SSX_WAIT_FOREVER,                            // no timeout
                          NULL,                                        // callback
@@ -225,14 +223,14 @@ errlHndl_t apss_initialize()
 
         TRAC_INFO("apss_initialize: Creating request G_meas_complete_request.");
         //Create the request for measure complete. Scheduling will happen in apss.c
-        pore_flex_create(&G_meas_complete_request,
-                         &G_pore_gpe0_queue,                          // queue
-                         (void*)GPE_apss_complete_pwr_meas_read,      // entry_point
-                         (uint32_t)&G_gpe_complete_pwr_meas_read_args,// entry_point arg
-                         SSX_WAIT_FOREVER,                            // no timeout
-                         (AsyncRequestCallback)reformat_meas_data,    // callback,
-                         (void*)NULL,                                 // callback arg
-                         ASYNC_CALLBACK_IMMEDIATE);                   // options
+        gpe_request_create(&G_meas_complete_request,
+                           &G_async_gpe_queue0,                        // queue
+                           IPC_ST_APSS_COMPLETE_PWR_MEAS_READ_FUNCID,  // entry_point
+                         (uint32_t)&G_gpe_complete_pwr_meas_read_args, // entry_point arg
+                         SSX_WAIT_FOREVER,                             // no timeout
+                         (AsyncRequestCallback)reformat_meas_data,     // callback,
+                         (void*)NULL,                                  // callback arg
+                         ASYNC_CALLBACK_IMMEDIATE);                    // options
 
     }
     else

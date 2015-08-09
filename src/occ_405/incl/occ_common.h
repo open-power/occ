@@ -242,6 +242,8 @@ enum
     HOMER_ACCESS_INITS          = 0x0318,
     INITIALIZING_IRQS           = 0x0320,
     IRQS_INITIALIZED            = 0x032f,
+    INITIALIZING_IPC            = 0x0330,
+    IPC_INITIALIZED             = 0x033f,
     MAIN_THREAD_STARTED         = 0x03ff,
     ROLES_INITIALIZED           = 0x04ff,
     SENSORS_INITIALIZED         = 0x05ff,

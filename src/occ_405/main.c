@@ -25,6 +25,8 @@
 
 #include "ssx.h"
 #include "ssx_io.h"
+#include "ipc_api.h"                //ipc base interfaces
+#include "occhw_async.h"            //async (GPE, OCB, etc) interfaces
 #include "simics_stdio.h"
 //#include "heartbeat.h"
 #include <thread.h>
@@ -59,6 +61,19 @@ extern void __ssx_boot;
 extern uint32_t G_occ_phantom_critical_count;
 extern uint32_t G_occ_phantom_noncritical_count;
 extern uint8_t G_occ_interrupt_type;
+
+// Remove the next LOC when dcom_initialize_roles() is un-commented
+uint8_t     G_occ_role = OCC_MASTER;  // TEMP 
+
+// TEMP Remove next 6 LOC when apssInitApplet.c is added
+extern GpeRequest G_meas_start_request;
+extern GpeRequest G_meas_cont_request;
+extern GpeRequest G_meas_complete_request;
+extern apss_start_args_t    G_gpe_start_pwr_meas_read_args;
+extern apss_continue_args_t G_gpe_continue_pwr_meas_read_args;
+extern apss_complete_args_t G_gpe_complete_pwr_meas_read_args;
+
+
 
 IMAGE_HEADER (G_mainAppImageHdr,__ssx_boot,MAIN_APP_ID,ID_NUM_INVALID);
 
@@ -99,62 +114,6 @@ void pmc_hw_error_isr(void *private, SsxIrqId irq, int priority);
 //Macro creates a 'bridge' handler that converts the initial fast-mode to full
 //mode interrupt handler
 SSX_IRQ_FAST2FULL(pmc_hw_error_fast, pmc_hw_error_isr);
-
-// TODO: Verify whether the workaround is still needed.
-/*
- * Function Specification
- *
- * Name: workaround_HW258436
- *
- * Description: Sets up the PBA so that there is no overlap in use of buffers between
- *              GPE engines and other engines.  This came from Bishop Brock.
- *              It should be pulled out after the procedure that sets up the PBA
- *              has been fixed.  Without this workaround we see an invalid instruction
- *              failure on the GPE.
- *
- * End Function Specification
- */
-void workaround_HW258436()
-{
-    uint64_t l_scom_data = 0;
-    int l_rc = 0;
-
-    do
-    {
-        //scom errors will be committed internally -- gm033
-        l_rc = getscom_ffdc(0x64004, &l_scom_data, NULL);
-        if(l_rc) break;
-        l_scom_data &= 0xfffff1ffffffffffull;
-        l_scom_data |= 0x0000080000000000ull;
-        l_rc = putscom_ffdc(0x64004, l_scom_data, NULL);
-        if(l_rc) break;
-
-        l_rc = getscom_ffdc(0x64005, &l_scom_data, NULL);
-        if(l_rc) break;
-        l_scom_data &= 0xfffff1ffffffffffull;
-        l_scom_data |= 0x0000040000000000ull;
-        l_rc = putscom_ffdc(0x64005, l_scom_data, NULL);
-        if(l_rc) break;
-
-        l_rc = getscom_ffdc(0x64006, &l_scom_data, NULL);
-        if(l_rc) break;
-        l_scom_data &= 0xfffff1ffffffffffull;
-        l_scom_data |= 0x0000040000000000ull;
-        l_rc = putscom_ffdc(0x64006, l_scom_data, NULL);
-        if(l_rc) break;
-
-        l_rc = getscom_ffdc(0x64007, &l_scom_data, NULL);
-        if(l_rc) break;
-        l_scom_data &= 0xfffff1ffffffffffull;
-        l_scom_data |= 0x0000040000000000ull;
-        l_rc = putscom_ffdc(0x64007, l_scom_data, NULL);
-        if(l_rc) break;
-    }while(0);
-    if(l_rc)
-    {
-        TRAC_ERR("workaround_HW258436: scom failure. rc=0x%08x", l_rc);
-    }
-}
 
 
 /*
@@ -383,6 +342,119 @@ END TEMP */
 /*
  * Function Specification
  *
+ * Name: gpe_reset
+ *
+ * Description: Force a GPE to start executing instructions at the reset vector
+ *
+ * End Function Specification
+ */
+void gpe_reset(uint32_t instance_id)
+{
+#define GPE0_XCR            0xC0000080
+#define XCR_CMD_HRESET      0x60000000
+#define XCR_CMD_TOGGLE_XSR  0x40000000
+#define XCR_CMD_RESUME      0x20000000
+#define GPE_XCR_ADDR(inst) (GPE0_XCR + (0x10000 * instance_id))
+
+
+    out32(GPE_XCR_ADDR(instance_id), XCR_CMD_HRESET);
+    out32(GPE_XCR_ADDR(instance_id), XCR_CMD_TOGGLE_XSR);
+    out32(GPE_XCR_ADDR(instance_id), XCR_CMD_TOGGLE_XSR);
+    out32(GPE_XCR_ADDR(instance_id), XCR_CMD_RESUME);
+}
+
+/*
+ * Function Specification
+ *
+ * Name: occ_ipc_setup
+ *
+ * Description: Initialzes IPC (Inter Process Communication) that is used
+ *              to communicate with GPEs.  
+ *              This will also start GPE0 and GPE1.   
+ * NOTE:  SGPE and PGPE are started prior to the OCC 405 during the IPL.
+ *
+ * End Function Specification
+ */
+void occ_ipc_setup()
+{
+    int         l_rc;
+    errlHndl_t  l_err;
+
+    do
+    {
+        // install our IPC interrupt handler (this disables our cbufs)
+        l_rc = ipc_init();
+        if(l_rc)
+        {
+            TRAC_ERR("ipc_init failed with rc=0x%08x", l_rc);
+            break;
+        }
+
+        // enable IPC's
+        l_rc = ipc_enable();
+        if(l_rc)
+        {
+            TRAC_ERR("ipc_enable failed with rc = 0x%08x", l_rc);
+            break;
+        }
+
+        TRAC_INFO("Calling IPC disable on all GPE's");
+        // disable all of the GPE cbufs.  They will enable them once
+        // they are ready to communicate.
+        ipc_disable(OCCHW_INST_ID_GPE0);
+        ipc_disable(OCCHW_INST_ID_GPE1);
+
+        TRAC_INFO("IPC initialization completed");
+
+        // start GPE's 0 and 1
+        TRAC_INFO("Starting GPE0");
+        gpe_reset(OCCHW_INST_ID_GPE0);
+
+//      $TEMP start GPE1 at later phase for DIMM collection
+//        TRAC_INFO("Starting GPE1");
+//        gpe_reset(OCCHW_INST_ID_GPE1);
+
+        TRAC_INFO("GPE's taken out of reset");
+
+    }while(0);
+
+/* TEMP -- NO ERRL YET
+    if(l_rc)
+    {
+        // Log single error for all error cases, just look at trace to see where it failed.
+        /* @
+         * @moduleid   OCC_IPC_SETUP
+         * @reasonCode IPC_GENERIC_FAILURE
+         * @severity   ERRL_SEV_UNRECOVERABLE
+         * @userdata1  IPC return code
+         * @userdata4  OCC_NO_EXTENDED_RC
+         * @devdesc    Firmware failure initializing IPC
+         */ /*
+        l_err = createErrl( OCC_IRQ_SETUP,             // i_modId,
+                            SSX_GENERIC_FAILURE,       // i_reasonCode,
+                            OCC_NO_EXTENDED_RC,
+                            ERRL_SEV_UNRECOVERABLE,
+                            NULL,                      // tracDesc_t i_trace,
+                            0,                         // i_traceSz,
+                            l_rc,                      // i_userData1,
+                            0);                        // i_userData2
+
+        //Callout firmware
+        addCalloutToErrl(l_err,
+                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                         ERRL_COMPONENT_ID_FIRMWARE,
+                         ERRL_CALLOUT_PRIORITY_HIGH);
+
+        commitErrl(&l_err);
+    }
+*/
+}
+
+
+
+/*
+ * Function Specification
+ *
  * Name: hmon_routine
  *
  * Description: Runs various routines that check the health of the OCC
@@ -483,26 +555,54 @@ void hmon_routine()
  */
 void master_occ_init()
 {
-    // Init DPSS chip & start associated tasks.
-    // At present, this is uses function which is part of the INIT_SEC so
-    // it needs to be run before any applet runs. In future, we can make
-    // this an applet
-    // Commented out below call since we are not going to have DPSS
-    // support in OCC. In future if we decide to support it, this call needs
-    // to be changed to applet call as we have applet for initializing DPSS.
-
-    // start_dpss();
 
     OCC_APLT_STATUS_CODES l_status = OCC_APLT_SUCCESS;
     errlHndl_t l_errl = NULL;
 
     // Initialize APSS
-    runApplet(OCC_APLT_APSS_INIT,   // Applet enum Name
+    // Start TEMP code until apssInitApplet.c is compiled and running applets is supported
+        TRAC_INFO("apss_initialize: Creating request G_meas_start_request.");
+        //Create the request for measure start. Scheduling will happen in apss.c
+        gpe_request_create(&G_meas_start_request,
+                           &G_async_gpe_queue0,                       // queue
+                           IPC_ST_APSS_START_PWR_MEAS_READ_FUNCID,    // entry_point
+                         (uint32_t)&G_gpe_start_pwr_meas_read_args,   // entry_point arg
+                         SSX_WAIT_FOREVER,                            // no timeout
+                         NULL,                                        // callback
+                         NULL,                                        // callback arg
+                         ASYNC_CALLBACK_IMMEDIATE);                   // options
+
+        TRAC_INFO("apss_initialize: Creating request G_meas_cont_request.");
+        //Create the request for measure continue. Scheduling will happen in apss.c
+        gpe_request_create(&G_meas_cont_request,
+                           &G_async_gpe_queue0,                        // request
+                           IPC_ST_APSS_CONTINUE_PWR_MEAS_READ_FUNCID,  // entry_point
+                         (uint32_t)&G_gpe_continue_pwr_meas_read_args, // entry_point arg
+                         SSX_WAIT_FOREVER,                            // no timeout
+                         NULL,                                        // callback
+                         NULL,                                        // callback arg
+                         ASYNC_CALLBACK_IMMEDIATE);                   // options
+
+        TRAC_INFO("apss_initialize: Creating request G_meas_complete_request.");
+        //Create the request for measure complete. Scheduling will happen in apss.c
+        gpe_request_create(&G_meas_complete_request,
+                           &G_async_gpe_queue0,                        // queue
+                           IPC_ST_APSS_COMPLETE_PWR_MEAS_READ_FUNCID,  // entry_point
+                         (uint32_t)&G_gpe_complete_pwr_meas_read_args, // entry_point arg
+                         SSX_WAIT_FOREVER,                             // no timeout
+                         (AsyncRequestCallback)reformat_meas_data,     // callback,
+                         (void*)NULL,                                  // callback arg
+                         ASYNC_CALLBACK_IMMEDIATE);                    // options
+
+   // END TEMP code.  Un-comment runApplet() when TEMP code is removed
+/*    runApplet(OCC_APLT_APSS_INIT,   // Applet enum Name
             NULL,                 // Applet arguments
             TRUE,                 // Blocking call?
             NULL,                 // Applet finished semaphore
             &l_errl,              // Error log handle
             &l_status);           // Error status
+*/
+
 
     if( (NULL != l_errl)  || (l_status !=  OCC_APLT_SUCCESS))
     {
@@ -736,9 +836,6 @@ void Main_thread_routine(void *private)
 
     TRAC_INFO("Main Thread Started ... " );
 
-    //FIXME: Need to investigate if we need this workaround for P9
-    //Owner: Wael
-    //workaround_HW258436();
 
     // NOTE: At present, we are not planning to use any config data from
     // mainstore. OCC Role will be provided by FSP after FSP communication
@@ -747,8 +844,13 @@ void Main_thread_routine(void *private)
     // change to use config_data_init at that time.
     // Default role initialization and determine OCC/Chip Id
 
-    // TEMP -- NO DCOM YET
+    // TEMP -- NO DCOM YET, init as OCC Master
     //dcom_initialize_roles();
+        // Remove the next 2 LOC when dcom_initialize_roles is un-commented
+        // AND cmdh is running to call master_occ_init
+        rtl_set_run_mask(RTL_FLAG_MSTR);
+      master_occ_init();
+
     CHECKPOINT(ROLES_INITIALIZED);
 
     // Sensor Initialization
@@ -809,7 +911,7 @@ void Main_thread_routine(void *private)
     // initWatchdogTimers called before will start running the timer but
     // the interrupt handler will just restart the timer until we use this
     // enable switch to actually start the watchdog function.
-    ENABLE_WDOG;
+//    ENABLE_WDOG;
 
     while (TRUE)
     {
@@ -1184,6 +1286,15 @@ int main(int argc, char **argv)
     occ_irq_setup();
 
     CHECKPOINT(IRQS_INITIALIZED);
+
+    // enable IPC and start GPEs
+    CHECKPOINT(INITIALIZING_IPC);
+
+    occ_ipc_setup();
+
+    CHECKPOINT(IPC_INITIALIZED);
+
+
 
     // Create and resume main thread
     int l_rc = createAndResumeThreadHelper(&Main_thread,
