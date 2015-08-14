@@ -335,7 +335,7 @@ void printSensor(sensor_t i_snsr)
     SNSR_DBG("sample_min: 0x%x\n",i_snsr.sample_min);
     SNSR_DBG("sample_max: 0x%x\n",i_snsr.sample_max);
     SNSR_DBG("status.reset: 0x%x\n",i_snsr.status.reset);
-    SNSR_DBG("accumulator: 0x%x\n",i_snsr.accumulator);
+    SNSR_DBG("accumulator: 0x%016llx\n",i_snsr.accumulator);
     SNSR_DBG("update_tag: 0x%x\n",i_snsr.update_tag);
     SNSR_DBG("src_accum_snapshot: 0x%x\n",i_snsr.src_accum_snapshot);
     SNSR_DBG("ipmi sensor id: 0x%x\n",i_snsr.ipmi_sid);  //@fk009c
@@ -628,7 +628,7 @@ uint32_t sensorTestCommon()
         // test updating vector element with min operation and
         // element disabled
 
-        uint32_t l_tempacc=l_sensor->accumulator;
+        uint64_t l_tempacc=l_sensor->accumulator;
         sensor_vector_update(l_sensor,0);
         if( (l_sensor->sample != 11) || (l_sensor->sample_min != 10 ) ||
             (l_sensor->sample_max != 11 ) ||

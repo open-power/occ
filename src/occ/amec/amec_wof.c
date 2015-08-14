@@ -607,7 +607,7 @@ void amec_wof_common_steps(void)
 
     // Acquire important sensor data
     l_temp = AMECSENSOR_PTR(TEMP2MSP0)->sample;
-    l_accum = AMECSENSOR_PTR(CUR250USVDD0)->accumulator;
+    l_accum = (uint32_t)AMECSENSOR_PTR(CUR250USVDD0)->accumulator;
     l_v_chip = g_amec->wof.v_chip; //from amec_update_wof_sensors()
 
     if (g_amec->wof.state != AMEC_WOF_NO_CORE_CHANGE)
