@@ -615,6 +615,9 @@ int32_t FirData_init( FirData_t * io_fd,
     uint8_t * reglist = NULL;
 
     PNOR_Data_t pData = PNOR_getData();
+    /* Copy ipl/runtime flag from HOMER to PNOR data buffer */
+    pData.iplState = ((HOMER_Data_t *)i_hBuf)->iplState;
+    ((PNOR_Data_t *)i_pBuf)->iplState = pData.iplState ;
 
     do
     {
