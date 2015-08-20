@@ -26,10 +26,10 @@
 #ifndef _APSS_H
 #define _APSS_H
 
+#include <apss_structs.h>
 #include <occ_common.h>
 #include <trac_interface.h>
 #include <errl.h>
-#include <gpe_export.h>
 #include <rtls.h>
 
 #define NUM_OF_APSS_GPIO_PORTS   2
@@ -58,21 +58,6 @@ extern uint16_t G_apss_fail_updown_count;     //Used to keep count of number of 
                         (G_apss_fail_updown_count += APSS_DATA_FAILURE_STEP): \
                         (G_apss_fail_updown_count = APSS_DATA_FAIL_MAX);}
 
-struct apssGpioConfigStruct
-{
-   uint8_t direction;
-   uint8_t drive;
-   uint8_t interrupt;
-} __attribute__ ((__packed__));
-typedef struct apssGpioConfigStruct apssGpioConfigStruct_t;
-
-struct apssCompositeConfigStruct
-{
-   uint8_t numAdcChannelsToRead;
-   uint8_t numGpioPortsToRead;
-} __attribute__ ((__packed__));
-typedef struct apssCompositeConfigStruct apssCompositeConfigStruct_t;
-
 struct apssPwrMeasStruct
 {
   uint16_t adc[MAX_APSS_ADC_CHANNELS];
@@ -81,32 +66,6 @@ struct apssPwrMeasStruct
   uint64_t tod;      // Time of Day that the ADC Collection Completed
 } __attribute__ ((__packed__));
 typedef struct apssPwrMeasStruct apssPwrMeasStruct_t;
-
-typedef struct {
-  PoreGpeErrorStruct error;
-  apssGpioConfigStruct_t config0; // G_gpio_config[0] (input to APSS)
-  apssGpioConfigStruct_t config1; // G_gpio_config[1] (input to APSS)
-} initGpioArgs_t;
-
-typedef struct {
-  PoreGpeErrorStruct error;
-  apssCompositeConfigStruct_t config; // G_apss_composite_config (input to APSS)
-} setCompositeModeArgs_t;
-
-typedef struct 
-{
-  PoreGpeErrorStruct error;   
-} apss_start_args_t;
-
-typedef struct {
-  PoreGpeErrorStruct error;   
-  uint64_t meas_data[4]; // G_apss_pwr_meas (1st block of data) (output from APSS)
-} apss_continue_args_t;
-
-typedef struct {
-  PoreGpeErrorStruct error;   
-  uint64_t meas_data[4]; // G_apss_pwr_meas (2nd block of data) (output from APSS)
-} apss_complete_args_t;
 
 // @TODO - Does G_gpio_config and G_apss_composite_config need to be used outside of APSS?  If not I will remove from .h
 // G_gpio_config: configuration for APSS GPIO pins (default all input, all 1's, not int)

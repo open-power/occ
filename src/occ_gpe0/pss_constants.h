@@ -48,4 +48,10 @@
 #define SPIPSS_P2S_WDATA_REG          (SPIPSS_REGISTER_BASE + 0x50)
 #define SPIPSS_P2S_RDATA_REG          (SPIPSS_REGISTER_BASE + 0x60)
 
+#define TOD_VALUE_REG 0x00040020
+
+// Constant for use in wait statments: waits (5 * MICROSECONDS)
+#define MICROSECONDS 600
+
+
 #endif //_PSS_CONSTANTS_H

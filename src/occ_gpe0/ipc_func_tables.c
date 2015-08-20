@@ -26,6 +26,8 @@
 #include "ipc_ping.h"
 
 void apss_start_pwr_meas_read(ipc_msg_t* cmd, void* arg);
+void apss_continue_pwr_meas_read(ipc_msg_t* cmd, void* arg);
+void apss_complete_pwr_meas_read(ipc_msg_t* cmd, void* arg);
 
 extern ipc_msgq_t G_gpe0_test_msgq0;
 
@@ -49,10 +51,10 @@ IPC_MT_FUNC_TABLE_END
 
 // Function table for single target (processor-specific) functions
 IPC_ST_FUNC_TABLE_START
-IPC_MSGQ_HANDLER(&G_gpe0_test_msgq0)     // 0 - IPC_ST_TEST_FUNC0 
-IPC_HANDLER(apss_start_pwr_meas_read, 0)  // 1 - IPC_ST_APSS_START_PWR_MEAS_READ_FUNCID
-IPC_HANDLER_DEFAULT                          // 2
-IPC_HANDLER_DEFAULT                          // 3
+IPC_MSGQ_HANDLER(&G_gpe0_test_msgq0)         // 0 - IPC_ST_TEST_FUNC0
+IPC_HANDLER(apss_start_pwr_meas_read, 0)     // 1 - IPC_ST_APSS_START_PWR_MEAS_READ_FUNCID
+IPC_HANDLER(apss_continue_pwr_meas_read, 0)  // 2 - IPC_ST_APSS_CONTINUE_PWR_MEAS_READ_FUNCID
+IPC_HANDLER(apss_complete_pwr_meas_read, 0)  // 3 - IPC_ST_APSS_COMPLETE_PWR_MEAS_READ_FUNCID
 IPC_HANDLER_DEFAULT                          // 4
 IPC_HANDLER_DEFAULT                          // 5
 IPC_HANDLER_DEFAULT                          // 6
