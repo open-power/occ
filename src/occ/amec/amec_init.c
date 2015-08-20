@@ -310,6 +310,7 @@ void amec_init_gamec_struct(void)
   g_amec->wof.algo_type = 0;
   g_amec->wof.cores_on = 0;
   g_amec->wof.state = AMEC_WOF_NO_CORE_CHANGE;
+  g_amec->wof.loadline = AMEC_WOF_LOADLINE_ACTIVE + AMEC_WOF_LOADLINE_PASSIVE;
 
   //Initialize stream buffer recording parameters
   g_amec->recordflag=0;      // Never enable recording until requested via Amester API call

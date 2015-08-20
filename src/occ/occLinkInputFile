@@ -19,7 +19,6 @@ INPUT ( amec_init.o
         amec_parm_table.o
         amec_analytics.o
         amec_wof.o
-        amec_wof_thread.o
         appletManager.o
         centaur_data.o
         centaur_control.o

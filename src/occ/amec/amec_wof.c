@@ -33,7 +33,7 @@
 #include <amec_sys.h>
 #include <cmdh_fsp_cmds_datacnfg.h>
 #include <ssx_api.h>  // SsxSemaphore
-#include <amec_wof.h> // For wof semaphore in amec_wof_thread.c
+#include <amec_wof.h>
 #include <common.h>
 #include <cmdh_fsp_cmds_datacnfg.h>
 
@@ -43,7 +43,6 @@
 
 extern amec_sys_t g_amec_sys;
 extern data_cnfg_t * G_data_cnfg; // in cmdh_fsp_cmds_datacnfg
-extern SsxSemaphore G_amec_wof_thread_wakeup_sem; // in amec_wof_thread.c
 
 //*************************************************************************
 // Macros
@@ -52,9 +51,6 @@ extern SsxSemaphore G_amec_wof_thread_wakeup_sem; // in amec_wof_thread.c
 //*************************************************************************
 // Defines/Enums
 //*************************************************************************
-
-// For prototype, one and only one of the following defines must be 1
-#define HAB19
 
 //*************************************************************************
 // Structures
@@ -79,15 +75,7 @@ uint16_t G_amec_wof_uplift_table[AMEC_WOF_UPLIFT_TBL_ROWS][AMEC_WOF_UPLIFT_TBL_C
 // Core IDDQ voltages array from pstates.h (voltages in 100uV)
 uint16_t G_iddq_voltages[CORE_IDDQ_MEASUREMENTS] = {8000, 9000, 10000, 11000, 12000, 12500};
 
-uint8_t G_wof_max_cores_per_chip = 12; //defaulted to 12 for now
-
-#ifdef HAB19
-
-#define AMEC_WOF_LOADLINE_ACTIVE 550  // Active loadline in micro ohms
-#define AMEC_WOF_LOADLINE_PASSIVE 50 // Passive loadline in micro ohms
-
-#endif //HAB19
-
+uint8_t  G_wof_max_cores_per_chip = 12; //defaulted to 12 for now
 
 //Approximate y=1.25^((T-85)/10).
 //Interpolate T in the table below to find m
@@ -234,109 +222,107 @@ void amec_wof_vdd_current_out(const uint16_t i_power_in,
     g_amec->wof.vdd_eff = l_eff; //for debugging
 }
 
-void amec_wof_init(void)
-{
-    // Initialize DCOM Thread Sem
-    ssx_semaphore_create( &G_amecWOFThreadWakeupSem, // Semaphore
-                          1,                         // Initial Count
-                          0);                        // No Max Count
-
-    // Avoid recomputing total
-    g_amec->wof.loadline = AMEC_WOF_LOADLINE_ACTIVE + AMEC_WOF_LOADLINE_PASSIVE;
-}
-
-
 bool amec_wof_validate_input_data(void)
 {
     bool                l_valid_data = TRUE;
+    uint8_t             l_pstate = 0;
+
+    // TODO: Need to add some sort of validation on the input data that is
+    // consumed by WOF. For now, we are just tracing all this input data.
 
     // Check operating point at turbo
-    TRAC_IMP("WOF Operating Turbo point: vdd_5mv[%d] Iddq_500ma[%d] frequency_mhz[%d]",
-             G_sysConfigData.wof_parms.operating_points[TURBO].vdd_5mv,
-             G_sysConfigData.wof_parms.operating_points[TURBO].idd_500ma,
-             G_sysConfigData.wof_parms.operating_points[TURBO].frequency_mhz);
+    TRAC_INFO("WOF Operating Turbo point: vdd_5mv[%d] Iddq_500ma[%d] frequency_mhz[%d]",
+              G_sysConfigData.wof_parms.operating_points[TURBO].vdd_5mv,
+              G_sysConfigData.wof_parms.operating_points[TURBO].idd_500ma,
+              G_sysConfigData.wof_parms.operating_points[TURBO].frequency_mhz);
 
     // RDP to TDP conversion factor and Max number of cores for this chip
-    TRAC_IMP("WOF rdp_tdp_factor[%d] max_cores_per_chip[%d]",
-             G_sysConfigData.wof_parms.tdp_rdp_factor,
-             G_wof_max_cores_per_chip);
+    TRAC_INFO("WOF rdp_tdp_factor[%d] max_cores_per_chip[%d]",
+              G_sysConfigData.wof_parms.tdp_rdp_factor,
+              G_wof_max_cores_per_chip);
 
     // IDDQ table
-    TRAC_IMP("WOF IDDQ Vdd current: 0.80V[%d] 0.90V[%d] 1.00V[%d] 1.10V[%d] 1.20V[%d] 1.25V[%d]",
-             G_sysConfigData.iddq_table.iddq_vdd[0].fields.iddq_corrected_value,
-             G_sysConfigData.iddq_table.iddq_vdd[1].fields.iddq_corrected_value,
-             G_sysConfigData.iddq_table.iddq_vdd[2].fields.iddq_corrected_value,
-             G_sysConfigData.iddq_table.iddq_vdd[3].fields.iddq_corrected_value,
-             G_sysConfigData.iddq_table.iddq_vdd[4].fields.iddq_corrected_value,
-             G_sysConfigData.iddq_table.iddq_vdd[5].fields.iddq_corrected_value);
+    TRAC_INFO("WOF IDDQ Vdd current: 0.80V[%d] 0.90V[%d] 1.00V[%d]",
+              G_sysConfigData.iddq_table.iddq_vdd[0].fields.iddq_corrected_value,
+              G_sysConfigData.iddq_table.iddq_vdd[1].fields.iddq_corrected_value,
+              G_sysConfigData.iddq_table.iddq_vdd[2].fields.iddq_corrected_value);
+    TRAC_INFO("WOF IDDQ Vdd current: 1.10V[%d] 1.20V[%d] 1.25V[%d]",
+              G_sysConfigData.iddq_table.iddq_vdd[3].fields.iddq_corrected_value,
+              G_sysConfigData.iddq_table.iddq_vdd[4].fields.iddq_corrected_value,
+              G_sysConfigData.iddq_table.iddq_vdd[5].fields.iddq_corrected_value);
 
     // Uplift table
-    TRAC_IMP("WOF Uplift Freqs: Row_1[%d] 1cor[%d] 2cor[%d] 3cor[%d] 12cor[%d]",
-             G_amec_wof_uplift_table[1][0],
-             G_amec_wof_uplift_table[1][1],
-             G_amec_wof_uplift_table[1][2],
-             G_amec_wof_uplift_table[1][3],
-             G_amec_wof_uplift_table[1][12]);
-    TRAC_IMP("WOF Uplift Freqs: Row_2[%d] 1cor[%d] 2cor[%d] 3cor[%d] 12cor[%d]",
-             G_amec_wof_uplift_table[2][0],
-             G_amec_wof_uplift_table[2][1],
-             G_amec_wof_uplift_table[2][2],
-             G_amec_wof_uplift_table[2][3],
-             G_amec_wof_uplift_table[2][12]);
-    TRAC_IMP("WOF Uplift Freqs: Row11[%d] 1cor[%d] 2cor[%d] 3cor[%d] 12cor[%d]",
-             G_amec_wof_uplift_table[11][0],
-             G_amec_wof_uplift_table[11][1],
-             G_amec_wof_uplift_table[11][2],
-             G_amec_wof_uplift_table[11][3],
-             G_amec_wof_uplift_table[11][12]);
-    TRAC_IMP("WOF Uplift Freqs: LastR[%d] 1cor[%d] 2cor[%d] 3cor[%d] 12cor[%d]",
-             G_amec_wof_uplift_table[AMEC_WOF_UPLIFT_TBL_ROWS-1][0],
-             G_amec_wof_uplift_table[AMEC_WOF_UPLIFT_TBL_ROWS-1][1],
-             G_amec_wof_uplift_table[AMEC_WOF_UPLIFT_TBL_ROWS-1][2],
-             G_amec_wof_uplift_table[AMEC_WOF_UPLIFT_TBL_ROWS-1][3],
-             G_amec_wof_uplift_table[AMEC_WOF_UPLIFT_TBL_ROWS-1][12]);
+    TRAC_INFO("WOF Uplift Freqs: Row_1[%d] 1cor[%d] 2cor[%d] 3cor[%d] 12cor[%d]",
+              G_amec_wof_uplift_table[1][0],
+              G_amec_wof_uplift_table[1][1],
+              G_amec_wof_uplift_table[1][2],
+              G_amec_wof_uplift_table[1][3],
+              G_amec_wof_uplift_table[1][12]);
+    TRAC_INFO("WOF Uplift Freqs: Row_2[%d] 1cor[%d] 2cor[%d] 3cor[%d] 12cor[%d]",
+              G_amec_wof_uplift_table[2][0],
+              G_amec_wof_uplift_table[2][1],
+              G_amec_wof_uplift_table[2][2],
+              G_amec_wof_uplift_table[2][3],
+              G_amec_wof_uplift_table[2][12]);
+    TRAC_INFO("WOF Uplift Freqs: Row11[%d] 1cor[%d] 2cor[%d] 3cor[%d] 12cor[%d]",
+              G_amec_wof_uplift_table[11][0],
+              G_amec_wof_uplift_table[11][1],
+              G_amec_wof_uplift_table[11][2],
+              G_amec_wof_uplift_table[11][3],
+              G_amec_wof_uplift_table[11][12]);
+    TRAC_INFO("WOF Uplift Freqs: LastR[%d] 1cor[%d] 2cor[%d] 3cor[%d] 12cor[%d]",
+              G_amec_wof_uplift_table[AMEC_WOF_UPLIFT_TBL_ROWS-1][0],
+              G_amec_wof_uplift_table[AMEC_WOF_UPLIFT_TBL_ROWS-1][1],
+              G_amec_wof_uplift_table[AMEC_WOF_UPLIFT_TBL_ROWS-1][2],
+              G_amec_wof_uplift_table[AMEC_WOF_UPLIFT_TBL_ROWS-1][3],
+              G_amec_wof_uplift_table[AMEC_WOF_UPLIFT_TBL_ROWS-1][12]);
 
     // VRM Efficiency Table
-    TRAC_IMP("WOF VRM Effic: Current_10mA 1[%d] 2[%d] 3[%d] ... 12[%d] 13[%d]",
-             G_amec_wof_vrm_eff_table[0][1],
-             G_amec_wof_vrm_eff_table[0][2],
-             G_amec_wof_vrm_eff_table[0][3],
-             G_amec_wof_vrm_eff_table[0][12],
-             G_amec_wof_vrm_eff_table[0][13]);
-    TRAC_IMP("WOF VRM Effic: Lo_volt[%d] 20A[%d] 40A[%d] 60A[%d] 260A[%d]",
-             G_amec_wof_vrm_eff_table[1][0],
-             G_amec_wof_vrm_eff_table[1][1],
-             G_amec_wof_vrm_eff_table[1][2],
-             G_amec_wof_vrm_eff_table[1][3],
-             G_amec_wof_vrm_eff_table[1][13]);
-    TRAC_IMP("WOF VRM Effic: Hi_volt[%d] 20A[%d] 40A[%d] 60A[%d] 260A[%d]",
-             G_amec_wof_vrm_eff_table[2][0],
-             G_amec_wof_vrm_eff_table[2][1],
-             G_amec_wof_vrm_eff_table[2][2],
-             G_amec_wof_vrm_eff_table[2][3],
-             G_amec_wof_vrm_eff_table[2][13]);
+    TRAC_INFO("WOF VRM Effic: Current_10mA 1[%d] 2[%d] 3[%d] ... 12[%d] 13[%d]",
+              G_amec_wof_vrm_eff_table[0][1],
+              G_amec_wof_vrm_eff_table[0][2],
+              G_amec_wof_vrm_eff_table[0][3],
+              G_amec_wof_vrm_eff_table[0][12],
+              G_amec_wof_vrm_eff_table[0][13]);
+    TRAC_INFO("WOF VRM Effic: Lo_volt[%d] 20A[%d] 40A[%d] 60A[%d] 260A[%d]",
+              G_amec_wof_vrm_eff_table[1][0],
+              G_amec_wof_vrm_eff_table[1][1],
+              G_amec_wof_vrm_eff_table[1][2],
+              G_amec_wof_vrm_eff_table[1][3],
+              G_amec_wof_vrm_eff_table[1][13]);
+    TRAC_INFO("WOF VRM Effic: Hi_volt[%d] 20A[%d] 40A[%d] 60A[%d] 260A[%d]",
+              G_amec_wof_vrm_eff_table[2][0],
+              G_amec_wof_vrm_eff_table[2][1],
+              G_amec_wof_vrm_eff_table[2][2],
+              G_amec_wof_vrm_eff_table[2][3],
+              G_amec_wof_vrm_eff_table[2][13]);
 
-    TRAC_IMP("WOF VID Mod Table: Num_pstates[%d] Max_num_cores[%d]",
-             G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_pstates,
-             G_sysConfigData.wof_parms.ut_vid_mod.ut_max_cores);
-    TRAC_IMP("WOF Vdd VID Mod Table 1_core: p0[0x%02X] p-14[0x%02X] p-15[0x%02X] p-16[0x%02X] p-17[0x%02X]",
-             G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[0][0],
-             G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[14][0],
-             G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[15][0],
-             G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[16][0],
-             G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[17][0]);
-    TRAC_IMP("WOF Vdd VID Mod Table 10_cores: p0[0x%02X] p-14[0x%02X] p-15[0x%02X] p-16[0x%02X] p-17[0x%02X]",
-             G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[0][9],
-             G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[14][9],
-             G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[15][9],
-             G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[16][9],
-             G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[17][9]);
-    TRAC_IMP("WOF Vdd VID Mod Table 12_cores: p0[0x%02X] p-14[0x%02X] p-15[0x%02X] p-16[0x%02X] p-17[0x%02X]",
-             G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[0][11],
-             G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[14][11],
-             G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[15][11],
-             G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[16][11],
-             G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[17][11]);
+    // VID Modification Table for 1 core, 10 cores and 12 cores
+    l_pstate = G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_pstates;
+    if (l_pstate > 3)
+    {
+        TRAC_INFO("WOF VID Mod Table: Num_pstates[%d] Max_num_cores[%d]",
+                  G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_pstates,
+                  G_sysConfigData.wof_parms.ut_vid_mod.ut_max_cores);
+        TRAC_INFO("WOF Vdd VID Mod Table 1_core: p0[0x%02X] p-1[0x%02X] p-2[0x%02X] p-3[0x%02X] p-4[0x%02X]",
+                  G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate][0],
+                  G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate-1][0],
+                  G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate-2][0],
+                  G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate-3][0],
+                  G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate-4][0]);
+        TRAC_INFO("WOF Vdd VID Mod Table 10_cores: p0[0x%02X] p-1[0x%02X] p-2[0x%02X] p-3[0x%02X] p-4[0x%02X]",
+                  G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate][9],
+                  G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate-1][9],
+                  G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate-2][9],
+                  G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate-3][9],
+                  G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate-4][9]);
+        TRAC_INFO("WOF Vdd VID Mod Table 12_cores: p0[0x%02X] p-1[0x%02X] p-2[0x%02X] p-3[0x%02X] p-4[0x%02X]",
+                  G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate][11],
+                  G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate-1][11],
+                  G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate-2][11],
+                  G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate-3][11],
+                  G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate-4][11]);
+    }
 
     return l_valid_data;
 }
@@ -538,6 +524,12 @@ uint8_t amec_wof_set_algorithm(const uint8_t i_algorithm)
                 {
                     g_amec->wof.error = AMEC_WOF_ERROR_SCOM_5;
                 }
+
+                // Restore original VID codes for turbo to ultraturbo Pstates
+                // (in case of transitiong out of algorithm 3)
+                g_amec->wof.pstatetable_cores_current = MAX_NUM_CORES;
+                g_amec->wof.pstatetable_cores_next = MAX_NUM_CORES;
+                amec_wof_update_pstate_table();
                 break;
         }
 
@@ -988,9 +980,6 @@ void amec_wof_alg_v3(void)
         g_amec_wof_pstate_table_ready = 1;
 
         g_amec->wof.state = AMEC_WOF_CORE_REQUEST_TURN_ON;
-
-        //For now, don't use a separate thread
-        //ssx_semaphore_post(&G_amecWOFThreadWakeupSem);
     }
     else if (g_amec->wof.pstatetable_cores_next <
              g_amec->wof.pstatetable_cores_current)
@@ -1008,9 +997,6 @@ void amec_wof_alg_v3(void)
         g_amec_wof_pstate_table_ready = 1;
 
         g_amec->wof.state = AMEC_WOF_CORE_REQUEST_TURN_OFF;
-
-        //For now, don't use a separate thread
-        //ssx_semaphore_post(&G_amecWOFThreadWakeupSem);
     }
     else
     {

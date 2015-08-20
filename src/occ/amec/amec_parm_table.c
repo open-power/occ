@@ -170,7 +170,6 @@ amec_parm_t g_amec_parm_list[] = {
     AMEC_PARM_RAW(PARM_WOF_WAKE_MASK,"wof_wake_mask",&g_amec_sys.wof.wake_up_mask_save,sizeof(uint64_t)),
     AMEC_PARM_RAW(PARM_WOF_PM_STATE,"wof_pm_state",&g_amec_sys.wof.pm_state,sizeof(uint8_t)*MAX_NUM_CORES),
     AMEC_PARM_UINT8(PARM_WOF_PSTATE_READY,"wof_ps_ready",&g_amec_wof_pstate_table_ready),
-    AMEC_PARM_UINT16(PARM_WOF_THREAD_COUNT,"wof_thd_cnt",&G_amec_wof_thread_counter),
     AMEC_PARM_INT32(PARM_WOF_EFFVLOW,"wof_effvlow",&g_amec_eff_vlow),
     AMEC_PARM_INT32(PARM_WOF_EFFVHIGH,"wof_effvhigh",&g_amec_eff_vhigh),
     AMEC_PARM_UINT32(PARM_WOF_IOUT,"wof_iout",&g_amec_wof_iout)

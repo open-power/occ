@@ -54,7 +54,6 @@
 #include <thrm_thread.h>
 #include "scom.h"
 #include <fir_data_collect.h>
-#include <amec_wof.h>
 
 extern void __ssx_boot;
 extern uint32_t G_occ_phantom_critical_count;
@@ -764,9 +763,6 @@ void Main_thread_routine(void *private)
     // with product and test applet thread.
     initAppletManager();
     CHECKPOINT(APPLETS_INITIALIZED);
-
-    //Initialize WOF thread semaphore before thread scheduler starts @cl020
-    amec_wof_init();
 
     //Initialize the thread scheduler.
     //Other thread initialization is done here so that don't have to handle

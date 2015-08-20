@@ -52,7 +52,6 @@ SsxThread* G_scheduledThreads[] =
     &App_thread,
     &TestAppletThread,
     &Dcom_thread,
-    &amec_wof_thread  // @cl020
 };
 
 // Error log counter for the callback so that only 1 error log is created
@@ -68,7 +67,6 @@ uint8_t Cmd_hndl_thread_stack[THREAD_STACK_SIZE];
 uint8_t App_thread_stack[THREAD_STACK_SIZE];
 uint8_t testAppletThreadStack[THREAD_STACK_SIZE];
 uint8_t dcomThreadStack[THREAD_STACK_SIZE];
-uint8_t amecWOFThreadStack[THREAD_STACK_SIZE]; // @cl020
 
 // Our idle thread. See main_thread_routine
 SsxThread Main_thread;
@@ -84,9 +82,6 @@ SsxThread TestAppletThread;
 
 // Dcom thread
 SsxThread Dcom_thread;
-
-// WOF thread
-SsxThread amec_wof_thread;
 
 // Function Specification
 //
@@ -146,7 +141,6 @@ void initThreadScheduler(void)
     int l_testAppletThreadRc = SSX_OK;
     int l_dcomThreadRc       = SSX_OK;
     int l_snapshotTimerRc    = SSX_OK;
-    int l_amecWOFThreadRc    = SSX_OK; // @cl020
 
     // Creating threads that need to be scheduled
     // Thread priority range should match scheduled
@@ -180,13 +174,6 @@ void initThreadScheduler(void)
                  (SsxAddress)dcomThreadStack,
                  THREAD_STACK_SIZE,
                  THREAD_PRIORITY_6);
-
-   l_amecWOFThreadRc = createAndResumeThreadHelper(&amec_wof_thread,
-                 amec_wof_thread_routine,
-                 (void *)0,
-                 (SsxAddress)amecWOFThreadStack,
-                 THREAD_STACK_SIZE,
-                 THREAD_PRIORITY_7);
 
     // Create the thread scheduler timer
     l_timerRc = ssx_timer_create(&G_threadSchTimer, threadSwapcallback, 0);
@@ -228,13 +215,12 @@ void initThreadScheduler(void)
         || l_cmdThreadRc
         || l_dcomThreadRc
         || l_timerRc
-        || l_snapshotTimerRc 
-	|| l_amecWOFThreadRc)
+        || l_snapshotTimerRc )
     {
         TRAC_ERR("Error creating thread: l_appThreadRc: %d, "
                  "l_testAppletThreadRc: %d, l_cmdThreadRc: %d, "
-                 "l_dcomThreadRc: %d, l_amecWOFThreadRC: %d", l_appThreadRc,l_testAppletThreadRc,
- 		 l_timerRc,l_cmdThreadRc,l_dcomThreadRc,l_amecWOFThreadRc);
+                 "l_dcomThreadRc: %d", l_appThreadRc, l_testAppletThreadRc,
+                 l_timerRc, l_cmdThreadRc, l_dcomThreadRc);
         TRAC_ERR("Error starting timers: timerRc: %d, snapshotTimerRc: %d.",
                   l_timerRc, l_snapshotTimerRc);
         // Create error log and log it

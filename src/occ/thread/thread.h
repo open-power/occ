@@ -75,9 +75,6 @@ extern SsxThread TestAppletThread;
 // Application manager thread
 extern SsxThread Dcom_thread;
 
-//WOF thread  @cl020
-extern SsxThread amec_wof_thread;  
-
 void Main_thread_routine(void *private);
 
 void Cmd_Hndl_thread_routine(void *arg);
@@ -87,7 +84,5 @@ void App_thread_routine(void *arg);
 void Dcom_thread_routine(void *arg);
 
 void testAppletThreadRoutine(void *arg);
-
-void amec_wof_thread_routine(void *arg);
 
 #endif //_THREAD_H

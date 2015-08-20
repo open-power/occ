@@ -44,8 +44,6 @@ extern sensor_t g_amec_wof_ceff_ratio_sensor;
 extern sensor_t g_amec_wof_core_wake_sensor;
 extern sensor_t g_amec_wof_vdd_sense_sensor;
 extern uint8_t g_amec_wof_pstate_table_ready;
-extern uint16_t G_amec_wof_thread_counter;
-extern SsxSemaphore G_amecWOFThreadWakeupSem;
 extern uint8_t G_wof_max_cores_per_chip;
 
 //*************************************************************************
@@ -55,6 +53,9 @@ extern uint8_t G_wof_max_cores_per_chip;
 //*************************************************************************
 // Defines/Enums
 //*************************************************************************
+
+#define AMEC_WOF_LOADLINE_ACTIVE 550  // Active loadline in micro ohms
+#define AMEC_WOF_LOADLINE_PASSIVE 50  // Passive loadline in micro ohms
 
 //SCOM address
 //PMC Winkle Interrupt Request Vector Register 3 (PMCWIRVR3)
@@ -171,7 +172,6 @@ typedef struct amec_wof
 //*************************************************************************
 void amec_wof_main(void);
 void amec_wof_helper(void);
-void amec_wof_init(void) INIT_SECTION;
 void amec_update_wof_sensors(void);
 uint8_t amec_wof_set_algorithm(const uint8_t i_algorithm);
 void amec_wof_update_pstate_table(void);
