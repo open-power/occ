@@ -61,15 +61,21 @@ OUTPUT_FORMAT(elf32-powerpc);
 //  Define the beginning of SRAM, the location of the PowerPC exception
 //  vectors (must be 64K-aligned) and the location of the boot branch.
 
-//  512 KB SRAM at the top of the 32-bit address space
+//  512 KB SRAM at the top of the 768K SRAM. SRAM starts at 0xfff00000
+//  Here we start at 0xfff40000 because the bottom 256K is reserved for
+//  -- IPC Common space (0xfff00000 - 0xfff01000)
+//  -- GPE0 (0xfff01000 - 0xfff10000)
+//  -- GPE1 (0xfff10000 - 0xfff20000)
+//  -- GPE2 (0xfff20000 - 0xfff30000)
+//  -- GPE3 (0xfff30000 - 0xfff40000)
 
 //  Last 1kB must be reserved for PORE-SLW, so stack can't be in that space
 
-#define origin            0xfff80000
-#define vectors           0xfff80000
+#define origin            0xfff40000
+#define vectors           0xfff40000
 #define reset             0xffffffec
-#define sram_available    (reset - origin)
 #define sram_size         0x00080000
+#define sram_available    sram_size
 #define reserved_for_slw  0x400
 
 // The SRAM controller aliases the SRAM at 8 x 128MB boundaries to support
@@ -105,7 +111,8 @@ _SSX_INITIAL_STACK_LIMIT = _SSX_INITIAL_STACK - INITIAL_STACK_SIZE;
 
 // .vectors_0000
 
-#define text_0000
+#define text_0000 \
+*(.vectors_0000)
 
 #define data_0000 main.o(imageHeader)
 
@@ -195,14 +202,13 @@ occhw_async.o(.text) \
 //occhw_async_pore.o(.text) \
 occhw_async_ocb.o(.text) \
 occhw_async_pba.o(.text) \
-occhw_pmc.o(.text) \
+occhw_scom.o(.text) \
 occhw_ocb.o(.text) \
 occhw_pba.o(.text) \
 occhw_id.o(.text) \
 //occhw_centaur.o(.text) \
 ppc405_lib_core.o(.text) \
 ssx_core.o(.text)
-
 
 #define data_2000
 
@@ -247,10 +253,11 @@ ppc405_boot.o(.text) \
 ppc405_init.o(.text) \
 occhw_init.o(.text)
 
-#ifndef PPC405_MMU_SUPPORT
-ASSERT((0), "OCC Application Firmware can not be compiled without \
-PPC405_MMU_SUPPORT compile flag")
-#endif
+// TEMP: Commented out for Simics, as there is no MMU support yet
+//#ifndef PPC405_MMU_SUPPORT
+//ASSERT((0), "OCC Application Firmware can not be compiled without \
+//PPC405_MMU_SUPPORT compile flag")
+//#endif
 
 // Define memory areas.
 
@@ -261,6 +268,11 @@ MEMORY
  writethrough : ORIGIN = writethrough_origin, LENGTH = sram_available
  boot         : ORIGIN = reset,  LENGTH = 20
 }
+
+// This symbol is only needed by external debug tools, so add this command
+// to ensure that table is pulled in by the linker even if ppc405 code
+// never references it.
+EXTERN(ssx_debug_ptrs);
 
 // NB: The code that sets up the MMU assumes that the linker script provides a
 // standard set of symbols that define the base address and size of each
@@ -327,7 +339,8 @@ SECTIONS
     // Non-cacheable and write-through data is placed in low memory to
     // improve latency.  PORE-private text and data is also placed here. PORE
     // text and data are segregated to enable relocated PORE disassembly of
-    //.text.pore.
+    //.text.pore. PORE text is read-only to OCC, however PORE data is writable
+    // by OCC to allow shared data structures (e.g., PTS).
 
     // When running without the MMU we need to carefully arrange things such
     // that the noncacheable and writethrough data is linked at the correct
@@ -354,15 +367,14 @@ SECTIONS
 
     ALIASED_SECTION(.noncacheable_ro)
     ALIASED_SECTION(.text.pore)
-    ALIASED_SECTION(.data.pore)
 
     . = ALIGN(1024);
     _NONCACHEABLE_RO_SECTION_SIZE = . - _NONCACHEABLE_RO_SECTION_BASE;
 
-
     _NONCACHEABLE_SECTION_BASE = .;
 
     ALIASED_SECTION(.noncacheable)
+    ALIASED_SECTION(.data.pore)
 
     . = ALIGN(1024);
     _NONCACHEABLE_SECTION_SIZE = . - _NONCACHEABLE_SECTION_BASE;
@@ -388,12 +400,13 @@ SECTIONS
     // To enable non-cacheable sections w/o the MMU will require setting up
     // the linker script to use aliased addresses of the SRAM.
 
-#if PPC405_MMU_SUPPORT == 0
-    ASSERT(((_NONCACHEABLE_RO_SECTION_SIZE == 0) &&
-            (_NONCACHEABLE_SECTION_SIZE == 0) &&
-            (_WRITETHROUGH_SECTION_SIZE == 0)),
-           " Non-cacheable and writethrough sections are currently only supported for MMU-enabled configurations.  Enabling these capabilities for untranslated addresses will require some modifications of the linker script.  ")
-#endif
+// TEMP: Commented out for Simics, as there is no MMU support yet
+//#if PPC405_MMU_SUPPORT == 0
+//    ASSERT(((_NONCACHEABLE_RO_SECTION_SIZE == 0) &&
+//            (_NONCACHEABLE_SECTION_SIZE == 0) &&
+//            (_WRITETHROUGH_SECTION_SIZE == 0)),
+//           " Non-cacheable and writethrough sections are currently only supported for MMU-enabled configurations.  Enabling these capabilities for untranslated addresses will require some modifications of the linker script.  ")
+//#endif
 
 
     ////////////////////////////////
@@ -461,7 +474,10 @@ SECTIONS
     // Other text
     // It's not clear why boot.S is generating empty .glink,.iplt
 
-   .otext . : { *(.text) *(.text.startup) gpe.bin*(*) gpe_1.bin*(*)} > sram
+    // In P8, this is where we put the GPE code. I do not believe we
+    // want to do that anymore, since we have allocated the bottom 256K
+    // of SRAM for that purpose.
+   .otext . : { *(.text) *(.text.startup)} > sram
    .glink . : { *(.glink) } > sram
 
      __CTOR_LIST__ = .;
@@ -505,9 +521,12 @@ SECTIONS
 
    _INIT_ONLY_DATA_BASE = .;
 
-   // _SSX_INITIAL_STACK_LIMIT = .;
-   // . = . + INITIAL_STACK_SIZE;
-   // _SSX_INITIAL_STACK = . - 1;
+   // TODO: These three lines were previously commented out (P8). Do we need
+   // space allocated for the stack? What was the reason for eliminating
+   // it in P8?
+   _SSX_INITIAL_STACK_LIMIT = .;
+   . = . + INITIAL_STACK_SIZE;
+   _SSX_INITIAL_STACK = . - 1;
 
    _INITCALL_SECTION_BASE = .;
    .data.initcall . : { *(.data.initcall) } > sram
@@ -564,7 +583,7 @@ SECTIONS
     // FIR data heap section
     ////////////////////////////////
     __CUR_COUNTER__ = .;
-    _FIR_HEAP_SECTION_BASE = 0xffff2000;
+    _FIR_HEAP_SECTION_BASE = 0xfffb1000;
     _FIR_HEAP_SECTION_SIZE = 0x3000;
     . = _FIR_HEAP_SECTION_BASE;
     .firHeap . : {*(firHeap) . = ALIGN(1024);} > sram
@@ -574,7 +593,7 @@ SECTIONS
     // FIR data parms section
     ////////////////////////////////
     __CUR_COUNTER__ = .;
-    _FIR_PARMS_SECTION_BASE = 0xffff5000;
+    _FIR_PARMS_SECTION_BASE = 0xfffb4000;
     _FIR_PARMS_SECTION_SIZE = 0x1000;
     . = _FIR_PARMS_SECTION_BASE;
     .firParms . : {*(firParms) . = ALIGN(1024);} > sram
@@ -585,9 +604,9 @@ SECTIONS
     ////////////////////////////////
     __CUR_COUNTER__ = .;
 
-    _LINEAR_WR_WINDOW_SECTION_BASE = 0xffff6000;
+    _LINEAR_WR_WINDOW_SECTION_BASE = 0xfffb5000;
     _LINEAR_WR_WINDOW_SECTION_SIZE = 0x1000;
-    _LINEAR_RD_WINDOW_SECTION_BASE = 0xffff7000;
+    _LINEAR_RD_WINDOW_SECTION_BASE = 0xfffb6800;
     _LINEAR_RD_WINDOW_SECTION_SIZE = 0x1000;
     . = _LINEAR_WR_WINDOW_SECTION_BASE;
     .linear_wr . : {*(linear_wr) . = ALIGN(_LINEAR_WR_WINDOW_SECTION_SIZE);} > sram
@@ -599,7 +618,7 @@ SECTIONS
     // Applet areas
     ////////////////////////////////
        __CUR_COUNTER__ = .;
-    _APPLET0_SECTION_BASE = 0xffff8000;
+    _APPLET0_SECTION_BASE = 0xfffb8000;
     . = _APPLET0_SECTION_BASE;
     // Section aligned to 128 to make occ main application image 128 bytes
     // aligned which is requirement for applet manager when traversing through
@@ -608,7 +627,7 @@ SECTIONS
 
     . = __CUR_COUNTER__;
     _APPLET0_SECTION_SIZE = 0x00004000;
-    _APPLET1_SECTION_BASE = 0xffffc000;
+    _APPLET1_SECTION_BASE = 0xfffbc000;
     _APPLET1_SECTION_SIZE = 0x00003c00;
 
     //////////////////////////////

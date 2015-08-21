@@ -143,9 +143,9 @@ SSX_THREAD_SUPPORT = 1
 endif
 
 # TODO: Enable this once we get MMU support working in simics
-# TEMP: Does this work in Simics?
+# Currently, turning on MMU support causes an SSX panic (in Simics)
 ifeq "$(PPC405_MMU_SUPPORT)" ""
-PPC405_MMU_SUPPORT = 1
+PPC405_MMU_SUPPORT = 0
 endif
 
 ifeq "$(OCCHW_ASYNC_SUPPORT)" ""

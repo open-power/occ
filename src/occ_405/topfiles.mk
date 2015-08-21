@@ -25,6 +25,10 @@
 TOP-C-SOURCES = aplt/appletManager.c \
                 cmdh/cmdh_fsp.c \
                 cmdh/cmdh_fsp_cmds_datacnfg.c \
+                cmdh/cmdh_mnfg_intf.c \
+                cmdh/cmdh_tunable_parms.c \
+                cmdh/snapshot.c \
+                cmdh/ffdc.c \
                 errl/errl.c \
                 homer.c \
                 main.c \
@@ -40,7 +44,7 @@ TOP-C-SOURCES = aplt/appletManager.c \
                 timer/timer.c \
                 trac/trac_interface.c \
 
-TOP-S-SOURCES = 
+TOP-S-SOURCES = cmdh/ll_ffdc.S \
 
 
 TOP_OBJECTS = $(TOP-C-SOURCES:.c=.o) $(TOP-S-SOURCES:.S=.o)

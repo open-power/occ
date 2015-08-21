@@ -150,13 +150,15 @@ ocb_timer_setup(int timer,
     do
     {
         //Read Hang Pulse Register 2 to get the log base 2 of the ocb clock divider -- grm
-        rc = getscom(TPC_HPR2, &l_hpr2.value);
+// TEMP : Need Simics to model this
+//        rc = getscom(TPC_HPR2, &l_hpr2.value);
         if(rc)
         {
             break;
         }
-
-        g_ocb_timer_divider = 1 << l_hpr2.fields.hang_pulse_reg;
+//David Du: l_hpr2.fields.hang_pulse_reg is typically 9
+//        g_ocb_timer_divider = 1 << l_hpr2.fields.hang_pulse_reg;
+        g_ocb_timer_divider = 1 << 9;
 
         //printk("ocb_timer_setup(%d, %d, %d, %p, %p, %d)\n",
         //       timer, auto_reload, timeout_ns,

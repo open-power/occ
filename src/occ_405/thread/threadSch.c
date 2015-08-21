@@ -44,14 +44,16 @@ SsxTimer G_threadSchTimer;
 // Index of highest priority thread in G_scheduledThreads
 uint16_t G_threadSchedulerIndex = 0;
 
+// TEMP: Commented out cmd handler and dcom threads for Simics enablement.
+//       Will need to reenable them when we need them again.
 // Array that holds the threads that need scheduling
 SsxThread* G_scheduledThreads[] =
 {
     &Main_thread,
-    &Cmd_Hndl_thread,
+//    &Cmd_Hndl_thread,
     &App_thread,
     &TestAppletThread,
-    &Dcom_thread,
+//    &Dcom_thread,
 };
 
 // Error log counter for the callback so that only 1 error log is created

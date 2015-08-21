@@ -188,7 +188,8 @@
 # FFDC Constants
 # --------------
 
-    .set        FFDC_BUFFER_ADDR, 0xFFFF7000
+    # The FFDC buffer is the response buffer
+    .set        FFDC_BUFFER_ADDR, 0xFFFB6800
     .set        FFDC_DBCR0, (DBCR0_EDM | DBCR0_TDE | DBCR0_FT)
     .set        FFDC_END_MARKER, 0xFFDCFFDC
     .set        FFDC_OCC_CHECKPOINT, 0x0F00
@@ -810,12 +811,21 @@ __save_ffdc_regs:
     # Save OISR1
     _lwzi       %r5, %r5, OCB_OISR1
     _stwi       %r5, %r3, OISR1
+
+    # TODO/NOTE: These registers were commented out for P9 because
+    # they were removed from the headerfile, ocb_register_addresses.h:
+    # OUDER0, OUDER1, OCIR0, OCIR1, ODHER0, ODHER1
+
+    # TODO: DETERMINE IF THIS REGISTER EXISTS
     # Save OUDER0
-    _lwzi       %r5, %r5, OCB_OUDER0
-    _stwi       %r5, %r3, OUDER0
+    #_lwzi       %r5, %r5, OCB_OUDER0
+    #_stwi       %r5, %r3, OUDER0
+
+    # TODO: DETERMINE IF THIS REGISTER EXISTS
     # Save OUDER1
-    _lwzi       %r5, %r5, OCB_OUDER1
-    _stwi       %r5, %r3, OUDER1
+    #_lwzi       %r5, %r5, OCB_OUDER1
+    #_stwi       %r5, %r3, OUDER1
+
     # Save OIMR0
     _lwzi       %r5, %r5, OCB_OIMR0
     _stwi       %r5, %r3, OIMR0
@@ -834,12 +844,17 @@ __save_ffdc_regs:
     # Save OIEPR1
     _lwzi       %r5, %r5, OCB_OIEPR1
     _stwi       %r5, %r3, OIEPR1
+
+    # TODO: DETERMINE IF THIS REGISTER EXISTS
     # Save OCIR0
-    _lwzi       %r5, %r5, OCB_OCIR0
-    _stwi       %r5, %r3, OCIR0
+    #_lwzi       %r5, %r5, OCB_OCIR0
+    #_stwi       %r5, %r3, OCIR0
+
+    # TODO: DETERMINE IF THIS REGISTER EXISTS
     # Save OCIR1
-    _lwzi       %r5, %r5, OCB_OCIR1
-    _stwi       %r5, %r3, OCIR1
+    #_lwzi       %r5, %r5, OCB_OCIR1
+    #_stwi       %r5, %r3, OCIR1
+
     # Save ONISR0
     _lwzi       %r5, %r5, OCB_ONISR0
     _stwi       %r5, %r3, ONISR0
@@ -852,12 +867,17 @@ __save_ffdc_regs:
     # Save OCISR1
     _lwzi       %r5, %r5, OCB_OCISR1
     _stwi       %r5, %r3, OCISR1
+
+    # TODO: DETERMINE IF THIS REGISTER EXISTS
     # Save ODHER0
-    _lwzi       %r5, %r5, OCB_ODHER0
-    _stwi       %r5, %r3, ODHER0
+    #_lwzi       %r5, %r5, OCB_ODHER0
+    #_stwi       %r5, %r3, ODHER0
+
+    # TODO: DETERMINE IF THIS REGISTER EXISTS
     # Save ODHER1
-    _lwzi       %r5, %r5, OCB_ODHER1
-    _stwi       %r5, %r3, ODHER1
+    #_lwzi       %r5, %r5, OCB_ODHER1
+    #_stwi       %r5, %r3, ODHER1
+
     # Save ssx timebase
     _lwzsd      %r5, __ssx_timebase_frequency_mhz
     _stwi       %r5, %r3, FFDC_TIMEBASE

@@ -36,6 +36,42 @@
 
 #include "global_app_cfg.h"
 
+// These versions of SSX_PANIC are being changed so that they exactly
+// mirror each other and are exactly structured at 8 instructions only and
+// make only one branch to outside code.
+#ifndef __ASSEMBLER__
+#ifndef SSX_PANIC
+#define SSX_PANIC(code)                                             \
+do {                                                                \
+    barrier();                                                      \
+    asm volatile ("stw  %r3, __occ_panic_save_r3@sda21(0)");        \
+    asm volatile ("mflr %r3");                                      \
+    asm volatile ("stw  %r4, __occ_panic_save_r4@sda21(0)");        \
+    asm volatile ("lis  %%r4, %0"::"i" (code >> 16));               \
+    asm volatile ("ori  %%r4, %%r4, %0"::"i" (code & 0xffff));      \
+    asm volatile ("bl   __ssx_checkpoint_panic_and_save_ffdc");     \
+    asm volatile ("trap");                                          \
+    asm volatile (".long %0" : : "i" (code));                       \
+} while (0)
+#endif // SSX_PANIC
+#else  /* __ASSEMBLER__ */
+#ifndef SSX_PANIC
+// This macro cannot be more than 8 instructions long, but it can be less than
+// 8.
+#define SSX_PANIC(code) _ssx_panic code
+    .macro  _ssx_panic, code
+    stw     %r3, __occ_panic_save_r3@sda21(0)
+    mflr    %r3
+    stw     %r4, __occ_panic_save_r4@sda21(0)
+    lis     %r4, \code@h
+    ori     %r4, %r4, \code@l
+    bl      __ssx_checkpoint_panic_and_save_ffdc
+    trap
+    .long   \code
+    .endm
+#endif // SSX_PANIC
+#endif /* __ASSEMBLER__ */
+
 /// Static configuration data for external interrupts:
 ///
 /// IRQ#, TYPE, POLARITY, ENABLE

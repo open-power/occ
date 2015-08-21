@@ -310,7 +310,7 @@ void task_apss_start_pwr_meas(struct task *i_self)
     int             l_rc                = 0;
     static bool     L_scheduled         = FALSE;
     static bool     L_idle_traced       = FALSE;
-//    static bool     L_ffdc_collected    = FALSE;
+    static bool     L_ffdc_collected    = FALSE;
 
     // Create/schedule GPE_start_pwr_meas_read (non-blocking)
     APSS_DBG("GPE_start_pwr_meas_read started\n");
@@ -341,7 +341,6 @@ void task_apss_start_pwr_meas(struct task *i_self)
             if ((ASYNC_REQUEST_STATE_COMPLETE != G_meas_start_request.request.completion_state) ||
                 (0 != G_gpe_start_pwr_meas_read_args.error.error))
             {
-/*  TEMP No error handling
                 //error should only be non-zero in the case where the GPE timed out waiting for
                 //the APSS master to complete the last operation.  Just keep retrying until
                 //DCOM resets us due to not having valid power data.
@@ -365,7 +364,7 @@ void task_apss_start_pwr_meas(struct task *i_self)
                      * @userdata1   GPE returned rc code
                      * @userdata4   ERC_APSS_COMPLETE_FAILURE
                      * @devdesc     Failure getting power measurement data from APSS
-                     */ /*
+                     */
                     l_err = createErrl(PSS_MID_APSS_START_MEAS,   // i_modId
                                        APSS_GPE_FAILURE,          // i_reasonCode
                                        ERC_APSS_COMPLETE_FAILURE,
@@ -386,7 +385,6 @@ void task_apss_start_pwr_meas(struct task *i_self)
                       // Set to true so that we don't log this error again.
                     L_ffdc_collected = TRUE;
                 }
-*/
             }
 
         }
@@ -504,7 +502,6 @@ void task_apss_continue_pwr_meas(struct task *i_self)
                 // Collect FFDC and log error once.
                 if (!L_ffdc_collected)
                 {
-/* TEMP no error logging
                     errlHndl_t l_err = NULL;
 
                     /*
@@ -515,7 +512,7 @@ void task_apss_continue_pwr_meas(struct task *i_self)
                      * @userdata2   0
                      * @userdata4   ERC_APSS_COMPLETE_FAILURE
                      * @devdesc     Failure getting power measurement data from APSS
-                     */ /*
+                     */
                     l_err = createErrl(PSS_MID_APSS_CONT_MEAS,   // i_modId
                                        APSS_GPE_FAILURE,          // i_reasonCode
                                        ERC_APSS_COMPLETE_FAILURE,
@@ -533,7 +530,6 @@ void task_apss_continue_pwr_meas(struct task *i_self)
 
                     // Commit Error
                     commitErrl(&l_err);
-*/
                       // Set to true so that we don't log this error again.
                     L_ffdc_collected = TRUE;
                 }
@@ -548,7 +544,6 @@ void task_apss_continue_pwr_meas(struct task *i_self)
         l_rc = gpe_request_schedule(&G_meas_cont_request);
         if (0 != l_rc)
         {
-/*  TEMP no error logging
             errlHndl_t l_err = NULL;
 
             TRAC_ERR("task_apss_cont_pwr_meas: schedule failed w/rc=0x%08X (%d us)", l_rc,
@@ -562,7 +557,7 @@ void task_apss_continue_pwr_meas(struct task *i_self)
              * @userdata2   0
              * @userdata4   ERC_APSS_SCHEDULE_FAILURE
              * @devdesc     task_apss_continue_pwr_meas schedule failed
-             */ /*
+             */
             l_err = createErrl(PSS_MID_APSS_CONT_MEAS,
                                SSX_GENERIC_FAILURE,
                                ERC_APSS_SCHEDULE_FAILURE,
@@ -574,7 +569,6 @@ void task_apss_continue_pwr_meas(struct task *i_self)
 
             // Request reset since this should never happen.
             REQUEST_RESET(l_err);
-*/
             L_scheduled = FALSE;
             break;
         }
@@ -680,7 +674,7 @@ void task_apss_complete_pwr_meas(struct task *i_self)
     int         l_rc                = 0;
     static bool L_scheduled         = FALSE;
     static bool L_idle_traced       = FALSE;
-//    static bool L_ffdc_collected    = FALSE;
+    static bool L_ffdc_collected    = FALSE;
 
     // Create/schedule GPE_apss_complete_pwr_meas_read (non-blocking)
     APSS_DBG("Calling task_apss_complete_pwr_meas.\n");
@@ -709,7 +703,6 @@ void task_apss_complete_pwr_meas(struct task *i_self)
             if ((ASYNC_REQUEST_STATE_COMPLETE != G_meas_complete_request.request.completion_state) ||
                 (0 != G_gpe_complete_pwr_meas_read_args.error.error))
             {
-/* TEMP no error logging
                 // Error should only be non-zero in the case where the GPE timed out waiting for
                 // the APSS master to complete the last operation. Just keep retrying until
                 // DCOM resets us due to not having valid power data.
@@ -733,7 +726,7 @@ void task_apss_complete_pwr_meas(struct task *i_self)
                      * @userdata2   0
                      * @userdata4   ERC_APSS_COMPLETE_FAILURE
                      * @devdesc     Failure getting power measurement data from APSS
-                     */ /*
+                     */
                     l_err = createErrl(PSS_MID_APSS_COMPLETE_MEAS,   // i_modId
                                        APSS_GPE_FAILURE,          // i_reasonCode
                                        ERC_APSS_COMPLETE_FAILURE,
@@ -754,8 +747,6 @@ void task_apss_complete_pwr_meas(struct task *i_self)
                     // Set to true so that we don't log this error again.
                     L_ffdc_collected = TRUE;
                 }
-*/
-
             }
         }
 
@@ -782,9 +773,6 @@ void task_apss_complete_pwr_meas(struct task *i_self)
              * @userdata4   ERC_APSS_SCHEDULE_FAILURE
              * @devdesc     task_apss_complete_pwr_meas schedule failed
              */
-
-/* TEMP no error logging
-
             l_err = createErrl(PSS_MID_APSS_COMPLETE_MEAS,
                                SSX_GENERIC_FAILURE,
                                ERC_APSS_SCHEDULE_FAILURE,
@@ -796,7 +784,6 @@ void task_apss_complete_pwr_meas(struct task *i_self)
 
             // Request reset since this should never happen.
             REQUEST_RESET(l_err);
-*/
             L_scheduled = FALSE;
             break;
         }

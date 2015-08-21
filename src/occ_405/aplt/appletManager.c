@@ -40,7 +40,9 @@
 #include "pba_firmware_registers.h"
 #include "occhw_pba.h"
 #include "occhw_async.h"
+#if PPC405_MMU_SUPPORT
 #include "ppc405_mmu.h"
+#endif
 #include "occhw.h"
 #include "cmdh_fsp.h"
 
@@ -376,6 +378,7 @@ errlHndl_t __attribute__((optimize("O1"))) initAppletAddr( void )
 
     // copy SSX mmu map to ApltInfo structure
     // startApplet() will use it to clear tlb entry
+#if PPC405_MMU_SUPPORT
     G_ApltInfo.mmuMapWritePermission = G_applet0_mmu_map;
     G_TestApltInfo.mmuMapWritePermission = G_applet1_mmu_map;
 
@@ -384,7 +387,7 @@ errlHndl_t __attribute__((optimize("O1"))) initAppletAddr( void )
     // mmu map/unmap several times.
     G_applet0_mmu_map = 0;
     G_applet1_mmu_map = 0;
-
+#endif
     return l_err;
 }
 
@@ -450,7 +453,7 @@ void initAppletManager( void )
         }
 
         CHECKPOINT(APP_SEMS_CREATED);
-
+#if PPC405_MMU_SUPPORT
         // Map mainstore to oci space so that we can walk through
         // OCC signed image to get applet addresses
         int l_ssxRc = ppc405_mmu_map(0,         //Mainstore address 0x0
@@ -482,7 +485,7 @@ void initAppletManager( void )
                               0);                               //userdata2
             break;
         }
-
+#endif /* PPC405_MMU_SUPPORT */
         CHECKPOINT(APP_MEM_MAPPED);
 
         // set to indicate to do mmu unmap after we are done using it.
@@ -504,6 +507,8 @@ void initAppletManager( void )
     if( TRUE == l_mmuUnmap)
     {
         CHECKPOINT(APP_MEM_UNMAP);
+
+#if PPC405_MMU_SUPPORT
 
         // Unmap mmu mapping for main store to oci space.
         // NOTE: This needs to be unmapped because 1) PowerBus disruptions
@@ -545,6 +550,7 @@ void initAppletManager( void )
                 commitErrl(&l_err);
             }
         }
+#endif /* PPC405_MMU_SUPPORT */
     }
 
     if( NULL != l_rc )
@@ -783,6 +789,9 @@ void startApplet( const OCC_APLT_TYPE i_isTestAplt )
         // re-load the test applet every time since they all use the same applet ID.
         if ( (l_info->appId == OCC_APLT_TEST) || (l_info->appId != l_info->previousAppId) )
         {
+
+#if PPC405_MMU_SUPPORT
+
             // 1a. check applet read-only/executable permissions, unmap it if existed.
             //     whole applet memory region in SRAM should be free first, then set it to
             //     writable for copyimage and calculate checksum.
@@ -863,6 +872,8 @@ void startApplet( const OCC_APLT_TYPE i_isTestAplt )
                 l_extReasonCode = ERC_MMU_MAP_APPLET_OVERWRITE_FAILURE;
                 break;
             }
+
+#endif /* PPC405_MMU_SUPPORT */
 
             // 2. read applet header info
             // 3. copy applet image to SRAM using DMA
@@ -994,6 +1005,8 @@ void startApplet( const OCC_APLT_TYPE i_isTestAplt )
             // get it for next step to protect text and data section
             l_applet_readonly_size = l_apltHeader->readonly_size;
 
+#if PPC405_MMU_SUPPORT
+
             // 5b. unmap (remove permissions) on SRAM applet after copying applet image.
             //     permissions should be set correctly in SRAM rodata/rwdata section in next step.
             if ( l_info->mmuMapWritePermission != 0 )
@@ -1075,6 +1088,8 @@ void startApplet( const OCC_APLT_TYPE i_isTestAplt )
                     break;
                 }
             }
+
+#endif /* PPC405_MMU_SUPPORT */
 
             // save off current applet being run (already copied) into previous
             // ie: cache applet id

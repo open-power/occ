@@ -74,6 +74,8 @@ homer_rc_t __attribute__((optimize("O1"))) homer_hd_map_read_unmap(const homer_r
     {
         *o_ssx_rc = SSX_OK;
 
+#if PPC405_MMU_SUPPORT
+
         /*
          * Map to mainstore at HOMER host data offset. The first parameter is
          * the effective address where the data can be accessed once mapped, the
@@ -86,7 +88,7 @@ homer_rc_t __attribute__((optimize("O1"))) homer_hd_map_read_unmap(const homer_r
                                    0,
                                    0,
                                    &l_mmuMapHomer);
-
+#endif
         if (SSX_OK != *o_ssx_rc)
         {
             l_rc = HOMER_SSX_MAP_ERR;
@@ -164,13 +166,14 @@ homer_rc_t __attribute__((optimize("O1"))) homer_hd_map_read_unmap(const homer_r
                     }
                 }
             }
-
+#if PPC405_MMU_SUPPORT
             // Unmap the HOMER before returning to caller
             *o_ssx_rc = ppc405_mmu_unmap(&l_mmuMapHomer);
             if ((SSX_OK != *o_ssx_rc) && (HOMER_SUCCESS == l_rc))
             {
                 l_rc = HOMER_SSX_UNMAP_ERR;
             }
+#endif
         }
     }
 

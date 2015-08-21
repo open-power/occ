@@ -159,8 +159,7 @@ void pmc_hw_error_isr(void *private, SsxIrqId irq, int priority)
      * @devdesc    Failure detected in processor
      *             power management controller (PMC)
      */
-    // TEMP -- NO ERRL YET
-/*
+/* TEMP NO MORE PMC
     l_err = createErrl( PMC_HW_ERROR_ISR,          // i_modId,
                         PMC_FAILURE,               // i_reasonCode,
                         OCC_NO_EXTENDED_RC,
@@ -169,17 +168,13 @@ void pmc_hw_error_isr(void *private, SsxIrqId irq, int priority)
                         DEFAULT_TRACE_SIZE,        // i_traceSz,
                         0,                         // i_userData1,
                         0);                        // i_userData2
-*/
     //Add our register dump to the error log
-    /*addUsrDtlsToErrl(l_err,
+    addUsrDtlsToErrl(l_err,
             (uint8_t*) &l_pmc_ffdc,
             sizeof(l_pmc_ffdc),
             ERRL_USR_DTL_STRUCT_VERSION_1,
             ERRL_USR_DTL_BINARY_DATA);
-    */
 
-// TEMP -- NO ERRL YET
-/*
     //Add firmware callout
     addCalloutToErrl(l_err,
             ERRL_CALLOUT_TYPE_COMPONENT_ID,
@@ -307,7 +302,6 @@ void occ_irq_setup()
 END TEMP */
     }while(0);
 
-/* TEMP -- NO ERRL YET
     if(l_rc)
     {
         //single error for all error cases, just look at trace to see where it failed.
@@ -318,7 +312,7 @@ END TEMP */
          * @userdata1  SSX return code
          * @userdata4  OCC_NO_EXTENDED_RC
          * @devdesc    Firmware failure initializing IRQ
-         */ /*
+         */
         l_err = createErrl( OCC_IRQ_SETUP,             // i_modId,
                             SSX_GENERIC_FAILURE,       // i_reasonCode,
                             OCC_NO_EXTENDED_RC,
@@ -336,7 +330,6 @@ END TEMP */
 
         commitErrl(&l_err);
     }
-*/
 }
 
 /*
@@ -418,7 +411,6 @@ void occ_ipc_setup()
 
     }while(0);
 
-/* TEMP -- NO ERRL YET
     if(l_rc)
     {
         // Log single error for all error cases, just look at trace to see where it failed.
@@ -429,7 +421,7 @@ void occ_ipc_setup()
          * @userdata1  IPC return code
          * @userdata4  OCC_NO_EXTENDED_RC
          * @devdesc    Firmware failure initializing IPC
-         */ /*
+         */
         l_err = createErrl( OCC_IRQ_SETUP,             // i_modId,
                             SSX_GENERIC_FAILURE,       // i_reasonCode,
                             OCC_NO_EXTENDED_RC,
@@ -447,7 +439,6 @@ void occ_ipc_setup()
 
         commitErrl(&l_err);
     }
-*/
 }
 
 
@@ -603,13 +594,11 @@ void master_occ_init()
             &l_status);           // Error status
 */
 
-
     if( (NULL != l_errl)  || (l_status !=  OCC_APLT_SUCCESS))
     {
         TRAC_ERR("APSS init applet returned error: l_status: 0x%x", l_status);
         // commit & delete. CommitErrl handles NULL error log handle
-        // TEMP -- NO ERRL / RESET YET
-        //REQUEST_RESET(l_errl);
+        REQUEST_RESET(l_errl);
     }
 
     // Reinitialize the PBAX Queues
@@ -726,8 +715,7 @@ void mainThrdTimerCallback(void * i_argPtr)
          * @userdata4   OCC_NO_EXTENDED_RC
          * @devdesc     SSX semaphore related failure
          */
-        // TEMP -- NO ERRL YET
-/*
+
         errlHndl_t l_err = createErrl(MAIN_THRD_TIMER_MID,          //modId
                                       SSX_GENERIC_FAILURE,          //reasoncode
                                       OCC_NO_EXTENDED_RC,           //Extended reason code
@@ -736,10 +724,10 @@ void mainThrdTimerCallback(void * i_argPtr)
                                       DEFAULT_TRACE_SIZE,           //Trace Size
                                       l_rc,                         //userdata1
                                       0);                           //userdata2
-*/
+
         // Commit Error
         // TEMP - NO RESET YET
-//        REQUEST_RESET(l_err);
+        REQUEST_RESET(l_err);
     }
 }
 
@@ -804,8 +792,7 @@ void initMainThrdSemAndTimer()
          * @userdata4   OCC_NO_EXTENDED_RC
          * @devdesc     SSX semaphore related failure
          */
-        // TEMP -- NO ERRL OR RESET YET
-/*
+
         errlHndl_t l_err = createErrl(MAIN_THRD_SEM_INIT_MID,       //modId
                                       SSX_GENERIC_FAILURE,          //reasoncode
                                       OCC_NO_EXTENDED_RC,           //Extended reason code
@@ -816,7 +803,6 @@ void initMainThrdSemAndTimer()
                                       l_timerRc);                   //userdata2
 
         REQUEST_RESET(l_err);
-*/
     }
 }
 
@@ -913,6 +899,14 @@ void Main_thread_routine(void *private)
     // enable switch to actually start the watchdog function.
 //    ENABLE_WDOG;
 
+// TEMP: Normally these flags are set elsewhere, after the BMC/FSP
+//       send us configuration data. This is a temporary hack until
+//       that communication is enabled. Required for APSS tasks.
+    rtl_set_run_mask(RTL_FLAG_OBS);
+    rtl_clr_run_mask(RTL_FLAG_STANDBY);
+    rtl_clr_run_mask(RTL_FLAG_APSS_NOT_INITD);
+    rtl_clr_run_mask(RTL_FLAG_RST_REQ);
+// END TEMP
     while (TRUE)
     {
         // Count each loop so the watchdog can tell the main thread is
@@ -1007,7 +1001,6 @@ void Main_thread_routine(void *private)
             }
         }
 
-/* TEMP -- NO ERRL OR RESET YET
         if( l_ssxrc != SSX_OK)
         {
             /* @
@@ -1017,7 +1010,7 @@ void Main_thread_routine(void *private)
              * @userdata1   semaphore pending return code
              * @userdata4   OCC_NO_EXTENDED_RC
              * @devdesc     SSX semaphore related failure
-             */ /*
+             */
 
             errlHndl_t l_err = createErrl(MAIN_THRD_ROUTINE_MID,        //modId
                                           SSX_GENERIC_FAILURE,          //reasoncode
@@ -1030,7 +1023,6 @@ void Main_thread_routine(void *private)
 
             REQUEST_RESET(l_err);
         }
-*/
     } // while loop
 }
 
@@ -1052,6 +1044,8 @@ int main(int argc, char **argv)
     // Initialize TLB for Linear Window access here so we
     // can write checkpoints into the fsp response buffer.
     // ----------------------------------------------------
+
+#if PPC405_MMU_SUPPORT
     l_ssxrc = ppc405_mmu_map(
             CMDH_OCC_RESPONSE_BASE_ADDRESS,
             CMDH_OCC_RESPONSE_BASE_ADDRESS,
@@ -1081,6 +1075,7 @@ int main(int argc, char **argv)
         //failure means we can't talk to FSP.
         SSX_PANIC(0x01000002);
     }
+#endif /* PPC405_MMU_SUPPORT */
 
 /* TEMP -- NO FIR SUPPORT IN PHASE1
     // Setup the TLB for writing to the FIR parms section
@@ -1283,7 +1278,10 @@ int main(int argc, char **argv)
     // enable and register additional interrupt handlers
     CHECKPOINT(INITIALIZING_IRQS);
 
-    occ_irq_setup();
+//  TODO: Uncomment when this is resolved. Causes SSX panic currently.
+//        Not needed until we want to be able to catch hardware OCC or
+//        PMC (or equivalent) errors.
+//  occ_irq_setup();
 
     CHECKPOINT(IRQS_INITIALIZED);
 
@@ -1308,7 +1306,6 @@ int main(int argc, char **argv)
     if( SSX_OK != l_rc)
     {
         TRAC_ERR("Failure creating/resuming main thread: rc: 0x%x", -l_rc);
-/* TEMP -- NO ERRL OR RESET YET
         /* @
          * @errortype
          * @moduleid    MAIN_MID
@@ -1316,7 +1313,7 @@ int main(int argc, char **argv)
          * @userdata1   return code
          * @userdata4   OCC_NO_EXTENDED_RC
          * @devdesc     Firmware internal error creating thread
-         */ /*
+         */
         errlHndl_t l_err = createErrl(MAIN_MID,                 //modId
                                       SSX_GENERIC_FAILURE,      //reasoncode
                                       OCC_NO_EXTENDED_RC,       //Extended reason code
@@ -1327,7 +1324,6 @@ int main(int argc, char **argv)
                                       0);                       //userdata2
         // Commit Error log
         REQUEST_RESET(l_err);
-*/
     }
 
     // Enter SSX Kernel

@@ -4,7 +4,9 @@ INPUT (
         cmdh_fsp.o
         cmdh_fsp_cmds_datacnfg.o
         errl.o
+        ffdc.o
         homer.o
+        ll_ffdc.o
         main.o
         occ_sys_config.o
         occbuildname.o
@@ -45,5 +47,4 @@ INPUT (
         ppc405_cache_init.o
         ppc405_mmu_asm.o
         ppc405_breakpoint.o
-        ppc405_thread_init.o
-        ppc405_mmu.o )
+        ppc405_thread_init.o )

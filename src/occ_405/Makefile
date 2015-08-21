@@ -40,6 +40,7 @@ OCCLIB := $(OBJDIR)/occlib/libocc.a
 PPC405LIB := $(OBJDIR)/ppc405lib/libppc405.a
 LINK_OBJS = $(OBJS) $(SSXLIB) $(COMMONLIB) $(OCCLIB) $(PPC405LIB)
 LINK_SCRIPT = $(addprefix $(OBJDIR)/, linkscript)
+LINK_CMD_SCRIPT = linkocc.cmd
 LDFLAGS += --oformat=elf32-powerpc -melf32ppc
 LIB_DIRS =  -L$(OBJDIR)/ssx \
             -L$(OBJDIR)/ssx/ppc405 \
@@ -69,15 +70,15 @@ $(OBJDIR)/$(IMAGE_NAME).out: $(LINK_OBJS) $(LINK_SCRIPT)
 	$(LD) -e __ssx_boot -T$(LINK_SCRIPT) $(LDFLAGS) -Map $(OBJDIR)/$(IMAGE_NAME).map -Bstatic -o $(OBJDIR)/$(IMAGE_NAME).out $(LIB_DIRS) -lssx -locc -lppc405 -lcommon
 
 #pass the link command file through the C preprocessor to evaluate macros and remove comments
-$(LINK_SCRIPT): linkocc.cmd
-	$(CPP) -E -x c -P $(DEFS) linkocc.cmd -o $(LINK_SCRIPT)
+#$(LINK_SCRIPT): linkocc.cmd
+$(LINK_SCRIPT): $(LINK_CMD_SCRIPT)
+	$(CPP) -E -x c -P $(DEFS) $(LINK_CMD_SCRIPT) -o $(LINK_SCRIPT)
 
 #Create an obj directory if needed
 $(LINK_OBJS) $(OBJS) $(OBJS:.o=.d): | $(OBJDIRS)
 
 $(OBJDIRS):
 	mkdir -p $(OBJDIRS)
-	
 
 #Build the SSX kernel library
 $(SSXLIB):
@@ -112,6 +113,6 @@ clean:
 	rm -fr $(OBJDIR)
 
 #Add dependencies to header files
-ifneq ($(MAKECMDGOALS),clean)
-include $(OBJS:.o=.d) 
-endif
+#ifneq ($(MAKECMDGOALS),clean)
+#include $(OBJS:.o=.d)
+#endif

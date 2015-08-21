@@ -242,17 +242,17 @@ endif
 # work as Make targets. The *.d files are include-ed in the
 # subdirectory Makefiles.
 
-$(OBJDIR)/%.d: %.c
-	@set -e; rm -f $@; \
-	echo -n "$(OBJDIR)/" > $@.$$$$; \
-	$(CC_ASM) -MM $(INCLUDES) $(CPPFLAGS) $(DEFS) $< >> $@.$$$$; \
-	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
-	rm -f $@.$$$$
+#$(OBJDIR)/%.d: %.c
+#	@set -e; rm -f $@; \
+#	echo -n "$(OBJDIR)/" > $@.$$$$; \
+#	$(CC_ASM) -MM $(INCLUDES) $(CPPFLAGS) $(DEFS) $< >> $@.$$$$; \
+#	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
+#	rm -f $@.$$$$
 
-$(OBJDIR)/%.d: %.S
-	@set -e; rm -f $@; \
-	echo -n "$(OBJDIR)/" > $@.$$$$; \
-	$(CC_ASM) -MM $(INCLUDES) $(CPPFLAGS) $(DEFS) $< >> $@.$$$$; \
-	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
-	rm -f $@.$$$$
+#$(OBJDIR)/%.d: %.S
+#	@set -e; rm -f $@; \
+#	echo -n "$(OBJDIR)/" > $@.$$$$; \
+#	$(CC_ASM) -MM $(INCLUDES) $(CPPFLAGS) $(DEFS) $< >> $@.$$$$; \
+#	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
+#	rm -f $@.$$$$
 

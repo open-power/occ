@@ -410,8 +410,9 @@ uint8_t cmdh_mnfg_list_sensors(const cmdh_fsp_cmd_t * i_cmd_ptr,
         // Do sanity check on the function inputs
         if ((NULL == i_cmd_ptr) || (NULL == o_rsp_ptr))
         {
+// TODO: THESE TRACES NEED TO BE VERIFIED
             TRAC_ERR("cmdh_mnfg_list_sensors: invalid pointers. cmd[0x%08x] rsp[0x%08x]",
-                     i_cmd_ptr, o_rsp_ptr);
+                     (uint32_t) i_cmd_ptr, (uint32_t) o_rsp_ptr);
             l_rc = ERRL_RC_INTERNAL_FAIL;
             break;
         }
@@ -553,8 +554,9 @@ uint8_t cmdh_mnfg_get_sensor(const cmdh_fsp_cmd_t * i_cmd_ptr,
         // Do sanity check on the function inputs
         if ((NULL == i_cmd_ptr) || (NULL == o_rsp_ptr))
         {
+// TODO: THESE TRACES NEED TO BE VERIFIED
             TRAC_ERR("cmdh_mnfg_get_sensor: invalid pointers. cmd[0x%08x] rsp[0x%08x]",
-                     i_cmd_ptr, o_rsp_ptr);
+                     (uint32_t) i_cmd_ptr, (uint32_t) o_rsp_ptr);
             l_rc = ERRL_RC_INTERNAL_FAIL;
             break;
         }
