@@ -36,6 +36,11 @@
 
 #include "global_app_cfg.h"
 
+#ifndef SIMICS_ENVIRONMENT
+#define SIMICS_ENVIRONMENT 1
+#warning Building for Simics!
+#endif
+
 /// Static configuration data for external interrupts:
 ///
 /// IRQ#, TYPE, POLARITY, ENABLE

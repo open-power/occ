@@ -56,13 +56,13 @@
 #define TRAC_TIME_200MHZ 2
 #define TRAC_TIME_167MHZ 3 // 166666667Hz
 
-//*************************************************************************
+//*************************************************************************/
 // Structures
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Globals
-//*************************************************************************
+//*************************************************************************/
 
 /// Instantiate the buffers for the traces.
 ///
@@ -73,6 +73,13 @@
 uint8_t g_trac_inf_buffer[TRACE_BUFFER_SIZE];
 uint8_t g_trac_err_buffer[TRACE_BUFFER_SIZE];
 uint8_t g_trac_imp_buffer[TRACE_BUFFER_SIZE];
+
+#if SIMICS_ENVIRONMENT
+// Necessary for use in Simics (to get address)
+uint8_t* g_trac_inf_buffer_ptr = g_trac_inf_buffer;
+uint8_t* g_trac_err_buffer_ptr = g_trac_err_buffer;
+uint8_t* g_trac_imp_buffer_ptr = g_trac_imp_buffer;
+#endif
 
 // Need to modify the addTraceToErrl() function in errl.c when new trace buffer is added/removed
 tracDesc_t g_trac_inf = (tracDesc_t) &g_trac_inf_buffer;

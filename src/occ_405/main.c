@@ -1278,10 +1278,12 @@ int main(int argc, char **argv)
     // enable and register additional interrupt handlers
     CHECKPOINT(INITIALIZING_IRQS);
 
-//  TODO: Uncomment when this is resolved. Causes SSX panic currently.
-//        Not needed until we want to be able to catch hardware OCC or
-//        PMC (or equivalent) errors.
-//  occ_irq_setup();
+//  TODO: Uncomment when this is resolved in Simics. Causes SSX panic
+//        currently. Not needed until we want to be able to catch
+//        hardware OCC or PMC (or equivalent) errors.
+#if !SIMICS_ENVIRONMENT
+    occ_irq_setup();
+#endif
 
     CHECKPOINT(IRQS_INITIALIZED);
 

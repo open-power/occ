@@ -183,7 +183,7 @@ PIPE-CFLAGS = -pipe -Wa,-m405
 
 GCC-CFLAGS += -Wall -fsigned-char -msoft-float  \
 	-mcpu=405 -mmulhw -mmultiple \
-	-meabi -msdata=eabi -ffreestanding -fno-common -Werror \
+	-meabi -msdata=eabi -ffreestanding -fno-common \
 	-fno-inline-functions-called-once \
 	-ffixed-r11 -ffixed-r12 \
     -ffixed-r14 -ffixed-r15 -ffixed-r16 -ffixed-r17 \
@@ -193,7 +193,7 @@ GCC-CFLAGS += -Wall -fsigned-char -msoft-float  \
     -ffixed-cr1 -ffixed-cr2 -ffixed-cr3 -ffixed-cr4 \
     -ffixed-cr5 -ffixed-cr6 -ffixed-cr7
 
-CFLAGS      =  -c $(GCC-CFLAGS) $(PIPE-CFLAGS) $(GCC-O-LEVEL) $(INCLUDES) 
+CFLAGS      =  -c $(GCC-CFLAGS) $(PIPE-CFLAGS) $(GCC-O-LEVEL) $(INCLUDES)
 
 CPPFLAGS    = -E
 

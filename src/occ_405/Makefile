@@ -28,6 +28,9 @@
 #Pull in the definitions that affect all makefiles for this image
 include img_defs.mk
 
+#Use tracepp instead of ppetracepp for 405 code
+include occ_defs.mk
+
 #Pull in object file names for the top directory
 include topfiles.mk
 

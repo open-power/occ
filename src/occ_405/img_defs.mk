@@ -113,8 +113,13 @@ ifndef PPETRACEPP_DIR
 export PPETRACEPP_DIR = $(abspath ../ppe/tools/ppetracepp)
 endif
 
+ifndef TRACEPP_DIR
+export TRACEPP_DIR = $(abspath ../tracepp)
+endif
+
 CC_ASM  = $(GCC-TOOL-PREFIX)gcc
 TCC     = $(PPETRACEPP_DIR)/ppetracepp $(GCC-TOOL-PREFIX)gcc
+THCC     = $(TRACEPP_DIR)/tracepp $(GCC-TOOL-PREFIX)gcc
 CC      = $(GCC-TOOL-PREFIX)gcc
 AS      = $(GCC-TOOL-PREFIX)as
 AR      = $(GCC-TOOL-PREFIX)ar
@@ -204,11 +209,11 @@ INCLUDES += $(IMG_INCLUDES) $(GLOBAL_INCLUDES) $(APP_INCLUDES) \
 PIPE-CFLAGS = -pipe -Wa,-m405
 
 GCC-CFLAGS += -g -Wall -fsigned-char -msoft-float  \
-	-mcpu=405 -mmultiple -mstring -m32 \
+	-m32 -mbig-endian -mcpu=405 -mmultiple -mstring \
 	-meabi -msdata=eabi -ffreestanding -fno-common \
 	-fno-inline-functions-called-once
 
-CFLAGS      =  -c $(GCC-CFLAGS) $(PIPE-CFLAGS) $(GCC-O-LEVEL) $(INCLUDES) 
+CFLAGS      =  -c $(GCC-CFLAGS) $(PIPE-CFLAGS) $(GCC-O-LEVEL) $(INCLUDES)
 
 ############################################################################
 
