@@ -37,6 +37,10 @@ ifndef PPETRACEPP_DIR
 export PPETRACEPP_DIR = $(abspath ppe/tools/ppetracepp)
 endif
 
+ifndef TRACEPP_DIR
+export TRACEPP_DIR = $(abspath tracepp)
+endif
+
 THASH	= $(PPETRACEPP_DIR)/tracehash.pl
 
 OCC_405_IMAGE_NAME = occ_405
@@ -46,6 +50,7 @@ OCC_GPE2_IMAGE_NAME = occ_gpe2
 OCC_GPE3_IMAGE_NAME = occ_gpe3
 
 NEEDED_IMAGES = \
+     $(TRACEPP_DIR)/tracepp \
      $(OBJDIR)/$(OCC_405_IMAGE_NAME)/$(OCC_405_IMAGE_NAME).out \
      $(OBJDIR)/$(OCC_GPE0_IMAGE_NAME)/$(OCC_GPE0_IMAGE_NAME).out \
 #     $(OBJDIR)/$(OCC_GPE1_IMAGE_NAME)/$(OCC_GPE1_IMAGE_NAME).out \
@@ -71,6 +76,7 @@ run: $(NEEDED_IMAGES)
 #clean the obj directory
 clean:
 	rm -fr $(OBJDIR)
+	rm -f $(TRACEPP_DIR)/tracepp
 
 #make binary application images
 $(OBJDIR)/$(OCC_405_IMAGE_NAME)/$(OCC_405_IMAGE_NAME).out:
@@ -87,6 +93,9 @@ $(OBJDIR)/$(OCC_GPE2_IMAGE_NAME)/$(OCC_GPE2_IMAGE_NAME).out:
 
 $(OBJDIR)/$(OCC_GPE3_IMAGE_NAME)/$(OCC_GPE3_IMAGE_NAME).out:
 #	(cd $(SRCDIR)/$(OCC_GPE3_IMAGE_NAME) && make)
+
+$(TRACEPP_DIR)/tracepp:
+	(cd $(TRACEPP_DIR) && make)
 
 # collect all of the trace hash files for all OCC images into a single trexStringFile
 .PHONY : tracehash

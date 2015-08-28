@@ -69,7 +69,7 @@ $(OBJDIR)/$(IMAGE_NAME).bin $(OBJDIR)/$(IMAGE_NAME).dis: $(OBJDIR)/$(IMAGE_NAME)
 	$(OBJDUMP) -S $< > $(OBJDIR)/$(IMAGE_NAME).dis
 
 #create a linked ELF executable
-$(OBJDIR)/$(IMAGE_NAME).out: $(LINK_OBJS) $(LINK_SCRIPT)
+$(OBJDIR)/$(IMAGE_NAME).out: $(TRACEPP_DIR)/tracepp $(LINK_OBJS) $(LINK_SCRIPT)
 	$(LD) -e __ssx_boot -T$(LINK_SCRIPT) $(LDFLAGS) -Map $(OBJDIR)/$(IMAGE_NAME).map -Bstatic -o $(OBJDIR)/$(IMAGE_NAME).out $(LIB_DIRS) -lssx -locc -lppc405 -lcommon
 
 #pass the link command file through the C preprocessor to evaluate macros and remove comments
@@ -98,6 +98,9 @@ $(OCCLIB):
 #Build the library code that only works on the ppc405
 $(PPC405LIB):
 	$(MAKE) -I $(IMAGE_SRCDIR) -C $(PPC405LIB_SRCDIR)
+
+$(TRACEPP_DIR)/tracepp:
+	(cd $(TRACEPP_DIR) && make)
 
 # collect all of the trace hash files for this image into a single trexStringFile
 .PHONY : tracehash
