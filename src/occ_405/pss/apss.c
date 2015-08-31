@@ -44,14 +44,14 @@
 // Configure both GPIOs (directoin/drive/interrupts): All Input, All 1's, No Interrupts
 const apssGpioConfigStruct_t G_gpio_config[2] = { {0x00, 0xFF, 0x00}, {0x00, 0xFF, 0x00} };
 
-// Configure streaming of: 16 ADCs, 2 GPIOs
-const apssCompositeConfigStruct_t G_apss_composite_config = { 16, 2 };
+// Configure streaming of: APSS Mode, 16 ADCs, 2 GPIOs
+const apssModeConfigStruct_t G_apss_mode_config = { APSS_MODE_AUTO2, 16, 2 };
 
 // Power Measurements (read from APSS every RealTime loop)
 apssPwrMeasStruct_t G_apss_pwr_meas = { {0} };
 
 GPE_BUFFER(initGpioArgs_t G_gpe_apss_initialize_gpio_args);
-GPE_BUFFER(setCompositeModeArgs_t G_gpe_apss_set_composite_mode_args);
+GPE_BUFFER(setApssModeArgs_t G_gpe_apss_set_mode_args);
 
 uint64_t G_gpe_apss_time_start;
 uint64_t G_gpe_apss_time_end;
@@ -637,14 +637,14 @@ void reformat_meas_data()
 
             // Copy measurements into correct struction locations (based on composite config)
             uint16_t l_index = 0;
-            memcpy(G_apss_pwr_meas.adc, &l_buffer[l_index], (G_apss_composite_config.numAdcChannelsToRead * 2));
-            l_index += (G_apss_composite_config.numAdcChannelsToRead * 2);
-            memcpy(G_apss_pwr_meas.gpio, &l_buffer[l_index], (G_apss_composite_config.numGpioPortsToRead * 2));
+            memcpy(G_apss_pwr_meas.adc, &l_buffer[l_index], (G_apss_mode_config.numAdcChannelsToRead * 2));
+            l_index += (G_apss_mode_config.numAdcChannelsToRead * 2);
+            memcpy(G_apss_pwr_meas.gpio, &l_buffer[l_index], (G_apss_mode_config.numGpioPortsToRead * 2));
             // TOD is always located at same offset
             memcpy(&G_apss_pwr_meas.tod, &l_buffer[l_continue_meas_length+l_complete_meas_length-8], 8);
 
-            APSS_DBG("...into structure: (%d ADC, %d GPIO)\n", G_apss_composite_config.numAdcChannelsToRead,
-                G_apss_composite_config.numGpioPortsToRead);
+            APSS_DBG("...into structure: (%d ADC, %d GPIO)\n", G_apss_mode_config.numAdcChannelsToRead,
+                G_apss_mode_config.numGpioPortsToRead);
             APSS_DBG_HEXDUMP(&G_apss_pwr_meas, sizeof(G_apss_pwr_meas), "G_apss_pwr_meas");
         }
 

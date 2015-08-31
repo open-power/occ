@@ -67,11 +67,11 @@ struct apssPwrMeasStruct
 } __attribute__ ((__packed__));
 typedef struct apssPwrMeasStruct apssPwrMeasStruct_t;
 
-// @TODO - Does G_gpio_config and G_apss_composite_config need to be used outside of APSS?  If not I will remove from .h
+// @TODO - Does G_gpio_config and G_apss_mode_config need to be used outside of APSS?  If not I will remove from .h
 // G_gpio_config: configuration for APSS GPIO pins (default all input, all 1's, not int)
 extern const apssGpioConfigStruct_t G_gpio_config[NUM_OF_APSS_GPIO_PORTS];
-// G_apss_composite_config: system parms needed to select correct composite command options
-extern const apssCompositeConfigStruct_t G_apss_composite_config;
+// G_apss_mode_config: system parms needed to select correct mode command options
+extern const apssModeConfigStruct_t G_apss_mode_config;
 
 // G_apss_pwr_meas: power, temp and GPIO readings that OCC gathers from APSS every tick
 extern apssPwrMeasStruct_t G_apss_pwr_meas;
@@ -80,7 +80,7 @@ extern apssPwrMeasStruct_t G_apss_pwr_meas;
 extern volatile bool G_ApssPwrMeasCompleted;
 
 extern initGpioArgs_t G_gpe_apss_initialize_gpio_args;
-extern setCompositeModeArgs_t G_gpe_apss_set_composite_mode_args;
+extern setApssModeArgs_t G_gpe_apss_set_mode_args;
 
 extern uint64_t G_gpe_apss_time_start;
 extern uint64_t G_gpe_apss_time_end;

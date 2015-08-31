@@ -36,6 +36,6 @@ typedef struct {
        uint64_t error;
      };
      uint64_t ffdc;
-} PoreGpeErrorStruct;  // Same for every GPE program
+} GpeErrorStruct;  // Same for every GPE program
 
 #endif //_GPE_EXPORT_H

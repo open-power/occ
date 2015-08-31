@@ -30,8 +30,7 @@
 #include "ipc_async_cmd.h"
 #include "pss_constants.h"
 #include <apss_structs.h>
-
-extern int wait_spi_completion(int reg, int timeout); //wait_spi.c
+#include "apss_util.h"
 
 void apss_start_pwr_meas_read(ipc_msg_t* cmd, void* arg)
 {
@@ -56,7 +55,7 @@ void apss_start_pwr_meas_read(ipc_msg_t* cmd, void* arg)
     // wait for ADC completion, or timeout after 5 micro seconds. 
     // scom register SPIPSS_ADC_STATUS_REG's bit 0 (HWCTRL_ONGOING) 
     // indicates when completion occurs.
-    rc = wait_spi_completion(SPIPSS_ADC_STATUS_REG, 5);
+    rc = wait_spi_completion(args, SPIPSS_ADC_STATUS_REG, 5);
     if(rc) // Timeout Reached, and SPI transaction didn't complete, copy over rc
     {
         PK_TRACE("gpe0:apss_start_pwr_meas_read:wait_spi_completion failed with rc = 0x%08x", rc);
@@ -161,7 +160,7 @@ void apss_continue_pwr_meas_read(ipc_msg_t* cmd, void* arg)
     // wait for ADC completion, or timeout after 100 micro seconds. 
     // scom register SPIPSS_ADC_STATUS_REG's bit 0 (HWCTRL_ONGOING) 
     // indicates when completion occurs.
-    rc = wait_spi_completion(SPIPSS_ADC_STATUS_REG, 100);
+    rc = wait_spi_completion(args, SPIPSS_ADC_STATUS_REG, 100);
     if(rc) // Timeout Reached, and SPI transaction didn't complete, copy returned status into rc
            // REVIEW: Should we also copy something into the ffdc as well?
     {
@@ -234,7 +233,7 @@ void apss_complete_pwr_meas_read(ipc_msg_t* cmd, void* arg)
     // wait for ADC completion, or timeout after 100 micro seconds. 
     // scom register SPIPSS_ADC_STATUS_REG's bit 0 (HWCTRL_ONGOING) 
     // indicates when completion occurs.
-    rc = wait_spi_completion(SPIPSS_ADC_STATUS_REG, 100);
+    rc = wait_spi_completion(args, SPIPSS_ADC_STATUS_REG, 100);
     if(rc) // Timeout Reached, and SPI transaction didn't complete, copy returned status into rc
            // REVIEW: Should we also copy something into the ffdc as well? whether in wait_spi_completion or here?
     {

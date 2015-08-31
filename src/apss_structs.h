@@ -23,15 +23,35 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
+/* This header file is used by both occ_405 and occ_gpe0.                 */
+/* Contains common structures and globals.                                */
+
 #ifndef _APSS_STRUCTS_H
 #define _APSS_STRUCTS_H
 
 #include <gpe_export.h>
 
+
+// List of supported APSS Modes set in occ_gpe0/apss_init.c
+#define APSS_MODE_COMPOSITE     0
+#define APSS_MODE_AUTO2         1
+
+
+// List of possible apss Return Codes
+#define APSS_RC_SUCCESS             0x0
+#define APSS_RC_SPI_TIMEOUT         0x1
+#define APSS_RC_SCOM_GET_FAILED     0x2
+#define APSS_RC_SCOM_PUT_FAILED     0x3
+#define APSS_RC_INVALID_REG         0x4
+#define APSS_RC_IPC_SEND_FAILED     0x5
+#define APSS_RC_INVALID_APSS_MODE   0x6
+
+
+
 /* This data structure holds the common args data structures between the  */
 /* 405 and the GPE0, used in IPC communications.                          */
 /* We started by adding these common apss data structures to test the     */
-/* code the way it worked before using the PORE GPE assembly. We will     */
+/* code the way it worked before using the GPE assembly. We will          */
 /* probably have to add the apssPwrMeasStruct_t to include GPIO,          */
 /* measurements, and to maintain a single data structure for all GPE0's   */
 /* ASPSS routine (or may be consolidate the three routines in a single    */
@@ -48,36 +68,37 @@ struct apssGpioConfigStruct
 } __attribute__ ((__packed__));
 typedef struct apssGpioConfigStruct apssGpioConfigStruct_t;
 
-struct apssCompositeConfigStruct
+struct apssModeConfigStruct
 {
-   uint8_t numAdcChannelsToRead;
-   uint8_t numGpioPortsToRead;
+    uint8_t mode;
+    uint8_t numAdcChannelsToRead;
+    uint8_t numGpioPortsToRead;
 } __attribute__ ((__packed__));
-typedef struct apssCompositeConfigStruct apssCompositeConfigStruct_t;
+typedef struct apssModeConfigStruct apssModeConfigStruct_t;
 
 typedef struct {
-  PoreGpeErrorStruct error;
+  GpeErrorStruct error;
   apssGpioConfigStruct_t config0; // G_gpio_config[0] (input to APSS)
   apssGpioConfigStruct_t config1; // G_gpio_config[1] (input to APSS)
 } initGpioArgs_t;
 
 typedef struct {
-  PoreGpeErrorStruct error;
-  apssCompositeConfigStruct_t config; // G_apss_composite_config (input to APSS)
-} setCompositeModeArgs_t;
+  GpeErrorStruct error;
+  apssModeConfigStruct_t config; // G_apss_composite_config (input to APSS)
+} setApssModeArgs_t;
 
 typedef struct
 {
-  PoreGpeErrorStruct error;
+  GpeErrorStruct error;
 } apss_start_args_t;
 
 typedef struct {
-  PoreGpeErrorStruct error;
+  GpeErrorStruct error;
   uint64_t meas_data[4]; // G_apss_pwr_meas (1st block of data) (output from APSS)
 } apss_continue_args_t;
 
 typedef struct {
-  PoreGpeErrorStruct error;
+  GpeErrorStruct error;
   uint64_t meas_data[4]; // G_apss_pwr_meas (2nd block of data) (output from APSS)
 } apss_complete_args_t;
 

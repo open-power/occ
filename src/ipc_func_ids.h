@@ -55,6 +55,8 @@ IPC_FUNCIDS_TABLE_START
     //These function ID's can only be sent to GPE0
     IPC_FUNCIDS_ST_START(OCCHW_INST_ID_GPE0)
         IPC_FUNC_ID(IPC_ST_TEST_FUNC0)
+        IPC_FUNC_ID(IPC_ST_APSS_INIT_GPIO_FUNCID)
+        IPC_FUNC_ID(IPC_ST_APSS_INIT_MODE_FUNCID)
         IPC_FUNC_ID(IPC_ST_APSS_START_PWR_MEAS_READ_FUNCID)
         IPC_FUNC_ID(IPC_ST_APSS_CONTINUE_PWR_MEAS_READ_FUNCID)
         IPC_FUNC_ID(IPC_ST_APSS_COMPLETE_PWR_MEAS_READ_FUNCID)
@@ -73,7 +75,7 @@ IPC_FUNCIDS_TABLE_START
     //Functions that are only supported by GPE3 should be defined here
     //These function ID's can only be sent to GPE3
     IPC_FUNCIDS_ST_START(OCCHW_INST_ID_GPE3)
-    IPC_FUNCIDS_ST_END(OCCHW_INST_ID_GPE3) 
+    IPC_FUNCIDS_ST_END(OCCHW_INST_ID_GPE3)
 
     //Functions that are only supported by PPC should be defined here
     //These function ID's can only be sent to the PPC

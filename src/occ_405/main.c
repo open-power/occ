@@ -56,6 +56,7 @@
 #include <thrm_thread.h>
 #include "scom.h"
 //#include <fir_data_collect.h>
+#include <pss_service_codes.h>
 
 extern void __ssx_boot;
 extern uint32_t G_occ_phantom_critical_count;
@@ -63,7 +64,7 @@ extern uint32_t G_occ_phantom_noncritical_count;
 extern uint8_t G_occ_interrupt_type;
 
 // Remove the next LOC when dcom_initialize_roles() is un-commented
-uint8_t     G_occ_role = OCC_MASTER;  // TEMP 
+uint8_t     G_occ_role = OCC_MASTER;  // TEMP
 
 // TEMP Remove next 6 LOC when apssInitApplet.c is added
 extern GpeRequest G_meas_start_request;
@@ -362,8 +363,8 @@ void gpe_reset(uint32_t instance_id)
  * Name: occ_ipc_setup
  *
  * Description: Initialzes IPC (Inter Process Communication) that is used
- *              to communicate with GPEs.  
- *              This will also start GPE0 and GPE1.   
+ *              to communicate with GPEs.
+ *              This will also start GPE0 and GPE1.
  * NOTE:  SGPE and PGPE are started prior to the OCC 405 during the IPL.
  *
  * End Function Specification
@@ -547,58 +548,206 @@ void hmon_routine()
 void master_occ_init()
 {
 
-    OCC_APLT_STATUS_CODES l_status = OCC_APLT_SUCCESS;
-    errlHndl_t l_errl = NULL;
+    errlHndl_t l_err = NULL;
+    GpeRequest l_request;   //Used once here to initialize apss.
 
+    // TODO: Move the APSS initialization code back to an applet once applets are running on P9.
     // Initialize APSS
-    // Start TEMP code until apssInitApplet.c is compiled and running applets is supported
-        TRAC_INFO("apss_initialize: Creating request G_meas_start_request.");
-        //Create the request for measure start. Scheduling will happen in apss.c
-        gpe_request_create(&G_meas_start_request,
-                           &G_async_gpe_queue0,                       // queue
-                           IPC_ST_APSS_START_PWR_MEAS_READ_FUNCID,    // entry_point
-                         (uint32_t)&G_gpe_start_pwr_meas_read_args,   // entry_point arg
-                         SSX_WAIT_FOREVER,                            // no timeout
-                         NULL,                                        // callback
-                         NULL,                                        // callback arg
-                         ASYNC_CALLBACK_IMMEDIATE);                   // options
 
-        TRAC_INFO("apss_initialize: Creating request G_meas_cont_request.");
-        //Create the request for measure continue. Scheduling will happen in apss.c
-        gpe_request_create(&G_meas_cont_request,
-                           &G_async_gpe_queue0,                        // request
-                           IPC_ST_APSS_CONTINUE_PWR_MEAS_READ_FUNCID,  // entry_point
-                         (uint32_t)&G_gpe_continue_pwr_meas_read_args, // entry_point arg
-                         SSX_WAIT_FOREVER,                            // no timeout
-                         NULL,                                        // callback
-                         NULL,                                        // callback arg
-                         ASYNC_CALLBACK_IMMEDIATE);                   // options
+    // Setup the GPIO init structure to pass to the PPE program
+    G_gpe_apss_initialize_gpio_args.error.error = 0;
+    G_gpe_apss_initialize_gpio_args.error.ffdc = 0;
+    G_gpe_apss_initialize_gpio_args.config0.direction
+                                = G_gpio_config[0].direction;
+    G_gpe_apss_initialize_gpio_args.config0.drive
+                                = G_gpio_config[0].drive;
+    G_gpe_apss_initialize_gpio_args.config0.interrupt
+                                = G_gpio_config[0].interrupt;
+    G_gpe_apss_initialize_gpio_args.config1.direction
+                                = G_gpio_config[1].direction;
+    G_gpe_apss_initialize_gpio_args.config1.drive
+                                = G_gpio_config[1].drive;
+    G_gpe_apss_initialize_gpio_args.config1.interrupt
+                                = G_gpio_config[1].interrupt;
 
-        TRAC_INFO("apss_initialize: Creating request G_meas_complete_request.");
-        //Create the request for measure complete. Scheduling will happen in apss.c
-        gpe_request_create(&G_meas_complete_request,
-                           &G_async_gpe_queue0,                        // queue
-                           IPC_ST_APSS_COMPLETE_PWR_MEAS_READ_FUNCID,  // entry_point
-                         (uint32_t)&G_gpe_complete_pwr_meas_read_args, // entry_point arg
-                         SSX_WAIT_FOREVER,                             // no timeout
-                         (AsyncRequestCallback)reformat_meas_data,     // callback,
-                         (void*)NULL,                                  // callback arg
-                         ASYNC_CALLBACK_IMMEDIATE);                    // options
+    // Create/schedule IPC_ST_APSS_INIT_GPIO_FUNCID and wait for it to complete (BLOCKING)
+    TRAC_INFO("master_occ_init: Creating request for GPE_apss_initialize_gpio");
+    gpe_request_create(&l_request,                                // request
+                       &G_async_gpe_queue0,                       // queue
+                       IPC_ST_APSS_INIT_GPIO_FUNCID,              // Function ID
+                       (uint8_t)&G_gpe_apss_initialize_gpio_args, // GPE argument_ptr
+                       SSX_SECONDS(5),                            // timeout
+                       NULL,                                      // callback
+                       NULL,                                      // callback arg
+                       ASYNC_REQUEST_BLOCKING);                   // options
 
-   // END TEMP code.  Un-comment runApplet() when TEMP code is removed
-/*    runApplet(OCC_APLT_APSS_INIT,   // Applet enum Name
-            NULL,                 // Applet arguments
-            TRUE,                 // Blocking call?
-            NULL,                 // Applet finished semaphore
-            &l_errl,              // Error log handle
-            &l_status);           // Error status
-*/
+    // Schedule the request to be executed
+    TRAC_INFO("master_occ_init: Scheduling request for IPC_ST_APSS_INIT_GPIO_FUNCID");
+    gpe_request_schedule(&l_request);
 
-    if( (NULL != l_errl)  || (l_status !=  OCC_APLT_SUCCESS))
+    // Check for a timeout only; will create the error below.
+    if(ASYNC_REQUEST_STATE_TIMED_OUT == l_request.request.completion_state)
     {
-        TRAC_ERR("APSS init applet returned error: l_status: 0x%x", l_status);
+        // For whatever reason, we hit a timeout.  It could be either
+        // that the HW did not work, or the request didn't ever make
+        // it to the front of the queue.
+        // Let's log an error, and include the FFDC data if it was
+        // generated.
+        TRAC_ERR("master_occ_init: Timeout communicating with PPE for APSS Init.");
+    }
+
+
+    TRAC_INFO("master_occ_init: GPE_apss_initialize_gpio completed w/rc=0x%08x\n",
+              l_request.request.completion_state);
+
+
+    //TODO: The ipc command will return "SUCCESS" even if an internal PPE failure
+    //      occurs.  Make sure that checking for rc as seen below, is good enough.
+
+    // Only continue if initializaton completed without any errors.
+    if ((ASYNC_REQUEST_STATE_COMPLETE == l_request.request.completion_state) &&
+        (G_gpe_apss_initialize_gpio_args.error.rc == ERRL_RC_SUCCESS))
+    {
+        // Setup the mode structure to pass to the GPE program
+        G_gpe_apss_set_mode_args.error.error = 0;
+        G_gpe_apss_set_mode_args.error.ffdc = 0;
+        G_gpe_apss_set_mode_args.config.mode
+                                = G_apss_mode_config.mode;  //Mode used is set in apss.c
+        G_gpe_apss_set_mode_args.config.numAdcChannelsToRead
+                                = G_apss_mode_config.numAdcChannelsToRead;
+        G_gpe_apss_set_mode_args.config.numGpioPortsToRead
+                                = G_apss_mode_config.numGpioPortsToRead;
+
+        // Create/schedule GPE_apss_set_mode and wait for it to complete (BLOCKING)
+        TRAC_INFO("master_occ_init: Creating request for GPE_apss_set_mode");
+        gpe_request_create(&l_request,                              // request
+                           &G_async_gpe_queue0,                     // queue
+                           IPC_ST_APSS_INIT_MODE_FUNCID,            // Function ID
+                           (uint8_t)&G_gpe_apss_set_mode_args,      // GPE argument_ptr
+                           SSX_SECONDS(5),                          // timeout
+                           NULL,                                    // callback
+                           NULL,                                    // callback arg
+                           ASYNC_REQUEST_BLOCKING);                 // options
+        //Schedule set_mode
+        gpe_request_schedule(&l_request);
+
+        // Check for a timeout, will create the error log later
+        if(ASYNC_REQUEST_STATE_TIMED_OUT == l_request.request.completion_state)
+        {
+            // For whatever reason, we hit a timeout.  It could be either
+            // that the HW did not work, or the request didn't ever make
+            // it to the front of the queue.
+            // Let's log an error, and include the FFDC data if it was
+            // generated.
+            TRAC_ERR("master_occ_init: Timeout communicating with PPE for APSS Init");
+        }
+
+        TRAC_INFO("master_occ_init: GPE_apss_set_mode completed w/rc=0x%08x",
+                  l_request.request.completion_state);
+
+        //Continue only if mode set was successful.
+        if ((ASYNC_REQUEST_STATE_COMPLETE == l_request.request.completion_state) &&
+            (G_gpe_apss_set_mode_args.error.rc == ERRL_RC_SUCCESS))
+        {
+            TRAC_INFO("master_occ_init: Creating request G_meas_start_request.");
+            //Create the request for measure start. Scheduling will happen in apss.c
+            gpe_request_create(&G_meas_start_request,
+                               &G_async_gpe_queue0,                     // queue
+                               IPC_ST_APSS_START_PWR_MEAS_READ_FUNCID,  // entry_point
+                               (uint8_t)&G_gpe_start_pwr_meas_read_args,// entry_point arg
+                               SSX_WAIT_FOREVER,                        // no timeout
+                               NULL,                                    // callback
+                               NULL,                                    // callback arg
+                               ASYNC_CALLBACK_IMMEDIATE);               // options
+
+            TRAC_INFO("master_occ_init: Creating request G_meas_cont_request.");
+            //Create the request for measure continue. Scheduling will happen in apss.c
+            gpe_request_create(&G_meas_cont_request,
+                               &G_async_gpe_queue0,                         // request
+                               IPC_ST_APSS_CONTINUE_PWR_MEAS_READ_FUNCID,   // entry_point
+                               (uint8_t)&G_gpe_continue_pwr_meas_read_args, // entry_point arg
+                               SSX_WAIT_FOREVER,                            // no timeout
+                               NULL,                                        // callback
+                               NULL,                                        // callback arg
+                               ASYNC_CALLBACK_IMMEDIATE);                   // options
+
+            TRAC_INFO("master_occ_init: Creating request G_meas_complete_request.");
+            //Create the request for measure complete. Scheduling will happen in apss.c
+            gpe_request_create(&G_meas_complete_request,
+                               &G_async_gpe_queue0,                          // queue
+                               IPC_ST_APSS_COMPLETE_PWR_MEAS_READ_FUNCID,    // entry_point
+                               (uint8_t)&G_gpe_complete_pwr_meas_read_args,  // entry_point arg
+                               SSX_WAIT_FOREVER,                             // no timeout
+                               (AsyncRequestCallback)reformat_meas_data,     // callback,
+                               (void*)NULL,                                  // callback arg
+                               ASYNC_CALLBACK_IMMEDIATE);                    // options
+
+        }
+        else
+        {
+            /*
+             * @errortype
+             * @moduleid    PSS_MID_APSS_INIT
+             * @reasoncode  INTERNAL_FAILURE
+             * @userdata1   GPE returned rc code
+             * @userdata2   GPE returned abort code
+             * @userdata4   ERC_PSS_COMPOSITE_MODE_FAIL
+             * @devdesc     Failure from GPE for setting composite mode on
+             *              APSS
+             */
+            l_err = createErrl(PSS_MID_APSS_INIT,                   // i_modId,
+                               INTERNAL_FAILURE,                    // i_reasonCode,
+                               ERC_PSS_COMPOSITE_MODE_FAIL,         // extended reason code
+                               ERRL_SEV_UNRECOVERABLE,              // i_severity
+                               NULL,                                // i_trace,
+                               0x0000,                              // i_traceSz,
+                               l_request.request.completion_state,  // i_userData1,
+                               l_request.request.abort_state);      // i_userData2
+            addUsrDtlsToErrl(l_err,
+                             (uint8_t*)&G_gpe_apss_set_mode_args,
+                             sizeof(G_gpe_apss_set_mode_args),
+                             ERRL_STRUCT_VERSION_1,
+                             ERRL_USR_DTL_TRACE_DATA);
+
+            // Returning an error log will cause us to go to safe
+            // state so we can report error to FSP
+        }
+    }
+    else
+    {
+        /*
+         * @errortype
+         * @moduleid    PSS_MID_APSS_INIT
+         * @reasoncode  INTERNAL_FAILURE
+         * @userdata1   GPE returned rc code
+         * @userdata2   GPE returned abort code
+         * @userdata4   ERC_PSS_GPIO_INIT_FAIL
+         * @devdesc     Failure from GPE for gpio initialization on APSS
+         */
+        l_err = createErrl(PSS_MID_APSS_INIT,                   // i_modId,
+                           INTERNAL_FAILURE,                    // i_reasonCode,
+                           ERC_PSS_GPIO_INIT_FAIL,              // extended reason code
+                           ERRL_SEV_UNRECOVERABLE,              // i_severity
+                           NULL,                                // tracDesc_t i_trace,
+                           0x0000,                              // i_traceSz,
+                           l_request.request.completion_state,  // i_userData1,
+                           l_request.request.abort_state);      // i_userData2
+        addUsrDtlsToErrl(l_err,
+                         (uint8_t*)&G_gpe_apss_initialize_gpio_args,
+                         sizeof(G_gpe_apss_initialize_gpio_args),
+                         ERRL_STRUCT_VERSION_1,
+                         ERRL_USR_DTL_TRACE_DATA);
+
+        // Returning an error log will cause us to go to safe
+        // state so we can report error to FSP
+    }
+
+    if( (NULL != l_err))
+    {
+        TRAC_ERR("APSS init applet returned error");
         // commit & delete. CommitErrl handles NULL error log handle
-        REQUEST_RESET(l_errl);
+        // TEMP -- NO ERRL / RESET YET
+        //REQUEST_RESET(l_err);
     }
 
     // Reinitialize the PBAX Queues
@@ -1137,7 +1286,7 @@ int main(int argc, char **argv)
     // The offset from the start of the HOMER is 0x00100000, we will need to
     // create a temporary mapping to this section of the HOMER with ppc405_mmu_map
     // (at address 0x00000000) read the value, convert it, and then unmap.
-    
+
     // Don't do a version check before reading the nest freq, it's present in
     // all HOMER versions.
     uint32_t l_tb_freq_hz = 0;
