@@ -36,7 +36,7 @@ uint32_t apss_start_spi_command(initGpioArgs_t * args, uint8_t i_noWait)
 
         if (!i_noWait)
         {
-            rc = wait_spi_completion(args, SPIPSS_P2S_STATUS_REG, 10);
+            rc = wait_spi_completion(&(args->error), SPIPSS_P2S_STATUS_REG, 10);
             if (rc)
             {
                 PK_TRACE("apss_start_spi_command: Timed out waiting for ops to complete. rc = 0x%08x",
@@ -63,14 +63,17 @@ void apss_init_gpio(ipc_msg_t* cmd, void* arg)
     //Note: arg was set to 0 in ipc func table (ipc_func_tables.c), so don't use it
 
     uint32_t            rc;
+    uint32_t            ipc_send_rc;
     ipc_async_cmd_t     *async_cmd = (ipc_async_cmd_t*)cmd;
     initGpioArgs_t      *args = (initGpioArgs_t*)async_cmd->cmd_data;
     uint64_t            regValue = 0;
 
+    PK_TRACE("apss_init_gpio: started.");
+
     do
     {
         // Wait for SPI operations to be complete (up to 10usec timeout)
-        rc = wait_spi_completion(args, SPIPSS_P2S_STATUS_REG, 10);
+        rc = wait_spi_completion(&(args->error), SPIPSS_P2S_STATUS_REG, 10);
         if (rc)
         {
             PK_TRACE("apss_init_gpio: Timed out waiting for ops to complete. rc = 0x%08x", rc);
@@ -197,14 +200,21 @@ void apss_init_gpio(ipc_msg_t* cmd, void* arg)
     }while(0);
 
     // send back a successful response.  OCC will check rc and ffdc
-    rc = ipc_send_rsp(cmd, IPC_RC_SUCCESS);
+    ipc_send_rc = ipc_send_rsp(cmd, IPC_RC_SUCCESS);
 
-    if(rc)
+    if(ipc_send_rc)
     {
-        PK_TRACE("apss_init_gpio: Failed to send response back. Halting GPE0", rc);
-        apss_set_ffdc(&(args->error), 0x00, rc, regValue);
+        PK_TRACE("apss_init_gpio: Failed to send response back. rc = 0x%08x. Halting GPE0",
+                 ipc_send_rc);
+        apss_set_ffdc(&(args->error), 0x00, ipc_send_rc, regValue);
         pk_halt();
     }
+
+    if(rc == 0) // if ipc_send_rc is 0, wont reach this instruction (pk_halt)
+    {
+        PK_TRACE("apss_init_gpio: completed successfully.");
+    }
+
 }
 
 /*
@@ -222,14 +232,17 @@ void apss_init_mode(ipc_msg_t* cmd, void* arg)
 
     uint32_t                rc = APSS_RC_SUCCESS;
     uint32_t                ipc_rc = IPC_RC_SUCCESS;
+    uint32_t                ipc_send_rc;
     ipc_async_cmd_t         *async_cmd = (ipc_async_cmd_t*)cmd;
     setApssModeArgs_t       *args = (setApssModeArgs_t*)async_cmd->cmd_data;
     uint64_t                regValue = 0;
 
+    PK_TRACE("apss_init_mode: started.");
+
     do
     {
         // Wait for SPI operations to be complete (up to 10usec timeout)
-        rc = wait_spi_completion(args, SPIPSS_P2S_STATUS_REG, 10);
+        rc = wait_spi_completion(&(args->error), SPIPSS_P2S_STATUS_REG, 10);
         if (rc)
         {
             PK_TRACE("apss_init_mode: Timed out waiting for ops to complete. rc = 0x%08x", rc);
@@ -318,16 +331,22 @@ void apss_init_mode(ipc_msg_t* cmd, void* arg)
     }while(0);
 
     // send back a response
-    PK_TRACE("apss_init_mode: Sending APSS response ReturnCode:0x%X. APSSrc:0x%X (0 = Success)", 
+    PK_TRACE("apss_init_mode: Sending APSS response ReturnCode:0x%X. APSSrc:0x%X (0 = Success)",
              ipc_rc, rc);
-    rc = ipc_send_rsp(cmd, ipc_rc);
+    ipc_send_rc = ipc_send_rsp(cmd, ipc_rc);
 
     //If we fail to send ipc response, then this error takes prescedence over any other error.
     //TODO: See if there's another space to write the error out to.
-    if(rc)
+    if(ipc_send_rc)
     {
-        PK_TRACE("apss_init_mode: Failed to send response back to mode initialization. Halting GPE0", ipc_rc);
-        apss_set_ffdc(&(args->error), 0x00, ipc_rc, regValue);
+        PK_TRACE("apss_init_mode: Failed to send response back to mode initialization. Halting GPE0",
+                 ipc_send_rc);
+        apss_set_ffdc(&(args->error), 0x00, ipc_send_rc, regValue);
         pk_halt();
+    }
+
+    if(rc == 0 && ipc_rc == IPC_RC_SUCCESS) // if ipc_send_rc, wont reach this instruction (pk_halt)
+    {
+        PK_TRACE("apss_init_mode: completed successfully.");
     }
 }
