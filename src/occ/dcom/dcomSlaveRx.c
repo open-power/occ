@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] Google Inc.                                                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
@@ -483,7 +483,7 @@ void task_dcom_wait_for_master( task_t *i_self)
         {
             if (L_first_doorbell_rcvd)
             {
-                // We didn't get a doorbell from the Master, increment our 
+                // We didn't get a doorbell from the Master, increment our
                 // counter
                 L_no_master_doorbell_cnt++;
 
@@ -523,6 +523,11 @@ void task_dcom_wait_for_master( task_t *i_self)
                                     0                               //userdata2
                                     );
 
+                        // the manufacturing action flag must be set prior
+                        // to calling the addCalloutToErrl in order to
+                        // enable setting the callouts for informational SRCs
+                        setErrlActions(l_errl, ERRL_ACTIONS_MANUFACTURING_ERROR);
+
                         // Callout to firmware
                         addCalloutToErrl(l_errl,
                                          ERRL_CALLOUT_TYPE_COMPONENT_ID,
@@ -541,12 +546,11 @@ void task_dcom_wait_for_master( task_t *i_self)
                                          G_sysConfigData.apss_huid,
                                          ERRL_CALLOUT_PRIORITY_LOW);
 
-                        setErrlActions(l_errl, ERRL_ACTIONS_MANUFACTURING_ERROR);
                         commitErrl(&l_errl);
                     }
                 }
 
-                if (L_no_master_doorbell_cnt == APSS_DATA_FAIL_MAX) 
+                if (L_no_master_doorbell_cnt == APSS_DATA_FAIL_MAX)
                 {
                     // If we still don't get a doorbell from the Master for this
                     // long, we will request a reset
@@ -565,7 +569,7 @@ void task_dcom_wait_for_master( task_t *i_self)
                                     DCOM_MID_TASK_WAIT_FOR_MASTER,  //modId
                                     APSS_SLV_LONG_TIMEOUT,          //reasoncode
                                     OCC_NO_EXTENDED_RC,             //Extended reason code
-                                    ERRL_SEV_INFORMATIONAL,         //Severity
+                                    ERRL_SEV_PREDICTIVE,            //Severity
                                     NULL,                           //Trace Buf
                                     DEFAULT_TRACE_SIZE,             //Trace Size
                                     APSS_DATA_FAIL_MAX,             //userdata1
