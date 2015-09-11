@@ -575,7 +575,7 @@ void master_occ_init()
     gpe_request_create(&l_request,                                // request
                        &G_async_gpe_queue0,                       // queue
                        IPC_ST_APSS_INIT_GPIO_FUNCID,              // Function ID
-                       (uint8_t)&G_gpe_apss_initialize_gpio_args, // GPE argument_ptr
+                       (uint32_t)&G_gpe_apss_initialize_gpio_args, // GPE argument_ptr
                        SSX_SECONDS(5),                            // timeout
                        NULL,                                      // callback
                        NULL,                                      // callback arg
@@ -623,7 +623,7 @@ void master_occ_init()
         gpe_request_create(&l_request,                              // request
                            &G_async_gpe_queue0,                     // queue
                            IPC_ST_APSS_INIT_MODE_FUNCID,            // Function ID
-                           (uint8_t)&G_gpe_apss_set_mode_args,      // GPE argument_ptr
+                           (uint32_t)&G_gpe_apss_set_mode_args,     // GPE argument_ptr
                            SSX_SECONDS(5),                          // timeout
                            NULL,                                    // callback
                            NULL,                                    // callback arg
@@ -652,31 +652,31 @@ void master_occ_init()
             TRAC_INFO("master_occ_init: Creating request G_meas_start_request.");
             //Create the request for measure start. Scheduling will happen in apss.c
             gpe_request_create(&G_meas_start_request,
-                               &G_async_gpe_queue0,                     // queue
-                               IPC_ST_APSS_START_PWR_MEAS_READ_FUNCID,  // entry_point
-                               (uint8_t)&G_gpe_start_pwr_meas_read_args,// entry_point arg
-                               SSX_WAIT_FOREVER,                        // no timeout
-                               NULL,                                    // callback
-                               NULL,                                    // callback arg
-                               ASYNC_CALLBACK_IMMEDIATE);               // options
+                               &G_async_gpe_queue0,                          // queue
+                               IPC_ST_APSS_START_PWR_MEAS_READ_FUNCID,       // entry_point
+                               (uint32_t)&G_gpe_start_pwr_meas_read_args,    // entry_point arg
+                               SSX_WAIT_FOREVER,                             // no timeout
+                               NULL,                                         // callback
+                               NULL,                                         // callback arg
+                               ASYNC_CALLBACK_IMMEDIATE);                    // options
 
             TRAC_INFO("master_occ_init: Creating request G_meas_cont_request.");
             //Create the request for measure continue. Scheduling will happen in apss.c
             gpe_request_create(&G_meas_cont_request,
-                               &G_async_gpe_queue0,                         // request
-                               IPC_ST_APSS_CONTINUE_PWR_MEAS_READ_FUNCID,   // entry_point
-                               (uint8_t)&G_gpe_continue_pwr_meas_read_args, // entry_point arg
-                               SSX_WAIT_FOREVER,                            // no timeout
-                               NULL,                                        // callback
-                               NULL,                                        // callback arg
-                               ASYNC_CALLBACK_IMMEDIATE);                   // options
+                               &G_async_gpe_queue0,                          // request
+                               IPC_ST_APSS_CONTINUE_PWR_MEAS_READ_FUNCID,    // entry_point
+                               (uint32_t)&G_gpe_continue_pwr_meas_read_args, // entry_point arg
+                               SSX_WAIT_FOREVER,                             // no timeout
+                               NULL,                                         // callback
+                               NULL,                                         // callback arg
+                               ASYNC_CALLBACK_IMMEDIATE);                    // options
 
             TRAC_INFO("master_occ_init: Creating request G_meas_complete_request.");
             //Create the request for measure complete. Scheduling will happen in apss.c
             gpe_request_create(&G_meas_complete_request,
                                &G_async_gpe_queue0,                          // queue
                                IPC_ST_APSS_COMPLETE_PWR_MEAS_READ_FUNCID,    // entry_point
-                               (uint8_t)&G_gpe_complete_pwr_meas_read_args,  // entry_point arg
+                               (uint32_t)&G_gpe_complete_pwr_meas_read_args, // entry_point arg
                                SSX_WAIT_FOREVER,                             // no timeout
                                (AsyncRequestCallback)reformat_meas_data,     // callback,
                                (void*)NULL,                                  // callback arg
