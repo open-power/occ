@@ -47,6 +47,13 @@
 #define IMP_MRK         "IMP: "
 #define DBG_MRK         "DBG: "
 
+#define MAIN_MRK        "MAIN: "
+#define CMDH_MRK        "CMDH: "
+#define DCOM_MRK        "DCOM: "
+#define APLT_MRK        "APLT: "
+#define INTR_MRK        "INTR: "
+#define SNPS_MRK        "SNPS: "
+
 //NOTE: TRAC_ERR must be used for tracing error related information only
 //      TRAC_IMP must be used for tracing important OCC state/status that
 //               changes once or twice OCC lifetime. It must NOT be used
@@ -77,17 +84,79 @@ extern void dumpHexString(const void *i_data, const unsigned int len, const char
 
 
 #define TRAC_ERR(frmt,args...)  \
-        TRACE(g_trac_err,ERR_MRK frmt,##args)
+        TRACE(&g_des_array[ERR_TRACE_DESCRIPTOR],frmt,##args)
 #define TRAC_INFO(frmt,args...)  \
-        TRACE(g_trac_inf,INFO_MRK frmt,##args)
+        TRACE(&g_des_array[INF_TRACE_DESCRIPTOR],frmt,##args)
 #define TRAC_IMP(frmt,args...)  \
-        TRACE(g_trac_imp,IMP_MRK frmt,##args)
+        TRACE(&g_des_array[IMP_TRACE_DESCRIPTOR],frmt,##args)
 #define DBG_PRINT(fmt,args...)  \
-        TRACE(g_trac_inf,DBG_MRK fmt,##args)
+        TRACE(&g_des_array[INF_TRACE_DESCRIPTOR],DBG_MRK fmt,##args)
 #define DEBUG_HEXDUMP(data, len, string)  \
-        TRACEBIN(g_trac_inf, string, data,len)
+        TRACEBIN(&g_des_array[INF_TRACE_DESCRIPTOR], string, data,len)
 
 #endif  //TRAC_TO_SIMICS
+
+// Tracing for main thread (call home, health monitor, fir data, thermal)
+#define MAIN_TRAC_ERR(frmt,args...) \
+        TRAC_ERR(MAIN_MRK frmt, ##args)
+
+#define MAIN_TRAC_INFO(frmt,args...) \
+        TRAC_INFO(MAIN_MRK frmt, ##args)
+
+#define MAIN_TRAC_IMP(frmt,args...) \
+        TRAC_IMP(MAIN_MRK frmt, ##args)
+
+// Tracing for command handler thread
+#define CMDH_TRAC_ERR(frmt,args...) \
+        TRAC_ERR(CMDH_MRK frmt, ##args)
+
+#define CMDH_TRAC_INFO(frmt,args...) \
+        TRAC_INFO(CMDH_MRK frmt, ##args)
+
+#define CMDH_TRAC_IMP(frmt,args...) \
+        TRAC_IMP(CMDH_MRK frmt, ##args)
+
+// Tracing for dcom thread
+#define DCOM_TRAC_ERR(frmt,args...) \
+        TRAC_ERR(DCOM_MRK frmt, ##args)
+
+#define DCOM_TRAC_INFO(frmt,args...) \
+        TRAC_INFO(DCOM_MRK frmt, ##args)
+
+#define DCOM_TRAC_IMP(frmt,args...) \
+        TRAC_IMP(DCOM_MRK frmt, ##args)
+
+// Tracing for the snapshot thread
+#define SNPS_TRAC_ERR(frmt,args...) \
+        TRAC_ERR(SNPS_MRK frmt, ##args)
+
+#define SNPS_TRAC_INFO(frmt,args...) \
+        TRAC_INFO(SNPS_MRK frmt, ##args)
+
+#define SNPS_TRAC_IMP(frmt,args...) \
+        TRAC_IMP(SNPS_MRK frmt, ##args)
+
+// Tracing for applets
+#define APLT_TRAC_ERR(frmt,args...) \
+        TRAC_ERR(APLT_MRK frmt, ##args)
+
+#define APLT_TRAC_INFO(frmt,args...) \
+        TRAC_INFO(APLT_MRK frmt, ##args)
+
+#define APLT_TRAC_IMP(frmt,args...) \
+        TRAC_IMP(APLT_MRK frmt, ##args)
+
+// Tracing for interrupts (RTL, oversubscription, etc)
+#define INTR_TRAC_ERR(frmt,args...) \
+        TRAC_ERR(INTR_MRK frmt, ##args)
+
+#define INTR_TRAC_INFO(frmt,args...) \
+        TRAC_INFO(INTR_MRK frmt, ##args)
+
+#define INTR_TRAC_IMP(frmt,args...) \
+        TRAC_IMP(INTR_MRK frmt, ##args)
+
+
 
 #ifdef MAIN_DEBUG
   #define MAIN_DBG(frmt,args...)  \

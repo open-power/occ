@@ -30,6 +30,7 @@
 //*************************************************************************
 // Includes
 //*************************************************************************
+#include "ssx.h"
 #include <occ_common.h>
 
 //*************************************************************************
@@ -81,6 +82,11 @@ typedef uint32_t trace_hash_val;
 #define TRACE_BUFFER_SIZE                   8192
 
 #define CIRCULAR_BUFFER_SIZE                4
+
+// These are indicies into g_des_array
+#define INF_TRACE_DESCRIPTOR 0
+#define ERR_TRACE_DESCRIPTOR 1
+#define IMP_TRACE_DESCRIPTOR 2
 
 //*************************************************************************
 // Structures
@@ -148,8 +154,9 @@ typedef trace_buf_head_t * tracDesc_t;
  */
 typedef struct trace_descriptor_array
 {
-    tracDesc_t  *entry; /* Pointer to trace descriptor                   */
-    CHAR        *comp;  /* Pointer to component name                     */
+    tracDesc_t      *entry; /* Pointer to trace descriptor */
+    CHAR            *comp;  /* Pointer to component name   */
+    SsxSemaphore    *sem;   /* Pointer to semaphore        */
 }trace_descriptor_array_t;
 
 typedef struct circular_buf_head
@@ -204,7 +211,7 @@ UINT TRAC_init_buffers(void);
  *
  *  return Non-zero return code on error
  */
-UINT TRAC_get_buffer(const tracDesc_t i_td_ptr,
+UINT TRAC_get_buffer(const trace_descriptor_array_t *i_td_ptr,
                      void *o_data);
 
 /*
@@ -222,7 +229,7 @@ UINT TRAC_get_buffer(const tracDesc_t i_td_ptr,
  *
  *  return Non-zero return code on error
  */
-UINT TRAC_get_buffer_partial(const tracDesc_t i_td_ptr,
+UINT TRAC_get_buffer_partial(const trace_descriptor_array_t *i_td_ptr,
                     void *o_data,
                     UINT *io_size);
 
@@ -233,7 +240,7 @@ UINT TRAC_get_buffer_partial(const tracDesc_t i_td_ptr,
  *
  *  return Valid trace descriptor on success, NULL on failure.
  */
-tracDesc_t TRAC_get_td(const char *i_comp);
+const trace_descriptor_array_t* TRAC_get_td(const char *i_comp);
 
 /*
  *  Reset all trace buffers
@@ -257,7 +264,7 @@ UINT TRAC_reset_buf(void);
  *
  *  return Non-zero return code on error.
  */
-UINT trace_adal_write_all(tracDesc_t io_td,const trace_hash_val i_hash,
+UINT trace_adal_write_all(const trace_descriptor_array_t *io_td,const trace_hash_val i_hash,
                      const char *i_fmt,const ULONG i_line, const ULONG i_type,...);
 
 
@@ -278,7 +285,7 @@ UINT trace_adal_write_all(tracDesc_t io_td,const trace_hash_val i_hash,
  *
  *  return Non-zero return code on error.
  */
-UINT trac_write_int(tracDesc_t io_td,const trace_hash_val i_hash,
+UINT trac_write_int(const trace_descriptor_array_t *io_td,const trace_hash_val i_hash,
                     const ULONG i_line,
                     const UINT i_num_args,
                     const ULONG i_1,const ULONG i_2,const ULONG i_3,
@@ -299,7 +306,7 @@ UINT trac_write_int(tracDesc_t io_td,const trace_hash_val i_hash,
  *
  *  return Non-zero return code on error.
  */
-UINT trac_write_bin(tracDesc_t io_td,const trace_hash_val i_hash,
+UINT trac_write_bin(const trace_descriptor_array_t *io_td,const trace_hash_val i_hash,
                     const ULONG i_line,
                     const void *i_ptr,
                     const ULONG i_size);

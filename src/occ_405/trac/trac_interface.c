@@ -23,26 +23,26 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-//*************************************************************************
+//*************************************************************************/
 // Includes
-//*************************************************************************
+//*************************************************************************/
 #include "ssx.h"
 
 #include <trac_interface.h>
 #include <trac_service_codes.h>
 #include <occ_common.h>
 #include <comp_ids.h>
-//*************************************************************************
+//*************************************************************************/
 // Externs
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Macros
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Defines/Enums
-//*************************************************************************
+//*************************************************************************/
 #define TRAC_END_BUFFER                 "&"
 
 #define TRAC_INTF_MUTEX_TIMEOUT         SSX_SECONDS(5)
@@ -86,22 +86,25 @@ tracDesc_t g_trac_inf = (tracDesc_t) &g_trac_inf_buffer;
 tracDesc_t g_trac_err = (tracDesc_t) &g_trac_err_buffer;
 tracDesc_t g_trac_imp = (tracDesc_t) &g_trac_imp_buffer;
 
+SsxSemaphore    g_trac_mutex_inf;
+SsxSemaphore    g_trac_mutex_err;
+SsxSemaphore    g_trac_mutex_imp;
+
+// There are #defines for the indicies of this array in the header file
 const trace_descriptor_array_t g_des_array[] =
 {
-    {&g_trac_inf,"INF"},
-    {&g_trac_err,"ERR"},
-    {&g_trac_imp,"IMP"}
+    {&g_trac_inf,"INF", &g_trac_mutex_inf},
+    {&g_trac_err,"ERR", &g_trac_mutex_err},
+    {&g_trac_imp,"IMP", &g_trac_mutex_imp}
 };
-
-SsxSemaphore    g_trac_mutex;
 
 static bool circular_full_flag = FALSE;
 circular_buf_header_t g_isr_circular_header;
 circular_entire_data_t g_isr_circular_buf[CIRCULAR_BUFFER_SIZE];
 
-//*************************************************************************
+//*************************************************************************/
 // Function Prototypes
-//*************************************************************************
+//*************************************************************************/
 /*
  *  Initialize all header values of a trace buffer
  *
@@ -128,7 +131,7 @@ UINT trac_init_values_buffer(tracDesc_t *o_buf,const CHAR *i_comp);
  *
  *  return Non-zero return code on error.
  */
-UINT trac_write_data(tracDesc_t io_td,
+UINT trac_write_data(const trace_descriptor_array_t *io_td,
                     const void *i_ptr,
                     const ULONG i_size);
 
@@ -151,9 +154,9 @@ uint16_t trac_write_data_to_circular(circular_entire_data_t *i_ptr);
  */
 uint16_t get_trac_entry_data_from_circular(circular_entire_data_t *o_ptr);
 
-//*************************************************************************
+//*************************************************************************/
 // Functions
-//*************************************************************************
+//*************************************************************************/
 
 // Function Specification
 //
@@ -168,15 +171,19 @@ UINT TRAC_init_buffers()
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
     INT             l_rc = 0;
-    UINT            l_num_des = 0;
+    UINT            l_num_des = sizeof(g_des_array) / sizeof(trace_descriptor_array_t);
     UINT            i=0;
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
 
 
-    // Initialize trace mutex
-    l_rc = ssx_semaphore_create(&g_trac_mutex, 1, 1);
+    // Initialize trace mutexes
+    for(i = 0;i < l_num_des; i++)
+    {
+        l_rc = ssx_semaphore_create(g_des_array[i].sem, 1, 1);
+        if(SSX_OK != l_rc) break;
+    }
 
     if(SSX_OK != l_rc)
     {
@@ -186,8 +193,6 @@ UINT TRAC_init_buffers()
     else
     {
         // Initialize trace buffers
-        l_num_des = sizeof(g_des_array) / sizeof(trace_descriptor_array_t);
-
         for(i=0;i<l_num_des;i++)
         {
             // Initialize the buffer
@@ -253,7 +258,7 @@ UINT trac_init_values_buffer(tracDesc_t *o_buf,const CHAR *i_comp)
 //              trac_write_int finally
 //
 // End Function Specification
-UINT trace_adal_write_all(tracDesc_t io_td,const trace_hash_val i_hash,
+UINT trace_adal_write_all(const trace_descriptor_array_t *io_td,const trace_hash_val i_hash,
                      const char *i_fmt,const ULONG i_line, const ULONG i_type,...)
 {
     UINT rc = 0, i = 0;
@@ -313,12 +318,11 @@ UINT trace_adal_write_all(tracDesc_t io_td,const trace_hash_val i_hash,
 // Description:
 //
 // End Function Specification
-UINT trac_write_int(tracDesc_t io_td,const trace_hash_val i_hash,
+UINT trac_write_int(const trace_descriptor_array_t *io_td,const trace_hash_val i_hash,
                      const ULONG i_line,
                      const UINT i_num_args,
                      const ULONG i_1,const ULONG i_2,const ULONG i_3,
-                     const ULONG i_4,const ULONG i_5
-                     )
+                     const ULONG i_4,const ULONG i_5)
 {
     /*------------------------------------------------------------------------*/
     /*  Local Variables                                                       */
@@ -390,7 +394,7 @@ UINT trac_write_int(tracDesc_t io_td,const trace_hash_val i_hash,
         // If ISR did not get semaphore, will add trace log into circular buffer.
         // Context thread will check circular buffer, and add log back into trace buffer.
         // Prevent ISR did not get semaphore, and lost trace log.
-        l_rc = ssx_semaphore_pend(&g_trac_mutex,
+        l_rc = ssx_semaphore_pend(io_td->sem,
                                   __ssx_kernel_context_thread()? \
                                   TRAC_INTF_MUTEX_TIMEOUT : SSX_NO_WAIT);
 
@@ -402,7 +406,7 @@ UINT trac_write_int(tracDesc_t io_td,const trace_hash_val i_hash,
             l_rc = SUCCESS;
 
             // Update the entry count
-            io_td->te_count++;
+            (*io_td->entry)->te_count++;
 
             l_rc = trac_write_data(io_td, (void *)&l_entry, l_entry_size);
 
@@ -414,7 +418,7 @@ UINT trac_write_int(tracDesc_t io_td,const trace_hash_val i_hash,
             }
 
             // Always try to release even if error above
-            ssx_semaphore_post(&g_trac_mutex);
+            ssx_semaphore_post(io_td->sem);
         }
         else if(!__ssx_kernel_context_thread())
         {
@@ -434,7 +438,7 @@ UINT trac_write_int(tracDesc_t io_td,const trace_hash_val i_hash,
                 circular_full_flag = TRUE;
                 l_rc = TRAC_CIRCULAR_BUFF_FULL;
                 // Always try to release even if error above
-                ssx_semaphore_post(&g_trac_mutex);
+                ssx_semaphore_post(io_td->sem);
                 return(l_rc);
             }
 
@@ -473,8 +477,7 @@ UINT trac_write_int(tracDesc_t io_td,const trace_hash_val i_hash,
                 l_entry_size = l_entry_size + ((1 - i_num_args)*4);
 
                 // fill trace field
-// TEMP -- I don't think we use this...
-//                l_entry.head.hash = trace_adal_hash("IMP: ISR Circular Buffer is full, %d entries lost", -1);
+                l_entry.head.hash = trace_adal_hash("IMP: ISR Circular Buffer is full, %d entries lost", -1);
                 l_entry.head.line = __LINE__;
 
                 // one argument for this trace
@@ -485,13 +488,15 @@ UINT trac_write_int(tracDesc_t io_td,const trace_hash_val i_hash,
                 // Disable non-critical interrupts in thread context
                 ssx_critical_section_enter(SSX_NONCRITICAL, &l_ctx);
 
+                // Get IMP trace buffer / mutex
+                const trace_descriptor_array_t *imp_td = TRAC_get_td("IMP");
+
                 //Write to IMP trace buffer
-                l_rc = ssx_semaphore_pend(&g_trac_mutex,TRAC_INTF_MUTEX_TIMEOUT);
+                l_rc = ssx_semaphore_pend(imp_td->sem,TRAC_INTF_MUTEX_TIMEOUT);
                 if(l_rc == SSX_OK)
                 {
-                    tracDesc_t imp_td = TRAC_get_td("IMP");
                     // Update the entry count
-                    imp_td->te_count++;
+                    (*imp_td->entry)->te_count++;
 
                     l_rc = trac_write_data(imp_td, (void *)&l_entry, l_entry_size);
                     if(l_rc != SUCCESS)
@@ -500,7 +505,7 @@ UINT trac_write_int(tracDesc_t io_td,const trace_hash_val i_hash,
                         // because of recursion concerns.  Luckily a trace error is not critical.
                         FIELD("trac_write_int: Failed in call to trac_write_data()");
                     }
-                    ssx_semaphore_post(&g_trac_mutex);
+                    ssx_semaphore_post(imp_td->sem);
                 }
                 else
                 {
@@ -530,13 +535,12 @@ UINT trac_write_int(tracDesc_t io_td,const trace_hash_val i_hash,
                 get_trac_entry_data_from_circular(&l_cir_data_out);
 
                 //Write to trace buffer
-                l_rc = ssx_semaphore_pend(&g_trac_mutex,TRAC_INTF_MUTEX_TIMEOUT);
+                const trace_descriptor_array_t *i_td = TRAC_get_td((const char *)l_cir_data_out.comp);
+                l_rc = ssx_semaphore_pend(i_td->sem,TRAC_INTF_MUTEX_TIMEOUT);
                 if(l_rc == SSX_OK)
                 {
-                    tracDesc_t i_td = TRAC_get_td((const char *)l_cir_data_out.comp);
-
                     // Update the entry count
-                    i_td->te_count++;
+                    (*i_td->entry)->te_count++;
 
                     l_rc = trac_write_data(i_td,
                                           (const void *)&l_cir_data_out.entry,
@@ -559,7 +563,7 @@ UINT trac_write_int(tracDesc_t io_td,const trace_hash_val i_hash,
                         FIELD("trac_write_int: Failed in call to trac_write_data()");
                     }
 
-                    ssx_semaphore_post(&g_trac_mutex);
+                    ssx_semaphore_post(i_td->sem);
                 }
                 else
                 {
@@ -589,7 +593,7 @@ UINT trac_write_int(tracDesc_t io_td,const trace_hash_val i_hash,
 // Description:
 //
 // End Function Specification
-UINT trac_write_bin(tracDesc_t io_td,const trace_hash_val i_hash,
+UINT trac_write_bin(const trace_descriptor_array_t *io_td,const trace_hash_val i_hash,
                     const ULONG i_line,
                     const void *i_ptr,
                     const ULONG i_size)
@@ -644,7 +648,7 @@ UINT trac_write_bin(tracDesc_t io_td,const trace_hash_val i_hash,
         if (__ssx_kernel_context_thread())
             ssx_critical_section_enter(SSX_NONCRITICAL, &l_ctx);
 
-        l_rc = ssx_semaphore_pend(&g_trac_mutex,TRAC_INTF_MUTEX_TIMEOUT);
+        l_rc = ssx_semaphore_pend(io_td->sem,TRAC_INTF_MUTEX_TIMEOUT);
 
         if(l_rc != SSX_OK)
         {
@@ -663,7 +667,7 @@ UINT trac_write_bin(tracDesc_t io_td,const trace_hash_val i_hash,
                               /SSX_TIMEBASE_FREQUENCY_HZ;
 
             // Increment trace counter
-            io_td->te_count++;;
+            (*io_td->entry)->te_count++;;
 
             // First write the header
             l_rc = trac_write_data(io_td,
@@ -705,7 +709,7 @@ UINT trac_write_bin(tracDesc_t io_td,const trace_hash_val i_hash,
             }
             while(FALSE);
 
-            ssx_semaphore_post(&g_trac_mutex);
+            ssx_semaphore_post(io_td->sem);
             // Re-enable non-critical interrupts if thread context
             if (__ssx_kernel_context_thread())
                 ssx_critical_section_exit(&l_ctx);
@@ -723,7 +727,7 @@ UINT trac_write_bin(tracDesc_t io_td,const trace_hash_val i_hash,
 // Description:
 //
 // End Function Specification
-UINT trac_write_data(tracDesc_t io_td,
+UINT trac_write_data(const trace_descriptor_array_t *io_td,
                     const void *i_ptr,
                     const ULONG i_size)
 {
@@ -749,22 +753,22 @@ UINT trac_write_data(tracDesc_t io_td,
             break;
         }
 
-        if((io_td->next_free + l_total_size) > TRACE_BUFFER_SIZE)
+        if(((*io_td->entry)->next_free + l_total_size) > TRACE_BUFFER_SIZE)
         {
             // copy what we can to end
-            l_buf_ptr = (char *)io_td + io_td->next_free;
+            l_buf_ptr = (char *)(*io_td->entry) + (*io_td->entry)->next_free;
             l_buf_ptr = (void *) ( ((ULONG) l_buf_ptr + 3) & ~3);
-            l_offset = TRACE_BUFFER_SIZE-io_td->next_free;
+            l_offset = TRACE_BUFFER_SIZE - (*io_td->entry)->next_free;
             memcpy(l_buf_ptr,i_ptr,(size_t)l_offset);
 
             l_total_size -= l_offset;
 
             // Now adjust the main header of buffer
-            io_td->times_wrap++;
-            io_td->next_free = io_td->hdr_len;
+            (*io_td->entry)->times_wrap++;
+            (*io_td->entry)->next_free = (*io_td->entry)->hdr_len;
         }
 
-        l_buf_ptr = (char *)io_td + io_td->next_free;
+        l_buf_ptr = (char *)(*io_td->entry) + (*io_td->entry)->next_free;
 
         // Word align the write - total size includes this alignment
         l_buf_ptr = (void *) ( ((ULONG) l_buf_ptr + 3) & ~3);
@@ -776,7 +780,7 @@ UINT trac_write_data(tracDesc_t io_td,
         // has the potential to be un-word aligned.  If two parts of the binary
         // trace had this problem then this code would not work.
         l_total_size = (l_total_size + 3) & ~3;
-        io_td->next_free += l_total_size;
+        (*io_td->entry)->next_free += l_total_size;
 
     }while(FALSE);
 
@@ -791,14 +795,14 @@ UINT trac_write_data(tracDesc_t io_td,
 // Description:
 //
 // End Function Specification
-tracDesc_t TRAC_get_td(const char *i_comp)
+const trace_descriptor_array_t* TRAC_get_td(const char *i_comp)
 {
     /*------------------------------------------------------------------------*/
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
-    UINT            l_num_des = 0;
-    UINT            i=0;
-    tracDesc_t      l_td = NULL;
+    UINT                        l_num_des = 0;
+    UINT                        i=0;
+    const trace_descriptor_array_t*   l_td = NULL;
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
@@ -811,7 +815,7 @@ tracDesc_t TRAC_get_td(const char *i_comp)
         if(memcmp(i_comp,(*(g_des_array[i].entry))->comp,(size_t)COMP_NAME_SIZE) == 0)
         {
             // Found the component
-            l_td = *g_des_array[i].entry;
+            l_td = &(g_des_array[i]);
             break;
         }
     }
@@ -826,7 +830,7 @@ tracDesc_t TRAC_get_td(const char *i_comp)
 // Description:
 //
 // End Function Specification
-UINT TRAC_get_buffer(const tracDesc_t i_td_ptr,
+UINT TRAC_get_buffer(const trace_descriptor_array_t *i_td_ptr,
                     void *o_data)
 {
     /*------------------------------------------------------------------------*/
@@ -846,7 +850,7 @@ UINT TRAC_get_buffer(const tracDesc_t i_td_ptr,
             ssx_critical_section_enter(SSX_NONCRITICAL, &l_ctx);
 
         // Get the lock
-        l_rc = ssx_semaphore_pend(&g_trac_mutex,TRAC_INTF_MUTEX_TIMEOUT);
+        l_rc = ssx_semaphore_pend(i_td_ptr->sem,TRAC_INTF_MUTEX_TIMEOUT);
         if(l_rc != SSX_OK)
         {
             // Badness
@@ -857,10 +861,10 @@ UINT TRAC_get_buffer(const tracDesc_t i_td_ptr,
             l_rc = SUCCESS;
 
             // Copy it's buffer into temp one
-            memcpy(o_data,i_td_ptr,(size_t)TRACE_BUFFER_SIZE);
+            memcpy(o_data,*i_td_ptr->entry,(size_t)TRACE_BUFFER_SIZE);
 
             // Always try to release even if error above
-            ssx_semaphore_post(&g_trac_mutex);
+            ssx_semaphore_post(i_td_ptr->sem);
 
             // Re-enable non-critical interrupts if thread context
             if (__ssx_kernel_context_thread())
@@ -883,7 +887,7 @@ UINT TRAC_get_buffer(const tracDesc_t i_td_ptr,
 // Description:
 //
 // End Function Specification
-UINT TRAC_get_buffer_partial(const tracDesc_t i_td_ptr,
+UINT TRAC_get_buffer_partial(const trace_descriptor_array_t *i_td_ptr,
                     void *io_data,
                     UINT *io_size)
 {
@@ -932,7 +936,7 @@ UINT TRAC_get_buffer_partial(const tracDesc_t i_td_ptr,
             ssx_critical_section_enter(SSX_NONCRITICAL, &l_ctx);
 
         // Get the lock
-        l_rc = ssx_semaphore_pend(&g_trac_mutex,TRAC_INTF_MUTEX_TIMEOUT);
+        l_rc = ssx_semaphore_pend(i_td_ptr->sem,TRAC_INTF_MUTEX_TIMEOUT);
         if(l_rc != SSX_OK)
         {
             // Badness
@@ -944,7 +948,7 @@ UINT TRAC_get_buffer_partial(const tracDesc_t i_td_ptr,
             memset(io_data,0,(size_t)*io_size);
 
             l_lock_get = TRUE;
-            l_full_buf = (char*)i_td_ptr;
+            l_full_buf = (char*)(*i_td_ptr->entry);
             if(*io_size >= TRACE_BUFFER_SIZE)
             {
                 // It fits
@@ -1024,7 +1028,7 @@ UINT TRAC_get_buffer_partial(const tracDesc_t i_td_ptr,
     // Always try to release even if error above
     if(l_lock_get)
     {
-        ssx_semaphore_post(&g_trac_mutex);
+        ssx_semaphore_post(i_td_ptr->sem);
         // Re-enable non-critical interrupts if thread context
         if (__ssx_kernel_context_thread())
             ssx_critical_section_exit(&l_ctx);
@@ -1046,7 +1050,7 @@ UINT TRAC_reset_buf()
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
     UINT            l_rc = 0;
-    UINT            l_num_des = 0;
+    UINT            l_num_des = sizeof(g_des_array) / sizeof(trace_descriptor_array_t);
     UINT            i=0;
     SsxMachineContext   l_ctx = 0;
     /*------------------------------------------------------------------------*/
@@ -1057,18 +1061,16 @@ UINT TRAC_reset_buf()
     if (__ssx_kernel_context_thread())
         ssx_critical_section_enter(SSX_NONCRITICAL, &l_ctx);
 
-    // Get mutex so no one traces
-    l_rc = ssx_semaphore_pend(&g_trac_mutex,TRAC_INTF_MUTEX_TIMEOUT);
-    if(l_rc != SSX_OK)
+    for(i=0;i<l_num_des;i++)
     {
-        // Badness
-        FIELD("TRAC_reset_buf: Failure trying to get mutex");
-    }
-    else
-    {
-        l_num_des = sizeof(g_des_array) / sizeof(trace_descriptor_array_t);
-
-        for(i=0;i<l_num_des;i++)
+        // Get mutex so no one traces
+        l_rc = ssx_semaphore_pend(g_des_array[i].sem,TRAC_INTF_MUTEX_TIMEOUT);
+        if(l_rc != SSX_OK)
+        {
+            // Badness
+            FIELD("TRAC_reset_buf: Failure trying to get mutex");
+        }
+        else
         {
             // Initialize the buffer
             l_rc = trac_init_values_buffer(g_des_array[i].entry,
@@ -1079,10 +1081,10 @@ UINT TRAC_reset_buf()
                 break;
             }
         }
-    }
 
-    // Always try to release even if fail above
-    ssx_semaphore_post(&g_trac_mutex);
+        // Always try to release even if fail above
+        ssx_semaphore_post(g_des_array[i].sem);
+    }
 
     // Re-enable non-critical interrupts if thread context
     if (__ssx_kernel_context_thread())
