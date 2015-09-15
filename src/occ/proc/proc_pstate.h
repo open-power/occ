@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -58,8 +58,9 @@ typedef struct __attribute__ ((packed))
     uint8_t              throttle;
     int8_t               pmin;
     int8_t               pnominal;
-    int8_t               pmax;
-    uint16_t             spare;
+    int8_t               turbo;
+    int8_t               ultraTurbo;
+    uint8_t              spare;
 } sapphire_config_t;
 
 typedef struct __attribute__ ((packed))
@@ -69,17 +70,20 @@ typedef struct __attribute__ ((packed))
     uint8_t              evid_vdd;
     uint8_t              evid_vcs;
     uint32_t             freq_khz;
-} sapphire_data_t; 
+} sapphire_data_t;
 
 #define PSTATE_ENTRY_NUMBER 256
 // This size must be a multiple of 128
+// Version 0x02 of Sapphire data
 typedef struct __attribute__ ((packed))
 {
-    sapphire_config_t    config;
-    uint64_t             reserved;
-    sapphire_data_t      data[PSTATE_ENTRY_NUMBER];
-    uint8_t              pad[112];
+    sapphire_config_t    config;                            //8 bytes
+    uint64_t             reserved;                          //8 bytes
+    sapphire_data_t      data[PSTATE_ENTRY_NUMBER];         //256 * 8 = 2048 bytes
+    int8_t               activeCore_max_pstate[MAX_CORES];  //One entry per core
+    uint8_t              pad[100];                          //Whatever is needed to make size a multiple of 128
 } sapphire_table_t __attribute__ ((aligned (128)));
+
 
 enum {
     NO_THROTTLE = 0x00,
@@ -88,13 +92,15 @@ enum {
     POWER_SUPPLY_FAILURE = 0x03,
     OVERCURRENT = 0x04,
     OCC_RESET = 0x05,
-}; 
+    PCAP_ABOVE_TURBO = 0x06,           //Exceeded PCAP while at or above Turbo Pstate. For debug only.
+    CPU_OT_ABOVE_TURBO = 0x07          //Processer over temperature at or above Turbo Pstate. For debug only.
+};
 
-extern GlobalPstateTable G_global_pstate_table; 
+extern GlobalPstateTable G_global_pstate_table;
 
-extern uint32_t    G_mhz_per_pstate;            
+extern uint32_t    G_mhz_per_pstate;
 
-extern sapphire_table_t G_sapphire_table;       
+extern sapphire_table_t G_sapphire_table;
 
 // Initialize PState Table
 errlHndl_t proc_gpsm_pstate_initialize(const PstateSuperStructure* i_pss);
@@ -124,7 +130,7 @@ inline bool proc_is_hwpstate_enabled(void);
 void populate_pstate_to_sapphire_tbl();
 
 // Copy sapphire table to mainstore memory at SAPPHIRE_OFFSET_IN_HOMER
-void populate_sapphire_tbl_to_mem(); 
+void populate_sapphire_tbl_to_mem();
 
 // Check if sapphire table needs update
 void proc_check_for_sapphire_updates();

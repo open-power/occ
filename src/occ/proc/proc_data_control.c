@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -36,6 +36,7 @@
 #include "state.h"
 #include "gpe_control.h"
 #include "occ_sys_config.h"
+#include <amec_sys.h>
 
 // Pore flex request for GPE job. The initialization will be done one time
 // during pore flex create.
@@ -198,7 +199,6 @@ void task_core_data_control( task_t * i_task )
 
     do
     {
-
         //Check to see if the previous GPE request still running
         if( !(async_request_is_idle(&G_core_data_control_req.request)) )
         {
@@ -212,6 +212,9 @@ void task_core_data_control( task_t * i_task )
             //gpewrite ptr with the occwrite ptr.
             l_temp = G_core_data_control_occwrite_ptr;
             G_core_data_control_gpewrite_ptr = l_temp;
+
+            //Signal that frequency vote has been applied (WOF depends on this)
+            g_amec->proc[0].core_max_freq_actual = g_amec->proc[0].core_max_freq;
         }
 
         //Setup the core data control parms

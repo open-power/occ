@@ -533,6 +533,7 @@ void amec_calc_freq_and_util_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uin
   // Get Current Idle State of Chiplet
   // The SLEEPCNT and WINKLECNT sensors are updated in amec_slv_state_0() function
   temp16 = CONVERT_UINT64_UINT16_UPPER(i_core_data_ptr->pcb_slave.pm_history.value);
+  g_amec->proc[0].core[i_core].pm_state_hist = temp16>>8;
   temp16 = temp16 & 0xE000;
   temp16 = temp16 >> 13;
   switch(temp16)
@@ -636,13 +637,15 @@ void amec_calc_freq_and_util_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uin
   if(g_amec->proc[0].core[i_core].sample_count == l_time_interval)
   {
       // Increase resolution of the UTIL accumulator by two decimal places
-      temp32 = AMECSENSOR_ARRAY_PTR(UTIL2MSP0C0,i_core)->accumulator * 100;
+      temp32 = (uint32_t)AMECSENSOR_ARRAY_PTR(UTIL2MSP0C0,i_core)->accumulator
+          * 100;
       // Calculate average utilization of this core
       temp32 = temp32 / g_amec->proc[0].core[i_core].sample_count;
       g_amec->proc[0].core[i_core].avg_util = temp32;
 
       // Increase resolution of the FREQA accumulator by two decimal places
-      temp32 = AMECSENSOR_ARRAY_PTR(FREQA2MSP0C0,i_core)->accumulator * 100;
+      temp32 = (uint32_t)AMECSENSOR_ARRAY_PTR(FREQA2MSP0C0,i_core)->accumulator
+          * 100;
       // Calculate average frequency of this core
       temp32 = temp32 / g_amec->proc[0].core[i_core].sample_count;
       g_amec->proc[0].core[i_core].avg_freq = temp32;

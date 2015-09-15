@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* COPYRIGHT International Business Machines Corp. 2011,2014              */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -335,7 +335,7 @@ void printSensor(sensor_t i_snsr)
     SNSR_DBG("sample_min: 0x%x\n",i_snsr.sample_min);
     SNSR_DBG("sample_max: 0x%x\n",i_snsr.sample_max);
     SNSR_DBG("status.reset: 0x%x\n",i_snsr.status.reset);
-    SNSR_DBG("accumulator: 0x%x\n",i_snsr.accumulator);
+    SNSR_DBG("accumulator: 0x%016llx\n",i_snsr.accumulator);
     SNSR_DBG("update_tag: 0x%x\n",i_snsr.update_tag);
     SNSR_DBG("src_accum_snapshot: 0x%x\n",i_snsr.src_accum_snapshot);
     SNSR_DBG("ipmi sensor id: 0x%x\n",i_snsr.ipmi_sid);  //@fk009c
@@ -380,14 +380,11 @@ uint32_t sensorTestCommon()
     //   PROBE250US2, // Internal Sensor for debug via AMESTER
     //   PROBE250US3, // Internal Sensor for debug via AMESTER
     //   PROBE250US4, // Internal Sensor for debug via AMESTER
-    //   PROBE250US5, // Internal Sensor for debug via AMESTER
-    //   PROBE250US6, // Internal Sensor for debug via AMESTER
-    //   PROBE250US7, // Internal Sensor for debug via AMESTER
 
     sensor_t *l_sensor=getSensorByGsid(PROBE250US0);
     sensor_t *l_sensor1=getSensorByGsid(PROBE250US1);
     sensor_t *l_sensor2=getSensorByGsid(PROBE250US4);
-    sensor_t *l_sensor3=getSensorByGsid(PROBE250US7);
+    sensor_t *l_sensor3=getSensorByGsid(PROBE250US4);  // There is no probe7, so use probe4 again.
     do
     {
         // make sure getSensorByGsid did not return NULL pointer.
@@ -404,7 +401,7 @@ uint32_t sensorTestCommon()
         if((l_sensor->gsid!=PROBE250US0) ||
            (l_sensor1->gsid!=PROBE250US1) ||
            (l_sensor2->gsid!=PROBE250US4) ||
-           (l_sensor3->gsid!=PROBE250US7)     )
+           (l_sensor3->gsid!=PROBE250US4))
         {
             l_rc = GET_SNSR_FAILURE1;
             break;
@@ -631,7 +628,7 @@ uint32_t sensorTestCommon()
         // test updating vector element with min operation and
         // element disabled
 
-        uint32_t l_tempacc=l_sensor->accumulator;
+        uint64_t l_tempacc=l_sensor->accumulator;
         sensor_vector_update(l_sensor,0);
         if( (l_sensor->sample != 11) || (l_sensor->sample_min != 10 ) ||
             (l_sensor->sample_max != 11 ) ||

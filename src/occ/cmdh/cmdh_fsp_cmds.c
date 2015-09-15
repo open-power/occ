@@ -443,7 +443,8 @@ ERRL_RC cmdh_poll_v10(cmdh_fsp_rsp_t * o_rsp_ptr)
             {
                 l_pwrSensorList[l_sensorHeader.count].id = G_amec_sensor_list[PWRAPSSCH0 + k]->ipmi_sid;
                 l_pwrSensorList[l_sensorHeader.count].current = G_amec_sensor_list[PWRAPSSCH0 + k]->sample;
-                l_pwrSensorList[l_sensorHeader.count].accumul = G_amec_sensor_list[PWRAPSSCH0 + k]->accumulator;
+                l_pwrSensorList[l_sensorHeader.count].accumul =
+                    (uint32_t)G_amec_sensor_list[PWRAPSSCH0 + k]->accumulator;
                 l_pwrSensorList[l_sensorHeader.count].update_tag  = G_amec_sensor_list[PWRAPSSCH0 + k]->update_tag;
                 l_sensorHeader.count++;
             }
@@ -643,6 +644,9 @@ errlHndl_t cmdh_reset_prep (const cmdh_fsp_cmd_t * i_cmd_ptr,
         }
         if (CURRENT_STATE() != OCC_STATE_STANDBY)
         {
+            // Clear the inhibit bits set by the WOF function
+            reset_wof_clear_inhibit();
+
             // Put OCC in stand-by state
             l_errlHndl = SMGR_set_state(OCC_STATE_STANDBY);
         }

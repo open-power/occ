@@ -54,6 +54,7 @@
 #include <amec_health.h>
 #include <amec_analytics.h>
 #include <common.h>
+#include <amec_wof.h>
 
 //*************************************************************************
 // Externs
@@ -339,6 +340,12 @@ void amec_slv_common_tasks_pre(void)
   // Update the sensors that come from the APSS every tick
   amec_update_apss_sensors();
 
+  // Update the external voltage sensors
+  amec_update_external_voltage();
+
+  // Update critical sensors for WOF algorithm
+  amec_update_wof_sensors();
+
   // Call the stream buffer recording function
   amec_analytics_sb_recording();
 
@@ -352,13 +359,6 @@ void amec_slv_common_tasks_pre(void)
       }
       L_counter = 0;
   }
-
-  // Update the external voltage sensors
-  amec_update_external_voltage();
-
-  // Update estimate of Vdd regulator output current
-
-  amec_update_current_sensor(); // Compute estimate for Vdd output current
 
   // Over-subscription check
   amec_oversub_check();
@@ -400,6 +400,10 @@ void amec_slv_common_tasks_post(void)
 
       // Call the OCC slave's performance check
       amec_slv_check_perf();
+
+      // Call helper function for the WOF algorithm. This should be done after
+      // the frequency selection in amec_slv_freq_smh().
+      amec_wof_helper();
 
       // Call the 250us trace recording if it has been configured via Amester.
       // If not configured, this call will return immediately.
@@ -450,9 +454,6 @@ void amec_slv_state_0(void)
   sensor_vector_update(AMECSENSOR_PTR(IPS2MSP0),     1);
   sensor_vector_update(AMECSENSOR_PTR(UTIL2MSP0),    1);
 
-  // Call the trace function for 2ms tracing if it has been configured via
-  // Amester. If not configured, this call will return immediately.
-  amec_tb_record(AMEC_TB_2MS);
 }
 
 
@@ -564,6 +565,17 @@ void amec_slv_state_4(void)
   // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
   amec_update_centaur_sensors(CENTAUR_4);
+
+  if ( IS_OCC_STATE_ACTIVE() )
+  {
+      // Execute the main WOF algorithm (Workload-Optimized Frequency
+      // selection)
+      amec_wof_main();
+  }
+
+  // Call the trace function for 2ms tracing if it has been configured via
+  // Amester. If not configured, this call will return immediately.
+  amec_tb_record(AMEC_TB_2MS);
 }
 
 

@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -639,7 +639,8 @@ uint8_t cmdh_mnfg_get_sensor(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 l_resp_ptr->sample = l_sensor_ptr->sample;
                 l_resp_ptr->min = l_sensor_ptr->sample_min;
                 l_resp_ptr->max = l_sensor_ptr->sample_max;
-                l_resp_ptr->accumulator = l_sensor_ptr->accumulator;
+                //lower 32-bits of accumulator only
+                l_resp_ptr->accumulator = (uint32_t)l_sensor_ptr->accumulator;
                 l_resp_ptr->status = *(uint8_t*)(&l_sensor_ptr->status);
             }
 

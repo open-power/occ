@@ -5,9 +5,10 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/* [+] Google Inc.                                                        */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -146,7 +147,7 @@ struct sensor
     uint16_t sample;          // Latest sample of this sensor
     uint16_t sample_min;      // Minimum value since last reset
     uint16_t sample_max;      // Maximum Value since last reset
-    uint32_t accumulator;     // Accumulator register for this sensor
+    uint64_t accumulator;     // Accumulator register for this sensor
     uint32_t src_accum_snapshot; // Copy of the source sensor's accumulator
                                  // used for time-derived sensors
     uint32_t update_tag;      // Count of the number of 'ticks' that have passed

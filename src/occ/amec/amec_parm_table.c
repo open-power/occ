@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -30,11 +30,16 @@
 #include <amec_parm.h>
 #include <amec_sys.h>
 #include <proc_pstate.h> //global pstate table parameter
+#include <amec_wof.h>    // externs for WOF parameters
+#include <pstates.h>     // for global pstate table
 
 //*************************************************************************
 // Externs
 //*************************************************************************
 
+extern int32_t g_amec_eff_vlow;
+extern int32_t g_amec_eff_vhigh;
+extern uint32_t g_amec_wof_iout;
 //*************************************************************************
 // Macros
 //*************************************************************************
@@ -101,7 +106,7 @@
 //*************************************************************************
 
 extern amec_sys_t g_amec_sys;
-
+ 
 //*************************************************************************
 // Globals
 //*************************************************************************
@@ -117,7 +122,7 @@ amec_parm_t g_amec_parm_list[] = {
     // System fmin and fmax
     AMEC_PARM_UINT16(PARM_SYS_FMAX,"sys_fmax",&g_amec_sys.sys.fmax),
     AMEC_PARM_UINT16(PARM_SYS_FMIN,"sys_fmin",&g_amec_sys.sys.fmin),
-
+    AMEC_PARM_RAW(PARM_DCOM_POBID,"dcom_pobid",&G_pob_id,sizeof(pob_id_t)),
     // Global Pstate table
     AMEC_PARM_RAW(PARM_GPST,"gpst",&G_global_pstate_table,sizeof(GlobalPstateTable)),
     // MHz per pstate
@@ -140,6 +145,34 @@ amec_parm_t g_amec_parm_list[] = {
     AMEC_PARM_UINT16(PARM_SOFT_FMIN,"part_soft_fmin",&g_amec_sys.part_config.part_list[0].soft_fmin),
     AMEC_PARM_UINT16(PARM_SOFT_FMAX,"part_soft_fmax",&g_amec_sys.part_config.part_list[0].soft_fmax),
     AMEC_PARM_RAW(PARM_TOD,"apss_tod",&G_dcom_slv_inbox_doorbell_rx.tod,8),
+
+    // WOF: Workload-Optimized Frequency
+    AMEC_PARM_UINT16(PARM_WOF_VDD_EFF,"wof_vdd_eff",&g_amec_sys.wof.vdd_eff),
+    AMEC_PARM_UINT16(PARM_WOF_CUR_OUT,"wof_cur_out",&g_amec_sys.wof.cur_out),
+    AMEC_PARM_UINT16(PARM_WOF_LOADLINE,"wof_loadline",&g_amec_sys.wof.loadline),
+    AMEC_PARM_UINT16(PARM_WOF_V_CHIP,"wof_v_chip",&g_amec_sys.wof.v_chip),
+    AMEC_PARM_UINT8(PARM_WOF_IDDQ_I,"wof_iddq_i",&g_amec_sys.wof.iddq_i),
+    AMEC_PARM_UINT16(PARM_WOF_IDDQ85C,"wof_iddq85c",&g_amec_sys.wof.iddq85c),
+    AMEC_PARM_UINT16(PARM_WOF_IDDQ,"wof_iddq",&g_amec_sys.wof.iddq),
+    AMEC_PARM_UINT16(PARM_WOF_AC,"wof_ac",&g_amec_sys.wof.ac),
+    AMEC_PARM_UINT32(PARM_WOF_CEFF_TDP,"wof_ceff_tdp",&g_amec_sys.wof.ceff_tdp),
+    AMEC_PARM_UINT32(PARM_WOF_CEFF,"wof_ceff",&g_amec_sys.wof.ceff),
+    AMEC_PARM_UINT32(PARM_WOF_CEFF_OLD,"wof_ceff_old",&g_amec_sys.wof.ceff_old),
+    AMEC_PARM_UINT16(PARM_WOF_CEFF_RATIO,"wof_ceff_ratio",&g_amec_sys.wof.ceff_ratio),
+    AMEC_PARM_INT16(PARM_WOF_F_UPLIFT,"wof_f_uplift",&g_amec_sys.wof.f_uplift),
+    AMEC_PARM_UINT16(PARM_WOF_F_VOTE,"wof_f_vote",&g_amec_sys.wof.f_vote),
+    AMEC_PARM_UINT16(PARM_WOF_VOTE_VREG,"wof_vote_vreg",&g_amec_sys.wof.vote_vreg),
+    AMEC_PARM_UINT16(PARM_WOF_VOTE_VCHIP,"wof_vote_vchip",&g_amec_sys.wof.vote_vchip),
+    AMEC_PARM_UINT8(PARM_WOF_ERROR,"wof_error",&g_amec_sys.wof.error),
+    AMEC_PARM_UINT8(PARM_WOF_STATE,"wof_state",&g_amec_sys.wof.state),
+    AMEC_PARM_UINT8(PARM_WOF_ENABLE,"wof_enable",&g_amec_sys.wof.enable_parm),
+    AMEC_PARM_UINT8(PARM_WOF_CORES_ON,"wof_cores_on",&g_amec_sys.wof.cores_on),
+    AMEC_PARM_RAW(PARM_WOF_WAKE_MASK,"wof_wake_mask",&g_amec_sys.wof.wake_up_mask_save,sizeof(uint64_t)),
+    AMEC_PARM_RAW(PARM_WOF_PM_STATE,"wof_pm_state",&g_amec_sys.wof.pm_state,sizeof(uint8_t)*MAX_NUM_CORES),
+    AMEC_PARM_UINT8(PARM_WOF_PSTATE_READY,"wof_ps_ready",&g_amec_wof_pstate_table_ready),
+    AMEC_PARM_INT32(PARM_WOF_EFFVLOW,"wof_effvlow",&g_amec_eff_vlow),
+    AMEC_PARM_INT32(PARM_WOF_EFFVHIGH,"wof_effvhigh",&g_amec_eff_vhigh),
+    AMEC_PARM_UINT32(PARM_WOF_IOUT,"wof_iout",&g_amec_wof_iout)
 };
 
 //Throw a compiler error when the enum and array are not both updated
