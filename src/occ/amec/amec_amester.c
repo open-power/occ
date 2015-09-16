@@ -390,7 +390,6 @@ uint8_t amester_api( const IPMIMsg_t * i_msg,
                 SensorInfo.value_min=l_sensor_ptr->sample_min;
                 SensorInfo.value_max=l_sensor_ptr->sample_max;
                 memcpy(&SensorInfo.status,&l_sensor_ptr->status,sizeof(uint16_t));
-                SensorInfo.test=0; //TODO: This field is not supported for now. Maybe need to change in the future.
 
                 // Copy to output buffer.
                 t=(char *)&SensorInfo;
@@ -1024,6 +1023,8 @@ uint8_t amester_entry_point( const IPMIMsg_t * i_msg,
 
             default:
                 l_rc = COMPCODE_CMD_UNKNOWN;
+                TRAC_ERR("amester_entry_point: Unknown command was sent! Cmd[0x%02X]"
+                         i_msg->u8Cmd);
                 break;
         }
     } while (0);
@@ -1109,6 +1110,10 @@ void amec_tb_record(const AMEC_TB_GUID i_guid)
                         }
                     case 3:
                         { //accumulator
+                            *l_w++ = (UINT8)(l_s->accumulator >> 56);
+                            *l_w++ = (UINT8)(l_s->accumulator >> 48);
+                            *l_w++ = (UINT8)(l_s->accumulator >> 40);
+                            *l_w++ = (UINT8)(l_s->accumulator >> 32);
                             *l_w++ = (UINT8)(l_s->accumulator >> 24);
                             *l_w++ = (UINT8)(l_s->accumulator >> 16);
                             *l_w++ = (UINT8)(l_s->accumulator >> 8);
@@ -1352,7 +1357,7 @@ void amec_tb_cmd_set_config(const IPMIMsg_t *i_psMsg,
                     l_trace->entry_size += 2;
                     break;
                 case 3: //acc
-                    l_trace->entry_size += 4;
+                    l_trace->entry_size += 8;
                     break;
                 case 4: //updates
                     l_trace->entry_size += 4;

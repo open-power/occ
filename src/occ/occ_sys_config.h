@@ -34,6 +34,7 @@
 #endif
 #include <state.h>
 #include <apss.h>
+#include <pstates.h>
 
 #define MAX_NUM_OCC              8
 #define MAX_NUM_NODES            4
@@ -355,6 +356,12 @@ typedef struct
   int8_t vcs_vid_uplift_cur;
   // Vcs VID delta to be applied to Pstate table
   int8_t vcs_vid_delta;
+
+  // --------------------------------------
+  // IDDQ Table and WOF Control parameters
+  // --------------------------------------
+  IddqTable   iddq_table;
+  WOFElements wof_parms;
 
 } occSysConfigData_t;  __attribute__ ((__aligned__ (128)))
 

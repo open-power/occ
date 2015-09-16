@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -28,9 +28,9 @@
   and makes them accessible to Amester parameter for reading and
   writing.  Any memory location may become an Amester parameter.
 
-  To add a parameter, 
+  To add a parameter,
   1. Add a new parameter id number in the AMEC_PARM_ENUM below.
-  2. In the same position, add the parameter to g_amec_parm_list in 
+  2. In the same position, add the parameter to g_amec_parm_list in
      amec_parm_table.c
      There are macros that help in adding a parameter to the table.
      The macro typically takes a) the parameter id, b) a string name,
@@ -50,12 +50,13 @@
 //*************************************************************************
 
 // List of all parameters
-// NOTE: The parameters must be in the same order as g_amec_parm_list[] in 
+// NOTE: The parameters must be in the same order as g_amec_parm_list[] in
 // amec_parm_table.c
 typedef enum
 {
     PARM_SYS_FMAX,
     PARM_SYS_FMIN,
+    PARM_DCOM_POBID,
     PARM_GPST,
     PARM_PSTATE_MHZ,
     PARM_FREQ_REASON,
@@ -69,10 +70,36 @@ typedef enum
     PARM_SOFT_FMIN,
     PARM_SOFT_FMAX,
     PARM_TOD,
+    PARM_WOF_VDD_EFF,
+    PARM_WOF_CUR_OUT,
+    PARM_WOF_LOADLINE,
+    PARM_WOF_V_CHIP,
+    PARM_WOF_IDDQ_I,
+    PARM_WOF_IDDQ85C,
+    PARM_WOF_IDDQ,
+    PARM_WOF_AC,
+    PARM_WOF_CEFF_TDP,
+    PARM_WOF_CEFF,
+    PARM_WOF_CEFF_OLD,
+    PARM_WOF_CEFF_RATIO,
+    PARM_WOF_F_UPLIFT,
+    PARM_WOF_F_VOTE,
+    PARM_WOF_VOTE_VREG,
+    PARM_WOF_VOTE_VCHIP,
+    PARM_WOF_ERROR,
+    PARM_WOF_STATE,
+    PARM_WOF_ENABLE,
+    PARM_WOF_CORES_ON,
+    PARM_WOF_WAKE_MASK,
+    PARM_WOF_PM_STATE,
+    PARM_WOF_PSTATE_READY,
+    PARM_WOF_EFFVLOW,
+    PARM_WOF_EFFVHIGH,
+    PARM_WOF_IOUT,
     AMEC_PARM_NUMBER_OF_PARAMETERS
 } AMEC_PARM_ENUM;
 
-typedef enum 
+typedef enum
 {
     AMEC_PARM_TYPE_UINT8 = 0,
     AMEC_PARM_TYPE_UINT16,
@@ -84,7 +111,7 @@ typedef enum
     AMEC_PARM_TYPE_INT64,
     AMEC_PARM_TYPE_STRING,
     AMEC_PARM_TYPE_RAW
-		
+
 } AMEC_PARM_TYPE_ENUM;
 
 #define AMEC_PARM_MODE_NORMAL   (0x00)
@@ -100,9 +127,9 @@ typedef struct amec_parm_s
     /// value_ptr: pointer to data
     UINT8 *value_ptr;
     /// number of bytes in base data
-    UINT32 length; 
+    UINT32 length;
     /// vector_length is the number of items in the array pointed by value ptr.
-    UINT32 vector_length; 
+    UINT32 vector_length;
     /// Type of data
     UINT8 type : 4;
     /// Mode of data (read-write, read-only, etc.)
@@ -140,8 +167,8 @@ void amec_parm_get_config(const IPMIMsg_t *i_psMsg,
                           UINT8 *o_retval);
 
 /**
- * Read a parameter value 
- *  
+ * Read a parameter value
+ *
  */
 void amec_parm_read(const IPMIMsg_t *const i_psMsg,
                     UINT8 *const o_pu8Resp,
@@ -161,16 +188,16 @@ void amec_parm_write(const IPMIMsg_t *const i_psMsg,
  * Update parameter value before reading
  *
  * Some parameters need to be updated before reading.
- * For example, a parameter that points to double-buffered 
+ * For example, a parameter that points to double-buffered
  * that may be at a new memory location each time the
- * parameter is examined. 
+ * parameter is examined.
  * This routine only needs to be called when the parameter
  * has a 'preread' field with a value of 1.
  */
 void amec_parm_preread(AMEC_PARM_GUID i_parm_guid);
 
 /**
- * Update parameter value after writing 
+ * Update parameter value after writing
  *
  * Some parameters trigger actions after writing.
  * This routine only needs to be called when the parameter

@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -219,8 +219,8 @@ void initThreadScheduler(void)
     {
         TRAC_ERR("Error creating thread: l_appThreadRc: %d, "
                  "l_testAppletThreadRc: %d, l_cmdThreadRc: %d, "
-                 "l_dcomThreadRc: %d", l_appThreadRc,l_testAppletThreadRc,
-                 l_timerRc,l_cmdThreadRc,l_dcomThreadRc);
+                 "l_dcomThreadRc: %d", l_appThreadRc, l_testAppletThreadRc,
+                 l_timerRc, l_cmdThreadRc, l_dcomThreadRc);
         TRAC_ERR("Error starting timers: timerRc: %d, snapshotTimerRc: %d.",
                   l_timerRc, l_snapshotTimerRc);
         // Create error log and log it

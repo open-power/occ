@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -81,6 +81,7 @@ typedef enum
     AMEC_VOTING_REASON_OVERRIDE_CORE    = 0x00020000,
     AMEC_VOTING_REASON_IPS              = 0x00040000,
     AMEC_VOTING_REASON_APSS_PMAX        = 0x00080000,
+    AMEC_VOTING_REASON_WOF              = 0x00100000,
 }amec_freq_voting_reason_t;
 
 
