@@ -46,16 +46,12 @@ THASH	= $(PPETRACEPP_DIR)/tracehash.pl
 OCC_405_IMAGE_NAME = occ_405
 OCC_GPE0_IMAGE_NAME = occ_gpe0
 OCC_GPE1_IMAGE_NAME = occ_gpe1
-OCC_GPE2_IMAGE_NAME = occ_gpe2
-OCC_GPE3_IMAGE_NAME = occ_gpe3
 
 NEEDED_IMAGES = \
      $(TRACEPP_DIR)/tracepp \
      $(OBJDIR)/$(OCC_405_IMAGE_NAME)/$(OCC_405_IMAGE_NAME).out \
      $(OBJDIR)/$(OCC_GPE0_IMAGE_NAME)/$(OCC_GPE0_IMAGE_NAME).out \
-#     $(OBJDIR)/$(OCC_GPE1_IMAGE_NAME)/$(OCC_GPE1_IMAGE_NAME).out \
-#     $(OBJDIR)/$(OCC_GPE2_IMAGE_NAME)/$(OCC_GPE2_IMAGE_NAME).out \
-#     $(OBJDIR)/$(OCC_GPE3_IMAGE_NAME)/$(OCC_GPE3_IMAGE_NAME).out
+     $(OBJDIR)/$(OCC_GPE1_IMAGE_NAME)/$(OCC_GPE1_IMAGE_NAME).out
 
 #SIMICS_WS = /gsa/ausgsa/home/d/a/davidy/work/simics-ppeWork
 
@@ -66,9 +62,7 @@ run: $(NEEDED_IMAGES)
 	$(SIMICS_WS)/simics \
 	           -e '$$occ_405_binary_to_load=$(OBJDIR)/$(OCC_405_IMAGE_NAME)/$(OCC_405_IMAGE_NAME).out' \
 	           -e '$$occ_gpe0_binary_to_load=$(OBJDIR)/$(OCC_GPE0_IMAGE_NAME)/$(OCC_GPE0_IMAGE_NAME).out' \
-#	           -e '$$occ_gpe1_binary_to_load=$(OBJDIR)/$(OCC_GPE1_IMAGE_NAME)/$(OCC_GPE1_IMAGE_NAME).out' \
-#	           -e '$$occ_gpe2_binary_to_load=$(OBJDIR)/$(OCC_GPE2_IMAGE_NAME)/$(OCC_GPE2_IMAGE_NAME).out' \
-#	           -e '$$occ_gpe3_binary_to_load=$(OBJDIR)/$(OCC_GPE3_IMAGE_NAME)/$(OCC_GPE3_IMAGE_NAME).out' \
+	           -e '$$occ_gpe1_binary_to_load=$(OBJDIR)/$(OCC_GPE1_IMAGE_NAME)/$(OCC_GPE1_IMAGE_NAME).out' \
 	           modelsetup.simics
 
 
@@ -86,13 +80,7 @@ $(OBJDIR)/$(OCC_GPE0_IMAGE_NAME)/$(OCC_GPE0_IMAGE_NAME).out:
 	(cd $(SRCDIR)/$(OCC_GPE0_IMAGE_NAME) && make)
 
 $(OBJDIR)/$(OCC_GPE1_IMAGE_NAME)/$(OCC_GPE1_IMAGE_NAME).out:
-#	(cd $(SRCDIR)/$(OCC_GPE1_IMAGE_NAME) && make)
-
-$(OBJDIR)/$(OCC_GPE2_IMAGE_NAME)/$(OCC_GPE2_IMAGE_NAME).out:
-#	(cd $(SRCDIR)/$(OCC_GPE2_IMAGE_NAME) && make)
-
-$(OBJDIR)/$(OCC_GPE3_IMAGE_NAME)/$(OCC_GPE3_IMAGE_NAME).out:
-#	(cd $(SRCDIR)/$(OCC_GPE3_IMAGE_NAME) && make)
+	(cd $(SRCDIR)/$(OCC_GPE1_IMAGE_NAME) && make)
 
 $(TRACEPP_DIR)/tracepp:
 	(cd $(TRACEPP_DIR) && make)

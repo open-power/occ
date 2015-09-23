@@ -404,9 +404,8 @@ void occ_ipc_setup()
         TRAC_INFO("Starting GPE0");
         gpe_reset(OCCHW_INST_ID_GPE0);
 
-//      $TEMP start GPE1 at later phase for DIMM collection
-//        TRAC_INFO("Starting GPE1");
-//        gpe_reset(OCCHW_INST_ID_GPE1);
+        TRAC_INFO("Starting GPE1");
+        gpe_reset(OCCHW_INST_ID_GPE1);
 
         TRAC_INFO("GPE's taken out of reset");
 
