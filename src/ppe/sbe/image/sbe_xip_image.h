@@ -80,21 +80,18 @@
 #define SBE_XIP_SECTION_HEADER      0
 #define SBE_XIP_SECTION_FIXED       1
 #define SBE_XIP_SECTION_FIXED_TOC   2
-#define SBE_XIP_SECTION_IPL_TEXT    3
-#define SBE_XIP_SECTION_IPL_DATA    4
+#define SBE_XIP_SECTION_LOADER_TEXT 3
+#define SBE_XIP_SECTION_LOADER_DATA 4
 #define SBE_XIP_SECTION_TEXT        5
 #define SBE_XIP_SECTION_DATA        6
 #define SBE_XIP_SECTION_TOC         7
 #define SBE_XIP_SECTION_STRINGS     8
-#define SBE_XIP_SECTION_HALT        9
-#define SBE_XIP_SECTION_PIBMEM0    10
-#define SBE_XIP_SECTION_DCRINGS    11
+#define SBE_XIP_SECTION_BASE        9
+#define SBE_XIP_SECTION_BASELOADER 10
+#define SBE_XIP_SECTION_OVERLAYS   11
 #define SBE_XIP_SECTION_RINGS      12
-#define SBE_XIP_SECTION_SLW        13
-#define SBE_XIP_SECTION_FIT        14
-#define SBE_XIP_SECTION_FFDC       15
 
-#define SBE_XIP_SECTIONS 16
+#define SBE_XIP_SECTIONS 13
 
 /// @}
 
@@ -123,19 +120,16 @@
         ".header",                              \
         ".fixed",                               \
         ".fixed_toc",                           \
-        ".ipl_text",                            \
-        ".ipl_data",                            \
+        ".loader_text",                         \
+        ".loader_data",                         \
         ".text",                                \
         ".data",                                \
         ".toc",                                 \
         ".strings",                             \
-        ".halt",                                \
-        ".pibmem0",                             \
-        ".dcrings",                             \
+        ".base",                                \
+        ".baseloader",                          \
+        ".overlays",                             \
         ".rings",                               \
-        ".slw",                                 \
-        ".fit",                                 \
-        ".ffdc",                                \
     }
 
 /// Applications can use this macro to safely index the array of section
@@ -165,20 +159,35 @@
 /// Data is a single unsigned byte
 #define SBE_XIP_UINT8 0x01
 
+/// Data is a 16-bit unsigned integer
+#define SBE_XIP_UINT16 0x02
+
 /// Data is a 32-bit unsigned integer
-#define SBE_XIP_UINT32 0x02
+#define SBE_XIP_UINT32 0x03
 
 /// Data is a 64-bit unsigned integer
-#define SBE_XIP_UINT64 0x03
+#define SBE_XIP_UINT64 0x04
+
+/// Data is a single signed byte
+#define SBE_XIP_INT8 0x05
+
+/// Data is a 16-bit signed integer
+#define SBE_XIP_INT16 0x06
+
+/// Data is a 32-bit signed integer
+#define SBE_XIP_INT32 0x07
+
+/// Data is a 64-bit signed integer
+#define SBE_XIP_INT64 0x08
 
 /// Data is a 0-byte terminated ASCII string
-#define SBE_XIP_STRING 0x04
+#define SBE_XIP_STRING 0x09
 
 /// Data is an address
-#define SBE_XIP_ADDRESS 0x05
+#define SBE_XIP_ADDRESS 0x0A
 
 /// The maximum type number
-#define SBE_XIP_MAX_TYPE_INDEX 0x05
+#define SBE_XIP_MAX_TYPE_INDEX 0x0A
 
 /// Applications can expand this macro to get access to string forms of the
 /// SBE-XIP data types if desired.
@@ -186,8 +195,13 @@
     const char* var[] = {                       \
         "Illegal 0 Code",                       \
         "SBE_XIP_UINT8",                        \
+        "SBE_XIP_UINT16",                       \
         "SBE_XIP_UINT32",                       \
         "SBE_XIP_UINT64",                       \
+        "SBE_XIP_INT8",                         \
+        "SBE_XIP_INT16",                        \
+        "SBE_XIP_INT32",                        \
+        "SBE_XIP_INT64",                        \
         "SBE_XIP_STRING",                       \
         "SBE_XIP_ADDRESS",                      \
     }
@@ -198,8 +212,13 @@
     const char* var[] = {                       \
         "Illegal 0 Code",                       \
         "u8 ",                                  \
+        "u16",                                  \
         "u32",                                  \
         "u64",                                  \
+        "i8 ",                                  \
+        "i16",                                  \
+        "i32",                                  \
+        "i64",                                  \
         "str",                                  \
         "adr",                                  \
     }
@@ -215,8 +234,8 @@
 
 /// Final alignment constraint for SBE-XIP images.
 ///
-/// PORE images are required to be multiples of 8 bytes in length, to
-/// gaurantee that the PoreVe will be able to complete any 8-byte load/store.
+/// images are required to be multiples of 8 bytes in length, to
+/// gaurantee that the something will be able to complete any 8-byte load/store.
 #define SBE_XIP_FINAL_ALIGNMENT 8
 
 
@@ -266,12 +285,12 @@ typedef struct {
 
     /// The required initial alignment for the section offset
     ///
-    /// The PORE and the applications using SBE-XIP images have strict
-    /// alignment/padding requirements.  The PORE does not handle any type of
+    /// The image and the applications using SBE-XIP images have strict
+    /// alignment/padding requirements.  The image does not handle any type of
     /// unaligned instruction or data fetches.  Some sections and subsections
     /// must also be POWER cache-line aligned. The \a iv_alignment applies to
-    /// the first byte of the section. PORE images are also required to be
-    /// multiples of 8 bytes in length, to gaurantee that the PoreVe will be
+    /// the first byte of the section. image images are also required to be
+    /// multiples of 8 bytes in length, to gaurantee that the something will be
     /// able to complete any 8-byte load/store.  These constraints are checked
     /// by sbe_xip_validate() and enforced by sbe_xip_append(). The alignment
     /// constraints may force a section to be padded, which may create "holes"
@@ -303,7 +322,7 @@ typedef struct {
 /// The header is a fixed-format representation of the most critical
 /// information about the image.  The large majority of information about the
 /// image and its contents are available through the searchable table of
-/// contents. PORE code itself normally accesses the data directly through
+/// contents. image code itself normally accesses the data directly through
 /// global symbols. 
 ///
 /// The header only contains information 1) required by OTPROM code (e.g., the
@@ -311,7 +330,7 @@ typedef struct {
 /// locations and sizes of all of the sections.); a few pieces of critical
 /// meta-data (e.g., information about the image build process).
 ///
-/// Any entries that are accessed by PORE code are required to be 64 bits, and
+/// Any entries that are accessed by image code are required to be 64 bits, and
 /// will appear at the beginning of the header.
 ///
 /// The header also contains bytewise offsets and sizes of all of the sections
@@ -338,7 +357,7 @@ typedef struct {
     /// The offset of the SBE-XIP entry point from the start of the image
     uint64_t iv_entryOffset;
 
-    /// The base address used to link the image, as a full relocatable PORE
+    /// The base address used to link the image, as a full relocatable image
     /// address 
     uint64_t iv_linkAddress;
 
@@ -403,7 +422,7 @@ typedef struct {
 /// A C-structure form of the SBE-XIP Table of Contents (TOC) entries
 ///
 /// The .toc section consists entirely of an array of these structures.
-/// TOC entries are never accessed by PORE code. 
+/// TOC entries are never accessed by image code. 
 ///
 /// These structures store indexing information for global data required to be
 /// manipulated by external tools.  The actual data is usually allocated in a
@@ -530,7 +549,7 @@ typedef struct {
     ///  If \a iv_partial is set this field is returned as 0.
     SbeXipToc* iv_toc;
 
-    /// The full relocatable PORE address
+    /// The full relocatable image address
     ///
     /// All relocatable addresses are computed from the \a iv_linkAddress
     /// stored in the header. For scalar and string data, this is the
@@ -575,41 +594,6 @@ typedef struct {
     uint8_t iv_partial;
 
 } SbeXipItem;
-
-
-/// Prototype entry in the .halt section
-///
-/// The .halt section is generated by the 'reqhalt' macro.  This structure
-/// associates the address of each halt with the string form of the FAPI
-/// return code associated with the halt.  The string form is used because the
-/// FAPI error return code is not constant.  The .halt section is 4-byte
-/// aligned, and each address/string entry is always padded to a multiple of 4
-/// bytes. 
-///
-/// In the .halt section the \a iv_string may be any length, thus the size of
-/// each actual record is variable (although guaranteed to always be a
-/// multiple of 4 bytes). Although the C compiler might natuarlly align
-/// instances of this structure on a 64-bit boundary, the APIs that allow
-/// access to the .halt section assume that the underlying machine can do
-/// non-aligned loads from a pointer to this structure.
-
-typedef struct {
-
-    /// The 64-bit relocatable address of the halt
-    ///
-    /// This is the address found in the PC (Status Register bits 16:63) when
-    /// the PORE halts.  The full 64-bit form is used rather than the simple
-    /// 32-bit offset to support merging SEEPROM and PIBMEM .halt sections in
-    /// the SEEPROM IPL images.
-    uint64_t iv_address;
-
-    /// A C-prototype for a variable-length 0-terminated ASCII string
-    ///
-    /// This is a prototype only to simplify C programming.  The actual string
-    /// may be any length.
-    char iv_string[4];
-
-} SbeXipHalt;
 
 
 /// Validate an SBE-XIP image
@@ -723,7 +707,7 @@ sbe_xip_translate_header(SbeXipHeader* o_hostHeader,
 ///
 /// This API searches the SBE-XIP Table of Contents (TOC) for the item named
 /// \a i_id, assigning \a o_data from the image if the item is found and is a
-/// scalar value.  Scalar values include 8- 32- and 64-bit integers and PORE
+/// scalar value.  Scalar values include 8- 32- and 64-bit integers and image
 /// addresses.  Image data smaller than 64 bits are extracted as unsigned
 /// types, and it is the caller's responsibility to cast or convert the
 /// returned data as appropriate.
@@ -795,24 +779,24 @@ int
 sbe_xip_get_string(void *i_image, const char* i_id, char** o_data);
 
 
-/// Directly read 64-bit data from the image based on a PORE address
+/// Directly read 64-bit data from the image based on a image address
 ///
 /// \param[in] i_image A pointer to an SBE-XIP image in host memory.  The
 /// image is assumed to be consistent with the information contained in the
 /// header regarding the presence of and sizes of all sections.
 ///
-/// \param[in] i_poreAddress A relocatable PORE address contained in the
-/// image, presumably of an 8-byte data area.  The \a i_poreAddress is
+/// \param[in] i_imageAddress A relocatable IMAGE address contained in the
+/// image, presumably of an 8-byte data area.  The \a i_imageAddress is
 /// required to be 8-byte aligned, otherwise the SBE_XIP_ALIGNMENT_ERROR code
 /// is returned.
 ///
 /// \param[out] o_data The 64 bit data in host format that was found at \a
-/// i_poreAddress.
+/// i_imageAddress.
 ///
 /// This API is provided for applications that need to manipulate SBE-XIP
-/// images in terms of their relocatable PORE addresses.  The API checks that
-/// the \a i_poreAddress is properly aligned and contained in the image, then
-/// reads the contents of \a i_poreAddress into \a o_data, performing
+/// images in terms of their relocatable IMAGE addresses.  The API checks that
+/// the \a i_imageAddress is properly aligned and contained in the image, then
+/// reads the contents of \a i_imageAddress into \a o_data, performing
 /// image-to-host endianess conversion if required.
 ///
 /// \retval 0 Success
@@ -820,7 +804,7 @@ sbe_xip_get_string(void *i_image, const char* i_id, char** o_data);
 /// \retval non-0 See \ref sbe_xip_image_errors
 int
 sbe_xip_read_uint64(const void *i_image, 
-                    const uint64_t i_poreAddress,
+                    const uint64_t i_imageAddress,
                     uint64_t* o_data);
 
 
@@ -839,8 +823,8 @@ sbe_xip_read_uint64(const void *i_image,
 /// This API searches the SBE-XIP Table of Contents (TOC) for the item named
 /// by \a i_id, updating the image from \a i_data if the item is found, has
 /// a scalar type and can be modified.  For this API the scalar types include
-/// 8- 32- and 64-bit integers.  Although PORE addresses are considered a
-/// scalar type for sbe_xip_get_scalar(), PORE addresses can not be modified
+/// 8- 32- and 64-bit integers.  Although IMAGE addresses are considered a
+/// scalar type for sbe_xip_get_scalar(), IMAGE addresses can not be modified
 /// by this API.  The caller is responsible for ensuring that the \a i_data is
 /// of the correct size for the underlying data element in the image.
 ///
@@ -910,24 +894,24 @@ int
 sbe_xip_set_string(void *io_image, const char* i_id, const char* i_data);
 
 
-/// Directly write 64-bit data into the image based on a PORE address
+/// Directly write 64-bit data into the image based on a IMAGE address
 ///
 /// \param[in, out] io_image A pointer to an SBE-XIP image in host memory.  The
 /// image is assumed to be consistent with the information contained in the
 /// header regarding the presence of and sizes of all sections.
 ///
-/// \param[in] i_poreAddress A relocatable PORE address contained in the
-/// image, presumably of an 8-byte data area.  The \a i_poreAddress is
+/// \param[in] i_imageAddress A relocatable IMAGE address contained in the
+/// image, presumably of an 8-byte data area.  The \a i_imageAddress is
 /// required to be 8-byte aligned, otherwise the SBE_XIP_ALIGNMENT_ERROR code
 /// is returned.
 ///
 /// \param[in] i_data The 64 bit data in host format to be written to \a
-/// i_poreAddress. 
+/// i_imageAddress. 
 ///
 /// This API is provided for applications that need to manipulate SBE-XIP
-/// images in terms of their relocatable PORE addresses.  The API checks that
-/// the \a i_poreAddress is properly aligned and contained in the image, then
-/// updates the contents of \a i_poreAddress with \a i_data, performing
+/// images in terms of their relocatable IMAGE addresses.  The API checks that
+/// the \a i_imageAddress is properly aligned and contained in the image, then
+/// updates the contents of \a i_imageAddress with \a i_data, performing
 /// host-to-image endianess conversion if required.
 ///
 /// \retval 0 Success
@@ -935,7 +919,7 @@ sbe_xip_set_string(void *io_image, const char* i_id, const char* i_data);
 /// \retval non-0 See \ref sbe_xip_image_errors
 int
 sbe_xip_write_uint64(void *io_image, 
-                     const uint64_t i_poreAddress,
+                     const uint64_t i_imageAddress,
                      const uint64_t i_data);
 
 
@@ -1022,73 +1006,6 @@ sbe_xip_find(void* i_image,
              const char* i_id, 
              SbeXipItem* o_item);
 
-
-/// Map over an SBE-XIP image .halt section
-///
-/// \param[in,out] io_image A pointer to an SBE-XIP image in host memory.  The
-/// image is assumed to be consistent with the information contained in the
-/// header regarding the presence of and sizes of all sections.
-///
-/// \param[in] i_fn A pointer to a function to call on each entry in .halt.
-/// The function has the prototype:
-///
-/// \code
-/// int (*i_fn)(void* io_image,
-///             const uint64_t i_poreAddress,
-///             const char* i_rcString,
-///             void* io_arg)
-///
-/// \endcode
-///
-/// \param[in,out] io_arg The private argument of \a i_fn.
-///
-/// This API iterates over each entry of the .halt section, calling \a i_fn
-/// with each HALT address, the string form of the return code associated with
-/// that HALT address, and a private argument. The iteration terminates either
-/// when all .halt entries have been mapped, or \a i_fn returns a non-zero
-/// code.  The \a i_poreAddddress passed to \a i_fn is the full 48-bit
-/// relocatable PORE address.
-///
-/// \retval 0 Success, including the case that the image has no .halt section.
-///
-/// \retval non-0 May be either one of the SBE-XIP image error codes (see \ref
-/// sbe_xip_image_errors), or any non-zero code from \a i_fn.  Since the
-/// standard SBE_XIP return codes are \> 0, application-defined codes should
-/// be \< 0.
-int
-sbe_xip_map_halt(void* io_image, 
-                 int (*i_fn)(void* io_image, 
-                             const uint64_t i_poreAddress,
-                             const char* i_rcString,
-                             void* io_arg),
-                 void* io_arg);
-
-
-/// Get the string from of a HALT code from an SBE-XIP image .halt section
-///
-/// \param[in,out] io_image A pointer to an SBE-XIP image in host memory.  The
-/// image is assumed to be consistent with the information contained in the
-/// header regarding the presence of and sizes of all sections.
-///
-/// \param[in] i_poreAddress This is the 48-bit address found in the PC when
-/// the PORE halts.  This address is actually 4 bytes beyond the actual HALT
-/// instruction, however for simplicity this is the address used to index the
-/// HALT. 
-///
-/// \param[out] o_rcString The caller provides the address of a string-pointer
-/// variable which is updated with a pointer to the string form of the halt
-/// code associated with \a i_poreAddress (assuming a successful completion).
-///
-/// \retval 0 Success
-///
-/// \revtal SBE_XIP_ITEM_NOT_FOUND The \a i_poreAddress is not associated
-/// with a halt code in .halt.
-///
-/// \revtal Other See \ref sbe_xip_image_errors
-int
-sbe_xip_get_halt(void* io_image, 
-                 const uint64_t i_poreAddress,
-                 const char** o_rcString);
 
 
 /// Delete a section from an SBE-XIP image in host memory
@@ -1200,8 +1117,8 @@ sbe_xip_duplicate_section(const void* i_image,
 /// - A scan program is appended to the image, or a run-time data area is
 /// allocated and cleared at the end of the image.
 ///
-/// - Pointer variables in the image are updated with PORE addresses obtained
-/// via sbe_xip_section2pore(), or
+/// - Pointer variables in the image are updated with IMAGE addresses obtained
+/// via sbe_xip_section2image(), or
 /// other procedure code initializes a newly allocated and cleared data area
 /// via host addresses obtained from sbe_xip_section2host().
 ///
@@ -1210,11 +1127,11 @@ sbe_xip_duplicate_section(const void* i_image,
 /// enforce these alignment constraints for all sections created by the API.
 /// All alignment is relative to the first byte of the image (\a io_image) -
 /// \e not to the current in-memory address of the image. By specification
-/// SBE-XIP images must be loaded at a 4K alignment in order for PORE hardware
+/// SBE-XIP images must be loaded at a 4K alignment in order for IMAGE hardware
 /// relocation to work, however the APIs don't require this 4K alignment for
-/// in-memory manipulation of images.  Images to be executed on PoreVe will
+/// in-memory manipulation of images.  Images to be executed on ImageVe will
 /// normally require at least 8-byte final aligment in order to guarantee that
-/// the PoreVe can execute an 8-byte fetch or load/store of the final
+/// the ImageVe can execute an 8-byte fetch or load/store of the final
 /// doubleword.
 ///
 /// \note If the TOC section is modified then the image is marked as having an
@@ -1235,7 +1152,7 @@ sbe_xip_append(void* io_image,
                uint32_t* o_sectionOffset);
 
 
-/// Convert an SBE-XIP section offset to a relocatable PORE address
+/// Convert an SBE-XIP section offset to a relocatable IMAGE address
 ///
 /// \param[in] i_image A pointer to an SBE-XIP image in host memory
 ///
@@ -1245,42 +1162,42 @@ sbe_xip_append(void* io_image,
 /// \param[in] i_offset An offset (in bytes) within the section.  At least one
 /// byte at \a i_offset must be currently allocated in the section.
 ///
-/// \param[in] o_poreAddress The equivalent relocatable PORE address is
-/// returned via this pointer. Since valid PORE addresses are always either
+/// \param[in] o_imageAddress The equivalent relocatable IMAGE address is
+/// returned via this pointer. Since valid IMAGE addresses are always either
 /// 4-byte (code) or 8-byte (data) aligned, this API checks the aligment of
-/// the translated address and returns SBE_XIP_ALIGNMENT_ERROR if the PORE
+/// the translated address and returns SBE_XIP_ALIGNMENT_ERROR if the IMAGE
 /// address is not at least 4-byte aligned.  Note that the translated address
 /// is still returned even if incorrectly aligned.
 ///
 /// This API is typically used to translate section offsets returned from
-/// sbe_xip_append() into relocatable PORE addresses.
+/// sbe_xip_append() into relocatable IMAGE addresses.
 ///
 /// \retval 0 Success
 ///
 /// \retval non-0 See \ref sbe_xip_image_errors
 int
-sbe_xip_section2pore(const void* i_image, 
+sbe_xip_section2image(const void* i_image, 
                      const int i_sectionId,
                      const uint32_t i_offset,
-                     uint64_t* o_poreAddress);
+                     uint64_t* o_imageAddress);
 
 
-/// Convert an SBE-XIP relocatable PORE address to a host memory address
+/// Convert an SBE-XIP relocatable image address to a host memory address
 ///
 /// \param[in] i_image A pointer to an SBE-XIP image in host memory.
 ///
-/// \param[in] i_poreAddress A relocatable PORE address putatively addressing
+/// \param[in] i_imageAddress A relocatable image address putatively addressing
 /// relocatable memory contained in the image.
 ///
 /// \param[out] o_hostAddress The API updates the location pointed to by \a
 /// o_hostAddress with the host address of the memory addressed by \a
-/// i_poreAddress.  In the event of an error (non-0 return code) the final
+/// i_imageAddress.  In the event of an error (non-0 return code) the final
 /// content of \a o_hostAddress is undefined.
 ///
-/// This API is typically used to translate relocatable PORE addresses stored
+/// This API is typically used to translate relocatable image addresses stored
 /// in the SBE-XIP image into the equivalent host address of the in-memory
 /// image, allowing host-code to manipulate arbitrary data structures in the
-/// image. If the \a i_poreAddress does not refer to memory within the image
+/// image. If the \a i_imageAddress does not refer to memory within the image
 /// (as determined by the link address and image size) then the
 /// SBE_XIP_INVALID_ARGUMENT error code is returned.
 ///
@@ -1288,32 +1205,32 @@ sbe_xip_section2pore(const void* i_image,
 ///
 /// \retval non-0 See \ref sbe_xip_image_errors
 int
-sbe_xip_pore2host(const void* i_image, 
-                  const uint64_t i_poreAddress,
+sbe_xip_image2host(const void* i_image, 
+                  const uint64_t i_imageAddress,
                   void** o_hostAddress);
 
 
-/// Convert an SBE-XIP relocatable PORE address to section Id and offset
+/// Convert an SBE-XIP relocatable image address to section Id and offset
 ///
 /// \param[in] i_image A pointer to an SBE-XIP image in host memory.
 ///
-/// \param[in] i_poreAddress A relocatable PORE address putatively addressing
+/// \param[in] i_imageAddress A relocatable image address putatively addressing
 /// relocatable memory contained in the image.
 ///
 /// \param[out] o_section The API updates the location pointed to by \a
 /// o_section with the section Id of the memory addressed by \a
-/// i_poreAddress.  In the event of an error (non-0 return code) the final
+/// i_imageAddress.  In the event of an error (non-0 return code) the final
 /// content of \a o_section is undefined.
 ///
 /// \param[out] o_offset The API updates the location pointed to by \a
-/// o_offset with the byte offset of the memory addressed by \a i_poreAddress
+/// o_offset with the byte offset of the memory addressed by \a i_imageAddress
 /// within \a o_section.  In the event of an error (non-0 return code) the
 /// final content of \a o_offset is undefined.
 ///
-/// This API is typically used to translate relocatable PORE addresses stored
+/// This API is typically used to translate relocatable image addresses stored
 /// in the SBE-XIP image into the equivalent section + offset form, allowing
 /// host-code to manipulate arbitrary data structures in the image. If the \a
-/// i_poreAddress does not refer to memory within the image (as determined by
+/// i_imageAddress does not refer to memory within the image (as determined by
 /// the link address and image size) then the SBE_XIP_INVALID_ARGUMENT error
 /// code is returned.
 ///
@@ -1321,28 +1238,28 @@ sbe_xip_pore2host(const void* i_image,
 ///
 /// \retval non-0 See \ref sbe_xip_image_errors
 int
-sbe_xip_pore2section(const void* i_image, 
-                     const uint64_t i_poreAddress,
+sbe_xip_image2section(const void* i_image, 
+                     const uint64_t i_imageAddress,
                      int* o_section,
                      uint32_t* o_offset);
 
 
-/// Convert an in-memory SBE-XIP host address to a relocatable PORE address
+/// Convert an in-memory SBE-XIP host address to a relocatable image address
 ///
 /// \param[in] i_image A pointer to an SBE-XIP image in host memory
 ///
 /// \param[in] i_hostAddress A host address addressing data within the image.
 ///
-/// \param[out] o_poreAddress The API updates the location pointed to by \a
-/// o_poreAddress with the equivelent relocatable PORE address of the memory
-/// addressed by i_hostAddress.  Since valid PORE addresses are always either
+/// \param[out] o_imageAddress The API updates the location pointed to by \a
+/// o_imageAddress with the equivelent relocatable image address of the memory
+/// addressed by i_hostAddress.  Since valid image addresses are always either
 /// 4-byte (code) or 8-byte (data) aligned, this API checks the aligment of
-/// the translated address and returns SBE_XIP_ALIGNMENT_ERROR if the PORE
+/// the translated address and returns SBE_XIP_ALIGNMENT_ERROR if the image
 /// address is not at least 4-byte aligned.  Note that the translated address
 /// is still returned evn if incorrectly aligned.
 ///
 /// This API is provided as a convenient way to convert host memory addresses
-/// for an in-memory SBE-XIP image into PORE addresses correctly relocated for
+/// for an in-memory SBE-XIP image into image addresses correctly relocated for
 /// the image, for example to update pointer variables in the image.  If the
 /// \a i_hostAddress does not refer to memory within the image (as determined
 /// by the image address and image size) then the SBE_XIP_INVALID_ARGUMENT
@@ -1352,9 +1269,9 @@ sbe_xip_pore2section(const void* i_image,
 ///
 /// \retval non-0 See \ref sbe_xip_image_errors
 int
-sbe_xip_host2pore(const void* i_image, 
+sbe_xip_host2image(const void* i_image, 
                   void* i_hostAddress,
-                  uint64_t* o_poreAddress);
+                  uint64_t* o_imageAddress);
 
 
 /// \defgroup sbe_xip_image_errors Error codes from SBE-XIP image APIs
@@ -1402,7 +1319,7 @@ sbe_xip_host2pore(const void* i_image,
 /// for those APIs that prohibit this.
 #define SBE_XIP_SECTION_ERROR 10
 
-/// An address translation API returned a PORE address that was not at least
+/// An address translation API returned a image address that was not at least
 /// 4-byte aligned, or alignment violations were observed by
 /// sbe_xip_validate() or sbe_xip_append().
 #define SBE_XIP_ALIGNMENT_ERROR 11
@@ -1628,7 +1545,7 @@ sbe_xip_host2pore(const void* i_image,
 /// \param[in] symbol The name of the scalar or vector; this name is also used
 /// as the TOC index of the data.
 ///
-/// \param[in] space A valid PORE memory space descriptor
+/// \param[in] space A valid image memory space descriptor
 ///
 /// \param[in] offset A 32-bit relocatable offset
 ///

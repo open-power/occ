@@ -35,17 +35,22 @@
 #include <algorithm>
 #include <buffer_parameters.H>
 
-#ifdef __FAPI2_DEBUG__
-// for debug printing ... can be removed for flight
+#ifdef FAPI2_DEBUG
 #include <iostream>
 #endif
+
+#if !defined(DOXYGEN) && defined(FAPI2_DEBUG)
 #include <iterator>
+#endif
 
 namespace fapi2
 {
     /// @cond
     /// Types representing a container of bits. Used to create
-    /// variable_buffer.
+    /// variable_buffer. container_unit must remain 32-bits
+    /// for now - there will be a lot of code to change if it
+    /// changes. There are assertions helping to enforce this
+    /// in places in the code.
     typedef uint32_t container_unit;
     typedef std::vector<container_unit> bits_container;
 
@@ -59,8 +64,8 @@ namespace fapi2
     class bufferTraits
     {
     public:
-#ifndef DOXYGEN
-#ifdef __FAPI2_DEBUG__
+
+#if !defined(DOXYGEN) && defined(FAPI2_DEBUG)
         ///
         /// @brief Print a container of bits
         /// @param[in] i_data the container of bits
@@ -75,7 +80,6 @@ namespace fapi2
                       << std::dec << std::endl;
         }
 #endif
-#endif
 
         ///
         /// @brief Return the size of the buffer in E units
@@ -87,8 +91,8 @@ namespace fapi2
         constexpr static B size(const T& i_buffer)
             {
                 return (bit_length(i_buffer) +
-                        (parameterTraits<E>::bit_length - 1)) /
-                    parameterTraits<E>::bit_length;
+                        (parameterTraits<E>::bit_length() - 1)) /
+                    parameterTraits<E>::bit_length();
             }
 
         ///
@@ -141,7 +145,8 @@ namespace fapi2
 
         typedef B bits_type;
         typedef T unit_type;
-        enum { bits_per_unit = sizeof(unit_type) * 8 };
+        constexpr static uint32_t bits_per_unit(void)
+            { return sizeof(unit_type) * 8; }
     };
 
     //
@@ -153,8 +158,7 @@ namespace fapi2
     class bufferTraits<bits_container, uint32_t>
     {
     public:
-#ifndef DOXYGEN
-#ifdef __FAPI2_DEBUG__
+#if !defined(DOXYGEN) && defined(FAPI2_DEBUG)
         ///
         /// @brief Print a container of bits
         /// @param[in] i_data the container of bits
@@ -167,7 +171,6 @@ namespace fapi2
             std::cout << std::dec << std::endl;
         }
 #endif
-#endif
 
         ///
         /// @brief Return the size of the buffer in E units
@@ -179,8 +182,8 @@ namespace fapi2
         constexpr static uint32_t size(const bits_container& i_buffer)
             {
                 return (bit_length(i_buffer) +
-                        (parameterTraits<E>::bit_length - 1)) /
-                    parameterTraits<E>::bit_length;
+                        (parameterTraits<E>::bit_length() - 1)) /
+                    parameterTraits<E>::bit_length();
             }
 
         ///
@@ -228,10 +231,11 @@ namespace fapi2
 
         typedef uint32_t bits_type;
         typedef container_unit unit_type;
-        enum { bits_per_unit = sizeof(unit_type) * 8 };
+        constexpr static uint32_t bits_per_unit(void)
+            { return sizeof(unit_type) * 8; }
     };
     /// @endcond
-};
+}
 
 
 

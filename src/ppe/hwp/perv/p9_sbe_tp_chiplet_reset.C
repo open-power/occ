@@ -25,28 +25,37 @@
 //------------------------------------------------------------------------------
 /// @file  p9_sbe_tp_chiplet_reset.C
 ///
-/// @brief IPL STEP 2.8 : SBE TP Chiplet Reset :: setup hangcounter 6 for TP chiplet
-// *!
-// *! OWNER NAME  : Abhishek Agarwal  Email: abagarw8@in.ibm.com
-// *! BACKUP NAME :                   Email:
+/// @brief setup hangcounter 6 for TP chiplet
 //------------------------------------------------------------------------------
-// *HWP HWP Owner   : Abhishek Agarwal <abagarw8@in.ibm.com>
-// *HWP FW Owner    : Brian Silver <bsilver@us.ibm.com>
-// *HWP Team        : Perv
-// *HWP Level       : 1
-// *HWP Consumed by : SBE
+// *HWP HWP Owner        : Abhishek Agarwal <abagarw8@in.ibm.com>
+// *HWP HWP Backup Owner : Srinivas V Naga <srinivan@in.ibm.com>
+// *HWP FW Owner         : Brian Silver <bsilver@us.ibm.com>
+// *HWP Team             : Perv
+// *HWP Level            : 2
+// *HWP Consumed by      : SBE
 //------------------------------------------------------------------------------
 
 
 //## auto_generated
 #include "p9_sbe_tp_chiplet_reset.H"
+
+#include "perv_scom_addresses.H"
+
+
 fapi2::ReturnCode p9_sbe_tp_chiplet_reset(const
         fapi2::Target<fapi2::TARGET_TYPE_PROC_CHIP> & i_target_chip)
 {
-    FAPI_DBG("p9_sbe_tp_chiplet_reset: Entering ...");
+    FAPI_DBG("Entering ...");
 
-    FAPI_DBG("p9_sbe_tp_chiplet_reset: Exiting ...");
+    FAPI_INF("Initializing Hangcounter 6 for PRV Cplt");
+    //Setting HANG_PULSE_6_REG register value
+    //PERV.HANG_PULSE_6_REG = HANG_PULSE_VALUE
+    FAPI_TRY(fapi2::putScom(i_target_chip, PERV_TP_HANG_PULSE_6_REG,
+                            HANG_PULSE_VALUE));
 
-    return fapi2::FAPI2_RC_SUCCESS;
+    FAPI_DBG("Exiting ...");
+
+fapi_try_exit:
+    return fapi2::current_err;
 
 }

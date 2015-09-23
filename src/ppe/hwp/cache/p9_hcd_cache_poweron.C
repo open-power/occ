@@ -26,17 +26,17 @@
 /// @file  p9_hcd_cache_poweron.C
 /// @brief Cache Chiplet Power-on
 ///
-/// *HWP HWP Owner   : David Du       <daviddu@us.ibm.com>
-/// *HWP FW Owner    : Sangeetha T S  <sangeet2@in.ibm.com>
-/// *HWP Team        : PM
-/// *HWP Consumed by : SBE:SGPE
-/// *HWP Level       : 1
-///
-/// Procedure Summary:
-///   Command the cache PFET controller to power-on
-///   Check for valid power on completion
-///   Polled Timeout:  100us
-///
+// *HWP HWP Owner   : David Young       <davidy@us.ibm.com>
+// *HWP FW Owner    : Sangeetha T S     <sangeet2@in.ibm.com>
+// *HWP Team        : PM
+// *HWP Consumed by : SBE:SGPE
+// *HWP Level       : 2
+//
+// Procedure Summary:
+//   Command the cache PFET controller to power-on
+//   Check for valid power on completion
+//   Polled Timeout:  100us
+//
 
 //------------------------------------------------------------------------------
 // Includes
@@ -53,32 +53,13 @@
 //------------------------------------------------------------------------------
 // Procedure: Cache Chiplet Power-on
 //------------------------------------------------------------------------------
-
-extern "C"
-{
+#define FAPI_CLEANUP() fapi_try_exit:
 
 fapi2::ReturnCode
 p9_hcd_cache_poweron(
-    const fapi2::Target<fapi2::TARGET_TYPE_EQ>& i_target,
-    const uint32_t i_operation)
+    const fapi2::Target<fapi2::TARGET_TYPE_EQ>& i_target)
 {
-
-#if 0
-    fapi2::buffer<uint64_t> data;
-
-    return fapi2::FAPI2_RC_SUCCESS;
-
-    FAPI_CLEANUP();
-    return fapi2::FAPI2_RC_PLAT_ERR_SEE_DATA;
-
-#endif
-
-    return fapi2::FAPI2_RC_SUCCESS;
-
+    fapi2::ReturnCode l_rc = fapi2::FAPI2_RC_SUCCESS;
+    FAPI_EXEC_HWP(l_rc, p9_common_poweronoff, i_target, p9power::POWER_ON);
+    return l_rc;
 } // Procedure
-
-
-} // extern C
-
-
-

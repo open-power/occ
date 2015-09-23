@@ -52,5 +52,30 @@
 /// Create a single bit mask at bit \a b
 #define BIT(b) BITS((b), 1)
 
+#ifdef _BIG_ENDIAN
+
+#define revle16(x) x
+#define revle32(x) x
+#define revle64(x) x
+
+#else
+
+uint16_t revle16(uint16_t i_x);
+uint32_t revle32(uint32_t i_x);
+uint64_t revle64(uint64_t i_x);
+
+#endif
+
+namespace fapi2
+{
+    /// @brief Delay this thread.
+    /// @param[in] i_nanoSeconds    nanoseconds to sleep
+    /// @param[in] i_simCycles      count of Awan cycles to advance
+    /// @return ReturnCode. Zero on success, else platform specified error.
+    inline ReturnCode delay(uint64_t i_nanoSeconds, uint64_t i_simCycles)
+    {
+        return FAPI2_RC_SUCCESS;
+    }
+}
 
 #endif // FAPI2_UTILS_H_

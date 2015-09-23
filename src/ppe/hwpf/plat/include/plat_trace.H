@@ -38,6 +38,15 @@
 #include <stdio.h>
 #include <stdint.h>
 
+// @todo  update these headers with extern "C" in a future commit
+//        or not and leave this just as it is.
+extern "C" 
+{
+#include "pk.h"
+#include <pk_trace.h>
+#include "trac_interface.h"
+}
+
 // Why not a #define, why is this in the fapi2 namespace?
 // To prevent problems with Cronus and the fapi1 definitions.
 namespace fapi2
@@ -47,9 +56,16 @@ namespace fapi2
 
 // Information traces (go into fast trace buffer that can wrap often)
 #define FAPI_TRACE(_id_, _fmt_, _args_...)                              \
-    printf("%s: %s:%d ", _id_, __func__, __LINE__);                     \
-    printf(_fmt_, ##_args_);                                            \
-    printf("\n")
+    PK_TRACE(_fmt_, ##_args_);
+
+
+/*  The following is a desirous trace entry but the second line has a
+    compilation issue that is unresolved
+    
+#define FAPI_TRACE(_id_, _fmt_, _args_...)                              \
+    PK_TRACE("%s: %s:%d ", _id_, __FUNCTION__, __LINE__);               \
+    PK_TRACE(_fmt_, ##_args_);
+*/
 
 #define FAPI_INF(_fmt_, _args_...) FAPI_TRACE("inf", _fmt_, ##_args_)
 

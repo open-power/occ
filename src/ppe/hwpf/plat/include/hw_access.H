@@ -38,6 +38,7 @@
 #include <variable_buffer.H>
 #endif
 
+#include <utils.H>
 #include <plat_hw_access.H>
 #include <fapi2_hw_access.H>
 
@@ -59,7 +60,6 @@ namespace fapi2
     /// @return uint8_t The current PIB error mask
     uint8_t getPIBErrorMask(void)
     {
-        uint8_t o_pib_mask;
         PLAT_GET_PIB_ERROR_MASK(o_pib_mask);
         return o_pib_mask;
     }
@@ -103,11 +103,7 @@ namespace fapi2
     inline void getScom(const Target<K>& i_target, const uint64_t i_address,
                        buffer<uint64_t>& o_data)
     {
-      //   PLAT_GETSCOM(i_target,
-//                     (uint32_t)(i_address & BITS(40,24)),
-//                     &(o_data()));
-                    
-//        fapi2::ReturnCode l_rc;
+
         PLAT_GETSCOM(current_err,
                      i_target,
                     (uint32_t)(i_address & BITS(40,24)),
@@ -123,12 +119,13 @@ namespace fapi2
     /// @return fapi::ReturnCode. FAPI2_RC_SUCCESS if success, else error code.
     template< TargetType K >
     inline void putScom(const Target<K>& i_target, const uint64_t i_address,
-                       buffer<uint64_t>& i_data)
+                       buffer<uint64_t> i_data)
     {
 
-        PLAT_PUTSCOM(i_target,
+        PLAT_PUTSCOM(current_err,
+                    i_target,
                     (uint32_t)(i_address & BITS(40,24)),
-                    &(i_data()));
+                    i_data());
     }
 
     /// @brief Read-modify-write a SCOM register on a chip
@@ -141,12 +138,13 @@ namespace fapi2
     template< TargetType K >
     inline void modifyScom( const Target<K>& i_target,
                             const uint64_t i_address,
-                            const buffer<uint64_t>& i_data,
+                            const buffer<uint64_t> i_data,
                             const ChipOpModifyMode i_modifyMode)
     {
         fapi2::buffer<uint64_t> l_modifyDataBuffer;
         
-        PLAT_GETSCOM(i_target,
+        PLAT_GETSCOM(current_err,
+                     i_target,
                      (uint32_t)(i_address & BITS(40,24)),
                      &(l_modifyDataBuffer()));
 
@@ -165,9 +163,10 @@ namespace fapi2
             l_modifyDataBuffer ^= i_data;
         }
 
-        PLAT_PUTSCOM(i_target,
+        PLAT_PUTSCOM(current_err,
+                     i_target,
                      (uint32_t)(i_address & BITS(40,24)),
-                     &(l_modifyDataBuffer())); 
+                     l_modifyDataBuffer()); 
         return;
     }
 
@@ -181,16 +180,17 @@ namespace fapi2
     template< TargetType K >
     inline void putScomUnderMask(const Target<K>& i_target,
                                  const uint64_t i_address,
-                                 buffer<uint64_t>& i_data,
-                                 buffer<uint64_t>& i_mask)
+                                 buffer<uint64_t> i_data,
+                                 buffer<uint64_t> i_mask)
     {
         fapi2::buffer<uint64_t> l_modifyDataBuffer = i_data;
 
         l_modifyDataBuffer &= i_mask;
         
-        PLAT_PUTSCOM(i_target,
+        PLAT_PUTSCOM(current_err,
+                    i_target,
                     (uint32_t)(i_address & BITS(40,24)),
-                    &(l_modifyDataBuffer()));
+                    l_modifyDataBuffer());
         return;
     }
           

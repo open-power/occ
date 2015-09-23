@@ -25,16 +25,14 @@
 //------------------------------------------------------------------------------
 /// @file  p9_sbe_tp_chiplet_init1.H
 ///
-/// @brief IPL STEP 2.3: SBE TP Chiplet Init 1 :: Releases PCB Reset, Sets TP chiplet enable, Drops Perv chiplet fence
-// *!
-// *! OWNER NAME  : Abhishek Agarwal  Email: abagarw8@in.ibm.com
-// *! BACKUP NAME :                   Email:
+/// @brief Initial steps of PIB AND PCB
 //------------------------------------------------------------------------------
-// *HWP HWP Owner   : Abhishek Agarwal <abagarw8@in.ibm.com>
-// *HWP FW Owner    : Brian Silver <bsilver@us.ibm.com>
-// *HWP Team        : Perv
-// *HWP Level       : 1
-// *HWP Consumed by : SBE
+// *HWP HWP Owner        : Abhishek Agarwal <abagarw8@in.ibm.com>
+// *HWP HWP Backup Owner : Srinivas V Naga <srinivan@in.ibm.com>
+// *HWP FW Owner         : sunil kumar <skumar8j@in.ibm.com>
+// *HWP Team             : Perv
+// *HWP Level            : 2
+// *HWP Consumed by      : SBE
 //------------------------------------------------------------------------------
 
 
@@ -48,11 +46,10 @@
 typedef fapi2::ReturnCode (*p9_sbe_tp_chiplet_init1_FP_t)(
     const fapi2::Target<fapi2::TARGET_TYPE_PROC_CHIP> &);
 
-/// @brief DESCRIPTION  -- Drop VSS2VIO fence
-///                        -- Releases PCB reset
-///                        -- Sets PRV Chiplet Enable
-///                        -- Drops PRV Chiplet fence enable
-///                        -- Drop Global Endpoint Reset
+/// @brief Releases the Pervasive Control Bus (PCB) reset
+/// Sets TP chiplet enable
+/// Drops pervasive chiplet fences
+///
 ///
 /// @param[in]     i_target_chip   Reference to TARGET_TYPE_PROC_CHIP target
 /// @return  FAPI2_RC_SUCCESS if success, else error code.

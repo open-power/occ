@@ -56,9 +56,13 @@
 #
 # OBJDIR             : target directory for all generated files
 
-IMAGE_NAME := sbe_main
+IMAGE_SEEPROM_NAME := seeprom_main
+IMAGE_SBE_NAME := sbe_main
+IMAGE_LOADER_NAME := loader_main
 
+ifndef PPE_TYPE
 PPE_TYPE := std
+endif
 
 ifndef IMAGE_SRCDIR
 export IMAGE_SRCDIR = $(abspath .)
@@ -76,24 +80,22 @@ ifndef PERV_SRCDIR
 export PERV_SRCDIR = $(abspath ../../hwp/perv)
 endif
 
+ifndef NEST_SRCDIR
+export NEST_SRCDIR = $(abspath ../../hwp/nest)
+endif
+
 ifndef HWPLIB_SRCDIR
 export HWPLIB_SRCDIR = $(abspath ../../hwp/lib)
-
 endif
 
 ifndef IMG_INCLUDES
-export IMG_INCLUDES = -I$(IMAGE_SRCDIR) -I$(CACHE_SRCDIR) -I$(CORE_SRCDIR)
-
-endif
-
-ifndef IMG_INCLUDES
-export IMG_INCLUDES = -I$(IMAGE_SRCDIR) -I$(CACHE_SRCDIR) -I$(CORE_SRCDIR)
+export IMG_INCLUDES = -I$(IMAGE_SRCDIR) -I$(CACHE_SRCDIR) -I$(CORE_SRCDIR) -I$(PERV_SRCDIR) -I$(NEST_SRCDIR)
 endif
 ifndef BASE_OBJDIR
 export BASE_OBJDIR = $(abspath ../obj)
 endif
 
-export IMG_OBJDIR = $(BASE_OBJDIR)/$(IMAGE_NAME)
+export IMG_OBJDIR = $(BASE_OBJDIR)/$(IMAGE_SEEPROM_NAME)
 
 ifndef PK_SRCDIR
 export PK_SRCDIR = $(abspath ../../pk)
@@ -103,12 +105,17 @@ ifndef TOOLS_ATTR_DIR
 export TOOLS_ATTR_DIR = $(abspath ../../tools/scripts)
 endif
 
-
-
-ifndef GCC-TOOL-PREFIX
-GCC-TOOL-PREFIX = $(CTEPATH)/tools/gcc405lin/prod/usr/bin/powerpc-linux-
+ifndef TOOLS_IMAGE_DIR
+export TOOLS_IMAGE_DIR = $(abspath ../../tools/image)
 endif
 
+ifndef IMPORT_XML_DIR
+export IMPORT_XML_DIR = $(abspath ../../importtemp/xml)
+endif
+
+ifndef IMPORT_COMMON_DIR
+export IMPORT_COMMON_DIR = $(abspath ../../importtemp/common)
+endif
 
 ifndef P2P_SRCDIR
 export P2P_SRCDIR = $(abspath ../../tools/PowerPCtoPPE)
@@ -128,14 +135,12 @@ export PPE_FAPI2_DIR = $(abspath ../../hwpf/plat)
 endif
 
 ifndef BASE_FAPI2_DIR
-export BASE_FAPI2_DIR = $(abspath /afs/awd/projects/eclipz/lab/p8/u/rembold/ekbgit/hwpf/fapi2)
+export BASE_FAPI2_DIR = $(abspath ../../importtemp/fapi2)
 endif
-
 
 ifndef CC_ROOT
 export CC_ROOT = ${CTEPATH}/tools/gcc405lin/prod
 endif
-
 
 ifndef GCC-TOOL-PREFIX
 GCC-TOOL-PREFIX  = ${CC_ROOT}/usr/bin/powerpc-linux-
@@ -145,10 +150,16 @@ ifndef BINUTILS-TOOL-PREFIX
 BINUTILS-TOOL-PREFIX = $(CTEPATH)/tools/ppetools/prod/powerpc-eabi/bin/
 endif
 
+ifndef FAPI_RC
+FAPI_RC = hwp_return_codes.H
+#FAPI_RC =
+endif
+
 OBJDIR = $(BASE_OBJDIR)$(SUB_OBJDIR)
 
 CC_ASM  = $(GCC-TOOL-PREFIX)gcc
-TCC     = $(PPETRACEPP_DIR)/ppetracepp $(GCC-TOOL-PREFIX)g++
+#TCC     = $(PPETRACEPP_DIR)/ppetracepp $(GCC-TOOL-PREFIX)g++
+TCC     = $(PPETRACEPP_DIR)/ppetracepp $(GCC-TOOL-PREFIX)gcc
 CC      = $(PPETRACEPP_DIR)/ppetracepp $(GCC-TOOL-PREFIX)gcc
 AS      = $(BINUTILS-TOOL-PREFIX)as
 AR      = $(BINUTILS-TOOL-PREFIX)ar
@@ -184,7 +195,7 @@ endif
 # Generate a 16bit trace string hash prefix value based on the name of this image.  This will form
 # the upper 16 bits of the 32 bit trace hash values.
 ifndef PK_TRACE_HASH_PREFIX
-PK_TRACE_HASH_PREFIX := $(shell echo $(IMAGE_NAME) | md5sum | cut -c1-4 | xargs -i printf "%d" 0x{})
+PK_TRACE_HASH_PREFIX := $(shell echo $(IMAGE_SEEPROM_NAME) | md5sum | cut -c1-4 | xargs -i printf "%d" 0x{})
 endif
 
 
@@ -194,68 +205,80 @@ ifndef GCC-O-LEVEL
 GCC-O-LEVEL = -O
 endif
 
-GCC-DEFS += -DIMAGE_NAME=$(IMAGE_NAME)
+GCC-DEFS += -DIMAGE_NAME=$(IMAGE_SEEPROM_NAME)
 GCC-DEFS += -DPK_TIMER_SUPPORT=$(PK_TIMER_SUPPORT) 
 GCC-DEFS += -DPK_THREAD_SUPPORT=$(PK_THREAD_SUPPORT) 
 GCC-DEFS += -DPK_TRACE_SUPPORT=$(PK_TRACE_SUPPORT)
 GCC-DEFS += -DPK_TRACE_HASH_PREFIX=$(PK_TRACE_HASH_PREFIX)
+GCC-DEFS += -DUSE_PK_APP_CFG_H=1
 GCC-DEFS += -D__PK__=1
 GCC-DEFS += -D__SBE__=1
+GCC-DEFS += -D__PPE__=1
+GCC-DEFS += -DFAPI2_NO_FFDC=1
+GCC-DEFS += -DPK_TRACE_SZ=512
+
 DEFS += $(GCC-DEFS)
 export LD_LIBRARY_PATH = /afs/awd.austin.ibm.com/proj/p3/cte/tools/gcc405lin/vol1/usr/lib
 
 ############################################################################
 
 
-INCLUDES += $(IMG_INCLUDES) \
-	-I$(IMAGE_SRCDIR)/../../../include \
-	-I$(PLAT_FAPI2_DIR)/include \
-	-I$(PPE_FAPI2_DIR)/include \
-	-I$(BASE_FAPI2_DIR)/include \
-	-I$(PK_SRCDIR)/../include \
-	-I$(PK_SRCDIR)/$(PPE_TYPE) \
-	-I$(PK_SRCDIR)/../include \
-	-I$(PK_SRCDIR)/kernel \
-        -I$(PK_SRCDIR)/ppe \
-        -I$(PK_SRCDIR)/ppe42 \
-        -I$(PK_SRCDIR)/trace
+INCLUDES += $(IMG_INCLUDES)
+INCLUDES += -I$(IMAGE_SRCDIR)/../../../include
+INCLUDES += -I$(HWPLIB_SRCDIR)
+INCLUDES += -I$(PLAT_FAPI2_DIR)/include
+INCLUDES += -I$(PPE_FAPI2_DIR)/include
+INCLUDES += -I$(BASE_FAPI2_DIR)/include
+INCLUDES += -I$(PK_SRCDIR)/../include
+INCLUDES += -I$(PK_SRCDIR)/$(PPE_TYPE)
+INCLUDES += -I$(PK_SRCDIR)/../include
+INCLUDES += -I$(PK_SRCDIR)/kernel
+INCLUDES += -I$(PK_SRCDIR)/ppe
+INCLUDES += -I$(PK_SRCDIR)/ppe42
+INCLUDES += -I$(PK_SRCDIR)/../sbe/sbefw
+INCLUDES += -I$(PK_SRCDIR)/trace
+INCLUDES += -I$(PK_SRCDIR)/../tools/ppetracepp
+INCLUDES += -I$(IMPORT_COMMON_DIR)/include
 
 PIPE-CFLAGS = -pipe -Wa,-m405
 
-GCC-CFLAGS += -g -Wall -Werror -Wno-error=unused-label \
-	-msoft-float -mcpu=405 -mmulhw \
-	-meabi -msdata=eabi  \
-	-ffreestanding \
-        -fno-common \
-	-fsigned-char \
-	-fno-inline-functions-called-once \
-	-ffixed-r11 \
-	-ffixed-r12 \
-	-ffixed-r14 \
-	-ffixed-r15 \
-	-ffixed-r16 \
-	-ffixed-r17 \
-	-ffixed-r18 \
-	-ffixed-r19 \
-	-ffixed-r20 \
-	-ffixed-r21 \
-	-ffixed-r22 \
-	-ffixed-r23 \
-	-ffixed-r24 \
-	-ffixed-r25 \
-	-ffixed-r26 \
-	-ffixed-r27 \
-	-ffixed-cr1 \
-	-ffixed-cr2 \
-	-ffixed-cr3 \
-	-ffixed-cr4 \
-	-ffixed-cr5 \
-	-ffixed-cr6 \
-	-ffixed-cr7
+# -Wno-error=unused-label , needs to be in.
 
+GCC-CFLAGS += -Wall -Werror -Wno-unused-label
+GCC-CFLAGS += -msoft-float -mcpu=405 -mmulhw
+GCC-CFLAGS += -meabi -msdata=eabi
+GCC-CFLAGS += -gpubnames -gdwarf-3
+GCC-CFLAGS += -ffreestanding
+GCC-CFLAGS += -fno-common
+GCC-CFLAGS += -fno-exceptions
+GCC-CFLAGS += -fsigned-char
+GCC-CFLAGS += -fno-inline-functions-called-once
+GCC-CFLAGS += -ffixed-r11
+GCC-CFLAGS += -ffixed-r12
+GCC-CFLAGS += -ffixed-r14
+GCC-CFLAGS += -ffixed-r15
+GCC-CFLAGS += -ffixed-r16
+GCC-CFLAGS += -ffixed-r17
+GCC-CFLAGS += -ffixed-r18
+GCC-CFLAGS += -ffixed-r19
+GCC-CFLAGS += -ffixed-r20
+GCC-CFLAGS += -ffixed-r21
+GCC-CFLAGS += -ffixed-r22
+GCC-CFLAGS += -ffixed-r23
+GCC-CFLAGS += -ffixed-r24
+GCC-CFLAGS += -ffixed-r25
+GCC-CFLAGS += -ffixed-r26
+GCC-CFLAGS += -ffixed-r27
+GCC-CFLAGS += -ffixed-cr1
+GCC-CFLAGS += -ffixed-cr2
+GCC-CFLAGS += -ffixed-cr3
+GCC-CFLAGS += -ffixed-cr4
+GCC-CFLAGS += -ffixed-cr5
+GCC-CFLAGS += -ffixed-cr6
+GCC-CFLAGS += -ffixed-cr7
 
-CFLAGS      	=  -c $(GCC-CFLAGS) $(PIPE-CFLAGS) $(GCC-O-LEVEL) $(INCLUDES) 
-
+CFLAGS =  
+PPE-CFLAGS = $(CFLAGS) -c $(GCC-CFLAGS) $(PIPE-CFLAGS) $(GCC-O-LEVEL) $(INCLUDES)
 
 CPPFLAGS    	= -E -std=c++11
 #CPPFLAGS    	= -E
@@ -312,14 +335,14 @@ endif
 # work as Make targets. The *.d files are include-ed in the
 # subdirectory Makefiles.
 
-$(OBJDIR)/%.d: %.C
+$(OBJDIR)/%.d: %.C $(FAPI_RC)
 	@set -e; rm -f $@; \
 	echo -n "$(OBJDIR)/" > $@.$$$$; \
 	$(CC_ASM) -MM $(INCLUDES) $(CPPFLAGS) $(DEFS) $< >> $@.$$$$; \
 	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
 	rm -f $@.$$$$
 
-$(OBJDIR)/%.d: %.c
+$(OBJDIR)/%.d: %.c $(FAPI_RC)
 	@set -e; rm -f $@; \
 	echo -n "$(OBJDIR)/" > $@.$$$$; \
 	echo "$(INCLUDES)"; \
@@ -327,7 +350,7 @@ $(OBJDIR)/%.d: %.c
 	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
 	rm -f $@.$$$$
 
-$(OBJDIR)/%.d: %.S
+$(OBJDIR)/%.d: %.S $(FAPI_RC)
 	@set -e; rm -f $@; \
 	echo -n "$(OBJDIR)/" > $@.$$$$; \
 	$(CC_ASM) -MM $(INCLUDES) $(CPPFLAGS) $(DEFS) $< >> $@.$$$$; \

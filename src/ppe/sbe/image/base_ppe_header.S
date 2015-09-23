@@ -37,12 +37,12 @@
 #include "proc_sbe_fixed.H"
 
         
-#define PORE_SPACE_UNDEFINED 0xffff
-#define PORE_SPACE_OCI       0x8000
-#define PORE_SPACE_PNOR      0x800b
-#define PORE_SPACE_OTPROM    0x0001
-#define PORE_SPACE_SEEPROM   0x800c
-#define PORE_SPACE_PIBMEM    0x0008 
+#define IMAGE_SPACE_UNDEFINED 0xffff
+#define IMAGE_SPACE_OCI       0x8000
+#define IMAGE_SPACE_PNOR      0x800b
+#define IMAGE_SPACE_OTPROM    0x0001
+#define IMAGE_SPACE_SEEPROM   0x800c
+#define IMAGE_SPACE_BASE      0x0008 
 
 
 
@@ -73,7 +73,7 @@
     .endm
         
 	.macro	..check_default_space
-	.if	(_PGAS_DEFAULT_SPACE == PORE_SPACE_UNDEFINED)
+	.if	(_PGAS_DEFAULT_SPACE == IMAGE_SPACE_UNDEFINED)
 	.error	"The PGAS default address space has not been defined"
 	.endif
 	.endm	
@@ -132,19 +132,16 @@ __header_64_reserved:
         SbeXipSection header
         SbeXipSection fixed,                8
         SbeXipSection fixed_toc,            8
-        SbeXipSection ipl_text,             4
-        SbeXipSection ipl_data,             8
+        SbeXipSection loader_text,          4
+        SbeXipSection loader_data,          8
         SbeXipSection text,                 4
         SbeXipSection data,                 8
         SbeXipSection toc,                  4
         SbeXipSection strings
-        SbeXipSection halt,                 4, empty=1
-        SbeXipSection pibmem0,              8, empty=1
-        SbeXipSection dcrings,              8, empty=1
+        SbeXipSection base,                 4, empty=1
+        SbeXipSection baseloader,           8, empty=1
+        SbeXipSection overlay,              8, empty=1
         SbeXipSection rings,                8, empty=1
-        SbeXipSection slw,                128, empty=1
-        SbeXipSection fit,                     empty=1
-        SbeXipSection ffdc,                 8, empty=1
 
         
         //////////////////////////////////////////////////////////////////////
@@ -203,14 +200,14 @@ __header_string_reserved:
 
     .section .fixed, "a", @progbits
     .section .fixed_toc, "a", @progbits        
-    .section .ipl_data, "a", @progbits
-    .section .ipl_text, "a", @progbits        
+    .section .loader_data, "a", @progbits
+    .section .loader_text, "a", @progbits        
         
     .section .toc, "a", @progbits
     .section .strings, "aS", @progbits
     
-    ..set_default_space PORE_SPACE_SEEPROM
-    SbeXipHeader SBE_SEEPROM_MAGIC, 0xFFF00000, 0xFFF00C78, _sbe_base_size 
+    ..set_default_space IMAGE_SPACE_SEEPROM
+    SbeXipHeader SBE_SEEPROM_MAGIC, 0xFFF00000, 0xFFF00C78, _seeprom_size 
 
     // Create the .fixed section    
     .proc_sbe_fixed_proc_chip

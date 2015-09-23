@@ -35,6 +35,8 @@
 /// configuration for a standard PPE.
 ///
 
+#include "pk_app_cfg.h"
+
 /// This constant is used to define the size of the table of interrupt handler
 /// structures as well as a limit for error checking. 
 #define EXTERNAL_IRQS 64

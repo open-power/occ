@@ -25,16 +25,14 @@
 //------------------------------------------------------------------------------
 /// @file  p9_sbe_tp_chiplet_reset.H
 ///
-/// @brief IPL STEP 2.8 : SBE TP Chiplet Reset :: setup hangcounter 6 for TP chiplet
-// *!
-// *! OWNER NAME  : Abhishek Agarwal  Email: abagarw8@in.ibm.com
-// *! BACKUP NAME :                   Email:
+/// @brief setup hangcounter 6 for TP chiplet
 //------------------------------------------------------------------------------
-// *HWP HWP Owner   : Abhishek Agarwal <abagarw8@in.ibm.com>
-// *HWP FW Owner    : Brian Silver <bsilver@us.ibm.com>
-// *HWP Team        : Perv
-// *HWP Level       : 1
-// *HWP Consumed by : SBE
+// *HWP HWP Owner        : Abhishek Agarwal <abagarw8@in.ibm.com>
+// *HWP HWP Backup Owner : Srinivas V Naga <srinivan@in.ibm.com>
+// *HWP FW Owner         : Brian Silver <bsilver@us.ibm.com>
+// *HWP Team             : Perv
+// *HWP Level            : 2
+// *HWP Consumed by      : SBE
 //------------------------------------------------------------------------------
 
 
@@ -45,10 +43,15 @@
 #include <fapi2.H>
 
 
+enum P9_SBE_TP_CHIPLET_RESET_Constants
+{
+    HANG_PULSE_VALUE = 0x0c00000000000000
+};
+
 typedef fapi2::ReturnCode (*p9_sbe_tp_chiplet_reset_FP_t)(
     const fapi2::Target<fapi2::TARGET_TYPE_PROC_CHIP> &);
 
-/// @brief --Setup hang counter for PCB slaves/master
+/// @brief Setup hang counter for PCB slaves/master
 ///
 ///
 /// @param[in]     i_target_chip   Reference to TARGET_TYPE_PROC_CHIP target

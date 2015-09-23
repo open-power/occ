@@ -51,14 +51,15 @@
 #include <utils.H>
 
 
+
 // In turn includes the needed generated headers (hwp_ffd_classes, etc.)
 #include <error_scope.H>
-//#include <set_sbe_error.H>      // Generated file  mb empty file addCopyright.pl does not like empty files
-#include <fapi2AttributeService.H>
-#include <fapi2AttributeIds.H>      // Generated file
+#include <set_sbe_error.H>      // Generated file
+#include <plat_attributes.H>
+#include <plat_target_utils.H>
 
 
-// #include <hwp_executor.H> // mb empty file addCopyright.pl does not like empty files
+#include <hwp_executor.H>
 
 // Block of headers not currently in fapi2
 #ifdef FAPI2_MISSING_HEADERS

@@ -26,25 +26,26 @@
 /// @file  p9_hcd_core_poweron.C
 /// @brief Core Chiplet Power-on
 ///
-/// *HWP HWP Owner   : David Du      <daviddu@us.ibm.com>
-/// *HWP FW Owner    : Reshmi Nair   <resnair5@in.ibm.com>
-/// *HWP Team        : PM
-/// *HWP Consumed by : SBE:CME
-/// *HWP Level       : 1
-///
-/// Procedure Summary:
-///   1.Command the core PFET controller to power-on, via putscom to CPPM
-///     -
-///   2.Check for valid power on completion, via getscom from CPPM
-///     Polled Timeout:  100us
-///
+// *HWP HWP Owner   : David Young          <davidy@us.ibm.com>
+// *HWP FW Owner    : Sangeetha T S     <sangeet2@in.ibm.com>
+// *HWP Team        : PM
+// *HWP Consumed by : SBE:CME
+// *HWP Level       : 2
+//
+// Procedure Summary:
+//   1.Command the core PFET controller to power-on, via putscom to CPPM
+//   2.Check for valid power on completion, via getscom from CPPM
+//     Polled Timeout:  100us
+//
 
 //-----------------------------------------------------------------------------
 // Includes
 //-----------------------------------------------------------------------------
 #include <fapi2.H>
-//#include <common_scom_addresses.H>
+#if 0
+#include <common_scom_addresses.H>
 //will be replaced with real scom address header file
+#endif
 #include "p9_hcd_core_poweron.H"
 
 //-----------------------------------------------------------------------------
@@ -55,30 +56,14 @@
 // Procedure: Core Chiplet Power-on
 //-----------------------------------------------------------------------------
 
-extern "C"
-{
+#define FAPI_CLEANUP() fapi_try_exit:
+#define FAPI_GOTO_EXIT() goto fapi_try_exit;
 
 fapi2::ReturnCode
 p9_hcd_core_poweron(
-    const fapi2::Target<fapi2::TARGET_TYPE_CORE>& i_target,
-    const uint32_t i_operation)
+    const fapi2::Target<fapi2::TARGET_TYPE_CORE>& i_target)
 {
-
-#if 0
-
-    fapi2::buffer<uint64_t> data;
-
-    return fapi2::FAPI2_RC_SUCCESS;
-
-    FAPI_CLEANUP();
-    return fapi2::FAPI2_RC_PLAT_ERR_SEE_DATA;
-
-#endif
-
-    return fapi2::FAPI2_RC_SUCCESS;
-
+    fapi2::ReturnCode l_rc = fapi2::FAPI2_RC_SUCCESS;
+    FAPI_EXEC_HWP(l_rc, p9_common_poweronoff, i_target, p9power::POWER_ON_VDD);
+    return l_rc;
 } // Procedure
-
-
-} // extern C
-

@@ -1,0 +1,149 @@
+<!-- IBM_PROLOG_BEGIN_TAG                                                   -->
+<!-- This is an automatically generated prolog.                             -->
+<!--                                                                        -->
+<!-- $Source: src/ppe/importtemp/xml/attribute_info/pervasive_attributes.xml $ -->
+<!--                                                                        -->
+<!-- OpenPOWER OnChipController Project                                     -->
+<!--                                                                        -->
+<!-- Contributors Listed Below - COPYRIGHT 2015                             -->
+<!-- [+] International Business Machines Corp.                              -->
+<!--                                                                        -->
+<!--                                                                        -->
+<!-- Licensed under the Apache License, Version 2.0 (the "License");        -->
+<!-- you may not use this file except in compliance with the License.       -->
+<!-- You may obtain a copy of the License at                                -->
+<!--                                                                        -->
+<!--     http://www.apache.org/licenses/LICENSE-2.0                         -->
+<!--                                                                        -->
+<!-- Unless required by applicable law or agreed to in writing, software    -->
+<!-- distributed under the License is distributed on an "AS IS" BASIS,      -->
+<!-- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        -->
+<!-- implied. See the License for the specific language governing           -->
+<!-- permissions and limitations under the License.                         -->
+<!--                                                                        -->
+<!-- IBM_PROLOG_END_TAG                                                     -->
+<!-- This is an automatically generated file. -->
+<!-- File: pervasive_attributes.xml. -->
+<!-- XML file specifying attributes used by HW Procedures. Attributes are taken from model pervasive -->
+<!--pervasive_attributes.xml-->
+<attributes>
+<attribute>
+  <id>ATTR_BOOT_FREQ</id>
+  <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+  <description></description>
+  <valueType>uint8</valueType>
+</attribute>
+
+<attribute>
+  <id>ATTR_CHIP_REGIONS_TO_ENABLE</id>
+  <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+  <description></description>
+  <valueType>uint32</valueType>
+</attribute>
+
+<attribute>
+  <id>ATTR_CHIP_UNIT_POS</id>
+  <targetType>TARGET_TYPE_PERV,TARGET_TYPE_PROC_CHIP</targetType>
+  <description></description>
+  <valueType>uint8</valueType>
+</attribute>
+
+<attribute>
+  <id>ATTR_ECID</id>
+  <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+  <description></description>
+  <valueType>uint64</valueType>
+</attribute>
+
+<attribute>
+  <id>ATTR_EC_GARD</id>
+  <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+  <description></description>
+  <valueType>uint8</valueType>
+</attribute>
+
+<attribute>
+  <id>ATTR_EQ_GARD</id>
+  <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+  <description></description>
+  <valueType>uint8</valueType>
+</attribute>
+
+<attribute>
+  <id>ATTR_I2C_BUS_DIV_NEST</id>
+  <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+  <description></description>
+  <valueType>uint8</valueType>
+</attribute>
+
+<attribute>
+  <id>ATTR_I2C_BUS_DIV_REF</id>
+  <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+  <description></description>
+  <valueType>uint8</valueType>
+</attribute>
+
+<attribute>
+  <id>ATTR_MC_SYNC_MODE</id>
+  <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+  <description></description>
+  <valueType>uint8</valueType>
+</attribute>
+
+<attribute>
+  <id>ATTR_NEST_PLL_BUCKET</id>
+  <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+  <description></description>
+  <valueType>uint8</valueType>
+</attribute>
+
+<attribute>
+  <id>ATTR_PROC_PB_BNDY_DMIPLL_DATA</id>
+  <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+  <description></description>
+  <valueType>uint8</valueType>
+</attribute>
+
+<attribute>
+  <id>ATTR_PROC_PB_BNDY_DMIPLL_FOR_DCCAL_DATA</id>
+  <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+  <description></description>
+  <valueType>uint8</valueType>
+</attribute>
+
+<attribute>
+  <id>ATTR_PROC_PERV_BNDY_PLL_DATA</id>
+  <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+  <description></description>
+  <valueType>uint8</valueType>
+</attribute>
+
+<attribute>
+  <id>ATTR_SBE_SEEPROM_I2C_DEVICE_ADDRESS</id>
+  <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+  <description></description>
+  <valueType>uint32</valueType>
+</attribute>
+
+<attribute>
+  <id>ATTR_SBE_SEEPROM_I2C_PORT</id>
+  <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+  <description></description>
+  <valueType>uint32</valueType>
+</attribute>
+
+<attribute>
+  <id>ATTR_VCS_BOOT_VOLTAGE</id>
+  <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+  <description></description>
+  <valueType>uint8</valueType>
+</attribute>
+
+<attribute>
+  <id>ATTR_VDD_BOOT_VOLTAGE</id>
+  <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+  <description></description>
+  <valueType>uint8</valueType>
+</attribute>
+
+</attributes>

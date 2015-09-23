@@ -1,0 +1,399 @@
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/ppe/sbe/sbefw/vector $                                    */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
+
+#ifndef stl_vector
+#define stl_vector
+
+/**
+ * @file vector
+ * @brief simple stl vector template class declaration.
+ */
+
+#include <stddef.h>
+
+#if !defined( __STDC_LIMIT_MACROS)
+#define __STDC_LIMIT_MACROS
+#endif
+#include <stdint.h>
+#include <pool.H>
+//TODO via RTC 129166
+// Add implementation for assert
+#define assert(X)
+namespace std
+{
+
+    /**
+     * @class vector
+     * subset of stl vector
+     * @note Does not support allocators, reverse iterators.
+     */
+    template <class T>
+        class vector
+        {
+            public:
+
+                typedef T * iterator;
+                typedef const T * const_iterator;
+                typedef T & reference;
+                typedef const T & const_reference;
+                typedef size_t size_type;
+                typedef T value_type;
+                typedef T * pointer;
+                typedef const T * const_pointer;
+
+            protected:
+
+                pointer iv_start;
+                pointer iv_finish;
+                SBEVECTORPOOL::vectorMemPool_t *iv_poolPtr;
+            public:
+
+                /**
+                 * Constructor default
+                 * @post     The vector is created with storage of
+                 *           G_BLOCKSIZE bytes.
+                 */
+                explicit vector(void)
+                {
+                    iv_poolPtr = SBEVECTORPOOL::allocMem();
+                    assert ( NULL != iv_poolPtr)
+                    iv_start = ( T* )iv_poolPtr->data;
+                    iv_finish = iv_start;
+                }
+
+
+                /**
+                 * MOVE COPY CTOR create a vector from another vector
+                 * @param[in] x  source vector
+                 * @post     Vector of x.size() is created from x with same
+                 *           memory.
+                 *           size() == capacity() == x.size()
+                 * @note     move Copy construtor willuse shallow copy. So input
+                 *           as well as output vector will point to same data
+                 */
+                vector(const vector<T>&& x)
+                {
+                        iv_start = x.iv_start;
+                        iv_finish = x.iv_finish;
+                        iv_poolPtr = x.iv_poolPtr;
+                        iv_poolPtr->refCount++;
+                }
+
+                /**
+                 * Reserve space for atleast n elements
+                 * @param[in] n Number of elements
+                 * @note    We are having fixed size vectors in ppe. Defining
+                 *          this function to avoid compile issues in standard
+                 *          library. This function is noop for less than 512
+                 *          bytes requirement. For more than 512 bytes, it will
+                 *          assert.
+                 */
+                void reserve(size_type n)
+                {
+                    assert(n < max_size());
+                    return;
+                 }
+                /**
+                 * DTOR
+                 * @post     Storage released
+                 */
+                __attribute__ ((always_inline))
+                ~vector()
+                {
+                    clear();  // call dtors
+                    SBEVECTORPOOL::releaseMem(iv_poolPtr);
+                }
+
+                /**
+                 * Move Assignment operator.
+                 * @param[in] x   A vector.
+                 * @return  A vector (for the purpose of multiple assigns).
+                 * @pre     None.
+                 * @post    *this == x, this->capacity() == x.size().
+                 *           All previously obtained iterators are invalid.
+                 */
+                vector<T>& operator=(const vector<T>&& x)
+                {
+                    // Just check here for pool to make sure
+                    // input vector and current vector are not same;
+                    if( iv_poolPtr != x.iv_poolPtr)
+                    {
+                        clear();
+                        SBEVECTORPOOL::releaseMem(iv_poolPtr);
+                        iv_start = x.iv_start;
+                        iv_finish = x.iv_finish;
+                        iv_poolPtr = x.iv_poolPtr;
+                        iv_poolPtr->refCount++;
+                     }
+                    return(*this);
+                }
+
+                // Iterators --------------------
+
+                /**
+                 * Get iterator to the first vector element
+                 * @return iterator of rist vector element
+                 * @pre None.
+                 * @post None.
+                 */
+                __attribute__ ((always_inline))
+                iterator begin()
+                {
+                    return (iv_start);
+                }
+
+                /**
+                 * Get const_iterator to the first vector element
+                 * @return const_iterator of rist vector element
+                 * @pre None.
+                 * @post None.
+                 */
+                __attribute__ ((always_inline))
+                const_iterator begin() const
+                {
+                    return (iv_start);
+                }
+
+                /**
+                 * Get iterator to the last vector element + 1
+                 * @return iterator
+                 * @pre None.
+                 * @post None.
+                 */
+                __attribute__ ((always_inline))
+                iterator end()
+                {
+                    return (iv_finish);
+                }
+
+                /**
+                 * Get const_iterator to the last vector element + 1
+                 * @return const_iterator
+                 * @pre None.
+                 * @post None.
+                 */
+                __attribute__ ((always_inline))
+                const_iterator end() const
+                {
+                    return (iv_finish);
+                }
+
+                //  Capacity -----------------------------------------------
+
+                /**
+                 * Get the number of elements in the container
+                 * @return number of elements in the container
+                 */
+                __attribute__ ((always_inline))
+                size_type size() const
+                {
+                    return(iv_finish - iv_start);
+                }
+
+                /**
+                 * Return the maximum potential size the container could reach.
+                 * @return number of the maximum element count this container
+                 *         could reach
+                 */
+                __attribute__ ((always_inline))
+                size_type max_size() const
+                {
+                    return SBEVECTORPOOL::G_BLOCKSIZE/(sizeof(T));
+                }
+
+                /**
+                 * Query for empty container
+                 * @return bool, true if size()==0 else false.
+                 * @pre none
+                 * @post none
+                 */
+                __attribute__ ((always_inline))
+                bool empty() const
+                {
+                    return(size() == 0);
+                }
+
+                // - Element Access -----------------------------------
+
+                /**
+                 * Access a mutable reference to an element in the container
+                 * @param An index into the vector
+                 * @return A reference to an element
+                 * @pre    0 <= n < size()
+                 * @post   None.
+                 */
+                __attribute__ ((always_inline))
+                reference operator[](size_type n)
+                {
+                    assert(n < size());
+                    return(*(iv_start + n));
+                }
+
+                /**
+                 * Access a mutable reference to an element in the container
+                 * @param[in] index An index into the vector
+                 * @return A reference to an element
+                 * @pre    0 <= n < size()
+                 * @post   None.
+                 * @note no exception handling
+                 */
+                __attribute__ ((always_inline))
+                reference at(size_type index)
+                {
+                    assert(index < size());
+                    return(*(iv_start + index));
+                }
+
+                /**
+                 * Get an immutable reference to an element in the container
+                 * @param[in] index An index into the vector
+                 * @return A const_reference to an object or type T
+                 * @pre    0 <= n < size()
+                 * @post   None.
+                 */
+                __attribute__ ((always_inline))
+                const_reference operator[](size_type index) const
+                {
+                    assert(index < size());
+                    return(*(iv_start + index));
+                }
+
+                /**
+                 * Get an immutable reference to an element in the container
+                 * @param[in] index An index into the vector
+                 * @return A const_reference to an object or type T
+                 * @pre    0 <= n < size()
+                 * @post   None.
+                 * @note no exception handling
+                 */
+                __attribute__ ((always_inline))
+                const_reference at(size_type index) const
+                {
+                    assert(index < size());
+                    return(*(iv_start + index));
+                }
+
+                /**
+                 * Get a mutable reference to the first element in the container
+                 * @return reference to first element
+                 * @pre none
+                 * @post None
+                 */
+                __attribute__ ((always_inline))
+                reference front()
+                {
+                    return *iv_start;
+                }
+
+                /**
+                 * Get an Immutable reference to the first element in the
+                 * container
+                 * @return const_reference to first element
+                 * @pre none
+                 * @post None
+                 */
+                __attribute__ ((always_inline))
+                const_reference front() const
+                {
+                    return *iv_start;
+                }
+
+                /**
+                 * Get a mutable reference to the last element in the container
+                 * @return reference to last element
+                 * @pre none
+                 * @post None
+                 */
+                __attribute__ ((always_inline))
+                reference back()
+                {
+                    return *(iv_finish-1);
+                }
+
+                /**
+                 * Get an Immutable reference to the last element in the
+                 * container
+                 * @return reference to last element
+                 * @pre none
+                 * @post None
+                 */
+                __attribute__ ((always_inline))
+                const_reference back() const
+                {
+                    return *(iv_finish-1);
+                }
+
+                /**
+                 * Add element to the back of the container
+                 * @param[in] x reference to object used to create new element
+                 * @pre none
+                 * @post All previously obtained iterators are invalid.
+                 */
+                __attribute__ ((always_inline))
+                void push_back(const T& x)
+                {
+                    assert(max_size() > size())
+                    new (iv_finish++) T(x);
+                }
+
+                /**
+                 * Clear the vector
+                 * @pre none.
+                 * @post size() = 0, All previously obtained iterators are
+                 *       invalid
+                 * @note capacity unchanged
+                 */
+                void clear ()
+                {
+                    while(iv_finish != iv_start)
+                    {
+                        --iv_finish;
+                        (iv_finish)->~T();
+                    }
+                }
+
+                /*
+                 * Assign new content to the vector object
+                 * @param[in] n number of elements to assign
+                 * @param[in] x reference to element to copy in
+                 */
+                void assign ( size_type n, const T& x)
+                {
+                    assert(n < max_size());
+                    clear();
+                    for (  ; n> 0; n--)
+                        push_back( x);
+                }
+
+            private:
+                vector(const vector<T>& x);
+                vector<T>& operator=(const vector<T>& x);
+};
+
+}; // end namespace std
+
+
+#endif
+/* vim: set filetype=cpp : */

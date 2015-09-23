@@ -36,6 +36,7 @@
 /// FAPI namespace
 namespace fapi2
 {
+
     ///
     /// @enum fapi::TargetType
     /// @brief Types, kinds, of targets
@@ -51,60 +52,45 @@ namespace fapi2
         TARGET_TYPE_EX                = 0x02, ///< Ex type
         TARGET_TYPE_CORE              = 0x04, ///< Core type
         TARGET_TYPE_EQ                = 0x08, ///< EQ type
-        TARGET_TYPE_PERV              = 0x10, ///< Pervasive type
-        TARGET_TYPE_EQ_MC_WRITE       = 0x20, ///< EQ Multicast Type
-        TARGET_TYPE_EQ_MC_READAND     = 0x21, ///< EQ Multicast Read AND Type
-        TARGET_TYPE_EQ_MC_READOR      = 0x22, ///< EQ Multicast Read OR Type
-        TARGET_TYPE_CORE_MC_WRITE     = 0x23, ///< Core Multicast Type
-        TARGET_TYPE_CORE_MC_READAND   = 0x24, ///< Core Multicast Read AND Type
-        TARGET_TYPE_CORE_MC_READOR    = 0x25, ///< Core Multicast Read OR Type
-        TARGET_TYPE_CME_CORE0         = 0x40, ///< CME Core0 (CME only)
-        TARGET_TYPE_CME_CORE1         = 0x41, ///< CME Core1 (CME only)
+        TARGET_TYPE_MCS               = 0x10, ///< MCS type
+        TARGET_TYPE_PERV              = 0x20, ///< Pervasive type
+        TARGET_TYPE_MCAST             = 0x80, ///< Multicast type
+
         TARGET_TYPE_ALL               = 0xFF, ///< Any/All types
-    
-    
-//         TARGET_TYPE_NONE              = 0x00000000, ///< No type
-//         TARGET_TYPE_SYSTEM            = 0x00000001, ///< System type
-//         TARGET_TYPE_DIMM              = 0x00000002, ///< DIMM type
-//         TARGET_TYPE_PROC_CHIP         = 0x00000004, ///< Processor type
-//         TARGET_TYPE_MEMBUF_CHIP       = 0x00000008, ///< Membuf type
-//         TARGET_TYPE_EX                = 0x00000010, ///< Ex type
-//         TARGET_TYPE_MBA               = 0x00000020, ///< MBA type
-//         TARGET_TYPE_MCS               = 0x00000040, ///< MCS type
-//         TARGET_TYPE_XBUS              = 0x00000080, ///< XBUS type
-//         TARGET_TYPE_ABUS              = 0x00000100, ///< ABUS type
-//         TARGET_TYPE_L4                = 0x00000200, ///< L4 type
-//         TARGET_TYPE_CORE              = 0x00000400, ///< Core type
-//         TARGET_TYPE_EQ                = 0x00000800, ///< EQ type
-//         TARGET_TYPE_MCA               = 0x00001000, ///< MCA type
-//         TARGET_TYPE_MCBIST            = 0x00002000, ///< MCBIST type
-//         TARGET_TYPE_MIA               = 0x00004000, ///< MIA type
-//         TARGET_TYPE_MIS               = 0x00008000, ///< MIS type
-//         TARGET_TYPE_DMI               = 0x00010000, ///< DMI type
-//         TARGET_TYPE_OBUS              = 0x00020000, ///< OBUS type
-//         TARGET_TYPE_NV                = 0x00040000, ///< NV bus type
-//         TARGET_TYPE_SBE               = 0x00080000, ///< SBE type
-//         TARGET_TYPE_PPE               = 0x00100000, ///< PPE type
-//         TARGET_TYPE_PERV              = 0x00200000, ///< Pervasive type
-//         TARGET_TYPE_PEC               = 0x00400000, ///< PEC type
-//         TARGET_TYPE_PHB               = 0x00800000, ///< PHB type     
-//         TARGET_TYPE_EQ_MC_WRITE       = 0x01000000, ///< EQ Multicast Type
-//         TARGET_TYPE_EQ_MC_READAND     = 0x02000000, ///< EQ Multicast Read AND Type
-//         TARGET_TYPE_EQ_MC_READOR      = 0x04000000, ///< EQ Multicast Read OR Type
-//         TARGET_TYPE_CORE_MC_WRITE     = 0x08000000, ///< Core Multicast Type
-//         TARGET_TYPE_CORE_MC_READAND   = 0x10000000, ///< Core Multicast Read AND Type
-//         TARGET_TYPE_CORE_MC_READOR    = 0x20000000, ///< Core Multicast Read OR Type
-//         TARGET_TYPE_CME_CORE0         = 0x40000000, ///< CME Core0 (CME only)
-//         TARGET_TYPE_CME_CORE1         = 0x80000000, ///< CME Core1 (CME only)
-//         TARGET_TYPE_ADDRESS           = 0xAAAAAAAA, ///< Address Overlay Type
-//         TARGET_TYPE_ALL               = 0xFFFFFFFF, ///< Any/All types
+
+        // The following are actually illegal targets on PPE platforms    
+//         TARGET_TYPE_SYSTEM            = 0xFE, ///< System type
+//         TARGET_TYPE_DIMM              = 0xFD, ///< DIMM type
+//         TARGET_TYPE_MEMBUF_CHIP       = 0xFC, ///< Membuf type
+//         TARGET_TYPE_MBA               = 0xFB, ///< MBA type
+//         TARGET_TYPE_XBUS              = 0xFA, ///< XBUS type
+//         TARGET_TYPE_ABUS              = 0xF9, ///< ABUS type
+//         TARGET_TYPE_L4                = 0xF8, ///< L4 type
+//         TARGET_TYPE_MCA               = 0xF7, ///< MCA type
+//         TARGET_TYPE_MCBIST            = 0xF6, ///< MCBIST type
+//         TARGET_TYPE_MIA               = 0xF5, ///< MIA type
+//         TARGET_TYPE_MIS               = 0xF4, ///< MIS type
+//         TARGET_TYPE_DMI               = 0xF3, ///< DMI type
+//         TARGET_TYPE_OBUS              = 0xF2, ///< OBUS type
+//         TARGET_TYPE_NV                = 0xF1, ///< NV bus type
+//         TARGET_TYPE_SBE               = 0xF0, ///< SBE type
+//         TARGET_TYPE_PPE               = 0xEF, ///< PPE type
+//         TARGET_TYPE_PEC               = 0xEE, ///< PEC type
+//         TARGET_TYPE_PHB               = 0xED, ///< PHB type  
+//         TARGET_TYPE_MI                = 0xEC, ///< MI type  
+
+        // Mappings to target types found in the error xml files
+        TARGET_TYPE_EX_CHIPLET    = TARGET_TYPE_EX,
+//        TARGET_TYPE_MBA_CHIPLET   = TARGET_TYPE_MBA,
+        TARGET_TYPE_MCS_CHIPLET   = TARGET_TYPE_MCS,
+//        TARGET_TYPE_XBUS_ENDPOINT = TARGET_TYPE_XBUS,
+//        TARGET_TYPE_ABUS_ENDPOINT = TARGET_TYPE_ABUS,
     };
-
-
-     /**
-      * @brief Typedef used when passing multiple TargetType values
-      */
-     typedef uint8_t TargetTypes_t;
+    
+    ///
+    /// @brief Typedef used when passing multiple TargetType values
+    ///
+    typedef uint8_t TargetTypes_t;           
 
     /// @cond
     constexpr TargetType operator|(TargetType x, TargetType y)

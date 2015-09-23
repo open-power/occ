@@ -1,0 +1,9 @@
+fapi2_hw_access.H is placed here to restore the return code get/putScom APIs 
+while allowing PPE Plat include directory to be before the Base HWPF in the 
+include path.
+
+1. SBE PLAT  (return codes)
+2, PPE PLAT  (no return codes) used by SGPE/PGPE/CME
+3. Base HWPF (return codes)
+
+This is a dual maintenance issue that should be reconsidered in the future.

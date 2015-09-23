@@ -1,0 +1,726 @@
+<!-- IBM_PROLOG_BEGIN_TAG                                                   -->
+<!-- This is an automatically generated prolog.                             -->
+<!--                                                                        -->
+<!-- $Source: src/ppe/importtemp/xml/attribute_info/perv_attributes.xml $   -->
+<!--                                                                        -->
+<!-- OpenPOWER OnChipController Project                                     -->
+<!--                                                                        -->
+<!-- Contributors Listed Below - COPYRIGHT 2015                             -->
+<!-- [+] International Business Machines Corp.                              -->
+<!--                                                                        -->
+<!--                                                                        -->
+<!-- Licensed under the Apache License, Version 2.0 (the "License");        -->
+<!-- you may not use this file except in compliance with the License.       -->
+<!-- You may obtain a copy of the License at                                -->
+<!--                                                                        -->
+<!--     http://www.apache.org/licenses/LICENSE-2.0                         -->
+<!--                                                                        -->
+<!-- Unless required by applicable law or agreed to in writing, software    -->
+<!-- distributed under the License is distributed on an "AS IS" BASIS,      -->
+<!-- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        -->
+<!-- implied. See the License for the specific language governing           -->
+<!-- permissions and limitations under the License.                         -->
+<!--                                                                        -->
+<!-- IBM_PROLOG_END_TAG                                                     -->
+<!-- $Id: proc_pll_ring_attributes.xml,v 1.17 2014/11/13 20:14:02 szhong Exp $ -->
+<!-- proc_pll_ring_attributes.xml -->
+<attributes>
+  <attribute>
+    <id>ATTR_REPR_RING</id>
+    <targetType>TARGET_TYPE_PERV</targetType>
+    <description>
+    </description>
+    <valueType>uint32</valueType>
+    <platInit/>
+    <persistRuntime/>
+  </attribute>
+  <!-- ********************************************************************* -->
+   <attribute>
+    <id>ATTR_TIME_RING</id>
+    <targetType>TARGET_TYPE_PERV</targetType>
+    <description>
+    </description>
+    <valueType>uint32</valueType>
+    <platInit/>
+    <persistRuntime/>
+  </attribute>
+  <!-- ********************************************************************* -->
+   <attribute>
+    <id>ATTR_GPTR_RING</id>
+    <targetType>TARGET_TYPE_PERV</targetType>
+    <description>
+    </description>
+    <valueType>uint32</valueType>
+    <platInit/>
+    <persistRuntime/>
+  </attribute>
+  <!-- ********************************************************************* -->
+   <attribute>
+    <id>ATTR_PLL_RING</id>
+    <targetType>TARGET_TYPE_PERV</targetType>
+    <description>
+    </description>
+    <valueType>uint32</valueType>
+    <platInit/>
+    <persistRuntime/>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+    <id>ATTR_PG_FSI</id>
+    <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+    <description>
+        Partial good mask for FSI chiplet.  A 0 indicates a GOOD subregion.
+        bit 4:  fsi0
+        bit 5:  fsi1
+        bit 6:  fsia
+    </description>
+    <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_PRV</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for Pervasive chiplet.  A 0 indicates a GOOD subregion.
+          bit 3:  vital
+          bit 4:  perv
+          bit 5:  net
+          bit 6:  pib
+          bit 7:  occ
+          bit 8:  anperv
+          bit 14: pllnest
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_N0</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for Nest0 chiplet.  A 0 indicates a GOOD subregion.
+          bit 3:  vital
+          bit 4:  perv
+          bit 5:  nx
+          bit 6:  cxa0
+          bit 7:  pbioe0
+          bit 8:  pbioe1
+          bit 9:  pbioe2
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_N1</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for Nest1 chiplet.  A 0 indicates a GOOD subregion.
+          bit 3:  vital
+          bit 4:  perv
+          bit 5:  mcd
+          bit 6:  va
+          bit 7:  pbioo0
+          bit 8:  pbioo1
+          bit 9:  mcs23
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_N2</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for Nest2 chiplet.  A 0 indicates a GOOD subregion.
+          bit 3:  vital
+          bit 4:  perv
+          bit 5:  cxa1
+          bit 6:  pcis0
+          bit 7:  pcis1
+          bit 8:  pcis2
+          bit 9:  iopsi
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_N3</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for Nest3 chiplet.  A 0 indicates a GOOD subregion.
+          bit 3:  vital
+          bit 4:  perv
+          bit 5:  pb
+          bit 6:  br
+          bit 7:  npu
+          bit 8:  mm
+          bit 9:  int
+          bit 10: mcs01
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_XB</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for XBus chiplet.  A 0 indicates a GOOD subregion.
+          bit 3:  vital
+          bit 4:  perv
+          bit 5:  iox0
+          bit 6:  iox1
+          bit 7:  iox2
+          bit 8:  pbiox0
+          bit 9:  pbiox1
+          bit 10: pbiox2
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+   <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_MC01</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for MC01 chiplet.  A 0 indicates a GOOD subregion.
+          bit 3:  vital
+          bit 4:  perv
+          bit 5:  mca01
+          bit 6:  iom01
+          bit 7:  iom23
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_MC23</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for MC23 chiplet.  A 0 indicates a GOOD subregion.
+          bit 3:  vital
+          bit 4:  perv
+          bit 5:  mca23
+          bit 6:  iom45
+          bit 7:  iom67
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_OB0</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for OBus0 chiplet.  A 0 indicates a GOOD subregion.
+          bit 3:  vital
+          bit 4:  perv
+          bit 5:  pbiooa0
+          bit 6:  ioo0
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_OB1</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for OBus1 chiplet.  A 0 indicates a GOOD subregion.
+          bit 3:  vital
+          bit 4:  perv
+          bit 5:  pbiooa1
+          bit 6:  ioo1
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_OB2</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for OBus2 chiplet.  A 0 indicates a GOOD subregion.
+          bit 3:  vital
+          bit 4:  perv
+          bit 5:  pbiooa2
+          bit 6:  ioo2
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_OB3</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for OBus3 chiplet.  A 0 indicates a GOOD subregion.
+          bit 3: vital
+          bit 4: perv
+          pbiooa3	ioo3
+
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_PCI0</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for PCI0 chiplet.  A 0 indicates a GOOD subregion.
+          bit 3:  vital
+          bit 4:  perv
+          bit 5:  pci00
+          bit 6:  iopci0
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_PCI1</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for PCI1 chiplet.  A 0 indicates a GOOD subregion.
+          bit 3:  vital
+          bit 4:  perv
+          bit 5:  pci11
+          bit 6:  pci12
+          bit 7:  iopci1
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_PCI2</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for PCI2 chiplet.  A 0 indicates a GOOD subregion.
+          bit 3: vital
+          bit 4: perv
+          bit 5:  pci23
+          bit 6:  pci24
+          bit 7:  pci25
+          bit 8:  iopci2
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_EQ0</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for EQ0 chiplet.  A 0 indicates a GOOD subregion.
+          bit 3:  vital
+          bit 4:  perv
+          bit 5:  eqpb
+          bit 6:  l30
+          bit 7:  l31
+          bit 8:  l20
+          bit 9:  l21
+          bit 10: an
+          bit 13: refr
+          bit 14: dpll
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_EQ1</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for EQ1 chiplet.  A 0 indicates a GOOD subregion.
+          bit 3:  vital
+          bit 4:  perv
+          bit 5:  eqpb
+          bit 6:  l30
+          bit 7:  l31
+          bit 8:  l20
+          bit 9:  l21
+          bit 10: an
+          bit 13: refr
+          bit 14: dpll
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_EQ2</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for EQ2 chiplet.  A 0 indicates a GOOD subregion.
+          bit 3:  vital
+          bit 4:  perv
+          bit 5:  eqpb
+          bit 6:  l30
+          bit 7:  l31
+          bit 8:  l20
+          bit 9:  l21
+          bit 10: an
+          bit 13: refr
+          bit 14: dpll
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_EQ3</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for EQ3 chiplet.  A 0 indicates a GOOD subregion.
+         bit 3: vital
+          bit 4:  perv
+          bit 5:  eqpb
+          bit 6:  l30
+          bit 7:  l31
+          bit 8:  l20
+          bit 9:  l21
+          bit 10: an
+          bit 13: refr
+          bit 14: dpll
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_EQ4</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for EQ4 chiplet.  A 0 indicates a GOOD subregion.
+          bit 3:  vital
+          bit 4:  perv
+          bit 5:  eqpb
+          bit 6:  l30
+          bit 7:  l31
+          bit 8:  l20
+          bit 9:  l21
+          bit 10: an
+          bit 13: refr
+          bit 14: dpll
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_EQ5</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for EQ5 chiplet.  A 0 indicates a GOOD subregion.
+          bit 3: vital
+          bit 4:  perv
+          bit 5:  eqpb
+          bit 6:  l30
+          bit 7:  l31
+          bit 8:  l20
+          bit 9:  l21
+          bit 10: an
+          bit 13: refr
+          bit 14: dpll
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_EC00</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for Core (EC00) chiplet.  A 0 indicates a GOOD subregion.
+          bit 3: vital
+          bit 4: perv
+          bit 5: c00
+          bit 6: c01
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_EC01</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for Core (EC01) chiplet.  A 0 indicates a GOOD subregion.
+          bit 3: vital
+          bit 4: perv
+          bit 5: c00
+          bit 6: c01
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_EC02</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for Core (EC02) chiplet.  A 0 indicates a GOOD subregion.
+          bit 3: vital
+          bit 4: perv
+          bit 5: c00
+          bit 6: c01
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_EC03</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for Core (EC03) chiplet.  A 0 indicates a GOOD subregion.
+          bit 3: vital
+          bit 4: perv
+          bit 5: c00
+          bit 6: c01
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_EC04</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for Core (EC04) chiplet.  A 0 indicates a GOOD subregion.
+          bit 3: vital
+          bit 4: perv
+          bit 5: c00
+          bit 6: c01
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_EC05</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for Core (EC05) chiplet.  A 0 indicates a GOOD subregion.
+          bit 3: vital
+          bit 4: perv
+          bit 5: c00
+          bit 6: c01
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_EC06</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for Core (EC06) chiplet.  A 0 indicates a GOOD subregion.
+          bit 3: vital
+          bit 4: perv
+          bit 5: c00
+          bit 6: c01
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_EC07</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for Core (EC07) chiplet.  A 0 indicates a GOOD subregion.
+          bit 3: vital
+          bit 4: perv
+          bit 5: c00
+          bit 6: c01
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_EC08</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for Core (EC08) chiplet.  A 0 indicates a GOOD subregion.
+          bit 3: vital
+          bit 4: perv
+          bit 5: c00
+          bit 6: c01
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_EC09</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for Core (EC09) chiplet.  A 0 indicates a GOOD subregion.
+          bit 3: vital
+          bit 4: perv
+          bit 5: c00
+          bit 6: c01
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_EC10</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for Core (EC10) chiplet.  A 0 indicates a GOOD subregion.
+          bit 3: vital
+          bit 4: perv
+          bit 5: c00
+          bit 6: c01
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_EC11</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for Core (EC11) chiplet.  A 0 indicates a GOOD subregion.
+          bit 3: vital
+          bit 4: perv
+          bit 5: c00
+          bit 6: c01
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_EC12</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for Core (EC12) chiplet.  A 0 indicates a GOOD subregion.
+          bit 3: vital
+          bit 4: perv
+          bit 5: c00
+          bit 6: c01
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_EC13</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for Core (EC13) chiplet.  A 0 indicates a GOOD subregion.
+          bit 3: vital
+          bit 4: perv
+          bit 5: c00
+          bit 6: c01
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_EC14</id>
+       <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for Core (EC14) chiplet.  A 0 indicates a GOOD subregion.
+          bit 3: vital
+          bit 4: perv
+          bit 5: c00
+          bit 6: c01
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_EC15</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for Core (EC15) chiplet.  A 0 indicates a GOOD subregion.
+          bit 3: vital
+          bit 4: perv
+          bit 5: c00
+          bit 6: c01
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_EC16</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for Core (EC16) chiplet.  A 0 indicates a GOOD subregion.
+          bit 3: vital
+          bit 4: perv
+          bit 5: c00
+          bit 6: c01
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_EC17</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for Core (EC17) chiplet.  A 0 indicates a GOOD subregion.
+          bit 3: vital
+          bit 4: perv
+          bit 5: c00
+          bit 6: c01
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_EC18</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for Core (EC18) chiplet.  A 0 indicates a GOOD subregion.
+         bit 3: vital
+          bit 4: perv
+          bit 5: c00
+          bit 6: c01
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_EC19</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for Core (EC19) chiplet.  A 0 indicates a GOOD subregion.
+          bit 3: vital
+          bit 4: perv
+          bit 5: c00
+          bit 6: c01
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_EC20</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for Core (EC20) chiplet.  A 0 indicates a GOOD subregion.
+          bit 3: vital
+          bit 4: perv
+          bit 5: c00
+          bit 6: c01
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_EC21</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for Core (EC21) chiplet.  A 0 indicates a GOOD subregion.
+          bit 3: vital
+          bit 4: perv
+          bit 5: c00
+          bit 6: c01
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_EC22</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for Core (EC22) chiplet.  A 0 indicates a GOOD subregion.
+          bit 3: vital
+          bit 4: perv
+          bit 5: c00
+          bit 6: c01
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+  <attribute>
+      <id>ATTR_PG_EC23</id>
+      <targetType>TARGET_TYPE_PROC_CHIP</targetType>
+      <description>
+          Partial good mask for Core (EC23) chiplet.  A 0 indicates a GOOD subregion.
+          bit 3: vital
+          bit 4: perv
+          bit 5: c00
+          bit 6: c01
+      </description>
+      <valueType>uint16</valueType>
+  </attribute>
+  <!-- ********************************************************************* -->
+</attributes>
