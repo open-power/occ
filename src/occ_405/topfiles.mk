@@ -24,8 +24,10 @@
 # IBM_PROLOG_END_TAG
 TOP-C-SOURCES = aplt/appletManager.c \
                 cmdh/cmdh_fsp.c \
+                cmdh/cmdh_fsp_cmds.c \
                 cmdh/cmdh_fsp_cmds_datacnfg.c \
                 cmdh/cmdh_mnfg_intf.c \
+                cmdh/cmdh_thread.c \
                 cmdh/cmdh_tunable_parms.c \
                 cmdh/snapshot.c \
                 cmdh/ffdc.c \
@@ -41,6 +43,7 @@ TOP-C-SOURCES = aplt/appletManager.c \
                 scom.c \
                 state.c \
                 thread/threadSch.c \
+                thread/thrm_thread.c \
                 timer/timer.c \
                 trac/trac_interface.c \
 

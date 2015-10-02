@@ -42,7 +42,7 @@
 #include <amec_data.h>
 #include "amec_amester.h"
 #include "amec_service_codes.h"
-//#include "amec_freq.h"
+#include "amec_freq.h"
 #include "amec_sys.h"
 #include "sensor.h"
 #include "sensorQueryList.h"
@@ -108,9 +108,11 @@ extern thrm_fru_data_t      G_thrm_fru_data[DATA_FRU_MAX];
 //
 // Name:  cmdh_tmgt_poll
 //
-// Description: TODO -- Add description
+// Description: Poll the OCC for OCC status, OCCs present
+//              system mode, error log ID, etc.
 //
 // End Function Specification
+/* TEMP -- NOT YET SUPPORTED (NEED AMEC/DCOM)
 errlHndl_t cmdh_tmgt_poll (const cmdh_fsp_cmd_t * i_cmd_ptr,
                      cmdh_fsp_rsp_t * o_rsp_ptr)
 {
@@ -210,6 +212,7 @@ errlHndl_t cmdh_tmgt_poll (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
     return l_errlHndl;
 }
+*/
 
 // Function Specification
 //
@@ -218,7 +221,7 @@ errlHndl_t cmdh_tmgt_poll (const cmdh_fsp_cmd_t * i_cmd_ptr,
 // Description: Used for version 0x10 poll calls from BMC/HTMGT.
 //
 // End Function Specification
-
+/* TEMP -- NOT SUPPORTED YET (NEED DCOM/AMEC)
 ERRL_RC cmdh_poll_v10(cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     ERRL_RC                     l_rc  = ERRL_RC_INTERNAL_FAIL;
@@ -507,7 +510,7 @@ ERRL_RC cmdh_poll_v10(cmdh_fsp_rsp_t * o_rsp_ptr)
 
     return l_rc;
 }
-
+*/
 
 
 
@@ -543,6 +546,7 @@ void cmdh_tmgt_query_fw (const cmdh_fsp_cmd_t * i_cmd_ptr,
 // Description: TODO -- Add description
 //
 // End Function Specification
+/* TEMP -- NOT ENABLED YET (NEED DCOM)
 errlHndl_t cmdh_reset_prep (const cmdh_fsp_cmd_t * i_cmd_ptr,
                             cmdh_fsp_rsp_t * o_rsp_ptr)
 {
@@ -617,7 +621,7 @@ errlHndl_t cmdh_reset_prep (const cmdh_fsp_cmd_t * i_cmd_ptr,
              * @userdata2   0
              * @userdata4   0
              * @devdesc     Generate error log for ResetPrep command
-             */
+             */ /*
             l_errlHndl = createErrl(
                 DATA_GET_RESET_PREP_ERRL,           //modId
                 PREP_FOR_RESET,                     //reasoncode
@@ -676,7 +680,7 @@ errlHndl_t cmdh_reset_prep (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
     return l_errlHndl;
 }
-
+*/
 
 // Function Specification
 //
@@ -738,7 +742,7 @@ void cmdh_dbug_get_trace (const cmdh_fsp_cmd_t * i_cmd_ptr,
     cmdh_dbug_get_trace_query_t *l_get_trace_query_ptr = (cmdh_dbug_get_trace_query_t*) i_cmd_ptr;
     cmdh_dbug_get_trace_resp_t *l_get_trace_resp_ptr = (cmdh_dbug_get_trace_resp_t*) o_rsp_ptr;
 
-    tracDesc_t l_trace_ptr = TRAC_get_td((char *)l_get_trace_query_ptr->comp);
+    const trace_descriptor_array_t* l_trace_ptr = TRAC_get_td((char *)l_get_trace_query_ptr->comp);
     l_rc = TRAC_get_buffer_partial(l_trace_ptr, l_get_trace_resp_ptr->data,&l_trace_buffer_size);
     l_trace_size = l_trace_buffer_size;
     if(l_rc==0)
@@ -762,6 +766,7 @@ void cmdh_dbug_get_trace (const cmdh_fsp_cmd_t * i_cmd_ptr,
 // Description: TODO Add description
 //
 // End Function Specification
+/* TEMP -- NOT ENABLED YET (NEED AMEC / SENSORS)
 void cmdh_dbug_get_ame_sensor (const cmdh_fsp_cmd_t * i_cmd_ptr,
                                cmdh_fsp_rsp_t * o_rsp_ptr)
 {
@@ -872,6 +877,7 @@ void cmdh_dbug_get_ame_sensor (const cmdh_fsp_cmd_t * i_cmd_ptr,
     o_rsp_ptr->data_length[0] = ((uint8_t *)&l_resp_data_length)[0];
     o_rsp_ptr->data_length[1] = ((uint8_t *)&l_resp_data_length)[1];
 }
+*/
 
 // Function Specification
 //
@@ -921,7 +927,7 @@ void cmdh_dbug_peek (const cmdh_fsp_cmd_t * i_cmd_ptr,
             dcache_flush( (void *) l_addr, l_len );
             l_len = 0;
             break;
-
+#if !SIMICS_ENVIRONMENT
         case 0x05:   // MMU Map Mainstore
             // Map mainstore to oci space so that we can peek at it
 
@@ -951,7 +957,7 @@ void cmdh_dbug_peek (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
             l_len = 0;
             break;
-
+#endif
         default:
             // Didn't do anything, respond with zero bytes
             l_len = 0;
@@ -1018,6 +1024,7 @@ errlHndl_t cmdh_get_elog (const cmdh_fsp_cmd_t * i_cmd_ptr,
 // Description: TODO Add description
 //
 // End Function Specification
+/* TEMP -- NOT ENABLED YET (NEED DCOM / AMEC)
 void cmdh_dbug_get_apss_data (const cmdh_fsp_cmd_t * i_cmd_ptr,
                               cmdh_fsp_rsp_t * o_rsp_ptr)
 {
@@ -1064,6 +1071,7 @@ void cmdh_dbug_get_apss_data (const cmdh_fsp_cmd_t * i_cmd_ptr,
     o_rsp_ptr->data_length[0] = ((uint8_t *)&l_resp_data_length)[0];
     o_rsp_ptr->data_length[1] = ((uint8_t *)&l_resp_data_length)[1];
 }
+*/
 
 // Function Specification
 //
@@ -1111,6 +1119,7 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
         // ------------------------------------------------
         // Run debug sub-commands that **cannot** use applets
         // ------------------------------------------------
+/* TEMP -- NOT SUPPORTED YET
         case DBUG_GET_AME_SENSOR:
             // This can't use an applet because it needs to run
             // an applet to get the data
@@ -1121,7 +1130,7 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
             // This is so small that we don't need to run it from an
             // applet
             break;
-
+*/
         case DBUG_GET_TRACE:
             // Get trace buffer SRAM address
             cmdh_dbug_get_trace(i_cmd_ptr, o_rsp_ptr);
@@ -1132,7 +1141,7 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
             TRAC_reset_buf();
             o_rsp_ptr->rc = ERRL_RC_SUCCESS;
             break;
-
+/* TEMP -- NOT YET SUPPORTED
         case DBUG_PEEK:
             cmdh_dbug_peek(i_cmd_ptr, o_rsp_ptr);
             break;
@@ -1308,6 +1317,7 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
         case DBUG_DUMP_APSS_DATA:
             cmdh_dbug_get_apss_data(i_cmd_ptr, o_rsp_ptr);
             break;
+*/
         default:
             l_rc = ERRL_RC_INVALID_DATA; //should NEVER get here...
             break;
@@ -1332,6 +1342,7 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
 // Description: TODO Add description
 //
 // End Function Specification
+/* NOT YET SUPPORTED -- NEED MODE AND STATES
 errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                     cmdh_fsp_rsp_t * o_rsp_ptr)
 {
@@ -1450,7 +1461,7 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
                      * @userdata2   OCC succeeded bitmap
                      * @userdata4   OCC_NO_EXTENDED_RC
                      * @devdesc     Timed out trying to reach requested power mode/state
-                     */
+                     */ /*
                     l_errlHndl = createErrl(
                             CMDH_GENERIC_CMD_FAILURE,           //modId
                             INTERNAL_FAILURE,                   //reasoncode
@@ -1489,7 +1500,7 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
     return l_errlHndl;
 }
-
+*/
 
 // Function Specification
 //
@@ -1498,6 +1509,7 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
 // Description: TODO Add description
 //
 // End Function Specification
+/* TEMP -- NOT YET SUPPORTED (NEED AMEC)
 errlHndl_t cmdh_amec_pass_through(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                     cmdh_fsp_rsp_t * o_rsp_ptr)
 {
@@ -1556,7 +1568,7 @@ errlHndl_t cmdh_amec_pass_through(const cmdh_fsp_cmd_t * i_cmd_ptr,
              * @userdata2   max data length
              * @userdata4   OCC_NO_EXTENDED_RC
              * @devdesc     amester_entry_point returned too much data.
-             */
+             */ /*
             l_errlHndl = createErrl(
                 AMEC_AMESTER_INTERFACE,             //modId
                 INTERNAL_FAILURE,                   //reasoncode
@@ -1596,6 +1608,7 @@ errlHndl_t cmdh_amec_pass_through(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
     return l_errlHndl;
 }
+*/
 
 // Function Specification
 //
@@ -1604,6 +1617,7 @@ errlHndl_t cmdh_amec_pass_through(const cmdh_fsp_cmd_t * i_cmd_ptr,
 // Description: TODO Add description
 //
 // End Function Specification
+/* TEMP -- NOT YET SUPPORTED (NEED SENSORS)
 errlHndl_t cmdh_tmgt_get_field_debug_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                                 cmdh_fsp_rsp_t * o_rsp_ptr)
 {
@@ -1629,7 +1643,8 @@ errlHndl_t cmdh_tmgt_get_field_debug_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         // Add occ infomation so that we know where the debug data from
         l_resp_ptr->occ_node     = G_pob_id.node_id;
-        l_resp_ptr->occ_id       = 0; // TODO: add occ id info
+        // TEMP: This was previously G_pob_id.chip_id
+        l_resp_ptr->occ_id       = 0; // TEMP/TODO: add occ id info
         l_resp_ptr->occ_role     = G_occ_role;
 
         // copy trace data
@@ -1717,6 +1732,7 @@ errlHndl_t cmdh_tmgt_get_field_debug_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
     return l_err;
 }
+*/
 
 // Function Specification
 //

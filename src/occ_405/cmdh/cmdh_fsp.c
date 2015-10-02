@@ -105,22 +105,20 @@ errlHndl_t cmdh_processTmgtRequest (const cmdh_fsp_cmd_t * i_cmd_ptr,
 // End Function Specification
 void notifyCmdhWakeupCondition(eCmdhWakeupThreadMask i_cond)
 {
-// TEMP -- NO CMD Handler thread in Phase1
-//    G_cmdh_thread_wakeup_mask |= i_cond;
-//    ssx_semaphore_post(&G_cmdh_fsp_wakeup_thread);
+    G_cmdh_thread_wakeup_mask |= i_cond;
+    ssx_semaphore_post(&G_cmdh_fsp_wakeup_thread);
 }
 
 // Function Specification
 //
 // Name:  clearCmdhWakeupCondition
 //
-// Description: TODO -- Add description
+// Description: Removes condition from the thread wakeup mask
 //
 // End Function Specification
 void clearCmdhWakeupCondition(eCmdhWakeupThreadMask i_cond)
 {
-// TEMP -- NO CMD Handler thread in Phase1
-//    G_cmdh_thread_wakeup_mask &= ~i_cond;
+    G_cmdh_thread_wakeup_mask &= ~i_cond;
 }
 
 
@@ -128,7 +126,8 @@ void clearCmdhWakeupCondition(eCmdhWakeupThreadMask i_cond)
 //
 // Name:  notifyFspDoorbellReceived
 //
-// Description: TODO -- Add description
+// Description: Notifies the command handler thread that a
+//              command from the FSP has been received
 //
 // End Function Specification
 void notifyFspDoorbellReceived(void * i_arg)
@@ -141,14 +140,14 @@ void notifyFspDoorbellReceived(void * i_arg)
 //
 // Name:  cmdh_thread_wait_for_wakeup
 //
-// Description: TODO -- Add description
+// Description: Blocks command handler thread until
+//              a doorbell from the FSP is received
 //
 // End Function Specification
 int cmdh_thread_wait_for_wakeup(void)
 {
     int l_rc = 0;
-// TEMP -- NO CMD Handler thread in Phase1
-/*
+
     // Check if we already have a pending wait for a doorbell,
     // if we do, don't schedule another one, that would result
     // in either undefined behavior or a race condition
@@ -160,7 +159,7 @@ int cmdh_thread_wait_for_wakeup(void)
 
     // Wait for someone to wakeup this thread
     l_rc = ssx_semaphore_pend(&G_cmdh_fsp_wakeup_thread, SSX_WAIT_FOREVER);
-*/
+
     return l_rc;
 }
 
@@ -221,7 +220,7 @@ int cmdh_fsp_fsi2host_mbox_wait4free(void)
 */
         if(rc2 || l_swup_timedout)
         {
-            TRAC_ERR("cmdh_fsp_fsi2host_mbox_wait4free: enable occ_special_wakeup failed with rc=%d, timeout=0x%04x, cores=0x%04x",
+            CMDH_TRAC_ERR("cmdh_fsp_fsi2host_mbox_wait4free: enable occ_special_wakeup failed with rc=%d, timeout=0x%04x, cores=0x%04x",
                      rc2, l_swup_timedout, l_cores);
 
             l_swakeup_failure = TRUE;
@@ -237,7 +236,7 @@ int cmdh_fsp_fsi2host_mbox_wait4free(void)
                     &l_payload, NULL);                     //errors committed internally
 
         if (rc) {
-            TRAC_INFO("PC_SCR3 getscom fail rc=%x",rc);
+            CMDH_TRAC_INFO("PC_SCR3 getscom fail rc=%x",rc);
             break;
         }
 
@@ -247,7 +246,7 @@ int cmdh_fsp_fsi2host_mbox_wait4free(void)
             if(0 == l_do_once)
             {
                 l_do_once = 1;
-                TRAC_INFO("HostBoot is on FSI2HOST mailbox...waiting for them to get off");
+                CMDH_TRAC_INFO("HostBoot is on FSI2HOST mailbox...waiting for them to get off");
             }
         }
         else if(0 == l_payload)
@@ -259,7 +258,7 @@ int cmdh_fsp_fsi2host_mbox_wait4free(void)
         else
         {
             // This is maybe an error, but probably not.  Especially in AVP mode.
-            TRAC_INFO("Hostboot is off FSI2HOST mbox, but PC_SCR3 = 0x%08x_%08x",
+            CMDH_TRAC_INFO("Hostboot is off FSI2HOST mbox, but PC_SCR3 = 0x%08x_%08x",
                     (uint32_t) ((l_payload & 0xFFFFFFFF00000000ULL) >> 32),
                     (uint32_t) ((l_payload & 0x00000000FFFFFFFFULL) >> 0));
 
@@ -280,7 +279,7 @@ int cmdh_fsp_fsi2host_mbox_wait4free(void)
 */
             if(rc2)
             {
-                TRAC_ERR("cmdh_fsp_fsi2host_mbox_wait4free: clear occ_special_wakeup failed with rc=%d, cores=0x%04x",
+                CMDH_TRAC_ERR("cmdh_fsp_fsi2host_mbox_wait4free: clear occ_special_wakeup failed with rc=%d, cores=0x%04x",
                          rc2, l_cores);
                 l_swakeup_failure = TRUE;
                 break;
@@ -304,7 +303,7 @@ int cmdh_fsp_fsi2host_mbox_wait4free(void)
 */
         if(rc2)
         {
-            TRAC_ERR("cmdh_fsp_fsi2host_mbox_wait4free: clear occ_special_wakeup failed with rc=%d, cores=0x%04x",
+            CMDH_TRAC_ERR("cmdh_fsp_fsi2host_mbox_wait4free: clear occ_special_wakeup failed with rc=%d, cores=0x%04x",
                      rc2, l_cores);
             l_swakeup_failure = TRUE;
         }
@@ -359,12 +358,10 @@ int cmdh_fsp_fsi2host_mbox_wait4free(void)
 // End Function Specification
 errlHndl_t cmdh_fsp_init(void)
 {
-// TEMP -- NO CMD Handler thread in Phase1
-
     int l_rc;
     errlHndl_t l_errlHndl = NULL;
     mbox_data_area_regs_t l_mbox_msg;
-/*
+
     CHECKPOINT(INIT_OCB);
 
     // ----------------------------------------------------
@@ -406,7 +403,7 @@ errlHndl_t cmdh_fsp_init(void)
 
             G_fsi2host_mbox_ready = FSI2HOST_MBOX_NOT_USEABLE;
 
-            TRAC_ERR("Timeout waiting for HostBoot to get off FSI2HOST mailbox.  rc=%d", l_rc);
+            CMDH_TRAC_ERR("Timeout waiting for HostBoot to get off FSI2HOST mailbox.  rc=%d", l_rc);
 
             /* @
              * @errortype
@@ -416,7 +413,7 @@ errlHndl_t cmdh_fsp_init(void)
              * @userdata2   0
              * @userdata4   ERC_CMDH_MBOX_REQST_FAILURE
              * @devdesc     Failed to get permission to use fsi2host mbox
-             */ /*
+             */
             l_errlHndl = createErrl(
                     CMDH_FSI2HOST_MBOX_UNAVAIL,             // modId
                     EXTERNAL_INTERFACE_FAILURE,             // reasoncode
@@ -431,7 +428,7 @@ errlHndl_t cmdh_fsp_init(void)
         else
         {
             CHECKPOINT(INIT_FSI_HOST_MBOX);
-            TRAC_INFO("HostBoot is off FSI2HOST mailbox.");
+            CMDH_TRAC_INFO("HostBoot is off FSI2HOST mailbox.");
 
             /// Initialize the FSI2HOST MBOX
             memset(&l_mbox_msg.word[0],0,sizeof(l_mbox_msg));
@@ -439,7 +436,8 @@ errlHndl_t cmdh_fsp_init(void)
             l_mbox_msg.fields.msg_queue_id                    = OCC_MSG_QUEUE_ID;
             l_mbox_msg.fields.msg_payload.fsp_cmd_buffer_addr = CMDH_LINEAR_WINDOW_BASE_ADDRESS;
             l_mbox_msg.fields.msg_payload.fsp_rsp_buffer_addr = CMDH_OCC_RESPONSE_BASE_ADDRESS;
-            l_mbox_msg.fields.msg_payload.occ_id              = G_pob_id.chip_id;
+            // TEMP: This was previously G_pob_id.chip_id (not 0)
+            l_mbox_msg.fields.msg_payload.occ_id              = 0; // TODO: Add OCC ID
 
             do
             {
@@ -533,7 +531,7 @@ errlHndl_t cmdh_fsp_init(void)
     else
     {
         // Invalid interrupt type
-        TRAC_ERR("cmdh_fsp_init: Invalid OCC interrupt type was detected! interrupt_type[%d]",
+        CMDH_TRAC_ERR("cmdh_fsp_init: Invalid OCC interrupt type was detected! interrupt_type[%d]",
                  G_occ_interrupt_type);
 
         /* @
@@ -544,7 +542,7 @@ errlHndl_t cmdh_fsp_init(void)
          * @userdata2   0
          * @userdata4   OCC_NO_EXTENDED_RC
          * @devdesc     Invalid OCC interrupt type was detected
-         */ /*
+         */
         l_errlHndl = createErrl(
                 CMDH_OCC_INTERRUPT_TYPE,           // modId
                 EXTERNAL_INTERFACE_FAILURE,        // reasoncode
@@ -556,7 +554,7 @@ errlHndl_t cmdh_fsp_init(void)
                 0                                  // userdata2
                 );
     }
-*/
+
     return l_errlHndl;
 }
 
@@ -597,7 +595,7 @@ int cmdh_fsp_attention_withRetry(uint32_t i_type, int i_timeout_in_ms)
         else
         {
             // Must have been a PIB Error
-            TRAC_ERR("PIB Error on Attention (Type %d) to FSP. rc=0x%x",
+            CMDH_TRAC_ERR("PIB Error on Attention (Type %d) to FSP. rc=0x%x",
                     i_type, l_alert_rc);
             // TODO: Create Error Log?
             break;
@@ -605,7 +603,7 @@ int cmdh_fsp_attention_withRetry(uint32_t i_type, int i_timeout_in_ms)
     }
     if(l_timeoutLimit == l_timeout)
     {
-        TRAC_INFO("Timeout on Attention (Type %d) to FSP. rc=0x%x",
+        CMDH_TRAC_INFO("Timeout on Attention (Type %d) to FSP. rc=0x%x",
                 i_type, l_alert_rc);
         l_rc = -1;
     }
@@ -893,7 +891,7 @@ errlHndl_t cmdh_fsp_cmd_hndler(void)
             (l_sender_id != ATTN_SENDER_ID_BMC))  ||
            (l_attn_type != ATTN_TYPE_CMD_WRITE))
         {
-            TRAC_ERR("Attention received with invalid values: sender_id[0x%02X] attn_type[0x%02X]",
+            CMDH_TRAC_ERR("Attention received with invalid values: sender_id[0x%02X] attn_type[0x%02X]",
                      l_sender_id,
                      l_attn_type);
 
@@ -938,7 +936,7 @@ errlHndl_t cmdh_fsp_cmd_hndler(void)
 
             if(l_ssxrc != SSX_OK)
             {
-                TRAC_ERR("cmdh_fsp_cmd_hndler: BCE request create failure rc=[%08X]", -l_ssxrc);
+                CMDH_TRAC_ERR("cmdh_fsp_cmd_hndler: BCE request create failure rc=[%08X]", -l_ssxrc);
                 /*
                  * @errortype
                  * @moduleid    CMDH_GENERIC_CMD_FAILURE
@@ -959,7 +957,7 @@ errlHndl_t cmdh_fsp_cmd_hndler(void)
 
             if(l_ssxrc != SSX_OK)
             {
-                TRAC_ERR("cmdh_fsp_cmd_hndler: BCE request schedule failure rc=[%08X]", -l_ssxrc);
+                CMDH_TRAC_ERR("cmdh_fsp_cmd_hndler: BCE request schedule failure rc=[%08X]", -l_ssxrc);
                 /*
                  * @errortype
                  * @moduleid    CMDH_GENERIC_CMD_FAILURE
@@ -996,7 +994,7 @@ errlHndl_t cmdh_fsp_cmd_hndler(void)
 
             if(l_ssxrc != SSX_OK)
             {
-                TRAC_ERR("cmdh_fsp_cmd_hndler: BCE request create failure rc=[%08X]", -l_ssxrc);
+                CMDH_TRAC_ERR("cmdh_fsp_cmd_hndler: BCE request create failure rc=[%08X]", -l_ssxrc);
                 /*
                  * @errortype
                  * @moduleid    CMDH_GENERIC_CMD_FAILURE
@@ -1017,7 +1015,7 @@ errlHndl_t cmdh_fsp_cmd_hndler(void)
 
             if(l_ssxrc != SSX_OK)
             {
-                TRAC_ERR("cmdh_fsp_cmd_hndler: BCE request schedule failure rc=[%08X]", -l_ssxrc);
+                CMDH_TRAC_ERR("cmdh_fsp_cmd_hndler: BCE request schedule failure rc=[%08X]", -l_ssxrc);
                 /*
                  * @errortype
                  * @moduleid    CMDH_GENERIC_CMD_FAILURE
@@ -1050,7 +1048,7 @@ errlHndl_t cmdh_fsp_cmd_hndler(void)
             if(l_cksm != CONVERT_UINT8_ARRAY_UINT16(G_htmgt_cmd_buffer.byte[l_cmd_len],
                                                     G_htmgt_cmd_buffer.byte[l_cmd_len+1]))
             {
-                TRAC_ERR("Checksum Error! Expected[0x%04X] Received[0x%02X%02X] Command Length[%u]",
+                CMDH_TRAC_ERR("Checksum Error! Expected[0x%04X] Received[0x%02X%02X] Command Length[%u]",
                          l_cksm,
                          G_htmgt_cmd_buffer.byte[l_cmd_len],
                          G_htmgt_cmd_buffer.byte[l_cmd_len+1],
@@ -1096,7 +1094,7 @@ errlHndl_t cmdh_fsp_cmd_hndler(void)
 
             if(l_ssxrc != SSX_OK)
             {
-                TRAC_ERR("cmdh_fsp_cmd_hndler: BCE request create failure rc=[%08X]", -l_ssxrc);
+                CMDH_TRAC_ERR("cmdh_fsp_cmd_hndler: BCE request create failure rc=[%08X]", -l_ssxrc);
                 /*
                  * @errortype
                  * @moduleid    CMDH_GENERIC_CMD_FAILURE
@@ -1117,7 +1115,7 @@ errlHndl_t cmdh_fsp_cmd_hndler(void)
 
             if(l_ssxrc != SSX_OK)
             {
-                TRAC_ERR("cmdh_fsp_cmd_hndler: BCE request schedule failure rc=[%08X]", -l_ssxrc);
+                CMDH_TRAC_ERR("cmdh_fsp_cmd_hndler: BCE request schedule failure rc=[%08X]", -l_ssxrc);
                 /*
                  * @errortype
                  * @moduleid    CMDH_GENERIC_CMD_FAILURE
@@ -1155,7 +1153,7 @@ errlHndl_t cmdh_fsp_cmd_hndler(void)
             if(l_cksm != CONVERT_UINT8_ARRAY_UINT16(G_fsp_msg.cmd->byte[l_cmd_len],
                         G_fsp_msg.cmd->byte[l_cmd_len+1]))
             {
-                TRAC_ERR("Checksum Error! Expected[0x%04X] Received[0x%02X%02X]",
+                CMDH_TRAC_ERR("Checksum Error! Expected[0x%04X] Received[0x%02X%02X]",
                          l_cksm,
                          G_fsp_msg.cmd->byte[l_cmd_len],
                          G_fsp_msg.cmd->byte[l_cmd_len+1]);
@@ -1265,17 +1263,17 @@ errlHndl_t cmdh_processTmgtRequest (const cmdh_fsp_cmd_t * i_cmd_ptr,
     i_rsp_ptr->data_length[1] = 0;
     i_rsp_ptr->rc             = ERRL_RC_SUCCESS;
 
-    TRAC_INFO("Commands are not supported yet!");
+    CMDH_TRAC_INFO("Commands are not supported yet!");
 
     // Run command function based on cmd_type
-    // TEMP -- PHASE 1 NO SUPPORT
-/*
     switch(l_cmd_type)
     {
+// TEMP -- NO SUPPORT YET
+// NOTE: It may be necessary to uncomment the function from cmdh_fsp_cmds.c as well
+/*
         case CMDH_POLL:
             l_err = cmdh_tmgt_poll (i_cmd_ptr,i_rsp_ptr);
             break;
-
         case CMDH_QUERYFWLEVEL:
             cmdh_tmgt_query_fw (i_cmd_ptr,i_rsp_ptr);
             break;
@@ -1339,8 +1337,9 @@ errlHndl_t cmdh_processTmgtRequest (const cmdh_fsp_cmd_t * i_cmd_ptr,
         case CMDH_GET_THROTTLE_VALUE:
         case CMDH_GET_CPU_TEMPS:
         case CMDH_FOM:
+*/
         default:
-            TRAC_INFO("Invalid or unsupported command 0x%02x",l_cmd_type);
+            CMDH_TRAC_INFO("Invalid or unsupported command 0x%02x",l_cmd_type);
 
             // -----------------------------------------------
             // Generate error response packet
@@ -1349,7 +1348,6 @@ errlHndl_t cmdh_processTmgtRequest (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
             break;
     } //end switch
-*/
     return l_err;
 }
 

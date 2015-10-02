@@ -52,7 +52,7 @@ void Cmd_Hndl_thread_routine(void *arg)
     errlHndl_t l_errlHndl = NULL;
 
     CHECKPOINT(CMDH_THREAD_STARTED);
-    TRAC_INFO("Command Handler Thread Started ... " );
+    CMDH_TRAC_INFO("Command Handler Thread Started ... " );
 
     // ------------------------------------------------
     // Initialize HW for FSP Comm
@@ -139,6 +139,3 @@ void Cmd_Hndl_thread_routine(void *arg)
     }
 
 }
-
-
-

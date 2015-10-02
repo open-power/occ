@@ -2,7 +2,9 @@ INPUT (
         appletManager.o
         apss.o
         cmdh_fsp.o
+        cmdh_fsp_cmds.o
         cmdh_fsp_cmds_datacnfg.o
+        cmdh_thread.o
         errl.o
         ffdc.o
         homer.o
@@ -14,6 +16,7 @@ INPUT (
         rtls.o
         rtls_tables.o
         threadSch.o
+        thrm_thread.o
         timer.o
         trac_interface.o
         scom.o

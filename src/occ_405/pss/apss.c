@@ -143,7 +143,7 @@ void do_apss_recovery(void)
     uint64_t        l_spi_adc_wdata;
 
 
-    TRAC_ERR("detected invalid power data[%08x%08x]",
+    INTR_TRAC_ERR("detected invalid power data[%08x%08x]",
              (uint32_t)(G_gpe_continue_pwr_meas_read_args.meas_data[0] >> 32),
              (uint32_t)(G_gpe_continue_pwr_meas_read_args.meas_data[0] & 0x00000000ffffffffull));
 
@@ -187,14 +187,13 @@ void do_apss_recovery(void)
             break;
         }
 
-/* TEMP -- UNRESOLVED TRACE ERRORS
-        TRAC_ERR("70000[%08x] 70001[%08x] 70002[%08x] 70003|70005[%08x] 70010[%08x]",
+        INTR_TRAC_ERR("70000[%08x] 70001[%08x] 70002[%08x] 70003|70005[%08x] 70010[%08x]",
                 (uint32_t)(l_spi_adc_ctrl0 >> 32),
                 (uint32_t)(l_spi_adc_ctrl1 >> 32),
                 (uint32_t)(l_spi_adc_ctrl2 >> 32),
                 (uint32_t)((l_spi_adc_status >> 32) | (l_spi_adc_reset >> 48)), // Stuff reset register in lower 16 bits
                 (uint32_t)(l_spi_adc_wdata >> 32));
-*/
+
         // Special error handling on OCC backup. Keep an up/down counter of
         // fail/success and log predictive error when we reach the limit.
         if(G_occ_role == OCC_SLAVE)
@@ -211,7 +210,7 @@ void do_apss_recovery(void)
                 rtl_stop_task(TASK_ID_APSS_CONT);
                 rtl_stop_task(TASK_ID_APSS_DONE);
 
-                TRAC_INFO("Redundant APSS has exceeded failure threshold.  Logging Error");
+                INTR_TRAC_INFO("Redundant APSS has exceeded failure threshold.  Logging Error");
 
                 /*
                  * @errortype
@@ -258,7 +257,7 @@ void do_apss_recovery(void)
             }
         }
 
-        TRAC_INFO("Starting APSS recovery.  fail_count=%d", G_backup_fail_count);
+        INTR_TRAC_INFO("Starting APSS recovery.  fail_count=%d", G_backup_fail_count);
 
         // Reset the ADC engine
         l_scom_addr = SPIPSS_ADC_RESET_REG;
@@ -288,7 +287,7 @@ void do_apss_recovery(void)
     // Just trace it if we get a scom failure trying to collect FFDC
     if(l_scom_rc)
     {
-        TRAC_ERR("apss recovery scom failure. addr=0x%08x, rc=0x%08x", l_scom_addr, l_scom_rc);
+        INTR_TRAC_ERR("apss recovery scom failure. addr=0x%08x, rc=0x%08x", l_scom_addr, l_scom_rc);
     }
 }
 
@@ -321,7 +320,7 @@ void task_apss_start_pwr_meas(struct task *i_self)
         {
             if (!L_idle_traced)
             {
-                TRAC_ERR("task_apss_start_pwr_meas: request is not idle.");
+                INTR_TRAC_ERR("task_apss_start_pwr_meas: request is not idle.");
                 L_idle_traced = TRUE;
             }
             break;
@@ -344,7 +343,7 @@ void task_apss_start_pwr_meas(struct task *i_self)
                 //error should only be non-zero in the case where the GPE timed out waiting for
                 //the APSS master to complete the last operation.  Just keep retrying until
                 //DCOM resets us due to not having valid power data.
-                TRAC_ERR("task_apss_start_pwr_meas: request is not complete or failed with an error(rc:0x%08X, ffdc:0x%08X%08X). " \
+                INTR_TRAC_ERR("task_apss_start_pwr_meas: request is not complete or failed with an error(rc:0x%08X, ffdc:0x%08X%08X). " \
                         "CompletionState:0x%X.",
                          G_gpe_start_pwr_meas_read_args.error.rc,
                          G_gpe_start_pwr_meas_read_args.error.ffdc >> 32,
@@ -399,7 +398,7 @@ void task_apss_start_pwr_meas(struct task *i_self)
         {
             errlHndl_t l_err = NULL;
 
-            TRAC_ERR("task_apss_start_pwr_meas: schedule failed w/rc=0x%08X (%d us)", l_rc,
+            INTR_TRAC_ERR("task_apss_start_pwr_meas: schedule failed w/rc=0x%08X (%d us)", l_rc,
                      (int) ((ssx_timebase_get())/(SSX_TIMEBASE_FREQUENCY_HZ/1000000)));
 
             /*
@@ -471,7 +470,7 @@ void task_apss_continue_pwr_meas(struct task *i_self)
         {
             if (!L_idle_traced)
             {
-                TRAC_ERR("task_apss_continue_pwr_meas: request is not idle.");
+                INTR_TRAC_ERR("task_apss_continue_pwr_meas: request is not idle.");
                 L_idle_traced = TRUE;
             }
             break;
@@ -491,7 +490,7 @@ void task_apss_continue_pwr_meas(struct task *i_self)
                 //error should only be non-zero in the case where the GPE timed out waiting for
                 //the APSS master to complete the last operation.  Just keep retrying until
                 //DCOM resets us due to not having valid power data.
-                TRAC_ERR("task_apss_continue_pwr_meas: request is not complete or failed with an error(rc:0x%08X, ffdc:0x%08X%08X). " \
+                INTR_TRAC_ERR("task_apss_continue_pwr_meas: request is not complete or failed with an error(rc:0x%08X, ffdc:0x%08X%08X). " \
                         "CompletionState:0x%X.",
                          G_gpe_continue_pwr_meas_read_args.error.rc,
                          G_gpe_continue_pwr_meas_read_args.error.ffdc >> 32,
@@ -546,7 +545,7 @@ void task_apss_continue_pwr_meas(struct task *i_self)
         {
             errlHndl_t l_err = NULL;
 
-            TRAC_ERR("task_apss_cont_pwr_meas: schedule failed w/rc=0x%08X (%d us)", l_rc,
+            INTR_TRAC_ERR("task_apss_cont_pwr_meas: schedule failed w/rc=0x%08X (%d us)", l_rc,
                      (int) ((ssx_timebase_get())/(SSX_TIMEBASE_FREQUENCY_HZ/1000000)));
 
             /*
@@ -685,7 +684,7 @@ void task_apss_complete_pwr_meas(struct task *i_self)
         {
             if (!L_idle_traced)
             {
-                TRAC_ERR("task_apss_complete_pwr_meas: request is not idle.");
+                INTR_TRAC_ERR("task_apss_complete_pwr_meas: request is not idle.");
                 L_idle_traced = TRUE;
             }
             break;
@@ -706,7 +705,7 @@ void task_apss_complete_pwr_meas(struct task *i_self)
                 // Error should only be non-zero in the case where the GPE timed out waiting for
                 // the APSS master to complete the last operation. Just keep retrying until
                 // DCOM resets us due to not having valid power data.
-                TRAC_ERR("task_apss_complete_pwr_meas: request is not complete or failed with an error(rc:0x%08X, ffdc:0x%08X%08X). " \
+                INTR_TRAC_ERR("task_apss_complete_pwr_meas: request is not complete or failed with an error(rc:0x%08X, ffdc:0x%08X%08X). " \
                         "CompletionState:0x%X.",
                          G_gpe_complete_pwr_meas_read_args.error.rc,
                          G_gpe_complete_pwr_meas_read_args.error.ffdc >> 32,
@@ -762,7 +761,7 @@ void task_apss_complete_pwr_meas(struct task *i_self)
 
             errlHndl_t l_err = NULL;
 
-            TRAC_ERR("task_apss_complete_pwr_meas: schedule failed w/rc=0x%08X (%d us)", l_rc,
+            INTR_TRAC_ERR("task_apss_complete_pwr_meas: schedule failed w/rc=0x%08X (%d us)", l_rc,
                      (int) ((ssx_timebase_get())/(SSX_TIMEBASE_FREQUENCY_HZ/1000000)));
             /*
              * @errortype

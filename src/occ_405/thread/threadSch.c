@@ -44,13 +44,13 @@ SsxTimer G_threadSchTimer;
 // Index of highest priority thread in G_scheduledThreads
 uint16_t G_threadSchedulerIndex = 0;
 
-// TEMP: Commented out cmd handler and dcom threads for Simics enablement.
+// TEMP: Commented out dcom thread for Simics enablement.
 //       Will need to reenable them when we need them again.
 // Array that holds the threads that need scheduling
 SsxThread* G_scheduledThreads[] =
 {
     &Main_thread,
-//    &Cmd_Hndl_thread,
+    &Cmd_Hndl_thread,
     &App_thread,
     &TestAppletThread,
 //    &Dcom_thread,
@@ -149,14 +149,13 @@ void initThreadScheduler(void)
     //  threads in G_scheduledThreads ie highest priority thread should be
     //  index 0 of G_scheduledThreads
 
-/* TEMP -- NOT USED IN PHASE1
     l_cmdThreadRc = createAndResumeThreadHelper(&Cmd_Hndl_thread,
               Cmd_Hndl_thread_routine,
               (void *)0,
               (SsxAddress)Cmd_hndl_thread_stack,
               THREAD_STACK_SIZE,
               THREAD_PRIORITY_3);
-*/
+
     l_appThreadRc = createAndResumeThreadHelper(&App_thread,
               App_thread_routine,
               (void *)&G_apltPdtType,
@@ -192,6 +191,7 @@ void initThreadScheduler(void)
     {
         TRAC_INFO("Error creating timer: RC: %d", l_timerRc);
     }
+
 /* TEMP -- NOT USED IN PHASE1
     // Create snapshot timer
     l_snapshotTimerRc = ssx_timer_create(&G_snapshotTimer, cmdh_snapshot_callback, 0);
@@ -220,12 +220,11 @@ void initThreadScheduler(void)
         || l_timerRc
         || l_snapshotTimerRc )
     {
-// TEMP -- UNRESOLVED TRACE ERROR
-/*        TRAC_ERR("Error creating thread: l_appThreadRc: %d, "
+        TRAC_ERR("Error creating thread: l_appThreadRc: %d, "
                  "l_testAppletThreadRc: %d, l_cmdThreadRc: %d, "
                  "l_dcomThreadRc: %d", l_appThreadRc,l_testAppletThreadRc,
                  l_timerRc,l_cmdThreadRc,l_dcomThreadRc);
-*/
+
         TRAC_ERR("Error starting timers: timerRc: %d, snapshotTimerRc: %d.",
                   l_timerRc, l_snapshotTimerRc);
         // Create error log and log it

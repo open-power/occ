@@ -274,14 +274,12 @@ errlHndl_t SMGR_observation_to_active()
             {
                 if(FALSE == l_error_logged)
                 {
-/* TEMP -- UNRESOLVED TRACE ERRORS
                     TRAC_ERR("SMGR: Timeout waiting for Pstates to be enabled, master state=%d, slave state=%d, pmc_mode[%08x], chips_present[%02x], pmc_deconfig[%08x]", //gm034
                             G_proc_dcm_sync_state.sync_state_master,
                             G_proc_dcm_sync_state.sync_state_slave,
                             in32(PMC_MODE_REG),
                             G_sysConfigData.is_occ_present,
                             in32(PMC_CORE_DECONFIGURATION_REG));
-*/ /*
                 }
                 l_extRc = ERC_GENERIC_TIMEOUT;
                 break;
@@ -390,13 +388,12 @@ errlHndl_t SMGR_observation_to_active()
             // This combined with the hang pulse count and pre-divider yields
             // about a 2 second timeout
             pohr.fields.pmc_occ_heartbeat_time = 0xffff;
-/* TEMP -- UNRESOLVED TRACE ERROR: "sizeof applied to a bitfield"
             TRAC_IMP("Configure PMC heartbeat, heartbeat_time=0x%x",
                     pohr.fields.pmc_occ_heartbeat_time);
             ppr0.fields.hangpulse_predivider = 1;
             TRAC_IMP("Configure PMC parm reg predivider=%d",
                     ppr0.fields.hangpulse_predivider);
-*/ /*
+
             // Write registers twice, known issue with heartbeat reg
             out32(PMC_OCC_HEARTBEAT_REG, pohr.value);
             out32(PMC_OCC_HEARTBEAT_REG, pohr.value);
