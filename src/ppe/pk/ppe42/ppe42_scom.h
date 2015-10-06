@@ -59,9 +59,8 @@ extern "C" {
 asm volatile \
     ( \
     "lvd %[data], 0(%[address]) \n" \
-    :  [data]"=&r"(_m_data) \
-    :  "[data]"(_m_data), \
-       [address]"b"(_m_address) \
+    :  [data]"=r"(_m_data) \
+    :  [address]"b"(_m_address) \
     );
 
 
@@ -81,9 +80,8 @@ asm volatile \
 asm volatile \
     ( \
     "lvdx %[data], %[base], %[offset] \n" \
-    :  [data]"=&r"(*_m_data) \
-    :  "[data]"(*_m_data), \
-       [base]"b"(_m_base), \
+    :  [data]"=r"(_m_data) \
+    :  [base]"b"(_m_base), \
        [offset]"r"(_m_offset) \
     );
 
