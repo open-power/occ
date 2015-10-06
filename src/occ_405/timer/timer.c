@@ -173,7 +173,8 @@ void task_poke_watchdogs(struct task * i_self)
     // Read the PMC status register on every RTL, this is how the OCC
     // generates a PMC hearbeat.
     pmc_status_reg_t psr;
-    psr.value = in32(PMC_STATUS_REG);
+// TMP: Not Ready yet: PMC => PGPE
+//    psr.value = in32(PMC_STATUS_REG);
 }
 
 // Function Specification

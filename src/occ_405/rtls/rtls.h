@@ -40,24 +40,24 @@ typedef struct task {
 // These are used as indices into the task table defined below.
 typedef enum {
     TASK_ID_APSS_START = 0x00,
-    TASK_ID_CORE_DATA_LOW,
+//    TASK_ID_CORE_DATA_LOW,
     TASK_ID_APSS_CONT,
-    TASK_ID_CORE_DATA_HIGH,
+//    TASK_ID_CORE_DATA_HIGH,
     TASK_ID_APSS_DONE,
-    TASK_ID_FAST_CORE_DATA,
-    TASK_ID_DCOM_RX_INBX,
-    TASK_ID_DCOM_TX_INBX,
+//    TASK_ID_FAST_CORE_DATA,
+//    TASK_ID_DCOM_RX_INBX,
+//    TASK_ID_DCOM_TX_INBX,
     TASK_ID_POKE_WDT,    // Reset ppc405 watchdog and OCB timer
-    TASK_ID_DCOM_WAIT_4_MSTR,
-    TASK_ID_DCOM_RX_OUTBX,
-    TASK_ID_DCOM_TX_OUTBX,
-    TASK_ID_DCOM_PARSE_FW_MSG,
+//    TASK_ID_DCOM_WAIT_4_MSTR,
+//    TASK_ID_DCOM_RX_OUTBX,
+//    TASK_ID_DCOM_TX_OUTBX,
+//    TASK_ID_DCOM_PARSE_FW_MSG,
     TASK_ID_CHECK_FOR_CHECKSTOP,
-    TASK_ID_AMEC_SLAVE,             // AMEC SMH tasks
-    TASK_ID_AMEC_MASTER,            // AMEC SMH tasks
-    TASK_ID_CENTAUR_DATA,           // Centaur task
-    TASK_ID_CORE_DATA_CONTROL,
-    TASK_ID_CENTAUR_CONTROL,        // Centaur task
+//    TASK_ID_AMEC_SLAVE,             // AMEC SMH tasks
+//    TASK_ID_AMEC_MASTER,            // AMEC SMH tasks
+//    TASK_ID_CENTAUR_DATA,           // Centaur task
+//    TASK_ID_CORE_DATA_CONTROL,
+//    TASK_ID_CENTAUR_CONTROL,        // Centaur task
     TASK_END  // This must always be the last enum in this list,
               // so that TASK_END always equals the last task ID + 1.
 } task_id_t;

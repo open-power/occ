@@ -136,9 +136,12 @@ errlHndl_t SMGR_standby_to_observation()
         l_error_logged = FALSE; // @at015a
         TRAC_IMP("SMGR: Standby to Observation Transition Started");
 
+// TEMP -- NOT SUPPORTED YET IN PHASE1 
+/*
         //This flag is set if tmgt sends us at least one data set in the
         //mem config data packet.  No data sets will be sent for centaur ec less than 2.0
         //due to an intermittent hw failure that can occur on those chips.
+
         if(G_mem_monitoring_allowed)
         {
             if(!rtl_task_is_runnable(TASK_ID_CENTAUR_DATA))
@@ -163,7 +166,7 @@ errlHndl_t SMGR_standby_to_observation()
                 }
             }
         }
-
+*/
         // Set the RTL Flags to indicate which tasks can run
         //   - Set OBSERVATION b/c we're in OBSERVATION State
         rtl_clr_run_mask_deferred(RTL_FLAG_STANDBY);

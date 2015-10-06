@@ -492,7 +492,8 @@ void initAppletManager( void )
         l_mmuUnmap = TRUE;
 
         // Traverse through OCC signed image to get applet address
-        l_rc = initAppletAddr();
+        // TEMP: Not Ready, SIMICS code doesn't handle applet address initialization properly
+//        l_rc = initAppletAddr();
 
         CHECKPOINT(APP_ADDR_INITIALIZED);
 
