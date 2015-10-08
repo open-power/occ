@@ -583,7 +583,7 @@ SECTIONS
     // FIR data heap section
     ////////////////////////////////
     __CUR_COUNTER__ = .;
-    _FIR_HEAP_SECTION_BASE = 0xfffb1000;
+    _FIR_HEAP_SECTION_BASE = 0xfffb9000;
     _FIR_HEAP_SECTION_SIZE = 0x3000;
     . = _FIR_HEAP_SECTION_BASE;
     .firHeap . : {*(firHeap) . = ALIGN(1024);} > sram
@@ -593,7 +593,7 @@ SECTIONS
     // FIR data parms section
     ////////////////////////////////
     __CUR_COUNTER__ = .;
-    _FIR_PARMS_SECTION_BASE = 0xfffb4000;
+    _FIR_PARMS_SECTION_BASE = 0xfffbc000;
     _FIR_PARMS_SECTION_SIZE = 0x1000;
     . = _FIR_PARMS_SECTION_BASE;
     .firParms . : {*(firParms) . = ALIGN(1024);} > sram
@@ -604,9 +604,9 @@ SECTIONS
     ////////////////////////////////
     __CUR_COUNTER__ = .;
 
-    _LINEAR_WR_WINDOW_SECTION_BASE = 0xfffb5000;
+    _LINEAR_WR_WINDOW_SECTION_BASE = 0xfffbd000;
     _LINEAR_WR_WINDOW_SECTION_SIZE = 0x1000;
-    _LINEAR_RD_WINDOW_SECTION_BASE = 0xfffb6000;
+    _LINEAR_RD_WINDOW_SECTION_BASE = 0xfffbe000;
     _LINEAR_RD_WINDOW_SECTION_SIZE = 0x1000;
     . = _LINEAR_WR_WINDOW_SECTION_BASE;
     .linear_wr . : {*(linear_wr) . = ALIGN(_LINEAR_WR_WINDOW_SECTION_SIZE);} > sram
@@ -615,20 +615,24 @@ SECTIONS
     . = __CUR_COUNTER__;
 
     ////////////////////////////////
-    // Applet areas
+    // TEMP/TODO: Previously, we were able to reclaim this space
+    //            by loading applets over init data. The init data
+    //            takes up much more than 4K, but as we stand now (pre-sensors)
+    //            it should be fine. However, we either need to
+    //            put these sections back into the normal area
+    //            with the rest of the code or figure out what to 
+    //            do with it to regain the space.
     ////////////////////////////////
        __CUR_COUNTER__ = .;
-    _APPLET0_SECTION_BASE = 0xfffb8000;
-    . = _APPLET0_SECTION_BASE;
+    INIT_SECTION_BASE = 0xfffbf000;
+    . = INIT_SECTION_BASE;
+
     // Section aligned to 128 to make occ main application image 128 bytes
     // aligned which is requirement for applet manager when traversing through
     // all the image headers
     initSection . :  { *(initSection) init_text . = ALIGN(128);} > sram
 
     . = __CUR_COUNTER__;
-    _APPLET0_SECTION_SIZE = 0x00004000;
-    _APPLET1_SECTION_BASE = 0xfffbc000;
-    _APPLET1_SECTION_SIZE = 0x00003c00;
 
     //////////////////////////////
     // End Of Memory

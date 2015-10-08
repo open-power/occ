@@ -173,10 +173,9 @@
 # 404 (x194)        32       Thread stack trace
 #
 # 436 (x1b4)        64      Command thread dump
-# 500 (x1f4)        64      App thread dump
-# 564 (x234)        64      DCOM thread dump
-# 628 (x274)        32      Stack trace
-# 660 (x294)        4       xffdcffdc End of buffer marker
+# 500 (x1f4)        64      DCOM thread dump
+# 564 (x234)        32      Stack trace
+# 596 (x254)        4       xffdcffdc End of buffer marker
 # -----------------------------------------------------------------------------
 # Total size:       664 - 8 + 3 = 659
 #
@@ -390,8 +389,6 @@ MAIN_THREAD_DUMP:           .byte
     .struct MAIN_THREAD_DUMP + 64
 CMD_THREAD_DUMP:            .byte
     .struct CMD_THREAD_DUMP + 64
-APP_THREAD_DUMP:            .byte
-    .struct APP_THREAD_DUMP + 64
 DCOM_THREAD_DUMP:           .byte
     .struct DCOM_THREAD_DUMP + 64
 STACK_TRACE:                .byte
@@ -931,11 +928,6 @@ __save_ffdc_regs:
     # Add the Command handler thread dump
     _liw        %r3, Cmd_Hndl_thread
     _liwa       %r4, CMD_THREAD_DUMP
-    bl          ffdc_thread_dumper
-
-    # Add the App thread dump
-    _liw        %r3, App_thread
-    _liwa       %r4, APP_THREAD_DUMP
     bl          ffdc_thread_dumper
 
     # Add the DCOM thread dump

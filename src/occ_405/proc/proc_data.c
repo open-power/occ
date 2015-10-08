@@ -753,7 +753,6 @@ void print_core_data_sensors(uint8_t core)
         PROC_DBG("\n-------------------------------\n");
         PROC_DBG("Core [%x] Sensors Data \n", core);
         // TODO: Commented these out b/c they take too long to run in task.
-        //       Consider moving this to an applet
         //dumpHexString(&l_core_data->sensors_tod, sizeof(l_core_data->sensors_tod), "Sensor TOD");
         //dumpHexString(&l_core_data->sensors_v0, sizeof(l_core_data->sensors_v0), "Sensor VO");
         //dumpHexString(&l_core_data->sensors_v1, sizeof(l_core_data->sensors_v1), "Sensor V1");
@@ -785,7 +784,6 @@ void print_core_status(uint8_t core)
         PROC_DBG("\n-------------------------\n");
         PROC_DBG("Core [%x] status \n", core);
         // TODO: Commented these out b/c they take too long to run in task.
-        //       Consider moving this to an applet
         //dumpHexString(&l_core_data->core_tod, sizeof(l_core_data->core_tod), "Core TOD");
         //dumpHexString(&l_core_data->core_raw_cycles, sizeof(l_core_data->core_raw_cycles), "Core Raw Cycles");
         //dumpHexString(&l_core_data->core_run_cycles, sizeof(l_core_data->core_run_cycles), "Run Cycles");
@@ -822,7 +820,6 @@ void print_fast_core_data(void)
     {
         PROC_DBG("\n---------------------------\n");
         // TODO: Commented these out b/c they take too long to run in task.
-        //       Consider moving this to an applet
         //dumpHexString(&l_fast_core_data->tod, sizeof(l_fast_core_data->tod), "Fast Core Data TOD");
         //dumpHexString(&l_fast_core_data->core_data, sizeof(fast_core_data_t) * MAX_NUM_HW_CORES, "Fast Core Data");
         PROC_DBG("\n");

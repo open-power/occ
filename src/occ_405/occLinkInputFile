@@ -1,6 +1,6 @@
 INPUT (
-        appletManager.o
         apss.o
+        cmdh_dbug_cmd.o
         cmdh_fsp.o
         cmdh_fsp_cmds.o
         cmdh_fsp_cmds_datacnfg.o
@@ -20,6 +20,7 @@ INPUT (
         timer.o
         trac_interface.o
         scom.o
+        sensor_query_list.o
         state.o
         ssx_core.o
         ssx_init.o

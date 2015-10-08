@@ -45,19 +45,19 @@ LINK_OBJS = $(OBJS) $(SSXLIB) $(COMMONLIB) $(OCCLIB) $(PPC405LIB)
 LINK_SCRIPT = $(addprefix $(OBJDIR)/, linkscript)
 LINK_CMD_SCRIPT = linkocc.cmd
 LDFLAGS += --oformat=elf32-powerpc -melf32ppc
-LIB_DIRS =  -L$(OBJDIR)/ssx \
+LIB_DIRS =  -L$(OBJDIR) \
+            -L$(OBJDIR)/ssx \
             -L$(OBJDIR)/ssx/ppc405 \
             -L$(OBJDIR)/ssx/ppc32 \
             -L$(OBJDIR)/commonlib \
             -L$(OBJDIR)/occlib \
             -L$(OBJDIR)/ppc405lib \
-            -L$(OBJDIR) \
-            -L$(OBJDIR)/aplt \
             -L$(OBJDIR)/cmdh \
             -L$(OBJDIR)/dcom \
             -L$(OBJDIR)/errl \
             -L$(OBJDIR)/pss \
             -L$(OBJDIR)/rtls \
+            -L$(OBJDIR)/sensor \
             -L$(OBJDIR)/thread \
             -L$(OBJDIR)/timer \
             -L$(OBJDIR)/trac \

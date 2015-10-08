@@ -53,8 +53,6 @@ typedef enum
 
 extern uint8_t main_thread_stack[THREAD_STACK_SIZE];
 extern uint8_t Cmd_hndl_thread_stack[THREAD_STACK_SIZE];
-extern uint8_t App_thread_stack[THREAD_STACK_SIZE];
-extern uint8_t testAppletThreadStack[THREAD_STACK_SIZE];
 
 /*----------------------------------------------------------*/
 /* SsxThread Declaration                                    */
@@ -67,22 +65,12 @@ extern SsxThread Main_thread;
 extern SsxThread Cmd_Hndl_thread;
 
 // Application manager thread
-extern SsxThread App_thread;
-
-// Test applet thread
-extern SsxThread TestAppletThread;
-
-// Application manager thread
 extern SsxThread Dcom_thread;
 
 void Main_thread_routine(void *private);
 
 void Cmd_Hndl_thread_routine(void *arg);
 
-void App_thread_routine(void *arg);
-
 void Dcom_thread_routine(void *arg);
-
-void testAppletThreadRoutine(void *arg);
 
 #endif //_THREAD_H

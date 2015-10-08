@@ -1,3 +1,4 @@
+
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
@@ -34,7 +35,6 @@
 #include <threadSch.h>
 #include <errl.h>
 #include <apss.h>
-#include <appletManager.h>
 #include <trac.h>
 #include <occ_service_codes.h>
 #include <occ_sys_config.h>
@@ -66,7 +66,6 @@ extern uint8_t G_occ_interrupt_type;
 // Remove the next LOC when dcom_initialize_roles() is un-commented
 uint8_t     G_occ_role = OCC_MASTER;  // TEMP
 
-// TEMP Remove next 6 LOC when apssInitApplet.c is added
 extern GpeRequest G_meas_start_request;
 extern GpeRequest G_meas_cont_request;
 extern GpeRequest G_meas_complete_request;
@@ -149,7 +148,7 @@ void pmc_hw_error_isr(void *private, SsxIrqId irq, int priority)
     // dump a bunch of FFDC registers
     //fill_pmc_ffdc_buffer(&l_pmc_ffdc);
 
-    TRAC_ERR("PMC Failure detected through OISR0[9]!!!");
+    MAIN_TRAC_ERR("PMC Failure detected through OISR0[9]!!!");
     /* @
      * @moduleid   PMC_HW_ERROR_ISR
      * @reasonCode PMC_FAILURE
@@ -225,9 +224,7 @@ void occ_hw_error_isr(void *private, SsxIrqId irq, int priority)
     _putscom(OCB_OCCLFIR_OR, OCC_LFIR_SPARE_BIT50, SCOM_TIMEOUT);
 
     //Halt occ so that hardware will enter safe mode
-    TRAC_ERR("Should have halted here...");
-// TEMP -- NOT SUPPORTED IN PHASE1
-//    OCC_HALT(ERRL_RC_OCC_HW_ERROR);
+    OCC_HALT(ERRL_RC_OCC_HW_ERROR);
 }
 
 // Enable and register any ISR's that need to be set up as early as possible.
@@ -250,7 +247,7 @@ void occ_irq_setup()
                              SSX_IRQ_TRIGGER_EDGE_SENSITIVE);
         if(l_rc)
         {
-            TRAC_ERR("occ_irq_setup: ssx_irq_setup(OCCHW_IRQ_OCC_ERROR) failed with rc=0x%08x", l_rc);
+            MAIN_TRAC_ERR("occ_irq_setup: ssx_irq_setup(OCCHW_IRQ_OCC_ERROR) failed with rc=0x%08x", l_rc);
             break;
         }
 
@@ -261,7 +258,7 @@ void occ_irq_setup()
                                    SSX_CRITICAL);
         if(l_rc)
         {
-            TRAC_ERR("occ_irq_setup: ssx_irq_handler_set(OCCHW_IRQ_OCC_ERROR) failed with rc=0x%08x", l_rc);
+            MAIN_TRAC_ERR("occ_irq_setup: ssx_irq_handler_set(OCCHW_IRQ_OCC_ERROR) failed with rc=0x%08x", l_rc);
             break;
         }
 
@@ -282,7 +279,7 @@ void occ_irq_setup()
                              SSX_IRQ_TRIGGER_EDGE_SENSITIVE);
         if(l_rc)
         {
-            TRAC_ERR("occ_irq_setup: ssx_irq_setup(OCCHW_IRQ_PMC_ERROR) failed with rc=0x%08x", l_rc);
+            MAIN_TRAC_ERR("occ_irq_setup: ssx_irq_setup(OCCHW_IRQ_PMC_ERROR) failed with rc=0x%08x", l_rc);
             break;
         }
 
@@ -293,7 +290,7 @@ void occ_irq_setup()
                                    SSX_NONCRITICAL);
         if(l_rc)
         {
-            TRAC_ERR("occ_irq_setup: ssx_irq_handler_set(OCCHW_IRQ_PMC_ERROR) failed with rc=0x%08x", l_rc);
+            MAIN_TRAC_ERR("occ_irq_setup: ssx_irq_handler_set(OCCHW_IRQ_PMC_ERROR) failed with rc=0x%08x", l_rc);
             break;
         }
 
@@ -380,7 +377,7 @@ void occ_ipc_setup()
         l_rc = ipc_init();
         if(l_rc)
         {
-            TRAC_ERR("ipc_init failed with rc=0x%08x", l_rc);
+            MAIN_TRAC_ERR("ipc_init failed with rc=0x%08x", l_rc);
             break;
         }
 
@@ -388,26 +385,26 @@ void occ_ipc_setup()
         l_rc = ipc_enable();
         if(l_rc)
         {
-            TRAC_ERR("ipc_enable failed with rc = 0x%08x", l_rc);
+            MAIN_TRAC_ERR("ipc_enable failed with rc = 0x%08x", l_rc);
             break;
         }
 
-        TRAC_INFO("Calling IPC disable on all GPE's");
+        MAIN_TRAC_INFO("Calling IPC disable on all GPE's");
         // disable all of the GPE cbufs.  They will enable them once
         // they are ready to communicate.
         ipc_disable(OCCHW_INST_ID_GPE0);
         ipc_disable(OCCHW_INST_ID_GPE1);
 
-        TRAC_INFO("IPC initialization completed");
+        MAIN_TRAC_INFO("IPC initialization completed");
 
         // start GPE's 0 and 1
-        TRAC_INFO("Starting GPE0");
+        MAIN_TRAC_INFO("Starting GPE0");
         gpe_reset(OCCHW_INST_ID_GPE0);
 
-        TRAC_INFO("Starting GPE1");
+        MAIN_TRAC_INFO("Starting GPE1");
         gpe_reset(OCCHW_INST_ID_GPE1);
 
-        TRAC_INFO("GPE's taken out of reset");
+        MAIN_TRAC_INFO("GPE's taken out of reset");
 
     }while(0);
 
@@ -468,7 +465,7 @@ void hmon_routine()
     if(L_critical_phantom_count != G_occ_phantom_critical_count)
     {
         L_critical_phantom_count = G_occ_phantom_critical_count;
-        TRAC_INFO("hmon_routine: critical phantom irq occurred! count[%d]", L_critical_phantom_count);
+        MAIN_TRAC_INFO("hmon_routine: critical phantom irq occurred! count[%d]", L_critical_phantom_count);
 
         //log a critical phantom error once
         if(!L_c_phantom_logged)
@@ -480,7 +477,7 @@ void hmon_routine()
     if(L_noncritical_phantom_count != G_occ_phantom_noncritical_count)
     {
         L_noncritical_phantom_count = G_occ_phantom_noncritical_count;
-        TRAC_INFO("hmon_routine: non-critical phantom irq occurred! count[%d]", L_noncritical_phantom_count);
+        MAIN_TRAC_INFO("hmon_routine: non-critical phantom irq occurred! count[%d]", L_noncritical_phantom_count);
 
         //log a non-critical phantom error once
         if(!L_nc_phantom_logged)
@@ -550,7 +547,6 @@ void master_occ_init()
     errlHndl_t l_err = NULL;
     GpeRequest l_request;   //Used once here to initialize apss.
 
-    // TODO: Move the APSS initialization code back to an applet once applets are running on P9.
     // Initialize APSS
 
     // Setup the GPIO init structure to pass to the PPE program
@@ -570,7 +566,7 @@ void master_occ_init()
                                 = G_gpio_config[1].interrupt;
 
     // Create/schedule IPC_ST_APSS_INIT_GPIO_FUNCID and wait for it to complete (BLOCKING)
-    TRAC_INFO("master_occ_init: Creating request for GPE_apss_initialize_gpio");
+    MAIN_TRAC_INFO("master_occ_init: Creating request for GPE_apss_initialize_gpio");
     gpe_request_create(&l_request,                                // request
                        &G_async_gpe_queue0,                       // queue
                        IPC_ST_APSS_INIT_GPIO_FUNCID,              // Function ID
@@ -581,7 +577,7 @@ void master_occ_init()
                        ASYNC_REQUEST_BLOCKING);                   // options
 
     // Schedule the request to be executed
-    TRAC_INFO("master_occ_init: Scheduling request for IPC_ST_APSS_INIT_GPIO_FUNCID");
+    MAIN_TRAC_INFO("master_occ_init: Scheduling request for IPC_ST_APSS_INIT_GPIO_FUNCID");
     gpe_request_schedule(&l_request);
 
     // Check for a timeout only; will create the error below.
@@ -592,11 +588,11 @@ void master_occ_init()
         // it to the front of the queue.
         // Let's log an error, and include the FFDC data if it was
         // generated.
-        TRAC_ERR("master_occ_init: Timeout communicating with PPE for APSS Init.");
+        MAIN_TRAC_ERR("master_occ_init: Timeout communicating with PPE for APSS Init.");
     }
 
 
-    TRAC_INFO("master_occ_init: GPE_apss_initialize_gpio completed w/rc=0x%08x\n",
+    MAIN_TRAC_INFO("master_occ_init: GPE_apss_initialize_gpio completed w/rc=0x%08x\n",
               l_request.request.completion_state);
 
 
@@ -618,7 +614,7 @@ void master_occ_init()
                                 = G_apss_mode_config.numGpioPortsToRead;
 
         // Create/schedule GPE_apss_set_mode and wait for it to complete (BLOCKING)
-        TRAC_INFO("master_occ_init: Creating request for GPE_apss_set_mode");
+        MAIN_TRAC_INFO("master_occ_init: Creating request for GPE_apss_set_mode");
         gpe_request_create(&l_request,                              // request
                            &G_async_gpe_queue0,                     // queue
                            IPC_ST_APSS_INIT_MODE_FUNCID,            // Function ID
@@ -638,17 +634,17 @@ void master_occ_init()
             // it to the front of the queue.
             // Let's log an error, and include the FFDC data if it was
             // generated.
-            TRAC_ERR("master_occ_init: Timeout communicating with PPE for APSS Init");
+            MAIN_TRAC_ERR("master_occ_init: Timeout communicating with PPE for APSS Init");
         }
 
-        TRAC_INFO("master_occ_init: GPE_apss_set_mode completed w/rc=0x%08x",
+        MAIN_TRAC_INFO("master_occ_init: GPE_apss_set_mode completed w/rc=0x%08x",
                   l_request.request.completion_state);
 
         //Continue only if mode set was successful.
         if ((ASYNC_REQUEST_STATE_COMPLETE == l_request.request.completion_state) &&
             (G_gpe_apss_set_mode_args.error.rc == ERRL_RC_SUCCESS))
         {
-            TRAC_INFO("master_occ_init: Creating request G_meas_start_request.");
+            MAIN_TRAC_INFO("master_occ_init: Creating request G_meas_start_request.");
             //Create the request for measure start. Scheduling will happen in apss.c
             gpe_request_create(&G_meas_start_request,
                                &G_async_gpe_queue0,                          // queue
@@ -659,7 +655,7 @@ void master_occ_init()
                                NULL,                                         // callback arg
                                ASYNC_CALLBACK_IMMEDIATE);                    // options
 
-            TRAC_INFO("master_occ_init: Creating request G_meas_cont_request.");
+            MAIN_TRAC_INFO("master_occ_init: Creating request G_meas_cont_request.");
             //Create the request for measure continue. Scheduling will happen in apss.c
             gpe_request_create(&G_meas_cont_request,
                                &G_async_gpe_queue0,                          // request
@@ -670,7 +666,7 @@ void master_occ_init()
                                NULL,                                         // callback arg
                                ASYNC_CALLBACK_IMMEDIATE);                    // options
 
-            TRAC_INFO("master_occ_init: Creating request G_meas_complete_request.");
+            MAIN_TRAC_INFO("master_occ_init: Creating request G_meas_complete_request.");
             //Create the request for measure complete. Scheduling will happen in apss.c
             gpe_request_create(&G_meas_complete_request,
                                &G_async_gpe_queue0,                          // queue
@@ -743,10 +739,9 @@ void master_occ_init()
 
     if( (NULL != l_err))
     {
-        TRAC_ERR("APSS init applet returned error");
+        MAIN_TRAC_ERR("master_occ_init: Error initializing APSS");
         // commit & delete. CommitErrl handles NULL error log handle
-        // TEMP -- NO ERRL / RESET YET
-        //REQUEST_RESET(l_err);
+        REQUEST_RESET(l_err);
     }
 
     // Reinitialize the PBAX Queues
@@ -774,7 +769,7 @@ void slave_occ_init()
     if( l_errl )
     {
         // Trace and commit error
-        TRAC_ERR("Initialization of Oversubscription IRQ handler failed");
+        MAIN_TRAC_ERR("Initialization of Oversubscription IRQ handler failed");
 
         // commit log ... log should be deleted by reader mechanism
         // TEMP -- NO ERRL YET
@@ -782,7 +777,7 @@ void slave_occ_init()
     }
     else
     {
-        TRAC_INFO("Oversubscription IRQ initialized");
+        MAIN_TRAC_INFO("Oversubscription IRQ initialized");
     }
 
     //Set up doorbell queues
@@ -822,7 +817,7 @@ void mainThrdTimerCallback(void * i_argPtr)
 
         if ( l_rc != SSX_OK )
         {
-            TRAC_ERR("Failure posting thermal semaphore: rc: 0x%x", l_rc);
+            MAIN_TRAC_ERR("Failure posting thermal semaphore: rc: 0x%x", l_rc);
             break;
         }
 
@@ -833,7 +828,7 @@ void mainThrdTimerCallback(void * i_argPtr)
 
         if ( l_rc != SSX_OK )
         {
-            TRAC_ERR("Failure posting HlTH monitor semaphore: rc: 0x%x", l_rc);
+            MAIN_TRAC_ERR("Failure posting HlTH monitor semaphore: rc: 0x%x", l_rc);
             break;
         }
 
@@ -844,7 +839,7 @@ void mainThrdTimerCallback(void * i_argPtr)
 
         if ( l_rc != SSX_OK )
         {
-            TRAC_ERR("Failure posting FFDC semaphore: rc: 0x%x", l_rc);
+            MAIN_TRAC_ERR("Failure posting FFDC semaphore: rc: 0x%x", l_rc);
             break;
         }
 
@@ -917,7 +912,7 @@ void initMainThrdSemAndTimer()
     }
     else
     {
-        TRAC_ERR("Error creating main thread timer: RC: %d", l_timerRc);
+        MAIN_TRAC_ERR("Error creating main thread timer: RC: %d", l_timerRc);
     }
 
     // Failure creating semaphore or creating/scheduling timer, create
@@ -927,7 +922,7 @@ void initMainThrdSemAndTimer()
         ( l_ffdcSemRc != SSX_OK ) ||
         ( l_timerRc != SSX_OK))
     {
-        TRAC_ERR("Semaphore/timer create failure: thrmSemRc: 0x%08x, "
+        MAIN_TRAC_ERR("Semaphore/timer create failure: thrmSemRc: 0x%08x, "
                  "hmonSemRc: 0x08%x, ffdcSemRc: 0x%08x, l_timerRc: 0x%08x",
                  -l_thrmSemRc,-l_hmonSemRc,-l_ffdcSemRc, l_timerRc );
 
@@ -968,7 +963,7 @@ void Main_thread_routine(void *private)
 {
     CHECKPOINT(MAIN_THREAD_STARTED);
 
-    TRAC_INFO("Main Thread Started ... " );
+    MAIN_TRAC_INFO("Main Thread Started ... " );
 
 
     // NOTE: At present, we are not planning to use any config data from
@@ -1014,7 +1009,7 @@ void Main_thread_routine(void *private)
     // start rtl to make sure timer doesn't timeout. This timer is being
     // reset from the rtl task.
 // TEMP -- watchdog timers not enabled yet
-//    TRAC_INFO("Initializing watchdog timers.");
+//    MAIN_TRAC_INFO("Initializing watchdog timers.");
 //    initWatchdogTimers();
     CHECKPOINT(WATCHDOG_INITIALIZED);
 
@@ -1026,14 +1021,6 @@ void Main_thread_routine(void *private)
     // FFDC functions.
     initMainThrdSemAndTimer();
     CHECKPOINT(SEMS_AND_TIMERS_INITIALIZED);
-
-    //Initialize the Applet Manager
-    // This needs to be done before initThreadScheduler because command line
-    // handler thread might start using applet as soon as it starts. Command
-    // line handler thread is started as part of the initThreadScheduler along
-    // with product and test applet thread.
-    initAppletManager();
-    CHECKPOINT(APPLETS_INITIALIZED);
 
     //Initialize the thread scheduler.
     //Other thread initialization is done here so that don't have to handle
@@ -1102,7 +1089,7 @@ void Main_thread_routine(void *private)
 */
         if ( l_ssxrc != SSX_OK )
         {
-            TRAC_ERR("thermal Semaphore pending failure RC[0x%08X]", -l_ssxrc );
+            MAIN_TRAC_ERR("thermal Semaphore pending failure RC[0x%08X]", -l_ssxrc );
         }
         else
         {
@@ -1118,7 +1105,7 @@ void Main_thread_routine(void *private)
 
             if( l_ssxrc != SSX_OK)
             {
-                TRAC_ERR("health monitor Semaphore pending failure RC[0x%08X]",
+                MAIN_TRAC_ERR("health monitor Semaphore pending failure RC[0x%08X]",
                          -l_ssxrc );
             }
             else
@@ -1136,7 +1123,7 @@ void Main_thread_routine(void *private)
 
             if( l_ssxrc != SSX_OK)
             {
-                TRAC_ERR("FFDC Semaphore pending failure RC[0x%08X]",-l_ssxrc );
+                MAIN_TRAC_ERR("FFDC Semaphore pending failure RC[0x%08X]",-l_ssxrc );
             }
             else
             {
@@ -1323,12 +1310,12 @@ int main(int argc, char **argv)
 
     CHECKPOINT(TRACE_INITIALIZED);
 
-    TRAC_INFO("Inside OCC Main");
+    MAIN_TRAC_INFO("Inside OCC Main");
     // Trace what happened before ssx initialization
-    TRAC_INFO("HOMER accessed, rc=%d, version=%d, ssx_rc=%d",
+    MAIN_TRAC_INFO("HOMER accessed, rc=%d, version=%d, ssx_rc=%d",
               l_homerrc, l_homer_version, l_ssxrc);
 
-    TRAC_INFO("HOMER accessed, rc=%d, nest_freq=%d, ssx_rc=%d",
+    MAIN_TRAC_INFO("HOMER accessed, rc=%d, nest_freq=%d, ssx_rc=%d",
               l_homerrc2, l_tb_freq_hz, l_ssxrc2);
 
     // Handle any errors from the version access
@@ -1366,7 +1353,7 @@ int main(int argc, char **argv)
             G_occ_interrupt_type = PSIHB_INTERRUPT;
         }
 
-        TRAC_INFO("HOMER accessed, rc=%d, host interrupt type=%d, ssx_rc=%d",
+        MAIN_TRAC_INFO("HOMER accessed, rc=%d, host interrupt type=%d, ssx_rc=%d",
                   l_homerrc, l_occ_int_type, l_ssxrc);
 
         // Handle any errors from the interrupt type access
@@ -1395,7 +1382,7 @@ int main(int argc, char **argv)
             OCC_SET_FIR_MASTER(FIR_OCC_NOT_FIR_MASTER);
         }
 
-        TRAC_INFO("HOMER accessed, rc=%d, FIR master=%d, ssx_rc=%d",
+        MAIN_TRAC_INFO("HOMER accessed, rc=%d, FIR master=%d, ssx_rc=%d",
                   l_homerrc, l_fir_master, l_ssxrc);
 
         // Handle any errors from the FIR master access
@@ -1406,14 +1393,14 @@ int main(int argc, char **argv)
         // If this OCC is the FIR master read in the FIR collection parms
         if (OCC_IS_FIR_MASTER())
         {
-            TRAC_IMP("I am the FIR master");
+            MAIN_TRAC_IMP("I am the FIR master");
 
             // Read the FIR parms buffer
             l_homerrc = homer_hd_map_read_unmap(HOMER_FIR_PARMS,
                                                 &G_fir_data_parms[0],
                                                 &l_ssxrc);
 
-            TRAC_INFO("HOMER accessed, rc=%d, FIR parms buffer 0x%x, ssx_rc=%d",
+            MAIN_TRAC_INFO("HOMER accessed, rc=%d, FIR parms buffer 0x%x, ssx_rc=%d",
                       l_homerrc, &G_fir_data_parms[0], l_ssxrc);
 
             // Handle any errors from the FIR master access
@@ -1455,7 +1442,7 @@ int main(int argc, char **argv)
 
     if( SSX_OK != l_rc)
     {
-        TRAC_ERR("Failure creating/resuming main thread: rc: 0x%x", -l_rc);
+        MAIN_TRAC_ERR("Failure creating/resuming main thread: rc: 0x%x", -l_rc);
         /* @
          * @errortype
          * @moduleid    MAIN_MID

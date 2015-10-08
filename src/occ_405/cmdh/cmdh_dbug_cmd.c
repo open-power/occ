@@ -1,13 +1,13 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occApplet/productApplet/cmdhDbugCmd.c $                   */
+/* $Source: src/occ_405/cmdh/cmdh_dbug_cmd.c $                            */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* COPYRIGHT International Business Machines Corp. 2011,2014              */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2015                             */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -23,52 +23,49 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-//*************************************************************************
+//*************************************************************************/
 // Includes
-//*************************************************************************
+//*************************************************************************/
 #include <common_types.h>       // imageHdr_t declaration and image header macro
 #include <occ_service_codes.h>  // For reason code
-#include <aplt_service_codes.h> // For test applet module ID
 #include <errl.h>               // For error handle
 #include <trac.h>               // For traces
 #include <state.h>
-#include <appletId.h>
-#include <cmdhDbugCmd.h>
+#include <cmdh_dbug_cmd.h>
 #include <cmdh_fsp.h>
 #include <cmdh_fsp_cmds.h>
 #include <centaur_data.h>
-#include <gpe_data.h>
+//#include <gpe_data.h>
 #include <proc_data.h>
 #include <apss.h>
 
-//*************************************************************************
+//*************************************************************************/
 // Externs
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Macros
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Defines/Enums
-//*************************************************************************
-#define CMDH_DBUG_APPLET_ID "Cmdh_Dbug_Aplt\0"
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Structures
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Globals
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Function Prototypes
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Functions
-//*************************************************************************
+//*************************************************************************/
 
 // Function Specification
 //
@@ -89,7 +86,7 @@ void dbug_err_inject(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
     if(!strncmp(l_cmd_ptr->comp, "RST", OCC_TRACE_NAME_SIZE))
     {
-        l_err = createErrl(TEST_APLT_MODID_ERRLTEST,     //modId
+        l_err = createErrl(CMDH_DBUG_MID,     //modId
                            INTERNAL_FAILURE,             //reasoncode
                            OCC_NO_EXTENDED_RC,           //Extended reason code
                            ERRL_SEV_PREDICTIVE,          //Severity
@@ -112,7 +109,7 @@ void dbug_err_inject(const cmdh_fsp_cmd_t * i_cmd_ptr,
     }
     else
     {
-        l_err = createErrl(TEST_APLT_MODID_ERRLTEST,     //modId
+        l_err = createErrl(CMDH_DBUG_MID,     //modId
                            INTERNAL_FAILURE,             //reasoncode
                            OCC_NO_EXTENDED_RC,           //Extended reason code
                            ERRL_SEV_UNRECOVERABLE,       //Severity
@@ -152,6 +149,8 @@ void dbug_err_inject(const cmdh_fsp_cmd_t * i_cmd_ptr,
 void dbug_centaur_dump(const cmdh_fsp_cmd_t * i_cmd_ptr,
                              cmdh_fsp_rsp_t * i_rsp_ptr)
 {
+/* TEMP -- NOT SUPPORTED (Don't have MemData structure anymore */
+#if 0
     uint16_t l_datalen = 0;
     uint8_t l_jj=0;
 
@@ -173,7 +172,7 @@ void dbug_centaur_dump(const cmdh_fsp_cmd_t * i_cmd_ptr,
     i_rsp_ptr->data_length[0] = CONVERT_UINT16_UINT8_HIGH(l_datalen);
     i_rsp_ptr->data_length[1] = CONVERT_UINT16_UINT8_LOW(l_datalen);
     i_rsp_ptr->rc             = ERRL_RC_SUCCESS;
-
+#endif
     return;
 }
 
@@ -214,6 +213,8 @@ void dbug_apss_dump(const cmdh_fsp_cmd_t * i_cmd_ptr,
 void dbug_proc_data_dump(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                cmdh_fsp_rsp_t * i_rsp_ptr)
 {
+/* TEMP -- NOT SUPPORTED (Don't have CoreData structure anymore) */
+#if 0
     uint16_t l_datalen = 0;
     uint8_t l_jj=0;
 
@@ -235,7 +236,7 @@ void dbug_proc_data_dump(const cmdh_fsp_cmd_t * i_cmd_ptr,
     i_rsp_ptr->data_length[0] = CONVERT_UINT16_UINT8_HIGH(l_datalen);
     i_rsp_ptr->data_length[1] = CONVERT_UINT16_UINT8_LOW(l_datalen);
     i_rsp_ptr->rc             = ERRL_RC_SUCCESS;
-
+#endif
     return;
 }
 
@@ -249,7 +250,7 @@ void dbug_proc_data_dump(const cmdh_fsp_cmd_t * i_cmd_ptr,
 errlHndl_t cmdhDbugCmd(void * i_arg)
 {
     errlHndl_t               l_errl    = NULL;
-    cmdhDbugCmdAppletArg_t * l_arg     = (cmdhDbugCmdAppletArg_t *) i_arg;
+    cmdhDbugCmdArg_t * l_arg     = (cmdhDbugCmdArg_t *) i_arg;
     cmdh_fsp_cmd_t *         l_cmd_ptr = l_arg->i_cmd_ptr;
     cmdh_fsp_rsp_t *         l_rsp_ptr = l_arg->io_rsp_ptr;
     uint8_t                  l_sub_cmd = 0;
@@ -258,7 +259,7 @@ errlHndl_t cmdhDbugCmd(void * i_arg)
     l_sub_cmd = l_cmd_ptr->data[0];
 
     // Trace that a debug command was run
-    TRAC_INFO("Debug Command via Applet: Sub:0x%02x\n", l_sub_cmd);
+    TRAC_INFO("Debug Command: Sub:0x%02x\n", l_sub_cmd);
 
     // Build up a successful default response
     l_rsp_ptr->rc = ERRL_RC_SUCCESS;
@@ -312,8 +313,3 @@ errlHndl_t cmdhDbugCmd(void * i_arg)
 
     return l_errl;
 }
-
-/*****************************************************************************/
-// Image Header
-/*****************************************************************************/
-IMAGE_HEADER(G_cmdhDbugCmd, cmdhDbugCmd, CMDH_DBUG_APPLET_ID, OCC_APLT_CMDH_DBUG);

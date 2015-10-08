@@ -22,7 +22,7 @@
 # permissions and limitations under the License.
 #
 # IBM_PROLOG_END_TAG
-TOP-C-SOURCES = aplt/appletManager.c \
+TOP-C-SOURCES = cmdh/cmdh_dbug_cmd.c \
                 cmdh/cmdh_fsp.c \
                 cmdh/cmdh_fsp_cmds.c \
                 cmdh/cmdh_fsp_cmds_datacnfg.c \
@@ -41,6 +41,9 @@ TOP-C-SOURCES = aplt/appletManager.c \
                 rtls/rtls.c \
                 rtls/rtls_tables.c \
                 scom.c \
+                sensor/sensor.c \
+                sensor/sensor_query_list.c \
+                sensor/sensor_table.c \
                 state.c \
                 thread/threadSch.c \
                 thread/thrm_thread.c \

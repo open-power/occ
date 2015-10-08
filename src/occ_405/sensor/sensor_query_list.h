@@ -1,7 +1,7 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_405/aplt/incl/cmdhDbugCmd.h $                         */
+/* $Source: src/occ_405/sensor/sensor_query_list.h $                      */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
@@ -23,15 +23,13 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-#ifndef _CMDHDBUGCMD_H
-#define _CMDHDBUGCMD_H
+#ifndef _SENSORQUERYLIST_H
+#define _SENSORQUERYLIST_H
 
 //*************************************************************************
 // Includes
 //*************************************************************************
 #include <occ_common.h>
-#include <cmdh_fsp.h>
-#include <cmdh_fsp_cmds.h>
 
 //*************************************************************************
 // Externs
@@ -48,25 +46,18 @@
 //*************************************************************************
 // Structures
 //*************************************************************************
-// Structure that is passed into cmdhDbugcmd applet
+// Structure that is passed into querySensorList command
 // when it is called
 typedef struct
 {
-  cmdh_fsp_cmd_t * i_cmd_ptr;
-  cmdh_fsp_rsp_t * io_rsp_ptr;
-} cmdhDbugCmdAppletArg_t;
-
-
-/**
- * struct cmdh_dbug_inject_errl_query_t;
- * Used by debug applet to create elog, version 0.
- */
-typedef struct __attribute__ ((packed))
-{
-    struct      cmdh_fsp_cmd_header;
-    uint8_t     sub_cmd;
-    char        comp[OCC_TRACE_NAME_SIZE];
-}cmdh_dbug_inject_errl_query_t;
+  uint16_t            i_startGsid;
+  uint8_t             i_present;
+  uint16_t            i_type;
+  uint16_t            i_loc;
+  uint16_t *          io_numOfSensors;
+  sensorQueryList_t * o_sensors;
+  sensor_info_t * o_sensorInfoPtrs;
+} querySensorListArg_t;
 
 //*************************************************************************
 // Globals
@@ -75,6 +66,7 @@ typedef struct __attribute__ ((packed))
 //*************************************************************************
 // Function Prototypes
 //*************************************************************************
+errlHndl_t querySensorList(const querySensorListArg_t * i_argPtr);
 
 //*************************************************************************
 // Functions

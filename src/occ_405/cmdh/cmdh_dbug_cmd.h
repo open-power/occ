@@ -1,7 +1,7 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_405/aplt/appletManager.h $                            */
+/* $Source: src/occ_405/cmdh/cmdh_dbug_cmd.h $                            */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
@@ -23,85 +23,62 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-#ifndef _appletManager_H
-#define _appletManager_H
+#ifndef _CMDHDBUGCMD_H
+#define _CMDHDBUGCMD_H
 
-//*************************************************************************
+//*************************************************************************/
 // Includes
-//*************************************************************************
+//*************************************************************************/
 #include <occ_common.h>
-#include "errl.h"
-#include <appletId.h>
+#include <cmdh_fsp.h>
+#include <cmdh_fsp_cmds.h>
 
-//*************************************************************************
+//*************************************************************************/
 // Externs
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Macros
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Defines/Enums
-//*************************************************************************
-// These are the status codes that the applet manager code may return.
-typedef enum
-{
-    OCC_APLT_SUCCESS             = 0x00,
-    OCC_APLT_PRE_START_FAILURE   = 0x01,
-    OCC_APLT_POST_START_FAILURE  = 0x02,
-    OCC_APLT_EXECUTE_FAILURE     = 0x03,
+//*************************************************************************/
 
-} OCC_APLT_STATUS_CODES;
-
-// Applet types
-typedef enum
-{
-    APLT_TYPE_PRODUCT = 0x00,
-    APLT_TYPE_TEST    = 0x01,
-    APLT_TYPE_INVALID = 0xFF
-}OCC_APLT_TYPE;
-
-//*************************************************************************
+//*************************************************************************/
 // Structures
-//*************************************************************************
-// Applet address/size structure
+//*************************************************************************/
+// Structure that is passed into cmdhDbugcmd function
+// when it is called
 typedef struct
 {
-    uint32_t iv_aplt_address;
-    uint32_t iv_size;
+  cmdh_fsp_cmd_t * i_cmd_ptr;
+  cmdh_fsp_rsp_t * io_rsp_ptr;
+} cmdhDbugCmdArg_t;
 
-} ApltAddress_t;
+
+/**
+ * struct cmdh_dbug_inject_errl_query_t;
+ * Used by debug command to create elog, version 0.
+ */
+typedef struct __attribute__ ((packed))
+{
+    struct      cmdh_fsp_cmd_header;
+    uint8_t     sub_cmd;
+    char        comp[OCC_TRACE_NAME_SIZE];
+}cmdh_dbug_inject_errl_query_t;
 
 //*************************************************************************
 // Globals
 //*************************************************************************
-// Currently NOT externalized, only used in appletManager.c
-
-// Used as a way to pass in parameters to each applet
-// Applet Manager will copy arguments passed in into this
-// global and pass them to applet
-//extern void *         G_ApltParms;
-
-extern ApltAddress_t  G_ApltAddressTable[ OCC_APLT_LAST ];
 
 //*************************************************************************
 // Function Prototypes
 //*************************************************************************
-/* run an applet */
-void runApplet(
-    const OCC_APLT  i_applet,
-    void *          i_parms,
-    const bool      i_block,
-    SsxSemaphore   *io_appletComplete,
-    errlHndl_t     *o_errHndl,
-    OCC_APLT_STATUS_CODES * o_status);
-
-/* initialize the applet manager */
-void initAppletManager( void ) INIT_SECTION;
 
 //*************************************************************************
 // Functions
 //*************************************************************************
 
-#endif //_appletManager_H
+#endif
+

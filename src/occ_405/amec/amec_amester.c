@@ -23,9 +23,9 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-//*************************************************************************
+//*************************************************************************/
 // Includes
-//*************************************************************************
+//*************************************************************************/
 #include <occ_common.h>
 #include <ssx.h>
 #include <errl.h>               // Error logging
@@ -37,25 +37,24 @@
 #include <amec_amester.h>
 #include <amec_sys.h>
 #include <trac.h>               // For traces
-#include <appletManager.h>
-#include <sensorQueryList.h>
+#include <sensor_query_list.h>
 #include <proc_data.h>
 #include <amec_parm.h>
 #include <string.h>
 #include <occ_sys_config.h>
 #include <dcom.h>
 
-//*************************************************************************
+//*************************************************************************/
 // Externs
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Macros
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Defines/Enums
-//*************************************************************************
+//*************************************************************************/
 
 ///Maximum size of trace buffer
 #define AMEC_TB_2MS_SIZE_BYTES   8192
@@ -69,13 +68,13 @@
 #define AMEC_TB_CONFIG_SIZE (MAX_SENSOR_NAME_SZ + 4)
 #define MAX_NUM_CHIPS MAX_NUM_OCC
 
-//*************************************************************************
+//*************************************************************************/
 // Structures
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Globals
-//*************************************************************************
+//*************************************************************************/
 
 // Each trace buffer should be aligned to 128 bytes in main memory because the
 // block copy engine only copies multiples of 128 byte units.
@@ -127,13 +126,13 @@ UINT8   g_amec_tb_record=0;
 ///=1 signals continuous tracing
 UINT8   g_amec_tb_continuous=0; //CL273
 
-//*************************************************************************
+//*************************************************************************/
 // Function Prototypes
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Functions
-//*************************************************************************
+//*************************************************************************/
 // Function Specification
 //
 // Name: amester_get_sensor_info
@@ -150,7 +149,6 @@ static uint8_t amester_get_sensor_info( uint8_t* o_resp, uint16_t* io_resp_lengt
     uint16_t l_numOfSensors = 1;
     sensor_info_t l_sensorInfo;
     errlHndl_t l_err = NULL;
-    OCC_APLT_STATUS_CODES l_status = 0;
     uint16_t l_resp_length = 0;
 
     do
@@ -180,7 +178,7 @@ static uint8_t amester_get_sensor_info( uint8_t* o_resp, uint16_t* io_resp_lengt
             break;
         }
 
-        querySensorListAppletArg_t l_querySensorListAppletArg = {
+        querySensorListArg_t l_qsl_arg = {
                 i_sensor,          // i_startGsid
                 0,               // i_present
                 SENSOR_TYPE_ALL, // i_type
@@ -190,19 +188,13 @@ static uint8_t amester_get_sensor_info( uint8_t* o_resp, uint16_t* io_resp_lengt
                 &l_sensorInfo    // o_sensorInfoPtr
         };
 
-
-        //Call sensor query list applet
-        runApplet(OCC_APLT_SNSR_QUERY,          // Applet enum Name
-                  &l_querySensorListAppletArg,  // Applet arguments
-                  TRUE,                         // Blocking call?
-                  NULL,                         // Applet finished semaphore
-                  &l_err,                       // Error log handle
-                  &l_status);                   // Error status
+        // Get sensor list
+        l_err = querySensorList(&l_qsl_arg);
 
         if( NULL != l_err)
         {
             // Query failure, it should not happens
-            TRAC_ERR("Failed to run OCC_APLT_SNSR_QUERY applet. Error status is : 0x%x", l_status);
+            TRAC_ERR("amester_get_sensor_info: Failed to get sensor list. Error status is : 0x%x", l_err->iv_reasonCode);
 
             // commit error log
             commitErrl( &l_err );

@@ -28,7 +28,6 @@
 #include "ssx.h"
 #include "thread_service_codes.h"
 #include "occ_service_codes.h"
-#include <appletManager.h>
 #include <trac.h>
 #include <state.h>
 #include "cmdh_snapshot.h"
@@ -51,23 +50,15 @@ SsxThread* G_scheduledThreads[] =
 {
     &Main_thread,
     &Cmd_Hndl_thread,
-    &App_thread,
-    &TestAppletThread,
 //    &Dcom_thread,
 };
 
 // Error log counter for the callback so that only 1 error log is created
 uint8_t G_threadSwapErrlCounter = 0;
 
-// Global for the parameter to the applet thread routine
-OCC_APLT_TYPE G_apltPdtType = APLT_TYPE_PRODUCT;
-OCC_APLT_TYPE G_apltTestType = APLT_TYPE_TEST;
-
 //Thread Stacks
 uint8_t main_thread_stack[THREAD_STACK_SIZE];
 uint8_t Cmd_hndl_thread_stack[THREAD_STACK_SIZE];
-uint8_t App_thread_stack[THREAD_STACK_SIZE];
-uint8_t testAppletThreadStack[THREAD_STACK_SIZE];
 uint8_t dcomThreadStack[THREAD_STACK_SIZE];
 
 // Our idle thread. See main_thread_routine
@@ -75,12 +66,6 @@ SsxThread Main_thread;
 
 // Command handler thread
 SsxThread Cmd_Hndl_thread;
-
-// Application manager thread
-SsxThread App_thread;
-
-// Test applet thread
-SsxThread TestAppletThread;
 
 // Dcom thread
 SsxThread Dcom_thread;
@@ -114,7 +99,7 @@ int createAndResumeThreadHelper(SsxThread         *io_thread,
     //check for errors creating a thread
     if(l_rc != SSX_OK)
     {
-        TRAC_ERR("Failure creating thread. rc: 0x%x", -l_rc);
+        MAIN_TRAC_ERR("Failure creating thread. rc: 0x%x", -l_rc);
     }
     else
     {
@@ -137,10 +122,8 @@ int createAndResumeThreadHelper(SsxThread         *io_thread,
 void initThreadScheduler(void)
 {
     // Locals
-    int l_appThreadRc        = SSX_OK;
     int l_cmdThreadRc        = SSX_OK;
     int l_timerRc            = SSX_OK;
-    int l_testAppletThreadRc = SSX_OK;
     int l_dcomThreadRc       = SSX_OK;
     int l_snapshotTimerRc    = SSX_OK;
 
@@ -156,19 +139,6 @@ void initThreadScheduler(void)
               THREAD_STACK_SIZE,
               THREAD_PRIORITY_3);
 
-    l_appThreadRc = createAndResumeThreadHelper(&App_thread,
-              App_thread_routine,
-              (void *)&G_apltPdtType,
-              (SsxAddress)App_thread_stack,
-              THREAD_STACK_SIZE,
-              THREAD_PRIORITY_4);
-
-    l_testAppletThreadRc = createAndResumeThreadHelper(&TestAppletThread,
-                 App_thread_routine,
-                 (void *)&G_apltTestType,
-                 (SsxAddress)testAppletThreadStack,
-                 THREAD_STACK_SIZE,
-                 THREAD_PRIORITY_5);
 /* TEMP -- NOT USED IN PHASE1
    l_dcomThreadRc = createAndResumeThreadHelper(&Dcom_thread,
                  Dcom_thread_routine,
@@ -183,13 +153,13 @@ void initThreadScheduler(void)
     // Check for errors creating the timer
     if(l_timerRc == SSX_OK)
     {
-        TRAC_INFO("timer created and scheduled");
+        MAIN_TRAC_INFO("timer created and scheduled");
         //schedule the timer so that it runs every THREAD_TIME_SLICE
         l_timerRc = ssx_timer_schedule(&G_threadSchTimer, 1, THREAD_TIME_SLICE);
     }
     else
     {
-        TRAC_INFO("Error creating timer: RC: %d", l_timerRc);
+        MAIN_TRAC_INFO("Error creating timer: RC: %d", l_timerRc);
     }
 
 /* TEMP -- NOT USED IN PHASE1
@@ -202,31 +172,27 @@ void initThreadScheduler(void)
         l_snapshotTimerRc = ssx_timer_schedule(&G_snapshotTimer, 0, SSX_SECONDS(30));
         if (l_snapshotTimerRc != SSX_OK)
         {
-            TRAC_ERR("cmdh_snapshot_sync: reseting the snapshot timer failed.");
+            MAIN_TRAC_ERR("cmdh_snapshot_sync: reseting the snapshot timer failed.");
         }
     }
     else
     {
-        TRAC_INFO("Error creating timer: RC: %d", l_snapshotTimerRc);
+        MAIN_TRAC_INFO("Error creating timer: RC: %d", l_snapshotTimerRc);
     }
 */
 
     // If there are any errors creating the threads or starting the
     // timer create an error log to pass back.
-    if(    l_appThreadRc
-        || l_testAppletThreadRc
-        || l_cmdThreadRc
+    if(    l_cmdThreadRc
         || l_dcomThreadRc
         || l_timerRc
         || l_snapshotTimerRc )
     {
-        TRAC_ERR("Error creating thread: l_appThreadRc: %d, "
-                 "l_testAppletThreadRc: %d, l_cmdThreadRc: %d, "
-                 "l_dcomThreadRc: %d", l_appThreadRc,l_testAppletThreadRc,
-                 l_timerRc,l_cmdThreadRc,l_dcomThreadRc);
+        MAIN_TRAC_ERR("Error creating thread: snapshopTimerTc: %d, "
+                      "timerRc: %d, cmdThreadRc: %d, dcomThreadRc: %d"
+                      l_snapshotTimerRc, l_timerRc,
+                      l_cmdThreadRc,l_dcomThreadRc);
 
-        TRAC_ERR("Error starting timers: timerRc: %d, snapshotTimerRc: %d.",
-                  l_timerRc, l_snapshotTimerRc);
         // Create error log and log it
         // TODO use correct trace
         tracDesc_t  l_trace = NULL;

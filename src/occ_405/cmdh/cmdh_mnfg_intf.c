@@ -29,7 +29,7 @@
 #include "dcom.h"
 #include "amec_oversub.h"
 #include "amec_sys.h"
-#include "sensorQueryList.h"
+#include "sensor_query_list.h"
 #include "amec_smh.h"
 #include "amec_master_smh.h"
 #include "centaur_data.h"
@@ -406,7 +406,6 @@ uint8_t cmdh_mnfg_list_sensors(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                     (cmdh_mfg_list_sensors_resp_t*) o_rsp_ptr;
     sensorQueryList_t               l_sensor_list[MFG_MAX_NUM_SENSORS + 1];
     errlHndl_t                      l_err = NULL;
-    OCC_APLT_STATUS_CODES           l_status = 0;
 
     do
     {
@@ -452,8 +451,8 @@ uint8_t cmdh_mnfg_list_sensors(const cmdh_fsp_cmd_t * i_cmd_ptr,
                   l_type,
                   l_location);
 
-        // Initialize the Applet arguments
-        querySensorListAppletArg_t l_applet_arg =
+        // Initialize the sensor query arguments
+        const querySensorListArg_t l_qsl_arg =
         {
             l_start_gsid,           // i_startGsid - passed by the caller
             l_cmd_ptr->present,     // i_present - passed by the caller
@@ -464,19 +463,14 @@ uint8_t cmdh_mnfg_list_sensors(const cmdh_fsp_cmd_t * i_cmd_ptr,
             NULL                    // o_sensorInfoPtr - not needed
         };
 
-        // Call the sensor query list applet
-        runApplet(OCC_APLT_SNSR_QUERY,
-                  &l_applet_arg,
-                  TRUE,
-                  NULL,
-                  &l_err,
-                  &l_status);
+        // Get the list of sensors
+        l_err = querySensorList(&l_qsl_arg);
 
         if (NULL != l_err)
         {
             // Query failure
-            TRAC_ERR("cmdh_mnfg_list_sensors: Failed to run OCC_APLT_SNSR_QUERY applet. Error status is: 0x%x",
-                     l_status);
+            TRAC_ERR("cmdh_mnfg_list_sensors: Failed to query sensor list. Error status is: 0x%x",
+                     l_err->iv_reasonCode);
 
             // Commit error log
             commitErrl(&l_err);
@@ -549,7 +543,6 @@ uint8_t cmdh_mnfg_get_sensor(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                     (cmdh_mfg_get_sensor_resp_t*) o_rsp_ptr;
     sensor_info_t                   l_sensor_info;
     errlHndl_t                      l_err = NULL;
-    OCC_APLT_STATUS_CODES           l_status = 0;
     sensor_t*                       l_sensor_ptr;
 
     do
@@ -592,8 +585,8 @@ uint8_t cmdh_mnfg_get_sensor(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         TRAC_INFO("cmdh_mnfg_get_sensor: gsid[0x%04x]", l_gsid);
 
-        // Initialize the Applet arguments
-        querySensorListAppletArg_t l_applet_arg =
+        // Initialize the sensor query arguments
+        querySensorListArg_t l_qsl_arg =
         {
             l_gsid,                 // i_startGsid - passed by the caller
             0,                      // i_present - passed by the caller
@@ -604,19 +597,14 @@ uint8_t cmdh_mnfg_get_sensor(const cmdh_fsp_cmd_t * i_cmd_ptr,
             &l_sensor_info          // o_sensorInfoPtr
         };
 
-        // Call the sensor query list applet
-        runApplet(OCC_APLT_SNSR_QUERY,
-                  &l_applet_arg,
-                  TRUE,
-                  NULL,
-                  &l_err,
-                  &l_status);
+        // Get the sensor list
+        l_err = querySensorList(&l_qsl_arg);
 
         if (NULL != l_err)
         {
             // Query failure
-            TRAC_ERR("cmdh_mnfg_get_sensor: Failed to run OCC_APLT_SNSR_QUERY applet. Error status is: 0x%x",
-                     l_status);
+            TRAC_ERR("cmdh_mnfg_get_sensor: Failed to get sensor list. Error status is: 0x%x",
+                     l_err->iv_reasonCode);
 
             // Commit error log
             commitErrl(&l_err);

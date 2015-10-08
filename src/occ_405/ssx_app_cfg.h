@@ -162,7 +162,7 @@ do {                                                                \
 
 #ifndef SIMICS_ENVIRONMENT
 #define SIMICS_ENVIRONMENT 1
-#warning Building for Simics!
+#pragma message "Building for Simics!"
 #endif
 
 #ifndef USE_SIMICS_IO

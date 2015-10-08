@@ -1,13 +1,13 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occApplet/productApplet/sensorQueryList.c $               */
+/* $Source: src/occ_405/sensor/sensor_query_list.c $                      */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* COPYRIGHT International Business Machines Corp. 2011,2014              */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2015                             */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -23,9 +23,9 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-//*************************************************************************
+//*************************************************************************/
 // Includes
-//*************************************************************************
+//*************************************************************************/
 #include <common_types.h>   // imageHdr_t declaration and image header macro
 #include <occ_common.h>     // imageHdr_t declaration and image header macro
 #include <errl.h>           // For error handle
@@ -34,43 +34,41 @@
 #include <sensor_service_codes.h> // sensor module ids
 #include <occ_service_codes.h>    // sensor module ids
 #include <sensor.h>               // For Sensor defines
-#include <sensorQueryList.h>      // For args to applet
-#include <appletId.h>       // For applet ID num
+#include <sensor_query_list.h>      // For args to command
 
 /*****************************************************************************/
-// C Source File Includes for this Applet
-// Must be done to give this applet access to the G_sensor_info sensor list
+// C Source File Includes
+// Must be done to give access to the G_sensor_info sensor list
 /*****************************************************************************/
 #include "sensor_info.c"
 
-//*************************************************************************
+//*************************************************************************/
 // Externs
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Macros
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Defines/Enums
-//*************************************************************************
-#define SENSOR_QUERY_ID "SNSR QueryList\0"
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Structures
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Globals
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Function Prototypes
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Functions
-//*************************************************************************
+//*************************************************************************/
 
 // Function Specification
 //
@@ -81,6 +79,8 @@
 // End Function Specification
 void printSensorInfo(uint16_t i_gsid)
 {
+/* TEMP -- NOT SUPPORTED (NEED AMEC/DCOM) */
+#if 0
     // Initialize variable j and k with NULL and then
     // point to sensor to avoid compilation error when SNSR_DEBUG is not
     // defined. j and k are only used with SNSR_DBG which is no-op statement
@@ -112,6 +112,7 @@ void printSensorInfo(uint16_t i_gsid)
              (uint32_t)k->mini_sensor,
              (NULL != j) ? *j : 0
     );
+#endif
 }
 
 // Function Specification
@@ -143,13 +144,14 @@ void printAllSensors(void)
 //  Description: Query sensor list
 //
 // End Function Specification
-errlHndl_t querySensorList(const querySensorListAppletArg_t * i_argPtr)
+errlHndl_t querySensorList(const querySensorListArg_t * i_argPtr)
 {
     errlHndl_t l_err = NULL;
-
+/* TEMP -- NOT SUPPORTED ( NEED AMEC/DCOM ) */
+#if 0
     if (i_argPtr != NULL)
     {
-        uint16_t i_startGsid = i_argPtr->i_startGsid;
+        uint16_t            i_startGsid     = i_argPtr->i_startGsid;
         uint8_t             i_present       = i_argPtr->i_present;
         uint16_t            i_type          = i_argPtr->i_type;
         uint16_t            i_loc           = i_argPtr->i_loc;
@@ -162,7 +164,7 @@ errlHndl_t querySensorList(const querySensorListAppletArg_t * i_argPtr)
             ((o_sensors == NULL) && (o_sensorInfoPtrs ==NULL)) ||
             (io_numOfSensors == NULL))
         {
-            TRAC_ERR("Invalid input pointers OR start GSID is out of range: "
+            TRAC_ERR("querySensorList: Invalid input pointers OR start GSID is out of range: "
                      "i_startGsid: 0x%x, G_amec_sensor_count: 0x%x",
                      i_startGsid,G_amec_sensor_count);
 
@@ -183,7 +185,7 @@ errlHndl_t querySensorList(const querySensorListAppletArg_t * i_argPtr)
              * @userdata1   i_startGsid -- passed in Global Sensor ID
              * @userdata2   G_amec_sensor_count -- number of OCC sensors
              * @userdata4   OCC_NO_EXTENDED_RC
-             * @devdesc     NULL pointer passed for querySensorList applet output args
+             * @devdesc     NULL pointer passed for querySensorList output args
              */
             l_err = createErrl(SENSOR_QUERY_LIST,                 //modId
                     ((i_startGsid >= NUMBER_OF_SENSORS_IN_LIST) ? INTERNAL_INVALID_INPUT_DATA : INTERNAL_FAILURE), //reasoncode
@@ -252,7 +254,7 @@ errlHndl_t querySensorList(const querySensorListAppletArg_t * i_argPtr)
     }
     else
     {
-        TRAC_ERR("Invalid applet argument pointer = NULL");
+        TRAC_ERR("querySensorList: Invalid argument pointer = NULL");
 
         /* @
          * @errortype
@@ -274,11 +276,6 @@ errlHndl_t querySensorList(const querySensorListAppletArg_t * i_argPtr)
                 0                             // UserData 2
               );
     }
-
+#endif
     return l_err;
 }
-
-/*****************************************************************************/
-// Image Header
-/*****************************************************************************/
-IMAGE_HEADER(G_querySensorList, querySensorList, SENSOR_QUERY_ID, OCC_APLT_SNSR_QUERY);

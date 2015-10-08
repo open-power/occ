@@ -23,11 +23,6 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-#ifndef APPLET_BUILD
-#warning "This file is only in OCC App Source Tree for convenience of updating sensors in one place."
-#error   "This file can only be included and built into an applet due to large table size"
-#endif
-
 #include <occ_common.h>         // STATIC_ASSERT macro
 #include <sensor.h>         // For Sensor defines
 

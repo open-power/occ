@@ -33,8 +33,7 @@
 #include "occ_common.h"
 #include "state.h"
 #include "cmdh_fsp_cmds.h"
-#include "cmdhDbugCmd.h"
-#include "appletManager.h"
+#include "cmdh_dbug_cmd.h"
 //#include "gpsm.h"
 //#include "pstates.h"
 #include "proc_pstate.h"
@@ -1185,6 +1184,8 @@ errlHndl_t data_store_role(const cmdh_fsp_cmd_t * i_cmd_ptr,
             // If this is a backup master occ, we need to be checking the APSS health
             if(OCC_BACKUP_MASTER == l_new_role)
             {
+// TEMP / TODO : NEED TO CHANGE THIS TO NOT BE USING AN APPLET
+#if 0 // Start
                 OCC_APLT_STATUS_CODES l_status = OCC_APLT_SUCCESS;
 
                 // Initialize APSS communication on the backup OCC (retries internally)
@@ -1201,7 +1202,7 @@ errlHndl_t data_store_role(const cmdh_fsp_cmd_t * i_cmd_ptr,
                     TRAC_ERR("APSS init applet returned error: l_status: 0x%x", l_status);
                     commitErrl(&l_errlHndl);
                 }
-
+#endif // End
                 // Allow APSS tasks to run on OCC backup
                 rtl_clr_run_mask_deferred(RTL_FLAG_APSS_NOT_INITD);
                 TRAC_IMP("OCC Role set to Backup Master via TMGT");

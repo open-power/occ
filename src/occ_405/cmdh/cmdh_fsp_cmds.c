@@ -32,8 +32,7 @@
 #include "occ_common.h"
 #include "state.h"
 #include "cmdh_fsp_cmds.h"
-#include "cmdhDbugCmd.h"
-#include "appletManager.h"
+#include "cmdh_dbug_cmd.h"
 //#include "gpsm.h"
 //#include "pstates.h"
 #include "proc_pstate.h"
@@ -45,25 +44,11 @@
 #include "amec_freq.h"
 #include "amec_sys.h"
 #include "sensor.h"
-#include "sensorQueryList.h"
+#include "sensor_query_list.h"
 #include "chom.h"
 #include "amec_master_smh.h"
 #include "thrm_thread.h"
 #include <proc_data.h>
-
-// We need to have a small structure in non-Applet space to keep track
-// of success & failures when running test applets.  This needs to be
-// kept as small as possible.
-typedef struct
-{
-  uint16_t    successful; // Number of Sucessful Test Applets
-  uint16_t    failed;     // Number of Failed Test Applets
-  uint16_t    total;      // Total Number of Test Applets
-  SsxTimebase duration;   // Total Duration of Test Applets
-  errlHndl_t  errlHndl;   // Holds the first failure's errlHndl
-} testAppletStats_t;
-
-testAppletStats_t G_testAppletStats = {0};
 
 // This table contains tunable parameter information that can be exposed to
 // customers (only Master OCC should access/control this table)
@@ -112,12 +97,13 @@ extern thrm_fru_data_t      G_thrm_fru_data[DATA_FRU_MAX];
 //              system mode, error log ID, etc.
 //
 // End Function Specification
-/* TEMP -- NOT YET SUPPORTED (NEED AMEC/DCOM)
 errlHndl_t cmdh_tmgt_poll (const cmdh_fsp_cmd_t * i_cmd_ptr,
                      cmdh_fsp_rsp_t * o_rsp_ptr)
 {
-    cmdh_poll_query_t *         l_poll_cmd  = (cmdh_poll_query_t *) i_cmd_ptr;
     errlHndl_t                  l_errlHndl  = NULL;
+/* TEMP -- NOT YET SUPPORTED (NEED AMEC/DCOM) */
+#if 0
+    cmdh_poll_query_t *         l_poll_cmd  = (cmdh_poll_query_t *) i_cmd_ptr;
     ERRL_RC                     l_rc        = ERRL_RC_INTERNAL_FAIL;
     uint8_t                     k           = 0;
 
@@ -209,10 +195,9 @@ errlHndl_t cmdh_tmgt_poll (const cmdh_fsp_cmd_t * i_cmd_ptr,
         cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, l_rc, &l_errlHndl);
     }
 
-
+#endif // #if 0
     return l_errlHndl;
 }
-*/
 
 // Function Specification
 //
@@ -221,11 +206,12 @@ errlHndl_t cmdh_tmgt_poll (const cmdh_fsp_cmd_t * i_cmd_ptr,
 // Description: Used for version 0x10 poll calls from BMC/HTMGT.
 //
 // End Function Specification
-/* TEMP -- NOT SUPPORTED YET (NEED DCOM/AMEC)
 ERRL_RC cmdh_poll_v10(cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     ERRL_RC                     l_rc  = ERRL_RC_INTERNAL_FAIL;
     uint8_t                     k = 0;
+/* TEMP -- NOT SUPPORTED YET (NEED DCOM/AMEC) */
+#if 0
     cmdh_poll_sensor_db_t       l_sensorHeader;
 
     // Clear response buffer
@@ -507,10 +493,9 @@ ERRL_RC cmdh_poll_v10(cmdh_fsp_rsp_t * o_rsp_ptr)
     l_poll_rsp->data_length[1] = CONVERT_UINT16_UINT8_LOW(l_rsp_index);
     l_rc                       = ERRL_RC_SUCCESS;
     l_poll_rsp->rc             = ERRL_RC_SUCCESS;
-
+#endif // #if 0
     return l_rc;
 }
-*/
 
 
 
@@ -546,12 +531,13 @@ void cmdh_tmgt_query_fw (const cmdh_fsp_cmd_t * i_cmd_ptr,
 // Description: TODO -- Add description
 //
 // End Function Specification
-/* TEMP -- NOT ENABLED YET (NEED DCOM)
 errlHndl_t cmdh_reset_prep (const cmdh_fsp_cmd_t * i_cmd_ptr,
                             cmdh_fsp_rsp_t * o_rsp_ptr)
 {
-    cmdh_reset_prep_t *         l_cmd_ptr = (cmdh_reset_prep_t *) i_cmd_ptr;
     errlHndl_t                  l_errlHndl = NULL;
+/* TEMP -- NOT ENABLED YET (NEED DCOM) */
+#if 0
+    cmdh_reset_prep_t *         l_cmd_ptr = (cmdh_reset_prep_t *) i_cmd_ptr;
     ERRL_RC                     l_rc = ERRL_RC_SUCCESS;
     bool                        l_ffdc = FALSE;
 
@@ -621,7 +607,7 @@ errlHndl_t cmdh_reset_prep (const cmdh_fsp_cmd_t * i_cmd_ptr,
              * @userdata2   0
              * @userdata4   0
              * @devdesc     Generate error log for ResetPrep command
-             */ /*
+             */
             l_errlHndl = createErrl(
                 DATA_GET_RESET_PREP_ERRL,           //modId
                 PREP_FOR_RESET,                     //reasoncode
@@ -677,10 +663,9 @@ errlHndl_t cmdh_reset_prep (const cmdh_fsp_cmd_t * i_cmd_ptr,
         // Build Error Response packet
         cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, l_rc, &l_errlHndl);
     }
-
+#endif // #if 0
     return l_errlHndl;
 }
-*/
 
 // Function Specification
 //
@@ -766,10 +751,11 @@ void cmdh_dbug_get_trace (const cmdh_fsp_cmd_t * i_cmd_ptr,
 // Description: TODO Add description
 //
 // End Function Specification
-/* TEMP -- NOT ENABLED YET (NEED AMEC / SENSORS)
 void cmdh_dbug_get_ame_sensor (const cmdh_fsp_cmd_t * i_cmd_ptr,
                                cmdh_fsp_rsp_t * o_rsp_ptr)
 {
+/* TEMP -- NOT ENABLED YET (NEED AMEC / SENSORS) */
+#if 0
     uint8_t                      l_rc = ERRL_RC_SUCCESS;
     uint16_t                     l_type = 0;
     uint16_t                     l_location = 0;
@@ -781,7 +767,6 @@ void cmdh_dbug_get_ame_sensor (const cmdh_fsp_cmd_t * i_cmd_ptr,
     sensorQueryList_t            l_sensor_list[CMDH_DBUG_MAX_NUM_SENSORS];
     sensor_t                     *l_sensor_ptr = NULL;
     errlHndl_t                   l_err = NULL;
-    OCC_APLT_STATUS_CODES        l_status = 0;
 
     do
     {
@@ -799,8 +784,8 @@ void cmdh_dbug_get_ame_sensor (const cmdh_fsp_cmd_t * i_cmd_ptr,
                   l_type,
                   l_location);
 
-        // Initialize the Applet arguments
-        querySensorListAppletArg_t l_applet_arg = {
+        // Initialize the arguments to query sensor list
+        querySensorListArg_t l_qsl_arg = {
             0,                      // i_startGsid - start with sensor 0x0000
             0,                      // i_present
             l_type,                 // i_type - passed by the caller
@@ -810,19 +795,14 @@ void cmdh_dbug_get_ame_sensor (const cmdh_fsp_cmd_t * i_cmd_ptr,
             NULL                    // o_sensorInfoPtr
         };
 
-        // Call the sensor query list applet
-        runApplet(OCC_APLT_SNSR_QUERY,
-                  &l_applet_arg,
-                  TRUE,
-                  NULL,
-                  &l_err,
-                  &l_status);
+        // Get the sensors
+        l_err = querySensorList(&l_qsl_arg);
 
         if (NULL != l_err)
         {
             // Query failure, this should not happen
-            TRAC_ERR("dbug_get_ame_sensor: Failed to run OCC_APLT_SNSR_QUERY applet. Error status is: 0x%x",
-                     l_status);
+            TRAC_ERR("dbug_get_ame_sensor: Failed to query sensors. Error status is: 0x%x",
+                     l_err->iv_reasonCode);
 
             // Commit error log
             commitErrl(&l_err);
@@ -876,8 +856,8 @@ void cmdh_dbug_get_ame_sensor (const cmdh_fsp_cmd_t * i_cmd_ptr,
     o_rsp_ptr->rc = l_rc;
     o_rsp_ptr->data_length[0] = ((uint8_t *)&l_resp_data_length)[0];
     o_rsp_ptr->data_length[1] = ((uint8_t *)&l_resp_data_length)[1];
+#endif // #if 0
 }
-*/
 
 // Function Specification
 //
@@ -1024,10 +1004,11 @@ errlHndl_t cmdh_get_elog (const cmdh_fsp_cmd_t * i_cmd_ptr,
 // Description: TODO Add description
 //
 // End Function Specification
-/* TEMP -- NOT ENABLED YET (NEED DCOM / AMEC)
 void cmdh_dbug_get_apss_data (const cmdh_fsp_cmd_t * i_cmd_ptr,
                               cmdh_fsp_rsp_t * o_rsp_ptr)
 {
+/* TEMP -- NOT ENABLED YET (NEED DCOM / AMEC) */
+#if 0
     uint8_t                      l_rc = ERRL_RC_SUCCESS;
     uint16_t                     i = 0;
     uint16_t                     l_resp_data_length = 0;
@@ -1070,8 +1051,8 @@ void cmdh_dbug_get_apss_data (const cmdh_fsp_cmd_t * i_cmd_ptr,
     o_rsp_ptr->rc = l_rc;
     o_rsp_ptr->data_length[0] = ((uint8_t *)&l_resp_data_length)[0];
     o_rsp_ptr->data_length[1] = ((uint8_t *)&l_resp_data_length)[1];
+#endif // #if 0
 }
-*/
 
 // Function Specification
 //
@@ -1088,8 +1069,7 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
     uint8_t                     l_block_num = 0;
     errl_generic_resp_t *       l_err_rsp_ptr =  (errl_generic_resp_t *) o_rsp_ptr;
     errlHndl_t                  l_errl = NULL;
-    OCC_APLT_STATUS_CODES       l_status = OCC_APLT_SUCCESS;
-    cmdhDbugCmdAppletArg_t      l_applet_args;
+    cmdhDbugCmdArg_t            l_cmdh_dbug_args;
 
     // Sub Command for debug is always first byte of data
     l_sub_cmd = i_cmd_ptr->data[0];
@@ -1116,21 +1096,15 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
     // Act on Debug Sub-Command
     switch ( l_sub_cmd )
     {
-        // ------------------------------------------------
-        // Run debug sub-commands that **cannot** use applets
-        // ------------------------------------------------
-/* TEMP -- NOT SUPPORTED YET
+/* TEMP -- NOT SUPPORTED YET */
+#if 0
         case DBUG_GET_AME_SENSOR:
-            // This can't use an applet because it needs to run
-            // an applet to get the data
             cmdh_dbug_get_ame_sensor(i_cmd_ptr, o_rsp_ptr);
             break;
 
         case DBUG_FSP_ATTN:
-            // This is so small that we don't need to run it from an
-            // applet
             break;
-*/
+#endif
         case DBUG_GET_TRACE:
             // Get trace buffer SRAM address
             cmdh_dbug_get_trace(i_cmd_ptr, o_rsp_ptr);
@@ -1141,14 +1115,13 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
             TRAC_reset_buf();
             o_rsp_ptr->rc = ERRL_RC_SUCCESS;
             break;
-/* TEMP -- NOT YET SUPPORTED
+/* TEMP -- NOT YET SUPPORTED */
+#if 0
         case DBUG_PEEK:
             cmdh_dbug_peek(i_cmd_ptr, o_rsp_ptr);
             break;
 
         case DBUG_FLUSH_DCACHE:
-            // This is so small that we don't need to run it from an
-            // applet
             dcache_flush_all();
             break;
 
@@ -1156,122 +1129,6 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
             chom_force_gen_log();
             break;
 
-        case 0xE0:  // Run Test Applet
-            // TODO: Come in and clean this up later
-#define TEST_APPLET_MAX_BLOCK_NUMBER 8
-#define TEST_APPLET_START_APPLET     0xFF
-#define TEST_APPLET_GET_STATS        0xFE
-#define TEST_APPLET_RESET_STATS      0xFD
-
-            // We need to waste the OCC SRAM space to start these applets, but
-            // lets try to use up as little code as possible
-
-            // Get the 2kB "Block Number" as passed in as the second data
-            // byte of the command.
-            l_block_num = i_cmd_ptr->data[1];
-
-            // If the block number that was passed is a valid data block,
-            // then copy the passed data into Main Memory
-            if(l_block_num < TEST_APPLET_MAX_BLOCK_NUMBER)
-            {
-                BceRequest pba_copy;
-                int l_ssxrc = SSX_OK;
-
-                // Calculate Address in Main Memory where we will put this block
-                uint32_t l_addr_in_mem = ( G_ApltAddressTable[OCC_APLT_TEST].iv_aplt_address
-                                           + (l_block_num*2048));
-
-                // Can't copy to last 1024 bytes of SRAM
-                size_t l_size = (l_block_num == 0x07) ? 1024 : 2048;
-
-                TRAC_INFO("uploading %d bytes of test applet block %d from 0x%08x to 0x%08x",
-                          l_size, l_block_num, &i_cmd_ptr->data[124], l_addr_in_mem);
-
-                // Set up copy request
-                l_ssxrc = bce_request_create(
-                        &pba_copy,                          // block copy object
-                        &G_pba_bcue_queue,                  // mainstore to sram copy engine
-                        l_addr_in_mem,                      // mainstore address
-                        (uint32_t) &i_cmd_ptr->data[124],   // sram starting address
-                        (size_t) l_size,                    // size of copy
-                        SSX_SECONDS(5),                     // no timeout
-                        NULL,                               // call back
-                        NULL,                               // call back arguments
-                        ASYNC_REQUEST_BLOCKING              // callback mask
-                        );
-
-                // Don't log error.  We are in a debug path, not product code.
-                if(l_ssxrc != SSX_OK)
-                {
-                    TRAC_ERR("CMDH Test Applet: PBA request create failure rc=[%08X]",l_ssxrc);
-                    l_rc = ERRL_RC_INTERNAL_FAIL;
-                    break;
-                }
-
-                // Do actual copying
-                l_ssxrc = bce_request_schedule(&pba_copy);
-
-                // Don't log error.  We are in a debug path, not product code.
-                if(l_ssxrc != SSX_OK)
-                {
-                    TRAC_ERR("CMDH Test Applet: PBA request schedule failure rc=[%08X]",l_ssxrc);
-                    l_rc = ERRL_RC_INTERNAL_FAIL;
-                    break;
-                }
-            }
-            else if(l_block_num == TEST_APPLET_START_APPLET)
-            {
-                TRAC_INFO("Starting test applet");
-                OCC_APLT_STATUS_CODES l_status = OCC_APLT_SUCCESS;
-                errlHndl_t  l_errl = NULL;
-
-                // ------------------------------------------
-                // Start Applet, and return
-                //     Applet will auto-checksum itself, and
-                //     fail w/ errlHndl if it doesn't match
-                // ------------------------------------------
-                runApplet(OCC_APLT_TEST,        // Applet enum Name
-                          NULL,                 // Applet arguments
-                          FALSE,                 // Blocking call?
-                          NULL,                 // Applet finished semaphore
-                          &l_errl,              // Error log handle
-                          &l_status);           // Error status
-
-                if( (NULL != l_errl)  || (l_status !=  OCC_APLT_SUCCESS))
-                {
-                    TRAC_ERR("Test applet failure. status=%d", l_status);
-                    l_rc = ERRL_RC_INTERNAL_FAIL;
-                }
-                else
-                {
-                    TRAC_INFO("Test applet started");
-                }
-            }
-            else if(l_block_num == TEST_APPLET_GET_STATS)
-            {
-                TRAC_INFO("Get applet stats");
-            }
-            else if(l_block_num == TEST_APPLET_RESET_STATS)
-            {
-                TRAC_INFO("Resetting applet stats");
-
-                // Reset Applet Test Stats
-                G_testAppletStats.total      = 0;
-                G_testAppletStats.duration   = 0;
-                G_testAppletStats.failed     = 0;
-                G_testAppletStats.errlHndl   = NULL;
-                G_testAppletStats.successful = 0;
-            }
-            else
-            {
-                TRAC_ERR("Unrecognized applet command. l_block_num = %d", l_block_num);
-                l_rc = ERRL_RC_INVALID_DATA;
-            }
-            break;
-
-        // ------------------------------------------------
-        // Run debug sub-commands that can use applets
-        // ------------------------------------------------
         case DBUG_READ_SCOM:
         case DBUG_PUT_SCOM:
         case DBUG_POKE:
@@ -1297,27 +1154,22 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
         case DBUG_CENTAUR_SENSOR_CACHE:
         case DBUG_DUMP_PROC_DATA:
 
-            l_applet_args.i_cmd_ptr  = (cmdh_fsp_cmd_t *) i_cmd_ptr;
-            l_applet_args.io_rsp_ptr = o_rsp_ptr;
+            l_cmdh_dbug_args.i_cmd_ptr  = (cmdh_fsp_cmd_t *) i_cmd_ptr;
+            l_cmdh_dbug_args.io_rsp_ptr = o_rsp_ptr;
 
-            runApplet(OCC_APLT_CMDH_DBUG,   // Applet enum Name
-              &l_applet_args,               // Applet arguments
-              TRUE,                 // Blocking call?
-              NULL,                 // Applet finished semaphore
-              &l_errl,              // Error log handle
-              &l_status);           // Error status
+            l_errl = cmdhDbugCmd(&l_cmdh_dbug_args);
 
-              if( (NULL != l_errl)  || (l_status !=  OCC_APLT_SUCCESS))
-              {
-                 TRAC_ERR("Debug command applet returned error: l_status: 0x%x", l_status);
-                 commitErrl( &l_errl );
-              }
+            if(NULL != l_errl)
+            {
+                TRAC_ERR("Debug command returned error: RC: 0x%x", l_errl->iv_reasonCode);
+                commitErrl( &l_errl );
+            }
             break;
 
         case DBUG_DUMP_APSS_DATA:
             cmdh_dbug_get_apss_data(i_cmd_ptr, o_rsp_ptr);
             break;
-*/
+#endif // #if 0
         default:
             l_rc = ERRL_RC_INVALID_DATA; //should NEVER get here...
             break;
@@ -1342,11 +1194,12 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
 // Description: TODO Add description
 //
 // End Function Specification
-/* NOT YET SUPPORTED -- NEED MODE AND STATES
 errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                     cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     errlHndl_t                      l_errlHndl     = NULL;
+/* NOT YET SUPPORTED -- NEED MODE AND STATES */
+#if 0
     smgr_setmodestate_v0_query_t*   l_cmd_ptr      = (smgr_setmodestate_v0_query_t *)i_cmd_ptr;
     ERRL_RC                         l_rc           = ERRL_RC_INTERNAL_FAIL;
     SsxInterval                     l_timeout      = SSX_SECONDS(15);
@@ -1461,7 +1314,7 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
                      * @userdata2   OCC succeeded bitmap
                      * @userdata4   OCC_NO_EXTENDED_RC
                      * @devdesc     Timed out trying to reach requested power mode/state
-                     */ /*
+                     */
                     l_errlHndl = createErrl(
                             CMDH_GENERIC_CMD_FAILURE,           //modId
                             INTERNAL_FAILURE,                   //reasoncode
@@ -1498,9 +1351,10 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
         cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, l_rc, &l_errlHndl);
     }
 
+#endif // #if 0
+
     return l_errlHndl;
 }
-*/
 
 // Function Specification
 //
@@ -1509,11 +1363,12 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
 // Description: TODO Add description
 //
 // End Function Specification
-/* TEMP -- NOT YET SUPPORTED (NEED AMEC)
 errlHndl_t cmdh_amec_pass_through(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                     cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     errlHndl_t                      l_errlHndl    = NULL;
+/* TEMP -- NOT YET SUPPORTED (NEED AMEC) */
+#if 0
     IPMIMsg_t                       l_IPMImsg;
     uint8_t                         l_rc          = 0;
     uint16_t                        l_rsp_data_length = CMDH_FSP_RSP_DATA_SIZE;
@@ -1568,7 +1423,7 @@ errlHndl_t cmdh_amec_pass_through(const cmdh_fsp_cmd_t * i_cmd_ptr,
              * @userdata2   max data length
              * @userdata4   OCC_NO_EXTENDED_RC
              * @devdesc     amester_entry_point returned too much data.
-             */ /*
+             */
             l_errlHndl = createErrl(
                 AMEC_AMESTER_INTERFACE,             //modId
                 INTERNAL_FAILURE,                   //reasoncode
@@ -1605,10 +1460,10 @@ errlHndl_t cmdh_amec_pass_through(const cmdh_fsp_cmd_t * i_cmd_ptr,
             l_err_resp_ptr->log_id = 0;
         }
     }
-
+#endif
     return l_errlHndl;
 }
-*/
+
 
 // Function Specification
 //
@@ -1617,17 +1472,17 @@ errlHndl_t cmdh_amec_pass_through(const cmdh_fsp_cmd_t * i_cmd_ptr,
 // Description: TODO Add description
 //
 // End Function Specification
-/* TEMP -- NOT YET SUPPORTED (NEED SENSORS)
 errlHndl_t cmdh_tmgt_get_field_debug_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                                 cmdh_fsp_rsp_t * o_rsp_ptr)
 {
+    errlHndl_t                        l_err             = NULL;
+/* TEMP -- NOT YET SUPPORTED (NEED SENSORS) */
+#if 0
     uint16_t                          i                 = 0;
     UINT                              l_rtLen           = 0;
     uint16_t                          l_num_of_sensors  = CMDH_FIELD_MAX_NUM_SENSORS;
     sensorQueryList_t                 l_sensor_list[CMDH_FIELD_MAX_NUM_SENSORS];
     sensor_t                          *l_sensor_ptr     = NULL;
-    errlHndl_t                        l_err             = NULL;
-    OCC_APLT_STATUS_CODES             l_status          = 0;
     cmdh_get_field_debug_data_resp_t  *l_resp_ptr       = (cmdh_get_field_debug_data_resp_t*) o_rsp_ptr;
     uint16_t                          l_rsp_data_length = 0;
     ERRL_RC                           l_rc              = ERRL_RC_SUCCESS;
@@ -1654,9 +1509,8 @@ errlHndl_t cmdh_tmgt_get_field_debug_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
         l_rtLen = CMDH_FIELD_TRACE_DATA_SIZE;
         TRAC_get_buffer_partial(TRAC_get_td("INF"), l_resp_ptr->trace_inf, &l_rtLen);
 
-        // Initialize the Applet arguments
         // TODO: Set "present" to 0 for testing (since no sensor presented now)
-        querySensorListAppletArg_t l_applet_arg = {
+        querySensorListArg_t l_qsl_arg = {
             0,                         // i_startGsid - start with sensor 0x0000
             0,                         // i_present
             (AMEC_SENSOR_TYPE_POWER|   // i_type
@@ -1667,19 +1521,14 @@ errlHndl_t cmdh_tmgt_get_field_debug_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
             NULL                       // o_sensorInfoPtr
         };
 
-        // Call the sensor query list applet
-        runApplet(OCC_APLT_SNSR_QUERY,
-                  &l_applet_arg,
-                  TRUE,
-                  NULL,
-                  &l_err,
-                  &l_status);
+        // Get sensor list
+        l_err = querySensorList(&l_qsl_arg);
 
         if (NULL != l_err)
         {
             // Query failure, this should not happen
-            TRAC_ERR("get_field_debug_data: Failed to run OCC_APLT_SNSR_QUERY applet. Error status is: 0x%x",
-                     l_status);
+            TRAC_ERR("get_field_debug_data: Failed to get sensor list. Error status is: 0x%x",
+                     l_err->iv_reasonCode);
 
             // Commit error log
             commitErrl(&l_err);
@@ -1729,10 +1578,9 @@ errlHndl_t cmdh_tmgt_get_field_debug_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
         // Build Error Response packet
         cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, l_rc, &l_err);
     }
-
+#endif
     return l_err;
 }
-*/
 
 // Function Specification
 //

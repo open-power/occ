@@ -27,15 +27,14 @@
 #define PROC_PSTATE_H
 
 #include "ssx.h"
-//#include "cmdh_service_codes.h"
+#include "cmdh_service_codes.h"
 #include "errl.h"
 #include "trac.h"
 #include "rtls.h"
 #include "occ_common.h"
 #include "state.h"
-//#include "cmdh_fsp_cmds.h"
-//#include "cmdhDbugCmd.h"
-#include "appletManager.h"
+#include "cmdh_fsp_cmds.h"
+#include "cmdh_dbug_cmd.h"
 //#include "gpsm.h"
 //#include "pstates.h"
 

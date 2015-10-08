@@ -136,16 +136,6 @@ extern void dumpHexString(const void *i_data, const unsigned int len, const char
 #define SNPS_TRAC_IMP(frmt,args...) \
         TRAC_IMP(SNPS_MRK frmt, ##args)
 
-// Tracing for applets
-#define APLT_TRAC_ERR(frmt,args...) \
-        TRAC_ERR(APLT_MRK frmt, ##args)
-
-#define APLT_TRAC_INFO(frmt,args...) \
-        TRAC_INFO(APLT_MRK frmt, ##args)
-
-#define APLT_TRAC_IMP(frmt,args...) \
-        TRAC_IMP(APLT_MRK frmt, ##args)
-
 // Tracing for interrupts (RTL, oversubscription, etc)
 #define INTR_TRAC_ERR(frmt,args...) \
         TRAC_ERR(INTR_MRK frmt, ##args)
