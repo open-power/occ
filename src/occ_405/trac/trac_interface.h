@@ -292,25 +292,6 @@ UINT trac_write_int(const trace_descriptor_array_t *io_td,const trace_hash_val i
                     const ULONG i_4,const ULONG i_5
                    );
 
-
-/*
- *  Trace binary data to buffer.
- *
- *  This function assumes i_td has been initialized.
- *
- *  param io_td Initialized trace descriptor pointer to buffer to trace to.
- *  param i_hash Hash value to be recorded for this trace.
- *  param i_line Line number trace is occurring on.
- *  param i_ptr Pointer to binary data to trace.
- *  param i_size Size of data to copy from i_ptr.
- *
- *  return Non-zero return code on error.
- */
-UINT trac_write_bin(const trace_descriptor_array_t *io_td,const trace_hash_val i_hash,
-                    const ULONG i_line,
-                    const void *i_ptr,
-                    const ULONG i_size);
-
 //*************************************************************************
 // Functions
 //*************************************************************************

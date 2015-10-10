@@ -806,9 +806,9 @@ bool apss_gpio_get(uint8_t i_pin_number, uint8_t *o_pin_value)
         // Check if G_dcom_slv_inbox_rx is valid.
         // The default value is all 0, so check if it's no-zero
         bool l_dcom_data_valid = FALSE;
-        int i=0;
 // TEMP -- NO DCOM IN PHASE1
 /*
+        int i=0;
         for(;i<sizeof(G_dcom_slv_inbox_rx);i++)
         {
             if( ((char*)&G_dcom_slv_inbox_rx)[i] != 0 )

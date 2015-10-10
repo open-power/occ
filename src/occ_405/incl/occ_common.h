@@ -30,12 +30,12 @@
 #include <comp_ids.h>
 
 // From Linker Script
-extern void _LINEAR_WR_WINDOW_SECTION_BASE;
+extern char _LINEAR_WR_WINDOW_SECTION_BASE[];
 extern void _LINEAR_WR_WINDOW_SECTION_SIZE;
-extern void _LINEAR_RD_WINDOW_SECTION_BASE;
+extern char _LINEAR_RD_WINDOW_SECTION_BASE[];
 extern void _LINEAR_RD_WINDOW_SECTION_SIZE;
-extern void _FIR_PARMS_SECTION_BASE;
-extern void _FIR_HEAP_SECTION_BASE;
+extern char _FIR_PARMS_SECTION_BASE[];
+extern char _FIR_HEAP_SECTION_BASE[];
 
 // Declare aligned data structures for Async access in a noncacheable section
 //

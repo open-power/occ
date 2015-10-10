@@ -1,3 +1,27 @@
+# IBM_PROLOG_BEGIN_TAG
+# This is an automatically generated prolog.
+#
+# $Source: src/occ_gpe1/img_defs.mk $
+#
+# OpenPOWER OnChipController Project
+#
+# Contributors Listed Below - COPYRIGHT 2015
+# [+] International Business Machines Corp.
+#
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# permissions and limitations under the License.
+#
+# IBM_PROLOG_END_TAG
 #  Make header for GPE PK builds
 #
 # The application may define the following variables to control the
@@ -167,7 +191,7 @@ GCC-CFLAGS += -Wall -fsigned-char -msoft-float  \
     -ffixed-r22 -ffixed-r23 -ffixed-r24 -ffixed-r25 \
     -ffixed-r26 -ffixed-r27 \
     -ffixed-cr1 -ffixed-cr2 -ffixed-cr3 -ffixed-cr4 \
-    -ffixed-cr5 -ffixed-cr6 -ffixed-cr7
+    -ffixed-cr5 -ffixed-cr6 -ffixed-cr7 -Werror
 
 CFLAGS      =  -c $(GCC-CFLAGS) $(PIPE-CFLAGS) $(GCC-O-LEVEL) $(INCLUDES) 
 

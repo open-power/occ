@@ -22,6 +22,9 @@
 # permissions and limitations under the License.
 #
 # IBM_PROLOG_END_TAG
+
+GCC-CFLAGS += -Werror
+
 %.o: %.c
 $(OBJDIR)/%.o: %.c
 	$(THCC) $(CFLAGS) $(DEFS) -o $@ $<

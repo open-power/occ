@@ -170,11 +170,13 @@ void initWatchdogTimers()
 // End Function Specification
 void task_poke_watchdogs(struct task * i_self)
 {
+/* TEMP/TODO: Not Ready yet: PMC => PGPE */
+#if 0
     // Read the PMC status register on every RTL, this is how the OCC
     // generates a PMC hearbeat.
     pmc_status_reg_t psr;
-// TMP: Not Ready yet: PMC => PGPE
-//    psr.value = in32(PMC_STATUS_REG);
+    psr.value = in32(PMC_STATUS_REG);
+#endif
 }
 
 // Function Specification

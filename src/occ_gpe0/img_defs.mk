@@ -191,7 +191,7 @@ GCC-CFLAGS += -Wall -fsigned-char -msoft-float  \
     -ffixed-r22 -ffixed-r23 -ffixed-r24 -ffixed-r25 \
     -ffixed-r26 -ffixed-r27 \
     -ffixed-cr1 -ffixed-cr2 -ffixed-cr3 -ffixed-cr4 \
-    -ffixed-cr5 -ffixed-cr6 -ffixed-cr7
+    -ffixed-cr5 -ffixed-cr6 -ffixed-cr7 -Werror
 
 CFLAGS      =  -c $(GCC-CFLAGS) $(PIPE-CFLAGS) $(GCC-O-LEVEL) $(INCLUDES)
 

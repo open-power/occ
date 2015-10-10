@@ -209,9 +209,9 @@ errlHndl_t cmdh_tmgt_poll (const cmdh_fsp_cmd_t * i_cmd_ptr,
 ERRL_RC cmdh_poll_v10(cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     ERRL_RC                     l_rc  = ERRL_RC_INTERNAL_FAIL;
-    uint8_t                     k = 0;
 /* TEMP -- NOT SUPPORTED YET (NEED DCOM/AMEC) */
 #if 0
+    uint8_t                     k = 0;
     cmdh_poll_sensor_db_t       l_sensorHeader;
 
     // Clear response buffer
@@ -874,9 +874,12 @@ void cmdh_dbug_peek (const cmdh_fsp_cmd_t * i_cmd_ptr,
     uint8_t            l_type    = l_cmd_ptr->type;
     uint32_t           l_addr    = l_cmd_ptr->oci_address;
 
+// Needed because otherwise we get warnings about
+// unused variables when building for Simics
+#if !SIMICS_ENVIRONMENT
     static Ppc405MmuMap       L_mmuMapHomer;
     static Ppc405MmuMap       L_mmuMapCommon;
-
+#endif
 
     switch(l_type)
     {
@@ -1064,12 +1067,13 @@ void cmdh_dbug_get_apss_data (const cmdh_fsp_cmd_t * i_cmd_ptr,
 void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
                            cmdh_fsp_rsp_t * o_rsp_ptr)
 {
+// TEMP / TODO : Uncomment these when needed, they cause unused var warning
     uint8_t                     l_rc = 0;
     uint8_t                     l_sub_cmd = 0;
-    uint8_t                     l_block_num = 0;
+//    uint8_t                     l_block_num = 0;
     errl_generic_resp_t *       l_err_rsp_ptr =  (errl_generic_resp_t *) o_rsp_ptr;
-    errlHndl_t                  l_errl = NULL;
-    cmdhDbugCmdArg_t            l_cmdh_dbug_args;
+//    errlHndl_t                  l_errl = NULL;
+//    cmdhDbugCmdArg_t            l_cmdh_dbug_args;
 
     // Sub Command for debug is always first byte of data
     l_sub_cmd = i_cmd_ptr->data[0];

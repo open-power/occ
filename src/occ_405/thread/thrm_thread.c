@@ -83,8 +83,10 @@ uint8_t THRM_thread_get_cooling_request()
 // End Function Specification
 errlHndl_t thrm_thread_load_thresholds()
 {
-/* TEMP -- THRM THREAD NOT YET ENABLED (NEED SENSOR / AMEC)
     errlHndl_t                  l_err = NULL;
+
+/* TEMP -- THRM THREAD NOT YET ENABLED (NEED SENSOR / AMEC) */
+#if 0
     cmdh_thrm_thresholds_t      *l_data = NULL;
     uint8_t                     i = 0;
 
@@ -150,9 +152,9 @@ errlHndl_t thrm_thread_load_thresholds()
                       i);
         }
     }while(0);
+#endif
 
-    return(l_err);
-*/
+    return l_err;
 }
 
 
@@ -330,7 +332,8 @@ BOOLEAN thrm_thread_vrm_fan_control(const uint16_t i_vrfan)
 // End Function Specification
 void thrm_thread_main()
 {
-/* TEMP -- THRM THREAD NOT ENABLED YET (NEED SENSOR / AMEC)
+/* TEMP -- THRM THREAD NOT ENABLED YET (NEED SENSOR / AMEC) */
+#if 0
     errlHndl_t                  l_err = NULL;
     BOOLEAN                     l_IncreaseFans = FALSE;
     sensor_t                    *l_sensor = NULL;
@@ -434,7 +437,7 @@ void thrm_thread_main()
                          * @userdata4   OCC_NO_EXTENDED_RC
                          * @devdesc     Request a fan increase and fan is already in full speed
                          *
-                         */ /*
+                         */
                         l_err = createErrl(THRD_THERMAL_MAIN,             //modId
                                            FAN_FULL_SPEED,                //reasoncode
                                            OCC_NO_EXTENDED_RC,            //Extended reason code
@@ -458,5 +461,5 @@ void thrm_thread_main()
             }
         }
     }
-*/
+#endif
 }

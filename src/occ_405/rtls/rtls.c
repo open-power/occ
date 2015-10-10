@@ -78,7 +78,7 @@ extern void arl_test(void);
 void rtl_start_task(const task_id_t i_task_id)
 {
     errlHndl_t l_err = NULL;   // Error handler
-    tracDesc_t l_trace = NULL; // Temporary trace descriptor
+    const trace_descriptor_array_t* l_trace = NULL; // Temporary trace descriptor
 
     if ( i_task_id < TASK_END )
     {
@@ -126,7 +126,7 @@ void rtl_stop_task(const task_id_t i_task_id)
 {
 
     errlHndl_t l_err = NULL;   // Error handler
-    tracDesc_t l_trace = NULL; // Temporary trace descriptor
+    const trace_descriptor_array_t* l_trace = NULL; // Temporary trace descriptor
 
     if ( i_task_id < TASK_END )
     {
@@ -173,7 +173,7 @@ bool rtl_task_is_runnable(const task_id_t i_task_id)
 {
     bool task_can_run = FALSE; // Default: task can NOT run
     errlHndl_t l_err = NULL;   // Error handler
-    tracDesc_t l_trace = NULL; // Temporary trace descriptor
+    const trace_descriptor_array_t* l_trace = NULL; // Temporary trace descriptor
 
     if ( i_task_id < TASK_END )
     {
@@ -232,7 +232,7 @@ void rtl_ocb_init(void)
 {
     int rc = 0;
     errlHndl_t l_err = NULL;
-    tracDesc_t l_trace = NULL;  // Temporary trace descriptor
+    const trace_descriptor_array_t* l_trace = NULL;  // Temporary trace descriptor
 
     // Setup an OCB timer and interrupt handler
     // The ocb_timer_setup will do the following:
@@ -284,12 +284,13 @@ void rtl_ocb_init(void)
 // End Function Specification
 void rtl_do_tick( void *private, SsxIrqId irq, int priority )
 {
-    uint64_t l_start = ssx_timebase_get();
+// TEMP / TODO  -- Unused var warning
+//    uint64_t l_start = ssx_timebase_get();
 
     uint8_t *l_taskid_ptr = NULL;   // Pointer to the current task ID in the current tick sequence
     task_t *l_task_ptr = NULL;      // Pointer to the currently executing task
     errlHndl_t  l_err = NULL;       // Error handler
-    tracDesc_t l_trace = NULL;      // Temporary trace descriptor (replace this when tracing is implemented)
+    const trace_descriptor_array_t* l_trace = NULL;      // Temporary trace descriptor (replace this when tracing is implemented)
     bool l_bad_id_reported = FALSE; // Has an invalid task ID already been reported?
 
     SsxMachineContext ctx;
@@ -409,7 +410,7 @@ void rtl_do_tick( void *private, SsxIrqId irq, int priority )
 void rtl_set_task_data( const task_id_t i_task_id, void * i_data_ptr )
 {
     errlHndl_t l_err = NULL;
-    tracDesc_t l_trace = NULL;  // Temporary trace descriptor
+    const trace_descriptor_array_t* l_trace = NULL;  // Temporary trace descriptor
 
     if ( i_task_id >= TASK_END )
     {

@@ -277,7 +277,7 @@ errlHndl_t createErrl(
             const uint8_t i_reasonCode,
             const uint32_t i_extReasonCode,
             const ERRL_SEVERITY i_sev,
-            const tracDesc_t i_trace,
+            const trace_descriptor_array_t* i_trace,
             const uint16_t i_traceSz,
             const uint32_t i_userData1,
             const uint32_t i_userData2
@@ -357,7 +357,7 @@ errlHndl_t createErrl(
 //
 // End Function Specification
 void addTraceToErrl(
-            const tracDesc_t i_trace,
+            const trace_descriptor_array_t* i_trace,
             const uint16_t i_traceSz,
             errlHndl_t io_err)
 {
@@ -366,9 +366,10 @@ void addTraceToErrl(
     uint16_t l_actualSizeOfUsrDtls = 0;
 // TEMP -- NO MORE PORE
 //    pore_status_t l_gpe0_status;
-    ocb_oisr0_t l_oisr0_status;
-    static bool L_gpe_halt_traced = FALSE;
-    static bool L_sys_checkstop_traced = FALSE;
+// TEMP / TODO -- Commented out due to unused var warning
+//    ocb_oisr0_t l_oisr0_status;
+//    static bool L_gpe_halt_traced = FALSE;
+//    static bool L_sys_checkstop_traced = FALSE;
 
 
     // check if GPE was frozen due to a checkstop
@@ -403,7 +404,10 @@ void addTraceToErrl(
         (io_err->iv_userDetails.iv_committed == 0) &&
         (i_traceSz != 0) &&
         ((io_err->iv_userDetails.iv_entrySize + sizeof(ErrlUserDetailsEntry_t)) < MAX_ERRL_ENTRY_SZ ) &&
-        ((i_trace==g_trac_inf)||(i_trace==g_trac_err)||(i_trace==g_trac_imp)||(i_trace==NULL)) )
+        ((i_trace==&g_des_array[INF_TRACE_DESCRIPTOR]) ||
+         (i_trace==&g_des_array[ERR_TRACE_DESCRIPTOR]) ||
+         (i_trace==&g_des_array[IMP_TRACE_DESCRIPTOR]) ||
+         (i_trace==NULL)) )
     {
         //local copy of the usr details entry
         ErrlUserDetailsEntry_t l_usrDtlsEntry;
@@ -576,7 +580,8 @@ void commitErrl( errlHndl_t *io_err )
 {
 // TEMP -- NO MORE PORE
 //    pore_status_t l_gpe0_status;
-    ocb_oisr0_t l_oisr0_status;
+// TEMP -- Commented out due to unused var warning
+//    ocb_oisr0_t l_oisr0_status;
     static bool L_log_commits_suspended_by_safe_mode = FALSE;
 
     if (!L_log_commits_suspended_by_safe_mode && io_err != NULL)

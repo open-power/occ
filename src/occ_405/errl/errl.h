@@ -281,7 +281,7 @@ errlHndl_t createErrl(
             const uint8_t i_reasonCode,
             const uint32_t i_extReasonCode,
             const ERRL_SEVERITY i_sev,
-            const tracDesc_t i_trace,
+            const trace_descriptor_array_t* i_trace,
             const uint16_t i_traceSz,
             const uint32_t i_userData1,
             const uint32_t i_userData2
@@ -290,7 +290,7 @@ errlHndl_t createErrl(
 
 /* Add Trace Data to Error Log */
 void addTraceToErrl(
-            const tracDesc_t i_trace,
+            const trace_descriptor_array_t* i_trace,
             const uint16_t i_traceSz,
             errlHndl_t io_errl
             );

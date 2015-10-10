@@ -246,7 +246,8 @@ errlHndl_t SMGR_observation_to_standby()
 errlHndl_t SMGR_observation_to_active()
 {
     errlHndl_t      l_errlHndl = NULL;
-/* TEMP -- UNNECCESSARY IN PHASE1
+/* TEMP -- UNNECCESSARY IN PHASE1 */
+#if 0
     static bool l_error_logged = FALSE;  // To prevent trace and error log happened over and over
     int                l_extRc = OCC_NO_EXTENDED_RC;
     int                l_rc = 0;
@@ -287,8 +288,7 @@ errlHndl_t SMGR_observation_to_active()
                 l_extRc = ERC_GENERIC_TIMEOUT;
                 break;
             }
-// TEMP -- We don't support Pstates in Phase1
-//            proc_gpsm_dcm_sync_enable_pstates_smh();
+            proc_gpsm_dcm_sync_enable_pstates_smh();
             ssx_sleep(SSX_MICROSECONDS(500));
         }
         if(proc_is_hwpstate_enabled() && G_sysConfigData.system_type.kvm)
@@ -313,7 +313,6 @@ errlHndl_t SMGR_observation_to_active()
         rtl_clr_run_mask_deferred(RTL_FLAG_OBS);
         rtl_set_run_mask_deferred(RTL_FLAG_ACTIVE);
 
-/* TEMP -- NOT SUPPORTED IN PHASE1
         // Ensure that the dpll override (enabled when mfg biases freq) has been disabled.
         int l_core;
         uint32_t l_configured_cores;
@@ -332,7 +331,6 @@ errlHndl_t SMGR_observation_to_active()
                 break;
             }
         }
-*/ /*
         if(!l_rc)
         {
 
@@ -353,7 +351,6 @@ errlHndl_t SMGR_observation_to_active()
             TRAC_IMP("OCC configuration view: G_present_hw_cores=0x%8.8x, G_present_cores=0x%8.8x",
                     G_present_hw_cores, G_present_cores);
 
-/* TEMP -- NOT SUPPORTED IN PHASE1
             // Setup the pcbs heartbeat timer
             l_rc = pcbs_hb_config(1, // enable = yes
                                   l_cfgd_cores,
@@ -376,7 +373,7 @@ errlHndl_t SMGR_observation_to_active()
                          PCBS_HEARBEAT_TIME_US,
                          l_actual_pcbs_hb_time);
             }
-*/ /*
+
             // TODO: #state_c_001 Manually configuring the PMC
             // heartbeat until pmc_hb_config is shown to be working
             // Reference SW238882 for more information on updates needed in
@@ -434,7 +431,7 @@ errlHndl_t SMGR_observation_to_active()
          * @userdata2   valid states
          * @userdata4   ERC_STATE_FROM_OBS_TO_STB_FAILURE
          * @devdesc     Failed changing from observation to standby
-         */ /*
+         */
          l_errlHndl = createErrl(MAIN_STATE_TRANSITION_MID,        //modId
                                  INTERNAL_FAILURE,                 //reasoncode
                                  l_extRc,                          //Extended reason code
@@ -450,7 +447,7 @@ errlHndl_t SMGR_observation_to_active()
                  ERRL_COMPONENT_ID_FIRMWARE,
                  ERRL_CALLOUT_PRIORITY_HIGH);
     }
-*/
+#endif
     return l_errlHndl;
 }
 

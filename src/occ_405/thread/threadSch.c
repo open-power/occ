@@ -195,7 +195,7 @@ void initThreadScheduler(void)
 
         // Create error log and log it
         // TODO use correct trace
-        tracDesc_t  l_trace = NULL;
+        const trace_descriptor_array_t*  l_trace = NULL;
 
         /* @
          * @errortype
@@ -249,7 +249,7 @@ void threadSwapcallback(void * arg)
         if(G_threadSwapErrlCounter == 0)
         {
             // TODO use correct trace
-            tracDesc_t l_trace = NULL;
+            const trace_descriptor_array_t* l_trace = NULL;
 
             /*
              * @errortype

@@ -193,7 +193,7 @@ int cmdh_fsp_fsi2host_mbox_wait4free(void)
     int                             rc,rc2      = 0;
     int                             l_do_once   = 0;
     int                             l_timeout   = FSI2HOST_TIMEOUT_IN_SECONDS;
-    ChipConfigCores                 l_cores, l_swup_timedout;
+    ChipConfigCores                 l_cores, l_swup_timedout = 0;
     pmc_core_deconfiguration_reg_t  l_pcdr;
     bool                            l_disable_swup;
     errlHndl_t                      l_errl;

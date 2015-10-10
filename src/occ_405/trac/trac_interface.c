@@ -444,7 +444,7 @@ UINT trac_write_int(const trace_descriptor_array_t *io_td,const trace_hash_val i
 
             // Save to Circular Buffer
             l_rc = trac_write_data_to_circular(&l_cir_data_in);
-            g_isr_circular_header.head = (++g_isr_circular_header.head) % CIRCULAR_BUFFER_SIZE;
+            g_isr_circular_header.head = (g_isr_circular_header.head + 1) % CIRCULAR_BUFFER_SIZE;
             g_isr_circular_header.entryCount++;
 
             if(l_rc != SUCCESS)
@@ -585,140 +585,7 @@ UINT trac_write_int(const trace_descriptor_array_t *io_td,const trace_hash_val i
     return(l_rc);
 }
 
-
-// Function Specification
-//
-// Name: trac_write_bin
-//
-// Description:
-//
-// End Function Specification
-UINT trac_write_bin(const trace_descriptor_array_t *io_td,const trace_hash_val i_hash,
-                    const ULONG i_line,
-                    const void *i_ptr,
-                    const ULONG i_size)
-{
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
-    UINT                l_rc = 0;
-    ULONG               l_entry_size = 0;
-    trace_bin_entry_t   l_entry;
-    SsxMachineContext   l_ctx = 0;
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
-
-    if((io_td == NULL) || (i_ptr == NULL) || (i_size == 0))
-    {
-        l_rc = TRAC_INVALID_PARM;
-    }
-    else
-    {
-        // Calculate total space needed
-        l_entry_size = sizeof(trace_entry_stamp_t);
-        l_entry_size += sizeof(trace_entry_head_t);
-
-        // We always add the size of the entry at the end of the trace entry
-        // so the parsing tool can easily walk the trace buffer stack so we
-        // need to add that on to total size
-        l_entry_size += sizeof(ULONG);
-
-        // Now add on size for actual size of the binary data
-        l_entry_size += i_size;
-
-        // Word align the entry
-        l_entry_size = (l_entry_size + 3) & ~3;
-
-        // Fill in the entry structure
-        //l_entry.stamp.tid = (ULONG)tx_thread_identify();   // What is response to this in AME code?
-        l_entry.stamp.tid = 0;   // What is response to this in AME code?
-
-        // Length is equal to size of data
-        l_entry.head.length = i_size;
-        l_entry.head.tag = TRACE_FIELDBIN;
-        l_entry.head.hash = i_hash;
-        l_entry.head.line = i_line;
-
-        // We now have total size and need to reserve a part of the trace
-        // buffer for this
-
-        // CRITICAL REGION START
-        // Disable non-critical interrupts if thread context
-        if (__ssx_kernel_context_thread())
-            ssx_critical_section_enter(SSX_NONCRITICAL, &l_ctx);
-
-        l_rc = ssx_semaphore_pend(io_td->sem,TRAC_INTF_MUTEX_TIMEOUT);
-
-        if(l_rc != SSX_OK)
-        {
-            // Badness
-            FIELD("trac_write_bin: Failed to get mutex");
-        }
-        else
-        {
-            // Capture the time.  Note the time stamp is split into tbh (upper) and
-            // tbl (lower), both of which are 32 bits each.  The ssx_timebase_get
-            // call returns a uint64_t
-
-            uint64_t l_time = ssx_timebase_get();
-            l_entry.stamp.tbh = l_time / SSX_TIMEBASE_FREQUENCY_HZ;                // seconds
-            l_entry.stamp.tbl = ((l_time % SSX_TIMEBASE_FREQUENCY_HZ)*1000000000)  // nanoseconds
-                              /SSX_TIMEBASE_FREQUENCY_HZ;
-
-            // Increment trace counter
-            (*io_td->entry)->te_count++;;
-
-            // First write the header
-            l_rc = trac_write_data(io_td,
-                                   (void *)&l_entry,
-                                   sizeof(l_entry));
-            do
-            {
-                if(l_rc != SUCCESS)
-                {
-                    // Badness - Not much we can do on trace failure.  Can't log error
-                    // because of recursion concerns.  Luckily a trace error is not critical.
-                    FIELD("trac_write_bin: Failed in call to trac_write_data - 1()");
-                    break;
-                }
-
-                // Now write the actual binary data
-                l_rc = trac_write_data(io_td,
-                                       i_ptr,
-                                       i_size);
-                if(l_rc != SUCCESS)
-                {
-                    // Badness - Not much we can do on trace failure.  Can't log error
-                    // because of recursion concerns.  Luckily a trace error is not critical.
-                    FIELD("trac_write_bin: Failed in call to trac_write_data - 2()");
-                    break;
-                }
-
-                // Now write the size at the end
-                l_rc = trac_write_data(io_td,
-                                       (void *)&l_entry_size,
-                                       sizeof(l_entry_size));
-                if(l_rc != SUCCESS)
-                {
-                    // Badness - Not much we can do on trace failure.  Can't log error
-                    // because of recursion concerns.  Luckily a trace error is not critical.
-                    FIELD("trac_write_bin: Failed in call to trac_write_data - 3()");
-                    break;
-                }
-            }
-            while(FALSE);
-
-            ssx_semaphore_post(io_td->sem);
-            // Re-enable non-critical interrupts if thread context
-            if (__ssx_kernel_context_thread())
-                ssx_critical_section_exit(&l_ctx);
-        }
-        // CRITICAL REGION END
-    }
-
-    return(l_rc);
-}
+// NOTE: Removed trac_write_bin because it was unused and unsafe
 
 // Function Specification
 //

@@ -58,7 +58,7 @@
 //#include <fir_data_collect.h>
 #include <pss_service_codes.h>
 
-extern void __ssx_boot;
+extern uint32_t __ssx_boot; // Function address is 32 bits
 extern uint32_t G_occ_phantom_critical_count;
 extern uint32_t G_occ_phantom_noncritical_count;
 extern uint8_t G_occ_interrupt_type;
@@ -132,7 +132,8 @@ SSX_IRQ_FAST2FULL(pmc_hw_error_fast, pmc_hw_error_isr);
  */
 void pmc_hw_error_isr(void *private, SsxIrqId irq, int priority)
 {
-    errlHndl_t  l_err;
+    // TEMP / TODO -- Unused var
+    //errlHndl_t  l_err;
     //pmc_ffdc_data_t l_pmc_ffdc;
     SsxMachineContext ctx;
 
@@ -449,9 +450,10 @@ void occ_ipc_setup()
  *
  * End Function Specification
  */
-/* TEMP -- NOT SUPPORTED IN PHASE1
 void hmon_routine()
 {
+/* TEMP -- NOT SUPPORTED IN PHASE1 */
+#if 0
     static uint32_t L_critical_phantom_count = 0;
     static uint32_t L_noncritical_phantom_count = 0;
     static bool L_c_phantom_logged = FALSE;
@@ -497,7 +499,7 @@ void hmon_routine()
          * @userdata2   non-critical count
          * @userdata4   OCC_NO_EXTENDED_RC
          * @devdesc     interrupt with unknown source was detected
-         */ /*
+         */
         errlHndl_t l_err = createErrl(HMON_ROUTINE_MID,             //modId
                                       INTERNAL_FAILURE,             //reasoncode
                                       OCC_NO_EXTENDED_RC,           //Extended reason code
@@ -528,8 +530,9 @@ void hmon_routine()
         amec_health_check_dimm_timeout();
         amec_health_check_dimm_temp();
     }
+#endif
 }
-*/
+
 
 
 /*
@@ -570,7 +573,7 @@ void master_occ_init()
     gpe_request_create(&l_request,                                // request
                        &G_async_gpe_queue0,                       // queue
                        IPC_ST_APSS_INIT_GPIO_FUNCID,              // Function ID
-                       (uint32_t)&G_gpe_apss_initialize_gpio_args, // GPE argument_ptr
+                       &G_gpe_apss_initialize_gpio_args,          // GPE argument_ptr
                        SSX_SECONDS(5),                            // timeout
                        NULL,                                      // callback
                        NULL,                                      // callback arg
@@ -618,7 +621,7 @@ void master_occ_init()
         gpe_request_create(&l_request,                              // request
                            &G_async_gpe_queue0,                     // queue
                            IPC_ST_APSS_INIT_MODE_FUNCID,            // Function ID
-                           (uint32_t)&G_gpe_apss_set_mode_args,     // GPE argument_ptr
+                           &G_gpe_apss_set_mode_args,               // GPE argument_ptr
                            SSX_SECONDS(5),                          // timeout
                            NULL,                                    // callback
                            NULL,                                    // callback arg
@@ -649,7 +652,7 @@ void master_occ_init()
             gpe_request_create(&G_meas_start_request,
                                &G_async_gpe_queue0,                          // queue
                                IPC_ST_APSS_START_PWR_MEAS_READ_FUNCID,       // entry_point
-                               (uint32_t)&G_gpe_start_pwr_meas_read_args,    // entry_point arg
+                               &G_gpe_start_pwr_meas_read_args,              // entry_point arg
                                SSX_WAIT_FOREVER,                             // no timeout
                                NULL,                                         // callback
                                NULL,                                         // callback arg
@@ -660,7 +663,7 @@ void master_occ_init()
             gpe_request_create(&G_meas_cont_request,
                                &G_async_gpe_queue0,                          // request
                                IPC_ST_APSS_CONTINUE_PWR_MEAS_READ_FUNCID,    // entry_point
-                               (uint32_t)&G_gpe_continue_pwr_meas_read_args, // entry_point arg
+                               &G_gpe_continue_pwr_meas_read_args,           // entry_point arg
                                SSX_WAIT_FOREVER,                             // no timeout
                                NULL,                                         // callback
                                NULL,                                         // callback arg
@@ -671,7 +674,7 @@ void master_occ_init()
             gpe_request_create(&G_meas_complete_request,
                                &G_async_gpe_queue0,                          // queue
                                IPC_ST_APSS_COMPLETE_PWR_MEAS_READ_FUNCID,    // entry_point
-                               (uint32_t)&G_gpe_complete_pwr_meas_read_args, // entry_point arg
+                               &G_gpe_complete_pwr_meas_read_args,           // entry_point arg
                                SSX_WAIT_FOREVER,                             // no timeout
                                (AsyncRequestCallback)reformat_meas_data,     // callback,
                                (void*)NULL,                                  // callback arg
@@ -1172,8 +1175,8 @@ void Main_thread_routine(void *private)
  */
 int main(int argc, char **argv)
 {
-    int l_ssxrc;
-    int l_ssxrc2;
+    int l_ssxrc = 0;
+    int l_ssxrc2 = 0;
 
     // ----------------------------------------------------
     // Initialize TLB for Linear Window access here so we
