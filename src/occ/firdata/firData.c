@@ -126,6 +126,9 @@ bool FirData_addRegToPnor( FirData_t * io_fd, PNOR_Trgt_t * io_pTrgt,
         }
 
         if ( 0 == reg.val ) break; // Skip zero value registers.
+        if ( (i_addr == 0x10040000) && ((reg.val & 0x1FFFFFFFFFFFFFFF) == 0) )
+            break; // Special case to ignore bits in core global checkstop
+                   // that only indicate a checkstop from other chip/chiplets
 
         full = FirData_addDataToPnor( io_fd, &reg, sizeof(reg) );
         if ( full ) break;
@@ -601,7 +604,7 @@ int32_t FirData_init( FirData_t * io_fd,
     int32_t rc = SUCCESS;
 
     size_t sz_hData    = sizeof(HOMER_Data_t);
-    size_t sz_pnoNoEcc = 0;
+    size_t sz_pnorNoEcc = 0;
     size_t sz_u32      = sizeof(uint32_t);
     size_t sz_u64      = sizeof(uint64_t);
 
@@ -650,9 +653,9 @@ int32_t FirData_init( FirData_t * io_fd,
 
         /* The actual maximum PNOR size may possibly be less then the PNOR data */
         /* buffer. If so, adjust maximum size. */
-        sz_pnoNoEcc = (io_fd->hData->pnorInfo.pnorSize / 9) * 8;
-        if ( sz_pnoNoEcc < io_fd->maxPBufSize )
-            io_fd->maxPBufSize = sz_pnoNoEcc;
+        sz_pnorNoEcc = io_fd->hData->pnorInfo.pnorSize;
+        if ( sz_pnorNoEcc < io_fd->maxPBufSize )
+            io_fd->maxPBufSize = sz_pnorNoEcc;
 
         /* Initialize the PNOR header data. */
         full = FirData_addDataToPnor( io_fd, &pData, sizeof(pData) );
