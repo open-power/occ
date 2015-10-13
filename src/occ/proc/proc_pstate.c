@@ -77,6 +77,7 @@ bool G_isDcm      = FALSE;
 
 // Used for Sapphire
 DMA_BUFFER( sapphire_table_t G_sapphire_table ) = {{0}};
+DMA_BUFFER( sapphire_sensor_t G_sensor_table ) = {{0}};
 
 //KVM throttle reason coming from the frequency voting box.
 extern uint8_t G_amec_kvm_throt_reason;
@@ -944,6 +945,7 @@ void populate_pstate_to_sapphire_tbl()
     }
 
     memset(&G_sapphire_table, 0, sizeof(sapphire_table_t));
+    memset(&G_sensor_table, 0, sizeof(sapphire_sensor_t));
 
     l_gpst_ptr = gpsm_gpst();
     const int8_t l_pmax = (int8_t) l_gpst_ptr->pmin + l_gpst_ptr->entries - 1;
@@ -1096,6 +1098,112 @@ void populate_sapphire_tbl_to_mem()
     }
 }
 
+void populate_sensor_tbl_to_mem()
+{
+    int l_ssxrc = SSX_OK, i;
+    uint32_t l_reasonCode = 0;
+    uint32_t l_extReasonCode = 0;
+    BceRequest pba_copy;
+
+    G_sensor_table.ambient_temperature = AMECSENSOR_PTR(TEMPAMBIENT)->sample;
+    G_sensor_table.altitude = AMECSENSOR_PTR(ALTITUDE)->sample;
+    G_sensor_table.power = AMECSENSOR_PTR(PWR250US)->sample;
+    G_sensor_table.fan_power = AMECSENSOR_PTR(PWR250USFAN)->sample;
+    G_sensor_table.io_power = AMECSENSOR_PTR(PWR250USIO)->sample;
+    G_sensor_table.storage_power = AMECSENSOR_PTR(PWR250USSTORE)->sample;
+    G_sensor_table.gpu_power = AMECSENSOR_PTR(PWR250USGPU)->sample;
+    G_sensor_table.fan_speed = AMECSENSOR_PTR(FANSPEEDAVG)->sample;
+    G_sensor_table.pwr250us = AMECSENSOR_PTR(PWR250USP0)->sample;
+    G_sensor_table.pwr250usvdd = AMECSENSOR_PTR(PWR250USVDD0)->sample;
+    G_sensor_table.pwr250usvcs = AMECSENSOR_PTR(PWR250USVCS0)->sample;
+    G_sensor_table.pwr250usmem = AMECSENSOR_PTR(PWR250USMEM0)->sample;
+    G_sensor_table.sleepcnt2ms = AMECSENSOR_PTR(SLEEPCNT2MSP0)->sample;
+    G_sensor_table.winkcnt2ms = AMECSENSOR_PTR(WINKCNT2MSP0)->sample;
+    G_sensor_table.temp2ms = AMECSENSOR_PTR(TEMP2MSP0)->sample;
+    G_sensor_table.temp2mspeak = AMECSENSOR_PTR(TEMP2MSP0PEAK)->sample;
+    G_sensor_table.util2ms = AMECSENSOR_PTR(UTIL2MSP0)->sample;
+
+    for ( i = 0; i < MAX_CORES; i++) {
+	if (CORE_PRESENT(i)) {
+            G_sensor_table.core_temp[i] = AMECSENSOR_ARRAY_PTR(TEMP2MSP0C0, i)->sample;
+            G_sensor_table.pwrpx250us[i] = AMECSENSOR_ARRAY_PTR(PWRPX250USP0C0, i)->sample;
+            G_sensor_table.cmbw2ms[i] = AMECSENSOR_ARRAY_PTR(CMBW2MSP0C0, i)->sample;
+	} else {
+            G_sensor_table.core_temp[i] = -1;
+            G_sensor_table.pwrpx250us[i] = -1;
+            G_sensor_table.cmbw2ms[i] = -1;
+	}
+    }
+    G_sensor_table.count++;
+    do
+    {
+        l_ssxrc = bce_request_create(&pba_copy,                          // block copy object
+			         &G_pba_bcue_queue,                  // sram to mainstore copy engine
+			         SAPPHIRE_OFFSET_IN_HOMER + sizeof(G_sapphire_table),           // mainstore address
+			         (uint32_t) &G_sensor_table,       // sram starting address
+			         (size_t) sizeof(G_sensor_table),  // size of copy
+			         SSX_WAIT_FOREVER,                   // no timeout
+			         NULL,                               // call back
+			         NULL,                               // call back arguments
+			         ASYNC_REQUEST_BLOCKING              // callback mask
+			         );
+        if(l_ssxrc != SSX_OK)
+        {
+            TRAC_ERR("populate_sapphire_tbl_to_mem: PBA request create failure rc=[%08X]", -l_ssxrc);
+	    /*
+	     * @errortype
+	     * @moduleid    MAIN_STATE_TRANSITION_MID
+	     * @reasoncode  SSX_GENERIC_FAILURE
+	     * @userdata1   RC for PBA block-copy engine
+	     * @userdata4   ERC_BCE_REQUEST_CREATE_FAILURE
+	     * @devdesc     SSX BCE related failure
+	     */
+	    l_reasonCode = SSX_GENERIC_FAILURE;
+	    l_extReasonCode = ERC_BCE_REQUEST_CREATE_FAILURE;
+            break;
+	}
+
+	// Do actual copying
+	l_ssxrc = bce_request_schedule(&pba_copy);
+
+	if(l_ssxrc != SSX_OK)
+	{
+	    TRAC_ERR("populate_sapphire_tbl_to_mem: PBA request schedule failure rc=[%08X]", -l_ssxrc);
+	    /*
+	     * @errortype
+	     * @moduleid    MAIN_STATE_TRANSITION_MID
+	     * @reasoncode  SSX_GENERIC_FAILURE
+	     * @userdata1   RC for PBA block-copy engine
+	     * @userdata4   ERC_BCE_REQUEST_SCHEDULE_FAILURE
+	     * @devdesc     Failed to copy data by using DMA
+	     */
+	    l_reasonCode = SSX_GENERIC_FAILURE;
+	    l_extReasonCode = ERC_BCE_REQUEST_SCHEDULE_FAILURE;
+	    break;
+	}
+    } while(0);
+
+    if ( l_ssxrc != SSX_OK )
+    {
+        errlHndl_t l_errl = createErrl(MAIN_STATE_TRANSITION_MID,    //modId
+                                       l_reasonCode,                 //reasoncode
+                                       l_extReasonCode,              //Extended reason code
+                                       ERRL_SEV_UNRECOVERABLE,       //Severity
+                                       NULL,                         //Trace Buf
+                                       0,                            //Trace Size
+                                       -l_ssxrc,                     //userdata1
+                                       0);                           //userdata2
+
+        // Callout firmware
+        addCalloutToErrl(l_errl,
+                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                         ERRL_COMPONENT_ID_FIRMWARE,
+                         ERRL_CALLOUT_PRIORITY_HIGH);
+
+        commitErrl(&l_errl);
+    }
+}
+
 // Function Specification
 //
 // Name: proc_check_for_sapphire_updates
@@ -1127,4 +1235,5 @@ void proc_check_for_sapphire_updates()
         G_sapphire_table.config.valid = 0x01; //default 0x01
         populate_sapphire_tbl_to_mem();
     }
+    populate_sensor_tbl_to_mem();
 }
