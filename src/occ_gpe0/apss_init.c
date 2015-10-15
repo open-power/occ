@@ -22,7 +22,7 @@ uint32_t apss_start_spi_command(initGpioArgs_t * args, uint8_t i_noWait)
     uint64_t regValue = 0x8000000000000000;
 
     // Start SPI transaction
-    rc = putscom_abs(SPIPSS_P2S_COMMAND_REG, &regValue);
+    rc = putscom_abs(SPIPSS_P2S_COMMAND_REG, regValue);
     if (rc)
     {
         PK_TRACE("apss_start_spi_command: SPIPSS_P2S_COMMAND_REG putscom failed. rc = 0x%08x",
@@ -32,7 +32,7 @@ uint32_t apss_start_spi_command(initGpioArgs_t * args, uint8_t i_noWait)
     else
     {
 
-         pk_sleep(PK_MICROSECONDS(5));
+         busy_wait(5);
 
         if (!i_noWait)
         {
@@ -85,7 +85,7 @@ void apss_init_gpio(ipc_msg_t* cmd, void* arg)
         // Setup the control regs
         // frame_size=16, out_count=16, in_delay1=never, in_count2=16
         regValue = 0x410FC00004000000;
-        rc = putscom_abs(SPIPSS_P2S_CTRL_REG0, &regValue);
+        rc = putscom_abs(SPIPSS_P2S_CTRL_REG0, regValue);
         if (rc)
         {
             PK_TRACE("apss_init_gpio: SPIPSS_P2S_CTRL_REG0 putscom failed. rc = 0x%08x", rc);
@@ -94,7 +94,7 @@ void apss_init_gpio(ipc_msg_t* cmd, void* arg)
         }
         // bridge_enable, clock_divider=7, 2 frames
         regValue = 0x8090400000000000;
-        rc = putscom_abs(SPIPSS_P2S_CTRL_REG1, &regValue);
+        rc = putscom_abs(SPIPSS_P2S_CTRL_REG1, regValue);
         if (rc)
         {
             PK_TRACE("apss_init_gpio: SPIPSS_P2S_CTRL_REG1 putscom failed. rc = 0x%08x", rc);
@@ -103,7 +103,7 @@ void apss_init_gpio(ipc_msg_t* cmd, void* arg)
         }
         // inter_frame_delay=50 (5usec)
         regValue = 0x0019000000000000;
-        rc = putscom_abs(SPIPSS_P2S_CTRL_REG2, &regValue);
+        rc = putscom_abs(SPIPSS_P2S_CTRL_REG2, regValue);
         if (rc)
         {
             PK_TRACE("apss_init_gpio: SPIPSS_P2S_CTRL_REG2 putscom failed. rc = 0x%08x", rc);
@@ -122,7 +122,7 @@ void apss_init_gpio(ipc_msg_t* cmd, void* arg)
             regValue |= 0x4000000000000000;
             regValue |= (port << 56);
 
-            rc = putscom_abs(SPIPSS_P2S_WDATA_REG, &regValue);
+            rc = putscom_abs(SPIPSS_P2S_WDATA_REG, regValue);
             if (rc)
             {
                 PK_TRACE("apss_init_gpio: SPIPSS_P2S_WDATA_REG putscom failed. value:0x%X. rc = 0x%08x",
@@ -147,7 +147,7 @@ void apss_init_gpio(ipc_msg_t* cmd, void* arg)
             regValue |= 0x5000000000000000;
             regValue |= (port << 56);
 
-            rc = putscom_abs(SPIPSS_P2S_WDATA_REG, &regValue);
+            rc = putscom_abs(SPIPSS_P2S_WDATA_REG, regValue);
             if (rc)
             {
                 PK_TRACE("apss_init_gpio: SPIPSS_P2S_WDATA_REG putscom failed. value:0x%X. rc = 0x%08x",
@@ -171,7 +171,7 @@ void apss_init_gpio(ipc_msg_t* cmd, void* arg)
             regValue |= 0x6000000000000000;
             regValue |= (port << 56);
 
-            rc = putscom_abs(SPIPSS_P2S_WDATA_REG, &regValue);
+            rc = putscom_abs(SPIPSS_P2S_WDATA_REG, regValue);
             if (rc)
             {
                 PK_TRACE("apss_init_gpio: SPIPSS_P2S_WDATA_REG putscom failed. value:0x%X. rc = 0x%08x",
@@ -254,7 +254,7 @@ void apss_init_mode(ipc_msg_t* cmd, void* arg)
         // Setup the control regs
         // frame_size=16, out_count1=16, in_delay1=never, in_count2=16
         regValue = 0x4100000000000000;
-        rc = putscom_abs(SPIPSS_P2S_CTRL_REG0, &regValue);
+        rc = putscom_abs(SPIPSS_P2S_CTRL_REG0, regValue);
         if (rc)
         {
             PK_TRACE("apss_init_mode: SPIPSS_P2S_CTRL_REG0 putscom failed. rc = 0x%08x", rc);
@@ -264,7 +264,7 @@ void apss_init_mode(ipc_msg_t* cmd, void* arg)
 
         // bridge_enable, clock_divider=7, 1 frames
         regValue = 0x8090000000000000;
-        rc = putscom_abs(SPIPSS_P2S_CTRL_REG1, &regValue);
+        rc = putscom_abs(SPIPSS_P2S_CTRL_REG1, regValue);
         if (rc)
         {
             PK_TRACE("apss_init_mode: SPIPSS_P2S_CTRL_REG1 putscom failed. rc = 0x%08x", rc);
@@ -273,7 +273,7 @@ void apss_init_mode(ipc_msg_t* cmd, void* arg)
         }
         // inter_frame_delay=25 (2.5usec)
         regValue = 0x0019000000000000;
-        rc = putscom_abs(SPIPSS_P2S_CTRL_REG2, &regValue);
+        rc = putscom_abs(SPIPSS_P2S_CTRL_REG2, regValue);
         if (rc)
         {
             PK_TRACE("apss_init_mode: SPIPSS_P2S_CTRL_REG2 putscom failed. rc = 0x%08x", rc);
@@ -306,7 +306,7 @@ void apss_init_mode(ipc_msg_t* cmd, void* arg)
             break;
         }
 
-        rc = putscom_abs(SPIPSS_P2S_WDATA_REG, &regValue);
+        rc = putscom_abs(SPIPSS_P2S_WDATA_REG, regValue);
         if (rc)
         {
             PK_TRACE("apss_init_mode: SPIPSS_P2S_WDATA_REG putscom to set MODE failed. value:0x%X. rc = 0x%08x",
@@ -317,7 +317,7 @@ void apss_init_mode(ipc_msg_t* cmd, void* arg)
 
         regValue = 0x8000000000000000;
         // Start SPI transaction
-        rc = putscom_abs(SPIPSS_P2S_COMMAND_REG, &regValue);
+        rc = putscom_abs(SPIPSS_P2S_COMMAND_REG, regValue);
         if (rc)
         {
             PK_TRACE("apss_init_mode: SPIPSS_P2S_COMMAND_REG putscom failed. rc = 0x%08x",
@@ -326,7 +326,7 @@ void apss_init_mode(ipc_msg_t* cmd, void* arg)
         }
 
         //Wait 20usec for apss becoming ready to send out the frame of composite mode
-         pk_sleep(PK_MICROSECONDS(20));;
+        busy_wait(20);
 
     }while(0);
 

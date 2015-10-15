@@ -51,110 +51,15 @@ IPC_MSGQ_CREATE(G_gpe0_test_msgq0);
 IPC_MSGQ_MSG_CREATE(G_test_msg, IPC_ST_TEST_FUNC0, &G_gpe0_test_msgq0);
 
 
-// Continuously ping each OCC instance
+// Main thread of execution. Currently does nothing
 void main_thread(void* arg)
 {
-    uint8_t     instance;
-    int         rc;
-    int         func_id;
-    ipc_msg_t   *test_msg;
+    volatile uint64_t t_ticks = 0;
 
-    PK_TRACE("thread started");
-
-    PK_TRACE("Waiting for ping response from all instances");
-    for(instance = 0; instance < OCCHW_MAX_INSTANCES; instance++)
-    {
-        // Wait for each instance (including self) to start accepting IPC commands
-        do
-        {
-            pk_sleep(PK_MILLISECONDS(10));
-            rc = ipc_ping(&G_ping_cmd, instance);
-        }while(rc == IPC_RC_TARGET_BLOCKED);
-
-        if(rc && rc != IPC_RC_TARGET_BLOCKED)
-        {
-            PK_TRACE("phase 1 ipc_ping(%u) failed with rc = 0x%08x", instance, rc);
-            PK_TRACE_BIN("G_ping_cmd:", &G_ping_cmd, sizeof(G_ping_cmd));
-            pk_halt();
-        }
-        PK_TRACE("Ping response received from instance(%d)", instance);
-    }
-
-    PK_TRACE("Starting infinite loop test");
     while(1)
     {
-        for(instance = 0; instance < OCCHW_MAX_INSTANCES; instance++)
-        {
-            // Ping each instance (including ourself)
-            rc = ipc_ping(&G_ping_cmd, instance);
-            if(rc)
-            {
-                PK_TRACE("phase 2 ipc_ping(%u) failed with rc = 0x%08x", instance, rc);
-                PK_TRACE_BIN("G_ping_cmd:", &G_ping_cmd, sizeof(G_ping_cmd));
-                pk_halt();
-            }
-        }
-
-        // Send an IPC_ST_TEST_FUNC0 message (to ourselves) if the message
-        // isnt' already in-flight.
-        if(ipc_is_free(&G_test_msg))
-        {
-            rc = ipc_send_cmd(&G_test_msg);
-            if(rc)
-            {
-                pk_halt();
-            }
-        }
-
-        // wait for a IPC_ST_TEST_FUNC0 command or response message to arrive
-        rc = ipc_msgq_recv(&test_msg, &G_gpe0_test_msgq0, PK_MILLISECONDS(1));
-        if(!rc)
-        {
-            //verify that the command message type is what we expected
-            func_id = ipc_get_funcid(test_msg);
-            if(func_id != IPC_ST_TEST_FUNC0)
-            {
-                //unexpected func id
-                //(probably caused by a mismatch between function table
-                // and function id ordering)
-                rc = ipc_send_rsp(test_msg, IPC_RC_CMD_NOT_SUPPORTED);
-            }
-            else
-            {
-                //Is this a response to the message we sent to ourselves?
-                if(ipc_is_a_response(test_msg))
-                {
-                    //check that the remote end was successful
-                    if(ipc_get_rc(test_msg) != IPC_RC_SUCCESS)
-                    {
-                        pk_halt();
-                    }
-                    //free up the message for sending again
-                    ipc_free_msg(test_msg);
-                }
-                else
-                {
-                    //successfully recieved the command message.
-                    //Send a response message back.
-                    rc = ipc_send_rsp(test_msg, IPC_RC_SUCCESS);
-                }
-            }
-            if(rc)
-            {
-                //failed to send the response back
-                pk_halt();
-            }
-        }
-        else
-        {
-            //Unless it's a timeout, a non-zero rc is an error
-            if(rc != IPC_RC_TIMEOUT)
-            {
-                //Failure encountered while waiting for a new message
-                pk_halt();
-            }
-        }
-        pk_sleep(PK_MILLISECONDS(1));
+        pk_sleep(PK_MICROSECONDS(250));
+        t_ticks++;
     }
 }
 
@@ -188,8 +93,9 @@ int main(int argc, char **argv)
         pk_halt();
     }
 
+
     //Initialize the thread control block for G_main_thread
-    pk_thread_create(&G_main_thread,
+      pk_thread_create(&G_main_thread,
                       (PkThreadRoutine)main_thread,
                       (void*)NULL,
                       (PkAddress)G_main_thread_stack,
@@ -206,6 +112,6 @@ int main(int argc, char **argv)
     // Start running the highest priority thread.
     // This function never returns
     pk_start_threads();
-    
+
     return 0;
 }

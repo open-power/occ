@@ -86,7 +86,7 @@ int wait_spi_completion(GpeErrorStruct *error, uint32_t reg, uint8_t timeout)
             }
 
             // sleep for 1 microsecond before retry
-            pk_sleep(PK_MICROSECONDS(1));
+            busy_wait(1);
         }
     }
 
@@ -99,4 +99,33 @@ int wait_spi_completion(GpeErrorStruct *error, uint32_t reg, uint8_t timeout)
     }
 
     return rc;
+}
+
+/*
+ * Function Specification:
+ *
+ * Name: busy_wait
+ *
+ * Description:  a counting loop to simulate sleep calls, and is ISR safe.
+ *
+ * Inputs:       t_microseconds: time to sleep in microseconds
+ *
+ * return:       none
+ *
+ * End Function Specification
+ */
+
+// result based on busy_wait(1) calibration against pk_sleep(1)
+#define BUSY_LOOP_CONSTANT 71
+
+void busy_wait(uint32_t t_microseconds)
+{
+    int j;
+    volatile uint32_t i;
+//    ppe42_mullw macro works fine, but compiler parameter settings seems broken, use nested loop instead
+//    int loop = t * 100;  // Assuming loop iteration takes 6 ppe cycles = 0.01 microseconds
+
+    for(j = 0; j < BUSY_LOOP_CONSTANT; j++)
+        for(i = 0; i < t_microseconds; i++);
+
 }

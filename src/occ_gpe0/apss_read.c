@@ -85,7 +85,7 @@ void apss_start_pwr_meas_read(ipc_msg_t* cmd, void* arg)
         // frame_size=16, out_count=16, in_count=16
         //    rc = putscom(0, SPIPSS_ADC_CTRL_REG0, uint64_t 0x4000100000000000);
         regValue = 0x4000100000000000;
-        rc = putscom_abs(SPIPSS_ADC_CTRL_REG0, &regValue);
+        rc = putscom_abs(SPIPSS_ADC_CTRL_REG0, regValue);
         if(rc)
         {
             PK_TRACE("apss_start_pwr_meas_read: SPIPSS_ADC_CTRL_REG0 putscom failed. rc = 0x%08x",
@@ -98,7 +98,7 @@ void apss_start_pwr_meas_read(ipc_msg_t* cmd, void* arg)
         // clock_divider=7, frames=16
         // rc = putscom_abs(SPIPSS_ADC_CTRL_REG1, 0x8093c00000000000);
         regValue = 0x8093c00000000000;
-        rc = putscom_abs(SPIPSS_ADC_CTRL_REG1, &regValue);
+        rc = putscom_abs(SPIPSS_ADC_CTRL_REG1, regValue);
         if(rc)
         {
             PK_TRACE("apss_start_pwr_meas_read: SPIPSS_ADC_CTRL_REG1 putscom failed. rc = 0x%08x",
@@ -111,7 +111,7 @@ void apss_start_pwr_meas_read(ipc_msg_t* cmd, void* arg)
         // 5 usec
         // rc = putscom_abs(SPIPSS_ADC_CTRL_REG2, 0x0019000000000000);
         regValue = 0x0019000000000000;
-        rc = putscom_abs(SPIPSS_ADC_CTRL_REG2, &regValue);
+        rc = putscom_abs(SPIPSS_ADC_CTRL_REG2, regValue);
         if(rc)
         {
             PK_TRACE("apss_start_pwr_meas_read: SPIPSS_ADC_CTRL_REG2 putscom failed. rc = 0x%08x",
@@ -124,7 +124,7 @@ void apss_start_pwr_meas_read(ipc_msg_t* cmd, void* arg)
         // APSS command to continue previous command
         // rc = putscom_abs(SPIPSS_ADC_WDATA_REG, 0x0000000000000000);
         regValue = 0x0000000000000000;
-        rc = putscom_abs(SPIPSS_ADC_WDATA_REG, &regValue);
+        rc = putscom_abs(SPIPSS_ADC_WDATA_REG, regValue);
         if(rc)
         {
             PK_TRACE("apss_start_pwr_meas_read: SPIPSS_ADC_WDATA_REG putscom failed. rc = 0x%08x",
@@ -137,7 +137,7 @@ void apss_start_pwr_meas_read(ipc_msg_t* cmd, void* arg)
         // Start SPI Transaction
         // rc = putscom_abs(SPIPSS_ADC_COMMAND_REG, 0x8000000000000000);
         regValue = 0x8000000000000000;
-        rc = putscom_abs(SPIPSS_ADC_COMMAND_REG, &regValue);
+        rc = putscom_abs(SPIPSS_ADC_COMMAND_REG, regValue);
 
         if(rc)
         {
@@ -311,6 +311,7 @@ void apss_complete_pwr_meas_read(ipc_msg_t* cmd, void* arg)
         }
 
         // SIMICS Verify: Check proper transfer to the OCC under simics
+/*   @TODO - TEMP: APSS TOD register is not defined in simics yet. Commented out until implemented.
         rc = getscom_abs(TOD_VALUE_REG, &args->meas_data[3]);
         if(rc)
         {
@@ -319,6 +320,7 @@ void apss_complete_pwr_meas_read(ipc_msg_t* cmd, void* arg)
             apss_set_ffdc(&(args->error), TOD_VALUE_REG, APSS_RC_SCOM_GET_FAILED, rc);
             break;
         }
+*/
     } while(0);
 
     // send back a response, IPC success (even if ffdc/rc are non zeros)
