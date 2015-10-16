@@ -803,7 +803,6 @@ void Main_thread_routine(void *private)
 
         if( G_ipl_time )
         {
-            TRAC_ERR("CHECKING FOR CHECKSTOP");
             //check for checkstop here
             task_check_for_checkstop
                             (&G_task_table[TASK_ID_CHECK_FOR_CHECKSTOP]);

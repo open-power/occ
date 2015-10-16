@@ -78,17 +78,17 @@ uint32_t calChecksum(const uint32_t i_startAddr ,const uint32_t i_sz);
 // End Function Specification
 void main()
 {
+    WRITE_TO_SPRG0(BOOT_ENTER_OCC_BOOTLOADER);
     uint32_t l_rc = 0;
 
     //retrieve the ipl time flag from SRAM.
     imageHdr_t *l_hdrPtr = (imageHdr_t *) SRAM_START_ADDRESS;
-    bool l_ipl_time = l_hdrPtr->occ_flags.flag_bits.ipl_time_flag;
+    uint16_t l_ipl_time = l_hdrPtr->occ_flags.flag_bits.ipl_time_flag;
 
     if(!l_ipl_time)
     {
         // set checkpoint to boot test SRAM
         WRITE_TO_SPRG0(BOOT_TEST_SRAM_CHKPOINT);
-
 #ifndef VPO
         // This is ifdef'd out b/c it takes too long to run in VPO
         // Test SRAM
@@ -117,6 +117,8 @@ void main()
         {
             WRITE_TO_SPRG1_AND_HALT(l_rc);
         }
+
+        WRITE_TO_SPRG0(BOOT_CALCULATE_CHKSUM_CHKPOINT);
         // calculate checksum for the SRAM main application image
         uint32_t l_checksum = calChecksum(l_hdrPtr->start_addr,
                                           l_hdrPtr->image_size);
@@ -125,11 +127,10 @@ void main()
         if(l_checksum != l_hdrPtr->checksum)
         {
           WRITE_TO_SPRG1_AND_HALT(l_checksum);
+
         }
 
     }
-    // set checkpoint to get nest frequency
-    WRITE_TO_SPRG0(BOOT_GET_NEST_FREQ_CHKPOINT);
 
     // set checkpoint to call to SSX_BOOT
     WRITE_TO_SPRG0(BOOT_SSX_BOOT_CALL_CHKPOINT);
@@ -143,10 +144,7 @@ void main()
     // halt at this point.
     WRITE_TO_SPRG0(BOOT_SSX_RETURNED_CHKPOINT);
 
-
     WRITE_TO_SPRG1_AND_HALT(l_hdrPtr->ep_addr);
-
-
 
 }
 

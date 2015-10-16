@@ -84,7 +84,8 @@ typedef enum
 //Struct containing various OCC flags
 struct OCC_FLAGS
 {
-    uint8_t ipl_time_flag : 1;
+    uint16_t reserved      : 15;
+    uint16_t ipl_time_flag : 1;
 };
 
 
