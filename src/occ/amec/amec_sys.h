@@ -282,7 +282,6 @@ typedef struct
   //-----------------------------------
   // Sensors
   //-----------------------------------
-//  sensor_t cpm2ms; //CPM - Commented out as requested by Malcolm
   sensor_t freq250us;
   sensor_t freqa2ms;
   sensor_t ips2ms;
@@ -296,7 +295,7 @@ typedef struct
   sensor_t cmt2ms;
   sensor_t cmbw2ms;
   sensor_t ppic;
-  sensor_t pwrpx250us;
+  sensor_t volt2msvdd;
 
   //-----------------------------------
   // Previous Tick Data

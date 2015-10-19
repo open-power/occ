@@ -45,6 +45,7 @@ extern sensor_t g_amec_wof_core_wake_sensor;
 extern sensor_t g_amec_wof_vdd_sense_sensor;
 extern uint8_t g_amec_wof_pstate_table_ready;
 extern uint8_t G_wof_max_cores_per_chip;
+extern uint16_t g_amec_wof_leak_overhead;
 
 //*************************************************************************
 // Macros

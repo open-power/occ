@@ -99,8 +99,12 @@ uint8_t g_amec_wof_pstate_table_ready = 0;
 
 // Useful globals for debug
 int32_t  g_amec_eff_vlow = 0;
-int32_t  g_amec_eff_vhigh = 0;;
+int32_t  g_amec_eff_vhigh = 0;
 uint32_t g_amec_wof_iout = 0;
+
+// Chip Vdd leakage current as a percentage of total Vdd leakage current
+// due to iVRM headers that cannot be turned off. Units are 0.1%
+uint16_t g_amec_wof_leak_overhead = 50; // default is 5%
 
 //*************************************************************************
 // Function Prototypes
@@ -604,6 +608,7 @@ void amec_wof_common_steps(void)
     uint16_t            l_temp = 0;   //Processor temperature
     uint32_t            l_accum = 0;  //Vdd current accumulator
     uint32_t            l_v_chip = 0; //Voltage at chip silicon
+    uint16_t            l_ceff_ratio; //Effective switching capacitance ratio
 
     // Acquire important sensor data
     l_temp = AMECSENSOR_PTR(TEMP2MSP0)->sample;
@@ -722,7 +727,16 @@ void amec_wof_common_steps(void)
         / ((int32_t)G_iddq_voltages[i+1] - (int32_t)G_iddq_voltages[i])
         + (int32_t)G_sysConfigData.iddq_table.iddq_vdd[i].fields.iddq_corrected_value;
 
-    l_result32 = l_result32 * l_cores_on / G_wof_max_cores_per_chip;
+    // Note: IDDQ value from table above is in 0.01 A units. The maximum
+    // value possible is 655.35 A. This means l_result <= 65535.
+
+    // Modify leakage value for cores off. A percentage of chip leakage comes
+    // from iVRM headers which cannot be turned off completely.
+    l_result32 = l_result32
+        * (g_amec_wof_leak_overhead
+           + ((1000 - g_amec_wof_leak_overhead)
+              * l_cores_on / G_wof_max_cores_per_chip))
+        / 1000;
 
     g_amec->wof.iddq85c = (uint16_t)l_result32;  // expose to parameter
 
@@ -804,21 +818,20 @@ void amec_wof_common_steps(void)
     }
     g_amec->wof.ceff_old = l_result32;
 
-    g_amec->wof.ceff_ratio = g_amec->wof.ceff_old * 10000 / g_amec->wof.ceff_tdp;
-    if (g_amec->wof.ceff_ratio > 10000)
-    {
-        // max freq must be turbo or higher by design
-        g_amec->wof.ceff_ratio = 10000;
-    }
-    sensor_update(AMECSENSOR_PTR(WOFCEFFRATIO),g_amec->wof.ceff_ratio);
+    l_ceff_ratio = g_amec->wof.ceff_old * 10000 / g_amec->wof.ceff_tdp;
+    // expose as sensor and parameter
+    g_amec->wof.ceff_ratio = l_ceff_ratio;
+    sensor_update(AMECSENSOR_PTR(WOFCEFFRATIO),l_ceff_ratio);
 
     // Step 5: frequency uplift table
+    // Clip ratio to 100% to fit in table bounds.
+    if (l_ceff_ratio > 10000) l_ceff_ratio = 10000;
     // Search table and point i to the lower entry the target value falls
     // between.
     for (i=1; i<AMEC_WOF_UPLIFT_TBL_ROWS-1; i++)
     {
-        if (G_amec_wof_uplift_table[i][0] <= (int16_t) g_amec->wof.ceff_ratio &&
-            G_amec_wof_uplift_table[i+1][0] >= (int16_t)g_amec->wof.ceff_ratio)
+        if (G_amec_wof_uplift_table[i][0] <= (int16_t) l_ceff_ratio &&
+            G_amec_wof_uplift_table[i+1][0] >= (int16_t) l_ceff_ratio)
         {
             break;
         }
@@ -836,7 +849,8 @@ void amec_wof_common_steps(void)
         // y = m(x-x1)+y1   m=(y2-y1)/(x2-x1)
         //FIXME: add rounding step after multiplication
         //FIXME: pre-compute m, since table is static
-        l_result32 = ((int32_t)g_amec->wof.ceff_ratio - (int32_t)G_amec_wof_uplift_table[i][0])
+        l_result32 =
+            ((int32_t)l_ceff_ratio - (int32_t)G_amec_wof_uplift_table[i][0])
             * ((int32_t)G_amec_wof_uplift_table[i+1][l_pstatetable_cores_next] -
                (int32_t)G_amec_wof_uplift_table[i][l_pstatetable_cores_next])
             / ((int32_t)G_amec_wof_uplift_table[i+1][0] - (int32_t)G_amec_wof_uplift_table[i][0])

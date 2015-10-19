@@ -609,11 +609,11 @@ void amec_update_external_voltage()
 
     // Extract the Vdd vid code and convert to voltage
     l_temp = (l_data & 0xFF000000) >>24;
-    l_vdd = 16125 - ((uint32_t)l_temp * 625)/10;
+    l_vdd = 16125 - (((uint32_t)l_temp * 125) >> 1);
 
     // Extract the Vcs vid code and convert to voltage
     l_temp = (l_data & 0x00FF0000) >>16;
-    l_vcs = 16125 - ((uint32_t)l_temp * 625)/10;
+    l_vcs = 16125 - (((uint32_t)l_temp * 125) >> 1);
 
     sensor_update( AMECSENSOR_PTR(VOLT250USP0V0), (uint16_t) l_vdd);
     sensor_update( AMECSENSOR_PTR(VOLT250USP0V1), (uint16_t) l_vcs);

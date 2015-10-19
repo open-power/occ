@@ -641,7 +641,7 @@ typedef struct {
 
 /// IDDQ Reading Type
 /// Each entry is 2 bytes. The values are in 10mA units; this allow for a
-/// maximum value of 655.36A represented.
+/// maximum value of 655.35A represented.
 ///
 typedef uint16_t iddq_entry_t;
 

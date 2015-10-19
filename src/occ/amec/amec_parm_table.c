@@ -172,7 +172,11 @@ amec_parm_t g_amec_parm_list[] = {
     AMEC_PARM_UINT8(PARM_WOF_PSTATE_READY,"wof_ps_ready",&g_amec_wof_pstate_table_ready),
     AMEC_PARM_INT32(PARM_WOF_EFFVLOW,"wof_effvlow",&g_amec_eff_vlow),
     AMEC_PARM_INT32(PARM_WOF_EFFVHIGH,"wof_effvhigh",&g_amec_eff_vhigh),
-    AMEC_PARM_UINT32(PARM_WOF_IOUT,"wof_iout",&g_amec_wof_iout)
+    AMEC_PARM_UINT32(PARM_WOF_IOUT,"wof_iout",&g_amec_wof_iout),
+    AMEC_PARM_UINT8(PARM_WOF_GOOD_CORES,"wof_good_cores",
+                    &G_wof_max_cores_per_chip),
+    AMEC_PARM_UINT16(PARM_WOF_LEAK_OVERHEAD,"wof_leak_ovrhd",
+                     &g_amec_wof_leak_overhead)
 };
 
 //Throw a compiler error when the enum and array are not both updated

@@ -49,6 +49,11 @@
 /******************************************************************************/
 
 /******************************************************************************/
+/* Externs                                                                    */
+/******************************************************************************/
+extern amec_sys_t g_amec_sys;
+
+/******************************************************************************/
 /* Forward Declarations                                                       */
 /******************************************************************************/
 void amec_calc_dts_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_core);
@@ -56,6 +61,7 @@ void amec_calc_dts_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_cor
 void amec_calc_freq_and_util_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_core);
 void amec_calc_ips_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_core);
 void amec_calc_spurr(uint8_t i_core);
+void amec_sensors_core_voltage(uint8_t i_core);
 
 //*************************************************************************
 // Code
@@ -166,6 +172,11 @@ void amec_update_proc_core_sensors(uint8_t i_core)
     // SPURR
     //-------------------------------------------------------
     amec_calc_spurr(i_core);
+
+    //-------------------------------------------------------
+    // Voltage
+    //-------------------------------------------------------
+    amec_sensors_core_voltage(i_core);
 
     // ------------------------------------------------------
     // Update PREVIOUS values for next time
@@ -878,6 +889,77 @@ void amec_calc_spurr(uint8_t i_core)
 
      sensor_update( AMECSENSOR_ARRAY_PTR(SPURR2MSP0C0,i_core), (uint16_t) temp32);
    }
+}
+
+
+// Function Specification
+//
+// Name: amec_sensors_core_voltage
+//
+// Description: update core-level voltage sensors
+//
+//
+// Flow:              FN=
+//
+// Thread:
+//
+// Task Flags:
+//
+// Future improvement:
+//   Gather scoms in lib/gpe_data.pS for efficiency.
+//
+// End Function Specification
+
+void amec_sensors_core_voltage(uint8_t i_core)
+{
+    #define SCOM_PIVRMCSR_ADDR_nochiplet 0x100F0154
+    #define SCOM_PIVRMVSR_ADDR_nochiplet 0x100F0155
+    //IVRM_FSM_ENABLE == 1, then iVRM FSM turned ON
+    #define IVRM_FSM_ENABLE_MASK         0x8000000000000000
+    //IVRM_CORE_VDD_BYPASS_B == 1, then iVRM not in bypass (negative action)
+    #define IVRM_CORE_VDD_BYPASS_B_MASK  0x0800000000000000
+
+    uint32_t l_rc=0;
+    uint64_t l_pivrmcsr=0; //ivrm control status reg
+    uint64_t l_pivrmvsr=0; //ivrm value setting reg
+    uint16_t l_voltage=0;
+    //Core power management state
+    uint8_t  l_pmstate=g_amec_sys.proc[0].core[i_core].pm_state_hist >> 5;
+
+    //
+    // iVRM in bypass?
+    l_rc = _getscom(CORE_CHIPLET_ADDRESS(SCOM_PIVRMCSR_ADDR_nochiplet,
+                                         CORE_OCC2HW(i_core)),
+                    &l_pivrmcsr,SCOM_TIMEOUT);
+    if (l_rc) return;
+    l_rc = _getscom(CORE_CHIPLET_ADDRESS(SCOM_PIVRMVSR_ADDR_nochiplet,
+                                         CORE_OCC2HW(i_core)),
+                    &l_pivrmvsr,SCOM_TIMEOUT);
+    if (l_rc) return;
+
+    if (l_pmstate == 5      //deep sleep
+        || l_pmstate == 7)  //deep windle
+    {
+        // This core is power gated
+        l_voltage = 0;
+    }
+    else if ((l_pivrmcsr & IVRM_FSM_ENABLE_MASK)
+             && (l_pivrmcsr & IVRM_CORE_VDD_BYPASS_B_MASK))
+    {
+        // if ivrm FSM enabled AND ivrm in bypass mode,
+        // then ivrm is regulating voltage.
+        // Compute sensor in 0.0001 V units
+        // iVRM Voltage (V) = VID * 0.00625 V + 0.6 V
+        // Note: 0.00625 V = 0.0125 V / 2 = 125>>1
+        // Note: .6 V = 6000 (0.0001 V)
+        l_voltage = ((((uint32_t)(l_pivrmvsr>>32)) * 125) >> 1) + 6000;
+    }
+    else // External voltage
+    {
+        //core is in bypass. Use estimate of voltage from external voltage rail.
+        l_voltage = g_amec->wof.v_chip;
+    }
+    sensor_update(AMECSENSOR_ARRAY_PTR(VOLT2MSP0C0,i_core),l_voltage);
 }
 
 /*----------------------------------------------------------------------------*/

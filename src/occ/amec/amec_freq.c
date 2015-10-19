@@ -404,18 +404,18 @@ void amec_slv_voting_box(void)
                 }
             }
 
-            //Make sure the frequency is not less then the system min
-            if(l_core_freq < g_amec->sys.fmin)
-            {
-                l_core_freq = g_amec->sys.fmin;
-            }
-
             // Override frequency via Amester parameter interface
             if (g_amec->proc[0].parm_f_override_enable &&
                 g_amec->proc[0].parm_f_override[k] > 0)
             {
                 l_core_freq = g_amec->proc[0].parm_f_override[k];
                 l_core_reason = AMEC_VOTING_REASON_OVERRIDE_CORE;
+            }
+
+            //Make sure the frequency is not less then the system min
+            if(l_core_freq < g_amec->sys.fmin)
+            {
+                l_core_freq = g_amec->sys.fmin;
             }
 
             // If frequency has changed, set the flag

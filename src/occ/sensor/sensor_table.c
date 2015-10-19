@@ -299,7 +299,7 @@ const sensor_ptr_t G_amec_sensor_list[] =
   CORE_SENSOR_PTRS( CMT2MSP0C ,     &g_amec_sys.proc[0].core, cmt2ms),
   CORE_SENSOR_PTRS( CMBW2MSP0C ,    &g_amec_sys.proc[0].core, cmbw2ms),
   CORE_SENSOR_PTRS( PPICP0C ,       &g_amec_sys.proc[0].core, ppic),
-  CORE_SENSOR_PTRS( PWRPX250USP0C , &g_amec_sys.proc[0].core, pwrpx250us),
+  CORE_SENSOR_PTRS( VOLT2MSP0C ,    &g_amec_sys.proc[0].core, volt2msvdd),
 
   // ------------------------------------------------------
   // Memory Sensors
@@ -448,7 +448,7 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   CORE_MINI_SENSOR_PTRS_NULL(     CMT2MSP0C ),
   CORE_MINI_SENSOR_PTRS_NULL(    CMBW2MSP0C ),
   CORE_MINI_SENSOR_PTRS_NULL(       PPICP0C ),
-  CORE_MINI_SENSOR_PTRS(      PWRPX250USP0C, &G_dcom_slv_outbox_tx.pwrpx250usp0cy), //
+  CORE_MINI_SENSOR_PTRS_NULL(    VOLT2MSP0C ),
 
   // ------------------------------------------------------
   // Memory Sensors

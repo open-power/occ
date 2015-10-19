@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -151,11 +151,14 @@ void amec_parm_read(const IPMIMsg_t *const i_psMsg,
     /*------------------------------------------------------------------------*/
     AMEC_PARM_GUID              l_id;
     UINT16                      i=0;  // output index
-    UINT16                      l_maxresponse = IPMI_MAX_MSG_SIZE - 1; // -1 since return code is 1B
+    // l_bytesleft tracks the amount of space remaining in the response in bytes
+    // The maximum data in bytes that can be returned is IPMI_MAX_MSG_SIZE - 1
+    // The -1 is due to the mandatory returned error code taking 1 byte.
+    UINT16                      l_bytesleft = IPMI_MAX_MSG_SIZE - 1;
     UINT8                       *l_src_ptr; // pointer to first byte of data
     UINT8                       *l_end_ptr; // mark end of data
     UINT32                      b;  // start byte
-
+    UINT16                      l_in; // Input byte index
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
@@ -164,52 +167,60 @@ void amec_parm_read(const IPMIMsg_t *const i_psMsg,
         *o_retval = COMPCODE_NORMAL; /* assume no error */
 
         // Parse input command
-        // Get the byte offset
+        // Get the byte offset for first parameter
         b = CONVERT_UINT8_ARRAY_UINT32(
             i_psMsg->au8CmdData_ptr[1],
             i_psMsg->au8CmdData_ptr[2],
             i_psMsg->au8CmdData_ptr[3],
             i_psMsg->au8CmdData_ptr[4]);
 
-        // Get parameter id
-        l_id = CONVERT_UINT8_ARRAY_UINT16(
-            i_psMsg->au8CmdData_ptr[5],
-            i_psMsg->au8CmdData_ptr[6]);
-
-        if (l_id >= AMEC_PARM_NUMBER_OF_PARAMETERS)
+        // Process each parameter in turn
+        for (l_in = 5; l_in + 1 < i_psMsg->u8CmdDataLen && l_bytesleft > 0;
+             l_in += 2)
         {
-            *o_retval = COMPCODE_PARAM_OUT_OF_RANGE;
-            *o_pu16RespLength = 0;
-            break;
+            // Get next parameter id
+            l_id = CONVERT_UINT8_ARRAY_UINT16(
+                i_psMsg->au8CmdData_ptr[l_in],
+                i_psMsg->au8CmdData_ptr[l_in+1]);
+
+            if (l_id >= AMEC_PARM_NUMBER_OF_PARAMETERS)
+            {
+                // Mark which parameter number does not exist
+                o_pu8Resp[0] = (uint8_t)(l_in >> 8);
+                o_pu8Resp[1] = (uint8_t)(l_in);
+                *o_retval = COMPCODE_PARAM_OUT_OF_RANGE;
+                *o_pu16RespLength = 2;
+                break;
+            }
+
+            if (g_amec_parm_list[l_id].preread)
+            {
+                amec_parm_preread(l_id);
+            }
+
+            // Copy value to output buffer
+            // Set src to first byte to send back
+            l_src_ptr = g_amec_parm_list[l_id].value_ptr + b;
+
+            // Set end pointer 1 beyond last byte to send. It is limited either
+            // on the value size, or the IPMI message size.
+            l_end_ptr = g_amec_parm_list[l_id].value_ptr
+                + (g_amec_parm_list[l_id].vector_length
+                   * g_amec_parm_list[l_id].length);
+
+            while ((UINT32)l_src_ptr < (UINT32)l_end_ptr)
+            {
+                //Copy next byte to output
+                o_pu8Resp[i++] = (UINT8)*l_src_ptr++;
+                l_bytesleft--;
+                if (l_bytesleft == 0) break;
+            }
+            // Set b for following parameter, if any
+            b = 0;
         }
-
-        if (g_amec_parm_list[l_id].preread)
-        {
-            amec_parm_preread(l_id);
-        }
-
-        // Copy value to output buffer
-        // Set src to first byte to send back
-        l_src_ptr = g_amec_parm_list[l_id].value_ptr + b;
-
-        // Set end pointer 1 beyond last byte to send. It is limited either
-        // on the value size, or the IPMI message size.
-        l_end_ptr = g_amec_parm_list[l_id].value_ptr
-            + (g_amec_parm_list[l_id].vector_length * g_amec_parm_list[l_id].length);
-        if (l_src_ptr + l_maxresponse < l_end_ptr)
-        {
-            l_end_ptr = l_src_ptr + l_maxresponse;
-        }
-
-        while ((UINT32)l_src_ptr < (UINT32)l_end_ptr)
-        {
-            //Copy next byte to output
-            o_pu8Resp[i++] = (UINT8)*l_src_ptr++;
-        }
-
-        *o_pu16RespLength = i;
-
     } while (FALSE);
+    // If valid output, then mark the number of valid bytes returned
+    if (*o_retval == COMPCODE_NORMAL) *o_pu16RespLength = i;
 }
 
 
