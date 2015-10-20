@@ -37,7 +37,6 @@ typedef enum {
     MNFG_RETRIEVE_EAR       = 0x08,
     MNFG_MEMORY_SLEW        = 0x09,
     MNFG_SET_FMINMAX        = 0x0A,
-    MNFG_FAILSAFE_EMULATION = 0x0C,
     MNFG_CPM_STRESS_CALI    = 0x0D,
     MNFG_UV_CONTROL         = 0x0E,
     MNFG_FCHECK_CONTROL     = 0x0F,

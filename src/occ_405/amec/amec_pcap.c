@@ -23,9 +23,9 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-//*************************************************************************
+//*************************************************************************/
 // Includes
-//*************************************************************************
+//*************************************************************************/
 #include "amec_pcap.h"
 #include "amec_sys.h"
 #include "amec_service_codes.h"
@@ -34,22 +34,22 @@
 #include <dcom.h>
 #include <trac.h>
 
-//*************************************************************************
+//*************************************************************************/
 // Externs
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Defines/Enums
-//*************************************************************************
+//*************************************************************************/
 #define PPB_NOM_DROP_DELAY 4    //ticks
 
-//*************************************************************************
+//*************************************************************************/
 // Structures
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Globals
-//*************************************************************************
+//*************************************************************************/
 
 //Number of ticks to wait before dropping below nominal frequency
 #define PWR_SETTLED_TICKS   4
@@ -73,13 +73,13 @@ uint32_t    G_mhz_per_pstate=0;   //TODO: Maybe there's a better value to initil
 
 uint8_t     G_over_pcap_count=0;
 
-//*************************************************************************
+//*************************************************************************/
 // Function Prototypes
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Functions
-//*************************************************************************
+//*************************************************************************/
 
 //////////////////////////
 // Function Specification
@@ -106,8 +106,7 @@ void amec_pmax_clip_controller(void)
 
     //Note: quickPowerDrop interrupts will not preempt the real time loop
     //      interrupt. No locking is needed between the two interrupts.
-    //Note: quickPowerDropLatchAmec represents the failsafe signal on ITEs and
-    //      oversubscription signal on non-ITEs.
+    //Note: oversubLatchAmec represents the oversubscription signal
 
     // See the oversub event and control oversub in AMEC
     if(AMEC_INTF_GET_OVERSUBSCRIPTION()&&
@@ -158,7 +157,6 @@ void amec_pcap_calc(void)
     /*------------------------------------------------------------------------*/
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
-    bool l_failsafe_state = AMEC_INTF_GET_FAILSAFE();
     bool l_oversub_state  = 0;
     uint16_t l_node_pwr = AMECSENSOR_PTR(PWR250US)->sample;
     uint16_t l_p0_pwr   = AMECSENSOR_PTR(PWR250USP0)->sample;
@@ -174,13 +172,7 @@ void amec_pcap_calc(void)
     //TRAC_INFO("amec_pcap_calc: Calculate active_node_pcap, and nom_pcap_fmin.");
     l_oversub_state = AMEC_INTF_GET_OVERSUBSCRIPTION();
 
-    //Set the active_node_pcap in g_amec.
-    if(TRUE == l_failsafe_state)
-    {
-        //Set active_node_pcap to soft min pcap since failsafe is on
-        g_amec->pcap.active_node_pcap = G_sysConfigData.pcap.soft_min_pcap;
-    }
-    else if(TRUE == l_oversub_state)
+    if(TRUE == l_oversub_state)
     {
         g_amec->pcap.active_node_pcap = g_amec->pcap.ovs_node_pcap;
     }

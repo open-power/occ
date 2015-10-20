@@ -44,13 +44,9 @@
 /* Defines                                                                    */
 /*----------------------------------------------------------------------------*/
 #define AMEC_INTF_GET_OVERSUBSCRIPTION() \
-(G_sysConfigData.failsafe_enabled ? g_amec->oversub_status.cmeThrottlePinLive : \
-                                   (g_amec->oversub_status.oversubPinLive || G_dcom_slv_inbox_rx.emulate_oversub))
+(g_amec->oversub_status.oversubPinLive || G_dcom_slv_inbox_rx.emulate_oversub)
 
 #define AMEC_INTF_GET_OVERSUBSCRIPTION_EMULATION() g_amec->oversub_status.oversubPinMnfg
-
-#define AMEC_INTF_GET_FAILSAFE() \
-(G_sysConfigData.failsafe_enabled ? g_amec->oversub_status.oversubPinLive : 0)
 
 /*----------------------------------------------------------------------------*/
 /* Typedef / Enum                                                             */
@@ -61,7 +57,6 @@ typedef enum oversub_reason
    FANS_FULL_SPEED    = 0x01,
    FAN_ERRROR         = 0x02,
    FAN_WARNING        = 0x03,
-   ITE_FAILSAFE       = 0x04,
 
    INDETERMINATE      = 0xFF
 }oversub_reason_t;

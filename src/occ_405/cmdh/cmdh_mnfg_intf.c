@@ -712,7 +712,6 @@ void cmdh_mnfg_test_parse (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         case MNFG_RETRIEVE_EAR:
         case MNFG_SET_FMINMAX:
-        case MNFG_FAILSAFE_EMULATION:
         case MNFG_CPM_STRESS_CALI:
         case MNFG_UV_CONTROL:
         case MNFG_FCHECK_CONTROL:

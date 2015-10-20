@@ -178,7 +178,6 @@ occSysConfigData_t G_sysConfigData =
     // -----------------------------------------------------------
     // Oversubscription Initializations
     // -----------------------------------------------------------
-    .failsafe_enabled = FALSE,
 
     //Master ppb_fmax calculated by Master OCC's slave.
     .master_ppb_fmax = 0xFFFF,

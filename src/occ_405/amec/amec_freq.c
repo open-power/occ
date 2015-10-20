@@ -481,9 +481,8 @@ void amec_slv_voting_box(void)
         G_time_until_freq_check--;
     }
 
-    //convert POWERCAP reason to POWER_SUPPLY_FAILURE if ovs/failsafe is asserted
-    if((l_kvm_throt_reason == POWERCAP) &&
-        (AMEC_INTF_GET_FAILSAFE() || AMEC_INTF_GET_OVERSUBSCRIPTION()))
+    //convert POWERCAP reason to POWER_SUPPLY_FAILURE if ovs is asserted
+    if((l_kvm_throt_reason == POWERCAP) && AMEC_INTF_GET_OVERSUBSCRIPTION())
     {
         l_kvm_throt_reason = POWER_SUPPLY_FAILURE;
     }
@@ -657,7 +656,6 @@ void amec_slv_check_perf(void)
     /*------------------------------------------------------------------------*/
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
-    static BOOLEAN          l_prev_failsafe_state = FALSE;
     static BOOLEAN          l_prev_ovs_state = FALSE;
     static BOOLEAN          l_prev_pcap_state = FALSE;
     static ERRL_SEVERITY    l_pcap_sev =  ERRL_SEV_PREDICTIVE;
@@ -683,61 +681,6 @@ void amec_slv_check_perf(void)
             }
             // we are done break and return
             break;
-        }
-
-        // frequency limited due to failsafe condition ?
-        if ( AMEC_INTF_GET_FAILSAFE() == TRUE )
-        {
-            if ( l_prev_failsafe_state == TRUE)
-            {
-                // we are done break and return
-                break;
-            }
-            else
-            {
-                // log this error ONLY ONCE per IPL
-                l_prev_failsafe_state = TRUE;
-
-                TRAC_ERR("Frequency limited due to failsafe condition(mode:%d, state:%d)",
-                          CURRENT_MODE(), CURRENT_STATE());
-                l_throttle_traced = TRUE;
-                l_time = ssx_timebase_get();
-
-                // log error that calls out OVS procedure
-                // set error severity to RRL_SEV_PREDICTIVE
-
-                /* @
-                 * @errortype
-                 * @moduleid    AMEC_SLAVE_CHECK_PERFORMANCE
-                 * @reasoncode  INTERNAL_FAILURE
-                 * @userdata1   Previous FailSafe State
-                 * @userdata4   ERC_AMEC_SLAVE_FAILSAFE_STATE
-                 * @devdesc     Frequency limited due to failsafe condition
-                 */
-                errlHndl_t l_errl = createErrl(AMEC_SLAVE_CHECK_PERFORMANCE, //modId
-                                              INTERNAL_FAILURE,             //reasoncode
-                                              ERC_AMEC_SLAVE_FAILSAFE_STATE,//Extended reason code
-                                              ERRL_SEV_PREDICTIVE,          //Severity
-                                              NULL,                         //Trace Buf
-                                              DEFAULT_TRACE_SIZE,           //Trace Size
-                                              l_prev_failsafe_state,        //userdata1
-                                              0);                           //userdata2
-
-                addCalloutToErrl(   l_errl,
-                                    ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                                    ERRL_COMPONENT_ID_OVERSUBSCRIPTION,
-                                    ERRL_CALLOUT_PRIORITY_HIGH
-                                );
-
-                // and sets the consolidate action flag
-                setErrlActions( l_errl, ERRL_ACTIONS_CONSOLIDATE_ERRORS );
-
-                // Commit Error
-                commitErrl(&l_errl);
-
-                // we are done lets break
-                break;
-            }
         }
 
         // frequency limited due to oversubscription condition ?
@@ -906,8 +849,8 @@ void amec_slv_check_perf(void)
         // trottle trace to every 3600 seconds (1hr = 3600000)
         if(!l_throttle_traced && ( DURATION_IN_MS_UNTIL_NOW_FROM(l_time) > 3600000 ) )
         {
-            TRAC_INFO("Frequency power limited due to transient condition: PowerLimited=%x, FailSafe=%x, OverSubScription=%x CurrentBulkPwr=%x",
-            G_non_dps_power_limited, AMEC_INTF_GET_FAILSAFE(), AMEC_INTF_GET_OVERSUBSCRIPTION(), l_snrBulkPwr );
+            TRAC_INFO("Frequency power limited due to transient condition: PowerLimited=%x, OverSubScription=%x CurrentBulkPwr=%x",
+            G_non_dps_power_limited, AMEC_INTF_GET_OVERSUBSCRIPTION(), l_snrBulkPwr );
             l_throttle_traced = TRUE;
 
             l_time = ssx_timebase_get();

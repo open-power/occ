@@ -327,8 +327,6 @@ typedef struct
   // ------------------------------------
   // Oversubscription Configuration Data
   // ------------------------------------
-  // If it's ITE or non-ITE (enabled:ITE, non-enalbe: non-ITE)
-  uint8_t failsafe_enabled;
 
   // ppb_fmax as set by Master OCC.  Initialized to 0xFFFF
   uint32_t master_ppb_fmax;

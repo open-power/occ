@@ -43,8 +43,6 @@ enum occReasonCode
     OVERSUB_ALERT                   = 0x05,
     /// Failure to maintain a hard power cap
     POWER_CAP_FAILURE               = 0x06,
-    /// Failsafe State
-    FAILSAFE_ALERT                  = 0x07,
     /// Fans are in full speed
     FAN_FULL_SPEED                  = 0x08,
     /// Timed out reading a FRU temperature
@@ -165,7 +163,6 @@ enum occExtReasonCode
     ERC_AMEC_PCAPS_MISMATCH_FAILURE             = 0x0000002A,
     ERC_AMEC_UNDER_PCAP_FAILURE                 = 0x0000002B,
 
-    ERC_AMEC_SLAVE_FAILSAFE_STATE               = 0x0000002C,
     ERC_AMEC_SLAVE_OVS_STATE                    = 0x0000002D,
     ERC_AMEC_SLAVE_POWERCAP                     = 0x0000002E,
 
