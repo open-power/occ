@@ -237,18 +237,37 @@ ERRL_RC cmdh_poll_v10(cmdh_fsp_rsp_t * o_rsp_ptr)
     // Byte 2
     l_poll_rsp->ext_status.word = 0;
 
-    //SET DVFS bits
+    //SET DVFS bits.
     for ( k = 0; k < MAX_NUM_CORES; k++ )
     {
         uint32_t l_freq_reason = g_amec->proc[0].core[k].f_reason;
+        uint16_t l_freq_request = g_amec->proc[0].core[k].f_request;
         if ( l_freq_reason & (AMEC_VOTING_REASON_PROC_THRM | AMEC_VOTING_REASON_VRHOT_THRM) )
         {
-            l_poll_rsp->ext_status.dvfs_due_to_ot = 1;
+            //If WOF is disabled   OR
+            //If WOF is enabled AND freq is less than Turbo frequency,
+            //set dvfs_due_to_ot bit.
+            //NOTE: STURBO holds the turbo freq if wof is enabled.
+            if ((g_amec->wof.enable_parm == 0) ||
+                ( (g_amec->wof.enable_parm) &&
+                  (l_freq_request < G_sysConfigData.sys_mode_freq.table[OCC_MODE_STURBO])))
+            {
+                l_poll_rsp->ext_status.dvfs_due_to_ot = 1;
+            }
         }
 
         if ( l_freq_reason & (AMEC_VOTING_REASON_PPB | AMEC_VOTING_REASON_PMAX | AMEC_VOTING_REASON_PWR) )
         {
-            l_poll_rsp->ext_status.dvfs_due_to_pwr = 1;
+            //If WOF is disabled   OR
+            //If WOF is enabled AND freq is less than Turbo frequency,
+            //set dvfs_due_to_pwr bit.
+            //NOTE: STURBO holds the turbo freq if wof is enabled.
+            if ((g_amec->wof.enable_parm == 0) ||
+                ( (g_amec->wof.enable_parm) &&
+                  (l_freq_request < G_sysConfigData.sys_mode_freq.table[OCC_MODE_STURBO])))
+            {
+                l_poll_rsp->ext_status.dvfs_due_to_pwr = 1;
+            }
         }
     }
 
