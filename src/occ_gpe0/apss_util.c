@@ -115,17 +115,39 @@ int wait_spi_completion(GpeErrorStruct *error, uint32_t reg, uint8_t timeout)
  * End Function Specification
  */
 
-// result based on busy_wait(1) calibration against pk_sleep(1)
-#define BUSY_LOOP_CONSTANT 71
 
 void busy_wait(uint32_t t_microseconds)
 {
     int j;
     volatile uint32_t i;
-//    ppe42_mullw macro works fine, but compiler parameter settings seems broken, use nested loop instead
-//    int loop = t * 100;  // Assuming loop iteration takes 6 ppe cycles = 0.01 microseconds
 
-    for(j = 0; j < BUSY_LOOP_CONSTANT; j++)
-        for(i = 0; i < t_microseconds; i++);
+    uint32_t start_decrementer_value;      // The decrementer register value at the beginning
+    uint32_t end_decrementer_value;        // The decrementer register value at the end
+    uint32_t current_decrementer_value;    // The current decrementer register value
+    uint32_t duration;
+    MFDEC(start_decrementer_value);        // get the decrementer register value at the beginning
+    current_decrementer_value = start_decrementer_value;
+
+    // multiply the delay time by the 37.5 MHz external clock frequency.
+    // I believe that the ppe42_mullw macro works fine, but the
+    // compiler parameter settings seems broken.
+    // @todo: This is a temporary fix, use external frequency directive.
+    duration =  (t_microseconds << 5)
+        + (t_microseconds << 2)
+        + (t_microseconds)
+        + (t_microseconds >> 1);
+
+    // Calculate the decrementer register value at the end of the busy wait period
+    end_decrementer_value = start_decrementer_value - duration;
+
+    if(start_decrementer_value < end_decrementer_value);          // decrementer overflows during the busy wait?
+    {
+        MFDEC(current_decrementer_value);
+        while(current_decrementer_value < end_decrementer_value)  // Wait until Decrementer overflows
+            MFDEC(current_decrementer_value);
+    }
+
+    while (current_decrementer_value > end_decrementer_value)     // Wait until end_decrementer_value is reached
+        MFDEC(current_decrementer_value);
 
 }
