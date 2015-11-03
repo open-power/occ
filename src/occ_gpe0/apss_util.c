@@ -142,9 +142,6 @@ int wait_spi_completion(GpeErrorStruct *error, uint32_t reg, uint8_t timeout)
 
 void busy_wait(uint32_t t_microseconds)
 {
-    int j;
-    volatile uint32_t i;
-
     uint32_t start_decrementer_value;      // The decrementer register value at the beginning
     uint32_t end_decrementer_value;        // The decrementer register value at the end
     uint32_t current_decrementer_value;    // The current decrementer register value
