@@ -44,10 +44,9 @@ typedef enum {
     TASK_ID_APSS_CONT,
 //    TASK_ID_CORE_DATA_HIGH,
     TASK_ID_APSS_DONE,
-//    TASK_ID_FAST_CORE_DATA,
 //    TASK_ID_DCOM_RX_INBX,
 //    TASK_ID_DCOM_TX_INBX,
-    TASK_ID_POKE_WDT,    // Reset ppc405 watchdog and OCB timer
+    TASK_ID_POKE_WDT,                 // Reset ppc405 watchdog and OCB timer
 //    TASK_ID_DCOM_WAIT_4_MSTR,
 //    TASK_ID_DCOM_RX_OUTBX,
 //    TASK_ID_DCOM_TX_OUTBX,
@@ -55,9 +54,10 @@ typedef enum {
     TASK_ID_CHECK_FOR_CHECKSTOP,
 //    TASK_ID_AMEC_SLAVE,             // AMEC SMH tasks
 //    TASK_ID_AMEC_MASTER,            // AMEC SMH tasks
-//    TASK_ID_CENTAUR_DATA,           // Centaur task
 //    TASK_ID_CORE_DATA_CONTROL,
-//    TASK_ID_CENTAUR_CONTROL,        // Centaur task
+//    TASK_ID_GPU_SM,                 // GPU State Machine
+//    TASK_ID_DIMM_SM,                // DIMM State Machine
+//    TASK_ID_MEM_DEADMAN,            // Memory deadman timer
     TASK_END  // This must always be the last enum in this list,
               // so that TASK_END always equals the last task ID + 1.
 } task_id_t;
@@ -108,7 +108,7 @@ typedef struct
 
 // Tick Timer definitions
 #define MICS_PER_TICK 250  // Number of micro-seconds per tick
-#define MAX_NUM_TICKS 8    // Number of entries in the global tick table (power of 2)
+#define MAX_NUM_TICKS 16   // Number of entries in the global tick table (power of 2)
 
 // The value of the current tick
 extern uint32_t G_current_tick;
