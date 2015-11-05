@@ -103,7 +103,7 @@ extern sapphire_table_t G_sapphire_table;
 //void proc_gpsm_dcm_sync_enable_pstates_smh(void);
 
 // Get DCM Sync State
-//proc_gpsm_dcm_sync_occfw_t proc_gpsm_dcm_sync_get_state(void);
+proc_gpsm_dcm_sync_occfw_t proc_gpsm_dcm_sync_get_state(void);
 
 // Pull down DCM pair's Sync State & Info via Mbox
 void proc_gpsm_dcm_sync_update_from_mbox(proc_gpsm_dcm_sync_occfw_t * i_dcm_sync_state);

@@ -107,16 +107,16 @@ task_t G_task_table[TASK_END] = {
 //    { FLAGS_DCOM_TX_SLV_INBX,      task_dcom_tx_slv_inbox,         NULL },  // TASK_ID_DCOM_TX_INBX
     { FLAGS_POKE_WDT,              task_poke_watchdogs,            NULL },  // TASK_ID_POKE_WDT
 // TEMP -- NOT SUPPORTED YET IN PHASE1
-//    { FLAGS_DCOM_WAIT_4_MSTR,      task_dcom_wait_for_master,      NULL },  // TASK_ID_DCOM_WAIT_4_MSTR
+    { FLAGS_DCOM_WAIT_4_MSTR,      task_dcom_wait_for_master,      NULL },  // TASK_ID_DCOM_WAIT_4_MSTR
 // TEMP -- NOT SUPPORTED YET IN PHASE1
-//    { FLAGS_DCOM_RX_SLV_OUTBOX,    task_dcom_rx_slv_outboxes,      NULL },  // TASK_ID_DCOM_RX_OUTBX
+    { FLAGS_DCOM_RX_SLV_OUTBOX,    task_dcom_rx_slv_outboxes,      NULL },  // TASK_ID_DCOM_RX_OUTBX
 // TEMP -- NOT SUPPORTED YET IN PHASE1
-//    { FLAGS_DCOM_TX_SLV_OUTBOX,    task_dcom_tx_slv_outbox,        NULL },  // TASK_ID_DCOM_TX_OUTBX
+    { FLAGS_DCOM_TX_SLV_OUTBOX,    task_dcom_tx_slv_outbox,        NULL },  // TASK_ID_DCOM_TX_OUTBX
 // TEMP -- NOT SUPPORTED YET IN PHASE1
 //    { FLAGS_DCOM_PARSE_OCC_FW_MSG, task_dcom_parse_occfwmsg,       NULL },  // TASK_ID_DCOM_PARSE_FW_MSG
     { FLAGS_CHECK_FOR_CHECKSTOP,   task_check_for_checkstop,       NULL },  // TASK_ID_CHECK_FOR_CHECKSTOP
 // TEMP -- NOT SUPPORTED YET IN PHASE1
-//    { FLAGS_AMEC_SLAVE,            task_amec_slave,                NULL },  // TASK_ID_AMEC_SLAVE
+    { FLAGS_AMEC_SLAVE,            task_amec_slave,                NULL },  // TASK_ID_AMEC_SLAVE
 // TEMP -- NOT SUPPORTED YET IN PHASE1
 //    { FLAGS_AMEC_MASTER,           task_amec_master,               NULL },  // TASK_ID_AMEC_MASTER
 // TEMP -- NOT SUPPORTED YET IN PHASE1
@@ -143,7 +143,7 @@ const uint8_t G_tick0_seq[] = {
                                 TASK_ID_POKE_WDT,
                                 //TASK_ID_DCOM_TX_OUTBX,
                                 //TASK_ID_DCOM_TX_INBX,
-                                //TASK_ID_AMEC_SLAVE,
+                                TASK_ID_AMEC_SLAVE,
                                 //TASK_ID_AMEC_MASTER,
                                 //TASK_ID_DCOM_PARSE_FW_MSG,
                                 //TASK_ID_CHECK_FOR_CHECKSTOP,
@@ -162,7 +162,7 @@ const uint8_t G_tick1_seq[] = {
                                 //TASK_ID_DCOM_RX_OUTBX,
                                 //TASK_ID_DCOM_TX_OUTBX,
                                 //TASK_ID_DCOM_TX_INBX,
-                                //TASK_ID_AMEC_SLAVE,
+                                TASK_ID_AMEC_SLAVE,
                                 //TASK_ID_AMEC_MASTER,
                                 //TASK_ID_DCOM_PARSE_FW_MSG,
                                 //TASK_ID_CHECK_FOR_CHECKSTOP,
@@ -181,7 +181,7 @@ const uint8_t G_tick2_seq[] = {
                                 //TASK_ID_DCOM_RX_OUTBX,
                                 //TASK_ID_DCOM_TX_OUTBX,
                                 //TASK_ID_DCOM_TX_INBX,
-                                //TASK_ID_AMEC_SLAVE,
+                                TASK_ID_AMEC_SLAVE,
                                 //TASK_ID_AMEC_MASTER,
                                 //TASK_ID_DCOM_PARSE_FW_MSG,
                                 //TASK_ID_CHECK_FOR_CHECKSTOP,
@@ -200,7 +200,7 @@ const uint8_t G_tick3_seq[] = {
                                 //TASK_ID_DCOM_RX_OUTBX,
                                 //TASK_ID_DCOM_TX_OUTBX,
                                 //TASK_ID_DCOM_TX_INBX,
-                                //TASK_ID_AMEC_SLAVE,
+                                TASK_ID_AMEC_SLAVE,
                                 //TASK_ID_AMEC_MASTER,
                                 //TASK_ID_DCOM_PARSE_FW_MSG,
                                 //TASK_ID_CHECK_FOR_CHECKSTOP,
@@ -220,7 +220,7 @@ const uint8_t G_tick4_seq[] = {
                                 TASK_ID_POKE_WDT,
                                 //TASK_ID_DCOM_TX_OUTBX,
                                 //TASK_ID_DCOM_TX_INBX,
-                                //TASK_ID_AMEC_SLAVE,
+                                TASK_ID_AMEC_SLAVE,
                                 //TASK_ID_AMEC_MASTER,
                                 //TASK_ID_DCOM_PARSE_FW_MSG,
                                 //TASK_ID_CHECK_FOR_CHECKSTOP,
@@ -239,7 +239,7 @@ const uint8_t G_tick5_seq[] = {
                                 //TASK_ID_DCOM_RX_OUTBX,
                                 //TASK_ID_DCOM_TX_OUTBX,
                                 //TASK_ID_DCOM_TX_INBX,
-                                //TASK_ID_AMEC_SLAVE,
+                                TASK_ID_AMEC_SLAVE,
                                 //TASK_ID_AMEC_MASTER,
                                 //TASK_ID_DCOM_PARSE_FW_MSG,
                                 //TASK_ID_CHECK_FOR_CHECKSTOP,
@@ -258,7 +258,7 @@ const uint8_t G_tick6_seq[] = {
                                 //TASK_ID_DCOM_RX_OUTBX,
                                 //TASK_ID_DCOM_TX_OUTBX,
                                 //TASK_ID_DCOM_TX_INBX,
-                                //TASK_ID_AMEC_SLAVE,
+                                TASK_ID_AMEC_SLAVE,
                                 //TASK_ID_AMEC_MASTER,
                                 //TASK_ID_DCOM_PARSE_FW_MSG,
                                 //TASK_ID_CHECK_FOR_CHECKSTOP,
@@ -277,7 +277,7 @@ const uint8_t G_tick7_seq[] = {
                                 //TASK_ID_DCOM_RX_OUTBX,
                                 //TASK_ID_DCOM_TX_OUTBX,
                                 //TASK_ID_DCOM_TX_INBX,
-                                //TASK_ID_AMEC_SLAVE,
+                                TASK_ID_AMEC_SLAVE,
                                 //TASK_ID_AMEC_MASTER,
                                 //TASK_ID_DCOM_PARSE_FW_MSG,
                                 //TASK_ID_CHECK_FOR_CHECKSTOP,
@@ -297,7 +297,7 @@ const uint8_t G_tick8_seq[] = {
                                 TASK_ID_POKE_WDT,
                                 //TASK_ID_DCOM_TX_OUTBX,
                                 //TASK_ID_DCOM_TX_INBX,
-                                //TASK_ID_AMEC_SLAVE,
+                                TASK_ID_AMEC_SLAVE,
                                 //TASK_ID_AMEC_MASTER,
                                 //TASK_ID_DCOM_PARSE_FW_MSG,
                                 //TASK_ID_CHECK_FOR_CHECKSTOP,
@@ -316,7 +316,7 @@ const uint8_t G_tick9_seq[] = {
                                 //TASK_ID_DCOM_RX_OUTBX,
                                 //TASK_ID_DCOM_TX_OUTBX,
                                 //TASK_ID_DCOM_TX_INBX,
-                                //TASK_ID_AMEC_SLAVE,
+                                TASK_ID_AMEC_SLAVE,
                                 //TASK_ID_AMEC_MASTER,
                                 //TASK_ID_DCOM_PARSE_FW_MSG,
                                 //TASK_ID_CHECK_FOR_CHECKSTOP,
@@ -335,7 +335,7 @@ const uint8_t G_tick10_seq[] = {
                                 //TASK_ID_DCOM_RX_OUTBX,
                                 //TASK_ID_DCOM_TX_OUTBX,
                                 //TASK_ID_DCOM_TX_INBX,
-                                //TASK_ID_AMEC_SLAVE,
+                                TASK_ID_AMEC_SLAVE,
                                 //TASK_ID_AMEC_MASTER,
                                 //TASK_ID_DCOM_PARSE_FW_MSG,
                                 //TASK_ID_CHECK_FOR_CHECKSTOP,
@@ -354,7 +354,7 @@ const uint8_t G_tick11_seq[] = {
                                 //TASK_ID_DCOM_RX_OUTBX,
                                 //TASK_ID_DCOM_TX_OUTBX,
                                 //TASK_ID_DCOM_TX_INBX,
-                                //TASK_ID_AMEC_SLAVE,
+                                TASK_ID_AMEC_SLAVE,
                                 //TASK_ID_AMEC_MASTER,
                                 //TASK_ID_DCOM_PARSE_FW_MSG,
                                 //TASK_ID_CHECK_FOR_CHECKSTOP,
@@ -374,7 +374,7 @@ const uint8_t G_tick12_seq[] = {
                                 TASK_ID_POKE_WDT,
                                 //TASK_ID_DCOM_TX_OUTBX,
                                 //TASK_ID_DCOM_TX_INBX,
-                                //TASK_ID_AMEC_SLAVE,
+                                TASK_ID_AMEC_SLAVE,
                                 //TASK_ID_AMEC_MASTER,
                                 //TASK_ID_DCOM_PARSE_FW_MSG,
                                 //TASK_ID_CHECK_FOR_CHECKSTOP,
@@ -393,7 +393,7 @@ const uint8_t G_tick13_seq[] = {
                                 //TASK_ID_DCOM_RX_OUTBX,
                                 //TASK_ID_DCOM_TX_OUTBX,
                                 //TASK_ID_DCOM_TX_INBX,
-                                //TASK_ID_AMEC_SLAVE,
+                                TASK_ID_AMEC_SLAVE,
                                 //TASK_ID_AMEC_MASTER,
                                 //TASK_ID_DCOM_PARSE_FW_MSG,
                                 //TASK_ID_CHECK_FOR_CHECKSTOP,
@@ -412,7 +412,7 @@ const uint8_t G_tick14_seq[] = {
                                 //TASK_ID_DCOM_RX_OUTBX,
                                 //TASK_ID_DCOM_TX_OUTBX,
                                 //TASK_ID_DCOM_TX_INBX,
-                                //TASK_ID_AMEC_SLAVE,
+                                TASK_ID_AMEC_SLAVE,
                                 //TASK_ID_AMEC_MASTER,
                                 //TASK_ID_DCOM_PARSE_FW_MSG,
                                 //TASK_ID_CHECK_FOR_CHECKSTOP,
@@ -431,7 +431,7 @@ const uint8_t G_tick15_seq[] = {
                                 //TASK_ID_DCOM_RX_OUTBX,
                                 //TASK_ID_DCOM_TX_OUTBX,
                                 //TASK_ID_DCOM_TX_INBX,
-                                //TASK_ID_AMEC_SLAVE,
+                                TASK_ID_AMEC_SLAVE,
                                 //TASK_ID_AMEC_MASTER,
                                 //TASK_ID_DCOM_PARSE_FW_MSG,
                                 //TASK_ID_CHECK_FOR_CHECKSTOP,

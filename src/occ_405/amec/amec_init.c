@@ -68,9 +68,10 @@ amec_sys_t g_amec_sys = {0};
 amec_sys_t * g_amec = &g_amec_sys;
 
 // GPE Request Structure that is used to measure the worst case GPE timings
-PoreFlex G_gpe_nop_request[NUM_GPE_ENGINES];
+GpeRequest G_gpe_nop_request[NUM_GPE_ENGINES];
 
-extern PoreEntryPoint GPE_pore_nop;
+// @TODO - TEMP: not ready yet
+//extern PoreEntryPoint GPE_pore_nop;
 extern void amec_slv_update_gpe_sensors(uint8_t i_gpe_engine);
 extern void amec_slv_update_gpe_sensors(uint8_t i_gpe_engine);
 
@@ -78,6 +79,8 @@ extern void amec_slv_update_gpe_sensors(uint8_t i_gpe_engine);
 // Function Prototypes
 //*************************************************************************
 
+// @TODO - TEMP: not ready yet
+#if 0
 //*************************************************************************
 // Functions
 //*************************************************************************
@@ -236,6 +239,7 @@ void amec_init_vector_sensors(void)
   }
 #endif
 }
+#endif // #if 0 @TODO - TEMP: not ready yet
 
 // Function Specification
 //
@@ -286,6 +290,8 @@ void amec_init_gamec_struct(void)
   g_amec->vrhotproc.freq_request = -1;
   g_amec->vrhotproc.speed_request = 1000;
 
+// @TODO - TEMP: not ready yet in Phase 1
+/*
   // Initialize partition information
   amec_part_init();
 
@@ -294,6 +300,7 @@ void amec_init_gamec_struct(void)
   {
     amec_core_perf_counter_ctor(&g_amec->proc[0].core[l_idx].core_perf, 0, l_idx);
   }
+*/
 
   //Initialize processor fields
   g_amec->proc[0].core_max_freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
@@ -355,13 +362,19 @@ void amec_init_gamec_struct(void)
 // End Function Specification
 void amec_slave_init()
 {
+// @TODO - TEMP: not ready yet
+/*
   errlHndl_t l_err = NULL;   // Error handler
   int         rc   = 0;      // Return code
   int         rc2  = 0;      // Return code
+*/
 
   // Set the GPE Request Pointers to NULL in case the create fails.
   G_fw_timing.gpe0_timing_request = NULL;
   G_fw_timing.gpe1_timing_request = NULL;
+
+// @TODO - TEMP: not ready yet
+#if 0
 
   // Initializes the GPE routine that will be used to measure the worst case
   // timings for GPE0
@@ -426,6 +439,8 @@ void amec_slave_init()
 
   // Initialize Vector Sensors for AMEC use
   amec_init_vector_sensors();
+
+#endif // #if 0 - @TODO - TEMP - Not ready yet
 
   // Initialize AMEC internal parameters
   amec_init_gamec_struct();

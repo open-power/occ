@@ -36,6 +36,11 @@
 
 /// \todo Add Doxygen grouping to constant groups
 
+// @TODO - TEMP: Added to eliminate errors: implicit declaration of functions out32 & in32
+// These functions are used in the pbax functions defined below.
+#include "ssx_api.h"
+#include "ppc32.h"
+
 #include "pba_register_addresses.h"
 #include "pba_firmware_registers.h"
 
@@ -239,8 +244,11 @@ typedef union pba_extended_address {
 int 
 pba_barset_initialize(int idx, uint64_t base, int log_size);
 
+// @TODO - TEMP: PORE assembly code. to be replace with valid GPE code
+/*
 int
 _pba_slave_reset(int id, SsxInterval timeout, SsxInterval sleep);
+*/
 
 int
 pba_slave_reset(int id);

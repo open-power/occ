@@ -310,8 +310,6 @@ void apss_complete_pwr_meas_read(ipc_msg_t* cmd, void* arg)
             break;
         }
 
-        // SIMICS Verify: Check proper transfer to the OCC under simics
-/*   @TODO - TEMP: APSS TOD register is not defined in simics yet. Commented out until implemented.
         rc = getscom_abs(TOD_VALUE_REG, &args->meas_data[3]);
         if(rc)
         {
@@ -320,7 +318,7 @@ void apss_complete_pwr_meas_read(ipc_msg_t* cmd, void* arg)
             apss_set_ffdc(&(args->error), TOD_VALUE_REG, APSS_RC_SCOM_GET_FAILED, rc);
             break;
         }
-*/
+
     } while(0);
 
     // send back a response, IPC success (even if ffdc/rc are non zeros)

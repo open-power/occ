@@ -62,9 +62,7 @@ extern uint32_t __ssx_boot; // Function address is 32 bits
 extern uint32_t G_occ_phantom_critical_count;
 extern uint32_t G_occ_phantom_noncritical_count;
 extern uint8_t G_occ_interrupt_type;
-
-// Remove the next LOC when dcom_initialize_roles() is un-commented
-uint8_t     G_occ_role = OCC_MASTER;  // TEMP
+extern uint8_t G_occ_role;
 
 extern GpeRequest G_meas_start_request;
 extern GpeRequest G_meas_cont_request;
@@ -761,13 +759,13 @@ void master_occ_init()
  *
  * End Function Specification
  */
-/* TEMP -- NO SLAVES YET
 void slave_occ_init()
 {
     // Init the DPSS oversubscription IRQ handler
     MAIN_DBG("Initializing Oversubscription IRQ...");
     // TEMP -- NO DPSS/ERRL YET
-    //errlHndl_t l_errl = dpss_oversubscription_irq_initialize();
+/*
+    errlHndl_t l_errl = dpss_oversubscription_irq_initialize();
 
     if( l_errl )
     {
@@ -782,15 +780,16 @@ void slave_occ_init()
     {
         MAIN_TRAC_INFO("Oversubscription IRQ initialized");
     }
-
+*/
     //Set up doorbell queues
     // TEMP -- NO DCOM YET
     //dcom_initialize_pbax_queues();
 
     // Run AMEC Slave Init Code
-    // TEMP -- NO AMEC YET
-    //amec_slave_init();
+    amec_slave_init();
 
+// @TODO - TEMP: SMGR not ready yet
+/*
     // Initialize SMGR State Semaphores
     extern SsxSemaphore G_smgrModeChangeSem;
     ssx_semaphore_create(&G_smgrModeChangeSem, 1, 1);
@@ -798,8 +797,8 @@ void slave_occ_init()
     // Initialize SMGR Mode Semaphores
     extern SsxSemaphore G_smgrStateChangeSem;
     ssx_semaphore_create(&G_smgrStateChangeSem, 1, 1);
-}
 */
+}
 
 /*
  * Function Specification
@@ -978,6 +977,10 @@ void Main_thread_routine(void *private)
 
     // TEMP -- NO DCOM YET, init as OCC Master
     //dcom_initialize_roles();
+
+    // Remove the next LOC when dcom_initialize_roles() is un-commented
+    G_occ_role = OCC_MASTER;  // TEMP - @TODO
+
         // Remove the next 2 LOC when dcom_initialize_roles is un-commented
         // AND cmdh is running to call master_occ_init
         rtl_set_run_mask(RTL_FLAG_MSTR);
@@ -988,8 +991,7 @@ void Main_thread_routine(void *private)
     // Sensor Initialization
     // All Master & Slave Sensor are initialized here, it is up to the
     // rest of the firmware if it uses them or not.
-// TEMP -- NO SENSORS YET
-//    sensor_init_all();
+    sensor_init_all();
     CHECKPOINT(SENSORS_INITIALIZED);
 
     // SPIVID Initialization must be done before Pstates
@@ -1004,8 +1006,7 @@ void Main_thread_routine(void *private)
 
     // Run slave OCC init on all OCCs. Master-only initialization will be
     // done after determining actual role. By default all OCCs are slave.
-// TEMP -- SLAVES NOT SUPPORTED YET
-//    slave_occ_init();
+    slave_occ_init();
     CHECKPOINT(SLAVE_OCC_INITIALIZED);
 
     // Initialize watchdog timers. This needs to be right before

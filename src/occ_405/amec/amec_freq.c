@@ -47,6 +47,7 @@
 #include <amec_sensors_fw.h>
 #include <amec_data.h>
 #include <amec_freq.h>
+#include "pss_constants.h"
 
 //*************************************************************************
 // Externs
@@ -77,7 +78,7 @@ const uint32_t G_pmc_ffdc_scom_addrs[PMC_FFDC_SCOM_ADDRS_SIZE] =
     PMC_LFIR_ERR_MASK_REG,
     OCB_OCCLFIR,
     PBA_FIR,
-    TOD_VALUE_REG
+    TOD_VALUE_REG 
 };
 
 //FFDC OCI addresses as requested by Greg Still in defect SW247927
@@ -211,6 +212,9 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
 
     return l_err;
 }
+
+// @TODO - TEMP - Code not ready yet
+#if 0
 
 // Function Specification
 //
@@ -546,6 +550,8 @@ void amec_slv_freq_smh(void)
     }
 }
 
+#endif // @TODO - TEMP - Code not ready yet
+
 // Function Specification
 //
 // Name: amec_slv_freq_smh
@@ -621,11 +627,14 @@ void amec_slv_mem_voting_box(void)
         if(!L_throttle_traced)
         {
             L_throttle_traced = TRUE;
+// @TODO - TEMP - No dimm temp Colection yet
+/*
             TRAC_INFO("Memory is being throttled. reason[%d] vote[%d] cent_expired[0x%02x] dimm_expired[0x%02x]",
                        l_reason,
                        l_vote,
                        G_cent_temp_expired_bitmap,
                        G_dimm_temp_expired_bitmap);
+*/
         }
     }
     else
@@ -865,6 +874,8 @@ void amec_slv_check_perf(void)
 // time to stabilize
 void amec_verify_pstate()
 {
+//  @TODO - TEMP Pstate functions not defined yet
+#if 0
     uint8_t                             l_core = 0;
     int8_t                              l_pstate_from_fmax = 0;
     gpe_bulk_core_data_t *              l_core_data_ptr;
@@ -956,6 +967,7 @@ void amec_verify_pstate()
             REQUEST_RESET(l_err);
         }
     }
+#endif // #if 0: @TODO - TEMP Pstate functions not defined yet
 }
 
 // Fills in a pmc ffdc buffer with lots of PMC related OCI and SCOM registers

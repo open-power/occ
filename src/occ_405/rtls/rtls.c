@@ -51,8 +51,7 @@ uint32_t G_run_mask_deferred = GLOBAL_RUN_MASK;
 uint32_t G_current_tick = 0xFFFFFFFF;
 
 // The durations measured within the current tick
-// TEMP -- PORE ISSUES
-//fw_timing_t G_fw_timing;
+fw_timing_t G_fw_timing;
 
 // The global TICK table
 // See notes regarding this table in rtls_tables.c.
@@ -284,8 +283,7 @@ void rtl_ocb_init(void)
 // End Function Specification
 void rtl_do_tick( void *private, SsxIrqId irq, int priority )
 {
-// TEMP / TODO  -- Unused var warning
-//    uint64_t l_start = ssx_timebase_get();
+    uint64_t l_start = ssx_timebase_get();
 
     uint8_t *l_taskid_ptr = NULL;   // Pointer to the current task ID in the current tick sequence
     task_t *l_task_ptr = NULL;      // Pointer to the currently executing task
@@ -305,8 +303,7 @@ void rtl_do_tick( void *private, SsxIrqId irq, int priority )
     CURRENT_TICK++;
 
     // Save off start time of RTL tick
-// TEMP -- COMMENTED OUT DUE TO PORE ISSUES
-//    G_fw_timing.rtl_start = l_start;
+    G_fw_timing.rtl_start = l_start;
 
     // Set global run mask point to deferred mask so that any modification
     // to the deferred mask flag is taken into effect for this tick.
@@ -390,8 +387,7 @@ void rtl_do_tick( void *private, SsxIrqId irq, int priority )
     } while(TRUE);
 
     // Save timing of RTL tick
-// TEMP -- PORE ISSUES
-//    G_fw_timing.rtl_dur = DURATION_IN_US_UNTIL_NOW_FROM(l_start);
+    G_fw_timing.rtl_dur = DURATION_IN_US_UNTIL_NOW_FROM(l_start);
 
     RTLS_DBG("RTL Tick Duration: %d us\n",(int)G_fw_timing.rtl_dur);
 

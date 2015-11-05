@@ -32,9 +32,9 @@
 #include "occ_common.h"
 #include "state.h"
 #include "cmdh_fsp_cmds.h"
-#include "cmdh_cbug_cmd.h"
-#include "gpsm.h"
-#include "pstates.h"
+// @TODO - TEMP Pstate include files
+//#include "gpsm.h"
+//#include "pstates.h"
 #include "proc_data.h"
 #include "proc_pstate.h"
 #include "scom.h"
@@ -56,7 +56,8 @@ typedef enum
 
 // Instance of the PState Table in OCC SRAM.  Should be placed in RO section
 // so that OCC FW can't corrupt it
-GLOBAL_PSTATE_TABLE(G_global_pstate_table);
+// @TODO - TEMP Pstates changed in P9
+//GLOBAL_PSTATE_TABLE(G_global_pstate_table);
 
 // Used for passing DCM Master & Slave States to each other over MBOX
 proc_gpsm_dcm_sync_occfw_t G_proc_dcm_sync_state = {0, PROC_GPSM_SYNC_NO_PSTATE_TABLE, PROC_GPSM_SYNC_NO_PSTATE_TABLE,0,0};
@@ -113,16 +114,17 @@ bool proc_is_hwpstate_enabled(void)
 // End Function Specification
 void proc_gpsm_dcm_sync_update_from_mbox(proc_gpsm_dcm_sync_occfw_t * i_dcm_sync_state)
 {
-    if(!gpsm_dcm_slave_p())
+// @TODO - TEMP - global state table changes in P9
+/*    if(!gpsm_dcm_slave_p())
     {
         G_proc_dcm_sync_state.sync_state_slave = i_dcm_sync_state->sync_state_slave;
     }
     else
     {
-        G_proc_dcm_sync_state.sync_state_master = i_dcm_sync_state->sync_state_master;
+*/        G_proc_dcm_sync_state.sync_state_master = i_dcm_sync_state->sync_state_master;
         G_proc_dcm_sync_state.pstate_v = i_dcm_sync_state->pstate_v;
         G_proc_dcm_sync_state.pstate_f = i_dcm_sync_state->pstate_f;
-    }
+/*    } */
 }
 
 
@@ -151,6 +153,7 @@ inline bool proc_is_dcm(void)
   return G_isDcm;
 }
 
+#if 0 // @TODO - TEMP - global state table changes in P9
 
 // Function Specification
 //
@@ -958,6 +961,8 @@ void populate_pstate_to_sapphire_tbl()
         G_sapphire_table.data[i].freq_khz = l_gpst_ptr->pstate0_frequency_khz + (G_sapphire_table.data[i].pstate * l_gpst_ptr->frequency_step_khz);
     }
 }
+
+#endif // @TODO - TEMP - global state table changes in P9
 
 // Function Specification
 //

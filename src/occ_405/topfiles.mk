@@ -22,33 +22,49 @@
 # permissions and limitations under the License.
 #
 # IBM_PROLOG_END_TAG
-TOP-C-SOURCES = cmdh/cmdh_dbug_cmd.c \
-                cmdh/cmdh_fsp.c \
-                cmdh/cmdh_fsp_cmds.c \
+TOP-C-SOURCES = amec/amec_data.c \
+                amec/amec_freq.c \
+                amec/amec_init.c \
+                amec/amec_master_smh.c \
+                amec/amec_part.c \
+                amec/amec_sensors_fw.c \
+                amec/amec_sensors_power.c \
+                amec/amec_slave_smh.c \
+                amec/amec_tasks.c \
+                amec/sensor_power.c \
+                cmdh/cmdh_dbug_cmd.c \
                 cmdh/cmdh_fsp_cmds_datacnfg.c \
+                cmdh/cmdh_fsp_cmds.c \
+                cmdh/cmdh_fsp.c \
                 cmdh/cmdh_mnfg_intf.c \
+                cmdh/cmdh_snapshot.c \
                 cmdh/cmdh_thread.c \
                 cmdh/cmdh_tunable_parms.c \
-                cmdh/snapshot.c \
                 cmdh/ffdc.c \
+                dcom/dcom.c \
+                dcom/dcomMasterRx.c \
+                dcom/dcomSlaveRx.c \
+                dcom/dcomSlaveTx.c \
                 errl/errl.c \
                 homer.c \
                 main.c \
+                mode.c \
                 occ_sys_config.c \
                 occbuildname.c \
+                proc/proc_pstate.c \
                 pss/apss.c \
                 reset.c \
-                rtls/rtls.c \
                 rtls/rtls_tables.c \
+                rtls/rtls.c \
                 scom.c \
-                sensor/sensor.c \
                 sensor/sensor_query_list.c \
                 sensor/sensor_table.c \
+                sensor/sensor.c \
                 state.c \
                 thread/threadSch.c \
                 thread/thrm_thread.c \
                 timer/timer.c \
-                trac/trac_interface.c \
+                trac/trac_interface.c 
 
 TOP-S-SOURCES = cmdh/ll_ffdc.S \
 

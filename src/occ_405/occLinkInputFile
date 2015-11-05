@@ -1,54 +1,71 @@
-INPUT (
+INPUT ( amec_data.o
+        amec_freq.o
+        amec_init.o
+        amec_master_smh.o
+        amec_part.o
+        amec_sensors_fw.o
+        amec_sensors_power.o
+        amec_slave_smh.o
+        amec_tasks.o
         apss.o
         cmdh_dbug_cmd.o
-        cmdh_fsp.o
-        cmdh_fsp_cmds.o
         cmdh_fsp_cmds_datacnfg.o
+        cmdh_fsp_cmds.o
+        cmdh_fsp.o
+        cmdh_snapshot.o
         cmdh_thread.o
+        dcom.o
+        dcomMasterRx.o
+        dcomSlaveRx.o
+        dcomSlaveTx.o
         errl.o
         ffdc.o
         homer.o
         ll_ffdc.o
         main.o
+        mode.o
         occ_sys_config.o
         occbuildname.o
-        reset.o
-        rtls.o
-        rtls_tables.o
-        threadSch.o
-        thrm_thread.o
-        timer.o
-        trac_interface.o
-        scom.o
-        sensor_query_list.o
-        state.o
-        ssx_core.o
-        ssx_init.o
-        ssx_stack_init.o
-        ssx_timer_core.o
-        ssx_timer_init.o
-        ssx_thread_init.o
-        ssx_thread_core.o
-        ssx_semaphore_init.o
-        ssx_semaphore_core.o
+        occhw_async_ocb.o
+        occhw_async_pba.o
+        occhw_async.o
+        occhw_cache.o
+        occhw_id.o
         occhw_init.o
         occhw_irq_init.o
         occhw_ocb.o
         occhw_pba.o
-        occhw_id.o
-        occhw_cache.o
-        occhw_async.o
-        occhw_async_ocb.o
-        occhw_async_pba.o
-        ppc405_core.o
-        ppc405_lib_core.o
+        ppc405_boot.o
+        ppc405_breakpoint.o
         ppc405_cache_core.o
+        ppc405_cache_init.o
+        ppc405_core.o
+        ppc405_exceptions.o
         ppc405_init.o
         ppc405_irq_core.o
         ppc405_irq_init.o
-        ppc405_boot.o
-        ppc405_exceptions.o
-        ppc405_cache_init.o
+        ppc405_lib_core.o
         ppc405_mmu_asm.o
-        ppc405_breakpoint.o
-        ppc405_thread_init.o )
+        ppc405_thread_init.o
+        proc_pstate.o
+        reset.o
+        rtls_tables.o
+        rtls.o
+        scom.o
+        sensor_query_list.o
+        sensor_table.o
+        sensor.o
+        ssx_core.o
+        ssx_init.o
+        ssx_semaphore_core.o
+        ssx_semaphore_init.o
+        ssx_stack_init.o
+        ssx_thread_core.o
+        ssx_thread_init.o
+        ssx_timer_core.o
+        ssx_timer_init.o
+        state.o
+        threadSch.o
+        thrm_thread.o
+        timer.o
+        trac_interface.o)

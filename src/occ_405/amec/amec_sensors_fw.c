@@ -162,13 +162,15 @@ void amec_update_fw_sensors(void)
             // Update Time used to measure GPE duration.
             G_fw_timing.rtl_start_gpe = G_fw_timing.rtl_start;
 
+// @TODO - TEMP - Old PORE SCHEDULE, needs to be replaced with GPE schedule code.
+/*
             // Schedule the GPE Routines that will run and update the worst
             // case timings (via callback) after they complete.  These GPE
             // routines are the last GPE routines added to the queue
             // during the RTL tick.
             rc  = pore_flex_schedule(G_fw_timing.gpe0_timing_request);
             rc2 = pore_flex_schedule(G_fw_timing.gpe1_timing_request);
-
+*/
             if(rc || rc2)
             {
                 /* @
@@ -197,6 +199,8 @@ void amec_update_fw_sensors(void)
         }
         else if(L_consec_trace_count < MAX_CONSEC_TRACE)
         {
+// @TODO: TEMP - PORE GPE Codes, needs to reflect PPE architecture.
+/*
             uint64_t l_dbg0;
             uint64_t l_dbg1;
             uint64_t l_status;
@@ -233,6 +237,7 @@ void amec_update_fw_sensors(void)
                          (uint32_t)(l_status & 0x00000000ffffffffull));
             }
             L_consec_trace_count++;
+*/
         }
     }
 }

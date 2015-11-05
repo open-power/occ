@@ -75,6 +75,9 @@ smh_state_t G_amec_slv_state = {AMEC_INITIAL_STATE,
 // Number of ticks for periodically updating VRM-related data
 #define AMEC_UPDATE_VRM_TICKS   4000
 
+// @TODO - TEMP: Not Ready yet in Phase 1.
+#if 0
+
 // --------------------------------------------------------
 // AMEC Slave State 6 Substate Table
 // --------------------------------------------------------
@@ -132,6 +135,8 @@ const smh_tbl_t amec_slv_state_table[AMEC_SMH_STATES_PER_LVL] =
   {amec_slv_state_7, amec_slv_state_7_substate_table},
 };
 
+#endif // #if 0 @TODO - TEMP: Not Ready yet in Phase 1.
+
 // This sets up the function pointer that will be called to update the
 // fw timings when the AMEC Slave State Machine finishes.
 smh_state_timing_t G_amec_slv_state_timings = {amec_slv_update_smh_sensors};
@@ -151,6 +156,9 @@ smh_state_timing_t G_amec_slv_state_timings = {amec_slv_update_smh_sensors};
 //*************************************************************************
 // Functions
 //*************************************************************************
+
+// @TODO - TEMP: Not Ready yet in Phase 1.
+#if 0
 
 // Function Specification
 //
@@ -311,6 +319,8 @@ void amec_slv_pstate_uplift_check(void)
     }
 }
 
+#endif // #if 0 @TODO - TEMP - Not ready yet in Phase 1
+
 // Function Specification
 //
 // Name: amec_slv_common_tasks_pre
@@ -323,24 +333,28 @@ void amec_slv_pstate_uplift_check(void)
 // End Function Specification
 void amec_slv_common_tasks_pre(void)
 {
-  static uint16_t L_counter = 0;
+//  @TODO - TEMP - Not ready yet in Phase 1
+//  static uint16_t L_counter = 0;
 
   AMEC_DBG("\tAMEC Slave Pre-State Common\n");
 
   // Check if we need to apply a voltage uplift to the Global Pstate table
-  amec_slv_pstate_uplift_check();
+// @TODO - TEMP: Not Ready yet in Phase 1.
+//  amec_slv_pstate_uplift_check();
 
   // Update the FW Worst Case sensors every tick
   amec_update_fw_sensors();
 
   // Update the fast core data sensors every tick
-  amec_update_fast_core_data_sensors();
+//  @TODO - TEMP - Not ready yet in Phase 1
+//  amec_update_fast_core_data_sensors();
 
   // Update the sensors that come from the APSS every tick
   amec_update_apss_sensors();
 
   // Call the stream buffer recording function
-  amec_analytics_sb_recording();
+//  @TODO - TEMP - Not ready yet in Phase 1
+/*  amec_analytics_sb_recording();
 
   // Update the sensors that come from the VRM
   L_counter++;
@@ -352,6 +366,7 @@ void amec_slv_common_tasks_pre(void)
       }
       L_counter = 0;
   }
+*/
 
   // Update the external voltage sensors
   amec_update_external_voltage();
@@ -361,9 +376,12 @@ void amec_slv_common_tasks_pre(void)
   amec_update_current_sensor(); // Compute estimate for Vdd output current
 
   // Over-subscription check
-  amec_oversub_check();
+//  @TODO - TEMP - Not ready yet in Phase 1
+//  amec_oversub_check();
 }
 
+// @TODO - TEMP: Not Ready yet in Phase 1.
+#if 0
 
 // Function Specification
 //
@@ -762,7 +780,7 @@ void amec_slv_substate_7_7(void)
     // Call health monitor to check for processor error temperature conditions
     amec_health_check_proc_temp();
 }
-
+#endif // #if 0 -  @TODO - TEMP: Not Ready yet in Phase 1.
 /*----------------------------------------------------------------------------*/
 /* End                                                                        */
 /*----------------------------------------------------------------------------*/

@@ -29,6 +29,7 @@
 #include <occ_common.h>
 #include <ssx.h>
 #include <ssx_app_cfg.h>
+#include "occhw_async.h"
 
 typedef struct task {
     uint32_t flags;
@@ -47,12 +48,12 @@ typedef enum {
 //    TASK_ID_DCOM_RX_INBX,
 //    TASK_ID_DCOM_TX_INBX,
     TASK_ID_POKE_WDT,                 // Reset ppc405 watchdog and OCB timer
-//    TASK_ID_DCOM_WAIT_4_MSTR,
-//    TASK_ID_DCOM_RX_OUTBX,
-//    TASK_ID_DCOM_TX_OUTBX,
+    TASK_ID_DCOM_WAIT_4_MSTR,
+    TASK_ID_DCOM_RX_OUTBX,
+    TASK_ID_DCOM_TX_OUTBX,
 //    TASK_ID_DCOM_PARSE_FW_MSG,
     TASK_ID_CHECK_FOR_CHECKSTOP,
-//    TASK_ID_AMEC_SLAVE,             // AMEC SMH tasks
+    TASK_ID_AMEC_SLAVE,             // AMEC SMH tasks
 //    TASK_ID_AMEC_MASTER,            // AMEC SMH tasks
 //    TASK_ID_CORE_DATA_CONTROL,
 //    TASK_ID_GPU_SM,                 // GPU State Machine
@@ -63,7 +64,6 @@ typedef enum {
 } task_id_t;
 
 // Structure containing the durations measured within a tick
-/* TEMP -- PoreFlex object no longer exists
 typedef struct
 {
   uint32_t rtl_dur;         // Duration of RTL tick interrupt
@@ -73,10 +73,9 @@ typedef struct
   uint64_t rtl_start;       // SsxTimebase of Start of current RTL Tick
   uint64_t rtl_start_gpe;   // SsxTimebase of Start of current RTL Tick (for GPE > 250us meas)
   uint32_t gpe_dur[2];      // Duration of the GPE Engines / tick
-  PoreFlex * gpe0_timing_request;   // GPE Request that facilitates GPE WC meas
-  PoreFlex * gpe1_timing_request;   // GPE Request that facilitates GPE WC meas
+  GpeRequest* gpe0_timing_request;   // GPE Request that facilitates GPE WC meas
+  GpeRequest* gpe1_timing_request;   // GPE Request that facilitates GPE WC meas
 } fw_timing_t;
-*/
 
 // Bit flags to define when a task can run
 // NOTE: whenever new flag is added, it must also be added to the
@@ -114,7 +113,7 @@ typedef struct
 extern uint32_t G_current_tick;
 
 // The durations measured within the current tick
-// extern fw_timing_t G_fw_timing;
+extern fw_timing_t G_fw_timing;
 
 // Preferred macro for accessing the current tick value
 #define CURRENT_TICK G_current_tick

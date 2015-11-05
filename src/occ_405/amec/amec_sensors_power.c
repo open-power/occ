@@ -43,7 +43,8 @@
 #include "amec_service_codes.h"
 #include <amec_sensors_power.h>
 #include <cmdh_snapshot.h>
-#include <vrm.h>
+// @TODO - TEMP - uncomment when vrm file is updated
+//#include <vrm.h>
 #include "amec_oversub.h"
 
 /******************************************************************************/
@@ -435,6 +436,8 @@ void amec_update_apss_sensors(void)
     }
 }
 
+// @TODO - TEMP - SPIVRMs are no longer defined, pgp_vrm.h and vrm.c are not present
+#if 0
 
 // Function Specification
 //
@@ -571,6 +574,8 @@ void amec_update_vrm_sensors(void)
     }
 }
 
+#endif // #if 0 @TODO - TEMP - SPIVRMs are no longer defined, pgp_vrm.h and vrm.c are not present
+
 // Function Specification
 //
 // Name: amec_update_external_voltage
@@ -594,7 +599,8 @@ void amec_update_external_voltage()
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
     // Collect the external voltage data
-    l_data = in32(PMC_GLOBAL_ACTUAL_VOLTAGE_REG);
+// @TODO - TEMP - External Votage regulator is not defined in simics yet
+//    l_data = in32(PMC_GLOBAL_ACTUAL_VOLTAGE_REG);
 
     // Extract the Vdd vid code and convert to voltage
     l_temp = (l_data & 0xFF000000) >>24;

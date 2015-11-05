@@ -39,6 +39,7 @@
 #include <amec_data.h>
 #include <amec_sys.h>
 #include "scom.h"
+#include "pss_constants.h"  // @TODO: move with HW registers? 
 
 #define PBAX_CONFIGURE_RCV_GROUP_MASK 0xff
 
@@ -257,6 +258,8 @@ void dcom_initialize_roles(void)
         G_occ_role = OCC_MASTER;
         rtl_set_run_mask(RTL_FLAG_MSTR);
 
+// @TODO TEMP - not ready yet for multiple DCMs
+/*
         // Save off OCC role inside DCM chip
         if(gpsm_dcm_slave_p())
         {
@@ -273,6 +276,7 @@ void dcom_initialize_roles(void)
                 gpsm_dcm_mode_p(),
                 !gpsm_dcm_slave_p(),
                 cfam_id() );
+*/
     }
     else
     {
@@ -316,10 +320,12 @@ void dcom_initialize_roles(void)
     G_occ_num_present = __builtin_popcount(G_sysConfigData.is_occ_present);
 
     // Initialize DCOM Thread Sem
+// @TODO - TEMP - Not ready yet in phase 1
+/*
     ssx_semaphore_create( &G_dcomThreadWakeupSem, // Semaphore
                           1,                      // Initial Count
                           0);                     // No Max Count
-
+*/
 }
 
 // Function Specification
@@ -338,7 +344,8 @@ void dcom_initialize_pbax_queues(void)
 
     do
     {
-        pbax_send_disable();
+// @TODO - TEMP - PBA_XCFG (Address 0x40020108) is not mapped in simics yet
+//        pbax_send_disable();
 
         // Check if conversion has valid information
         if (( l_pbaxid.chip_id > MAX_PBAX_CHIP_ID ) ||
@@ -362,7 +369,8 @@ void dcom_initialize_pbax_queues(void)
         }
 
         //enabled pbax send does not return errors
-        pbax_send_enable();
+// @TODO - TEMP - PBA_XCFG (Address 0x40020108) is not mapped in simics yet
+//        pbax_send_enable();
 
         if(G_occ_role == OCC_SLAVE)
         {
@@ -655,6 +663,8 @@ void dcom_build_occfw_msg( const dcom_error_type_t i_which_msg )
 
 }
 
+#if 0 // TODO - TEMP - Phase1 - Not ready yet for multi OCC communications.
+
 // Function Specification
 //
 // Name: task_dcom_parse_occfwmsg
@@ -810,6 +820,8 @@ void task_dcom_parse_occfwmsg(task_t *i_self)
     // clear slave event flags if master has acknowledged them and the event has cleared
     G_slave_event_flags = (G_slave_event_flags & (~(G_dcom_slv_inbox_rx.occ_fw_mailbox[3])));
 }
+
+#endif // #if 0 -  // TODO - TEMP - Phase1 - Not ready yet for multi OCC communications.
 
 #endif //_DCOM_C
 

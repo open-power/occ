@@ -25,9 +25,7 @@
 
 #ifndef _DCOMMASTERRX_C
 #define _DCOMMASTERRX_C
-
-#include <pgp_pmc.h>
-#include "pgp_pba.h"
+#include "occhw_pba.h"
 #include <rtls.h>
 #include <apss.h>
 #include <dcom.h>
