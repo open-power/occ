@@ -64,6 +64,7 @@ enum occAmecModuleId
     AMEC_HEALTH_CHECK_VRFAN_TIMEOUT  =    AMEC_COMP_ID | 0x13,
     AMEC_HEALTH_CHECK_PROC_TIMEOUT   =    AMEC_COMP_ID | 0x14,
     AMEC_HEALTH_CHECK_PROC_VRHOT     =    AMEC_COMP_ID | 0x15,
+    AMEC_WOF_SCOM_FAILURE            =    AMEC_COMP_ID | 0x16,
 };
 
 /*----------------------------------------------------------------------------*/

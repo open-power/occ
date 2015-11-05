@@ -50,6 +50,7 @@
 #include "amec_master_smh.h"
 #include "thrm_thread.h"
 #include <proc_data.h>
+#include "amec_wof.h"
 
 // We need to have a small structure in non-Applet space to keep track
 // of success & failures when running test applets.  This needs to be
@@ -1086,6 +1087,86 @@ void cmdh_dbug_get_apss_data (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
 // Function Specification
 //
+// Name:  cmdh_dbug_dump_wof_data
+//
+// Description: Command called via OCC debug to return the wof data
+//
+// End Function Specification
+void cmdh_dbug_dump_wof_data (const cmdh_fsp_cmd_t * i_cmd_ptr,
+                              cmdh_fsp_rsp_t * o_rsp_ptr)
+{
+    uint8_t                      l_rc = ERRL_RC_SUCCESS;
+    uint16_t                     i = 0;
+    uint16_t                     l_resp_data_length = 0;
+    cmdh_dbug_wof_data_resp_t    *l_resp_ptr = (cmdh_dbug_wof_data_resp_t*) o_rsp_ptr;
+
+    do
+    {
+        memset(o_rsp_ptr, 0, sizeof(cmdh_dbug_wof_data_resp_t));
+        // Do sanity check on the function inputs
+        if ((NULL == i_cmd_ptr) || (NULL == o_rsp_ptr))
+        {
+            l_rc = ERRL_RC_INTERNAL_FAIL;
+            break;
+        }
+
+        //Populate response struct
+        l_resp_ptr->wof_enable = g_amec->wof.enable_parm;
+        l_resp_ptr->wof_vdd_eff = g_amec->wof.vdd_eff;
+        l_resp_ptr->wof_cur_out = g_amec->wof.cur_out;
+        l_resp_ptr->wof_loadline = g_amec->wof.loadline;
+        l_resp_ptr->wof_v_chip = g_amec->wof.v_chip;
+        l_resp_ptr->wof_iddq_i = g_amec->wof.iddq_i;
+        l_resp_ptr->wof_iddq85c = g_amec->wof.iddq85c;
+        l_resp_ptr->wof_iddq = g_amec->wof.iddq;
+        l_resp_ptr->wof_ac = g_amec->wof.ac;
+        l_resp_ptr->wof_ceff_tdp = g_amec->wof.ceff_tdp;
+        l_resp_ptr->wof_ceff = g_amec->wof.ceff;
+        l_resp_ptr->wof_ceff_old = g_amec->wof.ceff_old;
+        l_resp_ptr->wof_ceff_ratio = g_amec->wof.ceff_ratio;
+        l_resp_ptr->wof_f_uplift = g_amec->wof.f_uplift;
+        l_resp_ptr->wof_f_vote = g_amec->wof.f_vote;
+        l_resp_ptr->wof_vote_vreg = g_amec->wof.vote_vreg;
+        l_resp_ptr->wof_vote_vchip = g_amec->wof.vote_vchip;
+        l_resp_ptr->wof_error = g_amec->wof.error;
+        l_resp_ptr->wof_state = g_amec->wof.state;
+        l_resp_ptr->wof_cores_on = g_amec->wof.cores_on;
+        l_resp_ptr->tdp_rdp_factor = G_sysConfigData.wof_parms.tdp_rdp_factor;
+        l_resp_ptr->opTurbo_vdd_100uv = G_sysConfigData.wof_parms.operating_points[TURBO].vdd_5mv * 5 * 10;
+        l_resp_ptr->opTurbo_idd_500ma = G_sysConfigData.wof_parms.operating_points[TURBO].idd_500ma;
+        l_resp_ptr->opTurbo_freq_mhz = G_sysConfigData.wof_parms.operating_points[TURBO].frequency_mhz;
+        for (i=0; i < MAX_NUM_CORES; i++)
+        {
+            if (g_amec->proc[0].core_max_freq == g_amec->proc[0].core[i].f_request)
+            {
+                l_resp_ptr->proc_max_freq = g_amec->proc[0].core_max_freq;
+                l_resp_ptr->proc_freq_reason = g_amec->proc[0].core[i].f_reason;
+                l_resp_ptr->proc_reason_core = i;
+                break;
+            }
+        }
+
+        l_resp_ptr->sensor_temp2msp0    = AMECSENSOR_PTR(TEMP2MSP0)->sample;
+        l_resp_ptr->sensor_pwr250usvdd0 = AMECSENSOR_PTR(PWR250USVDD0)->sample;
+        l_resp_ptr->sensor_cur250usvdd0 = AMECSENSOR_PTR(CUR250USVDD0)->sample;
+        l_resp_ptr->sensor_wof250usvdds = AMECSENSOR_PTR(WOF250USVDDS)->sample;
+
+        for (i=0; i< CORE_IDDQ_MEASUREMENTS; i++)
+        {
+            memcpy(&(l_resp_ptr->iddq_vdd[i]), &(G_sysConfigData.iddq_table.iddq_vdd[i]), sizeof(IddqReading));
+        }
+    }while(0);
+
+    // Populate the response data header
+    l_resp_data_length = sizeof(cmdh_dbug_wof_data_resp_t) - CMDH_DBUG_FSP_RESP_LEN;
+    o_rsp_ptr->rc = l_rc;
+    o_rsp_ptr->data_length[0] = ((uint8_t *)&l_resp_data_length)[0];
+    o_rsp_ptr->data_length[1] = ((uint8_t *)&l_resp_data_length)[1];
+}
+
+
+// Function Specification
+//
 // Name:  dbug_parse_cmd
 //
 // Description: TODO Add description
@@ -1326,6 +1407,9 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         case DBUG_DUMP_APSS_DATA:
             cmdh_dbug_get_apss_data(i_cmd_ptr, o_rsp_ptr);
+            break;
+        case DBUG_DUMP_WOF_DATA:
+            cmdh_dbug_dump_wof_data(i_cmd_ptr, o_rsp_ptr);
             break;
         default:
             l_rc = ERRL_RC_INVALID_DATA; //should NEVER get here...

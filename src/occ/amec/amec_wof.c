@@ -36,6 +36,7 @@
 #include <amec_wof.h>
 #include <common.h>
 #include <cmdh_fsp_cmds_datacnfg.h>
+#include <amec_service_codes.h>
 
 //*************************************************************************
 // Externs
@@ -226,75 +227,74 @@ void amec_wof_vdd_current_out(const uint16_t i_power_in,
     g_amec->wof.vdd_eff = l_eff; //for debugging
 }
 
-bool amec_wof_validate_input_data(void)
+void amec_wof_validate_input_data(void)
 {
-    bool                l_valid_data = TRUE;
     uint8_t             l_pstate = 0;
+    uint8_t             i=0;
 
     // TODO: Need to add some sort of validation on the input data that is
     // consumed by WOF. For now, we are just tracing all this input data.
 
+    // Operating frequencies
+    TRAC_INFO("WOF: Frequencies @  NOMINAL[%d]  TURBO[%d]  UltraTURBO[%d]",
+              G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL],
+              G_sysConfigData.sys_mode_freq.table[OCC_MODE_STURBO],
+              G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO]);
+
     // Check operating point at turbo
-    TRAC_INFO("WOF Operating Turbo point: vdd_5mv[%d] Iddq_500ma[%d] frequency_mhz[%d]",
+    TRAC_INFO("WOF Operating TURBO point: vdd_5mv[%d] Iddq_500ma[%d] frequency_mhz[%d]",
               G_sysConfigData.wof_parms.operating_points[TURBO].vdd_5mv,
               G_sysConfigData.wof_parms.operating_points[TURBO].idd_500ma,
               G_sysConfigData.wof_parms.operating_points[TURBO].frequency_mhz);
 
     // RDP to TDP conversion factor and Max number of cores for this chip
-    TRAC_INFO("WOF rdp_tdp_factor[%d] max_cores_per_chip[%d]",
+    TRAC_INFO("WOF tdp_rdp_factor[%d]     max_cores_per_chip[%d]",
               G_sysConfigData.wof_parms.tdp_rdp_factor,
               G_wof_max_cores_per_chip);
 
     // IDDQ table
-    TRAC_INFO("WOF IDDQ Vdd current: 0.80V[%d] 0.90V[%d] 1.00V[%d]",
+    TRAC_INFO("WOF IDDQ Vdd current:  0.80V[%6d]  0.90V[%6d]  1.00V[%6d]",
               G_sysConfigData.iddq_table.iddq_vdd[0].fields.iddq_corrected_value,
               G_sysConfigData.iddq_table.iddq_vdd[1].fields.iddq_corrected_value,
               G_sysConfigData.iddq_table.iddq_vdd[2].fields.iddq_corrected_value);
-    TRAC_INFO("WOF IDDQ Vdd current: 1.10V[%d] 1.20V[%d] 1.25V[%d]",
+    TRAC_INFO("WOF IDDQ Vdd current:  1.10V[%6d]  1.20V[%6d]  1.25V[%6d]",
               G_sysConfigData.iddq_table.iddq_vdd[3].fields.iddq_corrected_value,
               G_sysConfigData.iddq_table.iddq_vdd[4].fields.iddq_corrected_value,
               G_sysConfigData.iddq_table.iddq_vdd[5].fields.iddq_corrected_value);
 
     // Uplift table
-    TRAC_INFO("WOF Uplift Freqs: Row_1[%d] 1cor[%d] 2cor[%d] 3cor[%d] 12cor[%d]",
-              G_amec_wof_uplift_table[1][0],
-              G_amec_wof_uplift_table[1][1],
-              G_amec_wof_uplift_table[1][2],
-              G_amec_wof_uplift_table[1][3],
-              G_amec_wof_uplift_table[1][12]);
-    TRAC_INFO("WOF Uplift Freqs: Row_2[%d] 1cor[%d] 2cor[%d] 3cor[%d] 12cor[%d]",
-              G_amec_wof_uplift_table[2][0],
-              G_amec_wof_uplift_table[2][1],
-              G_amec_wof_uplift_table[2][2],
-              G_amec_wof_uplift_table[2][3],
-              G_amec_wof_uplift_table[2][12]);
-    TRAC_INFO("WOF Uplift Freqs: Row11[%d] 1cor[%d] 2cor[%d] 3cor[%d] 12cor[%d]",
-              G_amec_wof_uplift_table[11][0],
-              G_amec_wof_uplift_table[11][1],
-              G_amec_wof_uplift_table[11][2],
-              G_amec_wof_uplift_table[11][3],
-              G_amec_wof_uplift_table[11][12]);
-    TRAC_INFO("WOF Uplift Freqs: LastR[%d] 1cor[%d] 2cor[%d] 3cor[%d] 12cor[%d]",
-              G_amec_wof_uplift_table[AMEC_WOF_UPLIFT_TBL_ROWS-1][0],
-              G_amec_wof_uplift_table[AMEC_WOF_UPLIFT_TBL_ROWS-1][1],
-              G_amec_wof_uplift_table[AMEC_WOF_UPLIFT_TBL_ROWS-1][2],
-              G_amec_wof_uplift_table[AMEC_WOF_UPLIFT_TBL_ROWS-1][3],
-              G_amec_wof_uplift_table[AMEC_WOF_UPLIFT_TBL_ROWS-1][12]);
+    for (i=1; i < AMEC_WOF_UPLIFT_TBL_ROWS; i++)
+    {
+        // Print first 2 rows, a middle row, and last row.
+        if( (i == 1) ||             //1st row
+            (i == 2) ||             //2nd row
+            (i == (AMEC_WOF_UPLIFT_TBL_ROWS/2)) ||     //Middle row
+            (i ==  AMEC_WOF_UPLIFT_TBL_ROWS - 1))      //last row
+        {
+            TRAC_INFO("WOF Uplift Freqs: Row_%02i [%6d] 1core[%6d] 2core[%6d] 3core[%6d] 12core[%6d]",
+                      i,
+                      G_amec_wof_uplift_table[i][0],
+                      G_amec_wof_uplift_table[i][1],
+                      G_amec_wof_uplift_table[i][2],
+                      G_amec_wof_uplift_table[i][3],
+                      G_amec_wof_uplift_table[i][12]);
+        }
+    }
 
     // VRM Efficiency Table
-    TRAC_INFO("WOF VRM Effic: Current_10mA 1[%d] 2[%d] 3[%d] ... 12[%d] 13[%d]",
+    TRAC_INFO("WOF VRM Effic: Current_10mA 1[%6d] 2[%6d] 3[%6d] ... 12[%6d] 13[%6d]",
               G_amec_wof_vrm_eff_table[0][1],
               G_amec_wof_vrm_eff_table[0][2],
               G_amec_wof_vrm_eff_table[0][3],
               G_amec_wof_vrm_eff_table[0][12],
               G_amec_wof_vrm_eff_table[0][13]);
-    TRAC_INFO("WOF VRM Effic: Lo_volt[%d] 20A[%d] 40A[%d] 60A[%d] 260A[%d]",
+    TRAC_INFO("WOF VRM Effic: Lo_volt[%6d] 20A[%6d] 40A[%6d] 60A[%6d] 260A[%6d]",
               G_amec_wof_vrm_eff_table[1][0],
               G_amec_wof_vrm_eff_table[1][1],
               G_amec_wof_vrm_eff_table[1][2],
               G_amec_wof_vrm_eff_table[1][3],
               G_amec_wof_vrm_eff_table[1][13]);
-    TRAC_INFO("WOF VRM Effic: Hi_volt[%d] 20A[%d] 40A[%d] 60A[%d] 260A[%d]",
+    TRAC_INFO("WOF VRM Effic: Hi_volt[%6d] 20A[%6d] 40A[%6d] 60A[%6d] 260A[%6d]",
               G_amec_wof_vrm_eff_table[2][0],
               G_amec_wof_vrm_eff_table[2][1],
               G_amec_wof_vrm_eff_table[2][2],
@@ -308,27 +308,21 @@ bool amec_wof_validate_input_data(void)
         TRAC_INFO("WOF VID Mod Table: Num_pstates[%d] Max_num_cores[%d]",
                   G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_pstates,
                   G_sysConfigData.wof_parms.ut_vid_mod.ut_max_cores);
-        TRAC_INFO("WOF Vdd VID Mod Table 1_core: p0[0x%02X] p-1[0x%02X] p-2[0x%02X] p-3[0x%02X] p-4[0x%02X]",
-                  G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate][0],
-                  G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate-1][0],
-                  G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate-2][0],
-                  G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate-3][0],
-                  G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate-4][0]);
-        TRAC_INFO("WOF Vdd VID Mod Table 10_cores: p0[0x%02X] p-1[0x%02X] p-2[0x%02X] p-3[0x%02X] p-4[0x%02X]",
-                  G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate][9],
-                  G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate-1][9],
-                  G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate-2][9],
-                  G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate-3][9],
-                  G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate-4][9]);
-        TRAC_INFO("WOF Vdd VID Mod Table 12_cores: p0[0x%02X] p-1[0x%02X] p-2[0x%02X] p-3[0x%02X] p-4[0x%02X]",
-                  G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate][11],
-                  G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate-1][11],
-                  G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate-2][11],
-                  G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate-3][11],
-                  G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate-4][11]);
+        for (i=0; i < NUM_ACTIVE_CORES; i++)
+        {
+            //Print data for 1, 10, and 12 cores)
+            if( (i == 0) || (i == NUM_ACTIVE_CORES - 3) || (i == NUM_ACTIVE_CORES - 1))
+            {
+                TRAC_INFO("WOF Vdd VID Mod Table %2d_core: p0[0x%02X] p-1[0x%02X] p-2[0x%02X] p-3[0x%02X] p-4[0x%02X]",
+                          i + 1,
+                          G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate][i],
+                          G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate-1][i],
+                          G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate-2][i],
+                          G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate-3][i],
+                          G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate-4][i]);
+            }
+        }
     }
-
-    return l_valid_data;
 }
 
 uint32_t amec_wof_compute_c_eff(void)
@@ -447,10 +441,13 @@ uint32_t amec_wof_compute_c_eff(void)
 // Thread: RealTime Loop
 //
 // End Function Specification
-uint8_t amec_wof_set_algorithm(const uint8_t i_algorithm)
+int amec_wof_set_algorithm(const uint8_t i_algorithm)
 {
-    uint64_t             l_data64 = 0;
-    uint32_t             l_rc = 1;
+    uint64_t            l_data64 = 0;
+    int                 l_rc = 1;
+    int                 l_scom_rc = 0;
+    static uint8_t      l_failCount = 0;
+    errlHndl_t          l_err = NULL;
 
     do
     {
@@ -512,10 +509,12 @@ uint8_t amec_wof_set_algorithm(const uint8_t i_algorithm)
 
                 // Inhibit cores from waking up
                 l_data64 = 0xffff000000000000ull;
-                l_rc = _putscom(PDEMR, l_data64, SCOM_TIMEOUT);
-                if (l_rc != 0)
+                l_scom_rc = _putscom(PDEMR, l_data64, SCOM_TIMEOUT);
+                if (l_scom_rc != 0)
                 {
                     g_amec->wof.error = AMEC_WOF_ERROR_SCOM_4;
+                    TRAC_ERR("amec_wof_set_algorithm: Failed putscom on PDEMR to inhibit all cores."
+                             " rc:0x%X, wof.error:0x%X", l_scom_rc, g_amec->wof.error);
                 }
                 break;
 
@@ -523,10 +522,12 @@ uint8_t amec_wof_set_algorithm(const uint8_t i_algorithm)
                 // Do not inhibit core wakeup anymore (in case of transitioning
                 // out of algorithm 2)
                 l_data64 = 0x0000000000000000ull;
-                l_rc = _putscom(PDEMR, l_data64, SCOM_TIMEOUT);
-                if (l_rc != 0)
+                l_scom_rc = _putscom(PDEMR, l_data64, SCOM_TIMEOUT);
+                if (l_scom_rc != 0)
                 {
                     g_amec->wof.error = AMEC_WOF_ERROR_SCOM_5;
+                    TRAC_ERR("amec_wof_set_algorithm: Failed putscom on PDEMR to NOT inhibit all cores."
+                             " rc:0x%X, wof.error:0x%X", l_scom_rc, g_amec->wof.error);
                 }
 
                 // Restore original VID codes for turbo to ultraturbo Pstates
@@ -537,13 +538,63 @@ uint8_t amec_wof_set_algorithm(const uint8_t i_algorithm)
                 break;
         }
 
-        // Success, set the new algorithm
-        g_amec->wof.algo_type = g_amec->wof.enable_parm;
-        l_rc = 0;
+        //If there where no failures
+        if (l_scom_rc == 0)
+        {
+            // Success, set the new algorithm
+            g_amec->wof.algo_type = g_amec->wof.enable_parm;
+            l_rc = 0;
 
-        TRAC_INFO("WOF algorithm has been successfully initialized: algo_type[%d] C_eff_tdp[%d]",
-                  g_amec->wof.algo_type,
-                  g_amec->wof.ceff_tdp);
+            TRAC_INFO("WOF algorithm has been successfully initialized: algo_type[%d] C_eff_tdp[%d]",
+                      g_amec->wof.algo_type,
+                      g_amec->wof.ceff_tdp);
+        }
+        else
+        {
+            l_failCount++;
+            if (l_failCount == 3)
+            {
+                TRAC_ERR("amec_wof_set_algorithm: putScom failed three times, therefore disabling wof.");
+
+                /* @
+                 * @errortype
+                 * @moduleid    AMEC_WOF_SCOM_FAILURE
+                 * @reasoncode  PROC_SCOM_ERROR
+                 * @userdata1   Scom rc
+                 * @userdata2   0
+                 * @userdata4   OCC_NO_EXTENDED_RC
+                 * @devdesc     Failed to scom PDEMR register.
+                 *
+                 */
+                l_err = createErrl(AMEC_WOF_SCOM_FAILURE,           //modId
+                                   PROC_SCOM_ERROR,                 //reasoncode
+                                   OCC_NO_EXTENDED_RC,               //Extended reason code
+                                   ERRL_SEV_PREDICTIVE,              //Severity
+                                   NULL,                             //Trace Buf
+                                   DEFAULT_TRACE_SIZE,               //Trace Size
+                                   (uint32_t)l_scom_rc,              //userdata1
+                                   0);                               //userdata2
+
+                // Callout to firmware
+                addCalloutToErrl(l_err,
+                                 ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                                 ERRL_COMPONENT_ID_FIRMWARE,
+                                 ERRL_CALLOUT_PRIORITY_MED);
+
+                // Callout to processor
+                addCalloutToErrl(l_err,
+                                 ERRL_CALLOUT_TYPE_HUID,
+                                 G_sysConfigData.proc_huid,
+                                 ERRL_CALLOUT_PRIORITY_LOW);
+
+                // Commit the error
+                commitErrl(&l_err);
+
+
+                g_amec->wof.enable_parm = 0;
+
+            }
+        }
 
     } while (0);
 
@@ -615,6 +666,7 @@ void amec_wof_common_steps(void)
     l_accum = (uint32_t)AMECSENSOR_PTR(CUR250USVDD0)->accumulator;
     l_v_chip = g_amec->wof.v_chip; //from amec_update_wof_sensors()
 
+    //If no change, then nothing to do here.
     if (g_amec->wof.state != AMEC_WOF_NO_CORE_CHANGE)
     {
         return;
@@ -623,6 +675,10 @@ void amec_wof_common_steps(void)
         g_amec->wof.pstatetable_cores_current)
     {
         g_amec->wof.error = AMEC_WOF_ERROR_CORE_COUNT;
+        TRAC_ERR("amec_wof_common_steps: Invalid core count. "
+                 "CoresNext:%i, CoresCurrent:%i.  wof.error:0x%X",
+                 g_amec->wof.pstatetable_cores_next,
+                 g_amec->wof.pstatetable_cores_current, g_amec->wof.error);
         return;
     }
 
@@ -661,6 +717,8 @@ void amec_wof_common_steps(void)
     if (l_rc != 0)
     {
         g_amec->wof.error = AMEC_WOF_ERROR_SCOM_1;
+        TRAC_ERR("amec_wof_common_steps: Failed getscom on PMCWIRVR3 reg[0x%X]."
+                 " rc:0x%X, wof.error:0x%X", PMCWIRVR3, l_rc, g_amec->wof.error);
         return;
     }
 
@@ -1071,7 +1129,7 @@ void amec_wof_helper_v3(void)
             // FIXME: Turn on the p-state table (flip address of table)
             // FIXME: new WOF vote
 
-            // Now that new Pstate table is installed, we can allow WOF 
+            // Now that new Pstate table is installed, we can allow WOF
             // frequency request
             g_amec->wof.f_vote = g_amec->wof.f_uplift;
 
@@ -1090,6 +1148,9 @@ void amec_wof_helper_v3(void)
             if (l_rc != 0)
             {
                 g_amec->wof.error = AMEC_WOF_ERROR_SCOM_2;
+                TRAC_ERR("amec_wof_helper_v3: Failed putscom on PDEMR while "
+                         " toggling core inhibit bits. rc:0x%X, WakeUpMask:0x%X, wof.error:0x%X",
+                         l_rc, g_amec->wof.wake_up_mask, g_amec->wof.error);
                 break;
             }
 
@@ -1099,6 +1160,9 @@ void amec_wof_helper_v3(void)
             if (l_rc != 0)
             {
                 g_amec->wof.error = AMEC_WOF_ERROR_SCOM_3;
+                TRAC_ERR("amec_wof_helper_v3: Failed putscom on PDEMR while "
+                         " inhibiting all cores. rc:0x%X, wof.error:0x%X",
+                         l_rc, g_amec->wof.error);
                 break;
             }
 
@@ -1148,6 +1212,8 @@ void amec_wof_helper_v3(void)
 
         default:
             g_amec->wof.error = AMEC_WOF_ERROR_UNKNOWN_STATE;
+            TRAC_ERR("amec_wof_helper_v3: WOF is in an unknown state: 0x%X. "
+                     " wof.error:0x%X", g_amec->wof.state, g_amec->wof.error);
             break;
     }
 }
@@ -1209,6 +1275,9 @@ void amec_wof_helper_v2(void)
             if (l_rc != 0)
             {
                 g_amec->wof.error = AMEC_WOF_ERROR_SCOM_2;
+                TRAC_ERR("amec_wof_helper_v2: Failed putscom on PDEMR while "
+                         " toggling core inhibit bits. rc:0x%X, WakeUpMask:0x%X, wof.error:0x%X",
+                         l_rc, g_amec->wof.wake_up_mask, g_amec->wof.error);
                 break;
             }
 
@@ -1218,6 +1287,9 @@ void amec_wof_helper_v2(void)
             if (l_rc != 0)
             {
                 g_amec->wof.error = AMEC_WOF_ERROR_SCOM_3;
+                TRAC_ERR("amec_wof_helper_v2: Failed putscom on PDEMR while "
+                         " inhibiting all cores. rc:0x%X, wof.error:0x%X",
+                         l_rc, g_amec->wof.error);
                 break;
             }
 
@@ -1238,6 +1310,8 @@ void amec_wof_helper_v2(void)
 
         default:
             g_amec->wof.error = AMEC_WOF_ERROR_UNKNOWN_STATE;
+            TRAC_ERR("amec_wof_helper_v2: WOF is in an unknown state: 0x%X. "
+                     " wof.error:0x%X", g_amec->wof.state, g_amec->wof.error);
             break;
     }
 }
@@ -1285,15 +1359,17 @@ void amec_wof_helper(void)
 // End Function Specification
 void amec_wof_main(void)
 {
-    uint8_t             l_err = 0;
+    int     l_rc = 0;
 
     // If new algorithm selected, then initialize it. If initialization fails,
     // then do not run algorithm
     if (g_amec->wof.enable_parm != g_amec->wof.algo_type)
     {
-        l_err = amec_wof_set_algorithm(g_amec->wof.enable_parm);
-        if (l_err)
+        l_rc = amec_wof_set_algorithm(g_amec->wof.enable_parm);
+        if (l_rc)
         {
+            TRAC_ERR("amec_wof_main: Failed to set algorithm. WOF algorithm "
+                     "will not be run. l_rc=0x%X", l_rc);
             return;
         }
     }
@@ -1348,6 +1424,7 @@ void amec_wof_writeToTable(wof_tbl_type_t i_tblType ,
             uint8_t l_tblRow = l_tblIndex / i_clmnCount;
             uint8_t l_tblClmn = l_tblIndex % i_clmnCount;
 
+            //Write CORE Freq Table
             if (i_tblType == AMEC_WOF_CORE_FREQ_TBL)
             {
                 //Reset global table
@@ -1368,6 +1445,7 @@ void amec_wof_writeToTable(wof_tbl_type_t i_tblType ,
                         (l_tblRow != 0))
                     {
                         // Translate each entry from 1/100% to frequency in MHz
+                        // Table will reflect the frequency uplift based on TURBO.
                         l_temp = G_sysConfigData.sys_mode_freq.table[OCC_MODE_STURBO] * (10000 + l_temp) / 10000;
                     }
                     G_amec_wof_uplift_table[l_tblRow][l_tblClmn] = (uint16_t)l_temp;
@@ -1379,7 +1457,7 @@ void amec_wof_writeToTable(wof_tbl_type_t i_tblType ,
                              "Attempting to write cell at [%i,%i] location.", l_tblRow, l_tblClmn);
                 }
             }
-            else if (i_tblType == AMEC_WOF_VRM_EFF_TBL)
+            else if (i_tblType == AMEC_WOF_VRM_EFF_TBL) //Write VRM Efficiency table.
             {
                 //Reset data buffer
                 if (0 == l_tblIndex)
@@ -1471,10 +1549,8 @@ void amec_wof_store_core_freq(const uint8_t i_max_good_cores,
 //
 // Name:  amec_wof_get_max_freq
 //
-// Description: Parses and handles all data passed to OCC via data
-//              config format 0x30.
-//
-// Prereq: Data size has been verified.
+// Description: Returns the max frequency calculated
+// for the given number of cores.
 //
 // End Function Specification
 uint16_t amec_wof_get_max_freq(const uint8_t i_cores)

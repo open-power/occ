@@ -40,6 +40,7 @@
 #include "sensor.h"
 #include "thrm_thread.h"
 #include "apss.h"
+#include "occ_sys_config.h"
 
 // Enum of the various commands that TMGT may send to OCC
 typedef enum
@@ -461,7 +462,10 @@ typedef enum
     DBUG_CENTAUR_SENSOR_CACHE = 0x22,
     DBUG_DUMP_PROC_DATA     = 0x23,
     DBUG_GEN_CHOM_LOG       = 0x24,
-    DBUG_DUMP_APSS_DATA     = 0x25
+    DBUG_DUMP_APSS_DATA     = 0x25,
+    DBUG_DUMP_WOF_DATA      = 0x26,
+    DBUG_DUMP_WOF_UPLIFT_TBL= 0x27,
+    DBUG_DUMP_WOF_VRM_EFF_TBL=0x28,
 } DBUG_CMD;
 
 // Used by OCC tool to get trace, version 0.
@@ -577,6 +581,46 @@ typedef struct __attribute__ ((packed))
     cmdh_dbug_apss_data_t   ApssCh[MAX_APSS_ADC_CHANNELS];
     uint8_t                 checksum[2];
 } cmdh_dbug_apss_data_resp_t;
+
+//Structures used to return wof data
+typedef struct __attribute__ ((packed))
+{
+    struct                  cmdh_fsp_rsp_header;
+    uint8_t                 wof_enable;     //g_amec->wof.enable_parm
+    uint16_t                wof_vdd_eff;    //g_amec->wof.vdd_eff
+    uint16_t                wof_cur_out;    //g_amec->wof.cur_out
+    uint16_t                wof_loadline;   //g_amec->wof.loadline
+    uint16_t                wof_v_chip;     //g_amec->wof.v_chip
+    uint8_t                 wof_iddq_i;     //g_amec->wof.iddq_i
+    uint16_t                wof_iddq85c;    //g_amec->wof.iddq85c
+    uint16_t                wof_iddq;       //g_amec->wof.iddq
+    uint16_t                wof_ac;         //g_amec->wof.ac
+    uint32_t                wof_ceff_tdp;   //g_amec->wof.ceff_tdp
+    uint32_t                wof_ceff;       //g_amec->wof.ceff
+    uint32_t                wof_ceff_old;   //g_amec->wof.ceff_old
+    uint16_t                wof_ceff_ratio; //g_amec->wof.ceff_ratio
+    int16_t                 wof_f_uplift;   //g_amec->wof.f_uplift
+    uint16_t                wof_f_vote;     //g_amec->wof.f_vote
+    uint16_t                wof_vote_vreg;  //g_amec->wof.vote_vreg
+    uint16_t                wof_vote_vchip; //g_amec->wof.vote_vchip
+    uint8_t                 wof_error;      //g_amec->wof.error
+    uint8_t                 wof_state;      //g_amec->wof.state
+    uint8_t                 wof_cores_on;   //g_amec->wof.cores_on
+    uint32_t                tdp_rdp_factor; //G_sysConfigData.wof_parms.tdp_rdp_factor
+    uint32_t                opTurbo_vdd_100uv;//G_sysConfigData.wof_parms.operating_points[TURBO].vdd_5mv * 5 * 10 (converted to 100uv)
+    uint32_t                opTurbo_idd_500ma;//G_sysConfigData.wof_parms.operating_points[TURBO].idd_500ma
+    uint32_t                opTurbo_freq_mhz;//G_sysConfigData.wof_parms.operating_points[TURBO].frequency_mhz
+    uint16_t                proc_max_freq;  //g_amec->proc[0].core_max_freq
+    uint32_t                proc_freq_reason;//g_amec->proc[0].core[x].reason
+    uint8_t                 proc_reason_core;//Number of the core with freq reason
+    uint16_t                sensor_temp2msp0;//Temperature sensor
+    uint16_t                sensor_pwr250usvdd0;//VDD input power
+    uint16_t                sensor_cur250usvdd0;//VDD current out
+    uint16_t                sensor_wof250usvdds;//WOF250USVDDS v_sensor
+    IddqReading             iddq_vdd[CORE_IDDQ_MEASUREMENTS];// VDD IDDQ readings raw and corrected.
+    uint8_t                 checksum[2];
+} cmdh_dbug_wof_data_resp_t;
+
 
 //---------------------------------------------------------
 // Tunable Parameter Command

@@ -174,7 +174,7 @@ typedef struct amec_wof
 void amec_wof_main(void);
 void amec_wof_helper(void);
 void amec_update_wof_sensors(void);
-uint8_t amec_wof_set_algorithm(const uint8_t i_algorithm);
+int  amec_wof_set_algorithm(const uint8_t i_algorithm);
 void amec_wof_update_pstate_table(void);
 void amec_wof_alg_v2(void);
 void amec_wof_alg_v3(void);
@@ -202,7 +202,7 @@ void amec_wof_vdd_current_out(const uint16_t i_power_in,
                               uint16_t *o_current_out,
                               uint16_t *o_v_sense);
 
-bool amec_wof_validate_input_data(void);
+void amec_wof_validate_input_data(void);
 
 uint16_t amec_wof_get_max_freq(const uint8_t i_cores);
 #endif
