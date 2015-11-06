@@ -419,9 +419,15 @@ def p2p_replace(line, ppc_op):
     print newline
 
     # construct and write "mr R3, RA" to copy the operand RA to R3
-    newline = inst.group(1) + 'mr' + inst.group(3) + '3' +\
-              inst.group(5) + inst.group(6)
-    print newline
+    # if RA == R3 then R3 was clobbered, restore R3 from stack
+    if inst.group(6) == '3':
+        newline = inst.group(1) + 'lwz' + inst.group(3) + '3' +\
+                  inst.group(5) + '8(1)'
+        print newline
+    else:
+        newline = inst.group(1) + 'mr' + inst.group(3) + '3' +\
+                  inst.group(5) + inst.group(6)
+        print newline
 
     # if 'mulli' is detected, using 'li' instead of 'mr' for second operand
     if ppc_op == 'mulli':
@@ -429,11 +435,13 @@ def p2p_replace(line, ppc_op):
     else:
       temp_op = 'mr'
 
-    # construct and write "mr R4, RB" to copy the operand RB to R4
-    # or in 'mulli' case, "li R4, IM" to copy the operand IM to R4
-    newline = inst.group(1) + temp_op + inst.group(3) + '4' +\
-              inst.group(5) + inst.group(8)
-    print newline
+    # Set R4 if R4 is not already RB
+    if temp_op == 'li' or inst.group(8) != '4':
+        # construct and write "mr R4, RB" to copy the operand RB to R4
+        # or in 'mulli' case, "li R4, IM" to copy the operand IM to R4
+        newline = inst.group(1) + temp_op + inst.group(3) + '4' +\
+                  inst.group(5) + inst.group(8)
+        print newline
 
     # using branch and link(bl) to branch to subroutine
     # later subroutine can branch back using branch link register(blr)
@@ -442,10 +450,17 @@ def p2p_replace(line, ppc_op):
     newline = inst.group(1) + 'bl' + inst.group(3) + ppe_op
     print newline
 
-    # construct and write "mr RT, R3" to copy the result in R3 to RT
-    newline = inst.group(1) + 'mr' + inst.group(3) + inst.group(4) +\
-              inst.group(5) + '3'
-    print newline
+    # if RT is not already R3 then copy R3 to RT
+    if inst.group(4) != '3':
+        # construct and write "mr RT, R3" to copy the result in R3 to RT
+        newline = inst.group(1) + 'mr' + inst.group(3) + inst.group(4) +\
+                  inst.group(5) + '3'
+        print newline
+    else:
+        # save return on stack
+        newline = inst.group(1) + 'stw' + inst.group(3) + '3' +\
+                  inst.group(5) + '8(1)'
+        print newline
 
     # construct and write "lwz R3, 16(R1)" to fetch the LR value from stack
     newline = inst.group(1) + 'lwz' + inst.group(3) + '3' +\
