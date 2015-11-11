@@ -209,7 +209,11 @@ do {                                                                \
 #define SSX_TRACE_TIMEBASE_HZ PPC405_TIMEBASE_HZ
 #endif /* APPCFG_USE_EXT_TIMEBASE_FOR_TRACE */
 
+#if SSX_USE_INIT_SECTION
 #define INIT_SEC_NM_STR     "initSection"
 #define INIT_SECTION __attribute__ ((section (INIT_SEC_NM_STR)))
+#else
+#define INIT_SECTION
+#endif
 
 #endif /*__SSX_APP_CFG_H__*/

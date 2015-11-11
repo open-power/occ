@@ -580,10 +580,26 @@ SECTIONS
     _SSX_FREE_END   = _FIR_HEAP_SECTION_BASE - 1;
 
     ////////////////////////////////
+    // Trace Buffers
+    ////////////////////////////////
+    __CUR_COUNTER__ = .;
+    _ERR_TRACE_BUFFER_BASE = 0xfffb4000;
+    _ERR_TRACE_BUFFER_SIZE = 0x2000;
+    _INF_TRACE_BUFFER_BASE = 0xfffb6000;
+    _INF_TRACE_BUFFER_SIZE = 0x2000;
+    _IMP_TRACE_BUFFER_BASE = 0xfffb8000;
+    _IMP_TRACE_BUFFER_SIZE = 0x2000;
+    . = _ERR_TRACE_BUFFER_BASE;
+    .err_trac . : {*(err_trac) . = ALIGN(_ERR_TRACE_BUFFER_SIZE);} > sram
+    .inf_trac . : {*(inf_trac) . = ALIGN(_INF_TRACE_BUFFER_SIZE);} > sram
+    .imp_trac . : {*(imp_trac) . = ALIGN(_IMP_TRACE_BUFFER_SIZE);} > sram
+    . = __CUR_COUNTER__;
+
+    ////////////////////////////////
     // FIR data heap section
     ////////////////////////////////
     __CUR_COUNTER__ = .;
-    _FIR_HEAP_SECTION_BASE = 0xfffb9000;
+    _FIR_HEAP_SECTION_BASE = 0xfffba000;
     _FIR_HEAP_SECTION_SIZE = 0x3000;
     . = _FIR_HEAP_SECTION_BASE;
     .firHeap . : {*(firHeap) . = ALIGN(1024);} > sram
@@ -593,7 +609,7 @@ SECTIONS
     // FIR data parms section
     ////////////////////////////////
     __CUR_COUNTER__ = .;
-    _FIR_PARMS_SECTION_BASE = 0xfffbc000;
+    _FIR_PARMS_SECTION_BASE = 0xfffbd000;
     _FIR_PARMS_SECTION_SIZE = 0x1000;
     . = _FIR_PARMS_SECTION_BASE;
     .firParms . : {*(firParms) . = ALIGN(1024);} > sram
@@ -604,9 +620,9 @@ SECTIONS
     ////////////////////////////////
     __CUR_COUNTER__ = .;
 
-    _LINEAR_WR_WINDOW_SECTION_BASE = 0xfffbd000;
+    _LINEAR_WR_WINDOW_SECTION_BASE = 0xfffbe000;
     _LINEAR_WR_WINDOW_SECTION_SIZE = 0x1000;
-    _LINEAR_RD_WINDOW_SECTION_BASE = 0xfffbe000;
+    _LINEAR_RD_WINDOW_SECTION_BASE = 0xfffbf000;
     _LINEAR_RD_WINDOW_SECTION_SIZE = 0x1000;
     . = _LINEAR_WR_WINDOW_SECTION_BASE;
     .linear_wr . : {*(linear_wr) . = ALIGN(_LINEAR_WR_WINDOW_SECTION_SIZE);} > sram
@@ -617,22 +633,19 @@ SECTIONS
     ////////////////////////////////
     // TEMP/TODO: Previously, we were able to reclaim this space
     //            by loading applets over init data. The init data
-    //            takes up much more than 4K, but as we stand now (pre-sensors)
-    //            it should be fine. However, we either need to
-    //            put these sections back into the normal area
-    //            with the rest of the code or figure out what to 
-    //            do with it to regain the space.
+    //            takes up around 6K. It would be good to figure 
+    //            out what to do with it to regain the space.
     ////////////////////////////////
-       __CUR_COUNTER__ = .;
-    INIT_SECTION_BASE = 0xfffbf000;
-    . = INIT_SECTION_BASE;
+    //__CUR_COUNTER__ = .;
+    //INIT_SECTION_BASE = 0xfffbf000;
+    //. = INIT_SECTION_BASE;
 
     // Section aligned to 128 to make occ main application image 128 bytes
     // aligned which is requirement for applet manager when traversing through
     // all the image headers
-    initSection . :  { *(initSection) init_text . = ALIGN(128);} > sram
+    //initSection . :  { *(initSection) init_text . = ALIGN(128);} > sram
 
-    . = __CUR_COUNTER__;
+    //. = __CUR_COUNTER__;
 
     //////////////////////////////
     // End Of Memory

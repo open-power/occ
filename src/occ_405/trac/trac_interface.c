@@ -70,9 +70,9 @@
 ///     __attribute__ ((section (".noncacheable")))
 /// when debugging on real HW, in case the OCC hangs and we can't access
 /// the cache to get coherent data.
-uint8_t g_trac_inf_buffer[TRACE_BUFFER_SIZE];
-uint8_t g_trac_err_buffer[TRACE_BUFFER_SIZE];
-uint8_t g_trac_imp_buffer[TRACE_BUFFER_SIZE];
+uint8_t g_trac_inf_buffer[TRACE_BUFFER_SIZE] __attribute__ ((section (".inf_trac")));
+uint8_t g_trac_err_buffer[TRACE_BUFFER_SIZE] __attribute__ ((section (".err_trac")));
+uint8_t g_trac_imp_buffer[TRACE_BUFFER_SIZE] __attribute__ ((section (".imp_trac")));
 
 #if SIMICS_ENVIRONMENT
 // Necessary for use in Simics (to get address)
