@@ -20,6 +20,7 @@ INPUT ( amec_data.o
         dcomSlaveTx.o
         errl.o
         ffdc.o
+        fir_data_collect.o
         homer.o
         ll_ffdc.o
         main.o

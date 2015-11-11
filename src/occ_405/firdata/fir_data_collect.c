@@ -48,13 +48,17 @@ uint32_t G_fir_master = FIR_OCC_NOT_FIR_MASTER;
  */
 void fir_data_collect(void)
 {
+
+/* TEMP -- NOT YET SUPPORTED */
+TRAC_ERR("fir_data_collect: FirData_captureCsFirData not yet called/enabled");
+#if 0
     int32_t l_rc = 0;
 
     // Homer data section and size
-    uint8_t *l_hBuf = FIR_PARMS_SECTION_BASE_ADDRESS;
+    uint8_t *l_hBuf = (uint8_t*) FIR_PARMS_SECTION_BASE_ADDRESS;
     uint32_t l_hBufSize = HOMER_FIR_PARM_SIZE;
     // PNOR working buffer in SRAM and size
-    uint8_t *l_pBuf = FIR_HEAP_SECTION_BASE_ADDRESS;
+    uint8_t *l_pBuf = (uint8_t*) FIR_HEAP_SECTION_BASE_ADDRESS;
     uint32_t l_pBufSize = FIR_HEAP_SECTION_SIZE;
 
     l_rc = FirData_captureCsFirData(l_hBuf,
@@ -64,6 +68,8 @@ void fir_data_collect(void)
 
     // Trace the rc only, error logs cannot be collected in this state
     TRAC_IMP("Checkstop FIR data capture completed with rc=%d", l_rc);
+#endif
+
 }
 
 

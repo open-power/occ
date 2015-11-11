@@ -692,7 +692,7 @@ int cmdh_fsp_attention(uint32_t i_type)
 //
 // Name:  checksum16
 //
-// Description: TODO -- Add description
+// Description: Generates the checksum of the message (sum of preceding bytes)
 //
 // End Function Specification
 uint16_t checksum16(uint8_t * i_data, const uint16_t i_len)
@@ -1263,17 +1263,15 @@ errlHndl_t cmdh_processTmgtRequest (const cmdh_fsp_cmd_t * i_cmd_ptr,
     i_rsp_ptr->data_length[1] = 0;
     i_rsp_ptr->rc             = ERRL_RC_SUCCESS;
 
-    CMDH_TRAC_INFO("Commands are not supported yet!");
-
     // Run command function based on cmd_type
     switch(l_cmd_type)
     {
-// TEMP -- NO SUPPORT YET
-// NOTE: It may be necessary to uncomment the function from cmdh_fsp_cmds.c as well
-/*
         case CMDH_POLL:
             l_err = cmdh_tmgt_poll (i_cmd_ptr,i_rsp_ptr);
             break;
+// TEMP -- NO SUPPORT YET
+// NOTE: It may be necessary to uncomment the function from cmdh_fsp_cmds.c as well
+/*
         case CMDH_QUERYFWLEVEL:
             cmdh_tmgt_query_fw (i_cmd_ptr,i_rsp_ptr);
             break;
@@ -1285,11 +1283,11 @@ errlHndl_t cmdh_processTmgtRequest (const cmdh_fsp_cmd_t * i_cmd_ptr,
         case CMDH_SETMODESTATE:
             l_err = cmdh_tmgt_setmodestate(i_cmd_ptr,i_rsp_ptr);
             break;
-
+*/
         case CMDH_SETCONFIGDATA:
             l_err = DATA_store_cnfgdata (i_cmd_ptr,i_rsp_ptr);
             break;
-
+/*
         case CMDH_CLEARERRL:
             l_err = cmdh_clear_elog(i_cmd_ptr, i_rsp_ptr);
             break;

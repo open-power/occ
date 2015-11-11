@@ -39,8 +39,7 @@
 // TEMP -- Doesn't exist anymore
 //#include "heartbeat.h"
 #include "scom.h"
-// TEMP -- Not supported in phase1
-//#include <fir_data_collect.h>
+#include <fir_data_collect.h>
 
 extern proc_gpsm_dcm_sync_occfw_t G_proc_dcm_sync_state;
 extern bool G_mem_monitoring_allowed;
@@ -708,7 +707,6 @@ errlHndl_t SMGR_set_state(OCC_STATE i_new_state)
 uint8_t SMGR_validate_get_valid_states(void)
 {
     uint8_t         l_valid_states = 0;
-/* TEMP -- NOT SUPPORTED IN PHASE1
     uint32_t        l_datamask = DATA_get_present_cnfgdata();
     static BOOLEAN  l_throttle_traced = FALSE;
 
@@ -723,7 +721,7 @@ uint8_t SMGR_validate_get_valid_states(void)
     if(((l_datamask & SMGR_VALIDATE_DATA_ACTIVE_MASK) ==
             SMGR_VALIDATE_DATA_ACTIVE_MASK) )
     {
-        l_valid_states |= SMGR_MASK_ACTIVE_READY; //@rt004c
+        l_valid_states |= SMGR_MASK_ACTIVE_READY;
 
         if(!l_throttle_traced)
         {
@@ -739,9 +737,7 @@ uint8_t SMGR_validate_get_valid_states(void)
     }
 
     // If we are master OCC, set this bit
-// TEMP -- IN PHASE 1 WE ARE ALWAYS MASTER
-//    if(OCC_MASTER == G_occ_role)
-    if (TRUE)
+    if(OCC_MASTER == G_occ_role)
     {
        l_valid_states |= SMGR_MASK_MASTER_OCC;
     }
@@ -751,7 +747,7 @@ uint8_t SMGR_validate_get_valid_states(void)
     {
         l_valid_states |= OCC_ROLE_FIR_MASTER_MASK;
     }
-*/
+
     return l_valid_states;
 }
 

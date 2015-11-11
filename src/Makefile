@@ -56,7 +56,7 @@ NEEDED_IMAGES = \
 #SIMICS_WS = /gsa/ausgsa/home/d/a/davidy/work/simics-ppeWork
 
 #default is to build images
-needed_images: $(NEEDED_IMAGES)
+needed_images: $(NEEDED_IMAGES) tracehash
 
 run: $(NEEDED_IMAGES)
 	$(SIMICS_WS)/simics \

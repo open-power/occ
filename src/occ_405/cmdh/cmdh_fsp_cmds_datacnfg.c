@@ -223,9 +223,7 @@ uint8_t DATA_request_cnfgdata ()
         // Skip whenever we are trying to request pcap or freq as a slave
         if(((G_data_pri_table[i].format == DATA_FORMAT_POWER_CAP) ||
             (G_data_pri_table[i].format == DATA_FORMAT_FREQ)) &&
-// TEMP -- ALWAYS MASTER IN PHASE1
-//            (G_occ_role == OCC_SLAVE))
-              (FALSE))
+            (G_occ_role == OCC_SLAVE))
         {
             continue;
         }
@@ -253,8 +251,6 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                       cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     errlHndl_t                      l_err = NULL;
-/* TEMP -- NOT SUPPORTED IN PHASE1 */
-#if 0
     uint16_t                        l_req_freq;
     cmdh_store_mode_freqs_t*        l_cmdp = (cmdh_store_mode_freqs_t*)i_cmd_ptr;
     uint8_t*                        l_buf = ((uint8_t*)(l_cmdp)) + sizeof(cmdh_store_mode_freqs_t);
@@ -430,7 +426,7 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
         G_sysConfigData.sys_mode_freq.update_count++;
         G_data_cnfg->data_mask |= DATA_MASK_FREQ_PRESENT;
     }
-#endif // #if 0
+
     return l_err;
 }
 
@@ -444,8 +440,7 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
 errlHndl_t apss_store_adc_channel(const eApssAdcChannelAssignments i_func_id, const uint8_t i_channel_num )
 {
     errlHndl_t l_err = NULL;
-/* TEMP -- NOT SUPPORTED IN PHASE1 */
-#if 0
+
     // Check function ID and channel number
     if ( (i_func_id >= NUM_ADC_ASSIGNMENT_TYPES) ||
          (i_channel_num >= MAX_APSS_ADC_CHANNELS) )
@@ -596,7 +591,7 @@ errlHndl_t apss_store_adc_channel(const eApssAdcChannelAssignments i_func_id, co
             }
         }
     }
-#endif // #if 0
+
     return l_err;
 }
 
@@ -610,8 +605,6 @@ errlHndl_t apss_store_adc_channel(const eApssAdcChannelAssignments i_func_id, co
 // End Function Specification
 void apss_store_ipmi_sensor_id(const uint16_t i_channel, const apss_cfg_adc_v10_t *i_adc)
 {
-/* TEMP -- NOT SUPPORTED IN PHASE1 */
-#if 0
     // Get current processor id.
     uint8_t l_proc  = G_pob_id.module_id;
 
@@ -718,7 +711,6 @@ void apss_store_ipmi_sensor_id(const uint16_t i_channel, const apss_cfg_adc_v10_
             AMECSENSOR_PTR(PWRAPSSCH0 + i_channel)->ipmi_sid = i_adc->ipmisensorId;
         }
     }
-#endif // #if 0
 }
 
 // Function Specification
@@ -1066,6 +1058,7 @@ errlHndl_t data_store_pstate_super(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                         cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     errlHndl_t l_errlHndl = NULL;
+    CMDH_TRAC_ERR("data_store_pstate_super: config type not yet supported!");
 /* TEMP -- PSTATES NOT SUPPORTED IN PHASE1
     // Cast the command to the struct for this format
     cmdh_store_cnfgdata_pstatess_t * l_cmd_ptr = (cmdh_store_cnfgdata_pstatess_t *)i_cmd_ptr;
@@ -1123,8 +1116,6 @@ errlHndl_t data_store_role(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                  cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     errlHndl_t l_errlHndl = NULL;
-/* TEMP -- NOT SUPPORTED IN PHASE1 */
-#if 0
     uint8_t    l_new_role = OCC_SLAVE;
     uint8_t    l_old_role = G_occ_role;
     ERRL_RC    l_rc       = ERRL_RC_SUCCESS;
@@ -1174,8 +1165,7 @@ errlHndl_t data_store_role(const cmdh_fsp_cmd_t * i_cmd_ptr,
         {
             if(OCC_MASTER == l_old_role)
             {
-// TEMP - WE ARE ALWAYS MASTER IN PHASE1
-//                G_occ_role = OCC_SLAVE;
+                G_occ_role = OCC_SLAVE;
 
                 // Turn off anything master related since we are a slave
                 rtl_clr_run_mask_deferred(RTL_FLAG_MSTR);
@@ -1189,6 +1179,7 @@ errlHndl_t data_store_role(const cmdh_fsp_cmd_t * i_cmd_ptr,
             if(OCC_BACKUP_MASTER == l_new_role)
             {
 // TEMP / TODO : NEED TO CHANGE THIS TO NOT BE USING AN APPLET
+CMDH_TRAC_ERR("data_store_role: not initializing APSS!");
 #if 0 // Start
                 OCC_APLT_STATUS_CODES l_status = OCC_APLT_SUCCESS;
 
@@ -1280,7 +1271,7 @@ errlHndl_t data_store_role(const cmdh_fsp_cmd_t * i_cmd_ptr,
         // Send back an error response to TMGT
         cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, l_rc, &l_errlHndl);
     }
-#endif // #if 0
+
     return l_errlHndl;
 }
 
@@ -1297,6 +1288,7 @@ errlHndl_t data_store_power_cap(const cmdh_fsp_cmd_t * i_cmd_ptr,
 {
     errlHndl_t                      l_err = NULL;
 /* TEMP -- NOT SUPPORTED IN PHASE1 */
+CMDH_TRAC_ERR("data_store_power_cap: data config type not yet supported!");
 #if 0
     // Cast the command to the struct for this format
     cmdh_pcap_config_t * l_cmd_ptr = (cmdh_pcap_config_t *)i_cmd_ptr;
@@ -1409,8 +1401,7 @@ errlHndl_t data_store_sys_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                        cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     errlHndl_t                      l_err = NULL;
-/* TEMP -- NOT SUPPORTED IN PHASE1 */
-#if 0
+
     // Cast the command to the struct for this format
     cmdh_sys_config_t * l_cmd_ptr = (cmdh_sys_config_t *)i_cmd_ptr;
     uint16_t                        l_data_length = 0;
@@ -1501,7 +1492,7 @@ errlHndl_t data_store_sys_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
         G_data_cnfg->data_mask |= DATA_MASK_SYS_CNFG;
         TRAC_IMP("Got valid System Config data via TMGT for system type: 0x%02X", l_cmd_ptr->sys_config.system_type);
     }
-#endif // #if 0
+
     return l_err;
 }
 
@@ -1517,8 +1508,6 @@ errlHndl_t data_store_thrm_thresholds(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                             cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     errlHndl_t                      l_err = NULL;
-/* TEMP -- NOT SUPPORTED IN PHASE1 */
-#if 0
     cmdh_thrm_thresholds_t*         l_cmd_ptr = (cmdh_thrm_thresholds_t*)i_cmd_ptr;
     uint16_t                        i = 0;
     uint16_t                        l_data_length = 0;
@@ -1686,7 +1675,7 @@ errlHndl_t data_store_thrm_thresholds(const cmdh_fsp_cmd_t * i_cmd_ptr,
         // Notify thermal thread to update its local copy of the thermal thresholds
         THRM_thread_update_thresholds();
     }
-#endif // #if 0
+
     return l_err;
 }
 
@@ -1703,8 +1692,6 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                     cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     errlHndl_t                      l_err = NULL;
-/* TEMP -- NOT SUPPORTED IN PHASE1 */
-#if 0
     cmdh_mem_cfg_t*                 l_cmd_ptr = (cmdh_mem_cfg_t*)i_cmd_ptr;
     uint16_t                        l_data_length = 0;
     uint16_t                        l_exp_data_length = 0;
@@ -1860,7 +1847,7 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
         TRAC_IMP("data_store_mem_cfg: Got valid mem cfg packet. cent#=%d, dimm#=%d",
                  l_num_centaurs, l_num_dimms);
     }
-#endif // #if 0
+
     return l_err;
 }
 
@@ -1877,7 +1864,8 @@ errlHndl_t data_store_mem_throt(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                       cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     errlHndl_t                      l_err = NULL;
-/* TEMP -- NOT SUPPORTED IN PHASE1 */
+/* TEMP --  NOT SUPPORTED IN PHASE1 */
+CMDH_TRAC_ERR("data_store_mem_throt: data config type not yet supported!");
 #if 0
     cmdh_mem_throt_t*               l_cmd_ptr = (cmdh_mem_throt_t*)i_cmd_ptr;
     uint16_t                        l_data_length = 0;
@@ -2040,7 +2028,7 @@ errlHndl_t data_store_mem_throt(const cmdh_fsp_cmd_t * i_cmd_ptr,
         // Update the configured mba bitmap
         G_configured_mbas = l_configured_mbas;
     }
-#endif // #if 0
+#endif
     return l_err;
 }
 
@@ -2055,8 +2043,6 @@ errlHndl_t data_store_ips_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                        cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     errlHndl_t          l_err = NULL;
-/* TEMP --  NOT SUPPORTED IN PHASE1 */
-#if 0
     cmdh_ips_config_t   *l_cmd_ptr = (cmdh_ips_config_t *)i_cmd_ptr; // Cast the command to the struct for this format
     uint16_t            l_data_length = CMDH_DATALEN_FIELD_UINT16(l_cmd_ptr);
     uint32_t            l_ips_data_sz = sizeof(cmdh_ips_config_t) - sizeof(cmdh_fsp_cmd_header_t);
@@ -2108,7 +2094,7 @@ errlHndl_t data_store_ips_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
                  l_cmd_ptr->iv_ips_config.iv_utilizationForEntry,
                  l_cmd_ptr->iv_ips_config.iv_utilizationForExit );
     }
-#endif // #if 0
+
     return l_err;
 }
 
@@ -2221,8 +2207,6 @@ errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
                                       cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     errlHndl_t                      l_errlHndl = NULL;
-/* TEMP -- NOT SUPPORTED IN PHASE1 */
-#if 0
     UINT32                          l_new_data = 0;
     ERRL_RC                         l_rc       = ERRL_RC_INTERNAL_FAIL;
 
@@ -2415,7 +2399,7 @@ errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
         o_rsp_ptr->data_length[1] = 0;
         o_rsp_ptr->rc             = ERRL_RC_SUCCESS;
     }
-#endif // #if 0
+
     return(l_errlHndl);
 }
 

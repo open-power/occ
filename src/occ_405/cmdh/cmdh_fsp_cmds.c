@@ -101,8 +101,6 @@ errlHndl_t cmdh_tmgt_poll (const cmdh_fsp_cmd_t * i_cmd_ptr,
                      cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     errlHndl_t                  l_errlHndl  = NULL;
-/* TEMP -- NOT YET SUPPORTED (NEED AMEC/DCOM) */
-#if 0
     cmdh_poll_query_t *         l_poll_cmd  = (cmdh_poll_query_t *) i_cmd_ptr;
     ERRL_RC                     l_rc        = ERRL_RC_INTERNAL_FAIL;
     uint8_t                     k           = 0;
@@ -195,7 +193,6 @@ errlHndl_t cmdh_tmgt_poll (const cmdh_fsp_cmd_t * i_cmd_ptr,
         cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, l_rc, &l_errlHndl);
     }
 
-#endif // #if 0
     return l_errlHndl;
 }
 

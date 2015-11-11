@@ -63,7 +63,8 @@ LIB_DIRS =  -L$(OBJDIR) \
             -L$(OBJDIR)/trac \
             -L$(OBJDIR)/amec \
             -L$(OBJDIR)/dcom \
-            -L$(OBJDIR)/proc
+            -L$(OBJDIR)/proc \
+            -L$(OBJDIR)/firdata
 
 #default target is to make a binary application image
 #This removes all unecessary headers from the ELF executable

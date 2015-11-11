@@ -46,6 +46,7 @@ TOP-C-SOURCES = amec/amec_data.c \
                 dcom/dcomSlaveRx.c \
                 dcom/dcomSlaveTx.c \
                 errl/errl.c \
+                firdata/fir_data_collect.c \
                 homer.c \
                 main.c \
                 mode.c \
