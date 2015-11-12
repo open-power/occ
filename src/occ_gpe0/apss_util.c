@@ -82,7 +82,7 @@ int wait_spi_completion(GpeErrorStruct *error, uint32_t reg, uint8_t timeout)
     if((reg != SPIPSS_P2S_STATUS_REG) && (reg != SPIPSS_ADC_STATUS_REG))
     {
         PK_TRACE("gpe0:wait_spi_completion failed: Invalid Register 0x%08x", reg);
-        rc = APSS_RC_INVALID_REG;
+        rc = GPE_RC_INVALID_REG;
         apss_set_ffdc(error, reg, rc, 0x00);
     }
     else
@@ -94,8 +94,8 @@ int wait_spi_completion(GpeErrorStruct *error, uint32_t reg, uint8_t timeout)
             if(rc)
             {
                 PK_TRACE("gpe0:wait_spi_completion failed with rc = 0x%08x", rc);
-                apss_set_ffdc(error, reg, APSS_RC_SCOM_GET_FAILED, rc);
-                rc = APSS_RC_SCOM_GET_FAILED;
+                apss_set_ffdc(error, reg, GPE_RC_SCOM_GET_FAILED, rc);
+                rc = GPE_RC_SCOM_GET_FAILED;
                 break;
             }
 
@@ -118,8 +118,8 @@ int wait_spi_completion(GpeErrorStruct *error, uint32_t reg, uint8_t timeout)
     if (i >= timeout)
     {
         PK_TRACE("gpe0:wait_spi_completion Timed out waiting for p2s_ongoing to clear.");
-        apss_set_ffdc(error, reg, APSS_RC_SPI_TIMEOUT, rc);
-        rc = APSS_RC_SPI_TIMEOUT;
+        apss_set_ffdc(error, reg, GPE_RC_SPI_TIMEOUT, rc);
+        rc = GPE_RC_SPI_TIMEOUT;
     }
 
     return rc;

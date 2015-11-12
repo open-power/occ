@@ -30,22 +30,11 @@
 #define _APSS_STRUCTS_H
 
 #include <gpe_export.h>
-
+#include "gpe_err.h"
 
 // List of supported APSS Modes set in occ_gpe0/apss_init.c
 #define APSS_MODE_COMPOSITE     0
 #define APSS_MODE_AUTO2         1
-
-
-// List of possible apss Return Codes
-#define APSS_RC_SUCCESS             0x0
-#define APSS_RC_SPI_TIMEOUT         0x1
-#define APSS_RC_SCOM_GET_FAILED     0x2
-#define APSS_RC_SCOM_PUT_FAILED     0x3
-#define APSS_RC_INVALID_REG         0x4
-#define APSS_RC_IPC_SEND_FAILED     0x5
-#define APSS_RC_INVALID_APSS_MODE   0x6
-
 
 
 /* This data structure holds the common args data structures between the  */

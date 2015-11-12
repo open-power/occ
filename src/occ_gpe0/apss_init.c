@@ -254,7 +254,7 @@ void apss_init_mode(ipc_msg_t* cmd, void* arg)
 {
     //Note: arg was set to 0 in ipc func table (ipc_func_tables.c), so don't use it
 
-    uint32_t                rc = APSS_RC_SUCCESS;
+    uint32_t                rc = GPE_RC_SUCCESS;
     uint32_t                ipc_rc = IPC_RC_SUCCESS;
     uint32_t                ipc_send_rc;
     ipc_async_cmd_t         *async_cmd = (ipc_async_cmd_t*)cmd;
@@ -324,7 +324,7 @@ void apss_init_mode(ipc_msg_t* cmd, void* arg)
         {
             //Invalid mode.
             PK_TRACE("apss_init_mode: Given invalid APSS Mode. Mode:0x%X", args->config.mode);
-            rc = APSS_RC_INVALID_APSS_MODE;
+            rc = GPE_RC_INVALID_APSS_MODE;
             apss_set_ffdc(&(args->error), 0x00, rc, args->config.mode);
             ipc_rc = IPC_RC_CMD_FAILED;
             break;
