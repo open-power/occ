@@ -1105,8 +1105,9 @@ void populate_sensor_tbl_to_mem()
     uint32_t l_extReasonCode = 0;
     BceRequest pba_copy;
 
+    G_sensor_table.valid = 0x1;
+    G_sensor_table.version = 0x1;
     G_sensor_table.ambient_temperature = AMECSENSOR_PTR(TEMPAMBIENT)->sample;
-    G_sensor_table.altitude = AMECSENSOR_PTR(ALTITUDE)->sample;
     G_sensor_table.power = AMECSENSOR_PTR(PWR250US)->sample;
     G_sensor_table.fan_power = AMECSENSOR_PTR(PWR250USFAN)->sample;
     G_sensor_table.io_power = AMECSENSOR_PTR(PWR250USIO)->sample;
@@ -1117,24 +1118,20 @@ void populate_sensor_tbl_to_mem()
     G_sensor_table.pwr250usvdd = AMECSENSOR_PTR(PWR250USVDD0)->sample;
     G_sensor_table.pwr250usvcs = AMECSENSOR_PTR(PWR250USVCS0)->sample;
     G_sensor_table.pwr250usmem = AMECSENSOR_PTR(PWR250USMEM0)->sample;
-    G_sensor_table.sleepcnt2ms = AMECSENSOR_PTR(SLEEPCNT2MSP0)->sample;
-    G_sensor_table.winkcnt2ms = AMECSENSOR_PTR(WINKCNT2MSP0)->sample;
-    G_sensor_table.temp2ms = AMECSENSOR_PTR(TEMP2MSP0)->sample;
-    G_sensor_table.temp2mspeak = AMECSENSOR_PTR(TEMP2MSP0PEAK)->sample;
-    G_sensor_table.util2ms = AMECSENSOR_PTR(UTIL2MSP0)->sample;
 
-    for ( i = 0; i < MAX_CORES; i++) {
+    G_sensor_table.core_mask = 0;
+    G_sensor_table.chip_bw = 0;
+    for ( i = 0; i < MAX_CORES; i++)
 	if (CORE_PRESENT(i)) {
+	    G_sensor_table.core_mask |= (1 << i);
             G_sensor_table.core_temp[i] = AMECSENSOR_ARRAY_PTR(TEMP2MSP0C0, i)->sample;
-            G_sensor_table.pwrpx250us[i] = AMECSENSOR_ARRAY_PTR(PWRPX250USP0C0, i)->sample;
-            G_sensor_table.cmbw2ms[i] = AMECSENSOR_ARRAY_PTR(CMBW2MSP0C0, i)->sample;
-	} else {
-            G_sensor_table.core_temp[i] = -1;
-            G_sensor_table.pwrpx250us[i] = -1;
-            G_sensor_table.cmbw2ms[i] = -1;
+	    G_sensor_table.chip_bw += AMECSENSOR_ARRAY_PTR(CMBW2MSP0C0, i)->sample;
 	}
-    }
+
     G_sensor_table.count++;
+    G_sensor_table.chip_energy = AMECSENSOR_PTR(PWR250USP0)->accumulator;
+    G_sensor_table.system_energy = AMECSENSOR_PTR(PWR250US)->accumulator;
+
     do
     {
         l_ssxrc = bce_request_create(&pba_copy,                          // block copy object

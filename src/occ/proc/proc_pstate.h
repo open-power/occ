@@ -88,9 +88,11 @@ typedef struct __attribute__ ((packed))
 
 typedef struct __attribute__ ((packed))
 {
+    uint8_t	valid;
+    uint8_t	version;
+    uint16_t	core_mask;
 //System Sensors
     uint16_t	ambient_temperature;
-    uint16_t	altitude;
     uint16_t	power;
     uint16_t	fan_power;
     uint16_t	io_power;
@@ -102,17 +104,13 @@ typedef struct __attribute__ ((packed))
     uint16_t 	pwr250usvdd;
     uint16_t	pwr250usvcs;
     uint16_t	pwr250usmem;
-    uint16_t	sleepcnt2ms;
-    uint16_t	winkcnt2ms;
-    uint16_t 	temp2ms;
-    uint16_t	temp2mspeak;
-    uint16_t	util2ms;
+    uint64_t	chip_bw;
 //Core sensors
     uint16_t	core_temp[12];
-    uint16_t	pwrpx250us[12];
-    uint16_t	cmbw2ms[12];
     uint64_t 	count;
-    uint8_t	pad[14];
+    uint32_t	chip_energy;
+    uint32_t	system_energy;
+    uint8_t	pad[54];
 } sapphire_sensor_t __attribute__ ((aligned (128)));
 
 enum {
