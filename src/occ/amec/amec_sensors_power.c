@@ -444,6 +444,7 @@ void amec_update_apss_sensors(void)
         // Skip it...AMEC Health Monitor will figure out we didn't
         // update this sensor.
     }
+    ssx_semaphore_post(&G_dcomThreadWakeupSem);
 }
 
 

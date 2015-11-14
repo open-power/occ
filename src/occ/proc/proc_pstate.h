@@ -85,6 +85,34 @@ typedef struct __attribute__ ((packed))
 } sapphire_table_t __attribute__ ((aligned (128)));
 
 
+
+typedef struct __attribute__ ((packed))
+{
+    uint8_t	valid;
+    uint8_t	version;
+    uint16_t	core_mask;
+//System Sensors
+    uint16_t	ambient_temperature;
+    uint16_t	power;
+    uint16_t	fan_power;
+    uint16_t	io_power;
+    uint16_t	storage_power;
+    uint16_t	gpu_power;
+    uint16_t	fan_speed;
+//Processor Sensors
+    uint16_t 	pwr250us;
+    uint16_t 	pwr250usvdd;
+    uint16_t	pwr250usvcs;
+    uint16_t	pwr250usmem;
+    uint64_t	chip_bw;
+//Core sensors
+    uint16_t	core_temp[12];
+    uint64_t 	count;
+    uint32_t	chip_energy;
+    uint32_t	system_energy;
+    uint8_t	pad[54];
+} sapphire_sensor_t __attribute__ ((aligned (128)));
+
 enum {
     NO_THROTTLE = 0x00,
     POWERCAP = 0x01,
