@@ -95,11 +95,9 @@
 task_t G_task_table[TASK_END] = {
     // flags,                      func_ptr,                       data_ptr,// task_id_t
     { FLAGS_APSS_START_MEAS,       task_apss_start_pwr_meas,       NULL },  // TASK_ID_APSS_START
-// TEMP -- PORE ISSUES
-//    { FLAGS_LOW_CORES_DATA,        task_core_data,                 (void *) &G_low_cores},
+    { FLAGS_LOW_CORES_DATA,        task_core_data,                 (void *) &G_low_cores},
     { FLAGS_APSS_CONT_MEAS,        task_apss_continue_pwr_meas,    NULL },  // TASK_ID_APSS_CONT
-// TEMP -- PORE ISSUES
-//    { FLAGS_HIGH_CORES_DATA,       task_core_data,                 (void *) &G_high_cores},
+    { FLAGS_HIGH_CORES_DATA,       task_core_data,                 (void *) &G_high_cores},
     { FLAGS_APSS_DONE_MEAS,        task_apss_complete_pwr_meas,    NULL },  // TASK_ID_APSS_DONE
 // TEMP -- NOT SUPPORTED YET IN PHASE1
 //    { FLAGS_DCOM_RX_SLV_INBX,      task_dcom_rx_slv_inbox,         NULL },  // TASK_ID_DCOM_RX_INBX
@@ -131,10 +129,10 @@ task_t G_task_table[TASK_END] = {
 
 const uint8_t G_tick0_seq[] = {
                                 TASK_ID_APSS_START,
-                                //TASK_ID_CORE_DATA_LOW,
+                                TASK_ID_CORE_DATA_LOW,
                                 //TASK_ID_DIMM_SM,
                                 TASK_ID_APSS_CONT,
-                                //TASK_ID_CORE_DATA_HIGH,
+                                TASK_ID_CORE_DATA_HIGH,
                                 TASK_ID_APSS_DONE,
                                 //TASK_ID_CORE_DATA_CONTROL,
                                 //TASK_ID_DCOM_WAIT_4_MSTR,
@@ -151,7 +149,7 @@ const uint8_t G_tick0_seq[] = {
 
 const uint8_t G_tick1_seq[] = {
                                 TASK_ID_APSS_START,
-                                //TASK_ID_CORE_DATA_LOW,
+                                TASK_ID_CORE_DATA_LOW,
                                 //TASK_ID_GPU_SM,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_APSS_DONE,
@@ -170,10 +168,10 @@ const uint8_t G_tick1_seq[] = {
 
 const uint8_t G_tick2_seq[] = {
                                 TASK_ID_APSS_START,
-                                //TASK_ID_CORE_DATA_LOW,
+                                TASK_ID_CORE_DATA_LOW,
                                 //TASK_ID_DIMM_SM,
                                 TASK_ID_APSS_CONT,
-                                //TASK_ID_CORE_DATA_HIGH,
+                                TASK_ID_CORE_DATA_HIGH,
                                 TASK_ID_APSS_DONE,
                                 //TASK_ID_CORE_DATA_CONTROL,
                                 //TASK_ID_DCOM_WAIT_4_MSTR,
@@ -191,7 +189,7 @@ const uint8_t G_tick3_seq[] = {
                                 TASK_ID_APSS_START,
                                 //TASK_ID_GPU_SM,
                                 TASK_ID_APSS_CONT,
-                                //TASK_ID_CORE_DATA_HIGH,
+                                TASK_ID_CORE_DATA_HIGH,
                                 TASK_ID_APSS_DONE,
                                 //TASK_ID_MEM_DEADMAN,
                                 //TASK_ID_CORE_DATA_CONTROL,
@@ -208,10 +206,10 @@ const uint8_t G_tick3_seq[] = {
 
 const uint8_t G_tick4_seq[] = {
                                 TASK_ID_APSS_START,
-                                //TASK_ID_CORE_DATA_LOW,
+                                TASK_ID_CORE_DATA_LOW,
                                 //TASK_ID_DIMM_SM,
                                 TASK_ID_APSS_CONT,
-                                //TASK_ID_CORE_DATA_HIGH,
+                                TASK_ID_CORE_DATA_HIGH,
                                 TASK_ID_APSS_DONE,
                                 //TASK_ID_CORE_DATA_CONTROL,
                                 //TASK_ID_DCOM_WAIT_4_MSTR,
@@ -228,7 +226,7 @@ const uint8_t G_tick4_seq[] = {
 
 const uint8_t G_tick5_seq[] = {
                                 TASK_ID_APSS_START,
-                                //TASK_ID_CORE_DATA_LOW,
+                                TASK_ID_CORE_DATA_LOW,
                                 //TASK_ID_GPU_SM,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_APSS_DONE,
@@ -247,10 +245,10 @@ const uint8_t G_tick5_seq[] = {
 
 const uint8_t G_tick6_seq[] = {
                                 TASK_ID_APSS_START,
-                                //TASK_ID_CORE_DATA_LOW,
+                                TASK_ID_CORE_DATA_LOW,
                                 //TASK_ID_DIMM_SM,
                                 TASK_ID_APSS_CONT,
-                                //TASK_ID_CORE_DATA_HIGH,
+                                TASK_ID_CORE_DATA_HIGH,
                                 TASK_ID_APSS_DONE,
                                 //TASK_ID_CORE_DATA_CONTROL,
                                 //TASK_ID_DCOM_WAIT_4_MSTR,
@@ -268,7 +266,7 @@ const uint8_t G_tick7_seq[] = {
                                 TASK_ID_APSS_START,
                                 //TASK_ID_GPU_SM,
                                 TASK_ID_APSS_CONT,
-                                //TASK_ID_CORE_DATA_HIGH,
+                                TASK_ID_CORE_DATA_HIGH,
                                 TASK_ID_APSS_DONE,
                                 //TASK_ID_MEM_DEADMAN,
                                 //TASK_ID_CORE_DATA_CONTROL,
@@ -285,10 +283,10 @@ const uint8_t G_tick7_seq[] = {
 
 const uint8_t G_tick8_seq[] = {
                                 TASK_ID_APSS_START,
-                                //TASK_ID_CORE_DATA_LOW,
+                                TASK_ID_CORE_DATA_LOW,
                                 //TASK_ID_DIMM_SM,
                                 TASK_ID_APSS_CONT,
-                                //TASK_ID_CORE_DATA_HIGH,
+                                TASK_ID_CORE_DATA_HIGH,
                                 TASK_ID_APSS_DONE,
                                 //TASK_ID_CORE_DATA_CONTROL,
                                 //TASK_ID_DCOM_WAIT_4_MSTR,
@@ -305,7 +303,7 @@ const uint8_t G_tick8_seq[] = {
 
 const uint8_t G_tick9_seq[] = {
                                 TASK_ID_APSS_START,
-                                //TASK_ID_CORE_DATA_LOW,
+                                TASK_ID_CORE_DATA_LOW,
                                 //TASK_ID_GPU_SM,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_APSS_DONE,
@@ -324,10 +322,10 @@ const uint8_t G_tick9_seq[] = {
 
 const uint8_t G_tick10_seq[] = {
                                 TASK_ID_APSS_START,
-                                //TASK_ID_CORE_DATA_LOW,
+                                TASK_ID_CORE_DATA_LOW,
                                 //TASK_ID_DIMM_SM,
                                 TASK_ID_APSS_CONT,
-                                //TASK_ID_CORE_DATA_HIGH,
+                                TASK_ID_CORE_DATA_HIGH,
                                 TASK_ID_APSS_DONE,
                                 //TASK_ID_CORE_DATA_CONTROL,
                                 //TASK_ID_DCOM_WAIT_4_MSTR,
@@ -345,7 +343,7 @@ const uint8_t G_tick11_seq[] = {
                                 TASK_ID_APSS_START,
                                 //TASK_ID_GPU_SM,
                                 TASK_ID_APSS_CONT,
-                                //TASK_ID_CORE_DATA_HIGH,
+                                TASK_ID_CORE_DATA_HIGH,
                                 TASK_ID_APSS_DONE,
                                 //TASK_ID_MEM_DEADMAN,
                                 //TASK_ID_CORE_DATA_CONTROL,
@@ -362,10 +360,10 @@ const uint8_t G_tick11_seq[] = {
 
 const uint8_t G_tick12_seq[] = {
                                 TASK_ID_APSS_START,
-                                //TASK_ID_CORE_DATA_LOW,
+                                TASK_ID_CORE_DATA_LOW,
                                 //TASK_ID_DIMM_SM,
                                 TASK_ID_APSS_CONT,
-                                //TASK_ID_CORE_DATA_HIGH,
+                                TASK_ID_CORE_DATA_HIGH,
                                 TASK_ID_APSS_DONE,
                                 //TASK_ID_CORE_DATA_CONTROL,
                                 //TASK_ID_DCOM_WAIT_4_MSTR,
@@ -382,7 +380,7 @@ const uint8_t G_tick12_seq[] = {
 
 const uint8_t G_tick13_seq[] = {
                                 TASK_ID_APSS_START,
-                                //TASK_ID_CORE_DATA_LOW,
+                                TASK_ID_CORE_DATA_LOW,
                                 //TASK_ID_GPU_SM,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_APSS_DONE,
@@ -401,10 +399,10 @@ const uint8_t G_tick13_seq[] = {
 
 const uint8_t G_tick14_seq[] = {
                                 TASK_ID_APSS_START,
-                                //TASK_ID_CORE_DATA_LOW,
+                                TASK_ID_CORE_DATA_LOW,
                                 //TASK_ID_DIMM_SM,
                                 TASK_ID_APSS_CONT,
-                                //TASK_ID_CORE_DATA_HIGH,
+                                TASK_ID_CORE_DATA_HIGH,
                                 TASK_ID_APSS_DONE,
                                 //TASK_ID_CORE_DATA_CONTROL,
                                 //TASK_ID_DCOM_WAIT_4_MSTR,
@@ -422,7 +420,7 @@ const uint8_t G_tick15_seq[] = {
                                 TASK_ID_APSS_START,
                                 //TASK_ID_GPU_SM,
                                 TASK_ID_APSS_CONT,
-                                //TASK_ID_CORE_DATA_HIGH,
+                                TASK_ID_CORE_DATA_HIGH,
                                 TASK_ID_APSS_DONE,
                                 //TASK_ID_MEM_DEADMAN,
                                 //TASK_ID_CORE_DATA_CONTROL,

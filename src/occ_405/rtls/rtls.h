@@ -41,9 +41,9 @@ typedef struct task {
 // These are used as indices into the task table defined below.
 typedef enum {
     TASK_ID_APSS_START = 0x00,
-//    TASK_ID_CORE_DATA_LOW,
+    TASK_ID_CORE_DATA_LOW,
     TASK_ID_APSS_CONT,
-//    TASK_ID_CORE_DATA_HIGH,
+    TASK_ID_CORE_DATA_HIGH,
     TASK_ID_APSS_DONE,
 //    TASK_ID_DCOM_RX_INBX,
 //    TASK_ID_DCOM_TX_INBX,

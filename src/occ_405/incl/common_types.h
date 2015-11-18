@@ -27,7 +27,7 @@
 #define _COMMON_TYPES_H
 
 #include <stdint.h>
-
+#include <core_data.h>
 #ifdef USE_SSX_APP_CFG_H
 #include <ssx_app_cfg.h>
 #endif
@@ -124,6 +124,22 @@ struct image_header
 } __attribute__ ((__packed__));
 
 typedef struct image_header imageHdr_t;
+
+typedef struct ipc_scom_op
+{
+    uint32_t    addr;   // Register address
+    uint64_t    data;   // Data for read/write
+    uint32_t    size;   // Size of data buffer
+    uint8_t     read;   // Read (1) or write (0)
+    int         rc;     // Error of SCOM operation
+} ipc_scom_op_t;
+
+typedef struct ipc_core_data_parms
+{
+    CoreData*  data;
+    uint32_t   core_num;
+    uint32_t   rc;
+} ipc_core_data_parms_t;
 
 extern uint32_t __READ_ONLY_DATA_LEN__;
 extern uint32_t __WRITEABLE_DATA_ADDR__;

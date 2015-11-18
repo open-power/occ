@@ -24,7 +24,7 @@
 /* IBM_PROLOG_END_TAG                                                     */
 
 #include "proc_data.h"
-#include "pgp_async.h"
+#include "occhw_async.h"
 #include "threadSch.h"
 #include "pmc_register_addresses.h"
 #include "proc_data_service_codes.h"
@@ -34,7 +34,6 @@
 #include "rtls.h"
 #include "apss.h"
 #include "state.h"
-#include "gpe_control.h"
 #include "occ_sys_config.h"
 
 // Pore flex request for GPE job. The initialization will be done one time
@@ -141,8 +140,8 @@ void proc_core_data_control_init( void )
 
     do
     {
-        //FIXME: Need to move this object to the PGPE (later phase)
-        //Initializes PoreFlex object for fast core data
+        //FIXME: Need to change this to use PGPE queue
+        //Initializes PoreFlex object for pstate control
         rc = pore_flex_create( &G_core_data_control_req,  //gpe_req for the task
                 &G_pore_gpe0_queue,                       //queue
                 gpe_set_pstates,                          //entry point
@@ -192,6 +191,8 @@ void proc_core_data_control_init( void )
 // End Function Specification
 void task_core_data_control( task_t * i_task )
 {
+//TEMP/TODO: proc_core_data_control_init needs to be called from proc_core_init()
+//           when this task is enabled for it to function properly.
     errlHndl_t       l_err   = NULL;     //Error handler
     tracDesc_t       l_trace = NULL;     //Temporary trace descriptor
     int              rc      = 0;        //Return code

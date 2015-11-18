@@ -94,6 +94,10 @@ ifndef COMMONLIB_SRCDIR
 export COMMONLIB_SRCDIR = $(abspath ../lib/common)
 endif
 
+ifndef OCC_COMMON_TYPES_DIR
+export OCC_COMMON_TYPES_DIR = $(abspath ../occ_405/incl/)
+endif
+
 ifndef OCCLIB_SRCDIR
 export OCCLIB_SRCDIR = $(abspath ../lib/occlib)
 endif
@@ -177,7 +181,8 @@ DEFS += $(GCC-DEFS)
 INCLUDES += $(IMG_INCLUDES) $(GLOBAL_INCLUDES) \
 	-I$(PK_SRCDIR)/kernel -I$(PK_SRCDIR)/ppe42 -I$(PK_SRCDIR)/trace \
 	-I$(PK_SRCDIR)/$(PPE_TYPE) -I$(PK_SRCDIR)/../../include \
-	-I$(PK_SRCDIR)/../../include/registers -I$(OCCLIB_SRCDIR) -I$(COMMONLIB_SRCDIR)
+	-I$(PK_SRCDIR)/../../include/registers -I$(OCCLIB_SRCDIR) -I$(COMMONLIB_SRCDIR) \
+    -I$(OCC_COMMON_TYPES_DIR)
 
 PIPE-CFLAGS = -pipe -Wa,-m405
 

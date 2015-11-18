@@ -60,7 +60,8 @@
 
 // Number of uS in 1 RTL tick (250=250us)
 #define AMEC_US_PER_TICK         MICS_PER_TICK
-// Number of uS in 1 full period of the AMEC State Machine (2000=2mS, 8 RTL ticks)
+// Number of uS in 1 full period of the AMEC State Machine
+// We cycle through the 8 states twice per tick cycle (16 ticks), so 8 * 250us = 2ms
 #define AMEC_US_PER_SMH_PERIOD   (AMEC_SMH_STATES_PER_LVL * MICS_PER_TICK)
 // Number of <AMEC_US_PER_SMH_PERIOD> that happen in 1 second
 #define AMEC_SMH_PERIODS_IN_1SEC (10000000 / AMEC_US_PER_SMH_PERIOD)

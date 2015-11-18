@@ -48,6 +48,7 @@ INPUT ( amec_data.o
         ppc405_lib_core.o
         ppc405_mmu_asm.o
         ppc405_thread_init.o
+        proc_data.o
         proc_pstate.o
         reset.o
         rtls_tables.o

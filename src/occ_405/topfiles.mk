@@ -52,6 +52,7 @@ TOP-C-SOURCES = amec/amec_data.c \
                 mode.c \
                 occ_sys_config.c \
                 occbuildname.c \
+                proc/proc_data.c \
                 proc/proc_pstate.c \
                 pss/apss.c \
                 reset.c \

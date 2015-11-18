@@ -170,5 +170,27 @@ void busy_wait(uint32_t t_microseconds)
 
     while (current_decrementer_value > end_decrementer_value)     // Wait until end_decrementer_value is reached
         MFDEC(current_decrementer_value);
+}
 
+void ipc_scom_operation(ipc_msg_t* cmd, void* arg)
+{
+    int l_rc;
+    ipc_async_cmd_t *async_cmd = (ipc_async_cmd_t*)cmd;
+    ipc_scom_op_t *scom_op = (ipc_scom_op_t*) async_cmd->cmd_data;
+
+    if (scom_op->read)
+    {
+        l_rc = getscom_abs(scom_op->addr, &scom_op->data);
+    }
+    else
+    {
+        l_rc = putscom_abs(scom_op->addr, scom_op->data);
+    }
+
+    if(l_rc)
+    {
+        scom_op->rc = l_rc;
+        PK_TRACE("Error doing generic scom! RC: 0x%08X Addr: 0x%08X Read: %d Data: 0x%08X", l_rc,
+                 scom_op->addr, scom_op->read, scom_op->data);
+    }
 }

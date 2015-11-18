@@ -27,6 +27,9 @@
 #define _APSS_UTIL_H
 
 #include <apss_structs.h>
+#include <common_types.h>
+#include <ipc_structs.h>
+#include <ipc_async_cmd.h>
 
 void apss_set_ffdc(GpeErrorStruct *o_error, uint32_t i_addr, uint32_t i_rc, uint64_t i_ffdc);
 

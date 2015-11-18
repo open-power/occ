@@ -1000,8 +1000,7 @@ void Main_thread_routine(void *private)
     //Initialize structures for collecting core data.
     //It needs to run before RTLoop start as pore initialization needs to be
     // done before task to collect core data starts.
-// TEMP -- NOT NEEDED IN PHASE1
-//    proc_core_init();
+    proc_core_init();
     CHECKPOINT(PROC_CORE_INITIALIZED);
 
     // Run slave OCC init on all OCCs. Master-only initialization will be

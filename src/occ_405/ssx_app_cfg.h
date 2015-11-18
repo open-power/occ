@@ -102,6 +102,7 @@ do {                                                                \
 #define APPCFG_OCC_INSTANCE_ID 4
 
 
+#define PROC_DEBUG 1
 // Common configuration groups for verification. Bypass time-consuming setup
 // or setup done by procedures for simulation environments, and set up special
 // I/O configurations for simulation environments.
