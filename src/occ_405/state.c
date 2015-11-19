@@ -40,6 +40,7 @@
 //#include "heartbeat.h"
 #include "scom.h"
 #include <fir_data_collect.h>
+#include <dimm.h>
 
 extern proc_gpsm_dcm_sync_occfw_t G_proc_dcm_sync_state;
 extern bool G_mem_monitoring_allowed;
@@ -135,37 +136,8 @@ errlHndl_t SMGR_standby_to_observation()
         l_error_logged = FALSE;
         TRAC_IMP("SMGR: Standby to Observation Transition Started");
 
-// TEMP -- NOT SUPPORTED YET IN PHASE1 
-/*
-        //This flag is set if tmgt sends us at least one data set in the
-        //mem config data packet.  No data sets will be sent for centaur ec less than 2.0
-        //due to an intermittent hw failure that can occur on those chips.
+        memory_init();
 
-        if(G_mem_monitoring_allowed)
-        {
-            if(!rtl_task_is_runnable(TASK_ID_CENTAUR_DATA))
-            {
-
-                TRAC_INFO("SMGR_standby_to_observation: calling centaur_init()");
-                centaur_init(); //no rc, handles errors internally
-
-                //check if centaur_init resulted in a reset
-                //since we don't have a return code from centaur_init.
-                if(isSafeStateRequested())
-                {
-                    TRAC_ERR("SMGR_standby_to_observation: OCC is being reset, centaur_init failed");
-                }
-                else
-                {
-                    //initialization was successful.
-                    //Set task flags to allow centaur control task to run and
-                    //also to prevent us from doing initialization again.
-                    G_task_table[TASK_ID_CENTAUR_DATA].flags = CENTAUR_DATA_RTL_FLAGS;
-                    G_task_table[TASK_ID_CENTAUR_CONTROL].flags = CENTAUR_CONTROL_RTL_FLAGS;
-                }
-            }
-        }
-*/
         // Set the RTL Flags to indicate which tasks can run
         //   - Set OBSERVATION b/c we're in OBSERVATION State
         rtl_clr_run_mask_deferred(RTL_FLAG_STANDBY);

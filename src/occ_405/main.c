@@ -56,6 +56,7 @@
 #include "scom.h"
 //#include <fir_data_collect.h>
 #include <pss_service_codes.h>
+#include <dimm.h>
 
 extern uint32_t __ssx_boot; // Function address is 32 bits
 extern uint32_t G_occ_phantom_critical_count;

@@ -26,6 +26,7 @@
 #include <occ_common.h>
 #include <common_types.h>
 #include <occ_sys_config.h>
+#include <dimm.h>
 
 // SysConfig Section Defines
 #define SYSCFG_DEFAULT_VERSION       0xff
@@ -183,10 +184,12 @@ occSysConfigData_t G_sysConfigData =
     .master_ppb_fmax = 0xFFFF,
 
     // -----------------------------------------------------------
-    // Centaur/Dimm HUID initializations
+    // Centaur/DIMM Initialization
     // -----------------------------------------------------------
     .centaur_huids = {0},
-    .dimm_huids = {{0},{0},{0},{0},{0},{0},{0},{0}},
+    .dimm_huids = {{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0}},
+    .mem_type = MEM_TYPE_NIMBUS,
+    .dimm_i2c_engine = PIB_I2C_ENGINE_E,
 
     // -----------------------------------------------------------
     // Memory Throttle Limits

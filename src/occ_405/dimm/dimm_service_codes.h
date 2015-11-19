@@ -1,7 +1,7 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: gpe_err.h $                                                   */
+/* $Source: src/occ_405/dimm/dimm_service_codes.h $                       */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
@@ -23,27 +23,18 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-/* This header file is used by all gpes                                   */
-/* Contains common gpe return codes                                       */
+#ifndef _DIMM_SERVICE_CODES_H_
+#define _DIMM_SERVICE_CODES_H_
 
-#ifndef _GPE_ERR_H
-#define _GPE_ERR_H
+#include <comp_ids.h>
 
-// List of general gpe Return Codes
-#define GPE_RC_SUCCESS               0x00     // Success: No Errors
-#define GPE_RC_SPI_TIMEOUT           0x01     // Timeout on previous SPI transaction
-#define GPE_RC_SCOM_GET_FAILED       0x02     // Error on a SCOM read
-#define GPE_RC_SCOM_PUT_FAILED       0x03     // Error on a SCOM write
-#define GPE_RC_INVALID_REG           0x04     // Invalid SCOM Register used
-#define GPE_RC_IPC_SEND_FAILED       0x05     // Failed to send an IPC message
-#define GPE_RC_I2C_ERROR             0x06     // I2C error occurred
-#define GPE_RC_INVALID_STATE         0x07     // Invalid state for requested operation
-#define GPE_RC_NOT_COMPLETE          0x08     // Last operation did not complete
+enum dimmModuleId
+{
+    DIMM_MID_STATE_MACHINE         =  DIMM_COMP_ID | 0x00,
+    DIMM_MID_MEMORY_INIT           =  DIMM_COMP_ID | 0x01,
+    DIMM_MID_NIMBUS_INIT           =  DIMM_COMP_ID | 0x02,
+    DIMM_MID_DIMM_SM               =  DIMM_COMP_ID | 0x03,
+    DIMM_MID_MARK_DIMM_FAILED      =  DIMM_COMP_ID | 0x04,
+};
 
-// APSS Specific gpe return Codes
-#define GPE_RC_INVALID_APSS_MODE     0x40     // OCC requested undefined APSS mode
-
-// Core Data Errors
-#define GPE_RC_GET_CORE_DATA_FAILED  0x60     // Failed to collect core data
-
-#endif //_GPE_ERR_H
+#endif /* #ifndef _DIMM_SERVICE_CODES_H_ */

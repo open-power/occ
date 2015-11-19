@@ -957,7 +957,7 @@ errlHndl_t data_store_apss_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
          * @userdata4   OCC_NO_EXTENDED_RC
          * @devdesc     OCC recieved an invalid data packet from the FSP
          */
-        cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err); 
+        cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
     }
     else // Version 0x20
     {
@@ -1483,7 +1483,6 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
     uint8_t                         l_i2c_port;
     uint8_t                         l_i2c_addr = 0;
     uint8_t                         l_dimm_num = 0;
-    uint8_t                         l_centaur_num = 0;
     int                             i;
 
     do
@@ -1511,7 +1510,7 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
             // Store the memory type.  Memory must all be the same type, save from first and verify remaining
             G_sysConfigData.mem_type = l_cmd_ptr->data_set[0].memory_type;
-            if(G_sysConfigData.mem_type == 0xFF)  // TODO change to MEM_TYPE_NIMBUS
+            if(G_sysConfigData.mem_type == MEM_TYPE_NIMBUS)
             {
                 // Nimbus type -- dimm_info1 is I2C engine which must be the same
                 // save from first entry and verify remaining
@@ -1519,8 +1518,28 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
             }
             else
             {
-                // Must be cumulus type
-                G_sysConfigData.mem_type = 0;  // TODO change to MEM_TYPE_CUMULUS
+                // TODO - CUMULUS not supported yet
+                //G_sysConfigData.mem_type = MEM_TYPE_CUMULUS;
+
+                CMDH_TRAC_ERR("data_store_mem_cfg: Invalid mem type 0x%02X in config data packet version[0x%02X] num_data_sets[%u]",
+                              l_cmd_ptr->data_set[0].memory_type,
+                              l_cmd_ptr->header.version,
+                              l_cmd_ptr->header.num_data_sets);
+
+                cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
+                break;
+            }
+
+            // Clear all sensor IDs (hw and temperature)
+            memset(G_sysConfigData.dimm_huids, 0, sizeof(G_sysConfigData.dimm_huids));
+            int memctl, dimm;
+            for(memctl=0; memctl < MAX_NUM_MEM_CONTROLLERS; ++memctl)
+            {
+                g_amec->proc[0].memctl[memctl].centaur.temp_sid = 0;
+                for(dimm=0; dimm < NUM_DIMMS_PER_CENTAUR; ++dimm)
+                {
+                    g_amec->proc[0].memctl[memctl].centaur.dimm_temps[dimm].temp_sid = 0;
+                }
             }
 
             // Store the hardware sensor ID and the temperature sensor ID
@@ -1531,7 +1550,7 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
                 // Verify matching memory type and process based on memory type
                 if( (l_data_set->memory_type == G_sysConfigData.mem_type) &&
-                    (l_data_set->memory_type == 0xFF) )  // TODO change to MEM_TYPE_NIMBUS 
+                    (l_data_set->memory_type == MEM_TYPE_NIMBUS) )
                 {
                     // Nimbus type:  dimm info is I2C Engine, I2C Port, I2C Address
                     l_i2c_engine = l_data_set->dimm_info1;
@@ -1577,7 +1596,7 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                     // The location of the HW sensor ID in the 2D dimm_huids array is used to know i2c port
                     // and i2c address for reading the DIMM.  "centaur num" index is port "dimm num" is
                     // translated from i2c address, we already verified the i2c addr is 0x3z above
-                    l_dimm_num = (l_i2c_addr & 0x0F) >> 1; 
+                    l_dimm_num = (l_i2c_addr & 0x0F) >> 1;
 
                     // Store the hardware sensor ID
                     G_sysConfigData.dimm_huids[l_i2c_port][l_dimm_num] = l_data_set->hw_sensor_id;
@@ -1591,8 +1610,16 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 }
                 else  // must be cumulus and the "memory type" byte is the centaur#
                 {
+                    CMDH_TRAC_ERR("data_store_mem_cfg: Invalid mem type 0x%02X in config data packet entry %d (entry 0 type: 0x%02X)",
+                                  l_data_set->memory_type, i, G_sysConfigData.mem_type);
+
+                    cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
+                    break;
+
+#if 0
+                    // TODO - CUMULUS not supported yet
                     // per spec for cumulus memory type is the centaur# and dimm info1 is DIMM#
-                    l_centaur_num = l_data_set->memory_type;
+                    uint8_t l_centaur_num = l_data_set->memory_type;
                     l_dimm_num = l_data_set->dimm_info1;
 
                     // Validate the centaur and dimm #'s for this data set
@@ -1629,6 +1656,7 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
                         l_num_dimms++;
                     }
+#endif
                 } // Cumulus
             } // for each data set
         } // version 0x20
@@ -1645,8 +1673,8 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
     {
         // If there were no errors, indicate that we got this data
         G_data_cnfg->data_mask |= DATA_MASK_MEM_CFG;
-        CMDH_TRAC_IMP("data_store_mem_cfg: Got valid mem cfg packet. cent#=%d, dimm#=%d",
-                      l_num_centaurs, l_num_dimms);
+        CMDH_TRAC_IMP("data_store_mem_cfg: Got valid mem cfg packet. type=0x%02X, #cent=%d, #dimm=%d",
+                      G_sysConfigData.mem_type, l_num_centaurs, l_num_dimms);
 
         // No errors so we can enable memory monitoring if the data indicates it should be enabled
         if(l_cmd_ptr->header.num_data_sets == 0)  // num data sets of 0 indicates memory monitoring disabled

@@ -33,6 +33,7 @@
 #include <centaur_data.h>
 #include <centaur_control.h>
 #include "amec_master_smh.h"
+#include "dimm.h"
 
 //flags for task table
 #define APSS_TASK_FLAGS                  RTL_FLAG_MSTR |                    RTL_FLAG_OBS | RTL_FLAG_ACTIVE | RTL_FLAG_MSTR_READY |                    RTL_FLAG_RUN
@@ -47,9 +48,9 @@
 #define FLAGS_LOW_CORES_DATA             RTL_FLAG_MSTR | RTL_FLAG_NOTMSTR | RTL_FLAG_OBS | RTL_FLAG_ACTIVE | RTL_FLAG_MSTR_READY | RTL_FLAG_NO_APSS | RTL_FLAG_RUN |                                       RTL_FLAG_APSS_NOT_INITD
 #define FLAGS_HIGH_CORES_DATA            RTL_FLAG_MSTR | RTL_FLAG_NOTMSTR | RTL_FLAG_OBS | RTL_FLAG_ACTIVE | RTL_FLAG_MSTR_READY | RTL_FLAG_NO_APSS | RTL_FLAG_RUN |                                       RTL_FLAG_APSS_NOT_INITD
 
-//Start out with centaur tasks not running.
-#define FLAGS_CENTAUR_DATA               RTL_FLAG_NONE
-#define FLAGS_CENTAUR_CONTROL            RTL_FLAG_NONE
+// Start out with memory tasks not running, then start during transition to observation in memory_init()
+#define FLAGS_MEMORY_DATA                RTL_FLAG_NONE
+#define FLAGS_MEMORY_CONTROL             RTL_FLAG_NONE
 
 #define FLAGS_FAST_CORES_DATA            RTL_FLAG_MSTR | RTL_FLAG_NOTMSTR | RTL_FLAG_OBS | RTL_FLAG_ACTIVE | RTL_FLAG_MSTR_READY | RTL_FLAG_NO_APSS | RTL_FLAG_RUN |                                       RTL_FLAG_APSS_NOT_INITD
 
@@ -71,7 +72,6 @@
 
 // TEMP/TODO: These are not yet implemented
 #define FLAGS_GPU_SM
-#define FLAGS_DIMM_SM
 #define FLAGS_MEM_DEADMAN
 
 // Global tick sequences
@@ -121,8 +121,7 @@ task_t G_task_table[TASK_END] = {
 //    { FLAGS_CORE_DATA_CONTROL,     task_core_data_control,         NULL },  // TASK_ID_CORE_DATA_CONTROL
 // TEMP -- NOT YET IMPLEMENTED
 //    { FLAGS_GPU_SM,                task_gpu_sm,                    NULL },  // TASK_ID_GPU_SM
-// TEMP -- NOT YET IMPLEMENTED
-//    { FLAGS_DIMM_SM,               task_dimm_sm,                   NULL },  // TASK_ID_DIMM_SM
+    { FLAGS_MEMORY_DATA,           task_dimm_sm,                   NULL },  // TASK_ID_DIMM_SM
 // TEMP -- NOT YET IMPLEMENTED
 //    { FLAGS_MEM_DEADMAN,           task_mem_deadman,               NULL },  // TASK_ID_MEM_DEADMAN
 };
@@ -130,7 +129,7 @@ task_t G_task_table[TASK_END] = {
 const uint8_t G_tick0_seq[] = {
                                 TASK_ID_APSS_START,
                                 TASK_ID_CORE_DATA_LOW,
-                                //TASK_ID_DIMM_SM,
+                                TASK_ID_DIMM_SM,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_CORE_DATA_HIGH,
                                 TASK_ID_APSS_DONE,
@@ -169,7 +168,7 @@ const uint8_t G_tick1_seq[] = {
 const uint8_t G_tick2_seq[] = {
                                 TASK_ID_APSS_START,
                                 TASK_ID_CORE_DATA_LOW,
-                                //TASK_ID_DIMM_SM,
+                                TASK_ID_DIMM_SM,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_CORE_DATA_HIGH,
                                 TASK_ID_APSS_DONE,
@@ -207,7 +206,7 @@ const uint8_t G_tick3_seq[] = {
 const uint8_t G_tick4_seq[] = {
                                 TASK_ID_APSS_START,
                                 TASK_ID_CORE_DATA_LOW,
-                                //TASK_ID_DIMM_SM,
+                                TASK_ID_DIMM_SM,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_CORE_DATA_HIGH,
                                 TASK_ID_APSS_DONE,
@@ -246,7 +245,7 @@ const uint8_t G_tick5_seq[] = {
 const uint8_t G_tick6_seq[] = {
                                 TASK_ID_APSS_START,
                                 TASK_ID_CORE_DATA_LOW,
-                                //TASK_ID_DIMM_SM,
+                                TASK_ID_DIMM_SM,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_CORE_DATA_HIGH,
                                 TASK_ID_APSS_DONE,
@@ -284,7 +283,7 @@ const uint8_t G_tick7_seq[] = {
 const uint8_t G_tick8_seq[] = {
                                 TASK_ID_APSS_START,
                                 TASK_ID_CORE_DATA_LOW,
-                                //TASK_ID_DIMM_SM,
+                                TASK_ID_DIMM_SM,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_CORE_DATA_HIGH,
                                 TASK_ID_APSS_DONE,
@@ -323,7 +322,7 @@ const uint8_t G_tick9_seq[] = {
 const uint8_t G_tick10_seq[] = {
                                 TASK_ID_APSS_START,
                                 TASK_ID_CORE_DATA_LOW,
-                                //TASK_ID_DIMM_SM,
+                                TASK_ID_DIMM_SM,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_CORE_DATA_HIGH,
                                 TASK_ID_APSS_DONE,
@@ -361,7 +360,7 @@ const uint8_t G_tick11_seq[] = {
 const uint8_t G_tick12_seq[] = {
                                 TASK_ID_APSS_START,
                                 TASK_ID_CORE_DATA_LOW,
-                                //TASK_ID_DIMM_SM,
+                                TASK_ID_DIMM_SM,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_CORE_DATA_HIGH,
                                 TASK_ID_APSS_DONE,
@@ -400,7 +399,7 @@ const uint8_t G_tick13_seq[] = {
 const uint8_t G_tick14_seq[] = {
                                 TASK_ID_APSS_START,
                                 TASK_ID_CORE_DATA_LOW,
-                                //TASK_ID_DIMM_SM,
+                                TASK_ID_DIMM_SM,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_CORE_DATA_HIGH,
                                 TASK_ID_APSS_DONE,

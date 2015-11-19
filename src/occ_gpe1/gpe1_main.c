@@ -1,7 +1,7 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_gpe0/gpe0_main.c $                                    */
+/* $Source: src/occ_gpe1/gpe1_main.c $                                    */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
@@ -31,11 +31,11 @@
 
 #include "pk.h"
 #include "ipc_api.h"
-#include "ipc_ping.h"
 
 #define KERNEL_STACK_SIZE  256
 
 uint8_t        G_kernel_stack[KERNEL_STACK_SIZE];
+
 
 // The main function is called by the boot code (after initializing some
 // registers)
@@ -51,7 +51,7 @@ int main(int argc, char **argv)
 
     PK_TRACE("Kernel init completed");
 
-    // Disable IPC's and register the IPC interrupt handler 
+    // Disable IPC's and register the IPC interrupt handler
     rc = ipc_init();
     if(rc)
     {

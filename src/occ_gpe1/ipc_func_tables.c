@@ -1,4 +1,6 @@
 #include "ipc_api.h"
+#include "gpe1_dimm.h"
+
 
 // Function table for multi target (common) functions
 IPC_MT_FUNC_TABLE_START
@@ -14,7 +16,7 @@ IPC_MT_FUNC_TABLE_END
 
 // Function table for single target (processor-specific) functions
 IPC_ST_FUNC_TABLE_START
-IPC_HANDLER_DEFAULT                          // 0
+IPC_HANDLER(gpe_dimm_sm, 0)                  // 0 - IPC_ST_DIMM_SM_FUNCID
 IPC_HANDLER_DEFAULT                          // 1
 IPC_HANDLER_DEFAULT                          // 2
 IPC_HANDLER_DEFAULT                          // 3

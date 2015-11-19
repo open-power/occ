@@ -67,6 +67,7 @@ IPC_FUNCIDS_TABLE_START
     //Functions that are only supported by GPE1 should be defined here
     //These function ID's can only be sent to GPE1
     IPC_FUNCIDS_ST_START(OCCHW_INST_ID_GPE1)
+        IPC_FUNC_ID(IPC_ST_DIMM_SM_FUNCID)
     IPC_FUNCIDS_ST_END(OCCHW_INST_ID_GPE1)
 
     //Functions that are only supported by GPE2 should be defined here

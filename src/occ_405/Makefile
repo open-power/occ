@@ -54,6 +54,7 @@ LIB_DIRS =  -L$(OBJDIR) \
             -L$(OBJDIR)/ppc405lib \
             -L$(OBJDIR)/cmdh \
             -L$(OBJDIR)/dcom \
+            -L$(OBJDIR)/dimm \
             -L$(OBJDIR)/errl \
             -L$(OBJDIR)/pss \
             -L$(OBJDIR)/rtls \

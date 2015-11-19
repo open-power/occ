@@ -80,5 +80,9 @@
 #define CMDH_COMP_ID         0x0E00
 #define CMDH_COMP_NAME       "CMDH"
 
+// DIMM State Manager
+#define DIMM_COMP_ID         0x0F00
+#define DIMM_COMP_NAME       "DIMM"
+
 #endif
 

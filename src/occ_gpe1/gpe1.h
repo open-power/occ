@@ -1,7 +1,7 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: gpe_err.h $                                                   */
+/* $Source: src/occ_405/gpe/gpe1.h $                                      */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
@@ -23,27 +23,54 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-/* This header file is used by all gpes                                   */
-/* Contains common gpe return codes                                       */
+#ifndef _GPE1_H
+#define _GPE1_H
 
-#ifndef _GPE_ERR_H
-#define _GPE_ERR_H
+#include "gpe_export.h"
 
-// List of general gpe Return Codes
-#define GPE_RC_SUCCESS               0x00     // Success: No Errors
-#define GPE_RC_SPI_TIMEOUT           0x01     // Timeout on previous SPI transaction
-#define GPE_RC_SCOM_GET_FAILED       0x02     // Error on a SCOM read
-#define GPE_RC_SCOM_PUT_FAILED       0x03     // Error on a SCOM write
-#define GPE_RC_INVALID_REG           0x04     // Invalid SCOM Register used
-#define GPE_RC_IPC_SEND_FAILED       0x05     // Failed to send an IPC message
-#define GPE_RC_I2C_ERROR             0x06     // I2C error occurred
-#define GPE_RC_INVALID_STATE         0x07     // Invalid state for requested operation
-#define GPE_RC_NOT_COMPLETE          0x08     // Last operation did not complete
 
-// APSS Specific gpe return Codes
-#define GPE_RC_INVALID_APSS_MODE     0x40     // OCC requested undefined APSS mode
+// I2C SCOM Addresses:
+// (There are unique constants/addresses per engine, but to make the calls generic,
+//  these constants are defined instead of using the base constants)
+#define PIB_BASE                    0x000A0000
+// Engine B 0x00A0000
+// Engine C 0x00A1000
+// Engine D 0x00A2000
+// Engine E 0x00A3000
+#define SCOM_ENGINE_OFFSET(engine) (engine << 12)
+#define I2C_FIFO1_REG_READ          0x000A0004
+#define I2C_COMMAND_REG             0x000A0005
+#define I2C_MODE_REG                0x000A0006
+#define I2C_INTERRUPT_MASK_REG      0x000A0008
+#define I2C_STATUS_REG              0x000A000B // read
+#define I2C_IMM_RESET_I2C           0x000A000B // write
+#define I2C_BUSY_REGISTER           0x000A000E
+#define I2C_FIFO4_REG_READ          0x000A0012
 
-// Core Data Errors
-#define GPE_RC_GET_CORE_DATA_FAILED  0x60     // Failed to collect core data
 
-#endif //_GPE_ERR_H
+// I2C Status Reigster masks
+#define STATUS_ERROR_MASK               0xFE80330000000000
+#define STATUS_ERROR_OR_COMPLETE_MASK   0xFF80330000000000
+#define STATUS_COMPLETE_MASK            0x0100000000000000
+#define PEEK_ERROR_MASK                 0x00000000FC000000
+#define PEEK_MORE_DATA                  0x0000000002000000
+
+
+// Debug trace
+#ifdef GPE1_DEBUG
+  #define GPE1_DIMM_DBG(frmt,args...)  \
+          PK_TRACE(frmt,##args)
+  #define GPE1_DIMM_DBG_HEXDUMP(data, len, string)  \
+          PK_TRACE_BIN(data, len, string)
+#else
+  #define GPE1_DIMM_DBG(frmt,args...)
+  #define GPE1_DIMM_DBG_HEXDUMP(data, len, string)
+#endif
+
+
+void gpe_set_ffdc(GpeErrorStruct *o_error, uint32_t i_addr, uint32_t i_rc, uint64_t i_ffdc);
+
+void gpe_dimm_sm(ipc_msg_t* cmd, void* arg);
+
+
+#endif //_GPE1_H

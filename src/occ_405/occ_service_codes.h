@@ -102,6 +102,10 @@ enum occReasonCode
     APSS_HARD_FAILURE               = 0xC5,
     ///  Request to read redundant APSS data failed
     REDUNDANT_APSS_GPE_FAILURE      = 0xCB,
+    ///  Request to read DIMM data failed.
+    DIMM_GPE_FAILURE                = 0xD0,
+    MEMORY_INIT_FAILED              = 0xD1,
+    DIMM_INVALID_STATE              = 0xD2,
     /// Success!
     OCC_SUCCESS_REASON_CODE         = 0xFF,
 };
@@ -193,6 +197,9 @@ enum occExtReasonCode
     ERC_BCE_REQ_SCHED_INPROG_FAILURE            = 0x00000073,
     ERC_BCE_REQ_CREATE_WRITE_FAILURE            = 0x00000074,
     ERC_BCE_REQ_SCHED_WRITE_FAILURE             = 0x00000075,
+
+    ERC_DIMM_SCHEDULE_FAILURE                   = 0x00000080,
+    ERC_DIMM_COMPLETE_FAILURE                   = 0x00000081,
 };
 
 // Error log Module Ids

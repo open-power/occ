@@ -1,7 +1,7 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: gpe_err.h $                                                   */
+/* $Source: src/occ_405/dimm/dimm.h $                                     */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
@@ -23,27 +23,47 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-/* This header file is used by all gpes                                   */
-/* Contains common gpe return codes                                       */
+#ifndef _DIMM_H
+#define _DIMM_H
 
-#ifndef _GPE_ERR_H
-#define _GPE_ERR_H
+#include <occ_common.h>
+#include <trac_interface.h>
+#include <errl.h>
+#include <rtls.h>
 
-// List of general gpe Return Codes
-#define GPE_RC_SUCCESS               0x00     // Success: No Errors
-#define GPE_RC_SPI_TIMEOUT           0x01     // Timeout on previous SPI transaction
-#define GPE_RC_SCOM_GET_FAILED       0x02     // Error on a SCOM read
-#define GPE_RC_SCOM_PUT_FAILED       0x03     // Error on a SCOM write
-#define GPE_RC_INVALID_REG           0x04     // Invalid SCOM Register used
-#define GPE_RC_IPC_SEND_FAILED       0x05     // Failed to send an IPC message
-#define GPE_RC_I2C_ERROR             0x06     // I2C error occurred
-#define GPE_RC_INVALID_STATE         0x07     // Invalid state for requested operation
-#define GPE_RC_NOT_COMPLETE          0x08     // Last operation did not complete
+#define WORD_HIGH(data) ((uint32_t)(((uint64_t)data)>>32))
+#define WORD_LOW(data)  ((uint32_t)(((uint64_t)data)&0xFFFFFFFF))
 
-// APSS Specific gpe return Codes
-#define GPE_RC_INVALID_APSS_MODE     0x40     // OCC requested undefined APSS mode
+#define NUM_DIMM_PORTS           2
 
-// Core Data Errors
-#define GPE_RC_GET_CORE_DATA_FAILED  0x60     // Failed to collect core data
+typedef enum
+{
+    DIMM_READ_SUCCESS =             0x00,
+    DIMM_READ_IN_PROGRESS =         0x01,
+    DIMM_READ_SCHEDULE_FAILED =     0xFA,
+    DIMM_READ_NOT_COMPLETE =        0xFF,
+} readStatus_e;
 
-#endif //_GPE_ERR_H
+typedef enum
+{
+    PIB_I2C_ENGINE_C = 0x01,
+    PIB_I2C_ENGINE_D = 0x02,
+    PIB_I2C_ENGINE_E = 0x03,
+} PIB_I2C_ENGINE;
+
+typedef enum
+{
+    MEM_TYPE_CUMULUS = 0x00,
+    MEM_TYPE_NIMBUS  = 0xFF
+} MEMORY_TYPE;
+
+// Generic memory initialization to handle init for all memory types
+void memory_init();
+
+// Nimbus specific init
+void memory_nimbus_init();
+
+// DIMM I2C state machine (for NIMBUS)
+void task_dimm_sm(struct task *i_self);
+
+#endif //_DIMM_H

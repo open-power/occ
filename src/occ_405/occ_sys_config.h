@@ -34,6 +34,7 @@
 #endif
 #include <state.h>
 #include <apss.h>
+#include <dimm.h>
 
 #define MAX_NUM_OCC              8
 #define MAX_NUM_NODES            4
@@ -332,14 +333,10 @@ typedef struct
   uint32_t master_ppb_fmax;
 
   // --------------------------------------
-  // Hardware Sensor ID's for centaurs and dimms
+  // Memory Configuration Data
   // --------------------------------------
   uint32_t centaur_huids[MAX_NUM_CENTAURS];
   uint32_t dimm_huids[MAX_NUM_CENTAURS][NUM_DIMMS_PER_CENTAUR];
-
-  // --------------------------------------
-  // Memory type and dimm i2c engine for nimbus
-  // --------------------------------------
   uint8_t mem_type;
   uint8_t dimm_i2c_engine;
 

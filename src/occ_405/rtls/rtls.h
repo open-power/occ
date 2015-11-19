@@ -57,7 +57,7 @@ typedef enum {
 //    TASK_ID_AMEC_MASTER,            // AMEC SMH tasks
 //    TASK_ID_CORE_DATA_CONTROL,
 //    TASK_ID_GPU_SM,                 // GPU State Machine
-//    TASK_ID_DIMM_SM,                // DIMM State Machine
+    TASK_ID_DIMM_SM,                // DIMM State Machine
 //    TASK_ID_MEM_DEADMAN,            // Memory deadman timer
     TASK_END  // This must always be the last enum in this list,
               // so that TASK_END always equals the last task ID + 1.
@@ -97,13 +97,13 @@ typedef struct
                          RTL_FLAG_NO_APSS | RTL_FLAG_MSTR_READY | RTL_FLAG_STANDBY | \
                          RTL_FLAG_APSS_NOT_INITD)
 
-#define CENTAUR_CONTROL_RTL_FLAGS (RTL_FLAG_MSTR | RTL_FLAG_NOTMSTR | RTL_FLAG_ACTIVE | \
-                                   RTL_FLAG_MSTR_READY | RTL_FLAG_NO_APSS | RTL_FLAG_RUN | \
-                                   RTL_FLAG_APSS_NOT_INITD)
+#define MEMORY_CONTROL_RTL_FLAGS (RTL_FLAG_MSTR | RTL_FLAG_NOTMSTR | RTL_FLAG_ACTIVE | \
+                                  RTL_FLAG_MSTR_READY | RTL_FLAG_NO_APSS | RTL_FLAG_RUN | \
+                                  RTL_FLAG_APSS_NOT_INITD)
 
-#define CENTAUR_DATA_RTL_FLAGS (RTL_FLAG_MSTR | RTL_FLAG_NOTMSTR | RTL_FLAG_OBS | \
-                                RTL_FLAG_ACTIVE | RTL_FLAG_MSTR_READY | RTL_FLAG_NO_APSS | \
-                                RTL_FLAG_RUN | RTL_FLAG_APSS_NOT_INITD)
+#define MEMORY_DATA_RTL_FLAGS (RTL_FLAG_MSTR | RTL_FLAG_NOTMSTR | RTL_FLAG_OBS | \
+                               RTL_FLAG_ACTIVE | RTL_FLAG_MSTR_READY | RTL_FLAG_NO_APSS | \
+                               RTL_FLAG_RUN | RTL_FLAG_APSS_NOT_INITD)
 
 // Tick Timer definitions
 #define MICS_PER_TICK 250  // Number of micro-seconds per tick

@@ -35,10 +35,10 @@
 #
 # SSX_SRCDIR         : Default ..; The path to the SSX source code.
 #                      The default is set for building the SSX
-#                      subdirectories. 
+#                      subdirectories.
 #
 # SSX_THREAD_SUPPORT : (0/1, default 1); Compile SSX thread and
-#                      semaphore suppprt 
+#                      semaphore suppprt
 #
 # SSX_TIMER_SUPPORT  : (0/1, default 1); Compile SSX timer suppprt
 #
@@ -58,7 +58,7 @@
 #                      make GCC-O-LEVEL="-Os -fno-branch-count-reg"
 #
 # GCC-TOOL-PREFIX    : The full path (including executable file prefixes) to
-#                      the GCC cross-development tools to use.  The default is 
+#                      the GCC cross-development tools to use.  The default is
 #                      "ppcnf-mcp5-"
 #
 # CTEPATH            : This variable defaults to the afs/awd CTE tool
@@ -186,8 +186,8 @@ GCC-DEFS += -DSTRAIGHT_TO_OBS_HACK=1
 endif
 
 GCC-DEFS += -DIMAGE_NAME=$(IMAGE_NAME)
-GCC-DEFS += -DSSX_TIMER_SUPPORT=$(SSX_TIMER_SUPPORT) 
-GCC-DEFS += -DSSX_THREAD_SUPPORT=$(SSX_THREAD_SUPPORT) 
+GCC-DEFS += -DSSX_TIMER_SUPPORT=$(SSX_TIMER_SUPPORT)
+GCC-DEFS += -DSSX_THREAD_SUPPORT=$(SSX_THREAD_SUPPORT)
 GCC-DEFS += -DPPC405_MMU_SUPPORT=$(PPC405_MMU_SUPPORT)
 GCC-DEFS += -DSSX_TRACE_SUPPORT=$(SSX_TRACE_SUPPORT)
 GCC-DEFS += -DSSX_TRACE_HASH_PREFIX=$(SSX_TRACE_HASH_PREFIX)
@@ -212,6 +212,7 @@ APP_INCLUDES =  -I$(IMAGE_SRCDIR)/rtls \
                 -I$(IMAGE_SRCDIR)/amec \
                 -I$(IMAGE_SRCDIR)/cent \
                 -I$(IMAGE_SRCDIR)/firdata \
+                -I$(IMAGE_SRCDIR)/dimm \
                 -I$(IMAGE_SRCDIR)/../occ_gpe0 \
 
 INCLUDES += $(IMG_INCLUDES) $(GLOBAL_INCLUDES) $(APP_INCLUDES) \

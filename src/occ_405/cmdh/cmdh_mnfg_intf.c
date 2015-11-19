@@ -238,7 +238,8 @@ uint8_t cmdh_mnfg_mem_slew(const cmdh_fsp_cmd_t * i_cmd_ptr,
         // If we made it here, that means we are starting up a slew run
         TRAC_INFO("cmdh_mnfg_mem_slew: We are about to start auto-slewing function");
 
-// TEMP -- NOT SUPPORTED YET IN PHASE1 
+// TEMP -- NOT SUPPORTED YET IN PHASE1
+// when implementing see dimm/dimm.c - memory_init()
 /*
         // Force activation of memory monitoring and control
         if(!rtl_task_is_runnable(TASK_ID_CENTAUR_CONTROL))

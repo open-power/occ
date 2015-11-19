@@ -1244,9 +1244,11 @@ typedef union ocb_occmisc {
 #ifdef _BIG_ENDIAN
     uint32_t core_ext_intr : 1;
     uint32_t spare : 15;
-    uint32_t reserved1 : 16;
+    uint32_t i2cm_intr_status : 3;
+    uint32_t reserved1 : 13;
 #else
-    uint32_t reserved1 : 16;
+    uint32_t reserved1 : 13;
+    uint32_t i2cm_intr_status : 3;
     uint32_t spare : 15;
     uint32_t core_ext_intr : 1;
 #endif // _BIG_ENDIAN
