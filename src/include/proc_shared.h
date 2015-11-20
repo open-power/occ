@@ -1,7 +1,7 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: gpe_err.h $                                                   */
+/* $Source: src/include/proc_shared.h $                                */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
@@ -23,25 +23,19 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-/* This header file is used by all gpes                                   */
-/* Contains common gpe return codes                                       */
+#ifndef _PROC_SHARED_H
+#define _PROC_SHARED_H
 
-#ifndef _GPE_ERR_H
-#define _GPE_ERR_H
+#include "core_data.h"
+#include "gpe_export.h"
 
-// List of general gpe Return Codes
-#define GPE_RC_SUCCESS               0x00     // Success: No Errors
-#define GPE_RC_SPI_TIMEOUT           0x01     // Timeout on previous SPI transaction
-#define GPE_RC_SCOM_GET_FAILED       0x02     // Error on a SCOM read
-#define GPE_RC_SCOM_PUT_FAILED       0x03     // Error on a SCOM write
-#define GPE_RC_INVALID_REG           0x04     // Invalid SCOM Register used
-#define GPE_RC_IPC_SEND_FAILED       0x05     // Failed to send an IPC message
+// Paramaters for gpe_get_core_data() & gpe_get_per_core_data()
 
-// APSS Specific gpe return Codes
-#define GPE_RC_INVALID_APSS_MODE     0x40     // OCC requested undefined APSS mode
+typedef struct ipc_core_data_parms
+{
+    GpeErrorStruct   error;
+    CoreData*  data;
+    uint32_t   core_num;
+} ipc_core_data_parms_t;
 
-
-// Core Data Errors
-#define GPE_RC_GET_CORE_DATA_FAILED  0x60     // Failed to collect core data
-
-#endif //_GPE_ERR_H
+#endif // _PROC_SHARED_H

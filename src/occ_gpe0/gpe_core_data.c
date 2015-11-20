@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: gpe_err.h $                                                   */
+/* $Source: src/occ_gpe0/core_data.c $                                    */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2015                             */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -23,25 +23,54 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-/* This header file is used by all gpes                                   */
-/* Contains common gpe return codes                                       */
+#include "core_data.h"
+#include "ipc_async_cmd.h"
+#include "gpe_err.h"
+#include "gpe_util.h"
+#include "proc_shared.h"
 
-#ifndef _GPE_ERR_H
-#define _GPE_ERR_H
+/*
+ * Function Specifications:
+ *
+ * Name: gpe_get_core_data
+ *
+ * Description:  extract core number, call get_core data with the
+ *               proper core id and pointer to CoreData
+ *
+ * Inputs:       cmd is a pointer to IPC msg's cmd and cmd_data struct
+ *
+ * Outputs:      error: sets rc, address, and ffdc in the cmd_data's
+ *                      GpeErrorStruct
+ *
+ * End Function Specification
+ */
 
-// List of general gpe Return Codes
-#define GPE_RC_SUCCESS               0x00     // Success: No Errors
-#define GPE_RC_SPI_TIMEOUT           0x01     // Timeout on previous SPI transaction
-#define GPE_RC_SCOM_GET_FAILED       0x02     // Error on a SCOM read
-#define GPE_RC_SCOM_PUT_FAILED       0x03     // Error on a SCOM write
-#define GPE_RC_INVALID_REG           0x04     // Invalid SCOM Register used
-#define GPE_RC_IPC_SEND_FAILED       0x05     // Failed to send an IPC message
 
-// APSS Specific gpe return Codes
-#define GPE_RC_INVALID_APSS_MODE     0x40     // OCC requested undefined APSS mode
+void gpe_get_core_data(ipc_msg_t* cmd, void* arg)
+{
+    uint32_t rc;    // return code
+    ipc_async_cmd_t *async_cmd  = (ipc_async_cmd_t*)cmd;
+    ipc_core_data_parms_t *args = (ipc_core_data_parms_t*) async_cmd->cmd_data;
 
 
-// Core Data Errors
-#define GPE_RC_GET_CORE_DATA_FAILED  0x60     // Failed to collect core data
+    rc = get_core_data(args->core_num,     // core ID
+                       args->data);        // CoreData*
 
-#endif //_GPE_ERR_H
+    if(rc)
+    {
+        PK_TRACE("gpe_get_core_data: get_core_data failed, rc = 0x%08x, core = 0x%08x",
+                 rc, args->core_num);
+        gpe_set_ffdc(&(args->error), args->core_num,
+                      GPE_RC_GET_CORE_DATA_FAILED, rc);
+    }
+
+    // send back a response, IPC success even if ffdc/rc are non zeros
+    rc = ipc_send_rsp(cmd, IPC_RC_SUCCESS);
+    if(rc)
+    {
+        PK_TRACE("gpe_get_core_data: Failed to send response back. Halting GPE0", rc);
+        gpe_set_ffdc(&(args->error), 0x00, GPE_RC_IPC_SEND_FAILED, rc);
+        pk_halt();
+    }
+
+}

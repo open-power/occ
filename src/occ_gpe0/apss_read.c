@@ -30,7 +30,7 @@
 #include "ipc_async_cmd.h"
 #include "pss_constants.h"
 #include <apss_structs.h>
-#include "apss_util.h"
+#include "gpe_util.h"
 
 /*
  * Function Specifications:
@@ -90,7 +90,7 @@ void apss_start_pwr_meas_read(ipc_msg_t* cmd, void* arg)
         {
             PK_TRACE("apss_start_pwr_meas_read: SPIPSS_ADC_CTRL_REG0 putscom failed. rc = 0x%08x",
                      rc);
-            apss_set_ffdc(&(args->error), SPIPSS_ADC_CTRL_REG0, GPE_RC_SCOM_PUT_FAILED, rc);
+            gpe_set_ffdc(&(args->error), SPIPSS_ADC_CTRL_REG0, GPE_RC_SCOM_PUT_FAILED, rc);
             break;
         }
 
@@ -103,7 +103,7 @@ void apss_start_pwr_meas_read(ipc_msg_t* cmd, void* arg)
         {
             PK_TRACE("apss_start_pwr_meas_read: SPIPSS_ADC_CTRL_REG1 putscom failed. rc = 0x%08x",
                      rc);
-            apss_set_ffdc(&(args->error), SPIPSS_ADC_CTRL_REG1, GPE_RC_SCOM_PUT_FAILED, rc);
+            gpe_set_ffdc(&(args->error), SPIPSS_ADC_CTRL_REG1, GPE_RC_SCOM_PUT_FAILED, rc);
             break;
         }
 
@@ -116,7 +116,7 @@ void apss_start_pwr_meas_read(ipc_msg_t* cmd, void* arg)
         {
             PK_TRACE("apss_start_pwr_meas_read: SPIPSS_ADC_CTRL_REG2 putscom failed. rc = 0x%08x",
                      rc);
-            apss_set_ffdc(&(args->error), SPIPSS_ADC_CTRL_REG2, GPE_RC_SCOM_PUT_FAILED, rc);
+            gpe_set_ffdc(&(args->error), SPIPSS_ADC_CTRL_REG2, GPE_RC_SCOM_PUT_FAILED, rc);
             break;
         }
 
@@ -129,7 +129,7 @@ void apss_start_pwr_meas_read(ipc_msg_t* cmd, void* arg)
         {
             PK_TRACE("apss_start_pwr_meas_read: SPIPSS_ADC_WDATA_REG putscom failed. rc = 0x%08x",
                      rc);
-            apss_set_ffdc(&(args->error), SPIPSS_ADC_WDATA_REG, GPE_RC_SCOM_PUT_FAILED, rc);
+            gpe_set_ffdc(&(args->error), SPIPSS_ADC_WDATA_REG, GPE_RC_SCOM_PUT_FAILED, rc);
             break;
         }
 
@@ -143,7 +143,7 @@ void apss_start_pwr_meas_read(ipc_msg_t* cmd, void* arg)
         {
             PK_TRACE("apss_start_pwr_meas_read: SPIPSS_ADC_COMMAND_REG putscom failed. rc = 0x%08x",
                      rc);
-            apss_set_ffdc(&(args->error), SPIPSS_ADC_COMMAND_REG, GPE_RC_SCOM_PUT_FAILED, rc);
+            gpe_set_ffdc(&(args->error), SPIPSS_ADC_COMMAND_REG, GPE_RC_SCOM_PUT_FAILED, rc);
             break;
         }
 
@@ -154,7 +154,7 @@ void apss_start_pwr_meas_read(ipc_msg_t* cmd, void* arg)
     if(rc)
     {
         PK_TRACE("apss_start_pwr_meas_read: Failed to send response back. Halting GPE0", rc);
-        apss_set_ffdc(&(args->error), 0x00, GPE_RC_IPC_SEND_FAILED, rc);
+        gpe_set_ffdc(&(args->error), 0x00, GPE_RC_IPC_SEND_FAILED, rc);
         pk_halt();
     }
 }
@@ -218,7 +218,7 @@ void apss_continue_pwr_meas_read(ipc_msg_t* cmd, void* arg)
         {
             PK_TRACE("apss_continue_pwr_meas_read: SPIPSS_ADC_RDATA_REG0 getscom failed with rc = 0x%08x",
                      rc);
-            apss_set_ffdc(&(args->error), SPIPSS_ADC_RDATA_REG0, GPE_RC_SCOM_GET_FAILED, rc);
+            gpe_set_ffdc(&(args->error), SPIPSS_ADC_RDATA_REG0, GPE_RC_SCOM_GET_FAILED, rc);
             break;
         }
 
@@ -228,7 +228,7 @@ void apss_continue_pwr_meas_read(ipc_msg_t* cmd, void* arg)
         {
             PK_TRACE("apss_continue_pwr_meas_read: SPIPSS_ADC_RDATA_REG1 getscom failed with rc = 0x%08x",
                      rc);
-            apss_set_ffdc(&(args->error), SPIPSS_ADC_RDATA_REG1, GPE_RC_SCOM_GET_FAILED, rc);
+            gpe_set_ffdc(&(args->error), SPIPSS_ADC_RDATA_REG1, GPE_RC_SCOM_GET_FAILED, rc);
             break;
         }
 
@@ -238,7 +238,7 @@ void apss_continue_pwr_meas_read(ipc_msg_t* cmd, void* arg)
         {
             PK_TRACE("apss_continue_pwr_meas_read: SPIPSS_ADC_RDATA_REG2 getscom failed with rc = 0x%08x",
                      rc);
-            apss_set_ffdc(&(args->error), SPIPSS_ADC_RDATA_REG2, GPE_RC_SCOM_GET_FAILED, rc);
+            gpe_set_ffdc(&(args->error), SPIPSS_ADC_RDATA_REG2, GPE_RC_SCOM_GET_FAILED, rc);
             break;
         }
 
@@ -248,7 +248,7 @@ void apss_continue_pwr_meas_read(ipc_msg_t* cmd, void* arg)
         {
             PK_TRACE("apss_continue_pwr_meas_read: SPIPSS_ADC_RDATA_REG3 getscom failed with rc = 0x%08x",
                      rc);
-            apss_set_ffdc(&(args->error), SPIPSS_ADC_RDATA_REG3, GPE_RC_SCOM_GET_FAILED, rc);
+            gpe_set_ffdc(&(args->error), SPIPSS_ADC_RDATA_REG3, GPE_RC_SCOM_GET_FAILED, rc);
             break;
         }
     } while(0);
@@ -258,7 +258,7 @@ void apss_continue_pwr_meas_read(ipc_msg_t* cmd, void* arg)
     if(rc)
     {
         PK_TRACE("apss_continue_pwr_meas_read: Failed to send response back. Halting GPE0", rc);
-        apss_set_ffdc(&(args->error), 0x00, GPE_RC_IPC_SEND_FAILED, rc);
+        gpe_set_ffdc(&(args->error), 0x00, GPE_RC_IPC_SEND_FAILED, rc);
         pk_halt();
     }
 }
@@ -315,7 +315,7 @@ void apss_complete_pwr_meas_read(ipc_msg_t* cmd, void* arg)
         {
             PK_TRACE("apss_complete_pwr_meas_read: TOD_VALUE_REG getscom failed. rc = 0x%08x",
                      rc);
-            apss_set_ffdc(&(args->error), TOD_VALUE_REG, GPE_RC_SCOM_GET_FAILED, rc);
+            gpe_set_ffdc(&(args->error), TOD_VALUE_REG, GPE_RC_SCOM_GET_FAILED, rc);
             break;
         }
 
@@ -326,7 +326,7 @@ void apss_complete_pwr_meas_read(ipc_msg_t* cmd, void* arg)
     if(rc)
     {
         PK_TRACE("apss_complete_pwr_meas_read: Failed to send response back. Halting GPE0", rc);
-        apss_set_ffdc(&(args->error), 0x00, GPE_RC_IPC_SEND_FAILED, rc);
+        gpe_set_ffdc(&(args->error), 0x00, GPE_RC_IPC_SEND_FAILED, rc);
         pk_halt();
     }
 }

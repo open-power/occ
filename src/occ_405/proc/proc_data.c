@@ -352,7 +352,7 @@ void proc_core_init( void )
         //Initializes the GpeRequest object for low core data collection
         l_rc = gpe_request_create(&G_low_cores.gpe_req,            // GpeRequest for the task
                                   &G_async_gpe_queue0,             // Queue
-                                  IPC_ST_CORE_DATA_LOW_FUNCID,     // Function ID
+                                  IPC_ST_GET_CORE_DATA_FUNCID,     // Function ID
                                   &G_low_cores_data_parms,         // Task parameters
                                   SSX_WAIT_FOREVER,                // Timeout (none)
                                   NULL,                            // Callback
@@ -389,10 +389,10 @@ void proc_core_init( void )
         }
 
         //Initializes high cores data GpeRequest object
-        l_rc = gpe_request_create(&G_high_cores.gpe_req,            // GpeRequest for the task
+        l_rc = gpe_request_create(&G_high_cores.gpe_req,           // GpeRequest for the task
                                   &G_async_gpe_queue0,             // Queue
-                                  IPC_ST_CORE_DATA_HIGH_FUNCID,    // Function ID
-                                  &G_high_cores_data_parms,         // Task parameters
+                                  IPC_ST_GET_CORE_DATA_FUNCID,     // Function ID
+                                  &G_high_cores_data_parms,        // Task parameters
                                   SSX_WAIT_FOREVER,                // Timeout (none)
                                   NULL,                            // Callback
                                   NULL,                            // Callback arguments

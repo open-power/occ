@@ -1,7 +1,7 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_gpe0/apss_util.c $                                    */
+/* $Source: src/occ_gpe0/gpe_util.c $                                     */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
@@ -26,19 +26,19 @@
 #include "pk.h"
 #include "ppe42_scom.h"
 #include "pss_constants.h"
-#include "apss_util.h"
+#include "gpe_util.h"
 #define SPIPSS_P2S_ONGOING_MASK 0x8000000000000000
 
 /*
  * Function Specification
  *
- * Name: apss_set_ffdc
+ * Name: gpe_set_ffdc
  *
  * Description: Fills up the error struct with the given data.
  *
  * End Function Specification
  */
-void apss_set_ffdc(GpeErrorStruct *o_error, uint32_t i_addr, uint32_t i_rc, uint64_t i_ffdc)
+void gpe_set_ffdc(GpeErrorStruct *o_error, uint32_t i_addr, uint32_t i_rc, uint64_t i_ffdc)
 {
 
     o_error->addr = i_addr;
@@ -83,7 +83,7 @@ int wait_spi_completion(GpeErrorStruct *error, uint32_t reg, uint8_t timeout)
     {
         PK_TRACE("gpe0:wait_spi_completion failed: Invalid Register 0x%08x", reg);
         rc = GPE_RC_INVALID_REG;
-        apss_set_ffdc(error, reg, rc, 0x00);
+        gpe_set_ffdc(error, reg, rc, 0x00);
     }
     else
     {
@@ -94,7 +94,7 @@ int wait_spi_completion(GpeErrorStruct *error, uint32_t reg, uint8_t timeout)
             if(rc)
             {
                 PK_TRACE("gpe0:wait_spi_completion failed with rc = 0x%08x", rc);
-                apss_set_ffdc(error, reg, GPE_RC_SCOM_GET_FAILED, rc);
+                gpe_set_ffdc(error, reg, GPE_RC_SCOM_GET_FAILED, rc);
                 rc = GPE_RC_SCOM_GET_FAILED;
                 break;
             }
@@ -118,7 +118,7 @@ int wait_spi_completion(GpeErrorStruct *error, uint32_t reg, uint8_t timeout)
     if (i >= timeout)
     {
         PK_TRACE("gpe0:wait_spi_completion Timed out waiting for p2s_ongoing to clear.");
-        apss_set_ffdc(error, reg, GPE_RC_SPI_TIMEOUT, rc);
+        gpe_set_ffdc(error, reg, GPE_RC_SPI_TIMEOUT, rc);
         rc = GPE_RC_SPI_TIMEOUT;
     }
 

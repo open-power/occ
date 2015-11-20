@@ -22,7 +22,8 @@
 # permissions and limitations under the License.
 #
 # IBM_PROLOG_END_TAG
-TOP-C-SOURCES = gpe0_main.c pk_app_irq_table.c ipc_func_tables.c apss_read.c apss_util.c apss_init.c core_data.c
+TOP-C-SOURCES = gpe0_main.c pk_app_irq_table.c ipc_func_tables.c apss_read.c \
+                apss_init.c gpe_util.c core_data.c gpe_core_data.c
 TOP-S-SOURCES =
 
 TOP_OBJECTS = $(TOP-C-SOURCES:.c=.o) $(TOP-S-SOURCES:.S=.o)

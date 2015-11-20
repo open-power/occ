@@ -30,13 +30,21 @@ uint32_t get_core_data(uint32_t i_core,
                        CoreData* o_data)
 {
     uint32_t rc = 0;
-    uint32_t size = sizeof(CoreData) / 8;
+/*    uint32_t size = sizeof(CoreData) / 8;
     uint64_t* ptr = (uint64_t*)o_data;
     uint32_t i = 0;
-    for(i = 0; i < size; ++i)
-    {
-        ptr[i] = 0;
-    }
+*/
+    // Fake Sensor Initialization for testing
+
+    o_data->dts.core[0].fields.reading = 0x200+i_core*2;
+    o_data->dts.core[1].fields.reading = 0x200+i_core*2+1;
+
+    o_data->dts.cache.fields.reading   = 0x100+i_core;
+
+    o_data->dts.core[0].fields.valid = 1;
+    o_data->dts.core[1].fields.valid = 1;
+    o_data->dts.cache.fields.valid   = 1;
+
 
     /*   TODO RTC 141391 - No simics support to test this yet.
     uint32_t coreSelect = CHIPLET_CORE_ID(i_core);

@@ -29,7 +29,7 @@
 #include <occ_common.h>
 #include <ssx.h>
 #include "rtls.h"
-#include "core_data.h"
+#include "proc_shared.h"
 
 //Returns 0 if the specified core is not present. Otherwise, returns none-zero.
 #define CORE_PRESENT(occ_core_id) \

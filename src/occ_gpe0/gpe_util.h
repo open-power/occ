@@ -1,7 +1,7 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_gpe0/apss_util.h $                                    */
+/* $Source: src/occ_gpe0/gpe_util.h $                                     */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
@@ -31,7 +31,7 @@
 #include <ipc_structs.h>
 #include <ipc_async_cmd.h>
 
-void apss_set_ffdc(GpeErrorStruct *o_error, uint32_t i_addr, uint32_t i_rc, uint64_t i_ffdc);
+void gpe_set_ffdc(GpeErrorStruct *o_error, uint32_t i_addr, uint32_t i_rc, uint64_t i_ffdc);
 
 int wait_spi_completion(GpeErrorStruct *error, uint32_t reg, uint8_t timeout);
 

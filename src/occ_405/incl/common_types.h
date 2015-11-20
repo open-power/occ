@@ -28,6 +28,7 @@
 
 #include <stdint.h>
 #include <core_data.h>
+#include <proc_shared.h>
 #ifdef USE_SSX_APP_CFG_H
 #include <ssx_app_cfg.h>
 #endif
@@ -133,13 +134,6 @@ typedef struct ipc_scom_op
     uint8_t     read;   // Read (1) or write (0)
     int         rc;     // Error of SCOM operation
 } ipc_scom_op_t;
-
-typedef struct ipc_core_data_parms
-{
-    CoreData*  data;
-    uint32_t   core_num;
-    uint32_t   rc;
-} ipc_core_data_parms_t;
 
 extern uint32_t __READ_ONLY_DATA_LEN__;
 extern uint32_t __WRITEABLE_DATA_ADDR__;

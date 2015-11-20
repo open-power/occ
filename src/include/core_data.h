@@ -156,6 +156,7 @@ typedef struct
  * @param[out] Data pointer for the result
  * @return result of scom operation
  */
+
 uint32_t  get_core_data(uint32_t i_core, CoreData* o_data);
 
 #endif  /* __GPE_CORE_DATA_H__ */

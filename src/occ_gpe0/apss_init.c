@@ -28,7 +28,7 @@
 #include "ipc_async_cmd.h"
 #include "pss_constants.h"
 #include <apss_structs.h>       //H file common with occ_405
-#include "apss_util.h"
+#include "gpe_util.h"
 
 /*
  * Function Specification
@@ -51,7 +51,7 @@ uint32_t apss_start_spi_command(initGpioArgs_t * args, uint8_t i_noWait)
     {
         PK_TRACE("apss_start_spi_command: SPIPSS_P2S_COMMAND_REG putscom failed. rc = 0x%08x",
                  rc);
-        apss_set_ffdc(&(args->error), SPIPSS_P2S_COMMAND_REG, rc, 0x8000000000000000);
+        gpe_set_ffdc(&(args->error), SPIPSS_P2S_COMMAND_REG, rc, 0x8000000000000000);
     }
     else
     {
@@ -113,7 +113,7 @@ void apss_init_gpio(ipc_msg_t* cmd, void* arg)
         if (rc)
         {
             PK_TRACE("apss_init_gpio: SPIPSS_P2S_CTRL_REG0 putscom failed. rc = 0x%08x", rc);
-            apss_set_ffdc(&(args->error), SPIPSS_P2S_CTRL_REG0, rc, regValue);
+            gpe_set_ffdc(&(args->error), SPIPSS_P2S_CTRL_REG0, rc, regValue);
             break;
         }
         // bridge_enable, clock_divider=7, 2 frames
@@ -122,7 +122,7 @@ void apss_init_gpio(ipc_msg_t* cmd, void* arg)
         if (rc)
         {
             PK_TRACE("apss_init_gpio: SPIPSS_P2S_CTRL_REG1 putscom failed. rc = 0x%08x", rc);
-            apss_set_ffdc(&(args->error), SPIPSS_P2S_CTRL_REG1, rc, regValue);
+            gpe_set_ffdc(&(args->error), SPIPSS_P2S_CTRL_REG1, rc, regValue);
             break;
         }
         // inter_frame_delay=50 (5usec)
@@ -131,7 +131,7 @@ void apss_init_gpio(ipc_msg_t* cmd, void* arg)
         if (rc)
         {
             PK_TRACE("apss_init_gpio: SPIPSS_P2S_CTRL_REG2 putscom failed. rc = 0x%08x", rc);
-            apss_set_ffdc(&(args->error), SPIPSS_P2S_CTRL_REG2, rc, regValue);
+            gpe_set_ffdc(&(args->error), SPIPSS_P2S_CTRL_REG2, rc, regValue);
             break;
         }
 
@@ -151,7 +151,7 @@ void apss_init_gpio(ipc_msg_t* cmd, void* arg)
             {
                 PK_TRACE("apss_init_gpio: SPIPSS_P2S_WDATA_REG putscom failed. value:0x%X. rc = 0x%08x",
                          regValue, rc);
-                apss_set_ffdc(&(args->error), SPIPSS_P2S_WDATA_REG, rc, regValue);
+                gpe_set_ffdc(&(args->error), SPIPSS_P2S_WDATA_REG, rc, regValue);
                 break;
             }
 
@@ -176,7 +176,7 @@ void apss_init_gpio(ipc_msg_t* cmd, void* arg)
             {
                 PK_TRACE("apss_init_gpio: SPIPSS_P2S_WDATA_REG putscom failed. value:0x%X. rc = 0x%08x",
                          regValue, rc);
-                apss_set_ffdc(&(args->error), SPIPSS_P2S_WDATA_REG, rc, regValue);
+                gpe_set_ffdc(&(args->error), SPIPSS_P2S_WDATA_REG, rc, regValue);
                 break;
             }
             // Start SPI transaction
@@ -200,7 +200,7 @@ void apss_init_gpio(ipc_msg_t* cmd, void* arg)
             {
                 PK_TRACE("apss_init_gpio: SPIPSS_P2S_WDATA_REG putscom failed. value:0x%X. rc = 0x%08x",
                          regValue, rc);
-                apss_set_ffdc(&(args->error), SPIPSS_P2S_WDATA_REG, rc, regValue);
+                gpe_set_ffdc(&(args->error), SPIPSS_P2S_WDATA_REG, rc, regValue);
                 break;
             }
 
@@ -230,7 +230,7 @@ void apss_init_gpio(ipc_msg_t* cmd, void* arg)
     {
         PK_TRACE("apss_init_gpio: Failed to send response back. rc = 0x%08x. Halting GPE0",
                  ipc_send_rc);
-        apss_set_ffdc(&(args->error), 0x00, ipc_send_rc, regValue);
+        gpe_set_ffdc(&(args->error), 0x00, ipc_send_rc, regValue);
         pk_halt();
     }
 
@@ -282,7 +282,7 @@ void apss_init_mode(ipc_msg_t* cmd, void* arg)
         if (rc)
         {
             PK_TRACE("apss_init_mode: SPIPSS_P2S_CTRL_REG0 putscom failed. rc = 0x%08x", rc);
-            apss_set_ffdc(&(args->error), SPIPSS_P2S_CTRL_REG0, rc, regValue);
+            gpe_set_ffdc(&(args->error), SPIPSS_P2S_CTRL_REG0, rc, regValue);
             break;
         }
 
@@ -292,7 +292,7 @@ void apss_init_mode(ipc_msg_t* cmd, void* arg)
         if (rc)
         {
             PK_TRACE("apss_init_mode: SPIPSS_P2S_CTRL_REG1 putscom failed. rc = 0x%08x", rc);
-            apss_set_ffdc(&(args->error), SPIPSS_P2S_CTRL_REG1, rc, regValue);
+            gpe_set_ffdc(&(args->error), SPIPSS_P2S_CTRL_REG1, rc, regValue);
             break;
         }
         // inter_frame_delay=25 (2.5usec)
@@ -301,7 +301,7 @@ void apss_init_mode(ipc_msg_t* cmd, void* arg)
         if (rc)
         {
             PK_TRACE("apss_init_mode: SPIPSS_P2S_CTRL_REG2 putscom failed. rc = 0x%08x", rc);
-            apss_set_ffdc(&(args->error), SPIPSS_P2S_CTRL_REG2, rc, regValue);
+            gpe_set_ffdc(&(args->error), SPIPSS_P2S_CTRL_REG2, rc, regValue);
             break;
         }
 
@@ -325,7 +325,7 @@ void apss_init_mode(ipc_msg_t* cmd, void* arg)
             //Invalid mode.
             PK_TRACE("apss_init_mode: Given invalid APSS Mode. Mode:0x%X", args->config.mode);
             rc = GPE_RC_INVALID_APSS_MODE;
-            apss_set_ffdc(&(args->error), 0x00, rc, args->config.mode);
+            gpe_set_ffdc(&(args->error), 0x00, rc, args->config.mode);
             ipc_rc = IPC_RC_CMD_FAILED;
             break;
         }
@@ -335,7 +335,7 @@ void apss_init_mode(ipc_msg_t* cmd, void* arg)
         {
             PK_TRACE("apss_init_mode: SPIPSS_P2S_WDATA_REG putscom to set MODE failed. value:0x%X. rc = 0x%08x",
                      regValue, rc);
-            apss_set_ffdc(&(args->error), SPIPSS_P2S_WDATA_REG, rc, regValue);
+            gpe_set_ffdc(&(args->error), SPIPSS_P2S_WDATA_REG, rc, regValue);
             break;
         }
 
@@ -346,7 +346,7 @@ void apss_init_mode(ipc_msg_t* cmd, void* arg)
         {
             PK_TRACE("apss_init_mode: SPIPSS_P2S_COMMAND_REG putscom failed. rc = 0x%08x",
                      rc);
-            apss_set_ffdc(&(args->error), SPIPSS_P2S_COMMAND_REG, rc, 0x8000000000000000);
+            gpe_set_ffdc(&(args->error), SPIPSS_P2S_COMMAND_REG, rc, 0x8000000000000000);
         }
 
         //Wait 20usec for apss becoming ready to send out the frame of composite mode
@@ -365,7 +365,7 @@ void apss_init_mode(ipc_msg_t* cmd, void* arg)
     {
         PK_TRACE("apss_init_mode: Failed to send response back to mode initialization. Halting GPE0",
                  ipc_send_rc);
-        apss_set_ffdc(&(args->error), 0x00, ipc_send_rc, regValue);
+        gpe_set_ffdc(&(args->error), 0x00, ipc_send_rc, regValue);
         pk_halt();
     }
 
