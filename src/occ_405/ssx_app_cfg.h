@@ -1,3 +1,4 @@
+
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
@@ -101,8 +102,6 @@ do {                                                                \
 /// 0-3 -> GPE, 4 -> 405
 #define APPCFG_OCC_INSTANCE_ID 4
 
-
-#define PROC_DEBUG 1
 // Common configuration groups for verification. Bypass time-consuming setup
 // or setup done by procedures for simulation environments, and set up special
 // I/O configurations for simulation environments.

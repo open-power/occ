@@ -35,20 +35,6 @@
 #define CORE_PRESENT(occ_core_id) \
          ((CORE0_PRESENT_MASK >> occ_core_id) & G_present_cores)
 
-//Takes an OCC core id and converts it to a core id that
-//can be used by the hardware. The caller needs to send in
-//a valid core id. Since type is uchar so there is no need to check for
-//case less than 0. If core id is invalid then returns unconfigured core 24.
-#define CORE_OCC2HW(occ_core_id) \
-        ((occ_core_id <= 23) ? G_occ2hw_core_id[occ_core_id] : 24)
-
-//Takes a hardware core id and returns a OCC core id.
-//The caller needs to send in a valid core id. Since type is uchar so
-//there is no need to check for case less than 0. If core id
-//is invalid then returns unconfigured core 24.
-#define CORE_HW2OCC(hw_core_id) \
-    ((hw_core_id <= 23) ? G_hw2occ_core_id[hw_core_id] : 24)
-
 #define ALL_CORES_MASK          0xffffff00
 #define CORE0_PRESENT_MASK      0x80000000ul
 #define CORE0_PRESENT_MASK_GPE  0x8000000000000000ull
@@ -97,7 +83,7 @@ enum eOccProcCores
 };
 
 //Processor data collect structures used for task data pointers
-//gpe_req.request.parameter points to GpeGetCoreDataParms
+//gpe_req.cmd_data points to ipc_core_data_parms_t
 struct bulk_core_data_task {
         uint8_t start_core;
         uint8_t current_core;
@@ -108,27 +94,17 @@ struct bulk_core_data_task {
 typedef struct bulk_core_data_task bulk_core_data_task_t;
 
 //Global low and high cores structures used for task data pointers
-// TEMP -- CoreData / PoreFlex objects no longer exist
 extern bulk_core_data_task_t G_low_cores;
 extern bulk_core_data_task_t G_high_cores;
 
 //Global G_present_cores is bitmask of all OCC core numbering
 extern uint32_t G_present_cores;
 
-//Global G_present_hw_cores is bitmask of all hardware cores
-extern uint32_t G_present_hw_cores;
-extern uint8_t G_occ2hw_core_id[MAX_NUM_HW_CORES];
-extern uint8_t G_hw2occ_core_id[MAX_NUM_HW_CORES];
-
 //AMEC needs to know when data for a core has been collected.
 extern uint32_t G_updated_core_mask;
 
 // External reference to empath error mask
 extern uint32_t G_empath_error_core_mask;
-
-//Returns 0 if the specified core is not present. Otherwise, returns none-zero.
-#define CORE_PRESENT(occ_core_id) \
-         ((CORE0_PRESENT_MASK >> occ_core_id) & G_present_cores)
 
 //Returns 0 if the specified core is not updated. Otherwise, returns none-zero.
 #define CORE_UPDATED(occ_core_id) \
@@ -147,9 +123,6 @@ void task_core_data( task_t * i_task );
 
 //Initialize structures for collecting core data.
 void proc_core_init( void ) INIT_SECTION;
-
-//Collect fast core data for all configured cores on every tick
-void task_fast_core_data( task_t * i_task );
 
 //Returns a pointer to the most up-to-date bulk core data for the core
 //associated with the specified OCC core id.

@@ -593,7 +593,7 @@ void master_occ_init()
     }
 
 
-    MAIN_TRAC_INFO("master_occ_init: GPE_apss_initialize_gpio completed w/rc=0x%08x\n",
+    MAIN_TRAC_INFO("master_occ_init: GPE_apss_initialize_gpio completed w/rc=0x%08x",
               l_request.request.completion_state);
 
 

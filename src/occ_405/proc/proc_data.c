@@ -80,12 +80,6 @@ uint32_t G_present_cores = 0;
 //(1 = present, 0 = not present. Core 0 has the most significant bit)
 uint32_t G_present_hw_cores = 0;
 
-//OCC to HW core id mapping array
-uint8_t G_occ2hw_core_id[MAX_NUM_HW_CORES] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23 };
-
-//HW to OCC core id mapping array
-uint8_t G_hw2occ_core_id[MAX_NUM_HW_CORES] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23 };
-
 //Flag to keep track of one time trace for GPE running case
 //for task core data.
 bool    G_queue_not_idle_traced = FALSE;
@@ -122,8 +116,6 @@ void task_core_data( task_t * i_task )
     bulk_core_data_task_t * l_bulk_core_data_ptr = (bulk_core_data_task_t *)i_task->data_ptr;
     ipc_core_data_parms_t * l_parms = (ipc_core_data_parms_t*)(l_bulk_core_data_ptr->gpe_req.cmd_data);
 
-    INTR_TRAC_INFO("task_core_data: core %d", l_bulk_core_data_ptr->current_core);
-
     do
     {
         //First, check to see if the previous GPE request still running
@@ -131,11 +123,11 @@ void task_core_data( task_t * i_task )
         //asynchronous request queues
         if( !(async_request_is_idle(&l_bulk_core_data_ptr->gpe_req.request)) )
         {
-            //This should not happen unless there's a problem
+            //This should not happen unless there's a timing problem
             //Trace 1 time
             if( !G_queue_not_idle_traced )
             {
-                TRAC_ERR("Core data GPE is still running \n");
+                INTR_TRAC_ERR("Previous core data task has not yet completed");
                 G_queue_not_idle_traced = TRUE;
             }
             break;
@@ -147,11 +139,11 @@ void task_core_data( task_t * i_task )
             &&
             ((CURRENT_TICK & (MAX_NUM_TICKS - 1)) != 0) )
         {
-            PROC_DBG("Not collect data. Need to wait for tick.\n");
+            PROC_DBG("Data will not be collected, waiting for tick cycle to restart");
             break;
         }
 
-        //Check to see if the previously GPE request has successfully completed
+        //Check to see if the previous GPE request has successfully completed
         //A request is not considered complete until both the engine job
         //has finished without error and any callback has run to completion.
 
@@ -163,18 +155,17 @@ void task_core_data( task_t * i_task )
             //with the global one. The gpe routine will write new data into
             //a buffer that is not being accessed by the RTLoop code.
 
-            PROC_DBG( "Swap core_data_ptr [%x] with the global one\n",
+            PROC_DBG( "Swap core_data_ptr [%x] with the global one",
                      l_bulk_core_data_ptr->current_core );
 
             //debug only
 #ifdef PROC_DEBUG
-            print_core_status(l_bulk_core_data_ptr->current_core);
+//            print_core_status(l_bulk_core_data_ptr->current_core);
             print_core_data_sensors(l_bulk_core_data_ptr->current_core);
 #endif
 
             l_temp = l_bulk_core_data_ptr->core_data_ptr;
-            l_bulk_core_data_ptr->core_data_ptr =
-                    G_core_data_ptrs[l_bulk_core_data_ptr->current_core];
+            l_bulk_core_data_ptr->core_data_ptr = G_core_data_ptrs[l_bulk_core_data_ptr->current_core];
             G_core_data_ptrs[l_bulk_core_data_ptr->current_core] = l_temp;
 
             //Core data has been collected so set the bit in global mask.
@@ -208,7 +199,7 @@ void task_core_data( task_t * i_task )
         //be idle during this time it would have collected the data.
         if( CORE_PRESENT(l_bulk_core_data_ptr->current_core) )
         {
-            PROC_DBG("Schedule GpeRequest for core %d\n", l_bulk_core_data_ptr->current_core);
+            PROC_DBG("Schedule GpeRequest for core %d", l_bulk_core_data_ptr->current_core);
 
             //1. Setup the get core data parms
             l_parms->core_num = l_bulk_core_data_ptr->current_core;
@@ -238,14 +229,14 @@ void task_core_data( task_t * i_task )
                 if (G_get_per_core_data_max_schedule_intervals[l_current_core] < l_elapsed_us)
                 {
                     G_get_per_core_data_max_schedule_intervals[l_current_core] = l_elapsed_us;
-                    TRAC_INFO("New max get_per_core_data interval: core=%d, interval(us)=%d",
+                    INTR_TRAC_INFO("New max get_per_core_data interval: core=%d, interval(us)=%d",
                               l_current_core, l_elapsed_us);
                 }
                 // Also sniff if the request has actually completed, it is checked above but
                 // the schedule proceeds regardless which could be dangerous...
                 if (!async_request_completed(&l_bulk_core_data_ptr->gpe_req.request))
                 {
-                    TRAC_ERR("Async get_per_core_data task for core=%d not complete!",
+                    INTR_TRAC_ERR("Async get_per_core_data task for core=%d not complete!",
                              l_current_core);
                 }
             }
@@ -258,15 +249,15 @@ void task_core_data( task_t * i_task )
             if( l_rc != 0 )
             {
                 // Error in schedule gpe get core data
-                TRAC_ERR("Failed GpeRequest schedule core [RC:0x%08X] \n", l_rc);
+                INTR_TRAC_ERR("Failed GpeRequest schedule core [RC:0x%08X]", l_rc);
 
                 /*
                 * @errortype
                 * @moduleid    PROC_TASK_CORE_DATA_MOD
                 * @reasoncode  SSX_GENERIC_FAILURE
-                * @userdata1   pore_flex_schedule return code
+                * @userdata1   gpe_request_schedule return code
                 * @userdata4   OCC_NO_EXTENDED_RC
-                * @devdesc     SSX PORE related failure
+                * @devdesc     SSX IPC related failure
                 */
                 l_err = createErrl(
                         PROC_TASK_CORE_DATA_MOD,            //modId
@@ -322,10 +313,10 @@ void proc_core_init( void )
 
         // TEMP/TODO: For now, we will use a generic IPC command to do this and other
         //            scoms until the HW team can give us the hardware procedures.
-        G_core_stat_scom_op.addr = 0x6c090;
-        G_core_stat_scom_op.size = 8;
-        G_core_stat_scom_op.data = 0xFFFFFF00;
-        G_core_stat_scom_op.read = TRUE;
+        G_core_stat_scom_op.addr = 0x6c090;             // SCOM address of Core Configuration Status Register
+        G_core_stat_scom_op.size = 8;                   // Size of data buffer
+        G_core_stat_scom_op.data = 0xFFFFFF0000000000;  // 24 cores present
+        G_core_stat_scom_op.read = TRUE;                // We need to read the reg
 
         //Initializes the GpeRequest object for reading the configuration status register
         l_rc = gpe_request_create(&l_req,                          // GpeRequest for the task
@@ -337,16 +328,17 @@ void proc_core_init( void )
                                   NULL,                            // Callback arguments
                                   0 );                             // Options
         // Schedule the request
+        // TEMP -- Currently doesn't work in Simics
         //l_rc = gpe_request_schedule(&l_req);
 
-        MAIN_TRAC_INFO("proc_core_init: generic scom read back 0x%08X%08X", G_core_stat_scom_op.data>>32, G_core_stat_scom_op.data);
+        MAIN_TRAC_INFO("proc_core_init: generic scom read back 0x%08X%08X", (uint32_t) (G_core_stat_scom_op.data>>32), (uint32_t) G_core_stat_scom_op.data);
 
         // TODO: Store the present cores here
-        G_present_hw_cores = G_core_stat_scom_op.data & HW_CORES_MASK;
+        G_present_hw_cores = ((uint32_t) (G_core_stat_scom_op.data >> 32)) & HW_CORES_MASK;
 
         G_present_cores = G_present_hw_cores;
 
-        PROC_DBG("G_present_hw_cores =[%x] and G_present_cores =[%x] \n",
+        PROC_DBG("G_present_hw_cores =[%x] and G_present_cores =[%x]",
                 G_present_hw_cores, G_present_cores);
 
         //Initializes the GpeRequest object for low core data collection
@@ -451,7 +443,7 @@ CoreData * proc_get_bulk_core_data_ptr( const uint8_t i_occ_core_id )
     //so there is no need to check for case less than 0.
     //If core id is invalid then returns NULL.
 
-    if( i_occ_core_id <= 11 )
+    if( i_occ_core_id < MAX_NUM_FW_CORES  )
     {
         //Returns a pointer to the most up-to-date bulk core data.
         return G_core_data_ptrs[i_occ_core_id];
@@ -459,7 +451,7 @@ CoreData * proc_get_bulk_core_data_ptr( const uint8_t i_occ_core_id )
     else
     {
         //Core id outside the range
-        TRAC_ERR("Invalid OCC core id [0x%x]", i_occ_core_id);
+        TRAC_ERR("proc_get_bulk_core_data_ptr: Invalid OCC core id [0x%x]", i_occ_core_id);
         return( NULL );
     }
 }
@@ -479,19 +471,21 @@ void print_core_data_sensors(uint8_t core)
 
     if( l_core_data != NULL )
     {
-        PROC_DBG("\n-------------------------------\n");
-        PROC_DBG("Core [%x] Sensors Data \n", core);
+        PROC_DBG("-------------------------------");
+        PROC_DBG("Core [%x] Sensors Data", core);
+        PROC_DBG("Sensor Core[0] reading: 0x%04X [Valid:%d]", l_core_data->dts.core[0].fields.reading, l_core_data->dts.core[0].fields.valid);
+        PROC_DBG("Sensor Core[1] reading: 0x%04X [Valid:%d]", l_core_data->dts.core[1].fields.reading, l_core_data->dts.core[1].fields.valid);
+        PROC_DBG("Sensor Cache   reading: 0x%04X [Valid:%d]", l_core_data->dts.cache.fields.reading, l_core_data->dts.cache.fields.valid);
         // TODO: Commented these out b/c they take too long to run in task.
         //dumpHexString(&l_core_data->sensors_tod, sizeof(l_core_data->sensors_tod), "Sensor TOD");
         //dumpHexString(&l_core_data->sensors_v0, sizeof(l_core_data->sensors_v0), "Sensor VO");
         //dumpHexString(&l_core_data->sensors_v1, sizeof(l_core_data->sensors_v1), "Sensor V1");
         //dumpHexString(&l_core_data->sensors_v8, sizeof(l_core_data->sensors_v8), "Sensor V8");
         //dumpHexString(&l_core_data->sensors_v9, sizeof(l_core_data->sensors_v9), "Sensor V9");
-        PROC_DBG("\n");
     }
     else
     {
-        PROC_DBG("\n G_core_data_ptrs[%x] is NULL. This should not happen.\n", core);
+        PROC_DBG("G_core_data_ptrs[%x] is NULL. This should not happen.", core);
     }
     return;
 }
@@ -510,8 +504,8 @@ void print_core_status(uint8_t core)
 
     if( l_core_data != NULL )
     {
-        PROC_DBG("\n-------------------------\n");
-        PROC_DBG("Core [%x] status \n", core);
+        PROC_DBG("-------------------------");
+        PROC_DBG("Core [%x] status", core);
         // TODO: Commented these out b/c they take too long to run in task.
         //dumpHexString(&l_core_data->core_tod, sizeof(l_core_data->core_tod), "Core TOD");
         //dumpHexString(&l_core_data->core_raw_cycles, sizeof(l_core_data->core_raw_cycles), "Core Raw Cycles");
@@ -524,11 +518,10 @@ void print_core_status(uint8_t core)
         //dumpHexString(&l_core_data->core_mem_hler_b, sizeof(l_core_data->core_mem_hler_b), "Mem B");
         //dumpHexString(&l_core_data->mem_tod, sizeof(l_core_data->mem_tod), "Mem TOD");
         //dumpHexString(&l_core_data->mem_raw_cycles, sizeof(l_core_data->mem_raw_cycles), "Mem Raw Cycles");
-        PROC_DBG("\n");
     }
     else
     {
-        PROC_DBG("\n G_core_data_ptrs[%x] is NULL. This should not happen.\n", core);
+        PROC_DBG("G_core_data_ptrs[%x] is NULL. This should not happen.", core);
     }
     return;
 }

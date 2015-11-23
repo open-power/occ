@@ -1263,8 +1263,6 @@ errlHndl_t cmdh_processTmgtRequest (const cmdh_fsp_cmd_t * i_cmd_ptr,
     i_rsp_ptr->data_length[1] = 0;
     i_rsp_ptr->rc             = ERRL_RC_SUCCESS;
 
-    CMDH_TRAC_INFO("cmdh_processTmgtRequest: Received command type 0x%02X", l_cmd_type);
-
     // Run command function based on cmd_type
     switch(l_cmd_type)
     {
