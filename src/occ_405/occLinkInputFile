@@ -5,6 +5,7 @@ INPUT ( amec_data.o
         amec_part.o
         amec_sensors_fw.o
         amec_sensors_power.o
+        amec_sensors_core.o
         amec_slave_smh.o
         amec_tasks.o
         apss.o

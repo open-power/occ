@@ -26,7 +26,7 @@
 /******************************************************************************/
 /* Includes                                                                   */
 /******************************************************************************/
-#include <occ_common.h>
+//#include <occ_common.h>
 #include <ssx.h>
 #include <errl.h>               // Error logging
 #include "sensor.h"
@@ -43,6 +43,7 @@
 #include "amec_service_codes.h"
 #include <amec_sensors_core.h>
 #include "amec_perfcount.h"
+#include "proc_shared.h"
 
 /******************************************************************************/
 /* Globals                                                                    */
@@ -52,7 +53,6 @@
 /* Forward Declarations                                                       */
 /******************************************************************************/
 void amec_calc_dts_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_core);
-//void amec_calc_cpm_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_core); //CPM - Commented out as requested by Malcolm
 void amec_calc_freq_and_util_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_core);
 void amec_calc_ips_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_core);
 void amec_calc_spurr(uint8_t i_core);
@@ -60,48 +60,6 @@ void amec_calc_spurr(uint8_t i_core);
 //*************************************************************************
 // Code
 //*************************************************************************
-
-// Function Specification
-//
-// Name: amec_update_fast_core_data_sensors
-//
-// Description: Updates sensors that have data grabbed by the fast core data
-// task.
-//
-// Thread: RealTime Loop
-//
-// End Function Specification
-void amec_update_fast_core_data_sensors(void)
-{
-  // ------------------------------------------------------
-  // Update Fast Core Data Sensors
-  // ------------------------------------------------------
-  // SensorNameCx  = PCBS Local Pstate Freq Target (per core)
-  // TODclock      = TOD Clock?
-
-  // Need to comment this out because l_tod is always zero, which messes
-  // up proper sensor updates. Proper updating is done below in the core level
-  // sensor updates.
-
-  //gpe_fast_core_data_t * l_core = proc_get_fast_core_data_ptr();
-  // uint32_t l_tod = l_core->tod;
-
-  //if( l_core != NULL)
-  //{
-    // GPEtickdur0     = duration of last tick's PORE-GPE0 duration
-    // sensor_update( AMECSENSOR_PTR(TODclock0), CONVERT_UINT32_UINT8_UPPER_HIGH(l_tod) );
-    // sensor_update( AMECSENSOR_PTR(TODclock1), CONVERT_UINT32_UINT16_MIDDLE(l_tod) );
-    // sensor_update( AMECSENSOR_PTR(TODclock2), ((uint16_t) (CONVERT_UINT32_UINT8_LOWER_LOW(l_tod))) << 8);
-  //}
-
-  // TODO:  Don't know what to update from the PCBS LPstate Target Freq Status Reg
-  //for(int i=0; i++; i<MAX_NUM_HW_CORES)
-  //{
-  //  sensor_update(&sensor,
-  //                G_read_fast_core_data_ptr->core_data[i].pcbs_lpstate_freq_target_sr);
-  //}
-}
-
 
 // Function Specification
 //
@@ -114,10 +72,9 @@ void amec_update_fast_core_data_sensors(void)
 // End Function Specification
 void amec_update_proc_core_sensors(uint8_t i_core)
 {
-  gpe_bulk_core_data_t * l_core_data_ptr;
-  int i;
-  uint16_t               l_temp16 = 0;
-  uint32_t               l_temp32 = 0;
+  gpe_bulk_core_data_t *l_core_data_ptr;
+  uint16_t              l_temp16 = 0;
+  uint32_t              l_temp32 = 0;
 
   // Make sure the core is present, and that it has updated data.
   if(CORE_PRESENT(i_core) && CORE_UPDATED(i_core))
@@ -133,11 +90,7 @@ void amec_update_proc_core_sensors(uint8_t i_core)
     //-------------------------------------------------------
     amec_calc_dts_sensors(l_core_data_ptr, i_core);
 
-    //-------------------------------------------------------
-    //CPM - Commented out as requested by Malcolm
-    // ------------------------------------------------------
-    // amec_calc_cpm_sensors(l_core_data_ptr, i_core);
-
+/*
     //-------------------------------------------------------
     // Util / Freq
     //-------------------------------------------------------
@@ -146,12 +99,12 @@ void amec_update_proc_core_sensors(uint8_t i_core)
     {
         amec_calc_freq_and_util_sensors(l_core_data_ptr,i_core);
     }
-
+    
     //-------------------------------------------------------
     // Performance counter - This function should be called
     // after amec_calc_freq_and_util_sensors().
     //-------------------------------------------------------
-    amec_calc_dps_util_counters(i_core);
+    //amec_calc_dps_util_counters(i_core);
 
     //-------------------------------------------------------
     // IPS
@@ -165,7 +118,7 @@ void amec_update_proc_core_sensors(uint8_t i_core)
     //-------------------------------------------------------
     // SPURR
     //-------------------------------------------------------
-    amec_calc_spurr(i_core);
+    //amec_calc_spurr(i_core);
 
     // ------------------------------------------------------
     // Update PREVIOUS values for next time
@@ -188,7 +141,7 @@ void amec_update_proc_core_sensors(uint8_t i_core)
     {
       g_amec->proc[0].core[i_core].thread[i].prev_PC_RUN_Th_CYCLES = l_core_data_ptr->per_thread[i].run_cycles;
     }
-
+*/
     // Final step is to update TOD sensors
     // Extract 32 bits with 16usec resolution
     l_temp32 = (uint32_t)(G_dcom_slv_inbox_doorbell_rx.tod>>13);
@@ -205,6 +158,13 @@ void amec_update_proc_core_sensors(uint8_t i_core)
 }
 
 
+// Core Weight - Weight factor for core DTS used to calculate a core temp
+// TODO - fmk - to be changed once we have TMGT config data with weights.
+// Suggest adding core weight to g_amec struct
+// TEMP - Using the same weight for all cores.
+uint8_t     G_coreWeight = 2;
+uint8_t     G_quadWeight = 1;
+
 // Function Specification
 //
 // Name: amec_calc_dts_sensors
@@ -212,141 +172,93 @@ void amec_update_proc_core_sensors(uint8_t i_core)
 // Description: Compute core temperature. This function is called every
 // 2ms/core.
 //
+// PreCondition: The core is present.
+//
 // Thread: RealTime Loop
 //
 // End Function Specification
 void amec_calc_dts_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_core)
 {
-#define DTS_PER_CORE     4
+#define DTS_PER_CORE     2
 #define DTS_INVALID_MASK 0x0C00
 
-  uint32_t k, l_core_avg, l_core_hot, l_sensor_count;
-  uint32_t l_oha_status_reg = 0;
-  uint32_t l_pm_state_hist_reg = 0;
-  uint16_t l_dts[DTS_PER_CORE];
-  BOOLEAN  l_update_sensor = FALSE;
 
-  // Build up array of DTS values
-  // DTS sensors are in the format of     uint64_t dts0 : 12;
-  //                             uint64_t thermal_trip0 : 2;
-  //                                    uint64_t spare0 : 1;
-  //                                    uint64_t valid0 : 1;
-  //
-  // so we will need to convert them before they are used in loop below.
-  l_dts[0] = i_core_data_ptr->dts_cpm.sensors_v0.fields.dts0;
-  l_dts[1] = i_core_data_ptr->dts_cpm.sensors_v0.fields.dts1;
-  l_dts[2] = i_core_data_ptr->dts_cpm.sensors_v0.fields.dts2;
-  l_dts[3] = i_core_data_ptr->dts_cpm.sensors_v1.fields.dts4;
+  uint32_t      l_coreTemp = 0;
+  uint8_t       k = 0;
+  uint16_t      l_dts[DTS_PER_CORE];
+  uint16_t      l_quadDts = 0;
+  BOOLEAN       l_update_sensor = FALSE;
+  uint16_t      l_core_hot = 0;
+  uint8_t       l_dtsCnt = 0;   //Number of valid Core DTSs
 
-  // Read the low-order bytes of the OHA Status register
-  l_oha_status_reg = i_core_data_ptr->oha.oha_ro_status_reg.words.low_order;
+  //Clear DTS array.
+  memset((void *)&(l_dts[0]), 0, sizeof(l_dts));
 
-  // Read the high-order bytes of PM State History register for this core
-  l_pm_state_hist_reg = i_core_data_ptr->pcb_slave.pm_history.words.high_order;
-
-  // Check if we were able to collect core data
-  if(l_oha_status_reg & CORE_DATA_CORE_SENSORS_COLLECTED)
+  if (i_core_data_ptr != NULL)
   {
-      // Check if all DTS readings in the core are valid. The field sensors_v0
-      // contains core-related data
-      if(i_core_data_ptr->dts_cpm.sensors_v0.fields.valid0 ||
-         i_core_data_ptr->dts_cpm.sensors_v0.fields.valid1 ||
-         i_core_data_ptr->dts_cpm.sensors_v0.fields.valid2)
+    //the Core DTS temperatures are considered in the calculation only if:
+    //  - They are valid.
+    //  - Non-zero
+    //  - Non-negative
+    for (k = 0; k < DTS_PER_CORE; k++)
+    {
+      //Check validity
+      if (i_core_data_ptr->dts.core[k].fields.valid)
       {
-          l_update_sensor = TRUE;
-      }
-  }
-  // Check if we were able to collect L3 data
-  if(l_oha_status_reg & CORE_DATA_L3_SENSORS_COLLECTED)
-  {
-      // Check if DTS reading in the L3 is valid. The field sensors_v1 contains
-      // L3-related data
-      if(i_core_data_ptr->dts_cpm.sensors_v1.fields.valid4)
-      {
-          l_update_sensor = TRUE;
-      }
-  }
-  // Check if this core has been in fast winkle OR deep winkle
-  if(((l_pm_state_hist_reg & OCC_PM_STATE_MASK) == OCC_PAST_FAST_WINKLE) ||
-     ((l_pm_state_hist_reg & OCC_PM_STATE_MASK) == OCC_PAST_DEEP_WINKLE))
-  {
-      l_update_sensor = TRUE;
-  }
+        l_dts[k] = i_core_data_ptr->dts.core[k].fields.reading;
+        l_dtsCnt++;
 
-  // Update the thermal sensor associated with this core
-  if(l_update_sensor)
-  {
-      //calculate average temperature from all DTS's for this core
-      for(l_sensor_count = DTS_PER_CORE, l_core_hot = 0,
-          l_core_avg = 0, k = 0;
-          k < DTS_PER_CORE; k++)
-      {
         //Hardware bug workaround:  Temperatures reaching 0 degrees C
         //can show up as negative numbers.  To fix this, we discount
         //values that have the 2 MSB's set.
-        if((l_dts[k] & DTS_INVALID_MASK) == DTS_INVALID_MASK)
+        if(((l_dts[k] & DTS_INVALID_MASK) == DTS_INVALID_MASK) ||
+           (l_dts[k] == 0))
         {
-            l_dts[k] = 0;
+          l_dts[k] = 0;
+          l_dtsCnt--;
         }
 
-        l_core_avg += l_dts[k];
-        if(l_dts[k] > l_core_hot)
+        if (l_dts[k] > l_core_hot)
         {
-            l_core_hot = l_dts[k];
-        }
-        // Assume 0 degrees to mean bad sensor and don't let it bring the
-        // average reading down.
-        else if(l_dts[k] == 0)
-        {
-            l_sensor_count--;
+          l_core_hot = l_dts[k];
         }
       }
+    } //for loop
 
-      if(l_sensor_count == DTS_PER_CORE)
+    //The core DTSs are considered only if we have at least 1 valid core DTS and
+    //a non-zero G_coreWeight.
+    if (l_dtsCnt && G_coreWeight)
+    {
+      l_update_sensor = TRUE;
+    }
+
+    //The Quad DTS value is considered only if we have a valid Quad DTS and
+    //a non-zero quad weight.
+    if (i_core_data_ptr->dts.cache.fields.valid && G_quadWeight)
+    {
+      l_quadDts = i_core_data_ptr->dts.cache.fields.reading;
+      l_update_sensor = TRUE;
+    }
+
+    // Update the thermal sensor associated with this core
+    if(l_update_sensor)
+    {
+      //Formula:
+      //                (Cwt(CoreDTS1 + CoreDTS2) + (Qwt*QuadDTS))
+      //                ------------------------------------------
+      //                         (2*Cwt + Qwt)
+      if ((G_coreWeight && l_dtsCnt) || G_quadWeight)
       {
-        //For the common case, compiler converts this to a fast multiplication
-        //operation when one of the operands is a constant.
-        l_core_avg /= DTS_PER_CORE;
-      }
-      else if(l_sensor_count) //prevent div by 0 if all sensors are zero
-      {
-        //otherwise, use the slower division routine when both operands are
-        //unknown at compile time.
-        l_core_avg /= l_sensor_count;
+        l_coreTemp = ((G_coreWeight *(l_dts[0] + l_dts[1])) + (G_quadWeight * l_quadDts))
+                     / ((l_dtsCnt * G_coreWeight) + G_quadWeight);
       }
 
       // Update sensors & Interim Data
-      sensor_update( AMECSENSOR_ARRAY_PTR(TEMP2MSP0C0,i_core), l_core_avg);
+      sensor_update( AMECSENSOR_ARRAY_PTR(TEMP4MSP0C0,i_core), l_coreTemp);
       g_amec->proc[0].core[i_core].dts_hottest = l_core_hot;
-  }
-}
-
-
-//CPM - Commented out as requested by Malcolm
-/* void amec_calc_cpm_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_core)
-{
-#define CPM_PER_CORE     4
-
-  uint32_t k, l_cpm_min = 0xffffffff;
-  uint16_t l_cpm[CPM_PER_CORE];
-
-  l_cpm[0] = i_core_data_ptr->dts_cpm.sensors_v8.fields.encoded_cpm0;
-  l_cpm[1] = i_core_data_ptr->dts_cpm.sensors_v8.fields.encoded_cpm1;
-  l_cpm[2] = i_core_data_ptr->dts_cpm.sensors_v8.fields.encoded_cpm2;
-  l_cpm[3] = i_core_data_ptr->dts_cpm.sensors_v9.fields.encoded_cpm4;
-
-  //calculate min CPM from all CPM's for this core
-  for(k = 0; k < CPM_PER_CORE; k++)
-  {
-    if(l_cpm[k] < l_cpm_min)
-    {
-      l_cpm_min = l_cpm[k];
     }
   }
-
-  sensor_update( AMECSENSOR_ARRAY_PTR(CPM2MSP0C0,i_core), l_cpm_min);
 }
-*/
 
 // Function Specification
 //
@@ -358,6 +270,8 @@ void amec_calc_dts_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_cor
 // Thread: RealTime Loop
 //
 // End Function Specification
+// TEMP - Not supported yet.
+#if 0 
 void amec_calc_freq_and_util_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_core)
 {
   BOOLEAN  l_core_sleep_winkle = FALSE;
@@ -876,6 +790,7 @@ void amec_calc_spurr(uint8_t i_core)
      sensor_update( AMECSENSOR_ARRAY_PTR(SPURR2MSP0C0,i_core), (uint16_t) temp32);
    }
 }
+#endif 
 
 /*----------------------------------------------------------------------------*/
 /* End                                                                        */

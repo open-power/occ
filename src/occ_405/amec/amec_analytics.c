@@ -249,7 +249,7 @@ void amec_analytics_main(void)
                 g_amec->g44_avg[(i*MSA)+14] = g_amec->g44_avg[(i*MSA)+14] +
                     tempaccum/100;
                 g_amec->g44_avg[(i*MSA)+15] = g_amec->g44_avg[(i*MSA)+15] +
-                    (UINT32)g_amec->proc[i].temp2ms.sample;    // hottest processor core temperature (average??)
+                    (UINT32)g_amec->proc[i].temp4ms.sample;    // hottest processor core temperature (average??)
 
 // major changes below to accommodate Group 45
 
@@ -360,7 +360,7 @@ void amec_analytics_main(void)
                         g_amec->g44_avg[(i * MSA) + 86 + m] = g_amec->g44_avg[(i * MSA) + 86 + m] +
                             (UINT32)(g_amec->proc[i].core[j].ips2ms.sample / 50);  // accumulate average MIPS for this core
                         g_amec->g44_avg[(i * MSA) + 98 + m] = g_amec->g44_avg[(i * MSA) + 98 + m] +
-                            (UINT32)g_amec->proc[i].core[j].temp2ms.sample; // accumulate average temperature for this core
+                            (UINT32)g_amec->proc[i].core[j].temp4ms.sample; // accumulate average temperature for this core
                         g_amec->g44_avg[(i * MSA) + 110 + m] = g_amec->g44_avg[(i * MSA) + 110 + m] +
                             (UINT32)((g_amec->proc[i].core[j].cmbw2ms.sample) / 156); // accumulate average memory bandwidth for this core //@mw713 /156, was /78 (overflow issues)
                         temp16 = ((g_amec->proc[i].core[j].mcpifd2ms.sample) / 100);    // accumulate average busy latency counter for this core

@@ -312,8 +312,8 @@ ERRL_RC cmdh_poll_v10(cmdh_fsp_rsp_t * o_rsp_ptr)
     {
         if(CORE_PRESENT(k))
         {
-            l_tempSensorList[l_sensorHeader.count].id = G_amec_sensor_list[TEMP2MSP0C0 + k]->ipmi_sid;
-            l_tempSensorList[l_sensorHeader.count].value = G_amec_sensor_list[TEMP2MSP0C0 + k]->sample;
+            l_tempSensorList[l_sensorHeader.count].id = G_amec_sensor_list[TEMP4MSP0C0 + k]->ipmi_sid;
+            l_tempSensorList[l_sensorHeader.count].value = G_amec_sensor_list[TEMP4MSP0C0 + k]->sample;
             l_sensorHeader.count++;
         }
     }

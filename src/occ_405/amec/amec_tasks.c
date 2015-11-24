@@ -279,10 +279,10 @@ void task_amec_slave( task_t *i_self)
 
   amec_slv_common_tasks_pre();
 
-// @TODO TEMP: Not ready yet in phase 1
-/*
   amec_generic_smh( amec_slv_state_table, &G_amec_slv_state, &G_amec_slv_state_timings );
 
+// @TODO TEMP: Not ready yet in phase 1
+/*
   amec_slv_common_tasks_post();
 */
   // Set the total AMEC int task time for this tick, to the duration of the slave tasks.

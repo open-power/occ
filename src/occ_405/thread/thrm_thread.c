@@ -390,7 +390,7 @@ void thrm_thread_main()
 
             // Determine if additional cooling is required for processors
             // For processors, use the hottest of the core averages
-            l_sensor = getSensorByGsid(TEMP2MSP0PEAK);
+            l_sensor = getSensorByGsid(TEMP4MSP0PEAK);
             l_IncreaseFans |= thrm_thread_fan_control(DATA_FRU_PROC,
                                                       l_sensor->sample);
 

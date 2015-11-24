@@ -87,9 +87,9 @@ void amec_controller_proc_thermal()
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    // Get TEMP2MSP0PEAK sensor, which is hottest core temperature in OCC
+    // Get TEMP4MSP0PEAK sensor, which is hottest core temperature in OCC
     // processor
-    l_sensor = getSensorByGsid(TEMP2MSP0PEAK);
+    l_sensor = getSensorByGsid(TEMP4MSP0PEAK);
 
     // Use the highest temperature of all processors in 0.1 degrees C
     l_thermal_winner = l_sensor->sample * 10;

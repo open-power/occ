@@ -35,7 +35,8 @@
 #include "apss.h"
 #include "state.h"
 #include "proc_data_control.h"
-#include "core_data.h"
+
+
 //Global array of core data buffers
 GPE_BUFFER(CoreData G_core_data[MAX_NUM_FW_CORES+NUM_CORE_DATA_DOUBLE_BUF+NUM_CORE_DATA_EMPTY_BUF]) = {{{0}}};
 

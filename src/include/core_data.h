@@ -150,6 +150,8 @@ typedef struct
     CoreDataPcbSlave           pcb_slave;               //16
 } CoreData;
 
+typedef CoreData gpe_bulk_core_data_t;
+
 /**
  * Get core data
  * @param[in] The system core number [0-23]

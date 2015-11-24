@@ -116,6 +116,8 @@ const smh_tbl_t amec_slv_state_7_substate_table[AMEC_SMH_STATES_PER_LVL] =
   {amec_slv_substate_7_7, NULL},
 };
 
+#endif // #if 0 @TODO - TEMP: Not Ready yet in Phase 1.
+
 // --------------------------------------------------------
 // Main AMEC Slave State Table
 // --------------------------------------------------------
@@ -131,11 +133,11 @@ const smh_tbl_t amec_slv_state_table[AMEC_SMH_STATES_PER_LVL] =
   {amec_slv_state_3, NULL},
   {amec_slv_state_4, NULL},
   {amec_slv_state_5, NULL},
-  {amec_slv_state_6, amec_slv_state_6_substate_table},
-  {amec_slv_state_7, amec_slv_state_7_substate_table},
+  {amec_slv_state_6, NULL}, //Substate not yet supported: amec_slv_state_6_substate_table},
+  {amec_slv_state_7, NULL}, //Substate not yet supported: amec_slv_state_7_substate_table},
 };
 
-#endif // #if 0 @TODO - TEMP: Not Ready yet in Phase 1.
+
 
 // This sets up the function pointer that will be called to update the
 // fw timings when the AMEC Slave State Machine finishes.
@@ -424,7 +426,7 @@ void amec_slv_common_tasks_post(void)
       amec_tb_record(AMEC_TB_250US);
   }
 }
-
+#endif // #if 0 -  @TODO - TEMP: Not Ready yet in Phase 1.
 
 // Function Specification
 //
@@ -443,6 +445,7 @@ void amec_slv_state_0(void)
   amec_update_proc_core_sensors(CORE_0);
   amec_update_proc_core_sensors(CORE_8);
 
+/* Not yet supported
   //-------------------------------------------------------
   // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
@@ -462,8 +465,8 @@ void amec_slv_state_0(void)
   //-------------------------------------------------------
   // Update vector sensors
   //-------------------------------------------------------
-  sensor_vector_update(AMECSENSOR_PTR(TEMP2MSP0),    1);
-  sensor_vector_update(AMECSENSOR_PTR(TEMP2MSP0PEAK),1);
+  sensor_vector_update(AMECSENSOR_PTR(TEMP4MSP0),    1);
+  sensor_vector_update(AMECSENSOR_PTR(TEMP4MSP0PEAK),1);
   sensor_vector_update(AMECSENSOR_PTR(FREQA2MSP0),   1);
   sensor_vector_update(AMECSENSOR_PTR(IPS2MSP0),     1);
   sensor_vector_update(AMECSENSOR_PTR(UTIL2MSP0),    1);
@@ -471,6 +474,7 @@ void amec_slv_state_0(void)
   // Call the trace function for 2ms tracing if it has been configured via
   // Amester. If not configured, this call will return immediately.
   amec_tb_record(AMEC_TB_2MS);
+*/
 }
 
 
@@ -493,6 +497,7 @@ void amec_slv_state_1(void)
   amec_update_proc_core_sensors(CORE_1);
   amec_update_proc_core_sensors(CORE_9);
 
+/* Not yet supported
   //-------------------------------------------------------
   // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
@@ -502,6 +507,7 @@ void amec_slv_state_1(void)
   // Update Proc Level Centaur/DIMM Temperature sensors
   //-------------------------------------------------------
   amec_update_centaur_temp_sensors();
+*/
 }
 
 
@@ -522,10 +528,12 @@ void amec_slv_state_2(void)
   amec_update_proc_core_sensors(CORE_2);
   amec_update_proc_core_sensors(CORE_10);
 
+/* Not yet supported
   //-------------------------------------------------------
   // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
   amec_update_centaur_sensors(CENTAUR_2);
+*/
 }
 
 
@@ -548,6 +556,7 @@ void amec_slv_state_3(void)
   amec_update_proc_core_sensors(CORE_3);
   amec_update_proc_core_sensors(CORE_11);
 
+/* Not yet supported
   //-------------------------------------------------------
   // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
@@ -557,6 +566,7 @@ void amec_slv_state_3(void)
   // Perform amec_analytics (set amec_analytics_slot to 3)
   //-------------------------------------------------------
   amec_analytics_main();
+*/
 }
 
 
@@ -578,10 +588,12 @@ void amec_slv_state_4(void)
   //-------------------------------------------------------
   amec_update_proc_core_sensors(CORE_4);
 
+/* Not yet supported
   //-------------------------------------------------------
   // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
   amec_update_centaur_sensors(CENTAUR_4);
+*/
 }
 
 
@@ -603,6 +615,7 @@ void amec_slv_state_5(void)
   //-------------------------------------------------------
   amec_update_proc_core_sensors(CORE_5);
 
+/* Not yet supported
   //-------------------------------------------------------
   // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
@@ -612,6 +625,7 @@ void amec_slv_state_5(void)
   // Update partition sensors for DPS algorithms (for this tick)
   //-------------------------------------------------------
   amec_dps_main();
+*/
 }
 
 
@@ -633,10 +647,12 @@ void amec_slv_state_6(void)
   //-------------------------------------------------------
   amec_update_proc_core_sensors(CORE_6);
 
+/* Not yet supported
   //-------------------------------------------------------
   // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
   amec_update_centaur_sensors(CENTAUR_6);
+*/
 }
 
 
@@ -656,12 +672,16 @@ void amec_slv_state_7(void)
   //-------------------------------------------------------
   amec_update_proc_core_sensors(CORE_7);
 
+/* Not yet supported
   //-------------------------------------------------------
   // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
   amec_update_centaur_sensors(CENTAUR_7);
+*/
 }
 
+// @TODO - TEMP: Not Ready yet in Phase 1.
+#if 0
 // Function Specification
 //
 // Name: amec_slv_substate_6_0

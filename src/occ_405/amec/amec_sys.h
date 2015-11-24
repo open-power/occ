@@ -288,7 +288,7 @@ typedef struct
   sensor_t mcpifd2ms;
   sensor_t mcpifi2ms;
   sensor_t spurr2ms;
-  sensor_t temp2ms;
+  sensor_t temp4ms;
   sensor_t util2ms;
   sensor_t nutil3s;
   sensor_t mstl2ms;
@@ -454,10 +454,10 @@ typedef struct
   sensor_t sleepcnt2ms;
   sensor_t winkcnt2ms;
   sensor_t sp250us;
-  sensor_t temp2ms;
-  vectorSensor_t temp2ms_vector;
-  sensor_t temp2mspeak;
-  vectorSensor_t temp2mspeak_vector;
+  sensor_t temp4ms;
+  vectorSensor_t temp4ms_vector;
+  sensor_t temp4mspeak;
+  vectorSensor_t temp4mspeak_vector;
   sensor_t util2ms;
   vectorSensor_t util2ms_vector;
 

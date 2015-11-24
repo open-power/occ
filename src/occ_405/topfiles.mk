@@ -29,6 +29,7 @@ TOP-C-SOURCES = amec/amec_data.c \
                 amec/amec_part.c \
                 amec/amec_sensors_fw.c \
                 amec/amec_sensors_power.c \
+                amec/amec_sensors_core.c \
                 amec/amec_slave_smh.c \
                 amec/amec_tasks.c \
                 amec/sensor_power.c \

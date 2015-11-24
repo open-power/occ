@@ -1483,7 +1483,7 @@ errlHndl_t data_store_sys_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
             //Core Temp and Freq sensors are always in sequence in the table
             for (l_coreIndex = 0; l_coreIndex < MAX_CORES; l_coreIndex++)
             {
-                AMECSENSOR_PTR(TEMP2MSP0C0 + l_coreIndex)->ipmi_sid = l_cmd2_ptr->sys_config.core_sid[(l_coreIndex * 2)];
+                AMECSENSOR_PTR(TEMP4MSP0C0 + l_coreIndex)->ipmi_sid = l_cmd2_ptr->sys_config.core_sid[(l_coreIndex * 2)];
                 AMECSENSOR_PTR(FREQA2MSP0C0 + l_coreIndex)->ipmi_sid = l_cmd2_ptr->sys_config.core_sid[(l_coreIndex * 2) + 1];
             }
         }

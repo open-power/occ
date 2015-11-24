@@ -53,7 +53,6 @@
 /*----------------------------------------------------------------------------*/
 /* Function Declarations                                                      */
 /*----------------------------------------------------------------------------*/
-void amec_update_fast_core_data_sensors(void);
 
 void amec_update_proc_core_sensors(uint8_t i_core);
 

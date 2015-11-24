@@ -238,9 +238,9 @@ void chom_update_sensors()
     // update chom sensors which has multiple mini-sensor source
     for (i = 0 ; i<MAX_OCCS ; i++)
     {
-        if (G_dcom_slv_outbox_rx[i].temp2msp0peak > l_max_core_temp)
+        if (G_dcom_slv_outbox_rx[i].temp4msp0peak > l_max_core_temp)
         {
-            l_max_core_temp = G_dcom_slv_outbox_rx[i].temp2msp0peak;
+            l_max_core_temp = G_dcom_slv_outbox_rx[i].temp4msp0peak;
         }
 
         if (G_dcom_slv_outbox_rx[i].temp2mscent > l_max_cent_temp)
