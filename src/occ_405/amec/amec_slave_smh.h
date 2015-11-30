@@ -72,6 +72,8 @@ extern bool G_apss_lower_pmax_rail;
 void amec_slv_check_apss_fail(void);
 void amec_slv_pstate_uplift_check(void);
 
+void amec_update_proc_core_group(uint8_t);
+
 // PRE: slave common tasks
 void amec_slv_common_tasks_pre(void);
 // POST: slave common tasks
@@ -87,15 +89,35 @@ void amec_slv_state_5(void);
 void amec_slv_state_6(void);
 void amec_slv_state_7(void);
 
-// Slave SubState 6
-void amec_slv_substate_6_0(void);
-void amec_slv_substate_6_1(void);
-void amec_slv_substate_6_2(void);
-void amec_slv_substate_6_3(void);
-void amec_slv_substate_6_4(void);
-void amec_slv_substate_6_5(void);
-void amec_slv_substate_6_6(void);
-void amec_slv_substate_6_7(void);
+// Slave SubState 1
+void amec_slv_substate_1_0(void);
+void amec_slv_substate_1_1(void);
+void amec_slv_substate_1_2(void);
+void amec_slv_substate_1_3(void);
+void amec_slv_substate_1_4(void);
+void amec_slv_substate_1_5(void);
+void amec_slv_substate_1_6(void);
+void amec_slv_substate_1_7(void);
+
+// Slave SubState 3
+void amec_slv_substate_3_0(void);
+void amec_slv_substate_3_1(void);
+void amec_slv_substate_3_2(void);
+void amec_slv_substate_3_3(void);
+void amec_slv_substate_3_4(void);
+void amec_slv_substate_3_5(void);
+void amec_slv_substate_3_6(void);
+void amec_slv_substate_3_7(void);
+
+// Slave SubState 5
+void amec_slv_substate_5_0(void);
+void amec_slv_substate_5_1(void);
+void amec_slv_substate_5_2(void);
+void amec_slv_substate_5_3(void);
+void amec_slv_substate_5_4(void);
+void amec_slv_substate_5_5(void);
+void amec_slv_substate_5_6(void);
+void amec_slv_substate_5_7(void);
 
 // Slave SubState 7
 void amec_slv_substate_7_0(void);

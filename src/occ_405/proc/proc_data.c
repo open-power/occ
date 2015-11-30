@@ -473,7 +473,7 @@ void print_core_data_sensors(uint8_t core)
     if( l_core_data != NULL )
     {
         PROC_DBG("-------------------------------");
-        PROC_DBG("Core [%x] Sensors Data", core);
+        PROC_DBG("Core [%d] Sensors Data", core);
         PROC_DBG("Sensor Core[0] reading: 0x%04X [Valid:%d]", l_core_data->dts.core[0].fields.reading, l_core_data->dts.core[0].fields.valid);
         PROC_DBG("Sensor Core[1] reading: 0x%04X [Valid:%d]", l_core_data->dts.core[1].fields.reading, l_core_data->dts.core[1].fields.valid);
         PROC_DBG("Sensor Cache   reading: 0x%04X [Valid:%d]", l_core_data->dts.cache.fields.reading, l_core_data->dts.cache.fields.valid);

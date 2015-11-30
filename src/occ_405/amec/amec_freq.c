@@ -878,7 +878,7 @@ void amec_verify_pstate()
 #if 0
     uint8_t                             l_core = 0;
     int8_t                              l_pstate_from_fmax = 0;
-    gpe_bulk_core_data_t *              l_core_data_ptr;
+    CoreData *                          l_core_data_ptr;
     pmc_pmsr_ffcdc_data_t               l_pmc_pmsr_ffdc;
     errlHndl_t                          l_err = NULL;
 

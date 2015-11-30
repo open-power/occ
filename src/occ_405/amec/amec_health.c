@@ -858,7 +858,7 @@ void amec_health_check_proc_timeout()
     static uint32_t             L_read_fail_cnt = 0;
     uint8_t                     i = 0;
     uint8_t                     l_bad_core_index = 0;
-    gpe_bulk_core_data_t        *l_core_data_ptr = NULL;
+    CoreData                    *l_core_data_ptr = NULL;
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */

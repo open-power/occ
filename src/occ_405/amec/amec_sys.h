@@ -39,7 +39,7 @@
 #include <amec_oversub.h>
 #include <amec_amester.h>
 #include <amec_pcap.h>
-
+#include <amec_smh.h>
 //*************************************************************************
 // Externs
 //*************************************************************************
@@ -54,8 +54,8 @@
 // This is an arbitrary number of FW probes for use internally.
 #define NUM_AMEC_FW_PROBES  8
 
-// Number of States in the AMEC State Machine (should always be 8)
-#define NUM_AMEC_SMH_STATES 8
+// Number of States in the AMEC State Machine (= AMEC_SMH_STATES_PER_LVL)
+#define NUM_AMEC_SMH_STATES AMEC_SMH_STATES_PER_LVL
 
 // Number of PORE-GPE Engines
 #define NUM_GPE_ENGINES     2

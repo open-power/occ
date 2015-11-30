@@ -52,9 +52,9 @@
 /******************************************************************************/
 /* Forward Declarations                                                       */
 /******************************************************************************/
-void amec_calc_dts_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_core);
-void amec_calc_freq_and_util_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_core);
-void amec_calc_ips_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_core);
+void amec_calc_dts_sensors(CoreData * i_core_data_ptr, uint8_t i_core);
+void amec_calc_freq_and_util_sensors(CoreData * i_core_data_ptr, uint8_t i_core);
+void amec_calc_ips_sensors(CoreData * i_core_data_ptr, uint8_t i_core);
 void amec_calc_spurr(uint8_t i_core);
 
 //*************************************************************************
@@ -72,7 +72,7 @@ void amec_calc_spurr(uint8_t i_core);
 // End Function Specification
 void amec_update_proc_core_sensors(uint8_t i_core)
 {
-  gpe_bulk_core_data_t *l_core_data_ptr;
+  CoreData *l_core_data_ptr;
   uint16_t              l_temp16 = 0;
   uint32_t              l_temp32 = 0;
 
@@ -90,6 +90,7 @@ void amec_update_proc_core_sensors(uint8_t i_core)
     //-------------------------------------------------------
     amec_calc_dts_sensors(l_core_data_ptr, i_core);
 
+//    @TODO - TEMP: frequency and utilization sensors are not enabled yet.
 /*
     //-------------------------------------------------------
     // Util / Freq
@@ -99,7 +100,7 @@ void amec_update_proc_core_sensors(uint8_t i_core)
     {
         amec_calc_freq_and_util_sensors(l_core_data_ptr,i_core);
     }
-    
+
     //-------------------------------------------------------
     // Performance counter - This function should be called
     // after amec_calc_freq_and_util_sensors().
@@ -177,7 +178,7 @@ uint8_t     G_quadWeight = 1;
 // Thread: RealTime Loop
 //
 // End Function Specification
-void amec_calc_dts_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_core)
+void amec_calc_dts_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
 {
 #define DTS_PER_CORE     2
 #define DTS_INVALID_MASK 0x0C00
@@ -192,7 +193,10 @@ void amec_calc_dts_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_cor
   uint8_t       l_dtsCnt = 0;   //Number of valid Core DTSs
 
   //Clear DTS array.
-  memset((void *)&(l_dts[0]), 0, sizeof(l_dts));
+  for (k = 0; k < DTS_PER_CORE; k++)
+  {
+      l_dts[k] = 0;
+  }
 
   if (i_core_data_ptr != NULL)
   {
@@ -271,8 +275,8 @@ void amec_calc_dts_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_cor
 //
 // End Function Specification
 // TEMP - Not supported yet.
-#if 0 
-void amec_calc_freq_and_util_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_core)
+#if 0
+void amec_calc_freq_and_util_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
 {
   BOOLEAN  l_core_sleep_winkle = FALSE;
   uint32_t l_pm_state_hist_reg = 0;
@@ -609,7 +613,7 @@ void amec_calc_freq_and_util_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uin
 }
 
 
-void amec_calc_ips_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_core)
+void amec_calc_ips_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
 {
 #define     TWO_PWR_24_MASK                 0x00FFFFFF
 #define     TWO_PWR_20_MASK                 0x000FFFFF
