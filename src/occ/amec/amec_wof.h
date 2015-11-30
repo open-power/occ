@@ -47,6 +47,9 @@ extern uint8_t g_amec_wof_pstate_table_ready;
 extern uint8_t G_wof_max_cores_per_chip;
 extern uint16_t g_amec_wof_leak_overhead;
 
+extern uint16_t G_amec_wof_vrm_eff_table[AMEC_WOF_VRM_EFF_TBL_ROWS][AMEC_WOF_VRM_EFF_TBL_CLMS];
+extern uint16_t G_amec_wof_uplift_table[AMEC_WOF_UPLIFT_TBL_ROWS][AMEC_WOF_UPLIFT_TBL_CLMS];
+
 //*************************************************************************
 // Macros
 //*************************************************************************

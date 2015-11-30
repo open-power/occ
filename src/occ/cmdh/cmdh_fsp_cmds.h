@@ -621,6 +621,26 @@ typedef struct __attribute__ ((packed))
     uint8_t                 checksum[2];
 } cmdh_dbug_wof_data_resp_t;
 
+//Structures used to return wof uplift table
+typedef struct __attribute__ ((packed))
+{
+    struct                  cmdh_fsp_rsp_header;
+    uint8_t                 rowCnt;
+    uint8_t                 colCnt;
+    uint16_t                upliftTable[AMEC_WOF_UPLIFT_TBL_ROWS][AMEC_WOF_UPLIFT_TBL_CLMS];
+    uint8_t                 checksum[2];
+} cmdh_dbug_wof_uplift_resp_t;
+
+//Structures used to return wof vrm Eff table
+typedef struct __attribute__ ((packed))
+{
+    struct                  cmdh_fsp_rsp_header;
+    uint8_t                 rowCnt;
+    uint8_t                 colCnt;
+    uint16_t                vrmEff[AMEC_WOF_VRM_EFF_TBL_ROWS][AMEC_WOF_VRM_EFF_TBL_CLMS];
+    uint8_t                 checksum[2];
+} cmdh_dbug_wof_vrm_eff_resp_t;
+
 
 //---------------------------------------------------------
 // Tunable Parameter Command

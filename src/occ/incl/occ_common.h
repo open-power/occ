@@ -303,6 +303,16 @@ enum
 #define DURATION_IN_MS_UNTIL_NOW_FROM(start_time) \
   (uint32_t) ((ssx_timebase_get() - (SsxTimebase) start_time) / ( SSX_TIMEBASE_FREQUENCY_HZ / 1000 ))
 
+#define DATA_WOF_VRM_EFF_VERSION    0x10
+#define AMEC_WOF_VRM_EFF_TBL_ROWS   0x03
+#define AMEC_WOF_VRM_EFF_TBL_CLMS   0x0E
+#define AMEC_WOF_VRM_EFF_MAX_SZ     AMEC_WOF_VRM_EFF_TBL_ROWS * AMEC_WOF_VRM_EFF_TBL_CLMS * 2
+
+#define DATA_WOF_FREQ_DATA_VERSION  0x10
+#define AMEC_WOF_UPLIFT_TBL_ROWS    0x16
+#define AMEC_WOF_UPLIFT_TBL_CLMS    0x0D
+#define AMEC_WOF_CORE_FREQ_MAX_SZ   AMEC_WOF_UPLIFT_TBL_ROWS  * AMEC_WOF_UPLIFT_TBL_CLMS * 2
+
 // Skip this typedef in x86 environment
 #ifndef OCC_X86_PARSER
 typedef uint32_t      size_t ;

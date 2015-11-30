@@ -1106,6 +1106,7 @@ void cmdh_dbug_dump_wof_data (const cmdh_fsp_cmd_t * i_cmd_ptr,
         // Do sanity check on the function inputs
         if ((NULL == i_cmd_ptr) || (NULL == o_rsp_ptr))
         {
+            TRAC_ERR("cmdh_dbug_dump_wof_data failed; Null in or out ptr.");
             l_rc = ERRL_RC_INTERNAL_FAIL;
             break;
         }
@@ -1159,6 +1160,88 @@ void cmdh_dbug_dump_wof_data (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
     // Populate the response data header
     l_resp_data_length = sizeof(cmdh_dbug_wof_data_resp_t) - CMDH_DBUG_FSP_RESP_LEN;
+    o_rsp_ptr->rc = l_rc;
+    o_rsp_ptr->data_length[0] = ((uint8_t *)&l_resp_data_length)[0];
+    o_rsp_ptr->data_length[1] = ((uint8_t *)&l_resp_data_length)[1];
+}
+
+// Function Specification
+//
+// Name:  amec_dbug_dump_wof_uplift
+//
+// Description: Command called via OCC debug to return the uplift table used by WOF
+//
+// End Function Specification
+void cmdh_dbug_dump_wof_uplift (const cmdh_fsp_cmd_t * i_cmd_ptr,
+                              cmdh_fsp_rsp_t * o_rsp_ptr)
+{
+    uint8_t                     l_rc = ERRL_RC_SUCCESS;
+    uint16_t                    l_resp_data_length = 0;
+    cmdh_dbug_wof_uplift_resp_t *l_resp_ptr = (cmdh_dbug_wof_uplift_resp_t*) o_rsp_ptr;
+
+    do
+    {
+        memset(o_rsp_ptr, 0, sizeof(cmdh_dbug_wof_uplift_resp_t));
+
+        // Do sanity check on the function inputs
+        if ((NULL == i_cmd_ptr) || (NULL == o_rsp_ptr))
+        {
+            TRAC_ERR("amec_dbug_dump_wof_uplift failed; Null in or out ptr.");
+            l_rc = ERRL_RC_INTERNAL_FAIL;
+            break;
+        }
+
+        //Populate response struct
+        l_resp_ptr->rowCnt = AMEC_WOF_UPLIFT_TBL_ROWS;
+        l_resp_ptr->colCnt = AMEC_WOF_UPLIFT_TBL_CLMS;
+        memcpy(&(l_resp_ptr->upliftTable[0]),
+               &(G_amec_wof_uplift_table[0]),
+               sizeof(G_amec_wof_uplift_table));
+    }while(0);
+
+    // Populate the response data header
+    l_resp_data_length = sizeof(cmdh_dbug_wof_uplift_resp_t) - CMDH_DBUG_FSP_RESP_LEN;
+    o_rsp_ptr->rc = l_rc;
+    o_rsp_ptr->data_length[0] = ((uint8_t *)&l_resp_data_length)[0];
+    o_rsp_ptr->data_length[1] = ((uint8_t *)&l_resp_data_length)[1];
+}
+
+// Function Specification
+//
+// Name:  amec_dbug_dump_wof_vrm_eff
+//
+// Description: Command called via OCC debug to return the vrm Eff table used by WOF
+//
+// End Function Specification
+void cmdh_dbug_dump_wof_vrm_eff (const cmdh_fsp_cmd_t * i_cmd_ptr,
+                              cmdh_fsp_rsp_t * o_rsp_ptr)
+{
+    uint8_t                     l_rc = ERRL_RC_SUCCESS;
+    uint16_t                    l_resp_data_length = 0;
+    cmdh_dbug_wof_vrm_eff_resp_t *l_resp_ptr = (cmdh_dbug_wof_vrm_eff_resp_t*) o_rsp_ptr;
+
+    do
+    {
+        memset(o_rsp_ptr, 0, sizeof(cmdh_dbug_wof_vrm_eff_resp_t));
+
+        // Do sanity check on the function inputs
+        if ((NULL == i_cmd_ptr) || (NULL == o_rsp_ptr))
+        {
+            TRAC_ERR("amec_dbug_dump_wof_vrm_eff failed; Null in or out ptr.");
+            l_rc = ERRL_RC_INTERNAL_FAIL;
+            break;
+        }
+
+        //Populate response struct
+        l_resp_ptr->rowCnt = AMEC_WOF_VRM_EFF_TBL_ROWS;
+        l_resp_ptr->colCnt = AMEC_WOF_VRM_EFF_TBL_CLMS;
+        memcpy(&(l_resp_ptr->vrmEff[0]),
+               &(G_amec_wof_vrm_eff_table[0]),
+               sizeof(G_amec_wof_vrm_eff_table));
+    }while(0);
+
+    // Populate the response data header
+    l_resp_data_length = sizeof(cmdh_dbug_wof_vrm_eff_resp_t) - CMDH_DBUG_FSP_RESP_LEN;
     o_rsp_ptr->rc = l_rc;
     o_rsp_ptr->data_length[0] = ((uint8_t *)&l_resp_data_length)[0];
     o_rsp_ptr->data_length[1] = ((uint8_t *)&l_resp_data_length)[1];
@@ -1410,6 +1493,12 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
             break;
         case DBUG_DUMP_WOF_DATA:
             cmdh_dbug_dump_wof_data(i_cmd_ptr, o_rsp_ptr);
+            break;
+        case DBUG_DUMP_WOF_UPLIFT_TBL:
+            cmdh_dbug_dump_wof_uplift(i_cmd_ptr, o_rsp_ptr);
+            break;
+        case DBUG_DUMP_WOF_VRM_EFF_TBL:
+            cmdh_dbug_dump_wof_vrm_eff(i_cmd_ptr, o_rsp_ptr);
             break;
         default:
             l_rc = ERRL_RC_INVALID_DATA; //should NEVER get here...
