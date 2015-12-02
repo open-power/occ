@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -1121,7 +1121,7 @@ void cmdh_dbug_dump_wof_data (const cmdh_fsp_cmd_t * i_cmd_ptr,
         l_resp_ptr->wof_iddq85c = g_amec->wof.iddq85c;
         l_resp_ptr->wof_iddq = g_amec->wof.iddq;
         l_resp_ptr->wof_ac = g_amec->wof.ac;
-        l_resp_ptr->wof_ceff_tdp = g_amec->wof.ceff_tdp;
+        l_resp_ptr->wof_ceff_tdp = g_amec->wof.ceff_tdp[G_wof_max_cores_per_chip];
         l_resp_ptr->wof_ceff = g_amec->wof.ceff;
         l_resp_ptr->wof_ceff_old = g_amec->wof.ceff_old;
         l_resp_ptr->wof_ceff_ratio = g_amec->wof.ceff_ratio;

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -325,8 +325,9 @@ void amec_wof_validate_input_data(void)
     }
 }
 
-uint32_t amec_wof_compute_c_eff(void)
+uint32_t amec_wof_compute_ceff_tdp(uint8_t i_cores_on)
 {
+    // Example of calculation for Nominal operating point at 85C:
     // Estimate IDDQ@RDP(95C)@Vnom P0:
     // IDDQ@85C * 1.25 ^ ([95-85]/10) = 35.84 * 1.25 = 44.8 A (Leakage current)
     //
@@ -334,9 +335,9 @@ uint32_t amec_wof_compute_c_eff(void)
     //
     // P0: (151 A - 44.8 A) / 1.22 * 1.12 = 97.50 A @TDP
     //
-    // C_eff    = I / (V^3 * F)
+    // C_eff    = I / (V^1.3 * F)
     //
-    //   I is ??? in 0.01 Amps (or 10 mA)
+    //   I is AC component of Idd in 0.01 Amps (or 10 mA)
     //   V is the silicon voltage from the operating point data in 100 uV
     //   F is Turbo frequency in MHz
     //   C_eff is in nF
@@ -397,7 +398,8 @@ uint32_t amec_wof_compute_c_eff(void)
         G_sysConfigData.iddq_table.iddq_vdd[i].fields.iddq_corrected_value;
 
     // STEP 3: Correct the leakage current computed in the previous step for
-    // temperature by multiplying by 1.25
+    // temperature by multiplying by 1.25 (due to 10 C difference between IDDQ
+    // VPD operationg point data).
     l_i_leak = l_i_leak * 125 / 100;
 
     // STEP 4: Compute current differential in 10mA units at RDP
@@ -419,6 +421,9 @@ uint32_t amec_wof_compute_c_eff(void)
     // STEP 8: Divide by turbo frequency I / (V^1.3) / F
     l_c_eff_tdp = l_temp /
         G_sysConfigData.wof_parms.operating_points[TURBO].frequency_mhz;
+
+    // STEP 9: Scale for number of cores on
+    l_c_eff_tdp = l_c_eff_tdp * i_cores_on / G_wof_max_cores_per_chip;
 
     return l_c_eff_tdp;
 }
@@ -448,6 +453,7 @@ int amec_wof_set_algorithm(const uint8_t i_algorithm)
     int                 l_scom_rc = 0;
     static uint8_t      l_failCount = 0;
     errlHndl_t          l_err = NULL;
+    uint8_t             i;
 
     do
     {
@@ -493,7 +499,9 @@ int amec_wof_set_algorithm(const uint8_t i_algorithm)
         amec_wof_validate_input_data();
 
         // Calculate ceff_tdp from static data in the Pstate SuperStructure
-        g_amec->wof.ceff_tdp = amec_wof_compute_c_eff();
+        // FIX: Should compute this constant outside AMEC loop at boot.
+        for (i=1; i<=G_wof_max_cores_per_chip; i++)
+            g_amec->wof.ceff_tdp[i] = amec_wof_compute_ceff_tdp(i);
 
         switch(i_algorithm)
         {
@@ -547,7 +555,7 @@ int amec_wof_set_algorithm(const uint8_t i_algorithm)
 
             TRAC_INFO("WOF algorithm has been successfully initialized: algo_type[%d] C_eff_tdp[%d]",
                       g_amec->wof.algo_type,
-                      g_amec->wof.ceff_tdp);
+                      g_amec->wof.ceff_tdp[MAX_NUM_CORES]);
         }
         else
         {
@@ -789,8 +797,8 @@ void amec_wof_common_steps(void)
     // Note: IDDQ value from table above is in 0.01 A units. The maximum
     // value possible is 655.35 A. This means l_result <= 65535.
 
-    // Modify leakage value for cores off. A percentage of chip leakage comes
-    // from iVRM headers which cannot be turned off completely.
+    // Modify leakage value for number of cores on. A percentage of chip
+    // leakage comes from iVRM headers which cannot be turned off completely.
     l_result32 = l_result32
         * (g_amec_wof_leak_overhead
            + ((1000 - g_amec_wof_leak_overhead)
@@ -890,7 +898,8 @@ void amec_wof_common_steps(void)
     }
     g_amec->wof.ceff_old = l_result32;
 
-    l_ceff_ratio = g_amec->wof.ceff_old * 10000 / g_amec->wof.ceff_tdp;
+    l_ceff_ratio = g_amec->wof.ceff_old * 10000
+        / g_amec->wof.ceff_tdp[l_cores_on];
     // expose as sensor and parameter
     g_amec->wof.ceff_ratio = l_ceff_ratio;
     sensor_update(AMECSENSOR_PTR(WOFCEFFRATIO),l_ceff_ratio);

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -159,7 +159,8 @@ amec_parm_t g_amec_parm_list[] = {
     AMEC_PARM_UINT16(PARM_WOF_IDDQ_CHIP,"wof_iddq_chip",&g_amec_sys.wof.iddq_chip),
     AMEC_PARM_UINT16_ARRAY(PARM_WOF_IDDQ_CORE,"wof_iddq_core",g_amec_sys.wof.iddq_core,MAX_NUM_CORES),
     AMEC_PARM_UINT16(PARM_WOF_AC,"wof_ac",&g_amec_sys.wof.ac),
-    AMEC_PARM_UINT32(PARM_WOF_CEFF_TDP,"wof_ceff_tdp",&g_amec_sys.wof.ceff_tdp),
+    AMEC_PARM_UINT32_ARRAY(PARM_WOF_CEFF_TDP,"wof_ceff_tdp",
+                           &g_amec_sys.wof.ceff_tdp,MAX_NUM_CORES+1),
     AMEC_PARM_UINT32(PARM_WOF_CEFF,"wof_ceff",&g_amec_sys.wof.ceff),
     AMEC_PARM_UINT32(PARM_WOF_CEFF_OLD,"wof_ceff_old",&g_amec_sys.wof.ceff_old),
     AMEC_PARM_UINT16(PARM_WOF_CEFF_RATIO,"wof_ceff_ratio",&g_amec_sys.wof.ceff_ratio),
