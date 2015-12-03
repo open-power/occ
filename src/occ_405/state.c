@@ -132,7 +132,7 @@ errlHndl_t SMGR_standby_to_observation()
     if( SMGR_MASK_OBSERVATION_READY ==
         (SMGR_validate_get_valid_states() & SMGR_MASK_OBSERVATION_READY))
     {
-        l_error_logged = FALSE; // @at015a
+        l_error_logged = FALSE;
         TRAC_IMP("SMGR: Standby to Observation Transition Started");
 
 // TEMP -- NOT SUPPORTED YET IN PHASE1 
@@ -176,7 +176,7 @@ errlHndl_t SMGR_standby_to_observation()
 
         TRAC_IMP("SMGR: Standby to Observation Transition Completed");
     }
-    else if(FALSE == l_error_logged)// @at015a
+    else if(FALSE == l_error_logged)
     {
         l_error_logged = TRUE;
         TRAC_ERR("SMGR: Standby to Observation Transition Failed");
@@ -197,7 +197,7 @@ errlHndl_t SMGR_standby_to_observation()
                                  0,                                //userdata1
                                  0);                               //userdata2
 
-        // @wb001 -- Callout firmware
+        // Callout firmware
         addCalloutToErrl(l_errlHndl,
                      ERRL_CALLOUT_TYPE_COMPONENT_ID,
                      ERRL_COMPONENT_ID_FIRMWARE,
@@ -277,7 +277,7 @@ errlHndl_t SMGR_observation_to_active()
             {
                 if(FALSE == l_error_logged)
                 {
-                    TRAC_ERR("SMGR: Timeout waiting for Pstates to be enabled, master state=%d, slave state=%d, pmc_mode[%08x], chips_present[%02x], pmc_deconfig[%08x]", //gm034
+                    TRAC_ERR("SMGR: Timeout waiting for Pstates to be enabled, master state=%d, slave state=%d, pmc_mode[%08x], chips_present[%02x], pmc_deconfig[%08x]",
                             G_proc_dcm_sync_state.sync_state_master,
                             G_proc_dcm_sync_state.sync_state_slave,
                             in32(PMC_MODE_REG),
@@ -323,7 +323,7 @@ errlHndl_t SMGR_observation_to_active()
             l_pmgp1.value = 0;
             l_pmgp1.fields.dpll_freq_override_enable = 1;
             l_rc = putscom_ffdc(CORE_CHIPLET_ADDRESS(PCBS_PMGP1_REG_AND, l_core),
-                           ~l_pmgp1.value, NULL); //commit errors internally -- gm033
+                           ~l_pmgp1.value, NULL); //commit errors internally
             if(l_rc)
             {
                 TRAC_ERR("Failed disabling dpll frequency override.  rc=0x%08x, core=%d", l_rc, l_core);
@@ -561,9 +561,7 @@ errlHndl_t SMGR_all_to_safe()
 
     // If we are master, make sure we are broadcasting that the requested
     // state is "safe state"
-// TEMP -- IN PHASE1 WE ARE ALWAYS MASTER
-//    if (OCC_MASTER == G_occ_role)
-    if (TRUE)
+    if (OCC_MASTER == G_occ_role)
     {
        G_occ_external_req_state = OCC_STATE_SAFE;
     }

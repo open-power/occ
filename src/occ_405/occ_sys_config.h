@@ -332,10 +332,16 @@ typedef struct
   uint32_t master_ppb_fmax;
 
   // --------------------------------------
-  // HUID's for centaurs and dimms
+  // Hardware Sensor ID's for centaurs and dimms
   // --------------------------------------
-  uint64_t centaur_huids[MAX_NUM_CENTAURS];
-  uint64_t dimm_huids[MAX_NUM_CENTAURS][NUM_DIMMS_PER_CENTAUR];
+  uint32_t centaur_huids[MAX_NUM_CENTAURS];
+  uint32_t dimm_huids[MAX_NUM_CENTAURS][NUM_DIMMS_PER_CENTAUR];
+
+  // --------------------------------------
+  // Memory type and dimm i2c engine for nimbus
+  // --------------------------------------
+  uint8_t mem_type;
+  uint8_t dimm_i2c_engine;
 
   // --------------------------------------
   // Memory Throttle limits

@@ -69,8 +69,7 @@
 
 #define DATA_IPS_VERSION           0
 
-#define DATA_MEM_CFG_VERSION_1     1
-#define DATA_MEM_CFG_VERSION_10    0x10
+#define DATA_MEM_CFG_VERSION_20    0x20
 
 #define DATA_MEM_THROT_VERSION_1   1
 #define DATA_MEM_THROT_VERSION_10  0x10
@@ -95,10 +94,9 @@ const data_req_table_t G_data_pri_table[] =
     {DATA_MASK_APSS_CONFIG,           DATA_FORMAT_APSS_CONFIG}, //need apss config data prior to role data
     {DATA_MASK_SET_ROLE,              DATA_FORMAT_SET_ROLE},
     {DATA_MASK_MEM_CFG,               DATA_FORMAT_MEM_CFG},
-    {DATA_MASK_PSTATE_SUPERSTRUCTURE, DATA_FORMAT_PSTATE_SUPERSTRUCTURE},
+    {DATA_MASK_THRM_THRESHOLDS,       DATA_FORMAT_THRM_THRESHOLDS},
     {DATA_MASK_FREQ_PRESENT,          DATA_FORMAT_FREQ},
     {DATA_MASK_PCAP_PRESENT,          DATA_FORMAT_POWER_CAP},
-    {DATA_MASK_THRM_THRESHOLDS,       DATA_FORMAT_THRM_THRESHOLDS},
     {DATA_MASK_MEM_THROT,             DATA_FORMAT_MEM_THROT},
 };
 
@@ -136,7 +134,7 @@ errlHndl_t DATA_get_thrm_thresholds(cmdh_thrm_thresholds_t **o_thrm_thresh)
     }
     else
     {
-        TRAC_ERR("DATA_get_thrm_thresholds: Thermal Threshold data is unavailable! data_mask[0x%X]",
+        CMDH_TRAC_ERR("DATA_get_thrm_thresholds: Thermal Threshold data is unavailable! data_mask[0x%X]",
                  G_data_cnfg->data_mask);
         /* @
          * @errortype
@@ -170,7 +168,7 @@ errlHndl_t DATA_get_ips_cnfg(cmdh_ips_config_data_t **o_ips_cnfg)
     }
     else
     {
-        TRAC_ERR("DATA_get_ips_cnfg: IPS Config data is unavailable! data_mask[0x%X]",
+        CMDH_TRAC_ERR("DATA_get_ips_cnfg: IPS Config data is unavailable! data_mask[0x%X]",
                  G_data_cnfg->data_mask);
 
         /* @
@@ -279,7 +277,7 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
            ((DATA_FREQ_VERSION_10 == l_cmdp->version) && (l_mode_data_sz != (FREQ_FORMAT_10_NUM_FREQS * 2))) ||
            ((DATA_FREQ_VERSION_11 == l_cmdp->version) && (l_mode_data_sz != (FREQ_FORMAT_11_NUM_FREQS * 2))))
         {
-            TRAC_ERR("Invalid Frequency Data packet: data_length[%u] version[%u] l_count[%u] l_mode_data_sz[%u]",
+            CMDH_TRAC_ERR("Invalid Frequency Data packet: data_length[%u] version[%u] l_count[%u] l_mode_data_sz[%u]",
                      l_data_length, l_cmdp->version, l_count, l_mode_data_sz);
             cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
             break;
@@ -302,14 +300,14 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
                 if(l_mode == OCC_MODE_NOMINAL && !l_freq)
                 {
-                    TRAC_ERR("Received a frequency of 0 MHZ for nominal");
+                    CMDH_TRAC_ERR("Received a frequency of 0 MHZ for nominal");
                     cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
                     break;
                 }
 
                 if(l_mode >= OCC_MODE_COUNT)
                 {
-                    TRAC_ERR("Unrecognized frequency mode=%d ",
+                    CMDH_TRAC_ERR("Unrecognized frequency mode=%d ",
                              l_mode);
                     cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
                     break;
@@ -336,7 +334,7 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
                     // Log an error if we could not honor the requested FFO frequency, but keep going.
                     if(l_req_freq != l_freq)
                     {
-                        TRAC_ERR("FFO Freq out of range. request=%d, limit=%d ",
+                        CMDH_TRAC_ERR("FFO Freq out of range. request=%d, limit=%d ",
                                  l_req_freq,  l_freq);
                         /* @
                          * @errortype
@@ -360,7 +358,7 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 }
 
                 // Set the frequency for the passed in mode
-                TRAC_INFO("Mode %d frequency set: %d MHz",l_mode, l_freq);
+                CMDH_TRAC_INFO("Mode %d frequency set: %d MHz",l_mode, l_freq);
                 l_table[l_mode] = l_freq;
 
                 // If the mode is Turbo, also stored that frequency for DPS modes
@@ -378,18 +376,18 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
             l_freq = (l_buf[0] << 8 | l_buf[1]);
             l_table[OCC_MODE_NOMINAL] = l_freq;
 
-            TRAC_INFO("Nominal frequency = %d", l_freq);
+            CMDH_TRAC_INFO("Nominal frequency = %d", l_freq);
 
             l_freq = (l_buf[2] << 8 | l_buf[3]);
             l_table[OCC_MODE_TURBO] = l_freq;
 
-            TRAC_INFO("Max frequency = %d", l_freq);
+            CMDH_TRAC_INFO("Max frequency = %d", l_freq);
 
             l_freq = (l_buf[4] << 8 | l_buf[5]);
             l_table[OCC_MODE_PWRSAVE] = l_freq;
             l_table[OCC_MODE_MIN_FREQUENCY] = l_freq;
 
-            TRAC_INFO("Min frequency = %d", l_freq);
+            CMDH_TRAC_INFO("Min frequency = %d", l_freq);
 
         }
         else if(DATA_FREQ_VERSION_11 == l_cmdp->version) // Version 0x11 - OpenPower
@@ -399,19 +397,19 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
             l_freq = (l_buf[0] << 8 | l_buf[1]);
             l_table[OCC_MODE_NOMINAL] = l_freq;
-            TRAC_INFO("Nominal frequency = %d", l_freq);
+            CMDH_TRAC_INFO("Nominal frequency = %d", l_freq);
 
             l_freq = (l_buf[2] << 8 | l_buf[3]);
             l_table[OCC_MODE_TURBO] = l_freq;
-            TRAC_INFO("Turbo frequency = %d", l_freq);
+            CMDH_TRAC_INFO("Turbo frequency = %d", l_freq);
 
             l_freq = (l_buf[4] << 8 | l_buf[5]);
             l_table[OCC_MODE_PWRSAVE] = l_freq;
             l_table[OCC_MODE_MIN_FREQUENCY] = l_freq;
-            TRAC_INFO("Minimum frequency = %d", l_freq);
+            CMDH_TRAC_INFO("Minimum frequency = %d", l_freq);
 
             l_freq = (l_buf[6] << 8 | l_buf[7]);
-            TRAC_INFO("UT frequency = %d", l_freq);
+            CMDH_TRAC_INFO("UT frequency = %d", l_freq);
 
         }
 
@@ -445,7 +443,7 @@ errlHndl_t apss_store_adc_channel(const eApssAdcChannelAssignments i_func_id, co
     if ( (i_func_id >= NUM_ADC_ASSIGNMENT_TYPES) ||
          (i_channel_num >= MAX_APSS_ADC_CHANNELS) )
     {
-        TRAC_ERR("apss_store_adc_channel: Invalid function ID or channel number (id:0x%x, channel:%d)", i_func_id, i_channel_num);
+        CMDH_TRAC_ERR("apss_store_adc_channel: Invalid function ID or channel number (id:0x%x, channel:%d)", i_func_id, i_channel_num);
 
         /* @
          * @errortype
@@ -548,7 +546,7 @@ errlHndl_t apss_store_adc_channel(const eApssAdcChannelAssignments i_func_id, co
 
             default:
                 // It should never happen
-                TRAC_ERR("apss_store_gpio_pin: Invalid function ID: 0x%x", i_func_id);
+                CMDH_TRAC_ERR("apss_store_gpio_pin: Invalid function ID: 0x%x", i_func_id);
                 break;
         }
 
@@ -563,7 +561,7 @@ errlHndl_t apss_store_adc_channel(const eApssAdcChannelAssignments i_func_id, co
             else
             {
 
-                TRAC_ERR("apss_store_adc_channel: Function ID is duplicated (id:0x%x, channel:%d)", i_func_id, i_channel_num);
+                CMDH_TRAC_ERR("apss_store_adc_channel: Function ID is duplicated (id:0x%x, channel:%d)", i_func_id, i_channel_num);
 
                 /* @
                  * @errortype
@@ -700,7 +698,7 @@ void apss_store_ipmi_sensor_id(const uint16_t i_channel, const apss_cfg_adc_v10_
     {
         if (i_adc->ipmisensorId == 0)
         {
-            TRAC_ERR("apss_store_ipmi_sensor_id: Missing Sensor ID for channel %i.",i_channel);
+            CMDH_TRAC_ERR("apss_store_ipmi_sensor_id: Missing Sensor ID for channel %i.",i_channel);
             //We need to generate a generic sensor ID if we want channels with functionIDs but
             //no sensor IDs to be reported in the poll command.
         }
@@ -728,7 +726,7 @@ errlHndl_t apss_store_gpio_pin(const eApssGpioAssignments i_func_id, const uint8
     if ( (i_func_id >= NUM_GPIO_ASSIGNMENT_TYPES) ||
          ( i_gpio_num >= (MAX_APSS_GPIO_PORTS*NUM_OF_APSS_PINS_PER_GPIO_PORT) ) )
     {
-        TRAC_ERR("apss_store_gpio_pin: Invalid function ID or gpio number (id:0x%x, pin:%d)", i_func_id, i_gpio_num);
+        CMDH_TRAC_ERR("apss_store_gpio_pin: Invalid function ID or gpio number (id:0x%x, pin:%d)", i_func_id, i_gpio_num);
 
         /* @
          * @errortype
@@ -808,7 +806,7 @@ errlHndl_t apss_store_gpio_pin(const eApssGpioAssignments i_func_id, const uint8
                 break;
             default:
                 // It should never happen
-                TRAC_ERR("apss_store_gpio_pin: Invalid function ID: 0x%x", i_func_id);
+                CMDH_TRAC_ERR("apss_store_gpio_pin: Invalid function ID: 0x%x", i_func_id);
                 break;
         }
 
@@ -821,7 +819,7 @@ errlHndl_t apss_store_gpio_pin(const eApssGpioAssignments i_func_id, const uint8
             }
             else
             {
-                TRAC_ERR("apss_store_gpio_pin: Function ID is duplicated (id:0x%x, pin:%d)", i_func_id, i_gpio_num);
+                CMDH_TRAC_ERR("apss_store_gpio_pin: Function ID is duplicated (id:0x%x, pin:%d)", i_func_id, i_gpio_num);
 
                 /* @
                  * @errortype
@@ -911,7 +909,7 @@ errlHndl_t data_store_apss_config_v00(const cmdh_apss_config_v00_t * i_cmd_ptr,
         {
             // Change Data Request Mask to indicate we got this data
             G_data_cnfg->data_mask |= DATA_MASK_APSS_CONFIG;
-            TRAC_IMP("Got valid APSS Config data via TMGT");
+            CMDH_TRAC_IMP("Got valid APSS Config data via TMGT");
         }
     }
 
@@ -982,7 +980,7 @@ errlHndl_t data_store_apss_config_v10(const cmdh_apss_config_v10_t * i_cmd_ptr,
         {
             // Change Data Request Mask to indicate we got this data
             G_data_cnfg->data_mask |= DATA_MASK_APSS_CONFIG;
-            TRAC_IMP("Got valid APSS Config data via TMGT");
+            CMDH_TRAC_IMP("Got valid APSS Config data via TMGT");
         }
     }
 
@@ -1009,7 +1007,7 @@ errlHndl_t data_store_apss_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
     if(!( ((l_cmd_ptr->version == DATA_APSS_VERSION) && (l_v00_data_sz == l_data_length)) ||
           ((l_cmd_ptr->version == DATA_APSS_VERSION10) && (l_v10_data_sz == l_data_length)) ) )
     {
-        TRAC_ERR("data_store_apss_config: Invalid System Data packet. Given Version:0x%X",
+        CMDH_TRAC_ERR("data_store_apss_config: Invalid System Data packet. Given Version:0x%X",
                  l_cmd_ptr->version);
 
         /* @
@@ -1049,61 +1047,6 @@ errlHndl_t data_store_apss_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
 // Function Specification
 //
-// Name:  data_store_pstate_super
-//
-// Description: TODO Add description
-//
-// End Function Specification
-errlHndl_t data_store_pstate_super(const cmdh_fsp_cmd_t * i_cmd_ptr,
-                                        cmdh_fsp_rsp_t * o_rsp_ptr)
-{
-    errlHndl_t l_errlHndl = NULL;
-    CMDH_TRAC_ERR("data_store_pstate_super: config type not yet supported!");
-/* TEMP -- PSTATES NOT SUPPORTED IN PHASE1
-    // Cast the command to the struct for this format
-    cmdh_store_cnfgdata_pstatess_t * l_cmd_ptr = (cmdh_store_cnfgdata_pstatess_t *)i_cmd_ptr;
-
-    do
-    {
-        // Command Length Check - make sure we have all the data
-        // Lenght check depends on the version of the Pstate Superstructure
-        if( CMDH_DATALEN_FIELD_UINT16(i_cmd_ptr) < CMDH_CNFGDATA_PSTATESS_MIN_DATALEN)
-        {
-            TRAC_ERR("data_store_pstate_super: Invalid command length! expected[%u] received[%u]",
-                     CMDH_CNFGDATA_PSTATESS_MIN_DATALEN,
-                     CMDH_DATALEN_FIELD_UINT16(i_cmd_ptr));
-
-            // Build Error Response packet, it will get 'rebuilt' later, but
-            // we are doing this here to generate the errlHndl
-            cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_CMD_LEN, &l_errlHndl);
-            break;
-        }
-
-        // Only initialize Pstate once
-        if( G_gpsm_initialized == 0 )
-        {
-            // Initialize Pstate Table from PstateSuperStructure passed in
-            // via the DATA in this command.
-            l_errlHndl = proc_gpsm_pstate_initialize(&l_cmd_ptr->pstatess);
-        }
-
-        if(NULL == l_errlHndl)
-        {
-            // Change Data Request Mask to indicate we got this data
-            G_data_cnfg->data_mask |= DATA_MASK_PSTATE_SUPERSTRUCTURE;
-
-            TRAC_IMP("Pstate SuperStructure is valid: Magic_number[0x%08X%08X] Size[%d]",
-                     (uint32_t)(l_cmd_ptr->pstatess.magic >> 32),
-                     (uint32_t)(l_cmd_ptr->pstatess.magic & 0x00000000ffffffffull),
-                     CMDH_DATALEN_FIELD_UINT16(i_cmd_ptr) - 4);
-        }
-    } while(0);
-*/
-    return l_errlHndl;
-}
-
-// Function Specification
-//
 // Name:   data_store_role
 //
 // Description: Tell the OCC if it should run as a master or slave.  HTMGT knows
@@ -1123,16 +1066,8 @@ errlHndl_t data_store_role(const cmdh_fsp_cmd_t * i_cmd_ptr,
     // Cast the command to the struct for this format
     cmdh_set_role_t * l_cmd_ptr = (cmdh_set_role_t *)i_cmd_ptr;
 
-    // Mask off the OCC role if this is an FSPLESS system only.
-    if(G_occ_interrupt_type == FSP_SUPPORTED_OCC)
-    {
-        l_new_role = l_cmd_ptr->role;
-    }
-    else
-    {
-        l_new_role = l_cmd_ptr->role & OCC_ROLE_MASTER_MASK;
-    }
-
+    // Set the OCC role
+    l_new_role = l_cmd_ptr->role;
 
     // Must be in standby state before we can change roles
     if ( CURRENT_STATE() == OCC_STATE_STANDBY )
@@ -1152,7 +1087,7 @@ errlHndl_t data_store_role(const cmdh_fsp_cmd_t * i_cmd_ptr,
             // Allow APSS tasks to run on OCC master
             rtl_clr_run_mask_deferred(RTL_FLAG_APSS_NOT_INITD);
 
-            TRAC_IMP("OCC Role set to Master via TMGT");
+            CMDH_TRAC_IMP("data_store_role: OCC Role set to Master via TMGT");
 
             // Change Data Request Mask to indicate we got this data
             G_data_cnfg->data_mask |= DATA_MASK_SET_ROLE;
@@ -1178,35 +1113,24 @@ errlHndl_t data_store_role(const cmdh_fsp_cmd_t * i_cmd_ptr,
             // If this is a backup master occ, we need to be checking the APSS health
             if(OCC_BACKUP_MASTER == l_new_role)
             {
-// TEMP / TODO : NEED TO CHANGE THIS TO NOT BE USING AN APPLET
-CMDH_TRAC_ERR("data_store_role: not initializing APSS!");
-#if 0 // Start
-                OCC_APLT_STATUS_CODES l_status = OCC_APLT_SUCCESS;
+                l_errlHndl = initialize_apss();
 
-                // Initialize APSS communication on the backup OCC (retries internally)
-                runApplet(OCC_APLT_APSS_INIT,   // Applet enum name
-                          NULL,                 // Applet arguments
-                          TRUE,                 // Blocking call?
-                          NULL,                 // Applet finished semaphore
-                          &l_errlHndl,          // Error log handle
-                          &l_status);           // Error status
-
-                if(l_errlHndl || (l_status != OCC_APLT_SUCCESS))
+                if( NULL != l_errlHndl )
                 {
                     // Don't request due to a backup apss failure. Just log the error.
-                    TRAC_ERR("APSS init applet returned error: l_status: 0x%x", l_status);
+                    CMDH_TRAC_ERR("data_store_role: APSS init applet returned error: l_rc: 0x%x", l_errlHndl->iv_reasonCode);
                     commitErrl(&l_errlHndl);
                 }
-#endif // End
+
                 // Allow APSS tasks to run on OCC backup
                 rtl_clr_run_mask_deferred(RTL_FLAG_APSS_NOT_INITD);
-                TRAC_IMP("OCC Role set to Backup Master via TMGT");
+                CMDH_TRAC_IMP("data_store_role: OCC Role set to Backup Master via TMGT");
             }
             else
             {
                 // NOTE: slave initialization is done on all
                 //       OCC's during OCC initialization.
-                TRAC_IMP("OCC Role set to Slave via TMGT");
+                CMDH_TRAC_IMP("data_store_role: OCC Role set to Slave via TMGT");
             }
 
             // Change Data Request Mask to indicate we got this data
@@ -1218,7 +1142,7 @@ CMDH_TRAC_ERR("data_store_role: not initializing APSS!");
         }
         else
         {
-            TRAC_ERR("OCC Role from FSP is not recognized by OCC. role = %d", l_new_role);
+            CMDH_TRAC_ERR("data_store_role: OCC Role from FSP is not recognized by OCC. role = %d", l_new_role);
 
             l_rc = ERRL_RC_INVALID_DATA;
 
@@ -1243,7 +1167,8 @@ CMDH_TRAC_ERR("data_store_role: not initializing APSS!");
     }
     else
     {
-        TRAC_ERR("Role change requested while OCC is not in standby state.  role= %d, state= %d", l_new_role, CURRENT_STATE());
+        CMDH_TRAC_ERR("data_store_role: Role change requested while OCC is not in standby state. role=%d, state=%d",
+                      l_new_role, CURRENT_STATE());
 
         l_rc = ERRL_RC_INVALID_STATE;
 
@@ -1324,7 +1249,7 @@ CMDH_TRAC_ERR("data_store_power_cap: data config type not yet supported!");
     // if the expected data length does not agree with the actual data length...
     if((OCC_MASTER != G_occ_role) || l_invalid_input)
     {
-        TRAC_ERR("data_store_power_cap: Invalid Pcap Data packet! OCC_role[%d] Version[0x%02X] Data_size[%u]",
+        CMDH_TRAC_ERR("data_store_power_cap: Invalid Pcap Data packet! OCC_role[%d] Version[0x%02X] Data_size[%u]",
                  G_occ_role, l_cmd_ptr->version, l_data_length);
 
         /* @
@@ -1384,7 +1309,7 @@ CMDH_TRAC_ERR("data_store_power_cap: data config type not yet supported!");
         // Change Data Request Mask to indicate we got the data
         // G_data_cnfg->data_mask |= DATA_MASK_PCAP_PRESENT;
         // will update data mask when slave code acquires data
-        TRAC_IMP("data store pcap: Got valid PCAP Config data via TMGT. Count:%i, Data Cfg mask[%x]",G_master_pcap_data.pcap_data_count, G_data_cnfg->data_mask);
+        CMDH_TRAC_IMP("data store pcap: Got valid PCAP Config data via TMGT. Count:%i, Data Cfg mask[%x]",G_master_pcap_data.pcap_data_count, G_data_cnfg->data_mask);
     }
 #endif // #if 0
     return l_err;
@@ -1431,7 +1356,7 @@ errlHndl_t data_store_sys_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
     if(l_invalid_input)
     {
-        TRAC_ERR("data_store_sys_config: Invalid System Data packet! Version[0x%02X] Data_size[%u]",
+        CMDH_TRAC_ERR("data_store_sys_config: Invalid System Data packet! Version[0x%02X] Data_size[%u]",
                  l_cmd_ptr->version,
                  l_data_length);
 
@@ -1490,7 +1415,7 @@ errlHndl_t data_store_sys_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         // Change Data Request Mask to indicate we got this data
         G_data_cnfg->data_mask |= DATA_MASK_SYS_CNFG;
-        TRAC_IMP("Got valid System Config data via TMGT for system type: 0x%02X", l_cmd_ptr->sys_config.system_type);
+        CMDH_TRAC_IMP("Got valid System Config data via TMGT for system type: 0x%02X", l_cmd_ptr->sys_config.system_type);
     }
 
     return l_err;
@@ -1553,7 +1478,7 @@ errlHndl_t data_store_thrm_thresholds(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         if(l_invalid_input)
         {
-            TRAC_ERR("data_store_thrm_thresholds: Invalid Thermal Control Threshold Data packet: data_length[%u] version[0x%02X] num_data_sets[%u]",
+            CMDH_TRAC_ERR("data_store_thrm_thresholds: Invalid Thermal Control Threshold Data packet: data_length[%u] version[0x%02X] num_data_sets[%u]",
                      l_data_length,
                      l_cmd_ptr->version,
                      l_num_data_sets);
@@ -1582,7 +1507,7 @@ errlHndl_t data_store_thrm_thresholds(const cmdh_fsp_cmd_t * i_cmd_ptr,
                            sizeof(cmdh_thrm_thresholds_set_t));
 
                 // Useful trace for debugging
-                //TRAC_INFO("data_store_thrm_thresholds: FRU_type[0x%.2X] T_control[%u] DVFS[%u]",
+                //CMDH_TRAC_INFO("data_store_thrm_thresholds: FRU_type[0x%.2X] T_control[%u] DVFS[%u]",
                 //          G_data_cnfg->thrm_thresh.data[l_frutype].fru_type,
                 //          G_data_cnfg->thrm_thresh.data[l_frutype].t_control,
                 //          G_data_cnfg->thrm_thresh.data[l_frutype].dvfs);
@@ -1590,7 +1515,7 @@ errlHndl_t data_store_thrm_thresholds(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 else
                 {
                     // We got an invalid FRU type
-                    TRAC_ERR("data_store_thrm_thresholds: Received an invalid FRU type[0x%.2X] max_FRU_number[0x%.2X]",
+                    CMDH_TRAC_ERR("data_store_thrm_thresholds: Received an invalid FRU type[0x%.2X] max_FRU_number[0x%.2X]",
                              l_frutype,
                              DATA_FRU_MAX);
                     cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
@@ -1628,7 +1553,7 @@ errlHndl_t data_store_thrm_thresholds(const cmdh_fsp_cmd_t * i_cmd_ptr,
                     }
 
                     // Useful trace for debugging
-                    //TRAC_INFO("data_store_thrm_thresholds: FRU_type[0x%.2X] T_control[%u] DVFS[%u] Error[%u]",
+                    //CMDH_TRAC_INFO("data_store_thrm_thresholds: FRU_type[0x%.2X] T_control[%u] DVFS[%u] Error[%u]",
                     //          G_data_cnfg->thrm_thresh.data[l_frutype].fru_type,
                     //          G_data_cnfg->thrm_thresh.data[l_frutype].t_control,
                     //          G_data_cnfg->thrm_thresh.data[l_frutype].dvfs,
@@ -1637,7 +1562,7 @@ errlHndl_t data_store_thrm_thresholds(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 else
                 {
                     // We got an invalid FRU type
-                    TRAC_ERR("data_store_thrm_thresholds: Received an invalid FRU type[0x%.2X] max_FRU_number[0x%.2X]",
+                    CMDH_TRAC_ERR("data_store_thrm_thresholds: Received an invalid FRU type[0x%.2X] max_FRU_number[0x%.2X]",
                              l_frutype,
                              DATA_FRU_MAX);
                     cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
@@ -1660,7 +1585,7 @@ errlHndl_t data_store_thrm_thresholds(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 G_vrm_present = 0;
                 G_data_cnfg->thrm_thresh.data[DATA_FRU_VRM].error_count = 0xFF;
 
-                TRAC_IMP("data_store_thrm_thresholds: No VRM data was received! OCC won't attempt to talk to VRMs.");
+                CMDH_TRAC_IMP("data_store_thrm_thresholds: No VRM data was received! OCC won't attempt to talk to VRMs.");
             }
         }
 
@@ -1670,7 +1595,7 @@ errlHndl_t data_store_thrm_thresholds(const cmdh_fsp_cmd_t * i_cmd_ptr,
     {
         // If there were no errors, indicate that we got this data
         G_data_cnfg->data_mask |= DATA_MASK_THRM_THRESHOLDS;
-        TRAC_IMP("data_store_thrm_thresholds: Got valid Thermal Control Threshold data packet");
+        CMDH_TRAC_IMP("data_store_thrm_thresholds: Got valid Thermal Control Threshold data packet");
 
         // Notify thermal thread to update its local copy of the thermal thresholds
         THRM_thread_update_thresholds();
@@ -1684,7 +1609,7 @@ errlHndl_t data_store_thrm_thresholds(const cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // Name:   data_store_mem_cfg
 //
-// Description: Store the HUID's for centaurs and dimms. This data is
+// Description: Store the memory configuration for centaurs and/or dimms. This data is
 // sent to each OCC individually.
 //
 // End Function Specification
@@ -1692,56 +1617,184 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                     cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     errlHndl_t                      l_err = NULL;
-    cmdh_mem_cfg_t*                 l_cmd_ptr = (cmdh_mem_cfg_t*)i_cmd_ptr;
+    cmdh_mem_cfg_v20_t*             l_cmd_ptr = (cmdh_mem_cfg_v20_t*)i_cmd_ptr;
     uint16_t                        l_data_length = 0;
     uint16_t                        l_exp_data_length = 0;
     uint8_t                         l_num_centaurs = 0;
     uint8_t                         l_num_dimms = 0;
+    uint8_t                         l_i2c_engine;
+    uint8_t                         l_i2c_port;
+    uint8_t                         l_i2c_addr = 0;
+    uint8_t                         l_dimm_num = 0;
+    uint8_t                         l_centaur_num = 0;
     int                             i;
-    bool                            l_invalid_input = TRUE; //Assume bad input
 
     do
     {
         l_data_length = CMDH_DATALEN_FIELD_UINT16((&l_cmd_ptr->header));
 
-        // Sanity checks on input data, break if:
-        //  * the version doesn't match what we expect,  OR
-        //  * the actual data length does not match the expected data length.
-        if(l_cmd_ptr->header.version == DATA_MEM_CFG_VERSION_1)
+        // Process data based on version
+        if(l_cmd_ptr->header.version == DATA_MEM_CFG_VERSION_20)
         {
+            // Verify the actual data length matches the expected data length for this version
             l_exp_data_length = sizeof(cmdh_mem_cfg_header_t) - sizeof(cmdh_fsp_cmd_header_t) +
-                (l_cmd_ptr->header.num_data_sets * sizeof(cmdh_mem_cfg_data_set_t));
+                                (l_cmd_ptr->header.num_data_sets * sizeof(cmdh_mem_cfg_data_set_v20_t));
 
-            if(l_exp_data_length == l_data_length)
+            if(l_exp_data_length != l_data_length)
             {
-                l_invalid_input = FALSE;
-            }
-        }
-        else if(l_cmd_ptr->header.version == DATA_MEM_CFG_VERSION_10)
-        {
-            l_exp_data_length = sizeof(cmdh_mem_cfg_header_t) - sizeof(cmdh_fsp_cmd_header_t) +
-                (l_cmd_ptr->header.num_data_sets * sizeof(cmdh_mem_cfg_data_set_v10_t));
+               CMDH_TRAC_ERR("data_store_mem_cfg: Invalid mem config data packet: data_length[%u] exp_length[%u] version[0x%02X] num_data_sets[%u]",
+               l_data_length,
+               l_exp_data_length,
+               l_cmd_ptr->header.version,
+               l_cmd_ptr->header.num_data_sets);
 
-            if(l_exp_data_length == l_data_length)
+               cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
+               break;
+            }
+
+            // Store the memory type.  Memory must all be the same type, save from first and verify remaining
+            G_sysConfigData.mem_type = l_cmd_ptr->data_set[0].memory_type;
+            if(G_sysConfigData.mem_type == 0xFF)  // TODO change to MEM_TYPE_NIMBUS
             {
-                l_invalid_input = FALSE;
+                // Nimbus type -- dimm_info1 is I2C engine which must be the same
+                // save from first entry and verify remaining
+                G_sysConfigData.dimm_i2c_engine = l_cmd_ptr->data_set[0].dimm_info1;
             }
-        }
+            else
+            {
+                // Must be cumulus type
+                G_sysConfigData.mem_type = 0;  // TODO change to MEM_TYPE_CUMULUS
+            }
 
-        if(l_invalid_input)
+            // Store the hardware sensor ID and the temperature sensor ID
+            for(i=0; i<l_cmd_ptr->header.num_data_sets; i++)
+            {
+                cmdh_mem_cfg_v20_t*          l_cmd2_ptr = (cmdh_mem_cfg_v20_t*)i_cmd_ptr;
+                cmdh_mem_cfg_data_set_v20_t* l_data_set = &l_cmd2_ptr->data_set[i];
+
+                // Verify matching memory type and process based on memory type
+                if( (l_data_set->memory_type == G_sysConfigData.mem_type) &&
+                    (l_data_set->memory_type == 0xFF) )  // TODO change to MEM_TYPE_NIMBUS 
+                {
+                    // Nimbus type:  dimm info is I2C Engine, I2C Port, I2C Address
+                    l_i2c_engine = l_data_set->dimm_info1;
+                    l_i2c_port = l_data_set->dimm_info2;
+                    l_i2c_addr = l_data_set->dimm_info3;
+
+                    // Validate the i2c info for this data set.  Any failure will result in error and
+                    // memory monitoring disabled.
+
+                    // Engine must be the same
+                    if (l_i2c_engine != G_sysConfigData.dimm_i2c_engine)
+                    {
+                        CMDH_TRAC_ERR("data_store_mem_cfg: I2c engine mismatch. entry=%d, engine=%d, expected=%d",
+                                      i,
+                                      l_i2c_engine,
+                                      G_sysConfigData.dimm_i2c_engine);
+                        cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
+                        break;
+                    }
+
+                    // Port must be 0 or 1.
+                    if((l_i2c_port != 0) && (l_i2c_port != 1))
+                    {
+                        CMDH_TRAC_ERR("data_store_mem_cfg: Invalid I2C port. entry=%d, port=%d",
+                                      i,
+                                      l_i2c_port);
+                        cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
+                        break;
+                    }
+
+                    // I2C addr must be 0x3z where z is even
+                    if( ( (l_i2c_addr & 0xF0) != 0x30) ||
+                        ( (l_i2c_addr & 0x01) != 0 ) )
+                    {
+                        CMDH_TRAC_ERR("data_store_mem_cfg: Invalid I2C address. entry=%d, addr=%d",
+                                      i,
+                                      l_i2c_addr);
+                        cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
+                        break;
+                    }
+
+                    // DIMM info is good for this DIMM, save the sensor IDs for the DIMM
+                    // The location of the HW sensor ID in the 2D dimm_huids array is used to know i2c port
+                    // and i2c address for reading the DIMM.  "centaur num" index is port "dimm num" is
+                    // translated from i2c address, we already verified the i2c addr is 0x3z above
+                    l_dimm_num = (l_i2c_addr & 0x0F) >> 1; 
+
+                    // Store the hardware sensor ID
+                    G_sysConfigData.dimm_huids[l_i2c_port][l_dimm_num] = l_data_set->hw_sensor_id;
+
+                    // Store the temperature sensor ID
+                    g_amec->proc[0].memctl[l_i2c_port].centaur.dimm_temps[l_dimm_num].temp_sid =
+                    l_data_set->temp_sensor_id;
+
+                    l_num_dimms++;
+
+                }
+                else  // must be cumulus and the "memory type" byte is the centaur#
+                {
+                    // per spec for cumulus memory type is the centaur# and dimm info1 is DIMM#
+                    l_centaur_num = l_data_set->memory_type;
+                    l_dimm_num = l_data_set->dimm_info1;
+
+                    // Validate the centaur and dimm #'s for this data set
+                    if( (l_centaur_num >= MAX_NUM_CENTAURS) ||
+                        (l_dimm_num != 0xFF && l_dimm_num >= NUM_DIMMS_PER_CENTAUR) )
+                    {
+                        CMDH_TRAC_ERR("data_store_mem_cfg: Invalid dimm or centaur number. entry=%d, cent=%d, dimm=%d",
+                                      i,
+                                      l_centaur_num,
+                                      l_dimm_num);
+                        cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
+                        break;
+                    }
+
+                    // Per the spec, if dimm_num = 0xFF then this is a centaur ID
+                    if(l_dimm_num == 0xFF)
+                    {
+                        // Store the hardware sensor ID
+                        G_sysConfigData.centaur_huids[l_centaur_num] = l_data_set->hw_sensor_id;
+
+                        // Store the temperature sensor ID
+                        g_amec->proc[0].memctl[l_centaur_num].centaur.temp_sid = l_data_set->temp_sensor_id;
+
+                        l_num_centaurs++;
+                    }
+                    else
+                    {
+                        // Store the hardware sensor ID
+                        G_sysConfigData.dimm_huids[l_centaur_num][l_dimm_num] = l_data_set->hw_sensor_id;
+
+                        // Store the temperature sensor ID
+                        g_amec->proc[0].memctl[l_centaur_num].centaur.dimm_temps[l_dimm_num].temp_sid =
+                        l_data_set->temp_sensor_id;
+
+                        l_num_dimms++;
+                    }
+                } // Cumulus
+            } // for each data set
+        } // version 0x20
+        else  // version not supported
         {
-            TRAC_ERR("data_store_mem_cfg: Invalid mem config data packet: data_length[%u] exp_length[%u] version[0x%02X] num_data_sets[%u]",
-                     l_data_length,
-                     l_exp_data_length,
-                     l_cmd_ptr->header.version,
-                     l_cmd_ptr->header.num_data_sets);
+            CMDH_TRAC_ERR("data_store_mem_cfg: Invalid mem config data packet: version[0x%02X]",
+                          l_cmd_ptr->header.version);
+
             cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
-            break;
         }
+    } while(0);
 
-        if(l_cmd_ptr->header.num_data_sets == 0)
+    if(!l_err)
+    {
+        // If there were no errors, indicate that we got this data
+        G_data_cnfg->data_mask |= DATA_MASK_MEM_CFG;
+        CMDH_TRAC_IMP("data_store_mem_cfg: Got valid mem cfg packet. cent#=%d, dimm#=%d",
+                      l_num_centaurs, l_num_dimms);
+
+        // No errors so we can enable memory monitoring if the data indicates it should be enabled
+        if(l_cmd_ptr->header.num_data_sets == 0)  // num data sets of 0 indicates memory monitoring disabled
         {
-            TRAC_IMP("Memory monitoring is not allowed (mem config data sets = 0)");
+           CMDH_TRAC_IMP("Memory monitoring is not allowed (mem config data sets = 0)");
         }
         else
         {
@@ -1749,103 +1802,16 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
             // and we need to enable memory monitoring when we enter observation state
             G_mem_monitoring_allowed = TRUE;
 
-            // Require the mem throt packet for going to active and observation states
+            // Require the mem throt packet for going to active state
             SMGR_VALIDATE_DATA_ACTIVE_MASK |= DATA_MASK_MEM_THROT;
-            SMGR_VALIDATE_DATA_OBSERVATION_MASK |= DATA_MASK_MEM_THROT;
 
-            TRAC_IMP("Memory monitoring is allowed (mem config data sets = %d)",
-                    l_cmd_ptr->header.num_data_sets);
+            CMDH_TRAC_IMP("Memory monitoring is allowed (mem config data sets = %d)", l_cmd_ptr->header.num_data_sets);
         }
-
-        if(l_cmd_ptr->header.version == DATA_MEM_CFG_VERSION_1)
-        {
-            // Store the huid mapping
-            for(i=0; i<l_cmd_ptr->header.num_data_sets; i++)
-            {
-                cmdh_mem_cfg_data_set_t* l_data_set = &l_cmd_ptr->data_set[i];
-                // Validate the centaur and dimm #'s for this data set
-                if(l_data_set->centaur_num >= MAX_NUM_CENTAURS ||
-                   (l_data_set->dimm_num != 0xFF &&
-                    l_data_set->dimm_num >= NUM_DIMMS_PER_CENTAUR))
-                {
-                    TRAC_ERR("data_store_mem_cfg: Invalid dimm or centaur number. entry=%d, cent=%d, dimm=%d",
-                             i,
-                             l_data_set->centaur_num,
-                             l_data_set->dimm_num);
-                    cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
-                    break;
-                }
-
-                // Per the spec, if dimm_num = 0xFF then this is a centaur HUID
-                if(l_data_set->dimm_num == 0xFF)
-                {
-                    G_sysConfigData.centaur_huids[l_data_set->centaur_num] = l_data_set->huid;
-                    l_num_centaurs++;
-                }
-                else
-                {
-                    G_sysConfigData.dimm_huids[l_data_set->centaur_num][l_data_set->dimm_num] =
-                                                                                l_data_set->huid;
-                    l_num_dimms++;
-                }
-            }
-        }
-        else if(l_cmd_ptr->header.version == DATA_MEM_CFG_VERSION_10)
-        {
-            // Store the hardware sensor ID and the temperature sensor ID
-            for(i=0; i<l_cmd_ptr->header.num_data_sets; i++)
-            {
-                cmdh_mem_cfg_v10_t*          l_cmd2_ptr = (cmdh_mem_cfg_v10_t*)i_cmd_ptr;
-                cmdh_mem_cfg_data_set_v10_t* l_data_set = &l_cmd2_ptr->data_set[i];
-
-                // Validate the centaur and dimm #'s for this data set
-                if(l_data_set->centaur_num >= MAX_NUM_CENTAURS ||
-                   (l_data_set->dimm_num != 0xFF &&
-                    l_data_set->dimm_num >= NUM_DIMMS_PER_CENTAUR))
-                {
-                    TRAC_ERR("data_store_mem_cfg: Invalid dimm or centaur number. entry=%d, cent=%d, dimm=%d",
-                             i,
-                             l_data_set->centaur_num,
-                             l_data_set->dimm_num);
-                    cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
-                    break;
-                }
-
-                // Per the spec, if dimm_num = 0xFF then this is a centaur ID
-                if(l_data_set->dimm_num == 0xFF)
-                {
-                    // Store the hardware sensor ID
-                    G_sysConfigData.centaur_huids[l_data_set->centaur_num] = l_data_set->hw_sensor_id;
-
-                    // Store the temperature sensor ID
-                    g_amec->proc[0].memctl[l_data_set->centaur_num].centaur.temp_sid =
-                        l_data_set->temp_sensor_id;
-
-                    l_num_centaurs++;
-                }
-                else
-                {
-                    // Store the hardware sensor ID
-                    G_sysConfigData.dimm_huids[l_data_set->centaur_num][l_data_set->dimm_num] =
-                        l_data_set->hw_sensor_id;
-
-                    // Store the temperature sensor ID
-                    g_amec->proc[0].memctl[l_data_set->centaur_num].centaur.dimm_temps[l_data_set->dimm_num].temp_sid =
-                        l_data_set->temp_sensor_id;
-
-                    l_num_dimms++;
-                }
-            }
-        }
-
-    } while(0);
-
-    if(!l_err)
+    }
+    else
     {
-        // If there were no errors, indicate that we got this data
-        G_data_cnfg->data_mask |= DATA_MASK_MEM_CFG;
-        TRAC_IMP("data_store_mem_cfg: Got valid mem cfg packet. cent#=%d, dimm#=%d",
-                 l_num_centaurs, l_num_dimms);
+        // Error with data don't enable memory monitoring
+        CMDH_TRAC_IMP("data_store_mem_cfg: Memory monitoring not allowed due to error");
     }
 
     return l_err;
@@ -1904,7 +1870,7 @@ CMDH_TRAC_ERR("data_store_mem_throt: data config type not yet supported!");
 
         if(l_invalid_input)
         {
-            TRAC_ERR("data_store_mem_throt: Invalid mem throttle data packet: data_length[%u] exp_length[%u] version[0x%02X] num_data_sets[%u]",
+            CMDH_TRAC_ERR("data_store_mem_throt: Invalid mem throttle data packet: data_length[%u] exp_length[%u] version[0x%02X] num_data_sets[%u]",
                      l_data_length,
                      l_exp_data_length,
                      l_cmd_ptr->header.version,
@@ -1926,7 +1892,7 @@ CMDH_TRAC_ERR("data_store_mem_throt: data config type not yet supported!");
                 if(l_data_set->centaur_num >= MAX_NUM_CENTAURS ||
                     l_data_set->mba_num >= NUM_MBAS_PER_CENTAUR)
                 {
-                    TRAC_ERR("data_store_mem_throt: Invalid mba or centaur number. entry=%d, cent=%d, mba=%d",
+                    CMDH_TRAC_ERR("data_store_mem_throt: Invalid mba or centaur number. entry=%d, cent=%d, mba=%d",
                              i,
                              l_data_set->centaur_num,
                              l_data_set->mba_num);
@@ -1942,7 +1908,7 @@ CMDH_TRAC_ERR("data_store_mem_throt: data config type not yet supported!");
                 {
                     if(!(*l_n_ptr))
                     {
-                        TRAC_ERR("data_store_mem_throt: Memory Throttle N value is 0! cent[%d] mba[%d]",
+                        CMDH_TRAC_ERR("data_store_mem_throt: Memory Throttle N value is 0! cent[%d] mba[%d]",
                                  l_data_set->centaur_num, l_data_set->mba_num);
                         cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
                         break;
@@ -1975,7 +1941,7 @@ CMDH_TRAC_ERR("data_store_mem_throt: data config type not yet supported!");
                 if(l_data_set->centaur_num >= MAX_NUM_CENTAURS ||
                     l_data_set->mba_num >= NUM_MBAS_PER_CENTAUR)
                 {
-                    TRAC_ERR("data_store_mem_throt: Invalid mba or centaur number. entry=%d, cent=%d, mba=%d",
+                    CMDH_TRAC_ERR("data_store_mem_throt: Invalid mba or centaur number. entry=%d, cent=%d, mba=%d",
                              i,
                              l_data_set->centaur_num,
                              l_data_set->mba_num);
@@ -1997,7 +1963,7 @@ CMDH_TRAC_ERR("data_store_mem_throt: data config type not yet supported!");
                 {
                     if(!(*l_n_ptr))
                     {
-                        TRAC_ERR("data_store_mem_throt: Memory Throttle N value is 0! cent[%d] mba[%d]",
+                        CMDH_TRAC_ERR("data_store_mem_throt: Memory Throttle N value is 0! cent[%d] mba[%d]",
                                  l_data_set->centaur_num, l_data_set->mba_num);
                         cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
                         break;
@@ -2022,7 +1988,7 @@ CMDH_TRAC_ERR("data_store_mem_throt: data config type not yet supported!");
     {
         // If there were no errors, indicate that we got this data
         G_data_cnfg->data_mask |= DATA_MASK_MEM_THROT;
-        TRAC_IMP("data_store_mem_throt: Got valid mem throt packet. configured_mba_bitmap=0x%04x",
+        CMDH_TRAC_IMP("data_store_mem_throt: Got valid mem throt packet. configured_mba_bitmap=0x%04x",
                  l_configured_mbas);
 
         // Update the configured mba bitmap
@@ -2053,7 +2019,7 @@ errlHndl_t data_store_ips_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
        (l_cmd_ptr->iv_version != DATA_IPS_VERSION) ||
        ( l_ips_data_sz != l_data_length) )
     {
-        TRAC_ERR("data_store_ips_config: Invalid IPS Data packet");
+        CMDH_TRAC_ERR("data_store_ips_config: Invalid IPS Data packet");
 
         /* @
          * @errortype
@@ -2087,7 +2053,7 @@ errlHndl_t data_store_ips_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
         // Change Data Request Mask to indicate we got this data
         G_data_cnfg->data_mask |= DATA_MASK_IPS_CNFG;
 
-        TRAC_IMP("Got valid Idle Power Save Config data via TMGT: ipsEnabled[%d] Delay Time to enter IPS[%d], exit IPS[%d]. Utilization to enter IPS[%d], exit IPS[%d]",
+        CMDH_TRAC_IMP("Got valid Idle Power Save Config data via TMGT: ipsEnabled[%d] Delay Time to enter IPS[%d], exit IPS[%d]. Utilization to enter IPS[%d], exit IPS[%d]",
                  l_cmd_ptr->iv_ips_config.iv_ipsEnabled,
                  l_cmd_ptr->iv_ips_config.iv_delayTimeforEntry,
                  l_cmd_ptr->iv_ips_config.iv_delayTimeforExit,
@@ -2120,7 +2086,7 @@ errlHndl_t data_store_volt_uplift(const cmdh_fsp_cmd_t * i_cmd_ptr,
     if((l_cmd_ptr->version != DATA_VOLT_UPLIFT_VERSION) ||
        (l_actual_sz != l_expected_sz))
     {
-        TRAC_ERR("Invalid Vdd/Vcs Uplift Data packet Version[0x%02X] Size[%d] Expected[%d]",
+        CMDH_TRAC_ERR("Invalid Vdd/Vcs Uplift Data packet Version[0x%02X] Size[%d] Expected[%d]",
                  l_cmd_ptr->version,
                  l_actual_sz,
                  l_expected_sz);
@@ -2188,7 +2154,7 @@ errlHndl_t data_store_volt_uplift(const cmdh_fsp_cmd_t * i_cmd_ptr,
         // Change Data Request Mask to indicate we got this data
         G_data_cnfg->data_mask |= DATA_MASK_VOLT_UPLIFT;
 
-        TRAC_IMP("Got valid Vdd/Vcs Uplift Config data: Vdd_vid_delta[%d] Vcs_vid_delta[%d]",
+        CMDH_TRAC_IMP("Got valid Vdd/Vcs Uplift Config data: Vdd_vid_delta[%d] Vcs_vid_delta[%d]",
                  G_sysConfigData.vdd_vid_delta,
                  G_sysConfigData.vcs_vid_delta);
     }
@@ -2200,7 +2166,7 @@ errlHndl_t data_store_volt_uplift(const cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // Name:   DATA_store_cnfgdata
 //
-// Description: TODO Add description
+// Description: Process Set Configuration Data cmd based on format (type) byte
 //
 // End Function Specification
 errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
@@ -2212,7 +2178,7 @@ errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
     memset(o_rsp_ptr,0,(size_t)(sizeof(cmdh_fsp_rsp_t)));
 
-    TRAC_IMP("Data Config Packet Received Type: 0x%02x",i_cmd_ptr->data[0]);
+    CMDH_TRAC_IMP("Data Config Packet Received Type: 0x%02x",i_cmd_ptr->data[0]);
 
     switch (i_cmd_ptr->data[0])
     {
@@ -2221,18 +2187,6 @@ errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
             if(NULL == l_errlHndl)
             {
                 l_new_data = DATA_MASK_FREQ_PRESENT;
-            }
-            break;
-
-        case DATA_FORMAT_PSTATE_SUPERSTRUCTURE:
-            // Initialize the Pstate Table, based on the passed in
-            // PstateSuperStructure.
-
-            l_errlHndl = data_store_pstate_super(i_cmd_ptr, o_rsp_ptr);
-            if(NULL == l_errlHndl)
-            {
-                // Set this in case AMEC needs to know about this
-                l_new_data = DATA_MASK_PSTATE_SUPERSTRUCTURE;
             }
             break;
 
@@ -2306,7 +2260,7 @@ errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
             break;
 
         case DATA_FORMAT_MEM_CFG:
-            // Store HUID mapping for centaurs and dimms
+            // Store memory configuration for present centaurs and/or dimms to monitor
             l_errlHndl = data_store_mem_cfg(i_cmd_ptr, o_rsp_ptr);
 
             if(NULL == l_errlHndl)
@@ -2346,7 +2300,7 @@ errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
             if(CURRENT_STATE() != OCC_STATE_ACTIVE)
             {
                 // Clear all configuration data except for any data needed to support observation
-                TRAC_INFO("Clear all active configuration data");
+                CMDH_TRAC_INFO("Clear all active configuration data");
                 G_data_cnfg->data_mask &= SMGR_VALIDATE_DATA_OBSERVATION_MASK;
 
                 // Clear the frequencies config data
@@ -2355,7 +2309,7 @@ errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
             }
             else
             {
-                TRAC_ERR("Failed to clear all active configuration data because we are in ACTIVE state");
+                CMDH_TRAC_ERR("Failed to clear all active configuration data because we are in ACTIVE state");
                 l_rc = ERRL_RC_INVALID_STATE;
             }
             break;

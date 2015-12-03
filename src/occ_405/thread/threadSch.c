@@ -188,8 +188,7 @@ void initThreadScheduler(void)
         || l_timerRc
         || l_snapshotTimerRc )
     {
-        MAIN_TRAC_ERR("Error creating thread: snapshopTimerTc: %d, "
-                      "timerRc: %d, cmdThreadRc: %d, dcomThreadRc: %d"
+        MAIN_TRAC_ERR("Error creating thread: snapshopTimerTc: %d, timerRc: %d, cmdThreadRc: %d, dcomThreadRc: %d",
                       l_snapshotTimerRc, l_timerRc,
                       l_cmdThreadRc,l_dcomThreadRc);
 

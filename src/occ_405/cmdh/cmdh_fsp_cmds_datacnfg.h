@@ -90,23 +90,6 @@ typedef enum
 #define OCC_ROLE_MASTER_MASK        0x01
 #define OCC_ROLE_FIR_MASTER_MASK    0x40
 
-// Used by TMGT to send OCC the PstateSuperStruct
-// TEMP -- NO PStateSuperStructure anymore?
-/*
-typedef struct __attribute__ ((packed))
-{
-    struct    cmdh_fsp_cmd_header;
-    uint8_t   format;
-    uint8_t   reserved[3];
-    PstateSuperStructure pstatess;
-}cmdh_store_cnfgdata_pstatess_t;
-*/
-#define CMDH_CNFGDATA_PSTATESS_DATALEN (sizeof(PstateSuperStructure) + 4)
-
-//At a minimum, OCC expects this size: Pstate superstructure for versions
-//PSTATE01, PSTATE02, or PSTATE03, plus 4 bytes (from format and reserved bytes)
-#define CMDH_CNFGDATA_PSTATESS_MIN_DATALEN   (1904 + 4)
-
 // Used by TMGT to send OCC the frequencies for each mode.
 typedef struct __attribute__ ((packed))
 {
@@ -341,39 +324,24 @@ typedef struct __attribute__ ((packed))
     uint8_t                    num_data_sets;
 }cmdh_mem_cfg_header_t;
 
-// Maps an HUID to a centaur or dimm
-// NOTE: 0xFF for dimm means this is for a centaur
-typedef struct __attribute__ ((packed))
-{
-    uint64_t                   huid;
-    uint8_t                    centaur_num;
-    uint8_t                    dimm_num;
-    uint16_t                   reserved;
-}cmdh_mem_cfg_data_set_t;
-
 // Config packet definition used by TMGT to
-// send HUID mappings for centaurs and dimms
-typedef struct __attribute__ ((packed))
-{
-    cmdh_mem_cfg_header_t      header;
-    cmdh_mem_cfg_data_set_t    data_set[1];
-}cmdh_mem_cfg_t;
+// send sensor mappings for centaurs and dimms
 
 typedef struct __attribute__ ((packed))
 {
-    uint32_t                   reserved;
-    uint16_t                   hw_sensor_id;
-    uint16_t                   temp_sensor_id;
-    uint8_t                    centaur_num;
-    uint8_t                    dimm_num;
-    uint16_t                   reserved2;
-}cmdh_mem_cfg_data_set_v10_t;
+    uint32_t                   hw_sensor_id;
+    uint32_t                   temp_sensor_id;
+    uint8_t                    memory_type;
+    uint8_t                    dimm_info1;
+    uint8_t                    dimm_info2;
+    uint8_t                    dimm_info3;
+}cmdh_mem_cfg_data_set_v20_t;
 
 typedef struct __attribute__ ((packed))
 {
     cmdh_mem_cfg_header_t       header;
-    cmdh_mem_cfg_data_set_v10_t data_set[1];
-}cmdh_mem_cfg_v10_t;
+    cmdh_mem_cfg_data_set_v20_t data_set[1];
+}cmdh_mem_cfg_v20_t;
 
 
 // Header data for mem throttle packet
