@@ -116,10 +116,18 @@ typedef struct amec_wof
     uint16_t            v_chip;
     // First index into iddq table for interpolation
     uint8_t             iddq_i;
+    // First index into iddq table for interpolation
+    uint8_t             iddq_i_core[MAX_NUM_CORES];
     // Check interpolation of iddq table
     uint16_t            iddq85c;
-    // I_DC_extracted is the estimated temperature-corrected leakage current in 0.01 Amps
+    // Check interpolation of iddq table
+    uint16_t            iddq85c_core[MAX_NUM_CORES];
+    // Estimated temperature-corrected leakage current in 0.01 Amps (whole chip)
     uint16_t            iddq;
+    // Estimated temperature-corrected leakage current in 0.01 Amps (per core)
+    uint16_t            iddq_core[MAX_NUM_CORES];
+    // Estimated temperature-corrected leakage current in 0.01 Amps (old way)
+    uint16_t            iddq_chip;
     // I_AC extracted in 0.01 Amps
     uint16_t            ac;
     // Effective capacitance for TDP workload @ Turbo in 0.005904 nF
@@ -164,6 +172,8 @@ typedef struct amec_wof
     uint8_t             pstatetable_cores_current;
     //The next pstate table max number of cores
     uint8_t             pstatetable_cores_next;
+    //Estimated leakage current by core
+    uint16_t            leakage[MAX_NUM_CORES]; // leakage current in 0.01 A
 
 } amec_wof_t;
 
@@ -208,4 +218,7 @@ void amec_wof_vdd_current_out(const uint16_t i_power_in,
 void amec_wof_validate_input_data(void);
 
 uint16_t amec_wof_get_max_freq(const uint8_t i_cores);
+
+void amec_wof_calc_core_leakage(uint8_t i_core);
+
 #endif
