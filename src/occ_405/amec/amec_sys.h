@@ -210,8 +210,8 @@ typedef struct
     uint8_t  cur_temp;
     uint8_t  sample_age;
     uint8_t  flags;
-    // Sensor ID for reporting temperature to BMC
-    uint16_t temp_sid;
+    // Sensor ID for reporting temperature to BMC and FSP
+    uint32_t temp_sid;
 }fru_temp_t;
 
 typedef struct
@@ -240,8 +240,8 @@ typedef struct
   // Hottest centaur temperature for this centaur
   fru_temp_t centaur_hottest;
 
-  // Sensor ID for reporting temperature to BMC
-  uint16_t   temp_sid;
+  // Sensor ID for reporting temperature to BMC and FSP
+  uint32_t  temp_sid;
 
   amec_centaur_perf_counter_t perf;
 
