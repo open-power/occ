@@ -53,7 +53,6 @@
 #include <homer.h>
 //#include <amec_health.h>
 //#include <amec_freq.h>
-#include <thrm_thread.h>
 #include "scom.h"
 //#include <fir_data_collect.h>
 #include <pss_service_codes.h>
@@ -87,15 +86,13 @@ uint8_t G_noncritical_stack[NONCRITICAL_STACK_SIZE];
 uint8_t G_critical_stack[CRITICAL_STACK_SIZE];
 
 //NOTE: Three semaphores are used so that if in future it is decided
-// to move thermal, health monitor and FFDC into it's own threads, then
+// to move health monitor and FFDC into it's own threads, then
 // it can be done easily without more changes.
-// Semaphores for the thermal functions
-SsxSemaphore G_thrmSem;
 // Semaphores for the health monitor functions
 SsxSemaphore G_hmonSem;
 // Semaphores for the FFDC functions
 SsxSemaphore G_ffdcSem;
-// Timer for posting thermal, health monitor and FFDC semaphore
+// Timer for posting health monitor and FFDC semaphore
 SsxTimer G_mainThrdTimer;
 
 // Variable holding main thread loop count
@@ -625,17 +622,6 @@ void mainThrdTimerCallback(void * i_argPtr)
     int l_rc = SSX_OK;
     do
     {
-        // Post Thermal semaphore
-        l_rc = ssx_semaphore_post( &G_thrmSem );
-
-        if ( l_rc != SSX_OK )
-        {
-            MAIN_TRAC_ERR("Failure posting thermal semaphore: rc: 0x%x", l_rc);
-            break;
-        }
-
-        MAIN_DBG("posted thrmSem");
-
         // Post health monitor semaphore
         l_rc = ssx_semaphore_post( &G_hmonSem );
 
@@ -667,7 +653,7 @@ void mainThrdTimerCallback(void * i_argPtr)
          * @errortype
          * @moduleid    MAIN_THRD_TIMER_MID
          * @reasoncode  SSX_GENERIC_FAILURE
-         * @userdata1   Create thermal semaphore rc
+         * @userdata1   Create hmon and ffdc semaphore rc
          * @userdata4   OCC_NO_EXTENDED_RC
          * @devdesc     SSX semaphore related failure
          */
@@ -700,10 +686,6 @@ void mainThrdTimerCallback(void * i_argPtr)
  */
 void initMainThrdSemAndTimer()
 {
-    // create the thermal Semaphore, starting at 0 with a max count of 0
-    // NOTE: Max count of 0 is used becuase there is possibility that
-    // semaphore can be posted more than once without any semaphore activity
-    int l_thrmSemRc = ssx_semaphore_create(&G_thrmSem, 0, 0);
     // create the health monitor Semaphore, starting at 0 with a max count of 0
     // NOTE: Max count of 0 is used becuase there is possibility that
     // semaphore can be posted more than once without any semaphore activity
@@ -730,20 +712,19 @@ void initMainThrdSemAndTimer()
 
     // Failure creating semaphore or creating/scheduling timer, create
     // and log error.
-    if (( l_thrmSemRc != SSX_OK ) ||
-        ( l_hmonSemRc != SSX_OK ) ||
+    if (( l_hmonSemRc != SSX_OK ) ||
         ( l_ffdcSemRc != SSX_OK ) ||
         ( l_timerRc != SSX_OK))
     {
-        MAIN_TRAC_ERR("Semaphore/timer create failure: thrmSemRc: 0x%08x, "
+        MAIN_TRAC_ERR("Semaphore/timer create failure: "
                  "hmonSemRc: 0x08%x, ffdcSemRc: 0x%08x, l_timerRc: 0x%08x",
-                 -l_thrmSemRc,-l_hmonSemRc,-l_ffdcSemRc, l_timerRc );
+                 -l_hmonSemRc,-l_ffdcSemRc, l_timerRc );
 
         /* @
          * @errortype
          * @moduleid    MAIN_THRD_SEM_INIT_MID
          * @reasoncode  SSX_GENERIC_FAILURE
-         * @userdata1   Create thermal semaphore rc
+         * @userdata1   Create health monitor semaphore rc
          * @userdata2   Timer create/schedule rc
          * @userdata4   OCC_NO_EXTENDED_RC
          * @devdesc     SSX semaphore related failure
@@ -755,7 +736,7 @@ void initMainThrdSemAndTimer()
                                       ERRL_SEV_UNRECOVERABLE,       //Severity
                                       NULL,                         //Trace Buf
                                       DEFAULT_TRACE_SIZE,           //Trace Size
-                                      l_thrmSemRc,                  //userdata1
+                                      l_hmonSemRc,                  //userdata1
                                       l_timerRc);                   //userdata2
 
         REQUEST_RESET(l_err);
@@ -831,7 +812,7 @@ void Main_thread_routine(void *private)
     rtl_ocb_init();
     CHECKPOINT(RTL_TIMER_INITIALIZED);
 
-    // Initialize semaphores and timer for handling thermal, health monitor and
+    // Initialize semaphores and timer for handling health monitor and
     // FFDC functions.
     initMainThrdSemAndTimer();
     CHECKPOINT(SEMS_AND_TIMERS_INITIALIZED);
@@ -869,8 +850,6 @@ void Main_thread_routine(void *private)
         dcache_flush(g_trac_imp_buffer, TRACE_BUFFER_SIZE);
         dcache_flush(g_trac_err_buffer, TRACE_BUFFER_SIZE);
 
-        // Wait for thermal semaphore
-        l_ssxrc = ssx_semaphore_pend(&G_thrmSem,SSX_WAIT_FOREVER);
 /* TEMP -- FIR DATA IS NOT SUPPORTED IN PHASE1
         static bool L_fir_collection_completed = FALSE;
         // Look for FIR collection flag and status
@@ -901,16 +880,6 @@ void Main_thread_routine(void *private)
             }
         }
 */
-        if ( l_ssxrc != SSX_OK )
-        {
-            MAIN_TRAC_ERR("thermal Semaphore pending failure RC[0x%08X]", -l_ssxrc );
-        }
-        else
-        {
-            // For Simics phase 1, we don't want to call the thermal thread
-            // Call thermal routine that executes fan control
-            //thrm_thread_main();
-        }
 
         if( l_ssxrc == SSX_OK)
         {

@@ -65,9 +65,8 @@ TOP-C-SOURCES = amec/amec_data.c \
                 sensor/sensor.c \
                 state.c \
                 thread/threadSch.c \
-                thread/thrm_thread.c \
                 timer/timer.c \
-                trac/trac_interface.c 
+                trac/trac_interface.c
 
 TOP-S-SOURCES = cmdh/ll_ffdc.S \
 

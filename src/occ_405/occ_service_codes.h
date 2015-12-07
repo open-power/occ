@@ -75,6 +75,8 @@ enum occReasonCode
     CENT_LFIR_ERROR                 = 0x42,
     /// Throttle in nominal or turbo mode due to the bulk power limit being reached with both power supplies good
     PCAP_THROTTLE_POWER_LIMIT       = 0x61,
+    /// Firmware Failure: equivalent to assertion failures
+    INTERNAL_FW_FAILURE             = 0xA0,
     /// Failure within the OCC Complex of the processor
     INTERNAL_HW_FAILURE             = 0xB0,
     /// OCC GPE halted due to checkstop

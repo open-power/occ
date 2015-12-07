@@ -59,10 +59,8 @@
 
 #define DATA_APSS_VERSION20        0x20
 
-#define DATA_THRM_THRES_VERSION_1  1
-#define DATA_THRM_THRES_VERSION_10 0x10
-#define THRM_THRES_BASE_DATA_SZ_1  4
-#define THRM_THRES_BASE_DATA_SZ_10 3
+#define DATA_THRM_THRES_VERSION_20 0x20
+#define THRM_THRES_BASE_DATA_SZ_20 5
 
 #define DATA_IPS_VERSION           0
 
@@ -1345,12 +1343,11 @@ errlHndl_t data_store_thrm_thresholds(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                             cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     errlHndl_t                      l_err = NULL;
-    cmdh_thrm_thresholds_t*         l_cmd_ptr = (cmdh_thrm_thresholds_t*)i_cmd_ptr;
     uint16_t                        i = 0;
     uint16_t                        l_data_length = 0;
     uint16_t                        l_exp_data_length = 0;
     uint8_t                         l_frutype = 0;
-    cmdh_thrm_thresholds_v10_t*     l_cmd2_ptr = (cmdh_thrm_thresholds_v10_t*)i_cmd_ptr;
+    cmdh_thrm_thresholds_v20_t*     l_cmd_ptr = (cmdh_thrm_thresholds_v20_t*)i_cmd_ptr;
     uint8_t                         l_num_data_sets = 0;
     bool                            l_invalid_input = TRUE; //Assume bad input
     bool                            l_vrm_frutype = FALSE;
@@ -1362,27 +1359,17 @@ errlHndl_t data_store_thrm_thresholds(const cmdh_fsp_cmd_t * i_cmd_ptr,
         // Sanity checks on input data, break if:
         //  * data packet is smaller than the base size, OR
         //  * the version doesn't match what we expect,  OR
-        //  * the actual data length does not match the expected data length.
-        if(l_cmd_ptr->version == DATA_THRM_THRES_VERSION_1)
+        //  * the actual data length does not match the expected data length, OR
+        //  * the core and quad weights are both zero.
+        if(l_cmd_ptr->version == DATA_THRM_THRES_VERSION_20)
         {
             l_num_data_sets = l_cmd_ptr->num_data_sets;
-            l_exp_data_length = THRM_THRES_BASE_DATA_SZ_1 +
-                (l_num_data_sets * sizeof(cmdh_thrm_thresholds_set_t));
+            l_exp_data_length = THRM_THRES_BASE_DATA_SZ_20 +
+                (l_num_data_sets * sizeof(cmdh_thrm_thresholds_set_v20_t));
 
             if((l_exp_data_length == l_data_length) &&
-               (l_data_length >= THRM_THRES_BASE_DATA_SZ_1))
-            {
-                l_invalid_input = FALSE;
-            }
-        }
-        else if(l_cmd_ptr->version == DATA_THRM_THRES_VERSION_10)
-        {
-            l_num_data_sets = l_cmd2_ptr->num_data_sets;
-            l_exp_data_length = THRM_THRES_BASE_DATA_SZ_10 +
-                (l_num_data_sets * sizeof(cmdh_thrm_thresholds_set_v10_t));
-
-            if((l_exp_data_length == l_data_length) &&
-               (l_data_length >= THRM_THRES_BASE_DATA_SZ_10))
+               (l_data_length >= THRM_THRES_BASE_DATA_SZ_20) &&
+               (l_cmd_ptr->proc_core_weight || l_cmd_ptr->proc_quad_weight))
             {
                 l_invalid_input = FALSE;
             }
@@ -1398,107 +1385,68 @@ errlHndl_t data_store_thrm_thresholds(const cmdh_fsp_cmd_t * i_cmd_ptr,
             break;
         }
 
-        if(l_cmd_ptr->version == DATA_THRM_THRES_VERSION_1)
+        // Store the base data
+        G_data_cnfg->thrm_thresh.version          = l_cmd_ptr->version;
+        G_data_cnfg->thrm_thresh.proc_core_weight = l_cmd_ptr->proc_core_weight;
+        G_data_cnfg->thrm_thresh.proc_quad_weight = l_cmd_ptr->proc_quad_weight;
+        G_data_cnfg->thrm_thresh.num_data_sets    = l_cmd_ptr->num_data_sets;
+
+        // Store the FRU related data
+        for(i=0; i<l_cmd_ptr->num_data_sets; i++)
         {
-            // Store the base data
-            G_data_cnfg->thrm_thresh.version = l_cmd_ptr->version;
-            G_data_cnfg->thrm_thresh.fan_control_loop_time = l_cmd_ptr->fan_control_loop_time;
-            G_data_cnfg->thrm_thresh.num_data_sets = l_cmd_ptr->num_data_sets;
+            // Get the FRU type
+            l_frutype = l_cmd_ptr->data[i].fru_type;
 
-            // Store the FRU related data
-            for(i=0; i<l_cmd_ptr->num_data_sets; i++)
+            if((l_frutype >= 0) && (l_frutype < DATA_FRU_MAX))
             {
-                // Get the FRU type
-                l_frutype = l_cmd_ptr->data[i].fru_type;
+                // Copy FRU data
+                G_data_cnfg->thrm_thresh.data[l_frutype].fru_type = l_frutype;
+                G_data_cnfg->thrm_thresh.data[l_frutype].dvfs     = l_cmd_ptr->data[i].dvfs;
+                G_data_cnfg->thrm_thresh.data[l_frutype].error    = l_cmd_ptr->data[i].error;
+                G_data_cnfg->thrm_thresh.data[l_frutype].pm_dvfs  = l_cmd_ptr->data[i].pm_dvfs;
+                G_data_cnfg->thrm_thresh.data[l_frutype].pm_error = l_cmd_ptr->data[i].pm_error;
+                G_data_cnfg->thrm_thresh.data[l_frutype].max_read_timeout =
+                    l_cmd_ptr->data[i].max_read_timeout;
 
-                if((l_frutype >= 0) && (l_frutype < DATA_FRU_MAX))
+                // Set a local flag if we get data for VRM FRU type
+                if(l_frutype == DATA_FRU_VRM)
                 {
-                    // Copy FRU data
-                    memcpy((void *)&G_data_cnfg->thrm_thresh.data[l_frutype],
-                           (void *)&l_cmd_ptr->data[i],
-                           sizeof(cmdh_thrm_thresholds_set_t));
+                    l_vrm_frutype = TRUE;
+                }
 
                 // Useful trace for debugging
-                //CMDH_TRAC_INFO("data_store_thrm_thresholds: FRU_type[0x%.2X] T_control[%u] DVFS[%u]",
+                //CMDH_TRAC_INFO("data_store_thrm_thresholds: FRU_type[0x%.2X] T_control[%u] DVFS[%u] Error[%u]",
                 //          G_data_cnfg->thrm_thresh.data[l_frutype].fru_type,
                 //          G_data_cnfg->thrm_thresh.data[l_frutype].t_control,
-                //          G_data_cnfg->thrm_thresh.data[l_frutype].dvfs);
-                }
-                else
-                {
-                    // We got an invalid FRU type
-                    CMDH_TRAC_ERR("data_store_thrm_thresholds: Received an invalid FRU type[0x%.2X] max_FRU_number[0x%.2X]",
-                             l_frutype,
-                             DATA_FRU_MAX);
-                    cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
-                    break;
-                }
-            }
-        }
-        else if(l_cmd_ptr->version == DATA_THRM_THRES_VERSION_10)
-        {
-            // Store the base data
-            G_data_cnfg->thrm_thresh.version = l_cmd2_ptr->version;
-            G_data_cnfg->thrm_thresh.fan_control_loop_time = 0; //Indicates not to run fan control loop
-            G_data_cnfg->thrm_thresh.num_data_sets = l_cmd2_ptr->num_data_sets;
-
-            // Store the FRU related data
-            for(i=0; i<l_cmd2_ptr->num_data_sets; i++)
-            {
-                // Get the FRU type
-                l_frutype = l_cmd2_ptr->data[i].fru_type;
-
-                if((l_frutype >= 0) && (l_frutype < DATA_FRU_MAX))
-                {
-                    // Copy FRU data
-                    G_data_cnfg->thrm_thresh.data[l_frutype].fru_type = l_frutype;
-                    G_data_cnfg->thrm_thresh.data[l_frutype].dvfs = l_cmd2_ptr->data[i].dvfs;
-                    G_data_cnfg->thrm_thresh.data[l_frutype].error = l_cmd2_ptr->data[i].error;
-                    G_data_cnfg->thrm_thresh.data[l_frutype].pm_dvfs = l_cmd2_ptr->data[i].dvfs;
-                    G_data_cnfg->thrm_thresh.data[l_frutype].pm_error = l_cmd2_ptr->data[i].error;
-                    G_data_cnfg->thrm_thresh.data[l_frutype].max_read_timeout = l_cmd2_ptr->data[i].max_read_timeout;
-
-                    // Set a local flag if we get data for VRM FRU type
-                    if(l_frutype == DATA_FRU_VRM)
-                    {
-                        l_vrm_frutype = TRUE;
-                    }
-
-                    // Useful trace for debugging
-                    //CMDH_TRAC_INFO("data_store_thrm_thresholds: FRU_type[0x%.2X] T_control[%u] DVFS[%u] Error[%u]",
-                    //          G_data_cnfg->thrm_thresh.data[l_frutype].fru_type,
-                    //          G_data_cnfg->thrm_thresh.data[l_frutype].t_control,
-                    //          G_data_cnfg->thrm_thresh.data[l_frutype].dvfs,
-                    //          G_data_cnfg->thrm_thresh.data[l_frutype].error);
-                }
-                else
-                {
-                    // We got an invalid FRU type
-                    CMDH_TRAC_ERR("data_store_thrm_thresholds: Received an invalid FRU type[0x%.2X] max_FRU_number[0x%.2X]",
-                             l_frutype,
-                             DATA_FRU_MAX);
-                    cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
-                    break;
-                }
-            }
-
-            // Did we get data for VRM FRU type?
-            if(l_vrm_frutype)
-            {
-                // Then, set a global variable so that OCC attempts to talk to
-                // the VRMs
-                G_vrm_present = 1;
+                //          G_data_cnfg->thrm_thresh.data[l_frutype].dvfs,
+                //          G_data_cnfg->thrm_thresh.data[l_frutype].error);
             }
             else
             {
-                // No VRM data was received, so do not attempt to talk to the VRMs.
-                // Also, make the error count very high so that the health
-                // monitor doesn't complain about VRHOT being asserted.
-                G_vrm_present = 0;
-                G_data_cnfg->thrm_thresh.data[DATA_FRU_VRM].error_count = 0xFF;
-
-                CMDH_TRAC_IMP("data_store_thrm_thresholds: No VRM data was received! OCC won't attempt to talk to VRMs.");
+                // We got an invalid FRU type
+                CMDH_TRAC_ERR("data_store_thrm_thresholds: Received an invalid FRU type[0x%.2X] max_FRU_number[0x%.2X]",
+                              l_frutype,
+                              DATA_FRU_MAX);
+                cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
+                break;
             }
+        }
+
+        // Did we get data for VRM FRU type?
+        if(l_vrm_frutype)
+        {
+            // Then, set a global variable so that OCC attempts to talk to
+            // the VRMs
+            G_vrm_present = 1;
+        }
+        else
+        {
+            // No VRM data was received, so do not attempt to talk to the VRMs.
+            // Also, make the error count very high so that the health
+            // monitor doesn't complain about VRHOT being asserted.
+            G_vrm_present = 0;
+            G_data_cnfg->thrm_thresh.data[DATA_FRU_VRM].error_count = 0xFF;
+            CMDH_TRAC_IMP("data_store_thrm_thresholds: No VRM data was received! OCC won't attempt to talk to VRMs.");
         }
 
     } while(0);
@@ -1508,9 +1456,6 @@ errlHndl_t data_store_thrm_thresholds(const cmdh_fsp_cmd_t * i_cmd_ptr,
         // If there were no errors, indicate that we got this data
         G_data_cnfg->data_mask |= DATA_MASK_THRM_THRESHOLDS;
         CMDH_TRAC_IMP("data_store_thrm_thresholds: Got valid Thermal Control Threshold data packet");
-
-        // Notify thermal thread to update its local copy of the thermal thresholds
-        THRM_thread_update_thresholds();
     }
 
     return l_err;

@@ -466,9 +466,6 @@ typedef struct
   sensor_t temp2msdimm;
   sensor_t memsp2ms_tls;
 
-  // Error count for failing to read VR_FAN signal
-  uint8_t  vrfan_error_count;
-
   // Calculations & Interim Data
   uint16_t sleep_cnt;
   uint16_t winkle_cnt;

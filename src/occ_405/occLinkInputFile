@@ -69,6 +69,5 @@ INPUT ( amec_data.o
         ssx_timer_init.o
         state.o
         threadSch.o
-        thrm_thread.o
         timer.o
         trac_interface.o)

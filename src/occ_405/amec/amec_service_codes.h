@@ -54,7 +54,7 @@ enum occAmecModuleId
     AMEC_AMESTER_INTERFACE           =    AMEC_COMP_ID | 0x03,
     AMEC_PCAP_CONN_OC_CONTROLLER     =    AMEC_COMP_ID | 0x04,
     AMEC_MST_CHECK_PCAPS_MATCH       =    AMEC_COMP_ID | 0x05,
-    AMEC_MST_CHECK_UNDER_PCAP  	     = 	  AMEC_COMP_ID | 0x06,
+    AMEC_MST_CHECK_UNDER_PCAP        =    AMEC_COMP_ID | 0x06,
     AMEC_SLAVE_CHECK_PERFORMANCE     =    AMEC_COMP_ID | 0x07,
     AMEC_HEALTH_CHECK_PROC_TEMP      =    AMEC_COMP_ID | 0x08,
     AMEC_HEALTH_CHECK_DIMM_TEMP      =    AMEC_COMP_ID | 0x09,
@@ -64,6 +64,7 @@ enum occAmecModuleId
     AMEC_HEALTH_CHECK_VRFAN_TIMEOUT  =    AMEC_COMP_ID | 0x13,
     AMEC_HEALTH_CHECK_PROC_TIMEOUT   =    AMEC_COMP_ID | 0x14,
     AMEC_HEALTH_CHECK_PROC_VRHOT     =    AMEC_COMP_ID | 0x15,
+    AMEC_CALC_DTS_SENSORS            =    AMEC_COMP_ID | 0x16,
 };
 
 /*----------------------------------------------------------------------------*/

@@ -53,8 +53,6 @@
 // This holds the converted ADC Reads
 uint32_t G_lastValidAdcValue[MAX_APSS_ADC_CHANNELS] = {0};
 
-extern thrm_fru_data_t      G_thrm_fru_data[DATA_FRU_MAX];
-
 // There are only MAX_APSS_ADC_CHANNELS channels.  Therefore if the channel value
 // is greater then the MAX, then there was no channel associated with the function id.
 #define ADC_CONVERTED_VALUE(i_chan) \
@@ -484,10 +482,8 @@ void amec_update_vrm_sensors(void)
             // Update the VR_FAN sensor
             sensor_update( AMECSENSOR_PTR(VRFAN250USPROC), (uint16_t)l_vrfan );
 
-            // Clear our error count and the 'read failure' flag (since we can
-            // read VR_FAN signal)
+            // Clear our error count
             L_error_count = 0;
-            G_thrm_fru_data[DATA_FRU_VRM].read_failure = 0;
 
             // No longer reading gpio from APSS in GA1 due to instability in
             // APSS composite mode
@@ -524,45 +520,6 @@ void amec_update_vrm_sensors(void)
             if (L_error_count == 0)
             {
                 L_error_count = 0xFF;
-            }
-
-            // Log an error if we exceeded our number of fail-to-read sensor
-            if ((L_error_count == g_amec->proc[0].vrfan_error_count) &&
-                (g_amec->proc[0].vrfan_error_count != 0xFF))
-            {
-                TRAC_ERR("amec_update_vrm_sensors: Failed to read VR_FAN for %u consecutive times!",
-                         L_error_count);
-
-                // Also, inform the thermal thread to send a cooling request
-                G_thrm_fru_data[DATA_FRU_VRM].read_failure = 1;
-
-                /* @
-                 * @errortype
-                 * @moduleid    AMEC_HEALTH_CHECK_VRFAN_TIMEOUT
-                 * @reasoncode  VRM_VRFAN_TIMEOUT
-                 * @userdata1   timeout value
-                 * @userdata2   0
-                 * @userdata4   OCC_NO_EXTENDED_RC
-                 * @devdesc     Failed to read VR_FAN signal from regulator.
-                 *
-                 */
-                l_err = createErrl(AMEC_HEALTH_CHECK_VRFAN_TIMEOUT,  //modId
-                                   VRM_VRFAN_TIMEOUT,                //reasoncode
-                                   OCC_NO_EXTENDED_RC,               //Extended reason code
-                                   ERRL_SEV_PREDICTIVE,              //Severity
-                                   NULL,                             //Trace Buf
-                                   DEFAULT_TRACE_SIZE,               //Trace Size
-                                   g_amec->thermaldimm.temp_timeout, //userdata1
-                                   0);                               //userdata2
-
-                // Callout backplane for this VRM error
-                addCalloutToErrl(l_err,
-                                 ERRL_CALLOUT_TYPE_HUID,
-                                 G_sysConfigData.backplane_huid,
-                                 ERRL_CALLOUT_PRIORITY_MED);
-
-                // Commit the error
-                commitErrl(&l_err);
             }
         }
     }

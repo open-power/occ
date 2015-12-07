@@ -47,7 +47,6 @@
 #include "sensor_query_list.h"
 #include "chom.h"
 #include "amec_master_smh.h"
-#include "thrm_thread.h"
 #include <proc_data.h>
 
 // This table contains tunable parameter information that can be exposed to
@@ -87,8 +86,6 @@ uint8_t G_mst_tunable_parameter_overwrite = 0;
 //Reverse association of channel to function.
 uint8_t G_apss_ch_to_function[MAX_APSS_ADC_CHANNELS] = {0};
 
-extern thrm_fru_data_t      G_thrm_fru_data[DATA_FRU_MAX];
-
 // Function Specification
 //
 // Name:  cmdh_tmgt_poll
@@ -115,7 +112,6 @@ errlHndl_t cmdh_tmgt_poll (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
             l_poll_rsp->status.word     = SMGR_validate_get_valid_states();
             l_poll_rsp->ext_status.word = 0;
-            l_poll_rsp->ext_status.cooling_request = THRM_thread_get_cooling_request();
 
             l_poll_rsp->occ_pres_mask   = G_sysConfigData.is_occ_present;
             l_poll_rsp->config_data     = DATA_request_cnfgdata();
@@ -1582,79 +1578,6 @@ errlHndl_t cmdh_tmgt_get_field_debug_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
 #endif
     return l_err;
 }
-
-// Function Specification
-//
-// Name:  cmdh_get_cooling_request
-//
-// Description: TODO Add description
-//
-// End Function Specification
-errlHndl_t cmdh_get_cooling_request(const cmdh_fsp_cmd_t * i_cmd_ptr,
-                                    cmdh_fsp_rsp_t * o_rsp_ptr)
-{
-    errlHndl_t                  l_errlHndl = NULL;
-    cmdh_get_cooling_resp_t     *l_resp_ptr = (cmdh_get_cooling_resp_t*) o_rsp_ptr;
-    ERRL_RC                     l_rc = ERRL_RC_SUCCESS;
-    uint16_t                    l_rsp_data_length = 0;
-    uint16_t                    l_max_increment = 0;
-    uint8_t                     l_fru_winner = DATA_FRU_MAX;
-    uint8_t                     i = 0;
-    uint8_t                     j = 0;
-
-    do
-    {
-        // Command Length Check - make sure we at least have a version number
-        if( CMDH_DATALEN_FIELD_UINT16(i_cmd_ptr) < CMDH_GET_COOLING_MIN_DATALEN)
-        {
-            l_rc = ERRL_RC_INVALID_CMD_LEN;
-            break;
-        }
-
-        // Version Number Check
-        if(i_cmd_ptr->data[0] != CMDH_GET_COOLING_VERSION)
-        {
-            l_rc = ERRL_RC_INVALID_DATA;
-            break;
-        }
-
-        // Loop through all Zones
-        for (i=0; i<THRM_MAX_NUM_ZONES; i++)
-        {
-            // For each Zone, determine which FRU is requesting the maximum
-            // increment value
-            l_max_increment = 0;
-            l_fru_winner = DATA_FRU_MAX;
-            for (j=0; j<DATA_FRU_MAX; j++)
-            {
-                if (G_thrm_fru_data[j].FanIncZone[i] > l_max_increment)
-                {
-                    l_max_increment = G_thrm_fru_data[j].FanIncZone[i];
-                    l_fru_winner = j;
-                }
-            }
-            l_resp_ptr->zone_data[i].increment_value = l_max_increment;
-            l_resp_ptr->zone_data[i].comp_type = l_fru_winner;
-            l_resp_ptr->zone_data[i].reason = 0x00; // Always hardcoded to 0x00
-        }
-
-        // Populate the response data header
-        l_rsp_data_length = (sizeof(cmdh_get_cooling_resp_t) - CMDH_DBUG_FSP_RESP_LEN);
-        l_resp_ptr->data_length[0] = ((uint8_t *)&l_rsp_data_length)[0];
-        l_resp_ptr->data_length[1] = ((uint8_t *)&l_rsp_data_length)[1];
-        l_resp_ptr->rc = l_rc;
-
-    }while(0);
-
-    if(ERRL_RC_SUCCESS != l_rc)
-    {
-        // Build Error Response packet
-        cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, l_rc, &l_errlHndl);
-    }
-
-    return l_errlHndl;
-}
-
 
 // Function Specification
 //

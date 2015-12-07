@@ -31,13 +31,11 @@
 #include "amec_service_codes.h"
 #include "occ_service_codes.h"
 #include <centaur_data.h>
-#include <thrm_thread.h>
 #include <proc_data.h>
 
 //*************************************************************************
 // Externs
 //*************************************************************************
-extern thrm_fru_data_t      G_thrm_fru_data[DATA_FRU_MAX];
 
 //*************************************************************************
 // Defines/Enums
@@ -546,7 +544,6 @@ void amec_health_check_dimm_timeout()
         }//iterate over all centaurs
     }while(0);
     L_ran_once = TRUE;
-    G_thrm_fru_data[DATA_FRU_DIMM].read_failure = G_dimm_temp_expired_bitmap;
 }
 
 void amec_health_check_cent_timeout()
@@ -732,7 +729,6 @@ void amec_health_check_cent_timeout()
         }//iterate over all centaurs
     }while(0);
     L_ran_once = TRUE;
-    G_thrm_fru_data[DATA_FRU_CENTAUR].read_failure = G_cent_temp_expired_bitmap;
 }
 
 

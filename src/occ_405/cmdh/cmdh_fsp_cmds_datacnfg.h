@@ -222,29 +222,12 @@ extern cmdh_ips_config_data_t   G_ips_config_data;
 typedef struct __attribute__ ((packed))
 {
     uint8_t              fru_type;
-    uint8_t              t_control;
     uint8_t              dvfs;
     uint8_t              error;
-    uint8_t              pm_t_control;
     uint8_t              pm_dvfs;
     uint8_t              pm_error;
-    uint8_t              acoustic_t_control;
-    uint8_t              acoustic_dvfs;
-    uint8_t              acoustic_error;
-    uint8_t              warning;
-    uint8_t              warning_reset;
     uint8_t              error_count;
-    uint8_t              sample_time;
-    uint8_t              sample_error_count;
     uint8_t              max_read_timeout;
-    uint16_t             t_inc_zone1;
-    uint16_t             t_inc_zone2;
-    uint16_t             t_inc_zone3;
-    uint16_t             t_inc_zone4;
-    uint16_t             t_inc_zone5;
-    uint16_t             t_inc_zone6;
-    uint16_t             t_inc_zone7;
-    uint16_t             t_inc_zone8;
 }cmdh_thrm_thresholds_set_t;
 
 // Used by TMGT to send OCC thermal control thresholds
@@ -253,27 +236,40 @@ typedef struct __attribute__ ((packed))
     struct cmdh_fsp_cmd_header;
     uint8_t                    format;
     uint8_t                    version;
-    uint8_t                    fan_control_loop_time;
+
+    // Weight factor for core DTS used to calculate a core temp
+    uint8_t                    proc_core_weight;
+    uint8_t                    proc_quad_weight;
+
     uint8_t                    num_data_sets;
     cmdh_thrm_thresholds_set_t data[DATA_FRU_MAX];
 }cmdh_thrm_thresholds_t;
 
+
 typedef struct __attribute__ ((packed))
 {
-    uint8_t              fru_type;
-    uint8_t              dvfs;
-    uint8_t              error;
+    uint8_t              fru_type; // 0: proc, 1: centaur, 2: dimm, 3: vrm
+//  dvfs/pm_dvfs and error/pm_error fields define the temperature trigger
+//  points for DVFS/Throttling and error/FRU callouts, respectively.
+//  a 0xFF entry indicates that the coresponding temperature trigger
+//  point is undefined.
+    uint8_t              dvfs;     // OS Controlled sys/PowerVM nominal
+    uint8_t              error;    // OS Controlled sys/PowerVM nominal
+    uint8_t              pm_dvfs;  // powerVM sys
+    uint8_t              pm_error; // powerVM sys
     uint8_t              max_read_timeout;
-}cmdh_thrm_thresholds_set_v10_t;
+}cmdh_thrm_thresholds_set_v20_t;
 
 typedef struct __attribute__ ((packed))
 {
     struct cmdh_fsp_cmd_header;
     uint8_t              format;
     uint8_t              version;
+    uint8_t              proc_core_weight;
+    uint8_t              proc_quad_weight;
     uint8_t              num_data_sets;
-    cmdh_thrm_thresholds_set_v10_t data[DATA_FRU_MAX];
-}cmdh_thrm_thresholds_v10_t;
+    cmdh_thrm_thresholds_set_v20_t data[DATA_FRU_MAX];
+}cmdh_thrm_thresholds_v20_t;
 
 
 // Header data for mem cfg packet
@@ -357,8 +353,8 @@ typedef struct __attribute__ ((packed))
 // Used to mark present the config data TMGT has sent us.
 typedef struct data_cnfg
 {
-  uint32_t                      data_mask;
-  cmdh_thrm_thresholds_t        thrm_thresh;
+    uint32_t                  data_mask;
+    cmdh_thrm_thresholds_t    thrm_thresh;
 } data_cnfg_t;
 
 // Used by TMGT to send OCC the Vdd and Vcs uplift values

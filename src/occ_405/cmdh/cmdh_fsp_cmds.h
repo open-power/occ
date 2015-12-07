@@ -38,7 +38,6 @@
 //#include "pstates.h"
 #include "cmdh_fsp_cmds_datacnfg.h"
 #include "sensor.h"
-#include "thrm_thread.h"
 #include "apss.h"
 
 // Enum of the various commands that TMGT may send to OCC
@@ -57,7 +56,6 @@ typedef enum
     CMDH_READ_STATUS_REG        = 0x31,
     CMDH_GET_THROTTLE_VALUE     = 0x32,
     CMDH_GET_CPU_TEMPS          = 0x33,
-    CMDH_GET_COOLING_REQUEST    = 0x34,
     CMDH_GET_SNAPSHOT_BUFFER    = 0x35,
     CMDH_DEBUGPT                = 0x40,
     CMDH_AME_PASS_THROUGH       = 0x41,
@@ -125,7 +123,7 @@ typedef struct __attribute__ ((packed)) cmdh_poll_resp_v0
             uint8_t _reserved_3     : 1;
             uint8_t sync_request    : 1;   // In TMGT to TPMF interface spec, but not needed yet
             uint8_t _reserved_1     : 1;
-            uint8_t cooling_request : 1;   // 1:new fan speed, 0:no new fan speed
+            uint8_t _reserved_0     : 1;
         };
         uint8_t word;
     } ext_status;
@@ -385,36 +383,6 @@ typedef struct __attribute__ ((packed)) cmdh_reset_prep
 }cmdh_reset_prep_t;
 
 //---------------------------------------------------------
-// Get Cooling Request
-//---------------------------------------------------------
-
-// Minimum Data Length for Get Cooling Request Command
-#define CMDH_GET_COOLING_MIN_DATALEN  1
-
-// Version 0
-#define CMDH_GET_COOLING_VERSION      0
-
-typedef struct cmdh_get_cooling_data
-{
-    // Maximum increment value for this zone
-    uint16_t                    increment_value;
-    // Component type that is driving the increment for this zone
-    uint8_t                     comp_type;
-    // Currently not used, hardcode to 0x00 (see TMGT-OCC Interface Spec v2.0)
-    uint8_t                     reason;
-}cmdh_get_cooling_data_t;
-
-// Used by OCC to respond to "GET_COOLING_REQUEST" cmd
-typedef struct __attribute__ ((packed))
-{
-    struct                      cmdh_fsp_rsp_header;
-    // Zone data array
-    cmdh_get_cooling_data_t     zone_data[THRM_MAX_NUM_ZONES];
-    // Checksum
-    uint8_t   checksum[2];
-}cmdh_get_cooling_resp_t;
-
-//---------------------------------------------------------
 // Debug Command
 //---------------------------------------------------------
 
@@ -642,9 +610,6 @@ errlHndl_t cmdh_reset_prep(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
 errlHndl_t cmdh_tmgt_get_field_debug_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                                 cmdh_fsp_rsp_t * i_rsp_ptr);
-
-errlHndl_t cmdh_get_cooling_request(const cmdh_fsp_cmd_t * i_cmd_ptr,
-                                          cmdh_fsp_rsp_t * o_rsp_ptr);
 
 errlHndl_t cmdh_set_user_pcap(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                     cmdh_fsp_rsp_t * o_rsp_ptr);

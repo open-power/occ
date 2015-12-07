@@ -48,6 +48,7 @@
 /******************************************************************************/
 /* Globals                                                                    */
 /******************************************************************************/
+extern data_cnfg_t * G_data_cnfg;
 
 /******************************************************************************/
 /* Forward Declarations                                                       */
@@ -158,14 +159,6 @@ void amec_update_proc_core_sensors(uint8_t i_core)
   }
 }
 
-
-// Core Weight - Weight factor for core DTS used to calculate a core temp
-// TODO - fmk - to be changed once we have TMGT config data with weights.
-// Suggest adding core weight to g_amec struct
-// TEMP - Using the same weight for all cores.
-uint8_t     G_coreWeight = 2;
-uint8_t     G_quadWeight = 1;
-
 // Function Specification
 //
 // Name: amec_calc_dts_sensors
@@ -191,6 +184,11 @@ void amec_calc_dts_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
   BOOLEAN       l_update_sensor = FALSE;
   uint16_t      l_core_hot = 0;
   uint8_t       l_dtsCnt = 0;   //Number of valid Core DTSs
+
+  uint8_t       cWt = 0;        // core weight: zero unless at least one valid core dts reading
+  uint8_t       qWt = 0;        // quad weight: zero unless we have a valid quad dts reading
+
+  errlHndl_t    l_err = NULL;
 
   //Clear DTS array.
   for (k = 0; k < DTS_PER_CORE; k++)
@@ -231,35 +229,80 @@ void amec_calc_dts_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
 
     //The core DTSs are considered only if we have at least 1 valid core DTS and
     //a non-zero G_coreWeight.
-    if (l_dtsCnt && G_coreWeight)
+    if (l_dtsCnt && G_data_cnfg->thrm_thresh.proc_core_weight)
     {
       l_update_sensor = TRUE;
+      cWt = G_data_cnfg->thrm_thresh.proc_core_weight;
     }
 
     //The Quad DTS value is considered only if we have a valid Quad DTS and
     //a non-zero quad weight.
-    if (i_core_data_ptr->dts.cache.fields.valid && G_quadWeight)
+    if (i_core_data_ptr->dts.cache.fields.valid &&
+        G_data_cnfg->thrm_thresh.proc_quad_weight)
     {
       l_quadDts = i_core_data_ptr->dts.cache.fields.reading;
       l_update_sensor = TRUE;
+      qWt = G_data_cnfg->thrm_thresh.proc_quad_weight;
     }
 
     // Update the thermal sensor associated with this core
     if(l_update_sensor)
     {
-      //Formula:
-      //                (Cwt(CoreDTS1 + CoreDTS2) + (Qwt*QuadDTS))
-      //                ------------------------------------------
-      //                         (2*Cwt + Qwt)
-      if ((G_coreWeight && l_dtsCnt) || G_quadWeight)
-      {
-        l_coreTemp = ((G_coreWeight *(l_dts[0] + l_dts[1])) + (G_quadWeight * l_quadDts))
-                     / ((l_dtsCnt * G_coreWeight) + G_quadWeight);
-      }
+        do
+        {
+            if (!((cWt && l_dtsCnt) || qWt))
+            {
+                TRAC_ERR("amec_calc_dts_sensors:l_update_sensor  Firmware Corrupted! ",
+                              "core Weight: %d, valid core DTSs: %d, quad weight: %d",
+                              cWt, l_dtsCnt, qWt);
 
-      // Update sensors & Interim Data
-      sensor_update( AMECSENSOR_ARRAY_PTR(TEMP4MSP0C0,i_core), l_coreTemp);
-      g_amec->proc[0].core[i_core].dts_hottest = l_core_hot;
+                /* @
+                 * @errortype
+                 * @moduleid    AMEC_CALC_DTS_SENSORS
+                 * @reasoncode  INTERNAL_FW_FAILURE
+                 * @userdata1   core ID for which the assertion failed.
+                 * @userdata2   0
+                 * @userdata4   OCC_NO_EXTENDED_RC
+                 * @devdesc     VRHOT signal has been asserted long enough to
+                 *              exceed its error threshold.
+                 *
+                 */
+                l_err = createErrl(AMEC_CALC_DTS_SENSORS,
+                                   INTERNAL_FW_FAILURE,
+                                   OCC_NO_EXTENDED_RC,
+                                   ERRL_SEV_PREDICTIVE,
+                                   NULL,
+                                   DEFAULT_TRACE_SIZE,
+                                   i_core,                   // core ID for which assertion failed.
+                                   cWt<<16|l_dtsCnt<<8|qWt); // parameters caused assertion failure.
+
+                // Callout firmware
+                addCalloutToErrl(l_err,
+                                 ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                                 ERRL_COMPONENT_ID_FIRMWARE,
+                                 ERRL_CALLOUT_PRIORITY_HIGH);
+
+                // Commit error log and request reset
+                REQUEST_RESET(l_err);
+
+
+                // Commit Error
+                commitErrl(&l_err);
+                break;             // avoid potential divide by zero
+            }
+
+            //Formula:
+            //                (cWt(CoreDTS1 + CoreDTS2) + (qWt*QuadDTS))
+            //                ------------------------------------------
+            //                         (2*cWt + qWt)
+
+            l_coreTemp = ((cWt * (l_dts[0] + l_dts[1])) + (qWt * l_quadDts))
+                / ((l_dtsCnt * cWt) + qWt);
+
+            // Update sensors & Interim Data
+            sensor_update( AMECSENSOR_ARRAY_PTR(TEMP4MSP0C0,i_core), l_coreTemp);
+            g_amec->proc[0].core[i_core].dts_hottest = l_core_hot;
+        }  while(0);
     }
   }
 }

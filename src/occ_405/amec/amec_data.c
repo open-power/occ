@@ -47,7 +47,6 @@
 #include <amec_sensors_fw.h>
 #include <amec_data.h>
 #include <amec_freq.h>
-#include <thrm_thread.h>
 
 //*************************************************************************
 // Externs
@@ -163,9 +162,6 @@ errlHndl_t AMEC_data_write_thrm_thresholds(const OCC_MODE i_mode)
             break;
         }
 
-        // Notify thermal thread to update its local copy of the thermal thresholds
-        THRM_thread_update_thresholds();
-
         l_frudata = l_data->data;
 
         // TODO: Need to check if acoustic mode has been enabled (ITE-only mode)
@@ -258,8 +254,6 @@ errlHndl_t AMEC_data_write_thrm_thresholds(const OCC_MODE i_mode)
         TRAC_INFO("AMEC_data_write_thrm_thresholds: Setting %u as DVFS setpoint for DIMM",
                   l_dvfs_temp);
 
-        // Store the VRM thermal data
-        g_amec->proc[0].vrfan_error_count = l_frudata[DATA_FRU_VRM].sample_error_count;
         g_amec->vrhotproc.setpoint = l_frudata[DATA_FRU_VRM].error_count;
 
         TRAC_INFO("AMEC_data_write_thrm_thresholds: Setting %u as DVFS setpoint for VRHOT",
