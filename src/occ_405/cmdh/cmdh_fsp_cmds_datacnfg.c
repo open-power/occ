@@ -59,8 +59,7 @@
 #define DATA_SYS_VERSION_0         0
 #define DATA_SYS_VERSION_10        0x10
 
-#define DATA_APSS_VERSION          0
-#define DATA_APSS_VERSION10     0x10
+#define DATA_APSS_VERSION20        0x20
 
 #define DATA_THRM_THRES_VERSION_1  1
 #define DATA_THRM_THRES_VERSION_10 0x10
@@ -601,7 +600,7 @@ errlHndl_t apss_store_adc_channel(const eApssAdcChannelAssignments i_func_id, co
 //              associated power sensor.
 //
 // End Function Specification
-void apss_store_ipmi_sensor_id(const uint16_t i_channel, const apss_cfg_adc_v10_t *i_adc)
+void apss_store_ipmi_sensor_id(const uint16_t i_channel, const apss_cfg_adc_v20_t *i_adc)
 {
     // Get current processor id.
     uint8_t l_proc  = G_pob_id.module_id;
@@ -851,79 +850,15 @@ errlHndl_t apss_store_gpio_pin(const eApssGpioAssignments i_func_id, const uint8
     return l_err;
 }
 
+
 // Function Specification
 //
-// Name:  data_store_apss_config_v00
+// Name:  data_store_apss_config_v20
 //
 // Description: TODO Add description
 //
 // End Function Specification
-errlHndl_t data_store_apss_config_v00(const cmdh_apss_config_v00_t * i_cmd_ptr,
-                                            cmdh_fsp_rsp_t * o_rsp_ptr)
-{
-    errlHndl_t              l_err = NULL;
-
-    uint16_t l_channel = 0, l_port = 0, l_pin = 0;
-
-    // Set to default value
-    memset(&G_sysConfigData.apss_adc_map, SYSCFG_INVALID_ADC_CHAN, sizeof(G_sysConfigData.apss_adc_map));
-    memset(&G_sysConfigData.apss_gpio_map, SYSCFG_INVALID_PIN, sizeof(G_sysConfigData.apss_gpio_map));
-
-    // ADC channels info
-    for(l_channel=0;(l_channel < MAX_APSS_ADC_CHANNELS) && (NULL == l_err);l_channel++)
-    {
-        G_sysConfigData.apss_cal[l_channel].gnd_select = i_cmd_ptr->adc[l_channel].gnd_select;
-        G_sysConfigData.apss_cal[l_channel].gain       = i_cmd_ptr->adc[l_channel].gain;
-        G_sysConfigData.apss_cal[l_channel].offset     = i_cmd_ptr->adc[l_channel].offset;
-
-        // Assign the ADC channel
-        l_err = apss_store_adc_channel(i_cmd_ptr->adc[l_channel].assignment, l_channel);
-
-    }
-
-    if(NULL == l_err)
-    {
-        // GPIO Ports
-        for(l_port=0;(l_port < MAX_APSS_GPIO_PORTS) && (NULL == l_err);l_port++)
-        {
-            // GPIO mode
-            G_sysConfigData.apssGpioPortsMode[l_port] = i_cmd_ptr->gpio[l_port].mode;
-
-            // For each pin
-            for(l_pin=0; (l_pin < NUM_OF_APSS_PINS_PER_GPIO_PORT) && (NULL == l_err);l_pin++)
-            {
-                // Assign the GPIO number
-                l_err = apss_store_gpio_pin( i_cmd_ptr->gpio[l_port].assignment[l_pin],
-                                             (l_port*NUM_OF_APSS_PINS_PER_GPIO_PORT)+l_pin);
-
-                // TODO #cmdh_fsp_cmds_datacnfg_c_001
-                // This is only needed for an ITE which would have an OC
-                // sensor for a chassis power connector
-                // Assign this global the correct pins when the oc pins are passed in.
-                G_conn_oc_pins_bitmap = 0x0000;
-            }
-
-        }
-
-        if(NULL == l_err)
-        {
-            // Change Data Request Mask to indicate we got this data
-            G_data_cnfg->data_mask |= DATA_MASK_APSS_CONFIG;
-            CMDH_TRAC_IMP("Got valid APSS Config data via TMGT");
-        }
-    }
-
-    return l_err;
-}
-
-// Function Specification
-//
-// Name:  data_store_apss_config_v10
-//
-// Description: TODO Add description
-//
-// End Function Specification
-errlHndl_t data_store_apss_config_v10(const cmdh_apss_config_v10_t * i_cmd_ptr,
+errlHndl_t data_store_apss_config_v20(const cmdh_apss_config_v20_t * i_cmd_ptr,    //New for P9
                                             cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     errlHndl_t              l_err = NULL;
@@ -999,13 +934,11 @@ errlHndl_t data_store_apss_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
 {
     errlHndl_t              l_err = NULL;
     // Temporarly cast to version 0x10 struct just to get version number.
-    cmdh_apss_config_v10_t *l_cmd_ptr = (cmdh_apss_config_v10_t *)i_cmd_ptr;
+    cmdh_apss_config_v20_t *l_cmd_ptr = (cmdh_apss_config_v20_t *)i_cmd_ptr;
     uint16_t                l_data_length = CMDH_DATALEN_FIELD_UINT16(l_cmd_ptr); //Command length
-    uint32_t                l_v00_data_sz = sizeof(cmdh_apss_config_v00_t) - sizeof(cmdh_fsp_cmd_header_t);
-    uint32_t                l_v10_data_sz = sizeof(cmdh_apss_config_v10_t) - sizeof(cmdh_fsp_cmd_header_t);
+    uint32_t                l_v20_data_sz = sizeof(cmdh_apss_config_v20_t) - sizeof(cmdh_fsp_cmd_header_t);
 
-    if(!( ((l_cmd_ptr->version == DATA_APSS_VERSION) && (l_v00_data_sz == l_data_length)) ||
-          ((l_cmd_ptr->version == DATA_APSS_VERSION10) && (l_v10_data_sz == l_data_length)) ) )
+    if( !( (l_cmd_ptr->version == DATA_APSS_VERSION20) && (l_v20_data_sz == l_data_length) )  )
     {
         CMDH_TRAC_ERR("data_store_apss_config: Invalid System Data packet. Given Version:0x%X",
                  l_cmd_ptr->version);
@@ -1019,27 +952,11 @@ errlHndl_t data_store_apss_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
          * @userdata4   OCC_NO_EXTENDED_RC
          * @devdesc     OCC recieved an invalid data packet from the FSP
          */
-        l_err = createErrl(DATA_STORE_APSS_DATA,
-                           INVALID_INPUT_DATA,
-                           OCC_NO_EXTENDED_RC,
-                           ERRL_SEV_UNRECOVERABLE,
-                           NULL,
-                           DEFAULT_TRACE_SIZE,
-                           l_data_length,
-                           (uint32_t)l_cmd_ptr->version);
-
-        // Callout firmware
-        addCalloutToErrl(l_err,
-                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                         ERRL_COMPONENT_ID_FIRMWARE,
-                         ERRL_CALLOUT_PRIORITY_HIGH);
+        cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err); 
     }
-    else if (l_cmd_ptr->version == DATA_APSS_VERSION) // Version 0
+    else // Version 0x20
     {
-        l_err = data_store_apss_config_v00((cmdh_apss_config_v00_t *)i_cmd_ptr, o_rsp_ptr);
-    } else // Version 0x10
-    {
-        l_err = data_store_apss_config_v10(l_cmd_ptr, o_rsp_ptr);
+        l_err = data_store_apss_config_v20(l_cmd_ptr, o_rsp_ptr);
     }
 
     return l_err;

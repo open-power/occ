@@ -120,19 +120,11 @@ typedef struct __attribute__ ((packed))
 typedef struct  __attribute__ ((packed))
 {
   uint8_t  assignment;
+  uint32_t ipmisensorId;
   uint8_t  gnd_select;
   uint32_t gain;
   uint32_t offset;
-} apss_cfg_adc_v00_t; //Used by FSP
-
-typedef struct  __attribute__ ((packed))
-{
-  uint8_t  assignment;
-  uint16_t ipmisensorId;
-  uint8_t  gnd_select;
-  uint32_t gain;
-  uint32_t offset;
-} apss_cfg_adc_v10_t; //Used by Habanero
+} apss_cfg_adc_v20_t;  //New for P9
 
 // Used by TMGT to send OCC the GPIO Config Data
 typedef struct  __attribute__ ((packed))
@@ -149,19 +141,10 @@ typedef struct __attribute__ ((packed))
     uint8_t              format;
     uint8_t              version;
     uint8_t              reserved[2];
-    apss_cfg_adc_v00_t   adc[MAX_APSS_ADC_CHANNELS];
+    apss_cfg_adc_v20_t   adc[MAX_APSS_ADC_CHANNELS];
     apss_cfg_gpio_t      gpio[MAX_APSS_GPIO_PORTS];
-}cmdh_apss_config_v00_t; // Used by FSP
+}cmdh_apss_config_v20_t; //New for P9
 
-typedef struct __attribute__ ((packed))
-{
-    struct cmdh_fsp_cmd_header;
-    uint8_t              format;
-    uint8_t              version;
-    uint8_t              reserved[2];
-    apss_cfg_adc_v10_t   adc[MAX_APSS_ADC_CHANNELS];
-    apss_cfg_gpio_t      gpio[MAX_APSS_GPIO_PORTS];
-}cmdh_apss_config_v10_t; //Used by Habanero
 
 // Used by TMGT to send OCC the PCAP config data.
 typedef struct __attribute__ ((packed))

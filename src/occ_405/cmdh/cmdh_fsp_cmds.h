@@ -243,20 +243,20 @@ typedef struct __attribute__ ((packed)) cmdh_poll_sensor_datablock
 
 typedef struct __attribute__ ((packed)) cmdh_poll_temp_sensor
 {
-    uint16_t id;     // Sensor id.
+    uint32_t id;     // Sensor id.
     uint16_t value;  // current temperature sensor reading in degrees C
 } cmdh_poll_temp_sensor_t;
 
 typedef struct __attribute__ ((packed)) cmdh_poll_freq_sensor
 {
-    uint16_t id;     // Id to represent the frequency.
+    uint32_t id;     // Id to represent the frequency.
     uint16_t value;  // current frequency in MHZ
 } cmdh_poll_freq_sensor_t;
 
 // Only available from master occ.
 typedef struct __attribute__ ((packed)) cmdh_poll_powr_sensor
 {
-    uint16_t id;         // Sensor id - to represent the power.
+    uint32_t id;         // Sensor id - to represent the power.
     uint32_t update_tag; // Count of number of 250us samples represented by accumulator.
     uint32_t accumul;    // Accumulation of 250us power readings
     uint16_t current;    // Most recent 250us reading in watts.
@@ -498,7 +498,7 @@ typedef struct cmdh_dbug_sensor_list
     uint16_t    sample;
     uint16_t    sample_min;
     uint16_t    sample_max;
-    uint16_t    ipmi_sid;
+    uint32_t    ipmi_sid;
 }cmdh_dbug_sensor_list_t;
 
 // Max number of sensors that can be returned with cmdh_dbug_get_ame_sensor command
@@ -565,7 +565,7 @@ typedef struct __attribute__ ((packed))
     uint8_t     func;
     uint16_t    raw;
     uint16_t    calculated;
-    uint16_t    ipmi_sid;
+    uint32_t    ipmi_sid;
     uint32_t    offset;
     uint32_t    gain;
 }cmdh_dbug_apss_data_t;
