@@ -44,7 +44,7 @@ extern amec_sys_t g_amec_sys;
 #define SENSOR_W_CENTAUR_NUM(sensor_name, memc,cent,pp) SENSOR_W_CENTAUR_NUM_HELPER(sensor_name,memc,C,cent,P,pp)
 
 // Will define a set of "core sensor pointers" by passing in base sensor name
-// and ptr to [0] entry of array of 12 core sensors
+// and ptr to [0] entry of array of 24 core sensors
 #define CORE_SENSOR_PTRS(sensor,ptrbase,ptrmember) \
   [SENSOR_W_NUM(sensor, 0)] = ptrbase[ 0].ptrmember, \
   [SENSOR_W_NUM(sensor, 1)] = ptrbase[ 1].ptrmember, \
@@ -57,7 +57,19 @@ extern amec_sys_t g_amec_sys;
   [SENSOR_W_NUM(sensor, 8)] = ptrbase[ 8].ptrmember, \
   [SENSOR_W_NUM(sensor, 9)] = ptrbase[ 9].ptrmember, \
   [SENSOR_W_NUM(sensor,10)] = ptrbase[10].ptrmember, \
-  [SENSOR_W_NUM(sensor,11)] = ptrbase[11].ptrmember
+  [SENSOR_W_NUM(sensor,11)] = ptrbase[11].ptrmember, \
+  [SENSOR_W_NUM(sensor,12)] = ptrbase[12].ptrmember, \
+  [SENSOR_W_NUM(sensor,13)] = ptrbase[13].ptrmember, \
+  [SENSOR_W_NUM(sensor,14)] = ptrbase[14].ptrmember, \
+  [SENSOR_W_NUM(sensor,15)] = ptrbase[15].ptrmember, \
+  [SENSOR_W_NUM(sensor,16)] = ptrbase[16].ptrmember, \
+  [SENSOR_W_NUM(sensor,17)] = ptrbase[17].ptrmember, \
+  [SENSOR_W_NUM(sensor,18)] = ptrbase[18].ptrmember, \
+  [SENSOR_W_NUM(sensor,19)] = ptrbase[19].ptrmember, \
+  [SENSOR_W_NUM(sensor,20)] = ptrbase[20].ptrmember, \
+  [SENSOR_W_NUM(sensor,21)] = ptrbase[21].ptrmember, \
+  [SENSOR_W_NUM(sensor,22)] = ptrbase[22].ptrmember, \
+  [SENSOR_W_NUM(sensor,23)] = ptrbase[23].ptrmember
 
 // Will define a set of "memory controller sensor pointers" by passing in
 // base sensor nameand ptr to [0] entry of array of 8 memcontroller sensors
@@ -110,7 +122,19 @@ extern amec_sys_t g_amec_sys;
   [SENSOR_W_NUM(sensor, 8)] = ptr[ 8], \
   [SENSOR_W_NUM(sensor, 9)] = ptr[ 9], \
   [SENSOR_W_NUM(sensor,10)] = ptr[10], \
-  [SENSOR_W_NUM(sensor,11)] = ptr[11]
+  [SENSOR_W_NUM(sensor,11)] = ptr[11], \
+  [SENSOR_W_NUM(sensor,12)] = ptr[12], \
+  [SENSOR_W_NUM(sensor,13)] = ptr[13], \
+  [SENSOR_W_NUM(sensor,14)] = ptr[14], \
+  [SENSOR_W_NUM(sensor,15)] = ptr[15], \
+  [SENSOR_W_NUM(sensor,16)] = ptr[16], \
+  [SENSOR_W_NUM(sensor,17)] = ptr[17], \
+  [SENSOR_W_NUM(sensor,18)] = ptr[18], \
+  [SENSOR_W_NUM(sensor,19)] = ptr[19], \
+  [SENSOR_W_NUM(sensor,20)] = ptr[20], \
+  [SENSOR_W_NUM(sensor,21)] = ptr[21], \
+  [SENSOR_W_NUM(sensor,22)] = ptr[22], \
+  [SENSOR_W_NUM(sensor,23)] = ptr[23]
 
 // Will define a set of "core mini-sensor pointers" as NULL, since not
 // every sensor must have a mini-sensor.
@@ -126,7 +150,19 @@ extern amec_sys_t g_amec_sys;
   [SENSOR_W_NUM(sensor, 8)] = NULL, \
   [SENSOR_W_NUM(sensor, 9)] = NULL, \
   [SENSOR_W_NUM(sensor,10)] = NULL, \
-  [SENSOR_W_NUM(sensor,11)] = NULL
+  [SENSOR_W_NUM(sensor,11)] = NULL, \
+  [SENSOR_W_NUM(sensor,12)] = NULL, \
+  [SENSOR_W_NUM(sensor,13)] = NULL, \
+  [SENSOR_W_NUM(sensor,14)] = NULL, \
+  [SENSOR_W_NUM(sensor,15)] = NULL, \
+  [SENSOR_W_NUM(sensor,16)] = NULL, \
+  [SENSOR_W_NUM(sensor,17)] = NULL, \
+  [SENSOR_W_NUM(sensor,18)] = NULL, \
+  [SENSOR_W_NUM(sensor,19)] = NULL, \
+  [SENSOR_W_NUM(sensor,20)] = NULL, \
+  [SENSOR_W_NUM(sensor,21)] = NULL, \
+  [SENSOR_W_NUM(sensor,22)] = NULL, \
+  [SENSOR_W_NUM(sensor,23)] = NULL
 
 // Will define a set of "memory controller mini sensor ptrs" by passing in
 // base sensor nameand ptr to [0] entry of array of 8 memcontroller sensors
@@ -283,7 +319,7 @@ const sensor_ptr_t G_amec_sensor_list[] =
   SENSOR_PTR( VRHOT250USPROC,       &g_amec_sys.sys.vrhot250usproc),
 
   // ------------------------------------------------------
-  // Core Sensors (12 of each)
+  // Core Sensors (24 of each)
   // ------------------------------------------------------
   CORE_SENSOR_PTRS( FREQ250USP0C ,  &g_amec_sys.proc[0].core, freq250us),
   CORE_SENSOR_PTRS( FREQA2MSP0C ,   &g_amec_sys.proc[0].core, freqa2ms),
@@ -435,7 +471,7 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   MINI_SENSOR_PTR( VRHOT250USPROC,  NULL),
 
   // ------------------------------------------------------
-  // Core Sensors (12 of each)
+  // Core Sensors (24 of each)
   // ------------------------------------------------------
   CORE_MINI_SENSOR_PTRS_NULL(  FREQ250USP0C ),
   CORE_MINI_SENSOR_PTRS_NULL(   FREQA2MSP0C ),

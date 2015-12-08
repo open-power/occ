@@ -35,7 +35,6 @@
 #include "cmdh_fsp_cmds.h"
 #include "cmdh_dbug_cmd.h"
 //#include "gpsm.h"
-//#include "pstates.h"
 #include "proc_pstate.h"
 #include <amec_data.h>
 #include "amec_amester.h"
@@ -56,8 +55,7 @@
 #define DATA_PCAP_VERSION_0        0
 #define DATA_PCAP_VERSION_10       0x10
 
-#define DATA_SYS_VERSION_0         0
-#define DATA_SYS_VERSION_10        0x10
+#define DATA_SYS_VERSION_20        0x20
 
 #define DATA_APSS_VERSION20        0x20
 
@@ -431,7 +429,7 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // Name:  apss_store_adc_channel
 //
-// Description: TODO Add description
+// Description: Matches the functional ID (from MRW) to the APSS ADC channel
 //
 // End Function Specification
 errlHndl_t apss_store_adc_channel(const eApssAdcChannelAssignments i_func_id, const uint8_t i_channel_num )
@@ -545,7 +543,7 @@ errlHndl_t apss_store_adc_channel(const eApssAdcChannelAssignments i_func_id, co
 
             default:
                 // It should never happen
-                CMDH_TRAC_ERR("apss_store_gpio_pin: Invalid function ID: 0x%x", i_func_id);
+                CMDH_TRAC_ERR("apss_store_adc_channel: Invalid function ID: 0x%x", i_func_id);
                 break;
         }
 
@@ -556,6 +554,8 @@ errlHndl_t apss_store_adc_channel(const eApssAdcChannelAssignments i_func_id, co
             {
                 *l_adc_function = i_channel_num;
                 G_apss_ch_to_function[i_channel_num] = i_func_id;
+                CNFG_DBG("apss_store_adc_channel: func_id[0x%02X] stored as 0x%02X for channel %d",
+                         i_func_id, G_apss_ch_to_function[i_channel_num], *l_adc_function);
             }
             else
             {
@@ -706,6 +706,8 @@ void apss_store_ipmi_sensor_id(const uint16_t i_channel, const apss_cfg_adc_v20_
         if ((i_adc->assignment != ADC_12V_SENSE) && (i_adc->assignment != ADC_GND_REMOTE_SENSE))
         {
             AMECSENSOR_PTR(PWRAPSSCH0 + i_channel)->ipmi_sid = i_adc->ipmisensorId;
+            CNFG_DBG("apss_store_ipmi_sensor_id: SID[0x%08X] stored as 0x%08X for channel %d",
+                     i_adc->ipmisensorId, AMECSENSOR_PTR(PWRAPSSCH0 + i_channel)->ipmi_sid, i_channel);
         }
     }
 }
@@ -714,7 +716,7 @@ void apss_store_ipmi_sensor_id(const uint16_t i_channel, const apss_cfg_adc_v20_
 //
 // Name:  apss_store_gpio_pin
 //
-// Description: TODO Add description
+// Description: Matches the functional ID (from MRW) to the APSS GPIO pin
 //
 // End Function Specification
 errlHndl_t apss_store_gpio_pin(const eApssGpioAssignments i_func_id, const uint8_t i_gpio_num )
@@ -815,6 +817,7 @@ errlHndl_t apss_store_gpio_pin(const eApssGpioAssignments i_func_id, const uint8
             if( SYSCFG_INVALID_PIN == *l_gpio_function)
             {
                 *l_gpio_function = i_gpio_num;
+                CNFG_DBG("apss_store_gpio_pin: func_id[0x%02X] is mapped to pin 0x%02X", i_func_id, *l_gpio_function);
             }
             else
             {
@@ -883,7 +886,11 @@ errlHndl_t data_store_apss_config_v20(const cmdh_apss_config_v20_t * i_cmd_ptr, 
             //Write sensor IDs to the appropriate powr sensors.
             apss_store_ipmi_sensor_id(l_channel, &(i_cmd_ptr->adc[l_channel]));
         }
-
+        CNFG_DBG("data_store_apss_config_v20: Channel %d: FuncID[0x%02X] SID[0x%08X]",
+                 l_channel, i_cmd_ptr->adc[l_channel].assignment, i_cmd_ptr->adc[l_channel].ipmisensorId);
+        CNFG_DBG("data_store_apss_config_v20: Channel %d: GND[0x%02X] Gain[0x%08X] Offst[0x%08X]",
+                 l_channel, G_sysConfigData.apss_cal[l_channel].gnd_select, G_sysConfigData.apss_cal[l_channel].gain,
+                 G_sysConfigData.apss_cal[l_channel].offset);
     }
 
     if(NULL == l_err)
@@ -1032,6 +1039,7 @@ errlHndl_t data_store_role(const cmdh_fsp_cmd_t * i_cmd_ptr,
             {
                 l_errlHndl = initialize_apss();
 
+                // Initialize APSS communication on the backup OCC (retries internally)
                 if( NULL != l_errlHndl )
                 {
                     // Don't request due to a backup apss failure. Just log the error.
@@ -1245,7 +1253,7 @@ errlHndl_t data_store_sys_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
     errlHndl_t                      l_err = NULL;
 
     // Cast the command to the struct for this format
-    cmdh_sys_config_t * l_cmd_ptr = (cmdh_sys_config_t *)i_cmd_ptr;
+    cmdh_sys_config_v20_t * l_cmd_ptr = (cmdh_sys_config_v20_t *)i_cmd_ptr;
     uint16_t                        l_data_length = 0;
     uint32_t                        l_sys_data_sz = 0;
     bool                            l_invalid_input = TRUE; //Assume bad input
@@ -1254,17 +1262,9 @@ errlHndl_t data_store_sys_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
     l_data_length = CMDH_DATALEN_FIELD_UINT16(l_cmd_ptr);
 
     // Check length and version
-    if(l_cmd_ptr->version == DATA_SYS_VERSION_0)
+    if(l_cmd_ptr->version == DATA_SYS_VERSION_20)
     {
-        l_sys_data_sz = sizeof(cmdh_sys_config_t) - sizeof(cmdh_fsp_cmd_header_t);
-        if(l_sys_data_sz == l_data_length)
-        {
-            l_invalid_input = FALSE;
-        }
-    }
-    else if(l_cmd_ptr->version == DATA_SYS_VERSION_10)
-    {
-        l_sys_data_sz = sizeof(cmdh_sys_config_v10_t) - sizeof(cmdh_fsp_cmd_header_t);
+        l_sys_data_sz = sizeof(cmdh_sys_config_v20_t) - sizeof(cmdh_fsp_cmd_header_t);
         if(l_sys_data_sz == l_data_length)
         {
             l_invalid_input = FALSE;
@@ -1303,30 +1303,25 @@ errlHndl_t data_store_sys_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
     }
     else
     {
-        if(l_cmd_ptr->version == DATA_SYS_VERSION_0)
+        if(l_cmd_ptr->version == DATA_SYS_VERSION_20)
         {
             // Copy data
             G_sysConfigData.system_type.byte    = l_cmd_ptr->sys_config.system_type;
-            G_sysConfigData.proc_huid           = l_cmd_ptr->sys_config.proc_huid;
-            G_sysConfigData.backplane_huid      = l_cmd_ptr->sys_config.backplane_huid;
-            G_sysConfigData.apss_huid           = l_cmd_ptr->sys_config.apss_huid;
-            G_sysConfigData.dpss_huid           = l_cmd_ptr->sys_config.dpss_huid;
-        }
-        else if(l_cmd_ptr->version == DATA_SYS_VERSION_10)
-        {
-            // Copy data
-            cmdh_sys_config_v10_t * l_cmd2_ptr = (cmdh_sys_config_v10_t *)i_cmd_ptr;
-            G_sysConfigData.system_type.byte    = l_cmd2_ptr->sys_config.system_type;
-            G_sysConfigData.backplane_huid      = l_cmd2_ptr->sys_config.backplane_sid;
-            G_sysConfigData.apss_huid           = l_cmd2_ptr->sys_config.apss_sid;
-            G_sysConfigData.proc_huid           = l_cmd2_ptr->sys_config.proc_sid;
+            G_sysConfigData.backplane_huid      = l_cmd_ptr->sys_config.backplane_sid;
+            G_sysConfigData.apss_huid           = l_cmd_ptr->sys_config.apss_sid;
+            G_sysConfigData.proc_huid           = l_cmd_ptr->sys_config.proc_sid;
+            CNFG_DBG("data_store_sys_config: SystemType[0x%02X] BPSID[0x%08X] APSSSID[0x%08X] ProcSID[0x%08X]",
+                     G_sysConfigData.system_type.byte, G_sysConfigData.backplane_huid, G_sysConfigData.apss_huid,
+                     G_sysConfigData.proc_huid);
 
             //Write core temp and freq sensor ids
             //Core Temp and Freq sensors are always in sequence in the table
             for (l_coreIndex = 0; l_coreIndex < MAX_CORES; l_coreIndex++)
             {
-                AMECSENSOR_PTR(TEMP4MSP0C0 + l_coreIndex)->ipmi_sid = l_cmd2_ptr->sys_config.core_sid[(l_coreIndex * 2)];
-                AMECSENSOR_PTR(FREQA2MSP0C0 + l_coreIndex)->ipmi_sid = l_cmd2_ptr->sys_config.core_sid[(l_coreIndex * 2) + 1];
+                AMECSENSOR_PTR(TEMP4MSP0C0 + l_coreIndex)->ipmi_sid = l_cmd_ptr->sys_config.core_sid[(l_coreIndex * 2)];
+                AMECSENSOR_PTR(FREQA2MSP0C0 + l_coreIndex)->ipmi_sid = l_cmd_ptr->sys_config.core_sid[(l_coreIndex * 2) + 1];
+                CNFG_DBG("data_store_sys_config: Core[%d] TempSID[0x%08X] FreqSID[0x%08X]", l_coreIndex,
+                         AMECSENSOR_PTR(TEMP4MSP0C0 + l_coreIndex)->ipmi_sid, AMECSENSOR_PTR(FREQA2MSP0C0 + l_coreIndex)->ipmi_sid);
             }
         }
 

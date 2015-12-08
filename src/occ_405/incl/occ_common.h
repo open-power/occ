@@ -276,7 +276,7 @@ enum
 
 #define DEFAULT_TRACE_SIZE 1536
 #define MAX_OCCS       8
-#define MAX_CORES      12
+#define MAX_CORES      24
 
 //Used by G_occ_interrupt_type to distinguish between FSP supported OCCs and other servers.
 #define FSP_SUPPORTED_OCC 0x00

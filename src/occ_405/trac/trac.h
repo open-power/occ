@@ -50,7 +50,6 @@
 #define MAIN_MRK        "MAIN: "
 #define CMDH_MRK        "CMDH: "
 #define DCOM_MRK        "DCOM: "
-#define APLT_MRK        "APLT: "
 #define INTR_MRK        "INTR: "
 #define SNPS_MRK        "SNPS: "
 
@@ -208,16 +207,6 @@ extern void dumpHexString(const void *i_data, const unsigned int len, const char
   #define AMEC_DBG_HEXDUMP(data, len, string)
 #endif
 
-#ifdef APLT_DEBUG
-  #define APLT_DBG(frmt,args...)  \
-          DBG_PRINT(frmt,##args)
-  #define APLT_DBG_HEXDUMP(data, len, string)  \
-          DEBUG_HEXDUMP(data, len, string)
-#else
-  #define APLT_DBG(frmt,args...)
-  #define APLT_DBG_HEXDUMP(data, len, string)
-#endif
-
 #ifdef DCOM_DEBUG
   #define DCOM_DBG(frmt,args...)  \
           DBG_PRINT(frmt,##args)
@@ -288,6 +277,16 @@ extern void dumpHexString(const void *i_data, const unsigned int len, const char
   #define TMER_DBG_HEXDUMP(data, len, string)
 #endif
 
+#ifdef CNFG_DEBUG
+  #define CNFG_DBG(frmt,args...)  \
+          DBG_PRINT(frmt,##args)
+  #define CNFG_DBG_HEXDUMP(data, len, string)  \
+          DEBUG_HEXDUMP(data, len, string)
+#else
+  #define CNFG_DBG(frmt,args...)
+  #define CNFG_DBG_HEXDUMP(data, len, string)
+#endif
+
 #else // NO_TRAC_STRINGS
 
 #define TRAC_ERR(frmt,args...)
@@ -299,7 +298,6 @@ extern void dumpHexString(const void *i_data, const unsigned int len, const char
 #define PROC_DBG(frmt,args...)
 #define THRD_DBG(frmt,args...)
 #define AMEC_DBG(frmt,args...)
-#define APLT_DBG(frmt,args...)
 #define DCOM_DBG(frmt,args...)
 #define ERRL_DBG(frmt,args...)
 #define CENT_DBG(frmt,args...)
@@ -308,13 +306,13 @@ extern void dumpHexString(const void *i_data, const unsigned int len, const char
 #define DPSS_DBG(frmt,args...)
 #define SNSR_DBG(frmt,args...)
 #define TMER_DBG(frmt,args...)
+#define CNFG_DBG(frmt,args...)
 
 #define MAIN_DBG_HEXDUMP(frmt,args...)
 #define RTLS_DBG_HEXDUMP(frmt,args...)
 #define PROC_DBG_HEXDUMP(frmt,args...)
 #define THRD_DBG_HEXDUMP(frmt,args...)
 #define AMEC_DBG_HEXDUMP(frmt,args...)
-#define APLT_DBG_HEXDUMP(frmt,args...)
 #define DCOM_DBG_HEXDUMP(frmt,args...)
 #define ERRL_DBG_HEXDUMP(frmt,args...)
 #define CENT_DBG_HEXDUMP(frmt,args...)
@@ -323,6 +321,7 @@ extern void dumpHexString(const void *i_data, const unsigned int len, const char
 #define DPSS_DBG_HEXDUMP(frmt,args...)
 #define SNSR_DBG_HEXDUMP(frmt,args...)
 #define TMER_DBG_HEXDUMP(frmt,args...)
+#define CNFG_DBG_HEXDUMP(frmt,args...)
 
 #endif
 

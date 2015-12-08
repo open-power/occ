@@ -51,7 +51,7 @@
 #define MAX_VECTOR_SENSORS          32
 #define MAX_SENSOR_NAME_SZ          16 // including NULL
 #define MAX_SENSOR_UNIT_SZ          4 // including NULL
-#define MAX_AMEC_SENSORS            500
+#define MAX_AMEC_SENSORS            710
 #define VECTOR_SENSOR_DEFAULT_VAL   0xFF
 
 typedef enum
@@ -152,7 +152,7 @@ struct sensor
     uint32_t update_tag;      // Count of the number of 'ticks' that have passed
                               // between updates to this sensor (used for time-
                               // derived sensor)
-    uint16_t ipmi_sid;        // Ipmi sensor id obtained from mrw
+    uint32_t ipmi_sid;        // Ipmi sensor id obtained from mrw
     vectorSensor_t * vector;  // Pointer to vector control structure. NULL if
                               // this is not a vector sensor.
     uint16_t * mini_sensor;   // Pointer to entry in mini-sensor table. NULL if

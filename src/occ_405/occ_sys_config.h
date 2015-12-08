@@ -37,7 +37,7 @@
 
 #define MAX_NUM_OCC              8
 #define MAX_NUM_NODES            4
-#define MAX_NUM_CORES           12
+#define MAX_NUM_CORES           24
 #define MAX_THREADS_PER_CORE     8
 #define MAX_NUM_CHIP_MODULES     4
 #define MAX_NUM_POWER_SUPPLIES   4
@@ -266,16 +266,16 @@ typedef struct
   eSystemType system_type;  // OCC usage of this byte is TBD
 
   // Processor HUID - HUID for this OCC processor, used by OCC for processor error call out
-  uint64_t proc_huid;
+  uint32_t proc_huid;
 
   // Backplane HUID - Used by OCC for system backplane error call out (i.e. VRM errors will call out backplane)
-  uint64_t backplane_huid;
+  uint32_t backplane_huid;
 
   // APSS HUID - Used by OCC for APSS error call out
-  uint64_t apss_huid;
+  uint32_t apss_huid;
 
   // DPSS HUID - Used by OCC for DPSS error call out
-  uint64_t dpss_huid;
+  uint32_t dpss_huid;
 
   // Contains how many OCCs & how many proc modules are present.
   uint8_t sys_num_proc_present;

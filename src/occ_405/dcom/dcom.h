@@ -89,9 +89,9 @@
 // general defines
 #define TOD_SIZE 6
 #define NUM_TOD_SENSORS 3
-#define SLV_INBOX_RSV_SIZE 88
+#define SLV_INBOX_RSV_SIZE 64
 #define SLV_MAILBOX_SIZE 32
-#define SLV_OUTBOX_RSV_SIZE 758
+#define SLV_OUTBOX_RSV_SIZE 614
 #define DOORBELL_RSV_SIZE 1
 
 #define DCOM_250us_GAP 1
@@ -99,12 +99,12 @@
 #define DCOM_1S_GAP 4000
 
 // POB Id structure
-typedef struct 
-{ 
+typedef struct
+{
     uint8_t module_id  :2;
     uint8_t node_id    :3;
     uint8_t chip_id    :3;
-} pob_id_t; 
+} pob_id_t;
 
 // TODO may change in the future
 // For now pbax structure is same as pob id structure
@@ -118,41 +118,41 @@ typedef struct
     uint8_t  version;                                               // [1]
 
     // From APSS Power Measurement
-    uint16_t adc[MAX_APSS_ADC_CHANNELS];                            // [2]  - 32 bytes
-    uint16_t gpio[MAX_APSS_GPIO_PORTS];                             // [34] -  4 bytes
-    uint16_t ambient_temp;                                          // [38] -  2 bytes
-    uint16_t altitude;                                              // [40] -  2 bytes
-    uint8_t  tod[ TOD_SIZE ];                                       // [42] -  6 bytes
+    uint16_t adc[MAX_APSS_ADC_CHANNELS];                            // [2]   - 32 bytes
+    uint16_t gpio[MAX_APSS_GPIO_PORTS];                             // [34]  -  4 bytes
+    uint16_t ambient_temp;                                          // [38]  -  2 bytes
+    uint16_t altitude;                                              // [40]  -  2 bytes
+    uint8_t  tod[ TOD_SIZE ];                                       // [42]  -  6 bytes
 
     // AMEC Actuators
-    uint16_t freq250usp0cy[MAX_CORES];                              // [48] - 24 bytes
-    uint16_t memsp2msP0MxCyPz[MAX_CENTAUR_THROTTLES];               // [72] - 16 bytes
-    uint16_t memsp2msP0IGx[MAX_MEM_INTERLEAVE_GROUP_THROTTLES];     // [88] - 16 bytes
+    uint16_t freq250usp0cy[MAX_CORES];                              // [48]  - 48 bytes
+    uint16_t memsp2msP0MxCyPz[MAX_CENTAUR_THROTTLES];               // [96]  - 16 bytes
+    uint16_t memsp2msP0IGx[MAX_MEM_INTERLEAVE_GROUP_THROTTLES];     // [112] - 16 bytes
 
     // Manufacturing parameters
-    uint16_t foverride;                                             // [104] - 2 bytes
-    uint8_t  foverride_enable;                                      // [106] - 1 byte
-    uint8_t  emulate_oversub;                                       // [107] - 1 byte
+    uint16_t foverride;                                             // [128] -  2 bytes
+    uint8_t  foverride_enable;                                      // [130] -  1 byte
+    uint8_t  emulate_oversub;                                       // [131] -  1 byte
 
     // Idle Power Saver parameters
-    uint16_t ips_freq_request;                                      // [108] - 2 bytes
+    uint16_t ips_freq_request;                                      // [132] -  2 bytes
 
     // DPS Tunable Parameters
-    uint16_t alpha_up;                                              // [110] - 2 bytes
-    uint16_t alpha_down;                                            // [112] - 2 bytes
-    uint16_t sample_count_util;                                     // [114] - 2 bytes
-    uint16_t step_up;                                               // [116] - 2 bytes
-    uint16_t step_down;                                             // [118] - 2 bytes
-    uint16_t epsilon_perc;                                          // [120] - 2 bytes
-    uint16_t tlutil;                                                // [122] - 2 bytes
-    uint8_t  tunable_param_overwrite;                               // [124] - 1 byte
+    uint16_t alpha_up;                                              // [134] -  2 bytes
+    uint16_t alpha_down;                                            // [136] -  2 bytes
+    uint16_t sample_count_util;                                     // [138] -  2 bytes
+    uint16_t step_up;                                               // [140] -  2 bytes
+    uint16_t step_down;                                             // [142] -  2 bytes
+    uint16_t epsilon_perc;                                          // [144] -  2 bytes
+    uint16_t tlutil;                                                // [146] -  2 bytes
+    uint8_t  tunable_param_overwrite;                               // [148] -  1 byte
 
     // Soft frequency boundaries
-    uint16_t soft_fmin;                                             // [125] - 2 bytes
-    uint8_t  pad;                                                   // [127] - 1 bytes
-    uint16_t soft_fmax;                                             // [128] - 2 bytes
+    uint16_t soft_fmin;                                             // [149] -  2 bytes
+    uint8_t  pad;                                                   // [151] -  1 bytes
+    uint16_t soft_fmax;                                             // [152] -  2 bytes
 
-    // Reserved Bytes 
+    // Reserved Bytes
     union
     {
       struct
@@ -161,7 +161,7 @@ typedef struct
           freqConfig_t sys_mode_freq;
           uint8_t      tb_record;
       };
-      uint8_t  reserved[ SLV_INBOX_RSV_SIZE ];                      // [130] - 88 bytes
+      uint8_t  reserved[ SLV_INBOX_RSV_SIZE ];                      // [154] - 64 bytes
     };
 
     // GPSM DCM Synchronization
@@ -176,7 +176,7 @@ typedef struct
 
 // SLAVE OUTBOX structure
 typedef struct __attribute__ ((packed))
-{ 
+{
     // Packet Type & Sequence Information
     uint8_t  seq;                                                //   [0]
     uint8_t  version;                                            //   [1]
@@ -184,38 +184,38 @@ typedef struct __attribute__ ((packed))
     // Mini-sensors
     uint16_t freqa2msp0;                                         //   [2]
     uint16_t ips2msp0cy[MAX_CORES];                              //   [4]
-    uint16_t mcpifd2msp0cy[MAX_CORES];                           //  [28]
-    uint16_t mcpifi2msp0cy[MAX_CORES];                           //  [52]
-    uint16_t memsp2msp0mx[MAX_NUM_MEM_CONTROLLERS];              //  [76]
-    uint16_t pwr250usp0;                                         //  [92]
-    uint16_t pwr250usmemp0;                                      //  [94]
-    uint16_t sleepcnt2msp0;                                      //  [96]
-    uint16_t winkcnt2msp0;                                       //  [98]
-    uint16_t temp4msp0;                                          // [100]
-    uint16_t temp4msp0peak;                                      // [102]
-    uint16_t util2msp0cy[MAX_CORES];                             // [104]
-    uint16_t vrfan250usmem;                                      // [128]
-    uint16_t vrfan250usproc;                                     // [130]
-    uint16_t mrd2msp0mx[MAX_NUM_MEM_CONTROLLERS];                // [132]
-    uint16_t mwr2msp0mx[MAX_NUM_MEM_CONTROLLERS];                // [148]
-    uint16_t pwrpx250usp0cy[MAX_CORES];                          // [164]
-    uint16_t todclock[NUM_TOD_SENSORS];                          // [188]
-    uint16_t temp2mscent;                                        // [194]
-    uint16_t temp2msdimm;                                        // [196]
-    uint16_t util2msp0;                                          // [198]
-    uint16_t ips2msp0;                                           // [200]
-    uint16_t nutil3sp0cy[MAX_CORES];                             // [202] - 24 bytes
+    uint16_t mcpifd2msp0cy[MAX_CORES];                           //  [52]
+    uint16_t mcpifi2msp0cy[MAX_CORES];                           // [100]
+    uint16_t memsp2msp0mx[MAX_NUM_MEM_CONTROLLERS];              // [148]
+    uint16_t pwr250usp0;                                         // [164]
+    uint16_t pwr250usmemp0;                                      // [166]
+    uint16_t sleepcnt2msp0;                                      // [168]
+    uint16_t winkcnt2msp0;                                       // [170]
+    uint16_t temp4msp0;                                          // [172]
+    uint16_t temp4msp0peak;                                      // [174]
+    uint16_t util2msp0cy[MAX_CORES];                             // [176]
+    uint16_t vrfan250usmem;                                      // [224]
+    uint16_t vrfan250usproc;                                     // [226]
+    uint16_t mrd2msp0mx[MAX_NUM_MEM_CONTROLLERS];                // [228]
+    uint16_t mwr2msp0mx[MAX_NUM_MEM_CONTROLLERS];                // [244]
+    uint16_t pwrpx250usp0cy[MAX_CORES];                          // [260]
+    uint16_t todclock[NUM_TOD_SENSORS];                          // [308]
+    uint16_t temp2mscent;                                        // [314]
+    uint16_t temp2msdimm;                                        // [316]
+    uint16_t util2msp0;                                          // [318]
+    uint16_t ips2msp0;                                           // [320]
+    uint16_t nutil3sp0cy[MAX_CORES];                             // [322]
 
     // Fwish (i.e., desired frequency that this OCC slave wants based on DPS
     // algorithms)
-    uint16_t fwish;                                              // [226] - 2 bytes
+    uint16_t fwish;                                              // [370]
     // Factual (i.e., actual frequency requested by this OCC slave)
-    uint16_t factual;                                            // [228] - 2 bytes
+    uint16_t factual;                                            // [372]
 
-    // Reserved Bytes 
+    // Reserved Bytes
     union
     {
-        uint8_t  reserved[SLV_OUTBOX_RSV_SIZE];                  // [230] - 758 bytes
+        uint8_t  reserved[SLV_OUTBOX_RSV_SIZE];                  // [374] - 614 bytes
         struct __attribute__ ((packed))
         {
             uint8_t _reserved_1;
@@ -235,7 +235,7 @@ typedef struct __attribute__ ((packed))
 //   This must be aligned to 8 bytes since that is the unit
 //   that the PBAX unit uses to send
 typedef struct
-{ 
+{
     union
     {
         struct
@@ -323,7 +323,7 @@ typedef struct
         // How many Master Doorbell Broadcasts have been sent
         uint32_t    doorbellNumSent;
         // What is our "send" phase in relation to our SsxTimebase
-        uint16_t    doorbellPhase;  
+        uint16_t    doorbellPhase;
         // The Most Recent Master Doorbell Broadcast sequence number
         uint8_t     doorbellSeq;
         // Masks of the current status of the slaves
@@ -378,13 +378,13 @@ extern dcom_timing_t G_dcomTime;
 
 // Used to tell AMEC code that the slave inbox has been received.
 // This could just be a flag, doesn't have to be semaphore, since
-// the RTL Loop task can't block on Semaphore, it would just have 
+// the RTL Loop task can't block on Semaphore, it would just have
 // to loop until it got a good return code.
 extern bool G_slv_inbox_received;
 
 // Used to tell AMEC code that the slave outbox has been received.
 // This could just be a flag, doesn't have to be semaphore, since
-// the RTL Loop task can't block on Semaphore, it would just have 
+// the RTL Loop task can't block on Semaphore, it would just have
 // to loop until it got a good return code.
 extern uint8_t G_slv_outbox_complete;
 
@@ -426,7 +426,7 @@ extern SsxSemaphore G_dcomThreadWakeupSem;
 
 // Used to house the actuation & power measurement data from the master
 // before it is DMA'd to Main Memory from SRAM.
-extern dcom_slv_inbox_t  G_dcom_slv_inbox_tx[MAX_OCCS];  
+extern dcom_slv_inbox_t  G_dcom_slv_inbox_tx[MAX_OCCS];
 
 // Used to house the Slave Outboxes with the mini-sensor data in in the master
 // after it is DMA'd from main memory.
@@ -470,7 +470,7 @@ uint32_t dcom_calc_slv_inbox_addr(void);
 // Get address of slave outbox in main memory
 uint32_t dcom_calc_slv_outbox_addr( const dcom_slv_outbox_doorbell_t * i_doorbell, uint8_t * o_occ_id);
 
-// Determine if we are master or slave 
+// Determine if we are master or slave
 void dcom_initialize_roles(void) INIT_SECTION;
 
 // Copy slave inbox from main memory to sram

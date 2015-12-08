@@ -35,7 +35,6 @@
 #include "state.h"
 #include "cmdh_fsp.h"
 //#include "gpsm.h"
-//#include "pstates.h"
 #include "cmdh_fsp_cmds.h"
 #include "apss.h"
 
@@ -43,7 +42,6 @@
 // are sent to OCC over the TMGT<->OCC interface.
 typedef enum
 {
-   DATA_FORMAT_PSTATE_SUPERSTRUCTURE = 0x01,
    DATA_FORMAT_FREQ                  = 0x02,
    DATA_FORMAT_SET_ROLE              = 0x03,
    DATA_FORMAT_APSS_CONFIG           = 0x04,
@@ -63,7 +61,6 @@ typedef enum
 // to signal that OCC has received cnfg data
 typedef enum
 {
-   DATA_MASK_PSTATE_SUPERSTRUCTURE = 0x00000001,
    DATA_MASK_FREQ_PRESENT          = 0x00000002,
    DATA_MASK_SET_ROLE              = 0x00000004,
    DATA_MASK_APSS_CONFIG           = 0x00000008,
@@ -182,41 +179,22 @@ typedef struct __attribute__ ((packed))
     cmdh_pcap_config_data_v10_t   pcap_config;
 }cmdh_pcap_config_v10_t;
 
-// Used by TMGT to send OCC the System config data.
-typedef struct __attribute__ ((packed))
-{
-    uint8_t  system_type;     // OCC usage of this byte is TBD
-    uint64_t proc_huid;       // Processor HUID
-    uint64_t backplane_huid;  // Backplane HUID
-    uint64_t apss_huid;       // APSS HUID
-    uint64_t dpss_huid;       // DPSS HUID
-} cmdh_sys_config_data_t;
-
-// Used by TMGT to send OCC the system config data.
-typedef struct __attribute__ ((packed))
-{
-    struct cmdh_fsp_cmd_header;
-    uint8_t              format;
-    uint8_t              version;
-    cmdh_sys_config_data_t   sys_config;
-}cmdh_sys_config_t;
-
 typedef struct __attribute__ ((packed))
 {
     uint8_t  system_type;     // General system type
-    uint16_t proc_sid;        // Processor Sensor ID
-    uint16_t core_sid[24];    // 12 cores. 2 bytes for Temp, followed by 2 bytes for Frequency.
-    uint16_t backplane_sid;   // Backplane Sensor ID
-    uint16_t apss_sid;        // APSS Sensor ID
-} cmdh_sys_config_data_v10_t;
+    uint32_t proc_sid;        // Processor Sensor ID
+    uint32_t core_sid[MAX_CORES * 2];    // 24 cores. 4 bytes for Temp, followed by 4 bytes for Frequency.
+    uint32_t backplane_sid;   // Backplane Sensor ID
+    uint32_t apss_sid;        // APSS Sensor ID
+} cmdh_sys_config_data_v20_t;
 
 typedef struct __attribute__ ((packed))
 {
     struct cmdh_fsp_cmd_header;
     uint8_t              format;
     uint8_t              version;
-    cmdh_sys_config_data_v10_t   sys_config;
-}cmdh_sys_config_v10_t;
+    cmdh_sys_config_data_v20_t   sys_config;
+}cmdh_sys_config_v20_t;
 
 // Used by TMGT to send OCC the IPS config data.
 typedef struct __attribute__ ((packed))
