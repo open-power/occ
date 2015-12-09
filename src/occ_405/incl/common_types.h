@@ -128,11 +128,11 @@ typedef struct image_header imageHdr_t;
 
 typedef struct ipc_scom_op
 {
-    uint32_t    addr;   // Register address
-    uint64_t    data;   // Data for read/write
-    uint32_t    size;   // Size of data buffer
-    uint8_t     read;   // Read (1) or write (0)
-    int         rc;     // Error of SCOM operation
+    uint32_t        addr;   // Register address
+    uint64_t        data;   // Data for read/write
+    uint32_t        size;   // Size of data buffer
+    uint8_t         read;   // Read (1) or write (0)
+    GpeErrorStruct  error;  // Error of SCOM operation
 } ipc_scom_op_t;
 
 extern uint32_t __READ_ONLY_DATA_LEN__;

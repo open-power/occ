@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -35,7 +35,7 @@
 #include "apss.h"
 #include "state.h"
 #include "proc_data_control.h"
-
+#include "cmdh_fsp.h"
 
 //Global array of core data buffers
 GPE_BUFFER(CoreData G_core_data[MAX_NUM_FW_CORES+NUM_CORE_DATA_DOUBLE_BUF+NUM_CORE_DATA_EMPTY_BUF]) = {{{0}}};
@@ -282,23 +282,20 @@ void task_core_data( task_t * i_task )
     return;
 }
 
-
 // Function Specification
 //
 // Name: proc_core_init
 //
 // Description: Initialize structure for collecting core data. It
-//                needs to be run in occ main and before RTLoop started.
+//              needs to be run in occ main and before RTLoop started.
 //
 // End Function Specification
-
 void proc_core_init( void )
 {
     errlHndl_t l_err = NULL;    // Error handler
     int        l_rc = 0;        // Return code
     const trace_descriptor_array_t *l_trace = NULL;  // Temporary trace descriptor
     uint8_t i = 0;
-    GpeRequest l_req;
 
     // Setup the array of CoreData pointers
     for( i = 0; i < MAX_NUM_FW_CORES; i++ )
@@ -310,33 +307,11 @@ void proc_core_init( void )
     {
         // Before the real time loop begins collecting data, we need to determine which
         // cores are present and configured. The Core Configuration Status Register
-        // has this information, but only the GPEs can read this via a scom.
+        // has this information, so we will need to read it over OCI.
+        uint64_t l_ccsr_val = in64(OCB_CCSR);
+        MAIN_TRAC_INFO("proc_core_init: CCSR read 0x%08X%08X", (uint32_t) (l_ccsr_val>>32), (uint32_t) l_ccsr_val);
 
-        // TEMP/TODO: For now, we will use a generic IPC command to do this and other
-        //            scoms until the HW team can give us the hardware procedures.
-        G_core_stat_scom_op.addr = 0x6c090;             // SCOM address of Core Configuration Status Register
-        G_core_stat_scom_op.size = 8;                   // Size of data buffer
-        G_core_stat_scom_op.data = 0xFFFFFF0000000000;  // 24 cores present
-        G_core_stat_scom_op.read = TRUE;                // We need to read the reg
-
-        //Initializes the GpeRequest object for reading the configuration status register
-        l_rc = gpe_request_create(&l_req,                          // GpeRequest for the task
-                                  &G_async_gpe_queue0,             // Queue
-                                  IPC_ST_SCOM_OPERATION,           // Function ID
-                                  &G_core_stat_scom_op,            // Task parameters
-                                  SSX_WAIT_FOREVER,                // Timeout (none)
-                                  NULL,                            // Callback
-                                  NULL,                            // Callback arguments
-                                  0 );                             // Options
-        // Schedule the request
-        // TEMP -- Currently doesn't work in Simics
-        //l_rc = gpe_request_schedule(&l_req);
-
-        MAIN_TRAC_INFO("proc_core_init: generic scom read back 0x%08X%08X", (uint32_t) (G_core_stat_scom_op.data>>32), (uint32_t) G_core_stat_scom_op.data);
-
-        // TODO: Store the present cores here
-        G_present_hw_cores = ((uint32_t) (G_core_stat_scom_op.data >> 32)) & HW_CORES_MASK;
-
+        G_present_hw_cores = ((uint32_t) (l_ccsr_val >> 32)) & HW_CORES_MASK;
         G_present_cores = G_present_hw_cores;
 
         PROC_DBG("G_present_hw_cores =[%x] and G_present_cores =[%x]",
@@ -355,7 +330,7 @@ void proc_core_init( void )
         if( l_rc )
         {
             // If we failed to create the GpeRequest then there is a serious problem.
-            MAIN_TRAC_ERR("Failure creating the low core data GpeRequest. [RC=0x%08x]", l_rc );
+            MAIN_TRAC_ERR("proc_core_init: Failure creating the low core data GpeRequest. [RC=0x%08x]", l_rc );
 
             /*
              * @errortype
@@ -394,7 +369,7 @@ void proc_core_init( void )
         if( l_rc )
         {
             // If we failed to create the GpeRequest then there is a serious problem.
-            MAIN_TRAC_ERR("Failure creating the high core data GpeRequest. [RC=0x%08x]", l_rc );
+            MAIN_TRAC_ERR("proc_core_init: Failure creating the high core data GpeRequest. [RC=0x%08x]", l_rc );
 
             /*
              * @errortype

@@ -172,6 +172,15 @@ void busy_wait(uint32_t t_microseconds)
         MFDEC(current_decrementer_value);
 }
 
+/*
+ * Function Specification
+ *
+ * Name: ipc_scom_operation
+ *
+ * Description: Does a getscom or putscom for the 405
+ *
+ * End Function Specification
+ */
 void ipc_scom_operation(ipc_msg_t* cmd, void* arg)
 {
     int l_rc;
@@ -181,16 +190,28 @@ void ipc_scom_operation(ipc_msg_t* cmd, void* arg)
     if (scom_op->read)
     {
         l_rc = getscom_abs(scom_op->addr, &scom_op->data);
+        if( l_rc )
+        {
+            PK_TRACE("ipc_scom_operation: Error doing getscom! rc: 0x%08X addr: 0x%08X", l_rc, scom_op->addr);
+            gpe_set_ffdc(&(scom_op->error), scom_op->addr, GPE_RC_SCOM_GET_FAILED, l_rc);
+        }
     }
     else
     {
         l_rc = putscom_abs(scom_op->addr, scom_op->data);
+        if( l_rc )
+        {
+            PK_TRACE("ipc_scom_operation: Error doing putscom! rc: 0x%08X addr: 0x%08X", l_rc, scom_op->addr);
+            gpe_set_ffdc(&(scom_op->error), scom_op->addr, GPE_RC_SCOM_PUT_FAILED, l_rc);
+        }
     }
 
+    // send back a response, IPC success even if ffdc/rc are non zeros
+    l_rc = ipc_send_rsp(cmd, IPC_RC_SUCCESS);
     if(l_rc)
     {
-        scom_op->rc = l_rc;
-        PK_TRACE("Error doing generic scom! RC: 0x%08X Addr: 0x%08X Read: %d Data: 0x%08X", l_rc,
-                 scom_op->addr, scom_op->read, scom_op->data);
+        PK_TRACE("ipc_scom_operation: Failed to send response back. Halting GPE0", l_rc);
+        gpe_set_ffdc(&(scom_op->error), 0x00, GPE_RC_IPC_SEND_FAILED, l_rc);
+        pk_halt();
     }
 }
