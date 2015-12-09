@@ -1100,11 +1100,14 @@ int main(int argc, char **argv)
         // Data is in Mhz upon return and needs to be converted to Hz and then
         // quartered.
         l_tb_freq_hz = (l_tb_freq_hz * 1000000)/4;
+
+        // @TODO: this parameter should be passsed to all the GPEs/CMEs/etc
+        // Can be stored in GPE accessible SRAM areas.
+        // The whole OCC complex should be running at the same nest frequency (proc_freq/4).
     }
     else
     {
-        // Default to 400MHz
-        l_tb_freq_hz = 400000000;
+        l_tb_freq_hz = PPC405_TIMEBASE_HZ;
     }
 
     CHECKPOINT(SSX_STARTING);

@@ -28,15 +28,18 @@
 /// All GPE's will use the external timebase register
 #define APPCFG_USE_EXT_TIMEBASE
 
+#define DEFAULT_NEST_FREQ_HZ 600000000
+#define DEFAULT_EXT_CLK_FREQ_HZ 37500000
+
 // If we are using the OCB timebase then assume
 // a frequency of 37.5Mhz.  Otherwise, the default is to use
 // the decrementer as a timebase and assume a frequency of
 // 600MHz
 // In product code, this value will be IPL-time configurable.
 #ifdef APPCFG_USE_EXT_TIMEBASE
-#define PPE_TIMEBASE_HZ 37500000
+#define PPE_TIMEBASE_HZ DEFAULT_EXT_CLK_FREQ_HZ
 #else
-#define PPE_TIMEBASE_HZ 600000000
+#define PPE_TIMEBASE_HZ DEFAULT_NEST_FREQ_HZ
 #endif /* APPCFG_USE_EXT_TIMEBASE */
 
 

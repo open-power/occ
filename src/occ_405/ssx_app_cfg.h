@@ -197,15 +197,15 @@ do {                                                                \
 #endif
 
 #ifndef PPC405_TIMEBASE_HZ
-#define PPC405_TIMEBASE_HZ  600000000
+#define PPC405_TIMEBASE_HZ DEFAULT_NEST_FREQ_HZ
 #endif
 
 //If we are using the external timebase for traces, assume it is 37500000 Hz.
 //Otherwise, it will use the PPC405 timebase.
 #if APPCFG_USE_EXT_TIMEBASE_FOR_TRACE
-#define SSX_TRACE_TIMEBASE_HZ   37500000
+#define SSX_TRACE_TIMEBASE_HZ DEFAULT_EXT_CLK_FREQ_HZ
 #else
-#define SSX_TRACE_TIMEBASE_HZ PPC405_TIMEBASE_HZ
+#define SSX_TRACE_TIMEBASE_HZ __ssx_timebase_frequency_hz
 #endif /* APPCFG_USE_EXT_TIMEBASE_FOR_TRACE */
 
 #if SSX_USE_INIT_SECTION
