@@ -16,6 +16,7 @@ INPUT ( amec_data.o
         cmdh_snapshot.o
         cmdh_thread.o
         dcom.o
+        dcom_thread.o
         dcomMasterRx.o
         dcomSlaveRx.o
         dcomSlaveTx.o

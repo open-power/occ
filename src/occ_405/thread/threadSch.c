@@ -139,14 +139,13 @@ void initThreadScheduler(void)
               THREAD_STACK_SIZE,
               THREAD_PRIORITY_3);
 
-/* TEMP -- NOT USED IN PHASE1
    l_dcomThreadRc = createAndResumeThreadHelper(&Dcom_thread,
                  Dcom_thread_routine,
                  (void *)0,
                  (SsxAddress)dcomThreadStack,
                  THREAD_STACK_SIZE,
                  THREAD_PRIORITY_6);
-*/
+
     // Create the thread scheduler timer
     l_timerRc = ssx_timer_create(&G_threadSchTimer, threadSwapcallback, 0);
 

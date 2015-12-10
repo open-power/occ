@@ -43,6 +43,7 @@ TOP-C-SOURCES = amec/amec_data.c \
                 cmdh/cmdh_tunable_parms.c \
                 cmdh/ffdc.c \
                 dcom/dcom.c \
+                dcom/dcom_thread.c \
                 dcom/dcomMasterRx.c \
                 dcom/dcomSlaveRx.c \
                 dcom/dcomSlaveTx.c \

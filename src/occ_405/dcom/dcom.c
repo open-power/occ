@@ -251,12 +251,8 @@ void dcom_initialize_roles(void)
         }
 
         // Always start as OCC Slave
-        //G_occ_role = OCC_SLAVE;
-        //rtl_set_run_mask(RTL_FLAG_NOTMSTR);
-
-        // For Simics, we need to start as OCC Master
-        G_occ_role = OCC_MASTER;
-        rtl_set_run_mask(RTL_FLAG_MSTR);
+        G_occ_role = OCC_SLAVE;
+        rtl_set_run_mask(RTL_FLAG_NOTMSTR);
 
 // @TODO TEMP - not ready yet for multiple DCMs
 /*

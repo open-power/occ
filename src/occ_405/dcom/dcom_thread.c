@@ -26,8 +26,7 @@
 #ifndef _DCOM_THREAD_C
 #define _DCOM_THREAD_C
 
-#include <pgp_pmc.h>
-#include "pgp_pba.h"
+#include "occhw_pba.h"
 #include <rtls.h>
 #include <apss.h>
 #include <dcom.h>
@@ -79,6 +78,7 @@ void Dcom_thread_routine(void *arg)
                        SSX_SECONDS(10),
                        SSX_SECONDS(10));
 
+    DCOM_TRAC_INFO("DCOM Thread Started");
     for(;;)
     {
         // --------------------------------------------------
@@ -96,6 +96,8 @@ void Dcom_thread_routine(void *arg)
         // --------------------------------------------------
         G_dcom_thread_counter++;
 
+// NOTE: Temporary system config must say we are FSP system so
+// that we don't try to access main memory here.
         // --------------------------------------------------
         // Check if we need to update the sapphire table
         // --------------------------------------------------
@@ -161,14 +163,8 @@ void Dcom_thread_routine(void *arg)
             }
         }
 
-        // --------------------------------------------------
-        // DCM PStates
-        // \_ can do sem_post to increment through state machine
-        // --------------------------------------------------
-        if(OCC_STATE_SAFE != CURRENT_STATE())
-        {
-            proc_gpsm_dcm_sync_enable_pstates_smh();
-        }
+        // TEMP/TODO: In P8, we would call proc_gpsm_dcm_sync_enable_pstates_smh() here,
+        //            if not in safe mode. Do we need to do something similar in P9?
 
         // --------------------------------------------------
         // SSX Sleep

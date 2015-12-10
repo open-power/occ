@@ -252,7 +252,7 @@ void amec_calc_dts_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
         {
             if (!((cWt && l_dtsCnt) || qWt))
             {
-                TRAC_ERR("amec_calc_dts_sensors:l_update_sensor  Firmware Corrupted! ",
+                TRAC_ERR("amec_calc_dts_sensors:l_update_sensor  Firmware Corrupted! "
                               "core Weight: %d, valid core DTSs: %d, quad weight: %d",
                               cWt, l_dtsCnt, qWt);
 

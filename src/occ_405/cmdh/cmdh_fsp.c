@@ -1279,11 +1279,12 @@ errlHndl_t cmdh_processTmgtRequest (const cmdh_fsp_cmd_t * i_cmd_ptr,
         case CMDH_DEBUGPT:
             cmdh_dbug_cmd (i_cmd_ptr,i_rsp_ptr);
             break;
+*/
 
         case CMDH_SETMODESTATE:
             l_err = cmdh_tmgt_setmodestate(i_cmd_ptr,i_rsp_ptr);
             break;
-*/
+
         case CMDH_SETCONFIGDATA:
             l_err = DATA_store_cnfgdata (i_cmd_ptr,i_rsp_ptr);
             break;

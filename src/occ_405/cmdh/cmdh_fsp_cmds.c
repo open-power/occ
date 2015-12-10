@@ -1195,8 +1195,6 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                     cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     errlHndl_t                      l_errlHndl     = NULL;
-/* NOT YET SUPPORTED -- NEED MODE AND STATES */
-#if 0
     smgr_setmodestate_v0_query_t*   l_cmd_ptr      = (smgr_setmodestate_v0_query_t *)i_cmd_ptr;
     ERRL_RC                         l_rc           = ERRL_RC_INTERNAL_FAIL;
     SsxInterval                     l_timeout      = SSX_SECONDS(15);
@@ -1245,21 +1243,32 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
             break;
         }
 
+        // Verify that the state and mode are correct
+        if (!OCC_STATE_IS_VALID(l_cmd_ptr->occ_state) || !OCC_MODE_IS_VALID(l_cmd_ptr->occ_mode))
+        {
+            CMDH_TRAC_ERR("Invalid state and/or mode! State=0x%0X Mode=0x%0X",
+                          l_cmd_ptr->occ_state, l_cmd_ptr->occ_mode);
+            l_rc = ERRL_RC_INVALID_DATA;
+            break;
+        }
+
         // -------------------------------------------------
         // Act on State & Mode Changes
         // -------------------------------------------------
-        TRAC_INFO("SMS Mode=%d, State=%d\n",l_cmd_ptr->occ_mode, l_cmd_ptr->occ_state);
+        CMDH_TRAC_INFO("SMS Mode=%d, State=%d\n",l_cmd_ptr->occ_mode, l_cmd_ptr->occ_state);
 
         G_occ_external_req_mode  = l_cmd_ptr->occ_mode;
         G_occ_external_req_state = l_cmd_ptr->occ_state;
 
         // TODO: Should we have a way to transition state even if
         // master slave comm isn't working?
+        // TEMP/TODO : This is a temporary hack to allow state and mode transitions
+        //             until DCOM is enabled. Needs to be commented out again once
+        //             that happens. And then perhaps address the above TODO.
         // if(){
-        //     G_occ_master_state = l_cmd_ptr->occ_state;
-        //     G_occ_master_mode  = l_cmd_ptr->occ_mode;
+             G_occ_master_state = l_cmd_ptr->occ_state;
+             G_occ_master_mode  = l_cmd_ptr->occ_mode;
         // }
-
         // We need to wait and see if all Slaves correctly make it to state/mode.
         // TODO: Also, if all slaves can't go to this mode (based on their state),
         // we need to return PRESENT_STATE_PROHIBITS and do nothing.
@@ -1291,7 +1300,7 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
             if(l_occ_num <= l_occ_passed_num)
             {
                 // This means that all present OCCs have reached the desired state/mode
-                TRAC_INFO("cmdh_tmgt_setmodestate: changed state from %d to %d, mode from %d to %d",
+                CMDH_TRAC_INFO("cmdh_tmgt_setmodestate: changed state from %d to %d, mode from %d to %d",
                           l_pre_state, G_occ_external_req_state, l_pre_mode, G_occ_external_req_mode);
                 l_rc = ERRL_RC_SUCCESS;
                 break;
@@ -1301,7 +1310,7 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 // check time and break out if we reached limit
                 if ( ((ssx_timebase_get() - l_start) > l_timeout))
                 {
-                    TRAC_ERR("cmdh_tmgt_setmodestate: time out waiting for all slave occ (expected:%d, passed:%d)",
+                    CMDH_TRAC_ERR("cmdh_tmgt_setmodestate: time out waiting for all slave occ (expected:%d, passed:%d)",
                              l_occ_num, l_occ_passed_num);
                     /* @
                      * @errortype
@@ -1347,8 +1356,6 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
         // Build Error Response packet
         cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, l_rc, &l_errlHndl);
     }
-
-#endif // #if 0
 
     return l_errlHndl;
 }

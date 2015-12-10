@@ -70,6 +70,15 @@ typedef enum
     OCC_MODE_INVALID          = 0xFF,
 } OCC_MODE;
 
+// These are the only modes that TMGT/HTMGT can send
+#define OCC_MODE_IS_VALID(mode) ((mode == OCC_MODE_NOCHANGE) || \
+                                 (mode == OCC_MODE_NOMINAL) || \
+                                 (mode == OCC_MODE_TURBO) || \
+                                 (mode == OCC_MODE_PWRSAVE) || \
+                                 (mode == OCC_MODE_DYN_POWER_SAVE) || \
+                                 (mode == OCC_MODE_DYN_POWER_SAVE_FP) || \
+                                 (mode == OCC_MODE_FFO))
+
 // Typedef of the various internal modes that OCC can be in.
 typedef enum
 {

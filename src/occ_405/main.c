@@ -596,8 +596,6 @@ void slave_occ_init()
     // Run AMEC Slave Init Code
     amec_slave_init();
 
-// @TODO - TEMP: SMGR not ready yet
-/*
     // Initialize SMGR State Semaphores
     extern SsxSemaphore G_smgrModeChangeSem;
     ssx_semaphore_create(&G_smgrModeChangeSem, 1, 1);
@@ -605,7 +603,6 @@ void slave_occ_init()
     // Initialize SMGR Mode Semaphores
     extern SsxSemaphore G_smgrStateChangeSem;
     ssx_semaphore_create(&G_smgrStateChangeSem, 1, 1);
-*/
 }
 
 /*
@@ -770,13 +767,15 @@ void Main_thread_routine(void *private)
     // TEMP -- NO DCOM YET, init as OCC Master
     //dcom_initialize_roles();
 
+#if STRAIGHT_TO_OBS_HACK
     // Remove the next LOC when dcom_initialize_roles() is un-commented
     G_occ_role = OCC_MASTER;  // TEMP - @TODO
 
-        // Remove the next 2 LOC when dcom_initialize_roles is un-commented
-        // AND cmdh is running to call master_occ_init
-        rtl_set_run_mask(RTL_FLAG_MSTR);
-      master_occ_init();
+    // Remove the next 2 LOC when dcom_initialize_roles is un-commented
+    // AND cmdh is running to call master_occ_init
+    rtl_set_run_mask(RTL_FLAG_MSTR);
+    master_occ_init();
+#endif
 
     CHECKPOINT(ROLES_INITIALIZED);
 
@@ -832,11 +831,14 @@ void Main_thread_routine(void *private)
 // TEMP: Normally these flags are set elsewhere, after the BMC/FSP
 //       send us configuration data. This is a temporary hack until
 //       that communication is enabled. Required for APSS tasks.
+#if STRAIGHT_TO_OBS_HACK
     rtl_set_run_mask(RTL_FLAG_OBS);
     rtl_clr_run_mask(RTL_FLAG_STANDBY);
     rtl_clr_run_mask(RTL_FLAG_APSS_NOT_INITD);
     rtl_clr_run_mask(RTL_FLAG_RST_REQ);
+#endif
 // END TEMP
+
     while (TRUE)
     {
         // Count each loop so the watchdog can tell the main thread is

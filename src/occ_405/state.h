@@ -52,8 +52,9 @@ typedef enum
     OCC_STATE_OBSERVATION        = 0x02,
     OCC_STATE_ACTIVE             = 0x03,
     OCC_STATE_SAFE               = 0x04,
-    OCC_STATE_RESET              = 0x05,  // Invalid State, TPMD Legacy
-    OCC_STATE_STANDBYOBSERVATION = 0x06,  // Invalid State, TPMD Legacy
+
+    // Make sure this is after the last valid state
+    OCC_STATE_COUNT,
 
     // These are used for state transition table, and are not
     // a valid state in and of itself.
@@ -61,7 +62,10 @@ typedef enum
     OCC_STATE_INVALID            = 0xFF,
 } OCC_STATE;
 
-
+// These are the only states that TMGT/HTMGT can send
+#define OCC_STATE_IS_VALID(state) ((state == OCC_STATE_NOCHANGE) || \
+                                   (state == OCC_STATE_OBSERVATION) || \
+                                   (state == OCC_STATE_ACTIVE))
 /**
  * @enum SMGR_SMS_CMD_TYPE
  * @brief SMGR set-mode-state commands version 0 contains a byte that indicates if
