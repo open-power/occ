@@ -449,9 +449,15 @@ void print_core_data_sensors(uint8_t core)
     {
         PROC_DBG("-------------------------------");
         PROC_DBG("Core [%d] Sensors Data", core);
-        PROC_DBG("Sensor Core[0] reading: 0x%04X [Valid:%d]", l_core_data->dts.core[0].fields.reading, l_core_data->dts.core[0].fields.valid);
-        PROC_DBG("Sensor Core[1] reading: 0x%04X [Valid:%d]", l_core_data->dts.core[1].fields.reading, l_core_data->dts.core[1].fields.valid);
-        PROC_DBG("Sensor Cache   reading: 0x%04X [Valid:%d]", l_core_data->dts.cache.fields.reading, l_core_data->dts.cache.fields.valid);
+        PROC_DBG("Sensor Core[0] reading: 0x%04X [Valid:%d][Spare:%d][Trip:%d]",
+                 l_core_data->dts.core[0].fields.reading, l_core_data->dts.core[0].fields.valid,
+                 l_core_data->dts.core[0].fields.spare, l_core_data->dts.core[0].fields.thermal_trip);
+        PROC_DBG("Sensor Core[1] reading: 0x%04X [Valid:%d][Spare:%d][Trip:%d]",
+                 l_core_data->dts.core[1].fields.reading, l_core_data->dts.core[1].fields.valid,
+                 l_core_data->dts.core[1].fields.spare, l_core_data->dts.core[1].fields.thermal_trip);
+        PROC_DBG("Sensor Cache   reading: 0x%04X [Valid:%d][Spare:%d][Trip:%d]",
+                 l_core_data->dts.cache.fields.reading, l_core_data->dts.cache.fields.valid,
+                 l_core_data->dts.cache.fields.spare, l_core_data->dts.cache.fields.thermal_trip);
         // TODO: Commented these out b/c they take too long to run in task.
         //dumpHexString(&l_core_data->sensors_tod, sizeof(l_core_data->sensors_tod), "Sensor TOD");
         //dumpHexString(&l_core_data->sensors_v0, sizeof(l_core_data->sensors_v0), "Sensor VO");

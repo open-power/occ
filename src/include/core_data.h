@@ -1,25 +1,19 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/include/core_data.h $                                     */
+/* $Source: chips/p9/procedures/lib/pm/core_data.h $                      */
 /*                                                                        */
-/* OpenPOWER OnChipController Project                                     */
+/* IBM CONFIDENTIAL                                                       */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* EKB Project                                                            */
+/*                                                                        */
+/* COPYRIGHT 2015                                                         */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
-/* Licensed under the Apache License, Version 2.0 (the "License");        */
-/* you may not use this file except in compliance with the License.       */
-/* You may obtain a copy of the License at                                */
-/*                                                                        */
-/*     http://www.apache.org/licenses/LICENSE-2.0                         */
-/*                                                                        */
-/* Unless required by applicable law or agreed to in writing, software    */
-/* distributed under the License is distributed on an "AS IS" BASIS,      */
-/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
-/* implied. See the License for the specific language governing           */
-/* permissions and limitations under the License.                         */
+/* The source code for this program is not published or otherwise         */
+/* divested of its trade secrets, irrespective of what has been           */
+/* deposited with the U.S. Copyright Office.                              */
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
@@ -40,11 +34,9 @@
 
 #include <stdint.h>
 
-// TODO RTC 141391 Define this in sensor_register_addresses.h
 #define THERM_DTS_RESULT    0x00050000
 
 
-// TODO RTC 141391 This probably needs to be in firmware regs
 typedef union dts_sensor_result_reg
 {
     uint64_t value;
@@ -122,20 +114,6 @@ typedef struct
     sensor_result_t reserved;
 } CoreDataDts;
 
-// TODO can this section be removed?
-typedef struct
-{
-    uint32_t unused;
-    uint32_t tod_2mhz;
-    //power_management_control_reg_t pmcr;    // not used in P8
-
-    //pmsr not needed in P9 as info available from PGPE
-    //power_management_status_reg_t pmsr;
-
-    // pm_history moved to STOP HISTORY in P9
-    //ppm_pmstatehistocc_reg_t pm_history;
-} CoreDataPcbSlave;
-
 
 //
 // The instance of this data object must be 8 byte aligned
@@ -147,9 +125,12 @@ typedef struct
     CoreDataThrottle           throttle;                //24
     CoreDataPerThread          per_thread[8];           //24 * 8
     CoreDataDts                dts;                     //16
-    CoreDataPcbSlave           pcb_slave;               //16
 } CoreData;
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
 /**
  * Get core data
@@ -157,7 +138,10 @@ typedef struct
  * @param[out] Data pointer for the result
  * @return result of scom operation
  */
-
 uint32_t  get_core_data(uint32_t i_core, CoreData* o_data);
 
+#ifdef __cplusplus
+};
+#endif
 #endif  /* __GPE_CORE_DATA_H__ */
+
