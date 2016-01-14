@@ -551,6 +551,9 @@ int amec_wof_set_algorithm(const uint8_t i_algorithm)
         {
             // Success, set the new algorithm
             g_amec->wof.algo_type = g_amec->wof.enable_parm;
+            // Reset error count
+            g_amec->wof.error_count = 0;
+            g_amec->wof.error = 0;
             l_rc = 0;
 
             TRAC_INFO("WOF algorithm has been successfully initialized: algo_type[%d] C_eff_tdp[%d]",
@@ -650,7 +653,9 @@ void amec_update_wof_sensors(void)
     g_amec->wof.v_chip = l_v_chip; // expose in parameter
 }
 
-void amec_wof_common_steps(void)
+// Compute Ceff Ratio
+// Return non-zero on error
+int amec_wof_common_steps(void)
 {
     uint8_t             i;
     uint32_t            l_result32; //temporary result
@@ -670,15 +675,11 @@ void amec_wof_common_steps(void)
     uint16_t            l_ceff_ratio; //Effective switching capacitance ratio
     uint32_t            l_leakage = 0; // Total chip leakage current 0.01 A
 
-    // Acquire important sensor data
-    l_temp = AMECSENSOR_PTR(TEMP2MSP0)->sample;
-    l_accum = (uint32_t)AMECSENSOR_PTR(CUR250USVDD0)->accumulator;
-    l_v_chip = g_amec->wof.v_chip; //from amec_update_wof_sensors()
-
     //If no change, then nothing to do here.
     if (g_amec->wof.state != AMEC_WOF_NO_CORE_CHANGE)
     {
-        return;
+        // Not an error. WOF is transitioning cores. Try later.
+        return 0;
     }
     if (g_amec->wof.pstatetable_cores_next !=
         g_amec->wof.pstatetable_cores_current)
@@ -688,8 +689,13 @@ void amec_wof_common_steps(void)
                  "CoresNext:%i, CoresCurrent:%i.  wof.error:0x%X",
                  g_amec->wof.pstatetable_cores_next,
                  g_amec->wof.pstatetable_cores_current, g_amec->wof.error);
-        return;
+        return 1; //error
     }
+
+    // Acquire important sensor data
+    l_temp = AMECSENSOR_PTR(TEMP2MSP0)->sample;
+    l_accum = (uint32_t)AMECSENSOR_PTR(CUR250USVDD0)->accumulator;
+    l_v_chip = g_amec->wof.v_chip; //from amec_update_wof_sensors()
 
     // Count number of cores that are turned on.
     // They will have non-zero frequency. Cores that are in winkle or sleep
@@ -728,7 +734,7 @@ void amec_wof_common_steps(void)
         g_amec->wof.error = AMEC_WOF_ERROR_SCOM_1;
         TRAC_ERR("amec_wof_common_steps: Failed getscom on PMCWIRVR3 reg[0x%X]."
                  " rc:0x%X, wof.error:0x%X", PMCWIRVR3, l_rc, g_amec->wof.error);
-        return;
+        return 1; //error
     }
 
     // FIXME: Whenever deep sleep works:
@@ -872,7 +878,7 @@ void amec_wof_common_steps(void)
         * (uint32_t) g_amec->wof.loadline / (uint32_t)10000;
 
     l_result32i = g_amec->wof.ac << 14; // * 16384
-    // estimate g_amec->wof.v_chip^1.3 using equation:
+    // estimate v_chip^1.3 using equation:
     // = 21374 * (X in 0.1 mV) - 50615296
     l_result32v = (21374 * g_amec->wof.vote_vchip - 50615296) >> 10;
     l_result32 = l_result32i / l_result32v;
@@ -886,9 +892,9 @@ void amec_wof_common_steps(void)
 
     // Try using the present voltage, since the voltage calculated
     // using the WOF frequency causes Ceff to be too low.
-    // estimate g_amec->wof.v_chip^1.3 using equation:
+    // estimate v_chip^1.3 using equation:
     // = 21374 * (X in 0.1 mV) - 50615296
-    l_result32v = (21374 * g_amec->wof.v_chip - 50615296) >> 10;
+    l_result32v = (21374 * l_v_chip - 50615296) >> 10;
     l_result32 = l_result32i / l_result32v;
     l_result32 = l_result32 << 14; // * 16384
     if (g_amec->wof.f_vote != 0)
@@ -939,6 +945,8 @@ void amec_wof_common_steps(void)
     }
 
     g_amec->wof.f_uplift = l_result32;
+    g_amec->wof.error = 0; // clear previous errors
+    return 0; // no error
 }
 
 // Function Specification
@@ -952,7 +960,10 @@ void amec_wof_common_steps(void)
 // End Function Specification
 void amec_wof_alg_v2(void)
 {
-    amec_wof_common_steps();
+    int err;
+
+    err = amec_wof_common_steps();
+    if (err) return;
 
     g_amec->wof.f_vote = g_amec->wof.f_uplift;
 
@@ -1056,7 +1067,10 @@ void amec_wof_update_pstate_table(void)
 // End Function Specification
 void amec_wof_alg_v3(void)
 {
-    amec_wof_common_steps();
+    int err;
+
+    err = amec_wof_common_steps();
+    if (err) return;
 
     // Determine if we have cores that are turning on or off
     if (g_amec->wof.pstatetable_cores_next >
@@ -1382,7 +1396,61 @@ void amec_wof_helper(void)
 // End Function Specification
 void amec_wof_main(void)
 {
-    int     l_rc = 0;
+    int                 l_rc  = 0;
+    errlHndl_t          l_err = NULL;
+
+    if (g_amec->wof.error)
+    {
+        g_amec->wof.error_count++;
+    }
+    else
+    {
+        // clear error count if WOF successful last time
+        g_amec->wof.error_count=0;
+    }
+    if (g_amec->wof.error_count >= 5)
+    {
+        //Trigger error if WOF not operating for 10 ms (5 periods)
+
+        TRAC_ERR("amec_wof_main: >=5 consecutive errors, therefore disabling wof.");
+
+        /* @
+         * @errortype
+         * @moduleid    AMEC_WOF_SCOM_FAILURE
+         * @reasoncode  PROC_SCOM_ERROR
+         * @userdata1   Scom rc
+         * @userdata2   0
+         * @userdata4   OCC_NO_EXTENDED_RC
+         * @devdesc     Failed to scom PDEMR register.
+         *
+         */
+        l_err = createErrl(AMEC_WOF_SCOM_FAILURE,       //modId
+                           PROC_SCOM_ERROR,             //reasoncode
+                           ERC_GENERIC_TIMEOUT,         //Extended reason code
+                           ERRL_SEV_PREDICTIVE,         //Severity
+                           NULL,                        //Trace Buf
+                           DEFAULT_TRACE_SIZE,          //Trace Size
+                           (uint32_t)g_amec->wof.error, //userdata1
+                           0);                          //userdata2
+
+        // Callout to firmware
+        addCalloutToErrl(l_err,
+                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                         ERRL_COMPONENT_ID_FIRMWARE,
+                         ERRL_CALLOUT_PRIORITY_MED);
+
+        // Callout to processor
+        addCalloutToErrl(l_err,
+                         ERRL_CALLOUT_TYPE_HUID,
+                         G_sysConfigData.proc_huid,
+                         ERRL_CALLOUT_PRIORITY_LOW);
+ 
+        // Commit the error
+        commitErrl(&l_err);
+
+        g_amec->wof.enable_parm = 0; // disable WOF
+
+    }
 
     // If new algorithm selected, then initialize it. If initialization fails,
     // then do not run algorithm
