@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/cent/centaur_data.c $                                 */
+/* $Source: src/occ_405/cent/centaur_data.c $                             */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -23,12 +23,12 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-//*************************************************************************
+//*************************************************************************/
 // Includes
-//*************************************************************************
+//*************************************************************************/
 #include "centaur_data.h"
 #include "centaur_control.h"
-#include "pgp_async.h"
+#include "occhw_async.h"
 #include "threadSch.h"
 #include "pmc_register_addresses.h"
 #include "centaur_data_service_codes.h"
@@ -38,21 +38,21 @@
 #include "rtls.h"
 #include "apss.h"
 #include "state.h"
-#include "gpe_scom.h"
-#include "centaur_firmware_registers.h"
-#include "centaur_register_addresses.h"
+#include "occhw_scom.h"
+//#include "centaur_firmware_registers.h"
+//#include "centaur_register_addresses.h"
 
-//*************************************************************************
+//*************************************************************************/
 // Externs
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Macros
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Defines/Enums
-//*************************************************************************
+//*************************************************************************/
 
 // Enumerated list of possible centaur operations
 typedef enum
@@ -83,13 +83,16 @@ typedef enum
 #define CENT_THRM_PARITY_ERROR26    ((uint64_t)0x0000002000000000ull)
 #define CENT_MAX_DEADMAN_TIMER      0xf
 #define CENT_DEADMAN_TIMER_2SEC     0x8
-//*************************************************************************
+//*************************************************************************/
 // Structures
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Globals
-//*************************************************************************
+//*************************************************************************/
+
+/* TEMP/TODO: PORE/MemData issues */
+#if 0
 //Global array of centaur data buffers
 GPE_BUFFER(MemData G_centaur_data[NUM_CENTAUR_DATA_BUFF +
                                   NUM_CENTAUR_DOUBLE_BUF +
@@ -106,8 +109,6 @@ GPE_BUFFER(scomList_t G_cent_scom_list_entry[NUM_CENT_OPS]);
 
 //buffer for storing output from running gpe_scom_centaur()
 GPE_BUFFER(uint64_t G_cent_scom_data[MAX_NUM_CENTAURS]) = {0};
-
-cent_sensor_flags_t G_cent_enabled_sensors = {0};
 
 //Global array of centaur data pointers
 MemData * G_centaur_data_ptrs[MAX_NUM_CENTAURS] = { &G_centaur_data[0],
@@ -129,6 +130,9 @@ centaur_data_task_t G_centaur_data_task = {
     .prev_centaur = 7,
     .centaur_data_ptr = &G_centaur_data[8]
 };
+#endif
+
+cent_sensor_flags_t G_cent_enabled_sensors = {0};
 
 //AMEC needs to know when data for a centaur has been collected.
 uint32_t G_updated_centaur_mask = 0;
@@ -147,13 +151,13 @@ uint8_t      G_centaur_needs_recovery = 0;
 // This tells amec code to treat the centaur temperature as invalid
 uint8_t      G_centaur_nest_lfir6 = 0;
 
-//*************************************************************************
+//*************************************************************************/
 // Function Prototypes
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Functions
-//*************************************************************************
+//*************************************************************************/
 
 // Function Specification
 //
@@ -173,13 +177,18 @@ uint8_t      G_centaur_nest_lfir6 = 0;
 //number of SC polls to wait between i2c recovery attempts
 #define CENT_SC_MAX_INTERVAL 256
 
+/* TEMP/TODO: Reenable when needed */
+#if 0
 //determine scom address of MCIFIR register for given Centaur n
 #define MCS0_MCIFIR_N(n) \
         ( (n<4)? (MCS0_MCIFIR + ((MCS1_MCIFIR - MCS0_MCIFIR) * (n))) : (MCS4_MCIFIR + ((MCS5_MCIFIR - MCS4_MCIFIR) * (n-4))) )
+#endif
 
 //mask for channel checkstop
 #define MCIFIR_CHAN_CKSTOP_MASK 0x0000000100000000
 
+/* TEMP/TODO: Reenable when needed */
+#if 0
 bool cent_chan_checkstop(const uint8_t i_cent)
 {
     uint32_t l_scom_addr = 0;
@@ -226,7 +235,10 @@ bool cent_chan_checkstop(const uint8_t i_cent)
     }
     return l_rc;
 }
+#endif // #if 0
 
+/* TEMP/TODO: Reenable when needed */
+#if 0
 void cent_recovery(uint32_t i_cent)
 {
     int l_rc = 0;
@@ -591,6 +603,7 @@ void cent_recovery(uint32_t i_cent)
 
     }while(0);
 }
+#endif // #if 0
 
 // Function Specification
 //
@@ -600,6 +613,8 @@ void cent_recovery(uint32_t i_cent)
 //              collection
 //
 // End Function Specification
+/* TEMP/TODO: Reenable when needed */
+#if 0
 void task_centaur_data( task_t * i_task )
 {
     errlHndl_t    l_err   = NULL;    // Error handler
@@ -906,6 +921,7 @@ void task_centaur_data( task_t * i_task )
     }
     return;
 }
+#endif // #if 0
 
 #define CENTAUR_SENSCACHE_ENABLE 0x020115CC
 // Function Specification
@@ -915,6 +931,8 @@ void task_centaur_data( task_t * i_task )
 // Description: Reads
 //
 // End Function Specification
+/* TEMP/TODO: Reenable when needed */
+#if 0
 int cent_get_enabled_sensors()
 {
     int l_rc = 0;
@@ -970,6 +988,7 @@ int cent_get_enabled_sensors()
     }while(0);
     return l_rc;
 }
+#endif // #if 0
 
 // Function Specification
 //
@@ -980,6 +999,8 @@ int cent_get_enabled_sensors()
 //        This will also initialize the centaur watchdog.
 //
 // End Function Specification
+/* TEMP/TODO: Reenable when needed */
+#if 0
 void centaur_init( void )
 {
     errlHndl_t l_err   = NULL;  // Error handler
@@ -1241,7 +1262,7 @@ void centaur_init( void )
 
     return;
 }
-
+#endif // #if 0
 
 // Function Specification
 //
@@ -1252,6 +1273,8 @@ void centaur_init( void )
 //              Returns NULL for centaur ID outside the range of 0 to 7.
 //
 // End Function Specification
+/* TEMP/TODO: Reenable when needed */
+#if 0
 MemData * cent_get_centaur_data_ptr( const uint8_t i_occ_centaur_id )
 {
     //The caller needs to send in a valid OCC centaur id. Since type is uchar
@@ -1269,4 +1292,4 @@ MemData * cent_get_centaur_data_ptr( const uint8_t i_occ_centaur_id )
         return( NULL );
     }
 }
-
+#endif

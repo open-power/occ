@@ -1,14 +1,17 @@
 INPUT ( amec_data.o
         amec_freq.o
+        amec_health.o
         amec_init.o
         amec_master_smh.o
         amec_part.o
         amec_sensors_fw.o
         amec_sensors_power.o
+        amec_sensors_centaur.o
         amec_sensors_core.o
         amec_slave_smh.o
         amec_tasks.o
         apss.o
+        centaur_data.o
         cmdh_dbug_cmd.o
         cmdh_fsp_cmds_datacnfg.o
         cmdh_fsp_cmds.o

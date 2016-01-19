@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2015
+# Contributors Listed Below - COPYRIGHT 2015,2016
 # [+] International Business Machines Corp.
 #
 #
@@ -24,15 +24,18 @@
 # IBM_PROLOG_END_TAG
 TOP-C-SOURCES = amec/amec_data.c \
                 amec/amec_freq.c \
+                amec/amec_health.c \
                 amec/amec_init.c \
                 amec/amec_master_smh.c \
                 amec/amec_part.c \
                 amec/amec_sensors_fw.c \
                 amec/amec_sensors_power.c \
+                amec/amec_sensors_centaur.c \
                 amec/amec_sensors_core.c \
                 amec/amec_slave_smh.c \
                 amec/amec_tasks.c \
                 amec/sensor_power.c \
+                cent/centaur_data.c \
                 cmdh/cmdh_dbug_cmd.c \
                 cmdh/cmdh_fsp_cmds_datacnfg.c \
                 cmdh/cmdh_fsp_cmds.c \

@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/cmdh/cmdh_fsp_cmds.c $                                */
+/* $Source: src/occ_405/cmdh/cmdh_fsp_cmds.c $                            */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -33,10 +33,7 @@
 #include "state.h"
 #include "cmdh_fsp_cmds.h"
 #include "cmdh_dbug_cmd.h"
-//#include "gpsm.h"
-//#include "pstates.h"
 #include "proc_pstate.h"
-//#include "gpe_data.h"
 #include "centaur_data.h"
 #include <amec_data.h>
 #include "amec_amester.h"
@@ -100,81 +97,12 @@ errlHndl_t cmdh_tmgt_poll (const cmdh_fsp_cmd_t * i_cmd_ptr,
     errlHndl_t                  l_errlHndl  = NULL;
     cmdh_poll_query_t *         l_poll_cmd  = (cmdh_poll_query_t *) i_cmd_ptr;
     ERRL_RC                     l_rc        = ERRL_RC_INTERNAL_FAIL;
-    uint8_t                     k           = 0;
 
     do
     {
-        if(l_poll_cmd->version == CMDH_POLL_BASE_VERSION)
+        if (l_poll_cmd->version == CMDH_POLL_VERSION20)
         {
-            cmdh_poll_resp_v0_t * l_poll_rsp = (cmdh_poll_resp_v0_t *) o_rsp_ptr;
-
-            memset(l_poll_rsp,0,(size_t)sizeof(cmdh_poll_resp_v0_t));
-
-            l_poll_rsp->status.word     = SMGR_validate_get_valid_states();
-            l_poll_rsp->ext_status.word = 0;
-
-            l_poll_rsp->occ_pres_mask   = G_sysConfigData.is_occ_present;
-            l_poll_rsp->config_data     = DATA_request_cnfgdata();
-            l_poll_rsp->state           = CURRENT_STATE();
-            l_poll_rsp->ips_status.word = 0;
-
-            if( G_sysConfigData.system_type.kvm )
-            {
-                l_poll_rsp->mode = G_occ_external_req_mode_kvm;
-            }
-            else
-            {
-                l_poll_rsp->mode            = CURRENT_MODE();
-            }
-
-            l_poll_rsp->ext_status.dvfs_due_to_ot = 0;
-            l_poll_rsp->ext_status.dvfs_due_to_pwr = 0;
-
-            for ( k = 0; k < MAX_NUM_CORES; k++ )
-            {
-                uint32_t l_freq_reason = g_amec->proc[0].core[k].f_reason;
-                if ( l_freq_reason & (AMEC_VOTING_REASON_PROC_THRM | AMEC_VOTING_REASON_VRHOT_THRM) )
-                {
-                    l_poll_rsp->ext_status.dvfs_due_to_ot = 1;
-                }
-
-                if ( l_freq_reason & (AMEC_VOTING_REASON_PPB | AMEC_VOTING_REASON_PMAX | AMEC_VOTING_REASON_PWR) )
-                {
-                    l_poll_rsp->ext_status.dvfs_due_to_pwr = 1;
-                }
-            }
-
-            l_poll_rsp->ips_status.ips_enabled = G_ips_config_data.iv_ipsEnabled;
-            l_poll_rsp->ips_status.ips_active = AMEC_mst_get_ips_active_status();
-
-
-            l_poll_rsp->errl_id        = getOldestErrlID();
-            l_poll_rsp->errl_address   = getErrlOCIAddrByID(l_poll_rsp->errl_id);
-            l_poll_rsp->errl_length    = getErrlLengthByID(l_poll_rsp->errl_id);
-
-            //If errl_id is not 0, then neither address or length should be zero.
-            //This should not happen, but if it does tmgt will create an error log that
-            //includes the data at the errl slot address given.
-            //NOTE: One cause for a false errlog id is corruption of data in one errl slot
-            //      due to writing data greater than the size of the previous slot.  For
-            //      example writing the CallHome errorlog (3kb) into a regular sized (2kb) slot.
-            if ( (l_poll_rsp->errl_id != 0) &&
-                 ((l_poll_rsp->errl_address == 0) || (l_poll_rsp->errl_length == 0)))
-            {
-                TRAC_ERR("An error ID has been sent via poll but the address or size is 0. "
-                         "ErrlId:0x%X, sz:0x%X, address:0x%X.",
-                         l_poll_rsp->errl_id, l_poll_rsp->errl_length, l_poll_rsp->errl_address);
-            }
-            l_poll_rsp->data_length[0] = CONVERT_UINT16_UINT8_HIGH(CMDH_POLL_RESP_LEN_V0);
-            l_poll_rsp->data_length[1] = CONVERT_UINT16_UINT8_LOW(CMDH_POLL_RESP_LEN_V0);
-            l_rc                       = ERRL_RC_SUCCESS;
-            l_poll_rsp->rc             = ERRL_RC_SUCCESS;
-
-            // TODO: Clear flag indicating we sent a 'poll request' to TMGT
-        }
-        else if (l_poll_cmd->version == CMDH_POLL_VERSION10)
-        {
-            l_rc = cmdh_poll_v10(o_rsp_ptr);
+            l_rc = cmdh_poll_v20(o_rsp_ptr);
         }
         else
         {
@@ -194,16 +122,14 @@ errlHndl_t cmdh_tmgt_poll (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
 // Function Specification
 //
-// Name:  cmdh_poll_v10
+// Name:  cmdh_poll_v20
 //
-// Description: Used for version 0x10 poll calls from BMC/HTMGT.
+// Description: Used for version 0x20 poll calls from BMC/HTMGT.
 //
 // End Function Specification
-ERRL_RC cmdh_poll_v10(cmdh_fsp_rsp_t * o_rsp_ptr)
+ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     ERRL_RC                     l_rc  = ERRL_RC_INTERNAL_FAIL;
-/* TEMP -- NOT SUPPORTED YET (NEED DCOM/AMEC) */
-#if 0
     uint8_t                     k = 0;
     cmdh_poll_sensor_db_t       l_sensorHeader;
 
@@ -211,7 +137,7 @@ ERRL_RC cmdh_poll_v10(cmdh_fsp_rsp_t * o_rsp_ptr)
     memset(o_rsp_ptr, 0, (size_t)sizeof(cmdh_fsp_rsp_t));
 
     // Set pointer to start of o_rsp_ptr
-    cmdh_poll_resp_v10_fixed_t * l_poll_rsp = (cmdh_poll_resp_v10_fixed_t *) o_rsp_ptr;
+    cmdh_poll_resp_v20_fixed_t * l_poll_rsp = (cmdh_poll_resp_v20_fixed_t *) o_rsp_ptr;
 
     // Byte 1
     l_poll_rsp->status.word = SMGR_validate_get_valid_states();
@@ -246,6 +172,8 @@ ERRL_RC cmdh_poll_v10(cmdh_fsp_rsp_t * o_rsp_ptr)
     {
         l_poll_rsp->ext_status.n_power = 1;
     }
+
+    // TEMP/TODO: Sync request bit set here
 
     // Byte 3
     l_poll_rsp->occ_pres_mask   = G_sysConfigData.is_occ_present;
@@ -289,14 +217,16 @@ ERRL_RC cmdh_poll_v10(cmdh_fsp_rsp_t * o_rsp_ptr)
     l_poll_rsp->sensor_dblock_version = 0x01;  //Currently only 0x01 is supported.
 
     //l_rsp_index is used as an index into o_rsp_ptr
-    uint16_t l_rsp_index = CMDH_POLL_RESP_LEN_V10;
+    uint16_t l_rsp_index = CMDH_POLL_RESP_LEN_V20;
 
     ////////////////////
     // TEMP sensors:
     // Generate datablock header for temp sensors and sensor data.
+
+    // Set up the header
     memset((void*) &l_sensorHeader, 0, (size_t)sizeof(cmdh_poll_sensor_db_t));
     memcpy ((void *) &(l_sensorHeader.eyecatcher[0]), SENSOR_TEMP, 4);
-    l_sensorHeader.format = 0x01;
+    l_sensorHeader.format = 0x02;
     l_sensorHeader.length = sizeof(cmdh_poll_temp_sensor_t);
     l_sensorHeader.count  = 0;
 
@@ -304,6 +234,7 @@ ERRL_RC cmdh_poll_v10(cmdh_fsp_rsp_t * o_rsp_ptr)
     cmdh_poll_temp_sensor_t l_tempSensorList[MAX_NUM_CORES + MAX_NUM_MEM_CONTROLLERS + (MAX_NUM_MEM_CONTROLLERS * NUM_DIMMS_PER_CENTAUR)];
     memset(l_tempSensorList, 0x00, sizeof(l_tempSensorList));
 
+    // Add the core temperatures
     for (k=0; k<MAX_NUM_CORES; k++)
     {
         if(CORE_PRESENT(k))
@@ -314,43 +245,71 @@ ERRL_RC cmdh_poll_v10(cmdh_fsp_rsp_t * o_rsp_ptr)
         }
     }
 
-    uint8_t l_cent, l_dimm = 0;
-    for (l_cent=0; l_cent < MAX_NUM_MEM_CONTROLLERS; l_cent++)
+    // Add the DIMM and centaur temperatures
+    uint8_t l_cent, l_port, l_dimm = 0;
+    if(G_sysConfigData.mem_type == MEM_TYPE_NIMBUS)
     {
-        if (CENTAUR_PRESENT(l_cent))
+        for (l_port=0; l_port < NUM_DIMM_PORTS; l_port++)
         {
-            //Add entry for centaurs.
-            l_tempSensorList[l_sensorHeader.count].id = g_amec->proc[0].memctl[l_cent].centaur.temp_sid;
-            if (G_cent_timeout_logged_bitmap & (CENTAUR0_PRESENT_MASK >> l_cent))
-            {
-                l_tempSensorList[l_sensorHeader.count].value = 0xFFFF;
-            }
-            else
-            {
-                l_tempSensorList[l_sensorHeader.count].value = g_amec->proc[0].memctl[l_cent].centaur.centaur_hottest.cur_temp;
-            }
-            l_sensorHeader.count++;
-
-            //Add entries for present dimms associated with current centaur l_cent.
             for(l_dimm=0; l_dimm < NUM_DIMMS_PER_CENTAUR; l_dimm++)
             {
-                if (g_amec->proc[0].memctl[l_cent].centaur.dimm_temps[l_dimm].temp_sid != 0)
+                if (g_amec->proc[0].memctl[l_port].centaur.dimm_temps[l_dimm].temp_sid != 0)
                 {
-                    l_tempSensorList[l_sensorHeader.count].id = g_amec->proc[0].memctl[l_cent].centaur.dimm_temps[l_dimm].temp_sid;
+                    l_tempSensorList[l_sensorHeader.count].id = g_amec->proc[0].memctl[l_port].centaur.dimm_temps[l_dimm].temp_sid;
+
                     //If a dimm timed out long enough, we should return 0xFFFF for that sensor.
-                    if (G_dimm_timeout_logged_bitmap.bytes[l_cent] & (DIMM_SENSOR0 >> l_dimm))
+                    if (G_dimm_timeout_logged_bitmap.bytes[l_port] & (DIMM_SENSOR0 >> l_dimm))
                     {
                         l_tempSensorList[l_sensorHeader.count].value = 0xFFFF;
                     }
                     else
                     {
-                        l_tempSensorList[l_sensorHeader.count].value = g_amec->proc[0].memctl[l_cent].centaur.dimm_temps[l_dimm].cur_temp;
+                        l_tempSensorList[l_sensorHeader.count].value = g_amec->proc[0].memctl[l_port].centaur.dimm_temps[l_dimm].cur_temp;
                     }
 
                     l_sensorHeader.count++;
+                }
+            }
+        }
+    }
+    else if (G_sysConfigData.mem_type == MEM_TYPE_CUMULUS)
+    {
+        for (l_cent=0; l_cent < MAX_NUM_MEM_CONTROLLERS; l_cent++)
+        {
+            if (CENTAUR_PRESENT(l_cent))
+            {
+                //Add entry for centaurs.
+                l_tempSensorList[l_sensorHeader.count].id = g_amec->proc[0].memctl[l_cent].centaur.temp_sid;
+                if (G_cent_timeout_logged_bitmap & (CENTAUR0_PRESENT_MASK >> l_cent))
+                {
+                    l_tempSensorList[l_sensorHeader.count].value = 0xFFFF;
+                }
+                else
+                {
+                    l_tempSensorList[l_sensorHeader.count].value = g_amec->proc[0].memctl[l_cent].centaur.centaur_hottest.cur_temp;
+                }
+                l_sensorHeader.count++;
+
+                //Add entries for present dimms associated with current centaur l_cent.
+                for(l_dimm=0; l_dimm < NUM_DIMMS_PER_CENTAUR; l_dimm++)
+                {
+                    if (g_amec->proc[0].memctl[l_cent].centaur.dimm_temps[l_dimm].temp_sid != 0)
+                    {
+                        l_tempSensorList[l_sensorHeader.count].id = g_amec->proc[0].memctl[l_cent].centaur.dimm_temps[l_dimm].temp_sid;
+                        //If a dimm timed out long enough, we should return 0xFFFF for that sensor.
+                        if (G_dimm_timeout_logged_bitmap.bytes[l_cent] & (DIMM_SENSOR0 >> l_dimm))
+                        {
+                            l_tempSensorList[l_sensorHeader.count].value = 0xFFFF;
+                        }
+                        else
+                        {
+                            l_tempSensorList[l_sensorHeader.count].value = g_amec->proc[0].memctl[l_cent].centaur.dimm_temps[l_dimm].cur_temp;
+                        }
+
+                        l_sensorHeader.count++;
+                    }
 
                 }
-
             }
         }
     }
@@ -376,7 +335,7 @@ ERRL_RC cmdh_poll_v10(cmdh_fsp_rsp_t * o_rsp_ptr)
     // Generate datablock header for freq sensors and sensor data.
     memset((void*) &l_sensorHeader, 0, (size_t)sizeof(cmdh_poll_sensor_db_t));
     memcpy ((void *) &(l_sensorHeader.eyecatcher[0]), SENSOR_FREQ, 4);
-    l_sensorHeader.format = 0x01;
+    l_sensorHeader.format = 0x02;
     l_sensorHeader.length = sizeof(cmdh_poll_freq_sensor_t);
     l_sensorHeader.count  = 0;
 
@@ -413,7 +372,7 @@ ERRL_RC cmdh_poll_v10(cmdh_fsp_rsp_t * o_rsp_ptr)
     {
         memset((void*) &l_sensorHeader, 0, (size_t)sizeof(cmdh_poll_sensor_db_t));
         memcpy ((void *) &(l_sensorHeader.eyecatcher[0]), SENSOR_POWR, 4);
-        l_sensorHeader.format = 0x01;
+        l_sensorHeader.format = 0x02;
         l_sensorHeader.length = sizeof(cmdh_poll_power_sensor_t);
         l_sensorHeader.count  = 0;
 
@@ -486,7 +445,7 @@ ERRL_RC cmdh_poll_v10(cmdh_fsp_rsp_t * o_rsp_ptr)
     l_poll_rsp->data_length[1] = CONVERT_UINT16_UINT8_LOW(l_rsp_index);
     l_rc                       = ERRL_RC_SUCCESS;
     l_poll_rsp->rc             = ERRL_RC_SUCCESS;
-#endif // #if 0
+
     return l_rc;
 }
 

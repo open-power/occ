@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -56,9 +56,12 @@ extern uint8_t      G_centaur_nest_lfir6;
 /******************************************************************************/
 /* Forward Declarations                                                       */
 /******************************************************************************/
+/* TEMP/TODO: No MemData anymore */
+#if 0
 void amec_update_dimm_dts_sensors(MemData * i_sensor_cache, uint8_t i_centaur);
 void amec_update_centaur_dts_sensors(MemData * i_sensor_cache, uint8_t i_centaur);
 void amec_perfcount_getmc( MemData * i_sensor_cache, uint8_t i_centaur);
+#endif
 
 /******************************************************************************/
 /* Code                                                                       */
@@ -76,6 +79,8 @@ void amec_perfcount_getmc( MemData * i_sensor_cache, uint8_t i_centaur);
 // End Function Specification
 void amec_update_centaur_sensors(uint8_t i_centaur)
 {
+/* TEMP/TODO: No MemData anymore */
+#if 0
     if(CENTAUR_PRESENT(i_centaur))
     {
         MemData * l_sensor_cache = cent_get_centaur_data_ptr(i_centaur);
@@ -87,6 +92,7 @@ void amec_update_centaur_sensors(uint8_t i_centaur)
         amec_perfcount_getmc(l_sensor_cache, i_centaur);
         CLEAR_CENTAUR_UPDATED(i_centaur);
     }
+#endif
 }
 
 // Function Specification
@@ -99,6 +105,8 @@ void amec_update_centaur_sensors(uint8_t i_centaur)
 // Thread: RealTime Loop
 //
 // End Function Specification
+/* TEMP/TODO: No MemData anymore */
+#if 0
 void amec_update_dimm_dts_sensors(MemData * i_sensor_cache, uint8_t i_centaur)
 {
 #define MIN_VALID_DIMM_TEMP 1
@@ -237,7 +245,7 @@ void amec_update_dimm_dts_sensors(MemData * i_sensor_cache, uint8_t i_centaur)
     L_ran_once[i_centaur] = TRUE;
     AMEC_DBG("Centaur[%d]: HotDimm=%d\n",i_centaur,l_hottest_dimm_temp);
 }
-
+#endif
 
 // Function Specification
 //
@@ -248,6 +256,8 @@ void amec_update_dimm_dts_sensors(MemData * i_sensor_cache, uint8_t i_centaur)
 // Thread: RealTime Loop
 //
 // End Function Specification
+/* TEMP/TODO: No MemData anymore */
+#if 0
 void amec_update_centaur_dts_sensors(MemData * i_sensor_cache, uint8_t i_centaur)
 {
 #define MIN_VALID_CENT_TEMP 1
@@ -366,7 +376,7 @@ void amec_update_centaur_dts_sensors(MemData * i_sensor_cache, uint8_t i_centaur
 
     AMEC_DBG("Centaur[%d]: HotCentaur=%d\n",i_centaur,l_dts);
 }
-
+#endif
 
 // Function Specification
 //
@@ -419,6 +429,8 @@ void amec_update_centaur_temp_sensors(void)
 // Thread: RealTime Loop
 //
 // End Function Specification
+/* TEMP/TODO: No MemData anymore */
+#if 0
 void amec_perfcount_getmc( MemData * i_sensor_cache,
                            uint8_t i_centaur)
 {
@@ -680,6 +692,7 @@ void amec_perfcount_getmc( MemData * i_sensor_cache,
 
     return;
 }
+#endif
 
 /*----------------------------------------------------------------------------*/
 /* End                                                                        */

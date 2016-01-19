@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2015
+# Contributors Listed Below - COPYRIGHT 2015,2016
 # [+] International Business Machines Corp.
 #
 #
@@ -65,7 +65,8 @@ LIB_DIRS =  -L$(OBJDIR) \
             -L$(OBJDIR)/amec \
             -L$(OBJDIR)/dcom \
             -L$(OBJDIR)/proc \
-            -L$(OBJDIR)/firdata
+            -L$(OBJDIR)/firdata \
+            -L$(OBJDIR)/cent
 
 #default target is to make a binary application image
 #This removes all unecessary headers from the ELF executable

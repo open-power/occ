@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -844,7 +844,8 @@ void amec_health_check_proc_temp()
 // End Function Specification
 void amec_health_check_proc_timeout()
 {
-
+/* TEMP/TODO: Enable when needed */
+#if 0
     /*------------------------------------------------------------------------*/
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
@@ -947,6 +948,7 @@ void amec_health_check_proc_timeout()
             }
         }
     }while(0);
+#endif
 }
 
 // Function Specification

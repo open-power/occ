@@ -1,11 +1,11 @@
-\/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/state.c $                                             */
+/* $Source: src/occ_405/state.c $                                         */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -698,12 +698,6 @@ uint8_t SMGR_validate_get_valid_states(void)
             TRAC_IMP("Setting Active Bit for this OCC");
             l_throttle_traced = TRUE;
         }
-    }
-
-    // If we hit an oversubscription, we need to set that bit
-    if(FSI2HOST_MBOX_INITIALIZED == G_fsi2host_mbox_ready)
-    {
-        l_valid_states |=  SMGR_MASK_ATTN_ENABLED;
     }
 
     // If we are master OCC, set this bit

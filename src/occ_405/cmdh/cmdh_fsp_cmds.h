@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/cmdh/cmdh_fsp_cmds.h $                                */
+/* $Source: src/occ_405/cmdh/cmdh_fsp_cmds.h $                            */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -75,11 +75,9 @@ typedef enum
 //---------------------------------------------------------
 
 // Length of Poll Response
-#define CMDH_POLL_RESP_LEN_V0  16 // version 0x00 is 16 bytes.
-#define CMDH_POLL_RESP_LEN_V10 40 // version 0x10 has at least 40 bytes.
-// Poll Version 0
-#define CMDH_POLL_BASE_VERSION 0x00
-#define CMDH_POLL_VERSION10  0x10
+#define CMDH_POLL_RESP_LEN_V20 40 // version 0x20 has at least 40 bytes.
+// Poll Version 0x20
+#define CMDH_POLL_VERSION20  0x20
 
 // Struct used to parse Poll Cmd
 typedef struct __attribute__ ((packed)) cmdh_poll_query
@@ -91,82 +89,9 @@ typedef struct __attribute__ ((packed)) cmdh_poll_query
 }cmdh_poll_query_t;
 
 // Response packet used for Poll Cmd
-typedef struct __attribute__ ((packed)) cmdh_poll_resp_v0
+typedef struct __attribute__ ((packed)) cmdh_poll_resp_v20
 {
-    // Standard TMGT
-    struct    cmdh_fsp_rsp_header;
-    // Status
-    union
-    {
-        struct
-        {
-            uint8_t master_occ     : 1;
-            uint8_t _reserved_6    : 1;
-            uint8_t _reserved_5    : 1;
-            uint8_t status_changed : 1;
-            uint8_t oversubscribed : 1;
-            uint8_t _reserved_2    : 1;
-            uint8_t obs_ready      : 1;
-            uint8_t active_ready   : 1;
-        };
-        uint8_t word;
-    } status;
-    // Extended Status
-    union
-    {
-        struct
-        {
-            uint8_t dvfs_due_to_ot  : 1;
-            uint8_t dvfs_due_to_pwr : 1;
-            uint8_t _reserved_5     : 1;
-            uint8_t _reserved_4     : 1;
-            uint8_t _reserved_3     : 1;
-            uint8_t sync_request    : 1;   // In TMGT to TPMF interface spec, but not needed yet
-            uint8_t _reserved_1     : 1;
-            uint8_t _reserved_0     : 1;
-        };
-        uint8_t word;
-    } ext_status;
-    // OCCs Present
-    uint8_t   occ_pres_mask;
-    // Config Data Requested
-    uint8_t   config_data;
-    // Current OCC State
-    uint8_t   state;
-    // Current OCC Mode
-    uint8_t   mode;
-    // Current Idle Power Saver Status
-    union
-    {
-        struct
-        {
-            uint8_t _reserved_7     : 1;
-            uint8_t _reserved_6     : 1;
-            uint8_t _reserved_5     : 1;
-            uint8_t _reserved_4     : 1;
-            uint8_t _reserved_3     : 1;
-            uint8_t _reserved_2     : 1;
-            uint8_t ips_active      : 1;
-            uint8_t ips_enabled     : 1;
-        };
-        uint8_t word;
-    } ips_status;
-    // Error Log ID
-    uint8_t   errl_id;
-    // Error Log Start Address
-    uint32_t  errl_address;
-    // Error Log Length
-    uint16_t  errl_length;
-    // Reserved
-    uint8_t   _reserved[2];
-    // Checksum
-    uint8_t   checksum[2];
-}cmdh_poll_resp_v0_t;
-
-// Response packet used for Poll Cmd
-typedef struct __attribute__ ((packed)) cmdh_poll_resp_v10
-{
-    // Standard TMGT
+    // Standard TMGT/HTMGT
     struct    cmdh_fsp_rsp_header;
     // BYTE  1: Status
     union
@@ -177,7 +102,7 @@ typedef struct __attribute__ ((packed)) cmdh_poll_resp_v10
             uint8_t fir_master     : 1;   // 1 => fir master.
             uint8_t _reserved_5    : 1;
             uint8_t _reserved_4    : 1;
-            uint8_t attn_enabled   : 1;   // 1 => Attentions from OCC to Host are enabled.
+            uint8_t _reserved_3    : 1;
             uint8_t _reserved_2    : 1;
             uint8_t obs_ready      : 1;   // 1 => OCC received all data to support obs state.
             uint8_t active_ready   : 1;   // 1 => OCC received all data to support active state.
@@ -194,7 +119,7 @@ typedef struct __attribute__ ((packed)) cmdh_poll_resp_v10
             uint8_t mthrot_due_to_ot: 1;   // 1 => OCC throttled memory due to an over temp.
             uint8_t n_power         : 1;   // 1 => Server running without redundant power.
             uint8_t _reserved_3     : 1;
-            uint8_t _reserved_2     : 1;
+            uint8_t sync_request    : 1;   // 1 => OCC needs to restart snapshot buffers
             uint8_t _reserved_1     : 1;
             uint8_t _reserved_0     : 1;
         };
@@ -206,9 +131,24 @@ typedef struct __attribute__ ((packed)) cmdh_poll_resp_v10
     uint8_t   config_data;
     // BYTE  5: Current OCC State
     uint8_t   state;
-    // BYTE  6 - 7: Reserved
-    uint8_t   _reserved_6;
-    uint8_t   _reserved_7;
+    // BYTE  6: Current OCC Mode
+    uint8_t   mode;
+    // BYTE  7: Current Idle Power Saver Status
+    union
+    {
+        struct
+        {
+            uint8_t _reserved_7     : 1;
+            uint8_t _reserved_6     : 1;
+            uint8_t _reserved_5     : 1;
+            uint8_t _reserved_4     : 1;
+            uint8_t _reserved_3     : 1;
+            uint8_t _reserved_2     : 1;
+            uint8_t ips_active      : 1;
+            uint8_t ips_enabled     : 1;
+        };
+        uint8_t word;
+    } ips_status;
     // BYTE  8: Error Log ID
     uint8_t   errl_id;
     // BYTES  9 - 12: Error Log Start Address
@@ -228,7 +168,7 @@ typedef struct __attribute__ ((packed)) cmdh_poll_resp_v10
     uint8_t   sensor_dblock_version;
     // No need to include the 2 bytes for checksum since they get added prior to sending
     // data back to tmgt.
-}cmdh_poll_resp_v10_fixed_t;
+}cmdh_poll_resp_v20_fixed_t;
 
 typedef struct __attribute__ ((packed)) cmdh_poll_sensor_datablock
 {
@@ -592,7 +532,7 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
 errlHndl_t cmdh_tmgt_poll (const cmdh_fsp_cmd_t * i_cmd_ptr,
                            cmdh_fsp_rsp_t * i_rsp_ptr);
 
-ERRL_RC cmdh_poll_v10 (cmdh_fsp_rsp_t * i_rsp_ptr);
+ERRL_RC cmdh_poll_v20 (cmdh_fsp_rsp_t * i_rsp_ptr);
 
 errlHndl_t cmdh_clear_elog (const cmdh_fsp_cmd_t * i_cmd_ptr,
                                   cmdh_fsp_rsp_t * i_rsp_ptr);
