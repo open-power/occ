@@ -63,17 +63,20 @@
 //               TRAC_ERR or TRAC_IMP. Any debug or informational traces.
 //      TRAC_DBG must be used for debug purpose only. This traces will be
 //               turned OFF with product code.
-#ifdef TRAC_TO_SIMICS
+#if TRAC_TO_SIMICS
 
 #define TRAC_ERR(frmt,args...)  \
-        printf(ERR_MRK "%s: "frmt "\n",__FUNCTION__,##args)
+        printf(ERR_MRK "%s: "frmt "\n",__FUNCTION__,##args); \
+        TRACE(&g_des_array[ERR_TRACE_DESCRIPTOR],frmt,##args)
 #define TRAC_INFO(frmt,args...)  \
-        printf(INFO_MRK "%s: "frmt "\n",__FUNCTION__,##args)
+        printf(INFO_MRK "%s: "frmt "\n",__FUNCTION__,##args); \
+        TRACE(&g_des_array[INF_TRACE_DESCRIPTOR],frmt,##args)
 #define TRAC_IMP(frmt,args...)  \
-        printf(IMP_MRK "%s: "frmt "\n",__FUNCTION__,##args)
-
+        printf(IMP_MRK "%s: "frmt "\n",__FUNCTION__,##args); \
+        TRACE(&g_des_array[IMP_TRACE_DESCRIPTOR],frmt,##args)
 #define DBG_PRINT(fmt,args...)  \
-        printf(DBG_MRK "%s: "fmt "\n",__FUNCTION__,##args)
+        printf(DBG_MRK "%s: "fmt "\n",__FUNCTION__,##args); \
+        TRACEBIN(&g_des_array[INF_TRACE_DESCRIPTOR], string, data,len)
 
 extern void dumpHexString(const void *i_data, const unsigned int len, const char *string);
 #define DEBUG_HEXDUMP(data, len, string)  \

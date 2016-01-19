@@ -1219,14 +1219,16 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
         G_occ_external_req_mode  = l_cmd_ptr->occ_mode;
         G_occ_external_req_state = l_cmd_ptr->occ_state;
 
-        // TODO: Should we have a way to transition state even if
-        // master slave comm isn't working?
-        // TEMP/TODO : This is a temporary hack to allow state and mode transitions
-        //             until DCOM is enabled. Needs to be commented out again once
-        //             that happens. And then perhaps address the above TODO.
+        // In case we need to transition state while
+        // master slave comm isn't working:
+        // This is a temporary hack to allow state and mode transitions
+        //             until DCOM is enabled; commented out again once
+        //             that happens.
+        // This is only valid during early code development. It should
+        // always be commented in p9.
         // if(){
-             G_occ_master_state = l_cmd_ptr->occ_state;
-             G_occ_master_mode  = l_cmd_ptr->occ_mode;
+        //     G_occ_master_state = l_cmd_ptr->occ_state;
+        //     G_occ_master_mode  = l_cmd_ptr->occ_mode;
         // }
         // We need to wait and see if all Slaves correctly make it to state/mode.
         // TODO: Also, if all slaves can't go to this mode (based on their state),
@@ -1460,9 +1462,9 @@ errlHndl_t cmdh_tmgt_get_field_debug_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
         }
 
         // Add occ infomation so that we know where the debug data from
-        l_resp_ptr->occ_node     = G_pob_id.node_id;
-        // TEMP: This was previously G_pob_id.chip_id
-        l_resp_ptr->occ_id       = 0; // TEMP/TODO: add occ id info
+        l_resp_ptr->occ_node     = G_pbax_id.node_id;
+
+        l_resp_ptr->occ_id       =  G_pbax_id.chip_id;
         l_resp_ptr->occ_role     = G_occ_role;
 
         // copy trace data

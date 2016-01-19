@@ -214,8 +214,8 @@ void amec_update_apss_sensors(void)
     // via slave inbox first
     if (G_slv_inbox_received)
     {
-        uint8_t l_proc  = G_pob_id.module_id;
-        uint32_t temp32 = 0;
+        uint8_t l_proc   = G_pbax_id.module_id;
+        uint32_t temp32  = 0;
         uint8_t  l_idx   = 0;
         uint32_t l_bulk_current_sum = 0;
 

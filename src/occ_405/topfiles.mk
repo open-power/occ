@@ -26,7 +26,11 @@ TOP-C-SOURCES = amec/amec_data.c \
                 amec/amec_freq.c \
                 amec/amec_health.c \
                 amec/amec_init.c \
+                amec/amec_amester.c \
                 amec/amec_master_smh.c \
+                amec/amec_parm.c \
+                amec/amec_pcap.c \
+                amec/amec_parm_table.c \
                 amec/amec_part.c \
                 amec/amec_sensors_fw.c \
                 amec/amec_sensors_power.c \
@@ -45,10 +49,11 @@ TOP-C-SOURCES = amec/amec_data.c \
                 cmdh/cmdh_thread.c \
                 cmdh/cmdh_tunable_parms.c \
                 cmdh/ffdc.c \
-				common.c \
+                common.c \
                 dcom/dcom.c \
                 dcom/dcom_thread.c \
                 dcom/dcomMasterRx.c \
+                dcom/dcomMasterTx.c \
                 dcom/dcomSlaveRx.c \
                 dcom/dcomSlaveTx.c \
                 dimm/dimm.c \

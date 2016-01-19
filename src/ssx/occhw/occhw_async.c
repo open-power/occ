@@ -999,8 +999,6 @@ async_initialize()
     async_gpe_initialize(&G_async_gpe_queue3, ASYNC_ENGINE_GPE3);
 
 
-    // TODO: add these back in as they are ported to P9
-#if 0
     // BCE
 
     async_bce_initialize(&G_pba_bcde_queue,
@@ -1010,7 +1008,6 @@ async_initialize()
     async_bce_initialize(&G_pba_bcue_queue,
                          ASYNC_ENGINE_BCUE,
                          OCCHW_IRQ_PBA_BCUE_ATTN);
-#endif
 
     // OCB
 
@@ -1062,7 +1059,6 @@ async_initialize()
                          OCB_WRITE3_LENGTH,
                          OCB_WRITE3_PROTOCOL);
 
-#if 0
     // PBAX
 
     async_pbax_initialize(&G_pbax_read_queue[0],
@@ -1078,5 +1074,4 @@ async_initialize()
                           G_pbax_read1_buffer,
                           PBAX_READ1_LENGTH,
                           PBAX_READ1_PROTOCOL);
-#endif
 }

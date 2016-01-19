@@ -162,4 +162,8 @@ void ssx_trace_init(uint32_t    timebase_frequency_hz,
                        0);
 }
 
+////Needed for easy cache flush of trace buffer
+size_t g_ssx_trace_buf_size=sizeof(g_ssx_trace_buf);
+
+
 #endif

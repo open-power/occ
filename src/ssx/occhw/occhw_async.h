@@ -641,13 +641,13 @@ typedef struct {
     pba_fir_t fir;
 
     /// PBA Error Report 0
-    pba_errpt0_t errpt0;
+    pba_errrpt0_t errrpt0;
 
     /// PBA Error Report 1
-    pba_errpt1_t errpt1;
+    pba_errrpt1_t errrpt1;
 
     /// PBA Error Report 2
-    pba_errpt2_t errpt2;
+    pba_errrpt2_t errrpt2;
 
     /// PBA Read Buffer Valid Status
     pba_rbufvaln_t rbufval[PBA_READ_BUFFERS];

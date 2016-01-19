@@ -57,6 +57,7 @@
 //#include <fir_data_collect.h>
 #include <pss_service_codes.h>
 #include <dimm.h>
+#include "occhw_shared_data.h"
 
 extern uint32_t __ssx_boot; // Function address is 32 bits
 extern uint32_t G_occ_phantom_critical_count;
@@ -555,8 +556,7 @@ void master_occ_init()
     }
 
     // Reinitialize the PBAX Queues
-    // TEMP -- NO DCOM YET
-    //dcom_initialize_pbax_queues();
+    dcom_initialize_pbax_queues();
 }
 
 /*
@@ -591,8 +591,7 @@ void slave_occ_init()
     }
 */
     //Set up doorbell queues
-    // TEMP -- NO DCOM YET
-    //dcom_initialize_pbax_queues();
+    dcom_initialize_pbax_queues();
 
     // Run AMEC Slave Init Code
     amec_slave_init();
@@ -765,18 +764,8 @@ void Main_thread_routine(void *private)
     // change to use config_data_init at that time.
     // Default role initialization and determine OCC/Chip Id
 
-    // TEMP -- NO DCOM YET, init as OCC Master
-    //dcom_initialize_roles();
+    dcom_initialize_roles();
 
-#if STRAIGHT_TO_OBS_HACK
-    // Remove the next LOC when dcom_initialize_roles() is un-commented
-    G_occ_role = OCC_MASTER;  // TEMP - @TODO
-
-    // Remove the next 2 LOC when dcom_initialize_roles is un-commented
-    // AND cmdh is running to call master_occ_init
-    rtl_set_run_mask(RTL_FLAG_MSTR);
-    master_occ_init();
-#endif
 
     CHECKPOINT(ROLES_INITIALIZED);
 
@@ -828,17 +817,6 @@ void Main_thread_routine(void *private)
     // the interrupt handler will just restart the timer until we use this
     // enable switch to actually start the watchdog function.
 //    ENABLE_WDOG;
-
-// TEMP: Normally these flags are set elsewhere, after the BMC/FSP
-//       send us configuration data. This is a temporary hack until
-//       that communication is enabled. Required for APSS tasks.
-#if STRAIGHT_TO_OBS_HACK
-    rtl_set_run_mask(RTL_FLAG_OBS);
-    rtl_clr_run_mask(RTL_FLAG_STANDBY);
-    rtl_clr_run_mask(RTL_FLAG_APSS_NOT_INITD);
-    rtl_clr_run_mask(RTL_FLAG_RST_REQ);
-#endif
-// END TEMP
 
     while (TRUE)
     {
@@ -962,6 +940,39 @@ int main(int argc, char **argv)
     // ----------------------------------------------------
 
 #if PPC405_MMU_SUPPORT
+    l_ssxrc = ppc405_mmu_map(
+            OSD_ADDR,
+            OSD_ADDR,
+//          OSD_ADDR | 0x18000000,
+            OSD_TOTAL_SHARED_DATA_BYTES,
+            0,
+            TLBLO_WR | TLBLO_I,
+            NULL
+            );
+
+    if(l_ssxrc != SSX_OK)
+    {
+        //failure means we can't talk to FSP.
+        SSX_PANIC(0x01000001);
+    }
+
+#if SIMICS_ENVIRONMENT
+    l_ssxrc = ppc405_mmu_map(
+            SIMICS_STDIO_BASE,
+            SIMICS_STDIO_BASE,
+            1024,
+            0,
+            TLBLO_WR | TLBLO_I,
+            NULL
+            );
+
+    if(l_ssxrc != SSX_OK)
+    {
+        //failure means we can't talk to FSP.
+        SSX_PANIC(0x01000001);
+    }
+#endif  /* SIMICS_ENVIRONMENT */
+
     l_ssxrc = ppc405_mmu_map(
             CMDH_OCC_RESPONSE_BASE_ADDRESS,
             CMDH_OCC_RESPONSE_BASE_ADDRESS,

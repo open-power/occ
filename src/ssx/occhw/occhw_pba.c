@@ -257,13 +257,13 @@ pba_slave_reset(int id)
 /// not valid for some reason. 
 
 int
-pbax_configure(int master, int node, int chip, int group_mask)
+pbax_configure(int master, int group, int chip, int group_mask)
 {
     pba_xcfg_t pxc;
 
     if (SSX_ERROR_CHECK_API) {
-        SSX_ERROR_IF((node < 0) ||
-                     (node >= PBAX_NODES) ||
+        SSX_ERROR_IF((group < 0) ||
+                     (group >= PBAX_GROUPS) ||
                      (chip < 0) ||
                      (chip >= PBAX_CHIPS) ||
                      (group_mask < 0) ||
@@ -272,7 +272,7 @@ pbax_configure(int master, int node, int chip, int group_mask)
     }
     pxc.value = in64(PBA_XCFG);
     pxc.fields.reservation_en = (master != 0);
-    pxc.fields.rcv_nodeid = node;
+    pxc.fields.rcv_groupid = group;
     pxc.fields.rcv_chipid = chip;
     pxc.fields.rcv_brdcst_group = group_mask;
     out64(PBA_XCFG, pxc.value);
@@ -312,7 +312,7 @@ pbax_configure(int master, int node, int chip, int group_mask)
 int
 pbax_target_create(PbaxTarget* target,
                    int type, int scope, int queue, 
-                   int node, int chip_or_group)
+                   int group, int chip_or_group)
 {
     if (SSX_ERROR_CHECK_API) {
         SSX_ERROR_IF(target == 0, PBAX_INVALID_OBJECT);
@@ -327,7 +327,7 @@ pbax_target_create(PbaxTarget* target,
     target->target.fields.snd_qid = queue;
     target->target.fields.snd_type = type;
     target->target.fields.snd_reservation = (type == PBAX_BROADCAST);
-    target->target.fields.snd_nodeid = node;
+    target->target.fields.snd_groupid = group;
     target->target.fields.snd_chipid = chip_or_group;
 
     return 0;

@@ -59,8 +59,12 @@
 // Magic Number used to denote the start of Master->Slave Broadcast packets
 #define PBAX_MAGIC_NUMBER2_32B           0x00474A53
 
-#define MAX_PBAX_CHIP_ID 7
-#define INVALID_NODE_ID 7
+#define MAX_PBAX_CHIP_ID (MAX_NUM_OCC - 1)
+
+// PBAX Broadcast Masks, use PBAX_GROUP_MASK_MAX
+#define PBAX_CONFIGURE_RCV_GROUP_MASK PBAX_GROUP_MASK_MAX
+#define PBAX_BROADCAST_GROUP          PBAX_GROUP_MASK_MAX
+
 
 // OCC Slave to Master Messages (inbox ping/pong) - Moved to BAR2
 #define ADDR_SLAVE_OUTBOX_MAIN_MEM_PING 0x20001000
@@ -102,8 +106,10 @@
 typedef struct
 {
     uint8_t module_id  :2;
-    uint8_t node_id    :3;
-    uint8_t chip_id    :3;
+    uint8_t valid      :1;  // Valid chip/node id?
+    uint8_t node_id    :2;
+    uint8_t reserved   :1;
+    uint8_t chip_id    :2;
 } pob_id_t;
 
 // TODO may change in the future
@@ -240,7 +246,7 @@ typedef struct
     {
         struct
         {
-            // PowerBus ID so that the slave knows who the master is
+            // PowerBus ID (= pbax_id) so that the slave knows who the master is
             pob_id_t pob_id;                        //  1 byte
             // Magic Number denoting the start of the packet
             uint32_t magic1                :24;     //  3 bytes
@@ -395,9 +401,9 @@ extern uint8_t G_occ_role;
 // chip. In the case of SCMs, it will always return the Master role.
 extern uint8_t G_dcm_occ_role;
 
-// Holds PowerBus ID of this OCC (Chip & node). From this we can determine OCC ID
-// and PBAX ID.
-extern pob_id_t G_pob_id;
+// Holds PowerBus ID of this OCC (Chip & node). For P9, this is the same
+// for pob_id and PBAX ID.
+extern pob_id_t G_pbax_id;
 
 // PBAX 'Target' Structure (Register Abstraction) that has the data needed for
 // a multicast operation.
@@ -487,9 +493,6 @@ void task_dcom_tx_slv_outbox(task_t *i_self);
 
 // Initialize the pbax queues
 void dcom_initialize_pbax_queues(void);
-
-// Translate pids to pbax ids
-pbax_id_t dcom_pbusid2pbaxid(pob_id_t i_pobid);
 
 // Receive multicast doorbell
 uint32_t dcom_rx_slv_inbox_doorbell( void );

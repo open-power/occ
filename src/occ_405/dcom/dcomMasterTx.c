@@ -26,8 +26,7 @@
 #ifndef _DCOMMASTERTX_C
 #define _DCOMMASTERTX_C
 
-#include <pgp_pmc.h>
-#include "pgp_pba.h"
+#include "occhw_pba.h"
 #include <rtls.h>
 #include <apss.h>
 #include <dcom.h>
@@ -174,7 +173,7 @@ uint32_t dcom_build_slv_inbox(void)
     //DOORBELL.................
     //Prepare data for doorbell.  This is sent to all OCCs
 
-    G_dcom_slv_inbox_doorbell_tx.pob_id = G_pob_id;
+    G_dcom_slv_inbox_doorbell_tx.pob_id = G_pbax_id;
     G_dcom_slv_inbox_doorbell_tx.magic1 = PBAX_MAGIC_NUMBER2_32B;
     G_dcom_slv_inbox_doorbell_tx.addr_slv_inbox_buffer0 = l_addr_of_slv_inbox_in_main_mem;
 

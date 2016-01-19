@@ -436,8 +436,8 @@ errlHndl_t cmdh_fsp_init(void)
             l_mbox_msg.fields.msg_queue_id                    = OCC_MSG_QUEUE_ID;
             l_mbox_msg.fields.msg_payload.fsp_cmd_buffer_addr = CMDH_LINEAR_WINDOW_BASE_ADDRESS;
             l_mbox_msg.fields.msg_payload.fsp_rsp_buffer_addr = CMDH_OCC_RESPONSE_BASE_ADDRESS;
-            // TEMP: This was previously G_pob_id.chip_id (not 0)
-            l_mbox_msg.fields.msg_payload.occ_id              = 0; // TODO: Add OCC ID
+
+            l_mbox_msg.fields.msg_payload.occ_id              = G_pbax_id.chip_id;
 
             do
             {

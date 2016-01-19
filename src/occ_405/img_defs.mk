@@ -150,7 +150,7 @@ endif
 # TODO: Enable this once we get MMU support working in simics
 # Currently, turning on MMU support causes an SSX panic (in Simics)
 ifeq "$(PPC405_MMU_SUPPORT)" ""
-PPC405_MMU_SUPPORT = 0
+PPC405_MMU_SUPPORT = 1
 endif
 
 ifeq "$(OCCHW_ASYNC_SUPPORT)" ""
@@ -176,13 +176,9 @@ GCC-O-LEVEL = -Os
 endif
 
 ifdef TRAC_TO_SIMICS
-GCC-DEFS += -DTRAC_TO_SIMICS=1
-endif
-
-ifdef STRAIGHT_TO_OBS_HACK
-GCC-DEFS += -DSTRAIGHT_TO_OBS_HACK=$(STRAIGHT_TO_OBS_HACK)
+GCC-DEFS += -DTRAC_TO_SIMICS=$(TRAC_TO_SIMICS)
 else
-GCC-DEFS += -DSTRAIGHT_TO_OBS_HACK=1
+GCC-DEFS += -DTRAC_TO_SIMICS=0
 endif
 
 GCC-DEFS += -DIMAGE_NAME=$(IMAGE_NAME)

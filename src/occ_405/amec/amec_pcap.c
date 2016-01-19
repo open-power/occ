@@ -93,6 +93,8 @@ uint8_t     G_over_pcap_count=0;
 // End Function Specification
 void amec_pmax_clip_controller(void)
 {
+//  @TODO - TEMP Pstate functions not defined yet
+#if 0
     /*------------------------------------------------------------------------*/
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
@@ -140,6 +142,7 @@ void amec_pmax_clip_controller(void)
     }
 
     g_amec->proc[0].pwr_votes.pmax_clip_freq = l_pmax_clip_freq;
+#endif // @TODO - TEMP Pstate functions not defined yet
 }
 
 //////////////////////////

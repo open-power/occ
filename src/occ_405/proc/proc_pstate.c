@@ -678,7 +678,7 @@ void proc_gpsm_dcm_sync_enable_pstates_smh(void)
                 TRAC_IMP("MSTR: Initial Pstates: V: %d, F: %d\n",l_voltage_pstate, l_freq_pstate);
 
                 // DCM SYNC (Master2Slave):  Send V & F Pstate to slave
-                G_proc_dcm_sync_state.dcm_pair_id = G_pob_id.chip_id;
+                G_proc_dcm_sync_state.dcm_pair_id = G_pbax_id.chip_id;
                 G_proc_dcm_sync_state.pstate_v = l_voltage_pstate;
                 G_proc_dcm_sync_state.pstate_f = l_freq_pstate;
 

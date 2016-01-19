@@ -2,7 +2,11 @@ INPUT ( amec_data.o
         amec_freq.o
         amec_health.o
         amec_init.o
+        amec_amester.o
         amec_master_smh.o
+        amec_parm.o
+        amec_pcap.o
+        amec_parm_table.o
         amec_part.o
         amec_sensors_fw.o
         amec_sensors_power.o
@@ -22,6 +26,7 @@ INPUT ( amec_data.o
         dcom.o
         dcom_thread.o
         dcomMasterRx.o
+        dcomMasterTx.o
         dcomSlaveRx.o
         dcomSlaveTx.o
         dimm.o

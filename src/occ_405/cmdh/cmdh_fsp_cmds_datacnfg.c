@@ -601,7 +601,7 @@ errlHndl_t apss_store_adc_channel(const eApssAdcChannelAssignments i_func_id, co
 void apss_store_ipmi_sensor_id(const uint16_t i_channel, const apss_cfg_adc_v20_t *i_adc)
 {
     // Get current processor id.
-    uint8_t l_proc  = G_pob_id.module_id;
+    uint8_t l_proc  = G_pbax_id.module_id;
 
     switch (i_adc->assignment)
     {

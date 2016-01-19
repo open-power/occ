@@ -61,8 +61,10 @@ homer_rc_t __attribute__((optimize("O1"))) homer_hd_map_read_unmap(const homer_r
                                    void                    * const o_host_data,
                                    int                     * const o_ssx_rc)
 {
-// TEMP / TODO -- Commented out due to unused var warning
-//    Ppc405MmuMap l_mmuMapHomer = 0;
+#if PPC405_MMU_SUPPORT
+    Ppc405MmuMap l_mmuMapHomer = 0;
+#endif
+
     homer_rc_t l_rc = HOMER_SUCCESS;
     occHostConfigDataArea_t *l_hdcfg_data = 0x00000000;
 

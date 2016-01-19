@@ -39,11 +39,7 @@
 #include <amec_data.h>
 #include <amec_sys.h>
 #include "scom.h"
-#include "pss_constants.h"  // @TODO: move with HW registers? 
-
-#define PBAX_CONFIGURE_RCV_GROUP_MASK 0xff
-
-#define PBAX_BROADCAST_GROUP 0xFF
+#include "pss_constants.h"  // @TODO: move with HW registers?
 
 extern uint8_t G_occ_interrupt_type;
 
@@ -78,8 +74,8 @@ uint8_t     G_occ_role = OCC_SLAVE;
 
 uint8_t     G_dcm_occ_role            = OCC_DCM_SLAVE;
 
-// PowerBus ID of this OCC.  Contains ChipId & NodeId.
-pob_id_t    G_pob_id                  = {0};
+// PBAX ID of this OCC is also its PowerBus ID.  Contains ChipId & NodeId.
+pob_id_t    G_pbax_id                  = {0};
 
 // PBAX 'Target' Structure (Register Abstraction) that has the data needed for
 // a multicast operation.
@@ -119,184 +115,61 @@ void dcom_initialize_roles(void)
     G_occ_role = OCC_SLAVE;
 
     // Locals
-    int         l_rc = 0;
-    tpc_gp0_t   l_tp_gp0_read;
+    pba_xcfg_t pbax_cfg_reg;
 
     // Used as a debug tool to correlate time between OCCs & System Time
-    getscom_ffdc( TOD_VALUE_REG, &G_dcomTime.tod, NULL); // Commits errors internally
+    // getscom_ffdc(OCB_OTBR, &G_dcomTime.tod, NULL); // Commits errors internally
+
+    G_dcomTime.tod = in64(OCB_OTBR) >> 4;
     G_dcomTime.base = ssx_timebase_get();
+    pbax_cfg_reg.value = in64(PBA_XCFG);
 
-    // Scom will timeout if it can't be read
-    l_rc = getscom_ffdc( TPC_GP0, (uint64_t *) &l_tp_gp0_read, NULL);  // Commits errors internally
-
-    if( l_rc == 0 )
+    if(pbax_cfg_reg.fields.rcv_groupid < MAX_NUM_NODES &&
+       pbax_cfg_reg.fields.rcv_chipid < MAX_NUM_OCC)
     {
-        // Added check for Murano ChipId swizzle
-        if(CFAM_CHIP_TYPE_MURANO == cfam_chip_type())
-        {
-            // Murano has a different numbering scheme than you would
-            // expect.  It uses NodeId to denote DCM Id, and ChipId to
-            // denote chip within the DCM.  This is due to they way the
-            // PowerBus works for routing.
-            //
-            // To fix this, we need to manipulate our internal copy of
-            // ChipId/NodeId to match the way OCC FW uses them. We do this by
-            // multiplying the NodeId by 2 then adding chip Id to get a unique
-            // new ChipId (Max Node = 3, Max Chip = 1 by design
-            //
-            // Note that Murano is not multi-drawer capable, so we can
-            // fix our node id at 0
 
-#define MAX_MURANO_CHIP_IDS 2
-#define MAX_MURANO_NODE_IDS 4
-            if( (l_tp_gp0_read.fields.tc_chip_id_dc < MAX_MURANO_CHIP_IDS)
-                    && (l_tp_gp0_read.fields.tc_node_id_dc < MAX_MURANO_NODE_IDS))
-            {
-                // TODO: Check if possible to use node_id read from the chip GPIOs
+        TRAC_IMP("Proc ChipId (%d)  NodeId (%d)",
+                 pbax_cfg_reg.fields.rcv_chipid,
+                 pbax_cfg_reg.fields.rcv_groupid);
 
-                // Translate between chip ID & Module Id for Tuleta
-                uint8_t tuleta_chip2module[] = {0,0,2,2,1,1,3,3};
-
-                G_pob_id.chip_id = (l_tp_gp0_read.fields.tc_chip_id_dc
-                        + ( MAX_MURANO_CHIP_IDS * l_tp_gp0_read.fields.tc_node_id_dc));
-                G_pob_id.node_id = 0;
-
-                // The module id is only used by Power Measurements
-                G_pob_id.module_id = tuleta_chip2module[G_pob_id.chip_id];
-            }
-            else
-            {
-                // Chip Ids don't make any sense
-                TRAC_ERR("Proc ChipId (%d) and/or NodeId (%d) don't make sense for Murano",
-                        l_tp_gp0_read.fields.tc_chip_id_dc,
-                        l_tp_gp0_read.fields.tc_node_id_dc);
-                /* @
-                 * @errortype
-                 * @moduleid    DCOM_MID_INIT_ROLES
-                 * @reasoncode  INTERNAL_HW_FAILURE
-                 * @userdata1   TP.GP0 SCOM (upper)
-                 * @userdata2   TP.GP0 SCOM (lower)
-                 * @userdata4   ERC_CHIP_IDS_INVALID
-                 * @devdesc     Failure determining OCC role
-                 */
-                errlHndl_t  l_errl = createErrl(
-                        DCOM_MID_INIT_ROLES,            //ModId
-                        INTERNAL_HW_FAILURE,            //Reasoncode
-                        ERC_CHIP_IDS_INVALID,           //Extended reasoncode
-                        ERRL_SEV_UNRECOVERABLE,         //Severity
-                        NULL,                           //Trace Buf
-                        DEFAULT_TRACE_SIZE,             //Trace Size
-                        l_tp_gp0_read.words.high_order, //Userdata1
-                        l_tp_gp0_read.words.low_order   //Userdata2
-                        );
-
-                // Callout firmware
-                addCalloutToErrl(l_errl,
-                                 ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                                 ERRL_COMPONENT_ID_FIRMWARE,
-                                 ERRL_CALLOUT_PRIORITY_HIGH);
-
-                // Commit log
-                commitErrl( &l_errl );
-            }
-        }
-        else
-        {
-            // Save off chip and node ids directly as read
-            G_pob_id.chip_id = l_tp_gp0_read.fields.tc_chip_id_dc;
-            G_pob_id.node_id = l_tp_gp0_read.fields.tc_node_id_dc;
-
-            // Check if special SMP wrap mode is turned on. In this mode, a
-            // single drawer is configured as two virtual nodes. However, OCC
-            // still needs to treat it as a single node.
-            // As a temporary solution, HWSV is going to set bit 17 of the GP0
-            // register to inform OCC that SMP wrap is on.
-
-#define SMP_WRAP_MASK 0x00004000
-            if(l_tp_gp0_read.words.high_order & SMP_WRAP_MASK)
-            {
-                TRAC_INFO("dcom_initialize_roles: Temporary fix - SMP wrap mode has been detected");
-
-                // This is a single drawer
-                G_pob_id.node_id = 0;
-
-                // Translate the NodeId and ChipId into the correct internal
-                // representation for OCC to work.
-                if(l_tp_gp0_read.fields.tc_node_id_dc == 0)
-                {
-                    G_pob_id.chip_id = 2 * l_tp_gp0_read.fields.tc_chip_id_dc;
-                }
-                else if(l_tp_gp0_read.fields.tc_node_id_dc == 1)
-                {
-                    G_pob_id.chip_id = (l_tp_gp0_read.fields.tc_chip_id_dc) ? 1 : 3;
-                }
-            }
-
-            // If this is a FSP-less system, then use the node ID as the
-            // chip ID. This is because the HW assigns the OCCs as being in
-            // different nodes with the same chip IDs.
-            if (G_occ_interrupt_type != FSP_SUPPORTED_OCC)
-            {
-                G_pob_id.node_id = 0;
-                G_pob_id.chip_id = l_tp_gp0_read.fields.tc_node_id_dc;
-
-                TRAC_IMP("dcom_initialize_roles: Overriding chip_id[%d] with node_id[%d]",
-                         l_tp_gp0_read.fields.tc_chip_id_dc,
-                         l_tp_gp0_read.fields.tc_node_id_dc);
-            }
-
-            // Save off low 2 bits of chip ID as module ID.  Won't be
-            // more than 4 on venice since it is SCMs.
-            G_pob_id.module_id = (G_pob_id.chip_id & 0x03);
-        }
-
+        G_pbax_id.valid     = 1;
+        G_pbax_id.node_id   = pbax_cfg_reg.fields.rcv_groupid;
+        G_pbax_id.chip_id   = pbax_cfg_reg.fields.rcv_chipid;
+        G_pbax_id.module_id = G_pbax_id.chip_id;
         // Always start as OCC Slave
         G_occ_role = OCC_SLAVE;
         rtl_set_run_mask(RTL_FLAG_NOTMSTR);
 
-// @TODO TEMP - not ready yet for multiple DCMs
-/*
-        // Save off OCC role inside DCM chip
-        if(gpsm_dcm_slave_p())
-        {
-            G_dcm_occ_role = OCC_DCM_SLAVE;
-        }
-        else
-        {
-            G_dcm_occ_role = OCC_DCM_MASTER;
-        }
 
-        TRAC_IMP("Proc ChipId=%d, NodeId=%d, isDcm=%d, isDcmMaster=%d, ChipEC=0x%08x",
-                G_pob_id.chip_id,
-                G_pob_id.node_id,
-                gpsm_dcm_mode_p(),
-                !gpsm_dcm_slave_p(),
-                cfam_id() );
-*/
+        // Set the initial presence mask, and count the number of occ's present
+        G_sysConfigData.is_occ_present |= (0x01 << G_pbax_id.chip_id);
+        G_occ_num_present = __builtin_popcount(G_sysConfigData.is_occ_present);
+
     }
-    else
+    else // Invalid chip/node ID(s)
     {
-        //get scom failure
-        TRAC_ERR("getscom failure rc[0x%08X]", -l_rc );
-
+        TRAC_ERR("Proc ChipId (%d) and/or NodeId (%d) too high: request reset",
+                 pbax_cfg_reg.fields.rcv_chipid,
+                 pbax_cfg_reg.fields.rcv_groupid);
         /* @
          * @errortype
          * @moduleid    DCOM_MID_INIT_ROLES
-         * @reasoncode  INTERNAL_HW_FAILURE
-         * @userdata1   getscom failure rc
-         * @userdata4   ERC_GETSCOM_FAILURE
+         * @reasoncode  INVALID_CONFIGURATION
+         * @userdata1   PBAXCFG (upper)
+         * @userdata2   PBAXCFG (lower)
+         * @userdata4   ERC_CHIP_IDS_INVALID
          * @devdesc     Failure determining OCC role
          */
         errlHndl_t  l_errl = createErrl(
-                    DCOM_MID_INIT_ROLES,            //ModId
-                    INTERNAL_HW_FAILURE,            //Reasoncode
-                    ERC_GETSCOM_FAILURE,            //Extended reasoncode
-                    ERRL_SEV_UNRECOVERABLE,         //Severity
-                    NULL,                           //Trace Buf
-                    DEFAULT_TRACE_SIZE,             //Trace Size
-                    l_rc,                           //Userdata1
-                    0                               //Userdata2
-                    );
+            DCOM_MID_INIT_ROLES,            //ModId
+            INTERNAL_HW_FAILURE,            //Reasoncode
+            ERC_CHIP_IDS_INVALID,           //Extended reasoncode
+            ERRL_SEV_UNRECOVERABLE,         //Severity
+            NULL,                           //Trace Buf
+            DEFAULT_TRACE_SIZE,             //Trace Size
+            pbax_cfg_reg.words.high_order,  //Userdata1
+            pbax_cfg_reg.words.low_order    //Userdata2
+            );
 
         // Callout firmware
         addCalloutToErrl(l_errl,
@@ -304,24 +177,20 @@ void dcom_initialize_roles(void)
                          ERRL_COMPONENT_ID_FIRMWARE,
                          ERRL_CALLOUT_PRIORITY_HIGH);
 
-        // Commit log
-        commitErrl( &l_errl );
+        //Add processor callout
+        addCalloutToErrl(l_errl,
+                         ERRL_CALLOUT_TYPE_HUID,
+                         G_sysConfigData.proc_huid,
+                         ERRL_CALLOUT_PRIORITY_LOW);
 
-        // TODO request a reset of OCC
-        // we are toast without this working correctly
+        G_pbax_id.valid   = 0;  // Invalid Chip/Node ID
     }
 
-    // Set the initial presence mask, and count the number of occ's present
-    G_sysConfigData.is_occ_present |= (0x01 << G_pob_id.chip_id);
-    G_occ_num_present = __builtin_popcount(G_sysConfigData.is_occ_present);
-
-    // Initialize DCOM Thread Sem
-// @TODO - TEMP - Not ready yet in phase 1
-/*
+// Initialize DCOM Thread Sem
     ssx_semaphore_create( &G_dcomThreadWakeupSem, // Semaphore
                           1,                      // Initial Count
                           0);                     // No Max Count
-*/
+
 }
 
 // Function Specification
@@ -333,29 +202,19 @@ void dcom_initialize_roles(void)
 // End Function Specification
 void dcom_initialize_pbax_queues(void)
 {
-    pbax_id_t  l_pbaxid = dcom_pbusid2pbaxid(G_pob_id);
-
-    //SSX return codes
+    // SSX return codes
     int l_rc = 0;
 
     do
     {
-// @TODO - TEMP - PBA_XCFG (Address 0x40020108) is not mapped in simics yet
-//        pbax_send_disable();
+        //disabled pbax send before configuring PBAX
+        pbax_send_disable();
 
-        // Check if conversion has valid information
-        if (( l_pbaxid.chip_id > MAX_PBAX_CHIP_ID ) ||
-                ( l_pbaxid.node_id == INVALID_NODE_ID ))
-        {
-            TRAC_ERR("Error converting pbusids to pbaxids. chip_id[0x%08x], node_id[0x%08x]",
-                     l_pbaxid.chip_id, l_pbaxid.node_id);
-            l_rc = -1; // Force error to be logged below.
-            break;
-        }
-
-        l_rc = pbax_configure(G_occ_role,        // master
-                              l_pbaxid.node_id,  // node id
-                              l_pbaxid.chip_id,  // chipd id
+        // TODO: With the new design, PBAX node and chip IDs are set by hostboot
+        //       Remove these ID parameters from the pbax_configure function?
+        l_rc = pbax_configure(G_occ_role,                     // master
+                              G_pbax_id.node_id,              // node id
+                              G_pbax_id.chip_id,              // chipd id
                               PBAX_CONFIGURE_RCV_GROUP_MASK); // group_mask
 
         if(l_rc != 0)
@@ -365,17 +224,16 @@ void dcom_initialize_pbax_queues(void)
         }
 
         //enabled pbax send does not return errors
-// @TODO - TEMP - PBA_XCFG (Address 0x40020108) is not mapped in simics yet
-//        pbax_send_enable();
+        pbax_send_enable();
 
         if(G_occ_role == OCC_SLAVE)
         {
             // create pbax rx queue 1
-            l_rc = pbax_queue_create( &G_pbax_read_queue[1],//queue
-                    ASYNC_ENGINE_PBAX_PUSH1,                //engine
-                    G_pbax_queue_rx1_buffer,                //cq base
-                    NUM_ENTRIES_PBAX_QUEUE1,                //cq entries
-                    PBAX_INTERRUPT_PROTOCOL_AGGRESSIVE      //protocol
+            l_rc = pbax_queue_create( &G_pbax_read_queue[1], //queue
+                    ASYNC_ENGINE_PBAX_PUSH1,                 //engine
+                    G_pbax_queue_rx1_buffer,                 //cq base
+                    NUM_ENTRIES_PBAX_QUEUE1,                 //cq entries
+                    PBAX_INTERRUPT_PROTOCOL_AGGRESSIVE       //protocol
                     );
 
             if(l_rc != 0)
@@ -410,13 +268,12 @@ void dcom_initialize_pbax_queues(void)
 
         if(G_occ_role == OCC_MASTER)
         {
-            // TODO: Change this to PBAX_GROUP for Venice
             l_rc = pbax_target_create( &G_pbax_multicast_target,    // target,
-                    PBAX_BROADCAST,             // type
-                    PBAX_SYSTEM,                // scope TODO
-                    0,                          // queue
-                    l_pbaxid.node_id,           // node
-                    PBAX_BROADCAST_GROUP);      // chip_or_group
+                    PBAX_BROADCAST,                                 // type
+                    PBAX_SYSTEM,                                    // scope TODO
+                    0,                                              // queue
+                    G_pbax_id.node_id,                              // node
+                    PBAX_BROADCAST_GROUP);                          // chip_or_group
 
             if(l_rc != 0)
             {
@@ -452,38 +309,6 @@ void dcom_initialize_pbax_queues(void)
         // Commit log and request reset
         REQUEST_RESET(l_errl);
     }
-}
-
-// Function Specification
-//
-// Name: dcom_pbusid2pbaxid
-//
-// Description: Translate between PowerBus ID and pbax ID
-//
-// End Function Specification
-pbax_id_t dcom_pbusid2pbaxid(pob_id_t i_pobid)
-{
-    pbax_id_t l_pbax_id_t = {0};
-
-    // Check if chip id and nod id are valid
-    if((i_pobid.chip_id < MAX_NUM_OCC)
-        && (i_pobid.node_id < MAX_NUM_NODES))
-    {
-        l_pbax_id_t.chip_id = G_sysConfigData.pob2pbax_chip[i_pobid.chip_id];
-        l_pbax_id_t.node_id = G_sysConfigData.pob2pbax_node[i_pobid.node_id];
-    }
-    else
-    {
-        // Invalid data found
-
-        l_pbax_id_t.chip_id = MAX_PBAX_CHIP_ID;
-        l_pbax_id_t.node_id = INVALID_NODE_ID;
-
-        TRAC_ERR("Invalid Powerbus ID, could NOT convert chip id[%x] and node id[%x] to PBAX id",
-                   i_pobid.chip_id,i_pobid.node_id);
-    }
-
-    return l_pbax_id_t;
 }
 
 // Function Specification
@@ -659,7 +484,6 @@ void dcom_build_occfw_msg( const dcom_error_type_t i_which_msg )
 
 }
 
-#if 0 // TODO - TEMP - Phase1 - Not ready yet for multi OCC communications.
 
 // Function Specification
 //
@@ -816,8 +640,6 @@ void task_dcom_parse_occfwmsg(task_t *i_self)
     // clear slave event flags if master has acknowledged them and the event has cleared
     G_slave_event_flags = (G_slave_event_flags & (~(G_dcom_slv_inbox_rx.occ_fw_mailbox[3])));
 }
-
-#endif // #if 0 -  // TODO - TEMP - Phase1 - Not ready yet for multi OCC communications.
 
 #endif //_DCOM_C
 

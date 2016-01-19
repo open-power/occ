@@ -299,5 +299,6 @@ typedef struct
 }SsxTraceBuffer;
 
 extern SsxTraceBuffer g_ssx_trace_buf;
+extern size_t         g_ssx_trace_buf_size;
 
 #endif /* __SSX_TRACE_H__ */

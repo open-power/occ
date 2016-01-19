@@ -174,6 +174,7 @@ static const MmuRegion mmu_regions[] = {
      0, DATA_CACHEABILITY_FLAG | TEXT_CACHEABILITY_FLAG | TLBLO_EX | TLBLO_WR,
      &G_ex_free_mmu_map},
 
+/*
     {(SsxAddress)&_APPLET0_SECTION_BASE,
      (size_t)&_APPLET0_SECTION_SIZE,
      0, DATA_CACHEABILITY_FLAG | TEXT_CACHEABILITY_FLAG | TLBLO_WR | TLBLO_EX,
@@ -183,7 +184,7 @@ static const MmuRegion mmu_regions[] = {
      (size_t)&_APPLET1_SECTION_SIZE,
      0, DATA_CACHEABILITY_FLAG | TEXT_CACHEABILITY_FLAG | TLBLO_WR | TLBLO_EX,
      &G_applet1_mmu_map},
-
+*/
     {(SsxAddress)OCI_REGISTER_SPACE_BASE,
      (size_t)OCI_REGISTER_SPACE_SIZE,
      0, TLBLO_WR | TLBLO_I | TLBLO_G, 0} ,

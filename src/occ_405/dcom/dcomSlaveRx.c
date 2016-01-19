@@ -64,7 +64,8 @@ bool     G_apss_lower_pmax_rail = FALSE;
 // End Function Specification
 uint32_t dcom_calc_slv_inbox_addr(void)
 {
-    return (G_dcom_slv_inbox_doorbell_rx.addr_slv_inbox_buffer0 + ( G_pob_id.chip_id * sizeof(dcom_slv_inbox_t) ));
+    return (G_dcom_slv_inbox_doorbell_rx.addr_slv_inbox_buffer0
+            + ( G_pbax_id.chip_id * sizeof(dcom_slv_inbox_t) ) );
 }
 
 // Function Specification
@@ -301,7 +302,7 @@ void task_dcom_rx_slv_inbox( task_t *i_self)
                 // start task waiting for master to talk again.
                 rtl_start_task(TASK_ID_DCOM_WAIT_4_MSTR);
                 rtl_set_run_mask_deferred(RTL_FLAG_MSTR_READY);
-                TRAC_INFO("[%d]: Lost connection to master",(int) G_pob_id.chip_id);
+                TRAC_INFO("[%d]: Lost connection to master",(int) G_pbax_id.chip_id);
                 break;
             }
         }
@@ -599,9 +600,8 @@ void task_dcom_wait_for_master( task_t *i_self)
         // set up a unicast PBAX target to the master.
         if(!L_first_doorbell_rcvd)
         {
-            // Convert powerbus id to pbax id (sets node_id to INVALID_NODE_ID on failure)
-            l_pbaxid = dcom_pbusid2pbaxid(G_dcom_slv_inbox_doorbell_rx.pob_id); // Traces failure internally
-            if(l_pbaxid.node_id == INVALID_NODE_ID)
+            l_pbaxid = G_dcom_slv_inbox_doorbell_rx.pob_id;
+            if(l_pbaxid.node_id >= MAX_NUM_NODES)
             {
                 // We received an invalid power bus id from the master.
                 // This may be a communication failure, so allow some retries.
@@ -679,7 +679,7 @@ void task_dcom_wait_for_master( task_t *i_self)
             }
 
             TRAC_IMP("Slave OCC[%d] Received first doorbell from Master OCC[%d]",
-                     (int) G_pob_id.chip_id,
+                     (int) G_pbax_id.chip_id,
                      G_dcom_slv_inbox_doorbell_rx.pob_id.chip_id);
 
             // First message is dropped, so mark it as counted.
@@ -693,7 +693,7 @@ void task_dcom_wait_for_master( task_t *i_self)
         }
         else
         {
-             TRAC_INFO("[%d] Restablished contact via doorbell from Master",(int) G_pob_id.chip_id);
+             TRAC_INFO("[%d] Restablished contact via doorbell from Master",(int) G_pbax_id.chip_id);
 
              // Inform AMEC that Pmax_rail doesn't need to be lowered and reset
              // the no_master_doorbell counter

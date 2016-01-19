@@ -327,8 +327,18 @@ extern Ppc405MmuMap G_applet1_mmu_map;
 
 #endif  /* __ASSEMBLER__ */
 
-// OCCHW defines a private version of dcache_flush_all() that uses the undefined
-// OCI space at 0x20000000; See dcache_flush_all() in occhw_cache.S.
+// OCCHW defines a private version of dcache_flush_all() that uses undefined
+// OCI space defined by OCCHW_FLUSH_ZERO_ADDRESS.
+// See dcache_flush_all() in occhw_cache.S.
+//
+// DCCR bit | OCCHW_FLUSH_ZERO_ADDRESS ( see 405 spec for full table)
+// ---------|------------------------------------------
+//    0     | 0x00000000 - 0x07ffffff
+//    1     | 0x08000000 - 0x0fffffff
+//    4     | 0x20000000 - 0x27ffffff
+//    8     | 0x40000000 - 0x47ffffff  (undefined range - use for dcache flush)
+//   16     | 0x80000000 - 0x87ffffff  (overlaps PBA defined space)
+//   31     | 0xF8000000 - 0xffffffff  (overlaps SRAM)
 
 #define USE_GENERIC_DCACHE_FLUSH_ALL 0
 #define OCCHW_FLUSH_ZERO_ADDRESS       0x20000000

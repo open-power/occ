@@ -538,6 +538,24 @@ typedef struct {
 #define SSXTRACE_BIN(str, bufp, buf_size)
 #endif //SSX_TRACE_SUPPORT
 
+//Needed for easy cache flush of trace buffer
+//Note, in order to use this macro you must declare g_ssx_trace_buf[_size]
+//  as extern SsxTraceBuffer [and size_t] variables in the .c file as well
+//  as include ssx_trace.h.
+#if (SSX_TRACE_ENABLE && SSX_TRACE_SUPPORT && SSX_TIMER_SUPPORT)
+#define SSX_FLUSH_TRACE_BUF() dcache_flush(&g_ssx_trace_buf, g_ssx_trace_buf_size)
+#else
+#define SSX_FLUSH_TRACE_BUF()
+#endif
+
+//Making sure we can still compile application codes if SSX tracing for some
+//  reason isn't enabled.
+#if (SSX_TRACE_ENABLE && SSX_TRACE_SUPPORT && SSX_TIMER_SUPPORT)
+#define SSX_TRACE_INIT(freqhz, time0) ssx_trace_init(freqhz, time0)
+#else
+#define SSX_TRACE_INIT(freqhz, time0)
+#endif
+
 /// A generic doubly-linked list object
 ///
 /// This object functions both as a sentinel mode for a deque as well as a

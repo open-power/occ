@@ -140,9 +140,9 @@ pba_common_ffdc(PbaCommonFfdc* ffdc)
         }
 
         getscom(PBA_FIR, &(ffdc->fir.value));
-        getscom(PBA_ERRPT0, &(ffdc->errpt0.value));
-        getscom(PBA_ERRPT1, &(ffdc->errpt1.value));
-        getscom(PBA_ERRPT2, &(ffdc->errpt2.value));
+        getscom(PBA_ERRRPT0, &(ffdc->errrpt0.value));
+        getscom(PBA_ERRRPT1, &(ffdc->errrpt1.value));
+        getscom(PBA_ERRRPT2, &(ffdc->errrpt2.value));
 
         ffdc->error = 1;
     }

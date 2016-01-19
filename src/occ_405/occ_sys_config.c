@@ -163,12 +163,10 @@ occSysConfigData_t G_sysConfigData =
         .unthrottle    = 0,
     },
 
+
     // -----------------------------------------------------------
     // Master/Slave Section Initializations
     // -----------------------------------------------------------
-    .pob2pbax_chip = {0,1,2,3,4,5,6,7},
-    .pob2pbax_node = {0,1,2,3},
-
     .is_occ_present = SYSCFG_ZERO_OCCS_PRESENT,
 
     .master_config = {
@@ -424,7 +422,7 @@ void sysConfigFspLess(void)
     // ----------------------------------------------------
     // Set OCC Role based on Config Data
     // ----------------------------------------------------
-    if( G_pob_id.chip_id == G_sysConfigData.master_config.default_master )
+    if( G_pbax_id.chip_id == G_sysConfigData.master_config.default_master )
     {
         G_occ_role = OCC_MASTER;
 

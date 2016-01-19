@@ -45,6 +45,11 @@
 #ifndef __ASSEMBLER__
 
 #include <stddef.h>
+#if !defined(__size_t)
+#include <stdint.h>
+typedef size_t uint32_t;
+#endif
+
 
 // APIs inmplemented by string.c
 

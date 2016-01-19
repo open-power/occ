@@ -180,10 +180,6 @@ do {                                                                \
 #define USE_EPM_IO 0
 #endif
 
-#if SIMICS_ENVIRONMENT
-#define PPC405_MMU_SUPPORT 0
-#endif
-
 /// The buffer used for 'ssxout' in VBU and lab applications
 ///
 /// The buffer is defined to be quite large in order to accomodate full kernel
