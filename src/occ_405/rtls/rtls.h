@@ -52,7 +52,7 @@ typedef enum {
     TASK_ID_DCOM_RX_OUTBX,
     TASK_ID_DCOM_TX_OUTBX,
 //    TASK_ID_DCOM_PARSE_FW_MSG,
-    TASK_ID_CHECK_FOR_CHECKSTOP,
+    TASK_ID_MISC_405_CHECKS,        // Miscellaneous checks to be done by 405
     TASK_ID_AMEC_SLAVE,             // AMEC SMH tasks
 //    TASK_ID_AMEC_MASTER,            // AMEC SMH tasks
 //    TASK_ID_CORE_DATA_CONTROL,

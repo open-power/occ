@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/common.h $                                            */
+/* $Source: src/occ_405/lock/lock.h $                                     */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -22,29 +22,33 @@
 /* permissions and limitations under the License.                         */
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
-#ifndef _common_h
-#define _common_h
 
-#include <rtls.h>
+#ifndef _LOCK_H
+#define _LOCK_H
 
-
-// Reasons why the OCCMISC external interrupt was triggered
-typedef enum
-{
-    // defined as individual bits (since multiple interrupts could be queued)
-    INTR_REASON_HTMGT_SERVICE_REQUIRED  = 0x04,
-    INTR_REASON_I2C_OWNERSHIP_CHANGE    = 0x02,
-    INTR_REASON_OPAL_SHARED_MEM_CHANGE  = 0x01
-} ext_intr_reason_t;
+#include <occ_common.h>
+#include <dimm.h>
 
 
-// Miscellaneous checks to be done by 405
-// - check for pending host notifications
-// - check for checkstop
-void task_misc_405_checks(task_t *i_self);
+// TODO: remove testing code once SIMICS_FLAG_ISSUE removed
+//#define DEBUG_LOCK_TESTING
 
-// Trigger interrupt to the host with the specified reason (OCCMISC/core_ext_intr)
-// Returns true if notification was sent, false if interrupt already outstanding
-bool notify_host(const ext_intr_reason_t i_reason);
 
-#endif // _common_h
+
+// Release the OCC lock indefinitely
+// This should be called when OCC goes into safe mode or will be reset
+// to allow the host to use the specified I2C engines.
+// Use PIB_I2C_ENGINE_ALL, if locks for all I2C engines should be released
+void occ_i2c_lock_release(const uint8_t i_engine);
+
+
+// Check and update lock ownership for the specified i2c engine
+// If host has requesed lock, and there is no other outstanding interrupt
+// release the lock, generate and external interrupt and return false.
+// If the host has not released the lock, set ownership back to OCC and
+// return true.
+//
+// Returns true if OCC owns the lock, or false if host owns lock
+bool check_and_update_i2c_lock(const uint8_t i_engine);
+
+#endif //_LOCK_H

@@ -23,229 +23,207 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-// Description: Standard Library Calls
+// Description: Common 405 functions
 
-#include "ssx.h"
-#include "ssx_io.h"
 #include <common.h>
-#include <trac_service_codes.h>
-#include <string.h>
+#include <trac.h>
+
+
+uint8_t G_host_notifications_pending = 0;
+
 
 // Function Specification
 //
-// Name: memcmp
+// Name: task_misc_405_checks
 //
-// Description: Standard Library Calls
-//              Need implemented, since we can't statically link in Open Source libs
-//              These implementations aren't optimized, but allow the code to function
-//              so we can test out the code port.
-//
-// End Function Specification
-//int memcmp ( const void * ptr1, const void * ptr2, size_t num )
-//{
-//  return 0;
-//}
-
-// Function Specification
-//
-// Name: gpstCheckByte
-//
-// Description: Generate check byte for each entry of the Pstate table.
+// Description: Perform periodic checks on the 405 including:
+//              - host notifications
+//              - checkstops
 //
 // End Function Specification
-uint8_t gpstCheckByte(const uint64_t gpstEntry)
+void task_misc_405_checks(task_t *i_self)
 {
-    int cb[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    if (G_host_notifications_pending != 0)
+    {
+        notify_host(G_host_notifications_pending);
+    }
 
-    cb[0] ^= BIT(gpstEntry, 0);
-    cb[0] ^= BIT(gpstEntry, 1);
-    cb[0] ^= BIT(gpstEntry, 2);
-    cb[0] ^= BIT(gpstEntry, 3);
-    cb[0] ^= BIT(gpstEntry, 4);
-    cb[0] ^= BIT(gpstEntry, 5);
-    cb[0] ^= BIT(gpstEntry, 6);
-    cb[0] ^= BIT(gpstEntry, 7);
-    cb[0] ^= BIT(gpstEntry, 24);
-    cb[0] ^= BIT(gpstEntry, 25);
-    cb[0] ^= BIT(gpstEntry, 26);
-    cb[0] ^= BIT(gpstEntry, 28);
-    cb[0] ^= BIT(gpstEntry, 33);
-    cb[0] ^= BIT(gpstEntry, 38);
-    cb[0] ^= BIT(gpstEntry, 42);
-    cb[0] ^= BIT(gpstEntry, 43);
-    cb[0] ^= BIT(gpstEntry, 44);
-    cb[0] ^= BIT(gpstEntry, 45);
-    cb[0] ^= BIT(gpstEntry, 52);
-    cb[0] ^= BIT(gpstEntry, 53);
-    cb[0] ^= BIT(gpstEntry, 54);
-    cb[0] ^= BIT(gpstEntry, 55);
-    cb[1] ^= BIT(gpstEntry, 0);
-    cb[1] ^= BIT(gpstEntry, 3);
-    cb[1] ^= BIT(gpstEntry, 4);
-    cb[1] ^= BIT(gpstEntry, 7);
-    cb[1] ^= BIT(gpstEntry, 8);
-    cb[1] ^= BIT(gpstEntry, 9);
-    cb[1] ^= BIT(gpstEntry, 10);
-    cb[1] ^= BIT(gpstEntry, 11);
-    cb[1] ^= BIT(gpstEntry, 12);
-    cb[1] ^= BIT(gpstEntry, 13);
-    cb[1] ^= BIT(gpstEntry, 14);
-    cb[1] ^= BIT(gpstEntry, 15);
-    cb[1] ^= BIT(gpstEntry, 32);
-    cb[1] ^= BIT(gpstEntry, 33);
-    cb[1] ^= BIT(gpstEntry, 34);
-    cb[1] ^= BIT(gpstEntry, 36);
-    cb[1] ^= BIT(gpstEntry, 41);
-    cb[1] ^= BIT(gpstEntry, 46);
-    cb[1] ^= BIT(gpstEntry, 50);
-    cb[1] ^= BIT(gpstEntry, 51);
-    cb[1] ^= BIT(gpstEntry, 52);
-    cb[1] ^= BIT(gpstEntry, 53);
-    cb[2] ^= BIT(gpstEntry, 4);
-    cb[2] ^= BIT(gpstEntry, 5);
-    cb[2] ^= BIT(gpstEntry, 6);
-    cb[2] ^= BIT(gpstEntry, 7);
-    cb[2] ^= BIT(gpstEntry, 8);
-    cb[2] ^= BIT(gpstEntry, 11);
-    cb[2] ^= BIT(gpstEntry, 12);
-    cb[2] ^= BIT(gpstEntry, 15);
-    cb[2] ^= BIT(gpstEntry, 16);
-    cb[2] ^= BIT(gpstEntry, 17);
-    cb[2] ^= BIT(gpstEntry, 18);
-    cb[2] ^= BIT(gpstEntry, 19);
-    cb[2] ^= BIT(gpstEntry, 20);
-    cb[2] ^= BIT(gpstEntry, 21);
-    cb[2] ^= BIT(gpstEntry, 22);
-    cb[2] ^= BIT(gpstEntry, 23);
-    cb[2] ^= BIT(gpstEntry, 40);
-    cb[2] ^= BIT(gpstEntry, 41);
-    cb[2] ^= BIT(gpstEntry, 42);
-    cb[2] ^= BIT(gpstEntry, 44);
-    cb[2] ^= BIT(gpstEntry, 49);
-    cb[2] ^= BIT(gpstEntry, 54);
-    cb[3] ^= BIT(gpstEntry, 2);
-    cb[3] ^= BIT(gpstEntry, 3);
-    cb[3] ^= BIT(gpstEntry, 4);
-    cb[3] ^= BIT(gpstEntry, 5);
-    cb[3] ^= BIT(gpstEntry, 12);
-    cb[3] ^= BIT(gpstEntry, 13);
-    cb[3] ^= BIT(gpstEntry, 14);
-    cb[3] ^= BIT(gpstEntry, 15);
-    cb[3] ^= BIT(gpstEntry, 16);
-    cb[3] ^= BIT(gpstEntry, 19);
-    cb[3] ^= BIT(gpstEntry, 20);
-    cb[3] ^= BIT(gpstEntry, 23);
-    cb[3] ^= BIT(gpstEntry, 24);
-    cb[3] ^= BIT(gpstEntry, 25);
-    cb[3] ^= BIT(gpstEntry, 26);
-    cb[3] ^= BIT(gpstEntry, 27);
-    cb[3] ^= BIT(gpstEntry, 28);
-    cb[3] ^= BIT(gpstEntry, 29);
-    cb[3] ^= BIT(gpstEntry, 30);
-    cb[3] ^= BIT(gpstEntry, 31);
-    cb[3] ^= BIT(gpstEntry, 48);
-    cb[3] ^= BIT(gpstEntry, 49);
-    cb[3] ^= BIT(gpstEntry, 50);
-    cb[3] ^= BIT(gpstEntry, 52);
-    cb[4] ^= BIT(gpstEntry, 1);
-    cb[4] ^= BIT(gpstEntry, 6);
-    cb[4] ^= BIT(gpstEntry, 10);
-    cb[4] ^= BIT(gpstEntry, 11);
-    cb[4] ^= BIT(gpstEntry, 12);
-    cb[4] ^= BIT(gpstEntry, 13);
-    cb[4] ^= BIT(gpstEntry, 20);
-    cb[4] ^= BIT(gpstEntry, 21);
-    cb[4] ^= BIT(gpstEntry, 22);
-    cb[4] ^= BIT(gpstEntry, 23);
-    cb[4] ^= BIT(gpstEntry, 24);
-    cb[4] ^= BIT(gpstEntry, 27);
-    cb[4] ^= BIT(gpstEntry, 28);
-    cb[4] ^= BIT(gpstEntry, 31);
-    cb[4] ^= BIT(gpstEntry, 32);
-    cb[4] ^= BIT(gpstEntry, 33);
-    cb[4] ^= BIT(gpstEntry, 34);
-    cb[4] ^= BIT(gpstEntry, 35);
-    cb[4] ^= BIT(gpstEntry, 36);
-    cb[4] ^= BIT(gpstEntry, 37);
-    cb[4] ^= BIT(gpstEntry, 38);
-    cb[4] ^= BIT(gpstEntry, 39);
-    cb[5] ^= BIT(gpstEntry, 0);
-    cb[5] ^= BIT(gpstEntry, 1);
-    cb[5] ^= BIT(gpstEntry, 2);
-    cb[5] ^= BIT(gpstEntry, 4);
-    cb[5] ^= BIT(gpstEntry, 9);
-    cb[5] ^= BIT(gpstEntry, 14);
-    cb[5] ^= BIT(gpstEntry, 18);
-    cb[5] ^= BIT(gpstEntry, 19);
-    cb[5] ^= BIT(gpstEntry, 20);
-    cb[5] ^= BIT(gpstEntry, 21);
-    cb[5] ^= BIT(gpstEntry, 28);
-    cb[5] ^= BIT(gpstEntry, 29);
-    cb[5] ^= BIT(gpstEntry, 30);
-    cb[5] ^= BIT(gpstEntry, 31);
-    cb[5] ^= BIT(gpstEntry, 32);
-    cb[5] ^= BIT(gpstEntry, 35);
-    cb[5] ^= BIT(gpstEntry, 36);
-    cb[5] ^= BIT(gpstEntry, 39);
-    cb[5] ^= BIT(gpstEntry, 40);
-    cb[5] ^= BIT(gpstEntry, 41);
-    cb[5] ^= BIT(gpstEntry, 42);
-    cb[5] ^= BIT(gpstEntry, 43);
-    cb[5] ^= BIT(gpstEntry, 44);
-    cb[5] ^= BIT(gpstEntry, 45);
-    cb[5] ^= BIT(gpstEntry, 46);
-    cb[5] ^= BIT(gpstEntry, 47);
-    cb[6] ^= BIT(gpstEntry, 8);
-    cb[6] ^= BIT(gpstEntry, 9);
-    cb[6] ^= BIT(gpstEntry, 10);
-    cb[6] ^= BIT(gpstEntry, 12);
-    cb[6] ^= BIT(gpstEntry, 17);
-    cb[6] ^= BIT(gpstEntry, 22);
-    cb[6] ^= BIT(gpstEntry, 26);
-    cb[6] ^= BIT(gpstEntry, 27);
-    cb[6] ^= BIT(gpstEntry, 28);
-    cb[6] ^= BIT(gpstEntry, 29);
-    cb[6] ^= BIT(gpstEntry, 36);
-    cb[6] ^= BIT(gpstEntry, 37);
-    cb[6] ^= BIT(gpstEntry, 38);
-    cb[6] ^= BIT(gpstEntry, 39);
-    cb[6] ^= BIT(gpstEntry, 40);
-    cb[6] ^= BIT(gpstEntry, 43);
-    cb[6] ^= BIT(gpstEntry, 44);
-    cb[6] ^= BIT(gpstEntry, 47);
-    cb[6] ^= BIT(gpstEntry, 48);
-    cb[6] ^= BIT(gpstEntry, 49);
-    cb[6] ^= BIT(gpstEntry, 50);
-    cb[6] ^= BIT(gpstEntry, 51);
-    cb[6] ^= BIT(gpstEntry, 52);
-    cb[6] ^= BIT(gpstEntry, 53);
-    cb[6] ^= BIT(gpstEntry, 54);
-    cb[6] ^= BIT(gpstEntry, 55);
-    cb[7] ^= BIT(gpstEntry, 16);
-    cb[7] ^= BIT(gpstEntry, 17);
-    cb[7] ^= BIT(gpstEntry, 18);
-    cb[7] ^= BIT(gpstEntry, 20);
-    cb[7] ^= BIT(gpstEntry, 25);
-    cb[7] ^= BIT(gpstEntry, 30);
-    cb[7] ^= BIT(gpstEntry, 34);
-    cb[7] ^= BIT(gpstEntry, 35);
-    cb[7] ^= BIT(gpstEntry, 36);
-    cb[7] ^= BIT(gpstEntry, 37);
-    cb[7] ^= BIT(gpstEntry, 44);
-    cb[7] ^= BIT(gpstEntry, 45);
-    cb[7] ^= BIT(gpstEntry, 46);
-    cb[7] ^= BIT(gpstEntry, 47);
-    cb[7] ^= BIT(gpstEntry, 48);
-    cb[7] ^= BIT(gpstEntry, 51);
-    cb[7] ^= BIT(gpstEntry, 52);
-    cb[7] ^= BIT(gpstEntry, 55);
-    return
-        (cb[0] << 7) |
-        (cb[1] << 6) |
-        (cb[2] << 5) |
-        (cb[3] << 4) |
-        (cb[4] << 3) |
-        (cb[5] << 2) |
-        (cb[6] << 1) |
-        (cb[7] << 0);
+    // Check for checkstops
+/* TEMP -- NO MORE PORE / check_stop field no longer exists */
+#if 0
+    pore_status_t l_gpe0_status;
+
+    ocb_oisr0_t l_oisr0_status;
+    static bool L_checkstop_traced = FALSE;
+    uint8_t l_reason_code = 0;
+
+    do
+    {
+        // This check is disabled once a checkstop or frozen GPE is detected
+        if(L_checkstop_traced)
+        {
+            break;
+        }
+
+        // Looked for a frozen GPE, a sign that the chip has stopped working or
+        // check-stopped.  This check also looks for an interrupt status flag that
+        // indicates if the system has check-stopped.
+        l_gpe0_status.value = in64(PORE_GPE0_STATUS);
+        l_oisr0_status.value = in32(OCB_OISR0);
+
+        if (l_gpe0_status.fields.freeze_action
+            ||
+            l_oisr0_status.fields.check_stop)
+        {
+            errlHndl_t l_err = NULL;
+
+            if (l_gpe0_status.fields.freeze_action)
+            {
+                TRAC_IMP("Frozen GPE0 detected by RTL");
+                l_reason_code = OCC_GPE_HALTED;
+            }
+
+            if (l_oisr0_status.fields.check_stop)
+            {
+                TRAC_IMP("System checkstop detected by RTL");
+                l_reason_code = OCC_SYSTEM_HALTED;
+            }
+
+            L_checkstop_traced = TRUE;
+
+            /*
+             * @errortype
+             * @moduleid    MAIN_SYSTEM_HALTED_MID
+             * @reasoncode  OCC_GPE_HALTED
+             * @userdata1   High order word of PORE_GPE0_STATUS
+             * @userdata2   OCB_OISR0
+             * @devdesc     OCC detected frozen GPE0
+             */
+            /*
+             * @errortype
+             * @moduleid    MAIN_SYSTEM_HALTED_MID
+             * @reasoncode  OCC_SYSTEM_HALTED
+             * @userdata1   High order word of PORE_GPE0_STATUS
+             * @userdata2   OCB_OISR0
+             * @devdesc     OCC detected system checkstop
+             */
+             l_err = createErrl(MAIN_SYSTEM_HALTED_MID,
+                                l_reason_code,
+                                OCC_NO_EXTENDED_RC,
+                                ERRL_SEV_INFORMATIONAL,
+                                NULL,
+                                DEFAULT_TRACE_SIZE,
+                                l_gpe0_status.words.high_order,
+                                l_oisr0_status.value);
+
+             // The commit code will check for the frozen GPE0 and system
+             // checkstop conditions and take appropriate actions.
+             commitErrl(&l_err);
+        }
+    }
+    while(0);
+#endif // #if 0
+
+} // end task_misc_405_checks()
+
+
+// Trigger interrupt to the host with the specified reason (OCCMISC/core_ext_intr)
+// Returns true if notification was sent, false if interrupt already outstanding
+// If notifcation was not sent, G_host_notifications_pending will be set
+// so that it is retried during next tick.
+bool notify_host(const ext_intr_reason_t i_reason)
+{
+    bool notify_success = false;
+    //TRAC_INFO("notify_host(0x%02X) called (G_host_notifications_pending=0x%02X)", i_reason, G_host_notifications_pending);
+
+    // Use input reason unless there are outstanding notifications pending
+    uint8_t notifyReason = i_reason;
+    if (G_host_notifications_pending)
+    {
+        // Add reason to pending notifications
+        notifyReason = G_host_notifications_pending | i_reason;
+        // Determine next outstanding notifcation (highest priority first)
+        if (notifyReason & INTR_REASON_OPAL_SHARED_MEM_CHANGE)
+        {
+            notifyReason = INTR_REASON_OPAL_SHARED_MEM_CHANGE;
+        }
+        else if (notifyReason & INTR_REASON_HTMGT_SERVICE_REQUIRED)
+        {
+            notifyReason = INTR_REASON_HTMGT_SERVICE_REQUIRED;
+        }
+        else if (notifyReason & INTR_REASON_I2C_OWNERSHIP_CHANGE)
+        {
+            notifyReason = INTR_REASON_I2C_OWNERSHIP_CHANGE;
+        }
+        else
+        {
+            INTR_TRAC_ERR("notify_host: G_host_notification_pending has unrecognized value: 0x%02X",
+                          notifyReason);
+            notifyReason = i_reason;
+        }
+    }
+
+    // Build new value for register
+    ocb_occmisc_t new_occmisc = {0};
+    new_occmisc.fields.core_ext_intr = 1;
+    switch(notifyReason)
+    {
+        case INTR_REASON_HTMGT_SERVICE_REQUIRED:
+            new_occmisc.fields.ext_intr_service_required = 1;
+            break;
+        case INTR_REASON_I2C_OWNERSHIP_CHANGE:
+            new_occmisc.fields.ext_intr_i2c_change = 1;
+            break;
+        case INTR_REASON_OPAL_SHARED_MEM_CHANGE:
+            new_occmisc.fields.ext_intr_shmem_change = 1;
+            break;
+        default:
+            INTR_TRAC_ERR("notify_host: Invalid reason specified: 0x%02X", notifyReason);
+            new_occmisc.value = 0;
+            break;
+    }
+
+    if (new_occmisc.value != 0)
+    {
+        // Check if we can send interrupt to host (no other interrupts outstanding)
+        ocb_occmisc_t current_occmisc;
+        current_occmisc.value = in32(OCB_OCCMISC);
+        if (current_occmisc.fields.core_ext_intr == 0)
+        {
+#ifdef SIMICS_FLAG_ISSUE
+            out32(OCB_OCCMISC, new_occmisc.value); // _CLR and _OR not working
+#else
+            if (current_occmisc.fields.ext_intr_service_required ||
+                current_occmisc.fields.ext_intr_i2c_change ||
+                current_occmisc.fields.ext_intr_shmem_change)
+            {
+                // clear external interrupt reason
+                current_occmisc.value = 0;
+                current_occmisc.fields.ext_intr_service_required = 1;
+                current_occmisc.fields.ext_intr_i2c_change = 1;
+                current_occmisc.fields.ext_intr_shmem_change = 1;
+                out32(OCB_OCCMISC_CLR, current_occmisc.value);
+            }
+
+            out32(OCB_OCCMISC_OR, new_occmisc.value);
+#endif
+            notify_success = true;
+            TRAC_INFO("notify_host: notification of reason 0x%02X has been sent", notifyReason);
+            G_host_notifications_pending &= ~notifyReason;
+        }
+        else
+        {
+            // Host already has an interrupt outstanding, resend notification later
+            if ((G_host_notifications_pending & i_reason) == 0)
+            {
+                TRAC_INFO("notify_host: OCCMISC/core_ext_intr not clear yet (register=0x%08X, reason=0x%02X)",
+                          current_occmisc.value, i_reason);
+                G_host_notifications_pending |= i_reason;
+            }
+        }
+    }
+
+    return notify_success;
 }
+
+

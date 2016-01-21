@@ -56,6 +56,7 @@ LIB_DIRS =  -L$(OBJDIR) \
             -L$(OBJDIR)/dcom \
             -L$(OBJDIR)/dimm \
             -L$(OBJDIR)/errl \
+            -L$(OBJDIR)/lock \
             -L$(OBJDIR)/pss \
             -L$(OBJDIR)/rtls \
             -L$(OBJDIR)/sensor \

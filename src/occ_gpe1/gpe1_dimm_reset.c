@@ -76,22 +76,22 @@ void dimm_reset_master(ipc_msg_t* cmd, void* arg)
     {
         GPE1_DIMM_DBG("dimm_reset_master: putscom(0x%08X,0x%08X%08X) SUCCESS - IMM_RESET_I2C",
                       scomAddr, WORD_HIGH(regValue), WORD_LOW(regValue));
-    }
 
-    // Force reset of Port_busy_register
-    scomAddr = I2C_BUSY_REGISTER | SCOM_ENGINE_OFFSET(args->i2cEngine);
-    regValue = 0x8000000000000000;
-    rc = putscom_abs(scomAddr, regValue);
-    if(rc)
-    {
-        PK_TRACE("dimm_reset_master: I2C_BUSY_REGISTER putscom 0x%08X->0x%08X%08X FAILED. rc = 0x%08x",
-                 scomAddr, WORD_HIGH(regValue), WORD_LOW(regValue), rc);
-        gpe_set_ffdc(&(args->error), scomAddr, GPE_RC_SCOM_PUT_FAILED, rc);
-    }
-    else
-    {
-        GPE1_DIMM_DBG("dimm_reset_master: putscom(0x%08X,0x%08X%08X) SUCCESS - I2C_BUSY_REGISTER",
-                      scomAddr, WORD_HIGH(regValue), WORD_LOW(regValue));
+        // Force reset of Port_busy_register
+        scomAddr = I2C_BUSY_REGISTER | SCOM_ENGINE_OFFSET(args->i2cEngine);
+        regValue = 0x8000000000000000;
+        rc = putscom_abs(scomAddr, regValue);
+        if(rc)
+        {
+            PK_TRACE("dimm_reset_master: I2C_BUSY_REGISTER putscom 0x%08X->0x%08X%08X FAILED. rc = 0x%08x",
+                     scomAddr, WORD_HIGH(regValue), WORD_LOW(regValue), rc);
+            gpe_set_ffdc(&(args->error), scomAddr, GPE_RC_SCOM_PUT_FAILED, rc);
+        }
+        else
+        {
+            GPE1_DIMM_DBG("dimm_reset_master: putscom(0x%08X,0x%08X%08X) SUCCESS - I2C_BUSY_REGISTER",
+                          scomAddr, WORD_HIGH(regValue), WORD_LOW(regValue));
+        }
     }
 
 } // end dimm_reset_master()

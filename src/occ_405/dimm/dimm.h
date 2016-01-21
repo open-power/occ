@@ -31,10 +31,9 @@
 #include <errl.h>
 #include <rtls.h>
 
-#define WORD_HIGH(data) ((uint32_t)(((uint64_t)data)>>32))
-#define WORD_LOW(data)  ((uint32_t)(((uint64_t)data)&0xFFFFFFFF))
-
 #define NUM_DIMM_PORTS           2
+
+#define DIMM_TICK (CURRENT_TICK % MAX_NUM_TICKS)
 
 typedef enum
 {
@@ -49,6 +48,7 @@ typedef enum
     PIB_I2C_ENGINE_C = 0x01,
     PIB_I2C_ENGINE_D = 0x02,
     PIB_I2C_ENGINE_E = 0x03,
+    PIB_I2C_ENGINE_ALL = 0xFF,
 } PIB_I2C_ENGINE;
 
 typedef enum

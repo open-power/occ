@@ -30,6 +30,7 @@
 #include <trac.h>
 #include <state.h>
 #include <dcom.h>
+#include <common.h>
 
 uint32_t    G_occErrSlotBits = 0x000000000;
 uint8_t     G_occErrIdCounter= 0x00;
@@ -540,8 +541,6 @@ void addTraceToErrl(
 // End Function Specification
 void reportErrorLog( errlHndl_t i_err, uint16_t i_entrySize )
 {
-    ocb_occmisc_t l_reg;
-
     // report the log
     // will need to give them the address and size to read
 
@@ -557,13 +556,7 @@ void reportErrorLog( errlHndl_t i_err, uint16_t i_entrySize )
         // Host can inform HTMGT to collect the error log
         if (G_occ_interrupt_type == PSIHB_INTERRUPT)
         {
-            // From OCC OpenPower Interface v1.1, OCC needs to set bits 0 and 1 of
-            // the OCB_OCCMISC register
-            l_reg.fields.core_ext_intr = 1;
-// TEMP -- reason_intr field no longer exists
-//            l_reg.fields.reason_intr = 1;
-
-            out32(OCB_OCCMISC_OR, l_reg.value);
+            notify_host(INTR_REASON_HTMGT_SERVICE_REQUIRED);
         }
     }
 }

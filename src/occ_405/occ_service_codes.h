@@ -51,6 +51,8 @@ enum occReasonCode
     PROC_ERROR_TEMP                 = 0x10,
     /// Timed out reading processor temperature
     PROC_TEMP_TIMEOUT               = 0x11,
+    // OCI write did not retain value
+    OCI_WRITE_FAILURE               = 0x12,
     /// Processor SCOM failure
     PROC_SCOM_ERROR                 = 0x16,
     /// Any failure coming from the SSX RTOS code
@@ -220,6 +222,7 @@ enum occModuleId
     AMEC_VERIFY_FREQ_MID            =  MAIN_COMP_ID | 0x0d,
     FIR_DATA_MID                    =  MAIN_COMP_ID | 0x0e,
     CMDH_DBUG_MID                   =  MAIN_COMP_ID | 0x0f,
+    I2C_LOCK_UPDATE                 =  MAIN_COMP_ID | 0x10,
 };
 
 enum occUserDataType

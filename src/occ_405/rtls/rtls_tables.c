@@ -34,6 +34,7 @@
 #include <centaur_control.h>
 #include "amec_master_smh.h"
 #include "dimm.h"
+#include <common.h>
 
 //flags for task table
 #define APSS_TASK_FLAGS                  RTL_FLAG_MSTR |                    RTL_FLAG_OBS | RTL_FLAG_ACTIVE | RTL_FLAG_MSTR_READY |                    RTL_FLAG_RUN
@@ -62,7 +63,7 @@
 #define FLAGS_APSS_DONE_MEAS             APSS_TASK_FLAGS
 
 #define FLAGS_DCOM_PARSE_OCC_FW_MSG      RTL_FLAG_MSTR | RTL_FLAG_NOTMSTR | RTL_FLAG_OBS | RTL_FLAG_ACTIVE | RTL_FLAG_MSTR_READY | RTL_FLAG_NO_APSS | RTL_FLAG_RUN | RTL_FLAG_STANDBY | RTL_FLAG_RST_REQ | RTL_FLAG_APSS_NOT_INITD
-#define FLAGS_CHECK_FOR_CHECKSTOP        RTL_FLAG_MSTR | RTL_FLAG_NOTMSTR | RTL_FLAG_OBS | RTL_FLAG_ACTIVE | RTL_FLAG_MSTR_READY | RTL_FLAG_NO_APSS | RTL_FLAG_RUN | RTL_FLAG_STANDBY | RTL_FLAG_RST_REQ | RTL_FLAG_APSS_NOT_INITD
+#define FLAGS_MISC_405_CHECKS            RTL_FLAG_MSTR | RTL_FLAG_NOTMSTR | RTL_FLAG_OBS | RTL_FLAG_ACTIVE | RTL_FLAG_MSTR_READY | RTL_FLAG_NO_APSS | RTL_FLAG_RUN | RTL_FLAG_STANDBY | RTL_FLAG_RST_REQ | RTL_FLAG_APSS_NOT_INITD
 
 #define FLAGS_CORE_DATA_CONTROL          RTL_FLAG_MSTR | RTL_FLAG_NOTMSTR |                RTL_FLAG_ACTIVE | RTL_FLAG_MSTR_READY | RTL_FLAG_NO_APSS | RTL_FLAG_RUN |                                       RTL_FLAG_APSS_NOT_INITD
 
@@ -112,7 +113,7 @@ task_t G_task_table[TASK_END] = {
     { FLAGS_DCOM_TX_SLV_OUTBOX,    task_dcom_tx_slv_outbox,        NULL },  // TASK_ID_DCOM_TX_OUTBX
 // TEMP -- NOT SUPPORTED YET IN PHASE1
 //    { FLAGS_DCOM_PARSE_OCC_FW_MSG, task_dcom_parse_occfwmsg,       NULL },  // TASK_ID_DCOM_PARSE_FW_MSG
-    { FLAGS_CHECK_FOR_CHECKSTOP,   task_check_for_checkstop,       NULL },  // TASK_ID_CHECK_FOR_CHECKSTOP
+    { FLAGS_MISC_405_CHECKS,       task_misc_405_checks,           NULL },  // TASK_ID_MISC_405_CHECKS
 // TEMP -- NOT SUPPORTED YET IN PHASE1
     { FLAGS_AMEC_SLAVE,            task_amec_slave,                NULL },  // TASK_ID_AMEC_SLAVE
 // TEMP -- NOT SUPPORTED YET IN PHASE1
@@ -143,7 +144,7 @@ const uint8_t G_tick0_seq[] = {
                                 TASK_ID_AMEC_SLAVE,
                                 //TASK_ID_AMEC_MASTER,
                                 //TASK_ID_DCOM_PARSE_FW_MSG,
-                                //TASK_ID_CHECK_FOR_CHECKSTOP,
+                                TASK_ID_MISC_405_CHECKS,
                                 TASK_END };
 
 const uint8_t G_tick1_seq[] = {
@@ -162,7 +163,7 @@ const uint8_t G_tick1_seq[] = {
                                 TASK_ID_AMEC_SLAVE,
                                 //TASK_ID_AMEC_MASTER,
                                 //TASK_ID_DCOM_PARSE_FW_MSG,
-                                //TASK_ID_CHECK_FOR_CHECKSTOP,
+                                TASK_ID_MISC_405_CHECKS,
                                 TASK_END };
 
 const uint8_t G_tick2_seq[] = {
@@ -181,7 +182,7 @@ const uint8_t G_tick2_seq[] = {
                                 TASK_ID_AMEC_SLAVE,
                                 //TASK_ID_AMEC_MASTER,
                                 //TASK_ID_DCOM_PARSE_FW_MSG,
-                                //TASK_ID_CHECK_FOR_CHECKSTOP,
+                                TASK_ID_MISC_405_CHECKS,
                                 TASK_END };
 
 const uint8_t G_tick3_seq[] = {
@@ -200,7 +201,7 @@ const uint8_t G_tick3_seq[] = {
                                 TASK_ID_AMEC_SLAVE,
                                 //TASK_ID_AMEC_MASTER,
                                 //TASK_ID_DCOM_PARSE_FW_MSG,
-                                //TASK_ID_CHECK_FOR_CHECKSTOP,
+                                TASK_ID_MISC_405_CHECKS,
                                 TASK_END };
 
 const uint8_t G_tick4_seq[] = {
@@ -220,7 +221,7 @@ const uint8_t G_tick4_seq[] = {
                                 TASK_ID_AMEC_SLAVE,
                                 //TASK_ID_AMEC_MASTER,
                                 //TASK_ID_DCOM_PARSE_FW_MSG,
-                                //TASK_ID_CHECK_FOR_CHECKSTOP,
+                                TASK_ID_MISC_405_CHECKS,
                                 TASK_END };
 
 const uint8_t G_tick5_seq[] = {
@@ -239,7 +240,7 @@ const uint8_t G_tick5_seq[] = {
                                 TASK_ID_AMEC_SLAVE,
                                 //TASK_ID_AMEC_MASTER,
                                 //TASK_ID_DCOM_PARSE_FW_MSG,
-                                //TASK_ID_CHECK_FOR_CHECKSTOP,
+                                TASK_ID_MISC_405_CHECKS,
                                 TASK_END };
 
 const uint8_t G_tick6_seq[] = {
@@ -258,7 +259,7 @@ const uint8_t G_tick6_seq[] = {
                                 TASK_ID_AMEC_SLAVE,
                                 //TASK_ID_AMEC_MASTER,
                                 //TASK_ID_DCOM_PARSE_FW_MSG,
-                                //TASK_ID_CHECK_FOR_CHECKSTOP,
+                                TASK_ID_MISC_405_CHECKS,
                                 TASK_END };
 
 const uint8_t G_tick7_seq[] = {
@@ -277,7 +278,7 @@ const uint8_t G_tick7_seq[] = {
                                 TASK_ID_AMEC_SLAVE,
                                 //TASK_ID_AMEC_MASTER,
                                 //TASK_ID_DCOM_PARSE_FW_MSG,
-                                //TASK_ID_CHECK_FOR_CHECKSTOP,
+                                TASK_ID_MISC_405_CHECKS,
                                 TASK_END };
 
 const uint8_t G_tick8_seq[] = {
@@ -297,7 +298,7 @@ const uint8_t G_tick8_seq[] = {
                                 TASK_ID_AMEC_SLAVE,
                                 //TASK_ID_AMEC_MASTER,
                                 //TASK_ID_DCOM_PARSE_FW_MSG,
-                                //TASK_ID_CHECK_FOR_CHECKSTOP,
+                                TASK_ID_MISC_405_CHECKS,
                                 TASK_END };
 
 const uint8_t G_tick9_seq[] = {
@@ -316,7 +317,7 @@ const uint8_t G_tick9_seq[] = {
                                 TASK_ID_AMEC_SLAVE,
                                 //TASK_ID_AMEC_MASTER,
                                 //TASK_ID_DCOM_PARSE_FW_MSG,
-                                //TASK_ID_CHECK_FOR_CHECKSTOP,
+                                TASK_ID_MISC_405_CHECKS,
                                 TASK_END };
 
 const uint8_t G_tick10_seq[] = {
@@ -335,7 +336,7 @@ const uint8_t G_tick10_seq[] = {
                                 TASK_ID_AMEC_SLAVE,
                                 //TASK_ID_AMEC_MASTER,
                                 //TASK_ID_DCOM_PARSE_FW_MSG,
-                                //TASK_ID_CHECK_FOR_CHECKSTOP,
+                                TASK_ID_MISC_405_CHECKS,
                                 TASK_END };
 
 const uint8_t G_tick11_seq[] = {
@@ -354,7 +355,7 @@ const uint8_t G_tick11_seq[] = {
                                 TASK_ID_AMEC_SLAVE,
                                 //TASK_ID_AMEC_MASTER,
                                 //TASK_ID_DCOM_PARSE_FW_MSG,
-                                //TASK_ID_CHECK_FOR_CHECKSTOP,
+                                TASK_ID_MISC_405_CHECKS,
                                 TASK_END };
 
 const uint8_t G_tick12_seq[] = {
@@ -374,7 +375,7 @@ const uint8_t G_tick12_seq[] = {
                                 TASK_ID_AMEC_SLAVE,
                                 //TASK_ID_AMEC_MASTER,
                                 //TASK_ID_DCOM_PARSE_FW_MSG,
-                                //TASK_ID_CHECK_FOR_CHECKSTOP,
+                                TASK_ID_MISC_405_CHECKS,
                                 TASK_END };
 
 const uint8_t G_tick13_seq[] = {
@@ -393,7 +394,7 @@ const uint8_t G_tick13_seq[] = {
                                 TASK_ID_AMEC_SLAVE,
                                 //TASK_ID_AMEC_MASTER,
                                 //TASK_ID_DCOM_PARSE_FW_MSG,
-                                //TASK_ID_CHECK_FOR_CHECKSTOP,
+                                TASK_ID_MISC_405_CHECKS,
                                 TASK_END };
 
 const uint8_t G_tick14_seq[] = {
@@ -412,7 +413,7 @@ const uint8_t G_tick14_seq[] = {
                                 TASK_ID_AMEC_SLAVE,
                                 //TASK_ID_AMEC_MASTER,
                                 //TASK_ID_DCOM_PARSE_FW_MSG,
-                                //TASK_ID_CHECK_FOR_CHECKSTOP,
+                                TASK_ID_MISC_405_CHECKS,
                                 TASK_END };
 
 const uint8_t G_tick15_seq[] = {
@@ -431,7 +432,7 @@ const uint8_t G_tick15_seq[] = {
                                 TASK_ID_AMEC_SLAVE,
                                 //TASK_ID_AMEC_MASTER,
                                 //TASK_ID_DCOM_PARSE_FW_MSG,
-                                //TASK_ID_CHECK_FOR_CHECKSTOP,
+                                TASK_ID_MISC_405_CHECKS,
                                 TASK_END };
 
 // The Global Tick Table

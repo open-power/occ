@@ -40,7 +40,8 @@
 #include <occ_sys_config.h>
 #include "sensor.h"
 #include "amec_sys.h"
-
+#include "lock.h"
+#include "common.h"
 
 extern bool G_mem_monitoring_allowed;
 extern task_t G_task_table[TASK_END];
@@ -59,8 +60,6 @@ typedef struct {
 } dimmData_t;
 dimmData_t G_dimm[NUM_DIMM_PORTS][NUM_DIMMS_PER_CENTAUR] = {{{false,0}}};
 
-#define DIMM_TICK (CURRENT_TICK % MAX_NUM_TICKS)
-
 // If still no i2c interrupt after MAX_TICK_COUNT_WAIT, then try next operation anyway
 #define MAX_TICK_COUNT_WAIT 2
 
@@ -69,6 +68,7 @@ dimmData_t G_dimm[NUM_DIMM_PORTS][NUM_DIMMS_PER_CENTAUR] = {{{false,0}}};
 GpeRequest G_dimm_sm_request;
 // GPE arguments
 GPE_BUFFER(dimm_sm_args_t  G_dimm_sm_args);
+
 
 
 // Read OCC_MISC register to see if an I2C interrupt was generated for
@@ -250,13 +250,11 @@ void mark_dimm_failed()
 {
     const uint8_t port = G_dimm_sm_args.i2cPort;
     const uint8_t dimm = G_dimm_sm_args.dimm;
-    INTR_TRAC_ERR("mark_dimm_failed: DIMM%04X failed in state %d with rc=0x%02X "
-                  "(ffdc 0x%08X%08X, err_count=%d, completion_state 0x%02X)",
-                  DIMM_AND_PORT, G_dimm_sm_args.state,
-                  G_dimm_sm_args.error.rc,
+    INTR_TRAC_ERR("mark_dimm_failed: DIMM%04X failed in state/rc/count=0x%06X "
+                  "(ffdc 0x%08X%08X, completion_state 0x%02X)",
+                  DIMM_AND_PORT, (G_dimm_sm_args.state << 16) | (G_dimm_sm_args.error.rc << 8) | G_dimm[port][dimm].errorCount,
                   WORD_HIGH(G_dimm_sm_args.error.ffdc),
                   WORD_LOW(G_dimm_sm_args.error.ffdc),
-                  G_dimm[port][dimm].errorCount,
                   G_dimm_sm_request.request.completion_state);
 
     if (++G_dimm[port][dimm].errorCount > MAX_CONSECUTIVE_DIMM_RESETS)
@@ -411,17 +409,18 @@ bool check_for_i2c_failure()
 {
     bool failed = false;
 
-    if (false == G_dimm_i2c_reset_required)
+    // Check if I2C operation is complete
+    if (ASYNC_REQUEST_STATE_COMPLETE == G_dimm_sm_request.request.completion_state)
     {
-        // Check if I2C operation is complete
-        if (ASYNC_REQUEST_STATE_COMPLETE == G_dimm_sm_request.request.completion_state)
+        // Check if I2C operation failed
+        if ((GPE_RC_SUCCESS != G_dimm_sm_args.error.rc) &&
+            (GPE_RC_NOT_COMPLETE != G_dimm_sm_args.error.rc))
         {
-            // Check if I2C operation failed
-            if ((GPE_RC_SUCCESS != G_dimm_sm_args.error.rc) &&
-                (GPE_RC_NOT_COMPLETE != G_dimm_sm_args.error.rc))
+            failed = true;
+            // Only mark DIMM as failed if not during an I2C reset
+            if (false == G_dimm_i2c_reset_required)
             {
                 mark_dimm_failed();
-                failed = true;
             }
         }
     }
@@ -473,8 +472,7 @@ uint8_t dimm_reset_sm()
                 {
                     // If there is only one port, skip slave port 1
                     nextState = DIMM_STATE_INIT;
-                    G_dimm_i2c_reset_required = false;
-                    TRAC_INFO("dimm_reset_sm: I2C reset completed (1 port)");
+                    DIMM_DBG("dimm_reset_sm: I2C reset completed (1 port)");
                 }
             }
             break;
@@ -496,8 +494,7 @@ uint8_t dimm_reset_sm()
             if (schedule_dimm_req(DIMM_STATE_RESET_SLAVE_P1_COMPLETE))
             {
                 nextState = DIMM_STATE_INIT;
-                G_dimm_i2c_reset_required = false;
-                TRAC_INFO("dimm_reset_sm: I2C reset completed");
+                DIMM_DBG("dimm_reset_sm: I2C reset completed");
             }
             break;
 
@@ -510,6 +507,92 @@ uint8_t dimm_reset_sm()
     return nextState;
 
 } // end dimm_reset_sm()
+
+
+
+#ifdef DEBUG_LOCK_TESTING
+// TODO: remove testing code once SIMICS_FLAG_ISSUE removed
+// Simulate I2C locking behavior from the host
+void host_i2c_lock_request();
+void host_i2c_lock_release();
+#define DURATION_EXTINT     2 // number of ticks before clearing external interrupt
+#define DURATION_LOCK       6 // 80 // minimum ticks to keep lock
+#define DURATION_LOCK_DELTA 5 // additional ticks to hold lock (for timing variation)
+#define DURATION_UNLOCK    20 // 15 // number of ticks before host releases lock
+void SIMULATE_HOST()
+{
+    static int lockDuration = DURATION_LOCK;     // Unlock when this gets to 0
+    static int unlockDuration = DURATION_UNLOCK; // Request lock after this gets to 0
+    static int extIntDuration = DURATION_EXTINT; // Release external interrupt when this gets to 0
+    static int durationDelta = DURATION_LOCK_DELTA; // additional variability on how long lock is kept
+
+#if 1
+    // Force notifications (to ensure they are queued correctly
+    static int newNotification = 45; // new notification every ticks
+    if (--newNotification == 0)
+    {
+        ocb_occmisc_t current_occmisc0;
+        current_occmisc0.value = in32(OCB_OCCMISC);
+        TRAC_INFO("SIMULATE_HOST: forcing additional notifications (tmgt+tmgt+tmgt+shmem) currentInt=%d",
+                  current_occmisc0.fields.core_ext_intr);
+        notify_host(INTR_REASON_HTMGT_SERVICE_REQUIRED);
+        //notify_host(INTR_REASON_I2C_OWNERSHIP_CHANGE);
+        notify_host(INTR_REASON_HTMGT_SERVICE_REQUIRED);
+        notify_host(INTR_REASON_HTMGT_SERVICE_REQUIRED);
+        notify_host(INTR_REASON_OPAL_SHARED_MEM_CHANGE);
+        newNotification = 20;
+    }
+#endif
+
+    ocb_occflg_t occ_flags = {0};
+    occ_flags.value = in32(OCB_OCCFLG);
+    if (occ_flags.fields.i2c_engine3_lock_host == 1)
+    {
+        if (occ_flags.fields.i2c_engine3_lock_occ == 0)
+        {
+            // Host owns lock
+            if (--lockDuration == 0)
+            {
+                host_i2c_lock_release();
+                unlockDuration = DURATION_UNLOCK;
+            }
+        }
+        else
+        {
+            // Host requested lock, but does not own it yet
+        }
+    }
+    else
+    {
+        // Host has NOT requested lock yet
+        if (--unlockDuration == 0)
+        {
+            // Request the lock
+            host_i2c_lock_request();
+            lockDuration = DURATION_LOCK + durationDelta;
+            if (--durationDelta < 0)
+            {
+                durationDelta = DURATION_LOCK_DELTA;
+            }
+        }
+    }
+
+    // Handle clearing the external interrupt periodically
+    ocb_occmisc_t current_occmisc;
+    current_occmisc.value = in32(OCB_OCCMISC);
+    if (current_occmisc.fields.core_ext_intr)
+    {
+        if (--extIntDuration == 0)
+        {
+            TRAC_INFO("SIMULATE_HOST: clearing ext_intr");
+            current_occmisc.fields.core_ext_intr = 0;
+            out32(OCB_OCCMISC,current_occmisc.value);
+            extIntDuration = 2;
+        }
+    }
+}
+#endif // DEBUG_LOCK_TESTING
+
 
 
 // Function Specification
@@ -530,217 +613,279 @@ void task_dimm_sm(struct task *i_self)
 #define MAX_READ_ATTEMPT 3
     static uint8_t L_readAttempt = 0;
     static bool L_readIssued = false;
+    const uint8_t engine = G_sysConfigData.dimm_i2c_engine;
+    static bool L_occ_owns_lock = true;
 
     if (G_mem_monitoring_allowed)
     {
-        //DIMM_DBG("task_dimm_sm: request state=0x%02X, completion_state=0x%02X, abort_state=0x%02X",
-        //         G_dimm_sm_request.request.state, G_dimm_sm_request.request.completion_state, G_dimm_sm_request.request.abort_state);
+#ifdef DEBUG_LOCK_TESTING
+        // TODO: remove testing code once SIMICS_FLAG_ISSUE removed
+        SIMULATE_HOST();
+#endif
 
-        if (check_for_i2c_failure())
-        {
-            // After reset, move on to next DIMM
-            use_next_dimm(&L_dimmPort, &L_dimmIndex);
-        }
-
-        uint8_t nextState = G_dimm_state;
-
+        // First handle any outstanding I2C reset
         if (G_dimm_i2c_reset_required)
         {
-            nextState = dimm_reset_sm();
-        }
-        else if (G_dimm_state == DIMM_STATE_INIT)
-        {
-            // Setup I2C Interrupt Mask Register
-            DIMM_DBG("DIMM_STATE_INIT: (I2C Engine 0x%02X, Memory Type 0x%02X)",
-                     G_sysConfigData.dimm_i2c_engine, G_sysConfigData.mem_type);
-            G_dimm_sm_args.i2cEngine = G_sysConfigData.dimm_i2c_engine;
-            if (schedule_dimm_req(DIMM_STATE_INIT))
+            if ((G_dimm_state != DIMM_STATE_RESET_MASTER) && (check_for_i2c_failure()))
             {
-                nextState = DIMM_STATE_WRITE_MODE;
+                // I2C failure occurred during a reset...
+                INTR_TRAC_ERR("task_dimm_sm: Failure during I2C reset - memory monitoring disabled");
+                // release I2C lock to the host for this engine and stop monitoring
+                occ_i2c_lock_release(G_dimm_sm_args.i2cEngine);
+                L_occ_owns_lock = false;
+                G_mem_monitoring_allowed = false;
+                // TODO: What else do we need to do?  go to Safe State?
             }
-        }
-        else
-        {
-            bool intTriggered = check_for_i2c_interrupt(G_sysConfigData.dimm_i2c_engine);
-            if (intTriggered == false)
+            else
             {
-                ++L_notReadyCount;
-            }
-
-            // Check if prior command completed (or timed out waiting for it)
-            if (intTriggered || (L_notReadyCount > MAX_TICK_COUNT_WAIT))
-            {
-                if (ASYNC_REQUEST_STATE_COMPLETE == G_dimm_sm_request.request.completion_state)
+                if (G_dimm_state == DIMM_STATE_INIT)
                 {
-                    // IPC request completed, now check return code
-                    if (GPE_RC_SUCCESS == G_dimm_sm_args.error.rc)
-                    {
-                        // last request completed without error
-                        switch (G_dimm_sm_args.state)
-                        {
-                            case DIMM_STATE_INIT:
-                                // Save max I2C ports
-                                if (G_maxDimmPorts != G_dimm_sm_args.maxPorts)
-                                {
-                                    G_maxDimmPorts = G_dimm_sm_args.maxPorts;
-                                    DIMM_DBG("task_dimm_sm: updating DIMM Max I2C Ports to %d", G_maxDimmPorts);
-                                }
-                                break;
+                    // Reset has completed successfully
+                    TRAC_INFO("task_dimm_sm: I2C reset completed");
+                    G_dimm_i2c_reset_required = false;
+                    // Check if host needs I2C lock
+                    L_occ_owns_lock = check_and_update_i2c_lock(engine);
+                }
+                else
+                {
+                    // Reset still in progress
+                    G_dimm_state = dimm_reset_sm();
+                }
+            }
+        }
 
-                            case DIMM_STATE_READ_TEMP:
-                                if (L_readIssued)
-                                {
-                                    const uint8_t port = G_dimm_sm_args.i2cPort;
-                                    const uint8_t dimm = G_dimm_sm_args.dimm;
-
-                                    // Last DIMM read completed, update sensor and clear error count
-                                    DIMM_DBG("task_dimm_sm: Successfully read DIMM%04X temperature: %dC, tick %d",
-                                             DIMM_AND_PORT, G_dimm_sm_args.temp, DIMM_TICK);
-                                    g_amec->proc[0].memctl[port].centaur.dimm_temps[dimm].cur_temp = G_dimm_sm_args.temp;
-                                    G_dimm[port][dimm].lastReading = ((ssx_timebase_get())/(SSX_TIMEBASE_FREQUENCY_HZ/1000000));
-                                    G_dimm[port][dimm].errorCount = 0;
-
-                                    // Move on to next DIMM
-                                    use_next_dimm(&L_dimmPort, &L_dimmIndex);
-                                    L_readIssued = false;
-                                }
-                                break;
-
-                            default:
-                                // Nothing to do
-                                break;
-                        }
-                    }
-                    else
-                    {
-                        // last request did not return success
-                        switch (G_dimm_sm_args.state)
-                        {
-                            case DIMM_STATE_INITIATE_READ:
-                                if (++L_readAttempt < MAX_READ_ATTEMPT)
-                                {
-                                    // The initiate_read didnt complete, retry
-                                    DIMM_DBG("task_dimm_sm: initiate read didn't start (%d attempts)", L_readAttempt);
-                                    // Force the read again
-                                    G_dimm_state = DIMM_STATE_INITIATE_READ;
-                                    nextState = G_dimm_state;
-                                }
-                                else
-                                {
-                                    INTR_TRAC_ERR("task_dimm_sm: initiate read didn't start after %d attempts... forcing reset", L_readAttempt);
-                                    mark_dimm_failed();
-                                }
-                                break;
-
-                            case DIMM_STATE_READ_TEMP:
-                                if (L_readIssued)
-                                {
-                                    if (++L_readAttempt < MAX_READ_ATTEMPT)
-                                    {
-                                        DIMM_DBG("task_dimm_sm: read didn't complete (%d attempts)", L_readAttempt);
-                                        // Force the read again
-                                        G_dimm_state = DIMM_STATE_READ_TEMP;
-                                        nextState = G_dimm_state;
-                                    }
-                                    else
-                                    {
-                                        INTR_TRAC_ERR("task_dimm_sm: read did not complete after %d attempts... forcing reset", L_readAttempt);
-                                        mark_dimm_failed();
-                                    }
-                                }
-                                break;
-
-                            default:
-                                // Nothing to do
-                                break;
-                        }
-                    }
+        if (G_dimm_i2c_reset_required == false)
+        {
+            if ((L_occ_owns_lock == false) && ((DIMM_TICK == 0) || (DIMM_TICK == 8)))
+            {
+                // Check if host gave up the I2C lock
+                L_occ_owns_lock = check_and_update_i2c_lock(engine);
+                if (L_occ_owns_lock)
+                {
+                    // Start over at the INIT state after receiving the lock
+                    G_dimm_state = DIMM_STATE_INIT;
                 }
             }
 
-            if (false == G_dimm_i2c_reset_required)
+            if (L_occ_owns_lock)
             {
-                // Handle new DIMM state
-                switch (G_dimm_state)
+                // Check for failure on prior operation
+                if (check_for_i2c_failure())
                 {
-                    case DIMM_STATE_WRITE_MODE:
-                        // Only start a DIMM read on tick 0 or 8
-                        if ((DIMM_TICK == 0) || (DIMM_TICK == 8))
+                    // If there was a failure, continue to the next DIMM (after I2c reset)
+                    use_next_dimm(&L_dimmPort, &L_dimmIndex);
+                }
+
+                uint8_t nextState = G_dimm_state;
+
+                if (G_dimm_state == DIMM_STATE_INIT)
+                {
+                    // Setup I2C Interrupt Mask Register
+                    DIMM_DBG("DIMM_STATE_INIT: (I2C Engine 0x%02X, Memory Type 0x%02X)",
+                             engine, G_sysConfigData.mem_type);
+                    G_dimm_sm_args.i2cEngine = engine;
+                    if (schedule_dimm_req(DIMM_STATE_INIT))
+                    {
+                        nextState = DIMM_STATE_WRITE_MODE;
+                    }
+                }
+                else
+                {
+                    bool intTriggered = check_for_i2c_interrupt(engine);
+                    if (intTriggered == false)
+                    {
+                        // Interrupt not generated, I2C operation may not have completed.
+                        // After MAX_TICK_COUNT_WAIT, attempt operation anyway.
+                        ++L_notReadyCount;
+                    }
+
+                    // Check if prior command completed (or timed out waiting for it)
+                    if (intTriggered || (L_notReadyCount > MAX_TICK_COUNT_WAIT))
+                    {
+                        if (ASYNC_REQUEST_STATE_COMPLETE == G_dimm_sm_request.request.completion_state)
                         {
-                            // If DIMM has huid/sensor then it should be present
-                            if ((0 != G_sysConfigData.dimm_huids[L_dimmPort][L_dimmIndex]) &&
-                                (G_dimm[L_dimmPort][L_dimmIndex].disabled == false))
+                            // IPC request completed, now check return code
+                            if (GPE_RC_SUCCESS == G_dimm_sm_args.error.rc)
                             {
-                                G_dimm_sm_args.i2cPort = L_dimmPort;
-                                G_dimm_sm_args.dimm = L_dimmIndex;
-                                DIMM_DBG("task_dimm_sm: Starting collection for DIMM%04X at tick %d",
-                                         DIMM_AND_PORT, DIMM_TICK);
-                                if (schedule_dimm_req(DIMM_STATE_WRITE_MODE))
+                                // last request completed without error
+                                switch (G_dimm_sm_args.state)
                                 {
-                                    nextState = DIMM_STATE_WRITE_ADDR;
+                                    case DIMM_STATE_INIT:
+                                        // Save max I2C ports
+                                        if (G_maxDimmPorts != G_dimm_sm_args.maxPorts)
+                                        {
+                                            G_maxDimmPorts = G_dimm_sm_args.maxPorts;
+                                            DIMM_DBG("task_dimm_sm: updating DIMM Max I2C Ports to %d", G_maxDimmPorts);
+                                        }
+                                        break;
+
+                                    case DIMM_STATE_READ_TEMP:
+                                        if (L_readIssued)
+                                        {
+                                            const uint8_t port = G_dimm_sm_args.i2cPort;
+                                            const uint8_t dimm = G_dimm_sm_args.dimm;
+
+                                            // Last DIMM read completed, update sensor and clear error count
+                                            DIMM_DBG("task_dimm_sm: Successfully read DIMM%04X temperature: %dC, tick %d",
+                                                     DIMM_AND_PORT, G_dimm_sm_args.temp, DIMM_TICK);
+                                            g_amec->proc[0].memctl[port].centaur.dimm_temps[dimm].cur_temp = G_dimm_sm_args.temp;
+                                            G_dimm[port][dimm].lastReading = ((ssx_timebase_get())/(SSX_TIMEBASE_FREQUENCY_HZ/1000000));
+                                            G_dimm[port][dimm].errorCount = 0;
+
+                                            // Move on to next DIMM
+                                            use_next_dimm(&L_dimmPort, &L_dimmIndex);
+                                            L_readIssued = false;
+
+                                            // Check if host needs the I2C lock
+                                            L_occ_owns_lock = check_and_update_i2c_lock(engine);
+                                        }
+                                        break;
+
+                                    default:
+                                        // Nothing to do
+                                        break;
                                 }
                             }
                             else
                             {
-                                // Skip current DIMM and move on to next one
-                                use_next_dimm(&L_dimmPort, &L_dimmIndex);
+                                // last request did not return success
+                                switch (G_dimm_sm_args.state)
+                                {
+                                    case DIMM_STATE_INITIATE_READ:
+                                        if (++L_readAttempt < MAX_READ_ATTEMPT)
+                                        {
+                                            // The initiate_read didnt complete, retry
+                                            DIMM_DBG("task_dimm_sm: initiate read didn't start (%d attempts)", L_readAttempt);
+                                            // Force the read again
+                                            G_dimm_state = DIMM_STATE_INITIATE_READ;
+                                            nextState = G_dimm_state;
+                                        }
+                                        else
+                                        {
+                                            INTR_TRAC_ERR("task_dimm_sm: initiate read didn't start after %d attempts... forcing reset", L_readAttempt);
+                                            mark_dimm_failed();
+                                        }
+                                        break;
+
+                                    case DIMM_STATE_READ_TEMP:
+                                        if (L_readIssued)
+                                        {
+                                            if (++L_readAttempt < MAX_READ_ATTEMPT)
+                                            {
+                                                DIMM_DBG("task_dimm_sm: read didn't complete (%d attempts)", L_readAttempt);
+                                                // Force the read again
+                                                G_dimm_state = DIMM_STATE_READ_TEMP;
+                                                nextState = G_dimm_state;
+                                            }
+                                            else
+                                            {
+                                                INTR_TRAC_ERR("task_dimm_sm: read did not complete after %d attempts... forcing reset", L_readAttempt);
+                                                mark_dimm_failed();
+                                            }
+                                        }
+                                        break;
+
+                                    default:
+                                        // Nothing to do
+                                        break;
+                                }
                             }
                         }
-                        break;
+                    }
 
-                    case DIMM_STATE_WRITE_ADDR:
-                        if (intTriggered || (L_notReadyCount > MAX_TICK_COUNT_WAIT))
+                    if (L_occ_owns_lock)
+                    {
+                        if (false == G_dimm_i2c_reset_required)
                         {
-                            G_dimm_sm_args.dimm = L_dimmIndex;
-                            G_dimm_sm_args.i2cAddr = get_dimm_addr(L_dimmIndex);
-                            if (schedule_dimm_req(DIMM_STATE_WRITE_ADDR))
+                            // Handle new DIMM state
+                            switch (G_dimm_state)
                             {
-                                nextState = DIMM_STATE_INITIATE_READ;
-                                L_readAttempt = 0;
-                                L_readIssued = false;
+                                case DIMM_STATE_WRITE_MODE:
+                                    // Only start a DIMM read on tick 0 or 8
+                                    if ((DIMM_TICK == 0) || (DIMM_TICK == 8))
+                                    {
+                                        // If DIMM has huid/sensor then it should be present
+                                        if ((0 != G_sysConfigData.dimm_huids[L_dimmPort][L_dimmIndex]) &&
+                                            (G_dimm[L_dimmPort][L_dimmIndex].disabled == false))
+                                        {
+                                            G_dimm_sm_args.i2cPort = L_dimmPort;
+                                            G_dimm_sm_args.dimm = L_dimmIndex;
+                                            DIMM_DBG("task_dimm_sm: Starting collection for DIMM%04X at tick %d",
+                                                     DIMM_AND_PORT, DIMM_TICK);
+                                            if (schedule_dimm_req(DIMM_STATE_WRITE_MODE))
+                                            {
+                                                nextState = DIMM_STATE_WRITE_ADDR;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            // Skip current DIMM and move on to next one
+                                            use_next_dimm(&L_dimmPort, &L_dimmIndex);
+                                        }
+                                    }
+                                    break;
+
+                                case DIMM_STATE_WRITE_ADDR:
+                                    if (intTriggered || (L_notReadyCount > MAX_TICK_COUNT_WAIT))
+                                    {
+                                        G_dimm_sm_args.dimm = L_dimmIndex;
+                                        G_dimm_sm_args.i2cAddr = get_dimm_addr(L_dimmIndex);
+                                        if (schedule_dimm_req(DIMM_STATE_WRITE_ADDR))
+                                        {
+                                            nextState = DIMM_STATE_INITIATE_READ;
+                                            L_readAttempt = 0;
+                                            L_readIssued = false;
+                                        }
+                                    }
+                                    break;
+
+                                case DIMM_STATE_INITIATE_READ:
+                                    if (intTriggered || (L_notReadyCount > MAX_TICK_COUNT_WAIT))
+                                    {
+                                        G_dimm_sm_args.dimm = L_dimmIndex;
+                                        if (schedule_dimm_req(DIMM_STATE_INITIATE_READ))
+                                        {
+                                            nextState = DIMM_STATE_READ_TEMP;
+                                        }
+                                    }
+                                    break;
+
+                                case DIMM_STATE_READ_TEMP:
+                                    if (intTriggered || (L_notReadyCount > MAX_TICK_COUNT_WAIT))
+                                    {
+                                        if (schedule_dimm_req(DIMM_STATE_READ_TEMP))
+                                        {
+                                            L_readIssued = true;
+                                            nextState = DIMM_STATE_WRITE_MODE;
+                                        }
+                                    }
+                                    break;
+
+                                default:
+                                    INTR_TRAC_ERR("task_dimm_sm: INVALID STATE: 0x%02X", G_dimm_state);
+                                    break;
                             }
                         }
-                        break;
-
-                    case DIMM_STATE_INITIATE_READ:
-                        if (intTriggered || (L_notReadyCount > MAX_TICK_COUNT_WAIT))
+                        else
                         {
-                            G_dimm_sm_args.dimm = L_dimmIndex;
-                            if (schedule_dimm_req(DIMM_STATE_INITIATE_READ))
-                            {
-                                nextState = DIMM_STATE_READ_TEMP;
-                            }
+                            // Previous op triggered reset
+                            nextState = dimm_reset_sm();
                         }
-                        break;
+                    }
+                    else
+                    {
+                        // OCC no longer holds the i2c lock (no DIMM state change required)
+                        nextState = G_dimm_state;
+                    }
+                }
 
-                    case DIMM_STATE_READ_TEMP:
-                        if (intTriggered || (L_notReadyCount > MAX_TICK_COUNT_WAIT))
-                        {
-                            if (schedule_dimm_req(DIMM_STATE_READ_TEMP))
-                            {
-                                L_readIssued = true;
-                                nextState = DIMM_STATE_WRITE_MODE;
-                            }
-                        }
-                        break;
-
-                    default:
-                        INTR_TRAC_ERR("task_dimm_sm: INVALID STATE: 0x%02X", G_dimm_state);
-                        break;
+                if (nextState != G_dimm_state)
+                {
+                    DIMM_DBG("task_dimm_sm: Updating state to 0x%02X (DIMM%04X) end of tick %d", nextState, (L_dimmPort<<8)|L_dimmIndex, DIMM_TICK);
+                    G_dimm_state = nextState;
+                    L_notReadyCount = 0;
                 }
             }
-            else
-            {
-                // Previous op triggered reset
-                nextState = dimm_reset_sm();
-            }
-        }
-
-        if (nextState != G_dimm_state)
-        {
-            DIMM_DBG("task_dimm_sm: Updating state to 0x%02X (DIMM%04X) end of tick %d", nextState, (L_dimmPort<<8)|L_dimmIndex, DIMM_TICK);
-            G_dimm_state = nextState;
-            L_notReadyCount = 0;
         }
     }
 

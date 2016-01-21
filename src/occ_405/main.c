@@ -874,12 +874,7 @@ void Main_thread_routine(void *private)
             // Host can inform HTMGT to collect the error log
             if (G_occ_interrupt_type == PSIHB_INTERRUPT)
             {
-                // From OCC OpenPower Interface v1.1, OCC needs to set bits 0 and 1 of
-                // the OCB_OCCMISC register
-                ocb_occmisc_t l_occmiscreg;
-                l_occmiscreg.fields.core_ext_intr = 1;
-                l_occmiscreg.fields.reason_intr = 1;
-                out32(OCB_OCCMISC_OR, l_occmiscreg.value);
+                notify_host(INTR_REASON_HTMGT_SERVICE_REQUIRED);
             }
         }
 */

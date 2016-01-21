@@ -213,6 +213,7 @@ APP_INCLUDES =  -I$(IMAGE_SRCDIR)/rtls \
                 -I$(IMAGE_SRCDIR)/cent \
                 -I$(IMAGE_SRCDIR)/firdata \
                 -I$(IMAGE_SRCDIR)/dimm \
+                -I$(IMAGE_SRCDIR)/lock \
                 -I$(IMAGE_SRCDIR)/../occ_gpe0 \
 
 INCLUDES += $(IMG_INCLUDES) $(GLOBAL_INCLUDES) $(APP_INCLUDES) \

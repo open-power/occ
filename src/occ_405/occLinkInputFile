@@ -18,6 +18,7 @@ INPUT ( amec_data.o
         cmdh_fsp.o
         cmdh_snapshot.o
         cmdh_thread.o
+        common.o
         dcom.o
         dcom_thread.o
         dcomMasterRx.o
@@ -29,6 +30,7 @@ INPUT ( amec_data.o
         fir_data_collect.o
         homer.o
         ll_ffdc.o
+        lock.o
         main.o
         mode.o
         occ_sys_config.o

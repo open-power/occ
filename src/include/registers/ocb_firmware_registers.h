@@ -1243,53 +1243,23 @@ typedef union ocb_occmisc {
     struct {
 #ifdef _BIG_ENDIAN
     uint32_t core_ext_intr : 1;
-    uint32_t spare : 15;
+    uint32_t ext_intr_service_required : 1;
+    uint32_t ext_intr_i2c_change : 1;
+    uint32_t ext_intr_shmem_change : 1;
+    uint32_t spare : 12;
     uint32_t i2cm_intr_status : 3;
     uint32_t reserved1 : 13;
 #else
     uint32_t reserved1 : 13;
     uint32_t i2cm_intr_status : 3;
-    uint32_t spare : 15;
+    uint32_t spare : 11;
+    uint32_t ext_intr_shmem_change : 1;
+    uint32_t ext_intr_i2c_change : 1;
+    uint32_t ext_intr_service_required : 1;
     uint32_t core_ext_intr : 1;
 #endif // _BIG_ENDIAN
     } fields;
 } ocb_occmisc_t;
-
-
-
-typedef union ocb_occmisc_clr {
-
-    uint32_t value;
-    struct {
-#ifdef _BIG_ENDIAN
-    uint32_t core_ext_intr : 1;
-    uint32_t spare : 15;
-    uint32_t reserved1 : 16;
-#else
-    uint32_t reserved1 : 16;
-    uint32_t spare : 15;
-    uint32_t core_ext_intr : 1;
-#endif // _BIG_ENDIAN
-    } fields;
-} ocb_occmisc_clr_t;
-
-
-
-typedef union ocb_occmisc_or {
-
-    uint32_t value;
-    struct {
-#ifdef _BIG_ENDIAN
-    uint32_t core_ext_intr : 1;
-    uint32_t spare : 15;
-    uint32_t reserved1 : 16;
-#else
-    uint32_t reserved1 : 16;
-    uint32_t spare : 15;
-    uint32_t core_ext_intr : 1;
-#endif // _BIG_ENDIAN
-    } fields;
-} ocb_occmisc_or_t;
 
 
 
@@ -1442,40 +1412,26 @@ typedef union ocb_occflg {
     uint32_t value;
     struct {
 #ifdef _BIG_ENDIAN
-    uint32_t occ_flags : 32;
+    uint32_t reserved_gpe : 16;
+    uint32_t i2c_engine1_lock_host : 1;
+    uint32_t i2c_engine1_lock_occ  : 1;
+    uint32_t i2c_engine2_lock_host : 1;
+    uint32_t i2c_engine2_lock_occ  : 1;
+    uint32_t i2c_engine3_lock_host : 1;
+    uint32_t i2c_engine3_lock_occ  : 1;
+    uint32_t reserved_occ : 10;
 #else
-    uint32_t occ_flags : 32;
+    uint32_t reserved_occ : 10;
+    uint32_t i2c_engine3_lock_occ  : 1;
+    uint32_t i2c_engine3_lock_host : 1;
+    uint32_t i2c_engine2_lock_occ  : 1;
+    uint32_t i2c_engine2_lock_host : 1;
+    uint32_t i2c_engine1_lock_occ  : 1;
+    uint32_t i2c_engine1_lock_host : 1;
+    uint32_t reserved_gpe : 16;
 #endif // _BIG_ENDIAN
     } fields;
 } ocb_occflg_t;
-
-
-
-typedef union ocb_occflg_clr {
-
-    uint32_t value;
-    struct {
-#ifdef _BIG_ENDIAN
-    uint32_t occ_flags : 32;
-#else
-    uint32_t occ_flags : 32;
-#endif // _BIG_ENDIAN
-    } fields;
-} ocb_occflg_clr_t;
-
-
-
-typedef union ocb_occflg_or {
-
-    uint32_t value;
-    struct {
-#ifdef _BIG_ENDIAN
-    uint32_t occ_flags : 32;
-#else
-    uint32_t occ_flags : 32;
-#endif // _BIG_ENDIAN
-    } fields;
-} ocb_occflg_or_t;
 
 
 

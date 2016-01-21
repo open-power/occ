@@ -210,7 +210,7 @@ void dimm_write_int_mask(ipc_msg_t* cmd, void* arg)
                       scomAddr, WORD_HIGH(regValue), WORD_LOW(regValue));
         // max_num_of_ports (bits 9:15)
         args->maxPorts = (regValue >> 48) & 0x7F;
-        PK_TRACE("dimm_write_int_mask: maxPorts = %d", args->maxPorts);
+        GPE1_DIMM_DBG("dimm_write_int_mask: maxPorts = %d", args->maxPorts);
     }
 
 } // end dimm_write_int_mask()
@@ -481,8 +481,8 @@ void dimm_read_temp(ipc_msg_t* cmd, void* arg)
                     args->error.error = 0;
                     args->error.rc = GPE_RC_SUCCESS;
                     args->error.ffdc = 0;
-                    PK_TRACE("dimm_read_temp: DIMM%04X temperature=%dC",
-                             (args->i2cPort<<8)|args->dimm, args->temp);
+                    GPE1_DIMM_DBG("dimm_read_temp: DIMM%04X temperature=%dC",
+                                  (args->i2cPort<<8)|args->dimm, args->temp);
 
                     // Check for operation complete bit
                     // (operation complete bit will not get set until all

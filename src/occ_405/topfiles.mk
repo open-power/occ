@@ -45,6 +45,7 @@ TOP-C-SOURCES = amec/amec_data.c \
                 cmdh/cmdh_thread.c \
                 cmdh/cmdh_tunable_parms.c \
                 cmdh/ffdc.c \
+				common.c \
                 dcom/dcom.c \
                 dcom/dcom_thread.c \
                 dcom/dcomMasterRx.c \
@@ -54,6 +55,7 @@ TOP-C-SOURCES = amec/amec_data.c \
                 errl/errl.c \
                 firdata/fir_data_collect.c \
                 homer.c \
+                lock/lock.c \
                 main.c \
                 mode.c \
                 occ_sys_config.c \
