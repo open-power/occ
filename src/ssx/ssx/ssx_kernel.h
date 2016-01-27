@@ -213,8 +213,7 @@ SsxTimeQueue __ssx_time_queue;
 /// inside application code - thus the 'volatile' is cast away. The SSX kernel
 /// does not (must not) use this API.
 
-UNLESS__SSX_CORE_C__(extern)
-inline SsxThread *
+static inline SsxThread *
 ssx_current(void)
 {
     return (SsxThread *)__ssx_current_thread;

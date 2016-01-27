@@ -32,8 +32,7 @@
 
 /// Enable an interrupt by clearing the mask bit.  
 
-UNLESS__PPC405_IRQ_CORE_C__(extern)
-inline void
+static inline void
 ssx_irq_enable(SsxIrqId irq)
 {
     out32(OCB_OIMR_AND(irq), ~PGP_IRQ_MASK32(irq));
@@ -42,8 +41,7 @@ ssx_irq_enable(SsxIrqId irq)
 
 /// Disable an interrupt by setting the mask bit.
 
-UNLESS__PPC405_IRQ_CORE_C__(extern)
-inline void
+static inline void
 ssx_irq_disable(SsxIrqId irq)
 {
     out32(OCB_OIMR_OR(irq), PGP_IRQ_MASK32(irq));
@@ -53,8 +51,7 @@ ssx_irq_disable(SsxIrqId irq)
 /// Clear interrupt status with an AND mask.  Only meaningful for
 /// edge-triggered interrupts.
 
-UNLESS__PPC405_IRQ_CORE_C__(extern)
-inline void
+static inline void
 ssx_irq_status_clear(SsxIrqId irq)
 {
     out32(OCB_OISR_AND(irq), ~PGP_IRQ_MASK32(irq));
@@ -63,8 +60,7 @@ ssx_irq_status_clear(SsxIrqId irq)
 
 /// Get IRQ status as a 0 or non-0 integer
 
-UNLESS__PPC405_IRQ_CORE_C__(extern)
-inline int
+static inline int
 ssx_irq_status_get(SsxIrqId irq)
 {
     return (in32(OCB_OISR(irq)) & PGP_IRQ_MASK32(irq)) != 0;
@@ -73,8 +69,7 @@ ssx_irq_status_get(SsxIrqId irq)
 
 /// Set or clear interrupt status explicitly.
 
-UNLESS__PPC405_IRQ_CORE_C__(extern)
-inline void
+static inline void
 ssx_irq_status_set(SsxIrqId irq, int value)
 {
     if (value) {

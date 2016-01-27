@@ -87,20 +87,14 @@ extern const uint8_t _ctype[256];
 // returned are non-zero if the character c falls into the tested class, and a
 // zero value if not."
 
-#ifdef __CTYPE_C__
-#define _CTYPE_EXTERN_INLINE
-#else
-#define _CTYPE_EXTERN_INLINE extern inline
-#endif
-
 #define _CTYPE_PREDICATE(predicate, def)                \
-    _CTYPE_EXTERN_INLINE int predicate(int c) {         \
+    static inline int predicate(int c) {         \
         return ((c == _CTYPE_EOF) ?                     \
                 0 : _CTYPE_##def((unsigned char)c));    \
     }
 
 #define _CTYPE_FUNCTION(function, def)                          \
-    _CTYPE_EXTERN_INLINE int function(int c) {                  \
+    static inline int function(int c) {                  \
         return ((c == _CTYPE_EOF) ?                             \
                 _CTYPE_EOF : _CTYPE_##def((unsigned char)c));   \
     }
