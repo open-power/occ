@@ -29,6 +29,7 @@
 /*****************************************************************************/
 #include <common_types.h>   // imageHdr_t declaration and image header macro
 #include "ssx.h"
+#include "ctype.h"
 #include "ssx_io.h"         // For ERRL_DBGs
 #include <errl.h>
 #include <appletId.h>       // For applet ID
