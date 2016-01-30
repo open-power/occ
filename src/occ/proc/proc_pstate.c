@@ -1199,8 +1199,8 @@ void populate_sensor_tbl_to_mem()
 	}
 
     G_sensor_table.count++;
-    G_sensor_table.chip_energy = AMECSENSOR_PTR(PWR250USP0)->accumulator;
-    G_sensor_table.system_energy = AMECSENSOR_PTR(PWR250US)->accumulator;
+    G_sensor_table.chip_energy = AMECSENSOR_PTR(PWR250USP0)->accumulator / 4000;
+    G_sensor_table.system_energy = AMECSENSOR_PTR(PWR250US)->accumulator / 4000;
 
     do
     {
