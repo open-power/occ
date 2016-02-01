@@ -787,6 +787,7 @@ int amec_wof_common_steps(void)
     g_amec->wof.ac = g_amec->wof.cur_out - g_amec->wof.iddq;
 
     // Step 4: Compute ratio of workload C_eff to TDP C_eff.
+    l_result32i = g_amec->wof.ac << 14; // * 16384
     g_amec->wof.ceff_volt = l_volt_avg; // externalize
     // Estimate voltage^1.3 using equation:
     // = 21374 * (X in 0.1 mV) - 50615296
