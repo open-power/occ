@@ -168,7 +168,10 @@ void amec_wof_vdd_current_out(const uint16_t i_power_in,
     uint32_t l_iout = l_pout/i_v_set; //initial iout
     g_amec_wof_iout = l_iout; //for debugging
 
-    for(l_iteration=0; l_iteration<2; l_iteration++)  // iterate twice
+    // Initial guess for voltage sense
+    l_v_sense = i_v_set - AMEC_WOF_LOADLINE_ACTIVE * l_iout / 10000;
+
+    for(l_iteration=0; l_iteration<3; l_iteration++)  // Iterate to converge
     {
         for (i=1; i<AMEC_WOF_VRM_EFF_TBL_CLMS; i++)
         {
@@ -210,17 +213,22 @@ void amec_wof_vdd_current_out(const uint16_t i_power_in,
 
         g_amec_eff_vhigh = l_eff_vhigh;// for debug
 
-        l_v_offset = i_v_set - v_min;
+        l_v_offset = l_v_sense - v_min;
         l_eff = ((l_eff_vhigh - l_eff_vlow) * l_v_offset) / v_diff + l_eff_vlow;
+
+        // Clip to efficiency table maximum
+        if (l_iout > G_amec_wof_vrm_eff_table[0][AMEC_WOF_VRM_EFF_TBL_CLMS-1])
+        {
+            l_eff = G_amec_wof_vrm_eff_table[0][AMEC_WOF_VRM_EFF_TBL_CLMS-1];
+        }
+
         // V_droop = I_chip (0.01 A) * R_loadline (0.000001 ohm) => (in 0.00000001 V)
         // V_droop = V_droop / 10000 => (in 0.0001 V)
         // V_sense = V_reg - V_droop  => (in 0.0001 V)
-        l_v_sense = i_v_set - AMEC_WOF_LOADLINE_ACTIVE * l_iout / 10000;
         l_pout = i_power_in * l_eff * 10; // See l_pout above for *10 note
         l_iout = l_pout/l_v_sense;
+        l_v_sense = i_v_set - AMEC_WOF_LOADLINE_ACTIVE * l_iout / 10000;
     }
-
-    l_v_sense = i_v_set - AMEC_WOF_LOADLINE_ACTIVE * l_iout / 10000;
 
     *o_v_sense = l_v_sense;
     *o_current_out = l_iout;
