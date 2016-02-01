@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -174,19 +174,6 @@ void amec_update_proc_core_sensors(uint8_t i_core)
     //-------------------------------------------------------
     amec_calc_spurr(i_core);
 
-    //-------------------------------------------------------
-    // Voltage
-    //-------------------------------------------------------
-    amec_sensors_core_voltage(i_core);
-
-    //-------------------------------------------------------
-    // Leakage current (for WOF)
-    // Note: Run after core temperature and voltage updates
-    //         amec_calc_dts_sensors()
-    //         amec_sensors_core_voltage()
-    //-------------------------------------------------------
-    amec_wof_calc_core_leakage(i_core);
-
     // ------------------------------------------------------
     // Update PREVIOUS values for next time
     // ------------------------------------------------------
@@ -221,6 +208,24 @@ void amec_update_proc_core_sensors(uint8_t i_core)
     l_temp16 = (uint16_t)(G_dcom_slv_inbox_doorbell_rx.tod>>45);
     // hi 3 bits in 0.796 day resolution with 512MHz TOD clock
     sensor_update( AMECSENSOR_PTR(TODclock2), l_temp16);
+  }
+
+  // Always update core voltage and leakage current even when
+  // core is turned off. Required for correct WOF operation.
+  if(CORE_PRESENT(i_core))
+  {
+    //-------------------------------------------------------
+    // Voltage
+    //-------------------------------------------------------
+    amec_sensors_core_voltage(i_core);
+
+    //-------------------------------------------------------
+    // Leakage current (for WOF)
+    // Note: Run after core temperature and voltage updates
+    //         amec_calc_dts_sensors()
+    //         amec_sensors_core_voltage()
+    //-------------------------------------------------------
+    amec_wof_calc_core_leakage(i_core);
   }
 }
 
