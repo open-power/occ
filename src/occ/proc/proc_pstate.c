@@ -24,6 +24,7 @@
 /* IBM_PROLOG_END_TAG                                                     */
 
 #include "ssx.h"
+#include "special_wakeup.h"
 #include "proc_data_service_codes.h"
 #include "errl.h"
 #include "trac.h"
@@ -40,6 +41,9 @@
 #include "proc_pstate.h"
 #include "scom.h"
 #include "amec_sys.h"
+
+// Same as in gpsm code
+#define SWAKEUP_TIMEOUT_MS 25
 
 // GPSM DCM Synchronization States
 typedef enum
@@ -631,8 +635,14 @@ void proc_gpsm_dcm_sync_enable_pstates_smh(void)
     static Pstate l_voltage_pstate, l_freq_pstate;
 
     // Local Variables
-    int l_rc = 0;
+    int l_rc = 0, l_swup_rc = 0;
     errlHndl_t l_errlHndl = NULL;
+    ChipConfigCores                 l_cores, l_swup_timedout;
+    pmc_core_deconfiguration_reg_t  l_pcdr;
+
+    // query configured cores for special wakeup
+    l_pcdr.value = in32(PMC_CORE_DECONFIGURATION_REG);
+    l_cores = ~l_pcdr.fields.core_chiplet_deconf_vector;
 
     if(!gpsm_dcm_slave_p())
     {
@@ -759,10 +769,31 @@ void proc_gpsm_dcm_sync_enable_pstates_smh(void)
             case PROC_GPSM_SYNC_PSTATE_HW_MODE_ENABLED:
                 // Final State
                 // Pstates Enabled on both modules in DCM
+                //TRAC_INFO("PSTATE_HW_MODE_ENABLED: Clearing special wakeup for cores 0x%04X", l_cores);
+                // clear special wakeup
+                l_swup_rc = occ_special_wakeup_noclearcheck(FALSE,
+                                        l_cores,
+                                        SWAKEUP_TIMEOUT_MS,
+                                        &l_swup_timedout);
+                if (l_swup_rc)
+                {
+                    TRAC_ERR("PSTATE_HW_MODE_ENABLED: Error clearing special wakeup rc:0x%04X", l_swup_rc);
+                }
                 break;
 
            case PROC_GPSM_SYNC_PSTATE_ERROR:
                // Do nothing, something will have to come and kick us out of this state
+                //TRAC_INFO("PSTATE_HW_MODE_ERROR: Clearing special wakeup for cores 0x%04X", l_cores);
+                // clear special wakeup
+                l_swup_rc = occ_special_wakeup_noclearcheck(FALSE,
+                                        l_cores,
+                                        SWAKEUP_TIMEOUT_MS,
+                                        &l_swup_timedout);
+                if (l_swup_rc)
+                {
+                    TRAC_ERR("PSTATE_HW_MODE_ERROR: Error clearing special wakeup rc:0x%04X", l_swup_rc);
+                }
+
                break;
 
             default:
@@ -858,10 +889,12 @@ void proc_gpsm_dcm_sync_enable_pstates_smh(void)
            case PROC_GPSM_SYNC_PSTATE_HW_MODE_ENABLED:
                // Final State
                // Pstates Enabled on both modules in DCM
+               // NOTE: If IVRMs are enabled for DCM, add the code for clearing special wakeup from SCM state above
                break;
 
            case PROC_GPSM_SYNC_PSTATE_ERROR:
                // Do nothing, something will have to come and kick us out of this state
+               // NOTE: If IVRMs are enabled for DCM, add the code for clearing special wakeup from SCM state above
                break;
 
            default:
