@@ -140,8 +140,8 @@ void amec_wof_vdd_current_out(const uint16_t i_power_in,
     uint8_t i;
 
     // Stuff that can be pre-computed when efficiency table is read
-    int32_t v_min = G_amec_wof_vrm_eff_table[1][0] * 100; //0.8500 V = min from efficiency table
-    int32_t v_max = G_amec_wof_vrm_eff_table[2][0] * 100; //1.2500 V = max from efficiency table
+    int32_t v_min = G_amec_wof_vrm_eff_table[1][0] * 100; //min voltage in table
+    int32_t v_max = G_amec_wof_vrm_eff_table[2][0] * 100; //max voltage in table
     int32_t v_diff = v_max - v_min; // max voltage - min voltage from efficiency table
 
     // helper variables
@@ -173,54 +173,54 @@ void amec_wof_vdd_current_out(const uint16_t i_power_in,
 
     for(l_iteration=0; l_iteration<3; l_iteration++)  // Iterate to converge
     {
-        for (i=1; i<AMEC_WOF_VRM_EFF_TBL_CLMS; i++)
-        {
-            if (l_iout >= G_amec_wof_vrm_eff_table[0][i] &&
-                l_iout <= G_amec_wof_vrm_eff_table[0][i+1])
-            {
-                break;
-            }
-        }
-        // if beyond table, use last 2 entries
-        if (i >= AMEC_WOF_VRM_EFF_TBL_CLMS-1)
-        {
-            i = AMEC_WOF_VRM_EFF_TBL_CLMS - 2;
-        }
-
-        // i points to the first index
-
-        // Compute efficiency at lower voltage (0.85 V)
-        // Linear interpolate using the neighboring entries.
-        // y = (x-x1)m+y1   m=(y2-y1)/(x2-x1)
-        // x2minusx1 = difference in current between entries
-
-        // x2minusx1 in units of 0.01 A
-        l_x2minusx1 = ((int32_t)G_amec_wof_vrm_eff_table[0][i+1] -
-                       (int32_t)G_amec_wof_vrm_eff_table[0][i]);
-        // xminusx1 in units of 0.01 A
-        l_xminusx1 = (int32_t)l_iout - (int32_t)G_amec_wof_vrm_eff_table[0][i];
-        l_eff_vlow = l_xminusx1 * ((int32_t)G_amec_wof_vrm_eff_table[1][i+1] -
-                                   (int32_t)G_amec_wof_vrm_eff_table[1][i]) /
-            l_x2minusx1 + (int32_t)G_amec_wof_vrm_eff_table[1][i];
-
-        g_amec_eff_vlow = l_eff_vlow;//for debug
-
-        // Reuse same x2minusx1 and xminusx1 because efficiency curves use
-        // common current_in values
-        l_eff_vhigh = l_xminusx1 * ((int32_t)G_amec_wof_vrm_eff_table[2][i+1] -
-                                    (int32_t)G_amec_wof_vrm_eff_table[2][i]) /
-            l_x2minusx1 + (int32_t)G_amec_wof_vrm_eff_table[2][i];
-
-        g_amec_eff_vhigh = l_eff_vhigh;// for debug
-
-        l_v_offset = l_v_sense - v_min;
-        l_eff = ((l_eff_vhigh - l_eff_vlow) * l_v_offset) / v_diff + l_eff_vlow;
-
-        // Clip to efficiency table maximum
         if (l_iout > G_amec_wof_vrm_eff_table[0][AMEC_WOF_VRM_EFF_TBL_CLMS-1])
         {
-            l_eff = G_amec_wof_vrm_eff_table[0][AMEC_WOF_VRM_EFF_TBL_CLMS-1];
+            // Clip to efficiency table maximum
+            l_eff_vlow = G_amec_wof_vrm_eff_table[1][AMEC_WOF_VRM_EFF_TBL_CLMS-1];
+            l_eff_vhigh = G_amec_wof_vrm_eff_table[2][AMEC_WOF_VRM_EFF_TBL_CLMS-1];
         }
+        else
+        {
+            // Interpolate in the table to find efficiency for min/max voltage
+            for (i=1; i<AMEC_WOF_VRM_EFF_TBL_CLMS; i++)
+            {
+                if (l_iout >= G_amec_wof_vrm_eff_table[0][i] &&
+                    l_iout <= G_amec_wof_vrm_eff_table[0][i+1])
+                {
+                    break;
+                }
+            }
+            // if beyond table, use last 2 entries
+            if (i >= AMEC_WOF_VRM_EFF_TBL_CLMS-1)
+            {
+                i = AMEC_WOF_VRM_EFF_TBL_CLMS - 2;
+            }
+            // i points to the first index
+            // Compute efficiency at lower voltage (0.85 V)
+            // Linear interpolate using the neighboring entries.
+            // y = (x-x1)m+y1   m=(y2-y1)/(x2-x1)
+            // x2minusx1 = difference in current between entries
+
+            // x2minusx1 in units of 0.01 A
+            l_x2minusx1 = ((int32_t)G_amec_wof_vrm_eff_table[0][i+1] -
+                           (int32_t)G_amec_wof_vrm_eff_table[0][i]);
+            // xminusx1 in units of 0.01 A
+            l_xminusx1 = (int32_t)l_iout - (int32_t)G_amec_wof_vrm_eff_table[0][i];
+            l_eff_vlow = l_xminusx1 * ((int32_t)G_amec_wof_vrm_eff_table[1][i+1] -
+                                       (int32_t)G_amec_wof_vrm_eff_table[1][i]) /
+                l_x2minusx1 + (int32_t)G_amec_wof_vrm_eff_table[1][i];
+
+            // Reuse same x2minusx1 and xminusx1 because efficiency curves use
+            // common current_in values
+            l_eff_vhigh = l_xminusx1 * ((int32_t)G_amec_wof_vrm_eff_table[2][i+1] -
+                                        (int32_t)G_amec_wof_vrm_eff_table[2][i]) /
+                l_x2minusx1 + (int32_t)G_amec_wof_vrm_eff_table[2][i];
+        }
+
+        g_amec_eff_vlow = l_eff_vlow;//for debug
+        g_amec_eff_vhigh = l_eff_vhigh;// for debug
+        l_v_offset = l_v_sense - v_min;
+        l_eff = ((l_eff_vhigh - l_eff_vlow) * l_v_offset) / v_diff + l_eff_vlow;
 
         // V_droop = I_chip (0.01 A) * R_loadline (0.000001 ohm) => (in 0.00000001 V)
         // V_droop = V_droop / 10000 => (in 0.0001 V)
