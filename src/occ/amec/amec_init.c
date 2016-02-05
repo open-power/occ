@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -311,6 +311,7 @@ void amec_init_gamec_struct(void)
   g_amec->wof.cores_on = 0;
   g_amec->wof.state = AMEC_WOF_NO_CORE_CHANGE;
   g_amec->wof.loadline = AMEC_WOF_LOADLINE_ACTIVE + AMEC_WOF_LOADLINE_PASSIVE;
+  g_amec->wof.vdd_iter = AMEC_WOF_VDD_ITER;
 
   //Initialize stream buffer recording parameters
   g_amec->recordflag=0;      // Never enable recording until requested via Amester API call
