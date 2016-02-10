@@ -212,6 +212,12 @@ amec_parm_t g_amec_parm_list[] = {
                   &G_sysConfigData.iddq_table,sizeof(IddqTable)),
     AMEC_PARM_RAW(PARM_SYS_CONFIG,"sys_config",
                   &G_sysConfigData,sizeof(occSysConfigData_t)),
+    AMEC_PARM_UINT32(PARM_VOLT_ERR,"volt_err",&g_amec_sys.wof.volt_err),
+    AMEC_PARM_UINT32(PARM_VOLT_ERR_CNT,"volt_err_cnt",&g_amec_sys.wof.volt_err_cnt),
+    AMEC_PARM_UINT32(PARM_OP_TB_VDD5MV,"op_tb_vdd5mv",&G_sysConfigData.wof_parms.operating_points[TURBO].vdd_5mv),
+    AMEC_PARM_UINT32(PARM_OP_TB_IDD500MA,"op_tb_idd500ma",&G_sysConfigData.wof_parms.operating_points[TURBO].idd_500ma),
+    AMEC_PARM_UINT32(PARM_OP_TB_FMHZ,"op_tb_fmhz",&G_sysConfigData.wof_parms.operating_points[TURBO].frequency_mhz),
+    AMEC_PARM_UINT32(PARM_WOF_TDPRDP_FACTOR,"wof_tdprdp_fac",&G_sysConfigData.wof_parms.tdp_rdp_factor),
 };
 
 //Throw a compiler error when the enum and array are not both updated

@@ -936,43 +936,68 @@ void amec_sensors_core_voltage(uint8_t i_core)
     uint32_t l_rc=0;
     uint64_t l_pivrmcsr=0; //ivrm control status reg
     uint64_t l_pivrmvsr=0; //ivrm value setting reg
-    uint16_t l_voltage=0;
+    uint16_t l_voltage=0;  //off voltage
     //Core power management state
     uint8_t  l_pmstate=g_amec_sys.proc[0].core[i_core].pm_state_hist >> 5;
+    uint32_t l_addr=0;
 
-    //
-    // iVRM in bypass?
-    l_rc = _getscom(CORE_CHIPLET_ADDRESS(SCOM_PIVRMCSR_ADDR_nochiplet,
-                                         CORE_OCC2HW(i_core)),
-                    &l_pivrmcsr,SCOM_TIMEOUT);
-    if (l_rc) return;
-    l_rc = _getscom(CORE_CHIPLET_ADDRESS(SCOM_PIVRMVSR_ADDR_nochiplet,
-                                         CORE_OCC2HW(i_core)),
-                    &l_pivrmvsr,SCOM_TIMEOUT);
-    if (l_rc) return;
+    do
+    {
 
-    if (l_pmstate == 5      //deep sleep
-        || l_pmstate == 7)  //deep windle
-    {
-        // This core is power gated
-        l_voltage = 0;
-    }
-    else if ((l_pivrmcsr & IVRM_FSM_ENABLE_MASK)
-             && (l_pivrmcsr & IVRM_CORE_VDD_BYPASS_B_MASK))
-    {
-        // if ivrm FSM enabled AND ivrm in bypass mode,
-        // then ivrm is regulating voltage.
-        // Compute sensor in 0.0001 V units
-        // iVRM Voltage (V) = VID * 0.00625 V + 0.6 V
-        // Note: 0.00625 V = 0.0125 V / 2 = 125>>1
-        // Note: .6 V = 6000 (0.0001 V)
-        l_voltage = ((((uint32_t)(l_pivrmvsr>>56)) * 125) >> 1) + 6000;
-    }
-    else // External voltage
-    {
-        //core is in bypass. Use estimate of voltage from external voltage rail.
-        l_voltage = g_amec->wof.v_chip;
-    }
+        if (l_pmstate == 5      //deep sleep
+            || l_pmstate == 7)  //deep windle
+        {
+            // This core is power gated
+            l_voltage = 0;
+        }
+        else
+        {
+            //Assume by default core is in bypass.
+            //Use estimate of voltage from external voltage rail.
+            //If we detect it is off or in iVRM mode, update later.
+            l_voltage=g_amec->wof.v_chip;
+
+            // iVRM in bypass?
+            l_addr = CORE_CHIPLET_ADDRESS(SCOM_PIVRMCSR_ADDR_nochiplet,
+                                          CORE_OCC2HW(i_core));
+            l_rc = _getscom(l_addr,&l_pivrmcsr,SCOM_TIMEOUT);
+            if (l_rc)
+            {
+                g_amec->wof.volt_err=l_rc;
+                g_amec->wof.volt_err_cnt++;
+                TRAC_ERR("amec_sensors_core_voltage: Read error for PIVRMCSR"
+                         "l_rc = 0x%X, addr = 0x%X, error count = %i",
+                         l_rc, l_addr, g_amec->wof.volt_err_cnt);
+                break;
+            }
+            l_addr = CORE_CHIPLET_ADDRESS(SCOM_PIVRMVSR_ADDR_nochiplet,
+                                          CORE_OCC2HW(i_core));
+            l_rc = _getscom(l_addr,&l_pivrmvsr,SCOM_TIMEOUT);
+            if (l_rc)
+            {
+                g_amec->wof.volt_err=l_rc;
+                g_amec->wof.volt_err_cnt++;
+                TRAC_ERR("amec_sensors_core_voltage: Read error for PIVRMVSR"
+                         "l_rc = 0x%X, addr=0x%X, error count = %i",
+                         l_rc, l_addr, g_amec->wof.volt_err_cnt);
+                break;
+            }
+
+
+            if ((l_pivrmcsr & IVRM_FSM_ENABLE_MASK)
+                && (l_pivrmcsr & IVRM_CORE_VDD_BYPASS_B_MASK))
+            {
+                // if ivrm FSM enabled AND ivrm in bypass mode,
+                // then ivrm is regulating voltage.
+                // Compute sensor in 0.0001 V units
+                // iVRM Voltage (V) = VID * 0.00625 V + 0.6 V
+                // Note: 0.00625 V = 0.0125 V / 2 = 125>>1
+                // Note: .6 V = 6000 (0.0001 V)
+                l_voltage = ((((uint32_t)(l_pivrmvsr>>56)) * 125) >> 1) + 6000;
+            }
+        }
+    } while (0);
+
     sensor_update(AMECSENSOR_ARRAY_PTR(VOLT2MSP0C0,i_core),l_voltage);
 }
 
