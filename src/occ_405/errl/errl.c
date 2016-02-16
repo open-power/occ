@@ -31,6 +31,8 @@
 #include <state.h>
 #include <dcom.h>
 #include <common.h>
+#include <ocb_firmware_registers.h>
+#include <ocb_register_addresses.h>
 
 uint32_t    G_occErrSlotBits = 0x000000000;
 uint8_t     G_occErrIdCounter= 0x00;
@@ -333,10 +335,8 @@ errlHndl_t createErrl(
         //NOTE: Design does not exist for these fields
         //TODO: fix this when design is done!
         l_rc->iv_userDetails.iv_fwLevel = 0;
-        // TEMP -- WE DO NOT HAVE G_pob_id yet in PHASE1!
-        //l_rc->iv_userDetails.iv_occId = G_pob_id.chip_id;
-        //TEMP -- WE ARE ALWAYS MASTER IN PHASE1
-        //l_rc->iv_userDetails.iv_occRole = G_occ_role;
+        l_rc->iv_userDetails.iv_occId = G_pob_id.chip_id;
+        l_rc->iv_userDetails.iv_occRole = G_occ_role;
         l_rc->iv_userDetails.iv_occRole = OCC_MASTER;
         l_rc->iv_userDetails.iv_operatingState = CURRENT_STATE();
     }
@@ -365,34 +365,20 @@ void addTraceToErrl(
     UINT l_expectLen = 0, l_rtLen = 0, l_bytes_left;
     void * l_traceAddr = io_err;
     uint16_t l_actualSizeOfUsrDtls = 0;
-// TEMP -- NO MORE PORE
-//    pore_status_t l_gpe0_status;
-// TEMP / TODO -- Commented out due to unused var warning
-//    ocb_oisr0_t l_oisr0_status;
-//    static bool L_gpe_halt_traced = FALSE;
-//    static bool L_sys_checkstop_traced = FALSE;
+
+    ocb_oisr0_t l_oisr0_status;
+    static bool L_sys_checkstop_traced = FALSE;
 
 
-    // check if GPE was frozen due to a checkstop
-/* TEMP -- NO MORE PORE
-    l_gpe0_status.value = in64(PORE_GPE0_STATUS);
-    if(l_gpe0_status.fields.freeze_action && !L_gpe_halt_traced)
-    {
-        L_gpe_halt_traced = TRUE;
-        TRAC_IMP("addTraceToErrl: Frozen GPE0 detected. GPE0 status[0x%08x%08x]",
-                 l_gpe0_status.words.high_order,
-                 l_gpe0_status.words.low_order);
-    }
-*/
-    // Check if there is a system checkstop
-/* TEMP -- check_stop field no longer exists
+    // Check if there is any system checkstop
     l_oisr0_status.value = in32(OCB_OISR0);
-    if (l_oisr0_status.fields.check_stop && !L_sys_checkstop_traced)
+
+    if (l_oisr0_status.fields.check_stop_ppc405 && !L_sys_checkstop_traced)
     {
         L_sys_checkstop_traced = TRUE;
-        TRAC_IMP("addTraceToErrl: System checkstop detected");
+        TRAC_IMP("addTraceToErrl: System checkstop detected: ppc405, OISR0[0x%08x]",
+                 l_oisr0_status.value);
     }
-*/
 
     // 1. Check if error log is not null
     // 2. error log is not invalid
@@ -571,10 +557,8 @@ void reportErrorLog( errlHndl_t i_err, uint16_t i_entrySize )
 // End Function Specification
 void commitErrl( errlHndl_t *io_err )
 {
-// TEMP -- NO MORE PORE
-//    pore_status_t l_gpe0_status;
-// TEMP -- Commented out due to unused var warning
-//    ocb_oisr0_t l_oisr0_status;
+    ocb_oisr0_t l_oisr0_status;
+
     static bool L_log_commits_suspended_by_safe_mode = FALSE;
 
     if (!L_log_commits_suspended_by_safe_mode && io_err != NULL)
@@ -582,26 +566,13 @@ void commitErrl( errlHndl_t *io_err )
         // check if handle is valid and is NOT empty
         if ((*io_err != NULL ) && ( *io_err != INVALID_ERR_HNDL ))
         {
-            // Check if the GPE is frozen or if a system
-            // checkstop has occurred
-// TEMP -- NO MORE PORE
-/*
-            l_gpe0_status.value = in64(PORE_GPE0_STATUS);
+            // Check if there is a system checkstop
             l_oisr0_status.value = in32(OCB_OISR0);
 
-            if (l_gpe0_status.fields.freeze_action)
-                ||
-                l_oisr0_status.fields.check_stop)
+            if (l_oisr0_status.fields.check_stop_ppc405)
             {
-                if (l_gpe0_status.fields.freeze_action)
-                {
-                    TRAC_IMP("Frozen GPE0 detected by commitErrl");
-                }
-
-                if (l_oisr0_status.fields.check_stop)
-                {
-                    TRAC_IMP("System checkstop detected by commitErrl");
-                }
+                TRAC_IMP("addTraceToErrl: System checkstop detected: ppc405, OISR0[0x%08x]",
+                         l_oisr0_status.value);
                 //Go to the reset state to minimize errors
                 reset_state_request(RESET_REQUESTED_DUE_TO_ERROR);
 
@@ -622,7 +593,7 @@ void commitErrl( errlHndl_t *io_err )
                 // Motivate FIR data collection
                 G_fir_collection_required = TRUE;
             }
-*/
+
             // if reset action bit is set force severity to unrecoverable and
             // make sure there is at least one callout
             if((*io_err)->iv_actions.reset_required)
