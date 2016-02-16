@@ -187,8 +187,8 @@
 # FFDC Constants
 # --------------
 
-    # The FFDC buffer is the response buffer
-    .set        FFDC_BUFFER_ADDR, 0xFFFB6800
+    # The FFDC buffer is the response buffer: verify equality to _LINEAR_RD_WINDOW_SECTION_BASE
+    .set        FFDC_BUFFER_ADDR, 0xFFFBF000
     .set        FFDC_DBCR0, (DBCR0_EDM | DBCR0_TDE | DBCR0_FT)
     .set        FFDC_END_MARKER, 0xFFDCFFDC
     .set        FFDC_OCC_CHECKPOINT, 0x0F00
