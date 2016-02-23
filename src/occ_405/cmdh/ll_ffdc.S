@@ -427,7 +427,7 @@ END_OF_BUFFER:  .byte
 #   None
 #
 # Notes:
-#   GPR0-31 will be restored before the function returns.
+#   GPR1-31 will be restored before the function returns.
 #   This function assumes that r3 and r4 have been saved away in special
 #   variables called __occ_panic_save_r3 and __occ_panic_save_r4.
 #
@@ -447,6 +447,13 @@ END_OF_BUFFER:  .byte
 
 .global_function __occ_checkpoint_panic_and_save_ffdc
 __occ_checkpoint_panic_and_save_ffdc:
+
+    # Store LR
+    stwu       %r1, -8(%r1)
+    mflr       %r0
+    stw        %r0, 12(%r1)
+
+
     # Save r5 for later so we can use the register now
     _stwsd      %r5, __occ_panic_save_r5
 
@@ -506,8 +513,19 @@ __occ_checkpoint_panic_and_save_ffdc:
     # Call __save_ffdc_regs to save the remaining FFDC
     bl          __save_ffdc_regs
 
-    # Return to the caller
-    blr
+# Return to the caller
+# Comment out if you don't want to head to the trap handler
+#    lwz        %r0, 12(%r1)
+#    addi       %r1, %r1, 8
+#    mtlr       %r0
+#    blr
+
+# If we decide to lock the OCC here, rather than trap handler,
+# comment the above 4 LoC, and uncomment the next 2 LoC
+# This avoids infinite looping through the
+# __ssx_checkpoint_panic_and_save_ffdc code
+occ_panic_deathbed:
+        b occ_panic_deathbed
 
 
 # Function Specification ******************************************************
@@ -525,7 +543,7 @@ __occ_checkpoint_panic_and_save_ffdc:
 #   None
 #
 # Notes:
-#   GPR0-31 will be restored before the function returns.
+#   GPR1-31 will be restored before the function returns.
 #   This function assumes that r3 and r4 have been saved away in special
 #   variables called __occ_panic_save_r3 and __occ_panic_save_r4.
 #
@@ -545,6 +563,12 @@ __occ_checkpoint_panic_and_save_ffdc:
 
 .global_function __ssx_checkpoint_panic_and_save_ffdc
 __ssx_checkpoint_panic_and_save_ffdc:
+
+    # Store LR
+    stwu       %r1, -8(%r1)
+    mflr       %r0
+    stw        %r0, 12(%r1)
+
     # Save r5 for later so we can use the register now
     _stwsd      %r5, __occ_panic_save_r5
 
@@ -602,8 +626,19 @@ __ssx_checkpoint_panic_and_save_ffdc:
     # Call __save_ffdc_regs to save the remaining FFDC
     bl          __save_ffdc_regs
 
-    # Return to the caller
-    blr
+# Return to the caller
+# Comment out if you don't want to head to the trap handler
+#    lwz        %r0, 12(%r1)
+#    addi       %r1, %r1, 8
+#    mtlr       %r0
+#    blr
+
+# If we decide to lock the OCC here, rather than trap handler,
+# comment the above 4 LoC, and uncomment the next 2 LoC
+# This avoids infinite looping through the
+# __ssx_checkpoint_panic_and_save_ffdc code
+ssx_panic_deathbed:
+        b ssx_panic_deathbed
 
 
 // New function to save a panic checkpoint and return code to the ffdc
@@ -649,6 +684,12 @@ __panic_checkpoint:
     # exception passed in r3 and yyyy is the OCC specific panic checkpoint
     # value.
     #
+
+    # Store LR
+    stwu       %r1, -8(%r1)
+    mflr       %r0
+    stw        %r0, 12(%r1)
+
     # r3 contains the exception code and r4 and r5 are available for use
     li      %r4, 0x00
     # Sequence, command, length, unused are all set to 0
@@ -670,6 +711,9 @@ __panic_checkpoint:
     dcbf    0, %r4
 
     # Return to caller
+    lwz        %r0, 12(%r1)
+    addi       %r1, %r1, 8
+    mtlr       %r0
     blr
 
 
@@ -681,7 +725,7 @@ __panic_checkpoint:
 #  the data area and length fields of the FSP response buffer are modified, the
 #  FFDC header area (except for the length) is left unmodified.
 #
-#  GPR0-31 will be restored before the function returns.
+#  GPR1-31 will be restored before the function returns.
 #
 #  Important: This function assumes that r3, r4, r5 and the MSR have been saved
 #  in small data area special variables before being called.  It also assumes
@@ -700,6 +744,11 @@ __panic_checkpoint:
 # updated to save new FFDC format
 .global_function __save_ffdc_regs
 __save_ffdc_regs:
+
+    # Store LR
+    stwu       %r1, -8(%r1)
+    mflr       %r0
+    stw        %r0, 12(%r1)
 
     # Start by writing out the predetermined length of the FFDC to the buffer.
     _liwa       %r3, FFDC_BUFFER_LENGTH_HI
@@ -954,16 +1003,19 @@ __save_ffdc_regs:
     cmpwi       %r4, FFDC_BUFFER_LENGTH
     blt         1b
 
-    # Restore GPR0-GPR31
-    _liwa       %r0, GPR1
-    lmw         %r1, 0(%r0)
-    _liwa       %r0, GPR0
-    lwz         %r0, 0(%r0)
+    # Restore GPR4-GPR31
+    #   - r0 and r3 are volatile
+    #   - r1 and r2 are intact
+    _liwa       %r3, GPR4
+    lmw         %r4, 0(%r3)
 
     # Ensure preceding memory access synchronization
     sync
 
     # Return to caller
+    lwz        %r0, 12(%r1)
+    addi       %r1, %r1, 8
+    mtlr       %r0
     blr
 
 
