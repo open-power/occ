@@ -980,16 +980,20 @@ void populate_pstate_to_sapphire_tbl()
 
     l_gpst_ptr = gpsm_gpst();
     const int8_t l_pmax = (int8_t) l_gpst_ptr->pmin + l_gpst_ptr->entries - 1;
-    G_sapphire_table.config.valid = 0x01; // default 0x01
-    G_sapphire_table.config.version = 0x02; // default 0x02
+    G_sapphire_table.config.valid = 0x01;           // default 0x01
+    G_sapphire_table.config.version = 0x02;         // default 0x02
     G_sapphire_table.config.throttle = NO_THROTTLE; // default 0x00
-    G_sapphire_table.config.pmin = gpst_pmin(&G_global_pstate_table)+1; //Per David Du, we must use pmin+1 to avoid gpsa hang
-    G_sapphire_table.config.pnominal = (int8_t)proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL]);
+    //Per David Du, we must use pmin+1 to avoid gpsa hang
+    G_sapphire_table.config.pmin = gpst_pmin(&G_global_pstate_table)+1;
+    G_sapphire_table.config.pnominal =
+        (int8_t)proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL]);
     G_sapphire_table.config.turbo = (int8_t) proc_freq2pstate(l_turboFreq);
     G_sapphire_table.config.ultraTurbo = (int8_t) proc_freq2pstate(l_ultraturboFreq);
 
     int8_t l_tempPmax = gpst_pmax(&G_global_pstate_table);
     const uint16_t l_entries = l_tempPmax - G_sapphire_table.config.pmin + 1;
+
+    // index to the last entry in the pstates table: pmax
     const uint8_t l_idx = l_gpst_ptr->entries-1;
 
     for (i = 0; i < l_entries; i++)
@@ -998,17 +1002,22 @@ void populate_pstate_to_sapphire_tbl()
         G_sapphire_table.data[i].flag = 0; // default 0x00
         if (i < l_gpst_ptr->entries)
         {
-            G_sapphire_table.data[i].evid_vdd = l_gpst_ptr->pstate[i].fields.evid_vdd;
-            G_sapphire_table.data[i].evid_vcs = l_gpst_ptr->pstate[i].fields.evid_vcs;
+            // The Pstate entries are passed from tmgt ordered from lowest
+            // pstate enery level (pmin) to highest pstate level (pmax = 0)
+            G_sapphire_table.data[i].evid_vdd =
+                l_gpst_ptr->pstate[l_idx - i].fields.evid_vdd;
+            G_sapphire_table.data[i].evid_vcs =
+                l_gpst_ptr->pstate[l_idx - i].fields.evid_vcs;
         }
         else
         {
             // leave the VDD & VCS Vids the same as the "Pstate Table Pmin"
-            G_sapphire_table.data[i].evid_vdd = l_gpst_ptr->pstate[l_idx].fields.evid_vdd;
-            G_sapphire_table.data[i].evid_vcs = l_gpst_ptr->pstate[l_idx].fields.evid_vcs;
+            G_sapphire_table.data[i].evid_vdd = l_gpst_ptr->pstate[0].fields.evid_vdd;
+            G_sapphire_table.data[i].evid_vcs = l_gpst_ptr->pstate[0].fields.evid_vcs;
         }
         // extrapolate the frequency
-        G_sapphire_table.data[i].freq_khz = l_gpst_ptr->pstate0_frequency_khz + (G_sapphire_table.data[i].pstate * l_gpst_ptr->frequency_step_khz);
+        G_sapphire_table.data[i].freq_khz = l_gpst_ptr->pstate0_frequency_khz +
+            (G_sapphire_table.data[i].pstate * l_gpst_ptr->frequency_step_khz);
     }
 
     uint8_t l_core = 0;
