@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_405/gpe/gpe_export.h $                                */
+/* $Source: src/gpe_export.h $                                            */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -77,5 +77,14 @@ typedef struct
   uint8_t temp;
 } dimm_sm_args_t;
 
+// Arguments for doing a SCOM from GPE0
+typedef struct ipc_scom_op
+{
+    uint32_t        addr;   // Register address
+    uint64_t        data;   // Data for read/write
+    uint32_t        size;   // Size of data buffer
+    uint8_t         read;   // Read (1) or write (0)
+    GpeErrorStruct  error;  // Error of SCOM operation
+} ipc_scom_op_t;
 
 #endif //_GPE_EXPORT_H

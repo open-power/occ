@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2015
+# Contributors Listed Below - COPYRIGHT 2015,2016
 # [+] International Business Machines Corp.
 #
 #
@@ -112,6 +112,14 @@ endif
 
 ifndef PPETRACEPP_DIR
 export PPETRACEPP_DIR = $(abspath ../ppe/tools/ppetracepp)
+endif
+
+ifndef BOOTLOADER_OBJDIR
+export BOOTLOADER_OBJDIR = $(BASE_OBJDIR)/occBootLoader
+endif
+
+ifndef IMGHDRSCRIPT
+export IMGHDRSCRIPT = $(BOOTLOADER_OBJDIR)/imageHdrScript
 endif
 
 OBJDIR = $(IMG_OBJDIR)$(SUB_OBJDIR)

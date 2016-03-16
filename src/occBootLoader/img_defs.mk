@@ -1,7 +1,7 @@
 # IBM_PROLOG_BEGIN_TAG
 # This is an automatically generated prolog.
 #
-# $Source: src/occ_405/img_defs.mk $
+# $Source: src/occBootLoader/img_defs.mk $
 #
 # OpenPOWER OnChipController Project
 #
@@ -66,7 +66,7 @@
 #                      you are not in Austin be sure to define CTEPATH in
 #                      your .profile.
 
-IMAGE_NAME := occ_405
+IMAGE_NAME := occBootLoader
 ifndef IMAGE_SRCDIR
 export IMAGE_SRCDIR = $(abspath .)
 endif
@@ -105,6 +105,14 @@ ifndef SSXLIB_SRCDIR
 export SSXLIB_SRCDIR = $(abspath ../lib/ssxlib)
 endif
 
+ifndef OCC405_SRCDIR
+export OCC405_SRCDIR = $(abspath ../occ_405)
+endif
+
+ifndef OCC405_INCLDIR
+export OCC405_INCLDIR = $(OCC405_SRCDIR)/incl
+endif
+
 ifndef GCC-TOOL-PREFIX
 GCC-TOOL-PREFIX = $(CTEPATH)/tools/ppcgcc/prod/bin/powerpc-linux-
 endif
@@ -130,7 +138,6 @@ TCPP    = $(PPETRACEPP_DIR)/ppetracepp $(GCC-TOOL-PREFIX)gcc
 THASH	= $(PPETRACEPP_DIR)/tracehash.pl
 CPP     = $(GCC-TOOL-PREFIX)cpp
 
-
 ifndef CTEPATH
 $(warning The CTEPATH variable is not defined; Defaulting to /afs/awd)
 CTEPATH = /afs/awd/projects/cte
@@ -138,12 +145,8 @@ endif
 
 OBJDIR = $(IMG_OBJDIR)$(SUB_OBJDIR)
 
-ifndef BOOTLOADER_OBJDIR
-export BOOTLOADER_OBJDIR = $(BASE_OBJDIR)/occBootLoader
-endif
-
-ifndef IMGHDRSCRIPT
-export IMGHDRSCRIPT = $(BOOTLOADER_OBJDIR)/imageHdrScript
+ifndef GCC-O-LEVEL
+GCC-O-LEVEL = -Os
 endif
 
 ifeq "$(SSX_TIMER_SUPPORT)" ""
@@ -157,7 +160,7 @@ endif
 # TODO: Enable this once we get MMU support working in simics
 # Currently, turning on MMU support causes an SSX panic (in Simics)
 ifeq "$(PPC405_MMU_SUPPORT)" ""
-PPC405_MMU_SUPPORT = 1
+PPC405_MMU_SUPPORT = 0
 endif
 
 ifeq "$(OCCHW_ASYNC_SUPPORT)" ""
@@ -183,15 +186,13 @@ GCC-O-LEVEL = -Os
 endif
 
 ifdef TRAC_TO_SIMICS
-GCC-DEFS += -DTRAC_TO_SIMICS=$(TRAC_TO_SIMICS)
-else
-GCC-DEFS += -DTRAC_TO_SIMICS=0
+GCC-DEFS += -DTRAC_TO_SIMICS=1
 endif
 
-ifdef SIMICS_ENVIRONMENT
-GCC-DEFS += -DSIMICS_ENVIRONMENT=$(SIMICS_ENVIRONMENT)
+ifdef STRAIGHT_TO_OBS_HACK
+GCC-DEFS += -DSTRAIGHT_TO_OBS_HACK=$(STRAIGHT_TO_OBS_HACK)
 else
-GCC-DEFS += -DSIMICS_ENVIRONMENT=1
+GCC-DEFS += -DSTRAIGHT_TO_OBS_HACK=1
 endif
 
 GCC-DEFS += -DIMAGE_NAME=$(IMAGE_NAME)
@@ -207,29 +208,12 @@ DEFS += $(GCC-DEFS) -DCONFIGURE_PTS_SLW=0
 
 ############################################################################
 
-APP_INCLUDES =  -I$(IMAGE_SRCDIR)/rtls \
-                -I$(IMAGE_SRCDIR)/thread \
-                -I$(IMAGE_SRCDIR)/incl \
-                -I$(IMAGE_SRCDIR)/sensor \
-                -I$(IMAGE_SRCDIR)/errl \
-                -I$(IMAGE_SRCDIR)/trac \
-                -I$(IMAGE_SRCDIR)/pss \
-                -I$(IMAGE_SRCDIR)/timer \
-                -I$(IMAGE_SRCDIR)/proc \
-                -I$(IMAGE_SRCDIR)/cmdh \
-                -I$(IMAGE_SRCDIR)/dcom \
-                -I$(IMAGE_SRCDIR)/amec \
-                -I$(IMAGE_SRCDIR)/cent \
-                -I$(IMAGE_SRCDIR)/firdata \
-                -I$(IMAGE_SRCDIR)/dimm \
-                -I$(IMAGE_SRCDIR)/lock \
-                -I$(IMAGE_SRCDIR)/../occ_gpe0 \
-
-INCLUDES += $(IMG_INCLUDES) $(GLOBAL_INCLUDES) $(APP_INCLUDES) \
+INCLUDES += $(IMG_INCLUDES) $(GLOBAL_INCLUDES) -I$(OCC405_INCLDIR)\
 	-I$(SSX_SRCDIR)/ssx -I$(SSX_SRCDIR)/ppc32 -I$(SSX_SRCDIR)/ppc405 \
 	-I$(SSX_SRCDIR)/trace -I$(SSX_SRCDIR)/occhw -I$(SSX_SRCDIR)/../lib/common \
 	-I$(SSX_SRCDIR)/../include -I$(SSX_SRCDIR)/../include/registers \
-	-I$(OCCLIB_SRCDIR) -I$(COMMONLIB_SRCDIR) -I$(SSXLIB_SRCDIR) -I$(PPC405LIB_SRCDIR)
+	-I$(OCCLIB_SRCDIR) -I$(COMMONLIB_SRCDIR) -I$(SSXLIB_SRCDIR) -I$(PPC405LIB_SRCDIR) \
+    -I$(OCC405_SRCDIR)
 
 PIPE-CFLAGS = -pipe -Wa,-m405
 
@@ -257,7 +241,6 @@ $(OBJDIR)/%.o: %.c
 %.o: %.S
 $(OBJDIR)/%.o: %.S
 	$(TCPP) $(CFLAGS) $(DEFS) -o $@ $<
-
 
 # Other useful targets
 #

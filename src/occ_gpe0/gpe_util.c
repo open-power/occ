@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -27,6 +27,7 @@
 #include "ppe42_scom.h"
 #include "pss_constants.h"
 #include "gpe_util.h"
+#include "gpe_export.h"
 #define SPIPSS_P2S_ONGOING_MASK 0x8000000000000000
 
 /*

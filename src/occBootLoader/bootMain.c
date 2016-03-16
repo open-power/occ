@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* COPYRIGHT International Business Machines Corp. 2011,2014              */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -27,7 +27,7 @@
 // Includes
 //*************************************************************************
 #include <bootMain.h>           // boot loader defines
-#include <pgp_common.h>         // Nest frequency constant
+#include <occhw_common.h>         // Nest frequency constant
 #include <stddef.h>             // offsetof
 
 //*************************************************************************
@@ -62,8 +62,10 @@ IMAGE_HEADER(G_bootImageHdr,__boot_low_level_init,BOOT_LOADER_ID,
 //*************************************************************************
 //Forward declaration
 uint32_t boot_test_sram();
-uint32_t boot_load_image(const imageHdr_t *i_hdrAddr);
-uint32_t calChecksum(const uint32_t i_startAddr ,const uint32_t i_sz);
+uint32_t boot_load_405(const imageHdr_t *i_hdrAddr);
+uint32_t boot_load_gpe0(uint32_t i_startAddr, uint32_t i_size, uint8_t * i_srcPtr);
+uint32_t boot_load_gpe1(uint32_t i_startAddr, uint32_t i_size, uint8_t * i_srcPtr);
+uint32_t calChecksum(const uint32_t i_startAddr ,const uint32_t i_sz, bool i_gpeFile);
 
 //*************************************************************************
 // Functions
@@ -80,7 +82,14 @@ uint32_t calChecksum(const uint32_t i_startAddr ,const uint32_t i_sz);
 void main()
 {
     uint32_t l_rc = 0;
+    uint32_t l_gpe0_start_addr = 0;
+    uint32_t l_gpe1_start_addr = 0;
+    uint32_t l_gpe_size = 0;
+    uint8_t* l_gpe0_src_ptr = 0;
+    uint8_t* l_gpe1_src_ptr = 0;
+
     // set checkpoint to boot test SRAM
+
     WRITE_TO_SPRG0(BOOT_TEST_SRAM_CHKPOINT);
 
 #ifndef VPO
@@ -104,7 +113,7 @@ void main()
     WRITE_TO_SPRG0(BOOT_LOAD_IMAGE_CHKPOINT);
 
     // Load main application image to SRAM including main application header
-    l_rc = boot_load_image(l_hdrPtr);
+    l_rc = boot_load_405(l_hdrPtr);
 
     // If failed to load image, write failed return code to SPRG1 and halt
     if(0 != l_rc)
@@ -112,15 +121,71 @@ void main()
         WRITE_TO_SPRG1_AND_HALT(l_rc);
     }
 
-    // set checkpoint to calculate checksum
-    WRITE_TO_SPRG0(BOOT_CALCULTE_CHKSUM_CHKPOINT);
+    // set checkpoint to load gpe0 into SRAM
+    WRITE_TO_SPRG0(BOOT_LOAD_GPE0_CHKPOINT);
 
-    // calculate checksum for the SRAM main application image
+    // Load GPE0
+    l_gpe0_start_addr = (uint32_t) (((uint32_t) l_hdrPtr) + l_hdrPtr->image_size);
+    l_gpe0_src_ptr = (uint8_t*) (((uint32_t)l_hdrPtr) + l_hdrPtr->image_size);
+
+    l_rc = boot_load_gpe0(l_gpe0_start_addr, l_hdrPtr->gpe0_size, l_gpe0_src_ptr);
+
+    if(0 != l_rc)
+    {
+        WRITE_TO_SPRG1_AND_HALT(l_rc);
+    }
+
+    WRITE_TO_SPRG0(BOOT_LOAD_GPE1_CHKPOINT);
+
+    // Load GPE1
+    l_gpe1_start_addr = l_gpe0_start_addr + l_hdrPtr->gpe0_size;
+    l_gpe1_src_ptr = (uint8_t*) (((uint32_t)l_gpe0_src_ptr) + l_hdrPtr->gpe0_size);
+
+    l_rc = boot_load_gpe1(l_gpe1_start_addr, l_hdrPtr->gpe1_size, l_gpe1_src_ptr);
+
+    if(0 != l_rc)
+    {
+        WRITE_TO_SPRG1_AND_HALT(l_rc);
+    }
+
+    //==========================================
+    // Calculate checksums and verify they match
+    //==========================================
+
+    // set checkpoint to calculate checksum
+    WRITE_TO_SPRG0(BOOT_CALCULTE_CHKSUM_CHKPOINT_405);
+
+    // Calculate checksum for 405 SRAM
     uint32_t l_checksum = calChecksum(l_hdrPtr->start_addr,
-                                      l_hdrPtr->image_size);
+                                      l_hdrPtr->image_size,
+                                      false);
 
     // If checksum does not match, store bad checksum into SPRG1 and halt
     if(l_checksum != l_hdrPtr->checksum)
+    {
+        WRITE_TO_SPRG1_AND_HALT(l_checksum);
+    }
+    WRITE_TO_SPRG0(BOOT_CALCULTE_CHKSUM_CHKPOINT_GPE0);
+
+    // Calculate checksum for GPE0 SRAM
+    l_checksum = calChecksum(SRAM_START_ADDRESS_GPE0,
+                             l_hdrPtr->gpe0_size,
+                             true);
+
+    // If checksum does not match, store bad checksum into SPRG1 and halt
+    if(l_checksum != l_hdrPtr->gpe0_checksum)
+    {
+        WRITE_TO_SPRG1_AND_HALT(l_checksum);
+    }
+    WRITE_TO_SPRG0(BOOT_CALCULTE_CHKSUM_CHKPOINT_GPE1);
+
+    // Calculate checksum for GPE1 SRAM
+    l_checksum = calChecksum(SRAM_START_ADDRESS_GPE1,
+                             l_hdrPtr->gpe1_size,
+                             true);
+
+    // If checksum does not match, store bad checksum into SPRG1 and halt
+    if(l_checksum != l_hdrPtr->gpe1_checksum)
     {
         WRITE_TO_SPRG1_AND_HALT(l_checksum);
     }
@@ -151,7 +216,7 @@ void main()
 //               checksum
 //
 // End Function Specification
-uint32_t calChecksum(const uint32_t i_startAddr, const uint32_t i_sz)
+uint32_t calChecksum(const uint32_t i_startAddr, const uint32_t i_sz, bool i_gpeFile)
 {
     uint32_t l_checksum = 0;
     uint32_t l_counter = 0;
@@ -159,12 +224,28 @@ uint32_t calChecksum(const uint32_t i_startAddr, const uint32_t i_sz)
 
     while(l_counter < i_sz)
     {
-        l_checksum += (*(l_srcPtr + l_counter));
-        l_counter = l_counter + 1;
-        if(l_counter == (uint32_t)(offsetof(imageHdr_t,checksum)))
+        if( (l_counter == (uint32_t)(offsetof(imageHdr_t,checksum))) &&
+            !i_gpeFile )
         {
             l_counter = ((uint32_t)(offsetof(imageHdr_t,checksum)) +
                         sizeof(G_bootImageHdr.checksum));
+        }
+        else if ( (l_counter == (uint32_t)(offsetof(imageHdr_t,gpe0_checksum))) &&
+                  !i_gpeFile )
+        {
+            l_counter = ((uint32_t)(offsetof(imageHdr_t,gpe0_checksum)) +
+                        sizeof(G_bootImageHdr.gpe0_checksum));
+        }
+        else if ( (l_counter == (uint32_t)(offsetof(imageHdr_t,gpe1_checksum))) &&
+                  !i_gpeFile )
+        {
+            l_counter = ((uint32_t)(offsetof(imageHdr_t,gpe1_checksum)) +
+                        sizeof(G_bootImageHdr.gpe1_checksum));
+        }
+        else
+        {
+            l_checksum += (*(l_srcPtr + l_counter));
+            l_counter = l_counter + 1;
         }
     }
 
@@ -175,27 +256,27 @@ uint32_t calChecksum(const uint32_t i_startAddr, const uint32_t i_sz)
 //
 //  Name: boot_load_image
 //
-//  Description: This function copies main application image from main memory
-//               to SRAM
+//  Description: This function copies main application (405)
+//               image from main memory to SRAM
 //
 // End Function Specification
-uint32_t boot_load_image(const imageHdr_t *i_hdrAddr)
+uint32_t boot_load_405(const imageHdr_t* i_hdrAddr)
 {
     uint32_t l_rc = 0x0;
-    uint32_t l_mainAppDestRang = (i_hdrAddr->start_addr) +
+    uint32_t l_mainAppDestRange = (i_hdrAddr->start_addr) +
                                  (i_hdrAddr->image_size-1);
 
     // Make sure main application destination rang address falls within SRAM
     // range.
-    if((l_mainAppDestRang < SRAM_START_ADDRESS) ||
-       (l_mainAppDestRang > SRAM_END_ADDRESS))
+    if((l_mainAppDestRange < SRAM_START_ADDRESS_405) ||
+       (l_mainAppDestRange > SRAM_END_ADDRESS_405))
     {
-        // Return destination rang address if address is out of range and
+        // Return destination range address if address is out of range and
         // address is not zero. If address is zero, then return eye-catcher
         // address.
-        if(l_mainAppDestRang != 0)
+        if(l_mainAppDestRange != 0)
         {
-            l_rc = l_mainAppDestRang;
+            l_rc = l_mainAppDestRange;
         }
         else
         {
@@ -203,8 +284,8 @@ uint32_t boot_load_image(const imageHdr_t *i_hdrAddr)
         }
     }
     // Make sure main application start address falls within SRAM range
-    else if((i_hdrAddr->start_addr < SRAM_START_ADDRESS) ||
-            (i_hdrAddr->start_addr > SRAM_END_ADDRESS))
+    else if((i_hdrAddr->start_addr < SRAM_START_ADDRESS_405) ||
+            (i_hdrAddr->start_addr > SRAM_END_ADDRESS_405))
     {
         // Return start address if address is out of range and
         // address is not zero. If address is zero, then return eye-catcher
@@ -222,9 +303,7 @@ uint32_t boot_load_image(const imageHdr_t *i_hdrAddr)
     {
         // At this point we know that main application destination address
         // is within SRAM range.
-        // Now copy main application header specified
-        // size of data from main memory to main application header specified
-        // start address.
+        // Now copy main application (405) from main memory to SRAM.
         uint8_t *l_srcPtr = (uint8_t *)(i_hdrAddr);
         uint8_t *l_destPtr = (uint8_t *)(i_hdrAddr->start_addr);
         uint32_t l_numWords = i_hdrAddr->image_size;
@@ -234,13 +313,93 @@ uint32_t boot_load_image(const imageHdr_t *i_hdrAddr)
             *l_destPtr = *l_srcPtr;
             l_destPtr++;
             l_srcPtr++;
-            l_numWords = l_numWords - 1;
+            l_numWords--;
         }
     }
 
     return l_rc;
 }
 
+uint32_t boot_load_gpe0(uint32_t i_startAddr, uint32_t i_size, uint8_t * i_srcPtr)
+{
+    uint8_t* l_srcPtr = i_srcPtr;
+    uint32_t l_rc = 0x0;
+    uint32_t l_gpe0DestRange = SRAM_START_ADDRESS_GPE0 + i_size - 1;
+
+    // Make sure GPE0 destination range address falls within its SRAM range.
+    if(l_gpe0DestRange > SRAM_END_ADDRESS_GPE0)
+    {
+        // Return destination range address if address is out of range and
+        // address is not zero. If address is zero, then return eye-catcher
+        // address.
+        if(l_gpe0DestRange != 0)
+        {
+            l_rc = l_gpe0DestRange;
+        }
+        else
+        {
+            l_rc = EYE_CATCHER_ADDRESS;
+        }
+    }
+    else
+    {
+        // At this point we know that the destination address of GPE0
+        // is within SRAM range. Now copy GPE0 from main memory to SRAM.
+        uint8_t *l_destPtr = (uint8_t *)(SRAM_START_ADDRESS_GPE0);
+        uint32_t l_numWords = i_size;
+
+        while(l_numWords != 0)
+        {
+            *l_destPtr = *l_srcPtr;
+            l_destPtr++;
+            l_srcPtr++;
+            l_numWords--;
+        }
+    }
+
+    return l_rc;
+}
+
+
+uint32_t boot_load_gpe1(uint32_t i_startAddr, uint32_t i_size, uint8_t * i_srcPtr)
+{
+    uint8_t* l_srcPtr = i_srcPtr;
+    uint32_t l_rc = 0x0;
+    uint32_t l_gpe1DestRange = SRAM_START_ADDRESS_GPE1 + i_size - 1;
+
+    // Make sure GPE1 destination range address falls within its SRAM range.
+    if (l_gpe1DestRange > SRAM_END_ADDRESS_GPE1)
+    {
+        // Return destination range address if address is out of range and
+        // address is not zero. If address is zero, then return eye-catcher
+        // address.
+        if(l_gpe1DestRange != 0)
+        {
+            l_rc = l_gpe1DestRange;
+        }
+        else
+        {
+            l_rc = EYE_CATCHER_ADDRESS;
+        }
+    }
+    else
+    {
+        // At this point we know that the destination address of GPE1
+        // is within SRAM range. Now copy GPE1 from main memory to SRAM.
+        uint8_t *l_destPtr = (uint8_t *)(SRAM_START_ADDRESS_GPE1);
+        uint32_t l_numWords = i_size;
+
+        while(l_numWords != 0)
+        {
+            *l_destPtr = *l_srcPtr;
+            l_destPtr++;
+            l_srcPtr++;
+            l_numWords--;
+        }
+    }
+
+    return l_rc;
+}
 
 // Function Specification
 //

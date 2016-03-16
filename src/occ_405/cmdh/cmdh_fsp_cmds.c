@@ -809,7 +809,7 @@ void cmdh_dbug_peek (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
 // Needed because otherwise we get warnings about
 // unused variables when building for Simics
-#if !SIMICS_ENVIRONMENT
+#if PPC405_MMU_SUPPORT
     static Ppc405MmuMap       L_mmuMapHomer;
     static Ppc405MmuMap       L_mmuMapCommon;
 #endif
@@ -843,7 +843,7 @@ void cmdh_dbug_peek (const cmdh_fsp_cmd_t * i_cmd_ptr,
             dcache_flush( (void *) l_addr, l_len );
             l_len = 0;
             break;
-#if !SIMICS_ENVIRONMENT
+#if PPC405_MMU_SUPPORT
         case 0x05:   // MMU Map Mainstore
             // Map mainstore to oci space so that we can peek at it
 

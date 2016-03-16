@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/incl/common_types.h $                                 */
+/* $Source: src/occ_405/incl/common_types.h $                             */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -27,8 +27,6 @@
 #define _COMMON_TYPES_H
 
 #include <stdint.h>
-#include <core_data.h>
-#include <proc_shared.h>
 #ifdef USE_SSX_APP_CFG_H
 #include <ssx_app_cfg.h>
 #endif
@@ -71,18 +69,27 @@ typedef enum
 
 #define SRAM_REPAIR_RESERVE_SZ  64
 #define IMAGE_ID_STR_SZ         16
-#define RESERVED_SZ             14
+#define RESERVED_SZ             16
 #define TRAP_INST               0x7FE00004
 #define ID_NUM_INVALID          0xFFFF
 
 #define SRAM_HEADER_HACK   0x48000042
 #ifndef __ASSEMBLER__
 
-// Structure for the common image header
+// Structure for the common image header (total size is 162 bytes).
+// We use the first interrupt vector to store the image header on
+// the 405 because it is unused. The max size here is 256 bytes.
+//
+// The first interrupt vector within the PPE42 is actually used,
+// so we are unable to use image headers on the GPE binaries directly.
+// We can mitigate that here by storing information about the GPEs
+// into the bootloader or 405 image headers.
 struct image_header
 {
     // Overload sram_repair_reserved for magic applet number
     // Note: unit64_t's don't compile when used w/IMAGE_HEADER macro.
+
+    // TODO: Is this even needed since we've removed applets?
     union
     {
         struct
@@ -116,8 +123,12 @@ struct image_header
     uint32_t boot_writeable_size;       // boot writeable size
     uint32_t zero_data_addr;            // zero data address
     uint32_t zero_data_size;            // zero data size
+    uint32_t gpe0_size;                 // size of GPE0 binary
+    uint32_t gpe1_size;                 // size of GPE1 binary
     uint32_t ep_addr;                   // entry point to the image
     uint32_t checksum;                  // checksum of the image including header
+    uint32_t gpe0_checksum;             // checksum of GPE0 image
+    uint32_t gpe1_checksum;             // checksum of GPE1 image
     uint32_t version;                   // image version
     char image_id_str[IMAGE_ID_STR_SZ]; // image id string
     uint16_t aplt_id;                   // type: enum OCC_APLT
@@ -125,15 +136,6 @@ struct image_header
 } __attribute__ ((__packed__));
 
 typedef struct image_header imageHdr_t;
-
-typedef struct ipc_scom_op
-{
-    uint32_t        addr;   // Register address
-    uint64_t        data;   // Data for read/write
-    uint32_t        size;   // Size of data buffer
-    uint8_t         read;   // Read (1) or write (0)
-    GpeErrorStruct  error;  // Error of SCOM operation
-} ipc_scom_op_t;
 
 extern uint32_t __READ_ONLY_DATA_LEN__;
 extern uint32_t __WRITEABLE_DATA_ADDR__;
@@ -177,8 +179,12 @@ const volatile imageHdr_t nameStr  __attribute__((section("imageHeader")))= \
     (uint32_t)&__WRITEABLE_DATA_LEN__,  /* boot_writeable_size */ \
     0,                                  /* zero_data_addr (currently unused) */ \
     0,                                  /* zero data_size (currently unused) */ \
+    0,                                  /* GPE 0 Size (calculated later by imageHdrScript) */ \
+    0,                                  /* GPE 1 Size (calculated later by imageHdrScript) */ \
     (uint32_t)&epAddr,                  /* ep_addr */ \
     0,                                  /* checksum (calculated later by imsageHdrScript) */ \
+    0,                                  /* GPE 0 checksum (calculated later by imageHdrScript) */ \
+    0,                                  /* GPE 1 checksum (calculated later by imageHdrScript) */ \
     0,                                  /* version (filled in later by imageHdrScript) */ \
     IdStr,                              /* image_id_str */ \
     (uint16_t)IdNum,                    /* aplt_id */ \

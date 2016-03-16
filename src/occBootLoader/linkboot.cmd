@@ -1,44 +1,39 @@
-// IBM_PROLOG_BEGIN_TAG
-// This is an automatically generated prolog.
-//
-// $Source: src/occBootLoader/linkboot.cmd$
-//
-// OpenPOWER OnChipController Project
-//
-// Contributors Listed Below - COPYRIGHT 2011,2014
-// [+] Google Inc.
-// [+] International Business Machines Corp.
-//
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-// implied. See the License for the specific language governing
-// permissions and limitations under the License.
-//
-// IBM_PROLOG_END_TAG
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occBootLoader/linkboot.cmd $                              */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 
 // Linker script for the OCC Firmware boot loader.
 //
 // The image is 4 byte aligned.
 
-#ifdef OCCMK
-INCLUDE occLinkInputFile
-#endif
-
-#define BOOT_IMAGE_START_ADDR   0x00000000
-#define BOOT_VECTORS            0x00000000
+#define BOOT_IMAGE_START_ADDR   0x80000000
+#define BOOT_VECTORS            0x80000000
 #define BOOT_VECTORS_SIZE       0x00000740
 #define BOOT_BUILDNAME_ADDR     (BOOT_IMAGE_START_ADDR + BOOT_VECTORS_SIZE)
-#define WRITE_DATA_SEC_ADDR     0x80000000
+#define WRITE_DATA_SEC_ADDR     0x00000000
 #define BYTE_ALIGN 128
-#define pack_0000 bootMain.o(imageHeader)
+#define pack_0000 *(imageHeader)
 
 MEMORY
 {
@@ -64,19 +59,19 @@ SECTIONS
         bootInit.o(.vectors_0000)
         pack_0000
         . = ___vectors + 0x0100;
-        bootInit.o(.vectors_0100)
+        *(.vectors_0100)
         . = ___vectors + 0x0200;
-        bootInit.o(.vectors_0200)
+        *(.vectors_0200)
         . = ___vectors + 0x0300;
-        bootInit.o(.vectors_0300)
+        *(.vectors_0300)
         . = ___vectors + 0x0400;
-        bootInit.o(.vectors_0400)
+        *(.vectors_0400)
         . = ___vectors + 0x0500;
-        bootInit.o(.vectors_0500)
+        *(.vectors_0500)
         . = ___vectors + 0x0600;
-        bootInit.o(.vectors_0600)
+        *(.vectors_0600)
         . = ___vectors + 0x0700;
-        bootInit.o(.vectors_0700)
+        *(.vectors_0700)
         }
 
     ////////////////////////////////

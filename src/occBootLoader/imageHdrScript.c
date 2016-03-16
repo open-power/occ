@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* COPYRIGHT International Business Machines Corp. 2011,2014              */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -23,9 +23,9 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-//*************************************************************************
+//*************************************************************************/
 // Includes
-//*************************************************************************
+//*************************************************************************/
 #include <sys/types.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,18 +33,20 @@
 #include <stddef.h>
 #include <string.h>
 
-//*************************************************************************
+//*************************************************************************/
 // Externs
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Macros
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Defines/Enums
-//*************************************************************************
+//*************************************************************************/
 #define CHECKSUM_FIELD_OFFSET   offsetof(imageHdr_t, checksum)
+#define CHECKSUM_GPE0_FIELD_OFFSET   offsetof(imageHdr_t, gpe0_checksum)
+#define CHECKSUM_GPE1_FIELD_OFFSET   offsetof(imageHdr_t, gpe1_checksum)
 #define CHECKSUM_FIELD_LEN      4
 #define IMAGE_SZ_FIELD_OFFSET   offsetof(imageHdr_t, image_size)
 #define IMAGE_SZ_FIELD_LEN      4
@@ -57,34 +59,38 @@
 #define VERSION_OFFSET          offsetof(imageHdr_t, version)
 #define VERSION_LEN             4
 #define ID_STR_OFFSET           offsetof(imageHdr_t, image_id_str)
+#define GPE0_SZ_FIELD_OFFSET    offsetof(imageHdr_t, gpe0_size)
+#define GPE1_SZ_FIELD_OFFSET    offsetof(imageHdr_t, gpe1_size)
 #define ID_STR_LEN              IMAGE_ID_STR_SZ
 #define ADDRESS_MASK            0x03FFFFFC
-#define BRANCH_MASK             0x48000002
+#define ABS_BRANCH_MASK         0x48000002
+#define REL_BRANCH_MASK         0x48000000
+#define BRANCH_INSTR_OFFSET     0x40
 #define DUMP_HDR_STR            "dumpHdr"
 #define COMBINE_IMAGE_STR       "combineImage"
 #define FILE_TO_WRITE_ODE       "/obj/ppc/occc/405/image.bin"
-#define FILE_TO_WRITE_GNU       "image.bin"
+#define FILE_TO_WRITE_GNU       "/image.bin"
 #define DISPLAY_SIZE            "displaySize"
 #define READELF_CMD             "readelf -S "
 #define PIPE_CMD                " > elfdata "
 #define ELF_FILE                "elfdata"
 #define ELF_FILE_REMOVE_CMD     "rm elfdata"
 
-//*************************************************************************
+//*************************************************************************/
 // Structures
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Globals
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Function Prototypes
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Functions
-//*************************************************************************
+//*************************************************************************/
 
 // Function Specification
 //
@@ -234,9 +240,8 @@ int displaySize(char * i_file)
 // Description: Append input image to image.bin
 //
 // End Function Specification
-int combineImage(char * i_file1)
+int combineImage(FILE * i_file1)
 {
-    FILE * l_file1 = NULL;
     FILE * l_file2 = NULL;
     FILE * l_file = NULL;
     int l_rc = SUCCESS_RC;
@@ -245,7 +250,7 @@ int combineImage(char * i_file1)
 
     do
     {
-        char * l_sbPath = getenv("OCCROOT");
+        char * l_sbPath = getenv("BASE_OBJDIR");
         if( l_sbPath != NULL)
         {
             l_size = strlen(l_sbPath);
@@ -262,7 +267,7 @@ int combineImage(char * i_file1)
             }
             else
             {
-                printf("Failed to get either SANDBOXBASE or OCCROOT environment variables\n");
+                printf("Failed to get either SANDBOXBASE or BASE_OBJDIR environment variables\n");
                 l_rc = FAILURE_RC;
                 break;
             }
@@ -281,58 +286,46 @@ int combineImage(char * i_file1)
         l_fileToWrite[l_size] = '\0';
         printf("Writing to file: %s\n", l_fileToWrite);
 
-        // Open the file1
-        l_file1 = fopen(i_file1, "r");
-
-        if( NULL == l_file1)
-        {
-            printf("Failed to open file %s for reading\n",i_file1);
-            l_rc = FAILURE_RC;
-            break;
-        }
-
         // Open the destination file
         l_file = fopen(l_fileToWrite, "a");
 
         if( NULL == l_file)
         {
-            printf("Failed to open file %s for reading\n",l_fileToWrite);
+            printf("Failed to open file %s for writing\n",l_fileToWrite);
             l_rc = FAILURE_RC;
             break;
         }
 
         // get size of file1
-        l_rc = fseek(l_file1, 0, SEEK_END);
+        l_rc = fseek(i_file1, 0, SEEK_END);
 
         if( l_rc != 0)
         {
-            printf("Failed to seek end of the file: %s,rc: %d\n",
-                   i_file1,l_rc);
+            printf("Failed to seek end of the input file, rc: %d\n",l_rc);
             l_rc = FAILURE_RC;
             break;
         }
 
-        unsigned long int l_sz1 = ftell(l_file1);
+        unsigned long int l_sz1 = ftell(i_file1);
 
         //Now seek back to the beginning
-        l_rc = fseek(l_file1, 0, SEEK_SET);
+        l_rc = fseek(i_file1, 0, SEEK_SET);
 
         if( l_rc != 0)
         {
-            printf("Failed to seek start after getting size of the file: %s, "
-                   "rc: %d\n",i_file1,l_rc);
+            printf("Failed to seek start after getting size of the file, rc: %d\n",l_rc);
             l_rc = FAILURE_RC;
             break;
         }
 
         // Read full file into buffer
         unsigned int l_data[l_sz1];
-        size_t l_readSz = fread(&l_data[0], 1, l_sz1, l_file1);
+        size_t l_readSz = fread(&l_data[0], 1, l_sz1, i_file1);
 
         if( l_readSz != l_sz1)
         {
-            printf("Failed to read file: %s,readSz: 0x%x,l_sz: 0x%x\n",
-                   i_file1,l_readSz,l_sz1);
+            printf("Failed to read input file, readSz: 0x%x,l_sz: 0x%x\n",
+                   l_readSz,l_sz1);
             l_rc = -1;
             break;
         }
@@ -348,17 +341,6 @@ int combineImage(char * i_file1)
         }
 
     }while(0);
-
-    // Close file1 if it was open
-    if( l_file1 != NULL)
-    {
-        int l_rc2 = fclose( l_file1);
-
-        if( l_rc2 != 0)
-        {
-            printf("Failed to close file: %s,rc: %d\n", i_file1,l_rc2);
-        }
-    }
 
     // Close destination file if it was open
     if( l_file != NULL)
@@ -491,19 +473,16 @@ int dumpHdr(char * i_fileStr)
 // Description: calculate image checksum
 //
 // End Function Specification
-unsigned long int calImageChecksum(FILE * i_filePtr)
+unsigned long int calImageChecksum(FILE * i_filePtr, bool i_gpeFile)
 {
     unsigned long int l_checksum = 0;
-
     unsigned long int l_counter = 0;
-    int l_val = fgetc(i_filePtr);
+    int l_val = 0;
 
-    while( l_val != EOF)
+    while(1)
     {
-        l_checksum += l_val;
-        l_counter += 1;
         // Skip checksum field
-        if( l_counter == CHECKSUM_FIELD_OFFSET)
+        if( (l_counter == CHECKSUM_FIELD_OFFSET) && !i_gpeFile )
         {
             while( l_counter != (CHECKSUM_FIELD_OFFSET + CHECKSUM_FIELD_LEN))
             {
@@ -511,7 +490,30 @@ unsigned long int calImageChecksum(FILE * i_filePtr)
                 l_val = fgetc(i_filePtr);
             }
         }
-        l_val = fgetc(i_filePtr);
+        else if( (l_counter == CHECKSUM_GPE0_FIELD_OFFSET) && !i_gpeFile )
+        {
+            while( l_counter != (CHECKSUM_GPE0_FIELD_OFFSET + CHECKSUM_FIELD_LEN))
+            {
+                l_counter++;
+                l_val = fgetc(i_filePtr);
+            }
+        }
+        else if( (l_counter == CHECKSUM_GPE1_FIELD_OFFSET) && !i_gpeFile )
+        {
+            while( l_counter != (CHECKSUM_GPE1_FIELD_OFFSET + CHECKSUM_FIELD_LEN))
+            {
+                l_counter++;
+                l_val = fgetc(i_filePtr);
+            }
+        }
+        else
+        {
+            l_val = fgetc(i_filePtr);
+            if (l_val == EOF) break;
+
+            l_checksum += l_val;
+            l_counter ++;
+        }
     }
 
     fprintf(stdout,"Checksum: 0x%08X\t\tSize: 0x%08X\n", l_checksum, l_counter);
@@ -601,8 +603,36 @@ void printHelp()
 // End Function Specification
 int main(int argc, char* argv[])
 {
-    FILE * l_filePtr = NULL;
+    // NOTE: In order for this to work properly, the arguments must be in this order:
+    // argv[0] = (implicitly) name of this executable
+    // argv[1] = bootloader binary file
+    // argv[2] = 405 binary file
+    // argv[3] = gpe0 binary file
+    // argv[4] = gpe1 binary file
+    // argv[5] = bootloader version
+    // argv[6] = 405 version
+    // argv[7] = (optional) bootloader ID
+    // argv[8] = (optional) 405 ID
+
+#define ARG_BOOTLOADER_BIN  argv[1]
+#define ARG_405_BIN         argv[2]
+#define ARG_GPE0_BIN        argv[3]
+#define ARG_GPE1_BIN        argv[4]
+#define ARG_BOOTLOADER_VERS argv[5]
+#define ARG_405_VERS        argv[6]
+#define ARG_BOOTLOADER_ID   argv[7]
+#define ARG_405_ID          argv[8]
+
+    FILE * l_bootLdrPtr = NULL;
+    FILE * l_file405Ptr = NULL;
+    FILE * l_fileGPE0Ptr = NULL;
+    FILE * l_fileGPE1Ptr = NULL;
     int l_rc = SUCCESS_RC;
+
+    unsigned long int l_405_sz  = 0;
+    unsigned long int l_gpe0_sz = 0;
+    unsigned long int l_gpe1_sz = 0;
+    unsigned long int l_bootLdr_sz = 0;
 
     do
     {
@@ -613,6 +643,9 @@ int main(int argc, char* argv[])
             break;
         }
 
+        //=============================================
+        // Dump the image header for the specified file
+        //=============================================
         if( (strcmp(argv[2],DUMP_HDR_STR)== 0))
         {
             printf("Dump Image Header\n");
@@ -627,19 +660,9 @@ int main(int argc, char* argv[])
             break;
         }
 
-        if( (argc > 2) && (strcmp(argv[2],COMBINE_IMAGE_STR)== 0))
-        {
-            printf("Combining image from file: %s\n",argv[1]);
-            l_rc = combineImage(argv[1]);
-
-            if( l_rc != 0)
-            {
-                printf("Problem combining image: rc: %d\n",l_rc);
-                l_rc = FAILURE_RC;
-            }
-            break;
-        }
-
+        //=======================================================
+        // Dump the imagesize of the image for the specified file
+        //=======================================================
         if( (argc > 2) && (strcmp(argv[2],DISPLAY_SIZE)== 0))
         {
             l_rc = displaySize(argv[1]);
@@ -653,184 +676,526 @@ int main(int argc, char* argv[])
         }
 
         // At this point we know there is at least 1 argument to the program
-
-        // Open the file
-        l_filePtr = fopen(argv[1], "r+");
-
-        if( NULL == l_filePtr)
+        // but we need 6: path to bootloader, 405, gpe0, gpe1, and the versions.
+        if( argc < 7 )
         {
-            printf("Failed to open file %s for reading and writing\n",argv[1]);
+            printf("Need the path to the bootloader, 405, gpe0, gpe1, and versions of 405 and bootloader\n");
             l_rc = FAILURE_RC;
             break;
         }
-        // file is open now
-        // get the file size
-        l_rc = fseek(l_filePtr, 0, SEEK_END);
 
+        //===============
+        // Open the files
+        //===============
+        l_bootLdrPtr = fopen(ARG_BOOTLOADER_BIN, "r+");
+        l_file405Ptr = fopen(ARG_405_BIN, "r+");
+        l_fileGPE0Ptr = fopen(ARG_GPE0_BIN, "r+");
+        l_fileGPE1Ptr = fopen(ARG_GPE1_BIN, "r+");
+
+        // Verify all were successfully opened
+        if( NULL == l_bootLdrPtr )
+        {
+            printf("Failed to open file %s for reading and writing\n", ARG_BOOTLOADER_BIN);
+            l_rc = FAILURE_RC;
+            break;
+        }
+        else if( NULL == l_file405Ptr)
+        {
+            printf("Failed to open file %s for reading and writing\n", ARG_405_BIN);
+            l_rc = FAILURE_RC;
+            break;
+        }
+        else if( NULL == l_fileGPE0Ptr)
+        {
+            printf("Failed to open file %s for reading and writing\n", ARG_GPE0_BIN);
+            l_rc = FAILURE_RC;
+            break;
+        }
+        else if( NULL == l_fileGPE1Ptr)
+        {
+            printf("Failed to open file %s for reading and writing\n", ARG_GPE1_BIN);
+            l_rc = FAILURE_RC;
+            break;
+        }
+
+        //===============================
+        // Files are open, get file sizes
+        //===============================
+
+        // Bootloader
+        l_rc = fseek(l_bootLdrPtr, 0, SEEK_END);
         if( l_rc != 0)
         {
-            printf("Failed to seek end of the file: %s, rc: %d\n",argv[1],l_rc);
+            printf("Failed to seek end of the file: %s, rc: %d\n",ARG_BOOTLOADER_BIN,l_rc);
             l_rc = FAILURE_RC;
             break;
         }
+        l_bootLdr_sz = ftell(l_bootLdrPtr);
 
-        unsigned long int l_sz = ftell(l_filePtr);
-
-        if( l_sz % 128 != 0)
+        // 405
+        l_rc = fseek(l_file405Ptr, 0, SEEK_END);
+        if( l_rc != 0)
         {
-            printf("Image size:[%d] in file: [%s] is not 128-byte aligned\n",
-                   l_sz,argv[1]);
+            printf("Failed to seek end of the file: %s, rc: %d\n",ARG_405_BIN,l_rc);
+            l_rc = FAILURE_RC;
+            break;
+        }
+        l_405_sz = ftell(l_file405Ptr);
+
+        // GPE 0
+        l_rc = fseek(l_fileGPE0Ptr, 0, SEEK_END);
+        if( l_rc != 0)
+        {
+            printf("Failed to seek end of the file: %s, rc: %d\n",ARG_GPE0_BIN,l_rc);
+            l_rc = FAILURE_RC;
+            break;
+        }
+        l_gpe0_sz = ftell(l_fileGPE0Ptr);
+
+        // GPE 1
+        l_rc = fseek(l_fileGPE1Ptr, 0, SEEK_END);
+        if( l_rc != 0)
+        {
+            printf("Failed to seek end of the file: %s, rc: %d\n",ARG_GPE1_BIN,l_rc);
+            l_rc = FAILURE_RC;
+            break;
+        }
+        l_gpe1_sz = ftell(l_fileGPE1Ptr);
+
+        //================================================
+        // Ensure that all file sizes are 128-byte aligned
+        //================================================
+        if( (l_405_sz % 128 != 0) || (l_gpe0_sz % 128 != 0) ||
+            (l_gpe1_sz % 128 != 0) || (l_bootLdr_sz % 128 != 0) )
+        {
+            printf("An Image size is not 128-byte aligned: BootLdr [%d] 405[%d] GPE0[%d] GPE1[%d]\n",
+                   l_bootLdr_sz, l_405_sz, l_gpe0_sz, l_gpe1_sz);
             l_rc = FAILURE_RC;
             break;
         }
 
-        //Now seek back to the beginning
-        l_rc = fseek(l_filePtr, 0, SEEK_SET);
+        //=================================================
+        // Now seek back to the beginning of the bootloader
+        // and 405 since we are writing image sizes to them
+        //=================================================
 
+        // 405
+        l_rc = fseek(l_file405Ptr, 0, SEEK_SET);
         if( l_rc != 0)
         {
             printf("Failed to seek start after getting size of the file: %s, "
-                   "rc: %d\n",argv[1],l_rc);
+                   "rc: %d\n",ARG_405_BIN,l_rc);
             l_rc = FAILURE_RC;
             break;
         }
 
-        l_sz = htonl(l_sz);
-
-        // Write image size to the image header
-        l_rc = write(l_filePtr, &l_sz, IMAGE_SZ_FIELD_LEN,IMAGE_SZ_FIELD_OFFSET);
-
+        // Bootloader
+        l_rc = fseek(l_bootLdrPtr, 0, SEEK_SET);
         if( l_rc != 0)
         {
-            printf("Failed to write image size in the file: %s, "
-                   "rc: %d,l_sz: 0x%x,IMAGE_SZ_FIELD_LEN: %d, "
-                   "IMAGE_SZ_FIELD_OFFSET: %d\n",argv[1],l_rc,
+            printf("Failed to seek start after getting size of the file: %s, "
+                   "rc: %d\n",ARG_BOOTLOADER_BIN,l_rc);
+            l_rc = FAILURE_RC;
+            break;
+        }
+
+        //==========================================================
+        // Convert from host (typically little endian) to big endian
+        //==========================================================
+        l_bootLdr_sz = htonl(l_bootLdr_sz);
+        l_405_sz = htonl(l_405_sz);
+        l_gpe0_sz = htonl(l_gpe0_sz);
+        l_gpe1_sz = htonl(l_gpe1_sz);
+
+        //=======================================
+        // Write image sizes to the image headers
+        //=======================================
+
+        // Write bootloader size to bootloader image header
+        l_rc = write(l_bootLdrPtr, &l_bootLdr_sz, IMAGE_SZ_FIELD_LEN,IMAGE_SZ_FIELD_OFFSET);
+        if( l_rc != 0)
+        {
+            printf("Failed to write bootloader image size in the file: %s, "
+                   "rc: %d, IMAGE_SZ_FIELD_LEN: %d, "
+                   "IMAGE_SZ_FIELD_OFFSET: %d\n",ARG_BOOTLOADER_BIN,l_rc,
                    IMAGE_SZ_FIELD_LEN,IMAGE_SZ_FIELD_OFFSET);
             l_rc = FAILURE_RC;
             break;
 
         }
 
-        // Write image version
-        unsigned long int l_version = 0;
-        sprintf((char*)&l_version, "%s",argv[2]);
-        l_rc = write(l_filePtr, &l_version, VERSION_LEN, VERSION_OFFSET);
-
+        // Write 405 size to 405 image header
+        l_rc = write(l_file405Ptr, &l_405_sz, IMAGE_SZ_FIELD_LEN,IMAGE_SZ_FIELD_OFFSET);
         if( l_rc != 0)
         {
-            printf("Failed to write version in the file: %s, "
-                   "rc: %d,l_sz: 0x%x,: VERSION_LEN: %d, "
-                   "VERSION_OFFSET: %d\n",VERSION_LEN,l_rc,
-                   VERSION_LEN,VERSION_OFFSET);
+            printf("Failed to write 405 image size in the file: %s, "
+                   "rc: %d, IMAGE_SZ_FIELD_LEN: %d, "
+                   "IMAGE_SZ_FIELD_OFFSET: %d\n",ARG_405_BIN,l_rc,
+                   IMAGE_SZ_FIELD_LEN,IMAGE_SZ_FIELD_OFFSET);
             l_rc = FAILURE_RC;
             break;
 
         }
 
-        // If user has passed in image id string, write it to the image
-        if( argc > 3)
+        // Write GPE0 size to 405 image header
+        l_rc = write(l_file405Ptr, &l_gpe0_sz, IMAGE_SZ_FIELD_LEN,GPE0_SZ_FIELD_OFFSET);
+        if( l_rc != 0)
         {
-            l_rc = write(l_filePtr, argv[3], ID_STR_LEN, ID_STR_OFFSET);
+            printf("Failed to write GPE0 image size in the file: %s, "
+                   "rc: %d, IMAGE_SZ_FIELD_LEN: %d, "
+                   "GPE0_SZ_FIELD_OFFSET: %d\n",ARG_405_BIN,l_rc,
+                   IMAGE_SZ_FIELD_LEN,GPE0_SZ_FIELD_OFFSET);
+            l_rc = FAILURE_RC;
+            break;
+        }
+
+        // Write GPE1 size to 405 image header
+        l_rc = write(l_file405Ptr, &l_gpe1_sz, IMAGE_SZ_FIELD_LEN,GPE1_SZ_FIELD_OFFSET);
+        if( l_rc != 0)
+        {
+            printf("Failed to write GPE1 image size in the file: %s, "
+                   "rc: %d, IMAGE_SZ_FIELD_LEN: %d, "
+                   "GPE1_SZ_FIELD_OFFSET: %d\n",ARG_405_BIN,l_rc,
+                   IMAGE_SZ_FIELD_LEN,GPE1_SZ_FIELD_OFFSET);
+            l_rc = FAILURE_RC;
+            break;
+        }
+
+        //=====================
+        // Write image versions
+        //=====================
+        unsigned long int l_version = 0;
+
+        // Bootloader
+        sprintf((char*)&l_version, "%s",argv[5]);
+        l_rc = write(l_bootLdrPtr, &l_version, VERSION_LEN, VERSION_OFFSET);
+        if( l_rc != 0)
+        {
+            printf("Failed to write version in the file: %s, "
+                   "rc: %d, VERSION_LEN: %d, VERSION_OFFSET: %d\n",
+                   ARG_BOOTLOADER_BIN, l_rc, VERSION_LEN, VERSION_OFFSET);
+            l_rc = FAILURE_RC;
+            break;
+        }
+
+        // 405
+        sprintf((char*)&l_version, "%s",argv[6]);
+        l_rc = write(l_file405Ptr, &l_version, VERSION_LEN, VERSION_OFFSET);
+        if( l_rc != 0)
+        {
+            printf("Failed to write version in the file: %s, "
+                   "rc: %d, VERSION_LEN: %d, VERSION_OFFSET: %d\n",
+                   ARG_405_BIN, l_rc, VERSION_LEN, VERSION_OFFSET);
+            l_rc = FAILURE_RC;
+            break;
+        }
+
+        //===================================
+        // If user has passed in image id
+        // string(s), write it to the image(s)
+        //====================================
+
+        // Bootloader
+        if( argc > 7 )
+        {
+            l_rc = write(l_bootLdrPtr, ARG_BOOTLOADER_ID, ID_STR_LEN, ID_STR_OFFSET);
 
             if( l_rc != 0)
             {
                 printf("Failed to write id_str in the file: %s, "
-                       "rc: %d,l_sz: 0x%x,: ID_STR_LEN: %d, "
-                       "ID_STR_OFFSET: %d\n",argv[1],l_rc,
-                       ID_STR_LEN,ID_STR_OFFSET);
+                       "rc: %d ID_STR_LEN: %d, ID_STR_OFFSET: %d\n",
+                       ARG_BOOTLOADER_BIN, l_rc, ID_STR_LEN,ID_STR_OFFSET);
                 l_rc = FAILURE_RC;
                 break;
-
             }
         }
 
-        //Now seek to the ep_address field
-        l_rc = fseek(l_filePtr, ADDRESS_OFFSET, SEEK_SET);
+        // 405
+        if( argc > 8 )
+        {
+            l_rc = write(l_file405Ptr, ARG_405_ID, ID_STR_LEN, ID_STR_OFFSET);
 
+            if( l_rc != 0)
+            {
+                printf("Failed to write id_str in the file: %s, "
+                       "rc: %d ID_STR_LEN: %d, ID_STR_OFFSET: %d\n",
+                       ARG_405_BIN, l_rc, ID_STR_LEN,ID_STR_OFFSET);
+                l_rc = FAILURE_RC;
+                break;
+            }
+        }
+
+        //====================================================
+        // Seek to bootloader/405's entry point address fields
+        //====================================================
+
+        // Bootloader
+        l_rc = fseek(l_bootLdrPtr, ADDRESS_OFFSET, SEEK_SET);
         if( l_rc != 0)
         {
             printf("Failed to seek ep_address offset: 0x%x of the file: %s, "
-                   "rc: %d\n",ADDRESS_OFFSET,argv[1],l_rc);
+                   "rc: %d\n",ADDRESS_OFFSET,ARG_BOOTLOADER_BIN,l_rc);
             l_rc = FAILURE_RC;
             break;
         }
-        unsigned long int l_addr = 0;
-        // read ep_addr field
-        size_t l_readSz = fread(&l_addr, 1, ADDRESS_LEN, l_filePtr);
 
+        // 405
+        l_rc = fseek(l_file405Ptr, ADDRESS_OFFSET, SEEK_SET);
+        if( l_rc != 0)
+        {
+            printf("Failed to seek ep_address offset: 0x%x of the file: %s, "
+                   "rc: %d\n",ADDRESS_OFFSET,ARG_405_BIN,l_rc);
+            l_rc = FAILURE_RC;
+            break;
+        }
+
+        unsigned long int l_405_addr = 0, l_btldr_addr = 0;
+
+        // Read ep_addr fields
+
+        // 405
+        size_t l_readSz = fread(&l_405_addr, 1, ADDRESS_LEN, l_file405Ptr);
         if( l_readSz != ADDRESS_LEN)
         {
-            printf("Failed to read address for ep_branch calculation.file: %s, "
-                   "readSz: 0x%x,ADDRESS_LEN: 0x%x\n",argv[1],l_readSz,
+            printf("Failed to read address for ep_branch calculation. File: %s, "
+                   "readSz: 0x%x, ADDRESS_LEN: 0x%x\n",ARG_405_BIN,l_readSz,
                    ADDRESS_LEN);
             l_rc = FAILURE_RC;
             break;
         }
 
-        // calculate branch instruction to that address and write to
+        // Bootloader
+        l_readSz = fread(&l_btldr_addr, 1, ADDRESS_LEN, l_bootLdrPtr);
+        if( l_readSz != ADDRESS_LEN)
+        {
+            printf("Failed to read address for ep_branch calculation. File: %s, "
+                   "readSz: 0x%x, ADDRESS_LEN: 0x%x\n",ARG_BOOTLOADER_BIN,l_readSz,
+                   ADDRESS_LEN);
+            l_rc = FAILURE_RC;
+            break;
+        }
+
+        //==========================================================
+        // Calculate branch instruction to that address and write to
         // ep_branch_inst field in the image header
-        l_addr = ntohl(l_addr);
-        l_addr &= ADDRESS_MASK;
-        l_addr |= BRANCH_MASK;
+        //==========================================================
 
-        l_addr = htonl(l_addr);
-
-        l_rc = write(l_filePtr, &l_addr, EP_BRANCH_INST_LEN,
+        // 405
+        l_405_addr = ntohl(l_405_addr);
+        l_405_addr &= ADDRESS_MASK;
+        l_405_addr |= ABS_BRANCH_MASK;
+        l_405_addr = htonl(l_405_addr);
+        l_rc = write(l_file405Ptr, &l_405_addr, EP_BRANCH_INST_LEN,
                      EP_BRANCH_INST_OFFSET);
 
         if( l_rc != 0)
         {
             printf("Failed to write ep_branch_inst in the file: %s, "
-                   "rc: %d,l_sz: 0x%x,: EP_BRANCH_INST_LEN: %d, "
-                   "EP_BRANCH_INST_OFFSET: %d\n",argv[1],l_rc,
+                   "rc: %d, EP_BRANCH_INST_LEN: %d, "
+                   "EP_BRANCH_INST_OFFSET: %d\n",ARG_405_BIN,l_rc,
                    EP_BRANCH_INST_LEN,EP_BRANCH_INST_OFFSET);
             l_rc = FAILURE_RC;
             break;
-
         }
 
-        //Now seek back to the beginning for calculating checksum
-        l_rc = fseek(l_filePtr, 0, SEEK_SET);
+        // Bootloader
+        l_btldr_addr = ntohl(l_btldr_addr);
+        l_btldr_addr -= BRANCH_INSTR_OFFSET;
+        l_btldr_addr &= ADDRESS_MASK;
+        l_btldr_addr |= REL_BRANCH_MASK;
+        l_btldr_addr = htonl(l_btldr_addr);
+        l_rc = write(l_bootLdrPtr, &l_btldr_addr, EP_BRANCH_INST_LEN,
+                     EP_BRANCH_INST_OFFSET);
 
         if( l_rc != 0)
         {
-            printf("Failed to seek start before checksum calculation.file: %s,"
-                   "rc: %d\n",argv[1],l_rc);
+            printf("Failed to write ep_branch_inst in the file: %s, "
+                   "rc: %d, EP_BRANCH_INST_LEN: %d, "
+                   "EP_BRANCH_INST_OFFSET: %d\n",ARG_BOOTLOADER_BIN,l_rc,
+                   EP_BRANCH_INST_LEN,EP_BRANCH_INST_OFFSET);
             l_rc = FAILURE_RC;
             break;
         }
 
-        // calculate checksum
-        unsigned long int l_checksum = calImageChecksum(l_filePtr);
+        //=======================================================
+        //Now seek back to the beginning for calculating checksum
+        //=======================================================
 
-        l_checksum = htonl(l_checksum);
-
-        // Write checksum
-        l_rc = write(l_filePtr, &l_checksum,CHECKSUM_FIELD_LEN,
-                     CHECKSUM_FIELD_OFFSET);
-
+        // 405
+        l_rc = fseek(l_file405Ptr, 0, SEEK_SET);
         if( l_rc != 0)
         {
-            printf("Failed to write image size in the file: %s, "
-                   "rc: %d,l_sz: 0x%x,IMAGE_SZ_FIELD_LEN: %d, "
-                   "IMAGE_SZ_FIELD_OFFSET: %d\n",argv[1],l_rc,
+            printf("Failed to seek start before checksum calculation file: %s,"
+                   "rc: %d\n",ARG_405_BIN,l_rc);
+            l_rc = FAILURE_RC;
+            break;
+        }
+
+        // Bootloader
+        l_rc = fseek(l_bootLdrPtr, 0, SEEK_SET);
+        if( l_rc != 0)
+        {
+            printf("Failed to seek start before checksum calculation file: %s,"
+                   "rc: %d\n",ARG_BOOTLOADER_BIN,l_rc);
+            l_rc = FAILURE_RC;
+            break;
+        }
+
+        // GPE0
+        l_rc = fseek(l_fileGPE0Ptr, 0, SEEK_SET);
+        if( l_rc != 0)
+        {
+            printf("Failed to seek ep_address offset: 0x%x of the file: %s, "
+                   "rc: %d\n",ADDRESS_OFFSET,ARG_GPE0_BIN,l_rc);
+            l_rc = FAILURE_RC;
+            break;
+        }
+
+        // GPE1
+        l_rc = fseek(l_fileGPE1Ptr, 0, SEEK_SET);
+        if( l_rc != 0)
+        {
+            printf("Failed to seek ep_address offset: 0x%x of the file: %s, "
+                   "rc: %d\n",ADDRESS_OFFSET,ARG_GPE1_BIN,l_rc);
+            l_rc = FAILURE_RC;
+            break;
+        }
+
+        //====================
+        // Calculate checksums
+        //====================
+
+        // 405
+        unsigned long int l_checksum = calImageChecksum(l_file405Ptr, false);
+        l_checksum = htonl(l_checksum);
+        l_rc = write(l_file405Ptr, &l_checksum,CHECKSUM_FIELD_LEN,
+                     CHECKSUM_FIELD_OFFSET);
+        if( l_rc != 0)
+        {
+            printf("Failed to write image checksum in the file: %s, "
+                   "rc: %d,IMAGE_SZ_FIELD_LEN: %d, "
+                   "CHECKSUM_FIELD_OFFSET: %d\n",ARG_405_BIN,l_rc,
                    CHECKSUM_FIELD_LEN,CHECKSUM_FIELD_OFFSET);
             l_rc = FAILURE_RC;
             break;
         }
 
+        // Bootloader
+        l_checksum = calImageChecksum(l_bootLdrPtr, false);
+        l_checksum = htonl(l_checksum);
+        l_rc = write(l_bootLdrPtr, &l_checksum,CHECKSUM_FIELD_LEN,
+                     CHECKSUM_FIELD_OFFSET);
+        if( l_rc != 0)
+        {
+            printf("Failed to write image checksum in the file: %s, "
+                   "rc: %d,IMAGE_SZ_FIELD_LEN: %d, "
+                   "CHECKSUM_FIELD_OFFSET: %d\n",ARG_BOOTLOADER_BIN,l_rc,
+                   CHECKSUM_FIELD_LEN,CHECKSUM_FIELD_OFFSET);
+            l_rc = FAILURE_RC;
+            break;
+        }
+
+        // GPE0
+        l_checksum = calImageChecksum(l_fileGPE0Ptr, true);
+        l_checksum = htonl(l_checksum);
+        l_rc = write(l_file405Ptr, &l_checksum,CHECKSUM_FIELD_LEN,
+                     CHECKSUM_GPE0_FIELD_OFFSET);
+        if( l_rc != 0)
+        {
+            printf("Failed to write image checksum in the file: %s, "
+                   "rc: %d,IMAGE_SZ_FIELD_LEN: %d, "
+                   "CHECKSUM_GPE0_FIELD_OFFSET: %d\n",ARG_405_BIN,l_rc,
+                   CHECKSUM_FIELD_LEN,CHECKSUM_GPE0_FIELD_OFFSET);
+            l_rc = FAILURE_RC;
+            break;
+        }
+
+        // GPE1
+        l_checksum = calImageChecksum(l_fileGPE1Ptr, true);
+        l_checksum = htonl(l_checksum);
+        l_rc = write(l_file405Ptr, &l_checksum,CHECKSUM_FIELD_LEN,
+                     CHECKSUM_GPE1_FIELD_OFFSET);
+        if( l_rc != 0)
+        {
+            printf("Failed to write image checksum in the file: %s, "
+                   "rc: %d,IMAGE_SZ_FIELD_LEN: %d, "
+                   "CHECKSUM_GPE1_FIELD_OFFSET: %d\n",ARG_405_BIN,l_rc,
+                   CHECKSUM_FIELD_LEN,CHECKSUM_GPE1_FIELD_OFFSET);
+            l_rc = FAILURE_RC;
+            break;
+        }
+
+        // Combine the images into one binary
+        l_rc = combineImage(l_bootLdrPtr);
+        if ( l_rc )
+        {
+            printf("Failed to combine file %s, rc %d\n", ARG_BOOTLOADER_BIN, l_rc);
+            l_rc = FAILURE_RC;
+            break;
+        }
+        l_rc = combineImage(l_file405Ptr);
+        if ( l_rc )
+        {
+            printf("Failed to combine file %s, rc %d\n", ARG_405_BIN, l_rc);
+            l_rc = FAILURE_RC;
+            break;
+        }
+        l_rc = combineImage(l_fileGPE0Ptr);
+        if ( l_rc )
+        {
+            printf("Failed to combine file %s, rc %d\n", ARG_GPE0_BIN, l_rc);
+            l_rc = FAILURE_RC;
+            break;
+        }
+        l_rc = combineImage(l_fileGPE1Ptr);
+        if ( l_rc )
+        {
+            printf("Failed to combine file %s, rc %d", ARG_GPE1_BIN, l_rc);
+            l_rc = FAILURE_RC;
+            break;
+        }
     }while(0);
 
-    // Close file if open
-    if( l_filePtr != NULL)
-     {
-         int l_rc2 = fclose( l_filePtr);
+    // Close files if open
+    if( l_bootLdrPtr != NULL )
+    {
+        int l_rc2 = fclose(l_bootLdrPtr);
 
-         if( l_rc2 != 0)
-         {
-             printf("Failed to close file: %s,rc: %d\n", argv[1],l_rc2);
-         }
-     }
+        if( l_rc2 != 0)
+        {
+            printf("Failed to close file: %s,rc: %d\n", ARG_BOOTLOADER_BIN,l_rc2);
+        }
+    }
+
+    if( l_file405Ptr != NULL )
+    {
+        int l_rc2 = fclose( l_file405Ptr);
+
+        if( l_rc2 != 0)
+        {
+            printf("Failed to close file: %s,rc: %d\n", ARG_405_BIN,l_rc2);
+        }
+    }
+
+    if( l_fileGPE0Ptr != NULL )
+    {
+        int l_rc2 = fclose( l_fileGPE0Ptr);
+
+        if( l_rc2 != 0)
+        {
+            printf("Failed to close file: %s,rc: %d\n", ARG_GPE0_BIN,l_rc2);
+        }
+    }
+
+    if( l_fileGPE1Ptr != NULL )
+    {
+        int l_rc2 = fclose( l_fileGPE1Ptr);
+
+        if( l_rc2 != 0)
+        {
+            printf("Failed to close file: %s,rc: %d\n", ARG_GPE1_BIN,l_rc2);
+        }
+    }
 
 
     return l_rc;

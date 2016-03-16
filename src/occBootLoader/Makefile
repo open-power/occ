@@ -1,12 +1,11 @@
 # IBM_PROLOG_BEGIN_TAG
 # This is an automatically generated prolog.
 #
-# $Source: src/occBootLoader/Makefile$
+# $Source: src/occBootLoader/Makefile $
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2011,2014
-# [+] Google Inc.
+# Contributors Listed Below - COPYRIGHT 2011,2016
 # [+] International Business Machines Corp.
 #
 #
@@ -14,7 +13,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-# http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -24,58 +23,47 @@
 #
 # IBM_PROLOG_END_TAG
 
-ifndef ROOTPATH
-ROOTPATH = $(shell pwd)/../
-export OCCROOT = $(ROOTPATH)
-endif
+include img_defs.mk
+include bootfiles.mk
 
 #*******************************************************************************
 # Variables
 #*******************************************************************************
-OCC = ../occ
-BOOTLOADER = .
-SSX = ../ssx
-
-#*******************************************************************************
-# Includes
-#*******************************************************************************
-include bootfiles.mk
-include ../ssx/pgp/ssx.mk
-
-INCLUDES = -I. -I$(SSX)/ppc32 -I$(SSX)/pgp -I$(OCC)/incl -I$(OCC)/ -I$(SSX)/ppc405
+OBJECTS   = $(addprefix $(OBJDIR)/, $(notdir ${BOOTLOADER_OBJECTS}))
+LINK_SCRIPT = $(OBJDIR)/linkscript
+EXECUTABLE = $(OBJDIR)/bootloader
+imageHdrScript = $(OBJDIR)/imageHdrScript
+imageHdrScript_CC = gcc
 
 #*******************************************************************************
 # Flags
 #*******************************************************************************
-OBJECTS   = ${BOOTLOADER_OBJECTS}
-EXECUTABLE = bootloader
-imageHdrScript = imageHdrScript
-imageHdrScript_CC = gcc
-
 DEFS += $(D)
 
 #*******************************************************************************
 # Compilation
 #*******************************************************************************
-
-all: ${BOOTLOADER_OBJECTS} imageHdrScript
-	$(CPP) -P $(DEFS) < linkboot.cmd > linkscript
-	$(LD)  ${BOOTLOADER_OBJECTS} -Tlinkscript $(LDFLAGS) -zmuldefs -Map $(EXECUTABLE).map -melf32ppc --oformat=elf32-powerpc -Bstatic -o $(EXECUTABLE).out
+.PHONY : all
+all: $(OBJDIR) ${OBJECTS} ${imageHdrScript}
+	$(CPP) -P $(DEFS) < linkboot.cmd > $(LINK_SCRIPT)
+	$(LD)  ${OBJECTS} -T$(LINK_SCRIPT) $(LDFLAGS) -zmuldefs -Map $(EXECUTABLE).map -melf32ppc --oformat=elf32-powerpc -Bstatic -o $(EXECUTABLE).out -L$(OBJDIR)
 	$(OBJCOPY) -I elf32-powerpc -O binary $(EXECUTABLE).out $(EXECUTABLE).bin
 	$(OBJDUMP) -d $(EXECUTABLE).out > $(EXECUTABLE).dis
-	$(BOOTLOADER)/$(imageHdrScript) $(EXECUTABLE).bin t1
 
-.PHONY : combineImage
-combineImage:
-	 	$(BOOTLOADER)/imageHdrScript $(EXECUTABLE).bin combineImage
-	 	$(BOOTLOADER)/imageHdrScript $(EXECUTABLE).out displaySize
+$(OBJDIR)/imageHdrScript: imageHdrScript.c
+	$(imageHdrScript_CC) -g $(LDFLAGS) -I. -I$(OCC405_INCLDIR)/ -I$(OCC405_SRCDIR)/ imageHdrScript.c -o $(OBJDIR)/imageHdrScript
 
-imageHdrScript: imageHdrScript.c
-	$(imageHdrScript_CC) $(LDFLAGS) -I$(BOOTLOADER) -I$(OCC)/incl -I$(OCC)/ imageHdrScript.c -o $@
+$(OBJDIR)/occbuildname.o:
+	$(TCC) $(CFLAGS) $(DEFS) -o $@ $(OCC405_SRCDIR)/occbuildname.c
 
+$(OBJDIR)/savegpr.o:
+	$(TCPP) $(CFLAGS) $(DEFS) -o $@ $(SSX_SRCDIR)/ppc32/savegpr.S
+
+$(OBJDIR):
+	mkdir -p $(OBJDIR)
 #*******************************************************************************
 # Clean
 #*******************************************************************************
+.PHONY : clean
 clean:
-	rm -f *.o *.d *.out *.bin *.srec *.dis *.map linkscript imageHdrScript
-	rm -rf $(EXECUTABLE) $(IMAGE_FILE)
+	rm -rf $(OBJDIR)

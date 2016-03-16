@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -36,6 +36,7 @@ OUTPUT_FORMAT(elf32-powerpc);
 // is loaded at 0xfff01000
 #define SRAM_START 0xfff01000
 #define SRAM_LENGTH 0xF000
+// Exception vectors
 #define PPE_DEBUG_PTRS_OFFSET 0x180
 
 MEMORY
@@ -51,12 +52,12 @@ EXTERN(pk_debug_ptrs);
 SECTIONS
 {
     . = SRAM_START;
-
     . = ALIGN(512);
 
     _VECTOR_START = .;
+    __START_ADDR__ = .;
 
-    .vectors  _VECTOR_START  : { *(.vectors) } > sram
+    .vectors  _VECTOR_START  : {  *(.vectors) } > sram
 
     ///////////////////////////////////////////////////////////////////////////
     // Debug Pointers Table
@@ -71,13 +72,12 @@ SECTIONS
     ////////////////////////////////
     // All non-vector code goes here
     ////////////////////////////////
-    .text       : { *(.text) } > sram
+    .text       : { *(.text) . = ALIGN(128); } > sram
 
     ////////////////////////////////
     // Read-only Data
     ////////////////////////////////
 
-    . = ALIGN(8);
     _RODATA_SECTION_BASE = .;
 
     // SDA2 constant sections .sdata2 and .sbss2 must be adjacent to each
@@ -85,20 +85,21 @@ SECTIONS
     // offsets. 
 
     _SDA2_BASE_ = .;
-   .sdata2 . : { *(.sdata2) } > sram
-   .sbss2  . : { *(.sbss2) } > sram
+   .sdata2 . : { *(.sdata2) . = ALIGN(128); } > sram
+   .sbss2  . : { *(.sbss2 ) . = ALIGN(128); } > sram
 
    // Other read-only data.  
 
-   .rodata . : { *(.rodata*) *(.got2) } > sram
+   .rodata . : { *(.rodata*) *(.got2) . = ALIGN(128); } > sram
 
-    _RODATA_SECTION_SIZE = . - _RODATA_SECTION_BASE;
+    __READ_ONLY_DATA_LEN__ = . - _RODATA_SECTION_BASE;
+    __WRITEABLE_DATA_ADDR__ = .;
+    __WRITEABLE_DATA_LEN__ = . - __WRITEABLE_DATA_ADDR__;
 
     ////////////////////////////////
     // Read-write Data
     ////////////////////////////////
 
-    . = ALIGN(8);
     _DATA_SECTION_BASE = .;
 
     // SDA sections .sdata and .sbss must be adjacent to each
@@ -106,15 +107,15 @@ SECTIONS
     // offsets. 
 
     _SDA_BASE_ = .;
-    .sdata  . : { *(.sdata)  } > sram
-    .sbss   . : { *(.sbss)   } > sram
+    .sdata  . : { *(.sdata) . = ALIGN(128); } > sram
+    .sbss   . : { *(.sbss)  . = ALIGN(128); } > sram
 
     // Other read-write data
     // It's not clear why boot.S is generating empty .glink,.iplt
 
-   .rela   . : { *(.rela*) } > sram
-   .rwdata . : { *(.data) *(.bss) } > sram
-//   .iplt . : { *(.iplt) } > sram
+   .rela   . : { *(.rela*) . = ALIGN(128); } > sram
+   .rwdata . : { *(.data) *(.bss) . = ALIGN(128); } > sram
+//   .iplt . : { *(.iplt) ALIGN(128); } > sram
 
    _PK_INITIAL_STACK_LIMIT = .;
    . = . + INITIAL_STACK_SIZE;

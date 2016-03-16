@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2015
+# Contributors Listed Below - COPYRIGHT 2015,2016
 # [+] International Business Machines Corp.
 #
 #
@@ -100,6 +100,6 @@ clean:
 	rm -fr $(OBJDIR)
 
 #Add dependencies to header files
-ifneq ($(MAKECMDGOALS),clean)
-include $(OBJS:.o=.d) 
-endif
+#ifneq ($(MAKECMDGOALS),clean)
+#include $(OBJS:.o=.d) 
+#endif

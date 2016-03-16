@@ -2,11 +2,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/main.c $                                              */
+/* $Source: src/occ_405/main.c $                                          */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -956,7 +956,7 @@ int main(int argc, char **argv)
         SSX_PANIC(0x01000001);
     }
 
-#if SIMICS_ENVIRONMENT
+#if TRAC_TO_SIMICS
     l_ssxrc = ppc405_mmu_map(
             SIMICS_STDIO_BASE,
             SIMICS_STDIO_BASE,
@@ -1099,7 +1099,6 @@ int main(int argc, char **argv)
                    l_tb_freq_hz);
 
     CHECKPOINT(SSX_INITIALIZED);
-
     // TRAC_XXX needs ssx services, traces can only be done after ssx_initialize
     TRAC_init_buffers();
 

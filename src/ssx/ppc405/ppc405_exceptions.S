@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -83,10 +83,6 @@
         .global __vectors_0000
 __vectors:
 __vectors_0000:
-
-        // FIXME: This is just a quick hack to get SSX running on simics -- grm
-        .global __ssx_boot
-        b __ssx_boot
 
 ### ****************************************************************************
 ### .vectors_0100
