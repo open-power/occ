@@ -194,10 +194,13 @@ typedef struct __attribute__ ((packed)) cmdh_poll_freq_sensor
 // Only available from master occ.
 typedef struct __attribute__ ((packed)) cmdh_poll_powr_sensor
 {
-    uint32_t id;         // Sensor id - to represent the power.
-    uint32_t update_tag; // Count of number of 250us samples represented by accumulator.
-    uint32_t accumul;    // Accumulation of 250us power readings
-    uint16_t current;    // Most recent 250us reading in watts.
+    uint32_t id;            // Sensor id - to represent the power.
+    uint8_t  function_id;   // Identify what the reading is for (ADC_CHANNEL_ID in xml file)
+    uint8_t  apss_channel;  // APSS channel that the power was read from
+    uint16_t reserved;
+    uint32_t update_tag;    // Count of number of 250us samples represented by accumulator.
+    uint64_t accumul;       // Accumulation of 250us power readings
+    uint16_t current;       // Most recent 250us reading in watts.
 } cmdh_poll_power_sensor_t;
 
 // Only available from master occ.

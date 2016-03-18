@@ -380,9 +380,13 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
         cmdh_poll_power_sensor_t l_pwrSensorList[MAX_APSS_ADC_CHANNELS];
         for (k = 0; k < MAX_APSS_ADC_CHANNELS; k++)
         {
-            if (G_amec_sensor_list[PWRAPSSCH0 + k]->ipmi_sid != 0)
+            if ((G_apss_ch_to_function[k] != ADC_12V_SENSE) &&
+                (G_apss_ch_to_function[k] != ADC_GND_REMOTE_SENSE))
             {
                 l_pwrSensorList[l_sensorHeader.count].id = G_amec_sensor_list[PWRAPSSCH0 + k]->ipmi_sid;
+                l_pwrSensorList[l_sensorHeader.count].function_id = G_apss_ch_to_function[k];
+                l_pwrSensorList[l_sensorHeader.count].apss_channel = k;
+                l_pwrSensorList[l_sensorHeader.count].reserved = 0;
                 l_pwrSensorList[l_sensorHeader.count].current = G_amec_sensor_list[PWRAPSSCH0 + k]->sample;
                 l_pwrSensorList[l_sensorHeader.count].accumul = G_amec_sensor_list[PWRAPSSCH0 + k]->accumulator;
                 l_pwrSensorList[l_sensorHeader.count].update_tag  = G_amec_sensor_list[PWRAPSSCH0 + k]->update_tag;
@@ -398,7 +402,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
         // Write data to resp buffer if any.
         if (l_sensorHeader.count)
         {
-            uint8_t l_sensordataSz = l_sensorHeader.count * l_sensorHeader.length;
+            uint16_t l_sensordataSz = l_sensorHeader.count * l_sensorHeader.length;
             // Copy sensor data into response buffer.
             memcpy ((void *) &(o_rsp_ptr->data[l_rsp_index]), (void *)l_pwrSensorList, l_sensordataSz);
             // Increment index into response buffer.
@@ -962,8 +966,6 @@ errlHndl_t cmdh_get_elog (const cmdh_fsp_cmd_t * i_cmd_ptr,
 void cmdh_dbug_get_apss_data (const cmdh_fsp_cmd_t * i_cmd_ptr,
                               cmdh_fsp_rsp_t * o_rsp_ptr)
 {
-/* TEMP -- NOT ENABLED YET (NEED DCOM / AMEC) */
-#if 0
     uint8_t                      l_rc = ERRL_RC_SUCCESS;
     uint16_t                     i = 0;
     uint16_t                     l_resp_data_length = 0;
@@ -1006,7 +1008,6 @@ void cmdh_dbug_get_apss_data (const cmdh_fsp_cmd_t * i_cmd_ptr,
     o_rsp_ptr->rc = l_rc;
     o_rsp_ptr->data_length[0] = ((uint8_t *)&l_resp_data_length)[0];
     o_rsp_ptr->data_length[1] = ((uint8_t *)&l_resp_data_length)[1];
-#endif // #if 0
 }
 
 // Function Specification
@@ -1121,11 +1122,12 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
                 commitErrl( &l_errl );
             }
             break;
+#endif // #if 0
 
         case DBUG_DUMP_APSS_DATA:
             cmdh_dbug_get_apss_data(i_cmd_ptr, o_rsp_ptr);
             break;
-#endif // #if 0
+
         default:
             l_rc = ERRL_RC_INVALID_DATA; //should NEVER get here...
             break;

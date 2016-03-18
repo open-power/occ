@@ -146,7 +146,7 @@ struct sensor
     uint16_t sample;          // Latest sample of this sensor
     uint16_t sample_min;      // Minimum value since last reset
     uint16_t sample_max;      // Maximum Value since last reset
-    uint32_t accumulator;     // Accumulator register for this sensor
+    uint64_t accumulator;     // Accumulator register for this sensor
     uint32_t src_accum_snapshot; // Copy of the source sensor's accumulator
                                  // used for time-derived sensors
     uint32_t update_tag;      // Count of the number of 'ticks' that have passed

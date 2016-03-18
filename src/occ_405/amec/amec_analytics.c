@@ -145,6 +145,25 @@ void amec_analytics_sb_recording(void)
     }
 }
 
+/*
+  Implementation note:
+
+  amec_analytics_main is called every 2 ms from an AMEC task.
+
+  This routine uses the sensor accumulator to compute average values
+  over 2ms.  Normally, the sensor accumulator is 64-bit, but it is
+  enough to save and use just 32-bit for the purposes of computing the
+  2 ms average, since there is no danger of wrapping the accumulator
+  for 16-bit sensor values.  The key is that unsigned subtraction
+  between any two accumulator values, gives you a valid change in the
+  accumulator, even when the accumulator overflows and wraps back to
+  0, as long as the total change is small enough to fit in the
+  accumulators range (32-bit).  8 updates (in 2 ms) * 2^16-1 < 2^32-1,
+  so in 2ms, the accumulator's range of values cannot be exceeded.
+
+  The code below uses cast from 64-bit to 32-bit to make clear the intention.
+
+ */
 void amec_analytics_main(void)
 {
     /*------------------------------------------------------------------------*/
@@ -195,46 +214,79 @@ void amec_analytics_main(void)
                 g_amec->g44_avg[(i*MSA)+2] = (UINT32)g_amec->sys.todclock1.sample;   // ptr to middle 16 bits of 48 bit TOD clock
                 g_amec->g44_avg[(i*MSA)+4] = (UINT32)g_amec->sys.todclock2.sample;   // ptr to low 16 bits of 48 bit TOD clock
 
-                tempaccum=g_amec->sys.pwr250us.src_accum_snapshot;           // load pwr250us accum from last 2msec
-                g_amec->sys.pwr250us.src_accum_snapshot = g_amec->sys.pwr250us.accumulator;  // save current accum state for next 2msec
-                tempaccum=g_amec->sys.pwr250us.accumulator - tempaccum;    // total accumulation over 2msec
-                tempaccum=tempaccum>>3;                                      // divide by 8
+                // load pwr250us accum from last 2msec
+                tempaccum = g_amec->sys.pwr250us.src_accum_snapshot;
+                // save current accum state for next 2msec
+                g_amec->sys.pwr250us.src_accum_snapshot =
+                    (uint32_t)g_amec->sys.pwr250us.accumulator;
+                // total accumulation over 2msec
+                tempaccum = (uint32_t)g_amec->sys.pwr250us.accumulator
+                    - tempaccum;
+                tempaccum = tempaccum>>3; // divide by 8
                 g_amec->g44_avg[(i*MSA)+6] = g_amec->g44_avg[(i*MSA)+6] +
                     tempaccum;
 
-                tempaccum=g_amec->sys.pwr250usgpu.src_accum_snapshot;       // load pwr250usgpu accum from last 2msec
-                g_amec->sys.pwr250usgpu.src_accum_snapshot = g_amec->sys.pwr250usgpu.accumulator;  // save current accum state for next 2msec
-                tempaccum=g_amec->sys.pwr250usgpu.accumulator - tempaccum;  // total accumulation over 2msec
-                tempaccum=tempaccum>>3;                                     // divide by 8
+                // load pwr250usgpu accum from last 2msec
+                tempaccum = g_amec->sys.pwr250usgpu.src_accum_snapshot;
+                // save current accum state for next 2msec
+                g_amec->sys.pwr250usgpu.src_accum_snapshot =
+                    (uint32_t)g_amec->sys.pwr250usgpu.accumulator;
+                // total accumulation over 2msec
+                tempaccum = (uint32_t)g_amec->sys.pwr250usgpu.accumulator
+                    - tempaccum;
+                tempaccum = tempaccum>>3; // divide by 8
                 g_amec->g44_avg[(i*MSA)+8] = g_amec->g44_avg[(i*MSA)+8] +
                     tempaccum;
 
-                tempaccum=g_amec->proc[i].pwr250us.src_accum_snapshot;     // load accumulator from last 2msec
-                g_amec->proc[i].pwr250us.src_accum_snapshot = g_amec->proc[i].pwr250us.accumulator;  // save current accum state for next 2msec
-                tempaccum=g_amec->proc[i].pwr250us.accumulator - tempaccum;    // total accumulation over 2msec
-                tempaccum=tempaccum>>3;                                      // divide by 8
+                // load accumulator from last 2msec
+                tempaccum = g_amec->proc[i].pwr250us.src_accum_snapshot;
+                // save current accum state for next 2msec
+                g_amec->proc[i].pwr250us.src_accum_snapshot =
+                    (uint32_t)g_amec->proc[i].pwr250us.accumulator;
+                // total accumulation over 2msec
+                tempaccum = (uint32_t)g_amec->proc[i].pwr250us.accumulator
+                    - tempaccum;
+                tempaccum = tempaccum>>3; // divide by 8
                 g_amec->g44_avg[(i*MSA)+10] = g_amec->g44_avg[(i*MSA)+10] +
                     tempaccum;
 
-                tempaccum=g_amec->proc[i].pwr250usvdd.src_accum_snapshot;     // load accumulator from last 2msec
-                g_amec->proc[i].pwr250usvdd.src_accum_snapshot = g_amec->proc[i].pwr250usvdd.accumulator;  // save current accum state for next 2msec
-                tempaccum=g_amec->proc[i].pwr250usvdd.accumulator - tempaccum;    // total accumulation over 2msec
-                tempaccum=tempaccum>>3;
+                // load accumulator from last 2msec
+                tempaccum = g_amec->proc[i].pwr250usvdd.src_accum_snapshot;
+                // save current accum state for next 2msec
+                g_amec->proc[i].pwr250usvdd.src_accum_snapshot =
+                    (uint32_t)g_amec->proc[i].pwr250usvdd.accumulator;
+                // total accumulation over 2msec
+                tempaccum = (uint32_t)g_amec->proc[i].pwr250usvdd.accumulator
+                    - tempaccum;
+                tempaccum = tempaccum>>3;
                 g_amec->g44_avg[(i*MSA)+11] = g_amec->g44_avg[(i*MSA)+11] +
                     tempaccum;
 
-                tempaccum=g_amec->proc[i].vrm[0].volt250us.src_accum_snapshot;     // load accumulator from last 2msec
-                g_amec->proc[i].vrm[0].volt250us.src_accum_snapshot = g_amec->proc[i].vrm[0].volt250us.accumulator;  // save current accum state for next 2msec
-                tempaccum=g_amec->proc[i].vrm[0].volt250us.accumulator - tempaccum;    // total accumulation over 2msec
+                // load accumulator from last 2msec
+                tempaccum = g_amec->proc[i].vrm[0].volt250us.src_accum_snapshot;
+                // save current accum state for next 2msec
+                g_amec->proc[i].vrm[0].volt250us.src_accum_snapshot =
+                    (uint32_t)g_amec->proc[i].vrm[0].volt250us.accumulator;
+                // total accumulation over 2msec
+                tempaccum =
+                    (uint32_t)g_amec->proc[i].vrm[0].volt250us.accumulator
+                    - tempaccum;
                 temp32 = tempaccum<<3;  // Pi, Vdd
                 tempreg = 4000;
                 // Convert voltage from 100uV resolution to 6.25mV resolution
                 tempreg = (UINT16)(UTIL_DIV32(temp32, tempreg));
-                g_amec->g44_avg[(i*MSA)+12] = g_amec->g44_avg[(i*MSA)+12] + (UINT32)tempreg;
+                g_amec->g44_avg[(i*MSA)+12] = g_amec->g44_avg[(i*MSA)+12]
+                    + (UINT32)tempreg;
 
-                tempaccum=g_amec->proc[i].vrm[1].volt250us.src_accum_snapshot;     // load accumulator from last 2msec
-                g_amec->proc[i].vrm[1].volt250us.src_accum_snapshot = g_amec->proc[i].vrm[1].volt250us.accumulator;  // save current accum state for next 2msec
-                tempaccum=g_amec->proc[i].vrm[1].volt250us.accumulator - tempaccum;    // total accumulation over 2msec
+                // load accumulator from last 2msec
+                tempaccum = g_amec->proc[i].vrm[1].volt250us.src_accum_snapshot;
+                // save current accum state for next 2msec
+                g_amec->proc[i].vrm[1].volt250us.src_accum_snapshot =
+                    (uint32_t)g_amec->proc[i].vrm[1].volt250us.accumulator;
+                // total accumulation over 2msec
+                tempaccum =
+                    (uint32_t)g_amec->proc[i].vrm[1].volt250us.accumulator
+                    - tempaccum;
                 temp32 = tempaccum<<3;  // Pi, Vcs
                 tempreg = 4000;
                 // Convert voltage from 100uV resolution to 6.25mV resolution
@@ -242,14 +294,19 @@ void amec_analytics_main(void)
                 g_amec->g44_avg[(i*MSA)+13] = g_amec->g44_avg[(i*MSA)+13] +
                     (UINT32)tempreg;
 
-                tempaccum=g_amec->proc[i].cur250usvdd.src_accum_snapshot;     // load accumulator from last 2msec
-                g_amec->proc[i].cur250usvdd.src_accum_snapshot = g_amec->proc[i].cur250usvdd.accumulator;  // save current accum state for next 2msec
-                tempaccum=g_amec->proc[i].cur250usvdd.accumulator - tempaccum;    // total accumulation over 2msec
-                tempaccum=tempaccum>>3;
+                // load accumulator from last 2msec
+                tempaccum = g_amec->proc[i].cur250usvdd.src_accum_snapshot;
+                // save current accum state for next 2msec
+                g_amec->proc[i].cur250usvdd.src_accum_snapshot =
+                    (uint32_t)g_amec->proc[i].cur250usvdd.accumulator;
+                tempaccum = (uint32_t)g_amec->proc[i].cur250usvdd.accumulator
+                    - tempaccum;    // total accumulation over 2msec
+                tempaccum = tempaccum>>3;
                 g_amec->g44_avg[(i*MSA)+14] = g_amec->g44_avg[(i*MSA)+14] +
                     tempaccum/100;
+                // hottest processor core temperature (average??)
                 g_amec->g44_avg[(i*MSA)+15] = g_amec->g44_avg[(i*MSA)+15] +
-                    (UINT32)g_amec->proc[i].temp4ms.sample;    // hottest processor core temperature (average??)
+                    (UINT32)g_amec->proc[i].temp4ms.sample;
 
 // major changes below to accommodate Group 45
 
@@ -433,31 +490,46 @@ void amec_analytics_main(void)
                         (g_amec->analytics_thermal_offset + 1); // modulo 8
 
                 tempaccum = g_amec->fan.pwr250usfan.src_accum_snapshot;     // load accumulator from last 2msec
-                g_amec->fan.pwr250usfan.src_accum_snapshot = g_amec->fan.pwr250usfan.accumulator;  // save current accum state for next 2msec
-                tempaccum = g_amec->fan.pwr250usfan.accumulator - tempaccum;    // total accumulation over 2msec
+                // save current accum state for next 2msec
+                g_amec->fan.pwr250usfan.src_accum_snapshot =
+                    (uint32_t)g_amec->fan.pwr250usfan.accumulator;
+                // total accumulation over 2msec
+                tempaccum = (uint32_t)g_amec->fan.pwr250usfan.accumulator
+                    - tempaccum;
                 tempaccum = tempaccum >> g_amec->stream_vector_rate;
 
                 tempreg = tempreg | (0xff & ((UINT16)tempaccum));
                 g_amec->analytics_array[5] = tempreg;
 
                 tempaccum = g_amec->io.pwr250usio.src_accum_snapshot;     // load accumulator from last 2msec
-                g_amec->io.pwr250usio.src_accum_snapshot = g_amec->io.pwr250usio.accumulator;  // save current accum state for next 2msec
-                tempaccum = g_amec->io.pwr250usio.accumulator - tempaccum;    // total accumulation over 2msec
+                // save current accum state for next 2msec
+                g_amec->io.pwr250usio.src_accum_snapshot =
+                    (uint32_t)g_amec->io.pwr250usio.accumulator;
+                // total accumulation over 2msec
+                tempaccum = (uint32_t)g_amec->io.pwr250usio.accumulator
+                    - tempaccum;
                 tempaccum = tempaccum >> g_amec->stream_vector_rate;
 
                 tempreg = ((UINT16)tempaccum) << 8;   // upper byte
 
                 tempaccum = g_amec->storage.pwr250usstore.src_accum_snapshot;     // load accumulator from last 2msec
-                g_amec->storage.pwr250usstore.src_accum_snapshot = g_amec->storage.pwr250usstore.accumulator;  // save current accum state for next 2msec
-                tempaccum = g_amec->storage.pwr250usstore.accumulator - tempaccum;    // total accumulation over 2msec
+                // save current accum state for next 2msec
+                g_amec->storage.pwr250usstore.src_accum_snapshot =
+                    (uint32_t)g_amec->storage.pwr250usstore.accumulator;
+                tempaccum = (uint32_t)g_amec->storage.pwr250usstore.accumulator
+                    - tempaccum;    // total accumulation over 2msec
                 tempaccum = tempaccum >> g_amec->stream_vector_rate;
 
                 tempreg = tempreg | (0xff & ((UINT16)tempaccum));
                 g_amec->analytics_array[6] = tempreg;
 
                 tempaccum = g_amec->proc[0].pwr250usmem.src_accum_snapshot;     // load accumulator from last 2msec
-                g_amec->proc[0].pwr250usmem.src_accum_snapshot = g_amec->proc[0].pwr250usmem.accumulator;  // save current accum state for next 2msec
-                tempaccum = g_amec->proc[0].pwr250usmem.accumulator - tempaccum;    // total accumulation over 2msec
+                // save current accum state for next 2msec
+                g_amec->proc[0].pwr250usmem.src_accum_snapshot =
+                    (uint32_t)g_amec->proc[0].pwr250usmem.accumulator;
+                // total accumulation over 2msec
+                tempaccum = (uint32_t)g_amec->proc[0].pwr250usmem.accumulator
+                    - tempaccum;
                 tempaccum = tempaccum >> g_amec->stream_vector_rate;
 
                 tempreg = ((UINT16)tempaccum) << 8;   // upper byte

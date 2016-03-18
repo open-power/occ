@@ -75,16 +75,16 @@
 
 // Autonomic Management of Energy (AME) Parameters
 #define AME_API_MAJ     2       // API version major
-#define AME_API_MIN     26      // API version minor
+#define AME_API_MIN     27      // API version minor
 
 #define AME_VERSION_MAJ 7       // Major Version (e.g. Ver. 1.4 has MAJ=1)
-#define AME_VERSION_MIN 27      // Minor Version (e.g. Ver. 1.4 has MIN=4)
+#define AME_VERSION_MIN 28      // Minor Version (e.g. Ver. 1.4 has MIN=4)
 
 #define AME_YEAR        2015    // Year of Release (e.g. 2006)
-#define AME_MONTH       4       // Month of Release (e.g. September=9)
-#define AME_DAY         2       // Day of Release
+#define AME_MONTH       7       // Month of Release (e.g. September=9)
+#define AME_DAY         31      // Day of Release
 
-#define AME_SDRS        22      // AME Sensor Data Record Size: 18 bytes
+#define AME_SDRS        24      // AME Sensor Data Record Size: 24 bytes
 
 // AME data types for AME_GetInfo_*() functions
 #define AME_INFO_NAME   0
@@ -136,7 +136,7 @@ typedef struct sensorrec
 {
     uint32_t  timestamp;
     uint32_t  updates;
-    uint32_t  accumulated_value;
+    uint64_t  accumulated_value;
     uint16_t  value;
     uint16_t  value_min;
     uint16_t  value_max;
@@ -207,39 +207,6 @@ typedef struct sensorrec
                         //        if set to 0, this is a normal AME scalar
                         //        sensor.
 
-    uint16_t test;
-                        // if bit 15 is set to 1 in the status register, the
-                        //        test register can only be used to support
-                        //        the vector sensor. In this mode, the high 8
-                        //        bits are used to hold two 4 bit
-                        //        indices of minimum values. The low 8 bits are
-                        //        used to hold two 4 bit indices of
-                        //        maximum values. Vector sensors can only hold
-                        //        up to 12 elements, so each 4 bit index
-                        //        can point to the vector index of interest.
-                        //        Here is a summary of what each 4 bit field
-                        //        shows:
-                        //        bits 15-12: index of minimum vector sensor
-                        //                    value seen for all time (since
-                        //                    last reset)
-                        //        bits 11-8:  index of minimum vector sensor
-                        //                    value seen for the latest time
-                        //                    instant
-                        //        bits 7-4:   index of maximum vector sensor
-                        //                    value seen for all time (since
-                        //                    last reset)
-                        //        bits 3-0:   index of maximum vector sensor
-                        //                    value seen for the latest time
-                        //                    instant
-                        //        Vector sensors should not be longer than 12
-                        //        elements because one can only guard out
-                        //        up to 12 elements with the vector sensor
-                        //        enable mask and to avoid extreme cycle spikes.
-                        //        A RESET of this sensor will cause the test
-                        //        register (high and low bytes) to be set to
-                        //        0xFF.
-                        // if bit 15 is set to 0 in the status register, this
-                        //        register can be used to store anything.
 } sensorrec_t;
 
 typedef UINT8                   AMEC_TB_GUID;

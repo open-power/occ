@@ -597,13 +597,13 @@ void amec_calc_freq_and_util_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
   if(g_amec->proc[0].core[i_core].sample_count == l_time_interval)
   {
       // Increase resolution of the UTIL accumulator by two decimal places
-      temp32 = AMECSENSOR_ARRAY_PTR(UTIL2MSP0C0,i_core)->accumulator * 100;
+      temp32 = (uint32_t)AMECSENSOR_ARRAY_PTR(UTIL2MSP0C0,i_core)->accumulator * 100;
       // Calculate average utilization of this core
       temp32 = temp32 / g_amec->proc[0].core[i_core].sample_count;
       g_amec->proc[0].core[i_core].avg_util = temp32;
 
       // Increase resolution of the FREQA accumulator by two decimal places
-      temp32 = AMECSENSOR_ARRAY_PTR(FREQA2MSP0C0,i_core)->accumulator * 100;
+      temp32 = (uint32_t)AMECSENSOR_ARRAY_PTR(FREQA2MSP0C0,i_core)->accumulator * 100;
       // Calculate average frequency of this core
       temp32 = temp32 / g_amec->proc[0].core[i_core].sample_count;
       g_amec->proc[0].core[i_core].avg_freq = temp32;
@@ -837,7 +837,7 @@ void amec_calc_spurr(uint8_t i_core)
      sensor_update( AMECSENSOR_ARRAY_PTR(SPURR2MSP0C0,i_core), (uint16_t) temp32);
    }
 }
-#endif 
+#endif
 
 /*----------------------------------------------------------------------------*/
 /* End                                                                        */

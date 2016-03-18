@@ -633,7 +633,8 @@ uint8_t cmdh_mnfg_get_sensor(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 l_resp_ptr->sample = l_sensor_ptr->sample;
                 l_resp_ptr->min = l_sensor_ptr->sample_min;
                 l_resp_ptr->max = l_sensor_ptr->sample_max;
-                l_resp_ptr->accumulator = l_sensor_ptr->accumulator;
+                // Truncate accumulator to 4 bytes (should not be used)
+                l_resp_ptr->accumulator = (uint32_t)l_sensor_ptr->accumulator;
                 l_resp_ptr->status = *(uint8_t*)(&l_sensor_ptr->status);
             }
 

@@ -350,7 +350,8 @@ void cmdh_snapshot_callback(void * arg)
     static uint32_t L_prev_pwr_accum = 0;       // Holds the previous power sensor accumulator
     static uint32_t L_prev_pwr_update_tag = 0;  // Holds the previous power sensor update tag.
 
-    uint32_t        l_pwr_accum         = AMECSENSOR_PTR(PWR250US)->accumulator;
+    uint32_t        l_pwr_accum         =
+        (uint32_t)AMECSENSOR_PTR(PWR250US)->accumulator;
     uint32_t        l_pwr_update_tag    = AMECSENSOR_PTR(PWR250US)->update_tag;
     uint32_t        l_avg_pwr           = 0;
     uint32_t        l_min_pwr           = g_pwr250us_over30sec.min;
