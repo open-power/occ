@@ -49,9 +49,9 @@
 #define OCC_DCM_SLAVE     0
 #define OCC_DCM_MASTER    1
 
-// OCC Master to Slave Messages (inbox ping/pong) - Need to go over BAR3
-#define ADDR_SLAVE_INBOX_MAIN_MEM_PING 0x30000000
-#define ADDR_SLAVE_INBOX_MAIN_MEM_PONG 0x30000800
+// OCC Master to Slave Messages (inbox ping/pong) - Moved to BAR2
+#define ADDR_SLAVE_INBOX_MAIN_MEM_PING 0x20000000
+#define ADDR_SLAVE_INBOX_MAIN_MEM_PONG 0x20000800
 #define NUM_BYTES_IN_SLAVE_INBOX              256
 
 // Magic Number used to denote the end of Master->Slave Broadcast packets
@@ -62,9 +62,9 @@
 #define MAX_PBAX_CHIP_ID 7
 #define INVALID_NODE_ID 7
 
-// OCC Slave to Master Messages (inbox ping/pong) - Need to go over BAR3
-#define ADDR_SLAVE_OUTBOX_MAIN_MEM_PING 0x30001000
-#define ADDR_SLAVE_OUTBOX_MAIN_MEM_PONG 0x30003000
+// OCC Slave to Master Messages (inbox ping/pong) - Moved to BAR2
+#define ADDR_SLAVE_OUTBOX_MAIN_MEM_PING 0x20001000
+#define ADDR_SLAVE_OUTBOX_MAIN_MEM_PONG 0x20003000
 #define NUM_BYTES_IN_SLAVE_OUTBOX             1024
 
 // GP REG0
