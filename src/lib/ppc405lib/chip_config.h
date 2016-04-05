@@ -62,7 +62,7 @@ typedef uint8_t  ChipConfigCentaur;
 static inline uint32_t 
 pore_exe_mask(ChipConfig config)
 {
-    return (uint32_t)((config >> 32) & 0xffff0000);
+    return (uint32_t)((config >> 32) & 0xffffff00);
 }
 #endif
 
@@ -71,7 +71,7 @@ pore_exe_mask(ChipConfig config)
 static inline uint32_t
 left_justify_core_config(ChipConfig config)
 {
-    return (uint32_t)((config >> 32) & 0xffff0000);
+    return (uint32_t)((config >> 32) & 0xffffff00);
 }
 
 /// Left justify and mask MCS configuration into a uint32_t

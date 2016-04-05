@@ -261,11 +261,8 @@ enum
     CMDH_THREAD_STARTED         = 0x0dff,
     INIT_OCB                    = 0x0e05,
     OCB_INITIALIZED             = 0x0e07,
-    INIT_FSI_HOST_MBOX          = 0x0e10,
-    FSI_HOST_MBOX_INITIALIZED   = 0x0e20,
     FSP_COMM_INITIALIZED        = 0x0eff,
     ABOUT_TO_HALT               = 0x0f00,
-    FIRST_FSP_ATTN_SENT         = 0xffff,
 };
 
 // Checkpoint flags (one byte bitmap)

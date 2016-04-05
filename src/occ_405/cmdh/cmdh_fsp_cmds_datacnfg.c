@@ -2211,18 +2211,6 @@ errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
     if((!l_errlHndl) && (l_new_data))
     {
-        // Don't send a poll if we just received one or our periodic data
-        // packets like supernova, dimm, or p5ioc temperatures.  This causes
-        // TMGT to wrap their trace with our attentions
-        // For simplicity, don't poll if we don't have any new data to
-        // request
-        if(DATA_request_cnfgdata() != 0)
-        {
-            // Poll after we get new data to either inform the FSP that we need more,
-            // or inform the FSP that we have everything needed for a new state.
-            cmdh_fsp_attention(OCC_ALERT_FSP_SERVICE_REQD);
-        }
-
         // Notify AMEC component of new data
         AMEC_data_change(l_new_data);
     }

@@ -33,9 +33,9 @@
 #include "state.h"
 #include <cmdh_fsp.h>
 
-eCmdhWakeupThreadMask G_cmdh_thread_wakeup_mask;
-
 extern uint8_t G_occ_interrupt_type;
+
+eCmdhWakeupThreadMask G_cmdh_thread_wakeup_mask;
 
 // Function Specification
 //
@@ -67,18 +67,6 @@ void Cmd_Hndl_thread_routine(void *arg)
 
     CHECKPOINT(FSP_COMM_INITIALIZED);
 
-    // Only send this first attention if FSP is present
-    if(G_occ_interrupt_type == FSP_SUPPORTED_OCC)
-    {
-        // ------------------------------------------------
-        // Send 'Service' Attention to signal that we are
-        // ready to accept commands from FSP.
-        // ------------------------------------------------
-        cmdh_fsp_attention( OCC_ALERT_FSP_SERVICE_REQD );
-
-        CHECKPOINT(FIRST_FSP_ATTN_SENT);
-    }
-
     // ------------------------------------------------
     // Loop forever, handling FSP commands
     // ------------------------------------------------
@@ -94,11 +82,12 @@ void Cmd_Hndl_thread_routine(void *arg)
         // ------------------------------------------------
         if(SSX_OK == l_rc)
         {
+            // Handle the command that TMGT just sent to OCC
             if( CMDH_WAKEUP_FSP_COMMAND & G_cmdh_thread_wakeup_mask )
             {
                 clearCmdhWakeupCondition(CMDH_WAKEUP_FSP_COMMAND);
 
-                // Handle the command that TMGT just sent to OCC
+
                 l_errlHndl = cmdh_fsp_cmd_hndler();
 
                 // Commit an error if we get one passed back, do it before
@@ -107,34 +96,7 @@ void Cmd_Hndl_thread_routine(void *arg)
                 {
                     commitErrl(&l_errlHndl);
                 }
-
-                // Check if the sender is FSP based
-                if (G_occ_interrupt_type == FSP_SUPPORTED_OCC)
-                {
-                    // Tell the FSP we have a response ready for them.
-                    // Try to send this for 500ms before giving up
-                    cmdh_fsp_attention_withRetry(OCC_ALERT_FSP_RESP_READY, 500);
-                }
             }
-
-            if (CMDH_WAKEUP_FSP_ATTENTION_ALERT & G_cmdh_thread_wakeup_mask)
-            {
-                clearCmdhWakeupCondition(CMDH_WAKEUP_FSP_ATTENTION_ALERT);
-
-                // Tell the FSP we have something they need to come check on.
-                // Try to send this for 500ms, before giving up
-                cmdh_fsp_attention_withRetry(OCC_ALERT_FSP_SERVICE_REQD, 500);
-            }
-
-            if (CMDH_WAKEUP_FSP_CHECKSTOP_ALERT & G_cmdh_thread_wakeup_mask)
-            {
-                clearCmdhWakeupCondition(CMDH_WAKEUP_FSP_CHECKSTOP_ALERT);
-
-                // Tell the FSP we have something they need to come check on.
-                // Try to send this for 500ms, before giving up
-                cmdh_fsp_attention_withRetry(OCC_ALERT_SYS_CHECKSTOP, 500);
-            }
-
         }
     }
 

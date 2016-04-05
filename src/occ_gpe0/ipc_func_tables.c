@@ -32,9 +32,9 @@ void apss_init_mode(ipc_msg_t* cmd, void* arg);
 void apss_start_pwr_meas_read(ipc_msg_t* cmd, void* arg);
 void apss_continue_pwr_meas_read(ipc_msg_t* cmd, void* arg);
 void apss_complete_pwr_meas_read(ipc_msg_t* cmd, void* arg);
-void ipc_scom_operation(ipc_msg_t* cmd, void* arg);
-
 void gpe_get_core_data(ipc_msg_t* cmd, void* arg);
+
+void ipc_scom_operation(ipc_msg_t* cmd, void* arg);
 
 extern ipc_msgq_t G_gpe0_test_msgq0;
 

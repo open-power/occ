@@ -50,9 +50,6 @@ const int      ALLOW_UNTRUSTED_ACCESS          = 1;
 // to be expressed as a Log
 const int      LOG_SIZEOF_FSP_CMD_BUFFER       = 12;   // 4096 = 2**12
 
-// Given to OCC from HWSV team, sent in FSI2Host Mailbox1 Message
-const uint32_t OCC_MSG_QUEUE_ID = 0x80000007;
-
 // The OCB Device Driver request that OCC uses to receive a doorbell from FSP
 OcbRequest G_fsp_doorbell_ocb_request;
 
@@ -72,9 +69,6 @@ fsp_msg_t G_fsp_msg = {
     .cmd = (fsp_cmd_t *) CMDH_LINEAR_WINDOW_BASE_ADDRESS,
     .rsp = (fsp_rsp_t *) CMDH_OCC_RESPONSE_BASE_ADDRESS,
 };
-
-// This determines whether or not OCC can use MBOX for attentions
-eFsi2HostMboxState G_fsi2host_mbox_ready = FSI2HOST_MBOX_NOT_USEABLE;
 
 // Temporary storage used by our SSX_PANIC macro
 uint32_t __occ_panic_save_r3;
@@ -124,13 +118,13 @@ void clearCmdhWakeupCondition(eCmdhWakeupThreadMask i_cond)
     G_cmdh_thread_wakeup_mask &= ~i_cond;
 }
 
-
 // Function Specification
 //
 // Name:  notifyFspDoorbellReceived
 //
-// Description: Notifies the command handler thread that a
-//              command from the FSP has been received
+// Description: Notifies the command handler thread that a command
+//              from the FSP has been received by releasing the
+//              G_cmdh_fsp_wakeup_thread semaphore.
 //
 // End Function Specification
 void notifyFspDoorbellReceived(void * i_arg)
@@ -166,192 +160,6 @@ int cmdh_thread_wait_for_wakeup(void)
     return l_rc;
 }
 
-
-// Function Specification
-//
-// Name: cmdh_fsp_fsi2host_mbox_wait4free
-//
-// Description:  Checks the OR of all of the SCRATCH7 core scoms on the
-//               processor, and waits up to 90 <TBD> seconds for hostboot
-//               to signal they are off the fsi2host mbox by clearing the
-//               SCRATCH7 scom from 'hostboot' to all zeros.
-//
-// Moving the mbox check from scratch register 7 to scratch register 3.
-//
-// End Function Specification
-int cmdh_fsp_fsi2host_mbox_wait4free(void)
-{
-// Scratch register 3
-#define PC_SCR3 0x10013286
-
-// Hostboot writes 'hostboot' as its magic number
-#define HOSTBOOT_RUNNING 0x686f7374626f6f74ULL
-
-// Use at least 1 min to be safe
-#define FSI2HOST_TIMEOUT_IN_SECONDS 90
-
-#define SWAKEUP_TIMEOUT_MS  25 //use 25ms timeout (same as used in gpsm code)
-
-    uint64_t                        l_payload   = 0;
-    int                             rc,rc2      = 0;
-    int                             l_do_once   = 0;
-    int                             l_timeout   = FSI2HOST_TIMEOUT_IN_SECONDS;
-    ChipConfigCores                 l_cores, l_swup_timedout = 0;
-    pmc_core_deconfiguration_reg_t  l_pcdr;
-    bool                            l_disable_swup;
-    errlHndl_t                      l_errl;
-    bool                            l_swakeup_failure = FALSE;
-
-
-    // query configured cores for special wakeup
-    l_pcdr.value = in32(PMC_CORE_DECONFIGURATION_REG);
-    l_cores = ~l_pcdr.fields.core_chiplet_deconf_vector;
-
-    while(0 != l_timeout)
-    {
-        // Decrement Timeout Timer
-        l_timeout--;
-
-        l_disable_swup = FALSE;
-        // Enable special wakeup so following getscom doesn't
-        // fail with CHIPLET_OFFLINE error on sleeping cores
-// TEMP -- NO special_wakeup.h anymore!
-/*        rc2 = occ_special_wakeup(TRUE,
-                                l_cores,
-                                SWAKEUP_TIMEOUT_MS,
-                                &l_swup_timedout);
-*/
-        if(rc2 || l_swup_timedout)
-        {
-            CMDH_TRAC_ERR("cmdh_fsp_fsi2host_mbox_wait4free: enable occ_special_wakeup failed with rc=%d, timeout=0x%04x, cores=0x%04x",
-                     rc2, l_swup_timedout, l_cores);
-
-            l_swakeup_failure = TRUE;
-            break;
-        }
-
-        l_disable_swup = TRUE;
-
-        // Read from all cores & OR together so we don't have
-        // to figure out which is the hostboot 'master'
-        rc = getscom_ffdc(MC_ADDRESS(PC_SCR3,
-                    MC_GROUP_EX_CORE, PCB_MULTICAST_OR),
-                    &l_payload, NULL);                     //errors committed internally
-
-        if (rc) {
-            CMDH_TRAC_INFO("PC_SCR3 getscom fail rc=%x",rc);
-            break;
-        }
-
-        if (HOSTBOOT_RUNNING == l_payload)
-        {
-            // Hostboot is still running on the Mailbox
-            if(0 == l_do_once)
-            {
-                l_do_once = 1;
-                CMDH_TRAC_INFO("HostBoot is on FSI2HOST mailbox...waiting for them to get off");
-            }
-        }
-        else if(0 == l_payload)
-        {
-            // Hostboot is off the mailbox
-            rc = 0;
-            break;
-        }
-        else
-        {
-            // This is maybe an error, but probably not.  Especially in AVP mode.
-            CMDH_TRAC_INFO("Hostboot is off FSI2HOST mbox, but PC_SCR3 = 0x%08x_%08x",
-                    (uint32_t) ((l_payload & 0xFFFFFFFF00000000ULL) >> 32),
-                    (uint32_t) ((l_payload & 0x00000000FFFFFFFFULL) >> 0));
-
-            // Return success
-            rc = 0;
-            break;
-        }
-
-        if(l_disable_swup)
-        {
-            l_disable_swup = FALSE;
-            // clear special wakeup while we sleep
-// TEMP -- NO special_wakeup.h anymore!
-/*            rc2 = occ_special_wakeup(FALSE,
-                                    l_cores,
-                                    SWAKEUP_TIMEOUT_MS,
-                                    &l_swup_timedout);
-*/
-            if(rc2)
-            {
-                CMDH_TRAC_ERR("cmdh_fsp_fsi2host_mbox_wait4free: clear occ_special_wakeup failed with rc=%d, cores=0x%04x",
-                         rc2, l_cores);
-                l_swakeup_failure = TRUE;
-                break;
-            }
-        }
-
-
-        // Wait for 1 second until we try again
-        ssx_sleep(SSX_SECONDS(1));
-    }
-
-    //make sure we clear special wakeup before exiting this function
-    if(l_disable_swup)
-    {
-// TEMP -- NO special_wakeup.h anymore
-/*
-        rc2 = occ_special_wakeup(FALSE,
-                                l_cores,
-                                SWAKEUP_TIMEOUT_MS,
-                                &l_swup_timedout);
-*/
-        if(rc2)
-        {
-            CMDH_TRAC_ERR("cmdh_fsp_fsi2host_mbox_wait4free: clear occ_special_wakeup failed with rc=%d, cores=0x%04x",
-                     rc2, l_cores);
-            l_swakeup_failure = TRUE;
-        }
-    }
-
-    if( 0 == l_timeout )
-    {
-        rc = -1;
-    }
-
-    //Since cores can be left in an unknown state after special wakeup fails
-    //Log an error and request a reset to possibly clean up the special wakeup
-    if(l_swakeup_failure)
-    {
-        /* @
-         * @errortype
-         * @moduleid    CMDH_FSP_FSI2HOST_MBOX_WAIT4FREE
-         * @reasoncode  INTERNAL_HW_FAILURE
-         * @userdata1   rc - Return code of failing function
-         * @userdata2   bitmap of cores that timed out
-         * @userdata4   0
-         * @devdesc     Failed to enable OCC special wakeup
-         */
-        l_errl = createErrl(
-                CMDH_FSP_FSI2HOST_MBOX_WAIT4FREE,       // modId
-                INTERNAL_HW_FAILURE,                    // reasoncode
-                OCC_NO_EXTENDED_RC,                     // Extended reason code
-                ERRL_SEV_UNRECOVERABLE,                 // Severity
-                NULL,                                   // Trace Buf
-                DEFAULT_TRACE_SIZE,                     // Trace Size
-                rc2,                                    // userdata1
-                l_swup_timedout                         // userdata2
-                );
-
-        REQUEST_RESET(l_errl);
-        if(!rc)
-        {
-            rc = -1;
-        }
-    }
-
-    return rc;
-}
-
-
 // Function Specification
 //
 // Name: cmdh_fsp_init
@@ -361,9 +169,7 @@ int cmdh_fsp_fsi2host_mbox_wait4free(void)
 // End Function Specification
 errlHndl_t cmdh_fsp_init(void)
 {
-    int l_rc;
-    errlHndl_t l_errlHndl = NULL;
-    mbox_data_area_regs_t l_mbox_msg;
+    errlHndl_t            l_errlHndl = NULL;
 
     CHECKPOINT(INIT_OCB);
 
@@ -394,144 +200,8 @@ errlHndl_t cmdh_fsp_init(void)
     // Open Up Linear Window for FSP Communication
     // ----------------------------------------------------
 
-    if(G_occ_interrupt_type == FSP_SUPPORTED_OCC)
-    {
-        // ----------------------------------------------------
-        // Initialize FSI2Host Mailbox1 -- Attentions to FSP
-        // ----------------------------------------------------
-        l_rc = cmdh_fsp_fsi2host_mbox_wait4free();
-        if(l_rc)
-        {
-            CHECKPOINT_FLAG(CF_FSI_MB_TIMEOUT);
-
-            G_fsi2host_mbox_ready = FSI2HOST_MBOX_NOT_USEABLE;
-
-            CMDH_TRAC_ERR("Timeout waiting for HostBoot to get off FSI2HOST mailbox.  rc=%d", l_rc);
-
-            /* @
-             * @errortype
-             * @moduleid    CMDH_FSI2HOST_MBOX_UNAVAIL
-             * @reasoncode  EXTERNAL_INTERFACE_FAILURE
-             * @userdata1   l_rc - Return code of failing function
-             * @userdata2   0
-             * @userdata4   ERC_CMDH_MBOX_REQST_FAILURE
-             * @devdesc     Failed to get permission to use fsi2host mbox
-             */
-            l_errlHndl = createErrl(
-                    CMDH_FSI2HOST_MBOX_UNAVAIL,             // modId
-                    EXTERNAL_INTERFACE_FAILURE,             // reasoncode
-                    ERC_CMDH_MBOX_REQST_FAILURE,            // Extended reason code
-                    ERRL_SEV_PREDICTIVE,                    // Severity
-                    NULL,                                   // Trace Buf
-                    DEFAULT_TRACE_SIZE,                     // Trace Size
-                    l_rc,                                   // userdata1
-                    0                                       // userdata2
-                    );
-        }
-        else
-        {
-            CHECKPOINT(INIT_FSI_HOST_MBOX);
-            CMDH_TRAC_INFO("HostBoot is off FSI2HOST mailbox.");
-
-            /// Initialize the FSI2HOST MBOX
-            memset(&l_mbox_msg.word[0],0,sizeof(l_mbox_msg));
-            l_mbox_msg.fields.msg_id                          = 0;
-            l_mbox_msg.fields.msg_queue_id                    = OCC_MSG_QUEUE_ID;
-            l_mbox_msg.fields.msg_payload.fsp_cmd_buffer_addr = CMDH_LINEAR_WINDOW_BASE_ADDRESS;
-            l_mbox_msg.fields.msg_payload.fsp_rsp_buffer_addr = CMDH_OCC_RESPONSE_BASE_ADDRESS;
-
-            l_mbox_msg.fields.msg_payload.occ_id              = G_pbax_id.chip_id;
-
-            do
-            {
-                // Initialize Headers -- Hardware Provided Header Area not used
-                // scom errors will be committed internally
-                l_rc = putscom_ffdc(MAILBOX_1_HEADER_COMMAND_0_A_REGADDR,  0x0000000000000000ull, NULL);
-                    if(l_rc)
-                {
-                    break;
-                }
-                l_rc = putscom_ffdc(MAILBOX_1_HEADER_COMMAND_1_A_REGADDR,  0x0000000000000000ull, NULL);
-                if(l_rc)
-                {
-                    break;
-                }
-                l_rc = putscom_ffdc(MAILBOX_1_HEADER_COMMAND_2_A_REGADDR,  0x0000000000000000ull, NULL);
-                if(l_rc)
-                {
-                    break;
-                }
-
-                // Initialize Data Area -- 64 bytes
-                // Message ID & Message Queue ID
-                l_rc = putscom_ffdc(MAILBOX_1_DATA_AREA_A_0_REGADDR,  ((uint64_t) l_mbox_msg.fields.msg_id << 32), NULL);
-                if(l_rc)
-                {
-                    break;
-                }
-                // Command Type & Flags
-                l_rc = putscom_ffdc(MAILBOX_1_DATA_AREA_A_1_REGADDR,  ((uint64_t) l_mbox_msg.fields.msg_queue_id << 32), NULL);
-                if(l_rc)
-                {
-                    break;
-                }
-                // Data[0]
-                l_rc = putscom_ffdc(MAILBOX_1_DATA_AREA_A_2_REGADDR,  ((uint64_t) l_mbox_msg.fields.msg_payload.type << 32), NULL);
-                if(l_rc)
-                {
-                    break;
-                }
-                // Data[1]
-                l_rc = putscom_ffdc(MAILBOX_1_DATA_AREA_A_3_REGADDR,  ((uint64_t) l_mbox_msg.fields.msg_payload.flags << 32), NULL);
-                if(l_rc)
-                {
-                    break;
-                }
-                // (Void *) Extra Data
-                l_rc = putscom_ffdc(MAILBOX_1_DATA_AREA_A_4_REGADDR,  ((uint64_t) l_mbox_msg.fields.msg_payload.fsp_cmd_buffer_addr << 32), NULL);
-                if(l_rc)
-                {
-                    break;
-                }
-                // Unused
-                l_rc = putscom_ffdc(MAILBOX_1_DATA_AREA_A_5_REGADDR,  ((uint64_t) l_mbox_msg.fields.msg_payload.fsp_rsp_buffer_addr << 32), NULL);
-                if(l_rc)
-                {
-                    break;
-                }
-                l_rc = putscom_ffdc(MAILBOX_1_DATA_AREA_A_6_REGADDR,  ((uint64_t) l_mbox_msg.fields.msg_payload.occ_id << 32), NULL);
-                if(l_rc)
-                {
-                    break;
-                }
-                l_rc = putscom_ffdc(MAILBOX_1_DATA_AREA_A_7_REGADDR,  0x0000000000000000ull, NULL);
-                if(l_rc)
-                {
-                    break;
-                }
-                l_rc = putscom_ffdc(MAILBOX_1_DATA_AREA_A_8_REGADDR,  0x0000000000000000ull, NULL);
-                if(l_rc)
-                {
-                    break;
-                }
-                l_rc = putscom_ffdc(MAILBOX_1_DATA_AREA_A_9_REGADDR,  0x0000000000000000ull, NULL);
-                if(l_rc)
-                {
-                    break;
-                }
-
-                G_fsi2host_mbox_ready = FSI2HOST_MBOX_INITIALIZED;
-                CHECKPOINT(FSI_HOST_MBOX_INITIALIZED);
-            }while(0);
-        }
-    }
-    else if(G_occ_interrupt_type == PSIHB_INTERRUPT)
-    {
-        // For systems like Habanero, OCC will use the PSIHB complex to
-        // send an interrupt to Host. This is done via a simple SCOM
-        // register, so there is nothing to initialize here.
-    }
-    else
+    if(G_occ_interrupt_type != PSIHB_INTERRUPT &&
+       G_occ_interrupt_type != FSP_SUPPORTED_OCC)
     {
         // Invalid interrupt type
         CMDH_TRAC_ERR("cmdh_fsp_init: Invalid OCC interrupt type was detected! interrupt_type[%d]",
@@ -560,136 +230,6 @@ errlHndl_t cmdh_fsp_init(void)
 
     return l_errlHndl;
 }
-
-
-// Function Specification
-//
-// Name:  cmdh_fsp_attention
-//
-// Description: TODO -- Add description
-//
-// End Function Specification
-int cmdh_fsp_attention_withRetry(uint32_t i_type, int i_timeout_in_ms)
-{
-#define CMDH_RETRY_ATTENTION_INTERVAL_MS   10
-    int l_timeoutLimit = (i_timeout_in_ms / CMDH_RETRY_ATTENTION_INTERVAL_MS);
-    int l_timeout      = 0;
-    int l_alert_rc     = 0;
-    int l_rc           = 0;
-
-    // Try to send an alert to FSP every second until timeout is
-    // reached, or alert is successfully sent.
-    for(l_timeout=0; l_timeout < l_timeoutLimit; l_timeout++)
-    {
-        // Signal to TMGT that OCC has a response ready
-        l_alert_rc = cmdh_fsp_attention( OCC_ALERT_FSP_RESP_READY );
-
-        if(OCC_ALERT_SUCCESS == l_alert_rc)
-        {
-            // Attention successfully sent
-            break;
-        }
-        else if(OCC_ALERT_LAST_ATTN_NOT_COMPLETE == l_alert_rc)
-        {
-            // If we couldn't send the alert b/c FSP hasn't processed the last
-            // one, wait one second, then try again.
-            ssx_sleep(SSX_MILLISECONDS(CMDH_RETRY_ATTENTION_INTERVAL_MS));
-        }
-        else
-        {
-            // Must have been a PIB Error
-            CMDH_TRAC_ERR("PIB Error on Attention (Type %d) to FSP. rc=0x%x",
-                    i_type, l_alert_rc);
-            // TODO: Create Error Log?
-            break;
-        }
-    }
-    if(l_timeoutLimit == l_timeout)
-    {
-        CMDH_TRAC_INFO("Timeout on Attention (Type %d) to FSP. rc=0x%x",
-                i_type, l_alert_rc);
-        l_rc = -1;
-    }
-
-    return l_rc;
-}
-
-// Function Specification
-//
-// Name:  cmdh_fsp_attention
-//
-// Description: TODO -- Add description
-//
-// End Function Specification
-int cmdh_fsp_attention(uint32_t i_type)
-{
-    doorbl_stsctrl_reg_t  l_status;
-    mbox_data_area_regs_t l_mbox_msg;
-    int                   l_rc        = OCC_ALERT_SUCCESS;
-    errlHndl_t            l_err       = NULL;
-
-    do
-    {
-        // Don't send attentions if the FSI2HOST Mailbox isn't ours
-        if( FSI2HOST_MBOX_NOT_USEABLE == G_fsi2host_mbox_ready ){break;}
-
-        // Read Status Register for checks below
-        l_rc = getscom_ffdc(MAILBOX_1_DOORBELL_STS_CTRL_REGADDR, (uint64_t *) &l_status.doubleword, &l_err);
-        if(l_rc)
-        {
-            break;
-        }
-
-        if (l_status.lbus_slaveA_pending)
-        {
-            // Can't send alert, FSP hasn't handled last attention yet
-            l_rc = OCC_ALERT_LAST_ATTN_NOT_COMPLETE;
-
-            // Return from function with error rc, and let caller try again.
-            break;
-        }
-        else
-        {
-            // No attention in progress to FSP, we are allowed send one
-            if (0 == l_status.xup)
-            {
-                // FSP should have set this, but didn't...
-                // TODO: Ignore? Log Error? Valid Case? Abort sending another attention?
-            }
-
-            // Set Attention Command Type = OCC_ALERT_FSP_SERVICE_REQD, Flags = 0
-            l_mbox_msg.fields.msg_payload.type = i_type;
-
-            // Send Command Type & Flags to Mailbox Register
-            l_rc = putscom_ffdc(MAILBOX_1_DATA_AREA_A_2_REGADDR,  ((uint64_t) l_mbox_msg.fields.msg_payload.type << 32), &l_err);
-            if(l_rc){break;}
-
-            // Set Attention Interrupt by setting "LBUS slave-A Pending (bit 28, intel notation)"
-            l_status.lbus_slaveA_pending  = 1;
-            l_status.lbus_slaveA_data_cnt = 0x28;
-
-            // Clear Xup bit, it is set by FSP when it reads the OCC interrupt Mailbox
-            l_status.xup = 0;
-
-            // Write Status out to Doorbell Status/Control 1
-            l_rc = putscom_ffdc(MAILBOX_1_DOORBELL_STS_CTRL_REGADDR, (uint64_t) l_status.doubleword, &l_err);
-            if(l_rc){break;}
-
-            CMDH_DBG("Sent Attention to FSP:  Type[0x%x]\n",i_type);
-        }
-    }while(0);
-
-    if(l_err)
-    {
-        // TODO
-        //can't commit errors from this function since committing an error will
-        //cause another call to raise an attention and we could eventually run
-        //out of stack space
-        deleteErrl(&l_err);
-    }
-    return l_rc;
-}
-
 
 // Function Specification
 //

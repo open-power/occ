@@ -1143,9 +1143,9 @@ int main(int argc, char **argv)
         }
         else
         {
-            // For Simics we are assuming the BMC communication path
-            //G_occ_interrupt_type = FSP_SUPPORTED_OCC;
-            G_occ_interrupt_type = PSIHB_INTERRUPT;
+            // For Simics we are assuming the FSP communication path as the default
+            G_occ_interrupt_type = FSP_SUPPORTED_OCC;
+            //G_occ_interrupt_type = PSIHB_INTERRUPT;
         }
 
         MAIN_TRAC_INFO("HOMER accessed, rc=%d, host interrupt type=%d, ssx_rc=%d",

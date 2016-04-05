@@ -95,34 +95,13 @@
 // OCC/HTMGT response buffer offset in HOMER
 #define OCC_HTMGT_RSP_OFFSET_HOMER    0x001EF000
 
-// Typedef of the various alerts that OCC can send TMGT
-typedef enum
-{
-    //OCC has a response ready for TMGT to come get
-    OCC_ALERT_FSP_RESP_READY   = 1,
-    //OCC alert to TMGT that it needs to poll OCC
-    OCC_ALERT_FSP_SERVICE_REQD = 2,
-    //OCC alert to TMGT that it sees a checkstop
-    OCC_ALERT_SYS_CHECKSTOP    = 3,
-} eFspAlertType;
-
-// States for OCC using the Mailbox for Attn
-typedef enum
-{
-    FSI2HOST_MBOX_NOT_USEABLE = 0,
-    FSI2HOST_MBOX_INITIALIZED = 1,
-} eFsi2HostMboxState;
-
 // Typedef of the various reasons why the cmdh thread wakes up
 typedef enum
 {
     // Success, alert was sent
     CMDH_WAKEUP_REASON_NONE                   = 0x00000000,
     CMDH_WAKEUP_FSP_COMMAND                   = 0x00000001,
-    CMDH_WAKEUP_FSP_ATTENTION_ALERT           = 0x00000002,
-    CMDH_WAKEUP_FSP_CHECKSTOP_ALERT           = 0x00000004,
 } eCmdhWakeupThreadMask;
-
 
 // Typedef of the various errors that can happen on alerts
 typedef enum
@@ -331,80 +310,10 @@ typedef struct
     };
 } doorbl_stsctrl_reg_t;
 
-// Breakdown of the Mailbox1 Data, which OCC uses to alert TMGT.
-// This is the actual data that TMGT can get from the mailbox
-// when it is notified of an alert.
-typedef struct mbox_payload
-{
-    // This is the command type OCC uses to tell TMGT if this was a
-    // Response Ready, or Service Required (eFspAlertType)
-    uint32_t type;
-    union
-    {
-        struct
-        {
-            // Unused:  0 -> async, 1 -> sync.
-            uint32_t __reserved__async:1;
-            // Unused: This is for internal hostboot use.
-            uint32_t __reserved__mbox_sync:1;
-            // Unused
-            uint32_t __reserved__unused:30;
-        };
-        uint32_t flags;
-    };
-    union
-    {
-        struct
-        {
-            // "Write" Buffer Address (from TMGT perspective)
-            uint32_t fsp_cmd_buffer_addr;
-            // "Read" Buffer Address (from TMGT perspective)
-            uint32_t fsp_rsp_buffer_addr;
-            // Unused
-            uint8_t  _reserved[7];
-            // Sanity check on OCC Id (should match up with HUID)
-            uint8_t  occ_id;
-        };
-        uint64_t data[2];
-    };
-    // If extra_data != NULL, data[1] is required to have size of extra_data (in bytes)
-    uint64_t extra_data;
-} mbox_payload_t;
-
-// Breakdown of the Full Mailbox1, which OCC uses to alert TMGT.
-// This is the actual data that HWSV gets from the PIB, which it
-// then uses to notify TMGT of an alert, and sends TMGT the msg_payload
-typedef struct
-{
-    // Unused:  Identifier assigned by originating endpoint for correlating
-    // sync message responses.
-    uint32_t         msg_id;
-    // FSI2HOST Assigned Queue ID.  0x80000000 - 0xFFFFFFFF = FSP msg_queue,
-    // 0x0 - 0x80000000 = Hostboot msg_queue. 0x80000007 = OCC
-    uint32_t         msg_queue_id;
-    // Message Payload (what TMGT gets)
-    mbox_payload_t   msg_payload;
-} mbox_msg_t;
-
-// Union of the Full Mailbox1, which OCC uses to alert TMGT.
-// Since the data is SCOM'd, we want to parse it by uint64_t's
-// to do the scom, and fill it out using the mbox_msg_t.
-typedef union
-{
-    // Parsed out fields the way OCC & TMGT interpret them
-    mbox_msg_t fields;
-    // Words used in putscoms
-    uint64_t   word[8];
-} mbox_data_area_regs_t;
-
-extern eFsi2HostMboxState G_fsi2host_mbox_ready;
 extern eCmdhWakeupThreadMask G_cmdh_thread_wakeup_mask;
 extern fsp_cmd_t G_htmgt_cmd_buffer;
 extern fsp_rsp_t G_htmgt_rsp_buffer;
 extern uint8_t  G_rsp_status;
-
-int cmdh_fsp_attention(uint32_t i_type);
-int cmdh_fsp_attention_withRetry(uint32_t i_type, int i_timeout_in_ms);
 
 void notifyCmdhWakeupCondition(eCmdhWakeupThreadMask i_cond);
 void clearCmdhWakeupCondition(eCmdhWakeupThreadMask i_cond);
