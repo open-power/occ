@@ -1172,10 +1172,12 @@ errlHndl_t cmdh_fsp_cmd_hndler(void)
                     l_errlHndl = cmdh_processTmgtRequest (&G_fsp_msg.cmd->fields,
                                                           &G_tmp_rsp_buffer);
 
-                    // Write response data in SRAM except for return code
+                    // Copy response data in SRAM (excluding the return status)
                     G_fsp_msg.rsp->fields.data_length[0] = G_tmp_rsp_buffer.data_length[0];
                     G_fsp_msg.rsp->fields.data_length[1] = G_tmp_rsp_buffer.data_length[1];
-                    memcpy(&G_fsp_msg.rsp->fields.data[0], &G_tmp_rsp_buffer.data[0], sizeof(CMDH_FSP_RSP_DATA_SIZE));
+                    l_data_len = CONVERT_UINT8_ARRAY_UINT16(G_fsp_msg.rsp->fields.data_length[0],
+                                                            G_fsp_msg.rsp->fields.data_length[1]);
+                    memcpy(&G_fsp_msg.rsp->fields.data[0], &G_tmp_rsp_buffer.data[0], l_data_len);
                 }
                 else
                 {
@@ -1197,12 +1199,14 @@ errlHndl_t cmdh_fsp_cmd_hndler(void)
 
             // Add checksum
             l_cksm = checksum16(&G_fsp_msg.rsp->byte[0],(l_cmd_len));
+            if(l_sender_id == ATTN_SENDER_ID_BMC)
+            {
+                // The IN_PROGRESS return status must be removed from checksum, and
+                // the final return status (which must be written last) must be added
+                l_cksm += G_tmp_rsp_buffer.rc - ERRL_RC_CMD_IN_PROGRESS;
+            }
             G_fsp_msg.rsp->byte[l_cmd_len] = CONVERT_UINT16_UINT8_HIGH(l_cksm);
             G_fsp_msg.rsp->byte[l_cmd_len+1] = CONVERT_UINT16_UINT8_LOW(l_cksm);
-
-            // TODO: Do we really need this?
-            // Set an ACK on doorbell (sanity check)
-            //G_fsp_msg.doorbell[0] |= 0x80;
 
             // Last thing is to copy the return code in SRAM if the sender is BMC
             if(l_sender_id == ATTN_SENDER_ID_BMC)
