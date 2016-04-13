@@ -1,11 +1,27 @@
-// $Id: gpsm_init.c,v 1.11 2016/01/18 11:34:11 stillgs Exp $
-// $Source: /archive/shadow/ekb/.cvsroot/eclipz/chips/p8/working/procedures/lib/gpsm_init.c,v $
-//-----------------------------------------------------------------------------
-// *! (C) Copyright International Business Machines Corp. 2013
-// *! All Rights Reserved -- Property of IBM
-// *! *** IBM Confidential ***
-//-----------------------------------------------------------------------------
-
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/lib/gpsm_init.c $                                         */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 /// \file gpsm_init.c
 /// \brief Global Pstate Machine procedures only required to initialize Pstate
 /// and Pstate modes.
@@ -773,12 +789,9 @@ gpsm_resclk_install(const ResonantClockingSetup* i_resclk,
 
         // Write the PCBS_RESONANT_CLOCK_CONTROL_REG1 with the
         // Pstate setup, clearing all manual fields.
-       
-        // If at least one resonant clocking parm was 0 in PstateSuperStructure
-        // write the register with default values
-        // Low Band  : 2 GHZ to 3.2 GHz
-        // High Band : 3.2 GHZ - Up
 
+
+        // Make some defaults
         gpst_frequency2pstate(i_gpst, 0,       &(d_resclk.full_csb_ps));
         gpst_frequency2pstate(i_gpst, 2000000, &(d_resclk.res_low_lower_ps));
         gpst_frequency2pstate(i_gpst, 3200000, &(d_resclk.res_low_upper_ps));
@@ -786,11 +799,22 @@ gpsm_resclk_install(const ResonantClockingSetup* i_resclk,
         gpst_frequency2pstate(i_gpst, 9999999, &(d_resclk.res_high_upper_ps));
 
         prccr1.value = 0;
-        if (!(i_resclk->full_csb_ps && 
-              i_resclk->res_low_lower_ps &&
-              i_resclk->res_low_upper_ps && 
-              i_resclk->res_high_lower_ps &&
-              i_resclk->res_high_upper_ps)) {
+        
+        // SW348603 - The highest Pstate WILL be 0 so this check is not actually
+        // valid.       
+        // If all resonant clocking parms are 0 in PstateSuperStructure
+        // write the register with default values
+        // Low Band  : 2 GHZ to 3.2 GHz
+        // High Band : 3.2 GHZ - Up
+        
+        // By implication, if ANY of the fields are not zero indicates that they
+        // are all valid.
+
+        if (((i_resclk->full_csb_ps == 0) && 
+             (i_resclk->res_low_lower_ps == 0) &&
+             (i_resclk->res_low_upper_ps == 0) && 
+             (i_resclk->res_high_lower_ps == 0) &&
+             (i_resclk->res_high_upper_ps == 0))) {     // SW348603          
             prccr1.fields.full_csb_ps       = d_resclk.full_csb_ps;
             prccr1.fields.res_low_lower_ps  = d_resclk.res_low_lower_ps;
             prccr1.fields.res_low_upper_ps  = d_resclk.res_low_upper_ps;
@@ -802,7 +826,8 @@ gpsm_resclk_install(const ResonantClockingSetup* i_resclk,
             prccr1.fields.res_low_upper_ps  = i_resclk->res_low_upper_ps;
             prccr1.fields.res_high_lower_ps = i_resclk->res_high_lower_ps;
             prccr1.fields.res_high_upper_ps = i_resclk->res_high_upper_ps;
-        }
+        }         
+
 
         ///bug need to determine where these values come from
         prccr1.fields.nonres_csb_value_ti  = 0xC;
