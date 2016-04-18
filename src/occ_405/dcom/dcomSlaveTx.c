@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -25,6 +25,7 @@
 
 #ifndef _DCOMSLAVETX_C
 #define _DCOMSLAVETX_C
+#include "ssx.h"
 #include "occhw_pba.h"
 #include <rtls.h>
 #include <apss.h>

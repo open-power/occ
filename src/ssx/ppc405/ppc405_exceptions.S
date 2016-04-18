@@ -65,6 +65,7 @@
 /// has something similar to a PgP or 405 ASIC interrupt controller.
 ///
 /// \cond
+// *INDENT-OFF*
 
         .nolist
 #include "ssx.h"
@@ -859,4 +860,5 @@ __vectors_2000:
 __debug_interrupt:      
         b       debug_handler   
 
+// *INDENT-ON*
 /// \endcond

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -36,7 +36,7 @@
 ///
 /// The data cache flush/invalidate macros defined here create a compiler
 /// memory barrier that will cause GCC to flush/invalidate all memory data
-/// held in registers before the macro. 
+/// held in registers before the macro.
 
 #ifndef __ASSEMBLER__
 
@@ -75,7 +75,7 @@
 /// Instruction Cache Block Touch
 #define icbt(p) asm volatile ("icbt 0, %0" : : "r" (p) : "memory")
 
-void 
+void
 icache_invalidate_all(void);
 
 void
@@ -85,10 +85,10 @@ void
 dcache_flush_all(void);
 
 void
-dcache_invalidate(void *p, size_t bytes);
+dcache_invalidate(void* p, size_t bytes);
 
 void
-dcache_flush(void *p, size_t bytes);
+dcache_flush(void* p, size_t bytes);
 
 /// Invalidate a line in the D-cache
 ///
@@ -104,7 +104,7 @@ dcache_flush(void *p, size_t bytes);
 /// This API always issues a sync() after the invalidation.
 
 static inline void
-dcache_invalidate_line(void *p)
+dcache_invalidate_line(void* p)
 {
     dcbi(p);
     sync();
@@ -124,7 +124,7 @@ dcache_invalidate_line(void *p)
 /// This API always issues a sync() after the flush.
 
 static inline void
-dcache_flush_line(void *p)
+dcache_flush_line(void* p)
 {
     dcbf(p);
     sync();

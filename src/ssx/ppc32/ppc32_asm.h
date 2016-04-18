@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -55,11 +55,11 @@
 ///         absolute or relocatable expression.
 ///
 /// Forms:
-/// 
+///
 /// \b _lbzi \a dreg, \a areg, \a addr - Load Byte and Zero from Immediate address \n
 /// \b _lhzi \a dreg, \a areg, \a addr - Load Halfword and Zero from Immediate address \n
 /// \b _lwzi \a dreg, \a areg, \a addr - Load Word and Zero from Immediate address \n
-/// 
+///
 ///
 /// \section _stxi _st<w,h,b>i - STore register to Immediate address
 ///
@@ -75,7 +75,7 @@
 ///         absolute or relocatable expression.
 ///
 /// Forms:
-/// 
+///
 /// \b _stbi \a dreg, \a areg, \a addr - STore Byte to Immediate address \n
 /// \b _sthi \a dreg, \a areg, \a addr - STore Halfword to Immediate address \n
 /// \b _stwi \a dreg, \a areg, \a addr - STore Word to Immediate address \n
@@ -99,8 +99,8 @@
 /// \arg \c addr A 32-bit immediate address, assumed to be a
 ///              relocatable address in one of the small data sections.
 ///
-/// Forms:      
-/// 
+/// Forms:
+///
 /// \b _lbzsd \a dreg, \a addr  - Load Byte and Zero from Small Data area \n
 /// \b _lhzsd \a dreg, \a addr  - Load Halfword and Zero from Small Data area \n
 /// \b _lwzsd \a dreg, \a addr  - Load Word and Zero from Small Data area \n
@@ -158,8 +158,8 @@
 /// \arg \c ra Register containing the counter address at entry
 ///
 /// \a rs and \a ra must be unique.  At the end of the macro the count
-/// is updated to memory and \a ra is unmodified. 
-///        
+/// is updated to memory and \a ra is unmodified.
+///
 ///
 /// \section _setclear_bits Set/Clear/Copy Bits from Immediate Positions
 ///
@@ -183,7 +183,7 @@
 /// \b _copyfield \a rd, \a rs, \a n, \a b - Copy an n-bit field from \a rs to
 /// \a rd starting from bit \a b \n
 ///
-///     
+///
 /// \section pseudo_ops Assembler Pseudo-Ops Macros
 ///
 /// Several macros define new 'pseudo-ops'.
@@ -209,7 +209,7 @@
 /// \b .function \a symbol - Define a local function \a symbol \n
 /// \b .global_function \a symbol - Define a global function \a symbol \n
 ///
-/// 
+///
 /// \subsection epilogue .epilogue
 ///
 /// The \c .epilogue pseudo-op adds size and type information for
@@ -225,6 +225,7 @@
 /// \cond
 
 #ifdef __ASSEMBLER__
+// *INDENT-OFF*
 
 ### ****************************************************************************
 ### _l<b,h,w>zi
@@ -239,7 +240,7 @@
         lbzu    \dreg, \addr@l(\areg)
         .endif
         .endm
-        
+
         .macro  _lhzi dreg, areg, addr
         lis     \areg, \addr@ha
         .ifc    \areg, \dreg
@@ -248,7 +249,7 @@
         lhzu    \dreg, \addr@l(\areg)
         .endif
         .endm
-        
+
         .macro  _lwzi dreg, areg, addr
         lis     \areg, \addr@ha
         .ifc    \areg, \dreg
@@ -265,7 +266,7 @@
         lis     \areg, \addr@ha
         stbu    \dreg, \addr@l(\areg)
         .endm
-        
+
         .macro  _sthi dreg, areg, addr
         .ifc    \areg, \dreg
         .err
@@ -273,7 +274,7 @@
         lis     \areg, \addr@ha
         sthu    \dreg, \addr@l(\areg)
         .endm
-        
+
         .macro  _stwi dreg, areg, addr
         .ifc    \areg, \dreg
         .err
@@ -419,12 +420,13 @@
         .size   \symbol, . - \symbol
         .endm           
 
+// *INDENT-ON*
 #endif /* __ASSEMBLER__ */
 
 /// \endcond
-        
+
 // Local Variables:
 // mode:asm
 // End:
-        
+
 #endif /* __PPC32_ASM_H__ */

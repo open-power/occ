@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -93,7 +93,7 @@
 
 #ifndef __ASSEMBLER__
 
-typedef uint8_t AsyncEngine;
+    typedef uint8_t AsyncEngine;
 
 #endif  /* __ASSEMBLER__ */
 
@@ -113,7 +113,8 @@ typedef uint8_t AsyncEngine;
 /// master on the OCI (SLW/GPE/OCB/PBA).  Note that OCI errors from the 405
 /// core will cause an immediate machine check exception.
 
-typedef struct {
+typedef struct
+{
 
     /// PLB arbiter Error Address Register
     ///
@@ -236,11 +237,11 @@ oci_ffdc(OciFfdc* ffdc, int master_id);
 struct AsyncRequest;
 struct AsyncQueue;
 
-typedef int (*AsyncRunMethod)(struct AsyncRequest *request);
+typedef int (*AsyncRunMethod)(struct AsyncRequest* request);
 
-typedef int (*AsyncErrorMethod)(struct AsyncRequest *request);
+typedef int (*AsyncErrorMethod)(struct AsyncRequest* request);
 
-typedef int (*AsyncRequestCallback)(void *);
+typedef int (*AsyncRequestCallback)(void*);
 
 /// A generic request for the asynchronous request drivers
 ///
@@ -266,7 +267,8 @@ typedef int (*AsyncRequestCallback)(void *);
 /// requests.  If the \a error_method returns a non-0 code then the error is
 /// considered fatal and the queue stops.
 
-typedef struct AsyncRequest {
+typedef struct AsyncRequest
+{
 
     /// Generic queue management - the "base class"
     SsxDeque deque;
@@ -297,7 +299,7 @@ typedef struct AsyncRequest {
     SsxTimer timer;
 
     /// The engine queue the request is/was scheduled on
-    struct AsyncQueue *queue;
+    struct AsyncQueue* queue;
 
     /// The "virtual" run method for the class
     AsyncRunMethod run_method;
@@ -314,7 +316,7 @@ typedef struct AsyncRequest {
     AsyncRequestCallback callback;
 
     /// The argument of the callback
-    void *arg;
+    void* arg;
 
     /// The timeout value
     ///
@@ -367,13 +369,13 @@ typedef struct AsyncRequest {
 
 
 int
-async_request_create(AsyncRequest *request,
-                     struct AsyncQueue *queue,
+async_request_create(AsyncRequest* request,
+                     struct AsyncQueue* queue,
                      AsyncRunMethod run_method,
                      AsyncErrorMethod error_method,
                      SsxInterval timeout,
                      AsyncRequestCallback callback,
-                     void *arg,
+                     void* arg,
                      int options);
 
 void
@@ -395,7 +397,7 @@ async_request_finalize(AsyncRequest* request);
 /// \retval 1 The request is idle
 
 static inline int
-async_request_is_idle(AsyncRequest *request)
+async_request_is_idle(AsyncRequest* request)
 {
     return (request->state & ASYNC_REQUEST_IDLE_GROUP) != 0;
 }
@@ -415,7 +417,7 @@ async_request_is_idle(AsyncRequest *request)
 /// \retval 1 The request has completed successfully.
 
 static inline int
-async_request_completed(AsyncRequest *request)
+async_request_completed(AsyncRequest* request)
 {
     return (request->state == ASYNC_REQUEST_STATE_COMPLETE);
 }
@@ -431,7 +433,7 @@ async_request_latency(AsyncRequest* request, SsxTimebase* latency);
 
 
 void
-async_request_printk(AsyncRequest *request);
+async_request_printk(AsyncRequest* request);
 
 
 #endif  /* __ASSEMBLER__ */
@@ -462,7 +464,8 @@ async_request_printk(AsyncRequest *request);
 /// high-priority jobs will run in the reverse order from which they were
 /// enqueued.
 
-typedef struct AsyncQueue {
+typedef struct AsyncQueue
+{
 
     /// The sentinel of the request queue
     SsxDeque deque;
@@ -502,13 +505,13 @@ async_error_handler(AsyncQueue* queue, uint8_t completion_state);
 
 void
 async_edge_handler_setup(SsxIrqHandler handler,
-                         void *arg,
+                         void* arg,
                          SsxIrqId irq,
                          int priority);
 
 void
 async_level_handler_setup(SsxIrqHandler handler,
-                          void *arg,
+                          void* arg,
                           SsxIrqId irq,
                           int priority,
                           int polarity);
@@ -528,7 +531,8 @@ async_callbacks_initialize(SsxIrqId irq);
 struct GpeQueue;
 
 /// GPE FFDC
-typedef struct {
+typedef struct
+{
     uint32_t            func_id;
     int32_t             ipc_rc;
     int                 xir_dump_rc;
@@ -546,7 +550,8 @@ typedef struct {
 /// e.g., to do ping-pong buffer management.  None of the other fields should
 /// be directly modified by the application.
 
-typedef struct {
+typedef struct
+{
 
     /// The generic request
     AsyncRequest    request;
@@ -571,20 +576,20 @@ gpe_error_method(AsyncRequest* request);
 
 int
 gpe_request_create(GpeRequest* request,
-                 struct GpeQueue* queue,
-                 ipc_func_enum_t func_id,
-                 void* cmd_data,
-                 SsxInterval timeout,
-                 AsyncRequestCallback callback,
-                 void *arg,
-                 int options);
+                   struct GpeQueue* queue,
+                   ipc_func_enum_t func_id,
+                   void* cmd_data,
+                   SsxInterval timeout,
+                   AsyncRequestCallback callback,
+                   void* arg,
+                   int options);
 
 
 /// See async_request_schedule() for documentation.
 static inline int
 gpe_request_schedule(GpeRequest* request)
 {
-    return async_request_schedule((AsyncRequest *)request);
+    return async_request_schedule((AsyncRequest*)request);
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -597,7 +602,8 @@ gpe_request_schedule(GpeRequest* request)
 /// A GPE queue consists of a generic AsyncQueue to manage jobs on the
 /// engine.
 
-typedef struct GpeQueue {
+typedef struct GpeQueue
+{
 
     /// The generic request queue - the "base class"
     AsyncQueue queue;
@@ -606,14 +612,14 @@ typedef struct GpeQueue {
     uint8_t         ipc_target_id;
 
     /// Pointer to an IPC command message
-    ipc_async_cmd_t *ipc_cmd;
+    ipc_async_cmd_t* ipc_cmd;
 
 } GpeQueue;
 
 
 int
-gpe_queue_create(GpeQueue *queue,
-                  int engine);
+gpe_queue_create(GpeQueue* queue,
+                 int engine);
 
 #endif  /* ASSEMBLER */
 
@@ -629,7 +635,8 @@ gpe_queue_create(GpeQueue *queue,
 /// structure are embedded in higher-level structures for the PBA bridge, BCE
 /// engines, and PBAX mechanism.
 
-typedef struct {
+typedef struct
+{
 
     /// FFDC from the PLB (OCI) arbiter
     OciFfdc oci_ffdc;
@@ -674,7 +681,8 @@ typedef struct {
 /// direct bridge operations after OCC initialization.  This structure extends
 /// the common PBA FFDC with information on how the slaves were programmed.
 
-typedef struct {
+typedef struct
+{
 
     /// Common FFDC
     PbaCommonFfdc common;
@@ -694,7 +702,8 @@ typedef struct {
 /// Similar to the way the drivers are coded, the BCDE register forms are used
 /// to declare the structures.
 
-typedef struct {
+typedef struct
+{
 
     /// Common FFDC
     PbaCommonFfdc common;
@@ -716,7 +725,8 @@ typedef struct {
 
 /// FFDC collected for PBAX send errors
 
-typedef struct {
+typedef struct
+{
 
     /// Common FFDC
     PbaCommonFfdc common;
@@ -735,7 +745,8 @@ typedef struct {
 
 /// FFDC collected for PBAX receive errors
 
-typedef struct {
+typedef struct
+{
 
     /// Common FFDC
     PbaCommonFfdc common;
@@ -757,7 +768,8 @@ typedef struct {
 
 /// A single global structure containing FFDC for all PBA functions
 
-typedef struct {
+typedef struct
+{
 
     /// FFDC for the generic bridge
     PbaBridgeFfdc bridge;
@@ -770,10 +782,10 @@ typedef struct {
 
     /// FFDC for PBAX send
     PbaxSendFfdc pbax_send;
-    
+
     /// FFDC for PBAX receive
     PbaxReceiveFfdc pbax_receive;
-    
+
 } PbaUnitFfdc;
 
 #endif  // __ASSEMBLER__
@@ -796,7 +808,8 @@ struct BceQueue;
 /// through the channel, the software layer allows any amount of data to be
 /// moved as a single request.
 
-typedef struct {
+typedef struct
+{
 
     /// The generic request
     AsyncRequest request;
@@ -840,14 +853,14 @@ typedef struct {
 } BceRequest;
 
 int
-bce_request_create(BceRequest *request,
-                   struct BceQueue *queue,
+bce_request_create(BceRequest* request,
+                   struct BceQueue* queue,
                    uint32_t bridge_address,
                    uint32_t oci_address,
                    size_t bytes,
                    SsxInterval timeout,
                    AsyncRequestCallback callback,
-                   void *arg,
+                   void* arg,
                    int options);
 
 #endif  /* __ASSEMBLER__ */
@@ -874,7 +887,8 @@ bce_request_create(BceRequest *request,
 /// jobs on the engine and the PBA engine id. The BCDE and BCUE can use the
 /// same driver because their control interfaces are identical.
 
-typedef struct BceQueue {
+typedef struct BceQueue
+{
 
     /// The generic request queue
     AsyncQueue queue;
@@ -886,12 +900,12 @@ typedef struct BceQueue {
 
 
 int
-bce_queue_create(BceQueue *queue,
+bce_queue_create(BceQueue* queue,
                  int engine);
 
 
 int
-bce_request_schedule(BceRequest *request);
+bce_request_schedule(BceRequest* request);
 
 #endif  /* __ASSEMBLER__ */
 
@@ -933,7 +947,8 @@ struct PbaxQueue;
 /// buffer size. For free-form communications an aggressive read protocol must
 /// be used.
 
-typedef struct {
+typedef struct
+{
 
     /// The generic request
     AsyncRequest request;
@@ -942,7 +957,7 @@ typedef struct {
     ///
     /// This field is not modified by the drivers.  The application may modify
     /// this field any time the PbaxRequest is idle.
-    uint64_t *data;
+    uint64_t* data;
 
     /// Number of bytes to move, which must be a multiple of 8.
     ///
@@ -964,18 +979,18 @@ typedef struct {
 
 
 int
-pbax_request_create(PbaxRequest *request,
-                    struct PbaxQueue *queue,
-                    uint64_t *data,
+pbax_request_create(PbaxRequest* request,
+                    struct PbaxQueue* queue,
+                    uint64_t* data,
                     size_t bytes,
                     SsxInterval timeout,
                     AsyncRequestCallback callback,
-                    void *arg,
+                    void* arg,
                     int options);
 
 
 int
-pbax_request_schedule(PbaxRequest *request);
+pbax_request_schedule(PbaxRequest* request);
 
 #endif  /* __ASSEMBLER__ */
 
@@ -1004,7 +1019,8 @@ extern const SsxAddress pba_xshincn[];
 /// A PBAX circular buffer queue consists of a generic AsyncQueue to manage
 /// jobs on the engine, a pointer to the data area and the PBAX engine id.
 
-typedef struct PbaxQueue {
+typedef struct PbaxQueue
+{
 
     /// The generic request queue
     AsyncQueue queue;
@@ -1013,7 +1029,7 @@ typedef struct PbaxQueue {
     ///
     /// This data area must satisfy stringent alignment constraints; See the
     /// documentation for PbaxRequest.
-    uint64_t *cq_base;
+    uint64_t* cq_base;
 
     /// The number of 8-byte entries in the queue.
     ///
@@ -1039,17 +1055,17 @@ typedef struct PbaxQueue {
 
 
 int
-pbax_queue_create(PbaxQueue *queue,
+pbax_queue_create(PbaxQueue* queue,
                   int engine,
-                  uint64_t *cq_base,
+                  uint64_t* cq_base,
                   size_t cq_entries,
                   int protocol);
 
 int
-pbax_queue_disable(PbaxQueue *queue);
+pbax_queue_disable(PbaxQueue* queue);
 
 int
-pbax_queue_enable(PbaxQueue *queue);
+pbax_queue_enable(PbaxQueue* queue);
 
 int
 pbax_read(PbaxQueue* queue, void* buf, size_t bytes, size_t* read);
@@ -1069,7 +1085,7 @@ pbax_read(PbaxQueue* queue, void* buf, size_t bytes, size_t* read);
 /// reasonably attributed to an OCB channel under the control of OCC, and 2)
 /// general errors signalled by the OCB direct bridge.  Due to the myriad ways
 /// that OCB channels can be used the FFDC for OCB direct bridge errors is
-/// stored globally rather than with particular requests or queues.  
+/// stored globally rather than with particular requests or queues.
 ///
 /// The OcbFfdc includes the PLB arbiter PEARL and PESR register state.
 /// This state is only collected if the error status indicates an OCI timeout
@@ -1079,12 +1095,13 @@ pbax_read(PbaxQueue* queue, void* buf, size_t bytes, size_t* read);
 /// then disable the channel since any further communication through the
 /// channel must be considered compromised.
 
-typedef struct {
+typedef struct
+{
 
     /// FFDC from the OCI (PLB) arbiter
     OciFfdc oci_ffdc;
 
-    /// A copy of the OCB OCC_LFIR register at the time of the error 
+    /// A copy of the OCB OCC_LFIR register at the time of the error
     ocb_occlfir_t fir;
 
     /// A copy of the OCB Control/Status register for the channel at the time
@@ -1127,7 +1144,8 @@ typedef struct {
 ///
 /// Contains FFDC structures for each channel and the direct bridge
 
-typedef struct {
+typedef struct
+{
 
     OcbFfdc channel[OCB_INDIRECT_CHANNELS];
     OcbFfdc bridge;
@@ -1178,14 +1196,15 @@ struct OcbQueue;
 /// partner has received the data, but simply that the data has been queued
 /// for reception and the caller may reuse/refill the data buffer if required.
 
-typedef struct {
+typedef struct
+{
 
     /// The generic request
     AsyncRequest request;
 
     /// Initial pointer to the data to be moved for write data, or the
     /// data area to hold read data. This field is not modified by the drivers.
-    uint64_t *data;
+    uint64_t* data;
 
     /// Number of bytes to move. This field is not modified by the drivers.
     size_t bytes;
@@ -1201,18 +1220,18 @@ typedef struct {
 
 
 int
-ocb_request_create(OcbRequest *request,
-                   struct OcbQueue *queue,
-                   uint64_t *data,
+ocb_request_create(OcbRequest* request,
+                   struct OcbQueue* queue,
+                   uint64_t* data,
                    size_t bytes,
                    SsxInterval timeout,
                    AsyncRequestCallback callback,
-                   void *arg,
+                   void* arg,
                    int options);
 
 
 int
-ocb_request_schedule(OcbRequest *request);
+ocb_request_schedule(OcbRequest* request);
 
 #endif  /* __ASSEMBLER__ */
 
@@ -1225,7 +1244,7 @@ ocb_request_schedule(OcbRequest *request);
 // occhw_async.c - these constants are used as array indices.  The code also
 // assumes this ordering for the access of G_ocb_ocbsesn[], and for
 // determining whether the engine is a PUSH or PULL queue.
-// Note:  push/pull queues for channel 3 have been deleted 
+// Note:  push/pull queues for channel 3 have been deleted
 
 #define OCB_ENGINE_PUSH0 0
 #define OCB_ENGINE_PULL0 1
@@ -1245,13 +1264,14 @@ ocb_request_schedule(OcbRequest *request);
 /// A OCB circular buffer queue consists of a generic AsyncQueue to manage
 /// jobs on the engine, a pointer to the data area and the OCB engine id.
 
-typedef struct OcbQueue {
+typedef struct OcbQueue
+{
 
     /// The generic request queue
     AsyncQueue queue;
 
     /// The base of the circular queue data area - must be 8-byte aligned
-    uint64_t *cq_base;
+    uint64_t* cq_base;
 
     /// The length of the queue in terms of the number of 8-byte entries in
     /// the queue.
@@ -1272,9 +1292,9 @@ typedef struct OcbQueue {
 
 
 int
-ocb_queue_create(OcbQueue *queue,
+ocb_queue_create(OcbQueue* queue,
                  int engine,
-                 uint64_t *cq_base,
+                 uint64_t* cq_base,
                  size_t cq_length,
                  int protocol);
 
@@ -1476,7 +1496,7 @@ extern PbaxQueue G_pbax_read_queue[];
 #define _PBAX_ALIGN_(length)                    \
     (((length) <= 4) ? 32 :                     \
      (((length) <= 8) ? 64 :                    \
-      (((length) <= 16) ? 128 : 256)))     
+      (((length) <= 16) ? 128 : 256)))
 
 #define PBAX_CQ_READ_BUFFER(buffer, length) \
     uint64_t buffer[length] \
@@ -1490,20 +1510,20 @@ extern uint64_t G_pbax_read1_buffer[];
 // Initialization APIs
 
 void
-async_gpe_initialize(GpeQueue *queue, int engine);
+async_gpe_initialize(GpeQueue* queue, int engine);
 
 void
-async_bce_initialize(BceQueue *queue, int engine, SsxIrqId irq);
-
-
-void
-async_ocb_initialize(OcbQueue *queue, int engine,
-                     uint64_t *buffer, size_t length, int protocol);
+async_bce_initialize(BceQueue* queue, int engine, SsxIrqId irq);
 
 
 void
-async_pbax_initialize(PbaxQueue *queue, int engine, SsxIrqId irq,
-                      uint64_t *buffer, size_t length, int protocol);
+async_ocb_initialize(OcbQueue* queue, int engine,
+                     uint64_t* buffer, size_t length, int protocol);
+
+
+void
+async_pbax_initialize(PbaxQueue* queue, int engine, SsxIrqId irq,
+                      uint64_t* buffer, size_t length, int protocol);
 
 
 void

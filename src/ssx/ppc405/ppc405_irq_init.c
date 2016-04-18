@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -45,7 +45,7 @@
 ///
 /// \retval 0 Successful completion
 ///
-/// \retval -SSX_INVALID_ARGUMENT_PPC405_FIT The \a tcr_fp argument was 
+/// \retval -SSX_INVALID_ARGUMENT_PPC405_FIT The \a tcr_fp argument was
 /// invalid when called with a non-null (non-0) \a handler.
 
 // Since the SSX_CRITICAL Watchdog interrupt is also controlled by the TCR, we
@@ -57,7 +57,8 @@ ppc405_fit_setup(int tcr_fp, SsxIrqHandler handler, void* arg)
     SsxMachineContext ctx;
     Ppc405TCR tcr;
 
-    if (SSX_ERROR_CHECK_API && handler) {
+    if (SSX_ERROR_CHECK_API && handler)
+    {
         SSX_ERROR_IF((tcr_fp < 0) ||
                      (tcr_fp > 3),
                      SSX_INVALID_ARGUMENT_PPC405_FIT);
@@ -67,7 +68,8 @@ ppc405_fit_setup(int tcr_fp, SsxIrqHandler handler, void* arg)
 
     tcr.value = mfspr(SPRN_TCR);
 
-    if (handler) {
+    if (handler)
+    {
 
         tcr.fields.fp  = tcr_fp;
         tcr.fields.fie = 1;
@@ -75,7 +77,9 @@ ppc405_fit_setup(int tcr_fp, SsxIrqHandler handler, void* arg)
         __ppc405_fit_routine = handler;
         __ppc405_fit_arg = arg;
 
-    } else {
+    }
+    else
+    {
 
         tcr.fields.fie = 0;
     }
@@ -87,7 +91,7 @@ ppc405_fit_setup(int tcr_fp, SsxIrqHandler handler, void* arg)
 
     return SSX_OK;
 }
-    
+
 
 /// Set up a PPC405 Watchdog interrupt handler
 ///
@@ -98,17 +102,18 @@ ppc405_fit_setup(int tcr_fp, SsxIrqHandler handler, void* arg)
 ///
 /// \retval 0 Successful completion
 ///
-/// \retval -SSX_INVALID_ARGUMENT_PPC405_WATCHDOG One or more of the \a tcr_wp 
+/// \retval -SSX_INVALID_ARGUMENT_PPC405_WATCHDOG One or more of the \a tcr_wp
 /// or \a tcr_wrc arguments were invalid.
 
 int
-ppc405_watchdog_setup(int tcr_wp, int tcr_wrc, 
+ppc405_watchdog_setup(int tcr_wp, int tcr_wrc,
                       SsxIrqHandler handler, void* arg)
 {
     SsxMachineContext ctx;
     Ppc405TCR tcr;
 
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF((tcr_wp < 0)  ||
                      (tcr_wp > 3)  ||
                      (tcr_wrc < 0) ||
@@ -125,11 +130,12 @@ ppc405_watchdog_setup(int tcr_wp, int tcr_wrc,
     tcr.fields.wp  = tcr_wp;
     tcr.fields.wrc = tcr_wrc;
 
-    if (handler == 0) {
+    if (handler == 0)
+    {
 
         // Reinstall the default handler and clear the interrupt enable.  Then
         // clear any pending interrupt status.
-        // WIS. 
+        // WIS.
 
         __ppc405_watchdog_routine = __ppc405_default_irq_handler;
         __ppc405_watchdog_arg = 0;
@@ -141,7 +147,9 @@ ppc405_watchdog_setup(int tcr_wp, int tcr_wrc,
         mtspr(SPRN_TSR, TSR_WIS);
         isync();
 
-    } else {
+    }
+    else
+    {
 
         // Install the new handler and enable the watchdog interrup.
 
@@ -157,7 +165,7 @@ ppc405_watchdog_setup(int tcr_wp, int tcr_wrc,
 
     return SSX_OK;
 }
-    
+
 
 /// Set up a PPC405 Debug interrupt handler
 ///
@@ -167,7 +175,7 @@ ppc405_watchdog_setup(int tcr_wp, int tcr_wrc,
 ///
 /// \retval 0 Successful completion
 ///
-/// \retval -SSX_INVALID_ARGUMENT_PPC405_DEBUG The \a handler argument 
+/// \retval -SSX_INVALID_ARGUMENT_PPC405_DEBUG The \a handler argument
 /// is null (0).
 
 // The debug handler is installed in an SSX_CRITICAL critical section with all

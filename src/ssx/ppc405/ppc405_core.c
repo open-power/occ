@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -30,7 +30,7 @@
 
 /// \file ppc405_core.c
 /// \brief The final bits of SSX runtime code required to complete the PPC405
-/// port. 
+/// port.
 ///
 /// The entry points in this file are considered 'core' routines that will
 /// always be present during runtime in any SSX application.
@@ -58,7 +58,7 @@ typedef union
 SsxTimebase ssx_ext_timebase_get(void)
 {
     SsxExtTimebase              snapshot;
-    volatile SsxExtTimebase     *cur_tb = (SsxExtTimebase*)&ppc405_64bit_ext_timebase;
+    volatile SsxExtTimebase*     cur_tb = (SsxExtTimebase*)&ppc405_64bit_ext_timebase;
     uint32_t                    tbr;
     uint32_t                    high;
 
@@ -72,9 +72,10 @@ SsxTimebase ssx_ext_timebase_get(void)
     do
     {
         snapshot.tbu = cur_tb->tbu;
-        snapshot.tbl = cur_tb->tbl; 
+        snapshot.tbl = cur_tb->tbl;
         high = cur_tb->tbu;
-    }while(snapshot.tbu != high);
+    }
+    while(snapshot.tbu != high);
 
     //Now read the external timebase register
     tbr = in32(OCB_OTBR);
@@ -84,6 +85,7 @@ SsxTimebase ssx_ext_timebase_get(void)
     {
         snapshot.tbu++;
     }
+
     snapshot.tbl = tbr;
     return snapshot.tb64;
 }
@@ -96,16 +98,18 @@ SsxTimebase ssx_ext_timebase_get(void)
 /// \e right \e now is to call this API from a critical section.
 
 SsxTimebase
-ssx_timebase_get(void) 
+ssx_timebase_get(void)
 {
     Uint64 tb;
     uint32_t high;
 
-    do {
+    do
+    {
         tb.word[0] = mftbu();
         tb.word[1] = mftb();
         high       = mftbu();
-    } while (high != tb.word[0]);
+    }
+    while (high != tb.word[0]);
 
     return tb.value;
 }
@@ -117,7 +121,7 @@ ssx_timebase_get(void)
 /// what may happen when time warps as a result of this call.
 
 void
-ssx_timebase_set(SsxTimebase timebase) 
+ssx_timebase_set(SsxTimebase timebase)
 {
     SsxMachineContext ctx;
     Uint64 tb;
@@ -132,7 +136,7 @@ ssx_timebase_set(SsxTimebase timebase)
 
     ssx_critical_section_exit(&ctx);
 }
-    
+
 
 /// Enable interrupt preemption
 ///
@@ -150,24 +154,28 @@ ssx_timebase_set(SsxTimebase timebase)
 /// \retval 0 Successful completion
 ///
 /// \retval -SSX_ILLEGAL_CONTEXT The API call was not made from an interrupt
-/// context. 
+/// context.
 
 int
 ssx_interrupt_preemption_enable()
 {
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_UNLESS_ANY_INTERRUPT_CONTEXT();
     }
 
-    if (__ssx_kernel_context_noncritical_interrupt()) {
+    if (__ssx_kernel_context_noncritical_interrupt())
+    {
         wrteei(1);
-    } else {
+    }
+    else
+    {
         or_msr(MSR_CE);
     }
 
     return SSX_OK;
 }
-        
+
 
 /// Disable interrupt preemption
 ///
@@ -181,24 +189,28 @@ ssx_interrupt_preemption_enable()
 /// \retval 0 Successful completion
 ///
 /// \retval -SSX_ILLEGAL_CONTEXT The API call was not made from an interrupt
-/// context. 
+/// context.
 
 int
 ssx_interrupt_preemption_disable()
 {
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_UNLESS_ANY_INTERRUPT_CONTEXT();
     }
 
-    if (__ssx_kernel_context_noncritical_interrupt()) {
+    if (__ssx_kernel_context_noncritical_interrupt())
+    {
         wrteei(0);
-    } else {
+    }
+    else
+    {
         andc_msr(MSR_CE);
     }
 
     return SSX_OK;
 }
-        
+
 
 #if SSX_TIMER_SUPPORT
 
@@ -221,15 +233,21 @@ __ssx_schedule_hardware_timeout(SsxTimebase timeout)
     SsxTimebase now;
     uint32_t pit;
 
-    if (timeout != SSX_TIMEBASE_MAX) {
+    if (timeout != SSX_TIMEBASE_MAX)
+    {
 
         now = ssx_timebase_get();
 
-        if (timeout <= now) {
+        if (timeout <= now)
+        {
             pit = 1;
-        } else if ((timeout - now) > 0xffffffff) {
+        }
+        else if ((timeout - now) > 0xffffffff)
+        {
             pit = 0xffffffff;
-        } else {
+        }
+        else
+        {
             pit = timeout - now;
         }
 

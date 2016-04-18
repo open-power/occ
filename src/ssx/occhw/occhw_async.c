@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -109,7 +109,7 @@
 /// and any thread pending on request completion has been maxde runnable.
 ///
 /// Normally the application should see the request state (\a request->state)
-/// ASYNC_REQUEST_STATE_COMPLETE and a  callback return code 
+/// ASYNC_REQUEST_STATE_COMPLETE and a  callback return code
 /// (\a request=->callback_rc) of 0 which indicates that the job and callback
 /// both completed normally.  If the request did not complete normally it
 /// could be due to one of several reasons.  For further analysis the request
@@ -163,7 +163,7 @@ static SsxDeque G_async_callback_queue;
 SsxDeque G_ipc_deferred_queue;
 
 ////////////////////////////////////////////////////////////////////////////
-// FFDC 
+// FFDC
 ////////////////////////////////////////////////////////////////////////////
 
 /// Collect FFDC for the PLB (OCI) arbiter
@@ -175,7 +175,7 @@ SsxDeque G_ipc_deferred_queue;
 /// Note: The PEAR and PESR hold error information for all OCI masters
 /// _except_ the OCC ICU and DCU. ICU and DCU errors are in the STO_PESR and
 /// STO_PEAR. Currently there is no need to collect those DCRs for 'async'
-/// errors. 
+/// errors.
 
 void
 oci_ffdc(OciFfdc* ffdc, int master_id)
@@ -209,11 +209,13 @@ oci_ffdc(OciFfdc* ffdc, int master_id)
 // captured the first time the request is run on the device.
 
 static inline int
-async_request_run(AsyncRequest *request)
+async_request_run(AsyncRequest* request)
 {
-    if (request->state != ASYNC_REQUEST_STATE_RUNNING) {
+    if (request->state != ASYNC_REQUEST_STATE_RUNNING)
+    {
         request->start_time = ssx_timebase_get();
     }
+
     request->state = ASYNC_REQUEST_STATE_RUNNING;
     return request->run_method(request);
 }
@@ -229,7 +231,7 @@ async_request_run(AsyncRequest *request)
 // AsyncQueue objects.
 
 int
-async_queue_create(AsyncQueue *queue, AsyncEngine engine)
+async_queue_create(AsyncQueue* queue, AsyncEngine engine)
 {
     ssx_deque_sentinel_create(&(queue->deque));
     queue->current = 0;
@@ -244,7 +246,7 @@ async_queue_create(AsyncQueue *queue, AsyncEngine engine)
 // and async_request_deque().
 
 static void
-async_request_complete(AsyncRequest *request)
+async_request_complete(AsyncRequest* request)
 {
     SsxMachineContext ctx;
     AsyncRequestCallback callback;
@@ -256,19 +258,25 @@ async_request_complete(AsyncRequest *request)
     // Note that 'completed' here means only that the callback is complete.
 
     callback = request->callback;
-    if (!callback) {
+
+    if (!callback)
+    {
 
         completed = 1;
 
-    } else if ((request->options & ASYNC_CALLBACK_IMMEDIATE) ||
-               ((request->options & ASYNC_CALLBACK_NONCRITICAL) &&
-                !__ssx_kernel_context_critical_interrupt())) {
+    }
+    else if ((request->options & ASYNC_CALLBACK_IMMEDIATE) ||
+             ((request->options & ASYNC_CALLBACK_NONCRITICAL) &&
+              !__ssx_kernel_context_critical_interrupt()))
+    {
 
         request->state = ASYNC_REQUEST_STATE_CALLBACK_RUNNING;
         request->callback_rc = callback(request->arg);
         completed = 1;
 
-    } else {
+    }
+    else
+    {
 
         request->state = ASYNC_REQUEST_STATE_CALLBACK_QUEUED;
         completed = 0;
@@ -278,22 +286,29 @@ async_request_complete(AsyncRequest *request)
     // If the callback completed then we go ahead and cancel any timeout
     // and/or wake the thread if possible.  In critical interrupt contexts
     // we always have to defer these operations, so we may lose 'complete'
-    // status. 
+    // status.
 
-    if (completed && 
+    if (completed &&
         ((request->timeout != SSX_WAIT_FOREVER) ||
-         (request->options & ASYNC_REQUEST_BLOCKING))) {
+         (request->options & ASYNC_REQUEST_BLOCKING)))
+    {
 
-        if (__ssx_kernel_context_critical_interrupt()) {
+        if (__ssx_kernel_context_critical_interrupt())
+        {
 
             request->state = ASYNC_REQUEST_STATE_POSTPROCESSING;
             completed = 0;
 
-        } else {
-            if (request->timeout != SSX_WAIT_FOREVER) {
+        }
+        else
+        {
+            if (request->timeout != SSX_WAIT_FOREVER)
+            {
                 ssx_timer_cancel(&(request->timer));
             }
-            if (request->options & ASYNC_REQUEST_BLOCKING) {
+
+            if (request->options & ASYNC_REQUEST_BLOCKING)
+            {
                 ssx_semaphore_post(&(request->sem));
             }
         }
@@ -303,18 +318,24 @@ async_request_complete(AsyncRequest *request)
     // A truly completed job gets its completion state here.  Otherwise we
     // have to schedule the deferred postprocessing.
 
-    if (completed) {
-            
+    if (completed)
+    {
+
         request->state = request->completion_state;
 
-    } else {
+    }
+    else
+    {
 
         ssx_critical_section_enter(SSX_CRITICAL, &ctx);
 
-        if (request->options & ASYNC_CALLBACK_PRIORITY) {
+        if (request->options & ASYNC_CALLBACK_PRIORITY)
+        {
             ssx_deque_push_front(&G_async_callback_queue,
                                  &(request->deque));
-        } else {
+        }
+        else
+        {
             ssx_deque_push_back(&G_async_callback_queue,
                                 &(request->deque));
         }
@@ -346,30 +367,35 @@ async_request_complete(AsyncRequest *request)
 // interrupts for that queue.
 
 void
-async_handler(AsyncQueue *queue)
+async_handler(AsyncQueue* queue)
 {
-    AsyncRequest *finished, *current;
+    AsyncRequest* finished, *current;
     int rc;
 
     // This loop is repeated as long as any job started in a loop completes
     // immediately.
 
-    do {
+    do
+    {
 
         // This API may be called on an idle queue, which indicates that we
         // should simply start the job on the head of the queue.  Otherwise
         // save a pointer to the job that just finished and update its
         // end_time.
 
-        if (queue->state == ASYNC_QUEUE_STATE_IDLE) {
+        if (queue->state == ASYNC_QUEUE_STATE_IDLE)
+        {
 
             finished = 0;
 
-        } else {
+        }
+        else
+        {
 
-            finished = (AsyncRequest *)(queue->current);
+            finished = (AsyncRequest*)(queue->current);
 
-            if (SSX_ERROR_CHECK_KERNEL && (finished == 0)) {
+            if (SSX_ERROR_CHECK_KERNEL && (finished == 0))
+            {
                 SSX_PANIC(ASYNC_PHANTOM_INTERRUPT);
             }
 
@@ -380,22 +406,28 @@ async_handler(AsyncQueue *queue)
 
         // If the queue is in an error state we will not schedule any further
         // jobs on this queue.  Otherwise we start the next job running on the
-        // engine. 
+        // engine.
 
-        if (queue->state == ASYNC_QUEUE_STATE_ERROR) {
+        if (queue->state == ASYNC_QUEUE_STATE_ERROR)
+        {
 
             queue->current = 0;
             rc = 0;
 
-        } else {
+        }
+        else
+        {
 
-            current = (AsyncRequest *)ssx_deque_pop_front(&(queue->deque));
+            current = (AsyncRequest*)ssx_deque_pop_front(&(queue->deque));
             queue->current = current;
 
-            if (current) {
+            if (current)
+            {
                 queue->state = ASYNC_QUEUE_STATE_RUNNING;
                 rc = async_request_run(current);
-            } else {
+            }
+            else
+            {
                 queue->state = ASYNC_QUEUE_STATE_IDLE;
                 rc = 0;
             }
@@ -407,12 +439,14 @@ async_handler(AsyncQueue *queue)
         // next loop (it would have given an rc ==
         // -ASYNC_REQUEST_COMPLETE). Otherwise complete the request.
 
-        if (finished != 0) {
+        if (finished != 0)
+        {
 
             async_request_complete(finished);
         }
 
-   } while (rc == -ASYNC_REQUEST_COMPLETE);
+    }
+    while (rc == -ASYNC_REQUEST_COMPLETE);
 }
 
 
@@ -443,8 +477,8 @@ async_handler(AsyncQueue *queue)
 /// way at entry.
 ///
 /// \retval -ASYNC_REQUEST_NOT_COMPLETE This code is returned for requests that
-/// do not complete successfully, but only if ASYNC_REQUEST_BLOCKING is 
-/// specified. The caller will need to examine the request state if necessary 
+/// do not complete successfully, but only if ASYNC_REQUEST_BLOCKING is
+/// specified. The caller will need to examine the request state if necessary
 /// to determine whether the request failed, was cancelled or timed out.
 ///
 /// \todo Consider making the critical section priority depend on the device
@@ -453,44 +487,56 @@ async_handler(AsyncQueue *queue)
 /// section.
 
 int
-async_request_schedule(AsyncRequest *request)
+async_request_schedule(AsyncRequest* request)
 {
     SsxMachineContext ctx = SSX_THREAD_MACHINE_CONTEXT_DEFAULT; // For GCC
-    AsyncQueue *queue;
+    AsyncQueue* queue;
     int rc;
 
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF(request == 0, ASYNC_INVALID_OBJECT_SCHEDULE);
     }
 
     rc = 0;
     ssx_critical_section_enter(SSX_CRITICAL, &ctx);
 
-    do {
+    do
+    {
 
         // Check to insure the request is idle (which check must be done in
         // the critical section), then start any required timeout.
 
-        if (SSX_ERROR_CHECK_API) {
-            if (!async_request_is_idle(request)) {
+        if (SSX_ERROR_CHECK_API)
+        {
+            if (!async_request_is_idle(request))
+            {
                 rc = -ASYNC_REQUEST_NOT_IDLE;
                 break;
             }
         }
 
-        if (request->timeout != SSX_WAIT_FOREVER) {
+        if (request->timeout != SSX_WAIT_FOREVER)
+        {
             rc = ssx_timer_schedule(&(request->timer), request->timeout, 0);
-            if (rc) break;
+
+            if (rc)
+            {
+                break;
+            }
         }
-    
+
 
         // Enqueue the request and initialize the request state.
 
         queue = request->queue;
 
-        if (request->options & ASYNC_REQUEST_PRIORITY) {
+        if (request->options & ASYNC_REQUEST_PRIORITY)
+        {
             ssx_deque_push_front(&(queue->deque), &(request->deque));
-        } else {
+        }
+        else
+        {
             ssx_deque_push_back(&(queue->deque), &(request->deque));
         }
 
@@ -502,21 +548,29 @@ async_request_schedule(AsyncRequest *request)
         //  If the queue is idle, call the async_handler() to start the job.
         //  Then block the calling thread if required.
 
-        if (queue->state == ASYNC_QUEUE_STATE_IDLE) {
+        if (queue->state == ASYNC_QUEUE_STATE_IDLE)
+        {
             async_handler(queue);
         }
 
-        if (request->options & ASYNC_REQUEST_BLOCKING) {
+        if (request->options & ASYNC_REQUEST_BLOCKING)
+        {
             rc = ssx_semaphore_pend(&(request->sem), SSX_WAIT_FOREVER);
-            if (rc) break;
 
-            if (!async_request_completed(request)) {
+            if (rc)
+            {
+                break;
+            }
+
+            if (!async_request_completed(request))
+            {
                 rc = -ASYNC_REQUEST_NOT_COMPLETE;
                 break;
             }
         }
 
-    } while (0);
+    }
+    while (0);
 
     ssx_critical_section_exit(&ctx);
 
@@ -538,19 +592,23 @@ async_request_schedule(AsyncRequest *request)
 void
 async_error_handler(AsyncQueue* queue, uint8_t completion_state)
 {
-    AsyncRequest *finished;
+    AsyncRequest* finished;
 
-    finished = (AsyncRequest *)(queue->current);
+    finished = (AsyncRequest*)(queue->current);
 
-    if (SSX_ERROR_CHECK_KERNEL && (finished == 0)) {
+    if (SSX_ERROR_CHECK_KERNEL && (finished == 0))
+    {
         SSX_PANIC(ASYNC_PHANTOM_ERROR);
     }
 
-    if (finished->error_method) {
-        if (finished->error_method(finished)) {
+    if (finished->error_method)
+    {
+        if (finished->error_method(finished))
+        {
             queue->state = ASYNC_QUEUE_STATE_ERROR;
         }
     }
+
     finished->abort_state = finished->state;
     finished->completion_state = completion_state;
     async_handler(queue);
@@ -580,7 +638,7 @@ async_request_dequeue(AsyncRequest* request, uint8_t completion_state)
 // Time out an AsyncRequest
 //
 // This is an internal API, the timer callback used to time out long-running
-// AsyncRequest. 
+// AsyncRequest.
 //
 // This timer callback must run in an SSX_CRITICAL critical section to
 // guarantee atomic access to the AsyncRequest object.
@@ -588,7 +646,7 @@ async_request_dequeue(AsyncRequest* request, uint8_t completion_state)
 static void
 async_timeout(void* arg)
 {
-    AsyncRequest *request = (AsyncRequest*)arg;
+    AsyncRequest* request = (AsyncRequest*)arg;
     SsxMachineContext ctx;
 
     ssx_critical_section_enter(SSX_CRITICAL, &ctx);
@@ -596,7 +654,8 @@ async_timeout(void* arg)
     // The behavior at timeout depends on the mode.  We'll handle the cases
     // from easiest to hardest.
 
-    if (request->state & ASYNC_REQUEST_CALLBACK_GROUP) {
+    if (request->state & ASYNC_REQUEST_CALLBACK_GROUP)
+    {
 
         // If the request has already queued or is running the callback (which
         // could happen due to interrupt interleaving) then the request is
@@ -604,24 +663,30 @@ async_timeout(void* arg)
         // ssx_timer_cancel() to cancel the timer.  So there's nothing to do.
 
 
-    } else if (request->state & ASYNC_REQUEST_IDLE_GROUP) {
+    }
+    else if (request->state & ASYNC_REQUEST_IDLE_GROUP)
+    {
 
         // If the request is idle we panic - This can't happen as it would
         // indicate that the timer was not cancelled when the request
-        // finished.  
+        // finished.
 
         SSX_PANIC(ASYNC_TIMEOUT_BUG);
 
 
-    } else if (request->state & ASYNC_REQUEST_QUEUED_GROUP) {
+    }
+    else if (request->state & ASYNC_REQUEST_QUEUED_GROUP)
+    {
 
         // If the request is still in the queue then we can simply cancel it,
         // which includes running the callback.
 
-        async_request_dequeue(request, ASYNC_REQUEST_STATE_TIMED_OUT); 
+        async_request_dequeue(request, ASYNC_REQUEST_STATE_TIMED_OUT);
 
 
-    } else if (request->state & ASYNC_REQUEST_RUNNING_GROUP) {
+    }
+    else if (request->state & ASYNC_REQUEST_RUNNING_GROUP)
+    {
 
         // If the request is running on the hardware, then we need to call
         // the async_error_handler() to remove the job and restart the
@@ -630,7 +695,9 @@ async_timeout(void* arg)
         async_error_handler(request->queue, ASYNC_REQUEST_STATE_TIMED_OUT);
 
 
-    } else {
+    }
+    else
+    {
 
         SSX_PANIC(ASYNC_INVALID_STATE);
 
@@ -646,7 +713,7 @@ async_timeout(void* arg)
 // API does some error checking, and any errors will be returned by the
 // higher-level call.
 //
-// \retval -ASYNC_INVALID_OBJECT_REQUEST The \a request or \a queue was 
+// \retval -ASYNC_INVALID_OBJECT_REQUEST The \a request or \a queue was
 /// null (0).
 //
 // \retval -ASYNC_INVALID_OPTIONS The \a options argument contains invalid
@@ -658,23 +725,24 @@ async_timeout(void* arg)
 // non-NULL callback, but no protocol for running the callback was specified.
 
 int
-async_request_create(AsyncRequest *request,
-                     AsyncQueue *queue,
+async_request_create(AsyncRequest* request,
+                     AsyncQueue* queue,
                      AsyncRunMethod run_method,
                      AsyncErrorMethod error_method,
                      SsxInterval timeout,
                      AsyncRequestCallback callback,
-                     void *arg,
+                     void* arg,
                      int options)
 {
-    if (SSX_ERROR_CHECK_API) {
-        SSX_ERROR_IF((request == 0) || (queue == 0), 
-                      ASYNC_INVALID_OBJECT_REQUEST);
+    if (SSX_ERROR_CHECK_API)
+    {
+        SSX_ERROR_IF((request == 0) || (queue == 0),
+                     ASYNC_INVALID_OBJECT_REQUEST);
         SSX_ERROR_IF((options & ~ASYNC_GENERIC_OPTIONS) ||
                      (__builtin_popcount(options & ASYNC_CALLBACK_OPTIONS) > 1),
                      ASYNC_INVALID_OPTIONS);
         SSX_ERROR_IF(run_method == 0, ASYNC_INVALID_ARGUMENT);
-        SSX_ERROR_IF((callback != 0) && 
+        SSX_ERROR_IF((callback != 0) &&
                      ((options & ASYNC_CALLBACK_OPTIONS) == 0),
                      ASYNC_CALLBACK_PROTOCOL_UNSPECIFIED);
     }
@@ -688,12 +756,14 @@ async_request_create(AsyncRequest *request,
     request->callback = callback;
     request->arg = arg;
     request->options = options;
-    
-    if (request->timeout != SSX_WAIT_FOREVER) {
+
+    if (request->timeout != SSX_WAIT_FOREVER)
+    {
         ssx_timer_create(&(request->timer), async_timeout, (void*)request);
     }
 
-    if (options & ASYNC_REQUEST_BLOCKING) {
+    if (options & ASYNC_REQUEST_BLOCKING)
+    {
         ssx_semaphore_create(&(request->sem), 0, 1);
     }
 
@@ -713,7 +783,7 @@ async_request_create(AsyncRequest *request,
 /// request, or NULL (0) is this data is not required.
 ///
 /// \retval 0 The request contains valid timestamps and they have been
-/// returned. 
+/// returned.
 ///
 /// \retval -ASYNC_INVALID_TIMESTAMPS The caller's timestamps have been
 /// updated, but the timestamps are fully or partially invalid.  This could be
@@ -733,17 +803,23 @@ async_request_timestamps_get(AsyncRequest* request,
 
     ssx_critical_section_enter(SSX_CRITICAL, &ctx);
 
-    if (start_time) {
+    if (start_time)
+    {
         *start_time = request->start_time;
     }
-    if (end_time) {
+
+    if (end_time)
+    {
         *end_time = request->end_time;
     }
 
     if ((request->state & ASYNC_REQUEST_IDLE_GROUP) &&
-        (request->state != ASYNC_REQUEST_STATE_INITIALIZED)) {
+        (request->state != ASYNC_REQUEST_STATE_INITIALIZED))
+    {
         rc = 0;
-    } else {
+    }
+    else
+    {
         rc = -ASYNC_INVALID_TIMESTAMPS;
     }
 
@@ -761,7 +837,7 @@ async_request_timestamps_get(AsyncRequest* request,
 /// start time) computed from the timestamps of \a request.
 ///
 /// \retval 0 The request contains valid timestamps and they have been
-/// returned. 
+/// returned.
 ///
 /// \retval -ASYNC_INVALID_TIMESTAMPS The latancy has been computed but may be
 /// invalid.  This could be due to several reasons:
@@ -785,7 +861,7 @@ async_request_latency(AsyncRequest* request, SsxTimebase* latency)
 // Dump an AsyncRequest
 #if 0
 void
-async_request_printk(AsyncRequest *request)
+async_request_printk(AsyncRequest* request)
 {
     printk("----------------------------------------\n");
     printk("-- AsyncRequest @ %p\n", request);
@@ -848,50 +924,60 @@ SSX_IRQ_FAST2FULL(async_callback_handler, async_callback_handler_full);
 void
 async_request_finalize(AsyncRequest* request)
 {
-    if (request->state == ASYNC_REQUEST_STATE_CALLBACK_QUEUED) {
+    if (request->state == ASYNC_REQUEST_STATE_CALLBACK_QUEUED)
+    {
 
         request->state = ASYNC_REQUEST_STATE_CALLBACK_RUNNING;
 
-        if (request->options & ASYNC_CALLBACK_DEFERRED) {
+        if (request->options & ASYNC_CALLBACK_DEFERRED)
+        {
 
             ssx_interrupt_preemption_enable();
             request->callback_rc = request->callback(request->arg);
 
-        } else {
+        }
+        else
+        {
 
             request->callback_rc = request->callback(request->arg);
             ssx_interrupt_preemption_enable();
         }
+
         ssx_interrupt_preemption_disable();
     }
 
     request->state = request->completion_state;
 
-    if (request->timeout != SSX_WAIT_FOREVER) {
+    if (request->timeout != SSX_WAIT_FOREVER)
+    {
         ssx_timer_cancel(&(request->timer));
     }
 
-    if (request->options & ASYNC_REQUEST_BLOCKING) {
+    if (request->options & ASYNC_REQUEST_BLOCKING)
+    {
         ssx_semaphore_post(&(request->sem));
     }
 }
 
 
 void
-async_callback_handler_full(void *arg, SsxIrqId irq, int priority)
+async_callback_handler_full(void* arg, SsxIrqId irq, int priority)
 {
     SsxMachineContext ctx;
-    AsyncRequest *request;
-    ipc_msg_t *msg;
+    AsyncRequest* request;
+    ipc_msg_t* msg;
 
     ssx_irq_disable(irq);
 
     //Check for any async callbacks first
-    do {
+    do
+    {
 
         ssx_critical_section_enter(SSX_CRITICAL, &ctx);
-        request = (AsyncRequest *)ssx_deque_pop_front(&G_async_callback_queue);
-        if (!request) {
+        request = (AsyncRequest*)ssx_deque_pop_front(&G_async_callback_queue);
+
+        if (!request)
+        {
             break;
         }
 
@@ -899,29 +985,34 @@ async_callback_handler_full(void *arg, SsxIrqId irq, int priority)
 
         async_request_finalize(request);
 
-    } while (1);
+    }
+    while (1);
 
     ssx_critical_section_exit(&ctx);
 
     //Next, check for any deferred IPC messages
-    do {
+    do
+    {
 
         ssx_critical_section_enter(SSX_CRITICAL, &ctx);
 
-        msg = (ipc_msg_t *)ssx_deque_pop_front(&G_ipc_deferred_queue);
-        if (!msg) {
+        msg = (ipc_msg_t*)ssx_deque_pop_front(&G_ipc_deferred_queue);
+
+        if (!msg)
+        {
             ssx_irq_status_clear(irq);
             break;
         }
 
         ssx_critical_section_exit(&ctx);
 
-void ipc_process_msg(ipc_msg_t* msg);
+        void ipc_process_msg(ipc_msg_t* msg);
 
         //handle the command or response message in a noncritical context
         ipc_process_msg(msg);
 
-    } while (1);
+    }
+    while (1);
 
     ssx_critical_section_exit(&ctx);
     ssx_irq_enable(irq);
@@ -942,7 +1033,7 @@ void ipc_process_msg(ipc_msg_t* msg);
 
 void
 async_edge_handler_setup(SsxIrqHandler handler,
-                         void *arg,
+                         void* arg,
                          SsxIrqId irq,
                          int priority)
 {
@@ -957,7 +1048,7 @@ async_edge_handler_setup(SsxIrqHandler handler,
 
 void
 async_level_handler_setup(SsxIrqHandler handler,
-                          void *arg,
+                          void* arg,
                           SsxIrqId irq,
                           int priority,
                           int polarity)

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -35,7 +35,7 @@
 /// \brief PowerPC 405 port header for SSX
 
 //  The 405 has a 32-byte line and 2-way set associative caches.  The cache
-//  configuration varies by chip/ASIC. 
+//  configuration varies by chip/ASIC.
 //
 // Regarding the DCACHE_TAG_MASK, used by dcache_flush_all: The IBM
 // documentation on the D-cache tag sizes doesn't make any sense to me - it
@@ -61,37 +61,37 @@
 
 #ifdef HWMACRO_OCC
 
-#define ICACHE_SIZE  (16 * 1024)
-#define DCACHE_SIZE  (16 * 1024)
+    #define ICACHE_SIZE  (16 * 1024)
+    #define DCACHE_SIZE  (16 * 1024)
 
-#define LOG_ICACHE_SIZE 14
-#define LOG_DCACHE_SIZE 14
+    #define LOG_ICACHE_SIZE 14
+    #define LOG_DCACHE_SIZE 14
 
 #else
-#error "Please define the cache configuration of the processor"
+    #error "Please define the cache configuration of the processor"
 #endif
 
 // Macros to define where declared code is actually compiled
 
 #ifdef __PPC405_C__
-#define IF__PPC405_CORE_C__(x) x
-#define UNLESS__PPC405_CORE_C__(x) 
+    #define IF__PPC405_CORE_C__(x) x
+    #define UNLESS__PPC405_CORE_C__(x)
 #else
-#define IF__PPC405_CORE_C__(x)
-#define UNLESS__PPC405_CORE_C__(x) x
+    #define IF__PPC405_CORE_C__(x)
+    #define UNLESS__PPC405_CORE_C__(x) x
 #endif
 
 #ifdef __PPC405_IRQ_CORE_C__
-#define IF__PPC405_IRQ_CORE_C__(x) x
-#define UNLESS__PPC405_IRQ_CORE_C__(x) 
+    #define IF__PPC405_IRQ_CORE_C__(x) x
+    #define UNLESS__PPC405_IRQ_CORE_C__(x)
 #else
-#define IF__PPC405_IRQ_CORE_C__(x)
-#define UNLESS__PPC405_IRQ_CORE_C__(x) x
+    #define IF__PPC405_IRQ_CORE_C__(x)
+    #define UNLESS__PPC405_IRQ_CORE_C__(x) x
 #endif
 
 
 #ifdef HWMACRO_OCC
-#include "occhw.h"
+    #include "occhw.h"
 #endif
 
 #include "ppc32.h"
@@ -106,19 +106,19 @@
 #include "ppc405_mmu.h"
 
 #ifndef PPC405_IR_SUPPORT
-#define PPC405_IR_SUPPORT 1
+    #define PPC405_IR_SUPPORT 1
 #endif
 
 #ifndef PPC405_DR_SUPPORT
-#define PPC405_DR_SUPPORT 1
+    #define PPC405_DR_SUPPORT 1
 #endif
 
 #define PPC405_RELOCATION_MODE \
     ((PPC405_IR_SUPPORT * MSR_IR) | (PPC405_DR_SUPPORT * MSR_DR))
 
 #ifndef __ASSEMBLER__
-void*
-memcpy_real(void* dest, const void* src, size_t n);
+    void*
+    memcpy_real(void* dest, const void* src, size_t n);
 #endif
 
 #else   /* PPC405_MMU_SUPPORT */
@@ -142,7 +142,7 @@ memcpy_real(void* dest, const void* src, size_t n)
 /// can override this default.
 
 #ifndef EXECUTABLE_FREE_SPACE
-#define EXECUTABLE_FREE_SPACE 0
+    #define EXECUTABLE_FREE_SPACE 0
 #endif
 
 #include "ppc405_context.h"
@@ -235,7 +235,7 @@ memcpy_real(void* dest, const void* src, size_t n)
 /// try to help the user interpret what happened based on the TRAP code.
 
 #ifndef SSX_PANIC
- 
+
 #define SSX_PANIC(code)                                                 \
     do {                                                                \
         barrier();                                                      \
@@ -256,9 +256,9 @@ memcpy_real(void* dest, const void* src, size_t n)
 // traps to halt the OCC and freeze the timers.
 
 #ifdef __PPC405_CORE_C__
-uint32_t __ssx_panic_save_r3;
-uint32_t __ssx_panic_save_dbcr0;
-uint32_t __ssx_panic_dbcr0 = DBCR0_EDM | DBCR0_TDE | DBCR0_FT;
+    uint32_t __ssx_panic_save_r3;
+    uint32_t __ssx_panic_save_dbcr0;
+    uint32_t __ssx_panic_dbcr0 = DBCR0_EDM | DBCR0_TDE | DBCR0_FT;
 #endif
 
 #endif // SSX_PANIC
@@ -272,7 +272,7 @@ uint32_t __ssx_panic_dbcr0 = DBCR0_EDM | DBCR0_TDE | DBCR0_FT;
 #define SIMICS_MAGIC_BREAKPOINT asm volatile ("rlwimi 0,0,0,0,0")
 
 /// This is the Simics 'magic breakpoint' instruction including a memory
-/// barrier. 
+/// barrier.
 ///
 /// Note that the memory barrier guarantees that all variables held in
 /// registers are flushed to memory before the breakpoint, however this might
@@ -282,11 +282,11 @@ uint32_t __ssx_panic_dbcr0 = DBCR0_EDM | DBCR0_TDE | DBCR0_FT;
 /// form may be preferred so that variable values will be visible in memory.
 
 #define SIMICS_MAGIC_BREAKPOINT_BARRIER \
-             asm volatile ("rlwimi 0,0,0,0,0" : : : "memory")
+    asm volatile ("rlwimi 0,0,0,0,0" : : : "memory")
 
 
 #else // __ASSEMBLER__
-
+// *INDENT-OFF*
 /// This is the Simics 'magic breakpoint' instruction.  An assembler macro
 /// form is also provided for use within macros.
 
@@ -309,7 +309,7 @@ uint32_t __ssx_panic_dbcr0 = DBCR0_EDM | DBCR0_TDE | DBCR0_FT;
 /// would require 10.
 
 #ifndef SSX_PANIC
-        
+
 #define SSX_PANIC(code) _ssx_panic code
 
         .macro  _ssx_panic, code
@@ -324,7 +324,7 @@ uint32_t __ssx_panic_dbcr0 = DBCR0_EDM | DBCR0_TDE | DBCR0_FT;
         .endm
 
 #endif // SSX_PANIC
-
+// *INDENT-ON*
 #endif // __ASSEMBLER__
 
 
@@ -418,28 +418,35 @@ typedef uint32_t SsxMachineContext;
 
 UNLESS__PPC405_CORE_C__(extern)
 inline int
-ssx_interrupt_disable(int priority, SsxMachineContext *context)
+ssx_interrupt_disable(int priority, SsxMachineContext* context)
 {
-    *context = mfmsr();
+*context = mfmsr();
 
-    if (priority == SSX_NONCRITICAL) {
+if (priority == SSX_NONCRITICAL)
+{
 
-        wrteei(0);
+wrteei(0);
 
-    } else if (priority == SSX_CRITICAL) {
+}
+else if (priority == SSX_CRITICAL)
+{
 
-        mtmsr(*context & ~(MSR_EE | MSR_CE));
+mtmsr(*context & ~(MSR_EE | MSR_CE));
 
-    } else if (priority == SSX_SUPERCRITICAL) {
+}
+else if (priority == SSX_SUPERCRITICAL)
+{
 
-        mtmsr(*context & ~(MSR_APE | MSR_WE | MSR_CE | MSR_EE | MSR_ME | 
-                           MSR_DWE | MSR_DE));
+mtmsr(*context & ~(MSR_APE | MSR_WE | MSR_CE | MSR_EE | MSR_ME |
+MSR_DWE | MSR_DE));
 
-    } else if (SSX_ERROR_CHECK_API) {
-        SSX_ERROR(SSX_INVALID_ARGUMENT_INTERRUPT);
-    }
+}
+else if (SSX_ERROR_CHECK_API)
+{
+SSX_ERROR(SSX_INVALID_ARGUMENT_INTERRUPT);
+}
 
-    return SSX_OK;
+return SSX_OK;
 }
 
 
@@ -456,15 +463,16 @@ ssx_interrupt_disable(int priority, SsxMachineContext *context)
 
 UNLESS__PPC405_CORE_C__(extern)
 inline int
-ssx_machine_context_set(SsxMachineContext *context)
+ssx_machine_context_set(SsxMachineContext* context)
 {
-    if (SSX_ERROR_CHECK_API) {
-        SSX_ERROR_IF(context == 0, SSX_INVALID_ARGUMENT_CONTEXT_SET);
-    }
+if (SSX_ERROR_CHECK_API)
+{
+SSX_ERROR_IF(context == 0, SSX_INVALID_ARGUMENT_CONTEXT_SET);
+}
 
-    mtmsr(*context);
+mtmsr(*context);
 
-    return SSX_OK;
+return SSX_OK;
 }
 
 
@@ -481,15 +489,16 @@ ssx_machine_context_set(SsxMachineContext *context)
 
 UNLESS__PPC405_CORE_C__(extern)
 inline int
-ssx_machine_context_get(SsxMachineContext *context)
+ssx_machine_context_get(SsxMachineContext* context)
 {
-    if (SSX_ERROR_CHECK_API) {
-        SSX_ERROR_IF(context == 0, SSX_INVALID_ARGUMENT_CONTEXT_GET);
-    }
+if (SSX_ERROR_CHECK_API)
+{
+SSX_ERROR_IF(context == 0, SSX_INVALID_ARGUMENT_CONTEXT_GET);
+}
 
-    *context = mfmsr();
+*context = mfmsr();
 
-    return SSX_OK;
+return SSX_OK;
 }
 
 
@@ -504,11 +513,11 @@ ssx_machine_context_get(SsxMachineContext *context)
 /// behind the SP are for the initial subroutine's LR.
 
 static inline void
-__ssx_stack_create_initial_frame(SsxAddress *stack, size_t *size) \
+__ssx_stack_create_initial_frame(SsxAddress* stack, size_t* size) \
 {
-    *stack -= 8;
-    *size -= 8; 
-    *((SSX_STACK_TYPE *)(*stack)) = 0;
+*stack -= 8;
+* size -= 8;
+* ((SSX_STACK_TYPE*)(*stack)) = 0;
 }
 
 
@@ -524,49 +533,52 @@ __ssx_stack_create_initial_frame(SsxAddress *stack, size_t *size) \
 /// definition. For certain tests it's also helpful to look at the two
 /// interrupt counters as a single 0/non-0 field.
 
-typedef union {
+typedef union
+{
 
-    uint32_t value;
+uint32_t value;
 
-    struct {
+struct
+{
 
-        /// The critical interrupt nesting level.  If this field is non-zero,
-        /// then interrupt priority and preemption rules guarantee that a
-        /// critical interrupt handler is running, and the \c irq field will
-        /// contain the SsxIrqId of the currently active critical interrupt.
-        unsigned critical_interrupts : 8;
+/// The critical interrupt nesting level.  If this field is non-zero,
+/// then interrupt priority and preemption rules guarantee that a
+/// critical interrupt handler is running, and the \c irq field will
+/// contain the SsxIrqId of the currently active critical interrupt.
+unsigned critical_interrupts : 8;
 
-        /// The non-critical interrupt nesting level. If this field is
-        /// non-zero and the \c critical_interrupts field is 0, then interrupt
-        /// priority and preemption rules guarantee that a noncritical
-        /// interrupt handler is running, and the \c irq field will contain
-        /// the SsxIrqId of the currently active noncritical interrupt.
-        unsigned noncritical_interrupts : 8;
+/// The non-critical interrupt nesting level. If this field is
+/// non-zero and the \c critical_interrupts field is 0, then interrupt
+/// priority and preemption rules guarantee that a noncritical
+/// interrupt handler is running, and the \c irq field will contain
+/// the SsxIrqId of the currently active noncritical interrupt.
+unsigned noncritical_interrupts : 8;
 
-        /// The SsxIrqId of the currently running (or last run) handler.  If
-        /// either of the interrupt nesting levels are non-0, then this is the
-        /// SsxIrqId of the IRQ that is currently executing.
-        unsigned irq : 8;
+/// The SsxIrqId of the currently running (or last run) handler.  If
+/// either of the interrupt nesting levels are non-0, then this is the
+/// SsxIrqId of the IRQ that is currently executing.
+unsigned irq : 8;
 
-        /// A flag indicating that SSX is in thread mode after a call of
-        /// ssx_start_threads(). 
-        unsigned thread_mode : 1;
+/// A flag indicating that SSX is in thread mode after a call of
+/// ssx_start_threads(). 
+unsigned thread_mode : 1;
 
-        /// The priority of the currently running thread.  In an interrupt
-        /// context, this is the priority of the thread that was interrupted.
-        unsigned thread_priority : 7;
+/// The priority of the currently running thread.  In an interrupt
+/// context, this is the priority of the thread that was interrupted.
+unsigned thread_priority : 7;
 
-    } fields;
+} fields;
 
-    struct {
+struct
+{
 
-        /// Used as a 0/non-0 flag for interrupt context.
-        unsigned interrupt_context : 16;
+/// Used as a 0/non-0 flag for interrupt context.
+unsigned interrupt_context : 16;
 
-        /// Ignore
-        unsigned ignore : 16;
+/// Ignore
+unsigned ignore : 16;
 
-    } merged_fields;
+} merged_fields;
 
 } __SsxKernelContext;
 
@@ -627,7 +639,7 @@ typedef union {
         __ctx.value = mfspr(SPRN_USPRG0); \
         __ctx.fields.noncritical_interrupts; })
 
-        
+
 /// Return the critical interrupt nesting level
 
 #define __ssx_critical_level() \
@@ -635,7 +647,7 @@ typedef union {
         __SsxKernelContext __ctx; \
         __ctx.value = mfspr(SPRN_USPRG0); \
         __ctx.fields.critical_interrupts; })
-        
+
 
 // SSX requires the port to define the type SsxThreadQueue, which is a
 // priority queue (where 0 is the highest priority).  This queue must be able
@@ -653,46 +665,46 @@ typedef union {
 // cntlzw(). 
 
 static inline void
-__ssx_thread_queue_clear(volatile SsxThreadQueue *queue)
+__ssx_thread_queue_clear(volatile SsxThreadQueue* queue)
 {
-    *queue = 0;
+*queue = 0;
 }
 
 static inline void
-__ssx_thread_queue_insert(volatile SsxThreadQueue *queue, SsxThreadPriority priority)
+__ssx_thread_queue_insert(volatile SsxThreadQueue* queue, SsxThreadPriority priority)
 {
-    *queue |= (0x80000000u >> priority);
+*queue |= (0x80000000u >> priority);
 }
 
 static inline void
-__ssx_thread_queue_delete(volatile SsxThreadQueue *queue, SsxThreadPriority priority)
+__ssx_thread_queue_delete(volatile SsxThreadQueue* queue, SsxThreadPriority priority)
 {
-    *queue &= ~(0x80000000u >> priority);
+*queue &= ~(0x80000000u >> priority);
 }
 
 static inline SsxThreadPriority
-__ssx_thread_queue_min(volatile SsxThreadQueue *queue)
+__ssx_thread_queue_min(volatile SsxThreadQueue* queue)
 {
-    return cntlzw(*queue);
+return cntlzw(*queue);
 }
 
 static inline int
-__ssx_thread_queue_member(volatile SsxThreadQueue *queue, SsxThreadPriority priority)
+__ssx_thread_queue_member(volatile SsxThreadQueue* queue, SsxThreadPriority priority)
 {
-    return ((*queue >> (31 - priority)) & 1);
+return ((*queue >> (31 - priority)) & 1);
 }
 
 static inline void
-__ssx_thread_queue_union(volatile SsxThreadQueue *queue0, 
-                         volatile SsxThreadQueue *queue1)
+__ssx_thread_queue_union(volatile SsxThreadQueue* queue0,
+volatile SsxThreadQueue* queue1)
 {
-    *queue0 |= *queue1;
+*queue0 |= *queue1;
 }
 
 static inline int
-__ssx_thread_queue_count(volatile SsxThreadQueue* queue) 
+__ssx_thread_queue_count(volatile SsxThreadQueue* queue)
 {
-    return __builtin_popcount(*queue);
+return __builtin_popcount(*queue);
 }
 
 
@@ -759,7 +771,7 @@ __ssx_thread_queue_count(volatile SsxThreadQueue* queue)
 /// that the CODE_BREAKPOINT is ignored by the Simics PPC405 model as it does
 /// not model debug events.
 
-#if defined(SIMICS_ENVIRONMENT) && (SIMICS_ENVIRONMENT != 0) 
+#if defined(SIMICS_ENVIRONMENT) && (SIMICS_ENVIRONMENT != 0)
 #define CODE_BREAKPOINT                         \
     do {                                        \
         if (_code_breakpoint_enable) {          \

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -76,31 +76,32 @@
 /// \retval 0 Successful completion
 ///
 /// \retval -SSX_INVALID_THREAD_AT_CREATE The \a thread is a null (0) pointer.
-/// 
+///
 /// \retval -SSX_ILLEGAL_CONTEXT The API was called from a critical interrupt
-/// context. 
+/// context.
 ///
 /// \retval -SSX_INVALID_ARGUMENT_THREAD1 the \a thread_routine is null (0)
 ///
-/// \retval -SSX_INVALID_ARGUMENT_THREAD2 the \a priority is invalid, 
+/// \retval -SSX_INVALID_ARGUMENT_THREAD2 the \a priority is invalid,
 ///
-/// \retval -SSX_INVALID_ARGUMENT_THREAD3 the stack area wraps around 
+/// \retval -SSX_INVALID_ARGUMENT_THREAD3 the stack area wraps around
 /// the end of memory.
 ///
 /// \retval -SSX_STACK_OVERFLOW The stack area at thread creation is smaller
 /// than the minimum safe size.
 
 int
-ssx_thread_create(SsxThread         *thread,
+ssx_thread_create(SsxThread*         thread,
                   SsxThreadRoutine  thread_routine,
-                  void              *arg,
+                  void*              arg,
                   SsxAddress        stack,
                   size_t            stack_size,
                   SsxThreadPriority priority)
 {
     int rc;
 
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF_CRITICAL_INTERRUPT_CONTEXT();
         SSX_ERROR_IF(thread == 0, SSX_INVALID_THREAD_AT_CREATE);
         SSX_ERROR_IF((thread_routine == 0) ||
@@ -109,25 +110,34 @@ ssx_thread_create(SsxThread         *thread,
     }
 
     rc = __ssx_stack_init(&stack, &stack_size);
-    if (rc) {
+
+    if (rc)
+    {
         return rc;
     }
 
     thread->saved_stack_pointer = stack;
     thread->stack_base = stack;
 
-    if (SSX_STACK_DIRECTION < 0) {
+    if (SSX_STACK_DIRECTION < 0)
+    {
 
         thread->stack_limit = stack - stack_size;
-        if (SSX_ERROR_CHECK_API) {
+
+        if (SSX_ERROR_CHECK_API)
+        {
             SSX_ERROR_IF(thread->stack_limit > thread->stack_base,
                          SSX_INVALID_ARGUMENT_THREAD2);
         }
 
-    } else {
+    }
+    else
+    {
 
         thread->stack_limit = stack + stack_size;
-        if (SSX_ERROR_CHECK_API) {
+
+        if (SSX_ERROR_CHECK_API)
+        {
             SSX_ERROR_IF(thread->stack_limit < thread->stack_base,
                          SSX_INVALID_ARGUMENT_THREAD3);
         }
@@ -138,25 +148,25 @@ ssx_thread_create(SsxThread         *thread,
     thread->state = SSX_THREAD_STATE_SUSPENDED_RUNNABLE;
     thread->flags = 0;
 
-    ssx_timer_create_nonpreemptible(&(thread->timer), 
-                                    __ssx_thread_timeout, 
-                                    (void *)thread);
+    ssx_timer_create_nonpreemptible(&(thread->timer),
+                                    __ssx_thread_timeout,
+                                    (void*)thread);
 
     __ssx_thread_context_initialize(thread, thread_routine, arg);
 
     return rc;
 }
-    
 
-    
 
-    
 
-    
 
-        
 
-    
-        
+
+
+
+
+
+
+
 
 

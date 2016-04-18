@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -80,7 +80,7 @@ cfam_id(void)
     return G_cfam_id;
 }
 
-uint8_t 
+uint8_t
 cfam_chip_type(void)
 {
     return G_cfam_chip_type;
@@ -101,7 +101,7 @@ cfam_ec_level(void)
 
 // Note: Ex-chiplets start at chiplet 16 and are left-justified in the
 // ChipConfig.
-    
+
 
 ChipConfig G_chip_configuration SECTION_ATTRIBUTE(".noncacheable") = 0;
 uint64_t G_core_configuration SECTION_ATTRIBUTE(".noncacheable") = 0;
@@ -115,29 +115,44 @@ uint64_t G_core_configuration SECTION_ATTRIBUTE(".noncacheable") = 0;
 void
 _occhw_get_chip_configuration(void)
 {
-    if (SIMICS_ENVIRONMENT) {
+    if (SIMICS_ENVIRONMENT)
+    {
 
         pmc_core_deconfiguration_reg_t pcdr;
 
         pcdr.value = in32(PMC_CORE_DECONFIGURATION_REG);
-        G_chip_configuration = 
-            ~((uint64_t)(pcdr.fields.core_chiplet_deconf_vector) << 48); 
+        G_chip_configuration =
+            ~((uint64_t)(pcdr.fields.core_chiplet_deconf_vector) << 48);
 
-    } else {
+    }
+    else
+    {
 
         uint64_t select, configuration;
         int rc;
-    
+
         rc = getscom(0x000f0008, &select); /* TP CHIPLET SELECT */
-        if (rc) SSX_PANIC(OCCHW_ID_SCOM_ERROR_SELECT);
-        if (select != 0) SSX_PANIC(OCCHW_ID_SELECT_ERROR);
-    
-        rc = getscom(MC_ADDRESS(0x000f0012, 
-                                MC_GROUP_EX_CORE, 
-                                PCB_MULTICAST_SELECT), 
+
+        if (rc)
+        {
+            SSX_PANIC(OCCHW_ID_SCOM_ERROR_SELECT);
+        }
+
+        if (select != 0)
+        {
+            SSX_PANIC(OCCHW_ID_SELECT_ERROR);
+        }
+
+        rc = getscom(MC_ADDRESS(0x000f0012,
+                                MC_GROUP_EX_CORE,
+                                PCB_MULTICAST_SELECT),
                      &configuration);
-        if (rc) SSX_PANIC(OCCHW_ID_SCOM_ERROR_CONFIG);
-    
+
+        if (rc)
+        {
+            SSX_PANIC(OCCHW_ID_SCOM_ERROR_CONFIG);
+        }
+
         G_chip_configuration = (configuration << 16) & 0xffff000000000000ull;
     }
 
@@ -150,8 +165,8 @@ uint32_t core_configuration(void)
     return G_core_configuration >> 32;
 }
 
-    
 
-    
 
-    
+
+
+

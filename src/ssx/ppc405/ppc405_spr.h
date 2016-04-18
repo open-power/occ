@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -220,9 +220,11 @@
 
 #ifndef __ASSEMBLER__
 
-typedef union {
+typedef union
+{
     uint32_t value;
-    struct {
+    struct
+    {
         unsigned int wp       : 2;
         unsigned int wrc      : 2;
         unsigned int wie      : 1;
@@ -255,9 +257,9 @@ typedef union {
 ///  Note that \a sprn must be a compile-time constant.
 
 #define mfspr(sprn)                                             \
-   ({uint32_t __value;                                          \
-   asm volatile ("mfspr %0, %1" : "=r" (__value) : "i" (sprn)); \
-   __value;})    
+    ({uint32_t __value;                                          \
+        asm volatile ("mfspr %0, %1" : "=r" (__value) : "i" (sprn)); \
+        __value;})
 
 
 /// Move to SPR
@@ -265,10 +267,10 @@ typedef union {
 ///  Note that \a sprn must be a compile-time constant.
 
 #define mtspr(sprn, value)                                        \
-   ({uint32_t __value = (value);                                  \
-     asm volatile ("mtspr %0, %1" : : "i" (sprn), "r" (__value)); \
-   })
-    
+    ({uint32_t __value = (value);                                  \
+        asm volatile ("mtspr %0, %1" : : "i" (sprn), "r" (__value)); \
+    })
+
 
 /// Read-Modify-Write an SPR with OR (Set SPR bits)
 ///
@@ -307,6 +309,7 @@ typedef union {
 #endif  /* __ASSEMBLER__ */
 
 #ifdef __ASSEMBLER__
+// *INDENT-OFF*
 
         /// \cond
 
@@ -336,6 +339,7 @@ typedef union {
 
         /// \endcond
 
+// *INDENT-ON*
 #endif  /* __ASSEMBLER__ */
 
 #endif /* __PPC405_SPR_H__ */

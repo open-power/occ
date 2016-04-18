@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -73,39 +73,39 @@
 //  would most likely be a branch to an application-defined handler.
 
 #ifndef PPC405_MACHINE_CHECK_HANDLER
-#define PPC405_MACHINE_CHECK_HANDLER        SSX_PANIC(0x0200)
+    #define PPC405_MACHINE_CHECK_HANDLER        SSX_PANIC(0x0200)
 #endif
 
 #ifndef PPC405_DATA_STORAGE_HANDLER
-#define PPC405_DATA_STORAGE_HANDLER         SSX_PANIC(0x0300)
+    #define PPC405_DATA_STORAGE_HANDLER         SSX_PANIC(0x0300)
 #endif
 
 #ifndef PPC405_INSTRUCTION_STORAGE_HANDLER
-#define PPC405_INSTRUCTION_STORAGE_HANDLER  SSX_PANIC(0x0400)
+    #define PPC405_INSTRUCTION_STORAGE_HANDLER  SSX_PANIC(0x0400)
 #endif
 
 #ifndef PPC405_ALIGNMENT_HANDLER
-#define PPC405_ALIGNMENT_HANDLER            SSX_PANIC(0x0600)
+    #define PPC405_ALIGNMENT_HANDLER            SSX_PANIC(0x0600)
 #endif
 
 #ifndef PPC405_PROGRAM_HANDLER
-#define PPC405_PROGRAM_HANDLER              SSX_PANIC(0x0700)
+    #define PPC405_PROGRAM_HANDLER              SSX_PANIC(0x0700)
 #endif
 
 #ifndef PPC405_FPU_UNAVAILABLE_HANDLER
-#define PPC405_FPU_UNAVAILABLE_HANDLER      SSX_PANIC(0x0800)
+    #define PPC405_FPU_UNAVAILABLE_HANDLER      SSX_PANIC(0x0800)
 #endif
 
 #ifndef PPC405_APU_UNAVAILABLE_HANDLER
-#define PPC405_APU_UNAVAILABLE_HANDLER      SSX_PANIC(0x0f20)
+    #define PPC405_APU_UNAVAILABLE_HANDLER      SSX_PANIC(0x0f20)
 #endif
 
 #ifndef PPC405_DATA_TLB_MISS_HANDLER
-#define PPC405_DATA_TLB_MISS_HANDLER        SSX_PANIC(0x1100)
+    #define PPC405_DATA_TLB_MISS_HANDLER        SSX_PANIC(0x1100)
 #endif
 
 #ifndef PPC405_INSTRUCTION_TLB_MISS_HANDLER
-#define PPC405_INSTRUCTION_TLB_MISS_HANDLER SSX_PANIC(0x1200)
+    #define PPC405_INSTRUCTION_TLB_MISS_HANDLER SSX_PANIC(0x1200)
 #endif
 
 
@@ -122,7 +122,7 @@
 ///                   its own interrupt status .
 /// \arg \c priority - One of the values \c SSX_CRITICAL or \c
 ///                    SSX_NONCRITICAL; to enable a generic handler to choose
-///                    a behavior appropriate for the interrupt priority. 
+///                    a behavior appropriate for the interrupt priority.
 
 typedef void (*SsxIrqHandler)(void*    arg,
                               SsxIrqId irq,
@@ -168,7 +168,7 @@ void* __ppc405_fit_arg;
 
 
 int
-ppc405_watchdog_setup(int tcr_wp, int tcr_wrc, 
+ppc405_watchdog_setup(int tcr_wp, int tcr_wrc,
                       SsxIrqHandler handler, void* arg);
 
 
@@ -212,7 +212,7 @@ void* __ppc405_debug_arg;
 // straightforward solution.  The only way that I was able to find to get
 // naked assembly code into the output stream is to use 'asm' with simple
 // strings - I couldn't make it work with any kind of argument, as 'asm' would
-// reinterpret the arguments and resulting assembler code in various ways.  
+// reinterpret the arguments and resulting assembler code in various ways.
 //
 // There is another alternative that I tried wherby I created a subroutine
 // call and then filled in the subroutine body with 'asm' code.  However, the
@@ -243,17 +243,17 @@ void* __ppc405_debug_arg;
 /// The code stream injected into the GCC assembler output in response to
 ///
 /// SSX_IRQ_FAST2FULL(fast_handler, full_handler)
-/// 
+///
 /// is (comments added for clarification) :
 ///
 /// \code
-/// .text 
-/// .global fast_handler 
+/// .text
+/// .global fast_handler
 /// .align 5                   # Hard-coded PPC405 cache-line alignment
-/// fast_handler = .           # Can't macro expand LABEL: - this is equivalent 
-/// bl __ssx_irq_fast2full     # The fast-mode to full-mode conversion sequence 
-/// bl full_handler 
-/// b  __ssx_irq_full_mode_exit 
+/// fast_handler = .           # Can't macro expand LABEL: - this is equivalent
+/// bl __ssx_irq_fast2full     # The fast-mode to full-mode conversion sequence
+/// bl full_handler
+/// b  __ssx_irq_full_mode_exit
 /// \endcode
 ///
 /// The macro also declares the prototype of the fast handler:
@@ -268,13 +268,13 @@ void* __ppc405_debug_arg;
     __SSX_IRQ_FAST2FULL(.global fast_handler, fast_handler = ., bl full_handler)
 
 #define __SSX_IRQ_FAST2FULL(global, label, call) \
-asm(".text"); \
-asm(#global); \
-asm(".align 5"); \
-asm(#label); \
-asm("bl __ssx_irq_fast2full"); \
-asm(#call); \
-asm("b __ssx_irq_full_mode_exit");
+    asm(".text"); \
+    asm(#global); \
+    asm(".align 5"); \
+    asm(#label); \
+    asm("bl __ssx_irq_fast2full"); \
+    asm(#call); \
+    asm("b __ssx_irq_full_mode_exit");
 
 #endif  /* __ASSEMBLER__ */
 
@@ -282,7 +282,7 @@ asm("b __ssx_irq_full_mode_exit");
 //  correct order.  We need to bring in the system IRQ header here.
 
 #ifdef HWMACRO_OCC
-#include "occhw_irq.h"
+    #include "occhw_irq.h"
 #endif
 
 /// \page ppc405_irq_macros_page PPC405 SSX IRQ Assembler Macros
@@ -317,6 +317,7 @@ asm("b __ssx_irq_full_mode_exit");
 /// \cond
 
 #ifdef __ASSEMBLER__
+// *INDENT-OFF*
 
         .macro  _ssx_irq_fast2full full_handler
         bl      __ssx_irq_fast2full
@@ -324,10 +325,11 @@ asm("b __ssx_irq_full_mode_exit");
         b       __ssx_irq_full_mode_exit
         .endm     
 
+// *INDENT-ON*
 #endif  /* __ASSEMBLER__ */
 
 /// \endcond
-        
+
 #ifndef __ASSEMBLER__
 
 
@@ -336,9 +338,10 @@ asm("b __ssx_irq_full_mode_exit");
 ///  to this structure will need to be reflected down into the interrupt
 ///  dispatch assembler code.
 
-typedef struct {
-    SsxIrqHandler handler;
-    void          *arg;
+typedef struct
+{
+SsxIrqHandler handler;
+void*          arg;
 } Ppc405IrqHandler;
 
 
@@ -358,7 +361,7 @@ Ppc405IrqHandler __ppc405_irq_handlers[EXTERNAL_IRQS];
 
 UNLESS__PPC405_IRQ_CORE_C__(extern)
 Ppc405IrqHandler __ppc405_phantom_irq;
-    
+
 #endif  /* __ASSEMBLER__ */
 
 #endif  /* __PPC405_IRQ_H__ */

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -42,17 +42,17 @@ uint32_t __ssx_timebase_frequency_khz;
 uint32_t __ssx_timebase_frequency_mhz;
 
 
-/// Initialize SSX.  
+/// Initialize SSX.
 ///
 /// \param noncritical_stack A stack area for noncritical interrupt handlers.
 ///
 /// \param noncritical_stack_size The size (in bytes) of the stack area for
-/// noncritical interrupt handlers. 
+/// noncritical interrupt handlers.
 ///
 /// \param critical_stack A stack area for critical interrupt handlers.
 ///
 /// \param critical_stack_size The size (in bytes) of the stack area for
-/// critical interrupt handlers. 
+/// critical interrupt handlers.
 ///
 /// \param initial_timebase The initial value of the SSX timebase.  If this
 /// argument is given as the special value \c SSX_TIMEBASE_CONTINUE, then the
@@ -67,7 +67,7 @@ uint32_t __ssx_timebase_frequency_mhz;
 ///
 /// \retval 0 Successful completion
 ///
-/// \retval -SSX_INVALID_ARGUMENT_INIT A stack pointer is 0 or is given 
+/// \retval -SSX_INVALID_ARGUMENT_INIT A stack pointer is 0 or is given
 /// a 0 size.
 ///
 /// \retval -SSX_STACK_OVERFLOW One or both stacks are not large enough to
@@ -88,7 +88,8 @@ ssx_initialize(SsxAddress  noncritical_stack,
 {
     int rc;
 
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF((noncritical_stack == 0) ||
                      (noncritical_stack_size == 0) ||
                      (critical_stack == 0) ||
@@ -96,7 +97,8 @@ ssx_initialize(SsxAddress  noncritical_stack,
                      SSX_INVALID_ARGUMENT_INIT);
     }
 
-    if (initial_timebase != SSX_TIMEBASE_CONTINUES) {
+    if (initial_timebase != SSX_TIMEBASE_CONTINUES)
+    {
         __ssx_timebase_set(initial_timebase);
     }
 
@@ -107,7 +109,9 @@ ssx_initialize(SsxAddress  noncritical_stack,
     __ssx_thread_machine_context_default = SSX_THREAD_MACHINE_CONTEXT_DEFAULT;
 
     rc = __ssx_stack_init(&noncritical_stack, &noncritical_stack_size);
-    if (rc) {
+
+    if (rc)
+    {
         return rc;
     }
 
@@ -115,7 +119,9 @@ ssx_initialize(SsxAddress  noncritical_stack,
     __ssx_noncritical_stack_size = noncritical_stack_size;
 
     rc = __ssx_stack_init(&critical_stack, &critical_stack_size);
-    if (rc) {
+
+    if (rc)
+    {
         return rc;
     }
 
@@ -134,25 +140,27 @@ ssx_initialize(SsxAddress  noncritical_stack,
 #endif  /* SSX_TIMER_SUPPORT */
 
 #if SSX_THREAD_SUPPORT
-    
+
     // Clear the priority map. The final entry [SSX_THREADS] is for the idle
     // thread.
 
     int i;
-    for (i = 0; i <= SSX_THREADS; i++) {
+
+    for (i = 0; i <= SSX_THREADS; i++)
+    {
         __ssx_priority_map[i] = 0;
     }
 
     // Initialize the thread scheduler
 
     __ssx_thread_queue_clear(&__ssx_run_queue);
-    __ssx_current_thread = 0;   
+    __ssx_current_thread = 0;
     __ssx_next_thread    = 0;
     __ssx_delayed_switch = 0;
 
 #endif  /* SSX_THREAD_SUPPORT */
 
-   return SSX_OK;
+    return SSX_OK;
 }
 
 
@@ -163,11 +171,11 @@ ssx_initialize(SsxAddress  noncritical_stack,
 /// called.
 
 void
-__ssx_main(int argc, char **argv)
+__ssx_main(int argc, char** argv)
 {
     SSX_MAIN_HOOK;
 
-    int main(int argc, char **argv);
+    int main(int argc, char** argv);
     main(argc, argv);
 }
 
@@ -176,6 +184,6 @@ __ssx_main(int argc, char **argv)
 
 
 
-        
-        
-        
+
+
+

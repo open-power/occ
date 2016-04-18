@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -44,7 +44,7 @@
 /// \param initial_count The initial count of the semaphore
 ///
 /// \param max_count The maximum count allowed in the semaphore, for error
-/// checking 
+/// checking
 ///
 /// Semaphores are created (initialized) by a call of \c
 /// ssx_semaphore_create(), using an application-provided instance of an \c
@@ -76,18 +76,19 @@
 ///
 /// \retval 0 Successful completion
 ///
-/// \retval -SSX_INVALID_SEMAPHORE_AT_CREATE The \a semaphore is a null (0) 
+/// \retval -SSX_INVALID_SEMAPHORE_AT_CREATE The \a semaphore is a null (0)
 /// pointer.
-/// 
-/// \retval -SSX_INVALID_ARGUMENT_SEMAPHORE The \a max_count is non-zero 
+///
+/// \retval -SSX_INVALID_ARGUMENT_SEMAPHORE The \a max_count is non-zero
 /// and less than the \a initial_count.
 
 int
-ssx_semaphore_create(SsxSemaphore      *semaphore,
+ssx_semaphore_create(SsxSemaphore*      semaphore,
                      SsxSemaphoreCount initial_count,
                      SsxSemaphoreCount max_count)
 {
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF(semaphore == 0, SSX_INVALID_SEMAPHORE_AT_CREATE);
         SSX_ERROR_IF((max_count != 0) && (initial_count > max_count),
                      SSX_INVALID_ARGUMENT_SEMAPHORE);
@@ -100,7 +101,7 @@ ssx_semaphore_create(SsxSemaphore      *semaphore,
     return SSX_OK;
 }
 
-                             
+
 
 
 

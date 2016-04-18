@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2014,2015
+# Contributors Listed Below - COPYRIGHT 2014,2016
 # [+] International Business Machines Corp.
 #
 #
@@ -29,6 +29,7 @@
 /// The entry points in this file are routines that are typically used during
 /// initialization, and their code space could be deallocated and recovered if
 /// no longer needed by the application after initialization.
+// *INDENT-OFF*
 
         .nolist
 #include "ssx.h"
@@ -146,4 +147,5 @@ __ssx_thread_context_initialize:
 
         .epilogue __ssx_thread_context_initialize
 
+// *INDENT-ON*
 /// \endcond

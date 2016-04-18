@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -43,8 +43,8 @@
 #include "string_stream.h"
 
 #if USE_RTX_IO
-// This file is not avilable to OCC FW builds
-#include "rtx_stdio.h"
+    // This file is not avilable to OCC FW builds
+    #include "rtx_stdio.h"
 #endif
 
 // We need to make sure that the PLB arbiter is set up correctly to obtain
@@ -101,29 +101,30 @@ plb_arbiter_setup()
 // defined on cacheable data sections.
 
 #ifdef CACHE_INHIBIT_ALL
-#define CACHE_INHIBIT_TEXT 1
-#define CACHE_INHIBIT_DATA 1
+    #define CACHE_INHIBIT_TEXT 1
+    #define CACHE_INHIBIT_DATA 1
 #endif
 
 #if CACHE_INHIBIT_TEXT
-#define TEXT_CACHEABILITY_FLAG TLBLO_I
+    #define TEXT_CACHEABILITY_FLAG TLBLO_I
 #else
-#define TEXT_CACHEABILITY_FLAG 0
+    #define TEXT_CACHEABILITY_FLAG 0
 #endif
 
 #if CACHE_INHIBIT_DATA
-#define DATA_CACHEABILITY_FLAG TLBLO_I
-#define WRITETHROUGH_FLAG 0
+    #define DATA_CACHEABILITY_FLAG TLBLO_I
+    #define WRITETHROUGH_FLAG 0
 #else
-#define DATA_CACHEABILITY_FLAG 0
-#define WRITETHROUGH_FLAG TLBLO_W
+    #define DATA_CACHEABILITY_FLAG 0
+    #define WRITETHROUGH_FLAG TLBLO_W
 #endif
 
 
 // This structure contains all of the fields necessary to create a MMU
 // mapping.
 
-typedef struct {
+typedef struct
+{
     SsxAddress base;
     size_t size;
     uint32_t tlbhi_flags;
@@ -136,58 +137,64 @@ typedef struct {
 // mappings may be later modified.
 
 Ppc405MmuMap G_ex_free_mmu_map;
-Ppc405MmuMap G_applet0_mmu_map;
-Ppc405MmuMap G_applet1_mmu_map;
 
-static const MmuRegion mmu_regions[] = {
+static const MmuRegion mmu_regions[] =
+{
 
-    {(SsxAddress)&_TEXT0_SECTION_BASE,
-     (size_t)&_TEXT0_SECTION_SIZE,
-     0, TEXT_CACHEABILITY_FLAG | TLBLO_EX, 0} ,
+    {
+        (SsxAddress)& _TEXT0_SECTION_BASE,
+        (size_t)& _TEXT0_SECTION_SIZE,
+        0, TEXT_CACHEABILITY_FLAG | TLBLO_EX, 0
+    } ,
 
-    {(SsxAddress)&_TEXT1_SECTION_BASE,
-     (size_t)&_TEXT1_SECTION_SIZE,
-     0, TEXT_CACHEABILITY_FLAG | TLBLO_EX, 0} ,
+    {
+        (SsxAddress)& _TEXT1_SECTION_BASE,
+        (size_t)& _TEXT1_SECTION_SIZE,
+        0, TEXT_CACHEABILITY_FLAG | TLBLO_EX, 0
+    } ,
 
-    {(SsxAddress)&_RODATA_SECTION_BASE,
-     (size_t)&_RODATA_SECTION_SIZE,
-     0, DATA_CACHEABILITY_FLAG, 0} ,
+    {
+        (SsxAddress)& _RODATA_SECTION_BASE,
+        (size_t)& _RODATA_SECTION_SIZE,
+        0, DATA_CACHEABILITY_FLAG, 0
+    } ,
 
-    {(SsxAddress)&_NONCACHEABLE_RO_SECTION_BASE,
-     (size_t)&_NONCACHEABLE_RO_SECTION_SIZE,
-     0, TLBLO_I, 0} ,
+    {
+        (SsxAddress)& _NONCACHEABLE_RO_SECTION_BASE,
+        (size_t)& _NONCACHEABLE_RO_SECTION_SIZE,
+        0, TLBLO_I, 0
+    } ,
 
-    {(SsxAddress)&_NONCACHEABLE_SECTION_BASE,
-     (size_t)&_NONCACHEABLE_SECTION_SIZE,
-     0, TLBLO_I | TLBLO_WR, 0} ,
+    {
+        (SsxAddress)& _NONCACHEABLE_SECTION_BASE,
+        (size_t)& _NONCACHEABLE_SECTION_SIZE,
+        0, TLBLO_I | TLBLO_WR, 0
+    } ,
 
-    {(SsxAddress)&_WRITETHROUGH_SECTION_BASE,
-     (size_t)&_WRITETHROUGH_SECTION_SIZE,
-     0, DATA_CACHEABILITY_FLAG | WRITETHROUGH_FLAG | TLBLO_WR, 0} ,
+    {
+        (SsxAddress)& _WRITETHROUGH_SECTION_BASE,
+        (size_t)& _WRITETHROUGH_SECTION_SIZE,
+        0, DATA_CACHEABILITY_FLAG | WRITETHROUGH_FLAG | TLBLO_WR, 0
+    } ,
 
-    {(SsxAddress)&_DATA_SECTION_BASE,
-     (size_t)&_DATA_SECTION_SIZE,
-     0, DATA_CACHEABILITY_FLAG | TLBLO_WR, 0} ,
+    {
+        (SsxAddress)& _DATA_SECTION_BASE,
+        (size_t)& _DATA_SECTION_SIZE,
+        0, DATA_CACHEABILITY_FLAG | TLBLO_WR, 0
+    } ,
 
-    {(SsxAddress)&_EX_FREE_SECTION_BASE,
-     (size_t)&_EX_FREE_SECTION_SIZE,
-     0, DATA_CACHEABILITY_FLAG | TEXT_CACHEABILITY_FLAG | TLBLO_EX | TLBLO_WR,
-     &G_ex_free_mmu_map},
+    {
+        (SsxAddress)& _EX_FREE_SECTION_BASE,
+        (size_t)& _EX_FREE_SECTION_SIZE,
+        0, DATA_CACHEABILITY_FLAG | TEXT_CACHEABILITY_FLAG | TLBLO_EX | TLBLO_WR,
+        &G_ex_free_mmu_map
+    },
 
-/*
-    {(SsxAddress)&_APPLET0_SECTION_BASE,
-     (size_t)&_APPLET0_SECTION_SIZE,
-     0, DATA_CACHEABILITY_FLAG | TEXT_CACHEABILITY_FLAG | TLBLO_WR | TLBLO_EX,
-     &G_applet0_mmu_map},
-
-    {(SsxAddress)&_APPLET1_SECTION_BASE,
-     (size_t)&_APPLET1_SECTION_SIZE,
-     0, DATA_CACHEABILITY_FLAG | TEXT_CACHEABILITY_FLAG | TLBLO_WR | TLBLO_EX,
-     &G_applet1_mmu_map},
-*/
-    {(SsxAddress)OCI_REGISTER_SPACE_BASE,
-     (size_t)OCI_REGISTER_SPACE_SIZE,
-     0, TLBLO_WR | TLBLO_I | TLBLO_G, 0} ,
+    {
+        (SsxAddress)OCI_REGISTER_SPACE_BASE,
+        (size_t)OCI_REGISTER_SPACE_SIZE,
+        0, TLBLO_WR | TLBLO_I | TLBLO_G, 0
+    } ,
 };
 
 /// OCCHW MMU setup
@@ -208,8 +215,11 @@ occhw_mmu_setup()
     ppc405_mmu_reset();
 
     regions = sizeof(mmu_regions) / sizeof(MmuRegion);
-    for (i = 0; i < regions; i++) {
-        if (mmu_regions[i].size != 0) {
+
+    for (i = 0; i < regions; i++)
+    {
+        if (mmu_regions[i].size != 0)
+        {
             ppc405_mmu_map(mmu_regions[i].base,
                            mmu_regions[i].base,
                            mmu_regions[i].size,
@@ -261,19 +271,19 @@ io_setup()
                            SSXOUT_TRACE_BUFFER_SIZE,
                            SSX_FILE_OP_LOCK_CRITICAL);
 
-    stdout = (FILE *)(&G_ssxout);
-    stderr = (FILE *)(&G_ssxout);
-    ssxout = (FILE *)(&G_ssxout);
+    stdout = (FILE*)(&G_ssxout);
+    stderr = (FILE*)(&G_ssxout);
+    ssxout = (FILE*)(&G_ssxout);
 
 #elif USE_EPM_IO
 
     linear_stream_create(&G_ssxout, &G_ssxout_buffer,
-                        SSXOUT_TRACE_BUFFER_SIZE,
-                        SSX_FILE_OP_LOCK_CRITICAL);
+                         SSXOUT_TRACE_BUFFER_SIZE,
+                         SSX_FILE_OP_LOCK_CRITICAL);
 
-    stdout = (FILE *)(&G_ssxout);
-    stderr = (FILE *)(&G_ssxout);
-    ssxout = (FILE *)(&G_ssxout);
+    stdout = (FILE*)(&G_ssxout);
+    stderr = (FILE*)(&G_ssxout);
+    ssxout = (FILE*)(&G_ssxout);
 
 #elif USE_RTX_IO
 
@@ -281,10 +291,10 @@ io_setup()
     rtx_stdout_create(&rtx_stdout);
     rtx_stderr_create(&rtx_stderr);
 
-    stdin = (FILE *)(&rtx_stdin);
-    stdout = (FILE *)(&rtx_stdout);
-    stderr = (FILE *)(&rtx_stderr);
-    ssxout = (FILE *)(&rtx_stdout);
+    stdin = (FILE*)(&rtx_stdin);
+    stdout = (FILE*)(&rtx_stdout);
+    stderr = (FILE*)(&rtx_stderr);
+    ssxout = (FILE*)(&rtx_stdout);
 
     printf("Initialize the RTX stdio.\n");
     printf("RTX stdin is not implemented.\n");
@@ -295,10 +305,10 @@ io_setup()
     simics_stdout_create(&simics_stdout);
     simics_stderr_create(&simics_stderr);
 
-    stdin = (FILE *)(&simics_stdin);
-    stdout = (FILE *)(&simics_stdout);
-    stderr = (FILE *)(&simics_stderr);
-    ssxout = (FILE *)(&simics_stdout);
+    stdin = (FILE*)(&simics_stdin);
+    stdout = (FILE*)(&simics_stdout);
+    stderr = (FILE*)(&simics_stderr);
+    ssxout = (FILE*)(&simics_stdout);
 
     printf("Initialize the Simics stdio.\n");
 
@@ -390,7 +400,7 @@ __occhw_setup()
 
     // Setup requires SCOM, which requires a timeout. Therefore we need to set
     // up a default timebase frequency, which may be overridden during
-    // ssx_initialize(). 
+    // ssx_initialize().
 
     __ssx_timebase_frequency_hz = 600000000;
     __ssx_timebase_frequency_khz = 600000;

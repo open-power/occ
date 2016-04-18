@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -61,27 +61,27 @@
 
 #ifndef __ASSEMBLER__
 
-int 
-ocb_timer_reset(int timer, 
+int
+ocb_timer_reset(int timer,
                 int auto_reload,
                 int timeout_ns);
 
 #ifdef OCC
 int
-ocb_timer_setup(int timer, 
+ocb_timer_setup(int timer,
                 int auto_reload,
                 int timeout_ns,
                 SsxIrqHandler handler,
-                void *arg,
+                void* arg,
                 int priority) INIT_SECTION;
 #else
 int
 ocb_timer_setup(int timer,
-        int auto_reload,
-        int timeout_ns,
-        SsxIrqHandler handler,
-        void *arg,
-        int priority);
+                int auto_reload,
+                int timeout_ns,
+                SsxIrqHandler handler,
+                void* arg,
+                int priority);
 #endif
 
 /// Clear OCB timer status based on the IRQ
@@ -106,7 +106,7 @@ ocb_linear_window_disable(int channel);
 
 int
 ocb_allow_untrusted_initialize(int channel, int allow_untrusted);
-    
+
 
 #endif  /* __ASSEMBLER__ */
 

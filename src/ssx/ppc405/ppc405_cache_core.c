@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -30,7 +30,7 @@
 
 /// \file ppc405_cache_core.c
 /// \brief Core cache management routines required of any PPC405 configuration
-/// of SSX that interacts with DMA devices using cacheable memory. 
+/// of SSX that interacts with DMA devices using cacheable memory.
 ///
 ///  The entry points in this file are considered 'core' routines that will
 ///  always be present at runtime in any SSX application.
@@ -64,27 +64,33 @@
 /// dcache_invalidate_line() rather than this API.
 
 void
-dcache_invalidate(void *p, size_t bytes)
+dcache_invalidate(void* p, size_t bytes)
 {
     size_t lines;
 
-    if (bytes != 0) {
+    if (bytes != 0)
+    {
         lines = 1;
-        bytes -=  
+        bytes -=
             MIN((CACHE_LINE_SIZE - ((unsigned long)p % CACHE_LINE_SIZE)),
                 bytes);
         lines += bytes / CACHE_LINE_SIZE;
-        if (!cache_aligned(bytes)) {
+
+        if (!cache_aligned(bytes))
+        {
             lines++;
         }
-        while (lines--) {
+
+        while (lines--)
+        {
             dcbi(p);
             p += CACHE_LINE_SIZE;
         }
     }
+
     sync();
 }
-         
+
 
 /// Flush and invalidate a range of addresses from the D-cache
 ///
@@ -109,29 +115,35 @@ dcache_invalidate(void *p, size_t bytes)
 
 
 void
-dcache_flush(void *p, size_t bytes)
+dcache_flush(void* p, size_t bytes)
 {
     size_t lines;
 
-    if (bytes != 0) {
+    if (bytes != 0)
+    {
         lines = 1;
-        bytes -=  
+        bytes -=
             MIN((CACHE_LINE_SIZE - ((unsigned long)p % CACHE_LINE_SIZE)),
                 bytes);
         lines += bytes / CACHE_LINE_SIZE;
-        if (!cache_aligned(bytes)) {
+
+        if (!cache_aligned(bytes))
+        {
             lines++;
         }
-        while (lines--) {
+
+        while (lines--)
+        {
             dcbf(p);
             p += CACHE_LINE_SIZE;
         }
     }
+
     sync();
 }
-         
-        
 
-        
+
+
+
 
 

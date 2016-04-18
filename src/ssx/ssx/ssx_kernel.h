@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -40,19 +40,19 @@
 /// we should try it.
 
 #ifdef __SSX_CORE_C__
-#define IF__SSX_CORE_C__(x) x
-#define UNLESS__SSX_CORE_C__(x) 
+    #define IF__SSX_CORE_C__(x) x
+    #define UNLESS__SSX_CORE_C__(x)
 #else
-#define IF__SSX_CORE_C__(x)
-#define UNLESS__SSX_CORE_C__(x) x
+    #define IF__SSX_CORE_C__(x)
+    #define UNLESS__SSX_CORE_C__(x) x
 #endif
 
 #if SSX_MINIMIZE_KERNEL_CODE_SPACE
-#define IF_SSX_MINIMIZE_KERNEL_CODE_SPACE(x) x
-#define UNLESS_SSX_MINIMIZE_KERNEL_CODE_SPACE(x) 
+    #define IF_SSX_MINIMIZE_KERNEL_CODE_SPACE(x) x
+    #define UNLESS_SSX_MINIMIZE_KERNEL_CODE_SPACE(x)
 #else
-#define IF_SSX_MINIMIZE_KERNEL_CODE_SPACE(x)
-#define UNLESS_SSX_MINIMIZE_KERNEL_CODE_SPACE(x) x
+    #define IF_SSX_MINIMIZE_KERNEL_CODE_SPACE(x)
+    #define UNLESS_SSX_MINIMIZE_KERNEL_CODE_SPACE(x) x
 #endif
 
 
@@ -61,15 +61,15 @@
 /// This is the stack pointer saved when switching from a thread or
 /// non-critical interrupt context to a full-mode critical interrupt context.
 
-UNLESS__SSX_CORE_C__(extern) 
-volatile 
+UNLESS__SSX_CORE_C__(extern)
+volatile
 SsxAddress __ssx_saved_sp_critical;
 
 /// The critical interrupt stack; constant once defined by the call of
-/// ssx_initialize(). 
+/// ssx_initialize().
 
 UNLESS__SSX_CORE_C__(extern)
-volatile 
+volatile
 SsxAddress __ssx_critical_stack;
 
 /// This is the stack pointer saved when switching from a thread context to a
@@ -80,7 +80,7 @@ volatile
 SsxAddress __ssx_saved_sp_noncritical;
 
 /// The non-critical interrupt stack; constant once defined by the call of
-/// ssx_initialize(). 
+/// ssx_initialize().
 
 UNLESS__SSX_CORE_C__(extern)
 volatile
@@ -94,7 +94,7 @@ SsxThreadQueue __ssx_run_queue;
 /// This flag is set by \c __ssx_schedule() if a new highest-priority thread
 /// becomes runnable during an interrupt handler.  The context switch will
 /// take place at the end of non-critical interrupt processing, and the
-/// interrupt handling code will clear the flag. 
+/// interrupt handling code will clear the flag.
 
 UNLESS__SSX_CORE_C__(extern)
 volatile
@@ -108,11 +108,11 @@ int __ssx_delayed_switch;
 /// - After ssx_initialize() but prior to ssx_start_threads()
 ///
 /// - After ssx_start_threads(), when no threads are runnable.  In this case
-/// the NULL (0) value indicates that the SSX idle thread is 'running'. 
+/// the NULL (0) value indicates that the SSX idle thread is 'running'.
 ///
 /// - After ssx_start_threads(), when the current (non-idle) thread has
-/// completed or been deleted. 
-/// 
+/// completed or been deleted.
+///
 /// If \a __ssx_current_thread == 0 then there is no requirement to save any
 /// register state on a context switch, either because the SSX idle thread has
 /// no permanent context, or because any thread context on the kernel stack is
@@ -136,15 +136,15 @@ SsxThread* __ssx_current_thread;
 /// SSX_NONCRITICAL interrupts.
 ///
 /// \a __ssx_next_thread may be NULL (0) under the following
-/// conditions: 
+/// conditions:
 ///
 /// - After ssx_initialize() but prior to ssx_start_threads(), assuming no
 /// threads have been made runnable.
 ///
 /// - After ssx_start_threads(), when no threads are runnable.  In this case
 /// the NULL (0) value indicates that the SSX idle thread is the next thread
-/// to 'run'. 
-/// 
+/// to 'run'.
+///
 /// If \a __ssx_next_thread == 0 then there is no requirement to restore
 /// any register state on a context switch, because the SSX idle thread has
 /// no permanent context.
@@ -196,7 +196,8 @@ SsxThread* __ssx_priority_map[SSX_THREADS + 1];
 /// This structure is defined for use by the kernel, however applications
 /// could also use this structure to define their own time queues.
 
-typedef struct {
+typedef struct
+{
 
     /// A sentinel node for the time queue.
     ///
@@ -236,15 +237,15 @@ SsxTimeQueue __ssx_time_queue;
 /// does not (must not) use this API.
 
 UNLESS__SSX_CORE_C__(extern)
-inline SsxThread *
+inline SsxThread*
 ssx_current(void)
 {
-    return (SsxThread *)__ssx_current_thread;
+    return (SsxThread*)__ssx_current_thread;
 }
 
 
 /// Set the timebase.  This is only called at initialization. Machine
-/// specific. 
+/// specific.
 
 void
 __ssx_timebase_set(SsxTimebase t);
@@ -266,15 +267,15 @@ SSX_TIMER_CALLBACK(__ssx_thread_timeout);
 /// Generic stack initialization. Portable.
 
 int
-__ssx_stack_init(SsxAddress *stack,
-                 size_t     *size);
+__ssx_stack_init(SsxAddress* stack,
+                 size_t*     size);
 
 /// Machine-specific thread context initialization.
 
-void 
-__ssx_thread_context_initialize(SsxThread        *thread, 
-                                SsxThreadRoutine thread_routine, 
-                                void             *arg);
+void
+__ssx_thread_context_initialize(SsxThread*        thread,
+                                SsxThreadRoutine thread_routine,
+                                void*             arg);
 
 /// Machine specific resumption of __ssx_next_thread at __ssx_next_priority
 /// without saving the current context.
@@ -283,11 +284,11 @@ __ssx_next_thread_resume(void);
 
 /// Schedule a timer in the time queue. Portable.
 void
-__ssx_timer_schedule(SsxTimer *timer);
+__ssx_timer_schedule(SsxTimer* timer);
 
 /// Remove a timer from the time queue. Portable.
 int
-__ssx_timer_cancel(SsxTimer *timer);
+__ssx_timer_cancel(SsxTimer* timer);
 
 void
 __ssx_schedule(void);
@@ -296,7 +297,7 @@ __ssx_schedule(void);
 // Call the application main(). Portable.
 
 void
-__ssx_main(int argc, char **argv);
+__ssx_main(int argc, char** argv);
 
 #endif  /* __ASSEMBLER__ */
 

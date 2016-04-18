@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -66,13 +66,14 @@ ipc_async_cmd_t G_async_ipc_cmd[ASYNC_NUM_GPE_QUEUES] SECTION_ATTRIBUTE(".noncac
 ///
 /// \retval -ASYNC_INVALID_OBJECT_PORE_QUEUE The \a queue was NULL (0).
 ///
-/// \retval -ASYNC_INVALID_ENGINE_GPE The \a engine is not a (valid) 
+/// \retval -ASYNC_INVALID_ENGINE_GPE The \a engine is not a (valid)
 /// GPE engine.
 
 int
-gpe_queue_create(GpeQueue *queue, int engine)
+gpe_queue_create(GpeQueue* queue, int engine)
 {
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF(queue == 0, ASYNC_INVALID_OBJECT_GPE_QUEUE);
         SSX_ERROR_IF(!(engine & ASYNC_ENGINE_GPE), ASYNC_INVALID_ENGINE_GPE);
         SSX_ERROR_IF((ASYNC_ENG2GPE(engine) >= ASYNC_NUM_GPE_QUEUES), ASYNC_INVALID_ENGINE_GPE);
@@ -105,14 +106,14 @@ gpe_async_handler(ipc_msg_t* rsp, void* arg)
     if(rsp->ipc_rc != IPC_RC_SUCCESS)
     {
         //calls gpe_error_method before calling async_handler
-        async_error_handler((AsyncQueue *)arg, ASYNC_REQUEST_STATE_FAILED);
+        async_error_handler((AsyncQueue*)arg, ASYNC_REQUEST_STATE_FAILED);
     }
     else
     {
 
         //handle async callbacks and process the next gpe request in the queue
         //(if any)
-        async_handler((AsyncQueue *) arg);
+        async_handler((AsyncQueue*) arg);
     }
 }
 
@@ -149,7 +150,7 @@ gpe_async_handler(ipc_msg_t* rsp, void* arg)
 ///
 /// \retval 0 Success
 ///
-/// \retval -ASYNC_INVALID_OBJECT_GPE_REQUEST The \a request was NULL (0) 
+/// \retval -ASYNC_INVALID_OBJECT_GPE_REQUEST The \a request was NULL (0)
 /// or the \a queue was NULL (0) or not a GpeQueue.
 ///
 /// \retval IPC_RC_INVALID_FUNC_ID The func_id has an invalid target id
@@ -159,20 +160,21 @@ gpe_async_handler(ipc_msg_t* rsp, void* arg)
 /// call.
 
 int
-gpe_request_create(GpeRequest *request,
-                   GpeQueue *queue,
+gpe_request_create(GpeRequest* request,
+                   GpeQueue* queue,
                    ipc_func_enum_t func_id,
                    void* cmd_data,
                    SsxInterval timeout,
                    AsyncRequestCallback callback,
-                   void *arg,
+                   void* arg,
                    int options)
 {
-    AsyncQueue  *async_queue = (AsyncQueue *)queue;
+    AsyncQueue*  async_queue = (AsyncQueue*)queue;
     uint32_t    targeted_func_id;
     int         rc;
 
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF(!(async_queue->engine & ASYNC_ENGINE_GPE),
                      ASYNC_INVALID_OBJECT_GPE_REQUEST);
     }
@@ -186,6 +188,7 @@ gpe_request_create(GpeRequest *request,
                               callback,
                               arg,
                               options);
+
     if(!rc)
     {
 
@@ -203,7 +206,7 @@ gpe_request_create(GpeRequest *request,
             //single target function IDs already have a target
             targeted_func_id = func_id;
         }
-    
+
         //check that target id of the command matches the target id
         //of the queue.
         if (IPC_GET_TARGET_ID(targeted_func_id) != queue->ipc_target_id)
@@ -230,13 +233,13 @@ gpe_request_create(GpeRequest *request,
 //
 // This routine sends an async_request to a GPE.
 //
- 
+
 int
-gpe_run_method(AsyncRequest *async_request)
+gpe_run_method(AsyncRequest* async_request)
 {
-    GpeQueue        *queue = (GpeQueue*)(async_request->queue);
-    GpeRequest      *request = (GpeRequest*)async_request;
-    ipc_async_cmd_t *ipc_cmd = queue->ipc_cmd;
+    GpeQueue*        queue = (GpeQueue*)(async_request->queue);
+    GpeRequest*      request = (GpeRequest*)async_request;
+    ipc_async_cmd_t* ipc_cmd = queue->ipc_cmd;
     int rc;
 
     //Initialize the IPC command message
@@ -277,21 +280,21 @@ gpe_run_method(AsyncRequest *async_request)
 
 
 int
-gpe_error_method(AsyncRequest *async_request)
+gpe_error_method(AsyncRequest* async_request)
 {
-    GpeQueue *queue = (GpeQueue*)(async_request->queue);
-    GpeRequest *request = (GpeRequest*)async_request;
+    GpeQueue* queue = (GpeQueue*)(async_request->queue);
+    GpeRequest* request = (GpeRequest*)async_request;
 
     // Collect data that could explain why a GPE command
     // couldn't be sent or timed out on the response and save it
     // in the ffdc fields
-    
+
     //retrieve IPC data
     request->ffdc.func_id = queue->ipc_cmd->cmd.func_id.word32;
     request->ffdc.ipc_rc = queue->ipc_cmd->cmd.ipc_rc;
-    
+
     //retrieve XIR data
-    request->ffdc.xir_dump_rc = 
+    request->ffdc.xir_dump_rc =
         occhw_xir_dump(queue->ipc_target_id, &request->ffdc.xir_dump);
 
     return 0;
@@ -303,7 +306,7 @@ gpe_error_method(AsyncRequest *async_request)
 ////////////////////////////////////////////////////////////////////////////
 
 void
-async_gpe_initialize(GpeQueue *queue,int engine)
+async_gpe_initialize(GpeQueue* queue, int engine)
 {
     gpe_queue_create(queue, engine);
 }

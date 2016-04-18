@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -89,7 +89,8 @@ uint64_t __ppc405_tlb_free = 0;
 int
 ppc405_mmu_reset()
 {
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF(mfmsr() & (MSR_IR | MSR_DR),
                      PPC405_MMU_ILLEGAL_CONTEXT);
     }
@@ -172,10 +173,10 @@ ppc405_mmu_reset()
 /// duplicated range is accessed.
 
 int
-ppc405_mmu_map(SsxAddress effective_address, 
+ppc405_mmu_map(SsxAddress effective_address,
                SsxAddress real_address,
                size_t size, int tlbhi_flags, int tlblo_flags,
-               Ppc405MmuMap *map)
+               Ppc405MmuMap* map)
 {
     size_t log_page_size;
     size_t page_size = 0;
@@ -186,7 +187,8 @@ ppc405_mmu_map(SsxAddress effective_address,
     uint64_t bit;
     SsxMachineContext ctx;
 
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         uint64_t allocated;
         SsxAddress this_effective_address;
         int entry, overlap;
@@ -213,7 +215,8 @@ ppc405_mmu_map(SsxAddress effective_address,
         // mappings that duplicate each other (a super-bug), but it should
         // protect against bugs in a single thread's updating of the TLB.
 
-        if (size != 0) {
+        if (size != 0)
+        {
 
             // See if the requested effective address is already mapped in the
             // TLB
@@ -225,30 +228,35 @@ ppc405_mmu_map(SsxAddress effective_address,
             // range of the new request.
 
             allocated = ~__ppc405_tlb_free;
-            while (!overlap && (allocated != 0)) {
+
+            while (!overlap && (allocated != 0))
+            {
 
                 entry = cntlz64(allocated);
                 allocated &= ~((uint64_t)1 << (63 - entry));
 
                 tlbhi.value = tlbrehi(entry);
-                if (tlbhi.fields.v) {
 
-                    this_effective_address = 
+                if (tlbhi.fields.v)
+                {
+
+                    this_effective_address =
                         tlbhi.fields.epn << PPC405_LOG_PAGE_SIZE_MIN;
 
-                
+
                     // See if the first byte of this entry is inside the
                     // requested effective address range.  NB: use actual
                     // address ranges (addr + size - 1) to compute overlap to
                     // avoid overflow.
 
-                    overlap |= 
-                        (this_effective_address >= 
+                    overlap |=
+                        (this_effective_address >=
                          effective_address) &&
                         (this_effective_address <=
                          (effective_address + size - 1));
                 }
             }
+
             SSX_ERROR_IF(overlap, PPC405_DUPLICATE_TLB_ENTRY);
         }
     }
@@ -258,12 +266,14 @@ ppc405_mmu_map(SsxAddress effective_address,
     // pages, by using the largest possible (aligned) page size for the
     // remaining memory area.
 
-    while (size != 0) {
+    while (size != 0)
+    {
 
         ssx_critical_section_enter(SSX_CRITICAL, &ctx);
 
-        if (SSX_ERROR_CHECK_API) {
-            SSX_ERROR_IF_CRITICAL(__ppc405_tlb_free == 0, 
+        if (SSX_ERROR_CHECK_API)
+        {
+            SSX_ERROR_IF_CRITICAL(__ppc405_tlb_free == 0,
                                   PPC405_TOO_MANY_TLB_ENTRIES,
                                   &ctx);
         }
@@ -276,16 +286,23 @@ ppc405_mmu_map(SsxAddress effective_address,
         ssx_critical_section_exit(&ctx);
 
         log_page_size = PPC405_LOG_PAGE_SIZE_MAX;
-        do {
+
+        do
+        {
             page_size = POW2_32(log_page_size);
-            if ((size >= page_size) && 
+
+            if ((size >= page_size) &&
                 ((effective_address & (page_size - 1)) == 0) &&
-                ((real_address & (page_size - 1)) == 0)) {
+                ((real_address & (page_size - 1)) == 0))
+            {
                 break;
-            } else {
+            }
+            else
+            {
                 log_page_size -= 2;
             }
-        } while (1);
+        }
+        while (1);
 
         size -= page_size;
 
@@ -313,7 +330,8 @@ ppc405_mmu_map(SsxAddress effective_address,
         real_address += page_size;
     }
 
-    if (map) {
+    if (map)
+    {
         *map = local_map;
     }
 
@@ -336,17 +354,19 @@ ppc405_mmu_map(SsxAddress effective_address,
 /// \retval -PPC405_MMU_INVALID_ARGUMENT The \a map pointer is null (0).
 
 int
-ppc405_mmu_unmap(Ppc405MmuMap *map)
+ppc405_mmu_unmap(Ppc405MmuMap* map)
 {
     int tlb_entry;
     uint64_t bit;
     SsxMachineContext ctx;
 
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF(map == 0, PPC405_MMU_INVALID_ARGUMENT);
     }
 
-    while ((tlb_entry = cntlz64(*map)) != 64) {
+    while ((tlb_entry = cntlz64(*map)) != 64)
+    {
 
         bit = 0x8000000000000000ull >> tlb_entry;
         *map &= ~bit;
@@ -354,12 +374,12 @@ ppc405_mmu_unmap(Ppc405MmuMap *map)
         isync();
 
         ssx_critical_section_enter(SSX_CRITICAL, &ctx);
-        
+
         __ppc405_tlb_free |= bit;
 
         ssx_critical_section_exit(&ctx);
     }
-    
+
     return 0;
 }
 
@@ -379,39 +399,51 @@ ppc405_mmu_report(FILE* i_stream, Ppc405MmuMap* i_map)
     Ppc405Tlbhi tlbhi;
     Ppc405Tlblo tlblo;
     uint32_t size, eff_lo, eff_hi, real_lo, real_hi;
-    const char *size_string[] = {
+    const char* size_string[] =
+    {
         "  1K", "  4K", " 16K", " 64K", "256K", "  1M", "  4M", " 16M"
     };
     Ppc405MmuMap map;
 
     fprintf(i_stream, "------------------------------------------------------------------------------\n");
-    if (i_map == 0) {
+
+    if (i_map == 0)
+    {
         fprintf(i_stream, "--                 PPC405 MMU : Full Report                                 --\n");
-    } else {
+    }
+    else
+    {
         fprintf(i_stream, "--                 PPC405 MMU : Partial Report                              --\n");
     }
+
     fprintf(i_stream, "------------------------------------------------------------------------------\n");
     fprintf(i_stream, "--  #       Effective               Real         Size   EX/WR   WIMG  Other --\n");
     fprintf(i_stream, "------------------------------------------------------------------------------\n");
-    
-    if (i_map == 0) {
-        map =  __ppc405_tlb_free; 
-    } else {
+
+    if (i_map == 0)
+    {
+        map =  __ppc405_tlb_free;
+    }
+    else
+    {
         map = ~*i_map;
     }
 
-    for (i = 0; i < PPC405_TLB_ENTRIES; i++, map <<= 1) {
+    for (i = 0; i < PPC405_TLB_ENTRIES; i++, map <<= 1)
+    {
 
-        if (map & 0x8000000000000000ull) {
+        if (map & 0x8000000000000000ull)
+        {
             continue;
         }
 
         tlbhi.value = tlbrehi(i);
         tlblo.value = tlbrelo(i);
 
-        if (tlbhi.fields.v) {
+        if (tlbhi.fields.v)
+        {
 
-            size = 
+            size =
                 POW2_32(PPC405_LOG_PAGE_SIZE_MIN) << (2 * tlbhi.fields.size);
 
             eff_lo = tlbhi.fields.epn << PPC405_LOG_PAGE_SIZE_MIN;
@@ -421,19 +453,21 @@ ppc405_mmu_report(FILE* i_stream, Ppc405MmuMap* i_map)
             real_hi = real_lo + size - 1;
 
             fprintf(i_stream, "-- %2d : %08x:%08x -> %08x:%08x : %s : %s %s : %s%s%s%s : %s%s  --\n",
-                   i, 
-                   eff_lo, eff_hi,
-                   real_lo, real_hi,
-                   size_string[tlbhi.fields.size],
-                   tlblo.fields.ex ? "EX" : "  ",
-                   tlblo.fields.wr ? "WR" : "  ",
-                   tlblo.fields.w ? "W" : " ",
-                   tlblo.fields.i ? "I" : " ",
-                   tlblo.fields.m ? "M" : " ",
-                   tlblo.fields.g ? "G" : " ",
-                   tlbhi.fields.e ? "E" : " ",
-                   tlbhi.fields.u0 ? "U0" : "  ");
-        } else {
+                    i,
+                    eff_lo, eff_hi,
+                    real_lo, real_hi,
+                    size_string[tlbhi.fields.size],
+                    tlblo.fields.ex ? "EX" : "  ",
+                    tlblo.fields.wr ? "WR" : "  ",
+                    tlblo.fields.w ? "W" : " ",
+                    tlblo.fields.i ? "I" : " ",
+                    tlblo.fields.m ? "M" : " ",
+                    tlblo.fields.g ? "G" : " ",
+                    tlbhi.fields.e ? "E" : " ",
+                    tlbhi.fields.u0 ? "U0" : "  ");
+        }
+        else
+        {
             fprintf(i_stream, "-- %2d : ENTRY NOT VALID\n", i);
         }
     }
@@ -491,6 +525,6 @@ memcpy_real(void* dest, const void* src, size_t n)
     return dest;
 }
 
-    
 
-    
+
+

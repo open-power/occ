@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -58,18 +58,19 @@
 /// context.
 ///
 /// \retval -SSX_INVALID_SEMAPHORE_AT_POST The \a semaphore is a null (0) pointer.
-/// 
+///
 /// \retval -SSX_SEMAPHORE_OVERFLOW The \a max_count argument supplied when
 /// the semaphore was created is non-zero and the new internal count is
 /// greater than the \a max_count.
 
 int
-ssx_semaphore_post(SsxSemaphore *semaphore)
+ssx_semaphore_post(SsxSemaphore* semaphore)
 {
     SsxMachineContext ctx;
     SsxThreadPriority priority;
 
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF_CRITICAL_INTERRUPT_CONTEXT();
         SSX_ERROR_IF(semaphore == 0, SSX_INVALID_SEMAPHORE_AT_POST);
     }
@@ -78,7 +79,8 @@ ssx_semaphore_post(SsxSemaphore *semaphore)
 
     priority = __ssx_thread_queue_min(&(semaphore->pending_threads));
 
-    if (priority != SSX_IDLE_THREAD_PRIORITY) {
+    if (priority != SSX_IDLE_THREAD_PRIORITY)
+    {
 
         __ssx_thread_queue_delete(&(semaphore->pending_threads), priority);
         __ssx_thread_queue_insert(&__ssx_run_queue, priority);
@@ -87,19 +89,22 @@ ssx_semaphore_post(SsxSemaphore *semaphore)
 
         __ssx_schedule();
 
-    } else {
+    }
+    else
+    {
 
         semaphore->count++;
 
-        if (SSX_ERROR_CHECK_API) {
-            SSX_ERROR_IF((semaphore->max_count > 0) && 
+        if (SSX_ERROR_CHECK_API)
+        {
+            SSX_ERROR_IF((semaphore->max_count > 0) &&
                          (semaphore->count > semaphore->max_count),
                          SSX_SEMAPHORE_OVERFLOW);
         }
     }
 
     ssx_critical_section_exit(&ctx);
-    
+
     return SSX_OK;
 }
 
@@ -139,7 +144,7 @@ ssx_semaphore_post(SsxSemaphore *semaphore)
 /// constant as \c SSX_WAIT_FOREVER.
 ///
 /// Return values other than SSX_OK (0) are not necessarily errors; see \ref
-/// ssx_errors 
+/// ssx_errors
 ///
 /// The following return codes are non-error codes:
 ///
@@ -155,9 +160,9 @@ ssx_semaphore_post(SsxSemaphore *semaphore)
 /// \retval -SSX_ILLEGAL_CONTEXT The API was called from a critical interrupt
 /// context.
 ///
-/// \retval -SSX_INVALID_SEMAPHORE_AT_PEND The \a semaphore is a null (0) 
+/// \retval -SSX_INVALID_SEMAPHORE_AT_PEND The \a semaphore is a null (0)
 /// pointer.
-/// 
+///
 /// \retval -SSX_SEMAPHORE_PEND_WOULD_BLOCK The call was made from an
 /// interrupt context (or before threads have been started), the semaphore
 /// internal count was 0 and a non-zero timeout was specified.
@@ -165,39 +170,46 @@ ssx_semaphore_post(SsxSemaphore *semaphore)
 // Note: Casting __ssx_current_thread removes the 'volatile' attribute.
 
 int
-ssx_semaphore_pend(SsxSemaphore *semaphore,
+ssx_semaphore_pend(SsxSemaphore* semaphore,
                    SsxInterval  timeout)
 {
     SsxMachineContext ctx;
     SsxThreadPriority priority;
-    SsxThread         *thread;
-    SsxTimer          *timer = 0;
+    SsxThread*         thread;
+    SsxTimer*          timer = 0;
     int rc = SSX_OK;
 
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF_CRITICAL_INTERRUPT_CONTEXT();
         SSX_ERROR_IF(semaphore == 0, SSX_INVALID_SEMAPHORE_AT_PEND);
     }
 
     ssx_critical_section_enter(SSX_NONCRITICAL, &ctx);
 
-    if (semaphore->count != 0) {
+    if (semaphore->count != 0)
+    {
 
         semaphore->count--;
 
-    } else if (timeout == SSX_NO_WAIT) {
+    }
+    else if (timeout == SSX_NO_WAIT)
+    {
 
         rc = -SSX_SEMAPHORE_PEND_NO_WAIT;
 
-    } else { 
+    }
+    else
+    {
 
-        if (SSX_ERROR_CHECK_API) {
-            SSX_ERROR_IF_CRITICAL(!__ssx_kernel_context_thread(), 
+        if (SSX_ERROR_CHECK_API)
+        {
+            SSX_ERROR_IF_CRITICAL(!__ssx_kernel_context_thread(),
                                   SSX_SEMAPHORE_PEND_WOULD_BLOCK,
                                   &ctx);
         }
 
-        thread = (SsxThread *)__ssx_current_thread;
+        thread = (SsxThread*)__ssx_current_thread;
         priority = thread->priority;
 
         __ssx_thread_queue_insert(&(semaphore->pending_threads), priority);
@@ -207,7 +219,8 @@ ssx_semaphore_pend(SsxSemaphore *semaphore,
 
         SSX_KERN_TRACE("THREAD_SEMAPHORE_PEND(%d)", priority);
 
-        if (timeout != SSX_WAIT_FOREVER) {
+        if (timeout != SSX_WAIT_FOREVER)
+        {
             timer = &(thread->timer);
             timer->timeout = ssx_timebase_get() + timeout;
             __ssx_timer_schedule(timer);
@@ -219,14 +232,19 @@ ssx_semaphore_pend(SsxSemaphore *semaphore,
 
         thread->flags &= ~SSX_THREAD_FLAG_SEMAPHORE_PEND;
 
-        if (thread->flags & SSX_THREAD_FLAG_TIMER_PEND) {
-            if (thread->flags & SSX_THREAD_FLAG_TIMED_OUT) {
+        if (thread->flags & SSX_THREAD_FLAG_TIMER_PEND)
+        {
+            if (thread->flags & SSX_THREAD_FLAG_TIMED_OUT)
+            {
                 rc = -SSX_SEMAPHORE_PEND_TIMED_OUT;
                 __ssx_thread_queue_delete(&(semaphore->pending_threads), thread->priority);
-            } else {
+            }
+            else
+            {
                 __ssx_timer_cancel(timer);
             }
-            thread->flags &= 
+
+            thread->flags &=
                 ~(SSX_THREAD_FLAG_TIMER_PEND | SSX_THREAD_FLAG_TIMED_OUT);
         }
     }
@@ -258,7 +276,7 @@ ssx_semaphore_pend(SsxSemaphore *semaphore,
 /// \retval -SSX_ILLEGAL_CONTEXT The API was called from a critical interrupt
 /// context.
 ///
-/// \retval -SSX_INVALID_SEMAPHORE_AT_RELEASE The \a semaphore is a null (0) 
+/// \retval -SSX_INVALID_SEMAPHORE_AT_RELEASE The \a semaphore is a null (0)
 /// pointer.
 
 int
@@ -266,7 +284,8 @@ ssx_semaphore_release_all(SsxSemaphore* semaphore)
 {
     SsxMachineContext ctx;
 
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF_CRITICAL_INTERRUPT_CONTEXT();
         SSX_ERROR_IF(semaphore == 0, SSX_INVALID_SEMAPHORE_AT_RELEASE);
     }
@@ -281,8 +300,8 @@ ssx_semaphore_release_all(SsxSemaphore* semaphore)
 
     return SSX_OK;
 }
-                             
-            
+
+
 /// Get information about a semaphore.
 ///
 /// \param semaphore A pointer to the SsxSemaphore to query
@@ -304,23 +323,27 @@ ssx_semaphore_release_all(SsxSemaphore* semaphore)
 ///
 /// \retval 0 Successful completion
 ///
-/// \retval -SSX_INVALID_SEMAPHORE_AT_INFO The \a semaphore is a null (0) 
+/// \retval -SSX_INVALID_SEMAPHORE_AT_INFO The \a semaphore is a null (0)
 /// pointer.
 
 int
 ssx_semaphore_info_get(SsxSemaphore*      semaphore,
                        SsxSemaphoreCount* count,
                        int*               pending)
-                   
+
 {
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF(semaphore == 0, SSX_INVALID_SEMAPHORE_AT_INFO);
     }
 
-    if (count) {
+    if (count)
+    {
         *count = semaphore->count;
     }
-    if (pending) {
+
+    if (pending)
+    {
         *pending = __ssx_thread_queue_count(&(semaphore->pending_threads));
     }
 
@@ -336,7 +359,7 @@ ssx_semaphore_info_get(SsxSemaphore*      semaphore,
 /// ssx_irq_handler_set().  The semaphore should be initialized with
 /// ssx_semaphore_create(&sem, 0, 1).  This handler simply disables (masks)
 /// the interrupt, clears the status and calls ssx_semaphore_post() on the
-/// semaphore.  
+/// semaphore.
 ///
 /// Note that clearing the status in the interrupt controller as done here is
 /// effectively a no-op for level-sensitive interrupts. In the level-sensitive
@@ -344,11 +367,11 @@ ssx_semaphore_info_get(SsxSemaphore*      semaphore,
 /// condition in the device before re-enabling the interrupt.
 
 void
-ssx_semaphore_post_handler_full(void *arg, SsxIrqId irq, int priority)
+ssx_semaphore_post_handler_full(void* arg, SsxIrqId irq, int priority)
 {
     ssx_irq_disable(irq);
     ssx_irq_status_clear(irq);
-    ssx_semaphore_post((SsxSemaphore *)arg);
+    ssx_semaphore_post((SsxSemaphore*)arg);
 }
 
 SSX_IRQ_FAST2FULL(ssx_semaphore_post_handler, ssx_semaphore_post_handler_full);

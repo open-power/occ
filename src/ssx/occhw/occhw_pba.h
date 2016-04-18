@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -36,11 +36,6 @@
 
 /// \todo Add Doxygen grouping to constant groups
 
-// @TODO - TEMP: Added to eliminate errors: implicit declaration of functions out32 & in32
-// These functions are used in the pbax functions defined below.
-#include "ssx_api.h"
-#include "ppc32.h"
-
 #include "pba_register_addresses.h"
 #include "pba_firmware_registers.h"
 
@@ -52,7 +47,7 @@
 
 // It is assumed the the PBA BAR sets will be assigned according to the
 // following scheme.  There are still many open questions concerning PBA
-// setup. 
+// setup.
 
 /// The number of PBA Base Address Registers (BARS)
 #define PBA_BARS 4
@@ -73,8 +68,8 @@
 
 #define PBA_SLAVE_PORE_GPE 0    /* GPE0/1, but only 1 can access mainstore */
 #define PBA_SLAVE_OCC      1    /* 405 I- and D-cache */
-#define PBA_SLAVE_PORE_SLW 2    
-#define PBA_SLAVE_OCB      3    
+#define PBA_SLAVE_PORE_SLW 2
+#define PBA_SLAVE_OCB      3
 
 /// The maximum number of bytes a PBA block-copy engine can transfer at once
 #define PBA_BCE_SIZE_MAX 4096
@@ -117,10 +112,10 @@
 
 #define PBA_WRITE_TSIZE_CHIPLET(chiplet) (chiplet)
 
-#define PBA_WRITE_TSIZE_ARMW_ADD 0x03
-#define PBA_WRITE_TSIZE_ARMW_AND 0x13
-#define PBA_WRITE_TSIZE_ARMW_OR  0x23
-#define PBA_WRITE_TSIZE_ARMW_XOR 0x33
+#define PBA_WRITE_TSIZE_ARMW_ADD 0x02
+#define PBA_WRITE_TSIZE_ARMW_AND 0x22
+#define PBA_WRITE_TSIZE_ARMW_OR  0x42
+#define PBA_WRITE_TSIZE_ARMW_XOR 0x62
 
 #define PBA_WRITE_TSIZE_DC 0x0
 
@@ -154,7 +149,7 @@
 #define PBA_READ_TTYPE_CI_PR_RD      0x1 /// Cache-inhibited partial read for Centaur getscom().
 
 /// PBA read TTYPE don't care assignment
-#define PBA_READ_TTYPE_DC PBA_READ_TTYPE_CL_RD_NC      
+#define PBA_READ_TTYPE_DC PBA_READ_TTYPE_CL_RD_NC
 
 
 // PBA read prefetch options
@@ -164,13 +159,13 @@
 #define PBA_READ_PREFETCH_AUTO_LATE   0x2 /// Non-aggressive prefetch
 
 /// PBA read prefetch don't care assignment - see gpe_pba_parms_create()
-#define PBA_READ_PREFETCH_DC -1  
+#define PBA_READ_PREFETCH_DC -1
 
 
 // PBA PowerBus command scope and priority, and PBA defaults
 
 /// Nodal, Local Node
-#define POWERBUS_COMMAND_SCOPE_NODAL 0x0 
+#define POWERBUS_COMMAND_SCOPE_NODAL 0x0
 
 /// Group, Local 4-chip, (aka, node pump)
 #define POWERBUS_COMMAND_SCOPE_GROUP 0x1
@@ -183,7 +178,7 @@
 
 /// Foreign, All units on the local chip, local SMP, and remote chip (pivot
 /// nodes), In P8, only 100 and 101 are valid.
-#define POWERBUS_COMMAND_SCOPE_FOREIGN0 0x4 
+#define POWERBUS_COMMAND_SCOPE_FOREIGN0 0x4
 
 /// Foreign, All units on the local chip, local SMP, and remote chip (pivot
 /// nodes), In P8, only 100 and 101 are valid.
@@ -207,8 +202,8 @@
 /// initialization-only and/or lab-only procedure, so this long polling
 /// timeout is not a problem.
 #ifndef PBA_SLAVE_RESET_TIMEOUT
-#define PBA_SLAVE_RESET_TIMEOUT SSX_MICROSECONDS(100)
-#endif 
+    #define PBA_SLAVE_RESET_TIMEOUT SSX_MICROSECONDS(100)
+#endif
 
 
 // PBA Error/Panic codes
@@ -229,11 +224,13 @@
 ///
 /// The extended address covers only bits 23:36 of the 50-bit PowerBus address.
 
-typedef union pba_extended_address {
+typedef union pba_extended_address
+{
 
     uint64_t value;
     uint32_t word[2];
-    struct {
+    struct
+    {
         uint64_t reserved0        : 23;
         uint64_t extended_address : 14;
         uint64_t reserved1        : 27;
@@ -241,14 +238,11 @@ typedef union pba_extended_address {
 } pba_extended_address_t;
 
 
-int 
+int
 pba_barset_initialize(int idx, uint64_t base, int log_size);
 
-// @TODO - TEMP: PORE assembly code. to be replace with valid GPE code
-/*
 int
 _pba_slave_reset(int id, SsxInterval timeout, SsxInterval sleep);
-*/
 
 int
 pba_slave_reset(int id);
@@ -268,19 +262,18 @@ pba_slave_reset(int id);
 #define PBAX_QUEUES 2
 
 /// The number of PBAX Node Ids
-#define PBAX_NODES 8
+#define PBAX_GROUPS 16
 
 /// The number of PBAX Chip Ids (and group Ids)
 #define PBAX_CHIPS 8
-#define PBAX_GROUPS PBAX_CHIPS
 
 /// The maximum legal PBAX group mask
 #define PBAX_GROUP_MASK_MAX 0xff
 
 // PBAX Send Message Scope
 
-#define PBAX_GROUP  1
-#define PBAX_SYSTEM 2
+#define PBAX_GROUP  3
+#define PBAX_SYSTEM 5
 
 // PBAX Send Type
 
@@ -290,7 +283,7 @@ pba_slave_reset(int id);
 // Default timeout for pbax_send()
 
 #ifndef PBAX_SEND_DEFAULT_TIMEOUT
-#define PBAX_SEND_DEFAULT_TIMEOUT SSX_MICROSECONDS(30)
+    #define PBAX_SEND_DEFAULT_TIMEOUT SSX_MICROSECONDS(30)
 #endif
 
 /// An abstract target for PBAX send operations
@@ -304,7 +297,8 @@ pba_slave_reset(int id);
 /// For applications that use GPE programs to implement PBAX sends, a pointer
 /// to this object could also be passed to the GPE program.
 
-typedef struct {
+typedef struct
+{
 
     /// The abstract target
     ///
@@ -317,7 +311,7 @@ typedef struct {
 
 int
 pbax_target_create(PbaxTarget* target,
-                   int type, int scope, int queue, 
+                   int type, int scope, int queue,
                    int node, int chip_or_group);
 
 int
@@ -340,7 +334,7 @@ pbax_send_enable(void)
     pxc.words.high_order = in32(PBA_XCFG);
     pxc.fields.pbax_en = 1;
     out32(PBA_XCFG, pxc.words.high_order);
-    
+
 }
 
 
@@ -354,7 +348,7 @@ pbax_send_disable(void)
     pxc.words.high_order = in32(PBA_XCFG);
     pxc.fields.pbax_en = 0;
     out32(PBA_XCFG, pxc.words.high_order);
-    
+
 }
 
 
@@ -368,7 +362,7 @@ pbax_clear_send_error(void)
     pxc.words.high_order = in32(PBA_XCFG);
     pxc.fields.snd_reset = 1;
     out32(PBA_XCFG, pxc.words.high_order);
-}    
+}
 
 
 /// Clear the PBAX receive error condition
@@ -381,7 +375,7 @@ pbax_clear_receive_error(void)
     pxc.words.high_order = in32(PBA_XCFG);
     pxc.fields.rcv_reset = 1;
     out32(PBA_XCFG, pxc.words.high_order);
-}    
+}
 
 #endif /* __ASSEMBLER__ */
 

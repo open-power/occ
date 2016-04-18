@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -42,9 +42,9 @@
 ///  Note that \a dcrn must be a compile-time constant.
 
 #define mfdcr(dcrn)                                             \
-   ({uint32_t __value;                                          \
-   asm volatile ("mfdcr %0, %1" : "=r" (__value) : "i" (dcrn)); \
-   __value;})    
+    ({uint32_t __value;                                          \
+        asm volatile ("mfdcr %0, %1" : "=r" (__value) : "i" (dcrn)); \
+        __value;})
 
 
 /// Move to DCR
@@ -52,10 +52,10 @@
 ///  Note that \a dcrn must be a compile-time constant.
 
 #define mtdcr(dcrn, value)                                        \
-   ({uint32_t __value = (value);                                  \
-     asm volatile ("mtdcr %0, %1" : : "i" (dcrn), "r" (__value)); \
-   })
-    
+    ({uint32_t __value = (value);                                  \
+        asm volatile ("mtdcr %0, %1" : : "i" (dcrn), "r" (__value)); \
+    })
+
 
 /// Read-Modify-Write a DCR with OR (Set DCR bits)
 ///

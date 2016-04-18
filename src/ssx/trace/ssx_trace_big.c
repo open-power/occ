@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -41,7 +41,7 @@
 
 #if (SSX_TRACE_SUPPORT && SSX_TIMER_SUPPORT)
 void ssx_trace_big(uint32_t i_hash_and_count,
-                  uint64_t i_parm1, uint64_t i_parm2)
+                   uint64_t i_parm1, uint64_t i_parm2)
 {
     SsxTraceBig         footer;
     SsxTraceBig*        footer_ptr;
@@ -100,6 +100,7 @@ void ssx_trace_big(uint32_t i_hash_and_count,
     footer_ptr = (SsxTraceBig*)ptr64;
     ptr64 = (uint64_t*)&g_ssx_trace_buf.cb[cur_offset & SSX_TRACE_CB_MASK];
     *ptr64 = i_parm1;
+
     if(parm_size > 8)
     {
         ptr64 = (uint64_t*)&g_ssx_trace_buf.cb[(cur_offset + 8) & SSX_TRACE_CB_MASK];

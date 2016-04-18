@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -73,7 +73,7 @@
 
 /// This macro encapsulates error handling boilerplate in the SSX API
 /// functions, for errors that do not occur in critical sections.
-/// The error handling will only be enabled when SSX_ERROR_CHECK_API 
+/// The error handling will only be enabled when SSX_ERROR_CHECK_API
 /// is enabled.
 
 #define SSX_ERROR_IF_CHECK_API(condition, code) \

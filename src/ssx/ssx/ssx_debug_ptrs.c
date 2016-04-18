@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -36,14 +36,14 @@
 ///
 
 #include "ssx.h"
-#include "ssx_trace.h" 
+#include "ssx_trace.h"
 #include "ssx_debug_ptrs.h"
 
 
 extern SsxTimebase ppc405_64bit_ext_timebase;
 
 #if SSX_TRACE_SUPPORT
-extern SsxTraceBuffer g_ssx_trace_buf;
+    extern SsxTraceBuffer g_ssx_trace_buf;
 #endif
 
 ssx_debug_ptrs_t ssx_debug_ptrs SECTION_ATTRIBUTE(".debug_ptrs") =
@@ -62,7 +62,7 @@ ssx_debug_ptrs_t ssx_debug_ptrs SECTION_ATTRIBUTE(".debug_ptrs") =
 #if SSX_THREAD_SUPPORT
     .debug_thread_table_ptr     = &__ssx_priority_map,
     .debug_thread_table_size    = sizeof(__ssx_priority_map),
-    .debug_thread_runq_ptr      = (void*)&__ssx_run_queue,
+    .debug_thread_runq_ptr      = (void*)& __ssx_run_queue,
     .debug_thread_runq_size     = sizeof(__ssx_run_queue),
 #else
     .debug_thread_table_ptr     = 0,

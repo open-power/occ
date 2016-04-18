@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -75,7 +75,7 @@
 /// SCOM-by-SCOM basis.
 ///
 /// \bug Modify getscom/putscom to return the SSX error codes rather than
-/// 1-7. 
+/// 1-7.
 ///
 /// \bug Implement and use a generic poll_with_timeout(f, arg, t)
 
@@ -90,7 +90,7 @@
 // Common SCOM polling loop with software timeout.  The PMC is always polled
 // at least twice to guarantee that we always poll once after a timeout.
 
-static int 
+static int
 poll_scom(SsxInterval timeout)
 {
     SsxTimebase start;
@@ -99,19 +99,28 @@ poll_scom(SsxInterval timeout)
 
     start = ssx_timebase_get();
     timed_out = 0;
-    do {
-        rc = ssx_irq_status_get(OCCHW_IRQ_IPI_SCOM); 
-        if (!rc) {
+
+    do
+    {
+        rc = ssx_irq_status_get(OCCHW_IRQ_IPI_SCOM);
+
+        if (!rc)
+        {
             break;
         }
-        if (timed_out) {
+
+        if (timed_out)
+        {
             rc = -SCOM_TIMEOUT_ERROR;
             break;
         }
-        timed_out = 
+
+        timed_out =
             ((timeout != SSX_WAIT_FOREVER) &&
              ((ssx_timebase_get() - start) > timeout));
-    } while (1);
+    }
+    while (1);
+
     return rc;
 }
 
@@ -145,15 +154,15 @@ poll_scom(SsxInterval timeout)
 /// \retval -SCOM_TIMEOUT_ERROR The software timeout specified by the \a
 /// timeout parameter expired before the transaction completed.
 ///
-/// retval -SCOM_PROTOCOL_ERROR_GETSCOM_BUSY The PMC SCOM engine was busy when 
-/// the call was made. 
+/// retval -SCOM_PROTOCOL_ERROR_GETSCOM_BUSY The PMC SCOM engine was busy when
+/// the call was made.
 
 int
-_getscom(uint32_t address, uint64_t *data, SsxInterval timeout)
+_getscom(uint32_t address, uint64_t* data, SsxInterval timeout)
 {
     SsxMachineContext   ctx;
     int                 rc;
-    occhw_scom_cmd_t    *scom_cmd = &OSD_PTR->scom_cmd;
+    occhw_scom_cmd_t*    scom_cmd = &OSD_PTR->scom_cmd;
     occhw_scom_status_t scom_status;
 
     do
@@ -167,8 +176,10 @@ _getscom(uint32_t address, uint64_t *data, SsxInterval timeout)
         ssx_critical_section_enter(SSX_CRITICAL, &ctx);
 
         // Check for a transaction already ongoing
-        rc = ssx_irq_status_get(OCCHW_IRQ_IPI_SCOM); 
-        if (rc) {
+        rc = ssx_irq_status_get(OCCHW_IRQ_IPI_SCOM);
+
+        if (rc)
+        {
             ssx_critical_section_exit(&ctx);
             rc = -SCOM_PROTOCOL_ERROR_GETSCOM_BUSY;
             break;
@@ -208,7 +219,9 @@ _getscom(uint32_t address, uint64_t *data, SsxInterval timeout)
             }
         }
 
-    }while(0);
+    }
+    while(0);
+
     return rc;
 }
 
@@ -238,35 +251,66 @@ _getscom(uint32_t address, uint64_t *data, SsxInterval timeout)
 ///\ retval 1-7 A PCB error code.  See \c pcb_common.h
 
 int
-getscom(uint32_t address, uint64_t *data)
+getscom(uint32_t address, uint64_t* data)
 {
     int rc;
 
     rc = _getscom(address, data, SCOM_TIMEOUT);
-    if (rc == 0) {
+
+    if (rc == 0)
+    {
         return 0;
     }
 
-    if ((rc > 0) && (rc <= SCOM_ERROR_LIMIT)) {
+    if ((rc > 0) && (rc <= SCOM_ERROR_LIMIT))
+    {
         *data = 0;
-    } else {
+    }
+    else
+    {
 
         //printk("getscom(0x%08x, %p) : Failed with error %d\n",
         //       address, data, rc);
 
-        if (rc > 0) {
-            switch (rc) {
-            case 1: SSX_PANIC(SCOM_PCB_ERROR_1_GETSCOM); break;
-            case 2: SSX_PANIC(SCOM_PCB_ERROR_2_GETSCOM); break;
-            case 3: SSX_PANIC(SCOM_PCB_ERROR_3_GETSCOM); break;
-            case 4: SSX_PANIC(SCOM_PCB_ERROR_4_GETSCOM); break;
-            case 5: SSX_PANIC(SCOM_PCB_ERROR_5_GETSCOM); break;
-            case 6: SSX_PANIC(SCOM_PCB_ERROR_6_GETSCOM); break;
-            default: SSX_PANIC(SCOM_PCB_ERROR_7_GETSCOM); break;
-            } 
-        } else if (rc == -SCOM_TIMEOUT_ERROR) {
+        if (rc > 0)
+        {
+            switch (rc)
+            {
+                case 1:
+                    SSX_PANIC(SCOM_PCB_ERROR_1_GETSCOM);
+                    break;
+
+                case 2:
+                    SSX_PANIC(SCOM_PCB_ERROR_2_GETSCOM);
+                    break;
+
+                case 3:
+                    SSX_PANIC(SCOM_PCB_ERROR_3_GETSCOM);
+                    break;
+
+                case 4:
+                    SSX_PANIC(SCOM_PCB_ERROR_4_GETSCOM);
+                    break;
+
+                case 5:
+                    SSX_PANIC(SCOM_PCB_ERROR_5_GETSCOM);
+                    break;
+
+                case 6:
+                    SSX_PANIC(SCOM_PCB_ERROR_6_GETSCOM);
+                    break;
+
+                default:
+                    SSX_PANIC(SCOM_PCB_ERROR_7_GETSCOM);
+                    break;
+            }
+        }
+        else if (rc == -SCOM_TIMEOUT_ERROR)
+        {
             SSX_PANIC(SCOM_TIMEOUT_ERROR_GETSCOM);
-        } else {
+        }
+        else
+        {
             SSX_PANIC(SCOM_PROTOCOL_ERROR_GETSCOM);
         }
     }
@@ -288,7 +332,7 @@ getscom(uint32_t address, uint64_t *data)
 /// This routine executes in an SSX_CRITICAL critical section.
 ///
 /// Unlike most other APIs, this API returns both positive and negative error
-/// codes, as well as the 0 code for success. 
+/// codes, as well as the 0 code for success.
 ///
 /// If the transaction experiences a software timeout (controlled by the \a
 /// timeout parameter) or a protocol error, the PMC PIB master will be left in
@@ -302,15 +346,15 @@ getscom(uint32_t address, uint64_t *data)
 /// \retval -SCOM_TIMEOUT The software timeout specified by the \a timeout
 /// parameter expired before the transaction completed.
 ///
-/// \retval -SCOM_PROTOCOL_ERROR_PUTSCOM_BUSY The PMC SCOM engine was busy when 
-/// the call was made. 
+/// \retval -SCOM_PROTOCOL_ERROR_PUTSCOM_BUSY The PMC SCOM engine was busy when
+/// the call was made.
 
 int
 _putscom(uint32_t address, uint64_t data, SsxInterval timeout)
 {
     SsxMachineContext   ctx;
     int                 rc;
-    occhw_scom_cmd_t    *scom_cmd = &OSD_PTR->scom_cmd;
+    occhw_scom_cmd_t*    scom_cmd = &OSD_PTR->scom_cmd;
     occhw_scom_status_t scom_status;
 
     do
@@ -324,8 +368,10 @@ _putscom(uint32_t address, uint64_t data, SsxInterval timeout)
         ssx_critical_section_enter(SSX_CRITICAL, &ctx);
 
         // Check for a transaction already ongoing
-        rc = ssx_irq_status_get(OCCHW_IRQ_IPI_SCOM); 
-        if (rc) {
+        rc = ssx_irq_status_get(OCCHW_IRQ_IPI_SCOM);
+
+        if (rc)
+        {
             ssx_critical_section_exit(&ctx);
             rc = -SCOM_PROTOCOL_ERROR_PUTSCOM_BUSY;
             break;
@@ -344,7 +390,7 @@ _putscom(uint32_t address, uint64_t data, SsxInterval timeout)
         scom_status.status32 = scom_cmd->scom_status.status32;
 
         ssx_critical_section_exit(&ctx);
-        
+
         if(!rc)
         {
             //check that the GPE updated the scom status.  Normally,
@@ -362,7 +408,9 @@ _putscom(uint32_t address, uint64_t data, SsxInterval timeout)
                 rc = scom_status.sibrc;
             }
         }
-    }while(0);
+    }
+    while(0);
+
     return rc;
 }
 
@@ -377,7 +425,7 @@ _putscom(uint32_t address, uint64_t data, SsxInterval timeout)
 /// This routine executes in an SSX_CRITICAL critical section.
 ///
 /// Unlike most other APIs, this API returns positive error
-/// codes, as well as the 0 code for success. 
+/// codes, as well as the 0 code for success.
 ///
 /// If the transaction experiences a software timeout (controlled by the \a
 /// timeout parameter), a protocol error, or a PCB error greater than the
@@ -397,26 +445,53 @@ putscom(uint32_t address, uint64_t data)
 
     rc = _putscom(address, data, SCOM_TIMEOUT);
 
-    if ((rc == 0) || ((rc > 0) && (rc <= SCOM_ERROR_LIMIT))) {
+    if ((rc == 0) || ((rc > 0) && (rc <= SCOM_ERROR_LIMIT)))
+    {
         return rc;
     }
 
     //printk("putscom(0x%08x, 0x%016llx) : Failed with error %d\n",
     //       address, data, rc);
 
-    if (rc > 0) {
-        switch (rc) {
-        case 1: SSX_PANIC(SCOM_PCB_ERROR_1_PUTSCOM); break;
-        case 2: SSX_PANIC(SCOM_PCB_ERROR_2_PUTSCOM); break;
-        case 3: SSX_PANIC(SCOM_PCB_ERROR_3_PUTSCOM); break;
-        case 4: SSX_PANIC(SCOM_PCB_ERROR_4_PUTSCOM); break;
-        case 5: SSX_PANIC(SCOM_PCB_ERROR_5_PUTSCOM); break;
-        case 6: SSX_PANIC(SCOM_PCB_ERROR_6_PUTSCOM); break;
-        default: SSX_PANIC(SCOM_PCB_ERROR_7_PUTSCOM); break;
+    if (rc > 0)
+    {
+        switch (rc)
+        {
+            case 1:
+                SSX_PANIC(SCOM_PCB_ERROR_1_PUTSCOM);
+                break;
+
+            case 2:
+                SSX_PANIC(SCOM_PCB_ERROR_2_PUTSCOM);
+                break;
+
+            case 3:
+                SSX_PANIC(SCOM_PCB_ERROR_3_PUTSCOM);
+                break;
+
+            case 4:
+                SSX_PANIC(SCOM_PCB_ERROR_4_PUTSCOM);
+                break;
+
+            case 5:
+                SSX_PANIC(SCOM_PCB_ERROR_5_PUTSCOM);
+                break;
+
+            case 6:
+                SSX_PANIC(SCOM_PCB_ERROR_6_PUTSCOM);
+                break;
+
+            default:
+                SSX_PANIC(SCOM_PCB_ERROR_7_PUTSCOM);
+                break;
         }
-    } else if (rc == -SCOM_TIMEOUT_ERROR) {
+    }
+    else if (rc == -SCOM_TIMEOUT_ERROR)
+    {
         SSX_PANIC(SCOM_TIMEOUT_ERROR_PUTSCOM);
-    } else {
+    }
+    else
+    {
         SSX_PANIC(SCOM_PROTOCOL_ERROR_PUTSCOM);
     }
 

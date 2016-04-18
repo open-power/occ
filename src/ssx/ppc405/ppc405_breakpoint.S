@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -33,7 +33,7 @@
 ///
 /// The operation of these short assembler routines is introduced as part of
 /// the documentation for the CODE_BREAKPOINT macro.
-
+// *INDENT-OFF*
         .nolist
 #include "ssx.h"
         .list
@@ -122,4 +122,5 @@ _code_breakpoint_epilogue:
         
         .epilogue _code_breakpoint_epilogue
         
+// *INDENT-ON*
 /// \endcond

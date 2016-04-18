@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -58,8 +58,8 @@
 
 /// ssize_t is defined explictly rather than bringing in all of <unistd.h>
 #ifndef __ssize_t_defined
-#define __ssize_t_defined
-typedef int ssize_t;
+    #define __ssize_t_defined
+    typedef int ssize_t;
 #endif
 
 /// A memory barrier
@@ -76,23 +76,28 @@ typedef int ssize_t;
 
 /// CouNT Leading Zeros Word
 #define cntlzw(x) \
-({uint32_t __x = (x); \
-  uint32_t __lzw; \
-  asm volatile ("cntlzw %0, %1" : "=r" (__lzw) : "r" (__x)); \
-  __lzw;})
+    ({uint32_t __x = (x); \
+        uint32_t __lzw; \
+        asm volatile ("cntlzw %0, %1" : "=r" (__lzw) : "r" (__x)); \
+        __lzw;})
 
 /// CouNT Leading Zeros : uint32_t
 static inline int
-cntlz32(uint32_t x) {
+cntlz32(uint32_t x)
+{
     return cntlzw(x);
 }
 
 /// CouNT Leading Zeros : uint64_t
 static inline int
-cntlz64(uint64_t x) {
-    if (x > 0xffffffff) {
+cntlz64(uint64_t x)
+{
+    if (x > 0xffffffff)
+    {
         return cntlz32(x >> 32);
-    } else {
+    }
+    else
+    {
         return 32 + cntlz32(x);
     }
 }
@@ -104,7 +109,7 @@ popcount32(uint32_t x)
 {
     return __builtin_popcount(x);
 }
-    
+
 
 /// 64-bit population count
 static inline int
@@ -121,27 +126,27 @@ popcount64(uint64_t x)
 
 /// 8-bit MMIO Write
 #define out8(addr, data) \
-do {*(volatile uint8_t *)(addr) = (data); eieio();} while(0)
+    do {*(volatile uint8_t *)(addr) = (data); eieio();} while(0)
 
 /// 8-bit MMIO Read
 #define in8(addr) \
-({uint8_t __data = *(volatile uint8_t *)(addr); eieio(); __data;})
+    ({uint8_t __data = *(volatile uint8_t *)(addr); eieio(); __data;})
 
 /// 16-bit MMIO Write
 #define out16(addr, data) \
-do {*(volatile uint16_t *)(addr) = (data); eieio();} while(0)
+    do {*(volatile uint16_t *)(addr) = (data); eieio();} while(0)
 
 /// 16-bit MMIO Read
 #define in16(addr) \
-({uint16_t __data = *(volatile uint16_t *)(addr); eieio(); __data;})
+    ({uint16_t __data = *(volatile uint16_t *)(addr); eieio(); __data;})
 
 /// 32-bit MMIO Write
 #define out32(addr, data) \
-do {*(volatile uint32_t *)(addr) = (data); eieio();} while(0)
+    do {*(volatile uint32_t *)(addr) = (data); eieio();} while(0)
 
 /// 32-bit MMIO Read
 #define in32(addr) \
-({uint32_t __data = *(volatile uint32_t *)(addr); eieio(); __data;})
+    ({uint32_t __data = *(volatile uint32_t *)(addr); eieio(); __data;})
 
 /// 64-bit MMIO Write
 #define out64(addr, data) \
@@ -178,6 +183,7 @@ do {*(volatile uint32_t *)(addr) = (data); eieio();} while(0)
 #else // __ASSEMBLER__
 
 /// Store revision information as a global string constant
+// *INDENT-OFF*
         .macro  .revision_string, symbol:req, rev:req
         .pushsection .rodata
         .balign 4
@@ -187,6 +193,7 @@ do {*(volatile uint32_t *)(addr) = (data); eieio();} while(0)
         .balign 4
         .popsection
         .endm
+// *INDENT-ON*
 
 #endif  // __ASSEMBLER__
 

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -160,7 +160,7 @@
 /// blocked on a semaphore with timeout). The flag SSX_THREAD_FLAG_TIMED_OUT
 /// indicates that a thread timer timed out before the thread became
 /// runnable.  Currently only the semaphore-pend-with-timeout code uses this
-/// flag. 
+/// flag.
 ///
 /// Note that a thread can be mapped and runnable (in the run queue) even
 /// though SSX_THREAD_FLAG_SEMAPHORE_PEND and/or SSX_THREAD_FLAG_TIMER_PEND
@@ -180,7 +180,7 @@
 //  Critical Sections
 
 /// Enter a critical section of a given priority, saving the current machine
-/// context. 
+/// context.
 
 #define ssx_critical_section_enter(priority, pctx) \
     ssx_interrupt_disable(priority, pctx)
@@ -205,22 +205,22 @@
 
 // Application-overrideable definitions
 
-/// Control whether or not the API functions check for errors. 
+/// Control whether or not the API functions check for errors.
 ///
 /// This definition can be overriden by the application.
 
 #ifndef SSX_ERROR_CHECK_API
-#define SSX_ERROR_CHECK_API 1
+    #define SSX_ERROR_CHECK_API 1
 #endif
 
 /// Control whether API errors cause kernel panics or return negative error
-/// codes. 
+/// codes.
 ///
 /// This selection is only valid if \c SSX_ERROR_CHECK_API is defined
 /// non-0. This definition can be overriden by the application.
 
 #ifndef SSX_ERROR_PANIC
-#define SSX_ERROR_PANIC 1
+    #define SSX_ERROR_PANIC 1
 #endif
 
 /// Control whether or not the SSX kernel checks key invariants.
@@ -229,7 +229,7 @@
 /// definition can be overriden by the application.
 
 #ifndef SSX_ERROR_CHECK_KERNEL
-#define SSX_ERROR_CHECK_KERNEL 1
+    #define SSX_ERROR_CHECK_KERNEL 1
 #endif
 
 /// Define the time interval type, which must be an unsigned type of a size
@@ -237,22 +237,22 @@
 /// overridden by the application.
 
 #ifndef SSX_TIME_INTERVAL_TYPE
-#define SSX_TIME_INTERVAL_TYPE uint32_t
+    #define SSX_TIME_INTERVAL_TYPE uint32_t
 #endif
 
 /// Provide support for the SsxTimer APIs in addition to the default
 /// initerrupt APIs.  This definition can be overridden by the application.
 
 #ifndef SSX_TIMER_SUPPORT
-#define SSX_TIMER_SUPPORT 1
+    #define SSX_TIMER_SUPPORT 1
 #endif
 
 /// Provide support for the all SSX APIs. Thread support requires/implies
 /// support for time services and semaphores.  This definition can be
-/// overridden by the application. 
+/// overridden by the application.
 
 #ifndef SSX_THREAD_SUPPORT
-#define SSX_THREAD_SUPPORT 1
+    #define SSX_THREAD_SUPPORT 1
 #endif
 
 /// Control the level of stack checking.
@@ -260,7 +260,7 @@
 /// This definition can be overriden by the application.
 ///
 /// 0 : No stack prepatterning or checking is made for thread and kernel
-/// stacks. 
+/// stacks.
 ///
 /// 1 : Kernel interrupt stacks are prepatterned during
 /// \c ssx_initialize(). Thread stacks are prepatterned during
@@ -271,9 +271,9 @@
 /// noncritical interrupt processing.  The maximum utilization is stored in
 /// the thread data structure.  The kernel will panic if stack overflow is
 /// detected. Stack utilization is not computed for the idle thread.
- 
+
 #ifndef SSX_STACK_CHECK
-#define SSX_STACK_CHECK 1
+    #define SSX_STACK_CHECK 1
 #endif
 
 /// A hook for main()
@@ -284,7 +284,7 @@
 /// ssx_app_cfg.h. The SSX_MAIN_HOOK will run on the stack of main().
 
 #ifndef SSX_MAIN_HOOK
-#define SSX_MAIN_HOOK do {} while (0)
+    #define SSX_MAIN_HOOK do {} while (0)
 #endif
 
 /// A hook for ssx_start_threads()
@@ -292,13 +292,13 @@
 /// This hook macro is expanded in the call-tree of ssx_start_threads() before
 /// threads are actually started.  The application can redefine this hook
 /// macro in (or in headers referred to in) the application header
-/// ssx_app_cfg.h.  
+/// ssx_app_cfg.h.
 ///
 /// The SSX_START_THREADS_HOOK runs as a pseudo-interrupt handler on the
 /// noncritical interrupt stack, with noncritical interrupts disabled.
 
 #ifndef SSX_START_THREADS_HOOK
-#define SSX_START_THREADS_HOOK do {} while (0)
+    #define SSX_START_THREADS_HOOK do {} while (0)
 #endif
 
 /// The maximum value of the \c SsxTimebase type.
@@ -311,12 +311,12 @@
 #define SSX_TIMEBASE_CONTINUES SSX_TIMEBASE_MAX
 
 /// By convention, a timeout value indicating 'no waiting' in a call of \c
-/// ssx_semaphore_pend(). 
+/// ssx_semaphore_pend().
 
 #define SSX_NO_WAIT 0
 
 /// By convention, a timeout value indicating 'wait forever' in a call of \c
-/// ssx_semaphore_pend(). 
+/// ssx_semaphore_pend().
 
 #define SSX_WAIT_FOREVER ((SsxInterval)-1)
 
@@ -334,7 +334,7 @@
 /// ignored. The application can redefine this macro.
 
 #ifndef SSX_SECONDS
-#define SSX_SECONDS(s) ((SsxInterval)(__ssx_timebase_frequency_hz * (SsxInterval)(s)))
+    #define SSX_SECONDS(s) ((SsxInterval)(__ssx_timebase_frequency_hz * (SsxInterval)(s)))
 #endif
 
 /// Convert a time in integral milliseconds to a time interval - overflows are
@@ -342,7 +342,7 @@
 /// assumed. The application can redefine this macro.
 
 #ifndef SSX_MILLISECONDS
-#define SSX_MILLISECONDS(m) ((SsxInterval)(__ssx_timebase_frequency_khz * (SsxInterval)(m)))
+    #define SSX_MILLISECONDS(m) ((SsxInterval)(__ssx_timebase_frequency_khz * (SsxInterval)(m)))
 #endif
 
 /// Convert a time in integral microseconds to a time interval - overflows are
@@ -350,7 +350,7 @@
 /// assumed. The application can redefine this macro.
 
 #ifndef SSX_MICROSECONDS
-#define SSX_MICROSECONDS(u) ((SsxInterval)(__ssx_timebase_frequency_mhz * (SsxInterval)(u)))
+    #define SSX_MICROSECONDS(u) ((SsxInterval)(__ssx_timebase_frequency_mhz * (SsxInterval)(u)))
 #endif
 
 /// Convert a time in integral nanoseconds to a time interval - overflows are
@@ -365,38 +365,38 @@
 
 /// Enable SSX application tracing (enabled by default)
 #ifndef SSX_TRACE_ENABLE
-#define SSX_TRACE_ENABLE 1
+    #define SSX_TRACE_ENABLE 1
 #endif
 
 /// Enable SSX kernel tracing (disabled by default)
 #ifndef SSX_KERNEL_TRACE_ENABLE
-#define SSX_KERNEL_TRACE_ENABLE 0
+    #define SSX_KERNEL_TRACE_ENABLE 0
 #endif
 
 #if !SSX_TRACE_ENABLE
-#define SSX_TRACE(...)
-#define SSX_TRACE_BIN(str, bufp, buf_size)
+    #define SSX_TRACE(...)
+    #define SSX_TRACE_BIN(str, bufp, buf_size)
 #else
-#define SSX_TRACE(...) SSXTRACE(__VA_ARGS__)
-#define SSX_TRACE_BIN(str, bufp, buf_size) SSXTRACE_BIN(str, bufp, buf_size)
+    #define SSX_TRACE(...) SSXTRACE(__VA_ARGS__)
+    #define SSX_TRACE_BIN(str, bufp, buf_size) SSXTRACE_BIN(str, bufp, buf_size)
 #endif
 
 //Kernel trace macros
 #if !SSX_KERNEL_TRACE_ENABLE
-#define SSX_KERN_TRACE(...)
-#define SSX_KERN_TRACE_ASM16(...)
+    #define SSX_KERN_TRACE(...)
+    #define SSX_KERN_TRACE_ASM16(...)
 #else
-#define SSX_KERN_TRACE(...) SSX_TRACE(__VA_ARGS__)
-#define SSX_KERN_TRACE_ASM16(...) SSX_TRACE_ASM16(__VA_ARGS__)
+    #define SSX_KERN_TRACE(...) SSX_TRACE(__VA_ARGS__)
+    #define SSX_KERN_TRACE_ASM16(...) SSX_TRACE_ASM16(__VA_ARGS__)
 #endif  /* SSX_KERNEL_TRACE_ENABLE */
 
 
 /// Add a string to the trace buffer with an optional register holding a 16bit value
 /// WARNING: This calls a c function which may clobber any of the volatile registers
 #if (SSX_TRACE_SUPPORT && SSX_TIMER_SUPPORT)
-#define SSX_TRACE_ASM16(...) TRACE_ASM_HELPER16(VARG_COUNT(__VA_ARGS__), __VA_ARGS__)
+    #define SSX_TRACE_ASM16(...) TRACE_ASM_HELPER16(VARG_COUNT(__VA_ARGS__), __VA_ARGS__)
 #else
-#define SSX_TRACE_ASM16(...)
+    #define SSX_TRACE_ASM16(...)
 #endif /* SSX_TRACE_SUPPORT */
 
 /// The following macros are helper macros for tracing.  They should not be called
@@ -420,6 +420,7 @@
 #define TINY_TRACE_ASM7()   .error "too many parameters"
 
 //TODO: add support for tracing more than 1 parameter and binary data in assembly
+// *INDENT-OFF*
 
     .global ssx_trace_tiny
 
@@ -433,7 +434,8 @@
         oris    %r3, %r3, \hash16
         bl      ssx_trace_tiny
     .endm
-        
+
+// *INDENT-ON*        
 #endif /*__ASSEMBLER__*/
 
 
@@ -469,7 +471,8 @@ typedef SSX_TIME_INTERVAL_TYPE SsxInterval;
 
 #include "ssx_port_types.h"
 
-typedef struct {
+typedef struct
+{
 
     /// A priority queue of threads pending on the semaphore.
     SsxThreadQueue pending_threads;
@@ -490,8 +493,8 @@ typedef struct {
 /// arrays of semaphores.
 #define SSX_SEMAPHORE_INITIALIZATION(_initial_count, _max_count)        \
     {.pending_threads = 0,                                              \
-            .count = (_initial_count),                                  \
-            .max_count = (_max_count)}
+                        .count = (_initial_count),                                  \
+                                 .max_count = (_max_count)}
 
 
 /// Declare and initialize a semaphore
@@ -509,19 +512,19 @@ typedef struct {
 
 #define SSXTRACE2(str, parm0) \
     ((sizeof(parm0) <= 2)? \
-        ssx_trace_tiny(HASH_ARG_COMBO(str, parm0)): \
-        ssx_trace_big(HASH_ARG_COMBO(str, 1), ((uint64_t)parm0) << 32, 0))
+     ssx_trace_tiny(HASH_ARG_COMBO(str, parm0)): \
+     ssx_trace_big(HASH_ARG_COMBO(str, 1), ((uint64_t)parm0) << 32, 0))
 
 #define SSXTRACE3(str, parm0, parm1) \
-        ssx_trace_big(HASH_ARG_COMBO(str, 2), ((((uint64_t)parm0) << 32) | parm1), 0)
+    ssx_trace_big(HASH_ARG_COMBO(str, 2), ((((uint64_t)parm0) << 32) | parm1), 0)
 
 #define SSXTRACE4(str, parm0, parm1, parm2) \
-        ssx_trace_big(HASH_ARG_COMBO(str, 3), ((((uint64_t)parm0) << 32) | parm1),\
-                                             ((uint64_t)parm2) << 32 )
-        
+    ssx_trace_big(HASH_ARG_COMBO(str, 3), ((((uint64_t)parm0) << 32) | parm1),\
+                  ((uint64_t)parm2) << 32 )
+
 #define SSXTRACE5(str, parm0, parm1, parm2, parm3) \
-        ssx_trace_big(HASH_ARG_COMBO(str, 4), ((((uint64_t)parm0) << 32) | parm1),\
-                                             ((((uint64_t)parm2) << 32) | parm3) )
+    ssx_trace_big(HASH_ARG_COMBO(str, 4), ((((uint64_t)parm0) << 32) | parm1),\
+                  ((((uint64_t)parm2) << 32) | parm3) )
 
 #define SSXTRACE6(...) ssx_trace_tiny() //will fail at compile time
 #define SSXTRACE7(...) ssx_trace_tiny() //will fail at compile time
@@ -532,7 +535,7 @@ typedef struct {
 #if (SSX_TRACE_SUPPORT && SSX_TIMER_SUPPORT)
 #define SSXTRACE(...) SSXTRACE_HELPER(VARG_COUNT(__VA_ARGS__), __VA_ARGS__)
 #define SSXTRACE_BIN(str, bufp, buf_size) \
-        ssx_trace_binary(((buf_size < 255)? HASH_ARG_COMBO(str, buf_size): HASH_ARG_COMBO(str, 255)), bufp)
+    ssx_trace_binary(((buf_size < 255)? HASH_ARG_COMBO(str, buf_size): HASH_ARG_COMBO(str, 255)), bufp)
 #else
 #define SSXTRACE(...)
 #define SSXTRACE_BIN(str, bufp, buf_size)
@@ -543,17 +546,17 @@ typedef struct {
 //  as extern SsxTraceBuffer [and size_t] variables in the .c file as well
 //  as include ssx_trace.h.
 #if (SSX_TRACE_ENABLE && SSX_TRACE_SUPPORT && SSX_TIMER_SUPPORT)
-#define SSX_FLUSH_TRACE_BUF() dcache_flush(&g_ssx_trace_buf, g_ssx_trace_buf_size)
+    #define SSX_FLUSH_TRACE_BUF() dcache_flush(&g_ssx_trace_buf, g_ssx_trace_buf_size)
 #else
-#define SSX_FLUSH_TRACE_BUF()
+    #define SSX_FLUSH_TRACE_BUF()
 #endif
 
 //Making sure we can still compile application codes if SSX tracing for some
 //  reason isn't enabled.
 #if (SSX_TRACE_ENABLE && SSX_TRACE_SUPPORT && SSX_TIMER_SUPPORT)
-#define SSX_TRACE_INIT(freqhz, time0) ssx_trace_init(freqhz, time0)
+    #define SSX_TRACE_INIT(freqhz, time0) ssx_trace_init(freqhz, time0)
 #else
-#define SSX_TRACE_INIT(freqhz, time0)
+    #define SSX_TRACE_INIT(freqhz, time0)
 #endif
 
 /// A generic doubly-linked list object
@@ -564,7 +567,8 @@ typedef struct {
 /// initial 'data member' of the structure.  This allows a pointer to a queue
 /// element to be cast to a pointer to an SsxDeque and vice-versa.
 
-typedef struct SsxDeque {
+typedef struct SsxDeque
+{
 
     /// Pointer to the head or the next element in a deque.
     ///
@@ -583,7 +587,7 @@ typedef struct SsxDeque {
 } SsxDeque;
 
 
-typedef void (*SsxTimerCallback)(void *);
+typedef void (*SsxTimerCallback)(void*);
 
 #define SSX_TIMER_CALLBACK(callback) void callback(void *)
 
@@ -591,13 +595,14 @@ struct SsxTimer;
 
 /// The SSX timer object
 
-typedef struct SsxTimer {
+typedef struct SsxTimer
+{
 
     /// The time queue management pointers
     ///
     /// This pointer container is defined as the first element of the
     /// structure to allow the SsxTimer to be cast to an SsxDeque and
-    /// vice-versa. 
+    /// vice-versa.
     SsxDeque deque;
 
     /// The absolute timeout of the timer.
@@ -615,11 +620,11 @@ typedef struct SsxTimer {
     /// timeouts this field is initialized to __ssx_thread_timeout().
     SsxTimerCallback callback;
 
-    /// Private data passed to the callback. 
+    /// Private data passed to the callback.
     ///
     /// For SSX thread timers used to implement Sleep and semaphore pend this
     /// field is initialized to a pointer to the thread.
-    void *arg;
+    void* arg;
 
     /// Options for timer processing; See \ref ssx_timer_options
     uint8_t options;
@@ -633,7 +638,7 @@ typedef struct SsxTimer {
 ///
 /// This is the normal mode for SsxTimer objects scheduled by SSX kernal
 /// mechanisms.  The timer callbacks effectively run as if inside a
-/// highest-priority thread, allowing other interrupts to preempt them. 
+/// highest-priority thread, allowing other interrupts to preempt them.
 #define SSX_TIMER_CALLBACK_PREEMPTIBLE 0x1
 
 /// @}
@@ -641,15 +646,16 @@ typedef struct SsxTimer {
 
 // Threads
 
-typedef void (*SsxThreadRoutine)(void *arg);
+typedef void (*SsxThreadRoutine)(void* arg);
 
 #define SSX_THREAD_ROUTINE(f) void f(void *arg);
 
-typedef struct {
+typedef struct
+{
 
     /// Stack pointer saved during context switches.  Assembler code expects
     /// this to always be at address offset 0 from the thread pointer.
-    SsxAddress saved_stack_pointer; 
+    SsxAddress saved_stack_pointer;
 
     /// This is 1 past the last valid byte address of the thread stack.
     /// Assembler code expects this to always be at address offset (sizeof
@@ -662,8 +668,8 @@ typedef struct {
     SsxAddress stack_base;
 
     /// If the thread is blocked on a semaphore, then this is the semaphore the
-    /// thread is blocked on. 
-    SsxSemaphore *semaphore;
+    /// thread is blocked on.
+    SsxSemaphore* semaphore;
 
     /// The thread priority.
     SsxThreadPriority priority;
@@ -690,7 +696,7 @@ ssx_initialize(SsxAddress  noncritical_stack,
                size_t      critical_stack_size,
                SsxTimebase initial_timebase,
                uint32_t    timebase_frequency_hz);
-               
+
 
 // Timebase APIs
 
@@ -722,40 +728,40 @@ ssx_interrupt_preemption_disable(void);
 
 // Timer APIs
 
-int 
-ssx_timer_create(SsxTimer         *timer,
+int
+ssx_timer_create(SsxTimer*         timer,
                  SsxTimerCallback callback,
-                 void             *arg);
+                 void*             arg);
 
-int 
-ssx_timer_create_nonpreemptible(SsxTimer         *timer,
+int
+ssx_timer_create_nonpreemptible(SsxTimer*         timer,
                                 SsxTimerCallback callback,
-                                void             *arg);
+                                void*             arg);
 
-int 
-ssx_timer_schedule_absolute(SsxTimer    *timer,
+int
+ssx_timer_schedule_absolute(SsxTimer*    timer,
                             SsxTimebase time,
                             SsxInterval period);
 
-int 
-ssx_timer_schedule(SsxTimer    *timer,
+int
+ssx_timer_schedule(SsxTimer*    timer,
                    SsxInterval interval,
                    SsxInterval period);
 
-int 
-ssx_timer_cancel(SsxTimer *timer);
+int
+ssx_timer_cancel(SsxTimer* timer);
 
-int 
-ssx_timer_info_get(SsxTimer    *timer,
-                   SsxTimebase *timeout,
-                   int         *active);
+int
+ssx_timer_info_get(SsxTimer*    timer,
+                   SsxTimebase* timeout,
+                   int*         active);
 
 // Thread APIs
 
 int
-ssx_thread_create(SsxThread         *thread,
+ssx_thread_create(SsxThread*         thread,
                   SsxThreadRoutine  thread_routine,
-                  void              *arg,
+                  void*              arg,
                   SsxAddress        stack,
                   size_t            stack_size,
                   SsxThreadPriority priority);
@@ -764,13 +770,13 @@ int
 ssx_start_threads(void);
 
 int
-ssx_thread_resume(SsxThread *thread);
+ssx_thread_resume(SsxThread* thread);
 
 int
-ssx_thread_suspend(SsxThread *thread);
+ssx_thread_suspend(SsxThread* thread);
 
 int
-ssx_thread_delete(SsxThread *thread);
+ssx_thread_delete(SsxThread* thread);
 
 int
 ssx_complete(void);
@@ -782,19 +788,19 @@ int
 ssx_sleep(SsxInterval interval);
 
 int
-ssx_thread_info_get(SsxThread         *thread,
-                    SsxThreadState    *state,
-                    SsxThreadPriority *priority,
-                    int               *runnable);
+ssx_thread_info_get(SsxThread*         thread,
+                    SsxThreadState*    state,
+                    SsxThreadPriority* priority,
+                    int*               runnable);
 
-int 
-ssx_thread_priority_change(SsxThread         *thread,
+int
+ssx_thread_priority_change(SsxThread*         thread,
                            SsxThreadPriority new_priority,
-                           SsxThreadPriority *old_priority);
+                           SsxThreadPriority* old_priority);
 
 int
 ssx_thread_at_priority(SsxThreadPriority priority,
-                       SsxThread         **thread);
+                       SsxThread**         thread);
 
 int
 ssx_thread_priority_swap(SsxThread* thread_a, SsxThread* thread_b);
@@ -803,29 +809,29 @@ ssx_thread_priority_swap(SsxThread* thread_a, SsxThread* thread_b);
 // Semaphore APIs
 
 int
-ssx_semaphore_create(SsxSemaphore      *semaphore,
+ssx_semaphore_create(SsxSemaphore*      semaphore,
                      SsxSemaphoreCount initial_count,
                      SsxSemaphoreCount max_count);
 
 int
-ssx_semaphore_post(SsxSemaphore *semaphore);
+ssx_semaphore_post(SsxSemaphore* semaphore);
 
 int
-ssx_semaphore_pend(SsxSemaphore *semaphore,
+ssx_semaphore_pend(SsxSemaphore* semaphore,
                    SsxInterval  timeout);
 
 int
-ssx_semaphore_release_all(SsxSemaphore *semaphore);
+ssx_semaphore_release_all(SsxSemaphore* semaphore);
 
 
 int
-ssx_semaphore_info_get(SsxSemaphore      *semaphore,
-                       SsxSemaphoreCount *count,
-                       int               *pending);
+ssx_semaphore_info_get(SsxSemaphore*      semaphore,
+                       SsxSemaphoreCount* count,
+                       int*               pending);
 
 void
-ssx_semaphore_post_handler(void *arg, 
-                           SsxIrqId irq, 
+ssx_semaphore_post_handler(void* arg,
+                           SsxIrqId irq,
                            int priority);
 
 // Misc. APIs
@@ -835,26 +841,26 @@ ssx_halt() __attribute__ ((noreturn));
 
 // Deque APIs
 
-int 
-ssx_deque_sentinel_create(SsxDeque *deque);
+int
+ssx_deque_sentinel_create(SsxDeque* deque);
 
 #define SSX_DEQUE_SENTINEL_INIT(dq_addr) \
-{\
-    .next = dq_addr, \
-    .previous = dq_addr \
-}
+    {\
+        .next = dq_addr, \
+                .previous = dq_addr \
+    }
 
 #define SSX_DEQUE_SENTINEL_STATIC_CREATE(deque) \
     SsxDeque deque = SSX_DEQUE_SENTINEL_INIT(&deque)
 
-int 
-ssx_deque_element_create(SsxDeque *element);
+int
+ssx_deque_element_create(SsxDeque* element);
 
 #define SSX_DEQUE_ELEMENT_INIT() \
-{\
-    .next = 0, \
-    .previous = 0 \
-}
+    {\
+        .next = 0, \
+                .previous = 0 \
+    }
 
 #define SSX_DEQUE_ELEMENT_STATIC_CREATE(deque) \
     SsxDeque deque = SSX_DEQUE_ELEMENT_INIT()
@@ -868,8 +874,8 @@ ssx_deque_element_create(SsxDeque *element);
 ///
 /// \retval 1 The SsxDeque is empty
 
-static inline int 
-ssx_deque_is_empty(SsxDeque *deque)
+static inline int
+ssx_deque_is_empty(SsxDeque* deque)
 {
     return (deque == deque->next);
 }
@@ -883,8 +889,8 @@ ssx_deque_is_empty(SsxDeque *deque)
 ///
 /// \retval 1 The element is currently enqueued
 
-static inline int 
-ssx_deque_is_queued(SsxDeque *element)
+static inline int
+ssx_deque_is_queued(SsxDeque* element)
 {
     return (element->next != 0);
 }
@@ -899,8 +905,8 @@ ssx_deque_is_queued(SsxDeque *element)
 /// It is an error to call this API on an element that is already enqueued,
 /// but the API does not check for this error.
 
-static inline void 
-ssx_deque_push_back(SsxDeque *deque, SsxDeque *element)
+static inline void
+ssx_deque_push_back(SsxDeque* deque, SsxDeque* element)
 {
     deque->previous->next = element;
     element->previous = deque->previous;
@@ -918,15 +924,15 @@ ssx_deque_push_back(SsxDeque *deque, SsxDeque *element)
 /// It is an error to call this API on an element that is already enqueued,
 /// but the API does not check for this error.
 
-static inline void 
-ssx_deque_push_front(SsxDeque *deque, SsxDeque *element)
+static inline void
+ssx_deque_push_front(SsxDeque* deque, SsxDeque* element)
 {
     deque->next->previous = element;
     element->next = deque->next;
     element->previous = deque;
     deque->next = element;
 }
-    
+
 /// Pop an element from the head of a deque
 ///
 /// \param deque The sentinel node of a deque
@@ -938,15 +944,18 @@ ssx_deque_push_front(SsxDeque *deque, SsxDeque *element)
 
 // The cast of 'head' is used to remove the 'volatile' attribute.
 
-static inline SsxDeque *
-ssx_deque_pop_front(SsxDeque *deque)
+static inline SsxDeque*
+ssx_deque_pop_front(SsxDeque* deque)
 {
-    SsxDeque *head;
+    SsxDeque* head;
 
-    if (ssx_deque_is_empty(deque)) {
+    if (ssx_deque_is_empty(deque))
+    {
         return 0;
-    } else {
-        head = (SsxDeque *)(deque->next);
+    }
+    else
+    {
+        head = (SsxDeque*)(deque->next);
         deque->next = head->next;
         deque->next->previous = deque;
         head->next = 0;
@@ -963,7 +972,7 @@ ssx_deque_pop_front(SsxDeque *deque)
 /// enqueued, but the API does not check for this error.
 
 static inline void
-ssx_deque_delete(SsxDeque *element)
+ssx_deque_delete(SsxDeque* element)
 {
     element->previous->next = element->next;
     element->next->previous = element->previous;
@@ -985,7 +994,7 @@ void ssx_trace_init(uint32_t timebase_frequency_hz,
 /// Cast a pointer to another type, in a way that won't cause warnings
 
 #define SSX_CAST_POINTER(t, p) ((t)((SsxAddress)(p)))
-        
+
 // Static Assert Macro for Compile time assertions.
 //   - This macro can be used both inside and outside of a function.
 //   - A value of false will cause the ASSERT to produce this error
@@ -1012,7 +1021,7 @@ void ssx_trace_init(uint32_t timebase_frequency_hz,
 /// SSX follows the Unix convention that a successful call of an API returns 0
 /// (SSX_OK), but returns a negative code in the event of failure, or to
 /// provide further information. The error codes are all defined as manifest
-/// constants.  
+/// constants.
 ///
 /// Some negative codes returned by SSX APIs are not considered errors.  These
 /// conditions are always checked, never cause a panic if they occur, and

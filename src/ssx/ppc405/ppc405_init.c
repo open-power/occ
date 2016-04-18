@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -49,8 +49,9 @@ __ppc405_system_setup()
 
     // Initialize the interrupt vectors.
 
-    for (irq = 0; irq < EXTERNAL_IRQS; irq++) {
-        __ppc405_irq_handlers[irq].handler = __ppc405_default_irq_handler;      
+    for (irq = 0; irq < EXTERNAL_IRQS; irq++)
+    {
+        __ppc405_irq_handlers[irq].handler = __ppc405_default_irq_handler;
         __ppc405_irq_handlers[irq].arg = 0;
     }
 
@@ -78,7 +79,7 @@ __ppc405_system_setup()
 
 #if SSX_TIMER_SUPPORT
 #if SSX_TRACE_SUPPORT
-extern SsxTraceBuffer g_ssx_trace_buf;
+    extern SsxTraceBuffer g_ssx_trace_buf;
     //set the instance id
     g_ssx_trace_buf.instance_id = OCCHW_INST_ID_PPC;
 #endif  /* SSX_TRACE_SUPPORT */

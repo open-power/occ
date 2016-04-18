@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -52,7 +52,7 @@
 ///
 /// \retval 0 Successful completion
 ///
-/// \retval -SSX_INVALID_ARGUMENT_IRQ_SETUP One or more arguments are invalid, 
+/// \retval -SSX_INVALID_ARGUMENT_IRQ_SETUP One or more arguments are invalid,
 /// including an invalid \a irq, or invalid \a polarity or \a trigger parameters.
 
 int
@@ -62,7 +62,8 @@ ssx_irq_setup(SsxIrqId irq,
 {
     SsxMachineContext ctx;
 
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF(!OCCHW_IRQ_VALID(irq) ||
                      !OCCHW_IRQ_OWNED(irq) ||
                      !((polarity == SSX_IRQ_POLARITY_ACTIVE_HIGH) ||
@@ -74,15 +75,21 @@ ssx_irq_setup(SsxIrqId irq,
 
     ssx_critical_section_enter(SSX_CRITICAL, &ctx);
 
-    if (polarity == SSX_IRQ_POLARITY_ACTIVE_HIGH) {
+    if (polarity == SSX_IRQ_POLARITY_ACTIVE_HIGH)
+    {
         out32(OCCHW_OIEPR_OR(irq), OCCHW_IRQ_MASK32(irq));
-    } else {
+    }
+    else
+    {
         out32(OCCHW_OIEPR_CLR(irq), OCCHW_IRQ_MASK32(irq));
     }
 
-    if (trigger == SSX_IRQ_TRIGGER_EDGE_SENSITIVE) {
+    if (trigger == SSX_IRQ_TRIGGER_EDGE_SENSITIVE)
+    {
         out32(OCCHW_OITR_OR(irq), OCCHW_IRQ_MASK32(irq));
-    } else {
+    }
+    else
+    {
         out32(OCCHW_OITR_CLR(irq), OCCHW_IRQ_MASK32(irq));
     }
 
@@ -101,19 +108,20 @@ ssx_irq_setup(SsxIrqId irq,
 ///
 /// \retval 0 Successful completion
 ///
-/// \retval -SSX_INVALID_ARGUMENT_IRQ_HANDLER One or more arguments are 
-/// invalid, including an invalid \a irq, a  null (0) \a handler, 
+/// \retval -SSX_INVALID_ARGUMENT_IRQ_HANDLER One or more arguments are
+/// invalid, including an invalid \a irq, a  null (0) \a handler,
 /// or invalid \a priority.
 
 int
 ssx_irq_handler_set(SsxIrqId      irq,
                     SsxIrqHandler handler,
-                    void          *arg,
+                    void*          arg,
                     int           priority)
 {
     SsxMachineContext ctx;
 
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF(!OCCHW_IRQ_VALID(irq) ||
                      !OCCHW_IRQ_OWNED(irq) ||
                      (handler == 0) ||
@@ -129,9 +137,12 @@ ssx_irq_handler_set(SsxIrqId      irq,
     out32(OCCHW_OIRRB_CLR(irq), OCCHW_IRQ_MASK32(irq));
 
     //Critical priority needs a 1 in OIRRC
-    if (priority == SSX_CRITICAL) {
+    if (priority == SSX_CRITICAL)
+    {
         out32(OCCHW_OIRRC_OR(irq), OCCHW_IRQ_MASK32(irq));
-    } else {
+    }
+    else
+    {
         out32(OCCHW_OIRRC_CLR(irq), OCCHW_IRQ_MASK32(irq));
     }
 
@@ -156,9 +167,12 @@ ssx_irq_debug_set(SsxIrqId irq, int value)
 
     //TODO: port this over to using the OIRR instead of the OUDER
     //ouder = in32(OCCHW_OUDER(irq));
-    if (value) {
+    if (value)
+    {
         //out32(OCCHW_OUDER(irq), ouder | OCCHW_IRQ_MASK32(irq));
-    } else {
+    }
+    else
+    {
         //out32(OCCHW_OUDER(irq), ouder & ~OCCHW_IRQ_MASK32(irq));
     }
 
@@ -166,15 +180,15 @@ ssx_irq_debug_set(SsxIrqId irq, int value)
 }
 
 
-    
-
-    
-        
-
-    
-
-    
-    
 
 
-    
+
+
+
+
+
+
+
+
+
+

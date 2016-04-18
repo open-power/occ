@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -44,22 +44,23 @@
 /// exiting the critical section.
 ///
 /// \arg \c priority Either \c SSX_CRITICAL, \c SSX_NON_CRITICAL or
-/// SSX_SUPERCRITICAL (for \c ssx_critical_section_enter). 
+/// SSX_SUPERCRITICAL (for \c ssx_critical_section_enter).
 ///
 /// \arg \c ctxreg A register that will hold (holds) the machine context (MSR)
 /// prior to entering the critical section (to be restored) for \c
 /// _ssx_critical_section_enter (\c _ssx_critical_section_exit).
 ///
 /// \arg \c scrreg A scratch register required for the computation of
-/// \c _ssx_critical_section_enter. 
+/// \c _ssx_critical_section_enter.
 ///
 /// Forms:
-/// 
+///
 /// \b _ssx_critical_section_enter \a priority, \a ctxreg, \a scrreg - Enter a
 /// critical section \n
 /// \b _ssx_critical_section_exit \a ctxreg - Exit a critical section
 
 #ifdef __ASSEMBLER__
+// *INDENT-OFF*
 
         .set    _msr_ee_bit, MSR_EE_BIT
         .set    _msr_ce_bit, MSR_CE_BIT
@@ -86,7 +87,7 @@
         mtmsr   \ctxreg
         isync
         .endm
-        
+
 // ****************************************************************************
 // SSX context save/restore macros for 32-bit Embedded PowerPC
 // ****************************************************************************
@@ -309,7 +310,7 @@
                 sync            # HW239446!
 #endif
                 mfsprg0 %r3
-        
+
         .endif                             
 
         stwu    %r1, -SSX_FAST_CTX_SIZE(%r1) # May be corrupted w/o HW239446
@@ -330,7 +331,7 @@
 
 
         .macro  _ssx_fast_ctx_pop
-                
+
         lwz     %r3, SSX_FAST_CTX_CR(%r1)
         lwz     %r4, SSX_FAST_CTX_LR(%r1)
 
@@ -484,7 +485,7 @@
 
         stwu    %r1, -SSX_NON_VOL_CTX_SIZE(%r1)
         stmw    %r14, SSX_NON_VOL_CTX_GPR14(%r1)
-        
+
         .endm
 
 
@@ -495,6 +496,7 @@
 
         .endm
 
+// *INDENT-ON*
 #else /* __ASSEMBLER__ */
 
 /// SSX thread context layout as a C structure.
@@ -502,7 +504,8 @@
 /// This is the structure of the stack area pointed to by
 /// thread->saved_stack_pointer when a thread is fully context-switched out.
 
-typedef struct {
+typedef struct
+{
 
     uint32_t r1_nv;
     uint32_t link_nv;
@@ -558,7 +561,8 @@ typedef struct {
 /// layout of the stack area pointed to by either __ssx_saved_sp_noncritical
 /// or __ssx_saved_sp_critical.
 
-typedef struct {
+typedef struct
+{
 
     uint32_t r1_vf;
     uint32_t link_vf;
@@ -594,7 +598,8 @@ typedef struct {
 /// layout of the stack area pointed to by R1 - unless the fast-mode interrupt
 /// handler extends the stack.
 
-typedef struct {
+typedef struct
+{
 
     uint32_t r1;
     uint32_t link_fast;

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -45,16 +45,16 @@ OcbQueue G_ocb_write_queue[OCB_INDIRECT_CHANNELS];
 
 
 #if OCB_READ0_LENGTH % CACHE_LINE_SIZE
-#error "OCB read buffer 0 alignment error"
+    #error "OCB read buffer 0 alignment error"
 #endif
 #if OCB_READ1_LENGTH % CACHE_LINE_SIZE
-#error "OCB read buffer 1 alignment error"
+    #error "OCB read buffer 1 alignment error"
 #endif
 #if OCB_READ2_LENGTH % CACHE_LINE_SIZE
-#error "OCB read buffer 2 alignment error"
+    #error "OCB read buffer 2 alignment error"
 #endif
 #if OCB_READ3_LENGTH % CACHE_LINE_SIZE
-#error "OCB read buffer 3 alignment error"
+    #error "OCB read buffer 3 alignment error"
 #endif
 
 // OCB circular queue write buffers must be 8-byte aligned per hardware
@@ -94,33 +94,39 @@ OCB_CQ_WRITE_BUFFER(G_ocb_write3_buffer, OCB_WRITE3_LENGTH);
 /// OCB Stream Push/Pull Control/Status Register addresses
 
 static const SsxAddress G_ocb_ocbsxcsn[OCB_ENGINES] =
-    {OCB_OCBSHCS0, OCB_OCBSLCS0, 
-     OCB_OCBSHCS1, OCB_OCBSLCS1, 
-     OCB_OCBSHCS2, OCB_OCBSLCS2,
-     OCB_OCBSHCS3, OCB_OCBSLCS3};
+{
+    OCB_OCBSHCS0, OCB_OCBSLCS0,
+    OCB_OCBSHCS1, OCB_OCBSLCS1,
+    OCB_OCBSHCS2, OCB_OCBSLCS2,
+    OCB_OCBSHCS3, OCB_OCBSLCS3
+};
 
 /// OCB Stream Push/Pull Base Register addresses
 
 static const SsxAddress G_ocb_ocbsxbrn[OCB_ENGINES] =
-    {OCB_OCBSHBR0, OCB_OCBSLBR0, 
-     OCB_OCBSHBR1, OCB_OCBSLBR1,
-     OCB_OCBSHBR2, OCB_OCBSLBR2,
-     OCB_OCBSHBR3, OCB_OCBSLBR3};
+{
+    OCB_OCBSHBR0, OCB_OCBSLBR0,
+    OCB_OCBSHBR1, OCB_OCBSLBR1,
+    OCB_OCBSHBR2, OCB_OCBSLBR2,
+    OCB_OCBSHBR3, OCB_OCBSLBR3
+};
 
 
 /// OCB Stream Push/Pull Increment Register addresses
 
 static const SsxAddress G_ocb_ocbsxin[OCB_ENGINES] =
-    {OCB_OCBSHI0, OCB_OCBSLI0, 
-     OCB_OCBSHI1, OCB_OCBSLI1,
-     OCB_OCBSHI2, OCB_OCBSLI2,
-     OCB_OCBSHI3, OCB_OCBSLI3};
+{
+    OCB_OCBSHI0, OCB_OCBSLI0,
+    OCB_OCBSHI1, OCB_OCBSLI1,
+    OCB_OCBSHI2, OCB_OCBSLI2,
+    OCB_OCBSHI3, OCB_OCBSLI3
+};
 
 
 /// OCB Stream Error Status; There is only one register per OCB channel
 
 const SsxAddress G_ocb_ocbsesn[OCB_ENGINES / 2] =
-    {OCB_OCBSES0, OCB_OCBSES1, OCB_OCBSES2, OCB_OCBSES3};
+{OCB_OCBSES0, OCB_OCBSES1, OCB_OCBSES2, OCB_OCBSES3};
 
 
 ////////////////////////////////////////////////////////////////////////////
@@ -153,19 +159,26 @@ ocb_ffdc(int channel)
     ocb_ocbshcsn_t ocbshcsn;
     ocb_ocbslcsn_t ocbslcsn;
 
-    if (channel < 0) {
+    if (channel < 0)
+    {
         ffdc = &(G_ocb_ffdc.bridge);
-    } else {
+    }
+    else
+    {
         ffdc = &(G_ocb_ffdc.channel[channel]);
     }
 
-    if (ffdc->error == 0) {
-        
-        if (channel < 0) {
+    if (ffdc->error == 0)
+    {
+
+        if (channel < 0)
+        {
 
             memset(ffdc, 0, sizeof(OcbFfdc));
 
-        } else {
+        }
+        else
+        {
 
             getscom(OCB_OCBCSRN(channel), &(ffdc->csr.value));
 
@@ -199,7 +212,7 @@ ocb_ffdc(int channel)
 /// \param buf The caller's data buffer to receive the read data
 ///
 /// \param bytes The maximum number of bytes to read.  This value must be an
-/// even multiple of 8, as this API always reads multiples of 8 bytes. 
+/// even multiple of 8, as this API always reads multiples of 8 bytes.
 ///
 /// \param read The number of bytes actually copied from the device buffer to
 /// the caller's buffer.  This may be returned as any value from 0 to \a
@@ -209,7 +222,7 @@ ocb_ffdc(int channel)
 /// queue data area to the caller's data area, with the side effect of
 /// advancing the hardware queue pointers.  ocb_read() does not implement
 /// locking, critical sections or any other type of synchronization for access
-/// to the OCB queue data - that is the responsibility of the caller. 
+/// to the OCB queue data - that is the responsibility of the caller.
 ///
 /// ocb_read() may return an error code.  This may indicate a preexisting
 /// error in the queue, or may be an error resulting from the current read.
@@ -217,34 +230,37 @@ ocb_ffdc(int channel)
 ///
 /// \retval 0 Success
 ///
-/// \retval -ASYNC_INVALID_ARGUMENT_OCB_READ The number of \a bytes is not 
+/// \retval -ASYNC_INVALID_ARGUMENT_OCB_READ The number of \a bytes is not
 /// an even multiple of 8.
 ///
-/// \retval -ASYNC_OCB_ERROR_READ_OLD or -ASYNC_OCB_ERROR_READ_NEW This code 
+/// \retval -ASYNC_OCB_ERROR_READ_OLD or -ASYNC_OCB_ERROR_READ_NEW This code
 /// indicates an error associated with the OCB channel represented by the queue.
 
 int
-ocb_read(OcbQueue *queue, void* buf, size_t bytes, size_t* read)
+ocb_read(OcbQueue* queue, void* buf, size_t bytes, size_t* read)
 {
     ocb_ocbshcsn_t csr;
     ocb_ocbsesn_t ses;
     unsigned qlen, read_ptr, write_ptr, to_read;
-    uint64_t *pcq, *pbuf;
+    uint64_t* pcq, *pbuf;
     int rc;
 
-    do {
+    do
+    {
 
         rc = 0;
         *read = 0;
 
         // If pre-existing errors exist then immediately abort the read.
 
-        if (G_ocb_ffdc.channel[queue->engine / 2].error) {
+        if (G_ocb_ffdc.channel[queue->engine / 2].error)
+        {
             rc = -ASYNC_OCB_ERROR_READ_OLD;
             break;
         }
 
-        if (bytes % 8) {
+        if (bytes % 8)
+        {
             rc = -ASYNC_INVALID_ARGUMENT_OCB_READ;
             break;
         }
@@ -262,17 +278,26 @@ ocb_read(OcbQueue *queue, void* buf, size_t bytes, size_t* read)
         qlen = csr.fields.push_length + 1;
         read_ptr = csr.fields.push_read_ptr;
 
-        if (csr.fields.push_empty) {
+        if (csr.fields.push_empty)
+        {
             break;
 
-        } else if (csr.fields.push_full) {
+        }
+        else if (csr.fields.push_full)
+        {
             to_read = qlen;
 
-        } else {
+        }
+        else
+        {
             write_ptr = csr.fields.push_write_ptr;
-            if (read_ptr > write_ptr) {
+
+            if (read_ptr > write_ptr)
+            {
                 to_read = qlen - (read_ptr - write_ptr);
-            } else {
+            }
+            else
+            {
                 to_read = write_ptr - read_ptr;
             }
         }
@@ -288,12 +313,17 @@ ocb_read(OcbQueue *queue, void* buf, size_t bytes, size_t* read)
         // copied from the queue.
 
         pbuf = (uint64_t*)buf;
-        while (bytes && to_read--) {
+
+        while (bytes && to_read--)
+        {
 
             read_ptr++;
-            if (read_ptr == qlen) {
+
+            if (read_ptr == qlen)
+            {
                 read_ptr = 0;
             }
+
             pcq = queue->cq_base + read_ptr;
 
             dcache_invalidate_line(pcq);
@@ -303,12 +333,15 @@ ocb_read(OcbQueue *queue, void* buf, size_t bytes, size_t* read)
             bytes -= 8;
             *read += 8;
         }
-    } while (0);
+    }
+    while (0);
 
     // Check for underflow errors. If found, collect FFDC.
 
     ses.value = in32(G_ocb_ocbsesn[queue->engine / 2]);
-    if (ses.fields.push_read_underflow) {
+
+    if (ses.fields.push_read_underflow)
+    {
         ocb_ffdc(queue->engine / 2);
         rc = -ASYNC_OCB_ERROR_READ_NEW;
     }
@@ -324,7 +357,7 @@ ocb_read(OcbQueue *queue, void* buf, size_t bytes, size_t* read)
 /// \param buf The caller's data buffer containing the write data
 ///
 /// \param bytes The maximum number of bytes to write.  This value must be an
-/// even multiple of 8, as this API always writes multiples of 8 bytes. 
+/// even multiple of 8, as this API always writes multiples of 8 bytes.
 ///
 /// \param written The number of bytes actually copied from the caller's buffer to
 /// the device buffer.  This may be returned as any value from 0 to \a
@@ -342,34 +375,37 @@ ocb_read(OcbQueue *queue, void* buf, size_t bytes, size_t* read)
 ///
 /// \retval 0 Success
 ///
-/// \retval -ASYNC_INVALID_ARGUMENT_OCB_WRITE The number of \a bytes is not 
+/// \retval -ASYNC_INVALID_ARGUMENT_OCB_WRITE The number of \a bytes is not
 /// an even multiple of 8.
 ///
-/// \retval -ASYNC_OCB_ERROR_WRITE_OLD or -ASYNC_OCB_ERROR_WRITE_NEW This code 
+/// \retval -ASYNC_OCB_ERROR_WRITE_OLD or -ASYNC_OCB_ERROR_WRITE_NEW This code
 /// indicates an error associated with the OCB channel represented by the queue.
 
 int
-ocb_write(OcbQueue *queue, void* buf, size_t bytes, size_t* written)
+ocb_write(OcbQueue* queue, void* buf, size_t bytes, size_t* written)
 {
     ocb_ocbslcsn_t csr;
     ocb_ocbsesn_t ses;
     unsigned qlen, read_ptr, write_ptr, free;
-    uint64_t *pcq, *pbuf;
+    uint64_t* pcq, *pbuf;
     int rc;
 
-    do {
+    do
+    {
 
         rc = 0;
         *written = 0;
 
         // Pre-existing errors immediately abort the read.
 
-        if (G_ocb_ffdc.channel[queue->engine / 2].error) {
+        if (G_ocb_ffdc.channel[queue->engine / 2].error)
+        {
             rc = -ASYNC_OCB_ERROR_WRITE_OLD;
             break;
         }
 
-        if (bytes % 8) {
+        if (bytes % 8)
+        {
             rc = -ASYNC_INVALID_ARGUMENT_OCB_WRITE;
             break;
         }
@@ -386,17 +422,25 @@ ocb_write(OcbQueue *queue, void* buf, size_t bytes, size_t* written)
         qlen = csr.fields.pull_length + 1;
         write_ptr = csr.fields.pull_write_ptr;
 
-        if (csr.fields.pull_full) {
+        if (csr.fields.pull_full)
+        {
             break;
         }
 
-        if (csr.fields.pull_empty) {
+        if (csr.fields.pull_empty)
+        {
             free = qlen;
-        } else {
+        }
+        else
+        {
             read_ptr = csr.fields.pull_read_ptr;
-            if (write_ptr > read_ptr) {
+
+            if (write_ptr > read_ptr)
+            {
                 free = qlen - (write_ptr - read_ptr);
-            } else {
+            }
+            else
+            {
                 free = read_ptr - write_ptr;
             }
         }
@@ -411,12 +455,17 @@ ocb_write(OcbQueue *queue, void* buf, size_t bytes, size_t* written)
         // copied into the queue.
 
         pbuf = (uint64_t*)buf;
-        while (bytes && free--) {
+
+        while (bytes && free--)
+        {
 
             write_ptr++;
-            if (write_ptr == qlen) {
+
+            if (write_ptr == qlen)
+            {
                 write_ptr = 0;
             }
+
             pcq = queue->cq_base + write_ptr;
 
             *pcq = *pbuf++;
@@ -426,12 +475,15 @@ ocb_write(OcbQueue *queue, void* buf, size_t bytes, size_t* written)
             bytes -= 8;
             *written += 8;
         }
-    } while (0);
+    }
+    while (0);
 
     // Check for overflow. If found, collect FFDC.
 
     ses.value = in32(G_ocb_ocbsesn[queue->engine / 2]);
-    if (ses.fields.pull_write_overflow) {
+
+    if (ses.fields.pull_write_overflow)
+    {
         ocb_ffdc(queue->engine / 2);
         rc = -ASYNC_OCB_ERROR_WRITE_NEW;
     }
@@ -443,21 +495,25 @@ ocb_write(OcbQueue *queue, void* buf, size_t bytes, size_t* written)
 // This is the internal 'run method' for reading through an OCB circular
 // queue.  The run method simply enables the IRQ.  The interrupt handler reads
 // data from the queue and leaves the interrupt enabled until the read is
-// satisfied. 
+// satisfied.
 
 static int
-ocb_read_method(AsyncRequest *async_request)
+ocb_read_method(AsyncRequest* async_request)
 {
-    OcbRequest *request = (OcbRequest*)async_request;
-    OcbQueue *queue = (OcbQueue*)(async_request->queue);
+    OcbRequest* request = (OcbRequest*)async_request;
+    OcbQueue* queue = (OcbQueue*)(async_request->queue);
     int rc;
 
-    if (request->bytes == 0) {
+    if (request->bytes == 0)
+    {
         rc = -ASYNC_REQUEST_COMPLETE;
-    } else {
+    }
+    else
+    {
         ssx_irq_enable(queue->irq);
         rc = 0;
     }
+
     return rc;
 }
 
@@ -468,18 +524,22 @@ ocb_read_method(AsyncRequest *async_request)
 // satisfied.
 
 static int
-ocb_write_method(AsyncRequest *async_request)
+ocb_write_method(AsyncRequest* async_request)
 {
-    OcbRequest *request = (OcbRequest *)async_request;
-    OcbQueue *queue = (OcbQueue*)(async_request->queue);
+    OcbRequest* request = (OcbRequest*)async_request;
+    OcbQueue* queue = (OcbQueue*)(async_request->queue);
     int rc;
 
-    if (request->bytes == 0) {
+    if (request->bytes == 0)
+    {
         rc = -ASYNC_REQUEST_COMPLETE;
-    } else {
+    }
+    else
+    {
         ssx_irq_enable(queue->irq);
         rc = 0;
     }
+
     return rc;
 }
 
@@ -490,13 +550,13 @@ ocb_write_method(AsyncRequest *async_request)
 // the request.
 
 static int
-ocb_async_error_method(AsyncRequest *request)
+ocb_async_error_method(AsyncRequest* request)
 {
-    OcbQueue *queue = (OcbQueue*)(request->queue);
+    OcbQueue* queue = (OcbQueue*)(request->queue);
     ocb_ffdc(queue->engine / 2);
     return -1;
 }
-    
+
 
 /// Create a request for an OCB circular queue
 ///
@@ -536,27 +596,28 @@ ocb_async_error_method(AsyncRequest *request)
 /// \retval -ASYNC_INVALID_OBJECT_OCB_REQUEST The \a request or \a queue were NULL (0), or
 /// the \a queue is not an initialized OcbQueue.
 ///
-/// \retval -ASYNC_INVALID_ARGUMENT_OCB_REQUEST The \a data pointer is 
+/// \retval -ASYNC_INVALID_ARGUMENT_OCB_REQUEST The \a data pointer is
 /// NULL (0), or the number of bytes is not a multiple of 8.
 ///
 /// See async_request_create() for other errors that may be returned by this
 /// call.
 
 int
-ocb_request_create(OcbRequest *request,
-                   OcbQueue *queue,
-                   uint64_t *data,
+ocb_request_create(OcbRequest* request,
+                   OcbQueue* queue,
+                   uint64_t* data,
                    size_t bytes,
                    SsxInterval timeout,
                    AsyncRequestCallback callback,
-                   void *arg,
+                   void* arg,
                    int options)
 {
     int rc;
     AsyncRunMethod run_method = 0; // Make GCC Happy
-    AsyncQueue *async_queue = (AsyncQueue *)queue;
+    AsyncQueue* async_queue = (AsyncQueue*)queue;
 
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF((request == 0) ||
                      (queue == 0)   ||
                      !(async_queue->engine & ASYNC_ENGINE_OCB),
@@ -566,21 +627,22 @@ ocb_request_create(OcbRequest *request,
                      ASYNC_INVALID_ARGUMENT_OCB_REQUEST);
     }
 
-    switch (async_queue->engine) {
+    switch (async_queue->engine)
+    {
 
-    case ASYNC_ENGINE_OCB_PULL0:
-    case ASYNC_ENGINE_OCB_PULL1:
-    case ASYNC_ENGINE_OCB_PULL2:
-    case ASYNC_ENGINE_OCB_PULL3:
-        run_method = ocb_write_method;
-        break;
+        case ASYNC_ENGINE_OCB_PULL0:
+        case ASYNC_ENGINE_OCB_PULL1:
+        case ASYNC_ENGINE_OCB_PULL2:
+        case ASYNC_ENGINE_OCB_PULL3:
+            run_method = ocb_write_method;
+            break;
 
-    case ASYNC_ENGINE_OCB_PUSH0:
-    case ASYNC_ENGINE_OCB_PUSH1:
-    case ASYNC_ENGINE_OCB_PUSH2:
-    case ASYNC_ENGINE_OCB_PUSH3:
-        run_method = ocb_read_method;
-        break;
+        case ASYNC_ENGINE_OCB_PUSH0:
+        case ASYNC_ENGINE_OCB_PUSH1:
+        case ASYNC_ENGINE_OCB_PUSH2:
+        case ASYNC_ENGINE_OCB_PUSH3:
+            run_method = ocb_read_method;
+            break;
     }
 
     rc = async_request_create(&(request->request),
@@ -610,22 +672,23 @@ ocb_request_create(OcbRequest *request,
 ///
 /// \retval 0 Success
 ///
-/// \retval -ASYNC_INVALID_ARGUMENT_OCB_SCHEDULE The number of \a bytes 
+/// \retval -ASYNC_INVALID_ARGUMENT_OCB_SCHEDULE The number of \a bytes
 /// currently requested is not a multiple of 8.
 ///
 /// See async_request_schedule() for documentation of other errors
 
 int
-ocb_request_schedule(OcbRequest *request)
+ocb_request_schedule(OcbRequest* request)
 {
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF((request->bytes % 8), ASYNC_INVALID_ARGUMENT_OCB_SCHEDULE);
     }
 
     request->current = request->data;
     request->remaining = request->bytes;
 
-    return async_request_schedule((AsyncRequest *)request);
+    return async_request_schedule((AsyncRequest*)request);
 }
 
 
@@ -650,7 +713,7 @@ ocb_request_schedule(OcbRequest *request)
 /// buffer. The base register is also set up.
 
 void
-ocb_read_engine_reset(OcbQueue *queue, size_t cq_length, int protocol)
+ocb_read_engine_reset(OcbQueue* queue, size_t cq_length, int protocol)
 {
     ocb_ocbshcsn_t cs;
 
@@ -673,9 +736,12 @@ ocb_read_engine_reset(OcbQueue *queue, size_t cq_length, int protocol)
 
     // Reprogram and reenable/reset the queue
 
-    if (protocol == OCB_INTERRUPT_PROTOCOL_LAZY) {
+    if (protocol == OCB_INTERRUPT_PROTOCOL_LAZY)
+    {
         cs.fields.push_intr_action = OCB_INTR_ACTION_FULL;
-    } else {
+    }
+    else
+    {
         cs.fields.push_intr_action = OCB_INTR_ACTION_NOT_EMPTY;
     }
 
@@ -703,7 +769,7 @@ ocb_read_engine_reset(OcbQueue *queue, size_t cq_length, int protocol)
 /// buffer. The base register is also set up.
 
 void
-ocb_write_engine_reset(OcbQueue *queue, size_t cq_length, int protocol)
+ocb_write_engine_reset(OcbQueue* queue, size_t cq_length, int protocol)
 {
     ocb_ocbslcsn_t cs;
 
@@ -726,9 +792,12 @@ ocb_write_engine_reset(OcbQueue *queue, size_t cq_length, int protocol)
 
     // Reprogram and reenable/reset the queue
 
-    if (protocol == OCB_INTERRUPT_PROTOCOL_LAZY) {
+    if (protocol == OCB_INTERRUPT_PROTOCOL_LAZY)
+    {
         cs.fields.pull_intr_action = OCB_INTR_ACTION_EMPTY;
-    } else {
+    }
+    else
+    {
         cs.fields.pull_intr_action = OCB_INTR_ACTION_NOT_FULL;
     }
 
@@ -765,7 +834,7 @@ ocb_write_engine_reset(OcbQueue *queue, size_t cq_length, int protocol)
 ///
 /// \retval -ASYNC_INVALID_OBJECT_OCB_QUEUE The \a queue was NULL (0).
 ///
-/// \retval -ASYNC_INVALID_ARGUMENT_OCB_QUEUE The \a cq_base is not properly 
+/// \retval -ASYNC_INVALID_ARGUMENT_OCB_QUEUE The \a cq_base is not properly
 /// aligned, or the \a cq_length is invalid, or the \a protocol is invalid.
 ///
 /// \retval -ASYNC_INVALID_ENGINE_OCB The \a engine is not an OCB engine.
@@ -773,16 +842,17 @@ ocb_write_engine_reset(OcbQueue *queue, size_t cq_length, int protocol)
 /// Other errors may be returned by async_queue_create().
 
 int
-ocb_queue_create(OcbQueue *queue,
+ocb_queue_create(OcbQueue* queue,
                  int engine,
-                 uint64_t *cq_base,
+                 uint64_t* cq_base,
                  size_t cq_length,
                  int protocol)
 {
-    AsyncQueue *async_queue = (AsyncQueue *)queue;
+    AsyncQueue* async_queue = (AsyncQueue*)queue;
     int align_mask = 0;
 
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF(queue == 0, ASYNC_INVALID_OBJECT_OCB_QUEUE);
         SSX_ERROR_IF((cq_length < OCB_PUSH_PULL_LENGTH_MIN) ||
                      (cq_length > OCB_PUSH_PULL_LENGTH_MAX) ||
@@ -794,72 +864,75 @@ ocb_queue_create(OcbQueue *queue,
     queue->cq_base = cq_base;
     queue->cq_length = cq_length;
 
-    switch (engine) {
+    switch (engine)
+    {
 
         // These are the read engines from OCC's perspective.
 
-    case ASYNC_ENGINE_OCB_PUSH0:
-        queue->irq = OCCHW_IRQ_STRM0_PUSH;
-        queue->engine = OCB_ENGINE_PUSH0;
-        goto read_engine;
+        case ASYNC_ENGINE_OCB_PUSH0:
+            queue->irq = OCCHW_IRQ_STRM0_PUSH;
+            queue->engine = OCB_ENGINE_PUSH0;
+            goto read_engine;
 
-    case ASYNC_ENGINE_OCB_PUSH1:
-        queue->irq = OCCHW_IRQ_STRM1_PUSH;
-        queue->engine = OCB_ENGINE_PUSH1;
-        goto read_engine;
+        case ASYNC_ENGINE_OCB_PUSH1:
+            queue->irq = OCCHW_IRQ_STRM1_PUSH;
+            queue->engine = OCB_ENGINE_PUSH1;
+            goto read_engine;
 
-    case ASYNC_ENGINE_OCB_PUSH2:
-        queue->irq = OCCHW_IRQ_STRM2_PUSH;
-        queue->engine = OCB_ENGINE_PUSH2;
-        goto read_engine;
+        case ASYNC_ENGINE_OCB_PUSH2:
+            queue->irq = OCCHW_IRQ_STRM2_PUSH;
+            queue->engine = OCB_ENGINE_PUSH2;
+            goto read_engine;
 
-    case ASYNC_ENGINE_OCB_PUSH3:
-        queue->irq = OCCHW_IRQ_STRM3_PUSH;
-        queue->engine = OCB_ENGINE_PUSH3;
-        goto read_engine;
+        case ASYNC_ENGINE_OCB_PUSH3:
+            queue->irq = OCCHW_IRQ_STRM3_PUSH;
+            queue->engine = OCB_ENGINE_PUSH3;
+            goto read_engine;
 
-    read_engine:
-        align_mask = CACHE_LINE_SIZE - 1;
-        async_queue_create(async_queue, engine);
-        ocb_read_engine_reset(queue, cq_length, protocol);
-        break;
+        read_engine:
+            align_mask = CACHE_LINE_SIZE - 1;
+            async_queue_create(async_queue, engine);
+            ocb_read_engine_reset(queue, cq_length, protocol);
+            break;
 
         // These are the write engines from OCC's perspective.
 
-    case ASYNC_ENGINE_OCB_PULL0:
-        queue->irq = OCCHW_IRQ_STRM0_PULL;
-        queue->engine = OCB_ENGINE_PULL0;
-        goto write_engine;
+        case ASYNC_ENGINE_OCB_PULL0:
+            queue->irq = OCCHW_IRQ_STRM0_PULL;
+            queue->engine = OCB_ENGINE_PULL0;
+            goto write_engine;
 
-    case ASYNC_ENGINE_OCB_PULL1:
-        queue->irq = OCCHW_IRQ_STRM1_PULL;
-        queue->engine = OCB_ENGINE_PULL1;
-        goto write_engine;
+        case ASYNC_ENGINE_OCB_PULL1:
+            queue->irq = OCCHW_IRQ_STRM1_PULL;
+            queue->engine = OCB_ENGINE_PULL1;
+            goto write_engine;
 
-    case ASYNC_ENGINE_OCB_PULL2:
-        queue->irq = OCCHW_IRQ_STRM2_PULL;
-        queue->engine = OCB_ENGINE_PULL2;
-        goto write_engine;
+        case ASYNC_ENGINE_OCB_PULL2:
+            queue->irq = OCCHW_IRQ_STRM2_PULL;
+            queue->engine = OCB_ENGINE_PULL2;
+            goto write_engine;
 
-    case ASYNC_ENGINE_OCB_PULL3:
-        queue->irq = OCCHW_IRQ_STRM3_PULL;
-        queue->engine = OCB_ENGINE_PULL3;
-        goto write_engine;
+        case ASYNC_ENGINE_OCB_PULL3:
+            queue->irq = OCCHW_IRQ_STRM3_PULL;
+            queue->engine = OCB_ENGINE_PULL3;
+            goto write_engine;
 
-    write_engine:
-        align_mask = 8 - 1;
-        async_queue_create(async_queue, engine);
-        ocb_write_engine_reset(queue, cq_length, protocol);
-        break;
+        write_engine:
+            align_mask = 8 - 1;
+            async_queue_create(async_queue, engine);
+            ocb_write_engine_reset(queue, cq_length, protocol);
+            break;
 
-    default:
-        if (SSX_ERROR_CHECK_API) {
-            SSX_ERROR_IF(1, ASYNC_INVALID_ENGINE_OCB);
-        }
+        default:
+            if (SSX_ERROR_CHECK_API)
+            {
+                SSX_ERROR_IF(1, ASYNC_INVALID_ENGINE_OCB);
+            }
     }
 
-    if (SSX_ERROR_CHECK_API) {
-        SSX_ERROR_IF(((uint32_t)cq_base & align_mask) != 0, 
+    if (SSX_ERROR_CHECK_API)
+    {
+        SSX_ERROR_IF(((uint32_t)cq_base & align_mask) != 0,
                      ASYNC_INVALID_ARGUMENT_OCB_QUEUE2);
     }
 
@@ -883,35 +956,44 @@ ocb_queue_create(OcbQueue *queue,
 SSX_IRQ_FAST2FULL(ocb_async_handler, ocb_async_handler_full);
 
 void
-ocb_async_handler_full(void *arg, SsxIrqId irq, int priority)
+ocb_async_handler_full(void* arg, SsxIrqId irq, int priority)
 {
-    AsyncQueue *async_queue = (AsyncQueue*)arg;
-    OcbQueue *queue = (OcbQueue*)async_queue;
-    OcbRequest *request = (OcbRequest*)(async_queue->current);
+    AsyncQueue* async_queue = (AsyncQueue*)arg;
+    OcbQueue* queue = (OcbQueue*)async_queue;
+    OcbRequest* request = (OcbRequest*)(async_queue->current);
     size_t processed;
     int rc;
 
-    if (SSX_ERROR_CHECK_KERNEL && (request == 0)) {
+    if (SSX_ERROR_CHECK_KERNEL && (request == 0))
+    {
         SSX_PANIC(ASYNC_PHANTOM_INTERRUPT_OCB);
     }
 
-    if (queue->engine % 2) {
+    if (queue->engine % 2)
+    {
         rc = ocb_write(queue, request->current, request->remaining, &processed);
-    } else {
+    }
+    else
+    {
         rc = ocb_read(queue, request->current, request->remaining, &processed);
     }
 
-    if (rc) {
+    if (rc)
+    {
 
         ssx_irq_disable(queue->irq);
         async_error_handler(async_queue, ASYNC_REQUEST_STATE_FAILED);
 
-    } else if (processed == request->remaining) {
+    }
+    else if (processed == request->remaining)
+    {
 
         ssx_irq_disable(queue->irq);
         async_handler(async_queue);
 
-    } else {
+    }
+    else
+    {
 
         request->current += (processed / 8);
         request->remaining -= processed;
@@ -938,7 +1020,7 @@ ocb_async_handler_full(void *arg, SsxIrqId irq, int priority)
 SSX_IRQ_FAST2FULL(ocb_error_handler, ocb_error_handler_full);
 
 void
-ocb_error_handler_full(void *arg, SsxIrqId irq, int priority)
+ocb_error_handler_full(void* arg, SsxIrqId irq, int priority)
 {
     ocb_occlfir_t fir;
     ocb_occlfir_t fir_temp;
@@ -948,23 +1030,34 @@ ocb_error_handler_full(void *arg, SsxIrqId irq, int priority)
     ssx_irq_status_clear(irq);
 
     getscom(OCB_OCCLFIR, &(fir.value));
-  
+
     fir_temp.value = 0;
-    fir_temp.fields.ocb_idc0_error = 1;  
-    for (channel = 0; channel < OCB_INDIRECT_CHANNELS; channel++) {
-        if (fir.value & (fir_temp.value >> channel)) {
+    fir_temp.fields.ocb_idc0_error = 1;
+
+    for (channel = 0; channel < OCB_INDIRECT_CHANNELS; channel++)
+    {
+        if (fir.value & (fir_temp.value >> channel))
+        {
 
             queue = (AsyncQueue*)(&(G_ocb_read_queue[channel]));
-            if (queue->state == ASYNC_QUEUE_STATE_RUNNING) {
+
+            if (queue->state == ASYNC_QUEUE_STATE_RUNNING)
+            {
                 async_error_handler(queue, ASYNC_REQUEST_STATE_FAILED);
-            } else {
+            }
+            else
+            {
                 ocb_ffdc(channel);
             }
-                
+
             queue = (AsyncQueue*)(&(G_ocb_write_queue[channel]));
-            if (queue->state == ASYNC_QUEUE_STATE_RUNNING) {
+
+            if (queue->state == ASYNC_QUEUE_STATE_RUNNING)
+            {
                 async_error_handler(queue, ASYNC_REQUEST_STATE_FAILED);
-            } else {
+            }
+            else
+            {
                 ocb_ffdc(channel);
             }
         }
@@ -974,7 +1067,8 @@ ocb_error_handler_full(void *arg, SsxIrqId irq, int priority)
         fir.fields.ocb_db_oci_read_data_parity |
         fir.fields.ocb_db_oci_slave_error |
         fir.fields.ocb_pib_addr_parity_err |
-        fir.fields.ocb_db_pib_data_parity_err) {
+        fir.fields.ocb_db_pib_data_parity_err)
+    {
 
         ocb_ffdc(-1);
     }
@@ -986,12 +1080,12 @@ ocb_error_handler_full(void *arg, SsxIrqId irq, int priority)
 ////////////////////////////////////////////////////////////////////////////
 
 void
-async_ocb_initialize(OcbQueue *queue, int engine,
-                     uint64_t *buffer, size_t length, int protocol)
+async_ocb_initialize(OcbQueue* queue, int engine,
+                     uint64_t* buffer, size_t length, int protocol)
 {
     ocb_queue_create(queue, engine, buffer, length, protocol);
     async_level_handler_setup(ocb_async_handler,
-                              (void *)queue,
+                              (void*)queue,
                               queue->irq,
                               SSX_NONCRITICAL,
                               SSX_IRQ_POLARITY_ACTIVE_HIGH);

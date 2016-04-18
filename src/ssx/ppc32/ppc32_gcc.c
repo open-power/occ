@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -55,16 +55,20 @@ __lshrdi3(uint64_t x, int i)
 {
     Uint64 input, result;
 
-    if (i == 0) {
+    if (i == 0)
+    {
         return x;
     }
 
     input.value = x;
 
-    if (i >= 32) {
+    if (i >= 32)
+    {
         result.word[0] = 0;
         result.word[1] = input.word[0] >> (i - 32);
-    } else {
+    }
+    else
+    {
         result.word[0] = input.word[0] >> i;
         result.word[1] = (input.word[1] >> i) | (input.word[0] << (32 - i));
     }
@@ -83,16 +87,20 @@ __ashldi3(uint64_t x, int i)
 {
     Uint64 input, result;
 
-    if (i == 0) {
+    if (i == 0)
+    {
         return x;
     }
 
     input.value = x;
 
-    if (i >= 32) {
+    if (i >= 32)
+    {
         result.word[1] = 0;
         result.word[0] = input.word[1] << (i - 32);
-    } else {
+    }
+    else
+    {
         result.word[1] = input.word[1] << i;
         result.word[0] = (input.word[0] << i) | (input.word[1] >> (32 - i));
     }
@@ -112,19 +120,23 @@ __ashrdi3(uint64_t x, int i)
 {
     Int64 input, result;
 
-    if (i == 0) {
+    if (i == 0)
+    {
         return x;
     }
 
     input.value = x;
 
-    if (i >= 32) {
+    if (i >= 32)
+    {
         result.word[0] = input.word[0] >> 31;
         result.word[1] = input.word[0] >> (i - 32);
-    } else {
+    }
+    else
+    {
         result.word[0] = input.word[0] >> i;
-        result.word[1] = 
-            (((uint32_t)input.word[1]) >> i) | 
+        result.word[1] =
+            (((uint32_t)input.word[1]) >> i) |
             (input.word[0] << (32 - i));
     }
 
@@ -165,7 +177,7 @@ __popcountdi2(uint64_t x)
 // 64-bit divides
 //
 // For the unsigned case, note that divide by 0 returns quotient = remainder =
-// 0. 
+// 0.
 //
 // For the signed case, in general we perform the division on the absolute
 // values and fix the signs of the quotient and remainder at the end.
@@ -181,22 +193,22 @@ __popcountdi2(uint64_t x)
 // but only 184 bytes as configured here.
 
 #if 0
-// For the signed cases, we need to handle the special case that the dividend
-// or divisor is the most negative integer.  
-//
-// If the dividend is the most negative integer, then dividing this integer by
-// -1 would overflow as a positive quotient, so we set quotient and remainder
-// to 0 in this case.  For divide by 1, the quotient is the most negative
-// integer. Otherwise we adjust the dividend by the absolute value of the
-// divisor, then fix up the quotient later by adding or subtracting 1.
-//
-// If the divisor is the most negative integer, then the quotient is always 0
-// unless the dividend is also the most negative integer, in which case the
-// quotient is 1 and the remainder is 0.
-//
+    // For the signed cases, we need to handle the special case that the dividend
+    // or divisor is the most negative integer.
+    //
+    // If the dividend is the most negative integer, then dividing this integer by
+    // -1 would overflow as a positive quotient, so we set quotient and remainder
+    // to 0 in this case.  For divide by 1, the quotient is the most negative
+    // integer. Otherwise we adjust the dividend by the absolute value of the
+    // divisor, then fix up the quotient later by adding or subtracting 1.
+    //
+    // If the divisor is the most negative integer, then the quotient is always 0
+    // unless the dividend is also the most negative integer, in which case the
+    // quotient is 1 and the remainder is 0.
+    //
 #endif
 
-uint64_t 
+uint64_t
 __udivdi3(uint64_t u, uint64_t v)
 {
     uint64_t quotient, remainder;
@@ -206,7 +218,7 @@ __udivdi3(uint64_t u, uint64_t v)
 }
 
 
-uint64_t 
+uint64_t
 __umoddi3(uint64_t u, uint64_t v)
 {
     uint64_t quotient, remainder;
@@ -217,12 +229,12 @@ __umoddi3(uint64_t u, uint64_t v)
 
 
 #if 0
-#define INT64_T_MIN ((int64_t)(0x8000000000000000ull))
+    #define INT64_T_MIN ((int64_t)(0x8000000000000000ull))
 #endif
 
 void
-__ppc32_sdiv64(int64_t u, int64_t v, 
-               int64_t *quotient, int64_t *remainder)
+__ppc32_sdiv64(int64_t u, int64_t v,
+               int64_t* quotient, int64_t* remainder)
 {
     int q_negate, r_negate;
     uint64_t uu, uv;
@@ -236,47 +248,66 @@ __ppc32_sdiv64(int64_t u, int64_t v,
     uv = (v < 0 ? -v : v);
 
 #if 0
-    if (u == INT64_T_MIN) {
-        if (v == -1) {
+
+    if (u == INT64_T_MIN)
+    {
+        if (v == -1)
+        {
             *quotient = 0;
             *remainder = 0;
             return;
-        } else if (v == 1) {
+        }
+        else if (v == 1)
+        {
             *quotient = INT64_T_MIN;
             *remainder = 0;
             return;
-        } else if (v == INT64_T_MIN) {
+        }
+        else if (v == INT64_T_MIN)
+        {
             *quotient = 1;
             *remainder = 0;
             return;
-        } else {
+        }
+        else
+        {
             fixup = 1;
             u += (v < 0 ? -v : v);
         }
-    } else if (v == INT64_T_MIN) {
+    }
+    else if (v == INT64_T_MIN)
+    {
         *quotient = 0;
         *remainder = u;
         return;
     }
+
 #endif
 
-    __ppc32_udiv64(uu, uv, (uint64_t *)quotient, (uint64_t *)remainder);
+    __ppc32_udiv64(uu, uv, (uint64_t*)quotient, (uint64_t*)remainder);
 
 #if 0
-    if (fixup) {
+
+    if (fixup)
+    {
         *quotient += 1;
     }
+
 #endif
-    if (q_negate) {
+
+    if (q_negate)
+    {
         *quotient = -(*quotient);
     }
-    if (r_negate) {
+
+    if (r_negate)
+    {
         *remainder = -(*remainder);
     }
 }
-            
 
-int64_t  
+
+int64_t
 __divdi3(int64_t u, int64_t v)
 {
     int64_t quotient, remainder;
@@ -286,7 +317,7 @@ __divdi3(int64_t u, int64_t v)
 }
 
 
-int64_t  
+int64_t
 __moddi3(int64_t u, int64_t v)
 {
     int64_t quotient, remainder;
@@ -307,25 +338,34 @@ __ucmpdi2(uint64_t i_a, uint64_t i_b)
     a.value = i_a;
     b.value = i_b;
 
-    if (a.word[0] < b.word[0]) {
+    if (a.word[0] < b.word[0])
+    {
         rv = 0;
-    } else if (a.word[0] > b.word[0]) {
+    }
+    else if (a.word[0] > b.word[0])
+    {
         rv = 2;
-    } else if (a.word[1] < b.word[1]) {
+    }
+    else if (a.word[1] < b.word[1])
+    {
         rv = 0;
-    } else if (a.word[1] > b.word[1]) {
+    }
+    else if (a.word[1] > b.word[1])
+    {
         rv = 2;
-    } else {
+    }
+    else
+    {
         rv = 1;
     }
 
     return rv;
 }
-                   
 
 
 
-        
 
-        
-        
+
+
+
+

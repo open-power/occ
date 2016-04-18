@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -40,14 +40,16 @@
 
 /// A 64-bit unsigned integer type
 
-typedef union {
+typedef union
+{
     uint64_t value;
     uint32_t word[2];
 } Uint64;
 
 /// A 64-bit signed integer type
 
-typedef union {
+typedef union
+{
     int64_t value;
     int32_t word[2];
 } Int64;
@@ -70,14 +72,14 @@ __popcountdi2(uint64_t x);
 /// Unsigned 64/64 bit divide, returning quotient and remainder via pointers.
 
 void
-__ppc32_udiv64(uint64_t u, uint64_t v, uint64_t *q, uint64_t *r);
+__ppc32_udiv64(uint64_t u, uint64_t v, uint64_t* q, uint64_t* r);
 
 /// Signed 64/64 bit divide, returning quotient and remainder via pointers.
 
 void
-__ppc32_sdiv64(int64_t u, int64_t v, int64_t *q, int64_t *r);
+__ppc32_sdiv64(int64_t u, int64_t v, int64_t* q, int64_t* r);
 
-uint64_t 
+uint64_t
 __udivdi3(uint64_t u, uint64_t v);
 
 int64_t
@@ -86,7 +88,7 @@ __divdi3(int64_t u, int64_t v);
 int64_t
 __moddi3(int64_t u, int64_t v);
 
-uint64_t 
+uint64_t
 __umoddi3(uint64_t u, uint64_t v);
 
 int

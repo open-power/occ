@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -44,8 +44,8 @@
 /// This function is installed by default for interrupts not explicitly set up
 /// by the application.  These interrupts should never fire.
 
-void 
-__ppc405_default_irq_handler(void     *arg,
+void
+__ppc405_default_irq_handler(void*     arg,
                              SsxIrqId irq,
                              int      critical)
 {
@@ -60,12 +60,12 @@ __ppc405_default_irq_handler(void     *arg,
 /// 'glitch' occurred on the external noncritical or critical interrupt input
 /// to the PPC405 core.
 
-void __ppc405_phantom_irq_handler(void     *arg,
+void __ppc405_phantom_irq_handler(void*     arg,
                                   SsxIrqId irq,
                                   int      critical)
 {
     SSX_PANIC(PPC405_PHANTOM_INTERRUPT);
 }
-    
+
 
 #undef __PPC405_IRQ_CORE_C__

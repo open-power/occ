@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -40,23 +40,23 @@
 /// assembly.
 
 #ifndef __ASSEMBLER__
-#include <stdint.h>
-#include <stddef.h>
+    #include <stdint.h>
+    #include <stddef.h>
 #endif  /* __ASSEMBLER__ */
 
 #ifndef __SSX__
-#define __SSX__ 1
+    #define __SSX__ 1
 #endif
 
 /// The application environment specifies whether or not it will provide an
 /// application configuration file, which must be named "ssx_app_cfg.h".
 
 #ifndef USE_SSX_APP_CFG_H
-#define USE_SSX_APP_CFG_H 0
+    #define USE_SSX_APP_CFG_H 0
 #endif
 
 #if USE_SSX_APP_CFG_H
-#include "ssx_app_cfg.h"
+    #include "ssx_app_cfg.h"
 #endif
 
 #include "ssx_macros.h"
@@ -94,7 +94,7 @@
             __y++;                              \
         }                                       \
         __y;})
-    
+
 
 #define POW2_32(x) ((uint32_t)1 << (x))
 #define POW2_64(x) ((uint64_t)1 << (x))
@@ -119,7 +119,7 @@
 /// initialized. Otherwise it confuses the linker which wants to put
 /// uninitialized data into .bss sections.
 ///
-/// \code 
+/// \code
 ///
 /// int foo     SECTION_ATTRIBUTE(".noncacheable") = 0;
 /// int bar[10] SECTION_ATTRIBUTE(".noncacheable") = {0};
@@ -132,14 +132,14 @@
 /// This is required for example to avoid "function unused" warnings when a
 /// function is declared static but only referenced by inline assembler:
 ///
-/// \code 
-/// 
+/// \code
+///
 /// static USED_ATTRIBUTE void
-/// _checkstop(void* arg, SsxIrqId irq, int priority) 
+/// _checkstop(void* arg, SsxIrqId irq, int priority)
 /// {
 ///     SSX_PANIC(VALIDATION_CHECKSTOP);
 /// }
-/// 
+///
 /// SSX_IRQ_FAST2FULL(_validationCheckstopHandler, _checkstop);
 ///
 /// \endcode

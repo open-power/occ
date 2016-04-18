@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -45,9 +45,11 @@
 /// field. When writing, TID is set from the current PID, and when reading PID
 /// is set from the TID entry of the register.
 
-typedef union {
+typedef union
+{
     uint32_t value;
-    struct {
+    struct
+    {
         uint32_t epn  : 22;
         uint32_t size : 3;
         uint32_t v    : 1;
@@ -59,9 +61,11 @@ typedef union {
 
 /// The PPC405 TLBLO (Data) structure
 
-typedef union {
+typedef union
+{
     uint32_t value;
-    struct {
+    struct
+    {
         uint32_t rpn  : 22;
         uint32_t ex   : 1;
         uint32_t wr   : 1;
@@ -134,11 +138,11 @@ typedef uint64_t Ppc405MmuMap;
 
 /// TLBWEHI
 #define tlbwehi(entry, tlbhi) \
-asm volatile ("tlbwehi %0, %1" : : "r" (tlbhi), "r" (entry) : "memory")
+    asm volatile ("tlbwehi %0, %1" : : "r" (tlbhi), "r" (entry) : "memory")
 
 /// TLBWELO
 #define tlbwelo(entry, tlblo) \
-asm volatile ("tlbwelo %0, %1" : : "r" (tlblo), "r" (entry) : "memory")
+    asm volatile ("tlbwelo %0, %1" : : "r" (tlblo), "r" (entry) : "memory")
 
 /// TLBREHI
 #define tlbrehi(entry) \
@@ -172,17 +176,17 @@ int
 ppc405_mmu_reset(void);
 
 int
-ppc405_mmu_map(SsxAddress effective_address, 
+ppc405_mmu_map(SsxAddress effective_address,
                SsxAddress real_address,
                size_t size, int tlbhi_flags, int tlblo_flags,
-               Ppc405MmuMap *map);
+               Ppc405MmuMap* map);
 
 int
-ppc405_mmu_unmap(Ppc405MmuMap *map);
+ppc405_mmu_unmap(Ppc405MmuMap* map);
 
 void
 ppc405_mmu_start(void);
-                         
+
 void
 ppc405_mmu_report(FILE* stream, Ppc405MmuMap* map);
 

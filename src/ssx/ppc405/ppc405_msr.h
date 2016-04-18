@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -64,9 +64,9 @@
 /// Move From MSR
 
 #define mfmsr()                               \
-   ({uint32_t __msr;                          \
-    asm volatile ("mfmsr %0" : "=r" (__msr)); \
-    __msr;})
+    ({uint32_t __msr;                          \
+        asm volatile ("mfmsr %0" : "=r" (__msr)); \
+        __msr;})
 
 
 /// Move to MSR
@@ -86,7 +86,7 @@
 /// operation is only guaranteed atomic in a critical section.
 
 #define andc_msr(x) \
-     mtmsr(mfmsr() & ~(x))
+    mtmsr(mfmsr() & ~(x))
 
 
 /// Write MSR[EE] with an immediate value (0/1)

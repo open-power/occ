@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -40,6 +40,7 @@
 /// code was copied.
 ///
 
+// *INDENT-OFF*
 
         .macro SAVE reg
                 .global _savegpr_\reg
@@ -98,3 +99,5 @@
         mtlr 0
         mr 1,11
         blr
+
+// *INDENT-ON*

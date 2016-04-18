@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -41,7 +41,7 @@ unsigned int g_ocb_timer_divider = OCB_TIMER_DIVIDER_DEFAULT;
 /// \param timer A valid OCB timer index
 ///
 /// \param auto_reload A non-0 value indicates to run the timer in auto-reload
-/// mode. 
+/// mode.
 ///
 /// \param timeout_ns The timeout specified in nanoseconds. The actual timeout
 /// will be rounded down to the underlying timer tick, with a minimum 1 tick
@@ -55,7 +55,7 @@ unsigned int g_ocb_timer_divider = OCB_TIMER_DIVIDER_DEFAULT;
 ///
 /// \retval 0 Success
 ///
-/// \retval -OCB_INVALID_ARGUMENT_TIMER Causes include illegal timer 
+/// \retval -OCB_INVALID_ARGUMENT_TIMER Causes include illegal timer
 /// numbers and illegal or unrepresntable timeouts.
 
 // Note that OCB_TIMER_FREQUENCY_HZ is in the range of 1-2 MHz.
@@ -68,16 +68,20 @@ ocb_timer_reset(int timer,
     ocb_otrn_t otr;
     int ticks;
 
-    //printk("ocb_timer_reset(%d, %d, %d)\n", 
+    //printk("ocb_timer_reset(%d, %d, %d)\n",
     //       timer, auto_reload, timeout_ns);
 
-    if (timeout_ns != 0) {
+    if (timeout_ns != 0)
+    {
         ticks = MAX(1, timeout_ns / (1000000000 / OCB_TIMER_FREQUENCY_HZ));
-    } else {
+    }
+    else
+    {
         ticks = 0;
     }
 
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF((timer < 0) ||
                      (timer >= OCB_TIMERS) ||
                      (timeout_ns < 0) ||
@@ -103,7 +107,7 @@ ocb_timer_reset(int timer,
 /// \param timer A valid OCB timer index
 ///
 /// \param auto_reload A non-0 value indicates to run the timer in auto-reload
-/// mode. 
+/// mode.
 ///
 /// \param timeout_ns The timeout specified in nanoseconds. The actual timeout
 /// will rounded down to the underlying timer tick, with a minimum 1 tick
@@ -116,32 +120,32 @@ ocb_timer_reset(int timer,
 /// \param arg The private argument of the interrupt handler
 ///
 /// \param priority The SSX/PPC405 interrupt priority to assign to the
-/// interrupt. 
+/// interrupt.
 ///
 /// This API sets up and starts the timer and unmasks the timer
 /// interrupt. Once set up, the timer can be reset using ocb_timer_reset(). As
 /// a fine point of the specification, if a timer interrupt is already pending
 /// when this API is invoked then that interrupt will be cleared.  Only the
 /// next interrupt (corresponding to the new programming) will be serviced by
-/// the newly installed handler. 
+/// the newly installed handler.
 ///
 /// Note that the interrupt handler is responsible for clearing the timer
 /// interrupt status. An API ocb_timer_status_clear() is available for this.
 ///
 /// \retval 0 Success
 ///
-/// \retval -OCB_INVALID_ARGUMENT_TIMER Causes include illegal timer 
+/// \retval -OCB_INVALID_ARGUMENT_TIMER Causes include illegal timer
 /// numbers and illegal or unrepresntable timeouts.
 ///
 /// Other errors may be returned by the underlying calls to SSX routines that
 /// set up interrupts.
 
 int
-ocb_timer_setup(int timer, 
+ocb_timer_setup(int timer,
                 int auto_reload,
                 int timeout_ns,
                 SsxIrqHandler handler,
-                void *arg,
+                void* arg,
                 int priority)
 {
     int rc;
@@ -150,35 +154,38 @@ ocb_timer_setup(int timer,
     do
     {
         //Read Hang Pulse Register 2 to get the log base 2 of the ocb clock divider -- grm
-// TEMP : Need Simics to model this
+// TEMP/TODO: Cannot do getscom from 405
+// TODO: Need to discuss this getscom and whether it is necessary.
 //        rc = getscom(TPC_HPR2, &l_hpr2.value);
+
         if(rc)
         {
             break;
         }
-//David Du: l_hpr2.fields.hang_pulse_reg is typically 9
+//TEMP/TODO: l_hpr2.fields.hang_pulse_reg is typically 9
 //        g_ocb_timer_divider = 1 << l_hpr2.fields.hang_pulse_reg;
         g_ocb_timer_divider = 1 << 9;
 
         //printk("ocb_timer_setup(%d, %d, %d, %p, %p, %d)\n",
         //       timer, auto_reload, timeout_ns,
         //       handler, arg, priority);
-    
+
         ssx_irq_disable(OCCHW_IRQ_OCC_TIMER0 + timer);
 
         ssx_irq_setup(OCCHW_IRQ_OCC_TIMER0 + timer,
-                  SSX_IRQ_POLARITY_ACTIVE_HIGH,
-                  SSX_IRQ_TRIGGER_LEVEL_SENSITIVE);
+                      SSX_IRQ_POLARITY_ACTIVE_HIGH,
+                      SSX_IRQ_TRIGGER_LEVEL_SENSITIVE);
 
         ssx_irq_handler_set(OCCHW_IRQ_OCC_TIMER0 + timer,
-                        handler,
-                        arg,
-                        priority);
+                            handler,
+                            arg,
+                            priority);
 
         rc = ocb_timer_reset(timer, auto_reload, timeout_ns);
 
         ssx_irq_enable(OCCHW_IRQ_OCC_TIMER0 + timer);
-    }while(0);
+    }
+    while(0);
 
     return rc;
 }
@@ -220,7 +227,7 @@ ocb_core_interrupt()
 /// overwritten with b'11000'
 ///
 ///
-/// \todo double check SRAM region restriction 
+/// \todo double check SRAM region restriction
 ///
 /// \param channel The indirect channel to use, in the range 0..2.
 ///
@@ -233,7 +240,7 @@ ocb_core_interrupt()
 ///
 /// \retval 0 Success
 ///
-/// \retval OCB_INVALID_ARGUMENT_LW_INIT One or more of the parameter 
+/// \retval OCB_INVALID_ARGUMENT_LW_INIT One or more of the parameter
 /// restrictions were violated.
 ///
 /// \retval OCB_SCOM_ERROR An attempt to write a PBA SCOM register to set up
@@ -249,10 +256,11 @@ ocb_linear_window_initialize(int channel, uint32_t base, int log_size)
     // create mask for checking
     mask = (0x1ull << log_size) - 1;
 
-    if (SSX_ERROR_CHECK_API) {
-        SSX_ERROR_IF((channel < 0) || 
+    if (SSX_ERROR_CHECK_API)
+    {
+        SSX_ERROR_IF((channel < 0) ||
                      (channel > 3) ||
-                     (log_size < OCB_LW_LOG_SIZE_MIN) || 
+                     (log_size < OCB_LW_LOG_SIZE_MIN) ||
                      (log_size > OCB_LW_LOG_SIZE_MAX) ||
                      ((base & mask) != 0),
                      OCB_INVALID_ARGUMENT_LW_INIT);
@@ -287,7 +295,7 @@ ocb_linear_window_initialize(int channel, uint32_t base, int log_size)
 ///
 /// \retval 0 Success
 ///
-/// \retval OCB_INVALID_ARGUMENT_LW_DISABLE One or more of the parameter 
+/// \retval OCB_INVALID_ARGUMENT_LW_DISABLE One or more of the parameter
 /// restrictions were violated.
 ///
 
@@ -295,15 +303,16 @@ int
 ocb_linear_window_disable(int channel)
 {
     ocb_ocblwcrn_t ocblwcrn;
- 
-    if (SSX_ERROR_CHECK_API) {
-        SSX_ERROR_IF((channel < 0) || 
+
+    if (SSX_ERROR_CHECK_API)
+    {
+        SSX_ERROR_IF((channel < 0) ||
                      (channel > 3),
                      OCB_INVALID_ARGUMENT_LW_DISABLE);
     }
 
     ocblwcrn.value = in32(OCB_OCBLWCRN(channel));
-    // Disable LW mode   
+    // Disable LW mode
     ocblwcrn.fields.linear_window_enable = 0;
     out32(OCB_OCBLWCRN(channel), ocblwcrn.value);
 
@@ -323,7 +332,7 @@ ocb_linear_window_disable(int channel)
 /// Note that this bit is not used for indirect channel 3.
 ///
 ///
-/// \param allow_untrusted Enable untrusted PIB masters 
+/// \param allow_untrusted Enable untrusted PIB masters
 /// access to the indirect channel being configured.  If allow_untrusted is
 /// not enabled and the chip is running in trusted mode, then any untrusted
 /// PIB master will get an offline return code when attempting to write
@@ -331,7 +340,7 @@ ocb_linear_window_disable(int channel)
 ///
 /// \retval 0 Success
 ///
-/// \retval OCB_INVALID_ARGUMENT_UNTRUST One or more of the parameter 
+/// \retval OCB_INVALID_ARGUMENT_UNTRUST One or more of the parameter
 /// restrictions were violated.
 ///
 
@@ -344,8 +353,9 @@ ocb_allow_untrusted_initialize(int channel, int allow_untrusted)
 {
     ocb_ocbicrn_t ocbicrn;
 
-    if (SSX_ERROR_CHECK_API) {
-        SSX_ERROR_IF((channel < 0) || 
+    if (SSX_ERROR_CHECK_API)
+    {
+        SSX_ERROR_IF((channel < 0) ||
                      (channel > 2) ||
                      (allow_untrusted < 0) ||
                      (allow_untrusted > 1),
@@ -354,7 +364,7 @@ ocb_allow_untrusted_initialize(int channel, int allow_untrusted)
 
     // Configure allow_unsecure_pib_masters bit
     ocbicrn.fields.allow_unsecure_pib_masters = allow_untrusted;
-    out32(OCB_OCBICRN(channel), ocbicrn.value);  
+    out32(OCB_OCBICRN(channel), ocbicrn.value);
 
     return 0 ;
 }

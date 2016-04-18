@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -40,12 +40,13 @@
 // Implementation of timer creation
 
 static int
-_ssx_timer_create(SsxTimer         *timer,
+_ssx_timer_create(SsxTimer*         timer,
                   SsxTimerCallback callback,
-                  void             *arg,
+                  void*             arg,
                   int              options)
 {
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF((timer == 0), SSX_INVALID_TIMER_AT_CREATE);
     }
 
@@ -71,7 +72,7 @@ _ssx_timer_create(SsxTimer         *timer,
 /// Once created with ssx_timer_create() a timer can be scheduled with
 /// ssx_timer_schedule() or ssx_timer_schedule_absolute(), which queues the
 /// timer in the kernel time queue.  Timers can be cancelled by a call of
-/// ssx_timer_cancel(). 
+/// ssx_timer_cancel().
 ///
 /// Timers created with ssx_timer_create() are always run as noncritical
 /// interrupt handlers with interrupt preemption enabled. Timer callbacks are
@@ -88,12 +89,12 @@ _ssx_timer_create(SsxTimer         *timer,
 ///
 /// \retval -SSX_INVALID_TIMER_AT_CREATE The \a timer is a null (0) pointer.
 
-int 
-ssx_timer_create(SsxTimer         *timer,
+int
+ssx_timer_create(SsxTimer*         timer,
                  SsxTimerCallback callback,
-                 void             *arg)
+                 void*             arg)
 {
-    return _ssx_timer_create(timer, callback, arg, 
+    return _ssx_timer_create(timer, callback, arg,
                              SSX_TIMER_CALLBACK_PREEMPTIBLE);
 }
 
@@ -135,10 +136,10 @@ ssx_timer_create(SsxTimer         *timer,
 ///
 /// \retval -SSX_INVALID_TIMER_AT_CREATE The \a timer is a null (0) pointer.
 
-int 
-ssx_timer_create_nonpreemptible(SsxTimer         *timer,
+int
+ssx_timer_create_nonpreemptible(SsxTimer*         timer,
                                 SsxTimerCallback callback,
-                                void             *arg)
+                                void*             arg)
 {
     return _ssx_timer_create(timer, callback, arg, 0);
 }

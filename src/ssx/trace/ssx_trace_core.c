@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -46,7 +46,8 @@ void ssx_trace_timer_callback(void* arg);
 #if (SSX_TRACE_SUPPORT && SSX_TIMER_SUPPORT)
 
 //Static initialization of the trace timer
-SsxTimer g_ssx_trace_timer = {
+SsxTimer g_ssx_trace_timer =
+{
     .deque = SSX_DEQUE_ELEMENT_INIT(),
     .timeout = 0,
     .callback = ssx_trace_timer_callback,
@@ -89,7 +90,7 @@ void ssx_trace_tiny(uint32_t i_parm)
     tb64 = ssx_ext_timebase_get();
     state.tbu32 = tb64 >> 32;
     footer.time_format.word32 = tb64 & 0x00000000ffffffffull;
-    
+
     footer.time_format.format = SSX_TRACE_FORMAT_TINY;
 
     //The following operations must be done atomically
@@ -124,8 +125,8 @@ void ssx_trace_timer_callback(void* arg)
 
     // restart the timer
     ssx_timer_schedule(&g_ssx_trace_timer,
-                      SSX_TRACE_TIMER_PERIOD,
-                      0);
+                       SSX_TRACE_TIMER_PERIOD,
+                       0);
 }
 
 // Use this function to synchronize the timebase between multiple Processors.
@@ -163,7 +164,7 @@ void ssx_trace_init(uint32_t    timebase_frequency_hz,
 }
 
 ////Needed for easy cache flush of trace buffer
-size_t g_ssx_trace_buf_size=sizeof(g_ssx_trace_buf);
+size_t g_ssx_trace_buf_size = sizeof(g_ssx_trace_buf);
 
 
 #endif

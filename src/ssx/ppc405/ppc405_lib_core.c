@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -29,11 +29,11 @@
 //-----------------------------------------------------------------------------
 
 /// \file ppc405_lib_core.c
-/// \brief PPC405-specific library procedures 
+/// \brief PPC405-specific library procedures
 ///
 /// The routines in this file are not part of SSX per se, but are included
 /// with SSX because they may be considered OS services.
-/// 
+///
 /// These are core routines that will present in all PPC405 SSX applications.
 
 #include "ssx.h"

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -41,8 +41,8 @@
 
 #include "ssx.h"
 
-/// Initialize a stack area.  
-/// 
+/// Initialize a stack area.
+///
 /// \param stack A pointer to the smallest legal address of the stack.  The
 /// stack address is modified as the stack is aligned and initialized.
 ///
@@ -53,17 +53,18 @@
 /// SSX makes no assumptions about size or alignment of the area provided as a
 /// stack, and carefully aligns and initializes the stack.  Regardless of how
 /// the stack grows, the \a stack parameter is considered to be the lowest
-/// legal address of the stack.  
+/// legal address of the stack.
 
 int
-__ssx_stack_init(SsxAddress *stack,
-                 size_t     *size)
+__ssx_stack_init(SsxAddress* stack,
+                 size_t*     size)
 {
     SsxAddress mask;
     size_t excess, i, count;
-    SSX_STACK_TYPE *p;
+    SSX_STACK_TYPE* p;
 
-    if (SSX_STACK_DIRECTION < 0) {
+    if (SSX_STACK_DIRECTION < 0)
+    {
 
         // Stacks grow down.  The initial stack pointer is set to just above
         // the last allocated stack address.  This is legal for pre-decrement
@@ -74,7 +75,8 @@ __ssx_stack_init(SsxAddress *stack,
 
         *stack += *size;
 
-        if (!SSX_STACK_PRE_DECREMENT) {
+        if (!SSX_STACK_PRE_DECREMENT)
+        {
             *stack -= sizeof(SSX_STACK_TYPE);
             *size -= sizeof(SSX_STACK_TYPE);
         }
@@ -85,13 +87,19 @@ __ssx_stack_init(SsxAddress *stack,
         *size -= excess;
         *size = (*size / sizeof(SSX_STACK_TYPE)) * sizeof(SSX_STACK_TYPE);
 
-        if (SSX_STACK_CHECK) {
-            p = (SSX_STACK_TYPE *)(*stack);
+        if (SSX_STACK_CHECK)
+        {
+            p = (SSX_STACK_TYPE*)(*stack);
             count = *size / sizeof(SSX_STACK_TYPE);
-            for (i = 0; i < count; i++) {
-                if (SSX_STACK_PRE_DECREMENT) {
+
+            for (i = 0; i < count; i++)
+            {
+                if (SSX_STACK_PRE_DECREMENT)
+                {
                     *(--p) = SSX_STACK_PATTERN;
-                } else {
+                }
+                else
+                {
                     *(p--) = SSX_STACK_PATTERN;
                 }
             }
@@ -99,7 +107,9 @@ __ssx_stack_init(SsxAddress *stack,
 
         __ssx_stack_create_initial_frame(stack, size);
 
-    } else {
+    }
+    else
+    {
 
         SSX_PANIC(SSX_UNIMPLEMENTED);
     }

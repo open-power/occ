@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -40,14 +40,14 @@
 
 // Internal API to set up a PBA BAR
 
-static int 
+static int
 pba_bar_set(int idx, uint64_t pb_base, uint8_t pb_scope)
 {
     int rc ;
     pba_barn_t bar ;
 
     bar.fields.cmd_scope = pb_scope ;
-    bar.fields.addr = pb_base >> PBA_LOG_SIZE_MIN ; 
+    bar.fields.addr = pb_base >> PBA_LOG_SIZE_MIN ;
 
     rc = putscom(PBA_BARN(idx), bar.value);
 
@@ -93,10 +93,10 @@ pba_barmask_set(int idx, uint64_t mask)
 ///
 /// \retval 0 Success
 ///
-/// \retval PBA_INVALID_ARGUMENT_BARSET One or more of the parameter 
+/// \retval PBA_INVALID_ARGUMENT_BARSET One or more of the parameter
 /// restrictions were violated.
 ///
-/// \retval PBA_SCOM_ERROR1 or PBA_SCOM_ERROR2 An attempt to write a PBA SCOM 
+/// \retval PBA_SCOM_ERROR1 or PBA_SCOM_ERROR2 An attempt to write a PBA SCOM
 /// register to set up the BARs produced a non-zero return code.
 
 int
@@ -106,21 +106,25 @@ pba_barset_initialize(int idx, uint64_t base, int log_size)
 
     mask = (0x1ull << log_size) - 1;
 
-    if (SSX_ERROR_CHECK_API) {
-        SSX_ERROR_IF((idx < 0) || 
+    if (SSX_ERROR_CHECK_API)
+    {
+        SSX_ERROR_IF((idx < 0) ||
                      (idx > 3) ||
-                     (log_size < PBA_LOG_SIZE_MIN) || 
+                     (log_size < PBA_LOG_SIZE_MIN) ||
                      (log_size > PBA_LOG_SIZE_MAX) ||
                      ((base & mask) != 0),
                      PBA_INVALID_ARGUMENT_BARSET);
     }
 
-    if (pba_bar_set(idx, base, PBA_POWERBUS_COMMAND_SCOPE_DEFAULT)) {
+    if (pba_bar_set(idx, base, PBA_POWERBUS_COMMAND_SCOPE_DEFAULT))
+    {
         SSX_ERROR(PBA_SCOM_ERROR1);
     }
-    if (pba_barmask_set(idx, mask)) {
+
+    if (pba_barmask_set(idx, mask))
+    {
         SSX_ERROR(PBA_SCOM_ERROR2);
-    }   
+    }
 
     return 0 ;
 }
@@ -159,7 +163,7 @@ _pba_slave_reset_poll(void* arg, int* done)
 }
 
 
-/// Reset a PBA slave with explicit timeout.  
+/// Reset a PBA slave with explicit timeout.
 ///
 /// \param id A PBA slave id in the range 0..3
 ///
@@ -175,7 +179,7 @@ _pba_slave_reset_poll(void* arg, int* done)
 ///
 /// \retval 0 Success
 ///
-/// \retval -PBA_INVALID_ARGUMENT_RESET The slave \a id parameter 
+/// \retval -PBA_INVALID_ARGUMENT_RESET The slave \a id parameter
 /// is invalid.
 ///
 /// \retval -PBA_SLVRST_TIMED_OUT1 The procedure timed out waiting for the PBA
@@ -187,13 +191,16 @@ _pba_slave_reset(int id, SsxInterval timeout, SsxInterval sleep)
 {
     int rc, closureRc;
 
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF((id < 0) || (id >= PBA_SLAVES),
                      PBA_INVALID_ARGUMENT_RESET);
     }
-    
+
     rc = polling(&closureRc, _pba_slave_reset_poll, (void*)id, timeout, sleep);
-    if (rc == POLLING_TIMEOUT) {
+
+    if (rc == POLLING_TIMEOUT)
+    {
         rc = -PBA_SLVRST_TIMED_OUT1;
     }
 
@@ -213,7 +220,7 @@ _pba_slave_reset(int id, SsxInterval timeout, SsxInterval sleep)
 ///
 /// \retval 0 Success
 ///
-/// \retval -SSX_INVALID_ARGUMENT_PBA_RESET The slave \a id parameter is 
+/// \retval -SSX_INVALID_ARGUMENT_PBA_RESET The slave \a id parameter is
 /// invalid.
 ///
 /// \retval -PBA_SLVRST_TIMED_OUT2 The procedure timed out waiting for the PBA
@@ -225,7 +232,9 @@ pba_slave_reset(int id)
     int rc;
 
     rc = _pba_slave_reset(id, PBA_SLAVE_RESET_TIMEOUT, 0);
-    if (rc) {
+
+    if (rc)
+    {
         SSX_ERROR(PBA_SLVRST_TIMED_OUT2);
     }
 
@@ -253,15 +262,16 @@ pba_slave_reset(int id)
 ///
 /// \retval 0 Success
 ///
-/// \retval -PBAX_INVALID_ARGUMENT_CONFIG One of the arguments is 
-/// not valid for some reason. 
+/// \retval -PBAX_INVALID_ARGUMENT_CONFIG One of the arguments is
+/// not valid for some reason.
 
 int
 pbax_configure(int master, int group, int chip, int group_mask)
 {
     pba_xcfg_t pxc;
 
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF((group < 0) ||
                      (group >= PBAX_GROUPS) ||
                      (chip < 0) ||
@@ -270,6 +280,7 @@ pbax_configure(int master, int group, int chip, int group_mask)
                      (group_mask > PBAX_GROUP_MASK_MAX),
                      PBAX_INVALID_ARGUMENT_CONFIG);
     }
+
     pxc.value = in64(PBA_XCFG);
     pxc.fields.reservation_en = (master != 0);
     pxc.fields.rcv_groupid = group;
@@ -304,17 +315,18 @@ pbax_configure(int master, int group, int chip, int group_mask)
 /// \retval 0 Success
 ///
 /// \retval -PBAX_INVALID_OBJECT The \a target parameter is NULL (0) or
-/// otherwise invalid. 
+/// otherwise invalid.
 ///
-/// \retval -PBAX_INVALID_ARGUMENT_TARGET One or more of the arguments 
+/// \retval -PBAX_INVALID_ARGUMENT_TARGET One or more of the arguments
 /// is invalid.
 
 int
 pbax_target_create(PbaxTarget* target,
-                   int type, int scope, int queue, 
+                   int type, int scope, int queue,
                    int group, int chip_or_group)
 {
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF(target == 0, PBAX_INVALID_OBJECT);
         SSX_ERROR_IF(((type != PBAX_UNICAST) && (type != PBAX_BROADCAST)) ||
                      ((scope != PBAX_GROUP) && (scope != PBAX_SYSTEM)) ||
@@ -376,7 +388,7 @@ pbax_target_create(PbaxTarget* target,
 ///
 /// \retval -PBAX_TIMEOUT The caller-specified timeout expired before the PBAX
 /// send machine became free, but the PBAX send machine does not show error
-/// status. 
+/// status.
 ///
 /// \retval -PBAX_SEND_ERROR The PBAXSNDSTAT.snd_error bit is asserted.  It
 /// is expected that this error will cause the PBA error interrupt to fire -
@@ -391,39 +403,52 @@ _pbax_send(PbaxTarget* target, uint64_t data, SsxInterval timeout)
 
     // The PBAX is always polled at least twice to guarantee that we always
     // poll once after a timeout - unless the caller explicitly requested a 0
-    // timeout. 
-    
-    start = 0;     
-    timed_out = 0; 
-    do {
+    // timeout.
+
+    start = 0;
+    timed_out = 0;
+
+    do
+    {
         pss.words.high_order = in32(PBA_XSNDSTAT);
-        if (pss.fields.snd_error) {
+
+        if (pss.fields.snd_error)
+        {
             rc = -PBAX_SEND_ERROR;
             break;
         }
-        if (!pss.fields.snd_in_progress) {
+
+        if (!pss.fields.snd_in_progress)
+        {
             rc = 0;
             break;
         }
-        if (start == 0) {
+
+        if (start == 0)
+        {
             start = ssx_timebase_get();
         }
-        if ((timeout == 0) || timed_out) {
+
+        if ((timeout == 0) || timed_out)
+        {
             rc = -PBAX_SEND_TIMEOUT;
             break;
         }
-        timed_out = 
+
+        timed_out =
             ((timeout != SSX_WAIT_FOREVER) &&
              ((ssx_timebase_get() - start) > timeout));
-    } while (1);
+    }
+    while (1);
 
     //  Configure the send engine and initiate the write, which is kicked off
     //  by writing the high-order word of the send data register.
 
-    if (!rc) {
+    if (!rc)
+    {
         out32(PBA_XSNDTX, target->target.words.high_order);
-        out32(PBA_XSNDDAT + 4, data & 0xffffffff);
-        out32(PBA_XSNDDAT, data >> 32);
+        out32(PBA_XSNDDAT + 4, data >> 32);
+        out32(PBA_XSNDDAT, data & 0xffffffff);
     }
 
     return rc;
@@ -459,21 +484,27 @@ pbax_send(PbaxTarget* target, uint64_t data)
     int rc;
 
     rc = _pbax_send(target, data, PBAX_SEND_DEFAULT_TIMEOUT);
-    if (rc) {
-        if (rc == -PBAX_SEND_TIMEOUT) {
+
+    if (rc)
+    {
+        if (rc == -PBAX_SEND_TIMEOUT)
+        {
             SSX_ERROR(PBAX_SEND_TIMEOUT);
-        } else {
+        }
+        else
+        {
             SSX_ERROR(PBAX_SEND_ERROR);
         }
     }
+
     return rc;
 }
 
 
-    
-    
-    
-                     
+
+
+
+
 
 
 

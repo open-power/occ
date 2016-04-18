@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -52,7 +52,7 @@
 
 #ifndef __ASSEMBLER__
 
-/// Enable an interrupt by clearing the mask bit.  
+/// Enable an interrupt by clearing the mask bit.
 
 UNLESS__PPC405_IRQ_CORE_C__(extern)
 inline void
@@ -99,9 +99,12 @@ UNLESS__PPC405_IRQ_CORE_C__(extern)
 inline void
 ssx_irq_status_set(SsxIrqId irq, int value)
 {
-    if (value) {
+    if (value)
+    {
         out32(OCCHW_OISR_OR(irq), OCCHW_IRQ_MASK32(irq));
-    } else {
+    }
+    else
+    {
         out32(OCCHW_OISR_CLR(irq), OCCHW_IRQ_MASK32(irq));
     }
 }
@@ -121,18 +124,18 @@ ssx_irq_debug_set(SsxIrqId irq, int value);
 ///
 /// \arg \c rirq A register that holds the \c irq parameter passed to
 ///              the handler from SSX interrupt dispatch.  This register is not
-///              modified. 
+///              modified.
 /// \arg \c rmask A scratch register - At the end of macro execution this
 ///               register contains the 32-bit mask form of the irq.
 ///
 /// \arg \c raddr A scratch register - At the end of macro execution this
-///               register holds the address of the interrupt 
+///               register holds the address of the interrupt
 ///               controller facility that implements the action.
 ///
 /// \arg \c imm An immediate (0/non-0) value for certain macros.
 ///
 /// Forms:
-/// 
+///
 /// \b _ssx_irq_enable \a rirq, \a rmask, \a raddr - Enable an \c irq. \n
 /// \b _ssx_irq_disable \a rirq, \a rmask, \a raddr - Disable an \c irq. \n
 /// \b _ssx_irq_status_clear \a rirq, \a rmask, \a raddr - Clear \c irq
@@ -153,10 +156,11 @@ ssx_irq_debug_set(SsxIrqId irq, int value);
 // register \c raddr is used as scratch for these computations.  Hopefully the
 // local labels 888 and 999 are unique enough.
 
-// Register names must be compared as strings - e.g., %r0 is not 
+// Register names must be compared as strings - e.g., %r0 is not
 // a symbol, it is converted to "0" by the assembler.
 
 #ifdef __ASSEMBLER__
+// *INDENT-OFF*
 
         .macro  .two_unique, ra, rb
         .ifnc   \ra, \rb
@@ -192,7 +196,7 @@ ssx_irq_debug_set(SsxIrqId irq, int value);
 
         .macro  _ssx_irq_enable, rirq:req, rmask:req, raddr:req
         .three_unique \rirq, \rmask, \raddr
-        
+
         andi.   \raddr, \rirq, 0x20
         clrlwi  \raddr, \rirq, 27
         _occhw_irq_clr_mask \raddr, \rmask
@@ -208,7 +212,7 @@ ssx_irq_debug_set(SsxIrqId irq, int value);
 
         .macro  _ssx_irq_disable, rirq:req, rmask:req, raddr:req
         .three_unique \rirq, \rmask, \raddr
-        
+
         andi.   \raddr, \rirq, 0x20
         clrlwi  \raddr, \rirq, 27
         _occhw_irq_or_mask \raddr, \rmask
@@ -224,7 +228,7 @@ ssx_irq_debug_set(SsxIrqId irq, int value);
 
         .macro  _ssx_irq_status_clear, rirq:req, rmask:req, raddr:req
         .three_unique \rirq, \rmask, \raddr
-        
+
         andi.   \raddr, \rirq, 0x20
         clrlwi  \raddr, \rirq, 27
         _occhw_irq_clr_mask \raddr, \rmask
@@ -243,7 +247,7 @@ ssx_irq_debug_set(SsxIrqId irq, int value);
 
         andi.   \raddr, \rirq, 0x20
         clrlwi  \raddr, \rirq, 27
-        
+
         .if     \imm
         _occhw_irq_or_mask \raddr, \rmask
         bne-    888f
@@ -253,7 +257,7 @@ ssx_irq_debug_set(SsxIrqId irq, int value);
         _stwi   \rmask, \raddr, OCB_OISR1_OR
 
         .else
-        
+
         _occhw_irq_clr_mask \raddr, \rmask
         bne-    888f
         _stwi   \rmask, \raddr, OCB_OISR0_CLR
@@ -266,6 +270,7 @@ ssx_irq_debug_set(SsxIrqId irq, int value);
         eieio
         .endm
 
+// *INDENT-ON*
 #endif  /* __ASSEMBLER__ */
 
 /// \endcond

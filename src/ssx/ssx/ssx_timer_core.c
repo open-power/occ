@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -89,7 +89,7 @@
 
 #include "ssx.h"
 
-// This routine is only used in this file, and will always be called in 
+// This routine is only used in this file, and will always be called in
 // critical section.
 
 static inline int
@@ -113,24 +113,30 @@ timer_active(SsxTimer* timer)
 //  timeout.  This will happen naturally when the current timeout expires.
 
 int
-__ssx_timer_cancel(SsxTimer *timer)
+__ssx_timer_cancel(SsxTimer* timer)
 {
     int rc;
     SsxDeque* timer_deque = (SsxDeque*)timer;
     SsxTimeQueue* tq = &__ssx_time_queue;
 
-    if (!timer_active(timer)) {
+    if (!timer_active(timer))
+    {
 
         rc = -SSX_TIMER_NOT_ACTIVE;
 
-    } else {
+    }
+    else
+    {
 
-        if (timer_deque == tq->cursor) {
+        if (timer_deque == tq->cursor)
+        {
             tq->cursor = tq->cursor->next;
         }
+
         ssx_deque_delete(timer_deque);
         rc = 0;
     }
+
     return rc;
 }
 
@@ -151,25 +157,29 @@ __ssx_timer_schedule(SsxTimer* timer)
 {
     SsxTimeQueue* tq = &__ssx_time_queue;
 
-    if (!timer_active(timer)) {
+    if (!timer_active(timer))
+    {
         ssx_deque_push_back((SsxDeque*)tq, (SsxDeque*)timer);
     }
 
-    if (timer->timeout < tq->next_timeout) {
+    if (timer->timeout < tq->next_timeout)
+    {
         tq->next_timeout = timer->timeout;
-        if (tq->cursor == 0) {
+
+        if (tq->cursor == 0)
+        {
             __ssx_schedule_hardware_timeout(tq->next_timeout);
         }
     }
 }
-        
+
 
 // The tickless timer mechanism has timed out.  Note that due to timer
 // deletions and other factors, there may not actually be a timer in the queue
 // that has timed out - but it doesn't matter (other than for efficiency).
 //
 // Noncritical interrupts are (must be) disabled at entry, and this invariant
-// is checked. This routine must not be entered reentrantly. 
+// is checked. This routine must not be entered reentrantly.
 //
 // First, time out any timers that have expired.  Timers in the queue are
 // unordered, so we have to check every one.  Since passing through the
@@ -190,7 +200,7 @@ __ssx_timer_schedule(SsxTimer* timer)
 // handlers may invoke time queue operations, we need to establish a pointer
 // to the next entry to be examined (tq->cursor) before enabling interupts.
 // It's possible that this pointer will be changed by other interrupt handlers
-// that cancel the timer pointed to by tq->cursor. 
+// that cancel the timer pointed to by tq->cursor.
 //
 // The main loop iterates on the SsxDeque form of the time queue, casting each
 // element back up to the SsxTimer as it is processed.
@@ -206,23 +216,28 @@ __ssx_timer_handler()
 
     tq = &__ssx_time_queue;
 
-    if (SSX_ERROR_CHECK_KERNEL) {
-        if (tq->cursor != 0) {
+    if (SSX_ERROR_CHECK_KERNEL)
+    {
+        if (tq->cursor != 0)
+        {
             SSX_PANIC(SSX_TIMER_HANDLER_INVARIANT);
         }
     }
 
-    while ((now = ssx_timebase_get()) >= tq->next_timeout) {
+    while ((now = ssx_timebase_get()) >= tq->next_timeout)
+    {
 
         tq->next_timeout = SSX_TIMEBASE_MAX;
         timer_deque = ((SsxDeque*)tq)->next;
 
-        while (timer_deque != (SsxDeque*)tq) {
-    
+        while (timer_deque != (SsxDeque*)tq)
+        {
+
             timer = (SsxTimer*)timer_deque;
             tq->cursor = timer_deque->next;
 
-            if (timer->timeout <= now) {
+            if (timer->timeout <= now)
+            {
 
                 // The timer timed out.  It is removed from the queue unless
                 // it is a peridic timer that needs to be rescheduled.  We do
@@ -235,26 +250,37 @@ __ssx_timer_handler()
                 // we go ahead and open up to interrupts after the callback if
                 // the callback itself was not preemptible.
 
-                if (timer->period == 0) {
+                if (timer->period == 0)
+                {
                     ssx_deque_delete(timer_deque);
-                } else {
+                }
+                else
+                {
                     timer->timeout += timer->period;
                     tq->next_timeout = MIN(timer->timeout, tq->next_timeout);
                 }
 
                 callback = timer->callback;
-                if (callback) {
-                    if (timer->options & SSX_TIMER_CALLBACK_PREEMPTIBLE) {
+
+                if (callback)
+                {
+                    if (timer->options & SSX_TIMER_CALLBACK_PREEMPTIBLE)
+                    {
                         ssx_interrupt_preemption_enable();
                         callback(timer->arg);
-                    } else {
+                    }
+                    else
+                    {
                         callback(timer->arg);
                         ssx_interrupt_preemption_enable();
                     }
-                }                        
+                }
+
                 ssx_interrupt_preemption_disable();
 
-            } else {
+            }
+            else
+            {
 
                 // This timer has not timed out.  Its timeout will simply
                 // participate in the computation of the next timeout.  For
@@ -269,7 +295,7 @@ __ssx_timer_handler()
             timer_deque = tq->cursor;
         }
     }
-    
+
     tq->cursor = 0;
 
     // Finally, reschedule the next timeout
@@ -293,7 +319,7 @@ __ssx_timer_handler()
 /// timer that is not rescheduled.
 ///
 /// Once created with ssx_timer_create() a timer can be \e scheduled, which
-/// queues the timer in the kernel time queue.  It is not an error to call 
+/// queues the timer in the kernel time queue.  It is not an error to call
 /// ssx_timer_schedule() on a timer that is already scheduled in the time
 /// queue - the timer is simply rescheduled with the new characteristics.
 ///
@@ -301,23 +327,24 @@ __ssx_timer_handler()
 ///
 /// \retval 0 Successful completion
 ///
-/// \retval -SSX_INVALID_TIMER_AT_SCHEDULE A a null (0) pointer was provided as 
+/// \retval -SSX_INVALID_TIMER_AT_SCHEDULE A a null (0) pointer was provided as
 /// the \a timer argument.
 ///
-/// \retval -SSX_ILLEGAL_CONTEXT_TIMER The call was made from a critical 
-/// interrupt context. 
+/// \retval -SSX_ILLEGAL_CONTEXT_TIMER The call was made from a critical
+/// interrupt context.
 
 int
-ssx_timer_schedule_absolute(SsxTimer    *timer,
+ssx_timer_schedule_absolute(SsxTimer*    timer,
                             SsxTimebase timeout,
                             SsxInterval period)
-                   
+
 {
     SsxMachineContext ctx;
 
     ssx_critical_section_enter(SSX_NONCRITICAL, &ctx);
 
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF(timer == 0, SSX_INVALID_TIMER_AT_SCHEDULE);
         SSX_ERROR_IF(__ssx_kernel_context_critical_interrupt(),
                      SSX_ILLEGAL_CONTEXT_TIMER);
@@ -354,15 +381,15 @@ ssx_timer_schedule_absolute(SsxTimer    *timer,
 ///
 /// \retval 0 Successful completion
 ///
-/// \retval -SSX_INVALID_TIMER_AT_SCHEDULE A a null (0) pointer was provided as 
+/// \retval -SSX_INVALID_TIMER_AT_SCHEDULE A a null (0) pointer was provided as
 /// the \a timer argument.
 ///
-/// \retval -SSX_ILLEGAL_CONTEXT_TIMER The call was made from a critical 
-/// interrupt context. 
+/// \retval -SSX_ILLEGAL_CONTEXT_TIMER The call was made from a critical
+/// interrupt context.
 
 int
-ssx_timer_schedule(SsxTimer    *timer, 
-                   SsxInterval interval, 
+ssx_timer_schedule(SsxTimer*    timer,
+                   SsxInterval interval,
                    SsxInterval period)
 {
     return ssx_timer_schedule_absolute(timer,
@@ -375,13 +402,13 @@ ssx_timer_schedule(SsxTimer    *timer,
 ///
 /// \param timer The SsxTimer to cancel.
 ///
-/// Timers can be canceled at any time.  It is never an error to call 
+/// Timers can be canceled at any time.  It is never an error to call
 /// ssx_timer_cancel() on an SsxTimer object after it is created. Memory used
 /// by an SsxTimer can be safely reused for another purpose after a successful
 /// call ofssx_timer_cancel().
 ///
 /// Return values other than SSX_OK (0) are not necessarily errors; see \ref
-/// ssx_errors 
+/// ssx_errors
 ///
 /// The following return codes are non-error codes:
 ///
@@ -395,17 +422,18 @@ ssx_timer_schedule(SsxTimer    *timer,
 ///
 /// \retval -SSX_INVALID_TIMER_AT_CANCEL The \a timer is a null (0) pointer.
 ///
-/// \retval -SSX_ILLEGAL_CONTEXT_TIMER The call was made from a critical 
-/// interrupt context. 
+/// \retval -SSX_ILLEGAL_CONTEXT_TIMER The call was made from a critical
+/// interrupt context.
 ///
 
 int
-ssx_timer_cancel(SsxTimer *timer)
+ssx_timer_cancel(SsxTimer* timer)
 {
     SsxMachineContext ctx;
     int rc = SSX_OK;
 
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF_CRITICAL_INTERRUPT_CONTEXT();
         SSX_ERROR_IF(timer == 0, SSX_INVALID_TIMER_AT_CANCEL);
     }
@@ -447,19 +475,23 @@ ssx_timer_cancel(SsxTimer *timer)
 /// \retval -SSX_INVALID_TIMER_AT_INFO The \a timer is a null (0) pointer.
 
 int
-ssx_timer_info_get(SsxTimer    *timer,
-                   SsxTimebase *timeout,
-                   int         *active)
-                   
+ssx_timer_info_get(SsxTimer*    timer,
+                   SsxTimebase* timeout,
+                   int*         active)
+
 {
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF(timer == 0, SSX_INVALID_TIMER_AT_INFO);
     }
 
-    if (timeout) {
+    if (timeout)
+    {
         *timeout = timer->timeout;
     }
-    if (active) {
+
+    if (active)
+    {
         *active = timer_active(timer);
     }
 

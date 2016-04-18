@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -35,12 +35,12 @@
 /// \brief The OCCHW environment for SSX.
 
 // This is a 'circular' reference in SSX, but included here to simplify PGAS
-// programming. 
+// programming.
 
 #ifndef HWMACRO_OCC
-#define HWMACRO_OCC
-#include "ppc405.h"
-#endif  
+    #define HWMACRO_OCC
+    #include "ppc405.h"
+#endif
 
 // Can't include this here due to ordering issues.  It's included in
 // ppc405_irq.h.
@@ -83,7 +83,7 @@
 /// The final 128MB of memory (the SRAM) is mapped both I- and
 /// D-cacheable. The other 7 high-memory regions aliased by the SRAM remain
 /// uncacheable, however SRAM alias region 29 is marked write-through.
-/// 
+///
 /// Low memory addresses (direct-map Mainstore via PBA) are I-cacheable
 /// but not D-cacheable to improve predicatability of execution times.
 /// However, we should not execute from mainstore after initialization.
@@ -95,27 +95,27 @@
 /// @{
 
 #ifndef PPC405_ICCR_INITIAL
-#define PPC405_ICCR_INITIAL 0xff000001
+    #define PPC405_ICCR_INITIAL 0xff000001
 #endif
 
 #ifndef PPC405_DCCR_INITIAL
-#define PPC405_DCCR_INITIAL 0x00000001
+    #define PPC405_DCCR_INITIAL 0x00000001
 #endif
 
 #ifndef PPC405_DCWR_INITIAL
-#define PPC405_DCWR_INITIAL 0x00000004
+    #define PPC405_DCWR_INITIAL 0x00000004
 #endif
 
 #ifndef PPC405_SGR_INITIAL
-#define PPC405_SGR_INITIAL  0x00ff0000
+    #define PPC405_SGR_INITIAL  0x00ff0000
 #endif
 
 #ifndef PPC405_SU0R_INITIAL
-#define PPC405_SU0R_INITIAL 0x00000000
+    #define PPC405_SU0R_INITIAL 0x00000000
 #endif
 
 #ifndef PPC405_SLER_INITIAL
-#define PPC405_SLER_INITIAL 0x00000000
+    #define PPC405_SLER_INITIAL 0x00000000
 #endif
 
 /// @}
@@ -157,7 +157,7 @@
 
 #ifndef __ASSEMBLER__
 
-/// \page noncacheable_support Non-cacheable modes for OCCHW 
+/// \page noncacheable_support Non-cacheable modes for OCCHW
 ///
 /// In order to support evaluation of cache management strategies on
 /// performance, DMA buffers read/written by DMA devices can be declared as
@@ -181,7 +181,7 @@
 
 
 #ifndef NONCACHEABLE_SUPPORT
-#define NONCACHEABLE_SUPPORT 0
+    #define NONCACHEABLE_SUPPORT 0
 #endif
 
 
@@ -263,11 +263,11 @@
 /// Flush/invalidate a region of memory
 
 #if NONCACHEABLE_SUPPORT
-#define FLUSH(p, n) do {} while (0)
-#define INVALIDATE(p, n) do {} while (0)
+    #define FLUSH(p, n) do {} while (0)
+    #define INVALIDATE(p, n) do {} while (0)
 #else
-#define FLUSH(p, n) do {dcache_flush((p), (n));} while (0)
-#define INVALIDATE(p, n) do {dcache_invalidate((p), (n));} while (0)
+    #define FLUSH(p, n) do {dcache_flush((p), (n));} while (0)
+    #define INVALIDATE(p, n) do {dcache_invalidate((p), (n));} while (0)
 #endif  /* NONCACHEABLE_SUPPORT */
 
 
@@ -287,7 +287,8 @@
 /// This type definition is considered a required definition for a port of
 /// SSX.
 
-typedef struct {
+typedef struct
+{
     char bogus[9];
 } SsxLinkerSymbol;
 
@@ -341,7 +342,7 @@ extern Ppc405MmuMap G_applet1_mmu_map;
 //   31     | 0xF8000000 - 0xffffffff  (overlaps SRAM)
 
 #define USE_GENERIC_DCACHE_FLUSH_ALL 0
-#define OCCHW_FLUSH_ZERO_ADDRESS       0x20000000
-#define OCCHW_FLUSH_ZERO_DCCR          0x08000000
+#define OCCHW_FLUSH_ZERO_ADDRESS       0x40000000
+#define OCCHW_FLUSH_ZERO_DCCR          0x00800000
 
 #endif  /* __OCCHW_H__ */

@@ -27,6 +27,7 @@
 #define _DCOM_C
 
 //#include <pgp_pmc.h>
+#include "ssx.h"
 #include "occhw_pba.h"
 #include <rtls.h>
 #include <apss.h>

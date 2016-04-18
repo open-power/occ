@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -43,7 +43,7 @@
 // at entry.
 
 static inline int
-__ssx_thread_is_active(SsxThread *thread)
+__ssx_thread_is_active(SsxThread* thread)
 {
     return ((thread->state != SSX_THREAD_STATE_COMPLETED) &&
             (thread->state != SSX_THREAD_STATE_DELETED));
@@ -51,10 +51,10 @@ __ssx_thread_is_active(SsxThread *thread)
 
 
 // This routine is only used locally.  Noncritical interrupts must be disabled
-// at entry.  
+// at entry.
 
 static inline int
-__ssx_thread_is_mapped(SsxThread *thread)
+__ssx_thread_is_mapped(SsxThread* thread)
 {
     return (thread->state == SSX_THREAD_STATE_MAPPED);
 }
@@ -64,7 +64,7 @@ __ssx_thread_is_mapped(SsxThread *thread)
 // at entry.  This is only called on mapped threads.
 
 static inline int
-__ssx_thread_is_runnable(SsxThread *thread)
+__ssx_thread_is_runnable(SsxThread* thread)
 {
     return __ssx_thread_queue_member(&__ssx_run_queue, thread->priority);
 }
@@ -98,18 +98,24 @@ __ssx_thread_map(SsxThread* thread)
     priority = thread->priority;
     __ssx_priority_map[priority] = thread;
 
-    if (thread->state == SSX_THREAD_STATE_SUSPENDED_RUNNABLE) {
+    if (thread->state == SSX_THREAD_STATE_SUSPENDED_RUNNABLE)
+    {
 
         __ssx_thread_queue_insert(&__ssx_run_queue, priority);
 
-    } else if (thread->flags & SSX_THREAD_FLAG_SEMAPHORE_PEND) {
+    }
+    else if (thread->flags & SSX_THREAD_FLAG_SEMAPHORE_PEND)
+    {
 
-        if (thread->semaphore->count) {
+        if (thread->semaphore->count)
+        {
 
             thread->semaphore->count--;
             __ssx_thread_queue_insert(&__ssx_run_queue, priority);
 
-        } else {
+        }
+        else
+        {
 
             __ssx_thread_queue_insert(&(thread->semaphore->pending_threads),
                                       priority);
@@ -118,18 +124,24 @@ __ssx_thread_map(SsxThread* thread)
 
     thread->state = SSX_THREAD_STATE_MAPPED;
 
-    if (SSX_KERNEL_TRACE_ENABLE) {
-        if (__ssx_thread_is_runnable(thread)) {
+    if (SSX_KERNEL_TRACE_ENABLE)
+    {
+        if (__ssx_thread_is_runnable(thread))
+        {
             SSX_KERN_TRACE("THREAD_MAPPED_RUNNABLE(%d)", priority);
-        } else if (thread->flags & SSX_THREAD_FLAG_SEMAPHORE_PEND) {
+        }
+        else if (thread->flags & SSX_THREAD_FLAG_SEMAPHORE_PEND)
+        {
             SSX_KERN_TRACE("THREAD_MAPPED_SEMAPHORE_PEND(%d)", priority);
-        } else {
+        }
+        else
+        {
             SSX_KERN_TRACE("THREAD_MAPPED_SLEEPING(%d)", priority);
         }
     }
-}            
+}
 
-    
+
 // This routine is only used locally.  Noncritical interrupts must be disabled
 // at entry.  This routine is only ever called on threads in the
 // SSX_THREAD_STATE_MAPPED. Unmapping a thread removes it from the priority
@@ -138,23 +150,28 @@ __ssx_thread_map(SsxThread* thread)
 // __ssx_thread_unmap().
 
 void
-__ssx_thread_unmap(SsxThread *thread)
+__ssx_thread_unmap(SsxThread* thread)
 {
     SsxThreadPriority priority;
 
     priority = thread->priority;
     __ssx_priority_map[priority] = 0;
 
-    if (__ssx_thread_is_runnable(thread)) {
+    if (__ssx_thread_is_runnable(thread))
+    {
 
         thread->state = SSX_THREAD_STATE_SUSPENDED_RUNNABLE;
         __ssx_thread_queue_delete(&__ssx_run_queue, priority);
 
-    } else {
+    }
+    else
+    {
 
         thread->state = SSX_THREAD_STATE_SUSPENDED_BLOCKED;
-        if (thread->flags & SSX_THREAD_FLAG_SEMAPHORE_PEND) {
-            __ssx_thread_queue_delete(&(thread->semaphore->pending_threads), 
+
+        if (thread->flags & SSX_THREAD_FLAG_SEMAPHORE_PEND)
+        {
+            __ssx_thread_queue_delete(&(thread->semaphore->pending_threads),
                                       priority);
         }
     }
@@ -182,16 +199,24 @@ __ssx_schedule(void)
     __ssx_next_thread = __ssx_priority_map[__ssx_next_priority];
 
     if ((__ssx_next_thread == 0) ||
-        (__ssx_next_thread != __ssx_current_thread)) {
+        (__ssx_next_thread != __ssx_current_thread))
+    {
 
-        if (__ssx_kernel_mode_thread()) {
-            if (__ssx_kernel_context_thread()) {
-                if (__ssx_current_thread != 0) {
+        if (__ssx_kernel_mode_thread())
+        {
+            if (__ssx_kernel_context_thread())
+            {
+                if (__ssx_current_thread != 0)
+                {
                     __ssx_switch();
-                } else {
+                }
+                else
+                {
                     __ssx_next_thread_resume();
                 }
-            } else {
+            }
+            else
+            {
                 __ssx_delayed_switch = 1;
             }
         }
@@ -199,7 +224,7 @@ __ssx_schedule(void)
 }
 
 
-// This routine is only used locally. 
+// This routine is only used locally.
 //
 // Completion and deletion are pretty much the same thing.  Completion is
 // simply self-deletion of the current thread (which is mapped by
@@ -218,7 +243,7 @@ __ssx_schedule(void)
 // tag only encodes the priority, which may be in use by a mapped thread.
 
 void
-__ssx_thread_delete(SsxThread *thread, SsxThreadState final_state)
+__ssx_thread_delete(SsxThread* thread, SsxThreadState final_state)
 {
     SsxMachineContext ctx;
     int mapped;
@@ -227,26 +252,34 @@ __ssx_thread_delete(SsxThread *thread, SsxThreadState final_state)
 
     mapped = __ssx_thread_is_mapped(thread);
 
-    if (mapped) {
+    if (mapped)
+    {
         __ssx_thread_unmap(thread);
     }
 
     __ssx_timer_cancel(&(thread->timer));
     thread->state = final_state;
 
-    if (mapped) {
+    if (mapped)
+    {
 
-        if (SSX_KERNEL_TRACE_ENABLE) {
-            if (final_state == SSX_THREAD_STATE_DELETED) {
+        if (SSX_KERNEL_TRACE_ENABLE)
+        {
+            if (final_state == SSX_THREAD_STATE_DELETED)
+            {
                 SSX_KERN_TRACE("THREAD_DELETED(%d)", thread->priority);
-            } else {
+            }
+            else
+            {
                 SSX_KERN_TRACE("THREAD_COMPLETED(%d)", thread->priority);
             }
-        }                
-    
-        if (thread == __ssx_current_thread) {
+        }
+
+        if (thread == __ssx_current_thread)
+        {
             __ssx_current_thread = 0;
         }
+
         __ssx_schedule();
     }
 
@@ -274,33 +307,36 @@ __ssx_thread_delete(SsxThread *thread, SsxThreadState final_state)
 // tag only encodes the priority, which may be in use by a mapped thread.
 
 void
-__ssx_thread_timeout(void *arg)
+__ssx_thread_timeout(void* arg)
 {
-    SsxThread *thread = (SsxThread *)arg;
+    SsxThread* thread = (SsxThread*)arg;
 
-    switch (thread->state) {
+    switch (thread->state)
+    {
 
-    case SSX_THREAD_STATE_MAPPED:
-        if (!__ssx_thread_is_runnable(thread)) {
+        case SSX_THREAD_STATE_MAPPED:
+            if (!__ssx_thread_is_runnable(thread))
+            {
+                thread->flags |= SSX_THREAD_FLAG_TIMED_OUT;
+                __ssx_thread_queue_insert(&__ssx_run_queue, thread->priority);
+                __ssx_schedule();
+            }
+
+            break;
+
+        case SSX_THREAD_STATE_SUSPENDED_RUNNABLE:
+            break;
+
+        case SSX_THREAD_STATE_SUSPENDED_BLOCKED:
             thread->flags |= SSX_THREAD_FLAG_TIMED_OUT;
-            __ssx_thread_queue_insert(&__ssx_run_queue, thread->priority);
-            __ssx_schedule();
-        }
-        break;
+            thread->state = SSX_THREAD_STATE_SUSPENDED_RUNNABLE;
+            break;
 
-    case SSX_THREAD_STATE_SUSPENDED_RUNNABLE:
-        break;
-
-    case SSX_THREAD_STATE_SUSPENDED_BLOCKED:
-        thread->flags |= SSX_THREAD_FLAG_TIMED_OUT;
-        thread->state = SSX_THREAD_STATE_SUSPENDED_RUNNABLE;
-        break;
-
-    default:
-        SSX_PANIC(SSX_THREAD_TIMEOUT_STATE);
+        default:
+            SSX_PANIC(SSX_THREAD_TIMEOUT_STATE);
     }
 }
-        
+
 
 // This routine serves as a container for the SSX_START_THREADS_HOOK and
 // actually starts threads.  The helper routine __ssx_call_ssx_start_threads()
@@ -328,7 +364,7 @@ __ssx_start_threads(void)
 
     SSX_PANIC(SSX_START_THREADS_RETURNED);
 }
-    
+
 
 /// Start SSX threads
 ///
@@ -349,7 +385,8 @@ __ssx_start_threads(void)
 int
 ssx_start_threads(void)
 {
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF(__ssx_kernel_mode_thread(), SSX_ILLEGAL_CONTEXT_THREAD);
     }
 
@@ -370,12 +407,12 @@ ssx_start_threads(void)
 /// is currently mapped at the priority assigned to the thread.  SSX provides
 /// the ssx_thread_at_priority() API which allows an application-level
 /// scheduler to correctly manage multiple threads running at the same
-/// priority.  
+/// priority.
 ///
 /// If the thread was sleeping while suspended it remains asleep. However if
 /// the sleep timer timed out while the thread was suspended it will be
 /// resumed runnable.
-/// 
+///
 /// If the thread was blocked on a semaphore when it was suspended, then when
 /// the thread is resumed it will attempt to reacquire the semaphore.
 /// However, if the thread was blocked on a semaphore with timeout while
@@ -385,48 +422,53 @@ ssx_start_threads(void)
 /// It is not an error to call ssx_thread_resume() on a mapped
 /// thread.  However it is an error to call ssx_thread_resume() on a completed
 /// or deleted thread.
-/// 
+///
 /// Return values other than SSX_OK (0) are errors; see \ref ssx_errors
 ///
 /// \retval 0 Successful completion, including calls on a \a thread that is
 /// already mapped.
 ///
-/// \retval -SSX_ILLEGAL_CONTEXT_THREAD The API was called 
-/// from a critical interrupt context. 
+/// \retval -SSX_ILLEGAL_CONTEXT_THREAD The API was called
+/// from a critical interrupt context.
 ///
 /// \retval -SSX_INVALID_THREAD_AT_RESUME1 The \a thread is a null (0) pointer.
-/// 
-/// \retval -SSX_INVALID_THREAD_AT_RESUME2 The \a thread is not active, 
+///
+/// \retval -SSX_INVALID_THREAD_AT_RESUME2 The \a thread is not active,
 /// i.e. has completed or been deleted.
-/// 
-/// \retval -SSX_PRIORITY_IN_USE_AT_RESUME Another thread is already mapped at 
+///
+/// \retval -SSX_PRIORITY_IN_USE_AT_RESUME Another thread is already mapped at
 /// the priority of the \a thread.
 
 int
-ssx_thread_resume(SsxThread *thread)
+ssx_thread_resume(SsxThread* thread)
 {
     SsxMachineContext ctx;
 
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF_CRITICAL_INTERRUPT_CONTEXT();
         SSX_ERROR_IF(thread == 0, SSX_INVALID_THREAD_AT_RESUME1);
     }
 
     ssx_critical_section_enter(SSX_NONCRITICAL, &ctx);
 
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF_CRITICAL(!__ssx_thread_is_active(thread),
                               SSX_INVALID_THREAD_AT_RESUME2,
                               &ctx);
     }
 
-    if (!__ssx_thread_is_mapped(thread)) {
+    if (!__ssx_thread_is_mapped(thread))
+    {
 
-        if (SSX_ERROR_CHECK_API) {
+        if (SSX_ERROR_CHECK_API)
+        {
             SSX_ERROR_IF_CRITICAL(__ssx_priority_map[thread->priority] != 0,
                                   SSX_PRIORITY_IN_USE_AT_RESUME,
                                   &ctx);
         }
+
         __ssx_thread_map(thread);
         __ssx_schedule();
     }
@@ -447,7 +489,7 @@ ssx_thread_resume(SsxThread *thread)
 ///
 /// If a sleeping thread is suspended, the sleep timer remains active but a
 /// timeout of the timer simply marks the thread as runnable, but does not
-/// resume the thread.  
+/// resume the thread.
 ///
 /// If a thread blocked on a semaphore is suspended, the thread no longer
 /// participates in the semaphore mutual exclusion. If the thread is later
@@ -465,33 +507,36 @@ ssx_thread_resume(SsxThread *thread)
 /// \retval 0 Successful completion, including calls on a \a thread that is
 /// already suspended.
 ///
-/// \retval -SSX_ILLEGAL_CONTEXT_THREAD The API was called from a critical 
-/// interrupt context. 
+/// \retval -SSX_ILLEGAL_CONTEXT_THREAD The API was called from a critical
+/// interrupt context.
 ///
 /// \retval -SSX_INVALID_THREAD_AT_SUSPEND1 The \a thread is a null (0) pointer
-/// 
-/// \retval -SSX_INVALID_THREAD_AT_SUSPEND2 The \a thread is not active, 
+///
+/// \retval -SSX_INVALID_THREAD_AT_SUSPEND2 The \a thread is not active,
 /// i.e. has completed or been deleted.
 
 int
-ssx_thread_suspend(SsxThread *thread)
+ssx_thread_suspend(SsxThread* thread)
 {
     SsxMachineContext ctx;
 
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF_CRITICAL_INTERRUPT_CONTEXT();
         SSX_ERROR_IF((thread == 0), SSX_INVALID_THREAD_AT_SUSPEND1);
     }
 
     ssx_critical_section_enter(SSX_NONCRITICAL, &ctx);
 
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF_CRITICAL(!__ssx_thread_is_active(thread),
                               SSX_INVALID_THREAD_AT_SUSPEND2,
                               &ctx);
     }
 
-    if (__ssx_thread_is_mapped(thread)) {
+    if (__ssx_thread_is_mapped(thread))
+    {
 
         SSX_KERN_TRACE("THREAD_SUSPENDED(%d)", thread->priority);
         __ssx_thread_unmap(thread);
@@ -502,7 +547,7 @@ ssx_thread_suspend(SsxThread *thread)
 
     return SSX_OK;
 }
-    
+
 
 /// Delete a thread
 ///
@@ -521,17 +566,18 @@ ssx_thread_suspend(SsxThread *thread)
 /// thread deletes itself this API does not return at all.
 ///
 /// \retval 0 Successful completion, including calls on a \a thread that has
-/// completed or had already been deleted. 
+/// completed or had already been deleted.
 ///
-/// \retval -SSX_ILLEGAL_CONTEXT_THREAD The API was called from a critical 
-/// interrupt context. 
+/// \retval -SSX_ILLEGAL_CONTEXT_THREAD The API was called from a critical
+/// interrupt context.
 ///
 /// \retval -SSX_INVALID_THREAD_AT_DELETE The \a thread is a null (0) pointer.
 
 int
-ssx_thread_delete(SsxThread *thread)
+ssx_thread_delete(SsxThread* thread)
 {
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF_CRITICAL_INTERRUPT_CONTEXT();
         SSX_ERROR_IF(thread == 0, SSX_INVALID_THREAD_AT_DELETE);
     }
@@ -561,7 +607,7 @@ ssx_thread_delete(SsxThread *thread)
 /// a successful completion this API does not return to the caller, which is
 /// always the thread context being completed.
 ///
-/// \retval -SSX_ILLEGAL_CONTEXT_THREAD The API was not called from a thread 
+/// \retval -SSX_ILLEGAL_CONTEXT_THREAD The API was not called from a thread
 /// context.
 
 // Note: Casting __ssx_current_thread removes the 'volatile' attribute.
@@ -569,11 +615,12 @@ ssx_thread_delete(SsxThread *thread)
 int
 ssx_complete(void)
 {
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_UNLESS_THREAD_CONTEXT();
     }
 
-    __ssx_thread_delete((SsxThread *)__ssx_current_thread, 
+    __ssx_thread_delete((SsxThread*)__ssx_current_thread,
                         SSX_THREAD_STATE_COMPLETED);
 
     return SSX_OK;
@@ -604,7 +651,7 @@ ssx_complete(void)
 ///
 /// \retval 0 Successful completion.
 ///
-/// \retval -SSX_ILLEGAL_CONTEXT_THREAD The API was not called from a thread 
+/// \retval -SSX_ILLEGAL_CONTEXT_THREAD The API was not called from a thread
 /// context.
 
 // Note: Casting __ssx_current_thread removes the 'volatile' attribute.
@@ -613,15 +660,16 @@ int
 ssx_sleep_absolute(SsxTimebase time)
 {
     SsxMachineContext ctx;
-    SsxThread *current;
+    SsxThread* current;
 
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_UNLESS_THREAD_CONTEXT();
     }
 
     ssx_critical_section_enter(SSX_NONCRITICAL, &ctx);
 
-    current = (SsxThread *)__ssx_current_thread;
+    current = (SsxThread*)__ssx_current_thread;
 
     current->timer.timeout = time;
     __ssx_timer_schedule(&(current->timer));
@@ -667,11 +715,11 @@ ssx_sleep_absolute(SsxTimebase time)
 ///
 /// \retval 0 Successful completion.
 ///
-/// \retval -SSX_ILLEGAL_CONTEXT_THREAD The API was not called from a thread 
+/// \retval -SSX_ILLEGAL_CONTEXT_THREAD The API was not called from a thread
 /// context.
 
 int
-ssx_sleep(SsxInterval interval) 
+ssx_sleep(SsxInterval interval)
 {
     return ssx_sleep_absolute(ssx_timebase_get() + interval);
 }
@@ -707,26 +755,33 @@ ssx_sleep(SsxInterval interval)
 /// \retval -SSX_INVALID_THREAD_AT_INFO The \a thread is a null (0) pointer.
 
 int
-ssx_thread_info_get(SsxThread         *thread,
-                    SsxThreadState    *state,
-                    SsxThreadPriority *priority,
-                    int               *runnable)
+ssx_thread_info_get(SsxThread*         thread,
+                    SsxThreadState*    state,
+                    SsxThreadPriority* priority,
+                    int*               runnable)
 {
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF(thread == 0, SSX_INVALID_THREAD_AT_INFO);
     }
 
-    if (state) {
+    if (state)
+    {
         *state = thread->state;
     }
-    if (priority) {
+
+    if (priority)
+    {
         *priority = thread->priority;
     }
-    if (runnable) {
+
+    if (runnable)
+    {
         *runnable = ((thread->state == SSX_THREAD_STATE_MAPPED) &&
                      __ssx_thread_queue_member(&__ssx_run_queue,
                                                thread->priority));
     }
+
     return SSX_OK;
 }
 
@@ -755,10 +810,10 @@ ssx_thread_info_get(SsxThread         *thread,
 /// \retval 0 Successful completion, including the redundant case of
 /// attempting to change the priority of the thread to its current priority.
 ///
-/// \retval -SSX_ILLEGAL_CONTEXT_THREAD the API was called from a critical 
-/// interrupt context. 
+/// \retval -SSX_ILLEGAL_CONTEXT_THREAD the API was called from a critical
+/// interrupt context.
 ///
-/// \retval -SSX_INVALID_THREAD_AT_CHANGE The \a thread is null (0) or 
+/// \retval -SSX_INVALID_THREAD_AT_CHANGE The \a thread is null (0) or
 /// otherwise invalid.
 ///
 /// \retval -SSX_INVALID_ARGUMENT_THREAD_CHANGE The \a new_priority is invalid.
@@ -766,34 +821,40 @@ ssx_thread_info_get(SsxThread         *thread,
 /// \retval -SSX_PRIORITY_IN_USE_AT_CHANGE The \a thread is mapped and the \a
 /// new_priority is currently in use by another thread.
 
-int 
-ssx_thread_priority_change(SsxThread         *thread,
+int
+ssx_thread_priority_change(SsxThread*         thread,
                            SsxThreadPriority new_priority,
-                           SsxThreadPriority *old_priority)
+                           SsxThreadPriority* old_priority)
 {
     SsxMachineContext ctx;
     SsxThreadPriority priority;
 
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF_CRITICAL_INTERRUPT_CONTEXT();
         SSX_ERROR_IF(thread == 0, SSX_INVALID_THREAD_AT_CHANGE);
-        SSX_ERROR_IF(new_priority > SSX_THREADS, 
-        SSX_INVALID_ARGUMENT_THREAD_CHANGE);
+        SSX_ERROR_IF(new_priority > SSX_THREADS,
+                     SSX_INVALID_ARGUMENT_THREAD_CHANGE);
     }
 
     ssx_critical_section_enter(SSX_NONCRITICAL, &ctx);
 
     priority = thread->priority;
 
-    if (priority != new_priority) {
+    if (priority != new_priority)
+    {
 
-        if (!__ssx_thread_is_mapped(thread)) {
+        if (!__ssx_thread_is_mapped(thread))
+        {
 
             thread->priority = new_priority;
 
-        } else {
+        }
+        else
+        {
 
-            if (SSX_ERROR_CHECK_API) {
+            if (SSX_ERROR_CHECK_API)
+            {
                 SSX_ERROR_IF_CRITICAL(__ssx_priority_map[new_priority] != 0,
                                       SSX_PRIORITY_IN_USE_AT_CHANGE,
                                       &ctx);
@@ -806,7 +867,8 @@ ssx_thread_priority_change(SsxThread         *thread,
         }
     }
 
-    if (old_priority) {
+    if (old_priority)
+    {
         *old_priority = priority;
     }
 
@@ -834,14 +896,15 @@ ssx_thread_priority_change(SsxThread         *thread,
 ///
 /// \retval 0 Successful completion.
 ///
-/// \retval -SSX_INVALID_ARGUMENT_THREAD_PRIORITY The \a priority is invalid 
-/// or the \a thread parameter is null (0). 
+/// \retval -SSX_INVALID_ARGUMENT_THREAD_PRIORITY The \a priority is invalid
+/// or the \a thread parameter is null (0).
 
 int
 ssx_thread_at_priority(SsxThreadPriority priority,
-                       SsxThread         **thread)
+                       SsxThread**         thread)
 {
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF((priority > SSX_THREADS) || (thread == 0),
                      SSX_INVALID_ARGUMENT_THREAD_PRIORITY);
     }
@@ -876,7 +939,7 @@ ssx_thread_at_priority(SsxThreadPriority priority,
 /// mapped after the call of ssx_thread_priority_swap() if and only if it was
 /// mapped prior to the call.  If the new priority of a mapped thread is
 /// currently in use (by a thread other than the swap partner), then the
-/// SSX_PRIORITY_IN_USE_AT_SWAP error is signalled and the swap does not take 
+/// SSX_PRIORITY_IN_USE_AT_SWAP error is signalled and the swap does not take
 /// place. This could only happen if the swap partner is not currently mapped.
 ///
 /// It is legal for a thread to swap its own priority with another thread. The
@@ -889,13 +952,13 @@ ssx_thread_at_priority(SsxThreadPriority priority,
 /// actually change priorities, or the cases that assign new priorities to
 /// suspended, completed or deleted threads.
 ///
-/// \retval -SSX_ILLEGAL_CONTEXT_THREAD the API was called from a critical 
-/// interrupt context. 
+/// \retval -SSX_ILLEGAL_CONTEXT_THREAD the API was called from a critical
+/// interrupt context.
 ///
-/// \retval -SSX_INVALID_THREAD_AT_SWAP1 One or both of \a thread_a and 
-/// \a thread_b is null (0) or otherwise invalid, 
+/// \retval -SSX_INVALID_THREAD_AT_SWAP1 One or both of \a thread_a and
+/// \a thread_b is null (0) or otherwise invalid,
 ///
-/// \retval -SSX_INVALID_THREAD_AT_SWAP2 the priorities of One or both of 
+/// \retval -SSX_INVALID_THREAD_AT_SWAP2 the priorities of One or both of
 /// \a thread_a and \a thread_b are invalid.
 ///
 /// \retval -SSX_INVALID_ARGUMENT One or both of the priorities
@@ -912,50 +975,62 @@ ssx_thread_priority_swap(SsxThread* thread_a, SsxThread* thread_b)
     SsxThreadPriority priority_a, priority_b;
     int mapped_a, mapped_b;
 
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF_CRITICAL_INTERRUPT_CONTEXT();
-        SSX_ERROR_IF((thread_a == 0) ||  (thread_b == 0), 
-                       SSX_INVALID_THREAD_AT_SWAP1);
+        SSX_ERROR_IF((thread_a == 0) ||  (thread_b == 0),
+                     SSX_INVALID_THREAD_AT_SWAP1);
     }
 
     ssx_critical_section_enter(SSX_NONCRITICAL, &ctx);
 
-    if (thread_a != thread_b) {
+    if (thread_a != thread_b)
+    {
 
         mapped_a = __ssx_thread_is_mapped(thread_a);
         mapped_b = __ssx_thread_is_mapped(thread_b);
         priority_a = thread_a->priority;
         priority_b = thread_b->priority;
 
-        if (SSX_ERROR_CHECK_API) {
+        if (SSX_ERROR_CHECK_API)
+        {
             int priority_in_use;
             SSX_ERROR_IF_CRITICAL((priority_a > SSX_THREADS) ||
                                   (priority_b > SSX_THREADS),
                                   SSX_INVALID_THREAD_AT_SWAP2,
                                   &ctx);
-            priority_in_use = 
+            priority_in_use =
                 (mapped_a && !mapped_b &&
                  (__ssx_thread_at_priority(priority_b) != 0)) ||
-                (!mapped_a && mapped_b && 
+                (!mapped_a && mapped_b &&
                  (__ssx_thread_at_priority(priority_a) != 0));
-            SSX_ERROR_IF_CRITICAL(priority_in_use, 
-                                  SSX_PRIORITY_IN_USE_AT_SWAP, &ctx); 
+            SSX_ERROR_IF_CRITICAL(priority_in_use,
+                                  SSX_PRIORITY_IN_USE_AT_SWAP, &ctx);
         }
 
-        if (mapped_a) {
+        if (mapped_a)
+        {
             __ssx_thread_unmap(thread_a);
         }
-        if (mapped_b) {
+
+        if (mapped_b)
+        {
             __ssx_thread_unmap(thread_b);
-        }            
+        }
+
         thread_a->priority = priority_b;
         thread_b->priority = priority_a;
-        if (mapped_a) {
+
+        if (mapped_a)
+        {
             __ssx_thread_map(thread_a);
         }
-        if (mapped_b) {
+
+        if (mapped_b)
+        {
             __ssx_thread_map(thread_b);
         }
+
         __ssx_schedule();
     }
 

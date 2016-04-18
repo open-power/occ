@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -54,7 +54,7 @@
 /// For example, to identify a chip as Murano DD1.0, one could use either
 /// method shown below:
 ///
-/// \code 
+/// \code
 ///
 /// if (cfam_id() == CFAM_CHIP_ID_MURANO_10) { ... }
 ///
@@ -72,50 +72,50 @@
 
 #ifndef __ASSEMBLER__
 
-#include <stdint.h>
-#include "tpc_firmware_registers.h"
+    #include <stdint.h>
+    #include "tpc_firmware_registers.h"
 
 
-/// Get TPC device identification (internal API, called once from __occhw_setup().
-void
-_occhw_get_ids(void);
+    /// Get TPC device identification (internal API, called once from __occhw_setup().
+    void
+    _occhw_get_ids(void);
 
-/// Get the TPC Node Id
-uint8_t node_id(void);
+    /// Get the TPC Node Id
+    uint8_t node_id(void);
 
-/// Get the TPC Chip Id
-uint8_t chip_id(void);
+    /// Get the TPC Chip Id
+    uint8_t chip_id(void);
 
-/// Get the CFAM Chip Id
-/// 
-/// \returns A 32-bit value to be compared against the enumeration of known
-/// CFAM ids.  See \ref cfam_chip_ids.
-uint32_t cfam_id(void);
+    /// Get the CFAM Chip Id
+    ///
+    /// \returns A 32-bit value to be compared against the enumeration of known
+    /// CFAM ids.  See \ref cfam_chip_ids.
+    uint32_t cfam_id(void);
 
-/// Get the CFAM Chip Type
-/// 
-/// \returns An 8-bit value to be compared against the enumeration of known
-/// CFAM chip types.  See \ref cfam_chip_types.
-uint8_t cfam_chip_type(void);
+    /// Get the CFAM Chip Type
+    ///
+    /// \returns An 8-bit value to be compared against the enumeration of known
+    /// CFAM chip types.  See \ref cfam_chip_types.
+    uint8_t cfam_chip_type(void);
 
-/// Get the CFAM Chip EC Level
-/// 
-/// \returns An 8-bit value; The high-order nibble is the major EC level and
-/// the low-order nibble is the minor EC level. Fore example a value of 0x21
-/// indicates DD 2.1.
-uint8_t cfam_ec_level(void);
+    /// Get the CFAM Chip EC Level
+    ///
+    /// \returns An 8-bit value; The high-order nibble is the major EC level and
+    /// the low-order nibble is the minor EC level. Fore example a value of 0x21
+    /// indicates DD 2.1.
+    uint8_t cfam_ec_level(void);
 
 
-/// Compute the chip configuration (internal API, called once from __occhw_setup().
-void
-_occhw_get_chip_configuration(void);
+    /// Compute the chip configuration (internal API, called once from __occhw_setup().
+    void
+    _occhw_get_chip_configuration(void);
 
-/// Get the core configuration
-///
-/// The return value is a 32 bit integer with big-endian bits set to indicate
-/// valid cores.
-uint32_t
-core_configuration(void);
+    /// Get the core configuration
+    ///
+    /// The return value is a 32 bit integer with big-endian bits set to indicate
+    /// valid cores.
+    uint32_t
+    core_configuration(void);
 
 
 #endif // __ASSEMBLER__
@@ -138,9 +138,9 @@ core_configuration(void);
 /// \defgroup cfam_chip_ids CFAM Chip Ids (Including Centaur)
 ///
 /// The CFAM Chip ID is a 32-bit value that uniquely identfies a chip and its
-/// EC level. 
+/// EC level.
 ///
-/// The reference: 
+/// The reference:
 ///
 /// - https://eclipz.pok.ibm.com/sys/ras/docs/cfam_ids.txt
 ///
@@ -175,9 +175,11 @@ core_configuration(void);
 
 /// The CFAM ID as a set of fields
 
-typedef union {
+typedef union
+{
 #ifdef _BIG_ENDIAN
-    struct {
+    struct
+    {
         uint32_t majorEc  : 4;
         uint32_t location : 4;
         uint32_t minorEc  : 4;
@@ -185,7 +187,8 @@ typedef union {
         uint32_t vendor   : 12;
     };
 #else
-    struct {
+    struct
+    {
         uint32_t vendor   : 12;
         uint32_t chipType : 8;
         uint32_t minorEc  : 4;

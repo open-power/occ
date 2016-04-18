@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -66,9 +66,10 @@ __ssx_timer_handler()
 /// \retval -SSX_INVALID_DEQUE_SENTINEL The \a deque pointer was null
 
 int
-ssx_deque_sentinel_create(SsxDeque *deque)
+ssx_deque_sentinel_create(SsxDeque* deque)
 {
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF(deque == 0, SSX_INVALID_DEQUE_SENTINEL);
     }
 
@@ -83,16 +84,17 @@ ssx_deque_sentinel_create(SsxDeque *deque)
 ///
 /// SSX has no way of knowing whether the \a element is currently in use, so
 /// this API must only be called on unitialized or otherwise unused deque
-/// elements. 
+/// elements.
 ///
 /// \retval 0 success
 ///
 /// \retval -SSX_INVALID_DEQUE_ELEMENT The \a element pointer was null
 
 int
-ssx_deque_element_create(SsxDeque *element)
+ssx_deque_element_create(SsxDeque* element)
 {
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF(element == 0, SSX_INVALID_DEQUE_ELEMENT);
     }
 

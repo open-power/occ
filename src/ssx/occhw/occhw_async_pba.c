@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -67,35 +67,35 @@ PBAX_CQ_READ_BUFFER(G_pbax_read1_buffer, PBAX_READ1_LENGTH);
 
 /// PBA BCDE/BCUE PowerBus BAR[0..31]
 static const SsxAddress G_bce_pbadr[BCE_ENGINES] =
-    {PBA_BCDE_PBADR, PBA_BCUE_PBADR};
+{PBA_BCDE_PBADR, PBA_BCUE_PBADR};
 
 /// PBA BCDE/BCUE OCI BAR
 static const SsxAddress G_bce_ocibar[BCE_ENGINES] =
-    {PBA_BCDE_OCIBAR, PBA_BCUE_OCIBAR};
+{PBA_BCDE_OCIBAR, PBA_BCUE_OCIBAR};
 
 /// PBA BCDE/BCUE SET register
 static const SsxAddress G_bce_set[BCE_ENGINES] =
-    {PBA_BCDE_SET, PBA_BCUE_SET};
+{PBA_BCDE_SET, PBA_BCUE_SET};
 
 /// PBA BCDE/BCUE Control register
 static const SsxAddress G_bce_ctl[BCE_ENGINES] =
-    {PBA_BCDE_CTL, PBA_BCUE_CTL};
+{PBA_BCDE_CTL, PBA_BCUE_CTL};
 
 /// PBA BCDE/BCUE Status register
 static const SsxAddress G_bce_stat[BCE_ENGINES] =
-    {PBA_BCDE_STAT, PBA_BCUE_STAT};
+{PBA_BCDE_STAT, PBA_BCUE_STAT};
 
 /// PBAX Push Queue Control/Status Register addresses
 static const SsxAddress G_pba_xshcsn[PBAX_ENGINES] =
-    {PBA_XSHCS0, PBA_XSHCS1};
+{PBA_XSHCS0, PBA_XSHCS1};
 
 /// PBAX Push Queue Base Register addresses
 static const SsxAddress G_pba_xshbrn[PBAX_ENGINES] =
-    {PBA_XSHBR0, PBA_XSHBR1};
+{PBA_XSHBR0, PBA_XSHBR1};
 
 /// PBAX Push Queue Increment Register addresses
 static const SsxAddress G_pba_xshincn[PBAX_ENGINES] =
-    {PBA_XSHINC0, PBA_XSHINC1};
+{PBA_XSHINC0, PBA_XSHINC1};
 
 
 ////////////////////////////////////////////////////////////////////////////
@@ -120,21 +120,25 @@ pba_common_ffdc(PbaCommonFfdc* ffdc)
 {
     int i;
 
-    if (ffdc->error == 0) {
+    if (ffdc->error == 0)
+    {
 
         oci_ffdc(&(ffdc->oci_ffdc), OCI_MASTER_ID_PBA);
 
         ffdc->mode.value = in64(PBA_MODE);
-    
-        for (i = 0; i < PBA_READ_BUFFERS; i++) {
+
+        for (i = 0; i < PBA_READ_BUFFERS; i++)
+        {
             getscom(PBA_RBUFVALN(i), &(ffdc->rbufval[i].value));
         }
 
-        for (i = 0; i < PBA_WRITE_BUFFERS; i++) {
+        for (i = 0; i < PBA_WRITE_BUFFERS; i++)
+        {
             getscom(PBA_WBUFVALN(i), &(ffdc->wbufval[i].value));
         }
 
-        for (i = 0; i < PBA_BARS; i++) {
+        for (i = 0; i < PBA_BARS; i++)
+        {
             getscom(PBA_BARN(i), &(ffdc->bar[i].value));
             getscom(PBA_BARMSKN(i), &(ffdc->barmsk[i].value));
         }
@@ -159,13 +163,15 @@ pba_bridge_ffdc(PbaBridgeFfdc* ffdc)
 {
     int i;
 
-    if (ffdc->common.error == 0) {
+    if (ffdc->common.error == 0)
+    {
 
         pba_common_ffdc(&(ffdc->common));
 
         ffdc->slvrst.value = in64(PBA_SLVRST);
 
-        for (i = 0; i > PBA_SLAVES; i++) {
+        for (i = 0; i > PBA_SLAVES; i++)
+        {
             ffdc->slvctl[i].value = in64(PBA_SLVCTLN(i));
         }
     }
@@ -179,7 +185,8 @@ pba_bridge_ffdc(PbaBridgeFfdc* ffdc)
 static void
 bce_ffdc(BceFfdc* ffdc, int engine)
 {
-    if (ffdc->common.error == 0) {
+    if (ffdc->common.error == 0)
+    {
 
         pba_common_ffdc(&(ffdc->common));
 
@@ -196,10 +203,11 @@ bce_ffdc(BceFfdc* ffdc, int engine)
 static void
 pbax_send_ffdc(PbaxSendFfdc* ffdc)
 {
-    if (ffdc->common.error == 0) {
+    if (ffdc->common.error == 0)
+    {
 
         pba_common_ffdc(&(ffdc->common));
-    
+
         ffdc->xcfg.value = in64(PBA_XCFG);
         ffdc->xsndtx.value = in64(PBA_XSNDTX);
         ffdc->xsndstat.value = in64(PBA_XSNDSTAT);
@@ -217,14 +225,16 @@ pbax_receive_ffdc(PbaxReceiveFfdc* ffdc)
 {
     int i;
 
-    if (ffdc->common.error == 0) {
+    if (ffdc->common.error == 0)
+    {
 
         pba_common_ffdc(&(ffdc->common));
-    
+
         ffdc->xcfg.value = in64(PBA_XCFG);
         ffdc->xrcvstat.value = in64(PBA_XRCVSTAT);
-    
-        for (i = 0; i < PBAX_ENGINES; i++) {
+
+        for (i = 0; i < PBAX_ENGINES; i++)
+        {
             ffdc->xshbrn[i].value = in64(PBA_XSHBRN(i));
             ffdc->xshcsn[i].value = in64(PBA_XSHCSN(i));
         }
@@ -262,10 +272,10 @@ pbax_receive_ffdc(PbaxReceiveFfdc* ffdc)
 // register layout structures, but they work for BCUE as well.
 
 static int
-bce_async_run_method(AsyncRequest *async_request)
+bce_async_run_method(AsyncRequest* async_request)
 {
-    BceQueue *queue = (BceQueue *)(async_request->queue);
-    BceRequest *request = (BceRequest *)async_request;
+    BceQueue* queue = (BceQueue*)(async_request->queue);
+    BceRequest* request = (BceRequest*)async_request;
     int rc, engine;
     pba_bcde_pbadr_t pbadr;
     pba_bcde_set_t set;
@@ -273,11 +283,14 @@ bce_async_run_method(AsyncRequest *async_request)
     size_t to_write;
 
 
-    if (request->remaining == 0) {
+    if (request->remaining == 0)
+    {
 
         rc = -ASYNC_REQUEST_COMPLETE;
 
-    } else {
+    }
+    else
+    {
 
         to_write = MIN(request->remaining, PBA_BCE_SIZE_MAX);
 
@@ -314,7 +327,9 @@ bce_async_run_method(AsyncRequest *async_request)
         // Update the work remaining to be done.
 
         request->remaining -= to_write;
-        if (request->remaining != 0) {
+
+        if (request->remaining != 0)
+        {
             request->next_bridge_address += to_write;
             request->next_oci_address += to_write;
         }
@@ -333,19 +348,22 @@ bce_async_run_method(AsyncRequest *async_request)
 // whether to restart the queue.
 
 static int
-bce_async_error_method(AsyncRequest *request)
+bce_async_error_method(AsyncRequest* request)
 {
-    BceQueue *queue = (BceQueue*)(request->queue);
+    BceQueue* queue = (BceQueue*)(request->queue);
     int engine = queue->engine;
 
-    if (engine == BCE_ENGINE_BCDE) {
+    if (engine == BCE_ENGINE_BCDE)
+    {
 
-        bce_ffdc(&(G_pba_ffdc.bcde), engine); 
+        bce_ffdc(&(G_pba_ffdc.bcde), engine);
         out32(PBA_BCDE_CTL, PBA_BCDE_CTL_STOP >> 32);
 
-    } else {
+    }
+    else
+    {
 
-        bce_ffdc(&(G_pba_ffdc.bcue), engine); 
+        bce_ffdc(&(G_pba_ffdc.bcue), engine);
         out32(PBA_BCUE_CTL, PBA_BCUE_CTL_STOP >> 32);
 
     }
@@ -396,28 +414,29 @@ bce_async_error_method(AsyncRequest *request)
 ///
 /// \retval 0 Success
 ///
-/// \retval -ASYNC_INVALID_OBJECT_BCE_REQUEST The \a request was NULL (0), 
+/// \retval -ASYNC_INVALID_OBJECT_BCE_REQUEST The \a request was NULL (0),
 /// or the \a queue was NULL (0) or not a BceQueue.
 ///
 /// See async_request_create() for other errors that may be returned by this
 /// call.
 
 int
-bce_request_create(BceRequest *request,
-                   BceQueue *queue,
+bce_request_create(BceRequest* request,
+                   BceQueue* queue,
                    uint32_t bridge_address,
                    uint32_t oci_address,
                    size_t bytes,
                    SsxInterval timeout,
                    AsyncRequestCallback callback,
-                   void *arg,
+                   void* arg,
                    int options)
 {
     int rc;
-    AsyncQueue *async_queue = (AsyncQueue *)queue;
+    AsyncQueue* async_queue = (AsyncQueue*)queue;
 
 
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF((request == 0) ||
                      (queue == 0)   ||
                      !(async_queue->engine & ASYNC_ENGINE_BCE),
@@ -463,30 +482,34 @@ bce_request_create(BceRequest *request,
 /// \retval -ASYNC_INVALID_ENGINE_BCE The \a engine is not a PBA engine.
 
 int
-bce_queue_create(BceQueue *queue,
+bce_queue_create(BceQueue* queue,
                  int engine)
 {
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF(queue == 0, ASYNC_INVALID_OBJECT_BCE_QUEUE);
     }
 
-    switch (engine) {
+    switch (engine)
+    {
 
-    case ASYNC_ENGINE_BCDE:
-        async_queue_create(&(queue->queue), engine);
-        queue->engine = BCE_ENGINE_BCDE;
-        break;
+        case ASYNC_ENGINE_BCDE:
+            async_queue_create(&(queue->queue), engine);
+            queue->engine = BCE_ENGINE_BCDE;
+            break;
 
-    case ASYNC_ENGINE_BCUE:
-        async_queue_create(&(queue->queue), engine);
-        queue->engine = BCE_ENGINE_BCUE;
-        break;
+        case ASYNC_ENGINE_BCUE:
+            async_queue_create(&(queue->queue), engine);
+            queue->engine = BCE_ENGINE_BCUE;
+            break;
 
-    default:
-        if (SSX_ERROR_CHECK_API) {
-            SSX_ERROR(ASYNC_INVALID_ENGINE_BCE);
-        }
-        break;
+        default:
+            if (SSX_ERROR_CHECK_API)
+            {
+                SSX_ERROR(ASYNC_INVALID_ENGINE_BCE);
+            }
+
+            break;
     }
 
     return 0;
@@ -502,16 +525,17 @@ bce_queue_create(BceQueue *queue,
 ///
 /// \retval 0 Success
 ///
-/// \retval -ASYNC_INVALID_ARGUMENT_BCE_SCHEDULE Either the \a bridge_address 
+/// \retval -ASYNC_INVALID_ARGUMENT_BCE_SCHEDULE Either the \a bridge_address
 /// is not 128-byte aligned, or the OCI address is not 128-byte aligned, or the
 /// number of bytes is not a multiple of 128.
 ///
 /// See async_request_schedule() for documentation of other errors
 
 int
-bce_request_schedule(BceRequest *request)
+bce_request_schedule(BceRequest* request)
 {
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF((request->bridge_address % POWERBUS_CACHE_LINE_SIZE) ||
                      (request->oci_address % POWERBUS_CACHE_LINE_SIZE)    ||
                      (request->bytes % POWERBUS_CACHE_LINE_SIZE),
@@ -522,7 +546,7 @@ bce_request_schedule(BceRequest *request)
     request->next_oci_address = request->oci_address;
     request->remaining = request->bytes;
 
-    return async_request_schedule((AsyncRequest *)request);
+    return async_request_schedule((AsyncRequest*)request);
 }
 
 
@@ -538,19 +562,21 @@ bce_request_schedule(BceRequest *request)
 SSX_IRQ_FAST2FULL(bce_async_handler, bce_async_handler_full);
 
 void
-bce_async_handler_full(void *arg, SsxIrqId irq, int priority)
+bce_async_handler_full(void* arg, SsxIrqId irq, int priority)
 {
-    AsyncQueue *async_queue = (AsyncQueue *)arg;
-    AsyncRequest *async_current = (AsyncRequest *)async_queue->current;
-    BceQueue *queue = (BceQueue *)async_queue;
+    AsyncQueue* async_queue = (AsyncQueue*)arg;
+    AsyncRequest* async_current = (AsyncRequest*)async_queue->current;
+    BceQueue* queue = (BceQueue*)async_queue;
 
     out32(G_bce_ctl[queue->engine], 0);
 
-    if (SSX_ERROR_CHECK_KERNEL && (async_current == 0)) {
+    if (SSX_ERROR_CHECK_KERNEL && (async_current == 0))
+    {
         SSX_PANIC(ASYNC_PHANTOM_INTERRUPT_BCE);
     }
 
-    if (async_current->run_method(async_current) == -ASYNC_REQUEST_COMPLETE) {
+    if (async_current->run_method(async_current) == -ASYNC_REQUEST_COMPLETE)
+    {
         async_handler(async_queue);
     }
 }
@@ -577,10 +603,10 @@ bce_async_handler_full(void *arg, SsxIrqId irq, int priority)
 /// queue data area to the caller's data area, with the side effect of
 /// advancing the hardware queue pointers.  pbax_read() does not implement
 /// locking, critical sections or any other type of synchronization for access
-/// to the PBAX queue data.  
+/// to the PBAX queue data.
 ///
-/// pbax_read() returns the error code -ASYNC_PBAX_ERROR_OLD or 
-/// -ASYNC_PBAX_ERROR_NEW if PBAX receive error status is asserted.  
+/// pbax_read() returns the error code -ASYNC_PBAX_ERROR_OLD or
+/// -ASYNC_PBAX_ERROR_NEW if PBAX receive error status is asserted.
 /// The error return code may be disjoint from the actual
 /// read: If data is available it may be copied to the caller's buffer, but
 /// this data should always be considered corrupted in the event of an error
@@ -588,7 +614,7 @@ bce_async_handler_full(void *arg, SsxIrqId irq, int priority)
 ///
 /// \retval 0 Success
 ///
-/// \retval -ASYNC_INVALID_ARGUMENT_PBAX_READ The number of \a bytes is not 
+/// \retval -ASYNC_INVALID_ARGUMENT_PBAX_READ The number of \a bytes is not
 /// an even multiple of 8.
 ///
 /// \retval -ASYNC_PBAX_ERROR_OLD The PBA shows pre-existing error status
@@ -605,10 +631,11 @@ pbax_read(PbaxQueue* queue, void* buf, size_t bytes, size_t* read)
     pba_xshcsn_t csr;
     pba_xrcvstat_t rsr;
     unsigned qlen, read_ptr, write_ptr, to_read;
-    uint64_t *pcq, *pbuf;
+    uint64_t* pcq, *pbuf;
     int rc;
 
-    do {
+    do
+    {
 
         rc = 0;
         *read = 0;
@@ -616,13 +643,16 @@ pbax_read(PbaxQueue* queue, void* buf, size_t bytes, size_t* read)
         // If pre-existing errors exist then immediately abort the read.
 
         rsr.words.high_order = in32(PBA_XRCVSTAT);
-        if (rsr.fields.rcv_error) {
+
+        if (rsr.fields.rcv_error)
+        {
             pbax_receive_ffdc(&(G_pba_ffdc.pbax_receive));
             rc = -ASYNC_PBAX_ERROR_OLD;
             break;
         }
 
-        if (bytes % 8) {
+        if (bytes % 8)
+        {
             rc = -ASYNC_INVALID_ARGUMENT_PBAX_READ;
             break;
         }
@@ -639,17 +669,26 @@ pbax_read(PbaxQueue* queue, void* buf, size_t bytes, size_t* read)
         qlen = csr.fields.push_length + 1;
         read_ptr = csr.fields.push_read_ptr;
 
-        if (csr.fields.push_empty) {
+        if (csr.fields.push_empty)
+        {
             break;
 
-        } else if (csr.fields.push_full) {
+        }
+        else if (csr.fields.push_full)
+        {
             to_read = qlen;
 
-        } else {
+        }
+        else
+        {
             write_ptr = csr.fields.push_write_ptr;
-            if (read_ptr > write_ptr) {
+
+            if (read_ptr > write_ptr)
+            {
                 to_read = qlen - (read_ptr - write_ptr);
-            } else {
+            }
+            else
+            {
                 to_read = write_ptr - read_ptr;
             }
         }
@@ -664,27 +703,35 @@ pbax_read(PbaxQueue* queue, void* buf, size_t bytes, size_t* read)
         // copied from the queue.
 
         pbuf = (uint64_t*) buf;
-        while (bytes && to_read--) {
+
+        while (bytes && to_read--)
+        {
 
             read_ptr++;
-            if (read_ptr == qlen) {
+
+            if (read_ptr == qlen)
+            {
                 read_ptr = 0;
             }
+
             pcq = queue->cq_base + read_ptr;
 
             dcache_invalidate_line(pcq);
             *pbuf++ = *pcq;
-            out32(G_pba_xshincn[queue->engine], 0);        
+            out32(G_pba_xshincn[queue->engine], 0);
 
             bytes -= 8;
             *read += 8;
         }
-    } while(0);
+    }
+    while(0);
 
     // Check for errors that occurred during the read
 
     rsr.words.high_order = in32(PBA_XRCVSTAT);
-    if (rsr.fields.rcv_error) {
+
+    if (rsr.fields.rcv_error)
+    {
         pbax_receive_ffdc(&(G_pba_ffdc.pbax_receive));
         rc = -ASYNC_PBAX_ERROR_NEW;
     }
@@ -699,18 +746,22 @@ pbax_read(PbaxQueue* queue, void* buf, size_t bytes, size_t* read)
 // satisfied.
 
 int
-pbax_read_method(AsyncRequest *async_request)
+pbax_read_method(AsyncRequest* async_request)
 {
-    PbaxRequest *request = (PbaxRequest*)async_request;
-    PbaxQueue *queue = (PbaxQueue*)(async_request->queue);
+    PbaxRequest* request = (PbaxRequest*)async_request;
+    PbaxQueue* queue = (PbaxQueue*)(async_request->queue);
     int rc;
 
-    if (request->bytes == 0) {
+    if (request->bytes == 0)
+    {
         rc = -ASYNC_REQUEST_COMPLETE;
-    } else {
+    }
+    else
+    {
         ssx_irq_enable(queue->irq);
         rc = 0;
     }
+
     return rc;
 }
 
@@ -720,12 +771,12 @@ pbax_read_method(AsyncRequest *async_request)
 // Collect FFDC.
 
 static int
-pbax_async_error_method(AsyncRequest *request)
+pbax_async_error_method(AsyncRequest* request)
 {
     pbax_receive_ffdc(&(G_pba_ffdc.pbax_receive));
     return -1;
 }
-    
+
 
 /// Create a request for a PBAX read queue
 ///
@@ -761,10 +812,10 @@ pbax_async_error_method(AsyncRequest *request)
 ///
 /// \retval 0 Success
 ///
-/// \retval -ASYNC_INVALID_OBJECT_PBAX_REQUEST The \a request or \a queue 
+/// \retval -ASYNC_INVALID_OBJECT_PBAX_REQUEST The \a request or \a queue
 /// were NULL (0), or the \a queue is not an initialized PbaxQueue.
 ///
-/// \retval -ASYNC_INVALID_ARGUMENT_PBAX_REQUEST The \a data pointer is 
+/// \retval -ASYNC_INVALID_ARGUMENT_PBAX_REQUEST The \a data pointer is
 /// NULL (0), or the number of bytes is not a multiple of 8.
 ///
 /// See async_request_create() for other errors that may be returned by this
@@ -783,7 +834,8 @@ pbax_request_create(PbaxRequest* request,
     int rc;
     AsyncQueue* async_queue = (AsyncQueue*)queue;
 
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF((request == 0) ||
                      (queue == 0)   ||
                      !(async_queue->engine & ASYNC_ENGINE_PBAX),
@@ -817,22 +869,23 @@ pbax_request_create(PbaxRequest* request,
 ///
 /// \retval 0 Success
 ///
-/// \retval -ASYNC_INVALID_ARGUMENT_PBAX_SCHEDULE The number of \a bytes 
+/// \retval -ASYNC_INVALID_ARGUMENT_PBAX_SCHEDULE The number of \a bytes
 /// currently requested is not a multiple of 8.
 ///
 /// See async_request_schedule() for documentation of other errors
 
 int
-pbax_request_schedule(PbaxRequest *request)
+pbax_request_schedule(PbaxRequest* request)
 {
-    if (SSX_ERROR_CHECK_API) {
-        SSX_ERROR_IF((request->bytes % 8),ASYNC_INVALID_ARGUMENT_PBAX_SCHEDULE);
+    if (SSX_ERROR_CHECK_API)
+    {
+        SSX_ERROR_IF((request->bytes % 8), ASYNC_INVALID_ARGUMENT_PBAX_SCHEDULE);
     }
 
     request->current = request->data;
     request->remaining = request->bytes;
 
-    return async_request_schedule((AsyncRequest *)request);
+    return async_request_schedule((AsyncRequest*)request);
 }
 
 
@@ -846,19 +899,20 @@ pbax_request_schedule(PbaxRequest *request)
 ///
 /// Disable the PBAX recieve mechanism for a particular PBAX receive queue.
 /// Interrupts are disabled, and any data managed by the queue is effectively
-/// lost. 
+/// lost.
 ///
 /// \retval 0 Success
 ///
-/// \retval -ASYNC_INVALID_OBJECT_PBAX_DISABLE The \a queue is NULL (0) 
-/// or otherwise invalid. 
+/// \retval -ASYNC_INVALID_OBJECT_PBAX_DISABLE The \a queue is NULL (0)
+/// or otherwise invalid.
 
 int
-pbax_queue_disable(PbaxQueue *queue)
+pbax_queue_disable(PbaxQueue* queue)
 {
     pba_xshcsn_t cs;
 
-    if (SSX_ERROR_CHECK_API) {
+    if (SSX_ERROR_CHECK_API)
+    {
         SSX_ERROR_IF(queue == 0, ASYNC_INVALID_OBJECT_PBAX_DISABLE);
     }
 
@@ -882,18 +936,19 @@ pbax_queue_disable(PbaxQueue *queue)
 ///
 /// \retval 0 Success
 ///
-/// \retval -ASYNC_INVALID_OBJECT_PBAX_DISABLE The \a queue is NULL (0) 
-/// or otherwise invalid. 
+/// \retval -ASYNC_INVALID_OBJECT_PBAX_DISABLE The \a queue is NULL (0)
+/// or otherwise invalid.
 
 int
-pbax_queue_enable(PbaxQueue *queue)
+pbax_queue_enable(PbaxQueue* queue)
 {
     int rc;
     pba_xshcsn_t cs;
 
     rc = pbax_queue_disable(queue);
 
-    if (!rc) {
+    if (!rc)
+    {
 
         // Reinitialize the data buffer base address register and
         // reprogram/re-enable the queue.
@@ -902,9 +957,12 @@ pbax_queue_enable(PbaxQueue *queue)
 
         cs.value = 0;
 
-        if (queue->protocol == PBAX_INTERRUPT_PROTOCOL_LAZY) {
+        if (queue->protocol == PBAX_INTERRUPT_PROTOCOL_LAZY)
+        {
             cs.fields.push_intr_action = PBAX_INTR_ACTION_FULL;
-        } else {
+        }
+        else
+        {
             cs.fields.push_intr_action = PBAX_INTR_ACTION_NOT_EMPTY;
         }
 
@@ -913,6 +971,7 @@ pbax_queue_enable(PbaxQueue *queue)
 
         out32(G_pba_xshcsn[queue->engine], cs.words.high_order);
     }
+
     return 0;
 }
 
@@ -944,7 +1003,7 @@ pbax_queue_enable(PbaxQueue *queue)
 ///
 /// \retval -ASYNC_INVALID_OBJECT_PBAX_QUEUE The \a queue was NULL (0).
 ///
-/// \retval -ASYNC_INVALID_ARGUMENT_PBAX_QUEUE The \a cq_base is not properly 
+/// \retval -ASYNC_INVALID_ARGUMENT_PBAX_QUEUE The \a cq_base is not properly
 /// aligned, or the \a cq_length is invalid, or the \a protocol is invalid.
 ///
 /// \retval -ASYNC_INVALID_ENGINE_PBAX The \a engine is not an PBAX engine.
@@ -952,18 +1011,19 @@ pbax_queue_enable(PbaxQueue *queue)
 /// Other errors may be returned by async_queue_create().
 
 int
-pbax_queue_create(PbaxQueue *queue,
+pbax_queue_create(PbaxQueue* queue,
                   int engine,
-                  uint64_t *cq_base,
+                  uint64_t* cq_base,
                   size_t cq_entries,
                   int protocol)
 {
-    AsyncQueue *async_queue = (AsyncQueue *)queue;
+    AsyncQueue* async_queue = (AsyncQueue*)queue;
 
-    if (SSX_ERROR_CHECK_API) {
-        uint32_t align_mask = 
-            POW2_32(MAX(CEILING_LOG2(cq_entries * 8), 
-                        LOG_CACHE_LINE_SIZE)) - 1; 
+    if (SSX_ERROR_CHECK_API)
+    {
+        uint32_t align_mask =
+            POW2_32(MAX(CEILING_LOG2(cq_entries * 8),
+                        LOG_CACHE_LINE_SIZE)) - 1;
 
         SSX_ERROR_IF(queue == 0, ASYNC_INVALID_OBJECT_PBAX_QUEUE);
         SSX_ERROR_IF((((uint32_t)(cq_base) & align_mask) != 0) ||
@@ -978,22 +1038,24 @@ pbax_queue_create(PbaxQueue *queue,
     queue->cq_entries = cq_entries;
     queue->protocol = protocol;
 
-    switch (engine) {
+    switch (engine)
+    {
 
-    case ASYNC_ENGINE_PBAX_PUSH0:
-        queue->irq = OCCHW_IRQ_PBAX_OCC_PUSH0;
-        queue->engine = PBAX_ENGINE_PUSH0;
-        break;
+        case ASYNC_ENGINE_PBAX_PUSH0:
+            queue->irq = OCCHW_IRQ_PBAX_OCC_PUSH0;
+            queue->engine = PBAX_ENGINE_PUSH0;
+            break;
 
-    case ASYNC_ENGINE_PBAX_PUSH1:
-        queue->irq = OCCHW_IRQ_PBAX_OCC_PUSH1;
-        queue->engine = PBAX_ENGINE_PUSH1;
-        break;
+        case ASYNC_ENGINE_PBAX_PUSH1:
+            queue->irq = OCCHW_IRQ_PBAX_OCC_PUSH1;
+            queue->engine = PBAX_ENGINE_PUSH1;
+            break;
 
-    default:
-        if (SSX_ERROR_CHECK_API) {
-            SSX_ERROR_IF(1, ASYNC_INVALID_ENGINE_PBAX);
-        }
+        default:
+            if (SSX_ERROR_CHECK_API)
+            {
+                SSX_ERROR_IF(1, ASYNC_INVALID_ENGINE_PBAX);
+            }
     }
 
     async_queue_create(async_queue, engine);
@@ -1019,7 +1081,7 @@ pbax_queue_create(PbaxQueue *queue,
 SSX_IRQ_FAST2FULL(pbax_async_handler, pbax_async_handler_full);
 
 void
-pbax_async_handler_full(void *arg, SsxIrqId irq, int priority)
+pbax_async_handler_full(void* arg, SsxIrqId irq, int priority)
 {
     AsyncQueue* async_queue = (AsyncQueue*)arg;
     PbaxQueue* queue = (PbaxQueue*)async_queue;
@@ -1027,23 +1089,29 @@ pbax_async_handler_full(void *arg, SsxIrqId irq, int priority)
     size_t read;
     int rc;
 
-    if (SSX_ERROR_CHECK_KERNEL && (request == 0)) {
+    if (SSX_ERROR_CHECK_KERNEL && (request == 0))
+    {
         SSX_PANIC(ASYNC_PHANTOM_INTERRUPT_PBAX);
     }
 
     rc = pbax_read(queue, request->current, request->remaining, &read);
 
-    if (rc) {
+    if (rc)
+    {
 
         ssx_irq_disable(queue->irq);
         async_error_handler(async_queue, ASYNC_REQUEST_STATE_FAILED);
 
-    } else if (read == request->remaining) {
+    }
+    else if (read == request->remaining)
+    {
 
         ssx_irq_disable(queue->irq);
         async_handler(async_queue);
 
-    } else {
+    }
+    else
+    {
 
         request->current += (read / 8);
         request->remaining -= read;
@@ -1090,7 +1158,7 @@ pbax_async_handler_full(void *arg, SsxIrqId irq, int priority)
 SSX_IRQ_FAST2FULL(pba_error_handler, pba_error_handler_full);
 
 void
-pba_error_handler_full(void *arg, SsxIrqId irq, int priority)
+pba_error_handler_full(void* arg, SsxIrqId irq, int priority)
 {
     pba_fir_t fir;
     pba_bcde_stat_t bcde_stat;
@@ -1109,27 +1177,38 @@ pba_error_handler_full(void *arg, SsxIrqId irq, int priority)
     xrcvstat.words.high_order = in32(PBA_XRCVSTAT);
 
     queue = (AsyncQueue*)(&G_pba_bcde_queue);
+
     if (bcde_stat.fields.error &&
-        (queue->state == ASYNC_QUEUE_STATE_RUNNING)) {
+        (queue->state == ASYNC_QUEUE_STATE_RUNNING))
+    {
         async_error_handler(queue, ASYNC_REQUEST_STATE_FAILED);
     }
 
     queue = (AsyncQueue*)(&G_pba_bcue_queue);
-    if (bcue_stat.fields.error && 
-        (queue->state == ASYNC_QUEUE_STATE_RUNNING)) {
+
+    if (bcue_stat.fields.error &&
+        (queue->state == ASYNC_QUEUE_STATE_RUNNING))
+    {
         async_error_handler(queue, ASYNC_REQUEST_STATE_FAILED);
     }
 
-    if (xsndstat.fields.snd_error) {
+    if (xsndstat.fields.snd_error)
+    {
         pbax_send_ffdc(&G_pba_ffdc.pbax_send);
     }
 
-    if (xrcvstat.fields.rcv_error) {
-        for (channel = 0; channel < PBAX_CHANNELS; channel++) {
+    if (xrcvstat.fields.rcv_error)
+    {
+        for (channel = 0; channel < PBAX_CHANNELS; channel++)
+        {
             queue = (AsyncQueue*)(&G_pbax_read_queue[channel]);
-            if (queue->state == ASYNC_REQUEST_STATE_RUNNING) {
+
+            if (queue->state == ASYNC_REQUEST_STATE_RUNNING)
+            {
                 async_error_handler(queue, ASYNC_REQUEST_STATE_FAILED);
-            } else {
+            }
+            else
+            {
                 pbax_receive_ffdc(&G_pba_ffdc.pbax_receive);
             }
         }
@@ -1138,52 +1217,53 @@ pba_error_handler_full(void *arg, SsxIrqId irq, int priority)
     // Any FIR bits not already attributable to previously handled errors are
     // assumed to be due to the generic bridge.
 
-    if (fir.value & 
+    if (fir.value &
         (
-         PBA_FIR_OCI_APAR_ERR ||
-         PBA_FIR_PB_RDADRERR_FW ||
-         PBA_FIR_PB_RDDATATO_FW ||
-         PBA_FIR_PB_SUE_FW ||
-         PBA_FIR_PB_UE_FW ||
-         PBA_FIR_PB_CE_FW ||
-         PBA_FIR_OCI_SLAVE_INIT ||
-         PBA_FIR_OCI_WRPAR_ERR ||
-         PBA_FIR_OCI_REREQTO ||
-         PBA_FIR_PB_UNEXPCRESP ||
-         PBA_FIR_PB_UNEXPDATA ||
-         PBA_FIR_PB_PARITY_ERR ||
-         PBA_FIR_PB_WRADRERR_FW ||
-         PBA_FIR_PB_BADCRESP ||
-         PBA_FIR_PB_ACKDEAD_FW ||
-         PBA_FIR_PB_CRESPTO ||
-         // PBA_FIR_BCUE_SETUP_ERR ||
-         // PBA_FIR_BCUE_PB_ACK_DEAD ||
-         // PBA_FIR_BCUE_PB_ADRERR ||
-         // PBA_FIR_BCUE_OCI_DATAERR ||
-         // PBA_FIR_BCDE_SETUP_ERR ||
-         // PBA_FIR_BCDE_PB_ACK_DEAD ||
-         // PBA_FIR_BCDE_PB_ADRERR ||
-         // PBA_FIR_BCDE_RDDATATO_ERR ||
-         // PBA_FIR_BCDE_SUE_ERR ||
-         // PBA_FIR_BCDE_UE_ERR ||
-         // PBA_FIR_BCDE_CE ||
-         // PBA_FIR_BCDE_OCI_DATAERR ||
-         PBA_FIR_INTERNAL_ERR ||
-         PBA_FIR_ILLEGAL_CACHE_OP ||
-         PBA_FIR_OCI_BAD_REG_ADDR ||
-         // PBA_FIR_AXPUSH_WRERR ||
-         // PBA_FIR_AXRCV_DLO_ERR ||
-         // PBA_FIR_AXRCV_DLO_TO ||
-         // PBA_FIR_AXRCV_RSVDATA_TO ||
-         // PBA_FIR_AXFLOW_ERR ||
-         // PBA_FIR_AXSND_DHI_RTYTO ||
-         // PBA_FIR_AXSND_DLO_RTYTO ||
-         // PBA_FIR_AXSND_RSVTO ||
-         // PBA_FIR_AXSND_RSVERR ||
-         PBA_FIR_FIR_PARITY_ERR ||
-         PBA_FIR_FIR_PARITY_ERR2
-         )
-        ) {
+            PBA_FIR_OCI_APAR_ERR ||
+            PBA_FIR_PB_RDADRERR_FW ||
+            PBA_FIR_PB_RDDATATO_FW ||
+            PBA_FIR_PB_SUE_FW ||
+            PBA_FIR_PB_UE_FW ||
+            PBA_FIR_PB_CE_FW ||
+            PBA_FIR_OCI_SLAVE_INIT ||
+            PBA_FIR_OCI_WRPAR_ERR ||
+            PBA_FIR_OCI_REREQTO ||
+            PBA_FIR_PB_UNEXPCRESP ||
+            PBA_FIR_PB_UNEXPDATA ||
+            PBA_FIR_PB_PARITY_ERR ||
+            PBA_FIR_PB_WRADRERR_FW ||
+            PBA_FIR_PB_BADCRESP ||
+            PBA_FIR_PB_ACKDEAD_FW ||
+            PBA_FIR_PB_CRESPTO ||
+            // PBA_FIR_BCUE_SETUP_ERR ||
+            // PBA_FIR_BCUE_PB_ACK_DEAD ||
+            // PBA_FIR_BCUE_PB_ADRERR ||
+            // PBA_FIR_BCUE_OCI_DATAERR ||
+            // PBA_FIR_BCDE_SETUP_ERR ||
+            // PBA_FIR_BCDE_PB_ACK_DEAD ||
+            // PBA_FIR_BCDE_PB_ADRERR ||
+            // PBA_FIR_BCDE_RDDATATO_ERR ||
+            // PBA_FIR_BCDE_SUE_ERR ||
+            // PBA_FIR_BCDE_UE_ERR ||
+            // PBA_FIR_BCDE_CE ||
+            // PBA_FIR_BCDE_OCI_DATAERR ||
+            PBA_FIR_INTERNAL_ERR ||
+            PBA_FIR_ILLEGAL_CACHE_OP ||
+            PBA_FIR_OCI_BAD_REG_ADDR ||
+            // PBA_FIR_AXPUSH_WRERR ||
+            // PBA_FIR_AXRCV_DLO_ERR ||
+            // PBA_FIR_AXRCV_DLO_TO ||
+            // PBA_FIR_AXRCV_RSVDATA_TO ||
+            // PBA_FIR_AXFLOW_ERR ||
+            // PBA_FIR_AXSND_DHI_RTYTO ||
+            // PBA_FIR_AXSND_DLO_RTYTO ||
+            // PBA_FIR_AXSND_RSVTO ||
+            // PBA_FIR_AXSND_RSVERR ||
+            PBA_FIR_FIR_PARITY_ERR ||
+            PBA_FIR_FIR_PARITY_ERR2
+        )
+       )
+    {
 
         pba_bridge_ffdc(&(G_pba_ffdc.bridge));
     }
@@ -1195,11 +1275,11 @@ pba_error_handler_full(void *arg, SsxIrqId irq, int priority)
 ////////////////////////////////////////////////////////////////////////////
 
 void
-async_bce_initialize(BceQueue *queue, int engine, SsxIrqId irq)
+async_bce_initialize(BceQueue* queue, int engine, SsxIrqId irq)
 {
     bce_queue_create(queue, engine);
     async_level_handler_setup(bce_async_handler,
-                              (void *)queue,
+                              (void*)queue,
                               irq,
                               SSX_CRITICAL,
                               SSX_IRQ_POLARITY_ACTIVE_HIGH);
@@ -1208,13 +1288,13 @@ async_bce_initialize(BceQueue *queue, int engine, SsxIrqId irq)
 
 
 void
-async_pbax_initialize(PbaxQueue *queue, int engine, SsxIrqId irq,
-                     uint64_t *buffer, size_t length, int protocol)
+async_pbax_initialize(PbaxQueue* queue, int engine, SsxIrqId irq,
+                      uint64_t* buffer, size_t length, int protocol)
 {
     pbax_queue_create(queue, engine, buffer, length, protocol);
     pbax_queue_enable(queue);
     async_level_handler_setup(pbax_async_handler,
-                              (void *)queue,
+                              (void*)queue,
                               irq,
                               SSX_NONCRITICAL,
                               SSX_IRQ_POLARITY_ACTIVE_HIGH);

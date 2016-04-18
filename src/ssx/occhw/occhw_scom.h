@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -46,17 +46,17 @@
 
 #ifndef __ASSEMBLER__
 
-int
-_getscom(uint32_t address, uint64_t *data, SsxInterval timeout);
+    int
+    _getscom(uint32_t address, uint64_t* data, SsxInterval timeout);
 
-int
-getscom(uint32_t address, uint64_t *data);
+    int
+    getscom(uint32_t address, uint64_t* data);
 
-int
-_putscom(uint32_t address, uint64_t data, SsxInterval timeout);
+    int
+    _putscom(uint32_t address, uint64_t data, SsxInterval timeout);
 
-int
-putscom(uint32_t address, uint64_t data);
+    int
+    putscom(uint32_t address, uint64_t data);
 
 #endif  /* __ASSEMBLER__ */
 
@@ -92,7 +92,7 @@ putscom(uint32_t address, uint64_t data);
 /// The default timeout for getscom()/putscom()
 ///
 /// This timeout is enforced by the firmware to guarantee a timeout regardless
-/// of the hardware setup.  
+/// of the hardware setup.
 ///
 /// The expectation is that the hardware will be set up to enforce a PCB
 /// timeout of 8K cycles, or 16.384us @ 500 MHz. A timeout only occurs if
@@ -109,7 +109,7 @@ putscom(uint32_t address, uint64_t data);
 /// (either the setup, hardware or firmware) must be broken.
 
 #ifndef SCOM_TIMEOUT
-#define SCOM_TIMEOUT SSX_MICROSECONDS(17)
+    #define SCOM_TIMEOUT SSX_MICROSECONDS(17)
 #endif
 
 
@@ -124,7 +124,7 @@ putscom(uint32_t address, uint64_t data);
 /// well.
 
 #ifndef SCOM_ERROR_LIMIT
-#define SCOM_ERROR_LIMIT PCB_ERROR_CHIPLET_OFFLINE
+    #define SCOM_ERROR_LIMIT PCB_ERROR_CHIPLET_OFFLINE
 #endif
 
 #endif // __OCCHW_SCOM_H__

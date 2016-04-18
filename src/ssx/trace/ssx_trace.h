@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -32,24 +32,24 @@
 
 /// \file ssx_trace.h
 /// \brief Macros and declarations for the SSX Firmware Tracing Facility.
-/// 
+///
 
 #include <stdint.h>
 
 #define SSX_TRACE_VERSION 2
 
 #ifndef SSX_TRACE_SZ
-#define SSX_TRACE_SZ 256
+    #define SSX_TRACE_SZ 256
 #endif
 
 //Fail compilation if size is not a power of 2
 #if ((SSX_TRACE_SZ - 1) & SSX_TRACE_SZ)
-#error "SSX_TRACE_SZ is not a power of two!!!"
+    #error "SSX_TRACE_SZ is not a power of two!!!"
 #endif
 
 //Fail compilation if size is smaller than 64 bytes
 #if (SSX_TRACE_SZ < 64)
-#error "SSX_TRACE_SZ must be at least 64 bytes!!!"
+    #error "SSX_TRACE_SZ must be at least 64 bytes!!!"
 #endif
 
 //Mask for calculating offsets into the trace circular buffer
@@ -61,9 +61,9 @@
 #define PPC_IMG_STRING STRINGIFY(IMAGE_NAME)
 
 #ifdef SSX_TRACE_HASH_PREFIX
-#if (SSX_TRACE_HASH_PREFIX > 0xffff)
-#error SSX_TRACE_HASH_PREFIX must be defined as a 16 bit constant value
-#endif
+    #if (SSX_TRACE_HASH_PREFIX > 0xffff)
+        #error SSX_TRACE_HASH_PREFIX must be defined as a 16 bit constant value
+    #endif
 #endif //SSX_TRACE_HASH_PREFIX
 
 //This provides a 128ns tick (assuming a 32ns clock period)
@@ -94,7 +94,7 @@
 //are out of order it will result in a very large difference.  To solve this
 //problem, any time that the parser code sees a very large difference (larger
 //than SSX_TRACE_MTBT) it will treat it as a negative number.
-#define SSX_TRACE_MTBT (0xfffffffful - 31250000) 
+#define SSX_TRACE_MTBT (0xfffffffful - 31250000)
 
 #define SSX_TRACE_MAX_PARMS  4
 
@@ -107,9 +107,9 @@
 //(The trace version does not need to change if this changes as long
 // as it remains less than SSX_TRACE_MAX_BINARY)
 #if (SSX_TRACE_SZ <= 256)
-#define SSX_TRACE_CLIPPED_BINARY_SZ SSX_TRACE_SZ / 2
+    #define SSX_TRACE_CLIPPED_BINARY_SZ SSX_TRACE_SZ / 2
 #else
-#define SSX_TRACE_CLIPPED_BINARY_SZ SSX_TRACE_MAX_BINARY
+    #define SSX_TRACE_CLIPPED_BINARY_SZ SSX_TRACE_MAX_BINARY
 #endif
 
 //Trace formats that are supported
@@ -119,7 +119,7 @@ typedef enum
     SSX_TRACE_FORMAT_TINY,
     SSX_TRACE_FORMAT_BIG,
     SSX_TRACE_FORMAT_BINARY,
-}SsxTraceFormat;
+} SsxTraceFormat;
 
 //This combines the timestamp and the format bits into a
 //single 32 bit word.
@@ -127,11 +127,13 @@ typedef union
 {
     struct
     {
-        uint32_t    timestamp   : SSX_TRACE_TS_BITS;
-        uint32_t    format      : SSX_TRACE_FORMAT_BITS;
+    uint32_t    timestamp   :
+        SSX_TRACE_TS_BITS;
+    uint32_t    format      :
+        SSX_TRACE_FORMAT_BITS;
     };
     uint32_t word32;
-}SsxTraceTime;
+} SsxTraceTime;
 
 //SSX trace uses a 16 bit string format hash value
 typedef uint16_t SsxTraceHash;
@@ -146,7 +148,7 @@ typedef union
         uint16_t            parm;
     };
     uint32_t    word32;
-}SsxTraceTinyParms;
+} SsxTraceTinyParms;
 
 //A tiny trace fits within a single 8 byte word. This includes
 //the timestamp, format bits, hash id, and a 16 bit parameter.
@@ -155,10 +157,10 @@ typedef union
     struct
     {
         SsxTraceTinyParms   parms;
-        SsxTraceTime        time_format; 
+        SsxTraceTime        time_format;
     };
     uint64_t    word64;
-}SsxTraceTiny;
+} SsxTraceTiny;
 
 //Larger traces that require a 32 bit parameter or more than one
 //parameter use the big trace format.  The number of parms and
@@ -174,17 +176,17 @@ typedef union
         uint8_t             num_parms;
     };
     uint32_t    word32;
-}SsxTraceBigParms;
+} SsxTraceBigParms;
 
 typedef union
 {
     struct
     {
         SsxTraceBigParms    parms;
-        SsxTraceTime        time_format; 
+        SsxTraceTime        time_format;
     };
     uint64_t    word64;
-}SsxTraceBig;
+} SsxTraceBig;
 
 //Binary traces are handled in a similar fashion to big traces, except
 //that instead of having a number of parameters, we have number of bytes.
@@ -197,7 +199,7 @@ typedef union
         uint8_t             num_bytes;
     };
     uint32_t    word32;
-}SsxTraceBinaryParms;
+} SsxTraceBinaryParms;
 
 typedef union
 {
@@ -207,7 +209,7 @@ typedef union
         SsxTraceTime         time_format;
     };
     uint64_t    word64;
-}SsxTraceBinary;
+} SsxTraceBinary;
 
 //This is a generic structure that can be used to retrieve data
 //for tiny, big, and binary formatted entries.
@@ -228,7 +230,7 @@ typedef union
         SsxTraceTime        time_format;
     };
     uint64_t    word64;
-}SsxTraceGeneric;
+} SsxTraceGeneric;
 
 //This is a format that might be used in the future for tracing
 //a 64 bit timestamp so that we don't fill up the buffer with periodic
@@ -242,7 +244,7 @@ typedef union
         SsxTraceTime        time_format;
     };
     uint64_t    word64;
-}SsxTraceTime64;
+} SsxTraceTime64;
 #endif
 
 //It would probably be more accurate to call this a footer since it
@@ -255,7 +257,7 @@ typedef union
     SsxTraceBinary       binary;
     SsxTraceBig          big;
     SsxTraceTiny         small;
-}SsxTraceEntryFooter;
+} SsxTraceEntryFooter;
 
 
 //This is the data that is updated (in the buffer header) every time we add
@@ -268,7 +270,7 @@ typedef union
         uint32_t  offset;
     };
     uint64_t word64;
-}SsxTraceState;
+} SsxTraceState;
 
 #define SSX_TRACE_IMG_STR_SZ 16
 
@@ -296,7 +298,7 @@ typedef struct
 
     //circular trace buffer
     uint8_t             cb[SSX_TRACE_SZ];
-}SsxTraceBuffer;
+} SsxTraceBuffer;
 
 extern SsxTraceBuffer g_ssx_trace_buf;
 extern size_t         g_ssx_trace_buf_size;
