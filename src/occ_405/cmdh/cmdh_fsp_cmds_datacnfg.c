@@ -241,7 +241,7 @@ uint8_t DATA_request_cnfgdata ()
 //
 // End Function Specification
 errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
-                                      cmdh_fsp_rsp_t * o_rsp_ptr)
+                                cmdh_fsp_rsp_t       * o_rsp_ptr)
 {
     errlHndl_t                      l_err = NULL;
     uint16_t                        l_req_freq;
@@ -2058,13 +2058,11 @@ errlHndl_t data_store_volt_uplift(const cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // End Function Specification
 errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
-                                      cmdh_fsp_rsp_t * o_rsp_ptr)
+                                cmdh_fsp_rsp_t       * o_rsp_ptr)
 {
     errlHndl_t                      l_errlHndl = NULL;
     UINT32                          l_new_data = 0;
     ERRL_RC                         l_rc       = ERRL_RC_INTERNAL_FAIL;
-
-    memset(o_rsp_ptr,0,(size_t)(sizeof(cmdh_fsp_rsp_t)));
 
     CMDH_TRAC_IMP("Data Config Packet Received Type: 0x%02x",i_cmd_ptr->data[0]);
 
@@ -2239,7 +2237,7 @@ errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
         /// Build Response Packet - all formats return success with no data
         o_rsp_ptr->data_length[0] = 0;
         o_rsp_ptr->data_length[1] = 0;
-        o_rsp_ptr->rc             = ERRL_RC_SUCCESS;
+        G_rsp_status = ERRL_RC_SUCCESS;
     }
 
     return(l_errlHndl);

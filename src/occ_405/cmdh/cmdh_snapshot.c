@@ -323,7 +323,7 @@ errlHndl_t cmdh_snapshot_sync(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         l_resp_ptr->data_length[0] = 0;
         l_resp_ptr->data_length[1] = 0;
-        l_resp_ptr->rc = 0;
+        G_rsp_status = 0;
     }while(FALSE);
 
     if (l_rc)

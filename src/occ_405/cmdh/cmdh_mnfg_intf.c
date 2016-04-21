@@ -174,7 +174,7 @@ uint8_t cmdh_mnfg_run_stop_slew(const cmdh_fsp_cmd_t * i_cmd_ptr,
     }while(0);
 
     // Populate the response data packet
-    l_rsp_ptr->rc = l_rc;
+    G_rsp_status = l_rc;
     l_rsp_ptr->data_length[0] = 0;
     l_rsp_ptr->data_length[1] = MNFG_INTF_RUN_STOP_SLEW_RSP_SIZE;
 
@@ -316,7 +316,7 @@ uint8_t cmdh_mnfg_mem_slew(const cmdh_fsp_cmd_t * i_cmd_ptr,
     }while(0);
 
     // Populate the response data packet
-    l_rsp_ptr->rc = l_rc;
+    G_rsp_status = l_rc;
     l_rsp_ptr->data_length[0] = 0;
     l_rsp_ptr->data_length[1] = MNFG_INTF_MEM_SLEW_RSP_SIZE;
 
@@ -376,7 +376,7 @@ uint8_t cmdh_mnfg_emulate_oversub(const cmdh_fsp_cmd_t * i_cmd_ptr,
     }while(0);
 
     // Populate the response data packet
-    l_rsp_ptr->rc = ERRL_RC_SUCCESS;
+    G_rsp_status = ERRL_RC_SUCCESS;
     l_rsp_ptr->data_length[0] = 0;
     l_rsp_ptr->data_length[1] = 1;
 
@@ -515,7 +515,7 @@ uint8_t cmdh_mnfg_list_sensors(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
     // Populate the response data header
     l_resp_data_length = 2 + l_num_of_sensors * sizeof(cmdh_mfg_sensor_rec_t);
-    o_rsp_ptr->rc = l_rc;
+    G_rsp_status = l_rc;
     o_rsp_ptr->data_length[0] = ((uint8_t *)&l_resp_data_length)[0];
     o_rsp_ptr->data_length[1] = ((uint8_t *)&l_resp_data_length)[1];
 
@@ -652,7 +652,7 @@ uint8_t cmdh_mnfg_get_sensor(const cmdh_fsp_cmd_t * i_cmd_ptr,
     // Populate the response data header
     l_resp_data_length = sizeof(cmdh_mfg_get_sensor_resp_t) -
                          sizeof(cmdh_fsp_rsp_header_t);
-    o_rsp_ptr->rc = l_rc;
+    G_rsp_status = l_rc;
     o_rsp_ptr->data_length[0] = ((uint8_t *)&l_resp_data_length)[0];
     o_rsp_ptr->data_length[1] = ((uint8_t *)&l_resp_data_length)[1];
 

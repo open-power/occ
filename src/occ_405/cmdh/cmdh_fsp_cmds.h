@@ -44,24 +44,18 @@
 typedef enum
 {
     CMDH_POLL                   = 0x00,
-    CMDH_QUERYFWLEVEL           = 0x01,
-    CMDH_GETERRL                = 0x10,
     CMDH_CLEARERRL              = 0x12,
     CMDH_SETMODESTATE           = 0x20,
     CMDH_SETCONFIGDATA          = 0x21,
     CMDH_SET_USER_PCAP          = 0x22,
-    CMDH_SET_THERMAL_THROTTLE   = 0x23,
     CMDH_RESET_PREP             = 0x25,
     CMDH_SNAPSHOT_SYNC          = 0x26,
-    CMDH_READ_STATUS_REG        = 0x31,
-    CMDH_GET_THROTTLE_VALUE     = 0x32,
     CMDH_GET_CPU_TEMPS          = 0x33,
     CMDH_GET_SNAPSHOT_BUFFER    = 0x35,
     CMDH_DEBUGPT                = 0x40,
     CMDH_AME_PASS_THROUGH       = 0x41,
     CMDH_GET_FIELD_DEBUG_DATA   = 0x42,
     CMDH_MFG_TEST_CMD           = 0x53,
-    CMDH_FOM                    = 0x54,
     CMDH_TUNABLE_PARMS          = 0x60,
 } eCmdhCommands;
 
@@ -533,20 +527,13 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
                           cmdh_fsp_rsp_t * i_rsp_ptr);
 
 errlHndl_t cmdh_tmgt_poll (const cmdh_fsp_cmd_t * i_cmd_ptr,
-                           cmdh_fsp_rsp_t * i_rsp_ptr);
-
-ERRL_RC cmdh_poll_v20 (cmdh_fsp_rsp_t * i_rsp_ptr);
+                                 cmdh_fsp_rsp_t * i_rsp_ptr);
 
 errlHndl_t cmdh_clear_elog (const cmdh_fsp_cmd_t * i_cmd_ptr,
                                   cmdh_fsp_rsp_t * i_rsp_ptr);
 
-void cmdh_tmgt_query_fw (const cmdh_fsp_cmd_t * i_cmd_ptr,
-                               cmdh_fsp_rsp_t * i_rsp_ptr);
-
 errlHndl_t cmdh_amec_pass_through(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                         cmdh_fsp_rsp_t * i_rsp_ptr);
-errlHndl_t cmdh_get_elog(const cmdh_fsp_cmd_t * i_cmd_ptr,
-                               cmdh_fsp_rsp_t * i_rsp_ptr);
 
 errlHndl_t cmdh_reset_prep(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                  cmdh_fsp_rsp_t * i_rsp_ptr);

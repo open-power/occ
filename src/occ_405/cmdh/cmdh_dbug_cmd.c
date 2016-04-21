@@ -82,7 +82,7 @@ void dbug_err_inject(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
     i_rsp_ptr->data_length[0] = 0;
     i_rsp_ptr->data_length[1] = 0;
-    i_rsp_ptr->rc = ERRL_RC_SUCCESS;
+    G_rsp_status = ERRL_RC_SUCCESS;
 
     if(!strncmp(l_cmd_ptr->comp, "RST", OCC_TRACE_NAME_SIZE))
     {
@@ -97,7 +97,7 @@ void dbug_err_inject(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         if (INVALID_ERR_HNDL == l_err)
         {
-            i_rsp_ptr->rc = ERRL_RC_INTERNAL_FAIL;
+            G_rsp_status = ERRL_RC_INTERNAL_FAIL;
         }
 
         addCalloutToErrl(l_err,
@@ -120,14 +120,14 @@ void dbug_err_inject(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         if (INVALID_ERR_HNDL == l_err)
         {
-            i_rsp_ptr->rc = ERRL_RC_INTERNAL_FAIL;
+            G_rsp_status = ERRL_RC_INTERNAL_FAIL;
         }
 
         // Commit Error log
         commitErrl(&l_err);
     }
 
-    if (i_rsp_ptr->rc == ERRL_RC_INTERNAL_FAIL)
+    if (G_rsp_status == ERRL_RC_INTERNAL_FAIL)
     {
         TRAC_ERR("cmdh_dbug_inject_errl: Fail creating ERR Log\n");
     }
@@ -171,7 +171,7 @@ void dbug_centaur_dump(const cmdh_fsp_cmd_t * i_cmd_ptr,
     // Fill out the rest of the response data
     i_rsp_ptr->data_length[0] = CONVERT_UINT16_UINT8_HIGH(l_datalen);
     i_rsp_ptr->data_length[1] = CONVERT_UINT16_UINT8_LOW(l_datalen);
-    i_rsp_ptr->rc             = ERRL_RC_SUCCESS;
+    G_rsp_status              = ERRL_RC_SUCCESS;
 #endif
     return;
 }
@@ -198,7 +198,7 @@ void dbug_apss_dump(const cmdh_fsp_cmd_t * i_cmd_ptr,
     // Fill out the rest of the response data
     i_rsp_ptr->data_length[0] = CONVERT_UINT16_UINT8_HIGH(l_datalen);
     i_rsp_ptr->data_length[1] = CONVERT_UINT16_UINT8_LOW(l_datalen);
-    i_rsp_ptr->rc             = ERRL_RC_SUCCESS;
+    G_rsp_status              = ERRL_RC_SUCCESS;
 
     return;
 }
@@ -235,7 +235,7 @@ void dbug_proc_data_dump(const cmdh_fsp_cmd_t * i_cmd_ptr,
     // Fill out the rest of the response data
     i_rsp_ptr->data_length[0] = CONVERT_UINT16_UINT8_HIGH(l_datalen);
     i_rsp_ptr->data_length[1] = CONVERT_UINT16_UINT8_LOW(l_datalen);
-    i_rsp_ptr->rc             = ERRL_RC_SUCCESS;
+    G_rsp_status              = ERRL_RC_SUCCESS;
 #endif
     return;
 }
@@ -262,7 +262,7 @@ errlHndl_t cmdhDbugCmd(void * i_arg)
     TRAC_INFO("Debug Command: Sub:0x%02x\n", l_sub_cmd);
 
     // Build up a successful default response
-    l_rsp_ptr->rc = ERRL_RC_SUCCESS;
+    G_rsp_status  = ERRL_RC_SUCCESS;
     l_rsp_ptr->data_length[0] = 0;
     l_rsp_ptr->data_length[1] = 0;
 
@@ -307,7 +307,7 @@ errlHndl_t cmdhDbugCmd(void * i_arg)
         case DBUG_VERIFY_V_F:
         case DBUG_DUMP_PPM_DATA:
         default:
-            l_rsp_ptr->rc = ERRL_RC_INVALID_DATA;
+            G_rsp_status = ERRL_RC_INVALID_DATA;
             break;
     }
 

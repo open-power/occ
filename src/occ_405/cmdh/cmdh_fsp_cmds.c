@@ -83,6 +83,10 @@ uint8_t G_mst_tunable_parameter_overwrite = 0;
 //Reverse association of channel to function.
 uint8_t G_apss_ch_to_function[MAX_APSS_ADC_CHANNELS] = {0};
 
+
+ERRL_RC cmdh_poll_v20 (cmdh_fsp_rsp_t * i_rsp_ptr);
+
+
 // Function Specification
 //
 // Name:  cmdh_tmgt_poll
@@ -92,7 +96,7 @@ uint8_t G_apss_ch_to_function[MAX_APSS_ADC_CHANNELS] = {0};
 //
 // End Function Specification
 errlHndl_t cmdh_tmgt_poll (const cmdh_fsp_cmd_t * i_cmd_ptr,
-                     cmdh_fsp_rsp_t * o_rsp_ptr)
+                           cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     errlHndl_t                  l_errlHndl  = NULL;
     cmdh_poll_query_t *         l_poll_cmd  = (cmdh_poll_query_t *) i_cmd_ptr;
@@ -103,6 +107,7 @@ errlHndl_t cmdh_tmgt_poll (const cmdh_fsp_cmd_t * i_cmd_ptr,
         if (l_poll_cmd->version == CMDH_POLL_VERSION20)
         {
             l_rc = cmdh_poll_v20(o_rsp_ptr);
+            G_rsp_status = l_rc;
         }
         else
         {
@@ -132,9 +137,6 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
     ERRL_RC                     l_rc  = ERRL_RC_INTERNAL_FAIL;
     uint8_t                     k = 0;
     cmdh_poll_sensor_db_t       l_sensorHeader;
-
-    // Clear response buffer
-    memset(o_rsp_ptr, 0, (size_t)sizeof(cmdh_fsp_rsp_t));
 
     // Set pointer to start of o_rsp_ptr
     cmdh_poll_resp_v20_fixed_t * l_poll_rsp = (cmdh_poll_resp_v20_fixed_t *) o_rsp_ptr;
@@ -448,36 +450,11 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
     l_poll_rsp->data_length[0] = CONVERT_UINT16_UINT8_HIGH(l_rsp_index);
     l_poll_rsp->data_length[1] = CONVERT_UINT16_UINT8_LOW(l_rsp_index);
     l_rc                       = ERRL_RC_SUCCESS;
-    l_poll_rsp->rc             = ERRL_RC_SUCCESS;
+    // Response status is returned (must be written to rsp buffer last)
 
     return l_rc;
 }
 
-
-
-// Function Specification
-//
-// Name:  cmdh_tmgt_query_fw
-//
-// Description: TODO -- Add description
-//
-// End Function Specification
-void cmdh_tmgt_query_fw (const cmdh_fsp_cmd_t * i_cmd_ptr,
-                               cmdh_fsp_rsp_t * o_rsp_ptr)
-{
-    cmdh_fw_resp_t *            l_fw_data = (cmdh_fw_resp_t *) o_rsp_ptr;
-
-    l_fw_data->rc = ERRL_RC_SUCCESS;
-    l_fw_data->data_length[0] = 0;
-    l_fw_data->data_length[1] = CMDH_FW_QUERY_RESP_LEN;
-
-    // Copy the buildname into the response
-    memcpy( (void *) l_fw_data->fw_level,
-            (void *) &G_occ_buildname[0],
-            (size_t) CMDH_FW_QUERY_RESP_LEN);
-
-    return;
-}
 
 
 // Function Specification
@@ -488,7 +465,7 @@ void cmdh_tmgt_query_fw (const cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // End Function Specification
 errlHndl_t cmdh_reset_prep (const cmdh_fsp_cmd_t * i_cmd_ptr,
-                            cmdh_fsp_rsp_t * o_rsp_ptr)
+                                  cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     errlHndl_t                  l_errlHndl = NULL;
 /* TEMP -- NOT ENABLED YET (NEED DCOM) */
@@ -497,7 +474,7 @@ errlHndl_t cmdh_reset_prep (const cmdh_fsp_cmd_t * i_cmd_ptr,
     ERRL_RC                     l_rc = ERRL_RC_SUCCESS;
     bool                        l_ffdc = FALSE;
 
-    o_rsp_ptr->rc = ERRL_RC_SUCCESS;
+    G_rsp_status = ERRL_RC_SUCCESS;
     o_rsp_ptr->data_length[0] = 0;
     o_rsp_ptr->data_length[1] = 0;
 
@@ -612,7 +589,7 @@ errlHndl_t cmdh_reset_prep (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
     } while(0);
 
-    o_rsp_ptr->rc = l_rc;
+    G_rsp_status = l_rc;
 
     if(ERRL_RC_SUCCESS != l_rc)
     {
@@ -625,13 +602,13 @@ errlHndl_t cmdh_reset_prep (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
 // Function Specification
 //
-// Name:  cmdh_tmgt_query_fw
+// Name:  cmdh_clear_elog
 //
-// Description: TODO Add description
+// Description: Clear elog and free up entry
 //
 // End Function Specification
 errlHndl_t cmdh_clear_elog (const   cmdh_fsp_cmd_t * i_cmd_ptr,
-                                    cmdh_fsp_rsp_t * o_rsp_ptr)
+                            cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     cmdh_clear_elog_query_t *l_cmd_ptr = (cmdh_clear_elog_query_t *) i_cmd_ptr;
     uint8_t l_SlotNum = ERRL_INVALID_SLOT;
@@ -656,7 +633,7 @@ errlHndl_t cmdh_clear_elog (const   cmdh_fsp_cmd_t * i_cmd_ptr,
 
     if (l_err == NULL)
     {
-        o_rsp_ptr->rc = ERRL_RC_SUCCESS;
+        G_rsp_status = ERRL_RC_SUCCESS;
     }
     else
     {
@@ -675,7 +652,7 @@ errlHndl_t cmdh_clear_elog (const   cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // End Function Specification
 void cmdh_dbug_get_trace (const cmdh_fsp_cmd_t * i_cmd_ptr,
-                               cmdh_fsp_rsp_t * o_rsp_ptr)
+                          cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     UINT l_rc = 0;
     UINT l_trace_buffer_size = CMDH_FSP_RSP_SIZE-CMDH_DBUG_FSP_RESP_LEN-8;  // tmgt reserved 8 bytes
@@ -688,13 +665,13 @@ void cmdh_dbug_get_trace (const cmdh_fsp_cmd_t * i_cmd_ptr,
     l_trace_size = l_trace_buffer_size;
     if(l_rc==0)
     {
-        o_rsp_ptr->rc = ERRL_RC_SUCCESS;
+        G_rsp_status = ERRL_RC_SUCCESS;
         o_rsp_ptr->data_length[0] = CONVERT_UINT16_UINT8_HIGH(l_trace_size);
         o_rsp_ptr->data_length[1] = CONVERT_UINT16_UINT8_LOW(l_trace_size);
     }
     else
     {
-        o_rsp_ptr->rc = ERRL_RC_INTERNAL_FAIL;
+        G_rsp_status = ERRL_RC_INTERNAL_FAIL;
         o_rsp_ptr->data_length[0] = 0;
         o_rsp_ptr->data_length[1] = 0;
     }
@@ -809,7 +786,7 @@ void cmdh_dbug_get_ame_sensor (const cmdh_fsp_cmd_t * i_cmd_ptr,
     // Populate the response data header
     l_resp_data_length = sizeof(cmdh_dbug_get_sensor_resp_t) -
         CMDH_DBUG_FSP_RESP_LEN;
-    o_rsp_ptr->rc = l_rc;
+    G_rsp_status = l_rc;
     o_rsp_ptr->data_length[0] = ((uint8_t *)&l_resp_data_length)[0];
     o_rsp_ptr->data_length[1] = ((uint8_t *)&l_resp_data_length)[1];
 #endif // #if 0
@@ -823,7 +800,7 @@ void cmdh_dbug_get_ame_sensor (const cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // End Function Specification
 void cmdh_dbug_peek (const cmdh_fsp_cmd_t * i_cmd_ptr,
-                           cmdh_fsp_rsp_t * o_rsp_ptr)
+                     cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     cmdh_dbug_peek_t * l_cmd_ptr = (cmdh_dbug_peek_t*) i_cmd_ptr;
     uint32_t           l_len     = l_cmd_ptr->size;
@@ -903,58 +880,11 @@ void cmdh_dbug_peek (const cmdh_fsp_cmd_t * i_cmd_ptr,
             break;
     }
 
-    o_rsp_ptr->rc = ERRL_RC_SUCCESS;
+    G_rsp_status = ERRL_RC_SUCCESS;
     o_rsp_ptr->data_length[0] = CONVERT_UINT16_UINT8_HIGH(l_len);
     o_rsp_ptr->data_length[1] = CONVERT_UINT16_UINT8_LOW(l_len);
 }
 
-
-// Function Specification
-//
-// Name:  cmdh_get_elog
-//
-// Description: TODO Add description
-//
-// End Function Specification
-errlHndl_t cmdh_get_elog (const cmdh_fsp_cmd_t * i_cmd_ptr,
-                                cmdh_fsp_rsp_t * o_rsp_ptr)
-{
-    uint8_t l_lastID = getOldestErrlID();
-    uint8_t l_SlotNum = 0;
-    errlHndl_t l_errlHndl = INVALID_ERR_HNDL;
-
-    cmdh_get_elog_resp_t    *l_rsp_ptr = (cmdh_get_elog_resp_t *) o_rsp_ptr;
-
-    l_rsp_ptr->data_length[0] = 0;
-    l_rsp_ptr->data_length[1] = CMDH_GET_ELOG_RESP_LEN;
-
-    // Get slot num of last-Get-Err-log, return ERRL_INVALID_SLOT if not found
-    l_SlotNum = getErrSlotNumByErrId(l_lastID);
-
-    if (l_SlotNum != ERRL_INVALID_SLOT)
-    {
-        // clear error handle
-        l_errlHndl = NULL;
-
-        l_rsp_ptr->rc = ERRL_RC_SUCCESS;
-
-        // Get and return OCI address of last-Get-Err-log, return NULL if not found
-        l_rsp_ptr->oci_address = getErrSlotOCIAddr(l_SlotNum);
-        l_rsp_ptr->elog_id = l_lastID;
-    }
-    else
-    {
-        l_errlHndl = NULL;
-
-        l_rsp_ptr->rc = ERRL_RC_CONDITIONAL_SUCCESS;
-
-        // no data should be returned
-        l_rsp_ptr->oci_address = 0;
-        l_rsp_ptr->elog_id = 0;
-    }
-
-    return l_errlHndl;
-}
 
 // Function Specification
 //
@@ -973,7 +903,6 @@ void cmdh_dbug_get_apss_data (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
     do
     {
-        memset(o_rsp_ptr, 0, sizeof(cmdh_dbug_apss_data_resp_t));
         // Do sanity check on the function inputs
         if ((NULL == i_cmd_ptr) || (NULL == o_rsp_ptr))
         {
@@ -1005,7 +934,7 @@ void cmdh_dbug_get_apss_data (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
     // Populate the response data header
     l_resp_data_length = sizeof(cmdh_dbug_apss_data_resp_t) - CMDH_DBUG_FSP_RESP_LEN;
-    o_rsp_ptr->rc = l_rc;
+    G_rsp_status = l_rc;
     o_rsp_ptr->data_length[0] = ((uint8_t *)&l_resp_data_length)[0];
     o_rsp_ptr->data_length[1] = ((uint8_t *)&l_resp_data_length)[1];
 }
@@ -1014,16 +943,14 @@ void cmdh_dbug_get_apss_data (const cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // Name:  dbug_parse_cmd
 //
-// Description: TODO Add description
+// Description: Process debug commands
 //
 // End Function Specification
 void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
-                           cmdh_fsp_rsp_t * o_rsp_ptr)
+                    cmdh_fsp_rsp_t * o_rsp_ptr)
 {
-// TEMP / TODO : Uncomment these when needed, they cause unused var warning
     uint8_t                     l_rc = 0;
     uint8_t                     l_sub_cmd = 0;
-//    uint8_t                     l_block_num = 0;
     errl_generic_resp_t *       l_err_rsp_ptr =  (errl_generic_resp_t *) o_rsp_ptr;
 //    errlHndl_t                  l_errl = NULL;
 //    cmdhDbugCmdArg_t            l_cmdh_dbug_args;
@@ -1070,7 +997,7 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
         case DBUG_CLEAR_TRACE:
             // Call clear trace function
             TRAC_reset_buf();
-            o_rsp_ptr->rc = ERRL_RC_SUCCESS;
+            G_rsp_status = ERRL_RC_SUCCESS;
             break;
 /* TEMP -- NOT YET SUPPORTED */
 #if 0
@@ -1136,7 +1063,7 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
     // We don't do errors in DBUG, as a safety check make sure the response is valid.
     if ( l_rc )
     {
-        l_err_rsp_ptr->rc = l_rc;
+        G_rsp_status = l_rc;
         l_err_rsp_ptr->data_length[0] = 0;
         l_err_rsp_ptr->data_length[1] = 1;
     }
@@ -1153,7 +1080,7 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // End Function Specification
 errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
-                                    cmdh_fsp_rsp_t * o_rsp_ptr)
+                                  cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     errlHndl_t                      l_errlHndl     = NULL;
     smgr_setmodestate_v0_query_t*   l_cmd_ptr      = (smgr_setmodestate_v0_query_t *)i_cmd_ptr;
@@ -1331,7 +1258,7 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // End Function Specification
 errlHndl_t cmdh_amec_pass_through(const cmdh_fsp_cmd_t * i_cmd_ptr,
-                                    cmdh_fsp_rsp_t * o_rsp_ptr)
+                                  cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     errlHndl_t                      l_errlHndl    = NULL;
 /* TEMP -- NOT YET SUPPORTED (NEED AMEC) */
@@ -1406,7 +1333,7 @@ errlHndl_t cmdh_amec_pass_through(const cmdh_fsp_cmd_t * i_cmd_ptr,
             break;
         }
         // Set response rc and length
-        o_rsp_ptr->rc = ERRL_RC_SUCCESS;
+        G_rsp_status = ERRL_RC_SUCCESS;
         o_rsp_ptr->data_length[0] = ((uint8_t *)&l_rsp_data_length)[0];
         o_rsp_ptr->data_length[1] = ((uint8_t *)&l_rsp_data_length)[1];
 
@@ -1416,7 +1343,7 @@ errlHndl_t cmdh_amec_pass_through(const cmdh_fsp_cmd_t * i_cmd_ptr,
     {
         l_err_resp_ptr->data_length[0] = 0;
         l_err_resp_ptr->data_length[1] = 1;
-        l_err_resp_ptr->rc             = l_rc;
+        G_rsp_status = l_rc;
 
         if(l_errlHndl)
         {
@@ -1440,7 +1367,7 @@ errlHndl_t cmdh_amec_pass_through(const cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // End Function Specification
 errlHndl_t cmdh_tmgt_get_field_debug_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
-                                                cmdh_fsp_rsp_t * o_rsp_ptr)
+                                          cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     errlHndl_t                        l_err             = NULL;
 /* TEMP -- NOT YET SUPPORTED (NEED SENSORS) */
@@ -1536,7 +1463,7 @@ errlHndl_t cmdh_tmgt_get_field_debug_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
         l_rsp_data_length = (sizeof(cmdh_get_field_debug_data_resp_t) - CMDH_DBUG_FSP_RESP_LEN);
         l_resp_ptr->data_length[0] = ((uint8_t *)&l_rsp_data_length)[0];
         l_resp_ptr->data_length[1] = ((uint8_t *)&l_rsp_data_length)[1];
-        l_resp_ptr->rc             = l_rc;
+        G_rsp_status = l_rc;
 
     } while(0);
 
@@ -1557,13 +1484,13 @@ errlHndl_t cmdh_tmgt_get_field_debug_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // End Function Specification
 errlHndl_t cmdh_set_user_pcap(const cmdh_fsp_cmd_t * i_cmd_ptr,
-                                    cmdh_fsp_rsp_t * o_rsp_ptr)
+                              cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     errlHndl_t l_err = NULL;
     ERRL_RC  l_rc = ERRL_RC_SUCCESS;
 
 
-    o_rsp_ptr->rc = ERRL_RC_SUCCESS;
+    G_rsp_status = ERRL_RC_SUCCESS;
     o_rsp_ptr->data_length[0] = 0;
     o_rsp_ptr->data_length[1] = 0;
 

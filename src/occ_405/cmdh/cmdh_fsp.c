@@ -86,15 +86,18 @@ uint32_t __occ_panic_save_msr;
 DMA_BUFFER( fsp_cmd_t G_htmgt_cmd_buffer ) = {{{{0}}}};
 // Storage for responses sent to HTMGT
 DMA_BUFFER( fsp_rsp_t G_htmgt_rsp_buffer ) = {{{{0}}}};
-// Storage for responses sent to BMC
-cmdh_fsp_rsp_t G_tmp_rsp_buffer = {{0}};
 
 // This determines how OCC will send an interrupt to Host:
 // 0x00 = use FSI2MBOX; 0x01 = use PSIHB complex
 uint8_t G_occ_interrupt_type = FSP_SUPPORTED_OCC;
 
 errlHndl_t cmdh_processTmgtRequest (const cmdh_fsp_cmd_t * i_cmd_ptr,
-        cmdh_fsp_rsp_t * i_rsp_ptr);
+                                          cmdh_fsp_rsp_t * i_rsp_ptr);
+// G_rsp_status is used to store the response status value for the command being
+// processed.  The code will not write this status to the response buffer until the
+// entire buffer is ready to be sent.  At that point, G_rsp_status will be written
+// which will notify/trigger the consumer that the response is ready.
+uint8_t  G_rsp_status = 0;
 
 // Function Specification
 //
@@ -769,18 +772,18 @@ void cmdh_build_errl_rsp(const cmdh_fsp_cmd_t * i_cmd_ptr,
     {
         // Check if we need to update the return code, we only need to update this
         // if no one has previously set it to an error rc due to a error log
-        if( (ERRL_RC_SUCCESS == l_errl_rsp_ptr->rc) || (NULL == *l_errlHndlPtr) )
+        if( (ERRL_RC_SUCCESS == G_rsp_status) || (NULL == *l_errlHndlPtr) )
         {
             if( (i_rc == ERRL_RC_SUCCESS) || (i_rc == ERRL_RC_CONDITIONAL_SUCCESS) )
             {
                 // We can't return success in an error packet, change the
                 // return code to INTERNAL FAIL, because it must have been
                 // a code bug.
-                l_errl_rsp_ptr->rc = ERRL_RC_INTERNAL_FAIL;
+                G_rsp_status = ERRL_RC_INTERNAL_FAIL;
             }
             else
             {
-                l_errl_rsp_ptr->rc = i_rc;
+                G_rsp_status = i_rc;
             }
         }
 
@@ -843,7 +846,7 @@ void cmdh_build_errl_rsp(const cmdh_fsp_cmd_t * i_cmd_ptr,
         // This is a firmware bug, TMGT will see it is a bad RC,
         // with no error log, pick up on this, and log its own error
         l_errl_rsp_ptr->log_id = 0;  //ERRL_SLOT_INVALID
-        l_errl_rsp_ptr->rc     = ERRL_RC_INTERNAL_FAIL;
+        G_rsp_status = ERRL_RC_INTERNAL_FAIL;
     }
 
     l_errl_rsp_ptr->data_length[0] = 0;
@@ -857,7 +860,7 @@ void cmdh_build_errl_rsp(const cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // Name:  cmdh_fsp_cmd_hndler
 //
-// Description: TODO -- Add description
+// Description: Start processing command from HTMGT/TMGT/BMC
 //
 // End Function Specification
 errlHndl_t cmdh_fsp_cmd_hndler(void)
@@ -973,9 +976,12 @@ errlHndl_t cmdh_fsp_cmd_hndler(void)
                 break;
             }
 
-            // Zero out the response buffer, only update the return status of 'In Progress'
-            G_htmgt_rsp_buffer.fields.seq            = 0x00;
-            G_htmgt_rsp_buffer.fields.cmd_type       = 0x00;
+            // Zero out the response buffer and then fill in seq, cmd_type,
+            // and update the return status to IN_PROGRESS to signal that
+            // OCC has started processing the command
+            memset(&G_htmgt_rsp_buffer, 0, sizeof(G_htmgt_rsp_buffer));
+            G_htmgt_rsp_buffer.fields.seq      = G_htmgt_cmd_buffer.fields.seq;
+            G_htmgt_rsp_buffer.fields.cmd_type = G_htmgt_cmd_buffer.fields.cmd_type;
             G_htmgt_rsp_buffer.fields.rc             = ERRL_RC_CMD_IN_PROGRESS;
             G_htmgt_rsp_buffer.fields.data_length[0] = 0;
             G_htmgt_rsp_buffer.fields.data_length[1] = 1;
@@ -1048,13 +1054,14 @@ errlHndl_t cmdh_fsp_cmd_hndler(void)
             if(l_cksm != CONVERT_UINT8_ARRAY_UINT16(G_htmgt_cmd_buffer.byte[l_cmd_len],
                                                     G_htmgt_cmd_buffer.byte[l_cmd_len+1]))
             {
-                CMDH_TRAC_ERR("Checksum Error! Expected[0x%04X] Received[0x%02X%02X] Command Length[%u]",
+                CMDH_TRAC_ERR("HTMGT Checksum Error! Expected[0x%04X] Received[0x%04X] Command[0x%02X] Command Length[%u]",
                          l_cksm,
-                         G_htmgt_cmd_buffer.byte[l_cmd_len],
-                         G_htmgt_cmd_buffer.byte[l_cmd_len+1],
+                         CONVERT_UINT8_ARRAY_UINT16(G_htmgt_cmd_buffer.byte[l_cmd_len],
+                                                    G_htmgt_cmd_buffer.byte[l_cmd_len+1]),
+                         G_htmgt_cmd_buffer.fields.cmd_type,
                          l_cmd_len);
 
-                G_htmgt_rsp_buffer.fields.rc             = ERRL_RC_CHECKSUM_FAIL;
+                G_rsp_status = ERRL_RC_CHECKSUM_FAIL;
                 G_htmgt_rsp_buffer.fields.data_length[0] = 0;
                 G_htmgt_rsp_buffer.fields.data_length[1] = 1;
                 G_htmgt_rsp_buffer.fields.data[0]        = 0x00; //No error log
@@ -1066,11 +1073,6 @@ errlHndl_t cmdh_fsp_cmd_hndler(void)
                                                      &G_htmgt_rsp_buffer.fields);
             }
 
-            // Prepare the final response
-            // Copy the sequence number and command type to response
-            G_htmgt_rsp_buffer.fields.seq      = G_htmgt_cmd_buffer.fields.seq;
-            G_htmgt_rsp_buffer.fields.cmd_type = G_htmgt_cmd_buffer.fields.cmd_type;
-
             // Calculate length of response
             l_data_len = CONVERT_UINT8_ARRAY_UINT16(G_htmgt_rsp_buffer.fields.data_length[0],
                                                     G_htmgt_rsp_buffer.fields.data_length[1]);
@@ -1078,8 +1080,12 @@ errlHndl_t cmdh_fsp_cmd_hndler(void)
 
             // Add checksum
             l_cksm = checksum16(&G_htmgt_rsp_buffer.byte[0], l_cmd_len);
-            G_htmgt_rsp_buffer.byte[l_cmd_len] = CONVERT_UINT16_UINT8_HIGH(l_cksm);
+            // The IN_PROGRESS return status must be removed from checksum, and
+            // the final return status (which must be written last) must be added
+            l_cksm += G_rsp_status - ERRL_RC_CMD_IN_PROGRESS;
+            G_htmgt_rsp_buffer.byte[l_cmd_len]   = CONVERT_UINT16_UINT8_HIGH(l_cksm);
             G_htmgt_rsp_buffer.byte[l_cmd_len+1] = CONVERT_UINT16_UINT8_LOW(l_cksm);
+            G_htmgt_rsp_buffer.fields.rc         = G_rsp_status;
 
             // Need to write the final response to HOMER. Set up a copy request
             l_ssxrc = bce_request_create(&pba_copy,                           // block copy object
@@ -1133,13 +1139,21 @@ errlHndl_t cmdh_fsp_cmd_hndler(void)
         }
         else
         {
-            // The doorbell is coming from either TMGT or BMC. In either case,
-            // prepare a response with a return status of 'In Progress'
-            G_fsp_msg.rsp->fields.rc = ERRL_RC_CMD_IN_PROGRESS;
+            // The doorbell is coming from either TMGT or BMC.
+
+            // Zero out the response buffer and then fill in seq, cmd_type,
+            // and update the return status to IN_PROGRESS to signal that
+            // OCC has started processing the command
+            memset(G_fsp_msg.rsp, 0, (size_t)sizeof(fsp_rsp_t));
+            G_fsp_msg.rsp->fields.seq            = G_fsp_msg.cmd->fields.seq;
+            G_fsp_msg.rsp->fields.cmd_type       = G_fsp_msg.cmd->fields.cmd_type;
+            G_fsp_msg.rsp->fields.rc             = ERRL_RC_CMD_IN_PROGRESS;
+            G_fsp_msg.rsp->fields.data_length[0] = 0;
+            G_fsp_msg.rsp->fields.data_length[1] = 1;
 
             // Get Command Data Field Length
             l_data_len = CONVERT_UINT8_ARRAY_UINT16(G_fsp_msg.cmd->fields.data_length[0],
-                    G_fsp_msg.cmd->fields.data_length[1]);
+                                                    G_fsp_msg.cmd->fields.data_length[1]);
             l_cmd_len = l_data_len + CMDH_FSP_SEQ_CMD_SIZE + CMDH_FSP_DATALEN_SIZE;
 
             // Make sure that the message isn't > max message size before we do checksum
@@ -1151,74 +1165,45 @@ errlHndl_t cmdh_fsp_cmd_hndler(void)
             // Verify Command Checksum
             l_cksm = checksum16(&G_fsp_msg.cmd->byte[0],(l_cmd_len));
             if(l_cksm != CONVERT_UINT8_ARRAY_UINT16(G_fsp_msg.cmd->byte[l_cmd_len],
-                        G_fsp_msg.cmd->byte[l_cmd_len+1]))
+                                                    G_fsp_msg.cmd->byte[l_cmd_len+1]))
             {
-                CMDH_TRAC_ERR("Checksum Error! Expected[0x%04X] Received[0x%02X%02X]",
+                CMDH_TRAC_ERR("Checksum Error! Expected[0x%04X] Received[0x%04X] Command[0x%02X] Command Length[%u]",
                          l_cksm,
-                         G_fsp_msg.cmd->byte[l_cmd_len],
-                         G_fsp_msg.cmd->byte[l_cmd_len+1]);
+                         CONVERT_UINT8_ARRAY_UINT16(G_fsp_msg.cmd->byte[l_cmd_len],
+                                                    G_fsp_msg.cmd->byte[l_cmd_len+1]),
+                         G_fsp_msg.cmd->fields.cmd_type,
+                         l_cmd_len);
 
-                if(l_sender_id == ATTN_SENDER_ID_BMC)
-                {
-                    G_tmp_rsp_buffer.rc = ERRL_RC_CHECKSUM_FAIL;
-                }
-                else
-                {
-                    G_fsp_msg.rsp->fields.rc = ERRL_RC_CHECKSUM_FAIL;
-                }
+                G_rsp_status = ERRL_RC_CHECKSUM_FAIL;
+
                 G_fsp_msg.rsp->fields.data_length[0] = 0;
                 G_fsp_msg.rsp->fields.data_length[1] = 1;
                 G_fsp_msg.rsp->fields.data[0]        = 0x00; //No error log
-                // You could create an errl here, but is that really necessary?
-                // TMGT will know that the command didn't work...
             }
             else
             {
-                if(l_sender_id == ATTN_SENDER_ID_BMC)
-                {
-                    // If the sender is BMC, use a temporary buffer to store the
-                    // response since the return code should be updated last.
-                    // Command is responsible for RC, Data Len, Data
-                    l_errlHndl = cmdh_processTmgtRequest (&G_fsp_msg.cmd->fields,
-                                                          &G_tmp_rsp_buffer);
-
-                    // Write response data in SRAM except for return code
-                    G_fsp_msg.rsp->fields.data_length[0] = G_tmp_rsp_buffer.data_length[0];
-                    G_fsp_msg.rsp->fields.data_length[1] = G_tmp_rsp_buffer.data_length[1];
-                    memcpy(&G_fsp_msg.rsp->fields.data[0], &G_tmp_rsp_buffer.data[0], sizeof(CMDH_FSP_RSP_DATA_SIZE));
-                }
-                else
-                {
-                    // Command is responsible for RC, Data Len, Data
-                    l_errlHndl = cmdh_processTmgtRequest (&G_fsp_msg.cmd->fields,
-                                                          &G_fsp_msg.rsp->fields);
-                }
+                // Command is responsible for RC, Data Len, Data
+                l_errlHndl = cmdh_processTmgtRequest(&G_fsp_msg.cmd->fields,
+                                                     &G_fsp_msg.rsp->fields);
             }
 
             // Finish Building Response
-            // Copy the sequence number and command type to the response
-            G_fsp_msg.rsp->fields.seq      = G_fsp_msg.cmd->fields.seq;
-            G_fsp_msg.rsp->fields.cmd_type = G_fsp_msg.cmd->fields.cmd_type;
 
             // Calculate Length of Command
             l_data_len = CONVERT_UINT8_ARRAY_UINT16(G_fsp_msg.rsp->fields.data_length[0],
                                                     G_fsp_msg.rsp->fields.data_length[1]);
             l_cmd_len = l_data_len + CMDH_FSP_SEQ_CMD_RC_SIZE + CMDH_FSP_DATALEN_SIZE;
 
-            // Add checksum
+            // Calculate and add checksum
             l_cksm = checksum16(&G_fsp_msg.rsp->byte[0],(l_cmd_len));
+            // The IN_PROGRESS return status must be removed from checksum, and
+            // the final return status (which must be written last) must be added
+            l_cksm += G_rsp_status - ERRL_RC_CMD_IN_PROGRESS;
             G_fsp_msg.rsp->byte[l_cmd_len] = CONVERT_UINT16_UINT8_HIGH(l_cksm);
             G_fsp_msg.rsp->byte[l_cmd_len+1] = CONVERT_UINT16_UINT8_LOW(l_cksm);
 
-            // TODO: Do we really need this?
-            // Set an ACK on doorbell (sanity check)
-            //G_fsp_msg.doorbell[0] |= 0x80;
-
-            // Last thing is to copy the return code in SRAM if the sender is BMC
-            if(l_sender_id == ATTN_SENDER_ID_BMC)
-            {
-                G_fsp_msg.rsp->fields.rc = G_tmp_rsp_buffer.rc;
-            }
+            // Copy the return status last (to indicate command completion)
+            G_fsp_msg.rsp->fields.rc = G_rsp_status;
         }
 
     }while(0);
@@ -1249,11 +1234,11 @@ errlHndl_t cmdh_fsp_cmd_hndler(void)
 //
 // Name:  cmdh_processTmgtRequest
 //
-// Description: TODO -- Add description
+// Description: Call the required function to process the command
 //
 // End Function Specification
 errlHndl_t cmdh_processTmgtRequest (const cmdh_fsp_cmd_t * i_cmd_ptr,
-        cmdh_fsp_rsp_t * i_rsp_ptr)
+                                    cmdh_fsp_rsp_t       * i_rsp_ptr)
 {
     errlHndl_t            l_err         = NULL;
     uint8_t               l_cmd_type    = i_cmd_ptr->cmd_type;
@@ -1261,7 +1246,8 @@ errlHndl_t cmdh_processTmgtRequest (const cmdh_fsp_cmd_t * i_cmd_ptr,
     // Clear the Fields that the commands are responsible for
     i_rsp_ptr->data_length[0] = 0;
     i_rsp_ptr->data_length[1] = 0;
-    i_rsp_ptr->rc             = ERRL_RC_SUCCESS;
+    // Do not write return status to buffer until entire buffer has been written (include cksum)
+    G_rsp_status = ERRL_RC_SUCCESS;
 
     // Run command function based on cmd_type
     switch(l_cmd_type)
@@ -1269,13 +1255,6 @@ errlHndl_t cmdh_processTmgtRequest (const cmdh_fsp_cmd_t * i_cmd_ptr,
         case CMDH_POLL:
             l_err = cmdh_tmgt_poll (i_cmd_ptr,i_rsp_ptr);
             break;
-// TEMP -- NO SUPPORT YET
-// NOTE: It may be necessary to uncomment the function from cmdh_fsp_cmds.c as well
-/*
-        case CMDH_QUERYFWLEVEL:
-            cmdh_tmgt_query_fw (i_cmd_ptr,i_rsp_ptr);
-            break;
-*/
 
         case CMDH_DEBUGPT:
             cmdh_dbug_cmd (i_cmd_ptr,i_rsp_ptr);
@@ -1295,10 +1274,6 @@ errlHndl_t cmdh_processTmgtRequest (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         case CMDH_AME_PASS_THROUGH:
             l_err = cmdh_amec_pass_through(i_cmd_ptr,i_rsp_ptr);
-            break;
-
-        case CMDH_GETERRL:
-            l_err = cmdh_get_elog(i_cmd_ptr,i_rsp_ptr);
             break;
 
         case CMDH_RESET_PREP:
@@ -1326,12 +1301,7 @@ errlHndl_t cmdh_processTmgtRequest (const cmdh_fsp_cmd_t * i_cmd_ptr,
             l_err = cmdh_set_user_pcap(i_cmd_ptr, i_rsp_ptr);
             break;
 
-        //case CMDH_PWREXECPT:
-        case CMDH_SET_THERMAL_THROTTLE:
-        case CMDH_READ_STATUS_REG:
-        case CMDH_GET_THROTTLE_VALUE:
-        case CMDH_GET_CPU_TEMPS:
-        case CMDH_FOM:
+        //case CMDH_GET_CPU_TEMPS:
 */
         default:
             CMDH_TRAC_INFO("Invalid or unsupported command 0x%02x",l_cmd_type);

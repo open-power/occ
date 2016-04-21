@@ -26,8 +26,8 @@
 #ifndef _CMDH_FSP_H
 #define _CMDH_FSP_H
 
-#include "cmdh_service_codes.h" 
-#include "errl.h"             
+#include "cmdh_service_codes.h"
+#include "errl.h"
 #include "trac.h"
 #include "rtls.h"
 #include "occ_common.h"
@@ -57,9 +57,9 @@
 #define MAILBOX_1_DATA_AREA_A_8_REGADDR       (8 + MAILBOX_1_DATA_AREA_A_BASE)
 #define MAILBOX_1_DATA_AREA_A_9_REGADDR       (9 + MAILBOX_1_DATA_AREA_A_BASE)
 
-// Command/Response Common:  DataLength Field Size - 2 bytes  
+// Command/Response Common:  DataLength Field Size - 2 bytes
 #define CMDH_FSP_DATALEN_SIZE     2
-// Command/Response Common:  Checksum Field Size - 2 bytes  
+// Command/Response Common:  Checksum Field Size - 2 bytes
 #define CMDH_FSP_CHECKSUM_SIZE    2
 
 // Command:  Full Buffer Size - 4 kB
@@ -184,7 +184,7 @@ typedef enum
 #define CMDH_DATALEN_FIELD_UINT16(cmdOrRspPtr) \
     (CONVERT_UINT8_ARRAY_UINT16(cmdOrRspPtr->data_length[0], \
                                 cmdOrRspPtr->data_length[1]))
-// Faking out an inheritable anonymous struct definition, so it works 
+// Faking out an inheritable anonymous struct definition, so it works
 // with the same syntax that is used in C11 version of the C-standard
 // Contains TMGT command common fields (seq, cmd, data_len)
 #define cmdh_fsp_cmd_header \
@@ -332,44 +332,44 @@ typedef struct
 } doorbl_stsctrl_reg_t;
 
 // Breakdown of the Mailbox1 Data, which OCC uses to alert TMGT.
-// This is the actual data that TMGT can get from the mailbox 
+// This is the actual data that TMGT can get from the mailbox
 // when it is notified of an alert.
 typedef struct mbox_payload
-{    
-    // This is the command type OCC uses to tell TMGT if this was a 
+{
+    // This is the command type OCC uses to tell TMGT if this was a
     // Response Ready, or Service Required (eFspAlertType)
-    uint32_t type;    
+    uint32_t type;
     union
     {
-        struct    
-        {       
+        struct
+        {
             // Unused:  0 -> async, 1 -> sync.
-            uint32_t __reserved__async:1; 
+            uint32_t __reserved__async:1;
             // Unused: This is for internal hostboot use.
             uint32_t __reserved__mbox_sync:1;
-            // Unused       
+            // Unused
             uint32_t __reserved__unused:30;
         };
-        uint32_t flags;  
-    };    
+        uint32_t flags;
+    };
     union
     {
         struct
         {
             // "Write" Buffer Address (from TMGT perspective)
-            uint32_t fsp_cmd_buffer_addr;  
+            uint32_t fsp_cmd_buffer_addr;
             // "Read" Buffer Address (from TMGT perspective)
             uint32_t fsp_rsp_buffer_addr;
             // Unused
-            uint8_t  _reserved[7];   
+            uint8_t  _reserved[7];
             // Sanity check on OCC Id (should match up with HUID)
-            uint8_t  occ_id;            
-        };  
+            uint8_t  occ_id;
+        };
         uint64_t data[2];
     };
     // If extra_data != NULL, data[1] is required to have size of extra_data (in bytes)
-    uint64_t extra_data;    
-} mbox_payload_t; 
+    uint64_t extra_data;
+} mbox_payload_t;
 
 // Breakdown of the Full Mailbox1, which OCC uses to alert TMGT.
 // This is the actual data that HWSV gets from the PIB, which it
@@ -387,13 +387,13 @@ typedef struct
 } mbox_msg_t;
 
 // Union of the Full Mailbox1, which OCC uses to alert TMGT.
-// Since the data is SCOM'd, we want to parse it by uint64_t's 
+// Since the data is SCOM'd, we want to parse it by uint64_t's
 // to do the scom, and fill it out using the mbox_msg_t.
 typedef union
 {
     // Parsed out fields the way OCC & TMGT interpret them
     mbox_msg_t fields;
-    // Words used in putscoms 
+    // Words used in putscoms
     uint64_t   word[8];
 } mbox_data_area_regs_t;
 
@@ -401,6 +401,7 @@ extern eFsi2HostMboxState G_fsi2host_mbox_ready;
 extern eCmdhWakeupThreadMask G_cmdh_thread_wakeup_mask;
 extern fsp_cmd_t G_htmgt_cmd_buffer;
 extern fsp_rsp_t G_htmgt_rsp_buffer;
+extern uint8_t  G_rsp_status;
 
 int cmdh_fsp_attention(uint32_t i_type);
 int cmdh_fsp_attention_withRetry(uint32_t i_type, int i_timeout_in_ms);
@@ -414,8 +415,8 @@ errlHndl_t cmdh_fsp_cmd_hndler(void);
 errlHndl_t cmdh_fsp_init(void);
 
 void cmdh_build_errl_rsp(const cmdh_fsp_cmd_t * i_cmd_ptr,
-                         cmdh_fsp_rsp_t       * o_rsp_ptr, 
-                         ERRL_RC          i_rc, 
+                         cmdh_fsp_rsp_t       * o_rsp_ptr,
+                         ERRL_RC                i_rc,
                          errlHndl_t           * io_errlHndl);
 
 #endif

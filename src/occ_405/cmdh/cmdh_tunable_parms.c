@@ -73,7 +73,7 @@ uint8_t cmdh_tunable_parms_query(   const cmdh_fsp_cmd_t * i_cmd_ptr,
 
     // Setup the response data packet info
     uint16_t l_size = 2 + sizeof(G_mst_tunable_parameter_table);
-    o_rsp_ptr->rc = l_rc;
+    G_rsp_status = l_rc;
     o_rsp_ptr->data_length[0] = ((uint8_t *)&l_size)[0];
     o_rsp_ptr->data_length[1] = ((uint8_t *)&l_size)[1];
 
@@ -132,7 +132,7 @@ uint8_t cmdh_tunable_parms_write(   const cmdh_fsp_cmd_t * i_cmd_ptr,
     }while(0);
 
     // Populate the response data packet
-    o_rsp_ptr->rc = l_rc;
+    G_rsp_status = l_rc;
 
     // Set global var
     G_mst_tunable_parameter_overwrite = 1;
@@ -167,7 +167,7 @@ uint8_t cmdh_tunable_parms_restore(const cmdh_fsp_cmd_t * i_cmd_ptr,
     }while(0);
 
     // Populate the response data header
-    o_rsp_ptr->rc = l_rc;
+    G_rsp_status = l_rc;
 
     // Set global var
     G_mst_tunable_parameter_overwrite = 2;

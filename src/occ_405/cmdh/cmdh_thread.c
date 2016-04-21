@@ -108,8 +108,8 @@ void Cmd_Hndl_thread_routine(void *arg)
                     commitErrl(&l_errlHndl);
                 }
 
-                // Check is the sender is FSP
-                if(G_fsp_msg.doorbell[0] == ATTN_SENDER_ID_FSP)
+                // Check if the sender is FSP based
+                if (G_occ_interrupt_type == FSP_SUPPORTED_OCC)
                 {
                     // Tell the FSP we have a response ready for them.
                     // Try to send this for 500ms before giving up
