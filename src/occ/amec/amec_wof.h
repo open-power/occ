@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015                             */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -131,8 +131,7 @@ typedef struct amec_wof
     // I_AC extracted in 0.01 Amps
     uint16_t            ac;
     // Effective capacitance for TDP workload @ Turbo in 0.005904 nF
-    // Index = number_of_cores_on (e.g. 1-12 cores on is index 1-12)
-    uint32_t            ceff_tdp[MAX_NUM_CORES+1];
+    uint32_t            ceff_tdp;
     // Effective capacitance right now.
     uint32_t            ceff;
     // Effective capacitance old.
@@ -195,7 +194,7 @@ void amec_wof_alg_v3(void);
 void amec_wof_common_steps(void);
 void amec_wof_helper_v2(void);
 void amec_wof_helper_v3(void);
-uint32_t amec_wof_compute_ceff_tdp(uint8_t i_cores_on);
+uint32_t amec_wof_compute_c_eff(void);
 
 void amec_wof_writeToTable(wof_tbl_type_t i_tblType,
                           const uint16_t i_size,
