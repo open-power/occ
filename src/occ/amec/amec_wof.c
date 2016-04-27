@@ -660,7 +660,6 @@ void amec_wof_common_steps(void)
     uint32_t            l_accum = 0;  //Vdd current accumulator
     uint32_t            l_v_chip = 0; //Voltage at chip silicon
     uint16_t            l_ceff_ratio; //Effective switching capacitance ratio
-    uint32_t            l_leakage = 0; // Total chip leakage current 0.01 A
 
     // Acquire important sensor data
     l_temp = AMECSENSOR_PTR(TEMP2MSP0)->sample;
@@ -826,20 +825,7 @@ void amec_wof_common_steps(void)
     + (int32_t)amec_wof_iddq_mult_table[i][1];
 
     l_result32 = (l_result32*l_mult) >> 10;
-    // Save for comparison with per-core method
-    g_amec->wof.iddq_chip = l_result32;
-
-    // Sum per-core leakage to get total chip leakage
-    for (i=0; i<MAX_NUM_CORES; i++)
-    {
-        if (CORE_PRESENT(i)) {
-            l_leakage += g_amec->wof.iddq_core[i];
-        }
-    }
-    // Note: Divide by good cores on chip, since iddq_core represents full
-    // chip current.  Divide here, not in per-core calc, for accuracy.
-    g_amec->wof.iddq = l_leakage / G_wof_max_cores_per_chip;
-
+    g_amec->wof.iddq = l_result32;
 
     // Compute 2ms current average
     // Divide the 250us accumulator by 8 samples to get 2ms average
@@ -1593,132 +1579,4 @@ uint16_t amec_wof_get_max_freq(const uint8_t i_cores)
     }
 
     return l_maxFreq;
-}
-
-// Function Specification
-//
-// Name: amec_wof_calc_core_leakage
-//
-// Description: compute core-level leakage current sensor
-// Used by each interval of WOF algorithm.
-//
-//
-// Flow:              FN=
-//   Run in each AMEC real-time state (as per-core sensors are processed)
-//
-// Thread:
-//
-// Task Flags:
-//
-// Future improvement:
-//
-// End Function Specification
-void amec_wof_calc_core_leakage(uint8_t i_core)
-{
-    uint8_t             i;
-    uint32_t            l_result32; //temporary result
-    uint32_t l_temp; // per-core temperature
-    uint16_t l_voltage = AMECSENSOR_ARRAY_PTR(VOLT2MSP0C0,i_core)->sample;
-    uint16_t l_core_v; // voltage index for IDDQ table
-
-    if (l_voltage == 0)
-    {
-        // Core is off, estimate header leakage only
-        //Use avg. chip temp, since DTS cannot be read for off core
-        //Use chip voltage for header voltage
-        l_temp = AMECSENSOR_PTR(TEMP2MSP0)->sample;
-        l_core_v = g_amec->wof.v_chip;
-    }
-    else
-    {
-        // Core is on, use avg. DTS readings for core temperature
-        l_temp = AMECSENSOR_ARRAY_PTR(TEMP2MSP0C0,i_core)->sample;
-        l_core_v = l_voltage;
-    }
-
-    // Search table and point i to the lower entry the target value falls
-    // between.
-    if (l_core_v < G_iddq_voltages[0])
-    {
-        i=0; // voltage is lower than table, so use first two entries.
-    }
-    else
-    {
-        for (i=0; i<CORE_IDDQ_MEASUREMENTS-1; i++)
-        {
-            if (G_iddq_voltages[i] <= l_core_v &&
-                G_iddq_voltages[i+1] >= l_core_v)
-            {
-                break;
-            }
-        }
-    }
-    if (i >= CORE_IDDQ_MEASUREMENTS - 1)
-    {
-        // Voltage is higher than table, so use last two entries.
-        i = CORE_IDDQ_MEASUREMENTS - 2;
-    }
-
-    g_amec->wof.iddq_i_core[i_core] = i;
-
-    // Linear interpolate using the neighboring entries:
-    // y = m(x-x1)+y1   m=(y2-y1)/(x2-x1)
-    //FIXME: add rounding step after multiplication
-    //FIXME: pre-compute m, since table is static
-    l_result32 = ((int32_t)l_core_v - (int32_t)G_iddq_voltages[i])
-        * ((int32_t)G_sysConfigData.iddq_table.iddq_vdd[i+1].fields.iddq_corrected_value -
-           (int32_t)G_sysConfigData.iddq_table.iddq_vdd[i].fields.iddq_corrected_value)
-        / ((int32_t)G_iddq_voltages[i+1] - (int32_t)G_iddq_voltages[i])
-        + (int32_t)G_sysConfigData.iddq_table.iddq_vdd[i].fields.iddq_corrected_value;
-
-    // Note: IDDQ value from table above is in 0.01 A units. The maximum
-    // value possible is 655.35 A. This means l_result <= 65535.
-
-    g_amec->wof.iddq85c_core[i_core] = (uint16_t)l_result32;
-
-    // Temperature correction
-    if (l_temp < amec_wof_iddq_mult_table[0][0])
-    {
-        i=0; // index is lower than table, so use first two entries.
-    }
-    else
-    {
-        for (i=0; i<AMEC_WOF_IDDQ_MULT_TABLE_N-1; i++)
-        {
-            if (amec_wof_iddq_mult_table[i][0] <= l_temp &&
-                amec_wof_iddq_mult_table[i+1][0] >= l_temp)
-            {
-                break;
-            }
-        }
-    }
-    if (i >= AMEC_WOF_IDDQ_MULT_TABLE_N - 1)
-    {
-        i = AMEC_WOF_IDDQ_MULT_TABLE_N - 2;
-    }
-
-    uint32_t l_mult = ((int32_t)l_temp - (int32_t)amec_wof_iddq_mult_table[i][0])
-    * ((int32_t)amec_wof_iddq_mult_table[i+1][1] - (int32_t)amec_wof_iddq_mult_table[i][1])
-    / ((int32_t)amec_wof_iddq_mult_table[i+1][0] - (int32_t)amec_wof_iddq_mult_table[i][0])
-    + (int32_t)amec_wof_iddq_mult_table[i][1];
-
-    l_result32 = (l_result32*l_mult) >> 10;
-
-    // Modify leakage value for header-only. A percentage of chip
-    // leakage comes from iVRM headers which cannot be turned off completely.
-    if (l_voltage == 0)
-    {
-        l_result32 = l_result32
-            * g_amec_wof_leak_overhead / 1000;
-    }
-
-    g_amec->wof.iddq_core[i_core] = l_result32;
-    //Note:
-    //iddq_core[] represents the leakage current as if all cores
-    //in chip are on at the voltage and temperature of i_core.
-    //To calculate true per-core leakage current,
-    //divide by number of good cores on chip
-    //(G_wof_max_cores_per_chip).
-    //This is because IDDQ table represents full chip current.
-
 }

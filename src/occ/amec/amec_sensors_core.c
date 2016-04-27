@@ -43,7 +43,6 @@
 #include "amec_service_codes.h"
 #include <amec_sensors_core.h>
 #include "amec_perfcount.h"
-#include "amec_wof.h"           // update core leakage current for WOF
 
 /******************************************************************************/
 /* Globals                                                                    */
@@ -178,14 +177,6 @@ void amec_update_proc_core_sensors(uint8_t i_core)
     // Voltage
     //-------------------------------------------------------
     amec_sensors_core_voltage(i_core);
-
-    //-------------------------------------------------------
-    // Leakage current (for WOF)
-    // Note: Run after core temperature and voltage updates
-    //         amec_calc_dts_sensors()
-    //         amec_sensors_core_voltage()
-    //-------------------------------------------------------
-    amec_wof_calc_core_leakage(i_core);
 
     // ------------------------------------------------------
     // Update PREVIOUS values for next time
@@ -905,7 +896,7 @@ void amec_calc_spurr(uint8_t i_core)
 //
 // Name: amec_sensors_core_voltage
 //
-// Description: update core-level voltage sensor
+// Description: update core-level voltage sensors
 //
 //
 // Flow:              FN=
@@ -935,8 +926,6 @@ void amec_sensors_core_voltage(uint8_t i_core)
     //Core power management state
     uint8_t  l_pmstate=g_amec_sys.proc[0].core[i_core].pm_state_hist >> 5;
 
-    uint32_t l_temp; // per-core temperature
-
     //
     // iVRM in bypass?
     l_rc = _getscom(CORE_CHIPLET_ADDRESS(SCOM_PIVRMCSR_ADDR_nochiplet,
@@ -963,7 +952,7 @@ void amec_sensors_core_voltage(uint8_t i_core)
         // iVRM Voltage (V) = VID * 0.00625 V + 0.6 V
         // Note: 0.00625 V = 0.0125 V / 2 = 125>>1
         // Note: .6 V = 6000 (0.0001 V)
-        l_voltage = ((((uint32_t)(l_pivrmvsr>>56)) * 125) >> 1) + 6000;
+        l_voltage = ((((uint32_t)(l_pivrmvsr>>32)) * 125) >> 1) + 6000;
     }
     else // External voltage
     {
