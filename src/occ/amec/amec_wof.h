@@ -71,27 +71,16 @@ extern uint16_t G_amec_wof_uplift_table[AMEC_WOF_UPLIFT_TBL_ROWS][AMEC_WOF_UPLIF
 //implementing power shift algorithms
 #define PDEMR     0x62092
 
-//Default number of iterations to compute Vdd regulator current out.
-#define AMEC_WOF_VDD_ITER 4
-//Buffer initial estimate and N+2 iterations for
-//debugging/experimentation
-//index 0: initial estimate     (+1 below)
-//index 1-N+2: iteration output (+2 below)
-#define AMEC_WOF_VDD_ITER_BUFF AMEC_WOF_VDD_ITER+1+2
-
 typedef enum
 {
-    AMEC_WOF_ERROR_NONE,                     // 0
-    AMEC_WOF_ERROR_SCOM_1,                   // 1
-    AMEC_WOF_ERROR_SCOM_2,                   // 2
-    AMEC_WOF_ERROR_SCOM_3,                   // 3
-    AMEC_WOF_ERROR_SCOM_4,                   // 4
-    AMEC_WOF_ERROR_SCOM_5,                   // 5
-    AMEC_WOF_ERROR_CORE_COUNT,               // 6
-    AMEC_WOF_ERROR_UNKNOWN_STATE,            // 7
-    AMEC_WOF_ERROR_FREQ_VOTE_NOT_APPLIED,    // 8
-    AMEC_WOF_ERROR_WOF_FREQ_NOT_APPLIED,     // 9
-    AMEC_WOF_ERROR_PSTATETABLE_NOT_READY     //10
+    AMEC_WOF_ERROR_NONE,
+    AMEC_WOF_ERROR_SCOM_1,
+    AMEC_WOF_ERROR_SCOM_2,
+    AMEC_WOF_ERROR_SCOM_3,
+    AMEC_WOF_ERROR_SCOM_4,
+    AMEC_WOF_ERROR_SCOM_5,
+    AMEC_WOF_ERROR_CORE_COUNT,
+    AMEC_WOF_ERROR_UNKNOWN_STATE
 } AMEC_WOF_ERROR_ENUM;
 
 typedef enum
@@ -190,30 +179,7 @@ typedef struct amec_wof
     uint8_t             pstatetable_cores_next;
     //Estimated leakage current by core
     uint16_t            leakage[MAX_NUM_CORES]; // leakage current in 0.01 A
-    //Vdd current out algorithm iterations
-    uint8_t             vdd_iter;
-    //Start tick for iout debugging info
-    uint32_t            vdd_t1;
-    //Input to vdd iout algorithm
-    uint16_t            vdd_pin;
-    //Input to vdd iout algorithm
-    uint16_t            vdd_vset;
-    //Upper voltage trend line
-    int32_t            vdd_vhi;
-    //Lower voltage trend line
-    int32_t            vdd_vlo;
-    //iout values for each iteration
-    uint16_t            vdd_iouti[AMEC_WOF_VDD_ITER_BUFF];
-    //Voltage sense for each iteration
-    uint16_t            vdd_vouti[AMEC_WOF_VDD_ITER_BUFF];
-    //overall efficiency for each iteration
-    uint16_t            vdd_effi[AMEC_WOF_VDD_ITER_BUFF];
-    //efficiency for higher voltage trend
-    int32_t            vdd_effhii[AMEC_WOF_VDD_ITER_BUFF];
-    //efficiency for lower voltage trend
-    int32_t            vdd_effloi[AMEC_WOF_VDD_ITER_BUFF];
-    //End tick for vdd iout debugging (t1==t2 means debug data is synchronized)
-    uint32_t            vdd_t2;
+
 } amec_wof_t;
 
 //*************************************************************************

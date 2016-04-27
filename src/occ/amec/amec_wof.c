@@ -37,7 +37,6 @@
 #include <common.h>
 #include <cmdh_fsp_cmds_datacnfg.h>
 #include <amec_service_codes.h>
-#include <rtls.h>     // for G_current_tick debugging
 
 //*************************************************************************
 // Externs
@@ -118,7 +117,7 @@ uint16_t g_amec_wof_leak_overhead = 50; // default is 5%
 
 // Function Specification
 //
-// Name: amec_wof_vdd_iout_vout
+// Name: amec_wof_vdd_current_out
 //
 // Description:
 // Calculate Vdd output current and voltage at Vdd remote sense.
@@ -129,79 +128,56 @@ uint16_t g_amec_wof_leak_overhead = 50; // default is 5%
 //
 // Outputs:
 // o_current_out: Vdd current out (0.01 A units)
-// o_v_out: Voltage at Vdd remote sense (0.0001 V units)
+// o_v_sense: Voltage at Vdd remote sense (0.0001 V units)
 //
 // End Function Specification
-void amec_wof_vdd_iout_vout(const uint16_t i_power_in,
-                            const uint16_t i_v_set,
-                            uint16_t *o_current_out,
-                            uint16_t *o_v_out)
+void amec_wof_vdd_current_out(const uint16_t i_power_in,
+                              const uint16_t i_v_set,
+                              uint16_t *o_current_out,
+                              uint16_t *o_v_sense)
 {
     uint8_t l_iteration;
     uint8_t i;
 
-    // Convert table voltages from 0.01 V to 0.00001 V (*100)
-    int32_t v_lo = G_amec_wof_vrm_eff_table[1][0] * 100; //low voltage in table
-    int32_t v_hi = G_amec_wof_vrm_eff_table[2][0] * 100; //high voltage in table
-    // v_diff = max voltage - min voltage from efficiency table
-    int32_t v_diff = v_hi - v_lo;
+    // Stuff that can be pre-computed when efficiency table is read
+    int32_t v_min = G_amec_wof_vrm_eff_table[1][0] * 100; //min voltage in table
+    int32_t v_max = G_amec_wof_vrm_eff_table[2][0] * 100; //max voltage in table
+    int32_t v_diff = v_max - v_min; // max voltage - min voltage from efficiency table
 
     // helper variables
     int32_t l_x2minusx1, l_xminusx1;
     int32_t l_eff_vlow, l_eff_vhigh, l_v_offset;
-    int32_t l_v_out;
+    int32_t l_v_sense;
 
     // Set initial guesses before iteration part of algorithm
-    uint16_t l_eff = 8500; //initial guess efficiency=85.00%
+    uint32_t l_eff = 8500; //initial guess efficiency=85.00%
 
-    // Compute regulator output power in micro-W units.  out = in * efficiency
-    //    power_in: min=0W max=300W = 3000 (0.1 W units)
+    // Compute regulator output power.  out = in * efficiency
+    //    power_in: min=0W max=300W = 3000dW
     //    eff: min=0 max=10000=100% (.01% units)
-    //    power_in*eff: max=3000(0.1W) * 10000(0.01%) = 30M (0.00001 W)
+    //    power_in*eff: max=3000dW * 10000 = 30,000,000 (dW*0.0001)
     //                  is under 2^25, fits in 25 bits
-    //    *10 = 300M (0.000001W) fits in 29 bits of 32 bit reg.
-    uint32_t l_pout = i_power_in * (uint32_t)l_eff * 10;
+    //    *10 = 300M (dW*0.00001) in 29 bits
+    uint32_t l_pout = i_power_in * l_eff * 10;
 
-    // Compute current out of regulator in 0.01 A.
+    // Compute current out of regulator.
     // curr_out = power_out (*10 scaling factor) / voltage_out
-    //    p_out: max=300M (0.000001 W) in 29 bits
+    //    p_out: max=300M (dW*0.00001) in 29 bits
     //    v_set: min=5000 (0.0001 V)  max=16000(0.0001 V) in 14 bits
-    //     iout: max = 300M/5000 = 60000 (0.01 A), fits in 16 bits
+    //     iout: max = 300M/5000 = 60000 (dW*0.00001/(0.0001V)= 0.01A), in 16 bits.
     uint32_t l_iout = l_pout/i_v_set; //initial iout
     g_amec_wof_iout = l_iout; //for debugging
 
-    // Initial guess for voltage sense. 0.0001 V units.
-    //   V_chip = V_setpoint - I_chip * (R_loadline)
-    //     V_delta = I_chip(0.01 A) * R_loadline(0.000001 ohm) => 0.00000001 V
-    //     V_delta / 10000 => (in 0.0001 V)
-    //   V_chip = V_reg - V_delta  => (in 0.0001 V)
-    l_v_out = i_v_set - l_iout * AMEC_WOF_LOADLINE_ACTIVE / 10000;
+    // Initial guess for voltage sense
+    l_v_sense = i_v_set - AMEC_WOF_LOADLINE_ACTIVE * l_iout / 10000;
 
-    g_amec->wof.vdd_t1 = G_current_tick;
-    // Save inputs for debugging
-    g_amec->wof.vdd_pin = i_power_in;
-    g_amec->wof.vdd_vset = i_v_set;
-    g_amec->wof.vdd_vhi = v_hi;
-    g_amec->wof.vdd_vlo = v_lo;
-    // Save initial estimate
-    g_amec->wof.vdd_iouti[0] = l_iout;
-    g_amec->wof.vdd_vouti[0] = l_v_out;
-    g_amec->wof.vdd_effi[0]  = l_eff;
-
-    // Iterate to converge
-    for(l_iteration=1; l_iteration<=g_amec->wof.vdd_iter; l_iteration++)
+    for(l_iteration=0; l_iteration<3; l_iteration++)  // Iterate to converge
     {
         if (l_iout > G_amec_wof_vrm_eff_table[0][AMEC_WOF_VRM_EFF_TBL_CLMS-1])
         {
             // Clip to efficiency table maximum
             l_eff_vlow = G_amec_wof_vrm_eff_table[1][AMEC_WOF_VRM_EFF_TBL_CLMS-1];
             l_eff_vhigh = G_amec_wof_vrm_eff_table[2][AMEC_WOF_VRM_EFF_TBL_CLMS-1];
-        }
-        else if (l_iout < G_amec_wof_vrm_eff_table[0][1])
-        {
-            // Clip to efficiency table minimum
-            l_eff_vlow = G_amec_wof_vrm_eff_table[1][1];
-            l_eff_vhigh = G_amec_wof_vrm_eff_table[2][1];
         }
         else
         {
@@ -243,43 +219,20 @@ void amec_wof_vdd_iout_vout(const uint16_t i_power_in,
 
         g_amec_eff_vlow = l_eff_vlow;//for debug
         g_amec_eff_vhigh = l_eff_vhigh;// for debug
-        l_v_offset = l_v_out - v_lo;
-        l_eff = (uint16_t) ((((int32_t)l_eff_vhigh - (int32_t)l_eff_vlow)
-                             * (int32_t)l_v_offset)
-                            / (int32_t)v_diff
-                            + (int32_t)l_eff_vlow);
+        l_v_offset = l_v_sense - v_min;
+        l_eff = ((l_eff_vhigh - l_eff_vlow) * l_v_offset) / v_diff + l_eff_vlow;
 
-        // Estimate new iout,vout.
-        // See comments above for unit conversion on pout,iout,vout
-        l_pout = i_power_in * l_eff * 10;
-        l_iout = l_pout/l_v_out;
-        l_v_out = i_v_set - AMEC_WOF_LOADLINE_ACTIVE * l_iout / 10000;
-
-        if (l_iteration < AMEC_WOF_VDD_ITER_BUFF)
-        {
-            g_amec->wof.vdd_iouti[l_iteration] = l_iout;
-            g_amec->wof.vdd_vouti[l_iteration] = l_v_out;
-            g_amec->wof.vdd_effi[l_iteration]  = l_eff;
-            g_amec->wof.vdd_effhii[l_iteration] = l_eff_vhigh;
-            g_amec->wof.vdd_effloi[l_iteration] = l_eff_vlow;
-        }
-    }
-    // zero rest of debugging array
-    for(;l_iteration < AMEC_WOF_VDD_ITER_BUFF; l_iteration++)
-    {
-        g_amec->wof.vdd_iouti[l_iteration] = 0;
-        g_amec->wof.vdd_vouti[l_iteration] = 0;
-        g_amec->wof.vdd_effi[l_iteration]  = 0;
-        g_amec->wof.vdd_effhii[l_iteration] = 0;
-        g_amec->wof.vdd_effloi[l_iteration] = 0;
+        // V_droop = I_chip (0.01 A) * R_loadline (0.000001 ohm) => (in 0.00000001 V)
+        // V_droop = V_droop / 10000 => (in 0.0001 V)
+        // V_sense = V_reg - V_droop  => (in 0.0001 V)
+        l_pout = i_power_in * l_eff * 10; // See l_pout above for *10 note
+        l_iout = l_pout/l_v_sense;
+        l_v_sense = i_v_set - AMEC_WOF_LOADLINE_ACTIVE * l_iout / 10000;
     }
 
-    g_amec->wof.vdd_eff = l_eff; //for debugging
-    // If t1 == t2, then debug data between is synchronized
-    g_amec->wof.vdd_t2 = G_current_tick;
-
-    *o_v_out = l_v_out;
+    *o_v_sense = l_v_sense;
     *o_current_out = l_iout;
+    g_amec->wof.vdd_eff = l_eff; //for debugging
 }
 
 void amec_wof_validate_input_data(void)
@@ -671,7 +624,7 @@ int amec_wof_set_algorithm(const uint8_t i_algorithm)
 //
 // Name: amec_update_wof_sensors
 //
-// Description:
+// Description: Common for WOF/non-WOF.
 //   Compute CUR250USVDD0 (current out of Vdd regulator)
 //   Compute voltage at chip input
 //
@@ -680,35 +633,30 @@ int amec_wof_set_algorithm(const uint8_t i_algorithm)
 // End Function Specification
 void amec_update_wof_sensors(void)
 {
-    uint16_t            l_pow_reg_input_dW;
-    uint16_t            l_vdd_reg;
+    uint16_t            l_pow_reg_input_dW = AMECSENSOR_PTR(PWR250USVDD0)->sample * 10; // convert to dW by *10.
+    uint16_t            l_vdd_reg = AMECSENSOR_PTR(VOLT250USP0V0)->sample;
     uint16_t            l_curr_output;
-    uint32_t            l_v_delta;
+    uint32_t            l_v_droop;
     uint32_t            l_v_chip;
     uint16_t            l_v_sense;
 
-    // Vdd regulator input power in 0.1 W units (deci-Watts)
-    l_pow_reg_input_dW = AMECSENSOR_PTR(PWR250USVDD0)->sample * 10;
-    // Vdd regulator VID setting in 0.0001 V units
-    l_vdd_reg = AMECSENSOR_PTR(VOLT250USP0V0)->sample;
-
-    amec_wof_vdd_iout_vout(l_pow_reg_input_dW,
-                           l_vdd_reg,
-                           &l_curr_output,
-                           &l_v_sense);
-    // Save Vdd current output
+    // Step 1: Calculate voltage at chip
+    amec_wof_vdd_current_out(l_pow_reg_input_dW,
+                             l_vdd_reg,
+                             &l_curr_output,
+                             &l_v_sense);
     sensor_update(AMECSENSOR_PTR(CUR250USVDD0), l_curr_output);
+
     // Save Vsense estimate for WOF validation
     sensor_update(AMECSENSOR_PTR(WOF250USVDDS), l_v_sense);
 
-    // Compute Vdd voltage at chip input
-    //   V_chip = V_reg - I_chip * (R_loadline)
-    //     V_delta = I_chip(0.01 A) * R_loadline(0.000001 ohm) => 0.00000001 V
-    //     V_delta / 10000 => (in 0.0001 V)
-    //   V_chip = V_reg - V_delta  => (in 0.0001 V)
-    l_v_delta = (uint32_t) l_curr_output * (uint32_t) g_amec->wof.loadline
-        / (uint32_t)10000;
-    l_v_chip = l_vdd_reg - l_v_delta;
+    //1c. Compute Vdd load at chip
+    //    V_reg = V_chip + I_chip * (R_loadline)
+    //    V_droop = I_chip (0.01 A) * R_loadline (0.000001 ohm) => (in 0.00000001 V)
+    //    V_droop = V_droop / 10000 => (in 0.0001 V)
+    //    V_chip = V_reg - V_droop  => (in 0.0001 V)
+    l_v_droop = (uint32_t) l_curr_output * (uint32_t) g_amec->wof.loadline / (uint32_t)10000;
+    l_v_chip = l_vdd_reg - l_v_droop;
     g_amec->wof.v_chip = l_v_chip; // expose in parameter
 }
 
@@ -1075,17 +1023,7 @@ void amec_wof_alg_v3(void)
 // Description: Run this in every 250us state. Allows cores to
 // wake-up as soon as WOF outcome is ready.
 //
-// Error handling: On any error that delays WOF state transition,
-//   wof_error must be set non-zero so that failure to progress
-//   back to AMEC_WOF_NO_CORE_CHANGE will be noticed after a
-//   few internvals and WOF can be disabled.
-//
 // Thread: RealTime Loop
-//
-// Assumptions:
-//   Frequency voting box is run immediately before this routine
-//   to set the new frequency request, so WOF has up-to-date
-//   information.
 //
 // End Function Specification
 void amec_wof_helper_v3(void)
@@ -1105,37 +1043,20 @@ void amec_wof_helper_v3(void)
 
         case AMEC_WOF_CORE_REQUEST_TURN_ON:
         {
-            // Check if current frequency clips are above WOF frequency
+            // We need to be certain that the GPE has applied the last frequency
+            // request from the voting box (request != actual)
+            if (g_amec->proc[0].core_max_freq_actual != g_amec->proc[0].core_max_freq)
+            {
+                break;
+            }
+            // Check if actual clips are above WOF frequency
             if (g_amec->proc[0].core_max_freq_actual > g_amec->wof.f_vote)
             {
-                g_amec->wof.error = AMEC_WOF_ERROR_WOF_FREQ_NOT_APPLIED;
-                TRAC_ERR("amec_wof_helper_v3: actual frequency clip beyond wof vote."
-                         "core_max_freq_actual=%i, wof_f_vote=%i, wof.error:0x%X",
-                         g_amec->proc[0].core_max_freq_actual,
-                         g_amec->wof.f_vote, g_amec->wof.error);
                 break;
             }
-            // Check if new requested frequency clips are above WOF frequency
-            if (g_amec->proc[0].core_max_freq > g_amec->wof.f_vote)
-            {
-                g_amec->wof.error = AMEC_WOF_ERROR_FREQ_VOTE_NOT_APPLIED;
-                TRAC_ERR("amec_wof_helper_v3: wof vote not applied."
-                         "core_max_freq=%i, wof_f_vote=%i, wof.error:0x%X",
-                         g_amec->proc[0].core_max_freq,
-                         g_amec->wof.f_vote, g_amec->wof.error);
-                break;
-            }
-            // At this point, all core frequency must be at or below
-            // WOF frequency which has been set below the pstate table
-            // changes.
-
             // Wait until Pstate table is ready
             if (g_amec_wof_pstate_table_ready == 0)
             {
-                g_amec->wof.error = AMEC_WOF_ERROR_PSTATETABLE_NOT_READY;
-                TRAC_ERR("amec_wof_helper_v3: pstate table not ready"
-                         "pstate_table_ready=%i, wof.error:0x%X",
-                         g_amec_wof_pstate_table_ready, g_amec->wof.error);
                 break;
             }
 
@@ -1190,37 +1111,20 @@ void amec_wof_helper_v3(void)
 
         case AMEC_WOF_CORE_REQUEST_TURN_OFF:
         {
-            // Check if current frequency clips are above WOF frequency
+            // Check WOF frequency is applied
+            // Check if GPE is applying a new frequency (request != actual)
+            if (g_amec->proc[0].core_max_freq_actual != g_amec->proc[0].core_max_freq)
+            {
+                break;
+            }
+            // Check if actual clips are above WOF frequency
             if (g_amec->proc[0].core_max_freq_actual > g_amec->wof.f_vote)
             {
-                g_amec->wof.error = AMEC_WOF_ERROR_WOF_FREQ_NOT_APPLIED;
-                TRAC_ERR("amec_wof_helper_v3: actual frequency clip beyond wof vote."
-                         "core_max_freq_actual=%i, wof_f_vote=%i, wof.error:0x%X",
-                         g_amec->proc[0].core_max_freq_actual,
-                         g_amec->wof.f_vote, g_amec->wof.error);
                 break;
             }
-            // Check if new requested frequency clips are above WOF frequency
-            if (g_amec->proc[0].core_max_freq > g_amec->wof.f_vote)
-            {
-                g_amec->wof.error = AMEC_WOF_ERROR_FREQ_VOTE_NOT_APPLIED;
-                TRAC_ERR("amec_wof_helper_v3: wof vote not applied."
-                         "core_max_freq=%i, wof_f_vote=%i, wof.error:0x%X",
-                         g_amec->proc[0].core_max_freq,
-                         g_amec->wof.f_vote, g_amec->wof.error);
-                break;
-            }
-            // At this point, all core frequency must be at or below
-            // WOF frequency which has been set below the pstate table
-            // changes.
-
             // Wait until Pstate table is ready
             if (g_amec_wof_pstate_table_ready == 0)
             {
-                g_amec->wof.error = AMEC_WOF_ERROR_PSTATETABLE_NOT_READY;
-                TRAC_ERR("amec_wof_helper_v3: pstate table not ready"
-                         "pstate_table_ready=%i, wof.error:0x%X",
-                         g_amec_wof_pstate_table_ready, g_amec->wof.error);
                 break;
             }
 
