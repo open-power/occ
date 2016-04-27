@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -1103,13 +1103,14 @@ errlHndl_t data_store_pstate_super(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         if(NULL == l_errlHndl)
         {
+            // Change Data Request Mask to indicate we got this data
+            G_data_cnfg->data_mask |= DATA_MASK_PSTATE_SUPERSTRUCTURE;
+
             // Store IDDQ table and WOF control parameters
             memcpy(&G_sysConfigData.iddq_table, &l_cmd_ptr->pstatess.iddq,
                    sizeof(IddqTable));
             memcpy(&G_sysConfigData.wof_parms, &l_cmd_ptr->pstatess.wof,
                    sizeof(WOFElements));
-            // Change Data Request Mask to indicate we got this data
-            G_data_cnfg->data_mask |= DATA_MASK_PSTATE_SUPERSTRUCTURE;
 
             TRAC_IMP("Pstate SuperStructure is valid: Magic_number[0x%08X%08X] Size[%d]",
                      (uint32_t)(l_cmd_ptr->pstatess.magic >> 32),
@@ -2282,8 +2283,6 @@ errlHndl_t cmdh_store_wof_core_freq(const cmdh_fsp_cmd_t * i_cmd_ptr,
         if ((l_cmd_ptr->columnCount != 0) && (l_cmd_ptr->rowCount != 0))
         {
             amec_wof_store_core_freq(l_cmd_ptr->max_good_cores, l_actualDataSz, l_cmd_ptr->columnCount, &l_cmd_ptr->data[0]);
-            // Mark WOF uplift table received
-            G_data_cnfg->data_mask |= DATA_MASK_WOF_CORE_FREQ;
         }
         else
         {
@@ -2370,8 +2369,6 @@ errlHndl_t cmdh_store_wof_vrm_eff(const cmdh_fsp_cmd_t * i_cmd_ptr,
         if ((l_cmd_ptr->columnCount != 0) && (l_cmd_ptr->rowCount != 0))
         {
             amec_wof_store_vrm_eff(l_actualDataSz, l_cmd_ptr->columnCount, &l_cmd_ptr->data[0]);
-            // Mark VRM Efficiency data received
-            G_data_cnfg->data_mask |= DATA_MASK_WOF_VRM_EFF;
         }
         else
         {

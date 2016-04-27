@@ -77,7 +77,7 @@ uint16_t G_amec_wof_uplift_table[AMEC_WOF_UPLIFT_TBL_ROWS][AMEC_WOF_UPLIFT_TBL_C
 // Core IDDQ voltages array from pstates.h (voltages in 100uV)
 uint16_t G_iddq_voltages[CORE_IDDQ_MEASUREMENTS] = {8000, 9000, 10000, 11000, 12000, 12500};
 
-uint8_t  G_wof_max_cores_per_chip = 0; // WOF does not run until this is set.
+uint8_t  G_wof_max_cores_per_chip = 12; //defaulted to 12 for now
 
 //Approximate y=1.25^((T-85)/10).
 //Interpolate T in the table below to find m
@@ -512,30 +512,10 @@ int amec_wof_set_algorithm(const uint8_t i_algorithm)
     do
     {
         // Start WOF in safe state.
-
-        // Check required configuration data is loaded
         if (!(G_data_cnfg->data_mask | DATA_MASK_FREQ_PRESENT))
         {
             // Frequency table is not loaded, don't know safe turbo for WOF.
             // Initialization not yet possible. Try again later.
-            break;
-        }
-        if (!(G_data_cnfg->data_mask | DATA_MASK_PSTATE_SUPERSTRUCTURE))
-        {
-            // G_sysConfigData.iddq_table not loaded
-            // G_sysConfigData.wof_parms not loaded
-            break;
-        }
-        if (!(G_data_cnfg->data_mask | DATA_MASK_WOF_VRM_EFF))
-        {
-            // VRM Efficiency table not loaded.
-            // Cannot compute Vdd current out.
-            break;
-        }
-        if (!(G_data_cnfg->data_mask | DATA_MASK_WOF_CORE_FREQ))
-        {
-            // WOF uplift table not loaded
-            // WOF algorithm cannot run
             break;
         }
 
@@ -706,13 +686,6 @@ void amec_update_wof_sensors(void)
     uint32_t            l_v_delta;
     uint32_t            l_v_chip;
     uint16_t            l_v_sense;
-
-    if (!(G_data_cnfg->data_mask | DATA_MASK_WOF_VRM_EFF))
-    {
-        // VRM Efficiency table not loaded yet.
-        // Cannot compute Vdd current out.
-        return;
-    }
 
     // Vdd regulator input power in 0.1 W units (deci-Watts)
     l_pow_reg_input_dW = AMECSENSOR_PTR(PWR250USVDD0)->sample * 10;
