@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -78,11 +78,11 @@
 #define AME_API_MIN     28      // API version minor
 
 #define AME_VERSION_MAJ 7       // Major Version (e.g. Ver. 1.4 has MAJ=1)
-#define AME_VERSION_MIN 32      // Minor Version (e.g. Ver. 1.4 has MIN=4)
+#define AME_VERSION_MIN 31      // Minor Version (e.g. Ver. 1.4 has MIN=4)
 
-#define AME_YEAR        2016    // Year of Release (e.g. 2006)
-#define AME_MONTH       1       // Month of Release (e.g. September=9)
-#define AME_DAY         14       // Day of Release
+#define AME_YEAR        2015    // Year of Release (e.g. 2006)
+#define AME_MONTH       10       // Month of Release (e.g. September=9)
+#define AME_DAY         19       // Day of Release
 
 #define AME_SDRS        24      // AME Sensor Data Record Size: 24 bytes
 

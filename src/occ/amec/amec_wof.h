@@ -149,8 +149,6 @@ typedef struct amec_wof
     uint16_t            vote_vchip;
     // Non-zero is a WOF error flag
     uint8_t             error;
-    // Consecutive errors observed at beginning of WOF main loop
-    uint8_t             error_count;
     // The WOF algorithm can be selected (and enabled/disabled) by setting
     // g_amec->wof.enable_parm (either automatically from frequency data
     // packet or manually from the Amester parameter interface).
@@ -194,7 +192,7 @@ int  amec_wof_set_algorithm(const uint8_t i_algorithm);
 void amec_wof_update_pstate_table(void);
 void amec_wof_alg_v2(void);
 void amec_wof_alg_v3(void);
-int  amec_wof_common_steps(void);
+void amec_wof_common_steps(void);
 void amec_wof_helper_v2(void);
 void amec_wof_helper_v3(void);
 uint32_t amec_wof_compute_ceff_tdp(uint8_t i_cores_on);
