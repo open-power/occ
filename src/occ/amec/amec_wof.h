@@ -209,15 +209,11 @@ typedef struct amec_wof
     //overall efficiency for each iteration
     uint16_t            vdd_effi[AMEC_WOF_VDD_ITER_BUFF];
     //efficiency for higher voltage trend
-    int32_t             vdd_effhii[AMEC_WOF_VDD_ITER_BUFF];
+    int32_t            vdd_effhii[AMEC_WOF_VDD_ITER_BUFF];
     //efficiency for lower voltage trend
-    int32_t             vdd_effloi[AMEC_WOF_VDD_ITER_BUFF];
+    int32_t            vdd_effloi[AMEC_WOF_VDD_ITER_BUFF];
     //End tick for vdd iout debugging (t1==t2 means debug data is synchronized)
     uint32_t            vdd_t2;
-    //Last scom error reading core voltage
-    uint32_t            volt_err;
-    //Total error count reading core voltage
-    uint32_t            volt_err_cnt;
 } amec_wof_t;
 
 //*************************************************************************
