@@ -940,6 +940,8 @@ void amec_sensors_core_voltage(uint8_t i_core)
     //Core power management state
     uint8_t  l_pmstate=g_amec_sys.proc[0].core[i_core].pm_state_hist >> 5;
 
+    uint32_t l_temp; // per-core temperature
+
     //
     // iVRM in bypass?
     l_rc = _getscom(CORE_CHIPLET_ADDRESS(SCOM_PIVRMCSR_ADDR_nochiplet,
