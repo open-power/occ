@@ -137,8 +137,6 @@ typedef struct amec_wof
     uint32_t            ceff;
     // Effective capacitance old.
     uint32_t            ceff_old;
-    // Voltage used in ceff calculation (units in 0.1 mV, like sensors)
-    uint16_t            ceff_volt;
     // Effective capacitance ratio
     uint16_t            ceff_ratio;
     // Uplift frequency adjustment

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -85,7 +85,6 @@ typedef enum
     PARM_WOF_CEFF_TDP,
     PARM_WOF_CEFF,
     PARM_WOF_CEFF_OLD,
-    PARM_WOF_CEFF_VOLT,
     PARM_WOF_CEFF_RATIO,
     PARM_WOF_F_UPLIFT,
     PARM_WOF_F_VOTE,

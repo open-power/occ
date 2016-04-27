@@ -163,8 +163,6 @@ amec_parm_t g_amec_parm_list[] = {
                            &g_amec_sys.wof.ceff_tdp,MAX_NUM_CORES+1),
     AMEC_PARM_UINT32(PARM_WOF_CEFF,"wof_ceff",&g_amec_sys.wof.ceff),
     AMEC_PARM_UINT32(PARM_WOF_CEFF_OLD,"wof_ceff_old",&g_amec_sys.wof.ceff_old),
-    AMEC_PARM_UINT16(PARM_WOF_CEFF_VOLT,"wof_ceff_volt",
-                     &g_amec_sys.wof.ceff_volt),
     AMEC_PARM_UINT16(PARM_WOF_CEFF_RATIO,"wof_ceff_ratio",&g_amec_sys.wof.ceff_ratio),
     AMEC_PARM_INT16(PARM_WOF_F_UPLIFT,"wof_f_uplift",&g_amec_sys.wof.f_uplift),
     AMEC_PARM_UINT16(PARM_WOF_F_VOTE,"wof_f_vote",&g_amec_sys.wof.f_vote),
