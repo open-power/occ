@@ -34,9 +34,10 @@
 #include <stdint.h>
 #include <p9_config.h>
 
-#define PC_OCC_SPRC         0x00010A82
-#define PC_OCC_SPRD         0x00010A83
-#define TOD_VALUE_REG       0x00040020
+#define PC_OCC_SPRC             0x00010A82
+#define PC_OCC_SPRD             0x00010A83
+#define TOD_VALUE_REG           0x00040020
+#define STOP_STATE_HIST_OCC_REG 0x000F0112
 
 #define CORE_RAW_CYCLES             0x200
 #define CORE_RUN_CYCLES             0x208
@@ -110,12 +111,13 @@ typedef struct
 //
 // The instance of this data object must be 8 byte aligned
 //
-typedef struct // 120
+typedef struct // 128
 {
     CoreDataEmpath             empath;    //32
     CoreDataThrottle           throttle;  //16
     CoreDataPerThread          per_thread[EMPATH_CORE_THREADS]; // 64
     CoreDataDts                dts;  //8
+    uint64_t                   stop_state_hist;
 } CoreData;
 
 #ifdef __cplusplus

@@ -493,7 +493,6 @@ void print_core_status(uint8_t core)
         //dumpHexString(&l_core_data->core_dispatch, sizeof(l_core_data->core_dispatch), "Core Dispatch");
         //dumpHexString(&l_core_data->core_completion, sizeof(l_core_data->core_completion), "Core Completion");
         //dumpHexString(&l_core_data->core_workrate, sizeof(l_core_data->core_workrate), "Core Workrate");
-        //dumpHexString(&l_core_data->core_spurr, sizeof(l_core_data->core_spurr), "Core Spurr");
         //dumpHexString(&l_core_data->core_mem_hler_a, sizeof(l_core_data->core_mem_hler_a), "Mem A");
         //dumpHexString(&l_core_data->core_mem_hler_b, sizeof(l_core_data->core_mem_hler_b), "Mem B");
         //dumpHexString(&l_core_data->mem_tod, sizeof(l_core_data->mem_tod), "Mem TOD");

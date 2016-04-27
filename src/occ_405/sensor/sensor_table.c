@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -301,20 +301,20 @@ const sensor_ptr_t G_amec_sensor_list[] =
   // ------------------------------------------------------
   // Processor Sensors
   // ------------------------------------------------------
-  SENSOR_PTR( FREQA2MSP0,           &g_amec_sys.proc[0].freqa2ms),
-  SENSOR_PTR( IPS2MSP0,             &g_amec_sys.proc[0].ips2ms),
+  SENSOR_PTR( FREQA4MSP0,           &g_amec_sys.proc[0].freqa4ms),
+  SENSOR_PTR( IPS4MSP0,             &g_amec_sys.proc[0].ips4ms),
   SENSOR_PTR( MEMSP2MSP0,           &g_amec_sys.proc[0].memsp2ms),
   SENSOR_PTR( PWR250USP0,           &g_amec_sys.proc[0].pwr250us),
   SENSOR_PTR( PWR250USVDD0,         &g_amec_sys.proc[0].pwr250usvdd),
   SENSOR_PTR( CUR250USVDD0,         &g_amec_sys.proc[0].cur250usvdd),
   SENSOR_PTR( PWR250USVCS0,         &g_amec_sys.proc[0].pwr250usvcs),
   SENSOR_PTR( PWR250USMEM0,         &g_amec_sys.proc[0].pwr250usmem),
-  SENSOR_PTR( SLEEPCNT2MSP0,        &g_amec_sys.proc[0].sleepcnt2ms),
-  SENSOR_PTR( WINKCNT2MSP0,         &g_amec_sys.proc[0].winkcnt2ms),
+  SENSOR_PTR( SLEEPCNT4MSP0,        &g_amec_sys.proc[0].sleepcnt4ms),
+  SENSOR_PTR( WINKCNT4MSP0,         &g_amec_sys.proc[0].winkcnt4ms),
   SENSOR_PTR( SP250USP0,            &g_amec_sys.proc[0].sp250us),
   SENSOR_PTR( TEMP4MSP0,            &g_amec_sys.proc[0].temp4ms),
   SENSOR_PTR( TEMP4MSP0PEAK,        &g_amec_sys.proc[0].temp4mspeak),
-  SENSOR_PTR( UTIL2MSP0,            &g_amec_sys.proc[0].util2ms),
+  SENSOR_PTR( UTIL4MSP0,            &g_amec_sys.proc[0].util4ms),
   SENSOR_PTR( VRFAN250USPROC,       &g_amec_sys.sys.vrfan250usproc),
   SENSOR_PTR( VRHOT250USPROC,       &g_amec_sys.sys.vrhot250usproc),
 
@@ -322,17 +322,15 @@ const sensor_ptr_t G_amec_sensor_list[] =
   // Core Sensors (24 of each)
   // ------------------------------------------------------
   CORE_SENSOR_PTRS( FREQ250USP0C ,  &g_amec_sys.proc[0].core, freq250us),
-  CORE_SENSOR_PTRS( FREQA2MSP0C ,   &g_amec_sys.proc[0].core, freqa2ms),
-  CORE_SENSOR_PTRS( IPS2MSP0C ,     &g_amec_sys.proc[0].core, ips2ms),
-  CORE_SENSOR_PTRS( NOTBZE2MSP0C ,  &g_amec_sys.proc[0].core, mcpifd2ms),
-  CORE_SENSOR_PTRS( NOTFIN2MSP0C ,  &g_amec_sys.proc[0].core, mcpifi2ms),
-  CORE_SENSOR_PTRS( SPURR2MSP0C ,   &g_amec_sys.proc[0].core, spurr2ms),
+  CORE_SENSOR_PTRS( FREQA4MSP0C ,   &g_amec_sys.proc[0].core, freqa4ms),
+  CORE_SENSOR_PTRS( IPS4MSP0C ,     &g_amec_sys.proc[0].core, ips4ms),
+  CORE_SENSOR_PTRS( NOTBZE4MSP0C ,  &g_amec_sys.proc[0].core, mcpifd4ms),
+  CORE_SENSOR_PTRS( NOTFIN4MSP0C ,  &g_amec_sys.proc[0].core, mcpifi4ms),
   CORE_SENSOR_PTRS( TEMP4MSP0C ,    &g_amec_sys.proc[0].core, temp4ms),
-  CORE_SENSOR_PTRS( UTIL2MSP0C ,    &g_amec_sys.proc[0].core, util2ms),
+  CORE_SENSOR_PTRS( UTIL4MSP0C ,    &g_amec_sys.proc[0].core, util4ms),
   CORE_SENSOR_PTRS( NUTIL3SP0C ,    &g_amec_sys.proc[0].core, nutil3s),
   CORE_SENSOR_PTRS( MSTL2MSP0C ,    &g_amec_sys.proc[0].core, mstl2ms),
   CORE_SENSOR_PTRS( CMT2MSP0C ,     &g_amec_sys.proc[0].core, cmt2ms),
-  CORE_SENSOR_PTRS( CMBW2MSP0C ,    &g_amec_sys.proc[0].core, cmbw2ms),
   CORE_SENSOR_PTRS( PPICP0C ,       &g_amec_sys.proc[0].core, ppic),
   CORE_SENSOR_PTRS( PWRPX250USP0C , &g_amec_sys.proc[0].core, pwrpx250us),
 
@@ -453,20 +451,20 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   // ------------------------------------------------------
   // Processor Sensors
   // ------------------------------------------------------
-  MINI_SENSOR_PTR(     FREQA2MSP0,  &G_dcom_slv_outbox_tx.freqa2msp0),
-  MINI_SENSOR_PTR(       IPS2MSP0,  &G_dcom_slv_outbox_tx.ips2msp0),
+  MINI_SENSOR_PTR(     FREQA4MSP0,  &G_dcom_slv_outbox_tx.freqa4msp0),
+  MINI_SENSOR_PTR(       IPS4MSP0,  &G_dcom_slv_outbox_tx.ips4msp0),
   MINI_SENSOR_PTR(     MEMSP2MSP0,  NULL),
   MINI_SENSOR_PTR(     PWR250USP0,  &G_dcom_slv_outbox_tx.pwr250usp0),
   MINI_SENSOR_PTR(   PWR250USVDD0,  NULL),
   MINI_SENSOR_PTR(   CUR250USVDD0,  NULL),
   MINI_SENSOR_PTR(   PWR250USVCS0,  NULL),
   MINI_SENSOR_PTR(   PWR250USMEM0,  &G_dcom_slv_outbox_tx.pwr250usmemp0),
-  MINI_SENSOR_PTR(  SLEEPCNT2MSP0,  &G_dcom_slv_outbox_tx.sleepcnt2msp0),
-  MINI_SENSOR_PTR(   WINKCNT2MSP0,  &G_dcom_slv_outbox_tx.winkcnt2msp0),
+  MINI_SENSOR_PTR(  SLEEPCNT4MSP0,  &G_dcom_slv_outbox_tx.sleepcnt4msp0),
+  MINI_SENSOR_PTR(   WINKCNT4MSP0,  &G_dcom_slv_outbox_tx.winkcnt4msp0),
   MINI_SENSOR_PTR(      SP250USP0,  NULL),
   MINI_SENSOR_PTR(      TEMP4MSP0,  &G_dcom_slv_outbox_tx.temp4msp0),
   MINI_SENSOR_PTR(  TEMP4MSP0PEAK,  &G_dcom_slv_outbox_tx.temp4msp0peak),
-  MINI_SENSOR_PTR(      UTIL2MSP0,  &G_dcom_slv_outbox_tx.util2msp0),
+  MINI_SENSOR_PTR(      UTIL4MSP0,  &G_dcom_slv_outbox_tx.util4msp0),
   MINI_SENSOR_PTR( VRFAN250USPROC,  &G_dcom_slv_outbox_tx.vrfan250usproc),
   MINI_SENSOR_PTR( VRHOT250USPROC,  NULL),
 
@@ -474,17 +472,15 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   // Core Sensors (24 of each)
   // ------------------------------------------------------
   CORE_MINI_SENSOR_PTRS_NULL(  FREQ250USP0C ),
-  CORE_MINI_SENSOR_PTRS_NULL(   FREQA2MSP0C ),
-  CORE_MINI_SENSOR_PTRS(          IPS2MSP0C, &G_dcom_slv_outbox_tx.ips2msp0cy    ),
-  CORE_MINI_SENSOR_PTRS(       NOTBZE2MSP0C, &G_dcom_slv_outbox_tx.mcpifd2msp0cy ),
-  CORE_MINI_SENSOR_PTRS(       NOTFIN2MSP0C, &G_dcom_slv_outbox_tx.mcpifi2msp0cy ),
-  CORE_MINI_SENSOR_PTRS_NULL(   SPURR2MSP0C ),
+  CORE_MINI_SENSOR_PTRS_NULL(   FREQA4MSP0C ),
+  CORE_MINI_SENSOR_PTRS(          IPS4MSP0C, &G_dcom_slv_outbox_tx.ips4msp0cy    ),
+  CORE_MINI_SENSOR_PTRS(       NOTBZE4MSP0C, &G_dcom_slv_outbox_tx.mcpifd4msp0cy ),
+  CORE_MINI_SENSOR_PTRS(       NOTFIN4MSP0C, &G_dcom_slv_outbox_tx.mcpifi4msp0cy ),
   CORE_MINI_SENSOR_PTRS_NULL(    TEMP4MSP0C ),
-  CORE_MINI_SENSOR_PTRS(         UTIL2MSP0C, &G_dcom_slv_outbox_tx.util2msp0cy   ),
+  CORE_MINI_SENSOR_PTRS(         UTIL4MSP0C, &G_dcom_slv_outbox_tx.util4msp0cy   ),
   CORE_MINI_SENSOR_PTRS(         NUTIL3SP0C, &G_dcom_slv_outbox_tx.nutil3sp0cy   ),
   CORE_MINI_SENSOR_PTRS_NULL(    MSTL2MSP0C ),
   CORE_MINI_SENSOR_PTRS_NULL(     CMT2MSP0C ),
-  CORE_MINI_SENSOR_PTRS_NULL(    CMBW2MSP0C ),
   CORE_MINI_SENSOR_PTRS_NULL(       PPICP0C ),
   CORE_MINI_SENSOR_PTRS(      PWRPX250USP0C, &G_dcom_slv_outbox_tx.pwrpx250usp0cy), //
 

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -71,7 +71,7 @@ void amec_calc_dps_util_counters(const uint8_t i_core_id)
     /*------------------------------------------------------------------------*/
     l_perf = &g_amec->proc[0].core[i_core_id].core_perf;
     // Read sensor for this core
-    l_sensor = AMECSENSOR_ARRAY_PTR(UTIL2MSP0C0, i_core_id);
+    l_sensor = AMECSENSOR_ARRAY_PTR(UTIL4MSP0C0, i_core_id);
     l_utilization = l_sensor->sample;
     l_part = amec_part_find_by_core(&g_amec->part_config, i_core_id);
 

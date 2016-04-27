@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/occ_sys_config.h $                                    */
+/* $Source: src/occ_405/occ_sys_config.h $                                */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -39,7 +39,7 @@
 #define MAX_NUM_OCC              4
 #define MAX_NUM_NODES            4
 #define MAX_NUM_CORES           24
-#define MAX_THREADS_PER_CORE     8
+#define MAX_THREADS_PER_CORE     4
 #define MAX_NUM_CHIP_MODULES     4
 #define MAX_NUM_POWER_SUPPLIES   4
 #define MAX_NUM_MEM_CONTROLLERS  8
@@ -55,8 +55,8 @@
 
 #define UPPER_LIMIT_PROC_FREQ_MHZ     6000
 
-//Number of samples per second for performance-related algorithms (e.g. UTIL2MSP0Cy)
-#define AMEC_DPS_SAMPLING_RATE         500
+//Number of samples per second for performance-related algorithms (e.g. UTIL4MSP0Cy)
+#define AMEC_DPS_SAMPLING_RATE         250
 //Time interval for averaging utilization and frequency (IPS algorithm)
 #define AMEC_IPS_AVRG_INTERVAL           3
 

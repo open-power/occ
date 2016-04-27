@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -38,13 +38,15 @@
 /*----------------------------------------------------------------------------*/
 /* Defines/Constants                                                          */
 /*----------------------------------------------------------------------------*/
-// See bit definition of PM State History Register for OCC
-#define OCC_PM_STATE_MASK      0x1F000000  //Mask bits 0:2 of the register
-#define OCC_PAST_FAST_SLEEP    0x18000000  //Core has been in fast sleep
-#define OCC_PAST_DEEP_SLEEP    0x1C000000  //Core has been in deep sleep
-#define OCC_PAST_FAST_WINKLE   0x1E000000  //Core has been in fast winkle
-#define OCC_PAST_DEEP_WINKLE   0x1F000000  //Core has been in deep winkle
-#define OCC_PAST_CORE_CLK_STOP 0x08000000  //Core has been in an idle state with core clocks stopped
+// See bit definition of OCC Stop State History Register
+#define OCC_CORE_STOP_GATED      0x80000000  // Set upon entry stop entry transition (or initial power on)
+                                             // Not cleared until core is fully accessible
+#define OCC_CORE_SWUP_DONE       0x40000000  // Special wake-up done
+#define OCC_CORE_ACT_STOP_LVL    0x00F00000  // Actual stop level (probably changes too fast to be useful)
+// The following clear upon reading
+#define OCC_DEEPEST_REQ_STOP_LVL 0x000F0000  // Deepest requestest stop level
+#define OCC_DEEPEST_ACT_STOP_LVL 0x0000F000  // Deepest stop state fully entered
+#define OCC_IVRM_ENABLED_HIST    0x00000800  // Bit indicating if IVRM has been enabled
 
 /*----------------------------------------------------------------------------*/
 /* Structures                                                                 */

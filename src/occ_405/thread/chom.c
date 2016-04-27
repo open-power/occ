@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/thread/chom.c $                                       */
+/* $Source: src/occ_405/thread/chom.c $                                   */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -82,23 +82,23 @@ const uint16_t * g_chom_sensor_table[CHOM_NUM_OF_SENSORS] =
     // Fan power
     &g_amec_sys.fan.pwr250usfan.sample,
     // Processor frequency
-    &G_dcom_slv_outbox_rx[0].freqa2msp0,
-    &G_dcom_slv_outbox_rx[1].freqa2msp0,
-    &G_dcom_slv_outbox_rx[2].freqa2msp0,
-    &G_dcom_slv_outbox_rx[3].freqa2msp0,
-    &G_dcom_slv_outbox_rx[4].freqa2msp0,
-    &G_dcom_slv_outbox_rx[5].freqa2msp0,
-    &G_dcom_slv_outbox_rx[6].freqa2msp0,
-    &G_dcom_slv_outbox_rx[7].freqa2msp0,
+    &G_dcom_slv_outbox_rx[0].freqa4msp0,
+    &G_dcom_slv_outbox_rx[1].freqa4msp0,
+    &G_dcom_slv_outbox_rx[2].freqa4msp0,
+    &G_dcom_slv_outbox_rx[3].freqa4msp0,
+    &G_dcom_slv_outbox_rx[4].freqa4msp0,
+    &G_dcom_slv_outbox_rx[5].freqa4msp0,
+    &G_dcom_slv_outbox_rx[6].freqa4msp0,
+    &G_dcom_slv_outbox_rx[7].freqa4msp0,
     // Processor utilization sensor
-    &G_dcom_slv_outbox_rx[0].util2msp0,
-    &G_dcom_slv_outbox_rx[1].util2msp0,
-    &G_dcom_slv_outbox_rx[2].util2msp0,
-    &G_dcom_slv_outbox_rx[3].util2msp0,
-    &G_dcom_slv_outbox_rx[4].util2msp0,
-    &G_dcom_slv_outbox_rx[5].util2msp0,
-    &G_dcom_slv_outbox_rx[6].util2msp0,
-    &G_dcom_slv_outbox_rx[7].util2msp0,
+    &G_dcom_slv_outbox_rx[0].util4msp0,
+    &G_dcom_slv_outbox_rx[1].util4msp0,
+    &G_dcom_slv_outbox_rx[2].util4msp0,
+    &G_dcom_slv_outbox_rx[3].util4msp0,
+    &G_dcom_slv_outbox_rx[4].util4msp0,
+    &G_dcom_slv_outbox_rx[5].util4msp0,
+    &G_dcom_slv_outbox_rx[6].util4msp0,
+    &G_dcom_slv_outbox_rx[7].util4msp0,
     // Max Core temperature for all processors in the node
     NULL,
     // Max Centaur temperature for all Centaurs in the node
@@ -261,9 +261,9 @@ void chom_update_sensors()
     k = 0;
     for (i=0 ; i<MAX_OCCS ; i++)
     {
-        if (0 != G_dcom_slv_outbox_rx[i].ips2msp0)
+        if (0 != G_dcom_slv_outbox_rx[i].ips4msp0)
         {
-            l_mips += G_dcom_slv_outbox_rx[i].ips2msp0;
+            l_mips += G_dcom_slv_outbox_rx[i].ips4msp0;
             k++;
         }
     }

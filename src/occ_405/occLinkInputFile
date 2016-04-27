@@ -1,15 +1,16 @@
-INPUT ( amec_controller.o
+INPUT ( amec_amester.o
+        amec_controller.o
         amec_data.o
         amec_freq.o
         amec_health.o
         amec_init.o
-        amec_amester.o
         amec_master_smh.o
         amec_oversub.o
         amec_parm.o
-        amec_pcap.o
         amec_parm_table.o
         amec_part.o
+        amec_pcap.o
+        amec_perfcount.o
         amec_sensors_fw.o
         amec_sensors_power.o
         amec_sensors_centaur.o

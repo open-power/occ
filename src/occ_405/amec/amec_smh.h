@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -65,8 +65,9 @@
 // Number of uS in 1 full period of the AMEC State Machine
 #define AMEC_US_PER_SMH_PERIOD   (AMEC_SMH_STATES_PER_LVL * MICS_PER_TICK)
 // Number of <AMEC_US_PER_SMH_PERIOD> that happen in 1 second
-#define AMEC_SMH_PERIODS_IN_1SEC (10000000 / AMEC_US_PER_SMH_PERIOD)
-
+#define AMEC_SMH_PERIODS_IN_1SEC (1000000 / AMEC_US_PER_SMH_PERIOD)
+// Number of times core data is processed. The AMEC SMH goes around twice per tick cycle.
+#define AMEC_CORE_COLLECTION_1SEC (AMEC_SMH_PERIODS_IN_1SEC / 2)
 //*************************************************************************
 // Structures
 //*************************************************************************

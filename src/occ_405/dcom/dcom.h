@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -194,18 +194,18 @@ typedef struct __attribute__ ((packed))
     uint8_t  version;                                            //   [1]
 
     // Mini-sensors
-    uint16_t freqa2msp0;                                         //   [2]
-    uint16_t ips2msp0cy[MAX_CORES];                              //   [4]
-    uint16_t mcpifd2msp0cy[MAX_CORES];                           //  [52]
-    uint16_t mcpifi2msp0cy[MAX_CORES];                           // [100]
+    uint16_t freqa4msp0;                                         //   [2]
+    uint16_t ips4msp0cy[MAX_CORES];                              //   [4]
+    uint16_t mcpifd4msp0cy[MAX_CORES];                           //  [52]
+    uint16_t mcpifi4msp0cy[MAX_CORES];                           // [100]
     uint16_t memsp2msp0mx[MAX_NUM_MEM_CONTROLLERS];              // [148]
     uint16_t pwr250usp0;                                         // [164]
     uint16_t pwr250usmemp0;                                      // [166]
-    uint16_t sleepcnt2msp0;                                      // [168]
-    uint16_t winkcnt2msp0;                                       // [170]
+    uint16_t sleepcnt4msp0;                                      // [168]
+    uint16_t winkcnt4msp0;                                       // [170]
     uint16_t temp4msp0;                                          // [172]
     uint16_t temp4msp0peak;                                      // [174]
-    uint16_t util2msp0cy[MAX_CORES];                             // [176]
+    uint16_t util4msp0cy[MAX_CORES];                             // [176]
     uint16_t vrfan250usmem;                                      // [224]
     uint16_t vrfan250usproc;                                     // [226]
     uint16_t mrd2msp0mx[MAX_NUM_MEM_CONTROLLERS];                // [228]
@@ -214,8 +214,8 @@ typedef struct __attribute__ ((packed))
     uint16_t todclock[NUM_TOD_SENSORS];                          // [308]
     uint16_t temp2mscent;                                        // [314]
     uint16_t temp16msdimm;                                       // [316]
-    uint16_t util2msp0;                                          // [318]
-    uint16_t ips2msp0;                                           // [320]
+    uint16_t util4msp0;                                          // [318]
+    uint16_t ips4msp0;                                           // [320]
     uint16_t nutil3sp0cy[MAX_CORES];                             // [322]
 
     // Fwish (i.e., desired frequency that this OCC slave wants based on DPS

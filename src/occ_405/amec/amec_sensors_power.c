@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/amec/amec_sensors_power.c $                           */
+/* $Source: src/occ_405/amec/amec_sensors_power.c $                       */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -354,7 +354,7 @@ void amec_update_apss_sensors(void)
         {
             if (G_sysConfigData.is_occ_present & (1<< l_occCount))
             {
-                l_allOccAvgFreqOver250us += G_dcom_slv_outbox_rx[l_occCount].freqa2msp0;
+                l_allOccAvgFreqOver250us += G_dcom_slv_outbox_rx[l_occCount].freqa4msp0;
                 l_presentOCCs++;
             }
         }

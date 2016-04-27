@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/amec/amec_analytics.c $                               */
+/* $Source: src/occ_405/amec/amec_analytics.c $                           */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -190,8 +190,8 @@ void amec_analytics_main(void)
         return;
     }
 
-    g_amec->packednapsleep[0] = (g_amec->proc[0].winkcnt2ms.sample<<8) +
-        g_amec->proc[0].sleepcnt2ms.sample;
+    g_amec->packednapsleep[0] = (g_amec->proc[0].winkcnt4ms.sample<<8) +
+        g_amec->proc[0].sleepcnt4ms.sample;
     // There are no other elements in proc[] array other than element 0
     g_amec->packednapsleep[1] = 0;
     g_amec->packednapsleep[2] = 0;
@@ -343,9 +343,9 @@ void amec_analytics_main(void)
                 }
 
                 g_amec->g44_avg[(i*MSA)+48] = g_amec->g44_avg[(i*MSA)+48] +
-                    (UINT32)(g_amec->proc[i].winkcnt2ms.sample<<3);       // counter of cores that entered winkle for at least part of the 2msec interval: 1/8th resolution
+                    (UINT32)(g_amec->proc[i].winkcnt4ms.sample<<3);       // counter of cores that entered winkle for at least part of the 2msec interval: 1/8th resolution
                 g_amec->g44_avg[(i*MSA)+49] = g_amec->g44_avg[(i*MSA)+49] +
-                    (UINT32)(g_amec->proc[i].sleepcnt2ms.sample<<3);      // counter of cores that entered sleep for at least part of the 2msec interval: 1/8th resolution
+                    (UINT32)(g_amec->proc[i].sleepcnt4ms.sample<<3);      // counter of cores that entered sleep for at least part of the 2msec interval: 1/8th resolution
 
 
                 m=0;                     // counter for actual configured # of cores - 1.
@@ -354,7 +354,7 @@ void amec_analytics_main(void)
                     if (CORE_PRESENT(j))
                     {
                         //average frequency for this core (apply rounding for frequency for maximum 8 bit resolution): 20MHz resolution (Power8 is actually 33.25MHz steps)
-                        temp32 = (UINT32)g_amec->proc[i].core[j].freqa2ms.sample/10;     // 10MHz resolution
+                        temp32 = (UINT32)g_amec->proc[i].core[j].freqa4ms.sample/10;     // 10MHz resolution
                         temp16 = (UINT16)temp32;
                         temp32 = temp32 >>1;                                // convert to 20MHz resolution
                         if (temp16 & 1) temp32 = temp32+1;                  // if LSBit of 10MHz resolution value is a 1, then round the 20MHz resolution value up by 1
@@ -376,21 +376,21 @@ void amec_analytics_main(void)
                         temp16 = 0;      // keeps track of non-zero threads
                         for (k=0; k < g_amec->analytics_threadcountmax; k++)
                         {
-                        if (tempreg < g_amec->proc[i].core[j].thread[k].util2ms_thread)
+                        if (tempreg < g_amec->proc[i].core[j].thread[k].util4ms_thread)
                             {
-                            tempreg = g_amec->proc[i].core[j].thread[k].util2ms_thread;
+                            tempreg = g_amec->proc[i].core[j].thread[k].util4ms_thread;
                             }
-                        if ((0 < g_amec->proc[i].core[j].thread[k].util2ms_thread) ||
+                        if ((0 < g_amec->proc[i].core[j].thread[k].util4ms_thread) ||
                             (g_amec->analytics_threadmode !=  0))
                         {
                             // accumulate for computing average
-                            temp32 = temp32 + g_amec->proc[i].core[j].thread[k].util2ms_thread;
+                            temp32 = temp32 + g_amec->proc[i].core[j].thread[k].util4ms_thread;
                             // increment counter of threads
                             temp16 = temp16 + 1;
                         }
                         }
                         g_amec->g44_avg[(i*MSA)+62+m] = g_amec->g44_avg[(i*MSA)+62+m] +
-                            (UINT32)(g_amec->proc[i].core[j].util2ms.sample/50);  // accumulate util sensor that feeds IPS and DPS algorithms for this core
+                            (UINT32)(g_amec->proc[i].core[j].util4ms.sample/50);  // accumulate util sensor that feeds IPS and DPS algorithms for this core
 
                         if (g_amec->analytics_threadmode == 2)
                         {
@@ -406,7 +406,7 @@ void amec_analytics_main(void)
                         if (g_amec->analytics_threadmode == 3)
                         {
                             // accumulate average finish latency counter for this core
-                            temp16 = ((g_amec->proc[i].core[j].mcpifi2ms.sample) >>1);
+                            temp16 = ((g_amec->proc[i].core[j].mcpifi4ms.sample) >>1);
                         }
 
                         temp32 = (UINT32)(temp16/25);                       // 0.25% utilization resolution
@@ -415,12 +415,11 @@ void amec_analytics_main(void)
                         g_amec->g44_avg[(i * MSA) + 74 + m] = g_amec->g44_avg[(i * MSA) + 74 + m] +
                             (UINT32)(temp32);          // accumulate average utilization or individual threads for this core or finish latency counter
                         g_amec->g44_avg[(i * MSA) + 86 + m] = g_amec->g44_avg[(i * MSA) + 86 + m] +
-                            (UINT32)(g_amec->proc[i].core[j].ips2ms.sample / 50);  // accumulate average MIPS for this core
+                            (UINT32)(g_amec->proc[i].core[j].ips4ms.sample / 50);  // accumulate average MIPS for this core
                         g_amec->g44_avg[(i * MSA) + 98 + m] = g_amec->g44_avg[(i * MSA) + 98 + m] +
                             (UINT32)g_amec->proc[i].core[j].temp4ms.sample; // accumulate average temperature for this core
-                        g_amec->g44_avg[(i * MSA) + 110 + m] = g_amec->g44_avg[(i * MSA) + 110 + m] +
-                            (UINT32)((g_amec->proc[i].core[j].cmbw2ms.sample) / 156); // accumulate average memory bandwidth for this core //@mw713 /156, was /78 (overflow issues)
-                        temp16 = ((g_amec->proc[i].core[j].mcpifd2ms.sample) / 100);    // accumulate average busy latency counter for this core
+                        g_amec->g44_avg[(i * MSA) + 110 + m] = 0; // No longer supported (was memory bandwidth)
+                        temp16 = ((g_amec->proc[i].core[j].mcpifd4ms.sample) / 100);    // accumulate average busy latency counter for this core
                         g_amec->g44_avg[(i * MSA) + 122 + m] = g_amec->g44_avg[(i * MSA) + 122 + m] + (UINT32)temp16;
                         m++;              // increment configured core counter
                         if (m > 11) j = 12;   // safeguard in case more than 12 configured cores.

@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/cmdh/cmdh_fsp_cmds_datacnfg.c $                       */
+/* $Source: src/occ_405/cmdh/cmdh_fsp_cmds_datacnfg.c $                   */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -1265,9 +1265,9 @@ errlHndl_t data_store_sys_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
             for (l_coreIndex = 0; l_coreIndex < MAX_CORES; l_coreIndex++)
             {
                 AMECSENSOR_PTR(TEMP4MSP0C0 + l_coreIndex)->ipmi_sid = l_cmd_ptr->sys_config.core_sid[(l_coreIndex * 2)];
-                AMECSENSOR_PTR(FREQA2MSP0C0 + l_coreIndex)->ipmi_sid = l_cmd_ptr->sys_config.core_sid[(l_coreIndex * 2) + 1];
+                AMECSENSOR_PTR(FREQA4MSP0C0 + l_coreIndex)->ipmi_sid = l_cmd_ptr->sys_config.core_sid[(l_coreIndex * 2) + 1];
                 CNFG_DBG("data_store_sys_config: Core[%d] TempSID[0x%08X] FreqSID[0x%08X]", l_coreIndex,
-                         AMECSENSOR_PTR(TEMP4MSP0C0 + l_coreIndex)->ipmi_sid, AMECSENSOR_PTR(FREQA2MSP0C0 + l_coreIndex)->ipmi_sid);
+                         AMECSENSOR_PTR(TEMP4MSP0C0 + l_coreIndex)->ipmi_sid, AMECSENSOR_PTR(FREQA4MSP0C0 + l_coreIndex)->ipmi_sid);
             }
         }
 

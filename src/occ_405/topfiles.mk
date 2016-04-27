@@ -22,7 +22,8 @@
 # permissions and limitations under the License.
 #
 # IBM_PROLOG_END_TAG
-TOP-C-SOURCES = amec/amec_controller.c \
+TOP-C-SOURCES = amec/amec_analytics.c \
+                amec/amec_controller.c \
                 amec/amec_data.c \
                 amec/amec_freq.c \
                 amec/amec_health.c \
@@ -31,9 +32,10 @@ TOP-C-SOURCES = amec/amec_controller.c \
                 amec/amec_master_smh.c \
                 amec/amec_oversub.c \
                 amec/amec_parm.c \
-                amec/amec_pcap.c \
                 amec/amec_parm_table.c \
                 amec/amec_part.c \
+                amec/amec_pcap.c \
+                amec/amec_perfcount.c \
                 amec/amec_sensors_fw.c \
                 amec/amec_sensors_power.c \
                 amec/amec_sensors_centaur.c \
@@ -79,6 +81,7 @@ TOP-C-SOURCES = amec/amec_controller.c \
                 sensor/sensor_table.c \
                 sensor/sensor.c \
                 state.c \
+                thread/chom.c \
                 thread/threadSch.c \
                 timer/timer.c \
                 trac/trac_interface.c

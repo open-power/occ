@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/amec/amec_slave_smh.c $                               */
+/* $Source: src/occ_405/amec/amec_slave_smh.c $                           */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -384,19 +384,20 @@ void amec_slv_state_0(void)
   // Update Proc Core sensors (for this tick)
   //-------------------------------------------------------
 
+/* Not yet supported
   //-------------------------------------------------------
   // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
-//  amec_update_centaur_sensors(CENTAUR_0);
-
+  amec_update_centaur_sensors(CENTAUR_0);
+*/
   //-------------------------------------------------------
   // Update Sleep Count & Winkle Count Sensors
   //-------------------------------------------------------
-  sensor_update(AMECSENSOR_PTR(SLEEPCNT2MSP0),
+  sensor_update(AMECSENSOR_PTR(SLEEPCNT4MSP0),
                 __builtin_popcount( g_amec->proc[0].sleep_cnt));
   g_amec->proc[0].sleep_cnt  = 0;
 
-  sensor_update(AMECSENSOR_PTR(WINKCNT2MSP0),
+  sensor_update(AMECSENSOR_PTR(WINKCNT4MSP0),
                 __builtin_popcount(g_amec->proc[0].winkle_cnt));
   g_amec->proc[0].winkle_cnt = 0;
 
@@ -405,9 +406,9 @@ void amec_slv_state_0(void)
   //-------------------------------------------------------
   sensor_vector_update(AMECSENSOR_PTR(TEMP4MSP0),    1);
   sensor_vector_update(AMECSENSOR_PTR(TEMP4MSP0PEAK),1);
-  sensor_vector_update(AMECSENSOR_PTR(FREQA2MSP0),   1);
-  sensor_vector_update(AMECSENSOR_PTR(IPS2MSP0),     1);
-  sensor_vector_update(AMECSENSOR_PTR(UTIL2MSP0),    1);
+  sensor_vector_update(AMECSENSOR_PTR(FREQA4MSP0),   1);
+  sensor_vector_update(AMECSENSOR_PTR(IPS4MSP0),     1);
+  sensor_vector_update(AMECSENSOR_PTR(UTIL4MSP0),    1);
 
   // Call the trace function for 2ms tracing if it has been configured via
   // Amester. If not configured, this call will return immediately.
@@ -488,10 +489,10 @@ void amec_slv_state_3(void)
   // Update Proc Core sensors (for this tick)
   //-------------------------------------------------------
 
-/* Not yet supported
   //-------------------------------------------------------
   // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
+/* Not yet supported
   amec_update_centaur_sensors(CENTAUR_3);
 
   //-------------------------------------------------------

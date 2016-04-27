@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/amec/amec_sys.h $                                     */
+/* $Source: src/occ_405/amec/amec_sys.h $                                 */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -268,7 +268,7 @@ typedef struct
   //-----------------------------------
   // Calculations & Interim Data
   //-----------------------------------
-  uint16_t util2ms_thread;
+  uint16_t util4ms_thread;
 
 } amec_core_thread_t;
 
@@ -281,19 +281,16 @@ typedef struct
   //-----------------------------------
   // Sensors
   //-----------------------------------
-//  sensor_t cpm2ms; //CPM - Commented out as requested by Malcolm
   sensor_t freq250us;
-  sensor_t freqa2ms;
-  sensor_t ips2ms;
-  sensor_t mcpifd2ms;
-  sensor_t mcpifi2ms;
-  sensor_t spurr2ms;
+  sensor_t freqa4ms;
+  sensor_t ips4ms;
+  sensor_t mcpifd4ms;
+  sensor_t mcpifi4ms;
   sensor_t temp4ms;
-  sensor_t util2ms;
+  sensor_t util4ms;
   sensor_t nutil3s;
   sensor_t mstl2ms;
   sensor_t cmt2ms;
-  sensor_t cmbw2ms;
   sensor_t ppic;
   sensor_t pwrpx250us;
 
@@ -306,7 +303,6 @@ typedef struct
   uint32_t prev_PC_COMPLETED;
   uint32_t prev_PC_RAW_Th_CYCLES;
   uint32_t prev_tod_2mhz;
-  uint32_t prev_lpar_mem_cnt[4];
   uint32_t prev_FREQ_SENS_BUSY;
   uint32_t prev_FREQ_SENS_FINISH;
 
@@ -323,8 +319,6 @@ typedef struct
   uint16_t dts_hottest;
   // Counter of number of samples for calculating average utilization & frequency
   uint16_t sample_count;
-  // Array of memory bandwidth for each LPAR
-  uint16_t membw[4];
 
   // Average utilization over a fixed time interval
   uint32_t avg_util;
@@ -440,10 +434,10 @@ typedef struct
   amec_proc_pwr_votes_t pwr_votes;
 
   // Processor Sensors
-  sensor_t freqa2ms;
-  vectorSensor_t freqa2ms_vector;
-  sensor_t ips2ms;
-  vectorSensor_t ips2ms_vector;
+  sensor_t freqa4ms;
+  vectorSensor_t freqa4ms_vector;
+  sensor_t ips4ms;
+  vectorSensor_t ips4ms_vector;
   sensor_t memsp2ms;
   vectorSensor_t memsp2ms_vector;
   sensor_t pwr250us;
@@ -451,15 +445,15 @@ typedef struct
   sensor_t cur250usvdd;
   sensor_t pwr250usvcs;
   sensor_t pwr250usmem;
-  sensor_t sleepcnt2ms;
-  sensor_t winkcnt2ms;
+  sensor_t sleepcnt4ms;
+  sensor_t winkcnt4ms;
   sensor_t sp250us;
   sensor_t temp4ms;
   vectorSensor_t temp4ms_vector;
   sensor_t temp4mspeak;
   vectorSensor_t temp4mspeak_vector;
-  sensor_t util2ms;
-  vectorSensor_t util2ms_vector;
+  sensor_t util4ms;
+  vectorSensor_t util4ms_vector;
 
   // Memory Summary Sensors
   sensor_t temp2mscent;
