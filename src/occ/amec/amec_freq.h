@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -105,7 +105,7 @@ typedef enum
 // Structures
 //*************************************************************************
 
-#define PMC_FFDC_OCI_ADDRS_SIZE 34
+#define PMC_FFDC_OCI_ADDRS_SIZE 37
 #define PMC_FFDC_SCOM_ADDRS_SIZE 5
 
 // scom ffdc format

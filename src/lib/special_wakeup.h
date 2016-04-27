@@ -44,5 +44,13 @@ occ_special_wakeup(int set,
                    int timeout_ms,
                    ChipConfigCores *o_timeouts);
 
+// SW329314 - added for iVRM initialization handling
+int
+occ_special_wakeup_noclearcheck(int set,
+                   ChipConfigCores cores,
+                   int timeout_ms,
+                   ChipConfigCores *o_timeouts);
+
+
 #endif  /* __ASEMBLER__ */
 #endif  /* __SPECIAL_WAKEUP_H__ */

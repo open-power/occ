@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -75,12 +75,17 @@ typedef enum
     PARM_WOF_LOADLINE,
     PARM_WOF_V_CHIP,
     PARM_WOF_IDDQ_I,
+    PARM_WOF_IDDQ_I_CORE,
     PARM_WOF_IDDQ85C,
+    PARM_WOF_IDDQ85C_CORE,
     PARM_WOF_IDDQ,
+    PARM_WOF_IDDQ_CHIP,
+    PARM_WOF_IDDQ_CORE,
     PARM_WOF_AC,
     PARM_WOF_CEFF_TDP,
     PARM_WOF_CEFF,
     PARM_WOF_CEFF_OLD,
+    PARM_WOF_CEFF_VOLT,
     PARM_WOF_CEFF_RATIO,
     PARM_WOF_F_UPLIFT,
     PARM_WOF_F_VOTE,
@@ -98,6 +103,44 @@ typedef enum
     PARM_WOF_IOUT,
     PARM_WOF_GOOD_CORES,
     PARM_WOF_LEAK_OVERHEAD,
+    PARM_WOF_VDD_ITER,
+    PARM_WOF_VDD_T1,
+    PARM_WOF_VDD_PIN,
+    PARM_WOF_VDD_VSET,
+    PARM_WOF_VDD_VHI,
+    PARM_WOF_VDD_VLO,
+    PARM_WOF_VDD_IOUTI,
+    PARM_WOF_VDD_VOUTI,
+    PARM_WOF_VDD_EFFI,
+    PARM_WOF_VDD_EFFHII,
+    PARM_WOF_VDD_EFFLOI,
+    PARM_WOF_VDD_T2,
+    PARM_WOF_EFF_TABLE,
+    PARM_WOF_UPLIFT_TABLE,
+    PARM_WOF_IDDQ_TABLE,
+    PARM_SYS_CONFIG,
+    PARM_VOLT_ERR,
+    PARM_VOLT_ERR_CNT,
+    PARM_OP_TB_VDD5MV,
+    PARM_OP_TB_IDD500MA,
+    PARM_OP_TB_FMHZ,
+    PARM_WOF_TDPRDP_FACTOR,
+    PARM_WOF_ERR_CNT_CONS,
+    PARM_WOF_ERR_CNT_TOTAL,
+    PARM_WOF_ERR_THRESHOLD,
+    PARM_WOF_ERR_HISTORY,
+    PARM_WOF_ERR_HISTORY_NZ,
+    PARM_WOF_INFO_HISTORY,
+    PARM_SSX_TIME,
+    PARM_PSS,
+    PARM_PSS_ADDR,
+    PARM_PSS_LPSA,
+    PARM_PSS_RESCLK,
+    PARM_PSS_CPMRNG,
+    PARM_PSS_IDDQ,
+    PARM_PSS_WOF_ELMNT,
+    PARM_WOF_ERR_MAX_CONSEC,
+    PARM_WOF_ERR_MAX_CONSEC_SNAP,
     AMEC_PARM_NUMBER_OF_PARAMETERS
 } AMEC_PARM_ENUM;
 

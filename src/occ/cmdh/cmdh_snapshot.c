@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -411,9 +411,6 @@ void cmdh_snapshot_callback(void * arg)
         // Make sure we don't divide by 0
         if(l_pwr_uptag_diff == 0)
         {
-            // This should never happen.
-            TRAC_INFO("cmdh_snapshot_callback: update tag difference should not be 0. current:%i, previous:%i.",
-                     l_pwr_update_tag, L_prev_pwr_update_tag);
             l_avg_pwr = 0;
         }
         else
@@ -424,9 +421,6 @@ void cmdh_snapshot_callback(void * arg)
 
         if(l_freq_cnt == 0)
         {
-            // This should never happen.
-            TRAC_INFO("cmdh_snapshot_callback: No frequency data has been accumulated.  Returning 0 for frequency. count:%i.",
-                      l_freq_cnt);
             l_avg_freq = 0;
         }
         else

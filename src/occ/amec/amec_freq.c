@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -118,6 +118,9 @@ const uint32_t G_pmc_ffdc_oci_addrs[PMC_FFDC_OCI_ADDRS_SIZE] =
     PMC_GPSA_ACK_COLLECTION_REG,
     PMC_GPSA_ACK_COLLECTION_MASK_REG,
     PMC_OCC_HEARTBEAT_REG,
+    PMC_FSMSTATE_STATUS_REG,
+    PMC_O2P_ADDR_REG,
+    PMC_O2P_CTRL_STATUS_REG,
     0                           //0 marks last OCI address
 };
 

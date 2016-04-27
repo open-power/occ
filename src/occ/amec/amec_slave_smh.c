@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -572,6 +572,12 @@ void amec_slv_state_4(void)
       // selection)
       amec_wof_main();
   }
+
+  // Export SSX time to combine Amester/OCC traces
+  uint64_t l_time = ssx_timebase_get();
+  g_amec->ssx_time[0] = l_time / SSX_TIMEBASE_FREQUENCY_HZ;                // seconds
+  g_amec->ssx_time[1] = ((l_time % SSX_TIMEBASE_FREQUENCY_HZ)*1000000000)  // nanoseconds
+      /SSX_TIMEBASE_FREQUENCY_HZ;
 
   // Call the trace function for 2ms tracing if it has been configured via
   // Amester. If not configured, this call will return immediately.

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -31,6 +31,7 @@
 #include "state.h"
 #include "dcom.h"
 #include "amec_wof.h"
+#include "amec_sys.h"
 
 // Holds the state of the reset state machine
 uint8_t G_reset_state = RESET_NOT_REQUESTED;
@@ -151,22 +152,15 @@ void reset_state_request(uint8_t i_request)
 // End Function Specification
 void reset_wof_clear_inhibit()
 {
-    uint64_t l_data64 = 0;
+    uint32_t l_data32 = 0;
     uint32_t l_rc = 0;
 
     // Do not inhibit core wakeup anymore
-    l_data64 = 0x0000000000000000ull;
-    l_rc = _putscom(PDEMR, l_data64, SCOM_TIMEOUT);
-    if (l_rc != 0)
-    {
-        TRAC_ERR("reset_wof_clear_inhibit: Error writing to PDEMR register! addr[0x%08X] rc[0x%08X]",
-                 PDEMR,
-                 l_rc);
-    }
-    else
-    {
-        TRAC_IMP("reset_wof_clear_inhibit: PDEMR register has been successfully cleared");
-    }
+    g_amec->wof.enable_parm = 0;
+    l_data32 = 0;
+    out32(PDEMR, l_data32);
+
+    TRAC_IMP("reset_wof_clear_inhibit: PDEMR register has been successfully cleared");
 }
 
 // Function Specification

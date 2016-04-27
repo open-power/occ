@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -40,6 +40,7 @@
 extern int32_t g_amec_eff_vlow;
 extern int32_t g_amec_eff_vhigh;
 extern uint32_t g_amec_wof_iout;
+extern uint32_t G_pss_addr;
 //*************************************************************************
 // Macros
 //*************************************************************************
@@ -152,18 +153,25 @@ amec_parm_t g_amec_parm_list[] = {
     AMEC_PARM_UINT16(PARM_WOF_LOADLINE,"wof_loadline",&g_amec_sys.wof.loadline),
     AMEC_PARM_UINT16(PARM_WOF_V_CHIP,"wof_v_chip",&g_amec_sys.wof.v_chip),
     AMEC_PARM_UINT8(PARM_WOF_IDDQ_I,"wof_iddq_i",&g_amec_sys.wof.iddq_i),
+    AMEC_PARM_UINT8_ARRAY(PARM_WOF_IDDQ_I_CORE,"wof_iddq_ic",g_amec_sys.wof.iddq_i_core,MAX_NUM_CORES),
     AMEC_PARM_UINT16(PARM_WOF_IDDQ85C,"wof_iddq85c",&g_amec_sys.wof.iddq85c),
+    AMEC_PARM_UINT16_ARRAY(PARM_WOF_IDDQ85C_CORE,"wof_iddq85cc",g_amec_sys.wof.iddq85c_core,MAX_NUM_CORES),
     AMEC_PARM_UINT16(PARM_WOF_IDDQ,"wof_iddq",&g_amec_sys.wof.iddq),
+    AMEC_PARM_UINT16(PARM_WOF_IDDQ_CHIP,"wof_iddq_chip",&g_amec_sys.wof.iddq_chip),
+    AMEC_PARM_UINT16_ARRAY(PARM_WOF_IDDQ_CORE,"wof_iddq_core",g_amec_sys.wof.iddq_core,MAX_NUM_CORES),
     AMEC_PARM_UINT16(PARM_WOF_AC,"wof_ac",&g_amec_sys.wof.ac),
-    AMEC_PARM_UINT32(PARM_WOF_CEFF_TDP,"wof_ceff_tdp",&g_amec_sys.wof.ceff_tdp),
+    AMEC_PARM_UINT32_ARRAY(PARM_WOF_CEFF_TDP,"wof_ceff_tdp",
+                           &g_amec_sys.wof.ceff_tdp,MAX_NUM_CORES+1),
     AMEC_PARM_UINT32(PARM_WOF_CEFF,"wof_ceff",&g_amec_sys.wof.ceff),
     AMEC_PARM_UINT32(PARM_WOF_CEFF_OLD,"wof_ceff_old",&g_amec_sys.wof.ceff_old),
+    AMEC_PARM_UINT16(PARM_WOF_CEFF_VOLT,"wof_ceff_volt",
+                     &g_amec_sys.wof.ceff_volt),
     AMEC_PARM_UINT16(PARM_WOF_CEFF_RATIO,"wof_ceff_ratio",&g_amec_sys.wof.ceff_ratio),
     AMEC_PARM_INT16(PARM_WOF_F_UPLIFT,"wof_f_uplift",&g_amec_sys.wof.f_uplift),
     AMEC_PARM_UINT16(PARM_WOF_F_VOTE,"wof_f_vote",&g_amec_sys.wof.f_vote),
     AMEC_PARM_UINT16(PARM_WOF_VOTE_VREG,"wof_vote_vreg",&g_amec_sys.wof.vote_vreg),
     AMEC_PARM_UINT16(PARM_WOF_VOTE_VCHIP,"wof_vote_vchip",&g_amec_sys.wof.vote_vchip),
-    AMEC_PARM_UINT8(PARM_WOF_ERROR,"wof_error",&g_amec_sys.wof.error),
+    AMEC_PARM_UINT32(PARM_WOF_ERROR,"wof_error",&g_amec_sys.wof.error),
     AMEC_PARM_UINT8(PARM_WOF_STATE,"wof_state",&g_amec_sys.wof.state),
     AMEC_PARM_UINT8(PARM_WOF_ENABLE,"wof_enable",&g_amec_sys.wof.enable_parm),
     AMEC_PARM_UINT8(PARM_WOF_CORES_ON,"wof_cores_on",&g_amec_sys.wof.cores_on),
@@ -176,7 +184,57 @@ amec_parm_t g_amec_parm_list[] = {
     AMEC_PARM_UINT8(PARM_WOF_GOOD_CORES,"wof_good_cores",
                     &G_wof_max_cores_per_chip),
     AMEC_PARM_UINT16(PARM_WOF_LEAK_OVERHEAD,"wof_leak_ovrhd",
-                     &g_amec_wof_leak_overhead)
+                     &g_amec_wof_leak_overhead),
+    AMEC_PARM_UINT8(PARM_WOF_VDD_ITER,"wof_vdd_iter",
+                    &g_amec_sys.wof.vdd_iter),
+    AMEC_PARM_UINT32(PARM_WOF_VDD_T1,"wof_vdd_t1",&g_amec_sys.wof.vdd_t1),
+    AMEC_PARM_UINT16(PARM_WOF_VDD_PIN,"wof_vdd_pin",&g_amec_sys.wof.vdd_pin),
+    AMEC_PARM_UINT16(PARM_WOF_VDD_VSET,"wof_vdd_vset",&g_amec_sys.wof.vdd_vset),
+    AMEC_PARM_INT32(PARM_WOF_VDD_VHI,"wof_vdd_vhi",&g_amec_sys.wof.vdd_vhi),
+    AMEC_PARM_INT32(PARM_WOF_VDD_VLO,"wof_vdd_vlo",&g_amec_sys.wof.vdd_vlo),
+    AMEC_PARM_UINT16_ARRAY(PARM_WOF_VDD_IOUTI,"wof_vdd_iouti",
+                           g_amec_sys.wof.vdd_iouti,AMEC_WOF_VDD_ITER_BUFF),
+    AMEC_PARM_UINT16_ARRAY(PARM_WOF_VDD_VOUTI,"wof_vdd_vouti",
+                           g_amec_sys.wof.vdd_vouti,AMEC_WOF_VDD_ITER_BUFF),
+    AMEC_PARM_UINT16_ARRAY(PARM_WOF_VDD_EFFI,"wof_vdd_effi",
+                           g_amec_sys.wof.vdd_effi,AMEC_WOF_VDD_ITER_BUFF),
+    AMEC_PARM_INT32_ARRAY(PARM_WOF_VDD_EFFHII,"wof_vdd_effhii",
+                           g_amec_sys.wof.vdd_effhii,AMEC_WOF_VDD_ITER_BUFF),
+    AMEC_PARM_INT32_ARRAY(PARM_WOF_VDD_EFFLOI,"wof_vdd_effloi",
+                           g_amec_sys.wof.vdd_effloi,AMEC_WOF_VDD_ITER_BUFF),
+    AMEC_PARM_UINT32(PARM_WOF_VDD_T2,"wof_vdd_t2",&g_amec_sys.wof.vdd_t2),
+    AMEC_PARM_UINT16_ARRAY(PARM_WOF_EFF_TABLE,"wof_vdd_efftab",
+                           G_amec_wof_vrm_eff_table,
+                           AMEC_WOF_VRM_EFF_TBL_ROWS*AMEC_WOF_VRM_EFF_TBL_CLMS),
+    AMEC_PARM_UINT16_ARRAY(PARM_WOF_UPLIFT_TABLE,"wof_uplifttab",
+                           G_amec_wof_uplift_table,
+                           AMEC_WOF_UPLIFT_TBL_ROWS*AMEC_WOF_UPLIFT_TBL_CLMS),
+    AMEC_PARM_RAW(PARM_WOF_IDDQ_TABLE,"wof_iddq_tab",
+                  &G_sysConfigData.iddq_table,sizeof(IddqTable)),
+    AMEC_PARM_RAW(PARM_SYS_CONFIG,"sys_config",
+                  &G_sysConfigData,sizeof(occSysConfigData_t)),
+    AMEC_PARM_UINT32(PARM_VOLT_ERR,"volt_err",&g_amec_sys.wof.volt_err),
+    AMEC_PARM_UINT32(PARM_VOLT_ERR_CNT,"volt_err_cnt",&g_amec_sys.wof.volt_err_cnt),
+    AMEC_PARM_UINT32(PARM_OP_TB_VDD5MV,"op_tb_vdd5mv",&G_sysConfigData.wof_parms.operating_points[TURBO].vdd_5mv),
+    AMEC_PARM_UINT32(PARM_OP_TB_IDD500MA,"op_tb_idd500ma",&G_sysConfigData.wof_parms.operating_points[TURBO].idd_500ma),
+    AMEC_PARM_UINT32(PARM_OP_TB_FMHZ,"op_tb_fmhz",&G_sysConfigData.wof_parms.operating_points[TURBO].frequency_mhz),
+    AMEC_PARM_UINT32(PARM_WOF_TDPRDP_FACTOR,"wof_tdprdp_fac",&G_sysConfigData.wof_parms.tdp_rdp_factor),
+    AMEC_PARM_UINT32(PARM_WOF_ERR_CNT_CONS,"wof_err_cons",&g_amec_sys.wof.error_count_consecutive),
+    AMEC_PARM_UINT32(PARM_WOF_ERR_CNT_TOTAL,"wof_err_ttl",&g_amec_sys.wof.error_count_total),
+    AMEC_PARM_UINT32(PARM_WOF_ERR_THRESHOLD,"wof_err_thresh",&g_amec_sys.wof.error_threshold),
+    AMEC_PARM_RAW(PARM_WOF_ERR_HISTORY,"wof_err_hist",&g_amec_sys.wof.error_history,8),
+    AMEC_PARM_RAW(PARM_WOF_ERR_HISTORY_NZ,"wof_err_histnz",&g_amec_sys.wof.error_history_nz,8),
+    AMEC_PARM_RAW(PARM_WOF_INFO_HISTORY,"wof_info_hist",&g_amec_sys.wof.info_history,8),
+    AMEC_PARM_UINT32_ARRAY(PARM_SSX_TIME,"ssx_time",g_amec_sys.ssx_time,2),
+    AMEC_PARM_RAW(PARM_PSS,"pss",&G_sysConfigData.pss,sizeof(PstateSuperStructure)),
+    AMEC_PARM_RAW(PARM_PSS_ADDR,"pss_addr",&G_pss_addr,4),
+    AMEC_PARM_RAW(PARM_PSS_LPSA,"pss_lpsa",&(G_sysConfigData.pss.lpsa),sizeof(LocalPstateArray)),
+    AMEC_PARM_RAW(PARM_PSS_RESCLK,"pss_resclk",&(G_sysConfigData.pss.resclk),sizeof(ResonantClockingSetup)),
+    AMEC_PARM_RAW(PARM_PSS_CPMRNG,"pss_cpmranges",&(G_sysConfigData.pss.cpmranges),sizeof(CpmPstateModeRanges)),
+    AMEC_PARM_RAW(PARM_PSS_IDDQ,"pss_iddq",&(G_sysConfigData.pss.iddq),sizeof(IddqTable)),
+    AMEC_PARM_RAW(PARM_PSS_WOF_ELMNT,"pss_wofElmt",&(G_sysConfigData.pss.wof),sizeof(WOFElements)),
+    AMEC_PARM_UINT32(PARM_WOF_ERR_MAX_CONSEC,"wof_consErrMax",&g_amec_sys.wof.err_cnt_consec_max),
+    AMEC_PARM_RAW(PARM_WOF_ERR_MAX_CONSEC_SNAP,"wof_consErrSnap",&g_amec_sys.wof.error_history_snap,8)
 };
 
 //Throw a compiler error when the enum and array are not both updated

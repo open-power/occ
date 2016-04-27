@@ -29,6 +29,9 @@
 
 uint32_t G_special_wakeup_count[PGP_NCORES] = {0};
 
+#define TRUE  1
+#define FALSE 0
+
 /// Enter or clear special wakeup for a core
 ///
 /// \param set 1 = set, 0 = clear, all other values will cause an error.
@@ -37,6 +40,9 @@ uint32_t G_special_wakeup_count[PGP_NCORES] = {0};
 ///
 /// \param[out] o_timeouts.  Mask of cores that timed out before special wakeup
 /// complete was observed.
+///
+/// \param[in] b_noclear_check.  0 = Perform the clear check; 1 = do not perform
+/// the clear check
 ///
 /// \retval 0 Success
 ///
@@ -49,11 +55,15 @@ uint32_t G_special_wakeup_count[PGP_NCORES] = {0};
 /// may no longer be valid.
 ///
 
+// SW329314 - put all the real work in an internal function to all for a new
+// interface to be added.
+
 int
-occ_special_wakeup(int set,
+__occ_special_wakeup(int set,
                    ChipConfigCores cores,
                    int timeout_ms,
-                   ChipConfigCores *o_timeouts)
+                   ChipConfigCores *o_timeouts,
+                   int b_noclear_check)
 
 {
 
@@ -72,18 +82,19 @@ occ_special_wakeup(int set,
     // get pmc deconfig vector
     pcdr.value = in32(PMC_CORE_DECONFIGURATION_REG);
 
-    core_list = cores;
     bad_clear = 0;
-    if (! set) {
-        for (core = 0; core < PGP_NCORES; core++, core_list <<=1) {
-            if (core_list & (0x1 << (PGP_NCORES - 1))) {
-                if (G_special_wakeup_count[core] == 0) {
-                    bad_clear = 1;
+    if (!b_noclear_check) { 
+        core_list = cores; 
+        if (! set) {
+            for (core = 0; core < PGP_NCORES; core++, core_list <<=1) {
+                if (core_list & (0x1 << (PGP_NCORES - 1))) {
+                    if (G_special_wakeup_count[core] == 0) {
+                        bad_clear = 1;
+                    }
                 }
             }
         }
     }
-
     
     if (SSX_ERROR_CHECK_API) {
         SSX_ERROR_IF( (set < 0) ||
@@ -162,4 +173,75 @@ occ_special_wakeup(int set,
 
 }
                          
-            
+
+/// Legacy interface 
+/// \brief Enter or clear special wakeup for a core
+///
+/// \param set 1 = set, 0 = clear, all other values will cause an error.
+///
+/// \param cores = mask of cores to set/clear special wakeup.
+///
+/// \param[out] o_timeouts.  Mask of cores that timed out before special wakeup
+/// complete was observed.
+///
+/// \retval 0 Success
+///
+/// \retval -SPWU_INVALID_ARGUMENT One of the arguments was invalid in some way
+///
+/// \retval others This API may also return non-0 codes from
+/// getscom()/putscom()
+///
+/// If getscom/putscom rc = 0, the state of the global special_wakeup counts
+/// may no longer be valid.
+///
+int
+occ_special_wakeup(int set,
+                   ChipConfigCores cores,
+                   int timeout_ms,
+                   ChipConfigCores *o_timeouts)
+{
+    int rc;    
+    rc = __occ_special_wakeup(set,
+                              cores,
+                              timeout_ms,
+                              o_timeouts,
+                              FALSE);
+    return rc;
+}
+ 
+ 
+/// No Clear Chaeck interface 
+/// \brief Enter or clear special wakeup for a core without checking for clearing an
+/// already cleared core
+///
+/// \param set 1 = set, 0 = clear, all other values will cause an error.
+///
+/// \param cores = mask of cores to set/clear special wakeup.
+///
+/// \param[out] o_timeouts.  Mask of cores that timed out before special wakeup
+/// complete was observed.
+///
+/// \retval 0 Success
+///
+/// \retval -SPWU_INVALID_ARGUMENT One of the arguments was invalid in some way
+///
+/// \retval others This API may also return non-0 codes from
+/// getscom()/putscom()
+///
+/// If getscom/putscom rc = 0, the state of the global special_wakeup counts
+/// may no longer be valid.
+///
+int
+occ_special_wakeup_noclearcheck(int set,
+                   ChipConfigCores cores,
+                   int timeout_ms,
+                   ChipConfigCores *o_timeouts)
+{
+    int rc;   
+    rc = __occ_special_wakeup(set,
+                              cores,
+                              timeout_ms,
+                              o_timeouts,
+                              TRUE);
+    return rc;
+}           

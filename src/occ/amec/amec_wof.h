@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -61,34 +61,60 @@ extern uint16_t G_amec_wof_uplift_table[AMEC_WOF_UPLIFT_TBL_ROWS][AMEC_WOF_UPLIF
 #define AMEC_WOF_LOADLINE_ACTIVE 550  // Active loadline in micro ohms
 #define AMEC_WOF_LOADLINE_PASSIVE 50  // Passive loadline in micro ohms
 
-//SCOM address
+//OCI address
 //PMC Winkle Interrupt Request Vector Register 3 (PMCWIRVR3)
-#define PMCWIRVR3 0x6208b
+#define PMCWIRVR3 0x40010458
 
 //PMC Deep Exit Mask Register (PDEMR)
 //The PDEMR register masks the ability for a given chiplet to exit from Deep
 //Sleep or Winkle state. NOTE that this register is to be used by the OCC for
 //implementing power shift algorithms
-#define PDEMR     0x62092
+#define PDEMR     0x40010490
+
+//Default number of iterations to compute Vdd regulator current out.
+#define AMEC_WOF_VDD_ITER 4
+//Buffer initial estimate and N+2 iterations for
+//debugging/experimentation
+//index 0: initial estimate     (+1 below)
+//index 1-N+2: iteration output (+2 below)
+#define AMEC_WOF_VDD_ITER_BUFF AMEC_WOF_VDD_ITER+1+2
+
+#define AMEC_WOF_ERROR_THRESHOLD 20
 
 typedef enum
 {
-    AMEC_WOF_ERROR_NONE,
-    AMEC_WOF_ERROR_SCOM_1,
-    AMEC_WOF_ERROR_SCOM_2,
-    AMEC_WOF_ERROR_SCOM_3,
-    AMEC_WOF_ERROR_SCOM_4,
-    AMEC_WOF_ERROR_SCOM_5,
-    AMEC_WOF_ERROR_CORE_COUNT,
-    AMEC_WOF_ERROR_UNKNOWN_STATE
+    AMEC_WOF_ERROR_NONE,                     // 0
+    AMEC_WOF_ERROR_SCOM_1,                   // 1
+    AMEC_WOF_ERROR_SCOM_2,                   // 2
+    AMEC_WOF_ERROR_SCOM_3,                   // 3
+    AMEC_WOF_ERROR_SCOM_4,                   // 4
+    AMEC_WOF_ERROR_SCOM_5,                   // 5
+    AMEC_WOF_ERROR_CORE_COUNT,               // 6
+    AMEC_WOF_ERROR_UNKNOWN_STATE,            // 7
+    AMEC_WOF_ERROR_FREQ_VOTE_NOT_APPLIED,    // 8
+    AMEC_WOF_ERROR_WOF_FREQ_NOT_APPLIED,     // 9
+    AMEC_WOF_ERROR_PSTATETABLE_NOT_READY,    //10
+    AMEC_WOF_ERROR_THRESHOLD_REACHED,        //11
+    AMEC_WOF_ERROR_TRANSITION                //12
 } AMEC_WOF_ERROR_ENUM;
 
 typedef enum
 {
+    AMEC_WOF_INFO_NONE              = 0x00, // Not used
+    AMEC_WOF_INFO_WAIT_FREQ_DATA    = 0x01,
+    AMEC_WOF_INFO_WAIT_PSTATE_DATA  = 0x02,
+    AMEC_WOF_INFO_WAIT_VRM_DATA     = 0x03,
+    AMEC_WOF_INFO_WAIT_UPLIFT_DATA  = 0x04,
+    AMEC_WOF_INFO_WAIT_FREQ_SAFE    = 0x05,
+    AMEC_WOF_INFO_SET_ALG           = 0x10, // (last nibble is alg#)
+    AMEC_WOF_INFO_PSTATE_CORES      = 0x20  // (last nibble is cores on)
+} AMEC_WOF_INFO_ENUM;
+
+typedef enum
+{
     AMEC_WOF_NO_CORE_CHANGE,
-    AMEC_WOF_CORE_REQUEST_TURN_ON,
+    AMEC_WOF_CORE_CHANGE,
     AMEC_WOF_TRANSITION,
-    AMEC_WOF_CORE_REQUEST_TURN_OFF
 } AMEC_WOF_STATE_MACHINE;
 
 //Definition of types of wof tables
@@ -116,18 +142,29 @@ typedef struct amec_wof
     uint16_t            v_chip;
     // First index into iddq table for interpolation
     uint8_t             iddq_i;
+    // First index into iddq table for interpolation
+    uint8_t             iddq_i_core[MAX_NUM_CORES];
     // Check interpolation of iddq table
     uint16_t            iddq85c;
-    // I_DC_extracted is the estimated temperature-corrected leakage current in 0.01 Amps
+    // Check interpolation of iddq table
+    uint16_t            iddq85c_core[MAX_NUM_CORES];
+    // Estimated temperature-corrected leakage current in 0.01 Amps (whole chip)
     uint16_t            iddq;
+    // Estimated temperature-corrected leakage current in 0.01 Amps (per core)
+    uint16_t            iddq_core[MAX_NUM_CORES];
+    // Estimated temperature-corrected leakage current in 0.01 Amps (old way)
+    uint16_t            iddq_chip;
     // I_AC extracted in 0.01 Amps
     uint16_t            ac;
     // Effective capacitance for TDP workload @ Turbo in 0.005904 nF
-    uint32_t            ceff_tdp;
+    // Index = number_of_cores_on (e.g. 1-12 cores on is index 1-12)
+    uint32_t            ceff_tdp[MAX_NUM_CORES+1];
     // Effective capacitance right now.
     uint32_t            ceff;
     // Effective capacitance old.
     uint32_t            ceff_old;
+    // Voltage used in ceff calculation (units in 0.1 mV, like sensors)
+    uint16_t            ceff_volt;
     // Effective capacitance ratio
     uint16_t            ceff_ratio;
     // Uplift frequency adjustment
@@ -139,7 +176,24 @@ typedef struct amec_wof
     // Voltage at chip associated with wof vote at present current.
     uint16_t            vote_vchip;
     // Non-zero is a WOF error flag
-    uint8_t             error;
+    uint32_t             error;
+    // Consecutive errors counting toward threshold
+    uint32_t             error_count_consecutive;
+    // Maximum number of consecutive errors
+    uint32_t            err_cnt_consec_max;
+    // All WOF errors ever observed
+    uint32_t            error_count_total;
+    // Consecutive error count threshold before disabling WOF
+    uint32_t             error_threshold;
+    // WOF error history. First byte (MSB) is most recent error code.
+    // 2nd byte is next most recent code, etc.
+    uint64_t            error_history;
+    // WOF error history (only non-zero error codes)
+    uint64_t            error_history_nz;
+    // Snapshot of error history for max consecutive error count.
+    uint64_t            error_history_snap;
+    // WOF info history
+    uint64_t            info_history;
     // The WOF algorithm can be selected (and enabled/disabled) by setting
     // g_amec->wof.enable_parm (either automatically from frequency data
     // packet or manually from the Amester parameter interface).
@@ -158,13 +212,44 @@ typedef struct amec_wof
     uint8_t             pm_state[MAX_NUM_CORES];
     // Bit mask of the sleeping cores that want to wake up
     uint64_t            wake_up_mask;
-    // Copy of previous bit mask for debugging
+    // Copy of previous bit mask to detect flapping case
+    uint64_t            wake_up_mask_prev;
+    // Copy of previous non-zero bit mask for debugging
     uint64_t            wake_up_mask_save;
     // The current number of cores Pstate table allows
     uint8_t             pstatetable_cores_current;
     //The next pstate table max number of cores
     uint8_t             pstatetable_cores_next;
-
+    //Estimated leakage current by core
+    uint16_t            leakage[MAX_NUM_CORES]; // leakage current in 0.01 A
+    //Vdd current out algorithm iterations
+    uint8_t             vdd_iter;
+    //Start tick for iout debugging info
+    uint32_t            vdd_t1;
+    //Input to vdd iout algorithm
+    uint16_t            vdd_pin;
+    //Input to vdd iout algorithm
+    uint16_t            vdd_vset;
+    //Upper voltage trend line
+    int32_t            vdd_vhi;
+    //Lower voltage trend line
+    int32_t            vdd_vlo;
+    //iout values for each iteration
+    uint16_t            vdd_iouti[AMEC_WOF_VDD_ITER_BUFF];
+    //Voltage sense for each iteration
+    uint16_t            vdd_vouti[AMEC_WOF_VDD_ITER_BUFF];
+    //overall efficiency for each iteration
+    uint16_t            vdd_effi[AMEC_WOF_VDD_ITER_BUFF];
+    //efficiency for higher voltage trend
+    int32_t             vdd_effhii[AMEC_WOF_VDD_ITER_BUFF];
+    //efficiency for lower voltage trend
+    int32_t             vdd_effloi[AMEC_WOF_VDD_ITER_BUFF];
+    //End tick for vdd iout debugging (t1==t2 means debug data is synchronized)
+    uint32_t            vdd_t2;
+    //Last scom error reading core voltage
+    uint32_t            volt_err;
+    //Total error count reading core voltage
+    uint32_t            volt_err_cnt;
 } amec_wof_t;
 
 //*************************************************************************
@@ -181,10 +266,10 @@ int  amec_wof_set_algorithm(const uint8_t i_algorithm);
 void amec_wof_update_pstate_table(void);
 void amec_wof_alg_v2(void);
 void amec_wof_alg_v3(void);
-void amec_wof_common_steps(void);
+int  amec_wof_common_steps(void);
 void amec_wof_helper_v2(void);
 void amec_wof_helper_v3(void);
-uint32_t amec_wof_compute_c_eff(void);
+uint32_t amec_wof_compute_ceff_tdp(uint8_t i_cores_on);
 
 void amec_wof_writeToTable(wof_tbl_type_t i_tblType,
                           const uint16_t i_size,
@@ -208,4 +293,7 @@ void amec_wof_vdd_current_out(const uint16_t i_power_in,
 void amec_wof_validate_input_data(void);
 
 uint16_t amec_wof_get_max_freq(const uint8_t i_cores);
+
+void amec_wof_calc_core_leakage(uint8_t i_core);
+
 #endif

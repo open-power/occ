@@ -116,7 +116,7 @@ PoreEntryPoint gpe_get_per_core_data;
 
 #define CORE_DATA_PCB_SLAVE_BASE                        \
     (CORE_DATA_DTS_CPM_BASE + CORE_DATA_DTS_CPM_SIZE)
-#define CORE_DATA_PCB_SLAVE_SIZE 32
+#define CORE_DATA_PCB_SLAVE_SIZE 48
 
 #define CORE_DATA_OHA_BASE \
     (CORE_DATA_PCB_SLAVE_BASE + CORE_DATA_PCB_SLAVE_SIZE)
@@ -170,6 +170,8 @@ PoreEntryPoint gpe_get_per_core_data;
 #define CORE_DATA_PMCR                 (CORE_DATA_PCB_SLAVE_BASE + 0x08)
 #define CORE_DATA_PMSR                 (CORE_DATA_PCB_SLAVE_BASE + 0x10)
 #define CORE_DATA_PM_HISTORY           (CORE_DATA_PCB_SLAVE_BASE + 0x18)
+#define CORE_DATA_PIVRMCSR             (CORE_DATA_PCB_SLAVE_BASE + 0x20)
+#define CORE_DATA_PIVRMVSR             (CORE_DATA_PCB_SLAVE_BASE + 0x28)
 
 #define CORE_DATA_OHA_RO_STATUS_REG    (CORE_DATA_OHA_BASE + 0x00)
 
@@ -233,6 +235,8 @@ typedef struct {
     pcbs_power_management_control_reg_t pmcr;
     pcbs_power_management_status_reg_t pmsr;
     pcbs_pmstatehistocc_reg_t pm_history;
+    pcbs_ivrm_control_status_reg_t pivrmcsr;
+    pcbs_ivrm_value_setting_reg_t pivrmvsr;
 } CoreDataPcbSlave;
 
 typedef struct {

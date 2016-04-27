@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -362,7 +362,7 @@ typedef struct
   // --------------------------------------
   IddqTable   iddq_table;
   WOFElements wof_parms;
-
+  PstateSuperStructure pss;
 } occSysConfigData_t;  __attribute__ ((__aligned__ (128)))
 
 extern occSysConfigData_t G_sysConfigData;
@@ -386,8 +386,8 @@ typedef struct
 
 
 // Default PstateSuperStructure that can be used instead of TMGT provided one.
-extern const unsigned char G_defaultOccPstateSuperStructure[];
-
+extern const PstateSuperStructure* const G_defaultOccPstateSuperStructure;
+extern const PstateSuperStructure G_OccPstateSuperStructure;
 // MASTER PCAP values.
 extern pcap_config_data_t G_master_pcap_data;
 

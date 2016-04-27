@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -221,8 +221,7 @@ occModuleConfigData_t G_occModuleConfigData = {
 // configuration data for OCC to go to active state.
 //
 // This array was created with xxd -i pss.bin
-//
-// TODO: This can be removed or ifdef'd out to save space in the future.
+#ifdef FSPLESS_SIMICS
 const unsigned char G_defaultOccPstateSuperStructure[] = {
   0x50, 0x53, 0x54, 0x41, 0x54, 0x45, 0x30, 0x31, 0x6e, 0x5e, 0x34, 0x44,
   0x24, 0x34, 0x00, 0xf3, 0x6d, 0x5d, 0x34, 0x44, 0x24, 0x34, 0x00, 0x9f,
@@ -383,6 +382,14 @@ const unsigned char G_defaultOccPstateSuperStructure[] = {
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
   0x00, 0x00, 0x00, 0x00
 };
+#endif
+
+#ifndef FSPLESS_SIMICS
+const PstateSuperStructure G_OccPstateSuperStructure = {0};
+const PstateSuperStructure* const G_defaultOccPstateSuperStructure = (PstateSuperStructure*) &G_OccPstateSuperStructure;
+#endif
+
+uint32_t G_pss_addr = (uint32_t) &G_sysConfigData.pss;
 
 // Power Configuration Data
 pcap_config_data_t G_master_pcap_data =

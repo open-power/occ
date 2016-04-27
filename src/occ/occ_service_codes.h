@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -59,6 +59,8 @@ enum occReasonCode
     SSX_GENERIC_FAILURE             = 0x17,
     /// Failure to handshake with an external fw entity (HB, FSP, PHYP, etc)
     EXTERNAL_INTERFACE_FAILURE      = 0x18,
+    /// WOF Algorithm Failure
+    AMEC_WOF_ERROR                  = 0x19,
     /// VRM reached error threshold (VR_HOT asserted)
     VRM_ERROR_TEMP                  = 0x20,
     /// Timed out reading VR_FAN signal from VRM

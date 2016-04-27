@@ -582,21 +582,6 @@ per_core_memory:
         get_pc_pair (_BASE + 0x08), A0, P0
         get_pc_pair (_BASE + 0x10), A0, P0
 
-        // Throttling Counters
-throttling:
-1:      
-        ldandi  D0, GPEGETCOREDATAPARMS_SELECT, A1, GPE_GET_CORE_DATA_THROTTLE
-        braz    D0, 1f
-
-        .set    _BASE, CORE_DATA_THROTTLE_BASE
-        tag_core_data_group _BASE, A0, P0, P1
-
-        sti     PC_OCC_SPRC, P0, \
-                (SPRN_IFU_THROTTLE_COUNTER | SPRN_PC_AUTOINCREMENT)
-
-        get_pc_pair (_BASE + 0x08), A0, P0
-        get_pc_pair (_BASE + 0x10), A0, P0
-
         // Per-Thread Counters
 per_thread:
 1:      
@@ -675,7 +660,6 @@ interpolate:
         ldandi  D0, GPEGETCOREDATAPARMS_SELECT, A1, \
                 (GPE_GET_CORE_DATA_EMPATH   | \
                  GPE_GET_CORE_DATA_MEMORY   | \
-                 GPE_GET_CORE_DATA_THROTTLE | \
                  GPE_GET_CORE_DATA_THREAD)
         braz    D0, 1f
 
@@ -706,9 +690,10 @@ pcb_slave:
         .set    _BASE, CORE_DATA_PCB_SLAVE_BASE
         tag_core_data_group _BASE, A0, P0, P1, raw=0
         
-        get_scom D0, PCBS_POWER_MANAGEMENT_CONTROL_REG, P0, CORE_DATA_PMCR, A0
         get_scom D0, PCBS_POWER_MANAGEMENT_STATUS_REG, P0, CORE_DATA_PMSR, A0
         get_scom D0, PCBS_PMSTATEHISTOCC_REG, P0, CORE_DATA_PM_HISTORY, A0
+        get_scom D0, PCBS_IVRM_CONTROL_STATUS_REG, P0, CORE_DATA_PIVRMCSR, A0
+        get_scom D0, PCBS_IVRM_VALUE_SETTING_REG, P0, CORE_DATA_PIVRMVSR, A0
                    
 1:      
         ret
@@ -941,20 +926,6 @@ bypass_core_data:
         std     D0, (_BASE + 0x10), A0
 
 
-        // Throttling Counters
-
-1:      
-        ldandi  D0, GPEGETCOREDATAPARMS_SELECT, A1, GPE_GET_CORE_DATA_THROTTLE
-        braz    D0, 1f
-
-        .set    _BASE, CORE_DATA_THROTTLE_BASE
-        tag_core_data_group _BASE, A0, P0, P1, raw=0
-
-        ls      D0, 0        
-        std     D0, (_BASE + 0x08), A0
-        std     D0, (_BASE + 0x10), A0
-
-
         // Per-Thread Counters
         
 1:      
@@ -1028,9 +999,10 @@ get_pcbs_data:
         .set    _BASE, CORE_DATA_PCB_SLAVE_BASE
         tag_core_data_group _BASE, A0, P0, P1, raw=0
         
-        get_scom D0, PCBS_POWER_MANAGEMENT_CONTROL_REG, P0, CORE_DATA_PMCR, A0
         get_scom D0, PCBS_POWER_MANAGEMENT_STATUS_REG, P0, CORE_DATA_PMSR, A0
         get_scom D0, PCBS_PMSTATEHISTOCC_REG, P0, CORE_DATA_PM_HISTORY, A0
+        get_scom D0, PCBS_IVRM_CONTROL_STATUS_REG, P0, CORE_DATA_PIVRMCSR, A0
+        get_scom D0, PCBS_IVRM_VALUE_SETTING_REG, P0, CORE_DATA_PIVRMVSR, A0
 
 1:
         ret    

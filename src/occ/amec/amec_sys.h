@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -655,6 +655,8 @@ typedef struct
   //---------------------------------------------------------
   // 32 bit counter of 250usec ticks
   uint32_t      r_cnt;
+  // ssx timebase for exposing as Amester parameter. Updated every 2ms.
+  uint32_t      ssx_time[2];  // [0] is seconds, [1] is nanoseconds.
   // array holding sensor ptrs for writing to stream vector
   void          *stream_vector_map[STREAM_VECTOR_SIZE_EX];
   void          * ptr_probe250us[NUM_AMEC_FW_PROBES];       // array holding ptrs to data that is read by probe250us sensors

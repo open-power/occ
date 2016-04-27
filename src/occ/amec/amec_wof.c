@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -23,9 +23,9 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-//*************************************************************************
+//*************************************************************************/
 // Includes
-//*************************************************************************
+//*************************************************************************/
 #include <occ_common.h>
 #include <proc_data.h> // for CORE_PRESENT
 #include <errl.h>      // Error logging
@@ -37,29 +37,30 @@
 #include <common.h>
 #include <cmdh_fsp_cmds_datacnfg.h>
 #include <amec_service_codes.h>
+#include <rtls.h>     // for G_current_tick debugging
 
-//*************************************************************************
+//*************************************************************************/
 // Externs
-//*************************************************************************
+//*************************************************************************/
 
 extern amec_sys_t g_amec_sys;
 extern data_cnfg_t * G_data_cnfg; // in cmdh_fsp_cmds_datacnfg
 
-//*************************************************************************
+//*************************************************************************/
 // Macros
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Defines/Enums
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Structures
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Globals
-//*************************************************************************
+//*************************************************************************/
 
 sensor_t g_amec_wof_ceff_ratio_sensor;
 sensor_t g_amec_wof_core_wake_sensor;
@@ -76,22 +77,22 @@ uint16_t G_amec_wof_uplift_table[AMEC_WOF_UPLIFT_TBL_ROWS][AMEC_WOF_UPLIFT_TBL_C
 // Core IDDQ voltages array from pstates.h (voltages in 100uV)
 uint16_t G_iddq_voltages[CORE_IDDQ_MEASUREMENTS] = {8000, 9000, 10000, 11000, 12000, 12500};
 
-uint8_t  G_wof_max_cores_per_chip = 12; //defaulted to 12 for now
+uint8_t  G_wof_max_cores_per_chip = 0; // WOF does not run until this is set.
 
-//Approximate y=1.25^((T-85)/10).
+//Approximate y=1.3^((T-85)/10).
 //Interpolate T in the table below to find m
 // y ~= (T*m) >> 10     (shift out 10 bits)
-// Error in estimation is about 0.6% maximum.
+// Error in estimation is no more than 0.9%.
 uint16_t amec_wof_iddq_mult_table[][2] = {
     //Temperature in C, m
-    {20, 240},
-    {30, 300},
-    {40, 375},
-    {50, 469},
-    {60, 586},
-    {70, 733},
-    {80, 916},
-    {90, 1145}
+    {20, 186},
+    {30, 242},
+    {40, 314},
+    {50, 409},
+    {60, 531},
+    {70, 691},
+    {80, 898},
+    {90, 1168}
 };
 #define AMEC_WOF_IDDQ_MULT_TABLE_N 8
 
@@ -107,17 +108,84 @@ uint32_t g_amec_wof_iout = 0;
 // due to iVRM headers that cannot be turned off. Units are 0.1%
 uint16_t g_amec_wof_leak_overhead = 50; // default is 5%
 
-//*************************************************************************
+//*************************************************************************/
 // Function Prototypes
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Functions
-//*************************************************************************
+//*************************************************************************/
+
+// Name: amec_wof_error_update
+//
+// Description:
+// Track WOF error history
+//
+// Input: Next error code
+// Output: update exported error history for debugging
+void amec_wof_error_update(uint8_t i_errorcode)
+{
+    uint64_t history;
+    static uint8_t last_err = AMEC_WOF_ERROR_NONE;
+
+    // Update error code history, including success
+    history = (g_amec->wof.error_history >> 8)
+        | ((uint64_t)i_errorcode << 56);
+    g_amec->wof.error_history = history;
+    // Update non-success error history
+    if (i_errorcode != AMEC_WOF_ERROR_NONE)
+    {
+        history = (g_amec->wof.error_history_nz >> 8)
+            | ((uint64_t)i_errorcode << 56);
+        g_amec->wof.error_history_nz = history;
+        g_amec->wof.error_count_total++;
+
+        // Update consecutive error count
+        if (last_err == AMEC_WOF_ERROR_NONE)
+            g_amec->wof.error_count_consecutive=1;
+        else
+            g_amec->wof.error_count_consecutive++;
+        // Set maximum consecutive error count if greater than last
+        if ( g_amec->wof.error_count_consecutive > g_amec->wof.err_cnt_consec_max )
+        {
+            // Snapshot the maximum consecutive error count and its history
+            g_amec->wof.err_cnt_consec_max = g_amec->wof.error_count_consecutive;
+            g_amec->wof.error_history_snap = g_amec->wof.error_history;
+        }
+    }
+    else
+    {
+        // Reset error count
+        g_amec->wof.error_count_consecutive = 0;
+    }
+
+    // Save the prior error
+    last_err = g_amec->wof.error;
+    // Save the current error code
+    g_amec->wof.error = i_errorcode;
+    
+}
+
+// Name: amec_wof_info_update
+//
+// Description:
+// Track WOF info history
+//
+// Input: Next info code
+// Output: update exported info history for debugging
+void amec_wof_info_update(uint8_t i_code)
+{
+    uint64_t history;
+
+    // Update error code history, including success
+    history = (g_amec->wof.info_history >> 8)
+        | ((uint64_t)i_code << 56);
+    g_amec->wof.info_history = history;
+}
 
 // Function Specification
 //
-// Name: amec_wof_vdd_current_out
+// Name: amec_wof_vdd_iout_vout
 //
 // Description:
 // Calculate Vdd output current and voltage at Vdd remote sense.
@@ -128,103 +196,157 @@ uint16_t g_amec_wof_leak_overhead = 50; // default is 5%
 //
 // Outputs:
 // o_current_out: Vdd current out (0.01 A units)
-// o_v_sense: Voltage at Vdd remote sense (0.0001 V units)
+// o_v_out: Voltage at Vdd remote sense (0.0001 V units)
 //
 // End Function Specification
-void amec_wof_vdd_current_out(const uint16_t i_power_in,
-                              const uint16_t i_v_set,
-                              uint16_t *o_current_out,
-                              uint16_t *o_v_sense)
+void amec_wof_vdd_iout_vout(const uint16_t i_power_in,
+                            const uint16_t i_v_set,
+                            uint16_t *o_current_out,
+                            uint16_t *o_v_out)
 {
     uint8_t l_iteration;
     uint8_t i;
 
-    // Stuff that can be pre-computed when efficiency table is read
-    int32_t v_min = G_amec_wof_vrm_eff_table[1][0] * 100; //0.8500 V = min from efficiency table
-    int32_t v_max = G_amec_wof_vrm_eff_table[2][0] * 100; //1.2500 V = max from efficiency table
-    int32_t v_diff = v_max - v_min; // max voltage - min voltage from efficiency table
+    // Convert table voltages from 0.01 V to 0.00001 V (*100)
+    int32_t v_lo = G_amec_wof_vrm_eff_table[1][0] * 100; //low voltage in table
+    int32_t v_hi = G_amec_wof_vrm_eff_table[2][0] * 100; //high voltage in table
+    // v_diff = max voltage - min voltage from efficiency table
+    int32_t v_diff = v_hi - v_lo;
 
     // helper variables
     int32_t l_x2minusx1, l_xminusx1;
     int32_t l_eff_vlow, l_eff_vhigh, l_v_offset;
-    int32_t l_v_sense;
+    int32_t l_v_out;
 
     // Set initial guesses before iteration part of algorithm
-    uint32_t l_eff = 8500; //initial guess efficiency=85.00%
+    uint16_t l_eff = 8500; //initial guess efficiency=85.00%
 
-    // Compute regulator output power.  out = in * efficiency
-    //    power_in: min=0W max=300W = 3000dW
+    // Compute regulator output power in micro-W units.  out = in * efficiency
+    //    power_in: min=0W max=300W = 3000 (0.1 W units)
     //    eff: min=0 max=10000=100% (.01% units)
-    //    power_in*eff: max=3000dW * 10000 = 30,000,000 (dW*0.0001)
+    //    power_in*eff: max=3000(0.1W) * 10000(0.01%) = 30M (0.00001 W)
     //                  is under 2^25, fits in 25 bits
-    //    *10 = 300M (dW*0.00001) in 29 bits
-    uint32_t l_pout = i_power_in * l_eff * 10;
+    //    *10 = 300M (0.000001W) fits in 29 bits of 32 bit reg.
+    uint32_t l_pout = i_power_in * (uint32_t)l_eff * 10;
 
-    // Compute current out of regulator.
+    // Compute current out of regulator in 0.01 A.
     // curr_out = power_out (*10 scaling factor) / voltage_out
-    //    p_out: max=300M (dW*0.00001) in 29 bits
+    //    p_out: max=300M (0.000001 W) in 29 bits
     //    v_set: min=5000 (0.0001 V)  max=16000(0.0001 V) in 14 bits
-    //     iout: max = 300M/5000 = 60000 (dW*0.00001/(0.0001V)= 0.01A), in 16 bits.
+    //     iout: max = 300M/5000 = 60000 (0.01 A), fits in 16 bits
     uint32_t l_iout = l_pout/i_v_set; //initial iout
     g_amec_wof_iout = l_iout; //for debugging
 
-    for(l_iteration=0; l_iteration<2; l_iteration++)  // iterate twice
+    // Initial guess for voltage sense. 0.0001 V units.
+    //   V_chip = V_setpoint - I_chip * (R_loadline)
+    //     V_delta = I_chip(0.01 A) * R_loadline(0.000001 ohm) => 0.00000001 V
+    //     V_delta / 10000 => (in 0.0001 V)
+    //   V_chip = V_reg - V_delta  => (in 0.0001 V)
+    l_v_out = i_v_set - l_iout * AMEC_WOF_LOADLINE_ACTIVE / 10000;
+
+    g_amec->wof.vdd_t1 = G_current_tick;
+    // Save inputs for debugging
+    g_amec->wof.vdd_pin = i_power_in;
+    g_amec->wof.vdd_vset = i_v_set;
+    g_amec->wof.vdd_vhi = v_hi;
+    g_amec->wof.vdd_vlo = v_lo;
+    // Save initial estimate
+    g_amec->wof.vdd_iouti[0] = l_iout;
+    g_amec->wof.vdd_vouti[0] = l_v_out;
+    g_amec->wof.vdd_effi[0]  = l_eff;
+
+    // Iterate to converge
+    for(l_iteration=1; l_iteration<=g_amec->wof.vdd_iter; l_iteration++)
     {
-        for (i=1; i<AMEC_WOF_VRM_EFF_TBL_CLMS; i++)
+        if (l_iout > G_amec_wof_vrm_eff_table[0][AMEC_WOF_VRM_EFF_TBL_CLMS-1])
         {
-            if (l_iout >= G_amec_wof_vrm_eff_table[0][i] &&
-                l_iout <= G_amec_wof_vrm_eff_table[0][i+1])
+            // Clip to efficiency table maximum
+            l_eff_vlow = G_amec_wof_vrm_eff_table[1][AMEC_WOF_VRM_EFF_TBL_CLMS-1];
+            l_eff_vhigh = G_amec_wof_vrm_eff_table[2][AMEC_WOF_VRM_EFF_TBL_CLMS-1];
+        }
+        else if (l_iout < G_amec_wof_vrm_eff_table[0][1])
+        {
+            // Clip to efficiency table minimum
+            l_eff_vlow = G_amec_wof_vrm_eff_table[1][1];
+            l_eff_vhigh = G_amec_wof_vrm_eff_table[2][1];
+        }
+        else
+        {
+            // Interpolate in the table to find efficiency for min/max voltage
+            for (i=1; i<AMEC_WOF_VRM_EFF_TBL_CLMS; i++)
             {
-                break;
+                if (l_iout >= G_amec_wof_vrm_eff_table[0][i] &&
+                    l_iout <= G_amec_wof_vrm_eff_table[0][i+1])
+                {
+                    break;
+                }
             }
+            // if beyond table, use last 2 entries
+            if (i >= AMEC_WOF_VRM_EFF_TBL_CLMS-1)
+            {
+                i = AMEC_WOF_VRM_EFF_TBL_CLMS - 2;
+            }
+            // i points to the first index
+            // Compute efficiency at lower voltage (0.85 V)
+            // Linear interpolate using the neighboring entries.
+            // y = (x-x1)m+y1   m=(y2-y1)/(x2-x1)
+            // x2minusx1 = difference in current between entries
+
+            // x2minusx1 in units of 0.01 A
+            l_x2minusx1 = ((int32_t)G_amec_wof_vrm_eff_table[0][i+1] -
+                           (int32_t)G_amec_wof_vrm_eff_table[0][i]);
+            // xminusx1 in units of 0.01 A
+            l_xminusx1 = (int32_t)l_iout - (int32_t)G_amec_wof_vrm_eff_table[0][i];
+            l_eff_vlow = l_xminusx1 * ((int32_t)G_amec_wof_vrm_eff_table[1][i+1] -
+                                       (int32_t)G_amec_wof_vrm_eff_table[1][i]) /
+                l_x2minusx1 + (int32_t)G_amec_wof_vrm_eff_table[1][i];
+
+            // Reuse same x2minusx1 and xminusx1 because efficiency curves use
+            // common current_in values
+            l_eff_vhigh = l_xminusx1 * ((int32_t)G_amec_wof_vrm_eff_table[2][i+1] -
+                                        (int32_t)G_amec_wof_vrm_eff_table[2][i]) /
+                l_x2minusx1 + (int32_t)G_amec_wof_vrm_eff_table[2][i];
         }
-        // if beyond table, use last 2 entries
-        if (i >= AMEC_WOF_VRM_EFF_TBL_CLMS-1)
-        {
-            i = AMEC_WOF_VRM_EFF_TBL_CLMS - 2;
-        }
-
-        // i points to the first index
-
-        // Compute efficiency at lower voltage (0.85 V)
-        // Linear interpolate using the neighboring entries.
-        // y = (x-x1)m+y1   m=(y2-y1)/(x2-x1)
-        // x2minusx1 = difference in current between entries
-
-        // x2minusx1 in units of 0.01 A
-        l_x2minusx1 = ((int32_t)G_amec_wof_vrm_eff_table[0][i+1] -
-                       (int32_t)G_amec_wof_vrm_eff_table[0][i]);
-        // xminusx1 in units of 0.01 A
-        l_xminusx1 = (int32_t)l_iout - (int32_t)G_amec_wof_vrm_eff_table[0][i];
-        l_eff_vlow = l_xminusx1 * ((int32_t)G_amec_wof_vrm_eff_table[1][i+1] -
-                                   (int32_t)G_amec_wof_vrm_eff_table[1][i]) /
-            l_x2minusx1 + (int32_t)G_amec_wof_vrm_eff_table[1][i];
 
         g_amec_eff_vlow = l_eff_vlow;//for debug
-
-        // Reuse same x2minusx1 and xminusx1 because efficiency curves use
-        // common current_in values
-        l_eff_vhigh = l_xminusx1 * ((int32_t)G_amec_wof_vrm_eff_table[2][i+1] -
-                                    (int32_t)G_amec_wof_vrm_eff_table[2][i]) /
-            l_x2minusx1 + (int32_t)G_amec_wof_vrm_eff_table[2][i];
-
         g_amec_eff_vhigh = l_eff_vhigh;// for debug
+        l_v_offset = l_v_out - v_lo;
+        l_eff = (uint16_t) ((((int32_t)l_eff_vhigh - (int32_t)l_eff_vlow)
+                             * (int32_t)l_v_offset)
+                            / (int32_t)v_diff
+                            + (int32_t)l_eff_vlow);
 
-        l_v_offset = i_v_set - v_min;
-        l_eff = ((l_eff_vhigh - l_eff_vlow) * l_v_offset) / v_diff + l_eff_vlow;
-        // V_droop = I_chip (0.01 A) * R_loadline (0.000001 ohm) => (in 0.00000001 V)
-        // V_droop = V_droop / 10000 => (in 0.0001 V)
-        // V_sense = V_reg - V_droop  => (in 0.0001 V)
-        l_v_sense = i_v_set - AMEC_WOF_LOADLINE_ACTIVE * l_iout / 10000;
-        l_pout = i_power_in * l_eff * 10; // See l_pout above for *10 note
-        l_iout = l_pout/l_v_sense;
+        // Estimate new iout,vout.
+        // See comments above for unit conversion on pout,iout,vout
+        l_pout = i_power_in * l_eff * 10;
+        l_iout = l_pout/l_v_out;
+        l_v_out = i_v_set - AMEC_WOF_LOADLINE_ACTIVE * l_iout / 10000;
+
+        if (l_iteration < AMEC_WOF_VDD_ITER_BUFF)
+        {
+            g_amec->wof.vdd_iouti[l_iteration] = l_iout;
+            g_amec->wof.vdd_vouti[l_iteration] = l_v_out;
+            g_amec->wof.vdd_effi[l_iteration]  = l_eff;
+            g_amec->wof.vdd_effhii[l_iteration] = l_eff_vhigh;
+            g_amec->wof.vdd_effloi[l_iteration] = l_eff_vlow;
+        }
+    }
+    // zero rest of debugging array
+    for(;l_iteration < AMEC_WOF_VDD_ITER_BUFF; l_iteration++)
+    {
+        g_amec->wof.vdd_iouti[l_iteration] = 0;
+        g_amec->wof.vdd_vouti[l_iteration] = 0;
+        g_amec->wof.vdd_effi[l_iteration]  = 0;
+        g_amec->wof.vdd_effhii[l_iteration] = 0;
+        g_amec->wof.vdd_effloi[l_iteration] = 0;
     }
 
-    l_v_sense = i_v_set - AMEC_WOF_LOADLINE_ACTIVE * l_iout / 10000;
-
-    *o_v_sense = l_v_sense;
-    *o_current_out = l_iout;
     g_amec->wof.vdd_eff = l_eff; //for debugging
+    // If t1 == t2, then debug data between is synchronized
+    g_amec->wof.vdd_t2 = G_current_tick;
+
+    *o_v_out = l_v_out;
+    *o_current_out = l_iout;
 }
 
 void amec_wof_validate_input_data(void)
@@ -271,13 +393,13 @@ void amec_wof_validate_input_data(void)
             (i == (AMEC_WOF_UPLIFT_TBL_ROWS/2)) ||     //Middle row
             (i ==  AMEC_WOF_UPLIFT_TBL_ROWS - 1))      //last row
         {
-            TRAC_INFO("WOF Uplift Freqs: Row_%02i [%6d] 1core[%6d] 2core[%6d] 3core[%6d] 12core[%6d]",
+            TRAC_INFO("WOF Uplift Freqs: Row_%02i [%6d] 1core[%6d] 2core[%6d] 3core[%6d]",
                       i,
                       G_amec_wof_uplift_table[i][0],
                       G_amec_wof_uplift_table[i][1],
                       G_amec_wof_uplift_table[i][2],
-                      G_amec_wof_uplift_table[i][3],
-                      G_amec_wof_uplift_table[i][12]);
+                      G_amec_wof_uplift_table[i][3]);
+            TRAC_INFO("WOF Uplift Freqs Row_%02i 12core[%6d]", i, G_amec_wof_uplift_table[i][12]);
         }
     }
 
@@ -313,20 +435,23 @@ void amec_wof_validate_input_data(void)
             //Print data for 1, 10, and 12 cores)
             if( (i == 0) || (i == NUM_ACTIVE_CORES - 3) || (i == NUM_ACTIVE_CORES - 1))
             {
-                TRAC_INFO("WOF Vdd VID Mod Table %2d_core: p0[0x%02X] p-1[0x%02X] p-2[0x%02X] p-3[0x%02X] p-4[0x%02X]",
+                TRAC_INFO("WOF Vdd VID Mod Table %2d_core: p0[0x%02X] p-1[0x%02X] p-2[0x%02X] p-3[0x%02X]",
                           i + 1,
                           G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate][i],
                           G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate-1][i],
                           G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate-2][i],
-                          G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate-3][i],
+                          G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate-3][i]);
+                TRAC_INFO("WOF Vdd VID Mod Table %2d_core: p-4[0x%02X]",
+                          i+1,
                           G_sysConfigData.wof_parms.ut_vid_mod.ut_segment_vdd_vid[l_pstate-4][i]);
             }
         }
     }
 }
 
-uint32_t amec_wof_compute_c_eff(void)
+uint32_t amec_wof_compute_ceff_tdp(uint8_t i_cores_on)
 {
+    // Example of calculation for Nominal operating point at 85C:
     // Estimate IDDQ@RDP(95C)@Vnom P0:
     // IDDQ@85C * 1.25 ^ ([95-85]/10) = 35.84 * 1.25 = 44.8 A (Leakage current)
     //
@@ -334,9 +459,9 @@ uint32_t amec_wof_compute_c_eff(void)
     //
     // P0: (151 A - 44.8 A) / 1.22 * 1.12 = 97.50 A @TDP
     //
-    // C_eff    = I / (V^3 * F)
+    // C_eff    = I / (V^1.3 * F)
     //
-    //   I is ??? in 0.01 Amps (or 10 mA)
+    //   I is AC component of Idd in 0.01 Amps (or 10 mA)
     //   V is the silicon voltage from the operating point data in 100 uV
     //   F is Turbo frequency in MHz
     //   C_eff is in nF
@@ -389,7 +514,6 @@ uint32_t amec_wof_compute_c_eff(void)
 
     // Do linear interpolation using the neighboring entries:
     // Y = m*(X - x1) + y1, where m = (y2-y1) / (x2-x1)
-    // FIXME: Can we expect m to be negative?
     l_i_leak = (l_v_chip - G_iddq_voltages[i]) *
         ((int32_t)G_sysConfigData.iddq_table.iddq_vdd[i+1].fields.iddq_corrected_value -
          (int32_t)G_sysConfigData.iddq_table.iddq_vdd[i].fields.iddq_corrected_value) /
@@ -397,7 +521,8 @@ uint32_t amec_wof_compute_c_eff(void)
         G_sysConfigData.iddq_table.iddq_vdd[i].fields.iddq_corrected_value;
 
     // STEP 3: Correct the leakage current computed in the previous step for
-    // temperature by multiplying by 1.25
+    // temperature by multiplying by 1.25 (due to 10 C difference between IDDQ
+    // VPD operationg point data).
     l_i_leak = l_i_leak * 125 / 100;
 
     // STEP 4: Compute current differential in 10mA units at RDP
@@ -419,6 +544,9 @@ uint32_t amec_wof_compute_c_eff(void)
     // STEP 8: Divide by turbo frequency I / (V^1.3) / F
     l_c_eff_tdp = l_temp /
         G_sysConfigData.wof_parms.operating_points[TURBO].frequency_mhz;
+
+    // STEP 9: Scale for number of cores on
+    l_c_eff_tdp = l_c_eff_tdp * i_cores_on / G_wof_max_cores_per_chip;
 
     return l_c_eff_tdp;
 }
@@ -443,19 +571,43 @@ uint32_t amec_wof_compute_c_eff(void)
 // End Function Specification
 int amec_wof_set_algorithm(const uint8_t i_algorithm)
 {
-    uint64_t            l_data64 = 0;
+    uint32_t            l_data32 = 0;
     int                 l_rc = 1;
     int                 l_scom_rc = 0;
-    static uint8_t      l_failCount = 0;
     errlHndl_t          l_err = NULL;
+    uint8_t             i;
 
     do
     {
         // Start WOF in safe state.
+
+        // Check required configuration data is loaded
         if (!(G_data_cnfg->data_mask | DATA_MASK_FREQ_PRESENT))
         {
             // Frequency table is not loaded, don't know safe turbo for WOF.
             // Initialization not yet possible. Try again later.
+            amec_wof_info_update(AMEC_WOF_INFO_WAIT_FREQ_DATA);
+            break;
+        }
+        if (!(G_data_cnfg->data_mask | DATA_MASK_PSTATE_SUPERSTRUCTURE))
+        {
+            // G_sysConfigData.iddq_table not loaded
+            // G_sysConfigData.wof_parms not loaded
+            amec_wof_info_update(AMEC_WOF_INFO_WAIT_PSTATE_DATA);
+            break;
+        }
+        if (!(G_data_cnfg->data_mask | DATA_MASK_WOF_VRM_EFF))
+        {
+            // VRM Efficiency table not loaded.
+            // Cannot compute Vdd current out.
+            amec_wof_info_update(AMEC_WOF_INFO_WAIT_VRM_DATA);
+            break;
+        }
+        if (!(G_data_cnfg->data_mask | DATA_MASK_WOF_CORE_FREQ))
+        {
+            // WOF uplift table not loaded
+            // WOF algorithm cannot run
+            amec_wof_info_update(AMEC_WOF_INFO_WAIT_UPLIFT_DATA);
             break;
         }
 
@@ -479,7 +631,11 @@ int amec_wof_set_algorithm(const uint8_t i_algorithm)
         // interval.
         if (g_amec->proc[0].core_max_freq > g_amec->wof.f_vote)
         {
-            // Set to an invalid algorithm.
+            amec_wof_info_update(AMEC_WOF_INFO_WAIT_FREQ_SAFE);
+
+            // Set to an invalid algorithm so that no other algorithm
+            // is run and signal WOF should try again to transition
+            // to the new algorithm.
             g_amec->wof.algo_type = 0xFF;
 
             // Initialization not finished. Try again later.
@@ -493,7 +649,8 @@ int amec_wof_set_algorithm(const uint8_t i_algorithm)
         amec_wof_validate_input_data();
 
         // Calculate ceff_tdp from static data in the Pstate SuperStructure
-        g_amec->wof.ceff_tdp = amec_wof_compute_c_eff();
+        for (i=1; i<=G_wof_max_cores_per_chip; i++)
+            g_amec->wof.ceff_tdp[i] = amec_wof_compute_ceff_tdp(i);
 
         switch(i_algorithm)
         {
@@ -502,99 +659,40 @@ int amec_wof_set_algorithm(const uint8_t i_algorithm)
 
             case 2: // WOF algorithm 2
                 g_amec->wof.state = AMEC_WOF_NO_CORE_CHANGE; // WOF state
-                // Set pstate table to MAX_NUM_CORES;
+                // Set pstate table to number of good cores (all on);
                 // Conservatively assume all cores are on for next interval
-                g_amec->wof.pstatetable_cores_current = MAX_NUM_CORES;
-                g_amec->wof.pstatetable_cores_next = MAX_NUM_CORES;
+                g_amec->wof.pstatetable_cores_current = G_wof_max_cores_per_chip;
+                g_amec->wof.pstatetable_cores_next = G_wof_max_cores_per_chip;
 
                 // Inhibit cores from waking up
-                l_data64 = 0xffff000000000000ull;
-                l_scom_rc = _putscom(PDEMR, l_data64, SCOM_TIMEOUT);
-                if (l_scom_rc != 0)
-                {
-                    g_amec->wof.error = AMEC_WOF_ERROR_SCOM_4;
-                    TRAC_ERR("amec_wof_set_algorithm: Failed putscom on PDEMR to inhibit all cores."
-                             " rc:0x%X, wof.error:0x%X", l_scom_rc, g_amec->wof.error);
-                }
+                l_data32 = 0xffff0000ull;
+                out32(PDEMR, l_data32);
                 break;
-
             case 0: // No WOF
                 // Do not inhibit core wakeup anymore (in case of transitioning
                 // out of algorithm 2)
-                l_data64 = 0x0000000000000000ull;
-                l_scom_rc = _putscom(PDEMR, l_data64, SCOM_TIMEOUT);
-                if (l_scom_rc != 0)
-                {
-                    g_amec->wof.error = AMEC_WOF_ERROR_SCOM_5;
-                    TRAC_ERR("amec_wof_set_algorithm: Failed putscom on PDEMR to NOT inhibit all cores."
-                             " rc:0x%X, wof.error:0x%X", l_scom_rc, g_amec->wof.error);
-                }
+
+                l_data32 = 0x00000000ull;
+                out32(PDEMR, l_data32);
 
                 // Restore original VID codes for turbo to ultraturbo Pstates
                 // (in case of transitiong out of algorithm 3)
-                g_amec->wof.pstatetable_cores_current = MAX_NUM_CORES;
-                g_amec->wof.pstatetable_cores_next = MAX_NUM_CORES;
+                g_amec->wof.pstatetable_cores_next = G_wof_max_cores_per_chip;
+
                 amec_wof_update_pstate_table();
+                g_amec->wof.pstatetable_cores_current = G_wof_max_cores_per_chip;
+                TRAC_INFO("Turn WOF off");
                 break;
         }
 
-        //If there where no failures
-        if (l_scom_rc == 0)
-        {
-            // Success, set the new algorithm
-            g_amec->wof.algo_type = g_amec->wof.enable_parm;
-            l_rc = 0;
-
-            TRAC_INFO("WOF algorithm has been successfully initialized: algo_type[%d] C_eff_tdp[%d]",
-                      g_amec->wof.algo_type,
-                      g_amec->wof.ceff_tdp);
-        }
-        else
-        {
-            l_failCount++;
-            if (l_failCount == 3)
-            {
-                TRAC_ERR("amec_wof_set_algorithm: putScom failed three times, therefore disabling wof.");
-
-                /* @
-                 * @errortype
-                 * @moduleid    AMEC_WOF_SCOM_FAILURE
-                 * @reasoncode  PROC_SCOM_ERROR
-                 * @userdata1   Scom rc
-                 * @userdata2   0
-                 * @userdata4   OCC_NO_EXTENDED_RC
-                 * @devdesc     Failed to scom PDEMR register.
-                 *
-                 */
-                l_err = createErrl(AMEC_WOF_SCOM_FAILURE,           //modId
-                                   PROC_SCOM_ERROR,                 //reasoncode
-                                   OCC_NO_EXTENDED_RC,               //Extended reason code
-                                   ERRL_SEV_PREDICTIVE,              //Severity
-                                   NULL,                             //Trace Buf
-                                   DEFAULT_TRACE_SIZE,               //Trace Size
-                                   (uint32_t)l_scom_rc,              //userdata1
-                                   0);                               //userdata2
-
-                // Callout to firmware
-                addCalloutToErrl(l_err,
-                                 ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                                 ERRL_COMPONENT_ID_FIRMWARE,
-                                 ERRL_CALLOUT_PRIORITY_MED);
-
-                // Callout to processor
-                addCalloutToErrl(l_err,
-                                 ERRL_CALLOUT_TYPE_HUID,
-                                 G_sysConfigData.proc_huid,
-                                 ERRL_CALLOUT_PRIORITY_LOW);
-
-                // Commit the error
-                commitErrl(&l_err);
-
-
-                g_amec->wof.enable_parm = 0;
-
-            }
-        }
+        // Success, set the new algorithm
+        g_amec->wof.algo_type = g_amec->wof.enable_parm;
+        amec_wof_error_update(AMEC_WOF_ERROR_NONE);
+        l_rc = 0;
+        TRAC_INFO("WOF algorithm has been successfully initialized: algo_type[%d] C_eff_tdp[%d]",
+                  g_amec->wof.algo_type,
+                  g_amec->wof.ceff_tdp[G_wof_max_cores_per_chip]);
+        amec_wof_info_update(AMEC_WOF_INFO_SET_ALG | g_amec->wof.algo_type);
 
     } while (0);
 
@@ -606,7 +704,7 @@ int amec_wof_set_algorithm(const uint8_t i_algorithm)
 //
 // Name: amec_update_wof_sensors
 //
-// Description: Common for WOF/non-WOF.
+// Description: Runs when WOF is enabled and disabled.
 //   Compute CUR250USVDD0 (current out of Vdd regulator)
 //   Compute voltage at chip input
 //
@@ -615,34 +713,48 @@ int amec_wof_set_algorithm(const uint8_t i_algorithm)
 // End Function Specification
 void amec_update_wof_sensors(void)
 {
-    uint16_t            l_pow_reg_input_dW = AMECSENSOR_PTR(PWR250USVDD0)->sample * 10; // convert to dW by *10.
-    uint16_t            l_vdd_reg = AMECSENSOR_PTR(VOLT250USP0V0)->sample;
+    uint16_t            l_pow_reg_input_dW;
+    uint16_t            l_vdd_reg;
     uint16_t            l_curr_output;
-    uint32_t            l_v_droop;
+    uint32_t            l_v_delta;
     uint32_t            l_v_chip;
     uint16_t            l_v_sense;
 
-    // Step 1: Calculate voltage at chip
-    amec_wof_vdd_current_out(l_pow_reg_input_dW,
-                             l_vdd_reg,
-                             &l_curr_output,
-                             &l_v_sense);
-    sensor_update(AMECSENSOR_PTR(CUR250USVDD0), l_curr_output);
+    if (!(G_data_cnfg->data_mask | DATA_MASK_WOF_VRM_EFF))
+    {
+        // VRM Efficiency table not loaded yet.
+        // Cannot compute Vdd current out.
+        return;
+    }
 
+    // Vdd regulator input power in 0.1 W units (deci-Watts)
+    l_pow_reg_input_dW = AMECSENSOR_PTR(PWR250USVDD0)->sample * 10;
+    // Vdd regulator VID setting in 0.0001 V units
+    l_vdd_reg = AMECSENSOR_PTR(VOLT250USP0V0)->sample;
+
+    amec_wof_vdd_iout_vout(l_pow_reg_input_dW,
+                           l_vdd_reg,
+                           &l_curr_output,
+                           &l_v_sense);
+    // Save Vdd current output
+    sensor_update(AMECSENSOR_PTR(CUR250USVDD0), l_curr_output);
     // Save Vsense estimate for WOF validation
     sensor_update(AMECSENSOR_PTR(WOF250USVDDS), l_v_sense);
 
-    //1c. Compute Vdd load at chip
-    //    V_reg = V_chip + I_chip * (R_loadline)
-    //    V_droop = I_chip (0.01 A) * R_loadline (0.000001 ohm) => (in 0.00000001 V)
-    //    V_droop = V_droop / 10000 => (in 0.0001 V)
-    //    V_chip = V_reg - V_droop  => (in 0.0001 V)
-    l_v_droop = (uint32_t) l_curr_output * (uint32_t) g_amec->wof.loadline / (uint32_t)10000;
-    l_v_chip = l_vdd_reg - l_v_droop;
+    // Compute Vdd voltage at chip input
+    //   V_chip = V_reg - I_chip * (R_loadline)
+    //     V_delta = I_chip(0.01 A) * R_loadline(0.000001 ohm) => 0.00000001 V
+    //     V_delta / 10000 => (in 0.0001 V)
+    //   V_chip = V_reg - V_delta  => (in 0.0001 V)
+    l_v_delta = (uint32_t) l_curr_output * (uint32_t) g_amec->wof.loadline
+        / (uint32_t)10000;
+    l_v_chip = l_vdd_reg - l_v_delta;
     g_amec->wof.v_chip = l_v_chip; // expose in parameter
 }
 
-void amec_wof_common_steps(void)
+// Compute Ceff Ratio
+// Return non-zero on error
+int amec_wof_common_steps(void)
 {
     uint8_t             i;
     uint32_t            l_result32; //temporary result
@@ -651,80 +763,46 @@ void amec_wof_common_steps(void)
     uint8_t             l_cores_on = 0;
     uint8_t             l_cores_waking = 0;
     uint8_t             l_pstatetable_cores_next=0;
-    uint64_t            l_data64 = 0; // For SCOM access
-    uint32_t            l_rc;
-    Pstate              l_wof_vote_pstate; // pstate that corresponds to wof
-                                           // vote. Find associated voltage.
-    uint8_t             l_wof_vote_vid; // Vdd regulator VID associated with WOF vote.
-    uint16_t            l_temp = 0;   //Processor temperature
+    uint32_t            l_data32 = 0;
     uint32_t            l_accum = 0;  //Vdd current accumulator
-    uint32_t            l_v_chip = 0; //Voltage at chip silicon
     uint16_t            l_ceff_ratio; //Effective switching capacitance ratio
+    uint32_t            l_leakage = 0; // Total chip leakage current 0.01 A
+    uint32_t            l_volt_sum = 0; // Total active core voltage
+    uint8_t             l_volt_count = 0; // Num cores for Ceff voltage calc.
+    uint16_t            l_volt_avg = 0; // Avg active core voltage
+    uint8_t             l_hwid = 0; // HW core ID
+    uint64_t            l_core_mask = 0; // For accessing Winkle interrupt mask
 
-    // Acquire important sensor data
-    l_temp = AMECSENSOR_PTR(TEMP2MSP0)->sample;
-    l_accum = (uint32_t)AMECSENSOR_PTR(CUR250USVDD0)->accumulator;
-    l_v_chip = g_amec->wof.v_chip; //from amec_update_wof_sensors()
+    // Compute sensors that should be averaged over the WOF time period
+    // Avg voltage per core every 2ms
 
     //If no change, then nothing to do here.
     if (g_amec->wof.state != AMEC_WOF_NO_CORE_CHANGE)
     {
-        return;
+        // Not an error. WOF is transitioning cores. Try later.
+        return 0;
     }
     if (g_amec->wof.pstatetable_cores_next !=
         g_amec->wof.pstatetable_cores_current)
     {
-        g_amec->wof.error = AMEC_WOF_ERROR_CORE_COUNT;
+        amec_wof_error_update(AMEC_WOF_ERROR_CORE_COUNT);
         TRAC_ERR("amec_wof_common_steps: Invalid core count. "
                  "CoresNext:%i, CoresCurrent:%i.  wof.error:0x%X",
                  g_amec->wof.pstatetable_cores_next,
                  g_amec->wof.pstatetable_cores_current, g_amec->wof.error);
-        return;
+        return 1; //error
     }
 
-    // Count number of cores that are turned on.
-    // They will have non-zero frequency. Cores that are in winkle or sleep
-    // have frequency set to zero by OCC code.
-    for (i=0; i<MAX_NUM_CORES; i++)
-    {
-        g_amec->wof.pm_state[i] = g_amec_sys.proc[0].core[i].pm_state_hist;
-        if (!CORE_PRESENT(i))
-        {
-            continue;
-        }
+    // Acquire important sensor data
+    l_accum = (uint32_t)AMECSENSOR_PTR(CUR250USVDD0)->accumulator;
 
-        // A core is "on" if it is not in deep sleep or deep winkle
-        switch(g_amec_sys.proc[0].core[i].pm_state_hist >> 5)
-        {
-            case 5: //deep sleep
-                // FIXME: P8 only uses deep winkle. Add deep sleep when
-                // we can inhibit it.
-                //l_cores_on++;
-                break;
+    g_amec->wof.wake_up_mask_prev = g_amec->wof.wake_up_mask;
+    l_data32 = in32(PMCWIRVR3);
+    g_amec->wof.wake_up_mask = (((uint64_t)l_data32) << 32);
 
-            case 7: //deep winkle
-                break;
-
-            default:
-                l_cores_on++;
-                break;
-        }
-    }
-
-    g_amec->wof.cores_on = l_cores_on;
-
-    l_rc = _getscom(PMCWIRVR3, &g_amec->wof.wake_up_mask, SCOM_TIMEOUT);
-    if (l_rc != 0)
-    {
-        g_amec->wof.error = AMEC_WOF_ERROR_SCOM_1;
-        TRAC_ERR("amec_wof_common_steps: Failed getscom on PMCWIRVR3 reg[0x%X]."
-                 " rc:0x%X, wof.error:0x%X", PMCWIRVR3, l_rc, g_amec->wof.error);
-        return;
-    }
-
-    // FIXME: Whenever deep sleep works:
+    // In future processor generation when interlock on deep-sleep is added:
     // Need to do a getscom of register PMCSIRV3 to find the deep sleep cores
-    // that want to wake up. Then do an OR with the mask wake_up_mask.
+    // that want to wake up. Then OR into wake_up_mask.
 
     // Save non-zero wake up mask for debugging
     if (g_amec->wof.wake_up_mask != 0)
@@ -732,16 +810,102 @@ void amec_wof_common_steps(void)
         g_amec->wof.wake_up_mask_save = g_amec->wof.wake_up_mask;
     }
 
-    // Count the number of cores that want to wake up
-    l_data64 = g_amec->wof.wake_up_mask >> 48;
-    for(i=0; i<MAX_NUM_CORES; i++)
+    // Count number of cores that are turned on for
+    // 1) Determining pstate voltage selection
+    // 2) Determining Ceff voltage
+    // 
+    // IMPORTANT: 
+    //
+    // The algorithm uses PM state and the winkle exit vector to
+    // determine the sum of cores turned on for pstate voltage
+    // selection and also for Ceff leakage power calculation.  The
+    // counts can be different, since deep-sleep is counted for pstate
+    // voltage selection, since exit is not gated by WOF.
+    //
+    // Furthermore, the PM state may be stale compared to the winkle
+    // exit vector, since it was previously collected by a GPE task.
+    // This means that when a core exits winkle, it will take an
+    // additional WOF cycle for the PM state to show the core is
+    // running. We save the prior winkle exit vector to catch this
+    // case and mark the core as counted for purposes of setting the
+    // pstate voltage.
+    //
+    // The core voltage and PM state may be up to 2 ms stale, which
+    // implies momentary inaccuracy in the Ceff calculation as the
+    // core changes pstate or PM state. This is safe for the WOF
+    // frequency selection, since a safe frequency and voltage range
+    // is set by the number of active cores in conjunction with the
+    // winkle exit vector. Cores used in Ceff calc are marked l_volt=1.
+
+    for (i=0; i<MAX_NUM_CORES; i++)
     {
-        if (l_data64 & 0x1)
+        // Categorize core state
+        uint8_t l_on = 0;     // use to determine pstate voltage
+        uint8_t l_waking = 0; // in winkle exit vector
+        uint8_t l_volt = 0;   // use for ceff voltage calculation
+
+        if (!CORE_PRESENT(i))
         {
+            continue;
+        }
+
+        l_hwid = CORE_OCC2HW(i);
+        l_core_mask = 0x8000000000000000 >> l_hwid;
+
+        if ((g_amec->wof.wake_up_mask & l_core_mask) != 0)
+        {
+            // Core exiting winkle
+            l_waking = 1;
+        }
+
+        switch(g_amec_sys.proc[0].core[i].pm_state_hist >> 5)
+        {
+            case 5: //deep sleep
+                // Deep sleep does not have OCC interlock on POWER8/8+.
+                // Therefore, core is considered on.
+                l_on = 1;
+                l_volt = 1;
+                break;
+
+            case 7: //deep winkle
+                if ((g_amec->wof.wake_up_mask_prev & l_core_mask) != 0)
+                {
+                    // Core exited winkle last time.
+                    // The PM state is stale and should be ignored.
+                    // Conservatively assume core is on to
+                    // avoid miscount and "flapping" to pstate voltage.
+                    l_on = 1;
+                }
+                break;
+
+            default:
+                l_on = 1;
+                l_volt = 1;
+                break;
+        }
+
+        if (l_volt)
+        {
+            l_volt_sum += AMECSENSOR_ARRAY_PTR(VOLT2MSP0C0,i)->sample;
+            l_volt_count++;
+        }
+
+        // Count cores as "on" or "waking", but not both.
+        if (l_waking)
+        {
+            // don't care about PM state, since it may be stale.
             l_cores_waking++;
         }
-        l_data64 >>= 1; // shift right
+        else if (l_on)
+        {
+            l_cores_on++;
+        }
+
     }
+
+    if (l_volt_count) l_volt_avg = l_volt_sum / l_volt_count;
+    g_amec->wof.cores_on = l_cores_on; // externalize
+
     sensor_update(AMECSENSOR_PTR(WOFCOREWAKE), l_cores_waking);
 
     // Set the number of cores will be on for the next round.
@@ -749,110 +913,35 @@ void amec_wof_common_steps(void)
     // Save number of cores OCC is transitioning toward for other WOF states
     g_amec->wof.pstatetable_cores_next = l_pstatetable_cores_next;
 
-    // Step 2
-    // Search table and point i to the lower entry the target value falls
-    // between.
-    if (l_v_chip < G_iddq_voltages[0])
+    // Step 2: Determine leakage current
+
+    // Sum per-core leakage to get total chip leakage
+    for (i=0; i<MAX_NUM_CORES; i++)
     {
-        i=0; // voltage is lower than table, so use first two entries.
-    }
-    else
-    {
-        for (i=0; i<CORE_IDDQ_MEASUREMENTS-1; i++)
-        {
-            if (G_iddq_voltages[i] <= l_v_chip &&
-                G_iddq_voltages[i+1] >= l_v_chip)
-            {
-                break;
-            }
+        if (CORE_PRESENT(i)) {
+            l_leakage += g_amec->wof.iddq_core[i];
         }
     }
-    if (i >= CORE_IDDQ_MEASUREMENTS - 1)
-    {
-        // Voltage is higher than table, so use last two entries.
-        i = CORE_IDDQ_MEASUREMENTS - 2;
-    }
+    // Note: Divide by good cores on chip, since iddq_core represents full
+    // chip current.  Divide here, not in per-core calc, for accuracy.
+    g_amec->wof.iddq = l_leakage / G_wof_max_cores_per_chip;
 
-    g_amec->wof.iddq_i = i;
 
-    // Linear interpolate using the neighboring entries:
-    // y = m(x-x1)+y1   m=(y2-y1)/(x2-x1)
-    //FIXME: add rounding step after multiplication
-    //FIXME: pre-compute m, since table is static
-    l_result32 = ((int32_t)l_v_chip - (int32_t)G_iddq_voltages[i])
-        * ((int32_t)G_sysConfigData.iddq_table.iddq_vdd[i+1].fields.iddq_corrected_value -
-           (int32_t)G_sysConfigData.iddq_table.iddq_vdd[i].fields.iddq_corrected_value)
-        / ((int32_t)G_iddq_voltages[i+1] - (int32_t)G_iddq_voltages[i])
-        + (int32_t)G_sysConfigData.iddq_table.iddq_vdd[i].fields.iddq_corrected_value;
-
-    // Note: IDDQ value from table above is in 0.01 A units. The maximum
-    // value possible is 655.35 A. This means l_result <= 65535.
-
-    // Modify leakage value for cores off. A percentage of chip leakage comes
-    // from iVRM headers which cannot be turned off completely.
-    l_result32 = l_result32
-        * (g_amec_wof_leak_overhead
-           + ((1000 - g_amec_wof_leak_overhead)
-              * l_cores_on / G_wof_max_cores_per_chip))
-        / 1000;
-
-    g_amec->wof.iddq85c = (uint16_t)l_result32;  // expose to parameter
-
-    // Temperature correction
-    if (l_temp < amec_wof_iddq_mult_table[0][0])
-    {
-        i=0; // index is lower than table, so use first two entries.
-    }
-    else
-    {
-        for (i=0; i<AMEC_WOF_IDDQ_MULT_TABLE_N-1; i++)
-        {
-            if (amec_wof_iddq_mult_table[i][0] <= l_temp &&
-                amec_wof_iddq_mult_table[i+1][0] >= l_temp)
-            {
-                break;
-            }
-        }
-    }
-    if (i >= AMEC_WOF_IDDQ_MULT_TABLE_N - 1)
-    {
-        i = AMEC_WOF_IDDQ_MULT_TABLE_N - 2;
-    }
-
-    uint32_t l_mult = ((int32_t)l_temp - (int32_t)amec_wof_iddq_mult_table[i][0])
-    * ((int32_t)amec_wof_iddq_mult_table[i+1][1] - (int32_t)amec_wof_iddq_mult_table[i][1])
-    / ((int32_t)amec_wof_iddq_mult_table[i+1][0] - (int32_t)amec_wof_iddq_mult_table[i][0])
-    + (int32_t)amec_wof_iddq_mult_table[i][1];
-
-    l_result32 = (l_result32*l_mult) >> 10;
-    g_amec->wof.iddq = l_result32;
+    // Step 3: Compute AC portion of chip Vdd current (units of 0.01 A)
 
     // Compute 2ms current average
     // Divide the 250us accumulator by 8 samples to get 2ms average
     g_amec->wof.cur_out = (l_accum - g_amec->wof.cur_out_last) >> 3; // 0.01 A
     g_amec->wof.cur_out_last = l_accum;
 
-    // Step 3: Compute AC portion of chip Vdd current (units of 0.01 A)
     g_amec->wof.ac = g_amec->wof.cur_out - g_amec->wof.iddq;
 
-    // Step 4: Computer ratio of computed workload AC to TDP
-
-    //Victor and Josh request to use WOF freq/volt from last WOF vote
-    //(4/14/2015 e-mail exchange)
-
-    // Get voltage associated with prior WOF vote
-    l_wof_vote_pstate = proc_freq2pstate(g_amec->wof.f_vote);
-    l_wof_vote_vid =
-        G_global_pstate_table.pstate[l_wof_vote_pstate].fields.evid_vdd;
-    g_amec->wof.vote_vreg = 16125 - ((uint32_t)l_wof_vote_vid * 625)/10;
-    //Calculate voltage at chip if pstate changed to wof vote instantly
-    g_amec->wof.vote_vchip = g_amec->wof.vote_vreg - (uint32_t) g_amec->wof.cur_out
-        * (uint32_t) g_amec->wof.loadline / (uint32_t)10000;
-
+    // Step 4: Compute ratio of workload C_eff to TDP C_eff.
     l_result32i = g_amec->wof.ac << 14; // * 16384
-    // estimate g_amec->wof.v_chip^1.3 using equation:
+    g_amec->wof.ceff_volt = l_volt_avg; // externalize
+    // Estimate voltage^1.3 using equation:
     // = 21374 * (X in 0.1 mV) - 50615296
-    l_result32v = (21374 * g_amec->wof.vote_vchip - 50615296) >> 10;
+    l_result32v = (21374 * l_volt_avg - 50615296) >> 10;
     l_result32 = l_result32i / l_result32v;
     l_result32 = l_result32 << 14; // * 16384
     if (g_amec->wof.f_vote != 0)
@@ -860,25 +949,12 @@ void amec_wof_common_steps(void)
         // avoid divide by 0
         l_result32 = l_result32 / (uint32_t) g_amec->wof.f_vote;
     }
-    g_amec->wof.ceff = l_result32;
 
-    // Try using the present voltage, since the voltage calculated
-    // using the WOF frequency causes Ceff to be too low.
-    // estimate g_amec->wof.v_chip^1.3 using equation:
-    // = 21374 * (X in 0.1 mV) - 50615296
-    l_result32v = (21374 * g_amec->wof.v_chip - 50615296) >> 10;
-    l_result32 = l_result32i / l_result32v;
-    l_result32 = l_result32 << 14; // * 16384
-    if (g_amec->wof.f_vote != 0)
-    {
-        // avoid divide by 0
-        l_result32 = l_result32 / (uint32_t) g_amec->wof.f_vote;
-    }
     g_amec->wof.ceff_old = l_result32;
 
-    l_ceff_ratio = g_amec->wof.ceff_old * 10000 / g_amec->wof.ceff_tdp;
-    // expose as sensor and parameter
-    g_amec->wof.ceff_ratio = l_ceff_ratio;
+    l_ceff_ratio = g_amec->wof.ceff_old * 10000
+        / g_amec->wof.ceff_tdp[l_cores_on];
+    g_amec->wof.ceff_ratio = l_ceff_ratio; // externalize
     sensor_update(AMECSENSOR_PTR(WOFCEFFRATIO),l_ceff_ratio);
 
     // Step 5: frequency uplift table
@@ -905,8 +981,6 @@ void amec_wof_common_steps(void)
         // Ratio is within uplift table
         // Linear interpolate using the neighboring entries:
         // y = m(x-x1)+y1   m=(y2-y1)/(x2-x1)
-        //FIXME: add rounding step after multiplication
-        //FIXME: pre-compute m, since table is static
         l_result32 =
             ((int32_t)l_ceff_ratio - (int32_t)G_amec_wof_uplift_table[i][0])
             * ((int32_t)G_amec_wof_uplift_table[i+1][l_pstatetable_cores_next] -
@@ -916,6 +990,8 @@ void amec_wof_common_steps(void)
     }
 
     g_amec->wof.f_uplift = l_result32;
+    amec_wof_error_update(AMEC_WOF_ERROR_NONE); // clear previous errors
+    return 0; // no error
 }
 
 // Function Specification
@@ -929,21 +1005,17 @@ void amec_wof_common_steps(void)
 // End Function Specification
 void amec_wof_alg_v2(void)
 {
-    amec_wof_common_steps();
+    int err;
+
+    err = amec_wof_common_steps();
+    if (err) return;
 
     g_amec->wof.f_vote = g_amec->wof.f_uplift;
 
-    if (g_amec->wof.pstatetable_cores_next >
+    if (g_amec->wof.pstatetable_cores_next !=
         g_amec->wof.pstatetable_cores_current)
     {
-        // Cores turning on.
-        g_amec->wof.state = AMEC_WOF_CORE_REQUEST_TURN_ON;
-    }
-    else if (g_amec->wof.pstatetable_cores_next <
-             g_amec->wof.pstatetable_cores_current)
-    {
-        // Cores turning off.
-        g_amec->wof.state = AMEC_WOF_CORE_REQUEST_TURN_OFF;
+        g_amec->wof.state = AMEC_WOF_CORE_CHANGE;
     }
 }
 
@@ -973,10 +1045,6 @@ void amec_wof_update_pstate_table(void)
     // Extract the number of active cores, this will be the second index into
     // the VIDModificationTable array
     k = g_amec->wof.pstatetable_cores_next - 1;
-
-    TRAC_INFO("Updating Global Pstate table for WOF: cores_current[%d] cores_next[%d]",
-              g_amec->wof.pstatetable_cores_current,
-              g_amec->wof.pstatetable_cores_next);
 
     // STEP 1:
     // Prevent any Pstate changes by locking the PMC Rail so that
@@ -1018,6 +1086,9 @@ void amec_wof_update_pstate_table(void)
 
     // Set the Pmax_rail register via OCI write
     amec_oversub_pmax_clip(l_pmax);
+
+    // Signal that a new Pstate table is ready
+    g_amec_wof_pstate_table_ready = 1;
 }
 
 
@@ -1033,46 +1104,37 @@ void amec_wof_update_pstate_table(void)
 // End Function Specification
 void amec_wof_alg_v3(void)
 {
-    amec_wof_common_steps();
+    int err;
+
+    err = amec_wof_common_steps();
+    if (err) return;
 
     // Determine if we have cores that are turning on or off
-    if (g_amec->wof.pstatetable_cores_next >
+    if (g_amec->wof.pstatetable_cores_next !=
         g_amec->wof.pstatetable_cores_current)
     {
-        // Cores turning on.  Need to increase Pstate voltage.
-        // Move frequency to safe region so turbo voltage can be optimized.
-        // Go to Turbo - 1 MHz so we get Pstate below Turbo.
+        amec_wof_info_update(AMEC_WOF_INFO_PSTATE_CORES | g_amec->wof.pstatetable_cores_next);
+
+        // Cores are turning on or off.  Optimize Pstate voltage for new core count.
+        // Move frequency to safe region so turbo range voltage can be optimized.
+        // Go to Turbo - 1 MHz so all cores go to Pstate below Turbo range.
+        // (Cores will be in pstate range that is not being modified.)
         g_amec->wof.f_vote =
             G_sysConfigData.sys_mode_freq.table[OCC_MODE_STURBO] - 1;
 
-        // Update Pstate table in SRAM
-        amec_wof_update_pstate_table();
-
-        // Signal that a new Pstate table generation is ready
-        g_amec_wof_pstate_table_ready = 1;
-
-        g_amec->wof.state = AMEC_WOF_CORE_REQUEST_TURN_ON;
+        g_amec->wof.state = AMEC_WOF_CORE_CHANGE;
     }
-    else if (g_amec->wof.pstatetable_cores_next <
-             g_amec->wof.pstatetable_cores_current)
+    else if (g_amec->wof.wake_up_mask != 0)
     {
-        // Cores turning off. Decrease p-state voltage.
-        // Move frequency to safe region so turbo voltage can be optimized.
-        // Go to Turbo - 1 MHz so we get p-state below Turbo.
-        g_amec->wof.f_vote =
-            G_sysConfigData.sys_mode_freq.table[OCC_MODE_STURBO] - 1;
-
-        // Update Pstate table in SRAM
-        amec_wof_update_pstate_table();
-
-        // Signal that a new Pstate table generation is ready
-        g_amec_wof_pstate_table_ready = 1;
-
-        g_amec->wof.state = AMEC_WOF_CORE_REQUEST_TURN_OFF;
+        //Even though total number of cores active, if a core is waking
+        //the wake inhibit mask must be toggled
+        g_amec->wof.state = AMEC_WOF_TRANSITION;
+        g_amec->wof.f_vote = g_amec->wof.f_uplift;
     }
     else
     {
-        // No change.  Just adjust WOF frequency.
+        // No change in total number of cores AND no cores waking.
+        // Just adjust WOF frequency
         g_amec->wof.f_vote = g_amec->wof.f_uplift;
     }
 }
@@ -1084,13 +1146,23 @@ void amec_wof_alg_v3(void)
 // Description: Run this in every 250us state. Allows cores to
 // wake-up as soon as WOF outcome is ready.
 //
+// Error handling: On any error that delays WOF state transition,
+//   wof_error must be set non-zero so that failure to progress
+//   back to AMEC_WOF_NO_CORE_CHANGE will be noticed after a
+//   few internvals and WOF can be disabled.
+//
 // Thread: RealTime Loop
+//
+// Assumptions:
+//   Frequency voting box is run immediately before this routine
+//   to set the new frequency request, so WOF has up-to-date
+//   information.
 //
 // End Function Specification
 void amec_wof_helper_v3(void)
 {
-    uint64_t            l_data64 = 0;
-    uint32_t            l_rc = 0;
+    uint32_t            l_data32 = 0;
+    static uint8_t      l_consecutive_freq_error = 0;
 
     switch (g_amec->wof.state)
     {
@@ -1102,22 +1174,51 @@ void amec_wof_helper_v3(void)
             break;
         }
 
-        case AMEC_WOF_CORE_REQUEST_TURN_ON:
+        case AMEC_WOF_CORE_CHANGE:
         {
-            // We need to be certain that the GPE has applied the last frequency
-            // request from the voting box (request != actual)
-            if (g_amec->proc[0].core_max_freq_actual != g_amec->proc[0].core_max_freq)
-            {
-                break;
-            }
-            // Check if actual clips are above WOF frequency
+            // Check if current frequency clips are above WOF frequency
             if (g_amec->proc[0].core_max_freq_actual > g_amec->wof.f_vote)
             {
+                // Expect to hit this once every time we update pstate table,
+                // because it takes 1 tick to move frequency out of turbo range.
+                // Do not log first violation to converse log space.
+                if(l_consecutive_freq_error != 0)
+                {
+                    amec_wof_error_update(AMEC_WOF_ERROR_WOF_FREQ_NOT_APPLIED);
+                    TRAC_INFO("amec_wof_helper_v3: actual frequency clip beyond wof vote."
+                                  "core_max_freq_actual=%i, wof_f_vote=%i, wof.error:0x%X",
+                                  g_amec->proc[0].core_max_freq_actual,
+                                  g_amec->wof.f_vote, g_amec->wof.error);
+                }
+                l_consecutive_freq_error++;
                 break;
             }
+            // Mark that we got past the frequency check
+            l_consecutive_freq_error = 0;
+
+            // Check if new requested frequency clips are above WOF frequency
+            if (g_amec->proc[0].core_max_freq > g_amec->wof.f_vote)
+            {
+                amec_wof_error_update(AMEC_WOF_ERROR_FREQ_VOTE_NOT_APPLIED);
+                TRAC_INFO("amec_wof_helper_v3: wof vote not applied."
+                         "core_max_freq=%i, wof_f_vote=%i, wof.error:0x%X",
+                         g_amec->proc[0].core_max_freq,
+                         g_amec->wof.f_vote, g_amec->wof.error);
+                break;
+            }
+            // At this point, all core frequency must be at or below
+            // WOF frequency which has been set below the pstate table
+            // changes.
+
+            amec_wof_update_pstate_table();
+
             // Wait until Pstate table is ready
             if (g_amec_wof_pstate_table_ready == 0)
             {
+                amec_wof_error_update(AMEC_WOF_ERROR_PSTATETABLE_NOT_READY);
+                TRAC_ERR("amec_wof_helper_v3: pstate table not ready"
+                         "pstate_table_ready=%i, wof.error:0x%X",
+                         g_amec_wof_pstate_table_ready, g_amec->wof.error);
                 break;
             }
 
@@ -1125,9 +1226,6 @@ void amec_wof_helper_v3(void)
             // 1) GPE has applied the latest frequency selection, including WOF vote
             // 2) The true frequency is not above the WOF frequency
             // 3) The p-state table is ready
-
-            // FIXME: Turn on the p-state table (flip address of table)
-            // FIXME: new WOF vote
 
             // Now that new Pstate table is installed, we can allow WOF
             // frequency request
@@ -1140,78 +1238,29 @@ void amec_wof_helper_v3(void)
 
         case AMEC_WOF_TRANSITION:
         {
-            // Signal waking cores to turn on and go back to initial state.
+            // NOTE: This case stands alone because it is sometimes called 
+            // without going through the AMEC_WOF_UPDATE_PSTATES case.
+
+            // Signal any waking cores to turn on and go back to initial state.
 
             // Quickly toggle waking core inhibit bits. This will allow cores
             // that want to wake up to actually wake up.
-            l_rc = _putscom(PDEMR, ~g_amec->wof.wake_up_mask, SCOM_TIMEOUT);
-            if (l_rc != 0)
-            {
-                g_amec->wof.error = AMEC_WOF_ERROR_SCOM_2;
-                TRAC_ERR("amec_wof_helper_v3: Failed putscom on PDEMR while "
-                         " toggling core inhibit bits. rc:0x%X, WakeUpMask:0x%X, wof.error:0x%X",
-                         l_rc, g_amec->wof.wake_up_mask, g_amec->wof.error);
-                break;
-            }
+            l_data32 = (g_amec->wof.wake_up_mask >> 32);
+            out32(PDEMR, ~l_data32);
 
             // Now, go back to inhibiting all cores
-            l_data64 = 0xffff000000000000ull;
-            l_rc = _putscom(PDEMR, l_data64, SCOM_TIMEOUT);
-            if (l_rc != 0)
-            {
-                g_amec->wof.error = AMEC_WOF_ERROR_SCOM_3;
-                TRAC_ERR("amec_wof_helper_v3: Failed putscom on PDEMR while "
-                         " inhibiting all cores. rc:0x%X, wof.error:0x%X",
-                         l_rc, g_amec->wof.error);
-                break;
-            }
+            l_data32 = 0xffff0000ull;
+            out32(PDEMR, l_data32);
 
             g_amec->wof.pstatetable_cores_current =
                 g_amec->wof.pstatetable_cores_next;
             g_amec->wof.state = AMEC_WOF_NO_CORE_CHANGE;
 
-            break;
-        }
-
-        case AMEC_WOF_CORE_REQUEST_TURN_OFF:
-        {
-            // Check WOF frequency is applied
-            // Check if GPE is applying a new frequency (request != actual)
-            if (g_amec->proc[0].core_max_freq_actual != g_amec->proc[0].core_max_freq)
-            {
-                break;
-            }
-            // Check if actual clips are above WOF frequency
-            if (g_amec->proc[0].core_max_freq_actual > g_amec->wof.f_vote)
-            {
-                break;
-            }
-            // Wait until Pstate table is ready
-            if (g_amec_wof_pstate_table_ready == 0)
-            {
-                break;
-            }
-
-            // If we reach this point, then we can be assured that
-            // 1) GPE has applied the latest frequency selection, including WOF vote
-            // 2) The true frequency is not above the WOF frequency
-            // 3) The p-state table is ready
-
-            // FIXME: Turn on the p-state table (flip address of table)
-            // FIXME: new WOF vote
-
-            // Now that the new Pstate table is installed, we can allow WOF
-            // turbo frequency
-            g_amec->wof.f_vote = g_amec->wof.f_uplift;
-
-            g_amec->wof.pstatetable_cores_current =
-                g_amec->wof.pstatetable_cores_next;
-            g_amec->wof.state = AMEC_WOF_NO_CORE_CHANGE;
             break;
         }
 
         default:
-            g_amec->wof.error = AMEC_WOF_ERROR_UNKNOWN_STATE;
+            amec_wof_error_update(AMEC_WOF_ERROR_UNKNOWN_STATE);
             TRAC_ERR("amec_wof_helper_v3: WOF is in an unknown state: 0x%X. "
                      " wof.error:0x%X", g_amec->wof.state, g_amec->wof.error);
             break;
@@ -1230,8 +1279,7 @@ void amec_wof_helper_v3(void)
 // End Function Specification
 void amec_wof_helper_v2(void)
 {
-    uint64_t            l_data64 = 0;
-    uint32_t            l_rc = 0;
+    uint32_t            l_data32 = 0;
 
     switch (g_amec->wof.state)
     {
@@ -1242,7 +1290,7 @@ void amec_wof_helper_v2(void)
             break;
         }
 
-        case AMEC_WOF_CORE_REQUEST_TURN_ON:
+        case AMEC_WOF_CORE_CHANGE:
         {
             // We need to be certain that the GPE has applied the last frequency
             // request from the voting box: (actual != request)
@@ -1271,37 +1319,13 @@ void amec_wof_helper_v2(void)
 
             // Quickly toggle waking core inhibit bits to let those cores
             // wake up (uninhibit cores waking up)
-            l_rc = _putscom(PDEMR, ~g_amec->wof.wake_up_mask, SCOM_TIMEOUT);
-            if (l_rc != 0)
-            {
-                g_amec->wof.error = AMEC_WOF_ERROR_SCOM_2;
-                TRAC_ERR("amec_wof_helper_v2: Failed putscom on PDEMR while "
-                         " toggling core inhibit bits. rc:0x%X, WakeUpMask:0x%X, wof.error:0x%X",
-                         l_rc, g_amec->wof.wake_up_mask, g_amec->wof.error);
-                break;
-            }
+            l_data32 = (g_amec->wof.wake_up_mask >> 32);
+            out32(PDEMR, ~l_data32);
 
             // Next, inhibit all cores again
-            l_data64 = 0xffff000000000000ull;
-            l_rc = _putscom(PDEMR, l_data64, SCOM_TIMEOUT);
-            if (l_rc != 0)
-            {
-                g_amec->wof.error = AMEC_WOF_ERROR_SCOM_3;
-                TRAC_ERR("amec_wof_helper_v2: Failed putscom on PDEMR while "
-                         " inhibiting all cores. rc:0x%X, wof.error:0x%X",
-                         l_rc, g_amec->wof.error);
-                break;
-            }
+            l_data32 = 0xffff0000ull;
+            out32(PDEMR, l_data32);
 
-            g_amec->wof.pstatetable_cores_current =
-                g_amec->wof.pstatetable_cores_next;
-            g_amec->wof.state = AMEC_WOF_NO_CORE_CHANGE;
-            break;
-        }
-
-        case AMEC_WOF_CORE_REQUEST_TURN_OFF:
-        {
-            // Go to state 0.
             g_amec->wof.pstatetable_cores_current =
                 g_amec->wof.pstatetable_cores_next;
             g_amec->wof.state = AMEC_WOF_NO_CORE_CHANGE;
@@ -1309,7 +1333,7 @@ void amec_wof_helper_v2(void)
         }
 
         default:
-            g_amec->wof.error = AMEC_WOF_ERROR_UNKNOWN_STATE;
+            amec_wof_error_update(AMEC_WOF_ERROR_UNKNOWN_STATE);
             TRAC_ERR("amec_wof_helper_v2: WOF is in an unknown state: 0x%X. "
                      " wof.error:0x%X", g_amec->wof.state, g_amec->wof.error);
             break;
@@ -1359,7 +1383,59 @@ void amec_wof_helper(void)
 // End Function Specification
 void amec_wof_main(void)
 {
-    int     l_rc = 0;
+    int                 l_rc  = 0;
+    errlHndl_t          l_err = NULL;
+    // Count number of consecutive intervals WOF is not making progress
+    static uint32_t wof_main_error_count = 0; 
+
+    if (g_amec->wof.error)
+    {
+        wof_main_error_count++;
+    }
+    else
+    {
+        wof_main_error_count=0;
+    }
+    if ((wof_main_error_count >= g_amec->wof.error_threshold)
+        && (g_amec->wof.enable_parm != 0))
+    {
+        //Trigger error if WOF is running and not operating for error_threshold iterations
+        // which are each 2ms for POWER8.
+        amec_wof_error_update(AMEC_WOF_ERROR_THRESHOLD_REACHED);
+        TRAC_ERR("amec_wof_main: >=%i consecutive errors, disabling wof. error_hist = 0x%016llx, error_hist_nz=0x%016llx, error_count_ttl=%lu",
+                 g_amec->wof.error_threshold,  g_amec->wof.error_history,
+                 g_amec->wof.error_history_nz, g_amec->wof.error_count_total);
+
+        /* @
+         * @errortype
+         * @moduleid    AMEC_WOF_MAIN
+         * @reasoncode  AMEC_WOF_ERROR
+         * @userdata1   4 most recent WOF error codes
+         * @userdata2   next 4 WOF error codes
+         * @userdata4   OCC_NO_EXTENDED_RC
+         * @devdesc     WOF Consecutive error threshold reached
+         *
+         */
+        l_err = createErrl(AMEC_WOF_MAIN,               //modId
+                           AMEC_WOF_ERROR,              //reasoncode
+                           ERC_GENERIC_TIMEOUT,         //Extended reason code
+                           ERRL_SEV_PREDICTIVE,         //Severity
+                           NULL,                        //Trace Buf
+                           DEFAULT_TRACE_SIZE,          //Trace Size
+                           (uint32_t)(g_amec->wof.error_history>>32), //userdata1
+                           (uint32_t)(g_amec->wof.error_history)); //userdata2
+
+        // Callout to firmware
+        addCalloutToErrl(l_err,
+                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                         ERRL_COMPONENT_ID_FIRMWARE,
+                         ERRL_CALLOUT_PRIORITY_MED);
+ 
+        // Commit the error
+        commitErrl(&l_err);
+
+        g_amec->wof.enable_parm = 0; // disable WOF
+    }
 
     // If new algorithm selected, then initialize it. If initialization fails,
     // then do not run algorithm
@@ -1579,4 +1655,130 @@ uint16_t amec_wof_get_max_freq(const uint8_t i_cores)
     }
 
     return l_maxFreq;
+}
+
+// Function Specification
+//
+// Name: amec_wof_calc_core_leakage
+//
+// Description: compute core-level leakage current sensor
+// Used by each interval of WOF algorithm.
+//
+//
+// Flow:              FN=
+//   Run in each AMEC real-time state (as per-core sensors are processed)
+//
+// Thread:
+//
+// Task Flags:
+//
+// Future improvement:
+//
+// End Function Specification
+void amec_wof_calc_core_leakage(uint8_t i_core)
+{
+    uint8_t             i;
+    uint32_t            l_result32; //temporary result
+    uint32_t l_temp; // per-core temperature
+    uint16_t l_voltage = AMECSENSOR_ARRAY_PTR(VOLT2MSP0C0,i_core)->sample;
+    uint16_t l_core_v; // voltage index for IDDQ table
+
+    if (l_voltage == 0)
+    {
+        // Core is off, estimate header leakage only
+        //Use avg. chip temp, since DTS cannot be read for off core
+        //Use chip voltage for header voltage
+        l_temp = AMECSENSOR_PTR(TEMP2MSP0)->sample;
+        l_core_v = g_amec->wof.v_chip;
+    }
+    else
+    {
+        // Core is on, use avg. DTS readings for core temperature
+        l_temp = AMECSENSOR_ARRAY_PTR(TEMP2MSP0C0,i_core)->sample;
+        l_core_v = l_voltage;
+    }
+
+    // Search table and point i to the lower entry the target value falls
+    // between.
+    if (l_core_v < G_iddq_voltages[0])
+    {
+        i=0; // voltage is lower than table, so use first two entries.
+    }
+    else
+    {
+        for (i=0; i<CORE_IDDQ_MEASUREMENTS-1; i++)
+        {
+            if (G_iddq_voltages[i] <= l_core_v &&
+                G_iddq_voltages[i+1] >= l_core_v)
+            {
+                break;
+            }
+        }
+    }
+    if (i >= CORE_IDDQ_MEASUREMENTS - 1)
+    {
+        // Voltage is higher than table, so use last two entries.
+        i = CORE_IDDQ_MEASUREMENTS - 2;
+    }
+
+    g_amec->wof.iddq_i_core[i_core] = i;
+
+    // Linear interpolate using the neighboring entries:
+    // y = m(x-x1)+y1   m=(y2-y1)/(x2-x1)
+    l_result32 = ((int32_t)l_core_v - (int32_t)G_iddq_voltages[i])
+        * ((int32_t)G_sysConfigData.iddq_table.iddq_vdd[i+1].fields.iddq_corrected_value -
+           (int32_t)G_sysConfigData.iddq_table.iddq_vdd[i].fields.iddq_corrected_value)
+        / ((int32_t)G_iddq_voltages[i+1] - (int32_t)G_iddq_voltages[i])
+        + (int32_t)G_sysConfigData.iddq_table.iddq_vdd[i].fields.iddq_corrected_value;
+
+    // Note: IDDQ value from table above is in 0.01 A units. The maximum
+    // value possible is 655.35 A. This means l_result <= 65535.
+
+    g_amec->wof.iddq85c_core[i_core] = (uint16_t)l_result32;
+
+    // Temperature correction
+    if (l_temp < amec_wof_iddq_mult_table[0][0])
+    {
+        i=0; // index is lower than table, so use first two entries.
+    }
+    else
+    {
+        for (i=0; i<AMEC_WOF_IDDQ_MULT_TABLE_N-1; i++)
+        {
+            if (amec_wof_iddq_mult_table[i][0] <= l_temp &&
+                amec_wof_iddq_mult_table[i+1][0] >= l_temp)
+            {
+                break;
+            }
+        }
+    }
+    if (i >= AMEC_WOF_IDDQ_MULT_TABLE_N - 1)
+    {
+        i = AMEC_WOF_IDDQ_MULT_TABLE_N - 2;
+    }
+
+    uint32_t l_mult = ((int32_t)l_temp - (int32_t)amec_wof_iddq_mult_table[i][0])
+    * ((int32_t)amec_wof_iddq_mult_table[i+1][1] - (int32_t)amec_wof_iddq_mult_table[i][1])
+    / ((int32_t)amec_wof_iddq_mult_table[i+1][0] - (int32_t)amec_wof_iddq_mult_table[i][0])
+    + (int32_t)amec_wof_iddq_mult_table[i][1];
+
+    l_result32 = (l_result32*l_mult) >> 10;
+
+    // Modify leakage value for header-only. A percentage of chip
+    // leakage comes from iVRM headers which cannot be turned off completely.
+    if (l_voltage == 0)
+    {
+        l_result32 = l_result32
+            * g_amec_wof_leak_overhead / 1000;
+    }
+
+    g_amec->wof.iddq_core[i_core] = l_result32;
+    //Note:
+    //iddq_core[] represents the leakage current as if all cores
+    //in chip are on at the voltage and temperature of i_core.
+    //To calculate true per-core leakage current,
+    //divide by number of good cores on chip
+    //(G_wof_max_cores_per_chip).
+    //This is because IDDQ table represents full chip current.
+
 }

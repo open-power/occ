@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -39,11 +39,12 @@
 #include "heartbeat.h"
 #include "scom.h"
 #include <fir_data_collect.h>
+#include <amec_sys.h>
 
 extern proc_gpsm_dcm_sync_occfw_t G_proc_dcm_sync_state;
 extern bool G_mem_monitoring_allowed;
 extern task_t G_task_table[TASK_END];  // Global task table
-
+extern amec_sys_t * g_amec;
 // Maximum allowed value approx. 16.3 ms
 #define PCBS_HEARBEAT_TIME_US 16320
 
@@ -579,6 +580,9 @@ errlHndl_t SMGR_all_to_safe()
     //  - We will still be able to go out on PIB
     //  - We will still attempt to load an applet if told to do so
     //  - The master will no longer broadcast to slaves, and vice versa
+
+    // Disable WOF
+    g_amec->wof.enable_parm = 0;
 
     // Set the actual STATE now that we have finished everything else
     CURRENT_STATE() = OCC_STATE_SAFE;

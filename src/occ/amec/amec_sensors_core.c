@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -43,6 +43,7 @@
 #include "amec_service_codes.h"
 #include <amec_sensors_core.h>
 #include "amec_perfcount.h"
+#include "amec_wof.h"           // update core leakage current for WOF
 
 /******************************************************************************/
 /* Globals                                                                    */
@@ -56,12 +57,13 @@ extern amec_sys_t g_amec_sys;
 /******************************************************************************/
 /* Forward Declarations                                                       */
 /******************************************************************************/
+void amec_calc_pmstate_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_core);
 void amec_calc_dts_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_core);
 //void amec_calc_cpm_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_core); //CPM - Commented out as requested by Malcolm
 void amec_calc_freq_and_util_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_core);
 void amec_calc_ips_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_core);
 void amec_calc_spurr(uint8_t i_core);
-void amec_sensors_core_voltage(uint8_t i_core);
+void amec_sensors_core_voltage(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_core);
 
 //*************************************************************************
 // Code
@@ -135,14 +137,14 @@ void amec_update_proc_core_sensors(uint8_t i_core)
     l_core_data_ptr = proc_get_bulk_core_data_ptr(i_core);
 
     //-------------------------------------------------------
+    // Power management state
+    //-------------------------------------------------------
+    amec_calc_pmstate_sensors(l_core_data_ptr, i_core);
+
+    //-------------------------------------------------------
     // Thermal Sensors & Calc
     //-------------------------------------------------------
     amec_calc_dts_sensors(l_core_data_ptr, i_core);
-
-    //-------------------------------------------------------
-    //CPM - Commented out as requested by Malcolm
-    // ------------------------------------------------------
-    // amec_calc_cpm_sensors(l_core_data_ptr, i_core);
 
     //-------------------------------------------------------
     // Util / Freq
@@ -172,11 +174,6 @@ void amec_update_proc_core_sensors(uint8_t i_core)
     // SPURR
     //-------------------------------------------------------
     amec_calc_spurr(i_core);
-
-    //-------------------------------------------------------
-    // Voltage
-    //-------------------------------------------------------
-    amec_sensors_core_voltage(i_core);
 
     // ------------------------------------------------------
     // Update PREVIOUS values for next time
@@ -212,7 +209,63 @@ void amec_update_proc_core_sensors(uint8_t i_core)
     l_temp16 = (uint16_t)(G_dcom_slv_inbox_doorbell_rx.tod>>45);
     // hi 3 bits in 0.796 day resolution with 512MHz TOD clock
     sensor_update( AMECSENSOR_PTR(TODclock2), l_temp16);
+
+    // Always update core voltage and leakage current even when
+    // core is turned off. Required for correct WOF operation.
+
+    //-------------------------------------------------------
+    // Voltage
+    //-------------------------------------------------------
+    amec_sensors_core_voltage(l_core_data_ptr,i_core);
+
+    //-------------------------------------------------------
+    // Leakage current (for WOF)
+    // Note: Run after core temperature and voltage updates
+    //         amec_calc_dts_sensors()
+    //         amec_sensors_core_voltage()
+    //-------------------------------------------------------
+    amec_wof_calc_core_leakage(i_core);
   }
+}
+
+// Function Specification
+//
+// Name: amec_calc_pmstate_sensors
+//
+// Description: Update WINKCNT, SLEEPCNT sensors. Update OCC sense of
+//   core's Power Management State (Run, Nap, Sleep, Winkle, etc.)
+//
+// Thread: RealTime Loop
+//
+// End Function Specification
+void amec_calc_pmstate_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_core)
+{
+    uint16_t temp16;
+
+    // ------------------------------------------------------
+    // Per Core Sleep/Winkle Count
+    // ------------------------------------------------------
+
+    // Get Current Idle State of Chiplet
+    // The SLEEPCNT and WINKLECNT sensors are updated in amec_slv_state_0() function
+    temp16 = CONVERT_UINT64_UINT16_UPPER(i_core_data_ptr->pcb_slave.pm_history.value);
+    g_amec->proc[0].core[i_core].pm_state_hist = temp16>>8;
+    // Copy pm_state to sequential memory array for WOF debug
+    g_amec->wof.pm_state[i_core] = g_amec_sys.proc[0].core[i_core].pm_state_hist;
+    temp16 = temp16 & 0xE000;
+    temp16 = temp16 >> 13;
+    switch(temp16)
+    {
+    case 0:                                 break;   // Run State
+    case 1:                                 break;   // Special Wakeup
+    case 2:                                 break;   // Nap
+    case 3: SETBIT(g_amec->proc[0].sleep_cnt,i_core);  break;   // Legacy Sleep
+    case 4: SETBIT(g_amec->proc[0].sleep_cnt,i_core);  break;   // Fast Sleep
+    case 5: SETBIT(g_amec->proc[0].sleep_cnt,i_core);  break;   // Deep Sleep
+    case 6: SETBIT(g_amec->proc[0].winkle_cnt,i_core); break;   // Fast Winkle
+    case 7: SETBIT(g_amec->proc[0].winkle_cnt,i_core); break;   // Deep Winkle
+    }
+
 }
 
 
@@ -536,28 +589,6 @@ void amec_calc_freq_and_util_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uin
   }
 
   // No sensors to update for perThread Util
-
-  // ------------------------------------------------------
-  // Per Core Sleep/Winkle Count
-  // ------------------------------------------------------
-
-  // Get Current Idle State of Chiplet
-  // The SLEEPCNT and WINKLECNT sensors are updated in amec_slv_state_0() function
-  temp16 = CONVERT_UINT64_UINT16_UPPER(i_core_data_ptr->pcb_slave.pm_history.value);
-  g_amec->proc[0].core[i_core].pm_state_hist = temp16>>8;
-  temp16 = temp16 & 0xE000;
-  temp16 = temp16 >> 13;
-  switch(temp16)
-  {
-    case 0:                                 break;   // Run State
-    case 1:                                 break;   // Special Wakeup
-    case 2:                                 break;   // Nap
-    case 3: SETBIT(g_amec->proc[0].sleep_cnt,i_core);  break;   // Legacy Sleep
-    case 4: SETBIT(g_amec->proc[0].sleep_cnt,i_core);  break;   // Fast Sleep
-    case 5: SETBIT(g_amec->proc[0].sleep_cnt,i_core);  break;   // Deep Sleep
-    case 6: SETBIT(g_amec->proc[0].winkle_cnt,i_core); break;   // Fast Winkle
-    case 7: SETBIT(g_amec->proc[0].winkle_cnt,i_core); break;   // Deep Winkle
-  }
 
   // ------------------------------------------------------
   // Core Memory Hierarchy C LPARx Utilization counters
@@ -896,7 +927,7 @@ void amec_calc_spurr(uint8_t i_core)
 //
 // Name: amec_sensors_core_voltage
 //
-// Description: update core-level voltage sensors
+// Description: update core-level voltage sensor
 //
 //
 // Flow:              FN=
@@ -910,55 +941,42 @@ void amec_calc_spurr(uint8_t i_core)
 //
 // End Function Specification
 
-void amec_sensors_core_voltage(uint8_t i_core)
+void amec_sensors_core_voltage(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_core)
 {
-    #define SCOM_PIVRMCSR_ADDR_nochiplet 0x100F0154
-    #define SCOM_PIVRMVSR_ADDR_nochiplet 0x100F0155
-    //IVRM_FSM_ENABLE == 1, then iVRM FSM turned ON
-    #define IVRM_FSM_ENABLE_MASK         0x8000000000000000
-    //IVRM_CORE_VDD_BYPASS_B == 1, then iVRM not in bypass (negative action)
-    #define IVRM_CORE_VDD_BYPASS_B_MASK  0x0800000000000000
-
-    uint32_t l_rc=0;
-    uint64_t l_pivrmcsr=0; //ivrm control status reg
-    uint64_t l_pivrmvsr=0; //ivrm value setting reg
     uint16_t l_voltage=0;
     //Core power management state
     uint8_t  l_pmstate=g_amec_sys.proc[0].core[i_core].pm_state_hist >> 5;
 
-    //
-    // iVRM in bypass?
-    l_rc = _getscom(CORE_CHIPLET_ADDRESS(SCOM_PIVRMCSR_ADDR_nochiplet,
-                                         CORE_OCC2HW(i_core)),
-                    &l_pivrmcsr,SCOM_TIMEOUT);
-    if (l_rc) return;
-    l_rc = _getscom(CORE_CHIPLET_ADDRESS(SCOM_PIVRMVSR_ADDR_nochiplet,
-                                         CORE_OCC2HW(i_core)),
-                    &l_pivrmvsr,SCOM_TIMEOUT);
-    if (l_rc) return;
+    do
+    {
+        if (l_pmstate == 5      //deep sleep
+            || l_pmstate == 7)  //deep winkle
+        {
+            // This core is power gated
+            l_voltage = 0;
+        }
+        else
+        {
+            if (i_core_data_ptr->pcb_slave.pivrmcsr.fields.ivrm_fsm_enable==1
+                && i_core_data_ptr->pcb_slave.pivrmcsr.fields.ivrm_core_vdd_bypass_b==1)
+            {
+                // if ivrm FSM enabled AND ivrm in bypass mode,
+                // then ivrm is regulating voltage.
+                // Compute sensor in 0.0001 V units
+                // iVRM Voltage (V) = VID * 0.00625 V + 0.6 V
+                // Note: 0.00625 V = 0.0125 V / 2 = 125>>1
+                // Note: .6 V = 6000 (0.0001 V)
+                l_voltage = (((uint32_t)(i_core_data_ptr->pcb_slave.pivrmvsr.fields.ivrm_core_vdd_ivid)
+                              * 125) >> 1) + 6000;
+            }
+            else
+            {
+                //Use estimate of voltage from external voltage rail.
+                l_voltage=g_amec->wof.v_chip;
+            }
+        }
+    } while (0);
 
-    if (l_pmstate == 5      //deep sleep
-        || l_pmstate == 7)  //deep windle
-    {
-        // This core is power gated
-        l_voltage = 0;
-    }
-    else if ((l_pivrmcsr & IVRM_FSM_ENABLE_MASK)
-             && (l_pivrmcsr & IVRM_CORE_VDD_BYPASS_B_MASK))
-    {
-        // if ivrm FSM enabled AND ivrm in bypass mode,
-        // then ivrm is regulating voltage.
-        // Compute sensor in 0.0001 V units
-        // iVRM Voltage (V) = VID * 0.00625 V + 0.6 V
-        // Note: 0.00625 V = 0.0125 V / 2 = 125>>1
-        // Note: .6 V = 6000 (0.0001 V)
-        l_voltage = ((((uint32_t)(l_pivrmvsr>>32)) * 125) >> 1) + 6000;
-    }
-    else // External voltage
-    {
-        //core is in bypass. Use estimate of voltage from external voltage rail.
-        l_voltage = g_amec->wof.v_chip;
-    }
     sensor_update(AMECSENSOR_ARRAY_PTR(VOLT2MSP0C0,i_core),l_voltage);
 }
 
