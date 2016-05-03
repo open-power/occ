@@ -48,7 +48,7 @@ typedef enum
 {
     OCC_MODE_NOCHANGE          = 0x00,
     OCC_MODE_NOMINAL           = 0x01,
-    // OCC_MODE_BENCHMARK         = 0x02,
+    // reserved                = 0x02,
     OCC_MODE_TURBO             = 0x03,
     OCC_MODE_SAFE              = 0x04,
     OCC_MODE_PWRSAVE           = 0x05,
@@ -56,10 +56,13 @@ typedef enum
     OCC_MODE_MIN_FREQUENCY     = 0x07,
 
     // Mode 0x08-0x0A reserved by TMGT
-    // OCC_MODE_SAFE_LOW_POWER    = 0x09,
+    // reserved                = 0x08,
+    // reserved                = 0x09,
     OCC_MODE_DYN_POWER_SAVE_FP = 0x0A,
     OCC_MODE_FFO               = 0x0B,
-    OCC_MODE_STURBO            = 0x0C,
+    OCC_MODE_FMF               = 0x0C,
+
+    OCC_MODE_UTURBO            = 0x0D,
 
     // Make sure this is after the last valid mode
     OCC_MODE_COUNT,

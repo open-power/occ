@@ -282,11 +282,11 @@ uint8_t cmdh_mnfg_mem_slew(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                    &G_sysConfigData.mem_throt_limits[l_cent][l_mba];
 
                     // Uses values seen on tuleta as defaults
-                    l_throt_ptr->min_ot_n_per_mba = 13;
+                    l_throt_ptr->min_n_per_mba = 13;
                     l_throt_ptr->nom_n_per_mba = 72;
                     l_throt_ptr->nom_n_per_chip = 72;
-                    l_throt_ptr->turbo_n_per_mba = 72;
-                    l_throt_ptr->turbo_n_per_chip = 72;
+                    l_throt_ptr->pcap1_n_per_mba = 72;
+                    l_throt_ptr->pcap2_n_per_mba = 72;
                     l_throt_ptr->ovs_n_per_mba = 72;
                     l_throt_ptr->ovs_n_per_chip = 72;
                 }

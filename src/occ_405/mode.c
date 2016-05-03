@@ -39,7 +39,6 @@ errlHndl_t SMGR_mode_transition_to_powersave();
 errlHndl_t SMGR_mode_transition_to_dynpowersave();
 errlHndl_t SMGR_mode_transition_to_dynpowersave_fp();
 errlHndl_t SMGR_mode_transition_to_turbo();
-errlHndl_t SMGR_mode_transition_to_superturbo();
 errlHndl_t SMGR_mode_transition_to_ffo();
 
 // Mode that OCC is currently in
@@ -72,26 +71,12 @@ SsxSemaphore        G_smgrModeChangeSem;
 // transition.
 const smgr_state_trans_t G_smgr_mode_trans[] =
 {
-    /* ----- SPECIFIC CASE MODE TRANSITIONS ----- */
-    /* These are specific mode transitions for when it matters what
-     * mode we were in before the transition.  These must come before
-     * the agnostic mode transitions below, and will be run instead of
-     * those catch-all transition functions. */
-
-    /* Current Mode         New Mode                    Transition Function */
-    {OCC_MODE_STURBO,       OCC_MODE_NOMINAL,           NULL},
-
-    /* ----- DEFAULT MODE TRANSITIONS ----- */
-    /* These are default mode transitions for when it doesn't matter what
-     * mode we were in before the transition. */
-
     /* Current Mode         New Mode                    Transition Function */
     {OCC_MODE_ALL,          OCC_MODE_NOMINAL,           &SMGR_mode_transition_to_nominal},
     {OCC_MODE_ALL,          OCC_MODE_PWRSAVE,           &SMGR_mode_transition_to_powersave},
     {OCC_MODE_ALL,          OCC_MODE_DYN_POWER_SAVE,    &SMGR_mode_transition_to_dynpowersave},
     {OCC_MODE_ALL,          OCC_MODE_DYN_POWER_SAVE_FP, &SMGR_mode_transition_to_dynpowersave_fp},
     {OCC_MODE_ALL,          OCC_MODE_TURBO,             &SMGR_mode_transition_to_turbo},
-    {OCC_MODE_ALL,          OCC_MODE_STURBO,            &SMGR_mode_transition_to_superturbo},
     {OCC_MODE_ALL,          OCC_MODE_FFO,               &SMGR_mode_transition_to_ffo},
 };
 const uint8_t G_smgr_mode_trans_count = sizeof(G_smgr_mode_trans)/sizeof(smgr_state_trans_t);
@@ -193,7 +178,6 @@ errlHndl_t SMGR_set_mode(const OCC_MODE i_mode,
              case OCC_MODE_DYN_POWER_SAVE:    // FALL THROUGH
              case OCC_MODE_DYN_POWER_SAVE_FP: // FALL THROUGH
              case OCC_MODE_TURBO:             // FALL THROUGH
-             case OCC_MODE_STURBO:            // FALL THROUGH
              case OCC_MODE_FFO:               // FALL THROUGH
                  // Notify AMEC of mode change
 
@@ -383,29 +367,6 @@ errlHndl_t SMGR_mode_transition_to_turbo()
 
     CURRENT_MODE() = OCC_MODE_TURBO;
     TRAC_IMP("SMGR: Mode to Turbo Transition Completed");
-
-    return l_errlHndl;
-}
-
-
-// Function Specification
-//
-// Name: SMGR_mode_transition_to_superturbo
-//
-// Description:
-//
-// End Function Specification
-errlHndl_t SMGR_mode_transition_to_superturbo()
-{
-    errlHndl_t              l_errlHndl = NULL;
-
-    TRAC_IMP("SMGR: Mode to SuperTurbo Transition Started");
-
-    // Set Freq Mode for AMEC to use
-    l_errlHndl = amec_set_freq_range(OCC_MODE_STURBO);
-
-    CURRENT_MODE() = OCC_MODE_STURBO;
-    TRAC_IMP("SMGR: Mode to SuperTurbo Transition Completed");
 
     return l_errlHndl;
 }

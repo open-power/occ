@@ -163,9 +163,6 @@ void Dcom_thread_routine(void *arg)
             }
         }
 
-        // TEMP/TODO: In P8, we would call proc_gpsm_dcm_sync_enable_pstates_smh() here,
-        //            if not in safe mode. Do we need to do something similar in P9?
-
         // --------------------------------------------------
         // SSX Sleep
         // --------------------------------------------------

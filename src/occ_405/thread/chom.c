@@ -291,21 +291,8 @@ void chom_update_sensors()
     {   // update sample, min, max, average sensor data
         if (NULL != g_chom_sensor_table[i])
         {
-            //Report all sensors listed in g_chom_sensor_table, unless
-            //we have a Murano (DCM), then we only report the power from the
-            //OCC_DCM_MASTER occ. The DCM occ pairs (OCC_DCM_MASTER,OCC_DCM_SLAVE) are
-            //((0,1),(2,3),(4,5),(6,7)).
-            if( ((i >= CHOMPWRS0) && (i <= CHOMPWRS7)) &&
-                (CFAM_CHIP_TYPE_MURANO == cfam_chip_type()) &&
-                (((i-CHOMPWRS0) % 2) == 1) )
-            {
-                //Do nothing
-            }
-            else
-            {
-                // directly mapping to mini-sensor
-                g_chom->sensorData[0].sensor[i].sample = *g_chom_sensor_table[i];
-            }
+            // directly mapping to mini-sensor
+            g_chom->sensorData[0].sensor[i].sample = *g_chom_sensor_table[i];
         }
 
         l_sample = g_chom->sensorData[0].sensor[i].sample;

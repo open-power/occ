@@ -433,69 +433,60 @@ void amec_update_vrm_sensors(void)
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
 
-    // Check if we have access to SPIVID. In DCMs only Master OCC has access to
-    // the SPIVID.
-    if (G_dcm_occ_role == OCC_DCM_MASTER)
+    // VR_FAN and SOFT_OC come from SPIVID
+    l_rc = vrm_read_state(SPIVRM_PORT(0),
+                          &l_minus_np1_regmode,
+                          &l_minus_n_regmode,
+                          &l_vrfan,
+                          &l_softoc);
+    if (l_rc == 0)
     {
-        // VR_FAN and SOFT_OC come from SPIVID
-        l_rc = vrm_read_state(SPIVRM_PORT(0),
-                            &l_minus_np1_regmode,
-                            &l_minus_n_regmode,
-                            &l_vrfan,
-                            &l_softoc);
+        // Update the VR_FAN sensor
+        sensor_update( AMECSENSOR_PTR(VRFAN250USPROC), (uint16_t)l_vrfan );
 
-        if (l_rc == 0)
+        // Clear our error count
+        L_error_count = 0;
+
+        // No longer reading gpio from APSS in GA1 due to instability in
+        // APSS composite mode
+        //apss_gpio_get(l_pin, &l_pin_value);
+
+        // VR_HOT sensor is a counter of number of times the VRHOT signal
+        // has been asserted
+        l_vrhot_count = AMECSENSOR_PTR(VRHOT250USPROC)->sample;
+
+        // Check if VR_FAN is asserted AND if 'fans_full_speed' GPIO is ON.
+        // Note that this GPIO is active low.
+        if (AMECSENSOR_PTR(VRFAN250USPROC)->sample && !(l_pin_value))
         {
-            // Update the VR_FAN sensor
-            sensor_update( AMECSENSOR_PTR(VRFAN250USPROC), (uint16_t)l_vrfan );
-
-            // Clear our error count
-            L_error_count = 0;
-
-            // No longer reading gpio from APSS in GA1 due to instability in
-            // APSS composite mode
-            //apss_gpio_get(l_pin, &l_pin_value);
-
-            // VR_HOT sensor is a counter of number of times the VRHOT signal
-            // has been asserted
-            l_vrhot_count = AMECSENSOR_PTR(VRHOT250USPROC)->sample;
-
-            // Check if VR_FAN is asserted AND if 'fans_full_speed' GPIO is ON.
-            // Note that this GPIO is active low.
-            if (AMECSENSOR_PTR(VRFAN250USPROC)->sample && !(l_pin_value))
+            // VR_FAN is asserted and 'fans_full_speed' GPIO is ON,
+            // then increment our VR_HOT counter
+            if (l_vrhot_count < g_amec->vrhotproc.setpoint)
             {
-                // VR_FAN is asserted and 'fans_full_speed' GPIO is ON,
-                // then increment our VR_HOT counter
-                if (l_vrhot_count < g_amec->vrhotproc.setpoint)
-                {
-                    l_vrhot_count++;
-                }
+                l_vrhot_count++;
             }
-            else
-            {
-                // Reset our VR_HOT counter
-                l_vrhot_count = 0;
-            }
-            sensor_update(AMECSENSOR_PTR(VRHOT250USPROC), l_vrhot_count);
         }
         else
         {
-            // Increment our error count
-            L_error_count++;
+            // Reset our VR_HOT counter
+            l_vrhot_count = 0;
+        }
+        sensor_update(AMECSENSOR_PTR(VRHOT250USPROC), l_vrhot_count);
+    }
+    else
+    {
+        // Increment our error count
+        L_error_count++;
 
-            // Don't allow the error count to wrap
-            if (L_error_count == 0)
-            {
-                L_error_count = 0xFF;
-            }
+        // Don't allow the error count to wrap
+        if (L_error_count == 0)
+        {
+            L_error_count = 0xFF;
         }
     }
 
-    if( 1 )
-    {
-        sensor_update( AMECSENSOR_PTR(VRFAN250USMEM), 0 );
-        sensor_update( AMECSENSOR_PTR(VRHOT250USMEM), 0 );
-    }
+    sensor_update( AMECSENSOR_PTR(VRFAN250USMEM), 0 );
+    sensor_update( AMECSENSOR_PTR(VRHOT250USMEM), 0 );
 }
 
 #endif // #if 0 @TODO - TEMP - SPIVRMs are no longer defined, pgp_vrm.h and vrm.c are not present

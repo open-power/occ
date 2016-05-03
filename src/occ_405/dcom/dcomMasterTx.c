@@ -165,9 +165,6 @@ uint32_t dcom_build_slv_inbox(void)
     G_mst_tunable_parameter_overwrite = 0;
     dcom_build_occfw_msg( SLAVE_INBOX );
 
-    // Copy Data from one DCM pair's Outbox to other DCM pair's inbox
-    dcom_build_dcm_sync_msg( SLAVE_INBOX );
-
     l_addr_of_slv_inbox_in_main_mem = dcom_which_buffer();
 
     //DOORBELL.................

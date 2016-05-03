@@ -118,9 +118,6 @@ amec_parm_t g_amec_parm_list[] = {
     AMEC_PARM_UINT16(PARM_SYS_FMAX,"sys_fmax",&g_amec_sys.sys.fmax),
     AMEC_PARM_UINT16(PARM_SYS_FMIN,"sys_fmin",&g_amec_sys.sys.fmin),
 
-    // Global Pstate table
-// @TODO - TEMP - global state table changes in P9
-//    AMEC_PARM_RAW(PARM_GPST,"gpst",&G_global_pstate_table,sizeof(GlobalPstateTable)),
     // MHz per pstate
     AMEC_PARM_UINT32(PARM_PSTATE_MHZ,"pstate_mhz",&G_mhz_per_pstate),
     // frequency reason code per-core

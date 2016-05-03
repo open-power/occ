@@ -70,7 +70,6 @@ extern bool G_apss_lower_pmax_rail;
 // Function Prototypes
 //*************************************************************************
 void amec_slv_check_apss_fail(void);
-void amec_slv_pstate_uplift_check(void);
 
 void amec_update_proc_core_group(uint8_t);
 

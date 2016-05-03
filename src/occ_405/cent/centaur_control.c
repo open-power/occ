@@ -179,8 +179,8 @@ void cent_update_nlimits(uint32_t i_cent)
             &G_sysConfigData.mem_throt_limits[i_cent][1];
 
         //Minimum N value is not state dependent
-        l_active_limits01->min_n_per_mba = l_state_limits01->min_ot_n_per_mba;
-        l_active_limits23->min_n_per_mba = l_state_limits23->min_ot_n_per_mba;
+        l_active_limits01->min_n_per_mba = l_state_limits01->min_n_per_mba;
+        l_active_limits23->min_n_per_mba = l_state_limits23->min_n_per_mba;
 
         //oversubscription?
         if(AMEC_INTF_GET_OVERSUBSCRIPTION())
@@ -199,10 +199,8 @@ void cent_update_nlimits(uint32_t i_cent)
         }
         else //DPS, TURBO, FFO, and SPS modes will use these settings
         {
-            l_mba01_mba_maxn = l_state_limits01->turbo_n_per_mba;
-            l_mba01_chip_maxn = l_state_limits01->turbo_n_per_chip;
-            l_mba23_mba_maxn = l_state_limits23->turbo_n_per_mba;
-            l_mba23_chip_maxn = l_state_limits23->turbo_n_per_chip;
+            l_mba01_mba_maxn = l_state_limits01->pcap1_n_per_mba;
+            l_mba23_mba_maxn = l_state_limits23->pcap1_n_per_mba;
         }
 
         l_active_limits01->max_n_per_chip = l_mba01_chip_maxn;

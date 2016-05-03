@@ -64,6 +64,8 @@
 // Globals
 //*************************************************************************
 extern uint8_t G_occ_interrupt_type;
+extern uint32_t G_proc_fmin;
+extern uint32_t G_proc_fmax;
 
 //*************************************************************************
 // Function Prototypes
@@ -112,8 +114,8 @@ errlHndl_t AMEC_data_write_fcurr(const OCC_MODE i_mode)
     // min/max for AMEC component
     if(G_occ_interrupt_type != FSP_SUPPORTED_OCC)
     {
-        g_amec->sys.fmax = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
-        g_amec->sys.fmin = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
+        g_amec->sys.fmax = G_proc_fmax;
+        g_amec->sys.fmin = G_proc_fmin; // = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY]
 
         TRAC_INFO("AMEC_data_write_fcurr: New frequency range Fmin[%u] Fmax[%u]",
                   g_amec->sys.fmin,

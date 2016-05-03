@@ -146,13 +146,10 @@ typedef struct __attribute__ ((packed))
 // Used by TMGT to send OCC the PCAP config data.
 typedef struct __attribute__ ((packed))
 {
-    uint16_t current_pcap;     // Node power cap requested by customer (AEM) in 1W units
-    uint16_t soft_min_pcap;    // Minimum node power cap allowed in 1W units
-    uint16_t hard_min_pcap;    // Minimum guaranteed node power cap in 1W units
-    uint16_t max_pcap;         // Maximum customer settable node power cap in 1W units
-    uint16_t oversub_pcap;     // Node power cap to be used for oversubscripion in 1W units
-    uint16_t system_pcap;      // Fixed node power cap required by the system in 1W units
-    uint8_t  unthrottle;       // Only used on ITEs -- is indicated from CMM
+    uint16_t soft_min_pcap; // Min node power cap allowed in 1W units (1WU)
+    uint16_t hard_min_pcap; // Min guaranteed node power cap in 1WU
+    uint16_t sys_max_pcap;  // Max system (max user settable) power cap in 1WU
+    uint16_t qpd_pcap;      // Quick Power Drop (Oversubscription) power cap in 1WU
 } cmdh_pcap_config_data_t;
 
 // Used by TMGT to send OCC the PCAP config data.
@@ -163,21 +160,6 @@ typedef struct __attribute__ ((packed))
     uint8_t              version;
     cmdh_pcap_config_data_t   pcap_config;
 }cmdh_pcap_config_t;
-
-typedef struct __attribute__ ((packed))
-{
-    uint16_t min_pcap;        // Minimum guaranteed node power cap in 1W units
-    uint16_t sys_max_pcap;    // Fixed node power cap required by the system in 1W units
-    uint16_t oversub_pcap;    // Node power cap to be used for oversubscripion in 1W units
-} cmdh_pcap_config_data_v10_t;
-
-typedef struct __attribute__ ((packed))
-{
-    struct cmdh_fsp_cmd_header;
-    uint8_t              format;
-    uint8_t              version;
-    cmdh_pcap_config_data_v10_t   pcap_config;
-}cmdh_pcap_config_v10_t;
 
 typedef struct __attribute__ ((packed))
 {
@@ -310,19 +292,60 @@ typedef struct __attribute__ ((packed))
     uint8_t                    num_data_sets;
 }cmdh_mem_throt_header_t;
 
-// Provides memory throttle min and max values
+
+// Provides memory throttle min and max values for Nimbus systems
 typedef struct __attribute__ ((packed))
 {
-    uint8_t                    centaur_num;
-    uint8_t                    mba_num;
-    uint16_t                   min_ot_n_per_mba;
-    uint16_t                   nom_n_per_mba;
-    uint16_t                   nom_n_per_chip;
-    uint16_t                   turbo_n_per_mba;
-    uint16_t                   turbo_n_per_chip;
-    uint16_t                   ovs_n_per_mba;
-    uint16_t                   ovs_n_per_chip;
-}cmdh_mem_throt_data_set_t;
+    uint8_t  mc_num;            // Physical MC: [0=MC01, 2=MC23]
+    uint8_t  port_num;          // Physical port # [0-3]
+
+    uint16_t  min_n_per_port;   // Lowest per port allowed numerator
+    uint16_t  min_mem_power;    // Max mem Power @min (x0.1W)
+
+    uint16_t  pcap1_n_per_port; // Static per port numerator @PCAP1
+    uint16_t  pcap1_mem_power;  // Max memory power @PCAP1 (x0.1W)
+
+    uint16_t  pcap2_n_per_port; // Static per port numerator @PCAP2
+    uint16_t  pcap2_mem_power;  // Max memory power @PCAP2 (x0.1W)
+
+    uint16_t  nom_n_per_port;   // Static per port @Redundant (no ovs)
+    uint16_t  nom_n_per_slot;   // Static per slot @Redundant
+    uint16_t  nom_mem_power;    // Max memory power @Redundant(x0.1W)
+
+    uint16_t  ovs_n_per_port;   // Static per port @Oversubscription
+    uint16_t  ovs_n_per_slot;   // Static per slot @Oversubscription
+    uint16_t  ovs_mem_power;    // Max memory power @Oversubscription (x0.1W)
+}nimbus_mem_throt_t;
+
+// Provides memory throttle min and max values for Cumulus systems
+typedef struct __attribute__ ((packed))
+{
+    uint8_t   centaur_num;      // Physical centaur# [0-7]
+    uint8_t   mba_num;          // Memory Buffer within centaur [0-1]
+
+    uint16_t  min_n_per_mba;    // Lowest per MBA allowed numerator
+    uint16_t  min_mem_power;    // Max mem Power @min (x0.1W)
+
+    uint16_t  pcap1_n_per_mba;  // Static per MBA numerator @PCAP1
+    uint16_t  pcap1_mem_power;  // Max memory power @PCAP1 (x0.1W)
+
+    uint16_t  pcap2_n_per_mba;  // Static per MBA numerator @PCAP2
+    uint16_t  pcap2_mem_power;  // Max memory power @PCAP2 (x0.1W)
+
+    uint16_t  nom_n_per_mba;    // Static per MBA @Redundant (no ovs)
+    uint16_t  nom_n_per_chip;   // Static per chip @Redundant
+    uint16_t  nom_mem_power;    // Max memory power @Redundant(x0.1W)
+
+    uint16_t  ovs_n_per_mba;    // Static per MBA @Oversubscription
+    uint16_t  ovs_n_per_chip;   // Static per chip @Oversubscription
+    uint16_t  ovs_mem_power;    // Max memory power @Oversubscription (x0.1W)
+}cumulus_mem_throt_t;
+
+typedef union cmdh_mem_throt_data_set
+{
+    nimbus_mem_throt_t nimbus;
+    cumulus_mem_throt_t cumulus;
+} cmdh_mem_throt_data_set_t;
 
 // Config packet definition used by TMGT to
 // send mem throttle min/max settings.
@@ -331,24 +354,6 @@ typedef struct __attribute__ ((packed))
     cmdh_mem_throt_header_t      header;
     cmdh_mem_throt_data_set_t    data_set[1];
 }cmdh_mem_throt_t;
-
-typedef struct __attribute__ ((packed))
-{
-    uint8_t              centaur_num;
-    uint8_t              mba_num;
-    uint16_t             min_ot_n_per_mba;
-    uint16_t             redupwr_n_per_mba;
-    uint16_t             redupwr_n_per_chip;
-    uint16_t             ovs_n_per_mba;
-    uint16_t             ovs_n_per_chip;
-}cmdh_mem_throt_data_set_v10_t;
-
-typedef struct __attribute__ ((packed))
-{
-    cmdh_mem_throt_header_t       header;
-    cmdh_mem_throt_data_set_v10_t data_set[1];
-}cmdh_mem_throt_v10_t;
-
 
 // Used to mark present the config data TMGT has sent us.
 typedef struct data_cnfg

@@ -110,9 +110,6 @@ void amec_oversub_isr(void)
         // If RTL doesn't control it, do it here
         if(g_amec->oversub_status.oversubLatchAmec == 0)
         {
-            // Set PMC Pmax_clip to Pmin and throttle all Cores via OCI write to PMC
-            amec_oversub_pmax_clip(gpst_pmin(&G_global_pstate_table));
-
             // TODO: Throttle all Centaurs via PORE-GPE by setting 'Emergency Throttle'
 
             g_amec->oversub_status.oversubReasonLatchCount = OVERSUB_REASON_DELAY_4MS;
@@ -149,6 +146,7 @@ void amec_oversub_isr(void)
     TRAC_INFO("Oversub IRQ - Polarity (low active):%d, oversubPinLive: %d, count: %d)", l_cur_polarity, g_amec->oversub_status.oversubPinLive, l_isr_count);
 
 }
+
 
 // Function Specification
 //

@@ -71,9 +71,6 @@ dcom_fail_count_t G_dcomSlvInboxCounter = {0};
 
 uint8_t     G_occ_role = OCC_SLAVE;
 
-
-uint8_t     G_dcm_occ_role            = OCC_DCM_SLAVE;
-
 // PBAX ID of this OCC is also its PowerBus ID.  Contains ChipId & NodeId.
 pob_id_t    G_pbax_id                  = {0};
 
@@ -87,9 +84,6 @@ PbaxTarget  G_pbax_unicast_target;
 
 // Number of occ's that *should* be present
 uint8_t     G_occ_num_present;
-
-// DCM Status from all Slaves
-proc_gpsm_dcm_sync_occfw_t G_dcm_sync_occfw_table[MAX_OCCS];
 
 // Master/slave event flags
 uint32_t    G_master_event_flags              = 0;
@@ -399,47 +393,6 @@ void dcom_error_check( const dcom_error_type_t i_error_type, const bool i_clear_
 
 // Function Specification
 //
-// Name: dcom_build_dcm_sync_msg
-//
-// Description: Copy messages from DCM Master (OCC Slave) to
-//              DCM Slave (also OCC Slave) and vice versa
-//
-// End Function Specification
-void dcom_build_dcm_sync_msg(const dcom_error_type_t i_which_msg)
-{
-    // If the OCC Master isn't a DCM, no one else is a DCM either, so
-    // no need to bother sending these messages back & forth.
-    if(proc_is_dcm())
-    {
-        if ( i_which_msg == SLAVE_INBOX )
-        {
-            uint32_t l_slv_idx = 0;
-            for(l_slv_idx = 0; l_slv_idx < MAX_OCCS; l_slv_idx++)
-            {
-                // Populate G_dcm_sync_occfw_table with the data from all OCC Slaves
-                G_dcm_sync_occfw_table[l_slv_idx] = G_dcom_slv_outbox_rx[l_slv_idx].dcm_sync;
-            }
-
-            // DCM are always in even/odd numbered pairs sequentially as
-            // DCM master = even number[0,2,4,6] DCM Slave = odd number [1,3,5,7]
-            // with DCM pairs being [0,1], [2,3], [4,5], [6,7]
-            // so we can do this simple swizzle here and not need a table to
-            // do the conversion.
-            for(l_slv_idx = 0; l_slv_idx < MAX_OCCS; l_slv_idx+=2)
-            {
-                G_dcom_slv_inbox_tx[l_slv_idx].dcm_sync = G_dcm_sync_occfw_table[l_slv_idx+1];
-                G_dcom_slv_inbox_tx[l_slv_idx+1].dcm_sync = G_dcm_sync_occfw_table[l_slv_idx];
-            }
-        }
-        else if ( i_which_msg == SLAVE_OUTBOX )
-        {
-            G_dcom_slv_outbox_tx.dcm_sync = proc_gpsm_dcm_sync_get_state();
-        }
-    }
-}
-
-// Function Specification
-//
 // Name: dcom_build_occfw_msg
 //
 // Description: Copy data into occ fw msg portion
@@ -630,9 +583,6 @@ void task_dcom_parse_occfwmsg(task_t *i_self)
     // Copy soft frequency boundaries sent by Master OCC
     g_amec->part_config.part_list[0].soft_fmin = G_dcom_slv_inbox_rx.soft_fmin;
     g_amec->part_config.part_list[0].soft_fmax = G_dcom_slv_inbox_rx.soft_fmax;
-
-    // Update DCM Sync var that will be used in thread
-    proc_gpsm_dcm_sync_update_from_mbox(&G_dcom_slv_inbox_rx.dcm_sync);
 
     // acknowledge all masters event flags
     G_master_event_flags_ack = G_dcom_slv_inbox_rx.occ_fw_mailbox[2];

@@ -501,6 +501,9 @@ void amec_slv_voting_box(void)
     }
 }
 
+#endif // @TODO - TEMP - Code not ready yet
+
+
 // Function Specification
 //
 // Name: amec_slv_freq_smh
@@ -518,8 +521,8 @@ void amec_slv_freq_smh(void)
     /*------------------------------------------------------------------------*/
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
-    uint16_t                        k = 0;
-    int8_t                          l_pstate = 0;
+    uint16_t      k = 0;
+    Pstate        l_pstate[MAX_NUM_CORES];
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
@@ -527,30 +530,24 @@ void amec_slv_freq_smh(void)
 
     for (k=0; k<MAX_NUM_CORES; k++)
     {
-        switch (g_amec->proc[0].core[k].f_sms)
-        {
-            case AMEC_CORE_FREQ_IDLE_STATE:
-                // Translate frequency request into a Pstate
-                l_pstate = proc_freq2pstate(g_amec->proc[0].core[k].f_request);
-
-                // Fall through
-            case AMEC_CORE_FREQ_PROCESS_STATE:
-                if(G_sysConfigData.system_type.kvm)
-                {
-                    // update core bounds on kvm systems
-                    proc_set_core_bounds(gpst_pmin(&G_global_pstate_table) + 1, (Pstate) l_pstate, k);
-                }
-                else
-                {
-                    // update core pstate request on non-kvm systems
-                    proc_set_core_pstate((Pstate) l_pstate, k);
-                }
-                break;
-        }
+        // Translate frequency requests into pstates
+        l_pstate[k]= proc_freq2pstate(g_amec->proc[0].core[k].f_request);
     }
+
+    // TODO: if this is an OPAL system, send PGPE an IPC to set clipping bounds
+    //       otherwise, set send PGPE an IPC to set pstates
+
+    if(G_sysConfigData.system_type.kvm)
+    {
+        // Send IPC with G_proc_pmin and l_pstate to set pmin and pmax clips
+    }
+    else
+    {
+        // send an IPC with l_pstate to set pstates for all Cores
+    }
+
 }
 
-#endif // @TODO - TEMP - Code not ready yet
 
 // Function Specification
 //

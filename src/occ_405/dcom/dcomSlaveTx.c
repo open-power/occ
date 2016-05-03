@@ -78,9 +78,6 @@ uint32_t dcom_build_slv_outbox(void)
     // Call dcom_build_occfw_msg
     dcom_build_occfw_msg( SLAVE_OUTBOX );
 
-    // Create message that will be sent to DCM peer
-    dcom_build_dcm_sync_msg( SLAVE_OUTBOX );
-
     l_addr_of_slv_outbox_in_main_mem = dcom_which_buffer_slv_outbox();
 
     l_addr_of_slv_outbox_in_main_mem += G_pbax_id.chip_id*sizeof(dcom_slv_outbox_t);

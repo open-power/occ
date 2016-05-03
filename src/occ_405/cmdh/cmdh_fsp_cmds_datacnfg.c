@@ -45,15 +45,14 @@
 #define FREQ_FORMAT_PWR_MODE_NUM   6
 #define FREQ_FORMAT_BYTES_PER_MODE 3
 #define FREQ_FORMAT_BASE_DATA_SZ   (sizeof(cmdh_store_mode_freqs_t) - sizeof(cmdh_fsp_cmd_header_t))
-#define FREQ_FORMAT_10_NUM_FREQS   3
+
 #define FREQ_FORMAT_11_NUM_FREQS   4
+#define FREQ_FORMAT_20_NUM_FREQS   6
 
-#define DATA_FREQ_VERSION_0        0
-#define DATA_FREQ_VERSION_10       0x10
 #define DATA_FREQ_VERSION_11       0x11
+#define DATA_FREQ_VERSION_20       0x20
 
-#define DATA_PCAP_VERSION_0        0
-#define DATA_PCAP_VERSION_10       0x10
+#define DATA_PCAP_VERSION_20       0x20
 
 #define DATA_SYS_VERSION_20        0x20
 
@@ -66,12 +65,18 @@
 
 #define DATA_MEM_CFG_VERSION_20    0x20
 
-#define DATA_MEM_THROT_VERSION_1   1
-#define DATA_MEM_THROT_VERSION_10  0x10
+#define DATA_MEM_THROT_VERSION_20  0x20
 
 #define DATA_VOLT_UPLIFT_VERSION   0
 
 extern uint8_t G_occ_interrupt_type;
+
+extern uint32_t G_proc_fmin;
+extern uint32_t G_proc_fmax;
+extern uint32_t G_khz_per_pstate;
+
+extern uint8_t G_proc_pmin;
+extern uint8_t G_proc_pmax;
 
 typedef struct data_req_table
 {
@@ -244,14 +249,11 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                 cmdh_fsp_rsp_t       * o_rsp_ptr)
 {
     errlHndl_t                      l_err = NULL;
-    uint16_t                        l_req_freq;
     cmdh_store_mode_freqs_t*        l_cmdp = (cmdh_store_mode_freqs_t*)i_cmd_ptr;
     uint8_t*                        l_buf = ((uint8_t*)(l_cmdp)) + sizeof(cmdh_store_mode_freqs_t);
     uint16_t                        l_data_length;
     uint32_t                        l_mode_data_sz;
-    uint32_t                        i;
     uint16_t                        l_freq = 0;
-    uint8_t                         l_mode = 0;
     uint8_t                         l_count = FREQ_FORMAT_PWR_MODE_NUM;
     uint16_t                        l_table[OCC_MODE_COUNT] = {0};
 
@@ -267,10 +269,9 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
         // the format is 0x10 and we don't have room for the 3 2B frequencies, OR
         // the format is 0x11 and we don;t have room for the 4 2B frequencies.
         if((l_data_length < FREQ_FORMAT_BASE_DATA_SZ) ||
-           ((l_cmdp->version != DATA_FREQ_VERSION_0) && (l_cmdp->version != DATA_FREQ_VERSION_10) &&
-            (l_cmdp->version != DATA_FREQ_VERSION_11)) ||
-           ((DATA_FREQ_VERSION_10 == l_cmdp->version) && (l_mode_data_sz != (FREQ_FORMAT_10_NUM_FREQS * 2))) ||
-           ((DATA_FREQ_VERSION_11 == l_cmdp->version) && (l_mode_data_sz != (FREQ_FORMAT_11_NUM_FREQS * 2))))
+           ((l_cmdp->version != DATA_FREQ_VERSION_11) && (l_cmdp->version != DATA_FREQ_VERSION_20)) ||
+           ((DATA_FREQ_VERSION_11 == l_cmdp->version) && (l_mode_data_sz != (FREQ_FORMAT_11_NUM_FREQS * 2))) ||
+           ((DATA_FREQ_VERSION_20 == l_cmdp->version) && (l_mode_data_sz != (FREQ_FORMAT_20_NUM_FREQS * 2))))
         {
             CMDH_TRAC_ERR("Invalid Frequency Data packet: data_length[%u] version[%u] l_count[%u] l_mode_data_sz[%u]",
                      l_data_length, l_cmdp->version, l_count, l_mode_data_sz);
@@ -281,134 +282,119 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
         if(OCC_MASTER != G_occ_role)
         {
             // We want to ignore this cnfg data if we are not the master.
+            CMDH_TRAC_INFO("Received a Frequncy Data Packet on a Slave OCC: Ignore!");
             break;
         }
 
-        if(DATA_FREQ_VERSION_0 == l_cmdp->version)
+        if(DATA_FREQ_VERSION_11 == l_cmdp->version) // Version 0x11
         {
-            // parse the packed 3-byte data entries and store them
-            // in the global data structure.
-            for(i = 0; i < l_mode_data_sz; i += FREQ_FORMAT_BYTES_PER_MODE)
-            {
-                l_mode = l_buf[i];
-                l_freq = (l_buf[i+1] << 8 | l_buf[i+2]);
-
-                if(l_mode == OCC_MODE_NOMINAL && !l_freq)
-                {
-                    CMDH_TRAC_ERR("Received a frequency of 0 MHZ for nominal");
-                    cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
-                    break;
-                }
-
-                if(l_mode >= OCC_MODE_COUNT)
-                {
-                    CMDH_TRAC_ERR("Unrecognized frequency mode=%d ",
-                             l_mode);
-                    cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
-                    break;
-                }
-
-                // FFO Mode Checks - only need to verify when *in* FFO mode
-                if( ( OCC_MODE_FFO == CURRENT_MODE() )
-                        && ( OCC_MODE_FFO == l_mode ) )
-                {
-                    l_req_freq = l_freq;
-
-                    // Check and make sure that FFO freq >= Fmin, if not, log an error.
-                    if( l_freq < l_table[OCC_MODE_MIN_FREQUENCY] )
-                    {
-                        l_freq = l_table[OCC_MODE_MIN_FREQUENCY];
-                    }
-
-                    // Check and make sure that FFO freq <= Fmax, if not, log an error.
-                    else if ( l_freq > l_table[OCC_MODE_TURBO] )
-                    {
-                        l_freq = l_table[OCC_MODE_TURBO];
-                    }
-
-                    // Log an error if we could not honor the requested FFO frequency, but keep going.
-                    if(l_req_freq != l_freq)
-                    {
-                        CMDH_TRAC_ERR("FFO Freq out of range. request=%d, limit=%d ",
-                                 l_req_freq,  l_freq);
-                        /* @
-                         * @errortype
-                         * @moduleid    DATA_STORE_FREQ_DATA
-                         * @reasoncode  INVALID_INPUT_DATA
-                         * @userdata1   requested frequency
-                         * @userdata2   frequency used
-                         * @userdata4   OCC_NO_EXTENDED_RC
-                         * @devdesc     OCC recieved an invalid FFO frequency
-                         */
-                        l_err = createErrl(DATA_STORE_FREQ_DATA,
-                                           INVALID_INPUT_DATA,
-                                           OCC_NO_EXTENDED_RC,
-                                           ERRL_SEV_INFORMATIONAL,
-                                           NULL,
-                                           DEFAULT_TRACE_SIZE,
-                                           l_req_freq,
-                                           l_freq);
-                        commitErrl(&l_err);
-                    }
-                }
-
-                // Set the frequency for the passed in mode
-                CMDH_TRAC_INFO("Mode %d frequency set: %d MHz",l_mode, l_freq);
-                l_table[l_mode] = l_freq;
-
-                // If the mode is Turbo, also stored that frequency for DPS modes
-                if(l_mode == OCC_MODE_TURBO)
-                {
-                    l_table[OCC_MODE_DYN_POWER_SAVE] = l_freq;
-                    l_table[OCC_MODE_DYN_POWER_SAVE_FP] = l_freq;
-                }
-            }
-        }
-        else if(DATA_FREQ_VERSION_10 == l_cmdp->version) // Version 0x10 - OpenPower
-        {
-            // First Nominal Freq, then Max Freq, then Min Freq, which we'll
-            // store under the existing enums.
-            l_freq = (l_buf[0] << 8 | l_buf[1]);
-            l_table[OCC_MODE_NOMINAL] = l_freq;
-
-            CMDH_TRAC_INFO("Nominal frequency = %d", l_freq);
-
-            l_freq = (l_buf[2] << 8 | l_buf[3]);
-            l_table[OCC_MODE_TURBO] = l_freq;
-
-            CMDH_TRAC_INFO("Max frequency = %d", l_freq);
-
-            l_freq = (l_buf[4] << 8 | l_buf[5]);
-            l_table[OCC_MODE_PWRSAVE] = l_freq;
-            l_table[OCC_MODE_MIN_FREQUENCY] = l_freq;
-
-            CMDH_TRAC_INFO("Min frequency = %d", l_freq);
-
-        }
-        else if(DATA_FREQ_VERSION_11 == l_cmdp->version) // Version 0x11 - OpenPower
-        {
-            // First Nominal Freq, then Max Freq, then Min Freq, which we'll
+            // 1) Nominal, 2) Turbo,
+            // 3) Minimum, 4) Ultra Turbo
             // store under the existing enums.
 
+            // Bytes 3-4 Nominal Frequency Point
             l_freq = (l_buf[0] << 8 | l_buf[1]);
             l_table[OCC_MODE_NOMINAL] = l_freq;
             CMDH_TRAC_INFO("Nominal frequency = %d", l_freq);
 
+            // Bytes 5-6 Turbo Frequency Point
             l_freq = (l_buf[2] << 8 | l_buf[3]);
             l_table[OCC_MODE_TURBO] = l_freq;
             CMDH_TRAC_INFO("Turbo frequency = %d", l_freq);
 
+            // Bytes 7-8 Minimum Frequency Point
             l_freq = (l_buf[4] << 8 | l_buf[5]);
             l_table[OCC_MODE_PWRSAVE] = l_freq;
             l_table[OCC_MODE_MIN_FREQUENCY] = l_freq;
+            G_proc_fmin = l_freq;
             CMDH_TRAC_INFO("Minimum frequency = %d", l_freq);
 
+
+            // Bytes 9-10 Ultr Turbo Frequency Point
             l_freq = (l_buf[6] << 8 | l_buf[7]);
+            if(l_freq)
+            {
+                G_proc_fmax = l_freq;
+            }
+            else // If Ultra Turbo Frequency Point = 0, Fmax = Turbo Frequency
+            {
+                G_proc_fmax = l_table[OCC_MODE_TURBO];
+            }
+            l_table[OCC_MODE_UTURBO] = l_freq;
+            CMDH_TRAC_INFO("UT frequency = %d", l_freq);
+        }
+        else if(DATA_FREQ_VERSION_20 == l_cmdp->version) // Version 0x20
+        {
+            // 1) Nominal, 2) Turbo, 3) Minimum,
+            // 4) Ultra Turbo, 5) Static PS, 6) FFO
+            // store under the existing enums.
+
+            // Bytes 3-4 Nominal Frequency Point
+            l_freq = (l_buf[0] << 8 | l_buf[1]);
+            l_table[OCC_MODE_NOMINAL] = l_freq;
+            CMDH_TRAC_INFO("Nominal frequency = %d", l_freq);
+
+            // Bytes 5-6 Turbo Frequency Point
+            l_freq = (l_buf[2] << 8 | l_buf[3]);
+            l_table[OCC_MODE_TURBO] = l_freq;
+            CMDH_TRAC_INFO("Turbo frequency = %d", l_freq);
+
+            // Bytes 7-8 Minimum Frequency Point
+            l_freq = (l_buf[4] << 8 | l_buf[5]);
+            l_table[OCC_MODE_MIN_FREQUENCY] = l_freq;
+            G_proc_fmin = l_freq;
+            CMDH_TRAC_INFO("Minimum frequency = %d", l_freq);
+
+            // Bytes 9-10 Ultr Turbo Frequency Point
+            l_freq = (l_buf[6] << 8 | l_buf[7]);
+            if(l_freq)
+            {
+                G_proc_fmax = l_freq;
+            }
+            else // If Ultra Turbo Frequency Point = 0, Fmax = Turbo Frequency
+            {
+                G_proc_fmax = l_table[OCC_MODE_TURBO];
+            }
+            l_table[OCC_MODE_UTURBO] = l_freq;
             CMDH_TRAC_INFO("UT frequency = %d", l_freq);
 
+            // Bytes 11-12 Static Power Save Frequency Point
+            l_freq = (l_buf[8] << 8 | l_buf[9]);
+            l_table[OCC_MODE_PWRSAVE] = l_freq;
+            CMDH_TRAC_INFO("Static Power Save frequency = %d", l_freq);
+
+            // Bytes 13-14 FFO Frequency Point
+            l_freq = (l_buf[10] << 8 | l_buf[11]);
+            l_table[OCC_MODE_FFO] = l_freq;
+            CMDH_TRAC_INFO("FFO Frequency = %d", l_freq);
+
+            // Check for FFO Frequency point consistency,
+            // rest of the frequency points are checked next
+            if(l_freq < G_proc_fmin || l_freq > G_proc_fmax)
+            {
+                CMDH_TRAC_ERR("FFO Freq point is out-of-range - Fmin=0x%x, Fmax=0x%x, FFO=0x%x",
+                              l_freq, G_proc_fmin, G_proc_fmax);
+            }
+        }
+
+        // Calculate minimum Pstate:
+        G_proc_pmin = G_proc_pmax + ((G_proc_fmax - G_proc_fmin)/G_khz_per_pstate);
+
+        // inconsistent Frequency Points?
+        if((l_table[OCC_MODE_UTURBO] < l_table[OCC_MODE_TURBO] && l_table[OCC_MODE_UTURBO]) ||
+           l_table[OCC_MODE_TURBO]   < l_table[OCC_MODE_NOMINAL] ||
+           l_table[OCC_MODE_NOMINAL] < l_table[OCC_MODE_PWRSAVE] ||
+           l_table[OCC_MODE_PWRSAVE] < l_table[OCC_MODE_MIN_FREQUENCY])
+        {
+            CMDH_TRAC_ERR("Inconsistent Frequency points - UT-T=0x%x, NOM-PS=0x%x, MIN=0x%x",
+                          (l_table[OCC_MODE_UTURBO] << 16)  + l_table[OCC_MODE_TURBO],
+                          (l_table[OCC_MODE_NOMINAL] << 16) + l_table[OCC_MODE_PWRSAVE],
+                          l_table[OCC_MODE_MIN_FREQUENCY]);
         }
 
     }while(0);
+
+
 
     // Change Data Request Mask to indicate we got this data
     if(!l_err && (G_occ_role == OCC_MASTER))
@@ -1135,9 +1121,7 @@ errlHndl_t data_store_power_cap(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                         cmdh_fsp_rsp_t * i_rsp_ptr)
 {
     errlHndl_t                      l_err = NULL;
-/* TEMP -- NOT SUPPORTED IN PHASE1 */
-CMDH_TRAC_ERR("data_store_power_cap: data config type not yet supported!");
-#if 0
+
     // Cast the command to the struct for this format
     cmdh_pcap_config_t * l_cmd_ptr = (cmdh_pcap_config_t *)i_cmd_ptr;
     uint16_t                        l_data_length = 0;
@@ -1148,17 +1132,9 @@ CMDH_TRAC_ERR("data_store_power_cap: data config type not yet supported!");
     l_data_length = CONVERT_UINT8_ARRAY_UINT16(l_cmd_ptr->data_length[0], l_cmd_ptr->data_length[1]);
 
     // Check version and length
-    if(l_cmd_ptr->version == DATA_PCAP_VERSION_0)
+    if(l_cmd_ptr->version == DATA_PCAP_VERSION_20)
     {
         l_pcap_data_sz = sizeof(cmdh_pcap_config_t) - sizeof(cmdh_fsp_cmd_header_t);
-        if(l_pcap_data_sz == l_data_length)
-        {
-            l_invalid_input = FALSE;
-        }
-    }
-    else if(l_cmd_ptr->version == DATA_PCAP_VERSION_10)
-    {
-        l_pcap_data_sz = sizeof(cmdh_pcap_config_v10_t) - sizeof(cmdh_fsp_cmd_header_t);
         if(l_pcap_data_sz == l_data_length)
         {
             l_invalid_input = FALSE;
@@ -1167,8 +1143,8 @@ CMDH_TRAC_ERR("data_store_power_cap: data config type not yet supported!");
 
     // This is the master OCC and packet data length and version are valid?
     // TMGT should never send this packet to a slave OCC.
-    // if the is not master, OR
-    // if the version doesn't equal what we expect, OR
+    // if the OCC is not master, OR
+    // if the version doesn't equal what we expect (0x20), OR
     // if the expected data length does not agree with the actual data length...
     if((OCC_MASTER != G_occ_role) || l_invalid_input)
     {
@@ -1202,24 +1178,10 @@ CMDH_TRAC_ERR("data_store_power_cap: data config type not yet supported!");
     }
     else
     {
-        if(l_cmd_ptr->version == DATA_SYS_VERSION_0)
+        if(l_cmd_ptr->version == DATA_SYS_VERSION_20)
         {
             // Copy power cap data into G_master_pcap_data
             memcpy(&G_master_pcap_data, &l_cmd_ptr->pcap_config, sizeof(cmdh_pcap_config_data_t));
-        }
-        else if(l_cmd_ptr->version == DATA_SYS_VERSION_10)
-        {
-            // Copy data
-            cmdh_pcap_config_v10_t * l_cmd2_ptr = (cmdh_pcap_config_v10_t *)i_cmd_ptr;
-            G_master_pcap_data.soft_min_pcap   = l_cmd2_ptr->pcap_config.min_pcap;
-            G_master_pcap_data.hard_min_pcap   = l_cmd2_ptr->pcap_config.min_pcap;
-            G_master_pcap_data.max_pcap        = l_cmd2_ptr->pcap_config.sys_max_pcap;
-            G_master_pcap_data.oversub_pcap    = l_cmd2_ptr->pcap_config.oversub_pcap;
-            G_master_pcap_data.system_pcap     = l_cmd2_ptr->pcap_config.sys_max_pcap;
-            G_master_pcap_data.unthrottle      = 0;
-
-            // NOTE: The customer power cap will be set via a separate command
-            // from BMC/HTMGT.
         }
 
         // The last byte in G_master_pcap_data is a counter that needs to be incremented.
@@ -1234,7 +1196,6 @@ CMDH_TRAC_ERR("data_store_power_cap: data config type not yet supported!");
         // will update data mask when slave code acquires data
         CMDH_TRAC_IMP("data store pcap: Got valid PCAP Config data via TMGT. Count:%i, Data Cfg mask[%x]",G_master_pcap_data.pcap_data_count, G_data_cnfg->data_mask);
     }
-#endif // #if 0
     return l_err;
 }
 
@@ -1718,9 +1679,6 @@ errlHndl_t data_store_mem_throt(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                       cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     errlHndl_t                      l_err = NULL;
-/* TEMP --  NOT SUPPORTED IN PHASE1 */
-CMDH_TRAC_ERR("data_store_mem_throt: data config type not yet supported!");
-#if 0
     cmdh_mem_throt_t*               l_cmd_ptr = (cmdh_mem_throt_t*)i_cmd_ptr;
     uint16_t                        l_data_length = 0;
     uint16_t                        l_exp_data_length = 0;
@@ -1735,20 +1693,10 @@ CMDH_TRAC_ERR("data_store_mem_throt: data config type not yet supported!");
         // Sanity checks on input data, break if:
         //  * the version doesn't match what we expect,  OR
         //  * the actual data length does not match the expected data length.
-        if(l_cmd_ptr->header.version == DATA_MEM_THROT_VERSION_1)
+        if(l_cmd_ptr->header.version == DATA_MEM_THROT_VERSION_20)
         {
             l_exp_data_length = sizeof(cmdh_mem_throt_header_t) - sizeof(cmdh_fsp_cmd_header_t) +
                 (l_cmd_ptr->header.num_data_sets * sizeof(cmdh_mem_throt_data_set_t));
-
-            if(l_exp_data_length == l_data_length)
-            {
-                l_invalid_input = FALSE;
-            }
-        }
-        else if(l_cmd_ptr->header.version == DATA_MEM_THROT_VERSION_10)
-        {
-            l_exp_data_length = sizeof(cmdh_mem_throt_header_t) - sizeof(cmdh_fsp_cmd_header_t) +
-                (l_cmd_ptr->header.num_data_sets * sizeof(cmdh_mem_throt_data_set_v10_t));
 
             if(l_exp_data_length == l_data_length)
             {
@@ -1767,106 +1715,106 @@ CMDH_TRAC_ERR("data_store_mem_throt: data config type not yet supported!");
             break;
         }
 
-        if(l_cmd_ptr->header.version == DATA_MEM_THROT_VERSION_1)
+        if(l_cmd_ptr->header.version == DATA_MEM_THROT_VERSION_20)
         {
-            // Store the memory throttle settings
-            for(i=0; i<l_cmd_ptr->header.num_data_sets; i++)
+            if(MEM_TYPE_NIMBUS ==  G_sysConfigData.mem_type)
             {
-                cmdh_mem_throt_data_set_t* l_data_set = &l_cmd_ptr->data_set[i];
-                mem_throt_config_data_t    l_temp_set;
-                uint16_t * l_n_ptr;
-
-                // Validate the centaur and mba #'s for this data set
-                if(l_data_set->centaur_num >= MAX_NUM_CENTAURS ||
-                    l_data_set->mba_num >= NUM_MBAS_PER_CENTAUR)
+                // Store the memory throttle settings
+                for(i=0; i<l_cmd_ptr->header.num_data_sets; i++)
                 {
-                    CMDH_TRAC_ERR("data_store_mem_throt: Invalid mba or centaur number. entry=%d, cent=%d, mba=%d",
-                             i,
-                             l_data_set->centaur_num,
-                             l_data_set->mba_num);
-                    cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
-                    break;
-                }
+                    nimbus_mem_throt_t* l_data_set = &l_cmd_ptr->data_set[i].nimbus;
+                    mem_throt_config_data_t    l_temp_set;
+                    uint16_t * l_n_ptr;
 
-                // Copy into a temporary buffer while we check for N values of 0
-                memcpy(&l_temp_set, &(l_data_set->min_ot_n_per_mba), sizeof(mem_throt_config_data_t));
-
-                // A 0 for any N value is an error
-                for(l_n_ptr = &l_temp_set.min_ot_n_per_mba; l_n_ptr <= &l_temp_set.ovs_n_per_chip; l_n_ptr++)
-                {
-                    if(!(*l_n_ptr))
+                    // Validate the validity of Nimbus:
+                    // - MC num (0 for MC01, and 2 for MC23)
+                    // - and Port Number (0-3)
+                    if((l_data_set->mc_num != 0 && l_data_set->mc_num != 2) ||
+                       l_data_set->port_num >= MAX_NUM_MCU_PORTS)
                     {
-                        CMDH_TRAC_ERR("data_store_mem_throt: Memory Throttle N value is 0! cent[%d] mba[%d]",
-                                 l_data_set->centaur_num, l_data_set->mba_num);
+                        CMDH_TRAC_ERR("data_store_mem_throt: Invalid MC# or Port#. entry=%d, cent=%d, mba=%d",
+                                      i,
+                                      l_data_set->mc_num,
+                                      l_data_set->port_num);
                         cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
                         break;
                     }
 
-                }
-                if(l_err)
-                {
-                    break;
-                }
+                    // Copy into a temporary buffer while we check for N values of 0
+                    memcpy(&l_temp_set, &(l_data_set->min_n_per_port), sizeof(mem_throt_config_data_t));
 
-                memcpy(&G_sysConfigData.mem_throt_limits[l_data_set->centaur_num][l_data_set->mba_num],
-                       &(l_data_set->min_ot_n_per_mba),
-                       sizeof(mem_throt_config_data_t));
+                    // A 0 for any N value, or power value, is an error
+                    for(l_n_ptr = &l_temp_set.min_n_per_mba; l_n_ptr <= &l_temp_set.ovs_mem_power; l_n_ptr++)
+                    {
+                        if(!(*l_n_ptr))
+                        {
+                            CMDH_TRAC_ERR("data_store_mem_throt: Memory Throttle N/Power value is 0! MC[%d] Port[%d]",
+                                          l_data_set->mc_num, l_data_set->port_num);
+                            cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
+                            break;
+                        }
 
-                l_configured_mbas |= 1 << ((l_data_set->centaur_num * 2) + l_data_set->mba_num);
+                    }
+                    if(l_err)
+                    {
+                        break;
+                    }
+
+                    memcpy(&G_sysConfigData.mem_throt_limits[l_data_set->mc_num][l_data_set->port_num],
+                           &(l_data_set->min_n_per_port),
+                           sizeof(mem_throt_config_data_t));
+
+                    l_configured_mbas |= 1 << (((l_data_set->mc_num<<1) * 2) + l_data_set->port_num);
+                }
             }
-        }
-        else if(l_cmd_ptr->header.version == DATA_MEM_THROT_VERSION_10)
-        {
-            // Store the memory throttle settings
-            for(i=0; i<l_cmd_ptr->header.num_data_sets; i++)
+            else if (MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type)
             {
-                cmdh_mem_throt_v10_t*          l_cmd2_ptr = (cmdh_mem_throt_v10_t*)i_cmd_ptr;
-                cmdh_mem_throt_data_set_v10_t* l_data_set = &l_cmd2_ptr->data_set[i];
-                mem_throt_config_data_t        l_temp_set;
-                uint16_t * l_n_ptr;
-
-                // Validate the centaur and mba #'s for this data set
-                if(l_data_set->centaur_num >= MAX_NUM_CENTAURS ||
-                    l_data_set->mba_num >= NUM_MBAS_PER_CENTAUR)
+                // Store the memory throttle settings
+                for(i=0; i<l_cmd_ptr->header.num_data_sets; i++)
                 {
-                    CMDH_TRAC_ERR("data_store_mem_throt: Invalid mba or centaur number. entry=%d, cent=%d, mba=%d",
-                             i,
-                             l_data_set->centaur_num,
-                             l_data_set->mba_num);
-                    cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
-                    break;
-                }
+                    cumulus_mem_throt_t* l_data_set = &l_cmd_ptr->data_set[i].cumulus;
+                    mem_throt_config_data_t    l_temp_set;
+                    uint16_t * l_n_ptr;
 
-                // Copy into a temporary buffer while we check for N values of 0
-                l_temp_set.min_ot_n_per_mba = l_data_set->min_ot_n_per_mba;
-                l_temp_set.nom_n_per_mba = l_data_set->redupwr_n_per_mba;
-                l_temp_set.nom_n_per_chip = l_data_set->redupwr_n_per_chip;
-                l_temp_set.turbo_n_per_mba = l_data_set->redupwr_n_per_mba;
-                l_temp_set.turbo_n_per_chip = l_data_set->redupwr_n_per_chip;
-                l_temp_set.ovs_n_per_mba = l_data_set->ovs_n_per_mba;
-                l_temp_set.ovs_n_per_chip = l_data_set->ovs_n_per_chip;
-
-                // A 0 for any N value is an error
-                for(l_n_ptr = &l_temp_set.min_ot_n_per_mba; l_n_ptr <= &l_temp_set.ovs_n_per_chip; l_n_ptr++)
-                {
-                    if(!(*l_n_ptr))
+                    // Validate the centaur and mba #'s for this data set
+                    if(l_data_set->centaur_num >= MAX_NUM_CENTAURS ||
+                       l_data_set->mba_num >= NUM_MBAS_PER_CENTAUR)
                     {
-                        CMDH_TRAC_ERR("data_store_mem_throt: Memory Throttle N value is 0! cent[%d] mba[%d]",
-                                 l_data_set->centaur_num, l_data_set->mba_num);
+                        CMDH_TRAC_ERR("data_store_mem_throt: Invalid mba or centaur number. entry=%d, cent=%d, mba=%d",
+                                      i,
+                                      l_data_set->centaur_num,
+                                      l_data_set->mba_num);
                         cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
                         break;
                     }
-                }
-                if(l_err)
-                {
-                    break;
-                }
 
-                memcpy(&G_sysConfigData.mem_throt_limits[l_data_set->centaur_num][l_data_set->mba_num],
-                       &l_temp_set,
-                       sizeof(mem_throt_config_data_t));
+                    // Copy into a temporary buffer while we check for N values of 0
+                    memcpy(&l_temp_set, &(l_data_set->min_n_per_mba), sizeof(mem_throt_config_data_t));
 
-                l_configured_mbas |= 1 << ((l_data_set->centaur_num * 2) + l_data_set->mba_num);
+                    // A 0 for any N value is an error
+                    for(l_n_ptr = &l_temp_set.min_n_per_mba; l_n_ptr <= &l_temp_set.ovs_mem_power; l_n_ptr++)
+                    {
+                        if(!(*l_n_ptr))
+                        {
+                            CMDH_TRAC_ERR("data_store_mem_throt: Memory Throttle N value is 0! cent[%d] mba[%d]",
+                                          l_data_set->centaur_num, l_data_set->mba_num);
+                            cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
+                            break;
+                        }
+
+                    }
+                    if(l_err)
+                    {
+                        break;
+                    }
+
+                    memcpy(&G_sysConfigData.mem_throt_limits[l_data_set->centaur_num][l_data_set->mba_num],
+                           &(l_data_set->min_n_per_mba),
+                           sizeof(mem_throt_config_data_t));
+
+                    l_configured_mbas |= 1 << ((l_data_set->centaur_num * 2) + l_data_set->mba_num);
+
+                }
             }
         }
 
@@ -1880,9 +1828,9 @@ CMDH_TRAC_ERR("data_store_mem_throt: data config type not yet supported!");
                  l_configured_mbas);
 
         // Update the configured mba bitmap
-        G_configured_mbas = l_configured_mbas;
+// @TEMP @TODO: defined in centaur_control - Not ready yet
+//        G_configured_mbas = l_configured_mbas;
     }
-#endif
     return l_err;
 }
 

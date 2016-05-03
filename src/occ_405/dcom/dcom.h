@@ -45,10 +45,6 @@
 #define OCC_MASTER        1
 #define OCC_BACKUP_MASTER 2
 
-// OCC roles inside a DCM socket
-#define OCC_DCM_SLAVE     0
-#define OCC_DCM_MASTER    1
-
 // Memory address space where DCOM, sensor data, OPAL communications,
 // etc take place. Uses BAR2, with pba_region = 0b10
 #define COMMON_BASE_ADDRESS 0xA0000000
@@ -99,16 +95,16 @@
 #define NUM_ENTRIES_PBAX_QUEUE0 32
 #define NUM_ENTRIES_PBAX_QUEUE1 16
 
-// Wait for defines number of retries for task 
+// Wait for defines number of retries for task
 #define MAX_WAIT_FOR_SLAVES 400
 #define MAX_WAIT_FOR_MASTER 400
 
 // general defines
 #define TOD_SIZE 6
 #define NUM_TOD_SENSORS 3
-#define SLV_INBOX_RSV_SIZE 64
+#define SLV_INBOX_RSV_SIZE 68
 #define SLV_MAILBOX_SIZE 32
-#define SLV_OUTBOX_RSV_SIZE 614
+#define SLV_OUTBOX_RSV_SIZE 618
 #define DOORBELL_RSV_SIZE 1
 
 #define DCOM_250us_GAP 1
@@ -180,11 +176,8 @@ typedef struct
           freqConfig_t sys_mode_freq;
           uint8_t      tb_record;
       };
-      uint8_t  reserved[ SLV_INBOX_RSV_SIZE ];                      // [154] - 64 bytes
+      uint8_t  reserved[ SLV_INBOX_RSV_SIZE ];                      // [154] - 68 bytes
     };
-
-    // GPSM DCM Synchronization
-    proc_gpsm_dcm_sync_occfw_t dcm_sync;                            // [220] - 4 bytes
 
     // General Firmware Message Passing
     uint8_t  occ_fw_mailbox[ SLV_MAILBOX_SIZE ];                    // [224] - 32 bytes
@@ -234,7 +227,7 @@ typedef struct __attribute__ ((packed))
     // Reserved Bytes
     union
     {
-        uint8_t  reserved[SLV_OUTBOX_RSV_SIZE];                  // [374] - 614 bytes
+        uint8_t  reserved[SLV_OUTBOX_RSV_SIZE];                  // [374] - 618 bytes
         struct __attribute__ ((packed))
         {
             uint8_t _reserved_1;
@@ -242,9 +235,6 @@ typedef struct __attribute__ ((packed))
             uint32_t counter;
         };
     };
-
-    // GPSM DCM Synchronization
-    proc_gpsm_dcm_sync_occfw_t dcm_sync;                         // [988] - 4 bytes
 
     // General Firmware Message Passing
     uint8_t  occ_fw_mailbox[SLV_MAILBOX_SIZE];                   // [992] - 32 bytes
@@ -410,10 +400,6 @@ extern uint8_t G_slv_outbox_complete;
 // Specifies if the OCC is a MASTER or SLAVE
 extern uint8_t G_occ_role;
 
-// Specifies if the OCC is configured to be a Master or Slave inside the DCM
-// chip. In the case of SCMs, it will always return the Master role.
-extern uint8_t G_dcm_occ_role;
-
 // Holds PowerBus ID of this OCC (Chip & node). For P9, this is the same
 // for pob_id and PBAX ID.
 extern pob_id_t G_pbax_id;
@@ -531,8 +517,5 @@ void task_dcom_parse_occfwmsg(task_t *i_self);
 
 // Copy occ fw msg
 void dcom_build_occfw_msg( dcom_error_type_t i_which_msg );
-
-// Copy OCC DCM Sync Messages
-void dcom_build_dcm_sync_msg(const dcom_error_type_t i_which_msg);
 
 #endif //_DCOM_H

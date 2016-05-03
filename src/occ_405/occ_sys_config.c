@@ -468,7 +468,7 @@ void sysConfigFspLess(void)
                                | DATA_MASK_PCAP_PRESENT );
 
     // Install the Pstate Table
-    proc_gpsm_pstate_initialize((PstateSuperStructure*) G_defaultOccPstateSuperStructure);
+//    proc_pstate_initialize((PstateSuperStructure*) G_defaultOccPstateSuperStructure);
 
 }
 

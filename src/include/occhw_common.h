@@ -246,7 +246,7 @@ extern unsigned int g_ocb_timer_divider; //grm
 /// values.  To avoid bugs, Pstate register fields should always be extracted
 /// to a variable of type Pstate.  If the size of Pstate variables ever
 /// changes we will have to revisit this convention.
-typedef int8_t Pstate;
+typedef uint8_t Pstate;
 
 /// A DPLL frequency code
 ///

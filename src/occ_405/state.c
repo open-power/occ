@@ -42,7 +42,6 @@
 #include <fir_data_collect.h>
 #include <dimm.h>
 
-extern proc_gpsm_dcm_sync_occfw_t G_proc_dcm_sync_state;
 extern bool G_mem_monitoring_allowed;
 extern task_t G_task_table[TASK_END];  // Global task table
 
@@ -143,10 +142,14 @@ errlHndl_t SMGR_standby_to_observation()
         rtl_clr_run_mask_deferred(RTL_FLAG_STANDBY);
         rtl_set_run_mask_deferred(RTL_FLAG_OBS);
 
+        // Initialize key freq2pstate Global parameters
+        proc_pstate_initialize();
+
         // Set the actual STATE now that we have finished everything else
         CURRENT_STATE() = OCC_STATE_OBSERVATION;
 
         TRAC_IMP("SMGR: Standby to Observation Transition Completed");
+
     }
     else if(FALSE == l_error_logged)
     {
@@ -223,7 +226,9 @@ errlHndl_t SMGR_observation_to_active()
     int                l_extRc = OCC_NO_EXTENDED_RC;
     int                l_rc = 0;
 
-    // First check to make sure Pstates are enabled. If they aren't, then
+    // Pstates are enabled via an IPC call to PGPE once the OCC reaches the
+    // observation state. We still have to check that the enable_pstates() IPC job
+    // on the PGPE has completed before transitioned to the active state. otherwise,
     // wait TBD seconds in case we are going directly from Standby to Active
     // (pstate init only happens in observation state, so it might not be
     // done yet...must call it in this while loop since it is done in this
@@ -238,8 +243,7 @@ errlHndl_t SMGR_observation_to_active()
     // If we have all data we need to go to active state, but don't have pstates
     // enabled yet...then we will do the aforementioned wait
     if(((DATA_get_present_cnfgdata() & SMGR_VALIDATE_DATA_ACTIVE_MASK) ==
-            SMGR_VALIDATE_DATA_ACTIVE_MASK)
-        && !proc_is_hwpstate_enabled() )
+        SMGR_VALIDATE_DATA_ACTIVE_MASK))
     {
         SsxTimebase start = ssx_timebase_get();
         while( ! proc_is_hwpstate_enabled() )
@@ -249,9 +253,7 @@ errlHndl_t SMGR_observation_to_active()
             {
                 if(FALSE == l_error_logged)
                 {
-                    TRAC_ERR("SMGR: Timeout waiting for Pstates to be enabled, master state=%d, slave state=%d, pmc_mode[%08x], chips_present[%02x], pmc_deconfig[%08x]",
-                            G_proc_dcm_sync_state.sync_state_master,
-                            G_proc_dcm_sync_state.sync_state_slave,
+                    TRAC_ERR("SMGR: Timeout waiting for Pstates to be enabled, pmc_mode[%08x], chips_present[%02x], pmc_deconfig[%08x]",
                             in32(PMC_MODE_REG),
                             G_sysConfigData.is_occ_present,
                             in32(PMC_CORE_DECONFIGURATION_REG));
@@ -259,7 +261,6 @@ errlHndl_t SMGR_observation_to_active()
                 l_extRc = ERC_GENERIC_TIMEOUT;
                 break;
             }
-            proc_gpsm_dcm_sync_enable_pstates_smh();
             ssx_sleep(SSX_MICROSECONDS(500));
         }
         if(proc_is_hwpstate_enabled() && G_sysConfigData.system_type.kvm)

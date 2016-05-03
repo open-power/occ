@@ -45,6 +45,7 @@
 #define MAX_NUM_MEM_CONTROLLERS  8
 #define MAX_NUM_CENTAURS         8
 #define NUM_PROC_VRMS            2
+#define MAX_NUM_MCU_PORTS        4
 
 #define NUM_PROC_CHIPS_PER_OCC          1
 #define NUM_CENTAURS_PER_MEM_CONTROLLER 1
@@ -225,13 +226,22 @@ typedef struct
 // Memory Throttle settings
 typedef struct
 {
-    uint16_t    min_ot_n_per_mba;   //minimum value
+    uint16_t    min_n_per_mba;      //minimum value
+    uint16_t    min_mem_power;      // Max mem Power @min (x0.1W)
+
+    uint16_t    pcap1_n_per_mba;    //max mba value for Power Cap Level 1
+    uint16_t    pcap1_mem_power;    //max  memory power @PCAP L1
+
+    uint16_t    pcap2_n_per_mba;    //max mba value for Power Cap Level 2
+    uint16_t    pcap2_mem_power;    //max  memory power @PCAP L2
+
     uint16_t    nom_n_per_mba;      //max mba value for nominal mode
     uint16_t    nom_n_per_chip;     //chip setting for nominal mode
-    uint16_t    turbo_n_per_mba;    //max mba value for turbo mode
-    uint16_t    turbo_n_per_chip;   //chip setting for nominal mode
+    uint16_t    nom_mem_power;      //max memory power @Redundant
+
     uint16_t    ovs_n_per_mba;      //max mba value for oversubscription
     uint16_t    ovs_n_per_chip;     //chip setting for oversubscription
+    uint16_t    ovs_mem_power;      //max memory power @oversubscription
 } mem_throt_config_data_t;
 
 // Sys Config Structure
