@@ -62,10 +62,13 @@ void Cmd_Hndl_thread_routine(void *arg)
     {
         // Mark Errl as committed, so FSP knows right away we are having
         // problems with Attention, if that is the cause of the error.
+
         commitErrl(&l_errlHndl);
     }
-
-    CHECKPOINT(FSP_COMM_INITIALIZED);
+    else    // Mark the Checkpoint only if no error was logged
+    {
+        CHECKPOINT(FSP_COMM_INITIALIZED);
+    }
 
     // ------------------------------------------------
     // Loop forever, handling FSP commands
