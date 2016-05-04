@@ -173,7 +173,7 @@ errlHndl_t SMGR_set_mode(const OCC_MODE i_mode,
              break;
          }
 
-         // SAPPHIRE only accepts DPS-FE mode. In case OCC gets other modes, it should accept the request
+         // OPAL only accepts DPS-FE mode. In case OCC gets other modes, it should accept the request
          // and keep reporting back that it is in that mode. However, internally we should not
          // initiate any mode transition, i.e., OCC should remain internally in DPS-FE mode.
          if(G_sysConfigData.system_type.kvm)
@@ -181,7 +181,7 @@ errlHndl_t SMGR_set_mode(const OCC_MODE i_mode,
              G_occ_external_req_mode_kvm = l_mode;
              if (l_mode !=  OCC_MODE_DYN_POWER_SAVE)
              {
-                 TRAC_ERR("SAPPHIRE only accepts DPS-FE mode(6) but requested mode is : %d", l_mode);
+                 TRAC_ERR("OPAL only accepts DPS-FE mode(6) but requested mode is : %d", l_mode);
                  l_mode = OCC_MODE_DYN_POWER_SAVE;
              }
          }

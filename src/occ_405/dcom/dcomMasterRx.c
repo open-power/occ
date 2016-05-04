@@ -133,8 +133,8 @@ void task_dcom_rx_slv_outboxes( task_t *i_self)
             l_slv_response_mask |= (0x01 << l_slv);
 
             // Check valid address (should be inside inbox addresses range)
-            if ( (ADDR_SLAVE_OUTBOX_MAIN_MEM_PING <= l_addr) &&
-                 ((ADDR_SLAVE_OUTBOX_MAIN_MEM_PONG+(sizeof(dcom_slv_outbox_t)*MAX_OCCS)) > l_addr) )
+            if ( (SLAVE_OUTBOX_PING_COMMON_ADDRESS <= l_addr) &&
+                 ((SLAVE_OUTBOX_PONG_COMMON_ADDRESS+(sizeof(dcom_slv_outbox_t)*MAX_OCCS)) > l_addr) )
             {
                 DCOM_DBG("2.X. Copy down Slave Outboxes from %x\n",l_addr);
                 uint32_t l_ssxrc = 0;

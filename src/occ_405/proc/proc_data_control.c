@@ -220,12 +220,12 @@ void task_core_data_control( task_t * i_task )
         G_core_data_control_parms.config = (uint64_t) (((uint64_t) G_present_hw_cores) << 32);
         if(G_sysConfigData.system_type.kvm)
         {
-            //Set the chiplet bounds (pmax/pmin) only on sapphire
+            //Set the chiplet bounds (pmax/pmin) only on opal
             G_core_data_control_parms.select = GPE_SET_PSTATES_PMBR;
         }
         else
         {
-            //Set the chiplet pstate request on non-sapphire systems
+            //Set the chiplet pstate request on non-opal systems
             G_core_data_control_parms.select = GPE_SET_PSTATES_PMCR;
         }
 

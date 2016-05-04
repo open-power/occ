@@ -38,6 +38,7 @@
 #include "proc_data.h"
 #include "proc_pstate.h"
 #include "scom.h"
+#include "homer.h"
 
 // GPSM DCM Synchronization States
 typedef enum
@@ -74,8 +75,8 @@ int8_t   G_proc_gpst_pmax = 0;
 // Remembers if we are a DCM, for DCOM's sake
 bool G_isDcm      = FALSE;
 
-// Used for Sapphire
-DMA_BUFFER( sapphire_table_t G_sapphire_table ) = {{0}};
+// Used for OPAL
+DMA_BUFFER( opal_table_t G_opal_table ) = {{0}};
 
 //KVM throttle reason coming from the frequency voting box.
 extern uint8_t G_amec_kvm_throt_reason;
@@ -571,11 +572,11 @@ void proc_pstate_kvm_setup()
         TRAC_IMP("pmin clip pstate = %d, pmax clip pstate = %d", prbr.fields.pmin_rail, prbr.fields.pmax_rail);
         out32(PMC_RAIL_BOUNDS_REGISTER, prbr.value);
 
-        // Initialize the sapphire table in SRAM (sets valid bit)
-        populate_pstate_to_sapphire_tbl();
+        // Initialize the opal table in SRAM (sets valid bit)
+        populate_pstate_to_opal_tbl();
 
         // copy sram image into mainstore HOMER
-        populate_sapphire_tbl_to_mem();
+        populate_opal_tbl_to_mem();
         TRAC_IMP("proc_pstate_kvm_setup: RUNNING IN KVM MODE");
     }while(0);
 
@@ -919,46 +920,46 @@ void proc_gpsm_dcm_sync_enable_pstates_smh(void)
 
 // Function Specification
 //
-// Name:  populate_pstate_to_sapphire_tbl
+// Name:  populate_pstate_to_opal_tbl
 //
 // Description:
 //
 // End Function Specification
-void populate_pstate_to_sapphire_tbl()
+void populate_pstate_to_opal_tbl()
 {
     uint8_t i = 0;
     GlobalPstateTable * l_gpst_ptr = NULL;
 
-    memset(&G_sapphire_table, 0, sizeof(sapphire_table_t));
+    memset(&G_opal_table, 0, sizeof(opal_table_t));
 
     l_gpst_ptr = gpsm_gpst();
     const int8_t l_pmax = (int8_t) l_gpst_ptr->pmin + l_gpst_ptr->entries - 1;
-    G_sapphire_table.config.valid = 1; // default 0x01
-    G_sapphire_table.config.version = 1; // default 0x01
-    G_sapphire_table.config.throttle = NO_THROTTLE; // default 0x00
-    G_sapphire_table.config.pmin = gpst_pmin(&G_global_pstate_table)+1; //Per David Du, we must use pmin+1 to avoid gpsa hang
-    G_sapphire_table.config.pnominal = (int8_t)proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL]);
-    G_sapphire_table.config.pmax = gpst_pmax(&G_global_pstate_table);
-    const uint16_t l_entries = G_sapphire_table.config.pmax - G_sapphire_table.config.pmin + 1;
+    G_opal_table.config.valid = 1; // default 0x01
+    G_opal_table.config.version = 1; // default 0x01
+    G_opal_table.config.throttle = NO_THROTTLE; // default 0x00
+    G_opal_table.config.pmin = gpst_pmin(&G_global_pstate_table)+1; //Per David Du, we must use pmin+1 to avoid gpsa hang
+    G_opal_table.config.pnominal = (int8_t)proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL]);
+    G_opal_table.config.pmax = gpst_pmax(&G_global_pstate_table);
+    const uint16_t l_entries = G_opal_table.config.pmax - G_opal_table.config.pmin + 1;
     const uint8_t l_idx = l_gpst_ptr->entries-1;
 
     for (i = 0; i < l_entries; i++)
     {
-        G_sapphire_table.data[i].pstate = (int8_t) l_pmax - i;
-        G_sapphire_table.data[i].flag = 0; // default 0x00
+        G_opal_table.data[i].pstate = (int8_t) l_pmax - i;
+        G_opal_table.data[i].flag = 0; // default 0x00
         if (i < l_gpst_ptr->entries)
         {
-            G_sapphire_table.data[i].evid_vdd = l_gpst_ptr->pstate[i].fields.evid_vdd;
-            G_sapphire_table.data[i].evid_vcs = l_gpst_ptr->pstate[i].fields.evid_vcs;
+            G_opal_table.data[i].evid_vdd = l_gpst_ptr->pstate[i].fields.evid_vdd;
+            G_opal_table.data[i].evid_vcs = l_gpst_ptr->pstate[i].fields.evid_vcs;
         }
         else
         {
             // leave the VDD & VCS Vids the same as the "Pstate Table Pmin"
-            G_sapphire_table.data[i].evid_vdd = l_gpst_ptr->pstate[l_idx].fields.evid_vdd;
-            G_sapphire_table.data[i].evid_vcs = l_gpst_ptr->pstate[l_idx].fields.evid_vcs;
+            G_opal_table.data[i].evid_vdd = l_gpst_ptr->pstate[l_idx].fields.evid_vdd;
+            G_opal_table.data[i].evid_vcs = l_gpst_ptr->pstate[l_idx].fields.evid_vcs;
         }
         // extrapolate the frequency
-        G_sapphire_table.data[i].freq_khz = l_gpst_ptr->pstate0_frequency_khz + (G_sapphire_table.data[i].pstate * l_gpst_ptr->frequency_step_khz);
+        G_opal_table.data[i].freq_khz = l_gpst_ptr->pstate0_frequency_khz + (G_opal_table.data[i].pstate * l_gpst_ptr->frequency_step_khz);
     }
 }
 
@@ -966,12 +967,12 @@ void populate_pstate_to_sapphire_tbl()
 
 // Function Specification
 //
-// Name:  populate_sapphire_tbl_to_mem
+// Name:  populate_opal_tbl_to_mem
 //
 // Description:
 //
 // End Function Specification
-void populate_sapphire_tbl_to_mem()
+void populate_opal_tbl_to_mem()
 {
     int l_ssxrc = SSX_OK;
     uint32_t l_reasonCode = 0;
@@ -979,14 +980,13 @@ void populate_sapphire_tbl_to_mem()
 
     do
     {
-#define SAPPHIRE_OFFSET_IN_HOMER 0x001F8000
         BceRequest pba_copy;
         // Set up copy request
         l_ssxrc = bce_request_create(&pba_copy,                          // block copy object
                                      &G_pba_bcue_queue,                  // sram to mainstore copy engine
-                                     SAPPHIRE_OFFSET_IN_HOMER,           // mainstore address
-                                     (uint32_t) &G_sapphire_table,       // sram starting address
-                                     (size_t) sizeof(G_sapphire_table),  // size of copy
+                                     OPAL_ADDRESS_HOMER,             // mainstore address
+                                     (uint32_t) &G_opal_table,       // sram starting address
+                                     (size_t) sizeof(G_opal_table),  // size of copy
                                      SSX_WAIT_FOREVER,                   // no timeout
                                      NULL,                               // call back
                                      NULL,                               // call back arguments
@@ -995,7 +995,7 @@ void populate_sapphire_tbl_to_mem()
 
         if(l_ssxrc != SSX_OK)
         {
-            TRAC_ERR("populate_sapphire_tbl_to_mem: PBA request create failure rc=[%08X]", -l_ssxrc);
+            TRAC_ERR("populate_opal_tbl_to_mem: PBA request create failure rc=[%08X]", -l_ssxrc);
             /*
              * @errortype
              * @moduleid    MAIN_STATE_TRANSITION_MID
@@ -1014,7 +1014,7 @@ void populate_sapphire_tbl_to_mem()
 
         if(l_ssxrc != SSX_OK)
         {
-            TRAC_ERR("populate_sapphire_tbl_to_mem: PBA request schedule failure rc=[%08X]", -l_ssxrc);
+            TRAC_ERR("populate_opal_tbl_to_mem: PBA request schedule failure rc=[%08X]", -l_ssxrc);
             /*
              * @errortype
              * @moduleid    MAIN_STATE_TRANSITION_MID
@@ -1052,13 +1052,13 @@ void populate_sapphire_tbl_to_mem()
 
 // Function Specification
 //
-// Name: proc_check_for_sapphire_updates
+// Name: proc_check_for_opal_updates
 //
-// Description: Checks if the sapphire table needs an update
+// Description: Checks if the opal table needs an update
 //              and updates if necessary.
 //
 // End Function Specification
-void proc_check_for_sapphire_updates()
+void proc_check_for_opal_updates()
 {
     uint8_t l_latest_throttle_reason;
 
@@ -1073,12 +1073,12 @@ void proc_check_for_sapphire_updates()
     }
 
     //If the throttle reason changed, update it in the HOMER
-    if(G_sapphire_table.config.throttle != l_latest_throttle_reason)
+    if(G_opal_table.config.throttle != l_latest_throttle_reason)
     {
-        TRAC_INFO("proc_check_for_sapphire_updates: throttle reason changed to %d", l_latest_throttle_reason);
-        G_sapphire_table.config.throttle = l_latest_throttle_reason;
-        G_sapphire_table.config.version = 1; // default 0x01
-        G_sapphire_table.config.valid = 1; //default 0x01
-        populate_sapphire_tbl_to_mem();
+        TRAC_INFO("proc_check_for_opal_updates: throttle reason changed to %d", l_latest_throttle_reason);
+        G_opal_table.config.throttle = l_latest_throttle_reason;
+        G_opal_table.config.version = 1; // default 0x01
+        G_opal_table.config.valid = 1; //default 0x01
+        populate_opal_tbl_to_mem();
     }
 }

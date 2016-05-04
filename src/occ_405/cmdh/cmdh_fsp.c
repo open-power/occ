@@ -38,6 +38,7 @@
 #include "cmdh_tunable_parms.h"
 #include "cmdh_snapshot.h"
 #include "scom.h"
+#include "homer.h"
 
 // OCB Channel Setup Defines
 const int      OCB_CHANNEL_FSP_LINEAR          = 0;
@@ -469,7 +470,7 @@ errlHndl_t cmdh_fsp_cmd_hndler(void)
             // Set up a copy request
             l_ssxrc = bce_request_create(&pba_copy,                           // block copy object
                                          &G_pba_bcde_queue,                   // mainstore to sram copy engine
-                                         OCC_HTMGT_CMD_OFFSET_HOMER,          // mainstore address
+                                         OCC_HTMGT_CMD_ADDRESS_HOMER,         // mainstore address
                                          (uint32_t) &G_htmgt_cmd_buffer,      // sram starting address
                                          (size_t) sizeof(G_htmgt_cmd_buffer), // size of copy
                                          SSX_WAIT_FOREVER,                    // no timeout
@@ -530,7 +531,7 @@ errlHndl_t cmdh_fsp_cmd_hndler(void)
             // Need to write the response to HOMER. Set up a copy request
             l_ssxrc = bce_request_create(&pba_copy,                           // block copy object
                                          &G_pba_bcue_queue,                   // sram to mainstore copy engine
-                                         OCC_HTMGT_RSP_OFFSET_HOMER,          // mainstore address
+                                         OCC_HTMGT_RSP_ADDRESS_HOMER,         // mainstore address
                                          (uint32_t) &G_htmgt_rsp_buffer,      // sram starting address
                                          (size_t) sizeof(G_htmgt_rsp_buffer), // size of copy
                                          SSX_WAIT_FOREVER,                    // no timeout
@@ -630,7 +631,7 @@ errlHndl_t cmdh_fsp_cmd_hndler(void)
             // Need to write the final response to HOMER. Set up a copy request
             l_ssxrc = bce_request_create(&pba_copy,                           // block copy object
                                          &G_pba_bcue_queue,                   // sram to mainstore copy engine
-                                         OCC_HTMGT_RSP_OFFSET_HOMER,          // mainstore address
+                                         OCC_HTMGT_RSP_ADDRESS_HOMER,         // mainstore address
                                          (uint32_t) &G_htmgt_rsp_buffer,      // sram starting address
                                          (size_t) sizeof(G_htmgt_rsp_buffer), // size of copy
                                          SSX_WAIT_FOREVER,                    // no timeout

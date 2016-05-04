@@ -108,12 +108,12 @@ uint32_t dcom_build_slv_outbox(void)
 uint32_t dcom_which_buffer_slv_outbox(void)
 {
     // Locals
-    uint32_t l_mem_address = ADDR_SLAVE_OUTBOX_MAIN_MEM_PONG;
+    uint32_t l_mem_address = SLAVE_OUTBOX_PONG_COMMON_ADDRESS;
 
     // Switch back and forth based on tick
     if( CURRENT_TICK & 1 )
     {
-        l_mem_address = ADDR_SLAVE_OUTBOX_MAIN_MEM_PING;
+        l_mem_address = SLAVE_OUTBOX_PING_COMMON_ADDRESS;
     }
 
     return l_mem_address;

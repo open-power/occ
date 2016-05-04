@@ -49,9 +49,18 @@
 #define OCC_DCM_SLAVE     0
 #define OCC_DCM_MASTER    1
 
-// OCC Master to Slave Messages (inbox ping/pong) - Moved to BAR2
-#define ADDR_SLAVE_INBOX_MAIN_MEM_PING 0x20000000
-#define ADDR_SLAVE_INBOX_MAIN_MEM_PONG 0x20000800
+// Memory address space where DCOM, sensor data, OPAL communications,
+// etc take place. Uses BAR2, with pba_region = 0b10
+#define COMMON_BASE_ADDRESS 0xA0000000
+#define COMMON_SPACE_SIZE   0x00800000     // 8 MB
+
+// Occ Master to Slave Messages (inbox ping/pong)
+#define SLAVE_INBOX_PING_COMMON_OFFSET     0x00000000
+#define SLAVE_INBOX_PING_COMMON_ADDRESS    (COMMON_BASE_ADDRESS+SLAVE_INBOX_PING_COMMON_OFFSET)
+
+#define SLAVE_INBOX_PONG_COMMON_OFFSET     0x00000800
+#define SLAVE_INBOX_PONG_COMMON_ADDRESS    (COMMON_BASE_ADDRESS+SLAVE_INBOX_PONG_COMMON_OFFSET)
+
 #define NUM_BYTES_IN_SLAVE_INBOX              256
 
 // Magic Number used to denote the end of Master->Slave Broadcast packets
@@ -66,9 +75,13 @@
 #define PBAX_BROADCAST_GROUP          PBAX_GROUP_MASK_MAX
 
 
-// OCC Slave to Master Messages (inbox ping/pong) - Moved to BAR2
-#define ADDR_SLAVE_OUTBOX_MAIN_MEM_PING 0x20001000
-#define ADDR_SLAVE_OUTBOX_MAIN_MEM_PONG 0x20003000
+// OCC Slave to Master Messages (inbox ping/pong)
+#define SLAVE_OUTBOX_PING_COMMON_OFFSET     0x00001000
+#define SLAVE_OUTBOX_PING_COMMON_ADDRESS    (COMMON_BASE_ADDRESS+SLAVE_OUTBOX_PING_COMMON_OFFSET)
+
+#define SLAVE_OUTBOX_PONG_COMMON_OFFSET     0x00003000
+#define SLAVE_OUTBOX_PONG_COMMON_ADDRESS    (COMMON_BASE_ADDRESS+SLAVE_OUTBOX_PONG_COMMON_OFFSET)
+
 #define NUM_BYTES_IN_SLAVE_OUTBOX             1024
 
 // GP REG0

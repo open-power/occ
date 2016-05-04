@@ -45,6 +45,7 @@
 #include "chom.h"
 #include "amec_master_smh.h"
 #include <proc_data.h>
+#include "homer.h"
 
 // This table contains tunable parameter information that can be exposed to
 // customers (only Master OCC should access/control this table)
@@ -561,7 +562,7 @@ errlHndl_t cmdh_reset_prep (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         if (G_sysConfigData.system_type.kvm && isSafeStateRequested())
         {
-            // Notify dcom thread to update sapphire table
+            // Notify dcom thread to update opal table
             ssx_semaphore_post(&G_dcomThreadWakeupSem);
         }
         if (CURRENT_STATE() != OCC_STATE_STANDBY)
@@ -807,8 +808,6 @@ void cmdh_dbug_peek (const cmdh_fsp_cmd_t * i_cmd_ptr,
     uint8_t            l_type    = l_cmd_ptr->type;
     uint32_t           l_addr    = l_cmd_ptr->oci_address;
 
-// Needed because otherwise we get warnings about
-// unused variables when building for Simics
 #if PPC405_MMU_SUPPORT
     static Ppc405MmuMap       L_mmuMapHomer;
     static Ppc405MmuMap       L_mmuMapCommon;
@@ -848,19 +847,19 @@ void cmdh_dbug_peek (const cmdh_fsp_cmd_t * i_cmd_ptr,
             // Map mainstore to oci space so that we can peek at it
 
             // HOMER Image
-            ppc405_mmu_map(0x00000000, // Mainstore address (BAR0, offset 0)
-                           0x00000000, // OCI address 0x0 (BAR0)
-                           0x400000,   // Size = 4 MB
-                           0,          // TLB hi flags
-                           0,          // TLB lo flags
+            ppc405_mmu_map(HOMER_BASE_ADDRESS, // Mainstore address (BAR0, offset 0)
+                           HOMER_BASE_ADDRESS, // OCI address 0x0 (BAR0)
+                           HOMER_SPACE_SIZE,   // Size
+                           0,                  // TLB hi flags
+                           0,                  // TLB lo flags
                            &L_mmuMapHomer); // map pointer
 
             // COMMON Image = Communal OCC Memory Map On Node
-            ppc405_mmu_map(0x30000000, // Mainstore address (BAR3, offset 0)
-                           0x30000000, // OCI address 0x30000000
-                           0x00800000, // Size = 8 MB
-                           0,          // TLB hi flags
-                           0,          // TLB lo flags
+            ppc405_mmu_map(COMMON_BASE_ADDRESS, // Mainstore address (BAR2, offset 0)
+                           COMMON_BASE_ADDRESS, // OCI address 0xA0000000
+                           COMMON_SPACE_SIZE,   // Size
+                           0,                              // TLB hi flags
+                           0,                              // TLB lo flags
                            &L_mmuMapCommon); // map pointer
             l_len = 0;
             break;
@@ -1090,7 +1089,7 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
     OCC_STATE                       l_pre_state    = CURRENT_STATE();
     OCC_MODE                        l_pre_mode     = CURRENT_MODE();
 
-    // SAPPHIRE only accepts DPS-FE mode. In case OCC gets other modes, it should accept the request
+    // OPAL only accepts DPS-FE mode. In case OCC gets other modes, it should accept the request
     // and keep reporting back that it is in that mode.
     if(G_sysConfigData.system_type.kvm)
     {

@@ -135,8 +135,8 @@ void task_dcom_rx_slv_inbox( task_t *i_self)
             uint32_t l_addr_in_mem = dcom_calc_slv_inbox_addr();
 
             // Check valid address (should be inside inbox addresses range)
-            if ( (ADDR_SLAVE_INBOX_MAIN_MEM_PING <= l_addr_in_mem) &&
-                 ((ADDR_SLAVE_INBOX_MAIN_MEM_PONG+(sizeof(dcom_slv_inbox_t)*MAX_OCCS)) > l_addr_in_mem) )
+            if ( (SLAVE_INBOX_PING_COMMON_ADDRESS <= l_addr_in_mem) &&
+                 ((SLAVE_INBOX_PONG_COMMON_ADDRESS+(sizeof(dcom_slv_inbox_t)*MAX_OCCS)) > l_addr_in_mem) )
             {
                 uint32_t l_ssxrc = 0;
 

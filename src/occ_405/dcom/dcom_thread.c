@@ -99,11 +99,11 @@ void Dcom_thread_routine(void *arg)
 // NOTE: Temporary system config must say we are FSP system so
 // that we don't try to access main memory here.
         // --------------------------------------------------
-        // Check if we need to update the sapphire table
+        // Check if we need to update the opal table
         // --------------------------------------------------
         if(G_sysConfigData.system_type.kvm)
         {
-            proc_check_for_sapphire_updates();
+            proc_check_for_opal_updates();
         }
 
         // --------------------------------------------------

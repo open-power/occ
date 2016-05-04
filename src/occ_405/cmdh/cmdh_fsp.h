@@ -90,11 +90,6 @@
 // Attention type of an attention to the OCC
 #define ATTN_TYPE_CMD_WRITE       0x01
 
-// OCC/HTMGT command buffer offset in HOMER
-#define OCC_HTMGT_CMD_OFFSET_HOMER    0x001EE000
-// OCC/HTMGT response buffer offset in HOMER
-#define OCC_HTMGT_RSP_OFFSET_HOMER    0x001EF000
-
 // Typedef of the various reasons why the cmdh thread wakes up
 typedef enum
 {

@@ -30,9 +30,26 @@
 
 
 // Offset into the HOMER of the host data section and the size
-#define HOMER_HD_OFFSET       0x00100000
+#define HOMER_BASE_ADDRESS    0x80000000
+#define HOMER_SPACE_SIZE      0x00400000       // 4 MB
+
+#define HOMER_HD_OFFSET       0x000C0000
+#define HOMER_HD_ADDRESS     (HOMER_BASE_ADDRESS+HOMER_HD_OFFSET)
 #define HOMER_HD_SZ           (128 * 1024)
 #define HOMER_FIR_PARM_SIZE   (3 * 1024)
+
+// OPAL table address in HOMER
+#define OPAL_OFFSET_HOMER  0x000E2000
+#define OPAL_ADDRESS_HOMER (HOMER_BASE_ADDRESS+OPAL_OFFSET_HOMER)
+
+// OCC/HTMGT command buffer offset in HOMER
+#define OCC_HTMGT_CMD_OFFSET_HOMER  0x000E0000
+#define OCC_HTMGT_CMD_ADDRESS_HOMER (HOMER_BASE_ADDRESS+OCC_HTMGT_CMD_OFFSET_HOMER)
+
+// OCC/HTMGT response buffer offset in HOMER
+#define OCC_HTMGT_RSP_OFFSET_HOMER  0x000E1000
+#define OCC_HTMGT_RSP_ADDRESS_HOMER (HOMER_BASE_ADDRESS+OCC_HTMGT_RSP_OFFSET_HOMER)
+
 
 // Version(s) of HOMER host data currently supported
 typedef enum homer_version

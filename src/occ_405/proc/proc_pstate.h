@@ -59,7 +59,7 @@ typedef struct __attribute__ ((packed))
     int8_t               pnominal;
     int8_t               pmax;
     uint16_t             spare;
-} sapphire_config_t;
+} opal_config_t;
 
 typedef struct __attribute__ ((packed))
 {
@@ -68,17 +68,17 @@ typedef struct __attribute__ ((packed))
     uint8_t              evid_vdd;
     uint8_t              evid_vcs;
     uint32_t             freq_khz;
-} sapphire_data_t; 
+} opal_data_t;
 
 #define PSTATE_ENTRY_NUMBER 256
 // This size must be a multiple of 128
 typedef struct __attribute__ ((packed))
 {
-    sapphire_config_t    config;
+    opal_config_t        config;
     uint64_t             reserved;
-    sapphire_data_t      data[PSTATE_ENTRY_NUMBER];
+    opal_data_t          data[PSTATE_ENTRY_NUMBER];
     uint8_t              pad[112];
-} sapphire_table_t __attribute__ ((aligned (128)));
+} opal_table_t __attribute__ ((aligned (128)));
 
 enum {
     NO_THROTTLE = 0x00,
@@ -89,11 +89,11 @@ enum {
     OCC_RESET = 0x05,
 }; 
 
-//extern GlobalPstateTable G_global_pstate_table; 
+//extern GlobalPstateTable G_global_pstate_table;
 
-extern uint32_t    G_mhz_per_pstate;            
+extern uint32_t    G_mhz_per_pstate;
 
-extern sapphire_table_t G_sapphire_table;       
+extern opal_table_t G_opal_table;
 
 // Initialize PState Table
 // TEMP -- PstateSuperStructure no longer exists
@@ -122,12 +122,12 @@ inline bool proc_is_dcm();
 // Helper function to determine if we are in HW Pstate mode
 inline bool proc_is_hwpstate_enabled(void);
 
-// Copy pstate data to sapphire table
-void populate_pstate_to_sapphire_tbl();
+// Copy pstate data to opal table
+void populate_pstate_to_opal_tbl();
 
-// Copy sapphire table to mainstore memory at SAPPHIRE_OFFSET_IN_HOMER
-void populate_sapphire_tbl_to_mem(); 
+// Copy opal table to mainstore memory at OPAL_OFFSET_HOMER
+void populate_opal_tbl_to_mem();
 
-// Check if sapphire table needs update
-void proc_check_for_sapphire_updates();
+// Check if opal table needs update
+void proc_check_for_opal_updates();
 #endif

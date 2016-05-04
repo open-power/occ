@@ -66,7 +66,7 @@ homer_rc_t __attribute__((optimize("O1"))) homer_hd_map_read_unmap(const homer_r
 #endif
 
     homer_rc_t l_rc = HOMER_SUCCESS;
-    occHostConfigDataArea_t *l_hdcfg_data = 0x00000000;
+    occHostConfigDataArea_t *l_hdcfg_data = (occHostConfigDataArea_t *) HOMER_BASE_ADDRESS;
 
     // Validate the pointers
     if (!o_host_data || !o_ssx_rc || ((uint32_t)o_host_data % 4))
@@ -86,7 +86,7 @@ homer_rc_t __attribute__((optimize("O1"))) homer_hd_map_read_unmap(const homer_r
          * where the data is located.
          */
         *o_ssx_rc = ppc405_mmu_map((SsxAddress)l_hdcfg_data,
-                                   HOMER_HD_OFFSET,
+                                   (SsxAddress)(HOMER_HD_ADDRESS),
                                    sizeof(occHostConfigDataArea_t),
                                    0,
                                    0,
