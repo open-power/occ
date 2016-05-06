@@ -105,5 +105,5 @@ $(TRACEPP_DIR)/tracepp:
 .PHONY : tracehash
 tracehash:
 	mkdir -p $(BASE_OBJDIR)
-	$(THASH) -c -d $(BASE_OBJDIR) -s $(BASE_OBJDIR)/combStringFile
+	$(THASH) -c -d $(BASE_OBJDIR) -s $(BASE_OBJDIR)/occStringFile
 
