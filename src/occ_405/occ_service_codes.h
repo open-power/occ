@@ -69,6 +69,8 @@ enum occReasonCode
     DIMM_ERROR_TEMP                 = 0x30,
     /// Frequency limited due to oversubscription condition
     OVERSUB_LIMIT_ALERT             = 0x33,
+    /// Invalid configuration data (MRW, etc.)
+    INVALID_CONFIG_DATA             = 0x34,
     /// Centaur reached error threshold
     CENT_ERROR_TEMP                 = 0x40,
     /// Centaur in-band scom failure

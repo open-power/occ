@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/dcom/dcom.c $                                         */
+/* $Source: src/occ_405/dcom/dcom.c $                                     */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -154,7 +154,7 @@ void dcom_initialize_roles(void)
         /* @
          * @errortype
          * @moduleid    DCOM_MID_INIT_ROLES
-         * @reasoncode  INVALID_CONFIGURATION
+         * @reasoncode  INVALID_CONFIG_DATA
          * @userdata1   PBAXCFG (upper)
          * @userdata2   PBAXCFG (lower)
          * @userdata4   ERC_CHIP_IDS_INVALID
@@ -162,7 +162,7 @@ void dcom_initialize_roles(void)
          */
         errlHndl_t  l_errl = createErrl(
             DCOM_MID_INIT_ROLES,            //ModId
-            INTERNAL_HW_FAILURE,            //Reasoncode
+            INVALID_CONFIG_DATA,            //Reasoncode
             ERC_CHIP_IDS_INVALID,           //Extended reasoncode
             ERRL_SEV_UNRECOVERABLE,         //Severity
             NULL,                           //Trace Buf
