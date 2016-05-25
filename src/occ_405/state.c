@@ -36,8 +36,6 @@
 #include "cmdh_fsp_cmds_datacnfg.h"
 #include "cmdh_fsp.h"
 #include "proc_data.h"
-// TEMP -- Doesn't exist anymore
-//#include "heartbeat.h"
 #include "scom.h"
 #include <fir_data_collect.h>
 #include <dimm.h>
@@ -220,16 +218,14 @@ errlHndl_t SMGR_observation_to_standby()
 errlHndl_t SMGR_observation_to_active()
 {
     errlHndl_t      l_errlHndl = NULL;
-/* TEMP -- UNNECCESSARY IN PHASE1 */
-#if 0
     static bool l_error_logged = FALSE;  // To prevent trace and error log happened over and over
     int                l_extRc = OCC_NO_EXTENDED_RC;
     int                l_rc = 0;
 
     // Pstates are enabled via an IPC call to PGPE once the OCC reaches the
     // observation state. We still have to check that the enable_pstates() IPC job
-    // on the PGPE has completed before transitioned to the active state. otherwise,
-    // wait TBD seconds in case we are going directly from Standby to Active
+    // on the PGPE has completed before transitioning to active state. Otherwise,
+    //  we wait TBD seconds in case we are going directly from Standby to Active
     // (pstate init only happens in observation state, so it might not be
     // done yet...must call it in this while loop since it is done in this
     // same thread...)
@@ -251,12 +247,14 @@ errlHndl_t SMGR_observation_to_active()
             SsxInterval timeout =  SSX_SECONDS(5);
             if ((ssx_timebase_get() - start) > timeout)
             {
+                l_rc = 1;
                 if(FALSE == l_error_logged)
                 {
-                    TRAC_ERR("SMGR: Timeout waiting for Pstates to be enabled, pmc_mode[%08x], chips_present[%02x], pmc_deconfig[%08x]",
+                    TRAC_ERR("SMGR: Timeout waiting for Pstates to be enabled, "
+                             "pmc_mode[%08x], chips_present[%02x], Cores Present [%08x]",
                             in32(PMC_MODE_REG),
                             G_sysConfigData.is_occ_present,
-                            in32(PMC_CORE_DECONFIGURATION_REG));
+                             (uint32_t) ((in64(OCB_CCSR)) >> 32));
                 }
                 l_extRc = ERC_GENERIC_TIMEOUT;
                 break;
@@ -285,112 +283,16 @@ errlHndl_t SMGR_observation_to_active()
         rtl_clr_run_mask_deferred(RTL_FLAG_OBS);
         rtl_set_run_mask_deferred(RTL_FLAG_ACTIVE);
 
-        // Ensure that the dpll override (enabled when mfg biases freq) has been disabled.
-        int l_core;
-        uint32_t l_configured_cores;
-        pcbs_pmgp1_reg_t l_pmgp1;
-        l_configured_cores = ~in32(PMC_CORE_DECONFIGURATION_REG);
-        for(l_core = 0; l_core < PGP_NCORES; l_core++, l_configured_cores <<= 1)
-        {
-            if(!(l_configured_cores & 0x80000000)) continue;
-            l_pmgp1.value = 0;
-            l_pmgp1.fields.dpll_freq_override_enable = 1;
-            l_rc = putscom_ffdc(CORE_CHIPLET_ADDRESS(PCBS_PMGP1_REG_AND, l_core),
-                           ~l_pmgp1.value, NULL); //commit errors internally
-            if(l_rc)
-            {
-                TRAC_ERR("Failed disabling dpll frequency override.  rc=0x%08x, core=%d", l_rc, l_core);
-                break;
-            }
-        }
-        if(!l_rc)
-        {
-
-            // Set the actual STATE now that we have finished everything else
-            CURRENT_STATE() = OCC_STATE_ACTIVE;
-            TRAC_IMP("SMGR: Observation to Active Transition Completed");
-
-            // Configure and enable the PCB slave heartbeat timer
-            //
-            // task_core_data is running in every RTL tick and scheduling a run
-            // of gpe_get_per_core_data which will do a getscom on
-            // PCBS_PMSTATEHISTOCC_REG.  We will use PCBS_PMSTATEHISTOCC_REG as
-            // the PCBS heartbeat trigger register.
-            unsigned int l_actual_pcbs_hb_time = 0;
-            ChipConfigCores l_cfgd_cores =
-                    (ChipConfigCores)((uint64_t)core_configuration() >> 16);
-            TRAC_IMP("Configuring PCBS heartbeat for configured cores=0x%8.8x", l_cfgd_cores);
-            TRAC_IMP("OCC configuration view: G_present_hw_cores=0x%8.8x, G_present_cores=0x%8.8x",
-                    G_present_hw_cores, G_present_cores);
-
-            // Setup the pcbs heartbeat timer
-            l_rc = pcbs_hb_config(1, // enable = yes
-                                  l_cfgd_cores,
-                                  PCBS_PMSTATEHISTOCC_REG,
-                                  PCBS_HEARBEAT_TIME_US,
-                                  0, // force = no
-                                  &l_actual_pcbs_hb_time);
-
-            if (l_rc)
-            {
-                TRAC_ERR("Failure configuring the PCBS heartbeat timer, rc=%d",
-                         l_rc);
-                // FIXME #state_c_002 Add appropriate callouts for
-                // serviceability review
-                l_extRc = ERC_STATE_HEARTBEAT_CFG_FAILURE;
-            }
-            else
-            {
-                TRAC_IMP("PCBS heartbeat enabled, requested time(us)=%d, actual time(us)=%d",
-                         PCBS_HEARBEAT_TIME_US,
-                         l_actual_pcbs_hb_time);
-            }
-
-            // TODO: #state_c_001 Manually configuring the PMC
-            // heartbeat until pmc_hb_config is shown to be working
-            // Reference SW238882 for more information on updates needed in
-            // pmc_hb_config.  Note that if PMC parameter hangpulse pre-divider
-            // is 0 then the PMC heartbeat counter uses nest_nclck/4 instead of
-            // the hangpulse to count the heartbeat timeout.
-            pmc_parameter_reg0_t ppr0;
-            pmc_occ_heartbeat_reg_t pohr;
-            pohr.value = in32(PMC_OCC_HEARTBEAT_REG);
-            ppr0.value = in32(PMC_PARAMETER_REG0);
-            pohr.fields.pmc_occ_heartbeat_en = 0;
-            // This combined with the hang pulse count and pre-divider yields
-            // about a 2 second timeout
-            pohr.fields.pmc_occ_heartbeat_time = 0xffff;
-            TRAC_IMP("Configure PMC heartbeat, heartbeat_time=0x%x",
-                    pohr.fields.pmc_occ_heartbeat_time);
-            ppr0.fields.hangpulse_predivider = 1;
-            TRAC_IMP("Configure PMC parm reg predivider=%d",
-                    ppr0.fields.hangpulse_predivider);
-
-            // Write registers twice, known issue with heartbeat reg
-            out32(PMC_OCC_HEARTBEAT_REG, pohr.value);
-            out32(PMC_OCC_HEARTBEAT_REG, pohr.value);
-            out32(PMC_PARAMETER_REG0, ppr0.value);
-            out32(PMC_PARAMETER_REG0, ppr0.value);
-            TRAC_IMP("Enable PMC heartbeat timer");
-            pohr.value = in32(PMC_OCC_HEARTBEAT_REG);
-            pohr.fields.pmc_occ_heartbeat_en = 1;
-            out32(PMC_OCC_HEARTBEAT_REG, pohr.value);
-            out32(PMC_OCC_HEARTBEAT_REG, pohr.value);
-        }
+        // Set the actual STATE now that we have finished everything else
+        CURRENT_STATE() = OCC_STATE_ACTIVE;
+        TRAC_IMP("SMGR: Observation to Active Transition Completed");
     }
-    else
-    {
-        //trace and log an error.
-        l_rc = -1;
-    }
-
-    if(l_rc)
+    else if(l_rc)
     {
         TRAC_ERR("SMGR: Observation to Active Transition Failed, cnfgdata=0x%08x, reqd=0x%08x",
                 DATA_get_present_cnfgdata(),
                 SMGR_VALIDATE_DATA_ACTIVE_MASK);
     }
-
 
     if(l_rc && FALSE == l_error_logged)
     {
@@ -419,7 +321,6 @@ errlHndl_t SMGR_observation_to_active()
                  ERRL_COMPONENT_ID_FIRMWARE,
                  ERRL_CALLOUT_PRIORITY_HIGH);
     }
-#endif
     return l_errlHndl;
 }
 

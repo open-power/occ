@@ -213,9 +213,6 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
     return l_err;
 }
 
-// @TODO - TEMP - Code not ready yet
-#if 0
-
 // Function Specification
 //
 // Name: amec_slv_voting_box
@@ -500,9 +497,6 @@ void amec_slv_voting_box(void)
         ssx_semaphore_post(&G_dcomThreadWakeupSem);
     }
 }
-
-#endif // @TODO - TEMP - Code not ready yet
-
 
 // Function Specification
 //

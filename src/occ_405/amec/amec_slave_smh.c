@@ -212,8 +212,6 @@ smh_state_timing_t G_amec_slv_state_timings = {amec_slv_update_smh_sensors};
 // Functions
 //*************************************************************************
 
-// @TODO - TEMP: Not Ready yet in Phase 1.
-#if 0
 
 // Function Specification
 //
@@ -273,7 +271,6 @@ void amec_slv_check_apss_fail(void)
     g_amec->proc[0].pwr_votes.apss_pmax_clip_freq = l_pmax_rail_freq;
 }
 
-#endif // #if 0 @TODO - TEMP - Not ready yet in Phase 1
 
 // Function Specification
 //
@@ -330,9 +327,6 @@ void amec_slv_common_tasks_pre(void)
 //  amec_oversub_check();
 }
 
-// @TODO - TEMP: Not Ready yet in Phase 1.
-#if 0
-
 // Function Specification
 //
 // Name: amec_slv_cmmon_tasks_post
@@ -374,7 +368,6 @@ void amec_slv_common_tasks_post(void)
       amec_tb_record(AMEC_TB_250US);
   }
 }
-#endif // #if 0 -  @TODO - TEMP: Not Ready yet in Phase 1.
 
 // Function Specification
 //
@@ -391,11 +384,10 @@ void amec_slv_state_0(void)
   // Update Proc Core sensors (for this tick)
   //-------------------------------------------------------
 
-/* Not yet supported
   //-------------------------------------------------------
   // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
-  amec_update_centaur_sensors(CENTAUR_0);
+//  amec_update_centaur_sensors(CENTAUR_0);
 
   //-------------------------------------------------------
   // Update Sleep Count & Winkle Count Sensors
@@ -420,7 +412,6 @@ void amec_slv_state_0(void)
   // Call the trace function for 2ms tracing if it has been configured via
   // Amester. If not configured, this call will return immediately.
   amec_tb_record(AMEC_TB_2MS);
-*/
 }
 
 
@@ -1026,9 +1017,8 @@ void amec_slv_substate_5_0(void)
     //-------------------------------------------------------
     amec_update_proc_core_group(2);
 
-// @TODO - TEMP: Not Ready yet in Phase 1.
     // Call processor-based thermal controller
-//    amec_controller_proc_thermal();
+    amec_controller_proc_thermal();
 }
 
 void amec_slv_substate_5_1(void)
@@ -1050,8 +1040,8 @@ void amec_slv_substate_5_1(void)
     //-------------------------------------------------------
     amec_update_proc_core_group(6);
 
-// @TODO - TEMP: Not Ready yet in Phase 1.
     // Call controller on VRHOT signal from processor regulator
+// @TODO - Verify VRM monitoring
 //    amec_controller_vrhotproc();
 }
 
@@ -1371,9 +1361,8 @@ void amec_slv_substate_7_7(void)
     //-------------------------------------------------------
     amec_update_proc_core_group(7);
 
-// @TODO - TEMP: Not Ready yet in Phase 1.
-// Call health monitor to check for processor error temperature conditions
-//    amec_health_check_proc_temp();
+    // Call health monitor to check for processor error temperature conditions
+    amec_health_check_proc_temp();
 }
 
 void amec_update_proc_core_group(uint8_t group)

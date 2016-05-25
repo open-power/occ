@@ -79,8 +79,6 @@ extern void amec_slv_update_gpe_sensors(uint8_t i_gpe_engine);
 // Function Prototypes
 //*************************************************************************
 
-// @TODO - TEMP: not ready yet
-#if 0
 //*************************************************************************
 // Functions
 //*************************************************************************
@@ -239,7 +237,6 @@ void amec_init_vector_sensors(void)
   }
 #endif
 }
-#endif // #if 0 @TODO - TEMP: not ready yet
 
 // Function Specification
 //
@@ -437,10 +434,11 @@ void amec_slave_init()
     G_fw_timing.gpe1_timing_request = &G_gpe_nop_request[1];
   }
 
+#endif // #if 0 - @TODO - TEMP - Not ready yet
+
   // Initialize Vector Sensors for AMEC use
   amec_init_vector_sensors();
 
-#endif // #if 0 - @TODO - TEMP - Not ready yet
 
   // Initialize AMEC internal parameters
   amec_init_gamec_struct();

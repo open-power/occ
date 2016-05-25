@@ -120,7 +120,7 @@ void amec_oversub_isr(void)
         g_amec->oversub_status.oversubActiveTime = ssx_timebase_get();
 
         // Setup the IRQ
-        ssx_irq_setup(PGP_IRQ_EXTERNAL_TRAP,
+        ssx_irq_setup(OCCHW_IRQ_EXTERNAL_TRAP,
                       SSX_IRQ_POLARITY_ACTIVE_HIGH,
                       SSX_IRQ_TRIGGER_LEVEL_SENSITIVE);
         l_polarity = SSX_IRQ_POLARITY_ACTIVE_HIGH;
@@ -135,7 +135,7 @@ void amec_oversub_isr(void)
         g_amec->oversub_status.oversubInactiveTime = ssx_timebase_get();
 
         // Setup the IRQ
-        ssx_irq_setup(PGP_IRQ_EXTERNAL_TRAP,
+        ssx_irq_setup(OCCHW_IRQ_EXTERNAL_TRAP,
                       SSX_IRQ_POLARITY_ACTIVE_LOW,
                       SSX_IRQ_TRIGGER_LEVEL_SENSITIVE);
 

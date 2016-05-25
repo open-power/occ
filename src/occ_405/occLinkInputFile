@@ -1,9 +1,11 @@
-INPUT ( amec_data.o
+INPUT ( amec_controller.o
+        amec_data.o
         amec_freq.o
         amec_health.o
         amec_init.o
         amec_amester.o
         amec_master_smh.o
+        amec_oversub.o
         amec_parm.o
         amec_pcap.o
         amec_parm_table.o
@@ -30,6 +32,7 @@ INPUT ( amec_data.o
         dcomSlaveRx.o
         dcomSlaveTx.o
         dimm.o
+        dpss.o
         errl.o
         ffdc.o
         fir_data_collect.o

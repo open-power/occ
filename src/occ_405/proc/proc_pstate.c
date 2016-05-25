@@ -251,6 +251,10 @@ void proc_pstate_initialize(void)
     // sets the G_proc_pstate_enabled flag to true, so that the OCC is then
     // able to switch to the active state.
 
+    // @TODO: FIXME - TEMP Hack to enable Active State, until PGPE is ready
+    G_proc_pstate_enabled = 1;
+
+
     // Set up Key Globals for use by proc_freq2pstate functions
     G_proc_fmax = 4322500;
     G_proc_fmin = 2028250;

@@ -746,8 +746,8 @@ void amec_health_check_proc_temp()
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
     uint16_t                    l_ot_error;
-    static uint32_t             l_error_count = 0;
-    static BOOLEAN              l_ot_error_logged = FALSE;
+    static uint32_t             L_error_count = 0;
+    static BOOLEAN              L_ot_error_logged = FALSE;
     sensor_t                    *l_sensor;
     errlHndl_t                  l_err = NULL;
 
@@ -765,18 +765,18 @@ void amec_health_check_proc_temp()
         if (l_sensor->sample > l_ot_error)
         {
             // Increment the error counter for this FRU
-            l_error_count++;
+            L_error_count++;
 
             // Trace and log error the first time this occurs
-            if (l_error_count == AMEC_HEALTH_ERROR_TIMER)
+            if (L_error_count == AMEC_HEALTH_ERROR_TIMER)
             {
                 // Have we logged an OT error for this FRU already?
-                if (l_ot_error_logged == TRUE)
+                if (L_ot_error_logged == TRUE)
                 {
                     break;
                 }
 
-                l_ot_error_logged = TRUE;
+                L_ot_error_logged = TRUE;
 
                 TRAC_ERR("amec_health_check_error_temp: processor has exceeded OT error! temp[%u] ot_error[%u]",
                          l_sensor->sample,
@@ -821,14 +821,14 @@ void amec_health_check_proc_temp()
         else
         {
             // Trace that we have now dropped below the error threshold
-            if (l_error_count >= AMEC_HEALTH_ERROR_TIMER)
+            if (L_error_count >= AMEC_HEALTH_ERROR_TIMER)
             {
                 TRAC_INFO("amec_health_check_proc_temp: We have dropped below error threshold for processors. error_count[%u]",
-                          l_error_count);
+                          L_error_count);
             }
 
             // Reset the error counter for this FRU
-            l_error_count = 0;
+            L_error_count = 0;
         }
     }while (0);
 
@@ -844,8 +844,6 @@ void amec_health_check_proc_temp()
 // End Function Specification
 void amec_health_check_proc_timeout()
 {
-/* TEMP/TODO: Enable when needed */
-#if 0
     /*------------------------------------------------------------------------*/
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
@@ -907,16 +905,11 @@ void amec_health_check_proc_timeout()
                 // Get pointer to core data
                 l_core_data_ptr = proc_get_bulk_core_data_ptr(l_bad_core_index);
 
-                // Trace some critical registers to understand this error better
-                TRAC_ERR("OHA_Status_Reg[0x%08X] PM_State_Hist_Reg[0x%08X]",
-                         l_core_data_ptr->oha.oha_ro_status_reg.words.low_order,
-                         l_core_data_ptr->pcb_slave.pm_history.words.high_order);
 
-                TRAC_ERR("SensorV0[0x%08X%08X] SensorV1[0x%08X%08X]",
-                         (uint32_t)(l_core_data_ptr->dts_cpm.sensors_v0.value >> 32),
-                         (uint32_t)(l_core_data_ptr->dts_cpm.sensors_v0.value & 0x00000000ffffffffull),
-                         (uint32_t)(l_core_data_ptr->dts_cpm.sensors_v1.value >> 32),
-                         (uint32_t)(l_core_data_ptr->dts_cpm.sensors_v1.value & 0x00000000ffffffffull));
+                TRAC_ERR("Core Sensors[0x%04X%04X] Quad Sensor[0x%04X]",
+                         (uint16_t)(l_core_data_ptr->dts.core[0].result ),
+                         (uint16_t)(l_core_data_ptr->dts.core[0].result ),
+                         (uint16_t)(l_core_data_ptr->dts.cache.result));
 
                 /* @
                  * @errortype
@@ -948,7 +941,6 @@ void amec_health_check_proc_timeout()
             }
         }
     }while(0);
-#endif
 }
 
 // Function Specification

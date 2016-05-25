@@ -51,8 +51,8 @@
 //#include <vrm.h>
 #include <chom.h>
 #include <homer.h>
-//#include <amec_health.h>
-//#include <amec_freq.h>
+#include <amec_health.h>
+#include <amec_freq.h>
 #include "scom.h"
 //#include <fir_data_collect.h>
 #include <pss_service_codes.h>
@@ -449,8 +449,6 @@ void occ_ipc_setup()
  */
 void hmon_routine()
 {
-/* TEMP -- NOT SUPPORTED IN PHASE1 */
-#if 0
     static uint32_t L_critical_phantom_count = 0;
     static uint32_t L_noncritical_phantom_count = 0;
     static bool L_c_phantom_logged = FALSE;
@@ -517,6 +515,7 @@ void hmon_routine()
         amec_health_check_proc_vrhot();
     }
 
+#if 0  // Memory thermal control loop is not ready yet
     //if we are in active state with memory temperature data being collected
     //then monitor the temperature collections for overtemp and timeout conditions
     if(IS_OCC_STATE_ACTIVE() &&
@@ -527,7 +526,7 @@ void hmon_routine()
         amec_health_check_dimm_timeout();
         amec_health_check_dimm_temp();
     }
-#endif
+#endif   // Memory thermal control loop is not ready yet
 }
 
 
@@ -869,9 +868,8 @@ void Main_thread_routine(void *private)
             }
             else
             {
-                // For Simics phase 1, we don't want to call the health monitor thread
                 // call health monitor routine
-                //hmon_routine();
+                hmon_routine();
             }
         }
 

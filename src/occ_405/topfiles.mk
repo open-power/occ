@@ -22,12 +22,14 @@
 # permissions and limitations under the License.
 #
 # IBM_PROLOG_END_TAG
-TOP-C-SOURCES = amec/amec_data.c \
+TOP-C-SOURCES = amec/amec_controller.c \
+                amec/amec_data.c \
                 amec/amec_freq.c \
                 amec/amec_health.c \
                 amec/amec_init.c \
                 amec/amec_amester.c \
                 amec/amec_master_smh.c \
+                amec/amec_oversub.c \
                 amec/amec_parm.c \
                 amec/amec_pcap.c \
                 amec/amec_parm_table.c \
@@ -68,6 +70,7 @@ TOP-C-SOURCES = amec/amec_data.c \
                 proc/proc_data.c \
                 proc/proc_pstate.c \
                 pss/apss.c \
+                pss/dpss.c \
                 reset.c \
                 rtls/rtls_tables.c \
                 rtls/rtls.c \

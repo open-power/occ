@@ -123,10 +123,10 @@ errlHndl_t dpss_oversubscription_irq_initialize()
     __ppc405_phantom_irq.handler = occ_phantom_irq_handler;
 
     // Disable the IRQ while we work on it
-    ssx_irq_disable(PGP_IRQ_EXTERNAL_TRAP);
+    ssx_irq_disable(OCCHW_IRQ_EXTERNAL_TRAP);
 
     // Setup the IRQ
-    rc = ssx_irq_setup(PGP_IRQ_EXTERNAL_TRAP,
+    rc = ssx_irq_setup(OCCHW_IRQ_EXTERNAL_TRAP,
                        SSX_IRQ_POLARITY_ACTIVE_LOW,
                        SSX_IRQ_TRIGGER_LEVEL_SENSITIVE);
 
@@ -152,7 +152,7 @@ errlHndl_t dpss_oversubscription_irq_initialize()
     }
     else {
         // Set the IRQ handler
-        rc = ssx_irq_handler_set(PGP_IRQ_EXTERNAL_TRAP,
+        rc = ssx_irq_handler_set(OCCHW_IRQ_EXTERNAL_TRAP,
                                  isr_dpss_oversubscription_handler,
                                  NULL,
                                  SSX_NONCRITICAL);
@@ -179,8 +179,8 @@ errlHndl_t dpss_oversubscription_irq_initialize()
         }
         else {
             // Enable the IRQ
-            ssx_irq_status_clear(PGP_IRQ_EXTERNAL_TRAP);
-            ssx_irq_enable(PGP_IRQ_EXTERNAL_TRAP);
+            ssx_irq_status_clear(OCCHW_IRQ_EXTERNAL_TRAP);
+            ssx_irq_enable(OCCHW_IRQ_EXTERNAL_TRAP);
         }
     }
 

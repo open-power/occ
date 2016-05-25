@@ -29,7 +29,7 @@
 #include "core_data.h"
 #include "gpe_export.h"
 
-// Paramaters for gpe_get_core_data() & gpe_get_per_core_data()
+// Paramaters for gpe_get_core_data()
 
 typedef struct ipc_core_data_parms
 {
