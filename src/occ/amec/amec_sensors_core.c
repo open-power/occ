@@ -65,9 +65,9 @@ void amec_calc_ips_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_cor
 void amec_calc_spurr(uint8_t i_core);
 void amec_sensors_core_voltage(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_core);
 
-//*************************************************************************
+//*************************************************************************/
 // Code
-//*************************************************************************
+//*************************************************************************/
 
 // Function Specification
 //
@@ -477,7 +477,8 @@ void amec_calc_freq_and_util_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uin
   {
       temp32a = (i_core_data_ptr->empath.tod_2mhz -
                  g_amec->proc[0].core[i_core].prev_tod_2mhz);
-      temp32  = (2 * temp32) / temp32a;
+      if (0 == temp32a) temp32 = 0;
+      else temp32  = (2 * temp32) / temp32a;
   }
 
   // TODO:  Remove this once we have the OHA Power Proxy legacy mode stuff working.
@@ -524,11 +525,8 @@ void amec_calc_freq_and_util_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uin
   temp32a = temp32a >> 8;  // Drop non-significant bits
 
   // Calculate Utilization
-  temp32 = temp32 / temp32a;
-  if(temp32a == 0)          // Prevent a divide by zero
-  {
-      temp32 = 0;
-  }
+  if(temp32a == 0) temp32 = 0; // Prevent divide by 0
+  else temp32 = temp32 / temp32a;
 
   // Update Sensor for this core
   if(l_core_sleep_winkle)
@@ -578,7 +576,8 @@ void amec_calc_freq_and_util_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uin
     temp32a = temp32a >> 8;      // Drop non-significant bits
 
     // Calculate Utilization
-    temp32 = temp32 / temp32a;
+    if (temp32a == 0) temp32 = 0; // Prevent divide by 0
+    else temp32 = temp32 / temp32a;
 
     // Update per thread value for this core
     if(l_core_sleep_winkle)
@@ -824,7 +823,8 @@ void amec_calc_ips_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_cor
   //          IPC(in 0.01 IPC) = (ipc_delta * 100) / run_cycles
   // </amec_formula>
   temp32 = (fin2 * 100);  // In units of IPS
-  temp32 = temp32 / cyc2; // In units of 0.01 DPC
+  if (cyc2 == 0) temp32 = 0;
+  else temp32 = temp32 / cyc2; // In units of 0.01 DPC
   g_amec->proc[0].core[i_core].ipc = temp32;
 
 
@@ -844,7 +844,8 @@ void amec_calc_ips_sensors(gpe_bulk_core_data_t * i_core_data_ptr, uint8_t i_cor
   //          DPC(in 0.01DPC) = (dpc_delta * 100) / run_cycles
   // </amec_formula>
   temp32 = (disp2 * 100);  // In units of IPS
-  temp32 = temp32 / cyc2;  // In units of 0.01 DPC
+  if (cyc2 == 0) temp32 = 0;
+  else temp32 = temp32 / cyc2;  // In units of 0.01 DPC
   g_amec->proc[0].core[i_core].dpc = temp32;
 
   // ------------------------------------------------------
