@@ -51,6 +51,9 @@
 #include "thrm_thread.h"
 #include <proc_data.h>
 #include "amec_wof.h"
+#include <centaur_data.h>
+
+extern cent_sensor_flags_t G_dimm_temp_expired_bitmap;
 
 // We need to have a small structure in non-Applet space to keep track
 // of success & failures when running test applets.  This needs to be
@@ -376,7 +379,7 @@ ERRL_RC cmdh_poll_v10(cmdh_fsp_rsp_t * o_rsp_ptr)
                 {
                     l_tempSensorList[l_sensorHeader.count].id = g_amec->proc[0].memctl[l_cent].centaur.dimm_temps[l_dimm].temp_sid;
                     //If a dimm timed out long enough, we should return 0xFFFF for that sensor.
-                    if (G_dimm_timeout_logged_bitmap.bytes[l_cent] & (DIMM_SENSOR0 >> l_dimm))
+                    if (G_dimm_temp_expired_bitmap.bytes[l_cent] & (DIMM_SENSOR0 >> l_dimm))
                     {
                         l_tempSensorList[l_sensorHeader.count].value = 0xFFFF;
                     }

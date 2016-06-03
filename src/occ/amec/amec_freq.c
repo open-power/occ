@@ -48,12 +48,13 @@
 #include <amec_data.h>
 #include <amec_freq.h>
 #include <amec_wof.h>
+#include <centaur_data.h>
 
 //*************************************************************************
 // Externs
 //*************************************************************************
 extern uint8_t G_cent_temp_expired_bitmap;
-extern uint8_t G_dimm_temp_expired_bitmap;
+extern cent_sensor_flags_t G_dimm_temp_expired_bitmap;
 
 //*************************************************************************
 // Defines/Enums
@@ -661,11 +662,12 @@ void amec_slv_mem_voting_box(void)
         if(!L_throttle_traced)
         {
             L_throttle_traced = TRUE;
-            TRAC_INFO("Memory is being throttled. reason[%d] vote[%d] cent_expired[0x%02x] dimm_expired[0x%02x]",
+            TRAC_INFO("Memory is being throttled. reason[%d] vote[%d] cent_expired[0x%02x] dimm_expired[0x%08x%08X]",
                        l_reason,
                        l_vote,
                        G_cent_temp_expired_bitmap,
-                       G_dimm_temp_expired_bitmap);
+                       G_dimm_temp_expired_bitmap.words[0],
+                       G_dimm_temp_expired_bitmap.words[1]);
         }
     }
     else

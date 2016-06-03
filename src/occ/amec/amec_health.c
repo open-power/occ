@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -23,9 +23,9 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-//*************************************************************************
+//*************************************************************************/
 // Includes
-//*************************************************************************
+//*************************************************************************/
 #include "amec_health.h"
 #include "amec_sys.h"
 #include "amec_service_codes.h"
@@ -34,18 +34,18 @@
 #include <thrm_thread.h>
 #include <proc_data.h>
 
-//*************************************************************************
+//*************************************************************************/
 // Externs
-//*************************************************************************
+//*************************************************************************/
 extern thrm_fru_data_t      G_thrm_fru_data[DATA_FRU_MAX];
 
-//*************************************************************************
+//*************************************************************************/
 // Defines/Enums
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Globals
-//*************************************************************************
+//*************************************************************************/
 
 // Have we already called out the dimm for overtemp (bitmap of dimms)?
 cent_sensor_flags_t G_dimm_overtemp_logged_bitmap = {0};
@@ -53,9 +53,8 @@ cent_sensor_flags_t G_dimm_overtemp_logged_bitmap = {0};
 // Have we already called out the dimm for timeout (bitmap of dimms)?
 cent_sensor_flags_t G_dimm_timeout_logged_bitmap = {0};
 
-// Are any dimms currently in the timedout state (bitmap of centaurs)?
-// Note: this only tells you which centaur, not which dimm.
-uint8_t             G_dimm_temp_expired_bitmap = 0;
+// Are any dimms currently in the timedout state (bitmap of centaurs/dimm)?
+cent_sensor_flags_t G_dimm_temp_expired_bitmap = {0};
 
 // Have we already called out the centaur for timeout (bitmap of centaurs)?
 uint8_t G_cent_timeout_logged_bitmap = 0;
@@ -69,13 +68,13 @@ uint8_t G_cent_temp_expired_bitmap = 0;
 // Array to store the update tag of each core's temperature sensor
 uint32_t G_core_temp_update_tag[MAX_NUM_CORES] = {0};
 
-//*************************************************************************
+//*************************************************************************/
 // Function Declarations
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Functions
-//*************************************************************************
+//*************************************************************************/
 uint64_t amec_mem_get_huid(uint8_t i_cent, uint8_t i_dimm)
 {
     uint64_t l_huid;
@@ -388,10 +387,11 @@ void amec_health_check_dimm_timeout()
             //any dimm timers behind this centaur need incrementing?
             if(!l_need_inc.bytes[l_cent])
             {
-                //all dimm sensors were updated for this centaur. Clear the dimm timeout bit for this centaur.
-                if(G_dimm_temp_expired_bitmap & (CENTAUR0_PRESENT_MASK >> l_cent))
+                // All dimm sensors were updated for this centaur.
+                // Trace this fact and clear the expired byte for all DIMMs on this centaur.
+                if(G_dimm_temp_expired_bitmap.bytes[l_cent])
                 {
-                    G_dimm_temp_expired_bitmap &= ~(CENTAUR0_PRESENT_MASK >> l_cent);
+                    G_dimm_temp_expired_bitmap.bytes[l_cent] = 0;
                     TRAC_INFO("All dimm sensors for centaur %d have been updated", l_cent);
                 }
                 continue;
@@ -400,9 +400,14 @@ void amec_health_check_dimm_timeout()
             //There's at least one dimm requiring an increment, find the dimm
             for(l_dimm = 0; l_dimm < NUM_DIMMS_PER_CENTAUR; l_dimm++)
             {
-                //not this one, go to next one
+                //not this one, check if we need clear the dimm timeout and go to the next one
                 if(!(l_need_inc.bytes[l_cent] & (DIMM_SENSOR0 >> l_dimm)))
                 {
+                    // Clear this one if needed
+                    if(G_dimm_temp_expired_bitmap.bytes[l_cent] & (DIMM_SENSOR0 >> l_dimm))
+                    {
+                        G_dimm_temp_expired_bitmap.bytes[l_cent] &= ~(DIMM_SENSOR0 >> l_dimm);
+                    }
                     continue;
                 }
 
@@ -432,12 +437,12 @@ void amec_health_check_dimm_timeout()
                     continue;
                 }
 
-                //temperature has expired.  Notify control algorithms which centaur.
-                if(!(G_dimm_temp_expired_bitmap & (CENTAUR0_PRESENT_MASK >> l_cent)))
+                //temperature has expired.  Notify control algorithms which centaur/dimm
+                if(!(G_dimm_temp_expired_bitmap.bytes[l_cent] & (DIMM_SENSOR0 >> l_dimm)))
                 {
-                    G_dimm_temp_expired_bitmap |= CENTAUR0_PRESENT_MASK >> l_cent;
-                    TRAC_ERR("Timed out reading dimm temperature sensor on cent %d.",
-                             l_cent);
+                    G_dimm_temp_expired_bitmap.bytes[l_cent] |= (DIMM_SENSOR0 >> l_dimm);
+                    TRAC_ERR("Timed out reading dimm temperature sensor on cent %d dimm %d.",
+                             l_cent, l_dimm);
                 }
 
                 //If we've already logged an error for this FRU go to the next one.
@@ -546,7 +551,16 @@ void amec_health_check_dimm_timeout()
         }//iterate over all centaurs
     }while(0);
     L_ran_once = TRUE;
-    G_thrm_fru_data[DATA_FRU_DIMM].read_failure = G_dimm_temp_expired_bitmap;
+
+    // If any DIMMs have expired, mark read_failure indicating such.
+    if ( G_dimm_temp_expired_bitmap.bigword )
+    {
+        G_thrm_fru_data[DATA_FRU_DIMM].read_failure = 1;
+    }
+    else
+    {
+        G_thrm_fru_data[DATA_FRU_DIMM].read_failure = 0;
+    }
 }
 
 void amec_health_check_cent_timeout()
