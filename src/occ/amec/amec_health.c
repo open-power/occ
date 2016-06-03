@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -53,9 +53,9 @@ cent_sensor_flags_t G_dimm_overtemp_logged_bitmap = {0};
 // Have we already called out the dimm for timeout (bitmap of dimms)?
 cent_sensor_flags_t G_dimm_timeout_logged_bitmap = {0};
 
-// Are any dimms currently in the timedout state (bitmap of centaurs)?
-// Note: this only tells you which centaur, not which dimm.
-uint8_t             G_dimm_temp_expired_bitmap = 0;
+// Are any dimms currently in the timedout state (bitmap of centaurs/dimm)?
+// Note: this only tells you which dimm
+cent_sensor_flags_t G_dimm_temp_expired_bitmap = {0};
 
 // Have we already called out the centaur for timeout (bitmap of centaurs)?
 uint8_t G_cent_timeout_logged_bitmap = 0;
@@ -388,10 +388,9 @@ void amec_health_check_dimm_timeout()
             //any dimm timers behind this centaur need incrementing?
             if(!l_need_inc.bytes[l_cent])
             {
-                //all dimm sensors were updated for this centaur. Clear the dimm timeout bit for this centaur.
-                if(G_dimm_temp_expired_bitmap & (CENTAUR0_PRESENT_MASK >> l_cent))
+                //all dimm sensors were updated for this centaur. Trace this fact.
+                if(G_dimm_temp_expired_bitmap.bytes[l_cent])
                 {
-                    G_dimm_temp_expired_bitmap &= ~(CENTAUR0_PRESENT_MASK >> l_cent);
                     TRAC_INFO("All dimm sensors for centaur %d have been updated", l_cent);
                 }
                 continue;
@@ -400,9 +399,14 @@ void amec_health_check_dimm_timeout()
             //There's at least one dimm requiring an increment, find the dimm
             for(l_dimm = 0; l_dimm < NUM_DIMMS_PER_CENTAUR; l_dimm++)
             {
-                //not this one, go to next one
+                //not this one, check if we need clear the dimm timeout and go to the next one
                 if(!(l_need_inc.bytes[l_cent] & (DIMM_SENSOR0 >> l_dimm)))
                 {
+                    // This one needs to be cleared
+                    if(G_dimm_temp_expired_bitmap.bytes[l_cent] & (DIMM_SENSOR0 >> l_dimm))
+                    {
+                        G_dimm_temp_expired_bitmap.bytes[l_cent] &= ~(DIMM_SENSOR0 >> l_dimm);
+                    }
                     continue;
                 }
 
@@ -432,12 +436,18 @@ void amec_health_check_dimm_timeout()
                     continue;
                 }
 
-                //temperature has expired.  Notify control algorithms which centaur.
-                if(!(G_dimm_temp_expired_bitmap & (CENTAUR0_PRESENT_MASK >> l_cent)))
+                //temperature has expired.  Notify control algorithms which centaur/dimm
+                if(!(G_dimm_temp_expired_bitmap.bytes[l_cent] & (DIMM_SENSOR0 >> l_dimm)))
                 {
-                    G_dimm_temp_expired_bitmap |= CENTAUR0_PRESENT_MASK >> l_cent;
-                    TRAC_ERR("Timed out reading dimm temperature sensor on cent %d.",
-                             l_cent);
+                    G_dimm_temp_expired_bitmap.bytes[l_cent] |= (DIMM_SENSOR0 >> l_dimm);
+                    TRAC_ERR("Timed out reading dimm temperature sensor on cent %d dimm %d.",
+                             l_cent, l_dimm);
+
+                    // This is needed because read_failure is a uint8_t, we cannot store
+                    // the entirety of the expired bitmap in it. However, since the fru data
+                    // is used to act on the whole zone, this should be sufficient to keep
+                    // the algorithm informed that the zone needs cooling.
+                    G_thrm_fru_data[DATA_FRU_DIMM].read_failure = G_dimm_temp_expired_bitmap.bytes[l_cent];
                 }
 
                 //If we've already logged an error for this FRU go to the next one.
@@ -546,7 +556,6 @@ void amec_health_check_dimm_timeout()
         }//iterate over all centaurs
     }while(0);
     L_ran_once = TRUE;
-    G_thrm_fru_data[DATA_FRU_DIMM].read_failure = G_dimm_temp_expired_bitmap;
 }
 
 void amec_health_check_cent_timeout()
