@@ -176,7 +176,8 @@ typedef struct __attribute__ ((packed)) cmdh_poll_sensor_datablock
 typedef struct __attribute__ ((packed)) cmdh_poll_temp_sensor
 {
     uint32_t id;     // Sensor id.
-    uint16_t value;  // current temperature sensor reading in degrees C
+    uint8_t  fru_type;
+    uint8_t  value;  // current temperature sensor reading in degrees C
 } cmdh_poll_temp_sensor_t;
 
 typedef struct __attribute__ ((packed)) cmdh_poll_freq_sensor

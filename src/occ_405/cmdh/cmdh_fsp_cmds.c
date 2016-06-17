@@ -246,7 +246,8 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
         if(CORE_PRESENT(k))
         {
             l_tempSensorList[l_sensorHeader.count].id = G_amec_sensor_list[TEMP4MSP0C0 + k]->ipmi_sid;
-            l_tempSensorList[l_sensorHeader.count].value = G_amec_sensor_list[TEMP4MSP0C0 + k]->sample;
+            l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_PROC;
+            l_tempSensorList[l_sensorHeader.count].value = (G_amec_sensor_list[TEMP4MSP0C0 + k]->sample) & 0xFF;
             l_sensorHeader.count++;
         }
     }
@@ -262,15 +263,15 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
                 if (g_amec->proc[0].memctl[l_port].centaur.dimm_temps[l_dimm].temp_sid != 0)
                 {
                     l_tempSensorList[l_sensorHeader.count].id = g_amec->proc[0].memctl[l_port].centaur.dimm_temps[l_dimm].temp_sid;
-
+                    l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_DIMM;
                     //If a dimm timed out long enough, we should return 0xFFFF for that sensor.
                     if (G_dimm_temp_expired_bitmap.bytes[l_port] & (DIMM_SENSOR0 >> l_dimm))
                     {
-                        l_tempSensorList[l_sensorHeader.count].value = 0xFFFF;
+                        l_tempSensorList[l_sensorHeader.count].value = 0xFF;
                     }
                     else
                     {
-                        l_tempSensorList[l_sensorHeader.count].value = g_amec->proc[0].memctl[l_port].centaur.dimm_temps[l_dimm].cur_temp;
+                        l_tempSensorList[l_sensorHeader.count].value = (g_amec->proc[0].memctl[l_port].centaur.dimm_temps[l_dimm].cur_temp) & 0xFF;
                     }
 
                     l_sensorHeader.count++;
@@ -286,13 +287,14 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
             {
                 //Add entry for centaurs.
                 l_tempSensorList[l_sensorHeader.count].id = g_amec->proc[0].memctl[l_cent].centaur.temp_sid;
+                l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_CENTAUR;
                 if (G_cent_timeout_logged_bitmap & (CENTAUR0_PRESENT_MASK >> l_cent))
                 {
-                    l_tempSensorList[l_sensorHeader.count].value = 0xFFFF;
+                    l_tempSensorList[l_sensorHeader.count].value = 0xFF;
                 }
                 else
                 {
-                    l_tempSensorList[l_sensorHeader.count].value = g_amec->proc[0].memctl[l_cent].centaur.centaur_hottest.cur_temp;
+                    l_tempSensorList[l_sensorHeader.count].value = (g_amec->proc[0].memctl[l_cent].centaur.centaur_hottest.cur_temp) & 0xFF;
                 }
                 l_sensorHeader.count++;
 
@@ -302,19 +304,19 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
                     if (g_amec->proc[0].memctl[l_cent].centaur.dimm_temps[l_dimm].temp_sid != 0)
                     {
                         l_tempSensorList[l_sensorHeader.count].id = g_amec->proc[0].memctl[l_cent].centaur.dimm_temps[l_dimm].temp_sid;
+                        l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_DIMM;
                         //If a dimm timed out long enough, we should return 0xFFFF for that sensor.
                         if (G_dimm_temp_expired_bitmap.bytes[l_cent] & (DIMM_SENSOR0 >> l_dimm))
                         {
-                            l_tempSensorList[l_sensorHeader.count].value = 0xFFFF;
+                            l_tempSensorList[l_sensorHeader.count].value = 0xFF;
                         }
                         else
                         {
-                            l_tempSensorList[l_sensorHeader.count].value = g_amec->proc[0].memctl[l_cent].centaur.dimm_temps[l_dimm].cur_temp;
+                            l_tempSensorList[l_sensorHeader.count].value = (g_amec->proc[0].memctl[l_cent].centaur.dimm_temps[l_dimm].cur_temp & 0xFF);
                         }
 
                         l_sensorHeader.count++;
                     }
-
                 }
             }
         }

@@ -95,15 +95,6 @@ typedef struct __attribute__ ((packed))
     uint8_t version;
 }cmdh_store_mode_freqs_t;
 
-// Old way used by TMGT to send OCC the frequencies for each mode.
-typedef struct __attribute__ ((packed))
-{
-    struct cmdh_fsp_cmd_header;
-    uint8_t format;
-    uint8_t version;
-    uint8_t mode_count;
-}cmdh_store_mode_freqs_old_t;
-
 // Used by TMGT to tell OCC if it is a master or not
 typedef struct __attribute__ ((packed))
 {
@@ -303,9 +294,11 @@ typedef struct __attribute__ ((packed))
     uint16_t  min_mem_power;    // Max mem Power @min (x0.1W)
 
     uint16_t  pcap1_n_per_port; // Static per port numerator @PCAP1
+    uint16_t  pcap1_n_per_chip; // Static per chip numerator @PCAP1
     uint16_t  pcap1_mem_power;  // Max memory power @PCAP1 (x0.1W)
 
     uint16_t  pcap2_n_per_port; // Static per port numerator @PCAP2
+    uint16_t  pcap2_n_per_chip; // Static per chip numerator @PCAP2
     uint16_t  pcap2_mem_power;  // Max memory power @PCAP2 (x0.1W)
 
     uint16_t  nom_n_per_port;   // Static per port @Redundant (no ovs)
@@ -327,9 +320,11 @@ typedef struct __attribute__ ((packed))
     uint16_t  min_mem_power;    // Max mem Power @min (x0.1W)
 
     uint16_t  pcap1_n_per_mba;  // Static per MBA numerator @PCAP1
+    uint16_t  pcap1_n_per_chip; // Static per chip numerator @PCAP1
     uint16_t  pcap1_mem_power;  // Max memory power @PCAP1 (x0.1W)
 
     uint16_t  pcap2_n_per_mba;  // Static per MBA numerator @PCAP2
+    uint16_t  pcap2_n_per_chip; // Static per chip numerator @PCAP2
     uint16_t  pcap2_mem_power;  // Max memory power @PCAP2 (x0.1W)
 
     uint16_t  nom_n_per_mba;    // Static per MBA @Redundant (no ovs)

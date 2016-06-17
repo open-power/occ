@@ -43,13 +43,10 @@
 #include <centaur_data.h>
 
 #define FREQ_FORMAT_PWR_MODE_NUM   6
-#define FREQ_FORMAT_BYTES_PER_MODE 3
 #define FREQ_FORMAT_BASE_DATA_SZ   (sizeof(cmdh_store_mode_freqs_t) - sizeof(cmdh_fsp_cmd_header_t))
 
-#define FREQ_FORMAT_11_NUM_FREQS   4
 #define FREQ_FORMAT_20_NUM_FREQS   6
 
-#define DATA_FREQ_VERSION_11       0x11
 #define DATA_FREQ_VERSION_20       0x20
 
 #define DATA_PCAP_VERSION_20       0x20
@@ -238,11 +235,11 @@ uint8_t DATA_request_cnfgdata ()
     return(l_req);
 }
 
-// Functior Specification
+// Function Specification
 //
 // Name:  data_store_freq_data
 //
-// Description: TODO Add description
+// Description: Write all of the frequency points from TMGT into G_sysConfigData
 //
 // End Function Specification
 errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
@@ -265,12 +262,9 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
         // Sanity Checks
         // If the datapacket is bigger than what we can store, OR
         // if the version doesn't equal what we expect, OR
-        // if the expected data length does not agree with the actual data length, OR
-        // the format is 0x10 and we don't have room for the 3 2B frequencies, OR
-        // the format is 0x11 and we don;t have room for the 4 2B frequencies.
+        // if the expected data length does not agree with the actual data length
         if((l_data_length < FREQ_FORMAT_BASE_DATA_SZ) ||
-           ((l_cmdp->version != DATA_FREQ_VERSION_11) && (l_cmdp->version != DATA_FREQ_VERSION_20)) ||
-           ((DATA_FREQ_VERSION_11 == l_cmdp->version) && (l_mode_data_sz != (FREQ_FORMAT_11_NUM_FREQS * 2))) ||
+           (l_cmdp->version != DATA_FREQ_VERSION_20) ||
            ((DATA_FREQ_VERSION_20 == l_cmdp->version) && (l_mode_data_sz != (FREQ_FORMAT_20_NUM_FREQS * 2))))
         {
             CMDH_TRAC_ERR("Invalid Frequency Data packet: data_length[%u] version[%u] l_count[%u] l_mode_data_sz[%u]",
@@ -286,44 +280,7 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
             break;
         }
 
-        if(DATA_FREQ_VERSION_11 == l_cmdp->version) // Version 0x11
-        {
-            // 1) Nominal, 2) Turbo,
-            // 3) Minimum, 4) Ultra Turbo
-            // store under the existing enums.
-
-            // Bytes 3-4 Nominal Frequency Point
-            l_freq = (l_buf[0] << 8 | l_buf[1]);
-            l_table[OCC_MODE_NOMINAL] = l_freq;
-            CMDH_TRAC_INFO("Nominal frequency = %d", l_freq);
-
-            // Bytes 5-6 Turbo Frequency Point
-            l_freq = (l_buf[2] << 8 | l_buf[3]);
-            l_table[OCC_MODE_TURBO] = l_freq;
-            CMDH_TRAC_INFO("Turbo frequency = %d", l_freq);
-
-            // Bytes 7-8 Minimum Frequency Point
-            l_freq = (l_buf[4] << 8 | l_buf[5]);
-            l_table[OCC_MODE_PWRSAVE] = l_freq;
-            l_table[OCC_MODE_MIN_FREQUENCY] = l_freq;
-            G_proc_fmin = l_freq;
-            CMDH_TRAC_INFO("Minimum frequency = %d", l_freq);
-
-
-            // Bytes 9-10 Ultr Turbo Frequency Point
-            l_freq = (l_buf[6] << 8 | l_buf[7]);
-            if(l_freq)
-            {
-                G_proc_fmax = l_freq;
-            }
-            else // If Ultra Turbo Frequency Point = 0, Fmax = Turbo Frequency
-            {
-                G_proc_fmax = l_table[OCC_MODE_TURBO];
-            }
-            l_table[OCC_MODE_UTURBO] = l_freq;
-            CMDH_TRAC_INFO("UT frequency = %d", l_freq);
-        }
-        else if(DATA_FREQ_VERSION_20 == l_cmdp->version) // Version 0x20
+        if(DATA_FREQ_VERSION_20 == l_cmdp->version) // Version 0x20
         {
             // 1) Nominal, 2) Turbo, 3) Minimum,
             // 4) Ultra Turbo, 5) Static PS, 6) FFO
@@ -365,17 +322,47 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
             // Bytes 13-14 FFO Frequency Point
             l_freq = (l_buf[10] << 8 | l_buf[11]);
-            l_table[OCC_MODE_FFO] = l_freq;
-            CMDH_TRAC_INFO("FFO Frequency = %d", l_freq);
-
-            // Check for FFO Frequency point consistency,
-            // rest of the frequency points are checked next
-            if(l_freq < G_proc_fmin || l_freq > G_proc_fmax)
+            if (l_freq != 0)
             {
-                CMDH_TRAC_ERR("FFO Freq point is out-of-range - Fmin=0x%x, Fmax=0x%x, FFO=0x%x",
-                              l_freq, G_proc_fmin, G_proc_fmax);
+                // Check and make sure that FFO freq is within valid range
+                const uint16_t l_req_freq = l_freq;
+                if (l_freq < G_proc_fmin)
+                {
+                    l_freq = G_proc_fmin;
+                }
+                else if (l_freq > G_proc_fmax)
+                {
+                    l_freq = G_proc_fmax;
+                }
+
+                // Log an error if we could not honor the requested FFO frequency, but keep going.
+                if (l_req_freq != l_freq)
+                {
+                    TRAC_ERR("FFO Frequency out of range. requested %d, but using %d",
+                             l_req_freq,  l_freq);
+                    /* @
+                     * @errortype
+                     * @moduleid    DATA_STORE_FREQ_DATA
+                     * @reasoncode  INVALID_INPUT_DATA
+                     * @userdata1   requested frequency
+                     * @userdata2   frequency used
+                     * @userdata4   OCC_NO_EXTENDED_RC
+                     * @devdesc     OCC recieved an invalid FFO frequency
+                     */
+                    l_err = createErrl(DATA_STORE_FREQ_DATA,
+                                       INVALID_INPUT_DATA,
+                                       OCC_NO_EXTENDED_RC,
+                                       ERRL_SEV_INFORMATIONAL,
+                                       NULL,
+                                       DEFAULT_TRACE_SIZE,
+                                       l_req_freq,
+                                       l_freq);
+                    commitErrl(&l_err);
+                }
             }
         }
+        l_table[OCC_MODE_FFO] = l_freq;
+        CMDH_TRAC_INFO("FFO Frequency = %d", l_freq);
 
         // Calculate minimum Pstate:
         G_proc_pmin = G_proc_pmax + ((G_proc_fmax - G_proc_fmin)/G_khz_per_pstate);
@@ -1523,7 +1510,19 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                         // Validate the i2c info for this data set.  Any failure will result in error and
                         // memory monitoring disabled.
 
-                        // Engine must be the same
+                        // Only support engine C, D, or E
+                        if((l_i2c_engine != PIB_I2C_ENGINE_C) &&
+                           (l_i2c_engine != PIB_I2C_ENGINE_D) &&
+                           (l_i2c_engine != PIB_I2C_ENGINE_E))
+                        {
+                            CMDH_TRAC_ERR("data_store_mem_cfg: Invalid I2C engine. entry=%d, engine=%d",
+                                          i,
+                                          l_i2c_engine);
+                            cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
+                            break;
+                        }
+
+                        // Engine must be the same for all DIMMs
                         if (l_i2c_engine != G_sysConfigData.dimm_i2c_engine)
                         {
                             CMDH_TRAC_ERR("data_store_mem_cfg: I2c engine mismatch. entry=%d, engine=%d, expected=%d",
