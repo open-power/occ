@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/amec/amec_freq.c $                                    */
+/* $Source: src/occ_405/amec/amec_freq.c $                                */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -48,12 +48,13 @@
 #include <amec_data.h>
 #include <amec_freq.h>
 #include "pss_constants.h"
+#include <centaur_data.h>
 
 //*************************************************************************
 // Externs
 //*************************************************************************
 extern uint8_t G_cent_temp_expired_bitmap;
-extern uint8_t G_dimm_temp_expired_bitmap;
+extern cent_sensor_flags_t G_dimm_temp_expired_bitmap;
 
 //*************************************************************************
 // Defines/Enums
@@ -78,7 +79,7 @@ const uint32_t G_pmc_ffdc_scom_addrs[PMC_FFDC_SCOM_ADDRS_SIZE] =
     PMC_LFIR_ERR_MASK_REG,
     OCB_OCCLFIR,
     PBA_FIR,
-    TOD_VALUE_REG 
+    TOD_VALUE_REG
 };
 
 //FFDC OCI addresses as requested by Greg Still in defect SW247927
@@ -618,14 +619,12 @@ void amec_slv_mem_voting_box(void)
         if(!L_throttle_traced)
         {
             L_throttle_traced = TRUE;
-// @TODO - TEMP - No dimm temp Colection yet
-/*
-            TRAC_INFO("Memory is being throttled. reason[%d] vote[%d] cent_expired[0x%02x] dimm_expired[0x%02x]",
+            TRAC_INFO("Memory is being throttled. reason[%d] vote[%d] cent_expired[0x%02x] dimm_expired[0x%08x%08x]",
                        l_reason,
                        l_vote,
                        G_cent_temp_expired_bitmap,
-                       G_dimm_temp_expired_bitmap);
-*/
+                       G_dimm_temp_expired_bitmap.words[0],
+                       G_dimm_temp_expired_bitmap.words[1]);
         }
     }
     else

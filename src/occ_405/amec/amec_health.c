@@ -23,9 +23,9 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-//*************************************************************************
+//*************************************************************************/
 // Includes
-//*************************************************************************
+//*************************************************************************/
 #include "amec_health.h"
 #include "amec_sys.h"
 #include "amec_service_codes.h"
@@ -33,17 +33,17 @@
 #include <centaur_data.h>
 #include <proc_data.h>
 
-//*************************************************************************
+//*************************************************************************/
 // Externs
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Defines/Enums
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Globals
-//*************************************************************************
+//*************************************************************************/
 
 // Have we already called out the dimm for overtemp (bitmap of dimms)?
 cent_sensor_flags_t G_dimm_overtemp_logged_bitmap = {0};
@@ -51,9 +51,8 @@ cent_sensor_flags_t G_dimm_overtemp_logged_bitmap = {0};
 // Have we already called out the dimm for timeout (bitmap of dimms)?
 cent_sensor_flags_t G_dimm_timeout_logged_bitmap = {0};
 
-// Are any dimms currently in the timedout state (bitmap of centaurs)?
-// Note: this only tells you which centaur, not which dimm.
-uint8_t             G_dimm_temp_expired_bitmap = 0;
+// Are any dimms currently in the timedout state (bitmap of dimm)?
+cent_sensor_flags_t G_dimm_temp_expired_bitmap = {0};
 
 // Have we already called out the centaur for timeout (bitmap of centaurs)?
 uint8_t G_cent_timeout_logged_bitmap = 0;
@@ -67,13 +66,13 @@ uint8_t G_cent_temp_expired_bitmap = 0;
 // Array to store the update tag of each core's temperature sensor
 uint32_t G_core_temp_update_tag[MAX_NUM_CORES] = {0};
 
-//*************************************************************************
+//*************************************************************************/
 // Function Declarations
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Functions
-//*************************************************************************
+//*************************************************************************/
 uint64_t amec_mem_get_huid(uint8_t i_cent, uint8_t i_dimm)
 {
     uint64_t l_huid;
@@ -380,16 +379,17 @@ void amec_health_check_dimm_timeout()
             break;
         }
 
-        //iterate across all centaurs incrementing dimm sensor timers as needed
+        //iterate across all centaurs/ports incrementing dimm sensor timers as needed
         for(l_cent = 0; l_cent < MAX_NUM_CENTAURS; l_cent++)
         {
             //any dimm timers behind this centaur need incrementing?
             if(!l_need_inc.bytes[l_cent])
             {
-                //all dimm sensors were updated for this centaur. Clear the dimm timeout bit for this centaur.
-                if(G_dimm_temp_expired_bitmap & (CENTAUR0_PRESENT_MASK >> l_cent))
+                // All dimm sensors were updated for this centaur/port
+                // Trace this fact and clear the expired byte for all DIMMs on this centaur/port
+                if(G_dimm_temp_expired_bitmap.bytes[l_cent])
                 {
-                    G_dimm_temp_expired_bitmap &= ~(CENTAUR0_PRESENT_MASK >> l_cent);
+                    G_dimm_temp_expired_bitmap.bytes[l_cent] = 0;
                     TRAC_INFO("All dimm sensors for centaur %d have been updated", l_cent);
                 }
                 continue;
@@ -398,9 +398,14 @@ void amec_health_check_dimm_timeout()
             //There's at least one dimm requiring an increment, find the dimm
             for(l_dimm = 0; l_dimm < NUM_DIMMS_PER_CENTAUR; l_dimm++)
             {
-                //not this one, go to next one
+                //not this one, check if we need to clear the dimm timeout and go to the next one
                 if(!(l_need_inc.bytes[l_cent] & (DIMM_SENSOR0 >> l_dimm)))
                 {
+                    // Clear this one if needed
+                    if(G_dimm_temp_expired_bitmap.bytes[l_cent] & (DIMM_SENSOR0 >> l_dimm))
+                    {
+                        G_dimm_temp_expired_bitmap.bytes[l_cent] &= ~(DIMM_SENSOR0 >> l_dimm);
+                    }
                     continue;
                 }
 
@@ -430,12 +435,12 @@ void amec_health_check_dimm_timeout()
                     continue;
                 }
 
-                //temperature has expired.  Notify control algorithms which centaur.
-                if(!(G_dimm_temp_expired_bitmap & (CENTAUR0_PRESENT_MASK >> l_cent)))
+                //temperature has expired.  Notify control algorithms which DIMM
+                if(!(G_dimm_temp_expired_bitmap.bytes[l_cent] & (DIMM_SENSOR0 >> l_dimm)))
                 {
-                    G_dimm_temp_expired_bitmap |= CENTAUR0_PRESENT_MASK >> l_cent;
-                    TRAC_ERR("Timed out reading dimm temperature sensor on cent %d.",
-                             l_cent);
+                    G_dimm_temp_expired_bitmap.bytes[l_cent] |= (DIMM_SENSOR0 >> l_dimm);
+                    TRAC_ERR("Timed out reading dimm temperature sensor on cent %d dimm %d.",
+                             l_cent, l_dimm);
                 }
 
                 //If we've already logged an error for this FRU go to the next one.
@@ -460,7 +465,7 @@ void amec_health_check_dimm_timeout()
                      *
                      */
                     l_err = createErrl(AMEC_HEALTH_CHECK_DIMM_TIMEOUT,    //modId
-                                       FRU_TEMP_TIMEOUT,                 //reasoncode
+                                       FRU_TEMP_TIMEOUT,                  //reasoncode
                                        OCC_NO_EXTENDED_RC,                //Extended reason code
                                        ERRL_SEV_PREDICTIVE,               //Severity
                                        NULL,                              //Trace Buf
@@ -496,7 +501,7 @@ void amec_health_check_dimm_timeout()
                                      &G_dimm_timeout_logged_bitmap.bytes[l_cent]);
             } //iterate over all dimms
 
-        } //iterate over all centaurs
+        } //iterate over all centaurs/ports
 
         if(l_err)
         {
@@ -509,7 +514,7 @@ void amec_health_check_dimm_timeout()
             break;
         }
 
-        //iterate across all centaurs clearing dimm sensor timers as needed
+        //iterate across all centaurs/ports clearing dimm sensor timers as needed
         for(l_cent = 0; l_cent < MAX_NUM_CENTAURS; l_cent++)
         {
 
@@ -541,7 +546,7 @@ void amec_health_check_dimm_timeout()
                 }
 
             }//iterate over all dimms
-        }//iterate over all centaurs
+        }//iterate over all centaurs/ports
     }while(0);
     L_ran_once = TRUE;
 }

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -29,11 +29,12 @@
 #include <occ_common.h>
 #include <sensor.h>
 #include <amec_sys.h>
+#include <centaur_data.h>
 
 //*************************************************************************
 // Externs
 //*************************************************************************
-extern uint8_t G_dimm_temp_expired_bitmap;
+extern cent_sensor_flags_t G_dimm_temp_expired_bitmap;
 extern uint8_t G_cent_temp_expired_bitmap;
 //*************************************************************************
 // Macros
@@ -178,7 +179,7 @@ void amec_controller_dimm_thermal()
     // Get TEMP2MSDIMM sensor value
     l_sensor = getSensorByGsid(TEMP2MSDIMM);
 
-    if(G_dimm_temp_expired_bitmap)
+    if(G_dimm_temp_expired_bitmap.bigword)
     {
        //we were not able to read one or more dimm temperatures.
        //Assume temperature is at the setpoint plus 1 degree C.
