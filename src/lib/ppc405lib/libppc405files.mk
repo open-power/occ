@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2015
+# Contributors Listed Below - COPYRIGHT 2015,2016
 # [+] International Business Machines Corp.
 #
 #
@@ -43,19 +43,12 @@
 
 C-SOURCES = \
     assert.c \
-	byte_pool.c \
 	ctype.c \
 	ctype_table.c \
 	fgetc.c \
-	initcall.c \
-	lfsr.c \
-	mutex.c \
-	periodic_semaphore.c \
 	polling.c \
 	printf.c \
-	progress.c \
 	puts.c \
-	rtx_stdio.c \
 	simics_stdio.c \
 	sprintf.c \
 	ssx_dump.c \
@@ -66,7 +59,6 @@ C-SOURCES = \
 	string.c \
 	string_stream.c \
 	strtox.c \
-	sxlock.c \
 	time.c
 
 S-SOURCES =  
