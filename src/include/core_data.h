@@ -32,8 +32,8 @@
 #define __GPE_CORE_DATA_H__
 
 #include <stdint.h>
+#include <p9_config.h>
 
-#define THERM_DTS_RESULT    0x00050000
 #define PC_OCC_SPRC         0x00010A82
 #define PC_OCC_SPRD         0x00010A83
 #define TOD_VALUE_REG       0x00040020
@@ -67,17 +67,6 @@
 
 #define EMPATH_CORE_THREADS 4
 
-typedef union dts_sensor_result_reg
-{
-    uint64_t value;
-    struct
-    {
-        uint16_t  reading[2];
-        uint16_t  unused_hw2;
-        uint16_t  unused_hw3;
-    } half_words;
-} dts_sensor_result_reg_t;
-
 
 typedef struct
 {
@@ -109,19 +98,6 @@ typedef struct
     uint32_t mem_c;         // was mem_a
     //    uint32_t mem_b;       // No longer exists in p9
 } CoreDataPerThread;
-
-typedef union sensor_result
-{
-    uint16_t result;
-    struct
-    {
-        uint16_t reading : 12;
-        uint16_t thermal_trip : 2;
-        uint16_t spare : 1;
-        uint16_t valid : 1;
-    } fields;
-
-} sensor_result_t;
 
 typedef struct
 {

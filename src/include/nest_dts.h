@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/include/p9_config.h $                                     */
+/* $Source: src/include/nest_dts.h $                                      */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2016                             */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -22,58 +22,20 @@
 /* permissions and limitations under the License.                         */
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
+#if !defined(__NEST_DTS_H__)
+#define __NEST_DTS_H__
 
-/// \file p9_config.h
-/// \brief Chip configuration data structures for P9 OCC procedures
+#include <p9_config.h>
 
-#ifndef __P9_GPE_CONFIG_H__
-#define __P9_GPE_CONFIG_H__
-
-
-#include <stdint.h>
-
-#define THERM_DTS_RESULT        0x00050000
-
-typedef union dts_sensor_result_reg
+// Make struct size a multiple of 8 bytes for performance.
+typedef struct
 {
-    uint64_t value;
-    struct
-    {
-        uint16_t  reading[2];
-        uint16_t  unused_hw2;
-        uint16_t  unused_hw3;
-    } half_words;
-} dts_sensor_result_reg_t;
+    sensor_result_t sensor0;
+    sensor_result_t unused;
+    sensor_result_t sensor1;
+    sensor_result_t sensor2;
+} NestDts_t;
 
-typedef union sensor_result
-{
-    uint16_t result;
-    struct
-    {
-        uint16_t reading : 12;
-        uint16_t thermal_trip : 2;
-        uint16_t spare : 1;
-        uint16_t valid : 1;
-    } fields;
+uint32_t get_nest_dts(NestDts_t* o_data);
+#endif
 
-} sensor_result_t;
-
-
-/// SCOM address Ranges:
-// Cores (EX chiplet): 0x20000000 - 0x37000000
-// Caches: 0x10000000 - 0x15000000
-//
-#define CHIPLET_CORE_SCOM_BASE  0x20000000
-#define CHIPLET_CACHE_SCOM_BASE 0x10000000
-#define CHIPLET_NEST_SCOM_BASE  0x02000000
-
-#define CHIPLET_CORE_ID(n) \
-    (((n) << 24) + CHIPLET_CORE_SCOM_BASE)
-
-#define CHIPLET_CACHE_ID(n) \
-    (((n) << 24) + CHIPLET_CACHE_SCOM_BASE)
-
-#define CHIPLET_NEST_ID(n) \
-    (((n) << 24) + CHIPLET_NEST_SCOM_BASE)
-
-#endif  /* __P9_GPE_CONFIG_H__ */
