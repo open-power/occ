@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2015
+# Contributors Listed Below - COPYRIGHT 2015,2016
 # [+] International Business Machines Corp.
 #
 #
@@ -53,5 +53,5 @@ GPE-THREAD-S-SOURCES =
 GPE-ASYNC-C-SOURCES =
 GPE-ASYNC-S-SOURCES =
 
-GPE_OBJECTS += $(GPE-C-SOURCES:.c=.o) $(GPE-S-SOURCES:.S=.o)
+GPE_OBJECTS = $(GPE-C-SOURCES:.c=.o) $(GPE-S-SOURCES:.S=.o)
 

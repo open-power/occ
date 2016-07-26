@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -114,6 +114,18 @@
 #define PK_TIMER_HANDLER_INVARIANT            0x00779041
 #define PK_THREAD_TIMEOUT_STATE               0x00779045
 
+// Application-level panic offsets
+// (Use these as offsets for your application code panics and keep
+//  track of them locally in your application code domain, including
+//  sharing the panic defines with other developers making codes
+//  for the same engine.)
+
+#define PK_APP_OFFSET_SBE                     0x0077a000
+#define PK_APP_OFFSET_GPE0                    0x0077b000
+#define PK_APP_OFFSET_GPE1                    0x0077c000
+#define PK_APP_OFFSET_GPE2                    0x0077d000
+#define PK_APP_OFFSET_GPE3                    0x0077e000
+#define PK_APP_OFFSET_CME                     0x0077f000
 
 /// \defgroup pk_thread_states PK Thread States
 ///
@@ -323,11 +335,15 @@
 #define PK_TIMEBASE_FREQUENCY_HZ __pk_timebase_frequency_hz
 
 /// This is the unscaled timebase frequency in Hz.
-#ifdef APPCFG_USE_EXT_TIMEBASE
-#define PK_BASE_FREQ_HZ     25000000
-#else
-#define PK_BASE_FREQ_HZ     400000000
-#endif /* APPCFG_USE_EXT_TIMEBASE */
+#ifndef PK_BASE_FREQ_HZ
+    #ifdef APPCFG_USE_EXT_TIMEBASE
+        #define PK_BASE_FREQ_HZ     (uint32_t)25000000
+    #else
+        #define PK_BASE_FREQ_HZ     (uint32_t)400000000
+    #endif /* APPCFG_USE_EXT_TIMEBASE */
+#endif
+#define PK_BASE_FREQ_KHZ    (PK_BASE_FREQ_HZ / 1000)
+#define PK_BASE_FREQ_MHZ    (PK_BASE_FREQ_HZ / 1000000)
 
 /// Scale a time interval to be _closer_ to what was actually requested
 /// base on the actual timebase frequency.
@@ -337,7 +353,7 @@
 /// ignored. The application can redefine this macro.
 
 #ifndef PK_SECONDS
-#define PK_SECONDS(s) ((PkInterval)(PK_BASE_FREQ_HZ * (PkInterval)(s)))
+    #define PK_SECONDS(s) ((PkInterval)(PK_BASE_FREQ_HZ * (s)))
 #endif
 
 /// Convert a time in integral milliseconds to a time interval - overflows are
@@ -345,7 +361,7 @@
 /// assumed. The application can redefine this macro.
 
 #ifndef PK_MILLISECONDS
-#define PK_MILLISECONDS(m) ((PkInterval)((PK_BASE_FREQ_HZ * (PkInterval)(m)) / 1000))
+    #define PK_MILLISECONDS(m) ( (PkInterval)(PK_BASE_FREQ_KHZ * (m)) )
 #endif
 
 /// Convert a time in integral microseconds to a time interval - overflows are
@@ -353,7 +369,7 @@
 /// assumed. The application can redefine this macro.
 
 #ifndef PK_MICROSECONDS
-#define PK_MICROSECONDS(u) ((PkInterval)((PK_BASE_FREQ_HZ * (PkInterval)(u)) / 1000000))
+    #define PK_MICROSECONDS(u)  ( (PkInterval)(PK_BASE_FREQ_MHZ * (u)) )
 #endif
 
 /// Convert a time in integral nanoseconds to a time interval - overflows are
@@ -361,37 +377,73 @@
 /// assumed. The application can redefine this macro.
 
 #ifndef PK_NANOSECONDS
-#define PK_NANOSECONDS(n) ((PkInterval)((PK_BASE_FREQ_HZ * (PkInterval)(n)) / 1000000000))
+    #define PK_NANOSECONDS(n) ( (PkInterval)( ( ((PK_BASE_FREQ_MHZ<<10)/1000) * (n) ) >> 10) )
 #endif
 
 
 /// Enable PK application tracing (enabled by default)
 #ifndef PK_TRACE_ENABLE
-#define PK_TRACE_ENABLE 1
+    #define PK_TRACE_ENABLE 1
+#endif
+
+/// Enable PK crit  (disabled by default)
+#ifndef PK_TRACE_CRIT_ENABLE
+    #define PK_TRACE_CRIT_ENABLE 0
+#endif
+
+/// Enable Debug suppress  (disabled by default)
+// a.k.a. enabled means turn off PK_TRACE(), but keep crit trace
+#ifndef PK_TRACE_DBG_SUPPRESS
+    #define PK_TRACE_DBG_SUPPRESS 0
 #endif
 
 /// Enable PK kernel tracing (disabled by default)
 #ifndef PK_KERNEL_TRACE_ENABLE
-#define PK_KERNEL_TRACE_ENABLE 0
+    #define PK_KERNEL_TRACE_ENABLE 0
 #endif
+
+/// pk trace disabled implies no tracing at all
+//   override any other trace settings
+#if !PK_TRACE_ENABLE
+    #undef PK_TRACE_DBG_SUPPRESS
+    #undef PK_TRACE_CRIT_ENABLE
+
+    #define PK_TRACE_DBG_SUPPRESS 1
+    #define PK_TRACE_CRIT_ENABLE 0
+#endif
+
+// PK TRACE enabled & PK CRIT enabled implies all tracing on.
+// PK TRACE enabled & PK DBUG disabled implies   PK CRIT INFO tracing only.
+// PK TRACE enable & pK CRIT INFO disabled  && PK DBUG disabled implies
+//          PK TRACE disabled
+#if PK_TRACE_ENABLE &&  PK_TRACE_DBG_SUPPRESS && !PK_TRACE_CRIT_ENABLE
+    #undef PK_TRACE_ENABLE
+    #define PK_TRACE_ENABLE 0
+#endif
+
 
 //Application trace macros
-#if !PK_TRACE_ENABLE
-#define PK_TRACE(...)
-#define PK_TRACE_BIN(str, bufp, buf_size)
+#if PK_TRACE_DBG_SUPPRESS
+    #define PK_TRACE(...)
+    #define PK_TRACE_BIN(str, bufp, buf_size)
 #else
-#define PK_TRACE(...) PKTRACE(__VA_ARGS__)
-#define PK_TRACE_BIN(str, bufp, buf_size) PKTRACE_BIN(str, bufp, buf_size)
+    #define PK_TRACE(...) PKTRACE(__VA_ARGS__)
+    #define PK_TRACE_BIN(str, bufp, buf_size) PKTRACE_BIN(str, bufp, buf_size)
 #endif
 
+#if !PK_TRACE_CRIT_ENABLE
+    #define PK_TRACE_INF(...)
+#else
+    #define PK_TRACE_INF(...) PKTRACE(__VA_ARGS__)
+#endif
 
 //Kernel trace macros
 #if !PK_KERNEL_TRACE_ENABLE
-#define PK_KERN_TRACE(...)
-#define PK_KERN_TRACE_ASM16(...)
+    #define PK_KERN_TRACE(...)
+    #define PK_KERN_TRACE_ASM16(...)
 #else
-#define PK_KERN_TRACE(...) PK_TRACE(__VA_ARGS__)
-#define PK_KERN_TRACE_ASM16(...) PK_TRACE_ASM16(__VA_ARGS__)
+    #define PK_KERN_TRACE(...) PK_TRACE(__VA_ARGS__)
+    #define PK_KERN_TRACE_ASM16(...) PK_TRACE_ASM16(__VA_ARGS__)
 #endif  /* PK_KERNEL_TRACE_ENABLE */
 
 
@@ -423,7 +475,7 @@
 #define TINY_TRACE_ASM6()   .error "too many parameters"
 #define TINY_TRACE_ASM7()   .error "too many parameters"
 
-//TODO: add support for tracing more than 1 parameter and binary data in assembly
+//Possible enhancement: add support for tracing more than 1 parameter and binary data in assembly
 
     .global pk_trace_tiny
 
@@ -453,10 +505,10 @@ extern uint32_t __pk_timebase_frequency_hz;
 extern uint8_t __pk_timebase_rshift;
 
 /// The timebase frequency in KHz
-extern uint32_t __pk_timebase_frequency_khz;
+extern uint32_t __pk_timebase_frequency_khz;  //never set or used. Delete?
 
 /// The timebase frequency in Mhz
-extern uint32_t __pk_timebase_frequency_mhz;
+extern uint32_t __pk_timebase_frequency_mhz;  //never set or used. Delete?
 
 
 typedef unsigned long int PkAddress;
@@ -677,10 +729,21 @@ typedef struct {
 
 int
 pk_initialize(PkAddress  kernel_stack,
-               size_t      kernel_stack_size,
-               PkTimebase initial_timebase,
-               uint32_t    timebase_frequency_hz);
-               
+              size_t      kernel_stack_size,
+              PkTimebase initial_timebase,
+              uint32_t    timebase_frequency_hz);
+
+/**
+ * Set the timebase frequency.
+ * @param[in] The frequency in HZ
+ * @return PK_OK
+ * @pre  pk_initialize
+ * @Note This interface is intended for SBE. The timebase frequency value is
+ *       used by PK to calcate timed events. Any existing timeouts,
+ *       sleeps, or time based pending semaphores are not recalculated.
+ */
+int
+pk_timebase_freq_set(uint32_t timebase_frequency_hz);
 
 // Timebase APIs
 

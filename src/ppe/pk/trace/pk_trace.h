@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -127,8 +127,10 @@ typedef union
 {
     struct
     {
-        uint32_t    timestamp   : PK_TRACE_TS_BITS;
-        uint32_t    format      : PK_TRACE_FORMAT_BITS;
+    uint32_t    timestamp   :
+        PK_TRACE_TS_BITS;
+    uint32_t    format      :
+        PK_TRACE_FORMAT_BITS;
     };
     uint32_t word32;
 }PkTraceTime; //pk_trace_time_t;
@@ -299,5 +301,9 @@ typedef struct
 }PkTraceBuffer; //pk_trace_buffer_t;
 
 extern PkTraceBuffer g_pk_trace_buf;
+
+#ifdef PK_TRACE_BUFFER_WRAP_MARKER
+    extern uint32_t G_wrap_mask;
+#endif
 
 #endif /* __PK_TRACE_H__ */

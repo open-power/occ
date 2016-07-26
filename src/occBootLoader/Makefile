@@ -44,11 +44,17 @@ DEFS += $(D)
 # Compilation
 #*******************************************************************************
 .PHONY : all
-all: $(OBJDIR) ${OBJECTS} ${imageHdrScript}
+all: $(PPETOOLS_OBJDIR)/ppetracepp $(OBJDIR) ${OBJECTS} ${imageHdrScript}
 	$(CPP) -P $(DEFS) < linkboot.cmd > $(LINK_SCRIPT)
 	$(LD)  ${OBJECTS} -T$(LINK_SCRIPT) $(LDFLAGS) -zmuldefs -Map $(EXECUTABLE).map -melf32ppc --oformat=elf32-powerpc -Bstatic -o $(EXECUTABLE).out -L$(OBJDIR)
 	$(OBJCOPY) -I elf32-powerpc -O binary $(EXECUTABLE).out $(EXECUTABLE).bin
 	$(OBJDUMP) -d $(EXECUTABLE).out > $(EXECUTABLE).dis
+
+$(PPETOOLS_OBJDIR)/ppetracepp: $(PPETOOLS_OBJDIR)
+	g++ -m32 -O3 -w -g -I$(PPETRACEPP_DIR)/ $(PPETRACEPP_DIR)/ppetracepp.C -o $(PPETOOLS_OBJDIR)/ppetracepp
+
+$(PPETOOLS_OBJDIR):
+	mkdir -p $(PPETOOLS_OBJDIR)
 
 $(OBJDIR)/imageHdrScript: imageHdrScript.c
 	$(imageHdrScript_CC) -g $(LDFLAGS) -I. -I$(OCC405_INCLDIR)/ -I$(OCC405_SRCDIR)/ imageHdrScript.c -o $(OBJDIR)/imageHdrScript

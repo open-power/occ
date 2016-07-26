@@ -70,6 +70,8 @@ LIB_DIRS =  -L$(OBJDIR) \
             -L$(OBJDIR)/cent
 
 #default target is to make a binary application image
+all: $(PPETOOLS_OBJDIR)/ppetracepp $(OBJDIR)/$(IMAGE_NAME).bin $(OBJDIR)/$(IMAGE_NAME).dis
+
 #This removes all unecessary headers from the ELF executable
 $(OBJDIR)/$(IMAGE_NAME).bin $(OBJDIR)/$(IMAGE_NAME).dis: $(OBJDIR)/$(IMAGE_NAME).out
 	$(OBJCOPY) -O binary  $< $(OBJDIR)/$(IMAGE_NAME).bin
@@ -78,6 +80,12 @@ $(OBJDIR)/$(IMAGE_NAME).bin $(OBJDIR)/$(IMAGE_NAME).dis: $(OBJDIR)/$(IMAGE_NAME)
 #create a linked ELF executable
 $(OBJDIR)/$(IMAGE_NAME).out: $(TRACEPP_DIR)/tracepp $(LINK_OBJS) $(LINK_SCRIPT)
 	$(LD) -e __ssx_boot -T$(LINK_SCRIPT) $(LDFLAGS) -Map $(OBJDIR)/$(IMAGE_NAME).map -Bstatic -o $(OBJDIR)/$(IMAGE_NAME).out $(LIB_DIRS) -lssx -locc -lppc405 -lcommon
+
+$(PPETOOLS_OBJDIR)/ppetracepp: $(PPETOOLS_OBJDIR)
+	g++ -m32 -O3 -w -g -I$(PPETRACEPP_DIR)/ $(PPETRACEPP_DIR)/ppetracepp.C -o $(PPETOOLS_OBJDIR)/ppetracepp
+
+$(PPETOOLS_OBJDIR):
+	mkdir -p $(PPETOOLS_OBJDIR)
 
 #pass the link command file through the C preprocessor to evaluate macros and remove comments
 #$(LINK_SCRIPT): linkocc.cmd

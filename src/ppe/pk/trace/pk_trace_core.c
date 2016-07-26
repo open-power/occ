@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -46,7 +46,8 @@ void pk_trace_timer_callback(void* arg);
 #if (PK_TRACE_SUPPORT && PK_TIMER_SUPPORT)
 
 //Static initialization of the trace timer
-PkTimer g_pk_trace_timer = {
+PkTimer g_pk_trace_timer =
+{
     .deque = PK_DEQUE_ELEMENT_INIT(),
     .timeout = 0,
     .callback = pk_trace_timer_callback,
@@ -71,6 +72,10 @@ PkTraceBuffer g_pk_trace_buf =
 //Needed for buffer extraction in simics for now
 PkTraceBuffer* g_pk_trace_buf_ptr = &g_pk_trace_buf;
 
+#ifdef PK_TRACE_BUFFER_WRAP_MARKER
+    uint32_t G_wrap_mask = 0;
+#endif
+
 // Creates an 8 byte entry in the trace buffer that includes a timestamp,
 // a format string hash value and a 16 bit parameter.
 //
@@ -88,7 +93,7 @@ void pk_trace_tiny(uint32_t i_parm)
     tb64 = pk_timebase_get();
     state.tbu32 = tb64 >> 32;
     footer.time_format.word32 = tb64 & 0x00000000ffffffffull;
-    
+
     footer.time_format.format = PK_TRACE_FORMAT_TINY;
 
     //The following operations must be done atomically
@@ -100,6 +105,17 @@ void pk_trace_tiny(uint32_t i_parm)
 
     //calculate the offset for the next entry in the cb
     state.offset = g_pk_trace_buf.state.offset + sizeof(PkTraceTiny);
+
+#ifdef PK_TRACE_BUFFER_WRAP_MARKER
+
+    //insert marker to indicate when circular buffer wraps
+    if ((state.offset & PK_TRACE_SZ) ^ G_wrap_mask)
+    {
+        G_wrap_mask = state.offset & PK_TRACE_SZ;
+        asm volatile ("tw 0, 31, 31");
+    }
+
+#endif
 
     //update the cb state (tbu and offset)
     g_pk_trace_buf.state.word64 = state.word64;
@@ -115,12 +131,15 @@ void pk_trace_tiny(uint32_t i_parm)
 
 // This function is called periodically in order to ensure that the max ticks
 // between trace entries is no more than what will fit inside a 32bit value.
+#ifndef PK_TRACE_TIMER_OUTPUT
+    #define PK_TRACE_TIMER_OUTPUT 1
+#endif
 void pk_trace_timer_callback(void* arg)
 {
-
+#if PK_TRACE_TIMER_OUTPUT
     // guarantee at least one trace before the lower 32bit timebase flips
     PK_TRACE("PERIODIC TIMESTAMPING TRACE");
-
+#endif
     // restart the timer
     pk_timer_schedule(&g_pk_trace_timer,
                       PK_TRACE_TIMER_PERIOD);

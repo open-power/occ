@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -84,6 +84,17 @@ void pk_trace_binary(uint32_t i_hash_and_size, void* bufp)
 
     //calculate the offset for the next entry in the cb
     state.offset = footer_offset + sizeof(PkTraceBinary);
+
+#ifdef PK_TRACE_BUFFER_WRAP_MARKER
+
+    //insert marker to indicate when circular buffer wraps
+    if ((state.offset & PK_TRACE_SZ) ^ G_wrap_mask)
+    {
+        G_wrap_mask = state.offset & PK_TRACE_SZ;
+        asm volatile ("tw 0, 31, 31");
+    }
+
+#endif
 
     //update the cb state (tbu and offset)
     g_pk_trace_buf.state.word64 = state.word64;

@@ -121,20 +121,24 @@ ifndef PPETRACEPP_DIR
 export PPETRACEPP_DIR = $(abspath ../ppe/tools/ppetracepp)
 endif
 
+ifndef PPETOOLS_OBJDIR
+export PPETOOLS_OBJDIR = $(abspath ../../obj/ppetools)
+endif
+
 ifndef TRACEPP_DIR
 export TRACEPP_DIR = $(abspath ../tracepp)
 endif
 
 CC_ASM  = $(GCC-TOOL-PREFIX)gcc
-TCC     = $(PPETRACEPP_DIR)/ppetracepp $(GCC-TOOL-PREFIX)gcc
-THCC     = $(TRACEPP_DIR)/tracepp $(GCC-TOOL-PREFIX)gcc
+TCC     = $(PPETOOLS_OBJDIR)/ppetracepp $(GCC-TOOL-PREFIX)gcc
+THCC    = $(TRACEPP_DIR)/tracepp $(GCC-TOOL-PREFIX)gcc
 CC      = $(GCC-TOOL-PREFIX)gcc
 AS      = $(GCC-TOOL-PREFIX)as
 AR      = $(GCC-TOOL-PREFIX)ar
 LD      = $(GCC-TOOL-PREFIX)ld
 OBJDUMP = $(GCC-TOOL-PREFIX)objdump
 OBJCOPY = $(GCC-TOOL-PREFIX)objcopy
-TCPP    = $(PPETRACEPP_DIR)/ppetracepp $(GCC-TOOL-PREFIX)gcc
+TCPP    = $(PPETOOLS_OBJDIR)/ppetracepp $(GCC-TOOL-PREFIX)gcc
 THASH	= $(PPETRACEPP_DIR)/tracehash.pl
 CPP     = $(GCC-TOOL-PREFIX)cpp
 

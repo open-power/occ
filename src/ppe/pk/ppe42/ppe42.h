@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -488,11 +488,6 @@ do {*(volatile uint32_t *)(addr) = (data);} while(0)
 #define PPE42_RESET_TRAP 0
 #endif
 
-// PPE42 doesn't support the system call instruction so we use this illegal
-// instruction to force a program exception which then emulates the system call
-// instruction.
-#define PPE42_SC_INST   0x44000002
-
 #ifndef __ASSEMBLER__
 
 /// The PPE42 PK machine context is simply the MSR, a 32-bit integer.
@@ -571,9 +566,10 @@ pk_machine_context_get(PkMachineContext *context)
     return PK_OK;
 }
 
-/// The PK kernel thread context switch - PPE42 uses the 'sc' illegal instruction
-/// to force a program exception to occur. 
-#define __pk_switch() asm volatile (".long 0x44000002")
+extern void __ctx_switch();
+/// The PK context switch for the PPE kernel
+//  There is no protected mode in PPE42 so just call kernel code 
+#define __pk_switch() __ctx_switch()
 
 
 /// In the PowerPC EABI all initial stack frames require 8 bytes - the 4 bytes
@@ -817,27 +813,6 @@ __pk_thread_queue_count(volatile PkThreadQueue* queue)
 /// _code_breakpoint_enable.  In code not built with SIMICS_ENVIROMENT=1, note
 /// that the CODE_BREAKPOINT is ignored by the Simics PPE42 model as it does
 /// not model debug events.
-
-//#if defined(SIMICS_ENVIRONMENT) && (SIMICS_ENVIRONMENT != 0) 
-/*#define CODE_BREAKPOINT                         \
-    do {                                        \
-        if (_code_breakpoint_enable) {          \
-            SIMICS_MAGIC_BREAKPOINT;            \
-        }                                       \
-    } while (0)
-#else
-#define CODE_BREAKPOINT                                         \
-    do {                                                        \
-        if (_code_breakpoint_enable) {                          \
-            PkMachineContext __ctx;                            \
-            pk_critical_section_enter(&__ctx);   \
-            _code_breakpoint_prologue();                        \
-            _code_breakpoint_epilogue();                        \
-            pk_critical_section_exit(&__ctx);                  \
-        }                                                       \
-    } while (0)
-#endif
-*/
 
 //void
 //_code_breakpoint_prologue(void);

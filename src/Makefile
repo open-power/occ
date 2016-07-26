@@ -37,8 +37,16 @@ ifndef PPETRACEPP_DIR
 export PPETRACEPP_DIR = $(abspath ppe/tools/ppetracepp)
 endif
 
+ifndef PPETOOLS_OBJDIR
+export PPETOOLS_OBJDIR = $(abspath ../obj/ppetools)
+endif
+
 ifndef TRACEPP_DIR
 export TRACEPP_DIR = $(abspath tracepp)
+endif
+
+ifndef PK_SRCDIR
+export PK_SRCDIR = $(abspath ppe/pk)
 endif
 
 THASH	= $(PPETRACEPP_DIR)/tracehash.pl
@@ -63,7 +71,19 @@ NEEDED_IMAGES = \
      $(OBJDIR)/$(OCC_BOOTLOADER_DIR_NAME)/$(OCC_BOOTLOADER_NAME).out \
 
 .PHONY : all
-all: $(NEEDED_IMAGES) combineImage tracehash
+all: ppetools $(NEEDED_IMAGES) combineImage tracehash
+
+.PHONY: ppetools
+ppetools: $(PPETOOLS_OBJDIR)/ppetracepp $(PPETOOLS_OBJDIR)/ppe2fsp
+
+$(PPETOOLS_OBJDIR)/ppetracepp: $(PPETOOLS_OBJDIR)
+	g++ -m32 -O3 -w -g -I$(PPETRACEPP_DIR)/ $(PPETRACEPP_DIR)/ppetracepp.C -o $(PPETOOLS_OBJDIR)/ppetracepp
+
+$(PPETOOLS_OBJDIR)/ppe2fsp: $(PPETOOLS_OBJDIR)
+	gcc -m32 -w -g -I./ -I$(PK_SRCDIR)/trace $(PPETRACEPP_DIR)/ppe2fsp.c $(PPETRACEPP_DIR)/ppe2fsp_cmd.c -o $(PPETOOLS_OBJDIR)/ppe2fsp
+
+$(PPETOOLS_OBJDIR):
+	mkdir -p $(PPETOOLS_OBJDIR)/
 
 .PHONY : needed_images
 needed_images: $(NEEDED_IMAGES)

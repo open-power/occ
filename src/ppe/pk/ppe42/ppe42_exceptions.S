@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -225,20 +225,7 @@ dec_handler:
         b       check_for_ext_interrupt
 
 program_exception_handler:
-        ## first check if exception was caused by an illegal 'sc' instruction
-        mfspr       %r3, SPRN_EDR
-        _liw        %r4, PPE42_SC_INST
-        cmpwbeq     %r3, %r4, __sc_helper
         _pk_panic   PPE42_ILLEGAL_INSTRUCTION
-
-        ## Saved SRR0 is currently pointing to the 'sc' instruction.  We need to advance it
-        ## to the next instruction so that we don't end up in an endless loop (something
-        ## that the ppc sc instruction does automatically).
-__sc_helper:
-        mfsrr0      %r4
-        _lwzsd      %r3, __pk_saved_sp
-        addi        %r4, %r4, 4
-        stw         %r4, PK_CTX_SRR0(%r3)
 
         .global __pk_next_thread_resume
 __pk_next_thread_resume:
@@ -329,6 +316,23 @@ ctx_discard:
         ## (r3, r4, lr, and cr have already been saved for us) and
         ## r3 contains the interrupted kernel context
 
+        .global __ctx_switch
+__ctx_switch:
+        stwu    %r1,    -PK_CTX_SIZE(%r1)
+        stvd    %d3,    PK_CTX_GPR3(%r1)
+        mfcr    %r3
+        mflr    %r4
+        stvd    %d3,    PK_CTX_CR(%r1)
+        _liw    %r3     __pk_next_thread_resume
+        mtlr    %r3
+        ## emulate what interrupt would do
+        mtsrr0  %r4
+        mfmsr   %r3
+        mtsrr1  %r3
+
+        ## ctx_continue_push expects r3 to be value of sprg0
+        mfsprg0 %r3
+        
 ctx_continue_push:
 
         stvd    %d5,    PK_CTX_GPR5(%r1)
@@ -512,7 +516,7 @@ ctx_pop:
         lvd     %d5,    PK_CTX_GPR5(%r1)
         lvd     %d3,    PK_CTX_CR(%r1)
         mtlr    %r4
-        mtcr    %r3
+        mtcr0   %r3
         lvd     %d3,    PK_CTX_GPR3(%r1)
         addi    %r1,    %r1, PK_CTX_SIZE
 

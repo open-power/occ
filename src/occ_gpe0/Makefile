@@ -22,8 +22,6 @@
 # permissions and limitations under the License.
 #
 # IBM_PROLOG_END_TAG
-#remove this once we have a real compiler
-export P2P_ENABLE = 1
 
 #Pull in the definitions that affect all makefiles for this image
 include img_defs.mk
@@ -40,7 +38,7 @@ OBJS := $(addprefix $(OBJDIR)/, $(TOP_OBJECTS))
 PKLIB := $(OBJDIR)/pk/libpk.a
 COMMONLIB := $(OBJDIR)/commonlib/libcommon.a
 OCCLIB := $(OBJDIR)/occlib/libocc.a
-LIB_DIRS = -L$(OBJDIR)/pk -L$(OBJDIR)/commonlib -L$(OBJDIR)/occlib
+LIB_DIRS += -L$(OBJDIR)/pk -L$(OBJDIR)/commonlib -L$(OBJDIR)/occlib
 LINK_OBJS = $(OBJS) $(PKLIB) $(COMMONLIB) $(OCCLIB)
 LINK_SCRIPT = $(addprefix $(OBJDIR)/, linkscript)
 
@@ -50,7 +48,9 @@ LIB_DIRS += -L$(OBJDIR)/p2p
 LINK_OBJS += $(P2PLIB)
 endif
 
-#default target is to make a binary application image
+#default target is to make a binary application image and ppetracepp
+all: $(PPETOOLS_OBJDIR)/ppetracepp $(OBJDIR)/$(IMAGE_NAME).bin $(OBJDIR)/$(IMAGE_NAME).dis
+
 #This removes all unecessary headers from the ELF executable
 $(OBJDIR)/$(IMAGE_NAME).bin $(OBJDIR)/$(IMAGE_NAME).dis: $(OBJDIR)/$(IMAGE_NAME).out
 	$(OBJCOPY) -O binary  $< $(OBJDIR)/$(IMAGE_NAME).bin
@@ -58,7 +58,9 @@ $(OBJDIR)/$(IMAGE_NAME).bin $(OBJDIR)/$(IMAGE_NAME).dis: $(OBJDIR)/$(IMAGE_NAME)
 
 #create a linked ELF executable
 $(OBJDIR)/$(IMAGE_NAME).out: $(LINK_OBJS) $(LINK_SCRIPT)
-	$(LD) -e __system_reset -N -T$(LINK_SCRIPT) -Map $(OBJDIR)/$(IMAGE_NAME).map -Bstatic -o $(OBJDIR)/$(IMAGE_NAME).out $(LIB_DIRS) $(OBJS) -locc -lcommon -lpk -lp2p
+	$(LD) -e __system_reset -N -T$(LINK_SCRIPT) -Map $(OBJDIR)/$(IMAGE_NAME).map \
+	-Bstatic -o $(OBJDIR)/$(IMAGE_NAME).out $(LIB_DIRS) $(OBJS) \
+	-locc -lcommon -lpk -leabi -lmath -lc
 
 #pass the link command file through the C preprocessor to evaluate macros and remove comments
 $(LINK_SCRIPT): link.cmd
@@ -69,6 +71,12 @@ $(LINK_OBJS) $(OBJS) $(OBJS:.o=.d): | $(OBJDIR)
 
 $(OBJDIR):
 	mkdir -p $(OBJDIR)
+
+$(PPETOOLS_OBJDIR)/ppetracepp: $(PPETOOLS_OBJDIR)
+	g++ -m32 -O3 -w -g -I$(PPETRACEPP_DIR)/ $(PPETRACEPP_DIR)/ppetracepp.C -o $(PPETOOLS_OBJDIR)/ppetracepp
+
+$(PPETOOLS_OBJDIR):
+	mkdir -p $(PPETOOLS_OBJDIR)
 
 .PHONY: clean $(PKLIB) $(P2PLIB)
 

@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2015
+# Contributors Listed Below - COPYRIGHT 2015,2016
 # [+] International Business Machines Corp.
 #
 #
@@ -47,10 +47,12 @@
 ##########################################################################
 PK-C-SOURCES = pk_core.c pk_init.c pk_stack_init.c pk_bh_core.c pk_debug_ptrs.c
 
-PK-TIMER-C-SOURCES += pk_timer_core.c pk_timer_init.c
+PK-TIMER-C-SOURCES = pk_timer_core.c pk_timer_init.c
 
-PK-THREAD-C-SOURCES += pk_thread_init.c pk_thread_core.c pk_thread_util.c \
+PK-THREAD-C-SOURCES = pk_thread_init.c pk_thread_core.c pk_thread_util.c \
 	 pk_semaphore_init.c pk_semaphore_core.c
 
-PK_OBJECTS += $(PK-C-SOURCES:.c=.o)
+PK_TIMER_OBJECTS=$(PK-TIMER-C-SOURCES:.c=.o)
+PK_THREAD_OBJECTS=$(PK-THREAD-C-SOURCES:.c=.o)
+PK_OBJECTS = $(PK-C-SOURCES:.c=.o)
 

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -40,7 +40,7 @@
 // This function is for internal use only!
 void ipc_msgq_handler(ipc_msg_t* msg, void* arg)
 {
-    ipc_msgq_t  *msgq = (ipc_msgq_t*)arg;
+    ipc_msgq_t*  msgq = (ipc_msgq_t*)arg;
 
     //NOTE: this is hard coded to 0 on PPE
     if(KERN_CONTEXT_CRITICAL_INTERRUPT())
@@ -62,35 +62,51 @@ void ipc_msgq_handler(ipc_msg_t* msg, void* arg)
 int ipc_msgq_recv(ipc_msg_t** msg, ipc_msgq_t* msgq, KERN_INTERVAL timeout)
 {
     int                     rc;
-    ipc_msg_t               *popped_msg = 0;
+    ipc_msg_t*               popped_msg = 0;
     KERN_MACHINE_CONTEXT    ctx;
 
-    rc = KERN_SEMAPHORE_PEND(&msgq->msg_sem, timeout);
-    if(rc)
+    // First check for pending messages already on the queue.
+    KERN_CRITICAL_SECTION_ENTER(KERN_CRITICAL, &ctx);
+    popped_msg = (ipc_msg_t*)KERN_DEQUE_POP_FRONT(&msgq->msg_head);
+
+    if(popped_msg)
     {
-        if(rc == -KERN_SEMAPHORE_PEND_TIMED_OUT ||
-           rc == -KERN_SEMAPHORE_PEND_NO_WAIT)
-        {
-            rc = IPC_RC_TIMEOUT;
-        }
+        KERN_CRITICAL_SECTION_EXIT(&ctx);
+        rc = IPC_RC_SUCCESS;
     }
-    else
+    else  // no message - wait for one
     {
-        //The queue is also modified in the IPC interrupt context so
-        //we need to make sure interrupts are disabled while we modify it.
-        KERN_CRITICAL_SECTION_ENTER(KERN_CRITICAL, &ctx);
-        popped_msg = (ipc_msg_t*)KERN_DEQUE_POP_FRONT(&msgq->msg_head);
+
+        rc = KERN_SEMAPHORE_PEND(&msgq->msg_sem, timeout);
         KERN_CRITICAL_SECTION_EXIT(&ctx);
 
-        if(popped_msg)
+        if(rc)
         {
-            rc = IPC_RC_SUCCESS;
+            if(rc == -KERN_SEMAPHORE_PEND_TIMED_OUT ||
+               rc == -KERN_SEMAPHORE_PEND_NO_WAIT)
+            {
+                rc = IPC_RC_TIMEOUT;
+            }
         }
         else
         {
-            rc = IPC_RC_NO_MSG;
+            //The queue is also modified in the IPC interrupt context so
+            //we need to make sure interrupts are disabled while we modify it.
+            KERN_CRITICAL_SECTION_ENTER(KERN_CRITICAL, &ctx);
+            popped_msg = (ipc_msg_t*)KERN_DEQUE_POP_FRONT(&msgq->msg_head);
+            KERN_CRITICAL_SECTION_EXIT(&ctx);
+
+            if(popped_msg)
+            {
+                rc = IPC_RC_SUCCESS;
+            }
+            else
+            {
+                rc = IPC_RC_NO_MSG;
+            }
         }
     }
+
     *msg = popped_msg;
     return rc;
 }

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -50,7 +50,7 @@
 
 #ifndef __ASSEMBLER__
 
-/// Enable an interrupt by clearing the mask bit.  
+/// Enable an interrupt by clearing the mask bit.
 
 UNLESS__PPE42_IRQ_CORE_C__(extern)
 inline void
@@ -59,6 +59,14 @@ pk_irq_enable(PkIrqId irq)
     out64(STD_LCL_EIMR_CLR, STD_IRQ_MASK64(irq));
 }
 
+/// Enable a vector of interrupts by clearing the mask bits.
+
+UNLESS__PPE42_IRQ_CORE_C__(extern)
+inline void
+pk_irq_vec_enable(uint64_t irq_vec_mask)
+{
+    out64(STD_LCL_EIMR_CLR, irq_vec_mask);
+}
 
 /// Disable an interrupt by setting the mask bit.
 
@@ -67,6 +75,15 @@ inline void
 pk_irq_disable(PkIrqId irq)
 {
     out64(STD_LCL_EIMR_OR, STD_IRQ_MASK64(irq));
+}
+
+/// Disable a vector of interrupts by setting the mask bits.
+
+UNLESS__PPE42_IRQ_CORE_C__(extern)
+inline void
+pk_irq_vec_disable(uint64_t irq_vec_mask)
+{
+    out64(STD_LCL_EIMR_OR, irq_vec_mask);
 }
 
 
@@ -80,6 +97,16 @@ pk_irq_status_clear(PkIrqId irq)
     out64(STD_LCL_EISR_CLR, STD_IRQ_MASK64(irq));
 }
 
+
+/// Clear a vector of interrupts status with an CLR mask.  Only meaningful for
+/// edge-triggered interrupts.
+
+UNLESS__PPE42_IRQ_CORE_C__(extern)
+inline void
+pk_irq_vec_status_clear(uint64_t irq_vec_mask)
+{
+    out64(STD_LCL_EISR_CLR, irq_vec_mask);
+}
 
 /// Get IRQ status as a 0 or non-0 integer
 
@@ -97,9 +124,12 @@ UNLESS__PPE42_IRQ_CORE_C__(extern)
 inline void
 pk_irq_status_set(PkIrqId irq, int value)
 {
-    if (value) {
+    if (value)
+    {
         out64(STD_LCL_EISR_OR, STD_IRQ_MASK64(irq));
-    } else {
+    }
+    else
+    {
         out64(STD_LCL_EISR_CLR, STD_IRQ_MASK64(irq));
     }
 }

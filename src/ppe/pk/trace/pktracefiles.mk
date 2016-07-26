@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2015
+# Contributors Listed Below - COPYRIGHT 2015,2016
 # [+] International Business Machines Corp.
 #
 #
@@ -57,7 +57,7 @@ PKTRACE-THREAD-C-SOURCES +=
 PKTRACE-THREAD-S-SOURCES += 
 
 
-PKTRACE_OBJECTS += $(PKTRACE-C-SOURCES:.c=.o) $(PKTRACE-S-SOURCES:.S=.o)
+PKTRACE_OBJECTS = $(PKTRACE-C-SOURCES:.c=.o) $(PKTRACE-S-SOURCES:.S=.o)
 
 
 

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -53,7 +53,7 @@
 
 #ifndef __ASSEMBLER__
 
-/// Enable an interrupt by clearing the mask bit.  
+/// Enable an interrupt by clearing the mask bit.
 
 UNLESS__PPE42_IRQ_CORE_C__(extern)
 inline void
@@ -61,6 +61,31 @@ pk_irq_enable(PkIrqId irq)
 {
     out32(OCCHW_OIMR_CLR(irq), OCCHW_IRQ_MASK32(irq));
 }
+
+
+/// Enable a vector of interrupts by clearing the mask bits.
+
+UNLESS__PPE42_IRQ_CORE_C__(extern)
+inline void
+pk_irq_vec_enable(uint64_t irq_vec_mask)
+{
+    out32(OCB_OIMR0_CLR, (uint32_t)(irq_vec_mask >> 32));
+    out32(OCB_OIMR1_CLR, (uint32_t)irq_vec_mask);
+}
+
+
+/// Restore a vector of interrupts by overwriting OIMR.
+
+/*
+UNLESS__PPE42_IRQ_CORE_C__(extern)
+inline void
+pk_irq_vec_restore( PkMachineContext *context, uint64_t irq_vec_mask)
+{
+    pk_critical_section_enter(context);
+    out64( OCB_OIMR, irq_vec_mask);
+    pk_critical_section_exit(context);
+}
+*/
 
 
 /// Disable an interrupt by setting the mask bit.
@@ -73,6 +98,17 @@ pk_irq_disable(PkIrqId irq)
 }
 
 
+/// Disable a vector of interrupts by setting the mask bits.
+
+UNLESS__PPE42_IRQ_CORE_C__(extern)
+inline void
+pk_irq_vec_disable(uint64_t irq_vec_mask)
+{
+    out32(OCB_OIMR0_OR, (uint32_t)(irq_vec_mask >> 32));
+    out32(OCB_OIMR1_OR, (uint32_t)irq_vec_mask);
+}
+
+
 /// Clear interrupt status with an CLR mask.  Only meaningful for
 /// edge-triggered interrupts.
 
@@ -81,6 +117,18 @@ inline void
 pk_irq_status_clear(PkIrqId irq)
 {
     out32(OCCHW_OISR_CLR(irq), OCCHW_IRQ_MASK32(irq));
+}
+
+
+/// Clear a vector of interrupts status with an CLR mask.  Only meaningful for
+/// edge-triggered interrupts.
+
+UNLESS__PPE42_IRQ_CORE_C__(extern)
+inline void
+pk_irq_vec_status_clear(uint64_t irq_vec_mask)
+{
+    out32(OCB_OISR0_CLR, (uint32_t)(irq_vec_mask >> 32));
+    out32(OCB_OISR1_CLR, (uint32_t)irq_vec_mask);
 }
 
 
@@ -100,9 +148,12 @@ UNLESS__PPE42_IRQ_CORE_C__(extern)
 inline void
 pk_irq_status_set(PkIrqId irq, int value)
 {
-    if (value) {
+    if (value)
+    {
         out32(OCCHW_OISR_OR(irq), OCCHW_IRQ_MASK32(irq));
-    } else {
+    }
+    else
+    {
         out32(OCCHW_OISR_CLR(irq), OCCHW_IRQ_MASK32(irq));
     }
 }
@@ -119,18 +170,18 @@ pk_irq_status_set(PkIrqId irq, int value)
 ///
 /// \arg \c rirq A register that holds the \c irq parameter passed to
 ///              the handler from PK interrupt dispatch.  This register is not
-///              modified. 
+///              modified.
 /// \arg \c rmask A scratch register - At the end of macro execution this
 ///               register contains the 32-bit mask form of the irq.
 ///
 /// \arg \c raddr A scratch register - At the end of macro execution this
-///               register holds the address of the interrupt 
+///               register holds the address of the interrupt
 ///               controller facility that implements the action.
 ///
 /// \arg \c imm An immediate (0/non-0) value for certain macros.
 ///
 /// Forms:
-/// 
+///
 /// \b _pk_irq_enable \a rirq, \a rmask, \a raddr - Enable an \c irq. \n
 /// \b _pk_irq_disable \a rirq, \a rmask, \a raddr - Disable an \c irq. \n
 /// \b _pk_irq_status_clear \a rirq, \a rmask, \a raddr - Clear \c irq
@@ -151,10 +202,11 @@ pk_irq_status_set(PkIrqId irq, int value)
 // register \c raddr is used as scratch for these computations.  Hopefully the
 // local labels 888 and 999 are unique enough.
 
-// Register names must be compared as strings - e.g., %r0 is not 
+// Register names must be compared as strings - e.g., %r0 is not
 // a symbol, it is converted to "0" by the assembler.
 
 #ifdef __ASSEMBLER__
+// *INDENT-OFF*
 
         .macro  .two_unique, ra, rb
         .ifnc   \ra, \rb
@@ -190,7 +242,7 @@ pk_irq_status_set(PkIrqId irq, int value)
 
         .macro  _pk_irq_enable, rirq:req, rmask:req, raddr:req
         .three_unique \rirq, \rmask, \raddr
-        
+
         andi.   \raddr, \rirq, 0x20
         clrlwi  \raddr, \rirq, 27
         _occhw_irq_clr_mask \raddr, \rmask
@@ -206,7 +258,7 @@ pk_irq_status_set(PkIrqId irq, int value)
 
         .macro  _pk_irq_disable, rirq:req, rmask:req, raddr:req
         .three_unique \rirq, \rmask, \raddr
-        
+
         andi.   \raddr, \rirq, 0x20
         clrlwi  \raddr, \rirq, 27
         _occhw_irq_or_mask \raddr, \rmask
@@ -222,7 +274,7 @@ pk_irq_status_set(PkIrqId irq, int value)
 
         .macro  _pk_irq_status_clear, rirq:req, rmask:req, raddr:req
         .three_unique \rirq, \rmask, \raddr
-        
+
         andi.   \raddr, \rirq, 0x20
         clrlwi  \raddr, \rirq, 27
         _occhw_irq_clr_mask \raddr, \rmask
@@ -241,7 +293,7 @@ pk_irq_status_set(PkIrqId irq, int value)
 
         andi.   \raddr, \rirq, 0x20
         clrlwi  \raddr, \rirq, 27
-        
+
         .if     \imm
         _occhw_irq_or_mask \raddr, \rmask
         bne-    888f
@@ -251,7 +303,7 @@ pk_irq_status_set(PkIrqId irq, int value)
         _stwi   \rmask, \raddr, OCB_OISR1_OR
 
         .else
-        
+
         _occhw_irq_clr_mask \raddr, \rmask
         bne-    888f
         _stwi   \rmask, \raddr, OCB_OISR0_CLR
@@ -264,6 +316,7 @@ pk_irq_status_set(PkIrqId irq, int value)
         eieio
         .endm
 
+// *INDENT-ON*
 #endif  /* __ASSEMBLER__ */
 
 /// \endcond

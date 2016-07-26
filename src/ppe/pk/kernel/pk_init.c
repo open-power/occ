@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -119,18 +119,25 @@ pk_initialize(PkAddress     kernel_stack,
 {
     int rc;
 
-    if (PK_ERROR_CHECK_API) {
+    if (PK_ERROR_CHECK_API)
+    {
         PK_ERROR_IF((kernel_stack == 0) ||
-                     (kernel_stack_size == 0),
-                     PK_INVALID_ARGUMENT_INIT);
+                    (kernel_stack_size == 0),
+                    PK_INVALID_ARGUMENT_INIT);
     }
 
     __pk_timebase_frequency_hz = timebase_frequency_hz;
 
     __pk_thread_machine_context_default = PK_THREAD_MACHINE_CONTEXT_DEFAULT;
 
+    //set the shift adjustment to get us closer to the true
+    //timebase frequency (versus what was hardcoded)
+    pk_set_timebase_rshift(timebase_frequency_hz);
+
     rc = __pk_stack_init(&kernel_stack, &kernel_stack_size);
-    if (rc) {
+
+    if (rc)
+    {
         return rc;
     }
 
@@ -153,10 +160,6 @@ extern PkTraceBuffer g_pk_trace_buf;
     //set the trace timebase HZ
     g_pk_trace_buf.hz = timebase_frequency_hz;
 
-    //set the shift adjustment to get us closer to the true
-    //timebase frequency (versus what was hardcoded)
-    pk_set_timebase_rshift(timebase_frequency_hz);
-
     if(initial_timebase != PK_TIMEBASE_CONTINUES)
     {
         //set the timebase ajdustment for trace synchronization
@@ -173,25 +176,42 @@ extern PkTraceBuffer g_pk_trace_buf;
 #endif  /* PK_TIMER_SUPPORT */
 
 #if PK_THREAD_SUPPORT
-    
+
     // Clear the priority map. The final entry [PK_THREADS] is for the idle
     // thread.
 
     int i;
-    for (i = 0; i <= PK_THREADS; i++) {
+
+    for (i = 0; i <= PK_THREADS; i++)
+    {
         __pk_priority_map[i] = 0;
     }
 
     // Initialize the thread scheduler
 
     __pk_thread_queue_clear(&__pk_run_queue);
-    __pk_current_thread = 0;   
+    __pk_current_thread = 0;
     __pk_next_thread    = 0;
     __pk_delayed_switch = 0;
 
 #endif  /* PK_THREAD_SUPPORT */
 
-   return PK_OK;
+    return PK_OK;
+}
+
+
+// Set the timebase frequency.
+int
+pk_timebase_freq_set(uint32_t timebase_frequency_hz)
+{
+    __pk_timebase_frequency_hz = timebase_frequency_hz;
+    pk_set_timebase_rshift(timebase_frequency_hz);
+
+#if PK_TRACE_SUPPORT
+    g_pk_trace_buf.hz = timebase_frequency_hz;
+#endif
+    // Does the initial_timebase need to be reset?
+    return PK_OK;
 }
 
 
@@ -202,11 +222,11 @@ extern PkTraceBuffer g_pk_trace_buf;
 /// called.
 
 void
-__pk_main(int argc, char **argv)
+__pk_main(int argc, char** argv)
 {
     PK_MAIN_HOOK;
 
-    int main(int argc, char **argv);
+    int main(int argc, char** argv);
     main(argc, argv);
 }
 

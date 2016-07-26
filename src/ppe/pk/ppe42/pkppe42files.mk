@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2015
+# Contributors Listed Below - COPYRIGHT 2015,2016
 # [+] International Business Machines Corp.
 #
 #
@@ -60,11 +60,11 @@ PPE42-S-SOURCES =  ppe42_boot.S \
 PPE42-TIMER-C-SOURCES = 
 PPE42-TIMER-S-SOURCES = 
 
-PPE42-THREAD-C-SOURCES += 
-PPE42-THREAD-S-SOURCES += ppe42_thread_init.S
+PPE42-THREAD-C-SOURCES =
+PPE42-THREAD-S-SOURCES = ppe42_thread_init.S
 
-
-PPE42_OBJECTS += $(PPE42-C-SOURCES:.c=.o) $(PPE42-S-SOURCES:.S=.o)
+PPE42_THREAD_OBJECTS= $(PPE42-THREAD-S-SOURCES:.S=.o)
+PPE42_OBJECTS = $(PPE42-C-SOURCES:.c=.o) $(PPE42-S-SOURCES:.S=.o)
 
 
 

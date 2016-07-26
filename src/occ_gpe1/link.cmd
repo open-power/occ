@@ -70,7 +70,7 @@ SECTIONS
     ////////////////////////////////
     // All non-vector code goes here
     ////////////////////////////////
-    .text       : { *(.text) . = ALIGN(128); } > sram
+    .text       : { *(.text*) . = ALIGN(128); } > sram
 
     ////////////////////////////////
     // Read-only Data
@@ -84,12 +84,12 @@ SECTIONS
     // offsets.
 
     _SDA2_BASE_ = .;
-   .sdata2 . : { *(.sdata2) . = ALIGN(128);  } > sram
-   .sbss2  . : { *(.sbss2) . = ALIGN(128); } > sram
+   .sdata2 . : { *(.sdata2*) . = ALIGN(128);  } > sram
+   .sbss2  . : { *(.sbss2*) . = ALIGN(128); } > sram
 
    // Other read-only data.
 
-   .rodata . : { *(.rodata*) *(.got2) . = ALIGN(128);  } > sram
+   .rodata . : { *(.rodata*) *(.got2*) . = ALIGN(128);  } > sram
 
     _RODATA_SECTION_SIZE = . - _RODATA_SECTION_BASE;
 
@@ -105,14 +105,14 @@ SECTIONS
     // offsets.
 
     _SDA_BASE_ = .;
-    .sdata  . : { *(.sdata) . = ALIGN(128);  } > sram
-    .sbss   . : { *(.sbss) . = ALIGN(128);   } > sram
+    .sdata  . : { *(.sdata*) . = ALIGN(128);  } > sram
+    .sbss   . : { *(.sbss*) . = ALIGN(128);   } > sram
 
     // Other read-write data
     // It's not clear why boot.S is generating empty .glink,.iplt
 
    .rela   . : { *(.rela*) . = ALIGN(128); } > sram
-   .rwdata . : { *(.data) *(.bss) . = ALIGN(128); } > sram
+   .rwdata . : { *(.data*) *(.bss*) . = ALIGN(128); } > sram
 //   .iplt . : { *(.iplt) . = ALIGN(128);  } > sram
 
    _PK_INITIAL_STACK_LIMIT = .;

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -67,6 +67,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 #include <string>
 #include <time.h>
 #include <fcntl.h>
@@ -482,8 +483,14 @@ int main(int argc, char** argv)
 		realcc = argv[argi++];
 	}
 
-	// wait until -d options is handled before checking $debug
-	dprintf("ppetracepp version %s - API/macro version %s\n", version.c_str(), macro_version.c_str());
+    if (realcc.find("LD_LIBRARY_PATH") != string::npos)
+    {
+        realcc.append(1, ' ');
+        realcc.append(argv[argi++]);
+    }
+
+    // wait until -d options is handled before checking $debug
+    dprintf("ppetracepp version %s - API/macro version %s\n", version.c_str(), macro_version.c_str());
 
 	p_env = getenv("REALCPP");
 	string realcpp;

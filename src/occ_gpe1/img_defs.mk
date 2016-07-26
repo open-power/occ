@@ -86,6 +86,10 @@ endif
 
 export IMG_OBJDIR = $(BASE_OBJDIR)/$(IMAGE_NAME)
 
+ifndef PPETOOLS_OBJDIR
+export PPETOOLS_OBJDIR = $(abspath ../../obj/ppetools)
+endif
+
 ifndef PK_SRCDIR
 export PK_SRCDIR = $(abspath ../ppe/pk)
 endif
@@ -94,12 +98,34 @@ ifndef COMMONLIB_SRCDIR
 export COMMONLIB_SRCDIR = $(abspath ../lib/common)
 endif
 
+ifndef OCC_COMMON_TYPES_DIR
+export OCC_COMMON_TYPES_DIR = $(abspath ../occ_405/incl/)
+endif
+
 ifndef OCCLIB_SRCDIR
 export OCCLIB_SRCDIR = $(abspath ../lib/occlib)
 endif
 
+ifndef CTEPATH
+$(warning The CTEPATH variable is not defined; Defaulting to /afs/awd)
+export CTEPATH = /afs/awd/projects/cte
+endif
+
+ifdef P2P_ENABLE
+# TODO
+else
+PPE_TOOL_PATH = $(CTEPATH)/tools/ppetools/prod
+
 ifndef GCC-TOOL-PREFIX
-GCC-TOOL-PREFIX = $(CTEPATH)/tools/ppcgcc/prod/bin/powerpc-linux-
+GCC-TOOL-PREFIX = $(PPE_TOOL_PATH)/bin/powerpc-eabi-
+endif
+
+# libs needed by compiler
+LD_LIBRARY_PATH += :$(PPE_TOOL_PATH)/lib:
+export LD_LIBRARY_PATH
+
+# libs needed by compiled code
+LIB_DIRS += -L$(PPE_TOOL_PATH)/libgcc
 endif
 
 ifndef BINUTILS-TOOL-PREFIX
@@ -107,7 +133,7 @@ BINUTILS-TOOL-PREFIX = $(CTEPATH)/tools/ppetools/prod/powerpc-eabi/bin/
 endif
 
 ifndef P2P_SRCDIR
-export P2P_SRCDIR = $(abspath ../ppe/tools/PowerPCtoPPE)
+export P2P_SRCDIR $(abspath ../ppe/tools/PowerPCtoPPE)
 endif
 
 ifndef PPETRACEPP_DIR
@@ -126,25 +152,21 @@ OBJDIR = $(IMG_OBJDIR)$(SUB_OBJDIR)
 
 
 CC_ASM  = $(GCC-TOOL-PREFIX)gcc
-TCC      = $(PPETRACEPP_DIR)/ppetracepp $(GCC-TOOL-PREFIX)gcc
+TCC     = $(PPETOOLS_OBJDIR)/ppetracepp $(GCC-TOOL-PREFIX)gcc
 CC      = $(GCC-TOOL-PREFIX)gcc
 AS      = $(BINUTILS-TOOL-PREFIX)as
 AR      = $(BINUTILS-TOOL-PREFIX)ar
 LD      = $(BINUTILS-TOOL-PREFIX)ld
 OBJDUMP = $(BINUTILS-TOOL-PREFIX)objdump
 OBJCOPY = $(BINUTILS-TOOL-PREFIX)objcopy
-TCPP    = $(PPETRACEPP_DIR)/ppetracepp $(GCC-TOOL-PREFIX)gcc
+TCPP    = $(PPETOOLS_OBJDIR)/ppetracepp $(GCC-TOOL-PREFIX)gcc
 THASH	= $(PPETRACEPP_DIR)/tracehash.pl
 CPP     = $(GCC-TOOL-PREFIX)gcc
+TCXX    = $(PPETRACEPP_DIR)/ppetracepp $(GCC-TOOL-PREFIX)g++
+CXX     = $(GCC-TOOL-PREFIX)g++
 
 ifdef P2P_ENABLE
 PCP     = $(P2P_SRCDIR)/ppc-ppe-pcp.py
-endif
-
-
-ifndef CTEPATH
-$(warning The CTEPATH variable is not defined; Defaulting to /afs/awd)
-export CTEPATH = /afs/awd/projects/cte
 endif
 
 ifeq "$(PK_TIMER_SUPPORT)" ""
@@ -167,8 +189,11 @@ endif
 
 
 ifndef GCC-O-LEVEL
-#GCC-O-LEVEL = -Os
+ifdef P2P_ENABLE
 GCC-O-LEVEL = -O -g
+else
+GCC-O-LEVEL = -Os
+endif
 endif
 
 GCC-DEFS += -DIMAGE_NAME=$(IMAGE_NAME)
@@ -185,8 +210,10 @@ DEFS += $(GCC-DEFS)
 INCLUDES += $(IMG_INCLUDES) $(GLOBAL_INCLUDES) \
 	-I$(PK_SRCDIR)/kernel -I$(PK_SRCDIR)/ppe42 -I$(PK_SRCDIR)/trace \
 	-I$(PK_SRCDIR)/$(PPE_TYPE) -I$(PK_SRCDIR)/../../include \
-	-I$(PK_SRCDIR)/../../include/registers -I$(OCCLIB_SRCDIR) -I$(COMMONLIB_SRCDIR)
+	-I$(PK_SRCDIR)/../../include/registers -I$(OCCLIB_SRCDIR) -I$(COMMONLIB_SRCDIR) \
+    -I$(OCC_COMMON_TYPES_DIR)
 
+ifdef P2P_ENABLE
 PIPE-CFLAGS = -pipe -Wa,-m405
 
 GCC-CFLAGS += -Wall -fsigned-char -msoft-float  \
@@ -201,7 +228,25 @@ GCC-CFLAGS += -Wall -fsigned-char -msoft-float  \
     -ffixed-cr1 -ffixed-cr2 -ffixed-cr3 -ffixed-cr4 \
     -ffixed-cr5 -ffixed-cr6 -ffixed-cr7 -Werror
 
-CFLAGS      =  -c $(GCC-CFLAGS) $(PIPE-CFLAGS) $(GCC-O-LEVEL) $(INCLUDES) 
+else
+PIPE-CFLAGS = -pipe
+
+GCC-CFLAGS += -g -gpubnames -gdwarf-3
+GCC-CFLAGS += -Wall -Werror
+GCC-CFLAGS += -fsigned-char
+GCC-CFLAGS += -ffunction-sections
+GCC-CFLAGS += -fdata-sections
+GCC-CFLAGS += -msoft-float
+GCC-CFLAGS += -mcpu=ppe42
+GCC-CFLAGS += -meabi
+GCC-CFLAGS += -ffreestanding
+GCC-CFLAGS += -fno-common
+GCC-CFLAGS += -fno-inline-functions-called-once
+endif
+
+CFLAGS      =  -c $(GCC-CFLAGS) $(PIPE-CFLAGS) $(GCC-O-LEVEL) $(INCLUDES)
+
+CXXFLAGS    = -nostdinc++ -fno-rtti -fno-exceptions $(CFLAGS)
 
 CPPFLAGS    = -E
 
@@ -209,8 +254,8 @@ ASFLAGS		= -mppe42
 
 ifdef P2P_ENABLE
 #use this to disable sda optimizations
-#PCP-FLAG    =
-
+#PCP-FLAG    =  
+else
 #use this to enable sda optimizations
 PCP-FLAG = -e
 endif
@@ -244,23 +289,3 @@ $(OBJDIR)/%.o: $(OBJDIR)/%.es
 	$(AS) $(ASFLAGS) -o $@ $<
 
 endif
-
-# From the GNU 'Make' manual - these scripts uses the preprocessor to
-# create dependency files (*.d), then mungs them slightly to make them
-# work as Make targets. The *.d files are include-ed in the
-# subdirectory Makefiles.
-
-#$(OBJDIR)/%.d: %.c
-#	@set -e; rm -f $@; \
-#	echo -n "$(OBJDIR)/" > $@.$$$$; \
-#	$(CC_ASM) -MM $(INCLUDES) $(CPPFLAGS) $(DEFS) $< >> $@.$$$$; \
-#	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
-#	rm -f $@.$$$$
-
-#$(OBJDIR)/%.d: %.S
-#	@set -e; rm -f $@; \
-#	echo -n "$(OBJDIR)/" > $@.$$$$; \
-#	$(CC_ASM) -MM $(INCLUDES) $(CPPFLAGS) $(DEFS) $< >> $@.$$$$; \
-#	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
-#	rm -f $@.$$$$
-
