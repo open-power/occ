@@ -22,21 +22,7 @@
 # permissions and limitations under the License.
 #
 # IBM_PROLOG_END_TAG
-#  @file libppc405files.mk
-#
-#  @brief mk for libppc405.a object files
-#
-#  @page ChangeLogs Change Logs
-#  @section libppc405files.mk
-#  @verbatim
-#
-#
-# Change Log ******************************************************************
-# Flag     Defect/Feature  User        Date         Description
-# ------   --------------  ----------  ------------ -----------
-#
-# @endverbatim
-#
+
 ##########################################################################
 # INCLUDES
 ##########################################################################

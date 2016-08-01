@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -24,14 +24,6 @@
 /* IBM_PROLOG_END_TAG                                                     */
 #ifndef __PMC_FIRMWARE_REGISTERS_H__
 #define __PMC_FIRMWARE_REGISTERS_H__
-
-// $Id: pmc_firmware_registers.h,v 1.1.1.1 2013/12/11 21:03:25 bcbrock Exp $
-// $Source: /afs/awd/projects/eclipz/KnowledgeBase/.cvsroot/eclipz/chips/p8/working/procedures/ssx/pgp/registers/pmc_firmware_registers.h,v $
-//-----------------------------------------------------------------------------
-// *! (C) Copyright International Business Machines Corp. 2013
-// *! All Rights Reserved -- Property of IBM
-// *! *** IBM Confidential ***
-//-----------------------------------------------------------------------------
 
 /// \file pmc_firmware_registers.h
 /// \brief C register structs for the PMC unit

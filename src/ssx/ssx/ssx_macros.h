@@ -25,12 +25,6 @@
 #ifndef __SSX_MACROS_H__
 #define __SSX_MACROS_H__
 
-//-----------------------------------------------------------------------------
-// *! (C) Copyright International Business Machines Corp. 2014
-// *! All Rights Reserved -- Property of IBM
-// *! *** IBM Confidential ***
-//-----------------------------------------------------------------------------
-
 /// \file ssx_macros.h
 /// \brief Boilerplate macros for SSX
 

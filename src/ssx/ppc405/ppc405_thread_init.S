@@ -51,11 +51,6 @@ __ssx_thread_context_initialize(SsxThread        *thread,
                                 SsxThreadRoutine thread_routine, 
                                 void             *private);
 #endif
-//-----------------------------------------------------------------------------
-// *! (C) Copyright International Business Machines Corp. 2014
-// *! All Rights Reserved -- Property of IBM
-// *! *** IBM Confidential ***
-//-----------------------------------------------------------------------------
         
 /// \cond
 

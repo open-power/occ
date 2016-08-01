@@ -22,22 +22,11 @@
 # permissions and limitations under the License.
 #
 # IBM_PROLOG_END_TAG
+
 #  @file ssxssxfiles.mk
 #
 #  @brief mk for including ssx object files
-#
-#  @page ChangeLogs Change Logs
-#  @section ssxssxfiles.mk
-#  @verbatim
-#
-#
-# Change Log ******************************************************************
-# Flag     Defect/Feature  User        Date         Description
-# ------   --------------  ----------  ------------ -----------
-# @pb00E                   pbavari     03/11/2012   Makefile ODE support
-#
-# @endverbatim
-#
+
 ##########################################################################
 # Include
 ##########################################################################

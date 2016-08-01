@@ -25,12 +25,6 @@
 #ifndef __PPC405_CONTEXT_H__
 #define __PPC405_CONTEXT_H__
 
-//-----------------------------------------------------------------------------
-// *! (C) Copyright International Business Machines Corp. 2014
-// *! All Rights Reserved -- Property of IBM
-// *! *** IBM Confidential ***
-//-----------------------------------------------------------------------------
-
 /// \file ppc405_context.h
 /// \brief PPC405 Machine and Thread context for SSX
 

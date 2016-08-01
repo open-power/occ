@@ -22,21 +22,11 @@
 # permissions and limitations under the License.
 #
 # IBM_PROLOG_END_TAG
+
 #  @file pkppe42files.mk
 #
 #  @brief mk for including ppe42 object files
-#
-#  @page ChangeLogs Change Logs
-#  @section pkppe42files.mk
-#  @verbatim
-#
-#
-# Change Log ******************************************************************
-# Flag     Defect/Feature  User        Date         Description
-# ------   --------------  ----------  ------------ -----------
-#
-# @endverbatim
-#
+
 ##########################################################################
 # Include Files
 ##########################################################################

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -24,14 +24,6 @@
 /* IBM_PROLOG_END_TAG                                                     */
 #ifndef __CME_REGISTER_ADDRESSES_H__
 #define __CME_REGISTER_ADDRESSES_H__
-
-// $Id$
-// $Source$
-//-----------------------------------------------------------------------------
-// *! (C) Copyright International Business Machines Corp. 2015
-// *! All Rights Reserved -- Property of IBM
-// *! *** IBM Confidential ***
-//-----------------------------------------------------------------------------
 
 /// \file cme_register_addresses.h
 /// \brief Symbolic addresses for the CME unit

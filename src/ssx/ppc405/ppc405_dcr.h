@@ -25,12 +25,6 @@
 #ifndef __PPC405_DCR_H__
 #define __PPC405_DCR_H__
 
-//-----------------------------------------------------------------------------
-// *! (C) Copyright International Business Machines Corp. 2014
-// *! All Rights Reserved -- Property of IBM
-// *! *** IBM Confidential ***
-//-----------------------------------------------------------------------------
-
 /// \file ppc405_dcr.h
 /// \brief Everything related to PPC405-specific DCRs
 ///

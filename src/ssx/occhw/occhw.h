@@ -25,12 +25,6 @@
 #ifndef __OCCHW_H__
 #define __OCCHW_H__
 
-//-----------------------------------------------------------------------------
-// *! (C) Copyright International Business Machines Corp. 2014
-// *! All Rights Reserved -- Property of IBM
-// *! *** IBM Confidential ***
-//-----------------------------------------------------------------------------
-
 /// \file occhw.h
 /// \brief The OCCHW environment for SSX.
 

@@ -25,12 +25,6 @@
 #ifndef __GPE_COMMON_H__
 #define __GPE_COMMON_H__
 
-//-----------------------------------------------------------------------------
-// *! (C) Copyright International Business Machines Corp. 2014
-// *! All Rights Reserved -- Property of IBM
-// *! *** IBM Confidential ***
-//-----------------------------------------------------------------------------
-
 /// \file gpe_common.h
 /// \brief Common header for GPE
 ///

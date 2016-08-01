@@ -25,12 +25,6 @@
 #ifndef __OCCHW_CORE_H__
 #define __OCCHW_CORE_H__
 
-//-----------------------------------------------------------------------------
-// *! (C) Copyright International Business Machines Corp. 2014
-// *! All Rights Reserved -- Property of IBM
-// *! *** IBM Confidential ***
-//-----------------------------------------------------------------------------
-
 /// \file occhw_core.h
 /// \brief processor core units header.  Local and mechanically generated macros.
 

@@ -25,12 +25,6 @@
 #ifndef __PPC32_GCC_H__
 #define __PPC32_GCC_H__
 
-//-----------------------------------------------------------------------------
-// *! (C) Copyright International Business Machines Corp. 2014
-// *! All Rights Reserved -- Property of IBM
-// *! *** IBM Confidential ***
-//-----------------------------------------------------------------------------
-
 /// \file ppc32_gcc.h
 /// \brief 32-bit PowerPC functions expected by GCC
 

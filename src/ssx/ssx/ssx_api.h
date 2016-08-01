@@ -25,12 +25,6 @@
 #ifndef __SSX_API_H__
 #define __SSX_API_H__
 
-//-----------------------------------------------------------------------------
-// *! (C) Copyright International Business Machines Corp. 2014
-// *! All Rights Reserved -- Property of IBM
-// *! *** IBM Confidential ***
-//-----------------------------------------------------------------------------
-
 /// \file ssx_api.h
 /// \brief Macros and declarations for the SSX API.
 

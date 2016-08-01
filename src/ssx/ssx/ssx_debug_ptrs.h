@@ -24,11 +24,6 @@
 /* IBM_PROLOG_END_TAG                                                     */
 #ifndef __SSX_DEBUG_PTRS_H__
 #define __SSX_DEBUG_PTRS_H__
-//-----------------------------------------------------------------------------
-// *! (C) Copyright International Business Machines Corp. 2015
-// *! All Rights Reserved -- Property of IBM
-// *! *** IBM Confidential ***
-//-----------------------------------------------------------------------------
 
 /// \file ssx_debug_ptrs.h
 /// \brief Structure for a table of pointers to kernel debug data

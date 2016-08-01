@@ -25,12 +25,6 @@
 #ifndef __SSX_PORT_TYPES_H__
 #define __SSX_PORT_TYPES_H__
 
-//-----------------------------------------------------------------------------
-// *! (C) Copyright International Business Machines Corp. 2014
-// *! All Rights Reserved -- Property of IBM
-// *! *** IBM Confidential ***
-//-----------------------------------------------------------------------------
-
 /// \file ssx_port_types.h
 /// \brief Type definitions required by the SSX port.
 ///

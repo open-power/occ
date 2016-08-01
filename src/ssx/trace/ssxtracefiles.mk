@@ -22,21 +22,11 @@
 # permissions and limitations under the License.
 #
 # IBM_PROLOG_END_TAG
+
 #  @file ssxtracefiles.mk
 #
 #  @brief mk for including SSX trace object files
-#
-#  @page ChangeLogs Change Logs
-#  @section ssxtracefiles.mk
-#  @verbatim
-#
-#
-# Change Log ******************************************************************
-# Flag     Defect/Feature  User        Date         Description
-# ------   --------------  ----------  ------------ -----------
-#
-# @endverbatim
-#
+
 ##########################################################################
 # Include Files
 ##########################################################################

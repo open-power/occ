@@ -22,22 +22,10 @@
 # permissions and limitations under the License.
 #
 # IBM_PROLOG_END_TAG
+
 #  @file ssxppc32files.mk
 #
 #  @brief mk for including ppc32 object files
-#
-#  @page ChangeLogs Change Logs
-#  @section ssxppc32files.mk
-#  @verbatim
-#
-#
-# Change Log ******************************************************************
-# Flag     Defect/Feature  User        Date         Description
-# ------   --------------  ----------  ------------ -----------
-# @pb00E                   pbavari     03/11/2012   Makefile ODE support
-#
-# @endverbatim
-#
 
 ##########################################################################
 # Object Files

@@ -22,21 +22,11 @@
 # permissions and limitations under the License.
 #
 # IBM_PROLOG_END_TAG
+
 #  @file ssxoccwhfiles.mk
 #
 #  @brief mk for including occwh object files
-#
-#  @page ChangeLogs Change Logs
-#  @section ssxoccwhfiles.mk
-#  @verbatim
-#
-#
-# Change Log ******************************************************************
-# Flag     Defect/Feature  User        Date         Description
-# ------   --------------  ----------  ------------ -----------
-#
-# @endverbatim
-#
+
 ##########################################################################
 # Object Files
 ##########################################################################

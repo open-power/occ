@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -26,25 +26,7 @@
 // @file trac_interface.h
 // @brief Interface codes for TRAC component.
 */
-/******************************************************************************
- *
- *       @page ChangeLogs Change Logs
- *       @section _trac_interface_h trac_interface.h
- *       @verbatim
- *
- *   Flag    Def/Fea    Userid    Date        Description
- *   ------- ---------- --------  ----------  ----------------------------------
- *                      TEAM      06/16/2010  Port  
- *   @rc003             rickylie  02/03/2012  Verify & Clean Up OCC Headers & Comments
- *   @pb00E             pbavari   03/11/2012  Added correct include file
- *   @at009  859308     alvinwan  10/15/2012  Added tracepp support
- *   @ai005  860268     ailutsar  11/20/2012  Create trace test applet
- *   @rc005  864101     rickylie  12/12/2012  add small circ buffer to handle ISR semaphore conflict
- *
- *  @endverbatim
- *
- *///*************************************************************************/
- 
+
 #ifndef _TRAC_INTERFACE_H
 #define _TRAC_INTERFACE_H
 

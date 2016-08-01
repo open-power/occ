@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -24,14 +24,6 @@
 /* IBM_PROLOG_END_TAG                                                     */
 #ifndef __SIMICS_STDIO_ADDRESSES_H__
 #define __SIMICS_STDIO_ADDRESSES_H__
-
-// $Id: simics_stdio_addresses.h,v 1.1.1.1 2013/12/11 20:49:20 bcbrock Exp $
-// $Source: /afs/awd/projects/eclipz/KnowledgeBase/.cvsroot/eclipz/chips/p8/working/procedures/lib/simics_stdio_addresses.h,v $
-//-----------------------------------------------------------------------------
-// *! (C) Copyright International Business Machines Corp. 2013
-// *! All Rights Reserved -- Property of IBM
-// *! *** IBM Confidential ***
-//-----------------------------------------------------------------------------
 
 /// \file simics_stdio_adresses.h
 /// \brief MMIO addresses and offsets of the Simics fake stdio model

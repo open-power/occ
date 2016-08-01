@@ -25,12 +25,6 @@
 #ifndef __STD_IRQ_H__
 #define __STD_IRQ_H__
 
-//-----------------------------------------------------------------------------
-// *! (C) Copyright International Business Machines Corp. 2014
-// *! All Rights Reserved -- Property of IBM
-// *! *** IBM Confidential ***
-//-----------------------------------------------------------------------------
-
 /// \file occhw_irq.h
 /// \brief Standard PPE Externnal Interrupt handling for PK
 ///

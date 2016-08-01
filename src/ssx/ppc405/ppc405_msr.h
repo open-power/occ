@@ -25,12 +25,6 @@
 #ifndef __PPC405_MSR_H__
 #define __PPC405_MSR_H__
 
-//-----------------------------------------------------------------------------
-// *! (C) Copyright International Business Machines Corp. 2014
-// *! All Rights Reserved -- Property of IBM
-// *! *** IBM Confidential ***
-//-----------------------------------------------------------------------------
-
 /// \file ppc405_msr.h
 /// \brief Everything related to the PPC405 Machine State Register
 ///

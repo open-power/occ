@@ -25,12 +25,6 @@
 #ifndef __STD_COMMON_H__
 #define __STD_COMMON_H__
 
-//-----------------------------------------------------------------------------
-// *! (C) Copyright International Business Machines Corp. 2014
-// *! All Rights Reserved -- Property of IBM
-// *! *** IBM Confidential ***
-//-----------------------------------------------------------------------------
-
 /// \file cme_common.h
 /// \brief Common header for standard PPE's
 ///

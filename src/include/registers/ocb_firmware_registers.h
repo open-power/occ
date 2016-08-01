@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -24,14 +24,6 @@
 /* IBM_PROLOG_END_TAG                                                     */
 #ifndef __OCB_FIRMWARE_REGISTERS_H__
 #define __OCB_FIRMWARE_REGISTERS_H__
-
-// $Id$
-// $Source$
-//-----------------------------------------------------------------------------
-// *! (C) Copyright International Business Machines Corp. 2015
-// *! All Rights Reserved -- Property of IBM
-// *! *** IBM Confidential ***
-//-----------------------------------------------------------------------------
 
 /// \file ocb_firmware_registers.h
 /// \brief C register structs for the OCB unit

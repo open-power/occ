@@ -25,12 +25,6 @@
 #ifndef __PPC32_H__
 #define __PPC32_H__
 
-//-----------------------------------------------------------------------------
-// *! (C) Copyright International Business Machines Corp. 2014
-// *! All Rights Reserved -- Property of IBM
-// *! *** IBM Confidential ***
-//-----------------------------------------------------------------------------
-
 /// \file ppc32.h
 /// \brief Generic 32-bit PowerPC header for SSX
 ///

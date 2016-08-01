@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -24,14 +24,6 @@
 /* IBM_PROLOG_END_TAG                                                     */
 #ifndef __TPC_FIRMWARE_REGISTERS_H__
 #define __TPC_FIRMWARE_REGISTERS_H__
-
-// $Id: tpc_firmware_registers.h,v 1.1.1.1 2013/12/11 21:03:25 bcbrock Exp $
-// $Source: /afs/awd/projects/eclipz/KnowledgeBase/.cvsroot/eclipz/chips/p8/working/procedures/ssx/pgp/registers/tpc_firmware_registers.h,v $
-//-----------------------------------------------------------------------------
-// *! (C) Copyright International Business Machines Corp. 2013
-// *! All Rights Reserved -- Property of IBM
-// *! *** IBM Confidential ***
-//-----------------------------------------------------------------------------
 
 /// \file tpc_firmware_registers.h
 /// \brief C register structs for the TPC unit

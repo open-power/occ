@@ -25,12 +25,6 @@
 #ifndef __OCCHW_ID_H__
 #define __OCCHW_ID_H__
 
-//-----------------------------------------------------------------------------
-// *! (C) Copyright International Business Machines Corp. 2014
-// *! All Rights Reserved -- Property of IBM
-// *! *** IBM Confidential ***
-//-----------------------------------------------------------------------------
-
 /// \file occhw_id.h
 /// \brief chip and EC-level identification + chip configuration
 ///

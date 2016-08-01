@@ -25,12 +25,6 @@
 #ifndef __PPC405_IRQ_H__
 #define __PPC405_IRQ_H__
 
-//-----------------------------------------------------------------------------
-// *! (C) Copyright International Business Machines Corp. 2014
-// *! All Rights Reserved -- Property of IBM
-// *! *** IBM Confidential ***
-//-----------------------------------------------------------------------------
-
 /// \file ppc405_irq.h
 /// \brief PPC405 interrupt handling for SSX
 ///

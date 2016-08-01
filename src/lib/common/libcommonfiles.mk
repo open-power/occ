@@ -22,21 +22,11 @@
 # permissions and limitations under the License.
 #
 # IBM_PROLOG_END_TAG
+
 #  @file libcommonfiles.mk
 #
 #  @brief mk for libcommon.a object files
-#
-#  @page ChangeLogs Change Logs
-#  @section ofiles.mk
-#  @verbatim
-#
-#
-# Change Log ******************************************************************
-# Flag     Defect/Feature  User        Date         Description
-# ------   --------------  ----------  ------------ -----------
-#
-# @endverbatim
-#
+
 ##########################################################################
 # INCLUDES
 ##########################################################################

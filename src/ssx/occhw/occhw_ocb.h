@@ -25,12 +25,6 @@
 #ifndef __OCCHW_OCB_H__
 #define __OCCHW_OCB_H__
 
-//-----------------------------------------------------------------------------
-// *! (C) Copyright International Business Machines Corp. 2014
-// *! All Rights Reserved -- Property of IBM
-// *! *** IBM Confidential ***
-//-----------------------------------------------------------------------------
-
 /// \file occhw_ocb.h
 /// \brief OCB unit header.  Local and mechanically generated macros and APIs.
 

@@ -25,12 +25,6 @@
 #ifndef __OCCHW_IRQ_H__
 #define __OCCHW_IRQ_H__
 
-//-----------------------------------------------------------------------------
-// *! (C) Copyright International Business Machines Corp. 2014
-// *! All Rights Reserved -- Property of IBM
-// *! *** IBM Confidential ***
-//-----------------------------------------------------------------------------
-
 /// \file occhw_irq.h
 /// \brief PPC405-OCCHW Interrupt handling for SSX
 ///

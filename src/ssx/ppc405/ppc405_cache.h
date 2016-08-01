@@ -25,12 +25,6 @@
 #ifndef __PPC405_CACHE_H__
 #define __PPC405_CACHE_H__
 
-//-----------------------------------------------------------------------------
-// *! (C) Copyright International Business Machines Corp. 2014
-// *! All Rights Reserved -- Property of IBM
-// *! *** IBM Confidential ***
-//-----------------------------------------------------------------------------
-
 /// \file ppc405_cache.h
 /// \brief PowerPC 405 cache management header for SSX
 ///

@@ -25,12 +25,6 @@
 #ifndef __SSX_KERNEL_H__
 #define __SSX_KERNEL_H__
 
-//-----------------------------------------------------------------------------
-// *! (C) Copyright International Business Machines Corp. 2014
-// *! All Rights Reserved -- Property of IBM
-// *! *** IBM Confidential ***
-//-----------------------------------------------------------------------------
-
 /// \file ssx_kernel.h
 /// \brief SSX portable kernel (non-API) data and data structures
 ///

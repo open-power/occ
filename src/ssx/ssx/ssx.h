@@ -25,12 +25,6 @@
 #ifndef __SSX_H__
 #define __SSX_H__
 
-//-----------------------------------------------------------------------------
-// *! (C) Copyright International Business Machines Corp. 2014
-// *! All Rights Reserved -- Property of IBM
-// *! *** IBM Confidential ***
-//-----------------------------------------------------------------------------
-
 /// \file ssx.h
 /// \brief The combined header of the SSX kernel.
 ///

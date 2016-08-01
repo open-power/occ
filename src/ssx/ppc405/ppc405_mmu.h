@@ -25,12 +25,6 @@
 #ifndef __PPC405_MMU_H__
 #define __PPC405_MMU_H__
 
-//-----------------------------------------------------------------------------
-// *! (C) Copyright International Business Machines Corp. 2014
-// *! All Rights Reserved -- Property of IBM
-// *! *** IBM Confidential ***
-//-----------------------------------------------------------------------------
-
 /// \file ppc405_mmu.h
 /// \brief Definitions related to the PPC405 MMU and its use in SSX.
 

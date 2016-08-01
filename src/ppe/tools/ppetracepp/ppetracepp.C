@@ -41,29 +41,8 @@
 # ppetracepp creates a file "$target.ppe.hash" with the trace strings and the hash values.
 #
 # to enable debug mode set envvar PPETRACEPPDEBUG to 1 or give '-d' as first arg
-
-# *** Change History
-#
-# 2003-02-26  RBa  created from scratch
-# 2003-02-28  RBa  add C++ support (C++ interface uses own type for the hash)
-# 2003-05-28  RBa  if cc should link instead of compile just call compiler
-# 2003-07-11  AGe  Change search alg. slightly and put just format back
-# 2003-07-25  RBa  just call gcc if called to link instead to compile
-#                  eat argument for option -x
-# 2003-11-26  RBa  fix c/c++ algo: compile as c++ if realcc=*g++
-# 2004-02-02  RBa  remove explicit test whether source file is readable
-#                  it is obsolete and might lead to an error if afs is used
-# 2004-02-13  RBa  add support for dependency generation (-MD/-MG, -MF)
-#                  don't prepend './' to object filename
-# 2006-04-19  RBa  rewrite trace_ppe_write_all support, handle C and C++ the same
-# 2006-05-24  RBa  fix handling of missing -o ; add TRAC_PPVER for macro/API version
-# 2006-09-15  RBa  add handling of \" in trace format strings ; reduce non-error output
-#                  put object file in current dir if no -o given
-# 2007-03-22  RBa  handle more gcc options (-i) ; protect " in call to shell
-#                  store output of cpp as "unmodified" output for debug
-#                  only write string/hash file if strings found
-# 2012-09-24 hlava Rewritten as C program for better build performance (was perl)
 */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
