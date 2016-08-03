@@ -78,6 +78,7 @@
 /// should be done for completeness.
 
 #include "ssx.h"
+#include "ctype.h"
 #include "ssx_io.h"
 
 // Formatting options

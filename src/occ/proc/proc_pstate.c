@@ -86,7 +86,7 @@ DMA_BUFFER( sapphire_table_t G_sapphire_table ) = {{0}};
 extern uint8_t G_amec_kvm_throt_reason;
 
 // Set DCM Sync State
-void proc_gpsm_dcm_sync_set_state(eProcGpsmDcmSyncStates i_dcm_sync_state);
+static inline void proc_gpsm_dcm_sync_set_state(eProcGpsmDcmSyncStates i_dcm_sync_state);
 
 // Tracing out pstate table when it gets installed
 void proc_trace_pstate_table_quick(void);
@@ -152,7 +152,7 @@ inline proc_gpsm_dcm_sync_occfw_t proc_gpsm_dcm_sync_get_state(void)
 // Description:  Return if we are a DCM or not
 //
 // End Function Specification
-inline bool proc_is_dcm(void)
+bool proc_is_dcm(void)
 {
   return G_isDcm;
 }
@@ -167,7 +167,7 @@ inline bool proc_is_dcm(void)
 //               DCM Master or DCM Slave
 //
 // End Function Specification
-inline void proc_gpsm_dcm_sync_set_state(eProcGpsmDcmSyncStates i_dcm_sync_state)
+static inline void proc_gpsm_dcm_sync_set_state(eProcGpsmDcmSyncStates i_dcm_sync_state)
 {
     if(!gpsm_dcm_slave_p())
     {

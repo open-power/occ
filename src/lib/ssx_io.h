@@ -33,7 +33,6 @@
 #include "ssx_macros.h"
 #include "ssx_api.h"
 
-#include "ctype.h"
 #include "errno.h"
 #include "string.h"
 

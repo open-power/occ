@@ -410,8 +410,7 @@ typedef uint32_t SsxMachineContext;
 ///
 /// \retval -SSX_INVALID_ARGUMENT_INTERRUPT An illegal priority was specified.
 
-UNLESS__PPC405_CORE_C__(extern)
-inline int
+static inline int
 ssx_interrupt_disable(int priority, SsxMachineContext *context)
 {
     *context = mfmsr();
@@ -448,8 +447,7 @@ ssx_interrupt_disable(int priority, SsxMachineContext *context)
 /// \retval -SSX_INVALID_ARGUMENT_CONTEXT_SET A null pointer was provided as 
 /// the \a context argument or an illegal machine context was specified.
 
-UNLESS__PPC405_CORE_C__(extern)
-inline int
+static inline int
 ssx_machine_context_set(SsxMachineContext *context)
 {
     if (SSX_ERROR_CHECK_API) {
@@ -473,8 +471,7 @@ ssx_machine_context_set(SsxMachineContext *context)
 /// \retval -SSX_INVALID_ARGUMENT_CONTEXT_GET A null pointer was provided as 
 /// the \a context argument.
 
-UNLESS__PPC405_CORE_C__(extern)
-inline int
+static inline int
 ssx_machine_context_get(SsxMachineContext *context)
 {
     if (SSX_ERROR_CHECK_API) {

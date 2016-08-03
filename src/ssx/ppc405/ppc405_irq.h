@@ -135,10 +135,6 @@ int ssx_irq_handler_set(SsxIrqId      irq,
                         void*         arg,
                         int           priority);
 
-void ssx_irq_enable(SsxIrqId irq);
-void ssx_irq_disable(SsxIrqId irq);
-void ssx_irq_statusclear(SsxIrqId irq);
-
 SSX_IRQ_HANDLER(__ppc405_default_irq_handler);
 SSX_IRQ_HANDLER(__ppc405_phantom_irq_handler);
 
