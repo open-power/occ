@@ -176,8 +176,8 @@ void amec_controller_dimm_thermal()
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    // Get TEMP2MSDIMM sensor value
-    l_sensor = getSensorByGsid(TEMP2MSDIMM);
+    // Get TEMP16MSDIMM sensor value
+    l_sensor = getSensorByGsid(TEMP16MSDIMM);
 
     if(G_dimm_temp_expired_bitmap.bigword)
     {

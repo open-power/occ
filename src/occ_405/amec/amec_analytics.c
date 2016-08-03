@@ -465,7 +465,7 @@ void amec_analytics_main(void)
                         break;
 
                     case 4:
-                        tempreg = (g_amec->proc[0].temp2msdimm.sample) << 8;   // upper byte
+                        tempreg = (g_amec->proc[0].temp16msdimm.sample) << 8;   // upper byte
                         break;
 
                     case 5:
@@ -473,7 +473,7 @@ void amec_analytics_main(void)
                         break;
 
                     case 6:
-                        // tempreg=(g_amec->proc[2].temp2msdimm.sample)<<8;   // upper byte
+                        // tempreg=(g_amec->proc[2].temp16msdimm.sample)<<8;   // upper byte
                         tempreg = 0;
                         break;
 

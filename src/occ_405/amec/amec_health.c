@@ -86,13 +86,12 @@ uint64_t amec_mem_get_huid(uint8_t i_cent, uint8_t i_dimm)
     {
         //we're being asked for a dimm huid
         l_huid = G_sysConfigData.dimm_huids[i_cent][i_dimm];
-        if(!l_huid)
+        if((l_huid == 0) && (MEM_TYPE_CUMULUS == G_sysConfigData.mem_type))
         {
-            //if we don't have a valid dimm huid, use the
-            //centaur huid.
-            //TODO: this will not work for ISDIMMS.
+            //if we don't have a valid dimm huid, use the centaur huid.
             l_huid = G_sysConfigData.centaur_huids[i_cent];
         }
+        // else NIMBUS huid of 0 indicates not present (should never get called)
     }
     return l_huid;
 }
@@ -142,7 +141,7 @@ void amec_health_check_dimm_temp()
     }
 
     l_ot_error = g_amec->thermaldimm.ot_error;
-    l_sensor = getSensorByGsid(TEMP2MSDIMM);
+    l_sensor = getSensorByGsid(TEMP16MSDIMM);
     l_cur_temp = l_sensor->sample;
     l_max_temp = l_sensor->sample_max;
     TRAC_ERR("amec_health_check_dimm_temp: DIMM reached error temp[%d]. cur_max[%d], hist_max[%d]",

@@ -280,7 +280,7 @@ const sensor_info_t G_sensor_info[]   =
 
   /* ==MemSummarySensors==  NameString  Units                      Type              Location             Number                Freq      ScaleFactor   */
   SENSOR_INFO_T_ENTRY(     TEMP2MSCENT,   "C\0",    AMEC_SENSOR_TYPE_TEMP,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_250US_IN_HZ,   AMEFP(  1, 0)  ),
-  SENSOR_INFO_T_ENTRY(     TEMP2MSDIMM,   "C\0",    AMEC_SENSOR_TYPE_TEMP,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_250US_IN_HZ,   AMEFP(  1, 0)  ),
+  SENSOR_INFO_T_ENTRY(    TEMP16MSDIMM,   "C\0",    AMEC_SENSOR_TYPE_TEMP,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_250US_IN_HZ,   AMEFP(  1, 0)  ),
   SENSOR_INFO_T_ENTRY(        MEMSP2MS,   "%\0",    AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_250US_IN_HZ,   AMEFP(  1, 0)  ),
 
   /* ==PartSummarySensors==  NameString  Units                      Type              Location             Number                Freq      ScaleFactor   */

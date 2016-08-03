@@ -213,7 +213,7 @@ typedef struct __attribute__ ((packed))
     uint16_t pwrpx250usp0cy[MAX_CORES];                          // [260]
     uint16_t todclock[NUM_TOD_SENSORS];                          // [308]
     uint16_t temp2mscent;                                        // [314]
-    uint16_t temp2msdimm;                                        // [316]
+    uint16_t temp16msdimm;                                       // [316]
     uint16_t util2msp0;                                          // [318]
     uint16_t ips2msp0;                                           // [320]
     uint16_t nutil3sp0cy[MAX_CORES];                             // [322]

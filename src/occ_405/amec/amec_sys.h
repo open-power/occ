@@ -463,7 +463,7 @@ typedef struct
 
   // Memory Summary Sensors
   sensor_t temp2mscent;
-  sensor_t temp2msdimm;
+  sensor_t temp16msdimm;
   sensor_t memsp2ms_tls;
 
   // Calculations & Interim Data

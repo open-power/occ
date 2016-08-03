@@ -362,7 +362,7 @@ const sensor_ptr_t G_amec_sensor_list[] =
 
 
   SENSOR_PTR( TEMP2MSCENT,          &g_amec_sys.proc[0].temp2mscent),
-  SENSOR_PTR( TEMP2MSDIMM,          &g_amec_sys.proc[0].temp2msdimm),
+  SENSOR_PTR( TEMP16MSDIMM,         &g_amec_sys.proc[0].temp16msdimm),
   SENSOR_PTR( MEMSP2MS,             &g_amec_sys.proc[0].memsp2ms_tls),
 
   // ------------------------------------------------------
@@ -511,7 +511,7 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   PORTPAIR_MINI_SENSOR_PTRS_NULL(M4WR2MSP0M),
 
   MINI_SENSOR_PTR( TEMP2MSCENT,     &G_dcom_slv_outbox_tx.temp2mscent),
-  MINI_SENSOR_PTR( TEMP2MSDIMM,     &G_dcom_slv_outbox_tx.temp2msdimm),
+  MINI_SENSOR_PTR( TEMP16MSDIMM,    &G_dcom_slv_outbox_tx.temp16msdimm),
   MINI_SENSOR_PTR( MEMSP2MS,        NULL),
 
   // ------------------------------------------------------

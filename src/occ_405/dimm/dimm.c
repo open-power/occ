@@ -42,6 +42,7 @@
 #include "amec_sys.h"
 #include "lock.h"
 #include "common.h"
+#include "centaur_data.h"
 
 extern bool G_mem_monitoring_allowed;
 extern task_t G_task_table[TASK_END];
@@ -53,12 +54,14 @@ bool     G_dimm_i2c_reset_required = false;
 uint32_t G_dimm_i2c_reset_cause = 0;
 
 #define MAX_CONSECUTIVE_DIMM_RESETS 1
+// On Nimbus, we are using the centaur number as the I2C port (keep same structure)
+// There can be 8 DIMMs under a Centaur and 8 DIMMs per I2C port (max of 2 ports)
+#define NUM_DIMMS_PER_I2CPORT  NUM_DIMMS_PER_CENTAUR
 typedef struct {
     bool     disabled;
     uint8_t  errorCount;
-    uint64_t lastReading;
 } dimmData_t;
-dimmData_t G_dimm[NUM_DIMM_PORTS][NUM_DIMMS_PER_CENTAUR] = {{{false,0}}};
+dimmData_t G_dimm[NUM_DIMM_PORTS][NUM_DIMMS_PER_I2CPORT] = {{{false,0}}};
 
 // If still no i2c interrupt after MAX_TICK_COUNT_WAIT, then try next operation anyway
 #define MAX_TICK_COUNT_WAIT 2
@@ -171,7 +174,7 @@ void memory_init()
                 // Initialization was successful.  Set task flags to allow memory
                 // tasks to run and also prevent from doing initialization again.
                 G_task_table[mem_task].flags = MEMORY_DATA_RTL_FLAGS;
-                //G_task_table[TASK_ID_CENTAUR_CONTROL].flags = MEMORY_CONTROL_RTL_FLAGS;
+                //G_task_table[mem_task].flags = MEMORY_CONTROL_RTL_FLAGS;
             }
         }
     }
@@ -202,7 +205,7 @@ void update_hottest_dimm()
     int pIndex, dIndex;
     for (pIndex = 0; pIndex < G_maxDimmPorts; ++pIndex)
     {
-        for (dIndex = 0; dIndex < NUM_DIMMS_PER_CENTAUR; ++dIndex)
+        for (dIndex = 0; dIndex < NUM_DIMMS_PER_I2CPORT; ++dIndex)
         {
             if (g_amec->proc[0].memctl[pIndex].centaur.dimm_temps[dIndex].cur_temp > hottest)
             {
@@ -215,20 +218,24 @@ void update_hottest_dimm()
     DIMM_DBG("update_hottest_dimm: hottest DIMM temp for this sample: %dC (loc=%d)", hottest, hottest_loc);
     if(hottest > g_amec->proc[0].memctl[0].centaur.tempdimmax.sample_max)
     {
-        // Save hottest DIMM location ever sampled
+        // Save hottest DIMM location ever sampled.  There is no location for the temp16msdimm
+        // sensor, so just store it in memctl[0] location.
         DIMM_DBG("update_hottest_dimm: Hottest DIMM ever sampled was DIMM%d %dC (prior %dC)",
                  hottest_loc, hottest,  g_amec->proc[0].memctl[0].centaur.tempdimmax.sample_max);
+        // Store the hottest DIMM location in locdimmax sensor
         sensor_update(&g_amec->proc[0].memctl[0].centaur.locdimmax, hottest_loc);
     }
-    // Nimbus has no Centaurs, but store hottest temp in memctl[0]
+    // Store the hottest DIMM temp in tempdimmax sensor
     sensor_update(&g_amec->proc[0].memctl[0].centaur.tempdimmax, hottest);
+    // Store the hottest DIMM temp in temp16msdimm sensor
+    sensor_update(&g_amec->proc[0].temp16msdimm, hottest);
 }
 
 
 // Update current I2C port/DIMM index to next potential DIMM
 void use_next_dimm(uint8_t * i_port, uint8_t * i_dimm)
 {
-    if (++*i_dimm == NUM_DIMMS_PER_CENTAUR)
+    if (++*i_dimm == NUM_DIMMS_PER_I2CPORT)
     {
         // Finished all DIMMs for current port, switch to new port
         *i_port = 1 - *i_port;
@@ -256,6 +263,8 @@ void mark_dimm_failed()
                   WORD_HIGH(G_dimm_sm_args.error.ffdc),
                   WORD_LOW(G_dimm_sm_args.error.ffdc),
                   G_dimm_sm_request.request.completion_state);
+
+    g_amec->proc[0].memctl[port].centaur.dimm_temps[dimm].flags |= FRU_SENSOR_STATUS_ERROR;
 
     if (++G_dimm[port][dimm].errorCount > MAX_CONSECUTIVE_DIMM_RESETS)
     {
@@ -597,6 +606,92 @@ void SIMULATE_HOST()
 
 // Function Specification
 //
+// Name:  process_dimm_temp
+//
+// Description: Validate and store DIMM temperature
+//
+// End Function Specification
+void process_dimm_temp()
+{
+    const uint8_t port = G_dimm_sm_args.i2cPort;
+    const uint8_t dimm = G_dimm_sm_args.dimm;
+    uint8_t l_dimm_temp = G_dimm_sm_args.temp;
+
+#define MIN_VALID_DIMM_TEMP 1
+#define MAX_VALID_DIMM_TEMP 125 //according to Mike Pardiek
+#define MAX_MEM_TEMP_CHANGE 16
+
+    // Last DIMM read completed, update sensor and clear error count
+    DIMM_DBG("process_dimm_temp: Successfully read DIMM%04X temperature: %dC, tick %d",
+             DIMM_AND_PORT, l_dimm_temp, DIMM_TICK);
+
+    fru_temp_t* l_fru = &g_amec->proc[0].memctl[port].centaur.dimm_temps[dimm];
+
+    uint8_t l_prev_temp = l_fru->cur_temp;
+    if (l_prev_temp == 0)
+    {
+        l_prev_temp = l_dimm_temp;
+    }
+
+    //make sure temperature is within a 'reasonable' range.
+    if (l_dimm_temp < MIN_VALID_DIMM_TEMP ||
+        l_dimm_temp > MAX_VALID_DIMM_TEMP)
+    {
+        //set a flag so that if we end up logging an error we have something to debug why
+        l_fru->flags |= FRU_TEMP_OUT_OF_RANGE;
+        l_dimm_temp = l_prev_temp;
+    }
+    else
+    {
+        //don't allow temp to change more than is reasonable
+        if (l_dimm_temp > (l_prev_temp + MAX_MEM_TEMP_CHANGE))
+        {
+            if (!l_fru->flags)
+            {
+                TRAC_INFO("dimm temp rose faster than reasonable: DIMM%04X prev[%d] cur[%d]",
+                          DIMM_AND_PORT, l_prev_temp, l_dimm_temp);
+                l_fru->flags |= FRU_TEMP_FAST_CHANGE;
+            }
+            l_dimm_temp = l_prev_temp + MAX_MEM_TEMP_CHANGE;
+        }
+        else if (l_dimm_temp < (l_prev_temp - MAX_MEM_TEMP_CHANGE))
+        {
+            if (!l_fru->flags)
+            {
+                TRAC_INFO("dimm temp fell faster than reasonable: DIMM%04X prev[%d] cur[%d]",
+                          DIMM_AND_PORT, l_prev_temp, l_dimm_temp);
+                l_fru->flags |= FRU_TEMP_FAST_CHANGE;
+            }
+            l_dimm_temp = l_prev_temp - MAX_MEM_TEMP_CHANGE;
+        }
+        else //reasonable amount of change occurred
+        {
+            l_fru->flags &= ~FRU_TEMP_FAST_CHANGE;
+        }
+
+        //Notify thermal thread that temperature has been updated
+        G_dimm_temp_updated_bitmap.bytes[port] |= DIMM_SENSOR0 >> dimm;
+
+        //clear other error flags
+        l_fru->flags &= FRU_TEMP_FAST_CHANGE;
+    }
+
+    //Check if at or above the error temperature
+    if (l_dimm_temp >= g_amec->thermaldimm.ot_error)
+    {
+        //Set a bit so that this dimm can be called out by the thermal thread
+        G_dimm_overtemp_bitmap.bytes[port] |= 1 << dimm;
+    }
+
+    l_fru->cur_temp = l_dimm_temp;
+    G_dimm[port][dimm].errorCount = 0;
+
+} // end process_dimm_temp()
+
+
+
+// Function Specification
+//
 // Name:  task_dimm_sm
 //
 // Description: DIMM State Machine - Called every other tick to collect all of
@@ -722,15 +817,8 @@ void task_dimm_sm(struct task *i_self)
                                     case DIMM_STATE_READ_TEMP:
                                         if (L_readIssued)
                                         {
-                                            const uint8_t port = G_dimm_sm_args.i2cPort;
-                                            const uint8_t dimm = G_dimm_sm_args.dimm;
-
-                                            // Last DIMM read completed, update sensor and clear error count
-                                            DIMM_DBG("task_dimm_sm: Successfully read DIMM%04X temperature: %dC, tick %d",
-                                                     DIMM_AND_PORT, G_dimm_sm_args.temp, DIMM_TICK);
-                                            g_amec->proc[0].memctl[port].centaur.dimm_temps[dimm].cur_temp = G_dimm_sm_args.temp;
-                                            G_dimm[port][dimm].lastReading = ((ssx_timebase_get())/(SSX_TIMEBASE_FREQUENCY_HZ/1000000));
-                                            G_dimm[port][dimm].errorCount = 0;
+                                            // Validate  and store temperature
+                                            process_dimm_temp();
 
                                             // Move on to next DIMM
                                             use_next_dimm(&L_dimmPort, &L_dimmIndex);

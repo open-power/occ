@@ -721,7 +721,7 @@ enum e_gsid
     MLP2P0M7,
 
     TEMP2MSCENT,
-    TEMP2MSDIMM,
+    TEMP16MSDIMM,
     MEMSP2MS,
 
     // ------------------------------------------------------
