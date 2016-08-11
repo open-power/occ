@@ -57,18 +57,20 @@ void Cmd_Hndl_thread_routine(void *arg)
     // ------------------------------------------------
     // Initialize HW for FSP Comm
     // ------------------------------------------------
-    l_errlHndl = cmdh_fsp_init();
-    if(l_errlHndl)
-    {
-        // Mark Errl as committed, so FSP knows right away we are having
-        // problems with Attention, if that is the cause of the error.
+    cmdh_comm_init();
+    CHECKPOINT(COMM_INIT_COMPLETED);
 
-        commitErrl(&l_errlHndl);
-    }
-    else    // Mark the Checkpoint only if no error was logged
-    {
-        CHECKPOINT(FSP_COMM_INITIALIZED);
-    }
+    // Read/trace push queue register
+    const uint32_t l_data = in32(OCB_OCBSHCS1);
+    CMDH_TRAC_INFO("Cmd_Hndl_thread_routine: OCB_OCBSHCS1=0x%08X", l_data);
+    // write data after checkpoint and update checkpoint length
+    G_fsp_msg.rsp->fields.data[3] = (l_data >> 24);
+    G_fsp_msg.rsp->fields.data[4] = (l_data >> 16) & 0xFF;
+    G_fsp_msg.rsp->fields.data[5] = (l_data >>  8) & 0xFF;
+    G_fsp_msg.rsp->fields.data[6] = (l_data      ) & 0xFF;
+    G_fsp_msg.rsp->fields.data[7] = 0x11;
+    G_fsp_msg.rsp->fields.data_length[1] = 8; // 8 bytes vs 3
+    dcache_flush_line((void *)CMDH_OCC_RESPONSE_BASE_ADDRESS);
 
     // ------------------------------------------------
     // Loop forever, handling FSP commands

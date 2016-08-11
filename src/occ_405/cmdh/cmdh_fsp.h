@@ -151,6 +151,8 @@ typedef enum
     ERRL_RC_OCB_TIMER           = 0xE3,
     // Halting due to unmasked OCCLFIR bit being set (see OISR0 bit 2)
     ERRL_RC_OCC_HW_ERROR        = 0xE4,
+    // Halting due to failure during init
+    ERRL_RC_OCC_INIT_FAILURE    = 0xE5,
     // The command is being processed by OCC
     ERRL_RC_CMD_IN_PROGRESS     = 0xFF,
 } ERRL_RC;
@@ -316,7 +318,7 @@ int cmdh_thread_wait_for_wakeup(void);
 
 errlHndl_t cmdh_fsp_cmd_hndler(void);
 
-errlHndl_t cmdh_fsp_init(void);
+void cmdh_comm_init(void);
 
 void cmdh_build_errl_rsp(const cmdh_fsp_cmd_t * i_cmd_ptr,
                          cmdh_fsp_rsp_t       * o_rsp_ptr,

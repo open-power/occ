@@ -232,6 +232,14 @@ do {                                                                           \
     .endm
 #endif /* __ASSEMBLER__ */
 
+// Commit specified error and then halt the 405 with Initialization Failure
+#define CHECKPOINT_FAIL_AND_HALT(elog)  \
+{                                                           \
+    setErrlActions(elog, ERRL_ACTIONS_RESET_REQUIRED);      \
+    commitErrl(&elog);                                      \
+    OCC_HALT(ERRL_RC_OCC_INIT_FAILURE);                     \
+}
+
 // Unique checkpoints
 enum
 {
@@ -261,8 +269,9 @@ enum
     CMDH_THREAD_STARTED         = 0x0dff,
     INIT_OCB                    = 0x0e05,
     OCB_INITIALIZED             = 0x0e07,
-    FSP_COMM_INITIALIZED        = 0x0eff,
+    COMM_INIT_COMPLETED         = 0x0eff,
     ABOUT_TO_HALT               = 0x0f00,
+    COMM_INIT_FAILURE           = 0xeeff,
 };
 
 // Checkpoint flags (one byte bitmap)

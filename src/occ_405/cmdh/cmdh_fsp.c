@@ -45,6 +45,10 @@ const int      OCB_CHANNEL_FSP_LINEAR          = 0;
 const int      OCB_CHANNEL_FSP_DOORBELL        = 1;
 const int      ALLOW_UNTRUSTED_ACCESS          = 1;
 
+// L_startup_trace flag will enable additional checkpoint data prior to
+// first communication with TMGT to help debug communication issues.
+static bool L_startup_trace = TRUE;
+
 // Do not change this without changing size of FSP Command Buffer
 // (and vice versa).  The Linear window requires an alignment on
 // a power of 2 boundry, and linear window registers require this
@@ -131,6 +135,22 @@ void clearCmdhWakeupCondition(eCmdhWakeupThreadMask i_cond)
 void notifyFspDoorbellReceived(void * i_arg)
 {
     notifyCmdhWakeupCondition(CMDH_WAKEUP_FSP_COMMAND);
+
+    if (L_startup_trace)
+    {
+        // Read/trace push queue register
+        const uint32_t l_data = in32(OCB_OCBSHCS1);
+        TRAC_INFO("notifyFspDoorbellReceived: OCB_OCBSHCS1=0x%08X", l_data);
+        // write data after checkpoint and update checkpoint length
+        G_fsp_msg.rsp->fields.data[3] = (l_data >> 24);
+        G_fsp_msg.rsp->fields.data[4] = (l_data >> 16) & 0xFF;
+        G_fsp_msg.rsp->fields.data[5] = (l_data >>  8) & 0xFF;
+        G_fsp_msg.rsp->fields.data[6] = (l_data      ) & 0xFF;
+        G_fsp_msg.rsp->fields.data[7] = 0x22;
+        G_fsp_msg.rsp->fields.data_length[1] = 8; // 8 bytes vs 3
+        dcache_flush_line((void *)CMDH_OCC_RESPONSE_BASE_ADDRESS);
+    }
+
 }
 
 
@@ -155,6 +175,21 @@ int cmdh_thread_wait_for_wakeup(void)
         ocb_request_schedule(&G_fsp_doorbell_ocb_request);
     }
 
+    if (L_startup_trace)
+    {
+        // Read/trace push queue register
+        const uint32_t l_data = in32(OCB_OCBSHCS1);
+        TRAC_INFO("cmdh_thread_wait_for_wakeup: OCB_OCBSHCS1=0x%08X", l_data);
+        // write data after checkpoint and update checkpoint length
+        G_fsp_msg.rsp->fields.data[3] = (l_data >> 24);
+        G_fsp_msg.rsp->fields.data[4] = (l_data >> 16) & 0xFF;
+        G_fsp_msg.rsp->fields.data[5] = (l_data >>  8) & 0xFF;
+        G_fsp_msg.rsp->fields.data[6] = (l_data      ) & 0xFF;
+        G_fsp_msg.rsp->fields.data[7] = 0x33;
+        G_fsp_msg.rsp->fields.data_length[1] = 8; // 8 bytes vs 3
+        dcache_flush_line((void *)CMDH_OCC_RESPONSE_BASE_ADDRESS);
+    }
+
     // Wait for someone to wakeup this thread
     l_rc = ssx_semaphore_pend(&G_cmdh_fsp_wakeup_thread, SSX_WAIT_FOREVER);
 
@@ -163,12 +198,12 @@ int cmdh_thread_wait_for_wakeup(void)
 
 // Function Specification
 //
-// Name: cmdh_fsp_init
+// Name: cmdh_comm_init
 //
-// Description: TODO -- Add description
+// Description: Setup doorbell for TMGT/HTMGT/BMC communication
 //
 // End Function Specification
-errlHndl_t cmdh_fsp_init(void)
+void cmdh_comm_init(void)
 {
     errlHndl_t            l_errlHndl = NULL;
 
@@ -205,8 +240,8 @@ errlHndl_t cmdh_fsp_init(void)
        G_occ_interrupt_type != FSP_SUPPORTED_OCC)
     {
         // Invalid interrupt type
-        CMDH_TRAC_ERR("cmdh_fsp_init: Invalid OCC interrupt type was detected! interrupt_type[%d]",
-                 G_occ_interrupt_type);
+        CMDH_TRAC_ERR("cmdh_comm_init: Invalid OCC interrupt type was detected! interrupt_type[%d]",
+                      G_occ_interrupt_type);
 
         /* @
          * @errortype
@@ -218,18 +253,17 @@ errlHndl_t cmdh_fsp_init(void)
          * @devdesc     Invalid OCC interrupt type was detected
          */
         l_errlHndl = createErrl(
-                CMDH_OCC_INTERRUPT_TYPE,           // modId
-                EXTERNAL_INTERFACE_FAILURE,        // reasoncode
-                OCC_NO_EXTENDED_RC,                // Extended reason code
-                ERRL_SEV_PREDICTIVE,               // Severity
-                NULL,                              // Trace Buf
-                DEFAULT_TRACE_SIZE,                // Trace Size
-                G_occ_interrupt_type,              // userdata1
-                0                                  // userdata2
-                );
+                                CMDH_OCC_INTERRUPT_TYPE,           // modId
+                                EXTERNAL_INTERFACE_FAILURE,        // reasoncode
+                                OCC_NO_EXTENDED_RC,                // Extended reason code
+                                ERRL_SEV_PREDICTIVE,               // Severity
+                                NULL,                              // Trace Buf
+                                DEFAULT_TRACE_SIZE,                // Trace Size
+                                G_occ_interrupt_type,              // userdata1
+                                0                                  // userdata2
+                               );
+        CHECKPOINT_FAIL_AND_HALT(l_errlHndl);
     }
-
-    return l_errlHndl;
 }
 
 // Function Specification
@@ -461,6 +495,15 @@ errlHndl_t cmdh_fsp_cmd_hndler(void)
             break;
         }
 
+        bool l_trace_cmd = FALSE;
+        if (L_startup_trace)
+        {
+            // Disable startup traces since the response buffer will no longer contain the checkpoint
+            L_startup_trace = FALSE;
+            // Trace the current command and response status
+            l_trace_cmd = TRUE;
+        }
+
         // Determine which buffer to read based on the sender ID
         if(l_sender_id == ATTN_SENDER_ID_HTMGT)
         {
@@ -590,6 +633,11 @@ errlHndl_t cmdh_fsp_cmd_hndler(void)
                 l_cmd_len = CMDH_FSP_CMD_SIZE;
             }
 
+            if (l_trace_cmd)
+            {
+                TRAC_INFO("cmdh_fsp_cmd_hndler: HTMGT command(cmd: 0x%02X, seq: 0x%02X)", G_htmgt_cmd_buffer.fields.cmd_type, G_htmgt_cmd_buffer.fields.seq);
+            }
+
             // Verify the command checksum
             l_cksm = checksum16(&G_htmgt_cmd_buffer.byte[0], l_cmd_len);
             if(l_cksm != CONVERT_UINT8_ARRAY_UINT16(G_htmgt_cmd_buffer.byte[l_cmd_len],
@@ -627,6 +675,10 @@ errlHndl_t cmdh_fsp_cmd_hndler(void)
             G_htmgt_rsp_buffer.byte[l_cmd_len]   = CONVERT_UINT16_UINT8_HIGH(l_cksm);
             G_htmgt_rsp_buffer.byte[l_cmd_len+1] = CONVERT_UINT16_UINT8_LOW(l_cksm);
             G_htmgt_rsp_buffer.fields.rc         = G_rsp_status;
+            if (l_trace_cmd)
+            {
+                TRAC_INFO("cmdh_fsp_cmd_hndler: HTMGT response(status: 0x%02X, dataLen: 0x%04X)", G_htmgt_rsp_buffer.fields.rc, l_data_len);
+            }
 
             // Need to write the final response to HOMER. Set up a copy request
             l_ssxrc = bce_request_create(&pba_copy,                           // block copy object
@@ -703,6 +755,11 @@ errlHndl_t cmdh_fsp_cmd_hndler(void)
                 l_cmd_len = CMDH_FSP_CMD_SIZE;
             }
 
+            if (l_trace_cmd)
+            {
+                TRAC_INFO("cmdh_fsp_cmd_hndler: TMGT command(cmd: 0x%02X, seq: 0x%02X)" , G_fsp_msg.cmd->fields.cmd_type, G_fsp_msg.cmd->fields.seq);
+            }
+
             // Verify Command Checksum
             l_cksm = checksum16(&G_fsp_msg.cmd->byte[0],(l_cmd_len));
             if(l_cksm != CONVERT_UINT8_ARRAY_UINT16(G_fsp_msg.cmd->byte[l_cmd_len],
@@ -742,6 +799,11 @@ errlHndl_t cmdh_fsp_cmd_hndler(void)
             l_cksm += G_rsp_status - ERRL_RC_CMD_IN_PROGRESS;
             G_fsp_msg.rsp->byte[l_cmd_len] = CONVERT_UINT16_UINT8_HIGH(l_cksm);
             G_fsp_msg.rsp->byte[l_cmd_len+1] = CONVERT_UINT16_UINT8_LOW(l_cksm);
+
+            if (l_trace_cmd)
+            {
+                TRAC_INFO("cmdh_fsp_cmd_hndler: TMGT response(status: 0x%02X, dataLen: 0x%04X)", G_rsp_status, l_data_len);
+            }
 
             // Copy the return status last (to indicate command completion)
             G_fsp_msg.rsp->fields.rc = G_rsp_status;

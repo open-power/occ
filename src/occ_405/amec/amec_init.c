@@ -424,7 +424,7 @@ void amec_slave_init()
         rc2                                 //userdata2
     );
 
-    REQUEST_RESET(l_err);
+    CHECKPOINT_FAIL_AND_HALT(l_err);
   }
   else
   {

@@ -735,7 +735,7 @@ void initMainThrdSemAndTimer()
                                       l_hmonSemRc,                  //userdata1
                                       l_timerRc);                   //userdata2
 
-        REQUEST_RESET(l_err);
+        CHECKPOINT_FAIL_AND_HALT(l_err);
     }
 }
 
@@ -764,8 +764,6 @@ void Main_thread_routine(void *private)
     // Default role initialization and determine OCC/Chip Id
 
     dcom_initialize_roles();
-
-
     CHECKPOINT(ROLES_INITIALIZED);
 
     // Sensor Initialization

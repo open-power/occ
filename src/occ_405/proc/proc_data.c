@@ -351,8 +351,7 @@ void proc_core_init( void )
                     0                                        //Userdata2
             );
 
-            // commit error log
-            REQUEST_RESET(l_err);
+            CHECKPOINT_FAIL_AND_HALT(l_err);
             break;
         }
 
@@ -390,8 +389,7 @@ void proc_core_init( void )
                                 0                                         //Userdata2
             );
 
-            // commit error log
-            REQUEST_RESET(l_err);
+            CHECKPOINT_FAIL_AND_HALT(l_err);
             break;
         }
 

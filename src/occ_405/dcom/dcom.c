@@ -179,6 +179,8 @@ void dcom_initialize_roles(void)
                          ERRL_CALLOUT_PRIORITY_LOW);
 
         G_pbax_id.valid   = 0;  // Invalid Chip/Node ID
+
+        CHECKPOINT_FAIL_AND_HALT(l_errl);
     }
 
 // Initialize DCOM Thread Sem
@@ -237,7 +239,7 @@ void dcom_initialize_pbax_queues(void)
                 break;
             }
 
-            // create pbax rx queue o
+            // create pbax rx queue 0
             l_rc = pbax_queue_create( &G_pbax_read_queue[0],//queue
                     ASYNC_ENGINE_PBAX_PUSH0,                //engine
                     G_pbax_queue_rx0_buffer,                //cq base
@@ -301,8 +303,7 @@ void dcom_initialize_pbax_queues(void)
             0                                   //Userdata2
             );
 
-        // Commit log and request reset
-        REQUEST_RESET(l_errl);
+        CHECKPOINT_FAIL_AND_HALT(l_errl);
     }
 }
 

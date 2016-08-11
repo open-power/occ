@@ -204,16 +204,18 @@ void initThreadScheduler(void)
          * @userdata4   OCC_NO_EXTENDED_RC
          * @devdesc     SSX thread related failure
          */
-        errlHndl_t l_rc = createErrl(THRD_MID_INIT_THREAD_SCHDLR,   // ModId
-                                     SSX_GENERIC_FAILURE,           // Reasoncode
-                                     OCC_NO_EXTENDED_RC,            // Extended reasoncode
-                                     ERRL_SEV_UNRECOVERABLE,        // Severity
-                                     l_trace,                       // Trace Buf
-                                     DEFAULT_TRACE_SIZE,            // Trace Size
-                                     l_timerRc,                     // Userdata1
-                                     l_snapshotTimerRc);            // Userdata2
+        errlHndl_t l_errl = createErrl(THRD_MID_INIT_THREAD_SCHDLR,   // ModId
+                                       SSX_GENERIC_FAILURE,           // Reasoncode
+                                       OCC_NO_EXTENDED_RC,            // Extended reasoncode
+                                       ERRL_SEV_UNRECOVERABLE,        // Severity
+                                       l_trace,                       // Trace Buf
+                                       DEFAULT_TRACE_SIZE,            // Trace Size
+                                       l_timerRc,                     // Userdata1
+                                       l_snapshotTimerRc);            // Userdata2
 
-        REQUEST_RESET(l_rc);
+        CHECKPOINT(COMM_INIT_FAILURE);
+
+        REQUEST_RESET(l_errl);
     }
 }
 
