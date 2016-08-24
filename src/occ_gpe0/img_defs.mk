@@ -114,18 +114,18 @@ endif
 ifdef P2P_ENABLE
 # TODO
 else
+
+# libs needed by compiler
+ifndef PPE_TOOL_PATH
 PPE_TOOL_PATH = $(CTEPATH)/tools/ppetools/prod
+LD_LIBRARY_PATH += :$(PPE_TOOL_PATH)/lib:
+export LD_LIBRARY_PATH
+endif
 
 ifndef GCC-TOOL-PREFIX
 GCC-TOOL-PREFIX = $(PPE_TOOL_PATH)/bin/powerpc-eabi-
 endif
 
-# libs needed by compiler
-LD_LIBRARY_PATH += :$(PPE_TOOL_PATH)/lib:
-export LD_LIBRARY_PATH
-
-# libs needed by compiled code
-LIB_DIRS += -L$(PPE_TOOL_PATH)/libgcc
 endif
 
 ifndef BINUTILS-TOOL-PREFIX

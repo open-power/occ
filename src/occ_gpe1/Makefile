@@ -58,7 +58,9 @@ $(OBJDIR)/$(IMAGE_NAME).bin $(OBJDIR)/$(IMAGE_NAME).dis: $(OBJDIR)/$(IMAGE_NAME)
 
 #create a linked ELF executable
 $(OBJDIR)/$(IMAGE_NAME).out: $(LINK_OBJS) $(LINK_SCRIPT)
-	$(LD) -e __system_reset -N -T$(LINK_SCRIPT) -Map $(OBJDIR)/$(IMAGE_NAME).map -Bstatic -o $(OBJDIR)/$(IMAGE_NAME).out $(LIB_DIRS) $(OBJS) -locc -lcommon -lpk -leabi -lmath -lc
+	$(LD) -e __system_reset -N -T$(LINK_SCRIPT) -Map $(OBJDIR)/$(IMAGE_NAME).map \
+    -Bstatic -o $(OBJDIR)/$(IMAGE_NAME).out $(LIB_DIRS) $(OBJS) \
+    -locc -lcommon -lpk
 
 #pass the link command file through the C preprocessor to evaluate macros and remove comments
 $(LINK_SCRIPT): link.cmd
@@ -71,7 +73,7 @@ $(OBJDIR):
 	mkdir -p $(OBJDIR)
 
 $(PPETOOLS_OBJDIR)/ppetracepp: $(PPETOOLS_OBJDIR)
-	g++ -m32 -O3 -w -g -I$(PPETRACEPP_DIR)/ $(PPETRACEPP_DIR)/ppetracepp.C -o $(PPETOOLS_OBJDIR)/ppetracepp
+	g++ -O3 -w -g -I$(PPETRACEPP_DIR)/ $(PPETRACEPP_DIR)/ppetracepp.C -o $(PPETOOLS_OBJDIR)/ppetracepp
 
 $(PPETOOLS_OBJDIR):
 	mkdir -p $(PPETOOLS_OBJDIR)

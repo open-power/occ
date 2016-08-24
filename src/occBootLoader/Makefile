@@ -51,7 +51,7 @@ all: $(PPETOOLS_OBJDIR)/ppetracepp $(OBJDIR) ${OBJECTS} ${imageHdrScript}
 	$(OBJDUMP) -d $(EXECUTABLE).out > $(EXECUTABLE).dis
 
 $(PPETOOLS_OBJDIR)/ppetracepp: $(PPETOOLS_OBJDIR)
-	g++ -m32 -O3 -w -g -I$(PPETRACEPP_DIR)/ $(PPETRACEPP_DIR)/ppetracepp.C -o $(PPETOOLS_OBJDIR)/ppetracepp
+	g++ -O3 -w -g -I$(PPETRACEPP_DIR)/ $(PPETRACEPP_DIR)/ppetracepp.C -o $(PPETOOLS_OBJDIR)/ppetracepp
 
 $(PPETOOLS_OBJDIR):
 	mkdir -p $(PPETOOLS_OBJDIR)

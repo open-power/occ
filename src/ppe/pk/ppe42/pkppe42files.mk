@@ -40,7 +40,9 @@ PPE42-C-SOURCES = ppe42_core.c \
 		  ppe42_init.c \
 		  ppe42_irq_core.c\
 		  ppe42_gcc.c\
-                  ppe42_scom.c
+		  ppe42_scom.c\
+		  eabi.c\
+		  math.c
 				   
 PPE42-S-SOURCES =  ppe42_boot.S \
 		   ppe42_exceptions.S\
@@ -54,7 +56,6 @@ PPE42-THREAD-C-SOURCES =
 PPE42-THREAD-S-SOURCES = ppe42_thread_init.S
 
 PPE42_THREAD_OBJECTS= $(PPE42-THREAD-S-SOURCES:.S=.o)
-PPE42_OBJECTS = $(PPE42-C-SOURCES:.c=.o) $(PPE42-S-SOURCES:.S=.o)
-
-
+PPE42_OBJECTS = $(PPE42-C-SOURCES:.c=.o)
+PPE42_OBJECTS += $(PPE42-S-SOURCES:.S=.o)
 

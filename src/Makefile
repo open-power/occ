@@ -77,10 +77,10 @@ all: ppetools $(NEEDED_IMAGES) combineImage tracehash
 ppetools: $(PPETOOLS_OBJDIR)/ppetracepp $(PPETOOLS_OBJDIR)/ppe2fsp
 
 $(PPETOOLS_OBJDIR)/ppetracepp: $(PPETOOLS_OBJDIR)
-	g++ -m32 -O3 -w -g -I$(PPETRACEPP_DIR)/ $(PPETRACEPP_DIR)/ppetracepp.C -o $(PPETOOLS_OBJDIR)/ppetracepp
+	g++ -O3 -w -g -I$(PPETRACEPP_DIR)/ $(PPETRACEPP_DIR)/ppetracepp.C -o $(PPETOOLS_OBJDIR)/ppetracepp
 
 $(PPETOOLS_OBJDIR)/ppe2fsp: $(PPETOOLS_OBJDIR)
-	gcc -m32 -w -g -I./ -I$(PK_SRCDIR)/trace $(PPETRACEPP_DIR)/ppe2fsp.c $(PPETRACEPP_DIR)/ppe2fsp_cmd.c -o $(PPETOOLS_OBJDIR)/ppe2fsp
+	gcc -w -g -I./ -I$(PK_SRCDIR)/trace $(PPETRACEPP_DIR)/ppe2fsp.c $(PPETRACEPP_DIR)/ppe2fsp_cmd.c -o $(PPETOOLS_OBJDIR)/ppe2fsp
 
 $(PPETOOLS_OBJDIR):
 	mkdir -p $(PPETOOLS_OBJDIR)/
