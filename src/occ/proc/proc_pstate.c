@@ -569,7 +569,21 @@ void proc_pstate_kvm_setup()
         // Set the voltage clipping register to match the pmax/pmin clip values set above.
         pmc_rail_bounds_register_t prbr;
         prbr.value = in32(PMC_RAIL_BOUNDS_REGISTER);
-        prbr.fields.pmin_rail = gpst_pmin(&G_global_pstate_table);
+
+        // Use higher min pstate from: pstateTable OR pstate of min freq from TMGT
+        const int8_t tableMinPstate = gpst_pmin(&G_global_pstate_table);
+        const int8_t configMinPstate = (int8_t)proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY]);
+        if (configMinPstate > tableMinPstate)
+        {
+            TRAC_IMP("Setting pmin_rail to %d (pstate table min %d)", configMinPstate, tableMinPstate);
+            prbr.fields.pmin_rail = configMinPstate;
+        }
+        else
+        {
+            TRAC_IMP("Setting pmin_rail to %d (config table min %d)", tableMinPstate, configMinPstate);
+            prbr.fields.pmin_rail = tableMinPstate;
+        }
+
         prbr.fields.pmax_rail = gpst_pmax(&G_global_pstate_table);
         TRAC_IMP("pmin clip pstate = %d, pmax clip pstate = %d", prbr.fields.pmin_rail, prbr.fields.pmax_rail);
         out32(PMC_RAIL_BOUNDS_REGISTER, prbr.value);
@@ -984,7 +998,21 @@ void populate_pstate_to_sapphire_tbl()
     G_sapphire_table.config.version = 0x02;         // default 0x02
     G_sapphire_table.config.throttle = NO_THROTTLE; // default 0x00
     //Per David Du, we must use pmin+1 to avoid gpsa hang
-    G_sapphire_table.config.pmin = gpst_pmin(&G_global_pstate_table)+1;
+
+    // Use higher min pstate from: pstateTable OR pstate of min freq from TMGT
+    const int8_t tableMinPstate = gpst_pmin(&G_global_pstate_table);
+    const int8_t configMinPstate = (int8_t)proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY]);
+    if (configMinPstate > tableMinPstate)
+    {
+        TRAC_IMP("Setting pmin to %d (pstate table min %d)", configMinPstate, tableMinPstate);
+        G_sapphire_table.config.pmin = configMinPstate;
+    }
+    else
+    {
+        TRAC_IMP("Setting pmin to %d (config table min %d)", tableMinPstate, configMinPstate);
+        G_sapphire_table.config.pmin = tableMinPstate+1;
+    }
+
     G_sapphire_table.config.pnominal =
         (int8_t)proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL]);
     G_sapphire_table.config.turbo = (int8_t) proc_freq2pstate(l_turboFreq);
