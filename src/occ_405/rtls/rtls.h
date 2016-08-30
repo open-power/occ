@@ -47,18 +47,19 @@ typedef enum {
     TASK_ID_APSS_DONE,
     TASK_ID_DCOM_RX_INBX,
     TASK_ID_DCOM_TX_INBX,
-    TASK_ID_POKE_WDT,                 // Reset ppc405 watchdog and OCB timer
+    TASK_ID_POKE_WDT,              // Reset ppc405 watchdog and OCB timer
     TASK_ID_DCOM_WAIT_4_MSTR,
     TASK_ID_DCOM_RX_OUTBX,
     TASK_ID_DCOM_TX_OUTBX,
-    TASK_ID_MISC_405_CHECKS,        // Miscellaneous checks to be done by 405
+    TASK_ID_MISC_405_CHECKS,       // Miscellaneous checks to be done by 405
     TASK_ID_DCOM_PARSE_FW_MSG,
-    TASK_ID_AMEC_SLAVE,             // AMEC SMH tasks
-    TASK_ID_AMEC_MASTER,            // AMEC SMH tasks
-//    TASK_ID_CORE_DATA_CONTROL,
-//    TASK_ID_GPU_SM,                 // GPU State Machine
-    TASK_ID_DIMM_SM,                // DIMM State Machine
-//    TASK_ID_MEM_DEADMAN,            // Memory deadman timer
+    TASK_ID_AMEC_SLAVE,            // AMEC SMH tasks
+    TASK_ID_AMEC_MASTER,           // AMEC SMH tasks
+//  TASK_ID_CORE_DATA_CONTROL,
+//  TASK_ID_GPU_SM,                // GPU State Machine
+    TASK_ID_DIMM_SM,               // DIMM State Machine
+//  TASK_ID_MEM_DEADMAN,           // Memory deadman timer
+    TASK_ID_MEMORY_CONTROL,        // Memory (centaur/dimm) control task
     TASK_END  // This must always be the last enum in this list,
               // so that TASK_END always equals the last task ID + 1.
 } task_id_t;

@@ -44,6 +44,7 @@
 #include "amec_service_codes.h"
 #include <amec_sensors_core.h>
 #include <amec_sensors_power.h>
+#include <memory.h>
 #include <amec_sensors_centaur.h>
 #include <amec_sensors_fw.h>
 #include <amec_freq.h>
@@ -1211,11 +1212,11 @@ void amec_slv_substate_7_0(void)
     //-------------------------------------------------------
     amec_update_proc_core_group(3);
 
-// @TODO - TEMP: Not Ready yet in Phase 1.
-/*
     // Call memory thermal controller based on DIMM temperature
     amec_controller_dimm_thermal();
 
+// @TODO - TEMP: Not Ready yet in Phase 1.
+/*
     // Call memory thermal controller based on Centaur temperature
     amec_controller_centaur_thermal();
 */

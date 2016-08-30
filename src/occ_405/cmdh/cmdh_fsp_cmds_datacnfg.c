@@ -41,6 +41,7 @@
 #include "amec_service_codes.h"
 #include "amec_sys.h"
 #include <centaur_data.h>
+#include "dimm.h"
 
 #define FREQ_FORMAT_PWR_MODE_NUM   6
 #define FREQ_FORMAT_BASE_DATA_SZ   (sizeof(cmdh_store_mode_freqs_t) - sizeof(cmdh_fsp_cmd_header_t))
@@ -1443,7 +1444,7 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
         for(memctl=0; memctl < MAX_NUM_MEM_CONTROLLERS; ++memctl)
         {
             g_amec->proc[0].memctl[memctl].centaur.temp_sid = 0;
-            for(dimm=0; dimm < NUM_DIMMS_PER_CENTAUR; ++dimm)
+            for(dimm=0; dimm < NUM_DIMMS_PER_MEM_CONTROLLER; ++dimm)
             {
                 g_amec->proc[0].memctl[memctl].centaur.dimm_temps[dimm].temp_sid = 0;
             }
@@ -1562,6 +1563,8 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
                         // Store the hardware sensor ID
                         G_sysConfigData.dimm_huids[l_i2c_port][l_dimm_num] = l_data_set->hw_sensor_id;
+                        // Set bit vector of enabled DIMM sensors
+                        G_dimm_enabled_sensors.bytes[l_i2c_port] |= 0x80 >> l_dimm_num;
 
                         // Store the temperature sensor ID
                         g_amec->proc[0].memctl[l_i2c_port].centaur.dimm_temps[l_dimm_num].temp_sid =
@@ -1681,7 +1684,7 @@ errlHndl_t data_store_mem_throt(const cmdh_fsp_cmd_t * i_cmd_ptr,
     cmdh_mem_throt_t*               l_cmd_ptr = (cmdh_mem_throt_t*)i_cmd_ptr;
     uint16_t                        l_data_length = 0;
     uint16_t                        l_exp_data_length = 0;
-    int                             i;
+    uint8_t                         i;
     uint16_t                        l_configured_mbas = 0;
     bool                            l_invalid_input = TRUE; //Assume bad input
 
@@ -1705,131 +1708,141 @@ errlHndl_t data_store_mem_throt(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         if(l_invalid_input)
         {
-            CMDH_TRAC_ERR("data_store_mem_throt: Invalid mem throttle data packet: data_length[%u] exp_length[%u] version[0x%02X] num_data_sets[%u]",
-                     l_data_length,
-                     l_exp_data_length,
-                     l_cmd_ptr->header.version,
-                     l_cmd_ptr->header.num_data_sets);
+            CMDH_TRAC_ERR("data_store_mem_throt: Invalid mem throttle data packet: "
+                          "data_length[%u] exp_length[%u] version[0x%02X] num_data_sets[%u]",
+                          l_data_length,
+                          l_exp_data_length,
+                          l_cmd_ptr->header.version,
+                          l_cmd_ptr->header.num_data_sets);
             cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
             break;
         }
 
-        if(l_cmd_ptr->header.version == DATA_MEM_THROT_VERSION_20)
+        // Store the memory throttle settings
+        for(i=0; i<l_cmd_ptr->header.num_data_sets; i++)
         {
+            mem_throt_config_data_t    l_temp_set;
+            cmdh_mem_throt_data_set_t* l_data_set = &l_cmd_ptr->data_set[i];
+            uint16_t * l_n_ptr;
+
+            uint8_t mc=-1, port=-1, cent=-1, mba=-1; // dimm/centaur Info Parameters
+
             if(MEM_TYPE_NIMBUS ==  G_sysConfigData.mem_type)
             {
-                // Store the memory throttle settings
-                for(i=0; i<l_cmd_ptr->header.num_data_sets; i++)
+                mc   = l_data_set->mem_throt_info.nimbus.mc_num;
+                port = l_data_set->mem_throt_info.nimbus.port_num;
+
+                // Validate the Nimbus Info parameters:
+                // - MC num (0 for MC01, and 1 for MC23)
+                // - and Port Number (0-3)
+                if(mc   >= NUM_NIMBUS_MC_PAIRS ||
+                   port >= MAX_NUM_MCU_PORTS)
                 {
-                    nimbus_mem_throt_t* l_data_set = &l_cmd_ptr->data_set[i].nimbus;
-                    mem_throt_config_data_t    l_temp_set;
-                    uint16_t * l_n_ptr;
-
-                    // Validate the validity of Nimbus:
-                    // - MC num (0 for MC01, and 2 for MC23)
-                    // - and Port Number (0-3)
-                    if((l_data_set->mc_num != 0 && l_data_set->mc_num != 2) ||
-                       l_data_set->port_num >= MAX_NUM_MCU_PORTS)
-                    {
-                        CMDH_TRAC_ERR("data_store_mem_throt: Invalid MC# or Port#. entry=%d, cent=%d, mba=%d",
-                                      i,
-                                      l_data_set->mc_num,
-                                      l_data_set->port_num);
-                        cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
-                        break;
-                    }
-
-                    // Copy into a temporary buffer while we check for N values of 0
-                    memcpy(&l_temp_set, &(l_data_set->min_n_per_port), sizeof(mem_throt_config_data_t));
-
-                    // A 0 for any N value, or power value, is an error
-                    for(l_n_ptr = &l_temp_set.min_n_per_mba; l_n_ptr <= &l_temp_set.ovs_mem_power; l_n_ptr++)
-                    {
-                        if(!(*l_n_ptr))
-                        {
-                            CMDH_TRAC_ERR("data_store_mem_throt: Memory Throttle N/Power value is 0! MC[%d] Port[%d]",
-                                          l_data_set->mc_num, l_data_set->port_num);
-                            cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
-                            break;
-                        }
-
-                    }
-                    if(l_err)
-                    {
-                        break;
-                    }
-
-                    memcpy(&G_sysConfigData.mem_throt_limits[l_data_set->mc_num][l_data_set->port_num],
-                           &(l_data_set->min_n_per_port),
-                           sizeof(mem_throt_config_data_t));
-
-                    l_configured_mbas |= 1 << (((l_data_set->mc_num<<1) * 2) + l_data_set->port_num);
+                    CMDH_TRAC_ERR("data_store_mem_throt: Invalid MC or Port numbers."
+                                  " entry=%d, mc=%d, port=%d",
+                                  i, mc, port);
+                    cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
+                    break;
                 }
             }
-            else if (MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type)
+            else if(MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type)
             {
-                // Store the memory throttle settings
-                for(i=0; i<l_cmd_ptr->header.num_data_sets; i++)
+                cent = l_data_set->mem_throt_info.cumulus.centaur_num;
+                mba  = l_data_set->mem_throt_info.cumulus.mba_num;
+
+                // Validate the Cumulus Info parameters:
+                // - Centaur num (0-7)
+                // - and MBA num (0 for MBA01, and 1 for MBA23)
+                if(cent >= MAX_NUM_CENTAURS ||
+                   mba  >= NUM_MBAS_PER_CENTAUR)
                 {
-                    cumulus_mem_throt_t* l_data_set = &l_cmd_ptr->data_set[i].cumulus;
-                    mem_throt_config_data_t    l_temp_set;
-                    uint16_t * l_n_ptr;
-
-                    // Validate the centaur and mba #'s for this data set
-                    if(l_data_set->centaur_num >= MAX_NUM_CENTAURS ||
-                       l_data_set->mba_num >= NUM_MBAS_PER_CENTAUR)
-                    {
-                        CMDH_TRAC_ERR("data_store_mem_throt: Invalid mba or centaur number. entry=%d, cent=%d, mba=%d",
-                                      i,
-                                      l_data_set->centaur_num,
-                                      l_data_set->mba_num);
-                        cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
-                        break;
-                    }
-
-                    // Copy into a temporary buffer while we check for N values of 0
-                    memcpy(&l_temp_set, &(l_data_set->min_n_per_mba), sizeof(mem_throt_config_data_t));
-
-                    // A 0 for any N value is an error
-                    for(l_n_ptr = &l_temp_set.min_n_per_mba; l_n_ptr <= &l_temp_set.ovs_mem_power; l_n_ptr++)
-                    {
-                        if(!(*l_n_ptr))
-                        {
-                            CMDH_TRAC_ERR("data_store_mem_throt: Memory Throttle N value is 0! cent[%d] mba[%d]",
-                                          l_data_set->centaur_num, l_data_set->mba_num);
-                            cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
-                            break;
-                        }
-
-                    }
-                    if(l_err)
-                    {
-                        break;
-                    }
-
-                    memcpy(&G_sysConfigData.mem_throt_limits[l_data_set->centaur_num][l_data_set->mba_num],
-                           &(l_data_set->min_n_per_mba),
-                           sizeof(mem_throt_config_data_t));
-
-                    l_configured_mbas |= 1 << ((l_data_set->centaur_num * 2) + l_data_set->mba_num);
-
+                    CMDH_TRAC_ERR("data_store_mem_throt: Invalid mba or centaur number. "
+                                  "entry=%d, cent=%d, mba=%d",
+                                  i, cent, mba);
+                    cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
+                    break;
                 }
             }
+
+
+            // Copy into a temporary buffer while we check for N values of 0
+            memcpy(&l_temp_set, &(l_data_set->min_n_per_mba), sizeof(mem_throt_config_data_t));
+
+            // A 0 for any N value is an error
+            for(l_n_ptr = &l_temp_set.min_n_per_mba; l_n_ptr <= &l_temp_set.reserved_mem_power; l_n_ptr++)
+            {
+                if(!(*l_n_ptr))
+                {
+                    if(MEM_TYPE_NIMBUS ==  G_sysConfigData.mem_type)
+                    {
+                        CMDH_TRAC_ERR("data_store_mem_throt: RDIMM Throttle N value is 0!"
+                                      " mc[%d] port[%d]", mc, port);
+                    }
+                    else if(MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type)
+                    {
+                        CMDH_TRAC_ERR("data_store_mem_throt: Centaur DIMM Throttle N value is 0!"
+                                      " cent[%d] mba[%d]", cent, mba);
+                    }
+                    cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
+                    break;
+                }
+            }
+
+            if(l_err)  // zero N Value?
+            {
+                break;
+            }
+
+            if(MEM_TYPE_NIMBUS ==  G_sysConfigData.mem_type)
+            {
+                memcpy(&G_sysConfigData.mem_throt_limits[mc][port],
+                       &(l_data_set->min_n_per_mba),
+                       sizeof(mem_throt_config_data_t));
+
+                CONFIGURE_NIMBUS_DIMM_THROTTLING(l_configured_mbas, mc, port);
+            }
+            else if(MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type)
+            {
+                memcpy(&G_sysConfigData.mem_throt_limits[cent][mba],
+                       &(l_data_set->min_n_per_mba),
+                       sizeof(mem_throt_config_data_t));
+
+                l_configured_mbas |= 1 << ((cent* NUM_MBAS_PER_CENTAUR) + mba);
+            }
+        } // data_sets for loop
+
+        if(l_err) // Invalid Info Parameter?
+        {
+            break;
         }
 
     } while(0);
+
 
     if(!l_err)
     {
         // If there were no errors, indicate that we got this data
         G_data_cnfg->data_mask |= DATA_MASK_MEM_THROT;
-        CMDH_TRAC_IMP("data_store_mem_throt: Got valid mem throt packet. configured_mba_bitmap=0x%04x",
-                 l_configured_mbas);
+
+        if(MEM_TYPE_NIMBUS ==  G_sysConfigData.mem_type)
+        {
+            CMDH_TRAC_IMP("data_store_mem_throt: Got valid mem throt packet. "
+                          "configured DIMM bitmap=0x%04x",
+                          l_configured_mbas);
+        }
+        else if (MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type)
+        {
+            CMDH_TRAC_IMP("data_store_mem_throt: Got valid centaur mem throt packet. "
+                          "configured_mba_bitmap=0x%04x",
+                          l_configured_mbas);
+
+        }
 
         // Update the configured mba bitmap
-// @TEMP @TODO: defined in centaur_control - Not ready yet
-//        G_configured_mbas = l_configured_mbas;
+        G_configured_mbas = l_configured_mbas;
+
     }
+
     return l_err;
 }
 

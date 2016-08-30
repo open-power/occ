@@ -27,7 +27,7 @@
 
 #include <ssx.h>
 #include <occhw_async.h>
-#include <gpe_export.h>
+#include <dimm_structs.h>
 
 #include <trac_interface.h>
 #include <trac.h>
@@ -42,10 +42,11 @@
 #include "amec_sys.h"
 #include "lock.h"
 #include "common.h"
+#include "memory.h"
 #include "centaur_data.h"
 
 extern bool G_mem_monitoring_allowed;
-extern task_t G_task_table[TASK_END];
+extern memory_control_task_t G_memory_control_task;
 
 uint8_t G_dimm_state = DIMM_STATE_INIT;     // Curret state of DIMM state machine
 uint8_t G_maxDimmPorts = NUM_DIMM_PORTS;
@@ -54,9 +55,12 @@ bool     G_dimm_i2c_reset_required = false;
 uint32_t G_dimm_i2c_reset_cause = 0;
 
 #define MAX_CONSECUTIVE_DIMM_RESETS 1
+
 // On Nimbus, we are using the centaur number as the I2C port (keep same structure)
 // There can be 8 DIMMs under a Centaur and 8 DIMMs per I2C port (max of 2 ports)
-#define NUM_DIMMS_PER_I2CPORT  NUM_DIMMS_PER_CENTAUR
+// DIMM code assumed that NUM_DIMMS_PER_I2CPORT == NUM_DIMMS_PER_CENTAUR
+#define NUM_DIMMS_PER_I2CPORT           8
+
 typedef struct {
     bool     disabled;
     uint8_t  errorCount;
@@ -69,8 +73,10 @@ dimmData_t G_dimm[NUM_DIMM_PORTS][NUM_DIMMS_PER_I2CPORT] = {{{false,0}}};
 #define DIMM_AND_PORT ((G_dimm_sm_args.i2cPort<<8) | G_dimm_sm_args.dimm)
 // GPE Requests
 GpeRequest G_dimm_sm_request;
+
 // GPE arguments
 GPE_BUFFER(dimm_sm_args_t  G_dimm_sm_args);
+GPE_BUFFER(dimm_control_args_t  G_dimm_control_args);
 
 
 
@@ -121,79 +127,83 @@ uint8_t get_dimm_addr(uint8_t i_dimm)
     return 0x30 | (i_dimm<<1);
 }
 
-
-// Initialize the memory task data
-void memory_init()
-{
-    if(G_mem_monitoring_allowed)
-    {
-        // Check if memory task is running (default task is for NIMBUS)
-        const task_id_t mem_task = TASK_ID_DIMM_SM;
-        if(!rtl_task_is_runnable(mem_task))
-        {
-            if (MEM_TYPE_NIMBUS ==  G_sysConfigData.mem_type)
-            {
-                // Init DIMM state manager IPC request
-                memory_nimbus_init();
-            }
-            else
-            {
-                // TODO CUMULUS NOT SUPPORTED YET IN PHASE1
-#if 0
-                TRAC_INFO("memory_init: calling centaur_init()");
-                centaur_init(); //no rc, handles errors internally
-#endif
-                TRAC_ERR("memory_init: invalid memory type 0x%02X", G_sysConfigData.mem_type);
-                /*
-                 * @errortype
-                 * @moduleid    DIMM_MID_MEMORY_INIT
-                 * @reasoncode  MEMORY_INIT_FAILED
-                 * @userdata1   memory type
-                 * @userdata2   0
-                 * @devdesc     Invalid memory type detected
-                 */
-                errlHndl_t err = createErrl(DIMM_MID_MEMORY_INIT,
-                                            MEMORY_INIT_FAILED,
-                                            OCC_NO_EXTENDED_RC,
-                                            ERRL_SEV_PREDICTIVE,
-                                            NULL,
-                                            DEFAULT_TRACE_SIZE,
-                                            G_sysConfigData.mem_type,
-                                            0);
-                REQUEST_RESET(err);
-            }
-
-            // check if the init resulted in a reset
-            if(isSafeStateRequested())
-            {
-                TRAC_ERR("memory_init: OCC is being reset, memory init failed (type=0x%02X)",
-                         G_sysConfigData.mem_type);
-            }
-            else
-            {
-                // Initialization was successful.  Set task flags to allow memory
-                // tasks to run and also prevent from doing initialization again.
-                G_task_table[mem_task].flags = MEMORY_DATA_RTL_FLAGS;
-                //G_task_table[mem_task].flags = MEMORY_CONTROL_RTL_FLAGS;
-            }
-        }
-    }
-
-} // end memory_init()
-
-
 // Create DIMM state machine IPC request
 void memory_nimbus_init()
 {
-    DIMM_DBG("memory_nimbus_init: Creating request GPE1 DIMM request objects");
-    gpe_request_create(&G_dimm_sm_request,
-                       &G_async_gpe_queue1,             // queue
-                       IPC_ST_DIMM_SM_FUNCID,           // entry_point
-                       &G_dimm_sm_args,                 // entry_point arg
-                       SSX_WAIT_FOREVER,                // no timeout
-                       NULL,                            // callback
-                       NULL,                            // callback arg
-                       ASYNC_CALLBACK_IMMEDIATE);       // options
+    errlHndl_t l_err = NULL;    // Error handler
+    int rc_dimm_sm = 0, rc_dimm_ctl = 0; // rcs from gpe ipc request creation commands
+    int rc_dimm = 0;
+
+    do {
+        // Initializes GPE request for DIMM temperature reading IPC Task,
+        DIMM_DBG("memory_nimbus_init: Creating request GPE1 DIMM data IPC task");
+        rc_dimm_sm = gpe_request_create(
+            &G_dimm_sm_request,
+            &G_async_gpe_queue1,             // queue
+            IPC_ST_DIMM_SM_FUNCID,           // entry_point
+            &G_dimm_sm_args,                 // entry_point arg
+            SSX_WAIT_FOREVER,                // no timeout
+            NULL,                            // callback
+            NULL,                            // callback arg
+            ASYNC_CALLBACK_IMMEDIATE);       // options
+        if(rc_dimm_sm)
+        {
+            TRAC_ERR("memory_control_init: Failed to initialize dimm state"
+                     " machine IPC task [rc_dimm_sm=0x%x]",
+                     rc_dimm_sm);
+            rc_dimm = rc_dimm_sm;
+            break;
+        }
+
+        // Initializes GPE request for DIMM Control IPC Task,
+        DIMM_DBG("memory_nimbus_init: Creating request GPE1 DIMM control IPC task");
+        rc_dimm_ctl = gpe_request_create(
+            &G_memory_control_task.gpe_req,  // gpe_req for the task
+            &G_async_gpe_queue1,             // queue
+            IPC_ST_DIMM_CONTROL_FUNCID,      // Function ID
+            &G_dimm_control_args,            // parm for the task
+            SSX_WAIT_FOREVER,                // no timeout
+            NULL,                            // callback
+            NULL,                            // callback argument
+            ASYNC_CALLBACK_IMMEDIATE );      // options
+
+        if(rc_dimm_ctl)
+        {
+            TRAC_ERR("memory_control_init: Failed to initialize dimm control"
+                     " IPC task [rc_dimm_ctl=0x%x]",
+                     rc_dimm_ctl);
+            rc_dimm = rc_dimm_sm;
+            break;
+        }
+    }
+    while(0);
+
+
+    if(rc_dimm) // Either dimm sm or dimm control gpe request creation failed.
+    {
+        /* @
+         * @errortype
+         * @moduleid    DIMM_MID_NIMBUS_INIT
+         * @reasoncode  SSX_GENERIC_FAILURE
+         * @userdata1   l_rc_gpe  - Return code of failing function
+         * @userdata2   0
+         * @userdata4   ERC_CENTAUR_GPE_REQUEST_CREATE_FAILURE
+         * @devdesc     Failed to initialize GPE1 DIMM IPC job
+         */
+        l_err = createErrl(
+            DIMM_MID_NIMBUS_INIT,                       //modId
+            SSX_GENERIC_FAILURE,                        //reasoncode
+            OCC_NO_EXTENDED_RC,                         //Extended reason code
+            ERRL_SEV_PREDICTIVE,                        //Severity
+            NULL,                                       //Trace Buf
+            DEFAULT_TRACE_SIZE,                         //Trace Size
+            rc_dimm,                                    //userdata1
+            0                                           //userdata2
+            );
+
+        REQUEST_RESET(l_err);
+    }
+
 }
 
 
@@ -613,8 +623,8 @@ void SIMULATE_HOST()
 // End Function Specification
 void process_dimm_temp()
 {
-    const uint8_t port = G_dimm_sm_args.i2cPort;
-    const uint8_t dimm = G_dimm_sm_args.dimm;
+    const uint8_t port  = G_dimm_sm_args.i2cPort;
+    const uint8_t dimm  = G_dimm_sm_args.dimm;
     uint8_t l_dimm_temp = G_dimm_sm_args.temp;
 
 #define MIN_VALID_DIMM_TEMP 1
@@ -893,7 +903,7 @@ void task_dimm_sm(struct task *i_self)
                                     if ((DIMM_TICK == 0) || (DIMM_TICK == 8))
                                     {
                                         // If DIMM has huid/sensor then it should be present
-                                        if ((0 != G_sysConfigData.dimm_huids[L_dimmPort][L_dimmIndex]) &&
+                                        if (NIMBUS_DIMM_PRESENT(L_dimmPort,L_dimmIndex) &&
                                             (G_dimm[L_dimmPort][L_dimmIndex].disabled == false))
                                         {
                                             G_dimm_sm_args.i2cPort = L_dimmPort;

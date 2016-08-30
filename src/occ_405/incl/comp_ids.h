@@ -84,5 +84,8 @@
 #define DIMM_COMP_ID         0x0F00
 #define DIMM_COMP_NAME       "DIMM"
 
+// MEMORY Control
+#define MEM_COMP_ID          0x1000
+#define MEM_COMP_NAME        "MEM"
 #endif
 

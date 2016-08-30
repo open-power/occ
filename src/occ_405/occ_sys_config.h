@@ -45,12 +45,21 @@
 #define MAX_NUM_MEM_CONTROLLERS  8
 #define MAX_NUM_CENTAURS         8
 #define NUM_PROC_VRMS            2
+
 #define MAX_NUM_MCU_PORTS        4
+
+#define MC01                     0
+#define MC23                     1
+#define NUM_NIMBUS_MC_PAIRS      2
+
+#define NUM_DIMMS_PER_MEM_CONTROLLER    8
+#define NUM_I2C_PORTS                   2
 
 #define NUM_PROC_CHIPS_PER_OCC          1
 #define NUM_CENTAURS_PER_MEM_CONTROLLER 1
 #define NUM_PORT_PAIRS_PER_CENTAUR      2
-#define NUM_DIMMS_PER_CENTAUR           8
+#define NUM_DIMMS_PER_CENTAUR           \
+                (NUM_DIMMS_PER_MEM_CONTROLLER/NUM_CENTAURS_PER_MEM_CONTROLLER)
 #define NUM_MBAS_PER_CENTAUR            2
 
 #define UPPER_LIMIT_PROC_FREQ_MHZ     6000
@@ -223,26 +232,29 @@ typedef struct
     uint8_t  pcap_data_count;  // Used by OCC only.  Initialized to 0 and incremented by 1 with every new packet.
 } pcap_config_data_t;
 
-// Memory Throttle settings
+// Memory Centaur Throttle settings
 typedef struct
 {
-    uint16_t    min_n_per_mba;      //minimum value
-    uint16_t    min_mem_power;      // Max mem Power @min (x0.1W)
+    uint16_t    min_n_per_mba;           //minimum value
+    uint16_t    min_mem_power;           //Max mem Power @min (x0.1W)
 
-    uint16_t    pcap1_n_per_mba;    //max mba value for Power Cap Level 1
-    uint16_t    pcap1_mem_power;    //max  memory power @PCAP L1
+    uint16_t    turbo_n_per_mba;         //max mba value for Power Cap @Turbo
+    uint16_t    turbo_n_per_chip;        //Static per chip numerator @Turbo
+    uint16_t    turbo_mem_power;         //max  memory power @Turbo L1
 
-    uint16_t    pcap2_n_per_mba;    //max mba value for Power Cap Level 2
-    uint16_t    pcap2_mem_power;    //max  memory power @PCAP L2
+    uint16_t    pcap_n_per_mba;         //max mba value for Power Cap Level 2
+    uint16_t    pcap_n_per_chip;        //Static per chip numerator @PCAP
+    uint16_t    pcap_mem_power;         //max  memory power @PCAP L2
 
-    uint16_t    nom_n_per_mba;      //max mba value for nominal mode
-    uint16_t    nom_n_per_chip;     //chip setting for nominal mode
-    uint16_t    nom_mem_power;      //max memory power @Redundant
+    uint16_t    nom_n_per_mba;           //max mba value for nominal mode
+    uint16_t    nom_n_per_chip;          //chip setting for nominal mode
+    uint16_t    nom_mem_power;           //max memory power @Redundant
 
-    uint16_t    ovs_n_per_mba;      //max mba value for oversubscription
-    uint16_t    ovs_n_per_chip;     //chip setting for oversubscription
-    uint16_t    ovs_mem_power;      //max memory power @oversubscription
+    uint16_t    reserved_n_per_mba;      //reserved
+    uint16_t    reserved_n_per_chip;     //reserved
+    uint16_t    reserved_mem_power;      //reserved
 } mem_throt_config_data_t;
+
 
 // Sys Config Structure
 
@@ -353,7 +365,18 @@ typedef struct
   // --------------------------------------
   // Memory Throttle limits
   // --------------------------------------
-  mem_throt_config_data_t mem_throt_limits[MAX_NUM_CENTAURS][NUM_MBAS_PER_CENTAUR];
+  // This array holds throttle configuration parameters for
+  // both nimbus and cumulus systems.
+
+  // Throttle limits are layout:
+  // - Nimbus: mem_throt_limits[mc_pair][port]
+  //           mc_pair = 0/1 for MC01/MC23, port=0-3
+  //              (only first two rows populated)
+
+  // - Cumulus mem_throt_limits[cent][mba]
+  //           cent=0-8, mba = 0/1 for mba01/mba23
+  //              (only first two columns populated)
+  mem_throt_config_data_t mem_throt_limits[MAX_NUM_MEM_CONTROLLERS][MAX_NUM_MCU_PORTS];
 
   // --------------------------------------
   // Vdd/Vcs Uplift vid codes

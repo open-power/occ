@@ -43,6 +43,7 @@ TOP-C-SOURCES = amec/amec_analytics.c \
                 amec/amec_slave_smh.c \
                 amec/amec_tasks.c \
                 amec/sensor_power.c \
+                cent/centaur_control.c \
                 cent/centaur_data.c \
                 cmdh/cmdh_dbug_cmd.c \
                 cmdh/cmdh_fsp_cmds_datacnfg.c \
@@ -61,11 +62,13 @@ TOP-C-SOURCES = amec/amec_analytics.c \
                 dcom/dcomSlaveRx.c \
                 dcom/dcomSlaveTx.c \
                 dimm/dimm.c \
+                dimm/dimm_control.c \
                 errl/errl.c \
                 firdata/fir_data_collect.c \
                 homer.c \
                 lock/lock.c \
                 main.c \
+                mem/memory.c \
                 mode.c \
                 occ_sys_config.c \
                 occbuildname.c \

@@ -48,7 +48,7 @@
 #include "homer.h"
 #include <centaur_data.h>
 
-extern cent_sensor_flags_t G_dimm_temp_expired_bitmap;
+extern dimm_sensor_flags_t G_dimm_temp_expired_bitmap;
 
 // This table contains tunable parameter information that can be exposed to
 // customers (only Master OCC should access/control this table)

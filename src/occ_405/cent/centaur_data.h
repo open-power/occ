@@ -34,6 +34,7 @@
 #include "rtls.h"
 //#include "gpe_data.h"
 #include "occ_sys_config.h"
+#include "memory.h"
 
 //*************************************************************************
 // Externs
@@ -97,7 +98,7 @@ enum eOccCentaurs
 #define DIMM_SENSOR0 0x80
 
 #define CENTAUR_SENSOR_ENABLED(occ_cent_id, sensor_num) \
-        (G_cent_enabled_sensors.bytes[occ_cent_id] & (DIMM_SENSOR0 >> (sensor_num)))
+        (G_dimm_enabled_sensors.bytes[occ_cent_id] & (DIMM_SENSOR0 >> (sensor_num)))
 
 #define MBA_CONFIGURED(occ_cent_id, mba_num) \
         (G_configured_mbas & (1 << ((occ_cent_id * 2) + mba_num)))
@@ -119,14 +120,6 @@ struct centaur_data_task {
 typedef struct centaur_data_task centaur_data_task_t;
 */
 
-typedef union
-{
-    uint64_t bigword;
-    uint32_t words[2];
-    uint8_t  bytes[8];
-}cent_sensor_flags_t;
-
-
 //*************************************************************************
 // Globals
 //*************************************************************************
@@ -142,16 +135,16 @@ extern uint32_t G_present_centaurs;
 extern uint32_t G_updated_centaur_mask;
 
 //global bitmap of enabled dimm sensors
-extern cent_sensor_flags_t G_cent_enabled_sensors;
+extern dimm_sensor_flags_t G_dimm_enabled_sensors;
 
 //global bitmap of dimms that have ever gone over the error temperature
-extern cent_sensor_flags_t G_dimm_overtemp_bitmap;
+extern dimm_sensor_flags_t G_dimm_overtemp_bitmap;
 
 //global bitmap of dimms temps that have been updated
-extern cent_sensor_flags_t G_dimm_temp_updated_bitmap;
+extern dimm_sensor_flags_t G_dimm_temp_updated_bitmap;
 
 //global bitmap flagging the dimms which we already calledout due to timeout (bitmap of dimms)
-extern cent_sensor_flags_t G_dimm_timeout_logged_bitmap;
+extern dimm_sensor_flags_t G_dimm_timeout_logged_bitmap;
 
 //global bitmap flagging the centaurs which we already calledout due to timeout (bitmap of centaurs)
 extern uint8_t G_cent_timeout_logged_bitmap;

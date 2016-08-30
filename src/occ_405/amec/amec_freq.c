@@ -48,13 +48,13 @@
 #include <amec_data.h>
 #include <amec_freq.h>
 #include "pss_constants.h"
-#include <centaur_data.h>
+#include <memory.h>
 
 //*************************************************************************
 // Externs
 //*************************************************************************
 extern uint8_t G_cent_temp_expired_bitmap;
-extern cent_sensor_flags_t G_dimm_temp_expired_bitmap;
+extern dimm_sensor_flags_t G_dimm_temp_expired_bitmap;
 
 //*************************************************************************
 // Defines/Enums
@@ -572,20 +572,20 @@ void amec_slv_mem_voting_box(void)
 
     // Start with max allowed speed
     l_vote = AMEC_MEMORY_MAX_STEP;
-    l_reason = AMEC_MEM_VOTING_REASON_INIT;
+    l_reason = AMEC_MEM_VOTING_REASON_INIT;            // 0
 
     // Check vote from Centaur thermal control loop
     if (l_vote > g_amec->thermalcent.speed_request)
     {
         l_vote = g_amec->thermalcent.speed_request;
-        l_reason = AMEC_MEM_VOTING_REASON_CENT;
+        l_reason = AMEC_MEM_VOTING_REASON_CENT;        // 1
     }
 
     // Check vote from DIMM thermal control loop
     if (l_vote > g_amec->thermaldimm.speed_request)
     {
         l_vote = g_amec->thermaldimm.speed_request;
-        l_reason = AMEC_MEM_VOTING_REASON_DIMM;
+        l_reason = AMEC_MEM_VOTING_REASON_DIMM;        // 2
     }
 
     // Check if memory autoslewing is enabled
@@ -606,7 +606,7 @@ void amec_slv_mem_voting_box(void)
         }
 
         l_vote = g_amec->mem_speed_request + l_slew_step;
-        l_reason = AMEC_MEM_VOTING_REASON_SLEW;
+        l_reason = AMEC_MEM_VOTING_REASON_SLEW;        // 3
     }
 
     // Store final vote and vote reason in g_amec
@@ -619,7 +619,8 @@ void amec_slv_mem_voting_box(void)
         if(!L_throttle_traced)
         {
             L_throttle_traced = TRUE;
-            TRAC_INFO("Memory is being throttled. reason[%d] vote[%d] cent_expired[0x%02x] dimm_expired[0x%08x%08x]",
+            TRAC_INFO("Memory is being throttled. reason[%d] vote[%d] "
+                      "cent_expired[0x%02x] dimm_expired[0x%08x%08x]",
                        l_reason,
                        l_vote,
                        G_cent_temp_expired_bitmap,

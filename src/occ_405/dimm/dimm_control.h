@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/include/proc_shared.h $                                */
+/* $Source: src/occ_405/dimm/dimm_control.h $                             */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2016                             */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -23,19 +23,17 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-#ifndef _PROC_SHARED_H
-#define _PROC_SHARED_H
+#include <occ_common.h>
+#include "dimm_structs.h"
+#include "rtls.h"
 
-#include "gpe_export.h"
-#include "core_data.h"
+#ifndef _DIMM_CONTROL_H
+#define _DIMM_CONTROL_H
 
-// Paramaters for gpe_get_core_data()
+bool dimm_control(uint8_t mc, uint8_t port);
+void dimm_update_nlimits(uint8_t mc, uint8_t port);
+void populate_dimm_control_args(uint16_t i_throttle, uint8_t mc, uint8_t port,
+                                dimm_control_args_t * dimm_control_args);
+uint16_t convert_speed2numerator(uint16_t i_throttle, uint16_t min_n_value, uint16_t max_n_value);
 
-typedef struct ipc_core_data_parms
-{
-    GpeErrorStruct   error;
-    CoreData*  data;
-    uint32_t   core_num;
-} ipc_core_data_parms_t;
-
-#endif // _PROC_SHARED_H
+#endif //_DIMM_CONTROL_H

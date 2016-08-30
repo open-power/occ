@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/include/proc_shared.h $                                */
+/* $Source: src/occ_405/cent/centaur_control.h $                          */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2015                             */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -23,19 +23,19 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-#ifndef _PROC_SHARED_H
-#define _PROC_SHARED_H
+#ifndef _MEMORY_SERVICE_CODES_H
+#define _MEMORY_SERVICE_CODES_H
 
-#include "gpe_export.h"
-#include "core_data.h"
+//*************************************************************************
+// Includes
+//*************************************************************************
+#include <comp_ids.h>
 
-// Paramaters for gpe_get_core_data()
 
-typedef struct ipc_core_data_parms
+enum memModuleId
 {
-    GpeErrorStruct   error;
-    CoreData*  data;
-    uint32_t   core_num;
-} ipc_core_data_parms_t;
+    MEM_MID_TASK_MEMORY_CONTROL = MEM_COMP_ID | 0x00,
+    MEM_MID_MEMORY_INIT         = MEM_COMP_ID | 0x01,
+};
 
-#endif // _PROC_SHARED_H
+#endif // _MEMORY_SERVICE_CODES_H

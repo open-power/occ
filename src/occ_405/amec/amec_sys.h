@@ -40,6 +40,8 @@
 #include <amec_amester.h>
 #include <amec_pcap.h>
 #include <amec_smh.h>
+#include "dimm_structs.h"
+
 //*************************************************************************
 // Externs
 //*************************************************************************
@@ -387,6 +389,9 @@ typedef struct
 
   // Speed step limit
   uint16_t speed_step_limit;
+
+  // Memory Throttle Sent Last time to DIMM Throttle Register
+  dimm_n_value_t current_dimm_n_values[NUM_NIMBUS_MC_PAIRS][MAX_NUM_MCU_PORTS];
 } amec_systemwide_t;
 
 

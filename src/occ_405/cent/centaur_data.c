@@ -132,7 +132,7 @@ centaur_data_task_t G_centaur_data_task = {
 };
 #endif
 
-cent_sensor_flags_t G_cent_enabled_sensors = {0};
+dimm_sensor_flags_t G_dimm_enabled_sensors = {0};
 
 //AMEC needs to know when data for a centaur has been collected.
 uint32_t G_updated_centaur_mask = 0;
@@ -214,7 +214,7 @@ bool cent_chan_checkstop(const uint8_t i_cent)
                 G_present_centaurs &= ~(CENTAUR_BY_MASK(i_cent));
 
                 //remove the dimm temperature sensors behind this centaur from presence bitmap
-                G_cent_enabled_sensors.bytes[i_cent] = 0x00;
+                G_dimm_enabled_sensors.bytes[i_cent] = 0x00;
 
                 TRAC_IMP("Channel checkstop detected on Centaur[%d] scom_addr[0x%08X] G_present_centaurs[0x%08X]",
                          i_cent,
@@ -222,8 +222,8 @@ bool cent_chan_checkstop(const uint8_t i_cent)
                          G_present_centaurs);
 
                 TRAC_IMP("Updated bitmap of enabled dimm temperature sensors: 0x%08X %08X",
-                         G_cent_enabled_sensors.words[0],
-                         G_cent_enabled_sensors.words[1]);
+                         G_dimm_enabled_sensors.words[0],
+                         G_dimm_enabled_sensors.words[1]);
             }
         }
     }
@@ -979,12 +979,12 @@ int cent_get_enabled_sensors()
         //consolidate scom data into a smaller, cacheable 8 byte buffer
         for(l_cent = 0; l_cent < MAX_NUM_CENTAURS; l_cent++)
         {
-            G_cent_enabled_sensors.bytes[l_cent] = ((uint8_t*)(&G_cent_scom_data[l_cent]))[0];
+            G_dimm_enabled_sensors.bytes[l_cent] = ((uint8_t*)(&G_cent_scom_data[l_cent]))[0];
         }
 
         TRAC_IMP("bitmap of enabled dimm temperature sensors: 0x%08X %08X",
-                 G_cent_enabled_sensors.words[0],
-                 G_cent_enabled_sensors.words[1]);
+                 G_dimm_enabled_sensors.words[0],
+                 G_dimm_enabled_sensors.words[1]);
     }while(0);
     return l_rc;
 }

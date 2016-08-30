@@ -204,6 +204,9 @@ enum occExtReasonCode
 
     ERC_DIMM_SCHEDULE_FAILURE                   = 0x00000080,
     ERC_DIMM_COMPLETE_FAILURE                   = 0x00000081,
+
+    ERC_MEM_CONTROL_SCHEDULE_FAILURE            = 0x00000080,
+    ERC_MEM_CONTROL_COMPLETE_FAILURE            = 0x00000081,
 };
 
 // Error log Module Ids

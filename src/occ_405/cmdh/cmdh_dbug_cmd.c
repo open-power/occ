@@ -34,7 +34,7 @@
 #include <cmdh_dbug_cmd.h>
 #include <cmdh_fsp.h>
 #include <cmdh_fsp_cmds.h>
-#include <centaur_data.h>
+#include <memory.h>
 //#include <gpe_data.h>
 #include <proc_data.h>
 #include <apss.h>

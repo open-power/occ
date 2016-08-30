@@ -287,60 +287,48 @@ typedef struct __attribute__ ((packed))
 // Provides memory throttle min and max values for Nimbus systems
 typedef struct __attribute__ ((packed))
 {
-    uint8_t  mc_num;            // Physical MC: [0=MC01, 2=MC23]
-    uint8_t  port_num;          // Physical port # [0-3]
-
-    uint16_t  min_n_per_port;   // Lowest per port allowed numerator
-    uint16_t  min_mem_power;    // Max mem Power @min (x0.1W)
-
-    uint16_t  pcap1_n_per_port; // Static per port numerator @PCAP1
-    uint16_t  pcap1_n_per_chip; // Static per chip numerator @PCAP1
-    uint16_t  pcap1_mem_power;  // Max memory power @PCAP1 (x0.1W)
-
-    uint16_t  pcap2_n_per_port; // Static per port numerator @PCAP2
-    uint16_t  pcap2_n_per_chip; // Static per chip numerator @PCAP2
-    uint16_t  pcap2_mem_power;  // Max memory power @PCAP2 (x0.1W)
-
-    uint16_t  nom_n_per_port;   // Static per port @Redundant (no ovs)
-    uint16_t  nom_n_per_slot;   // Static per slot @Redundant
-    uint16_t  nom_mem_power;    // Max memory power @Redundant(x0.1W)
-
-    uint16_t  ovs_n_per_port;   // Static per port @Oversubscription
-    uint16_t  ovs_n_per_slot;   // Static per slot @Oversubscription
-    uint16_t  ovs_mem_power;    // Max memory power @Oversubscription (x0.1W)
-}nimbus_mem_throt_t;
+    uint8_t   mc_num;                // Physical MC: [0=MC01, 2=MC23]
+    uint8_t   port_num;              // Physical port # [0-3]
+} cmdh_mem_throt_nimbus_info_t;
 
 // Provides memory throttle min and max values for Cumulus systems
 typedef struct __attribute__ ((packed))
 {
-    uint8_t   centaur_num;      // Physical centaur# [0-7]
-    uint8_t   mba_num;          // Memory Buffer within centaur [0-1]
+    uint8_t   centaur_num;           // Physical centaur# [0-7]
+    uint8_t   mba_num;               // Memory Buffer within centaur [0-1]
+} cmdh_mem_throt_cumulus_info_t;
 
-    uint16_t  min_n_per_mba;    // Lowest per MBA allowed numerator
-    uint16_t  min_mem_power;    // Max mem Power @min (x0.1W)
-
-    uint16_t  pcap1_n_per_mba;  // Static per MBA numerator @PCAP1
-    uint16_t  pcap1_n_per_chip; // Static per chip numerator @PCAP1
-    uint16_t  pcap1_mem_power;  // Max memory power @PCAP1 (x0.1W)
-
-    uint16_t  pcap2_n_per_mba;  // Static per MBA numerator @PCAP2
-    uint16_t  pcap2_n_per_chip; // Static per chip numerator @PCAP2
-    uint16_t  pcap2_mem_power;  // Max memory power @PCAP2 (x0.1W)
-
-    uint16_t  nom_n_per_mba;    // Static per MBA @Redundant (no ovs)
-    uint16_t  nom_n_per_chip;   // Static per chip @Redundant
-    uint16_t  nom_mem_power;    // Max memory power @Redundant(x0.1W)
-
-    uint16_t  ovs_n_per_mba;    // Static per MBA @Oversubscription
-    uint16_t  ovs_n_per_chip;   // Static per chip @Oversubscription
-    uint16_t  ovs_mem_power;    // Max memory power @Oversubscription (x0.1W)
-}cumulus_mem_throt_t;
-
+// Nimbus/Cumulus dimm/centaur Info
 typedef union cmdh_mem_throt_data_set
 {
-    nimbus_mem_throt_t nimbus;
-    cumulus_mem_throt_t cumulus;
+    cmdh_mem_throt_nimbus_info_t  nimbus;
+    cmdh_mem_throt_cumulus_info_t cumulus;
+} cmdh_mem_throt_info_t;
+
+typedef struct __attribute__ ((packed))
+{
+    cmdh_mem_throt_info_t mem_throt_info;        // Nimbus/Cumulus information header
+
+    uint16_t              min_n_per_mba;         // Lowest per MBA allowed numerator
+    uint16_t              min_mem_power;         // Max mem Power @min (x0.1W)
+
+    uint16_t              turbo_n_per_mba;       // Static per MBA numerator @Turbo
+    uint16_t              turbo_n_per_chip;      // Static per chip numerator @Turbo
+    uint16_t              turbo_mem_power;       // Max memory power @Turbo (x0.1W)
+
+    uint16_t              pcap_n_per_mba;        // Static per MBA numerator @PCAP
+    uint16_t              pcap_n_per_chip;       // Static per chip numerator @PCAP
+    uint16_t              pcap_mem_power;        // Max memory power @PCAP (x0.1W)
+
+    uint16_t              nom_n_per_mba;         // Static per MBA @Redundant (no ovs)
+    uint16_t              nom_n_per_chip;        // Static per chip @Redundant
+    uint16_t              nom_mem_power;         // Max memory power @Redundant(x0.1W)
+
+    uint16_t              reserved_n_per_mba;    // reserved
+    uint16_t              reserved_n_per_chip;   // reserved
+    uint16_t              reserved_mem_power;    // reserved
 } cmdh_mem_throt_data_set_t;
+
 
 // Config packet definition used by TMGT to
 // send mem throttle min/max settings.
@@ -348,7 +336,7 @@ typedef struct __attribute__ ((packed))
 {
     cmdh_mem_throt_header_t      header;
     cmdh_mem_throt_data_set_t    data_set[1];
-}cmdh_mem_throt_t;
+} cmdh_mem_throt_t;
 
 // Used to mark present the config data TMGT has sent us.
 typedef struct data_cnfg

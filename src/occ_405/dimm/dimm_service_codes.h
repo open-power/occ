@@ -31,10 +31,9 @@
 enum dimmModuleId
 {
     DIMM_MID_STATE_MACHINE         =  DIMM_COMP_ID | 0x00,
-    DIMM_MID_MEMORY_INIT           =  DIMM_COMP_ID | 0x01,
-    DIMM_MID_NIMBUS_INIT           =  DIMM_COMP_ID | 0x02,
-    DIMM_MID_DIMM_SM               =  DIMM_COMP_ID | 0x03,
-    DIMM_MID_MARK_DIMM_FAILED      =  DIMM_COMP_ID | 0x04,
+    DIMM_MID_NIMBUS_INIT           =  DIMM_COMP_ID | 0x01,
+    DIMM_MID_DIMM_SM               =  DIMM_COMP_ID | 0x02,
+    DIMM_MID_MARK_DIMM_FAILED      =  DIMM_COMP_ID | 0x03,
 };
 
 #endif /* #ifndef _DIMM_SERVICE_CODES_H_ */

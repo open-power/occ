@@ -34,6 +34,7 @@
 #include "rtls.h"
 //#include "gpe_data.h"
 #include "occ_sys_config.h"
+#include "memory.h"
 
 //*************************************************************************
 // Externs
@@ -48,62 +49,23 @@
 //*************************************************************************
 
 //*************************************************************************
-// Structures
-//*************************************************************************
-
-typedef enum
-{
-    CENTAUR_CONTROL_GPE_STILL_RUNNING = 0x01,
-    CENTAUR_CONTROL_RESERVED_1        = 0x02,
-    CENTAUR_CONTROL_RESERVED_2        = 0x04,
-    CENTAUR_CONTROL_RESERVED_3        = 0x08,
-    CENTAUR_CONTROL_RESERVED_4        = 0x10,
-    CENTAUR_CONTROL_RESERVED_5        = 0x20,
-    CENTAUR_CONTROL_RESERVED_6        = 0x40,
-    CENTAUR_CONTROL_RESERVED_7        = 0x80,
-} eCentaurControlTraceFlags;
-
-//Centaur data collect structures used for task data pointers
-// TEMP -- PORE ISSUES
-/*
-struct centaur_control_task {
-        uint8_t  startCentaur;
-        uint8_t  prevCentaur;
-        uint8_t  curCentaur;
-        uint8_t  endCentaur;
-        uint8_t  traceThresholdFlags;
-        PoreFlex gpe_req;
-} __attribute__ ((__packed__));
-typedef struct centaur_control_task centaur_control_task_t;
-*/
-
-//per mba throttle values
-typedef struct
-{
-   uint16_t max_n_per_mba;      //mode and OVS dependent, from config data
-   uint16_t max_n_per_chip;     //mode and OVS dependent, from config data
-   uint16_t min_n_per_mba;      //from config data
-   uint16_t m;
-} centaur_throttle_t;
-
-//*************************************************************************
 // Globals
 //*************************************************************************
 
-//Global centaur structures used for task data pointers
-// TEMP -- PORE ISSUES
-//extern centaur_control_task_t G_centaur_control_task;
+//Global memory structures used for centaur task data pointers
+extern memory_control_task_t G_memory_control_task;
 
 //*************************************************************************
 // Function Prototypes
 //*************************************************************************
 
 //Collect centaur data for all centaur in specified range
-void task_centaur_control( task_t * i_task );
+void centaur_control( task_t* i_task );
 
 //Initialize structures for collecting centaur data.
 //void centaur_control_init( void ) INIT_SECTION;
 void centaur_control_init( void );
 
-#endif //_CENTAUR_CONTROL_H
+bool check_centaur_checkstop(uint8_t cent);
 
+#endif //_CENTAUR_CONTROL_H

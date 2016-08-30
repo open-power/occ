@@ -44,10 +44,9 @@
 //*************************************************************************
 enum centModuleId
 {
-	CENT_TASK_DATA_MOD		= CENT_COMP_ID | 0x00,
-	CENTAUR_INIT_MOD		= CENT_COMP_ID | 0x01,
-	CENT_TASK_CONTROL_MOD	= CENT_COMP_ID | 0x02,
-    CENT_RECOVERY_MOD       = CENT_COMP_ID | 0x03,
+    CENT_TASK_DATA_MOD       = CENT_COMP_ID | 0x00,
+    CENTAUR_INIT_MOD         = CENT_COMP_ID | 0x01,
+    CENT_RECOVERY_MOD        = CENT_COMP_ID | 0x03,
 };
 
 //*************************************************************************

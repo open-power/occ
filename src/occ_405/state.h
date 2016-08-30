@@ -153,6 +153,9 @@ extern SMGR_SMS_CMD_TYPE   G_occ_internal_sms;  // TODO:  Move to state.c
 // Returns true if OCC State is active
 #define IS_OCC_STATE_ACTIVE()  ( (OCC_STATE_ACTIVE == G_occ_internal_state)? 1 : 0 )
 
+// Returns true if OCC State is observation
+#define IS_OCC_STATE_OBSERVATION()  ( (OCC_STATE_OBSERVATION == G_occ_internal_state)? 1 : 0 )
+
 /**
  * @struct smgr_state_trans_t
  * @brief Used by the "Set State" command to call the correct transition

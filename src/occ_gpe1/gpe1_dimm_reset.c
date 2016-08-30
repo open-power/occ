@@ -34,6 +34,7 @@
 #include "ipc_async_cmd.h"
 #include "gpe1.h"
 #include "gpe1_dimm.h"
+#include "dimm_structs.h"
 
 
 /*

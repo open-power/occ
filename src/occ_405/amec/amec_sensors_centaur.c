@@ -34,6 +34,7 @@
 #include "occ_sys_config.h"
 #include "occ_service_codes.h"  // for SSX_GENERIC_FAILURE
 #include "dcom.h"
+#include "memory.h"
 #include "centaur_data.h"
 #include "amec_smh.h"
 #include "amec_slave_smh.h"
@@ -46,8 +47,8 @@
 /******************************************************************************/
 /* Globals                                                                    */
 /******************************************************************************/
-cent_sensor_flags_t G_dimm_overtemp_bitmap = {0};
-cent_sensor_flags_t G_dimm_temp_updated_bitmap = {0};
+dimm_sensor_flags_t G_dimm_overtemp_bitmap = {0};
+dimm_sensor_flags_t G_dimm_temp_updated_bitmap = {0};
 uint8_t             G_cent_overtemp_bitmap = 0;
 uint8_t             G_cent_temp_updated_bitmap = 0;
 extern uint8_t      G_centaur_needs_recovery;

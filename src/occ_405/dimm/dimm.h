@@ -31,6 +31,30 @@
 #include <errl.h>
 #include <rtls.h>
 
+// If DIMM has huid/sensor then it is present
+#define NIMBUS_DIMM_PRESENT(port,dimm) (0 != G_sysConfigData.dimm_huids[port][dimm])
+
+// A bit vector that indicated the dimms (mbas) configured in a system.
+// Bit 0 (MSB) encodes the configuration status for port 0 on MC01
+// (or mba01 on centaur 0) a 1 indicated a dimm (mba) is configured
+// for throttling. Only most significant 8 bits used in Nimbus.
+extern uint16_t G_configured_mbas;
+
+// DIMM Throttle Limits have been configured?
+#define NIMBUS_DIMM_THROTTLING_CONFIGURED(vector,mc,port) \
+    (0 != (vector & (0x8000 >> ((port) + ((mc) * (MAX_NUM_MCU_PORTS))))))
+
+#define NIMBUS_DIMM_INDEX_THROTTLING_CONFIGURED(memIndex) \
+    (0 != (G_configured_mbas & (0x8000 >> memIndex)))
+
+#define NIMBUS_DIMM_PORT_THROTTLING_CONFIGURED(mc,port)            \
+    (0 != (G_configured_mbas & (0x8000 >> ((mc) * (MAX_NUM_MCU_PORTS)))))
+
+// Configure NIMBUS_DIMM Throttling data on MC01/MC02's (0/1) port (0-3)
+#define CONFIGURE_NIMBUS_DIMM_THROTTLING(vector,mc,port)  \
+    vector |= (0x8000 >> ((port) + (mc) * (MAX_NUM_MCU_PORTS)))
+
+
 #define NUM_DIMM_PORTS           2
 
 #define DIMM_TICK (CURRENT_TICK % MAX_NUM_TICKS)

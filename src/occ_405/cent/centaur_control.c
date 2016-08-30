@@ -26,6 +26,8 @@
 //*************************************************************************/
 // Includes
 //*************************************************************************/
+#include <occ_common.h>
+#include "gpe_export.h"
 #include "centaur_control.h"
 #include "centaur_data.h"
 #include "occhw_async.h"
@@ -38,10 +40,11 @@
 #include "rtls.h"
 #include "apss.h"
 #include "state.h"
-#include "gpe_scom.h"
-#include "centaur_firmware_registers.h"
-#include "centaur_register_addresses.h"
+//#include "gpe_scom.h"
+//#include "centaur_firmware_registers.h"
+//#include "centaur_register_addresses.h"
 #include "amec_sys.h"
+#include "memory.h"
 
 //*************************************************************************/
 // Externs
@@ -74,24 +77,14 @@ typedef enum
 //*************************************************************************/
 
 //Pore flex request for the GPE job that is used for centaur init.
-PoreFlex G_centaur_control_pore_req;
-GPE_BUFFER(GpeScomParms G_centaur_control_reg_parms);
-GPE_BUFFER(scomList_t G_centaurThrottle[NUM_CENT_THROTTLE_SCOMS]);
+GpeRequest G_centaur_control_request;
 
-//Centaur structures used for task data pointers.
-centaur_control_task_t G_centaur_control_task =
-{
-    .startCentaur           = 0,     // First Centaur
-    .prevCentaur            = 7,     // Previous Centaur written to
-    .curCentaur             = 0,     // Current Centaur
-    .endCentaur             = 7,     // Last Centaur
-    .traceThresholdFlags    = 0,     // Trace Throttle Flags
-};
-
-// Per-MBA N/M Throttle Register "M & N" Values
-centaur_throttle_t G_centaurThrottleLimits[MAX_NUM_CENTAURS][NUM_MBAS_PER_CENTAUR];
+//@TODO TEMP: not ready yet for centaur control data structures
+//GPE_BUFFER(GpeScomParms G_centaur_control_reg_parms);
+//GPE_BUFFER(scomList_t G_centaurThrottle[NUM_CENT_THROTTLE_SCOMS]);
 
 //bitmap of configured MBA's (2 per centaur, lsb is centaur 0/mba 0)
+//same variable used for tracking bit maps of rdimms (4 per mc, 2 mc pairs)
 uint16_t G_configured_mbas = 0;
 
 //*************************************************************************/
@@ -119,7 +112,7 @@ uint16_t centaurThrottle_convert2Numerator(uint16_t i_throttle, uint8_t i_cent, 
 #define CENTAUR_THROTTLE_100_PERCENT_VALUE 1000
 
     uint32_t l_nvalue = 0;
-    centaur_throttle_t* l_mba = &G_centaurThrottleLimits[i_cent][i_mba];
+    memory_throttle_t* l_mba = &G_memoryThrottleLimits[i_cent][i_mba];
 
     if(MBA_CONFIGURED(i_cent, i_mba))
     {
@@ -140,6 +133,8 @@ uint16_t centaurThrottle_convert2Numerator(uint16_t i_throttle, uint8_t i_cent, 
 
     return (uint16_t)l_nvalue;
 }
+
+#if 0         // @TODO TEMP: Not Ready yet for centaur control
 
 //////////////////////////
 // Function Specification
@@ -169,10 +164,11 @@ void cent_update_nlimits(uint32_t i_cent)
 
     do
     {
-        centaur_throttle_t* l_active_limits01 =
-            &G_centaurThrottleLimits[i_cent][0];
-        centaur_throttle_t* l_active_limits23 =
-            &G_centaurThrottleLimits[i_cent][1];
+        memory_throttle_t* l_active_limits01 =
+            &G_memoryThrottleLimits[i_cent][0];
+        memory_throttle_t* l_active_limits23 =
+            &G_memoryThrottleLimits[i_cent][1];
+
         mem_throt_config_data_t* l_state_limits01 =
             &G_sysConfigData.mem_throt_limits[i_cent][0];
         mem_throt_config_data_t* l_state_limits23 =
@@ -182,15 +178,7 @@ void cent_update_nlimits(uint32_t i_cent)
         l_active_limits01->min_n_per_mba = l_state_limits01->min_n_per_mba;
         l_active_limits23->min_n_per_mba = l_state_limits23->min_n_per_mba;
 
-        //oversubscription?
-        if(AMEC_INTF_GET_OVERSUBSCRIPTION())
-        {
-            l_mba01_mba_maxn = l_state_limits01->ovs_n_per_mba;
-            l_mba01_chip_maxn = l_state_limits01->ovs_n_per_chip;
-            l_mba23_mba_maxn = l_state_limits23->ovs_n_per_mba;
-            l_mba23_chip_maxn = l_state_limits23->ovs_n_per_chip;
-        }
-        else if(CURRENT_MODE() == OCC_MODE_NOMINAL)
+        if(CURRENT_MODE() == OCC_MODE_NOMINAL)
         {
             l_mba01_mba_maxn = l_state_limits01->nom_n_per_mba;
             l_mba01_chip_maxn = l_state_limits01->nom_n_per_chip;
@@ -199,8 +187,8 @@ void cent_update_nlimits(uint32_t i_cent)
         }
         else //DPS, TURBO, FFO, and SPS modes will use these settings
         {
-            l_mba01_mba_maxn = l_state_limits01->pcap1_n_per_mba;
-            l_mba23_mba_maxn = l_state_limits23->pcap1_n_per_mba;
+            l_mba01_mba_maxn = l_state_limits01->turbo_n_per_mba;
+            l_mba23_mba_maxn = l_state_limits23->turbo_n_per_mba;
         }
 
         l_active_limits01->max_n_per_chip = l_mba01_chip_maxn;
@@ -235,29 +223,14 @@ void cent_update_nlimits(uint32_t i_cent)
 
 // Function Specification
 //
-// Name: task_centaur_control
+// Name: centaur_control
 //
-// Description: Collect centaur data. The task is used for centaur data
-//              collection
+// Description: Performs centaur control.
 //
 // End Function Specification
-#define CENTAUR_CONTROL_SCOM_TIMEOUT 16  //wait up to 16 ticks before logging timeout failure
-void task_centaur_control( task_t * i_task )
+void centaur_control( task_t* i_task )
 {
-    errlHndl_t            l_err     = NULL;    // Error handler
-    int                   rc        = 0;       // Return code
-    uint32_t              l_cent;
     amec_centaur_t        *l_cent_ptr = NULL;
-    static uint8_t        L_scom_timeout[MAX_NUM_CENTAURS] = {0}; //track # of consecutive failures
-    static bool           L_gpe_scheduled = FALSE;
-    static uint8_t        L_gpe_fail_logged = 0;
-    static bool           L_gpe_idle_traced = FALSE;
-    static bool           L_gpe_had_1_tick = FALSE;
-
-    // Pointer to the task data structure
-    centaur_control_task_t * l_centControlTask =
-            (centaur_control_task_t *) i_task->data_ptr;
-
 
     // Pointer to parameter field for GPE request
     GpeScomParms * l_parms =
@@ -265,130 +238,8 @@ void task_centaur_control( task_t * i_task )
 
     do
     {
-        l_cent = l_centControlTask->curCentaur;
         l_cent_ptr = &g_amec->proc[0].memctl[l_cent].centaur;
 
-        //First, check to see if the previous GPE request still running
-        //A request is considered idle if it is not attached to any of the
-        //asynchronous request queues
-        if( !(async_request_is_idle(&l_centControlTask->gpe_req.request)) )
-        {
-            L_scom_timeout[l_cent]++;
-            //This can happen due to variability in when the task runs
-            if(!L_gpe_idle_traced && L_gpe_had_1_tick)
-            {
-                TRAC_INFO("task_centaur_control: GPE is still running. cent[%d]", l_cent);
-                l_centControlTask->traceThresholdFlags |= CENTAUR_CONTROL_GPE_STILL_RUNNING;
-                L_gpe_idle_traced = TRUE;
-            }
-            L_gpe_had_1_tick = TRUE;
-            break;
-        }
-        else
-        {
-            //Request is idle
-            L_gpe_had_1_tick = FALSE;
-            if(L_gpe_idle_traced)
-            {
-                TRAC_INFO("task_centaur_control: GPE completed. cent[%d]", l_cent);
-                L_gpe_idle_traced = FALSE;
-            }
-        }
-
-        //check scom status
-        if(L_gpe_scheduled)
-        {
-            if(!async_request_completed(&l_centControlTask->gpe_req.request) || l_parms->rc)
-            {
-                if(!(L_gpe_fail_logged & (CENTAUR0_PRESENT_MASK >> l_cent)))
-                {
-                    // Check if the centaur has a channel checkstop. If it does,
-                    // then do not log any errors. We also don't want to throttle
-                    // a centaur that is in this condition.
-                    if(!(cent_chan_checkstop(l_cent)))
-                    {
-                        L_gpe_fail_logged |= CENTAUR0_PRESENT_MASK >> l_cent;
-                        TRAC_ERR("task_centaur_control: gpe_scom_centaur failed. l_cent=%d rc=%x, index=0x%08x", l_cent, l_parms->rc, l_parms->errorIndex);
-
-                        /* @
-                         * @errortype
-                         * @moduleid    CENT_TASK_CONTROL_MOD
-                         * @reasoncode  CENT_SCOM_ERROR
-                         * @userdata1   rc - Return code of scom operation
-                         * @userdata2   index of scom operation that failed
-                         * @userdata4   OCC_NO_EXTENDED_RC
-                         * @devdesc     OCC access to centaur failed
-                         */
-                        l_err = createErrl(
-                                CENT_TASK_CONTROL_MOD,                  // modId
-                                CENT_SCOM_ERROR,                        // reasoncode
-                                OCC_NO_EXTENDED_RC,                     // Extended reason code
-                                ERRL_SEV_PREDICTIVE,                    // Severity
-                                NULL,                                   // Trace Buf
-                                DEFAULT_TRACE_SIZE,                     // Trace Size
-                                l_parms->rc,                            // userdata1
-                                l_parms->errorIndex                     // userdata2
-                                );
-
-                        addUsrDtlsToErrl(l_err,                                  //io_err
-                                (uint8_t *) &(l_centControlTask->gpe_req.ffdc),  //i_dataPtr,
-                                sizeof(PoreFfdc),                                //i_size
-                                ERRL_USR_DTL_STRUCT_VERSION_1,                   //version
-                                ERRL_USR_DTL_BINARY_DATA);                       //type
-
-                        //callout the centaur
-                        addCalloutToErrl(l_err,
-                                         ERRL_CALLOUT_TYPE_HUID,
-                                         G_sysConfigData.centaur_huids[l_cent],
-                                         ERRL_CALLOUT_PRIORITY_MED);
-
-                        //callout the processor
-                        addCalloutToErrl(l_err,
-                                         ERRL_CALLOUT_TYPE_HUID,
-                                         G_sysConfigData.proc_huid,
-                                         ERRL_CALLOUT_PRIORITY_MED);
-
-                        commitErrl(&l_err);
-                    }
-                }//if(l_gpe_fail_logged & (CENTAUR0_PRESENT_MASK >> l_cent))
-
-                //Request failed. Keep count of failures and request a reset if we reach a
-                //max retry count
-                L_scom_timeout[l_cent]++;
-                if(L_scom_timeout[l_cent] == CENTAUR_CONTROL_SCOM_TIMEOUT)
-                {
-                    break;
-                }
-
-            }//if(!async_request_completed(&l_centControlTask->gpe_req.request) || l_parms->rc)
-            else
-            {
-                //request completed successfully.  reset the timeout.
-                L_scom_timeout[l_cent] = 0;
-            }
-        }//if(L_gpe_scheduled)
-
-        //The previous GPE job completed. Now get ready for the next job.
-        L_gpe_scheduled = FALSE;
-
-        //Update current centaur if we didn't fail
-        if ( l_cent >= l_centControlTask->endCentaur )
-        {
-            l_cent  = l_centControlTask->startCentaur;
-        }
-        else
-        {
-            l_cent++;
-        }
-        l_centControlTask->curCentaur = l_cent;
-        l_cent_ptr = &g_amec->proc[0].memctl[l_cent].centaur;
-
-        //If centaur is not present or neither MBA is configured then skip it.
-        if(!CENTAUR_PRESENT(l_cent) ||
-            (!MBA_CONFIGURED(l_cent, 0) && !MBA_CONFIGURED(l_cent, 1)))
-        {
-            break;
-        }
 
         //update min/max settings for both MBA's according to ovs and mode
         cent_update_nlimits(l_cent);
@@ -399,8 +250,8 @@ void task_centaur_control( task_t * i_task )
             centaurThrottle_convert2Numerator(g_amec->mem_speed_request, l_cent, 0);
         uint16_t l_mba23_n_per_mba =
             centaurThrottle_convert2Numerator(g_amec->mem_speed_request, l_cent, 1);
-        uint16_t l_mba01_n_per_chip = G_centaurThrottleLimits[l_cent][0].max_n_per_chip;
-        uint16_t l_mba23_n_per_chip = G_centaurThrottleLimits[l_cent][1].max_n_per_chip;
+        uint16_t l_mba01_n_per_chip = G_memoryThrottleLimits[l_cent][0].max_n_per_chip;
+        uint16_t l_mba23_n_per_chip = G_memoryThrottleLimits[l_cent][1].max_n_per_chip;
         amec_cent_mem_speed_t l_mba01_speed;
         amec_cent_mem_speed_t l_mba23_speed;
 
@@ -487,95 +338,8 @@ void task_centaur_control( task_t * i_task )
         l_cent_ptr->portpair[0].last_mem_speed_sent.word32 = l_mba01_speed.word32;
         l_cent_ptr->portpair[1].last_mem_speed_sent.word32 = l_mba23_speed.word32;
 
-
-        // Pore flex schedule gpe_scom_centaur
-        // Check pore_flex_schedule return code if error
-        // then request OCC reset.
-        rc = pore_flex_schedule( &(l_centControlTask->gpe_req) );
-        if( rc )
-        {
-            //Error in schedule gpe get centaur data
-            TRAC_ERR("task_centaur_control: Failed to schedule gpe rc=%x", rc);
-
-            /* @
-             * @errortype
-             * @moduleid    CENT_TASK_CONTROL_MOD
-             * @reasoncode  SSX_GENERIC_FAILURE
-             * @userdata1   rc - Return code of failing function
-             * @userdata2   0
-             * @userdata4   ERC_CENTAUR_PORE_FLEX_SCHEDULE_FAILURE
-             * @devdesc     OCC Failed to schedule a GPE job for centaur
-             */
-            l_err = createErrl(
-                    CENT_TASK_CONTROL_MOD,                  // modId
-                    SSX_GENERIC_FAILURE,                    // reasoncode
-                    ERC_CENTAUR_PORE_FLEX_SCHEDULE_FAILURE, // Extended reason code
-                    ERRL_SEV_UNRECOVERABLE,                 // Severity
-                    NULL,                                   // Trace Buf
-                    DEFAULT_TRACE_SIZE,                     // Trace Size
-                    rc,                                     // userdata1
-                    l_parms->rc                             // userdata2
-                    );
-
-            addUsrDtlsToErrl(l_err,                               //io_err
-                    (uint8_t *) &(l_centControlTask->gpe_req.ffdc),  //i_dataPtr,
-                    sizeof(PoreFfdc),                                //i_size
-                    ERRL_USR_DTL_STRUCT_VERSION_1,                   //version
-                    ERRL_USR_DTL_BINARY_DATA);                       //type
-
-            REQUEST_RESET(l_err);   //This will add a firmware callout for us
-            break;
-        }
-
-        L_gpe_scheduled = TRUE;
     } while(0);
 
-    if(L_scom_timeout[l_cent] == CENTAUR_CONTROL_SCOM_TIMEOUT)
-    {
-        TRAC_ERR("task_centaur_control: Timeout scomming centaur[%d]", l_cent);
-        /* @
-         * @errortype
-         * @moduleid    CENT_TASK_CONTROL_MOD
-         * @reasoncode  INTERNAL_FAILURE
-         * @userdata1   centaur number
-         * @userdata2   0
-         * @userdata4   OCC_NO_EXTENDED_RC
-         * @devdesc     Timed out trying to set the memory throttle settings
-         *              throttle settings.
-         */
-        l_err = createErrl(
-                CENT_TASK_CONTROL_MOD,                  // modId
-                INTERNAL_FAILURE,                       // reasoncode
-                OCC_NO_EXTENDED_RC,                     // Extended reason code
-                ERRL_SEV_PREDICTIVE,                    // Severity
-                NULL,                                   // Trace Buf
-                DEFAULT_TRACE_SIZE,                     // Trace Size
-                l_cent,                                 // userdata1
-                0                                       // userdata2
-                );
-
-        addUsrDtlsToErrl(l_err,                               //io_err
-                (uint8_t *) &(l_centControlTask->gpe_req.ffdc),  //i_dataPtr,
-                sizeof(PoreFfdc),                                //i_size
-                ERRL_USR_DTL_STRUCT_VERSION_1,                   //version
-                ERRL_USR_DTL_BINARY_DATA);                       //type
-
-        //callout the centaur
-        addCalloutToErrl(l_err,
-                         ERRL_CALLOUT_TYPE_HUID,
-                         G_sysConfigData.centaur_huids[l_cent],
-                         ERRL_CALLOUT_PRIORITY_MED);
-
-        //callout the processor
-        addCalloutToErrl(l_err,
-                         ERRL_CALLOUT_TYPE_HUID,
-                         G_sysConfigData.proc_huid,
-                         ERRL_CALLOUT_PRIORITY_MED);
-
-        REQUEST_RESET(l_err);
-    }
-
-    return;
 }
 
 
@@ -599,7 +363,7 @@ void centaur_control_init( void )
     do
     {
         //initialize the active throttle limits
-        memset(G_centaurThrottleLimits, 0, sizeof(G_centaurThrottleLimits));
+        memset(G_memoryThrottleLimits, 0, sizeof(G_memoryThrottleLimits));
 
         //Do one-time setup items for the task here.
 
@@ -628,15 +392,15 @@ void centaur_control_init( void )
         // Initializes PoreFlex for Centaur Control Task, but
         // doesn't actually run anything until RTL
         //--------------------------------------------------
-        l_rc_gpe = pore_flex_create(
-                &G_centaur_control_task.gpe_req,           // gpe_req for the task
-                &G_pore_gpe1_queue,                        // queue
-                gpe_scom_centaur,                          // entry point
+        l_rc_gpe = gpe_request_create(
+                &G_memory_control_task.gpe_req,            // gpe_req for the task
+                &G_async_gpe_queue1,                       // queue
+                IPC_ST_CENTAUR_CONTROL_FUNCID,             // Function ID
                 (uint32_t) &G_centaur_control_reg_parms,   // parm for the task
                 SSX_WAIT_FOREVER,                          //
                 NULL,                                      // callback
                 NULL,                                      // callback argument
-                0 );                                       // options
+                ASYNC_CALLBACK_IMMEDIATE );                // options
         if(l_rc_gpe)
         {
             break;
@@ -672,7 +436,7 @@ void centaur_control_init( void )
                 );
 
         addUsrDtlsToErrl(l_err,                                           //io_err
-                         (uint8_t *) &G_centaur_control_pore_req.ffdc,    //i_dataPtr,
+                         (uint8_t *) &G_centaur_control_request.ffdc,    //i_dataPtr,
                          sizeof(PoreFfdc),                                //i_size
                          ERRL_USR_DTL_STRUCT_VERSION_1,                   //version
                          ERRL_USR_DTL_BINARY_DATA);                       //type
@@ -683,6 +447,64 @@ void centaur_control_init( void )
     return;
 }
 
+bool check_centaur_checkstop(uint8_t cent)
+{
+    // Check if the centaur has a channel checkstop. If it does,
+    // then do not log any errors. We also don't want to throttle
+    // a centaur that is in this condition.
+    if(!(cent_chan_checkstop(cent)))
+    {
+        TRAC_ERR("task_memory_control: gpe_scom_centaur failed. "
+                 "cent=%d rc=%x, index=0x%08x",
+                 cent, G_centaur_control_reg_parms.rc,
+                 G_centaur_control_reg_parms.errorIndex);
+
+        /* @
+         * @errortype
+         * @moduleid    CENT_TASK_CONTROL_MOD
+         * @reasoncode  CENT_SCOM_ERROR
+         * @userdata1   rc - Return code of scom operation
+         * @userdata2   index of scom operation that failed
+         * @userdata4   OCC_NO_EXTENDED_RC
+         * @devdesc     OCC access to centaur failed
+         */
+        l_err = createErrl(
+            CENT_TASK_CONTROL_MOD,                  // modId
+            CENT_SCOM_ERROR,                        // reasoncode
+            OCC_NO_EXTENDED_RC,                     // Extended reason code
+            ERRL_SEV_PREDICTIVE,                    // Severity
+            NULL,                                   // Trace Buf
+            DEFAULT_TRACE_SIZE,                     // Trace Size
+            G_centaur_control_reg_parms.rc,                            // userdata1
+            G_centaur_control_reg_parms.errorIndex                     // userdata2
+            );
+
+        addUsrDtlsToErrl(l_err,                                  //io_err
+                         (uint8_t *) &(memControlTask->gpe_req.ffdc),     //i_dataPtr,
+                         sizeof(PoreFfdc),                                //i_size
+                         ERRL_USR_DTL_STRUCT_VERSION_1,                   //version
+                         ERRL_USR_DTL_BINARY_DATA);                       //type
+
+        //callout the centaur
+        addCalloutToErrl(l_err,
+                         ERRL_CALLOUT_TYPE_HUID,
+                         G_sysConfigData.centaur_huids[memIndex],
+                         ERRL_CALLOUT_PRIORITY_MED);
+
+        //callout the processor
+        addCalloutToErrl(l_err,
+                         ERRL_CALLOUT_TYPE_HUID,
+                         G_sysConfigData.proc_huid,
+                         ERRL_CALLOUT_PRIORITY_MED);
+
+        commitErrl(&l_err);
+
+        return TRUE; // a centaur channel checkstop error occured
+    }
+    return FALSE;    // No centaur channel checkstop errors
+
+}
 
 
+#endif        // @TODO TEMP: Not Ready yet for centaur control
 

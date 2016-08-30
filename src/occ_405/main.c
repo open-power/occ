@@ -507,26 +507,31 @@ void hmon_routine()
         commitErrl(&l_err);
     }
 
-    //if we are in activate state, then monitor the processor temperature for
-    //timeout conditions and the processor VRHOT signal.
-    if (IS_OCC_STATE_ACTIVE())
+    //if we are in observation or activate state, then monitor the processor temperature
+    //for timeout conditions and the processor VRHOT signal.
+    if (IS_OCC_STATE_OBSERVATION() || IS_OCC_STATE_ACTIVE())
     {
         amec_health_check_proc_timeout();
         amec_health_check_proc_vrhot();
     }
 
-#if 0  // Memory thermal control loop is not ready yet
-    //if we are in active state with memory temperature data being collected
+    //if we are in observation or active state with memory temperature data being collected
     //then monitor the temperature collections for overtemp and timeout conditions
-    if(IS_OCC_STATE_ACTIVE() &&
-       rtl_task_is_runnable(TASK_ID_CENTAUR_DATA))
+    if((IS_OCC_STATE_OBSERVATION() || IS_OCC_STATE_ACTIVE()) &&
+       rtl_task_is_runnable(TASK_ID_DIMM_SM))
     {
-        amec_health_check_cent_timeout();
-        amec_health_check_cent_temp();
+        // For Cumulus systems only, check for centaur timeout and overtemp errors
+        if (MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type)
+        {
+            amec_health_check_cent_timeout();
+            amec_health_check_cent_temp();
+        }
+
+        // For both Nimbus and Cumulus systems, check for rdimm-modules/centaur-dimm
+        // timeout and overtemp
         amec_health_check_dimm_timeout();
         amec_health_check_dimm_temp();
     }
-#endif   // Memory thermal control loop is not ready yet
 }
 
 

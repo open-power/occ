@@ -29,12 +29,12 @@
 #include <occ_common.h>
 #include <sensor.h>
 #include <amec_sys.h>
-#include <centaur_data.h>
+#include <memory.h>
 
 //*************************************************************************
 // Externs
 //*************************************************************************
-extern cent_sensor_flags_t G_dimm_temp_expired_bitmap;
+extern dimm_sensor_flags_t G_dimm_temp_expired_bitmap;
 extern uint8_t G_cent_temp_expired_bitmap;
 //*************************************************************************
 // Macros

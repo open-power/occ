@@ -36,7 +36,6 @@
 #include "centaur_control.h"
 
 extern task_t G_task_table[TASK_END];
-extern centaur_throttle_t G_centaurThrottleLimits[MAX_NUM_CENTAURS][NUM_MBAS_PER_CENTAUR];
 
 // Function Specification
 //

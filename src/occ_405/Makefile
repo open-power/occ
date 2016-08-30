@@ -67,7 +67,8 @@ LIB_DIRS =  -L$(OBJDIR) \
             -L$(OBJDIR)/dcom \
             -L$(OBJDIR)/proc \
             -L$(OBJDIR)/firdata \
-            -L$(OBJDIR)/cent
+            -L$(OBJDIR)/cent \
+            -L$(OBJDIR)/mem
 
 #default target is to make a binary application image
 all: $(PPETOOLS_OBJDIR)/ppetracepp $(OBJDIR)/$(IMAGE_NAME).bin $(OBJDIR)/$(IMAGE_NAME).dis
