@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/incl/occ_common.h $                                   */
+/* $Source: src/occ_405/incl/occ_common.h $                               */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -36,6 +36,7 @@ extern char _LINEAR_RD_WINDOW_SECTION_BASE[];
 extern void _LINEAR_RD_WINDOW_SECTION_SIZE;
 extern char _FIR_PARMS_SECTION_BASE[];
 extern char _FIR_HEAP_SECTION_BASE[];
+extern char _TRACE_BUFFERS_START_BASE[];
 
 // Declare aligned data structures for Async access in a noncacheable section
 //
@@ -81,6 +82,7 @@ extern char _FIR_HEAP_SECTION_BASE[];
 #define LINEAR_RD_WINDOW_SECTION_SIZE   ((uint32_t) &_LINEAR_RD_WINDOW_SECTION_SIZE)
 #define FIR_PARMS_SECTION_BASE_ADDRESS  ((uint32_t) &_FIR_PARMS_SECTION_BASE)
 #define FIR_HEAP_SECTION_BASE_ADDRESS   ((uint32_t) &_FIR_HEAP_SECTION_BASE)
+#define TRACE_BUFFERS_START_ADDR        ((uint32_t) &_TRACE_BUFFERS_START_BASE)
 
 
 // Conversion Macro's

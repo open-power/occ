@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/trac/trac_interface.h $                               */
+/* $Source: src/occ_405/trac/trac_interface.h $                           */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -78,8 +78,9 @@ typedef uint32_t trace_hash_val;
 // NOTE!  Increment this when new components are added!
 #define TRAC_NUM_TRACE_COMPONENTS           1
 
-
 #define TRACE_BUFFER_SIZE                   8192
+#define NUMBER_TRACE_BUFFERS                3
+#define ALL_TRACE_BUFFERS_SZ                (TRACE_BUFFER_SIZE * NUMBER_TRACE_BUFFERS)
 
 #define CIRCULAR_BUFFER_SIZE                4
 

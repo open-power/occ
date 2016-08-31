@@ -998,6 +998,22 @@ int main(int argc, char **argv)
         //failure means we can't talk to FSP.
         SSX_PANIC(0x01000002);
     }
+
+    l_ssxrc = ppc405_mmu_map(
+            TRACE_BUFFERS_START_ADDR,
+            TRACE_BUFFERS_START_ADDR,
+            ALL_TRACE_BUFFERS_SZ,
+            0,
+            TLBLO_WR | TLBLO_I,
+            NULL
+            );
+
+    if(l_ssxrc != SSX_OK)
+    {
+        //failure means there will be no trace data for debug
+        SSX_PANIC(0x01000003);
+    }
+
 #endif /* PPC405_MMU_SUPPORT */
 
 /* TEMP -- NO FIR SUPPORT IN PHASE1

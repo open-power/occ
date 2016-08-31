@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/linkocc.cmd $                                         */
+/* $Source: src/occ_405/linkocc.cmd $                                     */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -69,14 +69,11 @@ OUTPUT_FORMAT(elf32-powerpc);
 //  -- GPE2 (0xfff20000 - 0xfff30000)
 //  -- GPE3 (0xfff30000 - 0xfff40000)
 
-//  Last 1kB must be reserved for PORE-SLW, so stack can't be in that space
-
 #define origin            0xfff40000
 #define vectors           0xfff40000
 #define reset             0xffffffec
 #define sram_size         0x00080000
 #define sram_available    sram_size
-#define reserved_for_slw  0x400
 
 // The SRAM controller aliases the SRAM at 8 x 128MB boundaries to support
 // real-mode memory attributes using DCCR, ICCR etc.  Noncacheable access is
@@ -92,12 +89,6 @@ OUTPUT_FORMAT(elf32-powerpc);
 // This is the offset from the ppc405 EVPR where the debug pointers can be
 // found.
 #define SSX_DEBUG_PTRS_OFFSET   0x820
-
-//  main()'s stack starts just below the boot branch.  The bootloader will
-//  align this address as needed.
-
-_SSX_INITIAL_STACK       = (reset - reserved_for_slw - 1);
-_SSX_INITIAL_STACK_LIMIT = _SSX_INITIAL_STACK - INITIAL_STACK_SIZE;
 
 //  Define SSX kernel text sections to be packed into nooks and crannies of
 //  the exception vector area.  An option is provided _not_ to pack, to help
@@ -199,7 +190,6 @@ ssx_stack_init.o(.text) \
 thread_text \
 mmu_text \
 occhw_async.o(.text) \
-//occhw_async_pore.o(.text) \
 occhw_async_ocb.o(.text) \
 occhw_async_pba.o(.text) \
 occhw_scom.o(.text) \
@@ -253,11 +243,10 @@ ppc405_boot.o(.text) \
 ppc405_init.o(.text) \
 occhw_init.o(.text)
 
-// TEMP: Commented out for Simics, as there is no MMU support yet
-//#ifndef PPC405_MMU_SUPPORT
-//ASSERT((0), "OCC Application Firmware can not be compiled without \
-//PPC405_MMU_SUPPORT compile flag")
-//#endif
+#ifndef PPC405_MMU_SUPPORT
+ASSERT((0), "OCC Application Firmware can not be compiled without \
+PPC405_MMU_SUPPORT compile flag")
+#endif
 
 // Define memory areas.
 
@@ -336,12 +325,6 @@ SECTIONS
     // Noncacheable and Write-through Data
     ////////////////////////////////
 
-    // Non-cacheable and write-through data is placed in low memory to
-    // improve latency.  PORE-private text and data is also placed here. PORE
-    // text and data are segregated to enable relocated PORE disassembly of
-    //.text.pore. PORE text is read-only to OCC, however PORE data is writable
-    // by OCC to allow shared data structures (e.g., PTS).
-
     // When running without the MMU we need to carefully arrange things such
     // that the noncacheable and writethrough data is linked at the correct
     // aliased VMA while remaining loaded in contiguous LMA addresses.
@@ -366,7 +349,6 @@ SECTIONS
      _NONCACHEABLE_RO_SECTION_BASE = .;
 
     ALIASED_SECTION(.noncacheable_ro)
-    ALIASED_SECTION(.text.pore)
 
     . = ALIGN(1024);
     _NONCACHEABLE_RO_SECTION_SIZE = . - _NONCACHEABLE_RO_SECTION_BASE;
@@ -374,7 +356,6 @@ SECTIONS
     _NONCACHEABLE_SECTION_BASE = .;
 
     ALIASED_SECTION(.noncacheable)
-    ALIASED_SECTION(.data.pore)
 
     . = ALIGN(1024);
     _NONCACHEABLE_SECTION_SIZE = . - _NONCACHEABLE_SECTION_BASE;
@@ -400,21 +381,17 @@ SECTIONS
     // To enable non-cacheable sections w/o the MMU will require setting up
     // the linker script to use aliased addresses of the SRAM.
 
-// TEMP: Commented out for Simics, as there is no MMU support yet
-//#if PPC405_MMU_SUPPORT == 0
-//    ASSERT(((_NONCACHEABLE_RO_SECTION_SIZE == 0) &&
-//            (_NONCACHEABLE_SECTION_SIZE == 0) &&
-//            (_WRITETHROUGH_SECTION_SIZE == 0)),
-//           " Non-cacheable and writethrough sections are currently only supported for MMU-enabled configurations.  Enabling these capabilities for untranslated addresses will require some modifications of the linker script.  ")
-//#endif
+#if PPC405_MMU_SUPPORT == 0
+    ASSERT(((_NONCACHEABLE_RO_SECTION_SIZE == 0) &&
+            (_NONCACHEABLE_SECTION_SIZE == 0) &&
+            (_WRITETHROUGH_SECTION_SIZE == 0)),
+           " Non-cacheable and writethrough sections are currently only supported for MMU-enabled configurations.  Enabling these capabilities for untranslated addresses will require some modifications of the linker script.  ")
+#endif
 
 
     ////////////////////////////////
     // Read-only Data
     ////////////////////////////////
-
-    // Accesses of read-only data may or may not benefit from being in fast
-    // SRAM - we'll give it the benefit of the doubt.
 
     _RODATA_SECTION_BASE = .;
 
@@ -454,7 +431,7 @@ SECTIONS
 
     . = ALIGN(1024);
     _RODATA_SECTION_SIZE = . - _RODATA_SECTION_BASE;
-   __READ_ONLY_DATA_LEN__ = . - __START_ADDR__;
+    __READ_ONLY_DATA_LEN__ = . - __START_ADDR__;
 
 
     ////////////////////////////////
@@ -469,16 +446,12 @@ SECTIONS
     // initialization text then this will have to be moved if we're also doing
     // MMU protection.
 
-   .itext . : { init_text } > sram
+    .itext . : { init_text } > sram
 
     // Other text
     // It's not clear why boot.S is generating empty .glink,.iplt
-
-    // In P8, this is where we put the GPE code. I do not believe we
-    // want to do that anymore, since we have allocated the bottom 256K
-    // of SRAM for that purpose.
-   .otext . : { *(.text) *(.text.startup)} > sram
-   .glink . : { *(.glink) } > sram
+    .glink . : { *(.glink) } > sram
+    .otext . : { *(.text) *(.text.startup)} > sram
 
      __CTOR_LIST__ = .;
     .ctors . : { *(.ctors) } > sram
@@ -509,32 +482,30 @@ SECTIONS
     // Other read-write data
     // It's not clear why boot.S is generating empty .glink,.iplt
 
-   .rela   . : { *(.rela*) *(.glink*) *(.iplt*) }  > sram
-   .rwdata . : { *(.data) *(.bss) *(COMMON) . = ALIGN(128);  } > sram
+    .rela   . : { *(.rela*) *(.glink*) *(.iplt*) }  > sram
+    .rwdata . : { *(.data) *(.bss) *(COMMON) . = ALIGN(128);  } > sram
 
-   // Initialization-only data.  This includes the stack of main, the data
-   // structures declared by INITCALL, and any other data areas that can be
-   // reclaimed to the heap after initialization.
-   //
-   // NB: If we ever do reclaim this space, we need to modify the concept of
-   // executable free space.
+    // Initialization-only data.  This includes the stack of main, the data
+    // structures declared by INITCALL, and any other data areas that can be
+    // reclaimed to the heap after initialization.
+    //
+    // NB: If we ever do reclaim this space, we need to modify the concept of
+    // executable free space.
 
-   _INIT_ONLY_DATA_BASE = .;
+    _INIT_ONLY_DATA_BASE = .;
 
-   // TODO: These three lines were previously commented out (P8). Do we need
-   // space allocated for the stack? What was the reason for eliminating
-   // it in P8?
-   _SSX_INITIAL_STACK_LIMIT = .;
-   . = . + INITIAL_STACK_SIZE;
-   _SSX_INITIAL_STACK = . - 1;
+    // Put the stack right after the 405 main application and before the trace buffers
+    _SSX_INITIAL_STACK_LIMIT = .;
+    . = . + INITIAL_STACK_SIZE;
+    _SSX_INITIAL_STACK = . - 1;
 
-   _INITCALL_SECTION_BASE = .;
-   .data.initcall . : { *(.data.initcall) } > sram
-   _INITCALL_SECTION_SIZE = . - _INITCALL_SECTION_BASE;
+    _INITCALL_SECTION_BASE = .;
+    .data.initcall . : { *(.data.initcall) } > sram
+    _INITCALL_SECTION_SIZE = . - _INITCALL_SECTION_BASE;
 
-   .data.startup . : { *(.data.startup) } > sram
+    .data.startup . : { *(.data.startup) } > sram
 
-   _INIT_ONLY_DATA_SIZE = . - _INIT_ONLY_DATA_BASE;
+    _INIT_ONLY_DATA_SIZE = . - _INIT_ONLY_DATA_BASE;
 
     ////////////////////////////////
     // Free Space
@@ -570,20 +541,25 @@ SECTIONS
 #if EXECUTABLE_FREE_SPACE
     _DATA_SECTION_SIZE = . - _DATA_SECTION_BASE;
     __WRITEABLE_DATA_LEN__ = . - __WRITEABLE_DATA_ADDR__ ;
-    _EX_FREE_SECTION_SIZE = 0 - _EX_FREE_SECTION_BASE;
+    _EX_FREE_SECTION_SIZE = _TRACE_BUFFERS_START_BASE - _EX_FREE_SECTION_BASE;
 #else
-    _DATA_SECTION_SIZE = _FIR_HEAP_SECTION_BASE - _DATA_SECTION_BASE;
-    __WRITEABLE_DATA_LEN__ = _FIR_HEAP_SECTION_BASE - __WRITEABLE_DATA_ADDR__ ;
+    _DATA_SECTION_SIZE = _TRACE_BUFFERS_START_BASE - _DATA_SECTION_BASE;
+    __WRITEABLE_DATA_LEN__ = _TRACE_BUFFERS_START_BASE - __WRITEABLE_DATA_ADDR__ ;
     _EX_FREE_SECTION_SIZE = 0;
 #endif
 
-    _SSX_FREE_END   = _FIR_HEAP_SECTION_BASE - 1;
+    _SSX_FREE_END   = _TRACE_BUFFERS_START_BASE - 1;
 
     ////////////////////////////////
     // Trace Buffers
+    //
+    // NOTE: If these addresses change, TMGT/HTMGT will require
+    //       changes as well, to collect trace data in the event
+    //       the OCC/405 dies unexpectedly.
     ////////////////////////////////
     __CUR_COUNTER__ = .;
     _ERR_TRACE_BUFFER_BASE = 0xfffb4000;
+    _TRACE_BUFFERS_START_BASE = 0xfffb4000;
     _ERR_TRACE_BUFFER_SIZE = 0x2000;
     _INF_TRACE_BUFFER_BASE = 0xfffb6000;
     _INF_TRACE_BUFFER_SIZE = 0x2000;
@@ -631,7 +607,7 @@ SECTIONS
     . = __CUR_COUNTER__;
 
     ////////////////////////////////
-    // TEMP/TODO: Previously, we were able to reclaim this space
+    //  TODO:     Previously, we were able to reclaim this space
     //            by loading applets over init data. The init data
     //            takes up around 6K. It would be good to figure 
     //            out what to do with it to regain the space.
