@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -45,7 +45,7 @@
 const apssGpioConfigStruct_t G_gpio_config[2] = { {0x00, 0xFF, 0x00}, {0x00, 0xFF, 0x00} };
 
 // Configure streaming of: APSS Mode, 16 ADCs, 2 GPIOs
-const apssModeConfigStruct_t G_apss_mode_config = { APSS_MODE_AUTO2, 16, 2 };
+const apssModeConfigStruct_t G_apss_mode_config = { APSS_MODE_COMPOSITE, 16, 2 };
 
 // Power Measurements (read from APSS every RealTime loop)
 apssPwrMeasStruct_t G_apss_pwr_meas = { {0} };

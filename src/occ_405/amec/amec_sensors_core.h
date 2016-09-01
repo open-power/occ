@@ -44,7 +44,7 @@
 #define OCC_CORE_SWUP_DONE       0x40000000  // Special wake-up done
 #define OCC_CORE_ACT_STOP_LVL    0x00F00000  // Actual stop level (probably changes too fast to be useful)
 // The following clear upon reading
-#define OCC_DEEPEST_REQ_STOP_LVL 0x000F0000  // Deepest requestest stop level
+#define OCC_DEEPEST_REQ_STOP_LVL 0x000F0000  // Deepest requested stop level
 #define OCC_DEEPEST_ACT_STOP_LVL 0x0000F000  // Deepest stop state fully entered
 #define OCC_IVRM_ENABLED_HIST    0x00000800  // Bit indicating if IVRM has been enabled
 

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -31,6 +31,8 @@
 #include "pss_constants.h"
 #include <apss_structs.h>
 #include "gpe_util.h"
+
+extern uint8_t G_apss_mode;
 
 /*
  * Function Specifications:
@@ -82,7 +84,7 @@ void apss_start_pwr_meas_read(ipc_msg_t* cmd, void* arg)
         // Setup control regs:
 
         // SPIPSS_ADC_CTRL_REG0:
-        // frame_size=16, out_count=16, in_count=16
+        // frame_size=16, out_count=0, in_count=16
         //    rc = putscom(0, SPIPSS_ADC_CTRL_REG0, uint64_t 0x4000100000000000);
         regValue = 0x4000100000000000;
         rc = putscom_abs(SPIPSS_ADC_CTRL_REG0, regValue);
@@ -95,9 +97,16 @@ void apss_start_pwr_meas_read(ipc_msg_t* cmd, void* arg)
         }
 
         // SPIPSS_ADC_CTRL_REG1: ADC FSM
-        // clock_divider=7, frames=16
-        // rc = putscom_abs(SPIPSS_ADC_CTRL_REG1, 0x8093c00000000000);
-        regValue = 0x8093c00000000000;
+        if (APSS_MODE_COMPOSITE == G_apss_mode)
+        {
+            // clock_divider=36, frames=17 (i.e. 18)
+            regValue = 0x8092200000000000;
+        }
+        else
+        {
+            // clock_divider=36, frames=15 (i.e. 16)
+            regValue = 0x8091E00000000000;
+        }
         rc = putscom_abs(SPIPSS_ADC_CTRL_REG1, regValue);
         if(rc)
         {
@@ -185,7 +194,6 @@ void apss_continue_pwr_meas_read(ipc_msg_t* cmd, void* arg)
     int          rc;
     ipc_async_cmd_t *async_cmd = (ipc_async_cmd_t*)cmd;
     apss_continue_args_t *args = (apss_continue_args_t*)async_cmd->cmd_data;
-
 
     // Clear error, ffdc, and rc (feedback to 405)
     // These may be overwritten by error codes if errors occur
@@ -289,7 +297,6 @@ void apss_complete_pwr_meas_read(ipc_msg_t* cmd, void* arg)
     ipc_async_cmd_t *async_cmd = (ipc_async_cmd_t*)cmd;
     apss_complete_args_t *args = (apss_complete_args_t*)async_cmd->cmd_data;
 
-
     // clear error, ffdc, and rc (feedback to 405)
     // These may be overwritten by error codes if errors occur
     // REVIEW: Since the OCC clears these fields, do we really have to repeat this here?
@@ -310,6 +317,7 @@ void apss_complete_pwr_meas_read(ipc_msg_t* cmd, void* arg)
             break;
         }
 
+        // Get Time of Day
         rc = getscom_abs(TOD_VALUE_REG, &args->meas_data[3]);
         if(rc)
         {
@@ -319,6 +327,19 @@ void apss_complete_pwr_meas_read(ipc_msg_t* cmd, void* arg)
             break;
         }
 
+        // If we're in composite mode, collect the GPIO data
+        if (APSS_MODE_COMPOSITE == G_apss_mode)
+        {
+            // Read first 8 bytes of data (GPIO frames) into meas_data[0]
+            rc = getscom_abs(SPIPSS_ADC_RDATA_REG4, &args->meas_data[0]);
+            if(rc)
+            {
+                PK_TRACE("apss_complete_pwr_meas_read: SPIPSS_ADC_RDATA_REG4 getscom failed. rc = 0x%08x",
+                         rc);
+                gpe_set_ffdc(&(args->error), SPIPSS_ADC_RDATA_REG4, GPE_RC_SCOM_GET_FAILED, rc);
+                break;
+            }
+        }
     } while(0);
 
     // send back a response, IPC success (even if ffdc/rc are non zeros)

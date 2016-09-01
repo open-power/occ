@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -29,6 +29,10 @@
 #include "pss_constants.h"
 #include <apss_structs.h>       //H file common with occ_405
 #include "gpe_util.h"
+
+// Default to Auto-2 for now, should get set when the mode
+// is initialized, and before any APSS data is gathered.
+uint8_t G_apss_mode = APSS_MODE_AUTO2;
 
 /*
  * Function Specification
@@ -56,7 +60,7 @@ uint32_t apss_start_spi_command(initGpioArgs_t * args, uint8_t i_noWait)
     else
     {
 
-         busy_wait(5);
+        busy_wait(5);
 
         if (!i_noWait)
         {
@@ -116,7 +120,7 @@ void apss_init_gpio(ipc_msg_t* cmd, void* arg)
             gpe_set_ffdc(&(args->error), SPIPSS_P2S_CTRL_REG0, rc, regValue);
             break;
         }
-        // bridge_enable, clock_divider=7, 2 frames
+        // bridge_enable, clock_divider=36, 2 frames
         regValue = 0x8090400000000000;
         rc = putscom_abs(SPIPSS_P2S_CTRL_REG1, regValue);
         if (rc)
@@ -276,7 +280,7 @@ void apss_init_mode(ipc_msg_t* cmd, void* arg)
 
         ////////////////////////////
         // Setup the control regs
-        // frame_size=16, out_count1=16, in_delay1=never, in_count2=16
+        // frame_size=16, out_count1=16
         regValue = 0x4100000000000000;
         rc = putscom_abs(SPIPSS_P2S_CTRL_REG0, regValue);
         if (rc)
@@ -286,7 +290,7 @@ void apss_init_mode(ipc_msg_t* cmd, void* arg)
             break;
         }
 
-        // bridge_enable, clock_divider=7, 1 frames
+        // bridge_enable, clock_divider=36, 1 frames
         regValue = 0x8090000000000000;
         rc = putscom_abs(SPIPSS_P2S_CTRL_REG1, regValue);
         if (rc)
@@ -295,7 +299,7 @@ void apss_init_mode(ipc_msg_t* cmd, void* arg)
             gpe_set_ffdc(&(args->error), SPIPSS_P2S_CTRL_REG1, rc, regValue);
             break;
         }
-        // inter_frame_delay=25 (2.5usec)
+        // inter_frame_delay=50 (5usec)
         regValue = 0x0019000000000000;
         rc = putscom_abs(SPIPSS_P2S_CTRL_REG2, regValue);
         if (rc)
@@ -313,12 +317,14 @@ void apss_init_mode(ipc_msg_t* cmd, void* arg)
             regValue = args->config.numAdcChannelsToRead - 1;  //aaaa => Address of last ADC channel (countOfADCChannels - 1)
             regValue = regValue << 6;                   //Make space for GPIO port count
             regValue |= (args->config.numGpioPortsToRead) & 0x03;   //gg => Num of GPIO ports
-            regValue = (regValue << 51) | 0x8C00000000000000; //Add Command at D15-D12
+            regValue = (regValue << 48) | 0x8C00000000000000; //Add Command at D15-D12
+            G_apss_mode = APSS_MODE_COMPOSITE;
         }
         else if (args->config.mode == APSS_MODE_AUTO2)
         {
-            // Set Auto2 mode
+            // Set Auto2 mode to scan all 16 ADC channels
             regValue = 0x3FC0000000000000;
+            G_apss_mode = APSS_MODE_AUTO2;
         }
         else
         {

@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_405/gpe/pss_constants.h $                             */
+/* $Source: src/occ_gpe0/pss_constants.h $                                */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -39,6 +39,10 @@
 #define SPIPSS_ADC_RDATA_REG1         (SPIPSS_REGISTER_BASE + 0x21)
 #define SPIPSS_ADC_RDATA_REG2         (SPIPSS_REGISTER_BASE + 0x22)
 #define SPIPSS_ADC_RDATA_REG3         (SPIPSS_REGISTER_BASE + 0x23)
+#define SPIPSS_ADC_RDATA_REG4         (SPIPSS_REGISTER_BASE + 0x24)
+#define SPIPSS_ADC_RDATA_REG5         (SPIPSS_REGISTER_BASE + 0x25)
+#define SPIPSS_ADC_RDATA_REG6         (SPIPSS_REGISTER_BASE + 0x26)
+#define SPIPSS_ADC_RDATA_REG7         (SPIPSS_REGISTER_BASE + 0x27)
 #define SPIPSS_100NS_REG              (SPIPSS_REGISTER_BASE + 0x28)
 #define SPIPSS_P2S_CTRL_REG0          (SPIPSS_REGISTER_BASE + 0x40)
 #define SPIPSS_P2S_CTRL_REG1          (SPIPSS_REGISTER_BASE + 0x41)
