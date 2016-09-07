@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -244,7 +244,8 @@ struct ErrlEntry
         uint8_t word;
     } iv_actions;
     // Reserved for extended reason code for uniquely identifying error if needed
-    uint32_t            iv_userData4;
+    uint16_t            iv_reserved;
+    uint16_t            iv_extendedRC;
     // Log Callout Number
     uint8_t             iv_numCallouts;
     // Callouts
@@ -279,7 +280,7 @@ extern uint8_t      G_callslot[MAX_ERRL_CALL_HOME_SZ];
 errlHndl_t createErrl(
             const uint16_t i_modId,
             const uint8_t i_reasonCode,
-            const uint32_t i_extReasonCode,
+            const uint16_t i_extReasonCode,
             const ERRL_SEVERITY i_sev,
             const trace_descriptor_array_t* i_trace,
             const uint16_t i_traceSz,

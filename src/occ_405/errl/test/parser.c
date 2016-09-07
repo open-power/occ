@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -178,7 +178,8 @@ struct ErrlUserDetails
     uint32_t    iv_userData1;           // User Data Word 1
     uint32_t    iv_userData2;           // User Data Word 2
     uint32_t    iv_userData3;           // User Data Word 3
-    uint32_t    iv_userData4;           // User Data Word 4
+    uint16_t    iv_reserved2;
+    uint16_t    iv_extendedRC;          // Extended RC
     uint16_t    iv_entrySize;           // Log Size
     uint16_t    iv_userDetailEntrySize; // User Details Size
 } __attribute__ ((__packed__));

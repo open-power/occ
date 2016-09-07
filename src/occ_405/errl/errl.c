@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/errl/errl.c $                                         */
+/* $Source: src/occ_405/errl/errl.c $                                     */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -278,7 +278,7 @@ uint8_t getOldestErrlID()
 errlHndl_t createErrl(
             const uint16_t i_modId,
             const uint8_t i_reasonCode,
-            const uint32_t i_extReasonCode,
+            const uint16_t i_extReasonCode,
             const ERRL_SEVERITY i_sev,
             const trace_descriptor_array_t* i_trace,
             const uint16_t i_traceSz,
@@ -317,7 +317,7 @@ errlHndl_t createErrl(
         // if its a call home error then set the sev to informational
         l_rc->iv_severity = (i_sev == ERRL_SEV_CALLHOME_DATA ? (uint8_t)ERRL_SEV_INFORMATIONAL : i_sev);
 
-        l_rc->iv_userData4 = i_extReasonCode;
+        l_rc->iv_extendedRC = i_extReasonCode;
 
         // save off user detail section version
         l_rc->iv_userDetails.iv_version = ERRL_USR_DTL_STRUCT_VERSION_1;
