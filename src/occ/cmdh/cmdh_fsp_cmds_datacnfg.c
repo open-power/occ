@@ -48,10 +48,14 @@
 #define FREQ_FORMAT_BASE_DATA_SZ   (sizeof(cmdh_store_mode_freqs_t) - sizeof(cmdh_fsp_cmd_header_t))
 #define FREQ_FORMAT_10_NUM_FREQS   3
 #define FREQ_FORMAT_11_NUM_FREQS   4
+#define FREQ_FORMAT_20_NUM_FREQS   6
+
 
 #define DATA_FREQ_VERSION_0        0
 #define DATA_FREQ_VERSION_10       0x10
 #define DATA_FREQ_VERSION_11       0x11
+#define DATA_FREQ_VERSION_20       0x20
+
 
 #define DATA_PCAP_VERSION_0        0
 #define DATA_PCAP_VERSION_10       0x10
@@ -273,12 +277,14 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
         // if the version doesn't equal what we expect, OR
         // if the expected data length does not agree with the actual data length, OR
         // the format is 0x10 and we don't have room for the 3 2B frequencies, OR
-        // the format is 0x11 and we don;t have room for the 4 2B frequencies.
+        // the format is 0x11 and we don;t have room for the 4 2B frequencies, OR
+        // the format is 0x20 and we don;t have room for the 6 2B frequencies.
         if((l_data_length < FREQ_FORMAT_BASE_DATA_SZ) ||
            ((l_cmdp->version != DATA_FREQ_VERSION_0) && (l_cmdp->version != DATA_FREQ_VERSION_10) &&
-            (l_cmdp->version != DATA_FREQ_VERSION_11)) ||
+            (l_cmdp->version != DATA_FREQ_VERSION_11) && (l_cmdp->version != DATA_FREQ_VERSION_20)) ||
            ((DATA_FREQ_VERSION_10 == l_cmdp->version) && (l_mode_data_sz != (FREQ_FORMAT_10_NUM_FREQS * 2))) ||
-           ((DATA_FREQ_VERSION_11 == l_cmdp->version) && (l_mode_data_sz != (FREQ_FORMAT_11_NUM_FREQS * 2))))
+           ((DATA_FREQ_VERSION_11 == l_cmdp->version) && (l_mode_data_sz != (FREQ_FORMAT_11_NUM_FREQS * 2))) ||
+           ((DATA_FREQ_VERSION_20 == l_cmdp->version) && (l_mode_data_sz != (FREQ_FORMAT_20_NUM_FREQS * 2))))
         {
             TRAC_ERR("Invalid Frequency Data packet: data_length[%u] version[%u] l_count[%u] l_mode_data_sz[%u]",
                      l_data_length, l_cmdp->version, l_count, l_mode_data_sz);
@@ -378,18 +384,15 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
             // store under the existing enums.
             l_freq = (l_buf[0] << 8 | l_buf[1]);
             l_table[OCC_MODE_NOMINAL] = l_freq;
-
             TRAC_INFO("Nominal frequency = %d", l_freq);
 
             l_freq = (l_buf[2] << 8 | l_buf[3]);
             l_table[OCC_MODE_TURBO] = l_freq;
-
             TRAC_INFO("Max frequency = %d", l_freq);
 
             l_freq = (l_buf[4] << 8 | l_buf[5]);
             l_table[OCC_MODE_PWRSAVE] = l_freq;
             l_table[OCC_MODE_MIN_FREQUENCY] = l_freq;
-
             TRAC_INFO("Min frequency = %d", l_freq);
 
         }
@@ -428,6 +431,102 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
             }
             TRAC_INFO("UT frequency = %d", l_freq);
 
+        }
+        else if(DATA_FREQ_VERSION_20 == l_cmdp->version) // Version 0x20 - PowerVM support on BMC
+        {
+            // First Nominal Freq, then turbo Freq, then Min Freq, then ultra turbo, then SPS, then FFO
+            // which we'll store under the existing enums.
+            l_freq = (l_buf[0] << 8 | l_buf[1]);
+            l_table[OCC_MODE_NOMINAL] = l_freq;
+            TRAC_INFO("Nominal frequency = %d", l_freq);
+
+            l_freq = (l_buf[2] << 8 | l_buf[3]);
+            // Temporarily store the turbo frequency in the OCC_MODE_STURBO
+            // entry of the frequency table
+            l_table[OCC_MODE_STURBO] = l_freq;
+            // Save turbo for DPS modes.  DPS+Ultra Turbo is not supported in P8
+            l_table[OCC_MODE_DYN_POWER_SAVE] = l_freq;
+            l_table[OCC_MODE_DYN_POWER_SAVE_FP] = l_freq;
+            TRAC_INFO("Turbo frequency = %d", l_freq);
+
+            l_freq = (l_buf[4] << 8 | l_buf[5]);
+            l_table[OCC_MODE_PWRSAVE] = l_freq;   // will be overwritten below if SPS supported
+            l_table[OCC_MODE_MIN_FREQUENCY] = l_freq;
+            TRAC_INFO("Minimum frequency = %d", l_freq);
+
+            l_freq = (l_buf[6] << 8 | l_buf[7]);
+            // Check if the UltraTurbo frequency is not zero and system is OPAL (aka kvm)
+            // No support for ultra turbo on PowerVM
+            if((l_freq != 0) && (G_sysConfigData.system_type.kvm))
+            {
+                // The new maximum frequency is the UltraTurbo frequency
+                // with UT support max freq is saved in TURBO and
+                // legacy turbo is saved in STURBO which was already set above
+                l_table[OCC_MODE_TURBO] = l_freq;
+            }
+            else
+            {
+                // The new maximum frequency is the Turbo frequency
+                l_table[OCC_MODE_TURBO] = l_table[OCC_MODE_STURBO];
+                l_table[OCC_MODE_STURBO] = 0;
+            }
+            TRAC_INFO("Max frequency = %d", l_table[OCC_MODE_TURBO]);
+
+            // Static Power Save Frequency Point
+            // Only overwrite SPS of min freq if SPS is not 0 and SPS is above the min
+            l_freq = (l_buf[8] << 8 | l_buf[9]);
+            if((l_freq != 0) && (l_freq >= l_table[OCC_MODE_MIN_FREQUENCY]))
+            {
+                l_table[OCC_MODE_PWRSAVE] = l_freq;
+                TRAC_INFO("Static Power Save frequency = %d", l_freq);
+            }
+
+            // FFO Frequency Point
+            l_freq = (l_buf[10] << 8 | l_buf[11]);
+            // If FFO is supported (non-zero) verify FFO Frequency is within min/max
+            if(l_freq != 0)
+            {
+                l_req_freq = l_freq;
+
+                // Check and make sure that FFO freq >= Fmin, if not, log an error.
+                if( l_freq < l_table[OCC_MODE_MIN_FREQUENCY] )
+                {
+                    l_freq = l_table[OCC_MODE_MIN_FREQUENCY];
+                }
+
+                // Check and make sure that FFO freq <= Fmax, if not, log an error.
+                else if ( l_freq > l_table[OCC_MODE_TURBO] )
+                {
+                    l_freq = l_table[OCC_MODE_TURBO];
+                }
+
+                // Log an error if we could not honor the requested FFO frequency, but keep going.
+                if(l_req_freq != l_freq)
+                {
+                    TRAC_ERR("FFO Freq out of range. request=%d, limit=%d ",
+                             l_req_freq,  l_freq);
+                    /* @
+                     * @errortype
+                     * @moduleid    DATA_STORE_FREQ_DATA
+                     * @reasoncode  INVALID_INPUT_DATA
+                     * @userdata1   requested frequency
+                     * @userdata2   frequency used
+                     * @userdata4   OCC_NO_EXTENDED_RC
+                     * @devdesc     OCC recieved an invalid FFO frequency
+                     */
+                    l_err = createErrl(DATA_STORE_FREQ_DATA,
+                                       INVALID_INPUT_DATA,
+                                       OCC_NO_EXTENDED_RC,
+                                       ERRL_SEV_INFORMATIONAL,
+                                       NULL,
+                                       DEFAULT_TRACE_SIZE,
+                                       l_req_freq,
+                                       l_freq);
+                    commitErrl(&l_err);
+                }
+            }
+            l_table[OCC_MODE_FFO] = l_freq;
+            TRAC_INFO("FFO frequency = %d", l_freq);
         }
 
     }while(0);

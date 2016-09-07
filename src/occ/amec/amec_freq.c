@@ -162,20 +162,16 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
     /*------------------------------------------------------------------------*/
 
     // First set to Max Freq Range for this mode
-    if( VALID_MODE(i_mode) )
+    // if no mode set yet default to the full range
+    if(i_mode == OCC_MODE_NOCHANGE)
+    {
+      l_freq_min = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
+      l_freq_max = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
+    }
+    else if( VALID_MODE(i_mode) )
     {
       l_freq_min = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
       l_freq_max = G_sysConfigData.sys_mode_freq.table[i_mode];
-    }
-
-    // If SMS is set then TMGT wants us to pin to frequency which
-    // corresponds to input mode.  They will use this function
-    // when powering off and they wish to have us bring the system
-    // back up to real nominal frequency (without being impacted
-    // by power caps or thermal actuations)
-    if(CURRENT_SMS() == SMGR_SMS_STATIC_VF_CHANGE_REQ)
-    {
-        l_freq_min = l_freq_max;
     }
 
     g_amec->sys.fmin = l_freq_min;

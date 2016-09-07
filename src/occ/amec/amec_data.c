@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -116,21 +116,17 @@ errlHndl_t AMEC_data_write_fcurr(const OCC_MODE i_mode)
         g_amec->wof.f_vote = G_sysConfigData.sys_mode_freq.table[OCC_MODE_STURBO];
     }
 
-    // If we're active we need to load this new range into DVFS MIN/MAX
-    if(CURRENT_STATE() == OCC_STATE_ACTIVE)
-    {
-        // Use i_mode here since this function understands turbo
-        l_err = amec_set_freq_range(i_mode);
+    // Use i_mode here since this function understands turbo
+    l_err = amec_set_freq_range(i_mode);
 
-        if(l_err)
-        {
-            //break;
-        }
+    if(l_err)
+    {
+      //break;
     }
 
-    // If we are in OpenPower environment, load this new range into DVFS
-    // min/max for AMEC component
-    if(G_occ_interrupt_type != FSP_SUPPORTED_OCC)
+    // If we are in OpenPower environment with OPAL, load this new range into DVFS
+    // min/max for AMEC component.  With PowerVM min/max is set above in amec_set_freq_range() based on mode
+    if((G_occ_interrupt_type != FSP_SUPPORTED_OCC) && (G_sysConfigData.system_type.kvm))
     {
         g_amec->sys.fmax = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
         g_amec->sys.fmin = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];

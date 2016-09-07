@@ -294,7 +294,21 @@ ERRL_RC cmdh_poll_v10(cmdh_fsp_rsp_t * o_rsp_ptr)
     l_poll_rsp->config_data     = DATA_request_cnfgdata();
     // Byte 5
     l_poll_rsp->state           = CURRENT_STATE();
-    // Byte 6 - 7 reserved.
+
+    // Byte 6 System Mode and Byte 7 IPS Status
+    if( G_sysConfigData.system_type.kvm )  // OPAL No mode or IPS support
+    {
+        l_poll_rsp->mode = 0;
+        l_poll_rsp->ips_status.word = 0;
+    }
+    else  // PowerVM on BMC supports mode and IPS
+    {
+        l_poll_rsp->mode         = CURRENT_MODE();
+        l_poll_rsp->ips_status.word = 0;
+        l_poll_rsp->ips_status.ips_enabled = G_ips_config_data.iv_ipsEnabled;
+        l_poll_rsp->ips_status.ips_active = AMEC_mst_get_ips_active_status();
+    }
+
     // Byte 8:
     l_poll_rsp->errl_id         = getOldestErrlID();
     // Byte 9 - 12:
@@ -1523,7 +1537,7 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // Name:  SMGR_base_setmodestate_cmdh
 //
-// Description: TODO Add description
+// Description: Set Mode and State command handler
 //
 // End Function Specification
 errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
@@ -1578,6 +1592,15 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
             break;
         }
 
+        // Can't make FFO mode change if FFO frequency never set
+        if((l_cmd_ptr->occ_mode == OCC_MODE_FFO) && (!G_sysConfigData.sys_mode_freq.table[OCC_MODE_FFO]))
+        {
+            TRAC_ERR("FFO requested without FFO frequency set");
+            l_rc = ERRL_RC_INVALID_DATA;
+            break;
+        }
+
+
         // -------------------------------------------------
         // Act on State & Mode Changes
         // -------------------------------------------------
@@ -1586,16 +1609,7 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
         G_occ_external_req_mode  = l_cmd_ptr->occ_mode;
         G_occ_external_req_state = l_cmd_ptr->occ_state;
 
-        // TODO: Should we have a way to transition state even if
-        // master slave comm isn't working?
-        // if(){
-        //     G_occ_master_state = l_cmd_ptr->occ_state;
-        //     G_occ_master_mode  = l_cmd_ptr->occ_mode;
-        // }
-
         // We need to wait and see if all Slaves correctly make it to state/mode.
-        // TODO: Also, if all slaves can't go to this mode (based on their state),
-        // we need to return PRESENT_STATE_PROHIBITS and do nothing.
         do
         {
             uint8_t l_slv_idx = 0;

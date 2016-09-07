@@ -209,9 +209,25 @@ typedef struct __attribute__ ((packed)) cmdh_poll_resp_v10
     uint8_t   config_data;
     // BYTE  5: Current OCC State
     uint8_t   state;
-    // BYTE  6 - 7: Reserved
-    uint8_t   _reserved_6;
-    uint8_t   _reserved_7;
+    // BYTE  6: Current OCC Mode
+    uint8_t   mode;
+    // BYTE  7: Current Idle Power Saver Status
+    union
+    {
+        struct
+        {
+            uint8_t _reserved_7     : 1;
+            uint8_t _reserved_6     : 1;
+            uint8_t _reserved_5     : 1;
+            uint8_t _reserved_4     : 1;
+            uint8_t _reserved_3     : 1;
+            uint8_t _reserved_2     : 1;
+            uint8_t ips_active      : 1;
+            uint8_t ips_enabled     : 1;
+        };
+        uint8_t word;
+    } ips_status;
+
     // BYTE  8: Error Log ID
     uint8_t   errl_id;
     // BYTES  9 - 12: Error Log Start Address
