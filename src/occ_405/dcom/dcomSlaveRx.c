@@ -646,7 +646,8 @@ void task_dcom_wait_for_master( task_t *i_self)
                                       PBAX_GROUP,               //scope
                                       1,                        //queue
                                       l_pbaxid.node_id,         //node
-                                      l_pbaxid.chip_id);        //chip (or group) id
+                                      l_pbaxid.chip_id,         //chip (or group) id
+                                      0);                       //cnt (sends [cnt+1]*8 bytes)
             if(l_rc)
             {
                 // Log an error and request reset when pbax_target_create fails

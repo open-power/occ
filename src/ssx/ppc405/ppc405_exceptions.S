@@ -80,6 +80,12 @@
 __vectors:
 __vectors_0000:
 
+#ifndef SSX_NO_BOOT_VECTOR0
+        // FIXME: This is just a quick hack to get SSX running on simics -- grm
+        .global __ssx_boot
+        b __ssx_boot
+#endif
+
 ### ****************************************************************************
 ### .vectors_0100
 ### ****************************************************************************

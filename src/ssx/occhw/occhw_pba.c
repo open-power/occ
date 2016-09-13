@@ -318,7 +318,7 @@ pbax_configure(int master, int group, int chip, int group_mask)
 int
 pbax_target_create(PbaxTarget* target,
                    int type, int scope, int queue,
-                   int group, int chip_or_group)
+                   int group, int chip_or_group, int cnt)
 {
     if (SSX_ERROR_CHECK_API)
     {
@@ -336,6 +336,7 @@ pbax_target_create(PbaxTarget* target,
     target->target.fields.snd_reservation = (type == PBAX_BROADCAST);
     target->target.fields.snd_groupid = group;
     target->target.fields.snd_chipid = chip_or_group;
+    target->target.fields.snd_cnt = cnt;
 
     return 0;
 }
@@ -441,14 +442,13 @@ _pbax_send(PbaxTarget* target, uint64_t data, SsxInterval timeout)
 
     if (!rc)
     {
-        out32(PBA_XSNDTX, target->target.words.high_order);
+        out64(PBA_XSNDTX, target->target.value);
         out32(PBA_XSNDDAT + 4, data >> 32);
         out32(PBA_XSNDDAT, data & 0xffffffff);
     }
 
     return rc;
 }
-
 
 /// Use PBAX to send 64 bits to a target with a default timeout
 ///
@@ -494,15 +494,5 @@ pbax_send(PbaxTarget* target, uint64_t data)
 
     return rc;
 }
-
-
-
-
-
-
-
-
-
-
 
 

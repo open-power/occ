@@ -144,43 +144,25 @@ ocb_timer_setup(int timer,
                 int priority)
 {
     int rc;
-    tpc_hpr2_t l_hpr2;
 
-    do
-    {
-        //Read Hang Pulse Register 2 to get the log base 2 of the ocb clock divider -- grm
-// TEMP/TODO: Cannot do getscom from 405
-// TODO: Need to discuss this getscom and whether it is necessary.
-//        rc = getscom(TPC_HPR2, &l_hpr2.value);
+    //printk("ocb_timer_setup(%d, %d, %d, %p, %p, %d)\n",
+    //       timer, auto_reload, timeout_ns,
+    //       handler, arg, priority);
 
-        if(rc)
-        {
-            break;
-        }
-//TEMP/TODO: l_hpr2.fields.hang_pulse_reg is typically 9
-//        g_ocb_timer_divider = 1 << l_hpr2.fields.hang_pulse_reg;
-        g_ocb_timer_divider = 1 << 9;
+    ssx_irq_disable(OCCHW_IRQ_OCC_TIMER0 + timer);
 
-        //printk("ocb_timer_setup(%d, %d, %d, %p, %p, %d)\n",
-        //       timer, auto_reload, timeout_ns,
-        //       handler, arg, priority);
+    ssx_irq_setup(OCCHW_IRQ_OCC_TIMER0 + timer,
+                  SSX_IRQ_POLARITY_ACTIVE_HIGH,
+                  SSX_IRQ_TRIGGER_LEVEL_SENSITIVE);
 
-        ssx_irq_disable(OCCHW_IRQ_OCC_TIMER0 + timer);
+    ssx_irq_handler_set(OCCHW_IRQ_OCC_TIMER0 + timer,
+                        handler,
+                        arg,
+                        priority);
 
-        ssx_irq_setup(OCCHW_IRQ_OCC_TIMER0 + timer,
-                      SSX_IRQ_POLARITY_ACTIVE_HIGH,
-                      SSX_IRQ_TRIGGER_LEVEL_SENSITIVE);
+    rc = ocb_timer_reset(timer, auto_reload, timeout_ns);
 
-        ssx_irq_handler_set(OCCHW_IRQ_OCC_TIMER0 + timer,
-                            handler,
-                            arg,
-                            priority);
-
-        rc = ocb_timer_reset(timer, auto_reload, timeout_ns);
-
-        ssx_irq_enable(OCCHW_IRQ_OCC_TIMER0 + timer);
-    }
-    while(0);
+    ssx_irq_enable(OCCHW_IRQ_OCC_TIMER0 + timer);
 
     return rc;
 }

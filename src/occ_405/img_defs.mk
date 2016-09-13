@@ -205,7 +205,11 @@ GCC-DEFS += -DSSX_TRACE_HASH_PREFIX=$(SSX_TRACE_HASH_PREFIX)
 GCC-DEFS += -DSSX_USE_INIT_SECTION=$(SSX_USE_INIT_SECTION)
 GCC-DEFS += -DUSE_SSX_APP_CFG_H=1
 GCC-DEFS += -D__SSX__=1
-DEFS += $(GCC-DEFS) -DCONFIGURE_PTS_SLW=0
+
+# Do not use vector 0 for the branch instruction to __ssx_boot
+GCC-DEFS += -DSSX_NO_BOOT_VECTOR0=1
+
+DEFS += $(GCC-DEFS)
 
 ############################################################################
 

@@ -270,7 +270,8 @@ void dcom_initialize_pbax_queues(void)
                     PBAX_SYSTEM,                                    // scope TODO
                     0,                                              // queue
                     G_pbax_id.node_id,                              // node
-                    PBAX_BROADCAST_GROUP);                          // chip_or_group
+                    PBAX_BROADCAST_GROUP,                           // chip_or_group
+                    0);                                             // cnt (Sends [cnt+1]*8 bytes)
 
             if(l_rc != 0)
             {
