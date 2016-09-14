@@ -779,10 +779,15 @@ void Main_thread_routine(void *private)
     // All SPIVID inits are done by Hostboot, remove this section.
 
     //Initialize structures for collecting core data.
-    //It needs to run before RTLoop start as pore initialization needs to be
-    // done before task to collect core data starts.
+    //It needs to run before RTLoop starts, as gpe request initialization
+    //needs to be done before task to collect core data starts.
     proc_core_init();
     CHECKPOINT(PROC_CORE_INITIALIZED);
+
+    // Initialize structures for collecting nest dts data.
+    // Needs to run before RTL to initialize the gpe request
+    nest_dts_init();
+    CHECKPOINT(NEST_DTS_INITIALIZED);
 
     // Run slave OCC init on all OCCs. Master-only initialization will be
     // done after determining actual role. By default all OCCs are slave.

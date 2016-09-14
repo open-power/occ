@@ -74,6 +74,7 @@ INPUT ( amec_amester.o
         rtls_tables.o
         rtls.o
         scom.o
+        sensor_info.o
         sensor_query_list.o
         sensor_table.o
         sensor.o

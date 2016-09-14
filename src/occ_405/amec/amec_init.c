@@ -254,7 +254,7 @@ void amec_init_gamec_struct(void)
   /*  Code                                                                  */
   /*------------------------------------------------------------------------*/
 
-  // Defaul the frequency range to something safe
+  // Default the frequency range to something safe
   g_amec->sys.fmin = 2000;
   g_amec->sys.fmax = 2000;
   g_amec->sys.max_speed = 1000;

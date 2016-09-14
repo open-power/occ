@@ -458,6 +458,7 @@ typedef struct
   sensor_t temp4mspeak;
   vectorSensor_t temp4mspeak_vector;
   sensor_t util4ms;
+  sensor_t tempnest;
   vectorSensor_t util4ms_vector;
 
   // Memory Summary Sensors

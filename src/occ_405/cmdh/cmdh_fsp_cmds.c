@@ -1268,8 +1268,6 @@ errlHndl_t cmdh_amec_pass_through(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                   cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     errlHndl_t                      l_errlHndl    = NULL;
-/* TEMP -- NOT YET SUPPORTED (NEED AMEC) */
-#if 0
     IPMIMsg_t                       l_IPMImsg;
     uint8_t                         l_rc          = 0;
     uint16_t                        l_rsp_data_length = CMDH_FSP_RSP_DATA_SIZE;
@@ -1361,7 +1359,7 @@ errlHndl_t cmdh_amec_pass_through(const cmdh_fsp_cmd_t * i_cmd_ptr,
             l_err_resp_ptr->log_id = 0;
         }
     }
-#endif
+
     return l_errlHndl;
 }
 

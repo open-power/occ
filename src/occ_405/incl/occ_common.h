@@ -258,6 +258,7 @@ enum
     ROLES_INITIALIZED           = 0x04ff,
     SENSORS_INITIALIZED         = 0x05ff,
     PROC_CORE_INITIALIZED       = 0x06ff,
+    NEST_DTS_INITIALIZED        = 0x0700,
     CENTAUR_INITIALIZED         = 0x07ff,
     SLAVE_OCC_INITIALIZED       = 0x08ff,
     WATCHDOG_INITIALIZED        = 0x09ff,

@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: gpe_err.h $                                                   */
+/* $Source: src/gpe_err.h $                                               */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -45,5 +45,6 @@
 
 // Core Data Errors
 #define GPE_RC_GET_CORE_DATA_FAILED  0x60     // Failed to collect core data
+#define GPE_RC_GET_NEST_DTS_FAILED   0x61     // Failed to collect nest DTS temperatures
 
 #endif //_GPE_ERR_H

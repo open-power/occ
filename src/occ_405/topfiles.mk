@@ -80,6 +80,7 @@ TOP-C-SOURCES = amec/amec_analytics.c \
                 rtls/rtls_tables.c \
                 rtls/rtls.c \
                 scom.c \
+                sensor/sensor_info.c \
                 sensor/sensor_query_list.c \
                 sensor/sensor_table.c \
                 sensor/sensor.c \

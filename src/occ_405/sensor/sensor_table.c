@@ -315,6 +315,7 @@ const sensor_ptr_t G_amec_sensor_list[] =
   SENSOR_PTR( TEMP4MSP0,            &g_amec_sys.proc[0].temp4ms),
   SENSOR_PTR( TEMP4MSP0PEAK,        &g_amec_sys.proc[0].temp4mspeak),
   SENSOR_PTR( UTIL4MSP0,            &g_amec_sys.proc[0].util4ms),
+  SENSOR_PTR( TEMPNEST,             &g_amec_sys.proc[0].tempnest),
   SENSOR_PTR( VRFAN250USPROC,       &g_amec_sys.sys.vrfan250usproc),
   SENSOR_PTR( VRHOT250USPROC,       &g_amec_sys.sys.vrhot250usproc),
 
@@ -396,7 +397,8 @@ STATIC_ASSERT(   (MAX_AMEC_SENSORS < (sizeof(G_amec_sensor_list)/sizeof(sensor_p
 // Mini-Sensor Pointer Table
 // ----------------------
 //   - Indexed by GSID
-//   - Resident in initSection of SRAM, and will be deleted after sensor init
+//   - If an initSection is utilized, this will reside there and will be
+//     deleted after sensor init
 //   - Must contain every sensor in enum, or STATIC_ASSERT will give compile
 //     failure.
 //   - Pointers to mini-sensors can be NULL, but they must still be in array.
@@ -465,6 +467,7 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   MINI_SENSOR_PTR(      TEMP4MSP0,  &G_dcom_slv_outbox_tx.temp4msp0),
   MINI_SENSOR_PTR(  TEMP4MSP0PEAK,  &G_dcom_slv_outbox_tx.temp4msp0peak),
   MINI_SENSOR_PTR(      UTIL4MSP0,  &G_dcom_slv_outbox_tx.util4msp0),
+  MINI_SENSOR_PTR(       TEMPNEST,  NULL),
   MINI_SENSOR_PTR( VRFAN250USPROC,  &G_dcom_slv_outbox_tx.vrfan250usproc),
   MINI_SENSOR_PTR( VRHOT250USPROC,  NULL),
 

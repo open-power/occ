@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -35,12 +35,6 @@
 #include <occ_service_codes.h>    // sensor module ids
 #include <sensor.h>               // For Sensor defines
 #include <sensor_query_list.h>      // For args to command
-
-/*****************************************************************************/
-// C Source File Includes
-// Must be done to give access to the G_sensor_info sensor list
-/*****************************************************************************/
-#include "sensor_info.c"
 
 //*************************************************************************/
 // Externs
@@ -79,8 +73,6 @@
 // End Function Specification
 void printSensorInfo(uint16_t i_gsid)
 {
-/* TEMP -- NOT SUPPORTED (NEED AMEC/DCOM) */
-#if 0
     // Initialize variable j and k with NULL and then
     // point to sensor to avoid compilation error when SNSR_DEBUG is not
     // defined. j and k are only used with SNSR_DBG which is no-op statement
@@ -112,7 +104,6 @@ void printSensorInfo(uint16_t i_gsid)
              (uint32_t)k->mini_sensor,
              (NULL != j) ? *j : 0
     );
-#endif
 }
 
 // Function Specification
@@ -147,8 +138,7 @@ void printAllSensors(void)
 errlHndl_t querySensorList(const querySensorListArg_t * i_argPtr)
 {
     errlHndl_t l_err = NULL;
-/* TEMP -- NOT SUPPORTED ( NEED AMEC/DCOM ) */
-#if 0
+
     if (i_argPtr != NULL)
     {
         uint16_t            i_startGsid     = i_argPtr->i_startGsid;
@@ -276,6 +266,6 @@ errlHndl_t querySensorList(const querySensorListArg_t * i_argPtr)
                 0                             // UserData 2
               );
     }
-#endif
+
     return l_err;
 }

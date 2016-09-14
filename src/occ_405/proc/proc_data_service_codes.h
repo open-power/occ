@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -36,6 +36,8 @@ enum procModuleId
     PROC_GPST_INIT_FAILURE_MOD      = PROC_COMP_ID | 0x03,
     PROC_ENABLE_PSTATES_SMH_MOD     = PROC_COMP_ID | 0x04,
     PROC_PSTATE_KVM_SETUP_MOD       = PROC_COMP_ID | 0x05,
+    PROC_TASK_NEST_DTS_MOD          = PROC_COMP_ID | 0x06,
+    PROC_NEST_DTS_INIT_MOD          = PROC_COMP_ID | 0x07,
 };
 
 #endif /* #ifndef _PROC_DATA_SERVICE_CODES_H_ */

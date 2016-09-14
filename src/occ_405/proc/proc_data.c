@@ -36,6 +36,7 @@
 #include "state.h"
 #include "proc_data_control.h"
 #include "cmdh_fsp.h"
+#include "sensor.h"
 
 //Global array of core data buffers
 GPE_BUFFER(CoreData G_core_data[MAX_NUM_FW_CORES+NUM_CORE_DATA_DOUBLE_BUF+NUM_CORE_DATA_EMPTY_BUF]) = {{{0}}};
@@ -51,6 +52,12 @@ GPE_BUFFER(ipc_scom_op_t G_core_stat_scom_op);
 GPE_BUFFER(ipc_core_data_parms_t G_low_cores_data_parms);
 GPE_BUFFER(ipc_core_data_parms_t G_high_cores_data_parms);
 
+// IPC Gpe request structure for gathering nest dts temps
+GpeRequest G_nest_dts_gpe_req;
+
+// Global structure for nest dts temp collection
+GPE_BUFFER(ipc_nest_dts_parms_t G_nest_dts_parms);
+
 //We will have separate bulk core data structure for low and high cores.
 //Global low and high cores structures used for task data pointers.
 bulk_core_data_task_t G_low_cores = {
@@ -64,6 +71,9 @@ bulk_core_data_task_t G_high_cores = {
             CORE_MID_POINT,                     // High core to start with (current)
             MAX_NUM_FW_CORES - 1,               // High core to end with
             &G_core_data[MAX_NUM_FW_CORES+1] }; // Pointer to holding area for high coredata
+
+//Keeps track of if Nest DTS data has been collected in last 4ms
+bool G_nest_dts_data_valid = FALSE;
 
 //AMEC needs to know when data for a core has been collected.
 uint32_t G_updated_core_mask = 0;
@@ -292,10 +302,10 @@ void task_core_data( task_t * i_task )
 // End Function Specification
 void proc_core_init( void )
 {
-    errlHndl_t l_err = NULL;    // Error handler
-    int        l_rc = 0;        // Return code
-    const trace_descriptor_array_t *l_trace = NULL;  // Temporary trace descriptor
-    uint8_t i = 0;
+    errlHndl_t  l_err = NULL;    // Error handler
+    int         l_rc = 0;        // Return code
+    const trace_descriptor_array_t *l_trace = NULL; // Temporary trace descriptor
+    uint8_t     i = 0;
 
     // Setup the array of CoreData pointers
     for( i = 0; i < MAX_NUM_FW_CORES; i++ )
@@ -427,6 +437,170 @@ CoreData * proc_get_bulk_core_data_ptr( const uint8_t i_occ_core_id )
         //Core id outside the range
         TRAC_ERR("proc_get_bulk_core_data_ptr: Invalid OCC core id [0x%x]", i_occ_core_id);
         return( NULL );
+    }
+}
+
+// Function Specification
+//
+// Name: task_nest_dts
+//
+// Description: Collect nest DTS readings and save off the average.
+//
+// End Function Specification
+void task_nest_dts( task_t * i_task )
+{
+    errlHndl_t  l_err = NULL;  // Error handler
+    int         l_rc = 0;      // Return code
+    ipc_nest_dts_parms_t * l_parms = (ipc_nest_dts_parms_t*)(G_nest_dts_gpe_req.cmd_data);
+    uint16_t    l_avg = 0;
+    static bool L_scheduled = FALSE;
+    static bool L_idle_trace = FALSE;
+    static bool L_incomplete_trace = FALSE;
+
+    do
+    {
+        //First, check to see if the previous GPE request still running
+        //A request is considered idle if it is not attached to any of the
+        //asynchronous request queues
+        if( !(async_request_is_idle(&G_nest_dts_gpe_req.request)) )
+        {
+            //This should not happen unless there's a timing problem, trace once
+            if( !L_idle_trace )
+            {
+                INTR_TRAC_ERR("task_nest_dts: request is not idle");
+                L_idle_trace = TRUE;
+            }
+            break;
+        }
+
+        // Don't update the dts temp sensor until we've run at least once
+        if (L_scheduled)
+        {
+            // Check that the previous request has finished and an error did not occur
+            if ((ASYNC_REQUEST_STATE_COMPLETE == G_nest_dts_gpe_req.request.completion_state) &&
+                (0 == G_nest_dts_parms.error.error))
+            {
+                if (l_parms->data.sensor0.fields.valid &&
+                    l_parms->data.sensor1.fields.valid &&
+                    l_parms->data.sensor2.fields.valid)
+                {
+                    // Calculate the average of the 3 Nest DTS temps
+                    l_avg = l_parms->data.sensor0.fields.reading +
+                            l_parms->data.sensor1.fields.reading +
+                            l_parms->data.sensor2.fields.reading;
+                    l_avg = l_avg / 3;
+
+                    // Mark the data as valid and update sensor
+                    G_nest_dts_data_valid = TRUE;
+                    sensor_update(AMECSENSOR_PTR(TEMPNEST), l_avg);
+                }
+                else
+                {
+                    // Mark the data as invalid
+                    G_nest_dts_data_valid = FALSE;
+                }
+            }
+            else
+            {
+                // Async request not finished, mark data invalid
+                G_nest_dts_data_valid = FALSE;
+
+                // Trace only once
+                if (!L_incomplete_trace)
+                {
+                    INTR_TRAC_ERR("task_nest_dts: task did not complete in time or an error occurred [rc=0x%08X]",
+                                  G_nest_dts_parms.error.rc);
+                    L_incomplete_trace = TRUE;
+                }
+            }
+        }
+
+        // Schedule the nest DTS task
+        l_rc = gpe_request_schedule( &G_nest_dts_gpe_req );
+        if( l_rc != 0 )
+        {
+            // Error scheduling nest DTS task
+            INTR_TRAC_ERR("Failed to schedule nest DTS task [RC:0x%08X]", l_rc);
+
+            /*
+             * @errortype
+             * @moduleid    PROC_TASK_NEST_DTS_MOD
+             * @reasoncode  SSX_GENERIC_FAILURE
+             * @userdata1   gpe_request_schedule return code
+             * @userdata4   OCC_NO_EXTENDED_RC
+             * @devdesc     SSX IPC related failure
+             */
+            l_err = createErrl(
+                        PROC_TASK_NEST_DTS_MOD,             //modId
+                        SSX_GENERIC_FAILURE,                //reasoncode
+                        OCC_NO_EXTENDED_RC,                 //Extended reason code
+                        ERRL_SEV_PREDICTIVE,                //Severity
+                        NULL,                               //Trace Buf
+                        DEFAULT_TRACE_SIZE,                 //Trace Size
+                        l_rc,                               //userdata1
+                        0                                   //userdata2
+                    );
+
+            // commit error log
+            REQUEST_RESET(l_err);
+            break;
+        }
+        else
+        {
+            L_scheduled = TRUE;
+        }
+
+    } while(0);
+}
+
+// Function Specification
+//
+// Name: nest_dts_init
+//
+// Description: Setup the GpeRequest object for collecting nest DTS readings.
+//
+// End Function Specification
+void nest_dts_init(void)
+{
+    errlHndl_t l_err = NULL;    // Error handler
+    int        l_rc = 0;        // Return code
+
+    //Initializes the GpeRequest object for nest dts temp collection
+    l_rc = gpe_request_create(&G_nest_dts_gpe_req,             // GpeRequest for the task
+                              &G_async_gpe_queue0,             // Queue
+                              IPC_ST_GET_NEST_DTS_FUNCID,      // Function ID
+                              &G_nest_dts_parms,               // Task parameters
+                              SSX_WAIT_FOREVER,                // Timeout (none)
+                              NULL,                            // Callback
+                              NULL,                            // Callback arguments
+                              0 );                             // Options
+
+
+    if( l_rc )
+    {
+        // If we failed to create the GpeRequest then there is a serious problem.
+        MAIN_TRAC_ERR("nest_dts_init: Failure creating the nest dts GpeRequest. [RC=0x%08x]", l_rc );
+
+        /*
+         * @errortype
+         * @moduleid    PROC_NEST_DTS_INIT_MOD
+         * @reasoncode  SSX_GENERIC_FAILURE
+         * @userdata1   gpe_request_create return code
+         * @userdata4   ERC_NEST_DTS_GPE_REQUEST_CREATE_FAILURE
+         * @devdesc     Failure to create nest dts GpeRequest object
+         */
+        l_err = createErrl(
+                            PROC_NEST_DTS_INIT_MOD,                  //ModId
+                            SSX_GENERIC_FAILURE,                     //Reasoncode
+                            ERC_NEST_DTS_GPE_REQUEST_CREATE_FAILURE, //Extended reason code
+                            ERRL_SEV_PREDICTIVE,                     //Severity
+                            NULL,                                    //Trace Buf
+                            DEFAULT_TRACE_SIZE,                      //Trace Size
+                            l_rc,                                    //Userdata1
+                            0                                        //Userdata2
+        );
+
+        CHECKPOINT_FAIL_AND_HALT(l_err);
     }
 }
 

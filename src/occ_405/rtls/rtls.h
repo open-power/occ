@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -53,13 +53,14 @@ typedef enum {
     TASK_ID_DCOM_TX_OUTBX,
     TASK_ID_MISC_405_CHECKS,       // Miscellaneous checks to be done by 405
     TASK_ID_DCOM_PARSE_FW_MSG,
-    TASK_ID_AMEC_SLAVE,            // AMEC SMH tasks
-    TASK_ID_AMEC_MASTER,           // AMEC SMH tasks
-//  TASK_ID_CORE_DATA_CONTROL,
-//  TASK_ID_GPU_SM,                // GPU State Machine
-    TASK_ID_DIMM_SM,               // DIMM State Machine
-//  TASK_ID_MEM_DEADMAN,           // Memory deadman timer
+    TASK_ID_AMEC_SLAVE,             // AMEC SMH tasks
+    TASK_ID_AMEC_MASTER,            // AMEC SMH tasks
+//    TASK_ID_CORE_DATA_CONTROL,
+//    TASK_ID_GPU_SM,                 // GPU State Machine
+    TASK_ID_DIMM_SM,                // DIMM State Machine
+//    TASK_ID_MEM_DEADMAN,            // Memory deadman timer
     TASK_ID_MEMORY_CONTROL,        // Memory (centaur/dimm) control task
+    TASK_ID_NEST_DTS,
     TASK_END  // This must always be the last enum in this list,
               // so that TASK_END always equals the last task ID + 1.
 } task_id_t;

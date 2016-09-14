@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -106,6 +106,8 @@ extern uint32_t G_updated_core_mask;
 // External reference to empath error mask
 extern uint32_t G_empath_error_core_mask;
 
+extern bool G_nest_dts_data_valid;
+
 //Returns 0 if the specified core is not updated. Otherwise, returns none-zero.
 #define CORE_UPDATED(occ_core_id) \
          ((CORE0_PRESENT_MASK >> occ_core_id) & G_updated_core_mask)
@@ -123,6 +125,12 @@ void task_core_data( task_t * i_task );
 
 //Initialize structures for collecting core data.
 void proc_core_init( void ) INIT_SECTION;
+
+// Collect nest dts temperature sensors
+void task_nest_dts( task_t * i_task );
+
+// Initialize structures for collecting nest dts temps
+void nest_dts_init( void ) INIT_SECTION;
 
 //Returns a pointer to the most up-to-date bulk core data for the core
 //associated with the specified OCC core id.

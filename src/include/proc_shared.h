@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/include/proc_shared.h $                                */
+/* $Source: src/include/proc_shared.h $                                   */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -26,8 +26,9 @@
 #ifndef _PROC_SHARED_H
 #define _PROC_SHARED_H
 
-#include "gpe_export.h"
 #include "core_data.h"
+#include "nest_dts.h"
+#include "gpe_export.h"
 
 // Paramaters for gpe_get_core_data()
 
@@ -37,5 +38,11 @@ typedef struct ipc_core_data_parms
     CoreData*  data;
     uint32_t   core_num;
 } ipc_core_data_parms_t;
+
+typedef struct ipc_nest_dts_parms
+{
+    GpeErrorStruct  error;
+    NestDts_t       data;
+} ipc_nest_dts_parms_t;
 
 #endif // _PROC_SHARED_H

@@ -58,6 +58,7 @@ IPC_FUNCIDS_TABLE_START
         IPC_FUNC_ID(IPC_ST_GET_CORE_DATA_FUNCID)
         IPC_FUNC_ID(IPC_ST_SCOM_OPERATION)
         IPC_FUNC_ID(IPC_ST_GPE0_NOP)
+        IPC_FUNC_ID(IPC_ST_GET_NEST_DTS_FUNCID)
     IPC_FUNCIDS_ST_END(OCCHW_INST_ID_GPE0)
 
     //Functions that are only supported by GPE1 should be defined here

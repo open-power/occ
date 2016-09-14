@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/rtls/rtls_tables.c $                                  */
+/* $Source: src/occ_405/rtls/rtls_tables.c $                              */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -49,6 +49,8 @@
 
 #define FLAGS_LOW_CORES_DATA             RTL_FLAG_MSTR | RTL_FLAG_NOTMSTR | RTL_FLAG_OBS | RTL_FLAG_ACTIVE | RTL_FLAG_MSTR_READY | RTL_FLAG_NO_APSS | RTL_FLAG_RUN |                                       RTL_FLAG_APSS_NOT_INITD
 #define FLAGS_HIGH_CORES_DATA            RTL_FLAG_MSTR | RTL_FLAG_NOTMSTR | RTL_FLAG_OBS | RTL_FLAG_ACTIVE | RTL_FLAG_MSTR_READY | RTL_FLAG_NO_APSS | RTL_FLAG_RUN |                                       RTL_FLAG_APSS_NOT_INITD
+
+#define FLAGS_NEST_DTS                   RTL_FLAG_MSTR | RTL_FLAG_NOTMSTR | RTL_FLAG_OBS | RTL_FLAG_ACTIVE | RTL_FLAG_MSTR_READY | RTL_FLAG_NO_APSS | RTL_FLAG_RUN |                                       RTL_FLAG_APSS_NOT_INITD
 
 // Start out with memory tasks not running, then start during transition to observation in memory_init()
 #define FLAGS_MEMORY_DATA                RTL_FLAG_NONE
@@ -119,6 +121,7 @@ task_t G_task_table[TASK_END] = {
 // TEMP -- NOT YET IMPLEMENTED
 //  { FLAGS_MEM_DEADMAN,           task_mem_deadman,               NULL },  // TASK_ID_MEM_DEADMAN
     { FLAGS_MEMORY_CONTROL,       task_memory_control,             (void *) &G_memory_control_task },  // TASK_ID_MEMORY_CONTROL
+    { FLAGS_NEST_DTS,              task_nest_dts,                  NULL },
 };
 
 const uint8_t G_tick0_seq[] = {
@@ -184,6 +187,7 @@ const uint8_t G_tick2_seq[] = {
 
 const uint8_t G_tick3_seq[] = {
                                 TASK_ID_APSS_START,
+                                TASK_ID_NEST_DTS,
                                 //TASK_ID_GPU_SM,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_CORE_DATA_HIGH,
