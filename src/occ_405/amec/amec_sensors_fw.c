@@ -42,6 +42,8 @@
 #include "sensor_enum.h"
 #include "amec_service_codes.h"
 #include <amec_sensors_fw.h>
+#include "gpe_register_addresses.h"
+#include "gpe_firmware_registers.h"
 
 /******************************************************************************/
 /* Globals                                                                    */
@@ -124,13 +126,14 @@ void amec_update_fw_sensors(void)
     // Kick off GPE programs to track WorstCase time in GPE
     // and update the sensors.
     // ------------------------------------------------------
-    if( (NULL != G_fw_timing.gpe0_timing_request)
-        && (NULL != G_fw_timing.gpe1_timing_request) )
+    if( (NULL != G_fw_timing.gpe0_timing_request) &&
+        (NULL != G_fw_timing.gpe1_timing_request) )
     {
         //Check if both GPE engines were able to complete the last GPE job on
         //the queue within 1 tick.
         l_gpe0_idle = async_request_is_idle(&G_fw_timing.gpe0_timing_request->request);
         l_gpe1_idle = async_request_is_idle(&G_fw_timing.gpe1_timing_request->request);
+
         if(l_gpe0_idle && l_gpe1_idle)
         {
             //reset the consecutive trace count
@@ -138,8 +141,8 @@ void amec_update_fw_sensors(void)
 
             //Both GPE engines finished on time. Now check if they were
             //successful too.
-            if( async_request_completed(&(G_fw_timing.gpe0_timing_request->request))
-                && async_request_completed(&(G_fw_timing.gpe1_timing_request->request)) )
+            if( async_request_completed(&(G_fw_timing.gpe0_timing_request->request)) &&
+                async_request_completed(&(G_fw_timing.gpe1_timing_request->request)) )
             {
                 // GPEtickdur0 = duration of last tick's PORE-GPE0 duration
                 sensor_update( AMECSENSOR_PTR(GPEtickdur0), G_fw_timing.gpe_dur[0]);
@@ -162,15 +165,13 @@ void amec_update_fw_sensors(void)
             // Update Time used to measure GPE duration.
             G_fw_timing.rtl_start_gpe = G_fw_timing.rtl_start;
 
-// @TODO - TEMP - Old PORE SCHEDULE, needs to be replaced with GPE schedule code.
-/*
             // Schedule the GPE Routines that will run and update the worst
             // case timings (via callback) after they complete.  These GPE
             // routines are the last GPE routines added to the queue
             // during the RTL tick.
-            rc  = pore_flex_schedule(G_fw_timing.gpe0_timing_request);
-            rc2 = pore_flex_schedule(G_fw_timing.gpe1_timing_request);
-*/
+            rc  = gpe_request_schedule(G_fw_timing.gpe0_timing_request);
+            rc2 = gpe_request_schedule(G_fw_timing.gpe1_timing_request);
+
             if(rc || rc2)
             {
                 /* @
@@ -199,45 +200,38 @@ void amec_update_fw_sensors(void)
         }
         else if(L_consec_trace_count < MAX_CONSEC_TRACE)
         {
-// @TODO: TEMP - PORE GPE Codes, needs to reflect PPE architecture.
-/*
-            uint64_t l_dbg0;
-            uint64_t l_dbg1;
-            uint64_t l_status;
+            gpe_gpenxiramdbg_t xsr_sprg0;
+            gpe_gpenxiramedr_t ir_edr;
+            gpe_gpenxidbgpro_t iar_xsr;
 
             // Reset will eventually be requested due to not having power measurement
             // data after X ticks, but add some additional FFDC to the trace that
             // will tell us what GPE job is currently executing.
             if(!l_gpe0_idle)
             {
-                l_dbg1 = in64(PORE_GPE0_DBG1);
-                l_dbg0 = in64(PORE_GPE0_DBG0);
-                l_status = in64(PORE_GPE0_STATUS);
-                TRAC_ERR("GPE0 programs did not complete within one tick. DBG0[0x%08x%08x] DBG1[0x%08x%08x]",
-                         (uint32_t)(l_dbg0 >> 32),
-                         (uint32_t)(l_dbg0 & 0x00000000ffffffffull),
-                         (uint32_t)(l_dbg1 >> 32),
-                         (uint32_t)(l_dbg1 & 0x00000000ffffffffull));
-                TRAC_ERR("Additional GPE0 debug data: STATUS[0x%08x%08x]",
-                         (uint32_t)(l_status >> 32),
-                         (uint32_t)(l_status & 0x00000000ffffffffull));
+                xsr_sprg0.value  = in64(GPE_GPE0XIRAMDBG);
+                ir_edr.value     = in64(GPE_GPE0XIRAMEDR);
+                iar_xsr.value    = in64(GPE_GPE0XIDBGPRO);
+                TRAC_ERR("GPE0 programs did not complete within one tick. "
+                         "XSR[0x%08x]  IAR[0x%08x] IR[0x%08x] EDR[0x%08x]",
+                         iar_xsr.fields.xsr, iar_xsr.fields.iar,
+                         ir_edr.fields.ir, ir_edr.fields.edr);
+                TRAC_ERR("Additional GPE0 debug data: RAM_XSR[0x%08x] RAM_SPRG0[0x%08x]",
+                         xsr_sprg0.fields.xsr, xsr_sprg0.fields.sprg0);
             }
             if(!l_gpe1_idle)
             {
-                l_dbg1 = in64(PORE_GPE1_DBG1);
-                l_dbg0 = in64(PORE_GPE1_DBG0);
-                l_status = in64(PORE_GPE1_STATUS);
-                TRAC_ERR("GPE1 programs did not complete within one tick. DBG0[0x%08x%08x] DBG1[0x%08x%08x]",
-                         (uint32_t)(l_dbg0 >> 32),
-                         (uint32_t)(l_dbg0 & 0x00000000ffffffffull),
-                         (uint32_t)(l_dbg1 >> 32),
-                         (uint32_t)(l_dbg1 & 0x00000000ffffffffull));
-                TRAC_ERR("Additional GPE1 debug data: STATUS[0x%08x%08x]",
-                         (uint32_t)(l_status >> 32),
-                         (uint32_t)(l_status & 0x00000000ffffffffull));
+                xsr_sprg0.value  = in64(GPE_GPE1XIRAMDBG);
+                ir_edr.value     = in64(GPE_GPE1XIRAMEDR);
+                iar_xsr.value    = in64(GPE_GPE1XIDBGPRO);
+                TRAC_ERR("GPE1 programs did not complete within one tick. "
+                         "XSR[0x%08x]  IAR[0x%08x] IR[0x%08x] EDR[0x%08x]",
+                         iar_xsr.fields.xsr, iar_xsr.fields.iar,
+                         ir_edr.fields.ir, ir_edr.fields.edr);
+                TRAC_ERR("Additional GPE1 debug data: RAM_XSR[0x%08x] RAM_SPRG0[0x%08x]",
+                         xsr_sprg0.fields.xsr, xsr_sprg0.fields.sprg0);
             }
             L_consec_trace_count++;
-*/
         }
     }
 }

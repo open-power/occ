@@ -36,6 +36,8 @@ void gpe_get_core_data(ipc_msg_t* cmd, void* arg);
 
 void ipc_scom_operation(ipc_msg_t* cmd, void* arg);
 
+void gpe0_nop(ipc_msg_t* cmd, void* arg);
+
 extern ipc_msgq_t G_gpe0_test_msgq0;
 
 // Function table for multi target (common) functions
@@ -66,7 +68,7 @@ IPC_HANDLER(apss_continue_pwr_meas_read, 0)  // 4 - IPC_ST_APSS_CONTINUE_PWR_MEA
 IPC_HANDLER(apss_complete_pwr_meas_read, 0)  // 5 - IPC_ST_APSS_COMPLETE_PWR_MEAS_READ_FUNCID
 IPC_HANDLER(gpe_get_core_data, 0)            // 6 - IPC_ST_GET_CORE_DATA_FUNCID
 IPC_HANDLER(ipc_scom_operation, 0)           // 7 - IPC_ST_SCOM_OPERATION
-IPC_HANDLER_DEFAULT                          // 8
+IPC_HANDLER(gpe0_nop, 0)                     // 8 - IPC_ST_GPE0_NOP
 IPC_HANDLER_DEFAULT                          // 9
 IPC_HANDLER_DEFAULT                          // 10
 IPC_HANDLER_DEFAULT                          // 11

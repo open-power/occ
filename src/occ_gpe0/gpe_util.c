@@ -216,3 +216,33 @@ void ipc_scom_operation(ipc_msg_t* cmd, void* arg)
         pk_halt();
     }
 }
+
+/*
+ * Function Specification:
+ *
+ * Name: gpe0_nop
+ *
+ * Description: a function that does nothing. Called to measure IPC timing
+ *
+ * Inputs:      none
+ *
+ * return:      none
+ *
+ * End Function Specification
+ */
+
+void gpe0_nop(ipc_msg_t* cmd, void* arg)
+{
+    int rc;
+    ipc_async_cmd_t *async_cmd = (ipc_async_cmd_t*)cmd;
+    nop_t *args = (nop_t*)async_cmd->cmd_data;
+
+    // send back a response, IPC success even if ffdc/rc are non zeros
+    rc = ipc_send_rsp(cmd, IPC_RC_SUCCESS);
+    if(rc)
+    {
+        PK_TRACE("gpe0_nop: Failed to send response back. Halting GPE0", rc);
+        gpe_set_ffdc(&(args->error), 0x00, GPE_RC_IPC_SEND_FAILED, rc);
+        pk_halt();
+    }
+}

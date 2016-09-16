@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/gpe_export.h $                                            */
+/* $Source: src/occ_gpe1/nop.c $                                          */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -23,37 +23,39 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-#ifndef _GPE_EXPORT_H
-#define _GPE_EXPORT_H
+#include "pk.h"
+#include "ppe42_scom.h"
+#include "gpe_export.h"
+#include "ipc_api.h"
+#include "ipc_async_cmd.h"
+#include "gpe_util.h"
 
-#include "gpe_err.h"
+/*
+ * Function Specification:
+ *
+ * Name: gpe1_nop
+ *
+ * Description: a function that does nothing. Called to measure IPC timing
+ *
+ * Inputs:      none
+ *
+ * return:      none
+ *
+ * End Function Specification
+ */
 
-// GPE Error structure (common to both GPEs)
-typedef struct {
-     union
-     {
-       struct {
-         uint32_t rc;
-         uint32_t addr;
-       };
-       uint64_t error;
-     };
-     uint64_t ffdc;
-} GpeErrorStruct;
-
-// Arguments for doing a SCOM from GPE0
-typedef struct ipc_scom_op
+void gpe1_nop(ipc_msg_t* cmd, void* arg)
 {
-    GpeErrorStruct  error;  // Error of SCOM operation
-    uint32_t        addr;   // Register address
-    uint64_t        data;   // Data for read/write
-    uint32_t        size;   // Size of data buffer
-    uint8_t         read;   // Read (1) or write (0)
-} ipc_scom_op_t;
+    int rc;
+    ipc_async_cmd_t *async_cmd = (ipc_async_cmd_t*)cmd;
+    nop_t *args = (nop_t*)async_cmd->cmd_data;
 
-typedef struct nop
-{
-    GpeErrorStruct  error;  // Error of operation
-} nop_t;
-
-#endif //_GPE_EXPORT_H
+    // send back a response, IPC success even if ffdc/rc are non zeros
+    rc = ipc_send_rsp(cmd, IPC_RC_SUCCESS);
+    if(rc)
+    {
+        PK_TRACE("gpe1_nop: Failed to send response back. Halting GPE1", rc);
+        gpe_set_ffdc(&(args->error), 0x00, GPE_RC_IPC_SEND_FAILED, rc);
+        pk_halt();
+    }
+}

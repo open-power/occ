@@ -142,10 +142,10 @@ void memory_nimbus_init()
         // Initializes GPE request for DIMM temperature reading IPC Task,
         DIMM_DBG("memory_nimbus_init: Creating request GPE1 DIMM data IPC task");
         rc_dimm_sm = gpe_request_create(
-            &G_dimm_sm_request,
+            &G_dimm_sm_request,              // gpe_req for the task
             &G_async_gpe_queue1,             // queue
-            IPC_ST_DIMM_SM_FUNCID,           // entry_point
-            &G_dimm_sm_args,                 // entry_point arg
+            IPC_ST_DIMM_SM_FUNCID,           // Function ID
+            &G_dimm_sm_args,                 // parm for the task
             SSX_WAIT_FOREVER,                // no timeout
             NULL,                            // callback
             NULL,                            // callback arg

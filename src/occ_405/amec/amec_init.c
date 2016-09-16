@@ -357,41 +357,37 @@ void amec_init_gamec_struct(void)
 // End Function Specification
 void amec_slave_init()
 {
-// @TODO - TEMP: not ready yet
-/*
   errlHndl_t l_err = NULL;   // Error handler
   int         rc   = 0;      // Return code
   int         rc2  = 0;      // Return code
-*/
 
   // Set the GPE Request Pointers to NULL in case the create fails.
   G_fw_timing.gpe0_timing_request = NULL;
   G_fw_timing.gpe1_timing_request = NULL;
 
-// @TODO - TEMP: not ready yet
-#if 0
-
   // Initializes the GPE routine that will be used to measure the worst case
   // timings for GPE0
-  rc  = pore_flex_create( &G_gpe_nop_request[0],        //gpe_req for the task
-                          &G_pore_gpe0_queue,           //queue
-                          (void *) GPE_pore_nop,        //entry point
-                          (uint32_t)  NULL,             //parm for the task
-                          SSX_WAIT_FOREVER,             //no timeout
-                          (AsyncRequestCallback) amec_slv_update_gpe_sensors,    //callback
-                          (void *) GPE_ENGINE_0,        //callback argument
-                          ASYNC_CALLBACK_IMMEDIATE );   //options
+  rc  = gpe_request_create(&G_gpe_nop_request[0],        //gpe_req for the task
+                           &G_async_gpe_queue0,          //queue
+                           IPC_ST_GPE0_NOP,              //Function ID
+                           NULL,                         //parm for the task
+                           SSX_WAIT_FOREVER,             //no timeout
+                           (AsyncRequestCallback)
+                            amec_slv_update_gpe_sensors, //callback
+                           (void *) GPE_ENGINE_0,        //callback argument
+                           ASYNC_CALLBACK_IMMEDIATE );   //options
 
   // Initializes the GPE routine that will be used to measure the worst case
   // timings for GPE1
-  rc2 = pore_flex_create( &G_gpe_nop_request[1],        //gpe_req for the task
-                          &G_pore_gpe1_queue,           //queue
-                          (void *)GPE_pore_nop,         //entry point
-                          (uint32_t) NULL,              //parm for the task
-                          SSX_WAIT_FOREVER,             //no timeout
-                          (AsyncRequestCallback) amec_slv_update_gpe_sensors,    //callback
-                          (void *) GPE_ENGINE_1,        //callback argument
-                          ASYNC_CALLBACK_IMMEDIATE );   //options
+  rc2 = gpe_request_create( &G_gpe_nop_request[1],       //gpe_req for the task
+                          &G_async_gpe_queue1,           //queue
+                          IPC_ST_GPE1_NOP,               //Function ID
+                          NULL,                          //parm for the task
+                          SSX_WAIT_FOREVER,              //no timeout
+                          (AsyncRequestCallback)
+                           amec_slv_update_gpe_sensors,  //callback
+                          (void *) GPE_ENGINE_1,         //callback argument
+                          ASYNC_CALLBACK_IMMEDIATE );    //options
 
   // If we couldn't create the poreFlex objects, there must be a major problem
   // so we will log an error and halt OCC.
@@ -431,8 +427,6 @@ void amec_slave_init()
     G_fw_timing.gpe0_timing_request = &G_gpe_nop_request[0];
     G_fw_timing.gpe1_timing_request = &G_gpe_nop_request[1];
   }
-
-#endif // #if 0 - @TODO - TEMP - Not ready yet
 
   // Initialize Vector Sensors for AMEC use
   amec_init_vector_sensors();
