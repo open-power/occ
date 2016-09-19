@@ -112,7 +112,11 @@ bool check_for_i2c_interrupt(const uint8_t i_engine)
 
     if (!l_interruptTriggered)
     {
-        DIMM_DBG("check_for_i2c_interrupt: no interrupt for engine 0x%02X", i_engine);
+        DIMM_DBG("check_for_i2c_interrupt: no interrupt for engine 0x%02X (tick=%d)", i_engine, DIMM_TICK);
+    }
+    else
+    {
+        DIMM_DBG("check_for_i2c_interrupt: got interrupt for engine 0x%02X (tick=%d)", i_engine, DIMM_TICK);
     }
 
     return l_interruptTriggered;
@@ -147,7 +151,7 @@ void memory_nimbus_init()
             NULL,                            // callback arg
             ASYNC_CALLBACK_IMMEDIATE);       // options
         if(rc_dimm_sm)
-        {
+    {
             TRAC_ERR("memory_control_init: Failed to initialize dimm state"
                      " machine IPC task [rc_dimm_sm=0x%x]",
                      rc_dimm_sm);
@@ -175,21 +179,21 @@ void memory_nimbus_init()
             rc_dimm = rc_dimm_sm;
             break;
         }
-    }
+            }
     while(0);
 
 
     if(rc_dimm) // Either dimm sm or dimm control gpe request creation failed.
-    {
+            {
         /* @
-         * @errortype
+                 * @errortype
          * @moduleid    DIMM_MID_NIMBUS_INIT
          * @reasoncode  SSX_GENERIC_FAILURE
          * @userdata1   l_rc_gpe  - Return code of failing function
-         * @userdata2   0
+                 * @userdata2   0
          * @userdata4   ERC_CENTAUR_GPE_REQUEST_CREATE_FAILURE
          * @devdesc     Failed to initialize GPE1 DIMM IPC job
-         */
+                 */
         l_err = createErrl(
             DIMM_MID_NIMBUS_INIT,                       //modId
             SSX_GENERIC_FAILURE,                        //reasoncode
@@ -320,19 +324,23 @@ void mark_dimm_failed()
 
 
 // Schedule a GPE request for the specified DIMM state
-bool schedule_dimm_req(uint8_t i_state)
+bool schedule_dimm_req(uint8_t i_state, dimm_sm_args_t i_new_args)
 {
     bool l_scheduled = false;
     bool scheduleRequest = true;
 
-    DIMM_DBG("dimm_sm called with state 0x%02X (tick=%d)", i_state, DIMM_TICK);
+    DIMM_DBG("schedule_dimm_req called with state 0x%02X (tick=%d)", i_state, DIMM_TICK);
 
     if (!async_request_is_idle(&G_dimm_sm_request.request))
     {
-        INTR_TRAC_ERR("dimm_sm: request is not idle.");
+        INTR_TRAC_ERR("schedule_dimm_req: request not idle when scheduling 0x%02X (tick=%d) (prior state 0x%02X / DIMM%04X)",
+                      i_state, DIMM_TICK, G_dimm_sm_args.state, DIMM_AND_PORT);
     }
     else
     {
+        DIMM_DBG("schedule_dimm_req: scheduling 0x%02X (tick=%d) (prior state 0x%02X / DIMM%04X)",
+                 i_state, DIMM_TICK, G_dimm_sm_args.state, DIMM_AND_PORT);
+        G_dimm_sm_args = i_new_args;
         switch(i_state)
         {
             // Init
@@ -355,7 +363,7 @@ bool schedule_dimm_req(uint8_t i_state)
                 break;
 
             default:
-                INTR_TRAC_ERR("dimm_sm: Invalid state (0x%02X)", i_state);
+                INTR_TRAC_ERR("schedule_dimm_req: Invalid state (0x%02X)", i_state);
                 errlHndl_t err = NULL;
                 /*
                  * @errortype
@@ -385,7 +393,7 @@ bool schedule_dimm_req(uint8_t i_state)
             G_dimm_sm_args.error.error = 0;
             G_dimm_sm_args.state = i_state;
 
-            DIMM_DBG("dimm_sm: Scheduling GPE1 DIMM I2C state 0x%02X (tick %d)", i_state, DIMM_TICK);
+            DIMM_DBG("schedule_dimm_req: Scheduling GPE1 DIMM I2C state 0x%02X (tick %d)", i_state, DIMM_TICK);
             int l_rc = gpe_request_schedule(&G_dimm_sm_request);
             if (0 == l_rc)
             {
@@ -394,7 +402,7 @@ bool schedule_dimm_req(uint8_t i_state)
             else
             {
                 errlHndl_t l_err = NULL;
-                INTR_TRAC_ERR("dimm_sm: schedule failed w/rc=0x%08X (%d us)",
+                INTR_TRAC_ERR("schedule_dimm_req: schedule failed w/rc=0x%08X (%d us)",
                               l_rc, (int) ((ssx_timebase_get())/(SSX_TIMEBASE_FREQUENCY_HZ/1000000)));
                 /*
                  * @errortype
@@ -402,7 +410,7 @@ bool schedule_dimm_req(uint8_t i_state)
                  * @reasoncode  SSX_GENERIC_FAILURE
                  * @userdata1   GPE shedule returned rc code
                  * @userdata2   state
-                 * @devdesc     dimm_sm schedule failed
+                 * @devdesc     dimm_req schedule failed
                  */
                 l_err = createErrl(DIMM_MID_DIMM_SM,
                                    SSX_GENERIC_FAILURE,
@@ -451,14 +459,15 @@ bool check_for_i2c_failure()
 uint8_t dimm_reset_sm()
 {
     uint8_t nextState = G_dimm_state;
+    static dimm_sm_args_t L_new_dimm_args = {{{{0}}}};
 
     switch (G_dimm_state)
     {
         case DIMM_STATE_RESET_MASTER:
             if (DIMM_TICK == 0)
             {
-                G_dimm_sm_args.i2cEngine = G_sysConfigData.dimm_i2c_engine;
-                if (schedule_dimm_req(DIMM_STATE_RESET_MASTER))
+                L_new_dimm_args.i2cEngine = G_sysConfigData.dimm_i2c_engine;
+                if (schedule_dimm_req(DIMM_STATE_RESET_MASTER, L_new_dimm_args))
                 {
                     nextState = DIMM_STATE_RESET_SLAVE_P0;
                 }
@@ -467,8 +476,8 @@ uint8_t dimm_reset_sm()
             break;
 
         case DIMM_STATE_RESET_SLAVE_P0:
-            G_dimm_sm_args.i2cPort = 0;
-            if (schedule_dimm_req(DIMM_STATE_RESET_SLAVE_P0))
+            L_new_dimm_args.i2cPort = 0;
+            if (schedule_dimm_req(DIMM_STATE_RESET_SLAVE_P0, L_new_dimm_args))
             {
                 nextState = DIMM_STATE_RESET_SLAVE_P0_WAIT;
             }
@@ -481,7 +490,7 @@ uint8_t dimm_reset_sm()
             break;
 
         case DIMM_STATE_RESET_SLAVE_P0_COMPLETE:
-            if (schedule_dimm_req(DIMM_STATE_RESET_SLAVE_P0_COMPLETE))
+            if (schedule_dimm_req(DIMM_STATE_RESET_SLAVE_P0_COMPLETE, L_new_dimm_args))
             {
                 if (G_maxDimmPorts > 1)
                 {
@@ -497,8 +506,8 @@ uint8_t dimm_reset_sm()
             break;
 
         case DIMM_STATE_RESET_SLAVE_P1:
-            G_dimm_sm_args.i2cPort = 1;
-            if (schedule_dimm_req(DIMM_STATE_RESET_SLAVE_P1))
+            L_new_dimm_args.i2cPort = 1;
+            if (schedule_dimm_req(DIMM_STATE_RESET_SLAVE_P1, L_new_dimm_args))
             {
                 nextState = DIMM_STATE_RESET_SLAVE_P1_WAIT;
             }
@@ -510,7 +519,7 @@ uint8_t dimm_reset_sm()
             break;
 
         case DIMM_STATE_RESET_SLAVE_P1_COMPLETE:
-            if (schedule_dimm_req(DIMM_STATE_RESET_SLAVE_P1_COMPLETE))
+            if (schedule_dimm_req(DIMM_STATE_RESET_SLAVE_P1_COMPLETE, L_new_dimm_args))
             {
                 nextState = DIMM_STATE_INIT;
                 DIMM_DBG("dimm_reset_sm: I2C reset completed");
@@ -623,8 +632,8 @@ void SIMULATE_HOST()
 // End Function Specification
 void process_dimm_temp()
 {
-    const uint8_t port  = G_dimm_sm_args.i2cPort;
-    const uint8_t dimm  = G_dimm_sm_args.dimm;
+    const uint8_t port = G_dimm_sm_args.i2cPort;
+    const uint8_t dimm = G_dimm_sm_args.dimm;
     uint8_t l_dimm_temp = G_dimm_sm_args.temp;
 
 #define MIN_VALID_DIMM_TEMP 1
@@ -782,14 +791,16 @@ void task_dimm_sm(struct task *i_self)
                 }
 
                 uint8_t nextState = G_dimm_state;
+                static dimm_sm_args_t L_new_dimm_args = {{{{0}}}};
+
 
                 if (G_dimm_state == DIMM_STATE_INIT)
                 {
                     // Setup I2C Interrupt Mask Register
                     DIMM_DBG("DIMM_STATE_INIT: (I2C Engine 0x%02X, Memory Type 0x%02X)",
                              engine, G_sysConfigData.mem_type);
-                    G_dimm_sm_args.i2cEngine = engine;
-                    if (schedule_dimm_req(DIMM_STATE_INIT))
+                    L_new_dimm_args.i2cEngine = engine;
+                    if (schedule_dimm_req(DIMM_STATE_INIT, L_new_dimm_args))
                     {
                         nextState = DIMM_STATE_WRITE_MODE;
                     }
@@ -906,12 +917,12 @@ void task_dimm_sm(struct task *i_self)
                                         if (NIMBUS_DIMM_PRESENT(L_dimmPort,L_dimmIndex) &&
                                             (G_dimm[L_dimmPort][L_dimmIndex].disabled == false))
                                         {
-                                            G_dimm_sm_args.i2cPort = L_dimmPort;
-                                            G_dimm_sm_args.dimm = L_dimmIndex;
-                                            DIMM_DBG("task_dimm_sm: Starting collection for DIMM%04X at tick %d",
-                                                     DIMM_AND_PORT, DIMM_TICK);
-                                            if (schedule_dimm_req(DIMM_STATE_WRITE_MODE))
+                                            L_new_dimm_args.i2cPort = L_dimmPort;
+                                            L_new_dimm_args.dimm = L_dimmIndex;
+                                            if (schedule_dimm_req(DIMM_STATE_WRITE_MODE, L_new_dimm_args))
                                             {
+                                                DIMM_DBG("task_dimm_sm: Collection started for DIMM%04X at tick %d",
+                                                         DIMM_AND_PORT, DIMM_TICK);
                                                 nextState = DIMM_STATE_WRITE_ADDR;
                                             }
                                         }
@@ -926,9 +937,9 @@ void task_dimm_sm(struct task *i_self)
                                 case DIMM_STATE_WRITE_ADDR:
                                     if (intTriggered || (L_notReadyCount > MAX_TICK_COUNT_WAIT))
                                     {
-                                        G_dimm_sm_args.dimm = L_dimmIndex;
-                                        G_dimm_sm_args.i2cAddr = get_dimm_addr(L_dimmIndex);
-                                        if (schedule_dimm_req(DIMM_STATE_WRITE_ADDR))
+                                        L_new_dimm_args.dimm = L_dimmIndex;
+                                        L_new_dimm_args.i2cAddr = get_dimm_addr(L_dimmIndex);
+                                        if (schedule_dimm_req(DIMM_STATE_WRITE_ADDR, L_new_dimm_args))
                                         {
                                             nextState = DIMM_STATE_INITIATE_READ;
                                             L_readAttempt = 0;
@@ -940,8 +951,8 @@ void task_dimm_sm(struct task *i_self)
                                 case DIMM_STATE_INITIATE_READ:
                                     if (intTriggered || (L_notReadyCount > MAX_TICK_COUNT_WAIT))
                                     {
-                                        G_dimm_sm_args.dimm = L_dimmIndex;
-                                        if (schedule_dimm_req(DIMM_STATE_INITIATE_READ))
+                                        L_new_dimm_args.dimm = L_dimmIndex;
+                                        if (schedule_dimm_req(DIMM_STATE_INITIATE_READ, L_new_dimm_args))
                                         {
                                             nextState = DIMM_STATE_READ_TEMP;
                                         }
@@ -951,7 +962,7 @@ void task_dimm_sm(struct task *i_self)
                                 case DIMM_STATE_READ_TEMP:
                                     if (intTriggered || (L_notReadyCount > MAX_TICK_COUNT_WAIT))
                                     {
-                                        if (schedule_dimm_req(DIMM_STATE_READ_TEMP))
+                                        if (schedule_dimm_req(DIMM_STATE_READ_TEMP, L_new_dimm_args))
                                         {
                                             L_readIssued = true;
                                             nextState = DIMM_STATE_WRITE_MODE;
