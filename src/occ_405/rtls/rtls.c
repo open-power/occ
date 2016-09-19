@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -176,9 +176,9 @@ bool rtl_task_is_runnable(const task_id_t i_task_id)
 
     if ( i_task_id < TASK_END )
     {
-        if ( G_task_table[i_task_id].flags & RTL_FLAG_RUN )
+        if ( (G_task_table[i_task_id].flags & G_run_mask) == G_run_mask )
         {
-            // Yes, the task CAN run
+            // Yes, the task CAN run. task's flags match the global run mask
             task_can_run = TRUE;
         }
     }

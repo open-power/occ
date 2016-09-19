@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -65,6 +65,7 @@ enum occAmecModuleId
     AMEC_HEALTH_CHECK_PROC_TIMEOUT   =    AMEC_COMP_ID | 0x14,
     AMEC_HEALTH_CHECK_PROC_VRHOT     =    AMEC_COMP_ID | 0x15,
     AMEC_CALC_DTS_SENSORS            =    AMEC_COMP_ID | 0x16,
+    AMEC_SET_FREQ_RANGE              =    AMEC_COMP_ID | 0x17,
 };
 
 /*----------------------------------------------------------------------------*/

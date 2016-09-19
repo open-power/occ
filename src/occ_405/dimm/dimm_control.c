@@ -111,7 +111,6 @@ bool dimm_control(uint8_t mc, uint8_t port)
 //
 // End Function Specification
 
-#define DIMM_TRACE_THROTTLE_DELAY 8
 void dimm_update_nlimits(uint8_t mc, uint8_t port)
 {
     /*------------------------------------------------------------------------*/
@@ -123,6 +122,10 @@ void dimm_update_nlimits(uint8_t mc, uint8_t port)
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
+    if (L_trace_throttle_count == 0)
+    {
+        L_trace_throttle_count = G_configured_mbas;
+    }
 
     do
     {
@@ -138,12 +141,18 @@ void dimm_update_nlimits(uint8_t mc, uint8_t port)
             //Minimum N value is not state dependent
             l_active_limits->min_n_per_mba = l_state_limits->min_n_per_mba;
 
-            if(CURRENT_MODE() == OCC_MODE_NOMINAL)
+            //Power Capping memory?
+            if(g_amec->pcap.active_mem_level == 1)
+            {
+                l_port_dimm_maxn = l_state_limits->pcap_n_per_chip;
+                l_slot_dimm_maxn = l_state_limits->pcap_n_per_mba;
+            }
+            else if(CURRENT_MODE() == OCC_MODE_NOMINAL)
             {
                 l_port_dimm_maxn = l_state_limits->nom_n_per_chip;
                 l_slot_dimm_maxn = l_state_limits->nom_n_per_mba;
             }
-            else //DPS, TURBO, FFO, and SPS modes will use these settings
+            else //all other modes will use turbo settings
             {
                 l_port_dimm_maxn = l_state_limits->turbo_n_per_chip;
                 l_slot_dimm_maxn = l_state_limits->turbo_n_per_mba;
@@ -156,25 +165,23 @@ void dimm_update_nlimits(uint8_t mc, uint8_t port)
             {
                 l_active_limits->max_n_per_mba = l_slot_dimm_maxn;
 
-                //Don't repeatedly trace same slot changing, just once
-                if(!L_trace_throttle_count)
+                //Don't trace all MCAs changing, just trace one they will all
+                //be the same unless there is a different number of DIMMs behind
+                //the MCAs or a mix of DIMM sizes is supported
+                if(L_trace_throttle_count == G_configured_mbas)
                 {
-                    L_trace_throttle_count = DIMM_TRACE_THROTTLE_DELAY;
                     TRAC_IMP("dimm_update_nlimits: New DIMM slot throttle values: "
-                             "MC#|Port:[0x%08x], "
-                             "Max|Min slot Power:[0x%08x], Max port power:[0x%08x] ",
-                             (uint32_t)((mc << 16) | port),
-                             (uint32_t)( l_active_limits->min_n_per_mba |
-                                         (l_active_limits->max_n_per_mba << 16)),
-                             l_active_limits->max_n_per_chip << 16);
-
+                             "MC#|Port:[0x%04x], "
+                             "Max|Min N_PER_MBA:[0x%08x], Max N_PER_CHIP:[0x%04x] ",
+                             (uint16_t)((mc << 8) | port),
+                             (uint32_t)( (l_active_limits->max_n_per_mba << 16) |
+                                         l_active_limits->min_n_per_mba),
+                             l_active_limits->max_n_per_chip);
                 }
             }
 
-            if(L_trace_throttle_count)
-            {
-                L_trace_throttle_count--;
-            }
+            L_trace_throttle_count &= ~(0x8000 >> ((mc * (MAX_NUM_MCU_PORTS)) + port));
+
         } // NIMBUS_DIMM_THROTTLING_CONFIGURED ?
 
     }while(0);

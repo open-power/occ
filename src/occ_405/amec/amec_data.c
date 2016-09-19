@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/amec/amec_data.c $                                    */
+/* $Source: src/occ_405/amec/amec_data.c $                                */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -110,9 +110,10 @@ errlHndl_t AMEC_data_write_fcurr(const OCC_MODE i_mode)
         }
     }
 
-    // If we are in OpenPower environment, load this new range into DVFS
-    // min/max for AMEC component
-    if(G_occ_interrupt_type != FSP_SUPPORTED_OCC)
+    // If we are in OpenPower environment with OPAL, load this new range into DVFS
+    // min/max for AMEC component.  PowerVM on BMC and FSP the min/max is set above
+    // in amec_set_freq_range() based on mode
+    if((G_occ_interrupt_type != FSP_SUPPORTED_OCC) && (G_sysConfigData.system_type.kvm))
     {
         g_amec->sys.fmax = G_proc_fmax;
         g_amec->sys.fmin = G_proc_fmin; // = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY]
@@ -131,8 +132,7 @@ errlHndl_t AMEC_data_write_fcurr(const OCC_MODE i_mode)
 //
 // Description: This function loads data from the Thermal Control Threshold
 // data packet (format 0x13) into g_amec structure. This function should be
-// called when OCC goes active or changes modes or goes in/out of Acoustic
-// mode (ITE-only mode).
+// called when OCC goes active or changes modes
 //
 // Thread: RealTime Loop
 //
@@ -165,8 +165,6 @@ errlHndl_t AMEC_data_write_thrm_thresholds(const OCC_MODE i_mode)
         }
 
         l_frudata = l_data->data;
-
-        // TODO: Need to check if acoustic mode has been enabled (ITE-only mode)
 
         // Store the processor thermal data
         if(i_mode == OCC_MODE_NOMINAL)
@@ -346,6 +344,11 @@ errlHndl_t AMEC_data_change(const uint32_t i_data_mask)
     if(i_data_mask & DATA_MASK_FREQ_PRESENT)
     {
         l_err = AMEC_data_write_fcurr(l_cur_mode);
+
+        if(l_err)
+        {
+            TRAC_ERR("AMEC_data_change: Error writing frequency range!");
+        }
     }
     else if(i_data_mask & DATA_MASK_THRM_THRESHOLDS)
     {
@@ -404,13 +407,6 @@ void amec_data_write_pcap(void)
         //Copy pcap data received from Master OCC to G_sysConfigData
         memcpy(&(G_sysConfigData.pcap),&(G_dcom_slv_inbox_doorbell_rx.pcap),
                sizeof(pcap_config_data_t));
-
-        //Affects ITE ONLY: Check if it's ok (1) to exit the oversubscribed state
-        if(1 == G_sysConfigData.pcap.unthrottle)
-        {
-            //Clear throttle flag
-            g_amec->oversub_status.cmeThrottleLatchAmec = 0;
-        }
 
         //Check node power cap requested by customer/system.
         // 0 means there is no pcap for that parameter.

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -66,21 +66,8 @@ typedef enum
 #define OCC_STATE_IS_VALID(state) ((state == OCC_STATE_NOCHANGE) || \
                                    (state == OCC_STATE_OBSERVATION) || \
                                    (state == OCC_STATE_ACTIVE))
-/**
- * @enum SMGR_SMS_CMD_TYPE
- * @brief SMGR set-mode-state commands version 0 contains a byte that indicates if
- * the TPMD must actually change the voltage / frequency during a mode change.
- */
-typedef enum
-{
-    SMGR_SMS_VF_INFO_ONLY         = 0x00,
-    SMGR_SMS_VF_CHANGE_REQ        = 0x01,
-    SMGR_SMS_STATIC_VF_CHANGE_REQ = 0x02,
-} SMGR_SMS_CMD_TYPE;
-extern SMGR_SMS_CMD_TYPE   G_occ_internal_sms;  // TODO:  Move to state.c
 
 /**
- * @enum SMGR_SMS_STATUS_TYPE
  * @brief TMGT Poll contains a byte that indicates status based on this
  * bitmask
  */
@@ -171,7 +158,6 @@ typedef struct
 
 extern OCC_STATE          G_occ_internal_state;
 extern OCC_STATE          G_occ_internal_req_state;
-extern SMGR_SMS_CMD_TYPE  G_occ_internal_sms;
 extern OCC_STATE          G_occ_master_state;
 extern OCC_STATE          G_occ_external_req_state;
 

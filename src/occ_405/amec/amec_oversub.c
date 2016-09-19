@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -68,21 +68,17 @@
 
 // Function Specification
 //
-// Name: amec_oversub_pmax_clip
+// Name: amec_set_pmax_clip
 //
-// Description: Set Pmax_Clip in PMC to lowest Pstate
+// Description: Set Pmax_Clip in PMC to Pstate
 //
 // Task Flags:
 //
 // End Function Specification
-void amec_oversub_pmax_clip(Pstate i_pstate)
+void amec_set_pmax_clip(Pstate i_pstate)
 {
-    pmc_rail_bounds_register_t prbr;
+    // TODO: Send IPC cmd to PGPE to set Pmax_Clip
 
-    // Set Pmax_Clip in PMC to lowest Pstate
-    prbr.value = in32(PMC_RAIL_BOUNDS_REGISTER);
-    prbr.fields.pmax_rail = i_pstate;
-    out32(PMC_RAIL_BOUNDS_REGISTER, prbr.value);
 }
 
 // Function Specification
@@ -107,13 +103,9 @@ void amec_oversub_isr(void)
     // SSX_IRQ_POLARITY_ACTIVE_LOW means over-subscription is active
     if(l_polarity == SSX_IRQ_POLARITY_ACTIVE_LOW)
     {
-        // If RTL doesn't control it, do it here
-        if(g_amec->oversub_status.oversubLatchAmec == 0)
-        {
-            // TODO: Throttle all Centaurs via PORE-GPE by setting 'Emergency Throttle'
-
-            g_amec->oversub_status.oversubReasonLatchCount = OVERSUB_REASON_DELAY_4MS;
-        }
+        // oversub only switches pcap in amec_pcap_calc
+        // throttling only done if actually needed due to reaching power cap
+        g_amec->oversub_status.oversubReasonLatchCount = OVERSUB_REASON_DELAY_4MS;
 
         // Set oversubPinLive and oversubActiveTime
         g_amec->oversub_status.oversubPinLive = 1;
@@ -159,26 +151,7 @@ void amec_oversub_isr(void)
 // End Function Specification
 void amec_oversub_check(void)
 {
-    uint8_t                     l_cme_pin_value = 1; // low active, so set default to high
     static BOOLEAN              l_prev_ovs_state = FALSE;  // oversub happened
-
-    // Get CME Pin state
-    // No longer reading gpio from APSS in GA1 due to instability in APSS composite mode
-    //apss_gpio_get(l_cme_pin, &l_cme_pin_value);
-
-    // Check CME Pin? OR CME Oversub Mnfg Active
-    if( (l_cme_pin_value == 0) ||
-        (g_amec->oversub_status.cmeThrottlePinMnfg == 1) )
-    {
-        g_amec->oversub_status.cmeThrottlePinLive = 1;
-        g_amec->oversub_status.cmeThrottleLatchAmec = 1;
-    }
-    else
-    {
-        // Do not clear cmeThrottleLatchAmec.
-        // That will only be done via the PowerCa command from TMGT.
-        g_amec->oversub_status.cmeThrottlePinLive = 0;
-    }
 
     // oversubscription condition happened?
     if ( AMEC_INTF_GET_OVERSUBSCRIPTION() == TRUE )
@@ -226,7 +199,7 @@ void amec_oversub_check(void)
     // Figure out the over-subscription reason
     if(g_amec->oversub_status.oversubReasonLatchCount > 1)
     {
-        // Try to figure out why we throttled based on APSS GPIO pins
+        // TODO:  Try to figure out why we throttled based on APSS GPIO pins
         if( g_amec->oversub_status.oversubReasonLatchCount == OVERSUB_REASON_COUNT_TIMEOUT)
         {
             g_amec->oversub_status.oversubReason = INDETERMINATE;

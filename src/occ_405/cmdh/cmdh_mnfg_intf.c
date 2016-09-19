@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -32,8 +32,6 @@
 #include "sensor_query_list.h"
 #include "amec_smh.h"
 #include "amec_master_smh.h"
-#include "centaur_data.h"
-#include "centaur_control.h"
 
 extern task_t G_task_table[TASK_END];
 
@@ -237,69 +235,22 @@ uint8_t cmdh_mnfg_mem_slew(const cmdh_fsp_cmd_t * i_cmd_ptr,
         // If we made it here, that means we are starting up a slew run
         TRAC_INFO("cmdh_mnfg_mem_slew: We are about to start auto-slewing function");
 
-// TEMP -- NOT SUPPORTED YET IN PHASE1
-// when implementing see dimm/dimm.c - memory_init()
-/*
-        // Force activation of memory monitoring and control
-        if(!rtl_task_is_runnable(TASK_ID_CENTAUR_CONTROL))
+        // If the OCC is active (we can only run auto-slew in active state) the memory control
+        // task must be running and there is no support (or need) to force activation of
+        // memory monitoring and control
+
+        if(!IS_OCC_STATE_ACTIVE())
         {
-            uint32_t l_cent, l_mba;
-
-            // Only run initialization on an active OCC
-            if(!IS_OCC_STATE_ACTIVE())
-            {
-                TRAC_ERR("cmdh_mnfg_mem_slew: OCC must be active to start mem slewing");
-                l_rc = ERRL_RC_INVALID_STATE;
-                break;
-            }
-
-            // Force all MBA's to be present
-            G_configured_mbas = -1;
-
-            TRAC_INFO("cmdh_mnfg_mem_slew: calling centaur_init()");
-            centaur_init(); //no rc, handles errors internally
-
-            // Check if centaur_init resulted in a reset
-            // since we don't have a return code from centaur_init.
-            if(isSafeStateRequested())
-            {
-                TRAC_ERR("cmdh_mnfg_mem_slew: OCC is being reset");
-                l_rc = ERRL_RC_INTERNAL_FAIL;
-                break;
-            }
-
-            for(l_cent = 0; l_cent < MAX_NUM_CENTAURS; l_cent++)
-            {
-                if(!CENTAUR_PRESENT(l_cent))
-                {
-                    continue;
-                }
-
-                for(l_mba = 0; l_mba < NUM_MBAS_PER_CENTAUR; l_mba++)
-                {
-                    mem_throt_config_data_t * l_throt_ptr =
-                                   &G_sysConfigData.mem_throt_limits[l_cent][l_mba];
-
-                    // Uses values seen on tuleta as defaults
-                    l_throt_ptr->min_n_per_mba = 13;
-                    l_throt_ptr->nom_n_per_mba = 72;
-                    l_throt_ptr->nom_n_per_chip = 72;
-                    l_throt_ptr->pcap1_n_per_mba = 72;
-                    l_throt_ptr->pcap2_n_per_mba = 72;
-                    l_throt_ptr->ovs_n_per_mba = 72;
-                    l_throt_ptr->ovs_n_per_chip = 72;
-                }
-
-            }
-
-
-            // Initialization was successful.
-            // Set task flags to allow centaur control task to run and
-            // also to prevent us from doing initialization again.
-            G_task_table[TASK_ID_CENTAUR_DATA].flags = CENTAUR_DATA_RTL_FLAGS;
-            G_task_table[TASK_ID_CENTAUR_CONTROL].flags = CENTAUR_CONTROL_RTL_FLAGS;
+            TRAC_ERR("cmdh_mnfg_mem_slew: OCC must be active to start mem slewing");
+            l_rc = ERRL_RC_INVALID_STATE;
+            break;
         }
-*/
+        if(!rtl_task_is_runnable(TASK_ID_MEMORY_CONTROL))
+        {
+            TRAC_ERR("cmdh_mnfg_mem_slew: memory control task not running");
+            l_rc = ERRL_RC_INTERNAL_FAIL;
+            break;
+        }
 
         // Zero out the slew count
         g_amec->mnfg_parms.mem_slew_counter = 0;

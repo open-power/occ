@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/cmdh/cmdh_fsp_cmds_datacnfg.h $                       */
+/* $Source: src/occ_405/cmdh/cmdh_fsp_cmds_datacnfg.h $                   */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -287,7 +287,7 @@ typedef struct __attribute__ ((packed))
 // Provides memory throttle min and max values for Nimbus systems
 typedef struct __attribute__ ((packed))
 {
-    uint8_t   mc_num;                // Physical MC: [0=MC01, 2=MC23]
+    uint8_t   mc_num;                // Physical MC: [0=MC01, 1=MC23]
     uint8_t   port_num;              // Physical port # [0-3]
 } cmdh_mem_throt_nimbus_info_t;
 
@@ -310,23 +310,23 @@ typedef struct __attribute__ ((packed))
     cmdh_mem_throt_info_t mem_throt_info;        // Nimbus/Cumulus information header
 
     uint16_t              min_n_per_mba;         // Lowest per MBA allowed numerator
-    uint16_t              min_mem_power;         // Max mem Power @min (x0.1W)
+    uint16_t              min_mem_power;         // Max mem Power @min (x0.01W)
 
     uint16_t              turbo_n_per_mba;       // Static per MBA numerator @Turbo
     uint16_t              turbo_n_per_chip;      // Static per chip numerator @Turbo
-    uint16_t              turbo_mem_power;       // Max memory power @Turbo (x0.1W)
+    uint16_t              turbo_mem_power;       // Max memory power @Turbo (x0.01W)
 
     uint16_t              pcap_n_per_mba;        // Static per MBA numerator @PCAP
     uint16_t              pcap_n_per_chip;       // Static per chip numerator @PCAP
-    uint16_t              pcap_mem_power;        // Max memory power @PCAP (x0.1W)
+    uint16_t              pcap_mem_power;        // Max memory power @PCAP (x0.01W)
 
-    uint16_t              nom_n_per_mba;         // Static per MBA @Redundant (no ovs)
-    uint16_t              nom_n_per_chip;        // Static per chip @Redundant
-    uint16_t              nom_mem_power;         // Max memory power @Redundant(x0.1W)
+    uint16_t              nom_n_per_mba;         // Static per MBA N for nominal mode
+    uint16_t              nom_n_per_chip;        // Static per chip N for nominal mode
+    uint16_t              nom_mem_power;         // Max memory power @nominal (x0.01W)
 
-    uint16_t              reserved_n_per_mba;    // reserved
-    uint16_t              reserved_n_per_chip;   // reserved
-    uint16_t              reserved_mem_power;    // reserved
+    uint16_t              reserved1;             // reserved
+    uint16_t              reserved2;             // reserved
+    uint16_t              reserved3;             // reserved
 } cmdh_mem_throt_data_set_t;
 
 

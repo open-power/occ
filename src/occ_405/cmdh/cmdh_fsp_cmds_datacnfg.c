@@ -1696,6 +1696,9 @@ errlHndl_t data_store_mem_throt(const cmdh_fsp_cmd_t * i_cmd_ptr,
     uint8_t                         i;
     uint16_t                        l_configured_mbas = 0;
     bool                            l_invalid_input = TRUE; //Assume bad input
+    uint32_t                        l_total_turbo_mem_power = 0;
+    uint32_t                        l_total_nominal_mem_power = 0;
+    uint32_t                        l_total_pcap_mem_power = 0;
 
     do
     {
@@ -1777,8 +1780,8 @@ errlHndl_t data_store_mem_throt(const cmdh_fsp_cmd_t * i_cmd_ptr,
             // Copy into a temporary buffer while we check for N values of 0
             memcpy(&l_temp_set, &(l_data_set->min_n_per_mba), sizeof(mem_throt_config_data_t));
 
-            // A 0 for any N value is an error
-            for(l_n_ptr = &l_temp_set.min_n_per_mba; l_n_ptr <= &l_temp_set.reserved_mem_power; l_n_ptr++)
+            // A 0 for any power or N value is an error
+            for(l_n_ptr = &l_temp_set.min_n_per_mba; l_n_ptr <= &l_temp_set.nom_mem_power; l_n_ptr++)
             {
                 if(!(*l_n_ptr))
                 {
@@ -1818,38 +1821,29 @@ errlHndl_t data_store_mem_throt(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
                 l_configured_mbas |= 1 << ((cent* NUM_MBAS_PER_CENTAUR) + mba);
             }
+
+            // Add memory power
+            l_total_turbo_mem_power += l_data_set->turbo_mem_power;
+            l_total_nominal_mem_power += l_data_set->nom_mem_power;
+            l_total_pcap_mem_power += l_data_set->pcap_mem_power;
+
         } // data_sets for loop
 
-        if(l_err) // Invalid Info Parameter?
-        {
-            break;
-        }
-
     } while(0);
-
 
     if(!l_err)
     {
         // If there were no errors, indicate that we got this data
         G_data_cnfg->data_mask |= DATA_MASK_MEM_THROT;
+        CMDH_TRAC_IMP("data_store_mem_throt: Got valid mem throt packet. configured_mba_bitmap=0x%04x",
+                 l_configured_mbas);
 
-        if(MEM_TYPE_NIMBUS ==  G_sysConfigData.mem_type)
-        {
-            CMDH_TRAC_IMP("data_store_mem_throt: Got valid mem throt packet. "
-                          "configured DIMM bitmap=0x%04x",
-                          l_configured_mbas);
-        }
-        else if (MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type)
-        {
-            CMDH_TRAC_IMP("data_store_mem_throt: Got valid centaur mem throt packet. "
-                          "configured_mba_bitmap=0x%04x",
-                          l_configured_mbas);
-
-        }
-
-        // Update the configured mba bitmap
+        // Update the configured mba bitmap and save the total memory powers
         G_configured_mbas = l_configured_mbas;
-
+        // g_amec is in Watts, config data is in cW
+        g_amec->pcap.nominal_mem_pwr = l_total_nominal_mem_power / 100;
+        g_amec->pcap.turbo_mem_pwr = l_total_turbo_mem_power / 100;
+        g_amec->pcap.pcap1_mem_pwr = l_total_pcap_mem_power / 100;
     }
 
     return l_err;
@@ -2181,7 +2175,7 @@ errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
     if((!l_errlHndl) && (l_new_data))
     {
         // Notify AMEC component of new data
-        AMEC_data_change(l_new_data);
+        l_errlHndl = AMEC_data_change(l_new_data);
     }
 
     if(l_errlHndl)

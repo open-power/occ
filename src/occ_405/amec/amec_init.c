@@ -285,6 +285,10 @@ void amec_init_gamec_struct(void)
   g_amec->vrhotproc.freq_request = -1;
   g_amec->vrhotproc.speed_request = 1000;
 
+  // Initialize component power caps
+  g_amec->pcap.active_proc_pcap = 0;
+  g_amec->pcap.active_mem_level = 0;
+
 // @TODO - TEMP: not ready yet in Phase 1
 /*
   // Initialize partition information

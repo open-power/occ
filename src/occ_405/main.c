@@ -576,8 +576,7 @@ void slave_occ_init()
 {
     // Init the DPSS oversubscription IRQ handler
     MAIN_DBG("Initializing Oversubscription IRQ...");
-    // TEMP -- NO DPSS/ERRL YET
-/*
+
     errlHndl_t l_errl = dpss_oversubscription_irq_initialize();
 
     if( l_errl )
@@ -585,15 +584,14 @@ void slave_occ_init()
         // Trace and commit error
         MAIN_TRAC_ERR("Initialization of Oversubscription IRQ handler failed");
 
-        // commit log ... log should be deleted by reader mechanism
-        // TEMP -- NO ERRL YET
-        //commitErrl( &l_errl );
+        // commit log
+        commitErrl( &l_errl );
     }
     else
     {
         MAIN_TRAC_INFO("Oversubscription IRQ initialized");
     }
-*/
+
     //Set up doorbell queues
     dcom_initialize_pbax_queues();
 

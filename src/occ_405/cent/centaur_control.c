@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/cent/centaur_control.c $                              */
+/* $Source: src/occ_405/cent/centaur_control.c $                          */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -178,17 +178,27 @@ void cent_update_nlimits(uint32_t i_cent)
         l_active_limits01->min_n_per_mba = l_state_limits01->min_n_per_mba;
         l_active_limits23->min_n_per_mba = l_state_limits23->min_n_per_mba;
 
-        if(CURRENT_MODE() == OCC_MODE_NOMINAL)
+        //Power Capping memory?
+        if(g_amec->pcap.active_mem_level == 1)
+        {
+            l_mba01_mba_maxn = l_state_limits01->pcap_n_per_mba;
+            l_mba01_chip_maxn = l_state_limits01->pcap_n_per_chip;
+            l_mba23_mba_maxn = l_state_limits23->pcap_n_per_mba;
+            l_mba23_chip_maxn = l_state_limits23->pcap_n_per_chip;
+        }
+        else if(CURRENT_MODE() == OCC_MODE_NOMINAL)
         {
             l_mba01_mba_maxn = l_state_limits01->nom_n_per_mba;
             l_mba01_chip_maxn = l_state_limits01->nom_n_per_chip;
             l_mba23_mba_maxn = l_state_limits23->nom_n_per_mba;
             l_mba23_chip_maxn = l_state_limits23->nom_n_per_chip;
         }
-        else //DPS, TURBO, FFO, and SPS modes will use these settings
+        else //all other modes will use turbo settings
         {
             l_mba01_mba_maxn = l_state_limits01->turbo_n_per_mba;
+            l_mba01_chip_maxn = l_state_limits01->turbo_n_per_chip;
             l_mba23_mba_maxn = l_state_limits23->turbo_n_per_mba;
+            l_mba23_chip_maxn = l_state_limits23->turbo_n_per_chip;
         }
 
         l_active_limits01->max_n_per_chip = l_mba01_chip_maxn;

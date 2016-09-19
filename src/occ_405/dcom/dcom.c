@@ -450,6 +450,8 @@ void dcom_build_occfw_msg( const dcom_error_type_t i_which_msg )
 // End Function Specification
 void task_dcom_parse_occfwmsg(task_t *i_self)
 {
+    errlHndl_t l_errl = NULL;
+
     if(G_occ_role == OCC_MASTER)
     {
         // Local slave index counter
@@ -549,7 +551,12 @@ void task_dcom_parse_occfwmsg(task_t *i_self)
                 G_data_cnfg->data_mask |= DATA_MASK_FREQ_PRESENT;
 
                 // Notify AMEC that the frequencies have changed
-                AMEC_data_change(DATA_MASK_FREQ_PRESENT);
+                l_errl = AMEC_data_change(DATA_MASK_FREQ_PRESENT);
+                if(l_errl)
+                {
+                  // Commit log
+                  commitErrl(&l_errl);
+                }
             }
         }
         else

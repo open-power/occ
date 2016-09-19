@@ -207,6 +207,8 @@ enum occExtReasonCode
 
     ERC_MEM_CONTROL_SCHEDULE_FAILURE            = 0x0080,
     ERC_MEM_CONTROL_COMPLETE_FAILURE            = 0x0081,
+
+    ERC_FW_ZERO_FREQ_LIMIT                      = 0x0090,
 };
 
 // Error log Module Ids

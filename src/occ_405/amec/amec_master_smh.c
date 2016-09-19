@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -457,11 +457,13 @@ void amec_mst_check_under_pcap(void)
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
 
-    // Check if ppb_fmax = Fmin and PWR250US > Node power cap and
-    // Node power cap >=  hard_min_pcap
+    // Check if done everything possible to shed power and power still above a hard power cap
+    // ppb_fmax = Fmin and PWR250US > Node power cap and
+    // Node power cap >=  hard_min_pcap AND memory is throttled
     if((g_amec->proc[0].pwr_votes.ppb_fmax == g_amec->sys.fmin) &&
        (AMECSENSOR_PTR(PWR250US)->sample > g_amec->pcap.active_node_pcap) &&
-       (g_amec->pcap.active_node_pcap >= G_sysConfigData.pcap.hard_min_pcap))
+       (g_amec->pcap.active_node_pcap >= G_sysConfigData.pcap.hard_min_pcap) &&
+       (g_amec->pcap.active_mem_level != 0) )
     {
 
         G_over_cap_count++;

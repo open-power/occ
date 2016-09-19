@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -36,9 +36,6 @@
 
 // Returns the 'OCC Requested' OCC Mode
 #define REQUESTED_MODE()  G_occ_internal_req_mode
-
-// Returns the 'Requested' SMS Mode
-#define CURRENT_SMS()  G_occ_internal_sms
 
 // Returns the 'Requested' SMS Mode
 #define VALID_MODE(mode)  ((mode < OCC_MODE_COUNT) ? 1 : 0)

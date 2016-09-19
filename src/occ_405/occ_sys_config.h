@@ -233,31 +233,33 @@ typedef struct
     uint8_t  source;           // source of PCAP value currently in use
 } pcap_config_data_t;
 
+
 // source of PCAP value
 #define OUT_OF_BAND         1  // source is BMC or (H)TMGT
 #define IN_BAND             2  // source is OPAL
 
-// Memory Centaur Throttle settings
+
+// Memory Throttle settings
 typedef struct
 {
     uint16_t    min_n_per_mba;           //minimum value
-    uint16_t    min_mem_power;           //Max mem Power @min (x0.1W)
+    uint16_t    min_mem_power;           //Max mem Power @min (x0.01W)
 
-    uint16_t    turbo_n_per_mba;         //max mba value for Power Cap @Turbo
+    uint16_t    turbo_n_per_mba;         //max mba value for Turbo
     uint16_t    turbo_n_per_chip;        //Static per chip numerator @Turbo
-    uint16_t    turbo_mem_power;         //max  memory power @Turbo L1
+    uint16_t    turbo_mem_power;         //max memory power @Turbo
 
-    uint16_t    pcap_n_per_mba;         //max mba value for Power Cap Level 2
+    uint16_t    pcap_n_per_mba;         //max mba value for Power Cap
     uint16_t    pcap_n_per_chip;        //Static per chip numerator @PCAP
-    uint16_t    pcap_mem_power;         //max  memory power @PCAP L2
+    uint16_t    pcap_mem_power;         //max memory power @PCAP
 
     uint16_t    nom_n_per_mba;           //max mba value for nominal mode
     uint16_t    nom_n_per_chip;          //chip setting for nominal mode
-    uint16_t    nom_mem_power;           //max memory power @Redundant
+    uint16_t    nom_mem_power;           //max memory power @nominal
 
-    uint16_t    reserved_n_per_mba;      //reserved
-    uint16_t    reserved_n_per_chip;     //reserved
-    uint16_t    reserved_mem_power;      //reserved
+    uint16_t    reserved1;               //reserved
+    uint16_t    reserved2;               //reserved
+    uint16_t    reserved3;               //reserved
 } mem_throt_config_data_t;
 
 

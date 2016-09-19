@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -52,10 +52,6 @@ OCC_MODE           G_occ_external_req_mode = OCC_MODE_NOCHANGE;
 
 // Mode that TMGT is requesting OCC go to in KVM
 OCC_MODE           G_occ_external_req_mode_kvm = OCC_MODE_NOCHANGE;
-
-// Indicates if OCC must actually change the voltage / frequency during
-// a mode change.
-SMGR_SMS_CMD_TYPE   G_occ_internal_sms       = SMGR_SMS_VF_INFO_ONLY;
 
 // Indicates if we are currently in a mode transition
 bool                G_mode_transition_occuring = FALSE;
@@ -236,23 +232,10 @@ errlHndl_t SMGR_set_mode(const OCC_MODE i_mode,
          // Load correct thermal thresholds based on the current mode
          l_errlHndl = AMEC_data_write_thrm_thresholds(CURRENT_MODE());
 
-         // Update the CPU speed in AME?
-         // Register the New Mode?
-         // Update Power Policy Requirements?
-         // Update CPM Calibration
-
      }while(0);
-
-     // If we have a mode change failure, Mode change flag needs to be set,
-     // otherwise, it needs be be cleared/unset.
-     if(l_errlHndl)
-     {
-
-     }
 
      // Unlock critical section
      ssx_semaphore_post(&G_smgrModeChangeSem);
-
 
      return l_errlHndl;
 }

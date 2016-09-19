@@ -245,8 +245,9 @@ void amec_slv_check_apss_fail(void)
             l_pmax_rail_freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL];
             l_pstate = proc_freq2pstate(l_pmax_rail_freq);
 
-            // Set the Pmax_rail register via OCI write
-            amec_oversub_pmax_clip(l_pstate);
+            // Set the Pmax clip via PGPE
+            // There is no Pmax "rail" in P9, just set clips via PGPE
+            amec_set_pmax_clip(l_pstate);
 
             L_lower_pmax_rail = TRUE;
             L_raise_pmax_rail = FALSE;
@@ -260,8 +261,8 @@ void amec_slv_check_apss_fail(void)
             l_pmax_rail_freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
             l_pstate = proc_freq2pstate(l_pmax_rail_freq);
 
-            // Set the Pmax_rail register via OCI write
-            amec_oversub_pmax_clip(l_pstate);
+            // Set the Pmax clip via PGPE
+            amec_set_pmax_clip(l_pstate);
 
             L_lower_pmax_rail = FALSE;
             L_raise_pmax_rail = TRUE;
@@ -293,10 +294,6 @@ void amec_slv_common_tasks_pre(void)
   // Update the FW Worst Case sensors every tick
   amec_update_fw_sensors();
 
-  // Update the fast core data sensors every tick
-//  @TODO - TEMP - Not ready yet in Phase 1
-//  amec_update_fast_core_data_sensors();
-
   // Update the sensors that come from the APSS every tick
   amec_update_apss_sensors();
 
@@ -324,8 +321,7 @@ void amec_slv_common_tasks_pre(void)
   amec_update_current_sensor(); // Compute estimate for Vdd output current
 
   // Over-subscription check
-//  @TODO - TEMP - Not ready yet in Phase 1
-//  amec_oversub_check();
+  amec_oversub_check();
 }
 
 // Function Specification

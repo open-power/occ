@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/amec/amec_pcap.c $                                    */
+/* $Source: src/occ_405/amec/amec_pcap.c $                                */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -81,76 +81,13 @@ uint8_t     G_over_pcap_count=0;
 // Functions
 //*************************************************************************/
 
-//////////////////////////
-// Function Specification
-//
-// Name: amec_pmax_clip_controller
-//
-// Description: Calculate the pmax_clip_freq vote.  Initialized to Turbo.
-//
-// Thread: Real Time Loop
-//
-// End Function Specification
-void amec_pmax_clip_controller(void)
-{
-//  @TODO - TEMP Pstate functions not defined yet
-#if 0
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
-    uint16_t l_fturbo = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
-    uint32_t l_pmax_clip_freq = g_amec->proc[0].pwr_votes.pmax_clip_freq;
-    Pstate   l_pstate = 0;
-
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
-
-    //Note: quickPowerDrop interrupts will not preempt the real time loop
-    //      interrupt. No locking is needed between the two interrupts.
-    //Note: oversubLatchAmec represents the oversubscription signal
-
-    // See the oversub event and control oversub in AMEC
-    if(AMEC_INTF_GET_OVERSUBSCRIPTION()&&
-       (g_amec->oversub_status.oversubLatchAmec==FALSE) )
-    {
-        // ISR already did it but still need to do it again here due to
-        // l_pmax_clip_freq is incorrect
-        l_pmax_clip_freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
-        g_amec->oversub_status.oversubLatchAmec = TRUE;
-    }
-    else if( !AMEC_INTF_GET_OVERSUBSCRIPTION() )
-    {
-        // AMEC doesn't control it and let ISR do it
-        g_amec->oversub_status.oversubLatchAmec = FALSE;
-    }
-
-    if(l_pmax_clip_freq < l_fturbo)
-    {
-        l_pmax_clip_freq += G_mhz_per_pstate;
-
-        if(l_pmax_clip_freq > l_fturbo)
-        {
-            l_pmax_clip_freq = l_fturbo;
-        }
-
-        //call proc_freq2pstate
-        l_pstate = proc_freq2pstate(l_pmax_clip_freq);
-
-        //Set the pmax_clip register via OCI write.
-        amec_oversub_pmax_clip(l_pstate);
-    }
-
-    g_amec->proc[0].pwr_votes.pmax_clip_freq = l_pmax_clip_freq;
-#endif // @TODO - TEMP Pstate functions not defined yet
-}
 
 //////////////////////////
 // Function Specification
 //
 // Name: amec_pcap_calc
 //
-// Description: Calculate the node power cap and the processor power cap.
+// Description: Calculate the node, memory and processor power caps.
 //
 // Thread: Real Time Loop
 //
@@ -164,18 +101,23 @@ void amec_pcap_calc(void)
     uint16_t l_node_pwr = AMECSENSOR_PTR(PWR250US)->sample;
     uint16_t l_p0_pwr   = AMECSENSOR_PTR(PWR250USP0)->sample;
     int32_t l_avail_power = 0;
+    uint16_t mem_pwr_diff = 0;
     uint32_t l_proc_fraction = 0;
     static uint32_t L_prev_node_pcap = 0;
-    static bool l_apss_error_traced = FALSE;
+    static bool L_apss_error_traced = FALSE;
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
 
-    //TRAC_INFO("amec_pcap_calc: Calculate active_node_pcap, and nom_pcap_fmin.");
     l_oversub_state = AMEC_INTF_GET_OVERSUBSCRIPTION();
 
-    if(TRUE == l_oversub_state)
+    // Determine the active power cap.  norm_node_pcap is set as lowest
+    // between sys and user in amec_data_write_pcap()
+    // when in oversub only use oversub pcap if lower than norm_node_pcap
+    // to handle user set power cap lower than the oversub power cap
+    if( (TRUE == l_oversub_state) &&
+        (g_amec->pcap.ovs_node_pcap < g_amec->pcap.norm_node_pcap) )
     {
         g_amec->pcap.active_node_pcap = g_amec->pcap.ovs_node_pcap;
     }
@@ -199,36 +141,78 @@ void amec_pcap_calc(void)
     if(l_node_pwr != 0)
     {
         l_proc_fraction = ((uint32_t)(l_p0_pwr) << 16)/l_node_pwr;
-        if(l_apss_error_traced)
+        if(L_apss_error_traced)
         {
             TRAC_ERR("PCAP: PWR250US sensor is no longer 0.");
-            l_apss_error_traced = FALSE;
+            L_apss_error_traced = FALSE;
+        }
+
+        // check if allowed to increase power AND memory throttled due to pcap
+        if((l_avail_power > 0) && (g_amec->pcap.active_mem_level != 0))
+        {
+            // un-throttle memory if there is enough available power between
+            // current and new throttles
+            if (CURRENT_MODE() == OCC_MODE_NOMINAL)
+            {
+                mem_pwr_diff = g_amec->pcap.nominal_mem_pwr;
+            }
+            else
+            {
+                mem_pwr_diff = g_amec->pcap.turbo_mem_pwr;
+            }
+
+            // currently there's only 1 mem pcap throt level so must be pcap1
+            mem_pwr_diff -= g_amec->pcap.pcap1_mem_pwr;
+
+            if(l_avail_power >= mem_pwr_diff)
+            {
+                TRAC_IMP("PCAP: Un-Throttling memory");
+                g_amec->pcap.active_mem_level = 0;
+                // don't let the proc have any available power this tick
+                l_avail_power = 0;
+            }
+        }
+        // check if need to reduce power and frequency is already at the min
+        else if((l_avail_power < 0) && (g_amec->proc[0].pwr_votes.ppb_fmax == g_amec->sys.fmin))
+        {
+            // frequency at min now shed additional power by throttling
+            // memory if memory is currently un-throttled due to power
+            if (g_amec->pcap.active_mem_level == 0)
+            {
+                TRAC_IMP("PCAP: Throttling memory");
+                g_amec->pcap.active_mem_level = 1;
+            }
+        }
+        else
+        {
+            // no changes to memory throttles due to power
         }
     }
     else
     {
-        if(!l_apss_error_traced)
+        if(!L_apss_error_traced)
         {
             TRAC_ERR("PCAP: PWR250US sensor is showing a value of 0.");
-            l_apss_error_traced = TRUE;
+            L_apss_error_traced = TRUE;
         }
     }
 
-    g_amec->pcap.active_proc_pcap = l_p0_pwr + ((l_proc_fraction * l_avail_power) >> 16);
-
-    //TRAC_INFO("PCAP: calculated active proc pcap: avail_power[0x%X],proc_fraction[0x%X],"
-    //         "active_proc_pcap[0x%X].",l_avail_power,l_proc_fraction,g_amec->pcap.active_proc_pcap);
-
-    //NOTE: Power capping will not affect nominal cores unless a customer power cap is set below the
-    //      max pcap or oversubscription occurs.
-    //      However, nominal cores will drop below nominal if ppb_fmax drops below nominal.
-    if(g_amec->pcap.active_node_pcap < G_sysConfigData.pcap.max_pcap)
+    // skip processor changes until memory is un-capped
+    if(!g_amec->pcap.active_mem_level)
     {
-        g_amec->proc[0].pwr_votes.nom_pcap_fmin = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
-    }
-    else
-    {
-        g_amec->proc[0].pwr_votes.nom_pcap_fmin = G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL];
+        g_amec->pcap.active_proc_pcap = l_p0_pwr + ((l_proc_fraction * l_avail_power) >> 16);
+
+        //NOTE: Power capping will not affect nominal cores unless a customer pcap
+        //      is set below the max pcap or oversubscription occurs.  However,
+        //      nominal cores will drop below nominal if ppb_fmax drops below nominal
+        if(g_amec->pcap.active_node_pcap < G_sysConfigData.pcap.max_pcap)
+        {
+           g_amec->proc[0].pwr_votes.nom_pcap_fmin = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
+        }
+        else
+        {
+           g_amec->proc[0].pwr_votes.nom_pcap_fmin = G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL];
+        }
     }
 }
 
@@ -510,21 +494,21 @@ void amec_power_control(void)
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
 
-    // Call amec pmax clip controller to control the Pmax_clip register setting
-    // and voting box input.
-    amec_pmax_clip_controller();
-
-    // Calculate the power cap for the processor and the power capping limit
+    // Calculate the pcap for the proc, memory and the power capping limit
     // for nominal cores.
     amec_pcap_calc();
 
-    // Calculate the voting box input frequency for staying with the current pcap
-    amec_pcap_controller();
+    // skip processor changes until memory is un-capped
+    if(!g_amec->pcap.active_mem_level)
+    {
+       // Calculate voting box input freq for staying with the current pcap
+       amec_pcap_controller();
 
-    // Calculate the performance preserving bounds voting box input frequency.
-    amec_ppb_fmax_calc();
+       // Calculate the performance preserving bounds voting box input freq
+       amec_ppb_fmax_calc();
+    }
 
-    // Check for connector overcurrent condition and calculate voting box input frequency.
+    // Check for connector oc condition and calculate voting box input freq
     amec_conn_oc_controller();
 }
 

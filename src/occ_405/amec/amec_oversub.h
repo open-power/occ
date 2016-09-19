@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -69,10 +69,6 @@ typedef struct oversub_status
     // Live Status of oversub Pin
     uint32_t    oversubPinLive      : 1;
 
-    // AMEC status of oversub pin, so it doesn't
-    // change mid-RTL
-    uint32_t    oversubLatchAmec    : 1;
-
     // Used for SRC logging of performance loss,
     // need to have countdown b/c we don't get
     // APSS gpio signals as quick as we get
@@ -86,15 +82,6 @@ typedef struct oversub_status
     // For debug, tracks time oversub last went active
     SsxTimebase oversubActiveTime;
 
-    // Live status of CME throttle pin, doesn't change mid-RTL
-    uint32_t cmeThrottlePinLive     :1;
-
-    // Status of CME Throttle, doesn't get cleared until MM/TMGT
-    // tells us to clear it/un-throttle.
-    uint32_t cmeThrottleLatchAmec   :1;
-
-    // Way to emulate cmeThrottle for MNFG or Developers
-    uint32_t cmeThrottlePinMnfg     :1;
 }oversub_status_t;
 
 /*----------------------------------------------------------------------------*/
@@ -105,7 +92,7 @@ void amec_oversub_isr(void);
 
 void amec_oversub_check(void);
 
-void amec_oversub_pmax_clip(Pstate i_pstate);
+void amec_set_pmax_clip(Pstate i_pstate);
 
 bool apss_gpio_get(uint8_t i_pin_number, uint8_t *o_pin_value);
 

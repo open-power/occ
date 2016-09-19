@@ -165,52 +165,84 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
       l_freq_max = G_sysConfigData.sys_mode_freq.table[i_mode];
     }
 
-    // If SMS is set then TMGT wants us to pin to frequency which
-    // corresponds to input mode.  They will use this function
-    // when powering off and they wish to have us bring the system
-    // back up to real nominal frequency (without being impacted
-    // by power caps or thermal actuations)
-    if(CURRENT_SMS() == SMGR_SMS_STATIC_VF_CHANGE_REQ)
+    if( (l_freq_min == 0) || (l_freq_max == 0) )
     {
-        l_freq_min = l_freq_max;
+      // Do not update amec vars with a 0 frequency.
+      // The frequency limit for each mode should have been set prior
+      // to calling or the mode passed was invalid
+      TRAC_ERR("amec_set_freq_range: Freq of 0 found! mode[0x%02x] Fmin[%u] Fmax[%u]",
+                  i_mode,
+                  l_freq_min,
+                  l_freq_max);
+
+      // Log an error if this is PowerVM as this should never happen when OCC
+      // supports modes
+      if(!G_sysConfigData.system_type.kvm)
+      {
+        /* @
+         * @errortype
+         * @moduleid    AMEC_SET_FREQ_RANGE
+         * @reasoncode  INTERNAL_FW_FAILURE
+         * @userdata1   Mode
+         * @userdata2   0
+         * @userdata4   ERC_FW_ZERO_FREQ_LIMIT
+         * @devdesc     Fmin or Fmax of 0 found for mode
+         */
+         errlHndl_t l_err = createErrl(AMEC_SET_FREQ_RANGE,           //modId
+                                       INTERNAL_FW_FAILURE,           //reasoncode
+                                       ERC_FW_ZERO_FREQ_LIMIT,        //Extended reason code
+                                       ERRL_SEV_PREDICTIVE,           //Severity
+                                       NULL,                          //Trace Buf
+                                       DEFAULT_TRACE_SIZE,            //Trace Size
+                                       i_mode,                        //userdata1
+                                       0);                            //userdata2
+
+         // Callout Firmware
+         addCalloutToErrl(l_err,
+                          ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                          ERRL_COMPONENT_ID_FIRMWARE,
+                          ERRL_CALLOUT_PRIORITY_LOW
+                          );
+      }
     }
+    else
+    {
+      g_amec->sys.fmin = l_freq_min;
+      g_amec->sys.fmax = l_freq_max;
 
-    g_amec->sys.fmin = l_freq_min;
-    g_amec->sys.fmax = l_freq_max;
+      TRAC_INFO("amec_set_freq_range: Mode[0x%02x] Fmin[%u] Fmax[%u]",
+                i_mode,
+                l_freq_min,
+                l_freq_max);
 
-    TRAC_INFO("amec_set_freq_range: Mode[0x%02x] Fmin[%u] Fmax[%u]",
-              i_mode,
-              l_freq_min,
-              l_freq_max);
+      // Now determine the max frequency for the PPM structure
+      l_ppm_freq[OCC_INTERNAL_MODE_NOM].fmax    = G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL];
+      l_ppm_freq[OCC_INTERNAL_MODE_DPS].fmax    = G_sysConfigData.sys_mode_freq.table[OCC_MODE_DYN_POWER_SAVE];
+      l_ppm_freq[OCC_INTERNAL_MODE_DPS_MP].fmax = G_sysConfigData.sys_mode_freq.table[OCC_MODE_DYN_POWER_SAVE_FP];
 
-    // Now determine the max frequency for the PPM structure
-    l_ppm_freq[OCC_INTERNAL_MODE_NOM].fmax    = G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL];
-    l_ppm_freq[OCC_INTERNAL_MODE_DPS].fmax    = G_sysConfigData.sys_mode_freq.table[OCC_MODE_DYN_POWER_SAVE];
-    l_ppm_freq[OCC_INTERNAL_MODE_DPS_MP].fmax = G_sysConfigData.sys_mode_freq.table[OCC_MODE_DYN_POWER_SAVE_FP];
+      // Determine the min frequency for the PPM structure. This Fmin should
+      // always be set to the system Fmin
+      l_ppm_freq[OCC_INTERNAL_MODE_NOM].fmin    = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
+      l_ppm_freq[OCC_INTERNAL_MODE_DPS].fmin    = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
+      l_ppm_freq[OCC_INTERNAL_MODE_DPS_MP].fmin = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
 
-    // Determine the min frequency for the PPM structure. This Fmin should
-    // always be set to the system Fmin
-    l_ppm_freq[OCC_INTERNAL_MODE_NOM].fmin    = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
-    l_ppm_freq[OCC_INTERNAL_MODE_DPS].fmin    = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
-    l_ppm_freq[OCC_INTERNAL_MODE_DPS_MP].fmin = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
+      // Determine the min speed allowed for DPS power policies (this is needed
+      // by the DPS algorithms)
+      l_temp = (l_ppm_freq[OCC_INTERNAL_MODE_DPS].fmin * 1000)/l_ppm_freq[OCC_INTERNAL_MODE_DPS].fmax;
+      l_ppm_freq[OCC_INTERNAL_MODE_DPS].min_speed = l_temp;
 
-    // Determine the min speed allowed for DPS power policies (this is needed
-    // by the DPS algorithms)
-    l_temp = (l_ppm_freq[OCC_INTERNAL_MODE_DPS].fmin * 1000)/l_ppm_freq[OCC_INTERNAL_MODE_DPS].fmax;
-    l_ppm_freq[OCC_INTERNAL_MODE_DPS].min_speed = l_temp;
+      l_temp = (l_ppm_freq[OCC_INTERNAL_MODE_DPS_MP].fmin * 1000)/l_ppm_freq[OCC_INTERNAL_MODE_DPS_MP].fmax;
+      l_ppm_freq[OCC_INTERNAL_MODE_DPS_MP].min_speed = l_temp;
 
-    l_temp = (l_ppm_freq[OCC_INTERNAL_MODE_DPS_MP].fmin * 1000)/l_ppm_freq[OCC_INTERNAL_MODE_DPS_MP].fmax;
-    l_ppm_freq[OCC_INTERNAL_MODE_DPS_MP].min_speed = l_temp;
+      // Copy the PPM frequency information into g_amec
+      memcpy(g_amec->part_mode_freq, l_ppm_freq, sizeof(l_ppm_freq));
 
-    // Copy the PPM frequency information into g_amec
-    memcpy(g_amec->part_mode_freq, l_ppm_freq, sizeof(l_ppm_freq));
-
-    TRAC_INFO("amec_set_freq_range: PPM Fmin[%u] Fnom[%u] Fmax[%u] min_speed[%u]",
-              l_ppm_freq[OCC_INTERNAL_MODE_NOM].fmin,
-              l_ppm_freq[OCC_INTERNAL_MODE_NOM].fmax,
-              l_ppm_freq[OCC_INTERNAL_MODE_DPS].fmax,
-              l_ppm_freq[OCC_INTERNAL_MODE_DPS_MP].min_speed);
-
+      TRAC_INFO("amec_set_freq_range: PPM Fmin[%u] Fnom[%u] Fmax[%u] min_speed[%u]",
+                l_ppm_freq[OCC_INTERNAL_MODE_NOM].fmin,
+                l_ppm_freq[OCC_INTERNAL_MODE_NOM].fmax,
+                l_ppm_freq[OCC_INTERNAL_MODE_DPS].fmax,
+                l_ppm_freq[OCC_INTERNAL_MODE_DPS_MP].min_speed);
+    }
     return l_err;
 }
 
