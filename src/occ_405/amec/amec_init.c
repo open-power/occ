@@ -70,8 +70,6 @@ amec_sys_t * g_amec = &g_amec_sys;
 // GPE Request Structure that is used to measure the worst case GPE timings
 GpeRequest G_gpe_nop_request[NUM_GPE_ENGINES];
 
-// @TODO - TEMP: not ready yet
-//extern PoreEntryPoint GPE_pore_nop;
 extern void amec_slv_update_gpe_sensors(uint8_t i_gpe_engine);
 extern void amec_slv_update_gpe_sensors(uint8_t i_gpe_engine);
 

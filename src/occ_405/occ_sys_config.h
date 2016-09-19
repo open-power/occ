@@ -230,7 +230,12 @@ typedef struct
     uint16_t system_pcap;      // Fixed node power cap required by the system in 1W units
     uint8_t  unthrottle;       // Only used on ITEs -- is indicated from CMM
     uint8_t  pcap_data_count;  // Used by OCC only.  Initialized to 0 and incremented by 1 with every new packet.
+    uint8_t  source;           // source of PCAP value currently in use
 } pcap_config_data_t;
+
+// source of PCAP value
+#define OUT_OF_BAND         1  // source is BMC or (H)TMGT
+#define IN_BAND             2  // source is OPAL
 
 // Memory Centaur Throttle settings
 typedef struct

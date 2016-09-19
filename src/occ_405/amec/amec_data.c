@@ -464,7 +464,8 @@ void amec_data_write_pcap(void)
         // update data mask notifying we got pcap information
         extern data_cnfg_t * G_data_cnfg;
         G_data_cnfg->data_mask |= DATA_MASK_PCAP_PRESENT;
-        TRAC_IMP("amec_data_write: PCAP Config data: pcap[%d]: data_mask[%x]", g_amec->pcap.norm_node_pcap, G_data_cnfg->data_mask);
+        TRAC_IMP("amec_data_write: PCAP Config data: pcap[%d]: data_mask[%x]",
+                 g_amec->pcap.norm_node_pcap, G_data_cnfg->data_mask);
     }
 }
 

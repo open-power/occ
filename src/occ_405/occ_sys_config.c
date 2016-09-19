@@ -161,6 +161,7 @@ occSysConfigData_t G_sysConfigData =
         .oversub_pcap  = 0,
         .system_pcap   = 0,
         .unthrottle    = 0,
+        .source        = 0,
     },
 
 

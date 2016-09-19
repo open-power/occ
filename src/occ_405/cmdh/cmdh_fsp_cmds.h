@@ -207,6 +207,7 @@ typedef struct __attribute__ ((packed)) cmdh_poll_caps_sensor
     uint16_t max;       // Maximum power cap in 1W units.
     uint16_t min;       // Minimum power cap in 1W units.
     uint16_t user;      // Power cap set by user in 1W units.
+    uint8_t  source;    // User Power Limit Source
 } cmdh_poll_pcaps_sensor_t;
 
 //---------------------------------------------------------

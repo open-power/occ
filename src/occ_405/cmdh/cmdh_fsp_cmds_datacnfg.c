@@ -1168,8 +1168,17 @@ errlHndl_t data_store_power_cap(const cmdh_fsp_cmd_t * i_cmd_ptr,
     {
         if(l_cmd_ptr->version == DATA_SYS_VERSION_20)
         {
-            // Copy power cap data into G_master_pcap_data
-            memcpy(&G_master_pcap_data, &l_cmd_ptr->pcap_config, sizeof(cmdh_pcap_config_data_t));
+            // Copy power cap limits data into G_master_pcap_data
+            cmdh_pcap_config_t * l_cmd2_ptr = (cmdh_pcap_config_t *)i_cmd_ptr;
+            G_master_pcap_data.soft_min_pcap   = l_cmd2_ptr->pcap_config.soft_min_pcap;
+            G_master_pcap_data.hard_min_pcap   = l_cmd2_ptr->pcap_config.hard_min_pcap;
+            G_master_pcap_data.max_pcap        = l_cmd2_ptr->pcap_config.sys_max_pcap;
+            G_master_pcap_data.oversub_pcap    = l_cmd2_ptr->pcap_config.qpd_pcap;
+            G_master_pcap_data.system_pcap     = l_cmd2_ptr->pcap_config.sys_max_pcap;
+            G_master_pcap_data.unthrottle      = 0;
+
+            // NOTE: The customer power cap will be set via a separate command
+            // from BMC/(H)TMGT or OPAL.
         }
 
         // The last byte in G_master_pcap_data is a counter that needs to be incremented.

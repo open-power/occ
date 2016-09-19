@@ -425,7 +425,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
     {
         memset((void*) &l_sensorHeader, 0, (size_t)sizeof(cmdh_poll_sensor_db_t));
         memcpy ((void *) &(l_sensorHeader.eyecatcher[0]), SENSOR_CAPS, 4);
-        l_sensorHeader.format = 0x01;
+        l_sensorHeader.format = 0x02;
         l_sensorHeader.length = sizeof(cmdh_poll_pcaps_sensor_t);
 
 
@@ -436,16 +436,19 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
         l_pcapData.max = G_sysConfigData.pcap.max_pcap;
         l_pcapData.min = G_sysConfigData.pcap.hard_min_pcap;
         l_pcapData.user = G_sysConfigData.pcap.current_pcap;
+        l_pcapData.source = G_sysConfigData.pcap.source;
         l_sensorHeader.count  = 1;
 
         // Copy header to response buffer.
-        memcpy ((void *) &(o_rsp_ptr->data[l_rsp_index]), (void *)&l_sensorHeader, sizeof(l_sensorHeader));
+        memcpy ((void *) &(o_rsp_ptr->data[l_rsp_index]),
+                (void *)&l_sensorHeader, sizeof(l_sensorHeader));
         // Increment index into response buffer.
         l_rsp_index += sizeof(l_sensorHeader);
 
         uint8_t l_sensordataSz = l_sensorHeader.count * l_sensorHeader.length;
         // Copy sensor data into response buffer.
-        memcpy ((void *) &(o_rsp_ptr->data[l_rsp_index]), (void *)&(l_pcapData), l_sensordataSz);
+        memcpy ((void *) &(o_rsp_ptr->data[l_rsp_index]),
+                (void *)&(l_pcapData), l_sensordataSz);
         // Increment index into response buffer.
         l_rsp_index += l_sensordataSz;
 
@@ -1541,6 +1544,8 @@ errlHndl_t cmdh_set_user_pcap(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
             //Indicate there is new PCAP data available
             G_master_pcap_data.pcap_data_count++;
+
+            G_master_pcap_data.source = OUT_OF_BAND; // BMC/(H)TMGT
         }
 
         TRAC_INFO("User selected power limit = %d",
