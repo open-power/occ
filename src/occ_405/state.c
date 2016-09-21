@@ -42,6 +42,7 @@
 
 extern bool G_mem_monitoring_allowed;
 extern task_t G_task_table[TASK_END];  // Global task table
+extern bool G_simics_environment;
 
 // Maximum allowed value approx. 16.3 ms
 #define PCBS_HEARBEAT_TIME_US 16320
@@ -612,6 +613,11 @@ uint8_t SMGR_validate_get_valid_states(void)
     if (OCC_IS_FIR_MASTER())
     {
         l_valid_states |= OCC_ROLE_FIR_MASTER_MASK;
+    }
+
+    if(G_simics_environment)
+    {
+        l_valid_states |= OCC_SIMICS_ENVIRONMENT;
     }
 
     return l_valid_states;

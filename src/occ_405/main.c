@@ -102,6 +102,9 @@ uint32_t G_mainThreadLoopCounter = 0x0;
 // Global flag indicating FIR collection is required
 bool G_fir_collection_required = FALSE;
 
+// Global flag indicating we are running on Simics
+bool G_simics_environment = FALSE;
+
 extern uint8_t g_trac_inf_buffer[];
 extern uint8_t g_trac_imp_buffer[];
 extern uint8_t g_trac_err_buffer[];
@@ -112,6 +115,26 @@ void pmc_hw_error_isr(void *private, SsxIrqId irq, int priority);
 //mode interrupt handler
 SSX_IRQ_FAST2FULL(pmc_hw_error_fast, pmc_hw_error_isr);
 
+/*
+ * Function Specification
+ *
+ * Name: check_runtime_environment
+ *
+ * Description: Determines whether we are running in Simics or on real HW.
+ *
+ * End Function Specification
+ */
+void check_runtime_environment(void)
+{
+    uint64_t flags;
+    flags = in64(OCB_OCCFLG);
+
+    // NOTE: The lower 32 bits of this register have no latches on
+    //       physical hardware and will return 0s, so we can use
+    //       a backdoor hack in Simics to set bit 63, telling the
+    //       firmware what environment it's running in.
+    G_simics_environment = ( 0 != (flags & 0x0000000000000001) ) ? TRUE : FALSE;
+}
 
 /*
  * Function Specification
@@ -938,6 +961,9 @@ int main(int argc, char **argv)
     int l_ssxrc = 0;
     int l_ssxrc2 = 0;
 
+    // First, check what environment we are running on (Simics vs. HW).
+    check_runtime_environment();
+
     // ----------------------------------------------------
     // Initialize TLB for Linear Window access here so we
     // can write checkpoints into the fsp response buffer.
@@ -975,7 +1001,7 @@ int main(int argc, char **argv)
         //failure means we can't talk to FSP.
         SSX_PANIC(0x01000001);
     }
-#endif  /* SIMICS_ENVIRONMENT */
+#endif  /* TRAC_TO_SIMICS */
 
     l_ssxrc = ppc405_mmu_map(
             CMDH_OCC_RESPONSE_BASE_ADDRESS,
@@ -1125,6 +1151,10 @@ int main(int argc, char **argv)
     CHECKPOINT(TRACE_INITIALIZED);
 
     MAIN_TRAC_INFO("Inside OCC Main");
+
+    MAIN_TRAC_INFO("Currently %srunning in Simics environment",
+                  ((G_simics_environment == FALSE) ? "not " : "") );
+
     // Trace what happened before ssx initialization
     MAIN_TRAC_INFO("HOMER accessed, rc=%d, version=%d, ssx_rc=%d",
               l_homerrc, l_homer_version, l_ssxrc);
@@ -1224,17 +1254,18 @@ int main(int argc, char **argv)
         }
     }
 */
-    // enable and register additional interrupt handlers
-    CHECKPOINT(INITIALIZING_IRQS);
 
-//  TODO: Uncomment when this is resolved in Simics. Causes SSX panic
-//        currently. Not needed until we want to be able to catch
-//        hardware OCC or PMC (or equivalent) errors.
-#if !SIMICS_ENVIRONMENT
-    occ_irq_setup();
-#endif
+    //TODO: Causes an SSX panic in Simics. If it's needed in simulation,
+    //      debug of the problem will be necessary to resolve.
+    if(FALSE == G_simics_environment)
+    {
+        // enable and register additional interrupt handlers
+        CHECKPOINT(INITIALIZING_IRQS);
 
-    CHECKPOINT(IRQS_INITIALIZED);
+        occ_irq_setup();
+
+        CHECKPOINT(IRQS_INITIALIZED);
+    }
 
     // enable IPC and start GPEs
     CHECKPOINT(INITIALIZING_IPC);

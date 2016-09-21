@@ -87,6 +87,10 @@ typedef enum
 #define OCC_ROLE_MASTER_MASK        0x01
 #define OCC_ROLE_FIR_MASTER_MASK    0x40
 
+// Bit mask in poll for indicating if OCC thinks
+// it is running in simulation.
+#define OCC_SIMICS_ENVIRONMENT      0x08
+
 // Used by TMGT to send OCC the frequencies for each mode.
 typedef struct __attribute__ ((packed))
 {

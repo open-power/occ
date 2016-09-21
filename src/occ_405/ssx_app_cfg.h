@@ -155,7 +155,10 @@ do {                                                                \
 // Default initializations for validation that affect SSX and library code
 
 #ifndef SIMICS_ENVIRONMENT
-#define SIMICS_ENVIRONMENT 1
+#define SIMICS_ENVIRONMENT 0
+#endif
+
+#if SIMICS_ENVIRONMENT
 #pragma message "Building for Simics!"
 #endif
 
