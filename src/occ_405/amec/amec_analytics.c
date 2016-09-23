@@ -304,9 +304,9 @@ void amec_analytics_main(void)
                 tempaccum = tempaccum>>3;
                 g_amec->g44_avg[(i*MSA)+14] = g_amec->g44_avg[(i*MSA)+14] +
                     tempaccum/100;
-                // hottest processor core temperature (average??)
+                // hottest processor core temperature (average)
                 g_amec->g44_avg[(i*MSA)+15] = g_amec->g44_avg[(i*MSA)+15] +
-                    (UINT32)g_amec->proc[i].temp4ms.sample;
+                    (UINT32)g_amec->proc[i].tempprocavg.sample;
 
 // major changes below to accommodate Group 45
 
@@ -417,7 +417,7 @@ void amec_analytics_main(void)
                         g_amec->g44_avg[(i * MSA) + 86 + m] = g_amec->g44_avg[(i * MSA) + 86 + m] +
                             (UINT32)(g_amec->proc[i].core[j].ips4ms.sample / 50);  // accumulate average MIPS for this core
                         g_amec->g44_avg[(i * MSA) + 98 + m] = g_amec->g44_avg[(i * MSA) + 98 + m] +
-                            (UINT32)g_amec->proc[i].core[j].temp4ms.sample; // accumulate average temperature for this core
+                            (UINT32)g_amec->proc[i].core[j].tempprocthermal.sample; // accumulate average temperature for this core
                         g_amec->g44_avg[(i * MSA) + 110 + m] = 0; // No longer supported (was memory bandwidth)
                         temp16 = ((g_amec->proc[i].core[j].mcpifd4ms.sample) / 100);    // accumulate average busy latency counter for this core
                         g_amec->g44_avg[(i * MSA) + 122 + m] = g_amec->g44_avg[(i * MSA) + 122 + m] + (UINT32)temp16;

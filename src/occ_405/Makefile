@@ -71,6 +71,7 @@ LIB_DIRS =  -L$(OBJDIR) \
             -L$(OBJDIR)/mem
 
 #default target is to make a binary application image
+.PHONY : all
 all: $(PPETOOLS_OBJDIR)/ppetracepp $(OBJDIR)/$(IMAGE_NAME).bin $(OBJDIR)/$(IMAGE_NAME).dis
 
 #This removes all unecessary headers from the ELF executable

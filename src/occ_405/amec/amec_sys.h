@@ -288,13 +288,14 @@ typedef struct
   sensor_t ips4ms;
   sensor_t mcpifd4ms;
   sensor_t mcpifi4ms;
-  sensor_t temp4ms;
+  sensor_t tempprocthermal;
   sensor_t util4ms;
   sensor_t nutil3s;
   sensor_t mstl2ms;
   sensor_t cmt2ms;
   sensor_t ppic;
   sensor_t pwrpx250us;
+  sensor_t tempc;
 
   //-----------------------------------
   // Previous Tick Data
@@ -428,6 +429,14 @@ typedef struct
 } amec_proc_pwr_votes_t;
 
 //-------------------------------------------------------------
+// Quad Structure
+//-------------------------------------------------------------
+typedef struct
+{
+    sensor_t tempq;
+} amec_quad_t;
+
+//-------------------------------------------------------------
 // Proc Structure
 //-------------------------------------------------------------
 typedef struct
@@ -437,6 +446,7 @@ typedef struct
   amec_memctl_t  memctl[MAX_NUM_MEM_CONTROLLERS];
   amec_vrm_t     vrm[NUM_PROC_VRMS];
   amec_proc_pwr_votes_t pwr_votes;
+  amec_quad_t    quad[MAX_NUM_QUADS];
 
   // Processor Sensors
   sensor_t freqa4ms;
@@ -453,10 +463,10 @@ typedef struct
   sensor_t sleepcnt4ms;
   sensor_t winkcnt4ms;
   sensor_t sp250us;
-  sensor_t temp4ms;
+  sensor_t tempprocavg;
   vectorSensor_t temp4ms_vector;
-  sensor_t temp4mspeak;
-  vectorSensor_t temp4mspeak_vector;
+  sensor_t tempprocthermal;
+  vectorSensor_t tempprocthermal_vector;
   sensor_t util4ms;
   sensor_t tempnest;
   vectorSensor_t util4ms_vector;

@@ -401,8 +401,8 @@ void amec_slv_state_0(void)
   //-------------------------------------------------------
   // Update vector sensors
   //-------------------------------------------------------
-  sensor_vector_update(AMECSENSOR_PTR(TEMP4MSP0),    1);
-  sensor_vector_update(AMECSENSOR_PTR(TEMP4MSP0PEAK),1);
+  sensor_vector_update(AMECSENSOR_PTR(TEMPPROCAVG),  1);
+  sensor_vector_update(AMECSENSOR_PTR(TEMPPROCTHRM), 1);
   sensor_vector_update(AMECSENSOR_PTR(FREQA4MSP0),   1);
   sensor_vector_update(AMECSENSOR_PTR(IPS4MSP0),     1);
   sensor_vector_update(AMECSENSOR_PTR(UTIL4MSP0),    1);

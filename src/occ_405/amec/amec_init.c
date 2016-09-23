@@ -175,12 +175,12 @@ void amec_init_vector_sensors(void)
 #define VECTOR_ADD_ELEM_FAILURE 2
 
   //-----------------------------------------------------
-  // TEMP4MSP0 Vector Sensor
+  // TEMPPROCAVG Vector Sensor
   //-----------------------------------------------------
-  amec_vectorize_core_sensor(AMECSENSOR_PTR(TEMP4MSP0),
+  amec_vectorize_core_sensor(AMECSENSOR_PTR(TEMPPROCAVG),
       &g_amec_sys.proc[0].temp4ms_vector,
       VECTOR_OP_AVG,
-      TEMP4MSP0C0);
+      TEMPPROCTHRMC0);
 
   //-----------------------------------------------------
   // FREQA4MSP0 Vector Sensor
@@ -199,12 +199,12 @@ void amec_init_vector_sensors(void)
       IPS4MSP0C0);
 
   //-----------------------------------------------------
-  // TEMP4MSP0PEAK Vector Sensor
+  // TEMPPROCTHRM Vector Sensor
   //-----------------------------------------------------
-  amec_vectorize_core_sensor(AMECSENSOR_PTR(TEMP4MSP0PEAK),
-      &g_amec_sys.proc[0].temp4mspeak_vector,
+  amec_vectorize_core_sensor(AMECSENSOR_PTR(TEMPPROCTHRM),
+      &g_amec_sys.proc[0].tempprocthermal_vector,
       VECTOR_OP_MAX,
-      TEMP4MSP0C0);
+      TEMPPROCTHRMC0);
 
   //-----------------------------------------------------
   // UTIL2MSP0 Vector Sensor

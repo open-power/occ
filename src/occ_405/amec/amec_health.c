@@ -818,9 +818,9 @@ void amec_health_check_proc_temp()
     /*------------------------------------------------------------------------*/
     do
     {
-        // Get TEMP4MSP0PEAK sensor, which is hottest core temperature
+        // Get TEMPPROCTHRM sensor, which is hottest core temperature
         // in OCC processor
-        l_sensor = getSensorByGsid(TEMP4MSP0PEAK);
+        l_sensor = getSensorByGsid(TEMPPROCTHRM);
         l_ot_error = g_amec->thermalproc.ot_error;
 
         // Check to see if we exceeded our error temperature
@@ -931,7 +931,7 @@ void amec_health_check_proc_timeout()
             }
 
             // Check if this core's temperature sensor has been updated
-            l_sensor = AMECSENSOR_ARRAY_PTR(TEMP4MSP0C0,i);
+            l_sensor = AMECSENSOR_ARRAY_PTR(TEMPPROCTHRMC0,i);
             if (l_sensor->update_tag == G_core_temp_update_tag[i])
             {
                 // If the update tag is not changing, then this core's
@@ -968,10 +968,11 @@ void amec_health_check_proc_timeout()
                 l_core_data_ptr = proc_get_bulk_core_data_ptr(l_bad_core_index);
 
 
-                TRAC_ERR("Core Sensors[0x%04X%04X] Quad Sensor[0x%04X]",
+                TRAC_ERR("Core Sensors[0x%04X%04X] Quad Sensor[0x%04X%04X]",
                          (uint16_t)(l_core_data_ptr->dts.core[0].result ),
-                         (uint16_t)(l_core_data_ptr->dts.core[0].result ),
-                         (uint16_t)(l_core_data_ptr->dts.cache.result));
+                         (uint16_t)(l_core_data_ptr->dts.core[1].result ),
+                         (uint16_t)(l_core_data_ptr->dts.cache[0].result),
+                         (uint16_t)(l_core_data_ptr->dts.cache[1].result));
 
                 /* @
                  * @errortype

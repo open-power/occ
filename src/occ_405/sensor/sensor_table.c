@@ -71,6 +71,17 @@ extern amec_sys_t g_amec_sys;
   [SENSOR_W_NUM(sensor,22)] = ptrbase[22].ptrmember, \
   [SENSOR_W_NUM(sensor,23)] = ptrbase[23].ptrmember
 
+// Will define a set of "quad sensor pointers" by passing in base sensor name
+// and ptr to [0] entry of array of 6 quad sensors
+#define QUAD_SENSOR_PTRS(sensor,ptrbase,ptrmember) \
+  [SENSOR_W_NUM(sensor, 0)] = ptrbase[ 0].ptrmember, \
+  [SENSOR_W_NUM(sensor, 1)] = ptrbase[ 1].ptrmember, \
+  [SENSOR_W_NUM(sensor, 2)] = ptrbase[ 2].ptrmember, \
+  [SENSOR_W_NUM(sensor, 3)] = ptrbase[ 3].ptrmember, \
+  [SENSOR_W_NUM(sensor, 4)] = ptrbase[ 4].ptrmember, \
+  [SENSOR_W_NUM(sensor, 5)] = ptrbase[ 5].ptrmember
+
+
 // Will define a set of "memory controller sensor pointers" by passing in
 // base sensor nameand ptr to [0] entry of array of 8 memcontroller sensors
 #define MEMCONTROL_SENSOR_PTRS(sensor,ptrbase,ptrmember) \
@@ -136,7 +147,6 @@ extern amec_sys_t g_amec_sys;
   [SENSOR_W_NUM(sensor,22)] = ptr[22], \
   [SENSOR_W_NUM(sensor,23)] = ptr[23]
 
-// Will define a set of "core mini-sensor pointers" as NULL, since not
 // every sensor must have a mini-sensor.
 #define CORE_MINI_SENSOR_PTRS_NULL(sensor) \
   [SENSOR_W_NUM(sensor, 0)] = NULL, \
@@ -163,6 +173,25 @@ extern amec_sys_t g_amec_sys;
   [SENSOR_W_NUM(sensor,21)] = NULL, \
   [SENSOR_W_NUM(sensor,22)] = NULL, \
   [SENSOR_W_NUM(sensor,23)] = NULL
+
+// Will define a set of "quad mini-sensor pointers" by passing in base
+// sensor name and ptr to [0] entry of array of quad sensors
+#define QUAD_MINI_SENSOR_PTRS(sensor,ptr) \
+  [SENSOR_W_NUM(sensor, 0)] = ptr[ 0], \
+  [SENSOR_W_NUM(sensor, 1)] = ptr[ 1], \
+  [SENSOR_W_NUM(sensor, 2)] = ptr[ 2], \
+  [SENSOR_W_NUM(sensor, 3)] = ptr[ 3], \
+  [SENSOR_W_NUM(sensor, 4)] = ptr[ 4], \
+  [SENSOR_W_NUM(sensor, 5)] = ptr[ 5]
+
+// every sensor must have a mini-sensor.
+#define QUAD_MINI_SENSOR_PTRS_NULL(sensor) \
+  [SENSOR_W_NUM(sensor, 0)] = NULL, \
+  [SENSOR_W_NUM(sensor, 1)] = NULL, \
+  [SENSOR_W_NUM(sensor, 2)] = NULL, \
+  [SENSOR_W_NUM(sensor, 3)] = NULL, \
+  [SENSOR_W_NUM(sensor, 4)] = NULL, \
+  [SENSOR_W_NUM(sensor, 5)] = NULL
 
 // Will define a set of "memory controller mini sensor ptrs" by passing in
 // base sensor nameand ptr to [0] entry of array of 8 memcontroller sensors
@@ -312,12 +341,17 @@ const sensor_ptr_t G_amec_sensor_list[] =
   SENSOR_PTR( SLEEPCNT4MSP0,        &g_amec_sys.proc[0].sleepcnt4ms),
   SENSOR_PTR( WINKCNT4MSP0,         &g_amec_sys.proc[0].winkcnt4ms),
   SENSOR_PTR( SP250USP0,            &g_amec_sys.proc[0].sp250us),
-  SENSOR_PTR( TEMP4MSP0,            &g_amec_sys.proc[0].temp4ms),
-  SENSOR_PTR( TEMP4MSP0PEAK,        &g_amec_sys.proc[0].temp4mspeak),
+  SENSOR_PTR( TEMPPROCAVG,          &g_amec_sys.proc[0].tempprocavg),
+  SENSOR_PTR( TEMPPROCTHRM,         &g_amec_sys.proc[0].tempprocthermal),
   SENSOR_PTR( UTIL4MSP0,            &g_amec_sys.proc[0].util4ms),
   SENSOR_PTR( TEMPNEST,             &g_amec_sys.proc[0].tempnest),
   SENSOR_PTR( VRFAN250USPROC,       &g_amec_sys.sys.vrfan250usproc),
   SENSOR_PTR( VRHOT250USPROC,       &g_amec_sys.sys.vrhot250usproc),
+
+  // ------------------------------------------------------
+  // Quad Sensors (6 each)
+  // ------------------------------------------------------
+  QUAD_SENSOR_PTRS( TEMPQ,          &g_amec_sys.proc[0].quad, tempq),
 
   // ------------------------------------------------------
   // Core Sensors (24 of each)
@@ -327,13 +361,14 @@ const sensor_ptr_t G_amec_sensor_list[] =
   CORE_SENSOR_PTRS( IPS4MSP0C ,     &g_amec_sys.proc[0].core, ips4ms),
   CORE_SENSOR_PTRS( NOTBZE4MSP0C ,  &g_amec_sys.proc[0].core, mcpifd4ms),
   CORE_SENSOR_PTRS( NOTFIN4MSP0C ,  &g_amec_sys.proc[0].core, mcpifi4ms),
-  CORE_SENSOR_PTRS( TEMP4MSP0C ,    &g_amec_sys.proc[0].core, temp4ms),
+  CORE_SENSOR_PTRS( TEMPPROCTHRMC , &g_amec_sys.proc[0].core, tempprocthermal),
   CORE_SENSOR_PTRS( UTIL4MSP0C ,    &g_amec_sys.proc[0].core, util4ms),
   CORE_SENSOR_PTRS( NUTIL3SP0C ,    &g_amec_sys.proc[0].core, nutil3s),
   CORE_SENSOR_PTRS( MSTL2MSP0C ,    &g_amec_sys.proc[0].core, mstl2ms),
   CORE_SENSOR_PTRS( CMT2MSP0C ,     &g_amec_sys.proc[0].core, cmt2ms),
   CORE_SENSOR_PTRS( PPICP0C ,       &g_amec_sys.proc[0].core, ppic),
   CORE_SENSOR_PTRS( PWRPX250USP0C , &g_amec_sys.proc[0].core, pwrpx250us),
+  CORE_SENSOR_PTRS( TEMPC,          &g_amec_sys.proc[0].core, tempc),
 
   // ------------------------------------------------------
   // Memory Sensors
@@ -464,12 +499,17 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   MINI_SENSOR_PTR(  SLEEPCNT4MSP0,  &G_dcom_slv_outbox_tx.sleepcnt4msp0),
   MINI_SENSOR_PTR(   WINKCNT4MSP0,  &G_dcom_slv_outbox_tx.winkcnt4msp0),
   MINI_SENSOR_PTR(      SP250USP0,  NULL),
-  MINI_SENSOR_PTR(      TEMP4MSP0,  &G_dcom_slv_outbox_tx.temp4msp0),
-  MINI_SENSOR_PTR(  TEMP4MSP0PEAK,  &G_dcom_slv_outbox_tx.temp4msp0peak),
+  MINI_SENSOR_PTR(    TEMPPROCAVG,  &G_dcom_slv_outbox_tx.tempprocavg),
+  MINI_SENSOR_PTR(   TEMPPROCTHRM,  &G_dcom_slv_outbox_tx.tempprocthermal),
   MINI_SENSOR_PTR(      UTIL4MSP0,  &G_dcom_slv_outbox_tx.util4msp0),
   MINI_SENSOR_PTR(       TEMPNEST,  NULL),
   MINI_SENSOR_PTR( VRFAN250USPROC,  &G_dcom_slv_outbox_tx.vrfan250usproc),
   MINI_SENSOR_PTR( VRHOT250USPROC,  NULL),
+
+  // ------------------------------------------------------
+  // Quad Sensors (6 each)
+  // ------------------------------------------------------
+  QUAD_MINI_SENSOR_PTRS_NULL( TEMPQ ),
 
   // ------------------------------------------------------
   // Core Sensors (24 of each)
@@ -479,13 +519,14 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   CORE_MINI_SENSOR_PTRS(          IPS4MSP0C, &G_dcom_slv_outbox_tx.ips4msp0cy    ),
   CORE_MINI_SENSOR_PTRS(       NOTBZE4MSP0C, &G_dcom_slv_outbox_tx.mcpifd4msp0cy ),
   CORE_MINI_SENSOR_PTRS(       NOTFIN4MSP0C, &G_dcom_slv_outbox_tx.mcpifi4msp0cy ),
-  CORE_MINI_SENSOR_PTRS_NULL(    TEMP4MSP0C ),
+  CORE_MINI_SENSOR_PTRS_NULL( TEMPPROCTHRMC ),
   CORE_MINI_SENSOR_PTRS(         UTIL4MSP0C, &G_dcom_slv_outbox_tx.util4msp0cy   ),
   CORE_MINI_SENSOR_PTRS(         NUTIL3SP0C, &G_dcom_slv_outbox_tx.nutil3sp0cy   ),
   CORE_MINI_SENSOR_PTRS_NULL(    MSTL2MSP0C ),
   CORE_MINI_SENSOR_PTRS_NULL(     CMT2MSP0C ),
   CORE_MINI_SENSOR_PTRS_NULL(       PPICP0C ),
   CORE_MINI_SENSOR_PTRS(      PWRPX250USP0C, &G_dcom_slv_outbox_tx.pwrpx250usp0cy), //
+  CORE_MINI_SENSOR_PTRS_NULL(         TEMPC ),
 
   // ------------------------------------------------------
   // Memory Sensors
@@ -539,5 +580,3 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
 };
 STATIC_ASSERT(   (NUMBER_OF_SENSORS_IN_LIST != (sizeof(G_amec_mini_sensor_list)/sizeof(uint16_t *)))   );
 STATIC_ASSERT(   (MAX_AMEC_SENSORS < (sizeof(G_amec_mini_sensor_list)/sizeof(uint16_t *)))   );
-
-

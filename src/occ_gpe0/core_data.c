@@ -76,17 +76,9 @@ uint32_t get_core_data(uint32_t i_core,
     PPE_LVD(quadSelect + THERM_DTS_RESULT, value64);
     dts_scom_data.value = value64;
 
-    // Pick the sensor reading closest to core
-    // first two cores - use cache dts0
-    // last two cores -  use cache dts1
-    if(i_core & 0x00000002)
-    {
-        o_data->dts.cache.result = dts_scom_data.half_words.reading[1];
-    }
-    else
-    {
-        o_data->dts.cache.result = dts_scom_data.half_words.reading[0];
-    }
+    // Store the quad DTS readings
+    o_data->dts.cache[0].result = dts_scom_data.half_words.reading[0];
+    o_data->dts.cache[1].result = dts_scom_data.half_words.reading[1];
 
     //scom_reg = (uint64_t*)(coreSelect + THERM_DTS_RESULT);
     //dts_scom_data.value = *scom_reg;

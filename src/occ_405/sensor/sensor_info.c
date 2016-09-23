@@ -62,33 +62,75 @@
 #define CENTAUR_SENSOR_STRING_HELPER(sensor_name, memc,centL,cent,ppL,pp) SENSOR_STRING(sensor_name##memc##centL##cent##ppL##pp)
 #define CENTAUR_SENSOR_STRING(sensor_name,memc,cent,pp)  CENTAUR_SENSOR_STRING_HELPER(sensor_name, memc,C,cent,P,pp)
 
-// This will create a set of 12 sensor entries into the sensor list table.
+// This will create a set of 6 sensor entries into the sensor list table.
+// (one for each quad...)  The base name of the sensor enum must be passed
+// and this macro will take care of the paste & stringify operations.
+#define SENS_QUAD_ENTRY_SET(sensor_name, units, type, location, number, frequency, scaleFactor)  \
+  [SENSOR_W_NUM(sensor_name,0)] = {.name = SENSOR_STRING(sensor_name ## 0),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
+  [SENSOR_W_NUM(sensor_name,1)] = {.name = SENSOR_STRING(sensor_name ## 1),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
+  [SENSOR_W_NUM(sensor_name,2)] = {.name = SENSOR_STRING(sensor_name ## 2),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
+  [SENSOR_W_NUM(sensor_name,3)] = {.name = SENSOR_STRING(sensor_name ## 3),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
+  [SENSOR_W_NUM(sensor_name,4)] = {.name = SENSOR_STRING(sensor_name ## 4),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
+  [SENSOR_W_NUM(sensor_name,5)] = {.name = SENSOR_STRING(sensor_name ## 5),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}
+
+
+// This will create a set of 24 sensor entries into the sensor list table.
 // (one for each core...)  The base name of the sensor enum must be passed
 // and this macro will take care of the paste & stringify operations.
 #define SENS_CORE_ENTRY_SET(sensor_name, units, type, location, number, frequency, scaleFactor)  \
-  [SENSOR_W_NUM(sensor_name,0)] = {.name = SENSOR_STRING(sensor_name ## 1),   \
+  [SENSOR_W_NUM(sensor_name,0)] = {.name = SENSOR_STRING(sensor_name ## 0),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_NUM(sensor_name,1)] = {.name = SENSOR_STRING(sensor_name ## 2),   \
+  [SENSOR_W_NUM(sensor_name,1)] = {.name = SENSOR_STRING(sensor_name ## 1),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_NUM(sensor_name,2)] = {.name = SENSOR_STRING(sensor_name ## 3),   \
+  [SENSOR_W_NUM(sensor_name,2)] = {.name = SENSOR_STRING(sensor_name ## 2),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_NUM(sensor_name,3)] = {.name = SENSOR_STRING(sensor_name ## 4),   \
+  [SENSOR_W_NUM(sensor_name,3)] = {.name = SENSOR_STRING(sensor_name ## 3),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_NUM(sensor_name,4)] = {.name = SENSOR_STRING(sensor_name ## 5),   \
+  [SENSOR_W_NUM(sensor_name,4)] = {.name = SENSOR_STRING(sensor_name ## 4),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_NUM(sensor_name,5)] = {.name = SENSOR_STRING(sensor_name ## 6),   \
+  [SENSOR_W_NUM(sensor_name,5)] = {.name = SENSOR_STRING(sensor_name ## 5),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_NUM(sensor_name,6)] = {.name = SENSOR_STRING(sensor_name ## 9),   \
+  [SENSOR_W_NUM(sensor_name,6)] = {.name = SENSOR_STRING(sensor_name ## 6),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_NUM(sensor_name,7)] = {.name = SENSOR_STRING(sensor_name ## 10),   \
+  [SENSOR_W_NUM(sensor_name,7)] = {.name = SENSOR_STRING(sensor_name ## 7),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_NUM(sensor_name,8)] = {.name = SENSOR_STRING(sensor_name ## 11),   \
+  [SENSOR_W_NUM(sensor_name,8)] = {.name = SENSOR_STRING(sensor_name ## 8),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_NUM(sensor_name,9)] = {.name = SENSOR_STRING(sensor_name ## 12),   \
+  [SENSOR_W_NUM(sensor_name,9)] = {.name = SENSOR_STRING(sensor_name ## 9),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_NUM(sensor_name,10)] = {.name = SENSOR_STRING(sensor_name ## 13),   \
+  [SENSOR_W_NUM(sensor_name,10)] = {.name = SENSOR_STRING(sensor_name ## 10),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_NUM(sensor_name,11)] = {.name = SENSOR_STRING(sensor_name ## 14),   \
+  [SENSOR_W_NUM(sensor_name,11)] = {.name = SENSOR_STRING(sensor_name ## 11),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
+  [SENSOR_W_NUM(sensor_name,12)] = {.name = SENSOR_STRING(sensor_name ## 12),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
+  [SENSOR_W_NUM(sensor_name,13)] = {.name = SENSOR_STRING(sensor_name ## 13),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
+  [SENSOR_W_NUM(sensor_name,14)] = {.name = SENSOR_STRING(sensor_name ## 14),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
+  [SENSOR_W_NUM(sensor_name,15)] = {.name = SENSOR_STRING(sensor_name ## 15),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
+  [SENSOR_W_NUM(sensor_name,16)] = {.name = SENSOR_STRING(sensor_name ## 16),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
+  [SENSOR_W_NUM(sensor_name,17)] = {.name = SENSOR_STRING(sensor_name ## 17),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
+  [SENSOR_W_NUM(sensor_name,18)] = {.name = SENSOR_STRING(sensor_name ## 18),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
+  [SENSOR_W_NUM(sensor_name,19)] = {.name = SENSOR_STRING(sensor_name ## 19),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
+  [SENSOR_W_NUM(sensor_name,20)] = {.name = SENSOR_STRING(sensor_name ## 20),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
+  [SENSOR_W_NUM(sensor_name,21)] = {.name = SENSOR_STRING(sensor_name ## 21),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
+  [SENSOR_W_NUM(sensor_name,22)] = {.name = SENSOR_STRING(sensor_name ## 22),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
+  [SENSOR_W_NUM(sensor_name,23)] = {.name = SENSOR_STRING(sensor_name ## 23),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}
 
 // This will create a set of 8 sensor entries into the sensor list table.
@@ -217,23 +259,24 @@ const sensor_info_t G_sensor_info[]   =
   SENSOR_INFO_T_ENTRY(       TODclock2,  "day\0",   AMEC_SENSOR_TYPE_TIME,  AMEC_SENSOR_LOC_ALL, AMEC_SENSOR_NONUM,   AMEEFP_2MS_IN_HZ,   AMEFP( 795364,-6)  ),
 
   /* ==ProcSensors==        NameString  Units                      Type              Location             Number                Freq      ScaleFactor   */
-  SENSOR_INFO_T_ENTRY(      FREQA4MSP0, "MHz\0",    AMEC_SENSOR_TYPE_FREQ, AMEC_SENSOR_LOC_PROC, AMEC_SENSOR_NONUM,   AMEEFP_2MS_IN_HZ,   AMEFP(  1, 0)  ),
-  SENSOR_INFO_T_ENTRY(        IPS4MSP0, "MIP\0",    AMEC_SENSOR_TYPE_PERF, AMEC_SENSOR_LOC_PROC, AMEC_SENSOR_NONUM,   AMEEFP_2MS_IN_HZ,   AMEFP(  1, 0)  ),
-  SENSOR_INFO_T_ENTRY(      MEMSP2MSP0,   "%\0",    AMEC_SENSOR_TYPE_TIME, AMEC_SENSOR_LOC_PROC, AMEC_SENSOR_NONUM,   AMEEFP_2MS_IN_HZ,   AMEFP(  1, 0)  ),
+  SENSOR_INFO_T_ENTRY(      FREQA4MSP0, "MHz\0",    AMEC_SENSOR_TYPE_FREQ, AMEC_SENSOR_LOC_PROC, AMEC_SENSOR_NONUM,   AMEEFP_4MS_IN_HZ,   AMEFP(  1, 0)  ),
+  SENSOR_INFO_T_ENTRY(        IPS4MSP0, "MIP\0",    AMEC_SENSOR_TYPE_PERF, AMEC_SENSOR_LOC_PROC, AMEC_SENSOR_NONUM,   AMEEFP_4MS_IN_HZ,   AMEFP(  1, 0)  ),
+  SENSOR_INFO_T_ENTRY(      MEMSP2MSP0,   "%\0",    AMEC_SENSOR_TYPE_TIME, AMEC_SENSOR_LOC_PROC, AMEC_SENSOR_NONUM,   AMEEFP_4MS_IN_HZ,   AMEFP(  1, 0)  ),
   SENSOR_INFO_T_ENTRY(      PWR250USP0,   "W\0",   AMEC_SENSOR_TYPE_POWER, AMEC_SENSOR_LOC_PROC, AMEC_SENSOR_NONUM, AMEEFP_250US_IN_HZ,   AMEFP(  1, 0)  ),
   SENSOR_INFO_T_ENTRY(    PWR250USVDD0,   "W\0",   AMEC_SENSOR_TYPE_POWER, AMEC_SENSOR_LOC_PROC, AMEC_SENSOR_NONUM, AMEEFP_250US_IN_HZ,   AMEFP(  1, 0)  ),
   SENSOR_INFO_T_ENTRY(    CUR250USVDD0,   "A\0", AMEC_SENSOR_TYPE_CURRENT, AMEC_SENSOR_LOC_PROC, AMEC_SENSOR_NONUM, AMEEFP_250US_IN_HZ,   AMEFP(  1,-2)  ),
   SENSOR_INFO_T_ENTRY(    PWR250USVCS0,   "W\0",   AMEC_SENSOR_TYPE_POWER, AMEC_SENSOR_LOC_PROC, AMEC_SENSOR_NONUM, AMEEFP_250US_IN_HZ,   AMEFP(  1, 0)  ),
   SENSOR_INFO_T_ENTRY(    PWR250USMEM0,   "W\0",   AMEC_SENSOR_TYPE_POWER, AMEC_SENSOR_LOC_PROC, AMEC_SENSOR_NONUM, AMEEFP_250US_IN_HZ,   AMEFP(  1, 0)  ),
-  SENSOR_INFO_T_ENTRY(   SLEEPCNT4MSP0,   "#\0",    AMEC_SENSOR_TYPE_PERF, AMEC_SENSOR_LOC_PROC, AMEC_SENSOR_NONUM,   AMEEFP_2MS_IN_HZ,   AMEFP(  1, 0)  ),
-  SENSOR_INFO_T_ENTRY(    WINKCNT4MSP0,   "#\0",    AMEC_SENSOR_TYPE_PERF, AMEC_SENSOR_LOC_PROC, AMEC_SENSOR_NONUM,   AMEEFP_2MS_IN_HZ,   AMEFP(  1, 0)  ),
+  SENSOR_INFO_T_ENTRY(   SLEEPCNT4MSP0,   "#\0",    AMEC_SENSOR_TYPE_PERF, AMEC_SENSOR_LOC_PROC, AMEC_SENSOR_NONUM,   AMEEFP_4MS_IN_HZ,   AMEFP(  1, 0)  ),
+  SENSOR_INFO_T_ENTRY(    WINKCNT4MSP0,   "#\0",    AMEC_SENSOR_TYPE_PERF, AMEC_SENSOR_LOC_PROC, AMEC_SENSOR_NONUM,   AMEEFP_4MS_IN_HZ,   AMEFP(  1, 0)  ),
   SENSOR_INFO_T_ENTRY(       SP250USP0,   "%\0",    AMEC_SENSOR_TYPE_FREQ, AMEC_SENSOR_LOC_PROC, AMEC_SENSOR_NONUM, AMEEFP_250US_IN_HZ,   AMEFP(  1, 0)  ),
-  SENSOR_INFO_T_ENTRY(       TEMP4MSP0,   "C\0",    AMEC_SENSOR_TYPE_TEMP, AMEC_SENSOR_LOC_PROC, AMEC_SENSOR_NONUM,   AMEEFP_2MS_IN_HZ,   AMEFP(  1, 0)  ),
-  SENSOR_INFO_T_ENTRY(   TEMP4MSP0PEAK,   "C\0",    AMEC_SENSOR_TYPE_TEMP, AMEC_SENSOR_LOC_PROC, AMEC_SENSOR_NONUM,   AMEEFP_2MS_IN_HZ,   AMEFP(  1, 0)  ),
-  SENSOR_INFO_T_ENTRY(       UTIL4MSP0,   "%\0",    AMEC_SENSOR_TYPE_UTIL, AMEC_SENSOR_LOC_PROC, AMEC_SENSOR_NONUM,   AMEEFP_2MS_IN_HZ,   AMEFP(  1,-2)  ),
+  SENSOR_INFO_T_ENTRY(     TEMPPROCAVG,   "C\0",    AMEC_SENSOR_TYPE_TEMP, AMEC_SENSOR_LOC_PROC, AMEC_SENSOR_NONUM,   AMEEFP_4MS_IN_HZ,   AMEFP(  1, 0)  ),
+  SENSOR_INFO_T_ENTRY(    TEMPPROCTHRM,   "C\0",    AMEC_SENSOR_TYPE_TEMP, AMEC_SENSOR_LOC_PROC, AMEC_SENSOR_NONUM,   AMEEFP_4MS_IN_HZ,   AMEFP(  1, 0)  ),
+  SENSOR_INFO_T_ENTRY(       UTIL4MSP0,   "%\0",    AMEC_SENSOR_TYPE_UTIL, AMEC_SENSOR_LOC_PROC, AMEC_SENSOR_NONUM,   AMEEFP_4MS_IN_HZ,   AMEFP(  1,-2)  ),
   SENSOR_INFO_T_ENTRY(        TEMPNEST,   "C\0",    AMEC_SENSOR_TYPE_TEMP, AMEC_SENSOR_LOC_PROC, AMEC_SENSOR_NONUM,   AMEEFP_4MS_IN_HZ,   AMEFP(  1, 0)  ),
   SENSOR_INFO_T_ENTRY(  VRFAN250USPROC, "pin\0",    AMEC_SENSOR_TYPE_TEMP,  AMEC_SENSOR_LOC_VRM, AMEC_SENSOR_NONUM, AMEEFP_250US_IN_HZ,   AMEFP(  1, 0)  ),
   SENSOR_INFO_T_ENTRY(  VRHOT250USPROC, "pin\0",    AMEC_SENSOR_TYPE_TEMP,  AMEC_SENSOR_LOC_VRM, AMEC_SENSOR_NONUM, AMEEFP_250US_IN_HZ,   AMEFP(  1, 0)  ),
+  SENS_QUAD_ENTRY_SET(           TEMPQ,   "C\0",    AMEC_SENSOR_TYPE_TEMP, AMEC_SENSOR_LOC_PROC, AMEC_SENSOR_NONUM,   AMEEFP_4MS_IN_HZ,   AMEFP(  1, 0)  ),
 
   /* ==ReguSensors==        NameString  Units                      Type              Location             Number                Freq      ScaleFactor   */
   SENSOR_INFO_T_ENTRY(  UVOLT250USP0V0,  "mV\0", AMEC_SENSOR_TYPE_VOLTAGE,  AMEC_SENSOR_LOC_VRM, AMEC_SENSOR_NONUM, AMEEFP_250US_IN_HZ,   AMEFP(  1, -1)  ),
@@ -242,18 +285,19 @@ const sensor_info_t G_sensor_info[]   =
   SENSOR_INFO_T_ENTRY(   VOLT250USP0V1,  "mV\0", AMEC_SENSOR_TYPE_VOLTAGE,  AMEC_SENSOR_LOC_VRM, AMEC_SENSOR_NONUM, AMEEFP_250US_IN_HZ,   AMEFP(  1, -1)  ),
 
   /* ==CoreSensors==        NameString  Units                      Type              Location             Number                Freq      ScaleFactor   */
-  SENS_CORE_ENTRY_SET(   FREQ250USP0C , "MHz\0",    AMEC_SENSOR_TYPE_FREQ, AMEC_SENSOR_LOC_CORE, AMEC_SENSOR_NONUM, AMEEFP_250US_IN_HZ,   AMEFP(  1, 0)  ),
-  SENS_CORE_ENTRY_SET(    FREQA4MSP0C , "MHz\0",    AMEC_SENSOR_TYPE_FREQ, AMEC_SENSOR_LOC_CORE, AMEC_SENSOR_NONUM,   AMEEFP_2MS_IN_HZ,   AMEFP(  1, 0)  ),
-  SENS_CORE_ENTRY_SET(      IPS4MSP0C , "MIP\0",    AMEC_SENSOR_TYPE_PERF, AMEC_SENSOR_LOC_CORE, AMEC_SENSOR_NONUM,   AMEEFP_2MS_IN_HZ,   AMEFP(  1, 0)  ),
-  SENS_CORE_ENTRY_SET(   NOTBZE4MSP0C , "cyc\0",    AMEC_SENSOR_TYPE_PERF, AMEC_SENSOR_LOC_CORE, AMEC_SENSOR_NONUM,   AMEEFP_2MS_IN_HZ,   AMEFP(  1, 0)  ),
-  SENS_CORE_ENTRY_SET(   NOTFIN4MSP0C , "cyc\0",    AMEC_SENSOR_TYPE_PERF, AMEC_SENSOR_LOC_CORE, AMEC_SENSOR_NONUM,   AMEEFP_2MS_IN_HZ,   AMEFP(  1, 0)  ),
-  SENS_CORE_ENTRY_SET(     TEMP4MSP0C ,   "C\0",    AMEC_SENSOR_TYPE_TEMP, AMEC_SENSOR_LOC_CORE, AMEC_SENSOR_NONUM,   AMEEFP_2MS_IN_HZ,   AMEFP(  1, 0)  ),
-  SENS_CORE_ENTRY_SET(     UTIL4MSP0C ,   "%\0",    AMEC_SENSOR_TYPE_UTIL, AMEC_SENSOR_LOC_CORE, AMEC_SENSOR_NONUM,   AMEEFP_2MS_IN_HZ,   AMEFP(  1,-2)  ),
-  SENS_CORE_ENTRY_SET(     NUTIL3SP0C ,   "%\0",    AMEC_SENSOR_TYPE_UTIL, AMEC_SENSOR_LOC_CORE, AMEC_SENSOR_NONUM,    AMEEFP_3S_IN_HZ,   AMEFP(  1,-2)  ),
-  SENS_CORE_ENTRY_SET(     MSTL2MSP0C , "cpi\0",    AMEC_SENSOR_TYPE_PERF, AMEC_SENSOR_LOC_CORE, AMEC_SENSOR_NONUM,   AMEEFP_2MS_IN_HZ,   AMEFP(  1, 0)  ),
-  SENS_CORE_ENTRY_SET(      CMT2MSP0C ,   "%\0",    AMEC_SENSOR_TYPE_PERF, AMEC_SENSOR_LOC_CORE, AMEC_SENSOR_NONUM,   AMEEFP_2MS_IN_HZ,   AMEFP(  1, 0)  ),
-  SENS_CORE_ENTRY_SET(        PPICP0C ,   "%\0",    AMEC_SENSOR_TYPE_PERF, AMEC_SENSOR_LOC_CORE, AMEC_SENSOR_NONUM,   AMEEFP_2MS_IN_HZ,   AMEFP(  1, 0)  ),
-  SENS_CORE_ENTRY_SET(  PWRPX250USP0C ,   "W\0",   AMEC_SENSOR_TYPE_POWER, AMEC_SENSOR_LOC_CORE, AMEC_SENSOR_NONUM, AMEEFP_250US_IN_HZ,   AMEFP(  1, 0)  ),
+  SENS_CORE_ENTRY_SET(     FREQ250USP0C, "MHz\0",    AMEC_SENSOR_TYPE_FREQ, AMEC_SENSOR_LOC_CORE, AMEC_SENSOR_NONUM, AMEEFP_250US_IN_HZ,   AMEFP(  1, 0)  ),
+  SENS_CORE_ENTRY_SET(      FREQA4MSP0C, "MHz\0",    AMEC_SENSOR_TYPE_FREQ, AMEC_SENSOR_LOC_CORE, AMEC_SENSOR_NONUM,   AMEEFP_4MS_IN_HZ,   AMEFP(  1, 0)  ),
+  SENS_CORE_ENTRY_SET(        IPS4MSP0C, "MIP\0",    AMEC_SENSOR_TYPE_PERF, AMEC_SENSOR_LOC_CORE, AMEC_SENSOR_NONUM,   AMEEFP_4MS_IN_HZ,   AMEFP(  1, 0)  ),
+  SENS_CORE_ENTRY_SET(     NOTBZE4MSP0C, "cyc\0",    AMEC_SENSOR_TYPE_PERF, AMEC_SENSOR_LOC_CORE, AMEC_SENSOR_NONUM,   AMEEFP_4MS_IN_HZ,   AMEFP(  1, 0)  ),
+  SENS_CORE_ENTRY_SET(     NOTFIN4MSP0C, "cyc\0",    AMEC_SENSOR_TYPE_PERF, AMEC_SENSOR_LOC_CORE, AMEC_SENSOR_NONUM,   AMEEFP_4MS_IN_HZ,   AMEFP(  1, 0)  ),
+  SENS_CORE_ENTRY_SET(    TEMPPROCTHRMC,   "C\0",    AMEC_SENSOR_TYPE_TEMP, AMEC_SENSOR_LOC_CORE, AMEC_SENSOR_NONUM,   AMEEFP_4MS_IN_HZ,   AMEFP(  1, 0)  ),
+  SENS_CORE_ENTRY_SET(       UTIL4MSP0C,   "%\0",    AMEC_SENSOR_TYPE_UTIL, AMEC_SENSOR_LOC_CORE, AMEC_SENSOR_NONUM,   AMEEFP_4MS_IN_HZ,   AMEFP(  1,-2)  ),
+  SENS_CORE_ENTRY_SET(       NUTIL3SP0C,   "%\0",    AMEC_SENSOR_TYPE_UTIL, AMEC_SENSOR_LOC_CORE, AMEC_SENSOR_NONUM,    AMEEFP_3S_IN_HZ,   AMEFP(  1,-2)  ),
+  SENS_CORE_ENTRY_SET(       MSTL2MSP0C, "cpi\0",    AMEC_SENSOR_TYPE_PERF, AMEC_SENSOR_LOC_CORE, AMEC_SENSOR_NONUM,   AMEEFP_2MS_IN_HZ,   AMEFP(  1, 0)  ),
+  SENS_CORE_ENTRY_SET(        CMT2MSP0C,   "%\0",    AMEC_SENSOR_TYPE_PERF, AMEC_SENSOR_LOC_CORE, AMEC_SENSOR_NONUM,   AMEEFP_2MS_IN_HZ,   AMEFP(  1, 0)  ),
+  SENS_CORE_ENTRY_SET(          PPICP0C,   "%\0",    AMEC_SENSOR_TYPE_PERF, AMEC_SENSOR_LOC_CORE, AMEC_SENSOR_NONUM,   AMEEFP_2MS_IN_HZ,   AMEFP(  1, 0)  ),
+  SENS_CORE_ENTRY_SET(    PWRPX250USP0C,   "W\0",   AMEC_SENSOR_TYPE_POWER, AMEC_SENSOR_LOC_CORE, AMEC_SENSOR_NONUM, AMEEFP_250US_IN_HZ,   AMEFP(  1, 0)  ),
+  SENS_CORE_ENTRY_SET(            TEMPC,   "C\0",    AMEC_SENSOR_TYPE_TEMP, AMEC_SENSOR_LOC_CORE, AMEC_SENSOR_NONUM,   AMEEFP_4MS_IN_HZ,   AMEFP(  1, 0)  ),
 
   /* ==MemSensors==         NameString  Units                      Type              Location             Number                Freq      ScaleFactor   */
   SENSOR_INFO_T_ENTRY(   VRFAN250USMEM, "pin\0",    AMEC_SENSOR_TYPE_TEMP,  AMEC_SENSOR_LOC_VRM, AMEC_SENSOR_NONUM, AMEEFP_250US_IN_HZ,   AMEFP(  1, 0)  ),

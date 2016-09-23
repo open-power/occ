@@ -39,6 +39,7 @@
 #define MAX_NUM_OCC              4
 #define MAX_NUM_NODES            4
 #define MAX_NUM_CORES           24
+#define MAX_NUM_QUADS            6
 #define MAX_THREADS_PER_CORE     4
 #define MAX_NUM_CHIP_MODULES     4
 #define MAX_NUM_POWER_SUPPLIES   4
