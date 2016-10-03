@@ -187,7 +187,12 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
     l_poll_rsp->config_data     = DATA_request_cnfgdata();
     // Byte 5
     l_poll_rsp->state           = CURRENT_STATE();
-    // Byte 6 - 7 reserved.
+    // Byte 6
+    l_poll_rsp->mode            = CURRENT_MODE();
+    // Byte 7
+    l_poll_rsp->ips_status.word = 0;
+    l_poll_rsp->ips_status.ips_enabled = G_ips_config_data.iv_ipsEnabled;
+    l_poll_rsp->ips_status.ips_active = AMEC_mst_get_ips_active_status();
     // Byte 8:
     l_poll_rsp->errl_id         = getOldestErrlID();
     // Byte 9 - 12:
