@@ -66,7 +66,7 @@ homer_rc_t __attribute__((optimize("O1"))) homer_hd_map_read_unmap(const homer_r
 #endif
 
     homer_rc_t l_rc = HOMER_SUCCESS;
-    occHostConfigDataArea_t *l_hdcfg_data = (occHostConfigDataArea_t *) HOMER_BASE_ADDRESS;
+    occHostConfigDataArea_t *l_hdcfg_data = (occHostConfigDataArea_t *) HOMER_HD_ADDRESS;
 
     // Validate the pointers
     if (!o_host_data || !o_ssx_rc || ((uint32_t)o_host_data % 4))
@@ -100,73 +100,33 @@ homer_rc_t __attribute__((optimize("O1"))) homer_hd_map_read_unmap(const homer_r
         {
             // Check version, if ok handle ID requested. We need to support
             // current version as well as older ones
-            if ((HOMER_VERSION_MIN > l_hdcfg_data->version)
-                ||
-                (HOMER_VERSION_MAX < l_hdcfg_data->version))
+            if (HOMER_VERSION_P9 != l_hdcfg_data->version)
             {
                 l_rc = HOMER_UNSUPPORTED_HD_VERSION;
             }
             else
             {
-                // Version guaranteed to be within supported range
-
-                // HOMER Version 1 support
-                if (HOMER_VERSION_1 == l_hdcfg_data->version)
+                // HOMER_VERSION_P9 == l_hdcfg_data->version
+                switch (i_id)
                 {
-                    switch (i_id)
-                    {
-                        case HOMER_VERSION:
-                            *(uint32_t *)o_host_data = l_hdcfg_data->version;
-                            break;
-                        case HOMER_NEST_FREQ:
-                            *(uint32_t *)o_host_data = l_hdcfg_data->nestFrequency;
-                            break;
-                        default:
-                            l_rc = HOMER_UNKNOWN_ID;
-                            break;
-                    }
-                }
-                else if (HOMER_VERSION_2 == l_hdcfg_data->version)
-                {
-                    switch (i_id)
-                    {
-                        case HOMER_VERSION:
-                            *(uint32_t *)o_host_data = l_hdcfg_data->version;
-                            break;
-                        case HOMER_NEST_FREQ:
-                            *(uint32_t *)o_host_data = l_hdcfg_data->nestFrequency;
-                            break;
-                        case HOMER_INT_TYPE:
-                            *(uint32_t *)o_host_data = l_hdcfg_data->occInterruptType;
-                            break;
-                        default:
-                            l_rc = HOMER_UNKNOWN_ID;
-                            break;
-                    }
-                }
-                else if (HOMER_VERSION_3 == l_hdcfg_data->version)
-                {
-                    switch (i_id)
-                    {
-                        case HOMER_VERSION:
-                            *(uint32_t *)o_host_data = l_hdcfg_data->version;
-                            break;
-                        case HOMER_NEST_FREQ:
-                            *(uint32_t *)o_host_data = l_hdcfg_data->nestFrequency;
-                            break;
-                        case HOMER_INT_TYPE:
-                            *(uint32_t *)o_host_data = l_hdcfg_data->occInterruptType;
-                            break;
-                        case HOMER_FIR_MASTER:
-                            *(uint32_t *)o_host_data = l_hdcfg_data->firMaster;
-                            break;
-                        case HOMER_FIR_PARMS:
-                            memcpy(o_host_data, &(l_hdcfg_data->firParms[0]), HOMER_FIR_PARM_SIZE);
-                            break;
-                        default:
-                            l_rc = HOMER_UNKNOWN_ID;
-                            break;
-                    }
+                case HOMER_VERSION:
+                    *(uint32_t *)o_host_data = l_hdcfg_data->version;
+                    break;
+                case HOMER_NEST_FREQ:
+                    *(uint32_t *)o_host_data = l_hdcfg_data->nestFrequency;
+                    break;
+                case HOMER_INT_TYPE:
+                    *(uint32_t *)o_host_data = l_hdcfg_data->occInterruptType;
+                    break;
+                case HOMER_FIR_MASTER:
+                    *(uint32_t *)o_host_data = l_hdcfg_data->firMaster;
+                    break;
+                case HOMER_FIR_PARMS:
+                    memcpy(o_host_data, &(l_hdcfg_data->firParms[0]), HOMER_FIR_PARM_SIZE);
+                    break;
+                default:
+                    l_rc = HOMER_UNKNOWN_ID;
+                    break;
                 }
             }
 #if PPC405_MMU_SUPPORT

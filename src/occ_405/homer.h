@@ -54,11 +54,7 @@
 // Version(s) of HOMER host data currently supported
 typedef enum homer_version
 {
-    HOMER_VERSION_MIN   = 1,
-    HOMER_VERSION_1     = 1,
-    HOMER_VERSION_2     = 2,
-    HOMER_VERSION_3     = 3,
-    HOMER_VERSION_MAX   = 3,
+    HOMER_VERSION_P9    = 0x90,
 } homer_version_t;
 
 // ID of host data variables

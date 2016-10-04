@@ -1087,18 +1087,9 @@ int main(int argc, char **argv)
 
     // Get the homer version
     uint32_t l_homer_version = 0;
-    //l_homerrc = homer_hd_map_read_unmap(HOMER_VERSION,
-    //                                    &l_homer_version,
-    //                                    &l_ssxrc);
-
-    //if ((HOMER_SUCCESS != l_homerrc) && (HOMER_SSX_UNMAP_ERR != l_homerrc))
-    {
-        // Attempt to use max version if we can't read the homer.
-        //l_homer_version = HOMER_VERSION_MAX;
-
-        // For Simics, assume Homer version 2 (no FIR support)
-        l_homer_version = HOMER_VERSION_2;
-    }
+    l_homerrc = homer_hd_map_read_unmap(HOMER_VERSION,
+                                        &l_homer_version,
+                                        &l_ssxrc);
 
     // Get proc_pb_frequency from HOMER host data and calculate the timebase
     // frequency for the OCC. Pass the timebase frequency to ssx_initialize.
@@ -1107,19 +1098,18 @@ int main(int argc, char **argv)
     // HOMER, ie. if the MRW says that proc_pb_frequency is 2400 MHz, then
     // pass 600000000 (600MHz)
 
-    // The offset from the start of the HOMER is 0x00100000, we will need to
+    // The offset from the start of the HOMER is 0x000C0000, we will need to
     // create a temporary mapping to this section of the HOMER with ppc405_mmu_map
-    // (at address 0x00000000) read the value, convert it, and then unmap.
+    // (at address 0x800C0000) read the value, convert it, and then unmap.
 
     // Don't do a version check before reading the nest freq, it's present in
     // all HOMER versions.
     uint32_t l_tb_freq_hz = 0;
-    //l_homerrc2 = homer_hd_map_read_unmap(HOMER_NEST_FREQ,
-    //                                     &l_tb_freq_hz,
-    //                                     &l_ssxrc2);
+    l_homerrc2 = homer_hd_map_read_unmap(HOMER_NEST_FREQ,
+                                         &l_tb_freq_hz,
+                                         &l_ssxrc2);
 
-    //if ((HOMER_SUCCESS == l_homerrc2) || (HOMER_SSX_UNMAP_ERR == l_homerrc2))
-    if(0)
+    if ((HOMER_SUCCESS == l_homerrc2) || (HOMER_SSX_UNMAP_ERR == l_homerrc2))
     {
         // Data is in Mhz upon return and needs to be converted to Hz and then
         // quartered.
@@ -1176,35 +1166,32 @@ int main(int argc, char **argv)
     // nest frequency which was required above to enable SSX and tracing).
     CHECKPOINT(HOMER_ACCESS_INITS);
 
-    if (l_homer_version >= HOMER_VERSION_2)
+    // Get OCC interrupt type from HOMER host data area. This will tell OCC
+    // which interrupt to Host it should be using.
+    uint32_t l_occ_int_type = 0;
+    l_homerrc = homer_hd_map_read_unmap(HOMER_INT_TYPE,
+                                        &l_occ_int_type,
+                                        &l_ssxrc);
+
+    if ((HOMER_SUCCESS == l_homerrc) || (HOMER_SSX_UNMAP_ERR == l_homerrc))
     {
-        // Get OCC interrupt type from HOMER host data area. This will tell OCC
-        // which interrupt to Host it should be using.
-        uint32_t l_occ_int_type = 0;
-        //l_homerrc = homer_hd_map_read_unmap(HOMER_INT_TYPE,
-        //                                    &l_occ_int_type,
-        //                                    &l_ssxrc);
-
-        //if ((HOMER_SUCCESS == l_homerrc) || (HOMER_SSX_UNMAP_ERR == l_homerrc))
-        if(0)
-        {
-            G_occ_interrupt_type = (uint8_t) l_occ_int_type;
-        }
-        else
-        {
-            // For Simics we are assuming the FSP communication path as the default
-            G_occ_interrupt_type = FSP_SUPPORTED_OCC;
-            //G_occ_interrupt_type = PSIHB_INTERRUPT;
-        }
-
-        MAIN_TRAC_INFO("HOMER accessed, rc=%d, host interrupt type=%d, ssx_rc=%d",
-                  l_homerrc, l_occ_int_type, l_ssxrc);
-
-        // Handle any errors from the interrupt type access
-        homer_log_access_error(l_homerrc,
-                               l_ssxrc,
-                               l_occ_int_type);
+        G_occ_interrupt_type = (uint8_t) l_occ_int_type;
     }
+    else
+    {
+        // if HOMER host data read fails, assume the FSP communication
+        // path as the default
+        G_occ_interrupt_type = FSP_SUPPORTED_OCC;
+        //G_occ_interrupt_type = PSIHB_INTERRUPT;
+    }
+
+    MAIN_TRAC_INFO("HOMER accessed, rc=%d, host interrupt type=%d, ssx_rc=%d",
+                   l_homerrc, l_occ_int_type, l_ssxrc);
+
+    // Handle any errors from the interrupt type access
+    homer_log_access_error(l_homerrc,
+                           l_ssxrc,
+                           l_occ_int_type);
 /*
     //TEMP -- NO FIR SUPPORT
     if (l_homer_version >= HOMER_VERSION_3)
