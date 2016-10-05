@@ -471,7 +471,7 @@ bool check_centaur_checkstop(uint8_t cent)
 
         /* @
          * @errortype
-         * @moduleid    CENT_TASK_CONTROL_MOD
+         * @moduleid    CENT_CONTROL_MOD
          * @reasoncode  CENT_SCOM_ERROR
          * @userdata1   rc - Return code of scom operation
          * @userdata2   index of scom operation that failed
@@ -479,7 +479,7 @@ bool check_centaur_checkstop(uint8_t cent)
          * @devdesc     OCC access to centaur failed
          */
         l_err = createErrl(
-            CENT_TASK_CONTROL_MOD,                  // modId
+            CENT_CONTROL_MOD,                       // modId
             CENT_SCOM_ERROR,                        // reasoncode
             OCC_NO_EXTENDED_RC,                     // Extended reason code
             ERRL_SEV_PREDICTIVE,                    // Severity
