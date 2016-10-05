@@ -36,7 +36,7 @@ include topfiles.mk
 
 SSX_MAKE_DIR := $(SSX_SRCDIR)/occhw
 OBJS := $(addprefix $(OBJDIR)/, $(TOP_OBJECTS))
-OBJDIRS = $(dir ${OBJS})
+OBJDIRS = $(sort $(dir ${OBJS}))
 SSXLIB := $(OBJDIR)/ssx/libssx.a
 COMMONLIB := $(OBJDIR)/common/libcommon.a
 OCCLIB := $(OBJDIR)/occlib/libocc.a
@@ -80,8 +80,13 @@ $(OBJDIR)/$(IMAGE_NAME).bin $(OBJDIR)/$(IMAGE_NAME).dis: $(OBJDIR)/$(IMAGE_NAME)
 	$(OBJDUMP) -S $< > $(OBJDIR)/$(IMAGE_NAME).dis
 
 #create a linked ELF executable
-$(OBJDIR)/$(IMAGE_NAME).out: $(TRACEPP_DIR)/tracepp $(LINK_OBJS) $(LINK_SCRIPT)
+$(OBJDIR)/$(IMAGE_NAME).out: $(TRACEPP_DIR)/tracepp $(LINK_OBJS) $(LINK_SCRIPT) check-sensors
 	$(LD) -e __ssx_boot -T$(LINK_SCRIPT) $(LDFLAGS) -Map $(OBJDIR)/$(IMAGE_NAME).map -Bstatic -o $(OBJDIR)/$(IMAGE_NAME).out $(LIB_DIRS) -lssx -locc -lppc405 -lcommon
+
+#Verifies that we aren't missing sensors in the sensor lists
+.PHONY : check-sensors
+check-sensors:
+	$(OCCTOOLS)/check-sensors.sh $(OBJDUMP) $(OBJDIR)/sensor/
 
 $(PPETOOLS_OBJDIR)/ppetracepp: $(PPETOOLS_OBJDIR)
 	g++ -O3 -w -g -I$(PPETRACEPP_DIR)/ $(PPETRACEPP_DIR)/ppetracepp.C -o $(PPETOOLS_OBJDIR)/ppetracepp
@@ -94,11 +99,12 @@ $(PPETOOLS_OBJDIR):
 $(LINK_SCRIPT): $(LINK_CMD_SCRIPT)
 	$(CPP) -E -x c -P $(DEFS) $(LINK_CMD_SCRIPT) -o $(LINK_SCRIPT)
 
+
 #Create an obj directory if needed
 $(LINK_OBJS) $(OBJS) $(OBJS:.o=.d): | $(OBJDIRS)
 
 $(OBJDIRS):
-	mkdir -p $(OBJDIRS)
+	mkdir -p $@
 
 #Build the SSX kernel library
 $(SSXLIB):
@@ -136,6 +142,6 @@ clean:
 	rm -fr $(OBJDIR)
 
 #Add dependencies to header files
-#ifneq ($(MAKECMDGOALS),clean)
-#include $(OBJS:.o=.d)
-#endif
+ifneq ($(MAKECMDGOALS),clean)
+-include $(OBJS:.o=.d)
+endif

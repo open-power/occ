@@ -274,6 +274,33 @@ $(OBJDIR)/%.s: %.S
 	$(TCPP) $(CFLAGS) $(DEFS) $(CPPFLAGS) -o $@ $<
 .PRECIOUS: $(OBJDIR)/%.s
 
+# Header dependency files
+$(OBJDIR)/%.d: %.c
+	@set -e; rm -f $@; \
+	if [ "$(dir $*)" != "./" ]; then \
+		echo -n "$(OBJDIR)/$(dir $*)" > $@.$$$$; \
+	else \
+		echo -n "$(OBJDIR)/" > $@.$$$$; \
+	fi ; \
+	$(CC_ASM) -MM $(INCLUDES) $(CPPFLAGS) $(DEFS) $< >> $@.$$$$; \
+	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
+	sed 's,\($*\)\.d[ :]*,\1.s $@ : ,g' < $@ > $@.$$$$; \
+	sed 's,\($*\)\.d[ :]*,\1.es $@ : ,g' < $@.$$$$ > $@; \
+	rm -f $@.$$$$
+
+$(OBJDIR)/%.d: %.S
+	@set -e; rm -f $@; \
+	if [ "$(dir $*)" != "./" ]; then \
+		echo -n "$(OBJDIR)/$(dir $*)" > $@.$$$$; \
+	else \
+		echo -n "$(OBJDIR)/" > $@.$$$$; \
+	fi ; \
+	$(CC_ASM) -MM $(INCLUDES) $(CPPFLAGS) $(DEFS) $< >> $@.$$$$; \
+	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
+	sed 's,\($*\)\.d[ :]*,\1.s $@ : ,g' < $@ > $@.$$$$; \
+	sed 's,\($*\)\.d[ :]*,\1.es $@ : ,g' < $@.$$$$ > $@; \
+	rm -f $@.$$$$
+
 ifndef P2P_ENABLE
 
 $(OBJDIR)/%.o: $(OBJDIR)/%.s

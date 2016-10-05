@@ -79,6 +79,10 @@ ifndef GLOBAL_INCLUDES
 export GLOBAL_INCLUDES = -I$(IMAGE_SRCDIR)/..
 endif
 
+ifndef OCCTOOLS
+export OCCTOOLS = $(abspath ../tools/)
+endif
+
 ifndef BASE_OBJDIR
 export BASE_OBJDIR = $(abspath ../../obj)
 endif
@@ -114,7 +118,7 @@ export PPETRACEPP_DIR = $(abspath ../ppe/tools/ppetracepp)
 endif
 
 ifndef PPETOOLS_OBJDIR
-export PPETOOLS_OBJDIR = $(abspath ../obj/ppetools)
+export PPETOOLS_OBJDIR = $(BASE_OBJDIR)/ppetools
 endif
 
 ifndef TRACEPP_DIR
@@ -294,18 +298,26 @@ $(OBJDIR)/%.o: %.S
 # work as Make targets. The *.d files are include-ed in the
 # subdirectory Makefiles.
 
-#$(OBJDIR)/%.d: %.c
-#	@set -e; rm -f $@; \
-#	echo -n "$(OBJDIR)/" > $@.$$$$; \
-#	$(CC_ASM) -MM $(INCLUDES) $(CPPFLAGS) $(DEFS) $< >> $@.$$$$; \
-#	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
-#	rm -f $@.$$$$
+$(OBJDIR)/%.d: %.c
+	@set -e; rm -f $@; \
+	if [ "$(dir $*)" != "./" ]; then \
+		echo -n "$(OBJDIR)/$(dir $*)" > $@.$$$$; \
+	else \
+		echo -n "$(OBJDIR)/" > $@.$$$$; \
+	fi ; \
+	$(CC_ASM) -MM $(INCLUDES) $(CPPFLAGS) $(DEFS) $< >> $@.$$$$; \
+	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
+	rm -f $@.$$$$
 
-#$(OBJDIR)/%.d: %.S
-#	@set -e; rm -f $@; \
-#	echo -n "$(OBJDIR)/" > $@.$$$$; \
-#	$(CC_ASM) -MM $(INCLUDES) $(CPPFLAGS) $(DEFS) $< >> $@.$$$$; \
-#	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
-#	rm -f $@.$$$$
+$(OBJDIR)/%.d: %.S
+	@set -e; rm -f $@; \
+	if [ "$(dir $*)" != "./" ]; then \
+		echo -n "$(OBJDIR)/$(dir $*)" > $@.$$$$; \
+	else \
+		echo -n "$(OBJDIR)/" > $@.$$$$; \
+	fi ; \
+	$(CC_ASM) -MM $(INCLUDES) $(CPPFLAGS) $(DEFS) $< >> $@.$$$$; \
+	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
+	rm -f $@.$$$$
 
 

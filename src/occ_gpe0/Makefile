@@ -108,6 +108,6 @@ clean:
 	rm -fr $(OBJDIR)
 
 #Add dependencies to header files
-#ifneq ($(MAKECMDGOALS),clean)
-#include $(OBJS:.o=.d) 
-#endif
+ifneq ($(MAKECMDGOALS),clean)
+-include $(OBJS:.o=.d)
+endif

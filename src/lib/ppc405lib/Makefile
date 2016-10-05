@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2015
+# Contributors Listed Below - COPYRIGHT 2015,2016
 # [+] International Business Machines Corp.
 #
 #
@@ -52,6 +52,6 @@ clean:
 	rm -fr $(OBJDIR)
 
 ifneq ($(MAKECMDGOALS),clean)
-#include $(OBJS:.o=.d) 
+-include $(OBJS:.o=.d)
 endif
 
