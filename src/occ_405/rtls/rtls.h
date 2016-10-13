@@ -107,12 +107,22 @@ typedef struct
                                RTL_FLAG_ACTIVE | RTL_FLAG_MSTR_READY | RTL_FLAG_NO_APSS | \
                                RTL_FLAG_RUN | RTL_FLAG_APSS_NOT_INITD)
 
-// Tick Timer definitions
-#define MICS_PER_TICK 250  // Number of micro-seconds per tick
+// Tick Timer definitions:
+#define MICS_PER_TICK G_mics_per_tick // Number of micro-seconds per tick
 #define MAX_NUM_TICKS 16   // Number of entries in the global tick table (power of 2)
+// MICS_PER_TICK must be lower than 62ms to guarantee the tick table completes in < 1s (for health monitor)
+#define HW_MICS_PER_TICK        250
+#define SIMICS_MICS_PER_TICK  20000 // slow down RTL to 20ms for Simics
+#define DCOM_TX_APSS_WAIT_TIME G_dcom_tx_apss_wait_time
 
 // The value of the current tick
 extern uint32_t G_current_tick;
+
+// The number of micro-seconds per tick
+extern uint32_t G_mics_per_tick;
+
+// The number of micro-seconds to wait for APSS data to complete
+extern uint32_t G_dcom_tx_apss_wait_time;
 
 // The durations measured within the current tick
 extern fw_timing_t G_fw_timing;

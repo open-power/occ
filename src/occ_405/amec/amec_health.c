@@ -36,6 +36,7 @@
 //*************************************************************************/
 // Externs
 //*************************************************************************/
+extern bool G_simics_environment;
 
 //*************************************************************************/
 // Defines/Enums
@@ -351,10 +352,12 @@ void amec_health_check_dimm_timeout()
                     l_fru->sample_age = -1;
                 }
 
-                //info trace each transition to not having a new temperature
-                if(l_fru->sample_age == 1)
+                // In Simics: the RTL timer is increased and a DIMM reading will not always
+                // complete on each call.  (an error will still be logged if reading does not
+                // meet the DIMM MAX_READ_TIMEOUT.)
+                if((l_fru->sample_age == 1) && (!G_simics_environment))
                 {
-                    TRAC_INFO("Failed to read dimm temperature on cent[%d] dimm[%d] temp[%d] flags[0x%02X]",
+                    TRAC_INFO("No new DIMM temperature available on cent[%d] dimm[%d] temp[%d] flags[0x%02X]",
                               l_cent, l_dimm, l_fru->cur_temp, l_fru->flags);
                 }
 
@@ -468,8 +471,9 @@ void amec_health_check_dimm_timeout()
                 //clear timer
                 l_fru->sample_age = 0;
 
-                //info trace each time we recover
-                if(L_ran_once)
+                // In Simics: the RTL timer is increased and a DIMM reading will not always
+                // complete on each call.  Skip the "recovery" trace in Simics.
+                if((L_ran_once) && (!G_simics_environment))
                 {
                     TRAC_INFO("DIMM temperature collection has resumed on cent/port[%d] dimm[%d] temp[%d]",
                               l_cent, l_dimm, l_fru->cur_temp);

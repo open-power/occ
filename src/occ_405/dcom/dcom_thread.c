@@ -53,9 +53,6 @@ SsxSemaphore G_dcomThreadWakeupSem;
 //              happen more often than the 1-second that other threads run
 //              at.
 //
-//              This thread currently runs ~1ms, based on the RTL loop of
-//              250us.
-//
 //              FWIW -- It is pointless to set this thread to run any more
 //              often than the length of the RTL loop, since it is acting
 //              on data passed back and forth via that loop.
@@ -68,16 +65,15 @@ void Dcom_thread_routine(void *arg)
     SsxTimer  l_timeout_timer;
     errlHndl_t l_errlHndl = NULL;
     // --------------------------------------------------
-    // Create a timer that pops every 10 seconds to wake up
+    // Create a timer that pops every 7 seconds to wake up
     // this thread, in case a semaphore never gets posted.
-    // TODO: Is this really needed?
     // --------------------------------------------------
     ssx_timer_create(&l_timeout_timer,
                      (SsxTimerCallback) ssx_semaphore_post,
                      (void *) &G_dcomThreadWakeupSem);
     ssx_timer_schedule(&l_timeout_timer,
-                       SSX_SECONDS(10),
-                       SSX_SECONDS(10));
+                       SSX_SECONDS(7),
+                       SSX_SECONDS(7));
 
     DCOM_TRAC_INFO("DCOM Thread Started");
     for(;;)
@@ -168,9 +164,9 @@ void Dcom_thread_routine(void *arg)
         // SSX Sleep
         // --------------------------------------------------
         // Even if semaphores are continually posted, there is no reason
-        // for us to run this thread any more often than once every 250us
+        // for us to run this thread any more often than once every tick
         // so we don't starve any other thread
-        ssx_sleep(SSX_MICROSECONDS(250));
+        ssx_sleep(SSX_MICROSECONDS(MICS_PER_TICK));
     }
 }
 

@@ -58,6 +58,11 @@ uint32_t G_pbax_packet = 0xffffffff;
 // Used to keep count of number of APSS data collection fails.
 uint16_t G_apss_fail_updown_count = 0x0000;
 
+#ifdef DEBUG_APSS_SEQ
+// used to keep track of the APSS complete sequence number
+extern uint32_t G_savedCompleteSeq;
+#endif
+
 // Function Specification
 //
 // Name: dcom_build_slv_inbox
@@ -258,9 +263,14 @@ void task_dcom_tx_slv_inbox( task_t *i_self)
         // Did APSS power complete?
         if( l_pwr_meas == TRUE )
         {
-#ifdef DCOM_DEBUG
+#if !defined(DEBUG_APSS_SEQ) && defined(DCOM_DEBUG)
             uint64_t l_end = ssx_timebase_get();
             DCOM_DBG("Got APSS after waiting %d us\n",(int)( (l_end-l_start) / ( SSX_TIMEBASE_FREQUENCY_HZ / 1000000 ) ));
+#endif
+#if defined(DEBUG_APSS_SEQ) && !defined(DCOM_DEBUG)
+            uint64_t l_end = ssx_timebase_get();
+            DCOM_DBG("Got APSS after waiting %d us (complete seq %d)\n",
+                     (int)( (l_end-l_start) / ( SSX_TIMEBASE_FREQUENCY_HZ / 1000000 ) ), G_savedCompleteSeq);
 #endif
 
             APSS_SUCCESS();
@@ -371,6 +381,7 @@ void task_dcom_tx_slv_inbox( task_t *i_self)
 
                 // Request created at least once
                 L_bce_slv_inbox_tx_request_created_once = TRUE;
+                DCOM_DBG("4.1.1 Scheduling G_slv_inbox_tx_pba_request");
                 l_ssxrc = bce_request_schedule(&G_slv_inbox_tx_pba_request); // Actual copying
 
                 if(l_ssxrc != SSX_OK)
@@ -397,9 +408,7 @@ void task_dcom_tx_slv_inbox( task_t *i_self)
         else
         {
             // check time and break out if we reached limit
-            // TODO: shrink this later depending on how much
-            // work we are doing in RTL
-            if ((ssx_timebase_get() - l_start) < SSX_MICROSECONDS(150))
+            if ((ssx_timebase_get() - l_start) < SSX_MICROSECONDS(DCOM_TX_APSS_WAIT_TIME))
             {
                 continue;
             }

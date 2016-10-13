@@ -50,6 +50,12 @@ uint32_t G_run_mask_deferred = GLOBAL_RUN_MASK;
 // The value of the current tick
 uint32_t G_current_tick = 0xFFFFFFFF;
 
+// Number of micro-seconds per tick
+uint32_t G_mics_per_tick = HW_MICS_PER_TICK;
+
+// Number of micro-seconds to wait for APSS data collection to complete
+uint32_t G_dcom_tx_apss_wait_time = HW_MICS_PER_TICK * 0.6;
+
 // The durations measured within the current tick
 fw_timing_t G_fw_timing;
 

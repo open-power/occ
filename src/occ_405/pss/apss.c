@@ -70,6 +70,13 @@ GpeRequest G_meas_complete_request;
 // Up / down counter for redundant apss failures
 uint32_t G_backup_fail_count = 0;
 
+#ifdef DEBUG_APSS_SEQ
+uint32_t G_sequence_start = 0;
+uint32_t G_sequence_cont = 0;
+uint32_t G_sequence_complete = 0;
+volatile uint32_t G_savedCompleteSeq = 0;
+#endif
+
 // Used to tell slave inbox that pwr meas is complete
 volatile bool G_ApssPwrMeasCompleted = FALSE;
 
@@ -320,10 +327,14 @@ void task_apss_start_pwr_meas(struct task *i_self)
         {
             if (!L_idle_traced)
             {
-                INTR_TRAC_ERR("task_apss_start_pwr_meas: request is not idle.");
+                INTR_TRAC_INFO("E>task_apss_start_pwr_meas: request is not idle.");
                 L_idle_traced = TRUE;
             }
             break;
+        }
+        else
+        {
+            L_idle_traced = FALSE;
         }
 
         // Check if we need to try recovering the apss
@@ -392,40 +403,62 @@ void task_apss_start_pwr_meas(struct task *i_self)
         G_gpe_start_pwr_meas_read_args.error.error = 0;
         G_gpe_start_pwr_meas_read_args.error.ffdc = 0;
 
-        // Submit the next request
-        l_rc = gpe_request_schedule(&G_meas_start_request);
-        if (0 != l_rc)
+#ifdef DEBUG_APSS_SEQ
+        // DEBUG: Only allow start if the previous complete was scheduled
+        static bool L_throttle = FALSE;
+        if (G_sequence_complete == G_sequence_start)
         {
-            errlHndl_t l_err = NULL;
+            L_throttle = FALSE;
+            ++G_sequence_start;
+            TRAC_INFO("task_apss_start_pwr_meas: scheduling start (seq %d)", G_sequence_start);
+#endif
 
-            INTR_TRAC_ERR("task_apss_start_pwr_meas: schedule failed w/rc=0x%08X (%d us)", l_rc,
-                     (int) ((ssx_timebase_get())/(SSX_TIMEBASE_FREQUENCY_HZ/1000000)));
+            // Submit the next request
+            l_rc = gpe_request_schedule(&G_meas_start_request);
+            if (0 != l_rc)
+            {
+                errlHndl_t l_err = NULL;
 
-            /*
-             * @errortype
-             * @moduleid    PSS_MID_APSS_START_MEAS
-             * @reasoncode  SSX_GENERIC_FAILURE
-             * @userdata1   GPE shedule returned rc code
-             * @userdata2   0
-             * @userdata4   ERC_APSS_SCHEDULE_FAILURE
-             * @devdesc     task_apss_start_pwr_meas schedule failed
-             */
-            l_err = createErrl(PSS_MID_APSS_START_MEAS,
-                               SSX_GENERIC_FAILURE,
-                               ERC_APSS_SCHEDULE_FAILURE,
-                               ERRL_SEV_PREDICTIVE,
-                               NULL,
-                               DEFAULT_TRACE_SIZE,
-                               l_rc,
-                               0);
+                INTR_TRAC_ERR("task_apss_start_pwr_meas: schedule failed w/rc=0x%08X (%d us)", l_rc,
+                              (int) ((ssx_timebase_get())/(SSX_TIMEBASE_FREQUENCY_HZ/1000000)));
 
-            // Request reset since this should never happen.
-            REQUEST_RESET(l_err);
-            L_scheduled = FALSE;
-            break;
+                /*
+                 * @errortype
+                 * @moduleid    PSS_MID_APSS_START_MEAS
+                 * @reasoncode  SSX_GENERIC_FAILURE
+                 * @userdata1   GPE shedule returned rc code
+                 * @userdata2   0
+                 * @userdata4   ERC_APSS_SCHEDULE_FAILURE
+                 * @devdesc     task_apss_start_pwr_meas schedule failed
+                 */
+                l_err = createErrl(PSS_MID_APSS_START_MEAS,
+                                   SSX_GENERIC_FAILURE,
+                                   ERC_APSS_SCHEDULE_FAILURE,
+                                   ERRL_SEV_PREDICTIVE,
+                                   NULL,
+                                   DEFAULT_TRACE_SIZE,
+                                   l_rc,
+                                   0);
+
+                // Request reset since this should never happen.
+                REQUEST_RESET(l_err);
+                L_scheduled = FALSE;
+                break;
+            }
+
+            L_scheduled = TRUE;
+#ifdef DEBUG_APSS_SEQ
         }
-
-        L_scheduled = TRUE;
+        else
+        {
+            if (!L_throttle)
+            {
+                TRAC_INFO("task_apss_start_pwr_meas: start seq(%d) != complete seq(%d) so skipping start",
+                          G_sequence_start, G_sequence_complete);
+                L_throttle = TRUE;
+            }
+        }
+#endif
 
 
     }while (0);
@@ -470,10 +503,14 @@ void task_apss_continue_pwr_meas(struct task *i_self)
         {
             if (!L_idle_traced)
             {
-                INTR_TRAC_ERR("task_apss_continue_pwr_meas: request is not idle.");
+                INTR_TRAC_INFO("E>task_apss_continue_pwr_meas: request is not idle.");
                 L_idle_traced = TRUE;
             }
             break;
+        }
+        else
+        {
+            L_idle_traced = FALSE;
         }
 
         //Don't run anything if apss recovery is in progress
@@ -539,40 +576,63 @@ void task_apss_continue_pwr_meas(struct task *i_self)
         G_gpe_continue_pwr_meas_read_args.error.error = 0;
         G_gpe_continue_pwr_meas_read_args.error.ffdc = 0;
 
-        // Submit the next request
-        l_rc = gpe_request_schedule(&G_meas_cont_request);
-        if (0 != l_rc)
+#ifdef DEBUG_APSS_SEQ
+        // DEBUG: Only allow new continue if the start was scheduled
+        static bool L_throttle = FALSE;
+        if (G_sequence_start == (G_sequence_cont+1))
         {
-            errlHndl_t l_err = NULL;
+            L_throttle = FALSE;
+            ++G_sequence_cont;
+            TRAC_INFO("task_apss_cont_pwr_meas: scheduling cont (seq %d)", G_sequence_cont);
+#endif
 
-            INTR_TRAC_ERR("task_apss_cont_pwr_meas: schedule failed w/rc=0x%08X (%d us)", l_rc,
-                     (int) ((ssx_timebase_get())/(SSX_TIMEBASE_FREQUENCY_HZ/1000000)));
+            // Submit the next request
+            l_rc = gpe_request_schedule(&G_meas_cont_request);
+            if (0 != l_rc)
+            {
+                errlHndl_t l_err = NULL;
 
-            /*
-             * @errortype
-             * @moduleid    PSS_MID_APSS_CONT_MEAS
-             * @reasoncode  SSX_GENERIC_FAILURE
-             * @userdata1   GPE shedule returned rc code
-             * @userdata2   0
-             * @userdata4   ERC_APSS_SCHEDULE_FAILURE
-             * @devdesc     task_apss_continue_pwr_meas schedule failed
-             */
-            l_err = createErrl(PSS_MID_APSS_CONT_MEAS,
-                               SSX_GENERIC_FAILURE,
-                               ERC_APSS_SCHEDULE_FAILURE,
-                               ERRL_SEV_PREDICTIVE,
-                               NULL,
-                               DEFAULT_TRACE_SIZE,
-                               l_rc,
-                               0);
+                INTR_TRAC_ERR("task_apss_cont_pwr_meas: schedule failed w/rc=0x%08X (%d us)", l_rc,
+                              (int) ((ssx_timebase_get())/(SSX_TIMEBASE_FREQUENCY_HZ/1000000)));
 
-            // Request reset since this should never happen.
-            REQUEST_RESET(l_err);
-            L_scheduled = FALSE;
-            break;
+                /*
+                 * @errortype
+                 * @moduleid    PSS_MID_APSS_CONT_MEAS
+                 * @reasoncode  SSX_GENERIC_FAILURE
+                 * @userdata1   GPE shedule returned rc code
+                 * @userdata2   0
+                 * @userdata4   ERC_APSS_SCHEDULE_FAILURE
+                 * @devdesc     task_apss_continue_pwr_meas schedule failed
+                 */
+                l_err = createErrl(PSS_MID_APSS_CONT_MEAS,
+                                   SSX_GENERIC_FAILURE,
+                                   ERC_APSS_SCHEDULE_FAILURE,
+                                   ERRL_SEV_PREDICTIVE,
+                                   NULL,
+                                   DEFAULT_TRACE_SIZE,
+                                   l_rc,
+                                   0);
+
+                // Request reset since this should never happen.
+                REQUEST_RESET(l_err);
+                L_scheduled = FALSE;
+                break;
+            }
+
+            L_scheduled = TRUE;
+
+#ifdef DEBUG_APSS_SEQ
         }
-
-        L_scheduled = TRUE;
+        else
+        {
+            if (!L_throttle)
+            {
+                TRAC_INFO("task_apss_cont_pwr_meas: start seq(%d) != cont seq(%d+1) so skipping cont",
+                          G_sequence_start, G_sequence_cont);
+                L_throttle = TRUE;
+            }
+        }
+#endif
 
     }while (0);
 
@@ -590,13 +650,11 @@ void task_apss_continue_pwr_meas(struct task *i_self)
 //              collection for this loop.
 //
 // End Function Specification
-#define APSS_ADC_SEQ_MASK 0xf000f000f000f000ull
+#define APSS_ADC_SEQ_MASK  0xf000f000f000f000ull
 #define APSS_ADC_SEQ_CHECK 0x0000100020003000ull
 void reformat_meas_data()
 {
-    APSS_DBG("GPE_complete_pwr_meas_read finished w/rc=0x%08X\n", G_gpe_complete_pwr_meas_read_args.error.rc);
-    APSS_DBG_HEXDUMP(&G_gpe_complete_pwr_meas_read_args, sizeof(G_gpe_complete_pwr_meas_read_args), "G_gpe_complete_pwr_meas_read_args");
-
+    // NO TRACING ALLOWED IN CRITICAL INTERRUPT (any IPC callback functions)
     do
     {
         // Make sure complete was successful
@@ -624,15 +682,12 @@ void reformat_meas_data()
         if(G_occ_role == OCC_MASTER)
         {
             // Fail every 16 seconds
-            APSS_DBG("Populate meas data:\n");
-
             // Merge continue/complete data into a single buffer
             const uint16_t l_continue_meas_length = sizeof(G_gpe_continue_pwr_meas_read_args.meas_data);
             const uint16_t l_complete_meas_length = sizeof(G_gpe_complete_pwr_meas_read_args.meas_data);
             uint8_t l_buffer[l_continue_meas_length+l_complete_meas_length];
             memcpy(&l_buffer[                     0], G_gpe_continue_pwr_meas_read_args.meas_data, l_continue_meas_length);
             memcpy(&l_buffer[l_continue_meas_length], G_gpe_complete_pwr_meas_read_args.meas_data, l_complete_meas_length);
-            APSS_DBG_HEXDUMP(l_buffer, sizeof(l_buffer), "l_buffer");
 
             // Copy measurements into correct struction locations (based on composite config)
             uint16_t l_index = 0;
@@ -641,18 +696,17 @@ void reformat_meas_data()
             memcpy(G_apss_pwr_meas.gpio, &l_buffer[l_index], (G_apss_mode_config.numGpioPortsToRead * 2));
             // TOD is always located at same offset
             memcpy(&G_apss_pwr_meas.tod, &l_buffer[l_continue_meas_length+l_complete_meas_length-8], 8);
-
-            APSS_DBG("...into structure: (%d ADC, %d GPIO)\n", G_apss_mode_config.numAdcChannelsToRead,
-                G_apss_mode_config.numGpioPortsToRead);
-            APSS_DBG_HEXDUMP(&G_apss_pwr_meas, sizeof(G_apss_pwr_meas), "G_apss_pwr_meas");
         }
 
         // Mark apss pwr meas completed and valid
         G_ApssPwrMeasCompleted = TRUE;
+#ifdef DEBUG_APSS_SEQ
+        // Save the complete sequence number from the GPE
+        G_savedCompleteSeq = G_gpe_complete_pwr_meas_read_args.error.ffdc;
+#endif
         G_gpe_apss_time_end = ssx_timebase_get();
-        APSS_DBG("APSS Completed - %d\n",(int) ssx_timebase_get());
   }while(0);
-}
+} // end reformat_meas_data()
 
 
 // Note: The complete request must be global, since it must stick around until after the
@@ -684,10 +738,14 @@ void task_apss_complete_pwr_meas(struct task *i_self)
         {
             if (!L_idle_traced)
             {
-                INTR_TRAC_ERR("task_apss_complete_pwr_meas: request is not idle.");
+                INTR_TRAC_INFO("E>task_apss_complete_pwr_meas: request is not idle.");
                 L_idle_traced = TRUE;
             }
             break;
+        }
+        else
+        {
+            L_idle_traced = FALSE;
         }
         if(G_apss_recovery_requested)
         {
@@ -749,44 +807,72 @@ void task_apss_complete_pwr_meas(struct task *i_self)
             }
         }
 
-        // Clear these out prior to starting the GPE (GPE only sets them)
-        G_gpe_complete_pwr_meas_read_args.error.error = 0;
-        G_gpe_complete_pwr_meas_read_args.error.ffdc = 0;
-
-        // Submit the next request
-
-      l_rc = gpe_request_schedule(&G_meas_complete_request);
-        if (0 != l_rc)
+#ifdef DEBUG_APSS_SEQ
+        // DEBUG: Only allow new complete if the continue was scheduled
+        static bool L_throttle = FALSE;
+        if (G_sequence_cont == (G_sequence_complete+1))
         {
+            L_throttle = FALSE;
+            ++G_sequence_complete;
 
-            errlHndl_t l_err = NULL;
+            // Clear these out prior to starting the GPE (GPE only sets them)
+            G_gpe_complete_pwr_meas_read_args.error.error = 0;
+            // Set the FFDC field to the complete sequence number
+            G_gpe_complete_pwr_meas_read_args.error.ffdc = G_sequence_complete;
+            TRAC_INFO("task_apss_complete_pwr_meas: scheduling complete (seq %d, prior seq was %d)",
+                      G_sequence_complete, G_savedCompleteSeq);
+#else
+            // Clear these out prior to starting the GPE (GPE only sets them)
+            G_gpe_complete_pwr_meas_read_args.error.error = 0;
+            G_gpe_complete_pwr_meas_read_args.error.ffdc = 0;
+#endif
 
-            INTR_TRAC_ERR("task_apss_complete_pwr_meas: schedule failed w/rc=0x%08X (%d us)", l_rc,
-                     (int) ((ssx_timebase_get())/(SSX_TIMEBASE_FREQUENCY_HZ/1000000)));
-            /*
-             * @errortype
-             * @moduleid    PSS_MID_APSS_COMPLETE_MEAS
-             * @reasoncode  SSX_GENERIC_FAILURE
-             * @userdata1   GPE shedule returned rc code
-             * @userdata2   0
-             * @userdata4   ERC_APSS_SCHEDULE_FAILURE
-             * @devdesc     task_apss_complete_pwr_meas schedule failed
-             */
-            l_err = createErrl(PSS_MID_APSS_COMPLETE_MEAS,
-                               SSX_GENERIC_FAILURE,
-                               ERC_APSS_SCHEDULE_FAILURE,
-                               ERRL_SEV_PREDICTIVE,
-                               NULL,
-                               DEFAULT_TRACE_SIZE,
-                               l_rc,
-                               0);
+            // Submit the next request
 
-            // Request reset since this should never happen.
-            REQUEST_RESET(l_err);
-            L_scheduled = FALSE;
-            break;
+            l_rc = gpe_request_schedule(&G_meas_complete_request);
+            if (0 != l_rc)
+            {
+
+                errlHndl_t l_err = NULL;
+
+                INTR_TRAC_ERR("task_apss_complete_pwr_meas: schedule failed w/rc=0x%08X (%d us)", l_rc,
+                              (int) ((ssx_timebase_get())/(SSX_TIMEBASE_FREQUENCY_HZ/1000000)));
+                /*
+                 * @errortype
+                 * @moduleid    PSS_MID_APSS_COMPLETE_MEAS
+                 * @reasoncode  SSX_GENERIC_FAILURE
+                 * @userdata1   GPE shedule returned rc code
+                 * @userdata2   0
+                 * @userdata4   ERC_APSS_SCHEDULE_FAILURE
+                 * @devdesc     task_apss_complete_pwr_meas schedule failed
+                 */
+                l_err = createErrl(PSS_MID_APSS_COMPLETE_MEAS,
+                                   SSX_GENERIC_FAILURE,
+                                   ERC_APSS_SCHEDULE_FAILURE,
+                                   ERRL_SEV_PREDICTIVE,
+                                   NULL,
+                                   DEFAULT_TRACE_SIZE,
+                                   l_rc,
+                                   0);
+
+                // Request reset since this should never happen.
+                REQUEST_RESET(l_err);
+                L_scheduled = FALSE;
+                break;
+            }
+            L_scheduled = TRUE;
+#ifdef DEBUG_APSS_SEQ
         }
-        L_scheduled = TRUE;
+        else
+        {
+            if (!L_throttle)
+            {
+                TRAC_INFO("task_apss_complete_pwr_meas: cont seq(%d) != complete seq(%d+1) so skipping complete",
+                          G_sequence_cont, G_sequence_complete);
+                L_throttle = TRUE;
+            }
+        }
+#endif
 
 
     }while (0);

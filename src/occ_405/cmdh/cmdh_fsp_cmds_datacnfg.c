@@ -667,9 +667,10 @@ void apss_store_ipmi_sensor_id(const uint16_t i_channel, const apss_cfg_adc_v20_
     //the channel is not being utilized.
     if ((i_channel < MAX_APSS_ADC_CHANNELS) && (i_adc->assignment != ADC_RESERVED))
     {
-        if (i_adc->ipmisensorId == 0)
+        if ((i_adc->ipmisensorId == 0) && (G_occ_interrupt_type != FSP_SUPPORTED_OCC))
         {
-            CMDH_TRAC_ERR("apss_store_ipmi_sensor_id: Missing Sensor ID for channel %i.",i_channel);
+            // Sensor IDs are not required and only used for BMC based systems
+            CMDH_TRAC_INFO("apss_store_ipmi_sensor_id: No Sensor ID for channel %i.",i_channel);
             //We need to generate a generic sensor ID if we want channels with functionIDs but
             //no sensor IDs to be reported in the poll command.
         }

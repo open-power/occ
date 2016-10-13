@@ -55,17 +55,14 @@ void apss_start_pwr_meas_read(ipc_msg_t* cmd, void* arg)
     // the ipc arguments passed through the ipc_msg_t structure, has a pointer
     // to the G_gpe_start_pwr_meas_read_args struct.
 
+#ifdef DEBUG_APSS_SEQ
+    PK_TRACE("apss_start_pwr_meas_read: enter");
+#endif
+
     int      rc;
     uint64_t regValue; // a pointer to hold the putscom_abs register value
     ipc_async_cmd_t *async_cmd = (ipc_async_cmd_t*)cmd;
     apss_start_args_t *args = (apss_start_args_t*)async_cmd->cmd_data;
-
-    // clear error, ffdc, and rc (feedback to 405)
-    // These may be overwritten by error codes if errors occur
-    // REVIEW: Since the OCC clears these fields, do we really have to repeat this here?
-    args->error.error = 0;
-    args->error.rc = 0;
-    args->error.ffdc = 0;
 
     do{
 
@@ -158,11 +155,15 @@ void apss_start_pwr_meas_read(ipc_msg_t* cmd, void* arg)
 
     } while(0);
 
+#ifdef DEBUG_APSS_SEQ
+    PK_TRACE("apss_start_pwr_meas_read: calling ipc_send_rsp()");
+#endif
+
     // send back a response, IPC success even if ffdc/rc are non zeros
     rc = ipc_send_rsp(cmd, IPC_RC_SUCCESS);
     if(rc)
     {
-        PK_TRACE("apss_start_pwr_meas_read: Failed to send response back. Halting GPE0", rc);
+        PK_TRACE("apss_start_pwr_meas_read: Failed to send response back. Halting GPE0. rc = 0x%08X", rc);
         gpe_set_ffdc(&(args->error), 0x00, GPE_RC_IPC_SEND_FAILED, rc);
         pk_halt();
     }
@@ -195,13 +196,9 @@ void apss_continue_pwr_meas_read(ipc_msg_t* cmd, void* arg)
     ipc_async_cmd_t *async_cmd = (ipc_async_cmd_t*)cmd;
     apss_continue_args_t *args = (apss_continue_args_t*)async_cmd->cmd_data;
 
-    // Clear error, ffdc, and rc (feedback to 405)
-    // These may be overwritten by error codes if errors occur
-    // REVIEW: Since the OCC clears these fields, do we really have to repeat this here?
-    args->error.error = 0;
-    args->error.rc = 0;
-    args->error.ffdc = 0;
-
+#ifdef DEBUG_APSS_SEQ
+    PK_TRACE("apss_continue_pwr_meas_read: enter");
+#endif
 
     do{
         // wait for ADC completion, or timeout after 100 micro seconds.
@@ -261,11 +258,16 @@ void apss_continue_pwr_meas_read(ipc_msg_t* cmd, void* arg)
         }
     } while(0);
 
+#ifdef DEBUG_APSS_SEQ
+    PK_TRACE("apss_continue_pwr_meas_read: calling ipc_send_rsp()");
+#endif
+
     // send back a response, IPC success (even if ffdc/rc are non zeros)
     rc = ipc_send_rsp(cmd, IPC_RC_SUCCESS);
     if(rc)
     {
-        PK_TRACE("apss_continue_pwr_meas_read: Failed to send response back. Halting GPE0", rc);
+        PK_TRACE("apss_continue_pwr_meas_read: Failed to send response back. Halting GPE0. rc = 0x%08x",
+                 rc);
         gpe_set_ffdc(&(args->error), 0x00, GPE_RC_IPC_SEND_FAILED, rc);
         pk_halt();
     }
@@ -293,16 +295,13 @@ void apss_complete_pwr_meas_read(ipc_msg_t* cmd, void* arg)
     // the ipc arguments are passed through the ipc_msg_t structure, has a pointer
     // to the G_gpe_complete_pwr_meas_read_args
 
+#ifdef DEBUG_APSS_SEQ
+    PK_TRACE("apss_complete_pwr_meas_read: enter");
+#endif
+
     int          rc;
     ipc_async_cmd_t *async_cmd = (ipc_async_cmd_t*)cmd;
     apss_complete_args_t *args = (apss_complete_args_t*)async_cmd->cmd_data;
-
-    // clear error, ffdc, and rc (feedback to 405)
-    // These may be overwritten by error codes if errors occur
-    // REVIEW: Since the OCC clears these fields, do we really have to repeat this here?
-    args->error.error = 0;
-    args->error.rc = 0;
-    args->error.ffdc = 0;
 
     do {
         // wait for ADC completion, or timeout after 100 micro seconds.
@@ -342,11 +341,15 @@ void apss_complete_pwr_meas_read(ipc_msg_t* cmd, void* arg)
         }
     } while(0);
 
+#ifdef DEBUG_APSS_SEQ
+    PK_TRACE("apss_complete_pwr_meas_read: calling ipc_send_rsp()");
+#endif
+
     // send back a response, IPC success (even if ffdc/rc are non zeros)
     rc = ipc_send_rsp(cmd, IPC_RC_SUCCESS);
     if(rc)
     {
-        PK_TRACE("apss_complete_pwr_meas_read: Failed to send response back. Halting GPE0", rc);
+        PK_TRACE("apss_complete_pwr_meas_read: Failed to send response back. Halting GPE0. rc = 0x%08X", rc);
         gpe_set_ffdc(&(args->error), 0x00, GPE_RC_IPC_SEND_FAILED, rc);
         pk_halt();
     }

@@ -260,7 +260,6 @@ errlHndl_t SMGR_observation_to_active()
                 l_extRc = ERC_GENERIC_TIMEOUT;
                 break;
             }
-            ssx_sleep(SSX_MICROSECONDS(500));
         }
         if(proc_is_hwpstate_enabled() && G_sysConfigData.system_type.kvm)
         {

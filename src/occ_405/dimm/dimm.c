@@ -138,20 +138,21 @@ void memory_nimbus_init()
     int rc_dimm_sm = 0, rc_dimm_ctl = 0; // rcs from gpe ipc request creation commands
     int rc_dimm = 0;
 
-    do {
+    do
+    {
         // Initializes GPE request for DIMM temperature reading IPC Task,
         DIMM_DBG("memory_nimbus_init: Creating request GPE1 DIMM data IPC task");
         rc_dimm_sm = gpe_request_create(
-            &G_dimm_sm_request,              // gpe_req for the task
-            &G_async_gpe_queue1,             // queue
-            IPC_ST_DIMM_SM_FUNCID,           // Function ID
-            &G_dimm_sm_args,                 // parm for the task
-            SSX_WAIT_FOREVER,                // no timeout
-            NULL,                            // callback
-            NULL,                            // callback arg
-            ASYNC_CALLBACK_IMMEDIATE);       // options
+                                        &G_dimm_sm_request,              // gpe_req for the task
+                                        &G_async_gpe_queue1,             // queue
+                                        IPC_ST_DIMM_SM_FUNCID,           // Function ID
+                                        &G_dimm_sm_args,                 // parm for the task
+                                        SSX_WAIT_FOREVER,                // no timeout
+                                        NULL,                            // callback
+                                        NULL,                            // callback arg
+                                        ASYNC_CALLBACK_IMMEDIATE);       // options
         if(rc_dimm_sm)
-    {
+        {
             TRAC_ERR("memory_control_init: Failed to initialize dimm state"
                      " machine IPC task [rc_dimm_sm=0x%x]",
                      rc_dimm_sm);
@@ -162,14 +163,14 @@ void memory_nimbus_init()
         // Initializes GPE request for DIMM Control IPC Task,
         DIMM_DBG("memory_nimbus_init: Creating request GPE1 DIMM control IPC task");
         rc_dimm_ctl = gpe_request_create(
-            &G_memory_control_task.gpe_req,  // gpe_req for the task
-            &G_async_gpe_queue1,             // queue
-            IPC_ST_DIMM_CONTROL_FUNCID,      // Function ID
-            &G_dimm_control_args,            // parm for the task
-            SSX_WAIT_FOREVER,                // no timeout
-            NULL,                            // callback
-            NULL,                            // callback argument
-            ASYNC_CALLBACK_IMMEDIATE );      // options
+                                         &G_memory_control_task.gpe_req,  // gpe_req for the task
+                                         &G_async_gpe_queue1,             // queue
+                                         IPC_ST_DIMM_CONTROL_FUNCID,      // Function ID
+                                         &G_dimm_control_args,            // parm for the task
+                                         SSX_WAIT_FOREVER,                // no timeout
+                                         NULL,                            // callback
+                                         NULL,                            // callback argument
+                                         ASYNC_CALLBACK_IMMEDIATE );      // options
 
         if(rc_dimm_ctl)
         {
@@ -179,31 +180,31 @@ void memory_nimbus_init()
             rc_dimm = rc_dimm_sm;
             break;
         }
-            }
+    }
     while(0);
 
 
     if(rc_dimm) // Either dimm sm or dimm control gpe request creation failed.
-            {
+    {
         /* @
-                 * @errortype
+         * @errortype
          * @moduleid    DIMM_MID_NIMBUS_INIT
          * @reasoncode  SSX_GENERIC_FAILURE
          * @userdata1   l_rc_gpe  - Return code of failing function
-                 * @userdata2   0
+         * @userdata2   0
          * @userdata4   ERC_CENTAUR_GPE_REQUEST_CREATE_FAILURE
          * @devdesc     Failed to initialize GPE1 DIMM IPC job
-                 */
+         */
         l_err = createErrl(
-            DIMM_MID_NIMBUS_INIT,                       //modId
-            SSX_GENERIC_FAILURE,                        //reasoncode
-            OCC_NO_EXTENDED_RC,                         //Extended reason code
-            ERRL_SEV_PREDICTIVE,                        //Severity
-            NULL,                                       //Trace Buf
-            DEFAULT_TRACE_SIZE,                         //Trace Size
-            rc_dimm,                                    //userdata1
-            0                                           //userdata2
-            );
+                           DIMM_MID_NIMBUS_INIT,                       //modId
+                           SSX_GENERIC_FAILURE,                        //reasoncode
+                           OCC_NO_EXTENDED_RC,                         //Extended reason code
+                           ERRL_SEV_PREDICTIVE,                        //Severity
+                           NULL,                                       //Trace Buf
+                           DEFAULT_TRACE_SIZE,                         //Trace Size
+                           rc_dimm,                                    //userdata1
+                           0                                           //userdata2
+                          );
 
         REQUEST_RESET(l_err);
     }
@@ -333,8 +334,8 @@ bool schedule_dimm_req(uint8_t i_state, dimm_sm_args_t i_new_args)
 
     if (!async_request_is_idle(&G_dimm_sm_request.request))
     {
-        INTR_TRAC_ERR("schedule_dimm_req: request not idle when scheduling 0x%02X (tick=%d) (prior state 0x%02X / DIMM%04X)",
-                      i_state, DIMM_TICK, G_dimm_sm_args.state, DIMM_AND_PORT);
+        INTR_TRAC_INFO("E>schedule_dimm_req: request not idle when scheduling 0x%02X (tick=%d) (prior state 0x%02X / DIMM%04X)",
+                       i_state, DIMM_TICK, G_dimm_sm_args.state, DIMM_AND_PORT);
     }
     else
     {

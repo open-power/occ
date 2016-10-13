@@ -134,6 +134,12 @@ void check_runtime_environment(void)
     //       a backdoor hack in Simics to set bit 63, telling the
     //       firmware what environment it's running in.
     G_simics_environment = ( 0 != (flags & 0x0000000000000001) ) ? TRUE : FALSE;
+    if (G_simics_environment)
+    {
+        // slow down RTL for Simics
+        G_mics_per_tick = SIMICS_MICS_PER_TICK;
+        G_dcom_tx_apss_wait_time = SIMICS_MICS_PER_TICK * 6 / 10;
+    }
 }
 
 /*
@@ -1142,8 +1148,14 @@ int main(int argc, char **argv)
 
     MAIN_TRAC_INFO("Inside OCC Main");
 
-    MAIN_TRAC_INFO("Currently %srunning in Simics environment",
-                  ((G_simics_environment == FALSE) ? "not " : "") );
+    if (G_simics_environment == FALSE)
+    {
+        MAIN_TRAC_INFO("Currently not running in Simics environment");
+    }
+    else
+    {
+        MAIN_TRAC_INFO("Currently running in Simics environment");
+    }
 
     // Trace what happened before ssx initialization
     MAIN_TRAC_INFO("HOMER accessed, rc=%d, version=%d, ssx_rc=%d",

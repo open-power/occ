@@ -122,7 +122,7 @@ void task_dcom_rx_slv_inbox( task_t *i_self)
 
 #ifdef DCOM_DEBUG
             uint64_t l_end = ssx_timebase_get();
-            DCOM_DBG("Got Doorbell from Master after waiting %d us\n",(int)( (l_end-l_start) / ( SSX_TIMEBASE_FREQUENCY_HZ / 1000000 ) ));
+            DCOM_DBG("1.1 Got Doorbell from Master after waiting %d us\n",(int)( (l_end-l_start) / ( SSX_TIMEBASE_FREQUENCY_HZ / 1000000 ) ));
 #endif
             G_dcomTime.slave.doorbellStopWaitRx = ssx_timebase_get();
             uint64_t l_delta = G_dcomTime.slave.doorbellStopWaitRx - G_dcomTime.slave.doorbellStartWaitRx;
@@ -288,8 +288,9 @@ void task_dcom_rx_slv_inbox( task_t *i_self)
             {
                TRAC_INFO("Only got %d bytes from master",l_bytes);
             }
+
             // Check time and break out if we reached limit
-            if ((ssx_timebase_get() - l_start) < SSX_MICROSECONDS(100))    // TODO: Shrink this down
+            if ((ssx_timebase_get() - l_start) < SSX_MICROSECONDS(100))
             {
                 continue;
             }
@@ -352,7 +353,7 @@ uint32_t dcom_rx_slv_inbox_doorbell( void )
                 &l_read
                 );
 
-        DCOM_DBG("Doorbell (Multicast) Read: %d bytes\n",l_read);
+        DCOM_DBG("1.0.1 Doorbell (Multicast) Read: %d bytes\n",l_read);
 
         // We got an error reading from the PBAX, return to caller
         if ( l_pbarc != 0 )
@@ -374,9 +375,11 @@ uint32_t dcom_rx_slv_inbox_doorbell( void )
             {
                 if(l_bytes_so_far){
                     G_dcomTime.slave.doorbellErrorFlags.incomplete = 1;
+                    DCOM_DBG("dcom_rx_slv_inbox_doorbell: incomplete data");
                 }
                 else{
                     G_dcomTime.slave.doorbellErrorFlags.timeout = 1;
+                    DCOM_DBG("dcom_rx_slv_inbox_doorbell: timeout");
                 }
                 break;
             }
@@ -484,7 +487,7 @@ void task_dcom_wait_for_master( task_t *i_self)
         {
             if (L_first_doorbell_rcvd)
             {
-                // We didn't get a doorbell from the Master, increment our 
+                // We didn't get a doorbell from the Master, increment our
                 // counter
                 L_no_master_doorbell_cnt++;
 
@@ -547,7 +550,7 @@ void task_dcom_wait_for_master( task_t *i_self)
                     }
                 }
 
-                if (L_no_master_doorbell_cnt == APSS_DATA_FAIL_MAX) 
+                if (L_no_master_doorbell_cnt == APSS_DATA_FAIL_MAX)
                 {
                     // If we still don't get a doorbell from the Master for this
                     // long, we will request a reset
