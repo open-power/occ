@@ -394,7 +394,8 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
         for (k = 0; k < MAX_APSS_ADC_CHANNELS; k++)
         {
             if ((G_apss_ch_to_function[k] != ADC_12V_SENSE) &&
-                (G_apss_ch_to_function[k] != ADC_GND_REMOTE_SENSE))
+                (G_apss_ch_to_function[k] != ADC_GND_REMOTE_SENSE) &&
+                (G_apss_ch_to_function[k] != ADC_12V_STANDBY_CURRENT))
             {
                 l_pwrSensorList[l_sensorHeader.count].id = G_amec_sensor_list[PWRAPSSCH0 + k]->ipmi_sid;
                 l_pwrSensorList[l_sensorHeader.count].function_id = G_apss_ch_to_function[k];

@@ -301,7 +301,7 @@ const sensor_ptr_t G_amec_sensor_list[] =
   SENSOR_PTR( PWR250USFAN,          &g_amec_sys.fan.pwr250usfan),
   SENSOR_PTR( PWR250USIO,           &g_amec_sys.io.pwr250usio),
   SENSOR_PTR( PWR250USSTORE,        &g_amec_sys.storage.pwr250usstore),
-  SENSOR_PTR( PWR250USGPU,          &g_amec_sys.sys.pwr250usgpu),
+  SENSOR_PTR( PWRGPU,               &g_amec_sys.sys.pwr250usgpu),
   SENSOR_PTR( FANSPEEDAVG,          &g_amec_sys.fan.fanspeedavg),
   SENSOR_PTR( PWRAPSSCH0,           &g_amec_sys.sys.pwrapssch[0]),
   SENSOR_PTR( PWRAPSSCH1,           &g_amec_sys.sys.pwrapssch[1]),
@@ -319,6 +319,7 @@ const sensor_ptr_t G_amec_sensor_list[] =
   SENSOR_PTR( PWRAPSSCH13,          &g_amec_sys.sys.pwrapssch[13]),
   SENSOR_PTR( PWRAPSSCH14,          &g_amec_sys.sys.pwrapssch[14]),
   SENSOR_PTR( PWRAPSSCH15,          &g_amec_sys.sys.pwrapssch[15]),
+  SENSOR_PTR( CUR12VSTBY,           &g_amec_sys.sys.cur12Vstby),
 
   // ------------------------------------------------------
   // Chip Sensors
@@ -475,7 +476,7 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   MINI_SENSOR_PTR(    PWR250USFAN,  NULL),
   MINI_SENSOR_PTR(     PWR250USIO,  NULL),
   MINI_SENSOR_PTR(  PWR250USSTORE,  NULL),
-  MINI_SENSOR_PTR(    PWR250USGPU,  NULL),
+  MINI_SENSOR_PTR(         PWRGPU,  NULL),
   MINI_SENSOR_PTR(    FANSPEEDAVG,  NULL),
 
   // ------------------------------------------------------

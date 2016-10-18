@@ -362,6 +362,7 @@ typedef struct
   sensor_t pwr250us;
   sensor_t pwr250usgpu;
   sensor_t pwrapssch[MAX_APSS_ADC_CHANNELS];
+  sensor_t cur12Vstby;
 
   sensor_t vrfan250usmem;
   sensor_t vrhot250usmem;

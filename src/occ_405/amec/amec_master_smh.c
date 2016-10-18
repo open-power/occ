@@ -479,10 +479,10 @@ void amec_mst_check_under_pcap(void)
                      AMECSENSOR_PTR(PWR250USFAN)->sample,
                      AMECSENSOR_PTR(PWR250USMEM0)->sample);
 
-            TRAC_ERR("PWR250USIO = %d , PWR250USSTORE = %d, PWR250USGPU = %d",
+            TRAC_ERR("PWR250USIO = %d , PWR250USSTORE = %d, PWRGPU = %d",
                      AMECSENSOR_PTR(PWR250USIO)->sample,
                      AMECSENSOR_PTR(PWR250USSTORE)->sample,
-                     AMECSENSOR_PTR(PWR250USGPU)->sample);
+                     AMECSENSOR_PTR(PWRGPU)->sample);
 
             /* @
              * @errortype

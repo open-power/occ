@@ -813,7 +813,7 @@ void amec_slv_check_perf(void)
                         AMECSENSOR_PTR(PWR250USFAN)->sample,
                         AMECSENSOR_PTR(PWR250USIO)->sample,
                         AMECSENSOR_PTR(PWR250USSTORE)->sample,
-                        AMECSENSOR_PTR(PWR250USGPU)->sample );
+                        AMECSENSOR_PTR(PWRGPU)->sample );
 
                 TRAC_ERR("SnrProcPwr 0 %d, SnrProcPwr 1 %d, SnrProcPwr 2 %d, SnrProcPwr 3 %d",
                         g_amec->proc_snr_pwr[0],

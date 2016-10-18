@@ -96,6 +96,8 @@ typedef union
 #define MAX_DOM_OC_LATCH        4
 #define MAX_CONN_OC_SIGNALS     5
 #define MAX_PROC_CENT_CH        4
+#define MAX_GPU_DOMAINS         2
+#define MAX_NUM_GPU_PER_DOMAIN  3
 
 // List of all possible APSS Channel assignments (Function IDs)
 // Each channel in the APSS will be associated with only one of these
@@ -127,10 +129,16 @@ typedef enum
     ADC_GND_REMOTE_SENSE        = 0x15,
     ADC_TOTAL_SYS_CURRENT       = 0x16,
     ADC_MEM_CACHE               = 0x17,
-    ADC_GPU_SENSE               = 0x18,
-    ADC_MEMORY_PROC_0_0         = 0x19, //NOTE: On Habanero, the processor has 4 centaurs with 1 APSS channel
-    ADC_MEMORY_PROC_0_1         = 0x1A, //      assigned to each one of them. ADC_MEMORY_PROC_0 will be used
-    ADC_MEMORY_PROC_0_2         = 0x1B, //      for the first one and these are for the other 3.
+    ADC_GPU_0_0                 = 0x18,  // ADC_GPU_x_y x=Proc, y=GPU (max of 3 GPUs/proc)
+    ADC_MEMORY_PROC_0_0         = 0x19,
+    ADC_MEMORY_PROC_0_1         = 0x1A,
+    ADC_MEMORY_PROC_0_2         = 0x1B,
+    ADC_12V_STANDBY_CURRENT     = 0x1C,
+    ADC_GPU_0_1                 = 0x1D,
+    ADC_GPU_0_2                 = 0x1E,
+    ADC_GPU_1_0                 = 0x1F,
+    ADC_GPU_1_1                 = 0x20,
+    ADC_GPU_1_2                 = 0x21,
     NUM_ADC_ASSIGNMENT_TYPES    // This should always be the last member
 } eApssAdcChannelAssignments;
 
@@ -195,7 +203,8 @@ typedef struct
   uint8_t sense_12v;
   uint8_t remote_gnd;
   uint8_t mem_cache;
-  uint8_t gpu;
+  uint8_t current_12v_stby;
+  uint8_t gpu[MAX_GPU_DOMAINS][MAX_NUM_GPU_PER_DOMAIN];
 } apssAdcChannelData_t;
 
 // Master/Slave Configuration
@@ -419,9 +428,6 @@ typedef struct
 
 } occModuleConfigData_t;  __attribute__ ((__aligned__ (128)))
 
-
-// Default PstateSuperStructure that can be used instead of TMGT provided one.
-extern const unsigned char G_defaultOccPstateSuperStructure[];
 
 // MASTER PCAP values.
 extern pcap_config_data_t G_master_pcap_data;

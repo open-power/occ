@@ -509,8 +509,32 @@ errlHndl_t apss_store_adc_channel(const eApssAdcChannelAssignments i_func_id, co
                 l_adc_function = &G_sysConfigData.apss_adc_map.mem_cache;
                 break;
 
-            case ADC_GPU_SENSE:
-                l_adc_function = &G_sysConfigData.apss_adc_map.gpu;
+            case ADC_12V_STANDBY_CURRENT:
+                l_adc_function = &G_sysConfigData.apss_adc_map.current_12v_stby;
+                break;
+
+            case ADC_GPU_0_0:
+                l_adc_function = &G_sysConfigData.apss_adc_map.gpu[0][0];
+                break;
+
+            case ADC_GPU_0_1:
+                l_adc_function = &G_sysConfigData.apss_adc_map.gpu[0][1];
+                break;
+
+            case ADC_GPU_0_2:
+                l_adc_function = &G_sysConfigData.apss_adc_map.gpu[0][2];
+                break;
+
+            case ADC_GPU_1_0:
+                l_adc_function = &G_sysConfigData.apss_adc_map.gpu[1][0];
+                break;
+
+            case ADC_GPU_1_1:
+                l_adc_function = &G_sysConfigData.apss_adc_map.gpu[1][1];
+                break;
+
+            case ADC_GPU_1_2:
+                l_adc_function = &G_sysConfigData.apss_adc_map.gpu[1][2];
                 break;
 
             default:
@@ -648,14 +672,30 @@ void apss_store_ipmi_sensor_id(const uint16_t i_channel, const apss_cfg_adc_v20_
         case ADC_TOTAL_SYS_CURRENT:
             //None
             break;
+
         case ADC_MEM_CACHE:
             //None
             break;
 
-        case ADC_GPU_SENSE:
-            if (i_adc->ipmisensorId != 0)
+        case ADC_12V_STANDBY_CURRENT:
+            //None
+            break;
+
+        case ADC_GPU_0_0:
+        case ADC_GPU_0_1:
+        case ADC_GPU_0_2:
+            if((i_adc->ipmisensorId != 0) && (l_proc == 0))
             {
-                AMECSENSOR_PTR(PWR250USGPU)->ipmi_sid = i_adc->ipmisensorId;
+                AMECSENSOR_PTR(PWRGPU)->ipmi_sid = i_adc->ipmisensorId;
+            }
+            break;
+
+        case ADC_GPU_1_0:
+        case ADC_GPU_1_1:
+        case ADC_GPU_1_2:
+            if((i_adc->ipmisensorId != 0) && (l_proc == 1))
+            {
+                AMECSENSOR_PTR(PWRGPU)->ipmi_sid = i_adc->ipmisensorId;
             }
             break;
 
@@ -676,7 +716,8 @@ void apss_store_ipmi_sensor_id(const uint16_t i_channel, const apss_cfg_adc_v20_
         }
 
         //Only store sensor ids for power sensors.  12V sensor and gnd remote sensors do not report power used.
-        if ((i_adc->assignment != ADC_12V_SENSE) && (i_adc->assignment != ADC_GND_REMOTE_SENSE))
+        if ((i_adc->assignment != ADC_12V_SENSE) && (i_adc->assignment != ADC_GND_REMOTE_SENSE) &&
+            (i_adc->assignment != ADC_12V_STANDBY_CURRENT))
         {
             AMECSENSOR_PTR(PWRAPSSCH0 + i_channel)->ipmi_sid = i_adc->ipmisensorId;
             CNFG_DBG("apss_store_ipmi_sensor_id: SID[0x%08X] stored as 0x%08X for channel %d",

@@ -179,14 +179,6 @@ uint32_t amec_value_from_apss_adc(uint8_t i_chan)
 // End Function Specification
 void amec_update_apss_sensors(void)
 {
-    /*
-     * Removed fake apss config data, do not reuse, the old hardcoded
-     * values will not work with the new code used in processing APSS channel
-     * data.
-     * Code is in place to receive command code 0x21 SET CONFIG DATA
-     * which should popluate the ADC and GPIO maps as well as the APSS
-     * calibration data for all 16 ADC channels.
-     */
     // Need to check to make sure APSS data has been received
     // via slave inbox first
     if (G_slv_inbox_received)
@@ -220,11 +212,17 @@ void amec_update_apss_sensors(void)
 
         if (OCC_MASTER == G_occ_role)
         {
-            // Update channel sensors for all channels (except 12v and gnd)
+            // Update channel sensors for all channels (except 12v sense and gnd)
             for (l_idx = 0; l_idx < MAX_APSS_ADC_CHANNELS; l_idx++)
             {
-                if ((l_idx != G_sysConfigData.apss_adc_map.sense_12v) &&
-                    (l_idx != G_sysConfigData.apss_adc_map.remote_gnd))
+                if(l_idx == G_sysConfigData.apss_adc_map.current_12v_stby)
+                {
+                    // Save value of 12V Standby Current (.01A) in a sensor for lab use only
+                    temp32 = ADC_CONVERTED_VALUE(l_idx)/100;  // convert mA to .01A
+                    sensor_update(AMECSENSOR_PTR(CUR12VSTBY), (uint16_t) temp32);
+                }
+                else if((l_idx != G_sysConfigData.apss_adc_map.sense_12v) &&
+                        (l_idx != G_sysConfigData.apss_adc_map.remote_gnd))
                 {
                     temp32 = ((ADC_CONVERTED_VALUE(l_idx) * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
                     sensor_update(AMECSENSOR_PTR(PWRAPSSCH0 + l_idx), (uint16_t) temp32);
@@ -317,10 +315,15 @@ void amec_update_apss_sensors(void)
         temp32  = ((temp32  * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
         sensor_update( AMECSENSOR_PTR(PWR250USSTORE), (uint16_t)temp32);
 
-        // GPU adapter
-        temp32 = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.gpu);
-        temp32 = ((temp32 * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
-        sensor_update( AMECSENSOR_PTR(PWR250USGPU), (uint16_t)temp32);
+        // Save total GPU adapter for this proc
+        if (l_proc < MAX_GPU_DOMAINS)
+        {
+            temp32 = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.gpu[l_proc][0]);
+            temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.gpu[l_proc][1]);
+            temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.gpu[l_proc][2]);
+            temp32 = ((temp32 * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
+            sensor_update( AMECSENSOR_PTR(PWRGPU), (uint16_t)temp32);
+        }
 
         // ----------------------------------------------------
         // Convert Raw Bulk Power from APSS into sensors
@@ -335,6 +338,7 @@ void amec_update_apss_sensors(void)
         // Subract adc channels that don't measure power
         l_bulk_current_sum -= ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.sense_12v);
         l_bulk_current_sum -= ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.remote_gnd);
+        l_bulk_current_sum -= ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.current_12v_stby);
 
         // If we don't have a ADC channel that measures the bulk 12v power, use
         // the ADC sum instead
