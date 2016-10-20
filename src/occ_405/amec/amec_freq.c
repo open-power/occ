@@ -545,6 +545,10 @@ void amec_slv_voting_box(void)
 // End Function Specification
 void amec_slv_freq_smh(void)
 {
+// TODO/TEMP: Remove '#if 0' when/if needed. Currently does nothing and
+//            causes warning of set but not used..
+#if 0
+
     /*------------------------------------------------------------------------*/
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
@@ -572,7 +576,7 @@ void amec_slv_freq_smh(void)
     {
         // send an IPC with l_pstate to set pstates for all Cores
     }
-
+#endif
 }
 
 

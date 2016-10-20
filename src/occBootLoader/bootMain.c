@@ -84,7 +84,6 @@ void main()
     uint32_t l_rc = 0;
     uint32_t l_gpe0_start_addr = 0;
     uint32_t l_gpe1_start_addr = 0;
-    uint32_t l_gpe_size = 0;
     uint8_t* l_gpe0_src_ptr = 0;
     uint8_t* l_gpe1_src_ptr = 0;
 

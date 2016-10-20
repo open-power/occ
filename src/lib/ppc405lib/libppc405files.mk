@@ -39,13 +39,8 @@ C-SOURCES = \
 	sprintf.c \
 	ssx_dump.c \
 	ssx_io.c \
-	stdlib.c \
 	strcasecmp.c \
-	strdup.c \
-	string.c \
-	string_stream.c \
-	strtox.c \
-	time.c
+	string_stream.c
 
 S-SOURCES =  
 

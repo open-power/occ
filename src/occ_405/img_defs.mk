@@ -110,7 +110,11 @@ export SSXLIB_SRCDIR = $(abspath ../lib/ssxlib)
 endif
 
 ifndef GCC-TOOL-PREFIX
+ifdef CROSS_PREFIX
+GCC-TOOL-PREFIX = $(CROSS_PREFIX)
+else
 GCC-TOOL-PREFIX = $(CTEPATH)/tools/ppcgcc/prod/bin/powerpc-linux-
+endif
 endif
 
 ifndef PPETRACEPP_DIR
@@ -122,12 +126,12 @@ export PPETOOLS_OBJDIR = $(BASE_OBJDIR)/ppetools
 endif
 
 ifndef TRACEPP_DIR
-export TRACEPP_DIR = $(abspath ../tracepp)
+export TRACEPP_DIR = $(abspath ../tools/tracepp)
 endif
 
 CC_ASM  = $(GCC-TOOL-PREFIX)gcc
 TCC     = $(PPETOOLS_OBJDIR)/ppetracepp $(GCC-TOOL-PREFIX)gcc
-THCC    = $(TRACEPP_DIR)/tracepp $(GCC-TOOL-PREFIX)gcc
+THCC    = $(PPETOOLS_OBJDIR)/tracepp $(GCC-TOOL-PREFIX)gcc
 CC      = $(GCC-TOOL-PREFIX)gcc
 AS      = $(GCC-TOOL-PREFIX)as
 AR      = $(GCC-TOOL-PREFIX)ar

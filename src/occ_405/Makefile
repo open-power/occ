@@ -79,14 +79,10 @@ $(OBJDIR)/$(IMAGE_NAME).bin $(OBJDIR)/$(IMAGE_NAME).dis: $(OBJDIR)/$(IMAGE_NAME)
 	$(OBJCOPY) -O binary  $< $(OBJDIR)/$(IMAGE_NAME).bin
 	$(OBJDUMP) -S $< > $(OBJDIR)/$(IMAGE_NAME).dis
 
-#create a linked ELF executable
-$(OBJDIR)/$(IMAGE_NAME).out: $(TRACEPP_DIR)/tracepp $(LINK_OBJS) $(LINK_SCRIPT) check-sensors
+# Create a linked ELF executable and verify we aren't missing sensors
+$(OBJDIR)/$(IMAGE_NAME).out: $(PPETOOLS_OBJDIR)/tracepp $(LINK_OBJS) $(LINK_SCRIPT)
 	$(LD) -e __ssx_boot -T$(LINK_SCRIPT) $(LDFLAGS) -Map $(OBJDIR)/$(IMAGE_NAME).map -Bstatic -o $(OBJDIR)/$(IMAGE_NAME).out $(LIB_DIRS) -lssx -locc -lppc405 -lcommon
-
-#Verifies that we aren't missing sensors in the sensor lists
-.PHONY : check-sensors
-check-sensors:
-	$(OCCTOOLS)/check-sensors.sh $(OBJDUMP) $(OBJDIR)/sensor/
+	$(OCCTOOLS)/check-sensors.sh $(OBJDUMP) $(OBJDIR)
 
 $(PPETOOLS_OBJDIR)/ppetracepp: $(PPETOOLS_OBJDIR)
 	g++ -O3 -w -g -I$(PPETRACEPP_DIR)/ $(PPETRACEPP_DIR)/ppetracepp.C -o $(PPETOOLS_OBJDIR)/ppetracepp
@@ -95,10 +91,8 @@ $(PPETOOLS_OBJDIR):
 	mkdir -p $(PPETOOLS_OBJDIR)
 
 #pass the link command file through the C preprocessor to evaluate macros and remove comments
-#$(LINK_SCRIPT): linkocc.cmd
 $(LINK_SCRIPT): $(LINK_CMD_SCRIPT)
 	$(CPP) -E -x c -P $(DEFS) $(LINK_CMD_SCRIPT) -o $(LINK_SCRIPT)
-
 
 #Create an obj directory if needed
 $(LINK_OBJS) $(OBJS) $(OBJS:.o=.d): | $(OBJDIRS)
@@ -122,7 +116,7 @@ $(OCCLIB):
 $(PPC405LIB):
 	$(MAKE) -I $(IMAGE_SRCDIR) -C $(PPC405LIB_SRCDIR)
 
-$(TRACEPP_DIR)/tracepp:
+$(PPETOOLS_OBJDIR)/tracepp:
 	(cd $(TRACEPP_DIR) && make)
 
 # collect all of the trace hash files for this image into a single trexStringFile

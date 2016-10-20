@@ -128,10 +128,6 @@ endif
 
 endif
 
-ifndef BINUTILS-TOOL-PREFIX
-BINUTILS-TOOL-PREFIX = $(CTEPATH)/tools/ppetools/prod/powerpc-eabi/bin/
-endif
-
 ifndef P2P_SRCDIR
 export P2P_SRCDIR $(abspath ../ppe/tools/PowerPCtoPPE)
 endif
@@ -154,11 +150,11 @@ OBJDIR = $(IMG_OBJDIR)$(SUB_OBJDIR)
 CC_ASM  = $(GCC-TOOL-PREFIX)gcc
 TCC     = $(PPETOOLS_OBJDIR)/ppetracepp $(GCC-TOOL-PREFIX)gcc
 CC      = $(GCC-TOOL-PREFIX)gcc
-AS      = $(BINUTILS-TOOL-PREFIX)as
-AR      = $(BINUTILS-TOOL-PREFIX)ar
-LD      = $(BINUTILS-TOOL-PREFIX)ld
-OBJDUMP = $(BINUTILS-TOOL-PREFIX)objdump
-OBJCOPY = $(BINUTILS-TOOL-PREFIX)objcopy
+AS      = $(GCC-TOOL-PREFIX)as
+AR      = $(GCC-TOOL-PREFIX)ar
+LD      = $(GCC-TOOL-PREFIX)ld
+OBJDUMP = $(GCC-TOOL-PREFIX)objdump
+OBJCOPY = $(GCC-TOOL-PREFIX)objcopy
 TCPP    = $(PPETOOLS_OBJDIR)/ppetracepp $(GCC-TOOL-PREFIX)gcc
 THASH	= $(PPETRACEPP_DIR)/tracehash.pl
 CPP     = $(GCC-TOOL-PREFIX)gcc

@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_405/dimm/dimm.c $                                     */
+/* $Source: src/occ_405/lock/lock.c $                                     */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -226,9 +226,6 @@ void occ_i2c_lock_release(const uint8_t i_engine)
     if ((PIB_I2C_ENGINE_ALL == i_engine) ||
         (PIB_I2C_ENGINE_E == i_engine) || (PIB_I2C_ENGINE_D == i_engine) || (PIB_I2C_ENGINE_C == i_engine))
     {
-        ocb_occflg_t occ_flags;
-        occ_flags.value = in32(OCB_OCCFLG);
-
         if ((PIB_I2C_ENGINE_E == i_engine) || (PIB_I2C_ENGINE_ALL == i_engine))
         {
             update_i2c_lock(LOCK_RELEASE, PIB_I2C_ENGINE_E);
@@ -311,10 +308,8 @@ bool check_and_update_i2c_lock(const uint8_t i_engine)
         bool needRetry = false;
         do
         {
-            ocb_occflg_t occ_flags;
             ocb_occflg_t original_occflags;
             original_occflags.value = in32(OCB_OCCFLG);
-            occ_flags.value = original_occflags.value;
 
             LOCK_DBG("check_and_update_i2c_lock: I2C engine %d - host=%d, occ=%d (dimmTick=%d)",
                      i_engine, original_occflags.fields.i2c_engine3_lock_host, original_occflags.fields.i2c_engine3_lock_occ, DIMM_TICK);

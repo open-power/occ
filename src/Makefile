@@ -42,7 +42,7 @@ export PPETOOLS_OBJDIR = $(abspath ../obj/ppetools)
 endif
 
 ifndef TRACEPP_DIR
-export TRACEPP_DIR = $(abspath tracepp)
+export TRACEPP_DIR = $(abspath tools/tracepp)
 endif
 
 ifndef PK_SRCDIR
@@ -63,7 +63,6 @@ COMBINEIMAGE = $(MAKE) combineImage -C $(dir)
 IMAGEFILE = $(OBJDIR)/image.bin
 
 NEEDED_IMAGES = \
-     $(TRACEPP_DIR)/tracepp \
      $(OBJDIR)/$(OCC_BOOTLOADER_DIR_NAME)/$(IMAGE_HDR_SCRIPT) \
      $(OBJDIR)/$(OCC_405_IMAGE_NAME)/$(OCC_405_IMAGE_NAME).out \
      $(OBJDIR)/$(OCC_GPE0_IMAGE_NAME)/$(OCC_GPE0_IMAGE_NAME).out \
@@ -74,7 +73,7 @@ NEEDED_IMAGES = \
 all: ppetools $(NEEDED_IMAGES) combineImage tracehash
 
 .PHONY: ppetools
-ppetools: $(PPETOOLS_OBJDIR)/ppetracepp $(PPETOOLS_OBJDIR)/ppe2fsp
+ppetools: $(PPETOOLS_OBJDIR)/ppetracepp $(PPETOOLS_OBJDIR)/ppe2fsp $(PPETOOLS_OBJDIR)/tracepp
 
 $(PPETOOLS_OBJDIR)/ppetracepp: $(PPETOOLS_OBJDIR)
 	g++ -O3 -w -g -I$(PPETRACEPP_DIR)/ $(PPETRACEPP_DIR)/ppetracepp.C -o $(PPETOOLS_OBJDIR)/ppetracepp
@@ -103,7 +102,6 @@ combineImage: $(NEEDED_IMAGES)
 .PHONY : clean
 clean:
 	rm -fr $(OBJDIR)
-	rm -f $(TRACEPP_DIR)/tracepp
 
 # Make binary application images
 .PHONY : $(OBJDIR)/$(OCC_405_IMAGE_NAME)/$(OCC_405_IMAGE_NAME).out
@@ -122,7 +120,7 @@ $(OBJDIR)/$(OCC_GPE1_IMAGE_NAME)/$(OCC_GPE1_IMAGE_NAME).out:
 $(OBJDIR)/$(OCC_BOOTLOADER_DIR_NAME)/$(OCC_BOOTLOADER_NAME).out $(OBJDIR)/$(OCC_BOOTLOADER_DIR_NAME)/$(IMAGE_HDR_SCRIPT):
 	(cd $(SRCDIR)/$(OCC_BOOTLOADER_DIR_NAME) && make)
 
-$(TRACEPP_DIR)/tracepp:
+$(PPETOOLS_OBJDIR)/tracepp:
 	(cd $(TRACEPP_DIR) && make)
 
 # collect all of the trace hash files for all OCC images into a single trexStringFile

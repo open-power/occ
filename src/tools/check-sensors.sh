@@ -38,7 +38,7 @@ SCRIPTNAME=`basename "$0"`
 
 # Check that we have two arguments
 if [ $# -ne 2 ]; then
-    echo ${SCRIPTNAME}: usage: ${SCRIPTNAME} /path/to/powerpc-objdump /path/to/occ_405/sensor/
+    echo ${SCRIPTNAME}: usage: ${SCRIPTNAME} /path/to/powerpc-objdump /path/to/obj/occ_405/
     exit 1
 fi
 
@@ -48,11 +48,11 @@ READELF=`which readelf`
 
 # Assign arguments to coherent variables
 OBJDUMP=$1
-SENSOR_PATH=$2
+OBJ_PATH=$2
 
 # Object files that contain the sensor lists
-SENSOR_TABLE=${SENSOR_PATH}/sensor_table.o
-SENSOR_INFO=${SENSOR_PATH}/sensor_info.o
+OCC_405_OUT=${OBJ_PATH}/occ_405.out
+SENSOR_INFO=${OBJ_PATH}/sensor/sensor_info.o
 
 # Keep track of if a sensor is missing from a list
 ERROR=0
@@ -63,8 +63,10 @@ ERROR=0
 # is an array of pointers. On the 405 processor, pointers
 # are 4 bytes, so this looks for any lines in the objdump
 # output that are NULL pointers, indicating either a missing
-# sensor or one that was improperly implemented.
-NUM_ZERO_ENTRIES=$(${OBJDUMP} -Dz ${SENSOR_TABLE} \
+# sensor or one that was improperly implemented. We have to
+# dump the full 405 binary because later gcc versions don't
+# add the sensor addresses until after linking.
+NUM_ZERO_ENTRIES=$(${OBJDUMP} -Dz ${OCC_405_OUT} \
       | awk -v RS= '/^[[:xdigit:]].*<G_amec_sensor_list>/' \
       | grep .long\ 0x0 \
       | ${WC} -l)
@@ -93,6 +95,4 @@ if [ ${NUM_ZERO_ENTRIES} -ne 0 ]; then
     ERROR=1
 fi
 
-if [ ${ERROR} -ne 0 ]; then
-    exit 1
-fi
+exit ${ERROR}

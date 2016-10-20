@@ -104,7 +104,6 @@ typedef struct
 {
     sensor_result_t core[2];
     sensor_result_t cache[2];
-    sensor_result_t reserved;
 } CoreDataDts;
 
 

@@ -73,6 +73,10 @@
 // End Function Specification
 void printSensorInfo(uint16_t i_gsid)
 {
+// This prevents warnings of set but not used since without SNSR_DEBUG
+// being set, the SNSR_DBG macros don't do anything.
+#ifdef SNSR_DEBUG
+
     // Initialize variable j and k with NULL and then
     // point to sensor to avoid compilation error when SNSR_DEBUG is not
     // defined. j and k are only used with SNSR_DBG which is no-op statement
@@ -104,6 +108,8 @@ void printSensorInfo(uint16_t i_gsid)
              (uint32_t)k->mini_sensor,
              (NULL != j) ? *j : 0
     );
+
+#endif
 }
 
 // Function Specification
