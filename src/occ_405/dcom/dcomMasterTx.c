@@ -236,7 +236,7 @@ uint32_t dcom_which_buffer(void)
 // End Function Specification
 void task_dcom_tx_slv_inbox( task_t *i_self)
 {
-    static bool l_error = FALSE;
+    static bool L_error = FALSE;
     uint32_t    l_orc = OCC_SUCCESS_REASON_CODE;
     uint32_t    l_orc_ext = OCC_NO_EXTENDED_RC;
     uint64_t    l_start = ssx_timebase_get();
@@ -269,8 +269,8 @@ void task_dcom_tx_slv_inbox( task_t *i_self)
 #endif
 #if defined(DEBUG_APSS_SEQ) && !defined(DCOM_DEBUG)
             uint64_t l_end = ssx_timebase_get();
-            DCOM_DBG("Got APSS after waiting %d us (complete seq %d)\n",
-                     (int)( (l_end-l_start) / ( SSX_TIMEBASE_FREQUENCY_HZ / 1000000 ) ), G_savedCompleteSeq);
+            TRAC_INFO("Got APSS after waiting %d us (complete seq %d)\n",
+                      (int)( (l_end-l_start) / ( SSX_TIMEBASE_FREQUENCY_HZ / 1000000 ) ), G_savedCompleteSeq);
 #endif
 
             APSS_SUCCESS();
@@ -417,28 +417,29 @@ void task_dcom_tx_slv_inbox( task_t *i_self)
                 //Failure occurred, step up the FAIL_COUNT
                 APSS_FAIL();
 
-
                 if (G_apss_fail_updown_count >= APSS_DATA_FAIL_MAX)
                 {
-                    TRAC_ERR("task_dcom_tx_slv_inbox: APSS data collection failure exceeded threshold. fail_count=%i, threshold:%i",
-                             G_apss_fail_updown_count, APSS_DATA_FAIL_MAX);
+                    if (FALSE == isSafeStateRequested())
+                    {
+                        TRAC_ERR("task_dcom_tx_slv_inbox: APSS data collection failure exceeded threshold. fail_count=%i, threshold:%i",
+                                 G_apss_fail_updown_count, APSS_DATA_FAIL_MAX);
 
-                    /* @
-                     * @errortype
-                     * @moduleid    DCOM_MID_TASK_TX_SLV_INBOX
-                     * @reasoncode  APSS_HARD_FAILURE
-                     * @userdata1   N/A
-                     * @userdata4   OCC_NO_EXTENDED_RC
-                     * @devdesc     Time out waiting on power measurement completion (hard time-out)
-                     */
-                    TRAC_ERR("Timed out waiting apss meas completion (dcom_start:%d us, apss_start:%d us, apss_end:%d us)",
-                             (int) ((l_start)/(SSX_TIMEBASE_FREQUENCY_HZ/1000000)),
-                             (int) ((G_gpe_apss_time_start)/(SSX_TIMEBASE_FREQUENCY_HZ/1000000)),
-                             (int) ((G_gpe_apss_time_end)/(SSX_TIMEBASE_FREQUENCY_HZ/1000000)));
-                    l_orc = APSS_HARD_FAILURE;
-                    l_orc_ext = OCC_NO_EXTENDED_RC;
-                    l_request_reset = TRUE;
-
+                        /* @
+                         * @errortype
+                         * @moduleid    DCOM_MID_TASK_TX_SLV_INBOX
+                         * @reasoncode  APSS_HARD_FAILURE
+                         * @userdata1   N/A
+                         * @userdata4   OCC_NO_EXTENDED_RC
+                         * @devdesc     Time out waiting on power measurement completion (hard time-out)
+                         */
+                        TRAC_ERR("Timed out waiting apss meas completion (dcom_start:%d us, apss_start:%d us, apss_end:%d us)",
+                                 (int) ((l_start)/(SSX_TIMEBASE_FREQUENCY_HZ/1000000)),
+                                 (int) ((G_gpe_apss_time_start)/(SSX_TIMEBASE_FREQUENCY_HZ/1000000)),
+                                 (int) ((G_gpe_apss_time_end)/(SSX_TIMEBASE_FREQUENCY_HZ/1000000)));
+                        l_orc = APSS_HARD_FAILURE;
+                        l_orc_ext = OCC_NO_EXTENDED_RC;
+                        l_request_reset = TRUE;
+                    }
                 }
                 break;
             }
@@ -446,20 +447,24 @@ void task_dcom_tx_slv_inbox( task_t *i_self)
 
     } while (1);
 
-    //If an error exists and we have not logged one before or there's a new request to reset, then log error.
-    if ( (l_orc != OCC_SUCCESS_REASON_CODE) && ((l_error == FALSE) || (l_request_reset == TRUE)))
+    //If an error exists and
+    //we have not logged one before or there's a new request to reset,
+    //and a reset has not already been requested, then log error.
+    if ( (l_orc != OCC_SUCCESS_REASON_CODE) &&
+         ((L_error == FALSE) || (l_request_reset == TRUE)) &&
+         (FALSE == isSafeStateRequested()) )
     {
         // create and commit error only once.
         errlHndl_t  l_errl = createErrl(
-                    DCOM_MID_TASK_TX_SLV_INBOX,     //ModId
-                    l_orc,                          //Reasoncode
-                    l_orc_ext,                      //Extended reasoncode
-                    ERRL_SEV_UNRECOVERABLE,         //Severity
-                    NULL,                           //Trace Buf
-                    DEFAULT_TRACE_SIZE,             //Trace Size
-                    0,                              //Userdata1
-                    0                               //Userdata2
-                    );
+                                        DCOM_MID_TASK_TX_SLV_INBOX,     //ModId
+                                        l_orc,                          //Reasoncode
+                                        l_orc_ext,                      //Extended reasoncode
+                                        ERRL_SEV_UNRECOVERABLE,         //Severity
+                                        NULL,                           //Trace Buf
+                                        DEFAULT_TRACE_SIZE,             //Trace Size
+                                        0,                              //Userdata1
+                                        0                               //Userdata2
+                                       );
 
         // Callout firmware
         addCalloutToErrl(l_errl,
@@ -491,8 +496,7 @@ void task_dcom_tx_slv_inbox( task_t *i_self)
             commitErrl(&l_errl);
         }
 
-        l_error = TRUE;
-        l_request_reset = FALSE;
+        L_error = TRUE;
     }
 
 }
