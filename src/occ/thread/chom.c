@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -179,7 +179,7 @@ void chom_update_sensors()
     uint16_t l_max_core_temp = 0;
     uint16_t l_max_cent_temp = 0;
     uint16_t l_max_dimm_temp = 0;
-    uint16_t l_mips = 0;
+    uint32_t l_mips = 0;
     uint16_t l_mem_rw = 0;
     uint16_t l_sample = 0;
     uint16_t i = 0, j = 0, k = 0;
