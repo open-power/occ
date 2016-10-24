@@ -458,8 +458,8 @@ typedef struct
   vectorSensor_t memsp2ms_vector;
   sensor_t pwr250us;
   sensor_t pwr250usvdd;
-  sensor_t cur250usvdd;
-  sensor_t pwr250usvcs;
+  sensor_t curvdd;
+  sensor_t pwrvcsviovdn;
   sensor_t pwr250usmem;
   sensor_t sleepcnt4ms;
   sensor_t winkcnt4ms;
@@ -476,6 +476,10 @@ typedef struct
   sensor_t temp2mscent;
   sensor_t temp16msdimm;
   sensor_t memsp2ms_tls;
+
+  sensor_t curvdn;
+  sensor_t pwrvdd;
+  sensor_t pwrvdn;
 
   // Calculations & Interim Data
   uint16_t sleep_cnt;

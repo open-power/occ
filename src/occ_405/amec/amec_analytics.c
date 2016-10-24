@@ -295,11 +295,11 @@ void amec_analytics_main(void)
                     (UINT32)tempreg;
 
                 // load accumulator from last 2msec
-                tempaccum = g_amec->proc[i].cur250usvdd.src_accum_snapshot;
+                tempaccum = g_amec->proc[i].curvdd.src_accum_snapshot;
                 // save current accum state for next 2msec
-                g_amec->proc[i].cur250usvdd.src_accum_snapshot =
-                    (uint32_t)g_amec->proc[i].cur250usvdd.accumulator;
-                tempaccum = (uint32_t)g_amec->proc[i].cur250usvdd.accumulator
+                g_amec->proc[i].curvdd.src_accum_snapshot =
+                    (uint32_t)g_amec->proc[i].curvdd.accumulator;
+                tempaccum = (uint32_t)g_amec->proc[i].curvdd.accumulator
                     - tempaccum;    // total accumulation over 2msec
                 tempaccum = tempaccum>>3;
                 g_amec->g44_avg[(i*MSA)+14] = g_amec->g44_avg[(i*MSA)+14] +

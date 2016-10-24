@@ -267,7 +267,7 @@ void amec_update_apss_sensors(void)
         temp32 = ((l_vdd * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
         sensor_update( AMECSENSOR_PTR(PWR250USVDD0), (uint16_t)temp32);
         temp32 = ((l_vcs_vio_vpcie * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
-        sensor_update( AMECSENSOR_PTR(PWR250USVCS0), (uint16_t)temp32);
+        sensor_update( AMECSENSOR_PTR(PWRVCSVIOVDN), (uint16_t)temp32);
 
         // ----------------------------------------------------
         // Convert Other Raw Misc Power from APSS into sensors
@@ -529,8 +529,8 @@ void amec_update_external_voltage()
     l_temp = (l_data & 0x00FF0000) >>16;
     l_vcs = 16125 - ((uint32_t)l_temp * 625)/10;
 
-    sensor_update( AMECSENSOR_PTR(VOLT250USP0V0), (uint16_t) l_vdd);
-    sensor_update( AMECSENSOR_PTR(VOLT250USP0V1), (uint16_t) l_vcs);
+    sensor_update( AMECSENSOR_PTR(VOLTVDD), (uint16_t) l_vdd);
+    sensor_update( AMECSENSOR_PTR(VOLTVDN), (uint16_t) l_vcs);
 }
 
 // Function Specification
@@ -538,7 +538,7 @@ void amec_update_external_voltage()
 // Name: amec_update_current_sensor
 //
 // Description: Estimates Vdd output current based on input power and Vdd voltage setting.
-//   Compute CUR250USVDD0 (current out of Vdd regulator)
+//   Compute CURVDD (current out of Vdd regulator)
 //
 // Flow:
 //
@@ -553,7 +553,7 @@ void amec_update_current_sensor(void)
 {
     uint32_t result32; //temporary result
     uint16_t l_pow_reg_input_dW = AMECSENSOR_PTR(PWR250USVDD0)->sample * 10; // convert to dW by *10.
-    uint16_t l_vdd_reg = AMECSENSOR_PTR(VOLT250USP0V0)->sample;
+    uint16_t l_vdd_reg = AMECSENSOR_PTR(VOLTVDD)->sample;
     uint32_t l_pow_reg_output_mW;
     uint32_t l_curr_output;
 
@@ -582,9 +582,9 @@ void amec_update_current_sensor(void)
     //    p_out: max=300M (dW*0.00001) in 29 bits
     //    v_out: min=5000 (0.0001 V)  max=16000(0.0001 V) in 14 bits
     //    i_out: max = 300M/5000 = 60000 (dW*0.00001/(0.0001V)= 0.01A), in 16 bits.
-    // VOLT250USP0V0 in units of 0.0001 V = 0.1 mV. (multiply by 0.1 to get mV)
+    // VOLTVDD in units of 0.0001 V = 0.1 mV. (multiply by 0.1 to get mV)
     l_curr_output = l_pow_reg_output_mW / l_vdd_reg;
-    sensor_update(AMECSENSOR_PTR(CUR250USVDD0), l_curr_output);
+    sensor_update(AMECSENSOR_PTR(CURVDD), l_curr_output);
 
 }
 

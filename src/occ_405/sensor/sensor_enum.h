@@ -116,9 +116,9 @@ enum e_gsid
     IPS4MSP0,
     MEMSP2MSP0,
     PWR250USP0,
-    PWR250USVDD0,
-    CUR250USVDD0,
-    PWR250USVCS0,
+    PWR250USVDD0, // from APSS (no change)
+    CURVDD, // from AVSBUS - renamed from CUR250USVDD0 (was calculated from APSS data)
+    PWRVCSVIOVDN, // from APSS - rename from PWR250USVCS0 to show what it includes
     PWR250USMEM0,
     SLEEPCNT4MSP0,
     WINKCNT4MSP0,
@@ -462,13 +462,17 @@ enum e_gsid
     TEMPC22,
     TEMPC23,
 
+    CURVDN, // new - from AVSBUS
+    PWRVDD, // new - calculated from AVSBUS data
+    PWRVDN, // new - calculated from AVSBUS data
+
     // ------------------------------------------------------
     // Regulator Sensors
     // ------------------------------------------------------
     UVOLT250USP0V0,
     UVOLT250USP0V1,
-    VOLT250USP0V0,
-    VOLT250USP0V1,
+    VOLTVDD, // always from AVSBUS - renamed from VOLT250USP0V0
+    VOLTVDN, // always from AVSBUS - renamed from VOLT250USP0V1
 
     // ------------------------------------------------------
     // Memory Sensors

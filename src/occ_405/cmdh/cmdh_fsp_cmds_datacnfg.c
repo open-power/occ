@@ -632,7 +632,7 @@ void apss_store_ipmi_sensor_id(const uint16_t i_channel, const apss_cfg_adc_v20_
         case ADC_VCS_VIO_VPCIE_PROC_3:
             if (l_proc == (i_adc->assignment - ADC_VCS_VIO_VPCIE_PROC_0))
             {
-                AMECSENSOR_PTR(PWR250USVCS0)->ipmi_sid = i_adc->ipmisensorId;
+                AMECSENSOR_PTR(PWRVCSVIOVDN)->ipmi_sid = i_adc->ipmisensorId;
             }
             break;
 
