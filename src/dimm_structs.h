@@ -88,12 +88,17 @@ typedef struct
 } dimm_control_args_t;
 
 
+typedef struct
+{
+    GpeErrorStruct error;
+    uint8_t mca;
+} reset_mem_deadman_args_t;
 
-// Base Address of N/M DIMM Throttling Control Register
-#define N_M_DIMM_TCR_BASE     0x07010800
+// Base Address of NIMBUS MCA.
+#define DIMM_MCA_BASE_ADDRESS     0x07010800
 
 /*
-MC/Port Address  N/M Throttling     Control Addr        SCOM Address
+MC/Port Address MCA Port Address    Control Addr        SCOM Address
 mc01.port0        0x07010800        + 0x00000116        = 0x07010916
 mc01.port1        0x07010840        + 0x00000116        = 0x07010956
 mc01.port2        0x07010880        + 0x00000116        = 0x07010996
@@ -105,7 +110,26 @@ mc23.port3        0x080108C0        + 0x00000116        = 0x080109D6
  */
 
 //  N/M DIMM Throttling Control SCOM Register Addresses macro
-#define N_M_DIMM_TCR(mc,port) (N_M_DIMM_TCR_BASE + 0x116 + \
+#define N_M_DIMM_TCR(mc,port) (DIMM_MCA_BASE_ADDRESS + 0x116 + \
                                (0x01000000 * (mc)) + ( 0x40 * (port)))
+
+/*
+MC/Port Address MCA Port Address   Deadman Offset       SCOM Address
+mc01.port0        0x07010800        + 0x0000013C        = 0x0701093C
+mc01.port1        0x07010840        + 0x0000013C        = 0x0701097C
+mc01.port2        0x07010880        + 0x0000013C        = 0x070109BC
+mc01.port3        0x070108C0        + 0x0000013C        = 0x070109FC
+mc23.port0        0x08010800        + 0x0000013C        = 0x0801093C
+mc23.port1        0x08010840        + 0x0000013C        = 0x0801097C
+mc23.port2        0x08010880        + 0x0000013C        = 0x080109BC
+mc23.port3        0x080108C0        + 0x0000013C        = 0x080109FC
+ */
+
+//  NIMBUS DIMM Deadman SCOM Register Addresses macro
+#define DEADMAN_TIMER_PORT(mc,port) (DIMM_MCA_BASE_ADDRESS + 0x13C +         \
+                               (0x01000000 * (mc)) + ( 0x40 * (port)))
+
+#define DEADMAN_TIMER_MCA(mca) (DIMM_MCA_BASE_ADDRESS + 0x13C +              \
+                               (0x01000000 * (mca>>2)) + ( 0x40 * (mca&3)))
 
 #endif // _DIMM_STRUCTS_H

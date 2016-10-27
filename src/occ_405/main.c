@@ -1,4 +1,3 @@
-
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
@@ -58,6 +57,7 @@
 #include <pss_service_codes.h>
 #include <dimm.h>
 #include "occhw_shared_data.h"
+#include <pgpe_shared.h>
 
 extern uint32_t __ssx_boot; // Function address is 32 bits
 extern uint32_t G_occ_phantom_critical_count;
@@ -72,9 +72,13 @@ extern apss_start_args_t    G_gpe_start_pwr_meas_read_args;
 extern apss_continue_args_t G_gpe_continue_pwr_meas_read_args;
 extern apss_complete_args_t G_gpe_complete_pwr_meas_read_args;
 
-
+extern uint32_t G_pgpe_beacon_address;
 
 IMAGE_HEADER (G_mainAppImageHdr,__ssx_boot,MAIN_APP_ID,ID_NUM_INVALID);
+
+// PGPE Image Header Parameters
+uint32_t G_pgpe_sram_address;
+uint32_t G_pgpe_sram_sz;
 
 //Set main thread timer for one second
 #define MAIN_THRD_TIMER_SLICE ((SsxInterval) SSX_SECONDS(1))
@@ -110,6 +114,7 @@ extern uint8_t g_trac_imp_buffer[];
 extern uint8_t g_trac_err_buffer[];
 
 void pmc_hw_error_isr(void *private, SsxIrqId irq, int priority);
+void create_tlb_entry(uint32_t address, uint32_t size);
 
 //Macro creates a 'bridge' handler that converts the initial fast-mode to full
 //mode interrupt handler
@@ -354,6 +359,132 @@ END TEMP */
                          ERRL_CALLOUT_PRIORITY_HIGH);
 
         commitErrl(&l_err);
+    }
+}
+
+/*
+ * Function Specification
+ *
+ * Name: create_tlb_entry
+ *
+ * Description: Creates a TLB entry in the 405 processor to access PGPE space.
+ *              The TLB entry has read only access, and is cache-inhibited.
+ *              This call takes care of pages alignment
+ *              and adds additional pages in case the requested
+ *              space crosses page boundaries.
+ *
+ *              will result in panic if the TLB entry allocation
+ *              fails.
+ *
+ * End Function Specification
+ */
+
+#define PAGE_SIZE PPC405_PAGE_SIZE_MIN
+#define PAGE_ALIGNED_ADDRESS(addr)     (addr & ~((uint32_t)(PAGE_SIZE-1)))
+#define PAGE_ALIGNED_SIZE(sz)          ((uint32_t)PAGE_SIZE*(((uint32_t)sz/PAGE_SIZE)+1))
+
+void create_tlb_entry(uint32_t address, uint32_t size)
+{
+    int      l_rc = SSX_OK;
+    uint32_t tlb_entry_address, tlb_entry_size;   // address and size that guarantee page alignment
+
+    tlb_entry_address = PAGE_ALIGNED_ADDRESS(address);
+
+    if(address + (size%PPC405_PAGE_SIZE_MIN) >=
+       tlb_entry_address + PPC405_PAGE_SIZE_MIN)
+    {
+        tlb_entry_size = PAGE_ALIGNED_SIZE(size+PPC405_PAGE_SIZE_MIN);
+    }
+    else
+    {
+        tlb_entry_size = PAGE_ALIGNED_SIZE(size);
+    }
+
+    // define DTLB for PGPE image header
+    l_rc = ppc405_mmu_map(
+        tlb_entry_address,
+        tlb_entry_address,
+        tlb_entry_size,
+        0,
+        TLBLO_I,         //Read-only, Cache-inhibited
+        NULL
+        );
+
+    if(l_rc != SSX_OK)
+    {
+        MAIN_TRAC_ERR("Failed to create TLB entry,"
+                      "TLB Page Address[0x%08x], TLB Entry size[0x%08x], rc[0x%08x]",
+                      tlb_entry_address, tlb_entry_size, l_rc);
+
+            /* @
+             * @errortype
+             * @moduleid    CREATE_TLB_ENTRY
+             * @reasoncode  SSX_GENERIC_FAILURE
+             * @userdata1   ppc405_mmu_map return code
+             * @userdata2   address for which a TLB entry is created
+             * @userdata4   ERC_TLB_ENTRY_CREATION_FAILURE
+             * @devdesc     SSX semaphore related failure
+             */
+
+            errlHndl_t l_err = createErrl(CREATE_TLB_ENTRY,               //modId
+                                          SSX_GENERIC_FAILURE,            //reasoncode
+                                          ERC_TLB_ENTRY_CREATION_FAILURE, //Extended reason code
+                                          ERRL_SEV_UNRECOVERABLE,         //Severity
+                                          NULL,                           //Trace Buf
+                                          DEFAULT_TRACE_SIZE,             //Trace Size
+                                          l_rc,                           //userdata1
+                                          address);                       //userdata2
+
+            REQUEST_RESET(l_err);
+    }
+
+    MAIN_TRAC_IMP("Created TLB entry for Address[0x%08x]"
+                  "TLB Page Address[0x%08x], TLB Entry size[0x%08x]",
+                  address, tlb_entry_address, tlb_entry_size);
+}
+
+
+/*
+ * Function Specification
+ *
+ * Name: read_pgpe_header
+ *
+ * Description: Initialize PGPE image header entry in DTLB,
+ *              Read PGPE image header, lookup shared SRAM address and size,
+ *              Initialize OCC/PGPE shared SRAM entry in the DTLB,
+ *              Populate global variables, including G_pgpe_peacon_address.
+ *
+ * End Function Specification
+ */
+
+void read_pgpe_header(void)
+{
+
+    // define DTLB for the PGPE image header
+    create_tlb_entry(PGPE_HEADER_ADDR, PGPE_HEADER_SZ);
+
+    // Read PGPE Beacon address from PGPE image header
+    G_pgpe_beacon_address = in32(PGPE_BEACON_ADDR_PTR);
+
+    MAIN_TRAC_IMP("Read PGPE Beacon Address[0x%08x]",
+                  G_pgpe_beacon_address);
+
+    // Read OCC/PGPE Shared SRAM address and size
+    G_pgpe_sram_address   = in32(PGPE_SHARED_SRAM_ADDR_PTR);
+    G_pgpe_sram_sz        = in32(PGPE_SHARED_SRAM_SZ_PTR);
+
+    MAIN_TRAC_IMP("Read PGPE Shared SRAM Start Address[0x%08x], Size[0x%08x]",
+                  G_pgpe_sram_address, G_pgpe_sram_sz);
+
+    // PGPE Beacon is not implemented in simics yet
+    // the G_pgpe_sram_address and G_pgpe_sram_sz pointers don't
+    // have the proper values yet.
+    // @TODO: remove this condition when PGPE code is integrated. RTC: 163934
+    if(!G_simics_environment)
+    {
+        // define DTLB for OCC/PGPE shared SRAM, which enables access
+        // to OCC-PGPE Shared SRAM space, including pgpe_beacon
+        create_tlb_entry(G_pgpe_sram_address, G_pgpe_sram_sz);
     }
 }
 
@@ -823,12 +954,17 @@ void Main_thread_routine(void *private)
     slave_occ_init();
     CHECKPOINT(SLAVE_OCC_INITIALIZED);
 
+    // Read PGPE header file, extract OCC/PGPE Shared SRAM address and size,
+    // Read other global parameters, e.g. G_pgpe_beacon_address, etc.
+    read_pgpe_header();
+    CHECKPOINT(PGPE_IMAGE_HEADER_READ);
+
     // Initialize watchdog timers. This needs to be right before
     // start rtl to make sure timer doesn't timeout. This timer is being
     // reset from the rtl task.
-// TEMP -- watchdog timers not enabled yet
-//    MAIN_TRAC_INFO("Initializing watchdog timers.");
-//    initWatchdogTimers();
+
+    MAIN_TRAC_INFO("Initializing watchdog timers.");
+    initWatchdogTimers();
     CHECKPOINT(WATCHDOG_INITIALIZED);
 
     // Initialize Real time Loop Timer Interrupt

@@ -45,7 +45,7 @@
 enum occTimerModuleId
 {
     INIT_WD_TIMERS                  =  TMER_COMP_ID | 0x00,
-    RESET_OCB_TIMER                 =  TMER_COMP_ID | 0x01,
+    POKE_WD_TIMERS                  =  TMER_COMP_ID | 0x01,
 };
 
 //*************************************************************************

@@ -393,12 +393,12 @@ void amec_slave_init()
                           (void *) GPE_ENGINE_1,         //callback argument
                           ASYNC_CALLBACK_IMMEDIATE );    //options
 
-  // If we couldn't create the poreFlex objects, there must be a major problem
+  // If we couldn't create the GpeRequest objects, there must be a major problem
   // so we will log an error and halt OCC.
   if( rc || rc2 )
   {
-    //If fail to create pore flex object then there is a problem.
-    TRAC_ERR("Failed to create GPE duration poreFlex object[0x%x, 0x%x]", rc, rc2 );
+    //If fail to create GpeRequest object then there is a problem.
+    TRAC_ERR("Failed to create GPE duration GpeRequest object[0x%x, 0x%x]", rc, rc2 );
 
     /* @
      * @errortype
@@ -407,7 +407,7 @@ void amec_slave_init()
      * @userdata1   return code - gpe0
      * @userdata2   return code - gpe1
      * @userdata4   OCC_NO_EXTENDED_RC
-     * @devdesc     Failure to create PORE-GPE poreFlex object for FW timing
+     * @devdesc     Failure to create GpeRequest object for FW timing
      *              analysis.
      *
      */
@@ -416,7 +416,7 @@ void amec_slave_init()
         SSX_GENERIC_FAILURE,                //reasoncode
         OCC_NO_EXTENDED_RC,                 //Extended reason code
         ERRL_SEV_PREDICTIVE,                //Severity
-        NULL,    //TODO: create trace       //Trace Buf
+        NULL,                               //Trace Buf
         DEFAULT_TRACE_SIZE,                 //Trace Size
         rc,                                 //userdata1
         rc2                                 //userdata2

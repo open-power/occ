@@ -53,6 +53,8 @@
 #define MC23                     1
 #define NUM_NIMBUS_MC_PAIRS      2
 
+#define NUM_NIMBUS_MCAS          (MAX_NUM_MCU_PORTS * NUM_NIMBUS_MC_PAIRS)
+
 #define NUM_DIMMS_PER_MEM_CONTROLLER    8
 #define NUM_I2C_PORTS                   2
 

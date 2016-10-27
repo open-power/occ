@@ -110,6 +110,12 @@ enum occReasonCode
     DIMM_GPE_FAILURE                = 0xD0,
     MEMORY_INIT_FAILED              = 0xD1,
     DIMM_INVALID_STATE              = 0xD2,
+    PGPE_BEACON_TIMEOUT             = 0xD3,
+    /// GPE IPC TASK RCs
+    GPE_REQUEST_CREATE_FAILURE      = 0xD4,
+    GPE_REQUEST_SCHEDULE_FAILURE    = 0xD5,
+    GPE_REQUEST_TASK_TIMEOUT        = 0xD6,
+
     /// Success!
     OCC_SUCCESS_REASON_CODE         = 0xFF,
 };
@@ -210,6 +216,8 @@ enum occExtReasonCode
     ERC_MEM_CONTROL_COMPLETE_FAILURE            = 0x0081,
 
     ERC_FW_ZERO_FREQ_LIMIT                      = 0x0090,
+
+    ERC_TLB_ENTRY_CREATION_FAILURE              = 0x00A0,
 };
 
 // Error log Module Ids
@@ -231,6 +239,7 @@ enum occModuleId
     FIR_DATA_MID                    =  MAIN_COMP_ID | 0x0e,
     CMDH_DBUG_MID                   =  MAIN_COMP_ID | 0x0f,
     I2C_LOCK_UPDATE                 =  MAIN_COMP_ID | 0x10,
+    CREATE_TLB_ENTRY                =  MAIN_COMP_ID | 0x11,
 };
 
 enum occUserDataType

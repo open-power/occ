@@ -58,7 +58,6 @@ typedef enum {
 //    TASK_ID_CORE_DATA_CONTROL,
 //    TASK_ID_GPU_SM,                 // GPU State Machine
     TASK_ID_DIMM_SM,                // DIMM State Machine
-//    TASK_ID_MEM_DEADMAN,            // Memory deadman timer
     TASK_ID_MEMORY_CONTROL,        // Memory (centaur/dimm) control task
     TASK_ID_NEST_DTS,
     TASK_END  // This must always be the last enum in this list,

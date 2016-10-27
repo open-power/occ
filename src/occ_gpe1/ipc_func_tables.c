@@ -27,6 +27,7 @@
 
 void gpe_dimm_control(ipc_msg_t* cmd, void* arg);
 void gpe1_nop(ipc_msg_t* cmd, void* arg);
+void gpe_reset_mem_deadman(ipc_msg_t* cmd, void* arg);
 
 // Function table for multi target (common) functions
 IPC_MT_FUNC_TABLE_START
@@ -45,7 +46,7 @@ IPC_ST_FUNC_TABLE_START
 IPC_HANDLER(gpe_dimm_sm, 0)                  // 0 - IPC_ST_DIMM_SM_FUNCID
 IPC_HANDLER(gpe_dimm_control, 0)             // 1 - IPC_ST_DIMM_CONTROL_FUNCID
 IPC_HANDLER(gpe1_nop, 0)                     // 2 - IPC_ST_GPE1_NOP
-IPC_HANDLER_DEFAULT                          // 3
+IPC_HANDLER(gpe_reset_mem_deadman, 0)        // 3 - IPC_ST_RESET_MEM_DEADMAN
 IPC_HANDLER_DEFAULT                          // 4
 IPC_HANDLER_DEFAULT                          // 5
 IPC_HANDLER_DEFAULT                          // 6

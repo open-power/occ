@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -68,6 +68,10 @@ void initWatchdogTimers() INIT_SECTION;
 
 // Task to reset PPC405 watchdog timer and reset OCB timer
 void task_poke_watchdogs(struct task *i_self);
+
+void manage_mem_deadman_task(void);
+void init_mem_deadman_reset_task(void);
+void check_pgpe_beacon(void);
 
 //*************************************************************************
 // Functions
