@@ -42,6 +42,7 @@
 #include "amec_sys.h"
 #include <centaur_data.h>
 #include "dimm.h"
+#include <avsbus.h>
 
 #define FREQ_FORMAT_PWR_MODE_NUM   6
 #define FREQ_FORMAT_BASE_DATA_SZ   (sizeof(cmdh_store_mode_freqs_t) - sizeof(cmdh_fsp_cmd_header_t))
@@ -64,8 +65,6 @@
 #define DATA_MEM_CFG_VERSION_20    0x20
 
 #define DATA_MEM_THROT_VERSION_20  0x20
-
-#define DATA_VOLT_UPLIFT_VERSION   0
 
 extern uint8_t G_occ_interrupt_type;
 
@@ -90,6 +89,7 @@ const data_req_table_t G_data_pri_table[] =
 {
     {DATA_MASK_SYS_CNFG,              DATA_FORMAT_SYS_CNFG}, //Need this first so we can use correct huid's for callouts
     {DATA_MASK_APSS_CONFIG,           DATA_FORMAT_APSS_CONFIG}, //need apss config data prior to role data
+    {DATA_MASK_AVSBUS_CONFIG,         DATA_FORMAT_AVSBUS_CONFIG},
     {DATA_MASK_SET_ROLE,              DATA_FORMAT_SET_ROLE},
     {DATA_MASK_MEM_CFG,               DATA_FORMAT_MEM_CFG},
     {DATA_MASK_THRM_THRESHOLDS,       DATA_FORMAT_THRM_THRESHOLDS},
@@ -98,17 +98,12 @@ const data_req_table_t G_data_pri_table[] =
     {DATA_MASK_MEM_THROT,             DATA_FORMAT_MEM_THROT},
 };
 
-// TODO: Temporarily saving this off here not sure
-//        it it belongs somewhere more appropriate
 cmdh_ips_config_data_t G_ips_config_data = {0};
 
 bool G_mem_monitoring_allowed = FALSE;
 
-// Global flag that indicates if VRMs are present. In the context of BMC-based
-// systems, if OCC doesn't get any VRM thermal control thresholds (data packet
-// 0x13), it should not attempt to talk to the VRMs. In the context of
-// FSP-based systems, then we assume VRMs are always present.
-uint8_t G_vrm_present = 1;
+// Flag will get enabled when OCC receives Thermal Threshold data
+uint8_t G_vrm_thermal_monitoring = 0;
 
 // Function Specification
 //
@@ -195,7 +190,7 @@ errlHndl_t DATA_get_ips_cnfg(cmdh_ips_config_data_t **o_ips_cnfg)
 //
 // Name:  DATA_request_cnfgdata
 //
-// Description: TODO -- Add description
+// Description: Determine what config data should be requested from TMGT
 //
 // End Function Specification
 uint8_t DATA_request_cnfgdata ()
@@ -872,10 +867,10 @@ errlHndl_t apss_store_gpio_pin(const eApssGpioAssignments i_func_id, const uint8
 //
 // Name:  data_store_apss_config_v20
 //
-// Description: TODO Add description
+// Description: Configuration required for APSS
 //
 // End Function Specification
-errlHndl_t data_store_apss_config_v20(const cmdh_apss_config_v20_t * i_cmd_ptr,    //New for P9
+errlHndl_t data_store_apss_config_v20(const cmdh_apss_config_v20_t * i_cmd_ptr,
                                             cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     errlHndl_t              l_err = NULL;
@@ -922,12 +917,6 @@ errlHndl_t data_store_apss_config_v20(const cmdh_apss_config_v20_t * i_cmd_ptr, 
                 // Assign the GPIO number
                 l_err = apss_store_gpio_pin( i_cmd_ptr->gpio[l_port].assignment[l_pin],
                                              (l_port*NUM_OF_APSS_PINS_PER_GPIO_PORT)+l_pin);
-
-                // TODO #cmdh_fsp_cmds_datacnfg_c_001
-                // This is only needed for an ITE which would have an OC
-                // sensor for a chassis power connector
-                // Assign this global the correct pins when the oc pins are passed in.
-                G_conn_oc_pins_bitmap = 0x0000;
             }
 
         }
@@ -947,14 +936,13 @@ errlHndl_t data_store_apss_config_v20(const cmdh_apss_config_v20_t * i_cmd_ptr, 
 //
 // Name:  data_store_apss_config
 //
-// Description: TODO Add description
+// Description: Configuration required for APSS
 //
 // End Function Specification
 errlHndl_t data_store_apss_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                         cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     errlHndl_t              l_err = NULL;
-    // Temporarly cast to version 0x10 struct just to get version number.
     cmdh_apss_config_v20_t *l_cmd_ptr = (cmdh_apss_config_v20_t *)i_cmd_ptr;
     uint16_t                l_data_length = CMDH_DATALEN_FIELD_UINT16(l_cmd_ptr); //Command length
     uint32_t                l_v20_data_sz = sizeof(cmdh_apss_config_v20_t) - sizeof(cmdh_fsp_cmd_header_t);
@@ -982,6 +970,139 @@ errlHndl_t data_store_apss_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
     return l_err;
 }
+
+// Function Specification
+//
+// Name:  data_store_avsbus_config
+//
+// Description: Configuration required to read power/current from AVS Bus
+//
+// End Function Specification
+errlHndl_t data_store_avsbus_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
+                                    cmdh_fsp_rsp_t * o_rsp_ptr)
+{
+    errlHndl_t l_err = NULL;
+    const uint8_t  AVSBUS_VERSION = 0x01;
+    const uint16_t AVSBUS_LENGTH = sizeof(cmdh_avsbus_config_t) - sizeof(cmdh_fsp_cmd_header_t);
+    bool l_invalid_data = FALSE;
+
+    cmdh_avsbus_config_t *l_cmd_ptr = (cmdh_avsbus_config_t *)i_cmd_ptr;
+    uint16_t l_data_length = CMDH_DATALEN_FIELD_UINT16(l_cmd_ptr);
+
+    if ((AVSBUS_VERSION == l_cmd_ptr->version) && (AVSBUS_LENGTH == l_data_length))
+    {
+        // Validate Vdd
+        if ((l_cmd_ptr->vdd_bus == 0) || (l_cmd_ptr->vdd_bus == 1))
+        {
+            if ((l_cmd_ptr->vdd_rail >= 0) && (l_cmd_ptr->vdd_rail <= 15))
+            {
+                G_avsbus_vdd_monitoring = TRUE;
+                G_sysConfigData.avsbus_vdd.bus = l_cmd_ptr->vdd_bus;
+                G_sysConfigData.avsbus_vdd.rail = l_cmd_ptr->vdd_rail;
+                G_sysConfigData.avsbus_vdd.loadline = l_cmd_ptr->vdd_loadline;
+                CNFG_DBG("data_store_avsbus_config: Vdd bus[%d] rail[%d] loadline[0x%02X]",
+                         G_sysConfigData.avsbus_vdd.bus, G_sysConfigData.avsbus_vdd.rail, G_sysConfigData.avsbus_vdd.loadline);
+            }
+            else
+            {
+                CMDH_TRAC_ERR("data_store_avsbus_config: Invalid AVS Bus Vdd rail 0x%02X",
+                              l_cmd_ptr->vdd_rail);
+                l_invalid_data = TRUE;
+            }
+        }
+        else
+        {
+            if (l_cmd_ptr->vdd_bus != 0xFF)
+            {
+                CMDH_TRAC_ERR("data_store_avsbus_config: Invalid AVS Bus Vdd bus 0x%02X",
+                              l_cmd_ptr->vdd_bus);
+                l_invalid_data = TRUE;
+            }
+            else
+            {
+                CMDH_TRAC_INFO("data_store_avsbus_config: Vdd will not be monitored via AVS Bus");
+                G_avsbus_vdd_monitoring = FALSE;
+            }
+        }
+
+        // Validate Vdn
+        if ((l_cmd_ptr->vdn_bus == 0) || (l_cmd_ptr->vdn_bus == 1))
+        {
+            if ((l_cmd_ptr->vdn_rail >= 0) && (l_cmd_ptr->vdn_rail <= 15))
+            {
+                G_avsbus_vdn_monitoring = TRUE;
+                G_sysConfigData.avsbus_vdn.bus = l_cmd_ptr->vdn_bus;
+                G_sysConfigData.avsbus_vdn.rail = l_cmd_ptr->vdn_rail;
+                G_sysConfigData.avsbus_vdn.loadline = l_cmd_ptr->vdn_loadline;
+                CNFG_DBG("data_store_avsbus_config: Vdn bus[%d] rail[%d] loadline[0x%02X]",
+                         G_sysConfigData.avsbus_vdn.bus, G_sysConfigData.avsbus_vdn.rail, G_sysConfigData.avsbus_vdn.loadline);
+
+                if (G_avsbus_vdd_monitoring &&
+                    (G_sysConfigData.avsbus_vdd.bus == G_sysConfigData.avsbus_vdn.bus))
+                {
+                    CMDH_TRAC_ERR("data_store_avsbus_config: Vdd and Vdn can not use the same AVS bus");
+                    l_invalid_data = TRUE;
+                }
+            }
+            else
+            {
+                CMDH_TRAC_ERR("data_store_avsbus_config: Invalid AVS Bus Vdn rail 0x%02X",
+                              l_cmd_ptr->vdn_rail);
+                l_invalid_data = TRUE;
+            }
+        }
+        else
+        {
+            if (l_cmd_ptr->vdd_bus != 0xFF)
+            {
+                CMDH_TRAC_ERR("data_store_avsbus_config: Invalid Vdn data (%d / %d)",
+                              l_cmd_ptr->vdd_bus, l_cmd_ptr->vdd_rail);
+                l_invalid_data = TRUE;
+            }
+            else
+            {
+                CMDH_TRAC_INFO("data_store_avsbus_config: Vdn will not be monitored via AVS Bus");
+                G_avsbus_vdn_monitoring = FALSE;
+            }
+        }
+    }
+    else
+    {
+        CMDH_TRAC_ERR("data_store_avsbus_config: Invalid AVS Bus version/length (0x%02X/0x%04X))",
+                      l_cmd_ptr->version, l_data_length);
+        l_invalid_data = TRUE;
+    }
+
+    if (l_invalid_data)
+    {
+        /* @
+         * @errortype
+         * @moduleid    DATA_STORE_AVSBUS_DATA
+         * @reasoncode  INVALID_INPUT_DATA
+         * @userdata1   data size
+         * @userdata2   packet version
+         * @userdata4   OCC_NO_EXTENDED_RC
+         * @devdesc     OCC recieved an invalid data packet from the FSP
+         */
+        cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
+        G_avsbus_vdd_monitoring = FALSE;
+        G_avsbus_vdn_monitoring = FALSE;
+    }
+    else
+    {
+        avsbus_init();
+    }
+
+    if(!l_err)
+    {
+        // If there were no errors, indicate that we got this data
+        G_data_cnfg->data_mask |= DATA_MASK_AVSBUS_CONFIG;
+        CMDH_TRAC_IMP("data_store_avsbus_config: Got valid AVS Bus data packet");
+    }
+
+    return l_err;
+
+} // end data_store_avsbus_config()
 
 // Function Specification
 //
@@ -1242,7 +1363,7 @@ errlHndl_t data_store_power_cap(const cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // Name:  data_store_sys_config
 //
-// Description: TODO Add description
+// Description: Store system configuration data from TMGT
 //
 // End Function Specification
 errlHndl_t data_store_sys_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
@@ -1437,14 +1558,14 @@ errlHndl_t data_store_thrm_thresholds(const cmdh_fsp_cmd_t * i_cmd_ptr,
         {
             // Then, set a global variable so that OCC attempts to talk to
             // the VRMs
-            G_vrm_present = 1;
+            G_vrm_thermal_monitoring = 1;
         }
         else
         {
             // No VRM data was received, so do not attempt to talk to the VRMs.
             // Also, make the error count very high so that the health
             // monitor doesn't complain about VRHOT being asserted.
-            G_vrm_present = 0;
+            G_vrm_thermal_monitoring = 0;
             G_data_cnfg->thrm_thresh.data[DATA_FRU_VRM].error_count = 0xFF;
             CMDH_TRAC_IMP("data_store_thrm_thresholds: No VRM data was received! OCC won't attempt to talk to VRMs.");
         }
@@ -1532,7 +1653,7 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 }
                 else
                 {
-                    // TODO - CUMULUS not supported yet
+                    // TODO: RTC 163359 - OCC Centaur Support
                     //G_sysConfigData.mem_type = MEM_TYPE_CUMULUS;
 
                     CMDH_TRAC_ERR("data_store_mem_cfg: Invalid mem type 0x%02X in config data packet version[0x%02X] num_data_sets[%u]",
@@ -1633,7 +1754,7 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                         break;
 
 #if 0
-                        // TODO - CUMULUS not supported yet
+                        // TODO: RTC 163359 - OCC Centaur Support
                         // per spec for cumulus memory type is the centaur# and dimm info1 is DIMM#
                         uint8_t l_centaur_num = l_data_set->memory_type;
                         l_dimm_num = l_data_set->dimm_info1;
@@ -1895,7 +2016,7 @@ errlHndl_t data_store_mem_throt(const cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // Name:  data_store_ips_config
 //
-// Description: TODO Add description
+// Description: Store IPS config data from TMGT
 //
 // End Function Specification
 errlHndl_t data_store_ips_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
@@ -1959,104 +2080,6 @@ errlHndl_t data_store_ips_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
 // Function Specification
 //
-// Name:  data_store_volt_uplift
-//
-// Description: Store the Vdd and Vcd vid values sent by TMGT. This data
-//              is sent to each OCC.
-//
-// End Function Specification
-errlHndl_t data_store_volt_uplift(const cmdh_fsp_cmd_t * i_cmd_ptr,
-                                        cmdh_fsp_rsp_t * o_rsp_ptr)
-{
-    errlHndl_t             l_err = NULL;
-    cmdh_uplift_config_t   *l_cmd_ptr = (cmdh_uplift_config_t *)i_cmd_ptr; // Cast the command to the struct for this format
-    uint16_t               l_actual_sz = CMDH_DATALEN_FIELD_UINT16(l_cmd_ptr);
-    uint32_t               l_expected_sz = sizeof(cmdh_uplift_config_t) - sizeof(cmdh_fsp_cmd_header_t);
-    int8_t                 l_vdd_delta = 0;
-    int8_t                 l_vcs_delta = 0;
-
-    // Check length and version
-    if((l_cmd_ptr->version != DATA_VOLT_UPLIFT_VERSION) ||
-       (l_actual_sz != l_expected_sz))
-    {
-        CMDH_TRAC_ERR("Invalid Vdd/Vcs Uplift Data packet Version[0x%02X] Size[%d] Expected[%d]",
-                 l_cmd_ptr->version,
-                 l_actual_sz,
-                 l_expected_sz);
-
-        /* @
-         * @errortype
-         * @moduleid    DATA_STORE_VOLT_UPLIFT
-         * @reasoncode  INVALID_INPUT_DATA
-         * @userdata1   data size
-         * @userdata2   packet version
-         * @userdata4   OCC_NO_EXTENDED_RC
-         * @devdesc     OCC recieved an invalid data packet from the FSP
-         */
-        l_err = createErrl(DATA_STORE_VOLT_UPLIFT,
-                           INVALID_INPUT_DATA,
-                           OCC_NO_EXTENDED_RC,
-                           ERRL_SEV_UNRECOVERABLE,
-                           NULL,
-                           DEFAULT_TRACE_SIZE,
-                           l_actual_sz,
-                           (uint32_t)l_cmd_ptr->version);
-
-        // Callout firmware
-        addCalloutToErrl(l_err,
-                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                         ERRL_COMPONENT_ID_FIRMWARE,
-                         ERRL_CALLOUT_PRIORITY_HIGH);
-    }
-    else
-    {
-        // Check if the new uplift value for Vdd is zero. That means that they
-        // are asking OCC to reset the Pstate table to its original state.
-        if(l_cmd_ptr->vdd_vid_uplift == 0)
-        {
-            // Restore original state by using the current Vdd VID uplift
-            l_vdd_delta = -(G_sysConfigData.vdd_vid_uplift_cur);
-        }
-        else
-        {
-            // Compute the delta uplift that needs to be applied to Vdd
-            l_vdd_delta = -(l_cmd_ptr->vdd_vid_uplift) - G_sysConfigData.vdd_vid_uplift_cur;
-        }
-
-        // Check if the new uplift value for Vcs is zero. That means that they
-        // are asking OCC to reset the Pstate table to its original state.
-        if(l_cmd_ptr->vcs_vid_uplift == 0)
-        {
-            // Restore original state by using the current Vcs VID uplift
-            l_vcs_delta = -(G_sysConfigData.vcs_vid_uplift_cur);
-        }
-        else
-        {
-            // Compute the delta uplift that needs to be applied to Vcs
-            l_vcs_delta = -(l_cmd_ptr->vcs_vid_uplift) - G_sysConfigData.vcs_vid_uplift_cur;
-        }
-
-        // Store the new current Vdd and Vcs VID uplift values
-        G_sysConfigData.vdd_vid_uplift_cur = -(l_cmd_ptr->vdd_vid_uplift);
-        G_sysConfigData.vcs_vid_uplift_cur = -(l_cmd_ptr->vcs_vid_uplift);
-
-        // Store the Vdd and Vcs VID deltas to be applied to the Pstate table
-        G_sysConfigData.vdd_vid_delta = l_vdd_delta;
-        G_sysConfigData.vcs_vid_delta = l_vcs_delta;
-
-        // Change Data Request Mask to indicate we got this data
-        G_data_cnfg->data_mask |= DATA_MASK_VOLT_UPLIFT;
-
-        CMDH_TRAC_IMP("Got valid Vdd/Vcs Uplift Config data: Vdd_vid_delta[%d] Vcs_vid_delta[%d]",
-                 G_sysConfigData.vdd_vid_delta,
-                 G_sysConfigData.vcs_vid_delta);
-    }
-
-    return l_err;
-}
-
-// Function Specification
-//
 // Name:   DATA_store_cnfgdata
 //
 // Description: Process Set Configuration Data cmd based on format (type) byte
@@ -2103,6 +2126,17 @@ errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
             {
                 // Set this in case AMEC needs to know about this
                 l_new_data = DATA_MASK_APSS_CONFIG;
+            }
+            break;
+
+        case DATA_FORMAT_AVSBUS_CONFIG:
+            // Store AVSBUS settings so that OCC can retrieve the
+            // voltage/current and initialize the AVS Bus for reading
+            l_errlHndl = data_store_avsbus_config(i_cmd_ptr, o_rsp_ptr);
+            if(NULL == l_errlHndl)
+            {
+                // Notify AMEC of the new data
+                l_new_data = DATA_MASK_AVSBUS_CONFIG;
             }
             break;
 
@@ -2170,20 +2204,12 @@ errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
             }
             break;
 
-        case DATA_FORMAT_VOLT_UPLIFT:
-            l_errlHndl = data_store_volt_uplift(i_cmd_ptr , o_rsp_ptr);
-            if(NULL == l_errlHndl)
-            {
-                l_new_data = DATA_MASK_VOLT_UPLIFT;
-            }
-            break;
-
         case DATA_FORMAT_WOF_CORE_FREQ:
-            // FIXME: Need to add proper support for this data packet
+            // TODO: RTC 130216 - WOF
             break;
 
         case DATA_FORMAT_WOF_VRM_EFF:
-            // FIXME: Need to add proper support for this data packet
+            // TODO: RTC 130216 - WOF
             break;
 
         case DATA_FORMAT_CLEAR_ALL:

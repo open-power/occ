@@ -75,6 +75,7 @@ TOP-C-SOURCES = amec/amec_analytics.c \
                 proc/proc_data.c \
                 proc/proc_pstate.c \
                 pss/apss.c \
+                pss/avsbus.c \
                 pss/dpss.c \
                 reset.c \
                 rtls/rtls_tables.c \

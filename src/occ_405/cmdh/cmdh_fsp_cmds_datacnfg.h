@@ -51,7 +51,7 @@ typedef enum
    DATA_FORMAT_IPS_CNFG              = 0x11,
    DATA_FORMAT_MEM_THROT             = 0x12,
    DATA_FORMAT_THRM_THRESHOLDS       = 0x13,
-   DATA_FORMAT_VOLT_UPLIFT           = 0x20,
+   DATA_FORMAT_AVSBUS_CONFIG         = 0x14,
    DATA_FORMAT_WOF_CORE_FREQ         = 0x30,
    DATA_FORMAT_WOF_VRM_EFF           = 0x31,
    DATA_FORMAT_CLEAR_ALL             = 0xff,
@@ -66,12 +66,11 @@ typedef enum
    DATA_MASK_APSS_CONFIG           = 0x00000008,
    DATA_MASK_PCAP_PRESENT          = 0x00000010,
    DATA_MASK_SYS_CNFG              = 0x00000020,
-   //0x00000040 not assigned.
+   DATA_MASK_AVSBUS_CONFIG         = 0x00000040,
    DATA_MASK_THRM_THRESHOLDS       = 0x00000080,
    DATA_MASK_IPS_CNFG              = 0x00000100,
    DATA_MASK_MEM_CFG               = 0x00000200,
    DATA_MASK_MEM_THROT             = 0x00000400,
-   DATA_MASK_VOLT_UPLIFT           = 0x00000800,
 } eConfigDataPriorityMask;
 
 typedef enum
@@ -137,6 +136,19 @@ typedef struct __attribute__ ((packed))
     apss_cfg_gpio_t      gpio[MAX_APSS_GPIO_PORTS];
 }cmdh_apss_config_v20_t; //New for P9
 
+// Used by TMGT to send OCC the AVS Bus config data.
+typedef struct __attribute__ ((packed))
+{
+    struct cmdh_fsp_cmd_header;
+    uint8_t  format;
+    uint8_t  version;
+    uint8_t  vdd_bus;
+    uint8_t  vdd_rail;
+    uint16_t vdd_loadline;
+    uint8_t  vdn_bus;
+    uint8_t  vdn_rail;
+    uint16_t vdn_loadline;
+}cmdh_avsbus_config_t;
 
 // Used by TMGT to send OCC the PCAP config data.
 typedef struct __attribute__ ((packed))
@@ -348,16 +360,6 @@ typedef struct data_cnfg
     uint32_t                  data_mask;
     cmdh_thrm_thresholds_t    thrm_thresh;
 } data_cnfg_t;
-
-// Used by TMGT to send OCC the Vdd and Vcs uplift values
-typedef struct __attribute__ ((packed))
-{
-    struct               cmdh_fsp_cmd_header;
-    uint8_t              format;
-    uint8_t              version;
-    uint8_t              vdd_vid_uplift; //Only positive uplift values are supported
-    uint8_t              vcs_vid_uplift; //Only positive uplift values are supported
-}cmdh_uplift_config_t;
 
 errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
                                     cmdh_fsp_rsp_t * i_rsp_ptr);

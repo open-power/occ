@@ -702,8 +702,6 @@ void cmdh_dbug_get_trace (const cmdh_fsp_cmd_t * i_cmd_ptr,
 void cmdh_dbug_get_ame_sensor (const cmdh_fsp_cmd_t * i_cmd_ptr,
                                cmdh_fsp_rsp_t * o_rsp_ptr)
 {
-/* TEMP -- NOT ENABLED YET (NEED AMEC / SENSORS) */
-#if 0
     uint8_t                      l_rc = ERRL_RC_SUCCESS;
     uint16_t                     l_type = 0;
     uint16_t                     l_location = 0;
@@ -804,8 +802,8 @@ void cmdh_dbug_get_ame_sensor (const cmdh_fsp_cmd_t * i_cmd_ptr,
     G_rsp_status = l_rc;
     o_rsp_ptr->data_length[0] = ((uint8_t *)&l_resp_data_length)[0];
     o_rsp_ptr->data_length[1] = ((uint8_t *)&l_resp_data_length)[1];
-#endif // #if 0
-}
+} // end cmdh_dbug_get_ame_sensor()
+
 
 // Function Specification
 //
@@ -993,15 +991,13 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
     // Act on Debug Sub-Command
     switch ( l_sub_cmd )
     {
-/* TEMP -- NOT SUPPORTED YET */
-#if 0
         case DBUG_GET_AME_SENSOR:
             cmdh_dbug_get_ame_sensor(i_cmd_ptr, o_rsp_ptr);
             break;
 
         case DBUG_FSP_ATTN:
             break;
-#endif
+
         case DBUG_GET_TRACE:
             // Get trace buffer SRAM address
             cmdh_dbug_get_trace(i_cmd_ptr, o_rsp_ptr);

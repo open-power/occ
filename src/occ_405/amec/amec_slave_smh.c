@@ -60,7 +60,7 @@
 // Externs
 //*************************************************************************
 extern dcom_slv_inbox_t G_dcom_slv_inbox_rx;
-extern uint8_t G_vrm_present;
+extern uint8_t G_vrm_thermal_monitoring;
 
 //*************************************************************************
 // Macros
@@ -286,8 +286,7 @@ void amec_slv_check_apss_fail(void)
 // End Function Specification
 void amec_slv_common_tasks_pre(void)
 {
-//  @TODO - TEMP - Not ready yet in Phase 1
-//  static uint16_t L_counter = 0;
+  static uint16_t L_counter = 0;
 
   AMEC_DBG("\tAMEC Slave Pre-State Common\n");
 
@@ -297,28 +296,23 @@ void amec_slv_common_tasks_pre(void)
   // Update the sensors that come from the APSS every tick
   amec_update_apss_sensors();
 
+  // Read the AVS Bus sensors (Vdd / Vdn)
+  amec_update_avsbus_sensors();
+
   // Call the stream buffer recording function
-//  @TODO - TEMP - Not ready yet in Phase 1
-/*  amec_analytics_sb_recording();
+  // TODO: RTC 163683 - AMEC analytics
+  //amec_analytics_sb_recording();
 
   // Update the sensors that come from the VRM
   L_counter++;
   if (L_counter == AMEC_UPDATE_VRM_TICKS)
   {
-      if (G_vrm_present)
+      if (G_vrm_thermal_monitoring)
       {
           amec_update_vrm_sensors();
       }
       L_counter = 0;
   }
-*/
-
-  // Update the external voltage sensors
-  amec_update_external_voltage();
-
-  // Update estimate of Vdd regulator output current
-
-  amec_update_current_sensor(); // Compute estimate for Vdd output current
 
   // Over-subscription check
   amec_oversub_check();
@@ -1039,8 +1033,8 @@ void amec_slv_substate_5_1(void)
     amec_update_proc_core_group(6);
 
     // Call controller on VRHOT signal from processor regulator
-// @TODO - Verify VRM monitoring
-//    amec_controller_vrhotproc();
+    // TODO: RTC 155562 - VRM thermal monitoring
+    //amec_controller_vrhotproc();
 }
 
 
@@ -1211,11 +1205,9 @@ void amec_slv_substate_7_0(void)
     // Call memory thermal controller based on DIMM temperature
     amec_controller_dimm_thermal();
 
-// @TODO - TEMP: Not Ready yet in Phase 1.
-/*
     // Call memory thermal controller based on Centaur temperature
-    amec_controller_centaur_thermal();
-*/
+    // TODO: RTC 163359 - OCC Centaur Support
+    //amec_controller_centaur_thermal();
 
 }
 

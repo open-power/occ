@@ -324,14 +324,6 @@ void amec_slv_voting_box(void)
         l_kvm_throt_reason = CPU_OVERTEMP;
     }
 
-    // CONN_OC_VOTE
-    if(g_amec->proc[0].pwr_votes.conn_oc_vote < l_chip_fmax)
-    {
-        l_chip_fmax = g_amec->proc[0].pwr_votes.conn_oc_vote;
-        l_chip_reason = AMEC_VOTING_REASON_CONN_OC;
-        l_kvm_throt_reason = OVERCURRENT;
-    }
-
     for (k=0; k<MAX_NUM_CORES; k++)
     {
         if(CORE_PRESENT(k))

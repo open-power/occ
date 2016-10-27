@@ -1,7 +1,7 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/amec/amec_sensors_power.h $                           */
+/* $Source: src/occ_405/pss/avsbus.h $                                    */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
@@ -23,35 +23,34 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-#ifndef _AMEC_SENSORS_POWER_H
-#define _AMEC_SENSORS_POWER_H
+#ifndef _AVSBUS_H
+#define _AVSBUS_H
 
-/*----------------------------------------------------------------------------*/
-/* Includes                                                                   */
-/*----------------------------------------------------------------------------*/
-#include <occ_common.h>
-#include <ssx.h>
-#include <ssx_app_cfg.h>
-#include "amec_external.h"
+#include <errl.h>
 
-/*----------------------------------------------------------------------------*/
-/* Defines/Constants                                                          */
-/*----------------------------------------------------------------------------*/
+extern bool G_avsbus_vdd_monitoring;
+extern bool G_avsbus_vdn_monitoring;
 
-/*----------------------------------------------------------------------------*/
-/* Function Declarations                                                      */
-/*----------------------------------------------------------------------------*/
+typedef enum
+{
+    AVSBUS_VDD = 0x00,
+    AVSBUS_VDN = 0x01,
+} avsbus_type_e;
 
-// Function that is called by AMEC State Machine that will update the AMEC
-// sensors for data that comes from the APSS (Power Data from APSS ADCs)
-void amec_update_apss_sensors(void);
+typedef enum
+{
+    // This enum contains the AVS Bus CmdDataType that can be read
+    AVSBUS_VOLTAGE          = 0x00,
+    AVSBUS_CURRENT          = 0x02,
+    AVSBUS_STATUS           = 0x0E
+} avsbus_cmdtype_e;
 
-// Function that is called by AMEC State Machine that will update the AMEC
-// sensors for data that comes from the AVS Bus (Voltage/Current)
-void amec_update_avsbus_sensors(void);
+// Setup the AVS Bus for reading
+void avsbus_init();
 
-// Function that is called by AMEC State Machine that will update the AMEC
-// sensors for data that comes from the SPIVID chip (VR_FAN, SoftOC)
-void amec_update_vrm_sensors(void);
+// Read and return the voltage or current for specified rail
+// (voltage units are mV, current units are in 10mA)
+uint16_t avsbus_read(const avsbus_type_e i_type,
+                     const avsbus_cmdtype_e i_cmdtype);
 
-#endif // _AMEC_SENSORS_POWER_H
+#endif //_AVSBUS_H

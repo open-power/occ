@@ -43,9 +43,8 @@
 #include "amec_service_codes.h"
 #include <amec_sensors_power.h>
 #include <cmdh_snapshot.h>
-// @TODO - TEMP - uncomment when vrm file is updated
-//#include <vrm.h>
 #include "amec_oversub.h"
+#include "avsbus.h"
 
 /******************************************************************************/
 /* Globals                                                                    */
@@ -405,8 +404,117 @@ void amec_update_apss_sensors(void)
     }
 }
 
-// @TODO - TEMP - SPIVRMs are no longer defined, pgp_vrm.h and vrm.c are not present
-#if 0
+
+void update_avsbus_power_sensors(const avsbus_type_e i_type)
+{
+    static bool L_throttle_vdd = FALSE;
+    static bool L_throttle_vdn = FALSE;
+    bool * L_throttle = &L_throttle_vdd;
+    uint16_t l_loadline = G_sysConfigData.avsbus_vdd.loadline;
+    uint32_t l_voltageSensor = VOLTVDD;
+    uint32_t l_currentSensor = CURVDD;
+    uint32_t l_powerSensor = PWRVDD;
+    if (AVSBUS_VDN == i_type)
+    {
+        L_throttle = &L_throttle_vdn;
+        l_loadline = G_sysConfigData.avsbus_vdn.loadline;
+        l_voltageSensor = VOLTVDN;
+        l_currentSensor = CURVDN;
+        l_powerSensor = PWRVDN;
+    }
+
+    // Read AVS Bus current
+    uint32_t l_current_10ma = avsbus_read(i_type, AVSBUS_CURRENT);
+    if (l_current_10ma != 0)
+    {
+        // Current value stored in the sensor should be in 10mA (scale -2)
+        sensor_update(AMECSENSOR_PTR(l_currentSensor), (uint16_t)l_current_10ma);
+    }
+
+    // Read AVS Bus voltage
+    uint32_t l_voltage_mv = avsbus_read(i_type, AVSBUS_VOLTAGE);
+    if (l_voltage_mv != 0)
+    {
+        // Calculate voltage on just processor package (need to take load-line into account)
+        // Voltage value stored in the sensor should be in 100mV (scale -1)
+        // (current is in 10mA units, and load-line is in tenth of microOhms)
+        // v(V)     = i(10mA)*(1 A/1000 mA) * r(1/10u Ohm)*(1 Ohm/1,000,000 uOhm)
+        //          = i * (1 A/100) * r * (1 Ohm/10,000,000)
+        //          = i * r / 1,000,000,000
+        // v(mV)    = v(V) * 1,000
+        // v(100mV) = v(mV) / 100
+        //          = (v(V) * 1,000) / 100 = v(V) * 10
+        //          = (i * r / 1,000,000,000) * 10 = i * r / 100,000,000
+        const uint64_t l_volt_drop_100mv = (l_current_10ma * l_loadline) / 100000000;
+        // TODO: RTC163992 - Confirm loadline calculation (chip package load line vs regulator load line)
+        // Convert voltage to 100mv units and subtract the drop:
+        int32_t l_voltage_100mv = (l_voltage_mv / 100) - l_volt_drop_100mv;
+        if ((l_voltage_100mv <= 0) || (l_voltage_100mv > 0xFFFF))
+        {
+            // Voltage out of range, write 0
+            if (!*L_throttle)
+            {
+                TRAC_ERR("update_avsbus_power_sensors: Voltage out of range! %dmV - %d(100mV) = %d(100mV)",
+                         l_voltage_mv, WORD_LOW(l_volt_drop_100mv), l_voltage_100mv);
+                *L_throttle = TRUE;
+            }
+            l_voltage_100mv = 0;
+        }
+        else
+        {
+            *L_throttle = FALSE;
+        }
+        sensor_update(AMECSENSOR_PTR(l_voltageSensor), (uint16_t)l_voltage_100mv);
+
+        if (l_current_10ma != 0)
+        {
+            // Power value stored in the sensor should be in W (scale 0)
+            // p(W) = v(V) * i(A) = v(100mV)*100/1000 * i(10mA)*10/1000
+            //                    = v(100mV)/10       * i(10mA)/100
+            //                    = v(100mv) * i(10mA) / 1000
+            const uint32_t l_power = l_voltage_100mv * l_current_10ma / 1000;
+            sensor_update(AMECSENSOR_PTR(l_powerSensor), (uint16_t)l_power);
+        }
+    }
+
+} // end update_avsbus_power_sensors()
+
+
+// Function Specification
+//
+// Name: amec_update_avsbus_sensors
+//
+// Description: Read AVS Bus data and update sensors
+//
+// Thread: RealTime Loop
+//
+// End Function Specification
+void amec_update_avsbus_sensors(void)
+{
+    static bool L_vdd_state = TRUE;
+
+    if (L_vdd_state)
+    {
+        // If AVS Bus Vdd config data was received, update sensors
+        if (G_avsbus_vdd_monitoring)
+        {
+            update_avsbus_power_sensors(AVSBUS_VDD);
+        }
+    }
+    else
+    {
+        // If AVS Bus Vdn config data was received, update sensors
+        if (G_avsbus_vdn_monitoring)
+        {
+            update_avsbus_power_sensors(AVSBUS_VDN);
+        }
+    }
+
+    // Alternate between Vdd/Vdn readings
+    L_vdd_state = !L_vdd_state;
+
+} // end amec_update_avsbus_sensors()
+
 
 // Function Specification
 //
@@ -420,6 +528,8 @@ void amec_update_apss_sensors(void)
 // End Function Specification
 void amec_update_vrm_sensors(void)
 {
+// TODO: RTC 132561 - VR_FAN support
+#if 0
     /*------------------------------------------------------------------------*/
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
@@ -491,102 +601,9 @@ void amec_update_vrm_sensors(void)
 
     sensor_update( AMECSENSOR_PTR(VRFAN250USMEM), 0 );
     sensor_update( AMECSENSOR_PTR(VRHOT250USMEM), 0 );
-}
+#endif
+} // end amec_update_vrm_sensors()
 
-#endif // #if 0 @TODO - TEMP - SPIVRMs are no longer defined, pgp_vrm.h and vrm.c are not present
-
-// Function Specification
-//
-// Name: amec_update_external_voltage
-//
-// Description: Measure actual external voltage
-//
-// Thread: RealTime Loop
-//
-// End Function Specification
-void amec_update_external_voltage()
-{
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
-    uint32_t                    l_data = 0;
-    uint16_t                    l_temp = 0;
-    uint16_t                    l_vdd = 0;
-    uint16_t                    l_vcs = 0;
-
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
-    // Collect the external voltage data
-// @TODO - TEMP - External Votage regulator is not defined in simics yet
-//    l_data = in32(PMC_GLOBAL_ACTUAL_VOLTAGE_REG);
-
-    // Extract the Vdd vid code and convert to voltage
-    l_temp = (l_data & 0xFF000000) >>24;
-    l_vdd = 16125 - ((uint32_t)l_temp * 625)/10;
-
-    // Extract the Vcs vid code and convert to voltage
-    l_temp = (l_data & 0x00FF0000) >>16;
-    l_vcs = 16125 - ((uint32_t)l_temp * 625)/10;
-
-    sensor_update( AMECSENSOR_PTR(VOLTVDD), (uint16_t) l_vdd);
-    sensor_update( AMECSENSOR_PTR(VOLTVDN), (uint16_t) l_vcs);
-}
-
-// Function Specification
-//
-// Name: amec_update_current_sensor
-//
-// Description: Estimates Vdd output current based on input power and Vdd voltage setting.
-//   Compute CURVDD (current out of Vdd regulator)
-//
-// Flow:
-//
-// Thread: RealTime Loop
-//
-// Changedby:
-//
-// Task Flags:
-//
-// End Function Specification
-void amec_update_current_sensor(void)
-{
-    uint32_t result32; //temporary result
-    uint16_t l_pow_reg_input_dW = AMECSENSOR_PTR(PWR250USVDD0)->sample * 10; // convert to dW by *10.
-    uint16_t l_vdd_reg = AMECSENSOR_PTR(VOLTVDD)->sample;
-    uint32_t l_pow_reg_output_mW;
-    uint32_t l_curr_output;
-
-
-    /* Step 1 */
-
-    // 1. Get PWR250USVDD0  (the input power to regulator)
-    // 2. Look up efficiency using PWR250USVDD0 as index (and interpolate)
-    // 3. Calculate output power = PWR250USVDD0 * efficiency
-    // 4. Calculate output current = output power / Vdd set point
-
-    /* Determine regulator efficiency */
-    // use 85% efficiency all the time
-    result32 = 8500;
-
-    // Compute regulator output power.  out = in * efficiency
-    //    in: min=0W max=300W = 3000dW
-    //    eff: min=0 max=10000=100% (.01% units)
-    //    p_out: max=3000dW * 10000 = 30,000,000 (dW*0.0001) < 2^25, fits in 25 bits
-    l_pow_reg_output_mW = (uint32_t)l_pow_reg_input_dW * (uint32_t)result32;
-    // Scale up p_out by 10x to give better resolution for the following division step
-    //    p_out: max=30M (dW*0.0001) in 25 bits
-    //    * 10    = 300M (dW*0.00001) in 29 bits
-    l_pow_reg_output_mW *= 10;
-    // Compute current out of regulator.  curr_out = power_out (*10 scaling factor) / voltage_out
-    //    p_out: max=300M (dW*0.00001) in 29 bits
-    //    v_out: min=5000 (0.0001 V)  max=16000(0.0001 V) in 14 bits
-    //    i_out: max = 300M/5000 = 60000 (dW*0.00001/(0.0001V)= 0.01A), in 16 bits.
-    // VOLTVDD in units of 0.0001 V = 0.1 mV. (multiply by 0.1 to get mV)
-    l_curr_output = l_pow_reg_output_mW / l_vdd_reg;
-    sensor_update(AMECSENSOR_PTR(CURVDD), l_curr_output);
-
-}
 
 /*----------------------------------------------------------------------------*/
 /* End                                                                        */

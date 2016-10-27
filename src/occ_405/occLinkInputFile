@@ -18,6 +18,7 @@ INPUT ( amec_amester.o
         amec_slave_smh.o
         amec_tasks.o
         apss.o
+        avsbus.o
         centaur_control.o
         centaur_data.o
         cmdh_dbug_cmd.o

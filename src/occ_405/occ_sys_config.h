@@ -209,6 +209,13 @@ typedef struct
   uint8_t gpu[MAX_GPU_DOMAINS][MAX_NUM_GPU_PER_DOMAIN];
 } apssAdcChannelData_t;
 
+typedef struct
+{
+    uint8_t bus;
+    uint8_t rail;
+    uint16_t loadline;
+} avsbusData_t;
+
 // Master/Slave Configuration
 typedef struct
 {
@@ -344,6 +351,10 @@ typedef struct
   // GPIO Port Mode
   uint8_t apssGpioPortsMode[MAX_APSS_GPIO_PORTS];
 
+  // AVS Bus config
+  avsbusData_t avsbus_vdd;
+  avsbusData_t avsbus_vdn;
+
   // ------------------------------------
   // Power Cap Configuration Data updated by Slaves
   // ------------------------------------
@@ -397,18 +408,6 @@ typedef struct
   //              (only first two columns populated)
   mem_throt_config_data_t mem_throt_limits[MAX_NUM_MEM_CONTROLLERS][MAX_NUM_MCU_PORTS];
 
-  // --------------------------------------
-  // Vdd/Vcs Uplift vid codes
-  // --------------------------------------
-  // Current Vdd VID Uplift
-  int8_t vdd_vid_uplift_cur;
-  // Vdd VID delta to be applied to Pstate table
-  int8_t vdd_vid_delta;
-  // Current VCS VID Uplift request
-  int8_t vcs_vid_uplift_cur;
-  // Vcs VID delta to be applied to Pstate table
-  int8_t vcs_vid_delta;
-
 } occSysConfigData_t;  __attribute__ ((__aligned__ (128)))
 
 extern occSysConfigData_t G_sysConfigData;
@@ -434,8 +433,6 @@ typedef struct
 // MASTER PCAP values.
 extern pcap_config_data_t G_master_pcap_data;
 
-
-extern uint16_t    G_conn_oc_pins_bitmap;
 
 #ifdef FSPLESS_SIMICS
 void sysConfigFspLess(void);

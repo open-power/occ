@@ -1,7 +1,7 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/dimm_control_structs.h $                                  */
+/* $Source: src/dimm_structs.h $                                          */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
@@ -29,12 +29,11 @@
 #ifndef _DIMM_STRUCTS_H
 #define _DIMM_STRUCTS_H
 
+#include "occ_util.h"
 #include <gpe_export.h>
 #include "gpe_err.h"
 //#include "occ_sys_config.h"
 
-#define WORD_HIGH(data) ((uint32_t)(((uint64_t)data)>>32))
-#define WORD_LOW(data)  ((uint32_t)(((uint64_t)data)&0xFFFFFFFF))
 
 // DIMM States (GPE1)
 typedef enum

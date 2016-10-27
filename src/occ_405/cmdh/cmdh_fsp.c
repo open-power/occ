@@ -874,11 +874,12 @@ errlHndl_t cmdh_processTmgtRequest (const cmdh_fsp_cmd_t * i_cmd_ptr,
         case CMDH_CLEARERRL:
             l_err = cmdh_clear_elog(i_cmd_ptr, i_rsp_ptr);
             break;
-/*
+
         case CMDH_AME_PASS_THROUGH:
             l_err = cmdh_amec_pass_through(i_cmd_ptr,i_rsp_ptr);
             break;
 
+/*
         case CMDH_RESET_PREP:
             l_err = cmdh_reset_prep(i_cmd_ptr,i_rsp_ptr);
             break;
@@ -887,10 +888,12 @@ errlHndl_t cmdh_processTmgtRequest (const cmdh_fsp_cmd_t * i_cmd_ptr,
             cmdh_mnfg_test_parse(i_cmd_ptr,i_rsp_ptr);
             break;
 
+*/
         case CMDH_GET_FIELD_DEBUG_DATA:
             l_err = cmdh_tmgt_get_field_debug_data(i_cmd_ptr,i_rsp_ptr);
             break;
 
+/*
         case CMDH_TUNABLE_PARMS:
             l_err = cmdh_tunable_parms(i_cmd_ptr,i_rsp_ptr);
             break;

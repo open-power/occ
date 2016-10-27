@@ -156,6 +156,17 @@ occSysConfigData_t G_sysConfigData =
 
     .apssGpioPortsMode =   {0, 0},
 
+    .avsbus_vdd = {
+        .bus = 0,
+        .rail = 0,
+        .loadline = 0
+    },
+    .avsbus_vdn = {
+        .bus = 0,
+        .rail = 0,
+        .loadline = 0
+    },
+
     // -----------------------------------------------------------
     // Power Cap Initializations
     // -----------------------------------------------------------
@@ -210,14 +221,6 @@ occSysConfigData_t G_sysConfigData =
         {{0}, {0}, {0}, {0}},
         {{0}, {0}, {0}, {0}}
     },
-
-    // --------------------------------------
-    // Vdd/Vcs Uplift vid codes
-    // --------------------------------------
-    .vdd_vid_uplift_cur = 0,
-    .vdd_vid_delta = 0,
-    .vcs_vid_uplift_cur = 0,
-    .vcs_vid_delta = 0,
 };
 
 
@@ -242,9 +245,6 @@ pcap_config_data_t G_master_pcap_data =
     .unthrottle      = 0,
     .pcap_data_count = 0,
 };
-
-// TODO:  Move this to a different file
-uint16_t    G_conn_oc_pins_bitmap = 0x0000;
 
 // Function Specification
 //

@@ -91,7 +91,8 @@ typedef enum
      DATA_MASK_APSS_CONFIG | \
      DATA_MASK_SET_ROLE | \
      DATA_MASK_MEM_CFG | \
-     DATA_MASK_THRM_THRESHOLDS )
+     DATA_MASK_THRM_THRESHOLDS | \
+     DATA_MASK_AVSBUS_CONFIG )
 
 #define SMGR_VALIDATE_DATA_ACTIVE_MASK  G_smgr_validate_data_active_mask
 #define SMGR_VALIDATE_DATA_OBSERVATION_MASK G_smgr_validate_data_observation_mask

@@ -77,6 +77,8 @@ enum occReasonCode
     CENT_SCOM_ERROR                 = 0x41,
     /// Centaur FIR bit set
     CENT_LFIR_ERROR                 = 0x42,
+    AVSBUS_TIMEOUT                  = 0x50,
+    AVSBUS_ERROR                    = 0x51,
     /// Throttle in nominal or turbo mode due to the bulk power limit being reached with both power supplies good
     PCAP_THROTTLE_POWER_LIMIT       = 0x61,
     /// Firmware Failure: equivalent to assertion failures
@@ -218,6 +220,12 @@ enum occExtReasonCode
     ERC_FW_ZERO_FREQ_LIMIT                      = 0x0090,
 
     ERC_TLB_ENTRY_CREATION_FAILURE              = 0x00A0,
+
+    ERC_AVSBUS_VDD_VOLTAGE_FAILURE              = 0x00AA,
+    ERC_AVSBUS_VDD_CURRENT_FAILURE              = 0x00AB,
+    ERC_AVSBUS_VDN_VOLTAGE_FAILURE              = 0x00AC,
+    ERC_AVSBUS_VDN_CURRENT_FAILURE              = 0x00AD,
+
 };
 
 // Error log Module Ids

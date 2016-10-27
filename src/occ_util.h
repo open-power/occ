@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/amec/amec_sensors_power.h $                           */
+/* $Source: src/occ_util.h $                                              */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2016                             */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -23,35 +23,13 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-#ifndef _AMEC_SENSORS_POWER_H
-#define _AMEC_SENSORS_POWER_H
+/* This header file is used by both occ_405 and occ_gpe1.                 */
+/* Contains common structures and globals.                                */
 
-/*----------------------------------------------------------------------------*/
-/* Includes                                                                   */
-/*----------------------------------------------------------------------------*/
-#include <occ_common.h>
-#include <ssx.h>
-#include <ssx_app_cfg.h>
-#include "amec_external.h"
+#ifndef _OCC_UTIL_H
+#define _OCC_UTIL_H
 
-/*----------------------------------------------------------------------------*/
-/* Defines/Constants                                                          */
-/*----------------------------------------------------------------------------*/
+#define WORD_HIGH(data) ((uint32_t)(((uint64_t)data)>>32))
+#define WORD_LOW(data)  ((uint32_t)(((uint64_t)data)&0xFFFFFFFF))
 
-/*----------------------------------------------------------------------------*/
-/* Function Declarations                                                      */
-/*----------------------------------------------------------------------------*/
-
-// Function that is called by AMEC State Machine that will update the AMEC
-// sensors for data that comes from the APSS (Power Data from APSS ADCs)
-void amec_update_apss_sensors(void);
-
-// Function that is called by AMEC State Machine that will update the AMEC
-// sensors for data that comes from the AVS Bus (Voltage/Current)
-void amec_update_avsbus_sensors(void);
-
-// Function that is called by AMEC State Machine that will update the AMEC
-// sensors for data that comes from the SPIVID chip (VR_FAN, SoftOC)
-void amec_update_vrm_sensors(void);
-
-#endif // _AMEC_SENSORS_POWER_H
+#endif // _OCC_UTIL_H

@@ -354,129 +354,6 @@ void amec_ppb_fmax_calc(void)
 //////////////////////////
 // Function Specification
 //
-// Name: amec_conn_oc_controller
-//
-// Description: Handle Over Current.  Useful on ITE system only.
-//              Design uses 2 step procedure when OC is detected.
-//              1) Lower all cores to Fnom
-//              2) If still asserted after PWR_SETTLED_TICKS, lower all cores to Fmin
-//
-// Thread: Real Time Loop
-//
-// End Function Specification
-void amec_conn_oc_controller(void)
-{
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
-    errlHndl_t  l_err = NULL;
-    static uint8_t  L_asserted_count = 0;
-    static bool L_error_logged = FALSE;
-
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
-
-    //If no overcurrent pins are set, then set vote to Turbo
-    if(G_conn_oc_pins_bitmap == 0)
-    {
-        g_amec->proc[0].pwr_votes.conn_oc_vote = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
-    }
-    else
-    {
-        //Check if any of the OC gpio pins are set.
-        //TODO: G_conn_oc_pins_bitmap should be populated with data sent by TMGT.
-        if((G_conn_oc_pins_bitmap & ~(G_apss_pwr_meas.gpio[0])) == 0)
-        {
-            //Reset counter
-            L_asserted_count = 0;
-
-            g_amec->proc[0].pwr_votes.conn_oc_vote += G_mhz_per_pstate;
-
-            //Verify that vote is not greater than turbo.
-            if(g_amec->proc[0].pwr_votes.conn_oc_vote > G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO])
-            {
-                g_amec->proc[0].pwr_votes.conn_oc_vote = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
-            }
-        }
-        else if(L_asserted_count < PWR_SETTLED_TICKS)
-        {
-            g_amec->proc[0].pwr_votes.conn_oc_vote = G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL];
-            L_asserted_count++;
-
-            //Log an informational error
-            TRAC_ERR("Connector overcurrent pins still asserted. Count=%i.",L_asserted_count);
-
-            /* @
-             * @errortype
-             * @moduleid    AMEC_PCAP_CONN_OC_CONTROLLER
-             * @reasoncode  CONNECTOR_OC_PINS_WARNING
-             * @userdata1   OC pin bitmap
-             * @userdata2   APSS power measure gpio state
-             * @devdesc     The connector overcurrent pins are still asserted.
-             *
-             */
-
-            //TODO: ADD ACTION FLAG for manufacturing error to log it as predictive.
-            if(!L_error_logged) //only log this error once
-            {
-                L_error_logged = TRUE;
-                l_err = createErrl(
-                     AMEC_PCAP_CONN_OC_CONTROLLER,       //modId
-                     CONNECTOR_OC_PINS_WARNING,          //reasoncode
-                     OCC_NO_EXTENDED_RC,                 //Extended reason code
-                     ERRL_SEV_INFORMATIONAL,             //Severity
-                     NULL,                               //Trace Buf
-                     DEFAULT_TRACE_SIZE,                 //Trace Size
-                     G_conn_oc_pins_bitmap,              //userdata1
-                     G_apss_pwr_meas.gpio[0]             //userdata2
-                     );
-
-                commitErrl( &l_err);
-            }
-        }
-        else //Asserted count reached or exceeded PWR_SETTLED_TICKS.
-        {
-            g_amec->proc[0].pwr_votes.conn_oc_vote = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
-
-            if(CURRENT_MODE() == OCC_MODE_NOMINAL)
-            {
-                //Log a predictive error
-                TRAC_ERR("Connector overcurrent pins still asserted after max ticks. Logging error.");
-
-                /* @
-                 * @errortype
-                 * @moduleid    AMEC_PCAP_CONN_OC_CONTROLLER
-                 * @reasoncode  CONNECTOR_OC_PINS_FAILURE
-                 * @userdata1   OC pin bitmap
-                 * @userdata2   APSS power measure gpio state
-                 * @devdesc     The connector overcurrent pins are asserted for too long.
-                 *
-                 */
-
-                l_err = createErrl(
-                        AMEC_PCAP_CONN_OC_CONTROLLER,       //modId
-                        CONNECTOR_OC_PINS_FAILURE,          //reasoncode
-                        OCC_NO_EXTENDED_RC,                 //Extended reason code
-                        ERRL_SEV_PREDICTIVE,                //Severity
-                        NULL,                               //Trace Buf
-                        DEFAULT_TRACE_SIZE,                 //Trace Size
-                        G_conn_oc_pins_bitmap,              //userdata1
-                        G_apss_pwr_meas.gpio[0]             //userdata2
-                        );
-
-                commitErrl( &l_err);
-
-                //Request safe mode without retries.
-                //TODO: add code to request safe mode with no retries.
-            }
-        }
-    }
-}
-
-//////////////////////////
-// Function Specification
-//
 // Name: amec_power_control
 //
 // Description: Main function for power control loop.
@@ -507,9 +384,6 @@ void amec_power_control(void)
        // Calculate the performance preserving bounds voting box input freq
        amec_ppb_fmax_calc();
     }
-
-    // Check for connector oc condition and calculate voting box input freq
-    amec_conn_oc_controller();
 }
 
 /*----------------------------------------------------------------------------*/
