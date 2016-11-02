@@ -1084,11 +1084,6 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
     return;
 }
 
-// TODO: Workaround - SSX_SECONDS uses SsxInterval (uint32) instead of SsxTimebase (uint64)
-// That would only allow times up to 7.1 seconds.  OCC has a 15 second timeout for the
-// SET_MODE_AND_STATE command, so updating macro to handle this longer timeout. (waiting for SSX change)
-#undef SSX_SECONDS
-#define SSX_SECONDS(s) ((SsxTimebase)(__ssx_timebase_frequency_hz * (SsxTimebase)(s)))
 // Function Specification
 //
 // Name:  SMGR_base_setmodestate_cmdh
@@ -1102,7 +1097,7 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
     errlHndl_t                      l_errlHndl     = NULL;
     smgr_setmodestate_v0_query_t*   l_cmd_ptr      = (smgr_setmodestate_v0_query_t *)i_cmd_ptr;
     ERRL_RC                         l_rc           = ERRL_RC_INTERNAL_FAIL;
-    SsxTimebase                     l_timeout      = SSX_SECONDS(15);
+    SsxInterval                     l_timeout      = SSX_SECONDS(15);
     SsxTimebase                     l_start        = ssx_timebase_get();
     OCC_STATE                       l_pre_state    = CURRENT_STATE();
     OCC_MODE                        l_pre_mode     = CURRENT_MODE();

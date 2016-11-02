@@ -236,7 +236,7 @@
 /// overridden by the application.
 
 #ifndef PK_TIME_INTERVAL_TYPE
-#define PK_TIME_INTERVAL_TYPE uint32_t
+#define PK_TIME_INTERVAL_TYPE uint64_t
 #endif
 
 /// Provide support for the PkTimer APIs in addition to the default

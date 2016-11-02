@@ -65,15 +65,15 @@ void Dcom_thread_routine(void *arg)
     SsxTimer  l_timeout_timer;
     errlHndl_t l_errlHndl = NULL;
     // --------------------------------------------------
-    // Create a timer that pops every 7 seconds to wake up
+    // Create a timer that pops every 10 seconds to wake up
     // this thread, in case a semaphore never gets posted.
     // --------------------------------------------------
     ssx_timer_create(&l_timeout_timer,
                      (SsxTimerCallback) ssx_semaphore_post,
                      (void *) &G_dcomThreadWakeupSem);
     ssx_timer_schedule(&l_timeout_timer,
-                       SSX_SECONDS(7),
-                       SSX_SECONDS(7));
+                       SSX_SECONDS(10),
+                       SSX_SECONDS(10));
 
     DCOM_TRAC_INFO("DCOM Thread Started");
     for(;;)

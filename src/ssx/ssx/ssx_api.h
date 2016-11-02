@@ -231,7 +231,7 @@
 /// overridden by the application.
 
 #ifndef SSX_TIME_INTERVAL_TYPE
-    #define SSX_TIME_INTERVAL_TYPE uint32_t
+    #define SSX_TIME_INTERVAL_TYPE uint64_t
 #endif
 
 /// Provide support for the SsxTimer APIs in addition to the default
