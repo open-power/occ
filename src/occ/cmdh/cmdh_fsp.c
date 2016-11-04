@@ -411,11 +411,20 @@ errlHndl_t cmdh_fsp_init(void)
 
     ocb_request_schedule(&G_fsp_doorbell_ocb_request);
 
-    CHECKPOINT(OCB_INITIALIZED);
+    // -----------------------------------------------------------------
+    // Open Up Linear Window for FSP & BMC Communication in Secure Mode
+    // -----------------------------------------------------------------
+    // Initialize the linear window for OCB channel 2 which is used
+    // by BMC/TMGT to write to the command buffer in SRAM
+    ocb_linear_window_initialize(2, CMDH_LINEAR_WINDOW_BASE_ADDRESS, LOG_SIZEOF_FSP_CMD_BUFFER);
+    // Set OCB channel 2 (linear buffer) to allow untrusted communication
+    // which enables BMC/TMGT to write the command buffer
+    ocb_allow_untrusted_initialize(2, 1);
+    // Set OCB channel 1 (circular buffer) to allow untrusted communication
+    // which enables BMC/TMGT to send attentions to the OCC
+    ocb_allow_untrusted_initialize(1, 1);
 
-    // ----------------------------------------------------
-    // Open Up Linear Window for FSP Communication
-    // ----------------------------------------------------
+    CHECKPOINT(OCB_INITIALIZED);
 
     if(G_occ_interrupt_type == FSP_SUPPORTED_OCC)
     {
