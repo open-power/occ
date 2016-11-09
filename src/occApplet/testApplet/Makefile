@@ -5,8 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2011,2014
-# [+] Google Inc.
+# Contributors Listed Below - COPYRIGHT 2011,2016
 # [+] International Business Machines Corp.
 #
 #
@@ -14,7 +13,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-# http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -64,7 +63,7 @@ DEFS += -DOCC=1 -DUSE_SSX_APP_CFG_H=1
 
 GCC-CFLAGS = -c -g -Wall -fsigned-char -msoft-float -pipe \
 -m32 -mbig-endian -Wa,-m405 -mcpu=405 -mmultiple -mstring -meabi \
--ffreestanding -Os -mno-sdata 
+-ffreestanding -Os -mno-sdata -std=gnu89
 
 #*******************************************************************************
 # Compilation 
