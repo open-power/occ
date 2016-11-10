@@ -240,9 +240,15 @@ void amec_slv_pstate_uplift_check(void)
         TRAC_INFO("Updating Global Pstate table with requested uplift values!");
 
         // STEP 1:
-        // Prevent any Pstate changes by locking the PMC Rail so that
-        // Pmax_rail = Pmin_rail + 1
+        // Prevent any Pstate changes by locking the PMC Rail
+        // Determine minimum pstate (either min+1 from pstate table, or configured min from TMGT)
         l_pmin = gpst_pmin(&G_global_pstate_table) + 1;
+        const int8_t l_config_min_pstate = (int8_t)proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY]);
+        if (l_config_min_pstate > l_pmin)
+        {
+            // use larger min pstate (from TMGT config)
+            l_pmin = l_config_min_pstate;
+        }
 
         // Set the Pmax_rail register via OCI write
         amec_oversub_pmax_clip(l_pmin);

@@ -163,7 +163,7 @@ void amec_wof_error_update(uint8_t i_errorcode)
     last_err = g_amec->wof.error;
     // Save the current error code
     g_amec->wof.error = i_errorcode;
-    
+
 }
 
 // Name: amec_wof_info_update
@@ -813,8 +813,8 @@ int amec_wof_common_steps(void)
     // Count number of cores that are turned on for
     // 1) Determining pstate voltage selection
     // 2) Determining Ceff voltage
-    // 
-    // IMPORTANT: 
+    //
+    // IMPORTANT:
     //
     // The algorithm uses PM state and the winkle exit vector to
     // determine the sum of cores turned on for pstate voltage
@@ -1047,9 +1047,15 @@ void amec_wof_update_pstate_table(void)
     k = g_amec->wof.pstatetable_cores_next - 1;
 
     // STEP 1:
-    // Prevent any Pstate changes by locking the PMC Rail so that
-    // Pmax_rail = Pmin_rail + 1
+    // Prevent any Pstate changes by locking the PMC Rail to the min
+    // Determine minimum pstate (either min+1 from pstate table, or configured min from TMGT)
     l_pmin = gpst_pmin(&G_global_pstate_table) + 1;
+    const int8_t l_config_min_pstate = (int8_t)proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY]);
+    if (l_config_min_pstate > l_pmin)
+    {
+        // use larger min pstate (from TMGT config)
+        l_pmin = l_config_min_pstate;
+    }
 
     // Set the Pmax_rail register via OCI write
     amec_oversub_pmax_clip(l_pmin);
@@ -1238,7 +1244,7 @@ void amec_wof_helper_v3(void)
 
         case AMEC_WOF_TRANSITION:
         {
-            // NOTE: This case stands alone because it is sometimes called 
+            // NOTE: This case stands alone because it is sometimes called
             // without going through the AMEC_WOF_UPDATE_PSTATES case.
 
             // Signal any waking cores to turn on and go back to initial state.
@@ -1386,7 +1392,7 @@ void amec_wof_main(void)
     int                 l_rc  = 0;
     errlHndl_t          l_err = NULL;
     // Count number of consecutive intervals WOF is not making progress
-    static uint32_t wof_main_error_count = 0; 
+    static uint32_t wof_main_error_count = 0;
 
     if (g_amec->wof.error)
     {
@@ -1430,7 +1436,7 @@ void amec_wof_main(void)
                          ERRL_CALLOUT_TYPE_COMPONENT_ID,
                          ERRL_COMPONENT_ID_FIRMWARE,
                          ERRL_CALLOUT_PRIORITY_MED);
- 
+
         // Commit the error
         commitErrl(&l_err);
 

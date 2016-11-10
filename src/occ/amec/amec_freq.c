@@ -558,6 +558,15 @@ void amec_slv_freq_smh(void)
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
 
+    // Determine minimum pstate (either min+1 from pstate table, or configured min from TMGT)
+    int8_t l_min_pstate = gpst_pmin(&G_global_pstate_table) + 1;
+    const int8_t l_config_min_pstate = (int8_t)proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY]);
+    if (l_config_min_pstate > l_min_pstate)
+    {
+        // use larger min pstate (from TMGT config)
+        l_min_pstate = l_config_min_pstate;
+    }
+
     for (k=0; k<MAX_NUM_CORES; k++)
     {
         switch (g_amec->proc[0].core[k].f_sms)
@@ -565,13 +574,17 @@ void amec_slv_freq_smh(void)
             case AMEC_CORE_FREQ_IDLE_STATE:
                 // Translate frequency request into a Pstate
                 l_pstate = proc_freq2pstate(g_amec->proc[0].core[k].f_request);
+                if (l_pstate < l_min_pstate)
+                {
+                    l_pstate = l_min_pstate;
+                }
 
                 // Fall through
             case AMEC_CORE_FREQ_PROCESS_STATE:
                 if(G_sysConfigData.system_type.kvm)
                 {
                     // update core bounds on kvm systems
-                    proc_set_core_bounds(gpst_pmin(&G_global_pstate_table) + 1, (Pstate) l_pstate, k);
+                    proc_set_core_bounds(l_min_pstate, (Pstate) l_pstate, k);
                 }
                 else
                 {
@@ -585,7 +598,7 @@ void amec_slv_freq_smh(void)
 
 // Function Specification
 //
-// Name: amec_slv_freq_smh
+// Name: amec_slv_mem_voting_box
 //
 // Description: Slave OCC's voting box that decides the memory speed request.
 //              This function will run every tick.

@@ -510,6 +510,20 @@ void proc_pstate_kvm_setup()
 
         l_configured_cores = ~in32(PMC_CORE_DECONFIGURATION_REG);
 
+        // Determine minimum pstate (either min+1 from pstate table, or configured min from TMGT)
+        int8_t l_min_pstate = gpst_pmin(&G_global_pstate_table)+1; //Per David Du, we must use pmin+1 to avoid gpsa hang
+        const int8_t l_config_min_pstate = (int8_t)proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY]);
+        if (l_config_min_pstate > l_min_pstate)
+        {
+            // use larger min pstate (from TMGT config)
+            TRAC_IMP("Setting pmin_rail to %d (pstate table min %d)", l_config_min_pstate, l_min_pstate);
+            l_min_pstate = l_config_min_pstate;
+        }
+        else
+        {
+            TRAC_IMP("Setting pmin_rail to %d (config table min %d)", l_min_pstate, l_config_min_pstate);
+        }
+
         // Do per-core configuration
         for(l_core = 0; l_core < PGP_NCORES; l_core++, l_configured_cores <<= 1)
         {
@@ -548,7 +562,7 @@ void proc_pstate_kvm_setup()
 
             //set pmax/pmin clip initial settings
             l_pmbr.value = 0;
-            l_pmbr.fields.pmin_clip = gpst_pmin(&G_global_pstate_table)+1; //Per David Du, we must use pmin+1 to avoid gpsa hang
+            l_pmbr.fields.pmin_clip = l_min_pstate;
             l_pmbr.fields.pmax_clip = gpst_pmax(&G_global_pstate_table);
             l_rc = putscom_ffdc(CORE_CHIPLET_ADDRESS(PCBS_POWER_MANAGEMENT_BOUNDS_REG, l_core),
                            l_pmbr.value, NULL); //commit errors internally
@@ -569,21 +583,7 @@ void proc_pstate_kvm_setup()
         // Set the voltage clipping register to match the pmax/pmin clip values set above.
         pmc_rail_bounds_register_t prbr;
         prbr.value = in32(PMC_RAIL_BOUNDS_REGISTER);
-
-        // Use higher min pstate from: pstateTable OR pstate of min freq from TMGT
-        const int8_t tableMinPstate = gpst_pmin(&G_global_pstate_table);
-        const int8_t configMinPstate = (int8_t)proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY]);
-        if (configMinPstate > tableMinPstate)
-        {
-            TRAC_IMP("Setting pmin_rail to %d (pstate table min %d)", configMinPstate, tableMinPstate);
-            prbr.fields.pmin_rail = configMinPstate;
-        }
-        else
-        {
-            TRAC_IMP("Setting pmin_rail to %d (config table min %d)", tableMinPstate, configMinPstate);
-            prbr.fields.pmin_rail = tableMinPstate;
-        }
-
+        prbr.fields.pmin_rail = l_min_pstate;
         prbr.fields.pmax_rail = gpst_pmax(&G_global_pstate_table);
         TRAC_IMP("pmin clip pstate = %d, pmax clip pstate = %d", prbr.fields.pmin_rail, prbr.fields.pmax_rail);
         out32(PMC_RAIL_BOUNDS_REGISTER, prbr.value);

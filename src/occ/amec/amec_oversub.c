@@ -110,10 +110,17 @@ void amec_oversub_isr(void)
         // If RTL doesn't control it, do it here
         if(g_amec->oversub_status.oversubLatchAmec == 0)
         {
-            // Set PMC Pmax_clip to Pmin and throttle all Cores via OCI write to PMC
-            amec_oversub_pmax_clip(gpst_pmin(&G_global_pstate_table));
+            // Determine minimum pstate (either min+1 from pstate table, or configured min from TMGT)
+            int8_t l_min_pstate = gpst_pmin(&G_global_pstate_table) + 1;
+            const int8_t l_config_min_pstate = (int8_t)proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY]);
+            if (l_config_min_pstate > l_min_pstate)
+            {
+                // use larger min pstate (from TMGT config)
+                l_min_pstate = l_config_min_pstate;
+            }
 
-            // TODO: Throttle all Centaurs via PORE-GPE by setting 'Emergency Throttle'
+            // Set PMC Pmax_clip to Pmin and throttle all Cores via OCI write to PMC
+            amec_oversub_pmax_clip(l_min_pstate);
 
             g_amec->oversub_status.oversubReasonLatchCount = OVERSUB_REASON_DELAY_4MS;
         }
