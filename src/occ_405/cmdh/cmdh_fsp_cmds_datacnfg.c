@@ -1077,7 +1077,7 @@ errlHndl_t data_store_avsbus_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
     {
         /* @
          * @errortype
-         * @moduleid    DATA_STORE_AVSBUS_DATA
+         * @moduleid    DATA_STORE_GENERIC_DATA
          * @reasoncode  INVALID_INPUT_DATA
          * @userdata1   data size
          * @userdata2   packet version
