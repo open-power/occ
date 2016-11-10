@@ -24,7 +24,6 @@
 /* IBM_PROLOG_END_TAG                                                     */
 
 #include "ssx.h"
-//#include "special_wakeup.h" // lib/special_wakeup.h doesn't exist
 #include "cmdh_service_codes.h"
 #include "errl.h"
 #include "trac.h"
@@ -229,6 +228,21 @@ void cmdh_comm_init(void)
             ASYNC_CALLBACK_NONCRITICAL);
 
     ocb_request_schedule(&G_fsp_doorbell_ocb_request);
+
+    CHECKPOINT(OCB_DOORBELL_INITIALIZED);
+
+    // -----------------------------------------------------------------
+    // Open Up Linear Window for FSP & BMC Communication in Secure Mode
+    // -----------------------------------------------------------------
+    // OCB channel 0 is used by TMGT (FSP) to write to the command buffer
+    // OCB channel 2 is used by BMC to write to the command buffer
+    uint8_t channel = 0;
+    if (G_occ_interrupt_type != FSP_SUPPORTED_OCC)
+    {
+        channel = 2;
+    }
+    // Initialize the linear window to allow writes to command buffer in SRAM
+    ocb_linear_window_initialize(channel, CMDH_LINEAR_WINDOW_BASE_ADDRESS, LOG_SIZEOF_FSP_CMD_BUFFER);
 
     CHECKPOINT(OCB_INITIALIZED);
 

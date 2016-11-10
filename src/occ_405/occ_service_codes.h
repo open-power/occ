@@ -253,6 +253,8 @@ enum occModuleId
 enum occUserDataType
 {
     OCC_FULL_ELOG_TYPE              =   0x0000,                 // complete error log data
+    OCC_TRACE_TYPE                  =   0x0002,                 // OCC trace (from TMGT)
+    OCC_EXCEPTION_TYPE              =   0x00E0,                 // OCC exception data (from TMGT)
 };
 
 enum occUserDataVersion

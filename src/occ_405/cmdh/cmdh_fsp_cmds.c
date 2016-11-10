@@ -47,6 +47,7 @@
 #include <proc_data.h>
 #include "homer.h"
 #include <centaur_data.h>
+#include "cmdh_dbug_cmd.h"
 
 extern dimm_sensor_flags_t G_dimm_temp_expired_bitmap;
 
@@ -476,7 +477,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
 //
 // Name:  cmdh_reset_prep_t
 //
-// Description: TODO -- Add description
+// Description: Process reset prep command
 //
 // End Function Specification
 errlHndl_t cmdh_reset_prep (const cmdh_fsp_cmd_t * i_cmd_ptr,
@@ -663,7 +664,7 @@ errlHndl_t cmdh_clear_elog (const   cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // Name:  cmdh_dbug_get_trace
 //
-// Description: TODO Add description
+// Description: Process get trace command
 //
 // End Function Specification
 void cmdh_dbug_get_trace (const cmdh_fsp_cmd_t * i_cmd_ptr,
@@ -696,7 +697,7 @@ void cmdh_dbug_get_trace (const cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // Name:  cmdh_dbug_get_ame_sensor
 //
-// Description: TODO Add description
+// Description: Process get sensor data command
 //
 // End Function Specification
 void cmdh_dbug_get_ame_sensor (const cmdh_fsp_cmd_t * i_cmd_ptr,
@@ -809,7 +810,7 @@ void cmdh_dbug_get_ame_sensor (const cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // Name:  cmdh_dbug_peek
 //
-// Description: TODO Add description
+// Description: Process peek debug command
 //
 // End Function Specification
 void cmdh_dbug_peek (const cmdh_fsp_cmd_t * i_cmd_ptr,
@@ -841,7 +842,7 @@ void cmdh_dbug_peek (const cmdh_fsp_cmd_t * i_cmd_ptr,
             // Make sure we don't overflow our response buffer
             l_len = (l_len > CMDH_FSP_RSP_DATA_SIZE ) ? CMDH_FSP_RSP_DATA_SIZE : l_len;
 
-            // TODO:  didn't do anything, respond with zero bytes
+            // didn't do anything, respond with zero bytes
             l_len = 0;
             break;
 
@@ -901,7 +902,7 @@ void cmdh_dbug_peek (const cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // Name:  cmdh_dbug_get_apss_data
 //
-// Description: TODO Add description
+// Description: Process APSS data request
 //
 // End Function Specification
 void cmdh_dbug_get_apss_data (const cmdh_fsp_cmd_t * i_cmd_ptr,
@@ -963,8 +964,8 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
     uint8_t                     l_rc = 0;
     uint8_t                     l_sub_cmd = 0;
     errl_generic_resp_t *       l_err_rsp_ptr =  (errl_generic_resp_t *) o_rsp_ptr;
-//    errlHndl_t                  l_errl = NULL;
-//    cmdhDbugCmdArg_t            l_cmdh_dbug_args;
+    errlHndl_t                  l_errl = NULL;
+    cmdhDbugCmdArg_t            l_cmdh_dbug_args;
 
     // Sub Command for debug is always first byte of data
     l_sub_cmd = i_cmd_ptr->data[0];
@@ -1008,8 +1009,7 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
             TRAC_reset_buf();
             G_rsp_status = ERRL_RC_SUCCESS;
             break;
-/* TEMP -- NOT YET SUPPORTED */
-#if 0
+
         case DBUG_PEEK:
             cmdh_dbug_peek(i_cmd_ptr, o_rsp_ptr);
             break;
@@ -1058,7 +1058,6 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
                 commitErrl( &l_errl );
             }
             break;
-#endif // #if 0
 
         case DBUG_DUMP_APSS_DATA:
             cmdh_dbug_get_apss_data(i_cmd_ptr, o_rsp_ptr);
@@ -1084,7 +1083,7 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // Name:  SMGR_base_setmodestate_cmdh
 //
-// Description: TODO Add description
+// Description: Process set mode and state command
 //
 // End Function Specification
 errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
@@ -1262,7 +1261,7 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // Name:  cmdh_amec_pass_through
 //
-// Description: TODO Add description
+// Description: Process Amester pass-through command
 //
 // End Function Specification
 errlHndl_t cmdh_amec_pass_through(const cmdh_fsp_cmd_t * i_cmd_ptr,
@@ -1328,8 +1327,8 @@ errlHndl_t cmdh_amec_pass_through(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 AMEC_AMESTER_INTERFACE,             //modId
                 INTERNAL_FAILURE,                   //reasoncode
                 OCC_NO_EXTENDED_RC,                 //Extended reason code
-                ERRL_SEV_INFORMATIONAL,              //Severity
-                NULL,    //TODO: create trace       //Trace Buf
+                ERRL_SEV_INFORMATIONAL,             //Severity
+                NULL,                               //Trace Buf
                 DEFAULT_TRACE_SIZE,                 //Trace Size
                 l_rsp_data_length,                  //userdata1
                 IPMI_MAX_MSG_SIZE                   //userdata2
@@ -1369,7 +1368,7 @@ errlHndl_t cmdh_amec_pass_through(const cmdh_fsp_cmd_t * i_cmd_ptr,
 //
 // Name: cmdh_tmgt_get_field_debug_data
 //
-// Description: TODO Add description
+// Description: Process get field debug data command
 //
 // End Function Specification
 errlHndl_t cmdh_tmgt_get_field_debug_data(const cmdh_fsp_cmd_t * i_cmd_ptr,

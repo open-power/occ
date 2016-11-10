@@ -1075,15 +1075,6 @@ errlHndl_t data_store_avsbus_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
     if (l_invalid_data)
     {
-        /* @
-         * @errortype
-         * @moduleid    DATA_STORE_GENERIC_DATA
-         * @reasoncode  INVALID_INPUT_DATA
-         * @userdata1   data size
-         * @userdata2   packet version
-         * @userdata4   OCC_NO_EXTENDED_RC
-         * @devdesc     OCC recieved an invalid data packet from the FSP
-         */
         cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
         G_avsbus_vdd_monitoring = FALSE;
         G_avsbus_vdn_monitoring = FALSE;

@@ -21,6 +21,7 @@ INPUT ( amec_amester.o
         avsbus.o
         centaur_control.o
         centaur_data.o
+        chom.o
         cmdh_dbug_cmd.o
         cmdh_fsp_cmds_datacnfg.o
         cmdh_fsp_cmds.o

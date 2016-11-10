@@ -1055,11 +1055,10 @@ void Main_thread_routine(void *private)
             }
             else
             {
-                // For Simics phase 1, we don't want to call the call-home thread
                 // Only Master OCC will log call home data
                 if (OCC_MASTER == G_occ_role)
                 {
-                    //chom_main();
+                    chom_main();
                 }
             }
         }

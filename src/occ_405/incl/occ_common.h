@@ -272,6 +272,7 @@ enum
     APPLETS_INITIALIZED         = 0x0cff,
     CMDH_THREAD_STARTED         = 0x0dff,
     INIT_OCB                    = 0x0e05,
+    OCB_DOORBELL_INITIALIZED    = 0x0e06,
     OCB_INITIALIZED             = 0x0e07,
     COMM_INIT_COMPLETED         = 0x0eff,
     ABOUT_TO_HALT               = 0x0f00,
