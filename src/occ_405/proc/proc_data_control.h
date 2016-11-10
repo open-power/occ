@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -29,6 +29,8 @@
 #include <occ_common.h>
 #include <ssx.h>
 #include "rtls.h"
+#include "p9_pstates_common.h"
+
 //#include "gpe_control.h"
 
 // Initialze the structures used by the GPE

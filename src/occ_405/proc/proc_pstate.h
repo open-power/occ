@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -32,6 +32,7 @@
 #include "trac.h"
 #include "rtls.h"
 #include "occ_common.h"
+#include "p9_pstates_common.h"
 #include "state.h"
 #include "cmdh_fsp_cmds.h"
 #include "cmdh_dbug_cmd.h"

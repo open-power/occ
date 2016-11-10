@@ -71,8 +71,14 @@ IPC_FUNCIDS_TABLE_START
     IPC_FUNCIDS_ST_END(OCCHW_INST_ID_GPE1)
 
     //Functions that are only supported by GPE2 should be defined here
-    //These function ID's can only be sent to GPE2
+    //These function ID's can only be sent to GPE2 (PGPE)
     IPC_FUNCIDS_ST_START(OCCHW_INST_ID_GPE2)
+        IPC_FUNC_ID(IPC_PGPE_INVALID_FUNCID)
+        IPC_FUNC_ID(IPC_PGPE_START_SUSPEND_FUNCID)
+        IPC_FUNC_ID(IPC_PGPE_CLIPS_FUNCID)
+        IPC_FUNC_ID(IPC_PGPE_SET_PMCR_FUNCID)
+        IPC_FUNC_ID(IPC_PGPE_WOF_CONTROL_FUNCID)
+        IPC_FUNC_ID(IPC_PGPE_WOF_VFRT_FUNCID)
     IPC_FUNCIDS_ST_END(OCCHW_INST_ID_GPE2)
 
     //Functions that are only supported by GPE3 should be defined here

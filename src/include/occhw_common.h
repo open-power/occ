@@ -232,7 +232,7 @@ extern unsigned int g_ocb_timer_divider; //grm
 ////////////////////////////////////////////////////////////////////////////
 // PMC
 ////////////////////////////////////////////////////////////////////////////
-
+/*
 #ifndef __ASSEMBLER__
 
 /// A Pstate type
@@ -251,7 +251,7 @@ typedef uint16_t DpllCode;
 /// A VRM11 VID code
 typedef uint8_t Vid11;
 
-#endif  /* __ASSEMBLER__ */
+#endif  // __ASSEMBLER__ 
 
 /// The minimum Pstate
 #define PSTATE_MIN -128
@@ -272,7 +272,7 @@ typedef uint8_t Vid11;
 
 /// The maximum \a legal (non-power-off) VRM11 VID code
 #define VID11_MAX 0xfd
-
+*/
 
 ////////////////////////////////////////////////////////////////////////////
 // PCB
