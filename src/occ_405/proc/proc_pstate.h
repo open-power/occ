@@ -43,46 +43,63 @@ typedef struct __attribute__ ((packed))
 {
     uint8_t              valid;
     uint8_t              version;
-    // Sapphire_OCC_interface_v3.odp
-    // throttle status 0x00 No throttle, 0x01 Powercap, 0x02 CPU overtemp, 0x03 power supply failure, 0x04 overcurrent, 0x05 OCC reset
-    uint8_t              throttle;
-    int8_t               pmin;
-    int8_t               pnominal;
-    int8_t               pmax;
-    uint16_t             spare;
+    uint8_t              occ_role;
+    uint8_t              pmin;
+    uint8_t              pnominal;
+    uint8_t              pturbo;
+    uint8_t              puturbo;
+    uint8_t              reserved;
+
 } opal_config_t;
+
 
 typedef struct __attribute__ ((packed))
 {
     int8_t               pstate;
     uint8_t              flag;
-    uint8_t              evid_vdd;
-    uint8_t              evid_vcs;
+    uint16_t             reserved;
     uint32_t             freq_khz;
-} opal_data_t;
+} opal_pstate_data_t;
 
-#define PSTATE_ENTRY_NUMBER 256
+
+typedef struct __attribute__ ((packed))
+{
+    uint8_t              occ_state;
+    uint8_t              reserved[4];
+    uint8_t              proc_throt_status;
+    uint8_t              mem_throt_status;
+    uint8_t              quick_power_drop;
+    uint8_t              power_shift_ratio;
+    uint8_t              power_cap_type;
+    uint16_t             min_power_cap;
+    uint16_t             max_power_cap;
+    uint16_t             current_power_cap;
+
+} opal_dynamic_t;
+
 // This size must be a multiple of 128
 typedef struct __attribute__ ((packed))
 {
-    opal_config_t        config;
-    uint64_t             reserved;
-    opal_data_t          data[PSTATE_ENTRY_NUMBER];
-    uint8_t              pad[112];
-} opal_table_t __attribute__ ((aligned (128)));
+    opal_dynamic_t       dynamic;       // Dynamic OPAL parameters: 16B
+    uint8_t              pad[112];      // Reserved dynamic space: 112B
+} opal_dynamic_table_t __attribute__ ((aligned (128)));
 
-enum {
-    NO_THROTTLE = 0x00,
-    POWERCAP = 0x01,
-    CPU_OVERTEMP = 0x02,
-    POWER_SUPPLY_FAILURE = 0x03,
-    OVERCURRENT = 0x04,
-    OCC_RESET = 0x05,
-};
+#define PSTATE_ENTRIES 256    // number of generated PSTATES entries in OPAL table
+
+// This size must be a multiple of 128
+typedef struct __attribute__ ((packed))
+{
+    opal_config_t        config;                  // Static OPAL config parameters: 8B
+    uint8_t              reserved[16];            // Reserved static space: 16B
+    opal_pstate_data_t   pstates[PSTATE_ENTRIES]; // Generated Pstates Table: 2048B
+    uint8_t              max_pstate[24];          // Maximum Pstate with N active cores is max_pstate[N-1]: 24B
+    uint8_t              pad[56];                 // Padding in reserved static space: 56B
+} opal_static_table_t __attribute__ ((aligned (128)));
+
 
 extern uint32_t    G_mhz_per_pstate;
 
-extern opal_table_t G_opal_table;
+extern opal_dynamic_table_t G_opal_dynamic_table;
 
 // Initialize PState Key parameters
 void proc_pstate_initialize(void);
@@ -98,11 +115,21 @@ Pstate proc_freq2pstate(uint32_t i_freq_mhz);
 inline bool proc_is_hwpstate_enabled(void);
 
 // Copy pstate data to opal table
-void populate_pstate_to_opal_tbl();
+void populate_dynamic_opal_data(void);
+
+// Copy all opal static data to opal table
+void populate_static_opal_data(void);
 
 // Copy opal table to mainstore memory at OPAL_OFFSET_HOMER
-void populate_opal_tbl_to_mem();
+void populate_opal_tbl_to_mem(void);
 
 // Check if opal table needs update
-void proc_check_for_opal_updates();
+void check_for_opal_updates(void);
+
+// update dynamic opal data in SRAM & main memory
+void update_dynamic_opal_data (void);
+
+void proc_pstate_kvm_setup(void);
+
+uint8_t pmin_rail(void);
 #endif

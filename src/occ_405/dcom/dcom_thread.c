@@ -36,6 +36,7 @@
 #include <trac.h>
 #include <state.h>
 #include <proc_pstate.h>
+#include <amec_freq.h>
 
 // Debug Counter to make sure dcom thread is running
 uint16_t G_dcom_thread_counter = 0;
@@ -100,7 +101,7 @@ void Dcom_thread_routine(void *arg)
         // --------------------------------------------------
         if(G_sysConfigData.system_type.kvm)
         {
-            proc_check_for_opal_updates();
+            check_for_opal_updates();
         }
 
         // --------------------------------------------------
@@ -159,6 +160,7 @@ void Dcom_thread_routine(void *arg)
                 }
             }
         }
+
 
         // --------------------------------------------------
         // SSX Sleep

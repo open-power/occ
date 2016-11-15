@@ -287,9 +287,12 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
             l_table[OCC_MODE_NOMINAL] = l_freq;
             CMDH_TRAC_INFO("Nominal frequency = %d", l_freq);
 
-            // Bytes 5-6 Turbo Frequency Point
+            // Bytes 5-6 Turbo Frequency Point:
+            // also store for DPS modes
             l_freq = (l_buf[2] << 8 | l_buf[3]);
             l_table[OCC_MODE_TURBO] = l_freq;
+            l_table[OCC_MODE_DYN_POWER_SAVE] = l_freq;
+            l_table[OCC_MODE_DYN_POWER_SAVE_FP] = l_freq;
             CMDH_TRAC_INFO("Turbo frequency = %d", l_freq);
 
             // Bytes 7-8 Minimum Frequency Point

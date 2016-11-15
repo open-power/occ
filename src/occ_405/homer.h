@@ -39,8 +39,12 @@
 #define HOMER_FIR_PARM_SIZE   (3 * 1024)
 
 // OPAL table address in HOMER
-#define OPAL_OFFSET_HOMER  0x000E2000
-#define OPAL_ADDRESS_HOMER (HOMER_BASE_ADDRESS+OPAL_OFFSET_HOMER)
+#define OPAL_OFFSET_HOMER   0x000E2000 // Offset address of OPAL relative to HOMER
+#define OPAL_DYNAMIC_OFFSET 0x0B80     // Offset address of dynamic space (relative to OPAL start address)
+
+#define OPAL_ADDRESS_HOMER         (HOMER_BASE_ADDRESS+OPAL_OFFSET_HOMER)   // OPAL start address
+#define OPAL_STATIC_ADDRESS_HOMER   OPAL_ADDRESS_HOMER                      // OPAL's Static Address
+#define OPAL_DYNAMIC_ADDRESS_HOMER (OPAL_ADDRESS_HOMER+OPAL_DYNAMIC_OFFSET) // OPAL's Dynamic Address
 
 // OCC/HTMGT command buffer offset in HOMER
 #define OCC_HTMGT_CMD_OFFSET_HOMER  0x000E0000

@@ -457,6 +457,12 @@ void amec_data_write_pcap(void)
             g_amec->pcap.ovs_node_pcap = l_customer;
         }
 
+        //for all new pcap data setting: If KVM, update the OPAL dynamic data
+        if(G_sysConfigData.system_type.kvm)
+        {
+            ssx_semaphore_post(&G_dcomThreadWakeupSem);
+        }
+
         // update data mask notifying we got pcap information
         extern data_cnfg_t * G_data_cnfg;
         G_data_cnfg->data_mask |= DATA_MASK_PCAP_PRESENT;

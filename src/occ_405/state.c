@@ -536,9 +536,19 @@ errlHndl_t SMGR_set_state(OCC_STATE i_new_state)
                     // Signal that we are now in a state transition
                     G_state_transition_occuring = TRUE;
                     // Run transition function
+
                     l_transResult = (G_smgr_state_trans[jj].trans_func_ptr)();
+
+
                     // Signal that we are done with the transition
                     G_state_transition_occuring = FALSE;
+
+                    //State transition done: If KVM, update the OPAL dynamic data
+                    if(G_sysConfigData.system_type.kvm)
+                    {
+                        ssx_semaphore_post(&G_dcomThreadWakeupSem);
+                    }
+
                     break;
                 }
             }

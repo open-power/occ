@@ -342,8 +342,8 @@ void amec_slv_common_tasks_post(void)
       // Call amec_power_control
       amec_power_control();
 
-      // Call the OCC slave's voting box
-      amec_slv_voting_box();
+      // Call the OCC slave's processor voting box
+      amec_slv_proc_voting_box();
 
       // Call the frequency state machine
       amec_slv_freq_smh();

@@ -91,14 +91,37 @@ typedef enum
 
 extern BOOLEAN G_non_dps_power_limited;
 
-// This is reason code used by Voting box amec_slv_mem_voting_box
+// This is memory throttle reason code used by Voting box amec_slv_mem_voting_box
 typedef enum
 {
-    AMEC_MEM_VOTING_REASON_INIT         = 0,
-    AMEC_MEM_VOTING_REASON_CENT         = 1,
-    AMEC_MEM_VOTING_REASON_DIMM         = 2,
-    AMEC_MEM_VOTING_REASON_SLEW         = 3,
+    AMEC_MEM_VOTING_REASON_INIT     = 0x00,
+    AMEC_MEM_VOTING_REASON_CENT     = 0x01,
+    AMEC_MEM_VOTING_REASON_DIMM     = 0x02,
+    AMEC_MEM_VOTING_REASON_SLEW     = 0x03,
 }amec_mem_voting_reason_t;
+
+// This is memory throttle reason code encoded in OPAL dynamic data
+typedef enum
+{
+    NO_MEM_THROTTLE                 = 0x00,
+    POWER_CAP                       = 0x01,
+    MEMORY_OVER_TEMP                = 0x02,
+}opal_mem_voting_reason_t;
+
+// This is processor throttle reason code used by Voting box amec_slv_proc_voting_box
+typedef enum {
+    NO_THROTTLE                     = 0x00,
+    POWERCAP                        = 0x01,
+    CPU_OVERTEMP                    = 0x02,
+    POWER_SUPPLY_FAILURE            = 0x03,
+    OVERCURRENT                     = 0x04,
+    OCC_RESET                       = 0x05,
+    PCAP_EXCEED_PTURBO              = 0x06,
+    PROC_OVERTEMP_EXCEED_PTURBO     = 0x07,
+    MANUFACTURING_OVERRIDE          = 0xAA,
+}amec_proc_voting_reason_t;
+
+typedef  amec_proc_voting_reason_t opal_proc_voting_reason_t;
 
 //*************************************************************************/
 // Structures
@@ -155,8 +178,8 @@ void fill_pmc_ffdc_buffer(pmc_ffdc_data_t* i_ffdc_ptr);
 // Used to set the freq range that amec can control between.
 errlHndl_t amec_set_freq_range(const OCC_MODE i_mode);
 
-// Voting box for handling slave freq votes
-void amec_slv_voting_box(void);
+// Voting box for handling slave processor freq votes
+void amec_slv_proc_voting_box(void);
 
 // Amec Frequency State Machine
 void amec_slv_freq_smh(void);

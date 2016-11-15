@@ -36,6 +36,14 @@
 #include "proc_pstate.h"
 #include "scom.h"
 #include "homer.h"
+#include <amec_freq.h>
+#include <common.h>
+#include <amec_oversub.h>
+#include <amec_sys.h>
+
+//OPAL processor and memory throttle reason coming from the frequency voting boxes.
+extern opal_proc_voting_reason_t G_amec_opal_proc_throt_reason;
+extern opal_mem_voting_reason_t  G_amec_opal_mem_throt_reason;
 
 // Holds Fmax for ease of proc_freq2pstate calculation
 uint32_t G_proc_fmax = 0;
@@ -57,11 +65,12 @@ uint8_t   G_proc_pmin = 0;
 // enable pstates completes successfully.
 bool G_proc_pstate_enabled = FALSE;
 
-// Used for OPAL
-DMA_BUFFER( opal_table_t G_opal_table ) = {{0}};
+// OPAL Dynamic data, updated whenever any OCC G_opal_table.dynamic parameter change
+DMA_BUFFER( opal_dynamic_table_t G_opal_dynamic_table ) = {{0}};
 
-//KVM throttle reason coming from the frequency voting box.
-extern uint8_t G_amec_kvm_throt_reason;
+// OPAL Static data, updated once at transition to active state
+DMA_BUFFER( opal_static_table_t  G_opal_static_table )  = {{0}};
+
 
 // Function Specification
 //
@@ -175,7 +184,7 @@ void proc_pstate_kvm_setup()
         }
 
         // Initialize the opal table in SRAM (sets valid bit)
-        populate_pstate_to_opal_tbl();
+        populate_static_opal_data();
 
         // copy sram image into mainstore HOMER
         populate_opal_tbl_to_mem();
@@ -186,90 +195,61 @@ void proc_pstate_kvm_setup()
 
 // Function Specification
 //
-// Name:  populate_pstate_to_opal_tbl
+// Name:  populate_dynamic_opal_data
 //
-// Description:
+// Description: populate the dynamic data entries in the OPAL table
 //
 // End Function Specification
-void populate_pstate_to_opal_tbl()
+void populate_dynamic_opal_data()
 {
-    uint8_t i = 0;
+    memset(&G_opal_dynamic_table, 0, sizeof(G_opal_dynamic_table));
 
-    memset(&G_opal_table, 0, sizeof(opal_table_t));
+    // Dynamic OPAL runtime data
+    G_opal_dynamic_table.dynamic.occ_state            = CURRENT_STATE();
 
-    G_opal_table.config.valid = 1;              // default 0x01
-    G_opal_table.config.version = 1;            // default 0x01
-    G_opal_table.config.throttle = NO_THROTTLE; // default 0x00
-    G_opal_table.config.pmin = G_proc_pmin - 1;
-    G_opal_table.config.pnominal = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL]);
-    G_opal_table.config.pmax = G_proc_pmax;
-    const uint16_t l_entries = G_opal_table.config.pmin - G_opal_table.config.pmax + 1;
-//    const uint8_t l_idx = l_entries-1;
-
-    for (i = 0; i < l_entries; i++)
+    //If safe state is requested then that overrides anything from amec
+    if(isSafeStateRequested())
     {
-        G_opal_table.data[i].pstate = (Pstate) G_proc_pmax + i;
-        G_opal_table.data[i].flag = 0;          // default 0x00
-
-// @TODO: what are parameters used to calculte evids in P9?
-// Use it to calculate evids and complete OPAL Pstate table:
-
-/*        if (i < l_gpst_ptr->entries)
-        {
-            G_opal_table.data[i].evid_vdd = l_gpst_ptr->pstate[i].fields.evid_vdd;
-            G_opal_table.data[i].evid_vcs = l_gpst_ptr->pstate[i].fields.evid_vcs;
-        }
-        else
-        {
-            // leave the VDD & VCS Vids the same as the "Pstate Table Pmin"
-            G_opal_table.data[i].evid_vdd = l_gpst_ptr->pstate[l_idx].fields.evid_vdd;
-            G_opal_table.data[i].evid_vcs = l_gpst_ptr->pstate[l_idx].fields.evid_vcs;
-        }
-*/
-        // calculate frequency for pstate
-        G_opal_table.data[i].freq_khz = proc_pstate2freq(G_opal_table.data[i].pstate);
+        G_opal_dynamic_table.dynamic.proc_throt_status = OCC_RESET;
     }
+    else
+    {
+        G_opal_dynamic_table.dynamic.proc_throt_status = G_amec_opal_proc_throt_reason;
+    }
+
+    G_opal_dynamic_table.dynamic.mem_throt_status     = G_amec_opal_mem_throt_reason;
+    G_opal_dynamic_table.dynamic.quick_power_drop     = AMEC_INTF_GET_OVERSUBSCRIPTION();
+    G_opal_dynamic_table.dynamic.power_shift_ratio    = 50; // @TODO: Power Shift Ratio is not Implemented yet RTC:133825
+    G_opal_dynamic_table.dynamic.power_cap_type       = G_master_pcap_data.source;
+    G_opal_dynamic_table.dynamic.min_power_cap        = G_master_pcap_data.soft_min_pcap;
+    G_opal_dynamic_table.dynamic.max_power_cap        = G_master_pcap_data.max_pcap;
+    G_opal_dynamic_table.dynamic.current_power_cap    = G_master_pcap_data.current_pcap;
 }
-
-
 
 // Function Specification
 //
-// Name:   proc_pstate_initialize
+// Name:  populate_static_opal_data
 //
-// Description:  initialize Global variables required for
-//               the proc_freq2pstate function.
+// Description: populate the static configuration entries,
+//              the generated pstates table, and maximum pstates
+//              for all possible number of active cores.
 //
 // End Function Specification
-void proc_pstate_initialize(void)
+void populate_static_opal_data()
 {
-
-    // @TODO: Schedule a PGPE IPC to enable pstates. This will also tell
-    // PGPE how to set PMCR mode register (OCC control pstates or OPAL).
-
-    // the call back IPC function that gets executed after this IPC finishes
-    // sets the G_proc_pstate_enabled flag to true, so that the OCC is then
-    // able to switch to the active state.
-
-    // @TODO: FIXME - TEMP Hack to enable Active State, until PGPE is ready
-    G_proc_pstate_enabled = 1;
+    memset(&G_opal_dynamic_table, 0, sizeof(G_opal_dynamic_table));
 
 
-    // Set up Key Globals for use by proc_freq2pstate functions
-    G_proc_fmax = 4322500;
-    G_proc_fmin = 2028250;
-    G_khz_per_pstate = 33250;
-    G_proc_pmax = 0;
-    G_proc_pmin = G_proc_pmax + ((G_proc_fmax - G_proc_fmin)/G_khz_per_pstate);
+    // Static OPAL configuration data
+    G_opal_static_table.config.valid    = 1;
+    G_opal_static_table.config.version  = 0x90;
+    G_opal_static_table.config.occ_role = G_occ_role;
+    G_opal_static_table.config.pmin     = pmin_rail();
+    G_opal_static_table.config.pnominal = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL]);
+    G_opal_static_table.config.pturbo   = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO]);
+    G_opal_static_table.config.puturbo  = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_UTURBO]);
 
-    // Set globals used by amec for pcap calculation
-    // could have used G_khz_per_pstate in PCAP calculations
-    // instead, but using a separate varaible speeds up PCAP related
-    // calculations significantly, by eliminating division operations.
-    G_mhz_per_pstate = G_khz_per_pstate/1000;
-
-    TRAC_INFO("proc_pstate_initialize: Pstate Key globals initialized to default values");
-
+    // TODO - RTC:130201 generate pstates table & Max pstates for var #cores
 }
 
 // Function Specification
@@ -289,16 +269,17 @@ void populate_opal_tbl_to_mem()
     {
         BceRequest pba_copy;
         // Set up copy request
-        l_ssxrc = bce_request_create(&pba_copy,                          // block copy object
-                                     &G_pba_bcue_queue,                  // sram to mainstore copy engine
-                                     OPAL_ADDRESS_HOMER,             // mainstore address
-                                     (uint32_t) &G_opal_table,       // sram starting address
-                                     (size_t) sizeof(G_opal_table),  // size of copy
-                                     SSX_WAIT_FOREVER,                   // no timeout
-                                     NULL,                               // call back
-                                     NULL,                               // call back arguments
-                                     ASYNC_REQUEST_BLOCKING              // callback mask
-                                     );
+        l_ssxrc = bce_request_create(
+                       &pba_copy,                             // block copy object
+                       &G_pba_bcue_queue,                     // sram to mainstore copy engine
+                       OPAL_DYNAMIC_ADDRESS_HOMER,            // mainstore address
+                       (uint32_t) &G_opal_dynamic_table,      // sram starting address
+                       (size_t) sizeof(G_opal_dynamic_table), // size of copy
+                       SSX_WAIT_FOREVER,                      // no timeout
+                       NULL,                                  // call back
+                       NULL,                                  // call back arguments
+                       ASYNC_REQUEST_BLOCKING                 // callback mask
+                       );
 
         if(l_ssxrc != SSX_OK)
         {
@@ -309,7 +290,7 @@ void populate_opal_tbl_to_mem()
              * @reasoncode  SSX_GENERIC_FAILURE
              * @userdata1   RC for PBA block-copy engine
              * @userdata4   ERC_BCE_REQUEST_CREATE_FAILURE
-             * @devdesc     SSX BCE related failure
+             * @devdesc     Failed to create BCUE request
              */
             l_reasonCode = SSX_GENERIC_FAILURE;
             l_extReasonCode = ERC_BCE_REQUEST_CREATE_FAILURE;
@@ -328,7 +309,7 @@ void populate_opal_tbl_to_mem()
              * @reasoncode  SSX_GENERIC_FAILURE
              * @userdata1   RC for PBA block-copy engine
              * @userdata4   ERC_BCE_REQUEST_SCHEDULE_FAILURE
-             * @devdesc     Failed to copy data by using DMA
+             * @devdesc     Failed to copy OPAL data by using BCUE
              */
             l_reasonCode = SSX_GENERIC_FAILURE;
             l_extReasonCode = ERC_BCE_REQUEST_SCHEDULE_FAILURE;
@@ -359,33 +340,125 @@ void populate_opal_tbl_to_mem()
 
 // Function Specification
 //
-// Name: proc_check_for_opal_updates
+// Name:   proc_pstate_initialize
+//
+// Description:  initialize Global variables required for
+//               the proc_freq2pstate function.
+//
+// End Function Specification
+void proc_pstate_initialize(void)
+{
+    // RTC:130201
+    // @TODO: Schedule a PGPE IPC to enable pstates. This will also tell
+    // PGPE how to set PMCR mode register (OCC control pstates or OPAL).
+
+    // the call back IPC function that gets executed after this IPC finishes
+    // sets the G_proc_pstate_enabled flag to true, so that the OCC is then
+    // able to switch to the active state.
+
+    // @TODO: FIXME - TEMP Hack to enable Active State, until PGPE is ready
+    G_proc_pstate_enabled = 1;
+
+
+    // Set up Key Globals for use by proc_freq2pstate functions
+    // @TODO - FIXME ==> move to initialization code, reading from parameter block
+    G_proc_fmax = 4322500;
+    G_proc_fmin = 2028250;
+    G_khz_per_pstate = 33250;
+    G_proc_pmax = 0;
+    G_proc_pmin = G_proc_pmax + ((G_proc_fmax - G_proc_fmin)/G_khz_per_pstate);
+
+    // Set globals used by amec for pcap calculation
+    // could have used G_khz_per_pstate in PCAP calculations
+    // instead, but using a separate varaible speeds up PCAP related
+    // calculations significantly, by eliminating division operations.
+    G_mhz_per_pstate = G_khz_per_pstate/1000;
+
+    TRAC_INFO("proc_pstate_initialize: Pstate Key globals initialized to default values");
+
+}
+
+// Function Specification
+//
+// Name: check_for_opal_updates
 //
 // Description: Checks if the opal table needs an update
 //              and updates if necessary.
 //
 // End Function Specification
-void proc_check_for_opal_updates()
+void check_for_opal_updates(void)
 {
-    uint8_t l_latest_throttle_reason;
+    bool throttle_change = false;
 
-    //If safe state is requested then that overrides anything from amec
-    if(isSafeStateRequested())
+    // if throttle status change, update OPAL and notify host
+    if( (G_opal_dynamic_table.dynamic.proc_throt_status != G_amec_opal_proc_throt_reason) ||         // PROC throttle states changed
+        ((G_opal_dynamic_table.dynamic.proc_throt_status != OCC_RESET) && isSafeStateRequested()) ||  // OCC reset requested & OPAL not updated
+        (G_opal_dynamic_table.dynamic.mem_throt_status  != G_amec_opal_mem_throt_reason) )           // Mem throttle status changed
     {
-        l_latest_throttle_reason = OCC_RESET;
+        throttle_change = true;
+        update_dynamic_opal_data();
+    }
+
+    // else, if a dynamic OPAL parameter changed, update OPAL dynamic table and OPAL data in memory
+    else if(G_opal_dynamic_table.dynamic.occ_state         != CURRENT_STATE()                  ||
+            G_opal_dynamic_table.dynamic.quick_power_drop  != AMEC_INTF_GET_OVERSUBSCRIPTION() ||
+            G_opal_dynamic_table.dynamic.power_shift_ratio != 50  || // @TODO: Power Shift Ratio is not Implemented yet RTC:133825
+            G_opal_dynamic_table.dynamic.power_cap_type    != G_master_pcap_data.source        ||
+            G_opal_dynamic_table.dynamic.min_power_cap     != G_master_pcap_data.soft_min_pcap ||
+            G_opal_dynamic_table.dynamic.max_power_cap     != G_master_pcap_data.max_pcap      ||
+            G_opal_dynamic_table.dynamic.current_power_cap != G_master_pcap_data.current_pcap  )
+    {
+        update_dynamic_opal_data();
+    }
+
+    // A throttle status change, notify host after copying dynamic OPAL data
+    if(throttle_change)
+    {
+        notify_host(INTR_REASON_OPAL_SHARED_MEM_CHANGE);
+    }
+}
+
+
+// Function Specification
+//
+// Name: update_dynamic_opal_data
+//
+// Description: update dynamic opal data in SRAM and
+//              copy it over to OPAL space in main memory.
+//
+// End Function Specification
+void update_dynamic_opal_data (void)
+{
+    // Initialize the opal table in SRAM (sets valid bit)
+    populate_dynamic_opal_data();
+
+    // copy sram image into mainstore HOMER
+    populate_opal_tbl_to_mem();
+    TRAC_IMP("update_dynamic_opal_data: update dynamic OPAL data");
+
+
+}
+
+
+// Function Specification
+//
+// Name: pmin_rail
+//
+// Description: returns the smaller pstate (for narrower set of pstates) of:
+//                    1) the min pstate from the PGPE pstate table
+//                and 2) the TMGT configured min pstate
+//
+// End Function Specification
+uint8_t pmin_rail(void)
+{
+    uint8_t  configMinPstate = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY]);
+
+    if(configMinPstate < G_proc_pmin)
+    {
+        return configMinPstate;
     }
     else
     {
-        l_latest_throttle_reason = G_amec_kvm_throt_reason;
-    }
-
-    //If the throttle reason changed, update it in the HOMER
-    if(G_opal_table.config.throttle != l_latest_throttle_reason)
-    {
-        TRAC_INFO("proc_check_for_opal_updates: throttle reason changed to %d", l_latest_throttle_reason);
-        G_opal_table.config.throttle = l_latest_throttle_reason;
-        G_opal_table.config.version = 1; // default 0x01
-        G_opal_table.config.valid = 1; //default 0x01
-        populate_opal_tbl_to_mem();
+        return G_proc_pmin;
     }
 }

@@ -67,9 +67,12 @@ extern dimm_sensor_flags_t G_dimm_temp_expired_bitmap;
 //*************************************************************************
 // Globals
 //*************************************************************************
-BOOLEAN G_non_dps_power_limited = FALSE;
-uint8_t G_amec_kvm_throt_reason = NO_THROTTLE;
-uint16_t G_time_until_freq_check = FREQ_CHG_CHECK_TIME;
+BOOLEAN                   G_non_dps_power_limited      = FALSE;
+
+opal_proc_voting_reason_t G_amec_opal_proc_throt_reason = NO_THROTTLE;
+opal_mem_voting_reason_t  G_amec_opal_mem_throt_reason  = NO_MEM_THROTTLE;
+
+uint16_t                  G_time_until_freq_check      = FREQ_CHG_CHECK_TIME;
 
 //FFDC SCOM addresses as requested by Greg Still in defect SW247927
 //If new SCOM addresses are added, update the size of the array.
@@ -248,7 +251,7 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
 
 // Function Specification
 //
-// Name: amec_slv_voting_box
+// Name: amec_slv_proc_voting_box
 //
 // Description: Slave OCC's voting box that decides the frequency request.
 //              This function will run every tick.
@@ -258,7 +261,7 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
 // Task Flags:
 //
 // End Function Specification
-void amec_slv_voting_box(void)
+void amec_slv_proc_voting_box(void)
 {
     /*------------------------------------------------------------------------*/
     /*  Local Variables                                                       */
@@ -268,7 +271,7 @@ void amec_slv_voting_box(void)
     uint16_t                        l_core_freq = 0;
     uint32_t                        l_chip_reason = 0;
     uint32_t                        l_core_reason = 0;
-    uint8_t                         l_kvm_throt_reason = NO_THROTTLE;
+    amec_proc_voting_reason_t       l_kvm_throt_reason = NO_THROTTLE;
     amec_part_t                     *l_part = NULL;
     bool                            l_freq_req_changed = FALSE;
 
@@ -288,7 +291,15 @@ void amec_slv_voting_box(void)
     {
         l_chip_fmax = g_amec->proc[0].pwr_votes.ppb_fmax;
         l_chip_reason = AMEC_VOTING_REASON_PPB;
-        l_kvm_throt_reason = POWERCAP;
+
+        if( G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO] < l_chip_fmax)
+        {
+            l_kvm_throt_reason = PCAP_EXCEED_PTURBO;
+        }
+        else
+        {
+            l_kvm_throt_reason = POWERCAP;
+        }
     }
 
     // PMAX_CLIP_FREQ
@@ -313,7 +324,15 @@ void amec_slv_voting_box(void)
     {
         l_chip_fmax = g_amec->thermalproc.freq_request;
         l_chip_reason = AMEC_VOTING_REASON_PROC_THRM;
-        l_kvm_throt_reason = CPU_OVERTEMP;
+
+        if( G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO] < l_chip_fmax)
+        {
+            l_kvm_throt_reason = PROC_OVERTEMP_EXCEED_PTURBO;
+        }
+        else
+        {
+            l_kvm_throt_reason = CPU_OVERTEMP;
+        }
     }
 
     // Controller request based on VRHOT signal from processor regulator
@@ -321,7 +340,15 @@ void amec_slv_voting_box(void)
     {
         l_chip_fmax = g_amec->vrhotproc.freq_request;
         l_chip_reason = AMEC_VOTING_REASON_VRHOT_THRM;
-        l_kvm_throt_reason = CPU_OVERTEMP;
+
+        if(G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO] < l_chip_fmax)
+        {
+            l_kvm_throt_reason = PROC_OVERTEMP_EXCEED_PTURBO;
+        }
+        else
+        {
+            l_kvm_throt_reason = CPU_OVERTEMP;
+        }
     }
 
     for (k=0; k<MAX_NUM_CORES; k++)
@@ -385,7 +412,15 @@ void amec_slv_voting_box(void)
                 {
                     l_core_freq = g_amec->proc[0].pwr_votes.proc_pcap_vote;
                     l_core_reason = AMEC_VOTING_REASON_PWR;
-                    l_kvm_throt_reason = POWERCAP;
+
+                    if(G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO] < l_core_freq)
+                    {
+                        l_kvm_throt_reason = PCAP_EXCEED_PTURBO;
+                    }
+                    else
+                    {
+                        l_kvm_throt_reason = POWERCAP;
+                    }
                 }
             }
 
@@ -409,6 +444,8 @@ void amec_slv_voting_box(void)
                     l_core_freq = g_amec->foverride;
                     l_core_reason = AMEC_VOTING_REASON_OVERRIDE;
                 }
+
+                l_kvm_throt_reason = MANUFACTURING_OVERRIDE;
             }
 
             if(g_amec->pstate_foverride_enable)
@@ -469,10 +506,9 @@ void amec_slv_voting_box(void)
             sensor_update( AMECSENSOR_ARRAY_PTR(FREQ250USP0C0,k),
                     (uint16_t) g_amec->proc[0].core[k].f_request);
 
-#if 0
-            /// TODO: This can be deleted if deemed useless
+#if DEBUG_PROC_VOTING_BOX
             /// This trace that can be used to debug the voting
-            /// box an control loops.  It will trace the reason why a
+            /// box and control loops.  It will trace the reason why a
             /// controller is lowering the freq, but will only do it once in a
             /// row for the specific freq it wants to control to.  It assumes
             /// that all cores will be controlled to same freq.
@@ -515,10 +551,10 @@ void amec_slv_voting_box(void)
 
     //check if we need to update the throttle reason in homer
     if(G_sysConfigData.system_type.kvm &&
-       (l_kvm_throt_reason != G_amec_kvm_throt_reason))
+       (l_kvm_throt_reason != G_amec_opal_proc_throt_reason))
     {
         //Notify dcom thread to update the table
-        G_amec_kvm_throt_reason = l_kvm_throt_reason;
+        G_amec_opal_proc_throt_reason = l_kvm_throt_reason;
         ssx_semaphore_post(&G_dcomThreadWakeupSem);
     }
 }
@@ -537,6 +573,7 @@ void amec_slv_voting_box(void)
 // End Function Specification
 void amec_slv_freq_smh(void)
 {
+// RTC:130201
 // TODO/TEMP: Remove '#if 0' when/if needed. Currently does nothing and
 //            causes warning of set but not used..
 #if 0
@@ -557,8 +594,8 @@ void amec_slv_freq_smh(void)
         l_pstate[k]= proc_freq2pstate(g_amec->proc[0].core[k].f_request);
     }
 
-    // TODO: if this is an OPAL system, send PGPE an IPC to set clipping bounds
-    //       otherwise, set send PGPE an IPC to set pstates
+    // If this is an OPAL system, send PGPE an IPC to set clipping bounds
+    // otherwise, set send PGPE an IPC to set pstates
 
     if(G_sysConfigData.system_type.kvm)
     {
@@ -574,7 +611,7 @@ void amec_slv_freq_smh(void)
 
 // Function Specification
 //
-// Name: amec_slv_freq_smh
+// Name: amec_slv_mem_voting_box
 //
 // Description: Slave OCC's voting box that decides the memory speed request.
 //              This function will run every tick.
@@ -589,31 +626,42 @@ void amec_slv_mem_voting_box(void)
     /*------------------------------------------------------------------------*/
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
-    UINT16                  l_vote;
-    UINT8                   l_reason;
-    static INT16            l_slew_step = AMEC_MEMORY_STEP_SIZE;
-    static bool             L_throttle_traced = FALSE;
+    UINT16                   l_vote;
+    amec_mem_voting_reason_t l_reason;
+    opal_mem_voting_reason_t  kvm_reason;
+    static INT16             l_slew_step = AMEC_MEMORY_STEP_SIZE;
+    static bool              L_throttle_traced = FALSE;
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
 
     // Start with max allowed speed
-    l_vote = AMEC_MEMORY_MAX_STEP;
-    l_reason = AMEC_MEM_VOTING_REASON_INIT;            // 0
+    l_vote     = AMEC_MEMORY_MAX_STEP;
+    l_reason   = AMEC_MEM_VOTING_REASON_INIT;
+    kvm_reason = NO_THROTTLE;
+
+    // Memory throttled due to power cap.  if also throttled due to
+    // over temp, report over-temp as the reason to OPAL.
+    if (g_amec->pcap.active_mem_level != 0)
+    {
+        kvm_reason = POWER_CAP;
+    }
 
     // Check vote from Centaur thermal control loop
     if (l_vote > g_amec->thermalcent.speed_request)
     {
         l_vote = g_amec->thermalcent.speed_request;
-        l_reason = AMEC_MEM_VOTING_REASON_CENT;        // 1
+        l_reason = AMEC_MEM_VOTING_REASON_CENT;
+        kvm_reason = MEMORY_OVER_TEMP;
     }
 
     // Check vote from DIMM thermal control loop
     if (l_vote > g_amec->thermaldimm.speed_request)
     {
         l_vote = g_amec->thermaldimm.speed_request;
-        l_reason = AMEC_MEM_VOTING_REASON_DIMM;        // 2
+        l_reason = AMEC_MEM_VOTING_REASON_DIMM;
+        kvm_reason = MEMORY_OVER_TEMP;
     }
 
     // Check if memory autoslewing is enabled
@@ -634,7 +682,7 @@ void amec_slv_mem_voting_box(void)
         }
 
         l_vote = g_amec->mem_speed_request + l_slew_step;
-        l_reason = AMEC_MEM_VOTING_REASON_SLEW;        // 3
+        l_reason = AMEC_MEM_VOTING_REASON_SLEW;
     }
 
     // Store final vote and vote reason in g_amec
@@ -664,6 +712,16 @@ void amec_slv_mem_voting_box(void)
             TRAC_INFO("Memory is no longer being throttled");
         }
     }
+
+    //check if we need to update the throttle reason in OPAL table
+    if(G_sysConfigData.system_type.kvm &&
+       (kvm_reason != G_amec_opal_mem_throt_reason))
+    {
+        //Notify dcom thread to update the table
+        G_amec_opal_mem_throt_reason = kvm_reason;
+        ssx_semaphore_post(&G_dcomThreadWakeupSem);
+    }
+
     return;
 }
 
@@ -893,7 +951,7 @@ void amec_slv_check_perf(void)
 // time to stabilize
 void amec_verify_pstate()
 {
-//  @TODO - TEMP Pstate functions not defined yet
+//  @TODO - TEMP Pstate functions not defined yet. RTC:164718
 #if 0
     uint8_t                             l_core = 0;
     int8_t                              l_pstate_from_fmax = 0;
