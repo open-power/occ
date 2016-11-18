@@ -234,6 +234,61 @@ typedef struct
 
 } SysPowerDistParms;
 
+//
+/// UltraTurbo Segment VIDs by Core Count
+typedef struct
+{
+
+    /// Number of Segment Pstates
+    uint8_t     ut_segment_pstates;
+
+    /// Maximum number of core possibly active
+    uint8_t     ut_max_cores;
+
+    /// VDD VID modification
+    ///      1 core active  = offset 0
+    ///      2 cores active = offset 1
+    ///         ...
+    ///      12 cores active = offset 11
+    uint8_t ut_segment_vdd_vid[MAX_UT_PSTATES][NUM_ACTIVE_CORES];
+
+    /// VCS VID modification
+    ///      1 core active  = offset 0
+    ///      2 cores active = offset 1
+    ///         ...
+    ///      12 cores active = offset 11
+    uint8_t ut_segment_vcs_vid[MAX_UT_PSTATES][NUM_ACTIVE_CORES];
+
+} VIDModificationTable;
+
+/// Workload Optimized Frequency (WOF) Elements
+///
+/// Structure defining various control elements needed by the WOF algorithm
+/// firmware running on the OCC.
+///
+typedef struct
+{
+
+    /// WOF Enablement
+    uint8_t wof_enabled;
+
+    /// TDP<>RDP Current Factor
+    ///   Value read from ??? VPD
+    ///   Defines the scaling factor that converts current (amperage) value from
+    ///   the Thermal Design Point to the Regulator Design Point (RDP) as input
+    ///   to the Workload Optimization Frequency (WOF) OCC algorithm.
+    ///
+    ///   This is a ratio value and has a granularity of 0.01 decimal.  Data
+    ///   is held in hexidecimal (eg 1.22 is represented as 122 and then converted
+    ///   to hex 0x7A).
+    uint32_t tdp_rdp_factor;
+
+    /// UltraTurbo Segment VIDs by Core Count
+    VIDModificationTable ut_vid_mod;
+
+    uint8_t pad[4];
+
+} WOFElements;
 
 //
 // WOF Voltage, Frequency Ratio Tables
