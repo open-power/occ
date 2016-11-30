@@ -194,55 +194,62 @@ void pmc_hw_error_isr(void *private, SsxIrqId irq, int priority)
     // clear this irq status in OISR0
     ssx_irq_status_clear(irq);
 
-    // dump a bunch of FFDC registers
-    fill_pmc_ffdc_buffer(&l_pmc_ffdc);
+    if ((FALSE == isSafeStateRequested()) && (CURRENT_STATE() != OCC_STATE_SAFE))
+    {
+        // dump a bunch of FFDC registers
+        fill_pmc_ffdc_buffer(&l_pmc_ffdc);
 
-    TRAC_ERR("PMC Failure detected through OISR0[9]!!!");
-    /* @
-     * @moduleid   PMC_HW_ERROR_ISR
-     * @reasonCode PMC_FAILURE
-     * @severity   ERRL_SEV_PREDICTIVE
-     * @userdata1  0
-     * @userdata2  0
-     * @userdata4  OCC_NO_EXTENDED_RC
-     * @devdesc    Failure detected in processor
-     *             power management controller (PMC)
-     */
-    l_err = createErrl( PMC_HW_ERROR_ISR,          // i_modId,
-                        PMC_FAILURE,               // i_reasonCode,
-                        OCC_NO_EXTENDED_RC,
-                        ERRL_SEV_PREDICTIVE,
-                        NULL,                      // tracDesc_t i_trace,
-                        DEFAULT_TRACE_SIZE,        // i_traceSz,
-                        0,                         // i_userData1,
-                        0);                        // i_userData2
+        TRAC_ERR("PMC Failure detected through OISR0[9]!!!");
+        /* @
+         * @moduleid   PMC_HW_ERROR_ISR
+         * @reasonCode PMC_FAILURE
+         * @severity   ERRL_SEV_PREDICTIVE
+         * @userdata1  0
+         * @userdata2  0
+         * @userdata4  OCC_NO_EXTENDED_RC
+         * @devdesc    Failure detected in processor
+         *             power management controller (PMC)
+         */
+        l_err = createErrl( PMC_HW_ERROR_ISR,          // i_modId,
+                            PMC_FAILURE,               // i_reasonCode,
+                            OCC_NO_EXTENDED_RC,
+                            ERRL_SEV_PREDICTIVE,
+                            NULL,                      // tracDesc_t i_trace,
+                            DEFAULT_TRACE_SIZE,        // i_traceSz,
+                            0,                         // i_userData1,
+                            0);                        // i_userData2
 
-    //Add our register dump to the error log
-    addUsrDtlsToErrl(l_err,
-            (uint8_t*) &l_pmc_ffdc,
-            sizeof(l_pmc_ffdc),
-            ERRL_USR_DTL_STRUCT_VERSION_1,
-            ERRL_USR_DTL_BINARY_DATA);
+        //Add our register dump to the error log
+        addUsrDtlsToErrl(l_err,
+                         (uint8_t*) &l_pmc_ffdc,
+                         sizeof(l_pmc_ffdc),
+                         ERRL_USR_DTL_STRUCT_VERSION_1,
+                         ERRL_USR_DTL_BINARY_DATA);
 
-    //Add firmware callout
-    addCalloutToErrl(l_err,
-            ERRL_CALLOUT_TYPE_COMPONENT_ID,
-            ERRL_COMPONENT_ID_FIRMWARE,
-            ERRL_CALLOUT_PRIORITY_HIGH);
+        //Add firmware callout
+        addCalloutToErrl(l_err,
+                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                         ERRL_COMPONENT_ID_FIRMWARE,
+                         ERRL_CALLOUT_PRIORITY_HIGH);
 
-    //Add processor callout
-    addCalloutToErrl(l_err,
-            ERRL_CALLOUT_TYPE_HUID,
-            G_sysConfigData.proc_huid,
-            ERRL_CALLOUT_PRIORITY_MED);
+        //Add processor callout
+        addCalloutToErrl(l_err,
+                         ERRL_CALLOUT_TYPE_HUID,
+                         G_sysConfigData.proc_huid,
+                         ERRL_CALLOUT_PRIORITY_MED);
 
-    //Add planar callout
-    addCalloutToErrl(l_err,
-            ERRL_CALLOUT_TYPE_HUID,
-            G_sysConfigData.backplane_huid,
-            ERRL_CALLOUT_PRIORITY_LOW);
+        //Add planar callout
+        addCalloutToErrl(l_err,
+                         ERRL_CALLOUT_TYPE_HUID,
+                         G_sysConfigData.backplane_huid,
+                         ERRL_CALLOUT_PRIORITY_LOW);
 
-    REQUEST_RESET(l_err);
+        REQUEST_RESET(l_err);
+    }
+    else
+    {
+        TRAC_ERR("PMC Failure detected, but already in safe state so no PMC log will be created");
+    }
 
     // Unmask this interrupt
     ssx_irq_enable(irq);
