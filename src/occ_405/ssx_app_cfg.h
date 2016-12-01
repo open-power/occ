@@ -192,7 +192,7 @@ do {                                                                \
 /// The buffer is defined to be quite large in order to accomodate full kernel
 /// and application dumps in the event of problems.
 #ifndef SSXOUT_TRACE_BUFFER_SIZE
-#define SSXOUT_TRACE_BUFFER_SIZE (32 * 1024)
+#define SSXOUT_TRACE_BUFFER_SIZE (8 * 1024)
 #endif
 
 #ifndef APPCFG_USE_EXT_TIMEBASE_FOR_TRACE
