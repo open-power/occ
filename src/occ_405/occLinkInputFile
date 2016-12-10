@@ -60,6 +60,7 @@ INPUT ( amec_amester.o
         occhw_irq_init.o
         occhw_ocb.o
         occhw_pba.o
+        pgpe_interface.o
         ppc405_boot.o
         ppc405_breakpoint.o
         ppc405_cache_core.o
@@ -73,6 +74,7 @@ INPUT ( amec_amester.o
         ppc405_mmu_asm.o
         ppc405_thread_init.o
         proc_data.o
+        proc_data_control.o
         proc_pstate.o
         reset.o
         rtls_tables.o

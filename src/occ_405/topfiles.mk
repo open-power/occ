@@ -72,7 +72,9 @@ TOP-C-SOURCES = amec/amec_analytics.c \
                 mode.c \
                 occ_sys_config.c \
                 occbuildname.c \
+                pgpe/pgpe_interface.c \
                 proc/proc_data.c \
+                proc/proc_data_control.c \
                 proc/proc_pstate.c \
                 pss/apss.c \
                 pss/avsbus.c \

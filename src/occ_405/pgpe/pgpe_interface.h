@@ -1,7 +1,7 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_405/proc/proc_data_control.h $                        */
+/* $Source: src/occ_405/pgpe/pgpe_interface.h $                           */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
@@ -23,33 +23,23 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-#ifndef _PROC_DATA_CONTROL_H
-#define _PROC_DATA_CONTROL_H
+#ifndef _PGPE_INTERFACE_H_
+#define _PGPE_INTERFACE_H_
 
-#include <occ_common.h>
-#include <ssx.h>
-#include "rtls.h"
-#include "p9_pstates_common.h"
-#include "pstate_pgpe_occ_api.h"
+#include "errl.h"
 
-/// Per-quad Pstate/Clip control data-structure
-///
-/// Firmware maintains a copy of PstateClipStruct structures - with an entry
-/// for each quad on the chip - and updates the pstate/clip fields in place.
-/// The PGPE IPC procedures (MSGID_405_SET_PMCR and MSGID_405_CLIPS)
-/// are run periodically to update the core psates or clips control values
-/// from this data structure.  The array can (should) be cleared initially.
-typedef struct {
+errlHndl_t init_pgpe_ipcs(void);
 
-    /// The Pstate control values
-    ipcmsg_set_pmcr_t pstates;
+errlHndl_t pgpe_init_clips(void);
+errlHndl_t pgpe_init_pmcr(void);
+errlHndl_t pgpe_init_start_suspend(void);
+errlHndl_t pgpe_init_wof_control(void);
+errlHndl_t pgpe_init_wof_vfrt(void);
 
-    /// The clipping values
-    ipcmsg_clip_update_t clips;
+errlHndl_t pgpe_widen_clip_ranges(void);
+errlHndl_t pgpe_clip_update(void);
+errlHndl_t pgpe_pmcr_set(void);
+errlHndl_t pgpe_start_suspend(uint8_t action);
+void pgpe_start_suspend_callback(void);
 
-} PstatesClips;
-
-// Task that sets the PMCR, PMBR, PMICR
-void task_core_data_control( task_t * i_task );
-
-#endif
+#endif /* #ifndef _PGPE_INTERFACE_H_ */

@@ -32,17 +32,22 @@
 #include "state.h"
 #include "dcom.h"
 #include "occ_service_codes.h"
-#include "proc_pstate.h"
 #include "cmdh_fsp_cmds_datacnfg.h"
 #include "cmdh_fsp.h"
 #include "proc_data.h"
 #include "scom.h"
 #include <fir_data_collect.h>
 #include <dimm.h>
+#include "pgpe_interface.h"
+#include "pstate_pgpe_occ_api.h"
 
 extern bool G_mem_monitoring_allowed;
 extern task_t G_task_table[TASK_END];  // Global task table
 extern bool G_simics_environment;
+
+extern GpeRequest G_clip_update_req;
+extern GPE_BUFFER(ipcmsg_clip_update_t*  G_clip_update_parms_ptr);
+
 
 // Maximum allowed value approx. 16.3 ms
 #define PCBS_HEARBEAT_TIME_US 16320
@@ -141,9 +146,6 @@ errlHndl_t SMGR_standby_to_observation()
         rtl_clr_run_mask_deferred(RTL_FLAG_STANDBY);
         rtl_set_run_mask_deferred(RTL_FLAG_OBS);
 
-        // Initialize key freq2pstate Global parameters
-        proc_pstate_initialize();
-
         // Set the actual STATE now that we have finished everything else
         CURRENT_STATE() = OCC_STATE_OBSERVATION;
 
@@ -211,9 +213,9 @@ errlHndl_t SMGR_observation_to_standby()
 
 // Function Specification
 //
-// Name:
+// Name: SMGR_observation_to_active
 //
-// Description:
+// Description: Transition from Observation state to Active state
 //
 // End Function Specification
 errlHndl_t SMGR_observation_to_active()
@@ -223,19 +225,89 @@ errlHndl_t SMGR_observation_to_active()
     int                l_extRc = OCC_NO_EXTENDED_RC;
     int                l_rc = 0;
 
-    // Pstates are enabled via an IPC call to PGPE once the OCC reaches the
-    // observation state. We still have to check that the enable_pstates() IPC job
-    // on the PGPE has completed before transitioning to active state. Otherwise,
-    //  we wait TBD seconds in case we are going directly from Standby to Active
-    // (pstate init only happens in observation state, so it might not be
-    // done yet...must call it in this while loop since it is done in this
-    // same thread...)
-    //
+    // confirm that the clip update IPC call to widen clip ranges
+    // has successfully completed on PGPE (with no errors)
+    if( !async_request_is_idle(&G_clip_update_req.request) )  //widen_clip_ranges didn't complete
+    {
+        // an earlier clip update IPC call has not completed, trace and log an error
+        TRAC_ERR("SMGR: clip update IPC task is not Idle");
+
+            /*
+             * @errortype
+             * @moduleid    MAIN_SMGR_MID
+             * @reasoncode  PGPE_FAILURE
+             * @userdata4   ERC_PGPE_NOT_IDLE
+             * @devdesc     pgpe clip update not idle
+             */
+        l_errlHndl = createErrl(
+            MAIN_SMGR_MID,                   //ModId
+            PGPE_FAILURE,                    //Reasoncode
+            ERC_PGPE_NOT_IDLE,               //Extended reason code
+            ERRL_SEV_PREDICTIVE,             //Severity
+            NULL,                            //Trace Buf
+            DEFAULT_TRACE_SIZE,              //Trace Size
+            0,                               //Userdata1
+            0                                //Userdata2
+            );
+        // TODO now: REQUEST_RESET?
+    }
+    else if ( G_clip_update_parms_ptr->msg_cb.rc != PGPE_RC_SUCCESS ) // IPC task completed with errors
+    {
+        // an earlier clip update IPC call has not completed, trace and log an error
+        TRAC_ERR("SMGR: clip update IPC task returned an error [0x%08X]",
+                 G_clip_update_parms_ptr->msg_cb.rc);
+
+            /*
+             * @errortype
+             * @moduleid    MAIN_SMGR_MID
+             * @reasoncode  PGPE_FAILURE
+             * @userdata1   PGPE clip update's rc
+             * @userdata4   ERC_PGPE_CLIP_FAILURE
+             * @devdesc     pgpe clip update not idle
+             */
+        l_errlHndl = createErrl(
+            MAIN_SMGR_MID,                        //ModId
+            PGPE_FAILURE,                         //Reasoncode
+            ERC_PGPE_CLIP_FAILURE,                //Extended reason code
+            ERRL_SEV_PREDICTIVE,                  //Severity
+            NULL,                                 //Trace Buf
+            DEFAULT_TRACE_SIZE,                   //Trace Size
+            G_clip_update_parms_ptr->msg_cb.rc,   //Userdata1
+            0                                     //Userdata2
+            );
+        // TODO now: REQUEST_RESET?
+    }
+
+    else // Clips wide opened with no errors, enable Pstates on PGPE
+    {
+
+        // Pstates are enabled via an IPC call to PGPE, which will
+        // set the G_proc_pstate_status flag
+
+        l_errlHndl = pgpe_start_suspend(PGPE_ACTION_PSTATE_START);
+
+        if(l_errlHndl)
+        {
+            TRAC_ERR("SMGR: Failed to switch to Active state because of a "
+                     "failure to start the pstate protocol on PGPE.");
+        }
+        else
+        {
+            // Pstates enabled, update OPAL static table in main memory
+            if(G_sysConfigData.system_type.kvm)
+            {
+                // upon succesful enablement of Pstate protocol on
+                // PGPE update OPAL table with pstate information.
+                proc_pstate_kvm_setup();
+            }
+        }
+    }
+
     // NOTE that this is really unnecessary if you follow the TMGT OCC
     // Interface Spec, which tells you that you need to check for the "Active
     // Ready" bit in the poll response before you go to active state.
     // But since we have scenerios where TMGT isn't the one putting us in
-    // active state (we are going there automatically) we needed to add this
+    // active state (we are going there automatically) we needed to add this.
 
     // If we have all data we need to go to active state, but don't have pstates
     // enabled yet...then we will do the aforementioned wait
@@ -253,8 +325,8 @@ errlHndl_t SMGR_observation_to_active()
                 {
                     TRAC_ERR("SMGR: Timeout waiting for Pstates to be enabled, "
                              "pmc_mode[%08x], chips_present[%02x], Cores Present [%08x]",
-                            in32(PMC_MODE_REG),
-                            G_sysConfigData.is_occ_present,
+                             in32(PMC_MODE_REG),
+                             G_sysConfigData.is_occ_present,
                              (uint32_t) ((in64(OCB_CCSR)) >> 32));
                 }
                 l_extRc = ERC_GENERIC_TIMEOUT;

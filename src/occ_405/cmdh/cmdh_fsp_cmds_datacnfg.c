@@ -42,6 +42,7 @@
 #include <centaur_data.h>
 #include "dimm.h"
 #include <avsbus.h>
+#include "p9_pstates_occ.h"
 
 #define FREQ_FORMAT_PWR_MODE_NUM   6
 #define FREQ_FORMAT_BASE_DATA_SZ   (sizeof(cmdh_store_mode_freqs_t) - sizeof(cmdh_fsp_cmd_header_t))
@@ -67,12 +68,8 @@
 
 extern uint8_t G_occ_interrupt_type;
 
-extern uint32_t G_proc_fmin;
-extern uint32_t G_proc_fmax;
-extern uint32_t G_khz_per_pstate;
-
-extern uint8_t G_proc_pmin;
-extern uint8_t G_proc_pmax;
+extern uint16_t G_proc_fmax_mhz;      // Maximum frequency (uturbo if WOF enabled, otherwise turbo)
+extern OCCPstateParmBlock G_oppb;     // OCC Pstate Parameters Block Structure
 
 typedef struct data_req_table
 {
@@ -284,39 +281,64 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
             // Bytes 3-4 Nominal Frequency Point
             l_freq = (l_buf[0] << 8 | l_buf[1]);
             l_table[OCC_MODE_NOMINAL] = l_freq;
-            CMDH_TRAC_INFO("Nominal frequency = %d", l_freq);
+            CMDH_TRAC_INFO("Nominal frequency = %d MHz", l_freq);
 
             // Bytes 5-6 Turbo Frequency Point:
             // also store for DPS modes
             l_freq = (l_buf[2] << 8 | l_buf[3]);
+            // Verify that turbo frequency is <= G_proc_fmax_mhz
+            if(l_freq > G_proc_fmax_mhz)
+            {
+                CMDH_TRAC_ERR("Turbo Frequency[%d] (MHz)) is higher than "
+                              "G_proc_fmax_mhz[%d], clip Turbo Frequency",
+                              l_freq, G_proc_fmax_mhz);
+                l_freq = G_proc_fmax_mhz;
+            }
             l_table[OCC_MODE_TURBO] = l_freq;
             l_table[OCC_MODE_DYN_POWER_SAVE] = l_freq;
             l_table[OCC_MODE_DYN_POWER_SAVE_FP] = l_freq;
-            CMDH_TRAC_INFO("Turbo frequency = %d", l_freq);
+            CMDH_TRAC_INFO("Turbo frequency = %d MHz", l_freq);
 
             // Bytes 7-8 Minimum Frequency Point
             l_freq = (l_buf[4] << 8 | l_buf[5]);
+            // Verify that minimum frequency is >= G_oppb.frequency_min_khz
+            if(l_freq * 1000 < G_oppb.frequency_min_khz)
+            {
+                CMDH_TRAC_ERR("Minimum Frequency[%d] (Mhz)  is lower than PGPE's "
+                              "G_oppb.frequency_min_khz[%d], clip Minimum Frequency",
+                              l_freq, G_oppb.frequency_min_khz);
+                l_freq = G_oppb.frequency_min_khz / 1000;
+            }
             l_table[OCC_MODE_MIN_FREQUENCY] = l_freq;
-            G_proc_fmin = l_freq;
-            CMDH_TRAC_INFO("Minimum frequency = %d", l_freq);
+            CMDH_TRAC_INFO("Minimum frequency = %d MHz", l_freq);
 
             // Bytes 9-10 Ultr Turbo Frequency Point
             l_freq = (l_buf[6] << 8 | l_buf[7]);
-            if(l_freq)
+            // Verify that ultra turbo frequency is <= G_proc_fmax_mhz
+            if(l_freq  > G_proc_fmax_mhz)
             {
-                G_proc_fmax = l_freq;
-            }
-            else // If Ultra Turbo Frequency Point = 0, Fmax = Turbo Frequency
-            {
-                G_proc_fmax = l_table[OCC_MODE_TURBO];
+                CMDH_TRAC_ERR("Ultra Turbo Frequency[%d] (MHz) is higher than PGPE's "
+                              "Max freq (G_proc_fmax_mhz[%d]) clip Ultra Turbo Frequency",
+                              l_freq, G_proc_fmax_mhz);
+                l_freq = G_proc_fmax_mhz;
             }
             l_table[OCC_MODE_UTURBO] = l_freq;
-            CMDH_TRAC_INFO("UT frequency = %d", l_freq);
+            CMDH_TRAC_INFO("UT frequency = %d MHz", l_freq);
+
+            // clip G_proc_fmax_mhz to TMGT's MAX(turbo, ultra turbo) frequency point
+            if(l_table[OCC_MODE_UTURBO] > l_table[OCC_MODE_TURBO])
+            {
+                G_proc_fmax_mhz = l_table[OCC_MODE_UTURBO];
+            }
+            else
+            {
+                G_proc_fmax_mhz = l_table[OCC_MODE_TURBO];
+            }
 
             // Bytes 11-12 Static Power Save Frequency Point
             l_freq = (l_buf[8] << 8 | l_buf[9]);
             l_table[OCC_MODE_PWRSAVE] = l_freq;
-            CMDH_TRAC_INFO("Static Power Save frequency = %d", l_freq);
+            CMDH_TRAC_INFO("Static Power Save frequency = %d MHz", l_freq);
 
             // Bytes 13-14 FFO Frequency Point
             l_freq = (l_buf[10] << 8 | l_buf[11]);
@@ -324,19 +346,19 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
             {
                 // Check and make sure that FFO freq is within valid range
                 const uint16_t l_req_freq = l_freq;
-                if (l_freq < G_proc_fmin)
+                if (l_freq  < l_table[OCC_MODE_MIN_FREQUENCY])
                 {
-                    l_freq = G_proc_fmin;
+                    l_freq = l_table[OCC_MODE_MIN_FREQUENCY];
                 }
-                else if (l_freq > G_proc_fmax)
+                else if (l_freq > G_proc_fmax_mhz)
                 {
-                    l_freq = G_proc_fmax;
+                    l_freq = G_proc_fmax_mhz;
                 }
 
                 // Log an error if we could not honor the requested FFO frequency, but keep going.
                 if (l_req_freq != l_freq)
                 {
-                    TRAC_ERR("FFO Frequency out of range. requested %d, but using %d",
+                    TRAC_ERR("FFO Frequency out of range. requested %d MHz, but using %d MHz",
                              l_req_freq,  l_freq);
                     /* @
                      * @errortype
@@ -360,10 +382,7 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
             }
         }
         l_table[OCC_MODE_FFO] = l_freq;
-        CMDH_TRAC_INFO("FFO Frequency = %d", l_freq);
-
-        // Calculate minimum Pstate:
-        G_proc_pmin = G_proc_pmax + ((G_proc_fmax - G_proc_fmin)/G_khz_per_pstate);
+        CMDH_TRAC_INFO("FFO Frequency = %d Mhz", l_freq);
 
         // inconsistent Frequency Points?
         if((l_table[OCC_MODE_UTURBO] < l_table[OCC_MODE_TURBO] && l_table[OCC_MODE_UTURBO]) ||
@@ -2091,6 +2110,8 @@ errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
             l_errlHndl = data_store_freq_data(i_cmd_ptr , o_rsp_ptr);
             if(NULL == l_errlHndl)
             {
+                // New Frequency config data packet received with no error logs: set the
+                // DATA_MASK_FREQ_PRESENT to flag that we received the frequency from TMGT
                 l_new_data = DATA_MASK_FREQ_PRESENT;
             }
             break;

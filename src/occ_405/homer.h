@@ -54,6 +54,10 @@
 #define OCC_HTMGT_RSP_OFFSET_HOMER  0x000E1000
 #define OCC_HTMGT_RSP_ADDRESS_HOMER (HOMER_BASE_ADDRESS+OCC_HTMGT_RSP_OFFSET_HOMER)
 
+// PPMR Header space
+#define PPMR_OFFSET_HOMER    0x00300000                             // PPMR image HOMER offset
+#define PPMR_ADDRESS_HOMER   (HOMER_BASE_ADDRESS+PPMR_OFFSET_HOMER) // PPMR image memory address
+
 
 // Version(s) of HOMER host data currently supported
 typedef enum homer_version

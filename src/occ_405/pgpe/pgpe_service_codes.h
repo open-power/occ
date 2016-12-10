@@ -1,7 +1,7 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_405/pgpe_shared.h $                                   */
+/* $Source: src/occ_405/pgpe/pgpe_service_codes.h $                       */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
@@ -23,20 +23,24 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-#define PGPE_HEADER_ADDR             0xFFF20180 // 0xfff20000 + 0x180
-#define PGPE_HEADER_SZ               96         // Size of PGPE Image header
+#ifndef _PGPE_SERVICE_CODES_H_
+#define _PGPE_SERVICE_CODES_H_
 
-// Offset addresses of PGPE Header parameters (relative to start address)
-#define PGPE_SHARED_SRAM_ADDR_OFFSET 0x0c
-#define PGPE_SHARED_SRAM_SZ_OFFSET   0x14
-#define PGPE_BEACON_ADDR_OFFSET      0x48
+#include <comp_ids.h>
 
-// PGPE Image Header Parameter addresses
+enum pgpeModuleId
+{
+    PGPE_INIT_CLIPS_MOD              = PGPE_COMP_ID | 0x00,
+    PGPE_INIT_PMCR_MOD               = PGPE_COMP_ID | 0x01,
+    PGPE_INIT_START_SUSPEND_MOD      = PGPE_COMP_ID | 0x02,
+    PGPE_INIT_WOF_CONTROL_MOD        = PGPE_COMP_ID | 0x03,
+    PGPE_INIT_WOF_VFRT_MOD           = PGPE_COMP_ID | 0x04,
+    PGPE_CLIP_UPDATE_MOD             = PGPE_COMP_ID | 0x05,
+    PGPE_START_SUSPEND_MOD           = PGPE_COMP_ID | 0x06,
+    PGPE_PMCR_SET_MOD                = PGPE_COMP_ID | 0x07,
+    PGPE_WIDEN_CLIP_RANGES_MOD       = PGPE_COMP_ID | 0x08,
+    PGPE_START_SUSPEND_CALLBACK_MOD  = PGPE_COMP_ID | 0x09,
+};
 
-//Shared OCC-PGPE SRAM parameters
-#define PGPE_SHARED_SRAM_ADDR_PTR    (PGPE_HEADER_ADDR + PGPE_SHARED_SRAM_ADDR_OFFSET)
-#define PGPE_SHARED_SRAM_SZ_PTR      (PGPE_HEADER_ADDR + PGPE_SHARED_SRAM_SZ_OFFSET)
 
-// A pointer to PGPE Beacon Address
-#define PGPE_BEACON_ADDR_PTR         (PGPE_HEADER_ADDR + PGPE_BEACON_ADDR_OFFSET)
-
+#endif /* #ifndef _PGPE_SERVICE_CODES_H_ */

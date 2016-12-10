@@ -47,6 +47,8 @@
 #include <amec_sensors_fw.h>
 #include <amec_data.h>
 #include <amec_freq.h>
+#include <pgpe_interface.h>
+#include <p9_pstates_occ.h>
 
 //*************************************************************************
 // Externs
@@ -64,8 +66,9 @@
 // Globals
 //*************************************************************************
 extern uint8_t G_occ_interrupt_type;
-extern uint32_t G_proc_fmin;
-extern uint32_t G_proc_fmax;
+
+//max(fturbo,futurbo)
+extern uint16_t G_proc_fmax_mhz;
 
 //*************************************************************************
 // Function Prototypes
@@ -98,16 +101,13 @@ errlHndl_t AMEC_data_write_fcurr(const OCC_MODE i_mode)
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
 
-    // If we're active we need to load this new range into DVFS MIN/MAX
-    if(CURRENT_STATE() == OCC_STATE_ACTIVE)
-    {
-        // Use i_mode here since this function understands turbo
-        l_err = amec_set_freq_range(i_mode);
+    // Load new range into DVFS MIN/MAX,
+    // Use i_mode here since this function understands turbo
+    l_err = amec_set_freq_range(i_mode);
 
-        if(l_err)
-        {
-            //break;
-        }
+    if(l_err)
+    {
+        //break;
     }
 
     // If we are in OpenPower environment with OPAL, load this new range into DVFS
@@ -115,12 +115,23 @@ errlHndl_t AMEC_data_write_fcurr(const OCC_MODE i_mode)
     // in amec_set_freq_range() based on mode
     if((G_occ_interrupt_type != FSP_SUPPORTED_OCC) && (G_sysConfigData.system_type.kvm))
     {
-        g_amec->sys.fmax = G_proc_fmax;
-        g_amec->sys.fmin = G_proc_fmin; // = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY]
+        g_amec->sys.fmax = G_proc_fmax_mhz;
+        g_amec->sys.fmin = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
 
         TRAC_INFO("AMEC_data_write_fcurr: New frequency range Fmin[%u] Fmax[%u]",
                   g_amec->sys.fmin,
                   g_amec->sys.fmax);
+    }
+
+    if(!l_err)
+    {
+        // set the clip bounds wide open (if not in active state)
+        // if not already in active mode, send IPC command to PGPE to set
+        // pStates clips wide open (pmin - pmax)
+        if(!IS_OCC_STATE_ACTIVE())
+        {
+            l_err = pgpe_widen_clip_ranges();
+        }
     }
 
     return l_err;

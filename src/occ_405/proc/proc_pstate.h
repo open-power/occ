@@ -39,6 +39,25 @@
 //#include "gpsm.h"
 //#include "pstates.h"
 
+// The pstate associated with highest possible frequency
+// is always 0 in POWER9.
+#define PMAX 0
+
+typedef enum
+{
+    PSTATES_IN_TRANSITION = -1,
+    PSTATES_DISABLED      = 0,
+    PSTATES_ENABLED       = 1,
+} pstateStatus;
+
+
+typedef enum
+{
+    OPAL_STATIC = 0,
+    OPAL_DYNAMIC = 1,
+} opalDataType;
+
+
 typedef struct __attribute__ ((packed))
 {
     uint8_t              valid;
@@ -100,9 +119,7 @@ typedef struct __attribute__ ((packed))
 extern uint32_t    G_mhz_per_pstate;
 
 extern opal_dynamic_table_t G_opal_dynamic_table;
-
-// Initialize PState Key parameters
-void proc_pstate_initialize(void);
+extern opal_static_table_t G_opal_static_table;
 
 // Helper function to translate from Frequency to nearest Pstate
 Pstate proc_freq2pstate(uint32_t i_freq_mhz);
@@ -115,13 +132,19 @@ Pstate proc_freq2pstate(uint32_t i_freq_mhz);
 inline bool proc_is_hwpstate_enabled(void);
 
 // Copy pstate data to opal table
-void populate_dynamic_opal_data(void);
+void populate_opal_dynamic_data(void);
 
 // Copy all opal static data to opal table
-void populate_static_opal_data(void);
+void populate_opal_static_data(void);
 
-// Copy opal table to mainstore memory at OPAL_OFFSET_HOMER
-void populate_opal_tbl_to_mem(void);
+// Copy pstates sections of opal static data to opal table
+void populate_opal_static_pstates_data(void);
+
+// Copy config section of  opal static data to opal table
+void populate_opal_static_config_data(void);
+
+// Copy opal static/dynamic table to mainstore memory at OPAL_OFFSET_HOMER
+void populate_opal_tbl_to_mem(opalDataType opal_data_type);
 
 // Check if opal table needs update
 void check_for_opal_updates(void);

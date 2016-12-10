@@ -91,5 +91,10 @@
 // Workload Optimize Frequency
 #define WOF_COMP_ID          0x1100
 #define WOF_COMP_NAME        "WOF"
+
+// PGPE Interface
+#define PGPE_COMP_ID         0x1200
+#define PGPE_COMP_NAME       "PGPE"
+
 #endif
 

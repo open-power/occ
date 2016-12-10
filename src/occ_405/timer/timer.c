@@ -507,15 +507,15 @@ void check_pgpe_beacon(void)
                 /*
                  * @errortype
                  * @moduleid    POKE_WD_TIMERS
-                 * @reasoncode  INTERNAL_HW_FAILURE
+                 * @reasoncode  PGPE_FAILURE
                  * @userdata1   PGPE Beacon Value
                  * @userdata2   PGPE Beacon Address
-                 * @userdata4   PGPE_BEACON_TIMEOUT
+                 * @userdata4   ERC_PGPE_BEACON_TIMEOUT
                  * @devdesc     PGPE Beacon timeout
                  */
                 l_err = createErrl(POKE_WD_TIMERS,             // mod id
-                                   PGPE_BEACON_TIMEOUT,        // reason code
-                                   OCC_NO_EXTENDED_RC,         // Extended reason code
+                                   PGPE_FAILURE,               // reason code
+                                   ERC_PGPE_BEACON_TIMEOUT,    // Extended reason code
                                    ERRL_SEV_UNRECOVERABLE,     // severity
                                    NULL,                       // trace buffer
                                    0,                          // trace size

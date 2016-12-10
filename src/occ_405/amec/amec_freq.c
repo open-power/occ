@@ -56,6 +56,11 @@
 extern uint8_t G_cent_temp_expired_bitmap;
 extern dimm_sensor_flags_t G_dimm_temp_expired_bitmap;
 
+extern uint16_t G_proc_fmax_mhz;
+
+extern GPE_BUFFER(PstatesClips* G_core_data_control_occwrite_ptr);
+
+
 //*************************************************************************
 // Defines/Enums
 //*************************************************************************
@@ -67,12 +72,12 @@ extern dimm_sensor_flags_t G_dimm_temp_expired_bitmap;
 //*************************************************************************
 // Globals
 //*************************************************************************
-BOOLEAN                   G_non_dps_power_limited      = FALSE;
+BOOLEAN                   G_non_dps_power_limited       = FALSE;
 
 opal_proc_voting_reason_t G_amec_opal_proc_throt_reason = NO_THROTTLE;
 opal_mem_voting_reason_t  G_amec_opal_mem_throt_reason  = NO_MEM_THROTTLE;
 
-uint16_t                  G_time_until_freq_check      = FREQ_CHG_CHECK_TIME;
+uint16_t                  G_time_until_freq_check       = FREQ_CHG_CHECK_TIME;
 
 //FFDC SCOM addresses as requested by Greg Still in defect SW247927
 //If new SCOM addresses are added, update the size of the array.
@@ -162,7 +167,15 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
     /*------------------------------------------------------------------------*/
 
     // First set to Max Freq Range for this mode
-    if( VALID_MODE(i_mode) )
+    // if no mode set yet default to the full range
+    if(i_mode == OCC_MODE_NOCHANGE)
+    {
+        l_freq_min = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
+
+        // Set Max frequency (ultra turbo freq if wof enabled, to turbo freq  otherwise)
+        l_freq_max = G_proc_fmax_mhz;
+    }
+    else if( VALID_MODE(i_mode) )  // Set to Max Freq Range for this mode
     {
       l_freq_min = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
       l_freq_max = G_sysConfigData.sys_mode_freq.table[i_mode];
@@ -573,39 +586,54 @@ void amec_slv_proc_voting_box(void)
 // End Function Specification
 void amec_slv_freq_smh(void)
 {
-// RTC:130201
-// TODO/TEMP: Remove '#if 0' when/if needed. Currently does nothing and
-//            causes warning of set but not used..
-#if 0
-
     /*------------------------------------------------------------------------*/
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
-    uint16_t      k = 0;
-    Pstate        l_pstate[MAX_NUM_CORES];
+    uint8_t       quad = 0;       // loop through quads
+    uint8_t       core_num = 0;   // core ID
+    uint8_t       core_idx = 0;   // loop through cores within each quad
+    Pstate        pmax = 0;       // select the maximum pstate (minimum frequency)
+                                  // within each quad, initialize to 0
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
 
-    for (k=0; k<MAX_NUM_CORES; k++)
+    // loop through all quads, get f_requests, translate to pstates
+    for (quad = 0; quad < MAX_QUADS; quad++)
     {
-        // Translate frequency requests into pstates
-        l_pstate[k]= proc_freq2pstate(g_amec->proc[0].core[k].f_request);
-    }
+        for (core_idx=0; core_idx<NUM_CORES_PER_QUAD; core_idx++)  // scan quad cores
+        {
+            core_num = (quad*NUM_CORES_PER_QUAD) + core_idx;  // loop through all cores
 
-    // If this is an OPAL system, send PGPE an IPC to set clipping bounds
-    // otherwise, set send PGPE an IPC to set pstates
+            if(pmax <  proc_freq2pstate(g_amec->proc[0].core[core_num].f_request))
+            {
+                pmax = proc_freq2pstate(g_amec->proc[0].core[core_num].f_request);
+            }
+        }
 
-    if(G_sysConfigData.system_type.kvm)
-    {
-        // Send IPC with G_proc_pmin and l_pstate to set pmin and pmax clips
+        // set quad clip bounds/pstates based on system type
+        if(G_sysConfigData.system_type.kvm)
+        {
+            // update quad bounds on OPAL systems
+            G_core_data_control_occwrite_ptr->clips.ps_val_clip_min[quad] =
+                G_opal_static_table.config.pmin;
+            G_core_data_control_occwrite_ptr->clips.ps_val_clip_max[quad] = pmax;
+
+            PROC_DBG("Setting Quad %d's min-max clip bounds to %d-%d\n",
+                     quad, G_opal_static_table.config.pmin, pmax);
+        }
+        else
+        {
+            // update quad pstate request on non-OPAL systems
+            G_core_data_control_occwrite_ptr->pstates.pmcr[quad] =
+                ((uint64_t) pmax << 48) +1;             // Version 1 (Power9 format)
+
+            PROC_DBG("Setting Quad %d's Pstate to %d\n",quad, pmax);
+        }
+
+        pmax = 0; // initialize for next loop iteration
     }
-    else
-    {
-        // send an IPC with l_pstate to set pstates for all Cores
-    }
-#endif
 }
 
 

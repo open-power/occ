@@ -30,12 +30,13 @@
 
 enum rtlsModuleId
 {
-    RTLS_OCB_INIT_MOD           = RTLS_COMP_ID | 0x00,
-    RTLS_DO_TICK_MOD            = RTLS_COMP_ID | 0x01,
-    RTLS_START_TASK_MOD         = RTLS_COMP_ID | 0x02,
-    RTLS_STOP_TASK_MOD          = RTLS_COMP_ID | 0x03,
-    RTLS_TASK_RUNABLE_MOD       = RTLS_COMP_ID | 0x04,
-    RTLS_SET_TASK_DATA_MOD      = RTLS_COMP_ID | 0x05,
+    RTLS_OCB_INIT_MOD                 = RTLS_COMP_ID | 0x00,
+    RTLS_DO_TICK_MOD                  = RTLS_COMP_ID | 0x01,
+    RTLS_START_TASK_MOD               = RTLS_COMP_ID | 0x02,
+    RTLS_STOP_TASK_MOD                = RTLS_COMP_ID | 0x03,
+    RTLS_TASK_RUNABLE_MOD             = RTLS_COMP_ID | 0x04,
+    RTLS_SET_TASK_DATA_MOD            = RTLS_COMP_ID | 0x05,
+    RTLS_TASK_CORE_DATA_CONTROL_MOD   = RTLS_COMP_ID | 0x06,
 };
 
 #endif /* #ifndef _RTLS_SERVICE_CODES_H_ */

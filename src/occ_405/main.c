@@ -59,6 +59,7 @@
 #include "occhw_shared_data.h"
 #include <pgpe_shared.h>
 #include <gpe_register_addresses.h>
+#include <p9_pstates_occ.h>
 
 extern uint32_t __ssx_boot; // Function address is 32 bits
 extern uint32_t G_occ_phantom_critical_count;
@@ -78,8 +79,13 @@ extern uint32_t G_pgpe_beacon_address;
 IMAGE_HEADER (G_mainAppImageHdr,__ssx_boot,MAIN_APP_ID,ID_NUM_INVALID);
 
 // PGPE Image Header Parameters
-uint32_t G_pgpe_sram_address;
-uint32_t G_pgpe_sram_sz;
+uint32_t G_pgpe_shared_sram_address = 0;
+uint32_t G_pgpe_shared_sram_sz = 0;
+
+ppmr_header_t G_ppmr_header;       // PPMR Header layout format
+OCCPstateParmBlock G_oppb;         // OCC Pstate Parameters Block Structure
+extern uint16_t G_proc_fmax_mhz;   // max(turbo,uturbo) frequencies
+
 
 //Set main thread timer for one second
 #define MAIN_THRD_TIMER_SLICE ((SsxInterval) SSX_SECONDS(1))
@@ -119,6 +125,7 @@ extern uint8_t g_trac_err_buffer[];
 
 void pmc_hw_error_isr(void *private, SsxIrqId irq, int priority);
 void create_tlb_entry(uint32_t address, uint32_t size);
+void read_oppb_params(const OCCPstateParmBlock* occ_ppb);
 
 //Macro creates a 'bridge' handler that converts the initial fast-mode to full
 //mode interrupt handler
@@ -404,8 +411,9 @@ void create_tlb_entry(uint32_t address, uint32_t size)
         tlb_entry_size = PAGE_ALIGNED_SIZE(size);
     }
 
+
 #if PPC405_MMU_SUPPORT
-    // define DTLB for PGPE image header
+    // define DTLB for page aligned address and size
     l_rc = ppc405_mmu_map(
         tlb_entry_address,
         tlb_entry_address,
@@ -465,33 +473,308 @@ void create_tlb_entry(uint32_t address, uint32_t size)
 
 void read_pgpe_header(void)
 {
+    uint64_t   magic_number;
+    errlHndl_t l_err;
 
     // define DTLB for the PGPE image header
     create_tlb_entry(PGPE_HEADER_ADDR, PGPE_HEADER_SZ);
 
-    // Read PGPE Beacon address from PGPE image header
-    G_pgpe_beacon_address = in32(PGPE_BEACON_ADDR_PTR);
-
-    MAIN_TRAC_IMP("Read PGPE Beacon Address[0x%08x]",
-                  G_pgpe_beacon_address);
-
-    // Read OCC/PGPE Shared SRAM address and size
-    G_pgpe_sram_address   = in32(PGPE_SHARED_SRAM_ADDR_PTR);
-    G_pgpe_sram_sz        = in32(PGPE_SHARED_SRAM_SZ_PTR);
-
-    MAIN_TRAC_IMP("Read PGPE Shared SRAM Start Address[0x%08x], Size[0x%08x]",
-                  G_pgpe_sram_address, G_pgpe_sram_sz);
-
-    // PGPE Beacon is not implemented in simics yet
-    // the G_pgpe_sram_address and G_pgpe_sram_sz pointers don't
-    // have the proper values yet.
-    // @TODO: remove this condition when PGPE code is integrated. RTC: 163934
-    if(!G_simics_environment)
+    // verify the validity of the magic number
+    magic_number = in64(PGPE_HEADER_ADDR);
+    if(PGPE_MAGIC_NUMBER != magic_number)
     {
-        // define DTLB for OCC/PGPE shared SRAM, which enables access
-        // to OCC-PGPE Shared SRAM space, including pgpe_beacon
-        create_tlb_entry(G_pgpe_sram_address, G_pgpe_sram_sz);
+        // The Magic number is invalid .. Invalid or corrupt PGPE image header
+        MAIN_TRAC_ERR("Invalid PGPGE Magic number. Address[0x%08X], Magic Number[0x%08X%08X]",
+                      PGPE_HEADER_ADDR, (uint32_t)(magic_number>>32), (uint32_t)magic_number);
+        /* @
+         * @errortype
+         * @moduleid    READ_PGPE_HEADER
+         * @reasoncode  INVALID_MAGIC_NUMBER
+         * @userdata1   Low order 32 bits of retrieved PGPE magic number
+         * @userdata2   Hight order 32 bits of retrieved PGPE magic number
+         * @userdata4   OCC_NO_EXTENDED_RC
+         * @devdesc     SSX semaphore related failure
+         */
+
+        l_err = createErrl(READ_PGPE_HEADER,               //modId
+                                      INVALID_MAGIC_NUMBER,           //reasoncode
+                                      OCC_NO_EXTENDED_RC,             //Extended reason code
+                                      ERRL_SEV_UNRECOVERABLE,         //Severity
+                                      NULL,                           //Trace Buf
+                                      DEFAULT_TRACE_SIZE,             //Trace Size
+                                      (uint32_t)magic_number,         //userdata1
+                                      (uint32_t)(magic_number>>32));  //userdata2
+
+        REQUEST_RESET(l_err);
+
     }
+
+    if(l_err == NULL)
+    {
+        // Read PGPE Beacon address from PGPE image header
+        G_pgpe_beacon_address = in32(PGPE_BEACON_ADDR_PTR);
+
+        MAIN_TRAC_IMP("Read PGPE Beacon Address[0x%08x]",
+                      G_pgpe_beacon_address);
+
+        // Read OCC/PGPE Shared SRAM address and size
+        G_pgpe_shared_sram_address = in32(PGPE_SHARED_SRAM_ADDR_PTR);
+        G_pgpe_shared_sram_sz      = in32(PGPE_SHARED_SRAM_SZ_PTR);
+
+        MAIN_TRAC_IMP("Read PGPE Shared SRAM Start Address[0x%08x], Size[0x%08x]",
+                      G_pgpe_shared_sram_address, G_pgpe_shared_sram_sz);
+
+        // PGPE Beacon is not implemented in simics yet
+        // the G_pgpe_shared_sram_address and G_pgpe_shared_sram_sz pointers don't
+        // have the proper values yet.
+        // @TODO: remove this condition when PGPE code is integrated. RTC: 163934
+        if(!G_simics_environment)
+        {
+            // define DTLB for OCC/PGPE shared SRAM, which enables access
+            // to OCC-PGPE Shared SRAM space, including pgpe_beacon
+            create_tlb_entry(G_pgpe_shared_sram_address, G_pgpe_shared_sram_sz);
+        }
+    }
+        return;
+}
+
+
+/*
+ * Function Specification
+ *
+ * Name: read_ppmr_header
+ *
+ * Description: read PPMR image header, and extract the
+ *              OPPB HOMER offset and sturcture size..
+ *
+ * End Function Specification
+ */
+void read_ppmr_header(void)
+{
+    int l_ssxrc = SSX_OK;
+    uint32_t l_reasonCode = 0;
+    uint32_t l_extReasonCode = 0;
+
+    // error log parameters, if any
+    uint32_t userdata1 = 0;
+    uint32_t userdata2 = 0;
+
+    // create a DTLB entry for the PPMR image header
+    create_tlb_entry(PPMR_ADDRESS_HOMER, sizeof(ppmr_header_t));
+
+    do{
+        // use block copy engine to read the PPMR header
+        BceRequest pba_copy;
+
+        // Set up a copy request
+        l_ssxrc = bce_request_create(&pba_copy,                           // block copy object
+                                     &G_pba_bcde_queue,                   // mainstore to sram copy engine
+                                     PPMR_ADDRESS_HOMER,                  // mainstore address
+                                     (uint32_t) &G_ppmr_header,           // sram starting address
+                                     (size_t) sizeof(G_ppmr_header),      // size of copy
+                                     SSX_WAIT_FOREVER,                    // no timeout
+                                     NULL,                                // no call back
+                                     NULL,                                // no call back arguments
+                                     ASYNC_REQUEST_BLOCKING);             // blocking request
+
+        if(l_ssxrc != SSX_OK)
+        {
+            MAIN_TRAC_ERR("read_ppmr_header: BCDE request create failure rc=[%08X]", -l_ssxrc);
+            /*
+             * @errortype
+             * @moduleid    READ_PPMR_HEADER
+             * @reasoncode  SSX_GENERIC_FAILURE
+             * @userdata1   RC for BCE block-copy engine
+             * @userdata2   Internal function checkpoint
+             * @userdata4   ERC_BCE_REQUEST_CREATE_FAILURE
+             * @devdesc     Failed to create BCDE request
+             */
+            l_reasonCode = SSX_GENERIC_FAILURE;
+            l_extReasonCode = ERC_BCE_REQUEST_CREATE_FAILURE;
+
+            userdata1 = (uint32_t)(-l_ssxrc);
+            break;
+        }
+
+        // Do actual copying
+        l_ssxrc = bce_request_schedule(&pba_copy);
+
+        if(l_ssxrc != SSX_OK)
+        {
+            MAIN_TRAC_ERR("read_ppmr_header: BCE request schedule failure rc=[%08X]", -l_ssxrc);
+            /*
+             * @errortype
+             * @moduleid    READ_PPMR_HEADER
+             * @reasoncode  SSX_GENERIC_FAILURE
+             * @userdata1   RC for BCE block-copy engine
+             * @userdata4   ERC_BCE_REQUEST_SCHEDULE_FAILURE
+             * @devdesc     Failed to read PPMR data by using BCDE
+             */
+            l_reasonCode = SSX_GENERIC_FAILURE;
+            l_extReasonCode = ERC_BCE_REQUEST_SCHEDULE_FAILURE;
+
+            userdata1 = (uint32_t)(-l_ssxrc);
+            break;
+        }
+
+        if(G_ppmr_header.oppb_length != sizeof(OCCPstateParmBlock))
+        {
+            MAIN_TRAC_ERR("read_ppmr_header: OCCPstateParmBlock size mismatch:"
+                          "PPMR header sz[0x%08x] PPMR struct sz[0x%08x]",
+                          G_ppmr_header.oppb_length, sizeof(OCCPstateParmBlock));
+
+            /*
+             * @errortype
+             * @moduleid    READ_PPMR_HEADER
+             * @reasoncode  PGPE_FAILURE
+             * @userdata1   G_ppmr_header.oppb_length
+             * @userdata2   sizeof(OCCPstateParmBlock)
+             * @userdata4   ERC_PGPE_PPMR_OPPB_SIZE_MISMATCH
+             * @devdesc     PPMR's OPPB size mismatches data structure's
+             */
+            l_reasonCode = SSX_GENERIC_FAILURE;
+            l_extReasonCode = ERC_BCE_REQUEST_SCHEDULE_FAILURE;
+
+            userdata1 = G_ppmr_header.oppb_length;
+            userdata2 = sizeof(OCCPstateParmBlock);
+            break;
+        }
+
+
+
+    } while (0);
+
+    if ( l_reasonCode )
+    {
+        errlHndl_t l_errl = createErrl(READ_PPMR_HEADER,         //modId
+                                       l_reasonCode,             //reasoncode
+                                       l_extReasonCode,          //Extended reason code
+                                       ERRL_SEV_UNRECOVERABLE,   //Severity
+                                       NULL,                     //Trace Buf
+                                       0,                        //Trace Size
+                                       userdata1,                //userdata1
+                                       userdata2);               //userdata2
+
+        // Callout firmware
+        addCalloutToErrl(l_errl,
+                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                         ERRL_COMPONENT_ID_FIRMWARE,
+                         ERRL_CALLOUT_PRIORITY_HIGH);
+
+        REQUEST_RESET(l_errl);
+
+        return;
+    }
+
+    // Read OCC pstates parameter block
+    read_oppb_params((OCCPstateParmBlock*)G_ppmr_header.oppb_offset);
+}
+
+/*
+ * Function Specification
+ *
+ * Name: read_oppb_params
+ *
+ * Description: Read the OCC Pstates Parameter Block,
+ *              and initializa Pstates Global Variables.
+ *
+ * End Function Specification
+ */
+void read_oppb_params(const OCCPstateParmBlock* oppb_offset)
+{
+    int l_ssxrc = SSX_OK;
+    uint32_t l_reasonCode = 0;
+    uint32_t l_extReasonCode = 0;
+
+    create_tlb_entry( ((uint32_t)oppb_offset + (uint32_t)PPMR_ADDRESS_HOMER),
+                      sizeof(OCCPstateParmBlock));
+
+    do{
+        // use block copy engine to read the PPMR header
+        BceRequest pba_copy;
+
+        // Set up a copy request
+        l_ssxrc = bce_request_create(&pba_copy,                           // block copy object
+                                     &G_pba_bcde_queue,                   // mainstore to sram copy engine
+                                     (uint32_t)PPMR_ADDRESS_HOMER +
+                                     (uint32_t)oppb_offset,               // mainstore address
+                                     (uint32_t) &G_oppb,                  // sram starting address
+                                     (size_t) sizeof(OCCPstateParmBlock), // size of copy
+                                     SSX_WAIT_FOREVER,                    // no timeout
+                                     NULL,                                // no call back
+                                     NULL,                                // no call back arguments
+                                     ASYNC_REQUEST_BLOCKING);             // blocking request
+
+        if(l_ssxrc != SSX_OK)
+        {
+            CMDH_TRAC_ERR("read_oppb_params: BCDE request create failure rc=[%08X]", -l_ssxrc);
+            /*
+             * @errortype
+             * @moduleid    READ_OPPB_PARAMS
+             * @reasoncode  SSX_GENERIC_FAILURE
+             * @userdata1   RC for BCE block-copy engine
+             * @userdata2   Internal function checkpoint
+             * @userdata4   ERC_BCE_REQUEST_CREATE_FAILURE
+             * @devdesc     Failed to create BCDE request
+             */
+            l_reasonCode = SSX_GENERIC_FAILURE;
+            l_extReasonCode = ERC_BCE_REQUEST_CREATE_FAILURE;
+            break;
+        }
+
+        // Do actual copying
+        l_ssxrc = bce_request_schedule(&pba_copy);
+
+        if(l_ssxrc != SSX_OK)
+        {
+            CMDH_TRAC_ERR("read_oppb_params: BCE request schedule failure rc=[%08X]", -l_ssxrc);
+            /*
+             * @errortype
+             * @moduleid    READ_OPPB_PARAMS
+             * @reasoncode  SSX_GENERIC_FAILURE
+             * @userdata1   RC for BCE block-copy engine
+             * @userdata4   ERC_BCE_REQUEST_SCHEDULE_FAILURE
+             * @devdesc     Failed to read PPMR data by using BCDE
+             */
+            l_reasonCode = SSX_GENERIC_FAILURE;
+            l_extReasonCode = ERC_BCE_REQUEST_SCHEDULE_FAILURE;
+            break;
+        }
+    } while (0);
+
+    if ( l_ssxrc != SSX_OK )
+    {
+        errlHndl_t l_errl = createErrl(READ_OPPB_PARAMS,         //modId
+                                       l_reasonCode,             //reasoncode
+                                       l_extReasonCode,          //Extended reason code
+                                       ERRL_SEV_UNRECOVERABLE,   //Severity
+                                       NULL,                     //Trace Buf
+                                       0,                        //Trace Size
+                                       -l_ssxrc,                 //userdata1
+                                       0);                       //userdata2
+
+        // Callout firmware
+        addCalloutToErrl(l_errl,
+                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                         ERRL_COMPONENT_ID_FIRMWARE,
+                         ERRL_CALLOUT_PRIORITY_HIGH);
+
+        REQUEST_RESET(l_errl);
+
+        return;
+    }
+
+    // Copy over max frequency into G_proc_fmax_mhz
+    G_proc_fmax_mhz   = G_oppb.frequency_max_khz / 1000;
+
+
+    // Used by amec for pcap calculation could use G_oppb.frequency_step_khz
+    // in PCAP calculationsinstead, but using a separate varaible speeds
+    // up PCAP relatedcalculations significantly, by eliminating slow
+    // division operations.
+    G_mhz_per_pstate = G_oppb.frequency_step_khz/1000;
+
+    TRAC_INFO("read_oppb_params: OCC Pstates Parameter Block read successfully");
 }
 
 /*
@@ -971,10 +1254,43 @@ void Main_thread_routine(void *private)
     slave_occ_init();
     CHECKPOINT(SLAVE_OCC_INITIALIZED);
 
+    // @TODO: remove this precompile directive check when PGPE code is integrated.
+    ///       RTC: 163934
+#ifndef PGPE_SUPPORT
+    extern pstateStatus G_proc_pstate_status;
+    // TEMP Hack to enable Active State, until PGPE is ready
+    G_proc_pstate_status = PSTATES_ENABLED;
+
+
+    // Temp hack to Set up Key Globals for use by proc_freq2pstate functions
+    G_oppb.frequency_max_khz  = 4322500;
+    G_oppb.frequency_min_khz  = 2028250;
+    G_oppb.frequency_step_khz = 16667;
+    G_oppb.pstate_min         = PMAX +
+        ((G_oppb.frequency_max_khz - G_oppb.frequency_min_khz)/G_oppb.frequency_step_khz);
+
+    G_proc_fmax_mhz   = G_oppb.frequency_max_khz / 1000;
+
+
+    // Set globals used by amec for pcap calculation
+    // could have used G_oppb.frequency_step_khz in PCAP calculations
+    // instead, but using a separate varaible speeds up PCAP related
+    // calculations significantly, by eliminating division operations.
+    G_mhz_per_pstate = G_oppb.frequency_step_khz/1000;
+
+    TRAC_INFO("Main_thread_routine: Pstate Key globals initialized to default values");
+
+#else
     // Read PGPE header file, extract OCC/PGPE Shared SRAM address and size,
     // Read other global parameters, e.g. G_pgpe_beacon_address, etc.
     read_pgpe_header();
     CHECKPOINT(PGPE_IMAGE_HEADER_READ);
+
+    // Read PPMR header, extract OCC pstates parameter block address and size,
+    // Read OCCC pstate parameter block.
+    read_ppmr_header();
+    CHECKPOINT(PPMR_IMAGE_HEADER_READ);
+#endif
 
     // Initialize watchdog timers. This needs to be right before
     // start rtl to make sure timer doesn't timeout. This timer is being

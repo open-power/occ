@@ -168,6 +168,8 @@ typedef struct
     // Minimum Pstate;  Maximum is always 0.
     uint32_t pstate_min;    // Comes from PowerSave #V point after biases
 
+    // TODO: Temporary hack untill interface is finalized.
+    uint8_t pad[88];               // total size = 0xE00, devisible by 128
 } OCCPstateParmBlock;
 
 

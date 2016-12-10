@@ -24,6 +24,7 @@
 /* IBM_PROLOG_END_TAG                                                     */
 
 #include "proc_data.h"
+#include "proc_data_control.h"
 #include "occhw_async.h"
 #include "threadSch.h"
 #include "pmc_register_addresses.h"
@@ -35,231 +36,147 @@
 #include "apss.h"
 #include "state.h"
 #include "occ_sys_config.h"
+#include "p9_pstates_common.h"
+#include "pgpe_interface.h"
+#include "rtls_service_codes.h"
 
-// Pore flex request for GPE job. The initialization will be done one time
-// during pore flex create.
-PoreFlex G_core_data_control_req;
+// The the GPE parameter fields for PGPE IPC calls.
+extern GPE_BUFFER(ipcmsg_clip_update_t*  G_clip_update_parms_ptr);
+extern GPE_BUFFER(ipcmsg_set_pmcr_t*     G_pmcr_set_parms_ptr);
+
+extern GpeRequest G_clip_update_req;
+extern GpeRequest G_pmcr_set_req;
+
+// create gpe request for GPE job. The initialization will be done one time
+// during gpe request create.
+GpeRequest G_core_data_control_req;
 
 // Global double buffering for core data control
-GPE_BUFFER(PcbsPstateRegs G_core_data_control_a[MAX_NUM_HW_CORES]) = {{{0}}};
-GPE_BUFFER(PcbsPstateRegs G_core_data_control_b[MAX_NUM_HW_CORES]) = {{{0}}};
-
-// Pointer to the core data control that will be used by GPE engine.
-GPE_BUFFER(PcbsPstateRegs * G_core_data_control_gpewrite_ptr) = { &G_core_data_control_a[0] };
+GPE_BUFFER(PstatesClips G_quads_data_control[2]) = {{{{0}}}};
 
 // Pointer to the core data control that will be written to by the OCC FW.
-GPE_BUFFER(PcbsPstateRegs * G_core_data_control_occwrite_ptr) = { &G_core_data_control_b[0] };
+GPE_BUFFER(PstatesClips* G_core_data_control_occwrite_ptr) = { &G_quads_data_control[0] };
 
-// The Gpe parameter fields are set up each time before the GPE starts.
-GPE_BUFFER(GpeSetPstatesParms G_core_data_control_parms);
+// Pointer to the core data control that will be used by GPE engine.
+GPE_BUFFER(PstatesClips* G_core_data_control_gpewrite_ptr) = { &G_quads_data_control[1] };
 
-// Function Specification
-//
-// Name: proc_set_pstate
-//
-// Description: Function to demonstrate setting Pstates to all cores
-//              Should only be run from RTL
-//
-// End Function Specification
-void proc_set_pstate_all(Pstate i_pstate)
-{
-  uint8_t l_chiplet = 0;
-
-  for(; l_chiplet<MAX_NUM_HW_CORES; l_chiplet++)
-  {
-     set_chiplet_pstate(G_core_data_control_occwrite_ptr,
-                        l_chiplet,
-                        i_pstate,
-                        i_pstate);
-  }
-
-  PROC_DBG("Setting Pstates to %d\n",i_pstate);
-}
-
-
-// Function Specification
-//
-// Name: proc_set_core_pstate
-//
-// Description: Function to demonstrate setting Pstates to all cores
-//              Should only be run from RTL
-//
-// End Function Specification
-void proc_set_core_pstate(Pstate i_pstate, uint8_t i_core)
-{
-  set_chiplet_pstate(G_core_data_control_occwrite_ptr,
-                        CORE_OCC2HW(i_core),
-                        i_pstate,
-                        i_pstate);
-}
-
-// Function Specification
-//
-// Name: proc_set_core_bounds
-//
-// Description: Function to set core pmin/pmax
-//              Should only be run from RTL
-//
-// End Function Specification
-void proc_set_core_bounds(Pstate i_pmin, Pstate i_pmax, uint8_t i_core)
-{
-    Pstate l_pmax;
-    uint8_t l_hw_core = CORE_OCC2HW(i_core);
-
-    //don't allow pmax to be set lower than pmin
-    if(i_pmax < i_pmin)
-    {
-        l_pmax = i_pmin;
-    }
-    else
-    {
-        l_pmax = i_pmax;
-    }
-
-    set_chiplet_pmax(G_core_data_control_occwrite_ptr,
-                     l_hw_core,
-                     l_pmax);
-    set_chiplet_pmin(G_core_data_control_occwrite_ptr,
-                     l_hw_core,
-                     i_pmin);
-}
-
-
-// Function Specification
-//
-// Name: proc_core_data_control_init
-//
-// Description: Initializations needed for core data control task
-//
-// End Function Specification
-void proc_core_data_control_init( void )
-{
-    errlHndl_t l_err = NULL;   //Error handler
-    tracDesc_t l_trace = NULL; //Temporary trace descriptor
-    int         rc = 0; //Return code
-
-    do
-    {
-        //FIXME: Need to change this to use PGPE queue
-        //Initializes PoreFlex object for pstate control
-        rc = pore_flex_create( &G_core_data_control_req,  //gpe_req for the task
-                &G_pore_gpe0_queue,                       //queue
-                gpe_set_pstates,                          //entry point
-                (uint32_t) &G_core_data_control_parms,    //parm for the task
-                SSX_WAIT_FOREVER,                         //no timeout
-                NULL,                                     //callback
-                NULL,                                     //callback argument
-                0 );                                      //options
-        if( rc )
-        {
-            //If fail to create pore flex object then there is a problem.
-            TRAC_ERR("Fail to create core control poreFlex object[0x%x]", rc );
-
-            /*
-             * @errortype
-             * @moduleid    PROC_CORE_INIT_MOD
-             * @reasoncode  SSX_GENERIC_FAILURE
-             * @userdata1   pore_flex_create return code
-             * @userdata4   ERC_PROC_CONTROL_INIT_FAILURE
-             * @devdesc     Failure to create poreflex object
-             */
-            l_err = createErrl(
-                    PROC_CORE_INIT_MOD,                     //modId
-                    SSX_GENERIC_FAILURE,                    //reasoncode
-                    ERC_PROC_CONTROL_INIT_FAILURE,          //Extended reason code
-                    ERRL_SEV_PREDICTIVE,                    //Severity
-                    l_trace,    //TODO: create l_trace      //Trace Buf
-                    DEFAULT_TRACE_SIZE,                     //Trace Size
-                    rc,                                     //userdata1
-                    0                                       //userdata2
-                    );
-
-            // commit error log
-            REQUEST_RESET(l_err); //$gm006
-            break;
-        }
-
-    } while(0);
-}
 
 // Function Specification
 //
 // Name: task_core_data_control
 //
-// Description: Control core actuation for all configured cores on every tick.
+// Description: Control quad actuation for all configured cores on every tick.
 //
 // End Function Specification
 void task_core_data_control( task_t * i_task )
 {
-//TEMP/TODO: proc_core_data_control_init needs to be called from proc_core_init()
-//           when this task is enabled for it to function properly.
-    errlHndl_t       l_err   = NULL;     //Error handler
-    tracDesc_t       l_trace = NULL;     //Temporary trace descriptor
-    int              rc      = 0;        //Return code
-    PcbsPstateRegs * l_temp  = NULL;
+    errlHndl_t      err   = NULL;       //Error handler
+    PstatesClips* l_temp  = NULL;
 
-    do
+/////////////////////////////////////////////////////////////////
+
+    // perform Pstate/clip control if previous IPC call completed successfully
+    // if not idle, ignore cycle
+    // if an error was returned, log an error, and request reset
+    if(G_sysConfigData.system_type.kvm) // OPAL system
     {
-
-        //Check to see if the previous GPE request still running
-        if( !(async_request_is_idle(&G_core_data_control_req.request)) )
+        // confirm that the clip update IPC from last cycle
+        // has successfully completed on PGPE (with no errors)
+        if( async_request_is_idle(&G_clip_update_req.request) &&  //clip_update/widen_clip_ranges completed
+            (G_clip_update_parms_ptr->msg_cb.rc == PGPE_RC_SUCCESS) ) // with no errors
         {
-            break;
-        }
 
-        //Check to see if the previosuly GPE request has been succeeded
-        if( async_request_completed(&G_core_data_control_req.request) )
-        {
-            //If the previous GPE request succeeded then swap the
-            //gpewrite ptr with the occwrite ptr.
+            //The previous OPAL PGPE request succeeded:
+
+            //1) swap gpewrite ptr with the occwrite ptr (double buffering).
             l_temp = G_core_data_control_occwrite_ptr;
+            G_core_data_control_occwrite_ptr = G_core_data_control_gpewrite_ptr;
             G_core_data_control_gpewrite_ptr = l_temp;
-        }
 
-        //Setup the core data control parms
-        G_core_data_control_parms.config = (uint64_t) (((uint64_t) G_present_hw_cores) << 32);
-        if(G_sysConfigData.system_type.kvm)
-        {
-            //Set the chiplet bounds (pmax/pmin) only on opal
-            G_core_data_control_parms.select = GPE_SET_PSTATES_PMBR;
-        }
-        else
-        {
-            //Set the chiplet pstate request on non-opal systems
-            G_core_data_control_parms.select = GPE_SET_PSTATES_PMCR;
-        }
+            //2) Set clip values from gpewrite's quad clips data-structure
+            G_clip_update_parms_ptr = &G_core_data_control_gpewrite_ptr->clips;
 
-        G_core_data_control_parms.regs = (uint32_t) G_core_data_control_gpewrite_ptr;
-
-        rc = pore_flex_schedule( &G_core_data_control_req );
-        if( rc != 0 )
+            //call PGPE IPC function to update the clips
+            pgpe_clip_update();
+        }
+        else if(G_clip_update_parms_ptr->msg_cb.rc != PGPE_RC_SUCCESS)
         {
-            TRAC_ERR("Failed PoreFlex schedule core data control [%x] \n", rc);
+            // an earlier clip update IPC call has not completed, trace and log an error
+            TRAC_ERR("task_core_data_control: clip update IPC task returned an error, %d",
+                     G_clip_update_parms_ptr->msg_cb.rc);
 
             /*
              * @errortype
-             * @moduleid    PROC_TASK_CORE_DATA_MOD
-             * @reasoncode  SSX_GENERIC_FAILURE
-             * @userdata1   pore_flex_schedule return code
-             * @userdata4   ERC_PROC_CONTROL_TASK_FAILURE
-             * @devdesc     Failure to schedule poreflex object
+             * @moduleid    RTLS_TASK_CORE_DATA_CONTROL_MOD
+             * @reasoncode  PGPE_FAILURE
+             * @userdata1   rc
+             * @userdata2   idle?
+             * @userdata4   ERC_PGPE_UNSUCCESSFULL
+             * @devdesc     pgpe clip update returned an error
              */
-            l_err = createErrl(
-                    PROC_TASK_CORE_DATA_MOD,                //modId
-                    SSX_GENERIC_FAILURE,                    //reasoncode
-                    ERC_PROC_CONTROL_TASK_FAILURE,          //Extended reason code
-                    ERRL_SEV_PREDICTIVE,                    //Severity
-                    l_trace,    //TODO: create l_trace      //Trace Buf
-                    DEFAULT_TRACE_SIZE,                     //Trace Size
-                    rc,                                     //userdata1
-                    0                                       //userdata2
-                    );
-
-            // commit error log
-            REQUEST_RESET(l_err);
-            break;
+            err = createErrl(
+                RTLS_TASK_CORE_DATA_CONTROL_MOD,                  //ModId
+                PGPE_FAILURE,                                     //Reasoncode
+                ERC_PGPE_UNSUCCESSFULL,                           //Extended reason code
+                ERRL_SEV_PREDICTIVE,                              //Severity
+                NULL,                                             //Trace Buf
+                DEFAULT_TRACE_SIZE,                               //Trace Size
+                G_clip_update_parms_ptr->msg_cb.rc,                    //Userdata1
+                async_request_is_idle(&G_clip_update_req.request) //Userdata2
+                );
         }
-    } while(0);
+    }
+    else
+    {
+        // NON OPAL System, OCC owns PMCR:
+        if( async_request_is_idle(&G_pmcr_set_req.request) &&     // PMCR IPC from last TICK completed
+            (G_pmcr_set_parms_ptr->msg_cb.rc == PGPE_RC_SUCCESS) )     // with no errors
+        {
+            //The previous Non-OPAL PGPE request succeeded:
+
+            //1) swap gpewrite ptr with the occwrite ptr (double buffering).
+            l_temp = G_core_data_control_occwrite_ptr;
+            G_core_data_control_occwrite_ptr = G_core_data_control_gpewrite_ptr;
+            G_core_data_control_gpewrite_ptr = l_temp;
+
+            //2) Set Pstate values from gpewrite's quad pstates data-structure
+            G_pmcr_set_parms_ptr = &G_core_data_control_gpewrite_ptr->pstates;
+
+            //call PGPE IPC function to update Pstates
+            pgpe_pmcr_set();
+        }
+        else if(G_pmcr_set_parms_ptr->msg_cb.rc != PGPE_RC_SUCCESS)
+        {
+            // an earlier clip update IPC call has not completed, trace and log an error
+            TRAC_ERR("task_core_data_control: pstate update IPC task returned an error, %d",
+                     G_pmcr_set_parms_ptr->msg_cb.rc);
+
+            /*
+             * @errortype
+             * @moduleid    RTLS_TASK_CORE_DATA_CONTROL_MOD
+             * @reasoncode  PGPE_FAILURE
+             * @userdata1   rc
+             * @userdata4   ERC_PGPE_UNSUCCESSFULL
+             * @devdesc     pgpe PMCR set returned an error
+             */
+            err = createErrl(
+                RTLS_TASK_CORE_DATA_CONTROL_MOD, //ModId
+                PGPE_FAILURE,                    //Reasoncode
+                ERC_PGPE_UNSUCCESSFULL,          //Extended reason code
+                ERRL_SEV_PREDICTIVE,             //Severity
+                NULL,                            //Trace Buf
+                DEFAULT_TRACE_SIZE,              //Trace Size
+                G_pmcr_set_parms_ptr->msg_cb.rc,      //Userdata1
+                0                                //Userdata2
+                );
+        }
+    }
+
+    if(err)
+    {
+        // commit error log
+        REQUEST_RESET(err);
+    }
 
     return;
 }

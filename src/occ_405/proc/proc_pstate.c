@@ -40,30 +40,28 @@
 #include <common.h>
 #include <amec_oversub.h>
 #include <amec_sys.h>
+#include <pstate_pgpe_occ_api.h>
+#include <p9_pstates_occ.h>
 
 //OPAL processor and memory throttle reason coming from the frequency voting boxes.
 extern opal_proc_voting_reason_t G_amec_opal_proc_throt_reason;
 extern opal_mem_voting_reason_t  G_amec_opal_mem_throt_reason;
 
-// Holds Fmax for ease of proc_freq2pstate calculation
-uint32_t G_proc_fmax = 0;
+//Global OCC Pstate Parameters Block Structure
+extern OCCPstateParmBlock G_oppb;
 
-// Holds Fmin for ease of proc_freq2pstate calculation
-uint32_t G_proc_fmin = 0;
+//Holds Fmax for ease of proc_freq2pstate calculation = max(fturbo,futurbo)
+uint16_t G_proc_fmax_mhz;
 
-// Holds frequency steps between consequtive Pstates
-uint32_t G_khz_per_pstate = 0;
+// A global variable indicating whether the pstates have been enabled.
+// initialized to PSTATES_DISABLED, turns to PSTATES_ENABLED only after
+// the PGPE IPC that enable pstates completes successfully. While the IPC
+// task is still running, this variable be set to PSTATES_IN_TRANSITION
+pstateStatus G_proc_pstate_status = PSTATES_DISABLED;
 
-// Holds Pmax for ease of proc_freq2pstate calculation
-uint8_t   G_proc_pmax = 0;
 
-// Holds Pmin for ease of proc_freq2pstate calculation
-uint8_t   G_proc_pmin = 0;
-
-// Holds a flag indicating whether the pstates have been enabled.
-// initialized to FALSE, turns TRUE only after the PGPE IPC that
-// enable pstates completes successfully.
-bool G_proc_pstate_enabled = FALSE;
+// A Global parameter indicating the owner of the PMCR.
+PMCR_OWNER G_proc_pmcr_owner = G_sysConfigData.system_type.kvm? PMCR_OWNER_HOST: PMCR_OWNER_HOST;
 
 // OPAL Dynamic data, updated whenever any OCC G_opal_table.dynamic parameter change
 DMA_BUFFER( opal_dynamic_table_t G_opal_dynamic_table ) = {{0}};
@@ -81,7 +79,7 @@ DMA_BUFFER( opal_static_table_t  G_opal_static_table )  = {{0}};
 // End Function Specification
 bool proc_is_hwpstate_enabled(void)
 {
-    return ( G_proc_pstate_enabled ? TRUE : FALSE);
+    return ( G_proc_pstate_status == PSTATES_ENABLED ? TRUE : FALSE);
 }
 
 // Function Specification
@@ -93,20 +91,16 @@ bool proc_is_hwpstate_enabled(void)
 // End Function Specification
 uint32_t proc_pstate2freq(Pstate i_pstate)
 {
-    // If passed in Pstate is lower than Pmin, just use Pmin
-    if(i_pstate < G_proc_pmin)
+    // The higher the pstate number, the lower the frequency:
+    // If passed in Pstate is lower than Pmin (higher pstate value),
+    // just use Pmin.
+    if(i_pstate > G_oppb.pstate_min)
     {
-        i_pstate = G_proc_pmin;
-    }
-
-    // If passed in Pstate is greater than Pmax, just use Pmax
-    else if (i_pstate > G_proc_pmax)
-    {
-        i_pstate = G_proc_pmax;
+        i_pstate = G_oppb.pstate_min;
     }
 
     // Calculate Frequency in kHz based on Pstate
-    return (G_proc_fmin + (G_proc_pmin - i_pstate) * G_khz_per_pstate);
+    return ( G_oppb.frequency_max_khz - (i_pstate * G_oppb.frequency_step_khz));
 }
 
 // Function Specification
@@ -135,29 +129,21 @@ Pstate proc_freq2pstate(uint32_t i_freq_mhz)
             l_freq_khz =  G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY] * 1000;
         }
 
-        if(l_freq_khz < G_proc_fmax)
+        if(l_freq_khz < G_proc_fmax_mhz * 1000)
         {
             // First, calculate the delta between passed in freq, and Pmin
-            l_temp_freq = l_freq_khz - G_proc_fmin;
-
-            // Check if the passed in frequency is lower than Minimum Frequency
-            if(l_freq_khz <= G_proc_fmin)
-            {
-                // We need to substract a full step (minus 1) to make sure we
-                // are keeping things safe
-                l_temp_freq -= (G_khz_per_pstate - 1);
-            }
+            l_temp_freq = l_freq_khz - G_oppb.frequency_min_khz;
 
             // Next, calculate how many Pstate steps there are in that delta
-            l_temp_pstate = l_temp_freq / (int32_t) G_khz_per_pstate;
+            l_temp_pstate = l_temp_freq / (int32_t) G_oppb.frequency_step_khz;
 
             // Lastly, calculate Pstate, by adding delta Pstate steps to Pmin
-            l_pstate = G_proc_pmin - l_temp_pstate;
+            l_pstate = G_oppb.pstate_min - l_temp_pstate;
         }
         else
         {
             // Freq is higher than maximum frequency -- return Pmax
-            l_pstate = G_proc_pmax;
+            l_pstate = PMAX + (G_oppb.frequency_max_khz - G_proc_fmax_mhz*1000)/G_oppb.frequency_step_khz;
         }
     }
     while(0);
@@ -183,11 +169,13 @@ void proc_pstate_kvm_setup()
             break;
         }
 
+        TRAC_INFO("proc_pstate_kvm_setup: populate static OPAL data");
+
         // Initialize the opal table in SRAM (sets valid bit)
-        populate_static_opal_data();
+        populate_opal_static_data();
 
         // copy sram image into mainstore HOMER
-        populate_opal_tbl_to_mem();
+        populate_opal_tbl_to_mem(OPAL_STATIC);
         TRAC_IMP("proc_pstate_kvm_setup: RUNNING IN KVM MODE");
 
     }while(0);
@@ -195,12 +183,12 @@ void proc_pstate_kvm_setup()
 
 // Function Specification
 //
-// Name:  populate_dynamic_opal_data
+// Name:  populate_opal_dynamic_data
 //
 // Description: populate the dynamic data entries in the OPAL table
 //
 // End Function Specification
-void populate_dynamic_opal_data()
+void populate_opal_dynamic_data()
 {
     memset(&G_opal_dynamic_table, 0, sizeof(G_opal_dynamic_table));
 
@@ -228,18 +216,33 @@ void populate_dynamic_opal_data()
 
 // Function Specification
 //
-// Name:  populate_static_opal_data
+// Name:  populate_opal_static_data
 //
 // Description: populate the static configuration entries,
 //              the generated pstates table, and maximum pstates
 //              for all possible number of active cores.
 //
 // End Function Specification
-void populate_static_opal_data()
+void populate_opal_static_data()
 {
-    memset(&G_opal_dynamic_table, 0, sizeof(G_opal_dynamic_table));
+    // clear all entries of the OPAL static table
+    memset(&G_opal_static_table, 0, sizeof(G_opal_static_table));
+
+    populate_opal_static_config_data();
+    populate_opal_static_pstates_data();
+}
 
 
+
+// Function Specification
+//
+// Name:  populate_opal_static_config_data
+//
+// Description: populate the static configuration entries,
+//
+// End Function Specification
+void populate_opal_static_config_data(void)
+{
     // Static OPAL configuration data
     G_opal_static_table.config.valid    = 1;
     G_opal_static_table.config.version  = 0x90;
@@ -247,43 +250,90 @@ void populate_static_opal_data()
     G_opal_static_table.config.pmin     = pmin_rail();
     G_opal_static_table.config.pnominal = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL]);
     G_opal_static_table.config.pturbo   = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO]);
-    G_opal_static_table.config.puturbo  = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_UTURBO]);
+    G_opal_static_table.config.puturbo  = proc_freq2pstate(G_proc_fmax_mhz);
+}
 
-    // TODO - RTC:130201 generate pstates table & Max pstates for var #cores
+// Function Specification
+//
+// Name:  populate_opal_static_data
+//
+// Description: populate the generated pstates table, and maximum
+//              pstates for all possible number of active cores.
+//
+// End Function Specification
+void populate_opal_static_pstates_data(void)
+{
+    uint16_t i; // loop variable
+    for (i=0; i <= G_oppb.pstate_min; i++)
+    {
+        G_opal_static_table.pstates[i].pstate   = i;  // pstate number
+        G_opal_static_table.pstates[i].flag     = 0;  // flag is reserved for future use
+        G_opal_static_table.pstates[i].freq_khz = proc_pstate2freq(i); // pstate's frequency
+    }
+
+    for (i=0; i<MAX_NUM_CORES; i++)
+    {
+        // TODO - RTC:130216 fix entries for WOF systems
+        G_opal_static_table.max_pstate[i] = G_opal_static_table.config.pturbo;
+    }
 }
 
 // Function Specification
 //
 // Name:  populate_opal_tbl_to_mem
 //
-// Description:
+// Description: use the upload copy engine to copy OPAL
+//              OPAL table's static/dynamic entries to main memory.
 //
 // End Function Specification
-void populate_opal_tbl_to_mem()
+void populate_opal_tbl_to_mem(opalDataType opal_data_type)
 {
     int l_ssxrc = SSX_OK;
     uint32_t l_reasonCode = 0;
     uint32_t l_extReasonCode = 0;
+
+    uint32_t mainstore_address;
+    uint32_t sram_address;
+    size_t block_size;
+
+    if(opal_data_type == OPAL_STATIC)
+    {
+        mainstore_address = OPAL_STATIC_ADDRESS_HOMER;
+        sram_address      = (uint32_t) &G_opal_static_table;
+        block_size        = (size_t) sizeof(G_opal_static_table);
+    }
+    else if(opal_data_type == OPAL_DYNAMIC)
+    {
+        mainstore_address = OPAL_DYNAMIC_ADDRESS_HOMER;
+        sram_address      =(uint32_t) &G_opal_dynamic_table;
+        block_size        = (size_t) sizeof(G_opal_dynamic_table);
+    }
+    else
+    {
+        TRAC_ERR("populate_opal_tbl_to_mem: Invalid OPAL Table data type");
+        return;
+    }
 
     do
     {
         BceRequest pba_copy;
         // Set up copy request
         l_ssxrc = bce_request_create(
-                       &pba_copy,                             // block copy object
-                       &G_pba_bcue_queue,                     // sram to mainstore copy engine
-                       OPAL_DYNAMIC_ADDRESS_HOMER,            // mainstore address
-                       (uint32_t) &G_opal_dynamic_table,      // sram starting address
-                       (size_t) sizeof(G_opal_dynamic_table), // size of copy
-                       SSX_WAIT_FOREVER,                      // no timeout
-                       NULL,                                  // call back
-                       NULL,                                  // call back arguments
-                       ASYNC_REQUEST_BLOCKING                 // callback mask
+                       &pba_copy,                   // block copy object
+                       &G_pba_bcue_queue,           // sram to mainstore copy engine
+                       mainstore_address,           // mainstore address
+                       sram_address,                // sram starting address
+                       block_size,                  // size of copy
+                       SSX_WAIT_FOREVER,            // no timeout
+                       NULL,                        // call back
+                       NULL,                        // call back arguments
+                       ASYNC_REQUEST_BLOCKING       // callback mask
                        );
 
         if(l_ssxrc != SSX_OK)
         {
-            TRAC_ERR("populate_opal_tbl_to_mem: PBA request create failure rc=[%08X]", -l_ssxrc);
+            TRAC_ERR("populate_opal_tbl_to_mem: PBA request create failure rc=[%08X]",
+                     -l_ssxrc);
             /*
              * @errortype
              * @moduleid    MAIN_STATE_TRANSITION_MID
@@ -302,7 +352,8 @@ void populate_opal_tbl_to_mem()
 
         if(l_ssxrc != SSX_OK)
         {
-            TRAC_ERR("populate_opal_tbl_to_mem: PBA request schedule failure rc=[%08X]", -l_ssxrc);
+            TRAC_ERR("populate_opal_tbl_to_mem: PBA request schedule failure rc=[%08X]",
+                     -l_ssxrc);
             /*
              * @errortype
              * @moduleid    MAIN_STATE_TRANSITION_MID
@@ -319,14 +370,14 @@ void populate_opal_tbl_to_mem()
 
     if ( l_ssxrc != SSX_OK )
     {
-        errlHndl_t l_errl = createErrl(MAIN_STATE_TRANSITION_MID,    //modId
-                                       l_reasonCode,                 //reasoncode
-                                       l_extReasonCode,              //Extended reason code
-                                       ERRL_SEV_UNRECOVERABLE,       //Severity
-                                       NULL,                         //Trace Buf
-                                       0,                            //Trace Size
-                                       -l_ssxrc,                     //userdata1
-                                       0);                           //userdata2
+        errlHndl_t l_errl = createErrl(MAIN_STATE_TRANSITION_MID,  //modId
+                                       l_reasonCode,               //reasoncode
+                                       l_extReasonCode,            //Extended reason code
+                                       ERRL_SEV_UNRECOVERABLE,     //Severity
+                                       NULL,                       //Trace Buf
+                                       0,                          //Trace Size
+                                       -l_ssxrc,                   //userdata1
+                                       0);                         //userdata2
 
         // Callout firmware
         addCalloutToErrl(l_errl,
@@ -338,45 +389,6 @@ void populate_opal_tbl_to_mem()
     }
 }
 
-// Function Specification
-//
-// Name:   proc_pstate_initialize
-//
-// Description:  initialize Global variables required for
-//               the proc_freq2pstate function.
-//
-// End Function Specification
-void proc_pstate_initialize(void)
-{
-    // RTC:130201
-    // @TODO: Schedule a PGPE IPC to enable pstates. This will also tell
-    // PGPE how to set PMCR mode register (OCC control pstates or OPAL).
-
-    // the call back IPC function that gets executed after this IPC finishes
-    // sets the G_proc_pstate_enabled flag to true, so that the OCC is then
-    // able to switch to the active state.
-
-    // @TODO: FIXME - TEMP Hack to enable Active State, until PGPE is ready
-    G_proc_pstate_enabled = 1;
-
-
-    // Set up Key Globals for use by proc_freq2pstate functions
-    // @TODO - FIXME ==> move to initialization code, reading from parameter block
-    G_proc_fmax = 4322500;
-    G_proc_fmin = 2028250;
-    G_khz_per_pstate = 33250;
-    G_proc_pmax = 0;
-    G_proc_pmin = G_proc_pmax + ((G_proc_fmax - G_proc_fmin)/G_khz_per_pstate);
-
-    // Set globals used by amec for pcap calculation
-    // could have used G_khz_per_pstate in PCAP calculations
-    // instead, but using a separate varaible speeds up PCAP related
-    // calculations significantly, by eliminating division operations.
-    G_mhz_per_pstate = G_khz_per_pstate/1000;
-
-    TRAC_INFO("proc_pstate_initialize: Pstate Key globals initialized to default values");
-
-}
 
 // Function Specification
 //
@@ -429,14 +441,14 @@ void check_for_opal_updates(void)
 // End Function Specification
 void update_dynamic_opal_data (void)
 {
+    TRAC_INFO("update_dynamic_opal_data: populate dynamic OPAL data");
+
     // Initialize the opal table in SRAM (sets valid bit)
-    populate_dynamic_opal_data();
+    populate_opal_dynamic_data();
 
     // copy sram image into mainstore HOMER
-    populate_opal_tbl_to_mem();
-    TRAC_IMP("update_dynamic_opal_data: update dynamic OPAL data");
-
-
+    populate_opal_tbl_to_mem(OPAL_DYNAMIC);
+    TRAC_IMP("update_dynamic_opal_data: updated dynamic OPAL data");
 }
 
 
@@ -451,14 +463,15 @@ void update_dynamic_opal_data (void)
 // End Function Specification
 uint8_t pmin_rail(void)
 {
-    uint8_t  configMinPstate = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY]);
+    uint8_t  configMinPstate =
+        proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY]);
 
-    if(configMinPstate < G_proc_pmin)
+    if(configMinPstate < G_oppb.pstate_min)
     {
         return configMinPstate;
     }
     else
     {
-        return G_proc_pmin;
+        return G_oppb.pstate_min;
     }
 }

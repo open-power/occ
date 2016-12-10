@@ -113,11 +113,17 @@ enum occReasonCode
     DIMM_GPE_FAILURE                = 0xD0,
     MEMORY_INIT_FAILED              = 0xD1,
     DIMM_INVALID_STATE              = 0xD2,
-    PGPE_BEACON_TIMEOUT             = 0xD3,
+
+    // PGPE Generic RC
+    PGPE_FAILURE                    = 0xD3,
+
     /// GPE IPC TASK RCs
     GPE_REQUEST_CREATE_FAILURE      = 0xD4,
     GPE_REQUEST_SCHEDULE_FAILURE    = 0xD5,
     GPE_REQUEST_TASK_TIMEOUT        = 0xD6,
+    GPR_REQUEST_RC_FAILURE          = 0xD7,
+
+    INVALID_MAGIC_NUMBER            = 0xDA,
 
     /// Success!
     OCC_SUCCESS_REASON_CODE         = 0xFF,
@@ -227,6 +233,13 @@ enum occExtReasonCode
     ERC_AVSBUS_VDN_VOLTAGE_FAILURE              = 0x00AC,
     ERC_AVSBUS_VDN_CURRENT_FAILURE              = 0x00AD,
 
+    ERC_PGPE_BEACON_TIMEOUT                     = 0x00B0,
+    ERC_PGPE_NOT_IDLE                           = 0x00B1,
+    ERC_PGPE_UNSUCCESSFULL                      = 0x00B2,
+    ERC_PGPE_START_FAILURE                      = 0x00B3,
+    ERC_PGPE_SUSPEND_FAILURE                    = 0x00B4,
+    ERC_PGPE_CLIP_FAILURE                       = 0x00B5,
+    ERC_PGPE_PPMR_OPPB_SIZE_MISMATCH            = 0x00B6,
 };
 
 // Error log Module Ids
@@ -249,6 +262,10 @@ enum occModuleId
     CMDH_DBUG_MID                   =  MAIN_COMP_ID | 0x0f,
     I2C_LOCK_UPDATE                 =  MAIN_COMP_ID | 0x10,
     CREATE_TLB_ENTRY                =  MAIN_COMP_ID | 0x11,
+    READ_PGPE_HEADER                =  MAIN_COMP_ID | 0x12,
+    READ_PPMR_HEADER                =  MAIN_COMP_ID | 0x13,
+    READ_OPPB_PARAMS                =  MAIN_COMP_ID | 0x14,
+    MAIN_SMGR_MID                   =  MAIN_COMP_ID | 0x15,
 };
 
 enum occUserDataType

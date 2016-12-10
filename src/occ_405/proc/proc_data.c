@@ -35,6 +35,7 @@
 #include "apss.h"
 #include "state.h"
 #include "proc_data_control.h"
+#include "pgpe_interface.h"
 #include "cmdh_fsp.h"
 #include "sensor.h"
 
@@ -319,7 +320,8 @@ void proc_core_init( void )
         // cores are present and configured. The Core Configuration Status Register
         // has this information, so we will need to read it over OCI.
         uint64_t l_ccsr_val = in64(OCB_CCSR);
-        MAIN_TRAC_INFO("proc_core_init: CCSR read 0x%08X%08X", (uint32_t) (l_ccsr_val>>32), (uint32_t) l_ccsr_val);
+        MAIN_TRAC_INFO("proc_core_init: CCSR read 0x%08X%08X",
+                       (uint32_t) (l_ccsr_val>>32), (uint32_t) l_ccsr_val);
 
         G_present_hw_cores = ((uint32_t) (l_ccsr_val >> 32)) & HW_CORES_MASK;
         G_present_cores = G_present_hw_cores;
@@ -405,9 +407,8 @@ void proc_core_init( void )
 
     } while(0);
 
-    // Initialize the core data control structures at the same time
-// TEMP/TODO: Needs to be re-enabled when the data control task is enabled
-//    proc_core_data_control_init();
+    // Initialize the core data control at the same time
+    init_pgpe_ipcs();
 
     return;
 }

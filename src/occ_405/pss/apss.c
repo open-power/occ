@@ -1097,7 +1097,7 @@ errlHndl_t initialize_apss(void)
             //Create the request for measure start. Scheduling will happen in apss.c
             gpe_request_create(&G_meas_start_request,
                                &G_async_gpe_queue0,                          // queue
-                               IPC_ST_APSS_START_PWR_MEAS_READ_FUNCID,   // entry_point
+                               IPC_ST_APSS_START_PWR_MEAS_READ_FUNCID,       // entry_point
                                &G_gpe_start_pwr_meas_read_args,              // entry_point arg
                                SSX_WAIT_FOREVER,                             // no timeout
                                NULL,                                         // callback
