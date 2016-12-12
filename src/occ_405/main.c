@@ -401,6 +401,7 @@ void create_tlb_entry(uint32_t address, uint32_t size)
         tlb_entry_size = PAGE_ALIGNED_SIZE(size);
     }
 
+#if PPC405_MMU_SUPPORT
     // define DTLB for PGPE image header
     l_rc = ppc405_mmu_map(
         tlb_entry_address,
@@ -410,6 +411,7 @@ void create_tlb_entry(uint32_t address, uint32_t size)
         TLBLO_I,         //Read-only, Cache-inhibited
         NULL
         );
+#endif
 
     if(l_rc != SSX_OK)
     {

@@ -78,7 +78,10 @@ OUTPUT_FORMAT(elf32-powerpc);
 // The SRAM controller aliases the SRAM at 8 x 128MB boundaries to support
 // real-mode memory attributes using DCCR, ICCR etc.  Noncacheable access is
 // the next-to-last 128MB PPC405 region. Write-though access is the
-// next-to-next-to-last 128MB PPC405 region
+// next-to-next-to-last 128MB PPC405 region. For our purposes, this means that:
+// -- 0xF7F00000 - 0xF7FC0000 is our noncacheable SRAM address space
+// -- 0xEFF00000 - 0xEFFC0000 is our writethrough SRAM address space
+// -- 0xFFF00000 - 0xFFFC0000 is cached for both reads and writes
 
 #define noncacheable_offset 0x08000000
 #define noncacheable_origin (origin - 0x08000000)
@@ -378,17 +381,6 @@ SECTIONS
     . = . + writethrough_offset;
 #endif
 
-    // To enable non-cacheable sections w/o the MMU will require setting up
-    // the linker script to use aliased addresses of the SRAM.
-
-#if PPC405_MMU_SUPPORT == 0
-    ASSERT(((_NONCACHEABLE_RO_SECTION_SIZE == 0) &&
-            (_NONCACHEABLE_SECTION_SIZE == 0) &&
-            (_WRITETHROUGH_SECTION_SIZE == 0)),
-           " Non-cacheable and writethrough sections are currently only supported for MMU-enabled configurations.  Enabling these capabilities for untranslated addresses will require some modifications of the linker script.  ")
-#endif
-
-
     ////////////////////////////////
     // Read-only Data
     ////////////////////////////////
@@ -566,9 +558,20 @@ SECTIONS
     _IMP_TRACE_BUFFER_BASE = 0xfffb8000;
     _IMP_TRACE_BUFFER_SIZE = 0x2000;
     . = _ERR_TRACE_BUFFER_BASE;
+#if !PPC405_MMU_SUPPORT
+    . = . - writethrough_offset;
+    _LMA = . + writethrough_offset;
+    .err_trac . : AT (_LMA) {*(err_trac) . = ALIGN(_ERR_TRACE_BUFFER_SIZE);}
+    _LMA = . + writethrough_offset;
+    .inf_trac . : AT (_LMA) {*(inf_trac) . = ALIGN(_INF_TRACE_BUFFER_SIZE);}
+    _LMA = . + writethrough_offset;
+    .imp_trac . : AT (_LMA) {*(imp_trac) . = ALIGN(_IMP_TRACE_BUFFER_SIZE);}
+    . = . + writethrough_offset;
+#else
     .err_trac . : {*(err_trac) . = ALIGN(_ERR_TRACE_BUFFER_SIZE);} > sram
     .inf_trac . : {*(inf_trac) . = ALIGN(_INF_TRACE_BUFFER_SIZE);} > sram
     .imp_trac . : {*(imp_trac) . = ALIGN(_IMP_TRACE_BUFFER_SIZE);} > sram
+#endif
     . = __CUR_COUNTER__;
 
     ////////////////////////////////
@@ -578,7 +581,16 @@ SECTIONS
     _FIR_HEAP_SECTION_BASE = 0xfffba000;
     _FIR_HEAP_SECTION_SIZE = 0x3000;
     . = _FIR_HEAP_SECTION_BASE;
+
+#if !PPC405_MMU_SUPPORT
+    . = . - writethrough_offset;
+    _LMA = . + writethrough_offset;
+    .firHeap . : AT (_LMA) {*(firHeap) . = ALIGN(1024);}
+    . = . + writethrough_offset;
+#else
     .firHeap . : {*(firHeap) . = ALIGN(1024);} > sram
+#endif
+
     . = __CUR_COUNTER__;
 
     ////////////////////////////////
@@ -588,7 +600,16 @@ SECTIONS
     _FIR_PARMS_SECTION_BASE = 0xfffbd000;
     _FIR_PARMS_SECTION_SIZE = 0x1000;
     . = _FIR_PARMS_SECTION_BASE;
+
+#if !PPC405_MMU_SUPPORT
+    . = . - noncacheable_offset;
+    _LMA = . + noncacheable_offset;
+    .firParms . : AT (_LMA) {*(firParms) . = ALIGN(1024);}
+    . = . + noncacheable_offset;
+#else
     .firParms . : {*(firParms) . = ALIGN(1024);} > sram
+#endif
+
     . = __CUR_COUNTER__;
 
     ////////////////////////////////
@@ -601,8 +622,25 @@ SECTIONS
     _LINEAR_RD_WINDOW_SECTION_BASE = 0xfffbf000;     // Update FFDC_BUFFER_ADDR if changed
     _LINEAR_RD_WINDOW_SECTION_SIZE = 0x1000;
     . = _LINEAR_WR_WINDOW_SECTION_BASE;
+#if !PPC405_MMU_SUPPORT
+    . = . - noncacheable_offset;
+    _LMA = . + noncacheable_offset;
+    .linear_wr . : AT (_LMA) {*(linear_wr) . = ALIGN(_LINEAR_WR_WINDOW_SECTION_SIZE);}
+#else
     .linear_wr . : {*(linear_wr) . = ALIGN(_LINEAR_WR_WINDOW_SECTION_SIZE);} > sram
+#endif
+
+#if !PPC405_MMU_SUPPORT
+    . = . + noncacheable_offset - writethrough_offset;
+    _LMA = . + writethrough_offset;
+    .linear_rd . : AT (_LMA) {*(linear_rd) . = ALIGN(_LINEAR_RD_WINDOW_SECTION_SIZE);}
+#else
     .linear_rd . : {*(linear_rd) . = ALIGN(_LINEAR_RD_WINDOW_SECTION_SIZE);} > sram
+#endif
+
+#if !PPC405_MMU_SUPPORT
+    . = . + writethrough_offset;
+#endif
 
     . = __CUR_COUNTER__;
 

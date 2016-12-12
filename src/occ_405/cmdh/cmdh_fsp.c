@@ -69,10 +69,21 @@ LINEAR_WINDOW_RD_BUFFER(fsp_rsp_t G_fsp_rsp);
 
 // This holds the pointers to the command & response buffers, and to the
 // doorbell placeholder data.
+
+// Since the entirety of our SRAM is marked as cacheable, we need to use
+// the non-cacheable address alias of our command and response buffers when
+// not using the MMU.
+#if PPC405_MMU_SUPPORT
 fsp_msg_t G_fsp_msg = {
     .cmd = (fsp_cmd_t *) CMDH_LINEAR_WINDOW_BASE_ADDRESS,
     .rsp = (fsp_rsp_t *) CMDH_OCC_RESPONSE_BASE_ADDRESS,
 };
+#else
+fsp_msg_t G_fsp_msg = {
+    .cmd = (fsp_cmd_t *) (CMDH_LINEAR_WINDOW_BASE_ADDRESS - 0x08000000),
+    .rsp = (fsp_rsp_t *) (CMDH_OCC_RESPONSE_BASE_ADDRESS  - 0x10000000),
+};
+#endif
 
 // Temporary storage used by our SSX_PANIC macro
 uint32_t __occ_panic_save_r3;
@@ -780,6 +791,34 @@ errlHndl_t cmdh_fsp_cmd_hndler(void)
 
             // Verify Command Checksum
             l_cksm = checksum16(&G_fsp_msg.cmd->byte[0],(l_cmd_len));
+
+#ifdef CMDH_DEBUG
+            CMDH_DBG("CMD Address: 0x%08X, RSP Address: 0x%08X", (uint32_t) G_fsp_msg.cmd, (uint32_t) G_fsp_msg.rsp);
+
+            uint16_t l_idx = 0;
+            uint16_t l_word = 0;
+            uint32_t l_words[4] = {0};
+
+            for(l_idx=0; l_idx < l_cmd_len; l_idx++)
+            {
+                if( (0 == (l_idx % 16)) && (l_idx != 0) )
+                {
+                    CMDH_DBG("0x%08X: 0x%08X 0x%08X 0x%08X 0x%08X", ((uint32_t) G_fsp_msg.cmd) + (l_idx-16), l_words[0], l_words[1], l_words[2], l_words[3]);
+                    l_words[0] = 0;
+                    l_words[1] = 0;
+                    l_words[2] = 0;
+                    l_words[3] = 0;
+                }
+                l_word = (l_idx % 16) / 4;
+                l_words[l_word] |= (G_fsp_msg.cmd->byte[l_idx] << (24 - (8*((l_idx % 16) % 4))));
+            }
+
+            if( 0 != (l_idx % 16) )
+            {
+                CMDH_DBG("0x%08X: 0x%08X 0x%08X 0x%08X 0x%08X", (l_idx-(l_idx % 16)), l_words[0], l_words[1], l_words[2], l_words[3]);
+            }
+            CMDH_DBG("Checksum: 0x%04X", l_cksm);
+#endif
             if(l_cksm != CONVERT_UINT8_ARRAY_UINT16(G_fsp_msg.cmd->byte[l_cmd_len],
                                                     G_fsp_msg.cmd->byte[l_cmd_len+1]))
             {
