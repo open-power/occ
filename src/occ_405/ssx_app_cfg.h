@@ -160,10 +160,13 @@ do {                                                                \
 
 #if SIMICS_ENVIRONMENT
 #pragma message "Building for Simics!"
+#ifndef USE_SIMICS_IO
+#define USE_SIMICS_IO 1
+#endif
 #endif
 
 #ifndef USE_SIMICS_IO
-#define USE_SIMICS_IO 1
+#define USE_SIMICS_IO 0
 #endif
 
 #ifndef USE_RTX_IO

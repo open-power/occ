@@ -58,6 +58,7 @@
 #include <dimm.h>
 #include "occhw_shared_data.h"
 #include <pgpe_shared.h>
+#include <gpe_register_addresses.h>
 
 extern uint32_t __ssx_boot; // Function address is 32 bits
 extern uint32_t G_occ_phantom_critical_count;
@@ -499,17 +500,28 @@ void read_pgpe_header(void)
  */
 void gpe_reset(uint32_t instance_id)
 {
-#define GPE0_XCR            0xC0000080
 #define XCR_CMD_HRESET      0x60000000
 #define XCR_CMD_TOGGLE_XSR  0x40000000
 #define XCR_CMD_RESUME      0x20000000
-#define GPE_XCR_ADDR(inst) (GPE0_XCR + (0x10000 * instance_id))
+#define GPE_SRAM_BASE       0xFFF00000
 
+    uint32_t l_gpe_sram_addr = (instance_id * 0x10000) + GPE_SRAM_BASE;
 
-    out32(GPE_XCR_ADDR(instance_id), XCR_CMD_HRESET);
-    out32(GPE_XCR_ADDR(instance_id), XCR_CMD_TOGGLE_XSR);
-    out32(GPE_XCR_ADDR(instance_id), XCR_CMD_TOGGLE_XSR);
-    out32(GPE_XCR_ADDR(instance_id), XCR_CMD_RESUME);
+    // GPE0 is at 0xFFF01000
+    // GPE1 is at 0xFFF10000
+    // GPE2 is at 0xFFF20000
+    // GPE3 is at 0xFFF30000
+    if(0 == instance_id)
+    {
+        l_gpe_sram_addr += 0x1000;
+    }
+
+    out32(GPE_GPENIVPR(instance_id), l_gpe_sram_addr);
+
+    out32(GPE_GPENXIXCR(instance_id), XCR_CMD_HRESET);
+    out32(GPE_GPENXIXCR(instance_id), XCR_CMD_TOGGLE_XSR);
+    out32(GPE_GPENXIXCR(instance_id), XCR_CMD_TOGGLE_XSR);
+    out32(GPE_GPENXIXCR(instance_id), XCR_CMD_RESUME);
 }
 
 /*
@@ -1389,18 +1401,20 @@ int main(int argc, char **argv)
     }
 */
 
-    //TODO: Causes an SSX panic in Simics. If it's needed in simulation,
-    //      debug of the problem will be necessary to resolve.
-    if(FALSE == G_simics_environment)
-    {
-        // enable and register additional interrupt handlers
-        CHECKPOINT(INITIALIZING_IRQS);
+    //TODO: RTC 134619: Currently causes an SSX Panic due to SSX believing the
+    //                  interrupt is not owned by the 405. The fix is to update
+    //                  both occhw_interrupts.h and ssx_app_cfg.h. The change
+    //                  in occhw_interrupts.h is to change the owner. The change
+    //                  in ssx_app_cfg.h is to add OCCHW_IRQ_OCC_ERROR to the
+    //                  APPCFG_EXT_IRQS_CONFIG irq setup table.
+/*
+    // enable and register additional interrupt handlers
+    CHECKPOINT(INITIALIZING_IRQS);
 
-        occ_irq_setup();
+    occ_irq_setup();
 
-        CHECKPOINT(IRQS_INITIALIZED);
-    }
-
+    CHECKPOINT(IRQS_INITIALIZED);
+*/
     // enable IPC and start GPEs
     CHECKPOINT(INITIALIZING_IPC);
 
