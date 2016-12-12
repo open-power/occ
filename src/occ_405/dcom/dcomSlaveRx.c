@@ -296,7 +296,6 @@ void task_dcom_rx_slv_inbox( task_t *i_self)
             }
             else
             {
-                // TODO:  We need to signal this
 
                 G_dcomTime.slave.doorbellErrorFlags.timeoutRx = 1;
                 G_dcomTime.slave.doorbellTimeoutWaitRx = ssx_timebase_get();

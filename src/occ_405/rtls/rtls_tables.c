@@ -74,14 +74,14 @@
 #define FLAGS_POKE_WDT RTL_FLAG_RUN | RTL_FLAG_MSTR | RTL_FLAG_NOTMSTR | RTL_FLAG_STANDBY | \
                        RTL_FLAG_OBS | RTL_FLAG_ACTIVE | RTL_FLAG_MSTR_READY | RTL_FLAG_NO_APSS | RTL_FLAG_APSS_NOT_INITD
 
-// TEMP/TODO: These are not yet implemented
+// TEMP/TODO RTC: 133824 - New GPU interface via main memory and SMBUS
 #define FLAGS_GPU_SM
-#define FLAGS_MEM_DEADMAN
+
 
 // Global tick sequences
 // The number and size of these will vary as the real tick sequences are developed over time.
 
-//NOTE: Currently this is the only way the complete apss works in simics TODO need to revisit in
+//NOTE: Currently this is the only way the complete apss works in simics
 // the future.
 
 /* The Global Task Table
@@ -113,9 +113,9 @@ task_t G_task_table[TASK_END] = {
     { FLAGS_DCOM_PARSE_OCC_FW_MSG, task_dcom_parse_occfwmsg,       NULL },  // TASK_ID_DCOM_PARSE_FW_MSG
     { FLAGS_AMEC_SLAVE,            task_amec_slave,                NULL },  // TASK_ID_AMEC_SLAVE
     { FLAGS_AMEC_MASTER,           task_amec_master,               NULL },  // TASK_ID_AMEC_MASTER
-// TEMP -- NOT SUPPORTED YET IN PHASE1
+// TODO RTC: 163365 - /proc/ and /pss/ "TODO" cleanup
 //    { FLAGS_CORE_DATA_CONTROL,     task_core_data_control,         NULL },  // TASK_ID_CORE_DATA_CONTROL
-// TEMP -- NOT YET IMPLEMENTED
+// TODO RTC: 133824 - New GPU interface via main memory and SMBUS
 //    { FLAGS_GPU_SM,                task_gpu_sm,                    NULL },  // TASK_ID_GPU_SM
     { FLAGS_MEMORY_DATA,           task_dimm_sm,                   NULL },  // TASK_ID_DIMM_SM
     { FLAGS_MEMORY_CONTROL,       task_memory_control,             (void *) &G_memory_control_task },  // TASK_ID_MEMORY_CONTROL

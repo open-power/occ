@@ -111,8 +111,7 @@ inline OCC_MODE SMGR_get_mode(void)
 // Description:
 //
 // End Function Specification
-errlHndl_t SMGR_set_mode(const OCC_MODE i_mode,
-                         const uint8_t i_sms_type)
+errlHndl_t SMGR_set_mode( const OCC_MODE i_mode )
 {
      errlHndl_t  l_errlHndl = NULL;
      int         jj=0;

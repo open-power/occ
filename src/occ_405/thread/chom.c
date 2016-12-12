@@ -278,8 +278,6 @@ void chom_update_sensors()
     {
         for (j=0 ; j<MAX_NUM_MEM_CONTROLLERS ; j++)
         {
-            // TODO: Need to take a snapshot of the "max" field for that sensor and
-            // redefine the mini-sensor information that we pass back to the Master
             l_mem_rw = G_dcom_slv_outbox_rx[i].mrd2msp0mx[j]+G_dcom_slv_outbox_rx[i].mwr2msp0mx[j];
             g_chom->sensorData[0].sensor[k].sample = l_mem_rw;
             k++;
@@ -312,18 +310,6 @@ void chom_update_sensors()
 }
 
 
-// Function Specification
-//
-// Name: chom_collect_cpi_data
-//
-// Description: collect CPI data
-//
-// End Function Specification
-void chom_collect_cpi_data(void)
-{
-    // TODO
-}
-
 
 // Function Specification
 //
@@ -350,9 +336,6 @@ void chom_gen_periodic_log()
             g_chom->nodeData.modeInLog++;
         }
     }
-
-    // collect CPI data
-    chom_collect_cpi_data();
 
     /* @
      * @errortype

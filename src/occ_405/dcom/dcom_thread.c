@@ -132,7 +132,7 @@ void Dcom_thread_routine(void *arg)
             if(OCC_STATE_ACTIVE == CURRENT_STATE())
             {
                 // Set the new mode
-                l_errlHndl = SMGR_set_mode(l_newOccMode, 0 /* TODO V/F */ );
+                l_errlHndl = SMGR_set_mode(l_newOccMode);
                 if(l_errlHndl)
                 {
                     commitErrl(&l_errlHndl);
@@ -153,7 +153,7 @@ void Dcom_thread_routine(void *arg)
                     commitErrl(&l_errlHndl);
                 }
                 // Set the new mode
-                l_errlHndl = SMGR_set_mode(l_newOccMode, 0 /* TODO V/F */ );
+                l_errlHndl = SMGR_set_mode(l_newOccMode);
                 if(l_errlHndl)
                 {
                     commitErrl(&l_errlHndl);

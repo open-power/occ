@@ -219,7 +219,7 @@ INCLUDES += $(IMG_INCLUDES) $(GLOBAL_INCLUDES) -I$(OCC405_INCLDIR)\
 	-I$(SSX_SRCDIR)/trace -I$(SSX_SRCDIR)/occhw -I$(SSX_SRCDIR)/../lib/common \
 	-I$(SSX_SRCDIR)/../include -I$(SSX_SRCDIR)/../include/registers \
 	-I$(OCCLIB_SRCDIR) -I$(COMMONLIB_SRCDIR) -I$(SSXLIB_SRCDIR) -I$(PPC405LIB_SRCDIR) \
-    -I$(OCC405_SRCDIR)
+    -I$(OCC405_SRCDIR) -I$(IMAGE_SRCDIR)/../common
 
 PIPE-CFLAGS = -pipe -Wa,-m405
 

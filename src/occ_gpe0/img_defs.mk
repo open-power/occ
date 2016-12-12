@@ -207,7 +207,7 @@ INCLUDES += $(IMG_INCLUDES) $(GLOBAL_INCLUDES) \
 	-I$(PK_SRCDIR)/kernel -I$(PK_SRCDIR)/ppe42 -I$(PK_SRCDIR)/trace \
 	-I$(PK_SRCDIR)/$(PPE_TYPE) -I$(PK_SRCDIR)/../../include \
 	-I$(PK_SRCDIR)/../../include/registers -I$(OCCLIB_SRCDIR) -I$(COMMONLIB_SRCDIR) \
-    -I$(OCC_COMMON_TYPES_DIR)
+    -I$(OCC_COMMON_TYPES_DIR) -I$(IMAGE_SRCDIR)/../common
 
 ifdef P2P_ENABLE
 PIPE-CFLAGS = -pipe -Wa,-m405

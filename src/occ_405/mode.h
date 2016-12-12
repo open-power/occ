@@ -104,8 +104,7 @@ inline bool SMGR_is_mode_transitioning(void);
 inline OCC_MODE SMGR_get_mode(void);
 
 // Used to set OCC Mode
-errlHndl_t SMGR_set_mode(const OCC_MODE i_mode,
-                         const uint8_t i_sms_type);
+errlHndl_t SMGR_set_mode(const OCC_MODE i_mode);
 
 
 

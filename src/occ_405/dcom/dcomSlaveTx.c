@@ -305,10 +305,11 @@ void task_dcom_tx_slv_outbox( task_t *i_self)
                          ERRL_COMPONENT_ID_FIRMWARE,
                          ERRL_CALLOUT_PRIORITY_HIGH);
 
-        commitErrl( &l_errl );
+        // request a reset
+        REQUEST_RESET( l_errl );
 
-        // TODO request a reset
         l_error = TRUE;
+
     }
 
 }

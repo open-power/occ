@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -190,7 +190,6 @@ void initThreadScheduler(void)
                       l_cmdThreadRc,l_dcomThreadRc);
 
         // Create error log and log it
-        // TODO use correct trace
         const trace_descriptor_array_t*  l_trace = NULL;
 
         /* @
@@ -241,12 +240,15 @@ void threadSwapcallback(void * arg)
 
     if(l_rc != SSX_OK)
     {
-        // TODO trace error
+        MAIN_TRAC_ERR("SSX thread priority swap failure! rc=0x%x,"
+               "Thread A index=%d, Thread B index=%d",
+               l_rc,
+               l_threadAIndex,
+               l_threadBIndex );
 
         // Create and commit error log
         if(G_threadSwapErrlCounter == 0)
         {
-            // TODO use correct trace
             const trace_descriptor_array_t* l_trace = NULL;
 
             /*

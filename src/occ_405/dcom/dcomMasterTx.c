@@ -78,9 +78,6 @@ uint32_t dcom_build_slv_inbox(void)
     // Locals
     uint32_t l_addr_of_slv_inbox_in_main_mem = 0;
     uint32_t l_slv_idx = 0;
-    uint32_t l_core_idx = 0;
-    uint32_t l_cntr_idx = 0;
-    uint32_t l_mem_intr_idx = 0;
 
     static uint8_t      L_seq = 0xFF;
 
@@ -101,39 +98,20 @@ uint32_t dcom_build_slv_inbox(void)
         G_dcom_slv_inbox_tx[l_slv_idx].seq = L_seq;
         G_dcom_slv_inbox_tx[l_slv_idx].version = 0;
 
-        // TODO: adc,gpio,and tod are only sent here for sanity check and for bringup only.
-        // If the values are needed by the slaves, they should use the values sent in the doorbell.
-        // Probably remove them after bringup is complete.
+        memcpy( G_dcom_slv_inbox_tx[l_slv_idx].adc,
+                G_apss_pwr_meas.adc,
+                sizeof( G_dcom_slv_inbox_tx[l_slv_idx].adc));
 
-        memcpy( G_dcom_slv_inbox_tx[l_slv_idx].adc, G_apss_pwr_meas.adc, sizeof(G_dcom_slv_inbox_tx[l_slv_idx].adc));
-        memcpy( G_dcom_slv_inbox_tx[l_slv_idx].gpio, G_apss_pwr_meas.gpio, sizeof(G_dcom_slv_inbox_tx[l_slv_idx].gpio));
-        memcpy( G_dcom_slv_inbox_tx[l_slv_idx].tod, &G_apss_pwr_meas.tod, sizeof(  G_dcom_slv_inbox_tx[l_slv_idx].tod ));  //TODO - this doesn't work
+         memcpy( G_dcom_slv_inbox_tx[l_slv_idx].gpio,
+                G_apss_pwr_meas.gpio,
+                sizeof( G_dcom_slv_inbox_tx[l_slv_idx].gpio));
+
+         memcpy( G_dcom_slv_inbox_tx[l_slv_idx].tod,
+                &G_apss_pwr_meas.tod,
+                sizeof( G_dcom_slv_inbox_tx[l_slv_idx].tod));
 
         memset( G_dcom_slv_inbox_tx[l_slv_idx].occ_fw_mailbox, 0, sizeof( G_dcom_slv_inbox_tx[l_slv_idx].occ_fw_mailbox ));
 
-        // Collect frequency data for each core
-        for( l_core_idx = 0; l_core_idx < MAX_CORES; l_core_idx++)
-        {
-            // TODO - uncomment once macro exists
-            //G_dcom_slv_inbox_tx[l_slv_idx].freq250usp0cy = FREQ250USPC[l_core_idx];
-            G_dcom_slv_inbox_tx[l_slv_idx].freq250usp0cy[l_core_idx] = l_core_idx;
-        }
-
-        //collect data for each centaur throttle
-        for( l_cntr_idx = 0; l_cntr_idx < MAX_CENTAUR_THROTTLES; l_cntr_idx++)
-        {
-            // TODO - uncomment once macro exists
-            //G_dcom_slv_inbox_tx[l_slv_idx].memsp2msP0MxCyPz = MEMSP2MSP0MxCyPz[l_cntr_idx];
-            G_dcom_slv_inbox_tx[l_slv_idx].memsp2msP0MxCyPz[l_cntr_idx] = l_cntr_idx;
-        }
-
-        // Collect data for each mem interleave group throttle
-        for( l_mem_intr_idx = 0; l_mem_intr_idx < MAX_MEM_INTERLEAVE_GROUP_THROTTLES; l_mem_intr_idx++)
-        {
-            // TODO - uncomment once macro exists
-            //G_dcom_slv_inbox_tx[l_slv_idx].memsp2msP0IGx = MEMSP2MSP0IG[l_mem_intr_idx];
-            G_dcom_slv_inbox_tx[l_slv_idx].memsp2msP0IGx[l_mem_intr_idx] = l_mem_intr_idx;
-        }
 
         // Collect mnfg parameters that need to be sent to slaves
         G_dcom_slv_inbox_tx[l_slv_idx].foverride_enable = g_amec->mnfg_parms.auto_slew;

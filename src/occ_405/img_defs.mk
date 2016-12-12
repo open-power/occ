@@ -238,7 +238,7 @@ APP_INCLUDES =  -I$(IMAGE_SRCDIR)/rtls \
                 -I$(IMAGE_SRCDIR)/dimm \
                 -I$(IMAGE_SRCDIR)/mem \
                 -I$(IMAGE_SRCDIR)/lock \
-                -I$(IMAGE_SRCDIR)/../occ_gpe0 \
+                -I$(IMAGE_SRCDIR)/../common \
 
 INCLUDES += $(IMG_INCLUDES) $(GLOBAL_INCLUDES) $(APP_INCLUDES) \
 	-I$(SSX_SRCDIR)/ssx -I$(SSX_SRCDIR)/ppc32 -I$(SSX_SRCDIR)/ppc405 \

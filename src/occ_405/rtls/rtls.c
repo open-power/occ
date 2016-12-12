@@ -67,10 +67,6 @@ extern uint8_t *G_tick_table[MAX_NUM_TICKS];
 // See notes regarding this table in rtls_tables.c.
 extern task_t G_task_table[TASK_END];
 
-// ARL Test Code Function from arl_test.c
-// Added for enablement of Research use of OCC Environment
-//TODO: Remove when no longer needed.
-extern void arl_test(void);
 
 // Function Specification
 //
@@ -93,7 +89,6 @@ void rtl_start_task(const task_id_t i_task_id)
     else
     {
         // Invalid task ID for this operation
-        // TODO use correct trace
 
         /*
         * @errortype
@@ -141,7 +136,6 @@ void rtl_stop_task(const task_id_t i_task_id)
     else
     {
         // Invalid task ID for this operation
-        // TODO use correct trace
 
         /*
         * @errortype
@@ -191,7 +185,6 @@ bool rtl_task_is_runnable(const task_id_t i_task_id)
     else
     {
         // Invalid task ID for this operation
-        // TODO use correct trace
 
         /*
         * @errortype
@@ -253,8 +246,8 @@ void rtl_ocb_init(void)
                     SSX_NONCRITICAL);
     if( rc )
     {
-        //TODO: Add trace
-
+        TRAC_ERR("Error occured in rtl_ocb_init::ocb_timer_setup()"
+                 " rc = 0x%x", rc );
         /*
         * @errortype
         * @moduleid    RTLS_OCB_INIT_MOD
@@ -317,9 +310,6 @@ void rtl_do_tick( void *private, SsxIrqId irq, int priority )
 
     RTLS_DBG("#### Tick %d ####\n",CURRENT_TICK);
 
-    // Execute ARL Test Code before we run any tasks.  TODO: Remove when no longer needed.
-// TEMP -- DON'T THINK THIS IS NEEDED IN PHASE1
-//    arl_test();
 
     // Index into the tick table to get a pointer to the tick sequence for the current tick.
     l_taskid_ptr = G_tick_table[ (MAX_NUM_TICKS - 1) & CURRENT_TICK ];
@@ -338,8 +328,8 @@ void rtl_do_tick( void *private, SsxIrqId irq, int priority )
             if ( ! l_bad_id_reported )
             {
                 // First bad task ID we've seen this tick.  Log an unrecoverable error.
-
-                // TODO use correct trace
+                RTLS_DBG("rtl_do_tick() - Invalid task ID"
+                         "taskId = 0x%x", *l_taskid_ptr );
 
                 /*
                 * @errortype
@@ -416,7 +406,7 @@ void rtl_set_task_data( const task_id_t i_task_id, void * i_data_ptr )
 
     if ( i_task_id >= TASK_END )
     {
-        //TODO: add trace
+        RTLS_DBG("Invalid task ID: 0x%x", i_task_id);
         // Task ID is invalid so log an error internally
 
         /*

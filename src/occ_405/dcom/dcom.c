@@ -40,7 +40,7 @@
 #include <amec_data.h>
 #include <amec_sys.h>
 #include "scom.h"
-#include "pss_constants.h"  // @TODO: move with HW registers?
+#include "pss_constants.h"
 
 extern uint8_t G_occ_interrupt_type;
 
@@ -207,11 +207,11 @@ void dcom_initialize_pbax_queues(void)
         //disabled pbax send before configuring PBAX
         pbax_send_disable();
 
-        // TODO: With the new design, PBAX node and chip IDs are set by hostboot
-        //       Remove these ID parameters from the pbax_configure function?
+        // Node and Chip IDs are set by Hostboot and are not needed
+        // for pbax_configure
         l_rc = pbax_configure(G_occ_role,                     // master
                               G_pbax_id.node_id,              // node id
-                              G_pbax_id.chip_id,              // chipd id
+                              G_pbax_id.chip_id,              // chip id
                               PBAX_CONFIGURE_RCV_GROUP_MASK); // group_mask
 
         if(l_rc != 0)
@@ -267,7 +267,7 @@ void dcom_initialize_pbax_queues(void)
         {
             l_rc = pbax_target_create( &G_pbax_multicast_target,    // target,
                     PBAX_BROADCAST,                                 // type
-                    PBAX_SYSTEM,                                    // scope TODO
+                    PBAX_SYSTEM,                                    // scope
                     0,                                              // queue
                     G_pbax_id.node_id,                              // node
                     PBAX_BROADCAST_GROUP,                           // chip_or_group

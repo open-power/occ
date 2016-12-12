@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -61,7 +61,7 @@ extern void rtloop_ocb_init(void);
 //
 // Name: pgp_validation_ssx_main_hook
 //
-// Description: TODO Add description
+// Description: Pgp validation test
 //
 // End Function Specification
 void pgp_validation_ssx_main_hook(void)
@@ -73,10 +73,9 @@ void pgp_validation_ssx_main_hook(void)
 //
 // Name: Cmd_Hndl_thread_routine
 //
-// Description: TODO Add description
+// Description: Pseudo-command handler thread test
 //
 // End Function Specification
-//TODO placeholder
 void Cmd_Hndl_thread_routine(void *arg)
 {
      do
@@ -94,7 +93,7 @@ void Cmd_Hndl_thread_routine(void *arg)
 //
 // Name: App_thread_routine
 //
-// Description: TODO Add description
+// Description: Pseudo-applet thread routine test
 //
 // End Function Specification
 void App_thread_routine(void *arg)
@@ -115,7 +114,7 @@ void App_thread_routine(void *arg)
 //
 // Name: Thermal_Monitor_thread_routine
 //
-// Description: TODO Add description
+// Description: Pseudo-thermal monitoring thread routine test
 //
 // End Function Specification
 void Thermal_Monitor_thread_routine(void *arg)
@@ -136,7 +135,7 @@ void Thermal_Monitor_thread_routine(void *arg)
 //
 // Name: Hlth_Monitor_thread_routine
 //
-// Description: TODO Add description
+// Description: Pseudo-health monitoring thread test
 //
 // End Function Specification
 void Hlth_Monitor_thread_routine(void *arg)
@@ -157,7 +156,7 @@ void Hlth_Monitor_thread_routine(void *arg)
 //
 // Name: FFDC_thread_routine
 //
-// Description: TODO Add description
+// Description: Pseudo-ffdc thread routine test
 //
 // End Function Specification
 void FFDC_thread_routine(void *arg)
@@ -206,7 +205,7 @@ void main_thread_routine(void *private)
 //
 // Name: timer_routine
 //
-// Description: TODO Add description
+// Description: timer routine test
 //
 // End Function Specification
 void  timer_routine (void *arg)
@@ -218,7 +217,7 @@ void  timer_routine (void *arg)
 //
 // Name: dump_thread_info
 //
-// Description: TODO Add description
+// Description: Dumps information related to all scheduled threads
 //
 // End Function Specification
 void dump_thread_info(void *arg)
@@ -293,16 +292,7 @@ int main(int argc, char **argv)
     ssx_thread_resume(&main_thread);
 
     //Initialize the thread scheduler
-    l_errl = initThreadScheduler();
-
-    if(l_errl)
-    {
-        // TODO Trace the error
-
-        // Commit log
-        // NOTE: log should be deleted by reader mechanism
-        commitErrl( &l_errl );
-    }
+    initThreadScheduler();
 
     // Kick off timer
     ssx_timer_create(&G_test_timer, dump_thread_info, 0);

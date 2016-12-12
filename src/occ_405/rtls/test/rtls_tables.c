@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -85,7 +85,7 @@ void task_3_func(struct task *);
 //
 // Name: task_0_func
 //
-// Description: TODO Add description
+// Description: Example task 0
 //
 // End Function Specification
 void task_0_func(struct task *i_self) {
@@ -104,7 +104,7 @@ void task_0_func(struct task *i_self) {
 //
 // Name: task_1_func
 //
-// Description: TODO Add description
+// Description: Example task 1
 //
 // End Function Specification
 void task_1_func(struct task *i_self) {
@@ -123,7 +123,7 @@ void task_1_func(struct task *i_self) {
 //
 // Name: task_2_func
 //
-// Description: TODO Add description
+// Description: Example task 2
 //
 // End Function Specification
 void task_2_func(struct task *i_self) {
@@ -142,7 +142,7 @@ void task_2_func(struct task *i_self) {
 //
 // Name: task_3_func
 //
-// Description: TODO Add description
+// Description: Example task 3
 //
 // End Function Specification
 void task_3_func(struct task *i_self) {

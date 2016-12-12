@@ -102,7 +102,7 @@
 // general defines
 #define TOD_SIZE 6
 #define NUM_TOD_SENSORS 3
-#define SLV_INBOX_RSV_SIZE 68
+#define SLV_INBOX_RSV_SIZE 150
 #define SLV_MAILBOX_SIZE 32
 #define SLV_OUTBOX_RSV_SIZE 618
 #define DOORBELL_RSV_SIZE 1
@@ -121,7 +121,6 @@ typedef struct
     uint8_t chip_id    :2;
 } pob_id_t;
 
-// TODO may change in the future
 // For now pbax structure is same as pob id structure
 typedef pob_id_t pbax_id_t;
 
@@ -129,7 +128,7 @@ typedef pob_id_t pbax_id_t;
 typedef struct
 {
     // Packet Type & Sequence Information
-    uint8_t  seq;                                                   // [0]
+    uint8_t  seq;                                                   // [0]   - 1 byte
     uint8_t  version;                                               // [1]
 
     // From APSS Power Measurement
@@ -139,33 +138,28 @@ typedef struct
     uint16_t altitude;                                              // [40]  -  2 bytes
     uint8_t  tod[ TOD_SIZE ];                                       // [42]  -  6 bytes
 
-    // AMEC Actuators
-    uint16_t freq250usp0cy[MAX_CORES];                              // [48]  - 48 bytes
-    uint16_t memsp2msP0MxCyPz[MAX_CENTAUR_THROTTLES];               // [96]  - 16 bytes
-    uint16_t memsp2msP0IGx[MAX_MEM_INTERLEAVE_GROUP_THROTTLES];     // [112] - 16 bytes
-
     // Manufacturing parameters
-    uint16_t foverride;                                             // [128] -  2 bytes
-    uint8_t  foverride_enable;                                      // [130] -  1 byte
-    uint8_t  emulate_oversub;                                       // [131] -  1 byte
+    uint16_t foverride;                                             // [48] -  2 bytes
+    uint8_t  foverride_enable;                                      // [50] -  1 byte
+    uint8_t  emulate_oversub;                                       // [51] -  1 byte
 
     // Idle Power Saver parameters
-    uint16_t ips_freq_request;                                      // [132] -  2 bytes
+    uint16_t ips_freq_request;                                      // [52] -  2 bytes
 
     // DPS Tunable Parameters
-    uint16_t alpha_up;                                              // [134] -  2 bytes
-    uint16_t alpha_down;                                            // [136] -  2 bytes
-    uint16_t sample_count_util;                                     // [138] -  2 bytes
-    uint16_t step_up;                                               // [140] -  2 bytes
-    uint16_t step_down;                                             // [142] -  2 bytes
-    uint16_t epsilon_perc;                                          // [144] -  2 bytes
-    uint16_t tlutil;                                                // [146] -  2 bytes
-    uint8_t  tunable_param_overwrite;                               // [148] -  1 byte
+    uint16_t alpha_up;                                              // [54] -  2 bytes
+    uint16_t alpha_down;                                            // [56] -  2 bytes
+    uint16_t sample_count_util;                                     // [58] -  2 bytes
+    uint16_t step_up;                                               // [60] -  2 bytes
+    uint16_t step_down;                                             // [62] -  2 bytes
+    uint16_t epsilon_perc;                                          // [64] -  2 bytes
+    uint16_t tlutil;                                                // [66] -  2 bytes
+    uint8_t  tunable_param_overwrite;                               // [68] -  1 byte
 
     // Soft frequency boundaries
-    uint16_t soft_fmin;                                             // [149] -  2 bytes
-    uint8_t  pad;                                                   // [151] -  1 bytes
-    uint16_t soft_fmax;                                             // [152] -  2 bytes
+    uint16_t soft_fmin;                                             // [69] -  2 bytes
+    uint8_t  pad;                                                   // [71] -  1 bytes
+    uint16_t soft_fmax;                                             // [72] -  2 bytes
 
     // Reserved Bytes
     union
@@ -176,7 +170,7 @@ typedef struct
           freqConfig_t sys_mode_freq;
           uint8_t      tb_record;
       };
-      uint8_t  reserved[ SLV_INBOX_RSV_SIZE ];                      // [154] - 68 bytes
+      uint8_t  reserved[ SLV_INBOX_RSV_SIZE ];                      // [74] - 150 bytes
     };
 
     // General Firmware Message Passing
