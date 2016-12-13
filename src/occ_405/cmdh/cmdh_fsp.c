@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/cmdh/cmdh_fsp.c $                                     */
+/* $Source: src/occ_405/cmdh/cmdh_fsp.c $                                 */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -399,12 +399,16 @@ void cmdh_build_errl_rsp(const cmdh_fsp_cmd_t * i_cmd_ptr,
              */
             //For invalid data, use INVALID_INPUT_DATA reason code.  Use INTERNAL_FAILURE otherwise.
             l_reason = (i_rc == ERRL_RC_INVALID_DATA)? INVALID_INPUT_DATA: INTERNAL_FAILURE;
+            CMDH_TRAC_ERR("cmdh_build_errl_rsp: command 0x%02X failed with reason 0x%02X",
+                           i_cmd_ptr->cmd_type,
+                           l_reason);
+
             *l_errlHndlPtr = createErrl(
                     CMDH_GENERIC_CMD_FAILURE,           //modId
                     l_reason,                           //reasoncode
                     ERC_CMDH_INTERNAL_FAILURE,          //Extended reason code
                     ERRL_SEV_UNRECOVERABLE,             //Severity
-                    NULL,    //TODO: create trace       //Trace Buf
+                    NULL,                               //Trace Buf
                     DEFAULT_TRACE_SIZE,                 //Trace Size
                     CONVERT_UINT8_ARRAY_UINT32(i_cmd_ptr->cmd_type,
                                                i_cmd_ptr->data[0],
@@ -893,7 +897,6 @@ errlHndl_t cmdh_processTmgtRequest (const cmdh_fsp_cmd_t * i_cmd_ptr,
             l_err = cmdh_amec_pass_through(i_cmd_ptr,i_rsp_ptr);
             break;
 
-/*
         case CMDH_RESET_PREP:
             l_err = cmdh_reset_prep(i_cmd_ptr,i_rsp_ptr);
             break;
@@ -902,27 +905,25 @@ errlHndl_t cmdh_processTmgtRequest (const cmdh_fsp_cmd_t * i_cmd_ptr,
             cmdh_mnfg_test_parse(i_cmd_ptr,i_rsp_ptr);
             break;
 
-*/
         case CMDH_GET_FIELD_DEBUG_DATA:
             l_err = cmdh_tmgt_get_field_debug_data(i_cmd_ptr,i_rsp_ptr);
             break;
 
-/*
         case CMDH_TUNABLE_PARMS:
             l_err = cmdh_tunable_parms(i_cmd_ptr,i_rsp_ptr);
             break;
+
         case CMDH_SNAPSHOT_SYNC:
             l_err = cmdh_snapshot_sync(i_cmd_ptr,i_rsp_ptr);
             break;
+
         case CMDH_GET_SNAPSHOT_BUFFER:
             l_err = cmdh_get_snapshot_buffer(i_cmd_ptr,i_rsp_ptr);
             break;
-*/
+
         case CMDH_SET_USER_PCAP:
             l_err = cmdh_set_user_pcap(i_cmd_ptr, i_rsp_ptr);
             break;
-
-        //case CMDH_GET_CPU_TEMPS:
 
         default:
             CMDH_TRAC_INFO("Invalid or unsupported command 0x%02x",l_cmd_type);

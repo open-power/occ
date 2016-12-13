@@ -50,7 +50,6 @@ typedef enum
     CMDH_SET_USER_PCAP          = 0x22,
     CMDH_RESET_PREP             = 0x25,
     CMDH_SNAPSHOT_SYNC          = 0x26,
-    CMDH_GET_CPU_TEMPS          = 0x33,
     CMDH_GET_SNAPSHOT_BUFFER    = 0x35,
     CMDH_DEBUGPT                = 0x40,
     CMDH_AME_PASS_THROUGH       = 0x41,
@@ -96,7 +95,7 @@ typedef struct __attribute__ ((packed)) cmdh_poll_resp_v20
             uint8_t fir_master     : 1;   // 1 => fir master.
             uint8_t _reserved_5    : 1;
             uint8_t _reserved_4    : 1;
-            uint8_t _reserved_3    : 1;
+            uint8_t simics         : 1;   // 1 => running in SIMICS environment
             uint8_t _reserved_2    : 1;
             uint8_t obs_ready      : 1;   // 1 => OCC received all data to support obs state.
             uint8_t active_ready   : 1;   // 1 => OCC received all data to support active state.
@@ -306,6 +305,8 @@ typedef enum
     // FFDC error log should be generated. Current assumption is that an
     // OCC in a different node should never be reason for an OCC failure.
     CMDH_PREP_FAILON_OTHERNODE = 0x03,
+    // System is powering off, stop RTL tasks
+    CMDH_PREP_POWER_OFF = 0xFF,
 } eCmdhResetPrepReason;
 
 #define CMDH_RESET_PREP_TRACE_SIZE 3072

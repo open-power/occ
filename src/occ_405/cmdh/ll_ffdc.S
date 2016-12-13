@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2011,2015
+# Contributors Listed Below - COPYRIGHT 2011,2016
 # [+] International Business Machines Corp.
 #
 #
@@ -137,22 +137,22 @@
 # 256 (x100)        4       dbsr
 # 260 (x104)        4       OCB_OISR0
 # 264 (x108)        4       OCB_OISR1
-# 268 (x10c)        4       OCB_OUDER0
-# 272 (x110)        4       OCB_OUDER1
+# 268 (x10c)        4       OCB_OCCMISC
+# 272 (x110)        4       OCB_OHTMCR
 # 276 (x114)        4       OCB_OIMR0
 # 280 (x118)        4       OCB_OIMR1
 # 284 (x11c)        4       OCB_OITR0
 # 288 (x120)        4       OCB_OITR1
 # 292 (x124)        4       OCB_OIEPR0
 # 296 (x128)        4       OCB_OIEPR1
-# 300 (x12c)        4       OCB_OCIR0
-# 304 (x130)        4       OCB_OCIR1
+# 300 (x12c)        4       OCB_OEHDR
+# 304 (x130)        4       OCB_OCICFG
 # 308 (x134)        4       OCB_ONISR0
 # 312 (x138)        4       OCB_ONISR1
 # 316 (x13c)        4       OCB_OCISR0
 # 320 (x140)        4       OCB_OCISR1
-# 324 (x144)        4       OCB_ODHER0
-# 328 (x148)        4       OCB_ODHER1
+# 324 (x144)        4       OCB_OCCFLG
+# 328 (x148)        4       OCB_OCCHBR
 # 332 (x14c)        4       SSX timebase
 # 336 (x150)        16      Build name
 # 352 (x160)        8       OCCLFIR
@@ -343,10 +343,10 @@ OISR0:                      .int
     .struct OISR0 + 4
 OISR1:                      .int
     .struct OISR1 + 4
-OUDER0:                     .int
-    .struct OUDER0 + 4
-OUDER1:                     .int
-    .struct OUDER1 + 4
+OCCMISC:                     .int
+    .struct OCCMISC + 4
+OHTMCR:                     .int
+    .struct OHTMCR + 4
 OIMR0:                      .int
     .struct OIMR0 + 4
 OIMR1:                      .int
@@ -359,10 +359,10 @@ OIEPR0:                     .int
     .struct OIEPR0 + 4
 OIEPR1:                     .int
     .struct OIEPR1 + 4
-OCIR0:                      .int
-    .struct OCIR0 + 4
-OCIR1:                      .int
-    .struct OCIR1 + 4
+OEHDR:                      .int
+    .struct OEHDR + 4
+OCICFG:                      .int
+    .struct OCICFG + 4
 ONISR0:                     .int
     .struct ONISR0 + 4
 ONISR1:                     .int
@@ -371,10 +371,10 @@ OCISR0:                     .int
     .struct OCISR0 + 4
 OCISR1:                     .int
     .struct OCISR1 + 4
-ODHER0:                     .int
-    .struct ODHER0 + 4
-ODHER1:                     .int
-    .struct ODHER1 + 4
+OCCFLG:                     .int
+    .struct OCCFLG + 4
+OCCHBR:                     .int
+    .struct OCCHBR + 4
 FFDC_TIMEBASE:              .int
     .struct FFDC_TIMEBASE + 4
 OCC_BUILD_NAME:             .byte
@@ -858,19 +858,13 @@ __save_ffdc_regs:
     _lwzi       %r5, %r5, OCB_OISR1
     _stwi       %r5, %r3, OISR1
 
-    # TODO/NOTE: These registers were commented out for P9 because
-    # they were removed from the headerfile, ocb_register_addresses.h:
-    # OUDER0, OUDER1, OCIR0, OCIR1, ODHER0, ODHER1
+    # Save OCCMISC
+    _lwzi       %r5, %r5, OCB_OCCMISC
+    _stwi       %r5, %r3, OCCMISC
 
-    # TODO: DETERMINE IF THIS REGISTER EXISTS
-    # Save OUDER0
-    #_lwzi       %r5, %r5, OCB_OUDER0
-    #_stwi       %r5, %r3, OUDER0
-
-    # TODO: DETERMINE IF THIS REGISTER EXISTS
-    # Save OUDER1
-    #_lwzi       %r5, %r5, OCB_OUDER1
-    #_stwi       %r5, %r3, OUDER1
+    # Save OHTMCR
+    _lwzi       %r5, %r5, OCB_OHTMCR
+    _stwi       %r5, %r3, OHTMCR
 
     # Save OIMR0
     _lwzi       %r5, %r5, OCB_OIMR0
@@ -890,17 +884,12 @@ __save_ffdc_regs:
     # Save OIEPR1
     _lwzi       %r5, %r5, OCB_OIEPR1
     _stwi       %r5, %r3, OIEPR1
-
-    # TODO: DETERMINE IF THIS REGISTER EXISTS
-    # Save OCIR0
-    #_lwzi       %r5, %r5, OCB_OCIR0
-    #_stwi       %r5, %r3, OCIR0
-
-    # TODO: DETERMINE IF THIS REGISTER EXISTS
-    # Save OCIR1
-    #_lwzi       %r5, %r5, OCB_OCIR1
-    #_stwi       %r5, %r3, OCIR1
-
+    # Save OEHDR
+    _lwzi       %r5, %r5, OCB_OEHDR
+    _stwi       %r5, %r3, OEHDR
+    # Save OCICFG
+    _lwzi       %r5, %r5, OCB_OCICFG
+    _stwi       %r5, %r3, OCICFG
     # Save ONISR0
     _lwzi       %r5, %r5, OCB_ONISR0
     _stwi       %r5, %r3, ONISR0
@@ -913,16 +902,12 @@ __save_ffdc_regs:
     # Save OCISR1
     _lwzi       %r5, %r5, OCB_OCISR1
     _stwi       %r5, %r3, OCISR1
-
-    # TODO: DETERMINE IF THIS REGISTER EXISTS
-    # Save ODHER0
-    #_lwzi       %r5, %r5, OCB_ODHER0
-    #_stwi       %r5, %r3, ODHER0
-
-    # TODO: DETERMINE IF THIS REGISTER EXISTS
-    # Save ODHER1
-    #_lwzi       %r5, %r5, OCB_ODHER1
-    #_stwi       %r5, %r3, ODHER1
+    # Save OCCFLG
+    _lwzi       %r5, %r5, OCB_OCCFLG
+    _stwi       %r5, %r3, OCCFLG
+    # Save OCCHBR
+    _lwzi       %r5, %r5, OCB_OCCHBR
+    _stwi       %r5, %r3, OCCHBR
 
     # Save ssx timebase
     _lwzsd      %r5, __ssx_timebase_frequency_mhz

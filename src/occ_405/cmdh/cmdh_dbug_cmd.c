@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -149,7 +149,7 @@ void dbug_err_inject(const cmdh_fsp_cmd_t * i_cmd_ptr,
 void dbug_centaur_dump(const cmdh_fsp_cmd_t * i_cmd_ptr,
                              cmdh_fsp_rsp_t * i_rsp_ptr)
 {
-/* TEMP -- NOT SUPPORTED (Don't have MemData structure anymore */
+/* TODO - RTC 163359 Centaur support */
 #if 0
     uint16_t l_datalen = 0;
     uint8_t l_jj=0;
@@ -213,8 +213,6 @@ void dbug_apss_dump(const cmdh_fsp_cmd_t * i_cmd_ptr,
 void dbug_proc_data_dump(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                cmdh_fsp_rsp_t * i_rsp_ptr)
 {
-/* TEMP -- NOT SUPPORTED (Don't have CoreData structure anymore) */
-#if 0
     uint16_t l_datalen = 0;
     uint8_t l_jj=0;
 
@@ -236,7 +234,6 @@ void dbug_proc_data_dump(const cmdh_fsp_cmd_t * i_cmd_ptr,
     i_rsp_ptr->data_length[0] = CONVERT_UINT16_UINT8_HIGH(l_datalen);
     i_rsp_ptr->data_length[1] = CONVERT_UINT16_UINT8_LOW(l_datalen);
     G_rsp_status              = ERRL_RC_SUCCESS;
-#endif
     return;
 }
 

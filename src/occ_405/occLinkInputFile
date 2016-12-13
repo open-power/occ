@@ -26,8 +26,10 @@ INPUT ( amec_amester.o
         cmdh_fsp_cmds_datacnfg.o
         cmdh_fsp_cmds.o
         cmdh_fsp.o
+        cmdh_mnfg_intf.o
         cmdh_snapshot.o
         cmdh_thread.o
+        cmdh_tunable_parms.o
         common.o
         dcom.o
         dcom_thread.o

@@ -137,7 +137,7 @@ uint8_t cmdh_mnfg_run_stop_slew(const cmdh_fsp_cmd_t * i_cmd_ptr,
         }
         else
         {
-            l_step_size = 20;  // TODO: Need to find out the step size from Pstate table
+            l_step_size = (uint16_t)G_mhz_per_pstate;
 
             // Translate the step delay to internal OCC ticks
             l_temp = (l_cmd_ptr->step_delay * 1000) / AMEC_US_PER_TICK;
@@ -363,7 +363,7 @@ uint8_t cmdh_mnfg_list_sensors(const cmdh_fsp_cmd_t * i_cmd_ptr,
         // Do sanity check on the function inputs
         if ((NULL == i_cmd_ptr) || (NULL == o_rsp_ptr))
         {
-// TODO: THESE TRACES NEED TO BE VERIFIED
+// TODO RTC 132348: THESE TRACES NEED TO BE VERIFIED
             TRAC_ERR("cmdh_mnfg_list_sensors: invalid pointers. cmd[0x%08x] rsp[0x%08x]",
                      (uint32_t) i_cmd_ptr, (uint32_t) o_rsp_ptr);
             l_rc = ERRL_RC_INTERNAL_FAIL;
@@ -501,7 +501,7 @@ uint8_t cmdh_mnfg_get_sensor(const cmdh_fsp_cmd_t * i_cmd_ptr,
         // Do sanity check on the function inputs
         if ((NULL == i_cmd_ptr) || (NULL == o_rsp_ptr))
         {
-// TODO: THESE TRACES NEED TO BE VERIFIED
+// TODO RTC 132348: THESE TRACES NEED TO BE VERIFIED
             TRAC_ERR("cmdh_mnfg_get_sensor: invalid pointers. cmd[0x%08x] rsp[0x%08x]",
                      (uint32_t) i_cmd_ptr, (uint32_t) o_rsp_ptr);
             l_rc = ERRL_RC_INTERNAL_FAIL;

@@ -180,7 +180,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
         l_poll_rsp->ext_status.n_power = 1;
     }
 
-    // TEMP/TODO: Sync request bit set here
+    // TODO RTC 165947: Sync request bit set here
 
     // Byte 3
     l_poll_rsp->occ_pres_mask   = G_sysConfigData.is_occ_present;
@@ -484,8 +484,6 @@ errlHndl_t cmdh_reset_prep (const cmdh_fsp_cmd_t * i_cmd_ptr,
                                   cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     errlHndl_t                  l_errlHndl = NULL;
-/* TEMP -- NOT ENABLED YET (NEED DCOM) */
-#if 0
     cmdh_reset_prep_t *         l_cmd_ptr = (cmdh_reset_prep_t *) i_cmd_ptr;
     ERRL_RC                     l_rc = ERRL_RC_SUCCESS;
     bool                        l_ffdc = FALSE;
@@ -540,6 +538,21 @@ errlHndl_t cmdh_reset_prep (const cmdh_fsp_cmd_t * i_cmd_ptr,
                 l_rc = ERRL_RC_SUCCESS;
                 break;
 
+            case CMDH_PREP_POWER_OFF:
+                // System powering off, stop DCOM and other tasks that still run in standby
+                rtl_stop_task(TASK_ID_DCOM_WAIT_4_MSTR);
+                rtl_stop_task(TASK_ID_DCOM_RX_INBX);
+                rtl_stop_task(TASK_ID_DCOM_TX_INBX);
+                rtl_stop_task(TASK_ID_DCOM_RX_OUTBX);
+                rtl_stop_task(TASK_ID_DCOM_TX_OUTBX);
+                rtl_stop_task(TASK_ID_DCOM_PARSE_FW_MSG);
+                rtl_stop_task(TASK_ID_MISC_405_CHECKS);
+                rtl_stop_task(TASK_ID_POKE_WDT);
+
+                l_rc = ERRL_RC_SUCCESS;
+                break;
+
+
             default:
                 l_rc = ERRL_RC_INVALID_DATA;
                 break;
@@ -575,7 +588,8 @@ errlHndl_t cmdh_reset_prep (const cmdh_fsp_cmd_t * i_cmd_ptr,
             }
         }
 
-        if (G_sysConfigData.system_type.kvm && isSafeStateRequested())
+        if (G_sysConfigData.system_type.kvm && isSafeStateRequested() &&
+            (l_cmd_ptr->reason != CMDH_PREP_POWER_OFF))
         {
             // Notify dcom thread to update opal table
             ssx_semaphore_post(&G_dcomThreadWakeupSem);
@@ -612,7 +626,6 @@ errlHndl_t cmdh_reset_prep (const cmdh_fsp_cmd_t * i_cmd_ptr,
         // Build Error Response packet
         cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, l_rc, &l_errlHndl);
     }
-#endif // #if 0
     return l_errlHndl;
 }
 
@@ -1155,20 +1168,7 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
         G_occ_external_req_mode  = l_cmd_ptr->occ_mode;
         G_occ_external_req_state = l_cmd_ptr->occ_state;
 
-        // In case we need to transition state while
-        // master slave comm isn't working:
-        // This is a temporary hack to allow state and mode transitions
-        //             until DCOM is enabled; commented out again once
-        //             that happens.
-        // This is only valid during early code development. It should
-        // always be commented in p9.
-        // if(){
-        //     G_occ_master_state = l_cmd_ptr->occ_state;
-        //     G_occ_master_mode  = l_cmd_ptr->occ_mode;
-        // }
         // We need to wait and see if all Slaves correctly make it to state/mode.
-        // TODO: Also, if all slaves can't go to this mode (based on their state),
-        // we need to return PRESENT_STATE_PROHIBITS and do nothing.
         do
         {
             uint8_t l_slv_idx = 0;
@@ -1375,8 +1375,6 @@ errlHndl_t cmdh_tmgt_get_field_debug_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                           cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     errlHndl_t                        l_err             = NULL;
-/* TEMP -- NOT YET SUPPORTED (NEED SENSORS) */
-#if 0
     uint16_t                          i                 = 0;
     UINT                              l_rtLen           = 0;
     uint16_t                          l_num_of_sensors  = CMDH_FIELD_MAX_NUM_SENSORS;
@@ -1408,7 +1406,6 @@ errlHndl_t cmdh_tmgt_get_field_debug_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
         l_rtLen = CMDH_FIELD_TRACE_DATA_SIZE;
         TRAC_get_buffer_partial(TRAC_get_td("INF"), l_resp_ptr->trace_inf, &l_rtLen);
 
-        // TODO: Set "present" to 0 for testing (since no sensor presented now)
         querySensorListArg_t l_qsl_arg = {
             0,                         // i_startGsid - start with sensor 0x0000
             0,                         // i_present
@@ -1477,7 +1474,6 @@ errlHndl_t cmdh_tmgt_get_field_debug_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
         // Build Error Response packet
         cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, l_rc, &l_err);
     }
-#endif
     return l_err;
 }
 

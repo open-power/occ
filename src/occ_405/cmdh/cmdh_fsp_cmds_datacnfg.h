@@ -34,7 +34,6 @@
 #include "occ_common.h"
 #include "state.h"
 #include "cmdh_fsp.h"
-//#include "gpsm.h"
 #include "cmdh_fsp_cmds.h"
 #include "apss.h"
 
@@ -52,9 +51,6 @@ typedef enum
    DATA_FORMAT_MEM_THROT             = 0x12,
    DATA_FORMAT_THRM_THRESHOLDS       = 0x13,
    DATA_FORMAT_AVSBUS_CONFIG         = 0x14,
-   DATA_FORMAT_WOF_CORE_FREQ         = 0x30,
-   DATA_FORMAT_WOF_VRM_EFF           = 0x31,
-   DATA_FORMAT_CLEAR_ALL             = 0xff,
 } eConfigDataFormatVersion;
 
 // Enum of the various Cnfg Data Masks that are used

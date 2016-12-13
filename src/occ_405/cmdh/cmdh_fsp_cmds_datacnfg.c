@@ -34,7 +34,6 @@
 #include "state.h"
 #include "cmdh_fsp_cmds.h"
 #include "cmdh_dbug_cmd.h"
-//#include "gpsm.h"
 #include "proc_pstate.h"
 #include <amec_data.h>
 #include "amec_amester.h"
@@ -2195,33 +2194,6 @@ errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
             if(NULL == l_errlHndl)
             {
                 l_new_data = DATA_MASK_MEM_THROT;
-            }
-            break;
-
-        case DATA_FORMAT_WOF_CORE_FREQ:
-            // TODO: RTC 130216 - WOF
-            break;
-
-        case DATA_FORMAT_WOF_VRM_EFF:
-            // TODO: RTC 130216 - WOF
-            break;
-
-        case DATA_FORMAT_CLEAR_ALL:
-            // Make sure not in ACTIVE
-            if(CURRENT_STATE() != OCC_STATE_ACTIVE)
-            {
-                // Clear all configuration data except for any data needed to support observation
-                CMDH_TRAC_INFO("Clear all active configuration data");
-                G_data_cnfg->data_mask &= SMGR_VALIDATE_DATA_OBSERVATION_MASK;
-
-                // Clear the frequencies config data
-                memset(&G_sysConfigData.sys_mode_freq.table[0], 0, sizeof(G_sysConfigData.sys_mode_freq.table));
-
-            }
-            else
-            {
-                CMDH_TRAC_ERR("Failed to clear all active configuration data because we are in ACTIVE state");
-                l_rc = ERRL_RC_INVALID_STATE;
             }
             break;
 
