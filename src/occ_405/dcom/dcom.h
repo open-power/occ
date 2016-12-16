@@ -125,7 +125,7 @@ typedef struct
 typedef pob_id_t pbax_id_t;
 
 // SLAVE INBOX structure
-typedef struct
+typedef struct __attribute__ ((packed))
 {
     // Packet Type & Sequence Information
     uint8_t  seq;                                                   // [0]   - 1 byte
@@ -164,7 +164,7 @@ typedef struct
     // Reserved Bytes
     union
     {
-      struct
+      struct __attribute__ ((packed))
       {
           uint32_t     counter;
           freqConfig_t sys_mode_freq;
