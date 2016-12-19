@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -32,6 +32,9 @@
 #define PGPE_SHARED_SRAM_ADDR_OFFSET 0x0c
 #define PGPE_SHARED_SRAM_SZ_OFFSET   0x14
 #define PGPE_BEACON_ADDR_OFFSET      0x48
+#define PGPE_ACTIVE_QUAD_ADDR_OFFSET 0x4c
+#define PGPE_WOF_TBLS_ADDR_OFFSET    0x50
+#define PGPE_WOF_TBLS_LEN_OFFSET     0x54
 
 // PGPE Image Header Parameter addresses
 
@@ -41,6 +44,12 @@
 
 // A pointer to PGPE Beacon Address
 #define PGPE_BEACON_ADDR_PTR         (PGPE_HEADER_ADDR + PGPE_BEACON_ADDR_OFFSET)
+
+// Pointers to data needed by WOF
+#define PGPE_ACTIVE_QUAD_ADDR_PTR    (PGPE_HEADER_ADDR + PGPE_ACTIVE_QUAD_ADDR_OFFSET)
+#define PGPE_WOF_TBLS_ADDR_PTR       (PGPE_HEADER_ADDR + PGPE_WOF_TBLS_ADDR_OFFSET)
+#define PGPE_WOF_TBLS_LEN_PTR        (PGPE_HEADER_ADDR + PGPE_WOF_TBLS_LEN_OFFSET)
+
 
 
 // PMMR (Pstates PM region) in HOMMR

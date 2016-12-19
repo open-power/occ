@@ -55,13 +55,13 @@
 #include <amec_health.h>
 #include <amec_analytics.h>
 #include <common.h>
+#include <occhw_async.h>
 #include <wof.h>
 
 //*************************************************************************
 // Externs
 //*************************************************************************
 extern dcom_slv_inbox_t G_dcom_slv_inbox_rx;
-
 //*************************************************************************
 // Macros
 //*************************************************************************
@@ -510,26 +510,28 @@ void amec_slv_state_4(void)
   //-------------------------------------------------------
   if( IS_OCC_STATE_ACTIVE() )
   {
-      /* TODO: RTC: 166301 - Logic to determine if WOF algorithm should run.
-      static bool run_wof_algoritm = true;
 
-      if( !run_wof_algorithm )
+      /* TODO: RTC 166301 - Logic to determine if WOF algorithm should run.
+      // The WOF algorithm is to be run every 4ms. Since amec_slv_state_4
+      // is run every 2ms, we need to skip every other invocation.
+      static bool L_run_wof_algorithm = true;
+      if( !L_run_wof_algorithm )
       {
           // When false, the last invocation decided we need to wait 2 ms
           // run wof algo next time.
-          run_wof_algorithm = true;
+          L_run_wof_algorithm = true;
       }
       else
       {
         //if IPC command is idle and ready to go
         //{
         //wof_main();
-        run_wof_algorithm = false;
+        L_run_wof_algorithm = false;
         //}
         //else if IPC command is still waiting
         //make thread wait another 2 ms
         //{
-        //  run_wof_algorithm = true;
+        //  L_run_wof_algorithm = true;
         //}
         //else if IPC command is returning an error
         //{

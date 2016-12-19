@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -60,6 +60,7 @@
 #include <pgpe_shared.h>
 #include <gpe_register_addresses.h>
 #include <p9_pstates_occ.h>
+#include <wof.h>
 
 extern uint32_t __ssx_boot; // Function address is 32 bits
 extern uint32_t G_occ_phantom_critical_count;
@@ -76,6 +77,19 @@ extern apss_complete_args_t G_gpe_complete_pwr_meas_read_args;
 
 extern uint32_t G_pgpe_beacon_address;
 
+extern uint32_t G_proc_fmin_khz;
+extern uint32_t G_proc_fmax_khz;
+extern uint32_t G_wof_active_quads_sram_addr;
+extern uint32_t G_wof_tables_main_mem_addr;
+extern uint32_t G_wof_tables_len;
+extern bool     G_run_wof_main;
+extern wof_header_data_t G_wof_header;
+
+extern uint32_t G_khz_per_pstate;
+
+extern uint8_t G_proc_pmin;
+extern uint8_t G_proc_pmax;
+
 IMAGE_HEADER (G_mainAppImageHdr,__ssx_boot,MAIN_APP_ID,ID_NUM_INVALID);
 
 // PGPE Image Header Parameters
@@ -87,8 +101,10 @@ OCCPstateParmBlock G_oppb;         // OCC Pstate Parameters Block Structure
 extern uint16_t G_proc_fmax_mhz;   // max(turbo,uturbo) frequencies
 
 
-//Set main thread timer for one second
+// Set main thread timer for one second
 #define MAIN_THRD_TIMER_SLICE ((SsxInterval) SSX_SECONDS(1))
+
+
 
 // SIMICS printf/printk
 SimicsStdio G_simics_stdout;
@@ -97,6 +113,8 @@ SimicsStdio G_simics_stderr;
 //  Critical /non Critical Stacks
 uint8_t G_noncritical_stack[NONCRITICAL_STACK_SIZE];
 uint8_t G_critical_stack[CRITICAL_STACK_SIZE];
+
+
 
 //NOTE: Three semaphores are used so that if in future it is decided
 // to move health monitor and FFDC into it's own threads, then
@@ -461,6 +479,120 @@ void create_tlb_entry(uint32_t address, uint32_t size)
 /*
  * Function Specification
  *
+ * Name: read_wof_header
+ *
+ * Description: Read WOF Tables header and populate global variables
+ *              needed for WOF
+ *
+ * End Function Specification
+ */
+void read_wof_header(void)
+{
+    int l_ssxrc = SSX_OK;
+    uint32_t l_reasonCode = 0;
+    uint32_t l_extReasonCode = 0;
+
+    do
+    {
+        // use block copy engine to read WOF header
+        BceRequest l_wof_header_req;
+
+        // 128 byte aligned buffer to read the data
+        temp_bce_request_buffer_t l_temp_bce_buff = {{0}};
+
+        uint32_t pad = G_wof_tables_main_mem_addr%128;
+        // Force WOF tables address is on 128 byte boundary
+        uint32_t wof_main_mem_addr_128 = G_wof_tables_main_mem_addr - pad;
+        // Create request
+        l_ssxrc = bce_request_create(&l_wof_header_req,      // block copy object
+                                     &G_pba_bcde_queue,      // main to sram copy engine
+                                     wof_main_mem_addr_128,  // mainstore address
+                                     (uint32_t) &l_temp_bce_buff, // SRAM start address
+                                     MIN_BCE_REQ_SIZE,       // size of copy
+                                     SSX_WAIT_FOREVER,       // no timeout
+                                     NULL,                   // no call back
+                                     NULL,                   // no call back args
+                                     ASYNC_REQUEST_BLOCKING);// blocking request
+
+        if(l_ssxrc != SSX_OK)
+        {
+            CMDH_TRAC_ERR("read_wof_header: BCDE request create failure rc=[%08X]", -l_ssxrc);
+            /*
+             * @errortype
+             * @moduleid    READ_WOF_HEADER
+             * @reasoncode  SSX_GENERIC_FAILURE
+             * @userdata1   RC for BCE block-copy engine
+             * @userdata2   Internal function checkpoint
+             * @userdata4   ERC_BCE_REQUEST_CREATE_FAILURE
+             * @devdesc     Failed to create BCDE request
+             */
+            l_reasonCode = SSX_GENERIC_FAILURE;
+            l_extReasonCode = ERC_BCE_REQUEST_CREATE_FAILURE;
+            break;
+        }
+
+
+        // Do the actual copy
+        l_ssxrc = bce_request_schedule(&l_wof_header_req);
+
+        if(l_ssxrc != SSX_OK)
+        {
+            CMDH_TRAC_ERR("read_wof_header: BCE request schedule failure rc=[%08X]", -l_ssxrc);
+            /*
+             * @errortype
+             * @moduleid    READ_WOF_HEADER
+             * @reasoncode  SSX_GENERIC_FAILURE
+             * @userdata1   RC for BCE block-copy engine
+             * @userdata4   ERC_BCE_REQUEST_SCHEDULE_FAILURE
+             * @devdesc     Failed to read PPMR data by using BCDE
+             */
+            l_reasonCode = SSX_GENERIC_FAILURE;
+            l_extReasonCode = ERC_BCE_REQUEST_SCHEDULE_FAILURE;
+            break;
+        }
+
+        // Copy the data into Global WOF header struct
+        memcpy(&G_wof_header, &(l_temp_bce_buff.data[pad]), sizeof(wof_header_data_t));
+
+
+
+
+    }while( 0 );
+
+    // Check for errors and log, if any
+    if( l_ssxrc != SSX_OK )
+    {
+        errlHndl_t l_errl = createErrl(READ_WOF_HEADER,         //modId
+                                       l_reasonCode,             //reasoncode
+                                       l_extReasonCode,          //Extended reason code
+                                       ERRL_SEV_UNRECOVERABLE,   //Severity
+                                       NULL,                     //Trace Buf
+                                       0,                        //Trace Size
+                                       -l_ssxrc,                 //userdata1
+                                       0);                       //userdata2
+
+        // Callout firmware
+        addCalloutToErrl(l_errl,
+                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                         ERRL_COMPONENT_ID_FIRMWARE,
+                         ERRL_CALLOUT_PRIORITY_HIGH);
+
+        // Commit error log
+        commitErrl(&l_errl);
+
+        // We were unable to get the WOF header thus it should not be run.
+        G_run_wof_main = false;
+
+        return;
+
+    }
+}
+
+
+
+/*
+ * Function Specification
+ *
  * Name: read_pgpe_header
  *
  * Description: Initialize PGPE image header entry in DTLB,
@@ -470,7 +602,6 @@ void create_tlb_entry(uint32_t address, uint32_t size)
  *
  * End Function Specification
  */
-
 void read_pgpe_header(void)
 {
     uint64_t   magic_number;
@@ -516,6 +647,20 @@ void read_pgpe_header(void)
 
         MAIN_TRAC_IMP("Read PGPE Beacon Address[0x%08x]",
                       G_pgpe_beacon_address);
+
+        // Read active quads address, wof tables address, and wof tables len
+        G_wof_active_quads_sram_addr = in32(PGPE_ACTIVE_QUAD_ADDR_PTR);
+        G_wof_tables_main_mem_addr       = in32(PGPE_WOF_TBLS_ADDR_PTR);
+        G_wof_tables_len                 = in32(PGPE_WOF_TBLS_LEN_PTR);
+
+        MAIN_TRAC_IMP("Read WOF Tables Main Memory Address[0x%08x], Len[0x%08x],"
+                      " Active Quads Address[0x%08x]",
+                      G_wof_tables_main_mem_addr,
+                      G_wof_tables_len,
+                      G_wof_active_quads_sram_addr );
+
+        // Extract important WOF data into global space
+        read_wof_header();
 
         // Read OCC/PGPE Shared SRAM address and size
         G_pgpe_shared_sram_address = in32(PGPE_SHARED_SRAM_ADDR_PTR);
@@ -741,6 +886,11 @@ void read_oppb_params(const OCCPstateParmBlock* oppb_offset)
             break;
         }
     } while (0);
+
+    // Read WOF addresses
+
+    MAIN_TRAC_IMP("Read PGPE Shared SRAM Start Address[0x%08x], Size[0x%08x]",
+                  G_pgpe_shared_sram_address, G_pgpe_shared_sram_sz);
 
     if ( l_ssxrc != SSX_OK )
     {

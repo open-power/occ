@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -266,6 +266,7 @@ enum occModuleId
     READ_PPMR_HEADER                =  MAIN_COMP_ID | 0x13,
     READ_OPPB_PARAMS                =  MAIN_COMP_ID | 0x14,
     MAIN_SMGR_MID                   =  MAIN_COMP_ID | 0x15,
+    READ_WOF_HEADER                 =  MAIN_COMP_ID | 0x16,
 };
 
 enum occUserDataType

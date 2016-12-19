@@ -27,14 +27,48 @@
 
 
 
+//******************************************************************************
+// Define
+//******************************************************************************
+#define MIN_BCE_REQ_SIZE 256
 
 
-//******************************************************************************
-// Globals
-//******************************************************************************
+typedef struct __attribute__ ((packed))
+{
+    uint64_t magic_number;
+    uint8_t size_of_vfrt;
+    uint8_t vfrt_data_size;
+    uint8_t active_quads_start;
+    uint8_t active_quads_size;
+    uint8_t vdn_start;
+    uint8_t vdn_step;
+    uint8_t vdn_size;
+    uint8_t vdd_start;
+    uint8_t vdd_step;
+    uint8_t vdd_size;
+} wof_header_data_t;
+
+
+
+typedef struct
+{
+    // There is no guarantee that we can fit everything into the min BceRequest
+    // size of 128 given that there may be a need to padding in the event the
+    // Main Memory address is not 128-byte aligned. The data here is 256 to
+    // ensure we have enough room for any and all padding that may be needed.
+    uint8_t data[MIN_BCE_REQ_SIZE];
+} temp_bce_request_buffer_t __attribute ((aligned(128)));
 
 //******************************************************************************
 // Function Prototypes
 //******************************************************************************
+
+
+void wof_main( void );
+
+uint16_t calculate_step_from_start( uint16_t i_ceff_vdx,
+                        uint8_t i_step_size,
+                        uint8_t i_min_step,
+                        uint8_t i_max_step );
 
 #endif

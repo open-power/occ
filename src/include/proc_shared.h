@@ -31,7 +31,6 @@
 #include "gpe_export.h"
 
 // Paramaters for gpe_get_core_data()
-
 typedef struct ipc_core_data_parms
 {
     GpeErrorStruct   error;

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -533,14 +533,36 @@ SECTIONS
 #if EXECUTABLE_FREE_SPACE
     _DATA_SECTION_SIZE = . - _DATA_SECTION_BASE;
     __WRITEABLE_DATA_LEN__ = . - __WRITEABLE_DATA_ADDR__ ;
-    _EX_FREE_SECTION_SIZE = _TRACE_BUFFERS_START_BASE - _EX_FREE_SECTION_BASE;
+    _EX_FREE_SECTION_SIZE = _GLOBAL_DATA_BASE - _EX_FREE_SECTION_BASE;
 #else
-    _DATA_SECTION_SIZE = _TRACE_BUFFERS_START_BASE - _DATA_SECTION_BASE;
-    __WRITEABLE_DATA_LEN__ = _TRACE_BUFFERS_START_BASE - __WRITEABLE_DATA_ADDR__ ;
+    _DATA_SECTION_SIZE = _GLOBAL_DATA_BASE - _DATA_SECTION_BASE;
+    __WRITEABLE_DATA_LEN__ = _GLOBAL_DATA_BASE - __WRITEABLE_DATA_ADDR__ ;
     _EX_FREE_SECTION_SIZE = 0;
 #endif
 
-    _SSX_FREE_END   = _TRACE_BUFFERS_START_BASE - 1;
+    _SSX_FREE_END   = _GLOBAL_DATA_BASE - 1;
+
+
+    ////////////////////////////////
+    // Global Data Section
+    //
+    // Contains pointers to important Global variables
+    //
+    ////////////////////////////////
+    __CUR_COUNTER__ = .;
+    _GLOBAL_DATA_BASE = 0xfffb3f00;
+    _GLOBAL_DATA_SIZE = 0x100;
+    . = _GLOBAL_DATA_BASE;
+#if !PPC405_MMU_SUPPORT
+    . = . - writethrough_offset;
+    _LMA = . + writethrough_offset;
+    .global_data . : AT(_LMA) {*(global_data) . = ALIGN(_GLOBAL_DATA_SIZE);}
+    . = . + writethrough_offset;
+#else
+    .global_data . : {*(global_data) . = ALIGN(_GLOBAL_DATA_SIZE);} > sram
+#endif
+    . = __CUR_COUNTER__;
+
 
     ////////////////////////////////
     // Trace Buffers
@@ -667,4 +689,5 @@ SECTIONS
 
     _PPC405_END_OF_MEMORY = 0;
 }
+
 
