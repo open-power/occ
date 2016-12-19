@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -55,6 +55,7 @@
 #include <amec_health.h>
 #include <amec_analytics.h>
 #include <common.h>
+#include <wof.h>
 
 //*************************************************************************
 // Externs
@@ -517,6 +518,40 @@ void amec_slv_state_4(void)
   //-------------------------------------------------------
   amec_update_centaur_sensors(CENTAUR_4);
 */
+
+  //-------------------------------------------------------
+  // Run WOF Algorithm
+  //-------------------------------------------------------
+  if( IS_OCC_STATE_ACTIVE() )
+  {
+      /* TODO: RTC: 166301 - Logic to determine if WOF algorithm should run.
+      static bool run_wof_algoritm = true;
+
+      if( !run_wof_algorithm )
+      {
+          // When false, the last invocation decided we need to wait 2 ms
+          // run wof algo next time.
+          run_wof_algorithm = true;
+      }
+      else
+      {
+        //if IPC command is idle and ready to go
+        //{
+        //wof_main();
+        run_wof_algorithm = false;
+        //}
+        //else if IPC command is still waiting
+        //make thread wait another 2 ms
+        //{
+        //  run_wof_algorithm = true;
+        //}
+        //else if IPC command is returning an error
+        //{
+        //  flag the error, request a reset
+        //}
+      }
+      */
+  }
 }
 
 

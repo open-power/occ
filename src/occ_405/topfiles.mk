@@ -89,7 +89,8 @@ TOP-C-SOURCES = amec/amec_analytics.c \
                 thread/chom.c \
                 thread/threadSch.c \
                 timer/timer.c \
-                trac/trac_interface.c
+                trac/trac_interface.c \
+                wof/wof.c
 
 TOP-S-SOURCES = cmdh/ll_ffdc.S \
 

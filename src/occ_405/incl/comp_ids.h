@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -87,5 +87,9 @@
 // MEMORY Control
 #define MEM_COMP_ID          0x1000
 #define MEM_COMP_NAME        "MEM"
+
+// Workload Optimize Frequency
+#define WOF_COMP_ID          0x1100
+#define WOF_COMP_NAME        "WOF"
 #endif
 
