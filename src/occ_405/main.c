@@ -555,6 +555,44 @@ void read_wof_header(void)
         memcpy(&G_wof_header, &(l_temp_bce_buff.data[pad]), sizeof(wof_header_data_t));
 
 
+        // Make sure the header is reporting a valid number of quads i.e. 1 or 6
+        if( (G_wof_header.active_quads_size != ACTIVE_QUAD_SZ_MIN) &&
+            (G_wof_header.active_quads_size != ACTIVE_QUAD_SZ_MAX) )
+        {
+            CMDH_TRAC_ERR("read_wof_header: Invalid number of active quads!"
+                          " Expected: 1 or 6, Actual %d",
+                          G_wof_header.active_quads_size );
+
+            /*
+             * @errortype
+             * @moduleid    READ_WOF_HEADER
+             * @reasoncode  INVALID_ACTIVE_QUAD_COUNT
+             * @userdata1   Reported active quad count
+             * @devdesc     Read an invalid number of active quads
+             */
+            l_reasonCode = INVALID_ACTIVE_QUAD_COUNT;
+            l_extReasonCode = ERC_WOF_QUAD_COUNT_FAILURE;
+            errlHndl_t l_errl = createErrl(READ_WOF_HEADER,        //modId
+                                   INVALID_ACTIVE_QUAD_COUNT,      //reasoncode
+                                   ERC_WOF_QUAD_COUNT_FAILURE,     //Extended reason code
+                                   ERRL_SEV_UNRECOVERABLE,         //Severity
+                                   NULL,                           //Trace Buf
+                                   0,                              //Trace Size
+                                   G_wof_header.active_quads_size, //userdata1
+                                   0);                             //userdata2
+
+            // Callout firmware
+            addCalloutToErrl(l_errl,
+                             ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                             ERRL_COMPONENT_ID_FIRMWARE,
+                             ERRL_CALLOUT_PRIORITY_HIGH);
+
+            // Commit error log
+            commitErrl(&l_errl);
+
+            // We were unable to get the active quad count. Do not run wof algo.
+            G_run_wof_main = false;
+        }
 
 
     }while( 0 );

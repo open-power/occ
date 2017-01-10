@@ -31,7 +31,8 @@
 // Define
 //******************************************************************************
 #define MIN_BCE_REQ_SIZE 256
-
+#define ACTIVE_QUAD_SZ_MIN 1
+#define ACTIVE_QUAD_SZ_MAX 6
 
 typedef struct __attribute__ ((packed))
 {
@@ -67,8 +68,12 @@ typedef struct
 void wof_main( void );
 
 uint16_t calculate_step_from_start( uint16_t i_ceff_vdx,
-                        uint8_t i_step_size,
-                        uint8_t i_min_step,
-                        uint8_t i_max_step );
+                                    uint8_t i_step_size,
+                                    uint8_t i_min_step,
+                                    uint8_t i_max_step );
+
+uint8_t calc_quad_step_from_start( uint8_t i_num_active_quads );
+
+
 
 #endif

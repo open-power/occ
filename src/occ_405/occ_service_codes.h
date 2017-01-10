@@ -59,6 +59,8 @@ enum occReasonCode
     SSX_GENERIC_FAILURE             = 0x17,
     /// Failure to handshake with an external fw entity (HB, FSP, PHYP, etc)
     EXTERNAL_INTERFACE_FAILURE      = 0x18,
+    /// Incorrect number of active quads reported
+    INVALID_ACTIVE_QUAD_COUNT       = 0x19,
     /// VRM reached error threshold (VR_HOT asserted)
     VRM_ERROR_TEMP                  = 0x20,
     /// VR_FAN  - AVS Bus over-temperature reported
@@ -240,6 +242,8 @@ enum occExtReasonCode
     ERC_PGPE_SUSPEND_FAILURE                    = 0x00B6,
     ERC_PGPE_CLIP_FAILURE                       = 0x00B7,
     ERC_PGPE_PPMR_OPPB_SIZE_MISMATCH            = 0x00B8,
+
+    ERC_WOF_QUAD_COUNT_FAILURE                  = 0x00C0,
 };
 
 // Error log Module Ids

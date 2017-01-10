@@ -88,7 +88,7 @@ void wof_main(void)
 
 
 /**
- *  calculate_step
+ *  calculate_step_from_start
  *
  *  Description: Calculates the step number for the current VDN/VDD
  *
@@ -134,4 +134,21 @@ uint16_t calculate_step_from_start(uint16_t i_ceff_vdx,
     }
 
     return l_current_step;
+}
+
+
+/**
+ * calc_quad_step_from_start
+ *
+ * Description: Calculates the step number for the current number
+ *              of active quads
+ *
+ * Param[in]: i_num_active_quads - The current number of active quads.
+ *
+ * Return: The calculated step for current active quads
+ */
+uint8_t calc_quad_step_from_start( uint8_t i_num_active_quads )
+{
+    return (G_wof_header.active_quads_size == ACTIVE_QUAD_SZ_MIN) ? 0 :
+                                              (i_num_active_quads - 1);
 }
