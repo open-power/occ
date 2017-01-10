@@ -33,6 +33,8 @@
 #define MIN_BCE_REQ_SIZE 256
 #define ACTIVE_QUAD_SZ_MIN 1
 #define ACTIVE_QUAD_SZ_MAX 6
+#define WOF_HEADER_SIZE 32
+
 
 typedef struct __attribute__ ((packed))
 {
@@ -50,7 +52,6 @@ typedef struct __attribute__ ((packed))
 } wof_header_data_t;
 
 
-
 typedef struct
 {
     // There is no guarantee that we can fit everything into the min BceRequest
@@ -60,10 +61,16 @@ typedef struct
     uint8_t data[MIN_BCE_REQ_SIZE];
 } temp_bce_request_buffer_t __attribute ((aligned(128)));
 
+typedef struct
+{
+    temp_bce_request_buffer_t * vfrt_table;
+    uint8_t pad;
+} copy_vfrt_to_sram_parms_t;
+
+
 //******************************************************************************
 // Function Prototypes
 //******************************************************************************
-
 
 void wof_main( void );
 
@@ -73,6 +80,16 @@ uint16_t calculate_step_from_start( uint16_t i_ceff_vdx,
                                     uint8_t i_max_step );
 
 uint8_t calc_quad_step_from_start( uint8_t i_num_active_quads );
+
+
+
+uint32_t calc_vfrt_mainstore_addr( uint16_t i_vdd_step_from_start,
+                            uint16_t i_vdn_step_from_start,
+                            uint8_t i_quad_step_from_start );
+
+void copy_vfrt_to_sram( copy_vfrt_to_sram_parms_t * i_parms );
+
+void send_vfrt_to_pgpe( uint32_t i_vfrt_address );
 
 
 

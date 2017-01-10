@@ -26,6 +26,10 @@
 #include <trac.h>
 #include <sensor.h>
 #include <occhw_async.h>
+#include <pgpe_shared.h>
+#include <pstate_pgpe_occ_api.h>
+#include <occ_service_codes.h>
+#include <wof_service_codes.h>
 #include "wof.h"
 
 
@@ -37,7 +41,16 @@ uint32_t G_wof_tables_main_mem_addr;
 uint32_t G_wof_tables_len;
 bool     G_run_wof_main;
 
+uint8_t G_sram_vfrt_ping_buffer[MIN_BCE_REQ_SIZE] __attribute__ ((section(".vfrt_ping_buffer")));
+uint8_t G_sram_vfrt_pong_buffer[MIN_BCE_REQ_SIZE] __attribute__ ((section(".vfrt_pong_buffer")));
 wof_header_data_t G_wof_header __attribute__ ((section (".global_data")));
+uint32_t G_current_vfrt_addr = 0;
+
+//******************************************************************************
+// External Globals
+//******************************************************************************
+extern GPE_BUFFER(ipcmsg_wof_vfrt_t G_wof_vfrt_parms);
+extern GpeRequest G_wof_vfrt_req;
 
 
 
@@ -151,4 +164,253 @@ uint8_t calc_quad_step_from_start( uint8_t i_num_active_quads )
 {
     return (G_wof_header.active_quads_size == ACTIVE_QUAD_SZ_MIN) ? 0 :
                                               (i_num_active_quads - 1);
+}
+
+/**
+ * calc_vfrt_address
+ *
+ * Description: Calculates the VFRT address based on the Ceff vdd/vdn and quad
+ *              steps.
+ *
+ * Param[in]: i_vdd_step_from_start
+ * Param[in]: i_vdn_step_from_start
+ * Param[in]: i_quad_step_from_start
+ *
+ * Return: The desired VFRT address
+ */
+uint32_t calc_vfrt_mainstore_addr( uint16_t i_vdd_step_from_start,
+                            uint16_t i_vdn_step_from_start,
+                            uint8_t i_quad_step_from_start )
+{
+
+    // Wof tables address calculation
+    // (Base_addr + (sizeof VFRT * (total active quads * ( (i_vdn_step_from_start * vdd_size) + (i_vdd_step_from_start) ) + (i_quad_step_from_start))))
+    uint32_t offset = G_wof_header.size_of_vfrt *
+                    (( G_wof_header.active_quads_size *
+                    ((i_vdn_step_from_start * G_wof_header.vdd_size) +
+                    i_vdd_step_from_start) ) + i_quad_step_from_start);
+
+    // Skip the wof header at the beginning of wof tables
+    uint32_t wof_tables_base = G_wof_tables_main_mem_addr + WOF_HEADER_SIZE;
+
+    return wof_tables_base + offset;
+}
+
+
+/**
+ * copy_vfrt_to_sram
+ *
+ * Description: Call back function to copy VFRT into SRAM ping/pong buffer
+ *              This call will also tell the PGPE that a new VFRT is available
+ *
+ * Param[in]: i_parms - pointer to a struct that will hold data necessary to
+ *                      the calculation.
+ *                      -Pointer to vfrt table temp buffer
+ *                      -Padding if the address needed to be 128-byte aligned
+ */
+void copy_vfrt_to_sram( copy_vfrt_to_sram_parms_t * i_parms)
+{
+/*
+ *
+ * find out which ping pong buffer to use
+ * copy the vfrt to said ping pong buffer
+ * save current vfrt address to global
+ * send IPC command to pgpe to notify of new ping/pong vfrt address
+ */
+    // Static variable to trac which buffer is open for use
+    // 0 = PING; 1 = PONG;
+    int l_gperc; // gpe schedule return code
+    static uint8_t L_pingpong = 0;
+    uint8_t * l_buffer_address;
+
+    if( L_pingpong == 0 )
+    {
+        // Use ping buffer
+        l_buffer_address = G_sram_vfrt_ping_buffer;
+        // Set next access to pong buffer
+    }
+    else
+    {
+        // Use pong buffer
+        l_buffer_address = G_sram_vfrt_pong_buffer;
+        // Set next access to ping buffer
+    }
+
+    // Copy the vfrt data into the buffer
+    memcpy( l_buffer_address,
+            &(i_parms->vfrt_table->data[i_parms->pad]),
+            G_wof_header.size_of_vfrt );
+
+    // Set the parameters for the GpeRequest
+    G_wof_vfrt_parms.vfrt_ptr = l_buffer_address;
+    // TODO set this to Global amec field once we read shared sram
+    G_wof_vfrt_parms.active_quads = 1;
+
+    // Send IPC command to PGPE with new vfrt address and active quads
+    // Should not need to check if request is idle as wof_main does before
+    // the WOF calculations begin.
+    l_gperc = gpe_request_schedule( &G_wof_vfrt_req );
+
+    // Confirm Successfull completion of WOF VFRT task
+    if(l_gperc != 0)
+    {
+        //Error in scheduling pgpe clip update task
+        TRAC_ERR("copy_vfrt_to_sram: Failed to schedule WOF VFRT task rc=%x",
+                 l_gperc);
+
+        /* @
+         * @errortype
+         * @moduleid    COPY_VFRT_TO_SRAM
+         * @reasoncode  GPE_REQUEST_SCHEDULE_FAILURE
+         * @userdata1   rc - gpe_request_schedule return code
+         * @userdata2   0
+         * @userdata4   OCC_NO_EXTENDED_RC
+         * @devdesc     OCC Failed to schedule a GPE job for clip update
+         */
+        errlHndl_t l_errl = createErrl(
+            COPY_VFRT_TO_SRAM,                   // modId
+            GPE_REQUEST_SCHEDULE_FAILURE,           // reasoncode
+            OCC_NO_EXTENDED_RC,                     // Extended reason code
+            ERRL_SEV_UNRECOVERABLE,                 // Severity
+            NULL,                                   // Trace Buf
+            DEFAULT_TRACE_SIZE,                     // Trace Size
+            l_gperc,                                     // userdata1
+            0                                       // userdata2
+            );
+
+        // Callout firmware
+        addCalloutToErrl(l_errl,
+                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                         ERRL_COMPONENT_ID_FIRMWARE,
+                         ERRL_CALLOUT_PRIORITY_HIGH);
+
+        // Commit error log
+        commitErrl(&l_errl);
+    }
+    else
+    {
+        // Sent the IPC command successfully, update which buffer we should look
+        // at next time.
+        L_pingpong = ~L_pingpong;
+    }
+
+}
+
+
+/**
+ * send_vfrt_to_pgpe
+ *
+ * Description: Function to copy new VFRT from Mainstore to local SRAM buffer
+ *              and calls copy_vfrt_to_sram callback function to send new VFRT
+ *              to the PGPE
+ *              Note: If desired VFRT is the same as previous, skip.
+ *
+ * Param[in]: i_vfrt_address - Address of the desired vfrt table.
+ */
+void send_vfrt_to_pgpe( uint32_t i_vfrt_address )
+{
+    int l_ssxrc = SSX_OK;
+    uint32_t l_reasonCode = 0;
+    uint32_t l_extReasonCode = 0;
+
+    do
+    {
+        if(i_vfrt_address == G_current_vfrt_addr)
+        {
+            // VFRT is unchanged. Skip
+            break;
+        }
+        else
+        {
+            // New VFRT needed from Mainstore, create BCE request to get it.
+            BceRequest l_vfrt_req;
+
+            // 128-byte aligned temp buffer to hold data
+            temp_bce_request_buffer_t l_temp_bce_buff = {{0}};
+
+
+            uint8_t l_pad = i_vfrt_address%128;
+            uint32_t l_vfrt_addr_128_aligned = i_vfrt_address - l_pad;
+
+            // Create structure to hold parameters for callback function
+            copy_vfrt_to_sram_parms_t l_callback_parms;
+            l_callback_parms.vfrt_table = &l_temp_bce_buff;
+            l_callback_parms.pad = l_pad;
+
+
+            // Create request
+            l_ssxrc = bce_request_create(
+                             &l_vfrt_req,                 // block copy object
+                             &G_pba_bcde_queue,           // main to sram copy engine
+                             l_vfrt_addr_128_aligned,     //mainstore address
+                             (uint32_t) &l_temp_bce_buff, // SRAM start address
+                             MIN_BCE_REQ_SIZE,            // size of copy
+                             SSX_WAIT_FOREVER,            // no timeout
+                             (AsyncRequestCallback)copy_vfrt_to_sram,
+                             (void *)&l_callback_parms,
+                             ASYNC_CALLBACK_IMMEDIATE );
+
+            if(l_ssxrc != SSX_OK)
+            {
+                CMDH_TRAC_ERR("read_wof_header: BCDE request create failure rc=[%08X]", -l_ssxrc);
+                /*
+                 * @errortype
+                 * @moduleid    SEND_VFRT_TO_PGPE
+                 * @reasoncode  SSX_GENERIC_FAILURE
+                 * @userdata1   RC for BCE block-copy engine
+                 * @userdata2   Internal function checkpoint
+                 * @userdata4   ERC_BCE_REQUEST_CREATE_FAILURE
+                 * @devdesc     Failed to create BCDE request
+                 */
+                l_reasonCode = SSX_GENERIC_FAILURE;
+                l_extReasonCode = ERC_BCE_REQUEST_CREATE_FAILURE;
+                break;
+            }
+
+            // Do the actual copy
+            l_ssxrc = bce_request_schedule( &l_vfrt_req );
+
+            if(l_ssxrc != SSX_OK)
+            {
+                CMDH_TRAC_ERR("read_wof_header: BCE request schedule failure rc=[%08X]", -l_ssxrc);
+                /*
+                 * @errortype
+                 * @moduleid    SEND_VFRT_TO_PGPE
+                 * @reasoncode  SSX_GENERIC_FAILURE
+                 * @userdata1   RC for BCE block-copy engine
+                 * @userdata4   ERC_BCE_REQUEST_SCHEDULE_FAILURE
+                 * @devdesc     Failed to read PPMR data by using BCDE
+                 */
+                l_reasonCode = SSX_GENERIC_FAILURE;
+                l_extReasonCode = ERC_BCE_REQUEST_SCHEDULE_FAILURE;
+                break;
+            }
+
+        }
+    }while( 0 );
+
+    // Check for errors and log, if any
+    if( l_ssxrc != SSX_OK )
+    {
+        errlHndl_t l_errl = createErrl(SEND_VFRT_TO_PGPE,         //modId
+                                       l_reasonCode,             //reasoncode
+                                       l_extReasonCode,          //Extended reason code
+                                       ERRL_SEV_UNRECOVERABLE,   //Severity
+                                       NULL,                     //Trace Buf
+                                       0,                        //Trace Size
+                                       -l_ssxrc,                 //userdata1
+                                       0);                       //userdata2
+
+        // Callout firmware
+        addCalloutToErrl(l_errl,
+                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                         ERRL_COMPONENT_ID_FIRMWARE,
+                         ERRL_CALLOUT_PRIORITY_HIGH);
+
+        // Commit error log
+        commitErrl(&l_errl);
+
+        return;
+    }
+
 }
