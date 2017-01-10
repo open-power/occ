@@ -140,10 +140,10 @@ typedef struct __attribute__ ((packed))
     uint8_t  version;
     uint8_t  vdd_bus;
     uint8_t  vdd_rail;
-    uint16_t vdd_loadline;
+    uint16_t reserved1;
     uint8_t  vdn_bus;
     uint8_t  vdn_rail;
-    uint16_t vdn_loadline;
+    uint16_t reserved2;
 }cmdh_avsbus_config_t;
 
 // Used by TMGT to send OCC the PCAP config data.

@@ -287,7 +287,8 @@ const sensor_ptr_t G_amec_sensor_list[] =
   SENSOR_PTR(   PROBE250US5,        &g_amec_sys.fw.probe250us[5]),
   SENSOR_PTR(   PROBE250US6,        &g_amec_sys.fw.probe250us[6]),
   SENSOR_PTR(   PROBE250US7,        &g_amec_sys.fw.probe250us[7]),
-
+  SENSOR_PTR(  VOLTVDDSENSE,        &g_amec_sys.fw.voltvddsense),
+  SENSOR_PTR(  VOLTVDNSENSE,        &g_amec_sys.fw.voltvdnsense),
   SENSOR_PTR(   GPEtickdur0,        &g_amec_sys.fw.gpetickdur[0]),
   SENSOR_PTR(   GPEtickdur1,        &g_amec_sys.fw.gpetickdur[1]),
   SENSOR_PTR(    RTLtickdur,        &g_amec_sys.fw.prcdupdatedur),
@@ -467,6 +468,8 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   MINI_SENSOR_PTR(    PROBE250US5,  NULL),
   MINI_SENSOR_PTR(    PROBE250US6,  NULL),
   MINI_SENSOR_PTR(    PROBE250US7,  NULL),
+  MINI_SENSOR_PTR(   VOLTVDDSENSE,  NULL),
+  MINI_SENSOR_PTR(   VOLTVDNSENSE,  NULL),
   MINI_SENSOR_PTR(    GPEtickdur0,  NULL),
   MINI_SENSOR_PTR(    GPEtickdur1,  NULL),
   MINI_SENSOR_PTR(     RTLtickdur,  NULL),

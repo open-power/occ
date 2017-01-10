@@ -69,6 +69,9 @@ enum e_gsid
     PROBE250US6,       // Internal Sensor for debug via AMESTER
     PROBE250US7,       // Internal Sensor for debug via AMESTER
 
+    VOLTVDDSENSE,      // chip voltage (remote sense adjusted for loadline)
+    VOLTVDNSENSE,      // chip voltage (remote sense adjusted for loadline)
+
     GPEtickdur0,       // Duration on the GPE0 Engine
     GPEtickdur1,       // Duration on the GPE1 Engine
     RTLtickdur,        // Duration on the RTL tick interrupt

@@ -405,77 +405,158 @@ void amec_update_apss_sensors(void)
 }
 
 
+// Read the current from AVS Bus and update sensors
+void process_avsbus_current()
+{
+    if (G_avsbus_vdd_monitoring)
+    {
+        // Read Vdd current (returns 10mA)
+        uint32_t current = avsbus_read(AVSBUS_VDD, AVSBUS_CURRENT);
+        if (current != 0)
+        {
+            // Current value stored in the sensor should be in 10mA (scale -2)
+            sensor_update(AMECSENSOR_PTR(CURVDD), (uint16_t)current);
+        }
+    }
+    if (G_avsbus_vdn_monitoring)
+    {
+        // Read Vdn current (returns 10mA)
+        uint32_t current = avsbus_read(AVSBUS_VDN, AVSBUS_CURRENT);
+        if (current != 0)
+        {
+            // Current value stored in the sensor should be in 10mA (scale -2)
+            sensor_update(AMECSENSOR_PTR(CURVDN), (uint16_t)current);
+        }
+    }
+}
+
+
+// Read the voltage from AVS Bus and update sensors
+void process_avsbus_voltage()
+{
+    if (G_avsbus_vdd_monitoring)
+    {
+        // Read Vdd voltage (returns mV)
+        uint32_t voltage = avsbus_read(AVSBUS_VDD, AVSBUS_VOLTAGE);
+        if (voltage != 0)
+        {
+            // Voltage value stored in the sensor should be in 100mV (scale -1)
+            voltage /= 100;
+            sensor_update(AMECSENSOR_PTR(VOLTVDD), (uint16_t)voltage);
+        }
+    }
+    if (G_avsbus_vdn_monitoring)
+    {
+        // Read Vdn voltage (returns mV)
+        uint32_t voltage = avsbus_read(AVSBUS_VDN, AVSBUS_VOLTAGE);
+        if (voltage != 0)
+        {
+            // Voltage value stored in the sensor should be in 100mV (scale -1)
+            voltage /= 100;
+            sensor_update(AMECSENSOR_PTR(VOLTVDN), (uint16_t)voltage);
+        }
+    }
+}
+
+
+// Calculate chip voltage and power and update sensors
 void update_avsbus_power_sensors(const avsbus_type_e i_type)
 {
     static bool L_throttle_vdd = FALSE;
     static bool L_throttle_vdn = FALSE;
     bool * L_throttle = &L_throttle_vdd;
-    uint16_t l_loadline = G_sysConfigData.avsbus_vdd.loadline;
-    uint32_t l_voltageSensor = VOLTVDD;
+    // TODO: RTC 130216 : read loadline and distloss from Pstate Super Structure
+    uint16_t l_loadline = 0x61AB; // OCCPstateParmBlock.vdd_sysparm.loadline_uohm
+    uint16_t l_distloss = 0x0000; // OCCPstateParmBlock.vdd_sysparm.distloss_uohm
     uint32_t l_currentSensor = CURVDD;
+    uint32_t l_voltageSensor = VOLTVDD;
+    uint32_t l_voltageChip = VOLTVDDSENSE;
     uint32_t l_powerSensor = PWRVDD;
     if (AVSBUS_VDN == i_type)
     {
         L_throttle = &L_throttle_vdn;
-        l_loadline = G_sysConfigData.avsbus_vdn.loadline;
-        l_voltageSensor = VOLTVDN;
+        l_loadline = 0x6BA8; // OCCPstateParmBlock.vdn_sysparm.loadline_uohm
+        l_distloss = 0x0000; // OCCPstateParmBlock.vdn_sysparm.distloss_uohm
         l_currentSensor = CURVDN;
+        l_voltageSensor = VOLTVDN;
+        l_voltageChip = VOLTVDNSENSE;
         l_powerSensor = PWRVDN;
     }
 
-    // Read AVS Bus current
-    uint32_t l_current_10ma = avsbus_read(i_type, AVSBUS_CURRENT);
-    if (l_current_10ma != 0)
-    {
-        // Current value stored in the sensor should be in 10mA (scale -2)
-        sensor_update(AMECSENSOR_PTR(l_currentSensor), (uint16_t)l_current_10ma);
-    }
+    // Read latest voltage/current sensors
+    const sensor_t *volt = getSensorByGsid(l_voltageSensor);
+    const uint32_t l_voltage_100mv = volt->sample;
+    const sensor_t *curr = getSensorByGsid(l_currentSensor);
+    const uint32_t l_current_10ma = curr->sample;
 
-    // Read AVS Bus voltage
-    uint32_t l_voltage_mv = avsbus_read(i_type, AVSBUS_VOLTAGE);
-    if (l_voltage_mv != 0)
+#ifdef AVSDEBUG
+    // TODO: RTC 130216 : REMOVE AFTER VERIFYING loadline/distlost from Pstate Super Structure
+    static uint8_t L_traceCount = 0;
+    if (L_traceCount < 4)
+    {
+        TRAC_INFO("update_avsbus_power_sensors: #%d Vd%c=%dx100mV, I=%dx10mA", L_traceCount, (i_type==AVSBUS_VDD)?'d':'n',
+                  l_voltage_100mv, l_current_10ma);
+        TRAC_INFO("update_avsbus_power_sensors: #%d Vd%c Rloadline=%d, Rdistloss=%d", L_traceCount, (i_type==AVSBUS_VDD)?'d':'n',
+                  l_loadline, l_distloss);
+    }
+#endif
+
+    if ((l_voltage_100mv != 0) && (l_current_10ma != 0))
     {
         // Calculate voltage on just processor package (need to take load-line into account)
         // Voltage value stored in the sensor should be in 100mV (scale -1)
         // (current is in 10mA units, and load-line is in tenth of microOhms)
-        // v(V)     = i(10mA)*(1 A/1000 mA) * r(1/10u Ohm)*(1 Ohm/1,000,000 uOhm)
-        //          = i * (1 A/100) * r * (1 Ohm/10,000,000)
-        //          = i * r / 1,000,000,000
+        // v(V)     = i(10mA)*(1 A/1000 mA) * r(1 uOhm)*(1 Ohm/1,000,000 uOhm)
+        //          = i * (1 A/100) * r * (1 Ohm/1,000,000)
+        //          = i * r / 100,000,000
         // v(mV)    = v(V) * 1,000
         // v(100mV) = v(mV) / 100
         //          = (v(V) * 1,000) / 100 = v(V) * 10
-        //          = (i * r / 1,000,000,000) * 10 = i * r / 100,000,000
-        const uint64_t l_volt_drop_100mv = (l_current_10ma * l_loadline) / 100000000;
-        // TODO: RTC163992 - Confirm loadline calculation (chip package load line vs regulator load line)
-        // Convert voltage to 100mv units and subtract the drop:
-        int32_t l_voltage_100mv = (l_voltage_mv / 100) - l_volt_drop_100mv;
-        if ((l_voltage_100mv <= 0) || (l_voltage_100mv > 0xFFFF))
+        //          = (i * r / 100,000,000) * 10 = i * r / 10,000,000
+        // NOTE: distloss is the same as Rpath in the WOF algorithm
+        const uint64_t l_volt_drop_100mv = (l_current_10ma * (l_loadline+l_distloss)) / 10000000;
+        // Calculate chip voltage
+        int32_t l_chip_voltage_100mv = l_voltage_100mv - l_volt_drop_100mv;
+        if ((l_chip_voltage_100mv <= 0) || (l_chip_voltage_100mv > 0xFFFF))
         {
-            // Voltage out of range, write 0
+            // Voltage out of range, do not write sensors
             if (!*L_throttle)
             {
-                TRAC_ERR("update_avsbus_power_sensors: Voltage out of range! %dmV - %d(100mV) = %d(100mV)",
-                         l_voltage_mv, WORD_LOW(l_volt_drop_100mv), l_voltage_100mv);
+                TRAC_ERR("update_avsbus_power_sensors: chip voltage out of range! %dmV - %d(100mV) = %d(100mV)",
+                         l_voltage_100mv, WORD_LOW(l_volt_drop_100mv), l_chip_voltage_100mv);
                 *L_throttle = TRUE;
             }
-            l_voltage_100mv = 0;
         }
         else
         {
             *L_throttle = FALSE;
-        }
-        sensor_update(AMECSENSOR_PTR(l_voltageSensor), (uint16_t)l_voltage_100mv);
 
-        if (l_current_10ma != 0)
-        {
+            // Update chip voltage (remote sense adjusted for loadline) (100mV units)
+            sensor_update(AMECSENSOR_PTR(l_voltageChip), (uint16_t)l_chip_voltage_100mv);
+
             // Power value stored in the sensor should be in W (scale 0)
             // p(W) = v(V) * i(A) = v(100mV)*100/1000 * i(10mA)*10/1000
             //                    = v(100mV)/10       * i(10mA)/100
             //                    = v(100mv) * i(10mA) / 1000
-            const uint32_t l_power = l_voltage_100mv * l_current_10ma / 1000;
+            const uint32_t l_power = l_chip_voltage_100mv * l_current_10ma / 1000;
             sensor_update(AMECSENSOR_PTR(l_powerSensor), (uint16_t)l_power);
         }
+
+#ifdef AVSDEBUG
+        // TODO: RTC 130216 : REMOVE AFTER VERIFYING loadline/distlost from Pstate Super Structure
+        if (L_traceCount < 4)
+        {
+            const sensor_t *power = getSensorByGsid(l_powerSensor);
+            TRAC_INFO("update_avsbus_power_sensors: #%d Vd%cs=%dx100mV, P=%dW", L_traceCount, (i_type==AVSBUS_VDD)?'d':'n',
+                      l_chip_voltage_100mv, power->sample);
+        }
+#endif
     }
+
+#ifdef AVSDEBUG
+    // TODO: RTC 130216 : REMOVE AFTER VERIFYING loadline/distlost from Pstate Super Structure
+    ++L_traceCount;
+#endif
 
 } // end update_avsbus_power_sensors()
 
@@ -484,34 +565,74 @@ void update_avsbus_power_sensors(const avsbus_type_e i_type)
 //
 // Name: amec_update_avsbus_sensors
 //
-// Description: Read AVS Bus data and update sensors
+// Description: Read AVS Bus data and update sensors (called every tick)
+//   The very first tick kicks off a read of the currents for both buses (Vdd/Vdn).
+//   The next tick will process the currents and then start a read of the voltages.
+//   The next tick will process the voltages and then start a read of the currents.
+//   (readings for each bus will essentially be updated every 2 ticks)
 //
 // Thread: RealTime Loop
 //
 // End Function Specification
 void amec_update_avsbus_sensors(void)
 {
-    static bool L_vdd_state = TRUE;
 
-    if (L_vdd_state)
+    static enum {
+        AVSBUS_STATE_DISABLED           = 0,
+        AVSBUS_STATE_INITIATE_READ      = 1,
+        AVSBUS_STATE_PROCESS_CURRENT    = 2,
+        AVSBUS_STATE_PROCESS_VOLTAGE    = 3
+    } L_avsbus_state = AVSBUS_STATE_INITIATE_READ;
+
+    if (isSafeStateRequested())
     {
-        // If AVS Bus Vdd config data was received, update sensors
-        if (G_avsbus_vdd_monitoring)
-        {
-            update_avsbus_power_sensors(AVSBUS_VDD);
-        }
-    }
-    else
-    {
-        // If AVS Bus Vdn config data was received, update sensors
-        if (G_avsbus_vdn_monitoring)
-        {
-            update_avsbus_power_sensors(AVSBUS_VDN);
-        }
+        L_avsbus_state = AVSBUS_STATE_DISABLED;
+        G_avsbus_vdd_monitoring = FALSE;
+        G_avsbus_vdn_monitoring = FALSE;
     }
 
-    // Alternate between Vdd/Vdn readings
-    L_vdd_state = !L_vdd_state;
+    switch (L_avsbus_state)
+    {
+        case AVSBUS_STATE_INITIATE_READ:
+            // Start first AVS Bus read of current
+            initiate_avsbus_reads(AVSBUS_CURRENT);
+            L_avsbus_state = AVSBUS_STATE_PROCESS_CURRENT;
+            break;
+
+        case AVSBUS_STATE_PROCESS_CURRENT:
+            // Process the current readings
+            process_avsbus_current();
+            // Initiate read of voltages
+            initiate_avsbus_reads(AVSBUS_VOLTAGE);
+            L_avsbus_state = AVSBUS_STATE_PROCESS_VOLTAGE;
+            break;
+
+        case AVSBUS_STATE_PROCESS_VOLTAGE:
+            // Process the voltage readings
+            process_avsbus_voltage();
+            // Initiate read of currents
+            initiate_avsbus_reads(AVSBUS_CURRENT);
+            L_avsbus_state = AVSBUS_STATE_PROCESS_CURRENT;
+            break;
+
+        case AVSBUS_STATE_DISABLED:
+            break;
+
+        default:
+            TRAC_ERR("amec_update_avsbus_sensors: INVALID AVSBUS STATE 0x%02X", L_avsbus_state);
+            L_avsbus_state = AVSBUS_STATE_INITIATE_READ;
+            break;
+    }
+
+    // Update the chip voltage and power sensors after every reading
+    if (G_avsbus_vdd_monitoring)
+    {
+        update_avsbus_power_sensors(AVSBUS_VDD);
+    }
+    if (G_avsbus_vdn_monitoring)
+    {
+        update_avsbus_power_sensors(AVSBUS_VDN);
+    }
 
 } // end amec_update_avsbus_sensors()
 

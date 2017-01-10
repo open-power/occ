@@ -61,6 +61,9 @@ errlHndl_t  G_occErrSlots[ERRL_MAX_SLOTS] = {
                 (errlHndl_t) G_callslot
                 };
 
+// Array of error counters that are only cleared on OCC reset
+uint8_t G_error_history[ERR_HISTORY_SIZE] = {0};
+
 extern uint8_t G_occ_interrupt_type;
 extern bool G_fir_collection_required;
 
@@ -305,6 +308,9 @@ errlHndl_t createErrl(
         // add trace
         addTraceToErrl( i_trace, i_traceSz,  l_rc );
 
+        // add error history
+        addErrHistory( l_rc );
+
         // save off entry Id
         l_rc->iv_entryId = l_id;
 
@@ -518,6 +524,64 @@ void addTraceToErrl(
 }
 
 
+
+
+// Function Specification
+//
+// Name:  addErrHistory
+//
+// Description: Add error trace history to log
+//
+// End Function Specification
+void addErrHistory(errlHndl_t io_err)
+{
+    // 1. Check if error log is not null
+    // 2. error log is not invalid
+    // 3. error log has not been commited
+    // 4. free space is enough (to hold new user detail header + data)
+    if( (io_err != NULL) &&
+        (io_err != INVALID_ERR_HNDL) &&
+        (io_err->iv_userDetails.iv_committed == 0) &&
+        ((io_err->iv_userDetails.iv_entrySize + sizeof(ErrlUserDetailsEntry_t) + sizeof(G_error_history)) < MAX_ERRL_ENTRY_SZ ) )
+    {
+        void * l_errPtr = io_err;
+        ErrlUserDetailsEntry_t l_usrDtlsEntry;
+        const uint16_t l_usrDtlsHeaderSz = sizeof(l_usrDtlsEntry);
+
+        //  io_err  |-----------------------------------------|
+        //          | ErrlEntry_t                             |
+        //          | {iv_userDetails.iv_userDetailEntrySize, | <== elog header and optional user details sections, need to add length
+        //          |       ... other elements ...           }|     of new usrdtl section(ErrlUserDetailsEntry_t + data len)
+        //          |-----------------------------------------|
+        //          | ErrlUserDetailsEntry_t                  | <== new user detail header (l_usrDtlsEntry)
+        //          |-----------------------------------------|
+        //          | data ...                                | <== new user detail data (G_error_history)
+        //          |      ...                                |
+
+        l_usrDtlsEntry.iv_size = sizeof(G_error_history);
+        l_usrDtlsEntry.iv_type = (uint8_t) ERRL_USR_DTL_HISTORY_DATA;
+        l_usrDtlsEntry.iv_version = 1;
+
+        // Calculate trace data address (err address + sizeof(ErrlEntry_t + existing usrDtls) + sizeof(ErrlUserDetailsEntry_t))
+        void * l_dataAddr = l_errPtr + io_err->iv_userDetails.iv_entrySize + l_usrDtlsHeaderSz;
+        memcpy(l_dataAddr, G_error_history, sizeof(G_error_history));
+
+        // Calculate entire data length including usrDtl header.
+        const uint16_t l_sizeOfUsrDtls = l_usrDtlsHeaderSz + l_usrDtlsEntry.iv_size;
+
+        // Copy new user details header into log
+        memcpy(l_errPtr+((io_err->iv_userDetails.iv_entrySize)), &l_usrDtlsEntry, l_usrDtlsHeaderSz);
+
+        //update master user details size with new data
+        io_err->iv_userDetails.iv_userDetailEntrySize += l_sizeOfUsrDtls;
+
+        //update error log with new size
+        io_err->iv_userDetails.iv_entrySize += l_sizeOfUsrDtls;
+    }
+
+} // end addErrHistory()
+
+
 // Function Specification
 //
 // Name:  reportErrorLog
@@ -571,7 +635,7 @@ void commitErrl( errlHndl_t *io_err )
 
             if (l_oisr0_status.fields.check_stop_ppc405)
             {
-                TRAC_IMP("addTraceToErrl: System checkstop detected: ppc405, OISR0[0x%08x]",
+                TRAC_IMP("commitErrl: System checkstop detected: ppc405, OISR0[0x%08x]",
                          l_oisr0_status.value);
                 //Go to the reset state to minimize errors
                 reset_state_request(RESET_REQUESTED_DUE_TO_ERROR);

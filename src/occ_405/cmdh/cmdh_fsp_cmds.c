@@ -1160,6 +1160,14 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
             break;
         }
 
+        // Verify not in safe state
+        if ((TRUE == isSafeStateRequested()) || (CURRENT_STATE() == OCC_STATE_SAFE))
+        {
+            CMDH_TRAC_ERR("OCC in safe state, rejecting mode change request");
+            l_rc = ERRL_RC_INVALID_STATE;
+            break;
+        }
+
         // -------------------------------------------------
         // Act on State & Mode Changes
         // -------------------------------------------------

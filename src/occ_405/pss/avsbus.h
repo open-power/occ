@@ -48,9 +48,16 @@ typedef enum
 // Setup the AVS Bus for reading
 void avsbus_init();
 
-// Read and return the voltage or current for specified rail
-// (voltage units are mV, current units are in 10mA)
+// Initiate AVS Bus read for specified cmdtype (Voltage / Current)
+// (results can then be read on the next tick)
+void initiate_avsbus_reads(avsbus_cmdtype_e i_cmdType);
+
+// Process AVS Bus read results (or errors) for specified bus/cmdtype.
+// Returns the data requested (voltage units are mV, current units are in 10mA)
+// Predictive error will be logged after MAX_READ_ATTEMPTS failures on the specific
+// bus/cmdtype and an OCC reset will be requested
 uint16_t avsbus_read(const avsbus_type_e i_type,
                      const avsbus_cmdtype_e i_cmdtype);
+
 
 #endif //_AVSBUS_H

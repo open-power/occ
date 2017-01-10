@@ -110,6 +110,7 @@ typedef enum
     ERRL_USR_DTL_TRACE_DATA     = 0x01,
     ERRL_USR_DTL_CALLHOME_DATA  = 0x02,
     ERRL_USR_DTL_BINARY_DATA    = 0x03,
+    ERRL_USR_DTL_HISTORY_DATA   = 0x04,
 } ERRL_USR_DETAIL_TYPE;
 
 // These are the possible OCC States.
@@ -265,6 +266,23 @@ extern uint8_t      G_occErrIdCounter;
 
 extern errlHndl_t   G_occErrSlots[ERRL_MAX_SLOTS];
 
+// Array of error counters that are only cleared on OCC reset
+#define ERR_HISTORY_SIZE 32
+extern uint8_t G_error_history[ERR_HISTORY_SIZE];
+typedef enum {
+    ERR_AVSBUS_VDD_CURRENT = 1,
+    ERR_AVSBUS_VDD_VOLTAGE = 2,
+    ERR_AVSBUS_VDN_CURRENT = 3,
+    ERR_AVSBUS_VDN_VOLTAGE = 4,
+    ERR_DIMM_I2C_PORT0     = 5,
+    ERR_DIMM_I2C_PORT1     = 6
+} ERR_HISTORY_INDEX;
+#define INCREMENT_ERR_HISTORY(errorIndex) { \
+    if ((errorIndex < ERR_HISTORY_SIZE) && (G_error_history[errorIndex] < 255)) { \
+        ++G_error_history[errorIndex]; \
+    } \
+}
+
 // Globals used by testcases
 extern uint8_t      G_errslot1[MAX_ERRL_ENTRY_SZ];
 extern uint8_t      G_errslot2[MAX_ERRL_ENTRY_SZ];
@@ -295,6 +313,9 @@ void addTraceToErrl(
             const uint16_t i_traceSz,
             errlHndl_t io_errl
             );
+
+// Add Error history data to the Error Log
+void addErrHistory(errlHndl_t io_err);
 
 /* Commit the Error Log */
 void commitErrl( errlHndl_t * io_err );

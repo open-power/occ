@@ -1001,9 +1001,8 @@ errlHndl_t data_store_avsbus_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 G_avsbus_vdd_monitoring = TRUE;
                 G_sysConfigData.avsbus_vdd.bus = l_cmd_ptr->vdd_bus;
                 G_sysConfigData.avsbus_vdd.rail = l_cmd_ptr->vdd_rail;
-                G_sysConfigData.avsbus_vdd.loadline = l_cmd_ptr->vdd_loadline;
-                CNFG_DBG("data_store_avsbus_config: Vdd bus[%d] rail[%d] loadline[0x%02X]",
-                         G_sysConfigData.avsbus_vdd.bus, G_sysConfigData.avsbus_vdd.rail, G_sysConfigData.avsbus_vdd.loadline);
+                CNFG_DBG("data_store_avsbus_config: Vdd bus[%d] rail[%d]",
+                         G_sysConfigData.avsbus_vdd.bus, G_sysConfigData.avsbus_vdd.rail);
             }
             else
             {
@@ -1035,9 +1034,8 @@ errlHndl_t data_store_avsbus_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 G_avsbus_vdn_monitoring = TRUE;
                 G_sysConfigData.avsbus_vdn.bus = l_cmd_ptr->vdn_bus;
                 G_sysConfigData.avsbus_vdn.rail = l_cmd_ptr->vdn_rail;
-                G_sysConfigData.avsbus_vdn.loadline = l_cmd_ptr->vdn_loadline;
-                CNFG_DBG("data_store_avsbus_config: Vdn bus[%d] rail[%d] loadline[0x%02X]",
-                         G_sysConfigData.avsbus_vdn.bus, G_sysConfigData.avsbus_vdn.rail, G_sysConfigData.avsbus_vdn.loadline);
+                CNFG_DBG("data_store_avsbus_config: Vdn bus[%d] rail[%d]",
+                         G_sysConfigData.avsbus_vdn.bus, G_sysConfigData.avsbus_vdn.rail);
 
                 if (G_avsbus_vdd_monitoring &&
                     (G_sysConfigData.avsbus_vdd.bus == G_sysConfigData.avsbus_vdn.bus))

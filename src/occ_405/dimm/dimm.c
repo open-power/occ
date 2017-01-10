@@ -281,6 +281,15 @@ void mark_dimm_failed()
 
     g_amec->proc[0].memctl[port].centaur.dimm_temps[dimm].flags |= FRU_SENSOR_STATUS_ERROR;
 
+    if (port == 0)
+    {
+        INCREMENT_ERR_HISTORY(ERR_DIMM_I2C_PORT0);
+    }
+    else
+    {
+        INCREMENT_ERR_HISTORY(ERR_DIMM_I2C_PORT1);
+    }
+
     if (++G_dimm[port][dimm].errorCount > MAX_CONSECUTIVE_DIMM_RESETS)
     {
         // Disable collection on this DIMM, collect FFDC and log error

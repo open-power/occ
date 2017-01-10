@@ -79,6 +79,7 @@ enum occReasonCode
     CENT_LFIR_ERROR                 = 0x42,
     AVSBUS_TIMEOUT                  = 0x50,
     AVSBUS_ERROR                    = 0x51,
+    AVSBUS_CRC_ERROR                = 0x52,
     /// Throttle in nominal or turbo mode due to the bulk power limit being reached with both power supplies good
     PCAP_THROTTLE_POWER_LIMIT       = 0x61,
     /// Firmware Failure: equivalent to assertion failures

@@ -110,6 +110,9 @@ bool G_fir_collection_required = FALSE;
 // Global flag indicating we are running on Simics
 bool G_simics_environment = FALSE;
 
+// Nest frequency in MHz
+uint32_t G_nest_frequency_mhz;
+
 extern uint8_t g_trac_inf_buffer[];
 extern uint8_t g_trac_imp_buffer[];
 extern uint8_t g_trac_err_buffer[];
@@ -1261,14 +1264,14 @@ int main(int argc, char **argv)
     // all HOMER versions.
     uint32_t l_tb_freq_hz = 0;
     l_homerrc2 = homer_hd_map_read_unmap(HOMER_NEST_FREQ,
-                                         &l_tb_freq_hz,
+                                         &G_nest_frequency_mhz,
                                          &l_ssxrc2);
 
     if ((HOMER_SUCCESS == l_homerrc2) || (HOMER_SSX_UNMAP_ERR == l_homerrc2))
     {
         // Data is in Mhz upon return and needs to be converted to Hz and then
         // quartered.
-        l_tb_freq_hz = (l_tb_freq_hz * 1000000)/4;
+        l_tb_freq_hz = G_nest_frequency_mhz * (1000000 / 4);
 
         // @TODO: this parameter should be passsed to all the GPEs/CMEs/etc
         // Can be stored in GPE accessible SRAM areas.
@@ -1277,6 +1280,7 @@ int main(int argc, char **argv)
     else
     {
         l_tb_freq_hz = PPC405_TIMEBASE_HZ;
+        G_nest_frequency_mhz = (l_tb_freq_hz * 4) / 1000000;
     }
 
     CHECKPOINT(SSX_STARTING);

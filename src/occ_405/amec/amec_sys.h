@@ -79,6 +79,8 @@ typedef struct
   sensor_t gpetickdur[NUM_GPE_ENGINES];
   sensor_t prcdupdatedur;
   sensor_t probe250us[NUM_AMEC_FW_PROBES];
+  sensor_t voltvddsense;
+  sensor_t voltvdnsense;
 
   // DPS update flag
   // 8 bit flag: =1, no updating allowed; =0, updating is allowed

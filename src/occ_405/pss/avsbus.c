@@ -43,20 +43,16 @@
   #define AVS_DBG(frmt,args...)
 #endif
 
-
 // AVS Bus usage will be determined after receiving config data from TMGT
 bool G_avsbus_vdd_monitoring = FALSE;
 bool G_avsbus_vdn_monitoring = FALSE;
 
-// The following constants are used after a command is put on the bus.
-// The code will wait for the o2s_ongoing bit to change (which indicates cmd completion).
-// Max wait time will be: O2S_ONGOING_CHECK_ATTEMPTS * O2S_ONGOING_CHECK_DELAY_NS (in nanoseconds)
-const uint32_t    O2S_ONGOING_CHECK_ATTEMPTS = 10;
-const uint32_t    O2S_ONGOING_CHECK_DELAY_NS = 100;
+extern uint32_t G_nest_frequency_mhz;
+#define AVSBUS_FREQUENCY_MHZ 10
 
 // Number of read failures allowed before elog is created and reset requested.
 // This should be no longer than 4ms (or it will impact WOF calculations)
-// (readings are taken every 500ms => 500us * 8 = 4ms)
+// (readings are taken every 500us => 500us * 8 = 4ms)
 const uint8_t     MAX_READ_ATTEMPTS = 8;
 
 // NOTE: OCC must use Bridge B, because Bridge A is reserved for PGPE
@@ -142,13 +138,14 @@ void avsbus_init()
     //  2     o2s_cpol = 0 (positive active clock)
     //  3     o2s_cpha = 0 (first edge data launch/sample)
     //  4:13  o2s_clock_divider = set based on the nest frequency for the desired frequency of 10MHz (assumed speed) per O2SCTRL1_[a][n] description.
-    //                          = (nest_freq / (SPI_freq*8))-1 = (500M/(10M*8))-1 = 5.25
     //  14:16 reserved
     //  17    o2s_nr_of_frames = 1 (2 frames to account for the first and second frames of an AVSBus command)
     //  18:63 reserved
     //  1r00DDDD DDDDDDrr r1rrrrrr rrrrrrrrr
-    value = 0x8014400000000000;
-    // TODO: RTC163992 - Determine correct o2s_clock_divider based on nest freq
+    value = 0x8000400000000000;
+    // calculate o2s_clock_divider based on nest freq and target bus freq
+    const uint64_t divider = (G_nest_frequency_mhz / (AVSBUS_FREQUENCY_MHZ * 8)) - 1;
+    value |= (divider << 50);
     if (bus0_monitoring)
     {
         out64(OCB_O2SCTRL10B, value);
@@ -160,27 +157,29 @@ void avsbus_init()
 }
 
 
-// Calculate and update command with correct CRC
+// Calculate CRC for specified AVS Bus command
 // Function which generates a 3 bit CRC value for 29 bit data
 // from: ekb/chips/p9/procedures/hwp/lib/p9_avsbus_lib.C
+// (CRC is bits 29:31 in the AVS bus command)
+#define AVS_CRC_MASK      0x0000000700000000
 #define AVS_CRC_DATA_MASK 0xFFFFFFF800000000
-void avs_crc_update(uint64_t *io_avs_cmd)
+uint64_t avs_crc_calculate(const uint64_t i_avs_cmd)
 {
     //Polynomial= x^3 + x^1 + x^0 = 1*x^3 + 0*x^2 + 1*x^1 + 1*x^0 = divisor(1011)
 
-    uint64_t l_crc_value = 0;
+    uint64_t o_crc_value = 0;
     uint64_t l_polynomial = 0xB000000000000000;
     uint64_t l_msb =        0x8000000000000000;
 
-    l_crc_value = *io_avs_cmd & AVS_CRC_DATA_MASK;
+    o_crc_value = i_avs_cmd & AVS_CRC_DATA_MASK;
 
-    while (l_crc_value & AVS_CRC_DATA_MASK)
+    while (o_crc_value & AVS_CRC_DATA_MASK)
     {
-        if (l_crc_value & l_msb)
+        if (o_crc_value & l_msb)
         {
             //if l_msb is 1'b1, divide by l_polynomial and shift l_polynomial
             // to the right
-            l_crc_value = l_crc_value ^ l_polynomial;
+            o_crc_value = o_crc_value ^ l_polynomial;
             l_polynomial = l_polynomial >> 1;
         }
         else
@@ -192,26 +191,22 @@ void avs_crc_update(uint64_t *io_avs_cmd)
         l_msb = l_msb >> 1;
     }
 
-    // Add CRC to avs command (lower 3 bits of cmd)
-    *io_avs_cmd |= l_crc_value;
+    return o_crc_value;
 }
 
 
 #define ERRORCOUNT_MAXTYPES  2
 #define ERRORCOUNT_MAXCMDS   2
-// Read and return the voltage or current for specified rail
-// (voltage units are mV, current units are in 10mA)
-uint16_t avsbus_read(const avsbus_type_e i_type,
-                     const avsbus_cmdtype_e i_cmdtype)
+// Initiate read for specified type (Vdd/Vdn) and cmd (Voltage/Current)
+void avsbus_read_start(const avsbus_type_e i_type,
+                       const avsbus_cmdtype_e i_cmdtype)
 {
     if (isSafeStateRequested())
     {
         // No need to attempt read if OCC will be reset
-        return 0;
+        return;
     }
 
-    uint16_t o_reading = 0;
-    bool l_failure = FALSE;
     avsbusData_t l_data;
 
     // Create error array for each type (Vdd/Vdn) and command (Voltage/Current)
@@ -222,8 +217,6 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
         l_cmd_index = 1;
         l_trace_cmd = 'C';
     }
-    static uint32_t L_error_count[ERRORCOUNT_MAXTYPES][ERRORCOUNT_MAXCMDS] = {{0}};
-    uint32_t *      l_error_count = &L_error_count[i_type][l_cmd_index];
 
     char l_trace_type = 'd';
     if (AVSBUS_VDD == i_type)
@@ -237,11 +230,12 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
     }
 
 #ifdef AVSDEBUG
-    static bool L_traced[ERRORCOUNT_MAXTYPES][ERRORCOUNT_MAXCMDS] = {{0}};
-    bool *      l_traced = &L_traced[i_type][l_cmd_index];
-    if (!*l_traced)
+    static uint32_t L_trace_count[ERRORCOUNT_MAXTYPES][ERRORCOUNT_MAXCMDS] = {{0}};
+    uint32_t *      l_trace_count = &L_trace_count[i_type][l_cmd_index];
+    uint32_t DEBUG_TRACE_MAX = 2;
+    if (*l_trace_count < DEBUG_TRACE_MAX)
     {
-        TRAC_INFO("avsbus_read: Vd%c %c - bus[%d] rail[%d]",
+        TRAC_INFO("avsbus_read_start: Vd%c %c - bus[%d] rail[%d]",
                   l_trace_type, l_trace_cmd, l_data.bus, l_data.rail);
     }
 #endif
@@ -249,14 +243,10 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
     // Determine register based on the bus number
     uint32_t o2scmd_reg = OCB_O2SCMD0B;
     uint32_t o2swd_reg = OCB_O2SWD0B;
-    uint32_t o2sst_reg = OCB_O2SST0B;
-    uint32_t o2srd_reg = OCB_O2SRD0B;
     if (1 == l_data.bus)
     {
         o2scmd_reg = OCB_O2SCMD1B;
         o2swd_reg = OCB_O2SWD1B;
-        o2sst_reg = OCB_O2SST1B;
-        o2srd_reg = OCB_O2SRD1B;
     }
 
     // Write O2SCMD[a][n]
@@ -277,8 +267,11 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
     //   29:31 CRC
     //   01110DDD DRRRR111 11111111 11111CCC
     value = 0x7007FFF800000000 | ((uint64_t) i_cmdtype << 55) | ((uint64_t)l_data.rail << 51);
-    avs_crc_update(&value);
+    // Calculate/add CRC
+    value |= avs_crc_calculate(value);
     out64(o2swd_reg, value);
+
+    // Read has been started so now just wait for HW to complete
 
     // HW: Wait for bus op to complete
     // HW: arbitration between two bridges
@@ -286,7 +279,75 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
     // HW: execution completes
     // HW: o2s_ongoing 1 -> 0
 
-    // Poll waiting for o2s_ongoing to change to 0 or an error bit is set
+#ifdef AVSDEBUG
+    ++*l_trace_count; // DEBUG
+#endif
+
+} // end avsbus_read_start()
+
+
+// Read and return the voltage or current for specified rail
+// (voltage units are mV, current units are in 10mA)
+uint16_t avsbus_read(const avsbus_type_e i_type,
+                     const avsbus_cmdtype_e i_cmdtype)
+{
+    if (isSafeStateRequested())
+    {
+        // No need to attempt read if OCC will be reset
+        return 0;
+    }
+
+    uint16_t o_reading = 0;
+    bool l_failure = FALSE;
+
+    uint8_t l_cmd_index = 0;
+    char l_trace_cmd = 'V';
+    if (i_cmdtype == AVSBUS_CURRENT)
+    {
+        l_cmd_index = 1;
+        l_trace_cmd = 'C';
+    }
+
+    // Static error counters for each type (Vdd/Vdn) and command (Voltage/Current)
+    static uint32_t L_error_count[ERRORCOUNT_MAXTYPES][ERRORCOUNT_MAXCMDS] = {{0}};
+    uint32_t *      l_error_count = &L_error_count[i_type][l_cmd_index];
+
+    char l_trace_type = 'd';
+    avsbusData_t l_data = G_sysConfigData.avsbus_vdd;
+    if (AVSBUS_VDN == i_type)
+    {
+        l_trace_type = 'n';
+        l_data = G_sysConfigData.avsbus_vdn;
+    }
+
+#ifdef AVSDEBUG
+    static uint32_t L_trace_count[ERRORCOUNT_MAXTYPES][ERRORCOUNT_MAXCMDS] = {{0}};
+    uint32_t *      l_trace_count = &L_trace_count[i_type][l_cmd_index];
+    uint32_t DEBUG_TRACE_MAX = 2;
+    if (*l_trace_count < DEBUG_TRACE_MAX)
+    {
+        TRAC_INFO("avsbus_read: Vd%c %c - bus[%d] rail[%d]",
+                  l_trace_type, l_trace_cmd, l_data.bus, l_data.rail);
+    }
+#endif
+
+    // Determine register based on the bus number
+    uint32_t o2sst_reg = OCB_O2SST0B;
+    uint32_t o2srd_reg = OCB_O2SRD0B;
+    if (1 == l_data.bus)
+    {
+        o2sst_reg = OCB_O2SST1B;
+        o2srd_reg = OCB_O2SRD1B;
+    }
+
+    // HW: Wait for bus op to complete
+    // HW: arbitration between two bridges
+    // HW: o2s_ongoning: 0 -> 1
+    // HW: execution completes
+    // HW: o2s_ongoing 1 -> 0
+
+    // Since read was started in previous tick, it should have already completed
+    // (no need to poll/wait on o2s_ongoing)
     enum occReasonCode rc = OCC_SUCCESS_REASON_CODE;
     uint64_t l_status = in64(o2sst_reg);
     // OCC O2S Status Register
@@ -297,46 +358,16 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
     //   7     FSM error
     //   8:63  reserved
     // GrrrrBrF rrrrrrrr rrrrrrrr rrrrrrrr
-    uint32_t l_max_attempts = O2S_ONGOING_CHECK_ATTEMPTS;
-
-    while ((1 == (l_status >> 63)) &&
-           (0 == (l_status & 0x0500000000000000)))
-    {
-        if (l_max_attempts-- == 0)
-        {
-            l_failure = TRUE;
-            (*l_error_count)++;
-            if ((*l_error_count == 1) || (*l_error_count == MAX_READ_ATTEMPTS))
-            {
-                TRAC_ERR("avsbus_read: Vd%c %c timeout waiting for o2s_ongoing change O2SST[0x%08X] = [0x%08X] / Command[0x%08X]",
-                         l_trace_type, l_trace_cmd, o2sst_reg, WORD_HIGH(l_status), WORD_HIGH(value));
-                /*
-                 * @errortype
-                 * @moduleid    PSS_MID_AVSBUS_READ
-                 * @reasoncode  AVSBUS_TIMEOUT
-                 * @userdata1   AVS Bus type/bus/rail
-                 * @userdata2   status
-                 * @devdesc     task_apss_complete_pwr_meas schedule failed
-                 * @devdesc     Timeout when reading AVS Bus
-                 */
-                rc = AVSBUS_TIMEOUT;
-            }
-            break;
-        }
-        // TODO: RTC 163992
-        //ssx_sleep(SSX_NANOSECONDS(O2S_ONGOING_CHECK_DELAY_NS));
-        l_status = in64(o2sst_reg);
-    }
 
     if (0 != (l_status & 0x0500000000000000))
     {
+        // error bit was set
         l_failure = TRUE;
         (*l_error_count)++;
         if ((*l_error_count == 1) || (*l_error_count == MAX_READ_ATTEMPTS))
         {
-            // error bit was set
-            TRAC_ERR("avsbus_read: Error found in Vd%c %c O2SST[0x%08X] = [0x%08X] / Command[0x%08X]",
-                     l_trace_type, l_trace_cmd, o2sst_reg, WORD_HIGH(l_status), WORD_HIGH(value));
+            TRAC_ERR("avsbus_read: Error found in Vd%c %c O2SST[0x%08X] = [0x%08X]",
+                     l_trace_type, l_trace_cmd, o2sst_reg, WORD_HIGH(l_status));
             /*
              * @errortype
              * @moduleid    PSS_MID_AVSBUS_READ
@@ -348,13 +379,31 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
             rc = AVSBUS_ERROR;
         }
     }
+    else if (1 == (l_status >> 63)) // o2s_ongoing
+    {
+        // o2s_ongoing bit was still set (operation did not complete)
+        l_failure = TRUE;
+        (*l_error_count)++;
+        if ((*l_error_count == 1) || (*l_error_count == MAX_READ_ATTEMPTS))
+        {
+            TRAC_ERR("avsbus_read: Vd%c %c timeout waiting for o2s_ongoing change O2SST[0x%08X] = [0x%08X]",
+                     l_trace_type, l_trace_cmd, o2sst_reg, WORD_HIGH(l_status));
+            /*
+             * @errortype
+             * @moduleid    PSS_MID_AVSBUS_READ
+             * @reasoncode  AVSBUS_TIMEOUT
+             * @userdata1   AVS Bus type/bus/rail
+             * @userdata2   status
+             * @devdesc     Timeout when reading AVS Bus
+             */
+            rc = AVSBUS_TIMEOUT;
+        }
+    }
 
     if (FALSE == l_failure)
     {
         // Read the response data
-        value = in64(o2srd_reg);
-
-        // Check for valid command operation and extract read data
+        uint64_t value = in64(o2srd_reg);
         // AVS Bus response (read voltage or current):
         //   0:1   SlaveAck (0b00 from slave indicates good CRC and action was taken)
         //   2     0
@@ -363,11 +412,34 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
         //   24:28 Reserved (must be all 1s)
         //   29:31 CRC
         //   AA0SSSSS VVVVVVVV VVVVVVVV 11111CCC
-        if (0 == (value & 0xC000000000000000))
+
+        // Validate CRC
+        const uint64_t crc = avs_crc_calculate(value);
+        if (crc != (value & AVS_CRC_MASK))
+        {
+            l_failure = TRUE;
+            (*l_error_count)++;
+            if ((*l_error_count == 1) || (*l_error_count == MAX_READ_ATTEMPTS))
+            {
+                TRAC_ERR("avsbus_read: CRC mismatch in Vd%c %c rsp O2SRD[0x%08X] = [0x%08X] (calculated CRC 0x%08X)",
+                         l_trace_type, l_trace_cmd, o2srd_reg, WORD_HIGH(value), WORD_HIGH(crc));
+                /*
+                 * @errortype
+                 * @moduleid    PSS_MID_AVSBUS_READ
+                 * @reasoncode  AVSBUS_CRC_ERROR
+                 * @userdata1   AVS Bus type/bus/rail
+                 * @userdata2   status
+                 * @devdesc     CRC error reading AVS Bus
+                 */
+                rc = AVSBUS_CRC_ERROR;
+            }
+        }
+        // Check for valid command operation and extract read data
+        else if (0 == (value & 0xC000000000000000))
         {
             o_reading = (value >> 40) & 0x0000FFFF;
 #ifdef AVSDEBUG
-            if (!*l_traced)
+            if (*l_trace_count < DEBUG_TRACE_MAX)
             {
                 if (i_cmdtype == AVSBUS_VOLTAGE)
                 {
@@ -403,31 +475,39 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
 
     if (l_failure)
     {
+        enum occExtReasonCode exrc = ERC_AVSBUS_VDD_VOLTAGE_FAILURE;
+        if (AVSBUS_VDD == i_type)
+        {
+            if (i_cmdtype == AVSBUS_CURRENT)
+            {
+                exrc = ERC_AVSBUS_VDD_CURRENT_FAILURE;
+                INCREMENT_ERR_HISTORY(ERR_AVSBUS_VDD_CURRENT);
+            }
+            else
+            {
+                INCREMENT_ERR_HISTORY(ERR_AVSBUS_VDD_VOLTAGE);
+            }
+        }
+        else
+        {
+            if (i_cmdtype == AVSBUS_CURRENT)
+            {
+                exrc = ERC_AVSBUS_VDN_CURRENT_FAILURE;
+                INCREMENT_ERR_HISTORY(ERR_AVSBUS_VDN_CURRENT);
+            }
+            else
+            {
+                exrc = ERC_AVSBUS_VDN_VOLTAGE_FAILURE;
+                INCREMENT_ERR_HISTORY(ERR_AVSBUS_VDN_VOLTAGE);
+            }
+        }
+
         if (*l_error_count == MAX_READ_ATTEMPTS)
         {
             TRAC_ERR("avsbus_read: Reached %d consecutive Vd%c %c errors, requesting reset",
                      *l_error_count, l_trace_type, l_trace_cmd);
             G_avsbus_vdd_monitoring = FALSE;
             G_avsbus_vdn_monitoring = FALSE;
-            enum occExtReasonCode exrc = ERC_AVSBUS_VDD_VOLTAGE_FAILURE;
-            if (AVSBUS_VDD == i_type)
-            {
-                if (i_cmdtype == AVSBUS_CURRENT)
-                {
-                    exrc = ERC_AVSBUS_VDD_CURRENT_FAILURE;
-                }
-            }
-            else
-            {
-                if (i_cmdtype == AVSBUS_CURRENT)
-                {
-                    exrc = ERC_AVSBUS_VDN_CURRENT_FAILURE;
-                }
-                else
-                {
-                    exrc = ERC_AVSBUS_VDN_VOLTAGE_FAILURE;
-                }
-            }
             errlHndl_t l_err = createErrl(PSS_MID_AVSBUS_READ,
                                           rc,
                                           exrc,
@@ -444,8 +524,9 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
             REQUEST_RESET(l_err);
         }
     }
+
 #ifdef AVSDEBUG
-    *l_traced = TRUE; // DEBUG
+    ++*l_trace_count; // DEBUG
 #endif
 
     return o_reading;
@@ -453,5 +534,22 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
 } // end avsbus_read()
 
 
+// Start the AVS Bus read for both buses (if enabled)
+void initiate_avsbus_reads(avsbus_cmdtype_e i_cmdType)
+{
+    if (G_avsbus_vdd_monitoring)
+    {
+        // AVS Bus Vdd config data was received:
+        // Initiate AVS Bus read for Vdd (voltage or current)
+        avsbus_read_start(AVSBUS_VDD, i_cmdType);
+    }
 
+    if (G_avsbus_vdn_monitoring)
+    {
+        // AVS Bus Vdn config data was received:
+        // Initiate AVS Bus read for Vdn (voltage or current)
+        avsbus_read_start(AVSBUS_VDN, i_cmdType);
+    }
+
+} // end initiate_avsbus_reads()
 
