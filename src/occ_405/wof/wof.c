@@ -28,6 +28,7 @@
 #include <occhw_async.h>
 #include <pgpe_shared.h>
 #include <pstate_pgpe_occ_api.h>
+#include <p9_pstates_occ.h>
 #include <occ_service_codes.h>
 #include <wof_service_codes.h>
 #include "wof.h"
@@ -39,19 +40,25 @@
 uint32_t G_wof_active_quads_sram_addr;
 uint32_t G_wof_tables_main_mem_addr;
 uint32_t G_wof_tables_len;
+uint8_t  G_requested_active_quad_update;
+uint8_t  G_previous_active_quads;
 bool     G_run_wof_main;
 
 uint8_t G_sram_vfrt_ping_buffer[MIN_BCE_REQ_SIZE] __attribute__ ((section(".vfrt_ping_buffer")));
 uint8_t G_sram_vfrt_pong_buffer[MIN_BCE_REQ_SIZE] __attribute__ ((section(".vfrt_pong_buffer")));
+uint8_t * G_current_ping_pong_buf;
 wof_header_data_t G_wof_header __attribute__ ((section (".global_data")));
 uint32_t G_current_vfrt_addr = 0;
+quad_state0_t G_quad_state_0 = {0};
+quad_state0_t G_quad_state_1 = {0};
 
 //******************************************************************************
 // External Globals
 //******************************************************************************
+extern OCCPstateParmBlock G_oppb;
 extern GPE_BUFFER(ipcmsg_wof_vfrt_t G_wof_vfrt_parms);
 extern GpeRequest G_wof_vfrt_req;
-
+extern uint32_t   G_pgpe_shared_sram_address;
 
 
 /**
@@ -227,13 +234,11 @@ void copy_vfrt_to_sram( copy_vfrt_to_sram_parms_t * i_parms)
     {
         // Use ping buffer
         l_buffer_address = G_sram_vfrt_ping_buffer;
-        // Set next access to pong buffer
     }
     else
     {
         // Use pong buffer
         l_buffer_address = G_sram_vfrt_pong_buffer;
-        // Set next access to ping buffer
     }
 
     // Copy the vfrt data into the buffer
@@ -243,15 +248,14 @@ void copy_vfrt_to_sram( copy_vfrt_to_sram_parms_t * i_parms)
 
     // Set the parameters for the GpeRequest
     G_wof_vfrt_parms.vfrt_ptr = l_buffer_address;
-    // TODO set this to Global amec field once we read shared sram
-    G_wof_vfrt_parms.active_quads = 1;
+    G_wof_vfrt_parms.active_quads = G_requested_active_quad_update;
 
     // Send IPC command to PGPE with new vfrt address and active quads
     // Should not need to check if request is idle as wof_main does before
     // the WOF calculations begin.
     l_gperc = gpe_request_schedule( &G_wof_vfrt_req );
 
-    // Confirm Successfull completion of WOF VFRT task
+    // Confirm Successful scheduling of WOF VFRT task
     if(l_gperc != 0)
     {
         //Error in scheduling pgpe clip update task
@@ -292,6 +296,12 @@ void copy_vfrt_to_sram( copy_vfrt_to_sram_parms_t * i_parms)
         // Sent the IPC command successfully, update which buffer we should look
         // at next time.
         L_pingpong = ~L_pingpong;
+
+        // Update the previous active quads
+        G_previous_active_quads = G_requested_active_quad_update;
+
+        // Update Current ping pong buffer
+        G_current_ping_pong_buf = l_buffer_address;
     }
 
 }
@@ -310,15 +320,70 @@ void copy_vfrt_to_sram( copy_vfrt_to_sram_parms_t * i_parms)
 void send_vfrt_to_pgpe( uint32_t i_vfrt_address )
 {
     int l_ssxrc = SSX_OK;
+    int l_gperc = 0;
     uint32_t l_reasonCode = 0;
     uint32_t l_extReasonCode = 0;
 
     do
     {
-        if(i_vfrt_address == G_current_vfrt_addr)
+        if( (i_vfrt_address == G_current_vfrt_addr ) &&
+            (G_requested_active_quad_update == G_previous_active_quads) )
         {
-            // VFRT is unchanged. Skip
+            // VFRT and requested active quads are unchanged. Skip
             break;
+        }
+        else if( (i_vfrt_address == G_current_vfrt_addr) &&
+                 (G_requested_active_quad_update != G_previous_active_quads) )
+        {
+            // Only requested active quads changed. No need to do a BCE request
+            // for new VFRT. Just send IPC command with updated active quads
+            G_wof_vfrt_parms.vfrt_ptr = G_current_ping_pong_buf;
+            G_wof_vfrt_parms.active_quads = G_requested_active_quad_update;
+
+            //Send IPC command to PGPE with new active quad update
+            l_gperc = gpe_request_schedule( &G_wof_vfrt_req );
+
+            // Confirm Successful scheduling of WOF VFRT task
+            if(l_gperc != 0)
+            {
+                //Error in scheduling pgpe clip update task
+                TRAC_ERR("copy_vfrt_to_sram: Failed to schedule WOF VFRT task rc=%x",
+                         l_gperc);
+
+                /* @
+                 * @errortype
+                 * @moduleid    SEND_VFRT_TO_PGPE
+                 * @reasoncode  GPE_REQUEST_SCHEDULE_FAILURE
+                 * @userdata1   rc - gpe_request_schedule return code
+                 * @userdata2   0
+                 * @userdata4   OCC_NO_EXTENDED_RC
+                 * @devdesc     OCC Failed to schedule a GPE job for clip update
+                 */
+                errlHndl_t l_errl = createErrl(
+                    SEND_VFRT_TO_PGPE,                   // modId
+                    GPE_REQUEST_SCHEDULE_FAILURE,           // reasoncode
+                    OCC_NO_EXTENDED_RC,                     // Extended reason code
+                    ERRL_SEV_UNRECOVERABLE,                 // Severity
+                    NULL,                                   // Trace Buf
+                    DEFAULT_TRACE_SIZE,                     // Trace Size
+                    l_gperc,                                     // userdata1
+                    0                                       // userdata2
+                    );
+
+                // Callout firmware
+                addCalloutToErrl(l_errl,
+                                 ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                                 ERRL_COMPONENT_ID_FIRMWARE,
+                                 ERRL_CALLOUT_PRIORITY_HIGH);
+
+                // Commit error log
+                commitErrl(&l_errl);
+            }
+            else
+            {
+                // Successful Schedule. Update previous active quads
+                G_previous_active_quads = G_requested_active_quad_update;
+            }
         }
         else
         {
@@ -412,5 +477,29 @@ void send_vfrt_to_pgpe( uint32_t i_vfrt_address )
 
         return;
     }
+
+}
+
+/**
+ * read_shared_sram
+ *
+ * Description: Read out data from OCC-PGPE shared SRAM and saves the
+ *              data for the current iteration of the WOF algorithm
+ */
+void read_shared_sram( void )
+{
+    // Skip over the first doubleword for now (magic number and pgpe beacon)
+    uint32_t current_pgpe_sram_addr =
+                     G_pgpe_shared_sram_address + sizeof(uint64_t);
+
+    // Get the actual quad states
+    G_quad_state_0.value = in64(current_pgpe_sram_addr);
+    current_pgpe_sram_addr += sizeof(uint64_t);
+    G_quad_state_1.value = in64(current_pgpe_sram_addr);
+    current_pgpe_sram_addr += sizeof(uint64_t);
+
+    // Get the requested active quad update
+    uint64_t l_doubleword = in64(current_pgpe_sram_addr);
+    memcpy(&G_requested_active_quad_update, &l_doubleword, sizeof(uint8_t));
 
 }

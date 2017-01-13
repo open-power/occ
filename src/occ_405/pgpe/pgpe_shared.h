@@ -37,15 +37,12 @@
 #define PGPE_WOF_TBLS_LEN_OFFSET     0x54
 
 // Offset addresses of OCC-PGPE Shared SRAM pointers (relative to Shared SRAM ptr)
-#define PGPE_SHARED_REQUESTED_ACTIVE_QUAD_UPDATE_OFFSET 0x18
 
 // PGPE Image Header Parameter addresses
 
 //Shared OCC-PGPE SRAM parameters
 #define PGPE_SHARED_SRAM_ADDR_PTR    (PGPE_HEADER_ADDR + PGPE_SHARED_SRAM_ADDR_OFFSET)
 #define PGPE_SHARED_SRAM_SZ_PTR      (PGPE_HEADER_ADDR + PGPE_SHARED_SRAM_SZ_OFFSET)
-
-
 
 
 // A pointer to PGPE Beacon Address
@@ -55,10 +52,6 @@
 #define PGPE_ACTIVE_QUAD_ADDR_PTR    (PGPE_HEADER_ADDR + PGPE_ACTIVE_QUAD_ADDR_OFFSET)
 #define PGPE_WOF_TBLS_ADDR_PTR       (PGPE_HEADER_ADDR + PGPE_WOF_TBLS_ADDR_OFFSET)
 #define PGPE_WOF_TBLS_LEN_PTR        (PGPE_HEADER_ADDR + PGPE_WOF_TBLS_LEN_OFFSET)
-#define PGPE_SHARED_REQUESTED_ACTIVE_QUAD_UPDATE_PTR \
-                                     (PGPE_SHARED_SRAM_ADDR_PTR + \
-                                      PGPE_SHARED_REQUESTED_ACTIVE_QUAD_UPDATE_OFFSET)
-
 
 // PMMR (Pstates PM region) in HOMMR
 #define PPMR_OPPM_ADDR_OFFSET    0x40     //offset of the OCC Pstates Parameter Block address in the PPMR header

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -40,6 +40,7 @@
 #include <amec_amester.h>
 #include <amec_pcap.h>
 #include <amec_smh.h>
+#include <wof.h>
 #include "dimm_structs.h"
 
 //*************************************************************************
@@ -646,6 +647,10 @@ typedef struct
 
   // save off when pcap is considered valid
   uint8_t               pcap_valid;
+
+  // WOF structure
+  amec_wof_t            wof;
+
 
   //---------------------------------------------------------
   //

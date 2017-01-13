@@ -35,7 +35,7 @@
 #define ACTIVE_QUAD_SZ_MAX 6
 #define WOF_HEADER_SIZE 32
 
-
+// Structure to hold relevant data from the WOF header in Mainstore
 typedef struct __attribute__ ((packed))
 {
     uint64_t magic_number;
@@ -52,6 +52,12 @@ typedef struct __attribute__ ((packed))
 } wof_header_data_t;
 
 
+
+// Structure used in g_amec
+typedef struct
+{
+} amec_wof_t;
+
 typedef struct
 {
     // There is no guarantee that we can fit everything into the min BceRequest
@@ -61,6 +67,9 @@ typedef struct
     uint8_t data[MIN_BCE_REQ_SIZE];
 } temp_bce_request_buffer_t __attribute ((aligned(128)));
 
+
+// Parameter structure used to pass information to the copy_vfrt_to_sram
+// call back function.
 typedef struct
 {
     temp_bce_request_buffer_t * vfrt_table;
@@ -91,6 +100,6 @@ void copy_vfrt_to_sram( copy_vfrt_to_sram_parms_t * i_parms );
 
 void send_vfrt_to_pgpe( uint32_t i_vfrt_address );
 
-
+void read_shared_sram( void );
 
 #endif
