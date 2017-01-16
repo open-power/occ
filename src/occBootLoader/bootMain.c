@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -61,7 +61,7 @@ IMAGE_HEADER(G_bootImageHdr,__boot_low_level_init,BOOT_LOADER_ID,
 // Function Prototypes
 //*************************************************************************
 //Forward declaration
-uint32_t boot_test_sram();
+uint32_t boot_test_sram(uint32_t i_start, uint32_t i_end);
 uint32_t boot_load_405(const imageHdr_t *i_hdrAddr);
 uint32_t boot_load_gpe0(uint32_t i_startAddr, uint32_t i_size, uint8_t * i_srcPtr);
 uint32_t boot_load_gpe1(uint32_t i_startAddr, uint32_t i_size, uint8_t * i_srcPtr);
@@ -93,15 +93,23 @@ void main()
 
 #ifndef VPO
     // This is ifdef'd out b/c it takes too long to run in VPO
-    // Test SRAM
-    l_rc = boot_test_sram();
-#endif
+
+    // Only test GPE0/GPE1/405 SRAM because SGPE and PGPE are
+    // loaded before us.
 
     // If failed to test SRAM, write failed return code to SPRG1 and halt
+    l_rc = boot_test_sram(SRAM_START_ADDRESS_GPE0, SRAM_END_ADDRESS_GPE1);
     if(0 != l_rc)
     {
         WRITE_TO_SPRG1_AND_HALT(l_rc);
     }
+
+    l_rc = boot_test_sram(SRAM_START_ADDRESS_405, SRAM_END_ADDRESS_405);
+    if(0 != l_rc)
+    {
+        WRITE_TO_SPRG1_AND_HALT(l_rc);
+    }
+#endif
 
     // set imageHdr_t pointer to point to boot image header to get to boot
     // image size. This way we can get to main application image header.
@@ -410,26 +418,26 @@ uint32_t boot_load_gpe1(uint32_t i_startAddr, uint32_t i_size, uint8_t * i_srcPt
 //
 // End Function Specification
 
-uint32_t boot_test_sram()
+uint32_t boot_test_sram(uint32_t i_start, uint32_t i_end)
 {
     uint32_t l_rc = 0;
 
     // Point start to SRAM start address
-    uint32_t *l_startPtr = (uint32_t *)SRAM_TEST_START_ADDRESS;
+    uint32_t *l_startPtr = (uint32_t *) i_start;
 
     // Copy bit pattern from start until SRAM end address
-    while((uint32_t)l_startPtr < SRAM_TEST_END_ADDRESS)
+    while((uint32_t)l_startPtr < i_end)
     {
         *l_startPtr = SRAM_TEST_BIT_PATTERN;
         l_startPtr++;
     }
 
     // Reset start pointer to point to SRAM start Address
-    l_startPtr = (uint32_t *)SRAM_TEST_START_ADDRESS;
+    l_startPtr = (uint32_t *) i_start;
 
     //Read and verify bit pattern that was written. If pattern does not match,
     // return address that failed to match the pattern.
-    while((uint32_t)l_startPtr < SRAM_TEST_END_ADDRESS)
+    while((uint32_t)l_startPtr < i_end)
     {
         if((*l_startPtr) != SRAM_TEST_BIT_PATTERN)
         {

@@ -80,6 +80,7 @@ uint32_t dcom_build_slv_inbox(void)
     uint32_t l_slv_idx = 0;
 
     static uint8_t      L_seq = 0xFF;
+    static bool         L_traced = FALSE;
 
     L_seq++;
 
@@ -87,7 +88,15 @@ uint32_t dcom_build_slv_inbox(void)
     // interrupt context.
     if(G_pbax_rc)
     {
-        TRAC_INFO("PBAX Send Failure in transimitting multicast doorbell - RC[%08X], packet[%d]", G_pbax_rc, G_pbax_packet);
+        if (!L_traced)
+        {
+            TRAC_INFO("PBAX Send Failure in transimitting multicast doorbell - RC[%08X], packet[%d]", G_pbax_rc, G_pbax_packet);
+            L_traced = TRUE;
+        }
+    }
+    else
+    {
+        L_traced = FALSE;
     }
 
 

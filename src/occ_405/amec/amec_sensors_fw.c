@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -200,18 +200,20 @@ void amec_update_fw_sensors(void)
         }
         else if(L_consec_trace_count < MAX_CONSEC_TRACE)
         {
-            gpe_gpenxiramdbg_t xsr_sprg0;
-            gpe_gpenxiramedr_t ir_edr;
-            gpe_gpenxidbgpro_t iar_xsr;
+            gpe_gpenxiramdbg_t xsr_sprg0 = {0};
+            gpe_gpenxiramedr_t ir_edr = {0};
+            gpe_gpenxidbgpro_t iar_xsr = {0};
 
             // Reset will eventually be requested due to not having power measurement
             // data after X ticks, but add some additional FFDC to the trace that
             // will tell us what GPE job is currently executing.
             if(!l_gpe0_idle)
             {
-                xsr_sprg0.value  = in64(GPE_GPE0XIRAMDBG);
-                ir_edr.value     = in64(GPE_GPE0XIRAMEDR);
-                iar_xsr.value    = in64(GPE_GPE0XIDBGPRO);
+// TODO: Will need to figure out how to get this debug info. Currently causes a machine check
+//       when we try to read them.
+//                xsr_sprg0.value  = in64(GPE_GPE0XIRAMDBG);
+//                ir_edr.value     = in64(GPE_GPE0XIRAMEDR);
+//                iar_xsr.value    = in64(GPE_GPE0XIDBGPRO);
                 TRAC_ERR("GPE0 programs did not complete within one tick. "
                          "XSR[0x%08x]  IAR[0x%08x] IR[0x%08x] EDR[0x%08x]",
                          iar_xsr.fields.xsr, iar_xsr.fields.iar,
@@ -221,9 +223,11 @@ void amec_update_fw_sensors(void)
             }
             if(!l_gpe1_idle)
             {
-                xsr_sprg0.value  = in64(GPE_GPE1XIRAMDBG);
-                ir_edr.value     = in64(GPE_GPE1XIRAMEDR);
-                iar_xsr.value    = in64(GPE_GPE1XIDBGPRO);
+// TODO: Will need to figure out how to get this debug info. Currently causes a machine check
+//       when we try to read them.
+//                xsr_sprg0.value  = in64(GPE_GPE1XIRAMDBG);
+//                ir_edr.value     = in64(GPE_GPE1XIRAMEDR);
+//                iar_xsr.value    = in64(GPE_GPE1XIDBGPRO);
                 TRAC_ERR("GPE1 programs did not complete within one tick. "
                          "XSR[0x%08x]  IAR[0x%08x] IR[0x%08x] EDR[0x%08x]",
                          iar_xsr.fields.xsr, iar_xsr.fields.iar,

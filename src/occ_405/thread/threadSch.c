@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -142,7 +142,7 @@ void initThreadScheduler(void)
                  (void *)0,
                  (SsxAddress)dcomThreadStack,
                  THREAD_STACK_SIZE,
-                 THREAD_PRIORITY_6);
+                 THREAD_PRIORITY_4);
 
     // Create the thread scheduler timer
     l_timerRc = ssx_timer_create(&G_threadSchTimer, threadSwapcallback, 0);

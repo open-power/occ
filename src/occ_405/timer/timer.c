@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -255,7 +255,10 @@ void task_poke_watchdogs(struct task * i_self)
         //@TODO: remove when PGPE code is integrated, RTC: 163934
         if(!G_simics_environment) // PGPE Beacon is not implemented in simics
         {
+// TODO: RTC: 163934 Enable this when PGPE beacon is enabled.
+#if 0
             check_pgpe_beacon();
+#endif
         }
     }
 
@@ -472,6 +475,7 @@ void check_pgpe_beacon(void)
     static bool     L_pgpe_beacon_unchanged_4ms = false; // pgpe beacon unchanged once (4ms)
     static bool     L_error_logged              = false; // trace and error log only once
     errlHndl_t      l_err                       = NULL;  // Error handler
+
     do
     {
         // return PGPE Beacon
@@ -503,7 +507,6 @@ void check_pgpe_beacon(void)
                 // Second time beacon unchanged (8ms), log timeout error
                 TRAC_ERR("Error PGPE Beacon didn't change for 8 ms: %d",
                          pgpe_beacon);
-
                 /*
                  * @errortype
                  * @moduleid    POKE_WD_TIMERS

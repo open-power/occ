@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -153,6 +153,7 @@ do {                                                                \
 #endif
 
 // Default initializations for validation that affect SSX and library code
+#define PROCESSOR_EC_LEVEL
 
 #ifndef SIMICS_ENVIRONMENT
 #define SIMICS_ENVIRONMENT 0

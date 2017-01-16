@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -47,7 +47,7 @@ const apssGpioConfigStruct_t G_gpio_config[2] = { {0x00, 0xFF, 0x00}, {0x00, 0xF
 
 // G_apss_mode_config: system parms needed to select correct mode command options
 // Configure streaming of: APSS Mode, 16 ADCs, 2 GPIOs
-const apssModeConfigStruct_t G_apss_mode_config = { APSS_MODE_COMPOSITE, 16, 2 };
+const apssModeConfigStruct_t G_apss_mode_config = { APSS_MODE_AUTO2, 16, 2 };
 
 // Power Measurements (read from APSS every RealTime loop)
 apssPwrMeasStruct_t G_apss_pwr_meas = { {0} };
@@ -60,7 +60,7 @@ uint64_t G_gpe_apss_time_end;
 
 // Flag for requesting APSS recovery when OCC detects all zeroes or data out of sync
 bool G_apss_recovery_requested = FALSE;
-
+bool G_apss_data_traced = FALSE;
 GPE_BUFFER(apss_start_args_t    G_gpe_start_pwr_meas_read_args);
 GPE_BUFFER(apss_continue_args_t G_gpe_continue_pwr_meas_read_args);
 GPE_BUFFER(apss_complete_args_t G_gpe_complete_pwr_meas_read_args);
@@ -152,10 +152,13 @@ void do_apss_recovery(void)
     uint64_t        l_spi_adc_reset;
     uint64_t        l_spi_adc_wdata;
 
-
-    INTR_TRAC_ERR("detected invalid power data[%08x%08x]",
+    if (!G_apss_data_traced)
+    {
+        INTR_TRAC_ERR("detected invalid power data[%08x%08x]",
              (uint32_t)(G_gpe_continue_pwr_meas_read_args.meas_data[0] >> 32),
              (uint32_t)(G_gpe_continue_pwr_meas_read_args.meas_data[0] & 0x00000000ffffffffull));
+        G_apss_data_traced = TRUE;
+    }
 
     do
     {
@@ -344,7 +347,8 @@ void task_apss_start_pwr_meas(struct task *i_self)
         if(G_apss_recovery_requested)
         {
             // Do recovery then wait until next tick to do anything more.
-            do_apss_recovery();
+// TODO: RTC: 163275 Cannot SCOM from the 405. Move to GPE.
+//            do_apss_recovery();
             break;
         }
 
@@ -673,6 +677,10 @@ void reformat_meas_data()
             // Recovery will begin on the next tick
             G_apss_recovery_requested = TRUE;
             break;
+        }
+        else
+        {
+            G_apss_data_traced = FALSE;
         }
 
         // Decrement up/down fail counter for backup on success.

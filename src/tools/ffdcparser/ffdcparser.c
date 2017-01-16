@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016                             */
+/* Contributors Listed Below - COPYRIGHT 2016,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -28,7 +28,7 @@
 // NOTE: This tool is to be used when FFDC is dumped by the OCC, and currently
 //       only accepts input files in binary format.
 
-typedef struct thread_dump
+typedef struct __attribute__((packed,aligned(4))) thread_dump
 {
     uint8_t     len;
     uint8_t     pri;
@@ -80,22 +80,22 @@ typedef struct __attribute__((packed,aligned(4))) ffdc
     uint32_t    dbsr;       // Debug Status Register
     uint32_t    ocb_oisr0;
     uint32_t    ocb_oisr1;
-    uint32_t    ocb_ouder0;
-    uint32_t    ocb_ouder1;
+    uint32_t    ocb_occmisc;
+    uint32_t    ocb_ohtmcr;
     uint32_t    ocb_oimr0;
     uint32_t    ocb_oimr1;
     uint32_t    ocb_oitr0;
     uint32_t    ocb_oitr1;
     uint32_t    ocb_oiepr0;
     uint32_t    ocb_oiepr1;
-    uint32_t    ocb_ocir0;
-    uint32_t    ocb_ocir1;
+    uint32_t    ocb_oehdr;
+    uint32_t    ocb_ocicfg;
     uint32_t    ocb_onisr0;
     uint32_t    ocb_onisr1;
     uint32_t    ocb_ocisr0;
     uint32_t    ocb_ocisr1;
-    uint32_t    ocb_her0;
-    uint32_t    ocb_her1;
+    uint32_t    ocb_occflg;
+    uint32_t    ocb_occhbr;
     uint32_t    ssx_timebase;
     char        buildname[16];
     uint64_t    occlfir;
@@ -224,7 +224,7 @@ void dump_ffdc(ffdc_t * data)
     printf("CR: 0x%08X\n", data->cr);
     printf("CTR: 0x%08X\n", data->ctr);
     for(i = 0; i < 32; i++)
-        printf("GPR%d: 0x%08X\n", i, data->gpr[i]);
+        printf("GPR%02d: 0x%08X\n", i, data->gpr[i]);
     printf("EVPR: 0x%08X\n", data->evpr);
     printf("XER: 0x%08X\n", data->xer);
     printf("ESR: 0x%08X\n", data->esr);
@@ -246,22 +246,22 @@ void dump_ffdc(ffdc_t * data)
     printf("DBSR: 0x%08X\n", data->dbsr);
     printf("OCB_OISR0: 0x%08X\n", data->ocb_oisr0);
     printf("OCB_OISR1: 0x%08X\n", data->ocb_oisr1);
-    printf("OCB_OUDER0: 0x%08X\n", data->ocb_ouder0);
-    printf("OCB_OUDER1: 0x%08X\n", data->ocb_ouder1);
+    printf("OCB_OCCMISC: 0x%08X\n", data->ocb_occmisc);
+    printf("OCB_OHTMCR: 0x%08X\n", data->ocb_ohtmcr);
     printf("OCB_OIMR0: 0x%08X\n", data->ocb_oimr0);
     printf("OCB_OIMR1: 0x%08X\n", data->ocb_oimr1);
     printf("OCB_OITR0: 0x%08X\n", data->ocb_oitr0);
     printf("OCB_OITR1: 0x%08X\n", data->ocb_oitr1);
     printf("OCB_OIEPR0: 0x%08X\n", data->ocb_oiepr0);
     printf("OCB_OIEPR1: 0x%08X\n", data->ocb_oiepr1);
-    printf("OCB_OCIR0: 0x%08X\n", data->ocb_ocir0);
-    printf("OCB_OCIR1: 0x%08X\n", data->ocb_ocir1);
+    printf("OCB_OEHDR: 0x%08X\n", data->ocb_oehdr);
+    printf("OCB_OCICFG: 0x%08X\n", data->ocb_ocicfg);
     printf("OCB_ONISR0: 0x%08X\n", data->ocb_onisr0);
     printf("OCB_ONISR1: 0x%08X\n", data->ocb_onisr1);
     printf("OCB_OCISR0: 0x%08X\n", data->ocb_ocisr0);
     printf("OCB_OCISR1: 0x%08X\n", data->ocb_ocisr1);
-    printf("OCB_HER0: 0x%08X\n", data->ocb_her0);
-    printf("OCB_HER1: 0x%08X\n", data->ocb_her1);
+    printf("OCB_OCCFLG: 0x%08X\n", data->ocb_occflg);
+    printf("OCB_OCCHBR: 0x%08X\n", data->ocb_occhbr);
     printf("SSX Timebase: 0x%08X\n", data->ssx_timebase);
     printf("OCC Buildname: %s\n", data->buildname);
     printf("OCC LFIR: 0x%016X\n", data->occlfir);
@@ -346,22 +346,22 @@ int main(int argc, char** argv)
     data.dbsr = get_uint32(ffdc_file);
     data.ocb_oisr0 = get_uint32(ffdc_file);
     data.ocb_oisr1 = get_uint32(ffdc_file);
-    data.ocb_ouder0 = get_uint32(ffdc_file);
-    data.ocb_ouder1 = get_uint32(ffdc_file);
+    data.ocb_occmisc = get_uint32(ffdc_file);
+    data.ocb_ohtmcr = get_uint32(ffdc_file);
     data.ocb_oimr0 = get_uint32(ffdc_file);
     data.ocb_oimr1 = get_uint32(ffdc_file);
     data.ocb_oitr0 = get_uint32(ffdc_file);
     data.ocb_oitr1 = get_uint32(ffdc_file);
     data.ocb_oiepr0 = get_uint32(ffdc_file);
     data.ocb_oiepr1 = get_uint32(ffdc_file);
-    data.ocb_ocir0 = get_uint32(ffdc_file);
-    data.ocb_ocir1 = get_uint32(ffdc_file);
+    data.ocb_oehdr = get_uint32(ffdc_file);
+    data.ocb_ocicfg = get_uint32(ffdc_file);
     data.ocb_onisr0 = get_uint32(ffdc_file);
     data.ocb_onisr1 = get_uint32(ffdc_file);
     data.ocb_ocisr0 = get_uint32(ffdc_file);
     data.ocb_ocisr1 = get_uint32(ffdc_file);
-    data.ocb_her0 = get_uint32(ffdc_file);
-    data.ocb_her1 = get_uint32(ffdc_file);
+    data.ocb_occflg = get_uint32(ffdc_file);
+    data.ocb_occhbr = get_uint32(ffdc_file);
     data.ssx_timebase = get_uint32(ffdc_file);
     fgets(data.buildname, 16, ffdc_file);
     fgetc(ffdc_file);
@@ -377,6 +377,9 @@ int main(int argc, char** argv)
     dump_ffdc(&data);
     if(data.eye_catcher != 0xFFDCFFDC)
         printf("WARNING: Eye catcher(0x%08X) was not 0xFFDCFFDC\n", data.eye_catcher);
+
+    if(ffdc_file != NULL)
+        fclose(ffdc_file);
 
     return 0;
 }

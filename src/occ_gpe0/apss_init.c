@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -183,30 +183,6 @@ void apss_init_gpio(ipc_msg_t* cmd, void* arg)
                 gpe_set_ffdc(&(args->error), SPIPSS_P2S_WDATA_REG, rc, regValue);
                 break;
             }
-            // Start SPI transaction
-            rc = apss_start_spi_command(args, 0);
-            if (rc)
-            {
-                PK_TRACE("apss_init_gpio: SPI command start failed. rc = 0x%08x", rc);
-                //FFDC already added.
-                break;
-            }
-
-            //--------------------
-            // Interrupt (APSS cmd 0x6xxx)
-            regValue = args->config0.interrupt;
-            regValue = regValue << 48;
-            regValue |= 0x6000000000000000;
-            regValue |= (port << 56);
-
-            rc = putscom_abs(SPIPSS_P2S_WDATA_REG, regValue);
-            if (rc)
-            {
-                PK_TRACE("apss_init_gpio: SPIPSS_P2S_WDATA_REG putscom failed. value:0x%X. rc = 0x%08x",
-                         regValue, rc);
-                gpe_set_ffdc(&(args->error), SPIPSS_P2S_WDATA_REG, rc, regValue);
-                break;
-            }
 
             // Start SPI transaction
             if (port == 0)
@@ -354,9 +330,6 @@ void apss_init_mode(ipc_msg_t* cmd, void* arg)
                      rc);
             gpe_set_ffdc(&(args->error), SPIPSS_P2S_COMMAND_REG, rc, 0x8000000000000000);
         }
-
-        //Wait 20usec for apss becoming ready to send out the frame of composite mode
-        busy_wait(20);
 
     }while(0);
 

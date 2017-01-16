@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -45,7 +45,7 @@
 // Defines/Enums
 //*************************************************************************/
 #define MACHINE_CHECK_ENABLE        0x00001000
-#define DATA_CACHE_BLOCK_ENABLE     0x00008000
+#define DATA_CACHE_BLOCK_ENABLE     0x80000000
 #define DATA_CACHE_BLOCK_ADDR       0x00000000
 #define DATA_CACHE_SIZE             (16 * 1024)
 #define CACHE_LINE_SIZE             32
