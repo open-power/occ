@@ -122,6 +122,7 @@ enum occReasonCode
     GPE_REQUEST_TASK_TIMEOUT        = 0xD6,
     GPE_REQUEST_RC_FAILURE          = 0xD7,
 
+    WOF_VFRT_REQ_FAILURE            = 0xD8,
     INVALID_MAGIC_NUMBER            = 0xDA,
 
     /// Success!

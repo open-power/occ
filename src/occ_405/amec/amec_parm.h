@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -69,10 +69,47 @@ typedef enum
     PARM_SOFT_FMIN,
     PARM_SOFT_FMAX,
     PARM_TOD,
+    // WOF Parameters
+    PARM_V_CORE,
+    PARM_CORE_PWR_ON,
+    PARM_CORES_ON_PER_QUAD,
+    PARM_WOF_DISABLED,
+    PARM_VOLT_VDD_SENSE,
+    PARM_TEMPPROCTHERMC,
+    PARM_TEMPNEST,
+    PARM_TEMPQ,
+    PARM_QUAD_X_PSTATES,
+    PARM_IVRM_STATES,
+    PARM_IDC_VDD,
+    PARM_IDC_QUAD,
+    PARM_VOLTAGE_IDX,
+    PARM_ALL_CORES_OFF_ISO,
+    PARM_ALL_CACHES_ON_ISO,
+    PARM_QUAD_GOOD_CORES_ONLY,
+    PARM_QUAD_ON_CORES,
+    PARM_QUAD_BAD_OFF_CORES,
+    PARM_NEST_MULT,
+    PARM_CORE_MULT,
+    PARM_QUAD_MULT,
+    PARM_NEST_DELTA_TEMP,
+    PARM_CORE_DELTA_TEMP,
+    PARM_QUAD_DELTA_TEMP,
+    PARM_TVPD_LEAK_OFF,
+    PARM_TVPD_LEAK_ON,
+    PARM_TVPD_LEAK_CACHE,
+    PARM_REQ_ACTIVE_QUAD_UPDATE,
+    PARM_PREV_REQ_ACTIVE_QUADS,
+    PARM_CURR_PING_PONG_BUF,
+    PARM_NEXT_PING_PONG_BUF,
+    PARM_CURR_VFRT_MAIN_MEM_ADDR,
+    PARM_ACTIVE_QUADS_SRAM_ADDR,
+    PARM_VFRT_TBLS_MAIN_MEM_ADDR,
+    PARM_VFRT_TBLS_LEN,
+    // End WOF Parameters
     AMEC_PARM_NUMBER_OF_PARAMETERS
 } AMEC_PARM_ENUM;
 
-typedef enum 
+typedef enum
 {
     AMEC_PARM_TYPE_UINT8 = 0,
     AMEC_PARM_TYPE_UINT16,

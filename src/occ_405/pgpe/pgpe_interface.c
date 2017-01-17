@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -36,6 +36,7 @@
 #include "proc_data_control.h"
 #include "occ_sys_config.h"
 #include "ssx.h"
+#include "wof.h"
 
 extern opal_static_table_t  G_opal_static_table;
 
@@ -374,7 +375,7 @@ errlHndl_t pgpe_init_wof_vfrt(void)
                                 IPC_MSGID_405_WOF_VFRT,     // Function ID
                                 &G_wof_vfrt_parms,          // Task parameters
                                 SSX_WAIT_FOREVER,           // Timeout (none)
-                                NULL,                       // Callback
+                                (AsyncRequestCallback)switch_ping_pong_buffer,     // Callback
                                 NULL,                       // Callback arguments
                                 ASYNC_CALLBACK_IMMEDIATE);  // Options
 

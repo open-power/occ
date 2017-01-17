@@ -32,6 +32,7 @@ enum wofModuleId
     WOF_MAIN                            =  WOF_COMP_ID | 0x01,
     SEND_VFRT_TO_PGPE                   =  WOF_COMP_ID | 0x02,
     COPY_VFRT_TO_SRAM                   =  WOF_COMP_ID | 0x03,
+    WOF_VFRT_CALLBACK                   =  WOF_COMP_ID | 0x04,
 };
 
 

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -44,6 +44,7 @@
 #include "memory.h"
 #include <avsbus.h>
 #include "p9_pstates_occ.h"
+#include <wof.h>
 
 #define FREQ_FORMAT_PWR_MODE_NUM   6
 #define FREQ_FORMAT_BASE_DATA_SZ   (sizeof(cmdh_store_mode_freqs_t) - sizeof(cmdh_fsp_cmd_header_t))
@@ -1094,14 +1095,21 @@ errlHndl_t data_store_avsbus_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
         l_invalid_data = TRUE;
     }
 
-    if (l_invalid_data)
+    if (l_invalid_data || !G_avsbus_vdd_monitoring || !G_avsbus_vdn_monitoring)
     {
         cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
         G_avsbus_vdd_monitoring = FALSE;
         G_avsbus_vdn_monitoring = FALSE;
+
+        // If cannot use vdd/vdn, cannot run wof algorithm.
+        g_amec->wof.wof_disabled |= WOF_RC_NO_VDD_VDN_READ_MASK;
+
     }
     else
     {
+        // We can use vdd/vdn. Clear NO_VDD_VDN_READ mask
+        g_amec->wof.wof_disabled &= ~WOF_RC_NO_VDD_VDN_READ_MASK;
+
         avsbus_init();
     }
 

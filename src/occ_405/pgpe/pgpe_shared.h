@@ -31,6 +31,8 @@
 // Offset addresses of PGPE Header parameters (relative to start address)
 #define PGPE_SHARED_SRAM_ADDR_OFFSET 0x0c
 #define PGPE_SHARED_SRAM_SZ_OFFSET   0x14
+#define PGPE_PSTATE_TBL_ADDR_OFFSET  0x40
+#define PGPE_PSTATE_TBL_SZ_OFFSET    0x44
 #define PGPE_BEACON_ADDR_OFFSET      0x48
 #define PGPE_ACTIVE_QUAD_ADDR_OFFSET 0x4c
 #define PGPE_WOF_TBLS_ADDR_OFFSET    0x50
@@ -53,7 +55,11 @@
 #define PGPE_WOF_TBLS_ADDR_PTR       (PGPE_HEADER_ADDR + PGPE_WOF_TBLS_ADDR_OFFSET)
 #define PGPE_WOF_TBLS_LEN_PTR        (PGPE_HEADER_ADDR + PGPE_WOF_TBLS_LEN_OFFSET)
 
-// PMMR (Pstates PM region) in HOMMR
+// Pointers to Pstate tables in SRAM
+#define PGPE_PSTATE_TBL_ADDR_PTR     (PGPE_HEADER_ADDR + PGPE_PSTATE_TBL_ADDR_OFFSET)
+#define PGPE_PSTATE_TBL_SZ_PTR       (PGPE_HEADER_ADDR + PGPE_PSTATE_TBL_SZ_OFFSET)
+
+// PPMR (Pstates PM region) in HOMMR
 #define PPMR_OPPM_ADDR_OFFSET    0x40     //offset of the OCC Pstates Parameter Block address in the PPMR header
 #define PPMR_OPPM_SZ_OFFSET      0x44     //offset of the OCC Pstates Parameter Block size in the PPMR header
 

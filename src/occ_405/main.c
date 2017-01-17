@@ -79,10 +79,6 @@ extern uint32_t G_pgpe_beacon_address;
 
 extern uint32_t G_proc_fmin_khz;
 extern uint32_t G_proc_fmax_khz;
-extern uint32_t G_wof_active_quads_sram_addr;
-extern uint32_t G_wof_tables_main_mem_addr;
-extern uint32_t G_wof_tables_len;
-extern bool     G_run_wof_main;
 extern wof_header_data_t G_wof_header;
 
 extern uint32_t G_khz_per_pstate;
@@ -93,8 +89,10 @@ extern uint8_t G_proc_pmax;
 IMAGE_HEADER (G_mainAppImageHdr,__ssx_boot,MAIN_APP_ID,ID_NUM_INVALID);
 
 // PGPE Image Header Parameters
-uint32_t G_pgpe_shared_sram_address = 0;
-uint32_t G_pgpe_shared_sram_sz = 0;
+uint32_t G_pgpe_shared_sram_address;
+uint32_t G_pgpe_shared_sram_sz;
+uint32_t G_pgpe_pstate_table_address;
+uint32_t G_pgpe_pstate_table_sz;
 
 ppmr_header_t G_ppmr_header;       // PPMR Header layout format
 OCCPstateParmBlock G_oppb;         // OCC Pstate Parameters Block Structure
@@ -513,9 +511,9 @@ void read_wof_header(void)
         // 128 byte aligned buffer to read the data
         temp_bce_request_buffer_t l_temp_bce_buff = {{0}};
 
-        uint32_t pad = G_wof_tables_main_mem_addr%128;
+        uint32_t pad = g_amec->wof.vfrt_tbls_main_mem_addr%128;
         // Force WOF tables address is on 128 byte boundary
-        uint32_t wof_main_mem_addr_128 = G_wof_tables_main_mem_addr - pad;
+        uint32_t wof_main_mem_addr_128 = g_amec->wof.vfrt_tbls_main_mem_addr - pad;
         // Create request
         l_ssxrc = bce_request_create(&l_wof_header_req,      // block copy object
                                      &G_pba_bcde_queue,      // main to sram copy engine
@@ -581,6 +579,7 @@ void read_wof_header(void)
              * @moduleid    READ_WOF_HEADER
              * @reasoncode  INVALID_ACTIVE_QUAD_COUNT
              * @userdata1   Reported active quad count
+             * @userdata4   Quad count failure
              * @devdesc     Read an invalid number of active quads
              */
             l_reasonCode = INVALID_ACTIVE_QUAD_COUNT;
@@ -604,7 +603,7 @@ void read_wof_header(void)
             commitErrl(&l_errl);
 
             // We were unable to get the active quad count. Do not run wof algo.
-            G_run_wof_main = false;
+            g_amec->wof.wof_disabled |= WOF_RC_INVALID_ACTIVE_QUADS_MASK;
         }
 
 
@@ -632,8 +631,7 @@ void read_wof_header(void)
         commitErrl(&l_errl);
 
         // We were unable to get the WOF header thus it should not be run.
-        G_run_wof_main = false;
-
+        g_amec->wof.wof_disabled |= WOF_RC_NO_WOF_HEADER_MASK;
         return;
 
     }
@@ -700,15 +698,15 @@ void read_pgpe_header(void)
                       G_pgpe_beacon_address);
 
         // Read active quads address, wof tables address, and wof tables len
-        G_wof_active_quads_sram_addr = in32(PGPE_ACTIVE_QUAD_ADDR_PTR);
-        G_wof_tables_main_mem_addr       = in32(PGPE_WOF_TBLS_ADDR_PTR);
-        G_wof_tables_len                 = in32(PGPE_WOF_TBLS_LEN_PTR);
+        g_amec->wof.active_quads_sram_addr  = in32(PGPE_ACTIVE_QUAD_ADDR_PTR);
+        g_amec->wof.vfrt_tbls_main_mem_addr = in32(PGPE_WOF_TBLS_ADDR_PTR);
+        g_amec->wof.vfrt_tbls_len           = in32(PGPE_WOF_TBLS_LEN_PTR);
 
         MAIN_TRAC_IMP("Read WOF Tables Main Memory Address[0x%08x], Len[0x%08x],"
                       " Active Quads Address[0x%08x]",
-                      G_wof_tables_main_mem_addr,
-                      G_wof_tables_len,
-                      G_wof_active_quads_sram_addr );
+                      g_amec->wof.vfrt_tbls_main_mem_addr,
+                      g_amec->wof.vfrt_tbls_len,
+                      g_amec->wof.active_quads_sram_addr );
 
         // Extract important WOF data into global space
         read_wof_header();
@@ -719,6 +717,11 @@ void read_pgpe_header(void)
 
         MAIN_TRAC_IMP("Read PGPE Shared SRAM Start Address[0x%08x], Size[0x%08x]",
                       G_pgpe_shared_sram_address, G_pgpe_shared_sram_sz);
+
+        // Read OCC Pstate table address and size
+        G_pgpe_pstate_table_address = in32(PGPE_PSTATE_TBL_ADDR_PTR);
+        G_pgpe_pstate_table_sz      = in32(PGPE_PSTATE_TBL_SZ_PTR);
+
 
         // PGPE Beacon is not implemented in simics yet
         // the G_pgpe_shared_sram_address and G_pgpe_shared_sram_sz pointers don't

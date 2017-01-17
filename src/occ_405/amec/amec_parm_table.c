@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -138,6 +138,46 @@ amec_parm_t g_amec_parm_list[] = {
     AMEC_PARM_UINT16(PARM_SOFT_FMIN,"part_soft_fmin",&g_amec_sys.part_config.part_list[0].soft_fmin),
     AMEC_PARM_UINT16(PARM_SOFT_FMAX,"part_soft_fmax",&g_amec_sys.part_config.part_list[0].soft_fmax),
     AMEC_PARM_RAW(PARM_TOD,"apss_tod",&G_dcom_slv_inbox_doorbell_rx.tod,8),
+
+
+
+    // Begin WOF parameters
+    AMEC_PARM_UINT32_ARRAY(PARM_V_CORE, "v_core_100uV", &g_amec_sys.wof.v_core_100uV, MAX_NUM_QUADS),
+    AMEC_PARM_UINT32(PARM_CORE_PWR_ON, "core_pwr_on", &g_amec_sys.wof.core_pwr_on),
+    AMEC_PARM_UINT8_ARRAY(PARM_CORES_ON_PER_QUAD, "coreson_per_quad", &g_amec_sys.wof.cores_on_per_quad, MAX_NUM_QUADS),
+    AMEC_PARM_UINT16(PARM_WOF_DISABLED, "wof_disabled", &g_amec_sys.wof.wof_disabled),
+    AMEC_PARM_UINT32(PARM_VOLT_VDD_SENSE, "volt_vdd_sense", &g_amec_sys.wof.volt_vdd_sense),
+    AMEC_PARM_UINT16_ARRAY(PARM_TEMPPROCTHERMC, "tempprocthrmc", &g_amec_sys.wof.tempprocthrmc, MAX_NUM_CORES),
+    AMEC_PARM_UINT16(PARM_TEMPNEST, "tempnest_sense", &g_amec_sys.wof.tempnest_sense),
+    AMEC_PARM_UINT16_ARRAY(PARM_TEMPQ, "tempq", &g_amec_sys.wof.tempq, MAX_NUM_QUADS),
+    AMEC_PARM_UINT8_ARRAY(PARM_QUAD_X_PSTATES, "quad_x_pstates", &g_amec_sys.wof.quad_x_pstates, MAX_NUM_QUADS),
+    AMEC_PARM_UINT8(PARM_IVRM_STATES, "quad_ivrm_states", &g_amec_sys.wof.quad_ivrm_states),
+    AMEC_PARM_UINT32(PARM_IDC_VDD, "idc_vdd", &g_amec_sys.wof.idc_vdd),
+    AMEC_PARM_UINT32(PARM_IDC_QUAD, "idc_quad", &g_amec_sys.wof.idc_quad),
+    AMEC_PARM_UINT8(PARM_VOLTAGE_IDX, "voltage_idx", &g_amec_sys.wof.voltage_idx),
+    AMEC_PARM_UINT32(PARM_ALL_CORES_OFF_ISO, "allcores_off_iso", &g_amec_sys.wof.all_cores_off_iso),
+    AMEC_PARM_UINT32(PARM_ALL_CACHES_ON_ISO, "allcaches_on_iso", &g_amec_sys.wof.all_caches_on_iso),
+    AMEC_PARM_UINT16_ARRAY(PARM_QUAD_GOOD_CORES_ONLY, "quad_good_cores", &g_amec_sys.wof.quad_good_cores_only, MAX_NUM_QUADS),
+    AMEC_PARM_UINT16_ARRAY(PARM_QUAD_ON_CORES, "quad_on_cores", &g_amec_sys.wof.quad_on_cores, MAX_NUM_QUADS),
+    AMEC_PARM_UINT16_ARRAY(PARM_QUAD_BAD_OFF_CORES,"quadBadOffCores", &g_amec_sys.wof.quad_on_cores, MAX_NUM_QUADS),
+    AMEC_PARM_UINT32(PARM_NEST_MULT, "nest_mult", &g_amec_sys.wof.nest_mult),
+    AMEC_PARM_UINT32_ARRAY(PARM_CORE_MULT, "core_mult", &g_amec_sys.wof.core_mult, MAX_NUM_CORES),
+    AMEC_PARM_UINT32_ARRAY(PARM_QUAD_MULT, "quad_mult", &g_amec_sys.wof.quad_mult, MAX_NUM_QUADS),
+    AMEC_PARM_INT16(PARM_NEST_DELTA_TEMP, "nest_delta_temp", &g_amec_sys.wof.nest_delta_temp),
+    AMEC_PARM_INT16_ARRAY(PARM_CORE_DELTA_TEMP, "core_delta_temp", &g_amec_sys.wof.core_delta_temp, MAX_NUM_CORES),
+    AMEC_PARM_INT16_ARRAY(PARM_QUAD_DELTA_TEMP, "quad_delta_temp", &g_amec_sys.wof.quad_delta_temp, MAX_NUM_CORES),
+    AMEC_PARM_UINT16(PARM_TVPD_LEAK_OFF, "tvpd_leak_off", &g_amec_sys.wof.tvpd_leak_off),
+    AMEC_PARM_UINT16(PARM_TVPD_LEAK_ON, "tvpd_leak_on", &g_amec_sys.wof.tvpd_leak_on),
+    AMEC_PARM_UINT16(PARM_TVPD_LEAK_CACHE, "tvpd_leak_cache", &g_amec_sys.wof.tvpd_leak_cache),
+    AMEC_PARM_UINT8(PARM_REQ_ACTIVE_QUAD_UPDATE, "req_active_quad", &g_amec_sys.wof.req_active_quad_update),
+    AMEC_PARM_UINT8(PARM_PREV_REQ_ACTIVE_QUADS, "prevActiveQuads", &g_amec_sys.wof.prev_req_active_quads),
+    AMEC_PARM_UINT32(PARM_CURR_PING_PONG_BUF, "currPingPongBuf", &g_amec_sys.wof.curr_ping_pong_buf),
+    AMEC_PARM_UINT32(PARM_NEXT_PING_PONG_BUF, "nextPingPongBuf", &g_amec_sys.wof.next_ping_pong_buf),
+    AMEC_PARM_UINT32(PARM_CURR_VFRT_MAIN_MEM_ADDR, "vfrtMainMemAddr", &g_amec_sys.wof.curr_vfrt_main_mem_addr),
+    AMEC_PARM_UINT32(PARM_ACTIVE_QUADS_SRAM_ADDR, "activQuadSramPtr", &g_amec_sys.wof.active_quads_sram_addr),
+    AMEC_PARM_UINT32(PARM_VFRT_TBLS_MAIN_MEM_ADDR, "vfrtMainMemAddr", &g_amec_sys.wof.vfrt_tbls_main_mem_addr),
+    AMEC_PARM_UINT32(PARM_VFRT_TBLS_LEN, "vfrt_tbls_len", &g_amec_sys.wof.vfrt_tbls_len),
+    // End WOF parameters
 };
 
 //Throw a compiler error when the enum and array are not both updated

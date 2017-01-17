@@ -31,34 +31,71 @@
 #include <p9_pstates_occ.h>
 #include <occ_service_codes.h>
 #include <wof_service_codes.h>
+#include <amec_sys.h>
+#include <occ_sys_config.h>
 #include "wof.h"
-
-
-//******************************************************************************
-// Globals
-//******************************************************************************
-uint32_t G_wof_active_quads_sram_addr;
-uint32_t G_wof_tables_main_mem_addr;
-uint32_t G_wof_tables_len;
-uint8_t  G_requested_active_quad_update;
-uint8_t  G_previous_active_quads;
-bool     G_run_wof_main;
-
-uint8_t G_sram_vfrt_ping_buffer[MIN_BCE_REQ_SIZE] __attribute__ ((section(".vfrt_ping_buffer")));
-uint8_t G_sram_vfrt_pong_buffer[MIN_BCE_REQ_SIZE] __attribute__ ((section(".vfrt_pong_buffer")));
-uint8_t * G_current_ping_pong_buf;
-wof_header_data_t G_wof_header __attribute__ ((section (".global_data")));
-uint32_t G_current_vfrt_addr = 0;
-quad_state0_t G_quad_state_0 = {0};
-quad_state0_t G_quad_state_1 = {0};
 
 //******************************************************************************
 // External Globals
 //******************************************************************************
+extern amec_sys_t g_amec_sys;
 extern OCCPstateParmBlock G_oppb;
 extern GPE_BUFFER(ipcmsg_wof_vfrt_t G_wof_vfrt_parms);
 extern GpeRequest G_wof_vfrt_req;
 extern uint32_t   G_pgpe_shared_sram_address;
+extern uint32_t   G_pgpe_pstate_table_address;
+extern uint32_t   G_pgpe_pstate_table_sz;
+
+//******************************************************************************
+// Globals
+//******************************************************************************
+
+uint8_t G_sram_vfrt_ping_buffer[MIN_BCE_REQ_SIZE] __attribute__ ((section(".vfrt_ping_buffer")));
+uint8_t G_sram_vfrt_pong_buffer[MIN_BCE_REQ_SIZE] __attribute__ ((section(".vfrt_pong_buffer")));
+
+wof_header_data_t G_wof_header __attribute__ ((section (".global_data")));
+
+// Quad state structs to temporarily hold the data from the doublewords to
+// then populate in amec structure
+quad_state0_t G_quad_state_0 = {0};
+quad_state1_t G_quad_state_1 = {0};
+
+// Create a pointer to amec WOF structure
+amec_wof_t * g_wof = &(g_amec_sys.wof);
+
+// Core IDDQ voltages array (voltages in 100uV)
+uint16_t G_iddq_voltages[CORE_IDDQ_MEASUREMENTS] =
+{
+     6000,
+     7000,
+     8000,
+     9000,
+    10000,
+    11000
+};
+
+// Approximate y = 1.3^((T-tvpd_leak)/10)
+// Interpolate (T-tvpd_leak) in the table below to find m.
+// y ~= (T*m) >> 10     (shift out 10 bits)
+// Error in estimation is no more than 0.9%
+// The first column represents the result of T-tvpd_leak where T is the
+// associated temperature sensor. The second column represents the associated
+// m(slope) when the delta temp the first value.
+int16_t G_wof_iddq_mult_table[][2] = {
+    //Delta Temperature in C, m
+    {-50, 276},
+    {-40, 359},
+    {-30, 466},
+    {-20, 606},
+    {-10, 788},
+    {0,   1024},
+    {10,  1331},
+    {20,  1731},
+    {30,  2250},
+    {40,  2925},
+    {50,  3802}
+};
+#define WOF_IDDQ_MULT_TABLE_N 11
 
 
 /**
@@ -76,6 +113,10 @@ void wof_main(void)
     // TODO Read out necessary Sensor data for WOF calculation
     //    uint16_t l_current_vdd = getSensorByGsid(CURVDD)->sample;
     //    uint16_t l_current_vdn = getSensorByGsid(CURVDN)->sample
+
+    // Read VOLTVDDSENSE once here to be used in the algorithm and save it to amec
+    g_wof->volt_vdd_sense = getSensorByGsid(VOLTVDDSENSE)->sample;
+
     // Functions to calculate Ceff_vdd and Ceff_vdn here.
     uint16_t ceff_vdd = 0; // TODO: replace with future function call
     uint16_t ceff_vdn = 0; // TODO: replace with future function call
@@ -98,10 +139,9 @@ void wof_main(void)
     // NOTE to Reviewers: This trace is here just to put references to the above
     // variables such that compilation is successful. Will be removed in final
     // version
-    TRAC_INFO("Step from start VDN = %d, VDN = %d",
+    TRAC_INFO("Step from start VDN = %d, VDD = %d",
               vdn_step_from_start,
               vdd_step_from_start );
-
 
 
 }
@@ -198,7 +238,7 @@ uint32_t calc_vfrt_mainstore_addr( uint16_t i_vdd_step_from_start,
                     i_vdd_step_from_start) ) + i_quad_step_from_start);
 
     // Skip the wof header at the beginning of wof tables
-    uint32_t wof_tables_base = G_wof_tables_main_mem_addr + WOF_HEADER_SIZE;
+    uint32_t wof_tables_base = g_wof->vfrt_tbls_main_mem_addr + WOF_HEADER_SIZE;
 
     return wof_tables_base + offset;
 }
@@ -227,19 +267,22 @@ void copy_vfrt_to_sram( copy_vfrt_to_sram_parms_t * i_parms)
     // Static variable to trac which buffer is open for use
     // 0 = PING; 1 = PONG;
     int l_gperc; // gpe schedule return code
-    static uint8_t L_pingpong = 0;
     uint8_t * l_buffer_address;
 
-    if( L_pingpong == 0 )
+
+    if(g_wof->curr_ping_pong_buf == (uint32_t)G_sram_vfrt_ping_buffer)
     {
-        // Use ping buffer
-        l_buffer_address = G_sram_vfrt_ping_buffer;
+        // Switch to pong buffer
+        l_buffer_address = G_sram_vfrt_pong_buffer;
     }
     else
     {
-        // Use pong buffer
-        l_buffer_address = G_sram_vfrt_pong_buffer;
+        // Switch to ping buffer
+        l_buffer_address = G_sram_vfrt_ping_buffer;
     }
+
+    // Update global "next" ping pong buffer for callback function
+    g_wof->next_ping_pong_buf = (uint32_t)l_buffer_address;
 
     // Copy the vfrt data into the buffer
     memcpy( l_buffer_address,
@@ -248,7 +291,7 @@ void copy_vfrt_to_sram( copy_vfrt_to_sram_parms_t * i_parms)
 
     // Set the parameters for the GpeRequest
     G_wof_vfrt_parms.vfrt_ptr = l_buffer_address;
-    G_wof_vfrt_parms.active_quads = G_requested_active_quad_update;
+    G_wof_vfrt_parms.active_quads = g_wof->req_active_quad_update;
 
     // Send IPC command to PGPE with new vfrt address and active quads
     // Should not need to check if request is idle as wof_main does before
@@ -291,21 +334,62 @@ void copy_vfrt_to_sram( copy_vfrt_to_sram_parms_t * i_parms)
         // Commit error log
         commitErrl(&l_errl);
     }
-    else
-    {
-        // Sent the IPC command successfully, update which buffer we should look
-        // at next time.
-        L_pingpong = ~L_pingpong;
-
-        // Update the previous active quads
-        G_previous_active_quads = G_requested_active_quad_update;
-
-        // Update Current ping pong buffer
-        G_current_ping_pong_buf = l_buffer_address;
-    }
 
 }
 
+/**
+ * switch_ping_pong_buffer
+ *
+ * Description: Callback function for G_wof_vfrt_req GPE request to
+ *              confirm the new VFRT is being used by the PGPE and
+ *              record the switch on the 405
+ */
+//TODO RTC 166301 - will be renamed wof_vfrt_req_callback
+void switch_ping_pong_buffer( void )
+{
+    // Confirm the WOF VFRT PGPE request has completed with no errors
+    if( G_wof_vfrt_parms.msg_cb.rc == PGPE_WOF_RC_VFRT_QUAD_MISMATCH )
+    {
+        // TODO RTC 166301 - Implement this logic with read_req_active_quads
+        //                   function.
+        // Quad Mismatch.
+        // Reread the requested active quads from Shared SRAM and set
+        // parameters
+        // Trace the mismatch and let the code exit. Will retry
+        // next invocation of wof_main.
+        // Keep retrying if this return code is seen
+    }
+    else if( G_wof_vfrt_parms.msg_cb.rc == PGPE_RC_SUCCESS )
+    {
+       // GpeRequest went through successfully. update global ping pong buffer
+       g_wof->curr_ping_pong_buf = g_wof->next_ping_pong_buf;
+
+       // Update previous active quads
+       g_wof->prev_req_active_quads = g_wof->req_active_quad_update;
+    }
+    else
+    {
+        // Some other failure case. Reset PM complex.
+        /* @
+         * @errortype
+         * @moduleid    WOF_VFRT_CALLBACK
+         * @reasoncode  WOF_VFRT_REQ_FAILURE
+         * @userdata1   The GpeRequest RC
+         * @userdata4   OCC_NO_EXTENDED_RC
+         */
+        errlHndl_t l_errl = createErrl( WOF_VFRT_CALLBACK,
+                                        WOF_VFRT_REQ_FAILURE,
+                                        OCC_NO_EXTENDED_RC,
+                                        ERRL_SEV_UNRECOVERABLE,
+                                        NULL,
+                                        DEFAULT_TRACE_SIZE,
+                                        G_wof_vfrt_parms.msg_cb.rc,
+                                        0 );
+
+        REQUEST_RESET( l_errl );
+    }
+
+}
 
 /**
  * send_vfrt_to_pgpe
@@ -315,9 +399,9 @@ void copy_vfrt_to_sram( copy_vfrt_to_sram_parms_t * i_parms)
  *              to the PGPE
  *              Note: If desired VFRT is the same as previous, skip.
  *
- * Param[in]: i_vfrt_address - Address of the desired vfrt table.
+ * Param[in]: i_vfrt_main_mem_addr - Address of the desired vfrt table.
  */
-void send_vfrt_to_pgpe( uint32_t i_vfrt_address )
+void send_vfrt_to_pgpe( uint32_t i_vfrt_main_mem_addr )
 {
     int l_ssxrc = SSX_OK;
     int l_gperc = 0;
@@ -326,19 +410,21 @@ void send_vfrt_to_pgpe( uint32_t i_vfrt_address )
 
     do
     {
-        if( (i_vfrt_address == G_current_vfrt_addr ) &&
-            (G_requested_active_quad_update == G_previous_active_quads) )
+        if( (i_vfrt_main_mem_addr == g_wof->curr_vfrt_main_mem_addr ) &&
+            (g_wof->req_active_quad_update ==
+             g_wof->prev_req_active_quads) )
         {
             // VFRT and requested active quads are unchanged. Skip
             break;
         }
-        else if( (i_vfrt_address == G_current_vfrt_addr) &&
-                 (G_requested_active_quad_update != G_previous_active_quads) )
+        else if( (i_vfrt_main_mem_addr == g_wof->curr_vfrt_main_mem_addr)&&
+                 (g_wof->req_active_quad_update !=
+                  g_wof->prev_req_active_quads) )
         {
             // Only requested active quads changed. No need to do a BCE request
             // for new VFRT. Just send IPC command with updated active quads
-            G_wof_vfrt_parms.vfrt_ptr = G_current_ping_pong_buf;
-            G_wof_vfrt_parms.active_quads = G_requested_active_quad_update;
+            G_wof_vfrt_parms.vfrt_ptr = (VFRT_Hcode_t*)g_wof->curr_ping_pong_buf;
+            G_wof_vfrt_parms.active_quads = g_wof->req_active_quad_update;
 
             //Send IPC command to PGPE with new active quad update
             l_gperc = gpe_request_schedule( &G_wof_vfrt_req );
@@ -347,7 +433,7 @@ void send_vfrt_to_pgpe( uint32_t i_vfrt_address )
             if(l_gperc != 0)
             {
                 //Error in scheduling pgpe clip update task
-                TRAC_ERR("copy_vfrt_to_sram: Failed to schedule WOF VFRT task rc=%x",
+                TRAC_ERR("send_vfrt_to_sram: Failed to schedule WOF VFRT task rc=%x",
                          l_gperc);
 
                 /* @
@@ -379,11 +465,6 @@ void send_vfrt_to_pgpe( uint32_t i_vfrt_address )
                 // Commit error log
                 commitErrl(&l_errl);
             }
-            else
-            {
-                // Successful Schedule. Update previous active quads
-                G_previous_active_quads = G_requested_active_quad_update;
-            }
         }
         else
         {
@@ -394,8 +475,8 @@ void send_vfrt_to_pgpe( uint32_t i_vfrt_address )
             temp_bce_request_buffer_t l_temp_bce_buff = {{0}};
 
 
-            uint8_t l_pad = i_vfrt_address%128;
-            uint32_t l_vfrt_addr_128_aligned = i_vfrt_address - l_pad;
+            uint8_t l_pad = i_vfrt_main_mem_addr%128;
+            uint32_t l_vfrt_addr_128_aligned = i_vfrt_main_mem_addr - l_pad;
 
             // Create structure to hold parameters for callback function
             copy_vfrt_to_sram_parms_t l_callback_parms;
@@ -417,7 +498,7 @@ void send_vfrt_to_pgpe( uint32_t i_vfrt_address )
 
             if(l_ssxrc != SSX_OK)
             {
-                CMDH_TRAC_ERR("read_wof_header: BCDE request create failure rc=[%08X]", -l_ssxrc);
+                CMDH_TRAC_ERR("send_vfrt_to_pgpe: BCDE request create failure rc=[%08X]", -l_ssxrc);
                 /*
                  * @errortype
                  * @moduleid    SEND_VFRT_TO_PGPE
@@ -437,7 +518,7 @@ void send_vfrt_to_pgpe( uint32_t i_vfrt_address )
 
             if(l_ssxrc != SSX_OK)
             {
-                CMDH_TRAC_ERR("read_wof_header: BCE request schedule failure rc=[%08X]", -l_ssxrc);
+                CMDH_TRAC_ERR("send_vfrt_to_pgpe: BCE request schedule failure rc=[%08X]", -l_ssxrc);
                 /*
                  * @errortype
                  * @moduleid    SEND_VFRT_TO_PGPE
@@ -500,6 +581,450 @@ void read_shared_sram( void )
 
     // Get the requested active quad update
     uint64_t l_doubleword = in64(current_pgpe_sram_addr);
-    memcpy(&G_requested_active_quad_update, &l_doubleword, sizeof(uint8_t));
+    memcpy(&g_wof->req_active_quad_update, &l_doubleword, sizeof(uint8_t));
+
+    // merge the 16-bit power-on field from quad state 0 and the 16-bit power-on
+    // field from quad state 1 and save it to amec.
+    g_wof->core_pwr_on =
+                   (((uint32_t)G_quad_state_0.fields.core_poweron_state) << 16)
+                  | ((uint32_t)G_quad_state_1.fields.core_poweron_state);
+
+
+    // Clear out current quad pstates
+    memset(g_wof->quad_x_pstates, 0 , MAX_NUM_QUADS);
+
+    // Add the quad states to the global quad state array for easy looping.
+    g_wof->quad_x_pstates[0] = (uint8_t)G_quad_state_0.fields.quad0_pstate;
+    g_wof->quad_x_pstates[1] = (uint8_t)G_quad_state_0.fields.quad1_pstate;
+    g_wof->quad_x_pstates[2] = (uint8_t)G_quad_state_0.fields.quad2_pstate;
+    g_wof->quad_x_pstates[3] = (uint8_t)G_quad_state_0.fields.quad3_pstate;
+    g_wof->quad_x_pstates[4] = (uint8_t)G_quad_state_1.fields.quad4_pstate;
+    g_wof->quad_x_pstates[5] = (uint8_t)G_quad_state_1.fields.quad5_pstate;
+
+
+    // Save IVRM bit vector states to amec
+    g_wof->quad_ivrm_states =
+           (((uint8_t)G_quad_state_0.fields.ivrm_state) << 4)
+          | ((uint8_t)G_quad_state_1.fields.ivrm_state);
+}
+
+/**
+ * calculate_core_voltage
+ *
+ * Description: Calculate the core voltage based on Pstate and IVRM state.
+ *              Same for all cores in the quad so only need to calculate
+ *              once per quad.
+ */
+void calculate_core_voltage( void )
+{
+    uint32_t l_voltage;
+    uint8_t l_quad_mask;
+    int l_quad_idx = 0;
+    for(; l_quad_idx < MAX_NUM_QUADS; l_quad_idx++)
+    {
+        // Adjust current mask. (IVRM_STATE_QUAD_MASK = 0x80)
+        l_quad_mask = IVRM_STATE_QUAD_MASK >> l_quad_idx;
+
+        // Check IVRM state of quad 0.
+        // 0 = BYPASS, 1 = REGULATION
+        if( (g_wof->quad_ivrm_states & l_quad_mask ) == 0 )
+        {
+            l_voltage = g_wof->volt_vdd_sense;
+        }
+        else
+        {
+            // Calculate the address of the pstate for the current quad.
+            uint32_t pstate_addr = G_pgpe_pstate_table_address +
+                    (g_wof->quad_x_pstates[l_quad_idx] * sizeof(OCCPstateTable_entry_t));
+
+            // Get the Pstate
+            OCCPstateTable_entry_t * pstate_entry_ptr;
+            uint32_t current_pstate = in32(pstate_addr);
+            pstate_entry_ptr = (OCCPstateTable_entry_t *)(&current_pstate);
+
+            // Get the internal vid (ivid) from the pstate table
+            uint8_t current_vid = pstate_entry_ptr->internal_vdd_vid;
+
+            // Convert the vid to voltage and then convert units to 100uV
+            // Vid-to-voltage = 512mV + ivid*4mV
+            // mV to 100uV = mV*10
+            l_voltage = (512 + (current_vid*4))*10;
+        }
+
+        // Save the voltage to amec_wof_t global struct
+        g_wof->v_core_100uV[l_quad_idx] = l_voltage;
+    }
+}
+
+
+/**
+ * calculate_core_leakage
+ *
+ * Description: Calculate core-level leakage
+ *
+ * Return: the calculated core leakage
+ */
+void calculate_core_leakage( void )
+{
+
+    int l_chip_v_idx = 0;
+    uint16_t l_quad_x_cache;
+    uint16_t idc_vdd = 0;
+    uint8_t  num_quads_off = 0;
+    uint16_t temperature = 0;
+
+    // Get the VOLTVDDSENSE sensor and choose the appropriate
+    // chip voltage index
+    uint32_t l_v_chip = g_wof->volt_vdd_sense;
+
+    if( l_v_chip <= G_iddq_voltages[0] )
+    {
+        // Voltage is <= to first entry. Use first two entries.
+        l_chip_v_idx = 0;
+    }
+    else if( l_v_chip >= G_iddq_voltages[CORE_IDDQ_MEASUREMENTS-1] )
+    {
+        // Voltage is >= to last entry. Use last two entries.
+        l_chip_v_idx = CORE_IDDQ_MEASUREMENTS - 2;
+    }
+    else
+    {
+        // Search for entries on either side of our voltage
+        for(;l_chip_v_idx < CORE_IDDQ_MEASUREMENTS - 1; l_chip_v_idx++)
+        {
+            if( (l_v_chip >= G_iddq_voltages[l_chip_v_idx]) &&
+                (l_v_chip <= G_iddq_voltages[l_chip_v_idx]) )
+            {
+                break;
+            }
+        }
+
+    }
+    // Save index used for interpolating voltages to amec
+    g_wof->voltage_idx = l_chip_v_idx;
+
+
+    // Calculate all variables that will be used in the core
+    // loop that only need to be calculated once.
+
+    // Read the Nest Temperature sensor for calculations & save to amec
+    g_wof->tempnest_sense = getSensorByGsid(TEMPNEST)->sample;
+
+    // Look up Tvpd_leak for calculations when either the core or quad is off
+    // avttemp values in 0.5C. Divide by 2 to convert to 1C
+    g_wof->tvpd_leak_off =
+                  G_oppb.iddq.avgtemp_all_cores_off_caches_off[l_chip_v_idx] >> 1;
+
+    // Look up Tvpd_leak for calculations involving the cache.
+    g_wof->tvpd_leak_cache =
+              G_oppb.iddq.avgtemp_all_good_cores_off[l_chip_v_idx] >> 1;
+
+    // Take the difference between the temperature and tvpd_leak_off
+    // used for multiplier calculation
+    g_wof->nest_delta_temp = g_wof->tempnest_sense -
+                                  g_wof->tvpd_leak_off;
+
+    // Calculate IDDQ_TEMP_FACTOR^((TEMPNEST - tvpd_leak)/10)
+    g_wof->nest_mult = calculate_multiplier(g_wof->nest_delta_temp);
+
+
+    // Look up leakage current.
+    // Divide by 6 to get just one quad
+    g_wof->idc_quad =
+                 G_oppb.iddq.ivdd_all_cores_off_caches_off[l_chip_v_idx] /
+                 MAX_NUM_QUADS;
+
+
+
+
+    // Calculate ALL_CORES_OFF_ISO
+    // Perform linear interpolation using the neighboring entries:
+    // Y = m*(X-x1) + y1, where m = (y2-y1) / (x2-x1)
+    g_wof->all_cores_off_iso =
+         interpolate_linear((int32_t)l_v_chip,
+            (int32_t)G_iddq_voltages[l_chip_v_idx],
+            (int32_t)G_iddq_voltages[l_chip_v_idx+1],
+            (int32_t)G_oppb.iddq.ivdd_all_cores_off_caches_off[l_chip_v_idx],
+            (int32_t)G_oppb.iddq.ivdd_all_cores_off_caches_off[l_chip_v_idx+1]);
+
+    // Multiply by nest leakage percentage
+    // TODO: This percentage(60%) will eventually be added to the OCC Pstate Parameter
+    // block once it is added as a system attribute to the MRW.
+    // G_oppb.iddq.nestLeakagePercentage
+    g_wof->all_cores_off_iso = g_wof->all_cores_off_iso * 60 / 100;
+
+
+    // Calculate ALL_CACHES_ON_ISO
+    g_wof->all_caches_on_iso =
+              G_oppb.iddq.ivdd_all_good_cores_off_good_caches_on[l_chip_v_idx] -
+              g_wof->all_cores_off_iso;
+
+    l_quad_x_cache = g_wof->all_caches_on_iso / MAX_NUM_QUADS;
+
+    // Loop through all Quads and their respective Cores to calculate
+    // leakage.
+    int quad_idx = 0;       // Quad Index (0-5)
+    uint8_t core_idx = 0;       // Actual core index (0-23)
+    int core_loop_idx = 0;  // On a per quad basis (0-3)
+
+
+
+    for(quad_idx = 0; quad_idx < MAX_NUM_QUADS; quad_idx++)
+    {
+        if(g_wof->quad_x_pstates[quad_idx] == QUAD_POWERED_OFF)
+        {
+            // Increment the number of quads found to be off
+            num_quads_off++;
+
+        }
+        else // Quad i is on
+        {
+            // Calculate the index of the first core in the quad.
+            core_idx = quad_idx * NUM_CORES_PER_QUAD;
+
+            // Get the voltage for the current core.
+            // (Same for all cores within a single quad)
+            uint16_t cur_core_voltage = g_wof->v_core_100uV[quad_idx];
+
+            // Calculate the number of cores on within the current quad.
+            g_wof->cores_on_per_quad[quad_idx] =
+                                        num_cores_on_in_quad(quad_idx);
+
+            // Look up tvpd_leak_on for calculations when the core/quad is on
+            // avttemp in IDDQ table is in 0.5C. Divide by 2 to convert to 1C.
+            g_wof->tvpd_leak_on = G_oppb.iddq.avgtemp_quad_good_cores_on
+                                               [quad_idx][cur_core_voltage] >> 1;
+
+
+            // Calculate Quadx_good_cores_only
+            g_wof->quad_good_cores_only[quad_idx] =
+                    G_oppb.iddq.ivdd_quad_good_cores_on_good_caches_on
+                                    [quad_idx][cur_core_voltage] -
+                    G_oppb.iddq.ivdd_all_good_cores_off_good_caches_on
+                                                        [l_chip_v_idx] +
+                    g_wof->all_cores_off_iso*
+                    G_oppb.iddq.good_normal_cores[quad_idx]/24;
+
+
+            // Calculate quadx_ON_cores
+            g_wof->quad_on_cores[quad_idx] =
+                    (g_wof->quad_good_cores_only[quad_idx]*
+                     g_wof->cores_on_per_quad[quad_idx]) /
+                     G_oppb.iddq.good_normal_cores[quad_idx];
+
+
+            // Calculate quadx_BAD_OFF_cores
+            g_wof->quad_bad_off_cores[quad_idx] =
+                g_wof->all_cores_off_iso*G_oppb.iddq.good_normal_cores[quad_idx]/24;
+
+            // Reset num_cores_off_in_quad before processing current quads cores
+            uint8_t num_cores_off_in_quad = 0;
+            // Loop all cores within current quad
+            for(core_loop_idx = 0; core_loop_idx < NUM_CORES_PER_QUAD; core_loop_idx++)
+            {
+
+                if(core_powered_on(core_idx))
+                {
+
+                    // Get the core temperature from TEMPPROCTHRMC sensor
+                    temperature = AMECSENSOR_ARRAY_PTR(TEMPPROCTHRMC0,
+                                                       core_idx)->sample;
+
+                    // If the TEMPPROCTHRMCy is 0, use TEMPQx
+                    if(temperature == 0)
+                    {
+                        temperature = AMECSENSOR_ARRAY_PTR(TEMPQ0,
+                                                           quad_idx)->sample;
+                        // If TEMPQx is also 0, use TEMPNEST
+                        if(temperature == 0)
+                        {
+                            temperature = g_wof->tempnest_sense;
+                        }
+                    }
+
+                    // Save the selected temperature
+                    g_wof->tempprocthrmc[core_idx] = temperature;
+
+
+
+                    // Get the difference between the temperature and tvpd_leak
+                    g_wof->core_delta_temp[core_idx] =
+                                          g_wof->tempprocthrmc[core_idx] -
+                                          g_wof->tvpd_leak_on;
+
+                    // Calculate the multiplier for the core
+                    g_wof->core_mult[core_idx] =
+                       calculate_multiplier(g_wof->core_delta_temp[core_idx]);
+
+                    // For each core, incorporate core on calculation into
+                    // leakage
+                    idc_vdd += (g_wof->quad_on_cores[quad_idx]*
+                                 g_wof->core_mult[core_idx]) >> 10;
+
+                }
+                else // Core is powered off
+                {
+                    // Increment the number of cores found to be off
+                    num_cores_off_in_quad++;
+                }
+                // Increment the Core Index for the next iteration
+                core_idx++;
+            } // core loop
+
+            // After all cores within the current quad have been processed,
+            // incorporate calculation for cores that were off into leakage
+            idc_vdd +=
+               ((g_wof->quad_bad_off_cores[quad_idx]*g_wof->nest_mult)
+                                                >> 10)* num_cores_off_in_quad;
+
+            temperature = AMECSENSOR_ARRAY_PTR(TEMPQ0,
+                                               quad_idx)->sample;
+
+            // If TEMPQ0 is 0, use TEMPNEST
+            if( temperature == 0 )
+            {
+                temperature = g_wof->tempnest_sense;
+            }
+
+            // Save selected temperature off to amec
+            g_wof->tempq[quad_idx] = temperature;
+
+
+            // Get the quad delta temperature for cache calc
+            g_wof->quad_delta_temp[quad_idx] =
+                                 g_wof->tempq[quad_idx] -
+                                 g_wof->tvpd_leak_cache;
+
+            //Calculate the multiplier for the quad
+            g_wof->quad_mult[quad_idx] =
+                   calculate_multiplier(g_wof->quad_delta_temp[quad_idx]);
+
+            // Incorporate the cache into the leakage calculation
+            idc_vdd += (l_quad_x_cache*g_wof->quad_mult[quad_idx]) >> 10;
+
+
+        }
+    } // quad loop
+    // After all Quads have been processed, incorporate calculation for quads
+    // that off into leakage
+    idc_vdd += ((g_wof->idc_quad*g_wof->nest_mult) >> 10)* num_quads_off;
+
+
+    // Finally, save the calculated leakage to amec
+    g_wof->idc_vdd = idc_vdd;
 
 }
+
+
+/**
+ * core_powered_on
+ *
+ * Description: Helper function to determine whether the given core
+ *              is on based off the most recently read data from
+ *              OCC-PGPE Shared SRAM
+ *
+ * Param: The desired core number
+ *
+ * Return: Returns TRUE if the core is powered on, FALSE otherwise
+ */
+inline bool core_powered_on(uint8_t i_core_num)
+{
+    return ( g_wof->core_pwr_on & (0x80000000 >> i_core_num));
+}
+
+/**
+ *  num_cores_on_in_quad
+ *
+ *  Description: Helper function that returns the number of cores
+ *               currently powered on in the given quad based off
+ *               the most recently read data from OCC-PGPE Shared SRAM
+ *
+ *  Param: The Quad number
+ *
+ *  Return: Returns the number of cores powered on within the given quad.
+ */
+uint8_t num_cores_on_in_quad( uint8_t i_quad_num )
+{
+    int start_index = i_quad_num * NUM_CORES_PER_QUAD;
+    int i;
+    uint8_t num_powered_on_cores = 0;
+    for(i = start_index; i < (start_index + NUM_CORES_PER_QUAD); i++)
+    {
+        if( core_powered_on(i) )
+        {
+            num_powered_on_cores++;
+        }
+    }
+
+    return num_powered_on_cores;
+}
+
+/**
+ * interpolate_linear
+ *
+ * Description: Helper function that takes in the necessary input for
+ *              a linear interpolation and returns the result of the
+ *              calculation
+ *
+ *              Y = m*(X-x1) + y1, where m = (y2-y1) / (x2-x1)
+ *
+ * Return: The result Y of the formula above
+ */
+inline int32_t interpolate_linear( int32_t i_X,
+                                   int32_t i_x1,
+                                   int32_t i_x2,
+                                   int32_t i_y1,
+                                   int32_t i_y2 )
+{
+    return (i_X - i_x1)*((i_y2 - i_y1) / (i_x2 - i_x1)) + i_y1;
+}
+
+/**
+ * calculate_multiplier
+ *
+ * Description: This function calculates the 'm' in the formula
+ * y ~= (T*m) >> 10 by choosing the appropriate row in
+ * G_wof_iddq_mult_table based on the passed in temp, and interpolates
+ * the values of the 'm' column in order to find the appropriate multiplier
+ *
+ * Param: the delta temp between tvpd_leak and a temperature sensor. Used
+ *        to find the appropriate row index into G_wof_iddq_mult_table.
+ *
+ * Return: The multiplier representing the temperature factor
+ */
+int32_t calculate_multiplier( int32_t i_temp )
+{
+    int mult_idx;
+
+    if( i_temp < G_wof_iddq_mult_table[0][0] )
+    {
+        mult_idx = 0;
+    }
+    else if( i_temp >= G_wof_iddq_mult_table[WOF_IDDQ_MULT_TABLE_N-1][0] )
+    {
+        mult_idx = WOF_IDDQ_MULT_TABLE_N - 2;
+    }
+    else
+    {
+        for(mult_idx = 0 ; mult_idx < WOF_IDDQ_MULT_TABLE_N-1; mult_idx++)
+        {
+            if( (G_wof_iddq_mult_table[mult_idx][0] <= i_temp) &&
+                (G_wof_iddq_mult_table[mult_idx+1][0] >= i_temp) )
+            {
+                break;
+            }
+        }
+    }
+
+
+    // mult index now has the row index into G_wof_iddq_mult_table.
+    // use it to calculate the final multiplier
+    return interpolate_linear( i_temp,
+                      (int32_t)G_wof_iddq_mult_table[mult_idx][0],
+                      (int32_t)G_wof_iddq_mult_table[mult_idx+1][0],
+                      (int32_t)G_wof_iddq_mult_table[mult_idx][1],
+                      (int32_t)G_wof_iddq_mult_table[mult_idx+1][1]);
+}
+
+
+
