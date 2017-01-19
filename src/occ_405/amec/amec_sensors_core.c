@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -182,6 +182,7 @@ void amec_calc_dts_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
     uint8_t       k = 0;
     uint16_t      l_coreDts[DTS_PER_CORE] = {0};
     uint16_t      l_quadDts[QUAD_DTS_PER_CORE] = {0};
+    uint16_t      l_quadDtsTemp = 0;  // The one Quad DTS temp closest to the core
     BOOLEAN       l_update_sensor = FALSE;
     uint16_t      l_core_hot = 0;
     uint8_t       l_coreDtsCnt = 0; // Number of valid Core DTSs
@@ -268,6 +269,17 @@ void amec_calc_dts_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
             // Update the raw quad DTS reading (average of the two)
             l_dtsAvg = (l_quadDts[0] + l_quadDts[1]) / l_quadDtsCnt;
             sensor_update( AMECSENSOR_ARRAY_PTR(TEMPQ0, l_quad), l_dtsAvg);
+
+            // Pick the 1 quad DTS closest to the core for updating the thermal sensor
+            // only want 1 quad DTS to handle case when 2 cores from same EX are offline
+            // last 2 cores use dts1, first 2 cores use dts0
+            if(i_core & 0x02)
+                 l_quadDtsTemp = l_quadDts[1];
+            else
+                 l_quadDtsTemp = l_quadDts[0];
+
+            if(l_quadDtsTemp == 0)
+                 qWt = 0;  // No quad temp to include in average
         }
 
         // Update the thermal sensor associated with this core
@@ -276,13 +288,13 @@ void amec_calc_dts_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
             do
             {
                 // Make sure data is valid
-                if (!((cWt && l_coreDtsCnt) || (qWt && l_quadDtsCnt)))
+                if ( !((cWt && l_coreDtsCnt) || qWt) )
                 {
                     if(FALSE == L_bad_read_trace)
                     {
                         TRAC_ERR("amec_calc_dts_sensors: updating DTS sensors skipped. "
-                                 "core weight: %d, core DTSs: %d, quad weight: %d "
-                                 "quad DTSs: %d", cWt, l_coreDtsCnt, qWt, l_quadDtsCnt);
+                                 "core weight: %d, core DTSs: %d, quad weight: %d ",
+                                 cWt, l_coreDtsCnt, qWt);
                         L_bad_read_trace = TRUE;
                     }
 
@@ -291,13 +303,13 @@ void amec_calc_dts_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
                 }
 
                 //Formula:
-                //                (cWt(CoreDTS1 + CoreDTS2) + qWt(QuadDTS1 + QuadDTS1))
+                //                (cWt(CoreDTS1 + CoreDTS2) + qWt(QuadDTS))
                 //                ------------------------------------------
-                //                              (2*cWt + 2*qWt)
+                //                              (2*cWt + qWt)
 
-                l_coreTemp = ( (cWt * (l_coreDts[0] + l_coreDts[1])) + (qWt * (l_quadDts[0] + l_quadDts[1])) ) /
+                l_coreTemp = ( (cWt * (l_coreDts[0] + l_coreDts[1])) + (qWt * l_quadDtsTemp) ) /
                 //           ---------------------------------------------------------------------------------
-                                            ( (l_coreDtsCnt * cWt) + (l_quadDtsCnt * qWt) );
+                                            ( (l_coreDtsCnt * cWt) + qWt );
 
                 // Update sensors & Interim Data
                 sensor_update( AMECSENSOR_ARRAY_PTR(TEMPPROCTHRMC0,i_core), l_coreTemp);
