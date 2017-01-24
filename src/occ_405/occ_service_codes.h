@@ -61,10 +61,8 @@ enum occReasonCode
     EXTERNAL_INTERFACE_FAILURE      = 0x18,
     /// VRM reached error threshold (VR_HOT asserted)
     VRM_ERROR_TEMP                  = 0x20,
-    /// Timed out reading VR_FAN signal from VRM
-    VRM_VRFAN_TIMEOUT               = 0x21,
-    /// VR_FAN signal from VRM has been asserted
-    VRM_VRFAN_ASSERTED              = 0x22,
+    /// VR_FAN  - AVS Bus over-temperature reported
+    VRM_VRFAN_WARNING               = 0x22,
     /// DIMM reached error threshold
     DIMM_ERROR_TEMP                 = 0x30,
     /// Frequency limited due to oversubscription condition
@@ -98,9 +96,8 @@ enum occReasonCode
     OCC_SYSTEM_HALTED               = 0xB5,
     ///  Request to read APSS data failed.
     APSS_GPE_FAILURE                = 0xC0,
-    /// Connector overcurrent pin still asserted.
-    CONNECTOR_OC_PINS_WARNING       = 0xC1,
-    CONNECTOR_OC_PINS_FAILURE       = 0xC2,
+    /// AVS Bus output over-current reported
+    VRM_OVER_CURRENT_WARNING        = 0xC1,
     /// Slave OCC failed to receive new APSS data over a short time interval
     APSS_SLV_SHORT_TIMEOUT          = 0xC3,
     /// Slave OCC failed to receive new APSS data over a long time interval
@@ -232,6 +229,7 @@ enum occExtReasonCode
     ERC_AVSBUS_VDD_CURRENT_FAILURE              = 0x00AB,
     ERC_AVSBUS_VDN_VOLTAGE_FAILURE              = 0x00AC,
     ERC_AVSBUS_VDN_CURRENT_FAILURE              = 0x00AD,
+    ERC_AVSBUS_STATUS_FAILURE                   = 0x00AE,
 
     ERC_PGPE_BEACON_TIMEOUT                     = 0x00B0,
     ERC_PGPE_NOT_IDLE                           = 0x00B1,

@@ -967,12 +967,11 @@ void hmon_routine()
         commitErrl(&l_err);
     }
 
-    //if we are in observation or activate state, then monitor the processor temperature
-    //for timeout conditions and the processor VRHOT signal.
+    //if we are in observation or active state, then monitor the processor temperature
+    //for timeout conditions
     if (IS_OCC_STATE_OBSERVATION() || IS_OCC_STATE_ACTIVE())
     {
         amec_health_check_proc_timeout();
-        amec_health_check_proc_vrhot();
     }
 
     //if we are in observation or active state with memory temperature data being collected

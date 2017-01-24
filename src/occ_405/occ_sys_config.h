@@ -214,7 +214,6 @@ typedef struct
 {
     uint8_t bus;
     uint8_t rail;
-    uint16_t loadline;
 } avsbusData_t;
 
 // Master/Slave Configuration

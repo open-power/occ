@@ -99,7 +99,7 @@ cmdh_ips_config_data_t G_ips_config_data = {0};
 bool G_mem_monitoring_allowed = FALSE;
 
 // Flag will get enabled when OCC receives Thermal Threshold data
-uint8_t G_vrm_thermal_monitoring = 0;
+bool G_vrm_thermal_monitoring = FALSE;
 
 // Function Specification
 //
@@ -1568,16 +1568,16 @@ errlHndl_t data_store_thrm_thresholds(const cmdh_fsp_cmd_t * i_cmd_ptr,
         {
             // Then, set a global variable so that OCC attempts to talk to
             // the VRMs
-            G_vrm_thermal_monitoring = 1;
+            G_vrm_thermal_monitoring = TRUE;
         }
         else
         {
-            // No VRM data was received, so do not attempt to talk to the VRMs.
+            // No VRM data was received, so do not read AVS Bus status from VRMs
             // Also, make the error count very high so that the health
             // monitor doesn't complain about VRHOT being asserted.
-            G_vrm_thermal_monitoring = 0;
+            G_vrm_thermal_monitoring = FALSE;
             G_data_cnfg->thrm_thresh.data[DATA_FRU_VRM].error_count = 0xFF;
-            CMDH_TRAC_IMP("data_store_thrm_thresholds: No VRM data was received! OCC won't attempt to talk to VRMs.");
+            CMDH_TRAC_IMP("data_store_thrm_thresholds: No VRM limits received. OCC will not monitor AVS bus status");
         }
 
     } while(0);

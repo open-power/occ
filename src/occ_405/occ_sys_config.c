@@ -159,12 +159,10 @@ occSysConfigData_t G_sysConfigData =
     .avsbus_vdd = {
         .bus = 0,
         .rail = 0,
-        .loadline = 0
     },
     .avsbus_vdn = {
         .bus = 0,
         .rail = 0,
-        .loadline = 0
     },
 
     // -----------------------------------------------------------

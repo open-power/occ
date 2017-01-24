@@ -61,7 +61,6 @@
 // Externs
 //*************************************************************************
 extern dcom_slv_inbox_t G_dcom_slv_inbox_rx;
-extern uint8_t G_vrm_thermal_monitoring;
 
 //*************************************************************************
 // Macros
@@ -287,8 +286,6 @@ void amec_slv_check_apss_fail(void)
 // End Function Specification
 void amec_slv_common_tasks_pre(void)
 {
-  static uint16_t L_counter = 0;
-
   AMEC_DBG("\tAMEC Slave Pre-State Common\n");
 
   // Update the FW Worst Case sensors every tick
@@ -303,17 +300,6 @@ void amec_slv_common_tasks_pre(void)
   // Call the stream buffer recording function
   // TODO: RTC 163683 - AMEC analytics
   //amec_analytics_sb_recording();
-
-  // Update the sensors that come from the VRM
-  L_counter++;
-  if (L_counter == AMEC_UPDATE_VRM_TICKS)
-  {
-      if (G_vrm_thermal_monitoring)
-      {
-          amec_update_vrm_sensors();
-      }
-      L_counter = 0;
-  }
 
   // Over-subscription check
   amec_oversub_check();
@@ -1066,10 +1052,6 @@ void amec_slv_substate_5_1(void)
     // Update Proc Core sensors (for this substate)
     //-------------------------------------------------------
     amec_update_proc_core_group(6);
-
-    // Call controller on VRHOT signal from processor regulator
-    // TODO: RTC 155562 - VRM thermal monitoring
-    //amec_controller_vrhotproc();
 }
 
 

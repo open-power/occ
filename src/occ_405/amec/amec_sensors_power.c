@@ -23,6 +23,8 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
+//#define AVSDEBUG
+
 /******************************************************************************/
 /* Includes                                                                   */
 /******************************************************************************/
@@ -58,6 +60,7 @@ uint32_t G_lastValidAdcValue[MAX_APSS_ADC_CHANNELS] = {0};
     ((i_chan < MAX_APSS_ADC_CHANNELS) ? G_lastValidAdcValue[i_chan] : 0)
 
 extern uint8_t G_occ_interrupt_type;
+extern bool    G_vrm_thermal_monitoring;
 
 //*************************************************************************
 // Code
@@ -414,7 +417,7 @@ void process_avsbus_current()
         uint32_t current = avsbus_read(AVSBUS_VDD, AVSBUS_CURRENT);
         if (current != 0)
         {
-            // Current value stored in the sensor should be in 10mA (scale -2)
+            // Current value stored in the sensor should be in 10mA (A scale -2)
             sensor_update(AMECSENSOR_PTR(CURVDD), (uint16_t)current);
         }
     }
@@ -424,7 +427,7 @@ void process_avsbus_current()
         uint32_t current = avsbus_read(AVSBUS_VDN, AVSBUS_CURRENT);
         if (current != 0)
         {
-            // Current value stored in the sensor should be in 10mA (scale -2)
+            // Current value stored in the sensor should be in 10mA (A scale -2)
             sensor_update(AMECSENSOR_PTR(CURVDN), (uint16_t)current);
         }
     }
@@ -440,8 +443,8 @@ void process_avsbus_voltage()
         uint32_t voltage = avsbus_read(AVSBUS_VDD, AVSBUS_VOLTAGE);
         if (voltage != 0)
         {
-            // Voltage value stored in the sensor should be in 100mV (scale -1)
-            voltage /= 100;
+            // Voltage value stored in the sensor should be in 100uV (mV scale -1)
+            voltage *= 10;
             sensor_update(AMECSENSOR_PTR(VOLTVDD), (uint16_t)voltage);
         }
     }
@@ -451,8 +454,8 @@ void process_avsbus_voltage()
         uint32_t voltage = avsbus_read(AVSBUS_VDN, AVSBUS_VOLTAGE);
         if (voltage != 0)
         {
-            // Voltage value stored in the sensor should be in 100mV (scale -1)
-            voltage /= 100;
+            // Voltage value stored in the sensor should be in 100uV (mV scale -1)
+            voltage *= 10;
             sensor_update(AMECSENSOR_PTR(VOLTVDN), (uint16_t)voltage);
         }
     }
@@ -466,8 +469,8 @@ void update_avsbus_power_sensors(const avsbus_type_e i_type)
     static bool L_throttle_vdn = FALSE;
     bool * L_throttle = &L_throttle_vdd;
     // TODO: RTC 130216 : read loadline and distloss from Pstate Super Structure
-    uint16_t l_loadline = 0x61AB; // OCCPstateParmBlock.vdd_sysparm.loadline_uohm
-    uint16_t l_distloss = 0x0000; // OCCPstateParmBlock.vdd_sysparm.distloss_uohm
+    uint32_t l_loadline = 0x61AB; // OCCPstateParmBlock.vdd_sysparm.loadline_uohm
+    uint32_t l_distloss = 0x0000; // OCCPstateParmBlock.vdd_sysparm.distloss_uohm
     uint32_t l_currentSensor = CURVDD;
     uint32_t l_voltageSensor = VOLTVDD;
     uint32_t l_voltageChip = VOLTVDDSENSE;
@@ -484,46 +487,54 @@ void update_avsbus_power_sensors(const avsbus_type_e i_type)
     }
 
     // Read latest voltage/current sensors
-    const sensor_t *volt = getSensorByGsid(l_voltageSensor);
-    const uint32_t l_voltage_100mv = volt->sample;
-    const sensor_t *curr = getSensorByGsid(l_currentSensor);
-    const uint32_t l_current_10ma = curr->sample;
+    uint32_t l_voltage_100uv = 0;
+    uint32_t l_current_10ma = 0;
+    sensor_t *l_sensor = getSensorByGsid(l_voltageSensor);
+    if (l_sensor != NULL)
+    {
+        l_voltage_100uv = l_sensor->sample;
+    }
+    l_sensor = getSensorByGsid(l_currentSensor);
+    if (l_sensor != NULL)
+    {
+        l_current_10ma = l_sensor->sample;
+    }
 
 #ifdef AVSDEBUG
     // TODO: RTC 130216 : REMOVE AFTER VERIFYING loadline/distlost from Pstate Super Structure
-    static uint8_t L_traceCount = 0;
+    static uint32_t L_traceCount = 0;
     if (L_traceCount < 4)
     {
-        TRAC_INFO("update_avsbus_power_sensors: #%d Vd%c=%dx100mV, I=%dx10mA", L_traceCount, (i_type==AVSBUS_VDD)?'d':'n',
-                  l_voltage_100mv, l_current_10ma);
+        TRAC_INFO("update_avsbus_power_sensors: #%d Vd%c=%dx100uV, I=%dx10mA", L_traceCount, (i_type==AVSBUS_VDD)?'d':'n',
+                  l_voltage_100uv, l_current_10ma);
         TRAC_INFO("update_avsbus_power_sensors: #%d Vd%c Rloadline=%d, Rdistloss=%d", L_traceCount, (i_type==AVSBUS_VDD)?'d':'n',
                   l_loadline, l_distloss);
     }
 #endif
 
-    if ((l_voltage_100mv != 0) && (l_current_10ma != 0))
+    if ((l_voltage_100uv != 0) && (l_current_10ma != 0))
     {
         // Calculate voltage on just processor package (need to take load-line into account)
-        // Voltage value stored in the sensor should be in 100mV (scale -1)
-        // (current is in 10mA units, and load-line is in tenth of microOhms)
+        // Voltage value stored in the sensor should be in 100uV (mV scale -1)
+        // (current is in 10mA units, and load-line is in microOhms)
         // v(V)     = i(10mA)*(1 A/1000 mA) * r(1 uOhm)*(1 Ohm/1,000,000 uOhm)
         //          = i * (1 A/100) * r * (1 Ohm/1,000,000)
         //          = i * r / 100,000,000
-        // v(mV)    = v(V) * 1,000
-        // v(100mV) = v(mV) / 100
-        //          = (v(V) * 1,000) / 100 = v(V) * 10
-        //          = (i * r / 100,000,000) * 10 = i * r / 10,000,000
+        // v(uV)    = v(V) * 1,000,000
+        // v(100uV) = v(uV) / 100
+        //          = (v(V) * 1,000,000) / 100 = v(V) * 10,000
+        //          = (i * r / 100,000,000) * 10,000 = i * r / 10,000
         // NOTE: distloss is the same as Rpath in the WOF algorithm
-        const uint64_t l_volt_drop_100mv = (l_current_10ma * (l_loadline+l_distloss)) / 10000000;
+        const uint64_t l_volt_drop_100uv = (l_current_10ma * (l_loadline+l_distloss)) / 10000;
         // Calculate chip voltage
-        int32_t l_chip_voltage_100mv = l_voltage_100mv - l_volt_drop_100mv;
-        if ((l_chip_voltage_100mv <= 0) || (l_chip_voltage_100mv > 0xFFFF))
+        int32_t l_chip_voltage_100uv = l_voltage_100uv - l_volt_drop_100uv;
+        if ((l_chip_voltage_100uv <= 0) || (l_chip_voltage_100uv > 0xFFFF))
         {
             // Voltage out of range, do not write sensors
             if (!*L_throttle)
             {
-                TRAC_ERR("update_avsbus_power_sensors: chip voltage out of range! %dmV - %d(100mV) = %d(100mV)",
-                         l_voltage_100mv, WORD_LOW(l_volt_drop_100mv), l_chip_voltage_100mv);
+                TRAC_ERR("update_avsbus_power_sensors: chip voltage out of range! %d(100uV) - %d(100uV) = %d(100uV)",
+                         l_voltage_100uv, WORD_LOW(l_volt_drop_100uv), l_chip_voltage_100uv);
                 *L_throttle = TRUE;
             }
         }
@@ -531,14 +542,14 @@ void update_avsbus_power_sensors(const avsbus_type_e i_type)
         {
             *L_throttle = FALSE;
 
-            // Update chip voltage (remote sense adjusted for loadline) (100mV units)
-            sensor_update(AMECSENSOR_PTR(l_voltageChip), (uint16_t)l_chip_voltage_100mv);
+            // Update chip voltage (remote sense adjusted for loadline) (100uV units)
+            sensor_update(AMECSENSOR_PTR(l_voltageChip), (uint16_t)l_chip_voltage_100uv);
 
             // Power value stored in the sensor should be in W (scale 0)
-            // p(W) = v(V) * i(A) = v(100mV)*100/1000 * i(10mA)*10/1000
-            //                    = v(100mV)/10       * i(10mA)/100
-            //                    = v(100mv) * i(10mA) / 1000
-            const uint32_t l_power = l_chip_voltage_100mv * l_current_10ma / 1000;
+            // p(W) = v(V) * i(A) = v(100uV)*100/1,000,000 * i(10mA)*10/1000
+            //                    = v(100uV)/10,000        * i(10mA)/100
+            //                    = v(100uV) * i(10mA) / 1,000,000
+            const uint32_t l_power = l_chip_voltage_100uv * l_current_10ma / 1000000;
             sensor_update(AMECSENSOR_PTR(l_powerSensor), (uint16_t)l_power);
         }
 
@@ -547,15 +558,18 @@ void update_avsbus_power_sensors(const avsbus_type_e i_type)
         if (L_traceCount < 4)
         {
             const sensor_t *power = getSensorByGsid(l_powerSensor);
-            TRAC_INFO("update_avsbus_power_sensors: #%d Vd%cs=%dx100mV, P=%dW", L_traceCount, (i_type==AVSBUS_VDD)?'d':'n',
-                      l_chip_voltage_100mv, power->sample);
+            TRAC_INFO("update_avsbus_power_sensors: #%d Vd%cs=%dx100uV, P=%dW", L_traceCount, (i_type==AVSBUS_VDD)?'d':'n',
+                      l_chip_voltage_100uv, power->sample);
         }
 #endif
     }
 
 #ifdef AVSDEBUG
     // TODO: RTC 130216 : REMOVE AFTER VERIFYING loadline/distlost from Pstate Super Structure
-    ++L_traceCount;
+    if (L_traceCount < 4)
+    {
+        ++L_traceCount;
+    }
 #endif
 
 } // end update_avsbus_power_sensors()
@@ -581,14 +595,20 @@ void amec_update_avsbus_sensors(void)
         AVSBUS_STATE_DISABLED           = 0,
         AVSBUS_STATE_INITIATE_READ      = 1,
         AVSBUS_STATE_PROCESS_CURRENT    = 2,
-        AVSBUS_STATE_PROCESS_VOLTAGE    = 3
+        AVSBUS_STATE_PROCESS_VOLTAGE    = 3,
+        AVSBUS_STATE_PROCESS_STATUS     = 4
     } L_avsbus_state = AVSBUS_STATE_INITIATE_READ;
+
+    // Number of Curr/Volt readings between Status readings
+#define NUM_VRM_READINGS_PER_STATUS 2
+    static unsigned int L_readingCount = 0;
 
     if (isSafeStateRequested())
     {
         L_avsbus_state = AVSBUS_STATE_DISABLED;
         G_avsbus_vdd_monitoring = FALSE;
         G_avsbus_vdn_monitoring = FALSE;
+        G_vrm_thermal_monitoring = FALSE;
     }
 
     switch (L_avsbus_state)
@@ -610,7 +630,30 @@ void amec_update_avsbus_sensors(void)
         case AVSBUS_STATE_PROCESS_VOLTAGE:
             // Process the voltage readings
             process_avsbus_voltage();
-            // Initiate read of currents
+
+            if ((G_vrm_thermal_monitoring == FALSE) || (++L_readingCount < NUM_VRM_READINGS_PER_STATUS))
+            {
+                // Initiate read of currents
+                initiate_avsbus_reads(AVSBUS_CURRENT);
+                L_avsbus_state = AVSBUS_STATE_PROCESS_CURRENT;
+            }
+            else
+            {
+                // Periodically read status for VR FAN (VRM OT WARNING)
+                initiate_avsbus_read_status();
+                L_avsbus_state = AVSBUS_STATE_PROCESS_STATUS;
+                L_readingCount = 0;
+            }
+            break;
+
+        case AVSBUS_STATE_PROCESS_STATUS:
+            // Process the status
+            {
+                // Update sensor with the OT status (0 / 1)
+                uint16_t otStatus = process_avsbus_status();
+                sensor_update(AMECSENSOR_PTR(VRFAN), otStatus);
+            }
+            // Back to reading currents
             initiate_avsbus_reads(AVSBUS_CURRENT);
             L_avsbus_state = AVSBUS_STATE_PROCESS_CURRENT;
             break;
@@ -635,95 +678,6 @@ void amec_update_avsbus_sensors(void)
     }
 
 } // end amec_update_avsbus_sensors()
-
-
-// Function Specification
-//
-// Name: amec_update_vrm_sensors
-//
-// Description: Updates sensors that use data from the VRMs
-// (e.g., VR_FAN, FANS_FULL_SPEED, VR_HOT).
-//
-// Thread: RealTime Loop
-//
-// End Function Specification
-void amec_update_vrm_sensors(void)
-{
-// TODO: RTC 132561 - VR_FAN support
-#if 0
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
-    int                         l_rc = 0;
-    int                         l_vrfan = 0;
-    int                         l_softoc = 0;
-    int                         l_minus_np1_regmode = 0;
-    int                         l_minus_n_regmode = 0;
-    static uint8_t              L_error_count = 0;
-    uint8_t                     l_pin_value = 1; // active low, so set default to high
-    uint8_t                     l_vrhot_count = 0;
-    errlHndl_t                  l_err = NULL;
-
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
-
-    // VR_FAN and SOFT_OC come from SPIVID
-    l_rc = vrm_read_state(SPIVRM_PORT(0),
-                          &l_minus_np1_regmode,
-                          &l_minus_n_regmode,
-                          &l_vrfan,
-                          &l_softoc);
-    if (l_rc == 0)
-    {
-        // Update the VR_FAN sensor
-        sensor_update( AMECSENSOR_PTR(VRFAN250USPROC), (uint16_t)l_vrfan );
-
-        // Clear our error count
-        L_error_count = 0;
-
-        // No longer reading gpio from APSS in GA1 due to instability in
-        // APSS composite mode
-        //apss_gpio_get(l_pin, &l_pin_value);
-
-        // VR_HOT sensor is a counter of number of times the VRHOT signal
-        // has been asserted
-        l_vrhot_count = AMECSENSOR_PTR(VRHOT250USPROC)->sample;
-
-        // Check if VR_FAN is asserted AND if 'fans_full_speed' GPIO is ON.
-        // Note that this GPIO is active low.
-        if (AMECSENSOR_PTR(VRFAN250USPROC)->sample && !(l_pin_value))
-        {
-            // VR_FAN is asserted and 'fans_full_speed' GPIO is ON,
-            // then increment our VR_HOT counter
-            if (l_vrhot_count < g_amec->vrhotproc.setpoint)
-            {
-                l_vrhot_count++;
-            }
-        }
-        else
-        {
-            // Reset our VR_HOT counter
-            l_vrhot_count = 0;
-        }
-        sensor_update(AMECSENSOR_PTR(VRHOT250USPROC), l_vrhot_count);
-    }
-    else
-    {
-        // Increment our error count
-        L_error_count++;
-
-        // Don't allow the error count to wrap
-        if (L_error_count == 0)
-        {
-            L_error_count = 0xFF;
-        }
-    }
-
-    sensor_update( AMECSENSOR_PTR(VRFAN250USMEM), 0 );
-    sensor_update( AMECSENSOR_PTR(VRHOT250USMEM), 0 );
-#endif
-} // end amec_update_vrm_sensors()
 
 
 /*----------------------------------------------------------------------------*/

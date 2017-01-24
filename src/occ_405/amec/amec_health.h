@@ -43,7 +43,6 @@
 
 void amec_health_check_proc_temp(void);
 void amec_health_check_proc_timeout(void);
-void amec_health_check_proc_vrhot();
 void amec_health_check_cent_temp(void);
 void amec_health_check_cent_timeout(void);
 void amec_health_check_dimm_temp(void);

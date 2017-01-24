@@ -86,7 +86,7 @@ typedef struct amec_controller
  *  This function implements the Proportional Controller for the thermal
  *  control loop. Although it doesn't return any results, it populates the
  *  thermal vote in the field g_amec->thermalproc.speed_request.
- * 
+ *
  */
 void amec_controller_proc_thermal();
 
@@ -120,13 +120,6 @@ void amec_controller_dimm_thermal();
  *
  */
 uint16_t amec_controller_speed2freq (const uint16_t i_speed, const uint16_t i_fmax);
-
-/**
- *  Thermal Control Loop based on VRHOT signal from processor
- *  regulators.
- *
- */
-void amec_controller_vrhotproc();
 
 
 #endif //_AMEC_CONTROLLER_H

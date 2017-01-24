@@ -364,10 +364,7 @@ typedef struct
   sensor_t pwrapssch[MAX_APSS_ADC_CHANNELS];
   sensor_t cur12Vstby;
 
-  sensor_t vrfan250usmem;
-  sensor_t vrhot250usmem;
-  sensor_t vrfan250usproc;
-  sensor_t vrhot250usproc;
+  sensor_t vrfan;
 
   // Chip Sensors
   sensor_t todclock0;

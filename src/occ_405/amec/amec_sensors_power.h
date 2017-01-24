@@ -50,8 +50,4 @@ void amec_update_apss_sensors(void);
 // sensors for data that comes from the AVS Bus (Voltage/Current)
 void amec_update_avsbus_sensors(void);
 
-// Function that is called by AMEC State Machine that will update the AMEC
-// sensors for data that comes from the SPIVID chip (VR_FAN, SoftOC)
-void amec_update_vrm_sensors(void);
-
 #endif // _AMEC_SENSORS_POWER_H

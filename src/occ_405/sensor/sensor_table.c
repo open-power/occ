@@ -287,8 +287,6 @@ const sensor_ptr_t G_amec_sensor_list[] =
   SENSOR_PTR(   PROBE250US5,        &g_amec_sys.fw.probe250us[5]),
   SENSOR_PTR(   PROBE250US6,        &g_amec_sys.fw.probe250us[6]),
   SENSOR_PTR(   PROBE250US7,        &g_amec_sys.fw.probe250us[7]),
-  SENSOR_PTR(  VOLTVDDSENSE,        &g_amec_sys.fw.voltvddsense),
-  SENSOR_PTR(  VOLTVDNSENSE,        &g_amec_sys.fw.voltvdnsense),
   SENSOR_PTR(   GPEtickdur0,        &g_amec_sys.fw.gpetickdur[0]),
   SENSOR_PTR(   GPEtickdur1,        &g_amec_sys.fw.gpetickdur[1]),
   SENSOR_PTR(    RTLtickdur,        &g_amec_sys.fw.prcdupdatedur),
@@ -337,7 +335,6 @@ const sensor_ptr_t G_amec_sensor_list[] =
   SENSOR_PTR( MEMSP2MSP0,           &g_amec_sys.proc[0].memsp2ms),
   SENSOR_PTR( PWR250USP0,           &g_amec_sys.proc[0].pwr250us),
   SENSOR_PTR( PWR250USVDD0,         &g_amec_sys.proc[0].pwr250usvdd),
-  SENSOR_PTR( CURVDD,               &g_amec_sys.proc[0].curvdd),
   SENSOR_PTR( PWRVCSVIOVDN,         &g_amec_sys.proc[0].pwrvcsviovdn),
   SENSOR_PTR( PWR250USMEM0,         &g_amec_sys.proc[0].pwr250usmem),
   SENSOR_PTR( SLEEPCNT4MSP0,        &g_amec_sys.proc[0].sleepcnt4ms),
@@ -347,8 +344,10 @@ const sensor_ptr_t G_amec_sensor_list[] =
   SENSOR_PTR( TEMPPROCTHRM,         &g_amec_sys.proc[0].tempprocthermal),
   SENSOR_PTR( UTIL4MSP0,            &g_amec_sys.proc[0].util4ms),
   SENSOR_PTR( TEMPNEST,             &g_amec_sys.proc[0].tempnest),
-  SENSOR_PTR( VRFAN250USPROC,       &g_amec_sys.sys.vrfan250usproc),
-  SENSOR_PTR( VRHOT250USPROC,       &g_amec_sys.sys.vrhot250usproc),
+  SENSOR_PTR( VOLTVDDSENSE,         &g_amec_sys.fw.voltvddsense),
+  SENSOR_PTR( VOLTVDNSENSE,         &g_amec_sys.fw.voltvdnsense),
+  SENSOR_PTR( PWRVDD,               &g_amec_sys.proc[0].pwrvdd),
+  SENSOR_PTR( PWRVDN,               &g_amec_sys.proc[0].pwrvdn),
 
   // ------------------------------------------------------
   // Quad Sensors (6 each)
@@ -372,16 +371,9 @@ const sensor_ptr_t G_amec_sensor_list[] =
   CORE_SENSOR_PTRS( PWRPX250USP0C , &g_amec_sys.proc[0].core, pwrpx250us),
   CORE_SENSOR_PTRS( TEMPC,          &g_amec_sys.proc[0].core, tempc),
 
-  SENSOR_PTR( CURVDN,               &g_amec_sys.proc[0].curvdn),
-  SENSOR_PTR( PWRVDD,               &g_amec_sys.proc[0].pwrvdd),
-  SENSOR_PTR( PWRVDN,               &g_amec_sys.proc[0].pwrvdn),
-
   // ------------------------------------------------------
   // Memory Sensors
   // ------------------------------------------------------
-  SENSOR_PTR( VRFAN250USMEM,        &g_amec_sys.sys.vrfan250usmem),
-  SENSOR_PTR( VRHOT250USMEM,        &g_amec_sys.sys.vrhot250usmem),
-
   MEMCONTROL_SENSOR_PTRS(MRD2MSP0M,     &g_amec_sys.proc[0].memctl, mrd2ms),
   MEMCONTROL_SENSOR_PTRS(MWR2MSP0M,     &g_amec_sys.proc[0].memctl, mwr2ms),
   MEMCONTROL_SENSOR_PTRS(MIRC2MSP0M,    &g_amec_sys.proc[0].memctl, centaur.mirc2ms),
@@ -412,6 +404,9 @@ const sensor_ptr_t G_amec_sensor_list[] =
   SENSOR_PTR( UVOLT250USP0V1,       &g_amec_sys.proc[0].vrm[1].uvolt250us),
   SENSOR_PTR( VOLTVDD,              &g_amec_sys.proc[0].vrm[0].volt250us),
   SENSOR_PTR( VOLTVDN,              &g_amec_sys.proc[0].vrm[1].volt250us),
+  SENSOR_PTR( CURVDD,               &g_amec_sys.proc[0].curvdd),
+  SENSOR_PTR( CURVDN,               &g_amec_sys.proc[0].curvdn),
+  SENSOR_PTR( VRFAN,                &g_amec_sys.sys.vrfan),
 
   // ------------------------------------------------------
   // Partition Sensors
@@ -468,8 +463,6 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   MINI_SENSOR_PTR(    PROBE250US5,  NULL),
   MINI_SENSOR_PTR(    PROBE250US6,  NULL),
   MINI_SENSOR_PTR(    PROBE250US7,  NULL),
-  MINI_SENSOR_PTR(   VOLTVDDSENSE,  NULL),
-  MINI_SENSOR_PTR(   VOLTVDNSENSE,  NULL),
   MINI_SENSOR_PTR(    GPEtickdur0,  NULL),
   MINI_SENSOR_PTR(    GPEtickdur1,  NULL),
   MINI_SENSOR_PTR(     RTLtickdur,  NULL),
@@ -501,7 +494,6 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   MINI_SENSOR_PTR(     MEMSP2MSP0,  NULL),
   MINI_SENSOR_PTR(     PWR250USP0,  &G_dcom_slv_outbox_tx.pwr250usp0),
   MINI_SENSOR_PTR(   PWR250USVDD0,  NULL),
-  MINI_SENSOR_PTR(         CURVDD,  NULL),
   MINI_SENSOR_PTR(   PWRVCSVIOVDN,  NULL),
   MINI_SENSOR_PTR(   PWR250USMEM0,  &G_dcom_slv_outbox_tx.pwr250usmemp0),
   MINI_SENSOR_PTR(  SLEEPCNT4MSP0,  &G_dcom_slv_outbox_tx.sleepcnt4msp0),
@@ -511,8 +503,10 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   MINI_SENSOR_PTR(   TEMPPROCTHRM,  &G_dcom_slv_outbox_tx.tempprocthermal),
   MINI_SENSOR_PTR(      UTIL4MSP0,  &G_dcom_slv_outbox_tx.util4msp0),
   MINI_SENSOR_PTR(       TEMPNEST,  NULL),
-  MINI_SENSOR_PTR( VRFAN250USPROC,  &G_dcom_slv_outbox_tx.vrfan250usproc),
-  MINI_SENSOR_PTR( VRHOT250USPROC,  NULL),
+  MINI_SENSOR_PTR(   VOLTVDDSENSE,  NULL),
+  MINI_SENSOR_PTR(   VOLTVDNSENSE,  NULL),
+  MINI_SENSOR_PTR(         PWRVDD,  NULL),
+  MINI_SENSOR_PTR(         PWRVDN,  NULL),
 
   // ------------------------------------------------------
   // Quad Sensors (6 each)
@@ -536,15 +530,9 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   CORE_MINI_SENSOR_PTRS(      PWRPX250USP0C, &G_dcom_slv_outbox_tx.pwrpx250usp0cy),
   CORE_MINI_SENSOR_PTRS_NULL(         TEMPC ),
 
-  MINI_SENSOR_PTR(         CURVDN,  NULL),
-  MINI_SENSOR_PTR(         PWRVDD,  NULL),
-  MINI_SENSOR_PTR(         PWRVDN,  NULL),
-
   // ------------------------------------------------------
   // Memory Sensors
   // ------------------------------------------------------
-  MINI_SENSOR_PTR( VRFAN250USMEM,  &G_dcom_slv_outbox_tx.vrfan250usmem),
-  MINI_SENSOR_PTR( VRHOT250USMEM,  NULL),
 
   MEMCONTROL_MINI_SENSOR_PTRS(MRD2MSP0M, &G_dcom_slv_outbox_tx.mrd2msp0mx), //
   MEMCONTROL_MINI_SENSOR_PTRS(MWR2MSP0M, &G_dcom_slv_outbox_tx.mwr2msp0mx), //
@@ -573,6 +561,9 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   MINI_SENSOR_PTR( UVOLT250USP0V1,  NULL),
   MINI_SENSOR_PTR( VOLTVDD,         NULL),
   MINI_SENSOR_PTR( VOLTVDN,         NULL),
+  MINI_SENSOR_PTR( CURVDD,          NULL),
+  MINI_SENSOR_PTR( CURVDN,          NULL),
+  MINI_SENSOR_PTR( VRFAN,           NULL),
 
   // ------------------------------------------------------
   // Partition Sensors

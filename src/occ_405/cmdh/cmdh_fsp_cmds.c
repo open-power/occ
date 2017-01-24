@@ -50,6 +50,7 @@
 #include "cmdh_dbug_cmd.h"
 
 extern dimm_sensor_flags_t G_dimm_temp_expired_bitmap;
+extern bool G_vrm_thermal_monitoring;
 
 // This table contains tunable parameter information that can be exposed to
 // customers (only Master OCC should access/control this table)
@@ -325,6 +326,19 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
                     }
                 }
             }
+        }
+    }
+
+    if (G_vrm_thermal_monitoring)
+    {
+        // Add VRFAN
+        const sensor_t *vrfan = getSensorByGsid(VRFAN);
+        if (vrfan != NULL)
+        {
+            l_tempSensorList[l_sensorHeader.count].id = 0;
+            l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_VRM;
+            l_tempSensorList[l_sensorHeader.count].value = vrfan->sample & 0xFF;
+            l_sensorHeader.count++;
         }
     }
 

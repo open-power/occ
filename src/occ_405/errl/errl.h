@@ -270,12 +270,16 @@ extern errlHndl_t   G_occErrSlots[ERRL_MAX_SLOTS];
 #define ERR_HISTORY_SIZE 32
 extern uint8_t G_error_history[ERR_HISTORY_SIZE];
 typedef enum {
-    ERR_AVSBUS_VDD_CURRENT = 1,
-    ERR_AVSBUS_VDD_VOLTAGE = 2,
-    ERR_AVSBUS_VDN_CURRENT = 3,
-    ERR_AVSBUS_VDN_VOLTAGE = 4,
-    ERR_DIMM_I2C_PORT0     = 5,
-    ERR_DIMM_I2C_PORT1     = 6
+    ERR_AVSBUS_VDD_CURRENT          =  1,
+    ERR_AVSBUS_VDD_VOLTAGE          =  2,
+    ERR_AVSBUS_VDN_CURRENT          =  3,
+    ERR_AVSBUS_VDN_VOLTAGE          =  4,
+    ERR_DIMM_I2C_PORT0              =  5,
+    ERR_DIMM_I2C_PORT1              =  6,
+    ERR_AVSBUS_VDD_OVER_TEMPERATURE =  7,
+    ERR_AVSBUS_VDN_OVER_TEMPERATURE =  8,
+    ERR_AVSBUS_VDD_OVER_CURRENT     =  9,
+    ERR_AVSBUS_VDN_OVER_CURRENT     = 10,
 } ERR_HISTORY_INDEX;
 #define INCREMENT_ERR_HISTORY(errorIndex) { \
     if ((errorIndex < ERR_HISTORY_SIZE) && (G_error_history[errorIndex] < 255)) { \

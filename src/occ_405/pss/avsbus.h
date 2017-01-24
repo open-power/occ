@@ -31,6 +31,11 @@
 extern bool G_avsbus_vdd_monitoring;
 extern bool G_avsbus_vdn_monitoring;
 
+#define AVSBUS_STATUS_OVER_CURRENT_MASK     0x4000
+#define AVSBUS_STATUS_UNDER_VOLTAGE_MASK    0x2000
+#define AVSBUS_STATUS_OVER_TEMPERATURE_MASK 0x1000
+#define AVSBUS_STATUS_OVER_POWER_MASK       0x0800
+
 typedef enum
 {
     AVSBUS_VDD = 0x00,
@@ -59,5 +64,14 @@ void initiate_avsbus_reads(avsbus_cmdtype_e i_cmdType);
 uint16_t avsbus_read(const avsbus_type_e i_type,
                      const avsbus_cmdtype_e i_cmdtype);
 
+// Initiate read of AVS Bus Status
+// (results can then be read on the next tick)
+void initiate_avsbus_read_status();
+
+// Read the status from AVS Bus and return 1 if over-temperature was found for either bus
+// or 0 if no OT was found.  0xFF will be returned if there was an error reading status
+// on either bus.  Mfg error will be logged for the first OT or first OC condition.
+// Error history counters will be incremented for any over-temp/over-current condition.
+uint8_t process_avsbus_status();
 
 #endif //_AVSBUS_H
