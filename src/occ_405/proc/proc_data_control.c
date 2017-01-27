@@ -72,7 +72,6 @@ void task_core_data_control( task_t * i_task )
 {
     errlHndl_t      err   = NULL;       //Error handler
     PstatesClips* l_temp  = NULL;
-
 /////////////////////////////////////////////////////////////////
 
     // perform Pstate/clip control if previous IPC call completed successfully
@@ -110,18 +109,18 @@ void task_core_data_control( task_t * i_task )
              * @moduleid    RTLS_TASK_CORE_DATA_CONTROL_MOD
              * @reasoncode  PGPE_FAILURE
              * @userdata1   rc
-             * @userdata2   idle?
+             * @userdata2   clip update task idle?
              * @userdata4   ERC_PGPE_UNSUCCESSFULL
              * @devdesc     pgpe clip update returned an error
              */
             err = createErrl(
                 RTLS_TASK_CORE_DATA_CONTROL_MOD,                  //ModId
                 PGPE_FAILURE,                                     //Reasoncode
-                ERC_PGPE_UNSUCCESSFULL,                           //Extended reason code
+                ERC_PGPE_CLIP_UNSUCCESSFULL,                      //Extended reason code
                 ERRL_SEV_PREDICTIVE,                              //Severity
                 NULL,                                             //Trace Buf
                 DEFAULT_TRACE_SIZE,                               //Trace Size
-                G_clip_update_parms_ptr->msg_cb.rc,                    //Userdata1
+                G_clip_update_parms_ptr->msg_cb.rc,               //Userdata1
                 async_request_is_idle(&G_clip_update_req.request) //Userdata2
                 );
         }
@@ -156,18 +155,19 @@ void task_core_data_control( task_t * i_task )
              * @moduleid    RTLS_TASK_CORE_DATA_CONTROL_MOD
              * @reasoncode  PGPE_FAILURE
              * @userdata1   rc
+             * @userdata2   pmcr set task idle?
              * @userdata4   ERC_PGPE_UNSUCCESSFULL
              * @devdesc     pgpe PMCR set returned an error
              */
             err = createErrl(
-                RTLS_TASK_CORE_DATA_CONTROL_MOD, //ModId
-                PGPE_FAILURE,                    //Reasoncode
-                ERC_PGPE_UNSUCCESSFULL,          //Extended reason code
-                ERRL_SEV_PREDICTIVE,             //Severity
-                NULL,                            //Trace Buf
-                DEFAULT_TRACE_SIZE,              //Trace Size
-                G_pmcr_set_parms_ptr->msg_cb.rc,      //Userdata1
-                0                                //Userdata2
+                RTLS_TASK_CORE_DATA_CONTROL_MOD,               //ModId
+                PGPE_FAILURE,                                  //Reasoncode
+                ERC_PGPE_PMCR_UNSUCCESSFULL,                   //Extended reason code
+                ERRL_SEV_PREDICTIVE,                           //Severity
+                NULL,                                          //Trace Buf
+                DEFAULT_TRACE_SIZE,                            //Trace Size
+                G_pmcr_set_parms_ptr->msg_cb.rc,               //Userdata1
+                async_request_is_idle(&G_pmcr_set_req.request) //Userdata2
                 );
         }
     }

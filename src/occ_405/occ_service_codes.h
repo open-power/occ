@@ -118,7 +118,7 @@ enum occReasonCode
     GPE_REQUEST_CREATE_FAILURE      = 0xD4,
     GPE_REQUEST_SCHEDULE_FAILURE    = 0xD5,
     GPE_REQUEST_TASK_TIMEOUT        = 0xD6,
-    GPR_REQUEST_RC_FAILURE          = 0xD7,
+    GPE_REQUEST_RC_FAILURE          = 0xD7,
 
     INVALID_MAGIC_NUMBER            = 0xDA,
 
@@ -234,10 +234,12 @@ enum occExtReasonCode
     ERC_PGPE_BEACON_TIMEOUT                     = 0x00B0,
     ERC_PGPE_NOT_IDLE                           = 0x00B1,
     ERC_PGPE_UNSUCCESSFULL                      = 0x00B2,
-    ERC_PGPE_START_FAILURE                      = 0x00B3,
-    ERC_PGPE_SUSPEND_FAILURE                    = 0x00B4,
-    ERC_PGPE_CLIP_FAILURE                       = 0x00B5,
-    ERC_PGPE_PPMR_OPPB_SIZE_MISMATCH            = 0x00B6,
+    ERC_PGPE_CLIP_UNSUCCESSFULL                 = 0x00B3,
+    ERC_PGPE_PMCR_UNSUCCESSFULL                 = 0x00B4,
+    ERC_PGPE_START_FAILURE                      = 0x00B5,
+    ERC_PGPE_SUSPEND_FAILURE                    = 0x00B6,
+    ERC_PGPE_CLIP_FAILURE                       = 0x00B7,
+    ERC_PGPE_PPMR_OPPB_SIZE_MISMATCH            = 0x00B8,
 };
 
 // Error log Module Ids
