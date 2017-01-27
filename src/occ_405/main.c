@@ -1157,16 +1157,16 @@ void hmon_routine()
         commitErrl(&l_err);
     }
 
-    //if we are in observation or active state, then monitor the processor temperature
-    //for timeout conditions
-    if (IS_OCC_STATE_OBSERVATION() || IS_OCC_STATE_ACTIVE())
+    //if we are in observation, characterization, or activate state, then monitor the processor
+    //temperature for timeout conditions and the processor VRHOT signal.
+    if (IS_OCC_STATE_OBSERVATION() || IS_OCC_STATE_ACTIVE() || IS_OCC_STATE_CHARACTERIZATION())
     {
         amec_health_check_proc_timeout();
     }
 
-    //if we are in observation or active state with memory temperature data being collected
-    //then monitor the temperature collections for overtemp and timeout conditions
-    if((IS_OCC_STATE_OBSERVATION() || IS_OCC_STATE_ACTIVE()) &&
+    //if we are in observation, characterization, or active state with memory temperature data
+    // being collected then monitor the temperature collections for overtemp and timeout conditions
+    if((IS_OCC_STATE_OBSERVATION() || IS_OCC_STATE_ACTIVE() || IS_OCC_STATE_CHARACTERIZATION()) &&
        rtl_task_is_runnable(TASK_ID_DIMM_SM))
     {
         // For Cumulus systems only, check for centaur timeout and overtemp errors

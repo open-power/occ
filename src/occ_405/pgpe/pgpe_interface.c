@@ -35,6 +35,7 @@
 #include "proc_pstate.h"
 #include "proc_data_control.h"
 #include "occ_sys_config.h"
+#include "ssx.h"
 
 extern opal_static_table_t  G_opal_static_table;
 
@@ -56,7 +57,7 @@ GpeRequest G_wof_vfrt_req;
 // The the GPE parameter fields for PGPE IPC calls.
 GPE_BUFFER(ipcmsg_clip_update_t*  G_clip_update_parms_ptr);
 GPE_BUFFER(ipcmsg_set_pmcr_t*     G_pmcr_set_parms_ptr);
-GPE_BUFFER(ipcmsg_start_suspend_t G_start_suspend_parms);
+GPE_BUFFER(ipcmsg_start_stop_t    G_start_suspend_parms);
 GPE_BUFFER(ipcmsg_wof_control_t   G_wof_control_parms);
 GPE_BUFFER(ipcmsg_wof_vfrt_t      G_wof_vfrt_parms);
 
@@ -69,7 +70,7 @@ GPE_BUFFER(ipcmsg_wof_vfrt_t      G_wof_vfrt_parms);
 //
 // End Function Specification
 
-errlHndl_t init_pgpe_ipcs(void)
+void init_pgpe_ipcs(void)
 {
     errlHndl_t  err = NULL;    // Error handler
 
@@ -108,18 +109,19 @@ errlHndl_t init_pgpe_ipcs(void)
     {
         REQUEST_RESET(err);
     }
+    else
+    {
+        // Initialization used in the task_core_data_control for PGPE success
+        // checks made before the first clip/pstate IPC message to be ever sent
+        // from either of the two double buffers.
+        G_core_data_control_occwrite_ptr->clips.msg_cb.rc   = PGPE_RC_SUCCESS;
+        G_core_data_control_occwrite_ptr->pstates.msg_cb.rc = PGPE_RC_SUCCESS;
 
-    // Initialization used in the task_core_data_control for PGPE success
-    // checks made before the first clip/pstate IPC message to be ever sent
-    // from either of the two double buffers.
-    G_core_data_control_occwrite_ptr->clips.msg_cb.rc = PGPE_RC_SUCCESS;
-    G_core_data_control_occwrite_ptr->pstates.msg_cb.rc = PGPE_RC_SUCCESS;
+        G_core_data_control_gpewrite_ptr->clips.msg_cb.rc   = PGPE_RC_SUCCESS;
+        G_core_data_control_gpewrite_ptr->pstates.msg_cb.rc = PGPE_RC_SUCCESS;
+    }
 
-    G_core_data_control_gpewrite_ptr->clips.msg_cb.rc = PGPE_RC_SUCCESS;
-    G_core_data_control_gpewrite_ptr->pstates.msg_cb.rc = PGPE_RC_SUCCESS;
-
-
-    return(err);
+    return;
 }
 
 
@@ -411,65 +413,227 @@ errlHndl_t pgpe_init_wof_vfrt(void)
 
 // Function Specification
 //
-// Name: pgpe_widen_clip_ranges
+// Name: pgpe_widen_clip_blocking
 //
-// Description: Wide open PGPE clip ranges. Since this IPC call
-//              is non-blocking, this routine has to assure call
-//              completion before checking the pgpe return value.
+// Description: a blocking version of pgpe_widen_clip_ranges
+//              this call waits until the clip IPC task completes,
+//              and verifies this was a successful completion.
 //
 // End Function Specification
 
-errlHndl_t pgpe_widen_clip_ranges(void)
+#define CLIP_UPDATE_TIMEOUT 5        //maximum waiting time (usec) for clip update IPC task
+int pgpe_widen_clip_blocking(OCC_STATE state)
 {
+    errlHndl_t   err;
+    uint8_t      wait_time = 0;
+    int          rc = 0;  // Return code: 0 means success, otherwise an error.
 
-    errlHndl_t  err = NULL;    // Error handler
-    uint8_t     i;             // Loop variable
-
-    // Set clip bounds wide open
-    for(i=0; i<MAX_QUADS; i++)
+    do
     {
-        // minimum pstate
-        G_clip_update_parms_ptr->ps_val_clip_min[i] = pmin_rail();
+        // verify that the clip update IPC task is not currently running
+        if( !async_request_is_idle(&G_clip_update_req.request) )
+        {
+            // an earlier clip update IPC call has not completed, trace and log an error
+            TRAC_ERR("pgpe_blocking_widen_clip: clip update IPC task is not Idle");
 
-        // maximum pstate:
-        G_clip_update_parms_ptr->ps_val_clip_max[i] = proc_freq2pstate(G_proc_fmax_mhz);
+            /*
+             * @errortype
+             * @moduleid    PGPE_WIDEN_CLIP_BLOCKING_MOD
+             * @reasoncode  PGPE_FAILURE
+             * @userdata4   ERC_PGPE_NOT_IDLE
+             * @devdesc     pgpe clip update not idle
+             */
+            err = createErrl(
+                PGPE_WIDEN_CLIP_BLOCKING_MOD,    //ModId
+                PGPE_FAILURE,                    //Reasoncode
+                ERC_PGPE_NOT_IDLE,               //Extended reason code
+                ERRL_SEV_PREDICTIVE,             //Severity
+                NULL,                            //Trace Buf
+                DEFAULT_TRACE_SIZE,              //Trace Size
+                0,                               //Userdata1
+                0                                //Userdata2
+                );
+
+            rc = PGPE_FAILURE;
+            break;
+        }
+        else
+        {
+            // the function call to widen the clips
+            rc = pgpe_widen_clip_ranges(state);
+
+            // clip update task failed
+            if(rc)
+            {
+                break;
+            }
+        }
+
+
+        // Wait until the clip_update IPC task completes
+        while( !async_request_is_idle(&G_clip_update_req.request) )
+        {
+            if(wait_time > CLIP_UPDATE_TIMEOUT)
+            {
+                TRAC_ERR("pgpe_blocking_widen_clip: clip update IPC task timeout!");
+
+                /*
+                 * @errortype
+                 * @moduleid    PGPE_WIDEN_CLIP_BLOCKING_MOD
+                 * @reasoncode  GPE_REQUEST_TASK_TIMEOUT
+                 * @userdata4   OCC_NO_EXTENDED_RC
+                 * @devdesc     pgpe clip update timeout
+                 */
+                err = createErrl(
+                    PGPE_WIDEN_CLIP_BLOCKING_MOD,    //ModId
+                    GPE_REQUEST_TASK_TIMEOUT,        //Reasoncode
+                    OCC_NO_EXTENDED_RC,              //Extended reason code
+                    ERRL_SEV_PREDICTIVE,             //Severity
+                    NULL,                            //Trace Buf
+                    DEFAULT_TRACE_SIZE,              //Trace Size
+                    0,                               //Userdata1
+                    0                                //Userdata2
+                    );
+
+                rc = GPE_REQUEST_TASK_TIMEOUT;
+                break;
+            }
+
+            // sleep for 1 microsecond (allows context switching)
+            ssx_sleep(SSX_MICROSECONDS(1));
+
+            wait_time++;
+        }
+
+        // clip update timed out
+        if(err)
+        {
+            break;
+        }
+
+        // IPC task completed. check for errors
+        if ( G_clip_update_parms_ptr->msg_cb.rc != PGPE_RC_SUCCESS )
+        {
+            // clip update IPC call has not completed, trace and log an error
+            TRAC_ERR("pgpe_blocking_widen_clip: clip update IPC task "
+                     "returned an error [0x%08X]",
+                     G_clip_update_parms_ptr->msg_cb.rc);
+
+            /*
+             * @errortype
+             * @moduleid    PGPE_WIDEN_CLIP_BLOCKING_MOD
+             * @reasoncode  GPE_REQUEST_RC_FAILURE
+             * @userdata1   PGPE clip update's rc
+             * @userdata4   OCC_NO_EXTENDED_RC
+             * @devdesc     pgpe clip update returned a failure code
+             */
+            err = createErrl(
+                PGPE_WIDEN_CLIP_BLOCKING_MOD,         //ModId
+                GPE_REQUEST_RC_FAILURE,               //Reasoncode
+                OCC_NO_EXTENDED_RC,                   //Extended reason code
+                ERRL_SEV_PREDICTIVE,                  //Severity
+                NULL,                                 //Trace Buf
+                DEFAULT_TRACE_SIZE,                   //Trace Size
+                G_clip_update_parms_ptr->msg_cb.rc,   //Userdata1
+                0                                     //Userdata2
+                );
+
+            rc = GPE_REQUEST_RC_FAILURE;
+        }
+    } while (0);
+
+    if(err)
+    {
+        REQUEST_RESET(err);
     }
 
-    // Check that no previous clip update calls are still in progress
-    if(async_request_is_idle(&G_clip_update_req.request))
+    return(rc);
+}
+
+
+// Function Specification
+//
+// Name: pgpe_widen_clip_ranges
+//
+// Description: Widens PGPE clip ranges between minimum pstate,
+//              and maximum pstate allowed in the specified
+//              "state" parameter. Since this IPC call is
+//              non-blocking, the caller has to assure that
+//              IPC clip update task is idle,  wait for IPC task
+//              completion, then check the pgpe return value.
+//
+// End Function Specification
+
+int pgpe_widen_clip_ranges(OCC_STATE state)
+{
+
+    errlHndl_t  err = NULL;  // Error handler
+    int         rc = 0;      // return code
+    uint8_t     quad;        // Loop variable
+
+    Pstate      pmin   = pmin_rail();
+    Pstate      pmax;
+
+    bool        valid_state = false;
+
+    // when transitioning to observation state,
+    // set max clip to legacy turbo pstate clip
+    if(state == OCC_STATE_OBSERVATION)
     {
+        pmax = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO]);
+        valid_state = true;
+    }
+    // when transitioning to active or characterization state,
+    // wide open the clips. If WOF is enabled set it to ultra
+    // -turbo pstate, else, set it to turbo pstate.
+    else if (state == OCC_STATE_ACTIVE || state == OCC_STATE_CHARACTERIZATION)
+    {
+        pmax = proc_freq2pstate(G_proc_fmax_mhz);
+        valid_state = true;
+    }
+
+    if(valid_state)
+    {
+        // Set clip bounds
+        for(quad=0; quad<MAX_QUADS; quad++)
+        {
+            // minimum pstate, independent of state
+            G_clip_update_parms_ptr->ps_val_clip_min[quad] = pmin;
+
+            // max pstate (legacy turbo / ultra-turbo)
+            G_clip_update_parms_ptr->ps_val_clip_max[quad] = pmax;
+        }
+
         // will check for this IPC completion at transition to active state
-        err = pgpe_clip_update();
+        rc = pgpe_clip_update();
     }
     else
     {
-        // an earlier clip update IPC call has not completed, trace and log an error
-        TRAC_ERR("pgpe_widen_clip_ranges: clip update IPC task is not Idle");
-
-        // log an error
-        MAIN_TRAC_ERR("pgpe_widen_clip_ranges: clip update IPC is not Idle");
-
+        TRAC_ERR("pgpe_widen_clip_ranges: should never be called in state %d", state);
         /*
          * @errortype
          * @moduleid    PGPE_WIDEN_CLIP_RANGES_MOD
          * @reasoncode  PGPE_FAILURE
-         * @userdata1   0
-         * @userdata4   ERC_PGPE_NOT_IDLE
-         * @devdesc     pgpe clip update not idle
+         * @userdata1   state
+         * @userdata4   ERC_PGPE_CLIP_FAILURE
+         * @devdesc     pgpe clip update requested in an invalid state
          */
         err = createErrl(
-            PGPE_WIDEN_CLIP_RANGES_MOD,      //ModId
-            PGPE_FAILURE,                    //Reasoncode
-            OCC_NO_EXTENDED_RC,              //Extended reason code
-            ERRL_SEV_PREDICTIVE,             //Severity
-            NULL,                            //Trace Buf
-            DEFAULT_TRACE_SIZE,              //Trace Size
-            0,                               //Userdata1
-            0                                //Userdata2
+            PGPE_WIDEN_CLIP_RANGES_MOD,           //ModId
+            PGPE_FAILURE,                         //Reasoncode
+            ERC_PGPE_CLIP_FAILURE,                //Extended reason code
+            ERRL_SEV_PREDICTIVE,                  //Severity
+            NULL,                                 //Trace Buf
+            DEFAULT_TRACE_SIZE,                   //Trace Size
+            state,                                //Userdata1
+            0                                     //Userdata2
             );
+
+        rc = PGPE_FAILURE;
+        REQUEST_RESET(err);
     }
 
-    return(err);
+    return(rc);
 }
 
 // Function Specification
@@ -482,10 +646,10 @@ errlHndl_t pgpe_widen_clip_ranges(void)
 //
 // End Function Specification
 
-errlHndl_t pgpe_clip_update(void)
+int pgpe_clip_update(void)
 {
-    int rc;           // gpe schedule return code
-    errlHndl_t  err = NULL;    // Error handler
+    int rc = 0;              // return code
+    errlHndl_t  err = NULL;  // Error handler
 
     do
     {
@@ -515,6 +679,15 @@ errlHndl_t pgpe_clip_update(void)
                 0                                //Userdata2
                 );
 
+            // Callout firmware
+            addCalloutToErrl(err,
+                             ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                             ERRL_COMPONENT_ID_FIRMWARE,
+                             ERRL_CALLOUT_PRIORITY_HIGH);
+
+            commitErrl(&err);
+
+            rc = PGPE_FAILURE;
             break;
         }
 
@@ -554,11 +727,12 @@ errlHndl_t pgpe_clip_update(void)
                 0                                       // userdata2
                 );
 
+            rc = GPE_REQUEST_SCHEDULE_FAILURE;
             REQUEST_RESET(err);   //This will add a firmware callout for us
         }
     }while(0);
 
-    return err;
+    return rc;
 }
 
 
@@ -617,15 +791,16 @@ void pgpe_start_suspend_callback(void)
             {
                 // Pstates are now enabled (enable Active State transition).
                 G_proc_pstate_status = PSTATES_ENABLED;
+
+                // upon successful pstates START, assign G_proc_pmcr_owner (OCC/CHAR/HOST)
+                G_proc_pmcr_owner = G_start_suspend_parms.pmcr_owner;
             }
             // this was a command to disable pstates
-            else if(G_start_suspend_parms.action == PGPE_ACTION_PSTATE_SUSPEND)
+            else if(G_start_suspend_parms.action == PGPE_ACTION_PSTATE_STOP)
             {
                 // Pstates are now disabled (disaable Active State transition).
                 G_proc_pstate_status = PSTATES_DISABLED;
             }
-
-            G_proc_pmcr_owner = G_start_suspend_parms.pmcr_owner;
         }
 
     } while(0);
@@ -645,25 +820,13 @@ void pgpe_start_suspend_callback(void)
 //
 // End Function Specification
 
-errlHndl_t pgpe_start_suspend(uint8_t action)
+int pgpe_start_suspend(uint8_t action, PMCR_OWNER owner)
 {
-    PMCR_OWNER owner;          // PMCR owner
-    int rc;                    // gpe schedule return codes
+    int rc;                    // return code
     errlHndl_t  err = NULL;    // Error handler
 
-    // For now, we set PMCR ownership based on whether the system
-    // is OPAL system or not.
-    if(G_sysConfigData.system_type.kvm)
-    {
-        owner = PMCR_OWNER_HOST;
-    }
-    else
-    {
-        owner = PMCR_OWNER_OCC;
-    }
-
     // set the IPC parameters
-    G_start_suspend_parms.action = action;
+    G_start_suspend_parms.action     = action;
     G_start_suspend_parms.pmcr_owner = owner;
 
     // @TODO: remove this precompile directive check when PGPE code is integrated.
@@ -700,6 +863,7 @@ errlHndl_t pgpe_start_suspend(uint8_t action)
             0                                       // userdata2
             );
 
+        rc = GPE_REQUEST_SCHEDULE_FAILURE;
         REQUEST_RESET(err);   //This will add a firmware callout for us
     }
     // successfully scheduled, set the G_proc_pstate_status to indicate transition
@@ -712,7 +876,7 @@ errlHndl_t pgpe_start_suspend(uint8_t action)
     pgpe_start_suspend_callback();
 #endif
 
-    return err;
+    return rc;
 }
 
 
@@ -727,9 +891,9 @@ errlHndl_t pgpe_start_suspend(uint8_t action)
 //
 // End Function Specification
 
-errlHndl_t pgpe_pmcr_set(void)
+int pgpe_pmcr_set(void)
 {
-    int rc;                  // gpe schedule return codes
+    int rc;                  // return code
     errlHndl_t  err = NULL;  // Error handler
 
     do
@@ -760,6 +924,15 @@ errlHndl_t pgpe_pmcr_set(void)
                 0                                //Userdata2
                 );
 
+            // Callout firmware
+            addCalloutToErrl(err,
+                             ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                             ERRL_COMPONENT_ID_FIRMWARE,
+                             ERRL_CALLOUT_PRIORITY_HIGH);
+
+            commitErrl(&err);
+
+            rc = PGPE_FAILURE;
             break;
         }
 
@@ -778,10 +951,7 @@ errlHndl_t pgpe_pmcr_set(void)
             //Error in scheduling pgpe clip update task
             TRAC_ERR("pgpe_pmcr_set: Failed to schedule PMCR setup pgpe task rc=%x",
                      rc);
-        }
 
-        if(rc != 0)
-        {
             /* @
              * @errortype
              * @moduleid    PGPE_PMCR_SET_MOD
@@ -790,7 +960,7 @@ errlHndl_t pgpe_pmcr_set(void)
              * @userdata2   0
              * @userdata4   OCC_NO_EXTENDED_RC
              * @devdesc     OCC Failed to schedule a GPE job for clip update
-         */
+             */
             err = createErrl(
                 PGPE_PMCR_SET_MOD,                      // modId
                 GPE_REQUEST_SCHEDULE_FAILURE,           // reasoncode
@@ -802,11 +972,12 @@ errlHndl_t pgpe_pmcr_set(void)
                 0                                       // userdata2
                 );
 
+            rc = GPE_REQUEST_SCHEDULE_FAILURE;
             REQUEST_RESET(err);   //This will add a firmware callout for us
         }
     }
     while(0);
 
-    return err;
+    return rc;
 }
 

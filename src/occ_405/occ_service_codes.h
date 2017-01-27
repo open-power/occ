@@ -172,10 +172,6 @@ enum occExtReasonCode
     ERC_APSS_ADC_OUT_OF_RANGE_FAILURE           = 0x0026,
     ERC_APSS_ADC_DUPLICATED_FAILURE             = 0x0027,
 
-    ERC_STATE_FROM_OBS_TO_STB_FAILURE           = 0x0028,
-    ERC_STATE_FROM_STB_TO_OBS_FAILURE           = 0x0029,
-    ERC_STATE_HEARTBEAT_CFG_FAILURE             = 0x0080,
-
     ERC_AMEC_PCAPS_MISMATCH_FAILURE             = 0x002A,
     ERC_AMEC_UNDER_PCAP_FAILURE                 = 0x002B,
 
@@ -236,12 +232,15 @@ enum occExtReasonCode
     ERC_PGPE_BEACON_TIMEOUT                     = 0x00B0,
     ERC_PGPE_NOT_IDLE                           = 0x00B1,
     ERC_PGPE_UNSUCCESSFULL                      = 0x00B2,
+
     ERC_PGPE_CLIP_UNSUCCESSFULL                 = 0x00B3,
     ERC_PGPE_PMCR_UNSUCCESSFULL                 = 0x00B4,
     ERC_PGPE_START_FAILURE                      = 0x00B5,
     ERC_PGPE_SUSPEND_FAILURE                    = 0x00B6,
     ERC_PGPE_CLIP_FAILURE                       = 0x00B7,
     ERC_PGPE_PPMR_OPPB_SIZE_MISMATCH            = 0x00B8,
+    ERC_PGPE_ACTIVE_TO_OBSERVATION_TIMEOUT      = 0x00B9,
+    ERC_PGPE_TASK_TIMEOUT                       = 0x00BA,
 
     ERC_WOF_QUAD_COUNT_FAILURE                  = 0x00C0,
 
@@ -250,6 +249,16 @@ enum occExtReasonCode
 
     ERC_SMGR_NO_VALID_MODE_TRANSITION_CALL      = 0x00E0,
     ERC_SMGR_NO_VALID_STATE_TRANSITION_CALL     = 0x00E1,
+
+    ERC_STATE_FROM_ALL_TO_STB_FAILURE           = 0x0123,
+    ERC_STATE_FROM_ACT_TO_CHR_FAILURE           = 0x0124,
+    ERC_STATE_FROM_CHR_TO_ACT_FAILURE           = 0x0125,
+    ERC_STATE_FROM_CHR_TO_OBS_FAILURE           = 0x0126,
+    ERC_STATE_FROM_OBS_TO_CHR_FAILURE           = 0x0127,
+    ERC_STATE_FROM_STB_TO_CHR_FAILURE           = 0x0128,
+    ERC_STATE_FROM_STB_TO_OBS_FAILURE           = 0x0129,
+
+    ERC_STATE_HEARTBEAT_CFG_FAILURE             = 0x0180,
 };
 
 // Error log Module Ids

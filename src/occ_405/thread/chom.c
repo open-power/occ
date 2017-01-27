@@ -402,8 +402,10 @@ void chom_main()
         chom_data_init();
     }
 
-    // only update chom sensors on an active OCC
-    if (IS_OCC_STATE_ACTIVE())
+    // only update chom sensors on active, observing, or characterizing OCCs
+    if (IS_OCC_STATE_ACTIVE()           ||
+        IS_OCC_STATE_OBSERVATION()      ||
+        IS_OCC_STATE_CHARACTERIZATION())
     {
         chom_update_sensors();
     }

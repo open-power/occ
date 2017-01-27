@@ -593,7 +593,7 @@ void amec_slv_freq_smh(void)
     uint8_t       core_num = 0;   // core ID
     uint8_t       core_idx = 0;   // loop through cores within each quad
     Pstate        pmax = 0;       // select the maximum pstate (minimum frequency)
-                                  // within each quad, initialize to 0
+                                  // within each quad, initialize to 0 (max frequency)
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
@@ -606,6 +606,7 @@ void amec_slv_freq_smh(void)
         {
             core_num = (quad*NUM_CORES_PER_QUAD) + core_idx;  // loop through all cores
 
+            // The higher the pstate number, the lower the frequency
             if(pmax <  proc_freq2pstate(g_amec->proc[0].core[core_num].f_request))
             {
                 pmax = proc_freq2pstate(g_amec->proc[0].core[core_num].f_request);

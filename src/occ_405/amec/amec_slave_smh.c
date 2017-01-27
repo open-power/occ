@@ -62,6 +62,8 @@
 // Externs
 //*************************************************************************
 extern dcom_slv_inbox_t G_dcom_slv_inbox_rx;
+extern opal_proc_voting_reason_t G_amec_opal_proc_throt_reason;
+
 //*************************************************************************
 // Macros
 //*************************************************************************
@@ -344,6 +346,14 @@ void amec_slv_common_tasks_post(void)
       // Call the 250us trace recording if it has been configured via Amester.
       // If not configured, this call will return immediately.
       amec_tb_record(AMEC_TB_250US);
+  }
+  // if an OPAL system & just transitioned to CHAR or OBS state, set proc mnfg override
+  else if ( (IS_OCC_STATE_CHARACTERIZATION() || IS_OCC_STATE_OBSERVATION()) &&
+            (MANUFACTURING_OVERRIDE != G_amec_opal_proc_throt_reason)       &&
+            (G_sysConfigData.system_type.kvm == true) )
+  {
+      G_amec_opal_proc_throt_reason = MANUFACTURING_OVERRIDE;
+      ssx_semaphore_post(&G_dcomThreadWakeupSem);
   }
 }
 

@@ -27,8 +27,10 @@
 #define _PGPE_INTERFACE_H_
 
 #include "errl.h"
+#include "state.h"
+#include "pstate_pgpe_occ_api.h"
 
-errlHndl_t init_pgpe_ipcs(void);
+void init_pgpe_ipcs(void);
 
 errlHndl_t pgpe_init_clips(void);
 errlHndl_t pgpe_init_pmcr(void);
@@ -36,10 +38,13 @@ errlHndl_t pgpe_init_start_suspend(void);
 errlHndl_t pgpe_init_wof_control(void);
 errlHndl_t pgpe_init_wof_vfrt(void);
 
-errlHndl_t pgpe_widen_clip_ranges(void);
-errlHndl_t pgpe_clip_update(void);
-errlHndl_t pgpe_pmcr_set(void);
-errlHndl_t pgpe_start_suspend(uint8_t action);
+int pgpe_widen_clip_ranges(OCC_STATE state);
+int pgpe_widen_clip_blocking(OCC_STATE state);
+int pgpe_clip_update(void);
+
+int pgpe_pmcr_set(void);
+
+int pgpe_start_suspend(uint8_t action, PMCR_OWNER owner);
 void pgpe_start_suspend_callback(void);
 
 #endif /* #ifndef _PGPE_INTERFACE_H_ */

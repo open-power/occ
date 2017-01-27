@@ -31,6 +31,9 @@
 #include "errl.h"
 #include "mode.h"
 
+// Maximum allowed value approx. 16.3 ms
+#define PCBS_HEARBEAT_TIME_US 16320
+
 extern uint32_t G_smgr_validate_data_active_mask;
 extern uint32_t G_smgr_validate_data_observation_mask;
 
@@ -52,6 +55,7 @@ typedef enum
     OCC_STATE_OBSERVATION        = 0x02,
     OCC_STATE_ACTIVE             = 0x03,
     OCC_STATE_SAFE               = 0x04,
+    OCC_STATE_CHARACTERIZATION   = 0x05,
 
     // Make sure this is after the last valid state
     OCC_STATE_COUNT,
@@ -63,8 +67,9 @@ typedef enum
 } OCC_STATE;
 
 // These are the only states that TMGT/HTMGT can send
-#define OCC_STATE_IS_VALID(state) ((state == OCC_STATE_NOCHANGE) || \
-                                   (state == OCC_STATE_OBSERVATION) || \
+#define OCC_STATE_IS_VALID(state) ((state == OCC_STATE_NOCHANGE)         || \
+                                   (state == OCC_STATE_OBSERVATION)      || \
+                                   (state == OCC_STATE_CHARACTERIZATION) || \
                                    (state == OCC_STATE_ACTIVE))
 
 /**
@@ -144,6 +149,9 @@ typedef enum
 // Returns true if OCC State is observation
 #define IS_OCC_STATE_OBSERVATION()  ( (OCC_STATE_OBSERVATION == G_occ_internal_state)? 1 : 0 )
 
+// Returns true if OCC State is charaterization
+#define IS_OCC_STATE_CHARACTERIZATION()  ( (OCC_STATE_CHARACTERIZATION == G_occ_internal_state)? 1 : 0 )
+
 /**
  * @struct smgr_state_trans_t
  * @brief Used by the "Set State" command to call the correct transition
@@ -161,6 +169,24 @@ extern OCC_STATE          G_occ_internal_state;
 extern OCC_STATE          G_occ_internal_req_state;
 extern OCC_STATE          G_occ_master_state;
 extern OCC_STATE          G_occ_external_req_state;
+
+// State Transition Function Calls
+errlHndl_t SMGR_standby_to_observation();
+errlHndl_t SMGR_standby_to_characterization();
+errlHndl_t SMGR_standby_to_active();
+
+errlHndl_t SMGR_observation_to_characterization();
+errlHndl_t SMGR_observation_to_active();
+
+errlHndl_t SMGR_characterization_to_observation();
+errlHndl_t SMGR_characterization_to_active();
+
+errlHndl_t SMGR_active_to_observation();
+errlHndl_t SMGR_active_to_characterization();
+
+errlHndl_t SMGR_all_to_standby();
+
+errlHndl_t SMGR_all_to_safe();
 
 // Used by macro above to clear flag indicating to not halt OCC when a reset
 // is requested.
@@ -182,5 +208,5 @@ errlHndl_t SMGR_set_state(OCC_STATE i_state);
 // parms we currently know.
 uint8_t SMGR_validate_get_valid_states(void);
 
-#endif
+#endif // _state_h
 

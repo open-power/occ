@@ -95,7 +95,7 @@ errlHndl_t AMEC_data_write_fcurr(const OCC_MODE i_mode)
     /*------------------------------------------------------------------------*/
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
-    errlHndl_t                  l_err = NULL;
+    errlHndl_t      l_err = NULL;
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
@@ -125,12 +125,10 @@ errlHndl_t AMEC_data_write_fcurr(const OCC_MODE i_mode)
 
     if(!l_err)
     {
-        // set the clip bounds wide open (if not in active state)
-        // if not already in active mode, send IPC command to PGPE to set
-        // pStates clips wide open (pmin - pmax)
+        // set the clip bounds open (if not in active state)
         if(!IS_OCC_STATE_ACTIVE())
         {
-            l_err = pgpe_widen_clip_ranges();
+            pgpe_widen_clip_ranges(CURRENT_STATE());
         }
     }
 
