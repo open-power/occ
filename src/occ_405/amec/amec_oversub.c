@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -23,9 +23,9 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-//*************************************************************************
+//*************************************************************************/
 // Includes
-//*************************************************************************
+//*************************************************************************/
 #include "ssx.h"
 #include <occ_common.h>
 #include <trac.h>
@@ -35,36 +35,36 @@
 #include <occ_sys_config.h>
 #include <amec_service_codes.h>
 
-//*************************************************************************
+//*************************************************************************/
 // Externs
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Macros
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Defines/Enums
-//*************************************************************************
+//*************************************************************************/
 #define OVERSUB_REASON_DELAY_4MS     16  // 4ms (unit is 250us)
 #define OVERSUB_REASON_COUNT_TIMEOUT 2
 #define OVERSUB_REASON_DETERMINED    1
 
-//*************************************************************************
+//*************************************************************************/
 // Structures
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Globals
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Function Prototypes
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Functions
-//*************************************************************************
+//*************************************************************************/
 
 // Function Specification
 //
@@ -94,14 +94,14 @@ void amec_set_pmax_clip(Pstate i_pstate)
 // End Function Specification
 void amec_oversub_isr(void)
 {
-    static uint32_t l_isr_count = 0;
-    static uint8_t l_polarity = SSX_IRQ_POLARITY_ACTIVE_LOW; // Default is low
-    uint8_t l_cur_polarity = l_polarity;
+    static uint32_t L_isr_count = 0;
+    static uint8_t L_polarity = SSX_IRQ_POLARITY_ACTIVE_HIGH; // Default is high
+    uint8_t l_cur_polarity = L_polarity;
 
-    l_isr_count++;
+    L_isr_count++;
 
-    // SSX_IRQ_POLARITY_ACTIVE_LOW means over-subscription is active
-    if(l_polarity == SSX_IRQ_POLARITY_ACTIVE_LOW)
+    // SSX_IRQ_POLARITY_ACTIVE_HIGH means over-subscription is active
+    if(L_polarity == SSX_IRQ_POLARITY_ACTIVE_HIGH)
     {
         // oversub only switches pcap in amec_pcap_calc
         // throttling only done if actually needed due to reaching power cap
@@ -113,9 +113,9 @@ void amec_oversub_isr(void)
 
         // Setup the IRQ
         ssx_irq_setup(OCCHW_IRQ_EXTERNAL_TRAP,
-                      SSX_IRQ_POLARITY_ACTIVE_HIGH,
+                      SSX_IRQ_POLARITY_ACTIVE_LOW,
                       SSX_IRQ_TRIGGER_LEVEL_SENSITIVE);
-        l_polarity = SSX_IRQ_POLARITY_ACTIVE_HIGH;
+        L_polarity = SSX_IRQ_POLARITY_ACTIVE_LOW;
 
     }
     else  // over-subscription is inactive
@@ -128,14 +128,14 @@ void amec_oversub_isr(void)
 
         // Setup the IRQ
         ssx_irq_setup(OCCHW_IRQ_EXTERNAL_TRAP,
-                      SSX_IRQ_POLARITY_ACTIVE_LOW,
+                      SSX_IRQ_POLARITY_ACTIVE_HIGH,
                       SSX_IRQ_TRIGGER_LEVEL_SENSITIVE);
 
-        l_polarity = SSX_IRQ_POLARITY_ACTIVE_LOW;
+        L_polarity = SSX_IRQ_POLARITY_ACTIVE_HIGH;
     }
 
     // Trace Oversub Event, Polarity and ISR count
-    TRAC_INFO("Oversub IRQ - Polarity (low active):%d, oversubPinLive: %d, count: %d)", l_cur_polarity, g_amec->oversub_status.oversubPinLive, l_isr_count);
+    TRAC_INFO("Oversub IRQ - Polarity (high active):%d, oversubPinLive: %d, count: %d)", l_cur_polarity, g_amec->oversub_status.oversubPinLive, L_isr_count);
 
 }
 
@@ -151,14 +151,14 @@ void amec_oversub_isr(void)
 // End Function Specification
 void amec_oversub_check(void)
 {
-    static BOOLEAN              l_prev_ovs_state = FALSE;  // oversub happened
+    static BOOLEAN              L_prev_ovs_state = FALSE;  // oversub happened
 
     // oversubscription condition happened?
     if ( AMEC_INTF_GET_OVERSUBSCRIPTION() == TRUE )
     {
-        if ( l_prev_ovs_state != TRUE)
+        if ( L_prev_ovs_state != TRUE)
         {
-            l_prev_ovs_state = TRUE;
+            L_prev_ovs_state = TRUE;
 
             TRAC_ERR("Oversubscription condition happened");
             /* @
@@ -175,7 +175,7 @@ void amec_oversub_check(void)
                                           ERRL_SEV_INFORMATIONAL,       //Severity
                                           NULL,                         //Trace Buf
                                           DEFAULT_TRACE_SIZE,           //Trace Size
-                                          l_prev_ovs_state,             //userdata1
+                                          L_prev_ovs_state,             //userdata1
                                           0);                           //userdata2
 
             // set the mfg action flag (allows callout to be added to info error)
@@ -193,7 +193,7 @@ void amec_oversub_check(void)
     }
     else
     {
-        l_prev_ovs_state = FALSE;
+        L_prev_ovs_state = FALSE;
     }
 
     // Figure out the over-subscription reason

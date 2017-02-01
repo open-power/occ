@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -127,7 +127,7 @@ errlHndl_t dpss_oversubscription_irq_initialize()
 
     // Setup the IRQ
     rc = ssx_irq_setup(OCCHW_IRQ_EXTERNAL_TRAP,
-                       SSX_IRQ_POLARITY_ACTIVE_LOW,
+                       SSX_IRQ_POLARITY_ACTIVE_HIGH,
                        SSX_IRQ_TRIGGER_LEVEL_SENSITIVE);
 
     if( rc ) {
