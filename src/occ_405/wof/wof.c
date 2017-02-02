@@ -110,12 +110,9 @@ int16_t G_wof_iddq_mult_table[][2] = {
 void wof_main(void)
 {
 
-    // TODO Read out necessary Sensor data for WOF calculation
-    //    uint16_t l_current_vdd = getSensorByGsid(CURVDD)->sample;
-    //    uint16_t l_current_vdn = getSensorByGsid(CURVDN)->sample
 
-    // Read VOLTVDDSENSE once here to be used in the algorithm and save it to amec
-    g_wof->volt_vdd_sense = getSensorByGsid(VOLTVDDSENSE)->sample;
+    // Read out the sensor data needed for calculations
+    read_sensor_data();
 
     // Functions to calculate Ceff_vdd and Ceff_vdn here.
     uint16_t ceff_vdd = 0; // TODO: replace with future function call
@@ -629,7 +626,7 @@ void calculate_core_voltage( void )
         // 0 = BYPASS, 1 = REGULATION
         if( (g_wof->quad_ivrm_states & l_quad_mask ) == 0 )
         {
-            l_voltage = g_wof->volt_vdd_sense;
+            l_voltage = g_wof->voltvddsense_sensor;;
         }
         else
         {
@@ -675,7 +672,7 @@ void calculate_core_leakage( void )
 
     // Get the VOLTVDDSENSE sensor and choose the appropriate
     // chip voltage index
-    uint32_t l_v_chip = g_wof->volt_vdd_sense;
+    uint32_t l_v_chip = g_wof->voltvddsense_sensor;
 
     if( l_v_chip <= G_iddq_voltages[0] )
     {
@@ -707,9 +704,6 @@ void calculate_core_leakage( void )
     // Calculate all variables that will be used in the core
     // loop that only need to be calculated once.
 
-    // Read the Nest Temperature sensor for calculations & save to amec
-    g_wof->tempnest_sense = getSensorByGsid(TEMPNEST)->sample;
-
     // Look up Tvpd_leak for calculations when either the core or quad is off
     // avttemp values in 0.5C. Divide by 2 to convert to 1C
     g_wof->tvpd_leak_off =
@@ -721,7 +715,7 @@ void calculate_core_leakage( void )
 
     // Take the difference between the temperature and tvpd_leak_off
     // used for multiplier calculation
-    g_wof->nest_delta_temp = g_wof->tempnest_sense -
+    g_wof->nest_delta_temp = g_wof->tempnest_sensor -
                                   g_wof->tvpd_leak_off;
 
     // Calculate IDDQ_TEMP_FACTOR^((TEMPNEST - tvpd_leak)/10)
@@ -838,7 +832,7 @@ void calculate_core_leakage( void )
                         // If TEMPQx is also 0, use TEMPNEST
                         if(temperature == 0)
                         {
-                            temperature = g_wof->tempnest_sense;
+                            temperature = g_wof->tempnest_sensor;
                         }
                     }
 
@@ -883,7 +877,7 @@ void calculate_core_leakage( void )
             // If TEMPQ0 is 0, use TEMPNEST
             if( temperature == 0 )
             {
-                temperature = g_wof->tempnest_sense;
+                temperature = g_wof->tempnest_sensor;
             }
 
             // Save selected temperature off to amec
@@ -915,6 +909,40 @@ void calculate_core_leakage( void )
 
 }
 
+
+
+/**
+ * calculate_nest_leakage
+ *
+ * Description: Function to calculate the nest leakage using VPD leakage data,
+ *              temperature, and voltage
+ */
+void calculate_nest_leakage( void )
+{
+    // Get the desired tvpd leak for nest calculation
+    // avgtemp in IDDQ table is 0.5C units. Divide by 2 to get 1C
+    g_wof->tvpd_leak_nest = G_oppb.iddq.avgtemp_vdn >> 1;
+
+    // Subtract tvpd_leak from TEMPNEST sensor
+    int16_t nest_delta_temp = g_wof->tempnest_sensor - g_wof->tvpd_leak_nest;
+
+    // Calculate multiplier for final calculation;
+    uint32_t nest_mult = calculate_multiplier( nest_delta_temp );
+
+    // Save nest leakage to amec structure
+    g_wof->idc_vdn = (G_oppb.iddq.ivdn*nest_mult) >> 10;
+}
+
+/**
+ *  calculate_AC_currents
+ *
+ *  Description: Calculate the AC currents
+ */
+inline void calculate_AC_currents( void )
+{
+    g_wof->iac_vdd = g_wof->curvdd_sensor - g_wof->idc_vdd;
+    g_wof->iac_vdn = g_wof->curvdn_sensor - g_wof->idc_vdn;
+}
 
 /**
  * core_powered_on
@@ -1026,5 +1054,11 @@ int32_t calculate_multiplier( int32_t i_temp )
                       (int32_t)G_wof_iddq_mult_table[mult_idx+1][1]);
 }
 
-
-
+void read_sensor_data( void )
+{
+    // Read out necessary Sensor data for WOF calculation
+    g_wof->curvdd_sensor = getSensorByGsid(CURVDD)->sample;
+    g_wof->curvdn_sensor = getSensorByGsid(CURVDN)->sample;
+    g_wof->voltvddsense_sensor = getSensorByGsid(VOLTVDDSENSE)->sample;
+    g_wof->tempnest_sensor = getSensorByGsid(TEMPNEST)->sample;
+}

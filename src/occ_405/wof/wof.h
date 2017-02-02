@@ -81,21 +81,31 @@ typedef struct
     // Number of cores on per quad
     uint8_t cores_on_per_quad[MAX_NUM_QUADS];
     // The most recently read value in the sensor VOLTVDDSENSE
-    uint32_t volt_vdd_sense;
+    uint32_t voltvddsense_sensor;
     // The most recently read value in the sensor TEMPPROCTHRMCy where y is core num
     uint16_t tempprocthrmc[MAX_NUM_CORES];
     // The most recently read value in the sensor TEMPNEST
-    uint16_t tempnest_sense;
+    uint16_t tempnest_sensor;
     // The most recently read value in the sensor TEMPQx where x is the quad num
     uint16_t tempq[MAX_NUM_QUADS];
+    // The most recently read value in the sensor CURVDD
+    uint16_t curvdd_sensor;
+    // The most recently read value in the sensor CURVDN
+    uint16_t curvdn_sensor;
     // Array to hold the current 1-byte pstate values read from SRAM. 0xFF=off
     uint8_t  quad_x_pstates[MAX_NUM_QUADS];
     // Bit vector to hold the ivrm states of the quads. 0=BYPASS, 1=REGULATION
     uint8_t  quad_ivrm_states;
     // Contains the estimated core leakage based on temp, voltage, and vpd-leak
     uint32_t idc_vdd;
+    // Contains the estimated nest leakage based on temp, voltage and vpd-leak
+    uint32_t idc_vdn;
     // Contains the leakage current for quads
     uint32_t idc_quad;
+    // Contains the AC component of the workload for the core
+    uint32_t iac_vdd;
+    // Contains the AC component of the workload for the nest
+    uint32_t iac_vdn;
     // Contains the index used for interpolation in the ALL_CORES_OFF_ISO calc
     uint8_t voltage_idx;
     // Contains the final calculated value of ALL_CORES_OFF_ISO
@@ -129,6 +139,8 @@ typedef struct
     uint32_t tvpd_leak_on;
     // tvpd leak to use when performing cache calculations
     uint32_t tvpd_leak_cache;
+    // tvpd leak used for nest leakage calculations
+    uint32_t tvpd_leak_nest;
     // Contains the most recently read value from SRAM for Requested active quads
     uint8_t req_active_quad_update;
     // Contains the previous value read from shared SRAM for requested active quads
@@ -196,15 +208,22 @@ void calculate_core_voltage( void );
 
 void calculate_core_leakage( void );
 
+void calculate_nest_leakage( void );
+
+inline void calculate_AC_currents( void );
+
 inline bool core_powered_on( uint8_t i_core_num );
 
 uint8_t num_cores_on_in_quad( uint8_t i_quad_num );
 
 inline int32_t interpolate_linear( int32_t i_X,
-                             int32_t i_x1,
-                             int32_t i_x2,
-                             int32_t i_y1,
-                             int32_t i_y2 );
+                                   int32_t i_x1,
+                                   int32_t i_x2,
+                                   int32_t i_y1,
+                                   int32_t i_y2 );
 
 int32_t calculate_multiplier( int32_t i_temp );
+
+void read_sensor_data( void );
+
 #endif
