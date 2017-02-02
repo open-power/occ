@@ -178,6 +178,7 @@ errlHndl_t SMGR_standby_to_observation()
                      ERRL_CALLOUT_TYPE_COMPONENT_ID,
                      ERRL_COMPONENT_ID_FIRMWARE,
                      ERRL_CALLOUT_PRIORITY_HIGH);
+
     }
     return l_errlHndl;
 }
@@ -249,7 +250,12 @@ errlHndl_t SMGR_observation_to_active()
             0,                               //Userdata1
             0                                //Userdata2
             );
-        // TODO now: REQUEST_RESET?
+
+        // Callout firmware
+        addCalloutToErrl(l_errlHndl,
+                 ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                 ERRL_COMPONENT_ID_FIRMWARE,
+                 ERRL_CALLOUT_PRIORITY_HIGH);
     }
     else if ( G_clip_update_parms_ptr->msg_cb.rc != PGPE_RC_SUCCESS ) // IPC task completed with errors
     {
@@ -275,7 +281,12 @@ errlHndl_t SMGR_observation_to_active()
             G_clip_update_parms_ptr->msg_cb.rc,   //Userdata1
             0                                     //Userdata2
             );
-        // TODO now: REQUEST_RESET?
+
+        // Callout firmware
+        addCalloutToErrl(l_errlHndl,
+                 ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                 ERRL_COMPONENT_ID_FIRMWARE,
+                 ERRL_CALLOUT_PRIORITY_HIGH);
     }
 
     else // Clips wide opened with no errors, enable Pstates on PGPE
@@ -392,6 +403,7 @@ errlHndl_t SMGR_observation_to_active()
                  ERRL_CALLOUT_TYPE_COMPONENT_ID,
                  ERRL_COMPONENT_ID_FIRMWARE,
                  ERRL_CALLOUT_PRIORITY_HIGH);
+
     }
     return l_errlHndl;
 }
@@ -631,7 +643,30 @@ errlHndl_t SMGR_set_state(OCC_STATE i_new_state)
         if(G_smgr_state_trans_count == jj)
         {
             TRAC_ERR("No transition (or NULL) found for the state change");
-            l_transResult = NULL;
+
+            /* @
+             * @errortype
+             * @moduleid    MAIN_STATE_TRANSITION_MID
+             * @reasoncode  INTERNAL_FAILURE
+             * @userdata1   G_occ_internal_state
+             * @userdata2   i_new_state
+             * @userdata4   ERC_SMGR_NO_VALID_STATE_TRANSITION_CALL
+             * @devdesc     no valid state transition routine found
+             */
+            l_transResult = createErrl(MAIN_STATE_TRANSITION_MID,                //modId
+                                       INTERNAL_FAILURE,                         //reasoncode
+                                       ERC_SMGR_NO_VALID_STATE_TRANSITION_CALL,  //Extended reason code
+                                       ERRL_SEV_UNRECOVERABLE,                   //Severity
+                                       NULL,                                     //Trace Buf
+                                       DEFAULT_TRACE_SIZE,                       //Trace Size
+                                       G_occ_internal_state,                     //userdata1
+                                       i_new_state);                             //userdata2
+
+            addCalloutToErrl(l_transResult,
+                             ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                             ERRL_COMPONENT_ID_FIRMWARE,
+                             ERRL_CALLOUT_PRIORITY_HIGH);
+
             break;
         }
 

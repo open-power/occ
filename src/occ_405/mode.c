@@ -207,7 +207,29 @@ errlHndl_t SMGR_set_mode( const OCC_MODE i_mode )
                      if(G_smgr_mode_trans_count == jj)
                      {
                          TRAC_ERR("No transition (or NULL) found for the mode change\n");
-                         l_errlHndl = NULL;  //TODO: Create Error
+
+                         /* @
+                          * @errortype
+                          * @moduleid    MAIN_MODE_TRANSITION_MID
+                          * @reasoncode  INTERNAL_FAILURE
+                          * @userdata1   G_occ_internal_mode
+                          * @userdata2   l_mode
+                          * @userdata4   ERC_SMGR_NO_VALID_MODE_TRANSITION_CALL
+                          * @devdesc     no valid state transition routine found
+                          */
+                         l_errlHndl = createErrl(MAIN_MODE_TRANSITION_MID,                 //modId
+                                                 INTERNAL_FAILURE,                         //reasoncode
+                                                 ERC_SMGR_NO_VALID_MODE_TRANSITION_CALL,   //Extended reason code
+                                                 ERRL_SEV_UNRECOVERABLE,                   //Severity
+                                                 NULL,                                     //Trace Buf
+                                                 DEFAULT_TRACE_SIZE,                       //Trace Size
+                                                 G_occ_internal_mode,                      //userdata1
+                                                 l_mode);                                  //userdata2
+
+                         addCalloutToErrl(l_errlHndl,
+                                          ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                                          ERRL_COMPONENT_ID_FIRMWARE,
+                                          ERRL_CALLOUT_PRIORITY_HIGH);
                          break;
                      }
 

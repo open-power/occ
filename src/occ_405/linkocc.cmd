@@ -718,10 +718,8 @@ SECTIONS
     . = __CUR_COUNTER__;
 
     ////////////////////////////////
-    //  TODO:     Previously, we were able to reclaim this space
-    //            by loading applets over init data. The init data
-    //            takes up around 6K. It would be good to figure 
-    //            out what to do with it to regain the space.
+    //            The init data,
+    //            takes up around 6K.
     ////////////////////////////////
     //__CUR_COUNTER__ = .;
     //INIT_SECTION_BASE = 0xfffbf000;

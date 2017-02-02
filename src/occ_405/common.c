@@ -49,7 +49,9 @@ void task_misc_405_checks(task_t *i_self)
     }
 
     // Check for checkstops
-/* TEMP -- NO MORE PORE / check_stop field no longer exists */
+/* RTC 168529
+    TODO: replace PORE code with watchdog checking for GPE0 and GPE1
+          and check_stop field no longer exists */
 #if 0
     pore_status_t l_gpe0_status;
 

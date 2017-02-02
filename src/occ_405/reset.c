@@ -74,9 +74,6 @@ bool isSafeStateRequested(void)
 // End Function Specification
 void reset_state_request(uint8_t i_request)
 {
-  //TODO:  This needs to be changed so that G_reset_state operations are
-  // atomic.
-
   switch(i_request)
   {
     case RESET_REQUESTED_DUE_TO_ERROR:
@@ -102,8 +99,7 @@ void reset_state_request(uint8_t i_request)
 
         // Post the semaphore to wakeup the thread that
         // will put us into SAFE state.
-// TEMP -- THIS THREAD ISN"T ACTUALLY RUNNING IN PHASE1
-//        ssx_semaphore_post(&G_dcomThreadWakeupSem);
+        ssx_semaphore_post(&G_dcomThreadWakeupSem);
 
         // Set RTL Flags here too, depending how urgent it is that we stop
         // running tasks.
@@ -119,7 +115,6 @@ void reset_state_request(uint8_t i_request)
         // May need to add counter if multiple places request nominal
         G_reset_state = NOMINAL_REQUESTED_DUE_TO_ERROR;
 
-        //TODO:  Will need to set some flag or event here
       }
       break;
 
@@ -131,7 +126,6 @@ void reset_state_request(uint8_t i_request)
         // May need to add counter check if multiple places request nominal
         G_reset_state = RESET_NOT_REQUESTED;
 
-        //TODO:  Will need to clear some flag or event here
       }
       break;
 

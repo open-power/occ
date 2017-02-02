@@ -193,7 +193,8 @@ void check_runtime_environment(void)
  */
 void pmc_hw_error_isr(void *private, SsxIrqId irq, int priority)
 {
-    // TEMP / TODO -- Unused var
+    // TODO: RTC 134619; enable Interrupt handlers for HW errors
+    //       --  uncomment currently unused vars upon implementation
     //errlHndl_t  l_err;
     //pmc_ffdc_data_t l_pmc_ffdc;
     SsxMachineContext ctx;
@@ -221,7 +222,7 @@ void pmc_hw_error_isr(void *private, SsxIrqId irq, int priority)
      * @devdesc    Failure detected in processor
      *             power management controller (PMC)
      */
-/* TEMP NO MORE PMC
+/* TEMP NO MORE PMC - RTC 161456
     l_err = createErrl( PMC_HW_ERROR_ISR,          // i_modId,
                         PMC_FAILURE,               // i_reasonCode,
                         OCC_NO_EXTENDED_RC,
@@ -330,7 +331,7 @@ void occ_irq_setup()
 
 
         // ------------- PMC Error IRQ Setup ------------------
-/* TEMP -- IS THIS NO LONGER A THING IN P9??
+/* TODO - RTC: 134619 -- IS THIS NO LONGER A THING IN P9??
 
         // Disable the IRQ while we work on it
         ssx_irq_disable(OCCHW_IRQ_PMC_ERROR);
@@ -359,7 +360,7 @@ void occ_irq_setup()
         //enable the IRQ
         ssx_irq_status_clear(OCCHW_IRQ_PMC_ERROR);
         ssx_irq_enable(OCCHW_IRQ_PMC_ERROR);
-END TEMP */
+END TODO */
     }while(0);
 
     if(l_rc)
@@ -1315,7 +1316,6 @@ void mainThrdTimerCallback(void * i_argPtr)
                                       0);                           //userdata2
 
         // Commit Error
-        // TEMP - NO RESET YET
         REQUEST_RESET(l_err);
     }
 }
@@ -1522,7 +1522,7 @@ void Main_thread_routine(void *private)
         dcache_flush(g_trac_imp_buffer, TRACE_BUFFER_SIZE);
         dcache_flush(g_trac_err_buffer, TRACE_BUFFER_SIZE);
 
-/* TEMP -- FIR DATA IS NOT SUPPORTED IN PHASE1
+/* RTC 130203 -- FIR DATA IS NOT SUPPORTED IN PHASE1
         static bool L_fir_collection_completed = FALSE;
         // Look for FIR collection flag and status
         if (G_fir_collection_required && !L_fir_collection_completed)
@@ -1712,7 +1712,7 @@ int main(int argc, char **argv)
 
 #endif /* PPC405_MMU_SUPPORT */
 
-/* TEMP -- NO FIR SUPPORT IN PHASE1
+/* RTC 130203: TEMP -- NO FIR SUPPORT IN PHASE1
     // Setup the TLB for writing to the FIR parms section
     l_ssxrc = ppc405_mmu_map(FIR_PARMS_SECTION_BASE_ADDRESS,
                              FIR_PARMS_SECTION_BASE_ADDRESS,
@@ -1776,10 +1776,6 @@ int main(int argc, char **argv)
         // Data is in Mhz upon return and needs to be converted to Hz and then
         // quartered.
         l_tb_freq_hz = G_nest_frequency_mhz * (1000000 / 4);
-
-        // @TODO: this parameter should be passsed to all the GPEs/CMEs/etc
-        // Can be stored in GPE accessible SRAM areas.
-        // The whole OCC complex should be running at the same nest frequency (proc_freq/4).
     }
     else
     {
@@ -1866,7 +1862,7 @@ int main(int argc, char **argv)
                            l_ssxrc,
                            l_occ_int_type);
 /*
-    //TEMP -- NO FIR SUPPORT
+    //RTC 130203: TEMP -- NO FIR SUPPORT
     if (l_homer_version >= HOMER_VERSION_3)
     {
         // Get the FIR Master indicator

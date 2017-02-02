@@ -368,8 +368,6 @@ void dcom_error_check( const dcom_error_type_t i_error_type, const bool i_clear_
             // Commit log
             commitErrl( &l_errl );
 
-            // Call request nominal macro to change state
-            REQUEST_NOMINAL();
         }
         else if ( *l_count_ptr == DCOM_1S_GAP )
         {
