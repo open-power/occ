@@ -47,10 +47,6 @@ GPE_BUFFER(CoreData G_core_data[MAX_NUM_FW_CORES+NUM_CORE_DATA_DOUBLE_BUF+NUM_CO
 // Pointers to the actual core data buffers
 CoreData * G_core_data_ptrs[MAX_NUM_FW_CORES] = {0};
 
-// TEMP / TODO -- Only needed until we get the HWP for getting CORE_STATUS
-// Used to get GPE0 to do a getscom of the Core Config Status Reg
-GPE_BUFFER(ipc_scom_op_t G_core_stat_scom_op);
-
 //Global structures for gpe get core data parms
 GPE_BUFFER(ipc_core_data_parms_t G_low_cores_data_parms);
 GPE_BUFFER(ipc_core_data_parms_t G_high_cores_data_parms);
@@ -131,7 +127,6 @@ void task_core_data( task_t * i_task )
     errlHndl_t  l_err = NULL;  // Error handler
     int         l_rc = 0;      // Return code
     CoreData  * l_temp = NULL; // Used for pointer swapping
-    const trace_descriptor_array_t *l_trace = NULL; // Temporary trace descriptor
     bulk_core_data_task_t * l_bulk_core_data_ptr = (bulk_core_data_task_t *)i_task->data_ptr;
     ipc_core_data_parms_t * l_parms = (ipc_core_data_parms_t*)(l_bulk_core_data_ptr->gpe_req.cmd_data);
 
@@ -283,7 +278,7 @@ void task_core_data( task_t * i_task )
                         SSX_GENERIC_FAILURE,                //reasoncode
                         OCC_NO_EXTENDED_RC,                 //Extended reason code
                         ERRL_SEV_PREDICTIVE,                //Severity
-                        l_trace, //TODO: create l_trace     //Trace Buf
+                        NULL,                               //Trace Buf
                         DEFAULT_TRACE_SIZE,                 //Trace Size
                         l_rc,                               //userdata1
                         0                                   //userdata2
@@ -312,7 +307,6 @@ void proc_core_init( void )
 {
     errlHndl_t  l_err = NULL;    // Error handler
     int         l_rc = 0;        // Return code
-    const trace_descriptor_array_t *l_trace = NULL; // Temporary trace descriptor
     uint8_t     i = 0;
 
     // Setup the array of CoreData pointers
@@ -364,7 +358,7 @@ void proc_core_init( void )
                     SSX_GENERIC_FAILURE,                     //Reasoncode
                     ERC_LOW_CORE_GPE_REQUEST_CREATE_FAILURE, //Extended reason code
                     ERRL_SEV_PREDICTIVE,                     //Severity
-                    l_trace,                                 //Trace Buf
+                    NULL,                                    //Trace Buf
                     DEFAULT_TRACE_SIZE,                      //Trace Size
                     l_rc,                                    //Userdata1
                     0                                        //Userdata2
@@ -402,9 +396,9 @@ void proc_core_init( void )
                                 SSX_GENERIC_FAILURE,                      //Reasoncode
                                 ERC_HIGH_CORE_GPE_REQUEST_CREATE_FAILURE, //Extended reason code
                                 ERRL_SEV_PREDICTIVE,                      //Severity
-                                l_trace,                                  //Trace Buf
+                                NULL,                                     //Trace Buf
                                 DEFAULT_TRACE_SIZE,                       //Trace Size
-                                l_rc,                                       //Userdata1
+                                l_rc,                                     //Userdata1
                                 0                                         //Userdata2
             );
 
@@ -440,7 +434,7 @@ void proc_core_init( void )
                                 SSX_GENERIC_FAILURE,                      //Reasoncode
                                 ERC_24X7_GPE_CREATE_FAILURE,              //Extended reason code
                                 ERRL_SEV_PREDICTIVE,                      //Severity
-                                l_trace,                                  //Trace Buf
+                                NULL,                                     //Trace Buf
                                 DEFAULT_TRACE_SIZE,                       //Trace Size
                                 l_rc,                                     //Userdata1
                                 0                                         //Userdata2
@@ -721,6 +715,9 @@ void task_24x7(task_t * i_task)
 
 
 #ifdef PROC_DEBUG
+//uncomment to dump hex strings under simics. slows down simulation significantly
+//#define PROC_DEBUG_DUMP
+
 // Function Specification
 //
 // Name: print_core_data_sensors
@@ -746,12 +743,15 @@ void print_core_data_sensors(uint8_t core)
         PROC_DBG("Sensor Cache   reading: 0x%04X [Valid:%d][Spare:%d][Trip:%d]",
                  l_core_data->dts.cache.fields.reading, l_core_data->dts.cache.fields.valid,
                  l_core_data->dts.cache.fields.spare, l_core_data->dts.cache.fields.thermal_trip);
-        // TODO: Commented these out b/c they take too long to run in task.
-        //dumpHexString(&l_core_data->sensors_tod, sizeof(l_core_data->sensors_tod), "Sensor TOD");
-        //dumpHexString(&l_core_data->sensors_v0, sizeof(l_core_data->sensors_v0), "Sensor VO");
-        //dumpHexString(&l_core_data->sensors_v1, sizeof(l_core_data->sensors_v1), "Sensor V1");
-        //dumpHexString(&l_core_data->sensors_v8, sizeof(l_core_data->sensors_v8), "Sensor V8");
-        //dumpHexString(&l_core_data->sensors_v9, sizeof(l_core_data->sensors_v9), "Sensor V9");
+
+#ifdef PROC_DEBUG_DUMP
+        dumpHexString(&l_core_data->sensors_tod, sizeof(l_core_data->sensors_tod), "Sensor TOD");
+        dumpHexString(&l_core_data->sensors_v0, sizeof(l_core_data->sensors_v0), "Sensor VO");
+        dumpHexString(&l_core_data->sensors_v1, sizeof(l_core_data->sensors_v1), "Sensor V1");
+        dumpHexString(&l_core_data->sensors_v8, sizeof(l_core_data->sensors_v8), "Sensor V8");
+        dumpHexString(&l_core_data->sensors_v9, sizeof(l_core_data->sensors_v9), "Sensor V9");
+#endif
+
     }
     else
     {
@@ -776,17 +776,19 @@ void print_core_status(uint8_t core)
     {
         PROC_DBG("-------------------------");
         PROC_DBG("Core [%x] status", core);
-        // TODO: Commented these out b/c they take too long to run in task.
-        //dumpHexString(&l_core_data->core_tod, sizeof(l_core_data->core_tod), "Core TOD");
-        //dumpHexString(&l_core_data->core_raw_cycles, sizeof(l_core_data->core_raw_cycles), "Core Raw Cycles");
-        //dumpHexString(&l_core_data->core_run_cycles, sizeof(l_core_data->core_run_cycles), "Run Cycles");
-        //dumpHexString(&l_core_data->core_dispatch, sizeof(l_core_data->core_dispatch), "Core Dispatch");
-        //dumpHexString(&l_core_data->core_completion, sizeof(l_core_data->core_completion), "Core Completion");
-        //dumpHexString(&l_core_data->core_workrate, sizeof(l_core_data->core_workrate), "Core Workrate");
-        //dumpHexString(&l_core_data->core_mem_hler_a, sizeof(l_core_data->core_mem_hler_a), "Mem A");
-        //dumpHexString(&l_core_data->core_mem_hler_b, sizeof(l_core_data->core_mem_hler_b), "Mem B");
-        //dumpHexString(&l_core_data->mem_tod, sizeof(l_core_data->mem_tod), "Mem TOD");
-        //dumpHexString(&l_core_data->mem_raw_cycles, sizeof(l_core_data->mem_raw_cycles), "Mem Raw Cycles");
+
+#ifdef PROC_DEBUG_DUMP
+        dumpHexString(&l_core_data->core_tod, sizeof(l_core_data->core_tod), "Core TOD");
+        dumpHexString(&l_core_data->core_raw_cycles, sizeof(l_core_data->core_raw_cycles), "Core Raw Cycles");
+        dumpHexString(&l_core_data->core_run_cycles, sizeof(l_core_data->core_run_cycles), "Run Cycles");
+        dumpHexString(&l_core_data->core_dispatch, sizeof(l_core_data->core_dispatch), "Core Dispatch");
+        dumpHexString(&l_core_data->core_completion, sizeof(l_core_data->core_completion), "Core Completion");
+        dumpHexString(&l_core_data->core_workrate, sizeof(l_core_data->core_workrate), "Core Workrate");
+        dumpHexString(&l_core_data->core_mem_hler_a, sizeof(l_core_data->core_mem_hler_a), "Mem A");
+        dumpHexString(&l_core_data->core_mem_hler_b, sizeof(l_core_data->core_mem_hler_b), "Mem B");
+        dumpHexString(&l_core_data->mem_tod, sizeof(l_core_data->mem_tod), "Mem TOD");
+        dumpHexString(&l_core_data->mem_raw_cycles, sizeof(l_core_data->mem_raw_cycles), "Mem Raw Cycles");
+#endif
     }
     else
     {

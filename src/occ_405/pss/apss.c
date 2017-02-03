@@ -41,9 +41,11 @@
 // Threshold for calling out the redundant APSS
 #define MAX_BACKUP_FAILURES  8
 
+// G_gpio_config: configuration for APSS GPIO pins
 // Configure both GPIOs (directoin/drive/interrupts): All Input, All 1's, No Interrupts
 const apssGpioConfigStruct_t G_gpio_config[2] = { {0x00, 0xFF, 0x00}, {0x00, 0xFF, 0x00} };
 
+// G_apss_mode_config: system parms needed to select correct mode command options
 // Configure streaming of: APSS Mode, 16 ADCs, 2 GPIOs
 const apssModeConfigStruct_t G_apss_mode_config = { APSS_MODE_COMPOSITE, 16, 2 };
 
@@ -84,7 +86,8 @@ volatile bool G_ApssPwrMeasCompleted = FALSE;
 //
 // Name: dumpHexString
 //
-// Description: TODO Add description
+// Description: translates passed binary data into hexadecimal ASCII formatted
+//              readable text, and dumps it to simics stdio console.
 //
 // End Function Specification
 #if ( (!defined(NO_TRAC_STRINGS)) && defined(TRAC_TO_SIMICS) )
@@ -892,9 +895,8 @@ bool apss_gpio_get(uint8_t i_pin_number, uint8_t *o_pin_value)
         // Check if G_dcom_slv_inbox_rx is valid.
         // The default value is all 0, so check if it's no-zero
         bool l_dcom_data_valid = FALSE;
-// TEMP -- NO DCOM IN PHASE1
-/*
         int i=0;
+
         for(;i<sizeof(G_dcom_slv_inbox_rx);i++)
         {
             if( ((char*)&G_dcom_slv_inbox_rx)[i] != 0 )
@@ -903,7 +905,7 @@ bool apss_gpio_get(uint8_t i_pin_number, uint8_t *o_pin_value)
               break;
             }
         }
-*/
+
         if( l_dcom_data_valid == TRUE)
         {
             uint8_t l_gpio_port = i_pin_number/NUM_OF_APSS_PINS_PER_GPIO_PORT;
@@ -984,9 +986,6 @@ errlHndl_t initialize_apss(void)
 
         TRAC_INFO("initialize_apss: GPE_apss_initialize_gpio completed w/rc=0x%08x",
                   l_request.request.completion_state);
-
-        //TODO: The ipc command will return "SUCCESS" even if an internal PPE failure
-        //      occurs.  Make sure that checking for rc as seen below, is good enough.
 
         // Only continue if initializaton completed without any errors.
         if ((ASYNC_REQUEST_STATE_COMPLETE == l_request.request.completion_state) &&

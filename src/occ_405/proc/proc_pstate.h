@@ -125,8 +125,7 @@ extern opal_static_table_t G_opal_static_table;
 Pstate proc_freq2pstate(uint32_t i_freq_mhz);
 
 // Helper function to translate from Pstate to nearest Frequency
-// TEMP -- Pstate no longer exists
-//uint32_t proc_pstate2freq(Pstate i_pstate);
+uint32_t proc_pstate2freq(Pstate i_pstate);
 
 // Helper function to determine if we are in HW Pstate mode
 inline bool proc_is_hwpstate_enabled(void);

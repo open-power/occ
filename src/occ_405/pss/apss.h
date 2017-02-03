@@ -67,12 +67,6 @@ struct apssPwrMeasStruct
 } __attribute__ ((__packed__));
 typedef struct apssPwrMeasStruct apssPwrMeasStruct_t;
 
-// @TODO - Does G_gpio_config and G_apss_mode_config need to be used outside of APSS?  If not I will remove from .h
-// G_gpio_config: configuration for APSS GPIO pins (default all input, all 1's, not int)
-extern const apssGpioConfigStruct_t G_gpio_config[NUM_OF_APSS_GPIO_PORTS];
-// G_apss_mode_config: system parms needed to select correct mode command options
-extern const apssModeConfigStruct_t G_apss_mode_config;
-
 // G_apss_pwr_meas: power, temp and GPIO readings that OCC gathers from APSS every tick
 extern apssPwrMeasStruct_t G_apss_pwr_meas;
 
@@ -90,7 +84,7 @@ void task_apss_start_pwr_meas(task_t *i_self);
 void task_apss_continue_pwr_meas(task_t *i_self);
 void task_apss_complete_pwr_meas(task_t *i_self);
 
-void apss_test_pwr_meas(); // @temp cc - used to test measurements
+void apss_test_pwr_meas(); // used to test measurements
 void reformat_meas_data();
 bool apss_gpio_get(uint8_t i_pin_number, uint8_t *o_pin_value);
 errlHndl_t initialize_apss(void);
