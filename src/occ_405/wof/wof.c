@@ -45,7 +45,7 @@ extern GpeRequest G_wof_vfrt_req;
 extern uint32_t   G_pgpe_shared_sram_address;
 extern uint32_t   G_pgpe_pstate_table_address;
 extern uint32_t   G_pgpe_pstate_table_sz;
-
+extern uint32_t   G_nest_frequency_mhz;
 //******************************************************************************
 // Globals
 //******************************************************************************
@@ -933,6 +933,191 @@ void calculate_nest_leakage( void )
     g_wof->idc_vdn = (G_oppb.iddq.ivdn*nest_mult) >> 10;
 }
 
+
+/**
+ * calculate_effective_capacitance
+ *
+ * Description: Generic function to perform the effective capacitance
+ *              calculations.
+ *              C_eff = I / (V^1.3 * F)
+ *
+ *              I is the AC component of Idd in 0.01 Amps (or10 mA)
+ *              V is the silicon voltage in 100 uV
+ *              F is the frequency in MHz
+ *
+ *              Note: Caller must ensure they check for a 0 return value
+ *                    and disable wof if that is the case
+ *
+ * Param[in]: i_iAC - the AC component
+ * Param[in]: i_voltage - the voltage component in 100uV
+ * Param[in]: i_frequency - the frequency component
+ *
+ * Return: The calculated effective capacitance
+ */
+uint32_t calculate_effective_capacitance( uint32_t i_iAC,
+                                          uint32_t i_voltage,
+                                          uint32_t i_frequency )
+{
+
+    // Prevent divide by zero
+    if( i_frequency == 0 )
+    {
+        // Return 0 causing caller to disable wof.
+        return 0;
+    }
+
+    // Compute V^1.3 using a best-fit equation
+    // (V^1.3) = (21374 * (voltage in 100uV) - 50615296)>>10
+    uint32_t v_exp_1_dot_3 = (21374 * i_voltage - 50615296)>>10;
+
+    // Compute I / (V^1.3)
+    uint32_t I = i_iAC << 14; // * 16384
+
+    // Prevent divide by zero
+    if( v_exp_1_dot_3 == 0 )
+    {
+        // Return 0 causing caller to disable wof.
+        return 0;
+    }
+
+    uint32_t c_eff = (I / v_exp_1_dot_3);
+    c_eff = c_eff << 14; // * 16384
+
+    // Divide by frequency and return the final value.
+    // (I / (V^1.3 * F)) == I / V^1.3 /F
+    return c_eff / i_frequency;
+
+}
+
+
+
+/**
+ * calculate_ceff_ratio_vdn
+ *
+ * Description: Function to calculate the effective capacitance ratio
+ *              for the nest
+ */
+void calculate_ceff_ratio_vdn( void )
+{
+    //TODO Read iac_tdp_vdn(@turbo) from OCCPstateParmBlock struct
+    g_wof->iac_tdp_vdn = 0;
+
+    // Calculate Ceff_tdp_vdn
+    // iac_tdp_vdn / (VOLTVDN^1.3 * Fnest)
+    g_wof->ceff_tdp_vdn =
+                calculate_effective_capacitance( g_wof->iac_tdp_vdn,
+                                                 g_wof->voltvdn_sensor,
+                                                 G_nest_frequency_mhz );
+
+    // Calculate ceff_vdn
+    // iac_vdn/ (VOLTVDN^1.3 * Fnest)
+    g_wof->ceff_vdn =
+                calculate_effective_capacitance( g_wof->iac_vdn,
+                                                 g_wof->voltvdn_sensor,
+                                                 G_nest_frequency_mhz );
+
+    // Prevent divide by zero
+    if( g_wof->ceff_tdp_vdn == 0 )
+    {
+        /*
+         * @errortype
+         * @moduleid        CALC_CEFF_RATIO_VDN
+         * @reasoncode      DIVIDE_BY_ZERO_ERROR
+         * @userdata1       0
+         * @userdata4       OCC_NO_EXTENDED_RC
+         * @devdesc         Divide by zero error on ceff_vdn / ceff_tdp_vdn
+         */
+        errlHndl_t l_errl = createErrl(
+                        CALC_CEFF_RATIO_VDN,
+                        DIVIDE_BY_ZERO_ERROR,
+                        OCC_NO_EXTENDED_RC,
+                        ERRL_SEV_PREDICTIVE,
+                        NULL,
+                        DEFAULT_TRACE_SIZE,
+                        0,
+                        0 );
+
+        commitErrl( &l_errl );
+
+        // Return 0
+        g_wof->ceff_ratio_vdn = 0;
+
+        //TODO: RTC 166301 - call new disable_wof function
+    }
+    else
+    {
+        g_wof->ceff_ratio_vdn = g_wof->ceff_vdn / g_wof->ceff_tdp_vdn;
+    }
+}
+
+/**
+ *  calculate_ceff_ratio_vdd
+ *
+ *  Description: Function to calculate the effective capacitance ratio
+ *               for the core
+ */
+void calculate_ceff_ratio_vdd( void )
+{
+    //TODO read iac_tdp_vdd from OCCPstateParmBlock struct
+    g_wof->iac_tdp_vdd = 0;
+
+    // Get Vturbo and convert to 100uV (mV -> 100uV) = mV*10
+    // Multiply by Vratio
+    uint32_t V = (G_oppb.operating_points[TURBO].vdd_mv*10) * g_wof->v_ratio;
+
+    // Get Fturbo and multiply by Fratio
+    uint32_t F = G_oppb.operating_points[TURBO].frequency_mhz * g_wof->f_ratio;
+
+    // Calculate ceff_tdp_vdd
+    // iac_tdp_vdd / ((Vturbo*Vratio)^1.3 * (Fturbo*Fratio))
+    g_wof->ceff_tdp_vdd =
+                calculate_effective_capacitance( g_wof->iac_tdp_vdd,
+                                                 V,
+                                                 F );
+
+    // Calculate ceff_vdd
+    // iac_vdd / (Vclip^1.3 * Fclip)
+    g_wof->ceff_vdd =
+                calculate_effective_capacitance( g_wof->iac_vdd,
+                                                 g_wof->v_clip,
+                                                 g_wof->f_clip );
+
+    // Prevent divide by zero
+    if( g_wof->ceff_tdp_vdd == 0 )
+    {
+        /*
+         * @errortype
+         * @moduleid        CALC_CEFF_RATIO_VDD
+         * @reasoncode      DIVIDE_BY_ZERO_ERROR
+         * @userdata1       0
+         * @userdata4       OCC_NO_EXTENDED_RC
+         * @devdesc         Divide by zero error on ceff_vdd / ceff_tdp_vdd
+         */
+        errlHndl_t l_errl = createErrl(
+                        CALC_CEFF_RATIO_VDD,
+                        DIVIDE_BY_ZERO_ERROR,
+                        OCC_NO_EXTENDED_RC,
+                        ERRL_SEV_PREDICTIVE,
+                        NULL,
+                        DEFAULT_TRACE_SIZE,
+                        0,
+                        0 );
+
+        commitErrl( &l_errl );
+
+        // Return 0
+        g_wof->ceff_ratio_vdd = 0;
+
+        //TODO: RTC 166301 - call new disable_wof function
+    }
+    else
+    {
+        g_wof->ceff_ratio_vdd = g_wof->ceff_vdd / g_wof->ceff_tdp_vdd;
+    }
+}
+
+
+
 /**
  *  calculate_AC_currents
  *
@@ -1054,11 +1239,18 @@ int32_t calculate_multiplier( int32_t i_temp )
                       (int32_t)G_wof_iddq_mult_table[mult_idx+1][1]);
 }
 
+/**
+ * read_sensor_data
+ *
+ * Description: One time place to read out all the sensors needed
+ *              for wof calculations. First thing wof_main does.
+ */
 void read_sensor_data( void )
 {
     // Read out necessary Sensor data for WOF calculation
-    g_wof->curvdd_sensor = getSensorByGsid(CURVDD)->sample;
-    g_wof->curvdn_sensor = getSensorByGsid(CURVDN)->sample;
-    g_wof->voltvddsense_sensor = getSensorByGsid(VOLTVDDSENSE)->sample;
-    g_wof->tempnest_sensor = getSensorByGsid(TEMPNEST)->sample;
+    g_wof->curvdd_sensor        = getSensorByGsid(CURVDD)->sample;
+    g_wof->curvdn_sensor        = getSensorByGsid(CURVDN)->sample;
+    g_wof->voltvddsense_sensor  = getSensorByGsid(VOLTVDDSENSE)->sample;
+    g_wof->tempnest_sensor      = getSensorByGsid(TEMPNEST)->sample;
+    g_wof->voltvdn_sensor       = getSensorByGsid(VOLTVDN)->sample;
 }

@@ -92,6 +92,8 @@ typedef struct
     uint16_t curvdd_sensor;
     // The most recently read value in the sensor CURVDN
     uint16_t curvdn_sensor;
+    // The most recently read value in the sensor VOLTVDN
+    uint16_t voltvdn_sensor;
     // Array to hold the current 1-byte pstate values read from SRAM. 0xFF=off
     uint8_t  quad_x_pstates[MAX_NUM_QUADS];
     // Bit vector to hold the ivrm states of the quads. 0=BYPASS, 1=REGULATION
@@ -106,6 +108,30 @@ typedef struct
     uint32_t iac_vdd;
     // Contains the AC component of the workload for the nest
     uint32_t iac_vdn;
+    // Contains iac_tdp_vdd(@turbo) read from the pstate parameter block
+    uint32_t iac_tdp_vdd;
+    // Contains iac_tdp_vdn read from the pstate parameter block
+    uint32_t iac_tdp_vdn;
+    // Contains Vratio, read from OCC-PGPE shared SRAM
+    uint32_t v_ratio;
+    // Contains Fratio, read from OCC-PGPE shared SRAM
+    uint32_t f_ratio;
+    // Contains Vclip, read from OCC-PGPE shared SRAM
+    uint32_t v_clip;
+    // Contains Fclip, read from OCC-PGPE shared SRAM
+    uint32_t f_clip;
+    // Contains the calculated effective capacitance for tdp_vdd
+    uint32_t ceff_tdp_vdd;
+    // Contains the calculated effective capacitance for vdd
+    uint32_t ceff_vdd;
+    // Contains the calculated effective capacitance ratio for vdd
+    uint32_t ceff_ratio_vdd;
+    // Contains the calculated effective capacitance for tdp_vdn
+    uint32_t ceff_tdp_vdn;
+    // Contains the calculated effective capacitance for vdn
+    uint32_t ceff_vdn;
+    // Contains the calculated effective capacitance ratio for vdn
+    uint32_t ceff_ratio_vdn;
     // Contains the index used for interpolation in the ALL_CORES_OFF_ISO calc
     uint8_t voltage_idx;
     // Contains the final calculated value of ALL_CORES_OFF_ISO
@@ -210,6 +236,10 @@ void calculate_core_leakage( void );
 
 void calculate_nest_leakage( void );
 
+void calculate_ceff_ratio_vdn( void );
+
+void calculate_ceff_ratio_vdd( void );
+
 inline void calculate_AC_currents( void );
 
 inline bool core_powered_on( uint8_t i_core_num );
@@ -223,6 +253,11 @@ inline int32_t interpolate_linear( int32_t i_X,
                                    int32_t i_y2 );
 
 int32_t calculate_multiplier( int32_t i_temp );
+
+uint32_t calculate_effective_capacitance( uint32_t i_iAC,
+                                          uint32_t i_voltage,
+                                          uint32_t i_frequency );
+
 
 void read_sensor_data( void );
 

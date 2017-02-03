@@ -702,12 +702,18 @@ void read_pgpe_header(void)
         g_amec->wof.vfrt_tbls_main_mem_addr = in32(PGPE_WOF_TBLS_ADDR_PTR);
         g_amec->wof.vfrt_tbls_len           = in32(PGPE_WOF_TBLS_LEN_PTR);
 
+
         MAIN_TRAC_IMP("Read WOF Tables Main Memory Address[0x%08x], Len[0x%08x],"
                       " Active Quads Address[0x%08x]",
                       g_amec->wof.vfrt_tbls_main_mem_addr,
                       g_amec->wof.vfrt_tbls_len,
                       g_amec->wof.active_quads_sram_addr );
 
+        // TODO: RTC 169955 -  Read Vratio, Fratio, Vclip, Fclip from shared SRAM
+        g_amec->wof.v_ratio = 0;
+        g_amec->wof.f_ratio = 0;
+        g_amec->wof.v_clip  = 0;
+        g_amec->wof.f_clip  = 0;
         // Extract important WOF data into global space
         read_wof_header();
 

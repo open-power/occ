@@ -125,6 +125,9 @@ enum occReasonCode
     WOF_VFRT_REQ_FAILURE            = 0xD8,
     INVALID_MAGIC_NUMBER            = 0xDA,
 
+    DIVIDE_BY_ZERO_ERROR            = 0xDB,
+
+
     /// Success!
     OCC_SUCCESS_REASON_CODE         = 0xFF,
 };
