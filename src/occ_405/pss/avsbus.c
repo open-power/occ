@@ -727,7 +727,7 @@ uint16_t avsbus_read_status(const avsbus_type_e i_type)
                      l_trace_type, o2sst_reg, WORD_HIGH(l_status));
             /*
              * @errortype
-             * @moduleid    PSS_MID_AVSBUS_READ
+             * @moduleid    PSS_MID_AVSBUS_READ_STATUS
              * @reasoncode  AVSBUS_ERROR
              * @userdata1   AVS Bus type/bus/rail
              * @userdata2   status
@@ -747,7 +747,7 @@ uint16_t avsbus_read_status(const avsbus_type_e i_type)
                      l_trace_type, o2sst_reg, WORD_HIGH(l_status));
             /*
              * @errortype
-             * @moduleid    PSS_MID_AVSBUS_READ
+             * @moduleid    PSS_MID_AVSBUS_READ_STATUS
              * @reasoncode  AVSBUS_TIMEOUT
              * @userdata1   AVS Bus type/bus/rail
              * @userdata2   status
@@ -782,7 +782,7 @@ uint16_t avsbus_read_status(const avsbus_type_e i_type)
                          l_trace_type, o2srd_reg, WORD_HIGH(value), WORD_HIGH(crc));
                 /*
                  * @errortype
-                 * @moduleid    PSS_MID_AVSBUS_READ
+                 * @moduleid    PSS_MID_AVSBUS_READ_STATUS
                  * @reasoncode  AVSBUS_CRC_ERROR
                  * @userdata1   AVS Bus type/bus/rail
                  * @userdata2   status
@@ -842,7 +842,7 @@ uint16_t avsbus_read_status(const avsbus_type_e i_type)
             G_avsbus_vdd_monitoring = FALSE;
             G_avsbus_vdn_monitoring = FALSE;
             G_vrm_thermal_monitoring = FALSE;
-            errlHndl_t l_err = createErrl(PSS_MID_AVSBUS_READ,
+            errlHndl_t l_err = createErrl(PSS_MID_AVSBUS_READ_STATUS,
                                           rc,
                                           ERC_AVSBUS_STATUS_FAILURE,
                                           ERRL_SEV_PREDICTIVE,

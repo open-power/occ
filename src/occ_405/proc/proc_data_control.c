@@ -110,7 +110,7 @@ void task_core_data_control( task_t * i_task )
              * @reasoncode  PGPE_FAILURE
              * @userdata1   rc
              * @userdata2   clip update task idle?
-             * @userdata4   ERC_PGPE_UNSUCCESSFULL
+             * @userdata4   ERC_PGPE_CLIP_UNSUCCESSFULL
              * @devdesc     pgpe clip update returned an error
              */
             err = createErrl(
@@ -156,7 +156,7 @@ void task_core_data_control( task_t * i_task )
              * @reasoncode  PGPE_FAILURE
              * @userdata1   rc
              * @userdata2   pmcr set task idle?
-             * @userdata4   ERC_PGPE_UNSUCCESSFULL
+             * @userdata4   ERC_PGPE_PMCR_UNSUCCESSFULL
              * @devdesc     pgpe PMCR set returned an error
              */
             err = createErrl(
