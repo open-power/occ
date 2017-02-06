@@ -47,5 +47,9 @@ void amec_health_check_cent_temp(void);
 void amec_health_check_cent_timeout(void);
 void amec_health_check_dimm_temp(void);
 void amec_health_check_dimm_timeout(void);
+void amec_mem_mark_logged(uint8_t i_cent,
+                          uint8_t i_dimm,
+                          uint8_t* i_clog_bitmap,
+                          uint8_t* i_dlog_bitmap);
 
 #endif

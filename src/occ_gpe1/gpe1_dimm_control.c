@@ -146,15 +146,16 @@ void gpe_reset_mem_deadman(ipc_msg_t* cmd, void* arg)
     ipc_async_cmd_t *async_cmd = (ipc_async_cmd_t*)cmd;
     reset_mem_deadman_args_t *args = (reset_mem_deadman_args_t*)async_cmd->cmd_data;
 
-    int mca = args->mca; // Nimbus MCA; mc_pair = mca >>2 and port = mca & 3
-
     args->error.error = 0;
     args->error.ffdc = 0;
 
     do
     {   // read Deadman timer's SCOM Register for specified MCA (MC pair and port numbers)
         // @TODO: uncomment when deadman timer scom registers are definied in simics. RTC: 163713, RTC: 163934
-        //rc = getscom_abs(DEADMAN_TIMER_MCA(mca), &regValue);
+#if 0
+        int mca = args->mca; // Nimbus MCA; mc_pair = mca >>2 and port = mca & 3
+
+        rc = getscom_abs(DEADMAN_TIMER_MCA(mca), &regValue);
         if(rc)
         {
             PK_TRACE("gpe_reset_mem_deadman: Deadman timer read failed"
@@ -172,6 +173,7 @@ void gpe_reset_mem_deadman(ipc_msg_t* cmd, void* arg)
                      mca, DEADMAN_TIMER_MCA(mca), regValue);
 
         }
+#endif
     } while(0);
 
     // send back a response, IPC success even if ffdc/rc are non zeros

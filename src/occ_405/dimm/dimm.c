@@ -44,6 +44,7 @@
 #include "common.h"
 #include "memory.h"
 #include "centaur_data.h"
+#include "amec_health.h"
 
 extern bool G_mem_monitoring_allowed;
 extern memory_control_task_t G_memory_control_task;
@@ -308,7 +309,7 @@ void mark_dimm_failed()
         l_err = createErrl(DIMM_MID_MARK_DIMM_FAILED,
                            DIMM_GPE_FAILURE,
                            ERC_DIMM_COMPLETE_FAILURE,
-                           ERRL_SEV_INFORMATIONAL,
+                           ERRL_SEV_PREDICTIVE,
                            NULL,
                            DEFAULT_TRACE_SIZE,
                            G_dimm_sm_args.error.rc,
@@ -322,6 +323,10 @@ void mark_dimm_failed()
                          ERRL_CALLOUT_TYPE_HUID,
                          G_sysConfigData.dimm_huids[port][dimm],
                          ERRL_CALLOUT_PRIORITY_HIGH);
+        //Mark DIMM as logged so we don't log it again
+        amec_mem_mark_logged(port, dimm,
+                             &G_cent_timeout_logged_bitmap,
+                             &G_dimm_timeout_logged_bitmap.bytes[port]);
         commitErrl(&l_err);
     }
 

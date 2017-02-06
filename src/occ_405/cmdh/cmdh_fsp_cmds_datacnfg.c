@@ -1954,14 +1954,15 @@ errlHndl_t data_store_mem_throt(const cmdh_fsp_cmd_t * i_cmd_ptr,
             memcpy(&l_temp_set, &(l_data_set->min_n_per_mba), sizeof(mem_throt_config_data_t));
 
             // A 0 for any power or N value is an error
+            unsigned int l_index = 0;
             for(l_n_ptr = &l_temp_set.min_n_per_mba; l_n_ptr <= &l_temp_set.nom_mem_power; l_n_ptr++)
             {
                 if(!(*l_n_ptr))
                 {
                     if(MEM_TYPE_NIMBUS ==  G_sysConfigData.mem_type)
                     {
-                        CMDH_TRAC_ERR("data_store_mem_throt: RDIMM Throttle N value is 0!"
-                                      " mc[%d] port[%d]", mc, port);
+                        CMDH_TRAC_ERR("data_store_mem_throt: RDIMM Throttle value[%d] is 0!"
+                                      " mc[%d] port[%d]", l_index, mc, port);
                     }
                     else if(MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type)
                     {
@@ -1971,6 +1972,7 @@ errlHndl_t data_store_mem_throt(const cmdh_fsp_cmd_t * i_cmd_ptr,
                     cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
                     break;
                 }
+                ++l_index;
             }
 
             if(l_err)  // zero N Value?

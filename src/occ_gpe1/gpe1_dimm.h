@@ -44,9 +44,9 @@
 
 #define SCOM_ENGINE_OFFSET(engine) (engine << 12)
 
-// I2C Status Reigster masks
-#define STATUS_ERROR_MASK               0xFE80330000000000
-#define STATUS_ERROR_OR_COMPLETE_MASK   0xFF80330000000000
+// I2C Status Register masks
+#define STATUS_ERROR_MASK               0xFC80000000000000
+#define STATUS_ERROR_OR_COMPLETE_MASK   0xFF80000000000000
 #define STATUS_COMPLETE_MASK            0x0100000000000000
 #define PEEK_ERROR_MASK                 0x00000000FC000000
 #define PEEK_MORE_DATA                  0x0000000002000000

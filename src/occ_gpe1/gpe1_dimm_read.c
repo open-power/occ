@@ -370,10 +370,12 @@ void dimm_initiate_read(ipc_msg_t* cmd, void* arg)
         if ((regValue & STATUS_ERROR_OR_COMPLETE_MASK) == STATUS_COMPLETE_MASK)
         {
             // Status register indicates no errors and last command completed.
-            // Write the I2C command register with a 2 byte read request
+            // Write the I2C command register with a 2 byte read request.
+            // Since FIFO4 can read 4 bytes in one operation, we will do a read of 4 bytes
+            // and only look at first 2 bytes.  (FIFO4 will hang if only try to read 2 bytes)
             scomAddr = I2C_COMMAND_REG | SCOM_ENGINE_OFFSET(args->i2cEngine);
-            // start+address+stop + slave_address, rw=1=read, length=2
-            regValue  = 0xD001000200000000;
+            // start+address+stop + slave_address, rw=1=read, length=4
+            regValue  = 0xD001000400000000;
             regValue |= ((uint64_t)args->i2cAddr << 48);
             rc = putscom_abs(scomAddr, regValue);
             if(rc)
@@ -497,12 +499,7 @@ void dimm_read_temp(ipc_msg_t* cmd, void* arg)
                                  WORD_HIGH(regValue), WORD_LOW(regValue));
                         gpe_set_ffdc(&(args->error), scomAddr, GPE_RC_I2C_ERROR, regValue);
                     }
-                    else if (regValue & PEEK_MORE_DATA)
-                    {
-                        // The data_request bit is non-zero, but no more data is needed!
-                        PK_TRACE("dimm_read_temp: Got data, but more data needs access??");
-                        gpe_set_ffdc(&(args->error), scomAddr, GPE_RC_NOT_COMPLETE, regValue);
-                    }
+                    // PEEK_MORE_DATA will be set because we only read 2 of the 4 bytes (ignore this bit)
                 }
             }
             // else, all data not available yet (NOT_COMPLETE)

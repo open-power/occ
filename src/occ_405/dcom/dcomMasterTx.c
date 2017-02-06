@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -487,6 +487,8 @@ void task_dcom_tx_slv_inbox( task_t *i_self)
 // Description: transmit doorbells to slaves
 //              from master
 //
+// NOTE: runs at crit interrupt (adding traces will cause crash)
+//
 // End Function Specification
 void dcom_tx_slv_inbox_doorbell( void )
 {
@@ -530,8 +532,6 @@ void dcom_tx_slv_inbox_doorbell( void )
         l_delta : G_dcomTime.master.doorbellMaxDeltaTx;
     G_dcomTime.master.doorbellSeq = G_dcom_slv_inbox_doorbell_tx.magic_counter;
     G_dcomTime.master.doorbellNumSent++;
-
-    DCOM_DBG("Sent multicast doorbell\n");
 }
 #endif //_DCOMMASTERTOSLAVE_C
 

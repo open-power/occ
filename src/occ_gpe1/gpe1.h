@@ -48,14 +48,6 @@
 #define I2C_FIFO4_REG_READ          0x000A0012
 
 
-// I2C Status Reigster masks
-#define STATUS_ERROR_MASK               0xFE80330000000000
-#define STATUS_ERROR_OR_COMPLETE_MASK   0xFF80330000000000
-#define STATUS_COMPLETE_MASK            0x0100000000000000
-#define PEEK_ERROR_MASK                 0x00000000FC000000
-#define PEEK_MORE_DATA                  0x0000000002000000
-
-
 // Debug trace
 #ifdef GPE1_DEBUG
   #define GPE1_DIMM_DBG(frmt,args...)  \
