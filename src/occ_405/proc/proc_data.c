@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -38,6 +38,8 @@
 #include "pgpe_interface.h"
 #include "cmdh_fsp.h"
 #include "sensor.h"
+#include "gpe_24x7_structs.h"
+
 
 //Global array of core data buffers
 GPE_BUFFER(CoreData G_core_data[MAX_NUM_FW_CORES+NUM_CORE_DATA_DOUBLE_BUF+NUM_CORE_DATA_EMPTY_BUF]) = {{{0}}};
@@ -52,6 +54,11 @@ GPE_BUFFER(ipc_scom_op_t G_core_stat_scom_op);
 //Global structures for gpe get core data parms
 GPE_BUFFER(ipc_core_data_parms_t G_low_cores_data_parms);
 GPE_BUFFER(ipc_core_data_parms_t G_high_cores_data_parms);
+
+//Globals for 24x7 collection
+GPE_BUFFER(gpe_24x7_args_t G_24x7_parms);
+GpeRequest G_24x7_request;
+bool G_24x7_disabled = FALSE;
 
 // IPC Gpe request structure for gathering nest dts temps
 GpeRequest G_nest_dts_gpe_req;
@@ -405,6 +412,45 @@ void proc_core_init( void )
             break;
         }
 
+        //Initialize 24x7 data collection GpeRequest object
+        l_rc = gpe_request_create(&G_24x7_request,           // GpeRequest for the task
+                                  &G_async_gpe_queue1,       // Queue for GPE1
+                                  IPC_ST_24_X_7_FUNCID,      // Function ID
+                                  &G_24x7_parms,             // Task parameters
+                                  SSX_WAIT_FOREVER,          // Timeout (none)
+                                  NULL,                      // Callback
+                                  NULL,                      // Callback arguments
+                                  ASYNC_CALLBACK_IMMEDIATE); // Options
+
+        if( l_rc )
+        {
+            // If we failed to create the GpeRequest then there is a serious problem.
+            MAIN_TRAC_ERR("proc_core_init: Failure creating 24x7 GpeRequest. [RC=0x%08x]", l_rc );
+
+            /*
+             * @errortype
+             * @moduleid    PROC_CORE_INIT_MOD
+             * @reasoncode  SSX_GENERIC_FAILURE
+             * @userdata1   gpe_request_create return code
+             * @userdata4   ERC_24X7_GPE_CREATE_FAILURE
+             * @devdesc     Failure to create 24x7 GpeRequest object
+             */
+            l_err = createErrl(
+                                PROC_CORE_INIT_MOD,                       //ModId
+                                SSX_GENERIC_FAILURE,                      //Reasoncode
+                                ERC_24X7_GPE_CREATE_FAILURE,              //Extended reason code
+                                ERRL_SEV_PREDICTIVE,                      //Severity
+                                l_trace,                                  //Trace Buf
+                                DEFAULT_TRACE_SIZE,                       //Trace Size
+                                l_rc,                                     //Userdata1
+                                0                                         //Userdata2
+            );
+
+            CHECKPOINT_FAIL_AND_HALT(l_err);
+            break;
+        }
+
+
     } while(0);
 
     // Initialize the core data control at the same time
@@ -604,6 +650,75 @@ void nest_dts_init(void)
         CHECKPOINT_FAIL_AND_HALT(l_err);
     }
 }
+
+// Function Specification
+//
+// Name:  task_24x7
+//
+// Description: Called every tick while active/obs state to do 24x7 data collection
+//
+// End Function Specification
+void task_24x7(task_t * i_task)
+{
+    static uint8_t L_numTicks = 0x00;  // never called since OCC started
+
+    if (!G_24x7_disabled)
+    {
+       // Schedule 24x7 task if idle
+       if (!async_request_is_idle(&G_24x7_request.request))
+       {
+           INTR_TRAC_ERR("task_24x7: request not idle");
+           L_numTicks++;
+       }
+       else
+       {
+         // Clear errors and init parameters for GPE task
+         G_24x7_parms.error.error = 0;
+         G_24x7_parms.numTicksPassed = L_numTicks;
+
+         int l_rc = gpe_request_schedule(&G_24x7_request);
+         if (0 == l_rc)
+         {
+             L_numTicks = 1;  // next time called will be 1 tick later
+         }
+         else
+         {
+            errlHndl_t l_err = NULL;
+            INTR_TRAC_ERR("task_24x7: schedule failed w/rc=0x%08X (%d us)",
+                          l_rc, (int) ((ssx_timebase_get())/(SSX_TIMEBASE_FREQUENCY_HZ/1000000)));
+            /*
+             * @errortype
+             * @moduleid    PROC_24X7_MOD
+             * @reasoncode  SSX_GENERIC_FAILURE
+             * @userdata1   gpe_request_schedule return code
+             * @userdata4   ERC_24X7_GPE_SCHEDULE_FAILURE
+             * @devdesc     Failure to schedule 24x7 GpeRequest
+             */
+            l_err = createErrl(
+                                PROC_24X7_MOD,                            //ModId
+                                SSX_GENERIC_FAILURE,                      //Reasoncode
+                                ERC_24X7_GPE_SCHEDULE_FAILURE,            //Extended reason code
+                                ERRL_SEV_PREDICTIVE,                      //Severity
+                                NULL,                                     //Trace Buf
+                                DEFAULT_TRACE_SIZE,                       //Trace Size
+                                l_rc,                                     //Userdata1
+                                0                                         //Userdata2
+            );
+
+            // Request reset since this should never happen.
+            REQUEST_RESET(l_err);
+          }
+       }
+    }  // !G_24x7_disabled
+    else
+    {
+        // 24x7 is disabled INC number ticks so 24x7 knows how many ticks it was disabled for
+        L_numTicks++;
+    }
+
+    return;
+} // end task_24x7()
+
 
 #ifdef PROC_DEBUG
 // Function Specification

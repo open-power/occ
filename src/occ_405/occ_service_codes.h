@@ -244,6 +244,9 @@ enum occExtReasonCode
     ERC_PGPE_PPMR_OPPB_SIZE_MISMATCH            = 0x00B8,
 
     ERC_WOF_QUAD_COUNT_FAILURE                  = 0x00C0,
+
+    ERC_24X7_GPE_CREATE_FAILURE                 = 0x00D0,
+    ERC_24X7_GPE_SCHEDULE_FAILURE               = 0x00D1,
 };
 
 // Error log Module Ids

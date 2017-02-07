@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_405/proc/proc_data_service_codes.h $                  */
+/* $Source: src/common/gpe_24x7_structs.h $                               */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -23,22 +23,24 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-#ifndef _PROC_DATA_SERVICE_CODES_H_
-#define _PROC_DATA_SERVICE_CODES_H_
+/* This header file is used by both occ_405 and occ_gpe1.                 */
+/* Contains common structures and globals.                                */
 
-#include <comp_ids.h>
+#ifndef _GPE_24X7_STRUCTS_H
+#define _GPE_24X7_STRUCTS_H
 
-enum procModuleId
+#include <gpe_export.h>
+#include "gpe_err.h"
+
+
+// 24x7 collection arguments (GPE1)
+typedef struct
 {
-    PROC_TASK_CORE_DATA_MOD         = PROC_COMP_ID | 0x00,
-    PROC_CORE_INIT_MOD              = PROC_COMP_ID | 0x01,
-    PROC_TASK_FAST_CORE_DATA_MOD    = PROC_COMP_ID | 0x02,
-    PROC_GPST_INIT_FAILURE_MOD      = PROC_COMP_ID | 0x03,
-    PROC_ENABLE_PSTATES_SMH_MOD     = PROC_COMP_ID | 0x04,
-    PROC_PSTATE_KVM_SETUP_MOD       = PROC_COMP_ID | 0x05,
-    PROC_TASK_NEST_DTS_MOD          = PROC_COMP_ID | 0x06,
-    PROC_NEST_DTS_INIT_MOD          = PROC_COMP_ID | 0x07,
-    PROC_24X7_MOD                   = PROC_COMP_ID | 0x08,
-};
+    GpeErrorStruct error;
+    uint8_t numTicksPassed;
+} gpe_24x7_args_t;
 
-#endif /* #ifndef _PROC_DATA_SERVICE_CODES_H_ */
+// Number of "states" 24x7 collection code is broken up into
+#define MAX_24x7_STATES   16
+
+#endif // _GPE_24X7_STRUCTS_H

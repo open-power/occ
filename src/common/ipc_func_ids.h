@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/ipc_func_ids.h $                                          */
+/* $Source: src/common/ipc_func_ids.h $                                   */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -68,6 +68,7 @@ IPC_FUNCIDS_TABLE_START
         IPC_FUNC_ID(IPC_ST_DIMM_CONTROL_FUNCID)
         IPC_FUNC_ID(IPC_ST_GPE1_NOP)
         IPC_FUNC_ID(IPC_ST_RESET_MEM_DEADMAN)
+        IPC_FUNC_ID(IPC_ST_24_X_7_FUNCID)
     IPC_FUNCIDS_ST_END(OCCHW_INST_ID_GPE1)
 
     //Functions that are only supported by GPE2 should be defined here

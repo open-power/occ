@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -60,6 +60,7 @@ typedef enum {
     TASK_ID_DIMM_SM,               // DIMM State Machine
     TASK_ID_MEMORY_CONTROL,        // Memory (centaur/dimm) control task
     TASK_ID_NEST_DTS,
+    TASK_ID_24X7,                  // 24x7 data collection task
     TASK_END  // This must always be the last enum in this list,
               // so that TASK_END always equals the last task ID + 1.
 } task_id_t;

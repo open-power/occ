@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2015,2016
+# Contributors Listed Below - COPYRIGHT 2015,2017
 # [+] International Business Machines Corp.
 #
 #
@@ -24,7 +24,9 @@
 # IBM_PROLOG_END_TAG
 
 TOP-C-SOURCES = gpe1_main.c gpe1_dimm_read.c gpe1_dimm_reset.c nop.c \
-                pk_app_irq_table.c ipc_func_tables.c gpe1_dimm_control.c
+                pk_app_irq_table.c ipc_func_tables.c gpe1_dimm_control.c \
+                gpe1_24x7.c 
+
 TOP-S-SOURCES =
 
 TOP_OBJECTS = $(TOP-C-SOURCES:.c=.o) $(TOP-S-SOURCES:.S=.o)

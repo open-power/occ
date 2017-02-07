@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -135,5 +135,9 @@ void nest_dts_init( void ) INIT_SECTION;
 //Returns a pointer to the most up-to-date bulk core data for the core
 //associated with the specified OCC core id.
 CoreData * proc_get_bulk_core_data_ptr( const uint8_t i_occ_core_id );
+
+// 24x7 data collection
+void task_24x7( task_t * i_task );
+
 
 #endif //_PROC_DATA_H
