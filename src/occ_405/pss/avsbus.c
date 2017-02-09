@@ -39,10 +39,23 @@
 //#define AVSDEBUG
 
 #ifdef AVSDEBUG
+static bool G_trace_scoms = TRUE;
   #define AVS_DBG(frmt,args...)  TRAC_INFO(frmt,##args)
+  #define DEBUG_IN32(reg, result, name) if (G_trace_scoms) { TRAC_INFO(" in32(%08X) returned 0x%08X  "name, reg, result); }
+  #define DEBUG_OUT32(reg, value, name) if (G_trace_scoms) { TRAC_INFO("out32(%08X) = 0x%08X  "name, reg, value); }
 #else
   #define AVS_DBG(frmt,args...)
+  #define DEBUG_IN32(reg, result, name)
+  #define DEBUG_OUT32(reg, value, name)
 #endif
+
+//
+// 64 bit operations are only directly supported by the GPE.  On the 405 the
+// opreations will get broken up into two 32 bit operations.
+//
+// FYI: Using out64 was not working for writing OCB registers.
+// The problem was that when it breaks it down into two operations,
+// it winds up writing the wdata register twice.
 
 // AVS Bus usage will be determined after receiving config data from TMGT
 bool G_avsbus_vdd_monitoring = FALSE;
@@ -65,7 +78,7 @@ extern data_cnfg_t * G_data_cnfg;
 // AVS Bus setup that must be done once (common between read/write operations)
 void avsbus_init()
 {
-    uint64_t value;
+    uint32_t value;
 
     TRAC_INFO("avsbus_init: Vdd=%c Vdn=%c",
               G_avsbus_vdd_monitoring?'Y':'N', G_avsbus_vdn_monitoring?'Y':'N');
@@ -100,81 +113,90 @@ void avsbus_init()
     //  o2s_out_count1 = 0x20 (32d) - 5b header, 8b command type/select,16b info, 3b CRC
     //  o2s_in_delay1 = 0xFF (long delay - no read data)
     //  o2s_in_count1 = 0x0 (no read data)
-    value = 0x820FC00000000000;
+    value = 0x820FC000;
     if (bus0_monitoring)
     {
-        out64(OCB_O2SCTRLF0B, value);
+        DEBUG_OUT32(OCB_O2SCTRLF0B, value, "OCB_O2SCTRLF0B");
+        out32(OCB_O2SCTRLF0B, value);
     }
     if (bus1_monitoring)
     {
-        out64(OCB_O2SCTRLF1B, value);
+        DEBUG_OUT32(OCB_O2SCTRLF1B, value, "OCB_O2SCTRLF1B");
+        out32(OCB_O2SCTRLF1B, value);
     }
 
     // Write O2SCTRLS_[a][n]
-    //  o2s_out_count2 = 0x0 (no output)
-    //  o2s_in_delay2 = 0x0 (no delay - immediate read data)
-    //  o2s_in_count2 = 0x20 - 3b Slave Ack, 5b StatusResp,16b info, 5b Reserved, 3b CRC
-    value = 0x0000800000000000;
+    //  0:5   o2s_out_count2 = 0 (no output)
+    //  6:11  o2s_in_delay2 = 0 (no delay - immediate read data)
+    //  12:17 o2s_in_count2 = 32 (bits captured)
+    value = 0x00080000;
     if (bus0_monitoring)
     {
-        out64(OCB_O2SCTRLS0B, value);
+        DEBUG_OUT32(OCB_O2SCTRLS0B, value, "OCB_O2SCTRLS0B");
+        out32(OCB_O2SCTRLS0B, value);
     }
     if (bus1_monitoring)
     {
-        out64(OCB_O2SCTRLS1B, value);
-    }
-
-    // Write O2SCTRL2_[a][n]
-    //  o2s_inter_frame_delay = 0 (Wait 1 SPI clock). The AVSBus spec does not define any inter-frame delay so set this to the smallest value.
-    //  Note: the value 0 is the hardware reset value and, thus, this step can be omitted if the value desired to to be left at 0.
-    value = 0x0000000000000000;
-    if (bus0_monitoring)
-    {
-        out64(OCB_O2SCTRL20B, value);
-    }
-    if (bus1_monitoring)
-    {
-        out64(OCB_O2SCTRL21B, value);
+        DEBUG_OUT32(OCB_O2SCTRLS1B, value, "OCB_O2SCTRLS1B");
+        out32(OCB_O2SCTRLS1B, value);
     }
 
     // Write O2SCTRL1_[a][n]
     //  0     o2s_bridge_enable = 1 (make the O2S bridge active if not already)
     //  1     reserved
     //  2     o2s_cpol = 0 (positive active clock)
-    //  3     o2s_cpha = 0 (first edge data launch/sample)
+    //  3     o2s_cpha = 1 (second edge data sample)
     //  4:13  o2s_clock_divider = set based on the nest frequency for the desired frequency of 10MHz (assumed speed) per O2SCTRL1_[a][n] description.
     //  14:16 reserved
     //  17    o2s_nr_of_frames = 1 (2 frames to account for the first and second frames of an AVSBus command)
     //  18:63 reserved
     //  1r00DDDD DDDDDDrr r1rrrrrr rrrrrrrrr
-    value = 0x8000400000000000;
+    value = 0x90004000;
     // calculate o2s_clock_divider based on nest freq and target bus freq
-    const uint64_t divider = (G_nest_frequency_mhz / (AVSBUS_FREQUENCY_MHZ * 8)) - 1;
-    value |= (divider << 50);
+    const uint32_t divider = (G_nest_frequency_mhz / (AVSBUS_FREQUENCY_MHZ * 8)) - 1;
+    value |= (divider << 18);
     if (bus0_monitoring)
     {
-        out64(OCB_O2SCTRL10B, value);
+        TRAC_INFO("avsbus_init: reg[OCB_O2SCTRL10B] = 0x%08X", value);
+        out32(OCB_O2SCTRL10B, value);
     }
     if (bus1_monitoring)
     {
-        out64(OCB_O2SCTRL11B, value);
+        TRAC_INFO("avsbus_init: reg[OCB_O2SCTRL11B] = 0x%08X", value);
+        out32(OCB_O2SCTRL11B, value);
     }
-}
+
+    // Write O2SCTRL2_[a][n]
+    //  o2s_inter_frame_delay = 0 (Wait 1 SPI clock). The AVSBus spec does not define any inter-frame delay so set this to the smallest value.
+    //  Note: the value 0 is the hardware reset value and, thus, this step can be omitted if the value desired to to be left at 0.
+    value = 0x00000000;
+    if (bus0_monitoring)
+    {
+        DEBUG_OUT32(OCB_O2SCTRL20B, value, "OCB_O2SCTRL20B");
+        out32(OCB_O2SCTRL20B, value);
+    }
+    if (bus1_monitoring)
+    {
+        DEBUG_OUT32(OCB_O2SCTRL21B, value, "OCB_O2SCTRL21B");
+        out32(OCB_O2SCTRL21B, value);
+    }
+
+} // end avsbus_init()
 
 
 // Calculate CRC for specified AVS Bus command
 // Function which generates a 3 bit CRC value for 29 bit data
 // from: ekb/chips/p9/procedures/hwp/lib/p9_avsbus_lib.C
 // (CRC is bits 29:31 in the AVS bus command)
-#define AVS_CRC_MASK      0x0000000700000000
-#define AVS_CRC_DATA_MASK 0xFFFFFFF800000000
-uint64_t avs_crc_calculate(const uint64_t i_avs_cmd)
+#define AVS_CRC_MASK      0x00000007
+#define AVS_CRC_DATA_MASK 0xFFFFFFF8
+uint32_t avs_crc_calculate(const uint32_t i_avs_cmd)
 {
     //Polynomial= x^3 + x^1 + x^0 = 1*x^3 + 0*x^2 + 1*x^1 + 1*x^0 = divisor(1011)
 
-    uint64_t o_crc_value = 0;
-    uint64_t l_polynomial = 0xB000000000000000;
-    uint64_t l_msb =        0x8000000000000000;
+    uint32_t o_crc_value = 0;
+    uint32_t l_polynomial = 0xB0000000;
+    uint32_t l_msb =        0x80000000;
 
     o_crc_value = i_avs_cmd & AVS_CRC_DATA_MASK;
 
@@ -256,9 +278,9 @@ void avsbus_read_start(const avsbus_type_e i_type,
 
     // Write O2SCMD[a][n]
     //   o2s_clear_sticky_bits = 1
-    uint64_t value;
-    value = 0x4000000000000000;
-    out64(o2scmd_reg, value);
+    uint32_t value = 0x40000000;
+    DEBUG_OUT32(o2scmd_reg, value, "OCB_O2SCMDxB");
+    out32(o2scmd_reg, value);
 
     // Write O2SWD[a][n] - write commands and initiate hardware operation
     //   o2s_wdata with content
@@ -271,10 +293,11 @@ void avsbus_read_start(const avsbus_type_e i_type,
     //   13:28 CmdData (reserved / must be 1s)
     //   29:31 CRC
     //   01110DDD DRRRR111 11111111 11111CCC
-    value = 0x7007FFF800000000 | ((uint64_t) i_cmdtype << 55) | ((uint64_t)l_data.rail << 51);
+    value = 0x7007FFF8 | ((uint32_t) i_cmdtype << 23) | ((uint32_t)l_data.rail << 19);
     // Calculate/add CRC
     value |= avs_crc_calculate(value);
-    out64(o2swd_reg, value);
+    DEBUG_OUT32(o2swd_reg, value, "OCB_O2SWDxB");
+    out32(o2swd_reg, value);
 
     // Read has been started so now just wait for HW to complete
 
@@ -354,7 +377,8 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
     // Since read was started in previous tick, it should have already completed
     // (no need to poll/wait on o2s_ongoing)
     enum occReasonCode rc = OCC_SUCCESS_REASON_CODE;
-    uint64_t l_status = in64(o2sst_reg);
+    uint32_t l_status = in32(o2sst_reg);
+    DEBUG_IN32(o2sst_reg, l_status, "OCB_O2SSTxB");
     // OCC O2S Status Register
     //   0     o2s_ongoing
     //   1:4   reserved
@@ -364,7 +388,7 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
     //   8:63  reserved
     // GrrrrBrF rrrrrrrr rrrrrrrr rrrrrrrr
 
-    if (0 != (l_status & 0x0500000000000000))
+    if (0 != (l_status & 0x05000000))
     {
         // error bit was set
         l_failure = TRUE;
@@ -372,7 +396,7 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
         if ((*l_error_count == 1) || (*l_error_count == MAX_READ_ATTEMPTS))
         {
             TRAC_ERR("avsbus_read: Error found in Vd%c %c O2SST[0x%08X] = [0x%08X]",
-                     l_trace_type, l_trace_cmd, o2sst_reg, WORD_HIGH(l_status));
+                     l_trace_type, l_trace_cmd, o2sst_reg, l_status);
             /*
              * @errortype
              * @moduleid    PSS_MID_AVSBUS_READ
@@ -384,7 +408,7 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
             rc = AVSBUS_ERROR;
         }
     }
-    else if (l_status & 0x8000000000000000) // o2s_ongoing
+    else if (l_status & 0x80000000) // o2s_ongoing
     {
         // o2s_ongoing bit was still set (operation did not complete)
         l_failure = TRUE;
@@ -392,7 +416,7 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
         if ((*l_error_count == 1) || (*l_error_count == MAX_READ_ATTEMPTS))
         {
             TRAC_ERR("avsbus_read: Vd%c %c timeout waiting for o2s_ongoing change O2SST[0x%08X] = [0x%08X]",
-                     l_trace_type, l_trace_cmd, o2sst_reg, WORD_HIGH(l_status));
+                     l_trace_type, l_trace_cmd, o2sst_reg, l_status);
             /*
              * @errortype
              * @moduleid    PSS_MID_AVSBUS_READ
@@ -408,7 +432,8 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
     if (FALSE == l_failure)
     {
         // Read the response data
-        uint64_t value = in64(o2srd_reg);
+        uint32_t value = in32(o2srd_reg);
+        DEBUG_IN32(o2srd_reg, value, "OCB_O2SRDxB");
         // AVS Bus response (read voltage or current):
         //   0:1   SlaveAck (0b00 from slave indicates good CRC and action was taken)
         //   2     0
@@ -419,7 +444,7 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
         //   AA0SSSSS VVVVVVVV VVVVVVVV 11111CCC
 
         // Validate CRC
-        const uint64_t crc = avs_crc_calculate(value);
+        const uint32_t crc = avs_crc_calculate(value);
         if (crc != (value & AVS_CRC_MASK))
         {
             l_failure = TRUE;
@@ -427,7 +452,7 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
             if ((*l_error_count == 1) || (*l_error_count == MAX_READ_ATTEMPTS))
             {
                 TRAC_ERR("avsbus_read: CRC mismatch in Vd%c %c rsp O2SRD[0x%08X] = [0x%08X] (calculated CRC 0x%08X)",
-                         l_trace_type, l_trace_cmd, o2srd_reg, WORD_HIGH(value), WORD_HIGH(crc));
+                         l_trace_type, l_trace_cmd, o2srd_reg, value, crc);
                 /*
                  * @errortype
                  * @moduleid    PSS_MID_AVSBUS_READ
@@ -440,21 +465,21 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
             }
         }
         // Check for valid command operation and extract read data
-        else if (0 == (value & 0xC000000000000000))
+        else if (0 == (value & 0xC0000000))
         {
-            o_reading = (value >> 40) & 0x0000FFFF;
+            o_reading = (value >> 8) & 0x0000FFFF;
 #ifdef AVSDEBUG
             if (*l_trace_count < DEBUG_TRACE_MAX)
             {
                 if (i_cmdtype == AVSBUS_VOLTAGE)
                 {
                     TRAC_INFO("avsbus_read: Successfully read Vd%c voltage %dmV [0x%08X]",
-                              l_trace_type, o_reading, WORD_HIGH(value));
+                              l_trace_type, o_reading, value);
                 }
                 else
                 {
                     TRAC_INFO("avsbus_read: Successfully read Vd%c current %dx10mA [0x%08X]",
-                              l_trace_type, o_reading, WORD_HIGH(value));
+                              l_trace_type, o_reading, value);
                 }
             }
 #endif
@@ -462,7 +487,7 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
             {
                 // Trace and clear the error count
                 TRAC_INFO("avsbus_read: Successfully read Vd%c %c [0x%08X] (error count=%d)",
-                          l_trace_type, l_trace_cmd, WORD_HIGH(value), *l_error_count);
+                          l_trace_type, l_trace_cmd, value, *l_error_count);
                 *l_error_count = 0;
             }
         }
@@ -472,7 +497,7 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
             (*l_error_count)++;
             if ((*l_error_count == 1) || (*l_error_count == MAX_READ_ATTEMPTS))
             {
-                TRAC_ERR("avsbus_read: SlaveAck reported no action taken[0x%08X]", WORD_HIGH(value));
+                TRAC_ERR("avsbus_read: SlaveAck reported no action taken[0x%08X]", value);
                 rc = AVSBUS_ERROR;
             }
         }
@@ -521,7 +546,7 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
                                           NULL,
                                           DEFAULT_TRACE_SIZE,
                                           (i_type << 16) | (l_data.bus << 8) | l_data.rail,
-                                          WORD_HIGH(l_status));
+                                          l_status);
             // add processor callout and request reset
             addCalloutToErrl(l_err,
                              ERRL_CALLOUT_TYPE_HUID,
@@ -612,9 +637,9 @@ void initiate_avsbus_read_status()
 
             // Write O2SCMD[a][n]
             //   o2s_clear_sticky_bits = 1
-            uint64_t value;
-            value = 0x4000000000000000;
-            out64(o2scmd_reg, value);
+            uint32_t value = 0x40000000;
+            DEBUG_OUT32(o2scmd_reg, value, "OCB_O2SCMDxB");
+            out32(o2scmd_reg, value);
 
             // Write O2SWD[a][n] - write commands and initiate hardware operation
             //   o2s_wdata with content
@@ -628,10 +653,11 @@ void initiate_avsbus_read_status()
             //   29:31 CRC
             //   01110DDD DRRRR111 11111111 11111CCC
             //   01110111 01111111 11111111 11111CCC
-            value = 0x777FFFF800000000;
+            value = 0x777FFFF8;
             // Calculate/add CRC
             value |= avs_crc_calculate(value);
-            out64(o2swd_reg, value);
+            DEBUG_OUT32(o2swd_reg, value, "OCB_O2SWDxB");
+            out32(o2swd_reg, value);
         }
     }
 
@@ -706,7 +732,8 @@ uint16_t avsbus_read_status(const avsbus_type_e i_type)
     // Since read was started in previous tick, it should have already completed
     // (no need to poll/wait on o2s_ongoing)
     enum occReasonCode rc = OCC_SUCCESS_REASON_CODE;
-    uint64_t l_status = in64(o2sst_reg);
+    uint32_t l_status = in32(o2sst_reg);
+    DEBUG_IN32(o2sst_reg, l_status, "OCB_O2SSTxB");
     // OCC O2S Status Register
     //   0     o2s_ongoing
     //   1:4   reserved
@@ -716,7 +743,7 @@ uint16_t avsbus_read_status(const avsbus_type_e i_type)
     //   8:63  reserved
     // GrrrrBrF rrrrrrrr rrrrrrrr rrrrrrrr
 
-    if (0 != (l_status & 0x0500000000000000))
+    if (0 != (l_status & 0x05000000))
     {
         // error bit was set
         l_failure = TRUE;
@@ -724,7 +751,7 @@ uint16_t avsbus_read_status(const avsbus_type_e i_type)
         if ((*l_error_count == 1) || (*l_error_count == max_read_attempts))
         {
             TRAC_ERR("avsbus_read_status: Error found in Vd%c O2SST[0x%08X] = [0x%08X]",
-                     l_trace_type, o2sst_reg, WORD_HIGH(l_status));
+                     l_trace_type, o2sst_reg, l_status);
             /*
              * @errortype
              * @moduleid    PSS_MID_AVSBUS_READ_STATUS
@@ -736,7 +763,7 @@ uint16_t avsbus_read_status(const avsbus_type_e i_type)
             rc = AVSBUS_ERROR;
         }
     }
-    else if (l_status & 0x8000000000000000) // o2s_ongoing
+    else if (l_status & 0x80000000) // o2s_ongoing
     {
         // o2s_ongoing bit was still set (operation did not complete)
         l_failure = TRUE;
@@ -744,7 +771,7 @@ uint16_t avsbus_read_status(const avsbus_type_e i_type)
         if ((*l_error_count == 1) || (*l_error_count == max_read_attempts))
         {
             TRAC_ERR("avsbus_read_status: Vd%c timeout waiting for o2s_ongoing change O2SST[0x%08X] = [0x%08X]",
-                     l_trace_type, o2sst_reg, WORD_HIGH(l_status));
+                     l_trace_type, o2sst_reg, l_status);
             /*
              * @errortype
              * @moduleid    PSS_MID_AVSBUS_READ_STATUS
@@ -760,7 +787,8 @@ uint16_t avsbus_read_status(const avsbus_type_e i_type)
     if (FALSE == l_failure)
     {
         // Read the response data
-        uint64_t value = in64(o2srd_reg);
+        uint32_t value = in32(o2srd_reg);
+        DEBUG_IN32(o2srd_reg, value, "OCB_O2SRDxB");
         // AVS Bus response (read status):
         //   0:1   SlaveAck (0b00 from slave indicates good CRC and action was taken)
         //   2     0
@@ -771,7 +799,7 @@ uint16_t avsbus_read_status(const avsbus_type_e i_type)
         //   AA0SSSSS VVVVVVVV VVVVVVVV 11111CCC
 
         // Validate CRC
-        const uint64_t crc = avs_crc_calculate(value);
+        const uint32_t crc = avs_crc_calculate(value);
         if (crc != (value & AVS_CRC_MASK))
         {
             l_failure = TRUE;
@@ -779,7 +807,7 @@ uint16_t avsbus_read_status(const avsbus_type_e i_type)
             if ((*l_error_count == 1) || (*l_error_count == max_read_attempts))
             {
                 TRAC_ERR("avsbus_read_status: CRC mismatch in Vd%c rsp O2SRD[0x%08X] = [0x%08X] (calculated CRC 0x%08X)",
-                         l_trace_type, o2srd_reg, WORD_HIGH(value), WORD_HIGH(crc));
+                         l_trace_type, o2srd_reg, value, crc);
                 /*
                  * @errortype
                  * @moduleid    PSS_MID_AVSBUS_READ_STATUS
@@ -792,7 +820,7 @@ uint16_t avsbus_read_status(const avsbus_type_e i_type)
             }
         }
         // Check for valid command operation and extract read data
-        else if (0 == (value & 0xC000000000000000))
+        else if (0 == (value & 0xC0000000))
         {
             // AVS Bus Status:
             //  0     VDone
@@ -802,14 +830,14 @@ uint16_t avsbus_read_status(const avsbus_type_e i_type)
             //  4     POUT_OP_WARNING (over power)
             //  5-7   reserved
             //  8-15  reserved
-            o_reading = (value >> 40) & 0x0000FFFF;
+            o_reading = (value >> 8) & 0x0000FFFF;
 
 #ifdef AVSDEBUG
             static uint16_t L_lastReading = 0;
             if ((L_trace_count < DEBUG_TRACE_MAX) || (o_reading != L_lastReading))
             {
                 TRAC_INFO("avsbus_read_status: Successfully read Vd%c status 0x%04X [0x%08X]",
-                          l_trace_type, o_reading, WORD_HIGH(value));
+                          l_trace_type, o_reading, value);
                 L_lastReading = o_reading;
             }
 #endif
@@ -817,7 +845,7 @@ uint16_t avsbus_read_status(const avsbus_type_e i_type)
             {
                 // Trace and clear the error count
                 TRAC_INFO("avsbus_read_status: Successfully read Vd%c status [0x%08X] (error count=%d)",
-                          l_trace_type, WORD_HIGH(value), *l_error_count);
+                          l_trace_type, value, *l_error_count);
                 *l_error_count = 0;
             }
         }
@@ -827,7 +855,7 @@ uint16_t avsbus_read_status(const avsbus_type_e i_type)
             (*l_error_count)++;
             if ((*l_error_count == 1) || (*l_error_count == max_read_attempts))
             {
-                TRAC_ERR("avsbus_read_status: SlaveAck reported no action taken[0x%08X]", WORD_HIGH(value));
+                TRAC_ERR("avsbus_read_status: SlaveAck reported no action taken[0x%08X]", value);
                 rc = AVSBUS_ERROR;
             }
         }
@@ -849,7 +877,7 @@ uint16_t avsbus_read_status(const avsbus_type_e i_type)
                                           NULL,
                                           DEFAULT_TRACE_SIZE,
                                           (i_type << 16) | (l_data.bus << 8) | l_data.rail,
-                                          WORD_HIGH(l_status));
+                                          l_status);
             setErrlActions(l_err, ERRL_ACTIONS_MANUFACTURING_ERROR);
             // add processor callout
             addCalloutToErrl(l_err,
@@ -862,7 +890,11 @@ uint16_t avsbus_read_status(const avsbus_type_e i_type)
     }
 
 #ifdef AVSDEBUG
-    ++L_trace_count; // DEBUG
+    ++L_trace_count;
+    if (L_trace_count >= DEBUG_TRACE_MAX)
+    {
+        G_trace_scoms = FALSE;
+    }
 #endif
 
     return o_reading;
