@@ -104,7 +104,8 @@ extern uint16_t G_proc_fmax_mhz;   // max(turbo,uturbo) frequencies
 // Set main thread timer for one second
 #define MAIN_THRD_TIMER_SLICE ((SsxInterval) SSX_SECONDS(1))
 
-
+// Define location for data shared with GPEs
+gpe_shared_data_t G_shared_gpe_data __attribute__ ((section (".gpe_shared")));
 
 // SIMICS printf/printk
 SimicsStdio G_simics_stdout;
@@ -1795,6 +1796,10 @@ int main(int argc, char **argv)
                    CRITICAL_STACK_SIZE,
                    0,
                    l_tb_freq_hz);
+
+    // Store the nest / 4 frequency in shared SRAM so the GPEs
+    // can be initialized with the correct timebase as well.
+    G_shared_gpe_data.nest_freq_div = l_tb_freq_hz;
 
     CHECKPOINT(SSX_INITIALIZED);
     // TRAC_XXX needs ssx services, traces can only be done after ssx_initialize

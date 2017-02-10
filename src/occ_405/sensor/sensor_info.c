@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -86,25 +86,25 @@
 // (one for each core...)  The base name of the sensor enum must be passed
 // and this macro will take care of the paste & stringify operations.
 #define SENS_CORE_ENTRY_SET(sensor_name, units, type, location, number, frequency, scaleFactor)  \
-  [SENSOR_W_NUM(sensor_name,0)] = {.name = SENSOR_STRING(sensor_name ## 0),   \
+  [SENSOR_W_NUM(sensor_name,0)] = {.name = SENSOR_STRING(sensor_name ## 00),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_NUM(sensor_name,1)] = {.name = SENSOR_STRING(sensor_name ## 1),   \
+  [SENSOR_W_NUM(sensor_name,1)] = {.name = SENSOR_STRING(sensor_name ## 01),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_NUM(sensor_name,2)] = {.name = SENSOR_STRING(sensor_name ## 2),   \
+  [SENSOR_W_NUM(sensor_name,2)] = {.name = SENSOR_STRING(sensor_name ## 02),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_NUM(sensor_name,3)] = {.name = SENSOR_STRING(sensor_name ## 3),   \
+  [SENSOR_W_NUM(sensor_name,3)] = {.name = SENSOR_STRING(sensor_name ## 03),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_NUM(sensor_name,4)] = {.name = SENSOR_STRING(sensor_name ## 4),   \
+  [SENSOR_W_NUM(sensor_name,4)] = {.name = SENSOR_STRING(sensor_name ## 04),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_NUM(sensor_name,5)] = {.name = SENSOR_STRING(sensor_name ## 5),   \
+  [SENSOR_W_NUM(sensor_name,5)] = {.name = SENSOR_STRING(sensor_name ## 05),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_NUM(sensor_name,6)] = {.name = SENSOR_STRING(sensor_name ## 6),   \
+  [SENSOR_W_NUM(sensor_name,6)] = {.name = SENSOR_STRING(sensor_name ## 06),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_NUM(sensor_name,7)] = {.name = SENSOR_STRING(sensor_name ## 7),   \
+  [SENSOR_W_NUM(sensor_name,7)] = {.name = SENSOR_STRING(sensor_name ## 07),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_NUM(sensor_name,8)] = {.name = SENSOR_STRING(sensor_name ## 8),   \
+  [SENSOR_W_NUM(sensor_name,8)] = {.name = SENSOR_STRING(sensor_name ## 08),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_NUM(sensor_name,9)] = {.name = SENSOR_STRING(sensor_name ## 9),   \
+  [SENSOR_W_NUM(sensor_name,9)] = {.name = SENSOR_STRING(sensor_name ## 09),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
   [SENSOR_W_NUM(sensor_name,10)] = {.name = SENSOR_STRING(sensor_name ## 10),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \

@@ -32,6 +32,7 @@
 #include "pk.h"
 #include "ipc_api.h"
 #include "ipc_ping.h"
+#include "gpe_export.h"
 
 #define KERNEL_STACK_SIZE  256
 #define MAIN_THREAD_STACK_SIZE 512
@@ -39,6 +40,12 @@
 uint8_t        G_kernel_stack[KERNEL_STACK_SIZE];
 uint8_t        G_main_thread_stack[MAIN_THREAD_STACK_SIZE];
 PkThread       G_main_thread;
+
+//Point to the GPE shared structure
+#define GPE_SHARED_DATA_ADDR 0xFFFB3C00
+#define GPE_SHARED_DATA_SIZE 256
+
+gpe_shared_data_t * G_gpe_shared_data = (gpe_shared_data_t*) GPE_SHARED_DATA_ADDR;
 
 //statically initialize a ping command message
 IPC_PING_CMD_CREATE(G_ping_cmd);
@@ -68,14 +75,22 @@ void main_thread(void* arg)
 int main(int argc, char **argv)
 {
     int rc;
+    uint32_t l_timebase = G_gpe_shared_data->nest_freq_div;
+
+    // Don't initialize with a 0
+    if (!l_timebase)
+    {
+        l_timebase = PPE_TIMEBASE_HZ;
+    }
+
 
     // initializes kernel data (stack, threads, timebase, timers, etc.)
     pk_initialize((PkAddress)G_kernel_stack,
                   KERNEL_STACK_SIZE,
                   PK_TIMEBASE_CONTINUES,
-                  PPE_TIMEBASE_HZ);
+                  l_timebase);
 
-    PK_TRACE("Kernel init completed");
+    PK_TRACE("Kernel init completed, timebase is %d Hz", l_timebase);
 
     // Disable IPC's and register the IPC interrupt handler 
     rc = ipc_init();

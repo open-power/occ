@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/gpe_export.h $                                            */
+/* $Source: src/common/gpe_export.h $                                     */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -55,5 +55,11 @@ typedef struct nop
 {
     GpeErrorStruct  error;  // Error of operation
 } nop_t;
+
+typedef struct gpe_shared_data
+{
+    uint32_t    nest_freq_div; // Nest freq / 4
+    uint32_t    reserved[63];
+} gpe_shared_data_t;
 
 #endif //_GPE_EXPORT_H

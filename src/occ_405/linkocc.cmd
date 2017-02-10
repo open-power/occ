@@ -543,7 +543,30 @@ SECTIONS
     _SSX_FREE_END   = _PING_PONG_BUFFER_BASE - 1;
 
 
-     ////////////////////////////////
+    ////////////////////////////////
+    // Shared GPE data
+    //
+    // Section for sharing data with GPEs before IPC commands can be used
+    // NOTE: If this location is changed, the #define for the address
+    //       needs to be changed in gpe0_main.c and gpe1_main.c.
+    ////////////////////////////////
+    __CUR_COUNTER__ = .;
+    _GPE_SHARED_DATA_BASE = 0xfffb3c00;
+    _GPE_SHARED_DATA_SIZE = 0x100;
+    . = _GPE_SHARED_DATA_BASE;
+#if !PPC405_MMU_SUPPORT
+    . = . - writethrough_offset;
+    _LMA = . + writethrough_offset;
+    .gpe_shared . : AT(_LMA) {*(gpe_shared) . = ALIGN(_GPE_SHARED_DATA_SIZE);}
+    . = . + writethrough_offset;
+#else
+    .gpe_shared . : {*(gpe_shared) . = ALIGN(_GPE_SHARED_DATA_SIZE);} > sram
+#endif
+    . = __CUR_COUNTER__;
+
+
+
+    ////////////////////////////////
     // Ping/Pong Buffer Section
     //
     // Contains two 256-byte buffers used to tell the PGPE which vfrt to use
