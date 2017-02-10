@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -30,6 +30,9 @@
 
 #define DEFAULT_NEST_FREQ_HZ 600000000
 #define DEFAULT_EXT_CLK_FREQ_HZ 37500000
+
+// Turn off periodic GPE traces
+#define PK_TRACE_TIMER_OUTPUT 0
 
 // If we are using the OCB timebase then assume
 // a frequency of 37.5Mhz.  Otherwise, the default is to use
