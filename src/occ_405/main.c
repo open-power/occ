@@ -174,6 +174,17 @@ void check_runtime_environment(void)
         // slow down RTL for Simics
         G_mics_per_tick = SIMICS_MICS_PER_TICK;
         G_dcom_tx_apss_wait_time = SIMICS_MICS_PER_TICK * 6 / 10;
+
+        // Same comment as above about lower 32-bits. Bit 62 can be toggled
+        // on or off (in Simics) to indicate for which APSS specification the
+        // model is configured.
+        G_shared_gpe_data.spipss_spec_p9 =
+            (0 != (flags & 0x0000000000000002) ) ? FALSE : TRUE;
+
+    }
+    else
+    {
+        G_shared_gpe_data.spipss_spec_p9 = 0;
     }
 }
 
@@ -1812,6 +1823,14 @@ int main(int argc, char **argv)
     else
     {
         MAIN_TRAC_INFO("Currently running in Simics environment");
+        if(G_shared_gpe_data.spipss_spec_p9)
+        {
+            MAIN_TRAC_INFO("Using P9 Spec for APSS data gathering");
+        }
+        else
+        {
+            MAIN_TRAC_INFO("Using P8 Spec for APSS data gathering");
+        }
     }
 
     // Trace what happened before ssx initialization

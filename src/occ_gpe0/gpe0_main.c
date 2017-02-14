@@ -83,7 +83,6 @@ int main(int argc, char **argv)
         l_timebase = PPE_TIMEBASE_HZ;
     }
 
-
     // initializes kernel data (stack, threads, timebase, timers, etc.)
     pk_initialize((PkAddress)G_kernel_stack,
                   KERNEL_STACK_SIZE,

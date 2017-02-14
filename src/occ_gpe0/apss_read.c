@@ -33,7 +33,7 @@
 #include "gpe_util.h"
 
 extern uint8_t G_apss_mode;
-
+extern gpe_shared_data_t * G_gpe_shared_data;
 /*
  * Function Specifications:
  *
@@ -97,12 +97,26 @@ void apss_start_pwr_meas_read(ipc_msg_t* cmd, void* arg)
         if (APSS_MODE_COMPOSITE == G_apss_mode)
         {
             // clock_divider=36, frames=17 (i.e. 18)
-            regValue = 0x8092200000000000;
+            if(G_gpe_shared_data->spipss_spec_p9)
+            {
+                regValue = 0x8092200000000000;  // P9 Spec
+            }
+            else
+            {
+                regValue = 0x8093C00000000000;  // P9 Actual (16 frames)
+            }
         }
         else
         {
             // clock_divider=36, frames=15 (i.e. 16)
-            regValue = 0x8091E00000000000;
+            if(G_gpe_shared_data->spipss_spec_p9)
+            {
+                regValue = 0x8091E00000000000;  // P9 Spec
+            }
+            else
+            {
+                regValue = 0x8093C00000000000;  // P9 Actual
+            }
         }
         rc = putscom_abs(SPIPSS_ADC_CTRL_REG1, regValue);
         if(rc)
@@ -192,6 +206,7 @@ void apss_continue_pwr_meas_read(ipc_msg_t* cmd, void* arg)
     // the ipc arguments are passed through the ipc_msg_t structure, has a pointer
     // to the G_gpe_continue_pwr_meas_read_args
 
+    uint64_t     regValue = 0;
     int          rc;
     ipc_async_cmd_t *async_cmd = (ipc_async_cmd_t*)cmd;
     apss_continue_args_t *args = (apss_continue_args_t*)async_cmd->cmd_data;
@@ -256,6 +271,45 @@ void apss_continue_pwr_meas_read(ipc_msg_t* cmd, void* arg)
             gpe_set_ffdc(&(args->error), SPIPSS_ADC_RDATA_REG3, GPE_RC_SCOM_GET_FAILED, rc);
             break;
         }
+
+        // If we're trying to do composite mode for the P8 spec, we need to configure
+        // the ADC controller again. P9 spec does not need to do this since there would
+        // be  room for up to 32 frames.
+        if ( (APSS_MODE_COMPOSITE == G_apss_mode) &&(!G_gpe_shared_data->spipss_spec_p9) )
+        {
+            // ADC FSM, clock_divider=7, frames=1 (ie 2 for gpio ports)
+            regValue = 0x8090400000000000;
+            rc = putscom_abs(SPIPSS_ADC_CTRL_REG1, regValue);
+            if(rc)
+            {
+                PK_TRACE("apss_continue_pwr_meas_read: SPIPSS_ADC_CTRL_REG1 putscom failed. rc = 0x%08x",
+                         rc);
+                gpe_set_ffdc(&(args->error), SPIPSS_ADC_CTRL_REG1, GPE_RC_SCOM_PUT_FAILED, rc);
+                break;
+            }
+
+            // APSS command to continue previous command
+            regValue = 0x0000000000000000;
+            rc = putscom_abs(SPIPSS_ADC_WDATA_REG, regValue);
+            if(rc)
+            {
+                PK_TRACE("apss_continue_pwr_meas_read: SPIPSS_ADC_WDATA_REG putscom failed. rc = 0x%08x",
+                         rc);
+                gpe_set_ffdc(&(args->error), SPIPSS_ADC_WDATA_REG, GPE_RC_SCOM_PUT_FAILED, rc);
+                break;
+            }
+
+            // Start SPI Transaction
+            regValue = 0x8000000000000000;
+            rc = putscom_abs(SPIPSS_ADC_COMMAND_REG, regValue);
+            if(rc)
+            {
+                PK_TRACE("apss_continue_pwr_meas_read: SPIPSS_ADC_COMMAND_REG putscom failed. rc = 0x%08x",
+                         rc);
+                gpe_set_ffdc(&(args->error), SPIPSS_ADC_COMMAND_REG, GPE_RC_SCOM_PUT_FAILED, rc);
+                break;
+            }
+        }
     } while(0);
 
 #ifdef DEBUG_APSS_SEQ
@@ -302,7 +356,7 @@ void apss_complete_pwr_meas_read(ipc_msg_t* cmd, void* arg)
     int          rc;
     ipc_async_cmd_t *async_cmd = (ipc_async_cmd_t*)cmd;
     apss_complete_args_t *args = (apss_complete_args_t*)async_cmd->cmd_data;
-
+    uint32_t     rdata_reg = 0;
     do {
         // wait for ADC completion, or timeout after 100 micro seconds.
         // scom register SPIPSS_ADC_STATUS_REG's bit 0 (HWCTRL_ONGOING)
@@ -329,12 +383,16 @@ void apss_complete_pwr_meas_read(ipc_msg_t* cmd, void* arg)
         // If we're in composite mode, collect the GPIO data
         if (APSS_MODE_COMPOSITE == G_apss_mode)
         {
+            // RDATA4-7 do not exist on P9 HW, spec says they should.
+            if(G_gpe_shared_data->spipss_spec_p9) rdata_reg = SPIPSS_ADC_RDATA_REG4;
+            else rdata_reg = SPIPSS_ADC_RDATA_REG0;
+
             // Read first 8 bytes of data (GPIO frames) into meas_data[0]
-            rc = getscom_abs(SPIPSS_ADC_RDATA_REG4, &args->meas_data[0]);
+            rc = getscom_abs(rdata_reg, &args->meas_data[0]);
             if(rc)
             {
-                PK_TRACE("apss_complete_pwr_meas_read: SPIPSS_ADC_RDATA_REG4 getscom failed. rc = 0x%08x",
-                         rc);
+                PK_TRACE("apss_complete_pwr_meas_read: RDATA_REG(0x%08X) getscom failed. rc = 0x%08x",
+                         rdata_reg, rc);
                 gpe_set_ffdc(&(args->error), SPIPSS_ADC_RDATA_REG4, GPE_RC_SCOM_GET_FAILED, rc);
                 break;
             }
