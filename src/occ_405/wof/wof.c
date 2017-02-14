@@ -110,36 +110,52 @@ int16_t G_wof_iddq_mult_table[][2] = {
 void wof_main(void)
 {
 
-
     // Read out the sensor data needed for calculations
     read_sensor_data();
 
-    // Functions to calculate Ceff_vdd and Ceff_vdn here.
-    uint16_t ceff_vdd = 0; // TODO: replace with future function call
-    uint16_t ceff_vdn = 0; // TODO: replace with future function call
+    // Read out PGPE data from shared SRAM
+    read_shared_sram();
+
+    // Calculate the core voltage per quad
+    calculate_core_voltage();
+
+    // Calculate the core leakage across the entire Proc
+    calculate_core_leakage();
+
+    // Calculate the nest leakage for the entire system
+    calculate_nest_leakage();
+
+    // Calculate the AC currents
+    calculate_AC_currents();
+
+    // Calculate ceff_ratio_vdd and ceff_ratio_vdn
+    calculate_ceff_ratio_vdd();
+    calculate_ceff_ratio_vdn();
 
 
-    // Calculate how many steps from the beginning for VDD and VDN
-    uint16_t vdn_step_from_start =
-                             calculate_step_from_start( ceff_vdd,
-                                                        G_wof_header.vdn_step,
-                                                        G_wof_header.vdn_start,
-                                                        G_wof_header.vdn_size );
 
-    uint16_t vdd_step_from_start =
-                             calculate_step_from_start( ceff_vdn,
-                                                        G_wof_header.vdd_step,
-                                                        G_wof_header.vdd_start,
-                                                        G_wof_header.vdd_size );
+    // Calculate how many steps from the beginning for VDD, VDN, and active quads
+    g_wof->vdn_step_from_start =
+                             calculate_step_from_start( g_wof->ceff_ratio_vdn,
+                                                        g_wof->vdn_step,
+                                                        g_wof->vdn_start,
+                                                        g_wof->vdn_size );
 
-    // TODO: REMOVE THESE TRACES
-    // NOTE to Reviewers: This trace is here just to put references to the above
-    // variables such that compilation is successful. Will be removed in final
-    // version
-    TRAC_INFO("Step from start VDN = %d, VDD = %d",
-              vdn_step_from_start,
-              vdd_step_from_start );
+    g_wof->vdd_step_from_start =
+                             calculate_step_from_start( g_wof->ceff_ratio_vdd,
+                                                        g_wof->vdd_step,
+                                                        g_wof->vdd_start,
+                                                        g_wof->vdd_size );
 
+    g_wof->quad_step_from_start = calc_quad_step_from_start();
+
+    // Compute the Main Memory address of the desired VFRT table given
+    // the calculated VDN, VDD, and Quad steps
+    g_wof->next_vfrt_main_mem_addr = calc_vfrt_mainstore_addr();
+
+
+    // Send the new vfrt to the PGPE
+    send_vfrt_to_pgpe( g_wof->next_vfrt_main_mem_addr );
 
 }
 
@@ -149,15 +165,15 @@ void wof_main(void)
  *
  *  Description: Calculates the step number for the current VDN/VDD
  *
- *  Param[in]: i_ceff_vdx - The current Ceff_vdd or Ceff_vdn to calculate the step
- *                      for.
+ *  Param[in]: i_ceff_vdx_ratio - The current Ceff_vdd or Ceff_vdn_ratio
+ *                                to calculate the step for.
  *  Param[in]: i_step_size - The size of each step.
  *  Param[in]: i_min_ceff - The minimum step number for this VDN/VDD
  *  Param[in]: i_max_step - The maximum step number for this VDN/VDD
  *
  *  Return: The calculated step for current Ceff_vdd/Ceff_vdn
  */
-uint16_t calculate_step_from_start(uint16_t i_ceff_vdx,
+uint16_t calculate_step_from_start(uint16_t i_ceff_vdx_ratio,
                                    uint8_t i_step_size,
                                    uint8_t i_min_ceff,
                                    uint8_t i_max_step )
@@ -165,15 +181,15 @@ uint16_t calculate_step_from_start(uint16_t i_ceff_vdx,
     uint16_t l_current_step;
 
     // Ensure ceff is at least the min step
-    if( (i_ceff_vdx <= i_min_ceff) || (i_step_size == 0) )
+    if( (i_ceff_vdx_ratio <= i_min_ceff) || (i_step_size == 0) )
     {
         l_current_step = 0;
     }
     else
     {
         // Add step size to current vdd/vdn to round up.
-        //  -1 to prevent overshoot when i_ceff_vdx is equal to Ceff table value
-        l_current_step = i_ceff_vdx + i_step_size - 1;
+        //  -1 to prevent overshoot when i_ceff_vdx_ratio is equal to Ceff table value
+        l_current_step = i_ceff_vdx_ratio + i_step_size - 1;
 
         // Subtract the starting ceff to skip the 0 table entry
         l_current_step -= i_min_ceff;
@@ -200,39 +216,31 @@ uint16_t calculate_step_from_start(uint16_t i_ceff_vdx,
  * Description: Calculates the step number for the current number
  *              of active quads
  *
- * Param[in]: i_num_active_quads - The current number of active quads.
- *
  * Return: The calculated step for current active quads
  */
-uint8_t calc_quad_step_from_start( uint8_t i_num_active_quads )
+uint8_t calc_quad_step_from_start( void )
 {
     return (G_wof_header.active_quads_size == ACTIVE_QUAD_SZ_MIN) ? 0 :
-                                              (i_num_active_quads - 1);
+                                           (g_wof->req_active_quad_update - 1);
 }
 
 /**
- * calc_vfrt_address
+ * calc_vfrt_mainstore_address
  *
  * Description: Calculates the VFRT address based on the Ceff vdd/vdn and quad
  *              steps.
  *
- * Param[in]: i_vdd_step_from_start
- * Param[in]: i_vdn_step_from_start
- * Param[in]: i_quad_step_from_start
- *
  * Return: The desired VFRT address
  */
-uint32_t calc_vfrt_mainstore_addr( uint16_t i_vdd_step_from_start,
-                            uint16_t i_vdn_step_from_start,
-                            uint8_t i_quad_step_from_start )
+uint32_t calc_vfrt_mainstore_addr( void )
 {
 
     // Wof tables address calculation
-    // (Base_addr + (sizeof VFRT * (total active quads * ( (i_vdn_step_from_start * vdd_size) + (i_vdd_step_from_start) ) + (i_quad_step_from_start))))
+    // (Base_addr + (sizeof VFRT * (total active quads * ( (g_wof->vdn_step_from_start * vdd_size) + (g_wof->vdd_step_from_start) ) + (g_wof->quad_step_from_start))))
     uint32_t offset = G_wof_header.size_of_vfrt *
                     (( G_wof_header.active_quads_size *
-                    ((i_vdn_step_from_start * G_wof_header.vdd_size) +
-                    i_vdd_step_from_start) ) + i_quad_step_from_start);
+                    ((g_wof->vdn_step_from_start * G_wof_header.vdd_size) +
+                    g_wof->vdd_step_from_start) ) + g_wof->quad_step_from_start);
 
     // Skip the wof header at the beginning of wof tables
     uint32_t wof_tables_base = g_wof->vfrt_tbls_main_mem_addr + WOF_HEADER_SIZE;

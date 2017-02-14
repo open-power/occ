@@ -142,6 +142,19 @@ amec_parm_t g_amec_parm_list[] = {
 
 
     // Begin WOF parameters
+    AMEC_PARM_UINT8(PARM_SIZE_OF_VFRT , "size_of_vfrt", &g_amec_sys.wof.size_of_vfrt ),
+    AMEC_PARM_UINT8(PARM_VFRT_DATA_SIZE , "vfrt_data_size", &g_amec_sys.wof.vfrt_data_size ),
+    AMEC_PARM_UINT8(PARM_ACTIVE_QUADS_START , "actv_quads_start", &g_amec_sys.wof.active_quads_start ),
+    AMEC_PARM_UINT8(PARM_ACTIVE_QUADS_SIZE , "actv_quads_size", &g_amec_sys.wof.active_quads_size ),
+    AMEC_PARM_UINT8(PARM_VDN_START , "vdn_start", &g_amec_sys.wof.vdn_start ),
+    AMEC_PARM_UINT8(PARM_VDN_STEP , "vdn_step", &g_amec_sys.wof.vdn_step ),
+    AMEC_PARM_UINT8(PARM_VDN_SIZE , "vdn_size", &g_amec_sys.wof.vdn_size ),
+    AMEC_PARM_UINT8(PARM_VDD_START , "vdd_start", &g_amec_sys.wof.vdd_start ),
+    AMEC_PARM_UINT8(PARM_VDD_STEP , "vdd_step", &g_amec_sys.wof.vdd_step ),
+    AMEC_PARM_UINT8(PARM_VDD_SIZE , "vdd_size", &g_amec_sys.wof.vdd_size ),
+    AMEC_PARM_UINT16(PARM_VDD_STEP_FROM_START, "vdd_stp_frm_strt", &g_amec_sys.wof.vdd_step_from_start),
+    AMEC_PARM_UINT16(PARM_VDN_STEP_FROM_START, "vdn_stp_frm_strt", &g_amec_sys.wof.vdn_step_from_start),
+    AMEC_PARM_UINT8(PARM_QUAD_STEP_FROM_START, "quadStpFrmStrt", &g_amec_sys.wof.quad_step_from_start),
     AMEC_PARM_UINT32_ARRAY(PARM_V_CORE, "v_core_100uV", &g_amec_sys.wof.v_core_100uV, MAX_NUM_QUADS),
     AMEC_PARM_UINT32(PARM_CORE_PWR_ON, "core_pwr_on", &g_amec_sys.wof.core_pwr_on),
     AMEC_PARM_UINT8_ARRAY(PARM_CORES_ON_PER_QUAD, "coreson_per_quad", &g_amec_sys.wof.cores_on_per_quad, MAX_NUM_QUADS),
@@ -192,8 +205,9 @@ amec_parm_t g_amec_parm_list[] = {
     AMEC_PARM_UINT32(PARM_CURR_PING_PONG_BUF, "currPingPongBuf", &g_amec_sys.wof.curr_ping_pong_buf),
     AMEC_PARM_UINT32(PARM_NEXT_PING_PONG_BUF, "nextPingPongBuf", &g_amec_sys.wof.next_ping_pong_buf),
     AMEC_PARM_UINT32(PARM_CURR_VFRT_MAIN_MEM_ADDR, "vfrtMainMemAddr", &g_amec_sys.wof.curr_vfrt_main_mem_addr),
+    AMEC_PARM_UINT32(PARM_NEXT_VFRT_MAIN_MEM_ADDR, "nxt_vfrt_MM_addr", &g_amec_sys.wof.next_vfrt_main_mem_addr),
     AMEC_PARM_UINT32(PARM_ACTIVE_QUADS_SRAM_ADDR, "activQuadSramPtr", &g_amec_sys.wof.active_quads_sram_addr),
-    AMEC_PARM_UINT32(PARM_VFRT_TBLS_MAIN_MEM_ADDR, "vfrtMainMemAddr", &g_amec_sys.wof.vfrt_tbls_main_mem_addr),
+    AMEC_PARM_UINT32(PARM_VFRT_TBLS_MAIN_MEM_ADDR, "vfrtTblsMMAddr", &g_amec_sys.wof.vfrt_tbls_main_mem_addr),
     AMEC_PARM_UINT32(PARM_VFRT_TBLS_LEN, "vfrt_tbls_len", &g_amec_sys.wof.vfrt_tbls_len),
     // End WOF parameters
 };

@@ -74,6 +74,23 @@ typedef struct
 {
     // Bit vector where each bit signifies a different failure case
     uint16_t wof_disabled;
+    // Data from wof header for debug
+    uint8_t size_of_vfrt;
+    uint8_t vfrt_data_size;
+    uint8_t active_quads_start;
+    uint8_t active_quads_size;
+    uint8_t vdn_start;
+    uint8_t vdn_step;
+    uint8_t vdn_size;
+    uint8_t vdd_start;
+    uint8_t vdd_step;
+    uint8_t vdd_size;
+    // Calculated step from start for VDD
+    uint16_t vdd_step_from_start;
+    // Calculated step from start for VDN
+    uint16_t vdn_step_from_start;
+    // Calculated step from start for quads
+    uint8_t quad_step_from_start;
     // Array to hold the core voltages per quad (in 100uV)
     uint32_t v_core_100uV[MAX_NUM_QUADS];
     // Bit vector to hold the power on status of all 24 cores
@@ -177,6 +194,10 @@ typedef struct
     uint32_t next_ping_pong_buf;
     // The current vfrt address in Main Memory that WOF pulled to give to PGPE
     uint32_t curr_vfrt_main_mem_addr;
+    // The most recently calculated vfrt Main Memory address based off recently computed
+    // data. This is not what the PGPE is using. It is the candidate addr for the next
+    // vfrt
+    uint32_t next_vfrt_main_mem_addr;
     // PGPE SRAM address where active_quads
     uint32_t active_quads_sram_addr;
     // Main Memory address where the WOF VFRT tables are located
@@ -214,13 +235,11 @@ uint16_t calculate_step_from_start( uint16_t i_ceff_vdx,
                                     uint8_t i_min_step,
                                     uint8_t i_max_step );
 
-uint8_t calc_quad_step_from_start( uint8_t i_num_active_quads );
+uint8_t calc_quad_step_from_start( void );
 
 
 
-uint32_t calc_vfrt_mainstore_addr( uint16_t i_vdd_step_from_start,
-                            uint16_t i_vdn_step_from_start,
-                            uint8_t i_quad_step_from_start );
+uint32_t calc_vfrt_mainstore_addr( void );
 
 void copy_vfrt_to_sram( copy_vfrt_to_sram_parms_t * i_parms );
 

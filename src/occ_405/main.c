@@ -604,8 +604,21 @@ void read_wof_header(void)
 
             // We were unable to get the active quad count. Do not run wof algo.
             g_amec->wof.wof_disabled |= WOF_RC_INVALID_ACTIVE_QUADS_MASK;
+
+            break;
         }
 
+        // Make wof header data visible to amester
+        g_amec->wof.size_of_vfrt       = G_wof_header.size_of_vfrt;
+        g_amec->wof.vfrt_data_size     = G_wof_header.vfrt_data_size;
+        g_amec->wof.active_quads_start = G_wof_header.active_quads_start;
+        g_amec->wof.active_quads_size  = G_wof_header.active_quads_size;
+        g_amec->wof.vdn_start          = G_wof_header.vdn_start;
+        g_amec->wof.vdn_step           = G_wof_header.vdn_step;
+        g_amec->wof.vdn_size           = G_wof_header.vdn_size;
+        g_amec->wof.vdd_start          = G_wof_header.vdd_start;
+        g_amec->wof.vdd_step           = G_wof_header.vdd_step;
+        g_amec->wof.vdd_size           = G_wof_header.vdd_size;
 
     }while( 0 );
 
