@@ -76,14 +76,11 @@ enum e_gsid
     // ------------------------------------------------------
     // System Sensors
     // ------------------------------------------------------
-    TEMPAMBIENT,       // Ambient Temp of System (from APSS)
-    ALTITUDE,          // Altitude of System (from APSS)
     PWR250US,          // System DC Power (from APSS)
     PWR250USFAN,       // Fan Power (from APSS)
     PWR250USIO,        // IO Subsystem Power (from APSS)
     PWR250USSTORE,     // Storage Subsys Power (from APSS)
     PWRGPU,            // GPU Subsystem Power (from APSS) e.g. Nvidia GPU
-    FANSPEEDAVG,       // Average Fan Speed (from DPSS)
     PWRAPSSCH0,        // These PWRAPSSCH sensors are used to report the power
     PWRAPSSCH1,        // provided by each of the 16 APSS channels.
     PWRAPSSCH2,
@@ -495,6 +492,8 @@ enum e_gsid
     MWR2MSP0M6,
     MWR2MSP0M7,
 
+    // TODO: RTC 163359 - Determine if we want to store individual DIMM temps for CENTAUR
+    // or continue to use max DIMM temp/location under each CENTAUR.
     TEMPDIMMAXP0M0,
     TEMPDIMMAXP0M1,
     TEMPDIMMAXP0M2,
@@ -512,6 +511,24 @@ enum e_gsid
     LOCDIMMAXP0M5,
     LOCDIMMAXP0M6,
     LOCDIMMAXP0M7,
+
+    // Individual DIMM temperatures (NIMBUS)
+    TEMPDIMM00,
+    TEMPDIMM01,
+    TEMPDIMM02,
+    TEMPDIMM03,
+    TEMPDIMM04,
+    TEMPDIMM05,
+    TEMPDIMM06,
+    TEMPDIMM07,
+    TEMPDIMM08,
+    TEMPDIMM09,
+    TEMPDIMM10,
+    TEMPDIMM11,
+    TEMPDIMM12,
+    TEMPDIMM13,
+    TEMPDIMM14,
+    TEMPDIMM15,
 
     // ------------------------------------------------------
     // Centaur Sensors - 8 MemC/Proc - 1 Cent/MemC - 2 PP/Cent
@@ -705,7 +722,7 @@ enum e_gsid
     MLP2P0M7,
 
     TEMP2MSCENT,
-    TEMP16MSDIMM,
+    TEMPDIMMTHRM,
     MEMSP2MS,
 
     // ------------------------------------------------------

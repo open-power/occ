@@ -415,7 +415,7 @@ void amec_update_centaur_temp_sensors(void)
             l_hot = g_amec->proc[0].memctl[k].centaur.tempdimmax.sample;
         }
     }
-    sensor_update(&g_amec->proc[0].temp16msdimm,l_hot);
+    sensor_update(&g_amec->proc[0].tempdimmthrm,l_hot);
     AMEC_DBG("HotDimm=%d\n",l_hot);
 }
 

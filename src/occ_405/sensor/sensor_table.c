@@ -94,6 +94,26 @@ extern amec_sys_t g_amec_sys;
   [SENSOR_W_NUM(sensor, 6)] = ptrbase[6].ptrmember, \
   [SENSOR_W_NUM(sensor, 7)] = ptrbase[7].ptrmember
 
+// Will define a set of "memory controller sensor pointers" by passing in
+// base sensor nameand ptr to [0] entry of array of 8 memcontroller sensors
+#define DIMM_SENSOR_PTRS(sensor,ptrbase,ptrmember) \
+  [SENSOR_W_NUM(sensor, 00)] = ptrbase.ptrmember[ 0], \
+  [SENSOR_W_NUM(sensor, 01)] = ptrbase.ptrmember[ 1], \
+  [SENSOR_W_NUM(sensor, 02)] = ptrbase.ptrmember[ 2], \
+  [SENSOR_W_NUM(sensor, 03)] = ptrbase.ptrmember[ 3], \
+  [SENSOR_W_NUM(sensor, 04)] = ptrbase.ptrmember[ 4], \
+  [SENSOR_W_NUM(sensor, 05)] = ptrbase.ptrmember[ 5], \
+  [SENSOR_W_NUM(sensor, 06)] = ptrbase.ptrmember[ 6], \
+  [SENSOR_W_NUM(sensor, 07)] = ptrbase.ptrmember[ 7], \
+  [SENSOR_W_NUM(sensor, 08)] = ptrbase.ptrmember[ 8], \
+  [SENSOR_W_NUM(sensor, 09)] = ptrbase.ptrmember[ 9], \
+  [SENSOR_W_NUM(sensor, 10)] = ptrbase.ptrmember[10], \
+  [SENSOR_W_NUM(sensor, 11)] = ptrbase.ptrmember[11], \
+  [SENSOR_W_NUM(sensor, 12)] = ptrbase.ptrmember[12], \
+  [SENSOR_W_NUM(sensor, 13)] = ptrbase.ptrmember[13], \
+  [SENSOR_W_NUM(sensor, 14)] = ptrbase.ptrmember[14], \
+  [SENSOR_W_NUM(sensor, 15)] = ptrbase.ptrmember[15]
+
 // Will define a set of "centaur_port_pair sensor pointers" by passing in
 // base sensor nameand ptr to [0] entry of array of 16 memcontroller sensors
 #define PORTPAIR_SENSOR_PTRS(sensor,ptrbase,ptrmember,ptrsnsr) \
@@ -294,14 +314,11 @@ const sensor_ptr_t G_amec_sensor_list[] =
   // ------------------------------------------------------
   // System Sensors
   // ------------------------------------------------------
-  SENSOR_PTR( TEMPAMBIENT,          &g_amec_sys.sys.tempambient),
-  SENSOR_PTR( ALTITUDE,             &g_amec_sys.sys.altitude),
   SENSOR_PTR( PWR250US,             &g_amec_sys.sys.pwr250us),
   SENSOR_PTR( PWR250USFAN,          &g_amec_sys.fan.pwr250usfan),
   SENSOR_PTR( PWR250USIO,           &g_amec_sys.io.pwr250usio),
   SENSOR_PTR( PWR250USSTORE,        &g_amec_sys.storage.pwr250usstore),
   SENSOR_PTR( PWRGPU,               &g_amec_sys.sys.pwr250usgpu),
-  SENSOR_PTR( FANSPEEDAVG,          &g_amec_sys.fan.fanspeedavg),
   SENSOR_PTR( PWRAPSSCH0,           &g_amec_sys.sys.pwrapssch[0]),
   SENSOR_PTR( PWRAPSSCH1,           &g_amec_sys.sys.pwrapssch[1]),
   SENSOR_PTR( PWRAPSSCH2,           &g_amec_sys.sys.pwrapssch[2]),
@@ -378,6 +395,7 @@ const sensor_ptr_t G_amec_sensor_list[] =
   MEMCONTROL_SENSOR_PTRS(MWR2MSP0M,     &g_amec_sys.proc[0].memctl, mwr2ms),
   MEMCONTROL_SENSOR_PTRS(MIRC2MSP0M,    &g_amec_sys.proc[0].memctl, centaur.mirc2ms),
   MEMCONTROL_SENSOR_PTRS(MLP2P0M,       &g_amec_sys.proc[0].memctl, centaur.mlp2ms),
+  DIMM_SENSOR_PTRS(TEMPDIMM,            &g_amec_sys.proc[0],        tempdimm),
   MEMCONTROL_SENSOR_PTRS(TEMPDIMMAXP0M, &g_amec_sys.proc[0].memctl, centaur.tempdimmax),
   MEMCONTROL_SENSOR_PTRS(LOCDIMMAXP0M,  &g_amec_sys.proc[0].memctl, centaur.locdimmax),
 
@@ -393,9 +411,9 @@ const sensor_ptr_t G_amec_sensor_list[] =
   PORTPAIR_SENSOR_PTRS(M4WR2MSP0M,  &g_amec_sys.proc[0].memctl, centaur.portpair, m4wr2ms),
 
 
-  SENSOR_PTR( TEMP2MSCENT,          &g_amec_sys.proc[0].temp2mscent),
-  SENSOR_PTR( TEMP16MSDIMM,         &g_amec_sys.proc[0].temp16msdimm),
-  SENSOR_PTR( MEMSP2MS,             &g_amec_sys.proc[0].memsp2ms_tls),
+  SENSOR_PTR(TEMP2MSCENT,           &g_amec_sys.proc[0].temp2mscent),
+  SENSOR_PTR(TEMPDIMMTHRM,          &g_amec_sys.proc[0].tempdimmthrm),
+  SENSOR_PTR(MEMSP2MS,              &g_amec_sys.proc[0].memsp2ms_tls),
 
   // ------------------------------------------------------
   // Regulator Sensors
@@ -470,14 +488,11 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   // ------------------------------------------------------
   // System Sensors
   // ------------------------------------------------------
-  MINI_SENSOR_PTR(    TEMPAMBIENT,  NULL),
-  MINI_SENSOR_PTR(       ALTITUDE,  NULL),
   MINI_SENSOR_PTR(       PWR250US,  NULL),
   MINI_SENSOR_PTR(    PWR250USFAN,  NULL),
   MINI_SENSOR_PTR(     PWR250USIO,  NULL),
   MINI_SENSOR_PTR(  PWR250USSTORE,  NULL),
   MINI_SENSOR_PTR(         PWRGPU,  NULL),
-  MINI_SENSOR_PTR(    FANSPEEDAVG,  NULL),
 
   // ------------------------------------------------------
   // Chip Sensors
@@ -551,7 +566,7 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   PORTPAIR_MINI_SENSOR_PTRS_NULL(M4WR2MSP0M),
 
   MINI_SENSOR_PTR( TEMP2MSCENT,     &G_dcom_slv_outbox_tx.temp2mscent),
-  MINI_SENSOR_PTR( TEMP16MSDIMM,    &G_dcom_slv_outbox_tx.temp16msdimm),
+  MINI_SENSOR_PTR( TEMPDIMMTHRM,    &G_dcom_slv_outbox_tx.tempdimmthrm),
   MINI_SENSOR_PTR( MEMSP2MS,        NULL),
 
   // ------------------------------------------------------

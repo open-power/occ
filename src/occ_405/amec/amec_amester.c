@@ -754,23 +754,6 @@ uint8_t amester_manual_throttle( const IPMIMsg_t * i_msg,
                 }
 
 
-                case 24:   // parameter 24: set ambient and fan speed sensors
-                {
-                    // Set ambient temperature (8 bits)
-                    temp16=(uint16_t)i_msg->au8CmdData_ptr[2];
-                    sensor_update(AMECSENSOR_PTR(TEMPAMBIENT), temp16);
-                    // Set average fan speed (16 bits)
-                    temp16=((uint16_t)i_msg->au8CmdData_ptr[3]<<8)+(uint16_t)i_msg->au8CmdData_ptr[4];
-                    sensor_update(AMECSENSOR_PTR(FANSPEEDAVG), temp16);
-                    o_resp[0]=i_msg->au8CmdData_ptr[2];
-                    o_resp[1]=i_msg->au8CmdData_ptr[3];
-                    o_resp[2]=i_msg->au8CmdData_ptr[3];
-                     *io_resp_length=3;
-                    l_rc = COMPCODE_NORMAL;
-                    break;
-                }
-
-
                 case 29:   // parameter 29: Control vector recording modes and stream rates.
                 {
                     g_amec->stream_vector_rate=255; // First step is to set an invalid rate so no recording done at all

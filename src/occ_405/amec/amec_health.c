@@ -165,7 +165,7 @@ void amec_health_check_dimm_temp()
     }
 
     l_ot_error = g_amec->thermaldimm.ot_error;
-    l_sensor = getSensorByGsid(TEMP16MSDIMM);
+    l_sensor = getSensorByGsid(TEMPDIMMTHRM);
     l_cur_temp = l_sensor->sample;
     l_max_temp = l_sensor->sample_max;
     TRAC_ERR("amec_health_check_dimm_temp: DIMM reached error temp[%d]. cur_max[%d], hist_max[%d]",

@@ -248,9 +248,9 @@ void chom_update_sensors()
             l_max_cent_temp = G_dcom_slv_outbox_rx[i].temp2mscent;
         }
 
-        if (G_dcom_slv_outbox_rx[i].temp16msdimm > l_max_dimm_temp)
+        if (G_dcom_slv_outbox_rx[i].tempdimmthrm > l_max_dimm_temp)
         {
-            l_max_dimm_temp = G_dcom_slv_outbox_rx[i].temp16msdimm;
+            l_max_dimm_temp = G_dcom_slv_outbox_rx[i].tempdimmthrm;
         }
     }
     g_chom->sensorData[0].sensor[CHOMTEMPPROC].sample = l_max_core_temp;

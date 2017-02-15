@@ -134,8 +134,7 @@ typedef struct __attribute__ ((packed))
     // From APSS Power Measurement
     uint16_t adc[MAX_APSS_ADC_CHANNELS];                            // [2]   - 32 bytes
     uint16_t gpio[MAX_APSS_GPIO_PORTS];                             // [34]  -  4 bytes
-    uint16_t ambient_temp;                                          // [38]  -  2 bytes
-    uint16_t altitude;                                              // [40]  -  2 bytes
+    uint32_t reserved2;                                             // [38]  -  4 bytes
     uint8_t  tod[ TOD_SIZE ];                                       // [42]  -  6 bytes
 
     // Manufacturing parameters
@@ -207,7 +206,7 @@ typedef struct __attribute__ ((packed))
     uint16_t pwrpx250usp0cy[MAX_CORES];                          // [260]
     uint16_t todclock[NUM_TOD_SENSORS];                          // [308]
     uint16_t temp2mscent;                                        // [314]
-    uint16_t temp16msdimm;                                       // [316]
+    uint16_t tempdimmthrm;                                       // [316]
     uint16_t util4msp0;                                          // [318]
     uint16_t ips4msp0;                                           // [320]
     uint16_t nutil3sp0cy[MAX_CORES];                             // [322]

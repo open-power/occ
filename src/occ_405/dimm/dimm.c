@@ -50,17 +50,13 @@ extern bool G_mem_monitoring_allowed;
 extern memory_control_task_t G_memory_control_task;
 
 uint8_t G_dimm_state = DIMM_STATE_INIT;     // Curret state of DIMM state machine
-uint8_t G_maxDimmPorts = NUM_DIMM_PORTS;
+// G_maxDimmPort is the maximum I2C port number (1 indicates port 0 and 1 are valid)
+uint8_t G_maxDimmPort = NUM_DIMM_PORTS - 1;
 
 bool     G_dimm_i2c_reset_required = false;
 uint32_t G_dimm_i2c_reset_cause = 0;
 
 #define MAX_CONSECUTIVE_DIMM_RESETS 1
-
-// On Nimbus, we are using the centaur number as the I2C port (keep same structure)
-// There can be 8 DIMMs under a Centaur and 8 DIMMs per I2C port (max of 2 ports)
-// DIMM code assumed that NUM_DIMMS_PER_I2CPORT == NUM_DIMMS_PER_CENTAUR
-#define NUM_DIMMS_PER_I2CPORT           8
 
 typedef struct {
     bool     disabled;
@@ -72,6 +68,8 @@ dimmData_t G_dimm[NUM_DIMM_PORTS][NUM_DIMMS_PER_I2CPORT] = {{{false,0}}};
 #define MAX_TICK_COUNT_WAIT 2
 
 #define DIMM_AND_PORT ((G_dimm_sm_args.i2cPort<<8) | G_dimm_sm_args.dimm)
+#define DIMM_INDEX(port,dimm) ((port*NUM_DIMMS_PER_I2CPORT)+dimm)
+
 // GPE Requests
 GpeRequest G_dimm_sm_request;
 
@@ -193,7 +191,7 @@ void memory_nimbus_init()
          * @reasoncode  SSX_GENERIC_FAILURE
          * @userdata1   l_rc_gpe  - Return code of failing function
          * @userdata2   0
-         * @userdata4   ERC_CENTAUR_GPE_REQUEST_CREATE_FAILURE
+         * @userdata4   OCC_NO_EXTENDED_RC
          * @devdesc     Failed to initialize GPE1 DIMM IPC job
          */
         l_err = createErrl(
@@ -217,34 +215,21 @@ void memory_nimbus_init()
 void update_hottest_dimm()
 {
     // Find/save the hottest DIMM temperature for the last set of readings
-    uint8_t hottest = 0, hottest_loc = 0;
+    uint8_t hottest = 0;
     int pIndex, dIndex;
-    for (pIndex = 0; pIndex < G_maxDimmPorts; ++pIndex)
+    for (pIndex = 0; pIndex < NUM_DIMM_PORTS; ++pIndex)
     {
         for (dIndex = 0; dIndex < NUM_DIMMS_PER_I2CPORT; ++dIndex)
         {
             if (g_amec->proc[0].memctl[pIndex].centaur.dimm_temps[dIndex].cur_temp > hottest)
             {
                 hottest = g_amec->proc[0].memctl[pIndex].centaur.dimm_temps[dIndex].cur_temp;
-                hottest_loc = (pIndex*8) + dIndex;
             }
         }
     }
 
-    DIMM_DBG("update_hottest_dimm: hottest DIMM temp for this sample: %dC (loc=%d)", hottest, hottest_loc);
-    if(hottest > g_amec->proc[0].memctl[0].centaur.tempdimmax.sample_max)
-    {
-        // Save hottest DIMM location ever sampled.  There is no location for the temp16msdimm
-        // sensor, so just store it in memctl[0] location.
-        DIMM_DBG("update_hottest_dimm: Hottest DIMM ever sampled was DIMM%d %dC (prior %dC)",
-                 hottest_loc, hottest,  g_amec->proc[0].memctl[0].centaur.tempdimmax.sample_max);
-        // Store the hottest DIMM location in locdimmax sensor
-        sensor_update(&g_amec->proc[0].memctl[0].centaur.locdimmax, hottest_loc);
-    }
-    // Store the hottest DIMM temp in tempdimmax sensor
-    sensor_update(&g_amec->proc[0].memctl[0].centaur.tempdimmax, hottest);
-    // Store the hottest DIMM temp in temp16msdimm sensor
-    sensor_update(&g_amec->proc[0].temp16msdimm, hottest);
+    // Store the hottest DIMM temp sensor
+    sensor_update(AMECSENSOR_PTR(TEMPDIMMTHRM), hottest);
 }
 
 
@@ -324,7 +309,7 @@ void mark_dimm_failed()
                          G_sysConfigData.dimm_huids[port][dimm],
                          ERRL_CALLOUT_PRIORITY_HIGH);
         //Mark DIMM as logged so we don't log it again
-        amec_mem_mark_logged(port, dimm,
+        amec_mem_mark_logged(0, dimm,
                              &G_cent_timeout_logged_bitmap,
                              &G_dimm_timeout_logged_bitmap.bytes[port]);
         commitErrl(&l_err);
@@ -507,7 +492,7 @@ uint8_t dimm_reset_sm()
         case DIMM_STATE_RESET_SLAVE_P0_COMPLETE:
             if (schedule_dimm_req(DIMM_STATE_RESET_SLAVE_P0_COMPLETE, L_new_dimm_args))
             {
-                if (G_maxDimmPorts > 1)
+                if (G_maxDimmPort > 0)
                 {
                     nextState = DIMM_STATE_RESET_SLAVE_P1;
                 }
@@ -718,6 +703,9 @@ void process_dimm_temp()
     }
 
     l_fru->cur_temp = l_dimm_temp;
+    // Store DIMM temp in sensor
+    sensor_update(&g_amec->proc[0].tempdimm[DIMM_INDEX(port, dimm)], l_dimm_temp);
+
     G_dimm[port][dimm].errorCount = 0;
 
 } // end process_dimm_temp()
@@ -843,10 +831,10 @@ void task_dimm_sm(struct task *i_self)
                                 {
                                     case DIMM_STATE_INIT:
                                         // Save max I2C ports
-                                        if (G_maxDimmPorts != G_dimm_sm_args.maxPorts)
+                                        if (G_maxDimmPort != G_dimm_sm_args.maxPorts)
                                         {
-                                            G_maxDimmPorts = G_dimm_sm_args.maxPorts;
-                                            DIMM_DBG("task_dimm_sm: updating DIMM Max I2C Ports to %d", G_maxDimmPorts);
+                                            G_maxDimmPort = G_dimm_sm_args.maxPorts;
+                                            DIMM_DBG("task_dimm_sm: updating DIMM Max I2C Port to %d", G_maxDimmPort);
                                         }
                                         break;
 

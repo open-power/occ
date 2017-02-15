@@ -56,6 +56,11 @@ extern uint16_t G_configured_mbas;
 
 
 #define NUM_DIMM_PORTS           2
+// On Nimbus, we are using the centaur number as the I2C port (keep same structure)
+// There can be 8 DIMMs under a Centaur and 8 DIMMs per I2C port (max of 2 ports)
+// DIMM code assumed that NUM_DIMMS_PER_I2CPORT == NUM_DIMMS_PER_CENTAUR
+#define NUM_DIMMS_PER_I2CPORT           8
+
 
 #define DIMM_TICK (CURRENT_TICK % MAX_NUM_TICKS)
 

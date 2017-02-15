@@ -95,7 +95,6 @@ typedef struct
 typedef struct
 {
   // Sensors
-  sensor_t fanspeedavg;
   sensor_t pwr250usfan;
 
 } amec_fans_t;
@@ -358,8 +357,6 @@ typedef struct
 typedef struct
 {
   // System Sensors
-  sensor_t tempambient;
-  sensor_t altitude;
   sensor_t pwr250us;
   sensor_t pwr250usgpu;
   sensor_t pwrapssch[MAX_APSS_ADC_CHANNELS];
@@ -468,8 +465,10 @@ typedef struct
 
   // Memory Summary Sensors
   sensor_t temp2mscent;
-  sensor_t temp16msdimm;
+  sensor_t tempdimmthrm;
   sensor_t memsp2ms_tls;
+  // Nimbus DIMM Sensors
+  sensor_t       tempdimm[NUM_DIMM_PORTS*NUM_DIMMS_PER_I2CPORT];
 
   sensor_t curvdn;
   sensor_t pwrvdd;

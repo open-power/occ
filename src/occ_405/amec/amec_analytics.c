@@ -437,11 +437,6 @@ void amec_analytics_main(void)
                 // Now, update Group 45 analytics packed array
                 switch (g_amec->analytics_thermal_offset)
                 {
-                    case 0:
-                        tempreg = (g_amec->sys.tempambient.sample) << 8;   // upper byte
-                        tempreg = tempreg | 0x8000;    // Turn on MSBit for temporal frame sync
-                        break;
-
                     case 1:
                          if (g_amec->mst_ips_parms.active == 0)
                          {
@@ -459,12 +454,8 @@ void amec_analytics_main(void)
                         tempreg=(g_amec->mst_ips_parms.active)<<8;   // upper byte
                         break;
 
-                    case 3:
-                        tempreg = (g_amec->fan.fanspeedavg.sample / 100) << 8;   // upper byte (100 RPM resolution)
-                        break;
-
                     case 4:
-                        tempreg = (g_amec->proc[0].temp16msdimm.sample) << 8;   // upper byte
+                        tempreg = (g_amec->proc[0].tempdimmthrm.sample) << 8;   // upper byte
                         break;
 
                     case 5:
@@ -472,7 +463,7 @@ void amec_analytics_main(void)
                         break;
 
                     case 6:
-                        // tempreg=(g_amec->proc[2].temp16msdimm.sample)<<8;   // upper byte
+                        // tempreg=(g_amec->proc[2].tempdimmthrm.sample)<<8;   // upper byte
                         tempreg = 0;
                         break;
 
