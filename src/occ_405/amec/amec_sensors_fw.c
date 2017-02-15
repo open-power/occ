@@ -209,31 +209,27 @@ void amec_update_fw_sensors(void)
             // will tell us what GPE job is currently executing.
             if(!l_gpe0_idle)
             {
-// TODO: Will need to figure out how to get this debug info. Currently causes a machine check
-//       when we try to read them.
-//                xsr_sprg0.value  = in64(GPE_GPE0XIRAMDBG);
-//                ir_edr.value     = in64(GPE_GPE0XIRAMEDR);
-//                iar_xsr.value    = in64(GPE_GPE0XIDBGPRO);
+                xsr_sprg0.fields.xsr = in32(GPE_GPE0XIXSR);
+                xsr_sprg0.fields.sprg0 = in32(GPE_GPE0XISPRG0);
+                ir_edr.fields.edr = in32(GPE_GPE0XIEDR);
+                ir_edr.fields.ir = in32(GPE_GPE0XIIR);
+                iar_xsr.fields.iar = in32(GPE_GPE0XIIAR);
                 TRAC_ERR("GPE0 programs did not complete within one tick. "
-                         "XSR[0x%08x]  IAR[0x%08x] IR[0x%08x] EDR[0x%08x]",
-                         iar_xsr.fields.xsr, iar_xsr.fields.iar,
-                         ir_edr.fields.ir, ir_edr.fields.edr);
-                TRAC_ERR("Additional GPE0 debug data: RAM_XSR[0x%08x] RAM_SPRG0[0x%08x]",
-                         xsr_sprg0.fields.xsr, xsr_sprg0.fields.sprg0);
+                         "XSR[0x%08x]  IAR[0x%08x] IR[0x%08x] EDR[0x%08x] SPRG0[0x%08X]",
+                         xsr_sprg0.fields.xsr, iar_xsr.fields.iar,
+                         ir_edr.fields.ir, ir_edr.fields.edr, xsr_sprg0.fields.sprg0);
             }
             if(!l_gpe1_idle)
             {
-// TODO: Will need to figure out how to get this debug info. Currently causes a machine check
-//       when we try to read them.
-//                xsr_sprg0.value  = in64(GPE_GPE1XIRAMDBG);
-//                ir_edr.value     = in64(GPE_GPE1XIRAMEDR);
-//                iar_xsr.value    = in64(GPE_GPE1XIDBGPRO);
+                xsr_sprg0.fields.xsr = in32(GPE_GPE1XIXSR);
+                xsr_sprg0.fields.sprg0 = in32(GPE_GPE1XISPRG0);
+                ir_edr.fields.edr = in32(GPE_GPE1XIEDR);
+                ir_edr.fields.ir = in32(GPE_GPE1XIIR);
+                iar_xsr.fields.iar = in32(GPE_GPE1XIIAR);
                 TRAC_ERR("GPE1 programs did not complete within one tick. "
-                         "XSR[0x%08x]  IAR[0x%08x] IR[0x%08x] EDR[0x%08x]",
-                         iar_xsr.fields.xsr, iar_xsr.fields.iar,
-                         ir_edr.fields.ir, ir_edr.fields.edr);
-                TRAC_ERR("Additional GPE1 debug data: RAM_XSR[0x%08x] RAM_SPRG0[0x%08x]",
-                         xsr_sprg0.fields.xsr, xsr_sprg0.fields.sprg0);
+                         "XSR[0x%08x]  IAR[0x%08x] IR[0x%08x] EDR[0x%08x] SPRG0[0x%08X]",
+                         xsr_sprg0.fields.xsr, iar_xsr.fields.iar,
+                         ir_edr.fields.ir, ir_edr.fields.edr, xsr_sprg0.fields.sprg0);
             }
             L_consec_trace_count++;
         }
