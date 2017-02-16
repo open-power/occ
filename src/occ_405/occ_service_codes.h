@@ -86,6 +86,8 @@ enum occReasonCode
     INTERNAL_FW_FAILURE             = 0xA0,
     /// Failure within the OCC Complex of the processor
     INTERNAL_HW_FAILURE             = 0xB0,
+    /// OCC GPE halted due to checkstop
+    OCC_GPE_HALTED                  = 0xB1,
     /// PMC Failure
     PMC_FAILURE                     = 0xB2,
     /// Data passed as an argument or returned from a function is invalid
