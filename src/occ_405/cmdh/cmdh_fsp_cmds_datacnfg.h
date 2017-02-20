@@ -261,10 +261,21 @@ typedef struct __attribute__ ((packed))
 typedef struct __attribute__ ((packed))
 {
     struct cmdh_fsp_cmd_header;
-    uint8_t                    format;
-    uint8_t                    version;
-    uint8_t                    num_data_sets;
-}cmdh_mem_cfg_header_t;
+    uint8_t                 format;
+    uint8_t                 version;
+    uint8_t                 num_data_sets;
+}cmdh_mem_cfg_header_v20_t;
+
+// Header data for mem cfg packet
+typedef struct __attribute__ ((packed))
+{
+    struct cmdh_fsp_cmd_header;
+    uint8_t                 format;
+    uint8_t                 version;
+    uint8_t                 default_mem_pwr_ctl;  // default memory power control
+    uint8_t                 ips_mem_pwr_ctl;      // Idle Power Save memory power control
+    uint8_t                 num_data_sets;
+}cmdh_mem_cfg_header_v21_t;
 
 // Config packet definition used by TMGT to
 // send sensor mappings for centaurs and dimms
@@ -277,13 +288,19 @@ typedef struct __attribute__ ((packed))
     uint8_t                    dimm_info1;
     uint8_t                    dimm_info2;
     uint8_t                    dimm_info3;
-}cmdh_mem_cfg_data_set_v20_t;
+}cmdh_mem_cfg_data_set_t;
 
 typedef struct __attribute__ ((packed))
 {
-    cmdh_mem_cfg_header_t       header;
-    cmdh_mem_cfg_data_set_v20_t data_set[1];
+    cmdh_mem_cfg_header_v20_t       header;
+    cmdh_mem_cfg_data_set_t data_set[1];
 }cmdh_mem_cfg_v20_t;
+
+typedef struct __attribute__ ((packed))
+{
+    cmdh_mem_cfg_header_v21_t   header;
+    cmdh_mem_cfg_data_set_t data_set[1];
+}cmdh_mem_cfg_v21_t;
 
 
 // Header data for mem throttle packet

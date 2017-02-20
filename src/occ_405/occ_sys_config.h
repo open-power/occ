@@ -280,6 +280,16 @@ typedef struct
     uint16_t    reserved3;               //reserved
 } mem_throt_config_data_t;
 
+// this enum defines memory power control
+typedef enum
+{
+    MEM_PWR_CTL_OFF                  = 0x00,
+    MEM_PWR_CTL_POWER_DOWN           = 0x01,
+    MEM_PWR_CTL_PD_AND_STR           = 0x02,
+    MEM_PWR_CTL_PD_AND_STR_CLK_STOP  = 0x03,
+    MEM_PWR_CTL_NO_SUPPORT           = 0xFF,
+} eMemoryPowerControlSetting;
+
 
 // Sys Config Structure
 
@@ -390,6 +400,8 @@ typedef struct
   uint32_t dimm_huids[MAX_NUM_CENTAURS][NUM_DIMMS_PER_CENTAUR];
   uint8_t mem_type;
   uint8_t dimm_i2c_engine;
+  eMemoryPowerControlSetting ips_mem_pwr_ctl;     // IPS memory power control
+  eMemoryPowerControlSetting default_mem_pwr_ctl; // default memory power control
 
   // --------------------------------------
   // Memory Throttle limits

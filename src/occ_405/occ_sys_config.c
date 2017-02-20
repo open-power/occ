@@ -204,6 +204,8 @@ occSysConfigData_t G_sysConfigData =
     .dimm_huids = {{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0}},
     .mem_type = MEM_TYPE_NIMBUS,
     .dimm_i2c_engine = PIB_I2C_ENGINE_E,
+    .ips_mem_pwr_ctl = MEM_PWR_CTL_OFF,
+    .default_mem_pwr_ctl = MEM_PWR_CTL_OFF,
 
     // -------------------------------------------------------------------
     // Memory Throttle Limits Initialization (for both Nimbus and Cumulus)

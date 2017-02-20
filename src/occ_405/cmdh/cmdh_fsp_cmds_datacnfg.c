@@ -41,6 +41,7 @@
 #include "amec_sys.h"
 #include <centaur_data.h>
 #include "dimm.h"
+#include "memory.h"
 #include <avsbus.h>
 #include "p9_pstates_occ.h"
 
@@ -63,6 +64,7 @@
 #define DATA_IPS_VERSION           0
 
 #define DATA_MEM_CFG_VERSION_20    0x20
+#define DATA_MEM_CFG_VERSION_21    0x21
 
 #define DATA_MEM_THROT_VERSION_20  0x20
 
@@ -1605,7 +1607,7 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                     cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     errlHndl_t                      l_err = NULL;
-    cmdh_mem_cfg_v20_t*             l_cmd_ptr = (cmdh_mem_cfg_v20_t*)i_cmd_ptr;
+    cmdh_mem_cfg_v21_t*             l_cmd_ptr = (cmdh_mem_cfg_v21_t*)i_cmd_ptr;
     uint16_t                        l_data_length = 0;
     uint16_t                        l_exp_data_length = 0;
     uint8_t                         l_num_centaurs = 0;
@@ -1614,6 +1616,8 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
     uint8_t                         l_i2c_port;
     uint8_t                         l_i2c_addr = 0;
     uint8_t                         l_dimm_num = 0;
+    uint8_t                         num_data_sets = 0;
+    cmdh_mem_cfg_data_set_t*        data_sets_ptr;
     int                             i;
 
     do
@@ -1633,33 +1637,61 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
         }
 
         // Process data based on version
-        if(l_cmd_ptr->header.version == DATA_MEM_CFG_VERSION_20)
+        if( l_cmd_ptr->header.version == DATA_MEM_CFG_VERSION_20 ||
+            l_cmd_ptr->header.version == DATA_MEM_CFG_VERSION_21 )
         {
-            // Verify the actual data length matches the expected data length for this version
-            l_exp_data_length = sizeof(cmdh_mem_cfg_header_t) - sizeof(cmdh_fsp_cmd_header_t) +
-                                (l_cmd_ptr->header.num_data_sets * sizeof(cmdh_mem_cfg_data_set_v20_t));
+            if(l_cmd_ptr->header.version == DATA_MEM_CFG_VERSION_21)
+            {
+                G_sysConfigData.ips_mem_pwr_ctl = l_cmd_ptr->header.ips_mem_pwr_ctl;
+                G_sysConfigData.default_mem_pwr_ctl = l_cmd_ptr->header.default_mem_pwr_ctl;
+
+                num_data_sets = ((cmdh_mem_cfg_v21_t*) l_cmd_ptr)->header.num_data_sets;
+                data_sets_ptr = ((cmdh_mem_cfg_v21_t*) l_cmd_ptr)->data_set;
+
+                // Verify the actual data length matches the expected data length for this version
+                l_exp_data_length = sizeof(cmdh_mem_cfg_header_v21_t) - sizeof(cmdh_fsp_cmd_header_t) +
+                    (num_data_sets * sizeof(cmdh_mem_cfg_data_set_t));
+
+            }
+
+            else if(l_cmd_ptr->header.version == DATA_MEM_CFG_VERSION_20)
+            {
+                // OFF memory power control means none of the
+                //  memory control registers are ever updated.
+                G_sysConfigData.ips_mem_pwr_ctl     = MEM_PWR_CTL_NO_SUPPORT;
+                G_sysConfigData.default_mem_pwr_ctl = MEM_PWR_CTL_NO_SUPPORT;
+
+                num_data_sets = ((cmdh_mem_cfg_v20_t*) l_cmd_ptr)->header.num_data_sets;
+                data_sets_ptr = ((cmdh_mem_cfg_v20_t*) l_cmd_ptr)->data_set;
+
+                // Verify the actual data length matches the expected data length for this version
+                l_exp_data_length = sizeof(cmdh_mem_cfg_header_v20_t) - sizeof(cmdh_fsp_cmd_header_t) +
+                    (num_data_sets * sizeof(cmdh_mem_cfg_data_set_t));
+            }
+
 
             if(l_exp_data_length != l_data_length)
             {
-               CMDH_TRAC_ERR("data_store_mem_cfg: Invalid mem config data packet: data_length[%u] exp_length[%u] version[0x%02X] num_data_sets[%u]",
-               l_data_length,
-               l_exp_data_length,
-               l_cmd_ptr->header.version,
-               l_cmd_ptr->header.num_data_sets);
+               CMDH_TRAC_ERR("data_store_mem_cfg: Invalid mem config data packet: "
+                             "data_length[%u] exp_length[%u] version[0x%02X] num_data_sets[%u]",
+                             l_data_length,
+                             l_exp_data_length,
+                             l_cmd_ptr->header.version,
+                             num_data_sets);
 
                cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
                break;
             }
 
-            if (l_cmd_ptr->header.num_data_sets > 0)
+            if (num_data_sets > 0)
             {
                 // Store the memory type.  Memory must all be the same type, save from first and verify remaining
-                G_sysConfigData.mem_type = l_cmd_ptr->data_set[0].memory_type;
+                G_sysConfigData.mem_type = data_sets_ptr[0].memory_type;
                 if(G_sysConfigData.mem_type == MEM_TYPE_NIMBUS)
                 {
                     // Nimbus type -- dimm_info1 is I2C engine which must be the same
                     // save from first entry and verify remaining
-                    G_sysConfigData.dimm_i2c_engine = l_cmd_ptr->data_set[0].dimm_info1;
+                    G_sysConfigData.dimm_i2c_engine = data_sets_ptr[0].dimm_info1;
                 }
                 else
                 {
@@ -1667,19 +1699,29 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                     //G_sysConfigData.mem_type = MEM_TYPE_CUMULUS;
 
                     CMDH_TRAC_ERR("data_store_mem_cfg: Invalid mem type 0x%02X in config data packet version[0x%02X] num_data_sets[%u]",
-                                  l_cmd_ptr->data_set[0].memory_type,
+                                  data_sets_ptr[0].memory_type,
                                   l_cmd_ptr->header.version,
-                                  l_cmd_ptr->header.num_data_sets);
+                                  num_data_sets);
 
                     cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
                     break;
                 }
 
                 // Store the hardware sensor ID and the temperature sensor ID
-                for(i=0; i<l_cmd_ptr->header.num_data_sets; i++)
+                for(i=0; i<num_data_sets; i++)
                 {
-                    cmdh_mem_cfg_v20_t*          l_cmd2_ptr = (cmdh_mem_cfg_v20_t*)i_cmd_ptr;
-                    cmdh_mem_cfg_data_set_v20_t* l_data_set = &l_cmd2_ptr->data_set[i];
+                    cmdh_mem_cfg_data_set_t* l_data_set;
+
+                    if(l_cmd_ptr->header.version == DATA_MEM_CFG_VERSION_21)
+                    {
+                        cmdh_mem_cfg_v21_t*      l_cmd2_ptr = (cmdh_mem_cfg_v21_t*)i_cmd_ptr;
+                        l_data_set = &l_cmd2_ptr->data_set[i];
+                    }
+                    else       // DATA_MEM_CFG_VERSION_20
+                    {
+                        cmdh_mem_cfg_v20_t*      l_cmd2_ptr = (cmdh_mem_cfg_v20_t*)i_cmd_ptr;
+                        l_data_set = &l_cmd2_ptr->data_set[i];
+                    }
 
                     // Verify matching memory type and process based on memory type
                     if( (l_data_set->memory_type == G_sysConfigData.mem_type) &&
@@ -1825,7 +1867,7 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                       G_sysConfigData.mem_type, l_num_centaurs, l_num_dimms);
 
         // No errors so we can enable memory monitoring if the data indicates it should be enabled
-        if(l_cmd_ptr->header.num_data_sets == 0)  // num data sets of 0 indicates memory monitoring disabled
+        if(num_data_sets == 0)  // num data sets of 0 indicates memory monitoring disabled
         {
             CMDH_TRAC_IMP("Memory monitoring is not allowed (mem config data sets = 0)");
         }
@@ -1838,7 +1880,7 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
             // Require the mem throt packet for going to active state
             SMGR_VALIDATE_DATA_ACTIVE_MASK |= DATA_MASK_MEM_THROT;
 
-            CMDH_TRAC_IMP("Memory monitoring is allowed (mem config data sets = %d)", l_cmd_ptr->header.num_data_sets);
+            CMDH_TRAC_IMP("Memory monitoring is allowed (mem config data sets = %d)", num_data_sets);
         }
     }
     else

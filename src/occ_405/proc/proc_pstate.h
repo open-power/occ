@@ -112,7 +112,7 @@ typedef struct __attribute__ ((packed))
     uint8_t              reserved[16];            // Reserved static space: 16B
     opal_pstate_data_t   pstates[PSTATE_ENTRIES]; // Generated Pstates Table: 2048B
     uint8_t              max_pstate[24];          // Maximum Pstate with N active cores is max_pstate[N-1]: 24B
-    uint8_t              pad[56];                 // Padding in reserved static space: 56B
+    uint8_t              pad[80];                 // Padding in reserved static space: 80B
 } opal_static_table_t __attribute__ ((aligned (128)));
 
 
