@@ -65,8 +65,9 @@
 extern dcom_slv_inbox_t G_dcom_slv_inbox_rx;
 extern opal_proc_voting_reason_t G_amec_opal_proc_throt_reason;
 extern uint16_t G_proc_fmax_mhz;
+extern GpeRequest G_wof_vfrt_req;
 
-//*************************************************************************/
+//*************************************************************************
 // Macros
 //*************************************************************************/
 
@@ -505,7 +506,7 @@ void amec_slv_state_3(void)
 // End Function Specification
 void amec_slv_state_4(void)
 {
-  AMEC_DBG("\tAMEC Slave State 4\n");
+    AMEC_DBG("\tAMEC Slave State 4\n");
 
 /* Not yet supported  TODO Centaur support RTC 163359
   //-------------------------------------------------------
@@ -514,41 +515,12 @@ void amec_slv_state_4(void)
   amec_update_centaur_sensors(CENTAUR_4);
 */
 
-  //-------------------------------------------------------
-  // Run WOF Algorithm
-  //-------------------------------------------------------
-  if( IS_OCC_STATE_ACTIVE() )
-  {
-
-      /* TODO: RTC 166301 - Logic to determine if WOF algorithm should run.
-      // The WOF algorithm is to be run every 4ms. Since amec_slv_state_4
-      // is run every 2ms, we need to skip every other invocation.
-      static bool L_run_wof_algorithm = true;
-      if( !L_run_wof_algorithm )
-      {
-          // When false, the last invocation decided we need to wait 2 ms
-          // run wof algo next time.
-          L_run_wof_algorithm = true;
-      }
-      else
-      {
-        //if IPC command is idle and ready to go
-        //{
-        //wof_main();
-        L_run_wof_algorithm = false;
-        //}
-        //else if IPC command is still waiting
-        //make thread wait another 2 ms
-        //{
-        //  L_run_wof_algorithm = true;
-        //}
-        //else if IPC command is returning an error
-        //{
-        //  flag the error, request a reset
-        //}
-      }
-      */
-  }
+    //-------------------------------------------------------
+    // Run WOF Algorithm
+    //-------------------------------------------------------
+/* TODO WOF full function testing on HW RTC 158075
+    call_wof_main();
+*/
 }
 
 

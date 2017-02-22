@@ -36,7 +36,8 @@
 #define WOF_HEADER_SIZE             32
 #define CORE_IDDQ_MEASUREMENTS      6
 #define QUAD_POWERED_OFF            0xFF
-
+#define PGPE_WOF_OFF                0
+#define PGPE_WOF_ON                 1
 //******************************************************************************
 // Bit Vector Masks
 //******************************************************************************
@@ -45,11 +46,39 @@
 //******************************************************************************
 // WOF Reason Code Masks
 //******************************************************************************
-#define WOF_RC_NO_WOF_HEADER_MASK                       0x0001
-#define WOF_RC_INVALID_ACTIVE_QUADS_MASK                0x0002
-#define WOF_RC_NO_VDD_VDN_READ_MASK                     0x0004
+#define WOF_RC_NO_WOF_HEADER_MASK                  0x0001
+#define WOF_RC_INVALID_ACTIVE_QUADS                0x0002
+#define WOF_RC_INVALID_VDD_VDN                     0x0004
+#define WOF_RC_PGPE_REQ_NOT_IDLE                   0x0008
+#define WOF_RC_PGPE_WOF_DISABLED                   0x0010
+#define WOF_RC_PSTATE_PROTOCOL_OFF                 0x0020
+#define WOF_RC_VFRT_REQ_TIMEOUT                    0x0040
+#define WOF_RC_CONTROL_REQ_TIMEOUT                 0x0080
+#define WOF_RC_STATE_CHANGE                        0x0100
+#define WOF_RC_MODE_CHANGE                         0x0200
+#define WOF_RC_MODE_NO_SUPPORT_MASK                0x0400
+#define WOF_RC_DIVIDE_BY_ZERO                      0x0800
+#define WOF_RC_VFRT_REQ_FAILURE                    0x1000
+#define WOF_RC_CONTROL_REQ_FAILURE                 0x2000
 
-#define WOF_RC_MODE_NO_SUPPORT_MASK                     0x0008
+
+// Reason codes which should NOT create an error log should be added here
+#define ERRL_RETURN_CODES ~(WOF_RC_MODE_CHANGE  | \
+                            WOF_RC_STATE_CHANGE | \
+                            WOF_RC_MODE_NO_SUPPORT_MASK)
+
+// Enumeration to define the WOF initialization steps
+enum wof_init_states
+{
+    WOF_DISABLED,
+    INITIAL_VFRT_SENT_WAITING,
+    INITIAL_VFRT_SUCCESS,
+    WOF_CONTROL_ON_SENT_WAITING,
+    PGPE_WOF_ENABLED_NO_PREV_DATA,
+    WOF_ENABLED,
+};
+
+
 
 #define WOF_MAGIC_NUMBER            0x57465448   // "WFTH"
 
@@ -189,9 +218,12 @@ typedef struct
     // tvpd leak used for nest leakage calculations
     uint32_t tvpd_leak_nest;
     // Contains the most recently read value from SRAM for Requested active quads
+    // Value represents a bit vector denoting which quads are active
     uint8_t req_active_quad_update;
     // Contains the previous value read from shared SRAM for requested active quads
     uint8_t prev_req_active_quads;
+    // Contains the number of active quads i.e. the number of 1 bits in req_active_quads_update
+    uint8_t num_active_quads;
     // The current ping pong buffer SRAM address being used by PGPE
     uint32_t curr_ping_pong_buf;
     // The next ping pong buffer SRAM address to be used by PGPE if IPC request succeeds
@@ -202,12 +234,18 @@ typedef struct
     // data. This is not what the PGPE is using. It is the candidate addr for the next
     // vfrt
     uint32_t next_vfrt_main_mem_addr;
-    // PGPE SRAM address where active_quads
-    uint32_t active_quads_sram_addr;
     // Main Memory address where the WOF VFRT tables are located
     uint32_t vfrt_tbls_main_mem_addr;
     // The length of the WOF VFRT data in main memory
     uint32_t vfrt_tbls_len;
+    // The state of the wof routine during initialization. states defined above
+    uint8_t wof_init_state;
+    // The address in shared OCC-PGPE SRAM of Quad State 0
+    uint32_t quad_state_0_addr;
+    // The address in shared OCC-PGPE SRAM of Quad State 1
+    uint32_t quad_state_1_addr;
+    // The address in shared OCC-PGPE SRAM of the Requested Active quads
+    uint32_t req_active_quads_addr;
 } amec_wof_t;
 
 typedef struct
@@ -232,6 +270,8 @@ typedef struct
 // Function Prototypes
 //******************************************************************************
 
+void call_wof_main( void );
+
 void wof_main( void );
 
 uint16_t calculate_step_from_start( uint16_t i_ceff_vdx,
@@ -247,7 +287,7 @@ uint32_t calc_vfrt_mainstore_addr( void );
 
 void copy_vfrt_to_sram( copy_vfrt_to_sram_parms_t * i_parms );
 
-void switch_ping_pong_buffer( void );
+void wof_vfrt_callback( void );
 
 void send_vfrt_to_pgpe( uint32_t i_vfrt_address );
 
@@ -284,4 +324,13 @@ uint32_t calculate_effective_capacitance( uint32_t i_iAC,
 
 void read_sensor_data( void );
 
+void disable_wof( void );
+
+bool enable_wof( void );
+
+void wof_control_callback( void );
+
+void send_initial_vfrt_to_pgpe( void );
+
+void read_req_active_quads( void );
 #endif

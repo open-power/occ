@@ -33,7 +33,7 @@
 #include <wof_service_codes.h>
 #include <amec_sys.h>
 #include <occ_sys_config.h>
-#include "wof.h"
+#include <wof.h>
 
 //******************************************************************************
 // External Globals
@@ -41,8 +41,11 @@
 extern amec_sys_t g_amec_sys;
 extern OCCPstateParmBlock G_oppb;
 extern GPE_BUFFER(ipcmsg_wof_vfrt_t G_wof_vfrt_parms);
-extern GpeRequest G_wof_vfrt_req;
-extern uint32_t   G_nest_frequency_mhz;
+extern GPE_BUFFER(ipcmsg_wof_control_t G_wof_control_parms);
+extern GpeRequest   G_wof_vfrt_req;
+extern GpeRequest   G_wof_control_req;
+extern uint32_t     G_nest_frequency_mhz;
+extern pstateStatus G_proc_pstate_status;
 //******************************************************************************
 // Globals
 //******************************************************************************
@@ -54,6 +57,7 @@ wof_header_data_t G_wof_header __attribute__ ((section (".global_data")));
 
 // Quad state structs to temporarily hold the data from the doublewords to
 // then populate in amec structure
+//TODO RTC: 169955 - Update quad state temp structs to reflect new imported code
 quad_state0_t G_quad_state_0 = {0};
 quad_state1_t G_quad_state_1 = {0};
 
@@ -94,6 +98,217 @@ int16_t G_wof_iddq_mult_table[][2] = {
 };
 #define WOF_IDDQ_MULT_TABLE_N 11
 
+//******************************************************************************
+// Function Definitions
+//******************************************************************************
+
+/**
+ * call_wof_main
+ *
+ * Description: Performs the Initialization of the WOF infrastructure
+ *              such that the WOF algorithm can run. This includes making
+ *              sure the PGPE is ready to perform WOF calculations and enforcing
+ *              when WOF should wait a tick to perform a calc or disable wof
+ *              entirely. Called from amec_slave_smh.c::amec_slv_state_4. Called
+ *              every 2ms, but calls the wof_main algorithm every other invocation
+ *              resulting in 4ms intervals
+ * Param: None
+ *
+ * Return: None
+ */
+void call_wof_main( void )
+{
+    // Variable to control toggling between invocations
+    // Init to false to ensure init asynchronous operations have
+    // the extra 2ms to finish.
+    static bool L_run_wof = false;
+
+    // Variable to ensure we do not keep trying to send vfrt GpeRequest
+    // more than 1 extra time.
+    static bool L_vfrt_last_chance = false;
+
+    // Variable to ensure we do not keep trying to send the wof control
+    static bool L_wof_control_last_chance = false;
+
+    // GpeRequest more than 1 extra time.
+    bool enable_success = false;
+    do
+    {
+        // Make sure wof has not been disabled
+        if( g_wof->wof_disabled )
+        {
+            // WOF has been flagged as disabled and it has not already
+            // been turned off, Turn off wof on PGPE
+            if( g_wof->wof_init_state != WOF_DISABLED )
+            {
+                disable_wof();
+            }
+            // else wof has already disabled wof. No need to send
+            // wof control IPC message again.
+
+            break;
+        }
+
+        // Make sure Pstate Protocol is on
+        if(G_proc_pstate_status != PSTATES_ENABLED)
+        {
+            // No need to call disable wof as the PGPE would
+            // already have disabled wof. Just flag reason.
+            CMDH_TRAC_ERR("WOF Disabled! Pstate Protocol off");
+            g_wof->wof_disabled |= WOF_RC_PSTATE_PROTOCOL_OFF;
+            break;
+        }
+
+        // Ensure the OCC is active
+        if( IS_OCC_STATE_ACTIVE() )
+        {
+            // Make sure we are not disabled
+            if( !g_wof->wof_disabled &&
+                 g_wof->wof_init_state < PGPE_WOF_ENABLED_NO_PREV_DATA )
+            {
+                switch( g_wof->wof_init_state )
+                {
+                    // For each possible initialization state,
+                    // do the appropriate action
+                    case WOF_DISABLED:
+                        // calculate initial vfrt, send gpeRequest
+                        // Initial vfrt is the last vfrt in Main memory
+                        send_initial_vfrt_to_pgpe();
+                        break;
+
+                    case INITIAL_VFRT_SENT_WAITING:
+                        // Check if request is still processing.
+                        // Init state updated in wof_vfrt_callback
+                        if( !async_request_is_idle(&G_wof_vfrt_req.request) )
+                        {
+                            if( L_vfrt_last_chance )
+                            {
+                                CMDH_TRAC_ERR("WOF Disabled! Initial VFRT request timeout");
+                                g_wof->wof_disabled |= WOF_RC_VFRT_REQ_TIMEOUT;
+                            }
+                            else
+                            {
+                                L_vfrt_last_chance = true;
+                            }
+                        }
+                        else
+                        {
+                            // If we got here, init state was set in
+                            // wof_vfrt_callback
+                            L_vfrt_last_chance = false;
+                        }
+                        break;
+
+                    case INITIAL_VFRT_SUCCESS:
+                        // Send wof control on gpe request
+                        // If enable_success returns true, init state was set
+                        enable_success = enable_wof();
+                        if( !enable_success )
+                        {
+                            if( L_wof_control_last_chance )
+                            {
+                                CMDH_TRAC_ERR("WOF Disabled! Control req timeout(1)");
+                                g_wof->wof_disabled |= WOF_RC_CONTROL_REQ_TIMEOUT;
+                            }
+                            else
+                            {
+                                L_wof_control_last_chance = true;
+                            }
+                        }
+                        else
+                        {
+                            // Reset the last chance variable
+                            // Init state updated in enable_wof
+                            L_wof_control_last_chance = false;
+                        }
+                        break;
+
+                    case WOF_CONTROL_ON_SENT_WAITING:
+                        // check if request is still processing.
+                        if( !async_request_is_idle(&G_wof_control_req.request) )
+                        {
+                            if( L_wof_control_last_chance )
+                            {
+                                CMDH_TRAC_ERR("WOF Disabled! Control req timeout(2)");
+                                g_wof->wof_disabled |= WOF_RC_CONTROL_REQ_TIMEOUT;
+                            }
+                            else
+                            {
+                                L_wof_control_last_chance = true;
+                            }
+                        }
+                        // Init state updated in wof_control_callback
+                        break;
+
+                    default:
+                        break;
+                }
+            }
+            // If we have made it to at least WOF enabled no previous data
+            // state run wof routine normally ensuring wof was not disabled
+            // in previous 5 states
+            if( (g_wof->wof_init_state >= PGPE_WOF_ENABLED_NO_PREV_DATA) &&
+                !g_wof->wof_disabled )
+            {
+                // Make sure we run algo on appropriate tick
+                if( !L_run_wof )
+                {
+                    // Only check if req active quads changed if we are
+                    // in the fully enabled wof state
+                    if(g_wof->wof_init_state == WOF_ENABLED)
+                    {
+                        // Read active quads from sram
+                        read_req_active_quads();
+
+                        // If the requested active quads changed last loop
+                        // Send vfrt with new req active quads
+                        if( g_wof->req_active_quad_update !=
+                            g_wof->prev_req_active_quads )
+                        {
+                            // Calculate new quad step
+                            g_wof->quad_step_from_start =
+                                                    calc_quad_step_from_start();
+                            // Compute new VFRT Main Memory address using new quads
+                            g_wof->next_vfrt_main_mem_addr =
+                                                     calc_vfrt_mainstore_addr();
+                            // Send new VFRT
+                            send_vfrt_to_pgpe( g_wof->next_vfrt_main_mem_addr );
+                        }
+                    }
+                    L_run_wof = true;
+                }
+                else
+                {
+                    // Normal execution of wof algorithm
+                    if( !async_request_is_idle(&G_wof_vfrt_req.request) )
+                    {
+                        if( L_vfrt_last_chance )
+                        {
+                            CMDH_TRAC_ERR("WOF Disabled! VFRT req timeout");
+                            g_wof->wof_disabled |= WOF_RC_VFRT_REQ_TIMEOUT;
+                        }
+                        else
+                        {
+                            L_vfrt_last_chance = true;
+                        }
+                    }
+                    else
+                    {
+                        // Request is idle. Run wof algorithm
+                        wof_main();
+                        L_run_wof = false;
+                        L_vfrt_last_chance = false;
+                        // Finally make sure we are in the fully enabled state
+                        if( g_wof->wof_init_state == PGPE_WOF_ENABLED_NO_PREV_DATA )
+                        {
+                            g_wof->wof_init_state = WOF_ENABLED;
+                        }
+                    }
+                } // L_run_wof
+            } // >= PGPE_WOF_ENABLED_NO_PREV_DATA
+        } // IS_OCC_STATE_ACTIVE
+    } while( 0 );
+}
 
 /**
  *  wof_main
@@ -106,7 +321,6 @@ int16_t G_wof_iddq_mult_table[][2] = {
  */
 void wof_main(void)
 {
-
     // Read out the sensor data needed for calculations
     read_sensor_data();
 
@@ -128,8 +342,6 @@ void wof_main(void)
     // Calculate ceff_ratio_vdd and ceff_ratio_vdn
     calculate_ceff_ratio_vdd();
     calculate_ceff_ratio_vdn();
-
-
 
     // Calculate how many steps from the beginning for VDD, VDN, and active quads
     g_wof->vdn_step_from_start =
@@ -153,9 +365,7 @@ void wof_main(void)
 
     // Send the new vfrt to the PGPE
     send_vfrt_to_pgpe( g_wof->next_vfrt_main_mem_addr );
-
 }
-
 
 /**
  *  calculate_step_from_start
@@ -206,7 +416,6 @@ uint16_t calculate_step_from_start(uint16_t i_ceff_vdx_ratio,
     return l_current_step;
 }
 
-
 /**
  * calc_quad_step_from_start
  *
@@ -218,7 +427,7 @@ uint16_t calculate_step_from_start(uint16_t i_ceff_vdx_ratio,
 uint8_t calc_quad_step_from_start( void )
 {
     return (G_wof_header.active_quads_size == ACTIVE_QUAD_SZ_MIN) ? 0 :
-                                           (g_wof->req_active_quad_update - 1);
+                                           (g_wof->num_active_quads - 1);
 }
 
 /**
@@ -231,7 +440,6 @@ uint8_t calc_quad_step_from_start( void )
  */
 uint32_t calc_vfrt_mainstore_addr( void )
 {
-
     // Wof tables address calculation
     // (Base_addr + (sizeof VFRT * (total active quads * ( (g_wof->vdn_step_from_start * vdd_size) + (g_wof->vdd_step_from_start) ) + (g_wof->quad_step_from_start))))
     uint32_t offset = G_wof_header.size_of_vfrt *
@@ -303,10 +511,7 @@ void copy_vfrt_to_sram( copy_vfrt_to_sram_parms_t * i_parms)
     // Confirm Successful scheduling of WOF VFRT task
     if(l_gperc != 0)
     {
-        //Error in scheduling pgpe clip update task
-        TRAC_ERR("copy_vfrt_to_sram: Failed to schedule WOF VFRT task rc=%x",
-                 l_gperc);
-
+        //Error in scheduling wof_vfrt task
         /* @
          * @errortype
          * @moduleid    COPY_VFRT_TO_SRAM
@@ -314,17 +519,17 @@ void copy_vfrt_to_sram( copy_vfrt_to_sram_parms_t * i_parms)
          * @userdata1   rc - gpe_request_schedule return code
          * @userdata2   0
          * @userdata4   OCC_NO_EXTENDED_RC
-         * @devdesc     OCC Failed to schedule a GPE job for clip update
+         * @devdesc     OCC Failed to schedule a GPE job for wof vfrt
          */
         errlHndl_t l_errl = createErrl(
             COPY_VFRT_TO_SRAM,                   // modId
-            GPE_REQUEST_SCHEDULE_FAILURE,           // reasoncode
-            OCC_NO_EXTENDED_RC,                     // Extended reason code
-            ERRL_SEV_UNRECOVERABLE,                 // Severity
-            NULL,                                   // Trace Buf
-            DEFAULT_TRACE_SIZE,                     // Trace Size
-            l_gperc,                                     // userdata1
-            0                                       // userdata2
+            GPE_REQUEST_SCHEDULE_FAILURE,        // reasoncode
+            OCC_NO_EXTENDED_RC,                  // Extended reason code
+            ERRL_SEV_UNRECOVERABLE,              // Severity
+            NULL,                                // Trace Buf
+            DEFAULT_TRACE_SIZE,                  // Trace Size
+            l_gperc,                             // userdata1
+            0                                    // userdata2
             );
 
         // Callout firmware
@@ -336,30 +541,23 @@ void copy_vfrt_to_sram( copy_vfrt_to_sram_parms_t * i_parms)
         // Commit error log
         commitErrl(&l_errl);
     }
-
 }
 
 /**
- * switch_ping_pong_buffer
+ * wof_vfrt_callback
  *
  * Description: Callback function for G_wof_vfrt_req GPE request to
  *              confirm the new VFRT is being used by the PGPE and
- *              record the switch on the 405
+ *              record the switch on the 405. Also updates the 
+ *              initialization
  */
-//TODO RTC 166301 - will be renamed wof_vfrt_req_callback
-void switch_ping_pong_buffer( void )
+void wof_vfrt_callback( void )
 {
     // Confirm the WOF VFRT PGPE request has completed with no errors
     if( G_wof_vfrt_parms.msg_cb.rc == PGPE_WOF_RC_VFRT_QUAD_MISMATCH )
     {
-        // TODO RTC 166301 - Implement this logic with read_req_active_quads
-        //                   function.
-        // Quad Mismatch.
-        // Reread the requested active quads from Shared SRAM and set
-        // parameters
-        // Trace the mismatch and let the code exit. Will retry
-        // next invocation of wof_main.
-        // Keep retrying if this return code is seen
+        // Rereading OCC-SRAM to update requested active quads
+        read_req_active_quads();
     }
     else if( G_wof_vfrt_parms.msg_cb.rc == PGPE_RC_SUCCESS )
     {
@@ -368,29 +566,21 @@ void switch_ping_pong_buffer( void )
 
        // Update previous active quads
        g_wof->prev_req_active_quads = g_wof->req_active_quad_update;
+
+       // Update current vfrt_main_mem_address
+       g_wof->curr_vfrt_main_mem_addr = g_wof->next_vfrt_main_mem_addr;
+
+       // Update the wof_init_state based off the current state
+       if( g_wof->wof_init_state == INITIAL_VFRT_SENT_WAITING )
+       {
+            g_wof->wof_init_state = INITIAL_VFRT_SUCCESS;
+       }
     }
     else
     {
-        // Some other failure case. Reset PM complex.
-        /* @
-         * @errortype
-         * @moduleid    WOF_VFRT_CALLBACK
-         * @reasoncode  WOF_VFRT_REQ_FAILURE
-         * @userdata1   The GpeRequest RC
-         * @userdata4   OCC_NO_EXTENDED_RC
-         */
-        errlHndl_t l_errl = createErrl( WOF_VFRT_CALLBACK,
-                                        WOF_VFRT_REQ_FAILURE,
-                                        OCC_NO_EXTENDED_RC,
-                                        ERRL_SEV_UNRECOVERABLE,
-                                        NULL,
-                                        DEFAULT_TRACE_SIZE,
-                                        G_wof_vfrt_parms.msg_cb.rc,
-                                        0 );
-
-        REQUEST_RESET( l_errl );
+        // Disable WOF
+        g_wof->wof_disabled |= WOF_RC_VFRT_REQ_FAILURE;
     }
-
 }
 
 /**
@@ -406,7 +596,6 @@ void switch_ping_pong_buffer( void )
 void send_vfrt_to_pgpe( uint32_t i_vfrt_main_mem_addr )
 {
     int l_ssxrc = SSX_OK;
-    int l_gperc = 0;
     uint32_t l_reasonCode = 0;
     uint32_t l_extReasonCode = 0;
 
@@ -419,55 +608,8 @@ void send_vfrt_to_pgpe( uint32_t i_vfrt_main_mem_addr )
             // VFRT and requested active quads are unchanged. Skip
             break;
         }
-        else if( (i_vfrt_main_mem_addr == g_wof->curr_vfrt_main_mem_addr)&&
-                 (g_wof->req_active_quad_update !=
-                  g_wof->prev_req_active_quads) )
-        {
-            // Only requested active quads changed. No need to do a BCE request
-            // for new VFRT. Just send IPC command with updated active quads
-            G_wof_vfrt_parms.vfrt_ptr = (VFRT_Hcode_t*)g_wof->curr_ping_pong_buf;
-            G_wof_vfrt_parms.active_quads = g_wof->req_active_quad_update;
-
-            //Send IPC command to PGPE with new active quad update
-            l_gperc = gpe_request_schedule( &G_wof_vfrt_req );
-
-            // Confirm Successful scheduling of WOF VFRT task
-            if(l_gperc != 0)
-            {
-                //Error in scheduling pgpe clip update task
-                TRAC_ERR("send_vfrt_to_sram: Failed to schedule WOF VFRT task rc=%x",
-                         l_gperc);
-
-                /* @
-                 * @errortype
-                 * @moduleid    SEND_VFRT_TO_PGPE
-                 * @reasoncode  GPE_REQUEST_SCHEDULE_FAILURE
-                 * @userdata1   rc - gpe_request_schedule return code
-                 * @userdata2   0
-                 * @userdata4   OCC_NO_EXTENDED_RC
-                 * @devdesc     OCC Failed to schedule a GPE job for clip update
-                 */
-                errlHndl_t l_errl = createErrl(
-                    SEND_VFRT_TO_PGPE,                   // modId
-                    GPE_REQUEST_SCHEDULE_FAILURE,           // reasoncode
-                    OCC_NO_EXTENDED_RC,                     // Extended reason code
-                    ERRL_SEV_UNRECOVERABLE,                 // Severity
-                    NULL,                                   // Trace Buf
-                    DEFAULT_TRACE_SIZE,                     // Trace Size
-                    l_gperc,                                     // userdata1
-                    0                                       // userdata2
-                    );
-
-                // Callout firmware
-                addCalloutToErrl(l_errl,
-                                 ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                                 ERRL_COMPONENT_ID_FIRMWARE,
-                                 ERRL_CALLOUT_PRIORITY_HIGH);
-
-                // Commit error log
-                commitErrl(&l_errl);
-            }
-        }
+        // Either the Main memory address changed or req active quads changed
+        // get VFRT based on new values
         else
         {
             // New VFRT needed from Mainstore, create BCE request to get it.
@@ -476,7 +618,8 @@ void send_vfrt_to_pgpe( uint32_t i_vfrt_main_mem_addr )
             // 128-byte aligned temp buffer to hold data
             temp_bce_request_buffer_t l_temp_bce_buff = {{0}};
 
-
+            // TODO RTC 169955: No longer need padding as VFRT addresses
+            // will already be 128-byte aligned and sized
             uint8_t l_pad = i_vfrt_main_mem_addr%128;
             uint32_t l_vfrt_addr_128_aligned = i_vfrt_main_mem_addr - l_pad;
 
@@ -484,7 +627,6 @@ void send_vfrt_to_pgpe( uint32_t i_vfrt_main_mem_addr )
             copy_vfrt_to_sram_parms_t l_callback_parms;
             l_callback_parms.vfrt_table = &l_temp_bce_buff;
             l_callback_parms.pad = l_pad;
-
 
             // Create request
             l_ssxrc = bce_request_create(
@@ -533,14 +675,13 @@ void send_vfrt_to_pgpe( uint32_t i_vfrt_main_mem_addr )
                 l_extReasonCode = ERC_BCE_REQUEST_SCHEDULE_FAILURE;
                 break;
             }
-
         }
     }while( 0 );
 
     // Check for errors and log, if any
     if( l_ssxrc != SSX_OK )
     {
-        errlHndl_t l_errl = createErrl(SEND_VFRT_TO_PGPE,         //modId
+        errlHndl_t l_errl = createErrl(SEND_VFRT_TO_PGPE,        //modId
                                        l_reasonCode,             //reasoncode
                                        l_extReasonCode,          //Extended reason code
                                        ERRL_SEV_UNRECOVERABLE,   //Severity
@@ -560,7 +701,6 @@ void send_vfrt_to_pgpe( uint32_t i_vfrt_main_mem_addr )
 
         return;
     }
-
 }
 
 /**
@@ -571,27 +711,19 @@ void send_vfrt_to_pgpe( uint32_t i_vfrt_main_mem_addr )
  */
 void read_shared_sram( void )
 {
-    // Skip over the first doubleword for now (magic number and pgpe beacon)
-    uint32_t current_pgpe_sram_addr =
-                     G_pgpe_header.shared_sram_addr + sizeof(uint64_t);
-
     // Get the actual quad states
-    G_quad_state_0.value = in64(current_pgpe_sram_addr);
-    current_pgpe_sram_addr += sizeof(uint64_t);
-    G_quad_state_1.value = in64(current_pgpe_sram_addr);
-    current_pgpe_sram_addr += sizeof(uint64_t);
+    G_quad_state_0.value = in64(g_wof->quad_state_0_addr);
+    G_quad_state_1.value = in64(g_wof->quad_state_1_addr);
 
     // Get the requested active quad update
-    uint64_t l_doubleword = in64(current_pgpe_sram_addr);
-    memcpy(&g_wof->req_active_quad_update, &l_doubleword, sizeof(uint8_t));
+    read_req_active_quads();
 
     // merge the 16-bit power-on field from quad state 0 and the 16-bit power-on
     // field from quad state 1 and save it to amec.
-    // TODO: core_poweron_state not in new structure
+    // TODO RTC:16955 -  core_poweron_state not in new structure
     //g_wof->core_pwr_on =
     //               (((uint32_t)G_quad_state_0.fields.core_poweron_state) << 16)
     //              | ((uint32_t)G_quad_state_1.fields.core_poweron_state);
-
 
     // Clear out current quad pstates
     memset(g_wof->quad_x_pstates, 0 , MAXIMUM_QUADS);
@@ -603,7 +735,6 @@ void read_shared_sram( void )
     g_wof->quad_x_pstates[3] = (uint8_t)G_quad_state_0.fields.quad3_pstate;
     g_wof->quad_x_pstates[4] = (uint8_t)G_quad_state_1.fields.quad4_pstate;
     g_wof->quad_x_pstates[5] = (uint8_t)G_quad_state_1.fields.quad5_pstate;
-
 
     // Save IVRM bit vector states to amec
     g_wof->quad_ivrm_states =
@@ -653,12 +784,10 @@ void calculate_core_voltage( void )
             // mV to 100uV = mV*10
             l_voltage = (512 + (current_vid*4))*10;
         }
-
         // Save the voltage to amec_wof_t global struct
         g_wof->v_core_100uV[l_quad_idx] = l_voltage;
     }
 }
-
 
 /**
  * calculate_core_leakage
@@ -669,7 +798,6 @@ void calculate_core_voltage( void )
  */
 void calculate_core_leakage( void )
 {
-
     int l_chip_v_idx = 0;
     uint16_t l_quad_x_cache;
     uint16_t idc_vdd = 0;
@@ -706,7 +834,6 @@ void calculate_core_leakage( void )
     // Save index used for interpolating voltages to amec
     g_wof->voltage_idx = l_chip_v_idx;
 
-
     // Calculate all variables that will be used in the core
     // loop that only need to be calculated once.
 
@@ -727,15 +854,11 @@ void calculate_core_leakage( void )
     // Calculate IDDQ_TEMP_FACTOR^((TEMPNEST - tvpd_leak)/10)
     g_wof->nest_mult = calculate_multiplier(g_wof->nest_delta_temp);
 
-
     // Look up leakage current.
     // Divide by 6 to get just one quad
     g_wof->idc_quad =
                  G_oppb.iddq.ivdd_all_cores_off_caches_off[l_chip_v_idx] /
                  MAXIMUM_QUADS;
-
-
-
 
     // Calculate ALL_CORES_OFF_ISO
     // Perform linear interpolation using the neighboring entries:
@@ -753,7 +876,6 @@ void calculate_core_leakage( void )
     // G_oppb.iddq.nestLeakagePercentage
     g_wof->all_cores_off_iso = g_wof->all_cores_off_iso * 60 / 100;
 
-
     // Calculate ALL_CACHES_ON_ISO
     g_wof->all_caches_on_iso =
               G_oppb.iddq.ivdd_all_good_cores_off_good_caches_on[l_chip_v_idx] -
@@ -766,8 +888,6 @@ void calculate_core_leakage( void )
     int quad_idx = 0;       // Quad Index (0-5)
     uint8_t core_idx = 0;       // Actual core index (0-23)
     int core_loop_idx = 0;  // On a per quad basis (0-3)
-
-
 
     for(quad_idx = 0; quad_idx < MAXIMUM_QUADS; quad_idx++)
     {
@@ -795,7 +915,6 @@ void calculate_core_leakage( void )
             g_wof->tvpd_leak_on = G_oppb.iddq.avgtemp_quad_good_cores_on
                                                [quad_idx][cur_core_voltage] >> 1;
 
-
             // Calculate Quadx_good_cores_only
             g_wof->quad_good_cores_only[quad_idx] =
                     G_oppb.iddq.ivdd_quad_good_cores_on_good_caches_on
@@ -805,13 +924,11 @@ void calculate_core_leakage( void )
                     g_wof->all_cores_off_iso*
                     G_oppb.iddq.good_normal_cores[quad_idx]/24;
 
-
             // Calculate quadx_ON_cores
             g_wof->quad_on_cores[quad_idx] =
                     (g_wof->quad_good_cores_only[quad_idx]*
                      g_wof->cores_on_per_quad[quad_idx]) /
                      G_oppb.iddq.good_normal_cores[quad_idx];
-
 
             // Calculate quadx_BAD_OFF_cores
             g_wof->quad_bad_off_cores[quad_idx] =
@@ -822,10 +939,8 @@ void calculate_core_leakage( void )
             // Loop all cores within current quad
             for(core_loop_idx = 0; core_loop_idx < NUM_CORES_PER_QUAD; core_loop_idx++)
             {
-
                 if(core_powered_on(core_idx))
                 {
-
                     // Get the core temperature from TEMPPROCTHRMC sensor
                     temperature = AMECSENSOR_ARRAY_PTR(TEMPPROCTHRMC0,
                                                        core_idx)->sample;
@@ -844,8 +959,6 @@ void calculate_core_leakage( void )
 
                     // Save the selected temperature
                     g_wof->tempprocthrmc[core_idx] = temperature;
-
-
 
                     // Get the difference between the temperature and tvpd_leak
                     g_wof->core_delta_temp[core_idx] =
@@ -902,20 +1015,16 @@ void calculate_core_leakage( void )
             // Incorporate the cache into the leakage calculation
             idc_vdd += (l_quad_x_cache*g_wof->quad_mult[quad_idx]) >> 10;
 
-
         }
     } // quad loop
     // After all Quads have been processed, incorporate calculation for quads
     // that off into leakage
     idc_vdd += ((g_wof->idc_quad*g_wof->nest_mult) >> 10)* num_quads_off;
 
-
     // Finally, save the calculated leakage to amec
     g_wof->idc_vdd = idc_vdd;
 
 }
-
-
 
 /**
  * calculate_nest_leakage
@@ -939,7 +1048,6 @@ void calculate_nest_leakage( void )
     // TODO: ivdn is now an array and need to handle
     g_wof->idc_vdn = (G_oppb.iddq.ivdn[0]*nest_mult) >> 10;
 }
-
 
 /**
  * calculate_effective_capacitance
@@ -965,7 +1073,6 @@ uint32_t calculate_effective_capacitance( uint32_t i_iAC,
                                           uint32_t i_voltage,
                                           uint32_t i_frequency )
 {
-
     // Prevent divide by zero
     if( i_frequency == 0 )
     {
@@ -996,8 +1103,6 @@ uint32_t calculate_effective_capacitance( uint32_t i_iAC,
 
 }
 
-
-
 /**
  * calculate_ceff_ratio_vdn
  *
@@ -1026,6 +1131,7 @@ void calculate_ceff_ratio_vdn( void )
     // Prevent divide by zero
     if( g_wof->ceff_tdp_vdn == 0 )
     {
+        CMDH_TRAC_ERR("WOF Disabled! Ceff VDN divide by 0");
         /*
          * @errortype
          * @moduleid        CALC_CEFF_RATIO_VDN
@@ -1049,7 +1155,7 @@ void calculate_ceff_ratio_vdn( void )
         // Return 0
         g_wof->ceff_ratio_vdn = 0;
 
-        //TODO: RTC 166301 - call new disable_wof function
+        g_wof->wof_disabled |= WOF_RC_DIVIDE_BY_ZERO;
     }
     else
     {
@@ -1092,6 +1198,7 @@ void calculate_ceff_ratio_vdd( void )
     // Prevent divide by zero
     if( g_wof->ceff_tdp_vdd == 0 )
     {
+        CMDH_TRAC_ERR("WOF Disabled! Ceff VDD divide by 0");
         /*
          * @errortype
          * @moduleid        CALC_CEFF_RATIO_VDD
@@ -1115,15 +1222,14 @@ void calculate_ceff_ratio_vdd( void )
         // Return 0
         g_wof->ceff_ratio_vdd = 0;
 
-        //TODO: RTC 166301 - call new disable_wof function
+        // Disable wof
+        g_wof->wof_disabled |= WOF_RC_DIVIDE_BY_ZERO;
     }
     else
     {
         g_wof->ceff_ratio_vdd = g_wof->ceff_vdd / g_wof->ceff_tdp_vdd;
     }
 }
-
-
 
 /**
  *  calculate_AC_currents
@@ -1175,7 +1281,6 @@ uint8_t num_cores_on_in_quad( uint8_t i_quad_num )
             num_powered_on_cores++;
         }
     }
-
     return num_powered_on_cores;
 }
 
@@ -1236,7 +1341,6 @@ int32_t calculate_multiplier( int32_t i_temp )
         }
     }
 
-
     // mult index now has the row index into G_wof_iddq_mult_table.
     // use it to calculate the final multiplier
     return interpolate_linear( i_temp,
@@ -1260,4 +1364,261 @@ void read_sensor_data( void )
     g_wof->voltvddsense_sensor  = getSensorByGsid(VOLTVDDSENSE)->sample;
     g_wof->tempnest_sensor      = getSensorByGsid(TEMPNEST)->sample;
     g_wof->voltvdn_sensor       = getSensorByGsid(VOLTVDN)->sample;
+}
+
+
+/**
+ * disable_wof
+ *
+ * Description: Sends IPC command to PGPE to turn WOF off.
+ *              This function DOES NOT set the specific reason
+ *              bit in the amec structure. It is up to the caller
+ *              to record the reason wof should be disabled
+ */
+void disable_wof( void )
+{
+    errlHndl_t l_errl = NULL;
+    // Disable wof on 405
+    g_wof->wof_init_state = WOF_DISABLED;
+
+    CMDH_TRAC_ERR("WOF is being disabled. Reasoncode: %x",
+                  g_wof->wof_disabled );
+    // Make sure IPC command is idle
+    if(async_request_is_idle(&G_wof_control_req.request))
+    {
+        // Set parameters for the GpeRequest
+        G_wof_control_parms.action = PGPE_ACTION_WOF_OFF;
+        int rc = gpe_request_schedule( &G_wof_control_req );
+
+        if( rc != 0 )
+        {
+            CMDH_TRAC_ERR("disable_wof() - Error when sending WOF Control"
+                         " OFF IPC command! RC = %x", rc );
+            /** @
+             *  @errortype
+             *  @moduleid   DISABLE_WOF
+             *  @reasoncode GPE_REQUEST_SCHEDULE_FAILURE
+             *  @userdata1  rc - gpe_request_schedule return code
+             *  @userdata2  0
+             *  @userdata4  OCC_NO_EXTENDED_RC
+             *  @devdesc    OCC Failed to schedule a GPE job for enabling wof
+             */
+            l_errl = createErrl(
+                    DISABLE_WOF,
+                    GPE_REQUEST_SCHEDULE_FAILURE,
+                    OCC_NO_EXTENDED_RC,
+                    ERRL_SEV_PREDICTIVE,
+                    NULL,
+                    DEFAULT_TRACE_SIZE,
+                    rc,
+                    0);
+
+            g_wof->wof_disabled |= WOF_RC_PGPE_WOF_DISABLED;
+
+            // commit the error log
+            commitErrl( &l_errl );
+        }
+    }
+
+    // Create an error log based on the actual failure
+    if( g_wof->wof_disabled & ERRL_RETURN_CODES )
+    {
+        /** @
+         *  @errortype
+         *  @moduleid   DISABLE_WOF
+         *  @reasoncode WOF_DISABLED
+         *  @userdata1  wof_disabled reasoncode
+         *  @userdata2  0
+         *  @userdata4  OCC_NO_EXTENDED_RC
+         *  @devdesc    WOF has been disabled due to an error
+         */
+        l_errl = createErrl(
+                            DISABLE_WOF,
+                            WOF_DISABLED_RC,
+                            OCC_NO_EXTENDED_RC,
+                            ERRL_SEV_UNRECOVERABLE,
+                            NULL,
+                            DEFAULT_TRACE_SIZE,
+                            g_wof->wof_disabled,
+                            0);
+
+        // commit the error log
+        commitErrl( &l_errl );
+    }
+
+}
+
+/**
+ * enable_wof
+ *
+ * Description: Sends IPC command to PGPE to turn WOF on
+ *
+ * Return: True if we were able to successfully schedule the IPC command
+ *         False if the IPC request is still idle.
+ */
+bool enable_wof( void )
+{
+    CMDH_TRAC_ERR("WOF is being enabled...");
+    // Make sure IPC command is idle.
+    if(!async_request_is_idle( &G_wof_control_req.request ) )
+    {
+        return false;
+    }
+    else
+    {
+        // Set parameters for the GpeRequest
+        G_wof_control_parms.action = PGPE_ACTION_WOF_ON;
+
+        int rc = gpe_request_schedule( &G_wof_control_req );
+
+        if( rc != 0 )
+        {
+            CMDH_TRAC_ERR("enable_wof() - Error when sending WOF Control"
+                    " ON IPC command! RC = %x", rc);
+            /** @
+             *  @errortype
+             *  @moduleid   ENABLE_WOF
+             *  @reasoncode GPE_REQUEST_SCHEDULE_FAILURE
+             *  @userdata1  rc - gpe_request_schedule return code
+             *  @userdata2  0
+             *  @userdata4  OCC_NO_EXTENDED_RC
+             *  @devdesc    OCC Failed to schedule a GPE job for enabling wof
+             */
+            errlHndl_t l_errl = createErrl(
+                    ENABLE_WOF,
+                    GPE_REQUEST_SCHEDULE_FAILURE,
+                    OCC_NO_EXTENDED_RC,
+                    ERRL_SEV_PREDICTIVE,
+                    NULL,
+                    DEFAULT_TRACE_SIZE,
+                    rc,
+                    0);
+
+            g_wof->wof_disabled |= WOF_RC_PGPE_WOF_DISABLED;
+
+            // commit the error log
+            commitErrl( &l_errl );
+
+            return false;
+        }
+        else
+        {
+            // Set Init state
+            g_wof->wof_init_state = WOF_CONTROL_ON_SENT_WAITING;
+            return true;
+        }
+    }
+}
+
+/**
+ * wof_control_callback
+ *
+ * Description: Callback function for wof_control GpeRequest. Upon successful
+ *              return of the asynchronous request, if successful, set the
+ *              appropriate wof_init state based on whether request wanted
+ *              to turn WOF on or off
+ */
+void wof_control_callback( void )
+{
+    // Check to see if GpeRequest was successful
+    if( G_wof_control_parms.msg_cb.rc == PGPE_WOF_RC_NOT_ENABLED )
+    {
+        // PGPE cannot enable wof
+        g_wof->wof_disabled |= WOF_RC_PGPE_WOF_DISABLED;
+    }
+    else if( G_wof_control_parms.msg_cb.rc == PGPE_RC_SUCCESS)
+    {
+        // GpeRequest Success. Set Globals based on action
+        if( G_wof_control_parms.action == PGPE_ACTION_WOF_ON )
+        {
+            g_wof->wof_init_state = PGPE_WOF_ENABLED_NO_PREV_DATA;
+            g_wof->wof_disabled &= ~WOF_RC_PGPE_WOF_DISABLED;
+        }
+        else // G_wof_control_parms.action == PGPE_ACTION_WOF_OFF
+        {
+            g_wof->wof_disabled |= WOF_RC_PGPE_WOF_DISABLED;
+        }
+    }
+    else
+    {
+        if( G_wof_control_parms.action == PGPE_ACTION_WOF_OFF )
+        {
+            // Got some other unsuccessful RC. Create error and request reset
+            /*
+             * @errortype
+             * @moduleid    WOF_CONTROL_CALLBACK
+             * @reasoncode  GPE_REQUEST_RC_FAILURE
+             * @userdata1   Return code
+             * @userdata4   ERC_WOF_CONTROL_ERROR
+             * @devdesc     Invalid RC from wof control command
+             */
+            errlHndl_t l_errl = createErrl(
+                                WOF_CONTROL_CALLBACK,
+                                GPE_REQUEST_RC_FAILURE,
+                                ERC_WOF_CONTROL_ERROR,
+                                ERRL_SEV_PREDICTIVE, // Correct Severity???
+                                NULL,
+                                DEFAULT_TRACE_SIZE,
+                                G_wof_control_parms.msg_cb.rc,
+                                0 );
+
+            REQUEST_RESET(l_errl);
+        }
+        else
+        {
+            g_wof->wof_disabled |= WOF_RC_CONTROL_REQ_FAILURE;
+        }
+    }
+}
+
+/**
+ * send_initial_vfrt_to_pgpe
+ *
+ * Description: Function calculates the address of the final vfrt in Main Memory
+ *              and subsequently sends that address to the PGPE to use via IPC
+ *              command.
+ */
+void send_initial_vfrt_to_pgpe( void )
+{
+    // Set the steps for VDN, VDD, and Quads to the max value
+    g_wof->vdn_step_from_start  = g_wof->vdn_size - 1;
+    g_wof->vdd_step_from_start  = g_wof->vdd_size - 1;
+    g_wof->quad_step_from_start = g_wof->num_active_quads - 1;
+
+    // Calculate the address of the final vfrt
+    g_wof->next_vfrt_main_mem_addr = calc_vfrt_mainstore_addr();
+
+    // Send the final vfrt to shared OCC-PGPE SRAM.
+    send_vfrt_to_pgpe( g_wof->next_vfrt_main_mem_addr );
+
+    // Update Init state
+    g_wof->wof_init_state = INITIAL_VFRT_SENT_WAITING;
+}
+
+/**
+ * read_req_active_quads
+ *
+ * Description: Reads the Requested Active Quads Update field from
+ *              shared OCC-PGPE SRAM into global amec struct
+ */
+void read_req_active_quads( void )
+{
+    uint64_t l_doubleword = in64(g_wof->req_active_quads_addr);
+    memcpy(&g_wof->req_active_quad_update, &l_doubleword, sizeof(uint8_t));
+
+    // Count the number of on bits in req_active_quad_update
+    int i = 0;
+    uint8_t on_bits = 0;
+    uint8_t bit_mask = 128; // 0b10000000
+    for( i = 0; i < MAXIMUM_QUADS; i++ )
+    {
+        if( bit_mask & g_wof->req_active_quad_update )
+        {
+            on_bits++;
+        }
+        bit_mask >>= 1;
+    }
+
+    // Save number of on bits
+    g_wof->num_active_quads = on_bits;
 }

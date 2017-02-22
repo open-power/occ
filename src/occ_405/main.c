@@ -498,7 +498,7 @@ void read_wof_header(void)
     MAIN_TRAC_INFO("read_wof_header() 0x%08X", G_pgpe_header.wof_tables_addr);
 
     // Read active quads address, wof tables address, and wof tables len
-    g_amec->wof.active_quads_sram_addr  = G_pgpe_header.requested_active_quad_sram_addr;
+    g_amec->wof.req_active_quads_addr  = G_pgpe_header.requested_active_quad_sram_addr;
     g_amec->wof.vfrt_tbls_main_mem_addr = G_pgpe_header.wof_tables_addr;
     g_amec->wof.vfrt_tbls_len           = G_pgpe_header.wof_tables_length;
 
@@ -507,6 +507,13 @@ void read_wof_header(void)
     g_amec->wof.f_ratio = 0;
     g_amec->wof.v_clip  = 0;
     g_amec->wof.f_clip  = 0;
+
+
+    // Read in quad state info here once
+    g_amec->wof.quad_state_0_addr = G_pgpe_header.shared_sram_addr +
+                                    sizeof(uint64_t); //skip pgpe beacon
+    g_amec->wof.quad_state_1_addr = g_amec->wof.quad_state_0_addr +
+                                    sizeof(uint64_t); //skip quad state 0
 
     if (G_pgpe_header.wof_tables_addr != 0)
     {

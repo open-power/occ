@@ -121,6 +121,7 @@ enum occReasonCode
     GPE_REQUEST_RC_FAILURE          = 0xD7,
 
     WOF_VFRT_REQ_FAILURE            = 0xD8,
+    WOF_DISABLED_RC                 = 0xD9,
     INVALID_MAGIC_NUMBER            = 0xDA,
     DIVIDE_BY_ZERO_ERROR            = 0xDB,
     INVALID_FREQUENCY               = 0xDC,
@@ -245,6 +246,7 @@ enum occExtReasonCode
     ERC_PGPE_INVALID_ADDRESS                    = 0x00BB,
 
     ERC_WOF_QUAD_COUNT_FAILURE                  = 0x00C0,
+    ERC_WOF_CONTROL_ERROR                       = 0x00C1,
 
     ERC_24X7_GPE_CREATE_FAILURE                 = 0x00D0,
     ERC_24X7_GPE_SCHEDULE_FAILURE               = 0x00D1,

@@ -32,11 +32,14 @@ enum wofModuleId
     WOF_MAIN                            =  WOF_COMP_ID | 0x01,
     SEND_VFRT_TO_PGPE                   =  WOF_COMP_ID | 0x02,
     COPY_VFRT_TO_SRAM                   =  WOF_COMP_ID | 0x03,
-    WOF_VFRT_CALLBACK                   =  WOF_COMP_ID | 0x04,
-    CALC_EFF_CAP_VOLT                   =  WOF_COMP_ID | 0x05,
-    CALC_EFF_CAP_FREQ                   =  WOF_COMP_ID | 0x06,
-    CALC_CEFF_RATIO_VDD                 =  WOF_COMP_ID | 0x07,
-    CALC_CEFF_RATIO_VDN                 =  WOF_COMP_ID | 0x08,
+    WOF_CONTROL_CALLBACK                =  WOF_COMP_ID | 0x04,
+    WOF_VFRT_CALLBACK                   =  WOF_COMP_ID | 0x05,
+    CALC_EFF_CAP_VOLT                   =  WOF_COMP_ID | 0x06,
+    CALC_EFF_CAP_FREQ                   =  WOF_COMP_ID | 0x07,
+    CALC_CEFF_RATIO_VDD                 =  WOF_COMP_ID | 0x08,
+    CALC_CEFF_RATIO_VDN                 =  WOF_COMP_ID | 0x09,
+    DISABLE_WOF                         =  WOF_COMP_ID | 0x0A,
+    ENABLE_WOF                          =  WOF_COMP_ID | 0x0B,
 };
 
 

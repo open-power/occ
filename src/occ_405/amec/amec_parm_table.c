@@ -202,13 +202,17 @@ amec_parm_t g_amec_parm_list[] = {
     AMEC_PARM_UINT16(PARM_TVPD_LEAK_NEST, "tvpd_leak_nest", &g_amec_sys.wof.tvpd_leak_nest),
     AMEC_PARM_UINT8(PARM_REQ_ACTIVE_QUAD_UPDATE, "req_active_quad", &g_amec_sys.wof.req_active_quad_update),
     AMEC_PARM_UINT8(PARM_PREV_REQ_ACTIVE_QUADS, "prevActiveQuads", &g_amec_sys.wof.prev_req_active_quads),
+    AMEC_PARM_UINT8(PARM_NUM_ACTIVE_QUADS, "num_active_quads", &g_amec_sys.wof.num_active_quads),
     AMEC_PARM_UINT32(PARM_CURR_PING_PONG_BUF, "currPingPongBuf", &g_amec_sys.wof.curr_ping_pong_buf),
     AMEC_PARM_UINT32(PARM_NEXT_PING_PONG_BUF, "nextPingPongBuf", &g_amec_sys.wof.next_ping_pong_buf),
     AMEC_PARM_UINT32(PARM_CURR_VFRT_MAIN_MEM_ADDR, "vfrtMainMemAddr", &g_amec_sys.wof.curr_vfrt_main_mem_addr),
     AMEC_PARM_UINT32(PARM_NEXT_VFRT_MAIN_MEM_ADDR, "nxt_vfrt_MM_addr", &g_amec_sys.wof.next_vfrt_main_mem_addr),
-    AMEC_PARM_UINT32(PARM_ACTIVE_QUADS_SRAM_ADDR, "activQuadSramPtr", &g_amec_sys.wof.active_quads_sram_addr),
     AMEC_PARM_UINT32(PARM_VFRT_TBLS_MAIN_MEM_ADDR, "vfrtTblsMMAddr", &g_amec_sys.wof.vfrt_tbls_main_mem_addr),
     AMEC_PARM_UINT32(PARM_VFRT_TBLS_LEN, "vfrt_tbls_len", &g_amec_sys.wof.vfrt_tbls_len),
+    AMEC_PARM_UINT8(PARM_WOF_INIT_STATE, "wof_init_state", &g_amec_sys.wof.wof_init_state),
+    AMEC_PARM_UINT32(PARM_QUAD_STATE_0_ADDR, "quadSt0Addr", &g_amec_sys.wof.quad_state_0_addr),
+    AMEC_PARM_UINT32(PARM_QUAD_STATE_1_ADDR, "quadSt1Addr", &g_amec_sys.wof.quad_state_1_addr),
+    AMEC_PARM_UINT32(PARM_REQ_ACTIVE_QUADS_ADDR, "reqActQuadAddr", &g_amec_sys.wof.req_active_quads_addr),
     // End WOF parameters
 };
 

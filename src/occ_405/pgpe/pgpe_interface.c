@@ -300,7 +300,7 @@ errlHndl_t pgpe_init_wof_control(void)
                                 IPC_MSGID_405_WOF_CONTROL,  // Function ID
                                 &G_wof_control_parms,       // Task parameters
                                 SSX_WAIT_FOREVER,           // Timeout (none)
-                                NULL,                       // Callback
+                                (AsyncRequestCallback)wof_control_callback, // Callback
                                 NULL,                       // Callback arguments
                                 ASYNC_CALLBACK_IMMEDIATE); // Options
 
@@ -356,7 +356,7 @@ errlHndl_t pgpe_init_wof_vfrt(void)
                                 IPC_MSGID_405_WOF_VFRT,     // Function ID
                                 &G_wof_vfrt_parms,          // Task parameters
                                 SSX_WAIT_FOREVER,           // Timeout (none)
-                                (AsyncRequestCallback)switch_ping_pong_buffer,     // Callback
+                                (AsyncRequestCallback)wof_vfrt_callback, // Callback
                                 NULL,                       // Callback arguments
                                 ASYNC_CALLBACK_IMMEDIATE);  // Options
 
@@ -716,11 +716,14 @@ void pgpe_start_suspend_callback(void)
 
                 // upon successful pstates START, assign G_proc_pmcr_owner (OCC/CHAR/HOST)
                 G_proc_pmcr_owner = G_start_suspend_parms.pmcr_owner;
+
+                // Clear WOF Pstate status flag
+                g_amec->wof.wof_disabled &= ~WOF_RC_PSTATE_PROTOCOL_OFF;
             }
             // this was a command to disable pstates
             else if(G_start_suspend_parms.action == PGPE_ACTION_PSTATE_STOP)
             {
-                // Pstates are now disabled (disaable Active State transition).
+                // Pstates are now disabled (disable Active State transition).
                 G_proc_pstate_status = PSTATES_DISABLED;
             }
         }
