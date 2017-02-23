@@ -693,8 +693,8 @@ errlHndl_t SMGR_observation_to_active()
                  * @reasoncode  INTERNAL_FAILURE
                  * @userdata1   SMGR_MASK_ACTIVE_READY
                  * @userdata2   valid states
-                 * @userdata4   ERC_STATE_FROM_OBS_TO_STB_FAILURE
-                 * @devdesc     Failed changing from observation to standby
+                 * @userdata4   ERC_GENERIC_TIMEOUT
+                 * @devdesc     Failed changing from observation to active
                  */
                 l_errlHndl = createErrl(MAIN_STATE_TRANSITION_MID,        //modId
                                         INTERNAL_FAILURE,                 //reasoncode
