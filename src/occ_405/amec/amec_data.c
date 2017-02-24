@@ -123,15 +123,6 @@ errlHndl_t AMEC_data_write_fcurr(const OCC_MODE i_mode)
                   g_amec->sys.fmax);
     }
 
-    if(!l_err)
-    {
-        // set the clip bounds open (if not in active state)
-        if(!IS_OCC_STATE_ACTIVE())
-        {
-            pgpe_widen_clip_ranges(CURRENT_STATE());
-        }
-    }
-
     return l_err;
 }
 
