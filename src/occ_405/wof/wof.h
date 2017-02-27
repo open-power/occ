@@ -35,6 +35,8 @@
 #define ACTIVE_QUAD_SZ_MAX 6
 #define WOF_HEADER_SIZE 32
 
+#define WOF_RC_MODE_NO_SUPPORT_MASK                     0x0008
+
 // Structure to hold relevant data from the WOF header in Mainstore
 typedef struct __attribute__ ((packed))
 {
@@ -56,6 +58,8 @@ typedef struct __attribute__ ((packed))
 // Structure used in g_amec
 typedef struct
 {
+    // Bit vector where each bit signifies a different failure case
+    uint16_t wof_disabled;
 } amec_wof_t;
 
 typedef struct

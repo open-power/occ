@@ -248,7 +248,6 @@ void amec_slv_check_apss_fail(void)
             l_pstate = proc_freq2pstate(l_pmax_rail_freq);
 
             // Set the Pmax clip via PGPE
-            // There is no Pmax "rail" in P9, just set clips via PGPE
             amec_set_pmax_clip(l_pstate);
 
             L_lower_pmax_rail = TRUE;
@@ -368,11 +367,7 @@ void amec_slv_state_0(void)
 {
   AMEC_DBG("\tAMEC Slave State 0\n");
 
-  //-------------------------------------------------------
-  // Update Proc Core sensors (for this tick)
-  //-------------------------------------------------------
-
-/* Not yet supported
+/* Not yet supported  TODO Centaur support RTC 163359
   //-------------------------------------------------------
   // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
@@ -417,12 +412,7 @@ void amec_slv_state_1(void)
 {
   AMEC_DBG("\tAMEC Slave State 1\n");
 
-  //-------------------------------------------------------
-  // Update Proc Core sensors (for this tick)
-  //-------------------------------------------------------
-
-
-/* Not yet supported
+/* Not yet supported   TODO Centaur support RTC 163359
   //-------------------------------------------------------
   // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
@@ -447,11 +437,7 @@ void amec_slv_state_2(void)
 {
   AMEC_DBG("\tAMEC Slave State 2\n");
 
-  //-------------------------------------------------------
-  // Update Proc Core sensors (for this tick)
-  //-------------------------------------------------------
-
-/* Not yet supported
+/* Not yet supported   TODO Centaur support RTC 163359
   //-------------------------------------------------------
   // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
@@ -474,13 +460,9 @@ void amec_slv_state_3(void)
   AMEC_DBG("\tAMEC Slave State 3\n");
 
   //-------------------------------------------------------
-  // Update Proc Core sensors (for this tick)
-  //-------------------------------------------------------
-
-  //-------------------------------------------------------
   // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
-/* Not yet supported
+/* Not yet supported   TODO Centaur support RTC 163359
   amec_update_centaur_sensors(CENTAUR_3);
 
   //-------------------------------------------------------
@@ -504,13 +486,9 @@ void amec_slv_state_4(void)
 {
   AMEC_DBG("\tAMEC Slave State 4\n");
 
+/* Not yet supported  TODO Centaur support RTC 163359
   //-------------------------------------------------------
-  // Update Proc Core sensors (for this tick)
-  //-------------------------------------------------------
-
-/* Not yet supported
-  //-------------------------------------------------------
-  // Update Centaur sensors (for this tick)
+  // Update Centaur sensors (for this tick) 
   //-------------------------------------------------------
   amec_update_centaur_sensors(CENTAUR_4);
 */
@@ -567,20 +545,15 @@ void amec_slv_state_5(void)
   AMEC_DBG("\tAMEC Slave State 5\n");
 
   //-------------------------------------------------------
-  // Update Proc Core sensors (for this tick)
+  // Update Centaur sensors (for this tick) TODO Centaur support RTC 163359
   //-------------------------------------------------------
-
-/* Not yet supported
-  //-------------------------------------------------------
-  // Update Centaur sensors (for this tick)
-  //-------------------------------------------------------
-  amec_update_centaur_sensors(CENTAUR_5);
+//  amec_update_centaur_sensors(CENTAUR_5);
 
   //-------------------------------------------------------
   // Update partition sensors for DPS algorithms (for this tick)
   //-------------------------------------------------------
-  amec_dps_main();
-*/
+//  amec_dps_main();
+
 }
 
 
@@ -597,11 +570,7 @@ void amec_slv_state_6(void)
 {
   AMEC_DBG("\tAMEC Slave State 6\n");
 
-  //-------------------------------------------------------
-  // Update Proc Core sensors (for this tick)
-  //-------------------------------------------------------
-
-/* Not yet supported
+/* Not yet supported  TODO Centaur support RTC 163359
   //-------------------------------------------------------
   // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
@@ -621,11 +590,7 @@ void amec_slv_state_7(void)
 {
   AMEC_DBG("\tAMEC Slave State 7\n");
 
-  //-------------------------------------------------------
-  // Update Proc Core sensors (for this tick)
-  //-------------------------------------------------------
-
-/* Not yet supported
+/* Not yet supported   TODO Centaur support RTC 163359
   //-------------------------------------------------------
   // Update Centaur sensors (for this tick)
   //-------------------------------------------------------

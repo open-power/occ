@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -223,6 +223,18 @@ void chom_update_sensors()
 
             case OCC_MODE_FFO:
                 g_chom_pwr_modes[OCC_INTERNAL_MODE_FFO] = 1;
+                break;
+
+            case OCC_MODE_NOM_PERFORMANCE:
+                g_chom_pwr_modes[OCC_INTERNAL_MODE_NOM_PERF] = 1;
+                break;
+
+            case OCC_MODE_MAX_PERFORMANCE:
+                g_chom_pwr_modes[OCC_INTERNAL_MODE_MAX_PERF] = 1;
+                break;
+
+            case OCC_MODE_FMF:
+                g_chom_pwr_modes[OCC_INTERNAL_MODE_FMF] = 1;
                 break;
 
             default:

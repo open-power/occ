@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -50,16 +50,13 @@ typedef enum
     OCC_MODE_SAFE              = 0x04,
     OCC_MODE_PWRSAVE           = 0x05,
     OCC_MODE_DYN_POWER_SAVE    = 0x06,
-    OCC_MODE_MIN_FREQUENCY     = 0x07,
-
-    // Mode 0x08-0x0A reserved by TMGT
-    // reserved                = 0x08,
-    // reserved                = 0x09,
+    OCC_MODE_MIN_FREQUENCY     = 0x07,  // not a settable mode, just used to store system min freq
+    OCC_MODE_NOM_PERFORMANCE   = 0x08,
+    OCC_MODE_MAX_PERFORMANCE   = 0x09,
     OCC_MODE_DYN_POWER_SAVE_FP = 0x0A,
     OCC_MODE_FFO               = 0x0B,
     OCC_MODE_FMF               = 0x0C,
-
-    OCC_MODE_UTURBO            = 0x0D,
+    OCC_MODE_UTURBO            = 0x0D,  // not a settable mode, just used to store UT freq
 
     // Make sure this is after the last valid mode
     OCC_MODE_COUNT,
@@ -76,8 +73,11 @@ typedef enum
                                  (mode == OCC_MODE_TURBO) || \
                                  (mode == OCC_MODE_PWRSAVE) || \
                                  (mode == OCC_MODE_DYN_POWER_SAVE) || \
+                                 (mode == OCC_MODE_NOM_PERFORMANCE) || \
+                                 (mode == OCC_MODE_MAX_PERFORMANCE) || \
                                  (mode == OCC_MODE_DYN_POWER_SAVE_FP) || \
-                                 (mode == OCC_MODE_FFO))
+                                 (mode == OCC_MODE_FFO) || \
+                                 (mode == OCC_MODE_FMF))
 
 // Typedef of the various internal modes that OCC can be in.
 typedef enum
@@ -87,6 +87,9 @@ typedef enum
     OCC_INTERNAL_MODE_DPS          = 0x02,
     OCC_INTERNAL_MODE_DPS_MP       = 0x03,
     OCC_INTERNAL_MODE_FFO          = 0x04,
+    OCC_INTERNAL_MODE_NOM_PERF     = 0x05,
+    OCC_INTERNAL_MODE_MAX_PERF     = 0x06,
+    OCC_INTERNAL_MODE_FMF          = 0x07,
     OCC_INTERNAL_MODE_MAX_NUM,
     OCC_INTERNAL_MODE_UNDEFINED    = 0xFF
 } OCC_INTERNAL_MODE;

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -33,6 +33,7 @@
 #include "amec_freq.h"
 #include "amec_part.h"
 #include "amec_data.h"
+#include "amec_sys.h"
 
 errlHndl_t SMGR_mode_transition_to_nominal();
 errlHndl_t SMGR_mode_transition_to_powersave();
@@ -40,6 +41,10 @@ errlHndl_t SMGR_mode_transition_to_dynpowersave();
 errlHndl_t SMGR_mode_transition_to_dynpowersave_fp();
 errlHndl_t SMGR_mode_transition_to_turbo();
 errlHndl_t SMGR_mode_transition_to_ffo();
+errlHndl_t SMGR_mode_transition_to_fmf();
+errlHndl_t SMGR_mode_transition_to_nom_perf();
+errlHndl_t SMGR_mode_transition_to_max_perf();
+
 
 // Mode that OCC is currently in
 OCC_MODE           G_occ_internal_mode      = OCC_MODE_NOCHANGE;
@@ -74,6 +79,9 @@ const smgr_state_trans_t G_smgr_mode_trans[] =
     {OCC_MODE_ALL,          OCC_MODE_DYN_POWER_SAVE_FP, &SMGR_mode_transition_to_dynpowersave_fp},
     {OCC_MODE_ALL,          OCC_MODE_TURBO,             &SMGR_mode_transition_to_turbo},
     {OCC_MODE_ALL,          OCC_MODE_FFO,               &SMGR_mode_transition_to_ffo},
+    {OCC_MODE_ALL,          OCC_MODE_FMF,               &SMGR_mode_transition_to_fmf},
+    {OCC_MODE_ALL,          OCC_MODE_NOM_PERFORMANCE,   &SMGR_mode_transition_to_nom_perf},
+    {OCC_MODE_ALL,          OCC_MODE_MAX_PERFORMANCE,   &SMGR_mode_transition_to_max_perf},
 };
 const uint8_t G_smgr_mode_trans_count = sizeof(G_smgr_mode_trans)/sizeof(smgr_state_trans_t);
 
@@ -166,83 +174,68 @@ errlHndl_t SMGR_set_mode( const OCC_MODE i_mode )
              }
          }
 
-         switch (l_mode)
+         // Change Mode via Transition Function
+         do
          {
-             case OCC_MODE_NOMINAL:           // FALL THROUGH
-             case OCC_MODE_PWRSAVE:           // FALL THROUGH
-             case OCC_MODE_DYN_POWER_SAVE:    // FALL THROUGH
-             case OCC_MODE_DYN_POWER_SAVE_FP: // FALL THROUGH
-             case OCC_MODE_TURBO:             // FALL THROUGH
-             case OCC_MODE_FFO:               // FALL THROUGH
-                 // Notify AMEC of mode change
-
-                 // Change Mode via Transition Function
-                 do
+             // Loop through mode transition table, and find the state
+             // transition function that matches the transition we need to do.
+             for(jj=0; jj<G_smgr_mode_trans_count; jj++)
+             {
+                 if( ((G_smgr_mode_trans[jj].old_state == G_occ_internal_mode)
+                        || (G_smgr_mode_trans[jj].old_state == OCC_MODE_ALL) )
+                        && (G_smgr_mode_trans[jj].new_state == l_mode) )
                  {
-                     // Loop through mode transition table, and find the state
-                     // transition function that matches the transition we need to do.
-                     for(jj=0; jj<G_smgr_mode_trans_count; jj++)
+                     // We found the transtion that matches, now run the function
+                     // that is associated with that state transition.
+                     if(NULL != G_smgr_mode_trans[jj].trans_func_ptr)
                      {
-                         if( ((G_smgr_mode_trans[jj].old_state == G_occ_internal_mode)
-                                   || (G_smgr_mode_trans[jj].old_state == OCC_MODE_ALL) )
-                              && (G_smgr_mode_trans[jj].new_state == l_mode) )
-                         {
-                             // We found the transtion that matches, now run the function
-                             // that is associated with that state transition.
-                             if(NULL != G_smgr_mode_trans[jj].trans_func_ptr)
-                             {
-                                 // Signal that we are now in a mode transition
-                                 G_mode_transition_occuring = TRUE;
-                                 // Run transition function
-                                 l_errlHndl = (G_smgr_mode_trans[jj].trans_func_ptr)();
-                                 // Signal that we are done with the transition
-                                 G_mode_transition_occuring = FALSE;
-                                 break;
-                             }
-                         }
-                     }
-
-                     // Check if we hit the end of the table without finding a valid
-                     // mode transition.  If we did, log an internal error.
-                     if(G_smgr_mode_trans_count == jj)
-                     {
-                         TRAC_ERR("No transition (or NULL) found for the mode change\n");
-
-                         /* @
-                          * @errortype
-                          * @moduleid    MAIN_MODE_TRANSITION_MID
-                          * @reasoncode  INTERNAL_FAILURE
-                          * @userdata1   G_occ_internal_mode
-                          * @userdata2   l_mode
-                          * @userdata4   ERC_SMGR_NO_VALID_MODE_TRANSITION_CALL
-                          * @devdesc     no valid state transition routine found
-                          */
-                         l_errlHndl = createErrl(MAIN_MODE_TRANSITION_MID,                 //modId
-                                                 INTERNAL_FAILURE,                         //reasoncode
-                                                 ERC_SMGR_NO_VALID_MODE_TRANSITION_CALL,   //Extended reason code
-                                                 ERRL_SEV_UNRECOVERABLE,                   //Severity
-                                                 NULL,                                     //Trace Buf
-                                                 DEFAULT_TRACE_SIZE,                       //Trace Size
-                                                 G_occ_internal_mode,                      //userdata1
-                                                 l_mode);                                  //userdata2
-
-                         addCalloutToErrl(l_errlHndl,
-                                          ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                                          ERRL_COMPONENT_ID_FIRMWARE,
-                                          ERRL_CALLOUT_PRIORITY_HIGH);
+                         // Signal that we are now in a mode transition
+                         G_mode_transition_occuring = TRUE;
+                         // Run transition function
+                         l_errlHndl = (G_smgr_mode_trans[jj].trans_func_ptr)();
+                         // Signal that we are done with the transition
+                         G_mode_transition_occuring = FALSE;
                          break;
                      }
-
-                     // Update the power mode for all core groups that are following system mode
-                     AMEC_part_update_sysmode_policy(CURRENT_MODE());
                  }
-                 while(0);
+             }
+
+             // Check if we hit the end of the table without finding a valid
+             // mode transition.  If we did, log an internal error.
+             if(G_smgr_mode_trans_count == jj)
+             {
+                 TRAC_ERR("No transition (or NULL) found for the mode change\n");
+
+                 /* @
+                  * @errortype
+                  * @moduleid    MAIN_MODE_TRANSITION_MID
+                  * @reasoncode  INTERNAL_FAILURE
+                  * @userdata1   G_occ_internal_mode
+                  * @userdata2   l_mode
+                  * @userdata4   ERC_SMGR_NO_VALID_MODE_TRANSITION_CALL
+                  * @devdesc     no valid state transition routine found
+                  */
+                  l_errlHndl = createErrl(MAIN_MODE_TRANSITION_MID,                 //modId
+                                          INTERNAL_FAILURE,                         //reasoncode
+                                          ERC_SMGR_NO_VALID_MODE_TRANSITION_CALL,   //Extended reason code
+                                          ERRL_SEV_UNRECOVERABLE,                   //Severity
+                                          NULL,                                     //Trace Buf
+                                          DEFAULT_TRACE_SIZE,                       //Trace Size
+                                          G_occ_internal_mode,                      //userdata1
+                                          l_mode);                                  //userdata2
+
+                  addCalloutToErrl(l_errlHndl,
+                                   ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                                   ERRL_COMPONENT_ID_FIRMWARE,
+                                   ERRL_CALLOUT_PRIORITY_HIGH);
 
                  break;
-             default:
-                 //unsupported mode
-                 break;
+             }
+
+             // Update the power mode for all core groups that are following system mode
+             AMEC_part_update_sysmode_policy(CURRENT_MODE());
          }
+         while(0);
 
          if(l_errlHndl)
          {
@@ -278,6 +271,9 @@ errlHndl_t SMGR_mode_transition_to_nominal()
     // Set Freq Mode for AMEC to use
     l_errlHndl = amec_set_freq_range(OCC_MODE_NOMINAL);
 
+    // WOF is disabled in nominal mode
+    g_amec->wof.wof_disabled |= WOF_RC_MODE_NO_SUPPORT_MASK;
+
     CURRENT_MODE() = OCC_MODE_NOMINAL;
     TRAC_IMP("SMGR: Mode to Nominal Transition Completed");
 
@@ -300,6 +296,9 @@ errlHndl_t SMGR_mode_transition_to_powersave()
 
     // Set Freq Mode for AMEC to use
     l_errlHndl = amec_set_freq_range(OCC_MODE_PWRSAVE);
+
+    // WOF is disabled in SPS mode
+    g_amec->wof.wof_disabled |= WOF_RC_MODE_NO_SUPPORT_MASK;
 
     CURRENT_MODE() = OCC_MODE_PWRSAVE;
     TRAC_IMP("SMGR: Mode to PowerSave Transition Completed");
@@ -324,6 +323,9 @@ errlHndl_t SMGR_mode_transition_to_dynpowersave()
     // Set Freq Mode for AMEC to use
     l_errlHndl = amec_set_freq_range(OCC_MODE_DYN_POWER_SAVE);
 
+    // WOF is enabled in DPS, clear the mode bit
+    g_amec->wof.wof_disabled &= ~WOF_RC_MODE_NO_SUPPORT_MASK;
+
     CURRENT_MODE() = OCC_MODE_DYN_POWER_SAVE;
     TRAC_IMP("SMGR: Mode to Dynamic PowerSave-Favor Energy Transition Completed");
 
@@ -345,6 +347,9 @@ errlHndl_t SMGR_mode_transition_to_dynpowersave_fp()
 
     // Set Freq Mode for AMEC to use
     l_errlHndl = amec_set_freq_range(OCC_MODE_DYN_POWER_SAVE_FP);
+
+    // WOF is enabled in DPS-FP, clear the mode bit
+    g_amec->wof.wof_disabled &= ~WOF_RC_MODE_NO_SUPPORT_MASK;
 
     CURRENT_MODE() = OCC_MODE_DYN_POWER_SAVE_FP;
     TRAC_IMP("SMGR: Mode to Dynamic PowerSave-Favor Performance Transition Completed");
@@ -369,6 +374,9 @@ errlHndl_t SMGR_mode_transition_to_turbo()
     // Set Freq Mode for AMEC to use
     l_errlHndl = amec_set_freq_range(OCC_MODE_TURBO);
 
+    // WOF is disabled in turbo mode
+    g_amec->wof.wof_disabled |= WOF_RC_MODE_NO_SUPPORT_MASK;
+
     CURRENT_MODE() = OCC_MODE_TURBO;
     TRAC_IMP("SMGR: Mode to Turbo Transition Completed");
 
@@ -392,9 +400,86 @@ errlHndl_t SMGR_mode_transition_to_ffo()
     // Set Freq Mode for AMEC to use
     l_errlHndl = amec_set_freq_range(OCC_MODE_FFO);
 
+    // WOF is disabled in FFO
+    g_amec->wof.wof_disabled |= WOF_RC_MODE_NO_SUPPORT_MASK;
+
     CURRENT_MODE() = OCC_MODE_FFO;
     TRAC_IMP("SMGR: Mode to FFO Transition Completed");
 
     return l_errlHndl;
 }
 
+// Function Specification
+//
+// Name: SMGR_mode_transition_to_fmf
+//
+// Description: Transition to Fixed Maximum Frequency mode
+//
+// End Function Specification
+errlHndl_t SMGR_mode_transition_to_fmf()
+{
+    errlHndl_t              l_errlHndl = NULL;
+
+    TRAC_IMP("SMGR: Mode to FMF Transition Started");
+
+    // Set Freq Mode for AMEC to use
+    l_errlHndl = amec_set_freq_range(OCC_MODE_FMF);
+
+    // WOF is enabled in FMF, clear the mode bit
+    g_amec->wof.wof_disabled &= ~WOF_RC_MODE_NO_SUPPORT_MASK;
+
+    CURRENT_MODE() = OCC_MODE_FMF;
+    TRAC_IMP("SMGR: Mode to FMF Transition Completed");
+
+    return l_errlHndl;
+}
+
+// Function Specification
+//
+// Name: SMGR_mode_transition_to_nom_perf
+//
+// Description: Transition to nominal performance mode
+//
+// End Function Specification
+errlHndl_t SMGR_mode_transition_to_nom_perf()
+{
+    errlHndl_t              l_errlHndl = NULL;
+
+    TRAC_IMP("SMGR: Mode to Nominal Performance Transition Started");
+
+    // Set Freq Mode for AMEC to use
+    l_errlHndl = amec_set_freq_range(OCC_MODE_NOM_PERFORMANCE);
+
+    // WOF is enabled in nominal performance mode, clear the mode bit
+    g_amec->wof.wof_disabled &= ~WOF_RC_MODE_NO_SUPPORT_MASK;
+
+    CURRENT_MODE() = OCC_MODE_NOM_PERFORMANCE;
+    TRAC_IMP("SMGR: Mode to Nominal Performance Transition Completed");
+
+    return l_errlHndl;
+}
+
+// Function Specification
+//
+// Name: SMGR_mode_transition_to_max_perf
+//
+// Description: Transition to Maximum Performance mode
+//
+// End Function Specification
+errlHndl_t SMGR_mode_transition_to_max_perf()
+{
+    errlHndl_t              l_errlHndl = NULL;
+
+    TRAC_IMP("SMGR: Mode to Maximum Performance Transition Started");
+
+    // Set Freq Mode for AMEC to use
+    l_errlHndl = amec_set_freq_range(OCC_MODE_MAX_PERFORMANCE);
+
+    // WOF is enabled in max performance mode, clear the mode bit
+    g_amec->wof.wof_disabled &= ~WOF_RC_MODE_NO_SUPPORT_MASK;
+
+    CURRENT_MODE() = OCC_MODE_MAX_PERFORMANCE;
+    TRAC_IMP("SMGR: Mode to Maximum Performance Transition Completed");
+
+    return l_errlHndl;
+}

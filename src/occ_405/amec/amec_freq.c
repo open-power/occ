@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -172,13 +172,19 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
     {
         l_freq_min = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
 
-        // Set Max frequency (ultra turbo freq if wof enabled, to turbo freq  otherwise)
+        // Set Max frequency (ultra turbo freq if wof enabled, to turbo freq otherwise)
         l_freq_max = G_proc_fmax_mhz;
     }
     else if( VALID_MODE(i_mode) )  // Set to Max Freq Range for this mode
     {
       l_freq_min = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
-      l_freq_max = G_sysConfigData.sys_mode_freq.table[i_mode];
+
+      // Use max frequency for performance modes and FMF
+      if( (i_mode == OCC_MODE_NOM_PERFORMANCE) || (i_mode == OCC_MODE_MAX_PERFORMANCE) ||
+          (i_mode == OCC_MODE_FMF) )
+        l_freq_max = G_proc_fmax_mhz;
+      else
+        l_freq_max = G_sysConfigData.sys_mode_freq.table[i_mode];
     }
 
     if( (l_freq_min == 0) || (l_freq_max == 0) )
