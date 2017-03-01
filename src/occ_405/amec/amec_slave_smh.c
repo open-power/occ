@@ -23,9 +23,9 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-//*************************************************************************
+//*************************************************************************/
 // Includes
-//*************************************************************************
+//*************************************************************************/
 #include <occ_common.h>
 #include <ssx.h>
 #include <errl.h>               // Error logging
@@ -57,20 +57,22 @@
 #include <common.h>
 #include <occhw_async.h>
 #include <wof.h>
+#include <pgpe_interface.h>
 
-//*************************************************************************
+//*************************************************************************/
 // Externs
-//*************************************************************************
+//*************************************************************************/
 extern dcom_slv_inbox_t G_dcom_slv_inbox_rx;
 extern opal_proc_voting_reason_t G_amec_opal_proc_throt_reason;
+extern uint16_t G_proc_fmax_mhz;
 
-//*************************************************************************
+//*************************************************************************/
 // Macros
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Defines/Enums
-//*************************************************************************
+//*************************************************************************/
 smh_state_t G_amec_slv_state = {AMEC_INITIAL_STATE,
                                 AMEC_INITIAL_STATE,
                                 AMEC_INITIAL_STATE};
@@ -199,21 +201,21 @@ const smh_tbl_t amec_slv_state_table[AMEC_SMH_STATES_PER_LVL] =
 // fw timings when the AMEC Slave State Machine finishes.
 smh_state_timing_t G_amec_slv_state_timings = {amec_slv_update_smh_sensors};
 
-//*************************************************************************
+//*************************************************************************/
 // Structures
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Globals
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Function Prototypes
-//*************************************************************************
+//*************************************************************************/
 
-//*************************************************************************
+//*************************************************************************/
 // Functions
-//*************************************************************************
+//*************************************************************************/
 
 
 // Function Specification
@@ -230,48 +232,71 @@ void amec_slv_check_apss_fail(void)
     /*------------------------------------------------------------------------*/
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
-    uint32_t                    l_pmax_rail_freq = g_amec->proc[0].pwr_votes.apss_pmax_clip_freq;
-    Pstate                      l_pstate = 0;
-    static bool                 L_lower_pmax_rail = FALSE;
-    static bool                 L_raise_pmax_rail = TRUE;
-
+    uint32_t    l_pmax_rail_freq = g_amec->proc[0].pwr_votes.apss_pmax_clip_freq;
+    Pstate      l_pstate = 0;
+    static bool L_lower_pmax_rail = FALSE;
+    static bool L_raise_pmax_rail = TRUE;
+    int         rc = 0;
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
 
-    if (G_apss_lower_pmax_rail == TRUE)
+    do
     {
-        if (L_lower_pmax_rail == FALSE)
+        // Don't do this during a state transition
+        if( SMGR_is_state_transitioning() )
         {
-            // Lower the Pmax_rail to nominal
-            l_pmax_rail_freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL];
-            l_pstate = proc_freq2pstate(l_pmax_rail_freq);
-
-            // Set the Pmax clip via PGPE
-            amec_set_pmax_clip(l_pstate);
-
-            L_lower_pmax_rail = TRUE;
-            L_raise_pmax_rail = FALSE;
+            break;
         }
-    }
-    else
-    {
-        if (L_raise_pmax_rail == FALSE)
+
+        if (G_apss_lower_pmax_rail == TRUE)
         {
-            // Raise the Pmax rail back
-            l_pmax_rail_freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
-            l_pstate = proc_freq2pstate(l_pmax_rail_freq);
+            if (L_lower_pmax_rail == FALSE)
+            {
+                // Lower the Pmax_rail to nominal
+                l_pmax_rail_freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL];
 
-            // Set the Pmax clip via PGPE
-            amec_set_pmax_clip(l_pstate);
+                // Let the slave voting box handle the clip in KVM
+                // to take in account all reasons for clip changes
+                if(!G_sysConfigData.system_type.kvm)
+                {
+                    // Set the Pmax clip via PGPE
+                    // There is no Pmax "rail" in P9, just set clips via PGPE
+                    l_pstate = proc_freq2pstate(l_pmax_rail_freq);
+                    TRAC_INFO("amec_slv_check_apss_fail: attempting to lower Pstate to nominal");
+                    rc = pgpe_set_clip_ranges(l_pstate);
+                }
 
-            L_lower_pmax_rail = FALSE;
-            L_raise_pmax_rail = TRUE;
+                L_lower_pmax_rail = TRUE;
+                L_raise_pmax_rail = FALSE;
+            }
         }
-    }
+        else
+        {
+            if (L_raise_pmax_rail == FALSE)
+            {
+                // Raise the Pmax rail back
+                l_pmax_rail_freq = G_proc_fmax_mhz;
 
-    // Store the frequency vote for the voting box
-    g_amec->proc[0].pwr_votes.apss_pmax_clip_freq = l_pmax_rail_freq;
+                // Let the slave voting box handle the clip in KVM
+                // to take in account all reasons for clip changes
+                if(!G_sysConfigData.system_type.kvm)
+                {
+                    // Set the Pmax clip via PGPE
+                    l_pstate = proc_freq2pstate(l_pmax_rail_freq);
+                    TRAC_INFO("amec_slv_check_apss_fail: attempting to raise Pstate to fmax");
+                    rc = pgpe_set_clip_ranges(l_pstate);
+                }
+
+                L_lower_pmax_rail = FALSE;
+                L_raise_pmax_rail = TRUE;
+            }
+        }
+
+        // Store the frequency vote for the voting box
+        g_amec->proc[0].pwr_votes.apss_pmax_clip_freq = l_pmax_rail_freq;
+
+    } while(0);
 }
 
 
@@ -472,10 +497,12 @@ void amec_slv_state_3(void)
   //-------------------------------------------------------
 /* Not yet supported   TODO Centaur support RTC 163359
   amec_update_centaur_sensors(CENTAUR_3);
+*/
 
   //-------------------------------------------------------
   // Perform amec_analytics (set amec_analytics_slot to 3)
   //-------------------------------------------------------
+/* TODO: RTC 163683 - AMEC analytics
   amec_analytics_main();
 */
 }

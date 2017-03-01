@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -47,7 +47,7 @@ extern task_t G_task_table[TASK_END];  // Global task table
 extern bool G_simics_environment;
 
 extern pstateStatus G_proc_pstate_status;
-
+extern uint16_t G_proc_fmax_mhz;
 extern GpeRequest G_clip_update_req;
 extern GPE_BUFFER(ipcmsg_clip_update_t*  G_clip_update_parms_ptr);
 
@@ -112,9 +112,9 @@ uint32_t G_smgr_validate_data_observation_mask = SMGR_VALIDATE_DATA_OBSERVATION_
 
 // Function Specification
 //
-// Name: SMGR_is_mode_transitioning
+// Name: SMGR_is_state_transitioning
 //
-// Description:
+// Description: Indicates if we are transitioning between states
 //
 // End Function Specification
 inline bool SMGR_is_state_transitioning(void)
@@ -197,7 +197,7 @@ errlHndl_t SMGR_standby_to_characterization()
     errlHndl_t  l_errlHndl = NULL;
     int         rc = 0;
     static bool l_error_logged = FALSE;  // To prevent trace and error log happened over and over
-
+    Pstate      l_pstate;
     do
     {
 
@@ -207,15 +207,16 @@ errlHndl_t SMGR_standby_to_characterization()
             l_error_logged = FALSE;
             TRAC_IMP("SMGR: Standby to Characterization State Transition Started");
 
-            // wide open pstate clips
-            rc = pgpe_widen_clip_blocking(OCC_STATE_CHARACTERIZATION);
+            // set pstate clips
+            l_pstate = proc_freq2pstate(G_proc_fmax_mhz);
+            rc = pgpe_set_clip_blocking(l_pstate);
 
             if(rc)
             {
-                TRAC_ERR("SMGR: failed to widen pstate clips.");
+                TRAC_ERR("SMGR: failed to set pstate clips.");
                 break;
             }
-            else // successfully wide opened clips; enable pstates, then start transition
+            else // successfully set clips; enable pstates, then start transition
             {
 
                 // update OPAL static table in main memory
@@ -234,7 +235,7 @@ errlHndl_t SMGR_standby_to_characterization()
                     TRAC_ERR("SMGR: failed to start the pstate protocol on PGPE.");
                     break;
                 }
-                else // Clips wide opened and pstates started successfully, start transition
+                else // Clips set and pstates started successfully, start transition
                 {
                     memory_init();
 
@@ -416,14 +417,14 @@ errlHndl_t SMGR_characterization_to_observation()
     errlHndl_t  l_errlHndl     = NULL;
     int         rc             = 0;
     static bool l_error_logged = FALSE;  // To prevent trace and error logging over and over
-
+    Pstate      l_pstate;
     TRAC_IMP("SMGR: Characterization to Observation Transition Started");
 
     do
     {
-        // widen clips to legacy turbo
-        rc = pgpe_widen_clip_blocking(OCC_STATE_OBSERVATION);
-
+        // set clips to legacy turbo
+        l_pstate = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO]);
+        rc = pgpe_set_clip_blocking(l_pstate);
         if(rc)
         {
             TRAC_ERR("SMGR: failed to tighten pstate clips.");
@@ -492,10 +493,10 @@ errlHndl_t SMGR_observation_to_characterization()
     int         rc             = 0;
     errlHndl_t  l_errlHndl     = NULL;
     static bool l_error_logged = FALSE;  // To prevent trace and error logging over and over
-
+    Pstate      l_pstate;
     TRAC_IMP("SMGR: Observation to Characterization Transition Started");
 
-    // no change in RTL flags, just turn-on pstate protocol, and wide open clips
+    // no change in RTL flags, just turn-on pstate protocol, and set clips
 
     do
     {
@@ -507,15 +508,16 @@ errlHndl_t SMGR_observation_to_characterization()
                      "since OCC is not active ready.");
             break;
         }
-        // wide open pstate clips
-        rc = pgpe_widen_clip_blocking(OCC_STATE_CHARACTERIZATION);
+        // set pstate clips
+        l_pstate = proc_freq2pstate(G_proc_fmax_mhz);
+        rc = pgpe_set_clip_blocking(l_pstate);
 
         if(rc)
         {
-            TRAC_ERR("SMGR: failed to widen pstate clips.");
+            TRAC_ERR("SMGR: failed to set pstate clips.");
             break;
         }
-        else // successfully wide opened clips; enable pstates, then start transition
+        else // successfully set clips; enable pstates, then start transition
         {
             // update OPAL static table in main memory
             if(G_sysConfigData.system_type.kvm)
@@ -533,7 +535,7 @@ errlHndl_t SMGR_observation_to_characterization()
                 TRAC_ERR("SMGR: failed to start the pstate protocol on PGPE.");
                 break;
             }
-            else // Clips wide opened successfully and pstates enabled; complete transition
+            else // Clips set successfully and pstates enabled; complete transition
             {
                 // Set the actual STATE now that we have finished everything else
                 CURRENT_STATE() = OCC_STATE_CHARACTERIZATION;
@@ -586,9 +588,10 @@ errlHndl_t SMGR_observation_to_characterization()
 errlHndl_t SMGR_observation_to_active()
 {
     errlHndl_t      l_errlHndl = NULL;
-    static bool l_error_logged = FALSE;  // To prevent trace and error log happened over and over
-    int                l_extRc = OCC_NO_EXTENDED_RC;
-    int                l_rc = 0;
+    static bool     l_error_logged = FALSE;  // To prevent trace and error log happened over and over
+    int             l_extRc = OCC_NO_EXTENDED_RC;
+    int             l_rc = 0;
+    Pstate          l_pstate;
 
     // clear mnfg quad pstate request to default OCC to control all quads
     memset(&g_amec->mnfg_parms.quad_pstate[0], 0xFF, MAX_QUADS);
@@ -606,16 +609,17 @@ errlHndl_t SMGR_observation_to_active()
         if(SMGR_MASK_ACTIVE_READY ==
            (SMGR_validate_get_valid_states() & SMGR_MASK_ACTIVE_READY))
         {
-            l_rc = pgpe_widen_clip_blocking(OCC_STATE_ACTIVE);
+            l_pstate = proc_freq2pstate(G_proc_fmax_mhz);
+            l_rc = pgpe_set_clip_blocking(l_pstate);
 
             if(l_rc)
             {
                 TRAC_ERR("SMGR: Failed to switch to Active state because of a "
-                         "failure to widen clip pstates");
+                         "failure to set clip pstates");
                 break;
             }
 
-            else // Clips wide opened with no errors, enable Pstates on PGPE
+            else // Clips set with no errors, enable Pstates on PGPE
             {
 
                 // Pstates are enabled via an IPC call to PGPE, which will set the
@@ -939,7 +943,7 @@ errlHndl_t SMGR_active_to_observation()
             TRAC_ERR("SMGR: failed to stop the pstate protocol on PGPE.");
             break;
         }
-        else // Pstates Disabled and clips wide opened successfully, perform state transition
+        else // Pstates Disabled and clips set successfully, perform state transition
         {
             // Set the RTL Flags to indicate which tasks can run
             //   - Set OBSERVATION b/c in OBSERVATION State
@@ -989,20 +993,22 @@ errlHndl_t SMGR_active_to_characterization()
 {
     int          rc         = 0;
     errlHndl_t   l_errlHndl = NULL;
+    Pstate       l_pstate;
 
     TRAC_IMP("SMGR: Active to Characterization Transition Started");
 
     do
     {
-        // open wide pstate clips
-        rc = pgpe_widen_clip_blocking(OCC_STATE_CHARACTERIZATION);
+        // set pstate clips
+        l_pstate = proc_freq2pstate(G_proc_fmax_mhz);
+        rc = pgpe_set_clip_blocking(l_pstate);
 
         if(rc)
         {
-            TRAC_ERR("SMGR: failed to widen pstate clips.");
+            TRAC_ERR("SMGR: failed to set pstate clips.");
             break;
         }
-        else // clips widened successfully, keep pstates enabled, but change ownership
+        else // clips set successfully, keep pstates enabled, but change ownership
         {
             rc = pgpe_start_suspend(PGPE_ACTION_PSTATE_START, PMCR_OWNER_CHAR);
 
@@ -1011,7 +1017,7 @@ errlHndl_t SMGR_active_to_characterization()
                 TRAC_ERR("SMGR: failed to change PMCR ownership.");
                 break;
             }
-            else // Pstates Disabled and clips wide opened successfully, perform state transition
+            else // Pstates Disabled and clips set successfully, perform state transition
             {
                 // Set the RTL Flags to indicate which tasks can run
                 //   - Set OBSERVATION RTL flags for Characterization State

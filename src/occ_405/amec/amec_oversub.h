@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -91,8 +91,6 @@ typedef struct oversub_status
 void amec_oversub_isr(void);
 
 void amec_oversub_check(void);
-
-void amec_set_pmax_clip(Pstate i_pstate);
 
 bool apss_gpio_get(uint8_t i_pin_number, uint8_t *o_pin_value);
 

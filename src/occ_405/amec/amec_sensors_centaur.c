@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -57,7 +57,7 @@ extern uint8_t      G_centaur_nest_lfir6;
 /******************************************************************************/
 /* Forward Declarations                                                       */
 /******************************************************************************/
-/* TEMP/TODO: No MemData anymore */
+/* TODO - RTC 163359 Centaur support */
 #if 0
 void amec_update_dimm_dts_sensors(MemData * i_sensor_cache, uint8_t i_centaur);
 void amec_update_centaur_dts_sensors(MemData * i_sensor_cache, uint8_t i_centaur);
@@ -80,7 +80,7 @@ void amec_perfcount_getmc( MemData * i_sensor_cache, uint8_t i_centaur);
 // End Function Specification
 void amec_update_centaur_sensors(uint8_t i_centaur)
 {
-/* TEMP/TODO: No MemData anymore */
+/* TODO - RTC 163359 Centaur support */
 #if 0
     if(CENTAUR_PRESENT(i_centaur))
     {
@@ -106,7 +106,7 @@ void amec_update_centaur_sensors(uint8_t i_centaur)
 // Thread: RealTime Loop
 //
 // End Function Specification
-/* TEMP/TODO: No MemData anymore */
+/* TODO - RTC 163359 Centaur support */
 #if 0
 void amec_update_dimm_dts_sensors(MemData * i_sensor_cache, uint8_t i_centaur)
 {
@@ -257,7 +257,7 @@ void amec_update_dimm_dts_sensors(MemData * i_sensor_cache, uint8_t i_centaur)
 // Thread: RealTime Loop
 //
 // End Function Specification
-/* TEMP/TODO: No MemData anymore */
+/* TODO - RTC 163359 Centaur support */
 #if 0
 void amec_update_centaur_dts_sensors(MemData * i_sensor_cache, uint8_t i_centaur)
 {
@@ -430,7 +430,7 @@ void amec_update_centaur_temp_sensors(void)
 // Thread: RealTime Loop
 //
 // End Function Specification
-/* TEMP/TODO: No MemData anymore */
+/* TODO - RTC 163359 Centaur support */
 #if 0
 void amec_perfcount_getmc( MemData * i_sensor_cache,
                            uint8_t i_centaur)

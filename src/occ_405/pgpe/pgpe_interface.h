@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -38,8 +38,8 @@ errlHndl_t pgpe_init_start_suspend(void);
 errlHndl_t pgpe_init_wof_control(void);
 errlHndl_t pgpe_init_wof_vfrt(void);
 
-int pgpe_widen_clip_ranges(OCC_STATE state);
-int pgpe_widen_clip_blocking(OCC_STATE state);
+int pgpe_set_clip_ranges(Pstate i_pstate);
+int pgpe_set_clip_blocking(Pstate i_pstate);
 int pgpe_clip_update(void);
 
 int pgpe_pmcr_set(void);

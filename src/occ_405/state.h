@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -187,6 +187,8 @@ errlHndl_t SMGR_active_to_characterization();
 errlHndl_t SMGR_all_to_standby();
 
 errlHndl_t SMGR_all_to_safe();
+
+inline bool SMGR_is_state_transitioning(void);
 
 // Used by macro above to clear flag indicating to not halt OCC when a reset
 // is requested.

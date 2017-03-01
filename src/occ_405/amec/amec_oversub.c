@@ -34,6 +34,7 @@
 #include <dcom.h>
 #include <occ_sys_config.h>
 #include <amec_service_codes.h>
+#include <pgpe_interface.h>
 
 //*************************************************************************/
 // Externs
@@ -65,21 +66,6 @@
 //*************************************************************************/
 // Functions
 //*************************************************************************/
-
-// Function Specification
-//
-// Name: amec_set_pmax_clip
-//
-// Description: Set Pmax_Clip in PMC to Pstate
-//
-// Task Flags:
-//
-// End Function Specification
-void amec_set_pmax_clip(Pstate i_pstate)
-{
-    // TODO: Send IPC cmd to PGPE to set Pmax_Clip
-
-}
 
 // Function Specification
 //

@@ -1484,8 +1484,10 @@ void Main_thread_routine(void *private)
 
 
     // Temp hack to Set up Key Globals for use by proc_freq2pstate functions
-    G_oppb.frequency_max_khz  = 4322500;
-    G_oppb.frequency_min_khz  = 2028250;
+//    G_oppb.frequency_max_khz  = 4322500;
+//    G_oppb.frequency_min_khz  = 2028250;
+    G_oppb.frequency_max_khz  = 2600000;
+    G_oppb.frequency_min_khz  = 2000000;
     G_oppb.frequency_step_khz = 16667;
     G_oppb.pstate_min         = PMAX +
         ((G_oppb.frequency_max_khz - G_oppb.frequency_min_khz)/G_oppb.frequency_step_khz);

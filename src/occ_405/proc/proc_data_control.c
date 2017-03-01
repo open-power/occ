@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/proc/proc_data_control.c $                            */
+/* $Source: src/occ_405/proc/proc_data_control.c $                        */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -78,11 +78,10 @@ GPE_BUFFER(PstatesClips* G_core_data_control_gpewrite_ptr) = { &G_quads_data_con
 // End Function Specification
 void task_core_data_control( task_t * i_task )
 {
-    errlHndl_t      err        = NULL;   //Error handler
-    PstatesClips* l_temp       = NULL;
-    static bool L_trace_logged = false;  // trace logging to avoid unnecessarily repeatig logs
-
-/////////////////////////////////////////////////////////////////
+    errlHndl_t      err            = NULL;   //Error handler
+    PstatesClips*   l_temp         = NULL;
+    static bool     L_trace_logged = false;  // trace logging to avoid unnecessarily repeatig logs
+    Pstate          l_pstate;
 
     // Once a state transition process starts, task data control
     // stops updating the PMCR/CLIPS updates, this way, the state
@@ -102,7 +101,7 @@ void task_core_data_control( task_t * i_task )
             !G_active_to_observation_ready)
         {
             // confirm that the last clip update IPC successfully completed on PGPE (with no errors)
-            if( async_request_is_idle(&G_clip_update_req.request) &&  //clip_update/widen_clip_ranges completed
+            if( async_request_is_idle(&G_clip_update_req.request) &&  //clip_update/set_clip_ranges completed
                 (G_clip_update_parms_ptr->msg_cb.rc == PGPE_RC_SUCCESS) ) // with no errors
             {
                 uint8_t quad = 0;
@@ -118,10 +117,11 @@ void task_core_data_control( task_t * i_task )
                         pclip = G_clip_update_parms_ptr->ps_val_clip_max[quad];
                     }
                 }
+                l_pstate = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO]);
                 // pclip of highest quad frequency corresponds to a frequency higher than legacy turbo
-                if(pclip < proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO]))
+                if(pclip < l_pstate)
                 {
-                    pgpe_widen_clip_ranges(OCC_STATE_OBSERVATION);
+                    pgpe_set_clip_ranges(l_pstate);
                 }
 
                 //Whether clips have been lowered from frequencies higher than legacy turbo
@@ -142,7 +142,7 @@ void task_core_data_control( task_t * i_task )
         {
             // confirm that the clip update IPC from last cycle
             // has successfully completed on PGPE (with no errors)
-            if( async_request_is_idle(&G_clip_update_req.request) &&  //clip_update/widen_clip_ranges completed
+            if( async_request_is_idle(&G_clip_update_req.request) &&  //clip_update/set_clip_ranges completed
                 (G_clip_update_parms_ptr->msg_cb.rc == PGPE_RC_SUCCESS) ) // with no errors
             {
                 //The previous OPAL PGPE request succeeded:
