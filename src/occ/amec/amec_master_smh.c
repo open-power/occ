@@ -5,9 +5,9 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2014                        */
-/* [+] Google Inc.                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
+/*                                                                        */
 /*                                                                        */
 /* Licensed under the Apache License, Version 2.0 (the "License");        */
 /* you may not use this file except in compliance with the License.       */
@@ -56,6 +56,8 @@
 
 //Power cap failure threshold set to 32 (ticks)
 #define PCAP_FAILURE_THRESHOLD 32
+
+extern uint8_t G_occ_interrupt_type;
 
 //*************************************************************************
 // Structures
@@ -445,7 +447,6 @@ void amec_mst_check_pcaps_match(void)
 //              cap value.
 //
 // End Function Specification
-
 void amec_mst_check_under_pcap(void)
 {
     /*------------------------------------------------------------------------*/
@@ -457,66 +458,76 @@ void amec_mst_check_under_pcap(void)
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
 
-    // Check if ppb_fmax = Fmin and PWR250US > Node power cap and
-    // Node power cap >=  hard_min_pcap
+    // Check if ppb_fmax = Fmin and PWR250US > Node power cap
     if((g_amec->proc[0].pwr_votes.ppb_fmax == g_amec->sys.fmin) &&
-       (AMECSENSOR_PTR(PWR250US)->sample > g_amec->pcap.active_node_pcap) &&
-       (g_amec->pcap.active_node_pcap >= G_sysConfigData.pcap.hard_min_pcap))
+       (AMECSENSOR_PTR(PWR250US)->sample > g_amec->pcap.active_node_pcap))
     {
+       // We are over the cap @min freq now check if this is a failure maintaining a hard cap
+       // FSP:  Node power cap >=  hard_min_pcap
+       // BMC:  System cap i.e. No user set cap, treat all user caps as soft.
+       if( ((G_occ_interrupt_type == FSP_SUPPORTED_OCC) &&
+            (g_amec->pcap.active_node_pcap >= G_sysConfigData.pcap.hard_min_pcap)) ||
+           ((G_occ_interrupt_type != FSP_SUPPORTED_OCC) &&
+            (G_sysConfigData.pcap.current_pcap == 0)) )
+       {
+          G_over_cap_count++;
 
-        G_over_cap_count++;
+          //Log error and reset OCC if count >= 32 (ticks)
+          if(G_over_cap_count >= PCAP_FAILURE_THRESHOLD)
+          {
+              TRAC_ERR("Failure to maintain power cap: Power Cap = %d ,"
+                       "PWR250US = %d ,PWR250USP0 = %d ,PWR250USFAN = %d ,"
+                       "PWR250USMEM0 = %d",g_amec->pcap.active_node_pcap,
+                       AMECSENSOR_PTR(PWR250US)->sample,
+                       AMECSENSOR_PTR(PWR250USP0)->sample,
+                       AMECSENSOR_PTR(PWR250USFAN)->sample,
+                       AMECSENSOR_PTR(PWR250USMEM0)->sample);
 
-        //Log error and reset OCC if count >= 32 (ticks)
-        if(G_over_cap_count >= PCAP_FAILURE_THRESHOLD)
-        {
-            TRAC_ERR("Failure to maintain power cap: Power Cap = %d ,"
-                     "PWR250US = %d ,PWR250USP0 = %d ,PWR250USFAN = %d ,"
-                     "PWR250USMEM0 = %d",g_amec->pcap.active_node_pcap,
-                     AMECSENSOR_PTR(PWR250US)->sample,
-                     AMECSENSOR_PTR(PWR250USP0)->sample,
-                     AMECSENSOR_PTR(PWR250USFAN)->sample,
-                     AMECSENSOR_PTR(PWR250USMEM0)->sample);
+              TRAC_ERR("PWR250USIO = %d , PWR250USSTORE = %d, PWR250USGPU = %d",
+                       AMECSENSOR_PTR(PWR250USIO)->sample,
+                       AMECSENSOR_PTR(PWR250USSTORE)->sample,
+                       AMECSENSOR_PTR(PWR250USGPU)->sample);
 
-            TRAC_ERR("PWR250USIO = %d , PWR250USSTORE = %d, PWR250USGPU = %d",
-                     AMECSENSOR_PTR(PWR250USIO)->sample,
-                     AMECSENSOR_PTR(PWR250USSTORE)->sample,
-                     AMECSENSOR_PTR(PWR250USGPU)->sample);
+              /* @
+               * @errortype
+               * @moduleid    AMEC_MST_CHECK_UNDER_PCAP
+               * @reasoncode  POWER_CAP_FAILURE
+               * @userdata1   Power Cap
+               * @userdata2   PWR250US (Node Power)
+               * @devdesc     Failure to maintain max power limits
+               *
+               */
+              l_err = createErrl( AMEC_MST_CHECK_UNDER_PCAP,
+                                  POWER_CAP_FAILURE,
+                                  ERC_AMEC_UNDER_PCAP_FAILURE,
+                                  ERRL_SEV_PREDICTIVE,
+                                  NULL,
+                                  DEFAULT_TRACE_SIZE,
+                                  g_amec->pcap.active_node_pcap,
+                                  AMECSENSOR_PTR(PWR250US)->sample);
 
-            /* @
-             * @errortype
-             * @moduleid    AMEC_MST_CHECK_UNDER_PCAP
-             * @reasoncode  POWER_CAP_FAILURE
-             * @userdata1   Power Cap
-             * @userdata2   PWR250US (Node Power)
-             * @devdesc     Failure to maintain max power limits
-             *
-             */
-            l_err = createErrl( AMEC_MST_CHECK_UNDER_PCAP,
-                                POWER_CAP_FAILURE,
-                                ERC_AMEC_UNDER_PCAP_FAILURE,
-                                ERRL_SEV_PREDICTIVE,
-                                NULL,
-                                DEFAULT_TRACE_SIZE,
-                                g_amec->pcap.active_node_pcap,
-                                AMECSENSOR_PTR(PWR250US)->sample);
+              //Callout to firmware
+              addCalloutToErrl(l_err,
+                               ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                               ERRL_COMPONENT_ID_FIRMWARE,
+                               ERRL_CALLOUT_PRIORITY_HIGH);
+              //Callout to APSS
+              addCalloutToErrl(l_err,
+                               ERRL_CALLOUT_TYPE_HUID,
+                               G_sysConfigData.apss_huid,
+                               ERRL_CALLOUT_PRIORITY_HIGH);
 
-            //Callout to firmware
-            addCalloutToErrl(l_err,
-                             ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                             ERRL_COMPONENT_ID_FIRMWARE,
-                             ERRL_CALLOUT_PRIORITY_HIGH);
-
-            //Callout to APSS
-            addCalloutToErrl(l_err,
-                             ERRL_CALLOUT_TYPE_HUID,
-                             G_sysConfigData.apss_huid,
-                             ERRL_CALLOUT_PRIORITY_HIGH);
-
-            //Reset OCC
-            REQUEST_RESET(l_err);
-        }
+              //Reset OCC
+              REQUEST_RESET(l_err);
+          }
+       }
+       else  // Not a hard cap
+       {
+          // Soft power cap, clear counter
+          G_over_cap_count = 0;
+       }
     }
-    else
+    else  // Not over the cap @min freq
     {
         //Decrement count if node power under power cap value
         if(G_over_cap_count > 0)
