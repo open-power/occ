@@ -677,7 +677,7 @@ errlHndl_t SMGR_observation_to_active()
 
                 // Set the actual STATE now that we have finished everything else
                 CURRENT_STATE() = OCC_STATE_ACTIVE;
-                TRAC_IMP("SMGR: Observation to Active Transition Completed");
+                TRAC_IMP("SMGR: Observation to Active Transition Completed. OCC role = %d", G_occ_role);
             }
             else
             {

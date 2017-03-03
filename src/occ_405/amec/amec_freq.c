@@ -77,58 +77,6 @@ BOOLEAN                   G_non_dps_power_limited       = FALSE;
 opal_proc_voting_reason_t G_amec_opal_proc_throt_reason = NO_THROTTLE;
 opal_mem_voting_reason_t  G_amec_opal_mem_throt_reason  = NO_MEM_THROTTLE;
 
-uint16_t                  G_time_until_freq_check       = FREQ_CHG_CHECK_TIME;
-
-//FFDC SCOM addresses as requested by Greg Still in defect SW247927
-//If new SCOM addresses are added, update the size of the array.
-const uint32_t G_pmc_ffdc_scom_addrs[PMC_FFDC_SCOM_ADDRS_SIZE] =
-{
-    PMC_LFIR_ERR_REG,
-    PMC_LFIR_ERR_MASK_REG,
-    OCB_OCCLFIR,
-    PBA_FIR,
-    TOD_VALUE_REG
-};
-
-//FFDC OCI addresses as requested by Greg Still in defect SW247927
-//If new OCI addresses are added, update the size of the array.
-const uint32_t G_pmc_ffdc_oci_addrs[PMC_FFDC_OCI_ADDRS_SIZE] =
-{
-    PMC_MODE_REG,
-    PMC_PSTATE_MONITOR_AND_CTRL_REG,
-    PMC_RAIL_BOUNDS_REGISTER,
-    PMC_PARAMETER_REG0,
-    PMC_PARAMETER_REG1,
-    PMC_EFF_GLOBAL_ACTUAL_VOLTAGE_REG,
-    PMC_STATUS_REG,
-    PMC_INTCHP_CTRL_REG1,
-    PMC_INTCHP_CTRL_REG4,
-    PMC_INTCHP_STATUS_REG,
-    PMC_INTCHP_COMMAND_REG,
-    PMC_INTCHP_PSTATE_REG,
-    PMC_SPIV_CTRL_REG0A,
-    PMC_SPIV_CTRL_REG0B,
-    PMC_SPIV_CTRL_REG1,
-    PMC_SPIV_CTRL_REG2,
-    PMC_SPIV_CTRL_REG3,
-    PMC_SPIV_CTRL_REG4,
-    PMC_SPIV_STATUS_REG,
-    PMC_SPIV_COMMAND_REG,
-    PMC_O2S_CTRL_REG0A,
-    PMC_O2S_CTRL_REG0B,
-    PMC_O2S_CTRL_REG1,
-    PMC_O2S_CTRL_REG2,
-    PMC_O2S_CTRL_REG4,
-    PMC_O2S_STATUS_REG,
-    PMC_O2S_COMMAND_REG,
-    PMC_O2S_WDATA_REG,
-    PMC_CORE_DECONFIGURATION_REG,
-    PMC_FSMSTATE_STATUS_REG,
-    PMC_GPSA_ACK_COLLECTION_REG,
-    PMC_GPSA_ACK_COLLECTION_MASK_REG,
-    PMC_OCC_HEARTBEAT_REG,
-    0                           //0 marks last OCI address
-};
 
 //*************************************************************************
 // Function Prototypes
@@ -292,7 +240,6 @@ void amec_slv_proc_voting_box(void)
     uint32_t                        l_core_reason = 0;
     amec_proc_voting_reason_t       l_kvm_throt_reason = NO_THROTTLE;
     amec_part_t                     *l_part = NULL;
-    bool                            l_freq_req_changed = FALSE;
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
@@ -492,13 +439,6 @@ void amec_slv_proc_voting_box(void)
                 l_core_reason = AMEC_VOTING_REASON_OVERRIDE_CORE;
             }
 
-            // If frequency has changed, set the flag
-            if ( (l_core_freq != g_amec->proc[0].core[k].f_request) ||
-                    (l_core_freq != g_amec->sys.fmax))
-            {
-                l_freq_req_changed = TRUE;
-            }
-
             //STORE core frequency and reason
             g_amec->proc[0].core[k].f_request = l_core_freq;
             g_amec->proc[0].core[k].f_reason = l_core_reason;
@@ -509,9 +449,12 @@ void amec_slv_proc_voting_box(void)
 
             //CURRENT_MODE() may be OCC_MODE_NOCHANGE because STATE change is processed
             //before MODE change
-            if ((CURRENT_MODE() != OCC_MODE_DYN_POWER_SAVE) &&
+            if ((CURRENT_MODE() != OCC_MODE_DYN_POWER_SAVE)    &&
                 (CURRENT_MODE() != OCC_MODE_DYN_POWER_SAVE_FP) &&
-                (CURRENT_MODE() != OCC_MODE_NOCHANGE) &&
+                (CURRENT_MODE() != OCC_MODE_NOM_PERFORMANCE)   &&
+                (CURRENT_MODE() != OCC_MODE_MAX_PERFORMANCE)   &&
+                (CURRENT_MODE() != OCC_MODE_FMF)               &&
+                (CURRENT_MODE() != OCC_MODE_NOCHANGE)          &&
                 (l_core_reason & NON_DPS_POWER_LIMITED))
             {
                 G_non_dps_power_limited = TRUE;
@@ -551,16 +494,6 @@ void amec_slv_proc_voting_box(void)
             l_core_reason = 0;
         }
     }//End of for loop
-
-    // Check if the frequency is going to be changing
-    if( l_freq_req_changed == TRUE )
-    {
-        G_time_until_freq_check = FREQ_CHG_CHECK_TIME;
-    }
-    else if (G_time_until_freq_check != 0)
-    {
-        G_time_until_freq_check--;
-    }
 
     //convert POWERCAP reason to POWER_SUPPLY_FAILURE if ovs is asserted
     if((l_kvm_throt_reason == POWERCAP) && AMEC_INTF_GET_OVERSUBSCRIPTION())
@@ -787,9 +720,6 @@ void amec_slv_check_perf(void)
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
 
-    // Verify that cores are at proper frequency
-    amec_verify_pstate();
-
     do
     {
         // was frequency limited by power ?
@@ -982,154 +912,6 @@ void amec_slv_check_perf(void)
     return;
 }
 
-// Verifies that each core is at the correct frequency after they have had
-// time to stabilize
-void amec_verify_pstate()
-{
-//  @TODO - TEMP Pstate functions not defined yet. RTC:164718
-#if 0
-    uint8_t                             l_core = 0;
-    int8_t                              l_pstate_from_fmax = 0;
-    CoreData *                          l_core_data_ptr;
-    pmc_pmsr_ffcdc_data_t               l_pmc_pmsr_ffdc;
-    errlHndl_t                          l_err = NULL;
-
-    if ( (G_time_until_freq_check == 0) &&
-            ( CURRENT_MODE() != OCC_MODE_DYN_POWER_SAVE ) &&
-            ( CURRENT_MODE() != OCC_MODE_DYN_POWER_SAVE_FP ) &&
-            (!G_sysConfigData.system_type.kvm))
-    {
-        // Reset the counter
-        G_time_until_freq_check = FREQ_CHG_CHECK_TIME;
-
-        // Convert fmax to the corresponding pstate
-        l_pstate_from_fmax = proc_freq2pstate(g_amec->sys.fmax);
-
-        for( l_core = 0; l_core < MAX_NUM_CORES; l_core++ )
-        {
-            // If the core isn't present, skip it
-            if(!CORE_PRESENT(l_core))
-            {
-                l_pmc_pmsr_ffdc.pmsr_ffdc_data.data[l_core].value = 0;
-                continue;
-            }
-
-            // Get pointer to core data
-            l_core_data_ptr = proc_get_bulk_core_data_ptr(l_core);
-
-            // Get the core's pmsr data
-            l_pmc_pmsr_ffdc.pmsr_ffdc_data.data[l_core] = l_core_data_ptr->pcb_slave.pmsr;
-
-            // Verify that the core is running at the correct frequency
-            // If not, log an error
-            if( (l_pstate_from_fmax != l_pmc_pmsr_ffdc.pmsr_ffdc_data.data[l_core].fields.local_pstate_actual) &&
-                (l_pstate_from_fmax > l_pmc_pmsr_ffdc.pmsr_ffdc_data.data[l_core].fields.pv_min) &&
-                (l_err == NULL) )
-            {
-                TRAC_ERR("Frequency mismatch in core %d: actual_ps[%d] req_ps[%d] fmax[%d] mode[%d].",
-                    l_core,
-                    l_pmc_pmsr_ffdc.pmsr_ffdc_data.data[l_core].fields.local_pstate_actual,
-                    l_pstate_from_fmax,
-                    g_amec->sys.fmax,
-                    CURRENT_MODE());
-
-                fill_pmc_ffdc_buffer(&l_pmc_pmsr_ffdc.pmc_ffcdc_data);
-
-                /* @
-                 * @moduleid   AMEC_VERIFY_FREQ_MID
-                 * @reasonCode TARGET_FREQ_FAILURE
-                 * @severity   ERRL_SEV_PREDICTIVE
-                 * @userdata1  0
-                 * @userdata2  0
-                 * @userdata4  OCC_NO_EXTENDED_RC
-                 * @devdesc    A core is not running at the expected frequency
-                 */
-                l_err = createErrl( AMEC_VERIFY_FREQ_MID,      // i_modId,
-                                    TARGET_FREQ_FAILURE,       // i_reasonCode,
-                                    OCC_NO_EXTENDED_RC,
-                                    ERRL_SEV_UNRECOVERABLE,
-                                    NULL,                      // i_trace,
-                                    DEFAULT_TRACE_SIZE,        // i_traceSz,
-                                    0,                         // i_userData1,
-                                    0);                        // i_userData2
-
-                //Add firmware callout
-                addCalloutToErrl(l_err,
-                        ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                        ERRL_COMPONENT_ID_FIRMWARE,
-                        ERRL_CALLOUT_PRIORITY_HIGH);
-
-                //Add processor callout
-                addCalloutToErrl(l_err,
-                        ERRL_CALLOUT_TYPE_HUID,
-                        G_sysConfigData.proc_huid,
-                        ERRL_CALLOUT_PRIORITY_MED);
-            }
-        }
-
-        if( l_err != NULL)
-        {
-            //Add our register dump to the error log
-            addUsrDtlsToErrl(l_err,
-                    (uint8_t*) &l_pmc_pmsr_ffdc,
-                    sizeof(l_pmc_pmsr_ffdc),
-                    ERRL_USR_DTL_STRUCT_VERSION_1,
-                    ERRL_USR_DTL_BINARY_DATA);
-
-            REQUEST_RESET(l_err);
-        }
-    }
-#endif // #if 0: @TODO - TEMP Pstate functions not defined yet
-}
-
-// Fills in a pmc ffdc buffer with lots of PMC related OCI and SCOM registers
-void fill_pmc_ffdc_buffer(pmc_ffdc_data_t* i_ffdc_ptr)
-{
-    int i;
-    uint32_t    l_rc, l_addr, l_data32;
-    uint64_t    l_data64;
-
-    //clear out the entire buffer
-    memset(i_ffdc_ptr, 0, sizeof(pmc_ffdc_data_t));
-
-    //first get the OCI accessible FFDC data
-    for(i = 0; i < PMC_FFDC_OCI_ADDRS_SIZE; i++)
-    {
-        l_addr = G_pmc_ffdc_oci_addrs[i];
-        if(l_addr)
-        {
-            l_data32 = in32(l_addr);
-        }
-        else
-        {
-            //leave an entry with all zero address and data for eye catcher
-            break;
-        }
-
-        //store address along with data for easier parsing
-        i_ffdc_ptr->oci_regs[i].addr = l_addr;
-        i_ffdc_ptr->oci_regs[i].data = l_data32;
-    }
-
-    //then get the SCOM accessible FFDC data
-    for(i = 0; i < PMC_FFDC_SCOM_ADDRS_SIZE; i++)
-    {
-        l_addr = G_pmc_ffdc_scom_addrs[i];
-        l_rc = (uint32_t)_getscom(l_addr, &l_data64, SCOM_TIMEOUT);
-        if(l_rc)
-        {
-            //indicate there was a scom failure in collecting the data
-            l_data64 = 0xFEEDB0B000000000ull;
-
-            //store rc in lower word
-            l_data64 |= l_rc;
-        }
-
-        //store address along with data for easier parsing
-        i_ffdc_ptr->scom_regs[i].addr = l_addr;
-        i_ffdc_ptr->scom_regs[i].data = l_data64;
-    }
-}
 
 /*----------------------------------------------------------------------------*/
 /* End                                                                        */

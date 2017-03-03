@@ -92,8 +92,6 @@ enum occReasonCode
     PMC_FAILURE                     = 0xB2,
     /// Data passed as an argument or returned from a function is invalid
     INTERNAL_INVALID_INPUT_DATA     = 0xB3,
-    /// A core was not at the expected frequency
-    TARGET_FREQ_FAILURE             = 0xB4,
     /// RTL detected a system checkstop
     OCC_SYSTEM_HALTED               = 0xB5,
     ///  Request to read APSS data failed.
@@ -280,7 +278,6 @@ enum occModuleId
     GETSCOM_FFDC_MID                =  MAIN_COMP_ID | 0x0a,
     PUTSCOM_FFDC_MID                =  MAIN_COMP_ID | 0x0b,
     HMON_ROUTINE_MID                =  MAIN_COMP_ID | 0x0c,
-    AMEC_VERIFY_FREQ_MID            =  MAIN_COMP_ID | 0x0d,
     FIR_DATA_MID                    =  MAIN_COMP_ID | 0x0e,
     CMDH_DBUG_MID                   =  MAIN_COMP_ID | 0x0f,
     I2C_LOCK_UPDATE                 =  MAIN_COMP_ID | 0x10,

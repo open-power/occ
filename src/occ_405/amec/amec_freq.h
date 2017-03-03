@@ -127,44 +127,6 @@ typedef  amec_proc_voting_reason_t opal_proc_voting_reason_t;
 // Structures
 //*************************************************************************/
 
-#define PMC_FFDC_OCI_ADDRS_SIZE 34
-#define PMC_FFDC_SCOM_ADDRS_SIZE 5
-
-// scom ffdc format
-typedef struct __attribute__ ((packed))
-{
-    uint32_t    addr;
-    uint64_t    data;
-} pmc_ffdc_scom_entry_t;
-
-// OCI ffdc format
-typedef struct
-{
-    uint32_t    addr;
-    uint32_t    data;
-} pmc_ffdc_oci_entry_t;
-
-//PMC FFDC format for user detail section of error log
-typedef struct
-{
-    pmc_ffdc_oci_entry_t oci_regs[PMC_FFDC_OCI_ADDRS_SIZE];
-    pmc_ffdc_scom_entry_t scom_regs[PMC_FFDC_SCOM_ADDRS_SIZE];
-} pmc_ffdc_data_t;
-
-/* TEMP -- This PCBS PMS REG type no longer exists within SSX
-typedef struct
-{
-    pcbs_power_management_status_reg_t    data[MAX_NUM_CORES];
-} pmsr_ffdc_data_t;
-*/
-
-/* TEMP -- PMSR FFDC data doesn't exist due to reason above
-typedef struct
-{
-    pmc_ffdc_data_t     pmc_ffcdc_data;
-    pmsr_ffdc_data_t    pmsr_ffdc_data;
-} pmc_pmsr_ffcdc_data_t;
-*/
 
 //*************************************************************************/
 // Globals
@@ -173,7 +135,6 @@ typedef struct
 //*************************************************************************/
 // Function Prototypes
 //*************************************************************************/
-void fill_pmc_ffdc_buffer(pmc_ffdc_data_t* i_ffdc_ptr);
 
 // Used to set the freq range that amec can control between.
 errlHndl_t amec_set_freq_range(const OCC_MODE i_mode);
@@ -189,9 +150,6 @@ void amec_slv_mem_voting_box(void);
 
 // Amec Detect and log degraded performance errors
 void amec_slv_check_perf(void);
-
-// Verifies that each core is at the correct frequency
-void amec_verify_pstate();
 
 #endif
 

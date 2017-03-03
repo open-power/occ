@@ -318,33 +318,41 @@ void amec_slv_common_tasks_pre(void)
 // End Function Specification
 void amec_slv_common_tasks_post(void)
 {
+  static bool L_active_1tick = FALSE;
+
   AMEC_DBG("\tAMEC Slave Post-State Common\n");
 
   // Only execute if OCC is in the active state
   if ( IS_OCC_STATE_ACTIVE() )
   {
-      // Check if we need to change Pmax_clip register setting due to not
-      // getting any APSS data from Master
-      amec_slv_check_apss_fail();
+      // wait 1 tick after going active to allow pwr sensors to be updated
+      if(L_active_1tick)
+      {
+        // Check if we need to change Pmax_clip register setting due to not
+        // getting any APSS data from Master
+        amec_slv_check_apss_fail();
 
-      // Call amec_power_control
-      amec_power_control();
+        // Call amec_power_control
+        amec_power_control();
 
-      // Call the OCC slave's processor voting box
-      amec_slv_proc_voting_box();
+        // Call the OCC slave's processor voting box
+        amec_slv_proc_voting_box();
 
-      // Call the frequency state machine
-      amec_slv_freq_smh();
+        // Call the frequency state machine
+        amec_slv_freq_smh();
 
-      // Call the OCC slave's memory voting box
-      amec_slv_mem_voting_box();
+        // Call the OCC slave's memory voting box
+        amec_slv_mem_voting_box();
 
-      // Call the OCC slave's performance check
-      amec_slv_check_perf();
+        // Call the OCC slave's performance check
+        amec_slv_check_perf();
 
-      // Call the 250us trace recording if it has been configured via Amester.
-      // If not configured, this call will return immediately.
-      amec_tb_record(AMEC_TB_250US);
+        // Call the 250us trace recording if it has been configured via Amester.
+        // If not configured, this call will return immediately.
+        amec_tb_record(AMEC_TB_250US);
+      }
+      else
+         L_active_1tick = TRUE;
   }
   // if an OPAL system & just transitioned to CHAR or OBS state, set proc mnfg override
   else if ( (IS_OCC_STATE_CHARACTERIZATION() || IS_OCC_STATE_OBSERVATION()) &&
