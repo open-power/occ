@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -46,7 +46,7 @@
 
 //Number of watts power must be below the node power cap before raising
 //ppb_fmax
-#define PDROP_THRESH        0   //TODO: need better value.
+#define PDROP_THRESH        0
 
 //Structure used in g_amec
 typedef struct amec_pcap

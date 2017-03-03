@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -158,7 +158,7 @@ void amec_vectorize_core_sensor(sensor_t * l_sensor,
         SSX_GENERIC_FAILURE,            //reasoncode
         OCC_NO_EXTENDED_RC,             //Extended reason code
         ERRL_SEV_UNRECOVERABLE,         //Severity
-        NULL,//TODO: create trace       //Trace Buf
+        NULL,                           //Trace Buf
         DEFAULT_TRACE_SIZE,             //Trace Size
         l_rc,                           //userdata1
         l_gsid                          //userdata2
@@ -214,7 +214,8 @@ void amec_init_vector_sensors(void)
       VECTOR_OP_AVG,
       UTIL4MSP0C0);
 
-//TODO: Re-enable with error checking when centaur support is added
+//TODO: Centaur support RTC 163359
+//Re-enable with error checking when centaur support is added
 #if 0
   int l_rc = 0, l_idx = 0, l_idx2 = 0;    // Used to index the for loops for vector create
   //-----------------------------------------------------
@@ -289,8 +290,6 @@ void amec_init_gamec_struct(void)
   g_amec->pcap.active_proc_pcap = 0;
   g_amec->pcap.active_mem_level = 0;
 
-// @TODO - TEMP: not ready yet in Phase 1
-/*
   // Initialize partition information
   amec_part_init();
 
@@ -299,7 +298,6 @@ void amec_init_gamec_struct(void)
   {
     amec_core_perf_counter_ctor(&g_amec->proc[0].core[l_idx].core_perf, 0, l_idx);
   }
-*/
 
   //Initialize processor fields
   g_amec->proc[0].core_max_freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -55,10 +55,10 @@
 #define PWR_SETTLED_TICKS   4
 //Number of watts power must be below the node power cap before raising
 //ppb_fmax
-#define PDROP_THRESH        0   //TODO: need better value.
+#define PDROP_THRESH        0
 //Number of MHz to raise the proc_pcap_vote for every watt of available power
 //(DCM value should be less than SCM)
-#define PROC_MHZ_PER_WATT   28  //TODO: need better value.
+#define PROC_MHZ_PER_WATT   28
 //Number of MHz to raise ppb_fmax per watt of available power. Depends on
 //number of procs in node.
 #define NODE_MHZ_PER_WATT()  \
@@ -69,7 +69,7 @@
                             PROC_MHZ_PER_WATT/G_sysConfigData.sys_num_proc_present))
 
 //Frequency_step_khz (from global pstate table)/1000
-uint32_t    G_mhz_per_pstate=0;   //TODO: Maybe there's a better value to initilize it to.
+uint32_t    G_mhz_per_pstate=0;
 
 uint8_t     G_over_pcap_count=0;
 

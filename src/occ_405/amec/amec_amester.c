@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/amec/amec_amester.c $                                 */
+/* $Source: src/occ_405/amec/amec_amester.c $                             */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -1526,7 +1526,6 @@ void amec_tb_cmd_get_config(const IPMIMsg_t *i_psMsg,
         // oca_n field from POWER7 is always 0 on POWER8
         o_pu8Resp[l_i++] = 0;
 
-        // TODO: this should move to another command
         o_pu8Resp[l_i++] = g_amec_tb_record;
         o_pu8Resp[l_i++] = g_amec_tb_continuous;
         o_pu8Resp[l_i++] = (UINT8)((UINT16)AMEC_TB_SENSORS_MAX);

@@ -425,7 +425,7 @@ errlHndl_t pgpe_init_wof_vfrt(void)
 #define CLIP_UPDATE_TIMEOUT 5        //maximum waiting time (usec) for clip update IPC task
 int pgpe_widen_clip_blocking(OCC_STATE state)
 {
-    errlHndl_t   err;
+    errlHndl_t   err = NULL;
     uint8_t      wait_time = 0;
     int          rc = 0;  // Return code: 0 means success, otherwise an error.
 

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -102,7 +102,6 @@ void amec_controller_proc_thermal()
     // Calculate the thermal control error
     l_error = g_amec->thermalproc.setpoint - l_thermal_winner;
 
-    // TODO: Get with Malcolm to migrate to 16-bit multiply
     // Proportional Controller for the thermal control loop
     l_throttle = (int32_t) l_error * g_amec->thermalproc.Pgain;
     l_residue = (uint16_t) l_throttle;

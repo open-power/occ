@@ -199,7 +199,7 @@ void amec_oversub_check(void)
     // Figure out the over-subscription reason
     if(g_amec->oversub_status.oversubReasonLatchCount > 1)
     {
-        // TODO:  Try to figure out why we throttled based on APSS GPIO pins
+        // TODO -- RTC 155565 -- Try to figure out why we throttled based on APSS GPIO pins
         if( g_amec->oversub_status.oversubReasonLatchCount == OVERSUB_REASON_COUNT_TIMEOUT)
         {
             g_amec->oversub_status.oversubReason = INDETERMINATE;
