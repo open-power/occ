@@ -461,7 +461,7 @@ void task_dcom_wait_for_master( task_t *i_self)
     static bool         L_queue_enabled         = FALSE;
     static uint32_t     L_pobid_retries_left    = POBID_RETRIES;
     static uint16_t     L_no_master_doorbell_cnt = 0;
-    static bool         L_log_first_fail        = FALSE;
+    static uint16_t     L_trace_every_count = 1;
 
     DCOM_DBG("0. Wait for Master\n");
 
@@ -487,67 +487,16 @@ void task_dcom_wait_for_master( task_t *i_self)
                 // counter
                 L_no_master_doorbell_cnt++;
 
-                if (L_no_master_doorbell_cnt >= APSS_DATA_FAIL_PMAX_RAIL)
+
+                if (L_no_master_doorbell_cnt % L_trace_every_count == 0)
                 {
-                    // If we fail to receive the Master doorbell for this long, take
-                    // action
                     TRAC_INFO("task_dcom_wait_for_master: experiencing data collection problems! fail_count=%i",
                               L_no_master_doorbell_cnt);
+                }
 
-                    // Inform AMEC that Pmax_rail needs to change
-                    G_apss_lower_pmax_rail = TRUE;
-
-                    if (!L_log_first_fail)
-                    {
-                        // Create and commit this error only once.
-                        L_log_first_fail = TRUE;
-                        TRAC_ERR("Detected a problem with slave data collection: soft time-out[%d]. Lowering Pmax_rail!",
-                                 APSS_DATA_FAIL_PMAX_RAIL);
-
-                        /* @
-                         * @errortype
-                         * @moduleid    DCOM_MID_TASK_WAIT_FOR_MASTER
-                         * @reasoncode  APSS_SLV_SHORT_TIMEOUT
-                         * @userdata1   Time-out value
-                         * @userdata4   OCC_NO_EXTENDED_RC
-                         * @devdesc     Detected a problem with APSS data collection (short time-out)
-                         */
-                        errlHndl_t  l_errl = createErrl(
-                                    DCOM_MID_TASK_WAIT_FOR_MASTER,  //modId
-                                    APSS_SLV_SHORT_TIMEOUT,         //reasoncode
-                                    OCC_NO_EXTENDED_RC,             //Extended reason code
-                                    ERRL_SEV_INFORMATIONAL,         //Severity
-                                    NULL,                           //Trace Buf
-                                    DEFAULT_TRACE_SIZE,             //Trace Size
-                                    APSS_DATA_FAIL_PMAX_RAIL,       //userdata1
-                                    0                               //userdata2
-                                    );
-
-                        // the manufacturing action flag must be set prior
-                        // to calling the addCalloutToErrl in order to
-                        // enable setting the callouts for informational SRCs
-                        setErrlActions(l_errl, ERRL_ACTIONS_MANUFACTURING_ERROR);
-
-                        // Callout to firmware
-                        addCalloutToErrl(l_errl,
-                                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                                         ERRL_COMPONENT_ID_FIRMWARE,
-                                         ERRL_CALLOUT_PRIORITY_MED);
-
-                        // Callout to processor
-                        addCalloutToErrl(l_errl,
-                                         ERRL_CALLOUT_TYPE_HUID,
-                                         G_sysConfigData.proc_huid,
-                                         ERRL_CALLOUT_PRIORITY_LOW);
-
-                        // Callout to APSS
-                        addCalloutToErrl(l_errl,
-                                         ERRL_CALLOUT_TYPE_HUID,
-                                         G_sysConfigData.apss_huid,
-                                         ERRL_CALLOUT_PRIORITY_LOW);
-
-                        commitErrl(&l_errl);
-                    }
+                if (L_no_master_doorbell_cnt == APSS_DATA_FAIL_PMAX_RAIL)
+                {
+                    L_trace_every_count = 50;
                 }
 
                 if (L_no_master_doorbell_cnt == APSS_DATA_FAIL_MAX)
@@ -699,12 +648,12 @@ void task_dcom_wait_for_master( task_t *i_self)
         }
         else
         {
-             TRAC_INFO("[%d] Restablished contact via doorbell from Master",(int) G_pob_id.chip_id);
+             TRAC_INFO("[%d] Restablished contact via doorbell from Master (after %d ticks)",(int) G_pob_id.chip_id, L_no_master_doorbell_cnt);
 
              // Inform AMEC that Pmax_rail doesn't need to be lowered and reset
              // the no_master_doorbell counter
-             G_apss_lower_pmax_rail = FALSE;
              L_no_master_doorbell_cnt = 0;
+             L_trace_every_count = 1;
         }
 
         // Got a multicast doorbell
