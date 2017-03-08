@@ -44,7 +44,7 @@ void dumpHexString(const void *i_data, const unsigned int len, const char *strin
 #endif
 
 #define APSS_DATA_FAIL_PMAX_RAIL  16  //Number of steps before we lower Pmax_rail to nominal. This should allow for 4ms/16ticks with no APSS data.
-#define APSS_DATA_FAIL_MAX       800  //Number of steps we reach before reseting OCC.  This should allow for 200ms/800ticks with no APSS data.
+#define APSS_DATA_FAIL_MAX      1600  //Number of steps we reach before reseting OCC.  This should allow for 400ms/1600ticks with no APSS data.
 #define APSS_DATA_FAILURE_STEP     1  //Number of steps to increment FAIL_COUNT due to a failed APSS data collection.
 #define APSS_ERRORLOG_RESET_THRESHOLD 16 //When to allow apss tasks to log another error if count goes back to 0 again.
 
