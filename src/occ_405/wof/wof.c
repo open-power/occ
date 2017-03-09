@@ -42,9 +42,6 @@ extern amec_sys_t g_amec_sys;
 extern OCCPstateParmBlock G_oppb;
 extern GPE_BUFFER(ipcmsg_wof_vfrt_t G_wof_vfrt_parms);
 extern GpeRequest G_wof_vfrt_req;
-extern uint32_t   G_pgpe_shared_sram_address;
-extern uint32_t   G_pgpe_pstate_table_address;
-extern uint32_t   G_pgpe_pstate_table_sz;
 extern uint32_t   G_nest_frequency_mhz;
 //******************************************************************************
 // Globals
@@ -243,7 +240,7 @@ uint32_t calc_vfrt_mainstore_addr( void )
                     g_wof->vdd_step_from_start) ) + g_wof->quad_step_from_start);
 
     // Skip the wof header at the beginning of wof tables
-    uint32_t wof_tables_base = g_wof->vfrt_tbls_main_mem_addr + WOF_HEADER_SIZE;
+    uint32_t wof_tables_base = G_pgpe_header.wof_tables_addr + WOF_HEADER_SIZE;
 
     return wof_tables_base + offset;
 }
@@ -576,7 +573,7 @@ void read_shared_sram( void )
 {
     // Skip over the first doubleword for now (magic number and pgpe beacon)
     uint32_t current_pgpe_sram_addr =
-                     G_pgpe_shared_sram_address + sizeof(uint64_t);
+                     G_pgpe_header.shared_sram_addr + sizeof(uint64_t);
 
     // Get the actual quad states
     G_quad_state_0.value = in64(current_pgpe_sram_addr);
@@ -639,7 +636,7 @@ void calculate_core_voltage( void )
         else
         {
             // Calculate the address of the pstate for the current quad.
-            uint32_t pstate_addr = G_pgpe_pstate_table_address +
+            uint32_t pstate_addr = G_pgpe_header.occ_pstate_table_sram_addr +
                     (g_wof->quad_x_pstates[l_quad_idx] * sizeof(OCCPstateTable_entry_t));
 
             // Get the Pstate

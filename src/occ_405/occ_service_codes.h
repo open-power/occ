@@ -122,9 +122,8 @@ enum occReasonCode
 
     WOF_VFRT_REQ_FAILURE            = 0xD8,
     INVALID_MAGIC_NUMBER            = 0xDA,
-
     DIVIDE_BY_ZERO_ERROR            = 0xDB,
-
+    INVALID_FREQUENCY               = 0xDC,
 
     /// Success!
     OCC_SUCCESS_REASON_CODE         = 0xFF,
@@ -243,6 +242,7 @@ enum occExtReasonCode
     ERC_PGPE_PPMR_OPPB_SIZE_MISMATCH            = 0x00B8,
     ERC_PGPE_ACTIVE_TO_OBSERVATION_TIMEOUT      = 0x00B9,
     ERC_PGPE_TASK_TIMEOUT                       = 0x00BA,
+    ERC_PGPE_INVALID_ADDRESS                    = 0x00BB,
 
     ERC_WOF_QUAD_COUNT_FAILURE                  = 0x00C0,
 

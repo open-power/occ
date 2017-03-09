@@ -51,10 +51,14 @@
 
 #define WOF_RC_MODE_NO_SUPPORT_MASK                     0x0008
 
+#define WOF_MAGIC_NUMBER            0x57465448   // "WFTH"
+
 // Structure to hold relevant data from the WOF header in Mainstore
 typedef struct __attribute__ ((packed))
 {
-    uint64_t magic_number;
+    uint32_t magic_number;
+    uint8_t reserved[3];
+    uint8_t version;
     uint8_t size_of_vfrt;
     uint8_t vfrt_data_size;
     uint8_t active_quads_start;

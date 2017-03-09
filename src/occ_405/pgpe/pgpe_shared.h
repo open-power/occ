@@ -24,44 +24,22 @@
 /* IBM_PROLOG_END_TAG                                                     */
 
 #define PGPE_HEADER_ADDR             0xFFF20180 // 0xfff20000 + 0x180
-#define PGPE_HEADER_SZ               96         // Size of PGPE Image header
 
-#define PGPE_MAGIC_NUMBER            0x5849502050475045ull   // "XIP PGPE"
+#define PPMR_MAGIC_NUMBER_10         0x50504D525F312E30ull   // "PPMR_1.0"
+#define OPPB_MAGIC_NUMBER_10         0x4F43435050423030ull   // "OCCPPB00"
+#define PGPE_MAGIC_NUMBER_10         0x504750455F312E30ull   // "PGPE_1.0"
 
 // Offset addresses of PGPE Header parameters (relative to start address)
-#define PGPE_SHARED_SRAM_ADDR_OFFSET 0x0c
-#define PGPE_SHARED_SRAM_SZ_OFFSET   0x14
-#define PGPE_PSTATE_TBL_ADDR_OFFSET  0x40
-#define PGPE_PSTATE_TBL_SZ_OFFSET    0x44
-#define PGPE_BEACON_ADDR_OFFSET      0x48
-#define PGPE_ACTIVE_QUAD_ADDR_OFFSET 0x4c
-#define PGPE_WOF_TBLS_ADDR_OFFSET    0x50
-#define PGPE_WOF_TBLS_LEN_OFFSET     0x54
-
-// Offset addresses of OCC-PGPE Shared SRAM pointers (relative to Shared SRAM ptr)
-
-// PGPE Image Header Parameter addresses
-
-//Shared OCC-PGPE SRAM parameters
-#define PGPE_SHARED_SRAM_ADDR_PTR    (PGPE_HEADER_ADDR + PGPE_SHARED_SRAM_ADDR_OFFSET)
-#define PGPE_SHARED_SRAM_SZ_PTR      (PGPE_HEADER_ADDR + PGPE_SHARED_SRAM_SZ_OFFSET)
-
-
-// A pointer to PGPE Beacon Address
-#define PGPE_BEACON_ADDR_PTR         (PGPE_HEADER_ADDR + PGPE_BEACON_ADDR_OFFSET)
-
-// Pointers to data needed by WOF
-#define PGPE_ACTIVE_QUAD_ADDR_PTR    (PGPE_HEADER_ADDR + PGPE_ACTIVE_QUAD_ADDR_OFFSET)
-#define PGPE_WOF_TBLS_ADDR_PTR       (PGPE_HEADER_ADDR + PGPE_WOF_TBLS_ADDR_OFFSET)
-#define PGPE_WOF_TBLS_LEN_PTR        (PGPE_HEADER_ADDR + PGPE_WOF_TBLS_LEN_OFFSET)
-
-// Pointers to Pstate tables in SRAM
-#define PGPE_PSTATE_TBL_ADDR_PTR     (PGPE_HEADER_ADDR + PGPE_PSTATE_TBL_ADDR_OFFSET)
-#define PGPE_PSTATE_TBL_SZ_PTR       (PGPE_HEADER_ADDR + PGPE_PSTATE_TBL_SZ_OFFSET)
-
-// PPMR (Pstates PM region) in HOMMR
-#define PPMR_OPPM_ADDR_OFFSET    0x40     //offset of the OCC Pstates Parameter Block address in the PPMR header
-#define PPMR_OPPM_SZ_OFFSET      0x44     //offset of the OCC Pstates Parameter Block size in the PPMR header
+#define PGPE_SHARED_SRAM_ADDR_OFFSET           0x0c
+#define PGPE_SHARED_SRAM_LEN_OFFSET            0x14
+#define PGPE_OCC_PSTATE_TBL_ADDR_OFFSET        0x40
+#define PGPE_OCC_PSTATE_TBL_SZ_OFFSET          0x44
+#define PGPE_BEACON_ADDR_OFFSET                0x48
+#define PGPE_ACTUAL_QUAD_STATUS_ADDR_OFFSET    0x4c
+#define PGPE_WOF_STATE_ADDR_OFFSET             0x50
+#define PGPE_REQUESTED_ACTIVE_QUAD_ADDR_OFFSET 0x54
+#define PGPE_WOF_TBLS_ADDR_OFFSET              0x58
+#define PGPE_WOF_TBLS_LEN_OFFSET               0x5C
 
 
 // This size must be a multiple of 128
@@ -69,10 +47,10 @@ typedef struct __attribute__ ((packed))
 {
     uint64_t  magic_number;
     uint32_t  bc_offset;
-    uint32_t  resserved;
+    uint32_t  reserved;
     uint32_t  bl_offset;
     uint32_t  bl_length;
-    uint32_t  build_date;;
+    uint32_t  build_date;
     uint32_t  version;
     uint8_t   resvd_flag[8];
     uint32_t  pgpe_hcode_offset;
@@ -87,3 +65,23 @@ typedef struct __attribute__ ((packed))
     uint32_t  pstables_length;
     uint8_t   pad[48];
 } ppmr_header_t __attribute__ ((aligned (128)));
+
+
+typedef struct __attribute__ ((packed))
+{
+    uint32_t shared_sram_addr;
+    uint32_t shared_sram_length;
+    uint32_t occ_pstate_table_sram_addr;
+    uint32_t occ_pstate_table_length;
+    uint32_t beacon_sram_addr;
+    uint32_t actual_quad_status_sram_addr;
+    uint32_t wof_state_address;
+    uint32_t requested_active_quad_sram_addr;
+    uint32_t wof_tables_addr;
+    uint32_t wof_tables_length;
+} pgpe_header_data_t;
+
+extern pgpe_header_data_t G_pgpe_header;
+
+
+

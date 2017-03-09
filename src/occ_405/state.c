@@ -133,12 +133,12 @@ inline bool SMGR_is_state_transitioning(void)
 errlHndl_t SMGR_standby_to_observation()
 {
     errlHndl_t              l_errlHndl = NULL;
-    static bool l_error_logged = FALSE;  // To prevent trace and error log happened over and over
+    static bool L_error_logged = FALSE;  // To prevent trace and error log happened over and over
 
     if( SMGR_MASK_OBSERVATION_READY ==
         (SMGR_validate_get_valid_states() & SMGR_MASK_OBSERVATION_READY))
     {
-        l_error_logged = FALSE;
+        L_error_logged = FALSE;
         TRAC_IMP("SMGR: Standby to Observation Transition Started");
 
         memory_init();
@@ -154,10 +154,10 @@ errlHndl_t SMGR_standby_to_observation()
         TRAC_IMP("SMGR: Standby to Observation Transition Completed");
 
     }
-    else if(FALSE == l_error_logged)
+    else if(FALSE == L_error_logged)
     {
-        l_error_logged = TRUE;
-        TRAC_ERR("SMGR: Standby to Observation Transition Failed");
+        L_error_logged = TRUE;
+        TRAC_ERR("SMGR: Standby to Observation Transition Failed due to not OBS_READY");
         /* @
          * @errortype
          * @moduleid    MAIN_STATE_TRANSITION_MID
@@ -196,7 +196,7 @@ errlHndl_t SMGR_standby_to_characterization()
 {
     errlHndl_t  l_errlHndl = NULL;
     int         rc = 0;
-    static bool l_error_logged = FALSE;  // To prevent trace and error log happened over and over
+    static bool L_error_logged = FALSE;  // To prevent trace and error log happened over and over
     Pstate      l_pstate;
     do
     {
@@ -204,7 +204,7 @@ errlHndl_t SMGR_standby_to_characterization()
         if( SMGR_MASK_ACTIVE_READY ==
             (SMGR_validate_get_valid_states() & SMGR_MASK_ACTIVE_READY))
         {
-            l_error_logged = FALSE;
+            L_error_logged = FALSE;
             TRAC_IMP("SMGR: Standby to Characterization State Transition Started");
 
             // set pstate clips
@@ -253,10 +253,10 @@ errlHndl_t SMGR_standby_to_characterization()
         }
     } while (0);
 
-    if(l_errlHndl && (false == l_error_logged))
+    if(l_errlHndl && (false == L_error_logged))
     {
-        l_error_logged = TRUE;
-        TRAC_ERR("SMGR: Standby to Characterization Transition Failed");
+        L_error_logged = TRUE;
+        TRAC_ERR("SMGR: Standby to Characterization Transition Failed due to not ACTIVE_READY");
         /* @
          * @errortype
          * @moduleid    MAIN_STATE_TRANSITION_MID
@@ -297,7 +297,6 @@ errlHndl_t SMGR_standby_to_characterization()
 errlHndl_t SMGR_all_to_standby()
 {
     errlHndl_t  l_errlHndl     = NULL;
-    static bool l_error_logged = FALSE;  // To prevent trace and error logging over and over
     uint8_t     wait_time = 0;
     int         rc;
 
@@ -373,9 +372,8 @@ errlHndl_t SMGR_all_to_standby()
 
     } while (0);
 
-    if(l_errlHndl && !l_error_logged)
+    if(l_errlHndl)
     {
-        l_error_logged = TRUE;
         TRAC_ERR("SMGR: Transition to Standby Failed");
 
         /* @
@@ -416,7 +414,6 @@ errlHndl_t SMGR_characterization_to_observation()
 {
     errlHndl_t  l_errlHndl     = NULL;
     int         rc             = 0;
-    static bool l_error_logged = FALSE;  // To prevent trace and error logging over and over
     Pstate      l_pstate;
     TRAC_IMP("SMGR: Characterization to Observation Transition Started");
 
@@ -448,9 +445,8 @@ errlHndl_t SMGR_characterization_to_observation()
         }
     } while (0);
 
-    if(rc && !l_error_logged)
+    if(rc)
     {
-        l_error_logged = TRUE;
         TRAC_ERR("SMGR: Characterization to Observation Transition Failed");
 
         /* @
@@ -492,7 +488,7 @@ errlHndl_t SMGR_observation_to_characterization()
 {
     int         rc             = 0;
     errlHndl_t  l_errlHndl     = NULL;
-    static bool l_error_logged = FALSE;  // To prevent trace and error logging over and over
+    static bool L_error_logged = FALSE;  // To prevent trace and error logging over and over
     Pstate      l_pstate;
     TRAC_IMP("SMGR: Observation to Characterization Transition Started");
 
@@ -545,9 +541,9 @@ errlHndl_t SMGR_observation_to_characterization()
         }
     } while (0);
 
-    if(rc && (false == l_error_logged))
+    if(rc && (false == L_error_logged))
     {
-        l_error_logged = TRUE;
+        L_error_logged = TRUE;
         TRAC_ERR("SMGR: Observation to Characterization Transition Failed");
         /* @
          * @errortype
@@ -588,7 +584,7 @@ errlHndl_t SMGR_observation_to_characterization()
 errlHndl_t SMGR_observation_to_active()
 {
     errlHndl_t      l_errlHndl = NULL;
-    static bool     l_error_logged = FALSE;  // To prevent trace and error log happened over and over
+    static bool     L_error_logged = FALSE;  // To prevent trace and error log happened over and over
     int             l_extRc = OCC_NO_EXTENDED_RC;
     int             l_rc = 0;
     Pstate          l_pstate;
@@ -609,6 +605,7 @@ errlHndl_t SMGR_observation_to_active()
         if(SMGR_MASK_ACTIVE_READY ==
            (SMGR_validate_get_valid_states() & SMGR_MASK_ACTIVE_READY))
         {
+            TRAC_IMP("SMGR: Observation to Active Transition Started");
             l_pstate = proc_freq2pstate(G_proc_fmax_mhz);
             l_rc = pgpe_set_clip_blocking(l_pstate);
 
@@ -642,13 +639,13 @@ errlHndl_t SMGR_observation_to_active()
 
             // Wait for pstates enablement completition.
             SsxTimebase start = ssx_timebase_get();
+            SsxInterval timeout =  SSX_SECONDS(5);
             while( ! proc_is_hwpstate_enabled() )
             {
-                SsxInterval timeout =  SSX_SECONDS(5);
                 if ((ssx_timebase_get() - start) > timeout)
                 {
                     l_rc = 1;
-                    if(FALSE == l_error_logged)
+                    if(FALSE == L_error_logged)
                     {
                         TRAC_ERR("SMGR: Timeout waiting for Pstates to be enabled, "
                                  "pmc_mode[%08x], chips_present[%02x], Cores Present [%08x]",
@@ -659,14 +656,14 @@ errlHndl_t SMGR_observation_to_active()
                     l_extRc = ERC_GENERIC_TIMEOUT;
                     break;
                 }
+                ssx_sleep(SSX_MICROSECONDS(10));
             }
 
             // if pstates are now enabled, all conditions are already met
             // to transition to active state.
             if(proc_is_hwpstate_enabled() )
             {
-                l_error_logged = FALSE;
-                TRAC_IMP("SMGR: Observation to Active Transition Started");
+                L_error_logged = FALSE;
 
                 // Set the RTL Flags to indicate which tasks can run
                 //   - Clear OBSERVATION b/c not in OBSERVATION State
@@ -693,9 +690,9 @@ errlHndl_t SMGR_observation_to_active()
                 TRAC_ERR("SMGR: Observation to Active Transition Failed, because pstates are not enabled");
             }
 
-            if(l_rc && FALSE == l_error_logged)
+            if(l_rc && FALSE == L_error_logged)
             {
-                l_error_logged = TRUE;
+                L_error_logged = TRUE;
                 /* @
                  * @errortype
                  * @moduleid    MAIN_STATE_TRANSITION_MID
@@ -745,7 +742,7 @@ errlHndl_t SMGR_characterization_to_active()
 {
     int         rc         = 0;
     errlHndl_t  l_errlHndl = NULL;
-    static bool l_error_logged = FALSE;  // To prevent trace and error log happened over and over
+    static bool L_error_logged = FALSE;  // To prevent trace and error log happened over and over
 
     do
     {
@@ -779,7 +776,7 @@ errlHndl_t SMGR_characterization_to_active()
              (SMGR_validate_get_valid_states() & SMGR_MASK_ACTIVE_READY))
             && proc_is_hwpstate_enabled() )
         {
-            l_error_logged = FALSE;
+            L_error_logged = FALSE;
             TRAC_IMP("SMGR: Characterization to Active Transition Started");
 
             // Set the RTL Flags to indicate which tasks can run
@@ -794,9 +791,9 @@ errlHndl_t SMGR_characterization_to_active()
         }
     } while (0);
 
-    if(rc && (false == l_error_logged))
+    if(rc && (false == L_error_logged))
     {
-        l_error_logged = TRUE;
+        L_error_logged = TRUE;
         /* @
          * @errortype
          * @moduleid    MAIN_STATE_TRANSITION_MID

@@ -75,8 +75,6 @@ extern apss_start_args_t    G_gpe_start_pwr_meas_read_args;
 extern apss_continue_args_t G_gpe_continue_pwr_meas_read_args;
 extern apss_complete_args_t G_gpe_complete_pwr_meas_read_args;
 
-extern uint32_t G_pgpe_beacon_address;
-
 extern uint32_t G_proc_fmin_khz;
 extern uint32_t G_proc_fmax_khz;
 extern wof_header_data_t G_wof_header;
@@ -88,13 +86,8 @@ extern uint8_t G_proc_pmax;
 
 IMAGE_HEADER (G_mainAppImageHdr,__ssx_boot,MAIN_APP_ID,ID_NUM_INVALID);
 
-// PGPE Image Header Parameters
-uint32_t G_pgpe_shared_sram_address;
-uint32_t G_pgpe_shared_sram_sz;
-uint32_t G_pgpe_pstate_table_address;
-uint32_t G_pgpe_pstate_table_sz;
-
 ppmr_header_t G_ppmr_header;       // PPMR Header layout format
+pgpe_header_data_t G_pgpe_header;  // Selected fields from PGPE Header
 OCCPstateParmBlock G_oppb;         // OCC Pstate Parameters Block Structure
 extern uint16_t G_proc_fmax_mhz;   // max(turbo,uturbo) frequencies
 
@@ -142,7 +135,6 @@ extern uint8_t g_trac_err_buffer[];
 
 void pmc_hw_error_isr(void *private, SsxIrqId irq, int priority);
 void create_tlb_entry(uint32_t address, uint32_t size);
-void read_oppb_params(const OCCPstateParmBlock* occ_ppb);
 
 //Macro creates a 'bridge' handler that converts the initial fast-mode to full
 //mode interrupt handler
@@ -388,7 +380,7 @@ END TODO */
                             OCC_NO_EXTENDED_RC,
                             ERRL_SEV_UNRECOVERABLE,
                             NULL,                      // tracDesc_t i_trace,
-                            0,                         // i_traceSz,
+                            DEFAULT_TRACE_SIZE,        //Trace Size
                             l_rc,                      // i_userData1,
                             0);                        // i_userData2
 
@@ -425,13 +417,14 @@ END TODO */
 
 void create_tlb_entry(uint32_t address, uint32_t size)
 {
+#if PPC405_MMU_SUPPORT
     int      l_rc = SSX_OK;
     uint32_t tlb_entry_address, tlb_entry_size;   // address and size that guarantee page alignment
 
     tlb_entry_address = PAGE_ALIGNED_ADDRESS(address);
 
-    if(address + (size%PPC405_PAGE_SIZE_MIN) >=
-       tlb_entry_address + PPC405_PAGE_SIZE_MIN)
+    if ((address + (size%PPC405_PAGE_SIZE_MIN)) >=
+        (tlb_entry_address + PPC405_PAGE_SIZE_MIN))
     {
         tlb_entry_size = PAGE_ALIGNED_SIZE(size+PPC405_PAGE_SIZE_MIN);
     }
@@ -440,50 +433,46 @@ void create_tlb_entry(uint32_t address, uint32_t size)
         tlb_entry_size = PAGE_ALIGNED_SIZE(size);
     }
 
-
-#if PPC405_MMU_SUPPORT
     // define DTLB for page aligned address and size
-    l_rc = ppc405_mmu_map(
-        tlb_entry_address,
-        tlb_entry_address,
-        tlb_entry_size,
-        0,
-        TLBLO_I,         //Read-only, Cache-inhibited
-        NULL
-        );
-#endif
-
-    if(l_rc != SSX_OK)
+    l_rc = ppc405_mmu_map(tlb_entry_address,
+                          tlb_entry_address,
+                          tlb_entry_size,
+                          0,
+                          TLBLO_I,         //Read-only, Cache-inhibited
+                          NULL);
+    if(l_rc == SSX_OK)
+    {
+        MAIN_TRAC_IMP("Created TLB entry for Address[0x%08x]"
+                      "TLB Page Address[0x%08x], TLB Entry size[0x%08x]",
+                      address, tlb_entry_address, tlb_entry_size);
+    }
+    else
     {
         MAIN_TRAC_ERR("Failed to create TLB entry,"
                       "TLB Page Address[0x%08x], TLB Entry size[0x%08x], rc[0x%08x]",
                       tlb_entry_address, tlb_entry_size, l_rc);
 
-            /* @
-             * @errortype
-             * @moduleid    CREATE_TLB_ENTRY
-             * @reasoncode  SSX_GENERIC_FAILURE
-             * @userdata1   ppc405_mmu_map return code
-             * @userdata2   address for which a TLB entry is created
-             * @userdata4   ERC_TLB_ENTRY_CREATION_FAILURE
-             * @devdesc     SSX semaphore related failure
-             */
+        /* @
+         * @errortype
+         * @moduleid    CREATE_TLB_ENTRY
+         * @reasoncode  SSX_GENERIC_FAILURE
+         * @userdata1   ppc405_mmu_map return code
+         * @userdata2   address for which a TLB entry is created
+         * @userdata4   ERC_TLB_ENTRY_CREATION_FAILURE
+         * @devdesc     SSX semaphore related failure
+         */
+        errlHndl_t l_err = createErrl(CREATE_TLB_ENTRY,               //modId
+                                      SSX_GENERIC_FAILURE,            //reasoncode
+                                      ERC_TLB_ENTRY_CREATION_FAILURE, //Extended reason code
+                                      ERRL_SEV_UNRECOVERABLE,         //Severity
+                                      NULL,                           //Trace Buf
+                                      DEFAULT_TRACE_SIZE,             //Trace Size
+                                      l_rc,                           //userdata1
+                                      address);                       //userdata2
 
-            errlHndl_t l_err = createErrl(CREATE_TLB_ENTRY,               //modId
-                                          SSX_GENERIC_FAILURE,            //reasoncode
-                                          ERC_TLB_ENTRY_CREATION_FAILURE, //Extended reason code
-                                          ERRL_SEV_UNRECOVERABLE,         //Severity
-                                          NULL,                           //Trace Buf
-                                          DEFAULT_TRACE_SIZE,             //Trace Size
-                                          l_rc,                           //userdata1
-                                          address);                       //userdata2
-
-            REQUEST_RESET(l_err);
+        REQUEST_RESET(l_err);
     }
-
-    MAIN_TRAC_IMP("Created TLB entry for Address[0x%08x]"
-                  "TLB Page Address[0x%08x], TLB Entry size[0x%08x]",
-                  address, tlb_entry_address, tlb_entry_size);
+#endif
 }
 
 
@@ -493,7 +482,7 @@ void create_tlb_entry(uint32_t address, uint32_t size)
  * Name: read_wof_header
  *
  * Description: Read WOF Tables header and populate global variables
- *              needed for WOF
+ *              needed for WOF.  Must be called after pgpe header is read.
  *
  * End Function Specification
  */
@@ -501,97 +490,156 @@ void read_wof_header(void)
 {
     int l_ssxrc = SSX_OK;
     uint32_t l_reasonCode = 0;
-    uint32_t l_extReasonCode = 0;
+    uint32_t l_extReasonCode = OCC_NO_EXTENDED_RC;
+    uint32_t userdata1 = 0;
+    uint32_t userdata2 = 0;
 
-    do
+    MAIN_TRAC_INFO("read_wof_header() 0x%08X", G_pgpe_header.wof_tables_addr);
+
+    // Read active quads address, wof tables address, and wof tables len
+    g_amec->wof.active_quads_sram_addr  = G_pgpe_header.requested_active_quad_sram_addr;
+    g_amec->wof.vfrt_tbls_main_mem_addr = G_pgpe_header.wof_tables_addr;
+    g_amec->wof.vfrt_tbls_len           = G_pgpe_header.wof_tables_length;
+
+    // TODO: RTC 169955 -  Read Vratio, Fratio, Vclip, Fclip from shared SRAM
+    g_amec->wof.v_ratio = 0;
+    g_amec->wof.f_ratio = 0;
+    g_amec->wof.v_clip  = 0;
+    g_amec->wof.f_clip  = 0;
+
+    if (G_pgpe_header.wof_tables_addr != 0)
     {
-        // use block copy engine to read WOF header
-        BceRequest l_wof_header_req;
-
-        // 128 byte aligned buffer to read the data
-        temp_bce_request_buffer_t l_temp_bce_buff = {{0}};
-
-        uint32_t pad = g_amec->wof.vfrt_tbls_main_mem_addr%128;
-        // Force WOF tables address is on 128 byte boundary
-        uint32_t wof_main_mem_addr_128 = g_amec->wof.vfrt_tbls_main_mem_addr - pad;
-        // Create request
-        l_ssxrc = bce_request_create(&l_wof_header_req,      // block copy object
-                                     &G_pba_bcde_queue,      // main to sram copy engine
-                                     wof_main_mem_addr_128,  // mainstore address
-                                     (uint32_t) &l_temp_bce_buff, // SRAM start address
-                                     MIN_BCE_REQ_SIZE,       // size of copy
-                                     SSX_WAIT_FOREVER,       // no timeout
-                                     NULL,                   // no call back
-                                     NULL,                   // no call back args
-                                     ASYNC_REQUEST_BLOCKING);// blocking request
-
-        if(l_ssxrc != SSX_OK)
+        do
         {
-            CMDH_TRAC_ERR("read_wof_header: BCDE request create failure rc=[%08X]", -l_ssxrc);
-            /*
-             * @errortype
-             * @moduleid    READ_WOF_HEADER
-             * @reasoncode  SSX_GENERIC_FAILURE
-             * @userdata1   RC for BCE block-copy engine
-             * @userdata2   Internal function checkpoint
-             * @userdata4   ERC_BCE_REQUEST_CREATE_FAILURE
-             * @devdesc     Failed to create BCDE request
-             */
-            l_reasonCode = SSX_GENERIC_FAILURE;
-            l_extReasonCode = ERC_BCE_REQUEST_CREATE_FAILURE;
-            break;
-        }
+            // TODO: RTC: 169955 - Updates for new WOF header
+            // use block copy engine to read WOF header
+            BceRequest l_wof_header_req;
 
+            // 128 byte aligned buffer to read the data
+            temp_bce_request_buffer_t l_temp_bce_buff = {{0}};
 
-        // Do the actual copy
-        l_ssxrc = bce_request_schedule(&l_wof_header_req);
+            uint32_t pad = G_pgpe_header.wof_tables_addr%128;
+            // Force WOF tables address is on 128 byte boundary
+            uint32_t wof_main_mem_addr_128 = G_pgpe_header.wof_tables_addr - pad;
+            // Create request
+            l_ssxrc = bce_request_create(&l_wof_header_req,      // block copy object
+                                         &G_pba_bcde_queue,      // main to sram copy engine
+                                         wof_main_mem_addr_128,  // mainstore address
+                                         (uint32_t) &l_temp_bce_buff, // SRAM start address
+                                         MIN_BCE_REQ_SIZE,       // size of copy
+                                         SSX_WAIT_FOREVER,       // no timeout
+                                         NULL,                   // no call back
+                                         NULL,                   // no call back args
+                                         ASYNC_REQUEST_BLOCKING);// blocking request
+            if(l_ssxrc != SSX_OK)
+            {
+                MAIN_TRAC_ERR("read_wof_header: BCDE request create failure rc=[%08X]", -l_ssxrc);
+                /*
+                 * @errortype
+                 * @moduleid    READ_WOF_HEADER
+                 * @reasoncode  SSX_GENERIC_FAILURE
+                 * @userdata1   RC for BCE block-copy engine
+                 * @userdata4   ERC_BCE_REQUEST_CREATE_FAILURE
+                 * @devdesc     Failed to create BCDE request
+                 */
+                l_reasonCode = SSX_GENERIC_FAILURE;
+                l_extReasonCode = ERC_BCE_REQUEST_CREATE_FAILURE;
+                userdata1 = -l_ssxrc;
+                break;
+            }
 
-        if(l_ssxrc != SSX_OK)
+            // Do the actual copy
+            l_ssxrc = bce_request_schedule(&l_wof_header_req);
+            if(l_ssxrc != SSX_OK)
+            {
+                MAIN_TRAC_ERR("read_wof_header: BCE request schedule failure rc=[%08X]", -l_ssxrc);
+                /*
+                 * @errortype
+                 * @moduleid    READ_WOF_HEADER
+                 * @reasoncode  SSX_GENERIC_FAILURE
+                 * @userdata1   RC for BCE block-copy engine
+                 * @userdata4   ERC_BCE_REQUEST_SCHEDULE_FAILURE
+                 * @devdesc     Failed to read WOF data using BCDE
+                 */
+                l_reasonCode = SSX_GENERIC_FAILURE;
+                l_extReasonCode = ERC_BCE_REQUEST_SCHEDULE_FAILURE;
+                userdata1 = -l_ssxrc;
+                break;
+            }
+
+            // Copy the data into Global WOF header struct
+            memcpy(&G_wof_header, &(l_temp_bce_buff.data[pad]), sizeof(wof_header_data_t));
+
+            // verify the validity of the magic number
+            uint32_t magic_number = in32(G_pgpe_header.wof_tables_addr);
+            MAIN_TRAC_INFO("read_wof_header() Magic No: 0x%08X", magic_number);
+            if(WOF_MAGIC_NUMBER == magic_number)
+            {
+                // Make sure the header is reporting a valid number of quads i.e. 1 or 6
+                if( (G_wof_header.active_quads_size != ACTIVE_QUAD_SZ_MIN) &&
+                    (G_wof_header.active_quads_size != ACTIVE_QUAD_SZ_MAX) )
+                {
+                    MAIN_TRAC_ERR("read_wof_header: Invalid number of active quads!"
+                                  " Expected: 1 or 6, Actual %d, WOF disabled",
+                                  G_wof_header.active_quads_size );
+                    /*
+                     * @errortype
+                     * @moduleid    READ_WOF_HEADER
+                     * @reasoncode  INVALID_ACTIVE_QUAD_COUNT
+                     * @userdata1   Reported active quad count
+                     * @userdata4   ERC_WOF_QUAD_COUNT_FAILURE
+                     * @devdesc     Read an invalid number of active quads
+                     */
+                    l_reasonCode = INVALID_ACTIVE_QUAD_COUNT;
+                    l_extReasonCode = ERC_WOF_QUAD_COUNT_FAILURE;
+                    userdata1 = G_wof_header.active_quads_size;
+                    break;
+                }
+            }
+            else
+            {
+                MAIN_TRAC_ERR("read_wof_header: Invalid WOF Magic number. Address[0x%08X], Magic Number[0x%08X], WOF disabled",
+                              G_pgpe_header.wof_tables_addr, magic_number);
+                /* @
+                 * @errortype
+                 * @moduleid    READ_WOF_HEADER
+                 * @reasoncode  INVALID_MAGIC_NUMBER
+                 * @userdata1   WOF header sram address
+                 * @userdata2   read WOF magic number
+                 * @userdata4   OCC_NO_EXTENDED_RC
+                 * @devdesc     Invalid WOF magic number, WOF disabled
+                 */
+                l_reasonCode = INVALID_MAGIC_NUMBER;
+                userdata1 = G_pgpe_header.wof_tables_addr;
+                userdata2 = magic_number;
+                break;
+            }
+
+            // Make wof header data visible to amester
+            g_amec->wof.size_of_vfrt       = G_wof_header.size_of_vfrt;
+            g_amec->wof.vfrt_data_size     = G_wof_header.vfrt_data_size;
+            g_amec->wof.active_quads_start = G_wof_header.active_quads_start;
+            g_amec->wof.active_quads_size  = G_wof_header.active_quads_size;
+            g_amec->wof.vdn_start          = G_wof_header.vdn_start;
+            g_amec->wof.vdn_step           = G_wof_header.vdn_step;
+            g_amec->wof.vdn_size           = G_wof_header.vdn_size;
+            g_amec->wof.vdd_start          = G_wof_header.vdd_start;
+            g_amec->wof.vdd_step           = G_wof_header.vdd_step;
+            g_amec->wof.vdd_size           = G_wof_header.vdd_size;
+
+        }while( 0 );
+
+        // Check for errors and log, if any
+        if (l_reasonCode)
         {
-            CMDH_TRAC_ERR("read_wof_header: BCE request schedule failure rc=[%08X]", -l_ssxrc);
-            /*
-             * @errortype
-             * @moduleid    READ_WOF_HEADER
-             * @reasoncode  SSX_GENERIC_FAILURE
-             * @userdata1   RC for BCE block-copy engine
-             * @userdata4   ERC_BCE_REQUEST_SCHEDULE_FAILURE
-             * @devdesc     Failed to read PPMR data by using BCDE
-             */
-            l_reasonCode = SSX_GENERIC_FAILURE;
-            l_extReasonCode = ERC_BCE_REQUEST_SCHEDULE_FAILURE;
-            break;
-        }
-
-        // Copy the data into Global WOF header struct
-        memcpy(&G_wof_header, &(l_temp_bce_buff.data[pad]), sizeof(wof_header_data_t));
-
-
-        // Make sure the header is reporting a valid number of quads i.e. 1 or 6
-        if( (G_wof_header.active_quads_size != ACTIVE_QUAD_SZ_MIN) &&
-            (G_wof_header.active_quads_size != ACTIVE_QUAD_SZ_MAX) )
-        {
-            CMDH_TRAC_ERR("read_wof_header: Invalid number of active quads!"
-                          " Expected: 1 or 6, Actual %d",
-                          G_wof_header.active_quads_size );
-
-            /*
-             * @errortype
-             * @moduleid    READ_WOF_HEADER
-             * @reasoncode  INVALID_ACTIVE_QUAD_COUNT
-             * @userdata1   Reported active quad count
-             * @userdata4   Quad count failure
-             * @devdesc     Read an invalid number of active quads
-             */
-            l_reasonCode = INVALID_ACTIVE_QUAD_COUNT;
-            l_extReasonCode = ERC_WOF_QUAD_COUNT_FAILURE;
-            errlHndl_t l_errl = createErrl(READ_WOF_HEADER,        //modId
-                                   INVALID_ACTIVE_QUAD_COUNT,      //reasoncode
-                                   ERC_WOF_QUAD_COUNT_FAILURE,     //Extended reason code
-                                   ERRL_SEV_UNRECOVERABLE,         //Severity
-                                   NULL,                           //Trace Buf
-                                   0,                              //Trace Size
-                                   G_wof_header.active_quads_size, //userdata1
-                                   0);                             //userdata2
+            errlHndl_t l_errl = createErrl(READ_WOF_HEADER,          //modId
+                                           l_reasonCode,             //reasoncode
+                                           l_extReasonCode,          //Extended reason code
+                                           ERRL_SEV_UNRECOVERABLE,   //Severity
+                                           NULL,                     //Trace Buf
+                                           DEFAULT_TRACE_SIZE,       //Trace Size
+                                           userdata1,                //userdata1
+                                           userdata2);               //userdata2
 
             // Callout firmware
             addCalloutToErrl(l_errl,
@@ -602,54 +650,17 @@ void read_wof_header(void)
             // Commit error log
             commitErrl(&l_errl);
 
-            // We were unable to get the active quad count. Do not run wof algo.
-            g_amec->wof.wof_disabled |= WOF_RC_INVALID_ACTIVE_QUADS_MASK;
-
-            break;
+            // We were unable to get the WOF header thus it should not be run.
+            g_amec->wof.wof_disabled |= WOF_RC_NO_WOF_HEADER_MASK;
         }
-
-        // Make wof header data visible to amester
-        g_amec->wof.size_of_vfrt       = G_wof_header.size_of_vfrt;
-        g_amec->wof.vfrt_data_size     = G_wof_header.vfrt_data_size;
-        g_amec->wof.active_quads_start = G_wof_header.active_quads_start;
-        g_amec->wof.active_quads_size  = G_wof_header.active_quads_size;
-        g_amec->wof.vdn_start          = G_wof_header.vdn_start;
-        g_amec->wof.vdn_step           = G_wof_header.vdn_step;
-        g_amec->wof.vdn_size           = G_wof_header.vdn_size;
-        g_amec->wof.vdd_start          = G_wof_header.vdd_start;
-        g_amec->wof.vdd_step           = G_wof_header.vdd_step;
-        g_amec->wof.vdd_size           = G_wof_header.vdd_size;
-
-    }while( 0 );
-
-    // Check for errors and log, if any
-    if( l_ssxrc != SSX_OK )
-    {
-        errlHndl_t l_errl = createErrl(READ_WOF_HEADER,         //modId
-                                       l_reasonCode,             //reasoncode
-                                       l_extReasonCode,          //Extended reason code
-                                       ERRL_SEV_UNRECOVERABLE,   //Severity
-                                       NULL,                     //Trace Buf
-                                       0,                        //Trace Size
-                                       -l_ssxrc,                 //userdata1
-                                       0);                       //userdata2
-
-        // Callout firmware
-        addCalloutToErrl(l_errl,
-                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                         ERRL_COMPONENT_ID_FIRMWARE,
-                         ERRL_CALLOUT_PRIORITY_HIGH);
-
-        // Commit error log
-        commitErrl(&l_errl);
-
-        // We were unable to get the WOF header thus it should not be run.
-        g_amec->wof.wof_disabled |= WOF_RC_NO_WOF_HEADER_MASK;
-        return;
-
     }
-}
-
+    else
+    {
+        // We were unable to get the WOF header thus it should not be run.
+        MAIN_TRAC_INFO("read_wof_header(): WOF header address is 0, WOF is disabled");
+        g_amec->wof.wof_disabled |= WOF_RC_NO_WOF_HEADER_MASK;
+    }
+} // end read_wof_header()
 
 
 /*
@@ -662,99 +673,108 @@ void read_wof_header(void)
  *              Initialize OCC/PGPE shared SRAM entry in the DTLB,
  *              Populate global variables, including G_pgpe_peacon_address.
  *
+ * Returns: TRUE if read was successful, else FALSE
+ *
  * End Function Specification
  */
-void read_pgpe_header(void)
+bool read_pgpe_header(void)
 {
-    uint64_t   magic_number;
-    errlHndl_t l_err;
+    uint32_t l_reasonCode = 0;
+    uint32_t l_extReasonCode = OCC_NO_EXTENDED_RC;
+    uint32_t userdata1 = 0;
+    uint32_t userdata2 = 0;
+    uint64_t magic_number = 0;
 
-    // define DTLB for the PGPE image header
-    create_tlb_entry(PGPE_HEADER_ADDR, PGPE_HEADER_SZ);
-
-    // verify the validity of the magic number
-    magic_number = in64(PGPE_HEADER_ADDR);
-    if(PGPE_MAGIC_NUMBER != magic_number)
+    MAIN_TRAC_INFO("read_pgpe_header(0x%08X)", PGPE_HEADER_ADDR);
+    do
     {
-        // The Magic number is invalid .. Invalid or corrupt PGPE image header
-        MAIN_TRAC_ERR("Invalid PGPGE Magic number. Address[0x%08X], Magic Number[0x%08X%08X]",
-                      PGPE_HEADER_ADDR, (uint32_t)(magic_number>>32), (uint32_t)magic_number);
-        /* @
-         * @errortype
-         * @moduleid    READ_PGPE_HEADER
-         * @reasoncode  INVALID_MAGIC_NUMBER
-         * @userdata1   Low order 32 bits of retrieved PGPE magic number
-         * @userdata2   Hight order 32 bits of retrieved PGPE magic number
-         * @userdata4   OCC_NO_EXTENDED_RC
-         * @devdesc     SSX semaphore related failure
-         */
-
-        l_err = createErrl(READ_PGPE_HEADER,               //modId
-                                      INVALID_MAGIC_NUMBER,           //reasoncode
-                                      OCC_NO_EXTENDED_RC,             //Extended reason code
-                                      ERRL_SEV_UNRECOVERABLE,         //Severity
-                                      NULL,                           //Trace Buf
-                                      DEFAULT_TRACE_SIZE,             //Trace Size
-                                      (uint32_t)magic_number,         //userdata1
-                                      (uint32_t)(magic_number>>32));  //userdata2
-
-        REQUEST_RESET(l_err);
-
-    }
-
-    if(l_err == NULL)
-    {
-        // Read PGPE Beacon address from PGPE image header
-        G_pgpe_beacon_address = in32(PGPE_BEACON_ADDR_PTR);
-
-        MAIN_TRAC_IMP("Read PGPE Beacon Address[0x%08x]",
-                      G_pgpe_beacon_address);
-
-        // Read active quads address, wof tables address, and wof tables len
-        g_amec->wof.active_quads_sram_addr  = in32(PGPE_ACTIVE_QUAD_ADDR_PTR);
-        g_amec->wof.vfrt_tbls_main_mem_addr = in32(PGPE_WOF_TBLS_ADDR_PTR);
-        g_amec->wof.vfrt_tbls_len           = in32(PGPE_WOF_TBLS_LEN_PTR);
-
-
-        MAIN_TRAC_IMP("Read WOF Tables Main Memory Address[0x%08x], Len[0x%08x],"
-                      " Active Quads Address[0x%08x]",
-                      g_amec->wof.vfrt_tbls_main_mem_addr,
-                      g_amec->wof.vfrt_tbls_len,
-                      g_amec->wof.active_quads_sram_addr );
-
-        // TODO: RTC 169955 -  Read Vratio, Fratio, Vclip, Fclip from shared SRAM
-        g_amec->wof.v_ratio = 0;
-        g_amec->wof.f_ratio = 0;
-        g_amec->wof.v_clip  = 0;
-        g_amec->wof.f_clip  = 0;
-        // Extract important WOF data into global space
-        read_wof_header();
-
-        // Read OCC/PGPE Shared SRAM address and size
-        G_pgpe_shared_sram_address = in32(PGPE_SHARED_SRAM_ADDR_PTR);
-        G_pgpe_shared_sram_sz      = in32(PGPE_SHARED_SRAM_SZ_PTR);
-
-        MAIN_TRAC_IMP("Read PGPE Shared SRAM Start Address[0x%08x], Size[0x%08x]",
-                      G_pgpe_shared_sram_address, G_pgpe_shared_sram_sz);
-
-        // Read OCC Pstate table address and size
-        G_pgpe_pstate_table_address = in32(PGPE_PSTATE_TBL_ADDR_PTR);
-        G_pgpe_pstate_table_sz      = in32(PGPE_PSTATE_TBL_SZ_PTR);
-
-
-        // PGPE Beacon is not implemented in simics yet
-        // the G_pgpe_shared_sram_address and G_pgpe_shared_sram_sz pointers don't
-        // have the proper values yet.
-        // @TODO: remove this condition when PGPE code is integrated. RTC: 163934
-        if(!G_simics_environment)
+        // verify the validity of the magic number
+        magic_number = in64(PGPE_HEADER_ADDR);
+        if (PGPE_MAGIC_NUMBER_10 == magic_number)
         {
-            // define DTLB for OCC/PGPE shared SRAM, which enables access
-            // to OCC-PGPE Shared SRAM space, including pgpe_beacon
-            create_tlb_entry(G_pgpe_shared_sram_address, G_pgpe_shared_sram_sz);
+            G_pgpe_header.shared_sram_addr = in32(PGPE_HEADER_ADDR + PGPE_SHARED_SRAM_ADDR_OFFSET);
+            G_pgpe_header.shared_sram_length = in32(PGPE_HEADER_ADDR + PGPE_SHARED_SRAM_LEN_OFFSET);
+            G_pgpe_header.occ_pstate_table_sram_addr = in32(PGPE_HEADER_ADDR + PGPE_OCC_PSTATE_TBL_ADDR_OFFSET);
+            G_pgpe_header.occ_pstate_table_length = in32(PGPE_HEADER_ADDR + PGPE_OCC_PSTATE_TBL_SZ_OFFSET);
+            G_pgpe_header.beacon_sram_addr = in32(PGPE_HEADER_ADDR + PGPE_BEACON_ADDR_OFFSET);
+            G_pgpe_header.actual_quad_status_sram_addr = in32(PGPE_HEADER_ADDR + PGPE_ACTUAL_QUAD_STATUS_ADDR_OFFSET);
+            G_pgpe_header.wof_state_address = in32(PGPE_HEADER_ADDR + PGPE_WOF_STATE_ADDR_OFFSET);
+            G_pgpe_header.requested_active_quad_sram_addr = in32(PGPE_HEADER_ADDR + PGPE_REQUESTED_ACTIVE_QUAD_ADDR_OFFSET);
+            G_pgpe_header.wof_tables_addr = in32(PGPE_HEADER_ADDR + PGPE_WOF_TBLS_ADDR_OFFSET);
+            G_pgpe_header.wof_tables_length = in32(PGPE_HEADER_ADDR + PGPE_WOF_TBLS_LEN_OFFSET);
+
+            MAIN_TRAC_IMP("Shared SRAM Address[0x%08x], PGPE Beacon Address[0x%08x]",
+                          G_pgpe_header.shared_sram_addr, G_pgpe_header.beacon_sram_addr);
+            MAIN_TRAC_IMP("WOF Tables Main Memory Address[0x%08x], Len[0x%08x], "
+                          "Req Active Quads Address[0x%08x]",
+                          G_pgpe_header.wof_tables_addr,
+                          G_pgpe_header.wof_tables_length,
+                          G_pgpe_header.requested_active_quad_sram_addr);
+            if ((G_pgpe_header.beacon_sram_addr == 0) ||
+                (G_pgpe_header.shared_sram_addr == 0))
+            {
+                /*
+                 * @errortype
+                 * @moduleid    READ_PGPE_HEADER
+                 * @reasoncode  SSX_GENERIC_FAILURE
+                 * @userdata1   lower word of beacon sram address
+                 * @userdata2   lower word of shared sram address
+                 * @userdata4   ERC_PGPE_INVALID_ADDRESS
+                 * @devdesc     Invalid sram addresses from PGPE header
+                 */
+                l_reasonCode = SSX_GENERIC_FAILURE;
+                l_extReasonCode = ERC_PGPE_INVALID_ADDRESS;
+                userdata1 = WORD_LOW(G_pgpe_header.beacon_sram_addr);
+                userdata2 = WORD_LOW(G_pgpe_header.shared_sram_addr);
+                break;
+            }
         }
+        else
+        {
+            // The Magic number is invalid .. Invalid or corrupt PGPE image header
+            MAIN_TRAC_ERR("read_pgpe_header: Invalid PGPE Magic number. Address[0x%08X], Magic Number[0x%08X%08X]",
+                          PGPE_HEADER_ADDR, WORD_HIGH(magic_number), WORD_LOW(magic_number));
+            /* @
+             * @errortype
+             * @moduleid    READ_PGPE_HEADER
+             * @reasoncode  INVALID_MAGIC_NUMBER
+             * @userdata1   High order 32 bits of retrieved PGPE magic number
+             * @userdata2   Low order 32 bits of retrieved PGPE magic number
+             * @userdata4   OCC_NO_EXTENDED_RC
+             * @devdesc     Invalid magic number in PGPE header
+             */
+            l_reasonCode = INVALID_MAGIC_NUMBER;
+            userdata1 = WORD_HIGH(magic_number);
+            userdata2 = WORD_LOW(magic_number);
+            break;
+        }
+    } while (0);
+
+    if ( l_reasonCode )
+    {
+        errlHndl_t l_errl = createErrl(READ_PGPE_HEADER,         //modId
+                                       l_reasonCode,             //reasoncode
+                                       l_extReasonCode,          //Extended reason code
+                                       ERRL_SEV_UNRECOVERABLE,   //Severity
+                                       NULL,                     //Trace Buf
+                                       DEFAULT_TRACE_SIZE,       //Trace Size
+                                       userdata1,                //userdata1
+                                       userdata2);               //userdata2
+
+        // Callout firmware
+        addCalloutToErrl(l_errl,
+                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                         ERRL_COMPONENT_ID_FIRMWARE,
+                         ERRL_CALLOUT_PRIORITY_HIGH);
+
+        REQUEST_RESET(l_errl);
+        return FALSE;
     }
-        return;
-}
+
+    // Success
+    return TRUE;
+
+} // end read_pgpe_header()
 
 
 /*
@@ -762,21 +782,21 @@ void read_pgpe_header(void)
  *
  * Name: read_ppmr_header
  *
- * Description: read PPMR image header, and extract the
- *              OPPB HOMER offset and sturcture size..
+ * Description: read PPMR image header and validate magic number
+ *
+ * Returns: TRUE if read was successful, else FALSE
  *
  * End Function Specification
  */
-void read_ppmr_header(void)
+bool read_ppmr_header(void)
 {
     int l_ssxrc = SSX_OK;
     uint32_t l_reasonCode = 0;
-    uint32_t l_extReasonCode = 0;
-
-    // error log parameters, if any
+    uint32_t l_extReasonCode = OCC_NO_EXTENDED_RC;
     uint32_t userdata1 = 0;
     uint32_t userdata2 = 0;
 
+    MAIN_TRAC_INFO("read_ppmr_header(0x%08X)", PPMR_ADDRESS_HOMER);
     // create a DTLB entry for the PPMR image header
     create_tlb_entry(PPMR_ADDRESS_HOMER, sizeof(ppmr_header_t));
 
@@ -835,30 +855,24 @@ void read_ppmr_header(void)
             break;
         }
 
-        if(G_ppmr_header.oppb_length != sizeof(OCCPstateParmBlock))
+        if (PPMR_MAGIC_NUMBER_10 != G_ppmr_header.magic_number)
         {
-            MAIN_TRAC_ERR("read_ppmr_header: OCCPstateParmBlock size mismatch:"
-                          "PPMR header sz[0x%08x] PPMR struct sz[0x%08x]",
-                          G_ppmr_header.oppb_length, sizeof(OCCPstateParmBlock));
-
-            /*
+            MAIN_TRAC_ERR("read_ppmr_header: Invalid PPMR Magic number: 0x%08X%08X",
+                          WORD_HIGH(G_ppmr_header.magic_number), WORD_LOW(G_ppmr_header.magic_number));
+            /* @
              * @errortype
              * @moduleid    READ_PPMR_HEADER
-             * @reasoncode  PGPE_FAILURE
-             * @userdata1   G_ppmr_header.oppb_length
-             * @userdata2   sizeof(OCCPstateParmBlock)
-             * @userdata4   ERC_PGPE_PPMR_OPPB_SIZE_MISMATCH
-             * @devdesc     PPMR's OPPB size mismatches data structure's
+             * @reasoncode  INVALID_MAGIC_NUMBER
+             * @userdata1   High order 32 bits of retrieved PPMR magic number
+             * @userdata2   Low order 32 bits of retrieved PPMR magic number
+             * @userdata4   OCC_NO_EXTENDED_RC
+             * @devdesc     Invalid magic number in PPMR header
              */
-            l_reasonCode = SSX_GENERIC_FAILURE;
-            l_extReasonCode = ERC_BCE_REQUEST_SCHEDULE_FAILURE;
-
-            userdata1 = G_ppmr_header.oppb_length;
-            userdata2 = sizeof(OCCPstateParmBlock);
+            l_reasonCode = INVALID_MAGIC_NUMBER;
+            userdata1 = WORD_HIGH(G_ppmr_header.magic_number);
+            userdata2 = WORD_LOW(G_ppmr_header.magic_number);
             break;
         }
-
-
 
     } while (0);
 
@@ -869,7 +883,7 @@ void read_ppmr_header(void)
                                        l_extReasonCode,          //Extended reason code
                                        ERRL_SEV_UNRECOVERABLE,   //Severity
                                        NULL,                     //Trace Buf
-                                       0,                        //Trace Size
+                                       DEFAULT_TRACE_SIZE,       //Trace Size
                                        userdata1,                //userdata1
                                        userdata2);               //userdata2
 
@@ -881,11 +895,11 @@ void read_ppmr_header(void)
 
         REQUEST_RESET(l_errl);
 
-        return;
+        return FALSE;
     }
 
-    // Read OCC pstates parameter block
-    read_oppb_params((OCCPstateParmBlock*)G_ppmr_header.oppb_offset);
+    // Success
+    return TRUE;
 }
 
 /*
@@ -896,19 +910,24 @@ void read_ppmr_header(void)
  * Description: Read the OCC Pstates Parameter Block,
  *              and initializa Pstates Global Variables.
  *
+ * Returns: TRUE if read was successful, else FALSE
+ *
  * End Function Specification
  */
-void read_oppb_params(const OCCPstateParmBlock* oppb_offset)
+bool read_oppb_params(const OCCPstateParmBlock* oppb_offset)
 {
     int l_ssxrc = SSX_OK;
     uint32_t l_reasonCode = 0;
-    uint32_t l_extReasonCode = 0;
+    uint32_t l_extReasonCode = OCC_NO_EXTENDED_RC;
+    uint32_t userdata1 = 0;
+    uint32_t userdata2 = 0;
 
-    create_tlb_entry( ((uint32_t)oppb_offset + (uint32_t)PPMR_ADDRESS_HOMER),
-                      sizeof(OCCPstateParmBlock));
+    MAIN_TRAC_INFO("read_oppb_params(0x%08X)", PPMR_ADDRESS_HOMER + oppb_offset);
+    create_tlb_entry(((uint32_t)PPMR_ADDRESS_HOMER + (uint32_t)oppb_offset),
+                     sizeof(OCCPstateParmBlock));
 
     do{
-        // use block copy engine to read the PPMR header
+        // use block copy engine to read the OPPB header
         BceRequest pba_copy;
 
         // Set up a copy request
@@ -925,18 +944,18 @@ void read_oppb_params(const OCCPstateParmBlock* oppb_offset)
 
         if(l_ssxrc != SSX_OK)
         {
-            CMDH_TRAC_ERR("read_oppb_params: BCDE request create failure rc=[%08X]", -l_ssxrc);
+            MAIN_TRAC_ERR("read_oppb_params: BCDE request create failure rc=[%08X]", -l_ssxrc);
             /*
              * @errortype
              * @moduleid    READ_OPPB_PARAMS
              * @reasoncode  SSX_GENERIC_FAILURE
              * @userdata1   RC for BCE block-copy engine
-             * @userdata2   Internal function checkpoint
              * @userdata4   ERC_BCE_REQUEST_CREATE_FAILURE
              * @devdesc     Failed to create BCDE request
              */
             l_reasonCode = SSX_GENERIC_FAILURE;
             l_extReasonCode = ERC_BCE_REQUEST_CREATE_FAILURE;
+            userdata1 = (uint32_t)(-l_ssxrc);
             break;
         }
 
@@ -945,36 +964,78 @@ void read_oppb_params(const OCCPstateParmBlock* oppb_offset)
 
         if(l_ssxrc != SSX_OK)
         {
-            CMDH_TRAC_ERR("read_oppb_params: BCE request schedule failure rc=[%08X]", -l_ssxrc);
+            MAIN_TRAC_ERR("read_oppb_params: BCE request schedule failure rc=[%08X]", -l_ssxrc);
             /*
              * @errortype
              * @moduleid    READ_OPPB_PARAMS
              * @reasoncode  SSX_GENERIC_FAILURE
              * @userdata1   RC for BCE block-copy engine
              * @userdata4   ERC_BCE_REQUEST_SCHEDULE_FAILURE
-             * @devdesc     Failed to read PPMR data by using BCDE
+             * @devdesc     Failed to read OPPB data by using BCDE
              */
             l_reasonCode = SSX_GENERIC_FAILURE;
             l_extReasonCode = ERC_BCE_REQUEST_SCHEDULE_FAILURE;
+            userdata1 = (uint32_t)(-l_ssxrc);
             break;
         }
+
+        if (OPPB_MAGIC_NUMBER_10 != G_oppb.magic)
+        {
+            // The magic number is invalid .. Invalid or corrupt OPPB image header
+            MAIN_TRAC_ERR("read_oppb_header: Invalid OPPB magic number: 0x%08X%08X",
+                          WORD_HIGH(G_oppb.magic), WORD_LOW(G_oppb.magic));
+            /* @
+             * @errortype
+             * @moduleid    READ_OPPB_PARAMS
+             * @reasoncode  INVALID_MAGIC_NUMBER
+             * @userdata1   High order 32 bits of retrieved OPPB magic number
+             * @userdata2   Low order 32 bits of retrieved OPPB magic number
+             * @userdata4   OCC_NO_EXTENDED_RC
+             * @devdesc     Invalid magic number in OPPB header
+             */
+            l_reasonCode = INVALID_MAGIC_NUMBER;
+            userdata1 = WORD_HIGH(G_oppb.magic);
+            userdata2 = WORD_LOW(G_oppb.magic);
+            break;
+        }
+
+        // Validate frequencies
+        // frequency_min_khz frequency_max_khz frequency_step_khz pstate_min
+        if ((G_oppb.frequency_min_khz == 0) || (G_oppb.frequency_max_khz == 0) ||
+            (G_oppb.frequency_step_khz == 0) || (G_oppb.pstate_min == 0) ||
+            (G_oppb.frequency_min_khz > G_oppb.frequency_max_khz))
+        {
+            // The magic number is invalid .. Invalid or corrupt OPPB image header
+            MAIN_TRAC_ERR("read_oppb_header: Invalid frequency data: min[%d], max[%d], step[%d], pmin[%d] kHz",
+                          G_oppb.frequency_min_khz, G_oppb.frequency_max_khz,
+                          G_oppb.frequency_step_khz, G_oppb.pstate_min);
+            /* @
+             * @errortype
+             * @moduleid    READ_OPPB_PARAMS
+             * @reasoncode  INVALID_FREQUENCY
+             * @userdata1   min / max frequency (MHz)
+             * @userdata2   step freq (MHz) / pstate min
+             * @userdata4   OCC_NO_EXTENDED_RC
+             * @devdesc     Invalid frequency in OPPB header
+             */
+            l_reasonCode = INVALID_FREQUENCY;
+            userdata1 = ((G_oppb.frequency_min_khz/1000) << 16) | (G_oppb.frequency_max_khz/1000);
+            userdata2 = ((G_oppb.frequency_step_khz/1000) << 16) | G_oppb.pstate_min;
+            break;
+        }
+
     } while (0);
 
-    // Read WOF addresses
-
-    MAIN_TRAC_IMP("Read PGPE Shared SRAM Start Address[0x%08x], Size[0x%08x]",
-                  G_pgpe_shared_sram_address, G_pgpe_shared_sram_sz);
-
-    if ( l_ssxrc != SSX_OK )
+    if (l_reasonCode)
     {
         errlHndl_t l_errl = createErrl(READ_OPPB_PARAMS,         //modId
                                        l_reasonCode,             //reasoncode
                                        l_extReasonCode,          //Extended reason code
                                        ERRL_SEV_UNRECOVERABLE,   //Severity
                                        NULL,                     //Trace Buf
-                                       0,                        //Trace Size
-                                       -l_ssxrc,                 //userdata1
-                                       0);                       //userdata2
+                                       DEFAULT_TRACE_SIZE,       //Trace Size
+                                       userdata1,                //userdata1
+                                       userdata2);               //userdata2
 
         // Callout firmware
         addCalloutToErrl(l_errl,
@@ -984,7 +1045,7 @@ void read_oppb_params(const OCCPstateParmBlock* oppb_offset)
 
         REQUEST_RESET(l_errl);
 
-        return;
+        return FALSE;
     }
 
     // Copy over max frequency into G_proc_fmax_mhz
@@ -998,6 +1059,50 @@ void read_oppb_params(const OCCPstateParmBlock* oppb_offset)
     G_mhz_per_pstate = G_oppb.frequency_step_khz/1000;
 
     TRAC_INFO("read_oppb_params: OCC Pstates Parameter Block read successfully");
+
+    // Success
+    return TRUE;
+}
+
+
+/*
+ * Function Specification
+ *
+ * Name: read_hcode_headers
+ *
+ * Description: Read and save hcode header data
+ *
+ * End Function Specification
+ */
+void read_hcode_headers()
+{
+    do
+    {
+        CHECKPOINT(READ_HCODE_HEADERS);
+
+        if (read_ppmr_header() == FALSE) break;
+        CHECKPOINT(PPMR_IMAGE_HEADER_READ);
+
+        // Read OCC pstates parameter block
+        if (read_oppb_params((OCCPstateParmBlock*)G_ppmr_header.oppb_offset) == FALSE) break;
+        CHECKPOINT(OPPB_IMAGE_HEADER_READ);
+
+        // Read PGPE header file, extract OCC/PGPE Shared SRAM address and size,
+        if (read_pgpe_header() == FALSE) break;
+        CHECKPOINT(PGPE_IMAGE_HEADER_READ);
+
+        // Extract important WOF data into global space
+        read_wof_header();
+        CHECKPOINT(WOF_IMAGE_HEADER_READ);
+
+        // PGPE Beacon is not implemented in simics yet
+        if(!G_simics_environment)
+        {
+            // define DTLB for OCC/PGPE shared SRAM, which enables access
+            // to OCC-PGPE Shared SRAM space, including pgpe_beacon
+            create_tlb_entry(G_pgpe_header.shared_sram_addr, G_pgpe_header.shared_sram_length);
+        }
+    } while(0);
 }
 
 /*
@@ -1105,7 +1210,7 @@ void occ_ipc_setup()
                             OCC_NO_EXTENDED_RC,
                             ERRL_SEV_UNRECOVERABLE,
                             NULL,                      // tracDesc_t i_trace,
-                            0,                         // i_traceSz,
+                            DEFAULT_TRACE_SIZE,        //Trace Size
                             l_rc,                      // i_userData1,
                             0);                        // i_userData2
 
@@ -1504,15 +1609,8 @@ void Main_thread_routine(void *private)
     TRAC_INFO("Main_thread_routine: Pstate Key globals initialized to default values");
 
 #else
-    // Read PGPE header file, extract OCC/PGPE Shared SRAM address and size,
-    // Read other global parameters, e.g. G_pgpe_beacon_address, etc.
-    read_pgpe_header();
-    CHECKPOINT(PGPE_IMAGE_HEADER_READ);
-
-    // Read PPMR header, extract OCC pstates parameter block address and size,
-    // Read OCCC pstate parameter block.
-    read_ppmr_header();
-    CHECKPOINT(PPMR_IMAGE_HEADER_READ);
+    // Read hcode headers (PPMR, OCC pstate parameter block, PGPE, WOF)
+    read_hcode_headers();
 #endif
 
     // Initialize watchdog timers. This needs to be right before

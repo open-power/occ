@@ -83,8 +83,6 @@ bool G_wdog_enabled = false;
 GpeRequest G_reset_mem_deadman_request;                              // IPC request
 GPE_BUFFER(reset_mem_deadman_args_t G_gpe_reset_mem_deadman_args);   // IPC args
 
-uint32_t G_pgpe_beacon_address;      // PGPE Beacon Address
-
 //*************************************************************************/
 // Function Prototypes
 //*************************************************************************/
@@ -131,7 +129,7 @@ void initWatchdogTimers()
                            ERC_PPC405_WD_SETUP_FAILURE,    // Extended reason code
                            ERRL_SEV_UNRECOVERABLE,         // severity
                            NULL,                           // trace buffer
-                           0,                              // trace size
+                           DEFAULT_TRACE_SIZE,             //Trace Size
                            l_rc,                           // userdata1
                            0);                             // userdata2
 
@@ -253,13 +251,12 @@ void task_poke_watchdogs(struct task * i_self)
     {
         // Examine pgpe Beacon every other call (every 4ms)
         //@TODO: remove when PGPE code is integrated, RTC: 163934
+#ifdef PGPE_SUPPORT
         if(!G_simics_environment) // PGPE Beacon is not implemented in simics
         {
-// TODO: RTC: 163934 Enable this when PGPE beacon is enabled.
-#if 0
             check_pgpe_beacon();
-#endif
         }
+#endif
     }
 
     // toggle pgpe beacon check flag, check only once every other call (every 4ms)
@@ -479,7 +476,7 @@ void check_pgpe_beacon(void)
     do
     {
         // return PGPE Beacon
-        pgpe_beacon = in32(G_pgpe_beacon_address);
+        pgpe_beacon = in32(G_pgpe_header.beacon_sram_addr);
 
         // in first invocation, just initialize L_prev_pgpe_beacon
         // don't check if the PGPE Beacon value changed
@@ -521,12 +518,18 @@ void check_pgpe_beacon(void)
                                    ERC_PGPE_BEACON_TIMEOUT,    // Extended reason code
                                    ERRL_SEV_UNRECOVERABLE,     // severity
                                    NULL,                       // trace buffer
-                                   0,                          // trace size
+                                   DEFAULT_TRACE_SIZE,         //Trace Size
                                    pgpe_beacon,                // userdata1
-                                   G_pgpe_beacon_address);     // userdata2
+                                   G_pgpe_header.beacon_sram_addr); // userdata2
 
+                // TODO: RTC 170963 - re-enable reset when beacon starts working
+#if 0
                 // Commit error log and request reset
                 REQUEST_RESET(l_err);
+#else
+                // Commit error log
+                commitErrl(&l_err);
+#endif
             }
         }
         else
