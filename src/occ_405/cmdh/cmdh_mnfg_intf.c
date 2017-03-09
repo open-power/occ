@@ -611,13 +611,114 @@ uint8_t cmdh_mnfg_get_sensor(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
 // Function Specification
 //
+// Name:  cmdh_mnfg_request_quad_pstate
+//
+// Description: This function handles the manufacturing command to request
+// a Pstate per Quad.
+//
+// End Function Specification
+uint8_t cmdh_mnfg_request_quad_pstate(const cmdh_fsp_cmd_t * i_cmd_ptr,
+                                            cmdh_fsp_rsp_t * o_rsp_ptr)
+{
+    uint8_t                     l_rc = ERRL_RC_SUCCESS;
+    uint16_t                    l_datalength = 0;
+    uint16_t                    l_resp_data_length = 0;
+    uint8_t                     l_pmin = 0xFF;
+    uint8_t                     l_pmax = 0xFF;
+    uint8_t                     l_pstate_request = 0xFF;
+    uint8_t                     l_quad = 0;
+    mnfg_quad_pstate_cmd_t     *l_cmd_ptr = (mnfg_quad_pstate_cmd_t*) i_cmd_ptr;
+    mnfg_quad_pstate_rsp_t     *l_rsp_ptr = (mnfg_quad_pstate_rsp_t*) o_rsp_ptr;
+
+    do
+    {
+        if(!IS_OCC_STATE_ACTIVE())
+        {
+            TRAC_ERR("cmdh_mnfg_request_quad_pstate: OCC must be active to request pstate");
+            l_rc = ERRL_RC_INVALID_STATE;
+            break;
+        }
+
+        if(G_sysConfigData.system_type.kvm)
+        {
+            TRAC_ERR("cmdh_mnfg_request_quad_pstate: Must be PowerVM to request pstate");
+            l_rc = ERRL_RC_INVALID_CMD;
+            break;
+        }
+
+        // Check command packet data length
+        l_datalength = CMDH_DATALEN_FIELD_UINT16(i_cmd_ptr);
+        if(l_datalength != (sizeof(mnfg_quad_pstate_cmd_t) -
+                            sizeof(cmdh_fsp_cmd_header_t)))
+        {
+            TRAC_ERR("cmdh_mnfg_request_quad_pstate: incorrect data length. exp[%d] act[%d]",
+                     (sizeof(mnfg_quad_pstate_cmd_t) -
+                      sizeof(cmdh_fsp_cmd_header_t)),
+                      l_datalength);
+            l_rc = ERRL_RC_INVALID_CMD_LEN;
+            break;
+        }
+
+        // Check version
+        if(l_cmd_ptr->version != MFG_QUAD_PSTATE_VERSION)
+        {
+            TRAC_ERR("cmdh_mnfg_request_quad_pstate: incorrect version. exp[%d] act[%d]",
+                     MFG_QUAD_PSTATE_VERSION,
+                     l_cmd_ptr->version);
+            l_rc = ERRL_RC_INVALID_DATA;
+            break;
+        }
+
+        // only allow a Pstate within the current range based on mode
+        l_pmin = proc_freq2pstate(g_amec->sys.fmin);
+        l_pmax = proc_freq2pstate(g_amec->sys.fmax);
+
+        // Process each quad Pstate request, clip any request to min/max
+        // 0xFF has special meaning that OCC is in control
+        for(l_quad = 0; l_quad < MAX_QUADS; l_quad++)
+        {
+            l_pstate_request = l_cmd_ptr->quad_pstate_in[l_quad];
+            if(l_pstate_request != 0xFF)
+            {
+                // pmin is lowest frequency corresponding to highest pState value
+                if(l_pstate_request > l_pmin)
+                   l_pstate_request = l_pmin;
+
+                // pmax is highest frequency corresponding to lowest pState value
+                else if(l_pstate_request < l_pmax)
+                   l_pstate_request = l_pmax;
+            }
+            // save the quad pState request for amec and return in rsp data
+            g_amec->mnfg_parms.quad_pstate[l_quad] = l_pstate_request;
+            l_rsp_ptr->quad_pstate_out[l_quad] = l_pstate_request;
+            TRAC_INFO("cmdh_mnfg_request_quad_pstate: Quad %d Pstate in = 0x%02x Pstate out = 0x%02x",
+                      l_quad,
+                      l_cmd_ptr->quad_pstate_in[l_quad],
+                      l_rsp_ptr->quad_pstate_out[l_quad]);
+        }
+
+    }while(0);
+
+    // Populate the response data header
+    G_rsp_status = l_rc;
+    l_resp_data_length = sizeof(mnfg_quad_pstate_rsp_t) - sizeof(cmdh_fsp_rsp_header_t);
+    l_rsp_ptr->data_length[0] = ((uint8_t *)&l_resp_data_length)[0];
+    l_rsp_ptr->data_length[1] = ((uint8_t *)&l_resp_data_length)[1];
+
+    return l_rc;
+}
+
+
+
+// Function Specification
+//
 // Name:  cmdh_mnfg_test_parse
 //
 // Description:  This function parses the manufacturing commands sent via TMGT.
 //
 // End Function Specification
-void cmdh_mnfg_test_parse (const cmdh_fsp_cmd_t * i_cmd_ptr,
-                                 cmdh_fsp_rsp_t * o_rsp_ptr)
+errlHndl_t cmdh_mnfg_test_parse (const cmdh_fsp_cmd_t * i_cmd_ptr,
+                                     cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     uint8_t                     l_rc = 0;
     uint8_t                     l_sub_cmd = 0;
@@ -650,11 +751,10 @@ void cmdh_mnfg_test_parse (const cmdh_fsp_cmd_t * i_cmd_ptr,
             l_rc = cmdh_mnfg_mem_slew(i_cmd_ptr, o_rsp_ptr);
             break;
 
-        case MNFG_RETRIEVE_EAR:
-        case MNFG_SET_FMINMAX:
-        case MNFG_CPM_STRESS_CALI:
-        case MNFG_UV_CONTROL:
-        case MNFG_FCHECK_CONTROL:
+        case MNFG_QUAD_PSTATE:
+            l_rc = cmdh_mnfg_request_quad_pstate(i_cmd_ptr, o_rsp_ptr);
+            break;
+
         default:
             // Should never get here...
             l_rc = ERRL_RC_INVALID_DATA;
@@ -669,6 +769,7 @@ void cmdh_mnfg_test_parse (const cmdh_fsp_cmd_t * i_cmd_ptr,
         cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, l_rc, &l_errl);
     }
 
-    return;
+    return l_errl;
 }
+
 

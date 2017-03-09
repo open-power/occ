@@ -180,10 +180,12 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
       g_amec->sys.fmin = l_freq_min;
       g_amec->sys.fmax = l_freq_max;
 
-      TRAC_INFO("amec_set_freq_range: Mode[0x%02x] Fmin[%u] Fmax[%u]",
+      TRAC_INFO("amec_set_freq_range: Mode[0x%02x] Fmin[%u] (Pmin 0x%02x) Fmax[%u] (Pmax 0x%02x)",
                 i_mode,
                 l_freq_min,
-                l_freq_max);
+                proc_freq2pstate(g_amec->sys.fmin),
+                l_freq_max,
+                proc_freq2pstate(g_amec->sys.fmax));
 
       // Now determine the max frequency for the PPM structure
       l_ppm_freq[OCC_INTERNAL_MODE_NOM].fmax    = G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL];
@@ -528,51 +530,88 @@ void amec_slv_freq_smh(void)
     /*------------------------------------------------------------------------*/
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
-    uint8_t       quad = 0;       // loop through quads
-    uint8_t       core_num = 0;   // core ID
-    uint8_t       core_idx = 0;   // loop through cores within each quad
-    Pstate        pmax = 0;       // select the maximum pstate (minimum frequency)
-                                  // within each quad, initialize to 0 (max frequency)
+    uint8_t     quad = 0;       // loop through quads
+    uint8_t     core_num = 0;   // core ID
+    uint8_t     core_idx = 0;   // loop through cores within each quad
+    Pstate      pmax[MAX_QUADS] = {0}; // max pstate (min frequency) within each quad
+    Pstate      pmax_chip = 0;  // highest Pstate (lowest frequency) across all quads
+    bool        l_atLeast1Core[MAX_QUADS] = {FALSE};  // at least 1 core present in quad
+    static bool L_mfg_set_trace[MAX_QUADS] = {FALSE};
+    static bool L_mfg_clear_trace[MAX_QUADS] = {FALSE};
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
 
-    // loop through all quads, get f_requests, translate to pstates
+    // loop through all quads, get f_requests, translate to pstates and determine pmax across chip
     for (quad = 0; quad < MAX_QUADS; quad++)
     {
-        for (core_idx=0; core_idx<NUM_CORES_PER_QUAD; core_idx++)  // scan quad cores
+        for (core_idx=0; core_idx<NUM_CORES_PER_QUAD; core_idx++)  // loop thru all cores in quad
         {
-            core_num = (quad*NUM_CORES_PER_QUAD) + core_idx;  // loop through all cores
+            core_num = (quad*NUM_CORES_PER_QUAD) + core_idx;
 
-            // The higher the pstate number, the lower the frequency
-            if(pmax <  proc_freq2pstate(g_amec->proc[0].core[core_num].f_request))
+            // ignore core if freq request is 0 (core not present when amec_slv_proc_voting_box ran)
+            if(g_amec->proc[0].core[core_num].f_request != 0)
             {
-                pmax = proc_freq2pstate(g_amec->proc[0].core[core_num].f_request);
+               l_atLeast1Core[quad] = TRUE;
+               // The higher the pstate number, the lower the frequency
+               if(pmax[quad] <  proc_freq2pstate(g_amec->proc[0].core[core_num].f_request))
+               {
+                   pmax[quad] = proc_freq2pstate(g_amec->proc[0].core[core_num].f_request);
+                   if(pmax_chip < pmax[quad])  // check if this is a new lowest freq for the chip
+                      pmax_chip = pmax[quad];
+               }
             }
         }
+    }
+
+    // check for mfg quad Pstate request and set Pstate for each quad
+    for (quad = 0; quad < MAX_QUADS; quad++)
+    {
+        // set quad with no cores present to lowest frequency for the chip
+        if(l_atLeast1Core[quad] == FALSE)
+           pmax[quad] = pmax_chip;
+
+        // check if there is a mnfg Pstate request for this quad
+        if(g_amec->mnfg_parms.quad_pstate[quad] != 0xFF)
+        {
+           // use mnfg request if it is a lower frequency (higher pState)
+           if(g_amec->mnfg_parms.quad_pstate[quad] > pmax[quad])
+              pmax[quad] = g_amec->mnfg_parms.quad_pstate[quad];
+
+           if(L_mfg_clear_trace[quad] == FALSE)
+              L_mfg_set_trace[quad] = TRUE;
+        }
+        else if(L_mfg_clear_trace[quad] == TRUE)
+        {
+           TRAC_INFO("amec_slv_freq_smh: mfg Quad %d Pstate request cleared. New Pstate = 0x%02x", quad, pmax[quad]);
+           L_mfg_clear_trace[quad] = FALSE;
+	}
 
         // set quad clip bounds/pstates based on system type
         if(G_sysConfigData.system_type.kvm)
         {
             // update quad bounds on OPAL systems
-            G_core_data_control_occwrite_ptr->clips.ps_val_clip_min[quad] =
-                G_opal_static_table.config.pmin;
-            G_core_data_control_occwrite_ptr->clips.ps_val_clip_max[quad] = pmax;
+            G_core_data_control_occwrite_ptr->clips.ps_val_clip_min[quad] = G_opal_static_table.config.pmin;
+            G_core_data_control_occwrite_ptr->clips.ps_val_clip_max[quad] = pmax[quad];
 
             PROC_DBG("Setting Quad %d's min-max clip bounds to %d-%d\n",
-                     quad, G_opal_static_table.config.pmin, pmax);
+                     quad, G_opal_static_table.config.pmin, pmax[quad]);
         }
         else
         {
-            // update quad pstate request on non-OPAL systems
-            G_core_data_control_occwrite_ptr->pstates.pmcr[quad] =
-                ((uint64_t) pmax << 48) +1;             // Version 1 (Power9 format)
+            // update quad pstate request on non-OPAL systems. Version 1 (P9 format)
+            G_core_data_control_occwrite_ptr->pstates.pmcr[quad] = ((uint64_t) pmax[quad] << 48) +1;
 
-            PROC_DBG("Setting Quad %d's Pstate to %d\n",quad, pmax);
+            PROC_DBG("Setting Quad %d's Pstate to %d\n",quad, pmax[quad]);
         }
 
-        pmax = 0; // initialize for next loop iteration
+        if(L_mfg_set_trace[quad] == TRUE)
+        {
+            TRAC_INFO("amec_slv_freq_smh: mfg Quad %d Pstate request set = 0x%02x", quad, pmax[quad]);
+            L_mfg_set_trace[quad] = FALSE;
+            L_mfg_clear_trace[quad] = TRUE;
+        }
     }
 }
 

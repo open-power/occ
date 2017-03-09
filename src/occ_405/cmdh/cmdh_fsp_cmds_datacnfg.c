@@ -340,6 +340,14 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
             // Bytes 11-12 Static Power Save Frequency Point
             l_freq = (l_buf[8] << 8 | l_buf[9]);
+            // in case min freq was clipped verify power save not below min
+            if(l_freq < l_table[OCC_MODE_MIN_FREQUENCY])
+            {
+                CMDH_TRAC_ERR("Power Save Frequency[%d] is lower than min[%d]",
+                              l_freq, l_table[OCC_MODE_MIN_FREQUENCY]);
+                l_freq = l_table[OCC_MODE_MIN_FREQUENCY];
+            }
+
             l_table[OCC_MODE_PWRSAVE] = l_freq;
             CMDH_TRAC_INFO("Static Power Save frequency = %d MHz", l_freq);
 

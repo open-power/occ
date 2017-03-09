@@ -941,7 +941,7 @@ errlHndl_t cmdh_processTmgtRequest (const cmdh_fsp_cmd_t * i_cmd_ptr,
             break;
 
         case CMDH_MFG_TEST_CMD:
-            cmdh_mnfg_test_parse(i_cmd_ptr,i_rsp_ptr);
+            l_err = cmdh_mnfg_test_parse(i_cmd_ptr,i_rsp_ptr);
             break;
 
         case CMDH_GET_FIELD_DEBUG_DATA:

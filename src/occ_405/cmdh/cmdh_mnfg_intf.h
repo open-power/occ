@@ -28,18 +28,15 @@
 
 #include "cmdh_fsp.h"
 #include "sensor.h"
+#include "p9_pstates_common.h"
 
 typedef enum {
     MNFG_RUN_STOP_SLEW      = 0x02,
     MNFG_LIST_SENSORS       = 0x05,
     MNFG_GET_SENSOR         = 0x06,
     MNFG_OVERSUB_EMULATION  = 0x07,
-    MNFG_RETRIEVE_EAR       = 0x08,
     MNFG_MEMORY_SLEW        = 0x09,
-    MNFG_SET_FMINMAX        = 0x0A,
-    MNFG_CPM_STRESS_CALI    = 0x0D,
-    MNFG_UV_CONTROL         = 0x0E,
-    MNFG_FCHECK_CONTROL     = 0x0F,
+    MNFG_QUAD_PSTATE        = 0x0A,
 } MNFG_CMD;
 
 #define MNFG_INTF_SLEW_START    0x00
@@ -172,8 +169,26 @@ typedef struct __attribute__ ((packed))
     uint16_t                checksum;
 }cmdh_mfg_get_sensor_resp_t;
 
-void cmdh_mnfg_test_parse (const cmdh_fsp_cmd_t * i_cmd_ptr,
-                                 cmdh_fsp_rsp_t * o_rsp_ptr);
+#define MFG_QUAD_PSTATE_VERSION 0
+
+// Used by OCC to get mnfg request quad pstate command
+typedef struct __attribute__ ((packed))
+{
+    struct    cmdh_fsp_cmd_header;
+    uint8_t   sub_cmd;
+    uint8_t   version;
+    uint8_t   quad_pstate_in[MAX_QUADS];
+}mnfg_quad_pstate_cmd_t;
+
+// Used by OCC firmware to respond to mnfg request quad pstate command
+typedef struct __attribute__ ((packed))
+{
+    struct    cmdh_fsp_rsp_header;
+    uint8_t   quad_pstate_out[MAX_QUADS];
+}mnfg_quad_pstate_rsp_t;
+
+errlHndl_t cmdh_mnfg_test_parse (const cmdh_fsp_cmd_t * i_cmd_ptr,
+                                     cmdh_fsp_rsp_t * o_rsp_ptr);
 
 uint8_t cmdh_mnfg_emulate_oversub(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                         cmdh_fsp_rsp_t * o_rsp_ptr);
@@ -186,5 +201,8 @@ uint8_t cmdh_mnfg_get_sensor(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
 uint8_t cmdh_mnfg_run_stop_slew(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                       cmdh_fsp_rsp_t * o_rsp_ptr);
+
+uint8_t cmdh_mnfg_request_quad_pstate(const cmdh_fsp_cmd_t * i_cmd_ptr,
+                                             cmdh_fsp_rsp_t * o_rsp_ptr);
 
 #endif

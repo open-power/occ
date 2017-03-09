@@ -40,6 +40,7 @@
 #include <dimm.h>
 #include "pgpe_interface.h"
 #include "pstate_pgpe_occ_api.h"
+#include "amec_sys.h"
 
 extern bool G_mem_monitoring_allowed;
 extern task_t G_task_table[TASK_END];  // Global task table
@@ -588,6 +589,10 @@ errlHndl_t SMGR_observation_to_active()
     static bool l_error_logged = FALSE;  // To prevent trace and error log happened over and over
     int                l_extRc = OCC_NO_EXTENDED_RC;
     int                l_rc = 0;
+
+    // clear mnfg quad pstate request to default OCC to control all quads
+    memset(&g_amec->mnfg_parms.quad_pstate[0], 0xFF, MAX_QUADS);
+
     do
     {
         // NOTE that this is really unnecessary if you follow the TMGT OCC
