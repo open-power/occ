@@ -122,9 +122,10 @@ enum occReasonCode
 
     WOF_VFRT_REQ_FAILURE            = 0xD8,
     WOF_DISABLED_RC                 = 0xD9,
-    INVALID_MAGIC_NUMBER            = 0xDA,
-    DIVIDE_BY_ZERO_ERROR            = 0xDB,
-    INVALID_FREQUENCY               = 0xDC,
+    WOF_VFRT_ALIGNMENT_ERROR        = 0xDA,
+    INVALID_MAGIC_NUMBER            = 0xDB,
+    DIVIDE_BY_ZERO_ERROR            = 0xDC,
+    INVALID_FREQUENCY               = 0xDD,
 
     /// Success!
     OCC_SUCCESS_REASON_CODE         = 0xFF,

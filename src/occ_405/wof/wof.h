@@ -32,7 +32,7 @@
 //******************************************************************************
 #define ACTIVE_QUAD_SZ_MIN          1
 #define ACTIVE_QUAD_SZ_MAX          6
-#define MIN_BCE_REQ_SIZE            256
+#define MIN_BCE_REQ_SIZE            128
 #define WOF_HEADER_SIZE             32
 #define CORE_IDDQ_MEASUREMENTS      6
 #define QUAD_POWERED_OFF            0xFF
@@ -60,7 +60,7 @@
 #define WOF_RC_DIVIDE_BY_ZERO                      0x0800
 #define WOF_RC_VFRT_REQ_FAILURE                    0x1000
 #define WOF_RC_CONTROL_REQ_FAILURE                 0x2000
-
+#define WOF_RC_VFRT_ALIGNMENT_ERROR                0x4000
 
 // Reason codes which should NOT create an error log should be added here
 #define ERRL_RETURN_CODES ~(WOF_RC_MODE_CHANGE  | \
@@ -85,21 +85,36 @@ enum wof_init_states
 // Structure to hold relevant data from the WOF header in Mainstore
 typedef struct __attribute__ ((packed))
 {
-    uint32_t magic_number;
-    uint8_t reserved[3];
-    uint8_t version;
-    uint8_t size_of_vfrt;
-    uint8_t vfrt_data_size;
-    uint8_t active_quads_start;
-    uint8_t active_quads_size;
-    uint8_t vdn_start;
-    uint8_t vdn_step;
-    uint8_t vdn_size;
-    uint8_t vdd_start;
-    uint8_t vdd_step;
-    uint8_t vdd_size;
+    uint32_t magic_number;      //4
+    uint8_t  reserved_1[7];     //11
+    uint8_t  version;           //12
+    uint16_t vfrt_block_size;   //14
+    uint16_t vfrt_blck_hdr_sz;  //16
+    uint16_t vfrt_data_size;    //18
+    uint8_t  active_quads_size; //19
+    uint8_t  core_count;        //20
+    uint16_t vdn_start;         //22
+    uint16_t vdn_step;          //24
+    uint16_t vdn_size;          //26
+    uint16_t vdd_start;         //28
+    uint16_t vdd_step;          //30
+    uint16_t vdd_size;          //32
+    uint16_t vratio_start;      //34
+    uint16_t vratio_step;       //36
+    uint16_t vratio_size;       //38
+    uint16_t fratio_start;      //40
+    uint16_t fratio_step;       //42
+    uint16_t fratio_size;       //44
+    uint16_t vdn_percent[8];    //60
+    uint16_t socket_power_w;    //62
+    uint16_t nest_freq_mhz;     //64
+    uint16_t nom_freq_mhz;      //66
+    uint16_t rdp_capacity;      //68
+    uint64_t wof_tbls_src_tag;  //76
+    uint64_t package_name_hi;   //84
+    uint64_t package_name_lo;   //88
+    uint8_t  reserved_2[40];    //128
 } wof_header_data_t;
-
 
 
 // Structure used in g_amec
@@ -108,16 +123,32 @@ typedef struct
     // Bit vector where each bit signifies a different failure case
     uint16_t wof_disabled;
     // Data from wof header for debug
-    uint8_t size_of_vfrt;
-    uint8_t vfrt_data_size;
-    uint8_t active_quads_start;
-    uint8_t active_quads_size;
-    uint8_t vdn_start;
-    uint8_t vdn_step;
-    uint8_t vdn_size;
-    uint8_t vdd_start;
-    uint8_t vdd_step;
-    uint8_t vdd_size;
+    uint8_t  version;           //12
+    uint16_t vfrt_block_size;   //14
+    uint16_t vfrt_blck_hdr_sz;  //16
+    uint16_t vfrt_data_size;    //18
+    uint8_t  active_quads_size; //19
+    uint8_t  core_count;        //20
+    uint16_t vdn_start;         //22
+    uint16_t vdn_step;          //24
+    uint16_t vdn_size;          //26
+    uint16_t vdd_start;         //28
+    uint16_t vdd_step;          //30
+    uint16_t vdd_size;          //32
+    uint16_t vratio_start;      //34
+    uint16_t vratio_step;       //36
+    uint16_t vratio_size;       //38
+    uint16_t fratio_start;      //40
+    uint16_t fratio_step;       //42
+    uint16_t fratio_size;       //44
+    uint16_t vdn_percent[8];    //60
+    uint16_t socket_power_w;    //62
+    uint16_t nest_freq_mhz;     //64
+    uint16_t nom_freq_mhz;      //66
+    uint16_t rdp_capacity;      //68
+    uint64_t wof_tbls_src_tag;  //76
+    uint64_t package_name_hi;   //84
+    uint64_t package_name_lo;   //88
     // Calculated step from start for VDD
     uint16_t vdd_step_from_start;
     // Calculated step from start for VDN
@@ -244,16 +275,14 @@ typedef struct
     uint32_t quad_state_0_addr;
     // The address in shared OCC-PGPE SRAM of Quad State 1
     uint32_t quad_state_1_addr;
+    // The address in shared OCC-PGPE SRAM of the PGPE WOF state
+    uint32_t pgpe_wof_state_addr;
     // The address in shared OCC-PGPE SRAM of the Requested Active quads
     uint32_t req_active_quads_addr;
 } amec_wof_t;
 
 typedef struct
 {
-    // There is no guarantee that we can fit everything into the min BceRequest
-    // size of 128 given that there may be a need to padding in the event the
-    // Main Memory address is not 128-byte aligned. The data here is 256 to
-    // ensure we have enough room for any and all padding that may be needed.
     uint8_t data[MIN_BCE_REQ_SIZE];
 } temp_bce_request_buffer_t __attribute ((aligned(128)));
 
@@ -263,7 +292,6 @@ typedef struct
 typedef struct
 {
     temp_bce_request_buffer_t * vfrt_table;
-    uint8_t pad;
 } copy_vfrt_to_sram_parms_t;
 
 //******************************************************************************
@@ -275,9 +303,9 @@ void call_wof_main( void );
 void wof_main( void );
 
 uint16_t calculate_step_from_start( uint16_t i_ceff_vdx,
-                                    uint8_t i_step_size,
-                                    uint8_t i_min_step,
-                                    uint8_t i_max_step );
+                                    uint16_t i_step_size,
+                                    uint16_t i_min_step,
+                                    uint16_t i_max_step );
 
 uint8_t calc_quad_step_from_start( void );
 

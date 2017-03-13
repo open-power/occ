@@ -57,7 +57,6 @@ wof_header_data_t G_wof_header __attribute__ ((section (".global_data")));
 
 // Quad state structs to temporarily hold the data from the doublewords to
 // then populate in amec structure
-//TODO RTC: 169955 - Update quad state temp structs to reflect new imported code
 quad_state0_t G_quad_state_0 = {0};
 quad_state1_t G_quad_state_1 = {0};
 
@@ -381,9 +380,9 @@ void wof_main(void)
  *  Return: The calculated step for current Ceff_vdd/Ceff_vdn
  */
 uint16_t calculate_step_from_start(uint16_t i_ceff_vdx_ratio,
-                                   uint8_t i_step_size,
-                                   uint8_t i_min_ceff,
-                                   uint8_t i_max_step )
+                                   uint16_t i_step_size,
+                                   uint16_t i_min_ceff,
+                                   uint16_t i_max_step )
 {
     uint16_t l_current_step;
 
@@ -442,7 +441,7 @@ uint32_t calc_vfrt_mainstore_addr( void )
 {
     // Wof tables address calculation
     // (Base_addr + (sizeof VFRT * (total active quads * ( (g_wof->vdn_step_from_start * vdd_size) + (g_wof->vdd_step_from_start) ) + (g_wof->quad_step_from_start))))
-    uint32_t offset = G_wof_header.size_of_vfrt *
+    uint32_t offset = G_wof_header.vfrt_block_size *
                     (( G_wof_header.active_quads_size *
                     ((g_wof->vdn_step_from_start * G_wof_header.vdd_size) +
                     g_wof->vdd_step_from_start) ) + g_wof->quad_step_from_start);
@@ -463,7 +462,6 @@ uint32_t calc_vfrt_mainstore_addr( void )
  * Param[in]: i_parms - pointer to a struct that will hold data necessary to
  *                      the calculation.
  *                      -Pointer to vfrt table temp buffer
- *                      -Padding if the address needed to be 128-byte aligned
  */
 void copy_vfrt_to_sram( copy_vfrt_to_sram_parms_t * i_parms)
 {
@@ -496,8 +494,8 @@ void copy_vfrt_to_sram( copy_vfrt_to_sram_parms_t * i_parms)
 
     // Copy the vfrt data into the buffer
     memcpy( l_buffer_address,
-            &(i_parms->vfrt_table->data[i_parms->pad]),
-            G_wof_header.size_of_vfrt );
+            i_parms->vfrt_table->data,
+            G_wof_header.vfrt_block_size );
 
     // Set the parameters for the GpeRequest
     G_wof_vfrt_parms.vfrt_ptr = l_buffer_address;
@@ -599,8 +597,40 @@ void send_vfrt_to_pgpe( uint32_t i_vfrt_main_mem_addr )
     uint32_t l_reasonCode = 0;
     uint32_t l_extReasonCode = 0;
 
+    errlHndl_t l_errl = NULL;
     do
     {
+        // First check if the address is 128-byte aligned. error if not.
+        if( i_vfrt_main_mem_addr % 128 )
+        {
+            g_wof->wof_disabled |= WOF_RC_VFRT_ALIGNMENT_ERROR;
+
+            /* @
+             * @errortype
+             * @moduleid    SEND_VFRT_TO_PGPE
+             * @reasoncode  WOF_VFRT_ALIGNMENT_ERROR
+             * @userdata1   The input vfrt address
+             * @userdata2   0
+             * @userdata4   OCC_NO_EXTENDED_RC
+             * @devdesc     VFRT address is not 128-byte aligned
+             */
+            l_errl = createErrl(
+                SEND_VFRT_TO_PGPE,                   // modId
+                WOF_VFRT_ALIGNMENT_ERROR,           // reasoncode
+                OCC_NO_EXTENDED_RC,                     // Extended reason code
+                ERRL_SEV_UNRECOVERABLE,                 // Severity
+                NULL,                                   // Trace Buf
+                DEFAULT_TRACE_SIZE,                     // Trace Size
+                i_vfrt_main_mem_addr,                   // userdata1
+                0                                       // userdata2
+                );
+
+            // Commit error log
+            commitErrl(&l_errl);
+
+            break;
+        }
+
         if( (i_vfrt_main_mem_addr == g_wof->curr_vfrt_main_mem_addr ) &&
             (g_wof->req_active_quad_update ==
              g_wof->prev_req_active_quads) )
@@ -618,21 +648,15 @@ void send_vfrt_to_pgpe( uint32_t i_vfrt_main_mem_addr )
             // 128-byte aligned temp buffer to hold data
             temp_bce_request_buffer_t l_temp_bce_buff = {{0}};
 
-            // TODO RTC 169955: No longer need padding as VFRT addresses
-            // will already be 128-byte aligned and sized
-            uint8_t l_pad = i_vfrt_main_mem_addr%128;
-            uint32_t l_vfrt_addr_128_aligned = i_vfrt_main_mem_addr - l_pad;
-
             // Create structure to hold parameters for callback function
             copy_vfrt_to_sram_parms_t l_callback_parms;
             l_callback_parms.vfrt_table = &l_temp_bce_buff;
-            l_callback_parms.pad = l_pad;
 
             // Create request
             l_ssxrc = bce_request_create(
                              &l_vfrt_req,                 // block copy object
                              &G_pba_bcde_queue,           // main to sram copy engine
-                             l_vfrt_addr_128_aligned,     //mainstore address
+                             i_vfrt_main_mem_addr,     //mainstore address
                              (uint32_t) &l_temp_bce_buff, // SRAM start address
                              MIN_BCE_REQ_SIZE,            // size of copy
                              SSX_WAIT_FOREVER,            // no timeout
@@ -715,15 +739,22 @@ void read_shared_sram( void )
     G_quad_state_0.value = in64(g_wof->quad_state_0_addr);
     G_quad_state_1.value = in64(g_wof->quad_state_1_addr);
 
+    // Read f_clip, v_clip, f_ratio, and v_ratio
+    pgpe_wof_state_t l_wofstate;
+    l_wofstate.value = in64(g_wof->pgpe_wof_state_addr);
+    g_wof->f_clip  = l_wofstate.fields.fclip_ps;
+    g_wof->v_clip  = l_wofstate.fields.vclip_mv;
+    g_wof->f_ratio = l_wofstate.fields.fratio;
+    g_wof->v_ratio = l_wofstate.fields.vratio;
+
     // Get the requested active quad update
     read_req_active_quads();
 
-    // merge the 16-bit power-on field from quad state 0 and the 16-bit power-on
-    // field from quad state 1 and save it to amec.
-    // TODO RTC:16955 -  core_poweron_state not in new structure
-    //g_wof->core_pwr_on =
-    //               (((uint32_t)G_quad_state_0.fields.core_poweron_state) << 16)
-    //              | ((uint32_t)G_quad_state_1.fields.core_poweron_state);
+    // merge the 16-bit active_cores field from quad state 0 and the 16-bit
+    // active_cores field from quad state 1 and save it to amec.
+    g_wof->core_pwr_on =
+                   (((uint32_t)G_quad_state_0.fields.active_cores) << 16)
+                  | ((uint32_t)G_quad_state_1.fields.active_cores);
 
     // Clear out current quad pstates
     memset(g_wof->quad_x_pstates, 0 , MAXIMUM_QUADS);
@@ -737,6 +768,8 @@ void read_shared_sram( void )
     g_wof->quad_x_pstates[5] = (uint8_t)G_quad_state_1.fields.quad5_pstate;
 
     // Save IVRM bit vector states to amec
+    // NOTE: the ivrm_state field in both quad state 0 and quad state 1
+    //       double words should contain the same data.
     g_wof->quad_ivrm_states =
            (((uint8_t)G_quad_state_0.fields.ivrm_state) << 4)
           | ((uint8_t)G_quad_state_1.fields.ivrm_state);
@@ -824,7 +857,7 @@ void calculate_core_leakage( void )
         for(;l_chip_v_idx < CORE_IDDQ_MEASUREMENTS - 1; l_chip_v_idx++)
         {
             if( (l_v_chip >= G_iddq_voltages[l_chip_v_idx]) &&
-                (l_v_chip <= G_iddq_voltages[l_chip_v_idx]) )
+                (l_v_chip <= G_iddq_voltages[l_chip_v_idx+1]) )
             {
                 break;
             }
@@ -1034,6 +1067,42 @@ void calculate_core_leakage( void )
  */
 void calculate_nest_leakage( void )
 {
+
+
+    // Get the VOLTVDN sensor to choose the appropriate nest voltage
+    // index
+    uint32_t l_v_nest = g_wof->voltvdn_sensor;
+    int l_nest_v_idx = 0;
+
+    if( l_v_nest <= G_iddq_voltages[0] )
+    {
+        // Voltage is <= first entry. Use first two entries.
+        l_nest_v_idx = 0;
+    }
+    else if( l_v_nest >= G_iddq_voltages[CORE_IDDQ_MEASUREMENTS-1] )
+    {
+        // Voltage is >= to last entry. use last two entries.
+        l_nest_v_idx = CORE_IDDQ_MEASUREMENTS - 2;
+    }
+    else
+    {
+        // Search for entries on either side of our voltage
+        for(; l_nest_v_idx < CORE_IDDQ_MEASUREMENTS - 1; l_nest_v_idx++)
+        {
+            if( (l_v_nest >= G_iddq_voltages[l_nest_v_idx]) &&
+                (l_v_nest <= G_iddq_voltages[l_nest_v_idx+1]) )
+            {
+                break;
+            }
+        }
+    }
+
+    uint32_t idc_nest = interpolate_linear((int32_t) l_v_nest,
+                            (int32_t)G_iddq_voltages[l_nest_v_idx],
+                            (int32_t)G_iddq_voltages[l_nest_v_idx+1],
+                            (int32_t)G_oppb.iddq.ivdn[l_nest_v_idx],
+                            (int32_t)G_oppb.iddq.ivdn[l_nest_v_idx+1]);
+
     // Get the desired tvpd leak for nest calculation
     // avgtemp in IDDQ table is 0.5C units. Divide by 2 to get 1C
     g_wof->tvpd_leak_nest = G_oppb.iddq.avgtemp_vdn >> 1;
@@ -1045,8 +1114,7 @@ void calculate_nest_leakage( void )
     uint32_t nest_mult = calculate_multiplier( nest_delta_temp );
 
     // Save nest leakage to amec structure
-    // TODO: ivdn is now an array and need to handle
-    g_wof->idc_vdn = (G_oppb.iddq.ivdn[0]*nest_mult) >> 10;
+    g_wof->idc_vdn = (idc_nest*nest_mult) >> 10;
 }
 
 /**

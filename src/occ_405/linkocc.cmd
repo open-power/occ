@@ -551,7 +551,7 @@ SECTIONS
     //       needs to be changed in gpe0_main.c and gpe1_main.c.
     ////////////////////////////////
     __CUR_COUNTER__ = .;
-    _GPE_SHARED_DATA_BASE = 0xfffb3c00;
+    _GPE_SHARED_DATA_BASE = 0xfffb3d00;
     _GPE_SHARED_DATA_SIZE = 0x100;
     . = _GPE_SHARED_DATA_BASE;
 #if !PPC405_MMU_SUPPORT
@@ -569,15 +569,15 @@ SECTIONS
     ////////////////////////////////
     // Ping/Pong Buffer Section
     //
-    // Contains two 256-byte buffers used to tell the PGPE which vfrt to use
+    // Contains two 128-byte buffers used to tell the PGPE which vfrt to use
     //
     ////////////////////////////////
     __CUR_COUNTER__ = .;
-    _PING_PONG_BUFFER_BASE = 0xfffb3d00;
-    _PING_BUFFER_BASE = 0xfffb3d00;
-    _PING_BUFFER_SIZE = 0x100;
-    _PONG_BUFFER_BASE = 0xfffb3e00;
-    _PONG_BUFFER_SIZE = 0x100;
+    _PING_PONG_BUFFER_BASE = 0xfffb3e00;
+    _PING_BUFFER_BASE = 0xfffb3e00;
+    _PING_BUFFER_SIZE = 0x80;
+    _PONG_BUFFER_BASE = 0xfffb3e80;
+    _PONG_BUFFER_SIZE = 0x80;
     . = _PING_BUFFER_BASE;
 #if !PPC405_MMU_SUPPORT
     . = . - writethrough_offset;
