@@ -596,7 +596,7 @@ void read_shared_sram( void )
 
 
     // Clear out current quad pstates
-    memset(g_wof->quad_x_pstates, 0 , MAX_NUM_QUADS);
+    memset(g_wof->quad_x_pstates, 0 , MAX_QUADS);
 
     // Add the quad states to the global quad state array for easy looping.
     g_wof->quad_x_pstates[0] = (uint8_t)G_quad_state_0.fields.quad0_pstate;
@@ -625,7 +625,7 @@ void calculate_core_voltage( void )
     uint32_t l_voltage;
     uint8_t l_quad_mask;
     int l_quad_idx = 0;
-    for(; l_quad_idx < MAX_NUM_QUADS; l_quad_idx++)
+    for(; l_quad_idx < MAX_QUADS; l_quad_idx++)
     {
         // Adjust current mask. (IVRM_STATE_QUAD_MASK = 0x80)
         l_quad_mask = IVRM_STATE_QUAD_MASK >> l_quad_idx;
@@ -734,7 +734,7 @@ void calculate_core_leakage( void )
     // Divide by 6 to get just one quad
     g_wof->idc_quad =
                  G_oppb.iddq.ivdd_all_cores_off_caches_off[l_chip_v_idx] /
-                 MAX_NUM_QUADS;
+                 MAX_QUADS;
 
 
 
@@ -761,7 +761,7 @@ void calculate_core_leakage( void )
               G_oppb.iddq.ivdd_all_good_cores_off_good_caches_on[l_chip_v_idx] -
               g_wof->all_cores_off_iso;
 
-    l_quad_x_cache = g_wof->all_caches_on_iso / MAX_NUM_QUADS;
+    l_quad_x_cache = g_wof->all_caches_on_iso / MAX_QUADS;
 
     // Loop through all Quads and their respective Cores to calculate
     // leakage.
@@ -771,7 +771,7 @@ void calculate_core_leakage( void )
 
 
 
-    for(quad_idx = 0; quad_idx < MAX_NUM_QUADS; quad_idx++)
+    for(quad_idx = 0; quad_idx < MAX_QUADS; quad_idx++)
     {
         if(g_wof->quad_x_pstates[quad_idx] == QUAD_POWERED_OFF)
         {

@@ -92,11 +92,11 @@ typedef struct
     // Calculated step from start for quads
     uint8_t quad_step_from_start;
     // Array to hold the core voltages per quad (in 100uV)
-    uint32_t v_core_100uV[MAX_NUM_QUADS];
+    uint32_t v_core_100uV[MAX_QUADS];
     // Bit vector to hold the power on status of all 24 cores
     uint32_t core_pwr_on;
     // Number of cores on per quad
-    uint8_t cores_on_per_quad[MAX_NUM_QUADS];
+    uint8_t cores_on_per_quad[MAX_QUADS];
     // The most recently read value in the sensor VOLTVDDSENSE
     uint32_t voltvddsense_sensor;
     // The most recently read value in the sensor TEMPPROCTHRMCy where y is core num
@@ -104,7 +104,7 @@ typedef struct
     // The most recently read value in the sensor TEMPNEST
     uint16_t tempnest_sensor;
     // The most recently read value in the sensor TEMPQx where x is the quad num
-    uint16_t tempq[MAX_NUM_QUADS];
+    uint16_t tempq[MAX_QUADS];
     // The most recently read value in the sensor CURVDD
     uint16_t curvdd_sensor;
     // The most recently read value in the sensor CURVDN
@@ -112,7 +112,7 @@ typedef struct
     // The most recently read value in the sensor VOLTVDN
     uint16_t voltvdn_sensor;
     // Array to hold the current 1-byte pstate values read from SRAM. 0xFF=off
-    uint8_t  quad_x_pstates[MAX_NUM_QUADS];
+    uint8_t  quad_x_pstates[MAX_QUADS];
     // Bit vector to hold the ivrm states of the quads. 0=BYPASS, 1=REGULATION
     uint8_t  quad_ivrm_states;
     // Contains the estimated core leakage based on temp, voltage, and vpd-leak
@@ -156,17 +156,17 @@ typedef struct
     // Contains the final calculated value of ALL_CACHES_ON_ISO
     uint32_t all_caches_on_iso;
     // Contains good_cores_only (per_quad)
-    uint16_t quad_good_cores_only[MAX_NUM_QUADS];
+    uint16_t quad_good_cores_only[MAX_QUADS];
     // Contains on_cores
-    uint16_t quad_on_cores[MAX_NUM_QUADS];
+    uint16_t quad_on_cores[MAX_QUADS];
     // Contains BAD_OFF_cores
-    uint16_t quad_bad_off_cores[MAX_NUM_QUADS];
+    uint16_t quad_bad_off_cores[MAX_QUADS];
     // Contains the multiplier(m) used in y ~=(T*m)>>10 for nest leak calc
     uint32_t nest_mult;
     // Contains the multiplier(m) used in y ~=(T*m)>>10 for core leak calc 0-23
     uint32_t core_mult[MAX_NUM_CORES];
     // Contains the multiplier(m) used in y ~=(T*m)>>10 for quad leak calc 0-5
-    uint32_t quad_mult[MAX_NUM_QUADS];
+    uint32_t quad_mult[MAX_QUADS];
     // Contains the delta temp used for nest leakage calc (see G_wof_iddq_mult_table)
     // TEMPNEST - tvpd_leak_off
     int16_t nest_delta_temp;
@@ -175,7 +175,7 @@ typedef struct
     int16_t core_delta_temp[MAX_NUM_CORES];
     // Contains the delta temp used for quad leakage calc
     // TEMPQx - tvpd_leak_cache (where x is the quad number)
-    int16_t quad_delta_temp[MAX_NUM_QUADS];
+    int16_t quad_delta_temp[MAX_QUADS];
     // tvpd leak to use when either the core is off, or the entire quad is off
     uint32_t tvpd_leak_off;
     // tvpd leak to use when the core is on
