@@ -109,7 +109,7 @@ void task_core_data_control( task_t * i_task )
 
                 // Only if last clip update sent to PGPE is larger than legacy turbo,
                 // send new clips with legacy turbo values, otherwise, no action needed.
-                for (quad = 0; quad < MAX_QUADS; quad++)
+                for (quad = 0; quad < MAXIMUM_QUADS; quad++)
                 {
                     if(G_clip_update_parms_ptr->ps_val_clip_max[quad] < pclip)
                     {

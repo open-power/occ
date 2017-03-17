@@ -533,18 +533,18 @@ void amec_slv_freq_smh(void)
     uint8_t     quad = 0;       // loop through quads
     uint8_t     core_num = 0;   // core ID
     uint8_t     core_idx = 0;   // loop through cores within each quad
-    Pstate      pmax[MAX_QUADS] = {0}; // max pstate (min frequency) within each quad
+    Pstate      pmax[MAXIMUM_QUADS] = {0}; // max pstate (min frequency) within each quad
     Pstate      pmax_chip = 0;  // highest Pstate (lowest frequency) across all quads
-    bool        l_atLeast1Core[MAX_QUADS] = {FALSE};  // at least 1 core present in quad
-    static bool L_mfg_set_trace[MAX_QUADS] = {FALSE};
-    static bool L_mfg_clear_trace[MAX_QUADS] = {FALSE};
+    bool        l_atLeast1Core[MAXIMUM_QUADS] = {FALSE};  // at least 1 core present in quad
+    static bool L_mfg_set_trace[MAXIMUM_QUADS] = {FALSE};
+    static bool L_mfg_clear_trace[MAXIMUM_QUADS] = {FALSE};
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
 
     // loop through all quads, get f_requests, translate to pstates and determine pmax across chip
-    for (quad = 0; quad < MAX_QUADS; quad++)
+    for (quad = 0; quad < MAXIMUM_QUADS; quad++)
     {
         for (core_idx=0; core_idx<NUM_CORES_PER_QUAD; core_idx++)  // loop thru all cores in quad
         {
@@ -566,7 +566,7 @@ void amec_slv_freq_smh(void)
     }
 
     // check for mfg quad Pstate request and set Pstate for each quad
-    for (quad = 0; quad < MAX_QUADS; quad++)
+    for (quad = 0; quad < MAXIMUM_QUADS; quad++)
     {
         // set quad with no cores present to lowest frequency for the chip
         if(l_atLeast1Core[quad] == FALSE)

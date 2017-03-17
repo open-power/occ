@@ -587,13 +587,14 @@ void read_shared_sram( void )
 
     // merge the 16-bit power-on field from quad state 0 and the 16-bit power-on
     // field from quad state 1 and save it to amec.
-    g_wof->core_pwr_on =
-                   (((uint32_t)G_quad_state_0.fields.core_poweron_state) << 16)
-                  | ((uint32_t)G_quad_state_1.fields.core_poweron_state);
+    // TODO: core_poweron_state not in new structure
+    //g_wof->core_pwr_on =
+    //               (((uint32_t)G_quad_state_0.fields.core_poweron_state) << 16)
+    //              | ((uint32_t)G_quad_state_1.fields.core_poweron_state);
 
 
     // Clear out current quad pstates
-    memset(g_wof->quad_x_pstates, 0 , MAX_QUADS);
+    memset(g_wof->quad_x_pstates, 0 , MAXIMUM_QUADS);
 
     // Add the quad states to the global quad state array for easy looping.
     g_wof->quad_x_pstates[0] = (uint8_t)G_quad_state_0.fields.quad0_pstate;
@@ -622,7 +623,7 @@ void calculate_core_voltage( void )
     uint32_t l_voltage;
     uint8_t l_quad_mask;
     int l_quad_idx = 0;
-    for(; l_quad_idx < MAX_QUADS; l_quad_idx++)
+    for(; l_quad_idx < MAXIMUM_QUADS; l_quad_idx++)
     {
         // Adjust current mask. (IVRM_STATE_QUAD_MASK = 0x80)
         l_quad_mask = IVRM_STATE_QUAD_MASK >> l_quad_idx;
@@ -731,7 +732,7 @@ void calculate_core_leakage( void )
     // Divide by 6 to get just one quad
     g_wof->idc_quad =
                  G_oppb.iddq.ivdd_all_cores_off_caches_off[l_chip_v_idx] /
-                 MAX_QUADS;
+                 MAXIMUM_QUADS;
 
 
 
@@ -758,7 +759,7 @@ void calculate_core_leakage( void )
               G_oppb.iddq.ivdd_all_good_cores_off_good_caches_on[l_chip_v_idx] -
               g_wof->all_cores_off_iso;
 
-    l_quad_x_cache = g_wof->all_caches_on_iso / MAX_QUADS;
+    l_quad_x_cache = g_wof->all_caches_on_iso / MAXIMUM_QUADS;
 
     // Loop through all Quads and their respective Cores to calculate
     // leakage.
@@ -768,7 +769,7 @@ void calculate_core_leakage( void )
 
 
 
-    for(quad_idx = 0; quad_idx < MAX_QUADS; quad_idx++)
+    for(quad_idx = 0; quad_idx < MAXIMUM_QUADS; quad_idx++)
     {
         if(g_wof->quad_x_pstates[quad_idx] == QUAD_POWERED_OFF)
         {
@@ -935,7 +936,8 @@ void calculate_nest_leakage( void )
     uint32_t nest_mult = calculate_multiplier( nest_delta_temp );
 
     // Save nest leakage to amec structure
-    g_wof->idc_vdn = (G_oppb.iddq.ivdn*nest_mult) >> 10;
+    // TODO: ivdn is now an array and need to handle
+    g_wof->idc_vdn = (G_oppb.iddq.ivdn[0]*nest_mult) >> 10;
 }
 
 

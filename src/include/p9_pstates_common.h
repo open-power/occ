@@ -35,13 +35,13 @@
 #ifndef __P9_PSTATES_COMMON_H__
 #define __P9_PSTATES_COMMON_H__
 
-/// The minimum Pstate (knowing the increasing Pstates numbers represent
-/// decreasing frequency)
-#define PSTATE_MIN 255
-
 /// The maximum Pstate (knowing the increasing Pstates numbers represent
 /// decreasing frequency)
-#define PSTATE_MAX 0
+#define PSTATE_MAX 255
+
+/// The minimum Pstate (knowing the increasing Pstates numbers represent
+/// decreasing frequency)
+#define PSTATE_MIN 0
 
 /// The minimum \e legal DPLL frequency code
 ///
@@ -83,35 +83,65 @@
 #define IVID_STEP_UV 4000
 
 /// Maximum number of Quads (4 cores plus associated caches)
-#define MAX_QUADS 6
+#define MAXIMUM_QUADS 6
 
 // Constants associated with VRM stepping
 // @todo Determine what is needed here (eg Attribute mapping) and if any constants
 // are warrented
 
-/// VPD #V Operating Points
+/// VPD #V Data from keyword (eg VPD order)
 #define VPD_PV_POINTS 4
-#define VPD_PV_ORDER_STR {"PowerSave ", "Nominal   ", "Turbo     ", "UltraTurbo"}
-#define POWERSAVE   1
-#define NOMINAL     0
+#define VPD_PV_POWERSAVE   1
+#define VPD_PV_NOMINAL     0
+#define VPD_PV_TURBO       2
+#define VPD_PV_ULTRA       3
+#define VPD_PV_ORDER {VPD_PV_POWERSAVE, VPD_PV_NOMINAL, VPD_PV_TURBO, VPD_PV_ULTRA}
+#define VPD_PV_ORDER_STR {"Nominal   ","PowerSave ", "Turbo     ", "UltraTurbo"}
+
+/// VPD #V Operating Points (eg Natureal order)
+#define POWERSAVE   0
+#define NOMINAL     1
 #define TURBO       2
 #define ULTRA       3
 #define POWERBUS    4
-#define VPD_PV_ORDER {POWERSAVE, NOMINAL, TURBO, ULTRA}
+#define PV_OP_ORDER {POWERSAVE, NOMINAL, TURBO, ULTRA}
+#define PV_OP_ORDER_STR {"PowerSave ", "Nominal   ","Turbo     ", "UltraTurbo"}
+
+#define VPD_PV_CORE_FREQ_MHZ    0
+#define VPD_PV_VDD_MV           1
+#define VPD_PV_IDD_100MA        2
+#define VPD_PV_VCS_MV           3
+#define VPD_PV_ICS_100MA        4
+#define VPD_PV_PB_FREQ_MHZ      0
+#define VPD_PV_VDN_MV           1
+#define VPD_PV_IDN_100MA        2
+
 #define VPD_NUM_SLOPES_SET  2
 #define VPD_SLOPES_RAW      0
 #define VPD_SLOPES_BIASED   1
 #define VPD_NUM_SLOPES_REGION       3
-#define REGION_POWERSAVE_NOMINAL    1
-#define REGION_NOMINAL_TURBO        0
+#define REGION_POWERSAVE_NOMINAL    0
+#define REGION_NOMINAL_TURBO        1
 #define REGION_TURBO_ULTRA          2
+
+// Different points considered for calculating slopes
+#define NUM_VPD_PTS_SET             4
+#define VPD_PT_SET_RAW              0
+#define VPD_PT_SET_SYSP             1
+#define VPD_PT_SET_BIASED           2
+#define VPD_PT_SET_BIASED_SYSP      3
+#define VPD_PT_SET_ORDER {VPD_PT_SET_RAW, VPD_PT_SET_SYSP, VPD_PT_SET_BIASED, VPD_PT_SET_BIASED_SYSP}
+#define VPD_PT_SET_ORDER_STR {"Raw          ", "SysParam       ","Biased        ", "Biased/SysParam"}
+
+#define EVID_SLOPE_FP_SHIFT         13
 
 
 /// IDDQ readings,
 #define IDDQ_MEASUREMENTS 6
 #define MEASUREMENT_ELEMENTS  6    // Number of Quads for P9
 #define IDDQ_READINGS_PER_IQ 2
-#define IDDQ_ARRAY_VOLTAGES {0.60, 0.70, 0.80, 0.90, 1.00, 1.10}
+#define IDDQ_ARRAY_VOLTAGES     { 0.60 ,  0.70 ,  0.80 ,  0.90 ,  1.00 ,  1.10}
+#define IDDQ_ARRAY_VOLTAGES_STR {"0.60", "0.70", "0.80", "0.90", "1.00", "1.10"}
 
 /// WOF Items
 #define NUM_ACTIVE_CORES 24
@@ -151,6 +181,7 @@
 #define LPST_GPST_WARNING        0x00477902
 #define LPST_INCR_CLIP_ERROR     0x00477903
 
+#ifndef __ASSEMBLER__
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -179,15 +210,13 @@ typedef uint16_t VidAVS;
 ///
 typedef struct
 {
-
     uint32_t vdd_mv;
     uint32_t vcs_mv;
     uint32_t idd_100ma;
     uint32_t ics_100ma;
     uint32_t frequency_mhz;
     uint8_t  pstate;        // Pstate of this VpdOperating
-    uint8_t  pad[3];
-
+    uint8_t  pad[3];        // Alignment padding
 } VpdOperatingPoint;
 
 /// VPD Biases.
@@ -234,76 +263,146 @@ typedef struct
 
 } SysPowerDistParms;
 
-//
-/// UltraTurbo Segment VIDs by Core Count
-typedef struct
-{
-
-    /// Number of Segment Pstates
-    uint8_t     ut_segment_pstates;
-
-    /// Maximum number of core possibly active
-    uint8_t     ut_max_cores;
-
-    /// VDD VID modification
-    ///      1 core active  = offset 0
-    ///      2 cores active = offset 1
-    ///         ...
-    ///      12 cores active = offset 11
-    uint8_t ut_segment_vdd_vid[MAX_UT_PSTATES][NUM_ACTIVE_CORES];
-
-    /// VCS VID modification
-    ///      1 core active  = offset 0
-    ///      2 cores active = offset 1
-    ///         ...
-    ///      12 cores active = offset 11
-    uint8_t ut_segment_vcs_vid[MAX_UT_PSTATES][NUM_ACTIVE_CORES];
-
-} VIDModificationTable;
-
-/// Workload Optimized Frequency (WOF) Elements
-///
-/// Structure defining various control elements needed by the WOF algorithm
-/// firmware running on the OCC.
-///
-typedef struct
-{
-
-    /// WOF Enablement
-    uint8_t wof_enabled;
-
-    /// TDP<>RDP Current Factor
-    ///   Value read from ??? VPD
-    ///   Defines the scaling factor that converts current (amperage) value from
-    ///   the Thermal Design Point to the Regulator Design Point (RDP) as input
-    ///   to the Workload Optimization Frequency (WOF) OCC algorithm.
-    ///
-    ///   This is a ratio value and has a granularity of 0.01 decimal.  Data
-    ///   is held in hexidecimal (eg 1.22 is represented as 122 and then converted
-    ///   to hex 0x7A).
-    uint32_t tdp_rdp_factor;
-
-    /// UltraTurbo Segment VIDs by Core Count
-    VIDModificationTable ut_vid_mod;
-
-    uint8_t pad[4];
-
-} WOFElements;
 
 //
 // WOF Voltage, Frequency Ratio Tables
 //
+
+// VFRT Header
+
+typedef struct
+{
+
+    /// Magic Number
+    ///   Set to ASCII  "VT"
+    uint16_t magic_number;
+
+    /// Indicator
+    ///   Space for generation tools to be anything unique necessary to ID this
+    ///    VFRT
+    uint16_t indicator;
+
+    union
+    {
+        uint8_t value;
+        struct
+        {
+            uint8_t type    : 4;
+            uint8_t version : 4;
+        } fields;
+    } typever;
+
+    uint8_t reserved;
+
+    union
+    {
+        uint16_t value;
+        struct
+        {
+#ifdef _BIG_ENDIAN
+            uint16_t reserved: 4;
+            uint16_t vdn_id  : 4;
+            uint16_t vdd_id  : 4;
+            uint16_t qa_id   : 4;
+#else
+            uint16_t qa_id   : 4;
+            uint16_t vdd_id  : 4;
+            uint16_t vdn_id  : 4;
+            uint16_t reserved: 4;
+#endif // _BIG_ENDIAN
+
+        } fields;
+    } ids;
+
+} VFRTHeader_t;
+
+// WOF Tables Header
+
+typedef struct
+{
+
+    /// Magic Number
+    ///   Set to ASCII  "VFRT___x" where x is the version of the VFRT structure
+    uint64_t magic_number;
+
+    /// VFRT Size
+    ///    Length, in bytes, of a VFRT
+    uint8_t vfrt_size;
+
+    /// VFRT Data Size
+    ///    Length, in bytes, of the data field.
+    uint8_t vfrt_data_size;
+
+    uint8_t reserved;
+
+    /// Quad Active Size
+    ///    Total number of Active Quads
+    uint8_t quads_active_size;
+
+    /// Ceff Vdn Start
+    ///    CeffVdn value represented by index 0 (in percent)
+    uint8_t vdn_start;
+
+    /// Ceff Vdn Step
+    ///    CeffVdn step value for each CeffVdn index (in percent)
+    uint8_t vdn_step;
+
+    /// Ceff Vdn Size
+    ///    Number of CeffVdn indexes
+    uint8_t vdn_size;
+
+    /// Ceff Vdd Start
+    ///    CeffVdd value represented by index 0 (in percent)
+    uint8_t vdd_start;
+
+    /// Ceff Vdd Step
+    ///    CeffVdd step value for each CeffVdd index (in percent)
+    uint8_t vdd_step;
+
+    /// Ceff Vdd Size
+    ///    Number of CeffVdd indexes
+    uint8_t vdd_size;
+
+    /// Vratio Start
+    ///    Vratio value represented by index 0 (in percent)
+    uint8_t vratio_start;
+
+    /// Vratio Step
+    ///   Vratio step value for each CeffVdd index (in percent)
+    uint8_t vratio_step;
+
+    /// Vratio Size
+    ///    Number of Vratio indexes
+    uint8_t vratio_size;
+
+    /// Fratio Start
+    ///    Fratio value represented by index 0 (in percent)
+    uint8_t fratio_start;
+
+    /// Fratio Step
+    ///   Fratio step value for each CeffVdd index (in percent)
+    uint8_t fratio_step;
+
+    /// Fratio Size
+    ///    Number of Fratio indexes
+    uint8_t fratio_size;
+
+} WofTablesHeader_t;
+
 
 // VDN
 
 // Data is provided in 12ths (eg 12 core pairs on a 24 core chip)
 #define VFRT_VRATIO_SIZE 12
 
-// 100%/10% steps + 1 (for 0)
-#define VFRT_FRATIO_SIZE 11
+// 100%/10% steps
+#define VFRT_FRATIO_SIZE 10
 
-typedef uint16_t VFRT_Circuit_t;   // Holds a frequency in MHz
+// Holds a frequency that is 1000MHz + 16.667*VFRT_Circuit_t
+typedef uint8_t VFRT_Circuit_t;
 typedef Pstate   VFRT_Hcode_t;
+
+
 
 extern VFRT_Circuit_t VFRTCircuitTable[VFRT_FRATIO_SIZE][VFRT_FRATIO_SIZE];
 
@@ -313,5 +412,5 @@ extern VFRT_Hcode_t   VFRTInputTable[VFRT_FRATIO_SIZE][VFRT_FRATIO_SIZE];
 #ifdef __cplusplus
 } // end extern C
 #endif
-
+#endif    /* __ASSEMBLER__ */
 #endif    /* __P9_PSTATES_COMMON_H__ */

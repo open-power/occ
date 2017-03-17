@@ -590,7 +590,7 @@ errlHndl_t SMGR_observation_to_active()
     Pstate          l_pstate;
 
     // clear mnfg quad pstate request to default OCC to control all quads
-    memset(&g_amec->mnfg_parms.quad_pstate[0], 0xFF, MAX_QUADS);
+    memset(&g_amec->mnfg_parms.quad_pstate[0], 0xFF, MAXIMUM_QUADS);
 
     do
     {

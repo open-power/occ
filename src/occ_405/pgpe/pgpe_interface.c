@@ -585,7 +585,7 @@ int pgpe_set_clip_ranges(Pstate i_pstate)
     Pstate      pmax = i_pstate;
 
     // Set clip bounds
-    for(quad=0; quad<MAX_QUADS; quad++)
+    for(quad=0; quad<MAXIMUM_QUADS; quad++)
     {
         // Minimum pstate
         G_clip_update_parms_ptr->ps_val_clip_min[quad] = pmin;

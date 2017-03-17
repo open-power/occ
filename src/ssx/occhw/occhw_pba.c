@@ -337,6 +337,7 @@ pbax_target_create(PbaxTarget* target,
     target->target.fields.snd_groupid = group;
     target->target.fields.snd_chipid = chip_or_group;
     target->target.fields.snd_cnt = cnt;
+    target->target.fields.vg_targe = 0xffff;
 
     return 0;
 }

@@ -438,7 +438,7 @@ typedef struct
   amec_memctl_t  memctl[MAX_NUM_MEM_CONTROLLERS];
   amec_vrm_t     vrm[NUM_PROC_VRMS];
   amec_proc_pwr_votes_t pwr_votes;
-  amec_quad_t    quad[MAX_QUADS];
+  amec_quad_t    quad[MAXIMUM_QUADS];
 
   // Processor Sensors
   sensor_t freqa4ms;
@@ -527,7 +527,7 @@ typedef struct amec_mnfg
     ///memory slewing count
     uint32_t            mem_slew_counter;
     ///Per Quad Pstate request: 0xFF=no request
-    uint8_t             quad_pstate[MAX_QUADS];
+    uint8_t             quad_pstate[MAXIMUM_QUADS];
 } amec_mnfg_t;
 
 //-------------------------------------------------------------

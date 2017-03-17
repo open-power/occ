@@ -177,14 +177,14 @@ typedef struct __attribute__ ((packed))
     struct    cmdh_fsp_cmd_header;
     uint8_t   sub_cmd;
     uint8_t   version;
-    uint8_t   quad_pstate_in[MAX_QUADS];
+    uint8_t   quad_pstate_in[MAXIMUM_QUADS];
 }mnfg_quad_pstate_cmd_t;
 
 // Used by OCC firmware to respond to mnfg request quad pstate command
 typedef struct __attribute__ ((packed))
 {
     struct    cmdh_fsp_rsp_header;
-    uint8_t   quad_pstate_out[MAX_QUADS];
+    uint8_t   quad_pstate_out[MAXIMUM_QUADS];
 }mnfg_quad_pstate_rsp_t;
 
 errlHndl_t cmdh_mnfg_test_parse (const cmdh_fsp_cmd_t * i_cmd_ptr,

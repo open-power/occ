@@ -1,19 +1,25 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: chips/p9/common/pmlib/include/pstate_pgpe_occ_api.h $         */
+/* $Source: src/include/pstate_pgpe_occ_api.h $                           */
 /*                                                                        */
-/* IBM CONFIDENTIAL                                                       */
+/* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* EKB Project                                                            */
-/*                                                                        */
-/* COPYRIGHT 2015,2017                                                    */
+/* Contributors Listed Below - COPYRIGHT 2016                             */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
-/* The source code for this program is not published or otherwise         */
-/* divested of its trade secrets, irrespective of what has been           */
-/* deposited with the U.S. Copyright Office.                              */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 /// @file  p9_pstates_pgpe_occ_api.h
@@ -52,9 +58,6 @@ enum MESSAGE_ID_IPI2HI
 
 //
 // Return Codes
-//
-//\todo
-//Get feedback from Martha and Greg on these return codes
 //
 #define PGPE_RC_SUCCESS                         0x01
 #define PGPE_WOF_RC_NOT_ENABLED                 0x10
@@ -101,8 +104,8 @@ typedef struct ipcmsg_start_stop
 typedef struct ipcmsg_clip_update
 {
     ipcmsg_base_t   msg_cb;
-    uint8_t         ps_val_clip_min[MAX_QUADS];
-    uint8_t         ps_val_clip_max[MAX_QUADS];
+    uint8_t         ps_val_clip_min[MAXIMUM_QUADS];
+    uint8_t         ps_val_clip_max[MAXIMUM_QUADS];
     uint8_t         pad[2];
 } ipcmsg_clip_update_t;
 
@@ -111,7 +114,7 @@ typedef struct ipcmsg_set_pmcr
 {
     ipcmsg_base_t   msg_cb;
     uint8_t         pad[6];
-    uint64_t        pmcr[MAX_QUADS];
+    uint64_t        pmcr[MAXIMUM_QUADS];
 } ipcmsg_set_pmcr_t;
 
 
@@ -269,10 +272,10 @@ typedef union quad_state0
         uint64_t quad1_pstate             : 8;  // Pstate of Quad 1; 0xFF indicates EQ is off
         uint64_t quad2_pstate             : 8;  // Pstate of Quad 2; 0xFF indicates EQ is off
         uint64_t quad3_pstate             : 8;  // Pstate of Quad 3; 0xFF indicates EQ is off
-        uint64_t core_poweron_state       : 16; // bit vector: 0:core0, 1:core1, ..., 15:core15
-        uint64_t ivrm_state               : 4;  // ivrm state: bit vector 0:quad0, 1:quad1, 2:quad2, 3;quad3
-        uint64_t ivrm_state_rsvd          : 4;
-        uint64_t external_vrm_setpoint    : 8;  // set point in mV
+        uint64_t active_cores             : 16; // bit vector: 0:core0, 1:core1, ..., 15:core15
+    uint64_t ivrm_state               :
+        8;  // ivrm state: bit vector 0:quad0, 1:quad1, 2:quad2, 3;quad3, 4: quad4, 5: quad5, 6-7:reserved
+        uint64_t reserved                 : 8;  // reserved for future use
     } fields;
 } quad_state0_t;
 
@@ -288,14 +291,46 @@ typedef union quad_state1
     {
         uint64_t quad4_pstate             : 8;  // Pstate of Quad 4; 0xFF indicates EQ is off
         uint64_t quad5_pstate             : 8;  // Pstate of Quad 5; 0xFF indicates EQ is off
-        uint64_t reserved                 : 16;
-        uint64_t ivrm_state               : 2;  // ivrm state: bit vector 0:quad4, 1:quad5
-        uint64_t ivrm_state_rsvd          : 6;
-        uint64_t core_poweron_state       : 8;  // bit vector: 0:core16, 1:core17, ..., 7:core23
-        uint64_t requested_active_quad    : 8;
-        uint64_t external_vrm_setpoint    : 8;  // set point in mV
+        uint64_t reserved0                : 16;
+        uint64_t active_cores             : 16; // bit vector: 0:core16, 1:core17, ..., 7:core23
+    uint64_t ivrm_state               :
+        8;  // ivrm state: bit vector 0:quad0, 1:quad1, 2:quad2, 3;quad3, 4: quad4, 5: quad5, 6-7:reserved
+        uint64_t reserved1                : 8;  // reserved for future use
     } fields;
 } quad_state1_t;
+
+typedef union pgpe_wof_state
+{
+    uint64_t value;
+    struct
+    {
+        uint32_t high_order;
+        uint32_t low_order;
+    } words;
+    struct
+    {
+        uint64_t reserved0              : 8;
+        uint64_t fclip_ps               : 8;
+        uint64_t vclip_mv               : 16;
+        uint64_t fratio                 : 16;
+        uint64_t vratio                 : 16;
+    } fields;
+} pgpe_wof_state_t;
+
+typedef union requested_active_quads
+{
+    uint64_t value;
+    struct
+    {
+        uint32_t high_order;
+        uint32_t low_order;
+    } words;
+    struct
+    {
+        uint64_t reserved                   : 56;
+        uint64_t requested_active_quads     : 8;
+    } fields;
+} requested_active_quads_t;
 
 // End Quad State
 // -----------------------------------------------------------------------------
@@ -314,6 +349,12 @@ typedef struct
 
     /// Actual Pstate 1 - Quads 4, 5
     quad_state1_t       quad_pstate_1;
+
+    ///PGPE WOF State
+    pgpe_wof_state_t    pgpe_wof_state;
+
+    ///Requested Active Quads
+    requested_active_quads_t    req_active_quads;
 
     /// FFDC Address list
     Hcode_FFDC_list_t   ffdc_list;

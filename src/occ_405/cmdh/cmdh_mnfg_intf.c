@@ -675,7 +675,7 @@ uint8_t cmdh_mnfg_request_quad_pstate(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         // Process each quad Pstate request, clip any request to min/max
         // 0xFF has special meaning that OCC is in control
-        for(l_quad = 0; l_quad < MAX_QUADS; l_quad++)
+        for(l_quad = 0; l_quad < MAXIMUM_QUADS; l_quad++)
         {
             l_pstate_request = l_cmd_ptr->quad_pstate_in[l_quad];
             if(l_pstate_request != 0xFF)
