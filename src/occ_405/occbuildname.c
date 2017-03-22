@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/occbuildname.c $                                      */
+/* $Source: src/occ_405/occbuildname.c $                                  */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -34,6 +34,6 @@ volatile const char G_occ_buildname[16] __attribute__((section(".buildname"))) =
 
 #else
 
-volatile const char G_occ_buildname[16] __attribute__((section(".buildname"))) = /*<BuildName>*/  "op_occ_150716a\0"  /*</BuildName>*/ ;
+volatile const char G_occ_buildname[16] __attribute__((section(".buildname"))) = /*<BuildName>*/  "op_occ_170322a\0"  /*</BuildName>*/ ;
 
 #endif
