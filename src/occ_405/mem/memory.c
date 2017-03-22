@@ -27,6 +27,7 @@
 #include <trac.h>
 
 #include "memory.h"
+#include "memory_power_control.h"
 #include "dimm_control.h"
 #include "centaur_control.h"
 #include "centaur_data.h"
@@ -405,6 +406,14 @@ void memory_init()
                 G_task_table[TASK_ID_MEMORY_CONTROL].flags = MEMORY_CONTROL_RTL_FLAGS;
             }
         }
+    }
+
+    // if memory power control is enabled (version 21 memory configurtion
+    // command is received), create GPE1 memory power control IPC task
+    if((G_sysConfigData.ips_mem_pwr_ctl     != MEM_PWR_CTL_NO_SUPPORT ) &&
+       (G_sysConfigData.default_mem_pwr_ctl != MEM_PWR_CTL_NO_SUPPORT ))
+    {
+        gpe_init_mem_power_control();
     }
 
 } // end memory_init()

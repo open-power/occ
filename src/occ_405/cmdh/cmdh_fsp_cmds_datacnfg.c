@@ -1886,7 +1886,7 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
         // No errors so we can enable memory monitoring if the data indicates it should be enabled
         if(num_data_sets == 0)  // num data sets of 0 indicates memory monitoring disabled
         {
-            CMDH_TRAC_IMP("Memory monitoring is not allowed (mem config data sets = 0)");
+            CMDH_TRAC_IMP("Memory monitoring is not allowed (mem config data sets = 0), ");
         }
         else
         {
@@ -1897,7 +1897,10 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
             // Require the mem throt packet for going to active state
             SMGR_VALIDATE_DATA_ACTIVE_MASK |= DATA_MASK_MEM_THROT;
 
-            CMDH_TRAC_IMP("Memory monitoring is allowed (mem config data sets = %d)", num_data_sets);
+            CMDH_TRAC_IMP("Memory monitoring is allowed (mem config data sets = %d,"
+                          " ips_mem_pwr_ctl = %d, default_mem_pwr_ctl = %d)",
+                          num_data_sets, G_sysConfigData.ips_mem_pwr_ctl,
+                          G_sysConfigData.default_mem_pwr_ctl);
         }
     }
     else

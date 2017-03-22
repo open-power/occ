@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_405/cent/centaur_control.h $                          */
+/* $Source: src/occ_405/mem/memory_power_control.h $                      */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -23,21 +23,16 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-#ifndef _MEMORY_SERVICE_CODES_H
-#define _MEMORY_SERVICE_CODES_H
+#include <occ_common.h>
 
-//*************************************************************************
-// Includes
-//*************************************************************************
-#include <comp_ids.h>
+// perform memory power control (if needed)
+void amec_mem_power_control(void);
 
+// Check whether the OCC is in IPS
+inline bool is_occ_in_ips(void);
 
-enum memModuleId
-{
-    MEM_MID_TASK_MEMORY_CONTROL    = MEM_COMP_ID | 0x00,
-    MEM_MID_MEMORY_INIT            = MEM_COMP_ID | 0x01,
-    MEM_MID_MEM_INIT_POWER_CONTROL = MEM_COMP_ID | 0x02,
-    MEM_MID_GPE_MEM_POWER_CONTROL  = MEM_COMP_ID | 0x03,
-};
+// create the memory power control  gpe request IPC task
+void gpe_init_mem_power_control(void);
 
-#endif // _MEMORY_SERVICE_CODES_H
+// schedule the memory power control IPC task
+int gpe_mem_power_control(uint8_t mem_pwr_ctl, uint8_t memIndex, uint8_t wait_idle_gpe);

@@ -389,6 +389,9 @@ typedef struct
 
   // Memory Throttle Sent Last time to DIMM Throttle Register
   dimm_n_value_t current_dimm_n_values[NUM_NIMBUS_MC_PAIRS][MAX_NUM_MCU_PORTS];
+
+  // Current Memory Power Control values (applied last through GPE1)
+  uint8_t current_mem_pwr_ctl;
 } amec_systemwide_t;
 
 

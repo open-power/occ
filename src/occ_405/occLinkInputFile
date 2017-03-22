@@ -48,6 +48,7 @@ INPUT ( amec_amester.o
         lock.o
         main.o
         memory.o
+        memory_power_control.o
         mode.o
         occ_sys_config.o
         occbuildname.o

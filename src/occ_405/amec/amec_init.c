@@ -348,6 +348,9 @@ void amec_init_gamec_struct(void)
 //  g_amec->ptr_probe250us[6] = g_amec->ptr_probe250us[6]+2; // Point to low 16 bits of testscom1
 //  g_amec->ptr_probe250us[7] = &g_amec->task_centaur_data_count;
 
+  // Initialize the current_mem_pwr_ctl to indicate that memory power control is not supported
+  // update memory control registers only if new ips/default memory power control is different
+  g_amec->sys.current_mem_pwr_ctl = MEM_PWR_CTL_NO_SUPPORT;
 }
 
 // Function Specification

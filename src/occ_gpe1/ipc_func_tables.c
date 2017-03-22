@@ -29,6 +29,7 @@ void gpe_dimm_control(ipc_msg_t* cmd, void* arg);
 void gpe1_nop(ipc_msg_t* cmd, void* arg);
 void gpe_reset_mem_deadman(ipc_msg_t* cmd, void* arg);
 void gpe_24x7(ipc_msg_t* cmd, void* arg);
+void gpe_mem_power_control(ipc_msg_t* cmd, void* arg);
 
 
 // Function table for multi target (common) functions
@@ -49,16 +50,16 @@ IPC_HANDLER(gpe_dimm_sm, 0)                // 0 - IPC_ST_DIMM_SM_FUNCID
 IPC_HANDLER(gpe_dimm_control, 0)           // 1 - IPC_ST_DIMM_CONTROL_FUNCID
 IPC_HANDLER(gpe1_nop, 0)                   // 2 - IPC_ST_GPE1_NOP
 IPC_HANDLER(gpe_reset_mem_deadman, 0)      // 3 - IPC_ST_RESET_MEM_DEADMAN
-IPC_HANDLER(gpe_24x7, 0)                     // 4 - IPC_ST_24_X_7_FUNCID
-IPC_HANDLER_DEFAULT                          // 5
-IPC_HANDLER_DEFAULT                          // 6
-IPC_HANDLER_DEFAULT                          // 7
-IPC_HANDLER_DEFAULT                          // 8
-IPC_HANDLER_DEFAULT                          // 9
-IPC_HANDLER_DEFAULT                          // 10
-IPC_HANDLER_DEFAULT                          // 11
-IPC_HANDLER_DEFAULT                          // 12
-IPC_HANDLER_DEFAULT                          // 13
-IPC_HANDLER_DEFAULT                          // 14
-IPC_HANDLER_DEFAULT                          // 15
+IPC_HANDLER(gpe_24x7, 0)                   // 4 - IPC_ST_24_X_7_FUNCID
+IPC_HANDLER(gpe_mem_power_control, 0)      // 5 - IPC_ST_MEM_POWER_CONTROL_FUNCID
+IPC_HANDLER_DEFAULT                        // 6
+IPC_HANDLER_DEFAULT                        // 7
+IPC_HANDLER_DEFAULT                        // 8
+IPC_HANDLER_DEFAULT                        // 9
+IPC_HANDLER_DEFAULT                        // 10
+IPC_HANDLER_DEFAULT                        // 11
+IPC_HANDLER_DEFAULT                        // 12
+IPC_HANDLER_DEFAULT                        // 13
+IPC_HANDLER_DEFAULT                        // 14
+IPC_HANDLER_DEFAULT                        // 15
 IPC_ST_FUNC_TABLE_END

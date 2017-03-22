@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_405/cent/centaur_control.h $                          */
+/* $Source: src/occ_gpe1/gpe1_memory_power_control.h $                    */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -23,21 +23,25 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-#ifndef _MEMORY_SERVICE_CODES_H
-#define _MEMORY_SERVICE_CODES_H
+#ifndef _GPE1_MEMORY_POWER_CONTROL_H
+#define _GPE1_MEMORY_POWER_CONTROL_H
 
-//*************************************************************************
-// Includes
-//*************************************************************************
-#include <comp_ids.h>
+#define PCR0_MASTER_ENABLE_BIT           2
+#define PCR0_POWERDOWN_ENABLE_BIT        22
+
+#define STR0_STR_ENABLE_BIT              0
+#define STR0_DISABLE_MEMORY_CLOCKS_BIT   1
+
+// Big Endian set/clear bit MACROS
+#define SET_BIT(var, bit)           (var |  (0x8000000000000000 >> bit) )
+
+#define CLR_BIT(var, bit)           (var & ~(0x8000000000000000 >> bit) )
 
 
-enum memModuleId
-{
-    MEM_MID_TASK_MEMORY_CONTROL    = MEM_COMP_ID | 0x00,
-    MEM_MID_MEMORY_INIT            = MEM_COMP_ID | 0x01,
-    MEM_MID_MEM_INIT_POWER_CONTROL = MEM_COMP_ID | 0x02,
-    MEM_MID_GPE_MEM_POWER_CONTROL  = MEM_COMP_ID | 0x03,
-};
+// Big Endian set/clear 2 different bits MACROS
+#define SET_2BITS(var, bit1, bit2)  SET_BIT(SET_BIT(var, bit1), bit2)
 
-#endif // _MEMORY_SERVICE_CODES_H
+#define CLR_2BITS(var, bit1, bit2)  CLR_BIT(CLR_BIT(var, bit1), bit2)
+
+
+#endif // _GPE1_MEMORY_POWER_CONTROL_H

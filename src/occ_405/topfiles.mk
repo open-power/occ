@@ -69,6 +69,7 @@ TOP-C-SOURCES = amec/amec_analytics.c \
                 lock/lock.c \
                 main.c \
                 mem/memory.c \
+                mem/memory_power_control.c \
                 mode.c \
                 occ_sys_config.c \
                 occbuildname.c \

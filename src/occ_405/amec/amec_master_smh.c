@@ -561,7 +561,7 @@ void amec_mst_ips_main(void)
             // Reset the following parameters
             g_amec->mst_ips_parms.active = 0;
             G_ips_entry_count = 0;
-            g_amec->mst_ips_parms.freq_request = g_amec->sys.fmax;
+            g_amec->mst_ips_parms.freq_request = 0; // No IPS Frequency request when IPS is disabled
 
             break;
         }

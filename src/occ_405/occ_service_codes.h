@@ -122,7 +122,8 @@ enum occReasonCode
     GPE_REQUEST_CREATE_FAILURE      = 0xD4,
     GPE_REQUEST_SCHEDULE_FAILURE    = 0xD5,
     GPE_REQUEST_TASK_TIMEOUT        = 0xD6,
-    GPE_REQUEST_RC_FAILURE          = 0xD7,
+    GPE_REQUEST_TASK_NOT_IDLE       = 0xD7,
+    GPE_REQUEST_RC_FAILURE          = 0xD8,
 
     WOF_VFRT_REQ_FAILURE            = 0xD8,
     WOF_DISABLED_RC                 = 0xD9,

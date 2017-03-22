@@ -30,6 +30,7 @@
 #include "gpe_err.h"
 #include "gpe_util.h"
 #include "dimm_structs.h"
+#include "mca_addresses.h"
 #include "gpe1.h"
 
 /*
@@ -46,9 +47,6 @@
  *
  * End Function Specification
  */
-
-#define NUM_NIMBUS_MC_PAIRS 2
-#define MAX_NUM_MCU_PORTS   4
 
 void gpe_dimm_control(ipc_msg_t* cmd, void* arg)
 {
@@ -96,7 +94,7 @@ void gpe_dimm_control(ipc_msg_t* cmd, void* arg)
                      N_M_DIMM_TCR(mc,port), regValue, rc);
 
             gpe_set_ffdc(&(args->error), N_M_DIMM_TCR(mc,port),
-                         GPE_RC_SCOM_GET_FAILED, rc);
+                         GPE_RC_SCOM_PUT_FAILED, rc);
             break;
         }
         else

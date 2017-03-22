@@ -58,6 +58,7 @@
 #include <occhw_async.h>
 #include <wof.h>
 #include <pgpe_interface.h>
+#include <memory_power_control.h>
 
 //*************************************************************************/
 // Externs
@@ -346,6 +347,9 @@ void amec_slv_common_tasks_post(void)
 
         // Call amec_power_control
         amec_power_control();
+
+        // Apply memory power control, if needed.
+        amec_mem_power_control();
 
         // Call the OCC slave's processor voting box
         amec_slv_proc_voting_box();

@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_405/cent/centaur_control.h $                          */
+/* $Source: src/dimm_structs.h $                                          */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2016                             */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -23,21 +23,33 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-#ifndef _MEMORY_SERVICE_CODES_H
-#define _MEMORY_SERVICE_CODES_H
+/* This header file is used by both occ_405 and occ_gpe1.                 */
+/* Contains common structures and globals.                                */
 
-//*************************************************************************
-// Includes
-//*************************************************************************
-#include <comp_ids.h>
+#ifndef _MEM_STRUCTS_H
+#define _MEM_STRUCTS_H
 
+#include "occ_util.h"
+#include <gpe_export.h>
+#include "gpe_err.h"
 
-enum memModuleId
+// this enum defines memory power control
+typedef enum
 {
-    MEM_MID_TASK_MEMORY_CONTROL    = MEM_COMP_ID | 0x00,
-    MEM_MID_MEMORY_INIT            = MEM_COMP_ID | 0x01,
-    MEM_MID_MEM_INIT_POWER_CONTROL = MEM_COMP_ID | 0x02,
-    MEM_MID_GPE_MEM_POWER_CONTROL  = MEM_COMP_ID | 0x03,
-};
+    MEM_PWR_CTL_OFF                  = 0x00,
+    MEM_PWR_CTL_POWER_DOWN           = 0x01,
+    MEM_PWR_CTL_PD_AND_STR           = 0x02,
+    MEM_PWR_CTL_PD_AND_STR_CLK_STOP  = 0x03,
+    MEM_PWR_CTL_NO_SUPPORT           = 0xFF,
+} eMemoryPowerControlSetting;
 
-#endif // _MEMORY_SERVICE_CODES_H
+// memory power control IPC argument
+typedef struct
+{
+    GpeErrorStruct    error;
+    uint8_t           mem_pwr_ctl;
+    uint8_t           port;
+    uint8_t           mc;
+} mem_power_control_args_t;
+
+#endif  //_MEM_STRUCTS_H

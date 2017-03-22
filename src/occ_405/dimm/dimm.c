@@ -45,6 +45,7 @@
 #include "memory.h"
 #include "centaur_data.h"
 #include "amec_health.h"
+#include "memory_power_control.h"
 
 extern bool G_mem_monitoring_allowed;
 extern memory_control_task_t G_memory_control_task;
@@ -179,6 +180,9 @@ void memory_nimbus_init()
             rc_dimm = rc_dimm_sm;
             break;
         }
+
+        // Initialize GPE request for DIMM memory power control IPC task,
+        gpe_init_mem_power_control();   // will request reset if it fails
     }
     while(0);
 
