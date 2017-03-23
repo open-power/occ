@@ -373,7 +373,7 @@ errlHndl_t SMGR_all_to_standby()
 
     } while (0);
 
-    if(l_errlHndl)
+    if(l_errlHndl && !l_error_logged)
     {
         l_error_logged = TRUE;
         TRAC_ERR("SMGR: Transition to Standby Failed");
@@ -448,7 +448,7 @@ errlHndl_t SMGR_characterization_to_observation()
         }
     } while (0);
 
-    if(rc)
+    if(rc && !l_error_logged)
     {
         l_error_logged = TRUE;
         TRAC_ERR("SMGR: Characterization to Observation Transition Failed");

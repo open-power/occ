@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -237,15 +237,6 @@ void avsbus_read_start(const avsbus_type_e i_type,
     avsbusData_t l_data;
 
     // Create error array for each type (Vdd/Vdn) and command (Voltage/Current)
-    uint8_t l_cmd_index = 0;
-    char l_trace_cmd = 'V';
-    if (i_cmdtype == AVSBUS_CURRENT)
-    {
-        l_cmd_index = 1;
-        l_trace_cmd = 'C';
-    }
-
-    char l_trace_type = 'd';
     if (AVSBUS_VDD == i_type)
     {
         l_data = G_sysConfigData.avsbus_vdd;
@@ -253,13 +244,27 @@ void avsbus_read_start(const avsbus_type_e i_type,
     else
     {
         l_data = G_sysConfigData.avsbus_vdn;
-        l_trace_type = 'n';
     }
 
 #ifdef AVSDEBUG
+    uint8_t l_cmd_index = 0;
+    char l_trace_cmd = 'V';
+    char l_trace_type = 'd';
+
+    if (i_cmdtype == AVSBUS_CURRENT)
+    {
+        l_cmd_index = 1;
+        l_trace_cmd = 'C';
+    }
+    if (AVSBUS_VDD != i_type)
+    {
+        l_trace_type = 'n';
+    }
+
     static uint32_t L_trace_count[ERRORCOUNT_MAXTYPES][ERRORCOUNT_MAXCMDS] = {{0}};
     uint32_t *      l_trace_count = &L_trace_count[i_type][l_cmd_index];
     uint32_t DEBUG_TRACE_MAX = 2;
+
     if (*l_trace_count < DEBUG_TRACE_MAX)
     {
         TRAC_INFO("avsbus_read_start: Vd%c %c - bus[%d] rail[%d]",

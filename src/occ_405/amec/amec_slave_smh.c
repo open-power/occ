@@ -236,7 +236,7 @@ void amec_slv_check_apss_fail(void)
     Pstate      l_pstate = 0;
     static bool L_lower_pmax_rail = FALSE;
     static bool L_raise_pmax_rail = TRUE;
-    int         rc = 0;
+
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
@@ -264,7 +264,7 @@ void amec_slv_check_apss_fail(void)
                     // There is no Pmax "rail" in P9, just set clips via PGPE
                     l_pstate = proc_freq2pstate(l_pmax_rail_freq);
                     TRAC_INFO("amec_slv_check_apss_fail: attempting to lower Pstate to nominal");
-                    rc = pgpe_set_clip_ranges(l_pstate);
+                    pgpe_set_clip_ranges(l_pstate);
                 }
 
                 L_lower_pmax_rail = TRUE;
@@ -285,7 +285,7 @@ void amec_slv_check_apss_fail(void)
                     // Set the Pmax clip via PGPE
                     l_pstate = proc_freq2pstate(l_pmax_rail_freq);
                     TRAC_INFO("amec_slv_check_apss_fail: attempting to raise Pstate to fmax");
-                    rc = pgpe_set_clip_ranges(l_pstate);
+                    pgpe_set_clip_ranges(l_pstate);
                 }
 
                 L_lower_pmax_rail = FALSE;
