@@ -27,7 +27,8 @@
 
 #include <common.h>
 #include <trac.h>
-
+#include <errl.h>
+#include <occ_service_codes.h>
 
 uint8_t G_host_notifications_pending = 0;
 
@@ -41,6 +42,7 @@ uint8_t G_host_notifications_pending = 0;
 //              - checkstops
 //
 // End Function Specification
+
 void task_misc_405_checks(task_t *i_self)
 {
     if (G_host_notifications_pending != 0)
@@ -49,15 +51,10 @@ void task_misc_405_checks(task_t *i_self)
     }
 
     // Check for checkstops
-/* RTC 168529
-    TODO: replace PORE code with watchdog checking for GPE0 and GPE1
-          and check_stop field no longer exists */
-#if 0
-    pore_status_t l_gpe0_status;
-
     ocb_oisr0_t l_oisr0_status;
-    static bool L_checkstop_traced = FALSE;
-    uint8_t l_reason_code = 0;
+    static bool L_checkstop_traced = false;
+    uint8_t     l_reason_code      = 0;
+    bool        gpe_halt_detected  = false;
 
     do
     {
@@ -70,24 +67,28 @@ void task_misc_405_checks(task_t *i_self)
         // Looked for a frozen GPE, a sign that the chip has stopped working or
         // check-stopped.  This check also looks for an interrupt status flag that
         // indicates if the system has check-stopped.
-        l_gpe0_status.value = in64(PORE_GPE0_STATUS);
-        l_oisr0_status.value = in32(OCB_OISR0);
+        l_oisr0_status.value = in32(OCB_OISR0); // read high order 32 bits of OISR0
 
-        if (l_gpe0_status.fields.freeze_action
-            ||
-            l_oisr0_status.fields.check_stop)
+        gpe_halt_detected =
+            l_oisr0_status.fields.gpe0_error |   // GPE0 halted
+            l_oisr0_status.fields.gpe1_error;    // GPE1 halted
+
+        if (l_oisr0_status.fields.check_stop_ppc405 || gpe_halt_detected)
         {
             errlHndl_t l_err = NULL;
 
-            if (l_gpe0_status.fields.freeze_action)
+            if (gpe_halt_detected)
             {
-                TRAC_IMP("Frozen GPE0 detected by RTL");
+                TRAC_IMP("Frozen GPE detected by RTL, GPE0|GPE1 HALT:[%d|%d], OISR0[0x%08x]",
+                         l_oisr0_status.fields.gpe0_error, l_oisr0_status.fields.gpe1_error,
+                         l_oisr0_status.value);
                 l_reason_code = OCC_GPE_HALTED;
             }
 
-            if (l_oisr0_status.fields.check_stop)
+            if (l_oisr0_status.fields.check_stop_ppc405)
             {
-                TRAC_IMP("System checkstop detected by RTL");
+                TRAC_IMP("System checkstop detected by RTL, OISR0[0x%08x]",
+                         l_oisr0_status.value);
                 l_reason_code = OCC_SYSTEM_HALTED;
             }
 
@@ -97,16 +98,14 @@ void task_misc_405_checks(task_t *i_self)
              * @errortype
              * @moduleid    MAIN_SYSTEM_HALTED_MID
              * @reasoncode  OCC_GPE_HALTED
-             * @userdata1   High order word of PORE_GPE0_STATUS
-             * @userdata2   OCB_OISR0
-             * @devdesc     OCC detected frozen GPE0
+             * @userdata1   OCB_OISR0
+             * @devdesc     OCC detected frozen GPE
              */
             /*
              * @errortype
              * @moduleid    MAIN_SYSTEM_HALTED_MID
              * @reasoncode  OCC_SYSTEM_HALTED
-             * @userdata1   High order word of PORE_GPE0_STATUS
-             * @userdata2   OCB_OISR0
+             * @userdata1   OCB_OISR0
              * @devdesc     OCC detected system checkstop
              */
              l_err = createErrl(MAIN_SYSTEM_HALTED_MID,
@@ -115,8 +114,8 @@ void task_misc_405_checks(task_t *i_self)
                                 ERRL_SEV_INFORMATIONAL,
                                 NULL,
                                 DEFAULT_TRACE_SIZE,
-                                l_gpe0_status.words.high_order,
-                                l_oisr0_status.value);
+                                l_oisr0_status.value,
+                                0 );
 
              // The commit code will check for the frozen GPE0 and system
              // checkstop conditions and take appropriate actions.
@@ -124,7 +123,6 @@ void task_misc_405_checks(task_t *i_self)
         }
     }
     while(0);
-#endif // #if 0
 
 } // end task_misc_405_checks()
 
