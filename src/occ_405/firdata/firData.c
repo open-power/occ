@@ -660,6 +660,9 @@ int32_t FirData_init( FirData_t * io_fd,
             break;
         }
 
+        /* Copy the IPL state from the HOMER data to the PNOR data. */
+        io_fd->pData->iplState = io_fd->hData->iplState;
+
         /* Get the register list byte indexes in HOMER data buffer */
         memset( x, 0x00, sizeof(x) );
         for ( t = FIRST_TRGT; t < MAX_TRGTS; t++ )

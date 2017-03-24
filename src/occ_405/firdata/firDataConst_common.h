@@ -73,4 +73,12 @@ typedef enum
 
 } RegType_t;
 
+/** Indicates the state of the machine when the checkstop occurred. */
+typedef enum
+{
+    FIRDATA_STATE_RUNTIME = 0,
+    FIRDATA_STATE_IPL     = 1,
+
+} IplState_t;
+
 #endif /* __firDataConst_common_h */
