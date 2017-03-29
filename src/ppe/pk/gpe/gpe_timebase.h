@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -50,9 +50,9 @@ uint32_t pk_timebase32_get(void);
 
 #else
 
-    .macro _pk_timebase32_get rT, rA
-        _lwzi \rT, \rA, OCB_OTBR
-    .endm
+.macro _pk_timebase32_get rT, rA
+_lwzi \rT, \rA, OCB_OTBR
+.endm
 #endif  /* __ASSEMBLER__ */
 
 #endif /* __GPE_TIMEBASE_H__ */

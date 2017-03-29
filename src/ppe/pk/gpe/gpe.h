@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -29,15 +29,21 @@
 /// \brief The GPE environment for PK.
 
 // This is a 'circular' reference in PK, but included here to simplify PGAS
-// programming. 
+// programming.
 
 #ifndef HWMACRO_GPE
-#define HWMACRO_GPE
-#include "ppe42.h"
-#endif  
+    #define HWMACRO_GPE
+    #include "ppe42.h"
+#endif
+
+#ifndef PBASLVCTLN
+    #define PBASLVCTLN 0
+#endif
 
 #include "ocb_register_addresses.h"
 #include "gpe_common.h"
+
+#include "pba_register_addresses.h"
 
 /*
 #include "pcbs_register_addresses.h"

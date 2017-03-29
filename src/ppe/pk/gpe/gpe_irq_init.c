@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -46,37 +46,44 @@
 ///
 /// \retval 0 Successful completion
 ///
-/// \retval -PK_INVALID_ARGUMENT_IRQ_SETUP One or more arguments are invalid, 
+/// \retval -PK_INVALID_ARGUMENT_IRQ_SETUP One or more arguments are invalid,
 /// including an invalid \a irq, or invalid \a polarity or \a trigger parameters.
 
 int
 pk_irq_setup(PkIrqId irq,
-              int      polarity,
-              int      trigger)
+             int      polarity,
+             int      trigger)
 {
     PkMachineContext ctx;
 
-    if (PK_ERROR_CHECK_API) {
+    if (PK_ERROR_CHECK_API)
+    {
         PK_ERROR_IF(!OCCHW_IRQ_VALID(irq) ||
                     !OCCHW_IRQ_OWNED(irq) ||
-                     !((polarity == PK_IRQ_POLARITY_ACTIVE_HIGH) ||
-                       (polarity == PK_IRQ_POLARITY_ACTIVE_LOW)) ||
-                     !((trigger == PK_IRQ_TRIGGER_LEVEL_SENSITIVE) ||
-                       (trigger == PK_IRQ_TRIGGER_EDGE_SENSITIVE)),
-                     PK_INVALID_ARGUMENT_IRQ_SETUP);
+                    !((polarity == PK_IRQ_POLARITY_ACTIVE_HIGH) ||
+                      (polarity == PK_IRQ_POLARITY_ACTIVE_LOW)) ||
+                    !((trigger == PK_IRQ_TRIGGER_LEVEL_SENSITIVE) ||
+                      (trigger == PK_IRQ_TRIGGER_EDGE_SENSITIVE)),
+                    PK_INVALID_ARGUMENT_IRQ_SETUP);
     }
 
     pk_critical_section_enter(&ctx);
 
-    if (polarity == PK_IRQ_POLARITY_ACTIVE_HIGH) {
+    if (polarity == PK_IRQ_POLARITY_ACTIVE_HIGH)
+    {
         out32(OCCHW_OIEPR_OR(irq), OCCHW_IRQ_MASK32(irq));
-    } else {
+    }
+    else
+    {
         out32(OCCHW_OIEPR_CLR(irq), OCCHW_IRQ_MASK32(irq));
     }
 
-    if (trigger == PK_IRQ_TRIGGER_EDGE_SENSITIVE) {
+    if (trigger == PK_IRQ_TRIGGER_EDGE_SENSITIVE)
+    {
         out32(OCCHW_OITR_OR(irq), OCCHW_IRQ_MASK32(irq));
-    } else {
+    }
+    else
+    {
         out32(OCCHW_OITR_CLR(irq), OCCHW_IRQ_MASK32(irq));
     }
 
@@ -94,21 +101,22 @@ pk_irq_setup(PkIrqId irq,
 ///
 /// \retval 0 Successful completion
 ///
-/// \retval -PK_INVALID_ARGUMENT_IRQ_HANDLER One or more arguments are 
-/// invalid, including an invalid \a irq, a  null (0) \a handler, 
+/// \retval -PK_INVALID_ARGUMENT_IRQ_HANDLER One or more arguments are
+/// invalid, including an invalid \a irq, a  null (0) \a handler,
 /// or invalid \a priority.
 
 int
 pk_irq_handler_set(PkIrqId      irq,
-                    PkIrqHandler handler,
-                    void          *arg)
+                   PkIrqHandler handler,
+                   void*          arg)
 {
     PkMachineContext ctx;
 
-    if (PK_ERROR_CHECK_API) {
+    if (PK_ERROR_CHECK_API)
+    {
         PK_ERROR_IF(!OCCHW_IRQ_VALID(irq) ||
-                     (handler == 0),
-                     PK_INVALID_ARGUMENT_IRQ_HANDLER);
+                    (handler == 0),
+                    PK_INVALID_ARGUMENT_IRQ_HANDLER);
     }
 
     pk_critical_section_enter(&ctx);
@@ -122,4 +130,4 @@ pk_irq_handler_set(PkIrqId      irq,
 }
 
 
-    
+

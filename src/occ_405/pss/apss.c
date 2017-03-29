@@ -141,17 +141,6 @@ void dumpHexString(const void *i_data, const unsigned int len, const char *strin
 // End Function Specification
 void do_apss_recovery(void)
 {
-#define PSS_START_COMMAND 0x8000000000000000ull
-#define PSS_RESET_COMMAND 0x4000000000000000ull
-    int             l_scom_rc           = 0;
-    uint32_t        l_scom_addr;
-    uint64_t        l_spi_adc_ctrl0;
-    uint64_t        l_spi_adc_ctrl1;
-    uint64_t        l_spi_adc_ctrl2;
-    uint64_t        l_spi_adc_status;
-    uint64_t        l_spi_adc_reset;
-    uint64_t        l_spi_adc_wdata;
-
     if (!G_apss_data_traced)
     {
         INTR_TRAC_ERR("detected invalid power data[%08x%08x]",
@@ -160,147 +149,65 @@ void do_apss_recovery(void)
         G_apss_data_traced = TRUE;
     }
 
-    do
+    // Special error handling on OCC backup. Keep an up/down counter of
+    // fail/success and log predictive error when we reach the limit.
+    if(G_occ_role == OCC_SLAVE)
     {
-        // Collect SPI ADC FFDC data
-        l_scom_addr = SPIPSS_ADC_RESET_REG;
-        l_scom_rc = _getscom(l_scom_addr, &l_spi_adc_reset, SCOM_TIMEOUT);
-        if(l_scom_rc)
+        if(G_backup_fail_count < MAX_BACKUP_FAILURES)
         {
-            break;
+            // Increment the up/down counter
+            G_backup_fail_count++;
         }
-        l_scom_addr = SPIPSS_ADC_CTRL_REG0;
-        l_scom_rc = _getscom(l_scom_addr, &l_spi_adc_ctrl0, SCOM_TIMEOUT);
-        if(l_scom_rc)
+        else
         {
-            break;
+            //We're logging the error so stop running apss tasks
+            rtl_stop_task(TASK_ID_APSS_START);
+            rtl_stop_task(TASK_ID_APSS_CONT);
+            rtl_stop_task(TASK_ID_APSS_DONE);
+
+            INTR_TRAC_INFO("Redundant APSS has exceeded failure threshold.  Logging Error");
+
+            /*
+             * @errortype
+             * @moduleid    PSS_MID_DO_APSS_RECOVERY
+             * @reasoncode  REDUNDANT_APSS_GPE_FAILURE
+             * @userdata1   0
+             * @userdata2   0
+             * @userdata4   OCC_NO_EXTENDED_RC
+             * @devdesc     Redundant APSS failure.  Power Management Redundancy Lost.
+             */
+            errlHndl_t l_err = createErrl(PSS_MID_DO_APSS_RECOVERY,
+                                          REDUNDANT_APSS_GPE_FAILURE,
+                                          OCC_NO_EXTENDED_RC,
+                                          ERRL_SEV_PREDICTIVE,
+                                          NULL,
+                                          DEFAULT_TRACE_SIZE,
+                                          0,
+                                          0);
+
+            // APSS callout
+            addCalloutToErrl(l_err,
+                             ERRL_CALLOUT_TYPE_HUID,
+                             G_sysConfigData.apss_huid,
+                             ERRL_CALLOUT_PRIORITY_HIGH);
+            // Processor callout
+            addCalloutToErrl(l_err,
+                             ERRL_CALLOUT_TYPE_HUID,
+                             G_sysConfigData.proc_huid,
+                             ERRL_CALLOUT_PRIORITY_LOW);
+            // Backplane callout
+            addCalloutToErrl(l_err,
+                             ERRL_CALLOUT_TYPE_HUID,
+                             G_sysConfigData.backplane_huid,
+                             ERRL_CALLOUT_PRIORITY_LOW);
+            // Firmware callout
+            addCalloutToErrl(l_err,
+                             ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                             ERRL_COMPONENT_ID_FIRMWARE,
+                             ERRL_CALLOUT_PRIORITY_MED);
+
+            commitErrl(&l_err);
         }
-        l_scom_addr = SPIPSS_ADC_CTRL_REG1;
-        l_scom_rc = _getscom(l_scom_addr, &l_spi_adc_ctrl1, SCOM_TIMEOUT);
-        if(l_scom_rc)
-        {
-            break;
-        }
-        l_scom_addr = SPIPSS_ADC_CTRL_REG2;
-        l_scom_rc = _getscom(l_scom_addr, &l_spi_adc_ctrl2, SCOM_TIMEOUT);
-        if(l_scom_rc)
-        {
-            break;
-        }
-        l_scom_addr = SPIPSS_ADC_STATUS_REG;
-        l_scom_rc = _getscom(l_scom_addr, &l_spi_adc_status, SCOM_TIMEOUT);
-        if(l_scom_rc)
-        {
-            break;
-        }
-        l_scom_addr = SPIPSS_ADC_WDATA_REG;
-        l_scom_rc = _getscom(l_scom_addr, &l_spi_adc_wdata, SCOM_TIMEOUT);
-        if(l_scom_rc)
-        {
-            break;
-        }
-
-        INTR_TRAC_ERR("70000[%08x] 70001[%08x] 70002[%08x] 70003|70005[%08x] 70010[%08x]",
-                (uint32_t)(l_spi_adc_ctrl0 >> 32),
-                (uint32_t)(l_spi_adc_ctrl1 >> 32),
-                (uint32_t)(l_spi_adc_ctrl2 >> 32),
-                (uint32_t)((l_spi_adc_status >> 32) | (l_spi_adc_reset >> 48)), // Stuff reset register in lower 16 bits
-                (uint32_t)(l_spi_adc_wdata >> 32));
-
-        // Special error handling on OCC backup. Keep an up/down counter of
-        // fail/success and log predictive error when we reach the limit.
-        if(G_occ_role == OCC_SLAVE)
-        {
-            if(G_backup_fail_count < MAX_BACKUP_FAILURES)
-            {
-                // Increment the up/down counter
-                G_backup_fail_count++;
-            }
-            else
-            {
-                //We're logging the error so stop running apss tasks
-                rtl_stop_task(TASK_ID_APSS_START);
-                rtl_stop_task(TASK_ID_APSS_CONT);
-                rtl_stop_task(TASK_ID_APSS_DONE);
-
-                INTR_TRAC_INFO("Redundant APSS has exceeded failure threshold.  Logging Error");
-
-                /*
-                 * @errortype
-                 * @moduleid    PSS_MID_DO_APSS_RECOVERY
-                 * @reasoncode  REDUNDANT_APSS_GPE_FAILURE
-                 * @userdata1   0
-                 * @userdata2   0
-                 * @userdata4   OCC_NO_EXTENDED_RC
-                 * @devdesc     Redundant APSS failure.  Power Management Redundancy Lost.
-                 */
-                errlHndl_t l_err = createErrl(PSS_MID_DO_APSS_RECOVERY,
-                                              REDUNDANT_APSS_GPE_FAILURE,
-                                              OCC_NO_EXTENDED_RC,
-                                              ERRL_SEV_PREDICTIVE,
-                                              NULL,
-                                              DEFAULT_TRACE_SIZE,
-                                              0,
-                                              0);
-
-                // APSS callout
-                addCalloutToErrl(l_err,
-                                 ERRL_CALLOUT_TYPE_HUID,
-                                 G_sysConfigData.apss_huid,
-                                 ERRL_CALLOUT_PRIORITY_HIGH);
-                // Processor callout
-                addCalloutToErrl(l_err,
-                                 ERRL_CALLOUT_TYPE_HUID,
-                                 G_sysConfigData.proc_huid,
-                                 ERRL_CALLOUT_PRIORITY_LOW);
-                // Backplane callout
-                addCalloutToErrl(l_err,
-                                 ERRL_CALLOUT_TYPE_HUID,
-                                 G_sysConfigData.backplane_huid,
-                                 ERRL_CALLOUT_PRIORITY_LOW);
-                // Firmware callout
-                addCalloutToErrl(l_err,
-                                 ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                                 ERRL_COMPONENT_ID_FIRMWARE,
-                                 ERRL_CALLOUT_PRIORITY_MED);
-
-                commitErrl(&l_err);
-
-                break;
-            }
-        }
-
-        INTR_TRAC_INFO("Starting APSS recovery.  fail_count=%d", G_backup_fail_count);
-
-        // Reset the ADC engine
-        l_scom_addr = SPIPSS_ADC_RESET_REG;
-        l_scom_rc = _putscom(l_scom_addr, PSS_RESET_COMMAND, SCOM_TIMEOUT);
-        if(l_scom_rc)
-        {
-            break;
-        }
-
-        // Zero out the reset register
-        l_scom_rc = _putscom(l_scom_addr, 0, SCOM_TIMEOUT);
-        if(l_scom_rc)
-        {
-            break;
-        }
-
-        // Attempt recovery by sending the apss
-        // command that was set up earlier by initialization GPE
-        l_scom_addr = SPIPSS_P2S_COMMAND_REG;
-        l_scom_rc = _putscom(l_scom_addr, PSS_START_COMMAND, SCOM_TIMEOUT);
-        if(l_scom_rc)
-        {
-            break;
-        }
-    }while(0);
-
-    // Just trace it if we get a scom failure trying to collect FFDC
-    if(l_scom_rc)
-    {
-        INTR_TRAC_ERR("apss recovery scom failure. addr=0x%08x, rc=0x%08x", l_scom_addr, l_scom_rc);
     }
 }
 
@@ -347,8 +254,7 @@ void task_apss_start_pwr_meas(struct task *i_self)
         if(G_apss_recovery_requested)
         {
             // Do recovery then wait until next tick to do anything more.
-// TODO: RTC: 163275 Cannot SCOM from the 405. Move to GPE.
-//            do_apss_recovery();
+            do_apss_recovery();
             break;
         }
 
