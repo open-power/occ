@@ -54,9 +54,16 @@
 #define MAX_AMEC_SENSORS            710
 #define VECTOR_SENSOR_DEFAULT_VAL   0xFF
 
+// AMEC_SENSOR_TYPE_INVALID can not be used to identify sensor type.
+// A bit vector mask is used to specify sensor types that AMESTER is
+// probed for, and hence when a new sensor type is defined, it has to
+// have only one bit set in its value (e.g., 0x01<<num). When all types
+// are requested, a 0xFFFF mask (SENSOR_TYPE_ALL) is used to specify all
+// types, which is the case for initial AMESTER sensor scan routine to
+// detect all OCC sensors.
 typedef enum
 {
-    AMEC_SENSOR_TYPE_UNKNOWN    = 0x0000,
+    AMEC_SENSOR_TYPE_INVALID    = 0x0000,    // Not a valid sensor type
     AMEC_SENSOR_TYPE_GENERIC    = 0x0001,
     AMEC_SENSOR_TYPE_CURRENT    = 0x0002,
     AMEC_SENSOR_TYPE_VOLTAGE    = 0x0004,
@@ -69,9 +76,16 @@ typedef enum
     AMEC_SENSOR_TYPE_ALL        = 0xffff,
 }AMEC_SENSOR_TYPE;
 
+// AMEC_SENSOR_LOC_INVALID can not be used to identify sensor location.
+// A bit vector mask is used to specify sensor locations that AMESTER is
+// probed for, and hence when a new sensor type is defined, it has to
+// have exactly one bit set in its value (e.g., 0x01<<num). When sensors
+// from all locations are requested, a 0xFFFF mask (SENSOR_LOC_ALL) is
+// used to specify all locations, and that's the case in the initial
+// AMESTER sensor scan routine.
 typedef enum
 {
-    AMEC_SENSOR_LOC_UNKNOWN     = 0x0000,
+    AMEC_SENSOR_LOC_INVALID     = 0x0000,   // Not a valid sensor location.
     AMEC_SENSOR_LOC_SYS         = 0x0001,
     AMEC_SENSOR_LOC_PROC        = 0x0002,
     AMEC_SENSOR_LOC_LPAR        = 0x0004,
