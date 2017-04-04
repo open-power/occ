@@ -27,7 +27,6 @@
 
 #include <rtls.h>
 
-
 // Reasons why the OCCMISC external interrupt was triggered
 typedef enum
 {

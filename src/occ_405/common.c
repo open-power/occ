@@ -42,7 +42,6 @@ uint8_t G_host_notifications_pending = 0;
 //              - checkstops
 //
 // End Function Specification
-
 void task_misc_405_checks(task_t *i_self)
 {
     if (G_host_notifications_pending != 0)
@@ -51,10 +50,10 @@ void task_misc_405_checks(task_t *i_self)
     }
 
     // Check for checkstops
-    ocb_oisr0_t l_oisr0_status;
-    static bool L_checkstop_traced = false;
-    uint8_t     l_reason_code      = 0;
-    bool        gpe_halt_detected  = false;
+    ocb_oisr0_t  l_oisr0_status;       // OCC Interrupt Source 0 Register
+
+    static bool L_checkstop_traced    = false;
+    uint8_t     l_reason_code         = 0;
 
     do
     {
@@ -63,36 +62,40 @@ void task_misc_405_checks(task_t *i_self)
         {
             break;
         }
-
-        // Looked for a frozen GPE, a sign that the chip has stopped working or
-        // check-stopped.  This check also looks for an interrupt status flag that
+        // Look for a frozen GPE, a sign that the chip has stopped working or
+        // halted.  This check also looks for an interrupt status flag that
         // indicates if the system has check-stopped.
         l_oisr0_status.value = in32(OCB_OISR0); // read high order 32 bits of OISR0
 
-        gpe_halt_detected =
-            l_oisr0_status.fields.gpe0_error |   // GPE0 halted
-            l_oisr0_status.fields.gpe1_error;    // GPE1 halted
 
-        if (l_oisr0_status.fields.check_stop_ppc405 || gpe_halt_detected)
+        if (l_oisr0_status.fields.check_stop_ppc405 ||   // System Checkstop
+            l_oisr0_status.fields.gpe0_error        ||   // GPE0 Halt
+            l_oisr0_status.fields.gpe1_error)            // GPE1 Halt
         {
             errlHndl_t l_err = NULL;
 
-            if (gpe_halt_detected)
+            if (l_oisr0_status.fields.gpe0_error)
             {
-                TRAC_IMP("Frozen GPE detected by RTL, GPE0|GPE1 HALT:[%d|%d], OISR0[0x%08x]",
-                         l_oisr0_status.fields.gpe0_error, l_oisr0_status.fields.gpe1_error,
+                TRAC_IMP("task_misc_405_checks: Frozen GPE0 detected by RTL: OISR0[0x%08x]",
+                         l_oisr0_status.value);
+                l_reason_code = OCC_GPE_HALTED;
+            }
+
+            if (l_oisr0_status.fields.gpe1_error)
+            {
+                TRAC_IMP("task_misc_405_checks: Frozen GPE1 detected by RTL: OISR0[0x%08x]",
                          l_oisr0_status.value);
                 l_reason_code = OCC_GPE_HALTED;
             }
 
             if (l_oisr0_status.fields.check_stop_ppc405)
             {
-                TRAC_IMP("System checkstop detected by RTL, OISR0[0x%08x]",
+                TRAC_IMP("task_misc_405_checks: System checkstop detected by RTL: OISR0[0x%08x]",
                          l_oisr0_status.value);
                 l_reason_code = OCC_SYSTEM_HALTED;
             }
 
-            L_checkstop_traced = TRUE;
+            L_checkstop_traced = true;
 
             /*
              * @errortype

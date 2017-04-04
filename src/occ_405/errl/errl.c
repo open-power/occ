@@ -372,18 +372,20 @@ void addTraceToErrl(
     void * l_traceAddr = io_err;
     uint16_t l_actualSizeOfUsrDtls = 0;
 
-    ocb_oisr0_t l_oisr0_status;
+    ocb_oisr0_t  l_oisr0_status;       // OCC Interrupt Source 0 Register
+
     static bool L_sys_checkstop_traced = FALSE;
 
-
     // Check if there is any system checkstop
-    l_oisr0_status.value = in32(OCB_OISR0);
+    l_oisr0_status.value    = in32(OCB_OISR0);
 
-    if (l_oisr0_status.fields.check_stop_ppc405 && !L_sys_checkstop_traced)
+    // Level triggered interrupts?
+    if (l_oisr0_status.fields.check_stop_ppc405 &&
+        !L_sys_checkstop_traced)
     {
-        L_sys_checkstop_traced = TRUE;
-        TRAC_IMP("addTraceToErrl: System checkstop detected: ppc405, OISR0[0x%08x]",
-                 l_oisr0_status.value);
+            L_sys_checkstop_traced = TRUE;
+            TRAC_IMP("addTraceToErrl: System checkstop detected: ppc405, OISR0[0x%08x]",
+                     l_oisr0_status.value);
     }
 
     // 1. Check if error log is not null
