@@ -122,7 +122,7 @@ void task_dcom_rx_slv_inbox( task_t *i_self)
 
 #ifdef DCOM_DEBUG
             uint64_t l_end = ssx_timebase_get();
-            DCOM_DBG("1.1 Got Doorbell from Master after waiting %d us\n",(int)( (l_end-l_start) / ( SSX_TIMEBASE_FREQUENCY_HZ / 1000000 ) ));
+                DCOM_DBG("1.1 Got Doorbell from Master after waiting %d us\n",(int)( (l_end-l_start) / ( SSX_TIMEBASE_FREQUENCY_HZ / 1000000 ) ));
 #endif
             G_dcomTime.slave.doorbellStopWaitRx = ssx_timebase_get();
             uint64_t l_delta = G_dcomTime.slave.doorbellStopWaitRx - G_dcomTime.slave.doorbellStartWaitRx;
@@ -645,7 +645,7 @@ void task_dcom_wait_for_master( task_t *i_self)
             // Set up the master pbax unicast target for sending doorbells to the master
             l_rc = pbax_target_create(&G_pbax_unicast_target,   //target
                                       PBAX_UNICAST,             //type
-                                      PBAX_GROUP,               //scope
+                                      PBAX_SYSTEM,              //scope
                                       1,                        //queue
                                       l_pbaxid.node_id,         //node
                                       l_pbaxid.chip_id,         //chip (or group) id
