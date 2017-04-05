@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -196,11 +196,10 @@ bool cent_chan_checkstop(const uint8_t i_cent)
     uint64_t l_data;
     int      l_scom_rc = 0;
 
-    // Determine scom address of MCIFIR register
-    l_scom_addr = MCS0_MCIFIR_N(i_cent);
+    // TODO: RTC 163359 Centaur support
+    // We are unable to SCOM from the 405, so this scom was removed.
+    // Will need to determine how to get this information in the future.
 
-    // Do a getscom on MCIFIR register for i_cent
-    l_scom_rc = getscom_ffdc(l_scom_addr, &l_data, 0);
     if(!l_scom_rc)
     {
         //check for channel checkstop (bit 31)

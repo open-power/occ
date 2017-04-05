@@ -299,6 +299,8 @@ void apss_continue_pwr_meas_read(ipc_msg_t* cmd, void* arg)
                 break;
             }
 
+            busy_wait(5);
+
             // Start SPI Transaction
             regValue = 0x8000000000000000;
             rc = putscom_abs(SPIPSS_ADC_COMMAND_REG, regValue);

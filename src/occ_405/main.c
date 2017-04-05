@@ -280,12 +280,13 @@ void pmc_hw_error_isr(void *private, SsxIrqId irq, int priority)
  * End Function Specification
  */
 //NOTE: use "putscom pu 6B111 0 3 101 -ib -p1" to inject the error.
-#define OCC_LFIR_SPARE_BIT50 0x0000000000002000ull //gm031
+#define OCC_LFIR_SPARE_BIT50 0x0000000000002000ull
 void occ_hw_error_isr(void *private, SsxIrqId irq, int priority)
 {
     //set bit 50 of the OCC LFIR so that the PRDF component will log an error and callout the processor
     //TMGT will also see a problem and log an error but it will be informational.
-    _putscom(OCB_OCCLFIR_OR, OCC_LFIR_SPARE_BIT50, SCOM_TIMEOUT);
+
+    // TODO: Determine how to set this without a SCOM.
 
     //Halt occ so that hardware will enter safe mode
     OCC_HALT(ERRL_RC_OCC_HW_ERROR);

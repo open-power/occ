@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -111,9 +111,6 @@ void dcom_initialize_roles(void)
 
     // Locals
     pba_xcfg_t pbax_cfg_reg;
-
-    // Used as a debug tool to correlate time between OCCs & System Time
-    // getscom_ffdc(OCB_OTBR, &G_dcomTime.tod, NULL); // Commits errors internally
 
     G_dcomTime.tod = in64(OCB_OTBR) >> 4;
     G_dcomTime.base = ssx_timebase_get();
