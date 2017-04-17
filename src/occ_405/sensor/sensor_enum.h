@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -98,6 +98,7 @@ enum e_gsid
     PWRAPSSCH14,
     PWRAPSSCH15,
     CUR12VSTBY,        // 12V Standby Current
+    VRHOTMEMPRCCNT,
 
     // ------------------------------------------------------
     // Chip Sensors

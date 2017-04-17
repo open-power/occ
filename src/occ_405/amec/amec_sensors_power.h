@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/amec/amec_sensors_power.h $                           */
+/* $Source: src/occ_405/amec/amec_sensors_power.h $                       */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -47,7 +47,15 @@
 void amec_update_apss_sensors(void);
 
 // Function that is called by AMEC State Machine that will update the AMEC
+// sensors for GPIO data collected from the APSS.
+void amec_update_apss_gpio(void);
+
+// Function that is called by AMEC State Machine that will update the AMEC
 // sensors for data that comes from the AVS Bus (Voltage/Current)
 void amec_update_avsbus_sensors(void);
+
+// Function called by the AMEC state machine until GPU configuration is
+// successfully determined
+void amec_update_gpu_configuration(void);
 
 #endif // _AMEC_SENSORS_POWER_H

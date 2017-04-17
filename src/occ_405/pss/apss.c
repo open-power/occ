@@ -770,7 +770,6 @@ void task_apss_complete_pwr_meas(struct task *i_self)
     APSS_DBG("task_apss_complete_pwr_meas: finished w/rc=0x%08X\n", G_gpe_complete_pwr_meas_read_args.error.rc);
     APSS_DBG_HEXDUMP(&G_gpe_complete_pwr_meas_read_args, sizeof(G_gpe_complete_pwr_meas_read_args), "G_gpe_complete_pwr_meas_read_args");
 
-
 } // end task_apss_complete_pwr_meas
 
 bool apss_gpio_get(uint8_t i_pin_number, uint8_t *o_pin_value)
@@ -784,9 +783,9 @@ bool apss_gpio_get(uint8_t i_pin_number, uint8_t *o_pin_value)
         bool l_dcom_data_valid = FALSE;
         int i=0;
 
-        for(;i<sizeof(G_dcom_slv_inbox_rx);i++)
+        for(;i < NUM_OF_APSS_GPIO_PORTS; i++ )
         {
-            if( ((char*)&G_dcom_slv_inbox_rx)[i] != 0 )
+            if( G_dcom_slv_inbox_rx.gpio[i] != 0 )
             {
               l_dcom_data_valid = TRUE;
               break;

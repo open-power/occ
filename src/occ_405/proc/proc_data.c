@@ -654,17 +654,27 @@ void nest_dts_init(void)
 void task_24x7(task_t * i_task)
 {
     static uint8_t L_numTicks = 0x00;  // never called since OCC started
+    static bool    L_idle_trace = FALSE;
 
     if (!G_24x7_disabled)
     {
        // Schedule 24x7 task if idle
        if (!async_request_is_idle(&G_24x7_request.request))
        {
-           INTR_TRAC_ERR("task_24x7: request not idle");
+           if(!L_idle_trace)
+           {
+               INTR_TRAC_ERR("task_24x7: request not idle");
+               L_idle_trace = TRUE;
+           }
            L_numTicks++;
        }
        else
        {
+         if(L_idle_trace)
+         {
+            INTR_TRAC_INFO("task_24x7: previously was not idle and is now idle after %d ticks", L_numTicks);
+            L_idle_trace = FALSE;
+         }
          // Clear errors and init parameters for GPE task
          G_24x7_parms.error.error = 0;
          G_24x7_parms.numTicksPassed = L_numTicks;

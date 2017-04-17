@@ -54,6 +54,17 @@
 // This holds the converted ADC Reads
 uint32_t G_lastValidAdcValue[MAX_APSS_ADC_CHANNELS] = {0};
 
+// Indicates if we have determined GPU presence
+bool G_gpu_config_done = FALSE;
+
+// Bitmap of GPUs present
+uint32_t G_first_proc_gpu_config = 0;
+uint32_t G_first_sys_gpu_config = 0;
+uint32_t G_first_num_gpus_sys = 0;
+uint32_t G_curr_proc_gpu_config = 0;
+uint32_t G_curr_sys_gpu_config = 0;
+uint32_t G_curr_num_gpus_sys = 0;
+
 // There are only MAX_APSS_ADC_CHANNELS channels.  Therefore if the channel value
 // is greater then the MAX, then there was no channel associated with the function id.
 #define ADC_CONVERTED_VALUE(i_chan) \
@@ -63,9 +74,9 @@ extern uint8_t G_occ_interrupt_type;
 extern bool    G_vrm_thermal_monitoring;
 extern bool    G_apss_present;
 
-//*************************************************************************
+//*************************************************************************/
 // Code
-//*************************************************************************
+//*************************************************************************/
 
 // Function Specification
 //
@@ -231,6 +242,8 @@ void amec_update_apss_sensors(void)
                     sensor_update(AMECSENSOR_PTR(PWRAPSSCH0 + l_idx), (uint16_t) temp32);
                 }
             }
+
+            amec_update_apss_gpio();
         }
 
         // ----------------------------------------------------------
@@ -395,6 +408,9 @@ void amec_update_apss_sensors(void)
 
         //Count of number of updates.
         g_pwr250us_over30sec.count++;
+
+        // Check the GPU presence signals
+        amec_update_gpu_configuration();
 
         // ----------------------------------------------------
         // Clear Flag to indicate that AMEC has received the data.
@@ -691,7 +707,167 @@ void amec_update_avsbus_sensors(void)
 
 } // end amec_update_avsbus_sensors()
 
+// Function Specification
+//
+// Name: amec_update_apss_gpio
+//
+// Description: Updates sensors based on the GPIO data from the APSS
+//
+// Thread: RealTime Loop
+//
+// End Function Specification
+void amec_update_apss_gpio(void)
+{
+    // GPIO port numbers from system model
+    uint8_t * l_vrhot_port_nums = G_sysConfigData.apss_gpio_map.vr_fan;
 
+    // Actual values of the GPIO
+    uint8_t   l_vrhot0 = 1, l_vrhot1 = 1;
+
+    // Data is valid?
+    uint8_t   l_valid0 = FALSE, l_valid1 = FALSE;
+
+    // Get value from most recent APSS data
+    l_valid0 = apss_gpio_get(l_vrhot_port_nums[0], &l_vrhot0); //GPIO_VR_HOT_MEM_PROC_0
+    l_valid1 = apss_gpio_get(l_vrhot_port_nums[1], &l_vrhot1); //GPIO_VR_HOT_MEM_PROC_1
+
+    // Only log once
+    static uint8_t L_err_logged;
+
+    // These signals are active low
+    if( (l_valid0 && !l_vrhot0) || (l_valid1 && !l_vrhot1) )
+    {
+        // Update the sensor indicating that one of the vrhot signals was asserted
+        sensor_update(AMECSENSOR_PTR(VRHOTMEMPRCCNT), 1);
+
+        // Only log once
+        if(!L_err_logged)
+        {
+            INTR_TRAC_ERR("GPIO_VR_HOT_MEM_PROC_0[%d, valid=%d] GPIO_VR_HOT_MEM_PROC_1[%d, valid=%d]",
+                 l_vrhot0, l_valid0, l_vrhot1, l_valid1);
+            /*
+             * @errortype
+             * @moduleid    AMEC_UPDATE_APSS_GPIO
+             * @reasoncode  VR_HOT_MEM_PROC_ASSERTED
+             * @userdata1   0
+             * @userdata2   0
+             * @userdata4   OCC_NO_EXTENDED_RC
+             * @devdesc     GPIO_VR_HOT_MEM_PROC_0/1 was asserted
+             */
+            errlHndl_t l_err = createErrl(AMEC_UPDATE_APSS_GPIO,
+                                          VR_HOT_MEM_PROC_ASSERTED,
+                                          OCC_NO_EXTENDED_RC,
+                                          ERRL_SEV_INFORMATIONAL,
+                                          NULL,
+                                          DEFAULT_TRACE_SIZE,
+                                         0,
+                                          0);
+
+            // Manufacturing error only
+            setErrlActions(l_err, ERRL_ACTIONS_MANUFACTURING_ERROR);
+
+            // Processor callout
+            addCalloutToErrl(l_err,
+                             ERRL_CALLOUT_TYPE_HUID,
+                             G_sysConfigData.proc_huid,
+                             ERRL_CALLOUT_PRIORITY_HIGH);
+
+            // APSS callout
+            addCalloutToErrl(l_err,
+                             ERRL_CALLOUT_TYPE_HUID,
+                             G_sysConfigData.apss_huid,
+                             ERRL_CALLOUT_PRIORITY_LOW);
+
+            commitErrl(&l_err);
+
+            L_err_logged = TRUE;
+        }
+    }
+    else if ( (l_valid0 && l_vrhot0) && (l_valid1 && l_vrhot1) )
+    {
+        sensor_update(AMECSENSOR_PTR(VRHOTMEMPRCCNT), 0);
+    }
+}
+
+// Function Specification
+//
+// Name: amec_update_gpu_configuration
+//
+// Description: Checks the APSS data to see which GPUs are present
+//
+// Thread: RealTime Loop
+//
+// End Function Specification
+void amec_update_gpu_configuration(void)
+{
+    // GPIO port numbers from system model
+    uint8_t * l_gpu_port_nums = G_sysConfigData.apss_gpio_map.gpu;
+
+    // Actual values of the GPIO
+    uint8_t   l_gpu_pres = 1;
+
+    // Data is valid?
+    bool   l_valid = FALSE;
+    bool   l_all_valid = FALSE;
+
+    uint8_t   i = 0;
+    uint8_t   l_start_proc = (G_pbax_id.chip_id * GPU_PRES_SIGN_PER_OCC);
+
+    uint8_t   l_valid_bitmask_proc = 0; // Bitmask for present GPUs behind just this proc
+    uint8_t   l_valid_bitmask_sys = 0;  // Bitmask for present GPUs behind both procs
+    uint8_t   l_num_gpus_sys = 0;       // Number of GPUs both procs
+
+    // Check which GPUs are present
+    for( i=0; i < MAX_GPU_PRES_SIGNALS; i++ )
+    {
+        l_valid = apss_gpio_get(l_gpu_port_nums[i], &l_gpu_pres);
+
+        // Presence signal is active low
+        l_gpu_pres = (l_gpu_pres ? 0 : 1);
+        if(l_valid)
+        {
+            l_all_valid = TRUE;
+
+            // Keep track of number and configuration of GPUs behind both procs
+            l_num_gpus_sys += l_gpu_pres;
+            l_valid_bitmask_sys |= (l_gpu_pres << i);
+
+            // Also want to keep a separate tally of GPUs behind only this proc
+            if( (i >= l_start_proc) && (i < (l_start_proc + GPU_PRES_SIGN_PER_OCC)) )
+            {
+                l_valid_bitmask_proc |= (l_gpu_pres << (i - l_start_proc));
+            }
+        }
+        else
+        {
+            l_all_valid = FALSE;
+            break;
+        }
+    }
+
+    // If all GPU signals are valid, update the global if this is the first read.
+    // If this is not the first read, make sure that the signals match the first.
+    if(l_all_valid)
+    {
+        G_curr_proc_gpu_config = l_valid_bitmask_proc;
+        G_curr_sys_gpu_config = l_valid_bitmask_sys;
+        G_curr_num_gpus_sys = l_num_gpus_sys;
+        if(!G_gpu_config_done)
+        {
+            G_gpu_config_done = TRUE;
+            G_first_proc_gpu_config = l_valid_bitmask_proc;
+            G_first_sys_gpu_config = l_valid_bitmask_sys;
+            G_first_num_gpus_sys = l_num_gpus_sys;
+            TRAC_IMP("GPU presence detection completed. GPU configuration for this OCC: 0x%08X, total[%d]",
+                     G_curr_proc_gpu_config, G_curr_num_gpus_sys);
+        }
+        else if (G_curr_sys_gpu_config != G_first_sys_gpu_config)
+        {
+            TRAC_ERR("GPU presence has changed unexpectedly! Old:0x%02X, New:0x%02X",
+                     G_first_sys_gpu_config, l_valid_bitmask_sys);
+        }
+    }
+}
 /*----------------------------------------------------------------------------*/
 /* End                                                                        */
 /*----------------------------------------------------------------------------*/

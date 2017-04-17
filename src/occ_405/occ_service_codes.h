@@ -65,6 +65,8 @@ enum occReasonCode
     VRM_ERROR_TEMP                  = 0x20,
     /// VR_FAN  - AVS Bus over-temperature reported
     VRM_VRFAN_WARNING               = 0x22,
+    /// GPIO_VR_HOT_MEM_PROC signal from APSS asserted
+    VR_HOT_MEM_PROC_ASSERTED        = 0x23,
     /// DIMM reached error threshold
     DIMM_ERROR_TEMP                 = 0x30,
     /// Frequency limited due to oversubscription condition
