@@ -50,6 +50,7 @@ dcom_slv_outbox_doorbell_t G_dcom_slv_outbox_doorbell_tx;
 // Make sure that the Slave Outbox TX Buffer is 1kB, otherwise cause
 // error on the compile.
 STATIC_ASSERT(  (NUM_BYTES_IN_SLAVE_OUTBOX != (sizeof(G_dcom_slv_outbox_tx)))  );
+uint32_t G_slave_pbax_rc = 0;
 
 // Function Specification
 //
@@ -160,6 +161,13 @@ void task_dcom_tx_slv_outbox( task_t *i_self)
 
     do
     {
+        // If there was a pbax_send failure, trace it here since we can't do it in the critical
+        // interrupt context.
+        if(G_slave_pbax_rc)
+        {
+           TRAC_ERR("task_dcom_tx_slv_outbox: PBAX Send Failure in transimitting doorbell - RC[%08X]", G_slave_pbax_rc);
+        }
+
         // Build/setup outbox
         uint32_t l_addr_in_mem = dcom_build_slv_outbox();
         uint32_t l_ssxrc = 0;
@@ -327,7 +335,6 @@ void task_dcom_tx_slv_outbox( task_t *i_self)
 // End Function Specification
 void dcom_tx_slv_outbox_doorbell( void )
 {
-    static bool l_error = FALSE;
     int         l_pbarc = 0;
     uint64_t    l_tmp =0;
 
@@ -340,12 +347,8 @@ void dcom_tx_slv_outbox_doorbell( void )
                 l_tmp,
                 SSX_MICROSECONDS(15));
 
-    if ( l_pbarc != 0 && l_error == FALSE )
-    {
-        // Failure occurred
-        // This is running in a critical interrupt context.  Tracing not allowed!
-        l_error = TRUE;
-    }
+    // Set this global so we know to trace this in the non-critical interrupt context
+    G_slave_pbax_rc = l_pbarc;
 }
 
 #endif //_DCOMSLAVETOMASTER_C

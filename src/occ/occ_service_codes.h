@@ -91,6 +91,10 @@ enum occReasonCode
     TARGET_FREQ_FAILURE             = 0xB4,
     /// RTL detected a system checkstop
     OCC_SYSTEM_HALTED               = 0xB5,
+    ///  Reset PBA Queue due to PBAX Read Failure
+    PBAX_QUEUE_RESET                = 0xBA,
+    ///  PBAX failure sending doorbell to slaves
+    PBAX_ERROR                      = 0xBB,
     ///  Request to read APSS data failed.
     APSS_GPE_FAILURE                = 0xC0,
     /// Connector overcurrent pin still asserted.

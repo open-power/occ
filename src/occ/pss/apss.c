@@ -307,7 +307,6 @@ void task_apss_start_pwr_meas(struct task *i_self)
 {
     int             l_rc                = 0;
     static bool     L_scheduled         = FALSE;
-    static bool     L_idle_traced       = FALSE;
     static bool     L_ffdc_collected    = FALSE;
 
     // Create/schedule GPE_start_pwr_meas_read (non-blocking)
@@ -317,11 +316,7 @@ void task_apss_start_pwr_meas(struct task *i_self)
     {
         if (!async_request_is_idle(&G_meas_start_request.request))
         {
-            if (!L_idle_traced)
-            {
-                TRAC_ERR("task_apss_start_pwr_meas: request is not idle.");
-                L_idle_traced = TRUE;
-            }
+            TRAC_ERR("task_apss_start_pwr_meas: request is not idle.");
             break;
         }
 
@@ -455,7 +450,6 @@ void task_apss_continue_pwr_meas(struct task *i_self)
 {
     int         l_rc                = 0;
     static bool L_scheduled         = FALSE;
-    static bool L_idle_traced       = FALSE;
     static bool L_ffdc_collected    = FALSE;
 
     // Create/schedule GPE_apss_continue_pwr_meas_read (non-blocking)
@@ -465,11 +459,7 @@ void task_apss_continue_pwr_meas(struct task *i_self)
     {
         if (!async_request_is_idle(&G_meas_cont_request.request))
         {
-            if (!L_idle_traced)
-            {
-                TRAC_ERR("task_apss_continue_pwr_meas: request is not idle.");
-                L_idle_traced = TRUE;
-            }
+            TRAC_ERR("task_apss_continue_pwr_meas: request is not idle.");
             break;
         }
 
@@ -672,7 +662,6 @@ void task_apss_complete_pwr_meas(struct task *i_self)
 {
     int         l_rc                = 0;
     static bool L_scheduled         = FALSE;
-    static bool L_idle_traced       = FALSE;
     static bool L_ffdc_collected    = FALSE;
 
     // Create/schedule GPE_apss_complete_pwr_meas_read (non-blocking)
@@ -682,11 +671,7 @@ void task_apss_complete_pwr_meas(struct task *i_self)
     {
         if (!async_request_is_idle(&G_meas_complete_request.request))
         {
-            if (!L_idle_traced)
-            {
-                TRAC_ERR("task_apss_complete_pwr_meas: request is not idle.");
-                L_idle_traced = TRUE;
-            }
+            TRAC_ERR("task_apss_complete_pwr_meas: request is not idle.");
             break;
         }
 

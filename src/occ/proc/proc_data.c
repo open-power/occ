@@ -363,8 +363,8 @@ void task_core_data( task_t * i_task )
                 if (G_get_per_core_data_max_schedule_intervals[l_current_core] < l_elapsed_us)
                 {
                     G_get_per_core_data_max_schedule_intervals[l_current_core] = l_elapsed_us;
-                    TRAC_INFO("New max get_per_core_data interval: core=%d, interval(us)=%d",
-                              l_current_core, l_elapsed_us);
+//                    TRAC_INFO("New max get_per_core_data interval: core=%d, interval(us)=%d",
+//                              l_current_core, l_elapsed_us);
                 }
                 // Also sniff if the request has actually completed, it is checked above but
                 // the schedule proceeds regardless which could be dangerous...

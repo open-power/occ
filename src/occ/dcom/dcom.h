@@ -519,4 +519,7 @@ void dcom_build_occfw_msg( dcom_error_type_t i_which_msg );
 // Copy OCC DCM Sync Messages
 void dcom_build_dcm_sync_msg(const dcom_error_type_t i_which_msg);
 
+// Handle PBAX Error
+void dcom_pbax_error_handler(const uint8_t i_queue);
+
 #endif //_DCOM_H

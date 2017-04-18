@@ -379,7 +379,7 @@ void dcom_initialize_pbax_queues(void)
                 break;
             }
 
-            // create pbax rx queue o
+            // create pbax rx queue 0
             l_rc = pbax_queue_create( &G_pbax_read_queue[0],//queue
                     ASYNC_ENGINE_PBAX_PUSH0,                //engine
                     G_pbax_queue_rx0_buffer,                //cq base
@@ -808,6 +808,131 @@ void task_dcom_parse_occfwmsg(task_t *i_self)
 
     // clear slave event flags if master has acknowledged them and the event has cleared
     G_slave_event_flags = (G_slave_event_flags & (~(G_dcom_slv_inbox_rx.occ_fw_mailbox[3])));
+}
+
+// Function Specification
+//
+// Name: dcom_pbax_error_handler
+//
+// Description: Handle an error from a pbax_read call
+//
+// End Function Specification
+void dcom_pbax_error_handler(const uint8_t i_queue)
+{
+    uint64_t     l_pba_errpt2 = 0;
+    uint64_t     l_pba_fir = 0;
+    pba_xshcsn_t l_pba_shcs;
+    pba_xcfg_t   l_pbax_cfg;
+
+    SsxAddress   l_pba_shcs_addr = PBA_XSHCS0;
+    int          l_pba_errpt_scom_rc = 0;
+    int          l_pba_fir_scom_rc = 0;
+    errlHndl_t   l_err = NULL;
+    static bool  L_pba_reset_logged[2] = {FALSE};
+
+    // Skip if waiting for a reset, no sense in trying to recover when going to be reset anyway
+    if((TRUE == isSafeStateRequested()) || (CURRENT_STATE() == OCC_STATE_SAFE))
+       return;
+
+    if(i_queue == 1)
+       l_pba_shcs_addr = PBA_XSHCS1;
+
+    l_pba_shcs.words.high_order = in32(l_pba_shcs_addr);
+
+    TRAC_ERR("dcom_pbax_error_handler: Start error handler for queue %d PBA_XSHCS[0x%08x]",
+              i_queue,
+              l_pba_shcs.words.high_order);
+
+    do
+    {
+       l_pba_fir_scom_rc = _getscom(PBA_FIR, &l_pba_fir, SCOM_TIMEOUT);
+       if(l_pba_fir_scom_rc)
+       {
+          // trace scom failure and skip clearing pba fir
+          TRAC_ERR("dcom_pbax_error_handler: Failure reading PBA_FIR rc[%08x]",
+                    l_pba_fir_scom_rc);
+       }
+
+       l_pba_errpt_scom_rc = _getscom(PBA_ERRPT2, &l_pba_errpt2, SCOM_TIMEOUT);
+       if(l_pba_errpt_scom_rc)
+       {
+          // trace scom failure
+          TRAC_ERR("dcom_pbax_error_handler: Failure reading PBA_ERRPT2 rc[%08x]",
+                    l_pba_errpt_scom_rc);
+       }
+
+       TRAC_ERR("dcom_pbax_error_handler: PBA_FIR[0x%08x%08x] PBA_ERRPT2[0x%08x%08x]",
+                 (uint32_t)(l_pba_fir >> 32),
+                 (uint32_t)(l_pba_fir & 0x00000000ffffffffull),
+                 (uint32_t)(l_pba_errpt2 >> 32),
+                 (uint32_t)(l_pba_errpt2 & 0x00000000ffffffffull));
+
+       // reset queue and clear the error condition to allow future pbax reads
+
+       // 1. Disable the pushQ and reset the read & write pointer by writing 0 to push_enable (bit 31)
+       l_pba_shcs.fields.push_enable = 0;
+       out32(l_pba_shcs_addr, l_pba_shcs.words.high_order);
+
+       // 2. Clear the error status by setting rcv_reset (bit 3) in the PBAX CFG register
+       l_pbax_cfg.value = in64(PBA_XCFG);
+       l_pbax_cfg.fields.rcv_reset = 1;
+       out64(PBA_XCFG, l_pbax_cfg.value);
+
+
+       // 3.  Clear bits 32 and 35 in PBAFIR and zero out PBAERRPT2
+       // only clear PBAFIR if it was successfully read
+       if(!l_pba_fir_scom_rc)
+       {
+          l_pba_fir &= (~0x0000000090000000);
+          l_pba_fir_scom_rc = _putscom(PBA_FIR, l_pba_fir, SCOM_TIMEOUT);
+          if(l_pba_fir_scom_rc)
+          {
+             TRAC_ERR("dcom_pbax_error_handler: Failure writing 0x%08x%08x to PBA_FIR rc[%08x]",
+                       (uint32_t)(l_pba_fir >> 32),
+                       (uint32_t)(l_pba_fir & 0x00000000ffffffffull),
+                       l_pba_fir_scom_rc);
+          }
+
+       }
+
+       // to clear error report 2 write to error report 0
+       l_pba_errpt_scom_rc = _putscom(PBA_ERRPT0, 0, SCOM_TIMEOUT);
+       if(l_pba_errpt_scom_rc)
+       {
+          TRAC_ERR("dcom_pbax_error_handler: Failure writing 0 to PBA_ERRPT0 rc[%08x]",
+                    l_pba_errpt_scom_rc);
+       }
+
+       // 4.  Reenable the pushQ (set push_enable bit 31)
+       l_pba_shcs.fields.push_enable = 1;
+       out32(l_pba_shcs_addr, l_pba_shcs.words.high_order);
+
+       TRAC_INFO("dcom_pbax_error_handler: Success resetting queue %d PBA_XSHCS[0x%08x] PBA_XCFG[0x%08x]",
+                  i_queue, in32(l_pba_shcs_addr), in32(PBA_XCFG));
+
+       if(L_pba_reset_logged[i_queue] == FALSE)
+       {
+          // log error to indicate queue was reset
+          /* @
+           * @errortype
+           * @moduleid    DCOM_MID_PBAX_ERROR_HANDLER
+           * @reasoncode  PBAX_QUEUE_RESET
+           * @userdata1   PBA queue
+           * @userdata4   OCC_NO_EXTENDED_RC
+           * @devdesc     PBAX queue reset
+           */
+           l_err = createErrl( DCOM_MID_PBAX_ERROR_HANDLER,    //modId
+                               PBAX_QUEUE_RESET,               //reasoncode
+                               OCC_NO_EXTENDED_RC,             //Extended reason code
+                               ERRL_SEV_INFORMATIONAL,         //Severity
+                               NULL,                           //Trace Buf
+                               DEFAULT_TRACE_SIZE,             //Trace Size
+                               i_queue,                        //userdata1
+                               0);                             //userdata2
+           commitErrl(&l_err);
+           L_pba_reset_logged[i_queue] = TRUE;
+       }
+    }while(0);
 }
 
 #endif //_DCOM_C

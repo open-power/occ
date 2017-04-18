@@ -74,7 +74,6 @@ VOID cmdh_snapshot_find_oldest_newest(uint8_t  *o_oldest,
            (g_cmdh_snapshot_array[0].current_id == 0) &&
            (g_cmdh_snapshot_array[CMDH_SNAPSHOT_MAX_INDEX].current_id == 0))
         {
-            TRAC_INFO("cmdh_snapshot_find_oldest_newest: Entry 0 is the oldest and newest");
             *o_oldest = 0;
             *o_newest = 0;
             break;
@@ -141,7 +140,6 @@ ERRL_RC cmdh_snapshot_buffer_nonite(const cmdh_fsp_cmd_t *i_cmd_ptr,
         // Check case where there are no snapshot buffers available.
         if (g_cmdh_snapshot_cur_index == CMDH_SNAPSHOT_DEFAULT_CUR_INDEX)
         {
-            TRAC_INFO("cmdh_snapshot_buffer_nonite: No snapshot buffer available.");
             break;
         }
 
@@ -170,8 +168,6 @@ ERRL_RC cmdh_snapshot_buffer_nonite(const cmdh_fsp_cmd_t *i_cmd_ptr,
 
             if (i == CMDH_SNAPSHOT_MAX)
             {
-                TRAC_INFO("cmdh_snapshot_buffer_nonite: Requested buffer:%u not found so sending back %u",
-                          l_cmd_ptr->requested_id, l_rsp_ptr->newest_id);
                 l_req_idx = l_newest;
             }
         }
@@ -319,8 +315,6 @@ errlHndl_t cmdh_snapshot_sync(const cmdh_fsp_cmd_t * i_cmd_ptr,
             break;
         }
 
-        TRAC_INFO("cmdh_snapshot_sync: Snapshot buffer has been reset!");
-
         l_resp_ptr->data_length[0] = 0;
         l_resp_ptr->data_length[1] = 0;
         l_resp_ptr->rc = 0;
@@ -370,8 +364,6 @@ void cmdh_snapshot_callback(void * arg)
 
     if (g_cmdh_snapshot_reset)
     {
-        TRAC_INFO("cmdh_snapshot_callback: Initializing snapshot buffer and data.");
-
         memset(g_cmdh_snapshot_array, 0, sizeof(g_cmdh_snapshot_array));
         g_cmdh_snapshot_cur_id  = 0;
         memset(L_cim_buf,0,sizeof(cmdh_snapshot_buffer_t));

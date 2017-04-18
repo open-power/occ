@@ -333,11 +333,17 @@ void task_dcom_rx_slv_inbox( task_t *i_self)
 // End Function Specification
 uint32_t dcom_rx_slv_inbox_doorbell( void )
 {
-    static bool l_trace_once       = FALSE;
-    int         l_pbarc            = 0;
-    uint32_t    l_read             = 0;
-    uint32_t    l_bytes_so_far     = 0;
-    uint64_t    l_start            = ssx_timebase_get();
+    int           l_pbarc            = 0;
+    uint32_t      l_read             = 0;
+    uint32_t      l_bytes_so_far     = 0;
+    uint64_t      l_start            = ssx_timebase_get();
+    pba_xshcsn_t  l_pba_shcs0;
+    uint8_t       l_num_queue_entires = 0;
+    uint8_t       l_write_ptr = 0;
+    uint8_t       l_read_ptr = 0;
+    uint8_t       l_queue_full = 0;
+    bool          l_read_2_doorbells = FALSE;
+
 
     G_dcomTime.slave.doorbellStartRx = l_start;
 
@@ -357,18 +363,18 @@ uint32_t dcom_rx_slv_inbox_doorbell( void )
         if ( l_pbarc != 0 )
         {
             G_dcomTime.slave.doorbellErrorFlags.hwError = 1;
-            if ( FALSE == l_trace_once )
-            {
-                // Failure occurred but only trace it once
-                TRAC_ERR("PBAX Read Failure in receiving multicast doorbell - RC[%08X]", l_pbarc);
-                l_trace_once  = TRUE;
-            }
+            // Failure occurred
+            TRAC_ERR("Slave PBAX Read Failure in receiving doorbell from master - RC[%08X]", l_pbarc);
+
+            // Handle pbax read failure on queue 0
+            dcom_pbax_error_handler(0);
             break;
         }
 
         // Didn't read any bytes from pbax.  We are either done, or we
         // simply don't have any data to read
-        if(0 == l_read){
+        if(0 == l_read)
+        {
             if ((ssx_timebase_get() - l_start) > SSX_MICROSECONDS(3))
             {
                 if(l_bytes_so_far){
@@ -425,7 +431,51 @@ uint32_t dcom_rx_slv_inbox_doorbell( void )
                }
                G_dcomTime.slave.doorbellSeq = G_dcom_slv_inbox_doorbell_rx.magic_counter;
            }
-           break;
+
+           // if there is another full doorbell on the queue read that out to empty the queue
+           // and use that data as it is newer
+           l_pba_shcs0.value = in64(PBA_XSHCS0);
+           l_queue_full = l_pba_shcs0.fields.push_full;
+           l_write_ptr = (uint8_t)(l_pba_shcs0.fields.push_write_ptr);
+           l_read_ptr = (uint8_t)(l_pba_shcs0.fields.push_read_ptr);
+
+           // pointer is for an 8 byte queue entry, doorbell size is 128B == 16 queue entries
+           // when pointers equal each other that can be either empty or full so we need to
+           // check the full bit to handle that case
+           if(l_read_ptr > l_write_ptr)
+           {
+              l_num_queue_entires = NUM_ENTRIES_PBAX_QUEUE0 - (l_read_ptr - l_write_ptr);
+           }
+           else
+           {
+              l_num_queue_entires = l_write_ptr - l_read_ptr;
+           } 
+           if(l_queue_full || (l_num_queue_entires >= 16))
+           {
+              TRAC_IMP("dcom_rx_slv_inbox_doorbell: 2 doorbells PBA_XSHCS0[0x%08x]: full = %d 8B entries = %d read = %d write = %d",
+                        l_pba_shcs0.words.high_order,
+                        l_queue_full,
+                        l_num_queue_entires,
+                        l_read_ptr,
+                        l_write_ptr);
+              if(l_read_2_doorbells)
+              {
+                 // this shoud never happen but not going to read a 3rd to prevent infinite loop
+                 // we will either drain on next tick or overflow and recover from overflow
+                 TRAC_ERR("dcom_rx_slv_inbox_doorbell:  3rd full doorbell present!!! PBA_XSHCS0[0x%08x]",
+                          l_pba_shcs0.words.high_order);
+                 break;
+              }
+              // set up to start reading the 2nd doorbell
+              l_read_2_doorbells = TRUE;
+              l_read = 0;
+              l_bytes_so_far = 0;
+              l_start = ssx_timebase_get();
+           }
+           else
+           {
+             break;
+           }
         }
     }
 
@@ -486,7 +536,6 @@ void task_dcom_wait_for_master( task_t *i_self)
                 // We didn't get a doorbell from the Master, increment our
                 // counter
                 L_no_master_doorbell_cnt++;
-
 
                 if (L_no_master_doorbell_cnt % L_trace_every_count == 0)
                 {
@@ -650,8 +699,7 @@ void task_dcom_wait_for_master( task_t *i_self)
         {
              TRAC_INFO("[%d] Restablished contact via doorbell from Master (after %d ticks)",(int) G_pob_id.chip_id, L_no_master_doorbell_cnt);
 
-             // Inform AMEC that Pmax_rail doesn't need to be lowered and reset
-             // the no_master_doorbell counter
+             // reset the no_master_doorbell counter
              L_no_master_doorbell_cnt = 0;
              L_trace_every_count = 1;
         }

@@ -71,12 +71,14 @@ uint16_t G_apss_fail_updown_count = 0x0000;
 uint32_t dcom_build_slv_inbox(void)
 {
     // Locals
-    uint32_t l_addr_of_slv_inbox_in_main_mem = 0;
-    uint32_t l_slv_idx = 0;
-    uint32_t l_core_idx = 0;
-    uint32_t l_cntr_idx = 0;
-    uint32_t l_mem_intr_idx = 0;
-
+    uint32_t            l_addr_of_slv_inbox_in_main_mem = 0;
+    uint32_t            l_slv_idx = 0;
+    uint32_t            l_core_idx = 0;
+    uint32_t            l_cntr_idx = 0;
+    uint32_t            l_mem_intr_idx = 0;
+    errlHndl_t          l_err = NULL;
+    static uint16_t     L_master_pbax_send_fail_count = 0;
+    static bool         L_error_logged = FALSE;
     static uint8_t      L_seq = 0xFF;
 
     L_seq++;
@@ -85,8 +87,38 @@ uint32_t dcom_build_slv_inbox(void)
     // interrupt context.
     if(G_pbax_rc)
     {
-        TRAC_INFO("PBAX Send Failure in transimitting multicast doorbell - RC[%08X], packet[%d]", G_pbax_rc, G_pbax_packet);
+        L_master_pbax_send_fail_count++;
+        TRAC_ERR("PBAX Send Failure in transimitting multicast doorbell - RC[%08X], packet[%d] Num fails %d",
+                  G_pbax_rc, G_pbax_packet, L_master_pbax_send_fail_count);
+
+        // There is nothing we can do if we cannot get the doorbell across (hw retry threshold of 0xFF was found
+        // to not be enough for heavy workloads running at frequency close to nest) log an error here so it is
+        // known that lack of power data is due to pbax send failures.  An OCC reset does not clear this condition
+        // so no reason to reset the OCC here.
+        if ((L_master_pbax_send_fail_count == APSS_DATA_FAIL_PMAX_RAIL) && (!L_error_logged))
+        {
+          /* @
+           * @errortype
+           * @moduleid    DCOM_MID_BUILD_SLV_INBOX
+           * @reasoncode  PBAX_ERROR
+           * @userdata1   Number of consecutive pbax send failures
+           * @userdata4   OCC_NO_EXTENDED_RC
+           * @devdesc     PBAX send failure sending data to slaves
+           */
+           l_err = createErrl( DCOM_MID_BUILD_SLV_INBOX,       //modId
+                               PBAX_ERROR,                     //reasoncode
+                               OCC_NO_EXTENDED_RC,             //Extended reason code
+                               ERRL_SEV_INFORMATIONAL,         //Severity
+                               NULL,                           //Trace Buf
+                               DEFAULT_TRACE_SIZE,             //Trace Size
+                               L_master_pbax_send_fail_count,  //userdata1
+                               0);                             //userdata2
+           commitErrl(&l_err);
+           L_error_logged = TRUE;
+        }
     }
+    else
+       L_master_pbax_send_fail_count = 0;
 
 
     // INBOX...............
@@ -371,7 +403,6 @@ void task_dcom_tx_slv_inbox( task_t *i_self)
                     l_ssx_failure = TRUE;
                     break;
                 }
-
                 // Request created at least once
                 L_bce_slv_inbox_tx_request_created_once = TRUE;
                 l_ssxrc = bce_request_schedule(&G_slv_inbox_tx_pba_request); // Actual copying
@@ -400,8 +431,6 @@ void task_dcom_tx_slv_inbox( task_t *i_self)
         else
         {
             // check time and break out if we reached limit
-            // TODO: shrink this later depending on how much
-            // work we are doing in RTL
             if ((ssx_timebase_get() - l_start) < SSX_MICROSECONDS(150))
             {
                 continue;
@@ -524,7 +553,8 @@ void dcom_tx_slv_inbox_doorbell( void )
 
         // Set this global so we know to trace this in the non-critical interrupt context
         G_pbax_rc = l_pbarc;
-        if ( (l_pbarc != 0 ) )
+
+        if (l_pbarc != 0)
         {
             G_pbax_packet = l_jj;
             // Trace causes a panic in a critical interrupt! Don't trace here!(tries to pend a semaphore)
@@ -543,7 +573,6 @@ void dcom_tx_slv_inbox_doorbell( void )
     G_dcomTime.master.doorbellSeq = G_dcom_slv_inbox_doorbell_tx.magic_counter;
     G_dcomTime.master.doorbellNumSent++;
 
-    DCOM_DBG("Sent multicast doorbell\n");
 }
 #endif //_DCOMMASTERTOSLAVE_C
 
