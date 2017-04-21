@@ -23,7 +23,7 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 #define GLOBAL_CFG_USE_IPC  // have lib/occlib/ipc_structs.h use "ipc_func_ids.h"
-#define OCCHW_IRQ_ROUTE_OWNER 4
+#define OCCHW_IRQ_ROUTE_OWNER 3
 
 /// All GPE's will use the external timebase register
 #define APPCFG_USE_EXT_TIMEBASE

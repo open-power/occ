@@ -23,7 +23,6 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-
 #include "occ_common.h"
 #include "occhw_async.h"
 #include "pgpe_interface.h"
@@ -37,19 +36,17 @@
 #include "occ_sys_config.h"
 #include "ssx.h"
 #include "wof.h"
+#include "amec_sys.h"
 
 // Maximum waiting time (usec) for clip update IPC task
-#define CLIP_UPDATE_TIMEOUT 5
-
-extern opal_static_table_t  G_opal_static_table;
+#define CLIP_UPDATE_TIMEOUT 100  // maximum waiting time (usec) for clip update IPC task
 
 extern pstateStatus G_proc_pstate_status;
 extern PMCR_OWNER G_proc_pmcr_owner;
 
 extern uint16_t G_proc_fmax_mhz;
 
-extern GPE_BUFFER(PstatesClips* G_core_data_control_gpewrite_ptr);
-extern GPE_BUFFER(PstatesClips* G_core_data_control_occwrite_ptr);
+extern bool G_simics_environment;
 
 // IPC GPE Requests
 GpeRequest G_clip_update_req;
@@ -58,9 +55,9 @@ GpeRequest G_start_suspend_req;
 GpeRequest G_wof_control_req;
 GpeRequest G_wof_vfrt_req;
 
-// The the GPE parameter fields for PGPE IPC calls.
-GPE_BUFFER(ipcmsg_clip_update_t*  G_clip_update_parms_ptr);
-GPE_BUFFER(ipcmsg_set_pmcr_t*     G_pmcr_set_parms_ptr);
+// GPE parameter fields for PGPE IPC calls
+GPE_BUFFER(ipcmsg_clip_update_t   G_clip_update_parms);
+GPE_BUFFER(ipcmsg_set_pmcr_t      G_pmcr_set_parms);
 GPE_BUFFER(ipcmsg_start_stop_t    G_start_suspend_parms);
 GPE_BUFFER(ipcmsg_wof_control_t   G_wof_control_parms);
 GPE_BUFFER(ipcmsg_wof_vfrt_t      G_wof_vfrt_parms);
@@ -76,12 +73,6 @@ GPE_BUFFER(ipcmsg_wof_vfrt_t      G_wof_vfrt_parms);
 void init_pgpe_ipcs(void)
 {
     errlHndl_t  err = NULL;    // Error handler
-
-    //Set PMCR IPC task parameters to gpewrite's quad pstates data structure
-    G_pmcr_set_parms_ptr = &G_core_data_control_gpewrite_ptr->pstates;
-
-    //Set Clip IPC task parameters to gpewrite's quad pstates data structure
-    G_clip_update_parms_ptr = &G_core_data_control_gpewrite_ptr->clips;
 
     do
     {
@@ -112,17 +103,6 @@ void init_pgpe_ipcs(void)
     {
         REQUEST_RESET(err);
     }
-    else
-    {
-        // Initialization used in the task_core_data_control for PGPE success
-        // checks made before the first clip/pstate IPC message to be ever sent
-        // from either of the two double buffers.
-        G_core_data_control_occwrite_ptr->clips.msg_cb.rc   = PGPE_RC_SUCCESS;
-        G_core_data_control_occwrite_ptr->pstates.msg_cb.rc = PGPE_RC_SUCCESS;
-
-        G_core_data_control_gpewrite_ptr->clips.msg_cb.rc   = PGPE_RC_SUCCESS;
-        G_core_data_control_gpewrite_ptr->pstates.msg_cb.rc = PGPE_RC_SUCCESS;
-    }
 
     return;
 }
@@ -142,11 +122,13 @@ errlHndl_t pgpe_init_clips(void)
 
     do
     {
+        G_clip_update_parms.msg_cb.rc = PGPE_RC_SUCCESS;
+
         //Initializes the GpeRequest object for pgpe clips setting IPC
         rc = gpe_request_create(&G_clip_update_req,         // GpeRequest for the task
                                 &G_async_gpe_queue2,        // Queue
                                 IPC_MSGID_405_CLIPS,        // Function ID
-                                G_clip_update_parms_ptr,    // Task parameters
+                                &G_clip_update_parms,       // Task parameters
                                 SSX_WAIT_FOREVER,           // Timeout (none)
                                 NULL,                       // Callback
                                 NULL,                       // Callback arguments
@@ -197,11 +179,13 @@ errlHndl_t pgpe_init_pmcr(void)
 
     do
     {
+        G_pmcr_set_parms.msg_cb.rc = PGPE_RC_SUCCESS;
+
         //Initializes the GpeRequest object for pgpe PMCR setting IPC
         rc = gpe_request_create(&G_pmcr_set_req,            // GpeRequest for the task
                                 &G_async_gpe_queue2,        // Queue
                                 IPC_MSGID_405_SET_PMCR,     // Function ID
-                                G_pmcr_set_parms_ptr,       // Task parameters
+                                &G_pmcr_set_parms,          // Task parameters
                                 SSX_WAIT_FOREVER,           // Timeout (none)
                                 NULL,                       // Callback
                                 NULL,                       // Callback arguments
@@ -413,9 +397,9 @@ errlHndl_t pgpe_init_wof_vfrt(void)
 //
 // Name: pgpe_set_clip_blocking
 //
-// Description: a blocking version of pgpe_set_clip_ranges
+// Description: a blocking version of pgpe_clip_update
 //              this call waits until the clip IPC task completes,
-//              and verifies this was a successful completion.
+//              and verifies a successful completion.
 //
 // End Function Specification
 int pgpe_set_clip_blocking(Pstate i_pstate)
@@ -465,10 +449,9 @@ int pgpe_set_clip_blocking(Pstate i_pstate)
         // Previous task is finished
         if( !err )
         {
-            // the function call to set the clips
-            rc = pgpe_set_clip_ranges(i_pstate);
-
-            // clip update task failed
+            // set the all quads to same pstate and submit the update
+            memset(G_desired_pstate, i_pstate, MAXIMUM_QUADS);
+            rc = pgpe_clip_update();
             if(rc)
             {
                 break;
@@ -525,12 +508,12 @@ int pgpe_set_clip_blocking(Pstate i_pstate)
         }
 
         // IPC task completed. check for errors
-        if ( G_clip_update_parms_ptr->msg_cb.rc != PGPE_RC_SUCCESS )
+        if ( G_clip_update_parms.msg_cb.rc != PGPE_RC_SUCCESS )
         {
             // clip update IPC call has not completed, trace and log an error
             TRAC_ERR("pgpe_set_clip_blocking: clip update IPC task "
                      "returned an error [0x%08X]",
-                     G_clip_update_parms_ptr->msg_cb.rc);
+                     G_clip_update_parms.msg_cb.rc);
 
             /*
              * @errortype
@@ -547,7 +530,7 @@ int pgpe_set_clip_blocking(Pstate i_pstate)
                 ERRL_SEV_PREDICTIVE,                  //Severity
                 NULL,                                 //Trace Buf
                 DEFAULT_TRACE_SIZE,                   //Trace Size
-                G_clip_update_parms_ptr->msg_cb.rc,   //Userdata1
+                G_clip_update_parms.msg_cb.rc,   //Userdata1
                 0                                     //Userdata2
                 );
 
@@ -563,40 +546,6 @@ int pgpe_set_clip_blocking(Pstate i_pstate)
     return(rc);
 }
 
-
-// Function Specification
-//
-// Name: pgpe_set_clip_ranges
-//
-// Description: Sets PGPE clip ranges between minimum pstate,
-//              and maximum pstate allowed in the specified
-//              "i_pstate" parameter. Since this IPC call is
-//              non-blocking, the caller has to assure that
-//              IPC clip update task is idle,  wait for IPC task
-//              completion, then check the pgpe return value.
-//
-// End Function Specification
-int pgpe_set_clip_ranges(Pstate i_pstate)
-{
-    int         rc = 0;      // return code
-    uint8_t     quad;        // Loop variable
-
-    Pstate      pmin = pmin_rail();
-    Pstate      pmax = i_pstate;
-
-    // Set clip bounds
-    for(quad=0; quad<MAXIMUM_QUADS; quad++)
-    {
-        // Minimum pstate
-        G_clip_update_parms_ptr->ps_val_clip_min[quad] = pmin;
-
-        // Max pstate
-        G_clip_update_parms_ptr->ps_val_clip_max[quad] = pmax;
-    }
-
-    rc = pgpe_clip_update();
-    return(rc);
-}
 
 // Function Specification
 //
@@ -660,15 +609,20 @@ int pgpe_clip_update(void)
             l_wait_time++;
         }
 
-        // @TODO: remove this precompile directive check when PGPE code is integrated.
-        //        RTC: 163934
-#ifdef PGPE_SUPPORT
-        // Schedule PGPE clip update IPC task
-        rc = gpe_request_schedule(&G_clip_update_req);
-#else
-        G_start_suspend_parms.msg_cb.rc = PGPE_RC_SUCCESS;
-        rc = 0;
-#endif
+        if (!G_simics_environment)
+        {
+            // Set clip bounds
+            memset(G_clip_update_parms.ps_val_clip_min, proc_freq2pstate(g_amec->sys.fmin), MAXIMUM_QUADS);
+            memcpy(G_clip_update_parms.ps_val_clip_max, G_desired_pstate, sizeof(G_desired_pstate));
+
+            // Schedule PGPE clip update IPC task
+            rc = gpe_request_schedule(&G_clip_update_req);
+        }
+        else
+        {
+            G_start_suspend_parms.msg_cb.rc = PGPE_RC_SUCCESS;
+            rc = 0;
+        }
         // Confirm Successfull completion of PGPE clip update task
         if(rc != 0)
         {
@@ -789,21 +743,18 @@ void pgpe_start_suspend_callback(void)
 // End Function Specification
 int pgpe_start_suspend(uint8_t action, PMCR_OWNER owner)
 {
-    int rc;                    // return code
+    int rc = 0;                // return code
     errlHndl_t  err = NULL;    // Error handler
 
     // set the IPC parameters
     G_start_suspend_parms.action     = action;
     G_start_suspend_parms.pmcr_owner = owner;
 
-    // @TODO: remove this precompile directive check when PGPE code is integrated.
-    //        RTC: 163934
-#ifdef PGPE_SUPPORT
-    // Schedule PGPE start_suspend task
-    rc = gpe_request_schedule(&G_start_suspend_req);
-#else
-    rc = 0;
-#endif
+    if (!G_simics_environment)
+    {
+        // Schedule PGPE start_suspend task
+        rc = gpe_request_schedule(&G_start_suspend_req);
+    }
 
     // couldn't schedule the IPC task?
     if(rc != 0)
@@ -839,9 +790,10 @@ int pgpe_start_suspend(uint8_t action, PMCR_OWNER owner)
         G_proc_pstate_status = PSTATES_IN_TRANSITION;
     }
 
-#ifndef PGPE_SUPPORT
-    pgpe_start_suspend_callback();
-#endif
+    if (G_simics_environment)
+    {
+        pgpe_start_suspend_callback();
+    }
 
     return rc;
 }
@@ -859,7 +811,7 @@ int pgpe_start_suspend(uint8_t action, PMCR_OWNER owner)
 // End Function Specification
 int pgpe_pmcr_set(void)
 {
-    int rc;                  // return code
+    int rc = 0;              // return code
     errlHndl_t  err = NULL;  // Error handler
 
     do
@@ -902,14 +854,11 @@ int pgpe_pmcr_set(void)
             break;
         }
 
-        // @TODO: remove this precompile directive check when PGPE code is integrated.
-        //        RTC: 163934
-#ifdef PGPE_SUPPORT
-        // Schedule PGPE PMCR update IPC task
-        rc = gpe_request_schedule(&G_pmcr_set_req);
-#else
-        rc = 0;
-#endif
+        if (!G_simics_environment)
+        {
+            // Schedule PGPE PMCR update IPC task
+            rc = gpe_request_schedule(&G_pmcr_set_req);
+        }
 
         // Confirm Successfull completion of PGPE PMCR update task
         if(rc != 0)

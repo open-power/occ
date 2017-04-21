@@ -72,7 +72,7 @@ void task_misc_405_checks(task_t *i_self)
             l_oisr0_status.fields.gpe0_error        ||   // GPE0 Halt
             l_oisr0_status.fields.gpe1_error)            // GPE1 Halt
         {
-            errlHndl_t l_err = NULL;
+            //errlHndl_t l_err = NULL;
 
             if (l_oisr0_status.fields.gpe0_error)
             {
@@ -85,6 +85,13 @@ void task_misc_405_checks(task_t *i_self)
             {
                 TRAC_IMP("task_misc_405_checks: Frozen GPE1 detected by RTL: OISR0[0x%08x]",
                          l_oisr0_status.value);
+                /*
+                 * @errortype
+                 * @moduleid    MAIN_SYSTEM_HALTED_MID
+                 * @reasoncode  OCC_GPE_HALTED
+                 * @userdata1   OCB_OISR0
+                 * @devdesc     OCC detected frozen GPE
+                 */
                 l_reason_code = OCC_GPE_HALTED;
             }
 
@@ -92,25 +99,20 @@ void task_misc_405_checks(task_t *i_self)
             {
                 TRAC_IMP("task_misc_405_checks: System checkstop detected by RTL: OISR0[0x%08x]",
                          l_oisr0_status.value);
+                /*
+                 * @errortype
+                 * @moduleid    MAIN_SYSTEM_HALTED_MID
+                 * @reasoncode  OCC_SYSTEM_HALTED
+                 * @userdata1   OCB_OISR0
+                 * @devdesc     OCC detected system checkstop
+                 */
                 l_reason_code = OCC_SYSTEM_HALTED;
             }
 
             L_checkstop_traced = true;
 
-            /*
-             * @errortype
-             * @moduleid    MAIN_SYSTEM_HALTED_MID
-             * @reasoncode  OCC_GPE_HALTED
-             * @userdata1   OCB_OISR0
-             * @devdesc     OCC detected frozen GPE
-             */
-            /*
-             * @errortype
-             * @moduleid    MAIN_SYSTEM_HALTED_MID
-             * @reasoncode  OCC_SYSTEM_HALTED
-             * @userdata1   OCB_OISR0
-             * @devdesc     OCC detected system checkstop
-             */
+            // TODO: RTC 168529 - disable elog until fixed
+#if 0
              l_err = createErrl(MAIN_SYSTEM_HALTED_MID,
                                 l_reason_code,
                                 OCC_NO_EXTENDED_RC,
@@ -123,6 +125,7 @@ void task_misc_405_checks(task_t *i_self)
              // The commit code will check for the frozen GPE0 and system
              // checkstop conditions and take appropriate actions.
              commitErrl(&l_err);
+#endif
         }
     }
     while(0);

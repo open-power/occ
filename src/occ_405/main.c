@@ -1095,13 +1095,14 @@ void read_hcode_headers()
         read_wof_header();
         CHECKPOINT(WOF_IMAGE_HEADER_READ);
 
-        // PGPE Beacon is not implemented in simics yet
-        if(!G_simics_environment)
+        // PGPE Beacon is not implemented in simics
+        if (!G_simics_environment)
         {
             // define DTLB for OCC/PGPE shared SRAM, which enables access
             // to OCC-PGPE Shared SRAM space, including pgpe_beacon
             create_tlb_entry(G_pgpe_header.shared_sram_addr, G_pgpe_header.shared_sram_length);
         }
+
     } while(0);
 }
 
@@ -1580,38 +1581,38 @@ void Main_thread_routine(void *private)
     slave_occ_init();
     CHECKPOINT(SLAVE_OCC_INITIALIZED);
 
-    // @TODO: remove this precompile directive check when PGPE code is integrated.
-    ///       RTC: 163934
-#ifndef PGPE_SUPPORT
-    extern pstateStatus G_proc_pstate_status;
-    // TEMP Hack to enable Active State, until PGPE is ready
-    G_proc_pstate_status = PSTATES_ENABLED;
+    if (G_simics_environment)
+    {
+        extern pstateStatus G_proc_pstate_status;
+        // TEMP Hack to enable Active State, until PGPE is ready
+        G_proc_pstate_status = PSTATES_ENABLED;
 
 
-    // Temp hack to Set up Key Globals for use by proc_freq2pstate functions
-//    G_oppb.frequency_max_khz  = 4322500;
-//    G_oppb.frequency_min_khz  = 2028250;
-    G_oppb.frequency_max_khz  = 2600000;
-    G_oppb.frequency_min_khz  = 2000000;
-    G_oppb.frequency_step_khz = 16667;
-    G_oppb.pstate_min         = PMAX +
-        ((G_oppb.frequency_max_khz - G_oppb.frequency_min_khz)/G_oppb.frequency_step_khz);
+        // Temp hack to Set up Key Globals for use by proc_freq2pstate functions
+        //G_oppb.frequency_max_khz  = 4322500;
+        //G_oppb.frequency_min_khz  = 2028250;
+        G_oppb.frequency_max_khz  = 2600000;
+        G_oppb.frequency_min_khz  = 2000000;
+        G_oppb.frequency_step_khz = 16667;
+        G_oppb.pstate_min         = PMAX +
+            ((G_oppb.frequency_max_khz - G_oppb.frequency_min_khz)/G_oppb.frequency_step_khz);
 
-    G_proc_fmax_mhz   = G_oppb.frequency_max_khz / 1000;
+        G_proc_fmax_mhz   = G_oppb.frequency_max_khz / 1000;
 
 
-    // Set globals used by amec for pcap calculation
-    // could have used G_oppb.frequency_step_khz in PCAP calculations
-    // instead, but using a separate varaible speeds up PCAP related
-    // calculations significantly, by eliminating division operations.
-    G_mhz_per_pstate = G_oppb.frequency_step_khz/1000;
+        // Set globals used by amec for pcap calculation
+        // could have used G_oppb.frequency_step_khz in PCAP calculations
+        // instead, but using a separate varaible speeds up PCAP related
+        // calculations significantly, by eliminating division operations.
+        G_mhz_per_pstate = G_oppb.frequency_step_khz/1000;
 
-    TRAC_INFO("Main_thread_routine: Pstate Key globals initialized to default values");
-
-#else
-    // Read hcode headers (PPMR, OCC pstate parameter block, PGPE, WOF)
-    read_hcode_headers();
-#endif
+        TRAC_INFO("Main_thread_routine: Pstate Key globals initialized to default values");
+    }
+    else
+    {
+        // Read hcode headers (PPMR, OCC pstate parameter block, PGPE, WOF)
+        read_hcode_headers();
+    }
 
     // Initialize watchdog timers. This needs to be right before
     // start rtl to make sure timer doesn't timeout. This timer is being

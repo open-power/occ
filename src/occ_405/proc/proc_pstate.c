@@ -53,6 +53,8 @@ extern OCCPstateParmBlock G_oppb;
 //Holds Fmax for ease of proc_freq2pstate calculation = max(fturbo,futurbo)
 uint16_t G_proc_fmax_mhz;
 
+uint8_t         G_desired_pstate[MAXIMUM_QUADS];
+
 // A global variable indicating whether the pstates have been enabled.
 // initialized to PSTATES_DISABLED, turns to PSTATES_ENABLED only after
 // the PGPE IPC that enable pstates completes successfully. While the IPC
@@ -112,7 +114,7 @@ uint32_t proc_pstate2freq(Pstate i_pstate)
 // End Function Specification
 Pstate proc_freq2pstate(uint32_t i_freq_mhz)
 {
-    int8_t   l_pstate = PSTATE_MIN;
+    int8_t   l_pstate = 0;
     int8_t   l_temp_pstate = 0;
     int32_t  l_temp_freq = 0;
     uint32_t l_freq_khz = 0;
@@ -247,7 +249,7 @@ void populate_opal_static_config_data(void)
     G_opal_static_table.config.valid    = 1;
     G_opal_static_table.config.version  = 0x90;
     G_opal_static_table.config.occ_role = G_occ_role;
-    G_opal_static_table.config.pmin     = pmin_rail();
+    G_opal_static_table.config.pmin     = proc_freq2pstate(g_amec->sys.fmin);
     G_opal_static_table.config.pnominal = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL]);
     G_opal_static_table.config.pturbo   = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO]);
     G_opal_static_table.config.puturbo  = proc_freq2pstate(G_proc_fmax_mhz);
@@ -449,29 +451,4 @@ void update_dynamic_opal_data (void)
     // copy sram image into mainstore HOMER
     populate_opal_tbl_to_mem(OPAL_DYNAMIC);
     TRAC_IMP("update_dynamic_opal_data: updated dynamic OPAL data");
-}
-
-
-// Function Specification
-//
-// Name: pmin_rail
-//
-// Description: returns the smaller pstate (for narrower set of pstates) of:
-//                    1) the min pstate from the PGPE pstate table
-//                and 2) the TMGT configured min pstate
-//
-// End Function Specification
-uint8_t pmin_rail(void)
-{
-    uint8_t  configMinPstate =
-        proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY]);
-
-    if(configMinPstate < G_oppb.pstate_min)
-    {
-        return configMinPstate;
-    }
-    else
-    {
-        return G_oppb.pstate_min;
-    }
 }

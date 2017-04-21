@@ -233,7 +233,6 @@ void amec_slv_check_apss_fail(void)
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
     uint32_t    l_pmax_rail_freq = g_amec->proc[0].pwr_votes.apss_pmax_clip_freq;
-    Pstate      l_pstate = 0;
     static bool L_lower_pmax_rail = FALSE;
     static bool L_raise_pmax_rail = TRUE;
 
@@ -256,16 +255,9 @@ void amec_slv_check_apss_fail(void)
                 // Lower the Pmax_rail to nominal
                 l_pmax_rail_freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL];
 
-                // Let the slave voting box handle the clip in KVM
+                // Let the slave voting box handle the clip
                 // to take in account all reasons for clip changes
-                if(!G_sysConfigData.system_type.kvm)
-                {
-                    // Set the Pmax clip via PGPE
-                    // There is no Pmax "rail" in P9, just set clips via PGPE
-                    l_pstate = proc_freq2pstate(l_pmax_rail_freq);
-                    TRAC_INFO("amec_slv_check_apss_fail: attempting to lower Pstate to nominal");
-                    pgpe_set_clip_ranges(l_pstate);
-                }
+                TRAC_INFO("amec_slv_check_apss_fail: Updating apss pmax clip freq to nominal");
 
                 L_lower_pmax_rail = TRUE;
                 L_raise_pmax_rail = FALSE;
@@ -278,15 +270,9 @@ void amec_slv_check_apss_fail(void)
                 // Raise the Pmax rail back
                 l_pmax_rail_freq = G_proc_fmax_mhz;
 
-                // Let the slave voting box handle the clip in KVM
+                // Let the slave voting box handle the clip
                 // to take in account all reasons for clip changes
-                if(!G_sysConfigData.system_type.kvm)
-                {
-                    // Set the Pmax clip via PGPE
-                    l_pstate = proc_freq2pstate(l_pmax_rail_freq);
-                    TRAC_INFO("amec_slv_check_apss_fail: attempting to raise Pstate to fmax");
-                    pgpe_set_clip_ranges(l_pstate);
-                }
+                TRAC_INFO("amec_slv_check_apss_fail: Updating apss pmax clip freq to fmax");
 
                 L_lower_pmax_rail = FALSE;
                 L_raise_pmax_rail = TRUE;
@@ -523,7 +509,7 @@ void amec_slv_state_4(void)
 
 /* Not yet supported  TODO Centaur support RTC 163359
   //-------------------------------------------------------
-  // Update Centaur sensors (for this tick) 
+  // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
   amec_update_centaur_sensors(CENTAUR_4);
 */

@@ -22,7 +22,6 @@
 /* permissions and limitations under the License.                         */
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
-
 //*************************************************************************/
 // Includes
 //*************************************************************************/
@@ -250,13 +249,10 @@ void task_poke_watchdogs(struct task * i_self)
     if(true == L_check_pgpe_beacon)
     {
         // Examine pgpe Beacon every other call (every 4ms)
-        //@TODO: remove when PGPE code is integrated, RTC: 163934
-#ifdef PGPE_SUPPORT
         if(!G_simics_environment) // PGPE Beacon is not implemented in simics
         {
             check_pgpe_beacon();
         }
-#endif
     }
 
     // toggle pgpe beacon check flag, check only once every other call (every 4ms)
@@ -471,12 +467,14 @@ void check_pgpe_beacon(void)
     static bool     L_first_pgpe_beacon_check   = true;  // First time examining Beacon?
     static bool     L_pgpe_beacon_unchanged_4ms = false; // pgpe beacon unchanged once (4ms)
     static bool     L_error_logged              = false; // trace and error log only once
-    errlHndl_t      l_err                       = NULL;  // Error handler
+    //errlHndl_t      l_err                       = NULL;  // Error handler
+    static bool L_unchanged_traced = false;
+    static int  L_unchanged_count = 0;
 
     do
     {
-        // return PGPE Beacon
-        pgpe_beacon = in32(G_pgpe_header.beacon_sram_addr);
+        // return PGPE Beacon (use non-cachable address)
+        pgpe_beacon = in32(G_pgpe_header.beacon_sram_addr & 0xF7FFFFFF);
 
         // in first invocation, just initialize L_prev_pgpe_beacon
         // don't check if the PGPE Beacon value changed
@@ -491,51 +489,64 @@ void check_pgpe_beacon(void)
         // that PGPE Beacon has changed relative to previous reading
         if(pgpe_beacon == L_prev_pgpe_beacon)
         {
+            ++L_unchanged_count;
             if(false == L_pgpe_beacon_unchanged_4ms)
             {
                 // First time beacon unchaged (4ms), mark flag
                 L_pgpe_beacon_unchanged_4ms = true;
+                if(L_unchanged_traced == false)
+                {
+                    TRAC_ERR("Error PGPE Beacon didnt change for 4ms: 0x%08X", pgpe_beacon);
+                    L_unchanged_traced = true;
+                }
                 break;
             }
-            else if (false == L_error_logged)
+            else
             {
-                L_error_logged = true;
-
                 // Second time beacon unchanged (8ms), log timeout error
-                TRAC_ERR("Error PGPE Beacon didn't change for 8 ms: %d",
-                         pgpe_beacon);
-                /*
-                 * @errortype
-                 * @moduleid    POKE_WD_TIMERS
-                 * @reasoncode  PGPE_FAILURE
-                 * @userdata1   PGPE Beacon Value
-                 * @userdata2   PGPE Beacon Address
-                 * @userdata4   ERC_PGPE_BEACON_TIMEOUT
-                 * @devdesc     PGPE Beacon timeout
-                 */
-                l_err = createErrl(POKE_WD_TIMERS,             // mod id
-                                   PGPE_FAILURE,               // reason code
-                                   ERC_PGPE_BEACON_TIMEOUT,    // Extended reason code
-                                   ERRL_SEV_UNRECOVERABLE,     // severity
-                                   NULL,                       // trace buffer
-                                   DEFAULT_TRACE_SIZE,         //Trace Size
-                                   pgpe_beacon,                // userdata1
-                                   G_pgpe_header.beacon_sram_addr); // userdata2
-
-                // TODO: RTC 170963 - re-enable reset when beacon starts working
+                if (false == L_error_logged)
+                {
+                    TRAC_ERR("Error PGPE Beacon didn't change for 8 ms: 0x%08X", pgpe_beacon);
+                    L_error_logged = true;
+                    // TODO: RTC 170963 - re-enable reset when beacon starts working
 #if 0
-                // Commit error log and request reset
-                REQUEST_RESET(l_err);
-#else
-                // Commit error log
-                commitErrl(&l_err);
+                    /*
+                     * @errortype
+                     * @moduleid    POKE_WD_TIMERS
+                     * @reasoncode  PGPE_FAILURE
+                     * @userdata1   PGPE Beacon Value
+                     * @userdata2   PGPE Beacon Address
+                     * @userdata4   ERC_PGPE_BEACON_TIMEOUT
+                     * @devdesc     PGPE Beacon timeout
+                     */
+                    l_err = createErrl(POKE_WD_TIMERS,             // mod id
+                                       PGPE_FAILURE,               // reason code
+                                       ERC_PGPE_BEACON_TIMEOUT,    // Extended reason code
+                                       ERRL_SEV_UNRECOVERABLE,     // severity
+                                       NULL,                       // trace buffer
+                                       DEFAULT_TRACE_SIZE,         //Trace Size
+                                       pgpe_beacon,                // userdata1
+                                       G_pgpe_header.beacon_sram_addr); // userdata2
+
+                    // Commit error log and request reset
+                    REQUEST_RESET(l_err);
 #endif
+                }
             }
         }
         else
         {
+            if (L_pgpe_beacon_unchanged_4ms)
+            {
+                if (L_unchanged_traced)
+                {
+                    TRAC_ERR("check_pgpe_beacon: PGPE Beacon changed: 0x%08X (after %d calls)", pgpe_beacon, L_unchanged_count);
+                    L_unchanged_traced = false;
+                }
+            }
             // pgpe beacon changed over the last 4 ms
             L_pgpe_beacon_unchanged_4ms = false;
+            L_unchanged_count = 0;
         }
     } while(0);
 

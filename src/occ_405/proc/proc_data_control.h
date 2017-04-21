@@ -32,23 +32,6 @@
 #include "p9_pstates_common.h"
 #include "pstate_pgpe_occ_api.h"
 
-/// Per-quad Pstate/Clip control data-structure
-///
-/// Firmware maintains a copy of PstateClipStruct structures - with an entry
-/// for each quad on the chip - and updates the pstate/clip fields in place.
-/// The PGPE IPC procedures (MSGID_405_SET_PMCR and MSGID_405_CLIPS)
-/// are run periodically to update the core psates or clips control values
-/// from this data structure.  The array can (should) be cleared initially.
-typedef struct {
-
-    /// The Pstate control values
-    ipcmsg_set_pmcr_t pstates;
-
-    /// The clipping values
-    ipcmsg_clip_update_t clips;
-
-} PstatesClips;
-
 // Task that sets the PMCR, PMBR, PMICR
 void task_core_data_control( task_t * i_task );
 

@@ -33,7 +33,7 @@
 /// Designate an instance (GPE 0-3 or 405) to own the routing registers
 /// 0-3 -> GPE, 4 -> 405
 #ifndef OCCHW_IRQ_ROUTE_OWNER
-    #define OCCHW_IRQ_ROUTE_OWNER 4
+    #define OCCHW_IRQ_ROUTE_OWNER 3
 #endif
 
 /// This macro should be defined in the pk_app_cfg.h file for external interrupts

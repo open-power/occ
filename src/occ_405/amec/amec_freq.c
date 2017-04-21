@@ -58,8 +58,8 @@ extern dimm_sensor_flags_t G_dimm_temp_expired_bitmap;
 
 extern uint16_t G_proc_fmax_mhz;
 
-extern GPE_BUFFER(PstatesClips* G_core_data_control_occwrite_ptr);
 
+extern bool G_allowPstates;
 
 //*************************************************************************
 // Defines/Enums
@@ -246,6 +246,14 @@ void amec_slv_proc_voting_box(void)
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
+    if (!G_allowPstates)
+    {
+        // Don't allow pstates to be sent until after initial mode has been set
+        if (CURRENT_MODE())
+        {
+            G_allowPstates = TRUE;
+        }
+    }
 
     // Voting Box for CPU speed.
     // This function implements the voting box to decide which input gets the right
@@ -584,27 +592,18 @@ void amec_slv_freq_smh(void)
         }
         else if(L_mfg_clear_trace[quad] == TRUE)
         {
-           TRAC_INFO("amec_slv_freq_smh: mfg Quad %d Pstate request cleared. New Pstate = 0x%02x", quad, pmax[quad]);
-           L_mfg_clear_trace[quad] = FALSE;
-	}
-
-        // set quad clip bounds/pstates based on system type
-        if(G_sysConfigData.system_type.kvm)
-        {
-            // update quad bounds on OPAL systems
-            G_core_data_control_occwrite_ptr->clips.ps_val_clip_min[quad] = G_opal_static_table.config.pmin;
-            G_core_data_control_occwrite_ptr->clips.ps_val_clip_max[quad] = pmax[quad];
-
-            PROC_DBG("Setting Quad %d's min-max clip bounds to %d-%d\n",
-                     quad, G_opal_static_table.config.pmin, pmax[quad]);
+            TRAC_INFO("amec_slv_freq_smh: mfg Quad %d Pstate request cleared. New Pstate = 0x%02x", quad, pmax[quad]);
+            L_mfg_clear_trace[quad] = FALSE;
         }
-        else
-        {
-            // update quad pstate request on non-OPAL systems. Version 1 (P9 format)
-            G_core_data_control_occwrite_ptr->pstates.pmcr[quad] = ((uint64_t) pmax[quad] << 48) +1;
 
-            PROC_DBG("Setting Quad %d's Pstate to %d\n",quad, pmax[quad]);
+#ifdef PROC_DEBUG
+        if (G_desired_pstate[quad] != pmax[quad])
+        {
+            TRAC_IMP("Updating Quad %d's Pstate to %d", quad, pmax[quad]);
         }
+#endif
+        // update quad pstate request
+        G_desired_pstate[quad] = pmax[quad];
 
         if(L_mfg_set_trace[quad] == TRUE)
         {
@@ -642,7 +641,6 @@ void amec_slv_mem_voting_box(void)
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-
     // Start with max allowed speed
     l_vote     = AMEC_MEMORY_MAX_STEP;
     l_reason   = AMEC_MEM_VOTING_REASON_INIT;
