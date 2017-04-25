@@ -183,12 +183,12 @@ void amec_init_vector_sensors(void)
       TEMPPROCTHRMC0);
 
   //-----------------------------------------------------
-  // FREQA4MSP0 Vector Sensor
+  // FREQA Vector Sensor
   //-----------------------------------------------------
-  amec_vectorize_core_sensor(AMECSENSOR_PTR(FREQA4MSP0),
-      &g_amec_sys.proc[0].freqa4ms_vector,
+  amec_vectorize_core_sensor(AMECSENSOR_PTR(FREQA),
+      &g_amec_sys.proc[0].freqa_vector,
       VECTOR_OP_AVG,
-      FREQA4MSP0C0);
+      FREQAC0);
 
   //-----------------------------------------------------
   // IPS4MSP0 Vector Sensor
@@ -207,12 +207,12 @@ void amec_init_vector_sensors(void)
       TEMPPROCTHRMC0);
 
   //-----------------------------------------------------
-  // UTIL2MSP0 Vector Sensor
+  // UTIL Vector Sensor
   //-----------------------------------------------------
-  amec_vectorize_core_sensor(AMECSENSOR_PTR(UTIL4MSP0),
-      &g_amec_sys.proc[0].util4ms_vector,
+  amec_vectorize_core_sensor(AMECSENSOR_PTR(UTIL),
+      &g_amec_sys.proc[0].util_vector,
       VECTOR_OP_AVG,
-      UTIL4MSP0C0);
+      UTILC0);
 
 //TODO: Centaur support RTC 163359
 //Re-enable with error checking when centaur support is added
@@ -329,7 +329,7 @@ void amec_init_gamec_struct(void)
   memset (&g_amec->g44_avg, 0, 4*(MAX_SENSORS_ANALYTICS*MAX_NUM_CHIP_MODULES));
   for(l_idx=0; l_idx<NUM_AMEC_FW_PROBES; l_idx++)
   {
-     g_amec->ptr_probe250us[l_idx] = &g_amec->sys.pwr250us.sample;
+     g_amec->ptr_probe250us[l_idx] = &g_amec->sys.pwrsys.sample;
      g_amec->size_probe250us[l_idx] = 2;     // Size of object pointed to by probe is 2 bytes
      g_amec->index_probe250us[l_idx] = 0;    // Initialize all offsets to 0 (used only if size > 2)
   }
@@ -338,7 +338,7 @@ void amec_init_gamec_struct(void)
 //  g_amec->ptr_probe250us[2] = &g_amec->g44_avg[(0*MSA)+49];
 //  g_amec->ptr_probe250us[2] = g_amec->ptr_probe250us[2]+2;  // Point to low 16 bits of g44_avg
 //  g_amec->ptr_probe250us[3] = &g_amec->proc[0].core[0].thread[0].util2ms_thread;
-  g_amec->ptr_probe250us[1] = &g_amec->sys.pwr250us.sample;
+  g_amec->ptr_probe250us[1] = &g_amec->sys.pwrsys.sample;
   g_amec->ptr_probe250us[2] = &g_amec->r_cnt;
   g_amec->ptr_probe250us[2] = g_amec->ptr_probe250us[2]+2;  // Point to low 16 bits of r_cnt
   g_amec->ptr_probe250us[3] = &g_amec->r_cnt;

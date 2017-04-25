@@ -372,8 +372,8 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
     {
         if(CORE_PRESENT(k))
         {
-            l_freqSensorList[l_sensorHeader.count].id = G_amec_sensor_list[FREQA4MSP0C0 + k]->ipmi_sid;
-            l_freqSensorList[l_sensorHeader.count].value = G_amec_sensor_list[FREQA4MSP0C0 + k]->sample;
+            l_freqSensorList[l_sensorHeader.count].id = G_amec_sensor_list[FREQAC0 + k]->ipmi_sid;
+            l_freqSensorList[l_sensorHeader.count].value = G_amec_sensor_list[FREQAC0 + k]->sample;
             l_sensorHeader.count++;
         }
     }
@@ -452,7 +452,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
 
         cmdh_poll_pcaps_sensor_t l_pcapData;
         l_pcapData.current = g_amec->pcap.active_node_pcap;
-        l_pcapData.system = G_amec_sensor_list[PWR250US]->sample;
+        l_pcapData.system = G_amec_sensor_list[PWRSYS]->sample;
         l_pcapData.n = G_sysConfigData.pcap.oversub_pcap;
         l_pcapData.max = G_sysConfigData.pcap.max_pcap;
         l_pcapData.min = G_sysConfigData.pcap.hard_min_pcap;

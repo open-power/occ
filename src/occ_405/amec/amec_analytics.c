@@ -214,13 +214,13 @@ void amec_analytics_main(void)
                 g_amec->g44_avg[(i*MSA)+2] = (UINT32)g_amec->sys.todclock1.sample;   // ptr to middle 16 bits of 48 bit TOD clock
                 g_amec->g44_avg[(i*MSA)+4] = (UINT32)g_amec->sys.todclock2.sample;   // ptr to low 16 bits of 48 bit TOD clock
 
-                // load pwr250us accum from last 2msec
-                tempaccum = g_amec->sys.pwr250us.src_accum_snapshot;
+                // load pwrsys accum from last 2msec
+                tempaccum = g_amec->sys.pwrsys.src_accum_snapshot;
                 // save current accum state for next 2msec
-                g_amec->sys.pwr250us.src_accum_snapshot =
-                    (uint32_t)g_amec->sys.pwr250us.accumulator;
+                g_amec->sys.pwrsys.src_accum_snapshot =
+                    (uint32_t)g_amec->sys.pwrsys.accumulator;
                 // total accumulation over 2msec
-                tempaccum = (uint32_t)g_amec->sys.pwr250us.accumulator
+                tempaccum = (uint32_t)g_amec->sys.pwrsys.accumulator
                     - tempaccum;
                 tempaccum = tempaccum>>3; // divide by 8
                 g_amec->g44_avg[(i*MSA)+6] = g_amec->g44_avg[(i*MSA)+6] +
@@ -239,12 +239,12 @@ void amec_analytics_main(void)
                     tempaccum;
 
                 // load accumulator from last 2msec
-                tempaccum = g_amec->proc[i].pwr250us.src_accum_snapshot;
+                tempaccum = g_amec->proc[i].pwrproc.src_accum_snapshot;
                 // save current accum state for next 2msec
-                g_amec->proc[i].pwr250us.src_accum_snapshot =
-                    (uint32_t)g_amec->proc[i].pwr250us.accumulator;
+                g_amec->proc[i].pwrproc.src_accum_snapshot =
+                    (uint32_t)g_amec->proc[i].pwrproc.accumulator;
                 // total accumulation over 2msec
-                tempaccum = (uint32_t)g_amec->proc[i].pwr250us.accumulator
+                tempaccum = (uint32_t)g_amec->proc[i].pwrproc.accumulator
                     - tempaccum;
                 tempaccum = tempaccum>>3; // divide by 8
                 g_amec->g44_avg[(i*MSA)+10] = g_amec->g44_avg[(i*MSA)+10] +
@@ -354,7 +354,7 @@ void amec_analytics_main(void)
                     if (CORE_PRESENT(j))
                     {
                         //average frequency for this core (apply rounding for frequency for maximum 8 bit resolution): 20MHz resolution (Power8 is actually 33.25MHz steps)
-                        temp32 = (UINT32)g_amec->proc[i].core[j].freqa4ms.sample/10;     // 10MHz resolution
+                        temp32 = (UINT32)g_amec->proc[i].core[j].freqa.sample/10;     // 10MHz resolution
                         temp16 = (UINT16)temp32;
                         temp32 = temp32 >>1;                                // convert to 20MHz resolution
                         if (temp16 & 1) temp32 = temp32+1;                  // if LSBit of 10MHz resolution value is a 1, then round the 20MHz resolution value up by 1
@@ -390,7 +390,7 @@ void amec_analytics_main(void)
                         }
                         }
                         g_amec->g44_avg[(i*MSA)+62+m] = g_amec->g44_avg[(i*MSA)+62+m] +
-                            (UINT32)(g_amec->proc[i].core[j].util4ms.sample/50);  // accumulate util sensor that feeds IPS and DPS algorithms for this core
+                            (UINT32)(g_amec->proc[i].core[j].util.sample/50);  // accumulate util sensor that feeds IPS and DPS algorithms for this core
 
                         if (g_amec->analytics_threadmode == 2)
                         {

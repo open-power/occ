@@ -409,9 +409,9 @@ void amec_slv_state_0(void)
   //-------------------------------------------------------
   sensor_vector_update(AMECSENSOR_PTR(TEMPPROCAVG),  1);
   sensor_vector_update(AMECSENSOR_PTR(TEMPPROCTHRM), 1);
-  sensor_vector_update(AMECSENSOR_PTR(FREQA4MSP0),   1);
+  sensor_vector_update(AMECSENSOR_PTR(FREQA),        1);
   sensor_vector_update(AMECSENSOR_PTR(IPS4MSP0),     1);
-  sensor_vector_update(AMECSENSOR_PTR(UTIL4MSP0),    1);
+  sensor_vector_update(AMECSENSOR_PTR(UTIL),         1);
 
   // Call the trace function for 2ms tracing if it has been configured via
   // Amester. If not configured, this call will return immediately.

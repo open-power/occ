@@ -66,7 +66,7 @@
 
 #define UPPER_LIMIT_PROC_FREQ_MHZ     6000
 
-//Number of samples per second for performance-related algorithms (e.g. UTIL4MSP0Cy)
+//Number of samples per second for performance-related algorithms (e.g. UTILCy)
 #define AMEC_DPS_SAMPLING_RATE         250
 //Time interval for averaging utilization and frequency (IPS algorithm)
 #define AMEC_IPS_AVRG_INTERVAL           3

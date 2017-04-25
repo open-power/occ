@@ -842,7 +842,7 @@ void amec_slv_check_perf(void)
             }
         }
 
-        uint16_t l_snrBulkPwr = AMECSENSOR_PTR(PWR250US)->sample;
+        uint16_t l_snrBulkPwr = AMECSENSOR_PTR(PWRSYS)->sample;
 
         // frequency limited due to system power cap condition ?
         if (( l_snrBulkPwr > (G_sysConfigData.pcap.system_pcap - PDROP_THRESH) )

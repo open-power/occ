@@ -248,7 +248,7 @@ void amec_update_apss_sensors(void)
         uint32_t l_vdd = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.vdd[l_proc]);
         uint32_t l_vcs_vio_vpcie = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.vcs_vio_vpcie[l_proc]);
         temp32 = ((l_vcs_vio_vpcie + l_vdd) * l_bulk_voltage)/ADCMULT_TO_UNITS;
-        sensor_update(AMECSENSOR_PTR(PWR250USP0), (uint16_t) temp32);
+        sensor_update(AMECSENSOR_PTR(PWRPROC), (uint16_t) temp32);
 
         // Save off the combined power from all modules
         for (l_idx=0; l_idx < MAX_NUM_CHIP_MODULES; l_idx++)
@@ -348,7 +348,7 @@ void amec_update_apss_sensors(void)
         {
             temp32 = ((l_bulk_current_sum * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
         }
-        sensor_update(AMECSENSOR_PTR(PWR250US), (uint16_t)temp32);
+        sensor_update(AMECSENSOR_PTR(PWRSYS), (uint16_t)temp32);
 
         // Calculate average frequency of all OCCs.
         uint32_t    l_allOccAvgFreqOver250us = 0;
@@ -360,7 +360,7 @@ void amec_update_apss_sensors(void)
         {
             if (G_sysConfigData.is_occ_present & (1<< l_occCount))
             {
-                l_allOccAvgFreqOver250us += G_dcom_slv_outbox_rx[l_occCount].freqa4msp0;
+                l_allOccAvgFreqOver250us += G_dcom_slv_outbox_rx[l_occCount].freqa;
                 l_presentOCCs++;
             }
         }

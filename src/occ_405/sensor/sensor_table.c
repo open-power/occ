@@ -314,7 +314,7 @@ const sensor_ptr_t G_amec_sensor_list[] =
   // ------------------------------------------------------
   // System Sensors
   // ------------------------------------------------------
-  SENSOR_PTR( PWR250US,             &g_amec_sys.sys.pwr250us),
+  SENSOR_PTR( PWRSYS,               &g_amec_sys.sys.pwrsys),
   SENSOR_PTR( PWR250USFAN,          &g_amec_sys.fan.pwr250usfan),
   SENSOR_PTR( PWR250USIO,           &g_amec_sys.io.pwr250usio),
   SENSOR_PTR( PWR250USSTORE,        &g_amec_sys.storage.pwr250usstore),
@@ -347,10 +347,10 @@ const sensor_ptr_t G_amec_sensor_list[] =
   // ------------------------------------------------------
   // Processor Sensors
   // ------------------------------------------------------
-  SENSOR_PTR( FREQA4MSP0,           &g_amec_sys.proc[0].freqa4ms),
+  SENSOR_PTR( FREQA,                &g_amec_sys.proc[0].freqa),
   SENSOR_PTR( IPS4MSP0,             &g_amec_sys.proc[0].ips4ms),
   SENSOR_PTR( MEMSP2MSP0,           &g_amec_sys.proc[0].memsp2ms),
-  SENSOR_PTR( PWR250USP0,           &g_amec_sys.proc[0].pwr250us),
+  SENSOR_PTR( PWRPROC,              &g_amec_sys.proc[0].pwrproc),
   SENSOR_PTR( PWR250USVDD0,         &g_amec_sys.proc[0].pwr250usvdd),
   SENSOR_PTR( PWRVCSVIOVDN,         &g_amec_sys.proc[0].pwrvcsviovdn),
   SENSOR_PTR( PWR250USMEM0,         &g_amec_sys.proc[0].pwr250usmem),
@@ -359,7 +359,7 @@ const sensor_ptr_t G_amec_sensor_list[] =
   SENSOR_PTR( SP250USP0,            &g_amec_sys.proc[0].sp250us),
   SENSOR_PTR( TEMPPROCAVG,          &g_amec_sys.proc[0].tempprocavg),
   SENSOR_PTR( TEMPPROCTHRM,         &g_amec_sys.proc[0].tempprocthermal),
-  SENSOR_PTR( UTIL4MSP0,            &g_amec_sys.proc[0].util4ms),
+  SENSOR_PTR( UTIL,                 &g_amec_sys.proc[0].util),
   SENSOR_PTR( TEMPNEST,             &g_amec_sys.proc[0].tempnest),
   SENSOR_PTR( VOLTVDDSENSE,         &g_amec_sys.fw.voltvddsense),
   SENSOR_PTR( VOLTVDNSENSE,         &g_amec_sys.fw.voltvdnsense),
@@ -375,12 +375,12 @@ const sensor_ptr_t G_amec_sensor_list[] =
   // Core Sensors (24 of each)
   // ------------------------------------------------------
   CORE_SENSOR_PTRS( FREQ250USP0C ,  &g_amec_sys.proc[0].core, freq250us),
-  CORE_SENSOR_PTRS( FREQA4MSP0C ,   &g_amec_sys.proc[0].core, freqa4ms),
+  CORE_SENSOR_PTRS( FREQAC ,        &g_amec_sys.proc[0].core, freqa),
   CORE_SENSOR_PTRS( IPS4MSP0C ,     &g_amec_sys.proc[0].core, ips4ms),
   CORE_SENSOR_PTRS( NOTBZE4MSP0C ,  &g_amec_sys.proc[0].core, mcpifd4ms),
   CORE_SENSOR_PTRS( NOTFIN4MSP0C ,  &g_amec_sys.proc[0].core, mcpifi4ms),
   CORE_SENSOR_PTRS( TEMPPROCTHRMC , &g_amec_sys.proc[0].core, tempprocthermal),
-  CORE_SENSOR_PTRS( UTIL4MSP0C ,    &g_amec_sys.proc[0].core, util4ms),
+  CORE_SENSOR_PTRS( UTILC ,         &g_amec_sys.proc[0].core, util),
   CORE_SENSOR_PTRS( NUTIL3SP0C ,    &g_amec_sys.proc[0].core, nutil3s),
   CORE_SENSOR_PTRS( MSTL2MSP0C ,    &g_amec_sys.proc[0].core, mstl2ms),
   CORE_SENSOR_PTRS( CMT2MSP0C ,     &g_amec_sys.proc[0].core, cmt2ms),
@@ -488,7 +488,7 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   // ------------------------------------------------------
   // System Sensors
   // ------------------------------------------------------
-  MINI_SENSOR_PTR(       PWR250US,  NULL),
+  MINI_SENSOR_PTR(         PWRSYS,  NULL),
   MINI_SENSOR_PTR(    PWR250USFAN,  NULL),
   MINI_SENSOR_PTR(     PWR250USIO,  NULL),
   MINI_SENSOR_PTR(  PWR250USSTORE,  NULL),
@@ -504,10 +504,10 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   // ------------------------------------------------------
   // Processor Sensors
   // ------------------------------------------------------
-  MINI_SENSOR_PTR(     FREQA4MSP0,  &G_dcom_slv_outbox_tx.freqa4msp0),
+  MINI_SENSOR_PTR(          FREQA,  &G_dcom_slv_outbox_tx.freqa),
   MINI_SENSOR_PTR(       IPS4MSP0,  &G_dcom_slv_outbox_tx.ips4msp0),
   MINI_SENSOR_PTR(     MEMSP2MSP0,  NULL),
-  MINI_SENSOR_PTR(     PWR250USP0,  &G_dcom_slv_outbox_tx.pwr250usp0),
+  MINI_SENSOR_PTR(        PWRPROC,  &G_dcom_slv_outbox_tx.pwrproc),
   MINI_SENSOR_PTR(   PWR250USVDD0,  NULL),
   MINI_SENSOR_PTR(   PWRVCSVIOVDN,  NULL),
   MINI_SENSOR_PTR(   PWR250USMEM0,  &G_dcom_slv_outbox_tx.pwr250usmemp0),
@@ -516,7 +516,7 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   MINI_SENSOR_PTR(      SP250USP0,  NULL),
   MINI_SENSOR_PTR(    TEMPPROCAVG,  &G_dcom_slv_outbox_tx.tempprocavg),
   MINI_SENSOR_PTR(   TEMPPROCTHRM,  &G_dcom_slv_outbox_tx.tempprocthermal),
-  MINI_SENSOR_PTR(      UTIL4MSP0,  &G_dcom_slv_outbox_tx.util4msp0),
+  MINI_SENSOR_PTR(           UTIL,  &G_dcom_slv_outbox_tx.util),
   MINI_SENSOR_PTR(       TEMPNEST,  NULL),
   MINI_SENSOR_PTR(   VOLTVDDSENSE,  NULL),
   MINI_SENSOR_PTR(   VOLTVDNSENSE,  NULL),
@@ -532,12 +532,12 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   // Core Sensors (24 of each)
   // ------------------------------------------------------
   CORE_MINI_SENSOR_PTRS_NULL(  FREQ250USP0C ),
-  CORE_MINI_SENSOR_PTRS_NULL(   FREQA4MSP0C ),
+  CORE_MINI_SENSOR_PTRS_NULL(        FREQAC ),
   CORE_MINI_SENSOR_PTRS(          IPS4MSP0C, &G_dcom_slv_outbox_tx.ips4msp0cy    ),
   CORE_MINI_SENSOR_PTRS(       NOTBZE4MSP0C, &G_dcom_slv_outbox_tx.mcpifd4msp0cy ),
   CORE_MINI_SENSOR_PTRS(       NOTFIN4MSP0C, &G_dcom_slv_outbox_tx.mcpifi4msp0cy ),
   CORE_MINI_SENSOR_PTRS_NULL( TEMPPROCTHRMC ),
-  CORE_MINI_SENSOR_PTRS(         UTIL4MSP0C, &G_dcom_slv_outbox_tx.util4msp0cy   ),
+  CORE_MINI_SENSOR_PTRS(              UTILC, &G_dcom_slv_outbox_tx.utilcy        ),
   CORE_MINI_SENSOR_PTRS(         NUTIL3SP0C, &G_dcom_slv_outbox_tx.nutil3sp0cy   ),
   CORE_MINI_SENSOR_PTRS_NULL(    MSTL2MSP0C ),
   CORE_MINI_SENSOR_PTRS_NULL(     CMT2MSP0C ),

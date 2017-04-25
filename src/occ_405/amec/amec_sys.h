@@ -286,12 +286,12 @@ typedef struct
   // Sensors
   //-----------------------------------
   sensor_t freq250us;
-  sensor_t freqa4ms;
+  sensor_t freqa;
   sensor_t ips4ms;
   sensor_t mcpifd4ms;
   sensor_t mcpifi4ms;
   sensor_t tempprocthermal;
-  sensor_t util4ms;
+  sensor_t util;
   sensor_t nutil3s;
   sensor_t mstl2ms;
   sensor_t cmt2ms;
@@ -357,7 +357,7 @@ typedef struct
 typedef struct
 {
   // System Sensors
-  sensor_t pwr250us;
+  sensor_t pwrsys;
   sensor_t pwr250usgpu;
   sensor_t pwrapssch[MAX_APSS_ADC_CHANNELS];
   sensor_t cur12Vstby;
@@ -441,13 +441,13 @@ typedef struct
   amec_quad_t    quad[MAXIMUM_QUADS];
 
   // Processor Sensors
-  sensor_t freqa4ms;
-  vectorSensor_t freqa4ms_vector;
+  sensor_t freqa;
+  vectorSensor_t freqa_vector;
   sensor_t ips4ms;
   vectorSensor_t ips4ms_vector;
   sensor_t memsp2ms;
   vectorSensor_t memsp2ms_vector;
-  sensor_t pwr250us;
+  sensor_t pwrproc;
   sensor_t pwr250usvdd;
   sensor_t curvdd;
   sensor_t pwrvcsviovdn;
@@ -459,9 +459,9 @@ typedef struct
   vectorSensor_t temp4ms_vector;
   sensor_t tempprocthermal;
   vectorSensor_t tempprocthermal_vector;
-  sensor_t util4ms;
+  sensor_t util;
   sensor_t tempnest;
-  vectorSensor_t util4ms_vector;
+  vectorSensor_t util_vector;
 
   // Memory Summary Sensors
   sensor_t temp2mscent;

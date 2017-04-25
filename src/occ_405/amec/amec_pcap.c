@@ -98,8 +98,8 @@ void amec_pcap_calc(void)
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
     bool l_oversub_state  = 0;
-    uint16_t l_node_pwr = AMECSENSOR_PTR(PWR250US)->sample;
-    uint16_t l_p0_pwr   = AMECSENSOR_PTR(PWR250USP0)->sample;
+    uint16_t l_node_pwr = AMECSENSOR_PTR(PWRSYS)->sample;
+    uint16_t l_p0_pwr   = AMECSENSOR_PTR(PWRPROC)->sample;
     int32_t l_avail_power = 0;
     uint16_t mem_pwr_diff = 0;
     uint32_t l_proc_fraction = 0;
@@ -143,7 +143,7 @@ void amec_pcap_calc(void)
         l_proc_fraction = ((uint32_t)(l_p0_pwr) << 16)/l_node_pwr;
         if(L_apss_error_traced)
         {
-            TRAC_ERR("PCAP: PWR250US sensor is no longer 0.");
+            TRAC_ERR("PCAP: PWRSYS sensor is no longer 0.");
             L_apss_error_traced = FALSE;
         }
 
@@ -192,7 +192,7 @@ void amec_pcap_calc(void)
     {
         if(!L_apss_error_traced)
         {
-            TRAC_ERR("PCAP: PWR250US sensor is showing a value of 0.");
+            TRAC_ERR("PCAP: PWRSYS sensor is showing a value of 0.");
             L_apss_error_traced = TRUE;
         }
     }
@@ -238,7 +238,7 @@ void amec_pcap_controller(void)
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
 
-    l_power_avail = g_amec->pcap.active_proc_pcap - AMECSENSOR_PTR(PWR250USP0)->sample;
+    l_power_avail = g_amec->pcap.active_proc_pcap - AMECSENSOR_PTR(PWRPROC)->sample;
 
     if(l_proc_pcap_vote > g_amec->proc[0].pwr_votes.nom_pcap_fmin)
     {
@@ -304,9 +304,9 @@ void amec_ppb_fmax_calc(void)
     if(OCC_MASTER == G_occ_role)
     {
         //Power available is the ActiveNodePower - PowerDropThreshold - ActualPwr
-        l_power_avail = g_amec->pcap.active_node_pcap - PDROP_THRESH - AMECSENSOR_PTR(PWR250US)->sample;
+        l_power_avail = g_amec->pcap.active_node_pcap - PDROP_THRESH - AMECSENSOR_PTR(PWRSYS)->sample;
 
-        //Note: The PWR250US value is read over the SPI bus, which has no error
+        //Note: The PWRSYS value is read over the SPI bus, which has no error
         //detection. In order to prevent a single bad SPI transfer from causing
         //OCC to lower nominal core frequencies, we require the power to be over
         //the pcap for PPB_NOM_DROP_DELAY ticks before lowering PPB Fmax below

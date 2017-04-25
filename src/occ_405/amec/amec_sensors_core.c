@@ -358,7 +358,7 @@ void amec_calc_freq_and_util_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
   // ------------------------------------------------------
   // <amec_formula>
   // Result: Calculated Core Frequency
-  // Sensor: FREQA4MSP0C0
+  // Sensor: FREQAC0
   // Timescale: 4ms
   // Units: MHz
   // Min/Max: 0/6000 (UPPER_LIMIT_PROC_FREQ_MHZ=6000)
@@ -393,7 +393,7 @@ void amec_calc_freq_and_util_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
       {
           l_core_freq = (uint16_t) temp32;
       }
-      sensor_update( AMECSENSOR_ARRAY_PTR(FREQA4MSP0C0,i_core), l_core_freq);
+      sensor_update( AMECSENSOR_ARRAY_PTR(FREQAC0,i_core), l_core_freq);
   }
 
   // ------------------------------------------------------
@@ -401,7 +401,7 @@ void amec_calc_freq_and_util_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
   // ------------------------------------------------------
   // <amec_formula>
   // Result: Calculated Core Utilization
-  // Sensor: UTIL4MSP0C0
+  // Sensor: UTILC0
   // Timescale: 4ms
   // Units: 0.01 %
   // Min/Max: 0/10000  (0/100%)
@@ -439,7 +439,7 @@ void amec_calc_freq_and_util_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
   {
       l_core_util = (uint16_t) temp32;
   }
-  sensor_update(AMECSENSOR_ARRAY_PTR(UTIL4MSP0C0, i_core), l_core_util);
+  sensor_update(AMECSENSOR_ARRAY_PTR(UTILC0, i_core), l_core_util);
 
   // ------------------------------------------------------
   // Per Thread Utilization
@@ -582,13 +582,13 @@ void amec_calc_freq_and_util_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
   if(g_amec->proc[0].core[i_core].sample_count == l_time_interval)
   {
       // Increase resolution of the UTIL accumulator by two decimal places
-      temp32 = (uint32_t)AMECSENSOR_ARRAY_PTR(UTIL4MSP0C0,i_core)->accumulator * 100;
+      temp32 = (uint32_t)AMECSENSOR_ARRAY_PTR(UTILC0,i_core)->accumulator * 100;
       // Calculate average utilization of this core
       temp32 = temp32 / g_amec->proc[0].core[i_core].sample_count;
       g_amec->proc[0].core[i_core].avg_util = temp32;
 
       // Increase resolution of the FREQA accumulator by two decimal places
-      temp32 = (uint32_t)AMECSENSOR_ARRAY_PTR(FREQA4MSP0C0,i_core)->accumulator * 100;
+      temp32 = (uint32_t)AMECSENSOR_ARRAY_PTR(FREQAC0,i_core)->accumulator * 100;
       // Calculate average frequency of this core
       temp32 = temp32 / g_amec->proc[0].core[i_core].sample_count;
       g_amec->proc[0].core[i_core].avg_freq = temp32;
@@ -765,7 +765,7 @@ void amec_calc_ips_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
   //         = (2* fin2) / ticks_2mhz
   //
   // Note: For best resolution do multiply first and division last.
-  // Note: For an explanation regarding the multiply by 2, see the note under FREQA4MSP0C0.
+  // Note: For an explanation regarding the multiply by 2, see the note under FREQAC0.
   // </amec_formula>
 
   ticks_2mhz = i_core_data_ptr->empath.tod_2mhz -

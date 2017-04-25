@@ -458,10 +458,10 @@ void amec_mst_check_under_pcap(void)
     /*------------------------------------------------------------------------*/
 
     // Check if done everything possible to shed power and power still above a hard power cap
-    // ppb_fmax = Fmin and PWR250US > Node power cap and
+    // ppb_fmax = Fmin and PWRSYS > Node power cap and
     // Node power cap >=  hard_min_pcap AND memory is throttled
     if((g_amec->proc[0].pwr_votes.ppb_fmax == g_amec->sys.fmin) &&
-       (AMECSENSOR_PTR(PWR250US)->sample > g_amec->pcap.active_node_pcap) &&
+       (AMECSENSOR_PTR(PWRSYS)->sample > g_amec->pcap.active_node_pcap) &&
        (g_amec->pcap.active_node_pcap >= G_sysConfigData.pcap.hard_min_pcap) &&
        (g_amec->pcap.active_mem_level != 0) )
     {
@@ -472,10 +472,10 @@ void amec_mst_check_under_pcap(void)
         if(G_over_cap_count >= PCAP_FAILURE_THRESHOLD)
         {
             TRAC_ERR("Failure to maintain power cap: Power Cap = %d ,"
-                     "PWR250US = %d ,PWR250USP0 = %d ,PWR250USFAN = %d ,"
+                     "PWRSYS = %d ,PWRPROC = %d ,PWR250USFAN = %d ,"
                      "PWR250USMEM0 = %d",g_amec->pcap.active_node_pcap,
-                     AMECSENSOR_PTR(PWR250US)->sample,
-                     AMECSENSOR_PTR(PWR250USP0)->sample,
+                     AMECSENSOR_PTR(PWRSYS)->sample,
+                     AMECSENSOR_PTR(PWRPROC)->sample,
                      AMECSENSOR_PTR(PWR250USFAN)->sample,
                      AMECSENSOR_PTR(PWR250USMEM0)->sample);
 
@@ -489,7 +489,7 @@ void amec_mst_check_under_pcap(void)
              * @moduleid    AMEC_MST_CHECK_UNDER_PCAP
              * @reasoncode  POWER_CAP_FAILURE
              * @userdata1   Power Cap
-             * @userdata2   PWR250US (Node Power)
+             * @userdata2   PWRSYS (Node Power)
              * @devdesc     Failure to maintain max power limits
              *
              */
@@ -500,7 +500,7 @@ void amec_mst_check_under_pcap(void)
                                 NULL,
                                 DEFAULT_TRACE_SIZE,
                                 g_amec->pcap.active_node_pcap,
-                                AMECSENSOR_PTR(PWR250US)->sample);
+                                AMECSENSOR_PTR(PWRSYS)->sample);
 
             //Callout to firmware
             addCalloutToErrl(l_err,
