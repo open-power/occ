@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -175,7 +175,8 @@ ocb_ffdc(int channel)
         else
         {
 
-            getscom(OCB_OCBCSRN(channel), &(ffdc->csr.value));
+//TODO: Need to get OCBCSRN another way besides scom
+//            getscom(OCB_OCBCSRN(channel), &(ffdc->csr.value));
 
             ffdc->shbr.value = in32(OCB_OCBSHBRN(channel));
             ffdc->shcs.value = in32(OCB_OCBSHCSN(channel));
@@ -191,7 +192,8 @@ ocb_ffdc(int channel)
 
         }
 
-        getscom(OCB_OCCLFIR, &(ffdc->fir.value));
+//TODO: Need to get OCBLFIR another way
+//        getscom(OCB_OCCLFIR, &(ffdc->fir.value));
 
         oci_ffdc(&(ffdc->oci_ffdc), OCI_MASTER_ID_OCB);
 
@@ -1017,14 +1019,15 @@ SSX_IRQ_FAST2FULL(ocb_error_handler, ocb_error_handler_full);
 void
 ocb_error_handler_full(void* arg, SsxIrqId irq, int priority)
 {
-    ocb_occlfir_t fir;
+    ocb_occlfir_t fir = {0};
     ocb_occlfir_t fir_temp;
     int channel;
     AsyncQueue* queue;
 
     ssx_irq_status_clear(irq);
 
-    getscom(OCB_OCCLFIR, &(fir.value));
+// TODO: Need to get OCCLFIR another way
+//    getscom(OCB_OCCLFIR, &(fir.value));
 
     fir_temp.value = 0;
     fir_temp.fields.ocb_idc0_error = 1;

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -160,8 +160,8 @@ pba_bridge_ffdc(PbaBridgeFfdc* ffdc)
 
     if (ffdc->common.error == 0)
     {
-
-        pba_common_ffdc(&(ffdc->common));
+        //TODO:  Cannot get this information through scoms
+        //pba_common_ffdc(&(ffdc->common));
 
         ffdc->slvrst.value = in64(PBA_SLVRST);
 
@@ -182,8 +182,8 @@ bce_ffdc(BceFfdc* ffdc, int engine)
 {
     if (ffdc->common.error == 0)
     {
-
-        pba_common_ffdc(&(ffdc->common));
+        //TODO: Cannot get this information through scoms
+        //pba_common_ffdc(&(ffdc->common));
 
         ffdc->ctl.value = in64(G_bce_ctl[engine]);
         ffdc->set.value = in64(G_bce_set[engine]);
@@ -200,8 +200,8 @@ pbax_send_ffdc(PbaxSendFfdc* ffdc)
 {
     if (ffdc->common.error == 0)
     {
-
-        pba_common_ffdc(&(ffdc->common));
+        //TODO: Cannot get this information through scoms
+        //pba_common_ffdc(&(ffdc->common));
 
         ffdc->xcfg.value = in64(PBA_XCFG);
         ffdc->xsndtx.value = in64(PBA_XSNDTX);
@@ -222,8 +222,8 @@ pbax_receive_ffdc(PbaxReceiveFfdc* ffdc)
 
     if (ffdc->common.error == 0)
     {
-
-        pba_common_ffdc(&(ffdc->common));
+        //TODO: Cannot get this information through scoms
+        //pba_common_ffdc(&(ffdc->common));
 
         ffdc->xcfg.value = in64(PBA_XCFG);
         ffdc->xrcvstat.value = in64(PBA_XRCVSTAT);
@@ -1155,7 +1155,7 @@ SSX_IRQ_FAST2FULL(pba_error_handler, pba_error_handler_full);
 void
 pba_error_handler_full(void* arg, SsxIrqId irq, int priority)
 {
-    pba_fir_t fir;
+    pba_fir_t fir = {0};
     pba_bcde_stat_t bcde_stat;
     pba_bcue_stat_t bcue_stat;
     pba_xsndstat_t xsndstat;
@@ -1165,7 +1165,7 @@ pba_error_handler_full(void* arg, SsxIrqId irq, int priority)
 
     ssx_irq_status_clear(irq);
 
-    getscom(PBA_FIR, &(fir.value));
+    //getscom(PBA_FIR, &(fir.value));
     bcde_stat.words.high_order = in32(PBA_BCDE_STAT);
     bcue_stat.words.high_order = in32(PBA_BCUE_STAT);
     xsndstat.words.high_order = in32(PBA_XSNDSTAT);
@@ -1212,6 +1212,7 @@ pba_error_handler_full(void* arg, SsxIrqId irq, int priority)
     // Any FIR bits not already attributable to previously handled errors are
     // assumed to be due to the generic bridge.
 
+    // TODO: These should be bitwise OR'd not logic OR'd?
     if (fir.value &
         (
             PBA_FIR_OCI_APAR_ERR ||
