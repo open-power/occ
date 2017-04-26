@@ -732,6 +732,8 @@ bool read_pgpe_header(void)
         {
             G_pgpe_header.shared_sram_addr = in32(PGPE_HEADER_ADDR + PGPE_SHARED_SRAM_ADDR_OFFSET);
             G_pgpe_header.shared_sram_length = in32(PGPE_HEADER_ADDR + PGPE_SHARED_SRAM_LEN_OFFSET);
+            G_pgpe_header.generated_pstate_table_homer_offset = in32(PGPE_HEADER_ADDR + PGPE_GENERATED_PSTATE_TBL_ADDR_OFFSET);
+            G_pgpe_header.generated_pstate_table_length = in32(PGPE_HEADER_ADDR + PGPE_GENERATED_PSTATE_TBL_SZ_OFFSET);
             G_pgpe_header.occ_pstate_table_sram_addr = in32(PGPE_HEADER_ADDR + PGPE_OCC_PSTATE_TBL_ADDR_OFFSET);
             G_pgpe_header.occ_pstate_table_length = in32(PGPE_HEADER_ADDR + PGPE_OCC_PSTATE_TBL_SZ_OFFSET);
             G_pgpe_header.beacon_sram_addr = in32(PGPE_HEADER_ADDR + PGPE_BEACON_ADDR_OFFSET);

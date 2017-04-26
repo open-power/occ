@@ -32,7 +32,9 @@
 // Offset addresses of PGPE Header parameters (relative to start address)
 #define PGPE_SHARED_SRAM_ADDR_OFFSET           0x0c
 #define PGPE_SHARED_SRAM_LEN_OFFSET            0x14
-#define PGPE_OCC_PSTATE_TBL_ADDR_OFFSET        0x40
+#define PGPE_GENERATED_PSTATE_TBL_ADDR_OFFSET  0x38 // generated table address is offset from beginning of HOMER
+#define PGPE_GENERATED_PSTATE_TBL_SZ_OFFSET    0x3C
+#define PGPE_OCC_PSTATE_TBL_ADDR_OFFSET        0x40 // OCC table address is a SRAM address
 #define PGPE_OCC_PSTATE_TBL_SZ_OFFSET          0x44
 #define PGPE_BEACON_ADDR_OFFSET                0x48
 #define PGPE_ACTUAL_QUAD_STATUS_ADDR_OFFSET    0x4c
@@ -71,6 +73,8 @@ typedef struct __attribute__ ((packed))
 {
     uint32_t shared_sram_addr;
     uint32_t shared_sram_length;
+    uint32_t generated_pstate_table_homer_offset;
+    uint32_t generated_pstate_table_length;
     uint32_t occ_pstate_table_sram_addr;
     uint32_t occ_pstate_table_length;
     uint32_t beacon_sram_addr;

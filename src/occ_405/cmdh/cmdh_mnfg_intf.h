@@ -37,6 +37,7 @@ typedef enum {
     MNFG_OVERSUB_EMULATION  = 0x07,
     MNFG_MEMORY_SLEW        = 0x09,
     MNFG_QUAD_PSTATE        = 0x0A,
+    MNFG_READ_PSTATE_TABLE  = 0x0B,
 } MNFG_CMD;
 
 #define MNFG_INTF_SLEW_START    0x00
@@ -187,6 +188,26 @@ typedef struct __attribute__ ((packed))
     uint8_t   quad_pstate_out[MAXIMUM_QUADS];
 }mnfg_quad_pstate_rsp_t;
 
+
+#define MFG_PSTATE_READ_REQUEST_QUERY 0xFF
+#define MFG_PSTATE_READ_QUERY_RSP_SIZE  8
+#define MFG_PSTATE_READ_MAX_RSP_SIZE  1024
+
+// Used by OCC to get mnfg read pstate table command
+
+typedef struct __attribute__ ((packed))
+{
+    // Need 128 byte aligned buffer for BCE request
+    uint8_t data[MFG_PSTATE_READ_MAX_RSP_SIZE];
+} mfg_read_pstate_table_t __attribute ((aligned(128)));
+
+typedef struct __attribute__ ((packed))
+{
+    struct    cmdh_fsp_cmd_header;
+    uint8_t   sub_cmd;
+    uint8_t   request;
+}mnfg_read_pstate_table_cmd_t;
+
 errlHndl_t cmdh_mnfg_test_parse (const cmdh_fsp_cmd_t * i_cmd_ptr,
                                      cmdh_fsp_rsp_t * o_rsp_ptr);
 
@@ -203,6 +224,9 @@ uint8_t cmdh_mnfg_run_stop_slew(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                       cmdh_fsp_rsp_t * o_rsp_ptr);
 
 uint8_t cmdh_mnfg_request_quad_pstate(const cmdh_fsp_cmd_t * i_cmd_ptr,
+                                             cmdh_fsp_rsp_t * o_rsp_ptr);
+
+uint8_t cmdh_mnfg_read_pstate_table(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                              cmdh_fsp_rsp_t * o_rsp_ptr);
 
 #endif

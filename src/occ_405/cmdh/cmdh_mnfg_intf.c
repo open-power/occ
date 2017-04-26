@@ -32,6 +32,11 @@
 #include "sensor_query_list.h"
 #include "amec_smh.h"
 #include "amec_master_smh.h"
+#include <pgpe_shared.h>
+
+// SSX Block Copy Request for copying mfg Pstate table from HOMER to SRAM
+BceRequest G_mfg_pba_request;
+DMA_BUFFER(mfg_read_pstate_table_t G_mfg_read_pstate_table) = {{0}};
 
 extern task_t G_task_table[TASK_END];
 
@@ -708,6 +713,121 @@ uint8_t cmdh_mnfg_request_quad_pstate(const cmdh_fsp_cmd_t * i_cmd_ptr,
     return l_rc;
 }
 
+// Function Specification
+//
+// Name:  cmdh_mnfg_read_pstate_table
+//
+// Description: This function handles the manufacturing command to read
+// the generated Pstate table from main memory 3K blocks at a time
+//
+// End Function Specification
+uint8_t cmdh_mnfg_read_pstate_table(const cmdh_fsp_cmd_t * i_cmd_ptr,
+                                            cmdh_fsp_rsp_t * o_rsp_ptr)
+{
+    uint8_t                       l_rc = ERRL_RC_SUCCESS;
+    uint16_t                      l_datalength = 0;
+    uint16_t                      l_resp_data_length = 0;
+    uint32_t                      block_offset = 0;
+    uint32_t                      main_mem_address = 0;
+    int                           l_ssxrc = SSX_OK;
+    mnfg_read_pstate_table_cmd_t  *l_cmd_ptr = (mnfg_read_pstate_table_cmd_t*) i_cmd_ptr;
+
+    do
+    {
+        // Check command packet data length
+        l_datalength = CMDH_DATALEN_FIELD_UINT16(i_cmd_ptr);
+        if(l_datalength != (sizeof(mnfg_read_pstate_table_cmd_t) -
+                            sizeof(cmdh_fsp_cmd_header_t)))
+        {
+            TRAC_ERR("cmdh_mnfg_read_pstate_table: incorrect data length. exp[%d] act[%d]",
+                     (sizeof(mnfg_read_pstate_table_cmd_t) -
+                      sizeof(cmdh_fsp_cmd_header_t)),
+                      l_datalength);
+            l_rc = ERRL_RC_INVALID_CMD_LEN;
+            break;
+        }
+
+        // Process request
+        if(l_cmd_ptr->request == MFG_PSTATE_READ_REQUEST_QUERY)
+        {
+            memcpy(&o_rsp_ptr->data[0], &G_pgpe_header.generated_pstate_table_homer_offset, 4);
+            memcpy(&o_rsp_ptr->data[4], &G_pgpe_header.generated_pstate_table_length, 4);
+            l_resp_data_length = MFG_PSTATE_READ_QUERY_RSP_SIZE;
+
+            TRAC_INFO("cmdh_mnfg_read_pstate_table: Query table memory offset[0x%08x] table length[%d]",
+                     G_pgpe_header.generated_pstate_table_homer_offset,
+                     G_pgpe_header.generated_pstate_table_length);
+            break;
+        }
+
+        // Calculate the starting main memory address for block to read
+        block_offset = MFG_PSTATE_READ_MAX_RSP_SIZE * l_cmd_ptr->request;
+        if(block_offset > G_pgpe_header.generated_pstate_table_length)
+        {
+            TRAC_ERR("cmdh_mnfg_read_pstate_table: Block request %d out of range.  Pstate Table size %d",
+                     l_cmd_ptr->request,
+                     G_pgpe_header.generated_pstate_table_length);
+            l_rc = ERRL_RC_INVALID_DATA;
+            break;
+        }
+
+        main_mem_address = G_pgpe_header.generated_pstate_table_homer_offset + block_offset;
+
+        // Copy Pstate table from main memory to SRAM
+        // Set up a copy request
+        l_ssxrc = bce_request_create(&G_mfg_pba_request,                  // block copy object
+                                     &G_pba_bcde_queue,                   // mainstore to sram copy engine
+                                     main_mem_address,                    // mainstore address
+                                     (uint32_t)&G_mfg_read_pstate_table,  // sram starting address
+                                     sizeof(mfg_read_pstate_table_t),     // size of copy
+                                     SSX_SECONDS(1),                      // timeout
+                                     NULL,                                // no call back
+                                     NULL,                                // no call back arguments
+                                     ASYNC_REQUEST_BLOCKING);             // blocking request
+
+        if(l_ssxrc != SSX_OK)
+        {
+            TRAC_ERR("cmdh_mnfg_read_pstate_table: BCDE request create failure rc=[%08X]", -l_ssxrc);
+            l_rc = ERRL_RC_INTERNAL_FAIL;
+            break;
+        }
+
+        // Do actual copying
+        l_ssxrc = bce_request_schedule(&G_mfg_pba_request);
+
+        if(l_ssxrc != SSX_OK)
+        {
+            TRAC_ERR("cmdh_mnfg_read_pstate_table: BCE request schedule failure rc=[%08X]", -l_ssxrc);
+            l_rc = ERRL_RC_INTERNAL_FAIL;
+            break;
+        }
+
+        // Determine the rsp data length
+        l_resp_data_length = MFG_PSTATE_READ_MAX_RSP_SIZE;
+
+        if((block_offset + MFG_PSTATE_READ_MAX_RSP_SIZE) > G_pgpe_header.generated_pstate_table_length)
+        {
+            l_resp_data_length = G_pgpe_header.generated_pstate_table_length - block_offset;
+        }
+
+        // Copy to response buffer
+        memcpy(o_rsp_ptr->data,
+               &G_mfg_read_pstate_table,
+               l_resp_data_length);
+
+        TRAC_INFO("cmdh_mnfg_read_pstate_table: Read from main memory[0x%08x] block offset[%d] length[%d]",
+                   main_mem_address,
+                   block_offset,
+                   l_resp_data_length);
+    }while(0);
+
+    // Populate the response data header
+    G_rsp_status = l_rc;
+    o_rsp_ptr->data_length[0] = ((uint8_t *)&l_resp_data_length)[0];
+    o_rsp_ptr->data_length[1] = ((uint8_t *)&l_resp_data_length)[1];
+
+    return l_rc;
+}
 
 
 // Function Specification
@@ -753,6 +873,10 @@ errlHndl_t cmdh_mnfg_test_parse (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         case MNFG_QUAD_PSTATE:
             l_rc = cmdh_mnfg_request_quad_pstate(i_cmd_ptr, o_rsp_ptr);
+            break;
+
+        case MNFG_READ_PSTATE_TABLE:
+            l_rc = cmdh_mnfg_read_pstate_table(i_cmd_ptr, o_rsp_ptr);
             break;
 
         default:
