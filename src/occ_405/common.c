@@ -72,7 +72,7 @@ void task_misc_405_checks(task_t *i_self)
             l_oisr0_status.fields.gpe0_error        ||   // GPE0 Halt
             l_oisr0_status.fields.gpe1_error)            // GPE1 Halt
         {
-            //errlHndl_t l_err = NULL;
+            errlHndl_t l_err = NULL;
 
             if (l_oisr0_status.fields.gpe0_error)
             {
@@ -111,21 +111,18 @@ void task_misc_405_checks(task_t *i_self)
 
             L_checkstop_traced = true;
 
-            // TODO: RTC 168529 - disable elog until fixed
-#if 0
-             l_err = createErrl(MAIN_SYSTEM_HALTED_MID,
-                                l_reason_code,
-                                OCC_NO_EXTENDED_RC,
-                                ERRL_SEV_INFORMATIONAL,
-                                NULL,
-                                DEFAULT_TRACE_SIZE,
-                                l_oisr0_status.value,
-                                0 );
+            l_err = createErrl(MAIN_SYSTEM_HALTED_MID,
+                               l_reason_code,
+                               OCC_NO_EXTENDED_RC,
+                               ERRL_SEV_INFORMATIONAL,
+                               NULL,
+                               DEFAULT_TRACE_SIZE,
+                               l_oisr0_status.value,
+                               0 );
 
-             // The commit code will check for the frozen GPE0 and system
-             // checkstop conditions and take appropriate actions.
-             commitErrl(&l_err);
-#endif
+            // The commit code will check for the frozen GPE0 and system
+            // checkstop conditions and take appropriate actions.
+            commitErrl(&l_err);
         }
     }
     while(0);
