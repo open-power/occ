@@ -497,7 +497,7 @@ void copy_vfrt_to_sram( copy_vfrt_to_sram_parms_t * i_parms)
             G_wof_header.vfrt_block_size );
 
     // Set the parameters for the GpeRequest
-    G_wof_vfrt_parms.vfrt_ptr = l_buffer_address;
+    G_wof_vfrt_parms.homer_vfrt_ptr = (HomerVFRTLayout_t*)l_buffer_address;
     G_wof_vfrt_parms.active_quads = g_wof->req_active_quad_update;
 
     // Send IPC command to PGPE with new vfrt address and active quads
@@ -757,8 +757,8 @@ void calculate_core_voltage( void )
 {
     uint32_t l_voltage;
     uint8_t l_quad_mask;
-    int l_quad_idx = 0;
-    for(; l_quad_idx < MAXIMUM_QUADS; l_quad_idx++)
+    int l_quad_idx;
+    for(l_quad_idx = 0; l_quad_idx < MAXIMUM_QUADS; l_quad_idx++)
     {
         // Adjust current mask. (IVRM_STATE_QUAD_MASK = 0x80)
         l_quad_mask = IVRM_STATE_QUAD_MASK >> l_quad_idx;
@@ -790,6 +790,9 @@ void calculate_core_voltage( void )
         }
         // Save the voltage to amec_wof_t global struct
         g_wof->v_core_100uV[l_quad_idx] = l_voltage;
+
+        // Save off the voltage index for later use
+        g_wof->quad_v_idx[l_quad_idx] = get_voltage_index(l_voltage);
     }
 }
 
@@ -802,8 +805,8 @@ void calculate_core_voltage( void )
  */
 void calculate_core_leakage( void )
 {
-    int l_chip_v_idx = 0;
-    uint16_t l_quad_x_cache;
+    int l_chip_v_idx;
+    uint16_t l_quad_cache;
     uint16_t idc_vdd = 0;
     uint8_t  num_quads_off = 0;
     uint16_t temperature = 0;
@@ -812,80 +815,56 @@ void calculate_core_leakage( void )
     // chip voltage index
     uint32_t l_v_chip = g_wof->voltvddsense_sensor;
 
-    if( l_v_chip <= G_iddq_voltages[0] )
-    {
-        // Voltage is <= to first entry. Use first two entries.
-        l_chip_v_idx = 0;
-    }
-    else if( l_v_chip >= G_iddq_voltages[CORE_IDDQ_MEASUREMENTS-1] )
-    {
-        // Voltage is >= to last entry. Use last two entries.
-        l_chip_v_idx = CORE_IDDQ_MEASUREMENTS - 2;
-    }
-    else
-    {
-        // Search for entries on either side of our voltage
-        for(;l_chip_v_idx < CORE_IDDQ_MEASUREMENTS - 1; l_chip_v_idx++)
-        {
-            if( (l_v_chip >= G_iddq_voltages[l_chip_v_idx]) &&
-                (l_v_chip <= G_iddq_voltages[l_chip_v_idx+1]) )
-            {
-                break;
-            }
-        }
+    // Choose the lower bound index of G_iddq_voltages
+    l_chip_v_idx = get_voltage_index( l_v_chip );
 
-    }
     // Save index used for interpolating voltages to amec
-    g_wof->voltage_idx = l_chip_v_idx;
+    g_wof->chip_volt_idx = l_chip_v_idx;
 
     // Calculate all variables that will be used in the core
     // loop that only need to be calculated once.
 
-    // Look up Tvpd_leak for calculations when either the core or quad is off
-    // avttemp values in 0.5C. Divide by 2 to convert to 1C
-    g_wof->tvpd_leak_off =
-                  G_oppb.iddq.avgtemp_all_cores_off_caches_off[l_chip_v_idx] >> 1;
-
-    // Look up Tvpd_leak for calculations involving the cache.
-    g_wof->tvpd_leak_cache =
-              G_oppb.iddq.avgtemp_all_good_cores_off[l_chip_v_idx] >> 1;
-
-    // Take the difference between the temperature and tvpd_leak_off
-    // used for multiplier calculation
-    g_wof->nest_delta_temp = g_wof->tempnest_sensor -
-                                  g_wof->tvpd_leak_off;
-
-    // Calculate IDDQ_TEMP_FACTOR^((TEMPNEST - tvpd_leak)/10)
-    g_wof->nest_mult = calculate_multiplier(g_wof->nest_delta_temp);
-
-    // Look up leakage current.
-    // Divide by 6 to get just one quad
-    g_wof->idc_quad =
-                 G_oppb.iddq.ivdd_all_cores_off_caches_off[l_chip_v_idx] /
-                 MAXIMUM_QUADS;
-
-    // Calculate ALL_CORES_OFF_ISO
-    // Perform linear interpolation using the neighboring entries:
-    // Y = m*(X-x1) + y1, where m = (y2-y1) / (x2-x1)
+    // ALL_CORES_OFF_ISO
     g_wof->all_cores_off_iso =
-         interpolate_linear((int32_t)l_v_chip,
-            (int32_t)G_iddq_voltages[l_chip_v_idx],
-            (int32_t)G_iddq_voltages[l_chip_v_idx+1],
-            (int32_t)G_oppb.iddq.ivdd_all_cores_off_caches_off[l_chip_v_idx],
-            (int32_t)G_oppb.iddq.ivdd_all_cores_off_caches_off[l_chip_v_idx+1]);
+            scale_and_interpolate( G_oppb.iddq.ivdd_all_cores_off_caches_off,
+                                   G_oppb.iddq.avgtemp_all_cores_off_caches_off,
+                                   l_chip_v_idx,
+                                   g_wof->tempnest_sensor,
+                                   l_v_chip );
 
-    // Multiply by nest leakage percentage
-    // TODO: This percentage(60%) will eventually be added to the OCC Pstate Parameter
-    // block once it is added as a system attribute to the MRW.
-    // G_oppb.iddq.nestLeakagePercentage
-    g_wof->all_cores_off_iso = g_wof->all_cores_off_iso * 60 / 100;
+    // Get the core leakage percent from the OPPB
+    // Note: This value is named inaccurately in the OPPB so we are reassigning
+    // it's value here. We are also making the value visible to amester here.
+    g_wof->core_leakage_percent = G_oppb.nest_leakage_percent;
 
-    // Calculate ALL_CACHES_ON_ISO
-    g_wof->all_caches_on_iso =
-              G_oppb.iddq.ivdd_all_good_cores_off_good_caches_on[l_chip_v_idx] -
-              g_wof->all_cores_off_iso;
+    // Multiply by core leakage percentage
+    g_wof->all_cores_off_iso = g_wof->all_cores_off_iso *
+         g_wof->core_leakage_percent / 100;
 
-    l_quad_x_cache = g_wof->all_caches_on_iso / MAXIMUM_QUADS;
+    // Calculate ALL_GOOD_CACHES_ON_ISO
+    g_wof->all_good_caches_on_iso =
+     scale_and_interpolate( G_oppb.iddq.ivdd_all_good_cores_off_good_caches_on,
+                            G_oppb.iddq.avgtemp_all_good_cores_off,
+                            l_chip_v_idx,
+                            g_wof->tempnest_sensor,
+                            l_v_chip ) - g_wof->all_cores_off_iso;
+
+    // Calculate ALL_CACHES_OFF_ISO
+    g_wof->all_caches_off_iso =
+        scale_and_interpolate( G_oppb.iddq.ivdd_all_cores_off_caches_off,
+                               G_oppb.iddq.avgtemp_all_cores_off_caches_off,
+                               l_chip_v_idx,
+                               g_wof->tempnest_sensor,
+                               l_v_chip ) - g_wof->all_cores_off_iso;
+
+    // idc Quad uses same variables as all_cores_off_iso so just use that and
+    // divide by 6 to get just one quad
+    g_wof->idc_quad = g_wof->all_cores_off_iso / MAXIMUM_QUADS;
+
+    // Calculate quad_cache for all quads
+    l_quad_cache = ( g_wof->all_good_caches_on_iso - g_wof->all_caches_off_iso *
+                     ( MAXIMUM_QUADS - G_oppb.iddq.good_quads_per_sort) /
+                      MAXIMUM_QUADS ) / G_oppb.iddq.good_quads_per_sort;
 
     // Loop through all Quads and their respective Cores to calculate
     // leakage.
@@ -904,39 +883,28 @@ void calculate_core_leakage( void )
         else // Quad i is on
         {
             // Calculate the index of the first core in the quad.
+            // so we reference the correct one in the inner core loop
             core_idx = quad_idx * NUM_CORES_PER_QUAD;
 
             // Get the voltage for the current core.
             // (Same for all cores within a single quad)
-            uint16_t cur_core_voltage = g_wof->v_core_100uV[quad_idx];
+            uint8_t quad_v_idx = g_wof->quad_v_idx[quad_idx];
 
             // Calculate the number of cores on within the current quad.
             g_wof->cores_on_per_quad[quad_idx] =
                                         num_cores_on_in_quad(quad_idx);
 
-            // Look up tvpd_leak_on for calculations when the core/quad is on
-            // avttemp in IDDQ table is in 0.5C. Divide by 2 to convert to 1C.
-            g_wof->tvpd_leak_on = G_oppb.iddq.avgtemp_quad_good_cores_on
-                                               [quad_idx][cur_core_voltage] >> 1;
 
-            // Calculate Quadx_good_cores_only
-            g_wof->quad_good_cores_only[quad_idx] =
-                    G_oppb.iddq.ivdd_quad_good_cores_on_good_caches_on
-                                    [quad_idx][cur_core_voltage] -
-                    G_oppb.iddq.ivdd_all_good_cores_off_good_caches_on
-                                                        [l_chip_v_idx] +
-                    g_wof->all_cores_off_iso*
-                    G_oppb.iddq.good_normal_cores[quad_idx]/24;
+            // Take a snap shot of the quad temperature for later calculations
+            g_wof->tempq[quad_idx] = AMECSENSOR_ARRAY_PTR(TEMPQ0,
+                                                           quad_idx)->sample;
+            // If 0, use nest temperature.
+            if( g_wof->tempq[quad_idx] == 0 )
+            {
+                g_wof->tempq[quad_idx] = g_wof->tempnest_sensor;
+            }
 
-            // Calculate quadx_ON_cores
-            g_wof->quad_on_cores[quad_idx] =
-                    (g_wof->quad_good_cores_only[quad_idx]*
-                     g_wof->cores_on_per_quad[quad_idx]) /
-                     G_oppb.iddq.good_normal_cores[quad_idx];
 
-            // Calculate quadx_BAD_OFF_cores
-            g_wof->quad_bad_off_cores[quad_idx] =
-                g_wof->all_cores_off_iso*G_oppb.iddq.good_normal_cores[quad_idx]/24;
 
             // Reset num_cores_off_in_quad before processing current quads cores
             uint8_t num_cores_off_in_quad = 0;
@@ -945,39 +913,49 @@ void calculate_core_leakage( void )
             {
                 if(core_powered_on(core_idx))
                 {
+
                     // Get the core temperature from TEMPPROCTHRMC sensor
                     temperature = AMECSENSOR_ARRAY_PTR(TEMPPROCTHRMC0,
                                                        core_idx)->sample;
 
-                    // If the TEMPPROCTHRMCy is 0, use TEMPQx
+                    // If TEMPPROCTHRMCy is 0, use TEMPQx
                     if(temperature == 0)
                     {
-                        temperature = AMECSENSOR_ARRAY_PTR(TEMPQ0,
-                                                           quad_idx)->sample;
-                        // If TEMPQx is also 0, use TEMPNEST
-                        if(temperature == 0)
-                        {
-                            temperature = g_wof->tempnest_sensor;
-                        }
+                        // Quad temp guaranteed to be non-zero. Check was made
+                        // when assigning to tempq array.
+                        temperature = g_wof->tempq[quad_idx];
                     }
 
-                    // Save the selected temperature
+                    // Save selected temperature
                     g_wof->tempprocthrmc[core_idx] = temperature;
 
-                    // Get the difference between the temperature and tvpd_leak
-                    g_wof->core_delta_temp[core_idx] =
-                                          g_wof->tempprocthrmc[core_idx] -
-                                          g_wof->tvpd_leak_on;
+                    g_wof->quad_good_cores_only[quad_idx] =
+                    scale_and_interpolate
+                   (G_oppb.iddq.ivdd_quad_good_cores_on_good_caches_on[quad_idx],
+                    G_oppb.iddq.avgtemp_quad_good_cores_on[quad_idx],
+                    quad_v_idx,
+                    g_wof->tempprocthrmc[core_idx],
+                    g_wof->v_core_100uV[quad_idx] )
+                    -
+                    scale_and_interpolate
+                   (G_oppb.iddq.ivdd_all_good_cores_off_good_caches_on,
+                    G_oppb.iddq.avgtemp_all_good_cores_off,
+                    quad_v_idx,
+                    g_wof->tempprocthrmc[core_idx],
+                    g_wof->v_core_100uV[quad_idx])
+                    +
+                    g_wof->all_cores_off_iso *
+                    G_oppb.iddq.good_normal_cores[quad_idx] / 24;
 
-                    // Calculate the multiplier for the core
-                    g_wof->core_mult[core_idx] =
-                       calculate_multiplier(g_wof->core_delta_temp[core_idx]);
 
-                    // For each core, incorporate core on calculation into
-                    // leakage
-                    idc_vdd += (g_wof->quad_on_cores[quad_idx]*
-                                 g_wof->core_mult[core_idx]) >> 10;
+                    // Calculate quad_on_cores[quad]
+                    g_wof->quad_on_cores[quad_idx] =
+                        (g_wof->quad_good_cores_only[quad_idx]*
+                         g_wof->cores_on_per_quad[quad_idx]) /
+                         G_oppb.iddq.good_normal_cores[quad_idx];
 
+                    // Add to overall leakage
+                    idc_vdd += g_wof->quad_on_cores[quad_idx];
                 }
                 else // Core is powered off
                 {
@@ -989,45 +967,35 @@ void calculate_core_leakage( void )
             } // core loop
 
             // After all cores within the current quad have been processed,
-            // incorporate calculation for cores that were off into leakage
+            // incorporate calculations for cores that were off into leakage
+            // Calculate quadx_BAD_OFF_cores
+            g_wof->quad_bad_off_cores[quad_idx] =
+                g_wof->all_cores_off_iso *
+                G_oppb.iddq.good_normal_cores[quad_idx]/24;
+
+            // Scale to nest temp and add to overall leakage
             idc_vdd +=
-               ((g_wof->quad_bad_off_cores[quad_idx]*g_wof->nest_mult)
-                                                >> 10)* num_cores_off_in_quad;
+            (scale(g_wof->quad_bad_off_cores[quad_idx],
+                 (g_wof->tempnest_sensor -
+                 (G_oppb.iddq.avgtemp_all_cores_off_caches_off[quad_v_idx]>>1))))
+            * num_cores_off_in_quad;
+            // After all cores have been processed in current quad, multiply
+            // the scaled value by the numer of cores that were off.
 
-            temperature = AMECSENSOR_ARRAY_PTR(TEMPQ0,
-                                               quad_idx)->sample;
+            // Incorporate the cache into leakage calculation.
+            // scale from nest to quad
+            idc_vdd += scale( l_quad_cache,
+                        ( g_wof->tempq[quad_idx] - g_wof->tempnest_sensor) );
 
-            // If TEMPQ0 is 0, use TEMPNEST
-            if( temperature == 0 )
-            {
-                temperature = g_wof->tempnest_sensor;
-            }
-
-            // Save selected temperature off to amec
-            g_wof->tempq[quad_idx] = temperature;
-
-
-            // Get the quad delta temperature for cache calc
-            g_wof->quad_delta_temp[quad_idx] =
-                                 g_wof->tempq[quad_idx] -
-                                 g_wof->tvpd_leak_cache;
-
-            //Calculate the multiplier for the quad
-            g_wof->quad_mult[quad_idx] =
-                   calculate_multiplier(g_wof->quad_delta_temp[quad_idx]);
-
-            // Incorporate the cache into the leakage calculation
-            idc_vdd += (l_quad_x_cache*g_wof->quad_mult[quad_idx]) >> 10;
-
-        }
+        } // quad on/off conditional
     } // quad loop
+
     // After all Quads have been processed, incorporate calculation for quads
     // that off into leakage
-    idc_vdd += ((g_wof->idc_quad*g_wof->nest_mult) >> 10)* num_quads_off;
+    idc_vdd += g_wof->idc_quad * num_quads_off;
 
     // Finally, save the calculated leakage to amec
     g_wof->idc_vdd = idc_vdd;
-
 }
 
 /**
@@ -1039,53 +1007,17 @@ void calculate_core_leakage( void )
 void calculate_nest_leakage( void )
 {
 
-
     // Get the VOLTVDN sensor to choose the appropriate nest voltage
     // index
-    uint32_t l_v_nest = g_wof->voltvdn_sensor;
-    int l_nest_v_idx = 0;
+    int l_nest_v_idx = get_voltage_index( g_wof->voltvdn_sensor );
 
-    if( l_v_nest <= G_iddq_voltages[0] )
-    {
-        // Voltage is <= first entry. Use first two entries.
-        l_nest_v_idx = 0;
-    }
-    else if( l_v_nest >= G_iddq_voltages[CORE_IDDQ_MEASUREMENTS-1] )
-    {
-        // Voltage is >= to last entry. use last two entries.
-        l_nest_v_idx = CORE_IDDQ_MEASUREMENTS - 2;
-    }
-    else
-    {
-        // Search for entries on either side of our voltage
-        for(; l_nest_v_idx < CORE_IDDQ_MEASUREMENTS - 1; l_nest_v_idx++)
-        {
-            if( (l_v_nest >= G_iddq_voltages[l_nest_v_idx]) &&
-                (l_v_nest <= G_iddq_voltages[l_nest_v_idx+1]) )
-            {
-                break;
-            }
-        }
-    }
-
-    uint32_t idc_nest = interpolate_linear((int32_t) l_v_nest,
-                            (int32_t)G_iddq_voltages[l_nest_v_idx],
-                            (int32_t)G_iddq_voltages[l_nest_v_idx+1],
-                            (int32_t)G_oppb.iddq.ivdn[l_nest_v_idx],
-                            (int32_t)G_oppb.iddq.ivdn[l_nest_v_idx+1]);
-
-    // Get the desired tvpd leak for nest calculation
-    // avgtemp in IDDQ table is 0.5C units. Divide by 2 to get 1C
-    g_wof->tvpd_leak_nest = G_oppb.iddq.avgtemp_vdn >> 1;
-
-    // Subtract tvpd_leak from TEMPNEST sensor
-    int16_t nest_delta_temp = g_wof->tempnest_sensor - g_wof->tvpd_leak_nest;
-
-    // Calculate multiplier for final calculation;
-    uint32_t nest_mult = calculate_multiplier( nest_delta_temp );
-
-    // Save nest leakage to amec structure
-    g_wof->idc_vdn = (idc_nest*nest_mult) >> 10;
+    // Assign to nest leakage.
+    g_wof->idc_vdn =
+        scale_and_interpolate(G_oppb.iddq.ivdn,
+                              G_oppb.iddq.avgtemp_vdn,
+                              l_nest_v_idx,
+                              g_wof->tempnest_sensor,
+                              g_wof->voltvdn_sensor );
 }
 
 /**
@@ -1150,15 +1082,8 @@ uint32_t calculate_effective_capacitance( uint32_t i_iAC,
  */
 void calculate_ceff_ratio_vdn( void )
 {
-    //TODO Read iac_tdp_vdn(@turbo) from OCCPstateParmBlock struct
-    g_wof->iac_tdp_vdn = 0;
-
-    // Calculate Ceff_tdp_vdn
-    // iac_tdp_vdn / (VOLTVDN^1.3 * Fnest)
-    g_wof->ceff_tdp_vdn =
-                calculate_effective_capacitance( g_wof->iac_tdp_vdn,
-                                                 g_wof->voltvdn_sensor,
-                                                 G_nest_frequency_mhz );
+    // Get ceff_tdp_vdn from OCCPPB
+    g_wof->ceff_tdp_vdn = G_oppb.ceff_tdp_vdn;
 
     // Calculate ceff_vdn
     // iac_vdn/ (VOLTVDN^1.3 * Fnest)
@@ -1210,8 +1135,8 @@ void calculate_ceff_ratio_vdn( void )
  */
 void calculate_ceff_ratio_vdd( void )
 {
-    //TODO read iac_tdp_vdd from OCCPstateParmBlock struct
-    g_wof->iac_tdp_vdd = 0;
+    // Read iac_tdp_vdd from OCCPstateParmBlock struct
+    g_wof->iac_tdp_vdd = G_oppb.lac_tdp_vdd_turbo_10ma;
 
     // Get Vturbo and convert to 100uV (mV -> 100uV) = mV*10
     // Multiply by Vratio
@@ -1244,7 +1169,7 @@ void calculate_ceff_ratio_vdd( void )
          * @reasoncode      DIVIDE_BY_ZERO_ERROR
          * @userdata1       0
          * @userdata4       OCC_NO_EXTENDED_RC
-         * @devdesc         Divide by zero error on ceff_vdd / ceff_tdp_vdd
+         * @devdesc         Get ceff_tdp_vdd from OCCPPB
          */
         errlHndl_t l_errl = createErrl(
                         CALC_CEFF_RATIO_VDD,
@@ -1356,7 +1281,7 @@ inline int32_t interpolate_linear( int32_t i_X,
  *
  * Return: The multiplier representing the temperature factor
  */
-int32_t calculate_multiplier( int32_t i_temp )
+uint32_t calculate_multiplier( int32_t i_temp )
 {
     int mult_idx;
 
@@ -1641,4 +1566,111 @@ void read_req_active_quads( void )
 
     // Save number of on bits
     g_wof->num_active_quads = on_bits;
+}
+
+/**
+ * get_voltage_index
+ *
+ * Desctiption: Using the input voltage, returns the index to the lower bound
+ *              of the two voltages surrounding the input voltage in
+ *              G_iddq_voltages
+ *
+ * Param[in]: i_voltage - the input voltage to select the index for
+ *
+ * Return: The index to the lower bound voltage in G_iddq_voltages
+ */
+int get_voltage_index( uint32_t i_voltage )
+{
+
+    int l_volt_idx;
+    if( i_voltage <= G_iddq_voltages[0] )
+    {
+        // Voltage is <= to first entry. Use first two entries.
+        l_volt_idx = 0;
+    }
+    else if( i_voltage >= G_iddq_voltages[CORE_IDDQ_MEASUREMENTS-1] )
+    {
+        // Voltage is >= to last entry. Use last two entries.
+        l_volt_idx = CORE_IDDQ_MEASUREMENTS - 2;
+    }
+    else
+    {
+        // Search for entries on either side of our voltage
+        for(l_volt_idx = 0; l_volt_idx < CORE_IDDQ_MEASUREMENTS - 1; l_volt_idx++)
+        {
+            if( (i_voltage >= G_iddq_voltages[l_volt_idx]) &&
+                (i_voltage <= G_iddq_voltages[l_volt_idx+1]) )
+            {
+                break;
+            }
+        }
+    }
+    return l_volt_idx;
+}
+
+/**
+ * scale
+ *
+ * Description: Performs i_current*IDDQ_TEMP_FACTOR^(i_delta_temp)/10
+ *              where IDDQ_TEMP_FACTOR == 1.3
+ *              Note: The calculation is performed by doing a lookup
+ *              in G_wof_iddq_mult_table based on the passed in delta temp.
+ *
+ * Param[in]: i_current - The current to scale
+ * Param[in]: i_delta_temp - The measured temperature - the temperature at which
+ *                           the input current was measured.
+ * Return: The scaled current
+ */
+uint32_t scale( uint16_t i_current,
+                int16_t i_delta_temp )
+{
+    // Calculate the multipliers for the leakage current using the delta temp
+    uint32_t leak_multiplier = calculate_multiplier( i_delta_temp );
+    // Scale the current and return
+    return (i_current * leak_multiplier) >> 10;
+}
+
+/**
+ * scale_and_interpolate
+ *
+ * Desctiption: This function combines the scale and interpolate_linear
+ *              functions in order to approximate a current based off the
+ *              voltage scaled to the measured temperature (base temp)
+ *
+ * Param[in]: i_leak_arr - Array of IQ Currents taken from vpd (OCC Pstate
+ *                         parameter block.
+ * Param[in]: i_avgtemp_arr - Array of temperatures in which the currents
+ *                            in i_leak_arr were measured. Also taken from vpd.
+ * Param[in]: i_idx - The index into the two arrays calculated from voltage
+ * Param[in]: i_base_temp - The base temperature used to scale the current
+ * Param[in]: i_voltage - The associated voltage.
+ *
+ * Return: The approximated scaled current.
+ */
+uint32_t scale_and_interpolate( uint16_t * i_leak_arr,
+                       uint8_t * i_avgtemp_arr,
+                       int i_idx,
+                       uint16_t i_base_temp,
+                       uint16_t i_voltage )
+{
+    // Calculate the Delta temps for the upper and lower bounds
+    // Note: avgtemp arrays are in 0.5C. Divide by 2 to convert
+    //       to 1C
+    int16_t lower_delta = i_base_temp - (i_avgtemp_arr[i_idx] >> 1);
+    int16_t upper_delta = i_base_temp - (i_avgtemp_arr[i_idx+1] >> 1);
+
+    // Scale the currents based on the delta temperature
+    uint32_t scaled_lower_leak = scale( i_leak_arr[i_idx],
+                                        lower_delta );
+    uint32_t scaled_upper_leak = scale( i_leak_arr[i_idx],
+                                        upper_delta );
+
+    // Approximate current between the scaled currents using linear
+    // interpolation and return the result
+    return interpolate_linear( (int32_t) i_voltage,
+                               (int32_t) G_iddq_voltages[i_idx],
+                               (int32_t) G_iddq_voltages[i_idx+1],
+                               (int32_t) scaled_lower_leak,
+                               (int32_t) scaled_upper_leak );
+
 }

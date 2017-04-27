@@ -38,6 +38,7 @@
 #define QUAD_POWERED_OFF            0xFF
 #define PGPE_WOF_OFF                0
 #define PGPE_WOF_ON                 1
+#define NUM_CORES_PER_QUAD          4
 //******************************************************************************
 // Bit Vector Masks
 //******************************************************************************
@@ -178,6 +179,8 @@ typedef struct
     uint16_t voltvdn_sensor;
     // Array to hold the current 1-byte pstate values read from SRAM. 0xFF=off
     uint8_t  quad_x_pstates[MAXIMUM_QUADS];
+    // Array to hold the voltage index for the quads based on their voltage
+    uint8_t quad_v_idx[MAXIMUM_QUADS];
     // Bit vector to hold the ivrm states of the quads. 0=BYPASS, 1=REGULATION
     uint8_t  quad_ivrm_states;
     // Contains the estimated core leakage based on temp, voltage, and vpd-leak
@@ -192,8 +195,6 @@ typedef struct
     uint32_t iac_vdn;
     // Contains iac_tdp_vdd(@turbo) read from the pstate parameter block
     uint32_t iac_tdp_vdd;
-    // Contains iac_tdp_vdn read from the pstate parameter block
-    uint32_t iac_tdp_vdn;
     // Contains Vratio, read from OCC-PGPE shared SRAM
     uint32_t v_ratio;
     // Contains Fratio, read from OCC-PGPE shared SRAM
@@ -215,40 +216,19 @@ typedef struct
     // Contains the calculated effective capacitance ratio for vdn
     uint32_t ceff_ratio_vdn;
     // Contains the index used for interpolation in the ALL_CORES_OFF_ISO calc
-    uint8_t voltage_idx;
+    uint8_t chip_volt_idx;
     // Contains the final calculated value of ALL_CORES_OFF_ISO
     uint32_t all_cores_off_iso;
-    // Contains the final calculated value of ALL_CACHES_ON_ISO
-    uint32_t all_caches_on_iso;
+    // Contains the final calculated value of ALL_GOOD_CACHES_ON_ISO
+    uint32_t all_good_caches_on_iso;
+    // Contains the final calculated value of ALL_CACHES_OFF_ISO
+    uint32_t all_caches_off_iso;
     // Contains good_cores_only (per_quad)
-    uint16_t quad_good_cores_only[MAXIMUM_QUADS];
+    uint32_t quad_good_cores_only[MAXIMUM_QUADS];
     // Contains on_cores
     uint16_t quad_on_cores[MAXIMUM_QUADS];
     // Contains BAD_OFF_cores
     uint16_t quad_bad_off_cores[MAXIMUM_QUADS];
-    // Contains the multiplier(m) used in y ~=(T*m)>>10 for nest leak calc
-    uint32_t nest_mult;
-    // Contains the multiplier(m) used in y ~=(T*m)>>10 for core leak calc 0-23
-    uint32_t core_mult[MAX_NUM_CORES];
-    // Contains the multiplier(m) used in y ~=(T*m)>>10 for quad leak calc 0-5
-    uint32_t quad_mult[MAXIMUM_QUADS];
-    // Contains the delta temp used for nest leakage calc (see G_wof_iddq_mult_table)
-    // TEMPNEST - tvpd_leak_off
-    int16_t nest_delta_temp;
-    // Contains the delta temp used for core leakage calc
-    // TEMPPROCTHRMy - tvpd_leak_on (where y is the core number)
-    int16_t core_delta_temp[MAX_NUM_CORES];
-    // Contains the delta temp used for quad leakage calc
-    // TEMPQx - tvpd_leak_cache (where x is the quad number)
-    int16_t quad_delta_temp[MAXIMUM_QUADS];
-    // tvpd leak to use when either the core is off, or the entire quad is off
-    uint32_t tvpd_leak_off;
-    // tvpd leak to use when the core is on
-    uint32_t tvpd_leak_on;
-    // tvpd leak to use when performing cache calculations
-    uint32_t tvpd_leak_cache;
-    // tvpd leak used for nest leakage calculations
-    uint32_t tvpd_leak_nest;
     // Contains the most recently read value from SRAM for Requested active quads
     // Value represents a bit vector denoting which quads are active
     uint8_t req_active_quad_update;
@@ -280,6 +260,8 @@ typedef struct
     uint32_t pgpe_wof_state_addr;
     // The address in shared OCC-PGPE SRAM of the Requested Active quads
     uint32_t req_active_quads_addr;
+    // The core leakage percent portion of VDD
+    uint16_t core_leakage_percent;
 } amec_wof_t;
 
 typedef struct
@@ -344,12 +326,11 @@ inline int32_t interpolate_linear( int32_t i_X,
                                    int32_t i_y1,
                                    int32_t i_y2 );
 
-int32_t calculate_multiplier( int32_t i_temp );
+uint32_t calculate_multiplier( int32_t i_temp );
 
 uint32_t calculate_effective_capacitance( uint32_t i_iAC,
                                           uint32_t i_voltage,
                                           uint32_t i_frequency );
-
 
 void read_sensor_data( void );
 
@@ -362,4 +343,15 @@ void wof_control_callback( void );
 void send_initial_vfrt_to_pgpe( void );
 
 void read_req_active_quads( void );
+
+int get_voltage_index( uint32_t i_voltage );
+
+uint32_t scale( uint16_t i_current,
+                int16_t i_delta_temp );
+
+uint32_t scale_and_interpolate( uint16_t * i_leak_arr,
+                                uint8_t * i_avgtemp_arr,
+                                int i_idx,
+                                uint16_t i_base_temp,
+                                uint16_t i_voltage );
 #endif

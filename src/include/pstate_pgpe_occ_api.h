@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016                             */
+/* Contributors Listed Below - COPYRIGHT 2016,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -138,7 +138,7 @@ typedef struct ipcmsg_wof_vfrt
     uint8_t         active_quads; // OCC updated with the Active Quads that it
     // is using for its Ceff calculations
     uint8_t         pad;
-    VFRT_Hcode_t*   vfrt_ptr;     // Voltage Frequency Ratio Table
+    HomerVFRTLayout_t*   homer_vfrt_ptr;     // Voltage Frequency Ratio Table
 } ipcmsg_wof_vfrt_t;
 
 
