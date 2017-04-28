@@ -952,17 +952,17 @@ bool read_ppmr_header(void)
  *
  * End Function Specification
  */
-bool read_oppb_params(const OCCPstateParmBlock* oppb_offset)
+bool read_oppb_params()
 {
     int l_ssxrc = SSX_OK;
     uint32_t l_reasonCode = 0;
     uint32_t l_extReasonCode = OCC_NO_EXTENDED_RC;
     uint32_t userdata1 = 0;
     uint32_t userdata2 = 0;
+    const uint32_t oppb_address = PPMR_ADDRESS_HOMER + G_ppmr_header.oppb_offset;
 
-    MAIN_TRAC_INFO("read_oppb_params(0x%08X)", PPMR_ADDRESS_HOMER + oppb_offset);
-    create_tlb_entry(((uint32_t)PPMR_ADDRESS_HOMER + (uint32_t)oppb_offset),
-                     sizeof(OCCPstateParmBlock));
+    MAIN_TRAC_INFO("read_oppb_params(0x%08X)", oppb_address);
+    create_tlb_entry(oppb_address, sizeof(OCCPstateParmBlock));
 
     do{
         // use block copy engine to read the OPPB header
@@ -971,8 +971,7 @@ bool read_oppb_params(const OCCPstateParmBlock* oppb_offset)
         // Set up a copy request
         l_ssxrc = bce_request_create(&pba_copy,                           // block copy object
                                      &G_pba_bcde_queue,                   // mainstore to sram copy engine
-                                     (uint32_t)PPMR_ADDRESS_HOMER +
-                                     (uint32_t)oppb_offset,               // mainstore address
+                                     oppb_address,                        // mainstore address
                                      (uint32_t) &G_oppb,                  // sram starting address
                                      (size_t) sizeof(OCCPstateParmBlock), // size of copy
                                      SSX_WAIT_FOREVER,                    // no timeout
@@ -1122,7 +1121,7 @@ void read_hcode_headers()
         CHECKPOINT(PPMR_IMAGE_HEADER_READ);
 
         // Read OCC pstates parameter block
-        if (read_oppb_params((OCCPstateParmBlock*)G_ppmr_header.oppb_offset) == FALSE) break;
+        if (read_oppb_params() == FALSE) break;
         CHECKPOINT(OPPB_IMAGE_HEADER_READ);
 
         // Read PGPE header file, extract OCC/PGPE Shared SRAM address and size,

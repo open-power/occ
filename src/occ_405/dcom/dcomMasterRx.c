@@ -353,11 +353,10 @@ void task_dcom_rx_slv_outboxes( task_t *i_self)
 // End Function Specification
 uint32_t dcom_rx_slv_outbox_doorbell( void )
 {
-    static bool l_error = FALSE;
     int         l_pbarc = 0;
     uint32_t    l_read = 0;
 
-    // Grab doorbells from slave
+    // Grab doorbells from slave, read out the whole queue to prevent overflow
     l_pbarc = pbax_read(
             &G_pbax_read_queue[1],
             &G_dcom_slv_outbox_doorbell_rx[0],
@@ -365,19 +364,16 @@ uint32_t dcom_rx_slv_outbox_doorbell( void )
             &l_read
             );
 
-    if ( l_pbarc != 0 && l_error == FALSE )
+    if (l_pbarc != 0)
     {
         // Failure occurred but only trace it once
-        TRAC_ERR("PBAX Read Failure in receiving unicast doorbell - RC[%08X]", l_pbarc);
+        TRAC_ERR("Master PBAX Read Failure in receiving unicast slave doorbells - RC[%08X]", l_pbarc);
 
-        l_error  = TRUE;
-    }
-    else
-    {
-        l_error  = FALSE;
+        // Handle pbax read failure on queue 1
+        dcom_pbax_error_handler(1);
     }
 
-    // Return the number of doorbells read by dividing the bytes read by the number of occs slaves
+    // Return the number of doorbells read by dividing the bytes read by the doorbell size
     return (l_read/sizeof(dcom_slv_outbox_doorbell_t));
 }
 

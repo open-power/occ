@@ -94,6 +94,10 @@ enum occReasonCode
     INTERNAL_INVALID_INPUT_DATA     = 0xB3,
     /// RTL detected a system checkstop
     OCC_SYSTEM_HALTED               = 0xB5,
+    ///  Reset PBA Queue due to PBAX Read Failure
+    PBAX_QUEUE_RESET                = 0xBA,
+    ///  PBAX failure sending doorbell to slaves
+    PBAX_ERROR                      = 0xBB,
     ///  Request to read APSS data failed.
     APSS_GPE_FAILURE                = 0xC0,
     /// AVS Bus output over-current reported

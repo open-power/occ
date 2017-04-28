@@ -228,7 +228,6 @@ void task_apss_start_pwr_meas(struct task *i_self)
 {
     int             l_rc                = 0;
     static bool     L_scheduled         = FALSE;
-    static bool     L_idle_traced       = FALSE;
     static bool     L_ffdc_collected    = FALSE;
 
     // Create/schedule GPE_start_pwr_meas_read (non-blocking)
@@ -238,16 +237,8 @@ void task_apss_start_pwr_meas(struct task *i_self)
     {
         if (!async_request_is_idle(&G_meas_start_request.request))
         {
-            if (!L_idle_traced)
-            {
-                INTR_TRAC_INFO("E>task_apss_start_pwr_meas: request is not idle.");
-                L_idle_traced = TRUE;
-            }
+            INTR_TRAC_INFO("E>task_apss_start_pwr_meas: request is not idle.");
             break;
-        }
-        else
-        {
-            L_idle_traced = FALSE;
         }
 
         // Check if we need to try recovering the apss
@@ -404,7 +395,6 @@ void task_apss_continue_pwr_meas(struct task *i_self)
 {
     int         l_rc                = 0;
     static bool L_scheduled         = FALSE;
-    static bool L_idle_traced       = FALSE;
     static bool L_ffdc_collected    = FALSE;
 
     // Create/schedule GPE_apss_continue_pwr_meas_read (non-blocking)
@@ -414,16 +404,8 @@ void task_apss_continue_pwr_meas(struct task *i_self)
     {
         if (!async_request_is_idle(&G_meas_cont_request.request))
         {
-            if (!L_idle_traced)
-            {
-                INTR_TRAC_INFO("E>task_apss_continue_pwr_meas: request is not idle.");
-                L_idle_traced = TRUE;
-            }
+            INTR_TRAC_INFO("E>task_apss_continue_pwr_meas: request is not idle.");
             break;
-        }
-        else
-        {
-            L_idle_traced = FALSE;
         }
 
         //Don't run anything if apss recovery is in progress
@@ -643,7 +625,6 @@ void task_apss_complete_pwr_meas(struct task *i_self)
 {
     int         l_rc                = 0;
     static bool L_scheduled         = FALSE;
-    static bool L_idle_traced       = FALSE;
     static bool L_ffdc_collected    = FALSE;
 
     // Create/schedule GPE_apss_complete_pwr_meas_read (non-blocking)
@@ -653,16 +634,8 @@ void task_apss_complete_pwr_meas(struct task *i_self)
     {
         if (!async_request_is_idle(&G_meas_complete_request.request))
         {
-            if (!L_idle_traced)
-            {
-                INTR_TRAC_INFO("E>task_apss_complete_pwr_meas: request is not idle.");
-                L_idle_traced = TRUE;
-            }
+            INTR_TRAC_INFO("E>task_apss_complete_pwr_meas: request is not idle.");
             break;
-        }
-        else
-        {
-            L_idle_traced = FALSE;
         }
         if(G_apss_recovery_requested)
         {

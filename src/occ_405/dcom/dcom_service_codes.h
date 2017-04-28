@@ -40,6 +40,8 @@ enum dcomModuleId
     DCOM_MID_TASK_WAIT_FOR_MASTER   =  DCOM_COMP_ID | 0x07,
     DCOM_MID_ERROR_CHECK            =  DCOM_COMP_ID | 0x08,
     DCOM_MID_WAIT_FOR_MASTER        =  DCOM_COMP_ID | 0x09,
+    DCOM_MID_PBAX_ERROR_HANDLER     =  DCOM_COMP_ID | 0x0A,
+    DCOM_MID_BUILD_SLV_INBOX        =  DCOM_COMP_ID | 0x0B,
 };
 
 #endif /* #ifndef _DCOM_SERVICE_CODES_H_ */

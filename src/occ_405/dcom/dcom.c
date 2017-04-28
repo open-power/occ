@@ -596,5 +596,79 @@ void task_dcom_parse_occfwmsg(task_t *i_self)
     G_slave_event_flags = (G_slave_event_flags & (~(G_dcom_slv_inbox_rx.occ_fw_mailbox[3])));
 }
 
+
+// Function Specification
+//
+// Name: dcom_pbax_error_handler
+//
+// Description: Handle an error from a pbax_read call
+//
+// End Function Specification
+void dcom_pbax_error_handler(const uint8_t i_queue)
+{
+    pba_xshcsn_t l_pba_shcs;
+    pba_xcfg_t   l_pbax_cfg;
+
+    SsxAddress   l_pba_shcs_addr = PBA_XSHCS0;
+    errlHndl_t   l_err = NULL;
+    static bool  L_pba_reset_logged[2] = {FALSE};
+
+    // Skip if waiting for a reset, no sense in trying to recover when going to be reset anyway
+    if((TRUE == isSafeStateRequested()) || (CURRENT_STATE() == OCC_STATE_SAFE))
+        return;
+
+    if(i_queue == 1)
+        l_pba_shcs_addr = PBA_XSHCS1;
+
+    l_pba_shcs.words.high_order = in32(l_pba_shcs_addr);
+
+    TRAC_ERR("dcom_pbax_error_handler: Start error handler for queue %d PBA_XSHCS[0x%08x]",
+             i_queue, l_pba_shcs.words.high_order);
+
+    do
+    {
+        // reset queue and clear the error condition to allow future pbax reads
+
+        // 1. Disable the pushQ and reset the read & write pointer by writing 0 to push_enable (bit 31)
+        l_pba_shcs.fields.push_enable = 0;
+        out32(l_pba_shcs_addr, l_pba_shcs.words.high_order);
+
+        // 2. Clear the error status by setting rcv_reset (bit 3) in the PBAX CFG register
+        l_pbax_cfg.value = in64(PBA_XCFG);
+        l_pbax_cfg.fields.rcv_reset = 1;
+        out64(PBA_XCFG, l_pbax_cfg.value);
+
+        // 3.  Reenable the pushQ (set push_enable bit 31)
+        l_pba_shcs.fields.push_enable = 1;
+        out32(l_pba_shcs_addr, l_pba_shcs.words.high_order);
+
+        TRAC_INFO("dcom_pbax_error_handler: Success resetting queue %d PBA_XSHCS[0x%08x] PBA_XCFG[0x%08x]",
+                  i_queue, in32(l_pba_shcs_addr), in32(PBA_XCFG));
+
+        if(L_pba_reset_logged[i_queue] == FALSE)
+        {
+            // log error to indicate queue was reset
+            /* @
+             * @errortype
+             * @moduleid    DCOM_MID_PBAX_ERROR_HANDLER
+             * @reasoncode  PBAX_QUEUE_RESET
+             * @userdata1   PBA queue
+             * @userdata4   OCC_NO_EXTENDED_RC
+             * @devdesc     PBAX queue reset
+             */
+            l_err = createErrl( DCOM_MID_PBAX_ERROR_HANDLER,    //modId
+                                PBAX_QUEUE_RESET,               //reasoncode
+                                OCC_NO_EXTENDED_RC,             //Extended reason code
+                                ERRL_SEV_INFORMATIONAL,         //Severity
+                                NULL,                           //Trace Buf
+                                DEFAULT_TRACE_SIZE,             //Trace Size
+                                i_queue,                        //userdata1
+                                0);                             //userdata2
+            commitErrl(&l_err);
+            L_pba_reset_logged[i_queue] = TRUE;
+        }
+    }while(0);
+}
+
 #endif //_DCOM_C
 
