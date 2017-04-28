@@ -49,7 +49,6 @@ extern pstateStatus G_proc_pstate_status;
 //******************************************************************************
 // Globals
 //******************************************************************************
-
 uint8_t G_sram_vfrt_ping_buffer[MIN_BCE_REQ_SIZE] __attribute__ ((section(".vfrt_ping_buffer")));
 uint8_t G_sram_vfrt_pong_buffer[MIN_BCE_REQ_SIZE] __attribute__ ((section(".vfrt_pong_buffer")));
 
@@ -1494,7 +1493,7 @@ void disable_wof( void )
         /** @
          *  @errortype
          *  @moduleid   DISABLE_WOF
-         *  @reasoncode WOF_DISABLED
+         *  @reasoncode WOF_DISABLED_RC
          *  @userdata1  wof_disabled reasoncode
          *  @userdata2  0
          *  @userdata4  OCC_NO_EXTENDED_RC

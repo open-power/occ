@@ -61,6 +61,7 @@
 #define WOF_RC_VFRT_REQ_FAILURE                    0x1000
 #define WOF_RC_CONTROL_REQ_FAILURE                 0x2000
 #define WOF_RC_VFRT_ALIGNMENT_ERROR                0x4000
+#define WOF_RC_DRIVER_WOF_DISABLED                 0x8000
 
 // Reason codes which should NOT create an error log should be added here
 #define ERRL_RETURN_CODES ~(WOF_RC_MODE_CHANGE  | \

@@ -499,6 +499,17 @@ void read_wof_header(void)
     uint32_t userdata1 = 0;
     uint32_t userdata2 = 0;
 
+    // Skip reading wof header until WOF is enabled
+    // TODO RTC: 131186 - remove when WOF is up
+    g_amec->wof.wof_disabled |= WOF_RC_DRIVER_WOF_DISABLED;
+
+    if( g_amec->wof.wof_disabled )
+    {
+        MAIN_TRAC_INFO("WOF has not been enabled. Skipping read_wof_header");
+        return;
+    }
+
+
     MAIN_TRAC_INFO("read_wof_header() 0x%08X", G_pgpe_header.wof_tables_addr);
 
     // Read active quads address, wof tables address, and wof tables len
