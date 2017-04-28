@@ -508,35 +508,7 @@ void copy_vfrt_to_sram( copy_vfrt_to_sram_parms_t * i_parms)
     // Confirm Successful scheduling of WOF VFRT task
     if(l_gperc != 0)
     {
-        //Error in scheduling wof_vfrt task
-        /* @
-         * @errortype
-         * @moduleid    COPY_VFRT_TO_SRAM
-         * @reasoncode  GPE_REQUEST_SCHEDULE_FAILURE
-         * @userdata1   rc - gpe_request_schedule return code
-         * @userdata2   0
-         * @userdata4   OCC_NO_EXTENDED_RC
-         * @devdesc     OCC Failed to schedule a GPE job for wof vfrt
-         */
-        errlHndl_t l_errl = createErrl(
-            COPY_VFRT_TO_SRAM,                   // modId
-            GPE_REQUEST_SCHEDULE_FAILURE,        // reasoncode
-            OCC_NO_EXTENDED_RC,                  // Extended reason code
-            ERRL_SEV_UNRECOVERABLE,              // Severity
-            NULL,                                // Trace Buf
-            DEFAULT_TRACE_SIZE,                  // Trace Size
-            l_gperc,                             // userdata1
-            0                                    // userdata2
-            );
-
-        // Callout firmware
-        addCalloutToErrl(l_errl,
-                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                         ERRL_COMPONENT_ID_FIRMWARE,
-                         ERRL_CALLOUT_PRIORITY_HIGH);
-
-        // Commit error log
-        commitErrl(&l_errl);
+        // TODO: Cannot create an error log within a callback function. Need to handle.
     }
 }
 
@@ -1610,26 +1582,7 @@ void wof_control_callback( void )
     {
         if( G_wof_control_parms.action == PGPE_ACTION_WOF_OFF )
         {
-            // Got some other unsuccessful RC. Create error and request reset
-            /*
-             * @errortype
-             * @moduleid    WOF_CONTROL_CALLBACK
-             * @reasoncode  GPE_REQUEST_RC_FAILURE
-             * @userdata1   Return code
-             * @userdata4   ERC_WOF_CONTROL_ERROR
-             * @devdesc     Invalid RC from wof control command
-             */
-            errlHndl_t l_errl = createErrl(
-                                WOF_CONTROL_CALLBACK,
-                                GPE_REQUEST_RC_FAILURE,
-                                ERC_WOF_CONTROL_ERROR,
-                                ERRL_SEV_PREDICTIVE, // Correct Severity???
-                                NULL,
-                                DEFAULT_TRACE_SIZE,
-                                G_wof_control_parms.msg_cb.rc,
-                                0 );
-
-            REQUEST_RESET(l_errl);
+            // TODO: Cannot log an error here, so need to figure out what to do.
         }
         else
         {

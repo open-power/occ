@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -48,6 +48,7 @@ typedef enum
     PSTATES_IN_TRANSITION = -1,
     PSTATES_DISABLED      = 0,
     PSTATES_ENABLED       = 1,
+    PSTATES_FAILED        = 2,
 } pstateStatus;
 
 

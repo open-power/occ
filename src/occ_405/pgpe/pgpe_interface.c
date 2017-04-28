@@ -62,6 +62,9 @@ GPE_BUFFER(ipcmsg_start_stop_t    G_start_suspend_parms);
 GPE_BUFFER(ipcmsg_wof_control_t   G_wof_control_parms);
 GPE_BUFFER(ipcmsg_wof_vfrt_t      G_wof_vfrt_parms);
 
+// Used to track failure of start_suspend callback
+int G_ss_pgpe_rc;               // pgpe return codes
+
 
 // Function Specification
 //
@@ -671,38 +674,15 @@ int pgpe_clip_update(void)
 // End Function Specification
 void pgpe_start_suspend_callback(void)
 {
-    int pgpe_rc;               // pgpe return codes
-    errlHndl_t  err = NULL;    // Error handler
-
-    pgpe_rc = G_start_suspend_parms.msg_cb.rc;
+    G_ss_pgpe_rc = G_start_suspend_parms.msg_cb.rc;
 
     do
     {
         // Confirm Successfull completion of PGPE start suspend task
-        if(pgpe_rc != PGPE_RC_SUCCESS)
+        if(G_ss_pgpe_rc != PGPE_RC_SUCCESS)
         {
             //Error in scheduling pgpe start suspend task
-
-            /* @
-             * @errortype
-             * @moduleid    PGPE_START_SUSPEND_CALLBACK_MOD
-             * @reasoncode  GPE_REQUEST_SCHEDULE_FAILURE
-             * @userdata1   pgpe_rc - PGPE return code
-             * @userdata4   OCC_NO_EXTENDED_RC
-             * @devdesc     OCC Failed to schedule a GPE job for start_suspend
-             */
-            err = createErrl(
-                PGPE_START_SUSPEND_CALLBACK_MOD,        // modId
-                PGPE_FAILURE,                           // reasoncode
-                ERC_PGPE_UNSUCCESSFULL,                 // Extended reason code
-                ERRL_SEV_UNRECOVERABLE,                 // Severity
-                NULL,                                   // Trace Buf
-                DEFAULT_TRACE_SIZE,                     // Trace Size
-                pgpe_rc,                                // userdata1
-                0                                       // userdata2
-                );
-
-            REQUEST_RESET(err);   //This will add a firmware callout for us
+            G_proc_pstate_status = PSTATES_FAILED;
             break;
         }
         // task completed successfully

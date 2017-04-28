@@ -42,6 +42,11 @@
 #include "pstate_pgpe_occ_api.h"
 #include "amec_sys.h"
 
+// Maximum time to wait for a PGPE task before timeout
+#define WAIT_PGPE_TASK_TIMEOUT 200
+// Maximum time to wait for a PGPE task before timeout when transitioning to standby
+#define WAIT_PGPE_TASK_TIMEOUT_STDBY 50
+
 extern bool G_mem_monitoring_allowed;
 extern task_t G_task_table[TASK_END];  // Global task table
 extern bool G_simics_environment;
@@ -292,115 +297,51 @@ errlHndl_t SMGR_standby_to_characterization()
 // Description: Switch from any state to standby state
 //
 // End Function Specification
-
-#define WAIT_PGPE_TASK_TIMEOUT 200         // maximum time to wait for a PGPE task before timeout
 errlHndl_t SMGR_all_to_standby()
 {
-    errlHndl_t  l_errlHndl     = NULL;
     uint8_t     wait_time = 0;
     int         rc;
 
-    TRAC_IMP("SMGR: Transition from State (%d) to Standby Started",
-             CURRENT_STATE());
+    TRAC_IMP("SMGR: Transition from State (%d) to Standby Started", CURRENT_STATE());
 
-    do
+    // if Psates in transition (a pgpe_start_suspend IPC call still running),
+    // wait until it is settled up to WAIT_PGPE_TASK_TIMEOUT usec
+    while( (G_proc_pstate_status == PSTATES_IN_TRANSITION) &&
+           (wait_time < WAIT_PGPE_TASK_TIMEOUT_STDBY) )
     {
-
-        // if Psates in transition (a pgpe_start_suspend IPC call still running),
-        // wait until it is settled up to WAIT_PGPE_TASK_TIMEOUT usec
-        while(G_proc_pstate_status == PSTATES_IN_TRANSITION &&
-              wait_time < WAIT_PGPE_TASK_TIMEOUT)
-        {
-            // wait until pgpe_start_suspend call is completed. Sleep enables context switching.
-            ssx_sleep(SSX_MICROSECONDS(10));
-            wait_time += 10;
-        }
-
-        // check for timeout while waiting for pgpe_start_suspend() IPC completion
-        if(wait_time >= WAIT_PGPE_TASK_TIMEOUT)
-        {
-            TRAC_ERR("SMGR: Timeout waiting for Pstates start/suspend IPC task");
-
-            /* @
-             * @errortype
-             * @moduleid    MAIN_STATE_TRANSITION_MID
-             * @reasoncode  GPE_REQUEST_TASK_TIMEOUT
-             * @userdata1   wait_time
-             * @userdata4   OCC_NO_EXTENDED_RC
-             * @devdesc     timeout waiting for pstates start/suspend task
-             */
-            l_errlHndl = createErrl(MAIN_STATE_TRANSITION_MID,          //modId
-                                    GPE_REQUEST_TASK_TIMEOUT,           //reasoncode
-                                    OCC_NO_EXTENDED_RC,                 //Extended reason code
-                                    ERRL_SEV_UNRECOVERABLE,             //Severity
-                                    NULL,                               //Trace Buf
-                                    DEFAULT_TRACE_SIZE,                 //Trace Size
-                                    wait_time,                          //userdata1
-                                    0);                                 //userdata2
-
-            // Callout firmware
-            addCalloutToErrl(l_errlHndl,
-                             ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                             ERRL_COMPONENT_ID_FIRMWARE,
-                             ERRL_CALLOUT_PRIORITY_HIGH);
-            break;
-        }
-
-        // Stop Pstates if enabled
-        if(G_proc_pstate_status == PSTATES_ENABLED)
-        {
-            rc = pgpe_start_suspend(PGPE_ACTION_PSTATE_STOP, G_proc_pmcr_owner);
-            if(rc)
-            {
-                TRAC_ERR("SMGR: Failed to stop the pstate protocol on PGPE.");
-                break;
-            }
-        }
-
-        // Pstates Disabled, ready to safely transition to standby
-
-        // Set the RTL Flags to indicate which tasks can run
-        //   - Clear ACTIVE b/c not in ACTIVE State
-        //   - Clear OBSERVATION b/c not in CHARACTERIZATION State
-        rtl_clr_run_mask_deferred(RTL_FLAG_ACTIVE | RTL_FLAG_OBS );
-        rtl_set_run_mask_deferred(RTL_FLAG_STANDBY);
-
-        // Set the actual STATE now that we have finished everything else
-        CURRENT_STATE() = OCC_STATE_STANDBY;
-
-        TRAC_IMP("SMGR: Transition to Standby Completed");
-
-    } while (0);
-
-    if(l_errlHndl)
-    {
-        TRAC_ERR("SMGR: Transition to Standby Failed");
-
-        /* @
-         * @errortype
-         * @moduleid    MAIN_STATE_TRANSITION_MID
-         * @reasoncode  INTERNAL_FAILURE
-         * @userdata1   starting state
-         * @userdata4   ERC_STATE_FROM_ALL_TO_STB_FAILURE
-         * @devdesc     Failed changing from observation to characterization
-         */
-        l_errlHndl = createErrl(MAIN_STATE_TRANSITION_MID,          //modId
-                                INTERNAL_FAILURE,                   //reasoncode
-                                ERC_STATE_FROM_ALL_TO_STB_FAILURE,  //Extended reason code
-                                ERRL_SEV_UNRECOVERABLE,             //Severity
-                                NULL,                               //Trace Buf
-                                DEFAULT_TRACE_SIZE,                 //Trace Size
-                                CURRENT_STATE(),                    //userdata1
-                                0);                                 //userdata2
-
-        // Callout firmware
-        addCalloutToErrl(l_errlHndl,
-                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                         ERRL_COMPONENT_ID_FIRMWARE,
-                         ERRL_CALLOUT_PRIORITY_HIGH);
+        // wait until pgpe_start_suspend call is completed. Sleep enables context switching.
+        ssx_sleep(SSX_MICROSECONDS(10));
+        wait_time += 10;
     }
 
-    return l_errlHndl;
+    // check for timeout while waiting for pgpe_start_suspend() IPC completion
+    if(wait_time >= WAIT_PGPE_TASK_TIMEOUT)
+    {
+        TRAC_ERR("SMGR: Timeout waiting for Pstates start/suspend IPC task");
+    }
+    // Stop Pstates if enabled
+    else if(G_proc_pstate_status == PSTATES_ENABLED)
+    {
+        rc = pgpe_start_suspend(PGPE_ACTION_PSTATE_STOP, G_proc_pmcr_owner);
+        if(rc)
+        {
+            TRAC_ERR("SMGR: Failed to stop the pstate protocol on PGPE. rc[%08X]", rc);
+        }
+    }
+
+    // Pstates should be disabled, ready to safely transition to standby
+    // Set the RTL Flags to indicate which tasks can run
+    //   - Clear ACTIVE b/c not in ACTIVE State
+    //   - Clear OBSERVATION b/c not in CHARACTERIZATION State
+    rtl_clr_run_mask_deferred(RTL_FLAG_ACTIVE | RTL_FLAG_OBS );
+    rtl_set_run_mask_deferred(RTL_FLAG_STANDBY);
+
+    // Set the actual STATE now that we have finished everything else
+    CURRENT_STATE() = OCC_STATE_STANDBY;
+
+    TRAC_IMP("SMGR: Transition to Standby Completed");
+
+    return NULL;
 }
 
 // Function Specification

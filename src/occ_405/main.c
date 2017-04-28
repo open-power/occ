@@ -61,12 +61,14 @@
 #include <gpe_register_addresses.h>
 #include <p9_pstates_occ.h>
 #include <wof.h>
+#include "pgpe_service_codes.h"
 
 extern uint32_t __ssx_boot; // Function address is 32 bits
 extern uint32_t G_occ_phantom_critical_count;
 extern uint32_t G_occ_phantom_noncritical_count;
 extern uint8_t G_occ_interrupt_type;
 extern uint8_t G_occ_role;
+extern pstateStatus G_proc_pstate_status;
 
 extern GpeRequest G_meas_start_request;
 extern GpeRequest G_meas_cont_request;
@@ -90,7 +92,7 @@ ppmr_header_t G_ppmr_header;       // PPMR Header layout format
 pgpe_header_data_t G_pgpe_header;  // Selected fields from PGPE Header
 OCCPstateParmBlock G_oppb;         // OCC Pstate Parameters Block Structure
 extern uint16_t G_proc_fmax_mhz;   // max(turbo,uturbo) frequencies
-
+extern int G_ss_pgpe_rc;
 
 // Set main thread timer for one second
 #define MAIN_THRD_TIMER_SLICE ((SsxInterval) SSX_SECONDS(1))
@@ -1776,6 +1778,36 @@ void Main_thread_routine(void *private)
 
             REQUEST_RESET(l_err);
         }
+
+        // Check to make sure that the start_suspend PGPE job did not fail
+        if( (G_proc_pstate_status == PSTATES_FAILED) &&
+            (FALSE == isSafeStateRequested()) &&
+            (CURRENT_STATE() != OCC_STATE_SAFE) &&
+            (CURRENT_STATE() != OCC_STATE_STANDBY) )
+        {
+            /* @
+             * @errortype
+             * @moduleid    MAIN_THRD_ROUTINE_MID
+             * @reasoncode  PGPE_FAILURE
+             * @userdata1   start_suspend rc
+             * @userdata2   0
+             * @userdata4   ERC_PGPE_UNSUCCESSFULL
+             * @devdesc     PGPE returned an error in response to start_suspend
+             */
+            errlHndl_t l_err = createErrl(
+                        MAIN_THRD_ROUTINE_MID,                  // modId
+                        PGPE_FAILURE,                           // reasoncode
+                        ERC_PGPE_UNSUCCESSFULL,                 // Extended reason code
+                        ERRL_SEV_UNRECOVERABLE,                 // Severity
+                        NULL,                                   // Trace Buf
+                        DEFAULT_TRACE_SIZE,                     // Trace Size
+                        G_ss_pgpe_rc,                           // userdata1
+                        0                                       // userdata2
+                    );
+
+            REQUEST_RESET(l_err);
+        }
+
     } // while loop
 }
 
