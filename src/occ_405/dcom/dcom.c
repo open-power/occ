@@ -621,9 +621,13 @@ void dcom_pbax_error_handler(const uint8_t i_queue)
         l_pba_shcs_addr = PBA_XSHCS1;
 
     l_pba_shcs.words.high_order = in32(l_pba_shcs_addr);
+    uint32_t xsndstat = 0;
+    uint32_t xrcvstat = 0;
+    xsndstat = in32(PBA_XSNDSTAT);
+    xrcvstat = in32(PBA_XRCVSTAT);
 
-    TRAC_ERR("dcom_pbax_error_handler: Start error handler for queue %d PBA_XSHCS[0x%08x]",
-             i_queue, l_pba_shcs.words.high_order);
+    TRAC_ERR("dcom_pbax_error_handler: Start error handler for queue %d PBA_XSHCS[0x%08x] PBA_XSNDSTAT[0x%08X] PBA_XRCVSTAT[0x%08X]",
+             i_queue, l_pba_shcs.words.high_order, xsndstat, xrcvstat);
 
     do
     {
