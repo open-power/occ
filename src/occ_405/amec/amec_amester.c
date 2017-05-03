@@ -454,7 +454,7 @@ uint8_t amester_api( const IPMIMsg_t * i_msg,
             for( i = 0;i < l_sensor_count; i++)
             {
                 l_sensor_ptr = getSensorByGsid(i);
-                sensor_clear_minmax(l_sensor_ptr);
+                sensor_clear_minmax(l_sensor_ptr, AMEC_SENSOR_CLEAR_SAMPLE_MINMAX);
             }
             *io_resp_length = 0;
             l_rc = COMPCODE_NORMAL;

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -978,6 +978,108 @@ void cmdh_dbug_get_apss_data (const cmdh_fsp_cmd_t * i_cmd_ptr,
     o_rsp_ptr->data_length[1] = ((uint8_t *)&l_resp_data_length)[1];
 }
 
+
+// Function Specification
+//
+// Name: cmdh_dbug_dump_ame_sensor
+//
+// Description: Returns all fields (static and dynamic) for one sensor
+//
+// End Function Specification
+void cmdh_dbug_dump_ame_sensor(const cmdh_fsp_cmd_t * i_cmd_ptr,
+                               cmdh_fsp_rsp_t * o_rsp_ptr)
+{
+    const cmdh_dbug_dump_ame_sensor_cmd_t * l_cmd_ptr = (cmdh_dbug_dump_ame_sensor_cmd_t*) i_cmd_ptr;
+    cmdh_dbug_dump_ame_sensor_rsp_t *       l_rsp_ptr = (cmdh_dbug_dump_ame_sensor_rsp_t*) o_rsp_ptr;
+    uint8_t                                 l_rc = ERRL_RC_SUCCESS;    // Assume succeeds
+    uint16_t                                l_resp_data_length = 0;
+
+    // Make sure command and response pointer are valid
+    if ((l_cmd_ptr == NULL) || (l_rsp_ptr == NULL))
+    {
+        l_rc = ERRL_RC_INTERNAL_FAIL;
+    }
+    else
+    {
+        // Make sure sensor gsid is valid
+        uint16_t l_gsid = l_cmd_ptr->gsid;
+        if (l_gsid >= G_amec_sensor_count)
+        {
+            l_rc = ERRL_RC_INVALID_DATA;
+        }
+        else
+        {
+            // Copy static sensor fields into response struct
+            memcpy(&(l_rsp_ptr->sensor_info), &(G_sensor_info[l_gsid]), sizeof(sensor_info_t));
+            l_resp_data_length += sizeof(sensor_info_t);
+
+            // Copy dynamic sensor fields into response struct
+            memcpy(&(l_rsp_ptr->sensor), G_amec_sensor_list[l_gsid], sizeof(sensor_t));
+            l_resp_data_length += sizeof(sensor_t);
+        }
+    }
+
+    // Populate the response data header
+    if (l_rsp_ptr != NULL)
+    {
+        l_rsp_ptr->data_length[0] = CONVERT_UINT16_UINT8_HIGH(l_resp_data_length);
+        l_rsp_ptr->data_length[1] = CONVERT_UINT16_UINT8_LOW(l_resp_data_length);
+    }
+    G_rsp_status = l_rc;
+}
+
+
+// Function Specification
+//
+// Name: cmdh_dbug_clear_ame_sensor
+//
+// Description: Clears minimum and maximum fields in one sensor.
+//              Returns all dynamic sensor fields after the clear.
+//
+// End Function Specification
+void cmdh_dbug_clear_ame_sensor(const cmdh_fsp_cmd_t * i_cmd_ptr,
+                                cmdh_fsp_rsp_t * o_rsp_ptr)
+{
+    const cmdh_dbug_clear_ame_sensor_cmd_t * l_cmd_ptr = (cmdh_dbug_clear_ame_sensor_cmd_t*) i_cmd_ptr;
+    cmdh_dbug_clear_ame_sensor_rsp_t *       l_rsp_ptr = (cmdh_dbug_clear_ame_sensor_rsp_t*) o_rsp_ptr;
+    uint8_t                                  l_rc = ERRL_RC_SUCCESS;    // Assume succeeds
+    uint16_t                                 l_resp_data_length = 0;
+
+    // Make sure command and response pointer are valid
+    if ((l_cmd_ptr == NULL) || (l_rsp_ptr == NULL))
+    {
+        l_rc = ERRL_RC_INTERNAL_FAIL;
+    }
+    else
+    {
+        // Make sure sensor gsid is valid
+        uint16_t l_gsid = l_cmd_ptr->gsid;
+        if (l_gsid >= G_amec_sensor_count)
+        {
+            l_rc = ERRL_RC_INVALID_DATA;
+        }
+        else
+        {
+            // Clear specified min/max fields in sensor
+            AMEC_SENSOR_CLEAR_TYPE l_clear_type = (AMEC_SENSOR_CLEAR_TYPE) l_cmd_ptr->clear_type;
+            sensor_clear_minmax(G_amec_sensor_list[l_gsid], l_clear_type);
+
+            // Copy dynamic sensor fields (after clear) into response struct
+            memcpy(&(l_rsp_ptr->sensor), G_amec_sensor_list[l_gsid], sizeof(sensor_t));
+            l_resp_data_length += sizeof(sensor_t);
+        }
+    }
+
+    // Populate the response data header
+    if (l_rsp_ptr != NULL)
+    {
+        l_rsp_ptr->data_length[0] = CONVERT_UINT16_UINT8_HIGH(l_resp_data_length);
+        l_rsp_ptr->data_length[1] = CONVERT_UINT16_UINT8_LOW(l_resp_data_length);
+    }
+    G_rsp_status = l_rc;
+}
+
+
 // Function Specification
 //
 // Name:  dbug_parse_cmd
@@ -1088,6 +1190,14 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         case DBUG_DUMP_APSS_DATA:
             cmdh_dbug_get_apss_data(i_cmd_ptr, o_rsp_ptr);
+            break;
+
+        case DBUG_DUMP_AME_SENSOR:
+            cmdh_dbug_dump_ame_sensor(i_cmd_ptr, o_rsp_ptr);
+            break;
+
+        case DBUG_CLEAR_AME_SENSOR:
+            cmdh_dbug_clear_ame_sensor(i_cmd_ptr, o_rsp_ptr);
             break;
 
         default:

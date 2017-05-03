@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -91,20 +91,44 @@ void sensor_init(sensor_t * io_sensor_ptr,
 //  Name: sensor_clear_minmax
 //
 //  Description: Clears minimum and maximum fields in the sensor structure.
+//               i_clear_type contains one or more values OR'd together from the
+//               AMEC_SENSOR_CLEAR_TYPE enumeration.
 //
 // End Function Specification
-void sensor_clear_minmax( sensor_t * io_sensor_ptr)
+void sensor_clear_minmax(sensor_t * io_sensor_ptr,
+                         AMEC_SENSOR_CLEAR_TYPE i_clear_type)
 {
-    if( io_sensor_ptr != NULL)
+    if (io_sensor_ptr != NULL)
     {
-        io_sensor_ptr->sample_min = UINT16_MAX;
-        io_sensor_ptr->sample_max = UINT16_MIN;
-
-        // If it has vector sensor, clear max and min position
-        if( io_sensor_ptr->vector != NULL)
+        if (i_clear_type & AMEC_SENSOR_CLEAR_SAMPLE_MINMAX)
         {
-            io_sensor_ptr->vector->max_pos = VECTOR_SENSOR_DEFAULT_VAL;
-            io_sensor_ptr->vector->min_pos = VECTOR_SENSOR_DEFAULT_VAL;
+            io_sensor_ptr->sample_min = UINT16_MAX;
+            io_sensor_ptr->sample_max = UINT16_MIN;
+
+            // If it has vector sensor, clear max and min position
+            if (io_sensor_ptr->vector != NULL)
+            {
+                io_sensor_ptr->vector->max_pos = VECTOR_SENSOR_DEFAULT_VAL;
+                io_sensor_ptr->vector->min_pos = VECTOR_SENSOR_DEFAULT_VAL;
+            }
+        }
+
+        if (i_clear_type & AMEC_SENSOR_CLEAR_CSM_SAMPLE_MINMAX)
+        {
+            io_sensor_ptr->csm_sample_min = UINT16_MAX;
+            io_sensor_ptr->csm_sample_max = UINT16_MIN;
+        }
+
+        if (i_clear_type & AMEC_SENSOR_CLEAR_PROFILER_SAMPLE_MINMAX)
+        {
+            io_sensor_ptr->profiler_sample_min = UINT16_MAX;
+            io_sensor_ptr->profiler_sample_max = UINT16_MIN;
+        }
+
+        if (i_clear_type & AMEC_SENSOR_CLEAR_JOB_S_SAMPLE_MINMAX)
+        {
+            io_sensor_ptr->job_s_sample_min = UINT16_MAX;
+            io_sensor_ptr->job_s_sample_max = UINT16_MIN;
         }
     }
     else
@@ -134,7 +158,7 @@ void sensor_reset( sensor_t * io_sensor_ptr)
             *(io_sensor_ptr->mini_sensor) = 0x0;
         }
 
-        sensor_clear_minmax(io_sensor_ptr);
+        sensor_clear_minmax(io_sensor_ptr, AMEC_SENSOR_CLEAR_ALL_MINMAX);
 
         io_sensor_ptr->status.reset = 0;
     }
@@ -173,6 +197,60 @@ void sensor_vectorize( sensor_t * io_sensor_ptr,
 
 // Function Specification
 //
+//  Name: sensor_update_minmax
+//
+//  Description: Updates minimum and maximum fields in the sensor structure.
+//
+//  Implementation Notes:
+//    * This is an internal function so we don't validate parameters
+//
+// End Function Specification
+void sensor_update_minmax(sensor_t * io_sensor_ptr, uint16_t i_sensor_value)
+{
+    // Update sample min/max fields if needed
+    if (i_sensor_value < io_sensor_ptr->sample_min)
+    {
+        io_sensor_ptr->sample_min = i_sensor_value;
+    }
+    if (i_sensor_value > io_sensor_ptr->sample_max)
+    {
+        io_sensor_ptr->sample_max = i_sensor_value;
+    }
+
+    // Update CSM sample min/max fields if needed
+    if (i_sensor_value < io_sensor_ptr->csm_sample_min)
+    {
+        io_sensor_ptr->csm_sample_min = i_sensor_value;
+    }
+    if (i_sensor_value > io_sensor_ptr->csm_sample_max)
+    {
+        io_sensor_ptr->csm_sample_max = i_sensor_value;
+    }
+
+    // Update profiler sample min/max fields if needed
+    if (i_sensor_value < io_sensor_ptr->profiler_sample_min)
+    {
+        io_sensor_ptr->profiler_sample_min = i_sensor_value;
+    }
+    if (i_sensor_value > io_sensor_ptr->profiler_sample_max)
+    {
+        io_sensor_ptr->profiler_sample_max = i_sensor_value;
+    }
+
+    // Update job scheduler sample min/max fields if needed
+    if (i_sensor_value < io_sensor_ptr->job_s_sample_min)
+    {
+        io_sensor_ptr->job_s_sample_min = i_sensor_value;
+    }
+    if (i_sensor_value > io_sensor_ptr->job_s_sample_max)
+    {
+        io_sensor_ptr->job_s_sample_max = i_sensor_value;
+    }
+}
+
+
+// Function Specification
+//
 //  Name: sensor_update
 //
 //  Description: Update sensor
@@ -191,19 +269,8 @@ void sensor_update( sensor_t * io_sensor_ptr, const uint16_t i_sensor_value)
         // update sample value
         io_sensor_ptr->sample = i_sensor_value;
 
-        // update sample min value if input sample value is lower than
-        // sample_min
-        if( i_sensor_value < io_sensor_ptr->sample_min)
-        {
-            io_sensor_ptr->sample_min = i_sensor_value;
-        }
-
-        // update sample max value if input sample value is greater than
-        // sample_max
-        if( i_sensor_value > io_sensor_ptr->sample_max)
-        {
-            io_sensor_ptr->sample_max = i_sensor_value;
-        }
+        // update min/max values if needed
+        sensor_update_minmax(io_sensor_ptr, i_sensor_value);
 
         // If this sensor has mini sensor, update it's value
         if( io_sensor_ptr->mini_sensor != NULL)

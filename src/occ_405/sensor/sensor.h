@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -106,6 +106,19 @@ typedef enum
 
 } VECTOR_SENSOR_OP;
 
+// This enumeration specifies which sample minimum/maximum values to clear when
+// calling sensor_clear_minmax().  The enumeration values can be OR'd together,
+// so each value must be a different power of 2.  Specifying
+// AMEC_SENSOR_CLEAR_ALL_MINMAX clears all min/max values in the sensor.
+typedef enum
+{
+    AMEC_SENSOR_CLEAR_SAMPLE_MINMAX           = 0x0001,
+    AMEC_SENSOR_CLEAR_CSM_SAMPLE_MINMAX       = 0x0002,
+    AMEC_SENSOR_CLEAR_PROFILER_SAMPLE_MINMAX  = 0x0004,
+    AMEC_SENSOR_CLEAR_JOB_S_SAMPLE_MINMAX     = 0x0008,
+    AMEC_SENSOR_CLEAR_ALL_MINMAX              = 0xffff,
+} AMEC_SENSOR_CLEAR_TYPE;
+
 /*****************************************************************************/
 // Forward declaration as used in vectorSensor
 struct sensor;
@@ -156,22 +169,28 @@ typedef struct sensorStatus sensorStatus_t;
 // Sensor structure
 struct sensor
 {
-    uint16_t gsid;            // Global Sensor ID
-    uint16_t sample;          // Latest sample of this sensor
-    uint16_t sample_min;      // Minimum value since last reset
-    uint16_t sample_max;      // Maximum Value since last reset
-    uint64_t accumulator;     // Accumulator register for this sensor
-    uint32_t src_accum_snapshot; // Copy of the source sensor's accumulator
-                                 // used for time-derived sensors
-    uint32_t update_tag;      // Count of the number of 'ticks' that have passed
-                              // between updates to this sensor (used for time-
-                              // derived sensor)
-    uint32_t ipmi_sid;        // Ipmi sensor id obtained from mrw
-    vectorSensor_t * vector;  // Pointer to vector control structure. NULL if
-                              // this is not a vector sensor.
-    uint16_t * mini_sensor;   // Pointer to entry in mini-sensor table. NULL if
-                              // this sensor does not have a mini-sensor
-    sensorStatus_t status;    // Status and control register
+    uint16_t gsid;                // Global Sensor ID
+    uint16_t sample;              // Latest sample of this sensor
+    uint16_t sample_min;          // Minimum value since last OCC reset
+    uint16_t sample_max;          // Maximum value since last OCC reset
+    uint16_t csm_sample_min;      // Minimum value since last reset request by CSM
+    uint16_t csm_sample_max;      // Maximum value since last reset request by CSM
+    uint16_t profiler_sample_min; // Minimum value since last reset request by profiler
+    uint16_t profiler_sample_max; // Maximum value since last reset request by profiler
+    uint16_t job_s_sample_min;    // Minimum value since last reset by job scheduler
+    uint16_t job_s_sample_max;    // Maximum value since last reset by job scheduler
+    uint64_t accumulator;         // Accumulator register for this sensor
+    uint32_t src_accum_snapshot;  // Copy of the source sensor's accumulator
+                                  // used for time-derived sensors
+    uint32_t update_tag;          // Count of the number of 'ticks' that have passed
+                                  // between updates to this sensor (used for time-
+                                  // derived sensor)
+    uint32_t ipmi_sid;            // Ipmi sensor id obtained from mrw
+    vectorSensor_t * vector;      // Pointer to vector control structure. NULL if
+                                  // this is not a vector sensor.
+    uint16_t * mini_sensor;       // Pointer to entry in mini-sensor table. NULL if
+                                  // this sensor does not have a mini-sensor
+    sensorStatus_t status;        // Status and control register
 
 } __attribute__ ((__packed__));
 
@@ -215,8 +234,9 @@ void sensor_init(sensor_t * io_sensor_ptr,
                  const uint16_t * i_miniSnsrPtr
                  );
 
-// Clear minmax value
-void sensor_clear_minmax( sensor_t * io_sensor_ptr);
+// Clear mininum/maximum sample values in sensor
+void sensor_clear_minmax(sensor_t * io_sensor_ptr,
+                         AMEC_SENSOR_CLEAR_TYPE i_clear_type);
 
 // Sensor reset
 void sensor_reset( sensor_t * io_sensor_ptr);

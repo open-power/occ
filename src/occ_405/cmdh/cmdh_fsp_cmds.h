@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -369,7 +369,9 @@ typedef enum
     DBUG_CENTAUR_SENSOR_CACHE = 0x22,
     DBUG_DUMP_PROC_DATA     = 0x23,
     DBUG_GEN_CHOM_LOG       = 0x24,
-    DBUG_DUMP_APSS_DATA     = 0x25
+    DBUG_DUMP_APSS_DATA     = 0x25,
+    DBUG_DUMP_AME_SENSOR    = 0x26,
+    DBUG_CLEAR_AME_SENSOR   = 0x27
 } DBUG_CMD;
 
 // Used by OCC tool to get trace, version 0.
@@ -485,6 +487,40 @@ typedef struct __attribute__ ((packed))
     cmdh_dbug_apss_data_t   ApssCh[MAX_APSS_ADC_CHANNELS];
     uint8_t                 checksum[2];
 } cmdh_dbug_apss_data_resp_t;
+
+// DBUG_DUMP_AME_SENSOR command struct
+typedef struct __attribute__ ((packed))
+{
+    struct   cmdh_fsp_cmd_header;  // Standard command header
+    uint8_t  sub_cmd;              // Debug sub-command
+    uint16_t gsid;                 // Global Sensor ID
+} cmdh_dbug_dump_ame_sensor_cmd_t;
+
+// DBUG_DUMP_AME_SENSOR response struct
+typedef struct __attribute__ ((packed))
+{
+    struct        cmdh_fsp_rsp_header;               // Standard response header
+    sensor_info_t sensor_info;                       // Static sensor fields
+    sensor_t      sensor;                            // Dynamic sensor fields
+    uint8_t       checksum[CMDH_FSP_CHECKSUM_SIZE];  // Checksum
+} cmdh_dbug_dump_ame_sensor_rsp_t;
+
+// DBUG_CLEAR_AME_SENSOR command struct
+typedef struct __attribute__ ((packed))
+{
+    struct   cmdh_fsp_cmd_header;  // Standard command header
+    uint8_t  sub_cmd;              // Debug sub-command
+    uint16_t gsid;                 // Global Sensor ID
+    uint16_t clear_type;           // Fields to clear (AMEC_SENSOR_CLEAR_TYPE)
+} cmdh_dbug_clear_ame_sensor_cmd_t;
+
+// DBUG_CLEAR_AME_SENSOR response struct
+typedef struct __attribute__ ((packed))
+{
+    struct   cmdh_fsp_rsp_header;               // Standard response header
+    sensor_t sensor;                            // Dynamic sensor fields
+    uint8_t  checksum[CMDH_FSP_CHECKSUM_SIZE];  // Checksum
+} cmdh_dbug_clear_ame_sensor_rsp_t;
 
 //---------------------------------------------------------
 // Tunable Parameter Command
