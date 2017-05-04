@@ -272,7 +272,7 @@ errlHndl_t SMGR_mode_transition_to_nominal()
     l_errlHndl = amec_set_freq_range(OCC_MODE_NOMINAL);
 
     // WOF is disabled in nominal mode
-    g_amec->wof.wof_disabled |= WOF_RC_MODE_NO_SUPPORT_MASK;
+    set_clear_wof_disabled( SET, WOF_RC_MODE_NO_SUPPORT_MASK );
 
     CURRENT_MODE() = OCC_MODE_NOMINAL;
     TRAC_IMP("SMGR: Mode to Nominal Transition Completed");
@@ -298,7 +298,7 @@ errlHndl_t SMGR_mode_transition_to_powersave()
     l_errlHndl = amec_set_freq_range(OCC_MODE_PWRSAVE);
 
     // WOF is disabled in SPS mode
-    g_amec->wof.wof_disabled |= WOF_RC_MODE_NO_SUPPORT_MASK;
+    set_clear_wof_disabled( SET, WOF_RC_MODE_NO_SUPPORT_MASK );
 
     CURRENT_MODE() = OCC_MODE_PWRSAVE;
     TRAC_IMP("SMGR: Mode to PowerSave Transition Completed");
@@ -324,7 +324,7 @@ errlHndl_t SMGR_mode_transition_to_dynpowersave()
     l_errlHndl = amec_set_freq_range(OCC_MODE_DYN_POWER_SAVE);
 
     // WOF is enabled in DPS, clear the mode bit
-    g_amec->wof.wof_disabled &= ~WOF_RC_MODE_NO_SUPPORT_MASK;
+    set_clear_wof_disabled( CLEAR, WOF_RC_MODE_NO_SUPPORT_MASK );
 
     CURRENT_MODE() = OCC_MODE_DYN_POWER_SAVE;
     TRAC_IMP("SMGR: Mode to Dynamic PowerSave-Favor Energy Transition Completed");
@@ -349,7 +349,7 @@ errlHndl_t SMGR_mode_transition_to_dynpowersave_fp()
     l_errlHndl = amec_set_freq_range(OCC_MODE_DYN_POWER_SAVE_FP);
 
     // WOF is enabled in DPS-FP, clear the mode bit
-    g_amec->wof.wof_disabled &= ~WOF_RC_MODE_NO_SUPPORT_MASK;
+    set_clear_wof_disabled( CLEAR, WOF_RC_MODE_NO_SUPPORT_MASK );
 
     CURRENT_MODE() = OCC_MODE_DYN_POWER_SAVE_FP;
     TRAC_IMP("SMGR: Mode to Dynamic PowerSave-Favor Performance Transition Completed");
@@ -375,7 +375,7 @@ errlHndl_t SMGR_mode_transition_to_turbo()
     l_errlHndl = amec_set_freq_range(OCC_MODE_TURBO);
 
     // WOF is disabled in turbo mode
-    g_amec->wof.wof_disabled |= WOF_RC_MODE_NO_SUPPORT_MASK;
+    set_clear_wof_disabled( SET, WOF_RC_MODE_NO_SUPPORT_MASK );
 
     CURRENT_MODE() = OCC_MODE_TURBO;
     TRAC_IMP("SMGR: Mode to Turbo Transition Completed");
@@ -401,7 +401,7 @@ errlHndl_t SMGR_mode_transition_to_ffo()
     l_errlHndl = amec_set_freq_range(OCC_MODE_FFO);
 
     // WOF is disabled in FFO
-    g_amec->wof.wof_disabled |= WOF_RC_MODE_NO_SUPPORT_MASK;
+    set_clear_wof_disabled( SET, WOF_RC_MODE_NO_SUPPORT_MASK );
 
     CURRENT_MODE() = OCC_MODE_FFO;
     TRAC_IMP("SMGR: Mode to FFO Transition Completed");
@@ -426,7 +426,7 @@ errlHndl_t SMGR_mode_transition_to_fmf()
     l_errlHndl = amec_set_freq_range(OCC_MODE_FMF);
 
     // WOF is enabled in FMF, clear the mode bit
-    g_amec->wof.wof_disabled &= ~WOF_RC_MODE_NO_SUPPORT_MASK;
+    set_clear_wof_disabled( CLEAR, WOF_RC_MODE_NO_SUPPORT_MASK );
 
     CURRENT_MODE() = OCC_MODE_FMF;
     TRAC_IMP("SMGR: Mode to FMF Transition Completed");
@@ -451,7 +451,7 @@ errlHndl_t SMGR_mode_transition_to_nom_perf()
     l_errlHndl = amec_set_freq_range(OCC_MODE_NOM_PERFORMANCE);
 
     // WOF is enabled in nominal performance mode, clear the mode bit
-    g_amec->wof.wof_disabled &= ~WOF_RC_MODE_NO_SUPPORT_MASK;
+    set_clear_wof_disabled( CLEAR, WOF_RC_MODE_NO_SUPPORT_MASK );
 
     CURRENT_MODE() = OCC_MODE_NOM_PERFORMANCE;
     TRAC_IMP("SMGR: Mode to Nominal Performance Transition Completed");
@@ -476,7 +476,7 @@ errlHndl_t SMGR_mode_transition_to_max_perf()
     l_errlHndl = amec_set_freq_range(OCC_MODE_MAX_PERFORMANCE);
 
     // WOF is enabled in max performance mode, clear the mode bit
-    g_amec->wof.wof_disabled &= ~WOF_RC_MODE_NO_SUPPORT_MASK;
+    set_clear_wof_disabled( CLEAR, WOF_RC_MODE_NO_SUPPORT_MASK );
 
     CURRENT_MODE() = OCC_MODE_MAX_PERFORMANCE;
     TRAC_IMP("SMGR: Mode to Maximum Performance Transition Completed");

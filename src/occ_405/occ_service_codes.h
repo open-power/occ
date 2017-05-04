@@ -131,6 +131,7 @@ enum occReasonCode
     INVALID_MAGIC_NUMBER            = 0xDB,
     DIVIDE_BY_ZERO_ERROR            = 0xDC,
     INVALID_FREQUENCY               = 0xDD,
+    WOF_RE_ENABLED                  = 0xDE,
 
     /// Success!
     OCC_SUCCESS_REASON_CODE         = 0xFF,

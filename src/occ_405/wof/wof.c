@@ -132,18 +132,32 @@ void call_wof_main( void )
     bool enable_success = false;
     do
     {
+        // If the init state says we just turned WOF on in pgpe, clear
+        // PGPE wof disabled bit
+        if(g_wof->wof_init_state == PGPE_WOF_ENABLED_NO_PREV_DATA)
+        {
+            set_clear_wof_disabled( CLEAR, WOF_RC_PGPE_WOF_DISABLED );
+        }
+
+
         // Make sure wof has not been disabled
         if( g_wof->wof_disabled )
         {
-            // WOF has been flagged as disabled and it has not already
-            // been turned off, Turn off wof on PGPE
-            if( g_wof->wof_init_state != WOF_DISABLED )
+            // If error loggedin callback, record now
+            if( g_wof->vfrt_callback_error )
             {
-                disable_wof();
+                set_clear_wof_disabled( SET, WOF_RC_VFRT_REQ_FAILURE );
+                // After official error recorded, prevent this code
+                // from running from same setting of the var.
+                g_wof->vfrt_callback_error = 0;
             }
-            // else wof has already disabled wof. No need to send
-            // wof control IPC message again.
 
+            if( g_wof->pgpe_wof_off )
+            {
+                set_clear_wof_disabled( SET, WOF_RC_PGPE_WOF_DISABLED );
+                g_wof->pgpe_wof_off = 0;
+            }
+            // WOF has been flagged as disabled. Skip algorithm
             break;
         }
 
@@ -153,7 +167,7 @@ void call_wof_main( void )
             // No need to call disable wof as the PGPE would
             // already have disabled wof. Just flag reason.
             CMDH_TRAC_ERR("WOF Disabled! Pstate Protocol off");
-            g_wof->wof_disabled |= WOF_RC_PSTATE_PROTOCOL_OFF;
+            set_clear_wof_disabled( SET, WOF_RC_PSTATE_PROTOCOL_OFF );
             break;
         }
 
@@ -182,7 +196,7 @@ void call_wof_main( void )
                             if( L_vfrt_last_chance )
                             {
                                 CMDH_TRAC_ERR("WOF Disabled! Initial VFRT request timeout");
-                                g_wof->wof_disabled |= WOF_RC_VFRT_REQ_TIMEOUT;
+                                set_clear_wof_disabled( SET, WOF_RC_VFRT_REQ_TIMEOUT);
                             }
                             else
                             {
@@ -206,7 +220,7 @@ void call_wof_main( void )
                             if( L_wof_control_last_chance )
                             {
                                 CMDH_TRAC_ERR("WOF Disabled! Control req timeout(1)");
-                                g_wof->wof_disabled |= WOF_RC_CONTROL_REQ_TIMEOUT;
+                                set_clear_wof_disabled(SET, WOF_RC_CONTROL_REQ_TIMEOUT);
                             }
                             else
                             {
@@ -228,7 +242,7 @@ void call_wof_main( void )
                             if( L_wof_control_last_chance )
                             {
                                 CMDH_TRAC_ERR("WOF Disabled! Control req timeout(2)");
-                                g_wof->wof_disabled |= WOF_RC_CONTROL_REQ_TIMEOUT;
+                                set_clear_wof_disabled(SET, WOF_RC_CONTROL_REQ_TIMEOUT);
                             }
                             else
                             {
@@ -283,7 +297,7 @@ void call_wof_main( void )
                         if( L_vfrt_last_chance )
                         {
                             CMDH_TRAC_ERR("WOF Disabled! VFRT req timeout");
-                            g_wof->wof_disabled |= WOF_RC_VFRT_REQ_TIMEOUT;
+                            set_clear_wof_disabled(SET,WOF_RC_VFRT_REQ_TIMEOUT);
                         }
                         else
                         {
@@ -548,7 +562,7 @@ void wof_vfrt_callback( void )
     else
     {
         // Disable WOF
-        g_wof->wof_disabled |= WOF_RC_VFRT_REQ_FAILURE;
+        g_wof->vfrt_callback_error = 1;
     }
 }
 
@@ -568,36 +582,14 @@ void send_vfrt_to_pgpe( uint32_t i_vfrt_main_mem_addr )
     uint32_t l_reasonCode = 0;
     uint32_t l_extReasonCode = 0;
 
-    errlHndl_t l_errl = NULL;
     do
     {
         // First check if the address is 128-byte aligned. error if not.
         if( i_vfrt_main_mem_addr % 128 )
         {
-            g_wof->wof_disabled |= WOF_RC_VFRT_ALIGNMENT_ERROR;
-
-            /* @
-             * @errortype
-             * @moduleid    SEND_VFRT_TO_PGPE
-             * @reasoncode  WOF_VFRT_ALIGNMENT_ERROR
-             * @userdata1   The input vfrt address
-             * @userdata2   0
-             * @userdata4   OCC_NO_EXTENDED_RC
-             * @devdesc     VFRT address is not 128-byte aligned
-             */
-            l_errl = createErrl(
-                SEND_VFRT_TO_PGPE,                   // modId
-                WOF_VFRT_ALIGNMENT_ERROR,           // reasoncode
-                OCC_NO_EXTENDED_RC,                     // Extended reason code
-                ERRL_SEV_UNRECOVERABLE,                 // Severity
-                NULL,                                   // Trace Buf
-                DEFAULT_TRACE_SIZE,                     // Trace Size
-                i_vfrt_main_mem_addr,                   // userdata1
-                0                                       // userdata2
-                );
-
-            // Commit error log
-            commitErrl(&l_errl);
+            CMDH_TRAC_ERR("VFRT Main Memory address NOT 128-byte aligned:"
+                    " 0x%08x", i_vfrt_main_mem_addr);
+            set_clear_wof_disabled(SET, WOF_RC_VFRT_ALIGNMENT_ERROR);
 
             break;
         }
@@ -904,8 +896,6 @@ void calculate_core_leakage( void )
                 g_wof->tempq[quad_idx] = g_wof->tempnest_sensor;
             }
 
-
-
             // Reset num_cores_off_in_quad before processing current quads cores
             uint8_t num_cores_off_in_quad = 0;
             // Loop all cores within current quad
@@ -1096,30 +1086,11 @@ void calculate_ceff_ratio_vdn( void )
     if( g_wof->ceff_tdp_vdn == 0 )
     {
         CMDH_TRAC_ERR("WOF Disabled! Ceff VDN divide by 0");
-        /*
-         * @errortype
-         * @moduleid        CALC_CEFF_RATIO_VDN
-         * @reasoncode      DIVIDE_BY_ZERO_ERROR
-         * @userdata1       0
-         * @userdata4       OCC_NO_EXTENDED_RC
-         * @devdesc         Divide by zero error on ceff_vdn / ceff_tdp_vdn
-         */
-        errlHndl_t l_errl = createErrl(
-                        CALC_CEFF_RATIO_VDN,
-                        DIVIDE_BY_ZERO_ERROR,
-                        OCC_NO_EXTENDED_RC,
-                        ERRL_SEV_PREDICTIVE,
-                        NULL,
-                        DEFAULT_TRACE_SIZE,
-                        0,
-                        0 );
-
-        commitErrl( &l_errl );
 
         // Return 0
         g_wof->ceff_ratio_vdn = 0;
 
-        g_wof->wof_disabled |= WOF_RC_DIVIDE_BY_ZERO;
+        set_clear_wof_disabled(SET, WOF_RC_DIVIDE_BY_ZERO);
     }
     else
     {
@@ -1163,31 +1134,12 @@ void calculate_ceff_ratio_vdd( void )
     if( g_wof->ceff_tdp_vdd == 0 )
     {
         CMDH_TRAC_ERR("WOF Disabled! Ceff VDD divide by 0");
-        /*
-         * @errortype
-         * @moduleid        CALC_CEFF_RATIO_VDD
-         * @reasoncode      DIVIDE_BY_ZERO_ERROR
-         * @userdata1       0
-         * @userdata4       OCC_NO_EXTENDED_RC
-         * @devdesc         Get ceff_tdp_vdd from OCCPPB
-         */
-        errlHndl_t l_errl = createErrl(
-                        CALC_CEFF_RATIO_VDD,
-                        DIVIDE_BY_ZERO_ERROR,
-                        OCC_NO_EXTENDED_RC,
-                        ERRL_SEV_PREDICTIVE,
-                        NULL,
-                        DEFAULT_TRACE_SIZE,
-                        0,
-                        0 );
-
-        commitErrl( &l_errl );
 
         // Return 0
         g_wof->ceff_ratio_vdd = 0;
 
         // Disable wof
-        g_wof->wof_disabled |= WOF_RC_DIVIDE_BY_ZERO;
+        set_clear_wof_disabled(SET, WOF_RC_DIVIDE_BY_ZERO);
     }
     else
     {
@@ -1330,14 +1282,121 @@ void read_sensor_data( void )
     g_wof->voltvdn_sensor       = getSensorByGsid(VOLTVDN)->sample;
 }
 
+/**
+ * set_clear_wof_disabled
+ *
+ * Description: Sets or clears the bit specified by i_bit_mask and
+ *              logs an error if an error hasnt already been logged.
+ *
+ * Param[in]: i_action - Either CLEAR(0) or SET(1).
+ * Param[in]: i_bit_mask - The bit to set or clear. If setting a bit,
+ *                         this will be added to the errorlog created
+ *                         as userdata1
+ */
+void set_clear_wof_disabled( uint8_t i_action,
+                             uint32_t i_bit_mask )
+{
+    // Keep track of whether an error has already been logged
+    static bool L_errorLogged = false;
+
+    errlHndl_t l_errl = NULL;
+
+    uint32_t prev_wof_disabled = g_wof->wof_disabled;
+
+    if( i_action == SET )
+    {
+        // Set the bit
+        g_wof->wof_disabled |= i_bit_mask;
+        // If error has already been logged, trace and skip
+        if( L_errorLogged )
+        {
+            CMDH_TRAC_ERR("Another WOF error was encountered!"
+                          " wof_disabled=0x%08x",
+                          g_wof->wof_disabled);
+        }
+        else
+        {
+            CMDH_TRAC_ERR("WOF encountered an error. wof_disabled ="
+                          " 0x%08x", g_wof->wof_disabled );
+            // Make sure the reason requires an error log
+            if( g_wof->wof_disabled & ERRL_RETURN_CODES )
+            {
+                // Create error log
+                /** @errortype
+                 *  @moduleid   SET_CLEAR_WOF_DISABLED
+                 *  @reasoncode WOF_DISABLED_RC
+                 *  @userdata1  current wof_disabled
+                 *  @userdata2  Bit requested to be set
+                 *  @userdata4  OCC_NO_EXTENDED_RC
+                 *  @devdesc    WOF has been disabled due to an error
+                 */
+                l_errl = createErrl(
+                            SET_CLEAR_WOF_DISABLED,
+                            WOF_DISABLED_RC,
+                            OCC_NO_EXTENDED_RC,
+                            ERRL_SEV_UNRECOVERABLE,
+                            NULL,
+                            DEFAULT_TRACE_SIZE,
+                            g_wof->wof_disabled,
+                            i_bit_mask );
+
+                // commit the error log
+                commitErrl( &l_errl );
+                L_errorLogged = true;
+            }
+            // if the previous wof_disabled was all zeros,
+            // send IPC command to PGPE to disable wof
+            if( !prev_wof_disabled )
+            {
+                // Disable WOF
+                disable_wof();
+            }
+        }
+    }
+    else if ( i_action == CLEAR )
+    {
+        // Clear the bit
+        g_wof->wof_disabled &= ~i_bit_mask;
+        // If clearing the bit put wof_disabled at all 0's AND
+        // wof_disabled was not already all 0's, wof is being
+        // re-enabled. Log informational error.
+        if( prev_wof_disabled && !g_wof->wof_disabled )
+        {
+            /** @
+             *  @errortype
+             *  @moduleid   SET_CLEAR_WOF_DISABLED
+             *  @reasoncode WOF_RE_ENABLED
+             *  @userdata1  Last Bit cleared
+             *  @userdata2  0
+             *  @userdata4  OCC_NO_EXTENDED_RC
+             *  @devdesc    WOF is being re-enabled
+             */
+            l_errl = createErrl(
+                    SET_CLEAR_WOF_DISABLED,
+                    WOF_RE_ENABLED,
+                    OCC_NO_EXTENDED_RC,
+                    ERRL_SEV_INFORMATIONAL,
+                    NULL,
+                    DEFAULT_TRACE_SIZE,
+                    i_bit_mask,
+                    0 );
+
+            // commit the error log
+            commitErrl( &l_errl );
+        }
+    }
+    else
+    {
+        CMDH_TRAC_ERR("Invalid action given. Ignoring for now...");
+    }
+}
 
 /**
  * disable_wof
  *
  * Description: Sends IPC command to PGPE to turn WOF off.
  *              This function DOES NOT set the specific reason
- *              bit in the amec structure. It is up to the caller
- *              to record the reason wof should be disabled
+ *              bit in the amec structure.
  */
 void disable_wof( void )
 {
@@ -1347,69 +1406,71 @@ void disable_wof( void )
 
     CMDH_TRAC_ERR("WOF is being disabled. Reasoncode: %x",
                   g_wof->wof_disabled );
-    // Make sure IPC command is idle
-    if(async_request_is_idle(&G_wof_control_req.request))
+    uint32_t reasonCode = 0;
+    int user_data_rc = 0;
+    do
     {
-        // Set parameters for the GpeRequest
-        G_wof_control_parms.action = PGPE_ACTION_WOF_OFF;
-        int rc = gpe_request_schedule( &G_wof_control_req );
-
-        if( rc != 0 )
+        // Make sure IPC command is idle
+        if(async_request_is_idle(&G_wof_control_req.request))
         {
-            CMDH_TRAC_ERR("disable_wof() - Error when sending WOF Control"
-                         " OFF IPC command! RC = %x", rc );
-            /** @
-             *  @errortype
-             *  @moduleid   DISABLE_WOF
-             *  @reasoncode GPE_REQUEST_SCHEDULE_FAILURE
-             *  @userdata1  rc - gpe_request_schedule return code
-             *  @userdata2  0
-             *  @userdata4  OCC_NO_EXTENDED_RC
-             *  @devdesc    OCC Failed to schedule a GPE job for enabling wof
-             */
-            l_errl = createErrl(
-                    DISABLE_WOF,
-                    GPE_REQUEST_SCHEDULE_FAILURE,
-                    OCC_NO_EXTENDED_RC,
-                    ERRL_SEV_PREDICTIVE,
-                    NULL,
-                    DEFAULT_TRACE_SIZE,
-                    rc,
-                    0);
 
-            g_wof->wof_disabled |= WOF_RC_PGPE_WOF_DISABLED;
+            // Check to see if a previous wof control IPC message observed an error
+            if( g_wof->control_ipc_rc != 0 )
+            {
+                CMDH_TRAC_ERR("Unknown error from wof control IPC message");
+                /** @
+                 *  @errortype
+                 *  @moduleid   DISABLE_WOF
+                 *  @reasoncode GPE_REQUEST_RC_FAILURE
+                 *  @userdata1  rc - wof_control rc
+                 *  @userdata2  0
+                 *  @userdata4  OCC_NO_EXTENDED_RC
+                 *  @devdesc    OCC Failure from sending wof control
+                 */
+                user_data_rc = g_wof->control_ipc_rc;
+                g_wof->control_ipc_rc = 0;
+                reasonCode = GPE_REQUEST_RC_FAILURE;
+            }
+            else
+            {
+                // Set parameters for the GpeRequest
+                G_wof_control_parms.action = PGPE_ACTION_WOF_OFF;
+                user_data_rc = gpe_request_schedule( &G_wof_control_req );
 
-            // commit the error log
-            commitErrl( &l_errl );
+                if( user_data_rc != 0 )
+                {
+                    /** @
+                     *  @errortype
+                     *  @moduleid   DISABLE_WOF
+                     *  @reasoncode GPE_REQUEST_SCHEDULE_FAILURE
+                     *  @userdata1  rc - gpe_request_schedule return code
+                     *  @userdata2  0
+                     *  @userdata4  OCC_NO_EXTENDED_RC
+                     *  @devdesc    OCC Failed to schedule a GPE job for enabling wof
+                     */
+                    reasonCode = GPE_REQUEST_SCHEDULE_FAILURE;
+                    CMDH_TRAC_ERR("disable_wof() - Error when sending WOF Control"
+                                 " OFF IPC command! RC = %x", user_data_rc );
+                }
+            }
+
+            if( user_data_rc != 0 )
+            {
+                l_errl = createErrl(
+                        DISABLE_WOF,
+                        reasonCode,
+                        OCC_NO_EXTENDED_RC,
+                        ERRL_SEV_PREDICTIVE,
+                        NULL,
+                        DEFAULT_TRACE_SIZE,
+                        user_data_rc,
+                        0);
+
+                // commit the error log
+                commitErrl( &l_errl );
+            }
         }
-    }
-
-    // Create an error log based on the actual failure
-    if( g_wof->wof_disabled & ERRL_RETURN_CODES )
-    {
-        /** @
-         *  @errortype
-         *  @moduleid   DISABLE_WOF
-         *  @reasoncode WOF_DISABLED_RC
-         *  @userdata1  wof_disabled reasoncode
-         *  @userdata2  0
-         *  @userdata4  OCC_NO_EXTENDED_RC
-         *  @devdesc    WOF has been disabled due to an error
-         */
-        l_errl = createErrl(
-                            DISABLE_WOF,
-                            WOF_DISABLED_RC,
-                            OCC_NO_EXTENDED_RC,
-                            ERRL_SEV_UNRECOVERABLE,
-                            NULL,
-                            DEFAULT_TRACE_SIZE,
-                            g_wof->wof_disabled,
-                            0);
-
-        // commit the error log
-        commitErrl( &l_errl );
-    }
-
+    }while( 0 );
 }
 
 /**
@@ -1423,34 +1484,72 @@ void disable_wof( void )
 bool enable_wof( void )
 {
     CMDH_TRAC_ERR("WOF is being enabled...");
+    uint32_t reasonCode = 0;
+    bool result = true;
+    uint32_t bit_to_set = 0;
+    int rc = 0;
     // Make sure IPC command is idle.
     if(!async_request_is_idle( &G_wof_control_req.request ) )
     {
-        return false;
+        result = false;;
     }
     else
     {
-        // Set parameters for the GpeRequest
-        G_wof_control_parms.action = PGPE_ACTION_WOF_ON;
-
-        int rc = gpe_request_schedule( &G_wof_control_req );
-
-        if( rc != 0 )
+        // Check to see if a previous wof control IPC message observed an error
+        if( g_wof->control_ipc_rc != 0 )
         {
-            CMDH_TRAC_ERR("enable_wof() - Error when sending WOF Control"
-                    " ON IPC command! RC = %x", rc);
+            CMDH_TRAC_ERR("Unknown error from wof control IPC message");
+            rc = g_wof->control_ipc_rc;
+            bit_to_set = WOF_RC_CONTROL_REQ_FAILURE;
+            g_wof->control_ipc_rc = 0;
             /** @
              *  @errortype
              *  @moduleid   ENABLE_WOF
-             *  @reasoncode GPE_REQUEST_SCHEDULE_FAILURE
-             *  @userdata1  rc - gpe_request_schedule return code
+             *  @reasoncode GPE_REQUEST_RC_FAILURE
+             *  @userdata1  rc - wof_control RC
              *  @userdata2  0
              *  @userdata4  OCC_NO_EXTENDED_RC
-             *  @devdesc    OCC Failed to schedule a GPE job for enabling wof
+             *  @devdesc    OCC Failure from sending wof command
              */
+            reasonCode = GPE_REQUEST_RC_FAILURE;
+        }
+        else
+        {
+
+            // Set parameters for the GpeRequest
+            G_wof_control_parms.action = PGPE_ACTION_WOF_ON;
+
+            rc = gpe_request_schedule( &G_wof_control_req );
+
+            if( rc != 0 )
+            {
+                CMDH_TRAC_ERR("enable_wof() - Error when sending WOF Control"
+                        " ON IPC command! RC = %x", rc);
+                /** @
+                 *  @errortype
+                 *  @moduleid   ENABLE_WOF
+                 *  @reasoncode GPE_REQUEST_SCHEDULE_FAILURE
+                 *  @userdata1  rc - gpe_request_schedule return code
+                 *  @userdata2  0
+                 *  @userdata4  OCC_NO_EXTENDED_RC
+                 *  @devdesc    OCC Failed to schedule a GPE job for enabling wof
+                 */
+                bit_to_set = WOF_RC_PGPE_WOF_DISABLED;
+                reasonCode = GPE_REQUEST_SCHEDULE_FAILURE;
+            }
+            else
+            {
+                // Set Init state
+                CMDH_TRAC_INFO("wof control on sent waiting!");
+                g_wof->wof_init_state = WOF_CONTROL_ON_SENT_WAITING;
+                result = true;
+            }
+        }
+        if( rc != 0 )
+        {
             errlHndl_t l_errl = createErrl(
                     ENABLE_WOF,
-                    GPE_REQUEST_SCHEDULE_FAILURE,
+                    reasonCode,
                     OCC_NO_EXTENDED_RC,
                     ERRL_SEV_PREDICTIVE,
                     NULL,
@@ -1458,20 +1557,14 @@ bool enable_wof( void )
                     rc,
                     0);
 
-            g_wof->wof_disabled |= WOF_RC_PGPE_WOF_DISABLED;
+            result = false;
+            set_clear_wof_disabled( SET, bit_to_set );
 
-            // commit the error log
+            // Commit the error
             commitErrl( &l_errl );
-
-            return false;
-        }
-        else
-        {
-            // Set Init state
-            g_wof->wof_init_state = WOF_CONTROL_ON_SENT_WAITING;
-            return true;
         }
     }
+    return result;
 }
 
 /**
@@ -1488,7 +1581,7 @@ void wof_control_callback( void )
     if( G_wof_control_parms.msg_cb.rc == PGPE_WOF_RC_NOT_ENABLED )
     {
         // PGPE cannot enable wof
-        g_wof->wof_disabled |= WOF_RC_PGPE_WOF_DISABLED;
+        g_wof->pgpe_wof_off = 1;
     }
     else if( G_wof_control_parms.msg_cb.rc == PGPE_RC_SUCCESS)
     {
@@ -1496,23 +1589,15 @@ void wof_control_callback( void )
         if( G_wof_control_parms.action == PGPE_ACTION_WOF_ON )
         {
             g_wof->wof_init_state = PGPE_WOF_ENABLED_NO_PREV_DATA;
-            g_wof->wof_disabled &= ~WOF_RC_PGPE_WOF_DISABLED;
         }
-        else // G_wof_control_parms.action == PGPE_ACTION_WOF_OFF
+        else
         {
-            g_wof->wof_disabled |= WOF_RC_PGPE_WOF_DISABLED;
+            g_wof->pgpe_wof_off = 1;
         }
     }
     else
     {
-        if( G_wof_control_parms.action == PGPE_ACTION_WOF_OFF )
-        {
-            // TODO: Cannot log an error here, so need to figure out what to do.
-        }
-        else
-        {
-            g_wof->wof_disabled |= WOF_RC_CONTROL_REQ_FAILURE;
-        }
+        g_wof->control_ipc_rc = G_wof_control_parms.msg_cb.rc;
     }
 }
 

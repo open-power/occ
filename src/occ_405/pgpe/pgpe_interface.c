@@ -727,7 +727,7 @@ void pgpe_start_suspend_callback(void)
                 G_proc_pmcr_owner = G_start_suspend_parms.pmcr_owner;
 
                 // Clear WOF Pstate status flag
-                g_amec->wof.wof_disabled &= ~WOF_RC_PSTATE_PROTOCOL_OFF;
+                set_clear_wof_disabled( CLEAR, WOF_RC_PSTATE_PROTOCOL_OFF );
             }
             // this was a command to disable pstates
             else if(G_start_suspend_parms.action == PGPE_ACTION_PSTATE_STOP)

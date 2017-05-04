@@ -224,6 +224,9 @@ amec_parm_t g_amec_parm_list[] = {
     AMEC_PARM_UINT32(PARM_PGPE_WOF_STATE_ADDR, "pgpeWofStAddr", &g_amec_sys.wof.pgpe_wof_state_addr),
     AMEC_PARM_UINT32(PARM_REQ_ACTIVE_QUADS_ADDR, "reqActQuadAddr", &g_amec_sys.wof.req_active_quads_addr),
     AMEC_PARM_UINT16(PARM_CORE_LEAKAGE_PERCENT, "coreLeakPercent", &g_amec_sys.wof.core_leakage_percent),
+    AMEC_PARM_UINT32(PARM_PSTATE_TBL_SRAM_ADDR, "PstatesSramAddr", &g_amec_sys.wof.pstate_tbl_sram_addr),
+    AMEC_PARM_UINT8(PARM_VFRT_CALLBACK_ERR, "vfrtCallbackErr", &g_amec_sys.wof.vfrt_callback_error),
+    AMEC_PARM_UINT8(PARM_PGPE_WOF_OFF, "pgpeWofOff", &g_amec_sys.wof.pgpe_wof_off),
     // End WOF parameters
 };
 

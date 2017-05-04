@@ -40,6 +40,8 @@ enum wofModuleId
     CALC_CEFF_RATIO_VDN                 =  WOF_COMP_ID | 0x09,
     DISABLE_WOF                         =  WOF_COMP_ID | 0x0A,
     ENABLE_WOF                          =  WOF_COMP_ID | 0x0B,
+    SEND_INIT_VFRT                      =  WOF_COMP_ID | 0x0C,
+    SET_CLEAR_WOF_DISABLED              =  WOF_COMP_ID | 0x0D,
 };
 
 

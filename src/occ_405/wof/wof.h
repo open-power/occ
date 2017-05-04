@@ -80,6 +80,12 @@ enum wof_init_states
     WOF_ENABLED,
 };
 
+// Enumeration
+enum wof_disabled_actions
+{
+    CLEAR,
+    SET,
+};
 
 
 #define WOF_MAGIC_NUMBER            0x57465448   // "WFTH"
@@ -262,6 +268,17 @@ typedef struct
     uint32_t req_active_quads_addr;
     // The core leakage percent portion of VDD
     uint16_t core_leakage_percent;
+    // The SRAM address of the pstates for the quads.
+    uint32_t pstate_tbl_sram_addr;
+    // Return code of IPC request called from callback func
+    uint32_t gpe_req_rc;
+    // Return code of failed control message
+    uint32_t control_ipc_rc;
+    // Keeps track of whether we got an error in wof_vfrt_callback to be
+    // logged later
+    uint8_t vfrt_callback_error;
+    // Keeps track of whether or not we just turned off wof on the PGPE
+    uint8_t pgpe_wof_off;
 } amec_wof_t;
 
 typedef struct
@@ -333,6 +350,9 @@ uint32_t calculate_effective_capacitance( uint32_t i_iAC,
                                           uint32_t i_frequency );
 
 void read_sensor_data( void );
+
+void set_clear_wof_disabled( uint8_t i_action,
+                             uint32_t i_bit_mask );
 
 void disable_wof( void );
 

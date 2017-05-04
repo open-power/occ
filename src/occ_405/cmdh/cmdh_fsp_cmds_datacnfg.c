@@ -1136,14 +1136,13 @@ errlHndl_t data_store_avsbus_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         CMDH_TRAC_ERR("WOF Disabled! Invalid VDD/VDN");
         // If cannot use vdd/vdn, cannot run wof algorithm.
-        g_amec->wof.wof_disabled |= WOF_RC_INVALID_VDD_VDN;
+        set_clear_wof_disabled( SET, WOF_RC_INVALID_VDD_VDN );
 
     }
     else
     {
         // We can use vdd/vdn. Clear NO_VDD_VDN_READ mask
-        g_amec->wof.wof_disabled &= ~WOF_RC_INVALID_VDD_VDN;
-
+        set_clear_wof_disabled( CLEAR, WOF_RC_INVALID_VDD_VDN );
         avsbus_init();
     }
 
