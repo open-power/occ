@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -185,7 +185,7 @@ void amec_update_apss_sensors(void)
     // via slave inbox first
     if (G_slv_inbox_received)
     {
-        uint8_t l_proc   = G_pbax_id.module_id;
+        uint8_t l_proc   = G_pbax_id.chip_id;
         uint32_t temp32  = 0;
         uint8_t  l_idx   = 0;
         uint32_t l_bulk_current_sum = 0;

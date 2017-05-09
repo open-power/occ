@@ -297,7 +297,7 @@ void task_dcom_rx_slv_inbox( task_t *i_self)
             else
             {
 
-                G_dcomTime.slave.doorbellErrorFlags.timeoutRx = 1;
+                G_dcomTime.slave.doorbellErrorFlags |= DCOM_DOORBELL_RX_TIMEOUT_ERR;
                 G_dcomTime.slave.doorbellTimeoutWaitRx = ssx_timebase_get();
 
                 // Let's signal that master is not ready, and then
@@ -356,7 +356,7 @@ uint32_t dcom_rx_slv_inbox_doorbell( void )
         // We got an error reading from the PBAX, return to caller
         if ( l_pbarc != 0 )
         {
-            G_dcomTime.slave.doorbellErrorFlags.hwError = 1;
+            G_dcomTime.slave.doorbellErrorFlags |= DCOM_DOORBELL_HW_ERR;
             // Failure occurred
             TRAC_ERR("Slave PBAX Read Failure in receiving multicast doorbell from master - RC[%08X]", l_pbarc);
 
@@ -372,11 +372,11 @@ uint32_t dcom_rx_slv_inbox_doorbell( void )
             if ((ssx_timebase_get() - l_start) > SSX_MICROSECONDS(3))
             {
                 if(l_bytes_so_far){
-                    G_dcomTime.slave.doorbellErrorFlags.incomplete = 1;
+                    G_dcomTime.slave.doorbellErrorFlags |= DCOM_DOORBELL_INCOMPLETE_ERR;
                     DCOM_DBG("dcom_rx_slv_inbox_doorbell: incomplete data");
                 }
                 else{
-                    G_dcomTime.slave.doorbellErrorFlags.timeout = 1;
+                    G_dcomTime.slave.doorbellErrorFlags |= DCOM_DOORBELL_TIMEOUT_ERR;
                     DCOM_DBG("dcom_rx_slv_inbox_doorbell: timeout");
                 }
                 break;
@@ -398,7 +398,7 @@ uint32_t dcom_rx_slv_inbox_doorbell( void )
             {
                 l_read         = 0;
                 l_bytes_so_far = 0;
-                G_dcomTime.slave.doorbellErrorFlags.dropPacket = 1;
+                G_dcomTime.slave.doorbellErrorFlags |= DCOM_DOORBELL_PACKET_DROP_ERR;
 
                 TRAC_INFO("Slave Inbox - Start Magic Number Mismatch [0x%08X]",
                           G_dcom_slv_inbox_doorbell_rx.magic1);
@@ -411,7 +411,7 @@ uint32_t dcom_rx_slv_inbox_doorbell( void )
            {
                TRAC_INFO("Slave Inbox - End Magic Number Mismatch [0x%08X]",
                          G_dcom_slv_inbox_doorbell_rx.magic2);
-               G_dcomTime.slave.doorbellErrorFlags.badMagicNumEnd = 1;
+               G_dcomTime.slave.doorbellErrorFlags |= DCOM_DOORBELL_BAD_MAGIC_NUM_ERR;
 
                // Decrement the number of bytes we return so it fails
                // any valid length checks, but still indicates to us that
@@ -423,7 +423,7 @@ uint32_t dcom_rx_slv_inbox_doorbell( void )
            {
                if(G_dcom_slv_inbox_doorbell_rx.magic_counter != (G_dcomTime.slave.doorbellSeq + 1))
                {
-                   G_dcomTime.slave.doorbellErrorFlags.badSequence = 1;
+                   G_dcomTime.slave.doorbellErrorFlags |= DCOM_DOORBELL_BAD_SEQ_ERR;
                }
                G_dcomTime.slave.doorbellSeq = G_dcom_slv_inbox_doorbell_rx.magic_counter;
            }

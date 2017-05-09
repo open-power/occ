@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -47,6 +47,8 @@
 #define MAX_NUM_MEM_CONTROLLERS  8
 #define MAX_NUM_CENTAURS         8
 #define NUM_PROC_VRMS            2
+#define MAX_GPU_PRES_SIGNALS     6
+#define GPU_PRES_SIGN_PER_OCC    3
 
 #define MAX_NUM_MCU_PORTS        4
 
@@ -165,6 +167,14 @@ typedef enum
     DOM_B_OC_LATCH              = 0x0010,
     DOM_C_OC_LATCH              = 0x0011,
     DOM_D_OC_LATCH              = 0x0012,
+    PSU_FAN_DISABLE_N           = 0x0013,
+    GPU_0_0_PRSNT_N             = 0x0014, //GPU0_PRSNT_N
+    GPU_0_1_PRSNT_N             = 0x0015, //GPU1_PRSNT_N
+    GPU_0_2_PRSNT_N             = 0x0016, //GPU2_PRSNT_N
+    GPU_1_0_PRSNT_N             = 0x0017, //GPU3_PRSNT_N
+    GPU_1_1_PRSNT_N             = 0x0018, //GPU4_PRSNT_N
+    GPU_1_2_PRSNT_N             = 0x0019, //GPU5_PRSNT_N
+    NVDIMM_EPOW_N               = 0x001A,
     NUM_GPIO_ASSIGNMENT_TYPES    // This should always be the last member
 } eApssGpioAssignments;
 
@@ -189,6 +199,9 @@ typedef struct
   uint8_t fans_full_speed;
   uint8_t fans_error;
   uint8_t fans_reserved;
+  uint8_t psu_fan_disable;
+  uint8_t gpu[MAX_GPU_PRES_SIGNALS];
+  uint8_t nvdimm_epow;
 } apssGpioPinData_t;
 
 typedef struct
@@ -246,7 +259,6 @@ typedef struct
     uint16_t max_pcap;         // Maximum customer settable node power cap in 1W units
     uint16_t oversub_pcap;     // Node power cap to be used for oversubscripion in 1W units
     uint16_t system_pcap;      // Fixed node power cap required by the system in 1W units
-    uint8_t  unthrottle;       // Only used on ITEs -- is indicated from CMM
     uint8_t  pcap_data_count;  // Used by OCC only.  Initialized to 0 and incremented by 1 with every new packet.
     uint8_t  source;           // source of PCAP value currently in use
 } pcap_config_data_t;

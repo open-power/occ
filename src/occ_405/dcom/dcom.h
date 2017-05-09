@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -111,14 +111,20 @@
 #define DCOM_4MS_GAP 8
 #define DCOM_1S_GAP 4000
 
+// Doorbell error flag bits
+#define DCOM_DOORBELL_TIMEOUT_ERR       0x80
+#define DCOM_DOORBELL_INCOMPLETE_ERR    0x40
+#define DCOM_DOORBELL_BAD_SEQ_ERR       0x20
+#define DCOM_DOORBELL_BAD_MAGIC_NUM_ERR 0x10
+#define DCOM_DOORBELL_PACKET_DROP_ERR   0x08
+#define DCOM_DOORBELL_HW_ERR            0x04
+#define DCOM_DOORBELL_RX_TIMEOUT_ERR    0x02
+
 // POB Id structure
 typedef struct
 {
-    uint8_t module_id  :2;
-    uint8_t valid      :1;  // Valid chip/node id?
-    uint8_t node_id    :2;
-    uint8_t reserved   :1;
-    uint8_t chip_id    :2;
+    uint8_t node_id;
+    uint8_t chip_id;
 } pob_id_t;
 
 // For now pbax structure is same as pob id structure
@@ -242,39 +248,39 @@ typedef struct
     {
         struct
         {
-            // PowerBus ID (= pbax_id) so that the slave knows who the master is
-            pob_id_t pob_id;                        //  1 byte
             // Magic Number denoting the start of the packet
-            uint32_t magic1                :24;     //  3 bytes
+            uint32_t magic1;                        //  4 bytes
+            // PowerBus ID (= pbax_id) so that the slave knows who the master is
+            pob_id_t pob_id;                        //  2 bytes
+            // PowerPreservingBoundry Fmax to throttle all OCCs the same
+            uint16_t ppb_fmax;                      //  2 bytes
             // OCI Address where the Slave Inbox Buffer was placed
             uint32_t addr_slv_inbox_buffer0;        //  4 bytes
             // PowerCap data sent from master to slaves
             pcap_config_data_t pcap;                // 14 bytes
-            // PowerPreservingBoundry Fmax to throttle all OCCs the same
-            uint16_t ppb_fmax;                      //  2 bytes
+            // Reserved
+            uint8_t _reserved0[2];                  //  2 bytes
             // GPIO pins from APSS
             uint16_t gpio[2];                       //  4 bytes
             // Raw ADC Channels from APSS
             uint16_t adc[MAX_APSS_ADC_CHANNELS];    // 32 bytes
-            // Reserved
-            uint8_t  _reserved_0[4];                //  4 bytes
             // Time of Day Clock from the last APSS reading
             uint64_t tod;                           //  8 bytes
             // Reserved
-            uint8_t  _reserved_1[52];               // 52 bytes
+            uint8_t  _reserved_1[51];               // 51 bytes
             // Counter in case we want to determine sequence errors
             uint8_t  magic_counter;                 //  1 byte
             // Magic Number for denoting the end of the packet
-            uint32_t magic2                :24;     //  3 bytes
-        };                                          // --------
+            uint32_t magic2;                        //  4 bytes
+        } __attribute__ ((packed));                 // --------
         uint64_t words[16];                // Total = 128 bytes
     };
-} __attribute__ ((packed)) dcom_slv_inbox_doorbell_t;
+} dcom_slv_inbox_doorbell_t;
 
 // Slave Outbox Doorbell
 typedef struct
 {
-    pob_id_t  pob_id;
+    uint8_t   chip_id;
     uint8_t   pcap_valid;
     uint16_t  active_node_pcap;
     uint32_t  addr_slv_outbox_buffer;
@@ -357,16 +363,7 @@ typedef struct
         // Most Recent Sequence number received from Master Doorbell
         uint8_t     doorbellSeq;
         // Error Flags for receiving Master Doorbell (never cleared)
-        struct
-        {
-            uint8_t timeout     :1;
-            uint8_t incomplete  :1;
-            uint8_t badSequence :1;
-            uint8_t badMagicNumEnd  :1;
-            uint8_t dropPacket  :1;
-            uint8_t hwError     :1;
-            uint8_t timeoutRx   :1;
-        } doorbellErrorFlags;
+        uint8_t     doorbellErrorFlags;
     } slave;
 
     // General Timing

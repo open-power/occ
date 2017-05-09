@@ -34,6 +34,11 @@
 // Turn off periodic GPE traces
 #define PK_TRACE_TIMER_OUTPUT 0
 
+// Redefine the default MSR to mask off SIB errors and avoid data machine checks
+// These SIB errors probably occur due to contention on the PIB
+#define PK_THREAD_MACHINE_CONTEXT_DEFAULT (MSR_SEM | MSR_UIE | MSR_EE | MSR_ME)
+#define PPE42_MSR_INITIAL (MSR_SEM | MSR_ME)
+
 // If we are using the OCB timebase then assume
 // a frequency of 37.5Mhz.  Otherwise, the default is to use
 // the decrementer as a timebase and assume a frequency of

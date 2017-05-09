@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -84,7 +84,7 @@ uint32_t dcom_build_slv_outbox(void)
 
     l_addr_of_slv_outbox_in_main_mem += G_pbax_id.chip_id*sizeof(dcom_slv_outbox_t);
 
-    G_dcom_slv_outbox_doorbell_tx.pob_id = G_pbax_id;
+    G_dcom_slv_outbox_doorbell_tx.chip_id = G_pbax_id.chip_id;
     G_dcom_slv_outbox_doorbell_tx.pcap_valid = g_amec->pcap_valid;
     G_dcom_slv_outbox_doorbell_tx.active_node_pcap = g_amec->pcap.active_node_pcap;
     G_dcom_slv_outbox_doorbell_tx.addr_slv_outbox_buffer = l_addr_of_slv_outbox_in_main_mem;
@@ -128,7 +128,7 @@ uint32_t dcom_which_buffer_slv_outbox(void)
 // End Function Specification
 uint32_t dcom_calc_slv_outbox_addr( const dcom_slv_outbox_doorbell_t * i_doorbell, uint8_t * o_occ_id  )
 {
-    *o_occ_id = i_doorbell->pob_id.chip_id;
+    *o_occ_id = i_doorbell->chip_id;
     return i_doorbell->addr_slv_outbox_buffer;
 }
 

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -175,7 +175,6 @@ occSysConfigData_t G_sysConfigData =
         .max_pcap      = 0,
         .oversub_pcap  = 0,
         .system_pcap   = 0,
-        .unthrottle    = 0,
         .source        = 0,
     },
 
@@ -242,7 +241,6 @@ pcap_config_data_t G_master_pcap_data =
     .max_pcap        = 0,
     .oversub_pcap    = 0,
     .system_pcap     = 0,
-    .unthrottle      = 0,
     .pcap_data_count = 0,
 };
 

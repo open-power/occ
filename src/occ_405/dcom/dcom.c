@@ -124,10 +124,8 @@ void dcom_initialize_roles(void)
                  pbax_cfg_reg.fields.rcv_chipid,
                  pbax_cfg_reg.fields.rcv_groupid);
 
-        G_pbax_id.valid     = 1;
         G_pbax_id.node_id   = pbax_cfg_reg.fields.rcv_groupid;
         G_pbax_id.chip_id   = pbax_cfg_reg.fields.rcv_chipid;
-        G_pbax_id.module_id = G_pbax_id.chip_id;
         // Always start as OCC Slave
         G_occ_role = OCC_SLAVE;
         rtl_set_run_mask(RTL_FLAG_NOTMSTR);
@@ -174,8 +172,6 @@ void dcom_initialize_roles(void)
                          ERRL_CALLOUT_TYPE_HUID,
                          G_sysConfigData.proc_huid,
                          ERRL_CALLOUT_PRIORITY_LOW);
-
-        G_pbax_id.valid   = 0;  // Invalid Chip/Node ID
 
         CHECKPOINT_FAIL_AND_HALT(l_errl);
     }

@@ -626,7 +626,7 @@ errlHndl_t apss_store_adc_channel(const eApssAdcChannelAssignments i_func_id, co
 void apss_store_ipmi_sensor_id(const uint16_t i_channel, const apss_cfg_adc_v20_t *i_adc)
 {
     // Get current processor id.
-    uint8_t l_proc  = G_pbax_id.module_id;
+    uint8_t l_proc  = G_pbax_id.chip_id;
 
     switch (i_adc->assignment)
     {
@@ -846,6 +846,24 @@ errlHndl_t apss_store_gpio_pin(const eApssGpioAssignments i_func_id, const uint8
             case DOM_D_OC_LATCH:
                 l_gpio_function = &G_sysConfigData.apss_gpio_map.dom_oc_latch[i_func_id-DOM_A_OC_LATCH];
                 break;
+
+            case PSU_FAN_DISABLE_N:
+                l_gpio_function = &G_sysConfigData.apss_gpio_map.psu_fan_disable;
+                break;
+
+            case GPU_0_0_PRSNT_N:
+            case GPU_0_1_PRSNT_N:
+            case GPU_0_2_PRSNT_N:
+            case GPU_1_0_PRSNT_N:
+            case GPU_1_1_PRSNT_N:
+            case GPU_1_2_PRSNT_N:
+                l_gpio_function = &G_sysConfigData.apss_gpio_map.gpu[i_func_id-GPU_0_0_PRSNT_N];
+                break;
+
+            case NVDIMM_EPOW_N:
+                l_gpio_function = &G_sysConfigData.apss_gpio_map.nvdimm_epow;
+                break;
+
             default:
                 // It should never happen
                 CMDH_TRAC_ERR("apss_store_gpio_pin: Invalid function ID: 0x%x", i_func_id);
@@ -1367,7 +1385,6 @@ errlHndl_t data_store_power_cap(const cmdh_fsp_cmd_t * i_cmd_ptr,
             G_master_pcap_data.max_pcap        = l_cmd2_ptr->pcap_config.sys_max_pcap;
             G_master_pcap_data.oversub_pcap    = l_cmd2_ptr->pcap_config.qpd_pcap;
             G_master_pcap_data.system_pcap     = l_cmd2_ptr->pcap_config.sys_max_pcap;
-            G_master_pcap_data.unthrottle      = 0;
 
             // NOTE: The customer power cap will be set via a separate command
             // from BMC/(H)TMGT or OPAL.
