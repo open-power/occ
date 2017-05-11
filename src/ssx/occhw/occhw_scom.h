@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -31,8 +31,6 @@
 #include "ssx.h"
 
 #include "occhw_common.h"
-#include "pmc_register_addresses.h"
-#include "pmc_firmware_registers.h"
 
 ////////////////////////////////////////////////////////////////////////////
 // SCOM

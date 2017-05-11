@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2015,2016
+# Contributors Listed Below - COPYRIGHT 2015,2017
 # [+] International Business Machines Corp.
 #
 #
@@ -40,7 +40,6 @@ C-SOURCES = \
 	ssx_dump.c \
 	ssx_io.c \
 	strcasecmp.c \
-	string_stream.c
 
 S-SOURCES =  
 

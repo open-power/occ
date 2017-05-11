@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -44,6 +44,9 @@
 //              uncomitted error log.
 //
 // End Function Specification
+
+// In P9 we cannot do a scom from the 405. They must be done from a GPE.
+#if 0
 int getscom_ffdc(uint32_t i_addr, uint64_t* o_data, errlHndl_t* o_errp)
 {
     pmc_o2p_addr_reg_t          l_addr;
@@ -213,4 +216,4 @@ int putscom_ffdc(uint32_t i_addr, uint64_t i_data, errlHndl_t* o_errp)
 
     return l_rc;
 }
-
+#endif

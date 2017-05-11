@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2011,2016
+# Contributors Listed Below - COPYRIGHT 2011,2017
 # [+] International Business Machines Corp.
 #
 #
@@ -951,7 +951,7 @@ __save_ffdc_regs:
     bl          _getscom
 
     # Save core (de)configuration
-    _liw        %r5, PMC_CORE_DECONFIGURATION_REG
+    _liw        %r5, OCB_CCSR
     _stwi       %r5, %r3, CORES_DECON
 
     # Add the Main thread dump

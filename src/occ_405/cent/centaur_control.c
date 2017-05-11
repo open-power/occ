@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -32,7 +32,6 @@
 #include "centaur_data.h"
 #include "occhw_async.h"
 #include "threadSch.h"
-#include "pmc_register_addresses.h"
 #include "centaur_data_service_codes.h"
 #include "occ_service_codes.h"
 #include "errl.h"

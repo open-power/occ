@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -106,7 +106,7 @@ uint64_t G_core_configuration SECTION_ATTRIBUTE(".noncacheable") = 0;
 ///
 /// \bug in Simics we're doing this based on the PMC_CORE_DECONFIGURATION_REG
 /// pending Simics support for the base pervasive functionality
-
+#if 0
 void
 _occhw_get_chip_configuration(void)
 {
@@ -153,7 +153,7 @@ _occhw_get_chip_configuration(void)
 
     G_core_configuration = G_chip_configuration & 0xffff000000000000ull;
 }
-
+#endif
 
 uint32_t core_configuration(void)
 {

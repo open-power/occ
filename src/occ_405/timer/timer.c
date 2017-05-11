@@ -227,14 +227,14 @@ void init_mem_deadman_reset_task(void)
 // End Function Specification
 void task_poke_watchdogs(struct task * i_self)
 {
-    pmc_occ_heartbeat_reg_t hbr;                          // OCC heart beat register
+    ocb_occhbr_t hbr;                          // OCC heart beat register
 
     static bool             L_check_pgpe_beacon = false;  // Check GPE beacon this time?
 
 // 1. Enable OCC heartbeat
 
-    hbr.fields.pmc_occ_heartbeat_time = 8000; // count corresponding to 8 ms
-    hbr.fields.pmc_occ_heartbeat_en   = true; // enable heartbeat timer
+    hbr.fields.occ_heartbeat_count = 8000; // count corresponding to 8 ms
+    hbr.fields.occ_heartbeat_en   = true;  // enable heartbeat timer
 
     out32(OCB_OCCHBR, hbr.value);             // Enable heartbeat register, and set it
 

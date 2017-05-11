@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/firdata/fir_data_collect.c $                          */
+/* $Source: src/occ_405/firdata/fir_data_collect.c $                      */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -82,6 +82,8 @@ TRAC_ERR("fir_data_collect: FirData_captureCsFirData not yet called/enabled");
  *
  * End Function Specification
  */
+// TODO: This code is not allowed currently, as it relies on performing scom operations.
+#if 0
 bool pnor_access_allowed(void)
 {
     /* BMC ownership of the PNOR is indicated by bit 18 in TPC_GP0 */
@@ -165,5 +167,4 @@ bool pnor_access_allowed(void)
 
     return l_access_allowed;
 }
-
-
+#endif

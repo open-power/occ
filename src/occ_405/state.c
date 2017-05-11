@@ -589,8 +589,7 @@ errlHndl_t SMGR_observation_to_active()
                     if(FALSE == L_error_logged)
                     {
                         TRAC_ERR("SMGR: Timeout waiting for Pstates to be enabled, "
-                                 "pmc_mode[%08x], chips_present[%02x], Cores Present [%08x]",
-                                 in32(PMC_MODE_REG),
+                                 "chips_present[%02x], Cores Present [%08x]",
                                  G_sysConfigData.is_occ_present,
                                  (uint32_t) ((in64(OCB_CCSR)) >> 32));
                     }

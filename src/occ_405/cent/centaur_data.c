@@ -30,7 +30,6 @@
 #include "centaur_control.h"
 #include "occhw_async.h"
 #include "threadSch.h"
-#include "pmc_register_addresses.h"
 #include "centaur_data_service_codes.h"
 #include "occ_service_codes.h"
 #include "errl.h"
