@@ -73,6 +73,8 @@ uint32_t    G_mhz_per_pstate=0;
 
 uint8_t     G_over_pcap_count=0;
 
+extern uint16_t G_proc_fmax_mhz;   // max(turbo,uturbo) frequencies
+
 //*************************************************************************/
 // Function Prototypes
 //*************************************************************************/
@@ -250,9 +252,9 @@ void amec_pcap_controller(void)
         l_proc_pcap_vote += (PROC_MHZ_PER_WATT * l_power_avail);
     }
 
-    if(l_proc_pcap_vote > G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO])
+    if(l_proc_pcap_vote > G_proc_fmax_mhz)
     {
-        l_proc_pcap_vote = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
+        l_proc_pcap_vote = G_proc_fmax_mhz;
     }
 
     if(l_proc_pcap_vote < G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY])
@@ -338,9 +340,9 @@ void amec_ppb_fmax_calc(void)
                 G_sysConfigData.master_ppb_fmax += NODE_MHZ_PER_WATT() * l_power_avail;
             }
 
-            if(G_sysConfigData.master_ppb_fmax > G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO])
+            if(G_sysConfigData.master_ppb_fmax > G_proc_fmax_mhz)
             {
-                G_sysConfigData.master_ppb_fmax = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
+                G_sysConfigData.master_ppb_fmax = G_proc_fmax_mhz;
             }
 
             if(G_sysConfigData.master_ppb_fmax < G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY])

@@ -30,11 +30,6 @@
 #include <dimm.h>
 
 
-// TODO: remove testing code once SIMICS_FLAG_ISSUE removed
-//#define DEBUG_LOCK_TESTING
-
-
-
 // Release the OCC lock indefinitely
 // This should be called when OCC goes into safe mode or will be reset
 // to allow the host to use the specified I2C engines.

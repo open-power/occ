@@ -23,9 +23,6 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-// TODO: Simics currently does not support the atomic _OR/_CLR OCI registers
-#define SIMICS_FLAG_ISSUE
-
 // Debug trace
 //#define LOCK_DEBUG
 #ifdef LOCK_DEBUG
@@ -65,17 +62,9 @@ void host_i2c_lock_request()
 {
     ocb_occflg_t occ_flags = {0};
     TRAC_INFO("host_i2c_lock_request called (tick %d / %d)", CURRENT_TICK, DIMM_TICK);
-#ifdef SIMICS_FLAG_ISSUE
-    // NON-ATOMIC OPERATION
-    occ_flags.value = in32(OCB_OCCFLG);
-    occ_flags.fields.i2c_engine3_lock_host = 1;
-    out32(OCB_OCCFLG, occ_flags.value);
-#else
-    // TODO - OCB_OCCFLG_OR is currently not working in SIMICS 1/27/2016
     occ_flags.fields.i2c_engine3_lock_host = 1;
     TRAC_INFO("host_i2c_lock_request - writing %04X to _OR(0x%08X)", occ_flags.value, OCB_OCCFLG_OR);
     out32(OCB_OCCFLG_OR, occ_flags.value);
-#endif
 
     occ_flags.value = in32(OCB_OCCFLG);
     //TRAC_INFO("host_i2c_lock_request - 0x%08X returned value=0x%04X", OCB_OCCFLG, occ_flags.value);
@@ -97,18 +86,6 @@ void host_i2c_lock_release()
 
     ocb_occmisc_t occmiscreg = {0};
     ocb_occflg_t occ_flags = {0};
-#ifdef SIMICS_FLAG_ISSUE // NON-ATOMIC OPERATION
-    // clear external interrupt (so OCC can notify host when lock released)
-    occmiscreg.value = in32(OCB_OCCMISC);
-    occmiscreg.fields.core_ext_intr = 0;
-    out32(OCB_OCCMISC, occmiscreg.value);
-
-    // Clear the host request
-    occ_flags.value = in32(OCB_OCCFLG);
-    occ_flags.fields.i2c_engine3_lock_host = 0;
-    out32(OCB_OCCFLG, occ_flags.value);
-#else
-    // TODO - OCB_OCCFLG_CLR is currently not working in SIMICS 1/27/2016
     // clear external interrupt (so OCC can notify host when lock released)
     occmiscreg.fields.core_ext_intr = 1;
     out32(OCB_OCCMISC_CLR, occmiscreg.value);
@@ -117,7 +94,6 @@ void host_i2c_lock_release()
     occ_flags.fields.i2c_engine3_lock_host = 1;
     TRAC_INFO("host_i2c_lock_release - writing %04X to _CLR(0x%08X)", occ_flags.value, OCB_OCCFLG_CLR);
     out32(OCB_OCCFLG_CLR, occ_flags.value);
-#endif
 
     occ_flags.value = in32(OCB_OCCFLG);
     //TRAC_INFO("host_i2c_lock_release - 0x%08X returned value=0x%04X", OCB_OCCFLG, occ_flags.value);
@@ -157,23 +133,6 @@ void update_i2c_lock(const lockOperation_e i_op, const uint8_t i_engine)
     }
 #endif
 
-#ifdef SIMICS_FLAG_ISSUE
-    // TODO - OCB_OCCFLG_OR is currently not working in SIMICS 1/27/2016
-    // NON-ATOMIC OPERATION
-    occ_flags.value = in32(OCB_OCCFLG);
-    if (PIB_I2C_ENGINE_E == i_engine)
-    {
-        occ_flags.fields.i2c_engine3_lock_occ = i_op;
-    }
-    else if (PIB_I2C_ENGINE_D == i_engine)
-    {
-        occ_flags.fields.i2c_engine2_lock_occ = i_op;
-    }
-    else if (PIB_I2C_ENGINE_C == i_engine)
-    {
-        occ_flags.fields.i2c_engine1_lock_occ = i_op;
-    }
-#else
     if (PIB_I2C_ENGINE_E == i_engine)
     {
         occ_flags.fields.i2c_engine3_lock_occ = 1;
@@ -186,15 +145,10 @@ void update_i2c_lock(const lockOperation_e i_op, const uint8_t i_engine)
     {
         occ_flags.fields.i2c_engine1_lock_occ = 1;
     }
-#endif
 
     if (LOCK_RELEASE == i_op)
     {
-#ifdef SIMICS_FLAG_ISSUE
-        out32(OCB_OCCFLG, occ_flags.value);
-#else
         out32(OCB_OCCFLG_CLR, occ_flags.value);
-#endif
 
         // OCC had the lock and host wants it, so send interrupt to host
         notify_host(INTR_REASON_I2C_OWNERSHIP_CHANGE);
@@ -203,11 +157,7 @@ void update_i2c_lock(const lockOperation_e i_op, const uint8_t i_engine)
     }
     else // LOCK_ACQUIRE
     {
-#ifdef SIMICS_FLAG_ISSUE
-        out32(OCB_OCCFLG, occ_flags.value);
-#else
         out32(OCB_OCCFLG_OR, occ_flags.value);
-#endif
 
         TRAC_IMP("update_i2c_lock: OCC has aquired lock for I2C engine %d", i_engine);
     }
@@ -221,7 +171,7 @@ void update_i2c_lock(const lockOperation_e i_op, const uint8_t i_engine)
 // If no engine is specified, locks for all I2C engines will be released
 void occ_i2c_lock_release(const uint8_t i_engine)
 {
-    TRAC_INFO("occ_i2c_lock_release(engine %d) called", i_engine); // TODO DEBUG
+    TRAC_INFO("occ_i2c_lock_release(engine %d) called", i_engine);
 
     if ((PIB_I2C_ENGINE_ALL == i_engine) ||
         (PIB_I2C_ENGINE_E == i_engine) || (PIB_I2C_ENGINE_D == i_engine) || (PIB_I2C_ENGINE_C == i_engine))

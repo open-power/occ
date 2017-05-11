@@ -564,6 +564,9 @@ int pgpe_clip_update(void)
     int rc = 0;              // return code
     errlHndl_t  err = NULL;  // Error handler
     uint32_t    l_wait_time = 0;
+    static uint64_t L_last_list = 0xFFFFFFFFFFFFFFFF;
+    static bool L_first_trace = TRUE;
+
     do
     {
         // Caller must check the completion of previous invocation of clip updates.
@@ -614,9 +617,35 @@ int pgpe_clip_update(void)
 
         if (!G_simics_environment)
         {
-            // Set clip bounds
-            memset(G_clip_update_parms.ps_val_clip_min, proc_freq2pstate(g_amec->sys.fmin), MAXIMUM_QUADS);
-            memcpy(G_clip_update_parms.ps_val_clip_max, G_desired_pstate, sizeof(G_desired_pstate));
+            unsigned int quad = 0;
+            uint64_t pstate_list = 0;
+            for (quad = 0; quad < MAXIMUM_QUADS; quad++)
+            {
+                pstate_list |= ((uint64_t) G_desired_pstate[quad] << ((7-quad)*8));
+
+                // Set clip bounds
+                G_clip_update_parms.ps_val_clip_min[quad] = proc_freq2pstate(g_amec->sys.fmin);
+                G_clip_update_parms.ps_val_clip_max[quad] = G_desired_pstate[quad];
+            }
+
+
+            if (pstate_list != L_last_list)
+            {
+                if (L_first_trace)
+                {
+                    TRAC_IMP("pgpe_clip_update: Scheduling clip update: min[0x%02X], max[0x%08X%04X]",
+                             G_clip_update_parms.ps_val_clip_min[0],
+                             WORD_HIGH(pstate_list), WORD_LOW(pstate_list)>>16);
+                    L_first_trace = FALSE;
+                }
+                else
+                {
+                    TRAC_INFO("pgpe_clip_update: Scheduling clip update: min[0x%02X], max[0x%08X%04X]",
+                              G_clip_update_parms.ps_val_clip_min[0],
+                             WORD_HIGH(pstate_list), WORD_LOW(pstate_list)>>16);
+                }
+                L_last_list = pstate_list;
+            }
 
             // Schedule PGPE clip update IPC task
             rc = gpe_request_schedule(&G_clip_update_req);
@@ -735,6 +764,14 @@ int pgpe_start_suspend(uint8_t action, PMCR_OWNER owner)
 
     if (!G_simics_environment)
     {
+        if (action == PGPE_ACTION_PSTATE_START)
+        {
+            TRAC_IMP("pgpe_start_suspend: scheduling enable of pstates (owner=0x%02X)", owner);
+        }
+        else if (action == PGPE_ACTION_PSTATE_STOP)
+        {
+            TRAC_IMP("pgpe_start_suspend: scheduling disable of pstates (owner=0x%02X)", owner);
+        }
         // Schedule PGPE start_suspend task
         rc = gpe_request_schedule(&G_start_suspend_req);
     }

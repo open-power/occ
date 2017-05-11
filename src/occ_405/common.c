@@ -193,9 +193,6 @@ bool notify_host(const ext_intr_reason_t i_reason)
         current_occmisc.value = in32(OCB_OCCMISC);
         if (current_occmisc.fields.core_ext_intr == 0)
         {
-#ifdef SIMICS_FLAG_ISSUE
-            out32(OCB_OCCMISC, new_occmisc.value); // _CLR and _OR not working
-#else
             if (current_occmisc.fields.ext_intr_service_required ||
                 current_occmisc.fields.ext_intr_i2c_change ||
                 current_occmisc.fields.ext_intr_shmem_change)
@@ -209,7 +206,6 @@ bool notify_host(const ext_intr_reason_t i_reason)
             }
 
             out32(OCB_OCCMISC_OR, new_occmisc.value);
-#endif
             notify_success = true;
             TRAC_INFO("notify_host: notification of reason 0x%02X has been sent", notifyReason);
             G_host_notifications_pending &= ~notifyReason;

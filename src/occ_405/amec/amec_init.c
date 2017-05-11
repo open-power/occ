@@ -300,10 +300,10 @@ void amec_init_gamec_struct(void)
   }
 
   //Initialize processor fields
-  g_amec->proc[0].core_max_freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
+  g_amec->proc[0].core_max_freq = 0xFFFF;
 
   //Initialize processor power votes
-  g_amec->proc[0].pwr_votes.pmax_clip_freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
+  g_amec->proc[0].pwr_votes.pmax_clip_freq = 0xFFFF;
   g_amec->proc[0].pwr_votes.apss_pmax_clip_freq = 0xFFFF;
 
   //Initialize stream buffer recording parameters

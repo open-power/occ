@@ -410,6 +410,9 @@ void check_for_opal_updates(void)
         (G_opal_dynamic_table.dynamic.mem_throt_status  != G_amec_opal_mem_throt_reason) )           // Mem throttle status changed
     {
         throttle_change = true;
+        TRAC_INFO("check_for_opal_updates: throttle status change - proc 0x%02X->0x%02X, mem: 0x%02X->0x%02X",
+                  G_opal_dynamic_table.dynamic.proc_throt_status, G_amec_opal_proc_throt_reason,
+                  G_opal_dynamic_table.dynamic.mem_throt_status, G_amec_opal_mem_throt_reason);
         update_dynamic_opal_data();
     }
 
@@ -422,6 +425,16 @@ void check_for_opal_updates(void)
             G_opal_dynamic_table.dynamic.max_power_cap     != G_master_pcap_data.max_pcap      ||
             G_opal_dynamic_table.dynamic.current_power_cap != G_master_pcap_data.current_pcap  )
     {
+        if (G_opal_dynamic_table.dynamic.occ_state         != CURRENT_STATE())
+            TRAC_INFO("check_for_opal_updates: state changed from 0x%02X->0x%02X", G_opal_dynamic_table.dynamic.occ_state, CURRENT_STATE());
+        if (G_opal_dynamic_table.dynamic.quick_power_drop  != AMEC_INTF_GET_OVERSUBSCRIPTION())
+            TRAC_INFO("check_for_opal_updates: qpd changed from 0x%02X->0x%02X", G_opal_dynamic_table.dynamic.quick_power_drop, AMEC_INTF_GET_OVERSUBSCRIPTION());
+        if (G_opal_dynamic_table.dynamic.power_cap_type    != G_master_pcap_data.source        ||
+            G_opal_dynamic_table.dynamic.min_power_cap     != G_master_pcap_data.soft_min_pcap ||
+            G_opal_dynamic_table.dynamic.max_power_cap     != G_master_pcap_data.max_pcap      ||
+            G_opal_dynamic_table.dynamic.current_power_cap != G_master_pcap_data.current_pcap)
+            TRAC_INFO("check_for_opal_updates: power cap change");
+
         update_dynamic_opal_data();
     }
 
@@ -443,12 +456,10 @@ void check_for_opal_updates(void)
 // End Function Specification
 void update_dynamic_opal_data (void)
 {
-    TRAC_INFO("update_dynamic_opal_data: populate dynamic OPAL data");
 
     // Initialize the opal table in SRAM (sets valid bit)
     populate_opal_dynamic_data();
 
     // copy sram image into mainstore HOMER
     populate_opal_tbl_to_mem(OPAL_DYNAMIC);
-    TRAC_IMP("update_dynamic_opal_data: updated dynamic OPAL data");
 }

@@ -543,7 +543,6 @@ uint8_t dimm_reset_sm()
 
 
 #ifdef DEBUG_LOCK_TESTING
-// TODO: remove testing code once SIMICS_FLAG_ISSUE removed
 // Simulate I2C locking behavior from the host
 void host_i2c_lock_request();
 void host_i2c_lock_release();
@@ -740,7 +739,6 @@ void task_dimm_sm(struct task *i_self)
     if (G_mem_monitoring_allowed)
     {
 #ifdef DEBUG_LOCK_TESTING
-        // TODO: remove testing code once SIMICS_FLAG_ISSUE removed
         SIMULATE_HOST();
 #endif
 

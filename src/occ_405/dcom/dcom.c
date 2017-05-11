@@ -43,6 +43,7 @@
 #include "pss_constants.h"
 
 extern uint8_t G_occ_interrupt_type;
+extern uint16_t G_proc_fmax_mhz;   // max(turbo,uturbo) frequencies
 
 dcom_timing_t G_dcomTime;
 
@@ -534,6 +535,15 @@ void task_dcom_parse_occfwmsg(task_t *i_self)
 
             if(l_change)
             {
+                if(G_sysConfigData.sys_mode_freq.table[OCC_MODE_UTURBO] > G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO])
+                {
+                    G_proc_fmax_mhz = G_sysConfigData.sys_mode_freq.table[OCC_MODE_UTURBO];
+                }
+                else
+                {
+                    G_proc_fmax_mhz = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
+                }
+
                 // Update "update count" for debug purposes
                 G_sysConfigData.sys_mode_freq.update_count =
                     G_dcom_slv_inbox_rx.sys_mode_freq.update_count;
