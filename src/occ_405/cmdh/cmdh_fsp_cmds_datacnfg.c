@@ -328,6 +328,17 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
                               l_freq, G_proc_fmax_mhz);
                 l_freq = G_proc_fmax_mhz;
             }
+
+            // If Ultra Turbo is 0, disable WOF
+            if( l_freq == 0 )
+            {
+                set_clear_wof_disabled( SET, WOF_RC_UTURBO_IS_ZERO );
+            }
+            else
+            {
+                set_clear_wof_disabled( CLEAR, WOF_RC_UTURBO_IS_ZERO );
+            }
+
             l_table[OCC_MODE_UTURBO] = l_freq;
             CMDH_TRAC_INFO("UT frequency = %d MHz", l_freq);
 

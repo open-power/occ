@@ -227,6 +227,8 @@ amec_parm_t g_amec_parm_list[] = {
     AMEC_PARM_UINT32(PARM_PSTATE_TBL_SRAM_ADDR, "PstatesSramAddr", &g_amec_sys.wof.pstate_tbl_sram_addr),
     AMEC_PARM_UINT8(PARM_VFRT_CALLBACK_ERR, "vfrtCallbackErr", &g_amec_sys.wof.vfrt_callback_error),
     AMEC_PARM_UINT8(PARM_PGPE_WOF_OFF, "pgpeWofOff", &g_amec_sys.wof.pgpe_wof_off),
+    AMEC_PARM_UINT32(PARM_VFRT_MM_OFFSET, "vfrt_mm_offset", &g_amec_sys.wof.vfrt_mm_offset),
+    AMEC_PARM_UINT8(PARM_VFRT_REQ_RC, "wof_vfrt_req_rc", &g_amec_sys.wof.wof_vfrt_req_rc ),
     // End WOF parameters
 };
 

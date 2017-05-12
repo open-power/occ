@@ -96,6 +96,9 @@ OCCPstateParmBlock G_oppb;         // OCC Pstate Parameters Block Structure
 extern uint16_t G_proc_fmax_mhz;   // max(turbo,uturbo) frequencies
 extern int G_ss_pgpe_rc;
 
+// Buffer to hold the wof header
+DMA_BUFFER(temp_bce_request_buffer_t G_temp_bce_buff) = {{0}};
+
 // Set main thread timer for one second
 #define MAIN_THRD_TIMER_SLICE ((SsxInterval) SSX_SECONDS(1))
 
@@ -516,17 +519,32 @@ void read_wof_header(void)
 
     MAIN_TRAC_INFO("read_wof_header() 0x%08X", G_pgpe_header.wof_tables_addr);
 
+#ifdef WOF_PGPE_SUPPORT
     // Read active quads address, wof tables address, and wof tables len
     g_amec->wof.req_active_quads_addr   = G_pgpe_header.requested_active_quad_sram_addr;
     g_amec->wof.vfrt_tbls_main_mem_addr = G_pgpe_header.wof_tables_addr;
     g_amec->wof.vfrt_tbls_len           = G_pgpe_header.wof_tables_length;
     g_amec->wof.pgpe_wof_state_addr     = G_pgpe_header.wof_state_address;
-
+    g_amec->wof.pstate_tbl_sram_addr    = G_pgpe_header.occ_pstate_table_sram_addr;
 
     // Read in quad state addresses here once
     g_amec->wof.quad_state_0_addr = G_pgpe_header.actual_quad_status_sram_addr;
     g_amec->wof.quad_state_1_addr = g_amec->wof.quad_state_0_addr +
                                     sizeof(uint64_t); //skip quad state 0
+
+#else
+    // No WOF PGPE support. Hard code addresses and externalize to amester
+    g_amec->wof.quad_state_0_addr = G_pgpe_header.beacon_sram_addr + sizeof(uint32_t);
+    g_amec->wof.quad_state_1_addr = g_amec->wof.quad_state_0_addr + sizeof(uint64_t);
+    g_amec->wof.pgpe_wof_state_addr = g_amec->wof.quad_state_1_addr + sizeof(uint64_t);
+    g_amec->wof.req_active_quads_addr = g_amec->wof.pgpe_wof_state_addr + sizeof(uint64_t)+7;
+    g_amec->wof.vfrt_tbls_main_mem_addr = PPMR_ADDRESS_HOMER+WOF_TABLES_OFFSET;
+    g_amec->wof.pstate_tbl_sram_addr = PSTATE_TBL_ADDR;
+
+    // Set some of the fields in the pgpe header struct for next set of calcs
+    G_pgpe_header.wof_tables_addr = g_amec->wof.vfrt_tbls_main_mem_addr;
+
+#endif
 
     if (G_pgpe_header.wof_tables_addr != 0 &&
         G_pgpe_header.wof_tables_addr%128 == 0)
@@ -536,14 +554,11 @@ void read_wof_header(void)
             // use block copy engine to read WOF header
             BceRequest l_wof_header_req;
 
-            // 128 byte aligned buffer to read the data
-            temp_bce_request_buffer_t l_temp_bce_buff = {{0}};
-
             // Create request
             l_ssxrc = bce_request_create(&l_wof_header_req,              // block copy object
                                          &G_pba_bcde_queue,              // main to sram copy engine
                                          G_pgpe_header.wof_tables_addr,  // mainstore address
-                                         (uint32_t) &l_temp_bce_buff,    // SRAM start address
+                                         (uint32_t) &G_temp_bce_buff,    // SRAM start address
                                          MIN_BCE_REQ_SIZE, // size of copy
                                          SSX_WAIT_FOREVER,       // no timeout
                                          NULL,                   // no call back
@@ -587,9 +602,32 @@ void read_wof_header(void)
 
             // Copy the data into Global WOF header struct
             memcpy(&G_wof_header,
-                   l_temp_bce_buff.data,
+                   G_temp_bce_buff.data,
                    sizeof(wof_header_data_t));
 
+#ifndef WOF_PGPE_SUPPORT
+            // No WOF_PGPE_SUPPORT. Hard code the values
+            // Taken from P9_Power_management_HcodeHWP_spec.pdf
+            // Version 0.50
+            g_amec->wof.version              = 1;
+            g_amec->wof.vfrt_block_size      = 256;
+            g_amec->wof.vfrt_blck_hdr_sz     = 8;
+            g_amec->wof.vfrt_data_size       = 1;
+            g_amec->wof.active_quads_size    = 6;
+            g_amec->wof.core_count           = 24;
+            g_amec->wof.vdn_start            = 2500;
+            g_amec->wof.vdn_step             = 1000;
+            g_amec->wof.vdn_size             = 8;
+            g_amec->wof.vdd_start            = 0;
+            g_amec->wof.vdd_step             = 500;
+            g_amec->wof.vdd_size             = 21;
+            g_amec->wof.vratio_start         = 409;
+            g_amec->wof.vratio_step          = 417;
+            g_amec->wof.vratio_size          = 24;
+            g_amec->wof.fratio_start         = 10000;
+            g_amec->wof.fratio_step          = 1000;
+            g_amec->wof.fratio_size          = 5;
+#else
             // verify the validity of the magic number
             uint32_t magic_number = in32(G_pgpe_header.wof_tables_addr);
             MAIN_TRAC_INFO("read_wof_header() Magic No: 0x%08X", magic_number);
@@ -635,6 +673,7 @@ void read_wof_header(void)
                 break;
             }
 
+            MAIN_TRAC_INFO("MAIN: VFRT block size %d", G_wof_header.vfrt_block_size);
              // Make wof header data visible to amester
             g_amec->wof.version              = G_wof_header.version;
             g_amec->wof.vfrt_block_size      = G_wof_header.vfrt_block_size;
@@ -663,6 +702,7 @@ void read_wof_header(void)
             g_amec->wof.package_name_hi      = G_wof_header.package_name_hi;
             g_amec->wof.package_name_lo      = G_wof_header.package_name_lo;
 
+#endif
             // Initialize wof init state to zero
             g_amec->wof.wof_init_state  = WOF_DISABLED;
 

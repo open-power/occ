@@ -25,20 +25,19 @@
 #ifndef _WOF_H
 #define _WOF_H
 
-
-
 //******************************************************************************
 // Define
 //******************************************************************************
 #define ACTIVE_QUAD_SZ_MIN          1
 #define ACTIVE_QUAD_SZ_MAX          6
-#define MIN_BCE_REQ_SIZE            128
-#define WOF_HEADER_SIZE             32
+#define MIN_BCE_REQ_SIZE            256
+#define WOF_HEADER_SIZE             128
 #define CORE_IDDQ_MEASUREMENTS      6
 #define QUAD_POWERED_OFF            0xFF
 #define PGPE_WOF_OFF                0
 #define PGPE_WOF_ON                 1
 #define NUM_CORES_PER_QUAD          4
+#define WOF_TABLES_OFFSET           0xC0000// Relative to PPMR_ADDRESS_HOMER
 //******************************************************************************
 // Bit Vector Masks
 //******************************************************************************
@@ -47,22 +46,28 @@
 //******************************************************************************
 // WOF Reason Code Masks
 //******************************************************************************
-#define WOF_RC_NO_WOF_HEADER_MASK                  0x0001
-#define WOF_RC_INVALID_ACTIVE_QUADS                0x0002
-#define WOF_RC_INVALID_VDD_VDN                     0x0004
-#define WOF_RC_PGPE_REQ_NOT_IDLE                   0x0008
-#define WOF_RC_PGPE_WOF_DISABLED                   0x0010
-#define WOF_RC_PSTATE_PROTOCOL_OFF                 0x0020
-#define WOF_RC_VFRT_REQ_TIMEOUT                    0x0040
-#define WOF_RC_CONTROL_REQ_TIMEOUT                 0x0080
-#define WOF_RC_STATE_CHANGE                        0x0100
-#define WOF_RC_MODE_CHANGE                         0x0200
-#define WOF_RC_MODE_NO_SUPPORT_MASK                0x0400
-#define WOF_RC_DIVIDE_BY_ZERO                      0x0800
-#define WOF_RC_VFRT_REQ_FAILURE                    0x1000
-#define WOF_RC_CONTROL_REQ_FAILURE                 0x2000
-#define WOF_RC_VFRT_ALIGNMENT_ERROR                0x4000
-#define WOF_RC_DRIVER_WOF_DISABLED                 0x8000
+#define WOF_RC_NO_WOF_HEADER_MASK                  0x00000001
+#define WOF_RC_INVALID_ACTIVE_QUADS                0x00000002
+#define WOF_RC_INVALID_VDD_VDN                     0x00000004
+#define WOF_RC_PGPE_REQ_NOT_IDLE                   0x00000008
+#define WOF_RC_PGPE_WOF_DISABLED                   0x00000010
+#define WOF_RC_PSTATE_PROTOCOL_OFF                 0x00000020
+#define WOF_RC_VFRT_REQ_TIMEOUT                    0x00000040
+#define WOF_RC_CONTROL_REQ_TIMEOUT                 0x00000080
+#define WOF_RC_STATE_CHANGE                        0x00000100
+#define WOF_RC_MODE_CHANGE                         0x00000200
+#define WOF_RC_MODE_NO_SUPPORT_MASK                0x00000400
+#define WOF_RC_DIVIDE_BY_ZERO                      0x00000800
+#define WOF_RC_VFRT_REQ_FAILURE                    0x00001000
+#define WOF_RC_CONTROL_REQ_FAILURE                 0x00002000
+#define WOF_RC_VFRT_ALIGNMENT_ERROR                0x00004000
+#define WOF_RC_DRIVER_WOF_DISABLED                 0x00008000
+#define WOF_RC_UTURBO_IS_ZERO                      0x00010000
+
+//***************************************************************************
+// Temp space used to save hard coded addresses
+//***************************************************************************
+#define PSTATE_TBL_ADDR 0xFFF2B85C
 
 // Reason codes which should NOT create an error log should be added here
 #define ERRL_RETURN_CODES ~(WOF_RC_MODE_CHANGE  | \
@@ -72,12 +77,12 @@
 // Enumeration to define the WOF initialization steps
 enum wof_init_states
 {
-    WOF_DISABLED,
-    INITIAL_VFRT_SENT_WAITING,
-    INITIAL_VFRT_SUCCESS,
-    WOF_CONTROL_ON_SENT_WAITING,
-    PGPE_WOF_ENABLED_NO_PREV_DATA,
-    WOF_ENABLED,
+    WOF_DISABLED,                   //0
+    INITIAL_VFRT_SENT_WAITING,      //1
+    INITIAL_VFRT_SUCCESS,           //2
+    WOF_CONTROL_ON_SENT_WAITING,    //3
+    PGPE_WOF_ENABLED_NO_PREV_DATA,  //4
+    WOF_ENABLED,                    //5
 };
 
 // Enumeration
@@ -87,7 +92,7 @@ enum wof_disabled_actions
     SET,
 };
 
-
+//#define WOF_PGPE_SUPPORT 1
 #define WOF_MAGIC_NUMBER            0x57465448   // "WFTH"
 
 // Structure to hold relevant data from the WOF header in Mainstore
@@ -124,12 +129,11 @@ typedef struct __attribute__ ((packed))
     uint8_t  reserved_2[40];
 } wof_header_data_t;
 
-
 // Structure used in g_amec
 typedef struct
 {
     // Bit vector where each bit signifies a different failure case
-    uint16_t wof_disabled;
+    uint32_t wof_disabled;
     // Data from wof header for debug
     uint8_t  version;
     uint16_t vfrt_block_size;
@@ -277,22 +281,18 @@ typedef struct
     // Keeps track of whether we got an error in wof_vfrt_callback to be
     // logged later
     uint8_t vfrt_callback_error;
-    // Keeps track of whether or not we just turned off wof on the PGPE
+    // Keeps track of whether or /not we just turned off wof on the PGPE
     uint8_t pgpe_wof_off;
+    // Offset into main memory with the beginning of the wof vfrt data as base
+    uint32_t vfrt_mm_offset;
+    // Return code returned from a bad VFRT request
+    uint8_t wof_vfrt_req_rc;
 } amec_wof_t;
 
-typedef struct
+typedef struct __attribute__ ((packed))
 {
     uint8_t data[MIN_BCE_REQ_SIZE];
 } temp_bce_request_buffer_t __attribute ((aligned(128)));
-
-
-// Parameter structure used to pass information to the copy_vfrt_to_sram
-// call back function.
-typedef struct
-{
-    temp_bce_request_buffer_t * vfrt_table;
-} copy_vfrt_to_sram_parms_t;
 
 //******************************************************************************
 // Function Prototypes
@@ -313,7 +313,7 @@ uint8_t calc_quad_step_from_start( void );
 
 uint32_t calc_vfrt_mainstore_addr( void );
 
-void copy_vfrt_to_sram( copy_vfrt_to_sram_parms_t * i_parms );
+void copy_vfrt_to_sram( void );
 
 void wof_vfrt_callback( void );
 
@@ -374,4 +374,6 @@ uint32_t scale_and_interpolate( uint16_t * i_leak_arr,
                                 int i_idx,
                                 uint16_t i_base_temp,
                                 uint16_t i_voltage );
+
+void print_data(void);
 #endif

@@ -522,9 +522,7 @@ void amec_slv_state_4(void)
     //-------------------------------------------------------
     // Run WOF Algorithm
     //-------------------------------------------------------
-/* TODO WOF full function testing on HW RTC 158075
     call_wof_main();
-*/
 }
 
 
