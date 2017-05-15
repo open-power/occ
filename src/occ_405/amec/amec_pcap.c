@@ -50,6 +50,7 @@
 //*************************************************************************/
 // Globals
 //*************************************************************************/
+extern bool G_apss_present;
 
 //Number of ticks to wait before dropping below nominal frequency
 #define PWR_SETTLED_TICKS   4
@@ -373,18 +374,28 @@ void amec_power_control(void)
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
 
-    // Calculate the pcap for the proc, memory and the power capping limit
-    // for nominal cores.
-    amec_pcap_calc();
-
-    // skip processor changes until memory is un-capped
-    if(!g_amec->pcap.active_mem_level)
+    if(G_apss_present)
     {
-       // Calculate voting box input freq for staying with the current pcap
-       amec_pcap_controller();
+       // Calculate the pcap for the proc, memory and the power capping limit
+       // for nominal cores.
+       amec_pcap_calc();
 
-       // Calculate the performance preserving bounds voting box input freq
-       amec_ppb_fmax_calc();
+       // skip processor changes until memory is un-capped
+       if(!g_amec->pcap.active_mem_level)
+       {
+          // Calculate voting box input freq for staying with the current pcap
+          amec_pcap_controller();
+
+          // Calculate the performance preserving bounds voting box input freq
+          amec_ppb_fmax_calc();
+       }
+    }
+    else
+    {
+        // No system power reading for power capping set pcap frequency votes to max
+        g_amec->proc[0].pwr_votes.proc_pcap_nom_vote = G_proc_fmax_mhz;
+        g_amec->proc[0].pwr_votes.proc_pcap_vote = G_proc_fmax_mhz;
+        g_amec->proc[0].pwr_votes.ppb_fmax = G_proc_fmax_mhz;
     }
 }
 

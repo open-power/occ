@@ -61,6 +61,7 @@ uint32_t G_lastValidAdcValue[MAX_APSS_ADC_CHANNELS] = {0};
 
 extern uint8_t G_occ_interrupt_type;
 extern bool    G_vrm_thermal_monitoring;
+extern bool    G_apss_present;
 
 //*************************************************************************
 // Code
@@ -183,7 +184,7 @@ void amec_update_apss_sensors(void)
 {
     // Need to check to make sure APSS data has been received
     // via slave inbox first
-    if (G_slv_inbox_received)
+    if (G_slv_inbox_received && G_apss_present)
     {
         uint8_t l_proc   = G_pbax_id.chip_id;
         uint32_t temp32  = 0;
@@ -475,6 +476,7 @@ void update_avsbus_power_sensors(const avsbus_type_e i_type)
     uint32_t l_voltageSensor = VOLTVDD;
     uint32_t l_voltageChip = VOLTVDDSENSE;
     uint32_t l_powerSensor = PWRVDD;
+    uint32_t l_powerSensor2 = PWRVDN;
     if (AVSBUS_VDN == i_type)
     {
         L_throttle = &L_throttle_vdn;
@@ -484,6 +486,7 @@ void update_avsbus_power_sensors(const avsbus_type_e i_type)
         l_voltageSensor = VOLTVDN;
         l_voltageChip = VOLTVDNSENSE;
         l_powerSensor = PWRVDN;
+        l_powerSensor2 = PWRVDD;
     }
 
     // Read latest voltage/current sensors
@@ -552,6 +555,14 @@ void update_avsbus_power_sensors(const avsbus_type_e i_type)
             //                    = v(100uV) * i(10mA) / 1,000,000
             const uint32_t l_power = l_chip_voltage_100uv * l_current_10ma / 1000000;
             sensor_update(AMECSENSOR_PTR(l_powerSensor), (uint16_t)l_power);
+            if(!G_apss_present)
+            {
+               // no APSS, update the processor power sensor with total processor power
+               // TODO RTC 160889 add in processor power for parts not measured (i.e. Vddr, Vcs, Vio etc)
+               sensor_t *l_sensor2 = getSensorByGsid(l_powerSensor2);
+               const uint16_t l_proc_power = (uint16_t)l_power + l_sensor2->sample;
+               sensor_update(AMECSENSOR_PTR(PWRPROC), l_proc_power);
+            }
         }
 
 #ifdef AVSDEBUG

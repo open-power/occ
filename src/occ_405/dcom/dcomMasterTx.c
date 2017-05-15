@@ -39,6 +39,7 @@
 #include <amec_master_smh.h>
 
 extern UINT8 g_amec_tb_record; // From amec_amester.c for syncronized traces
+extern bool G_apss_present;
 
 // SSX Block Copy Request for the Slave Inbox Transmit Queue
 BceRequest G_slv_inbox_tx_pba_request;
@@ -238,9 +239,9 @@ void task_dcom_tx_slv_inbox( task_t *i_self)
 
     do
     {
-        // If we are in standby, we need to fake out
+        // If we are in standby or no APSS present, we need to fake out
         // the APSS data since we aren't talking to APSS.
-        if( OCC_STATE_STANDBY == CURRENT_STATE() )
+        if( (OCC_STATE_STANDBY == CURRENT_STATE()) || !G_apss_present )
         {
            G_ApssPwrMeasCompleted = TRUE;
         }

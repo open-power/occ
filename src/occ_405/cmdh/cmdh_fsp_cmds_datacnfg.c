@@ -104,6 +104,9 @@ bool G_mem_monitoring_allowed = FALSE;
 // Flag will get enabled when OCC receives Thermal Threshold data
 bool G_vrm_thermal_monitoring = FALSE;
 
+// Will get set to true when receiving APSS config data 
+bool G_apss_present = FALSE;
+
 // Function Specification
 //
 // Name:  DATA_get_present_cnfgdata
@@ -924,12 +927,12 @@ errlHndl_t data_store_apss_config_v20(const cmdh_apss_config_v20_t * i_cmd_ptr,
                                             cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     errlHndl_t              l_err = NULL;
-
     uint16_t l_channel = 0, l_port = 0, l_pin = 0;
 
     // Set to default value
     memset(&G_sysConfigData.apss_adc_map, SYSCFG_INVALID_ADC_CHAN, sizeof(G_sysConfigData.apss_adc_map));
     memset(&G_sysConfigData.apss_gpio_map, SYSCFG_INVALID_PIN, sizeof(G_sysConfigData.apss_gpio_map));
+    G_apss_present = FALSE;
 
     // ADC channels info
     for(l_channel=0;(l_channel < MAX_APSS_ADC_CHANNELS) && (NULL == l_err);l_channel++)
@@ -944,6 +947,10 @@ errlHndl_t data_store_apss_config_v20(const cmdh_apss_config_v20_t * i_cmd_ptr,
         {
             //Write sensor IDs to the appropriate powr sensors.
             apss_store_ipmi_sensor_id(l_channel, &(i_cmd_ptr->adc[l_channel]));
+
+            // APSS is present if there is at least one channel with a valid assignment
+            if(i_cmd_ptr->adc[l_channel].assignment != ADC_RESERVED)
+              G_apss_present = TRUE;
         }
         CNFG_DBG("data_store_apss_config_v20: Channel %d: FuncID[0x%02X] SID[0x%08X]",
                  l_channel, i_cmd_ptr->adc[l_channel].assignment, i_cmd_ptr->adc[l_channel].ipmisensorId);
@@ -975,7 +982,7 @@ errlHndl_t data_store_apss_config_v20(const cmdh_apss_config_v20_t * i_cmd_ptr,
         {
             // Change Data Request Mask to indicate we got this data
             G_data_cnfg->data_mask |= DATA_MASK_APSS_CONFIG;
-            CMDH_TRAC_IMP("Got valid APSS Config data via TMGT");
+            CMDH_TRAC_IMP("Got valid APSS Config data via TMGT; APSS present = %d", G_apss_present);
         }
     }
 
@@ -1190,8 +1197,9 @@ errlHndl_t data_store_role(const cmdh_fsp_cmd_t * i_cmd_ptr,
             rtl_clr_run_mask_deferred(RTL_FLAG_NOTMSTR);
             rtl_set_run_mask_deferred(RTL_FLAG_MSTR);
 
-            // Allow APSS tasks to run on OCC master
-            rtl_clr_run_mask_deferred(RTL_FLAG_APSS_NOT_INITD);
+            // Allow APSS tasks to run on OCC master if APSS is present
+            if(G_apss_present)
+               rtl_clr_run_mask_deferred(RTL_FLAG_APSS_NOT_INITD);
 
             CMDH_TRAC_IMP("data_store_role: OCC Role set to Master via TMGT");
 
@@ -1230,7 +1238,8 @@ errlHndl_t data_store_role(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 }
 
                 // Allow APSS tasks to run on OCC backup
-                rtl_clr_run_mask_deferred(RTL_FLAG_APSS_NOT_INITD);
+                if(G_apss_present)
+                   rtl_clr_run_mask_deferred(RTL_FLAG_APSS_NOT_INITD);
                 CMDH_TRAC_IMP("data_store_role: OCC Role set to Backup Master via TMGT");
             }
             else

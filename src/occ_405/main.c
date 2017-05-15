@@ -86,6 +86,8 @@ extern uint32_t G_khz_per_pstate;
 extern uint8_t G_proc_pmin;
 extern uint8_t G_proc_pmax;
 
+extern bool    G_apss_present;
+
 IMAGE_HEADER (G_mainAppImageHdr,__ssx_boot,MAIN_APP_ID,ID_NUM_INVALID);
 
 ppmr_header_t G_ppmr_header;       // PPMR Header layout format
@@ -1377,7 +1379,9 @@ void master_occ_init()
 
     errlHndl_t l_err = NULL;
 
-    l_err = initialize_apss();
+    // Only do APSS initialization if APSS is present
+    if(G_apss_present)
+       l_err = initialize_apss();
 
     if( (NULL != l_err))
     {
