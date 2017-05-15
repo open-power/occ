@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -30,8 +30,20 @@
 
 enum occSensorModuleId
 {
-    SENSOR_QUERY_LIST     =  SNSR_COMP_ID | 0x00,
-    SENSOR_INITIALIZE     =  SNSR_COMP_ID | 0x01,
+    // Sensors
+    SENSOR_QUERY_LIST                = SNSR_COMP_ID | 0x00,
+    SENSOR_INITIALIZE                = SNSR_COMP_ID | 0x01,
+
+    // Main memory sensors
+    MM_SENSORS_INIT_MOD              = SNSR_COMP_ID | 0x10,
+    MM_SENSORS_UPDATE_MOD            = SNSR_COMP_ID | 0x11,
+    MM_SENSORS_BCE_COPY_MOD          = SNSR_COMP_ID | 0x12,
+    MM_SENSORS_IS_BCE_REQ_IDLE_MOD   = SNSR_COMP_ID | 0x13,
+    MM_SENSORS_WRITE_DATA_HDR_MOD    = SNSR_COMP_ID | 0x14,
+    MM_SENSORS_VALIDATE_DATA_HDR_MOD = SNSR_COMP_ID | 0x15,
+    MM_SENSORS_WRITE_NAMES_MOD       = SNSR_COMP_ID | 0x16,
+    MM_SENSORS_WRITE_READINGS_MOD    = SNSR_COMP_ID | 0x17,
+    MM_SENSORS_VALIDATE_READINGS_MOD = SNSR_COMP_ID | 0x18,
 };
 
 #endif /* #ifndef _SENSOR_SERVICE_CODES_H_ */

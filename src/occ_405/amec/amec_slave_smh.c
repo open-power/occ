@@ -59,6 +59,9 @@
 #include <wof.h>
 #include <pgpe_interface.h>
 #include <memory_power_control.h>
+#include <state.h>                      // For CURRENT_STATE(), OCC_STATE_*
+#include <cmdh_fsp_cmds_datacnfg.h>     // For DATA_get_present_cnfgdata()
+#include <sensor_main_memory.h>         // For main_mem_sensors_*()
 
 //*************************************************************************/
 // Externs
@@ -118,6 +121,25 @@ const smh_tbl_t amec_slv_state_1_substate_table[AMEC_SMH_STATES_PER_LVL] =
   {amec_slv_substate_1_5, NULL},
   {amec_slv_substate_1_6, NULL},
   {amec_slv_substate_1_7, NULL},
+};
+
+// --------------------------------------------------------
+// AMEC Slave State 2 Substate Table
+// --------------------------------------------------------
+// Each function inside this state table runs once every 16ms.
+//
+// No Substates
+//
+const smh_tbl_t amec_slv_state_2_substate_table[AMEC_SMH_STATES_PER_LVL] =
+{
+  {amec_slv_substate_2_0, NULL},    // Substate 2.0
+  {NULL,                  NULL},    // Substate 2.1 (not used)
+  {NULL,                  NULL},    // Substate 2.2 (not used)
+  {NULL,                  NULL},    // Substate 2.3 (not used)
+  {amec_slv_substate_2_4, NULL},    // Substate 2.4
+  {NULL,                  NULL},    // Substate 2.5 (not used)
+  {NULL,                  NULL},    // Substate 2.6 (not used)
+  {NULL,                  NULL},    // Substate 2.7 (not used)
 };
 
 // --------------------------------------------------------
@@ -183,13 +205,11 @@ const smh_tbl_t amec_slv_state_7_substate_table[AMEC_SMH_STATES_PER_LVL] =
 // --------------------------------------------------------
 // Each function inside this state table runs once every 2ms.
 //
-// No Substates
-//
 const smh_tbl_t amec_slv_state_table[AMEC_SMH_STATES_PER_LVL] =
 {
   {amec_slv_state_0, NULL},
   {amec_slv_state_1, amec_slv_state_1_substate_table},
-  {amec_slv_state_2, NULL},
+  {amec_slv_state_2, amec_slv_state_2_substate_table},
   {amec_slv_state_3, amec_slv_state_3_substate_table},
   {amec_slv_state_4, NULL},
   {amec_slv_state_5, amec_slv_state_5_substate_table},
@@ -286,6 +306,50 @@ void amec_slv_check_apss_fail(void)
         g_amec->proc[0].pwr_votes.apss_pmax_clip_freq = l_pmax_rail_freq;
 
     } while(0);
+}
+
+
+// Function Specification
+//
+// Name: amec_slv_update_main_mem_sensors
+//
+// Description: Initializes and updates the main memory sensors.
+//
+// End Function Specification
+void amec_slv_update_main_mem_sensors(void)
+{
+    // Don't initialize/update main memory sensors during a state transition
+    if (SMGR_is_state_transitioning())
+    {
+        return;
+    }
+
+    // If main memory sensors have not been initialized
+    if (!G_main_mem_sensors_initialized)
+    {
+        // Make sure OCC role has been set.  Role required for initialization.
+        if (DATA_get_present_cnfgdata() & DATA_MASK_SET_ROLE)
+        {
+            // Initialize main memory sensors.  Write static sensor data to main
+            // memory.  Must call multiple times due to BCE copy size
+            // limitations.  Sets G_main_mem_sensors_initialized to true when
+            // all initialization is done.
+            main_mem_sensors_init();
+        }
+    }
+    else
+    {
+        // Main memory sensors have been initialized.  Check if the OCC is in
+        // the proper state to update the sensor readings in main memory.
+        if ((CURRENT_STATE() == OCC_STATE_OBSERVATION)    ||
+            (CURRENT_STATE() == OCC_STATE_ACTIVE)         ||
+            (CURRENT_STATE() == OCC_STATE_CHARACTERIZATION))
+        {
+            // Update main memory sensors.  Write dynamic sensor readings data
+            // to main memory.
+            main_mem_sensors_update();
+        }
+    }
 }
 
 
@@ -766,6 +830,29 @@ void amec_slv_substate_1_7(void)
     // Update Proc Core sensors (for this substate)
     //-------------------------------------------------------
     amec_update_proc_core_group(4);
+}
+
+
+// Function Specification
+//
+// Name: amec_slv_substate_2_0
+//       amec_slv_substate_2_4
+//
+// Description: slave substate amec_slv_substate_2_0
+//              slave substate amec_slv_substate_2_4
+//              other substates of state 2 are not currently used
+//
+// End Function Specification
+void amec_slv_substate_2_0(void)
+{
+    AMEC_DBG("\tAMEC Slave State 2.0\n");
+    amec_slv_update_main_mem_sensors();
+}
+
+void amec_slv_substate_2_4(void)
+{
+    AMEC_DBG("\tAMEC Slave State 2.4\n");
+    amec_slv_update_main_mem_sensors();
 }
 
 

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -71,6 +71,8 @@ extern bool G_apss_lower_pmax_rail;
 //*************************************************************************
 void amec_slv_check_apss_fail(void);
 
+void amec_slv_update_main_mem_sensors(void);
+
 void amec_update_proc_core_group(uint8_t);
 
 // PRE: slave common tasks
@@ -97,6 +99,10 @@ void amec_slv_substate_1_4(void);
 void amec_slv_substate_1_5(void);
 void amec_slv_substate_1_6(void);
 void amec_slv_substate_1_7(void);
+
+// Slave SubState 2 (6 SubStates unused)
+void amec_slv_substate_2_0(void);
+void amec_slv_substate_2_4(void);
 
 // Slave SubState 3
 void amec_slv_substate_3_0(void);

@@ -127,13 +127,16 @@ enum occReasonCode
     GPE_REQUEST_TASK_NOT_IDLE       = 0xD7,
     GPE_REQUEST_RC_FAILURE          = 0xD8,
 
-    WOF_VFRT_REQ_FAILURE            = 0xD8,
-    WOF_DISABLED_RC                 = 0xD9,
-    WOF_VFRT_ALIGNMENT_ERROR        = 0xDA,
-    INVALID_MAGIC_NUMBER            = 0xDB,
-    DIVIDE_BY_ZERO_ERROR            = 0xDC,
-    INVALID_FREQUENCY               = 0xDD,
-    WOF_RE_ENABLED                  = 0xDE,
+    WOF_VFRT_REQ_FAILURE            = 0xD9,
+    WOF_DISABLED_RC                 = 0xDA,
+    WOF_VFRT_ALIGNMENT_ERROR        = 0xDB,
+    INVALID_MAGIC_NUMBER            = 0xDC,
+    DIVIDE_BY_ZERO_ERROR            = 0xDD,
+    INVALID_FREQUENCY               = 0xDE,
+    WOF_RE_ENABLED                  = 0xDF,
+
+    /// Error copying sensors to main memory
+    SENSOR_MAIN_MEM_ERROR           = 0xE0,
 
     /// Success!
     OCC_SUCCESS_REASON_CODE         = 0xFF,

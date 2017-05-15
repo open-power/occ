@@ -25,13 +25,14 @@
 
 
 
-#include <sensor.h>           // sensor structure and other defines
+#include <sensor.h>               // sensor structure and other defines
 #include <occ_common.h>           // For size_t needed by memset
-#include <string.h>           // For memset
-#include "ssx_io.h"           // For sprintf
-#include <occ_service_codes.h> // OCC reason codes
+#include <string.h>               // For memset
+#include "ssx_io.h"               // For sprintf
+#include <occ_service_codes.h>    // OCC reason codes
 #include <sensor_service_codes.h> // sensor module ids
-#include <trac.h>             // Trace macros
+#include <trac.h>                 // Trace macros
+#include <rtls.h>                 // For G_current_tick
 
 #define UINT16_MIN                  0
 
@@ -149,6 +150,7 @@ void sensor_reset( sensor_t * io_sensor_ptr)
 {
     if( io_sensor_ptr != NULL)
     {
+        io_sensor_ptr->timestamp = 0x0;
         io_sensor_ptr->accumulator = 0x0;
         io_sensor_ptr->sample = 0x0;
 
@@ -266,6 +268,9 @@ void sensor_update( sensor_t * io_sensor_ptr, const uint16_t i_sensor_value)
             sensor_reset(io_sensor_ptr);
         }
 
+        // update timestamp
+        io_sensor_ptr->timestamp = G_current_tick;
+
         // update sample value
         io_sensor_ptr->sample = i_sensor_value;
 
@@ -280,6 +285,7 @@ void sensor_update( sensor_t * io_sensor_ptr, const uint16_t i_sensor_value)
 
         // add sample value to accumulator
         io_sensor_ptr->accumulator += i_sensor_value;
+
         // increment update tag
         io_sensor_ptr->update_tag += 1;
     }

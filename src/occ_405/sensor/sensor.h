@@ -171,6 +171,7 @@ typedef struct sensorStatus sensorStatus_t;
 struct sensor
 {
     uint16_t gsid;                // Global Sensor ID
+    uint64_t timestamp;           // Timestamp for latest sample
     uint16_t sample;              // Latest sample of this sensor
     uint16_t sample_min;          // Minimum value since last OCC reset
     uint16_t sample_max;          // Maximum value since last OCC reset

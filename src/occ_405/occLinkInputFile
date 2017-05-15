@@ -81,6 +81,7 @@ INPUT ( amec_amester.o
         rtls.o
         scom.o
         sensor_info.o
+        sensor_main_memory.o
         sensor_query_list.o
         sensor_table.o
         sensor.o
