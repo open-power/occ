@@ -347,8 +347,7 @@ typedef struct __attribute__ ((packed)) cmdh_reset_prep
 // over the TMGT<->OCC interface.
 typedef enum
 {
-    DBUG_READ_SCOM          = 0x01,
-    DBUG_PUT_SCOM           = 0x02,
+    DBUG_DUMP_WOF_DATA      = 0x01,
     DBUG_GET_TRACE          = 0x03,
     DBUG_CLEAR_TRACE        = 0x04,
     // free = 0x05
@@ -364,11 +363,7 @@ typedef enum
     DBUG_MEM_PWR_CTL        = 0x0F,
     DBUG_PERFCOUNT          = 0x10,
     DBUG_TEST_INTF          = 0x11,
-    DBUG_SET_BUS_SPEED      = 0x12,
-    DBUG_FAN_CONTROL        = 0x13,
     DBUG_INJECT_ERRL        = 0x14,
-    DBUG_IIC_READ           = 0x15,
-    DBUG_IIC_WRITE          = 0x16,
     DBUG_GPIO_READ          = 0x17,
     DBUG_FSP_ATTN           = 0x18,
     DBUG_CALCULATE_MAX_DIFF = 0x19,
@@ -385,7 +380,8 @@ typedef enum
     DBUG_GEN_CHOM_LOG       = 0x24,
     DBUG_DUMP_APSS_DATA     = 0x25,
     DBUG_DUMP_AME_SENSOR    = 0x26,
-    DBUG_CLEAR_AME_SENSOR   = 0x27
+    DBUG_CLEAR_AME_SENSOR   = 0x27,
+    DBUG_WOF_CONTROL        = 0x28
 } DBUG_CMD;
 
 // Used by OCC tool to get trace, version 0.
@@ -536,6 +532,22 @@ typedef struct __attribute__ ((packed))
     uint8_t  checksum[CMDH_FSP_CHECKSUM_SIZE];  // Checksum
 } cmdh_dbug_clear_ame_sensor_rsp_t;
 
+// DBUG_WOF_CONTROL command struct
+typedef struct __attribute__ ((packed))
+{
+    struct      cmdh_fsp_cmd_header;    // Standard command header
+    uint8_t     sub_cmd;                // Debug sub-command
+    uint8_t     action;                 // CLEAR(0) or SET(1)
+    uint32_t    wof_rc;                 // Bit to set
+} cmdh_dbug_wof_control_cmd_t;
+
+// DBUG_WOF_CONTROL response struct
+typedef struct __attribute__ ((packed))
+{
+    struct      cmdh_fsp_rsp_header;
+    uint32_t    wof_disabled;
+    uint8_t     checksum[CMDH_FSP_CHECKSUM_SIZE];
+} cmdh_dbug_wof_control_rsp_t;
 //---------------------------------------------------------
 // Tunable Parameter Command
 //---------------------------------------------------------

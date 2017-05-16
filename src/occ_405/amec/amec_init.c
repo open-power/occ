@@ -351,6 +351,10 @@ void amec_init_gamec_struct(void)
   // Initialize the current_mem_pwr_ctl to indicate that memory power control is not supported
   // update memory control registers only if new ips/default memory power control is different
   g_amec->sys.current_mem_pwr_ctl = MEM_PWR_CTL_NO_SUPPORT;
+
+  // Initialize wof_disabled
+  g_amec->wof.wof_disabled = WOF_RC_DRIVER_WOF_DISABLED;
+
 }
 
 // Function Specification

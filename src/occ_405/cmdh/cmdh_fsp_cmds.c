@@ -48,7 +48,7 @@
 #include "homer.h"
 #include <centaur_data.h>
 #include "cmdh_dbug_cmd.h"
-
+#include "wof.h"
 extern dimm_sensor_flags_t G_dimm_temp_expired_bitmap;
 extern bool G_vrm_thermal_monitoring;
 
@@ -1087,6 +1087,85 @@ void cmdh_dbug_dump_ame_sensor(const cmdh_fsp_cmd_t * i_cmd_ptr,
     G_rsp_status = l_rc;
 }
 
+// Function Specification
+//
+// Name: cmdh_dbug_wof_control
+//
+// Description: Sets the specified bit or clears all of them of wof_disabled
+//
+// End Function Specification
+void cmdh_dbug_wof_control( const cmdh_fsp_cmd_t * i_cmd_ptr,
+                            cmdh_fsp_rsp_t * o_rsp_ptr )
+{
+    const cmdh_dbug_wof_control_cmd_t * l_cmd_ptr = (cmdh_dbug_wof_control_cmd_t*) i_cmd_ptr;
+    cmdh_dbug_wof_control_rsp_t * l_rsp_ptr = (cmdh_dbug_wof_control_rsp_t*) o_rsp_ptr;
+    uint8_t  l_rc = ERRL_RC_SUCCESS;
+    uint16_t l_resp_data_length = sizeof(g_amec->wof.wof_disabled);
+
+     // Do sanity check on the function inputs
+    if ((NULL == l_cmd_ptr) || (NULL == l_rsp_ptr))
+    {
+        l_rc = ERRL_RC_INTERNAL_FAIL;
+    }
+    else
+    {
+        // Process action
+        if( l_cmd_ptr->action == SET )
+        {
+            g_amec->wof.wof_disabled |= l_cmd_ptr->wof_rc;
+        }
+        else if( l_cmd_ptr->action == CLEAR )
+        {
+            if(g_amec->wof.wof_disabled & WOF_RC_NO_WOF_HEADER_MASK)
+            {
+                TRAC_INFO("DEBUG - No WOF header present in memory."
+                          " Cannot enable WOF!");
+                g_amec->wof.wof_disabled = WOF_RC_NO_WOF_HEADER_MASK;
+            }
+            else
+            {
+                g_amec->wof.wof_disabled = 0x00000000;
+            }
+        }
+        // Fill in response data
+        l_rsp_ptr->wof_disabled = g_amec->wof.wof_disabled;
+    }
+
+    TRAC_INFO("DEBUG - wof_disabled: 0x%08x", g_amec->wof.wof_disabled);
+
+    // Fill in response data length
+    if( l_rsp_ptr != NULL )
+    {
+        l_rsp_ptr->data_length[0] = CONVERT_UINT16_UINT8_HIGH(l_resp_data_length);
+        l_rsp_ptr->data_length[1] = CONVERT_UINT16_UINT8_LOW(l_resp_data_length);
+    }
+    G_rsp_status = l_rc;
+    return;
+}
+
+// Function Specification
+//
+// Name: cmdh_dbug_dump_wof_data
+//
+// Description: Dumps out the contents of g_amec_sys.wof
+//
+// End Function Specification
+void cmdh_dbug_dump_wof_data( const cmdh_fsp_cmd_t * i_cmd_ptr,
+                              cmdh_fsp_rsp_t * o_rsp_ptr)
+{
+    uint16_t l_datalen = sizeof(amec_wof_t);
+
+    // Fill in response data
+    memcpy((void*)&(o_rsp_ptr->data[0]),
+           (void*)&(g_amec->wof),
+           l_datalen);
+
+    // Fill in response data length
+    o_rsp_ptr->data_length[0] = CONVERT_UINT16_UINT8_HIGH(l_datalen);
+    o_rsp_ptr->data_length[1] = CONVERT_UINT16_UINT8_LOW(l_datalen);
+    G_rsp_status = ERRL_RC_SUCCESS;
+    return;
+}
 
 // Function Specification
 //
@@ -1138,7 +1217,6 @@ void cmdh_dbug_clear_ame_sensor(const cmdh_fsp_cmd_t * i_cmd_ptr,
     G_rsp_status = l_rc;
 }
 
-
 // Function Specification
 //
 // Name:  dbug_parse_cmd
@@ -1174,6 +1252,7 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
         default:
             // Trace the rest of the debug commands.
             TRAC_INFO("Debug Command: Sub:0x%02x\n", l_sub_cmd);
+
             break;
     }
 
@@ -1210,8 +1289,14 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
             chom_force_gen_log();
             break;
 
-        case DBUG_READ_SCOM:
-        case DBUG_PUT_SCOM:
+        case DBUG_WOF_CONTROL:
+            cmdh_dbug_wof_control(i_cmd_ptr, o_rsp_ptr);
+            break;
+
+        case DBUG_DUMP_WOF_DATA:
+            cmdh_dbug_dump_wof_data(i_cmd_ptr, o_rsp_ptr);
+            break;
+
         case DBUG_POKE:
         case DBUG_SET_PEXE_EVENT:
         case DBUG_DUMP_THEMAL:
@@ -1220,11 +1305,7 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
         case DBUG_MEM_PWR_CTL:
         case DBUG_PERFCOUNT:
         case DBUG_TEST_INTF:
-        case DBUG_SET_BUS_SPEED:
-        case DBUG_FAN_CONTROL:
         case DBUG_INJECT_ERRL:
-        case DBUG_IIC_READ:
-        case DBUG_IIC_WRITE:
         case DBUG_GPIO_READ:
         case DBUG_CALCULATE_MAX_DIFF:
         case DBUG_FORCE_ELOG:

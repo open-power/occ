@@ -1340,7 +1340,8 @@ void set_clear_wof_disabled( uint8_t i_action,
                     static bool trace = true;
                     if(trace)
                     {
-                        INTR_TRAC_INFO("WOF is disabled in the driver.");
+                        INTR_TRAC_INFO("WOF is disabled in the driver. wof_disabled = "
+                                       "0x%08x", g_wof->wof_disabled );
                         trace = false;
                     }
                     break;

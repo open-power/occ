@@ -501,28 +501,13 @@ void create_tlb_entry(uint32_t address, uint32_t size)
 void read_wof_header(void)
 {
     int l_ssxrc = SSX_OK;
-    uint32_t l_reasonCode = 0;
-    uint32_t l_extReasonCode = OCC_NO_EXTENDED_RC;
-    uint32_t userdata1 = 0;
-    uint32_t userdata2 = 0;
-
-    // Skip reading wof header until WOF is enabled
-    // TODO RTC: 131186 - remove when WOF is up
-    g_amec->wof.wof_disabled |= WOF_RC_DRIVER_WOF_DISABLED;
-
-    if( g_amec->wof.wof_disabled )
-    {
-        MAIN_TRAC_INFO("WOF has not been enabled. Skipping read_wof_header");
-        return;
-    }
-
+    bool l_error = false;
 
     MAIN_TRAC_INFO("read_wof_header() 0x%08X", G_pgpe_header.wof_tables_addr);
 
-#ifdef WOF_PGPE_SUPPORT
     // Read active quads address, wof tables address, and wof tables len
     g_amec->wof.req_active_quads_addr   = G_pgpe_header.requested_active_quad_sram_addr;
-    g_amec->wof.vfrt_tbls_main_mem_addr = G_pgpe_header.wof_tables_addr;
+    g_amec->wof.vfrt_tbls_main_mem_addr = PPMR_ADDRESS_HOMER+WOF_TABLES_OFFSET;
     g_amec->wof.vfrt_tbls_len           = G_pgpe_header.wof_tables_length;
     g_amec->wof.pgpe_wof_state_addr     = G_pgpe_header.wof_state_address;
     g_amec->wof.pstate_tbl_sram_addr    = G_pgpe_header.occ_pstate_table_sram_addr;
@@ -532,19 +517,8 @@ void read_wof_header(void)
     g_amec->wof.quad_state_1_addr = g_amec->wof.quad_state_0_addr +
                                     sizeof(uint64_t); //skip quad state 0
 
-#else
-    // No WOF PGPE support. Hard code addresses and externalize to amester
-    g_amec->wof.quad_state_0_addr = G_pgpe_header.beacon_sram_addr + sizeof(uint32_t);
-    g_amec->wof.quad_state_1_addr = g_amec->wof.quad_state_0_addr + sizeof(uint64_t);
-    g_amec->wof.pgpe_wof_state_addr = g_amec->wof.quad_state_1_addr + sizeof(uint64_t);
-    g_amec->wof.req_active_quads_addr = g_amec->wof.pgpe_wof_state_addr + sizeof(uint64_t)+7;
-    g_amec->wof.vfrt_tbls_main_mem_addr = PPMR_ADDRESS_HOMER+WOF_TABLES_OFFSET;
-    g_amec->wof.pstate_tbl_sram_addr = PSTATE_TBL_ADDR;
-
     // Set some of the fields in the pgpe header struct for next set of calcs
     G_pgpe_header.wof_tables_addr = g_amec->wof.vfrt_tbls_main_mem_addr;
-
-#endif
 
     if (G_pgpe_header.wof_tables_addr != 0 &&
         G_pgpe_header.wof_tables_addr%128 == 0)
@@ -557,27 +531,17 @@ void read_wof_header(void)
             // Create request
             l_ssxrc = bce_request_create(&l_wof_header_req,              // block copy object
                                          &G_pba_bcde_queue,              // main to sram copy engine
-                                         G_pgpe_header.wof_tables_addr,  // mainstore address
+                                         g_amec->wof.vfrt_tbls_main_mem_addr,// mainstore address
                                          (uint32_t) &G_temp_bce_buff,    // SRAM start address
-                                         MIN_BCE_REQ_SIZE, // size of copy
-                                         SSX_WAIT_FOREVER,       // no timeout
-                                         NULL,                   // no call back
-                                         NULL,                   // no call back args
-                                         ASYNC_REQUEST_BLOCKING);// blocking request
+                                         MIN_BCE_REQ_SIZE,               // size of copy
+                                         SSX_WAIT_FOREVER,               // no timeout
+                                         NULL,                           // no call back
+                                         NULL,                           // no call back args
+                                         ASYNC_REQUEST_BLOCKING);        // blocking request
             if(l_ssxrc != SSX_OK)
             {
                 MAIN_TRAC_ERR("read_wof_header: BCDE request create failure rc=[%08X]", -l_ssxrc);
-                /*
-                 * @errortype
-                 * @moduleid    READ_WOF_HEADER
-                 * @reasoncode  SSX_GENERIC_FAILURE
-                 * @userdata1   RC for BCE block-copy engine
-                 * @userdata4   ERC_BCE_REQUEST_CREATE_FAILURE
-                 * @devdesc     Failed to create BCDE request
-                 */
-                l_reasonCode = SSX_GENERIC_FAILURE;
-                l_extReasonCode = ERC_BCE_REQUEST_CREATE_FAILURE;
-                userdata1 = -l_ssxrc;
+                l_error = TRUE;
                 break;
             }
 
@@ -586,17 +550,7 @@ void read_wof_header(void)
             if(l_ssxrc != SSX_OK)
             {
                 MAIN_TRAC_ERR("read_wof_header: BCE request schedule failure rc=[%08X]", -l_ssxrc);
-                /*
-                 * @errortype
-                 * @moduleid    READ_WOF_HEADER
-                 * @reasoncode  SSX_GENERIC_FAILURE
-                 * @userdata1   RC for BCE block-copy engine
-                 * @userdata4   ERC_BCE_REQUEST_SCHEDULE_FAILURE
-                 * @devdesc     Failed to read WOF data using BCDE
-                 */
-                l_reasonCode = SSX_GENERIC_FAILURE;
-                l_extReasonCode = ERC_BCE_REQUEST_SCHEDULE_FAILURE;
-                userdata1 = -l_ssxrc;
+                l_error = TRUE;
                 break;
             }
 
@@ -605,29 +559,7 @@ void read_wof_header(void)
                    G_temp_bce_buff.data,
                    sizeof(wof_header_data_t));
 
-#ifndef WOF_PGPE_SUPPORT
-            // No WOF_PGPE_SUPPORT. Hard code the values
-            // Taken from P9_Power_management_HcodeHWP_spec.pdf
-            // Version 0.50
-            g_amec->wof.version              = 1;
-            g_amec->wof.vfrt_block_size      = 256;
-            g_amec->wof.vfrt_blck_hdr_sz     = 8;
-            g_amec->wof.vfrt_data_size       = 1;
-            g_amec->wof.active_quads_size    = 6;
-            g_amec->wof.core_count           = 24;
-            g_amec->wof.vdn_start            = 2500;
-            g_amec->wof.vdn_step             = 1000;
-            g_amec->wof.vdn_size             = 8;
-            g_amec->wof.vdd_start            = 0;
-            g_amec->wof.vdd_step             = 500;
-            g_amec->wof.vdd_size             = 21;
-            g_amec->wof.vratio_start         = 409;
-            g_amec->wof.vratio_step          = 417;
-            g_amec->wof.vratio_size          = 24;
-            g_amec->wof.fratio_start         = 10000;
-            g_amec->wof.fratio_step          = 1000;
-            g_amec->wof.fratio_size          = 5;
-#else
+
             // verify the validity of the magic number
             uint32_t magic_number = in32(G_pgpe_header.wof_tables_addr);
             MAIN_TRAC_INFO("read_wof_header() Magic No: 0x%08X", magic_number);
@@ -640,17 +572,7 @@ void read_wof_header(void)
                     MAIN_TRAC_ERR("read_wof_header: Invalid number of active quads!"
                                   " Expected: 1 or 6, Actual %d, WOF disabled",
                                   G_wof_header.active_quads_size );
-                    /*
-                     * @errortype
-                     * @moduleid    READ_WOF_HEADER
-                     * @reasoncode  INVALID_ACTIVE_QUAD_COUNT
-                     * @userdata1   Reported active quad count
-                     * @userdata4   ERC_WOF_QUAD_COUNT_FAILURE
-                     * @devdesc     Read an invalid number of active quads
-                     */
-                    l_reasonCode = INVALID_ACTIVE_QUAD_COUNT;
-                    l_extReasonCode = ERC_WOF_QUAD_COUNT_FAILURE;
-                    userdata1 = G_wof_header.active_quads_size;
+                    l_error = TRUE;
                     break;
                 }
             }
@@ -658,18 +580,7 @@ void read_wof_header(void)
             {
                 MAIN_TRAC_ERR("read_wof_header: Invalid WOF Magic number. Address[0x%08X], Magic Number[0x%08X], WOF disabled",
                               G_pgpe_header.wof_tables_addr, magic_number);
-                /* @
-                 * @errortype
-                 * @moduleid    READ_WOF_HEADER
-                 * @reasoncode  INVALID_MAGIC_NUMBER
-                 * @userdata1   WOF header sram address
-                 * @userdata2   read WOF magic number
-                 * @userdata4   OCC_NO_EXTENDED_RC
-                 * @devdesc     Invalid WOF magic number, WOF disabled
-                 */
-                l_reasonCode = INVALID_MAGIC_NUMBER;
-                userdata1 = G_pgpe_header.wof_tables_addr;
-                userdata2 = magic_number;
+                l_error = TRUE;
                 break;
             }
 
@@ -702,33 +613,14 @@ void read_wof_header(void)
             g_amec->wof.package_name_hi      = G_wof_header.package_name_hi;
             g_amec->wof.package_name_lo      = G_wof_header.package_name_lo;
 
-#endif
             // Initialize wof init state to zero
             g_amec->wof.wof_init_state  = WOF_DISABLED;
 
         }while( 0 );
 
         // Check for errors and log, if any
-        if (l_reasonCode)
+        if ( l_error )
         {
-            errlHndl_t l_errl = createErrl(READ_WOF_HEADER,          //modId
-                                           l_reasonCode,             //reasoncode
-                                           l_extReasonCode,          //Extended reason code
-                                           ERRL_SEV_UNRECOVERABLE,   //Severity
-                                           NULL,                     //Trace Buf
-                                           DEFAULT_TRACE_SIZE,       //Trace Size
-                                           userdata1,                //userdata1
-                                           userdata2);               //userdata2
-
-            // Callout firmware
-            addCalloutToErrl(l_errl,
-                             ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                             ERRL_COMPONENT_ID_FIRMWARE,
-                             ERRL_CALLOUT_PRIORITY_HIGH);
-
-            // Commit error log
-            commitErrl(&l_errl);
-
             // We were unable to get the WOF header thus it should not be run.
             set_clear_wof_disabled( SET, WOF_RC_NO_WOF_HEADER_MASK );
         }

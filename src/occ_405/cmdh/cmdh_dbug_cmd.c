@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -281,8 +281,6 @@ errlHndl_t cmdhDbugCmd(void * i_arg)
              dbug_proc_data_dump(l_cmd_ptr, l_rsp_ptr);
              break;
 
-        case DBUG_READ_SCOM:            // Obsolete
-        case DBUG_PUT_SCOM:             // Obsolete
         case DBUG_POKE:                 // Can't allow in trusted
         case DBUG_GET_TRACE:
         case DBUG_CLEAR_TRACE:
@@ -292,10 +290,6 @@ errlHndl_t cmdhDbugCmd(void * i_arg)
         case DBUG_MEM_PWR_CTL:
         case DBUG_PERFCOUNT:
         case DBUG_TEST_INTF:
-        case DBUG_SET_BUS_SPEED:        // Obsolete
-        case DBUG_FAN_CONTROL:          // Obsolete
-        case DBUG_IIC_READ:             // Obsolete
-        case DBUG_IIC_WRITE:            // Obsolete
         case DBUG_GPIO_READ:
         case DBUG_CALCULATE_MAX_DIFF:
         case DBUG_FORCE_ELOG:
