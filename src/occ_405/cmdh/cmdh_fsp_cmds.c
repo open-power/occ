@@ -446,7 +446,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
     {
         memset((void*) &l_sensorHeader, 0, (size_t)sizeof(cmdh_poll_sensor_db_t));
         memcpy ((void *) &(l_sensorHeader.eyecatcher[0]), SENSOR_CAPS, 4);
-        l_sensorHeader.format = 0x02;
+        l_sensorHeader.format = 0x03;
         l_sensorHeader.length = sizeof(cmdh_poll_pcaps_sensor_t);
 
 
@@ -455,7 +455,8 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
         l_pcapData.system = G_amec_sensor_list[PWRSYS]->sample;
         l_pcapData.n = G_sysConfigData.pcap.oversub_pcap;
         l_pcapData.max = G_sysConfigData.pcap.max_pcap;
-        l_pcapData.min = G_sysConfigData.pcap.hard_min_pcap;
+        l_pcapData.hard_min = G_sysConfigData.pcap.hard_min_pcap;
+        l_pcapData.soft_min = G_sysConfigData.pcap.soft_min_pcap;
         l_pcapData.user = G_sysConfigData.pcap.current_pcap;
         l_pcapData.source = G_sysConfigData.pcap.source;
         l_sensorHeader.count  = 1;
@@ -476,6 +477,64 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
         l_poll_rsp->sensor_dblock_count +=1;
 
     }
+
+
+    ///////////////////
+    // EXTN Sensors:
+    // Generate datablock header for freq sensors and sensor data.
+    memset((void*) &l_sensorHeader, 0, (size_t)sizeof(cmdh_poll_sensor_db_t));
+    memcpy ((void *) &(l_sensorHeader.eyecatcher[0]), SENSOR_EXTN, 4);
+    l_sensorHeader.format = 0x01;
+    l_sensorHeader.length = sizeof(cmdh_poll_extn_sensor_t);
+    l_sensorHeader.count  = 0;
+
+    cmdh_poll_extn_sensor_t l_extnSensorList[4] = {{0}};
+    l_extnSensorList[l_sensorHeader.count].name = EXTN_NAME_FMIN;
+    uint16_t freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
+    l_extnSensorList[l_sensorHeader.count].data[0] = proc_freq2pstate(freq);
+    l_extnSensorList[l_sensorHeader.count].data[1] = CONVERT_UINT16_UINT8_HIGH(freq);
+    l_extnSensorList[l_sensorHeader.count].data[2] = CONVERT_UINT16_UINT8_LOW(freq);
+    l_sensorHeader.count++;
+    l_extnSensorList[l_sensorHeader.count].name = EXTN_NAME_FNOM;
+    freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL];
+    l_extnSensorList[l_sensorHeader.count].data[0] = proc_freq2pstate(freq);
+    l_extnSensorList[l_sensorHeader.count].data[1] = CONVERT_UINT16_UINT8_HIGH(freq);
+    l_extnSensorList[l_sensorHeader.count].data[2] = CONVERT_UINT16_UINT8_LOW(freq);
+    l_sensorHeader.count++;
+    l_extnSensorList[l_sensorHeader.count].name = EXTN_NAME_FTURBO;
+    freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
+    if (freq > 0)
+    {
+        l_extnSensorList[l_sensorHeader.count].data[0] = proc_freq2pstate(freq);
+        l_extnSensorList[l_sensorHeader.count].data[1] = CONVERT_UINT16_UINT8_HIGH(freq);
+        l_extnSensorList[l_sensorHeader.count].data[2] = CONVERT_UINT16_UINT8_LOW(freq);
+    }
+    l_sensorHeader.count++;
+    l_extnSensorList[l_sensorHeader.count].name = EXTN_NAME_FUTURBO;
+    freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_UTURBO];
+    if (freq > 0)
+    {
+        l_extnSensorList[l_sensorHeader.count].data[0] = proc_freq2pstate(freq);
+        l_extnSensorList[l_sensorHeader.count].data[1] = CONVERT_UINT16_UINT8_HIGH(freq);
+        l_extnSensorList[l_sensorHeader.count].data[2] = CONVERT_UINT16_UINT8_LOW(freq);
+    }
+    l_sensorHeader.count++;
+
+    // Copy header to response buffer.
+    memcpy ((void *) &(o_rsp_ptr->data[l_rsp_index]), (void *)&l_sensorHeader, sizeof(l_sensorHeader));
+    //Increment index into response buffer.
+    l_rsp_index += sizeof(l_sensorHeader);
+    l_poll_rsp->sensor_dblock_count +=1;
+    // Write data to outbuffer if any.
+    if (l_sensorHeader.count)
+    {
+        uint8_t l_sensordataSz = l_sensorHeader.count * l_sensorHeader.length;
+        // Copy sensor data into response buffer.
+        memcpy ((void *) &(o_rsp_ptr->data[l_rsp_index]), (void *)l_extnSensorList, l_sensordataSz);
+        // Increment index into response buffer.
+        l_rsp_index += l_sensordataSz;
+    }
+
 
     l_poll_rsp->data_length[0] = CONVERT_UINT16_UINT8_HIGH(l_rsp_index);
     l_poll_rsp->data_length[1] = CONVERT_UINT16_UINT8_LOW(l_rsp_index);
@@ -1647,10 +1706,10 @@ errlHndl_t cmdh_set_user_pcap(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         //A value of 0 means this pcap has been deactivated, otherwise
         //make sure it's within the min & max.
-        if ((l_pcap != 0) && (l_pcap < G_master_pcap_data.hard_min_pcap))
+        if ((l_pcap != 0) && (l_pcap < G_master_pcap_data.soft_min_pcap))
         {
             TRAC_ERR("User PCAP %d is below the minimum allowed (%d)",
-                      l_pcap, G_master_pcap_data.hard_min_pcap);
+                      l_pcap, G_master_pcap_data.soft_min_pcap);
 
             l_rc = ERRL_RC_INVALID_DATA;
             break;

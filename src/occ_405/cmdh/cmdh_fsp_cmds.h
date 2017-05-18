@@ -62,6 +62,11 @@ typedef enum
 #define SENSOR_FREQ "FREQ"
 #define SENSOR_POWR "POWR"
 #define SENSOR_CAPS "CAPS"
+#define SENSOR_EXTN "EXTN"
+#define EXTN_NAME_FMIN    0x464D494E // "FMIN"
+#define EXTN_NAME_FNOM    0x464E4F00 // "FNOM"
+#define EXTN_NAME_FTURBO  0x46540000 // "FT"
+#define EXTN_NAME_FUTURBO 0x46555400 // "FUT"
 
 //---------------------------------------------------------
 // Poll Command
@@ -204,10 +209,19 @@ typedef struct __attribute__ ((packed)) cmdh_poll_caps_sensor
     uint16_t system;    // Current system power in 1W units.
     uint16_t n;         // Oversubscription; output pcap limit when theres no redundant power.
     uint16_t max;       // Maximum power cap in 1W units.
-    uint16_t min;       // Minimum power cap in 1W units.
+    uint16_t hard_min;  // Minimum hard power cap in 1W units.
+    uint16_t soft_min;  // Minimum soft power cap in 1W units.
     uint16_t user;      // Power cap set by user in 1W units.
     uint8_t  source;    // User Power Limit Source
 } cmdh_poll_pcaps_sensor_t;
+
+typedef struct __attribute__ ((packed)) cmdh_poll_extn_sensor
+{
+    uint32_t name;          // Sensor name or id
+    uint8_t  flags;         // Flags indicating any special processing
+    uint8_t  reserved;
+    uint8_t  data[6];       // Data associated with sensor
+} cmdh_poll_extn_sensor_t;
 
 //---------------------------------------------------------
 // Query FW Level Command
