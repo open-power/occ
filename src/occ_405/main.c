@@ -690,7 +690,7 @@ void read_wof_header(void)
             commitErrl(&l_errl);
 
             // We were unable to get the WOF header thus it should not be run.
-            g_amec->wof.wof_disabled |= WOF_RC_NO_WOF_HEADER_MASK;
+            set_clear_wof_disabled( SET, WOF_RC_NO_WOF_HEADER_MASK );
         }
     }
     else
@@ -698,7 +698,7 @@ void read_wof_header(void)
         // We were unable to get the WOF header thus it should not be run.
         MAIN_TRAC_INFO("read_wof_header(): WOF header address is 0 or NOT"
                 " 128-byte aligned, WOF is disabled");
-        g_amec->wof.wof_disabled |= WOF_RC_NO_WOF_HEADER_MASK;
+        set_clear_wof_disabled( SET, WOF_RC_NO_WOF_HEADER_MASK );
     }
 } // end read_wof_header()
 

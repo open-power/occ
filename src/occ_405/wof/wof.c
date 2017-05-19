@@ -1303,92 +1303,106 @@ void set_clear_wof_disabled( uint8_t i_action,
 
     uint32_t prev_wof_disabled = g_wof->wof_disabled;
 
-    if( i_action == SET )
+    do
     {
-        // Set the bit
-        g_wof->wof_disabled |= i_bit_mask;
-        // If error has already been logged, trace and skip
-        if( L_errorLogged )
+        if( i_action == SET )
         {
-            CMDH_TRAC_ERR("Another WOF error was encountered!"
-                          " wof_disabled=0x%08x",
-                          g_wof->wof_disabled);
-        }
-        else
-        {
-            CMDH_TRAC_ERR("WOF encountered an error. wof_disabled ="
-                          " 0x%08x", g_wof->wof_disabled );
-            // Make sure the reason requires an error log
-            if( g_wof->wof_disabled & ERRL_RETURN_CODES )
+            // Set the bit
+            g_wof->wof_disabled |= i_bit_mask;
+            // If error has already been logged, trace and skip
+            if( L_errorLogged )
             {
-                // Create error log
-                /** @errortype
+                CMDH_TRAC_ERR("Another WOF error was encountered!"
+                              " wof_disabled=0x%08x",
+                              g_wof->wof_disabled);
+            }
+            else
+            {
+                CMDH_TRAC_ERR("WOF encountered an error. wof_disabled ="
+                              " 0x%08x", g_wof->wof_disabled );
+                     // If wof is disabled in driver, skip generating all error logs
+                if( g_wof->wof_disabled & WOF_RC_DRIVER_WOF_DISABLED )
+                {
+                    static bool trace = true;
+                    if(trace)
+                    {
+                        CMDH_TRAC_INFO("WOF is disabled in the driver.");
+                        trace = false;
+                    }
+                    break;
+                }
+                // Make sure the reason requires an error log
+                if( g_wof->wof_disabled & ERRL_RETURN_CODES )
+                {
+                    // Create error log
+                    /** @errortype
+                     *  @moduleid   SET_CLEAR_WOF_DISABLED
+                     *  @reasoncode WOF_DISABLED_RC
+                     *  @userdata1  current wof_disabled
+                     *  @userdata2  Bit requested to be set
+                     *  @userdata4  OCC_NO_EXTENDED_RC
+                     *  @devdesc    WOF has been disabled due to an error
+                     */
+                    l_errl = createErrl(
+                                SET_CLEAR_WOF_DISABLED,
+                                WOF_DISABLED_RC,
+                                OCC_NO_EXTENDED_RC,
+                                ERRL_SEV_UNRECOVERABLE,
+                                NULL,
+                                DEFAULT_TRACE_SIZE,
+                                g_wof->wof_disabled,
+                                i_bit_mask );
+
+                    // commit the error log
+                    commitErrl( &l_errl );
+                    L_errorLogged = true;
+                }
+                // if the previous wof_disabled was all zeros,
+                // send IPC command to PGPE to disable wof
+                if( !prev_wof_disabled )
+                {
+                    // Disable WOF
+                    disable_wof();
+                }
+            }
+        }
+        else if ( i_action == CLEAR )
+        {
+            // Clear the bit
+            g_wof->wof_disabled &= ~i_bit_mask;
+            // If clearing the bit put wof_disabled at all 0's AND
+            // wof_disabled was not already all 0's, wof is being
+            // re-enabled. Log informational error.
+            if( prev_wof_disabled && !g_wof->wof_disabled )
+            {
+                /** @
+                 *  @errortype
                  *  @moduleid   SET_CLEAR_WOF_DISABLED
-                 *  @reasoncode WOF_DISABLED_RC
-                 *  @userdata1  current wof_disabled
-                 *  @userdata2  Bit requested to be set
+                 *  @reasoncode WOF_RE_ENABLED
+                 *  @userdata1  Last Bit cleared
+                 *  @userdata2  0
                  *  @userdata4  OCC_NO_EXTENDED_RC
-                 *  @devdesc    WOF has been disabled due to an error
+                 *  @devdesc    WOF is being re-enabled
                  */
                 l_errl = createErrl(
-                            SET_CLEAR_WOF_DISABLED,
-                            WOF_DISABLED_RC,
-                            OCC_NO_EXTENDED_RC,
-                            ERRL_SEV_UNRECOVERABLE,
-                            NULL,
-                            DEFAULT_TRACE_SIZE,
-                            g_wof->wof_disabled,
-                            i_bit_mask );
+                        SET_CLEAR_WOF_DISABLED,
+                        WOF_RE_ENABLED,
+                        OCC_NO_EXTENDED_RC,
+                        ERRL_SEV_INFORMATIONAL,
+                        NULL,
+                        DEFAULT_TRACE_SIZE,
+                        i_bit_mask,
+                        0 );
 
                 // commit the error log
                 commitErrl( &l_errl );
-                L_errorLogged = true;
-            }
-            // if the previous wof_disabled was all zeros,
-            // send IPC command to PGPE to disable wof
-            if( !prev_wof_disabled )
-            {
-                // Disable WOF
-                disable_wof();
             }
         }
-    }
-    else if ( i_action == CLEAR )
-    {
-        // Clear the bit
-        g_wof->wof_disabled &= ~i_bit_mask;
-        // If clearing the bit put wof_disabled at all 0's AND
-        // wof_disabled was not already all 0's, wof is being
-        // re-enabled. Log informational error.
-        if( prev_wof_disabled && !g_wof->wof_disabled )
+        else
         {
-            /** @
-             *  @errortype
-             *  @moduleid   SET_CLEAR_WOF_DISABLED
-             *  @reasoncode WOF_RE_ENABLED
-             *  @userdata1  Last Bit cleared
-             *  @userdata2  0
-             *  @userdata4  OCC_NO_EXTENDED_RC
-             *  @devdesc    WOF is being re-enabled
-             */
-            l_errl = createErrl(
-                    SET_CLEAR_WOF_DISABLED,
-                    WOF_RE_ENABLED,
-                    OCC_NO_EXTENDED_RC,
-                    ERRL_SEV_INFORMATIONAL,
-                    NULL,
-                    DEFAULT_TRACE_SIZE,
-                    i_bit_mask,
-                    0 );
-
-            // commit the error log
-            commitErrl( &l_errl );
+            CMDH_TRAC_ERR("Invalid action given. Ignoring for now...");
         }
-    }
-    else
-    {
-        CMDH_TRAC_ERR("Invalid action given. Ignoring for now...");
-    }
+    }while( 0 );
 }
 
 /**
