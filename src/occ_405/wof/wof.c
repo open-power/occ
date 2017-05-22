@@ -814,91 +814,76 @@ void calculate_core_voltage( void )
  */
 void calculate_core_leakage( void )
 {
-    int l_chip_v_idx;
     uint16_t l_quad_cache;
     uint16_t idc_vdd = 0;
-    uint8_t  num_quads_off = 0;
     uint16_t temperature = 0;
-
-    // Get the VOLTVDDSENSE sensor and choose the appropriate
-    // chip voltage index
-    uint32_t l_v_chip = g_wof->voltvddsense_sensor;
-
-    // Choose the lower bound index of G_iddq_voltages
-    l_chip_v_idx = get_voltage_index( l_v_chip );
-
-    // Save index used for interpolating voltages to amec
-    g_wof->chip_volt_idx = l_chip_v_idx;
-
-    // Calculate all variables that will be used in the core
-    // loop that only need to be calculated once.
-
-    // ALL_CORES_OFF_ISO
-    g_wof->all_cores_off_iso =
-            scale_and_interpolate( G_oppb.iddq.ivdd_all_cores_off_caches_off,
-                                   G_oppb.iddq.avgtemp_all_cores_off_caches_off,
-                                   l_chip_v_idx,
-                                   g_wof->tempnest_sensor,
-                                   l_v_chip );
 
     // Get the core leakage percent from the OPPB
     // Note: This value is named inaccurately in the OPPB so we are reassigning
     // it's value here. We are also making the value visible to amester here.
     g_wof->core_leakage_percent = G_oppb.nest_leakage_percent;
 
-    // Multiply by core leakage percentage
-    g_wof->all_cores_off_iso =
-       (g_wof->all_cores_off_iso * g_wof->core_leakage_percent) / 100;
-
-    // Calculate ALL_GOOD_CACHES_ON_ISO
-    g_wof->all_good_caches_on_iso =
-     scale_and_interpolate( G_oppb.iddq.ivdd_all_good_cores_off_good_caches_on,
-                            G_oppb.iddq.avgtemp_all_good_cores_off,
-                            l_chip_v_idx,
-                            g_wof->tempnest_sensor,
-                            l_v_chip );
-    g_wof->all_good_caches_on_iso -= g_wof->all_cores_off_iso;
-
-    // Calculate ALL_CACHES_OFF_ISO
-    g_wof->all_caches_off_iso =
-        scale_and_interpolate( G_oppb.iddq.ivdd_all_cores_off_caches_off,
-                               G_oppb.iddq.avgtemp_all_cores_off_caches_off,
-                               l_chip_v_idx,
-                               g_wof->tempnest_sensor,
-                               l_v_chip );
-    g_wof->all_caches_off_iso -= g_wof->all_cores_off_iso;
-
-    // idc Quad uses same variables as all_cores_off_iso so just use that and
-    // divide by 6 to get just one quad
-    g_wof->idc_quad = g_wof->all_cores_off_iso / MAXIMUM_QUADS;
-
-    // Calculate quad_cache for all quads
-    l_quad_cache = ( g_wof->all_good_caches_on_iso - (g_wof->all_caches_off_iso *
-                     ( MAXIMUM_QUADS - G_oppb.iddq.good_quads_per_sort) /
-                      MAXIMUM_QUADS) ) / G_oppb.iddq.good_quads_per_sort;
-
     // Loop through all Quads and their respective Cores to calculate
     // leakage.
-    int quad_idx = 0;       // Quad Index          (0-5)
-    uint8_t core_idx = 0;   // Actual core index   (0-23)
+    int quad_idx = 0;       // Quad Index (0-5)
+    uint8_t core_idx = 0;       // Actual core index (0-23)
     int core_loop_idx = 0;  // On a per quad basis (0-3)
 
     for(quad_idx = 0; quad_idx < MAXIMUM_QUADS; quad_idx++)
     {
+        // Get the voltage for the current core.
+        // (Same for all cores within a single quad)
+        uint8_t quad_v_idx = g_wof->quad_v_idx[quad_idx];
+
+        // ALL_CORES_OFF_ISO
+        g_wof->all_cores_off_iso =
+        scale_and_interpolate( G_oppb.iddq.ivdd_all_cores_off_caches_off,
+                               G_oppb.iddq.avgtemp_all_cores_off_caches_off,
+                               quad_v_idx,
+                               g_wof->tempnest_sensor,
+                               g_wof->v_core_100uV[quad_idx] );
+
+        //Multiply by core leakage percentage
+        g_wof->all_cores_off_iso = g_wof->all_cores_off_iso *
+            g_wof->core_leakage_percent / 100;
+
+        // Calculate ALL_GOOD_CACHES_ON_ISO
+        g_wof->all_good_caches_on_iso =
+        scale_and_interpolate( G_oppb.iddq.ivdd_all_good_cores_off_good_caches_on,
+                               G_oppb.iddq.avgtemp_all_good_cores_off,
+                               quad_v_idx,
+                               g_wof->tempnest_sensor,
+                               g_wof->v_core_100uV[quad_idx] ) -
+                               g_wof->all_cores_off_iso;
+
+        // Calculate ALL_CACHES_OFF_ISO
+        g_wof->all_caches_off_iso =
+        scale_and_interpolate( G_oppb.iddq.ivdd_all_cores_off_caches_off,
+                               G_oppb.iddq.avgtemp_all_cores_off_caches_off,
+                               quad_v_idx,
+                               g_wof->tempnest_sensor,
+                               g_wof->v_core_100uV[quad_idx] ) -
+                               g_wof->all_cores_off_iso;
+
+        // idc Quad uses same variables as all_cores_off_iso so just use that and
+        // divide by 6 to get just one quad
+        g_wof->idc_quad = g_wof->all_caches_off_iso / MAXIMUM_QUADS;
+
+        // Calculate quad_cache for all quads
+        l_quad_cache = ( g_wof->all_good_caches_on_iso - g_wof->all_caches_off_iso *
+                     ( MAXIMUM_QUADS - G_oppb.iddq.good_quads_per_sort) /
+                      MAXIMUM_QUADS) / G_oppb.iddq.good_quads_per_sort;
+
         if(g_wof->quad_x_pstates[quad_idx] == QUAD_POWERED_OFF)
         {
-            // Increment the number of quads found to be off
-            num_quads_off++;
+            // Incorporate quad off into leakage
+            idc_vdd += g_wof->idc_quad;
         }
         else // Quad i is on
         {
             // Calculate the index of the first core in the quad.
             // so we reference the correct one in the inner core loop
             core_idx = quad_idx * NUM_CORES_PER_QUAD;
-
-            // Get the voltage for the current core.
-            // (Same for all cores within a single quad)
-            uint8_t quad_v_idx = g_wof->quad_v_idx[quad_idx];
 
             // Calculate the number of cores on within the current quad.
             g_wof->cores_on_per_quad[quad_idx] =
@@ -988,6 +973,7 @@ void calculate_core_leakage( void )
             // After all cores have been processed in current quad, multiply
             // the scaled value by the numer of cores that were off.
 
+
             // Incorporate the cache into leakage calculation.
             // scale from nest to quad
             idc_vdd += scale( l_quad_cache,
@@ -995,10 +981,6 @@ void calculate_core_leakage( void )
 
         } // quad on/off conditional
     } // quad loop
-
-    // After all Quads have been processed, incorporate calculation for quads
-    // that off into leakage
-    idc_vdd += g_wof->idc_quad * num_quads_off;
 
     // Finally, save the calculated leakage to amec
     g_wof->idc_vdd = idc_vdd;
