@@ -41,9 +41,15 @@ SCOM_Trgt_t SCOM_Trgt_getTrgt( TrgtType_t i_type, uint8_t i_procPos,
         .fsiBaseAddr = i_fsiBaseAddr,
     };
 
-    if ( TRGT_PROC == trgt.type ) trgt.procUnitPos = 0;
+    if (TRGT_PROC == trgt.type)
+    {
+        trgt.procUnitPos = 0;
+    } 
 
-    if ( TRGT_MEMBUF == trgt.type || TRGT_MBA == trgt.type ) trgt.isMaster = false;
+    if ( TRGT_MEMBUF == trgt.type || TRGT_MBA == trgt.type )
+    {
+        trgt.isMaster = false;
+    }
 
     return trgt;
 }
@@ -57,16 +63,25 @@ uint8_t SCOM_Trgt_getChipPos( SCOM_Trgt_t i_trgt )
     switch ( i_trgt.type )
     {
         case TRGT_PROC:
+        case TRGT_CAPP:
+        case TRGT_XBUS:
+        case TRGT_OBUS:
+        case TRGT_PEC:
+        case TRGT_PHB:
+        case TRGT_EQ:
         case TRGT_EX:
+        case TRGT_EC:
+        case TRGT_MCBIST:
         case TRGT_MCS:
+        case TRGT_MCA:
             p = i_trgt.procPos;
             break;
 
-        case TRGT_MEMBUF:
+        case TRGT_MEMBUF:  /* TODO RTC 173614  -- with CUMULUS   */
             p = (i_trgt.procPos * MAX_MEMBUF_PER_PROC) + i_trgt.procUnitPos;
             break;
 
-        case TRGT_MBA:
+        case TRGT_MBA:     /* TODO RTC 173614  -- with CUMULUS   */
             p = (i_trgt.procPos     * MAX_MEMBUF_PER_PROC) +
                 (i_trgt.procUnitPos / MAX_MBA_PER_MEMBUF);
             break;
@@ -88,10 +103,20 @@ uint8_t SCOM_Trgt_getChipUnitPos( SCOM_Trgt_t i_trgt )
         case TRGT_PROC:
         case TRGT_MEMBUF: u = 0; break;
 
+        case TRGT_CAPP:
+        case TRGT_XBUS:
+        case TRGT_OBUS:
+        case TRGT_PEC:
+        case TRGT_PHB:
+        case TRGT_EQ:
         case TRGT_EX:
-        case TRGT_MCS:  u = i_trgt.procUnitPos; break;
+        case TRGT_EC:
+        case TRGT_MCBIST:
+        case TRGT_MCS:
+        case TRGT_MCA:  u = i_trgt.procUnitPos; break;
 
         case TRGT_MBA:  u = i_trgt.procUnitPos % MAX_MBA_PER_MEMBUF; break;
+           /* TODO RTC 173614  -- with CUMULUS   */
 
         default: ;
     }
@@ -107,8 +132,17 @@ SCOM_Trgt_t SCOM_Trgt_getParentChip( SCOM_Trgt_t i_trgt )
     switch ( i_trgt.type )
     {
         case TRGT_PROC:
+        case TRGT_CAPP:
+        case TRGT_XBUS:
+        case TRGT_OBUS:
+        case TRGT_PEC:
+        case TRGT_PHB:
+        case TRGT_EQ:
         case TRGT_EX:
-        case TRGT_MCS:  t = TRGT_PROC; break;
+        case TRGT_EC:
+        case TRGT_MCBIST:
+        case TRGT_MCS:
+        case TRGT_MCA:   t = TRGT_PROC; break;
 
         case TRGT_MEMBUF:
         case TRGT_MBA:  t = TRGT_MEMBUF; break;
@@ -120,11 +154,22 @@ SCOM_Trgt_t SCOM_Trgt_getParentChip( SCOM_Trgt_t i_trgt )
     switch ( i_trgt.type )
     {
         case TRGT_PROC:
+        case TRGT_CAPP:
+        case TRGT_XBUS:
+        case TRGT_OBUS:
+        case TRGT_PEC:
+        case TRGT_PHB:
+        case TRGT_EQ:
         case TRGT_EX:
+        case TRGT_EC:
+        case TRGT_MCBIST:
         case TRGT_MCS:
-        case TRGT_MEMBUF: u = i_trgt.procUnitPos;                    break;
+        case TRGT_MCA:
+        case TRGT_MEMBUF: u = i_trgt.procUnitPos;                  break;
+           /* TODO RTC 173614  -- with CUMULUS   */
 
         case TRGT_MBA:  u = i_trgt.procUnitPos / MAX_MBA_PER_MEMBUF; break;
+           /* TODO RTC 173614  -- with CUMULUS   */
 
         default: ;
     }

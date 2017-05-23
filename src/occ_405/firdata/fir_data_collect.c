@@ -32,6 +32,7 @@
 #include "tpc_register_addresses.h"
 #include <trac.h>
 #include <homer.h>
+#include <firData.h>
 
 FIR_HEAP_BUFFER(uint8_t G_fir_heap[FIR_HEAP_SECTION_SIZE]);
 FIR_PARMS_BUFFER(uint8_t G_fir_data_parms[FIR_PARMS_SECTION_SIZE]);
@@ -49,9 +50,6 @@ uint32_t G_fir_master = FIR_OCC_NOT_FIR_MASTER;
 void fir_data_collect(void)
 {
 
-/* TEMP -- NOT YET SUPPORTED */
-TRAC_ERR("fir_data_collect: FirData_captureCsFirData not yet called/enabled");
-#if 0
     int32_t l_rc = 0;
 
     // Homer data section and size
@@ -68,8 +66,6 @@ TRAC_ERR("fir_data_collect: FirData_captureCsFirData not yet called/enabled");
 
     // Trace the rc only, error logs cannot be collected in this state
     TRAC_IMP("Checkstop FIR data capture completed with rc=%d", l_rc);
-#endif
-
 }
 
 

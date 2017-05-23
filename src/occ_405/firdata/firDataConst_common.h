@@ -33,10 +33,13 @@
 #include <stdint.h>
 
 /** Target types for all supported targets. */
+/** NOTE: These are used to build the register list in HOMER data      */
+/**       and also to create the exiting chiplet masks. Hence,         */
+/**       the numbers assigned here have to match the sequence         */
+/**       of chiplets in HOMER_ChipNimbus_t, HOMER_ChipCumulus_t, etc. */
 typedef enum
 {
     /* NOTE: These will be used as array indexes. */
-
     TRGT_FIRST = 0,
 
     /** Common Nimbus/Cumulus types */
@@ -127,4 +130,3 @@ typedef enum
 } IplState_t;
 
 #endif /* __firDataConst_common_h */
-
