@@ -487,6 +487,51 @@ void create_tlb_entry(uint32_t address, uint32_t size)
 #endif
 }
 
+/*
+ * Function Specification
+ *
+ * Name: externalize_oppb
+ *
+ * Description: Saves the relevant content from the G_oppb into g_amec
+ *              for WOF calculations.
+ *
+ * End Function Specification
+ */
+void externalize_oppb( void )
+{
+
+    g_amec->wof.good_quads_per_sort = G_oppb.iddq.good_quads_per_sort;
+    g_amec->wof.good_normal_cores_per_sort = G_oppb.iddq.good_normal_cores_per_sort;
+    g_amec->wof.good_caches_per_sort = G_oppb.iddq.good_caches_per_sort;
+
+    int i = 0;
+    for( i = 0; i < MAXIMUM_QUADS; i++)
+    {
+        g_amec->wof.good_normal_cores[i] = G_oppb.iddq.good_normal_cores[i];
+        g_amec->wof.good_caches[i] = G_oppb.iddq.good_caches[i];
+        g_amec->wof.allGoodCoresCachesOn[i] = G_oppb.iddq.ivdd_all_good_cores_on_caches_on[i];
+        g_amec->wof.allCoresCachesOff[i] = G_oppb.iddq.ivdd_all_cores_off_caches_off[i];
+        g_amec->wof.coresOffCachesOn[i] = G_oppb.iddq.ivdd_all_good_cores_off_good_caches_on[i];
+        g_amec->wof.quad1CoresCachesOn[i] = G_oppb.iddq.ivdd_quad_good_cores_on_good_caches_on[0][i];
+        g_amec->wof.quad2CoresCachesOn[i] = G_oppb.iddq.ivdd_quad_good_cores_on_good_caches_on[1][i];
+        g_amec->wof.quad3CoresCachesOn[i] = G_oppb.iddq.ivdd_quad_good_cores_on_good_caches_on[2][i];
+        g_amec->wof.quad4CoresCachesOn[i] = G_oppb.iddq.ivdd_quad_good_cores_on_good_caches_on[3][i];
+        g_amec->wof.quad5CoresCachesOn[i] = G_oppb.iddq.ivdd_quad_good_cores_on_good_caches_on[4][i];
+        g_amec->wof.quad6CoresCachesOn[i] = G_oppb.iddq.ivdd_quad_good_cores_on_good_caches_on[5][i];
+        g_amec->wof.ivdn[i] = G_oppb.iddq.ivdn[i];
+        g_amec->wof.allCoresCachesOnT[i] = G_oppb.iddq.avgtemp_all_good_cores_on[i];
+        g_amec->wof.allCoresCachesOffT[i] = G_oppb.iddq.avgtemp_all_cores_off_caches_off[i];
+        g_amec->wof.coresOffCachesOnT[i] = G_oppb.iddq.avgtemp_all_good_cores_off[i];
+        g_amec->wof.quad1CoresCachesOnT[i] = G_oppb.iddq.avgtemp_quad_good_cores_on[0][i];
+        g_amec->wof.quad2CoresCachesOnT[i] = G_oppb.iddq.avgtemp_quad_good_cores_on[1][i];
+        g_amec->wof.quad3CoresCachesOnT[i] = G_oppb.iddq.avgtemp_quad_good_cores_on[2][i];
+        g_amec->wof.quad4CoresCachesOnT[i] = G_oppb.iddq.avgtemp_quad_good_cores_on[3][i];
+        g_amec->wof.quad5CoresCachesOnT[i] = G_oppb.iddq.avgtemp_quad_good_cores_on[4][i];
+        g_amec->wof.quad6CoresCachesOnT[i] = G_oppb.iddq.avgtemp_quad_good_cores_on[5][i];
+        g_amec->wof.avgtemp_vdn[i] = G_oppb.iddq.avgtemp_vdn[i];
+
+    }
+}
 
 /*
  * Function Specification
@@ -504,6 +549,8 @@ void read_wof_header(void)
     bool l_error = false;
 
     MAIN_TRAC_INFO("read_wof_header() 0x%08X", G_pgpe_header.wof_tables_addr);
+    // Get OCCPstateParmBlock out to Amester
+    externalize_oppb();
 
     // Read active quads address, wof tables address, and wof tables len
     g_amec->wof.req_active_quads_addr   = G_pgpe_header.requested_active_quad_sram_addr;
@@ -511,6 +558,8 @@ void read_wof_header(void)
     g_amec->wof.vfrt_tbls_len           = G_pgpe_header.wof_tables_length;
     g_amec->wof.pgpe_wof_state_addr     = G_pgpe_header.wof_state_address;
     g_amec->wof.pstate_tbl_sram_addr    = G_pgpe_header.occ_pstate_table_sram_addr;
+
+    MAIN_TRAC_INFO("read_wof_header() 0x%08X", g_amec->wof.vfrt_tbls_main_mem_addr);
 
     // Read in quad state addresses here once
     g_amec->wof.quad_state_0_addr = G_pgpe_header.actual_quad_status_sram_addr;
@@ -628,12 +677,11 @@ void read_wof_header(void)
     else
     {
         // We were unable to get the WOF header thus it should not be run.
-        MAIN_TRAC_INFO("read_wof_header(): WOF header address is 0 or NOT"
+        MAIN_TRAC_ERR("read_wof_header(): WOF header address is 0 or NOT"
                 " 128-byte aligned, WOF is disabled");
         set_clear_wof_disabled( SET, WOF_RC_NO_WOF_HEADER_MASK );
     }
 } // end read_wof_header()
-
 
 /*
  * Function Specification
@@ -680,10 +728,12 @@ bool read_pgpe_header(void)
             MAIN_TRAC_IMP("Shared SRAM Address[0x%08x], PGPE Beacon Address[0x%08x]",
                           G_pgpe_header.shared_sram_addr, G_pgpe_header.beacon_sram_addr);
             MAIN_TRAC_IMP("WOF Tables Main Memory Address[0x%08x], Len[0x%08x], "
-                          "Req Active Quads Address[0x%08x]",
+                          "Req Active Quads Address[0x%08x], "
+                          "WOF State address[0x%08x]",
                           G_pgpe_header.wof_tables_addr,
                           G_pgpe_header.wof_tables_length,
-                          G_pgpe_header.requested_active_quad_sram_addr);
+                          G_pgpe_header.requested_active_quad_sram_addr,
+                          G_pgpe_header.wof_state_address);
             if ((G_pgpe_header.beacon_sram_addr == 0) ||
                 (G_pgpe_header.shared_sram_addr == 0))
             {

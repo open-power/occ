@@ -206,13 +206,15 @@ typedef struct
     // Contains iac_tdp_vdd(@turbo) read from the pstate parameter block
     uint32_t iac_tdp_vdd;
     // Contains Vratio, read from OCC-PGPE shared SRAM
-    uint32_t v_ratio;
+    uint16_t v_ratio;
     // Contains Fratio, read from OCC-PGPE shared SRAM
-    uint32_t f_ratio;
+    uint16_t f_ratio;
     // Contains Vclip, read from OCC-PGPE shared SRAM
-    uint32_t v_clip;
-    // Contains Fclip, read from OCC-PGPE shared SRAM
-    uint32_t f_clip;
+    uint16_t v_clip;
+    // Contains Fclip_ps pstate, read from OCC-PGPE shared SRAM
+    uint8_t f_clip_ps;
+    // Contains the actual frequency translated from f_clip_ps;
+    uint32_t f_clip_freq;
     // Contains the calculated effective capacitance for tdp_vdd
     uint32_t ceff_tdp_vdd;
     // Contains the calculated effective capacitance for vdd
@@ -287,6 +289,42 @@ typedef struct
     uint32_t vfrt_mm_offset;
     // Return code returned from a bad VFRT request
     uint8_t wof_vfrt_req_rc;
+    // Voltage used in ceff_ratio_vdd calc
+    uint32_t c_ratio_vdd_volt;
+    // Frequency used in ceff_ratio_vdd calc
+    uint32_t c_ratio_vdd_freq;
+    // Voltage used in ceff_ratio_vdn calc
+    uint32_t c_ratio_vdn_volt;
+    // Frequency used in ceff_ratio_vdn calc
+    uint32_t c_ratio_vdn_freq;
+
+    uint32_t all_cores_off_before;
+    //OPPB variables
+    uint8_t good_quads_per_sort;
+    uint8_t good_normal_cores_per_sort;
+    uint8_t good_caches_per_sort;
+    uint8_t good_normal_cores[MAXIMUM_QUADS];
+    uint8_t good_caches[MAXIMUM_QUADS];
+    uint16_t allGoodCoresCachesOn[CORE_IDDQ_MEASUREMENTS];
+    uint16_t allCoresCachesOff[CORE_IDDQ_MEASUREMENTS];
+    uint16_t coresOffCachesOn[CORE_IDDQ_MEASUREMENTS];
+    uint16_t quad1CoresCachesOn[CORE_IDDQ_MEASUREMENTS];
+    uint16_t quad2CoresCachesOn[CORE_IDDQ_MEASUREMENTS];
+    uint16_t quad3CoresCachesOn[CORE_IDDQ_MEASUREMENTS];
+    uint16_t quad4CoresCachesOn[CORE_IDDQ_MEASUREMENTS];
+    uint16_t quad5CoresCachesOn[CORE_IDDQ_MEASUREMENTS];
+    uint16_t quad6CoresCachesOn[CORE_IDDQ_MEASUREMENTS];
+    uint16_t ivdn[CORE_IDDQ_MEASUREMENTS];
+    uint8_t allCoresCachesOnT[CORE_IDDQ_MEASUREMENTS];
+    uint8_t allCoresCachesOffT[CORE_IDDQ_MEASUREMENTS];
+    uint8_t coresOffCachesOnT[CORE_IDDQ_MEASUREMENTS];
+    uint8_t quad1CoresCachesOnT[CORE_IDDQ_MEASUREMENTS];
+    uint8_t quad2CoresCachesOnT[CORE_IDDQ_MEASUREMENTS];
+    uint8_t quad3CoresCachesOnT[CORE_IDDQ_MEASUREMENTS];
+    uint8_t quad4CoresCachesOnT[CORE_IDDQ_MEASUREMENTS];
+    uint8_t quad5CoresCachesOnT[CORE_IDDQ_MEASUREMENTS];
+    uint8_t quad6CoresCachesOnT[CORE_IDDQ_MEASUREMENTS];
+    uint8_t avgtemp_vdn[CORE_IDDQ_MEASUREMENTS];
 } amec_wof_t;
 
 typedef struct __attribute__ ((packed))
@@ -333,7 +371,7 @@ void calculate_ceff_ratio_vdd( void );
 
 inline void calculate_AC_currents( void );
 
-inline bool core_powered_on( uint8_t i_core_num );
+inline uint32_t  core_powered_on( uint8_t i_core_num );
 
 uint8_t num_cores_on_in_quad( uint8_t i_quad_num );
 
@@ -376,4 +414,6 @@ uint32_t scale_and_interpolate( uint16_t * i_leak_arr,
                                 uint16_t i_voltage );
 
 void print_data(void);
+
+void print_oppb(void);
 #endif

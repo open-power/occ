@@ -129,10 +129,22 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
 
       // Use max frequency for performance modes and FMF
       if( (i_mode == OCC_MODE_NOM_PERFORMANCE) || (i_mode == OCC_MODE_MAX_PERFORMANCE) ||
-          (i_mode == OCC_MODE_FMF) )
-        l_freq_max = G_proc_fmax_mhz;
+          (i_mode == OCC_MODE_FMF) || (i_mode ==OCC_MODE_DYN_POWER_SAVE) ||
+          (i_mode == OCC_MODE_DYN_POWER_SAVE_FP) )
+      {
+          if( g_amec->wof.wof_disabled )
+          {
+              l_freq_max = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
+          }
+          else
+          {
+              l_freq_max = G_proc_fmax_mhz;
+          }
+      }
       else
-        l_freq_max = G_sysConfigData.sys_mode_freq.table[i_mode];
+      {
+          l_freq_max = G_sysConfigData.sys_mode_freq.table[i_mode];
+      }
     }
 
     if( (l_freq_min == 0) || (l_freq_max == 0) )

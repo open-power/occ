@@ -302,8 +302,6 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 l_freq = G_proc_fmax_mhz;
             }
             l_table[OCC_MODE_TURBO] = l_freq;
-            l_table[OCC_MODE_DYN_POWER_SAVE] = l_freq;
-            l_table[OCC_MODE_DYN_POWER_SAVE_FP] = l_freq;
             CMDH_TRAC_INFO("Turbo frequency = %d MHz", l_freq);
 
             // Bytes 7-8 Minimum Frequency Point
@@ -352,6 +350,10 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
             {
                 G_proc_fmax_mhz = l_table[OCC_MODE_TURBO];
             }
+
+            // Set dynamic power save frequencies
+            l_table[OCC_MODE_DYN_POWER_SAVE] = G_proc_fmax_mhz;
+            l_table[OCC_MODE_DYN_POWER_SAVE_FP] = G_proc_fmax_mhz;
 
             // Bytes 11-12 Static Power Save Frequency Point
             l_freq = (l_buf[8] << 8 | l_buf[9]);

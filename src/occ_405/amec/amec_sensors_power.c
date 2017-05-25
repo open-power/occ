@@ -23,7 +23,6 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-//#define AVSDEBUG
 
 /******************************************************************************/
 /* Includes                                                                   */
@@ -47,7 +46,7 @@
 #include <cmdh_snapshot.h>
 #include "amec_oversub.h"
 #include "avsbus.h"
-
+#include <p9_pstates_occ.h>
 /******************************************************************************/
 /* Globals                                                                    */
 /******************************************************************************/
@@ -73,6 +72,8 @@ uint32_t G_curr_num_gpus_sys = 0;
 extern uint8_t G_occ_interrupt_type;
 extern bool    G_vrm_thermal_monitoring;
 extern PWR_READING_TYPE  G_pwr_reading_type;
+extern bool    G_apss_present;
+extern OCCPstateParmBlock G_oppb;
 
 //*************************************************************************/
 // Code
@@ -485,9 +486,8 @@ void update_avsbus_power_sensors(const avsbus_type_e i_type)
     static bool L_throttle_vdd = FALSE;
     static bool L_throttle_vdn = FALSE;
     bool * L_throttle = &L_throttle_vdd;
-    // TODO: RTC 130216 : read loadline and distloss from Pstate Super Structure
-    uint32_t l_loadline = 0x0000; // OCCPstateParmBlock.vdd_sysparm.loadline_uohm
-    uint32_t l_distloss = 0x0000; // OCCPstateParmBlock.vdd_sysparm.distloss_uohm
+    uint32_t l_loadline = G_oppb.vdd_sysparm.loadline_uohm;
+    uint32_t l_distloss = G_oppb.vdd_sysparm.distloss_uohm;
     uint32_t l_currentSensor = CURVDD;
     uint32_t l_voltageSensor = VOLTVDD;
     uint32_t l_voltageChip = VOLTVDDSENSE;
@@ -496,8 +496,8 @@ void update_avsbus_power_sensors(const avsbus_type_e i_type)
     if (AVSBUS_VDN == i_type)
     {
         L_throttle = &L_throttle_vdn;
-        l_loadline = 0x0000; // OCCPstateParmBlock.vdn_sysparm.loadline_uohm
-        l_distloss = 0x0000; // OCCPstateParmBlock.vdn_sysparm.distloss_uohm
+        l_loadline = G_oppb.vdn_sysparm.loadline_uohm;
+        l_distloss = G_oppb.vdn_sysparm.distloss_uohm;
         l_currentSensor = CURVDN;
         l_voltageSensor = VOLTVDN;
         l_voltageChip = VOLTVDNSENSE;
@@ -519,18 +519,6 @@ void update_avsbus_power_sensors(const avsbus_type_e i_type)
         l_current_10ma = l_sensor->sample;
     }
 
-#ifdef AVSDEBUG
-    // TODO: RTC 130216 : REMOVE AFTER VERIFYING loadline/distlost from Pstate Super Structure
-    static uint32_t L_traceCount = 0;
-    uint32_t DEBUG_TRACE_MAX = 8;
-    if (L_traceCount < DEBUG_TRACE_MAX)
-    {
-        TRAC_INFO("update_avsbus_power_sensors: #%d Vd%c=%dx100uV, I=%dx10mA", L_traceCount, (i_type==AVSBUS_VDD)?'d':'n',
-                  l_voltage_100uv, l_current_10ma);
-        TRAC_INFO("update_avsbus_power_sensors: #%d Vd%c Rloadline=%d, Rdistloss=%d", L_traceCount, (i_type==AVSBUS_VDD)?'d':'n',
-                  l_loadline, l_distloss);
-    }
-#endif
 
     if ((l_voltage_100uv != 0) && (l_current_10ma != 0))
     {
@@ -581,24 +569,7 @@ void update_avsbus_power_sensors(const avsbus_type_e i_type)
             }
         }
 
-#ifdef AVSDEBUG
-        // TODO: RTC 130216 : REMOVE AFTER VERIFYING loadline/distlost from Pstate Super Structure
-        if (L_traceCount < DEBUG_TRACE_MAX)
-        {
-            const sensor_t *power = getSensorByGsid(l_powerSensor);
-            TRAC_INFO("update_avsbus_power_sensors: #%d Vd%cs=%dx100uV, P=%dW", L_traceCount, (i_type==AVSBUS_VDD)?'d':'n',
-                      l_chip_voltage_100uv, power->sample);
-        }
-#endif
     }
-
-#ifdef AVSDEBUG
-    // TODO: RTC 130216 : REMOVE AFTER VERIFYING loadline/distlost from Pstate Super Structure
-    if (L_traceCount < DEBUG_TRACE_MAX)
-    {
-        ++L_traceCount;
-    }
-#endif
 
 } // end update_avsbus_power_sensors()
 

@@ -34,6 +34,7 @@
 #include <amec_sys.h>
 #include <occ_sys_config.h>
 #include <wof.h>
+#include <amec_freq.h>
 
 //******************************************************************************
 // External Globals
@@ -372,6 +373,7 @@ void wof_main(void)
 
     // Calculate the AC currents
     calculate_AC_currents();
+
     // Calculate ceff_ratio_vdd and ceff_ratio_vdn
     calculate_ceff_ratio_vdd();
     calculate_ceff_ratio_vdn();
@@ -600,12 +602,6 @@ void send_vfrt_to_pgpe( uint32_t i_vfrt_main_mem_addr )
 
     do
     {
-        static bool print = true;
-        if( print )
-        {
-            //print_data();
-            print = false;
-        }
         // First check if the address is 128-byte aligned. error if not.
         if( i_vfrt_main_mem_addr % 128 )
         {
@@ -718,14 +714,15 @@ void read_shared_sram( void )
     // Read f_clip, v_clip, f_ratio, and v_ratio
     pgpe_wof_state_t l_wofstate;
     l_wofstate.value = in64(g_wof->pgpe_wof_state_addr);
-    //
-    g_wof->f_clip  = l_wofstate.fields.fclip_ps;
+
+    g_wof->f_clip_ps  = l_wofstate.fields.fclip_ps;
+
+    // convert f_clip_ps from Pstate to frequency(mHz)
+    g_wof->f_clip_freq = (proc_pstate2freq(g_wof->f_clip_ps))/1000;
+
     g_wof->v_clip  = l_wofstate.fields.vclip_mv;
-    //TODO RTC 174543: hard code values to 1
-//    g_wof->f_ratio = l_wofstate.fields.fratio;
-//    g_wof->v_ratio = l_wofstate.fields.vratio;
-    g_wof->f_ratio = 1;
-    g_wof->v_ratio = 1;
+    g_wof->f_ratio = l_wofstate.fields.fratio;
+    g_wof->v_ratio = l_wofstate.fields.vratio;
 
     // Get the requested active quad update
     read_req_active_quads();
@@ -826,7 +823,7 @@ void calculate_core_leakage( void )
     // Loop through all Quads and their respective Cores to calculate
     // leakage.
     int quad_idx = 0;       // Quad Index (0-5)
-    uint8_t core_idx = 0;       // Actual core index (0-23)
+    uint8_t core_idx = 0;   // Actual core index (0-23)
     int core_loop_idx = 0;  // On a per quad basis (0-3)
 
     for(quad_idx = 0; quad_idx < MAXIMUM_QUADS; quad_idx++)
@@ -843,9 +840,11 @@ void calculate_core_leakage( void )
                                g_wof->tempnest_sensor,
                                g_wof->v_core_100uV[quad_idx] );
 
+        g_wof->all_cores_off_before = g_wof->all_cores_off_iso;
+
         //Multiply by core leakage percentage
-        g_wof->all_cores_off_iso = g_wof->all_cores_off_iso *
-            g_wof->core_leakage_percent / 100;
+        g_wof->all_cores_off_iso = ( g_wof->all_cores_off_iso *
+            g_wof->core_leakage_percent ) / 100;
 
         // Calculate ALL_GOOD_CACHES_ON_ISO
         g_wof->all_good_caches_on_iso =
@@ -855,6 +854,7 @@ void calculate_core_leakage( void )
                                g_wof->tempnest_sensor,
                                g_wof->v_core_100uV[quad_idx] ) -
                                g_wof->all_cores_off_iso;
+
 
         // Calculate ALL_CACHES_OFF_ISO
         g_wof->all_caches_off_iso =
@@ -900,6 +900,7 @@ void calculate_core_leakage( void )
 
             // Reset num_cores_off_in_quad before processing current quads cores
             uint8_t num_cores_off_in_quad = 0;
+
             // Loop all cores within current quad
             for(core_loop_idx = 0; core_loop_idx < NUM_CORES_PER_QUAD; core_loop_idx++)
             {
@@ -923,27 +924,26 @@ void calculate_core_leakage( void )
                     // Calculate QUAD_GOOD_CORES_ONLY
                     g_wof->quad_good_cores_only[quad_idx] =
                     scale_and_interpolate
-                   (G_oppb.iddq.ivdd_quad_good_cores_on_good_caches_on[quad_idx],
+                    (G_oppb.iddq.ivdd_quad_good_cores_on_good_caches_on[quad_idx],
                     G_oppb.iddq.avgtemp_quad_good_cores_on[quad_idx],
                     quad_v_idx,
                     g_wof->tempprocthrmc[core_idx],
                     g_wof->v_core_100uV[quad_idx] )
                     -
                     scale_and_interpolate
-                   (G_oppb.iddq.ivdd_all_good_cores_off_good_caches_on,
+                    (G_oppb.iddq.ivdd_all_good_cores_off_good_caches_on,
                     G_oppb.iddq.avgtemp_all_good_cores_off,
                     quad_v_idx,
                     g_wof->tempprocthrmc[core_idx],
-                    g_wof->v_core_100uV[quad_idx])
+                    g_wof->v_core_100uV[quad_idx]) 
                     +
                     (g_wof->all_cores_off_iso * G_oppb.iddq.good_normal_cores[quad_idx])
                      / 24;
 
                     // Calculate quad_on_cores[quad]
                     g_wof->quad_on_cores[quad_idx] =
-                        (g_wof->quad_good_cores_only[quad_idx]*
-                         g_wof->cores_on_per_quad[quad_idx]) /
-                         G_oppb.iddq.good_normal_cores[quad_idx];
+                        g_wof->quad_good_cores_only[quad_idx] /
+                        G_oppb.iddq.good_normal_cores[quad_idx];
 
                     // Add to overall leakage
                     idc_vdd += g_wof->quad_on_cores[quad_idx];
@@ -972,7 +972,6 @@ void calculate_core_leakage( void )
             * num_cores_off_in_quad;
             // After all cores have been processed in current quad, multiply
             // the scaled value by the numer of cores that were off.
-
 
             // Incorporate the cache into leakage calculation.
             // scale from nest to quad
@@ -1069,16 +1068,15 @@ uint32_t calculate_effective_capacitance( uint32_t i_iAC,
 void calculate_ceff_ratio_vdn( void )
 {
     // Get ceff_tdp_vdn from OCCPPB
-    // TODO RTC: 174543 - remove hardcoded values once present
-    //g_wof->ceff_tdp_vdn = G_oppb.ceff_tdp_vdn;
-    g_wof->ceff_tdp_vdn = 1;
+    g_wof->ceff_tdp_vdn = G_oppb.ceff_tdp_vdn;
 
     // Calculate ceff_vdn
     // iac_vdn/ (VOLTVDN^1.3 * Fnest)
+    g_wof->c_ratio_vdn_freq = G_nest_frequency_mhz;
     g_wof->ceff_vdn =
                 calculate_effective_capacitance( g_wof->iac_vdn,
                                                  g_wof->voltvdn_sensor,
-                                                 G_nest_frequency_mhz );
+                                                 g_wof->c_ratio_vdn_freq );
 
     // Prevent divide by zero
     if( g_wof->ceff_tdp_vdn == 0 )
@@ -1104,29 +1102,29 @@ void calculate_ceff_ratio_vdn( void )
 void calculate_ceff_ratio_vdd( void )
 {
     // Read iac_tdp_vdd from OCCPstateParmBlock struct
-    // TODO  RTC: 174543 - remove hardcoded values once present
-    // g_wof->iac_tdp_vdd = G_oppb.lac_tdp_vdd_turbo_10ma;
-    g_wof->iac_tdp_vdd = 10;
+    g_wof->iac_tdp_vdd = G_oppb.lac_tdp_vdd_turbo_10ma;
 
     // Get Vturbo and convert to 100uV (mV -> 100uV) = mV*10
     // Multiply by Vratio
-    uint32_t V = (G_oppb.operating_points[TURBO].vdd_mv*10) * g_wof->v_ratio;
+    g_wof->c_ratio_vdd_volt =
+        (G_oppb.operating_points[TURBO].vdd_mv*10) * g_wof->v_ratio;
 
     // Get Fturbo and multiply by Fratio
-    uint32_t F = G_oppb.operating_points[TURBO].frequency_mhz * g_wof->f_ratio;
+    g_wof->c_ratio_vdd_freq =
+        G_oppb.operating_points[TURBO].frequency_mhz * g_wof->f_ratio;
 
     // Calculate ceff_tdp_vdd
     // iac_tdp_vdd / ((Vturbo*Vratio)^1.3 * (Fturbo*Fratio))
     g_wof->ceff_tdp_vdd =
                 calculate_effective_capacitance( g_wof->iac_tdp_vdd,
-                                                 V,
-                                                 F );
+                                                 g_wof->c_ratio_vdd_volt,
+                                                 g_wof->c_ratio_vdd_freq );
     // Calculate ceff_vdd
     // iac_vdd / (Vclip^1.3 * Fclip)
     g_wof->ceff_vdd =
                 calculate_effective_capacitance( g_wof->iac_vdd,
-                                                 g_wof->v_clip,
-                                                 g_wof->f_clip );
+                                                 (g_wof->v_clip*10), // mV->100uV
+                                                 g_wof->f_clip_freq );
 
     // Prevent divide by zero
     if( g_wof->ceff_tdp_vdd == 0 )
@@ -1139,7 +1137,8 @@ void calculate_ceff_ratio_vdd( void )
     }
     else
     {
-        g_wof->ceff_ratio_vdd = g_wof->ceff_vdd / g_wof->ceff_tdp_vdd;
+        // Save ceff_ratio_vdd. Multiply by 10000 to convert to correct granularity.
+        g_wof->ceff_ratio_vdd = (g_wof->ceff_vdd*10000) / g_wof->ceff_tdp_vdd;
     }
 }
 
@@ -1165,7 +1164,7 @@ inline void calculate_AC_currents( void )
  *
  * Return: Returns TRUE if the core is powered on, FALSE otherwise
  */
-inline bool core_powered_on(uint8_t i_core_num)
+inline uint32_t core_powered_on(uint8_t i_core_num)
 {
     return ( g_wof->core_pwr_on & (0x80000000 >> i_core_num));
 }
@@ -1188,7 +1187,7 @@ uint8_t num_cores_on_in_quad( uint8_t i_quad_num )
     uint8_t num_powered_on_cores = 0;
     for(i = start_index; i < (start_index + NUM_CORES_PER_QUAD); i++)
     {
-        if( core_powered_on(i) )
+        if( core_powered_on(i) > 0 )
         {
             num_powered_on_cores++;
         }
@@ -1360,6 +1359,12 @@ void set_clear_wof_disabled( uint8_t i_action,
                 {
                     // Disable WOF
                     disable_wof();
+                    // Set the the frequency ranges
+                    l_errl = amec_set_freq_range(CURRENT_MODE());
+                    if(l_errl)
+                    {
+                        commitErrl( &l_errl);
+                    }
                 }
             }
         }
@@ -1393,6 +1398,13 @@ void set_clear_wof_disabled( uint8_t i_action,
 
                 // commit the error log
                 commitErrl( &l_errl );
+
+                // Set the the frequency ranges
+                l_errl = amec_set_freq_range(CURRENT_MODE());
+                if(l_errl)
+                {
+                    commitErrl( &l_errl);
+                }
             }
         }
         else
@@ -1699,8 +1711,8 @@ void send_initial_vfrt_to_pgpe( void )
 void read_req_active_quads( void )
 {
     uint64_t l_doubleword = in64(g_wof->req_active_quads_addr);
-    memcpy(&g_wof->req_active_quad_update, &l_doubleword, sizeof(uint8_t));
 
+    g_wof->req_active_quad_update = (uint8_t)(0x00000000000000ff & l_doubleword);
     // Count the number of on bits in req_active_quad_update
     int i = 0;
     uint8_t on_bits = 0;
@@ -1795,7 +1807,7 @@ uint32_t scale( uint16_t i_current,
  * Param[in]: i_base_temp - The base temperature used to scale the current
  * Param[in]: i_voltage - The associated voltage.
  *
- * Return: The approximated scaled current.
+ * Return: The approximated scaled current in 10mA.
  */
 uint32_t scale_and_interpolate( uint16_t * i_leak_arr,
                        uint8_t * i_avgtemp_arr,
@@ -1812,16 +1824,17 @@ uint32_t scale_and_interpolate( uint16_t * i_leak_arr,
     // Scale the currents based on the delta temperature
     uint32_t scaled_lower_leak = scale( i_leak_arr[i_idx],
                                         lower_delta );
-    uint32_t scaled_upper_leak = scale( i_leak_arr[i_idx],
+    uint32_t scaled_upper_leak = scale( i_leak_arr[i_idx+1],
                                         upper_delta );
 
     // Approximate current between the scaled currents using linear
     // interpolation and return the result
+    // Divide by 10 to get 10mA units
     return interpolate_linear( (int32_t) i_voltage,
                                (int32_t) G_iddq_voltages[i_idx],
                                (int32_t) G_iddq_voltages[i_idx+1],
                                (int32_t) scaled_lower_leak,
-                               (int32_t) scaled_upper_leak );
+                               (int32_t) scaled_upper_leak ) / 10;
 
 }
 
@@ -1869,8 +1882,139 @@ void print_data( void )
     INTR_TRAC_INFO("fratio_size:        %d",g_wof->fratio_size);
     INTR_TRAC_INFO("fratio:             %d",g_wof->f_ratio);
     INTR_TRAC_INFO("vratio:             %d",g_wof->v_ratio);
-    INTR_TRAC_INFO("fclip:              %d",g_wof->f_clip);
+    INTR_TRAC_INFO("fclip_ps:           %x",g_wof->f_clip_ps);
+    INTR_TRAC_INFO("fclip_freq:         %d",g_wof->f_clip_freq);
     INTR_TRAC_INFO("vclip:              %d",g_wof->v_clip);
     INTR_TRAC_INFO("req_active_quads:   %x", g_wof->req_active_quad_update);
     INTR_TRAC_INFO("vfrt_mm_offset:     0x%08x", g_wof->vfrt_mm_offset);
+}
+
+/**
+ * print_oppb
+ *
+ * Description: For internal use only. Traces the contents of G_oppb that
+ *              are used in this file.
+ */
+void print_oppb( void )
+{
+    CMDH_TRAC_INFO("Printing Contents of OCCPstateParmBlock");
+    CMDH_TRAC_INFO("");
+
+    int i;
+    for(i = 0; i < VPD_PV_POINTS; i++)
+    {
+        CMDH_TRAC_INFO("operating_points[%d] = %d",
+                       i,
+                       G_oppb.operating_points[i] );
+    }
+    CMDH_TRAC_INFO("G_oppb.IddqTable");
+    CMDH_TRAC_INFO("");
+    CMDH_TRAC_INFO("iddq_version = %x", G_oppb.iddq.iddq_version);
+    CMDH_TRAC_INFO("good_quads_per_sort = %d", G_oppb.iddq.good_quads_per_sort);
+    CMDH_TRAC_INFO("good_normal_cores_per_sort = %d",
+           G_oppb.iddq.good_normal_cores_per_sort);
+    CMDH_TRAC_INFO("good_caches_per_sort = %d", G_oppb.iddq.good_caches_per_sort);
+
+    for( i = 0; i < MAXIMUM_QUADS; i++)
+    {
+        CMDH_TRAC_INFO("good_normal_cores[%d] = %d",
+                        i,
+                        G_oppb.iddq.good_normal_cores[i] );
+    }
+    for( i = 0; i < MAXIMUM_QUADS; i++)
+    {
+        CMDH_TRAC_INFO("good_caches[%d] = %d",
+                        i,
+                        G_oppb.iddq.good_caches[i] );
+    }
+    CMDH_TRAC_INFO("rdp_to_tdp_scale_factor = %d", G_oppb.iddq.rdp_to_tdp_scale_factor);
+    CMDH_TRAC_INFO("wof_iddq_margin_factor = %d", G_oppb.iddq.wof_iddq_margin_factor);
+    CMDH_TRAC_INFO("vdd_temp_scale_factor = %d",
+            G_oppb.iddq.vdd_temperature_scale_factor);
+    CMDH_TRAC_INFO("vdn_temp_scale_factor = %d",
+            G_oppb.iddq.vdn_temperature_scale_factor);
+    for( i = 0; i < IDDQ_MEASUREMENTS; i++)
+    {
+        CMDH_TRAC_INFO("ivdd_all_good_cores_on_caches_on[%d] = %d",
+                        i,
+                        G_oppb.iddq.ivdd_all_good_cores_on_caches_on[i]);
+    }
+    for( i = 0; i < IDDQ_MEASUREMENTS; i++)
+    {
+        CMDH_TRAC_INFO("ivdd_all_cores_off_caches_off[%d] = %d",
+                        i,
+                        G_oppb.iddq.ivdd_all_cores_off_caches_off[i]);
+    }
+    for( i = 0; i < IDDQ_MEASUREMENTS; i++)
+    {
+        CMDH_TRAC_INFO("ivdd_all_good_cores_off_good_caches_on[%d] = %d",
+                        i,
+                        G_oppb.iddq.ivdd_all_good_cores_off_good_caches_on[i]);
+    }
+    int j;
+    for( i = 0; i < MAXIMUM_QUADS; i++ )
+    {
+        for( j = 0; j < IDDQ_MEASUREMENTS; j++)
+        {
+            CMDH_TRAC_INFO("ivdd_quad_good_cores_on_good_caches_on[%d][%d] = %d",
+            i,
+            j,
+            G_oppb.iddq.ivdd_quad_good_cores_on_good_caches_on[i][j]);
+        }
+    }
+    for( i = 0; i < IDDQ_MEASUREMENTS; i++)
+    {
+        CMDH_TRAC_INFO("ivdn[%d] = %d",
+                        i,
+                        G_oppb.iddq.ivdn[i]);
+    }
+    for( i = 0; i < IDDQ_MEASUREMENTS; i++)
+    {
+        CMDH_TRAC_INFO("avgtemp_all_good_cores_on[%d] = %d",
+                        i,
+                        G_oppb.iddq.avgtemp_all_good_cores_on[i]);
+    }
+    for( i = 0; i < IDDQ_MEASUREMENTS; i++)
+    {
+        CMDH_TRAC_INFO("avgtemp_all_cores_off_caches_off[%d] = %d",
+                        i,
+                        G_oppb.iddq.avgtemp_all_cores_off_caches_off[i]);
+    }
+    for( i = 0; i < IDDQ_MEASUREMENTS; i++)
+    {
+        CMDH_TRAC_INFO("avgtemp_all_good_cores_off[%d] = %d",
+                        i,
+                        G_oppb.iddq.avgtemp_all_good_cores_off[i] );
+    }
+    for( i = 0; i < MAXIMUM_QUADS; i++ )
+    {
+        for( j = 0; j < IDDQ_MEASUREMENTS; j++)
+        {
+            CMDH_TRAC_INFO("avgtemp_quad_good_cores_on[%d][%d] = %d",
+            i,
+            j,
+            G_oppb.iddq.avgtemp_quad_good_cores_on[i][j]);
+        }
+    }
+    for( i = 0; i < IDDQ_MEASUREMENTS; i++)
+    {
+        CMDH_TRAC_INFO("avgtemp_vdn[%d] = %d",
+                        i,
+                        G_oppb.iddq.avgtemp_vdn[i]);
+    }
+    CMDH_TRAC_INFO("");
+    CMDH_TRAC_INFO("freq_min_khz = %d", G_oppb.frequency_min_khz);
+    CMDH_TRAC_INFO("freq_max_khz = %d", G_oppb.frequency_max_khz);
+    CMDH_TRAC_INFO("freq_step_khz = %d", G_oppb.frequency_step_khz);
+    CMDH_TRAC_INFO("pstate_min = %d", G_oppb.pstate_min);
+    CMDH_TRAC_INFO("nest_freq_mhz = %d", G_oppb.nest_frequency_mhz);
+    CMDH_TRAC_INFO("nest_leakage_percent = %d", G_oppb.nest_leakage_percent);
+    CMDH_TRAC_INFO("ceff_tdp_vdn = %d", G_oppb.ceff_tdp_vdn);
+    CMDH_TRAC_INFO("lac_tdp_vdd_turbo_10ma = %d", G_oppb.lac_tdp_vdd_turbo_10ma);
+    CMDH_TRAC_INFO("lac_tdp_vdd_nominal_10ma = %d", G_oppb.lac_tdp_vdd_nominal_10ma);
+    CMDH_TRAC_INFO("vdd_sysparm.loadline = %d", G_oppb.vdd_sysparm.loadline_uohm);
+    CMDH_TRAC_INFO("vdd_sysparm.distloss = %d", G_oppb.vdd_sysparm.distloss_uohm);
+    CMDH_TRAC_INFO("vdn_sysparm.loadline = %d", G_oppb.vdn_sysparm.loadline_uohm);
+    CMDH_TRAC_INFO("vdn_sysparm.distloss = %d", G_oppb.vdn_sysparm.distloss_uohm);
+    CMDH_TRAC_INFO("End OCCPstateParmBlock");
 }
