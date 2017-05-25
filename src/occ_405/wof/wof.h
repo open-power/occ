@@ -93,35 +93,35 @@ enum wof_disabled_actions
 // Structure to hold relevant data from the WOF header in Mainstore
 typedef struct __attribute__ ((packed))
 {
-    uint32_t magic_number;      //4
-    uint8_t  reserved_1[7];     //11
-    uint8_t  version;           //12
-    uint16_t vfrt_block_size;   //14
-    uint16_t vfrt_blck_hdr_sz;  //16
-    uint16_t vfrt_data_size;    //18
-    uint8_t  active_quads_size; //19
-    uint8_t  core_count;        //20
-    uint16_t vdn_start;         //22
-    uint16_t vdn_step;          //24
-    uint16_t vdn_size;          //26
-    uint16_t vdd_start;         //28
-    uint16_t vdd_step;          //30
-    uint16_t vdd_size;          //32
-    uint16_t vratio_start;      //34
-    uint16_t vratio_step;       //36
-    uint16_t vratio_size;       //38
-    uint16_t fratio_start;      //40
-    uint16_t fratio_step;       //42
-    uint16_t fratio_size;       //44
-    uint16_t vdn_percent[8];    //60
-    uint16_t socket_power_w;    //62
-    uint16_t nest_freq_mhz;     //64
-    uint16_t nom_freq_mhz;      //66
-    uint16_t rdp_capacity;      //68
-    uint64_t wof_tbls_src_tag;  //76
-    uint64_t package_name_hi;   //84
-    uint64_t package_name_lo;   //88
-    uint8_t  reserved_2[40];    //128
+    uint32_t magic_number;
+    uint8_t  reserved_1[3];
+    uint8_t  version;
+    uint16_t vfrt_block_size;
+    uint16_t vfrt_blck_hdr_sz;
+    uint16_t vfrt_data_size;
+    uint8_t  active_quads_size;
+    uint8_t  core_count;
+    uint16_t vdn_start;
+    uint16_t vdn_step;
+    uint16_t vdn_size;
+    uint16_t vdd_start;
+    uint16_t vdd_step;
+    uint16_t vdd_size;
+    uint16_t vratio_start;
+    uint16_t vratio_step;
+    uint16_t vratio_size;
+    uint16_t fratio_start;
+    uint16_t fratio_step;
+    uint16_t fratio_size;
+    uint16_t vdn_percent[8];
+    uint16_t socket_power_w;
+    uint16_t nest_freq_mhz;
+    uint16_t nom_freq_mhz;
+    uint16_t rdp_capacity;
+    uint64_t wof_tbls_src_tag;
+    uint64_t package_name_hi;
+    uint64_t package_name_lo;
+    uint8_t  reserved_2[40];
 } wof_header_data_t;
 
 
@@ -131,32 +131,32 @@ typedef struct
     // Bit vector where each bit signifies a different failure case
     uint16_t wof_disabled;
     // Data from wof header for debug
-    uint8_t  version;           //12
-    uint16_t vfrt_block_size;   //14
-    uint16_t vfrt_blck_hdr_sz;  //16
-    uint16_t vfrt_data_size;    //18
-    uint8_t  active_quads_size; //19
-    uint8_t  core_count;        //20
-    uint16_t vdn_start;         //22
-    uint16_t vdn_step;          //24
-    uint16_t vdn_size;          //26
-    uint16_t vdd_start;         //28
-    uint16_t vdd_step;          //30
-    uint16_t vdd_size;          //32
-    uint16_t vratio_start;      //34
-    uint16_t vratio_step;       //36
-    uint16_t vratio_size;       //38
-    uint16_t fratio_start;      //40
-    uint16_t fratio_step;       //42
-    uint16_t fratio_size;       //44
-    uint16_t vdn_percent[8];    //60
-    uint16_t socket_power_w;    //62
-    uint16_t nest_freq_mhz;     //64
-    uint16_t nom_freq_mhz;      //66
-    uint16_t rdp_capacity;      //68
-    uint64_t wof_tbls_src_tag;  //76
-    uint64_t package_name_hi;   //84
-    uint64_t package_name_lo;   //88
+    uint8_t  version;
+    uint16_t vfrt_block_size;
+    uint16_t vfrt_blck_hdr_sz;
+    uint16_t vfrt_data_size;
+    uint8_t  active_quads_size;
+    uint8_t  core_count;
+    uint16_t vdn_start;
+    uint16_t vdn_step;
+    uint16_t vdn_size;
+    uint16_t vdd_start;
+    uint16_t vdd_step;
+    uint16_t vdd_size;
+    uint16_t vratio_start;
+    uint16_t vratio_step;
+    uint16_t vratio_size;
+    uint16_t fratio_start;
+    uint16_t fratio_step;
+    uint16_t fratio_size;
+    uint16_t vdn_percent[8];
+    uint16_t socket_power_w;
+    uint16_t nest_freq_mhz;
+    uint16_t nom_freq_mhz;
+    uint16_t rdp_capacity;
+    uint64_t wof_tbls_src_tag;
+    uint64_t package_name_hi;
+    uint64_t package_name_lo;
     // Calculated step from start for VDD
     uint16_t vdd_step_from_start;
     // Calculated step from start for VDN
