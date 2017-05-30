@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/firdata/norflash.H $                                  */
+/* $Source: src/occ_405/firdata/norflash.h $                              */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -27,7 +27,7 @@
 #define __PNOR_NORFLASH_H
 
 #include <native.h>
-#include <sfc_ast2400.h>
+#include <pnor_mboxdd.h>
 
 /** @file norflash.H
  *  @brief Contains constants related to specific types of
@@ -142,11 +142,11 @@ enum
  *        Status register be read after a read or erase operation,
  *        otherwise all future operations won't work..
  *
- * @parm i_sfc  SFC driver to operate on
+ * @parm i_pnorMbox  Pnor Mbox Struct to operate on
  *
  * @return Error from operation
  */
-errorHndl_t micronFlagStatus( Sfc_t* i_sfc );
+errorHndl_t micronFlagStatus( pnorMbox_t* i_pnorMbox );
 
 
 

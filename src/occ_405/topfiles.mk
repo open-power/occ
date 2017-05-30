@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2015,2016
+# Contributors Listed Below - COPYRIGHT 2015,2017
 # [+] International Business Machines Corp.
 #
 #
@@ -65,6 +65,8 @@ TOP-C-SOURCES = amec/amec_analytics.c \
                 dimm/dimm_control.c \
                 errl/errl.c \
                 firdata/fir_data_collect.c \
+                firdata/ast_mboxdd.c \
+                firdata/pnor_mboxdd.c \
                 homer.c \
                 lock/lock.c \
                 main.c \

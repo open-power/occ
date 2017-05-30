@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/firdata/pnor_util.C $                                 */
+/* $Source: src/occ_405/firdata/pnor_util.c $                             */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -26,7 +26,7 @@
 /* Interfaces to write into PNOR */
 
 #include <native.h>
-#include <sfc_ast2400.h>
+#include <pnor_mboxdd.H>
 #include <ecc.h>
 #include <pnor_util.h>
 #include <norflash.h>
@@ -36,8 +36,9 @@
 uint32_t g_next_byte = 0xFFFFFFFF;
 /* Size of the FIRDATA section of PNOR */
 uint32_t g_pnor_size = 0;
-/* Global SFC object */
-Sfc_t g_sfc;
+/* Global PNOR Mbox object */
+pnorMbox_t* g_pnorMbox;
+
 /* Cache to queue up PNOR writes */
 uint8_t g_write_cache[PAGE_PROGRAM_BYTES];
 /* Current position of data inside write cache */
@@ -74,10 +75,10 @@ int32_t pnor_write_8B( uint64_t i_data )
     memcpy( &(g_write_cache[g_write_cache_index]), data9, cpsz );
     g_write_cache_index += cpsz;
 
-    /* Write a complete chunk into the flash */    
+    /* Write a complete chunk into the flash */
     if( g_write_cache_index == PAGE_PROGRAM_BYTES )
     {
-        errorHndl_t tmp = writeFlash( &g_sfc,
+        errorHndl_t tmp = writeFlash( &g_pnorMbox,
                                       g_next_byte,
                                       PAGE_PROGRAM_BYTES,
                                       g_write_cache );
@@ -113,9 +114,6 @@ errorHndl_t pnor_prep( HOMER_PnorInfo_t* i_pnorInfo )
 {
     errorHndl_t l_err = NO_ERROR;
 
-    g_sfc.iv_mmioOffset = i_pnorInfo->mmioOffset;
-    g_sfc.iv_flashWorkarounds = i_pnorInfo->norWorkarounds;
-
     /* Figure out where to start */
     TRACFCOMP("FIRDATA is at %.8X..%.8X", i_pnorInfo->pnorOffset, i_pnorInfo->pnorOffset+i_pnorInfo->pnorSize );
     g_next_byte = i_pnorInfo->pnorOffset;
@@ -123,7 +121,7 @@ errorHndl_t pnor_prep( HOMER_PnorInfo_t* i_pnorInfo )
     memset( g_write_cache, 0xFF, PAGE_PROGRAM_BYTES );
 
     /* Can we rely on skiboot leaving things in a good state? */
-    l_err = hwInit(&g_sfc);
+    l_err = hwInit(&g_pnorMbox);
     if( l_err )
     {
         TRACFCOMP("hwInit failed");
@@ -131,17 +129,6 @@ errorHndl_t pnor_prep( HOMER_PnorInfo_t* i_pnorInfo )
         g_next_byte = 0xFFFFFFFF;
         g_pnor_size = 0;
     }
-
-    /* Future Improvement
-       Enable write mode once at the beginning to avoid extra
-       reg operations turning it on and off 
-    l_err = enableWriteMode(g_sfc);
-    if( l_err )
-    {
-        g_next_byte = 0xFFFFFFFF;
-        g_pnor_size = 0;
-    }
-    */
 
     return l_err;
 }
@@ -166,21 +153,6 @@ int32_t PNOR_writeFirData( HOMER_PnorInfo_t i_pnorInfo,
         }
 
         uint32_t idx = 0;
-
-        /* Erase the section. */
-        for( idx = i_pnorInfo.pnorOffset;
-             idx < (i_pnorInfo.pnorOffset+i_pnorInfo.pnorSize);
-             idx += 4096 )
-        {
-            l_err = eraseFlash(&g_sfc,idx);
-            if( l_err )
-            {
-                TRACFCOMP("eraseFlash failed");
-                rc = FAIL;
-                break; /*nothing more to do here*/
-            }
-        }
-
         uint64_t dataChunk  = 0;
         size_t sz_dataChunk = sizeof(uint64_t);
 
