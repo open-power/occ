@@ -93,156 +93,82 @@ int32_t translate_addr( SCOM_Trgt_t i_trgt, uint64_t i_addr, uint64_t * o_addr )
     #define FUNC "[translate_addr] "
 
     int32_t rc = SUCCESS;
-
-    TrgtType_t l_type = i_trgt.type;
+    uint8_t l_chip_unit_num = SCOM_Trgt_getChipUnitPos(i_trgt);
 
     *o_addr = i_addr;
 
-    /* No translation needed for non-unit scoms */
-    if( (l_type == TRGT_PROC) || (l_type == TRGT_MEMBUF) )
+    //The following translation logic is a copy of p9_scominfo_createChipUnitScomAddr
+    //function from EKB (chips/p9/common/scominfo/p9_scominfo.C)
+
+    if(i_trgt.type == TRGT_PROC || i_trgt.type == TRGT_MEMBUF)
     {
-        *o_addr = i_addr;
+        //No need to translate here.
+        //We already assigned i_addr to o_addr above, so just return SUCCESS.
+        return rc;
     }
-    else /* it is a Unit */
+    else if(i_trgt.type == TRGT_EX) //EX
     {
-        uint8_t l_num = SCOM_Trgt_getChipUnitPos(i_trgt);
-
-        if( l_type == TRGT_EX )
+        if(get_chiplet_id(i_addr) <= EP05_CHIPLET_ID &&
+           get_chiplet_id(i_addr) >= EP00_CHIPLET_ID)
         {
-            /*first byte is 0x10, second nibble of that byte is the EX number */
-            *o_addr |= (l_num << 24);
+            set_chiplet_id(EP00_CHIPLET_ID + (l_chip_unit_num / 2), o_addr);
+            uint8_t l_ring_id = get_ring(i_addr) & 0xF;
+            l_ring_id = (l_ring_id - (l_ring_id % 2)) + (l_chip_unit_num % 2);
+            set_ring(l_ring_id & 0xF, o_addr);
         }
-        else if( l_type == TRGT_MCS )
+        else if(get_chiplet_id(i_addr) <= EC23_CHIPLET_ID &&
+                get_chiplet_id(i_addr) >= EC00_CHIPLET_ID)
         {
-            /*Non-DMI address */
-            if( (i_addr & MCS_MASK) == MCS_BASEADDR )
+            set_chiplet_id(EC00_CHIPLET_ID +
+                           (get_chiplet_id(i_addr) % 2) +
+                           (l_chip_unit_num * 2), o_addr);
+        }
+    }
+    else if(i_trgt.type == TRGT_EQ) //EQ
+    {
+        set_chiplet_id(EP00_CHIPLET_ID + l_chip_unit_num, o_addr);
+    }
+    else if(i_trgt.type == TRGT_EC) //EC
+    {
+        set_chiplet_id(EC00_CHIPLET_ID + l_chip_unit_num, o_addr);
+    }
+    else if(i_trgt.type == TRGT_MBA) //MBA
+    {
+        if( (i_addr & MBA_MASK) == MBA_BASEADDR )
+        {
+            /* 0x00000000_03010400  MBA 0  # MBA01 */
+            /* 0x00000000_03010C00  MBA 1  # MBA23 */
+            if( l_chip_unit_num == 1 )
             {
-                /* MC0 MCS0 = 0x02011800  MCS-0  range 0             */
-                /* MC0 MCS1 = 0x02011880  MCS-1  range 0 + remainder */
-                /* MC1 MCS0 = 0x02011900  MCS-2  range 1             */
-                /* MC1 MCS0 = 0x02011980  MCS-3  range 1 + remainder */
-                /* MC2 MCS0 = 0x02011C00  MCS-4  range 2             */
-                /* MC2 MCS1 = 0x02011C80  MCS-5  range 2 + remainder */
-                /* MC3 MCS0 = 0x02011D00  MCS-6  range 3             */
-                /* MC3 MCS1 = 0x02011D80  MCS-7  range 3 + remainder */
-                if( (l_num / 2) == 1) /*range 1 */
-                {
-                    *o_addr |= 0x100;
-                }
-                else if( (l_num / 2) == 2)  /*range 2 */
-                {
-                    *o_addr |= 0x400;
-                }
-                else if( (l_num / 2) == 3)  /*range 3 */
-                {
-                    *o_addr |= 0x500;
-                }
-
-                /* Add 0x80 for the odd numbers */
-                if( l_num % 2)
-                {
-                    *o_addr |= 0x80;
-                }
-            }
-            else if( (i_addr & MCS_MASK) == MCS_DMI_BASEADDR )
-            {
-                /* 0x00000000_02011A00  MCS 0-3  # MCS/DMI0 Direct SCOM */
-                /* 0x00000000_02011E00  MCS 4-7  # MCS/DMI4 Direct SCOM */
-                if( l_num > 3 )
-                {
-                    *o_addr |= 0x400; /* A00->E00 */
-                }
-            }
-            else if( (i_addr & MCS_MASK) == IND_MCS_DMI_BASEADDR )
-            {
-                /* 0x80000060_02011A3F  MCS 0  # DMI0 Indirect SCOM RX3 */
-                /* 0x80000040_02011A3F  MCS 1  # DMI1 Indirect SCOM RX2 */
-                /* 0x80000000_02011A3F  MCS 2  # DMI3 Indirect SCOM RX0 */
-                /* 0x80000020_02011A3F  MCS 3  # DMI2 Indirect SCOM RX1 */
-
-                /* 0x80000060_02011E3F  MCS 4  # DMI4 Indirect SCOM RX3 */
-                /* 0x80000040_02011E3F  MCS 5  # DMI5 Indirect SCOM RX2 */
-                /* 0x80000000_02011E3F  MCS 6  # DMI7 Indirect SCOM RX0 */
-                /* 0x80000020_02011E3F  MCS 7  # DMI6 Indirect SCOM RX1 */
-
-                /* 0x80000460_02011A3F  MCS 0  # DMI0 Indirect SCOM TX3 */
-                /* 0x80000440_02011A3F  MCS 1  # DMI1 Indirect SCOM TX2 */
-                /* 0x80000400_02011A3F  MCS 2  # DMI3 Indirect SCOM TX0 */
-                /* 0x80000420_02011A3F  MCS 3  # DMI2 Indirect SCOM TX1 */
-
-                /* 0x80000460_02011E3F  MCS 4  # DMI4 Indirect SCOM TX3 */
-                /* 0x80000440_02011E3F  MCS 5  # DMI5 Indirect SCOM TX2 */
-                /* 0x80000400_02011E3F  MCS 6  # DMI7 Indirect SCOM TX0 */
-                /* 0x80000420_02011E3F  MCS 7  # DMI6 Indirect SCOM TX1 */
-
-                /* zero out the instance bits */
-                *o_addr &= 0xFFFFFF9FFFFFFFFF;
-                switch( l_num )
-                {
-                    case(0):
-                    case(4):
-                        *o_addr |= 0x0000006000000000;
-                        break;
-                    case(1):
-                    case(5):
-                        *o_addr |= 0x0000004000000000;
-                        break;
-                    case(2):
-                    case(6):
-                        /*nothing to do */
-                        break;
-                    case(3):
-                    case(7):
-                        *o_addr |= 0x0000002000000000;
-                        break;
-                    default:
-                        TRAC_ERR(FUNC"unsupported MCS unit position %d", l_num);
-                        rc = FAIL;
-                }
-                if( l_num > 3 )
-                {
-                    *o_addr |= 0x400; /* A00->E00 */
-                }
+                *o_addr |= 0x00000800;
             }
         }
-        else if( l_type == TRGT_MBA )
+        else if( (i_addr & MBA_MASK) == TCM_MBA_BASEADDR )
         {
-            if( (i_addr & MBA_MASK) == MBA_BASEADDR )
+            /* 0x00000000_03010880  MBA 0  # Trace for MBA01 */
+            /* 0x00000000_030110C0  MBA 1  # Trace for MBA23 */
+            *o_addr |= (l_chip_unit_num * 0x840);
+        }
+        else if( (i_addr & MBA_MASK) == IND_MBA_BASEADDR )
+        {
+            /* 0x00000000_03011400  MBA 0  # DPHY01 (indirect addressing) */
+            /* 0x00000000_03011800  MBA 1  # DPHY23 (indirect addressing) */
+            /* 0x80000000_0301143f  MBA 0  # DPHY01 (indirect addressing) */
+            /* 0x80000000_0301183f  MBA 1  # DPHY23 (indirect addressing) */
+            /* 0x80000000_0701143f  MBA 0  # DPHY01 (indirect addressing) */
+            /* 0x80000000_0701183f  MBA 1  # DPHY23 (indirect addressing) */
+            if( l_chip_unit_num == 1 )
             {
-                /* 0x00000000_03010400  MBA 0  # MBA01 */
-                /* 0x00000000_03010C00  MBA 1  # MBA23 */
-                if( l_num == 1 )
-                {
-                    *o_addr |= 0x00000800;
-                }
-            }
-            else if( (i_addr & MBA_MASK) == TCM_MBA_BASEADDR )
-            {
-                /* 0x00000000_03010880  MBA 0  # Trace for MBA01 */
-                /* 0x00000000_030110C0  MBA 1  # Trace for MBA23 */
-                *o_addr |= (l_num * 0x840);
-            }
-            else if( (i_addr & MBA_MASK) == IND_MBA_BASEADDR )
-            {
-                /* 0x00000000_03011400  MBA 0  # DPHY01 (indirect addressing) */
-                /* 0x00000000_03011800  MBA 1  # DPHY23 (indirect addressing) */
-                /* 0x80000000_0301143f  MBA 0  # DPHY01 (indirect addressing) */
-                /* 0x80000000_0301183f  MBA 1  # DPHY23 (indirect addressing) */
-                /* 0x80000000_0701143f  MBA 0  # DPHY01 (indirect addressing) */
-                /* 0x80000000_0701183f  MBA 1  # DPHY23 (indirect addressing) */
-                if( l_num == 1 )
-                {
-                    /* 030114zz->030118zz */
-                    *o_addr &= 0xFFFFFFFFFFFFFBFF;
-                    *o_addr |= 0x0000000000000800;
-                }
+                /* 030114zz->030118zz */
+                *o_addr &= 0xFFFFFFFFFFFFFBFF;
+                *o_addr |= 0x0000000000000800;
             }
         }
-        else
-        {
-            TRAC_ERR( FUNC"unsupported unit type %d", l_type );
-            rc = FAIL;
-        }
+    }
+    else
+    {
+        TRAC_ERR( FUNC"unsupported unit type %d", i_trgt.type );
+        rc = FAIL;
     }
 
     return rc;

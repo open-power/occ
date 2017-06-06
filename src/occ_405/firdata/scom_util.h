@@ -31,6 +31,48 @@
 
 #define SCOMFAIL 0xDEADBEEF
 
+typedef enum
+{
+    N0_CHIPLET_ID   = 0x02,     ///< Nest0 (North) chiplet
+    N1_CHIPLET_ID   = 0x03,     ///< Nest1 (East) chiplet
+    N2_CHIPLET_ID   = 0x04,     ///< Nest2 (South) chiplet
+    N3_CHIPLET_ID   = 0x05,     ///< Nest3 (West) chiplet
+    MC01_CHIPLET_ID = 0x07,     ///< MC01 (West) chiplet
+    MC23_CHIPLET_ID = 0x08,     ///< MC23 (East) chiplet
+    OB0_CHIPLET_ID  = 0x09,     ///< OBus0 chiplet
+    PCI0_CHIPLET_ID = 0x0D,     ///< PCIe0 chiplet
+    EP00_CHIPLET_ID = 0x10,     ///< Quad0 chiplet (EX0/1)
+    EP05_CHIPLET_ID = 0x15,     ///< Quad5 chiplet (EX10/11)
+    EC00_CHIPLET_ID = 0x20,     ///< Core0 chiplet (Quad0, EX0, C0)
+    EC23_CHIPLET_ID = 0x37      ///< Core23 chiplet (Quad5, EX11, C1)
+} p9_chiplet_id_t;
+
+typedef enum
+{
+    MC_MC01_0_RING_ID = 0x2,    ///< MC01_0 / MC23_0
+    MC_IOM01_0_RING_ID = 0x4,   ///< IOM01_0 / IOM45_0
+} p9_mc_ring_id_t;
+
+typedef enum
+{
+    XB_IOX_0_RING_ID = 0x3,     ///< IOX_0
+    XB_IOX_2_RING_ID = 0x5,     ///< IOX_2
+    XB_PBIOX_0_RING_ID = 0x6,   ///< PBIOX_0
+    XB_PBIOX_2_RING_ID = 0x8    ///< PBIOX_2
+} p9_xb_ring_id_t;
+
+typedef enum
+{
+    P9C_MC_CHAN_RING_ID = 0x2,
+    P9C_MC_IO_RING_ID   = 0x4,
+    P9C_MC_BIST_RING_ID = 0x8
+} p9c_mc_ring_id_t;
+
+typedef enum
+{
+    N2_PCIS0_0_RING_ID = 0x3,   ///< PCIS0_0
+} p9_n2_ring_id_t;
+
 /** @brief  Performs a hardware scom on a regular register.
  *  @param  i_trgt The SCOM target.
  *  @param  i_addr 32-bit SCOM address.
