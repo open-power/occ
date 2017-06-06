@@ -24,9 +24,16 @@
 /* IBM_PROLOG_END_TAG                                                     */
 
 /* Support for SCOM operations */
-#include <scom_util.h>
 #include <fsi.h>
 #include <native.h>
+#include <occhw_async.h>
+#include "occ_common.h"
+#include "gpe_export.h"
+#include <scom_util.h>
+
+bool G_request_created = FALSE;
+GPE_BUFFER(ipc_scom_op_t G_scom_op);
+GpeRequest G_request;
 
 enum {
     /*FSI addresses are byte offsets, so need to multiply by 4
@@ -251,34 +258,53 @@ int32_t translate_addr( SCOM_Trgt_t i_trgt, uint64_t i_addr, uint64_t * o_addr )
  */
 int32_t getscomraw( SCOM_Trgt_t i_chip, uint32_t i_addr, uint64_t * o_val )
 {
-    int32_t rc = SUCCESS;
+    int32_t l_rc = SUCCESS;
 
-    *o_val = 0;
+    //TODO RTC:175100 check isMaster and use SBE FIFO logic
 
-    /* SCOMs to the master chip are done via XSCOM. */
-    if ( i_chip.isMaster )
+    if(!G_request_created) //Only need to create request once
     {
-        return xscom_read( i_addr, o_val );
+        l_rc = gpe_request_create(&G_request,              //Request
+                                  &G_async_gpe_queue0,     //Queue
+                                  IPC_ST_SCOM_OPERATION,   //Function ID
+                                  &G_scom_op,              //GPE arguments
+                                  SSX_SECONDS(5),          //Timeout
+                                  NULL,                    //Callback function
+                                  NULL,                    //Callback args
+                                  ASYNC_REQUEST_BLOCKING); //Options
+        if(l_rc)
+        {
+            return l_rc;
+        }
+        else
+        {
+            G_request_created = TRUE;
+        }
     }
 
-    /* 1) Sent the command to do the SCOM read. */
-    rc = putfsi( i_chip, COMMAND_REG, i_addr );
-    if ( SUCCESS != rc ) return rc;
+    //Pack in the request data
+    G_scom_op.read = TRUE;
+    G_scom_op.addr = i_addr;
 
-    /* 2) Check status next -- TODO */
+    l_rc = gpe_request_schedule(&G_request);
+    if(l_rc)
+    {
+        return l_rc;
+    }
 
-    /* 3) Read the two data registers. */
-    uint32_t data0, data1;
+    //Since it's a blocking request, it should be completed by the time we
+    //get here. If it's not, then a timeout has occurred.
+    if(G_request.request.completion_state == ASYNC_REQUEST_STATE_COMPLETE)
+    {
+        *o_val = G_scom_op.data;
+    }
+    else
+    {
+        *o_val = 0;
+        l_rc = FAIL;
+    }
 
-    rc = getfsi( i_chip, DATA0_REG, &data0 );
-    if ( SUCCESS != rc ) return rc;
-
-    rc = getfsi( i_chip, DATA1_REG, &data1 );
-    if ( SUCCESS != rc ) return rc;
-
-    *o_val = ((uint64_t)data0 << 32) | (uint64_t)data1;
-
-    return rc;
+    return l_rc;
 }
 
 /**
@@ -290,28 +316,49 @@ int32_t getscomraw( SCOM_Trgt_t i_chip, uint32_t i_addr, uint64_t * o_val )
  */
 int32_t putscomraw( SCOM_Trgt_t i_chip, uint32_t i_addr, uint64_t i_val )
 {
-    int32_t rc = SUCCESS;
+    int32_t l_rc = SUCCESS;
 
-    /* SCOMs to the master chip are done via XSCOM. */
-    if ( i_chip.isMaster )
+    //TODO RTC:175100 check isMaster and use SBE FIFO logic
+
+    if(!G_request_created) //Only need to create request once
     {
-        return xscom_write( i_addr, i_val );
+        l_rc = gpe_request_create(&G_request,              //Request
+                                  &G_async_gpe_queue0,     //Queue
+                                  IPC_ST_SCOM_OPERATION,   //Function ID
+                                  &G_scom_op,              //GPE arguments
+                                  SSX_SECONDS(5),          //Timeout
+                                  NULL,                    //Callback function
+                                  NULL,                    //Callback args
+                                  ASYNC_REQUEST_BLOCKING); //Options
+        if(l_rc)
+        {
+            return l_rc;
+        }
+        else
+        {
+            G_request_created = TRUE;
+        }
     }
 
-    /* 1) Write the two data registers. */
-    rc = putfsi( i_chip, DATA0_REG, i_val >> 32 );
-    if ( SUCCESS != rc ) return rc;
+    //Pack in the request data
+    G_scom_op.read = FALSE;
+    G_scom_op.addr = i_addr;
+    G_scom_op.data = i_val;
 
-    rc = putfsi( i_chip, DATA1_REG, (uint32_t)i_val );
-    if ( SUCCESS != rc ) return rc;
+    l_rc = gpe_request_schedule(&G_request);
+    if(l_rc)
+    {
+        return l_rc;
+    }
 
-    /* 2) Send the command to do the SCOM write. */
-    rc = putfsi( i_chip, COMMAND_REG, i_addr | 0x80000000 );
-    if ( SUCCESS != rc ) return rc;
+    //It's a blocking request, so if the request hasn't been completed by this
+    //time, then a timeout has occurred.
+    if(G_request.request.completion_state != ASYNC_REQUEST_STATE_COMPLETE)
+    {
+        l_rc = FAIL;
+    }
 
-    /* 3) Check status next -- TODO */
-
-    return rc;
+    return l_rc;
 }
 
 /**
