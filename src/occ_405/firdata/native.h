@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/firdata/native.H $                                    */
+/* $Source: src/occ_405/firdata/native.h $                                */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -46,7 +46,7 @@ extern "C" {
 #define TRACDCOMP(frmt,args...)
 #endif // FIRD_DEBUG
 
-#define TRACFCOMP(frmt,args...) TRACE(g_trac_inf,INFO_MRK frmt,##args)
+#define TRACFCOMP(frmt,args...) TRACE(&g_des_array[INF_TRACE_DESCRIPTOR],INFO_MRK frmt,##args)
 
 #else // NO_TRAC_STRINGS
 

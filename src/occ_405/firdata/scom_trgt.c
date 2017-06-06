@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/firdata/scoms.C $                                     */
+/* $Source: src/occ_405/firdata/scom_trgt.c $                             */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -41,9 +41,9 @@ SCOM_Trgt_t SCOM_Trgt_getTrgt( TrgtType_t i_type, uint8_t i_procPos,
         .fsiBaseAddr = i_fsiBaseAddr,
     };
 
-    if ( PROC == trgt.type ) trgt.procUnitPos = 0;
+    if ( TRGT_PROC == trgt.type ) trgt.procUnitPos = 0;
 
-    if ( MEMB == trgt.type || MBA == trgt.type ) trgt.isMaster = false;
+    if ( TRGT_MEMBUF == trgt.type || TRGT_MBA == trgt.type ) trgt.isMaster = false;
 
     return trgt;
 }
@@ -56,19 +56,19 @@ uint8_t SCOM_Trgt_getChipPos( SCOM_Trgt_t i_trgt )
 
     switch ( i_trgt.type )
     {
-        case PROC:
-        case EX:
-        case MCS:
+        case TRGT_PROC:
+        case TRGT_EX:
+        case TRGT_MCS:
             p = i_trgt.procPos;
             break;
 
-        case MEMB:
-            p = (i_trgt.procPos * MAX_MEMB_PER_PROC) + i_trgt.procUnitPos;
+        case TRGT_MEMBUF:
+            p = (i_trgt.procPos * MAX_MEMBUF_PER_PROC) + i_trgt.procUnitPos;
             break;
 
-        case MBA:
-            p = (i_trgt.procPos     * MAX_MEMB_PER_PROC) +
-                (i_trgt.procUnitPos / MAX_MBA_PER_MEMB);
+        case TRGT_MBA:
+            p = (i_trgt.procPos     * MAX_MEMBUF_PER_PROC) +
+                (i_trgt.procUnitPos / MAX_MBA_PER_MEMBUF);
             break;
 
         default: ;
@@ -85,13 +85,13 @@ uint8_t SCOM_Trgt_getChipUnitPos( SCOM_Trgt_t i_trgt )
 
     switch ( i_trgt.type )
     {
-        case PROC:
-        case MEMB: u = 0; break;
+        case TRGT_PROC:
+        case TRGT_MEMBUF: u = 0; break;
 
-        case EX:
-        case MCS:  u = i_trgt.procUnitPos; break;
+        case TRGT_EX:
+        case TRGT_MCS:  u = i_trgt.procUnitPos; break;
 
-        case MBA:  u = i_trgt.procUnitPos % MAX_MBA_PER_MEMB; break;
+        case TRGT_MBA:  u = i_trgt.procUnitPos % MAX_MBA_PER_MEMBUF; break;
 
         default: ;
     }
@@ -103,15 +103,15 @@ uint8_t SCOM_Trgt_getChipUnitPos( SCOM_Trgt_t i_trgt )
 
 SCOM_Trgt_t SCOM_Trgt_getParentChip( SCOM_Trgt_t i_trgt )
 {
-    TrgtType_t t = MAX_TRGTS;
+    TrgtType_t t = TRGT_MAX;
     switch ( i_trgt.type )
     {
-        case PROC:
-        case EX:
-        case MCS:  t = PROC; break;
+        case TRGT_PROC:
+        case TRGT_EX:
+        case TRGT_MCS:  t = TRGT_PROC; break;
 
-        case MEMB:
-        case MBA:  t = MEMB; break;
+        case TRGT_MEMBUF:
+        case TRGT_MBA:  t = TRGT_MEMBUF; break;
 
         default: ;
     }
@@ -119,12 +119,12 @@ SCOM_Trgt_t SCOM_Trgt_getParentChip( SCOM_Trgt_t i_trgt )
     uint8_t u = 0;
     switch ( i_trgt.type )
     {
-        case PROC:
-        case EX:
-        case MCS:
-        case MEMB: u = i_trgt.procUnitPos;                    break;
+        case TRGT_PROC:
+        case TRGT_EX:
+        case TRGT_MCS:
+        case TRGT_MEMBUF: u = i_trgt.procUnitPos;                    break;
 
-        case MBA:  u = i_trgt.procUnitPos / MAX_MBA_PER_MEMB; break;
+        case TRGT_MBA:  u = i_trgt.procUnitPos / MAX_MBA_PER_MEMBUF; break;
 
         default: ;
     }

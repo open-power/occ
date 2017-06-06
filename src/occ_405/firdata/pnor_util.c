@@ -26,7 +26,7 @@
 /* Interfaces to write into PNOR */
 
 #include <native.h>
-#include <pnor_mboxdd.H>
+#include <pnor_mboxdd.h>
 #include <ecc.h>
 #include <pnor_util.h>
 #include <norflash.h>

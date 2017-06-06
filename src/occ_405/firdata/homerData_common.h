@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/firdata/homerData.H $                                 */
+/* $Source: src/occ_405/firdata/homerData_common.h $                      */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -129,13 +129,13 @@ typedef struct __attribute__((packed))
     uint16_t mbaMasks[MAX_PROC_PER_NODE];
 
     /** Contains number of registers per type for each target type. */
-    uint8_t counts[MAX_TRGTS][MAX_REGS];
+    uint8_t counts[TRGT_MAX][REG_MAX];
 
     /** FSI base address for each PROC chip. */
     uint32_t procFsiBaseAddr[MAX_PROC_PER_NODE];
 
     /** FSI base address for each MEMB chip. */
-    uint32_t membFsiBaseAddr[MAX_PROC_PER_NODE][MAX_MEMB_PER_PROC];
+    uint32_t membFsiBaseAddr[MAX_PROC_PER_NODE][MAX_MEMBUF_PER_PROC];
 
     /** Information regarding the PNOR location and size. */
     HOMER_PnorInfo_t pnorInfo;

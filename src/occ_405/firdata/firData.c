@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/firdata/firData.C $                                   */
+/* $Source: src/occ_405/firdata/firData.c $                               */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -55,7 +55,7 @@ typedef struct
     PNOR_Data_t * pData;       /*/< Pointer to the PNOR header data */
     uint32_t      pBufSize;    /*/< Current size of the PNOR data buffer */
 
-    FirData_ListPointers_t hPtrs[MAX_TRGTS]; /*/< Pointers to the register lists */
+    FirData_ListPointers_t hPtrs[TRGT_MAX]; /*/< Pointers to the register lists */
 
 } FirData_t;
 
@@ -204,7 +204,7 @@ bool FirData_addGlblsToPnor( FirData_t * io_fd, PNOR_Trgt_t * io_pTrgt,
     bool full = false;
 
     uint8_t t   = i_sTrgt.type;
-    uint8_t cnt = io_fd->hData->counts[t][GLBL];
+    uint8_t cnt = io_fd->hData->counts[t][REG_GLBL];
 
     uint32_t i = 0;
 
@@ -246,7 +246,7 @@ bool FirData_addFirsToPnor( FirData_t * io_fd, PNOR_Trgt_t * io_pTrgt,
     bool full = false;
 
     uint8_t t   = i_sTrgt.type;
-    uint8_t cnt = io_fd->hData->counts[t][FIR];
+    uint8_t cnt = io_fd->hData->counts[t][REG_FIR];
 
     uint32_t i = 0;
 
@@ -298,7 +298,7 @@ bool FirData_addRegsToPnor( FirData_t * io_fd, PNOR_Trgt_t * io_pTrgt,
     bool full = false;
 
     uint8_t t   = i_sTrgt.type;
-    uint8_t cnt = io_fd->hData->counts[t][REG];
+    uint8_t cnt = io_fd->hData->counts[t][REG_REG];
 
     uint32_t i = 0;
 
@@ -330,7 +330,7 @@ bool FirData_addIdFirsToPnor( FirData_t * io_fd, PNOR_Trgt_t * io_pTrgt,
     bool full = false;
 
     uint8_t t   = i_sTrgt.type;
-    uint8_t cnt = io_fd->hData->counts[t][IDFIR];
+    uint8_t cnt = io_fd->hData->counts[t][REG_IDFIR];
 
     uint32_t i = 0;
 
@@ -384,7 +384,7 @@ bool FirData_addIdRegsToPnor( FirData_t * io_fd, PNOR_Trgt_t * io_pTrgt,
     bool full = false;
 
     uint8_t t   = i_sTrgt.type;
-    uint8_t cnt = io_fd->hData->counts[t][IDREG];
+    uint8_t cnt = io_fd->hData->counts[t][REG_IDREG];
 
     uint32_t i = 0;
 
@@ -436,9 +436,10 @@ bool FirData_addTrgtToPnor( FirData_t * io_fd, SCOM_Trgt_t i_sTrgt,
         /* Update the number of targets in the PNOR data. */
         io_fd->pData->trgts++;
 
-        /* NOTE: Must add all regular registers (GLBL, FIR, REG) before all */
-        /*       indirect-SCOM registers. Also, must check GLBL registers first */
-        /*       to determine whether it is necessary to do the other registers. */
+        /* NOTE: Must add all regular registers (REG_GLBL, REG_FIR, REG_REG)
+         *       before all indirect-SCOM registers. Also, must check REG_GLBL
+         *       registers first to determine whether it is necessary to do the
+         *       other registers. */
 
         /* Add the GLBLs. */
         full = FirData_addGlblsToPnor( io_fd, pTrgt, i_sTrgt, o_noAttn );
@@ -499,7 +500,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
             fsi = io_fd->hData->procFsiBaseAddr[p];
 
             /* Add this PROC to the PNOR. */
-            sTrgt = SCOM_Trgt_getTrgt(PROC, p, 0, fsi, isM);
+            sTrgt = SCOM_Trgt_getTrgt(TRGT_PROC, p, 0, fsi, isM);
             full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn );
             if ( full ) break;
             if ( noAttn ) continue; /* Skip the PROC, EXs, and MCSs */
@@ -510,7 +511,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
                 if ( 0 == (io_fd->hData->exMasks[p] & (0x8000 >> u)) ) continue;
 
                 /* Add this EX to the PNOR. */
-                sTrgt = SCOM_Trgt_getTrgt(EX, p, u, fsi, isM);
+                sTrgt = SCOM_Trgt_getTrgt(TRGT_EX, p, u, fsi, isM);
                 full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn );
                 if ( full ) break;
                 if ( noAttn ) continue; /* Skip the EX */
@@ -523,7 +524,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
                 if ( 0 == (io_fd->hData->mcsMasks[p] & (0x80 >> u)) ) continue;
 
                 /* Add this MCS to the PNOR. */
-                sTrgt = SCOM_Trgt_getTrgt(MCS, p, u, fsi, isM);
+                sTrgt = SCOM_Trgt_getTrgt(TRGT_MCS, p, u, fsi, isM);
                 full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn );
                 if ( full ) break;
                 if ( noAttn ) continue; /* Skip the MCS */
@@ -533,38 +534,38 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
         if ( full ) break;
 
         /* Iterate all MEMBs. Must do this separate of from the PROCs because */
-        /* it is possible a MEMB could be reporting an attention but the */
+        /* it is possible a MEMBUF could be reporting an attention but the */
         /* connected PROC is not. */
-        for ( i = 0; i < MAX_MEMB_PER_NODE; i++ )
+        for ( i = 0; i < MAX_MEMBUF_PER_NODE; i++ )
         {
-            p = i / MAX_MEMB_PER_PROC;
-            u = i % MAX_MEMB_PER_PROC;
+            p = i / MAX_MEMBUF_PER_PROC;
+            u = i % MAX_MEMBUF_PER_PROC;
 
-            /* Check if the MEMB is configured. */
+            /* Check if the MEMBUF is configured. */
             if ( 0 == (io_fd->hData->membMasks[p] & (0x80 >> u)) ) continue;
 
             /* Get the FSI base address. */
             fsi = io_fd->hData->membFsiBaseAddr[p][u];
 
-            /* Add this MEMB to the PNOR. */
-            sTrgt = SCOM_Trgt_getTrgt(MEMB, p, u, fsi, false);
+            /* Add this MEMBUF to the PNOR. */
+            sTrgt = SCOM_Trgt_getTrgt(TRGT_MEMBUF, p, u, fsi, false);
             full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn );
             if ( full ) break;
-            if ( noAttn ) continue; /* Skip the MEMB and MBAs */
+            if ( noAttn ) continue; /* Skip the MEMBUF and MBAs */
 
-            for ( j = 0; j < MAX_MBA_PER_MEMB; j++ )
+            for ( j = 0; j < MAX_MBA_PER_MEMBUF; j++ )
             {
-                mu = u * MAX_MBA_PER_MEMB + j;
+                mu = u * MAX_MBA_PER_MEMBUF + j;
 
                 /* Check if the MBA is configured. */
                 if ( 0 == (io_fd->hData->mbaMasks[p] & (0x8000 >> mu)) )
                     continue;
 
                 /* Add this MBA to the PNOR. */
-                sTrgt = SCOM_Trgt_getTrgt(MBA, p, mu, fsi, false);
+                sTrgt = SCOM_Trgt_getTrgt(TRGT_MBA, p, mu, fsi, false);
                 full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn );
                 if ( full ) break;
-                if ( noAttn ) continue; /* Skip the MEMB */
+                if ( noAttn ) continue; /* Skip the MEMBUF */
             }
             if ( full ) break;
         }
@@ -607,10 +608,10 @@ int32_t FirData_init( FirData_t * io_fd,
 
     bool full = false;
 
-    uint32_t x[MAX_TRGTS][MAX_REGS];
+    uint32_t x[TRGT_MAX][REG_MAX];
     size_t curIdx = 0;
 
-    uint32_t t = FIRST_TRGT;
+    uint32_t t = TRGT_FIRST;
 
     uint8_t * reglist = NULL;
 
@@ -665,14 +666,14 @@ int32_t FirData_init( FirData_t * io_fd,
 
         /* Get the register list byte indexes in HOMER data buffer */
         memset( x, 0x00, sizeof(x) );
-        for ( t = FIRST_TRGT; t < MAX_TRGTS; t++ )
+        for ( t = TRGT_FIRST; t < TRGT_MAX; t++ )
         {
-            x[t][GLBL]  = curIdx;
-            x[t][FIR]   = x[t][GLBL]  + sz_u32 * io_fd->hData->counts[t][GLBL];
-            x[t][REG]   = x[t][FIR]   + sz_u32 * io_fd->hData->counts[t][FIR];
-            x[t][IDFIR] = x[t][REG]   + sz_u32 * io_fd->hData->counts[t][REG];
-            x[t][IDREG] = x[t][IDFIR] + sz_u64 * io_fd->hData->counts[t][IDFIR];
-            curIdx      = x[t][IDREG] + sz_u64 * io_fd->hData->counts[t][IDREG];
+            x[t][REG_GLBL]  = curIdx;
+            x[t][REG_FIR]   = x[t][REG_GLBL]  + sz_u32 * io_fd->hData->counts[t][REG_GLBL];
+            x[t][REG_REG]   = x[t][REG_FIR]   + sz_u32 * io_fd->hData->counts[t][REG_FIR];
+            x[t][REG_IDFIR] = x[t][REG_REG]   + sz_u32 * io_fd->hData->counts[t][REG_REG];
+            x[t][REG_IDREG] = x[t][REG_IDFIR] + sz_u64 * io_fd->hData->counts[t][REG_IDFIR];
+            curIdx          = x[t][REG_IDREG] + sz_u64 * io_fd->hData->counts[t][REG_IDREG];
         }
 
         /* Check to make sure the list data is not larger than the available */
@@ -687,13 +688,13 @@ int32_t FirData_init( FirData_t * io_fd,
 
         /* Now, get the pointers for each list. */
         reglist = io_fd->hBuf + sz_hData;
-        for ( t = FIRST_TRGT; t < MAX_TRGTS; t++ )
+        for ( t = TRGT_FIRST; t < TRGT_MAX; t++ )
         {
-            (io_fd->hPtrs[t]).glbl  = (uint32_t *)(reglist + x[t][GLBL] );
-            (io_fd->hPtrs[t]).fir   = (uint32_t *)(reglist + x[t][FIR]  );
-            (io_fd->hPtrs[t]).reg   = (uint32_t *)(reglist + x[t][REG]  );
-            (io_fd->hPtrs[t]).idFir = (uint64_t *)(reglist + x[t][IDFIR]);
-            (io_fd->hPtrs[t]).idReg = (uint64_t *)(reglist + x[t][IDREG]);
+            (io_fd->hPtrs[t]).glbl  = (uint32_t *)(reglist + x[t][REG_GLBL] );
+            (io_fd->hPtrs[t]).fir   = (uint32_t *)(reglist + x[t][REG_FIR]  );
+            (io_fd->hPtrs[t]).reg   = (uint32_t *)(reglist + x[t][REG_REG]  );
+            (io_fd->hPtrs[t]).idFir = (uint64_t *)(reglist + x[t][REG_IDFIR]);
+            (io_fd->hPtrs[t]).idReg = (uint64_t *)(reglist + x[t][REG_IDREG]);
         }
 
     } while (0);
@@ -737,12 +738,14 @@ int32_t FirData_captureCsFirData( uint8_t * i_hBuf, uint32_t i_hBufSize,
         FirData_addTrgtsToPnor( &fd );
 
         /* Write the buffer to PNOR. */
+/* TODO: 175241
         rc = PNOR_writeFirData( fd.hData->pnorInfo, fd.pBuf, fd.pBufSize );
         if ( SUCCESS != rc )
         {
             TRAC_ERR( FUNC"Failed to process FIR data" );
             break;
         }
+*/
 
     } while (0);
 

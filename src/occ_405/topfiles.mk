@@ -64,9 +64,15 @@ TOP-C-SOURCES = amec/amec_analytics.c \
                 dimm/dimm.c \
                 dimm/dimm_control.c \
                 errl/errl.c \
-                firdata/fir_data_collect.c \
                 firdata/ast_mboxdd.c \
+                firdata/ecc.c \
+                firdata/firData.c \
+                firdata/fir_data_collect.c \
+                firdata/fsi.c \
+                firdata/native.c \
                 firdata/pnor_mboxdd.c \
+                firdata/scom_trgt.c \
+                firdata/scom_util.c \
                 homer.c \
                 lock/lock.c \
                 main.c \

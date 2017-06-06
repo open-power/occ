@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/firdata/native.C $                                    */
+/* $Source: src/occ_405/firdata/native.c $                                */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -40,11 +40,14 @@ int32_t xscom_read( uint32_t i_address, uint64_t * o_data )
 
     *o_data = 0;
 
+// TODO: RTC 173636 Needs SCOM support.
+#if 0
     rc = getscom_ffdc( i_address, o_data, NULL );
     if ( SUCCESS != rc )
     {
         TRAC_ERR( "SCOM error in xscom_read wrapper, rc=%d", rc );
     }
+#endif
 
     if ( TRACE_XSCOM )
     {
@@ -59,11 +62,14 @@ int32_t xscom_write( uint32_t i_address, uint64_t i_data )
 {
     int32_t rc = SUCCESS;
 
+// TODO: RTC 173636 Needs SCOM support.
+#if 0
     rc = putscom_ffdc( i_address, i_data, NULL );
     if ( SUCCESS != rc )
     {
         TRAC_ERR( "SCOM error in xscom_write wrapper, rc=%d", rc );
     }
+#endif
 
     if ( TRACE_XSCOM )
     {

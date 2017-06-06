@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/firdata/pnorData.H $                                  */
+/* $Source: src/occ_405/firdata/pnorData_common.h $                       */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -106,12 +106,15 @@ typedef enum
 /** Information for each target with SCOM data. */
 typedef struct __attribute__((packed))
 {
-    uint32_t type     : 3; /** Target type. See enum TrgtType_t */
+    uint32_t reserved1: 3;
     uint32_t procPos  : 3; /** The processor position (0-7) */
     uint32_t unitPos  : 4; /** Unit position relative to the processor (0-15) */
     uint32_t regs     : 9; /** Number of normal registers */
     uint32_t idRegs   : 4; /** Number of indirect-SCOM registers */
     uint32_t scomErrs : 9; /** Number of SCOM errors detected */
+
+    uint8_t trgtType  : 6; /** Target type. See enum TrgtType_t */
+    uint8_t reserved  : 2;
 
 } PNOR_Trgt_t;
 
@@ -124,7 +127,7 @@ static inline PNOR_Trgt_t PNOR_getTrgt( uint32_t i_type, uint32_t i_procPos,
                                         uint32_t i_procUnitPos )
 {
     PNOR_Trgt_t t;
-    t.type     = i_type;
+    t.trgtType = i_type;
     t.procPos  = i_procPos;
     t.unitPos  = i_procUnitPos;
     t.regs     = 0;

@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/firdata/scom_util.C $                                 */
+/* $Source: src/occ_405/firdata/scom_util.c $                             */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -91,7 +91,7 @@ int32_t translate_addr( SCOM_Trgt_t i_trgt, uint64_t i_addr, uint64_t * o_addr )
     *o_addr = i_addr;
 
     /* No translation needed for non-unit scoms */
-    if( (l_type == PROC) || (l_type == MEMB) )
+    if( (l_type == TRGT_PROC) || (l_type == TRGT_MEMBUF) )
     {
         *o_addr = i_addr;
     }
@@ -99,12 +99,12 @@ int32_t translate_addr( SCOM_Trgt_t i_trgt, uint64_t i_addr, uint64_t * o_addr )
     {
         uint8_t l_num = SCOM_Trgt_getChipUnitPos(i_trgt);
 
-        if( l_type == EX )
+        if( l_type == TRGT_EX )
         {
             /*first byte is 0x10, second nibble of that byte is the EX number */
             *o_addr |= (l_num << 24);
         }
-        else if( l_type == MCS )
+        else if( l_type == TRGT_MCS )
         {
             /*Non-DMI address */
             if( (i_addr & MCS_MASK) == MCS_BASEADDR )
@@ -197,7 +197,7 @@ int32_t translate_addr( SCOM_Trgt_t i_trgt, uint64_t i_addr, uint64_t * o_addr )
                 }
             }
         }
-        else if( l_type == MBA )
+        else if( l_type == TRGT_MBA )
         {
             if( (i_addr & MBA_MASK) == MBA_BASEADDR )
             {
