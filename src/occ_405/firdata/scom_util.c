@@ -106,6 +106,38 @@ int32_t translate_addr( SCOM_Trgt_t i_trgt, uint64_t i_addr, uint64_t * o_addr )
         //We already assigned i_addr to o_addr above, so just return SUCCESS.
         return rc;
     }
+    else if(i_trgt.type == TRGT_CAPP) //CAPP
+    {
+        set_chiplet_id(N0_CHIPLET_ID + (l_chip_unit_num * 2), o_addr);
+    }
+    else if(i_trgt.type == TRGT_XBUS) //XBUS
+    {
+        uint8_t l_ring_id = get_ring(i_addr) & 0xF;
+        if(l_ring_id <= XB_IOX_2_RING_ID && l_ring_id >= XB_IOX_0_RING_ID)
+        {
+            set_ring((XB_IOX_0_RING_ID + l_chip_unit_num) & 0xF, o_addr);
+        }
+        else if(l_ring_id <= XB_PBIOX_2_RING_ID &&
+                l_ring_id >= XB_PBIOX_0_RING_ID)
+        {
+            set_ring((XB_PBIOX_0_RING_ID + l_chip_unit_num) & 0xF, o_addr);
+        }
+    }
+    else if(i_trgt.type == TRGT_OBUS) //OBUS
+    {
+        set_chiplet_id(OB0_CHIPLET_ID + l_chip_unit_num, o_addr);
+    }
+    else if(i_trgt.type == TRGT_PEC) //PEC
+    {
+        if(get_chiplet_id(i_addr) == N2_CHIPLET_ID)
+        {
+            set_ring((N2_PCIS0_0_RING_ID + l_chip_unit_num) & 0xF, o_addr);
+        }
+        else
+        {
+            set_chiplet_id(PCI0_CHIPLET_ID + l_chip_unit_num, o_addr);
+        }
+    }
     else if(i_trgt.type == TRGT_EX) //EX
     {
         if(get_chiplet_id(i_addr) <= EP05_CHIPLET_ID &&
@@ -163,6 +195,49 @@ int32_t translate_addr( SCOM_Trgt_t i_trgt, uint64_t i_addr, uint64_t * o_addr )
                 *o_addr &= 0xFFFFFFFFFFFFFBFF;
                 *o_addr |= 0x0000000000000800;
             }
+        }
+    }
+    else if(i_trgt.type == TRGT_MCS || //MCS
+            i_trgt.type == TRGT_MI) //MI TODO RTC 175488
+    {
+        set_chiplet_id(N3_CHIPLET_ID - (2 * (l_chip_unit_num / 2)), o_addr);
+        set_sat_id(2 * (l_chip_unit_num % 2), o_addr);
+    }
+    else if(i_trgt.type == TRGT_MCBIST || //MCBIST
+            i_trgt.type == TRGT_MC) //MC TODO RTC 175488
+    {
+        set_chiplet_id(MC01_CHIPLET_ID + l_chip_unit_num, o_addr);
+    }
+    else if(i_trgt.type == TRGT_MCA) //MCA
+    {
+        if(get_chiplet_id(i_addr) == MC01_CHIPLET_ID ||
+           get_chiplet_id(i_addr) == MC23_CHIPLET_ID)
+        {
+            set_chiplet_id(MC01_CHIPLET_ID + (l_chip_unit_num / 4), o_addr);
+
+            if((get_ring(i_addr) & 0xf) == MC_MC01_0_RING_ID)
+            {
+                // mc
+                uint8_t l_sat_id = get_sat_id(i_addr);
+                set_sat_id((l_sat_id - (l_sat_id % 4)) + (l_chip_unit_num % 4)
+                                                                      , o_addr);
+            }
+            else
+            {
+                // iomc
+                set_ring((MC_IOM01_0_RING_ID + (l_chip_unit_num % 4)) & 0xF
+                                                                      , o_addr);
+            }
+        }
+        else
+        {
+            // mcs->mca registers
+            uint8_t l_mcs_unitnum = l_chip_unit_num / 2;
+            set_chiplet_id(N3_CHIPLET_ID - (2 * (l_mcs_unitnum / 2)) , o_addr);
+            set_sat_id(2 * (l_chip_unit_num % 2), o_addr);
+            uint8_t l_mcs_sat_offset = 0x2F & get_sat_offset(i_addr);
+            l_mcs_sat_offset |= (l_chip_unit_num % 2) << 4;
+            set_sat_offset(l_mcs_sat_offset, o_addr);
         }
     }
     else
