@@ -131,11 +131,49 @@ int32_t translate_addr( SCOM_Trgt_t i_trgt, uint64_t i_addr, uint64_t * o_addr )
     {
         if(get_chiplet_id(i_addr) == N2_CHIPLET_ID)
         {
+            // nest
             set_ring((N2_PCIS0_0_RING_ID + l_chip_unit_num) & 0xF, o_addr);
         }
         else
         {
+            // iopci / pci
             set_chiplet_id(PCI0_CHIPLET_ID + l_chip_unit_num, o_addr);
+        }
+    }
+    else if (i_trgt.type == TRGT_PHB) //PHB
+    {
+        if(get_chiplet_id(i_addr) == N2_CHIPLET_ID)
+        {
+            // nest
+            if(l_chip_unit_num == 0)
+            {
+                set_ring(N2_PCIS0_0_RING_ID & 0xF, o_addr);
+                set_sat_id((get_sat_id(i_addr) < 4) ?  1 : 4, o_addr);
+            }
+            else
+            {
+                set_ring((N2_PCIS0_0_RING_ID + (l_chip_unit_num / 3) + 1) & 0xF,
+                                                                        o_addr);
+                set_sat_id(((get_sat_id(i_addr) < 4) ? 1 : 4) +
+                           ((l_chip_unit_num % 2) ? 0 : 1) +
+                           (2 * l_chip_unit_num / 5), o_addr);
+            }
+        }
+        else
+        {
+            // pci
+            if(l_chip_unit_num == 0)
+            {
+                set_chiplet_id(PCI0_CHIPLET_ID, o_addr);
+                set_sat_id(((get_sat_id(i_addr) < 4) ? 1 : 4), o_addr);
+            }
+            else
+            {
+                set_chiplet_id(PCI0_CHIPLET_ID + (l_chip_unit_num / 3) + 1, o_addr);
+                set_sat_id(((get_sat_id(i_addr) < 4) ? 1 : 4) +
+                           ((l_chip_unit_num % 2) ? 0 : 1) +
+                           2 * l_chip_unit_num / 5, o_addr);
+            }
         }
     }
     else if(i_trgt.type == TRGT_EX) //EX
@@ -238,6 +276,59 @@ int32_t translate_addr( SCOM_Trgt_t i_trgt, uint64_t i_addr, uint64_t * o_addr )
             uint8_t l_mcs_sat_offset = 0x2F & get_sat_offset(i_addr);
             l_mcs_sat_offset |= (l_chip_unit_num % 2) << 4;
             set_sat_offset(l_mcs_sat_offset, o_addr);
+        }
+    }
+    else if(i_trgt.type == TRGT_DMI) //DMI  TODO RTC 175488
+    {
+        if(get_chiplet_id(i_addr) == N3_CHIPLET_ID || get_chiplet_id(i_addr) == N1_CHIPLET_ID)
+        {
+            set_chiplet_id(N3_CHIPLET_ID - 2 * (l_chip_unit_num / 4), o_addr);
+            set_sat_id(2 * ((l_chip_unit_num / 2) % 2), o_addr);
+            uint8_t l_sat_offset = get_sat_offset(i_addr);
+            l_sat_offset = (l_sat_offset & 0xF) + ((2 + (l_chip_unit_num % 2)) << 4);
+            set_sat_offset(l_sat_offset, o_addr);
+        }
+        else if(get_chiplet_id(i_addr) == MC01_CHIPLET_ID || get_chiplet_id(i_addr) == MC23_CHIPLET_ID)
+        {
+            if(get_ring(i_addr) == P9C_MC_CHAN_RING_ID)
+            {
+                set_chiplet_id(MC01_CHIPLET_ID + l_chip_unit_num / 4, o_addr);
+                uint8_t l_sat_id = get_sat_id(i_addr);
+                l_sat_id = l_sat_id & 0xC;
+                set_sat_id(l_sat_id + l_chip_unit_num % 4, o_addr);
+            }
+            else if(get_ring(i_addr) == P9C_MC_BIST_RING_ID)
+            {
+                set_chiplet_id(MC01_CHIPLET_ID + l_chip_unit_num / 4, o_addr);
+                uint8_t l_sat_offset = get_sat_offset(i_addr);
+                l_sat_offset = (l_sat_offset & 0xF) + ((l_chip_unit_num % 2) << 4);
+                set_sat_offset(l_sat_offset, o_addr);
+            }
+            else if(get_ring(i_addr) == P9C_MC_IO_RING_ID)
+            {
+                set_chiplet_id(MC01_CHIPLET_ID + l_chip_unit_num / 4, o_addr);
+                uint8_t l_rxtx_group = get_rxtx_group_id(i_addr);
+                l_rxtx_group = l_rxtx_group & 0xF0;
+
+                switch(l_chip_unit_num % 4)
+                {
+                    case 0:
+                        l_rxtx_group += 3;
+                        break;
+                    case 1:
+                        l_rxtx_group += 2;
+                        break;
+                    case 2:
+                        l_rxtx_group += 0;
+                        break;
+                    case 3:
+                        l_rxtx_group += 1;
+                        break;
+                    default:
+                        break;
+                }
+                set_rxtx_group_id(l_rxtx_group, o_addr);
+            }
         }
     }
     else
