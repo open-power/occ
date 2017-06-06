@@ -104,4 +104,4 @@ INPUT ( amec_amester.o
         native.o
         scom_trgt.o
         scom_util.o
-)
+        scom_addr_util.o)

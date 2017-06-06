@@ -30,6 +30,7 @@
 #include "occ_common.h"
 #include "gpe_export.h"
 #include <scom_util.h>
+#include "scom_addr_util.h"
 
 bool G_request_created = FALSE;
 GPE_BUFFER(ipc_scom_op_t G_scom_op);
