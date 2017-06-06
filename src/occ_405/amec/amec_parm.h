@@ -50,13 +50,10 @@
 //*************************************************************************
 
 // List of all parameters
-// NOTE: The parameters must be in the same order as g_amec_parm_list[] in 
-// amec_parm_table.c
 typedef enum
 {
     PARM_SYS_FMAX,
     PARM_SYS_FMIN,
-    PARM_GPST,
     PARM_PSTATE_MHZ,
     PARM_FREQ_REASON,
     PARM_FREQ_OR,
@@ -155,6 +152,7 @@ typedef enum
     PARM_PGPE_WOF_OFF,
     PARM_VFRT_MM_OFFSET,
     PARM_VFRT_REQ_RC,
+
     // End WOF Parameters
     AMEC_PARM_NUMBER_OF_PARAMETERS
 } AMEC_PARM_ENUM;

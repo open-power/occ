@@ -108,9 +108,6 @@ extern amec_sys_t g_amec_sys;
 
 // This is the list of all parameters seen by Amester
 //
-// Note: The parameters must be in the same order as in AMEC_PARM_ENUM
-// in amec_parm.h
-//
 // Future optimization: This table could be placed in main memory, not
 // the SRAM tank, since slow access to it is OK.
 amec_parm_t g_amec_parm_list[] = {
@@ -144,7 +141,7 @@ amec_parm_t g_amec_parm_list[] = {
     // Begin WOF parameters
     AMEC_PARM_UINT8(PARM_WOF_HDR_VERSION, "wof_hdr_ver", &g_amec_sys.wof.version),
     AMEC_PARM_UINT16(PARM_VFRT_BLOCK_SIZE, "vfrt_blck_sz", &g_amec_sys.wof.vfrt_block_size),
- AMEC_PARM_UINT16(PARM_VFRT_BLOCK_HEADER_SZ, "vfrtBlckHdrSz", &g_amec_sys.wof.vfrt_blck_hdr_sz),
+    AMEC_PARM_UINT16(PARM_VFRT_BLOCK_HEADER_SZ, "vfrtBlckHdrSz", &g_amec_sys.wof.vfrt_blck_hdr_sz),
     AMEC_PARM_UINT16(PARM_VFRT_DATA_SIZE , "vfrt_data_size", &g_amec_sys.wof.vfrt_data_size ),
     AMEC_PARM_UINT8(PARM_ACTIVE_QUADS_SIZE , "actv_quads_size", &g_amec_sys.wof.active_quads_size ),
     AMEC_PARM_UINT8(PARM_CORE_COUNT, "core_count", &g_amec_sys.wof.core_count),
@@ -192,6 +189,7 @@ amec_parm_t g_amec_parm_list[] = {
     AMEC_PARM_UINT32(PARM_IAC_VDD, "iac_vdd", &g_amec_sys.wof.iac_vdd),
     AMEC_PARM_UINT32(PARM_IAC_VDN, "iac_vdn", &g_amec_sys.wof.iac_vdn),
     AMEC_PARM_UINT32(PARM_IAC_TDP_VDD, "iac_tdp_vdd", &g_amec_sys.wof.iac_tdp_vdd),
+    AMEC_PARM_UINT8(PARM_VOLTAGE_IDX, "voltage_idx", &g_amec_sys.wof.chip_volt_idx),
     AMEC_PARM_UINT32(PARM_V_RATIO, "Vratio", &g_amec_sys.wof.v_ratio),
     AMEC_PARM_UINT32(PARM_F_RATIO, "Fratio", &g_amec_sys.wof.f_ratio),
     AMEC_PARM_UINT32(PARM_V_CLIP, "Vclip", &g_amec_sys.wof.v_clip),
@@ -203,7 +201,6 @@ amec_parm_t g_amec_parm_list[] = {
     AMEC_PARM_UINT32(PARM_CEFF_VDN, "ceff_vdn", &g_amec_sys.wof.ceff_vdn),
     AMEC_PARM_UINT32(PARM_CEFF_RATIO_VDN, "ceff_ratio_vdn", &g_amec_sys.wof.ceff_ratio_vdn),
 
-    AMEC_PARM_UINT8(PARM_VOLTAGE_IDX, "voltage_idx", &g_amec_sys.wof.chip_volt_idx),
     AMEC_PARM_UINT32(PARM_ALL_CORES_OFF_ISO, "allCoresOffIso", &g_amec_sys.wof.all_cores_off_iso),
     AMEC_PARM_UINT32(PARM_ALL_CACHES_ON_ISO, "allCachesOnIso", &g_amec_sys.wof.all_good_caches_on_iso),
     AMEC_PARM_UINT16_ARRAY(PARM_QUAD_GOOD_CORES_ONLY, "quad_good_cores", &g_amec_sys.wof.quad_good_cores_only, MAXIMUM_QUADS),
