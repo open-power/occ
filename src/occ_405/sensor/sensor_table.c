@@ -417,6 +417,13 @@ const sensor_ptr_t G_amec_sensor_list[] =
   SENSOR_PTR(MEMSP2MS,              &g_amec_sys.proc[0].memsp2ms_tls),
 
   // ------------------------------------------------------
+  // GPU Sensors
+  // ------------------------------------------------------
+  SENSOR_PTR(TEMPGPU0,              &g_amec_sys.proc[0].tempgpu0),
+  SENSOR_PTR(TEMPGPU1,              &g_amec_sys.proc[0].tempgpu1),
+  SENSOR_PTR(TEMPGPU2,              &g_amec_sys.proc[0].tempgpu2),
+
+  // ------------------------------------------------------
   // Regulator Sensors
   // ------------------------------------------------------
   SENSOR_PTR( UVOLT250USP0V0,       &g_amec_sys.proc[0].vrm[0].uvolt250us),

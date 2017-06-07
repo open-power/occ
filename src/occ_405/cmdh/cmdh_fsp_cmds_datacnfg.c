@@ -91,6 +91,7 @@ const data_req_table_t G_data_pri_table[] =
     {DATA_MASK_AVSBUS_CONFIG,         DATA_FORMAT_AVSBUS_CONFIG},
     {DATA_MASK_SET_ROLE,              DATA_FORMAT_SET_ROLE},
     {DATA_MASK_MEM_CFG,               DATA_FORMAT_MEM_CFG},
+    {DATA_MASK_GPU,                   DATA_FORMAT_GPU},
     {DATA_MASK_THRM_THRESHOLDS,       DATA_FORMAT_THRM_THRESHOLDS},
     {DATA_MASK_FREQ_PRESENT,          DATA_FORMAT_FREQ},
     {DATA_MASK_PCAP_PRESENT,          DATA_FORMAT_POWER_CAP},
@@ -104,8 +105,8 @@ bool G_mem_monitoring_allowed = FALSE;
 // Flag will get enabled when OCC receives Thermal Threshold data
 bool G_vrm_thermal_monitoring = FALSE;
 
-// Will get set to true when receiving APSS config data 
-bool G_apss_present = FALSE;
+// Will get set when receiving APSS config data
+PWR_READING_TYPE G_pwr_reading_type = PWR_READING_TYPE_NONE;
 
 // Function Specification
 //
@@ -938,15 +939,19 @@ errlHndl_t data_store_apss_config_v20(const cmdh_apss_config_v20_t * i_cmd_ptr,
                                             cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     errlHndl_t              l_err = NULL;
-    uint16_t l_channel = 0, l_port = 0, l_pin = 0;
-
-    // Set to default value
-    memset(&G_sysConfigData.apss_adc_map, SYSCFG_INVALID_ADC_CHAN, sizeof(G_sysConfigData.apss_adc_map));
-    memset(&G_sysConfigData.apss_gpio_map, SYSCFG_INVALID_PIN, sizeof(G_sysConfigData.apss_gpio_map));
-    G_apss_present = FALSE;
+    uint16_t l_channel = 0, l_port = 0, l_pin = 0, l_num_channels = MAX_APSS_ADC_CHANNELS;
 
     // ADC channels info
-    for(l_channel=0;(l_channel < MAX_APSS_ADC_CHANNELS) && (NULL == l_err);l_channel++)
+    if(G_pwr_reading_type == PWR_READING_TYPE_2_CHANNEL)
+       l_num_channels = 2;
+    else
+    {
+       // This must be APSS type, however it is possible that xml and/or HTMGT doesn't support
+       // indication of no APSS so we will default to none and then set to APSS if valid channel found
+       G_pwr_reading_type = PWR_READING_TYPE_NONE;
+    }
+
+    for(l_channel=0;(l_channel < l_num_channels) && (NULL == l_err);l_channel++)
     {
         G_sysConfigData.apss_cal[l_channel].gnd_select = i_cmd_ptr->adc[l_channel].gnd_select;
         G_sysConfigData.apss_cal[l_channel].gain       = i_cmd_ptr->adc[l_channel].gain;
@@ -960,8 +965,11 @@ errlHndl_t data_store_apss_config_v20(const cmdh_apss_config_v20_t * i_cmd_ptr,
             apss_store_ipmi_sensor_id(l_channel, &(i_cmd_ptr->adc[l_channel]));
 
             // APSS is present if there is at least one channel with a valid assignment
-            if(i_cmd_ptr->adc[l_channel].assignment != ADC_RESERVED)
-              G_apss_present = TRUE;
+            if( (i_cmd_ptr->adc[l_channel].assignment != ADC_RESERVED) &&
+                (G_pwr_reading_type == PWR_READING_TYPE_NONE) )
+            {
+                G_pwr_reading_type = PWR_READING_TYPE_APSS;
+            }
         }
         CNFG_DBG("data_store_apss_config_v20: Channel %d: FuncID[0x%02X] SID[0x%08X]",
                  l_channel, i_cmd_ptr->adc[l_channel].assignment, i_cmd_ptr->adc[l_channel].ipmisensorId);
@@ -970,7 +978,7 @@ errlHndl_t data_store_apss_config_v20(const cmdh_apss_config_v20_t * i_cmd_ptr,
                  G_sysConfigData.apss_cal[l_channel].offset);
     }
 
-    if(NULL == l_err)
+    if( (NULL == l_err) && (G_pwr_reading_type == PWR_READING_TYPE_APSS) ) // only APSS has GPIO config
     {
 
         // GPIO Ports
@@ -988,13 +996,6 @@ errlHndl_t data_store_apss_config_v20(const cmdh_apss_config_v20_t * i_cmd_ptr,
             }
 
         }
-
-        if(NULL == l_err)
-        {
-            // Change Data Request Mask to indicate we got this data
-            G_data_cnfg->data_mask |= DATA_MASK_APSS_CONFIG;
-            CMDH_TRAC_IMP("Got valid APSS Config data via TMGT; APSS present = %d", G_apss_present);
-        }
     }
 
     return l_err;
@@ -1011,14 +1012,46 @@ errlHndl_t data_store_apss_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                         cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     errlHndl_t              l_err = NULL;
+    bool                    l_invalid_data = FALSE;
     cmdh_apss_config_v20_t *l_cmd_ptr = (cmdh_apss_config_v20_t *)i_cmd_ptr;
     uint16_t                l_data_length = CMDH_DATALEN_FIELD_UINT16(l_cmd_ptr); //Command length
     uint32_t                l_v20_data_sz = sizeof(cmdh_apss_config_v20_t) - sizeof(cmdh_fsp_cmd_header_t);
 
-    if( !( (l_cmd_ptr->version == DATA_APSS_VERSION20) && (l_v20_data_sz == l_data_length) )  )
+
+    // Set to default value
+    memset(&G_sysConfigData.apss_adc_map, SYSCFG_INVALID_ADC_CHAN, sizeof(G_sysConfigData.apss_adc_map));
+    memset(&G_sysConfigData.apss_gpio_map, SYSCFG_INVALID_PIN, sizeof(G_sysConfigData.apss_gpio_map));
+
+    // only version 0x20 supported and data length must be at least 4
+    if( (l_cmd_ptr->version != DATA_APSS_VERSION20) || (l_data_length < 4))
     {
-        CMDH_TRAC_ERR("data_store_apss_config: Invalid System Data packet. Given Version:0x%X",
-                 l_cmd_ptr->version);
+       l_invalid_data = TRUE;
+    }
+    else
+    {
+       // verify the data length and process the data based on power reading type
+       // PWR_READING_TYPE_APSS --> full size of structure
+       // PWR_READING_TYPE_2_CHANNEL --> 0x20 bytes (2 ADC channels, no GPIOs)
+       // PWR_READING_TYPE_NONE --> 4 bytes (no channel or GPIO data)
+
+       G_pwr_reading_type = l_cmd_ptr->type;
+
+       if( ( (G_pwr_reading_type == PWR_READING_TYPE_2_CHANNEL) && (l_data_length == 0x20) ) ||
+                ( (G_pwr_reading_type == PWR_READING_TYPE_APSS) && (l_v20_data_sz == l_data_length) ) )
+       {
+          l_err = data_store_apss_config_v20(l_cmd_ptr, o_rsp_ptr);
+       }
+       else if( (G_pwr_reading_type != PWR_READING_TYPE_NONE) || (l_data_length != 4) )
+       {
+          l_invalid_data = TRUE;
+       }
+    }
+
+    if(l_invalid_data)
+    {
+        G_pwr_reading_type = PWR_READING_TYPE_NONE;
+        CMDH_TRAC_ERR("data_store_apss_config: Invalid System Data packet. Given Version:0x%02X length:0x%04X",
+                 l_cmd_ptr->version, l_data_length);
 
         /* @
          * @errortype
@@ -1031,9 +1064,11 @@ errlHndl_t data_store_apss_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
          */
         cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
     }
-    else // Version 0x20
+    else if(NULL == l_err)
     {
-        l_err = data_store_apss_config_v20(l_cmd_ptr, o_rsp_ptr);
+        // Change Data Request Mask to indicate we got this data
+        G_data_cnfg->data_mask |= DATA_MASK_APSS_CONFIG;
+        CMDH_TRAC_IMP("Got valid APSS Config data via TMGT; Pwr reading type = %d", G_pwr_reading_type);
     }
 
     return l_err;
@@ -1152,6 +1187,8 @@ errlHndl_t data_store_avsbus_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
     }
     else
     {
+        G_sysConfigData.proc_power_adder = l_cmd_ptr->proc_power_adder;
+
         // We can use vdd/vdn. Clear NO_VDD_VDN_READ mask
         set_clear_wof_disabled( CLEAR, WOF_RC_INVALID_VDD_VDN );
         avsbus_init();
@@ -1167,6 +1204,48 @@ errlHndl_t data_store_avsbus_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
     return l_err;
 
 } // end data_store_avsbus_config()
+
+// Function Specification
+//
+// Name:  data_store_gpu
+//
+// Description: GPU information
+//
+// End Function Specification
+errlHndl_t data_store_gpu(const cmdh_fsp_cmd_t * i_cmd_ptr,
+                                cmdh_fsp_rsp_t * o_rsp_ptr)
+{
+    errlHndl_t l_err = NULL;
+    const uint8_t  GPU_VERSION = 0x01;
+    const uint16_t GPU_LENGTH = sizeof(cmdh_gpu_config_t) - sizeof(cmdh_fsp_cmd_header_t);
+
+    cmdh_gpu_config_t *l_cmd_ptr = (cmdh_gpu_config_t *)i_cmd_ptr;
+    uint16_t l_data_length = CMDH_DATALEN_FIELD_UINT16(l_cmd_ptr);
+
+    if ((GPU_VERSION == l_cmd_ptr->version) && (GPU_LENGTH == l_data_length))
+    {
+        G_sysConfigData.total_non_gpu_max_pwr_watts = l_cmd_ptr->total_non_gpu_max_pwr_watts;
+        G_sysConfigData.total_proc_mem_pwr_drop_watts = l_cmd_ptr->total_proc_mem_pwr_drop_watts;
+        G_sysConfigData.gpu_sensor_ids[0]  = l_cmd_ptr->gpu0_sid;
+        AMECSENSOR_PTR(TEMPGPU0)->ipmi_sid = l_cmd_ptr->gpu0_temp_sid;
+        G_sysConfigData.gpu_sensor_ids[1]  = l_cmd_ptr->gpu1_sid;
+        AMECSENSOR_PTR(TEMPGPU1)->ipmi_sid = l_cmd_ptr->gpu1_temp_sid;
+        G_sysConfigData.gpu_sensor_ids[2]  = l_cmd_ptr->gpu2_sid;
+        AMECSENSOR_PTR(TEMPGPU2)->ipmi_sid = l_cmd_ptr->gpu2_temp_sid;
+
+        G_data_cnfg->data_mask |= DATA_MASK_GPU;
+        CMDH_TRAC_IMP("data_store_gpu: Got valid GPU data packet");
+    }
+    else
+    {
+        CMDH_TRAC_ERR("data_store_gpu: Invalid GPU version/length (0x%02X/0x%04X))",
+                      l_cmd_ptr->version, l_data_length);
+        cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
+    }
+
+    return l_err;
+
+} // end data_store_gpu()
 
 // Function Specification
 //
@@ -1208,7 +1287,7 @@ errlHndl_t data_store_role(const cmdh_fsp_cmd_t * i_cmd_ptr,
             rtl_set_run_mask_deferred(RTL_FLAG_MSTR);
 
             // Allow APSS tasks to run on OCC master if APSS is present
-            if(G_apss_present)
+            if(G_pwr_reading_type == PWR_READING_TYPE_APSS)
                rtl_clr_run_mask_deferred(RTL_FLAG_APSS_NOT_INITD);
 
             CMDH_TRAC_IMP("data_store_role: OCC Role set to Master via TMGT");
@@ -1248,7 +1327,7 @@ errlHndl_t data_store_role(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 }
 
                 // Allow APSS tasks to run on OCC backup
-                if(G_apss_present)
+                if(G_pwr_reading_type == PWR_READING_TYPE_APSS)
                    rtl_clr_run_mask_deferred(RTL_FLAG_APSS_NOT_INITD);
                 CMDH_TRAC_IMP("data_store_role: OCC Role set to Backup Master via TMGT");
             }
@@ -2249,6 +2328,16 @@ errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
             {
                 // Notify AMEC of the new data
                 l_new_data = DATA_MASK_AVSBUS_CONFIG;
+            }
+            break;
+
+        case DATA_FORMAT_GPU:
+            // Store GPU information
+            l_errlHndl = data_store_gpu(i_cmd_ptr, o_rsp_ptr);
+            if(NULL == l_errlHndl)
+            {
+                // Notify AMEC of the new data
+                l_new_data = DATA_MASK_GPU;
             }
             break;
 

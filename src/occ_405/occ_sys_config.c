@@ -165,6 +165,8 @@ occSysConfigData_t G_sysConfigData =
         .rail = 0,
     },
 
+    .proc_power_adder = 0,
+
     // -----------------------------------------------------------
     // Power Cap Initializations
     // -----------------------------------------------------------

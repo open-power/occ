@@ -103,6 +103,14 @@ typedef union
 #define MAX_GPU_DOMAINS         2
 #define MAX_NUM_GPU_PER_DOMAIN  3
 
+//Returns non-0 if the specified GPU behind this OCC (not system wide) is present. Otherwise, returns zero.
+// NOTE: This is looking at the first GPU config, GPU config should not change after first determined, if
+// current GPU config is wanted to compare to the first check G_curr_proc_gpu_config
+extern uint32_t G_first_proc_gpu_config;
+#define GPU_PRESENT(occ_gpu_id) \
+         ((0x01 << occ_gpu_id) & G_first_proc_gpu_config)
+
+
 // List of all possible APSS Channel assignments (Function IDs)
 // Each channel in the APSS will be associated with only one of these
 // function ids for each system type as defined in the mrw.
@@ -365,6 +373,7 @@ typedef struct
   // AVS Bus config
   avsbusData_t avsbus_vdd;
   avsbusData_t avsbus_vdn;
+  uint16_t     proc_power_adder;
 
   // ------------------------------------
   // Power Cap Configuration Data updated by Slaves
@@ -420,6 +429,13 @@ typedef struct
   //           cent=0-8, mba = 0/1 for mba01/mba23
   //              (only first two columns populated)
   mem_throt_config_data_t mem_throt_limits[MAX_NUM_MEM_CONTROLLERS][MAX_NUM_MCU_PORTS];
+
+  // --------------------------------------
+  // GPU Information for error callout and GPU power capping
+  // --------------------------------------
+  uint32_t gpu_sensor_ids[MAX_NUM_GPU_PER_DOMAIN];
+  uint16_t total_non_gpu_max_pwr_watts;
+  uint16_t total_proc_mem_pwr_drop_watts;
 
 } occSysConfigData_t;  __attribute__ ((__aligned__ (128)))
 

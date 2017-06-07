@@ -47,6 +47,7 @@
 #include <proc_data.h>
 #include "homer.h"
 #include <centaur_data.h>
+#include <avsbus.h>
 #include "cmdh_dbug_cmd.h"
 #include "wof.h"
 extern dimm_sensor_flags_t G_dimm_temp_expired_bitmap;
@@ -141,7 +142,7 @@ errlHndl_t cmdh_tmgt_poll (const cmdh_fsp_cmd_t * i_cmd_ptr,
 ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     ERRL_RC                     l_rc  = ERRL_RC_INTERNAL_FAIL;
-    uint8_t                     k = 0;
+    uint8_t                     k = 0, l_max_sensors = 0;
     cmdh_poll_sensor_db_t       l_sensorHeader;
 
     // Set pointer to start of o_rsp_ptr
@@ -244,7 +245,9 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
     l_sensorHeader.count  = 0;
 
     //Initialize to max number of possible temperature sensors.
-    cmdh_poll_temp_sensor_t l_tempSensorList[MAX_NUM_CORES + MAX_NUM_MEM_CONTROLLERS + (MAX_NUM_MEM_CONTROLLERS * NUM_DIMMS_PER_CENTAUR)];
+    l_max_sensors = MAX_NUM_CORES + MAX_NUM_MEM_CONTROLLERS + (MAX_NUM_MEM_CONTROLLERS * NUM_DIMMS_PER_CENTAUR) + MAX_NUM_GPU_PER_DOMAIN;
+    l_max_sensors++;  // +1 for VRM
+    cmdh_poll_temp_sensor_t l_tempSensorList[l_max_sensors];
     memset(l_tempSensorList, 0x00, sizeof(l_tempSensorList));
 
     // Add the core temperatures
@@ -342,6 +345,18 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
         }
     }
 
+    // Add GPU temperatures
+    for (k=0; k<MAX_NUM_GPU_PER_DOMAIN; k++)
+    {
+        if(GPU_PRESENT(k))
+        {
+            l_tempSensorList[l_sensorHeader.count].id = G_amec_sensor_list[TEMPGPU0 + k]->ipmi_sid;
+            l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_GPU;
+            l_tempSensorList[l_sensorHeader.count].value = (G_amec_sensor_list[TEMPGPU0 + k]->sample) & 0xFF;
+            l_sensorHeader.count++;
+        }
+    }
+
     // Copy header first.
     memcpy ((void *) &(o_rsp_ptr->data[l_rsp_index]), (void *)&l_sensorHeader, sizeof(l_sensorHeader));
     // Increment index into response buffer.
@@ -395,8 +410,10 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
 
     /////////////////////
     // POWR Sensors:
-    // Generate datablock header for power sensors and sensor data.  RETURNED by MASTER ONLY.
-    if (G_occ_role == OCC_MASTER)
+    // Generate datablock header for power sensors and sensor data.
+    // If APSS is present return format version 0x02 by MASTER ONLY.
+    // If no APSS present return format version 0xA0 by all OCCs.
+    if ( (G_occ_role == OCC_MASTER) && (G_pwr_reading_type == PWR_READING_TYPE_APSS) )
     {
         memset((void*) &l_sensorHeader, 0, (size_t)sizeof(cmdh_poll_sensor_db_t));
         memcpy ((void *) &(l_sensorHeader.eyecatcher[0]), SENSOR_POWR, 4);
@@ -439,6 +456,58 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
         }
     }
 
+    else if (G_pwr_reading_type != PWR_READING_TYPE_APSS)
+    {
+        memset((void*) &l_sensorHeader, 0, (size_t)sizeof(cmdh_poll_sensor_db_t));
+        memcpy ((void *) &(l_sensorHeader.eyecatcher[0]), SENSOR_POWR, 4);
+        l_sensorHeader.format = 0xA0;
+        l_sensorHeader.length = sizeof(cmdh_poll_power_no_apss_sensor_t);
+        l_sensorHeader.count  = 1;
+
+        cmdh_poll_power_no_apss_sensor_t l_pwrData;
+        memset((void*) &l_pwrData, 0, (size_t)sizeof(cmdh_poll_power_no_apss_sensor_t));
+
+        // if there is a non-APSS chip for system power fill in system power else return 0's
+        if(G_pwr_reading_type != PWR_READING_TYPE_NONE)
+        {
+            l_pwrData.sys_pwr_id = G_amec_sensor_list[PWRSYS]->ipmi_sid;
+            l_pwrData.sys_pwr_update_time = G_mics_per_tick; // system power is read every tick
+            l_pwrData.sys_pwr_current = G_amec_sensor_list[PWRSYS]->sample;
+            l_pwrData.sys_pwr_update_tag = G_amec_sensor_list[PWRSYS]->update_tag;
+            l_pwrData.sys_pwr_accumul = G_amec_sensor_list[PWRSYS]->accumulator;
+        }
+
+        // Proc power is from AVS bus, return readings if reading Vdd and Vdn else return 0's
+        if( (G_avsbus_vdd_monitoring) && (G_avsbus_vdn_monitoring) )
+        {
+            // when no APSS present proc readings are updated based on AVS timing use PWRVDD/N timing (2 ticks)
+            l_pwrData.proc_pwr_update_time = G_mics_per_tick * 2;
+            l_pwrData.proc_pwr_current = G_amec_sensor_list[PWRPROC]->sample;
+            l_pwrData.proc_pwr_update_tag = G_amec_sensor_list[PWRPROC]->update_tag;
+            l_pwrData.proc_pwr_accumul = G_amec_sensor_list[PWRPROC]->accumulator;
+            l_pwrData.vdd_pwr_current = G_amec_sensor_list[PWRVDD]->sample;
+            l_pwrData.vdd_pwr_update_tag = G_amec_sensor_list[PWRVDD]->update_tag;
+            l_pwrData.vdd_pwr_accumul = G_amec_sensor_list[PWRVDD]->accumulator;
+            l_pwrData.vdn_pwr_current = G_amec_sensor_list[PWRVDN]->sample;
+            l_pwrData.vdn_pwr_update_tag = G_amec_sensor_list[PWRVDN]->update_tag;
+            l_pwrData.vdn_pwr_accumul = G_amec_sensor_list[PWRVDN]->accumulator;
+        }
+
+        // Copy header to response buffer.
+        memcpy ((void *) &(o_rsp_ptr->data[l_rsp_index]),
+                (void *)&l_sensorHeader, sizeof(l_sensorHeader));
+        // Increment index into response buffer.
+        l_rsp_index += sizeof(l_sensorHeader);
+
+        // Copy sensor data into response buffer.
+        memcpy ((void *) &(o_rsp_ptr->data[l_rsp_index]),
+                (void *)&(l_pwrData), sizeof(cmdh_poll_power_no_apss_sensor_t));
+        // Increment index into response buffer.
+        l_rsp_index += sizeof(cmdh_poll_power_no_apss_sensor_t);
+
+        l_poll_rsp->sensor_dblock_count +=1;
+    }
+
     ////////////////////////
     // POWER CAPS:
     // Generate datablock header for power caps.  RETURNED by MASTER ONLY.
@@ -448,18 +517,24 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
         memcpy ((void *) &(l_sensorHeader.eyecatcher[0]), SENSOR_CAPS, 4);
         l_sensorHeader.format = 0x03;
         l_sensorHeader.length = sizeof(cmdh_poll_pcaps_sensor_t);
-
+        l_sensorHeader.count  = 1;
 
         cmdh_poll_pcaps_sensor_t l_pcapData;
-        l_pcapData.current = g_amec->pcap.active_node_pcap;
-        l_pcapData.system = G_amec_sensor_list[PWRSYS]->sample;
-        l_pcapData.n = G_sysConfigData.pcap.oversub_pcap;
-        l_pcapData.max = G_sysConfigData.pcap.max_pcap;
-        l_pcapData.hard_min = G_sysConfigData.pcap.hard_min_pcap;
-        l_pcapData.soft_min = G_sysConfigData.pcap.soft_min_pcap;
-        l_pcapData.user = G_sysConfigData.pcap.current_pcap;
-        l_pcapData.source = G_sysConfigData.pcap.source;
-        l_sensorHeader.count  = 1;
+        memset((void*) &l_pcapData, 0, (size_t)sizeof(cmdh_poll_pcaps_sensor_t));
+
+        // Return 0's for power cap section if there is no system power reading
+        // OCC can't support power capping without knowing the system power
+        if(G_pwr_reading_type != PWR_READING_TYPE_NONE)
+        {
+           l_pcapData.current = g_amec->pcap.active_node_pcap;
+           l_pcapData.system = G_amec_sensor_list[PWRSYS]->sample;
+           l_pcapData.n = G_sysConfigData.pcap.oversub_pcap;
+           l_pcapData.max = G_sysConfigData.pcap.max_pcap;
+           l_pcapData.hard_min = G_sysConfigData.pcap.hard_min_pcap;
+           l_pcapData.soft_min = G_sysConfigData.pcap.soft_min_pcap;
+           l_pcapData.user = G_sysConfigData.pcap.current_pcap;
+           l_pcapData.source = G_sysConfigData.pcap.source;
+        }
 
         // Copy header to response buffer.
         memcpy ((void *) &(o_rsp_ptr->data[l_rsp_index]),
@@ -467,17 +542,14 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
         // Increment index into response buffer.
         l_rsp_index += sizeof(l_sensorHeader);
 
-        uint8_t l_sensordataSz = l_sensorHeader.count * l_sensorHeader.length;
         // Copy sensor data into response buffer.
         memcpy ((void *) &(o_rsp_ptr->data[l_rsp_index]),
-                (void *)&(l_pcapData), l_sensordataSz);
+                (void *)&(l_pcapData), sizeof(cmdh_poll_pcaps_sensor_t));
         // Increment index into response buffer.
-        l_rsp_index += l_sensordataSz;
+        l_rsp_index += sizeof(cmdh_poll_pcaps_sensor_t);
 
         l_poll_rsp->sensor_dblock_count +=1;
-
     }
-
 
     ///////////////////
     // EXTN Sensors:

@@ -471,8 +471,14 @@ typedef struct
   sensor_t temp2mscent;
   sensor_t tempdimmthrm;
   sensor_t memsp2ms_tls;
+
   // Nimbus DIMM Sensors
   sensor_t       tempdimm[NUM_DIMM_PORTS*NUM_DIMMS_PER_I2CPORT];
+
+ // GPU Sensors
+  sensor_t tempgpu0;
+  sensor_t tempgpu1;
+  sensor_t tempgpu2;
 
   sensor_t curvdn;
   sensor_t pwrvdd;

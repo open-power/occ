@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -51,6 +51,7 @@ typedef enum
    DATA_FORMAT_MEM_THROT             = 0x12,
    DATA_FORMAT_THRM_THRESHOLDS       = 0x13,
    DATA_FORMAT_AVSBUS_CONFIG         = 0x14,
+   DATA_FORMAT_GPU                   = 0x15,
 } eConfigDataFormatVersion;
 
 // Enum of the various Cnfg Data Masks that are used
@@ -67,6 +68,7 @@ typedef enum
    DATA_MASK_IPS_CNFG              = 0x00000100,
    DATA_MASK_MEM_CFG               = 0x00000200,
    DATA_MASK_MEM_THROT             = 0x00000400,
+   DATA_MASK_GPU                   = 0x00000800,
 } eConfigDataPriorityMask;
 
 typedef enum
@@ -75,8 +77,18 @@ typedef enum
     DATA_FRU_CENTAUR            = 0x01,
     DATA_FRU_DIMM               = 0x02,
     DATA_FRU_VRM                = 0x03,
+    DATA_FRU_GPU                = 0x04,
     DATA_FRU_MAX,
 } eConfigDataFruType;
+
+typedef enum
+{
+    PWR_READING_TYPE_APSS       = 0x00,
+    PWR_READING_TYPE_2_CHANNEL  = 0x02,
+    PWR_READING_TYPE_NONE       = 0xFF,
+} PWR_READING_TYPE;
+
+extern PWR_READING_TYPE  G_pwr_reading_type;
 
 // Set OCC Role Masks
 #define OCC_ROLE_MASTER_MASK        0x01
@@ -85,6 +97,9 @@ typedef enum
 // Bit mask in poll for indicating if OCC thinks
 // it is running in simulation.
 #define OCC_SIMICS_ENVIRONMENT      0x08
+
+// Bit mask in poll for indicating OCC owns PMCR
+#define OCC_PMCR_OWNER_POLL_STATUS_MASK 0x10
 
 // Used by TMGT to send OCC the frequencies for each mode.
 typedef struct __attribute__ ((packed))
@@ -127,7 +142,8 @@ typedef struct __attribute__ ((packed))
     struct cmdh_fsp_cmd_header;
     uint8_t              format;
     uint8_t              version;
-    uint8_t              reserved[2];
+    uint8_t              type;
+    uint8_t              reserved;
     apss_cfg_adc_v20_t   adc[MAX_APSS_ADC_CHANNELS];
     apss_cfg_gpio_t      gpio[MAX_APSS_GPIO_PORTS];
 }cmdh_apss_config_v20_t; //New for P9
@@ -143,8 +159,25 @@ typedef struct __attribute__ ((packed))
     uint16_t reserved1;
     uint8_t  vdn_bus;
     uint8_t  vdn_rail;
-    uint16_t reserved2;
+    uint16_t proc_power_adder;
 }cmdh_avsbus_config_t;
+
+// Used by TMGT to send OCC GPU data.
+typedef struct __attribute__ ((packed))
+{
+    struct cmdh_fsp_cmd_header;
+    uint8_t  format;
+    uint8_t  version;
+    uint16_t total_non_gpu_max_pwr_watts;
+    uint16_t total_proc_mem_pwr_drop_watts;
+    uint16_t reserved;
+    uint32_t gpu0_sid;       // GPU0 Sensor ID
+    uint32_t gpu0_temp_sid;  // GPU0 Temperature Sensor ID
+    uint32_t gpu1_sid;       // GPU1 Sensor ID
+    uint32_t gpu1_temp_sid;  // GPU1 Temperature Sensor ID
+    uint32_t gpu2_sid;       // GPU2 Sensor ID
+    uint32_t gpu2_temp_sid;  // GPU2 Temperature Sensor ID
+}cmdh_gpu_config_t;
 
 // Used by TMGT to send OCC the PCAP config data.
 typedef struct __attribute__ ((packed))

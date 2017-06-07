@@ -86,7 +86,7 @@ extern uint32_t G_khz_per_pstate;
 extern uint8_t G_proc_pmin;
 extern uint8_t G_proc_pmax;
 
-extern bool    G_apss_present;
+extern PWR_READING_TYPE  G_pwr_reading_type;
 
 IMAGE_HEADER (G_mainAppImageHdr,__ssx_boot,MAIN_APP_ID,ID_NUM_INVALID);
 
@@ -1312,14 +1312,16 @@ void master_occ_init()
     errlHndl_t l_err = NULL;
 
     // Only do APSS initialization if APSS is present
-    if(G_apss_present)
+    if(G_pwr_reading_type == PWR_READING_TYPE_APSS)
+    {
        l_err = initialize_apss();
 
-    if( (NULL != l_err))
-    {
-        MAIN_TRAC_ERR("master_occ_init: Error initializing APSS");
-        // commit & delete. CommitErrl handles NULL error log handle
-        REQUEST_RESET(l_err);
+       if( (NULL != l_err))
+       {
+           MAIN_TRAC_ERR("master_occ_init: Error initializing APSS");
+           // commit & delete. CommitErrl handles NULL error log handle
+           REQUEST_RESET(l_err);
+       }
     }
 
     // Reinitialize the PBAX Queues

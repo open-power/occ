@@ -72,7 +72,7 @@ uint32_t G_curr_num_gpus_sys = 0;
 
 extern uint8_t G_occ_interrupt_type;
 extern bool    G_vrm_thermal_monitoring;
-extern bool    G_apss_present;
+extern PWR_READING_TYPE  G_pwr_reading_type;
 
 //*************************************************************************/
 // Code
@@ -195,7 +195,7 @@ void amec_update_apss_sensors(void)
 {
     // Need to check to make sure APSS data has been received
     // via slave inbox first
-    if (G_slv_inbox_received && G_apss_present)
+    if (G_slv_inbox_received && (G_pwr_reading_type == PWR_READING_TYPE_APSS))
     {
         uint8_t l_proc   = G_pbax_id.chip_id;
         uint32_t temp32  = 0;
@@ -571,12 +571,12 @@ void update_avsbus_power_sensors(const avsbus_type_e i_type)
             //                    = v(100uV) * i(10mA) / 1,000,000
             const uint32_t l_power = l_chip_voltage_100uv * l_current_10ma / 1000000;
             sensor_update(AMECSENSOR_PTR(l_powerSensor), (uint16_t)l_power);
-            if(!G_apss_present)
+            if(G_pwr_reading_type != PWR_READING_TYPE_APSS)
             {
                // no APSS, update the processor power sensor with total processor power
-               // TODO RTC 160889 add in processor power for parts not measured (i.e. Vddr, Vcs, Vio etc)
+               // Vdd + Vdn + fixed adder for parts not measured (i.e. Vddr, Vcs, Vio etc)
                sensor_t *l_sensor2 = getSensorByGsid(l_powerSensor2);
-               const uint16_t l_proc_power = (uint16_t)l_power + l_sensor2->sample;
+               const uint16_t l_proc_power = (uint16_t)l_power + l_sensor2->sample + G_sysConfigData.proc_power_adder;
                sensor_update(AMECSENSOR_PTR(PWRPROC), l_proc_power);
             }
         }

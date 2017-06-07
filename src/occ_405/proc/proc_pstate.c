@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -63,7 +63,7 @@ pstateStatus G_proc_pstate_status = PSTATES_DISABLED;
 
 
 // A Global parameter indicating the owner of the PMCR.
-PMCR_OWNER G_proc_pmcr_owner = G_sysConfigData.system_type.kvm? PMCR_OWNER_HOST: PMCR_OWNER_HOST;
+PMCR_OWNER G_proc_pmcr_owner = PMCR_OWNER_HOST;
 
 // OPAL Dynamic data, updated whenever any OCC G_opal_table.dynamic parameter change
 DMA_BUFFER( opal_dynamic_table_t G_opal_dynamic_table ) = {{0}};

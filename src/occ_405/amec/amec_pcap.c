@@ -50,7 +50,7 @@
 //*************************************************************************/
 // Globals
 //*************************************************************************/
-extern bool G_apss_present;
+extern PWR_READING_TYPE  G_pwr_reading_type;
 
 //Number of ticks to wait before dropping below nominal frequency
 #define PWR_SETTLED_TICKS   4
@@ -374,7 +374,7 @@ void amec_power_control(void)
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
 
-    if(G_apss_present)
+    if(G_pwr_reading_type == PWR_READING_TYPE_APSS)
     {
        // Calculate the pcap for the proc, memory and the power capping limit
        // for nominal cores.

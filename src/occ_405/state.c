@@ -1230,7 +1230,7 @@ errlHndl_t SMGR_set_state(OCC_STATE i_new_state)
 //
 // Name:  SMGR_validate_get_valid_states
 //
-// Description: Return a byte of status masks that correspond to the v10 poll
+// Description: Return a byte of status masks that correspond to the v20 poll
 //              response definition status byte.
 //
 // End Function Specification
@@ -1275,6 +1275,11 @@ uint8_t SMGR_validate_get_valid_states(void)
     if(G_simics_environment)
     {
         l_valid_states |= OCC_SIMICS_ENVIRONMENT;
+    }
+
+    if(G_proc_pmcr_owner == PMCR_OWNER_OCC)
+    {
+        l_valid_states |= OCC_PMCR_OWNER_POLL_STATUS_MASK;
     }
 
     return l_valid_states;

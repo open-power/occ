@@ -202,6 +202,26 @@ typedef struct __attribute__ ((packed)) cmdh_poll_powr_sensor
     uint16_t current;       // Most recent 250us reading in watts.
 } cmdh_poll_power_sensor_t;
 
+typedef struct __attribute__ ((packed)) cmdh_poll_powr_no_apss_sensor
+{
+    uint32_t sys_pwr_id;            // Sensor id - to represent total system power.
+    uint16_t sys_pwr_update_time;   // Time in us that system power is read
+    uint16_t sys_pwr_current;       // Most recent system power reading in watts
+    uint32_t sys_pwr_update_tag;    // Count of number of samples represented by sys pwr accumulator
+    uint64_t sys_pwr_accumul;       // Accumulation of system power readings
+    uint32_t reserved;
+    uint16_t proc_pwr_update_time;  // Time in us that processor power is updated
+    uint16_t proc_pwr_current;      // Most recent processor power reading in watts
+    uint32_t proc_pwr_update_tag;   // Count of number of samples represented by proc accumulator
+    uint64_t proc_pwr_accumul;      // Accumulation of processor power readings
+    uint16_t vdd_pwr_current;       // Most recent processor Vdd power reading in watts
+    uint32_t vdd_pwr_update_tag;    // Count of number of samples represented by Vdd accumulator
+    uint64_t vdd_pwr_accumul;       // Accumulation of processor Vdd power readings
+    uint16_t vdn_pwr_current;       // Most recent processor Vdn power reading in watts
+    uint32_t vdn_pwr_update_tag;    // Count of number of samples represented by Vdn accumulator
+    uint64_t vdn_pwr_accumul;       // Accumulation of processor Vdn power readings
+} cmdh_poll_power_no_apss_sensor_t;
+
 // Only available from master occ.
 typedef struct __attribute__ ((packed)) cmdh_poll_caps_sensor
 {
