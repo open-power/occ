@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -28,13 +28,13 @@ typedef struct
 {
     ipc_msg_t msg;
     KERN_SEMAPHORE sem;
-}ipc_ping_cmd_t;
+} ipc_ping_cmd_t;
 
 #ifdef IPC_ENABLE_PING
 //server side ping message handler
 void ipc_ping_handler(ipc_msg_t* cmd, void* arg);
 
-//Initialize a ping command.  
+//Initialize a ping command.
 int ipc_ping_cmd_init(ipc_ping_cmd_t* ping_cmd);
 
 //function for handling the ping response on the local processor
@@ -42,11 +42,11 @@ void ipc_ping_response(ipc_msg_t* rsp, void* arg);
 
 //Statically initialize a ping command
 #define IPC_PING_CMD_CREATE(name) \
-ipc_ping_cmd_t name = \
-{\
-    .msg = IPC_MSG_INIT(IPC_MT_PING, ipc_ping_response, 0), \
-    .sem = KERN_SEMAPHORE_INITIALIZATION(0, 1) \
-}
+    ipc_ping_cmd_t name = \
+                          {\
+                           .msg = IPC_MSG_INIT(IPC_MT_PING, ipc_ping_response, 0), \
+                           .sem = KERN_SEMAPHORE_INITIALIZATION(0, 1) \
+                          }
 
 //blocking command that can be run in a thread context to ping another target
 int ipc_ping(ipc_ping_cmd_t* ping_cmd, uint32_t target_id);

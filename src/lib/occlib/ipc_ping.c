@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -38,7 +38,7 @@ void ipc_ping_handler(ipc_msg_t* cmd, void* arg)
 //      deferred to a non-critical handler.
 void ipc_ping_response(ipc_msg_t* rsp, void* arg)
 {
-    ipc_ping_cmd_t *ping_cmd = (ipc_ping_cmd_t*)rsp;
+    ipc_ping_cmd_t* ping_cmd = (ipc_ping_cmd_t*)rsp;
 
     if(KERN_CONTEXT_CRITICAL_INTERRUPT())
     {
@@ -64,6 +64,7 @@ int ipc_ping(ipc_ping_cmd_t* ping_cmd, uint32_t target_id)
     {
         //set the target (since this is a multi-target command)
         rc = ipc_set_cmd_target(&ping_cmd->msg, target_id);
+
         if(rc)
         {
             break;
@@ -71,6 +72,7 @@ int ipc_ping(ipc_ping_cmd_t* ping_cmd, uint32_t target_id)
 
         //send the command
         rc = ipc_send_cmd(&ping_cmd->msg);
+
         if(rc)
         {
             break;
@@ -78,19 +80,23 @@ int ipc_ping(ipc_ping_cmd_t* ping_cmd, uint32_t target_id)
 
         //assume that if we timed out then the target must have gone down.
         rc = KERN_SEMAPHORE_PEND(&ping_cmd->sem, KERN_SECONDS(1));
+
         if(rc)
         {
             if(rc == -KERN_SEMAPHORE_PEND_TIMED_OUT)
             {
                 rc = IPC_RC_TIMEOUT;
             }
+
             break;
         }
 
         //response message was received.  Now return the ipc_rc
         rc = ipc_get_rc(&ping_cmd->msg);
-        
-    }while(0);
+
+    }
+    while(0);
+
     return rc;
 }
 #endif /*IPC_ENABLE_PING*/

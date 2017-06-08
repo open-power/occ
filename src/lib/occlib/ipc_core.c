@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -35,8 +35,8 @@
 uint8_t     G_ipc_enabled = 0;
 
 #ifndef STATIC_IPC_TABLES
-ipc_func_table_entry_t G_ipc_mt_handlers[IPC_MT_MAX_FUNCTIONS];
-ipc_func_table_entry_t G_ipc_st_handlers[IPC_ST_MAX_FUNCTIONS];
+    ipc_func_table_entry_t G_ipc_mt_handlers[IPC_MT_MAX_FUNCTIONS];
+    ipc_func_table_entry_t G_ipc_st_handlers[IPC_ST_MAX_FUNCTIONS];
 #endif
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -80,7 +80,9 @@ int ipc_send_msg(ipc_msg_t* msg, uint32_t target_id)
 
             msgs[*write_count % IPC_CBUF_SIZE] = msg;
             (*write_count)++;
-
+#ifdef GPE_IPC_TIMERS
+            msg->begin_time = in32(OCB_OTBR);
+#endif
             //raise the IPC interrupt on the target
             KERN_IRQ_STATUS_SET(IPC_GET_IRQ(target_id), 1);
         }
@@ -96,8 +98,11 @@ int ipc_send_msg(ipc_msg_t* msg, uint32_t target_id)
                 rc = IPC_RC_TARGET_BLOCKED;
             }
         }
+
         KERN_CRITICAL_SECTION_EXIT(&ctx);
-    }while(0);
+    }
+    while(0);
+
     return rc;
 }
 
@@ -107,6 +112,7 @@ int ipc_send_msg(ipc_msg_t* msg, uint32_t target_id)
 int ipc_send_cmd(ipc_msg_t* cmd)
 {
     int rc;
+
     do
     {
         //don't allow sending new commands if IPC is disabled
@@ -141,16 +147,19 @@ int ipc_send_cmd(ipc_msg_t* cmd)
         rc = ipc_send_msg(cmd, cmd->func_id.target_id);
 
         cmd->ipc_rc = rc;
-    }while(0);
+    }
+    while(0);
+
     return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Send a command message back to the sender as a response message with status.
-/// 
+///
 int ipc_send_rsp(ipc_msg_t* rsp, uint32_t ipc_rc)
 {
     int rc;
+
     if(rsp->func_id.active_flag)
     {
         rsp->func_id.response_flag = 1;
@@ -161,6 +170,7 @@ int ipc_send_rsp(ipc_msg_t* rsp, uint32_t ipc_rc)
     {
         rc = IPC_RC_MSG_NOT_ACTIVE;
     }
+
     return rc;
 }
 
@@ -182,6 +192,7 @@ void ipc_default_handler(ipc_msg_t* msg, void* arg)
 int ipc_set_cmd_target(ipc_msg_t* cmd, uint32_t target_id)
 {
     int rc = IPC_RC_SUCCESS;
+
     do
     {
         //verify that this is a muti-target function
@@ -194,7 +205,8 @@ int ipc_set_cmd_target(ipc_msg_t* cmd, uint32_t target_id)
         {
             cmd->func_id.target_id = target_id;
         }
-    }while(0);
+    }
+    while(0);
 
     return rc;
 }
@@ -208,7 +220,7 @@ void ipc_process_msg(ipc_msg_t* msg)
 {
     uint32_t                table_index;
     uint32_t                table_limit;
-    ipc_func_table_entry_t *func_table;
+    ipc_func_table_entry_t* func_table;
 
     do
     {
@@ -217,6 +229,10 @@ void ipc_process_msg(ipc_msg_t* msg)
         {
             if(msg->resp_callback)
             {
+#ifdef GPE_IPC_TIMERS
+                msg->end_time = in32(OCB_OTBR);
+#endif
+
                 msg->resp_callback(msg, msg->callback_arg);
             }
             else
@@ -257,7 +273,8 @@ void ipc_process_msg(ipc_msg_t* msg)
             //it should eventually time out and log the message as FFDC.
             ipc_send_rsp(msg, IPC_RC_INVALID_FUNC_ID);
         }
-    }while(0);
+    }
+    while(0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -267,12 +284,12 @@ void ipc_process_msg(ipc_msg_t* msg)
 ///
 void ipc_process_cbuf(uint32_t sender_id)
 {
-    ipc_target_t            *my_cbufs = &OSD_PTR->ipc_data.targets[OCCHW_INST_ID_SELF];
-    uint8_t                 *read_count = &my_cbufs->counts.reads.counts8[sender_id];
-    uint8_t                 *write_count = &my_cbufs->counts.writes.counts8[sender_id];
-    ipc_msg_t               **msg_ptrs = &my_cbufs->cbufs[sender_id][0];
-    ipc_msg_t               *cur_msg;
-    
+    ipc_target_t*            my_cbufs = &OSD_PTR->ipc_data.targets[OCCHW_INST_ID_SELF];
+    uint8_t*                 read_count = &my_cbufs->counts.reads.counts8[sender_id];
+    uint8_t*                 write_count = &my_cbufs->counts.writes.counts8[sender_id];
+    ipc_msg_t**               msg_ptrs = &my_cbufs->cbufs[sender_id][0];
+    ipc_msg_t*               cur_msg;
+
 
     while(*read_count != *write_count)
     {
@@ -291,13 +308,13 @@ void ipc_process_cbuf(uint32_t sender_id)
 /// and processes them.
 ///
 #ifdef __SSX__
-KERN_IRQ_HANDLER(ipc_irq_handler_full)
+    KERN_IRQ_HANDLER(ipc_irq_handler_full)
 #else
-KERN_IRQ_HANDLER(ipc_irq_handler)
+    KERN_IRQ_HANDLER(ipc_irq_handler)
 #endif
 {
     ipc_counts_t    xored_counts;
-    ipc_target_t    *my_cbufs;
+    ipc_target_t*    my_cbufs;
     uint32_t        sender_id;
 
     // Processors could be sending us new packets while we're
@@ -325,7 +342,7 @@ KERN_IRQ_HANDLER(ipc_irq_handler)
         // Use cntlzw to find the first buffer that isn't empty
         sender_id = cntlz64(xored_counts.counts64) / IPC_CBUF_COUNT_BITS;
 
-    
+
         // If all buffers are empty then we're done
         if(sender_id > OCCHW_INST_ID_MAX)
         {
@@ -339,8 +356,10 @@ KERN_IRQ_HANDLER(ipc_irq_handler)
         ipc_process_cbuf(sender_id);
     }
 
+#ifndef UNIFIED_IRQ_HANDLER_GPE
     // Unmask the irq before returning
     KERN_IRQ_ENABLE(IPC_GET_IRQ(OCCHW_INST_ID_SELF));
+#endif
 }
 
 
@@ -352,7 +371,7 @@ KERN_IRQ_HANDLER(ipc_irq_handler)
 /// NOTE: This is only needed for SSX.  PK only supports full interrupts.
 ///
 #ifdef __SSX__
-KERN_IRQ_FAST2FULL(ipc_irq_handler, ipc_irq_handler_full);
+    KERN_IRQ_FAST2FULL(ipc_irq_handler, ipc_irq_handler_full);
 #endif
 
 
@@ -366,16 +385,19 @@ int ipc_init(void)
 
 #ifndef STATIC_IPC_TABLES
     int i;
+
     for(i = 0; i < IPC_MT_MAX_FUNCTIONS; i++)
     {
         G_ipc_mt_handlers[i].handler = ipc_default_handler;
         G_ipc_mt_handlers[i].arg = 0;
     }
+
     for(i = 0; i < IPC_ST_MAX_FUNCTIONS; i++)
     {
         G_ipc_st_handlers[i].handler = ipc_default_handler;
         G_ipc_st_handlers[i].arg = 0;
     }
+
 #endif
     return IPC_RC_SUCCESS;
 }
@@ -392,9 +414,9 @@ int ipc_enable(void)
     {
         // Install the IPI interrupt handler for this processor
         rc = KERN_IRQ_HANDLER_SET(IPC_GET_IRQ(OCCHW_INST_ID_SELF),
-                          ipc_irq_handler,
-                          0,
-                          KERN_CRITICAL);
+                                  ipc_irq_handler,
+                                  0,
+                                  KERN_CRITICAL);
 
         if(rc)
         {
@@ -418,7 +440,8 @@ int ipc_enable(void)
         //Allow us to send out new commands
         G_ipc_enabled = 1;
 
-    }while(0);
+    }
+    while(0);
 
     return rc;
 }
@@ -467,13 +490,15 @@ int ipc_disable(uint32_t target_id)
         // is known to be halted.
         for(i = 0; i <= OCCHW_INST_ID_MAX; i++)
         {
-            target_cbufs->counts.reads.counts8[i] = 
+            target_cbufs->counts.reads.counts8[i] =
                 target_cbufs->counts.writes.counts8[i] - (IPC_CBUF_SIZE * 2);
         }
 
         KERN_CRITICAL_SECTION_EXIT(&ctx);
 
-    }while(0);
+    }
+    while(0);
+
     return rc;
 }
 

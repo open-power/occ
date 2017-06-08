@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -36,7 +36,7 @@
 /// Hardcoded address for the location of the OCC shared data segment
 /// This is placed in the non-cacheable aliased region of SRAM space
 #ifndef OSD_ADDR
-#define OSD_ADDR 0xf7f00000
+    #define OSD_ADDR 0xf7f00000
 #endif
 
 /// Total space of the OCC shared data segment

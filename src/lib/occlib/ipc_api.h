@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -63,29 +63,29 @@
 /// is known that it is safe for the message to be reused (sent as a command
 /// again).
 ///
-void ipc_init_msg(ipc_msg_t* msg, 
-                 uint32_t func_id,
-                 ipc_msg_handler_t resp_callback,
-                 void* callback_arg);
+void ipc_init_msg(ipc_msg_t* msg,
+                  uint32_t func_id,
+                  ipc_msg_handler_t resp_callback,
+                  void* callback_arg);
 
 //Use these to statically initialize an IPC message
 #define IPC_MSG_INIT(_func_id, _resp_callback, _callback_arg) \
-{\
-    {.node = KERN_DEQUE_ELEMENT_INIT()}, \
-    .func_id.word32 = _func_id, \
-    .ipc_rc = IPC_RC_SUCCESS, \
-    .resp_callback = _resp_callback, \
-    .callback_arg = _callback_arg \
-}
+    {\
+        {.node = KERN_DEQUE_ELEMENT_INIT()}, \
+        .func_id.word32 = _func_id, \
+                          .ipc_rc = IPC_RC_SUCCESS, \
+                                    .resp_callback = _resp_callback, \
+                                            .callback_arg = _callback_arg \
+    }
 
 #define IPC_MSG_CREATE(msg_name, _func_id, _resp_callback, _callback_arg) \
-ipc_msg_t msg_name = IPC_MSG_INIT(_func_id, _resp_callback, _callback_arg)
+    ipc_msg_t msg_name = IPC_MSG_INIT(_func_id, _resp_callback, _callback_arg)
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Free up a message to be reused.
 ///
 /// \param msg a pointer to a message.
-/// 
+///
 /// This interface should be called on a message when it is known that it is
 /// safe to reuse the message.  Normally, this would be one of the last things
 /// performed in the response callback function for a command, but it may also
@@ -120,7 +120,7 @@ int ipc_set_cmd_target(ipc_msg_t* cmd, uint32_t target_id);
 /// \param cmd A pointer to an initialized command message
 ///
 /// It is expected that at some point prior to calling this function the
-/// message was initialized with a call to \a ipc_init_msg or 
+/// message was initialized with a call to \a ipc_init_msg or
 /// \a ipc_init_msgq_msg.
 ///
 /// Once a message has been sent it is not safe to send again until it has been
@@ -131,7 +131,7 @@ int ipc_set_cmd_target(ipc_msg_t* cmd, uint32_t target_id);
 /// \retval IPC_RC_SUCCESS The message was successfully placed on the target's
 /// receive buffer.
 ///
-/// \retval IPC_RC_SELF_BLOCKED The call was made prior to calling 
+/// \retval IPC_RC_SELF_BLOCKED The call was made prior to calling
 /// \a ipc_enable.
 ///
 /// \retval IPC_RC_INVALID_FUNC_ID The command was initialized with an invalid
@@ -148,7 +148,7 @@ int ipc_set_cmd_target(ipc_msg_t* cmd, uint32_t target_id);
 ///
 /// \retval IPC_RC_TARGET_BLOCKED The command could not be sent because the
 /// target is blocking any new messages.
-/// 
+///
 int ipc_send_cmd(ipc_msg_t* cmd);
 
 
@@ -164,7 +164,7 @@ int ipc_send_cmd(ipc_msg_t* cmd);
 /// is no risk of overlapping return codes.
 ///
 /// It is expected that at some point prior to calling this function the
-/// message was initialized with a call to \a ipc_init_msg or 
+/// message was initialized with a call to \a ipc_init_msg or
 /// \a ipc_init_msgq_msg.
 ///
 /// Once a message has been sent it is not safe to send again until it has been
@@ -399,11 +399,11 @@ void ipc_init_msgq(ipc_msgq_t* msgq);
 
 //Use this to statically initialize an IPC message queue
 #define IPC_MSGQ_CREATE(msgq) \
-ipc_msgq_t msgq = \
-{\
-    .msg_head = KERN_DEQUE_SENTINEL_INIT(&msgq.msg_head),\
-    .msg_sem = KERN_SEMAPHORE_INITIALIZATION(0, 0)\
-}
+    ipc_msgq_t msgq = \
+                      {\
+                       .msg_head = KERN_DEQUE_SENTINEL_INIT(&msgq.msg_head),\
+                       .msg_sem = KERN_SEMAPHORE_INITIALIZATION(0, 0)\
+                      }
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Initialize an IPC message and associate it with an IPC message queue
@@ -419,7 +419,7 @@ ipc_msgq_t msgq = \
 /// wishes to have the command response placed on the specified IPC message
 /// queue.  This allows a thread to block (via the \a ipc_msq_recv interface)
 /// on the message queue until a response to a command has arrived.
-/// 
+///
 /// \note An IPC message queue can be associated with more than one IPC
 /// message.
 ///

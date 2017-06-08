@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -41,7 +41,7 @@ int ipc_set_handler(uint32_t            function_id,
                     ipc_msg_handler_t   handler,
                     void*               callback_arg)
 {
-    ipc_func_table_entry_t *func_table;
+    ipc_func_table_entry_t* func_table;
     uint32_t                table_limit;
     int                     rc = IPC_RC_SUCCESS;
     ipc_func_id_t           func_id = {{0}};
@@ -65,6 +65,7 @@ int ipc_set_handler(uint32_t            function_id,
                 rc = IPC_RC_INVALID_TARGET_ID;
                 break;
             }
+
             table_limit = IPC_ST_NUM_FUNCIDS;
             func_table = G_ipc_st_handlers;
         }
@@ -84,23 +85,29 @@ int ipc_set_handler(uint32_t            function_id,
 
         func_table[func_id.table_index].handler = handler;
         func_table[func_id.table_index].arg = callback_arg;
-    }while(0);
+    }
+    while(0);
+
     return rc;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Initialize an IPC command message
 ///
-void ipc_init_msg(ipc_msg_t* msg, 
-                 uint32_t func_id,
-                 ipc_msg_handler_t resp_callback,
-                 void* callback_arg)
+void ipc_init_msg(ipc_msg_t* msg,
+                  uint32_t func_id,
+                  ipc_msg_handler_t resp_callback,
+                  void* callback_arg)
 {
     KERN_DEQUE_ELEMENT_CREATE(&msg->node);
     msg->func_id.word32 = func_id;
     msg->ipc_rc = IPC_RC_SUCCESS;
     msg->resp_callback = resp_callback;
     msg->callback_arg = callback_arg;
+#ifdef GPE_IPC_TIMERS
+    msg->begin_time = 0;
+    msg->end_time = 0;
+#endif
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -138,11 +145,14 @@ int ipc_ping_cmd_init(ipc_ping_cmd_t* ping_cmd)
 
         //initialize the semaphore count to 0 and set the max count to 1
         rc = KERN_SEMAPHORE_CREATE(&ping_cmd->sem, 0, 1);
+
         if(rc)
         {
             break;
         }
-    }while(0);
+    }
+    while(0);
+
     return rc;
 }
 #endif /*IPC_ENABLE_PING*/

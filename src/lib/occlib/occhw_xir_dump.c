@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -49,7 +49,8 @@ int32_t occhw_xir_dump(uint32_t inst_id, occhw_xir_dump_t* xir_dump)
         //TODO: dump the XIR regs once the addresses are available
         rc = 0;
 
-    }while(0);
+    }
+    while(0);
 
     return rc;
 }

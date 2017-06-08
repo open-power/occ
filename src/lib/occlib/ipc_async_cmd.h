@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -35,10 +35,11 @@
 
 #ifndef __ASSEMBLER__
 
-typedef struct {
+typedef struct
+{
     ipc_msg_t   cmd;
     void*       cmd_data;
-}ipc_async_cmd_t;
+} ipc_async_cmd_t;
 
 #endif /*__ASSEMBLER__*/
 #endif /*__IPC_ASYNC_CMD_H__*/

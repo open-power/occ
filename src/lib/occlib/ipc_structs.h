@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -35,21 +35,21 @@
 
 
 #ifndef IPC_CBUF_SIZE
-#define IPC_CBUF_SIZE 8 //number of messages must be a power of 2
+    #define IPC_CBUF_SIZE 8 //number of messages must be a power of 2
 #endif
 
 //the maximum number of multi-target functions (common functions)
 //This can be overriden in a global header that's included by all occ images
 //so that it is the same across all processors.
 #ifndef IPC_MT_MAX_FUNCTIONS
-#define IPC_MT_MAX_FUNCTIONS 8
+    #define IPC_MT_MAX_FUNCTIONS 8
 #endif
 
 //the maximum number of single-target functions (processor-specific functions)
 //This can be overridden in a local header file and does not need to be the
 //same across all processors.
-#ifndef IPC_ST_MAX_FUNCTIONS 
-#define IPC_ST_MAX_FUNCTIONS 16
+#ifndef IPC_ST_MAX_FUNCTIONS
+    #define IPC_ST_MAX_FUNCTIONS 16
 #endif
 
 /// IPC return codes
@@ -90,9 +90,9 @@
 // define the GLOBAL_CFG_USE_IPC macro.  This allows IPC to compile
 // without errors.
 #ifdef GLOBAL_CFG_USE_IPC
-#include "ipc_func_ids.h"
+    #include "ipc_func_ids.h"
 #else
-IPC_FUNCIDS_TABLE_START
+    IPC_FUNCIDS_TABLE_START
     IPC_FUNCIDS_MT_START
     IPC_FUNCIDS_MT_END
     IPC_FUNCIDS_ST_START(OCCHW_INST_ID_GPE0)
@@ -105,7 +105,7 @@ IPC_FUNCIDS_TABLE_START
     IPC_FUNCIDS_ST_END(OCCHW_INST_ID_GPE3)
     IPC_FUNCIDS_ST_START(OCCHW_INST_ID_PPC)
     IPC_FUNCIDS_ST_END(OCCHW_INST_ID_PPC)
-IPC_FUNCIDS_TABLE_END
+    IPC_FUNCIDS_TABLE_END
 #endif /*GLOBAL_CFG_USE_IPC*/
 
 //Statically check that the function tables are large enough
@@ -113,7 +113,7 @@ KERN_STATIC_ASSERT(IPC_MT_NUM_FUNCIDS <= IPC_MT_MAX_FUNCTIONS);
 KERN_STATIC_ASSERT(IPC_ST_NUM_FUNCIDS <= IPC_ST_MAX_FUNCTIONS);
 
 #ifdef __SSX__
-extern KERN_DEQUE G_ipc_deferred_queue;
+    extern KERN_DEQUE G_ipc_deferred_queue;
 #endif
 
 struct ipc_msg;
@@ -134,30 +134,30 @@ typedef struct
 {
     ipc_counts_t    reads;
     ipc_counts_t    writes;
-}ipc_rwcounts_t;
+} ipc_rwcounts_t;
 
 typedef struct
 {
     ipc_rwcounts_t counts;
     ipc_msg_t*     cbufs[OCCHW_MAX_INSTANCES][IPC_CBUF_SIZE];
-    uint8_t        pad[16]; 
-}ipc_target_t; //size is 6 x 32 = 192 bytes
+    uint8_t        pad[16];
+} ipc_target_t; //size is 6 x 32 = 192 bytes
 
 /// All of the shared data for IPC is contained in this structure
 typedef struct
 {
     ipc_target_t      targets[OCCHW_MAX_INSTANCES]; //880 bytes
-}ipc_shared_data_t;
+} ipc_shared_data_t;
 
 //prototype for ipc handlers and callback functions
-typedef void (*ipc_msg_handler_t)(ipc_msg_t*, void *);
+typedef void (*ipc_msg_handler_t)(ipc_msg_t*, void*);
 
 //function table entry
 typedef struct
 {
     ipc_msg_handler_t   handler;
     void*               arg;
-}ipc_func_table_entry_t;
+} ipc_func_table_entry_t;
 
 extern ipc_func_table_entry_t G_ipc_mt_handlers[IPC_MT_MAX_FUNCTIONS];
 
@@ -177,7 +177,8 @@ typedef union
         uint32_t    table_index:        8;
     };
     uint32_t    word32;
-}ipc_func_id_t;
+} ipc_func_id_t;
+
 
 #define IPC_MSG_DEQUEUE_SZ 8 //expected size of a deque structure
 struct ipc_msg
@@ -200,7 +201,10 @@ struct ipc_msg
     ipc_msg_handler_t       resp_callback;
 
     //Argument passed into the callback function
-    void                    *callback_arg;
+    void*                    callback_arg;
+
+    uint32_t begin_time;    //!< Send start time
+    uint32_t end_time;      //!< Response received time
 };
 
 //Do a static check on the size of KERN_DEQUE.  IPC_MSG_DEQUE_SZ must be <= sizeof(KERN_DEQUE).
@@ -214,7 +218,7 @@ typedef struct
 {
     KERN_DEQUE          msg_head;
     KERN_SEMAPHORE      msg_sem; //posted whenever a new message is queued
-}ipc_msgq_t;
+} ipc_msgq_t;
 
 #endif /*__ASSEMBLER__*/
 

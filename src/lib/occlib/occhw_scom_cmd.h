@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -69,7 +69,7 @@ typedef union
         uint32_t ipe    :  1;
         uint32_t sibrca :  8;
     };
-}occhw_scom_status_t;
+} occhw_scom_status_t;
 
 typedef struct
 {

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -40,13 +40,13 @@
 ///
 #define IPC_FUNCIDS_TABLE_START \
     typedef enum \
-{
+    {
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Marks the end of the IPC function ID table
 ///
 #define IPC_FUNCIDS_TABLE_END \
-} ipc_func_enum_t;
+    } ipc_func_enum_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Marks the start of the IPC multi-target function IDs within the IPC
@@ -77,7 +77,7 @@
 ///
 #define IPC_FUNCIDS_ST_START(target_id) \
     IPC_CONCAT_INST(IPC_ST_START_, target_id) = \
-    (int)(((((uint32_t)target_id) << 24) | IPC_FLAG_VALID ) - 1),
+            (int)(((((uint32_t)target_id) << 24) | IPC_FLAG_VALID ) - 1),
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Marks the end of the IPC single-target function IDs for the specified
@@ -114,11 +114,11 @@
 
 #define IPC_MT_FUNC_TABLE_START \
     ipc_func_table_entry_t G_ipc_mt_handlers[IPC_MT_MAX_FUNCTIONS] = \
-{
+            {
 
 #define IPC_ST_FUNC_TABLE_START \
     ipc_func_table_entry_t G_ipc_st_handlers[IPC_ST_MAX_FUNCTIONS] = \
-{
+            {
 
 #define IPC_HANDLER(func, arg) \
     {func, arg},
@@ -130,16 +130,16 @@
     {ipc_msgq_handler, msgq_ptr},
 
 #define IPC_MT_FUNC_TABLE_END \
-};
+    };
 
 #define IPC_ST_FUNC_TABLE_END \
-};
+    };
 
 #else
 
 #define IPC_MT_FUNC_TABLE_START
 
-#define IPC_ST_FUNC_TABLE_START 
+#define IPC_ST_FUNC_TABLE_START
 
 #define IPC_HANDLER(func, arg)
 
@@ -149,7 +149,7 @@
 
 #define IPC_MT_FUNC_TABLE_END
 
-#define IPC_ST_FUNC_TABLE_END 
+#define IPC_ST_FUNC_TABLE_END
 
 #endif /*STATIC_IPC_TABLES*/
 
@@ -161,10 +161,10 @@
 /// inside a critical interrupt context).
 #ifdef __SSX__
 #define IPC_DEFER_TO_NONCRITICAL(ipc_msg) \
-{ \
-    ssx_deque_push_back(&G_ipc_deferred_queue, &ipc_msg->node); \
-    ssx_irq_status_set(OCCHW_IRQ_ASYNC_IPI, 1); \
-}
+    { \
+        ssx_deque_push_back(&G_ipc_deferred_queue, &ipc_msg->node); \
+        ssx_irq_status_set(OCCHW_IRQ_ASYNC_IPI, 1); \
+    }
 
 #else
 #define IPC_DEFER_TO_NONCRITICAL(ipc_msg)
@@ -180,9 +180,9 @@
 /// Sets the target to be invalid if it's not a multi-target function id
 ///////////////////////////////////////////////////////////////////////////////
 #define IPC_SET_MT_TARGET(funcid, targetid) \
-(((funcid) & IPC_FLAG_MT)?  \
-  (((targetid) << IPC_TARGET_SHIFT)  | ((funcid) & ~(IPC_TARGET_MASK))): \
-  (IPC_TARGET_MASK | (funcid)))
+    (((funcid) & IPC_FLAG_MT)?  \
+     (((targetid) << IPC_TARGET_SHIFT)  | ((funcid) & ~(IPC_TARGET_MASK))): \
+     (IPC_TARGET_MASK | (funcid)))
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Retrieve the target ID from an IPC function id
