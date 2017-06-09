@@ -116,7 +116,7 @@ errorHndl_t readRegSIO(uint8_t i_regAddr,
  *
  * @return data requested
  */
-inline uint8_t get8( mboxMessage_t *i_msg, uint8_t i_index)
+static inline uint8_t get8( mboxMessage_t *i_msg, uint8_t i_index)
 {
     if ( i_index >= BMC_MBOX_ARGS_REGS )
     {
@@ -133,7 +133,7 @@ inline uint8_t get8( mboxMessage_t *i_msg, uint8_t i_index)
  * @param[in] i_index: Index into args section to be written to
  * @param[in] i_value: data to be written
  */
-inline void  put8( mboxMessage_t *i_msg, uint8_t i_index, uint8_t i_value )
+static inline void put8(mboxMessage_t *i_msg, uint8_t i_index, uint8_t i_value)
 {
     if ( i_index >= BMC_MBOX_ARGS_REGS )
     {
@@ -150,7 +150,7 @@ inline void  put8( mboxMessage_t *i_msg, uint8_t i_index, uint8_t i_value )
  *
  * @return data requested
  */
-inline uint16_t get16( mboxMessage_t *i_msg, uint8_t i_index )
+static inline uint16_t get16( mboxMessage_t *i_msg, uint8_t i_index )
 {
     if ( i_index >= (BMC_MBOX_ARGS_REGS-1) )
     {
@@ -167,7 +167,9 @@ inline uint16_t get16( mboxMessage_t *i_msg, uint8_t i_index )
  * @param[in] i_index: Index into args section to be written to
  * @param[in] i_value: data to be written
  */
-inline void put16( mboxMessage_t *i_msg, uint8_t i_index, uint16_t i_value )
+static inline void put16(mboxMessage_t *i_msg,
+                         uint8_t i_index,
+                         uint16_t i_value)
 {
     if ( i_index >= (BMC_MBOX_ARGS_REGS-1) )
     {
@@ -186,7 +188,7 @@ inline void put16( mboxMessage_t *i_msg, uint8_t i_index, uint16_t i_value )
  *
  * @return data requested
  */
-inline uint32_t get32( mboxMessage_t *i_msg, uint8_t i_index )
+static inline uint32_t get32( mboxMessage_t *i_msg, uint8_t i_index )
 {
     if ( i_index >= (BMC_MBOX_ARGS_REGS-3) )
     {
@@ -205,7 +207,9 @@ inline uint32_t get32( mboxMessage_t *i_msg, uint8_t i_index )
  * @param[in] i_msg:   mboxMessage_t pointer to access args section
  * @param[in] i_index: Index into args section to be read from
  */
-inline void put32( mboxMessage_t *i_msg, uint8_t i_index, uint32_t i_value )
+static inline void put32(mboxMessage_t *i_msg,
+                         uint8_t i_index,
+                         uint32_t i_value)
 {
     if ( i_index >= (BMC_MBOX_ARGS_REGS-3) )
     {

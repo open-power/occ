@@ -76,7 +76,6 @@ typedef uint32_t errorHndl_t;
 #define TERABYTE  (GIGABYTE * 1024ul)   /**< 1 TB */
 
 #define PAGESIZE  (4*KILOBYTE)          /**< 4 KB */
-#define PAGE_SIZE PAGESIZE
 
 #undef SUCCESS
 #define SUCCESS 0

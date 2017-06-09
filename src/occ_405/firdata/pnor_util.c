@@ -58,26 +58,33 @@ int32_t pnor_write_8B( uint64_t i_data )
         return FAIL;
     }
 
+//@TODO: Do we need ECC, or does the BMC handle that for us now?
     /* Create 9-byte ECC-ified version */
-    uint8_t data9[9];
-    injectECC( (uint8_t*)(&i_data), 8, data9 );
+//    uint8_t data9[9];
+//    injectECC( (uint8_t*)(&i_data), 8, data9 );
 
     /* Copy data into the write cache until we queue up
        a big chunk of data to write.  This is more efficient
        and avoids handling the write boundary of the PP
        command internally. */
-    size_t cpsz = 9;
+//    size_t cpsz = 9;
+
+    uint8_t data8[8];
+    size_t cpsz = 8;
+
     if( (g_write_cache_index + cpsz) > PAGE_PROGRAM_BYTES )
     {
         cpsz = PAGE_PROGRAM_BYTES - g_write_cache_index;
     }
-    memcpy( &(g_write_cache[g_write_cache_index]), data9, cpsz );
+     memcpy( &(g_write_cache[g_write_cache_index]), data8, cpsz );
+//    memcpy( &(g_write_cache[g_write_cache_index]), data9, cpsz );
+
     g_write_cache_index += cpsz;
 
     /* Write a complete chunk into the flash */
     if( g_write_cache_index == PAGE_PROGRAM_BYTES )
     {
-        errorHndl_t tmp = writeFlash( &g_pnorMbox,
+        errorHndl_t tmp = writeFlash( g_pnorMbox,
                                       g_next_byte,
                                       PAGE_PROGRAM_BYTES,
                                       g_write_cache );
@@ -93,12 +100,18 @@ int32_t pnor_write_8B( uint64_t i_data )
         memset( g_write_cache, 0xFF, PAGE_PROGRAM_BYTES );
         g_write_cache_index = 0;
 
-        /* Handle the overflow */
-        if( (9 - cpsz) > 0 )
+        if( (8 - cpsz) > 0 )
         {
-            memcpy( &(g_write_cache[0]), &(data9[cpsz]), 9 - cpsz );
-            g_write_cache_index = 9 - cpsz;
+            memcpy( &(g_write_cache[0]), &(data8[cpsz]), 8 - cpsz );
+            g_write_cache_index = 8 - cpsz;
         }
+
+        /* Handle the overflow */
+//        if( (9 - cpsz) > 0 )
+//        {
+//            memcpy( &(g_write_cache[0]), &(data9[cpsz]), 9 - cpsz );
+//            g_write_cache_index = 9 - cpsz;
+//        }
     }
 
     return rc;
@@ -120,7 +133,7 @@ errorHndl_t pnor_prep( HOMER_PnorInfo_t* i_pnorInfo )
     memset( g_write_cache, 0xFF, PAGE_PROGRAM_BYTES );
 
     /* Can we rely on skiboot leaving things in a good state? */
-    l_err = hwInit(&g_pnorMbox);
+    l_err = hwInit(g_pnorMbox);
     if( l_err )
     {
         TRACFCOMP("hwInit failed");

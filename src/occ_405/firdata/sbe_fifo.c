@@ -100,7 +100,7 @@ uint32_t waitDnFifoReady(SCOM_Trgt_t* i_target, uint32_t* o_status)
         }
         else
         {
-            TRAC_INFO("SBE status reg returned fifo empty or dequeued eot flag 0x%.8X",
+            TRAC_IMP("SBE status reg returned fifo empty or dequeued eot flag 0x%.8X",
                       *o_status);
         }
 
@@ -130,7 +130,7 @@ uint32_t writeRequest(SCOM_Trgt_t* i_target, uint32_t* i_fifoRequest)
 {
     uint32_t l_rc = SUCCESS;
 
-    TRAC_INFO("Enter writeRequest");
+    TRAC_IMP("Enter writeRequest");
 
     // Ensure Downstream Max Transfer Counter is 0 non-0 can cause
     // protocol issues)
@@ -186,7 +186,7 @@ uint32_t writeRequest(SCOM_Trgt_t* i_target, uint32_t* i_fifoRequest)
         TRAC_ERR("writeRequest: failed to putfsi to addr 0x%08x", l_addr);
     }
 
-    TRAC_INFO("Exit writeRequest");
+    TRAC_IMP("Exit writeRequest");
 
     return l_rc;
 }
@@ -206,7 +206,7 @@ uint32_t readResponse(SCOM_Trgt_t* i_target,
     uint32_t l_rc = SUCCESS;
     uint32_t l_readBuffer[READ_BUFFER_SIZE];
 
-    TRAC_INFO("Enter readResponse");
+    TRAC_IMP("Enter readResponse");
 
     // EOT is expected before the response buffer is full. Room for
     // the PCBPIB status or FFDC is included, but is only returned
@@ -341,7 +341,7 @@ uint32_t readResponse(SCOM_Trgt_t* i_target,
         l_rc = FAIL;
     }
 
-    TRAC_INFO("Exit readResponse");
+    TRAC_IMP("Exit readResponse");
     return l_rc;
 }
 
@@ -359,7 +359,7 @@ uint32_t performFifoChipOp(SCOM_Trgt_t* i_target,
 {
     uint32_t l_rc = SUCCESS;
 
-    TRAC_INFO("Enter performFifoChipOp");
+    TRAC_IMP("Enter performFifoChipOp");
 
     l_rc = writeRequest(i_target, i_fifoRequest);
     if(l_rc != SUCCESS)
@@ -372,7 +372,7 @@ uint32_t performFifoChipOp(SCOM_Trgt_t* i_target,
                         i_fifoResponse,
                         i_responseSize);
 
-    TRAC_INFO("Exit performFifoChioOp");
+    TRAC_IMP("Exit performFifoChioOp");
 
     return l_rc;
 }
@@ -387,7 +387,7 @@ int32_t putFifoScom(SCOM_Trgt_t* i_target, uint64_t i_addr, uint64_t i_data)
 {
     uint32_t l_rc = SUCCESS;
 
-    TRAC_INFO("Enter putFifoScom");
+    TRAC_IMP("Enter putFifoScom");
 
     struct fifoPutScomRequest  l_fifoRequest;
     struct fifoPutScomResponse l_fifoResponse;
@@ -404,7 +404,7 @@ int32_t putFifoScom(SCOM_Trgt_t* i_target, uint64_t i_addr, uint64_t i_data)
                              (uint32_t*)&l_fifoResponse,
                              sizeof(struct fifoPutScomResponse));
 
-    TRAC_INFO("Exit putFifoScom");
+    TRAC_IMP("Exit putFifoScom");
 
     return l_rc;
 }
@@ -419,7 +419,7 @@ int32_t getFifoScom(SCOM_Trgt_t* i_target, uint64_t i_addr, uint64_t* o_data)
 {
     uint32_t l_rc = SUCCESS;
 
-    TRAC_INFO("Enter getFifoScom");
+    TRAC_IMP("Enter getFifoScom");
 
     struct fifoGetScomRequest  l_fifoRequest;
     struct fifoGetScomResponse l_fifoResponse;
@@ -438,7 +438,7 @@ int32_t getFifoScom(SCOM_Trgt_t* i_target, uint64_t i_addr, uint64_t* o_data)
     //Always return data even if there is an error
     *o_data = l_fifoResponse.data;
 
-    TRAC_INFO("Exit getFifoScom");
+    TRAC_IMP("Exit getFifoScom");
 
     return l_rc;
 }

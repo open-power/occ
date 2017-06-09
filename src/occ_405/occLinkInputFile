@@ -18,6 +18,7 @@ INPUT ( amec_amester.o
         amec_slave_smh.o
         amec_tasks.o
         apss.o
+        ast_mboxdd.o
         avsbus.o
         centaur_control.o
         centaur_data.o
@@ -44,6 +45,7 @@ INPUT ( amec_amester.o
         ffdc.o
         homer.o
         ll_ffdc.o
+        lpc.o
         lock.o
         main.o
         memory.o
@@ -61,6 +63,7 @@ INPUT ( amec_amester.o
         occhw_ocb.o
         occhw_pba.o
         pgpe_interface.o
+        pnor_mboxdd.o
         ppc405_boot.o
         ppc405_breakpoint.o
         ppc405_cache_core.o
@@ -104,6 +107,7 @@ INPUT ( amec_amester.o
         fir_data_collect.o
         fsi.o
         native.o
+        pnor_util.o
         scom_trgt.o
         scom_util.o
         scom_addr_util.o

@@ -104,7 +104,16 @@ TOP-C-SOURCES = amec/amec_analytics.c \
                 thread/threadSch.c \
                 timer/timer.c \
                 trac/trac_interface.c \
-                wof/wof.c
+                wof/wof.c \
+		firdata/scom_addr_util.c \
+                firdata/firData.c \
+                firdata/fir_data_collect.c \
+                firdata/fsi.c \
+                firdata/lpc.c \
+                firdata/native.c \
+                firdata/pnor_util.c \
+                firdata/scom_trgt.c \
+                firdata/scom_util.c
 
 TOP-S-SOURCES = cmdh/ll_ffdc.S \
 

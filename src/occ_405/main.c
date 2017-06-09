@@ -53,7 +53,7 @@
 #include <amec_health.h>
 #include <amec_freq.h>
 #include "scom.h"
-//#include <fir_data_collect.h>
+#include <fir_data_collect.h>
 #include <pss_service_codes.h>
 #include <dimm.h>
 #include "occhw_shared_data.h"
@@ -62,6 +62,12 @@
 #include <p9_pstates_occ.h>
 #include <wof.h>
 #include "pgpe_service_codes.h"
+//#include <lpc.h>
+#include <native.h>
+#include <ast_mboxdd.h>
+#include <pnor_mboxdd.h>
+
+pnorMbox_t l_pnorMbox;
 
 extern uint32_t __ssx_boot; // Function address is 32 bits
 extern uint32_t G_occ_phantom_critical_count;
@@ -116,8 +122,6 @@ SimicsStdio G_simics_stderr;
 //  Critical /non Critical Stacks
 uint8_t G_noncritical_stack[NONCRITICAL_STACK_SIZE];
 uint8_t G_critical_stack[CRITICAL_STACK_SIZE];
-
-
 
 //NOTE: Three semaphores are used so that if in future it is decided
 // to move health monitor and FFDC into it's own threads, then
