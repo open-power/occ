@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -57,5 +57,7 @@
 #define STATIC_IRQ_TABLE
 
 #define STATIC_IPC_TABLES
+// PBA Slave allocated to Gpe 1 is PBA_SLAVE 2. SET PBASLVCTLN to 2 here.
+#define PBASLVCTLN 2
 
 #endif /*__PK_APP_CFG_H__*/
