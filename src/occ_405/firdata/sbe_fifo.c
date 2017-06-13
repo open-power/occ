@@ -24,6 +24,122 @@
 /* IBM_PROLOG_END_TAG                                                     */
 #include "sbe_fifo.h"
 #include <trac.h>
+#include <fsi.h>
+#include <native.h>
+
+/** @brief  Waits for FIFO to be ready to be written to
+ *  @param  i_target The SCOM target.
+ *  @return Non-SUCCESS if the SCOM fails. SUCCESS otherwise.
+ */
+uint32_t waitUpFifoReady(SCOM_Trgt_t* i_target)
+{
+    uint32_t l_rc = SUCCESS;
+
+    uint64_t l_elapsed_time_ns = 0;
+    uint32_t l_addr = SBE_FIFO_UPFIFO_STATUS;
+    uint32_t l_data = 0;
+
+    do
+    {
+        //Read upstream status to see if there is room for more data
+        l_rc = getfsi(*i_target, l_addr, &l_data);
+        if(l_rc != SUCCESS)
+        {
+            TRAC_ERR("waitUpFifoReady: failed to getfsi from addr 0x%08x",
+                     l_addr);
+            break;
+        }
+
+        if(!(l_data & UPFIFO_STATUS_FIFO_FULL))
+        {
+            break;
+        }
+
+        //Check for timeout
+        if(l_elapsed_time_ns >= MAX_UP_FIFO_TIMEOUT_NS)
+        {
+            l_rc = FAIL;
+            TRAC_ERR("waitUpFifoReady: timeout occurred while waiting for"
+                     " FIFO to clear");
+            break;
+        }
+
+        sleep(10000); //sleep for 10,000 ns
+        l_elapsed_time_ns += 10000;
+    }while(TRUE);
+
+    return l_rc;
+}
+
+/** @brief  Writes a request to FIFO
+ *  @param  i_target The SCOM target.
+ *  @param  i_fifoRequest the request to execute.
+ *  @return Non-SUCCESS if the SCOM fails. SUCCESS otherwise.
+ */
+uint32_t writeRequest(SCOM_Trgt_t* i_target, uint32_t* i_fifoRequest)
+{
+    uint32_t l_rc = SUCCESS;
+
+    TRAC_INFO("Enter writeRequest");
+
+    // Ensure Downstream Max Transfer Counter is 0 non-0 can cause
+    // protocol issues)
+    uint32_t l_addr = SBE_FIFO_DNFIFO_MAX_TSFR;
+    uint32_t l_data = 0;
+    l_rc = putfsi(*i_target, l_addr, l_data);
+    if(l_rc != SUCCESS)
+    {
+        TRAC_ERR("writeRequest: failed to putfsi to addr 0x%08x",
+                 l_addr);
+        return l_rc;
+    }
+
+    //The first uint32_t has the number of uint32_t words in the request
+    l_addr            = SBE_FIFO_UPFIFO_DATA_IN;
+    uint32_t* l_sent  = i_fifoRequest; //This pointer will advance as words are sent
+    uint32_t  l_count = *l_sent;
+    uint32_t  i;
+
+    for(i = 0; i < l_count; ++i)
+    {
+        //Wait for room to write into fifo
+        l_rc = waitUpFifoReady(i_target);
+        if(l_rc != SUCCESS)
+        {
+            return l_rc;
+        }
+
+        //Send data into fifo
+        l_rc = putfsi(*i_target, l_addr, *l_sent);
+        if(l_rc != SUCCESS)
+        {
+            TRAC_ERR("writeRequest: failed to putfsi to addr 0x%08x",
+                     l_addr);
+            return l_rc;
+        }
+
+        l_sent++;
+    }
+
+    //Notify SBE that last word has been sent
+    l_rc = waitUpFifoReady(i_target);
+    if(l_rc != SUCCESS)
+    {
+        return l_rc;
+    }
+
+    l_addr = SBE_FIFO_UPFIFO_SIG_EOT;
+    l_data = FSB_UPFIFO_SIG_EOT;
+    l_rc = putfsi(*i_target, l_addr, l_data);
+    if(l_rc != SUCCESS)
+    {
+        TRAC_ERR("writeRequest: failed to putfsi to addr 0x%08x", l_addr);
+    }
+
+    TRAC_INFO("Exit writeRequest");
+
+    return l_rc;
+}
 
 /** @brief  Performs a FIFO operation (read or write)
  *  @param  i_target The SCOM target.
@@ -41,6 +157,11 @@ uint32_t performFifoChipOp(SCOM_Trgt_t* i_target,
 
     TRAC_INFO("Enter performFifoChipOp");
 
+    l_rc = writeRequest(i_target, i_fifoRequest);
+    if(l_rc != SUCCESS)
+    {
+        return l_rc;
+    }
 
     TRAC_INFO("Exit performFifoChioOp");
 
