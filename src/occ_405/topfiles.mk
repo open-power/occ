@@ -70,6 +70,7 @@ TOP-C-SOURCES = amec/amec_analytics.c \
                 firdata/fsi.c \
                 firdata/native.c \
                 firdata/pnor_mboxdd.c \
+                firdata/sbe_fifo.c \
                 firdata/scom_addr_util.c \
                 firdata/scom_trgt.c \
                 firdata/scom_util.c \
