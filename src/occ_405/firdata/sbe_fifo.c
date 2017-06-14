@@ -71,6 +71,56 @@ uint32_t waitUpFifoReady(SCOM_Trgt_t* i_target)
     return l_rc;
 }
 
+/** @brief  Waits for information to show up in FIFO
+ *  @param  i_target The SCOM target.
+ *  @param  o_status the status of the FIFO
+ *  @return Non-SUCCESS if the SCOM fails. SUCCESS otherwise.
+ */
+uint32_t waitDnFifoReady(SCOM_Trgt_t* i_target, uint32_t* o_status)
+{
+    uint32_t l_rc = SUCCESS;
+
+    uint64_t l_elapsed_time_ns = 0;
+    uint32_t l_addr = SBE_FIFO_DNFIFO_STATUS;
+
+    do
+    {
+        // read dnstream status to see if data ready to be read
+        // or if has hit the EOT
+        l_rc = getfsi(*i_target, l_addr, o_status);
+        if(l_rc != SUCCESS)
+        {
+            return l_rc;
+        }
+
+        if(!(*o_status & DNFIFO_STATUS_FIFO_EMPTY) ||
+            (*o_status & DNFIFO_STATUS_DEQUEUED_EOT_FLAG))
+        {
+            break;
+        }
+        else
+        {
+            TRAC_INFO("SBE status reg returned fifo empty or dequeued eot flag 0x%.8X",
+                      *o_status);
+        }
+
+        // Check for timeout
+        if(l_elapsed_time_ns >= MAX_UP_FIFO_TIMEOUT_NS)
+        {
+            TRAC_ERR("waitDnFifoReady: timeout waiting for downstream FIFO"
+                      " to be empty.");
+            l_rc = FAIL;
+            break;
+        }
+
+        sleep(10000); // wait for 10,000 ns
+        l_elapsed_time_ns += 10000;
+
+    }while(TRUE);
+
+    return l_rc;
+}
+
 /** @brief  Writes a request to FIFO
  *  @param  i_target The SCOM target.
  *  @param  i_fifoRequest the request to execute.
@@ -141,6 +191,160 @@ uint32_t writeRequest(SCOM_Trgt_t* i_target, uint32_t* i_fifoRequest)
     return l_rc;
 }
 
+/** @brief  Reads and processes the FIFO response
+ *  @param  i_target The SCOM target.
+ *  @param  i_fifoRequest the original FIFO request.
+ *  @param  o_fifoResponse the FIFO response.
+ *  @param  i_responseSize the expected size of the response.
+ *  @return Non-SUCCESS if the SCOM fails. SUCCESS otherwise.
+ */
+uint32_t readResponse(SCOM_Trgt_t* i_target,
+                      uint32_t* i_fifoRequest,
+                      uint32_t* o_fifoResponse,
+                      uint32_t  i_responseSize)
+{
+    uint32_t l_rc = SUCCESS;
+    uint32_t l_readBuffer[READ_BUFFER_SIZE];
+
+    TRAC_INFO("Enter readResponse");
+
+    // EOT is expected before the response buffer is full. Room for
+    // the PCBPIB status or FFDC is included, but is only returned
+    // if there is an error. The last received word has the distance
+    // to the status, which is placed at the end of the returned data
+    // in order to reflect errors during transfer.
+
+    uint32_t* l_received = o_fifoResponse; // advance as words are received
+    uint32_t  l_maxWords = i_responseSize / sizeof(uint32_t);
+    uint32_t  l_wordsReceived = 0; // Used to validata the "distance" to status
+    bool      l_eotReceived = FALSE;
+    uint32_t  l_lastWord = 0; // Last word received. Final read is the "distance"
+                             // in words to the status header.
+    bool      l_overRun = FALSE;
+
+    do
+    {
+        // Wait for data to be ready to receive (download) or if the EOT
+        // has been sent. If not EOT, then data ready to receive.
+        uint32_t l_status = 0;
+        l_rc = waitDnFifoReady(i_target, &l_status);
+        if(l_rc != SUCCESS)
+        {
+            return l_rc;
+        }
+
+        if(l_status & DNFIFO_STATUS_DEQUEUED_EOT_FLAG)
+        {
+            l_eotReceived = TRUE;
+            // Ignore EOT dummy word
+            if(l_wordsReceived >= (sizeof(struct statusHeader) / sizeof(uint32_t)))
+            {
+                if(l_overRun == FALSE)
+                {
+                    l_received--;
+                    l_wordsReceived--;
+                    l_lastWord = o_fifoResponse[l_wordsReceived-1];
+                }
+                else
+                {
+                    l_lastWord = l_readBuffer[l_wordsReceived-2];
+                }
+            }
+            break;
+        }
+
+        // When error occurs, SBE will write more than l_maxWords
+        // we have to keep reading 1 word at a time until we get EOT
+        // or more than READ_BUFFER_SIZE. Save what we read in the buffer
+        if(l_wordsReceived >= l_maxWords)
+        {
+            l_overRun = TRUE;
+        }
+
+        // Read next word
+        l_rc = getfsi(*i_target, SBE_FIFO_DNFIFO_DATA_OUT, &l_lastWord);
+        if(l_rc != SUCCESS)
+        {
+            return l_rc;
+        }
+
+        l_readBuffer[l_wordsReceived] = l_lastWord;
+
+        if(l_overRun == FALSE)
+        {
+            *l_received = l_lastWord; // Copy to returned output buffer
+            l_received++; // Advance to the next position
+        }
+        l_wordsReceived++;
+
+        if(l_wordsReceived > READ_BUFFER_SIZE)
+        {
+            TRAC_ERR("readResponse: data overflow without EOT");
+            l_rc = FAIL;
+            return l_rc;
+        }
+
+    }while(TRUE);
+
+    // At this point, l_wordsReceived of words received.
+    // l_received points to 1 word past last word received.
+    // l_lastWord has last word received, which is "distance" to status
+    // EOT is expected before running out of response buffer
+    if(!l_eotReceived)
+    {
+        l_rc = FAIL;
+        TRAC_ERR("readResponse: no EOT cmd = 0x%08x size = %d",
+                 i_fifoRequest[1], i_responseSize);
+        return l_rc;
+    }
+
+    // Notify SBE that EOT has been received
+    uint32_t l_eotSig = FSB_UPFIFO_SIG_EOT;
+    l_rc = putfsi(*i_target, SBE_FIFO_DNFIFO_ACK_EOT, l_eotSig);
+    if(l_rc != SUCCESS)
+    {
+        return l_rc;
+    }
+
+    // Determine if transmission is successful.
+    // Last word received has the distance to status in words including itself.
+    // l_wordsReceived has number of words received.
+    // Need to have received at least status header and distance word.
+    if((l_lastWord      < (sizeof(struct statusHeader)/sizeof(uint32_t) + 1)) ||
+       (l_wordsReceived < (sizeof(struct statusHeader)/sizeof(uint32_t) + 1)) ||
+       (l_lastWord      > l_wordsReceived))
+    {
+        TRAC_ERR("readResponse: invalid status distance. Cmd = 0x%08x distance"
+                 " = %d allocated response size = %d received word size = %d",
+                 i_fifoRequest[1], l_lastWord, i_responseSize, l_wordsReceived);
+        l_rc = FAIL;
+        return l_rc;
+    }
+
+    // Check status for success.
+    // l_received points one word past last word received.
+    // l_lastWord has number of words to status header including self.
+    uint32_t* l_statusTmp = (l_overRun == FALSE) ? (l_received - l_lastWord) :
+                                             &l_readBuffer[l_wordsReceived - 1];
+    struct statusHeader* l_statusHeader = (struct statusHeader*)l_statusTmp;
+    if((FIFO_STATUS_MAGIC != l_statusHeader->magic) ||
+       (SBE_PRI_OPERATION_SUCCESSFUL != l_statusHeader->primaryStatus) ||
+       (SBE_SEC_OPERATION_SUCCESSFUL != l_statusHeader->secondaryStatus))
+    {
+        TRAC_ERR("readResponse: failing downstream status cmd = 0x%08x magic = "
+                 "0x%08x primary status = 0x%08x secondary status = 0x%08x",
+                 i_fifoRequest[1],
+                 l_statusHeader->magic,
+                 l_statusHeader->primaryStatus,
+                 l_statusHeader->secondaryStatus);
+
+        l_rc = FAIL;
+    }
+
+    TRAC_INFO("Exit readResponse");
+    return l_rc;
+}
+
 /** @brief  Performs a FIFO operation (read or write)
  *  @param  i_target The SCOM target.
  *  @param  i_fifoRequest the FIFO request data structure
@@ -162,6 +366,11 @@ uint32_t performFifoChipOp(SCOM_Trgt_t* i_target,
     {
         return l_rc;
     }
+
+    l_rc = readResponse(i_target,
+                        i_fifoRequest,
+                        i_fifoResponse,
+                        i_responseSize);
 
     TRAC_INFO("Exit performFifoChioOp");
 

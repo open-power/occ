@@ -31,6 +31,7 @@
 #include "gpe_export.h"
 #include <scom_util.h>
 #include "scom_addr_util.h"
+#include <sbe_fifo.h>
 
 bool G_request_created = FALSE;
 GPE_BUFFER(ipc_scom_op_t G_scom_op);
@@ -353,7 +354,11 @@ int32_t getscomraw( SCOM_Trgt_t i_chip, uint32_t i_addr, uint64_t * o_val )
 {
     int32_t l_rc = SUCCESS;
 
-    //TODO RTC:175100 check isMaster and use SBE FIFO logic
+    //Use SBE FIFO if it's a slave proc
+    if(!i_chip.isMaster)
+    {
+        return getFifoScom(&i_chip, i_addr, o_val);
+    }
 
     if(!G_request_created) //Only need to create request once
     {
@@ -411,7 +416,11 @@ int32_t putscomraw( SCOM_Trgt_t i_chip, uint32_t i_addr, uint64_t i_val )
 {
     int32_t l_rc = SUCCESS;
 
-    //TODO RTC:175100 check isMaster and use SBE FIFO logic
+    //Use SBE FIFO if it's a slave proc
+    if(!i_chip.isMaster)
+    {
+        return putFifoScom(&i_chip, i_addr, i_val);
+    }
 
     if(!G_request_created) //Only need to create request once
     {
