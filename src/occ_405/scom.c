@@ -30,8 +30,7 @@
 #include "occ_service_codes.h"
 #include "occ_sys_config.h"
 #include "polling.h"
-
-#define MAX_SCOM_FFDC_RETRIES 1
+#include <scom_util.h>
 
 // Function Specification
 //
@@ -44,45 +43,28 @@
 //              uncomitted error log.
 //
 // End Function Specification
-
-// In P9 we cannot do a scom from the 405. They must be done from a GPE.
-#if 0
 int getscom_ffdc(uint32_t i_addr, uint64_t* o_data, errlHndl_t* o_errp)
 {
-    pmc_o2p_addr_reg_t          l_addr;
-    pmc_o2p_ctrl_status_reg_t   l_status;
     int                         l_rc;
-    int                         l_retries = 0;
     errlHndl_t                  l_err = NULL;
 
-    while(l_retries <= MAX_SCOM_FFDC_RETRIES)
-    {
-        l_rc = _getscom(i_addr, o_data, SCOM_TIMEOUT);
-        if(!l_rc)
-        {
-            break;
-        }
+    //P9 SCOM logic requires a target. However, if we're here, then it doesn't
+    //matter which target we pass in, so long as isMaster is true. This will
+    //allow to take the branch of code that schedules GPE scom job. See
+    //src/occ_405/firdata/scom_util.c for more info.
+    SCOM_Trgt_t l_tempTarget;
+    l_tempTarget.type = TRGT_PROC;
+    l_tempTarget.isMaster = TRUE;
+    l_tempTarget.procUnitPos = 0;
 
-        //_getscom returns immediately if the o2p interface was busy
-        //wait to see if busy condition clears up
-        if(l_rc == -SCOM_PROTOCOL_ERROR_GETSCOM_BUSY)
-        {
-            busy_wait(SCOM_TIMEOUT);
-        }
-
-        l_retries++;
-    }
+    l_rc = SCOM_getScom(l_tempTarget, i_addr, o_data);
 
     if(l_rc)
     {
         //grab additional ffdc
-        l_status.value = in32(PMC_O2P_CTRL_STATUS_REG);
-        l_addr.value = in32(PMC_O2P_ADDR_REG);
-        TRAC_ERR("getscom_ffdc: scom failed.  addr[%08x] rc[%08x] o2p_stat[%08x] o2p_addr[%08x]",
+        TRAC_ERR("getscom_ffdc: scom failed.  addr[%08x] rc[%08x]",
                  i_addr,
-                 -l_rc,
-                 l_status.value,
-                 l_addr.value);
+                 -l_rc);
 
         /* @
          * @errortype
@@ -140,40 +122,25 @@ int getscom_ffdc(uint32_t i_addr, uint64_t* o_data, errlHndl_t* o_errp)
 // End Function Specification
 int putscom_ffdc(uint32_t i_addr, uint64_t i_data, errlHndl_t* o_errp)
 {
-    pmc_o2p_addr_reg_t          l_addr;
-    pmc_o2p_ctrl_status_reg_t   l_status;
     int                         l_rc;
-    int                         l_retries = 0;
     errlHndl_t                  l_err = NULL;
 
-    while(l_retries <= MAX_SCOM_FFDC_RETRIES)
-    {
-        l_rc = _putscom(i_addr, i_data, SCOM_TIMEOUT);
-        if(!l_rc)
-        {
-            break;
-        }
+    //P9 SCOM logic requires a target. However, if we're here, then it doesn't
+    //matter which target we pass in, so long as isMaster is true. This will
+    //allow to take the branch of code that schedules GPE scom job. See
+    //src/occ_405/firdata/scom_util.c for more info.
+    SCOM_Trgt_t l_tempTarget;
+    l_tempTarget.type = TRGT_PROC;
+    l_tempTarget.isMaster = TRUE;
+    l_tempTarget.procUnitPos = 0;
 
-        //_putscom returns immediately if the o2p interface was busy.  Instead, see if
-        //it cleared after SCOM_TIMEOUT period.
-        if(l_rc == -SCOM_PROTOCOL_ERROR_PUTSCOM_BUSY)
-        {
-            busy_wait(SCOM_TIMEOUT);
-        }
-
-        l_retries++;
-    }
+    l_rc = SCOM_putScom(l_tempTarget, i_addr, i_data);
 
     if(l_rc)
     {
-        //grab addtional ffdc
-        l_status.value = in32(PMC_O2P_CTRL_STATUS_REG);
-        l_addr.value = in32(PMC_O2P_ADDR_REG);
-        TRAC_ERR("putscom_ffdc: scom failed.  addr[%08x] rc[%08x] o2p_stat[%08x] o2p_addr[%08x]",
+        TRAC_ERR("putscom_ffdc: scom failed.  addr[%08x] rc[%08x]",
                  i_addr,
-                 -l_rc,
-                 l_status.value,
-                 l_addr.value);
+                 -l_rc);
 
         /* @
          * @errortype
@@ -213,7 +180,6 @@ int putscom_ffdc(uint32_t i_addr, uint64_t i_data, errlHndl_t* o_errp)
              commitErrl(&l_err);
          }
     }
-
     return l_rc;
 }
-#endif
+

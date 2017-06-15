@@ -574,3 +574,29 @@ int32_t SCOM_getIdScom( SCOM_Trgt_t i_trgt, uint64_t i_addr, uint32_t * o_val )
 
     #undef FUNC
 }
+
+/**
+ * @brief  Executes standard putscom.
+ * @param  i_trgt Chip to SCOM.
+ * @param  i_addr Address to SCOM.
+ * @param  i_val  Value to put.
+ * @return Non-SUCCESS if an internal function fails. SUCCESS otherwise.
+*/
+int32_t SCOM_putScom( SCOM_Trgt_t i_trgt, uint32_t i_addr, uint64_t i_val )
+{
+    int32_t l_rc = SUCCESS;
+
+    /* Get the parent chip. */
+    SCOM_Trgt_t l_chip_targ = SCOM_Trgt_getParentChip(i_trgt);
+
+    /* Get the address relative to the parent chip. */
+    uint64_t l_trans_addr;
+    l_rc = translate_addr( i_trgt, i_addr, &l_trans_addr );
+    if ( SUCCESS == l_rc )
+    {
+        /* Do the SCOM. */
+        l_rc = putscomraw( l_chip_targ, l_trans_addr, i_val );
+    }
+
+    return l_rc;
+}
