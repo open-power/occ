@@ -117,8 +117,6 @@ enum e_gsid
     PWR250USVDD0, // from APSS (no change)
     PWRVCSVIOVDN, // from APSS - rename from PWR250USVCS0 to show what it includes
     PWR250USMEM0,
-    SLEEPCNT4MSP0,
-    WINKCNT4MSP0,
     SP250USP0,
     TEMPPROCAVG,
     TEMPPROCTHRM,
@@ -128,7 +126,8 @@ enum e_gsid
     VOLTVDNSENSE,   // chip voltage (remote sense adjusted for loadline)
     PWRVDD,         // calculated from AVSBUS data
     PWRVDN,         // calculated from AVSBUS data
-
+    PROCPWRTHROT,
+    PROCOTTHROT,
     TEMPQ0,
     TEMPQ1,
     TEMPQ2,
@@ -461,6 +460,56 @@ enum e_gsid
     TEMPC22,
     TEMPC23,
 
+    STOPDEEPREQC0,
+    STOPDEEPREQC1,
+    STOPDEEPREQC2,
+    STOPDEEPREQC3,
+    STOPDEEPREQC4,
+    STOPDEEPREQC5,
+    STOPDEEPREQC6,
+    STOPDEEPREQC7,
+    STOPDEEPREQC8,
+    STOPDEEPREQC9,
+    STOPDEEPREQC10,
+    STOPDEEPREQC11,
+    STOPDEEPREQC12,
+    STOPDEEPREQC13,
+    STOPDEEPREQC14,
+    STOPDEEPREQC15,
+    STOPDEEPREQC16,
+    STOPDEEPREQC17,
+    STOPDEEPREQC18,
+    STOPDEEPREQC19,
+    STOPDEEPREQC20,
+    STOPDEEPREQC21,
+    STOPDEEPREQC22,
+    STOPDEEPREQC23,
+
+    STOPDEEPACTC0,
+    STOPDEEPACTC1,
+    STOPDEEPACTC2,
+    STOPDEEPACTC3,
+    STOPDEEPACTC4,
+    STOPDEEPACTC5,
+    STOPDEEPACTC6,
+    STOPDEEPACTC7,
+    STOPDEEPACTC8,
+    STOPDEEPACTC9,
+    STOPDEEPACTC10,
+    STOPDEEPACTC11,
+    STOPDEEPACTC12,
+    STOPDEEPACTC13,
+    STOPDEEPACTC14,
+    STOPDEEPACTC15,
+    STOPDEEPACTC16,
+    STOPDEEPACTC17,
+    STOPDEEPACTC18,
+    STOPDEEPACTC19,
+    STOPDEEPACTC20,
+    STOPDEEPACTC21,
+    STOPDEEPACTC22,
+    STOPDEEPACTC23,
+
     // ------------------------------------------------------
     // Regulator Sensors
     // ------------------------------------------------------
@@ -512,6 +561,9 @@ enum e_gsid
     LOCDIMMAXP0M5,
     LOCDIMMAXP0M6,
     LOCDIMMAXP0M7,
+
+    MEMPWRTHROT,
+    MEMOTTHROT,
 
     // Individual DIMM temperatures (NIMBUS)
     TEMPDIMM00,

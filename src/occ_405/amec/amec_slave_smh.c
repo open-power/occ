@@ -399,17 +399,6 @@ void amec_slv_state_0(void)
   amec_update_centaur_sensors(CENTAUR_0);
 */
   //-------------------------------------------------------
-  // Update Sleep Count & Winkle Count Sensors
-  //-------------------------------------------------------
-  sensor_update(AMECSENSOR_PTR(SLEEPCNT4MSP0),
-                __builtin_popcount( g_amec->proc[0].sleep_cnt));
-  g_amec->proc[0].sleep_cnt  = 0;
-
-  sensor_update(AMECSENSOR_PTR(WINKCNT4MSP0),
-                __builtin_popcount(g_amec->proc[0].winkle_cnt));
-  g_amec->proc[0].winkle_cnt = 0;
-
-  //-------------------------------------------------------
   // Update vector sensors
   //-------------------------------------------------------
   sensor_vector_update(AMECSENSOR_PTR(TEMPPROCAVG),  1);

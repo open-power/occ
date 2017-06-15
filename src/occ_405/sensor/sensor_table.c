@@ -355,8 +355,6 @@ const sensor_ptr_t G_amec_sensor_list[] =
   SENSOR_PTR( PWR250USVDD0,         &g_amec_sys.proc[0].pwr250usvdd),
   SENSOR_PTR( PWRVCSVIOVDN,         &g_amec_sys.proc[0].pwrvcsviovdn),
   SENSOR_PTR( PWR250USMEM0,         &g_amec_sys.proc[0].pwr250usmem),
-  SENSOR_PTR( SLEEPCNT4MSP0,        &g_amec_sys.proc[0].sleepcnt4ms),
-  SENSOR_PTR( WINKCNT4MSP0,         &g_amec_sys.proc[0].winkcnt4ms),
   SENSOR_PTR( SP250USP0,            &g_amec_sys.proc[0].sp250us),
   SENSOR_PTR( TEMPPROCAVG,          &g_amec_sys.proc[0].tempprocavg),
   SENSOR_PTR( TEMPPROCTHRM,         &g_amec_sys.proc[0].tempprocthermal),
@@ -366,6 +364,8 @@ const sensor_ptr_t G_amec_sensor_list[] =
   SENSOR_PTR( VOLTVDNSENSE,         &g_amec_sys.fw.voltvdnsense),
   SENSOR_PTR( PWRVDD,               &g_amec_sys.proc[0].pwrvdd),
   SENSOR_PTR( PWRVDN,               &g_amec_sys.proc[0].pwrvdn),
+  SENSOR_PTR( PROCPWRTHROT,         &g_amec_sys.proc[0].procpwrthrot),
+  SENSOR_PTR( PROCOTTHROT,          &g_amec_sys.proc[0].procotthrot),
 
   // ------------------------------------------------------
   // Quad Sensors (6 each)
@@ -388,6 +388,8 @@ const sensor_ptr_t G_amec_sensor_list[] =
   CORE_SENSOR_PTRS( PPICP0C ,       &g_amec_sys.proc[0].core, ppic),
   CORE_SENSOR_PTRS( PWRPX250USP0C , &g_amec_sys.proc[0].core, pwrpx250us),
   CORE_SENSOR_PTRS( TEMPC,          &g_amec_sys.proc[0].core, tempc),
+  CORE_SENSOR_PTRS( STOPDEEPREQC,   &g_amec_sys.proc[0].core, stopdeepreqc),
+  CORE_SENSOR_PTRS( STOPDEEPACTC,   &g_amec_sys.proc[0].core, stopdeepactc),
 
   // ------------------------------------------------------
   // Memory Sensors
@@ -399,6 +401,8 @@ const sensor_ptr_t G_amec_sensor_list[] =
   DIMM_SENSOR_PTRS(TEMPDIMM,            &g_amec_sys.proc[0],        tempdimm),
   MEMCONTROL_SENSOR_PTRS(TEMPDIMMAXP0M, &g_amec_sys.proc[0].memctl, centaur.tempdimmax),
   MEMCONTROL_SENSOR_PTRS(LOCDIMMAXP0M,  &g_amec_sys.proc[0].memctl, centaur.locdimmax),
+  SENSOR_PTR(MEMPWRTHROT,               &g_amec_sys.proc[0].mempwrthrot),
+  SENSOR_PTR(MEMOTTHROT,                &g_amec_sys.proc[0].memotthrot),
 
   PORTPAIR_SENSOR_PTRS(MAC2MSP0M,   &g_amec_sys.proc[0].memctl, centaur.portpair, mac2ms),
   PORTPAIR_SENSOR_PTRS(MPU2MSP0M,   &g_amec_sys.proc[0].memctl, centaur.portpair, mpu2ms),
@@ -519,8 +523,6 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   MINI_SENSOR_PTR(   PWR250USVDD0,  NULL),
   MINI_SENSOR_PTR(   PWRVCSVIOVDN,  NULL),
   MINI_SENSOR_PTR(   PWR250USMEM0,  &G_dcom_slv_outbox_tx.pwr250usmemp0),
-  MINI_SENSOR_PTR(  SLEEPCNT4MSP0,  &G_dcom_slv_outbox_tx.sleepcnt4msp0),
-  MINI_SENSOR_PTR(   WINKCNT4MSP0,  &G_dcom_slv_outbox_tx.winkcnt4msp0),
   MINI_SENSOR_PTR(      SP250USP0,  NULL),
   MINI_SENSOR_PTR(    TEMPPROCAVG,  &G_dcom_slv_outbox_tx.tempprocavg),
   MINI_SENSOR_PTR(   TEMPPROCTHRM,  &G_dcom_slv_outbox_tx.tempprocthermal),

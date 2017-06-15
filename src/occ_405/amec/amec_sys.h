@@ -298,6 +298,8 @@ typedef struct
   sensor_t ppic;
   sensor_t pwrpx250us;
   sensor_t tempc;
+  sensor_t stopdeepreqc;
+  sensor_t stopdeepactc;
 
   //-----------------------------------
   // Previous Tick Data
@@ -456,8 +458,6 @@ typedef struct
   sensor_t curvdd;
   sensor_t pwrvcsviovdn;
   sensor_t pwr250usmem;
-  sensor_t sleepcnt4ms;
-  sensor_t winkcnt4ms;
   sensor_t sp250us;
   sensor_t tempprocavg;
   vectorSensor_t temp4ms_vector;
@@ -471,6 +471,8 @@ typedef struct
   sensor_t temp2mscent;
   sensor_t tempdimmthrm;
   sensor_t memsp2ms_tls;
+  sensor_t mempwrthrot;
+  sensor_t memotthrot;
 
   // Nimbus DIMM Sensors
   sensor_t       tempdimm[NUM_DIMM_PORTS*NUM_DIMMS_PER_I2CPORT];
@@ -483,11 +485,10 @@ typedef struct
   sensor_t curvdn;
   sensor_t pwrvdd;
   sensor_t pwrvdn;
+  sensor_t procpwrthrot;
+  sensor_t procotthrot;
 
   // Calculations & Interim Data
-  uint16_t sleep_cnt;
-  uint16_t winkle_cnt;
-
   uint16_t core_max_freq;               // Maximum requested freq for all cores on chip.
 
   // Parameters used through Amester interface
@@ -727,8 +728,6 @@ typedef struct
   uint8_t       analytics_slot;
   // Used to hold selected analytics group
   uint16_t      analytics_array[STREAM_VECTOR_SIZE_EX];
-  // for group 44 support core bit maps of their napping cores (upper byte) and sleeping cores (lower byte)
-  uint16_t      packednapsleep[MAX_NUM_CHIP_MODULES];
   // holds the sum of all the memory power sensors (32msec)
   uint16_t      total_memory_power;
   uint16_t  probetemp[NUM_AMEC_FW_PROBES];                  // array holding temporary probe data

@@ -190,13 +190,6 @@ void amec_analytics_main(void)
         return;
     }
 
-    g_amec->packednapsleep[0] = (g_amec->proc[0].winkcnt4ms.sample<<8) +
-        g_amec->proc[0].sleepcnt4ms.sample;
-    // There are no other elements in proc[] array other than element 0
-    g_amec->packednapsleep[1] = 0;
-    g_amec->packednapsleep[2] = 0;
-    g_amec->packednapsleep[3] = 0;
-
     switch (g_amec->analytics_group)
     {
         case 45:  // Group 45
@@ -341,12 +334,6 @@ void amec_analytics_main(void)
                     (UINT32)(temp16/156);                                 // L4 write bandwidth (/156 because two portpairs added together)
                   l=l+1;
                 }
-
-                g_amec->g44_avg[(i*MSA)+48] = g_amec->g44_avg[(i*MSA)+48] +
-                    (UINT32)(g_amec->proc[i].winkcnt4ms.sample<<3);       // counter of cores that entered winkle for at least part of the 2msec interval: 1/8th resolution
-                g_amec->g44_avg[(i*MSA)+49] = g_amec->g44_avg[(i*MSA)+49] +
-                    (UINT32)(g_amec->proc[i].sleepcnt4ms.sample<<3);      // counter of cores that entered sleep for at least part of the 2msec interval: 1/8th resolution
-
 
                 m=0;                     // counter for actual configured # of cores - 1.
                 for (j=0; j<12; j++)     // Group 45 supports up to 12 cores to be configured per OCC chip

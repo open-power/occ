@@ -143,6 +143,17 @@ void amec_controller_proc_thermal()
     g_amec->thermalproc.freq_request = amec_controller_speed2freq(
             g_amec->thermalproc.speed_request,
             g_amec->sys.fmax);
+
+    // Update the Processor OT Throttle Sensor
+    if(g_amec->thermalproc.freq_request < g_amec->sys.fmax)
+    {
+       // frequency is less than max indicate throttle due to OT
+       sensor_update(AMECSENSOR_PTR(PROCOTTHROT), 1);
+    }
+    else  // not currently throttled due to OT
+    {
+       sensor_update(AMECSENSOR_PTR(PROCOTTHROT), 0);
+    }
 }
 
 //*************************************************************************
@@ -235,6 +246,18 @@ void amec_controller_dimm_thermal()
 
     // Generate the new thermal speed request
     g_amec->thermaldimm.speed_request = (uint16_t) l_mem_speed;
+
+    // Update the Memory OT Throttle Sensor
+    if(g_amec->thermaldimm.speed_request < AMEC_MEMORY_MAX_STEP)
+    {
+       // Memory speed is less than max indicate throttle due to OT
+       sensor_update(AMECSENSOR_PTR(MEMOTTHROT), 1);
+    }
+    else  // not currently throttled due to OT
+    {
+       sensor_update(AMECSENSOR_PTR(MEMOTTHROT), 0);
+    }
+
 }
 
 

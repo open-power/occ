@@ -389,6 +389,26 @@ void amec_power_control(void)
           // Calculate the performance preserving bounds voting box input freq
           amec_ppb_fmax_calc();
        }
+
+       // Update the Processor and Memory Throttle due to power sensors
+       if(g_amec->proc[0].pwr_votes.proc_pcap_vote < G_proc_fmax_mhz)
+       {
+          // Frequency is being throttled due to power cap
+          sensor_update(AMECSENSOR_PTR(PROCPWRTHROT), 1);
+       }
+       else  // not currently throttled due to power
+       {
+          sensor_update(AMECSENSOR_PTR(PROCPWRTHROT), 0);
+       }
+       if(g_amec->pcap.active_mem_level != 0)
+       {
+          // Memory is being throttled due to power cap
+          sensor_update(AMECSENSOR_PTR(MEMPWRTHROT), 1);
+       }
+       else  // not currently throttled due to power
+       {
+          sensor_update(AMECSENSOR_PTR(MEMPWRTHROT), 0);
+       }
     }
     else
     {

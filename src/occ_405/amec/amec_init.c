@@ -334,7 +334,6 @@ void amec_init_gamec_struct(void)
      g_amec->index_probe250us[l_idx] = 0;    // Initialize all offsets to 0 (used only if size > 2)
   }
 
-//  g_amec->ptr_probe250us[1] = g_amec->proc[0].sleepcnt2ms.sample;
 //  g_amec->ptr_probe250us[2] = &g_amec->g44_avg[(0*MSA)+49];
 //  g_amec->ptr_probe250us[2] = g_amec->ptr_probe250us[2]+2;  // Point to low 16 bits of g44_avg
 //  g_amec->ptr_probe250us[3] = &g_amec->proc[0].core[0].thread[0].util2ms_thread;

@@ -118,6 +118,7 @@ errlHndl_t cmdh_tmgt_poll (const cmdh_fsp_cmd_t * i_cmd_ptr,
         }
         else
         {
+            CMDH_TRAC_ERR("cmdh_tmgt_poll: Invalid version 0x%02X", l_poll_cmd->version);
             l_rc = ERRL_RC_INVALID_DATA;
             break;
         }

@@ -494,38 +494,24 @@ void amec_calc_freq_and_util_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
   // No sensors to update for perThread Util
 
   // ------------------------------------------------------
-  // Per Core Sleep/Winkle Count
+  // Per Core Stop State Sensors
   // ------------------------------------------------------
 
-  // Get deepest idle state entered by the chiplet since the last read
-
-  // The SLEEPCNT and WINKLECNT sensors are updated in amec_slv_state_0() function
-  temp16 = CONVERT_UINT64_UINT16_MIDUPPER(i_core_data_ptr->stop_state_hist);
-  temp16 = temp16 & 0xF000;
-  temp16 = temp16 >> 12;
-  switch(temp16)
+  // Get deepest idle state requested since the last read. bits 12:15 OCC stop state hist reg
+  temp16 = CONVERT_UINT64_UINT16_UPPER(i_core_data_ptr->stop_state_hist);
+  temp16 &= 0x000F;
+  if(temp16 != 0x000F) // Don't update with reset value
   {
-    case 0:  // Stop 0: Run State
-    case 1:  // Stop 1: Nap
-        break;
-    case 2:  // Stop 2: Fast Sleep
-    case 3:  // Stop 3: Fast Sleep @ Vmin
-    case 4:  // Stop 4: Deep Sleep "instant on"
-    case 5:  // Stop 5-7: Higher Latency Deep Sleep
-    case 6:
-    case 7:
-    case 8:  // Stop 8-10: Deep Sleep+
-    case 9:
-    case 10:
-        SETBIT(g_amec->proc[0].sleep_cnt,i_core);
-        break;
-    case 11: // Stop 11-15: Quad Deep Winkle
-    case 12:
-    case 13:
-    case 14:
-    case 15:
-        SETBIT(g_amec->proc[0].winkle_cnt,i_core);
-        break;
+    sensor_update(AMECSENSOR_ARRAY_PTR(STOPDEEPREQC0,i_core), temp16);
+  }
+
+  // Get deepest idle state entered by the chiplet since the last read bits 16:19 OCC stop state hist reg
+  temp16 = CONVERT_UINT64_UINT16_MIDUPPER(i_core_data_ptr->stop_state_hist);
+  temp16 = temp16 >> 12;
+  temp16 = temp16 & 0x000F;
+  if(temp16 != 0x000F) // Don't update with reset value
+  {
+    sensor_update(AMECSENSOR_ARRAY_PTR(STOPDEEPACTC0,i_core), temp16);
   }
 
   // ------------------------------------------------------
