@@ -36,7 +36,6 @@
 #include <norflash.h>
 #include <pnor_mboxdd.h>
 #include <lpc.h>
-#include <assert.h>
 extern int TRACE_PNOR_MBOX;
 int TRACE_PNOR_MBOX = 0;
 
@@ -106,7 +105,11 @@ errorHndl_t readFlash(pnorMbox_t* i_pnorMbox,
     do
     {
         // Ensure we are operating on a 4-byte boundary
-        assert( i_size % 4 == 0);
+        if (i_size % 4 != 0)
+        {
+            TRAC_ERR("readFlash: not on 4-byte boundary");
+            return FAIL;
+        }
 
         TRAC_INFO("readFlash(i_addr=0x%.8X)> ", i_addr);
 
@@ -161,7 +164,11 @@ errorHndl_t writeFlash(pnorMbox_t* i_pnorMbox,
     do
     {
         // Ensure we are operating on a 4-byte boundary
-        assert( i_size % 4 == 0 );
+        if (i_size % 4 != 0)
+        {
+            TRAC_ERR("writeFlash: not on 4-byte boundary");
+            return FAIL;
+        }
 
         TRAC_INFO(ENTER_MRK"writeFlash(i_address=0x%llx)> ", i_addr);
 

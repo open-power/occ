@@ -65,7 +65,6 @@ TOP-C-SOURCES = amec/amec_analytics.c \
                 dimm/dimm_control.c \
                 errl/errl.c \
                 firdata/ast_mboxdd.c \
-                firdata/ecc.c \
                 firdata/firData.c \
                 firdata/fir_data_collect.c \
                 firdata/fsi.c \

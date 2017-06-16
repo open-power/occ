@@ -26,8 +26,6 @@
 #ifndef __AST_MBOXDD_H
 #define __AST_MBOXDD_H
 
-#include <assert.h>
-
 /** @file ast_mboxdd.H
  *  @brief Provides the interfaces Aspeed MBOX hardware
  */
@@ -120,7 +118,11 @@ errorHndl_t readRegSIO(uint8_t i_regAddr,
  */
 inline uint8_t get8( mboxMessage_t *i_msg, uint8_t i_index)
 {
-    assert( i_index < BMC_MBOX_ARGS_REGS);
+    if ( i_index >= BMC_MBOX_ARGS_REGS )
+    {
+        return 0;
+    }
+
     return i_msg->iv_args[i_index];
 }
 
@@ -131,9 +133,13 @@ inline uint8_t get8( mboxMessage_t *i_msg, uint8_t i_index)
  * @param[in] i_index: Index into args section to be written to
  * @param[in] i_value: data to be written
  */
-inline void put8( mboxMessage_t *i_msg, uint8_t i_index, uint8_t i_value )
+inline void  put8( mboxMessage_t *i_msg, uint8_t i_index, uint8_t i_value )
 {
-    assert( i_index < BMC_MBOX_ARGS_REGS);
+    if ( i_index >= BMC_MBOX_ARGS_REGS )
+    {
+        return;
+    }
+
     i_msg->iv_args[i_index] = i_value;
 }
 
@@ -146,7 +152,11 @@ inline void put8( mboxMessage_t *i_msg, uint8_t i_index, uint8_t i_value )
  */
 inline uint16_t get16( mboxMessage_t *i_msg, uint8_t i_index )
 {
-    assert( i_index < (BMC_MBOX_ARGS_REGS - 1));
+    if ( i_index >= (BMC_MBOX_ARGS_REGS-1) )
+    {
+        return 0;
+    }
+
     return i_msg->iv_args[i_index] | (i_msg->iv_args[i_index + 1] << 8);
 }
 
@@ -159,7 +169,11 @@ inline uint16_t get16( mboxMessage_t *i_msg, uint8_t i_index )
  */
 inline void put16( mboxMessage_t *i_msg, uint8_t i_index, uint16_t i_value )
 {
-    assert( i_index < (BMC_MBOX_ARGS_REGS - 1));
+    if ( i_index >= (BMC_MBOX_ARGS_REGS-1) )
+    {
+        return;
+    }
+
     i_msg->iv_args[i_index] = i_value & 0xff;
     i_msg->iv_args[i_index + 1] = i_value >> 8;
 }
@@ -174,7 +188,11 @@ inline void put16( mboxMessage_t *i_msg, uint8_t i_index, uint16_t i_value )
  */
 inline uint32_t get32( mboxMessage_t *i_msg, uint8_t i_index )
 {
-    assert( i_index < (BMC_MBOX_ARGS_REGS - 3));
+    if ( i_index >= (BMC_MBOX_ARGS_REGS-3) )
+    {
+        return 0;
+    }
+
     return i_msg->iv_args[i_index] |
         (i_msg->iv_args[i_index + 1] << 8) |
         (i_msg->iv_args[i_index + 2] << 16) |
@@ -189,11 +207,15 @@ inline uint32_t get32( mboxMessage_t *i_msg, uint8_t i_index )
  */
 inline void put32( mboxMessage_t *i_msg, uint8_t i_index, uint32_t i_value )
 {
-    assert( i_index < (BMC_MBOX_ARGS_REGS - 3));
-        i_msg->iv_args[i_index] = i_value & 0xff;
-        i_msg->iv_args[i_index + 1] = (i_value >> 8) & 0xff;
-        i_msg->iv_args[i_index + 2] = (i_value >> 16) & 0xff;
-        i_msg->iv_args[i_index + 3 ] = i_value >> 24;
+    if ( i_index >= (BMC_MBOX_ARGS_REGS-3) )
+    {
+        return;
+    }
+
+    i_msg->iv_args[i_index] = i_value & 0xff;
+    i_msg->iv_args[i_index + 1] = (i_value >> 8) & 0xff;
+    i_msg->iv_args[i_index + 2] = (i_value >> 16) & 0xff;
+    i_msg->iv_args[i_index + 3 ] = i_value >> 24;
 }
 
 typedef struct {

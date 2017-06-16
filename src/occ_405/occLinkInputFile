@@ -98,7 +98,6 @@ INPUT ( amec_amester.o
         timer.o
         trac_interface.o
         wof.o
-        ecc.o
         firData.o
         fir_data_collect.o
         fsi.o

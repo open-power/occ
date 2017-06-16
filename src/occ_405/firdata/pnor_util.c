@@ -27,7 +27,6 @@
 
 #include <native.h>
 #include <pnor_mboxdd.h>
-#include <ecc.h>
 #include <pnor_util.h>
 #include <norflash.h>
 
