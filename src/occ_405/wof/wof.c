@@ -1162,7 +1162,7 @@ inline void calculate_AC_currents( void )
  *
  * Param: The desired core number
  *
- * Return: Returns TRUE if the core is powered on, FALSE otherwise
+ * Return: Returns a non-zero value if the core is powered on, 0 otherwise
  */
 inline uint32_t core_powered_on(uint8_t i_core_num)
 {

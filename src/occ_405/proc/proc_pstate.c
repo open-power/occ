@@ -275,8 +275,8 @@ void populate_opal_static_pstates_data(void)
 
     for (i=0; i<MAX_NUM_CORES; i++)
     {
-        // TODO - RTC:130216 fix entries for WOF systems
-        G_opal_static_table.max_pstate[i] = G_opal_static_table.config.pturbo;
+        // TODO - RTC:170582 fix entries for WOF systems
+        G_opal_static_table.max_pstate[i] = G_opal_static_table.config.puturbo;
     }
 }
 
