@@ -271,10 +271,10 @@ errlHndl_t SMGR_mode_transition_to_nominal()
     // Set Freq Mode for AMEC to use
     l_errlHndl = amec_set_freq_range(OCC_MODE_NOMINAL);
 
+    CURRENT_MODE() = OCC_MODE_NOMINAL;
+
     // WOF is disabled in nominal mode
     set_clear_wof_disabled( SET, WOF_RC_MODE_NO_SUPPORT_MASK );
-
-    CURRENT_MODE() = OCC_MODE_NOMINAL;
     TRAC_IMP("SMGR: Mode to Nominal Transition Completed");
 
     return l_errlHndl;
@@ -297,10 +297,11 @@ errlHndl_t SMGR_mode_transition_to_powersave()
     // Set Freq Mode for AMEC to use
     l_errlHndl = amec_set_freq_range(OCC_MODE_PWRSAVE);
 
+    CURRENT_MODE() = OCC_MODE_PWRSAVE;
+
     // WOF is disabled in SPS mode
     set_clear_wof_disabled( SET, WOF_RC_MODE_NO_SUPPORT_MASK );
 
-    CURRENT_MODE() = OCC_MODE_PWRSAVE;
     TRAC_IMP("SMGR: Mode to PowerSave Transition Completed");
 
     return l_errlHndl;
@@ -323,10 +324,12 @@ errlHndl_t SMGR_mode_transition_to_dynpowersave()
     // Set Freq Mode for AMEC to use
     l_errlHndl = amec_set_freq_range(OCC_MODE_DYN_POWER_SAVE);
 
+
+    CURRENT_MODE() = OCC_MODE_DYN_POWER_SAVE;
+
     // WOF is enabled in DPS, clear the mode bit
     set_clear_wof_disabled( CLEAR, WOF_RC_MODE_NO_SUPPORT_MASK );
 
-    CURRENT_MODE() = OCC_MODE_DYN_POWER_SAVE;
     TRAC_IMP("SMGR: Mode to Dynamic PowerSave-Favor Energy Transition Completed");
 
     return l_errlHndl;
@@ -348,10 +351,10 @@ errlHndl_t SMGR_mode_transition_to_dynpowersave_fp()
     // Set Freq Mode for AMEC to use
     l_errlHndl = amec_set_freq_range(OCC_MODE_DYN_POWER_SAVE_FP);
 
+    CURRENT_MODE() = OCC_MODE_DYN_POWER_SAVE_FP;
     // WOF is enabled in DPS-FP, clear the mode bit
     set_clear_wof_disabled( CLEAR, WOF_RC_MODE_NO_SUPPORT_MASK );
 
-    CURRENT_MODE() = OCC_MODE_DYN_POWER_SAVE_FP;
     TRAC_IMP("SMGR: Mode to Dynamic PowerSave-Favor Performance Transition Completed");
 
     return l_errlHndl;
@@ -374,10 +377,11 @@ errlHndl_t SMGR_mode_transition_to_turbo()
     // Set Freq Mode for AMEC to use
     l_errlHndl = amec_set_freq_range(OCC_MODE_TURBO);
 
+    CURRENT_MODE() = OCC_MODE_TURBO;
+
     // WOF is disabled in turbo mode
     set_clear_wof_disabled( SET, WOF_RC_MODE_NO_SUPPORT_MASK );
 
-    CURRENT_MODE() = OCC_MODE_TURBO;
     TRAC_IMP("SMGR: Mode to Turbo Transition Completed");
 
     return l_errlHndl;
@@ -400,10 +404,10 @@ errlHndl_t SMGR_mode_transition_to_ffo()
     // Set Freq Mode for AMEC to use
     l_errlHndl = amec_set_freq_range(OCC_MODE_FFO);
 
+    CURRENT_MODE() = OCC_MODE_FFO;
     // WOF is disabled in FFO
     set_clear_wof_disabled( SET, WOF_RC_MODE_NO_SUPPORT_MASK );
 
-    CURRENT_MODE() = OCC_MODE_FFO;
     TRAC_IMP("SMGR: Mode to FFO Transition Completed");
 
     return l_errlHndl;
@@ -425,10 +429,9 @@ errlHndl_t SMGR_mode_transition_to_fmf()
     // Set Freq Mode for AMEC to use
     l_errlHndl = amec_set_freq_range(OCC_MODE_FMF);
 
+    CURRENT_MODE() = OCC_MODE_FMF;
     // WOF is enabled in FMF, clear the mode bit
     set_clear_wof_disabled( CLEAR, WOF_RC_MODE_NO_SUPPORT_MASK );
-
-    CURRENT_MODE() = OCC_MODE_FMF;
     TRAC_IMP("SMGR: Mode to FMF Transition Completed");
 
     return l_errlHndl;
@@ -450,10 +453,10 @@ errlHndl_t SMGR_mode_transition_to_nom_perf()
     // Set Freq Mode for AMEC to use
     l_errlHndl = amec_set_freq_range(OCC_MODE_NOM_PERFORMANCE);
 
+    CURRENT_MODE() = OCC_MODE_NOM_PERFORMANCE;
     // WOF is enabled in nominal performance mode, clear the mode bit
     set_clear_wof_disabled( CLEAR, WOF_RC_MODE_NO_SUPPORT_MASK );
 
-    CURRENT_MODE() = OCC_MODE_NOM_PERFORMANCE;
     TRAC_IMP("SMGR: Mode to Nominal Performance Transition Completed");
 
     return l_errlHndl;
@@ -475,10 +478,10 @@ errlHndl_t SMGR_mode_transition_to_max_perf()
     // Set Freq Mode for AMEC to use
     l_errlHndl = amec_set_freq_range(OCC_MODE_MAX_PERFORMANCE);
 
+    CURRENT_MODE() = OCC_MODE_MAX_PERFORMANCE;
     // WOF is enabled in max performance mode, clear the mode bit
     set_clear_wof_disabled( CLEAR, WOF_RC_MODE_NO_SUPPORT_MASK );
 
-    CURRENT_MODE() = OCC_MODE_MAX_PERFORMANCE;
     TRAC_IMP("SMGR: Mode to Maximum Performance Transition Completed");
 
     return l_errlHndl;

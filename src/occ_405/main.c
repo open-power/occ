@@ -636,7 +636,9 @@ void read_wof_header(void)
             MAIN_TRAC_INFO("MAIN: VFRT block size %d", G_wof_header.vfrt_block_size);
              // Make wof header data visible to amester
             g_amec->wof.version              = G_wof_header.version;
-            g_amec->wof.vfrt_block_size      = G_wof_header.vfrt_block_size;
+            // TODO: RTC 174543 - Read vfrt blck size from header once correct
+            //                    in SRAM
+            g_amec->wof.vfrt_block_size      = 256;
             g_amec->wof.vfrt_blck_hdr_sz     = G_wof_header.vfrt_blck_hdr_sz;
             g_amec->wof.vfrt_data_size       = G_wof_header.vfrt_data_size;
             g_amec->wof.active_quads_size    = G_wof_header.active_quads_size;
