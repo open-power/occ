@@ -336,7 +336,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
     if (G_vrm_thermal_monitoring)
     {
         // Add VRFAN
-        const sensor_t *vrfan = getSensorByGsid(VRFAN);
+        const sensor_t *vrfan = getSensorByGsid(VRMPROCOT);
         if (vrfan != NULL)
         {
             l_tempSensorList[l_sensorHeader.count].id = G_sysConfigData.proc_huid;

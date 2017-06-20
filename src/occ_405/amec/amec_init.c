@@ -191,12 +191,12 @@ void amec_init_vector_sensors(void)
       FREQAC0);
 
   //-----------------------------------------------------
-  // IPS4MSP0 Vector Sensor
+  // IPS Vector Sensor
   //-----------------------------------------------------
-  amec_vectorize_core_sensor(AMECSENSOR_PTR(IPS4MSP0),
+  amec_vectorize_core_sensor(AMECSENSOR_PTR(IPS),
       &g_amec_sys.proc[0].ips4ms_vector,
       VECTOR_OP_AVG,
-      IPS4MSP0C0);
+      IPSC0);
 
   //-----------------------------------------------------
   // TEMPPROCTHRM Vector Sensor
@@ -214,27 +214,6 @@ void amec_init_vector_sensors(void)
       VECTOR_OP_AVG,
       UTILC0);
 
-//TODO: Centaur support RTC 163359
-//Re-enable with error checking when centaur support is added
-#if 0
-  int l_rc = 0, l_idx = 0, l_idx2 = 0;    // Used to index the for loops for vector create
-  //-----------------------------------------------------
-  // MEMSP2MSP0 Vector Sensor
-  //-----------------------------------------------------
-  sensor_vectorize(AMECSENSOR_PTR(MEMSP2MSP0),
-      &g_amec_sys.proc[0].memsp2ms_vector,
-      VECTOR_OP_MIN);
-
-  for(l_idx=0; l_idx<MAX_NUM_MEM_CONTROLLERS; l_idx++)
-  {
-    for(l_idx2=0; l_idx2<NUM_PORT_PAIRS_PER_CENTAUR; l_idx2++)
-    {
-      sensor_vector_elem_add(AMECSENSOR_PTR(MEMSP2MSP0)->vector,
-          l_idx,
-          AMECSENSOR_2D_ARRAY_PTR(MEMSP2MSPM0C0P0,l_idx, l_idx2));
-    }
-  }
-#endif
 }
 
 // Function Specification

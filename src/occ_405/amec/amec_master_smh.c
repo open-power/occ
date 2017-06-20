@@ -473,16 +473,16 @@ void amec_mst_check_under_pcap(void)
         if(G_over_cap_count >= PCAP_FAILURE_THRESHOLD)
         {
             TRAC_ERR("Failure to maintain power cap: Power Cap = %d ,"
-                     "PWRSYS = %d ,PWRPROC = %d ,PWR250USFAN = %d ,"
-                     "PWR250USMEM0 = %d",g_amec->pcap.active_node_pcap,
+                     "PWRSYS = %d ,PWRPROC = %d ,PWRFAN = %d ,"
+                     "PWRMEM = %d",g_amec->pcap.active_node_pcap,
                      AMECSENSOR_PTR(PWRSYS)->sample,
                      AMECSENSOR_PTR(PWRPROC)->sample,
-                     AMECSENSOR_PTR(PWR250USFAN)->sample,
-                     AMECSENSOR_PTR(PWR250USMEM0)->sample);
+                     AMECSENSOR_PTR(PWRFAN)->sample,
+                     AMECSENSOR_PTR(PWRMEM)->sample);
 
-            TRAC_ERR("PWR250USIO = %d , PWR250USSTORE = %d, PWRGPU = %d",
-                     AMECSENSOR_PTR(PWR250USIO)->sample,
-                     AMECSENSOR_PTR(PWR250USSTORE)->sample,
+            TRAC_ERR("PWRIO = %d , PWRSTORE = %d, PWRGPU = %d",
+                     AMECSENSOR_PTR(PWRIO)->sample,
+                     AMECSENSOR_PTR(PWRSTORE)->sample,
                      AMECSENSOR_PTR(PWRGPU)->sample);
 
             /* @

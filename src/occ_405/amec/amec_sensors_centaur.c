@@ -468,7 +468,7 @@ void amec_perfcount_getmc( MemData * i_sensor_cache,
         }
 
         // ---------------------------------------------------------------------------
-        //  Interim Calculation:  MWR2MSP0Mx (0.01 Mrps) Memory write requests per sec
+        //  Interim Calculation:  MWRMx (0.01 Mrps) Memory write requests per sec
         // ---------------------------------------------------------------------------
 
         // Extract write bandwidth
@@ -483,7 +483,7 @@ void amec_perfcount_getmc( MemData * i_sensor_cache,
         g_amec->proc[0].memctl[i_centaur].centaur.portpair[i_mc_id].perf.memwrite2ms = tempreg;
 
         // -------------------------------------------------------------------------
-        // Interim Calculation:  MRD2MSP0Mx (0.01 Mrps) Memory read requests per sec
+        // Interim Calculation:  MRDMx (0.01 Mrps) Memory read requests per sec
         // -------------------------------------------------------------------------
 
         // Extract read bandwidth
@@ -510,7 +510,7 @@ void amec_perfcount_getmc( MemData * i_sensor_cache,
         }
 
         // ----------------------------------------------------------------
-        // Sensor:  MPU2MSP0Mx (0.01 Mrps) Memory power-up requests per sec
+        // Sensor:  MPUMx (0.01 Mrps) Memory power-up requests per sec
         // ----------------------------------------------------------------
         // Extract power up count
         temp32new = (templ); // left shift into top 20 bits of 32 bits
@@ -523,7 +523,7 @@ void amec_perfcount_getmc( MemData * i_sensor_cache,
         sensor_update(AMECSENSOR_PORTPAIR_PTR(mpu2ms,i_centaur,i_mc_id), tempreg);
 
         // -------------------------------------------------------------------
-        // Sensor:  MAC2MSP0Mx (0.01 Mrps)  Memory activation requests per sec
+        // Sensor:  MACMx (0.01 Mrps)  Memory activation requests per sec
         // -------------------------------------------------------------------
         // Extract activation count
         temp32 = templ;
@@ -538,7 +538,7 @@ void amec_perfcount_getmc( MemData * i_sensor_cache,
         sensor_update(AMECSENSOR_PORTPAIR_PTR(mac2ms,i_centaur,i_mc_id), tempreg);
 
         // --------------------------------------------------------------------------
-        // Sensor:  MTS2MS (count) Last received Timestamp (frame count) from Centaur
+        // Sensor:  MTS (count) Last received Timestamp (frame count) from Centaur
         // --------------------------------------------------------------------------
         // Extract framecount (clock is 266.6666666MHz * 0.032 / 4096)=2083.
         temp32new = l_sensor_cache->scache.frame_count;
@@ -562,7 +562,7 @@ void amec_perfcount_getmc( MemData * i_sensor_cache,
             templ = l_sensor_cache->scache.mba23_cache_hits_wr;
         }
         // ----------------------------------------------------------------------
-        // Sensor:  M4RD2MS  (0.01 Mrps) Memory cached (L4) read requests per sec
+        // Sensor:  M4RD  (0.01 Mrps) Memory cached (L4) read requests per sec
         // ----------------------------------------------------------------------
         temp32new = (tempu); // left shift into top 20 bits of 32 bits
         temp32 = temp32new - g_amec->proc[0].memctl[i_centaur].centaur.portpair[i_mc_id].perf.l4_rd_cnt_accum;
@@ -583,7 +583,7 @@ void amec_perfcount_getmc( MemData * i_sensor_cache,
         sensor_update(AMECSENSOR_PORTPAIR_PTR(m4rd2ms,i_centaur,i_mc_id), tempreg);
 
         // -----------------------------------------------------------------------
-        // Sensor:  M4WR2MS  (0.01 Mrps) Memory cached (L4) write requests per sec
+        // Sensor:  M4WR  (0.01 Mrps) Memory cached (L4) write requests per sec
         // -----------------------------------------------------------------------
         temp32new = (templ); // left shift into top 20 bits of 32 bits
         temp32 = temp32new - g_amec->proc[0].memctl[i_centaur].centaur.portpair[i_mc_id].perf.l4_wr_cnt_accum;
@@ -605,7 +605,7 @@ void amec_perfcount_getmc( MemData * i_sensor_cache,
         sensor_update(AMECSENSOR_PORTPAIR_PTR(m4wr2ms,i_centaur,i_mc_id), tempreg);
 
         // ------------------------------------------------------------------------------
-        // Sensor:  MIRB2MS  (0.01 Mevents/s) Memory Inter-request arrival idle intervals
+        // Sensor:  MIRB  (0.01 Mevents/s) Memory Inter-request arrival idle intervals
         // ------------------------------------------------------------------------------
         temp32new = (i_mc_id == 0) ? l_sensor_cache->scache.mba01_intreq_arr_cnt_base : l_sensor_cache->scache.mba23_intreq_arr_cnt_base;
         temp32 = temp32new - g_amec->proc[0].memctl[i_centaur].centaur.portpair[i_mc_id].perf.intreq_base_accum;
@@ -617,7 +617,7 @@ void amec_perfcount_getmc( MemData * i_sensor_cache,
         sensor_update(AMECSENSOR_PORTPAIR_PTR(mirb2ms,i_centaur,i_mc_id), tempreg);
 
         // --------------------------------------------------------------------------------------------------------
-        // Sensor:  MIRL2MS  (0.01 Mevents/s) Memory Inter-request arrival idle intervals longer than low threshold
+        // Sensor:  MIRL  (0.01 Mevents/s) Memory Inter-request arrival idle intervals longer than low threshold
         // --------------------------------------------------------------------------------------------------------
         temp32new = (i_mc_id == 0) ? l_sensor_cache->scache.mba01_intreq_arr_cnt_low : l_sensor_cache->scache.mba23_intreq_arr_cnt_low;
         temp32 = temp32new - g_amec->proc[0].memctl[i_centaur].centaur.portpair[i_mc_id].perf.intreq_low_accum;
@@ -629,7 +629,7 @@ void amec_perfcount_getmc( MemData * i_sensor_cache,
         sensor_update(AMECSENSOR_PORTPAIR_PTR(mirl2ms,i_centaur,i_mc_id), tempreg);
 
         // -----------------------------------------------------------------------------------------------------------
-        // Sensor:  MIRM2MS  (0.01 Mevents/s) Memory Inter-request arrival idle intervals longer than medium threshold
+        // Sensor:  MIRM  (0.01 Mevents/s) Memory Inter-request arrival idle intervals longer than medium threshold
         // -----------------------------------------------------------------------------------------------------------
         temp32new = (i_mc_id == 0) ? l_sensor_cache->scache.mba01_intreq_arr_cnt_med : l_sensor_cache->scache.mba23_intreq_arr_cnt_med;
         temp32 = temp32new - g_amec->proc[0].memctl[i_centaur].centaur.portpair[i_mc_id].perf.intreq_med_accum;
@@ -641,7 +641,7 @@ void amec_perfcount_getmc( MemData * i_sensor_cache,
         sensor_update(AMECSENSOR_PORTPAIR_PTR(mirm2ms,i_centaur,i_mc_id), tempreg);
 
         // ---------------------------------------------------------------------------------------------------------
-        // Sensor:  MIRH2MS  (0.01 Mevents/s) Memory Inter-request arrival idle intervals longer than high threshold
+        // Sensor:  MIRH  (0.01 Mevents/s) Memory Inter-request arrival idle intervals longer than high threshold
         // ---------------------------------------------------------------------------------------------------------
         temp32new = (i_mc_id == 0) ? l_sensor_cache->scache.mba01_intreq_arr_cnt_high : l_sensor_cache->scache.mba23_intreq_arr_cnt_high;
         temp32 = temp32new - g_amec->proc[0].memctl[i_centaur].centaur.portpair[i_mc_id].perf.intreq_high_accum;
@@ -654,7 +654,7 @@ void amec_perfcount_getmc( MemData * i_sensor_cache,
     }
 
     // --------------------------------------------------------------------------------------------------------------
-    // Sensor:  MIRC2MS  (0.01 Mevents/s) Memory Inter-request arrival idle interval longer than programmed threshold
+    // Sensor:  MIRC  (0.01 Mevents/s) Memory Inter-request arrival idle interval longer than programmed threshold
     // --------------------------------------------------------------------------------------------------------------
     temp32new = l_sensor_cache->scache.intreq_arr_cnt_high_latency;
     temp32 = temp32new - g_amec->proc[0].memctl[i_centaur].centaur.perf.intreq_highlatency_accum;
@@ -666,7 +666,7 @@ void amec_perfcount_getmc( MemData * i_sensor_cache,
     sensor_update((&(g_amec->proc[0].memctl[i_centaur].centaur.mirc2ms)), tempreg);
 
     // ----------------------------------------------------
-    // Sensor:  MLP2MS   (events/s) Number of LP2 exits
+    // Sensor:  MLP2   (events/s) Number of LP2 exits
     // ----------------------------------------------------
     temp32new = l_sensor_cache->scache.lp2_exits;
     temp32 = temp32new - g_amec->proc[0].memctl[i_centaur].centaur.perf.lp2exit_accum;
@@ -678,14 +678,14 @@ void amec_perfcount_getmc( MemData * i_sensor_cache,
     sensor_update((&(g_amec->proc[0].memctl[i_centaur].centaur.mlp2ms)), tempreg);
 
     // ------------------------------------------------------------
-    // Sensor:  MRD2MSP0Mx (0.01 Mrps) Memory read requests per sec
+    // Sensor:  MRDMx (0.01 Mrps) Memory read requests per sec
     // ------------------------------------------------------------
     tempreg = g_amec->proc[0].memctl[i_centaur].centaur.portpair[0].perf.memread2ms;
     tempreg += g_amec->proc[0].memctl[i_centaur].centaur.portpair[1].perf.memread2ms;
     sensor_update( (&(g_amec->proc[0].memctl[i_centaur].mrd2ms)), tempreg);
 
     // -------------------------------------------------------------
-    // Sensor:  MWR2MSP0Mx (0.01 Mrps) Memory write requests per sec
+    // Sensor:  MWRMx (0.01 Mrps) Memory write requests per sec
     // -------------------------------------------------------------
     tempreg = g_amec->proc[0].memctl[i_centaur].centaur.portpair[0].perf.memwrite2ms;
     tempreg += g_amec->proc[0].memctl[i_centaur].centaur.portpair[1].perf.memwrite2ms;

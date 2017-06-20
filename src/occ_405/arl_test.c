@@ -67,7 +67,7 @@ void arl_test(void)
     temp32 = temp32 << 8;                         // Shift left 8 bits (raw value is < 2^24)
     temp32a = 64000;                              // Divide by 64000 to convert to frequency sensor in 1MHz increments
     temp32 = temp32 / temp32a;
-    gpRTL->FREQ250USP0C0=(UINT16)temp32;          // Write to frequency sensor
+    gpRTL->FREQREQC0=(UINT16)temp32;          // Write to frequency sensor
 
 
     // Debug code to inject data into SCOMs for per thread information

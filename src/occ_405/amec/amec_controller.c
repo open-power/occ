@@ -291,8 +291,8 @@ void amec_controller_centaur_thermal()
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    // Get TEMP2MSCENT sensor value
-    l_sensor = getSensorByGsid(TEMP2MSCENT);
+    // Get TEMPCENT sensor value
+    l_sensor = getSensorByGsid(TEMPCENT);
 
     if(G_cent_temp_expired_bitmap)
     {

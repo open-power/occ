@@ -77,7 +77,7 @@ typedef struct
     UINT32  utilcounter[MAX_THREADS];     // base counter for synthesizing per thread utilization (value written to SCOMs every 250usec)
     UINT32  utilincrement[MAX_THREADS];   // increment for synthesizing per thread utilization (cycles per 250usec with run latch on)
     UINT16  util2ms_thread[MAX_THREADS];  // array of utilization sensors for P0 Core 0  (0.01% increments)
-    UINT16  FREQ250USP0C0;                // actual frequency sensor for P0 Core 0 (1MHz increments)
+    UINT16  FREQREQC0;                    // requested actual frequency sensor for P0 Core 0 (1MHz increments)
 
 } sRTLData_t;
 

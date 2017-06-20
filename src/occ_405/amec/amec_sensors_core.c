@@ -529,7 +529,7 @@ void amec_calc_freq_and_util_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
   }
 
   // Update Sensor for this core
-  sensor_update( AMECSENSOR_ARRAY_PTR(NOTBZE4MSP0C0,i_core), (uint16_t) temp32);
+  sensor_update( AMECSENSOR_ARRAY_PTR(NOTBZEC0,i_core), (uint16_t) temp32);
 
   temp32 =  i_core_data_ptr->empath.freq_sens_finish;
   temp32a = g_amec->proc[0].core[i_core].prev_FREQ_SENS_FINISH;
@@ -543,14 +543,14 @@ void amec_calc_freq_and_util_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
   }
 
   // Update Sensor for this core
-  sensor_update( AMECSENSOR_ARRAY_PTR(NOTFIN4MSP0C0,i_core), (uint16_t) temp32);
+  sensor_update( AMECSENSOR_ARRAY_PTR(NOTFINC0,i_core), (uint16_t) temp32);
 
   // ------------------------------------------------------
   // Per Core Normalized Average Utilization
   // ------------------------------------------------------
   // <amec_formula>
   // Result: Calculated Normalized Average Core Utilization
-  // Sensor: NUTIL3SP0C0
+  // Sensor: NUTILC0
   // Timescale: 4ms (3s rolling average)
   // Units: 0.01 %
   // Min/Max: 0/10000  (0/100%)
@@ -611,11 +611,11 @@ void amec_calc_freq_and_util_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
       // Update sensor for this core
       if(l_core_sleep_winkle)
       {
-          sensor_update(AMECSENSOR_ARRAY_PTR(NUTIL3SP0C0, i_core), 0);
+          sensor_update(AMECSENSOR_ARRAY_PTR(NUTILC0, i_core), 0);
       }
       else
       {
-          sensor_update(AMECSENSOR_ARRAY_PTR(NUTIL3SP0C0, i_core), (uint16_t)temp32);
+          sensor_update(AMECSENSOR_ARRAY_PTR(NUTILC0, i_core), (uint16_t)temp32);
       }
   }
 }
@@ -740,7 +740,7 @@ void amec_calc_ips_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
   // ------------------------------------------------------
   // <amec_formula>
   // Result: Calculated Instructions per Second
-  // Sensor: IPS4MSP0C0
+  // Sensor: IPSC0
   // Timescale: 4ms
   // Units: 0.2Mips
   // Min/Max: ?
@@ -765,7 +765,7 @@ void amec_calc_ips_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
   {
       temp32 = 0;
   }
-  sensor_update( AMECSENSOR_ARRAY_PTR(IPS4MSP0C0,i_core), (uint16_t) temp32);
+  sensor_update( AMECSENSOR_ARRAY_PTR(IPSC0,i_core), (uint16_t) temp32);
 }
 
 /*----------------------------------------------------------------------------*/

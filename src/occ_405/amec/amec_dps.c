@@ -354,7 +354,7 @@ void amec_dps_main(void)
         if (CORE_PRESENT(l_idx))
         {
             G_dcom_slv_outbox_tx.factual =
-                AMECSENSOR_ARRAY_PTR(FREQ250USP0C0,l_idx)->sample;
+                AMECSENSOR_ARRAY_PTR(FREQREQC0,l_idx)->sample;
             break;
         }
     }

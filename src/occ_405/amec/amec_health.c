@@ -513,7 +513,7 @@ void amec_health_check_cent_temp()
     }
 
     l_ot_error = g_amec->thermalcent.ot_error;
-    l_sensor = getSensorByGsid(TEMP2MSCENT);
+    l_sensor = getSensorByGsid(TEMPCENT);
     l_cur_temp = l_sensor->sample;
     l_max_temp = l_sensor->sample_max;
     TRAC_ERR("amec_health_check_cent_temp: Centaur reached error temp[%d]. cur_max[%d], hist_max[%d] bitmap[0x%02X]",

@@ -487,7 +487,7 @@ void amec_slv_proc_voting_box(void)
             }
 
             // Update the sensor telling us what the requested frequency is
-            sensor_update( AMECSENSOR_ARRAY_PTR(FREQ250USP0C0,k),
+            sensor_update( AMECSENSOR_ARRAY_PTR(FREQREQC0,k),
                     (uint16_t) g_amec->proc[0].core[k].f_request);
 
 #if DEBUG_PROC_VOTING_BOX
@@ -878,9 +878,9 @@ void amec_slv_check_perf(void)
                          G_sysConfigData.pcap.system_pcap );
 
                 TRAC_ERR("SnrFanPwr %d, SnrIOPwr %d, SnrStoragePwr %d, SnrGpuPrw %d ",
-                        AMECSENSOR_PTR(PWR250USFAN)->sample,
-                        AMECSENSOR_PTR(PWR250USIO)->sample,
-                        AMECSENSOR_PTR(PWR250USSTORE)->sample,
+                        AMECSENSOR_PTR(PWRFAN)->sample,
+                        AMECSENSOR_PTR(PWRIO)->sample,
+                        AMECSENSOR_PTR(PWRSTORE)->sample,
                         AMECSENSOR_PTR(PWRGPU)->sample );
 
                 TRAC_ERR("SnrProcPwr 0 %d, SnrProcPwr 1 %d, SnrProcPwr 2 %d, SnrProcPwr 3 %d",

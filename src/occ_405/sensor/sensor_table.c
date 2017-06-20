@@ -315,9 +315,9 @@ const sensor_ptr_t G_amec_sensor_list[] =
   // System Sensors
   // ------------------------------------------------------
   SENSOR_PTR( PWRSYS,               &g_amec_sys.sys.pwrsys),
-  SENSOR_PTR( PWR250USFAN,          &g_amec_sys.fan.pwr250usfan),
-  SENSOR_PTR( PWR250USIO,           &g_amec_sys.io.pwr250usio),
-  SENSOR_PTR( PWR250USSTORE,        &g_amec_sys.storage.pwr250usstore),
+  SENSOR_PTR( PWRFAN,               &g_amec_sys.fan.pwr250usfan),
+  SENSOR_PTR( PWRIO,                &g_amec_sys.io.pwr250usio),
+  SENSOR_PTR( PWRSTORE,             &g_amec_sys.storage.pwr250usstore),
   SENSOR_PTR( PWRGPU,               &g_amec_sys.sys.pwr250usgpu),
   SENSOR_PTR( PWRAPSSCH0,           &g_amec_sys.sys.pwrapssch[0]),
   SENSOR_PTR( PWRAPSSCH1,           &g_amec_sys.sys.pwrapssch[1]),
@@ -349,13 +349,9 @@ const sensor_ptr_t G_amec_sensor_list[] =
   // Processor Sensors
   // ------------------------------------------------------
   SENSOR_PTR( FREQA,                &g_amec_sys.proc[0].freqa),
-  SENSOR_PTR( IPS4MSP0,             &g_amec_sys.proc[0].ips4ms),
-  SENSOR_PTR( MEMSP2MSP0,           &g_amec_sys.proc[0].memsp2ms),
+  SENSOR_PTR( IPS,                  &g_amec_sys.proc[0].ips4ms),
   SENSOR_PTR( PWRPROC,              &g_amec_sys.proc[0].pwrproc),
-  SENSOR_PTR( PWR250USVDD0,         &g_amec_sys.proc[0].pwr250usvdd),
-  SENSOR_PTR( PWRVCSVIOVDN,         &g_amec_sys.proc[0].pwrvcsviovdn),
-  SENSOR_PTR( PWR250USMEM0,         &g_amec_sys.proc[0].pwr250usmem),
-  SENSOR_PTR( SP250USP0,            &g_amec_sys.proc[0].sp250us),
+  SENSOR_PTR( PWRMEM,               &g_amec_sys.proc[0].pwr250usmem),
   SENSOR_PTR( TEMPPROCAVG,          &g_amec_sys.proc[0].tempprocavg),
   SENSOR_PTR( TEMPPROCTHRM,         &g_amec_sys.proc[0].tempprocthermal),
   SENSOR_PTR( UTIL,                 &g_amec_sys.proc[0].util),
@@ -373,20 +369,27 @@ const sensor_ptr_t G_amec_sensor_list[] =
   QUAD_SENSOR_PTRS( TEMPQ,          &g_amec_sys.proc[0].quad, tempq),
 
   // ------------------------------------------------------
+  // Regulator Sensors
+  // ------------------------------------------------------
+  SENSOR_PTR( VOLTVDD,              &g_amec_sys.proc[0].vrm[0].volt250us),
+  SENSOR_PTR( VOLTVDN,              &g_amec_sys.proc[0].vrm[1].volt250us),
+  SENSOR_PTR( CURVDD,               &g_amec_sys.proc[0].curvdd),
+  SENSOR_PTR( CURVDN,               &g_amec_sys.proc[0].curvdn),
+  SENSOR_PTR( VRMPROCOT,            &g_amec_sys.sys.vrfan),
+
+
+  // ------------------------------------------------------
   // Core Sensors (24 of each)
   // ------------------------------------------------------
-  CORE_SENSOR_PTRS( FREQ250USP0C ,  &g_amec_sys.proc[0].core, freq250us),
+  CORE_SENSOR_PTRS( FREQREQC ,      &g_amec_sys.proc[0].core, freq250us),
   CORE_SENSOR_PTRS( FREQAC ,        &g_amec_sys.proc[0].core, freqa),
-  CORE_SENSOR_PTRS( IPS4MSP0C ,     &g_amec_sys.proc[0].core, ips4ms),
-  CORE_SENSOR_PTRS( NOTBZE4MSP0C ,  &g_amec_sys.proc[0].core, mcpifd4ms),
-  CORE_SENSOR_PTRS( NOTFIN4MSP0C ,  &g_amec_sys.proc[0].core, mcpifi4ms),
+  CORE_SENSOR_PTRS( IPSC ,          &g_amec_sys.proc[0].core, ips4ms),
+  CORE_SENSOR_PTRS( NOTBZEC ,       &g_amec_sys.proc[0].core, mcpifd4ms),
+  CORE_SENSOR_PTRS( NOTFINC ,       &g_amec_sys.proc[0].core, mcpifi4ms),
   CORE_SENSOR_PTRS( TEMPPROCTHRMC , &g_amec_sys.proc[0].core, tempprocthermal),
   CORE_SENSOR_PTRS( UTILC ,         &g_amec_sys.proc[0].core, util),
-  CORE_SENSOR_PTRS( NUTIL3SP0C ,    &g_amec_sys.proc[0].core, nutil3s),
-  CORE_SENSOR_PTRS( MSTL2MSP0C ,    &g_amec_sys.proc[0].core, mstl2ms),
-  CORE_SENSOR_PTRS( CMT2MSP0C ,     &g_amec_sys.proc[0].core, cmt2ms),
-  CORE_SENSOR_PTRS( PPICP0C ,       &g_amec_sys.proc[0].core, ppic),
-  CORE_SENSOR_PTRS( PWRPX250USP0C , &g_amec_sys.proc[0].core, pwrpx250us),
+  CORE_SENSOR_PTRS( NUTILC ,        &g_amec_sys.proc[0].core, nutil3s),
+  CORE_SENSOR_PTRS( MSTLC ,         &g_amec_sys.proc[0].core, mstl2ms),
   CORE_SENSOR_PTRS( TEMPC,          &g_amec_sys.proc[0].core, tempc),
   CORE_SENSOR_PTRS( STOPDEEPREQC,   &g_amec_sys.proc[0].core, stopdeepreqc),
   CORE_SENSOR_PTRS( STOPDEEPACTC,   &g_amec_sys.proc[0].core, stopdeepactc),
@@ -394,31 +397,29 @@ const sensor_ptr_t G_amec_sensor_list[] =
   // ------------------------------------------------------
   // Memory Sensors
   // ------------------------------------------------------
-  MEMCONTROL_SENSOR_PTRS(MRD2MSP0M,     &g_amec_sys.proc[0].memctl, mrd2ms),
-  MEMCONTROL_SENSOR_PTRS(MWR2MSP0M,     &g_amec_sys.proc[0].memctl, mwr2ms),
-  MEMCONTROL_SENSOR_PTRS(MIRC2MSP0M,    &g_amec_sys.proc[0].memctl, centaur.mirc2ms),
-  MEMCONTROL_SENSOR_PTRS(MLP2P0M,       &g_amec_sys.proc[0].memctl, centaur.mlp2ms),
+  MEMCONTROL_SENSOR_PTRS(MRDM,          &g_amec_sys.proc[0].memctl, mrd2ms),
+  MEMCONTROL_SENSOR_PTRS(MWRM,          &g_amec_sys.proc[0].memctl, mwr2ms),
+  MEMCONTROL_SENSOR_PTRS(MIRCM,         &g_amec_sys.proc[0].memctl, centaur.mirc2ms),
+  MEMCONTROL_SENSOR_PTRS(MLP2M,         &g_amec_sys.proc[0].memctl, centaur.mlp2ms),
   DIMM_SENSOR_PTRS(TEMPDIMM,            &g_amec_sys.proc[0],        tempdimm),
-  MEMCONTROL_SENSOR_PTRS(TEMPDIMMAXP0M, &g_amec_sys.proc[0].memctl, centaur.tempdimmax),
-  MEMCONTROL_SENSOR_PTRS(LOCDIMMAXP0M,  &g_amec_sys.proc[0].memctl, centaur.locdimmax),
+  MEMCONTROL_SENSOR_PTRS(TEMPDIMMAXM,   &g_amec_sys.proc[0].memctl, centaur.tempdimmax),
+  MEMCONTROL_SENSOR_PTRS(LOCDIMMAXM,    &g_amec_sys.proc[0].memctl, centaur.locdimmax),
   SENSOR_PTR(MEMPWRTHROT,               &g_amec_sys.proc[0].mempwrthrot),
   SENSOR_PTR(MEMOTTHROT,                &g_amec_sys.proc[0].memotthrot),
 
-  PORTPAIR_SENSOR_PTRS(MAC2MSP0M,   &g_amec_sys.proc[0].memctl, centaur.portpair, mac2ms),
-  PORTPAIR_SENSOR_PTRS(MPU2MSP0M,   &g_amec_sys.proc[0].memctl, centaur.portpair, mpu2ms),
-  PORTPAIR_SENSOR_PTRS(MIRB2MSP0M,  &g_amec_sys.proc[0].memctl, centaur.portpair, mirb2ms),
-  PORTPAIR_SENSOR_PTRS(MIRL2MSP0M,  &g_amec_sys.proc[0].memctl, centaur.portpair, mirl2ms),
-  PORTPAIR_SENSOR_PTRS(MIRM2MSP0M,  &g_amec_sys.proc[0].memctl, centaur.portpair, mirm2ms),
-  PORTPAIR_SENSOR_PTRS(MIRH2MSP0M,  &g_amec_sys.proc[0].memctl, centaur.portpair, mirh2ms),
-  PORTPAIR_SENSOR_PTRS(MTS2MSP0M,   &g_amec_sys.proc[0].memctl, centaur.portpair, mts2ms),
-  PORTPAIR_SENSOR_PTRS(MEMSP2MSPM,  &g_amec_sys.proc[0].memctl, centaur.portpair, memsp2ms),
-  PORTPAIR_SENSOR_PTRS(M4RD2MSP0M,  &g_amec_sys.proc[0].memctl, centaur.portpair, m4rd2ms),
-  PORTPAIR_SENSOR_PTRS(M4WR2MSP0M,  &g_amec_sys.proc[0].memctl, centaur.portpair, m4wr2ms),
+  PORTPAIR_SENSOR_PTRS(MACM,        &g_amec_sys.proc[0].memctl, centaur.portpair, mac2ms),
+  PORTPAIR_SENSOR_PTRS(MPUM,        &g_amec_sys.proc[0].memctl, centaur.portpair, mpu2ms),
+  PORTPAIR_SENSOR_PTRS(MIRBM,       &g_amec_sys.proc[0].memctl, centaur.portpair, mirb2ms),
+  PORTPAIR_SENSOR_PTRS(MIRLM,       &g_amec_sys.proc[0].memctl, centaur.portpair, mirl2ms),
+  PORTPAIR_SENSOR_PTRS(MIRMM,       &g_amec_sys.proc[0].memctl, centaur.portpair, mirm2ms),
+  PORTPAIR_SENSOR_PTRS(MIRHM,       &g_amec_sys.proc[0].memctl, centaur.portpair, mirh2ms),
+  PORTPAIR_SENSOR_PTRS(MTSM,        &g_amec_sys.proc[0].memctl, centaur.portpair, mts2ms),
+  PORTPAIR_SENSOR_PTRS(M4RDM,       &g_amec_sys.proc[0].memctl, centaur.portpair, m4rd2ms),
+  PORTPAIR_SENSOR_PTRS(M4WRM,       &g_amec_sys.proc[0].memctl, centaur.portpair, m4wr2ms),
 
 
-  SENSOR_PTR(TEMP2MSCENT,           &g_amec_sys.proc[0].temp2mscent),
+  SENSOR_PTR(TEMPCENT,              &g_amec_sys.proc[0].temp2mscent),
   SENSOR_PTR(TEMPDIMMTHRM,          &g_amec_sys.proc[0].tempdimmthrm),
-  SENSOR_PTR(MEMSP2MS,              &g_amec_sys.proc[0].memsp2ms_tls),
 
   // ------------------------------------------------------
   // GPU Sensors
@@ -428,31 +429,20 @@ const sensor_ptr_t G_amec_sensor_list[] =
   SENSOR_PTR(TEMPGPU2,              &g_amec_sys.proc[0].tempgpu2),
 
   // ------------------------------------------------------
-  // Regulator Sensors
-  // ------------------------------------------------------
-  SENSOR_PTR( UVOLT250USP0V0,       &g_amec_sys.proc[0].vrm[0].uvolt250us),
-  SENSOR_PTR( UVOLT250USP0V1,       &g_amec_sys.proc[0].vrm[1].uvolt250us),
-  SENSOR_PTR( VOLTVDD,              &g_amec_sys.proc[0].vrm[0].volt250us),
-  SENSOR_PTR( VOLTVDN,              &g_amec_sys.proc[0].vrm[1].volt250us),
-  SENSOR_PTR( CURVDD,               &g_amec_sys.proc[0].curvdd),
-  SENSOR_PTR( CURVDN,               &g_amec_sys.proc[0].curvdn),
-  SENSOR_PTR( VRFAN,                &g_amec_sys.sys.vrfan),
-
-  // ------------------------------------------------------
   // Partition Sensors
   // ------------------------------------------------------
-  SENSOR_PTR( UTIL2MSSLCG000,       &g_amec_sys.part_config.part_list[0].util2msslack),
-  SENSOR_PTR( UTIL2MSSLCG001,       &g_amec_sys.part_config.part_list[1].util2msslack),
-  SENSOR_PTR( UTIL2MSSLCG002,       &g_amec_sys.part_config.part_list[2].util2msslack),
-  SENSOR_PTR( UTIL2MSSLCG003,       &g_amec_sys.part_config.part_list[3].util2msslack),
-  SENSOR_PTR( UTIL2MSSLCG004,       &g_amec_sys.part_config.part_list[4].util2msslack),
-  SENSOR_PTR( UTIL2MSSLCG005,       &g_amec_sys.part_config.part_list[5].util2msslack),
-  SENSOR_PTR( UTIL2MSSLCG006,       &g_amec_sys.part_config.part_list[6].util2msslack),
-  SENSOR_PTR( UTIL2MSSLCG007,       &g_amec_sys.part_config.part_list[7].util2msslack),
-  SENSOR_PTR( UTIL2MSSLCG008,       &g_amec_sys.part_config.part_list[8].util2msslack),
-  SENSOR_PTR( UTIL2MSSLCG009,       &g_amec_sys.part_config.part_list[9].util2msslack),
-  SENSOR_PTR( UTIL2MSSLCG010,       &g_amec_sys.part_config.part_list[10].util2msslack),
-  SENSOR_PTR( UTIL2MSSLCG011,       &g_amec_sys.part_config.part_list[11].util2msslack),
+  SENSOR_PTR( UTILSLCG000,          &g_amec_sys.part_config.part_list[0].util2msslack),
+  SENSOR_PTR( UTILSLCG001,          &g_amec_sys.part_config.part_list[1].util2msslack),
+  SENSOR_PTR( UTILSLCG002,          &g_amec_sys.part_config.part_list[2].util2msslack),
+  SENSOR_PTR( UTILSLCG003,          &g_amec_sys.part_config.part_list[3].util2msslack),
+  SENSOR_PTR( UTILSLCG004,          &g_amec_sys.part_config.part_list[4].util2msslack),
+  SENSOR_PTR( UTILSLCG005,          &g_amec_sys.part_config.part_list[5].util2msslack),
+  SENSOR_PTR( UTILSLCG006,          &g_amec_sys.part_config.part_list[6].util2msslack),
+  SENSOR_PTR( UTILSLCG007,          &g_amec_sys.part_config.part_list[7].util2msslack),
+  SENSOR_PTR( UTILSLCG008,          &g_amec_sys.part_config.part_list[8].util2msslack),
+  SENSOR_PTR( UTILSLCG009,          &g_amec_sys.part_config.part_list[9].util2msslack),
+  SENSOR_PTR( UTILSLCG010,          &g_amec_sys.part_config.part_list[10].util2msslack),
+  SENSOR_PTR( UTILSLCG011,          &g_amec_sys.part_config.part_list[11].util2msslack),
 
 };
 STATIC_ASSERT(   (NUMBER_OF_SENSORS_IN_LIST != (sizeof(G_amec_sensor_list)/sizeof(sensor_ptr_t)))   );
@@ -501,10 +491,28 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   // System Sensors
   // ------------------------------------------------------
   MINI_SENSOR_PTR(         PWRSYS,  NULL),
-  MINI_SENSOR_PTR(    PWR250USFAN,  NULL),
-  MINI_SENSOR_PTR(     PWR250USIO,  NULL),
-  MINI_SENSOR_PTR(  PWR250USSTORE,  NULL),
+  MINI_SENSOR_PTR(         PWRFAN,  NULL),
+  MINI_SENSOR_PTR(         PWRIO,   NULL),
+  MINI_SENSOR_PTR(       PWRSTORE,  NULL),
   MINI_SENSOR_PTR(         PWRGPU,  NULL),
+  MINI_SENSOR_PTR(     PWRAPSSCH0,  NULL),
+  MINI_SENSOR_PTR(     PWRAPSSCH1,  NULL),
+  MINI_SENSOR_PTR(     PWRAPSSCH2,  NULL),
+  MINI_SENSOR_PTR(     PWRAPSSCH3,  NULL),
+  MINI_SENSOR_PTR(     PWRAPSSCH4,  NULL),
+  MINI_SENSOR_PTR(     PWRAPSSCH5,  NULL),
+  MINI_SENSOR_PTR(     PWRAPSSCH6,  NULL),
+  MINI_SENSOR_PTR(     PWRAPSSCH7,  NULL),
+  MINI_SENSOR_PTR(     PWRAPSSCH8,  NULL),
+  MINI_SENSOR_PTR(     PWRAPSSCH9,  NULL),
+  MINI_SENSOR_PTR(    PWRAPSSCH10,  NULL),
+  MINI_SENSOR_PTR(    PWRAPSSCH11,  NULL),
+  MINI_SENSOR_PTR(    PWRAPSSCH12,  NULL),
+  MINI_SENSOR_PTR(    PWRAPSSCH13,  NULL),
+  MINI_SENSOR_PTR(    PWRAPSSCH14,  NULL),
+  MINI_SENSOR_PTR(    PWRAPSSCH15,  NULL),
+  MINI_SENSOR_PTR(     CUR12VSTBY,  NULL),
+  MINI_SENSOR_PTR( VRHOTMEMPRCCNT,  NULL),
 
   // ------------------------------------------------------
   // Chip Sensors
@@ -517,13 +525,9 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   // Processor Sensors
   // ------------------------------------------------------
   MINI_SENSOR_PTR(          FREQA,  &G_dcom_slv_outbox_tx.freqa),
-  MINI_SENSOR_PTR(       IPS4MSP0,  &G_dcom_slv_outbox_tx.ips4msp0),
-  MINI_SENSOR_PTR(     MEMSP2MSP0,  NULL),
+  MINI_SENSOR_PTR(            IPS,  &G_dcom_slv_outbox_tx.ips4msp0),
   MINI_SENSOR_PTR(        PWRPROC,  &G_dcom_slv_outbox_tx.pwrproc),
-  MINI_SENSOR_PTR(   PWR250USVDD0,  NULL),
-  MINI_SENSOR_PTR(   PWRVCSVIOVDN,  NULL),
-  MINI_SENSOR_PTR(   PWR250USMEM0,  &G_dcom_slv_outbox_tx.pwr250usmemp0),
-  MINI_SENSOR_PTR(      SP250USP0,  NULL),
+  MINI_SENSOR_PTR(         PWRMEM,  &G_dcom_slv_outbox_tx.pwr250usmemp0),
   MINI_SENSOR_PTR(    TEMPPROCAVG,  &G_dcom_slv_outbox_tx.tempprocavg),
   MINI_SENSOR_PTR(   TEMPPROCTHRM,  &G_dcom_slv_outbox_tx.tempprocthermal),
   MINI_SENSOR_PTR(           UTIL,  &G_dcom_slv_outbox_tx.util),
@@ -532,6 +536,8 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   MINI_SENSOR_PTR(   VOLTVDNSENSE,  NULL),
   MINI_SENSOR_PTR(         PWRVDD,  NULL),
   MINI_SENSOR_PTR(         PWRVDN,  NULL),
+  MINI_SENSOR_PTR(   PROCPWRTHROT,  NULL),
+  MINI_SENSOR_PTR(    PROCOTTHROT,  NULL),
 
   // ------------------------------------------------------
   // Quad Sensors (6 each)
@@ -539,72 +545,97 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   QUAD_MINI_SENSOR_PTRS_NULL( TEMPQ ),
 
   // ------------------------------------------------------
+  // Regulator Sensors
+  // ------------------------------------------------------
+  MINI_SENSOR_PTR( VOLTVDD,         NULL),
+  MINI_SENSOR_PTR( VOLTVDN,         NULL),
+  MINI_SENSOR_PTR( CURVDD,          NULL),
+  MINI_SENSOR_PTR( CURVDN,          NULL),
+  MINI_SENSOR_PTR( VRMPROCOT,       NULL),
+
+  // ------------------------------------------------------
   // Core Sensors (24 of each)
   // ------------------------------------------------------
-  CORE_MINI_SENSOR_PTRS_NULL(  FREQ250USP0C ),
+  CORE_MINI_SENSOR_PTRS_NULL(      FREQREQC ),
   CORE_MINI_SENSOR_PTRS_NULL(        FREQAC ),
-  CORE_MINI_SENSOR_PTRS(          IPS4MSP0C, &G_dcom_slv_outbox_tx.ips4msp0cy    ),
-  CORE_MINI_SENSOR_PTRS(       NOTBZE4MSP0C, &G_dcom_slv_outbox_tx.mcpifd4msp0cy ),
-  CORE_MINI_SENSOR_PTRS(       NOTFIN4MSP0C, &G_dcom_slv_outbox_tx.mcpifi4msp0cy ),
+  CORE_MINI_SENSOR_PTRS(               IPSC, &G_dcom_slv_outbox_tx.ips4msp0cy    ),
+  CORE_MINI_SENSOR_PTRS(            NOTBZEC, &G_dcom_slv_outbox_tx.mcpifd4msp0cy ),
+  CORE_MINI_SENSOR_PTRS(            NOTFINC, &G_dcom_slv_outbox_tx.mcpifi4msp0cy ),
   CORE_MINI_SENSOR_PTRS_NULL( TEMPPROCTHRMC ),
   CORE_MINI_SENSOR_PTRS(              UTILC, &G_dcom_slv_outbox_tx.utilcy        ),
-  CORE_MINI_SENSOR_PTRS(         NUTIL3SP0C, &G_dcom_slv_outbox_tx.nutil3sp0cy   ),
-  CORE_MINI_SENSOR_PTRS_NULL(    MSTL2MSP0C ),
-  CORE_MINI_SENSOR_PTRS_NULL(     CMT2MSP0C ),
-  CORE_MINI_SENSOR_PTRS_NULL(       PPICP0C ),
-  CORE_MINI_SENSOR_PTRS(      PWRPX250USP0C, &G_dcom_slv_outbox_tx.pwrpx250usp0cy),
+  CORE_MINI_SENSOR_PTRS(             NUTILC, &G_dcom_slv_outbox_tx.nutil3sp0cy   ),
+  CORE_MINI_SENSOR_PTRS_NULL(         MSTLC ),
   CORE_MINI_SENSOR_PTRS_NULL(         TEMPC ),
+  CORE_MINI_SENSOR_PTRS_NULL(  STOPDEEPREQC ),
+  CORE_MINI_SENSOR_PTRS_NULL(  STOPDEEPACTC ),
 
   // ------------------------------------------------------
   // Memory Sensors
   // ------------------------------------------------------
 
-  MEMCONTROL_MINI_SENSOR_PTRS(MRD2MSP0M, &G_dcom_slv_outbox_tx.mrd2msp0mx), //
-  MEMCONTROL_MINI_SENSOR_PTRS(MWR2MSP0M, &G_dcom_slv_outbox_tx.mwr2msp0mx), //
-  MEMCONTROL_MINI_SENSOR_PTRS_NULL(MIRC2MSP0M),
-  MEMCONTROL_MINI_SENSOR_PTRS_NULL(MLP2P0M),
+  MEMCONTROL_MINI_SENSOR_PTRS(MRDM, &G_dcom_slv_outbox_tx.mrd2msp0mx), //
+  MEMCONTROL_MINI_SENSOR_PTRS(MWRM, &G_dcom_slv_outbox_tx.mwr2msp0mx), //
+  MEMCONTROL_MINI_SENSOR_PTRS_NULL(MIRCM),
+  MEMCONTROL_MINI_SENSOR_PTRS_NULL(MLP2M),
 
-  PORTPAIR_MINI_SENSOR_PTRS_NULL(MAC2MSP0M),
-  PORTPAIR_MINI_SENSOR_PTRS_NULL(MPU2MSP0M),
-  PORTPAIR_MINI_SENSOR_PTRS_NULL(MIRB2MSP0M),
-  PORTPAIR_MINI_SENSOR_PTRS_NULL(MIRL2MSP0M),
-  PORTPAIR_MINI_SENSOR_PTRS_NULL(MIRM2MSP0M),
-  PORTPAIR_MINI_SENSOR_PTRS_NULL(MIRH2MSP0M),
-  PORTPAIR_MINI_SENSOR_PTRS_NULL(MTS2MSP0M),
-  PORTPAIR_MINI_SENSOR_PTRS_NULL(MEMSP2MSPM),
-  PORTPAIR_MINI_SENSOR_PTRS_NULL(M4RD2MSP0M),
-  PORTPAIR_MINI_SENSOR_PTRS_NULL(M4WR2MSP0M),
+  MINI_SENSOR_PTR( TEMPDIMM00,     NULL),
+  MINI_SENSOR_PTR( TEMPDIMM01,     NULL),
+  MINI_SENSOR_PTR( TEMPDIMM02,     NULL),
+  MINI_SENSOR_PTR( TEMPDIMM03,     NULL),
+  MINI_SENSOR_PTR( TEMPDIMM04,     NULL),
+  MINI_SENSOR_PTR( TEMPDIMM05,     NULL),
+  MINI_SENSOR_PTR( TEMPDIMM06,     NULL),
+  MINI_SENSOR_PTR( TEMPDIMM07,     NULL),
+  MINI_SENSOR_PTR( TEMPDIMM08,     NULL),
+  MINI_SENSOR_PTR( TEMPDIMM09,     NULL),
+  MINI_SENSOR_PTR( TEMPDIMM10,     NULL),
+  MINI_SENSOR_PTR( TEMPDIMM11,     NULL),
+  MINI_SENSOR_PTR( TEMPDIMM12,     NULL),
+  MINI_SENSOR_PTR( TEMPDIMM13,     NULL),
+  MINI_SENSOR_PTR( TEMPDIMM14,     NULL),
+  MINI_SENSOR_PTR( TEMPDIMM15,     NULL),
 
-  MINI_SENSOR_PTR( TEMP2MSCENT,     &G_dcom_slv_outbox_tx.temp2mscent),
+  MEMCONTROL_MINI_SENSOR_PTRS_NULL(TEMPDIMMAXM),
+  MEMCONTROL_MINI_SENSOR_PTRS_NULL(LOCDIMMAXM),
+
+  MINI_SENSOR_PTR( MEMPWRTHROT,  NULL),
+  MINI_SENSOR_PTR( MEMOTTHROT,   NULL),
+
+  PORTPAIR_MINI_SENSOR_PTRS_NULL(MACM),
+  PORTPAIR_MINI_SENSOR_PTRS_NULL(MPUM),
+  PORTPAIR_MINI_SENSOR_PTRS_NULL(MIRBM),
+  PORTPAIR_MINI_SENSOR_PTRS_NULL(MIRLM),
+  PORTPAIR_MINI_SENSOR_PTRS_NULL(MIRMM),
+  PORTPAIR_MINI_SENSOR_PTRS_NULL(MIRHM),
+  PORTPAIR_MINI_SENSOR_PTRS_NULL(MTSM),
+  PORTPAIR_MINI_SENSOR_PTRS_NULL(M4RDM),
+  PORTPAIR_MINI_SENSOR_PTRS_NULL(M4WRM),
+
+  MINI_SENSOR_PTR( TEMPCENT,        &G_dcom_slv_outbox_tx.temp2mscent),
   MINI_SENSOR_PTR( TEMPDIMMTHRM,    &G_dcom_slv_outbox_tx.tempdimmthrm),
-  MINI_SENSOR_PTR( MEMSP2MS,        NULL),
 
   // ------------------------------------------------------
-  // Regulator Sensors
+  // GPU Sensors
   // ------------------------------------------------------
-  MINI_SENSOR_PTR( UVOLT250USP0V0,  NULL),
-  MINI_SENSOR_PTR( UVOLT250USP0V1,  NULL),
-  MINI_SENSOR_PTR( VOLTVDD,         NULL),
-  MINI_SENSOR_PTR( VOLTVDN,         NULL),
-  MINI_SENSOR_PTR( CURVDD,          NULL),
-  MINI_SENSOR_PTR( CURVDN,          NULL),
-  MINI_SENSOR_PTR( VRFAN,           NULL),
+  MINI_SENSOR_PTR( TEMPGPU0,     NULL),
+  MINI_SENSOR_PTR( TEMPGPU1,     NULL),
+  MINI_SENSOR_PTR( TEMPGPU2,     NULL),
 
   // ------------------------------------------------------
   // Partition Sensors
   // ------------------------------------------------------
-  MINI_SENSOR_PTR( UTIL2MSSLCG000,  NULL),
-  MINI_SENSOR_PTR( UTIL2MSSLCG001,  NULL),
-  MINI_SENSOR_PTR( UTIL2MSSLCG002,  NULL),
-  MINI_SENSOR_PTR( UTIL2MSSLCG003,  NULL),
-  MINI_SENSOR_PTR( UTIL2MSSLCG004,  NULL),
-  MINI_SENSOR_PTR( UTIL2MSSLCG005,  NULL),
-  MINI_SENSOR_PTR( UTIL2MSSLCG006,  NULL),
-  MINI_SENSOR_PTR( UTIL2MSSLCG007,  NULL),
-  MINI_SENSOR_PTR( UTIL2MSSLCG008,  NULL),
-  MINI_SENSOR_PTR( UTIL2MSSLCG009,  NULL),
-  MINI_SENSOR_PTR( UTIL2MSSLCG010,  NULL),
-  MINI_SENSOR_PTR( UTIL2MSSLCG011,  NULL),
+  MINI_SENSOR_PTR( UTILSLCG000,  NULL),
+  MINI_SENSOR_PTR( UTILSLCG001,  NULL),
+  MINI_SENSOR_PTR( UTILSLCG002,  NULL),
+  MINI_SENSOR_PTR( UTILSLCG003,  NULL),
+  MINI_SENSOR_PTR( UTILSLCG004,  NULL),
+  MINI_SENSOR_PTR( UTILSLCG005,  NULL),
+  MINI_SENSOR_PTR( UTILSLCG006,  NULL),
+  MINI_SENSOR_PTR( UTILSLCG007,  NULL),
+  MINI_SENSOR_PTR( UTILSLCG008,  NULL),
+  MINI_SENSOR_PTR( UTILSLCG009,  NULL),
+  MINI_SENSOR_PTR( UTILSLCG010,  NULL),
+  MINI_SENSOR_PTR( UTILSLCG011,  NULL),
 };
 STATIC_ASSERT(   (NUMBER_OF_SENSORS_IN_LIST != (sizeof(G_amec_mini_sensor_list)/sizeof(uint16_t *)))   );
 STATIC_ASSERT(   (MAX_AMEC_SENSORS < (sizeof(G_amec_mini_sensor_list)/sizeof(uint16_t *)))   );

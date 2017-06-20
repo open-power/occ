@@ -279,12 +279,6 @@ void amec_update_apss_sensors(void)
         //  divide by   10 to get it to centiUnits      (0.01)
         //  divide by  100 to get it to deciUnits       (0.1)
         //  divide by 1000 to get it to Units           (1)
-        // Vdd has both a power and a current sensor, we convert the Vdd power
-        // to Watts and the current to centiAmps
-        temp32 = ((l_vdd * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
-        sensor_update( AMECSENSOR_PTR(PWR250USVDD0), (uint16_t)temp32);
-        temp32 = ((l_vcs_vio_vpcie * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
-        sensor_update( AMECSENSOR_PTR(PWRVCSVIOVDN), (uint16_t)temp32);
 
         // ----------------------------------------------------
         // Convert Other Raw Misc Power from APSS into sensors
@@ -294,14 +288,14 @@ void amec_update_apss_sensors(void)
         temp32  = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.fans[0]);
         temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.fans[1]);
         temp32  = ((temp32  * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
-        sensor_update( AMECSENSOR_PTR(PWR250USFAN), (uint16_t)temp32);
+        sensor_update( AMECSENSOR_PTR(PWRFAN), (uint16_t)temp32);
 
         // I/O: Add up all I/O channels
         temp32  = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.io[0]);
         temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.io[1]);
         temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.io[2]);
         temp32 = ((temp32  * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
-        sensor_update( AMECSENSOR_PTR(PWR250USIO), (uint16_t)temp32);
+        sensor_update( AMECSENSOR_PTR(PWRIO), (uint16_t)temp32);
 
         // Memory: Add up all channels for the same processor.
         temp32 = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.memory[l_proc][0]);
@@ -314,7 +308,7 @@ void amec_update_apss_sensors(void)
             temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.mem_cache);
         }
         temp32 = ((temp32  * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
-        sensor_update( AMECSENSOR_PTR(PWR250USMEM0), (uint16_t)temp32);
+        sensor_update( AMECSENSOR_PTR(PWRMEM), (uint16_t)temp32);
 
         // Save off the combined power from all memory
         for (l_idx=0; l_idx < MAX_NUM_CHIP_MODULES; l_idx++)
@@ -330,7 +324,7 @@ void amec_update_apss_sensors(void)
         temp32  = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.storage_media[0]);
         temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.storage_media[1]);
         temp32  = ((temp32  * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
-        sensor_update( AMECSENSOR_PTR(PWR250USSTORE), (uint16_t)temp32);
+        sensor_update( AMECSENSOR_PTR(PWRSTORE), (uint16_t)temp32);
 
         // Save total GPU adapter for this proc
         if (l_proc < MAX_GPU_DOMAINS)
@@ -382,7 +376,7 @@ void amec_update_apss_sensors(void)
         //Calculate average of all the OCCs.
         l_allOccAvgFreqOver250us /= l_presentOCCs;
 
-        // Save the max and min pwr250us sensors and keep an accumulator of the
+        // Save the max and min pwr sensors and keep an accumulator of the
         // average frequency over 30 seconds.
         if (g_pwr250us_over30sec.count == 0)
         {
@@ -650,7 +644,7 @@ void amec_update_avsbus_sensors(void)
             {
                 // Update sensor with the OT status (0 / 1)
                 uint16_t otStatus = process_avsbus_status();
-                sensor_update(AMECSENSOR_PTR(VRFAN), otStatus);
+                sensor_update(AMECSENSOR_PTR(VRMPROCOT), otStatus);
             }
             // Back to reading currents
             initiate_avsbus_reads(AVSBUS_CURRENT);

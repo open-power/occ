@@ -656,27 +656,7 @@ void apss_store_ipmi_sensor_id(const uint16_t i_channel, const apss_cfg_adc_v20_
         case ADC_MEMORY_PROC_3:
             if (l_proc == (i_adc->assignment - ADC_MEMORY_PROC_0))
             {
-                AMECSENSOR_PTR(PWR250USMEM0)->ipmi_sid = i_adc->ipmisensorId;
-            }
-            break;
-        case ADC_VDD_PROC_0:
-        case ADC_VDD_PROC_1:
-        case ADC_VDD_PROC_2:
-        case ADC_VDD_PROC_3:
-            if (l_proc == (i_adc->assignment - ADC_VDD_PROC_0))
-            {
-                AMECSENSOR_PTR(PWR250USVDD0)->ipmi_sid = i_adc->ipmisensorId;
-            }
-
-            break;
-
-        case ADC_VCS_VIO_VPCIE_PROC_0:
-        case ADC_VCS_VIO_VPCIE_PROC_1:
-        case ADC_VCS_VIO_VPCIE_PROC_2:
-        case ADC_VCS_VIO_VPCIE_PROC_3:
-            if (l_proc == (i_adc->assignment - ADC_VCS_VIO_VPCIE_PROC_0))
-            {
-                AMECSENSOR_PTR(PWRVCSVIOVDN)->ipmi_sid = i_adc->ipmisensorId;
+                AMECSENSOR_PTR(PWRMEM)->ipmi_sid = i_adc->ipmisensorId;
             }
             break;
 
@@ -685,7 +665,7 @@ void apss_store_ipmi_sensor_id(const uint16_t i_channel, const apss_cfg_adc_v20_
         case ADC_IO_C:
             if (i_adc->ipmisensorId != 0)
             {
-                AMECSENSOR_PTR(PWR250USIO)->ipmi_sid = i_adc->ipmisensorId;
+                AMECSENSOR_PTR(PWRIO)->ipmi_sid = i_adc->ipmisensorId;
             }
             break;
 
@@ -693,7 +673,7 @@ void apss_store_ipmi_sensor_id(const uint16_t i_channel, const apss_cfg_adc_v20_
         case ADC_FANS_B:
             if (i_adc->ipmisensorId != 0)
             {
-                AMECSENSOR_PTR(PWR250USFAN)->ipmi_sid = i_adc->ipmisensorId;
+                AMECSENSOR_PTR(PWRFAN)->ipmi_sid = i_adc->ipmisensorId;
             }
             break;
 
@@ -701,7 +681,7 @@ void apss_store_ipmi_sensor_id(const uint16_t i_channel, const apss_cfg_adc_v20_
         case ADC_STORAGE_B:
             if (i_adc->ipmisensorId != 0)
             {
-                AMECSENSOR_PTR(PWR250USSTORE)->ipmi_sid = i_adc->ipmisensorId;
+                AMECSENSOR_PTR(PWRSTORE)->ipmi_sid = i_adc->ipmisensorId;
             }
             break;
 

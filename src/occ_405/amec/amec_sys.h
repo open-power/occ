@@ -126,7 +126,6 @@ typedef struct
 typedef struct
 {
   // Sensors
-  sensor_t uvolt250us;
   sensor_t volt250us;
 
 } amec_vrm_t;
@@ -181,7 +180,6 @@ typedef struct
   sensor_t mirm2ms;
   sensor_t mirh2ms;
   sensor_t mts2ms;
-  sensor_t memsp2ms;
   sensor_t m4rd2ms;
   sensor_t m4wr2ms;
 
@@ -294,9 +292,6 @@ typedef struct
   sensor_t util;
   sensor_t nutil3s;
   sensor_t mstl2ms;
-  sensor_t cmt2ms;
-  sensor_t ppic;
-  sensor_t pwrpx250us;
   sensor_t tempc;
   sensor_t stopdeepreqc;
   sensor_t stopdeepactc;
@@ -451,14 +446,11 @@ typedef struct
   vectorSensor_t freqa_vector;
   sensor_t ips4ms;
   vectorSensor_t ips4ms_vector;
-  sensor_t memsp2ms;
-  vectorSensor_t memsp2ms_vector;
   sensor_t pwrproc;
   sensor_t pwr250usvdd;
   sensor_t curvdd;
   sensor_t pwrvcsviovdn;
   sensor_t pwr250usmem;
-  sensor_t sp250us;
   sensor_t tempprocavg;
   vectorSensor_t temp4ms_vector;
   sensor_t tempprocthermal;
@@ -470,7 +462,6 @@ typedef struct
   // Memory Summary Sensors
   sensor_t temp2mscent;
   sensor_t tempdimmthrm;
-  sensor_t memsp2ms_tls;
   sensor_t mempwrthrot;
   sensor_t memotthrot;
 
