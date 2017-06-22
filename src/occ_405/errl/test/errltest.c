@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -54,7 +54,6 @@ SsxTimer timer;
 /// Our idle thread.  See #main_thread_routine
 SsxThread main_thread;
 
-/// TODO: Goes away due to device driver layer
 SsxThread prcd_thread;
 
 /*----------------------------------------------------------------------------*/
@@ -90,7 +89,6 @@ void pgp_validation_ssx_main_hook(void)
 // Description:
 //
 // End Function Specification
-//TODO placeholder
 void Cmd_Hndl_thread_routine(void *arg)
 {
 }

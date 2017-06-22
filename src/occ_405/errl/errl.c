@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -67,7 +67,6 @@ uint8_t G_error_history[ERR_HISTORY_SIZE] = {0};
 extern uint8_t G_occ_interrupt_type;
 extern bool G_fir_collection_required;
 
-void hexDumpLog( errlHndl_t i_log );
 
 // Function Specification
 //
@@ -293,6 +292,7 @@ errlHndl_t createErrl(
     uint64_t    l_time = 0;
     uint8_t     l_id = 0;
     uint8_t     l_errSlot = getErrSlotNumAndErrId( i_sev, &l_id, &l_time);
+    static uint8_t traceCount = 5;
 
 
     if ( l_errSlot != ERRL_INVALID_SLOT )
@@ -338,8 +338,6 @@ errlHndl_t createErrl(
         l_rc->iv_numCallouts = 0;
 
         // save off occ fields
-        //NOTE: Design does not exist for these fields
-        //TODO: fix this when design is done!
         l_rc->iv_userDetails.iv_fwLevel = 0;
         l_rc->iv_userDetails.iv_occId = G_pbax_id.chip_id;
         l_rc->iv_userDetails.iv_occRole = G_occ_role;
@@ -348,8 +346,11 @@ errlHndl_t createErrl(
     }
     else
     {
-        // TODO: put a threshold on this trace
-        TRAC_INFO("Error Logs are FULL  - Slot [%d]", l_errSlot);
+        if( traceCount > 0 )
+        {
+            TRAC_INFO("Error Logs are FULL  - Slot [%d]", l_errSlot);
+            traceCount--;
+        }
     }
 
     return l_rc;
@@ -940,79 +941,3 @@ void setErrlActions(errlHndl_t io_err, const uint8_t i_mask)
     }
 }
 
-// TODO: Cleanup this function.
-// Function Specification
-//
-// Name:  hexDumpLog
-//
-// Description: Hex Dump Log
-//
-// End Function Specification
-void hexDumpLog( errlHndl_t i_log )
-{
-#if 0
-    uint32_t    l_written = 0;
-    uint32_t    l_counter = 0;
-    uint8_t *   l_data = (uint8_t*) i_log;
-    uint32_t    l_len = i_log->iv_userDetails.iv_entrySize;
-
-    while ( l_counter < l_len)
-    {
-        if (( i_log == NULL ) ||
-            ( i_log == INVALID_ERR_HNDL ))
-        {
-            // break out if log is invalid
-            // do nothing
-            break;
-        }
-
-        printf("|   %08X     ", (uint32_t) l_data + l_counter);
-
-        // Display 16 bytes in Hex with 2 spaces in between
-        l_written = 0;
-        uint8_t i = 0;
-        for ( i = 0; i < 16 && l_counter < l_len; i++ )
-        {
-            l_written += printf("%02X",l_data[l_counter++]);
-
-            if ( ! ( l_counter % 4 ) )
-            {
-                l_written += printf("  ");
-            }
-        }
-
-        // Pad with spaces
-        uint8_t l_space[64] = {0};
-        memset( l_space, 0x00, sizeof( l_space ));
-        memset( l_space, ' ', 43-l_written);
-        printf("%s", l_space );
-
-        // Display ASCII
-        l_written = 0;
-        uint8_t l_char;
-        for ( ; i > 0 ; i-- )
-        {
-            l_char = l_data[ l_counter-i ];
-
-            if ( isprint( l_char ) &&
-                 ( l_char != '&' ) &&
-                 ( l_char != '<' ) &&
-                 ( l_char != '>' )
-               )
-            {
-                l_written += printf("%c",l_char );
-            }
-            else
-            {
-                l_written += printf("." );
-            }
-        }
-
-        // Pad with spaces
-        uint8_t l_space2[64] = {0};
-        memset( l_space2, 0x00, sizeof( l_space2 ));
-        memset( l_space2, ' ', 19-l_written);
-        printf("%s|\n", l_space2 );
-    }
-#endif
-}
