@@ -78,7 +78,7 @@ typedef enum
 //Pore flex request for the GPE job that is used for centaur init.
 GpeRequest G_centaur_control_request;
 
-//@TODO TEMP: not ready yet for centaur control data structures
+//TODO: RTC 163359 - not ready yet for centaur control data structures
 //GPE_BUFFER(GpeScomParms G_centaur_control_reg_parms);
 //GPE_BUFFER(scomList_t G_centaurThrottle[NUM_CENT_THROTTLE_SCOMS]);
 
@@ -133,7 +133,7 @@ uint16_t centaurThrottle_convert2Numerator(uint16_t i_throttle, uint8_t i_cent, 
     return (uint16_t)l_nvalue;
 }
 
-#if 0         // @TODO TEMP: Not Ready yet for centaur control
+#if 0         // TODO: 163359 - Not Ready yet for centaur control
 
 //////////////////////////
 // Function Specification
@@ -515,5 +515,5 @@ bool check_centaur_checkstop(uint8_t cent)
 }
 
 
-#endif        // @TODO TEMP: Not Ready yet for centaur control
+#endif        // TODO: RTC 163359 - Not Ready yet for centaur control
 

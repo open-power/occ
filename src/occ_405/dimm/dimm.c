@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -753,7 +753,6 @@ void task_dimm_sm(struct task *i_self)
                 occ_i2c_lock_release(G_dimm_sm_args.i2cEngine);
                 L_occ_owns_lock = false;
                 G_mem_monitoring_allowed = false;
-                // TODO: What else do we need to do?  go to Safe State?
             }
             else
             {

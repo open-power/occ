@@ -90,7 +90,7 @@ typedef enum
 // Globals
 //*************************************************************************/
 
-/* TEMP/TODO: PORE/MemData issues */
+/* TODO 163359: PORE/MemData issues */
 #if 0
 //Global array of centaur data buffers
 GPE_BUFFER(MemData G_centaur_data[NUM_CENTAUR_DATA_BUFF +
@@ -176,7 +176,7 @@ uint8_t      G_centaur_nest_lfir6 = 0;
 //number of SC polls to wait between i2c recovery attempts
 #define CENT_SC_MAX_INTERVAL 256
 
-/* TEMP/TODO: Reenable when needed */
+/* TODO: RTC 163359 - Reenable when needed */
 #if 0
 //determine scom address of MCIFIR register for given Centaur n
 #define MCS0_MCIFIR_N(n) \
@@ -186,7 +186,7 @@ uint8_t      G_centaur_nest_lfir6 = 0;
 //mask for channel checkstop
 #define MCIFIR_CHAN_CKSTOP_MASK 0x0000000100000000
 
-/* TEMP/TODO: Reenable when needed */
+/* TODO: RTC 163359 - Reenable when needed */
 #if 0
 bool cent_chan_checkstop(const uint8_t i_cent)
 {
@@ -235,7 +235,7 @@ bool cent_chan_checkstop(const uint8_t i_cent)
 }
 #endif // #if 0
 
-/* TEMP/TODO: Reenable when needed */
+/* TODO: RTC 163359 - Reenable when needed */
 #if 0
 void cent_recovery(uint32_t i_cent)
 {
@@ -611,7 +611,7 @@ void cent_recovery(uint32_t i_cent)
 //              collection
 //
 // End Function Specification
-/* TEMP/TODO: Reenable when needed */
+/* TODO: RTC 163359 - Reenable when needed */
 #if 0
 void task_centaur_data( task_t * i_task )
 {
@@ -929,7 +929,7 @@ void task_centaur_data( task_t * i_task )
 // Description: Reads
 //
 // End Function Specification
-/* TEMP/TODO: Reenable when needed */
+/* TODO: RTC 163359 - Reenable when needed */
 #if 0
 int cent_get_enabled_sensors()
 {
@@ -997,7 +997,7 @@ int cent_get_enabled_sensors()
 //        This will also initialize the centaur watchdog.
 //
 // End Function Specification
-/* TEMP/TODO: Reenable when needed */
+/* TODO: RTC 163359 - Reenable when needed */
 #if 0
 void centaur_init( void )
 {
@@ -1271,7 +1271,7 @@ void centaur_init( void )
 //              Returns NULL for centaur ID outside the range of 0 to 7.
 //
 // End Function Specification
-/* TEMP/TODO: Reenable when needed */
+/* TODO: RTC 163359 - Reenable when needed */
 #if 0
 MemData * cent_get_centaur_data_ptr( const uint8_t i_occ_centaur_id )
 {

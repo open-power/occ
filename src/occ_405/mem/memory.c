@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -39,7 +39,7 @@ extern dimm_control_args_t  G_dimm_control_args;
 extern task_t G_task_table[TASK_END];
 
 
-// @TODO: TEMP - uncomment when Centaur code is enabled
+// TODO: RTC 163359  - uncomment when Centaur code is enabled
 //extern GpeScomParms G_centaur_control_reg_parms;
 
 // This array identifies dimm throttle limits for both Centaurs (Cumulus) and
@@ -112,7 +112,7 @@ void task_memory_control( task_t * i_task )
     }
     else if (MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type)
     {
-// @TODO: TEMP - uncomment when Centaur code is enabled
+// TODO: RTC 163359 - uncomment when Centaur code is enabled
 //        gpe_rc = G_centaur_control_reg_parms.rc;
     }
 
@@ -156,7 +156,7 @@ void task_memory_control( task_t * i_task )
                 {
                     if(!(L_gpe_fail_logged & (CENTAUR0_PRESENT_MASK >> memIndex)))
                     {
-// @TODO: TEMP - uncomment when Centaur code is enabled
+// TODO: RTC 163359 - uncomment when Centaur code is enabled
 /*                        if (!check_centaur_checkstop(memIndex))
                         {
                             L_gpe_fail_logged |= CENTAUR0_PRESENT_MASK >> memIndex;
@@ -224,7 +224,7 @@ void task_memory_control( task_t * i_task )
             {
                 break;
             }
-// @TODO TEMP: centaur code not ready yet
+// TODO RTC: 163359 - centaur code not ready yet
 //            rc = centaur_control(memIndex);  // Control one centaur
         }
 
@@ -240,7 +240,7 @@ void task_memory_control( task_t * i_task )
                 }
                 else if (MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type)
                 {
-// @TODO: TEMP - uncomment when Centaur code is enabled
+// TODO RTC: 163359 - uncomment when Centaur code is enabled
 //              gpe_rc = G_centaur_control_reg_parms.rc;
                 }
 
@@ -367,7 +367,7 @@ void memory_init()
             }
             else
             {
-                // TODO CUMULUS NOT SUPPORTED YET IN PHASE1
+                // TODO RTC: 163359 - CUMULUS NOT SUPPORTED YET IN PHASE1
 #if 0
                 TRAC_INFO("memory_init: calling centaur_init()");
                 centaur_init(); //no rc, handles errors internally
