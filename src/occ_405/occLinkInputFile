@@ -80,6 +80,7 @@ INPUT ( amec_amester.o
         rtls_tables.o
         rtls.o
         scom.o
+        sensor_inband_cmd.o
         sensor_info.o
         sensor_main_memory.o
         sensor_query_list.o

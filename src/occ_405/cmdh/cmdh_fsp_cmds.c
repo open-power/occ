@@ -50,6 +50,7 @@
 #include <avsbus.h>
 #include "cmdh_dbug_cmd.h"
 #include "wof.h"
+#include "sensor_main_memory.h"
 extern dimm_sensor_flags_t G_dimm_temp_expired_bitmap;
 extern bool G_vrm_thermal_monitoring;
 
@@ -1824,9 +1825,76 @@ errlHndl_t cmdh_tmgt_get_field_debug_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
 // Function Specification
 //
+// Name:  cmdh_set_user_pcap_common
+//
+// Description: Implements the common part of Set Use Power Cap cmd from inband or out of band
+//
+// End Function Specification
+uint8_t cmdh_set_user_pcap_common(uint16_t i_pcap,
+                                  uint8_t  i_source)
+{
+    uint8_t  l_rc = ERRL_RC_SUCCESS;
+
+    do
+    {
+        // Can't send this command to a slave
+        if (OCC_SLAVE == G_occ_role)
+        {
+            TRAC_ERR("From source %d User PCAP %d must be sent to master OCC",
+                      i_source, i_pcap);
+            l_rc = ERRL_RC_INVALID_CMD;
+            break;
+        }
+
+        //A value of 0 means this pcap has been deactivated, otherwise
+        //make sure it's within the min & max.
+        if ((i_pcap != 0) && (i_pcap < G_master_pcap_data.soft_min_pcap))
+        {
+            TRAC_ERR("From source %d User PCAP %d is below the minimum allowed (%d)",
+                      i_source, i_pcap, G_master_pcap_data.soft_min_pcap);
+
+            l_rc = ERRL_RC_INVALID_DATA;
+            break;
+        }
+        else if ((i_pcap > G_master_pcap_data.system_pcap) &&
+                 (G_master_pcap_data.system_pcap != 0))
+        {
+            TRAC_ERR("From source %d User PCAP %d is above the maximum allowed (%d)",
+                      i_source, i_pcap, G_master_pcap_data.system_pcap);
+
+            l_rc = ERRL_RC_INVALID_DATA;
+            break;
+        }
+        else
+        {
+            G_master_pcap_data.current_pcap = i_pcap;
+
+            //Indicate there is new PCAP data available
+            G_master_pcap_data.pcap_data_count++;
+            // if user pcap was just disabled set source to 0 (no user pcap) 
+            if(i_pcap == 0)
+            {
+               G_master_pcap_data.source = 0;
+            }
+            else
+            {
+               G_master_pcap_data.source = i_source;
+            }
+        }
+
+        TRAC_INFO("User selected power limit = %d set from source %d",
+                  G_master_pcap_data.current_pcap, i_source);
+
+    } while (0);
+
+    return l_rc;
+}
+
+// Function Specification
+//
 // Name:  cmdh_set_user_pcap
 //
-// Description: Implements the Set Use Power Cap command.
+// Description: Implements the Set Use Power Cap command from out of band interface
 //
 // End Function Specification
 errlHndl_t cmdh_set_user_pcap(const cmdh_fsp_cmd_t * i_cmd_ptr,
@@ -1840,58 +1908,18 @@ errlHndl_t cmdh_set_user_pcap(const cmdh_fsp_cmd_t * i_cmd_ptr,
     o_rsp_ptr->data_length[0] = 0;
     o_rsp_ptr->data_length[1] = 0;
 
-    do
+    if (CMDH_DATALEN_FIELD_UINT16(i_cmd_ptr) != CMDH_SET_USER_PCAP_DATALEN)
     {
-        // Can't send this command to a slave
-        if (OCC_SLAVE == G_occ_role)
-        {
-            l_rc = ERRL_RC_INVALID_CMD;
-            break;
-        }
-
-        if (CMDH_DATALEN_FIELD_UINT16(i_cmd_ptr) != CMDH_SET_USER_PCAP_DATALEN)
-        {
-            l_rc = ERRL_RC_INVALID_CMD_LEN;
-            break;
-        }
-
+        TRAC_ERR("cmdh_set_user_pcap: Invalid command length %u, expected %u ",
+                  CMDH_DATALEN_FIELD_UINT16(i_cmd_ptr), CMDH_SET_USER_PCAP_DATALEN);
+        l_rc = ERRL_RC_INVALID_CMD_LEN;
+    }
+    else
+    {
         uint16_t l_pcap = CONVERT_UINT8_ARRAY_UINT16(i_cmd_ptr->data[0],
                                                      i_cmd_ptr->data[1]);
-
-        //A value of 0 means this pcap has been deactivated, otherwise
-        //make sure it's within the min & max.
-        if ((l_pcap != 0) && (l_pcap < G_master_pcap_data.soft_min_pcap))
-        {
-            TRAC_ERR("User PCAP %d is below the minimum allowed (%d)",
-                      l_pcap, G_master_pcap_data.soft_min_pcap);
-
-            l_rc = ERRL_RC_INVALID_DATA;
-            break;
-        }
-        else if ((l_pcap > G_master_pcap_data.system_pcap) &&
-                 (G_master_pcap_data.system_pcap != 0))
-        {
-            TRAC_ERR("User PCAP %d is above the maximum allowed (%d)",
-                      l_pcap, G_master_pcap_data.system_pcap);
-
-            l_rc = ERRL_RC_INVALID_DATA;
-            break;
-        }
-        else
-        {
-            G_master_pcap_data.current_pcap = l_pcap;
-
-            //Indicate there is new PCAP data available
-            G_master_pcap_data.pcap_data_count++;
-
-            G_master_pcap_data.source = OUT_OF_BAND; // BMC/(H)TMGT
-        }
-
-        TRAC_INFO("User selected power limit = %d",
-                  G_master_pcap_data.current_pcap);
-
-    } while (0);
-
+        l_rc = cmdh_set_user_pcap_common(l_pcap, OUT_OF_BAND);
+    }
 
     if (ERRL_RC_SUCCESS != l_rc)
     {
@@ -1900,4 +1928,256 @@ errlHndl_t cmdh_set_user_pcap(const cmdh_fsp_cmd_t * i_cmd_ptr,
     }
 
     return l_err;
+}
+
+// Function Specification
+//
+// Name:  cmdh_clear_sensor_data
+//
+// Description: Implements the Clear sensor data command
+//
+// End Function Specification
+uint8_t cmdh_clear_sensor_data(const uint16_t  i_cmd_data_length,
+                               const uint8_t*  i_cmd_data_ptr,
+                               const uint16_t  i_max_rsp_data_length,
+                                     uint16_t* o_rsp_data_length,
+                                     uint8_t*  o_rsp_data_ptr)
+{
+    uint8_t  l_rc = ERRL_RC_SUCCESS;
+    cmdh_clear_sensor_cmd_data_t *l_cmd_ptr = (cmdh_clear_sensor_cmd_data_t *) i_cmd_data_ptr;
+    cmdh_clear_sensor_rsp_data_t *l_rsp_ptr = (cmdh_clear_sensor_rsp_data_t*) o_rsp_data_ptr;
+    *o_rsp_data_length = 0;
+
+    do
+    {
+        // Command Length Check
+        if( i_cmd_data_length != sizeof(cmdh_clear_sensor_cmd_data_t) )
+        {
+            TRAC_ERR("cmdh_clear_sensor_data: Invalid command length %u, expected %u ",
+                     i_cmd_data_length, sizeof(cmdh_clear_sensor_cmd_data_t));
+            l_rc = ERRL_RC_INVALID_CMD_LEN;
+            break;
+        }
+        // Make sure there is enough room in response buffer
+        if( sizeof(cmdh_clear_sensor_rsp_data_t) > i_max_rsp_data_length )
+        {
+            TRAC_ERR("cmdh_clear_sensor_data: Response size %u is larger than buffer size %u ",
+                     sizeof(cmdh_clear_sensor_rsp_data_t), i_max_rsp_data_length);
+            l_rc = ERRL_RC_INTERNAL_FAIL;
+            break;
+        }
+        // Check that the owner(s) to clear sensors for are valid
+        if( (l_cmd_ptr->sensor_owner_id & ~(VALID_CLEAR_SENSOR_OWNER_MASK) ) ||
+            (l_cmd_ptr->sensor_owner_id == 0) )
+        {
+            TRAC_ERR("cmdh_clear_sensor_data: Invalid sensor owners = 0x%02X",
+                     l_cmd_ptr->sensor_owner_id);
+            l_rc = ERRL_RC_INVALID_DATA;
+            break;
+        }
+
+        // clear min/max fields of all sensors for the given owner(s)
+        sensor_t *l_sensor_ptr = NULL;
+        uint16_t i = 0;
+        for( i = 0;i < G_amec_sensor_count; i++)
+        {
+            l_sensor_ptr = getSensorByGsid(i);
+            sensor_clear_minmax(l_sensor_ptr, l_cmd_ptr->sensor_owner_id);
+        }
+
+        // copy the owner_id to the response buffer and set the rsp length
+        l_rsp_ptr->sensor_owner_id = l_cmd_ptr->sensor_owner_id;
+        *o_rsp_data_length = (uint16_t) sizeof(cmdh_clear_sensor_rsp_data_t);
+        TRAC_INFO("cmdh_clear_sensor_data: Sensor min/max cleared for owners = 0x%02X",
+                   l_rsp_ptr->sensor_owner_id);
+    } while (0);
+
+    return l_rc;
+}
+
+// Function Specification
+//
+// Name:  cmdh_set_pcap_inband
+//
+// Description: Implements setting a power cap from the inband interface
+//
+// End Function Specification
+uint8_t cmdh_set_pcap_inband(const uint16_t  i_cmd_data_length,
+                             const uint8_t*  i_cmd_data_ptr,
+                             const uint16_t  i_max_rsp_data_length,
+                                   uint16_t* o_rsp_data_length,
+                                   uint8_t*  o_rsp_data_ptr)
+{
+    uint8_t  l_rc = ERRL_RC_SUCCESS;
+    cmdh_set_inband_pcap_cmd_data_t *l_cmd_ptr = (cmdh_set_inband_pcap_cmd_data_t *) i_cmd_data_ptr;
+    cmdh_set_inband_pcap_rsp_data_t *l_rsp_ptr = (cmdh_set_inband_pcap_rsp_data_t*) o_rsp_data_ptr;
+    *o_rsp_data_length = 0;
+
+    do
+    {
+        // Command Length Check
+        if( i_cmd_data_length != sizeof(cmdh_set_inband_pcap_cmd_data_t) )
+        {
+            TRAC_ERR("cmdh_set_pcap_inband: Invalid command length %u, expected %u ",
+                     i_cmd_data_length, sizeof(cmdh_set_inband_pcap_cmd_data_t));
+            l_rc = ERRL_RC_INVALID_CMD_LEN;
+            break;
+        }
+
+        // Make sure there is enough room in response buffer
+        if( sizeof(cmdh_set_inband_pcap_rsp_data_t) > i_max_rsp_data_length )
+        {
+            TRAC_ERR("cmdh_set_pcap_inband: Response size %u is larger than buffer size %u ",
+                     sizeof(cmdh_set_inband_pcap_rsp_data_t), i_max_rsp_data_length);
+            l_rc = ERRL_RC_INTERNAL_FAIL;
+            break;
+        }
+
+        uint16_t l_pcap = CONVERT_UINT8_ARRAY_UINT16(l_cmd_ptr->power_cap[0],
+                                                     l_cmd_ptr->power_cap[1]);
+        l_rc = cmdh_set_user_pcap_common(l_pcap, IN_BAND);
+        
+        // if successful copy the power cap to the response buffer and set the rsp length
+        if(l_rc == ERRL_RC_SUCCESS)
+        {
+           l_rsp_ptr->power_cap[0] = l_cmd_ptr->power_cap[0];
+           l_rsp_ptr->power_cap[1] = l_cmd_ptr->power_cap[1];
+           *o_rsp_data_length = (uint16_t) sizeof(cmdh_set_inband_pcap_rsp_data_t);
+        }
+    } while (0);
+
+    return l_rc;
+}
+
+// Function Specification
+//
+// Name:  cmdh_write_psr
+//
+// Description: Implements the Write Power Shifting Ratio command
+//
+// End Function Specification
+uint8_t cmdh_write_psr(const uint16_t  i_cmd_data_length,
+                       const uint8_t*  i_cmd_data_ptr,
+                       const uint16_t  i_max_rsp_data_length,
+                             uint16_t* o_rsp_data_length,
+                             uint8_t*  o_rsp_data_ptr)
+{
+    uint8_t  l_rc = ERRL_RC_SUCCESS;
+    cmdh_write_psr_cmd_data_t *l_cmd_ptr = (cmdh_write_psr_cmd_data_t *) i_cmd_data_ptr;
+    cmdh_write_psr_rsp_data_t *l_rsp_ptr = (cmdh_write_psr_rsp_data_t*) o_rsp_data_ptr;
+    *o_rsp_data_length = 0;
+
+    do
+    {
+        // Command Length Check
+        if( i_cmd_data_length != sizeof(cmdh_write_psr_cmd_data_t) )
+        {
+            TRAC_ERR("cmdh_write_psr: Invalid command length %u, expected %u ",
+                     i_cmd_data_length, sizeof(cmdh_write_psr_cmd_data_t));
+            l_rc = ERRL_RC_INVALID_CMD_LEN;
+            break;
+        }
+        // Make sure there is enough room in response buffer
+        if( sizeof(cmdh_write_psr_rsp_data_t) > i_max_rsp_data_length )
+        {
+            TRAC_ERR("cmdh_write_psr: Response size %u is larger than buffer size %u ",
+                     sizeof(cmdh_write_psr_rsp_data_t), i_max_rsp_data_length);
+            l_rc = ERRL_RC_INTERNAL_FAIL;
+            break;
+        }
+        // Verify PSR is within range 0-100%
+        if(l_cmd_ptr->psr > 100)
+        {
+            TRAC_ERR("cmdh_write_psr: Invalid PSR %u",
+                     l_cmd_ptr->psr);
+            l_rc = ERRL_RC_INVALID_DATA;
+            break;
+        }
+
+        // PSR is valid
+        TRAC_INFO("cmdh_write_psr: PSR changed from %u to %u", G_sysConfigData.psr, l_cmd_ptr->psr);
+        G_sysConfigData.psr = l_cmd_ptr->psr;
+
+        // copy the PSR to the response buffer and set the rsp length
+        l_rsp_ptr->psr = l_cmd_ptr->psr;
+        *o_rsp_data_length = (uint16_t) sizeof(cmdh_write_psr_rsp_data_t);
+    } while (0);
+
+    return l_rc;
+}
+
+// Function Specification
+//
+// Name:  cmdh_select_sensor_groups
+//
+// Description: Implements the Select sensor Groups command to select
+//               sensor types that will be copied to main memory
+//
+// End Function Specification
+uint8_t cmdh_select_sensor_groups(const uint16_t  i_cmd_data_length,
+                                  const uint8_t*  i_cmd_data_ptr,
+                                  const uint16_t  i_max_rsp_data_length,
+                                        uint16_t* o_rsp_data_length,
+                                        uint8_t*  o_rsp_data_ptr)
+{
+    uint8_t  l_rc = ERRL_RC_SUCCESS;
+    uint16_t l_sensor_groups = 0;
+    cmdh_select_sensor_groups_cmd_data_t *l_cmd_ptr = (cmdh_select_sensor_groups_cmd_data_t *) i_cmd_data_ptr;
+    cmdh_select_sensor_groups_rsp_data_t *l_rsp_ptr = (cmdh_select_sensor_groups_rsp_data_t*) o_rsp_data_ptr;
+    *o_rsp_data_length = 0;
+    do
+    {
+        // Command Length Check
+        if( i_cmd_data_length != sizeof(cmdh_select_sensor_groups_cmd_data_t) )
+        {
+            TRAC_ERR("cmdh_select_sensor_groups: Invalid command length %u, expected %u ",
+                     i_cmd_data_length, sizeof(cmdh_select_sensor_groups_cmd_data_t));
+            l_rc = ERRL_RC_INVALID_CMD_LEN;
+            break;
+        }
+        // Make sure there is enough room in response buffer
+        if( sizeof(cmdh_select_sensor_groups_rsp_data_t) > i_max_rsp_data_length )
+        {
+            TRAC_ERR("cmdh_select_sensor_groups: Response size %u is larger than buffer size %u ",
+                     sizeof(cmdh_select_sensor_groups_rsp_data_t), i_max_rsp_data_length);
+            l_rc = ERRL_RC_INTERNAL_FAIL;
+            break;
+        }
+        // Check that the sensor group(s) to select are valid
+        // 0 is valid and means not to copy any sensors to main memory
+        l_sensor_groups = CONVERT_UINT8_ARRAY_UINT16(l_cmd_ptr->sensor_groups[0],
+                                                     l_cmd_ptr->sensor_groups[1]);
+        if(l_sensor_groups & ~(VALID_SET_SENSOR_GROUPS_MASK))
+        {
+            TRAC_ERR("cmdh_select_sensor_groups: Invalid sensor groups = 0x%04X",
+                     l_sensor_groups);
+            l_rc = ERRL_RC_INVALID_DATA;
+            break;
+        }
+
+        // Loop thru 16 bits to check all possible sensor types
+        uint8_t l_bit = 0;
+        uint16_t l_sensor_type = 0;
+        bool l_enabled = false;
+        for(l_bit = 0; l_bit < 16; l_bit++)
+        {
+           l_sensor_type = 0x0001 << l_bit;
+           // only set eanbled for sensor types that are valid
+           if( l_sensor_type & (VALID_SET_SENSOR_GROUPS_MASK) )
+           {
+              // type is valid now set enabled based on sensor groups selected
+              l_enabled = (l_sensor_groups & l_sensor_type) ? true : false;
+              main_mem_sensors_set_enabled(l_sensor_type, l_enabled);
+           }
+        }
+
+        // copy the sensor groups to the response buffer and set the rsp length
+        l_rsp_ptr->sensor_groups[0] = l_cmd_ptr->sensor_groups[0];
+        l_rsp_ptr->sensor_groups[1] = l_cmd_ptr->sensor_groups[1];
+        *o_rsp_data_length = (uint16_t) sizeof(cmdh_select_sensor_groups_rsp_data_t);
+        TRAC_INFO("cmdh_select_sensor_groups: Sensor groups 0x%04X selected",
+                   l_sensor_groups);
+    } while (0);
+
+    return l_rc;
 }

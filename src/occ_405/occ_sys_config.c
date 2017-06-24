@@ -222,6 +222,14 @@ occSysConfigData_t G_sysConfigData =
         {{0}, {0}, {0}, {0}},
         {{0}, {0}, {0}, {0}}
     },
+
+    // -----------------------------------------------------------
+    // GPU Initialization
+    // -----------------------------------------------------------
+    .gpu_sensor_ids = {0},
+    .total_non_gpu_max_pwr_watts = 0,
+    .total_proc_mem_pwr_drop_watts = 0,
+    .psr = 100,  // default to 100% take all possible power away from CPU/memory first
 };
 
 

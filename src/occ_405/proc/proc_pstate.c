@@ -209,7 +209,7 @@ void populate_opal_dynamic_data()
 
     G_opal_dynamic_table.dynamic.mem_throt_status     = G_amec_opal_mem_throt_reason;
     G_opal_dynamic_table.dynamic.quick_power_drop     = AMEC_INTF_GET_OVERSUBSCRIPTION();
-    G_opal_dynamic_table.dynamic.power_shift_ratio    = 50; // @TODO: Power Shift Ratio is not Implemented yet RTC:133825
+    G_opal_dynamic_table.dynamic.power_shift_ratio    = G_sysConfigData.psr;
     G_opal_dynamic_table.dynamic.power_cap_type       = G_master_pcap_data.source;
     G_opal_dynamic_table.dynamic.min_power_cap        = G_master_pcap_data.soft_min_pcap;
     G_opal_dynamic_table.dynamic.max_power_cap        = G_master_pcap_data.max_pcap;
@@ -419,7 +419,7 @@ void check_for_opal_updates(void)
     // else, if a dynamic OPAL parameter changed, update OPAL dynamic table and OPAL data in memory
     else if(G_opal_dynamic_table.dynamic.occ_state         != CURRENT_STATE()                  ||
             G_opal_dynamic_table.dynamic.quick_power_drop  != AMEC_INTF_GET_OVERSUBSCRIPTION() ||
-            G_opal_dynamic_table.dynamic.power_shift_ratio != 50  || // @TODO: Power Shift Ratio is not Implemented yet RTC:133825
+            G_opal_dynamic_table.dynamic.power_shift_ratio != G_sysConfigData.psr              ||
             G_opal_dynamic_table.dynamic.power_cap_type    != G_master_pcap_data.source        ||
             G_opal_dynamic_table.dynamic.min_power_cap     != G_master_pcap_data.soft_min_pcap ||
             G_opal_dynamic_table.dynamic.max_power_cap     != G_master_pcap_data.max_pcap      ||

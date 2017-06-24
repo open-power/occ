@@ -436,6 +436,7 @@ typedef struct
   uint32_t gpu_sensor_ids[MAX_NUM_GPU_PER_DOMAIN];
   uint16_t total_non_gpu_max_pwr_watts;
   uint16_t total_proc_mem_pwr_drop_watts;
+  uint8_t  psr;  // power shifting ratio for power capping between GPU/Proc&mem
 
 } occSysConfigData_t;  __attribute__ ((__aligned__ (128)))
 

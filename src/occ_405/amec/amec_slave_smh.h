@@ -124,6 +124,12 @@ void amec_slv_substate_5_5(void);
 void amec_slv_substate_5_6(void);
 void amec_slv_substate_5_7(void);
 
+// Slave SubState 6 (4 SubStates unused) check for inband cmd every 4ms
+void amec_slv_substate_6_1(void);
+void amec_slv_substate_6_3(void);
+void amec_slv_substate_6_5(void);
+void amec_slv_substate_6_7(void);
+
 // Slave SubState 7
 void amec_slv_substate_7_0(void);
 void amec_slv_substate_7_1(void);

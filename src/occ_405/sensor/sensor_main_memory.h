@@ -302,5 +302,4 @@ void main_mem_sensors_update(void);
  */
 void main_mem_sensors_set_enabled(AMEC_SENSOR_TYPE i_sensor_type, bool i_enabled);
 
-
 #endif // _SENSOR_MAIN_MEMORY_H

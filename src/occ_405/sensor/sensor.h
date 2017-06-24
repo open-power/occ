@@ -75,6 +75,12 @@ typedef enum
     AMEC_SENSOR_TYPE_PERF       = 0x0200,
     AMEC_SENSOR_TYPE_ALL        = 0xffff,
 }AMEC_SENSOR_TYPE;
+// Changes to sensor type bits would require changes to select sensor groups command
+// Define the sensor types allowed to be selected via select sensor groups command
+#define VALID_SET_SENSOR_GROUPS_MASK (AMEC_SENSOR_TYPE_GENERIC | AMEC_SENSOR_TYPE_CURRENT | \
+         AMEC_SENSOR_TYPE_VOLTAGE | AMEC_SENSOR_TYPE_TEMP | AMEC_SENSOR_TYPE_UTIL | \
+         AMEC_SENSOR_TYPE_TIME | AMEC_SENSOR_TYPE_FREQ | AMEC_SENSOR_TYPE_POWER | \
+         AMEC_SENSOR_TYPE_PERF)
 
 // AMEC_SENSOR_LOC_INVALID can not be used to identify sensor location.
 // A bit vector mask is used to specify sensor locations that AMESTER is
@@ -113,13 +119,16 @@ typedef enum
 // AMEC_SENSOR_CLEAR_ALL_MINMAX clears all min/max values in the sensor.
 typedef enum
 {
-    AMEC_SENSOR_CLEAR_SAMPLE_MINMAX           = 0x0001,
-    AMEC_SENSOR_CLEAR_CSM_SAMPLE_MINMAX       = 0x0002,
-    AMEC_SENSOR_CLEAR_PROFILER_SAMPLE_MINMAX  = 0x0004,
-    AMEC_SENSOR_CLEAR_JOB_S_SAMPLE_MINMAX     = 0x0008,
-    AMEC_SENSOR_CLEAR_ALL_MINMAX              = 0xffff,
+    AMEC_SENSOR_CLEAR_SAMPLE_MINMAX           = 0x01,
+    AMEC_SENSOR_CLEAR_CSM_SAMPLE_MINMAX       = 0x10,
+    AMEC_SENSOR_CLEAR_PROFILER_SAMPLE_MINMAX  = 0x20,
+    AMEC_SENSOR_CLEAR_JOB_S_SAMPLE_MINMAX     = 0x40,
+    AMEC_SENSOR_CLEAR_ALL_MINMAX              = 0xff,
 } AMEC_SENSOR_CLEAR_TYPE;
-
+// The bits for types must match the defined owners in the clear sensor data command
+// Define the owners allowed to be cleared via clear sensor data command
+#define VALID_CLEAR_SENSOR_OWNER_MASK (AMEC_SENSOR_CLEAR_CSM_SAMPLE_MINMAX | \
+         AMEC_SENSOR_CLEAR_PROFILER_SAMPLE_MINMAX | AMEC_SENSOR_CLEAR_JOB_S_SAMPLE_MINMAX)
 /*****************************************************************************/
 // Forward declaration as used in vectorSensor
 struct sensor;

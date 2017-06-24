@@ -135,8 +135,14 @@ enum occReasonCode
     INVALID_FREQUENCY               = 0xDE,
     WOF_RE_ENABLED                  = 0xDF,
 
+// NOTE: 0xE0 - 0xEF can NOT be used these are reserved for critical
+// OCC errors.  (H)TMGT will be looking for 0xEy ERRL_RC in cmd response RC
+// and create an OCC error log with OCC component ID and 0xEy RC if found
+
     /// Error copying sensors to main memory
-    SENSOR_MAIN_MEM_ERROR           = 0xE0,
+    SENSOR_MAIN_MEM_ERROR           = 0xF0,
+
+    INBAND_CMD_ERROR                = 0xF1,
 
     /// Success!
     OCC_SUCCESS_REASON_CODE         = 0xFF,
@@ -226,6 +232,7 @@ enum occExtReasonCode
     ERC_BCE_REQ_SCHED_INPROG_FAILURE            = 0x0073,
     ERC_BCE_REQ_CREATE_WRITE_FAILURE            = 0x0074,
     ERC_BCE_REQ_SCHED_WRITE_FAILURE             = 0x0075,
+    ERC_BCE_REQ_CALLBACK_TIMEOUT                = 0x0076,
 
     ERC_DIMM_SCHEDULE_FAILURE                   = 0x0080,
     ERC_DIMM_COMPLETE_FAILURE                   = 0x0081,

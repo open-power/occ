@@ -62,6 +62,7 @@
 #include <state.h>                      // For CURRENT_STATE(), OCC_STATE_*
 #include <cmdh_fsp_cmds_datacnfg.h>     // For DATA_get_present_cnfgdata()
 #include <sensor_main_memory.h>         // For main_mem_sensors_*()
+#include <sensor_inband_cmd.h>          // For inband_command_*()
 
 //*************************************************************************/
 // Externs
@@ -181,6 +182,25 @@ const smh_tbl_t amec_slv_state_5_substate_table[AMEC_SMH_STATES_PER_LVL] =
 };
 
 // --------------------------------------------------------
+// AMEC Slave State 6 Substate Table
+// --------------------------------------------------------
+// Each function inside this state table runs once every 16ms.
+//
+// No Substates
+//
+const smh_tbl_t amec_slv_state_6_substate_table[AMEC_SMH_STATES_PER_LVL] =
+{
+  {NULL,                  NULL},    // Substate 6.0 (not used)
+  {amec_slv_substate_6_1, NULL},    // Substate 6.1
+  {NULL,                  NULL},    // Substate 6.2 (not used)
+  {amec_slv_substate_6_3, NULL},    // Substate 6.3
+  {NULL,                  NULL},    // Substate 6.4 (not used)
+  {amec_slv_substate_6_5, NULL},    // Substate 6.5
+  {NULL,                  NULL},    // Substate 6.6 (not used)
+  {amec_slv_substate_6_7, NULL},    // Substate 6.7
+};
+
+// --------------------------------------------------------
 // AMEC Slave State 7 Substate Table
 // --------------------------------------------------------
 // Each function inside this state table runs once every 16ms.
@@ -213,10 +233,9 @@ const smh_tbl_t amec_slv_state_table[AMEC_SMH_STATES_PER_LVL] =
   {amec_slv_state_3, amec_slv_state_3_substate_table},
   {amec_slv_state_4, NULL},
   {amec_slv_state_5, amec_slv_state_5_substate_table},
-  {amec_slv_state_6, NULL},
+  {amec_slv_state_6, amec_slv_state_6_substate_table},
   {amec_slv_state_7, amec_slv_state_7_substate_table},
 };
-
 
 
 // This sets up the function pointer that will be called to update the
@@ -431,6 +450,7 @@ void amec_slv_common_tasks_post(void)
         // Call the 250us trace recording if it has been configured via Amester.
         // If not configured, this call will return immediately.
         amec_tb_record(AMEC_TB_250US);
+
       }
       else
          L_active_1tick = TRUE;
@@ -442,6 +462,16 @@ void amec_slv_common_tasks_post(void)
   {
       G_amec_opal_proc_throt_reason = MANUFACTURING_OVERRIDE;
       ssx_semaphore_post(&G_dcomThreadWakeupSem);
+  }
+  // Check if an inband command is being processed
+  if(G_inband_occ_cmd_state != INBAND_OCC_CMD_NONE)
+  {
+      // call inband command handler if in active, char or obs state
+      if ( (IS_OCC_STATE_ACTIVE() && L_active_1tick) || IS_OCC_STATE_OBSERVATION() ||
+            IS_OCC_STATE_CHARACTERIZATION() )
+      {
+         inband_command_handler();
+      }
   }
 }
 
@@ -1227,6 +1257,43 @@ void amec_slv_substate_5_7(void)
     amec_update_proc_core_group(6);
 }
 
+// Function Specification
+//
+// Name: amec_slv_substate_6_1
+//       amec_slv_substate_6_3
+//       amec_slv_substate_6_5
+//       amec_slv_substate_6_7
+//
+// Description: slave substate amec_slv_substate_6_1
+//              slave substate amec_slv_substate_6_3
+//              slave substate amec_slv_substate_6_5
+//              slave substate amec_slv_substate_6_7
+//              other substates of state 6 are not currently used
+//
+// End Function Specification
+void amec_slv_substate_6_1(void)
+{
+    AMEC_DBG("\tAMEC Slave State 6.1\n");
+    inband_command_check();
+}
+
+void amec_slv_substate_6_3(void)
+{
+    AMEC_DBG("\tAMEC Slave State 6.3\n");
+    inband_command_check();
+}
+
+void amec_slv_substate_6_5(void)
+{
+    AMEC_DBG("\tAMEC Slave State 6.5\n");
+    inband_command_check();
+}
+
+void amec_slv_substate_6_7(void)
+{
+    AMEC_DBG("\tAMEC Slave State 6.7\n");
+    inband_command_check();
+}
 
 // Function Specification
 //

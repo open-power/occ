@@ -34,13 +34,11 @@
 #include "occ_common.h"
 #include "state.h"
 #include "cmdh_fsp.h"
-//#include "gpsm.h"
-//#include "pstates.h"
 #include "cmdh_fsp_cmds_datacnfg.h"
 #include "sensor.h"
 #include "apss.h"
 
-// Enum of the various commands that TMGT may send to OCC
+// Enum of the various commands that may be sent to OCC
 typedef enum
 {
     CMDH_POLL                   = 0x00,
@@ -56,6 +54,10 @@ typedef enum
     CMDH_GET_FIELD_DEBUG_DATA   = 0x42,
     CMDH_MFG_TEST_CMD           = 0x53,
     CMDH_TUNABLE_PARMS          = 0x60,
+    CMDH_CLEAR_SENSOR_DATA      = 0xD0,
+    CMDH_SET_PCAP_INBAND        = 0xD1,
+    CMDH_WRITE_PSR              = 0xD2,
+    CMDH_SELECT_SENSOR_GROUPS   = 0xD3,
 } eCmdhCommands;
 
 #define SENSOR_TEMP "TEMP"
@@ -64,7 +66,7 @@ typedef enum
 #define SENSOR_CAPS "CAPS"
 #define SENSOR_EXTN "EXTN"
 #define EXTN_NAME_FMIN    0x464D494E // "FMIN"
-#define EXTN_NAME_FNOM    0x464E4F00 // "FNOM"
+#define EXTN_NAME_FNOM    0x464E4F4D // "FNOM"
 #define EXTN_NAME_FTURBO  0x46540000 // "FT"
 #define EXTN_NAME_FUTURBO 0x46555400 // "FUT"
 
@@ -605,6 +607,65 @@ extern cmdh_tunable_param_table_t G_mst_tunable_parameter_table[CMDH_DEFAULT_TUN
 
 #define CMDH_SET_USER_PCAP_DATALEN 2
 
+//---------------------------------------------------------
+// Clear Sensor Data Command
+//---------------------------------------------------------
+
+typedef struct __attribute__ ((packed))
+{
+    uint8_t                 sensor_owner_id;
+    uint8_t                 reserved[3];
+}cmdh_clear_sensor_cmd_data_t;
+
+typedef struct __attribute__ ((packed))
+{
+    uint8_t                 sensor_owner_id;
+    uint8_t                 reserved[3];
+}cmdh_clear_sensor_rsp_data_t;
+
+//---------------------------------------------------------
+// Set Power Cap In-band Command
+//---------------------------------------------------------
+
+typedef struct __attribute__ ((packed))
+{
+    uint8_t                power_cap[2];
+}cmdh_set_inband_pcap_cmd_data_t;
+
+typedef struct __attribute__ ((packed))
+{
+    uint8_t                power_cap[2];
+}cmdh_set_inband_pcap_rsp_data_t;
+
+//---------------------------------------------------------
+// Write Power Shifting Ratio Command
+//---------------------------------------------------------
+
+typedef struct __attribute__ ((packed))
+{
+    uint8_t                 psr;
+}cmdh_write_psr_cmd_data_t;
+
+typedef struct __attribute__ ((packed))
+{
+    uint8_t                 psr;
+}cmdh_write_psr_rsp_data_t;
+
+//---------------------------------------------------------
+// Select Sensor Groups Command
+//---------------------------------------------------------
+
+typedef struct __attribute__ ((packed))
+{
+    uint8_t                sensor_groups[2];
+}cmdh_select_sensor_groups_cmd_data_t;
+
+typedef struct __attribute__ ((packed))
+{
+    uint8_t                sensor_groups[2];
+}cmdh_select_sensor_groups_rsp_data_t;
+
+
 errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                         cmdh_fsp_rsp_t * i_rsp_ptr);
 
@@ -628,6 +689,36 @@ errlHndl_t cmdh_tmgt_get_field_debug_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
 errlHndl_t cmdh_set_user_pcap(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                     cmdh_fsp_rsp_t * o_rsp_ptr);
+
+
+//------------------------------------------------------------------------------------
+// Commands supported via in-band interface must have additional inputs/output/return
+// Any out of band commands that are to be supported in-band should change to this
+// common format to allow calling by either i.e. AMESTER pass thru is supported on both
+//------------------------------------------------------------------------------------
+uint8_t cmdh_clear_sensor_data(const uint16_t  i_cmd_data_length,
+                                    const uint8_t*  i_cmd_data_ptr,
+                                    const uint16_t  i_max_rsp_data_length,
+                                          uint16_t* o_rsp_data_length,
+                                          uint8_t*  o_rsp_data_ptr);
+
+uint8_t cmdh_set_pcap_inband(const uint16_t  i_cmd_data_length,
+                                  const uint8_t*  i_cmd_data_ptr,
+                                  const uint16_t  i_max_rsp_data_length,
+                                        uint16_t* o_rsp_data_length,
+                                        uint8_t*  o_rsp_data_ptr);
+
+uint8_t cmdh_write_psr(const uint16_t  i_cmd_data_length,
+                            const uint8_t*  i_cmd_data_ptr,
+                            const uint16_t  i_max_rsp_data_length,
+                                  uint16_t* o_rsp_data_length,
+                                  uint8_t*  o_rsp_data_ptr);
+
+uint8_t cmdh_select_sensor_groups(const uint16_t  i_cmd_data_length,
+                                       const uint8_t*  i_cmd_data_ptr,
+                                       const uint16_t  i_max_rsp_data_length,
+                                             uint16_t* o_rsp_data_length,
+                                             uint8_t*  o_rsp_data_ptr);
 
 #endif
 
