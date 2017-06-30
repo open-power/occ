@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2015,2016
+# Contributors Listed Below - COPYRIGHT 2015,2017
 # [+] International Business Machines Corp.
 #
 #
@@ -222,7 +222,8 @@ GCC-CFLAGS += -Wall -fsigned-char -msoft-float  \
     -ffixed-r22 -ffixed-r23 -ffixed-r24 -ffixed-r25 \
     -ffixed-r26 -ffixed-r27 \
     -ffixed-cr1 -ffixed-cr2 -ffixed-cr3 -ffixed-cr4 \
-    -ffixed-cr5 -ffixed-cr6 -ffixed-cr7 -Werror
+    -ffixed-cr5 -ffixed-cr6 -ffixed-cr7 -Werror \
+    -std=gnu89
 
 else
 PIPE-CFLAGS = -pipe
@@ -238,6 +239,7 @@ GCC-CFLAGS += -meabi
 GCC-CFLAGS += -ffreestanding
 GCC-CFLAGS += -fno-common
 GCC-CFLAGS += -fno-inline-functions-called-once
+GCC-CFLAGS += -std=gnu89
 endif
 
 CFLAGS      =  -c $(GCC-CFLAGS) $(PIPE-CFLAGS) $(GCC-O-LEVEL) $(INCLUDES)
