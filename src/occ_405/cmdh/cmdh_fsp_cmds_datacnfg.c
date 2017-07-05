@@ -328,7 +328,7 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 l_freq = G_proc_fmax_mhz;
             }
 
-            // If Ultra Turbo is 0, disable WOF
+            // If Ultra Turbo is 0, disable WOF, else enable
             if( l_freq == 0 )
             {
                 set_clear_wof_disabled( SET, WOF_RC_UTURBO_IS_ZERO );
@@ -336,6 +336,7 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
             else
             {
                 set_clear_wof_disabled( CLEAR, WOF_RC_UTURBO_IS_ZERO );
+                set_clear_wof_disabled( CLEAR, WOF_RC_OCC_WOF_DISABLED );
             }
 
             l_table[OCC_MODE_UTURBO] = l_freq;

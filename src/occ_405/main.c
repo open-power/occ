@@ -548,7 +548,6 @@ void read_wof_header(void)
     int l_ssxrc = SSX_OK;
     bool l_error = false;
 
-    MAIN_TRAC_INFO("read_wof_header() 0x%08X", G_pgpe_header.wof_tables_addr);
     // Get OCCPstateParmBlock out to Amester
     externalize_oppb();
 

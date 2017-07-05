@@ -331,7 +331,7 @@ void amec_init_gamec_struct(void)
   g_amec->sys.current_mem_pwr_ctl = MEM_PWR_CTL_NO_SUPPORT;
 
   // Initialize wof_disabled
-  g_amec->wof.wof_disabled = 0x00000000;
+  g_amec->wof.wof_disabled = WOF_RC_OCC_WOF_DISABLED;
 
 }
 

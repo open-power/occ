@@ -1293,9 +1293,8 @@ void set_clear_wof_disabled( uint8_t i_action,
 {
     // Keep track of whether an error has already been logged
     static bool L_errorLogged = false;
-
+    bool l_logError = false;
     errlHndl_t l_errl = NULL;
-
     uint32_t prev_wof_disabled = g_wof->wof_disabled;
 
     do
@@ -1304,6 +1303,18 @@ void set_clear_wof_disabled( uint8_t i_action,
         {
             // Set the bit
             g_wof->wof_disabled |= i_bit_mask;
+
+
+            // If OCC has not yet been enabled through TMGT/HTMGT, skip
+            // error log
+            if( g_wof->wof_disabled & WOF_RC_OCC_WOF_DISABLED )
+            {
+                INTR_TRAC_ERR("OCC encountered a WOF error before TMGT/HTMGT"
+                              " enabled it. wof_disabled = 0x%08x",
+                              g_wof->wof_disabled);
+                break;
+            }
+
             // If error has already been logged, trace and skip
             if( L_errorLogged )
             {
@@ -1330,28 +1341,7 @@ void set_clear_wof_disabled( uint8_t i_action,
                 // Make sure the reason requires an error log
                 if( g_wof->wof_disabled & ERRL_RETURN_CODES )
                 {
-                    // Create error log
-                    /** @errortype
-                     *  @moduleid   SET_CLEAR_WOF_DISABLED
-                     *  @reasoncode WOF_DISABLED_RC
-                     *  @userdata1  current wof_disabled
-                     *  @userdata2  Bit requested to be set
-                     *  @userdata4  OCC_NO_EXTENDED_RC
-                     *  @devdesc    WOF has been disabled due to an error
-                     */
-                    l_errl = createErrl(
-                                SET_CLEAR_WOF_DISABLED,
-                                WOF_DISABLED_RC,
-                                OCC_NO_EXTENDED_RC,
-                                ERRL_SEV_UNRECOVERABLE,
-                                NULL,
-                                DEFAULT_TRACE_SIZE,
-                                g_wof->wof_disabled,
-                                i_bit_mask );
-
-                    // commit the error log
-                    commitErrl( &l_errl );
-                    L_errorLogged = true;
+                    l_logError = true;
                 }
                 // if the previous wof_disabled was all zeros,
                 // send IPC command to PGPE to disable wof
@@ -1372,6 +1362,18 @@ void set_clear_wof_disabled( uint8_t i_action,
         {
             // Clear the bit
             g_wof->wof_disabled &= ~i_bit_mask;
+
+            // If TMGT/HTMGT is enabling WOF, check for any previous
+            // errors and log if they exist.
+            if( i_bit_mask == WOF_RC_OCC_WOF_DISABLED )
+            {
+                if( g_wof->wof_disabled )
+                {
+                    l_logError = true;
+                }
+                break;
+            }
+
             // If clearing the bit put wof_disabled at all 0's AND
             // wof_disabled was not already all 0's, wof is being
             // re-enabled. Log informational error.
@@ -1413,6 +1415,32 @@ void set_clear_wof_disabled( uint8_t i_action,
         }
     }while( 0 );
 
+    // Check for error
+    if( l_logError )
+    {
+        // Create error log
+        /** @errortype
+         *  @moduleid   SET_CLEAR_WOF_DISABLED
+         *  @reasoncode WOF_DISABLED_RC
+         *  @userdata1  current wof_disabled
+         *  @userdata2  Bit requested to be set
+         *  @userdata4  OCC_NO_EXTENDED_RC
+         *  @devdesc    WOF has been disabled due to an error
+         */
+        l_errl = createErrl(
+                    SET_CLEAR_WOF_DISABLED,
+                    WOF_DISABLED_RC,
+                    OCC_NO_EXTENDED_RC,
+                    ERRL_SEV_UNRECOVERABLE,
+                    NULL,
+                    DEFAULT_TRACE_SIZE,
+                    g_wof->wof_disabled,
+                    i_bit_mask );
+
+        // commit the error log
+        commitErrl( &l_errl );
+        L_errorLogged = true;
+    }
 }
 
 /**
