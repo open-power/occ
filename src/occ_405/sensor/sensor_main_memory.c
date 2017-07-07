@@ -147,7 +147,8 @@ typedef struct __attribute__ ((packed))
  * copied to main memory.
  *
  * Note the array is NOT indexed by global sensor ID.  This is because only a
- * subset of OCC sensors are copied to main memory.
+ * subset of OCC sensors are copied to main memory, and the sensors are ordered
+ * differently (by type).
  *
  * The sensors MUST be grouped by sensor type (AMEC_SENSOR_TYPE).  Sensors are
  * enabled/disabled by type, so we want sensors of the same type in contiguous
@@ -157,26 +158,50 @@ typedef struct __attribute__ ((packed))
  */
 main_mem_sensor_t G_main_mem_sensors[] =
 {
-    // AMEC_SENSOR_TYPE_TEMP:  gsid            smf_mode  master_only
-    MAIN_MEM_CORE_SENSORS     (TEMPPROCTHRMC,  false,    false),
-    MAIN_MEM_DIMM_SENSORS     (TEMPDIMM,       false,    false),
+    // AMEC_SENSOR_TYPE_CURRENT:  gsid            smf_mode  master_only
+    MAIN_MEM_SENSOR              (CURVDD,         true,     false),
+    MAIN_MEM_SENSOR              (CURVDN,         true,     false),
 
-    // AMEC_SENSOR_TYPE_UTIL:  gsid            smf_mode  master_only
-    MAIN_MEM_CORE_SENSORS     (UTILC,          false,    false),
+    // AMEC_SENSOR_TYPE_VOLTAGE:  gsid            smf_mode  master_only
+    MAIN_MEM_SENSOR              (VOLTVDD,        true,     false),
+    MAIN_MEM_SENSOR              (VOLTVDDSENSE,   true,     false),
+    MAIN_MEM_SENSOR              (VOLTVDN,        true,     false),
+    MAIN_MEM_SENSOR              (VOLTVDNSENSE,   true,     false),
 
-    // AMEC_SENSOR_TYPE_FREQ:  gsid            smf_mode  master_only
-    MAIN_MEM_CORE_SENSORS     (FREQAC,         true,     false),
-
-    // AMEC_SENSOR_TYPE_POWER: gsid            smf_mode  master_only
-    MAIN_MEM_SENSOR           (PWRSYS,         true,     true ),
-    MAIN_MEM_APSSCH_SENSORS   (PWRAPSSCH,      true,     true ),
-    MAIN_MEM_SENSOR           (PWRPROC,        true,     false),
-
-    // AMEC_SENSOR_TYPE_PERF:  gsid            smf_mode  master_only
-    MAIN_MEM_SENSOR           (PROCPWRTHROT,   false,    false),
-    MAIN_MEM_SENSOR           (PROCOTTHROT,    false,    false),
-    MAIN_MEM_SENSOR           (MEMPWRTHROT,    false,    false),
-    MAIN_MEM_SENSOR           (MEMOTTHROT,     false,    false)
+    // AMEC_SENSOR_TYPE_TEMP:     gsid            smf_mode  master_only
+    MAIN_MEM_SENSOR              (TEMPNEST,       false,    false),
+    MAIN_MEM_CORE_SENSORS        (TEMPPROCTHRMC,  false,    false),
+    MAIN_MEM_DIMM_SENSORS        (TEMPDIMM,       false,    false),
+                                 
+    // AMEC_SENSOR_TYPE_UTIL:     gsid            smf_mode  master_only
+    MAIN_MEM_CORE_SENSORS        (UTILC,          false,    false),
+    MAIN_MEM_SENSOR              (UTIL,           false,    false),
+    MAIN_MEM_CORE_SENSORS        (NUTILC,         false,    false),
+                                 
+    // AMEC_SENSOR_TYPE_FREQ:     gsid            smf_mode  master_only
+    MAIN_MEM_SENSOR              (FREQA,          true,     false),
+    MAIN_MEM_CORE_SENSORS        (FREQAC,         true,     false),
+                                 
+    // AMEC_SENSOR_TYPE_POWER:    gsid            smf_mode  master_only
+    MAIN_MEM_SENSOR              (PWRSYS,         true,     true ),
+    MAIN_MEM_SENSOR              (PWRGPU,         true,     false),
+    MAIN_MEM_APSSCH_SENSORS      (PWRAPSSCH,      true,     true ),
+    MAIN_MEM_SENSOR              (PWRPROC,        true,     false),
+    MAIN_MEM_SENSOR              (PWRVDD,         true,     false),
+    MAIN_MEM_SENSOR              (PWRVDN,         true,     false),
+    MAIN_MEM_SENSOR              (PWRMEM,         true,     false),
+                                 
+    // AMEC_SENSOR_TYPE_PERF:     gsid            smf_mode  master_only
+    MAIN_MEM_SENSOR              (IPS,            false,    false),
+    MAIN_MEM_CORE_SENSORS        (STOPDEEPACTC,   true,     false),
+    MAIN_MEM_CORE_SENSORS        (STOPDEEPREQC,   true,     false),
+    MAIN_MEM_CORE_SENSORS        (IPSC,           false,    false),
+    MAIN_MEM_CORE_SENSORS        (NOTBZEC,        false,    false),
+    MAIN_MEM_CORE_SENSORS        (NOTFINC,        false,    false),
+    MAIN_MEM_SENSOR              (PROCPWRTHROT,   false,    false),
+    MAIN_MEM_SENSOR              (PROCOTTHROT,    false,    false),
+    MAIN_MEM_SENSOR              (MEMPWRTHROT,    false,    false),
+    MAIN_MEM_SENSOR              (MEMOTTHROT,     false,    false)
 };
 
 /**
