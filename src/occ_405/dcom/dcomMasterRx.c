@@ -298,7 +298,7 @@ void task_dcom_rx_slv_outboxes( task_t *i_self)
                 else
                 {
                     L_bce_not_ready_count++;
-                    INCREMENT_ERR_HISTORY(ERR_DCOM_RX_SLV_OUTBOX);
+                    INCREMENT_ERR_HISTORY(ERRH_DCOM_RX_SLV_OUTBOX);
                 }
             }
             else
@@ -383,7 +383,7 @@ uint32_t dcom_rx_slv_outbox_doorbell( void )
 
     if (l_pbarc != 0)
     {
-        INCREMENT_ERR_HISTORY(ERR_DCOM_MASTER_PBAX_READ_FAIL);
+        INCREMENT_ERR_HISTORY(ERRH_DCOM_MASTER_PBAX_READ_FAIL);
 
         TRAC_ERR("Master PBAX Read Failure in receiving unicast slave doorbells - RC[%08X]", l_pbarc);
 

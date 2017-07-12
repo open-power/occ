@@ -115,20 +115,15 @@ int16_t G_wof_iddq_mult_table[][2] = {
  *              such that the WOF algorithm can run. This includes making
  *              sure the PGPE is ready to perform WOF calculations and enforcing
  *              when WOF should wait a tick to perform a calc or disable wof
- *              entirely. Called from amec_slave_smh.c::amec_slv_state_4. Called
- *              every 2ms, but calls the wof_main algorithm every other invocation
- *              resulting in 4ms intervals
+ *              entirely. Called from amec_slave_smh.c::amec_slv_state_4.
+ *              This should run every 4ms, if HW_MICS_PER_TICK changes adjust calls
+ *              to this function (use amec substates) to keep this called every 4ms
  * Param: None
  *
  * Return: None
  */
 void call_wof_main( void )
 {
-    // Variable to control toggling between invocations
-    // Init to false to ensure init asynchronous operations have
-    // the extra 2ms to finish.
-    static bool L_run_wof = false;
-
     // Variable to ensure we do not keep trying to send vfrt GpeRequest
     // more than 1 extra time.
     static bool L_vfrt_last_chance = false;
@@ -272,42 +267,36 @@ void call_wof_main( void )
             if( (g_wof->wof_init_state >= PGPE_WOF_ENABLED_NO_PREV_DATA) &&
                 !g_wof->wof_disabled )
             {
-                // Make sure we run algo on appropriate tick
-                if( !L_run_wof )
+                // Only check if req active quads changed if we are
+                // in the fully enabled wof state
+                if(g_wof->wof_init_state == WOF_ENABLED)
                 {
-                    // Only check if req active quads changed if we are
-                    // in the fully enabled wof state
-                    if(g_wof->wof_init_state == WOF_ENABLED)
-                    {
-                        // Read active quads from sram
-                        read_req_active_quads();
+                    // Read active quads from sram
+                    read_req_active_quads();
 
-                        // If the requested active quads changed last loop
-                        // Send vfrt with new req active quads
-                        if( g_wof->req_active_quad_update !=
-                            g_wof->prev_req_active_quads )
+                    // If the requested active quads changed last loop
+                    // Send vfrt with new req active quads
+                    if( g_wof->req_active_quad_update !=
+                        g_wof->prev_req_active_quads )
+                    {
+                        // Calculate new quad step
+                        g_wof->quad_step_from_start =
+                                                calc_quad_step_from_start();
+                        // Compute new VFRT Main Memory address using new quads
+                        g_wof->next_vfrt_main_mem_addr =
+                                                 calc_vfrt_mainstore_addr();
+                        // Send new VFRT
+                        send_vfrt_to_pgpe( g_wof->next_vfrt_main_mem_addr );
+                        if(async_request_is_idle(&G_wof_vfrt_req.request))
                         {
-                            // Calculate new quad step
-                            g_wof->quad_step_from_start =
-                                                    calc_quad_step_from_start();
-                            // Compute new VFRT Main Memory address using new quads
-                            g_wof->next_vfrt_main_mem_addr =
-                                                     calc_vfrt_mainstore_addr();
-                            // Send new VFRT
-                            send_vfrt_to_pgpe( g_wof->next_vfrt_main_mem_addr );
-                            if(async_request_is_idle(&G_wof_vfrt_req.request))
-                            {
-                                g_wof->gpe_req_rc = gpe_request_schedule(&G_wof_vfrt_req);
-                            }
-                            else
-                            {
-                                INTR_TRAC_INFO("VFRT Request is not idle when"
-                                               "requested active quads changed");
-                            }
+                            g_wof->gpe_req_rc = gpe_request_schedule(&G_wof_vfrt_req);
+                        }
+                        else
+                        {
+                            INTR_TRAC_INFO("VFRT Request is not idle when"
+                                           "requested active quads changed");
                         }
                     }
-                    // Toggle for next tick
-                    L_run_wof = true;
                 }
                 else
                 {
@@ -330,8 +319,6 @@ void call_wof_main( void )
                         // Request is idle. Run wof algorithm
                         wof_main();
 
-                        // Set control variables for next tick
-                        L_run_wof = false;
                         L_vfrt_last_chance = false;
                         // Finally make sure we are in the fully enabled state
                         if( g_wof->wof_init_state == PGPE_WOF_ENABLED_NO_PREV_DATA )
@@ -339,7 +326,7 @@ void call_wof_main( void )
                             g_wof->wof_init_state = WOF_ENABLED;
                         }
                     }
-                } // L_run_wof
+                }
             } // >= PGPE_WOF_ENABLED_NO_PREV_DATA
         } // IS_OCC_STATE_ACTIVE
     } while( 0 );

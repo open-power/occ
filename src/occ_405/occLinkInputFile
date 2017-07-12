@@ -1,6 +1,7 @@
 INPUT ( amec_amester.o
         amec_controller.o
         amec_data.o
+        amec_dps.o
         amec_freq.o
         amec_health.o
         amec_init.o

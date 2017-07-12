@@ -164,7 +164,7 @@ void amec_update_proc_core_sensors(uint8_t i_core)
 // Name: amec_calc_dts_sensors
 //
 // Description: Compute core temperature. This function is called every
-// 4ms/core.
+// CORE_DATA_COLLECTION_US/core.
 //
 // PreCondition: The core is present.
 //
@@ -324,7 +324,7 @@ void amec_calc_dts_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
 // Name: amec_calc_freq_and_util_sensors
 //
 // Description: Compute the frequency and utilization sensors for a given core.
-// This function is called every 4ms/core.
+// This function is called CORE_DATA_COLLECTION_US per core.
 //
 // Thread: RealTime Loop
 //
@@ -359,14 +359,14 @@ void amec_calc_freq_and_util_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
   // <amec_formula>
   // Result: Calculated Core Frequency
   // Sensor: FREQAC0
-  // Timescale: 4ms
+  // Timescale: CORE_DATA_COLLECTION_US
   // Units: MHz
   // Min/Max: 0/6000 (UPPER_LIMIT_PROC_FREQ_MHZ=6000)
-  // Formula: cyc_delta(cycles) = (RAW_CYCLES[t=now] - RAW_CYCLES[t=-4ms])
-  //          time_delta(TOD ticks) = (TOD[t=now] - TOD[t=-4ms])
+  // Formula: cyc_delta(cycles) = (RAW_CYCLES[t=now] - RAW_CYCLES[t=-CORE_DATA_COLLECTION_US])
+  //          time_delta(TOD ticks) = (TOD[t=now] - TOD[t=-CORE_DATA_COLLECTION_US])
   //          frequency(MHz) = (cyc_delta / time_delta) * (2M TOD ticks / 1 second)
   //                         = (2 * cyc_delta) / time_delta
-  // NOTE: cyc_delta is the total number of cycles in 4ms time for the core
+  // NOTE: cyc_delta is the total number of cycles in CORE_DATA_COLLECTION_US time for the core
   // NOTE: In the HWP where we aquire the TOD count, we shift the counter by 8
   //       which causes each TOD tick here to equate to 0.5us. This is why we
   //       are multiplying by 2 in the above equation.
@@ -402,15 +402,15 @@ void amec_calc_freq_and_util_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
   // <amec_formula>
   // Result: Calculated Core Utilization
   // Sensor: UTILC0
-  // Timescale: 4ms
+  // Timescale: CORE_DATA_COLLECTION_US
   // Units: 0.01 %
   // Min/Max: 0/10000  (0/100%)
-  // Formula: cyc_delta = (RAW_CYCLES[t=now] - RAW_CYCLES[t=-4ms])
-  //          run_delta = (RUN_CYCLES[t=now] - RUN_CYCLES[t=-4ms])
+  // Formula: cyc_delta = (RAW_CYCLES[t=now] - RAW_CYCLES[t=-CORE_DATA_COLLECTION_US])
+  //          run_delta = (RUN_CYCLES[t=now] - RUN_CYCLES[t=-CORE_DATA_COLLECTION_US])
   //          UTIL(in %) = run_delta / cyc_delta
   //
-  // NOTE: cyc_delta is the total number of cycles in 4ms time for the core
-  // NOTE: run_delta is the total number of cycles utilized by a specific core in 4ms
+  // NOTE: cyc_delta is the total number of cycles in CORE_DATA_COLLECTION_US time for the core
+  // NOTE: run_delta is the total number of cycles utilized by a specific core in CORE_DATA_COLLECTION_US
   // </amec_formula>
 
   // Compute Delta in PC_RUN_CYCLES
@@ -447,15 +447,15 @@ void amec_calc_freq_and_util_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
   // <amec_formula>
   // Result: Calculated Core Utilization
   // Sensor: None
-  // Timescale: 4ms
+  // Timescale: CORE_DATA_COLLECTION_US
   // Units: 0.01 %
   // Min/Max: 0/10000  (0/100%)
-  // Formula: cyc_delta = (RAW_CYCLES[t=now] - RAW_CYCLES[t=-4ms])
-  //          run_delta = (RUN_CYCLES[t=now] - RUN_CYCLES[t=-4ms])
+  // Formula: cyc_delta = (RAW_CYCLES[t=now] - RAW_CYCLES[t=-CORE_DATA_COLLECTION_US])
+  //          run_delta = (RUN_CYCLES[t=now] - RUN_CYCLES[t=-CORE_DATA_COLLECTION_US])
   //          UTIL(in %) = run_delta / cyc_delta
   //
-  // NOTE: cyc_delta is the total number of cycles run by the core in 4ms
-  // NOTE: run_delta is the total number of cycles run by a specific thread in 4ms
+  // NOTE: cyc_delta is the total number of cycles run by the core in CORE_DATA_COLLECTION_US
+  // NOTE: run_delta is the total number of cycles run by a specific thread in CORE_DATA_COLLECTION_US
   // </amec_formula>
 
   // Get RAW CYCLES for Thread
@@ -551,7 +551,7 @@ void amec_calc_freq_and_util_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
   // <amec_formula>
   // Result: Calculated Normalized Average Core Utilization
   // Sensor: NUTILC0
-  // Timescale: 4ms (3s rolling average)
+  // Timescale: CORE_DATA_COLLECTION_US (3s rolling average)
   // Units: 0.01 %
   // Min/Max: 0/10000  (0/100%)
   // </amec_formula>
@@ -680,11 +680,11 @@ void amec_calc_ips_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
   // <amec_formula>
   // Result: Calculated Instructions per Cycle
   // Sensor: None
-  // Timescale: 4ms
+  // Timescale: CORE_DATA_COLLECTION_US
   // Units: 0.01 IPC
   // Min/Max: ?
-  // Formula: ipc_delta = (INST_COMPLETE[t=now] - INST_COMPLETE[t=-4ms])
-  //          run_cycles = (RUN_CYCLES[t=now] - RUN_CYCLES[t=-4ms])
+  // Formula: ipc_delta = (INST_COMPLETE[t=now] - INST_COMPLETE[t=-CORE_DATA_COLLECTION_US])
+  //          run_cycles = (RUN_CYCLES[t=now] - RUN_CYCLES[t=-CORE_DATA_COLLECTION_US])
   //          100 = Convert 0.01 IPC
   //
   //          IPC(in 0.01 IPC) = (ipc_delta * 100) / run_cycles
@@ -701,11 +701,11 @@ void amec_calc_ips_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
   // <amec_formula>
   // Result: Calculated dispatched Instructions per Cycle
   // Sensor: None
-  // Timescale: 4ms
+  // Timescale: CORE_DATA_COLLECTION_US
   // Units: 0.01 DPC
   // Min/Max: ?
-  // Formula: dpc_delta  = (INST_DISPATCH[t=now] - INST_DISPATCH[t=-4ms])
-  //          run_cycles = (RUN_CYCLES[t=now] - RUN_CYCLES[t=-4ms])
+  // Formula: dpc_delta  = (INST_DISPATCH[t=now] - INST_DISPATCH[t=-CORE_DATA_COLLECTION_US])
+  //          run_cycles = (RUN_CYCLES[t=now] - RUN_CYCLES[t=-CORE_DATA_COLLECTION_US])
   //          100        = Convert 0.01 DPC
   //
   //          DPC(in 0.01DPC) = (dpc_delta * 100) / run_cycles
@@ -721,11 +721,11 @@ void amec_calc_ips_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
   // <amec_formula>
   // Result: Calculated dispatched Instructions per Second
   // Sensor: None
-  // Timescale: 4ms
+  // Timescale: CORE_DATA_COLLECTION_US
   // Units: 0.2Mips
   // Min/Max: ?
-  // Formula: dps_delta = (INST_DISPATCH[t=now] - INST_DISPATCH[t=-4ms])
-  //          250       = # of 4ms periods in 1 second
+  // Formula: dps_delta = (INST_DISPATCH[t=now] - INST_DISPATCH[t=-CORE_DATA_COLLECTION_US])
+  //          250       = # of CORE_DATA_COLLECTION_US periods in 1 second
   //          50,000    = Convert IPS to 0.2MIPS
   //
   //          DPS(in 0.2Mips) = (dps_delta * 250) / 50,000
@@ -741,12 +741,12 @@ void amec_calc_ips_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
   // <amec_formula>
   // Result: Calculated Instructions per Second
   // Sensor: IPSC0
-  // Timescale: 4ms
+  // Timescale: CORE_DATA_COLLECTION_US
   // Units: 0.2Mips
   // Min/Max: ?
   // Formula:
-  //    comp_delta = (INST_COMPLETE[t=now] - INST_COMPLETE[t=-4ms])
-  //    ticks_delta = (TOD[t=now] - TOD[t=-4ms])
+  //    comp_delta = (INST_COMPLETE[t=now] - INST_COMPLETE[t=-CORE_DATA_COLLECTION_US])
+  //    ticks_delta = (TOD[t=now] - TOD[t=-CORE_DATA_COLLECTION_US])
   //    MIPS = comp_delta (insns/interval) * (1 interval per ticks_delta 2mhz ticks) * (2M 2mhz ticks / s) / 1M
   //         = (2* fin2) / ticks_2mhz
   //

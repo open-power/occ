@@ -214,8 +214,8 @@ typedef UINT16                  AMEC_SENSOR_GUID;
 
 typedef enum
 {
-    AMEC_TB_2MS,        // GUID for 2ms trace
-    AMEC_TB_250US,      // GUID for 250us trace
+    AMEC_TB_EVERY_8TH_TICK,  // GUID for traces every 8th tick
+    AMEC_TB_EVERY_TICK,      // GUID for traces every tick
     AMEC_TB_NUMBER_OF_TRACES // Number of trace buffers supported
 } AMEC_TB_ENUM;
 

@@ -79,8 +79,11 @@ uint32_t G_sequence_complete = 0;
 volatile uint32_t G_savedCompleteSeq = 0;
 #endif
 
-// Used to tell slave inbox that pwr meas is complete
+// Used to tell slave inbox that pwr meas is complete AND valid
 volatile bool G_ApssPwrMeasCompleted = FALSE;
+
+// Used to tell slave inbox that pwr meas is complete but is invalid
+volatile bool G_ApssPwrMeasDoneInvalid = FALSE;
 
 // Function Specification
 //
@@ -141,8 +144,6 @@ void dumpHexString(const void *i_data, const unsigned int len, const char *strin
 // End Function Specification
 void do_apss_recovery(void)
 {
-    INCREMENT_ERR_HISTORY(ERR_INVALID_APSS_DATA);
-
     if (!G_apss_data_traced)
     {
         INTR_TRAC_ERR("detected invalid power data[%08x%08x]",
@@ -373,6 +374,7 @@ void task_apss_start_pwr_meas(struct task *i_self)
     APSS_DBG("GPE_start_pwr_meas_read finished w/rc=0x%08X", G_gpe_start_pwr_meas_read_args.error.rc);
     APSS_DBG_HEXDUMP(&G_gpe_start_pwr_meas_read_args, sizeof(G_gpe_start_pwr_meas_read_args), "G_gpe_start_pwr_meas_read_args");
     G_ApssPwrMeasCompleted = FALSE;  // Will complete when 3rd task is complete.
+    G_ApssPwrMeasDoneInvalid = FALSE;  // validity checked when 3rd task completes
     G_gpe_apss_time_start = ssx_timebase_get();
 
 
@@ -557,6 +559,9 @@ void reformat_meas_data()
         // Make sure complete was successful
         if (G_gpe_complete_pwr_meas_read_args.error.error)
         {
+            INCREMENT_ERR_HISTORY(ERRH_APSS_COMPLETE_ERROR);
+            // Indicate that collection completed but is invalid so tx_slv_inbox will stop waiting for valid data
+            G_ApssPwrMeasDoneInvalid = TRUE;
             break;
         }
 
@@ -565,6 +570,9 @@ void reformat_meas_data()
              !(G_gpe_continue_pwr_meas_read_args.meas_data[0] & ~APSS_ADC_SEQ_MASK))
         {
             // Recovery will begin on the next tick
+            INCREMENT_ERR_HISTORY(ERRH_INVALID_APSS_DATA);
+            // Indicate that collection completed but is invalid so tx_slv_inbox will stop waiting for valid data
+            G_ApssPwrMeasDoneInvalid = TRUE;
             G_apss_recovery_requested = TRUE;
             break;
         }

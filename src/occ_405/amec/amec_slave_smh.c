@@ -83,9 +83,6 @@ smh_state_t G_amec_slv_state = {AMEC_INITIAL_STATE,
                                 AMEC_INITIAL_STATE,
                                 AMEC_INITIAL_STATE};
 
-// Number of ticks for periodically updating VRM-related data
-#define AMEC_UPDATE_VRM_TICKS   4000
-
 // This table presents the core data sensors collection pattern.
 // This pattern is not completely rbitrary, and it must always
 // follow track the GPE request pattern for the data collection.
@@ -108,7 +105,7 @@ const uint8_t G_sensor_update_pattern[AMEC_SMH_STATES_PER_LVL][CORES_PER_STATE] 
 // --------------------------------------------------------
 // AMEC Slave State 1 Substate Table
 // --------------------------------------------------------
-// Each function inside this state table runs once every 16ms.
+// Each substate runs every 64th tick time = 64 * MICS_PER_TICK
 //
 // No Substates
 //
@@ -127,26 +124,26 @@ const smh_tbl_t amec_slv_state_1_substate_table[AMEC_SMH_STATES_PER_LVL] =
 // --------------------------------------------------------
 // AMEC Slave State 2 Substate Table
 // --------------------------------------------------------
-// Each function inside this state table runs once every 16ms.
+// Each substate runs every 64th tick time = 64 * MICS_PER_TICK
 //
 // No Substates
 //
 const smh_tbl_t amec_slv_state_2_substate_table[AMEC_SMH_STATES_PER_LVL] =
 {
-  {amec_slv_substate_2_0, NULL},    // Substate 2.0
-  {NULL,                  NULL},    // Substate 2.1 (not used)
-  {NULL,                  NULL},    // Substate 2.2 (not used)
-  {NULL,                  NULL},    // Substate 2.3 (not used)
-  {amec_slv_substate_2_4, NULL},    // Substate 2.4
-  {NULL,                  NULL},    // Substate 2.5 (not used)
-  {NULL,                  NULL},    // Substate 2.6 (not used)
-  {NULL,                  NULL},    // Substate 2.7 (not used)
+  {amec_slv_substate_2_even, NULL}, // Substate 2.0
+  {NULL,                     NULL}, // Substate 2.1 (not used)
+  {amec_slv_substate_2_even, NULL}, // Substate 2.2
+  {NULL,                     NULL}, // Substate 2.3 (not used)
+  {amec_slv_substate_2_even, NULL}, // Substate 2.4
+  {NULL,                     NULL}, // Substate 2.5 (not used)
+  {amec_slv_substate_2_even, NULL}, // Substate 2.6
+  {NULL,                     NULL}, // Substate 2.7 (not used)
 };
 
 // --------------------------------------------------------
 // AMEC Slave State 3 Substate Table
 // --------------------------------------------------------
-// Each function inside this state table runs once every 16ms.
+// Each substate runs every 64th tick time = 64 * MICS_PER_TICK
 //
 // No Substates
 //
@@ -165,7 +162,7 @@ const smh_tbl_t amec_slv_state_3_substate_table[AMEC_SMH_STATES_PER_LVL] =
 // --------------------------------------------------------
 // AMEC Slave State 5 Substate Table
 // --------------------------------------------------------
-// Each function inside this state table runs once every 16ms.
+// Each substate runs every 64th tick time = 64 * MICS_PER_TICK
 //
 // No Substates
 //
@@ -184,26 +181,26 @@ const smh_tbl_t amec_slv_state_5_substate_table[AMEC_SMH_STATES_PER_LVL] =
 // --------------------------------------------------------
 // AMEC Slave State 6 Substate Table
 // --------------------------------------------------------
-// Each function inside this state table runs once every 16ms.
+// Each substate runs every 64th tick time = 64 * MICS_PER_TICK
 //
 // No Substates
 //
 const smh_tbl_t amec_slv_state_6_substate_table[AMEC_SMH_STATES_PER_LVL] =
 {
-  {NULL,                  NULL},    // Substate 6.0 (not used)
-  {amec_slv_substate_6_1, NULL},    // Substate 6.1
-  {NULL,                  NULL},    // Substate 6.2 (not used)
-  {amec_slv_substate_6_3, NULL},    // Substate 6.3
-  {NULL,                  NULL},    // Substate 6.4 (not used)
-  {amec_slv_substate_6_5, NULL},    // Substate 6.5
-  {NULL,                  NULL},    // Substate 6.6 (not used)
-  {amec_slv_substate_6_7, NULL},    // Substate 6.7
+  {amec_slv_substate_6_all, NULL},  // Substate 6.0
+  {amec_slv_substate_6_all, NULL},  // Substate 6.1
+  {amec_slv_substate_6_all, NULL},  // Substate 6.2
+  {amec_slv_substate_6_all, NULL},  // Substate 6.3
+  {amec_slv_substate_6_all, NULL},  // Substate 6.4
+  {amec_slv_substate_6_all, NULL},  // Substate 6.5
+  {amec_slv_substate_6_all, NULL},  // Substate 6.6
+  {amec_slv_substate_6_all, NULL},  // Substate 6.7
 };
 
 // --------------------------------------------------------
 // AMEC Slave State 7 Substate Table
 // --------------------------------------------------------
-// Each function inside this state table runs once every 16ms.
+// Each substate runs every 64th tick time = 64 * MICS_PER_TICK
 //
 // No Substates
 //
@@ -223,7 +220,7 @@ const smh_tbl_t amec_slv_state_7_substate_table[AMEC_SMH_STATES_PER_LVL] =
 // --------------------------------------------------------
 // Main AMEC Slave State Table
 // --------------------------------------------------------
-// Each function inside this state table runs once every 2ms.
+// Each function inside this state table runs once every 8th tick
 //
 const smh_tbl_t amec_slv_state_table[AMEC_SMH_STATES_PER_LVL] =
 {
@@ -447,10 +444,9 @@ void amec_slv_common_tasks_post(void)
         // Call the OCC slave's performance check
         amec_slv_check_perf();
 
-        // Call the 250us trace recording if it has been configured via Amester.
+        // Call the every tick trace recording if it has been configured via Amester.
         // If not configured, this call will return immediately.
-        amec_tb_record(AMEC_TB_250US);
-
+        amec_tb_record(AMEC_TB_EVERY_TICK);
       }
       else
          L_active_1tick = TRUE;
@@ -467,8 +463,8 @@ void amec_slv_common_tasks_post(void)
   if(G_inband_occ_cmd_state != INBAND_OCC_CMD_NONE)
   {
       // call inband command handler if in active, char or obs state
-      if ( (IS_OCC_STATE_ACTIVE() && L_active_1tick) || IS_OCC_STATE_OBSERVATION() ||
-            IS_OCC_STATE_CHARACTERIZATION() )
+      if ( IS_OCC_STATE_ACTIVE() || IS_OCC_STATE_OBSERVATION() ||
+           IS_OCC_STATE_CHARACTERIZATION() )
       {
          inband_command_handler();
       }
@@ -501,9 +497,9 @@ void amec_slv_state_0(void)
   sensor_vector_update(AMECSENSOR_PTR(IPS),     1);
   sensor_vector_update(AMECSENSOR_PTR(UTIL),         1);
 
-  // Call the trace function for 2ms tracing if it has been configured via
+  // Call the trace function for every 8th tick tracing if it has been configured via
   // Amester. If not configured, this call will return immediately.
-  amec_tb_record(AMEC_TB_2MS);
+  amec_tb_record(AMEC_TB_EVERY_8TH_TICK);
 }
 
 
@@ -631,7 +627,7 @@ void amec_slv_state_5(void)
   //-------------------------------------------------------
   // Update partition sensors for DPS algorithms (for this tick)
   //-------------------------------------------------------
-//  amec_dps_main();
+  amec_dps_main();
 
 }
 
@@ -865,26 +861,19 @@ void amec_slv_substate_1_7(void)
 
 // Function Specification
 //
-// Name: amec_slv_substate_2_0
-//       amec_slv_substate_2_4
+// Name: amec_slv_substate_2_even
 //
-// Description: slave substate amec_slv_substate_2_0
-//              slave substate amec_slv_substate_2_4
-//              other substates of state 2 are not currently used
+// Description: even numbered slave substates
+//              gives state 2 substate function to be called every 16th tick
+//              Time = 16 * MICS_PER_TICK 
+//              odd substates of state 2 are not currently used
 //
 // End Function Specification
-void amec_slv_substate_2_0(void)
+void amec_slv_substate_2_even(void)
 {
-    AMEC_DBG("\tAMEC Slave State 2.0\n");
+    AMEC_DBG("\tAMEC Slave State 2 even substate\n");
     amec_slv_update_main_mem_sensors();
 }
-
-void amec_slv_substate_2_4(void)
-{
-    AMEC_DBG("\tAMEC Slave State 2.4\n");
-    amec_slv_update_main_mem_sensors();
-}
-
 
 // Function Specification
 //
@@ -1259,39 +1248,16 @@ void amec_slv_substate_5_7(void)
 
 // Function Specification
 //
-// Name: amec_slv_substate_6_1
-//       amec_slv_substate_6_3
-//       amec_slv_substate_6_5
-//       amec_slv_substate_6_7
+// Name: amec_slv_substate_6_all
 //
-// Description: slave substate amec_slv_substate_6_1
-//              slave substate amec_slv_substate_6_3
-//              slave substate amec_slv_substate_6_5
-//              slave substate amec_slv_substate_6_7
-//              other substates of state 6 are not currently used
+// Description: Called for every substate of state 6
+//              gives state 6 substate function to be called every 8th tick
+//              Time = 8 * MICS_PER_TICK 
 //
 // End Function Specification
-void amec_slv_substate_6_1(void)
+void amec_slv_substate_6_all(void)
 {
-    AMEC_DBG("\tAMEC Slave State 6.1\n");
-    inband_command_check();
-}
-
-void amec_slv_substate_6_3(void)
-{
-    AMEC_DBG("\tAMEC Slave State 6.3\n");
-    inband_command_check();
-}
-
-void amec_slv_substate_6_5(void)
-{
-    AMEC_DBG("\tAMEC Slave State 6.5\n");
-    inband_command_check();
-}
-
-void amec_slv_substate_6_7(void)
-{
-    AMEC_DBG("\tAMEC Slave State 6.7\n");
+    AMEC_DBG("\tAMEC Slave State 6 substate\n");
     inband_command_check();
 }
 

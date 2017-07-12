@@ -111,7 +111,7 @@ typedef struct
 #define MICS_PER_TICK G_mics_per_tick // Number of micro-seconds per tick
 #define MAX_NUM_TICKS 16   // Number of entries in the global tick table (power of 2)
 // MICS_PER_TICK must be lower than 62ms to guarantee the tick table completes in < 1s (for health monitor)
-#define HW_MICS_PER_TICK        250
+#define HW_MICS_PER_TICK        500
 #define SIMICS_MICS_PER_TICK  20000 // slow down RTL to 20ms for Simics
 #define DCOM_TX_APSS_WAIT_TIME G_dcom_tx_apss_wait_time
 

@@ -278,7 +278,7 @@ void task_dcom_rx_slv_inbox( task_t *i_self)
                 else
                 {
                     L_bce_not_ready_count++;
-                    INCREMENT_ERR_HISTORY(ERR_DCOM_RX_SLV_INBOX);
+                    INCREMENT_ERR_HISTORY(ERRH_DCOM_RX_SLV_INBOX);
                 }
             }
             else
@@ -372,7 +372,7 @@ uint32_t dcom_rx_slv_inbox_doorbell( void )
         // We got an error reading from the PBAX, return to caller
         if ( l_pbarc != 0 )
         {
-            INCREMENT_ERR_HISTORY(ERR_DCOM_SLAVE_PBAX_READ_FAIL);
+            INCREMENT_ERR_HISTORY(ERRH_DCOM_SLAVE_PBAX_READ_FAIL);
             G_dcomTime.slave.doorbellErrorFlags |= DCOM_DOORBELL_HW_ERR;
             // Failure occurred
             TRAC_ERR("Slave PBAX Read Failure in receiving multicast doorbell from master - RC[%08X]", l_pbarc);
@@ -515,8 +515,8 @@ void task_dcom_wait_for_master( task_t *i_self)
 
                 if (L_no_master_doorbell_cnt == APSS_DATA_FAIL_PMAX_RAIL)
                 {
-                    // Now only trace every 50th occurrence
-                    L_trace_every_count = 50;
+                    // Now only trace every 1000th occurrence
+                    L_trace_every_count = 1000;
 
                     // Inform AMEC that Pmax_rail needs to change
                     G_apss_lower_pmax_rail = TRUE;

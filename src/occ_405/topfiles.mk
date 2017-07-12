@@ -25,6 +25,7 @@
 TOP-C-SOURCES = amec/amec_analytics.c \
                 amec/amec_controller.c \
                 amec/amec_data.c \
+                amec/amec_dps.c \
                 amec/amec_freq.c \
                 amec/amec_health.c \
                 amec/amec_init.c \

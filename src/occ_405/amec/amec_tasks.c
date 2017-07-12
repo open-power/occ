@@ -76,10 +76,10 @@ uint8_t _rotl8(uint8_t val, uint8_t shift)
 //
 // Description: Generic State Machine that allows for 8 states per level,
 //              with 3 levels.
-//              If State Machine gets called/incremented every          250us,
-//                - Each function entry in Level 0 table runs every       2ms,
-//                - Each function entry in Level 1 table will run every  16ms,
-//                - Each function entry in Level 2 table will run every 128ms.
+//              If State Machine gets called/incremented every          500us,
+//                - Each function entry in Level 0 table runs every       4ms,
+//                - Each function entry in Level 1 table will run every  32ms,
+//                - Each function entry in Level 2 table will run every 256ms.
 //
 //              Anything longer than that will need to be taken care of
 //              inside of the states themselves.

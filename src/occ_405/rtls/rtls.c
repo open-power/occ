@@ -32,6 +32,7 @@
 #include <errl.h>               // Error logging
 #include "amec_external.h"
 #include <trac.h>               // Traces
+#include <sensor.h>
 
 //Macro creates a 'bridge' handler that converts the initial fast-mode to full
 //mode interrupt handler
@@ -54,7 +55,7 @@ uint32_t G_current_tick = 0xFFFFFFFF;
 uint32_t G_mics_per_tick = HW_MICS_PER_TICK;
 
 // Number of micro-seconds to wait for APSS data collection to complete
-uint32_t G_dcom_tx_apss_wait_time = HW_MICS_PER_TICK * 0.6;
+uint32_t G_dcom_tx_apss_wait_time = HW_MICS_PER_TICK * 5 / 10;
 
 // The durations measured within the current tick
 fw_timing_t G_fw_timing;
@@ -288,8 +289,8 @@ void rtl_do_tick( void *private, SsxIrqId irq, int priority )
     task_t *l_task_ptr = NULL;      // Pointer to the currently executing task
     errlHndl_t  l_err = NULL;       // Error handler
     const trace_descriptor_array_t* l_trace = NULL;      // Temporary trace descriptor (replace this when tracing is implemented)
-    bool l_bad_id_reported = FALSE; // Has an invalid task ID already been reported?
-
+    static bool L_bad_id_reported = FALSE; // Has an invalid task ID already been reported?
+    static bool L_error_logged = FALSE;  // has an error for exceeding time time been logged?
     SsxMachineContext ctx;
 
     // Enter the protected context
@@ -312,7 +313,8 @@ void rtl_do_tick( void *private, SsxIrqId irq, int priority )
 
 
     // Index into the tick table to get a pointer to the tick sequence for the current tick.
-    l_taskid_ptr = G_tick_table[ (MAX_NUM_TICKS - 1) & CURRENT_TICK ];
+    uint8_t l_tick = (MAX_NUM_TICKS - 1) & CURRENT_TICK;
+    l_taskid_ptr = G_tick_table[l_tick];
 
     do
     {
@@ -325,10 +327,10 @@ void rtl_do_tick( void *private, SsxIrqId irq, int priority )
         if ( *l_taskid_ptr > TASK_END )
         {
             // Invalid task ID
-            if ( ! l_bad_id_reported )
+            if ( ! L_bad_id_reported )
             {
                 // First bad task ID we've seen this tick.  Log an unrecoverable error.
-                RTLS_DBG("rtl_do_tick() - Invalid task ID"
+                TRAC_ERR("rtl_do_tick() - Invalid task ID"
                          "taskId = 0x%x", *l_taskid_ptr );
 
                 /*
@@ -360,7 +362,7 @@ void rtl_do_tick( void *private, SsxIrqId irq, int priority )
                 commitErrl( &l_err );
 
                 // Set our "bad ID reported" flag
-                l_bad_id_reported = TRUE;
+                L_bad_id_reported = TRUE;
             }
 
             // Under all conditions, move on to the next task ID.
@@ -384,6 +386,43 @@ void rtl_do_tick( void *private, SsxIrqId irq, int priority )
 
     // Save timing of RTL tick
     G_fw_timing.rtl_dur = DURATION_IN_US_UNTIL_NOW_FROM(l_start);
+    if(G_fw_timing.rtl_dur > MICS_PER_TICK)
+    {
+        // exceeded tick time!!!
+        TRAC_ERR("rtl_do_tick: tick seq %d took %dus AMEC slv/mst tasks took total of %dus",
+                  l_tick, G_fw_timing.rtl_dur, G_fw_timing.ameint_dur);
+        sensor_t *l_gpe0_sensor = getSensorByGsid(GPEtickdur0);
+        sensor_t *l_gpe1_sensor = getSensorByGsid(GPEtickdur1);
+
+        TRAC_ERR("GPE TIMES: GPE0 = %dus, max %dus  GPE1 = %dus, max %dus",
+                  l_gpe0_sensor->sample, l_gpe0_sensor->sample_max, l_gpe1_sensor->sample, l_gpe1_sensor->sample_max);
+
+        if(!L_error_logged)
+        {
+           /*
+            * @errortype
+            * @moduleid    RTLS_DO_TICK_MOD
+            * @reasoncode  INTERNAL_FAILURE
+            * @userdata1   Tick time in us
+            * @userdata4   ERC_RTL_TIME_EXCEEDED
+            * @devdesc     Exceeded RTL tick time
+            */
+            l_err = createErrl(
+                RTLS_DO_TICK_MOD,               //ModId
+                INTERNAL_FAILURE,               //Reasoncode
+                ERC_RTL_TIME_EXCEEDED,          //Extended reasoncode
+                ERRL_SEV_PREDICTIVE,            //Severity
+                l_trace,                        //Trace Buf
+                DEFAULT_TRACE_SIZE,             //Trace Size
+                G_fw_timing.rtl_dur,            //Userdata1
+                0                               //Userdata2
+                );
+
+            // Commit error log
+            commitErrl( &l_err );
+            L_error_logged = TRUE;
+        }
+    }
 
     RTLS_DBG("RTL Tick Duration: %d us\n",(int)G_fw_timing.rtl_dur);
 

@@ -100,7 +100,7 @@ void amec_update_fw_sensors(void)
     int rc2                         = 0;
     static bool l_first_call        = TRUE;
     bool l_gpe0_idle, l_gpe1_idle;
-    static int L_consec_trace_count = 0;
+    static uint8_t L_consec_trace_count[2] = {0};
 
     // ------------------------------------------------------
     // Update OCC Firmware Sensors from last tick
@@ -136,8 +136,9 @@ void amec_update_fw_sensors(void)
 
         if(l_gpe0_idle && l_gpe1_idle)
         {
-            //reset the consecutive trace count
-            L_consec_trace_count = 0;
+            //reset the consecutive trace counts
+            L_consec_trace_count[0] = 0;
+            L_consec_trace_count[1] = 0;
 
             //Both GPE engines finished on time. Now check if they were
             //successful too.
@@ -198,7 +199,7 @@ void amec_update_fw_sensors(void)
                 commitErrl( &l_err );
             }
         }
-        else if(L_consec_trace_count < MAX_CONSEC_TRACE)
+        else
         {
             gpe_gpenxiramdbg_t xsr_sprg0 = {0};
             gpe_gpenxiramedr_t ir_edr = {0};
@@ -209,29 +210,49 @@ void amec_update_fw_sensors(void)
             // will tell us what GPE job is currently executing.
             if(!l_gpe0_idle)
             {
-                xsr_sprg0.fields.xsr = in32(GPE_GPE0XIXSR);
-                xsr_sprg0.fields.sprg0 = in32(GPE_GPE0XISPRG0);
-                ir_edr.fields.edr = in32(GPE_GPE0XIEDR);
-                ir_edr.fields.ir = in32(GPE_GPE0XIIR);
-                iar_xsr.fields.iar = in32(GPE_GPE0XIIAR);
-                TRAC_ERR("GPE0 programs did not complete within one tick. "
-                         "XSR[0x%08x]  IAR[0x%08x] IR[0x%08x] EDR[0x%08x] SPRG0[0x%08X]",
-                         xsr_sprg0.fields.xsr, iar_xsr.fields.iar,
-                         ir_edr.fields.ir, ir_edr.fields.edr, xsr_sprg0.fields.sprg0);
+                INCREMENT_ERR_HISTORY(ERRH_GPE0_NOT_IDLE);
+
+                if(L_consec_trace_count[0] < MAX_CONSEC_TRACE)
+                {
+                   xsr_sprg0.fields.xsr = in32(GPE_GPE0XIXSR);
+                   xsr_sprg0.fields.sprg0 = in32(GPE_GPE0XISPRG0);
+                   ir_edr.fields.edr = in32(GPE_GPE0XIEDR);
+                   ir_edr.fields.ir = in32(GPE_GPE0XIIR);
+                   iar_xsr.fields.iar = in32(GPE_GPE0XIIAR);
+                   TRAC_ERR("GPE0 programs did not complete within one tick. "
+                             "XSR[0x%08x]  IAR[0x%08x] IR[0x%08x] EDR[0x%08x] SPRG0[0x%08X]",
+                             xsr_sprg0.fields.xsr, iar_xsr.fields.iar,
+                             ir_edr.fields.ir, ir_edr.fields.edr, xsr_sprg0.fields.sprg0);
+                    L_consec_trace_count[0]++;
+                }
             }
+            else
+            {
+                 L_consec_trace_count[0] = 0;
+            }
+
             if(!l_gpe1_idle)
             {
-                xsr_sprg0.fields.xsr = in32(GPE_GPE1XIXSR);
-                xsr_sprg0.fields.sprg0 = in32(GPE_GPE1XISPRG0);
-                ir_edr.fields.edr = in32(GPE_GPE1XIEDR);
-                ir_edr.fields.ir = in32(GPE_GPE1XIIR);
-                iar_xsr.fields.iar = in32(GPE_GPE1XIIAR);
-                TRAC_ERR("GPE1 programs did not complete within one tick. "
-                         "XSR[0x%08x]  IAR[0x%08x] IR[0x%08x] EDR[0x%08x] SPRG0[0x%08X]",
-                         xsr_sprg0.fields.xsr, iar_xsr.fields.iar,
-                         ir_edr.fields.ir, ir_edr.fields.edr, xsr_sprg0.fields.sprg0);
+                INCREMENT_ERR_HISTORY(ERRH_GPE1_NOT_IDLE);
+
+                if(L_consec_trace_count[1] < MAX_CONSEC_TRACE)
+                {
+                    xsr_sprg0.fields.xsr = in32(GPE_GPE1XIXSR);
+                    xsr_sprg0.fields.sprg0 = in32(GPE_GPE1XISPRG0);
+                    ir_edr.fields.edr = in32(GPE_GPE1XIEDR);
+                    ir_edr.fields.ir = in32(GPE_GPE1XIIR);
+                    iar_xsr.fields.iar = in32(GPE_GPE1XIIAR);
+                    TRAC_ERR("GPE1 programs did not complete within one tick. "
+                             "XSR[0x%08x]  IAR[0x%08x] IR[0x%08x] EDR[0x%08x] SPRG0[0x%08X]",
+                             xsr_sprg0.fields.xsr, iar_xsr.fields.iar,
+                             ir_edr.fields.ir, ir_edr.fields.edr, xsr_sprg0.fields.sprg0);
+                    L_consec_trace_count[1]++;
+                }
             }
-            L_consec_trace_count++;
+            else
+            {
+                 L_consec_trace_count[1] = 0;
+            }
         }
     }
 }

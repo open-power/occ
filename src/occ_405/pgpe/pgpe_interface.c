@@ -757,6 +757,7 @@ int pgpe_start_suspend(uint8_t action, PMCR_OWNER owner)
 {
     int rc = 0;                // return code
     errlHndl_t  err = NULL;    // Error handler
+    pstateStatus l_current_pstate_status = G_proc_pstate_status;
 
     // set the IPC parameters
     G_start_suspend_parms.action     = action;
@@ -764,6 +765,9 @@ int pgpe_start_suspend(uint8_t action, PMCR_OWNER owner)
 
     if (!G_simics_environment)
     {
+        // set the G_proc_pstate_status to indicate transition
+        G_proc_pstate_status = PSTATES_IN_TRANSITION;
+
         if (action == PGPE_ACTION_PSTATE_START)
         {
             TRAC_IMP("pgpe_start_suspend: scheduling enable of pstates (owner=0x%02X)", owner);
@@ -779,6 +783,9 @@ int pgpe_start_suspend(uint8_t action, PMCR_OWNER owner)
     // couldn't schedule the IPC task?
     if(rc != 0)
     {
+        // restore pState status since it isn't going to change
+        G_proc_pstate_status = l_current_pstate_status;
+
         //Error in scheduling pgpe start suspend task
         TRAC_ERR("pgpe_start_suspend: Failed to schedule pgpe start_suspend task rc=%x",
                  rc);
@@ -803,11 +810,6 @@ int pgpe_start_suspend(uint8_t action, PMCR_OWNER owner)
 
         rc = GPE_REQUEST_SCHEDULE_FAILURE;
         REQUEST_RESET(err);   //This will add a firmware callout for us
-    }
-    // successfully scheduled, set the G_proc_pstate_status to indicate transition
-    else
-    {
-        G_proc_pstate_status = PSTATES_IN_TRANSITION;
     }
 
     if (G_simics_environment)

@@ -58,6 +58,9 @@ extern uint32_t G_present_hw_cores;
 //*************************************************************************/
 
 ///Maximum size of trace buffer
+// NOTE:  Any names in this file using timescale will NOT be kept in sync
+//         with RTL tick time changes since this is just for AMESTER, names
+//         used outside of the file by the main OCC code will be kept in sync
 #define AMEC_TB_2MS_SIZE_BYTES   8192
 #define AMEC_TB_250US_SIZE_BYTES 8192
 #define AMEC_TB_SIZE_BYTES (AMEC_TB_250US_SIZE_BYTES + AMEC_TB_2MS_SIZE_BYTES)
@@ -85,8 +88,8 @@ DMA_BUFFER(UINT8 g_amec_tb_bytes[AMEC_TB_SIZE_BYTES]);
 // Array that maintains a list of all trace buffers built.
 // NOTE: Must be in same order as AMEC_TB_ENUM
 DMA_BUFFER(amec_tb_t  g_amec_tb_list[AMEC_MAX_NUM_TB]) = {
-    //trace 2ms
-    [AMEC_TB_2MS] = {
+    //trace every 8th tick
+    [AMEC_TB_EVERY_8TH_TICK] = {
         "trace2ms", // name
         AMEFP(500,0), // freq
         (UINT8*)(UINT32)g_amec_tb_bytes, // bytes
@@ -101,8 +104,8 @@ DMA_BUFFER(amec_tb_t  g_amec_tb_list[AMEC_MAX_NUM_TB]) = {
         {0}, // sensors_num[]
         {0} // parms_num[]
     },
-    // trace 250us
-    [AMEC_TB_250US] = {
+    // trace every tick
+    [AMEC_TB_EVERY_TICK] = {
         "trace250us",  // name
         AMEFP(4000,0), // freq
         (UINT8*)(UINT32)g_amec_tb_bytes+AMEC_TB_2MS_SIZE_BYTES, // bytes
@@ -1051,7 +1054,6 @@ void amec_tb_record(const AMEC_TB_GUID i_guid)
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
 
-    // Record OCA from last 32 ms
     if(G_dcom_slv_inbox_rx.tb_record)
     {
         // Check for valid tb write entry index

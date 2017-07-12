@@ -178,7 +178,7 @@ void check_runtime_environment(void)
     {
         // slow down RTL for Simics
         G_mics_per_tick = SIMICS_MICS_PER_TICK;
-        G_dcom_tx_apss_wait_time = SIMICS_MICS_PER_TICK * 6 / 10;
+        G_dcom_tx_apss_wait_time = SIMICS_MICS_PER_TICK * 4 / 10;
 
         // Same comment as above about lower 32-bits. Bit 62 can be toggled
         // on or off (in Simics) to indicate for which APSS specification the

@@ -89,7 +89,7 @@ uint32_t dcom_build_slv_inbox(void)
     // interrupt context.
     if(G_pbax_rc)
     {
-        INCREMENT_ERR_HISTORY(ERR_DCOM_MASTER_PBAX_SEND_FAIL);
+        INCREMENT_ERR_HISTORY(ERRH_DCOM_MASTER_PBAX_SEND_FAIL);
 
         if (!L_traced)
         {
@@ -232,6 +232,7 @@ void task_dcom_tx_slv_inbox( task_t *i_self)
     uint32_t    l_orc_ext = OCC_NO_EXTENDED_RC;
     uint64_t    l_start = ssx_timebase_get();
     bool        l_pwr_meas = FALSE;
+    bool        l_pwr_meas_complete_invalid = FALSE;
     bool        l_request_reset = FALSE;
     bool        l_ssx_failure = FALSE;
     // Use a static local bool to track whether the BCE request used
@@ -250,8 +251,9 @@ void task_dcom_tx_slv_inbox( task_t *i_self)
         }
 
         l_pwr_meas = G_ApssPwrMeasCompleted;
+        l_pwr_meas_complete_invalid = G_ApssPwrMeasDoneInvalid;
 
-        // Did APSS power complete?
+        // Did APSS power complete AND valid?
         if( l_pwr_meas == TRUE )
         {
 #if !defined(DEBUG_APSS_SEQ) && defined(DCOM_DEBUG)
@@ -405,11 +407,40 @@ void task_dcom_tx_slv_inbox( task_t *i_self)
             else
             {
                 L_bce_not_ready_count++;
-                INCREMENT_ERR_HISTORY(ERR_DCOM_TX_SLV_INBOX);
+                INCREMENT_ERR_HISTORY(ERRH_DCOM_TX_SLV_INBOX);
             }
 
             // Moved the break statement here in case we decide not to
             // schedule the BCE request.
+            break;
+        }
+        // Is APSS power collection done but failed?  Stop waiting since no valid data will be coming
+        else if(l_pwr_meas_complete_invalid == TRUE)
+        {
+            //Failure occurred, step up the FAIL_COUNT
+            APSS_FAIL();
+
+            if (G_apss_fail_updown_count >= APSS_DATA_FAIL_MAX)
+            {
+                if (FALSE == isSafeStateRequested())
+                {
+                        /* @
+                         * @errortype
+                         * @moduleid    DCOM_MID_TASK_TX_SLV_INBOX
+                         * @reasoncode  APSS_HARD_FAILURE
+                         * @userdata1   N/A
+                         * @userdata4   ERC_APSS_NO_VALID_DATA
+                         * @devdesc     No valid APSS data (hard time-out)
+                         */
+                        TRAC_ERR("No valid apss data: #complete errors = %i  #invalid = %i",
+                                 G_error_history[ERRH_APSS_COMPLETE_ERROR],
+                                 G_error_history[ERRH_INVALID_APSS_DATA]);
+                        l_orc = APSS_HARD_FAILURE;
+                        l_orc_ext = ERC_APSS_NO_VALID_DATA;
+                        l_request_reset = TRUE;
+                }
+            }
+
             break;
         }
         else
@@ -421,7 +452,7 @@ void task_dcom_tx_slv_inbox( task_t *i_self)
             }
             else
             {
-                INCREMENT_ERR_HISTORY(ERR_DCOM_APSS_COMPLETE_TIMEOUT);
+                INCREMENT_ERR_HISTORY(ERRH_APSS_COMPLETE_TIMEOUT);
 
                 //Failure occurred, step up the FAIL_COUNT
                 APSS_FAIL();
@@ -430,9 +461,6 @@ void task_dcom_tx_slv_inbox( task_t *i_self)
                 {
                     if (FALSE == isSafeStateRequested())
                     {
-                        TRAC_ERR("task_dcom_tx_slv_inbox: APSS data collection failure exceeded threshold. fail_count=%i, threshold:%i",
-                                 G_apss_fail_updown_count, APSS_DATA_FAIL_MAX);
-
                         /* @
                          * @errortype
                          * @moduleid    DCOM_MID_TASK_TX_SLV_INBOX
@@ -450,6 +478,7 @@ void task_dcom_tx_slv_inbox( task_t *i_self)
                         l_request_reset = TRUE;
                     }
                 }
+
                 break;
             }
         }

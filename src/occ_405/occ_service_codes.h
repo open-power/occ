@@ -139,9 +139,7 @@ enum occReasonCode
 // OCC errors.  (H)TMGT will be looking for 0xEy ERRL_RC in cmd response RC
 // and create an OCC error log with OCC component ID and 0xEy RC if found
 
-    /// Error copying sensors to main memory
-    SENSOR_MAIN_MEM_ERROR           = 0xF0,
-
+    SENSOR_MAIN_MEM_ERROR           = 0xF0,  // Error copying sensors to main memory
     INBAND_CMD_ERROR                = 0xF1,
     OPAL_TABLE_UPDATE_ERROR         = 0xF2,
 
@@ -192,6 +190,7 @@ enum occExtReasonCode
     ERC_APSS_GPIO_DUPLICATED_FAILURE            = 0x0025,
     ERC_APSS_ADC_OUT_OF_RANGE_FAILURE           = 0x0026,
     ERC_APSS_ADC_DUPLICATED_FAILURE             = 0x0027,
+    ERC_APSS_NO_VALID_DATA                      = 0x0028,
 
     ERC_AMEC_PCAPS_MISMATCH_FAILURE             = 0x002A,
     ERC_AMEC_UNDER_PCAP_FAILURE                 = 0x002B,
@@ -283,6 +282,7 @@ enum occExtReasonCode
     ERC_STATE_FROM_STB_TO_OBS_FAILURE           = 0x0129,
 
     ERC_STATE_HEARTBEAT_CFG_FAILURE             = 0x0180,
+    ERC_RTL_TIME_EXCEEDED                       = 0x0190,
 };
 
 // Error log Module Ids

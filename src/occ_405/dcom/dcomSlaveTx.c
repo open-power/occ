@@ -163,7 +163,7 @@ void task_dcom_tx_slv_outbox( task_t *i_self)
         if(G_slave_pbax_rc)
         {
             TRAC_ERR("task_dcom_tx_slv_outbox: PBAX Send Failure in transimitting doorbell - RC[%08X]", G_slave_pbax_rc);
-            INCREMENT_ERR_HISTORY(ERR_DCOM_SLAVE_PBAX_SEND_FAIL);
+            INCREMENT_ERR_HISTORY(ERRH_DCOM_SLAVE_PBAX_SEND_FAIL);
         }
 
         // Build/setup outbox
@@ -304,7 +304,7 @@ void task_dcom_tx_slv_outbox( task_t *i_self)
         else
         {
             L_bce_not_ready_count++;
-            INCREMENT_ERR_HISTORY(ERR_DCOM_TX_SLV_OUTBOX);
+            INCREMENT_ERR_HISTORY(ERRH_DCOM_TX_SLV_OUTBOX);
         }
 
     } while (0);

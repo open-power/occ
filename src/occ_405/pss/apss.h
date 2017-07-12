@@ -67,11 +67,14 @@ struct apssPwrMeasStruct
 } __attribute__ ((__packed__));
 typedef struct apssPwrMeasStruct apssPwrMeasStruct_t;
 
-// G_apss_pwr_meas: power, temp and GPIO readings that OCC gathers from APSS every tick
+// G_apss_pwr_meas: power and GPIO readings that OCC gathers from APSS every tick
 extern apssPwrMeasStruct_t G_apss_pwr_meas;
 
-// Used to tell slave inbox that pwr meas is complete
+// Used to tell slave inbox that pwr meas is complete AND valid
 extern volatile bool G_ApssPwrMeasCompleted;
+
+// Used to tell slave inbox that pwr meas is complete but NOT valid
+extern volatile bool G_ApssPwrMeasDoneInvalid;
 
 extern initGpioArgs_t G_gpe_apss_initialize_gpio_args;
 extern setApssModeArgs_t G_gpe_apss_set_mode_args;
