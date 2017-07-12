@@ -32,13 +32,15 @@
 #include <occ_service_codes.h>    // OCC reason codes
 #include <sensor_service_codes.h> // sensor module ids
 #include <trac.h>                 // Trace macros
-#include <rtls.h>                 // For G_current_tick
+#include <get_tod_structs.h>      // For TOD_VALUE_UNKNOWN
 
 #define UINT16_MIN                  0
 
 // Global sensor counter
 uint32_t G_amec_sensor_count = 0;
 
+// See header file for description
+volatile uint64_t G_tod = TOD_VALUE_UNKNOWN;
 
 void sensor_init(sensor_t * io_sensor_ptr,
                  const uint16_t i_gsid,
@@ -268,8 +270,8 @@ void sensor_update( sensor_t * io_sensor_ptr, const uint16_t i_sensor_value)
             sensor_reset(io_sensor_ptr);
         }
 
-        // update timestamp
-        io_sensor_ptr->timestamp = G_current_tick;
+        // set timestamp to current time of day
+        io_sensor_ptr->timestamp = G_tod;
 
         // update sample value
         io_sensor_ptr->sample = i_sensor_value;

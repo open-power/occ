@@ -80,6 +80,7 @@ INPUT ( amec_amester.o
         reset.o
         rtls_tables.o
         rtls.o
+        sensor_get_tod_task.o
         sensor_inband_cmd.o
         sensor_info.o
         sensor_main_memory.o

@@ -43,6 +43,7 @@
 #include <occ_service_codes.h>      // For OCC reason codes
 #include <sensor_service_codes.h>   // For sensor module ids
 #include <trac.h>                   // For trace macros
+#include <errl.h>                   // For error logging functions and types
 #include <occhw_async.h>            // For bce_request_*(), async_request_is_idle()
 #include <cmdh_fsp_cmds.h>          // For G_apss_ch_to_function
 

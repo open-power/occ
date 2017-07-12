@@ -239,6 +239,10 @@ extern const sensor_info_t    G_sensor_info[];
 // Contains array of pointers to mini-sensors, indexed by GSID
 extern const minisensor_ptr_t G_amec_mini_sensor_list[];
 
+// Current Time Of Day (TOD).  Constantly updated by TASK_ID_GET_TOD.  Used by
+// sensor_update().  Declared volatile since it is used in multiple threads.
+extern volatile uint64_t G_tod;
+
 // sensor_init
 void sensor_init(sensor_t * io_sensor_ptr,
                  const uint16_t i_gsid,

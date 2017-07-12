@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_405/sensor/sensor_service_codes.h $                   */
+/* $Source: src/occ_405/sensor/sensor_get_tod_task.h $                    */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2017,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -23,38 +23,32 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-#ifndef _SENSOR_SERVICE_CODES_H_
-#define _SENSOR_SERVICE_CODES_H_
+#ifndef _SENSOR_GET_TOD_TASK_H
+#define _SENSOR_GET_TOD_TASK_H
 
-#include <comp_ids.h>
+/**
+ * @file sensor_get_tod_task.h
+ *
+ * This file declares the functions for the task that gets the current Time Of
+ * Day (TOD).
+ */
 
-enum occSensorModuleId
-{
-    // Sensors
-    SENSOR_QUERY_LIST                = SNSR_COMP_ID | 0x00,
-    SENSOR_INITIALIZE                = SNSR_COMP_ID | 0x01,
+//******************************************************************************
+// Includes
+//******************************************************************************
+#include <rtls.h>                   // For task_t
 
-    // Main memory sensors
-    MM_SENSORS_INIT_MOD              = SNSR_COMP_ID | 0x10,
-    MM_SENSORS_UPDATE_MOD            = SNSR_COMP_ID | 0x11,
-    MM_SENSORS_BCE_COPY_MOD          = SNSR_COMP_ID | 0x12,
-    MM_SENSORS_IS_BCE_REQ_IDLE_MOD   = SNSR_COMP_ID | 0x13,
-    MM_SENSORS_WRITE_DATA_HDR_MOD    = SNSR_COMP_ID | 0x14,
-    MM_SENSORS_VALIDATE_DATA_HDR_MOD = SNSR_COMP_ID | 0x15,
-    MM_SENSORS_WRITE_NAMES_MOD       = SNSR_COMP_ID | 0x16,
-    MM_SENSORS_WRITE_READINGS_MOD    = SNSR_COMP_ID | 0x17,
-    MM_SENSORS_VALIDATE_READINGS_MOD = SNSR_COMP_ID | 0x18,
 
-    // Inband commands
-    INBAND_CMD_IS_BCE_REQ_IDLE_MOD   = SNSR_COMP_ID | 0x20,
-    INBAND_CMD_BCE_COPY_MOD          = SNSR_COMP_ID | 0x21,
-    INBAND_CMD_HANDLER_MOD           = SNSR_COMP_ID | 0x22,
-    INBAND_CMD_CHECK_MOD             = SNSR_COMP_ID | 0x23,
+//******************************************************************************
+// Function Prototypes
+//******************************************************************************
 
-    // Get time of day task
-    GET_TOD_IS_REQ_IDLE_MOD          = SNSR_COMP_ID | 0x30,
-    GET_TOD_HNDL_REQ_RSLT_MOD        = SNSR_COMP_ID | 0x31,
-    GET_TOD_SCHED_REQ_MOD            = SNSR_COMP_ID | 0x32,
-};
+/**
+ * Initial function called by the TASK_ID_GET_TOD task.  Gets the current Time
+ * Of Day (TOD) value and stores it in the global variable G_tod.
+ *
+ * @param i_self This task
+ */
+void task_get_tod(task_t * i_self);
 
-#endif /* #ifndef _SENSOR_SERVICE_CODES_H_ */
+#endif // _SENSOR_GET_TOD_TASK_H

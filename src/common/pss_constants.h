@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_gpe0/pss_constants.h $                                */
+/* $Source: src/common/pss_constants.h $                                  */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -52,7 +52,8 @@
 #define SPIPSS_P2S_WDATA_REG          (SPIPSS_REGISTER_BASE + 0x50)
 #define SPIPSS_P2S_RDATA_REG          (SPIPSS_REGISTER_BASE + 0x60)
 
-#define TOD_VALUE_REG 0x00040020
+#define TOD_STATUS_REG 0x00040008
+#define TOD_VALUE_REG  0x00040020
 
 // Constant for use in wait statments: waits (5 * MICROSECONDS)
 #define MICROSECONDS 600
