@@ -84,7 +84,7 @@ class AMESTER:
         self.get_num_parameters()
 
     def identify_occs(self):
-        r = self.session.get(self.url + '/xyz/openbmc_project/occ/pass_through/enumerate',
+        r = self.session.get(self.url + '/org/open_power/control/enumerate',
                              verify=False)
         j = r.json()
         if j['status'] != 'ok':
