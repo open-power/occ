@@ -62,11 +62,10 @@
 #include <p9_pstates_occ.h>
 #include <wof.h>
 #include "pgpe_service_codes.h"
-//#include <lpc.h>
 #include <native.h>
 #include <ast_mboxdd.h>
 #include <pnor_mboxdd.h>
-
+#include <common.h>
 pnorMbox_t l_pnorMbox;
 
 extern uint32_t __ssx_boot; // Function address is 32 bits
@@ -1688,18 +1687,19 @@ void Main_thread_routine(void *private)
         dcache_flush(g_trac_imp_buffer, TRACE_BUFFER_SIZE);
         dcache_flush(g_trac_err_buffer, TRACE_BUFFER_SIZE);
 
-/* RTC 130203 -- FIR DATA IS NOT SUPPORTED IN PHASE1
         static bool L_fir_collection_completed = FALSE;
         // Look for FIR collection flag and status
         if (G_fir_collection_required && !L_fir_collection_completed)
         {
+            TRAC_IMP("fir data collection starting");
             // If this OCC is the FIR master and PNOR access is allowed perform
             // FIR collection
-            if (OCC_IS_FIR_MASTER() && pnor_access_allowed())
+            if (OCC_IS_FIR_MASTER())
             {
-                fir_data_collect();
+//                fir_data_collect();
                 L_fir_collection_completed = TRUE;
             }
+            TRAC_IMP("fir data collection done");
 
             G_fir_collection_required = FALSE;
             // Error reporting is skipped while FIR collection is required so we
@@ -1712,7 +1712,6 @@ void Main_thread_routine(void *private)
                 notify_host(INTR_REASON_HTMGT_SERVICE_REQUIRED);
             }
         }
-*/
 
         if( l_ssxrc == SSX_OK)
         {
@@ -1906,9 +1905,6 @@ int main(int argc, char **argv)
         SSX_PANIC(0x01000003);
     }
 
-#endif /* PPC405_MMU_SUPPORT */
-
-/* RTC 130203: TEMP -- NO FIR SUPPORT IN PHASE1
     // Setup the TLB for writing to the FIR parms section
     l_ssxrc = ppc405_mmu_map(FIR_PARMS_SECTION_BASE_ADDRESS,
                              FIR_PARMS_SECTION_BASE_ADDRESS,
@@ -1936,7 +1932,8 @@ int main(int argc, char **argv)
         // Panic, this section is required for FIR collection on checkstops
         SSX_PANIC(0x01000004);
     }
-*/
+#endif
+
     CHECKPOINT_INIT();
     CHECKPOINT(MAIN_STARTED);
 
@@ -2065,55 +2062,47 @@ int main(int argc, char **argv)
     homer_log_access_error(l_homerrc,
                            l_ssxrc,
                            l_occ_int_type);
-/*
-    //RTC 130203: TEMP -- NO FIR SUPPORT
-    if (l_homer_version >= HOMER_VERSION_3)
+    // Get the FIR Master indicator
+    uint32_t l_fir_master = FIR_OCC_NOT_FIR_MASTER;
+    l_homerrc = homer_hd_map_read_unmap(HOMER_FIR_MASTER,
+                                        &l_fir_master,
+                                        &l_ssxrc);
+
+    if (((HOMER_SUCCESS == l_homerrc) || (HOMER_SSX_UNMAP_ERR == l_homerrc))
+        &&
+        (FIR_OCC_IS_FIR_MASTER == l_fir_master))
     {
-        // Get the FIR Master indicator
-        uint32_t l_fir_master = FIR_OCC_NOT_FIR_MASTER;
-        l_homerrc = homer_hd_map_read_unmap(HOMER_FIR_MASTER,
-                                            &l_fir_master,
+        OCC_SET_FIR_MASTER(FIR_OCC_IS_FIR_MASTER);
+    }
+    else
+    {
+        OCC_SET_FIR_MASTER(FIR_OCC_NOT_FIR_MASTER);
+    }
+
+    TRAC_IMP("HOMER accessed, rc=%d, FIR master=%d, ssx_rc=%d",
+              l_homerrc, l_fir_master, l_ssxrc);
+
+    // Handle any errors from the FIR master access
+    homer_log_access_error(l_homerrc,
+                           l_ssxrc,
+                           l_fir_master);
+
+    // If this OCC is the FIR master read in the FIR collection parms
+    if (OCC_IS_FIR_MASTER())
+    {
+        // Read the FIR parms buffer
+        l_homerrc = homer_hd_map_read_unmap(HOMER_FIR_PARMS,
+                                            &G_fir_data_parms[0],
                                             &l_ssxrc);
 
-        if (((HOMER_SUCCESS == l_homerrc) || (HOMER_SSX_UNMAP_ERR == l_homerrc))
-            &&
-            (FIR_OCC_IS_FIR_MASTER == l_fir_master))
-        {
-            OCC_SET_FIR_MASTER(FIR_OCC_IS_FIR_MASTER);
-        }
-        else
-        {
-            OCC_SET_FIR_MASTER(FIR_OCC_NOT_FIR_MASTER);
-        }
-
-        MAIN_TRAC_INFO("HOMER accessed, rc=%d, FIR master=%d, ssx_rc=%d",
-                  l_homerrc, l_fir_master, l_ssxrc);
+        TRAC_IMP("HOMER accessed, rc=%d, FIR parms buffer 0x%x, ssx_rc=%d",
+                  l_homerrc, &G_fir_data_parms[0], l_ssxrc);
 
         // Handle any errors from the FIR master access
         homer_log_access_error(l_homerrc,
                                l_ssxrc,
-                               l_fir_master);
-
-        // If this OCC is the FIR master read in the FIR collection parms
-        if (OCC_IS_FIR_MASTER())
-        {
-            MAIN_TRAC_IMP("I am the FIR master");
-
-            // Read the FIR parms buffer
-            l_homerrc = homer_hd_map_read_unmap(HOMER_FIR_PARMS,
-                                                &G_fir_data_parms[0],
-                                                &l_ssxrc);
-
-            MAIN_TRAC_INFO("HOMER accessed, rc=%d, FIR parms buffer 0x%x, ssx_rc=%d",
-                      l_homerrc, &G_fir_data_parms[0], l_ssxrc);
-
-            // Handle any errors from the FIR master access
-            homer_log_access_error(l_homerrc,
-                                   l_ssxrc,
-                                   (uint32_t)&G_fir_data_parms[0]);
-        }
+                               (uint32_t)&G_fir_data_parms[0]);
     }
-*/
 
     //TODO: RTC 134619: Currently causes an SSX Panic due to SSX believing the
     //                  interrupt is not owned by the 405. The fix is to update
