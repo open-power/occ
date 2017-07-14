@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -67,7 +67,7 @@ uint32_t get_core_data(uint32_t i_core,
     // mask off resource occupied/offline errors - will return these)
     // SIB rc 3-7 will machine check (unless already masked)
     mtmsr((mfmsr() & ~(MSR_SIBRC | MSR_SIBRCA))
-          | 0xe0000000);  //MASK SIBRC == 1 | SIBRC == 2
+          | 0xe8000000);  //MASK SIBRC == 1 | SIBRC == 2 | SIBRC == 4
 
     dts_sensor_result_reg_t dts_scom_data;
 
