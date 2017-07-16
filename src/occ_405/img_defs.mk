@@ -234,7 +234,6 @@ APP_INCLUDES =  -I$(IMAGE_SRCDIR)/rtls \
                 -I$(IMAGE_SRCDIR)/dcom \
                 -I$(IMAGE_SRCDIR)/amec \
                 -I$(IMAGE_SRCDIR)/cent \
-                -I$(IMAGE_SRCDIR)/firdata \
                 -I$(IMAGE_SRCDIR)/dimm \
                 -I$(IMAGE_SRCDIR)/mem \
                 -I$(IMAGE_SRCDIR)/lock \

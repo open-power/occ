@@ -36,7 +36,6 @@
 #include "cmdh_mnfg_intf.h"
 #include "cmdh_tunable_parms.h"
 #include "cmdh_snapshot.h"
-#include "scom.h"
 #include "homer.h"
 
 // OCB Channel Setup Defines

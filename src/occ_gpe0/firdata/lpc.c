@@ -25,7 +25,6 @@
 
 #include <native.h>
 #include <lpc.h>
-#include <trac_interface.h>
 #include <scom_util.h>
 
 #define    LPCHC_FW_SPACE   0xF0000000 /**< LPC Host Controller FW Space */
@@ -198,7 +197,7 @@ errorHndl_t pollComplete(CommandReg_t* i_ctrl,
 errorHndl_t lpc_read( LpcTransType i_type,
                      uint32_t i_addr,
                      uint8_t* o_data,
-                     size_t i_size )
+                     uint32_t i_size )
 {
     errorHndl_t l_err = NO_ERROR;
     int32_t l_addr = 0;
@@ -299,7 +298,7 @@ errorHndl_t lpc_read( LpcTransType i_type,
 errorHndl_t lpc_write( LpcTransType i_type,
                       uint32_t i_addr,
                       uint8_t* i_data,
-                      size_t i_size )
+                      uint32_t i_size )
 {
     errorHndl_t l_err = NO_ERROR;
     uint32_t l_addr = 0;

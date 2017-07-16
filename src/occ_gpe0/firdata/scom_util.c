@@ -26,16 +26,12 @@
 /* Support for SCOM operations */
 #include <fsi.h>
 #include <native.h>
-#include <occhw_async.h>
-#include "occ_common.h"
 #include "gpe_export.h"
 #include <scom_util.h>
 #include "scom_addr_util.h"
 #include <sbe_fifo.h>
 
 bool G_request_created = FALSE;
-GPE_BUFFER(ipc_scom_op_t G_scom_op);
-GpeRequest G_request;
 
 enum {
     /*FSI addresses are byte offsets, so need to multiply by 4
@@ -359,50 +355,8 @@ int32_t getscomraw( SCOM_Trgt_t i_chip, uint32_t i_addr, uint64_t * o_val )
     {
         return getFifoScom(&i_chip, i_addr, o_val);
     }
-
-    if(!G_request_created) //Only need to create request once
-    {
-        l_rc = gpe_request_create(&G_request,              //Request
-                                  &G_async_gpe_queue0,     //Queue
-                                  IPC_ST_SCOM_OPERATION,   //Function ID
-                                  &G_scom_op,              //GPE arguments
-                                  SSX_SECONDS(5),          //Timeout
-                                  NULL,                    //Callback function
-                                  NULL,                    //Callback args
-                                  ASYNC_REQUEST_BLOCKING); //Options
-        if(l_rc)
-        {
-            TRAC_ERR("getscomraw: failed to create gpe request, rc=0x%08X", l_rc);
-            return l_rc;
-        }
-        else
-        {
-            G_request_created = TRUE;
-        }
-    }
-
-    //Pack in the request data
-    G_scom_op.read = TRUE;
-    G_scom_op.addr = i_addr;
-
-    l_rc = gpe_request_schedule(&G_request);
-    if(l_rc)
-    {
-        TRAC_ERR("getscomraw: failed to schedule gpe request, rc=0x%08X", l_rc);
-        return l_rc;
-    }
-
-    //Since it's a blocking request, it should be completed by the time we
-    //get here. If it's not, then a timeout has occurred.
-    if(G_request.request.completion_state == ASYNC_REQUEST_STATE_COMPLETE)
-    {
-        *o_val = G_scom_op.data;
-    }
-    else
-    {
-        *o_val = 0;
-        l_rc = FAIL;
-    }
+    *o_val = 0;
+    l_rc = FAIL;
 
     return l_rc;
 }
@@ -423,48 +377,6 @@ int32_t putscomraw( SCOM_Trgt_t i_chip, uint32_t i_addr, uint64_t i_val )
     {
         return putFifoScom(&i_chip, i_addr, i_val);
     }
-
-    if(!G_request_created) //Only need to create request once
-    {
-        l_rc = gpe_request_create(&G_request,              //Request
-                                  &G_async_gpe_queue0,     //Queue
-                                  IPC_ST_SCOM_OPERATION,   //Function ID
-                                  &G_scom_op,              //GPE arguments
-                                  SSX_SECONDS(5),          //Timeout
-                                  NULL,                    //Callback function
-                                  NULL,                    //Callback args
-                                  ASYNC_REQUEST_BLOCKING); //Options
-        if(l_rc)
-        {
-            TRAC_ERR("putscomraw gpe request create failed, rc = 0x%08x", l_rc);
-            return l_rc;
-        }
-        else
-        {
-            G_request_created = TRUE;
-        }
-    }
-
-    //Pack in the request data
-    G_scom_op.read = FALSE;
-    G_scom_op.addr = i_addr;
-    G_scom_op.data = i_val;
-
-    l_rc = gpe_request_schedule(&G_request);
-    if(l_rc)
-    {
-        TRAC_ERR("putscomraw gpe request schedule failed, rc=0x%08X", l_rc);
-        return l_rc;
-    }
-
-    //It's a blocking request, so if the request hasn't been completed by this
-    //time, then a timeout has occurred.
-    if(G_request.request.completion_state != ASYNC_REQUEST_STATE_COMPLETE)
-    {
-        TRAC_ERR("putscomraw gpe request failed to complete, rc = 0x%08x", l_rc);
-        l_rc = FAIL;
-    }
-
     return l_rc;
 }
 

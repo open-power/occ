@@ -34,7 +34,6 @@
 #include "cmdh_fsp_cmds.h"
 #include "proc_data.h"
 #include "proc_pstate.h"
-#include "scom.h"
 #include "homer.h"
 #include <amec_freq.h>
 #include <common.h>

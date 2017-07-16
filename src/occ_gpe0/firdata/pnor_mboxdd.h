@@ -79,7 +79,7 @@ errorHndl_t hwInit(pnorMbox_t* i_pnorMbox);
  */
 errorHndl_t readFlash(pnorMbox_t* i_pnorMbox,
                       uint32_t i_addr,
-                      size_t i_size,
+                      uint32_t i_size,
                       void* o_data);
 
 /**
@@ -93,7 +93,7 @@ errorHndl_t readFlash(pnorMbox_t* i_pnorMbox,
  */
 errorHndl_t writeFlash(pnorMbox_t* i_pnorMbox,
                        uint32_t i_addr,
-                       size_t i_size,
+                       uint32_t i_size,
                        void* i_data);
 
 /**
@@ -111,9 +111,9 @@ errorHndl_t writeFlash(pnorMbox_t* i_pnorMbox,
 errorHndl_t adjustMboxWindow(pnorMbox_t* i_pnorMbox,
                             bool i_isWrite,
                             uint32_t i_reqAddr,
-                            size_t i_reqSize,
+                            uint32_t i_reqSize,
                             uint32_t *o_lpcAddr,
-                            size_t *o_chunkLen);
+                            uint32_t *o_chunkLen);
 
 /**
  * @brief Mark a range dirty in a write window
@@ -123,7 +123,7 @@ errorHndl_t adjustMboxWindow(pnorMbox_t* i_pnorMbox,
  *
  * @return Error from operation
  */
-errorHndl_t writeDirty(pnorMbox_t* i_pnorMbox, uint32_t i_addr, size_t i_size);
+errorHndl_t writeDirty(pnorMbox_t* i_pnorMbox, uint32_t i_addr, uint32_t i_size);
 
 /**
 * @brief Flush all pending dirty data to the flash

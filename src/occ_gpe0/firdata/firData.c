@@ -141,9 +141,9 @@ bool FirData_addRegToPnor( FirData_t * io_fd, PNOR_Trgt_t * io_pTrgt,
         rc = SCOM_getScom( i_sTrgt, i_addr, &(reg.val) );
         if ( SUCCESS != rc )
         {
-            TRAC_ERR( "[FirData_addRegToPnor] t=%d p=%d u=%d rc=%d "
-                      "addr=0x%08x val=0x%08x%08x", i_sTrgt.type,
-                      i_sTrgt.procPos, i_sTrgt.procUnitPos, rc, i_addr,
+            TRAC_ERR( "[FirData_addRegToPnor] t=%d p=%d u=%d rc=%d ",
+                i_sTrgt.type, i_sTrgt.procPos, i_sTrgt.procUnitPos, rc);
+            TRAC_ERR( "addr=0x%08x val=0x%08x%08x",i_addr,
                       (uint32_t)(reg.val >> 32), (uint32_t)reg.val );
 
             if ( io_pTrgt->scomErrs < PNOR_Trgt_MAX_SCOM_ERRORS )
@@ -680,7 +680,7 @@ bool FirData_addIdRegsToPnor( FirData_t * io_fd, PNOR_Trgt_t * io_pTrgt,
     for ( i = 0; i < cnt; i++ )
     {
 #ifdef DEBUG_PRD_CHKSTOP_ANALYSIS
-        TRAC_INFO(" addIdRegsToPnor In/Array: chipType:%X::%X trgType:%X::%X"
+        TRAC_IMP(" addIdRegsToPnor In/Array: chipType:%X::%X trgType:%X::%X"
                   " regType:%X::%X ecLevel %X::%X",
                   i_chipStruct->chipType, l_ecAddrtPtr->chipType,
                   t, l_ecAddrtPtr->trgtType,
@@ -736,9 +736,8 @@ bool FirData_addTrgtToPnor( FirData_t * io_fd, SCOM_Trgt_t i_sTrgt,
 
     *o_noAttn = false; /* Must be false if there are no global regs. */
 
-    TRAC_IMP( "FIRDATA: t=%d p=%d u=%d FSI=0x%08x isM=%c", i_sTrgt.type,
-              i_sTrgt.procPos, i_sTrgt.procUnitPos, i_sTrgt.fsiBaseAddr,
-              i_sTrgt.isMaster ? 'T' : 'F' );
+    TRAC_IMP( "FIRDATA: t=%d p=%d u=%d FSI=0x%08x", i_sTrgt.type,
+              i_sTrgt.procPos, i_sTrgt.procUnitPos, (uint32_t)i_sTrgt.fsiBaseAddr);
 
     do
     {
@@ -812,7 +811,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
         uint8_t       *l_bytePtr = io_fd->hBuf + sizeof(HOMER_Data_t) + pad;
         HOMER_Chip_t  *l_chipPtr = NULL;
 
-        TRAC_INFO("AddTgtsMain:numChips:%d", io_fd->hData->chipCount);
+        TRAC_IMP("AddTgtsMain:numChips:%d", (uint32_t)io_fd->hData->chipCount);
 
         /* Iterate ALL CHIPs  */
         for ( p = 0; p < io_fd->hData->chipCount; p++ )
@@ -823,7 +822,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
             fsi = l_chipPtr->fsiBaseAddr;
             p   = l_chipPtr->chipPos;
 
-            TRAC_INFO( " AddTgtsMain:ChipType:%d  ChipNumber:%d",
+            TRAC_IMP( " AddTgtsMain:ChipType:%d  ChipNumber:%d",
                        l_chipPtr->chipType, p );
 
             /* Is this a PROC or Centaur chip ? */
@@ -908,13 +907,13 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
                     l_bytePtr += sizeof(HOMER_ChipCumulus_t);
                 } /* else if cumulus */
 
-                TRAC_INFO( "  Masks XBUS:%X OBUS:%X EC:%X EQ:%X EX:%X CAPP:%X PEC:%X PHB:%X",
-                           l_existBits.xbusMask, l_existBits.obusMask, l_existBits.ecMask,
-                           l_existBits.eqMask, l_existBits.exMask, l_existBits.cappMask,
-                           l_existBits.pecMask, l_existBits.phbMask );
-                TRAC_INFO( "  Masks MCBIST:%X MCS:%X MCA:%X",
-                           l_existBits.mcbist_mc_Mask,  l_existBits.mcs_mi_Mask,
-                           l_existBits.mca_dmi_Mask );
+//                TRAC_IMP("Masks XBUS:%X OBUS:%X EC:%X EQ:%X EX:%X CAPP:%X PEC:%X PHB:%X",
+//                           (uint32_t)l_existBits.xbusMask, (uint32_t)l_existBits.obusMask, (uint32_t)l_existBits.ecMask,
+//                           (uint32_t)l_existBits.eqMask,   (uint32_t)l_existBits.exMask,   (uint32_t)l_existBits.cappMask,
+//                           (uint32_t)l_existBits.pecMask,  (uint32_t)l_existBits.phbMask);
+//                TRAC_IMP("Masks MCBIST:%X MCS:%X MCA:%X",
+//                           (uint32_t)l_existBits.mcbist_mc_Mask, (uint32_t) l_existBits.mcs_mi_Mask,
+//                           (uint32_t)l_existBits.mca_dmi_Mask);
 
                 /* Add this PROC to the PNOR. */
                 sTrgt = SCOM_Trgt_getTrgt(TRGT_PROC, p, 0, fsi, isM);
@@ -1148,7 +1147,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
             {
                 /* unexpected chip type */
                 TRAC_ERR( "addTrgtsToPnor saw invalid chip:0x%X",
-                          l_chipPtr->chipType );
+                          (uint32_t)l_chipPtr->chipType );
                 break;
             } /* end if centaur chip type */
 
@@ -1184,15 +1183,15 @@ int32_t FirData_init( FirData_t * io_fd,
 
     int32_t rc = SUCCESS;
 
-    size_t sz_hData    = sizeof(HOMER_Data_t);
-    size_t sz_pnoNoEcc = 0;
-    size_t sz_u32      = sizeof(uint32_t);
-    size_t sz_u64      = sizeof(uint64_t);
+    uint32_t sz_hData    = sizeof(HOMER_Data_t);
+    uint32_t sz_pnoNoEcc = 0;
+    uint32_t sz_u32      = sizeof(uint32_t);
+    uint32_t sz_u64      = sizeof(uint64_t);
 
     bool full = false;
 
     uint32_t x[TRGT_MAX][REG_MAX];
-    size_t curIdx = 0;
+    uint32_t curIdx = 0;
 
     uint32_t t = TRGT_FIRST;
 
@@ -1264,7 +1263,7 @@ int32_t FirData_init( FirData_t * io_fd,
         if ( io_fd->maxHBufSize - sz_hData < curIdx )
         {
             TRAC_ERR( FUNC"HOMER list size %d is larger than HOMER data "
-                      "buffer %d", curIdx, io_fd->maxHBufSize - sz_hData );
+                      "buffer %d", (uint32_t)curIdx, (uint32_t)(io_fd->maxHBufSize - sz_hData ));
             rc = FAIL;
             break;
         }
@@ -1302,7 +1301,7 @@ int32_t FirData_init( FirData_t * io_fd,
             }
             else
             {
-                TRAC_ERR(FUNC"Chiptype is invalid %X ", l_chiptPtr->chipType);
+                TRAC_ERR(FUNC"Chiptype is invalid %X ", (uint32_t)l_chiptPtr->chipType);
                 rc = FAIL;
                 break;
             }
@@ -1378,8 +1377,9 @@ int32_t FirData_captureCsFirData( uint8_t * i_hBuf, uint32_t i_hBufSize,
 
     if ( SUCCESS != rc )
     {
-        TRAC_ERR( FUNC"Failed: i_hBuf=%p, i_hBufSize=0x%08x, i_pBuf=%p, "
-                  "i_pBufSize=%08x", i_hBuf, i_hBufSize, i_pBuf, i_pBufSize );
+        TRAC_ERR( FUNC"Failed: i_hBuf=%08x, i_hBufSize=0x%08x, i_pBuf=%08x, "
+                  "i_pBufSize=%08x", (uint32_t)i_hBuf, (uint32_t)i_hBufSize,
+                  (uint32_t)i_pBuf, (uint32_t)i_pBufSize );
     }
 
     return rc;

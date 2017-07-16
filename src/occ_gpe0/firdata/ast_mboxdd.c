@@ -41,7 +41,7 @@ errorHndl_t writeRegSIO(uint8_t i_regAddr, uint8_t i_data)
     errorHndl_t l_err = NO_ERROR;
 
     do {
-        size_t reg_size = sizeof(uint8_t);
+        uint32_t reg_size = sizeof(uint8_t);
 
         /* Write out the register address */
         l_err = lpc_write( LPC_TRANS_IO, SIO_ADDR_REG_2E,
@@ -65,7 +65,7 @@ errorHndl_t readRegSIO(uint8_t i_regAddr, uint8_t* o_data)
     errorHndl_t l_err = NO_ERROR;
 
     do {
-        size_t reg_size = sizeof(uint8_t);
+        uint32_t reg_size = sizeof(uint8_t);
 
         /* Write out the register address */
          l_err = lpc_write( LPC_TRANS_IO, SIO_ADDR_REG_2E,
@@ -86,7 +86,7 @@ errorHndl_t readRegSIO(uint8_t i_regAddr, uint8_t* o_data)
 
 errorHndl_t mboxOut(uint64_t i_addr, uint8_t i_byte)
 {
-    size_t len = sizeof(i_byte);
+    uint32_t len = sizeof(i_byte);
 
     return lpc_write( LPC_TRANS_IO,
                       i_addr + MBOX_IO_BASE,
@@ -96,7 +96,7 @@ errorHndl_t mboxOut(uint64_t i_addr, uint8_t i_byte)
 
 errorHndl_t mboxIn(uint64_t i_addr, uint8_t *o_byte)
 {
-    size_t len = sizeof(uint8_t);
+    uint32_t len = sizeof(uint8_t);
 
     return lpc_read( LPC_TRANS_IO,
                      i_addr + MBOX_IO_BASE,
@@ -247,7 +247,7 @@ errorHndl_t initializeMbox(void)
 
     do
     {
-        size_t reg_size = sizeof(uint8_t);
+        uint32_t reg_size = sizeof(uint8_t);
 
         //First need to unlock SIO registers
         /* Send SuperIO password - send A5 twice to offset 0x2E */

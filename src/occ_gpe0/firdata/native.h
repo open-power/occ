@@ -28,17 +28,14 @@
 #define _NATIVE_H
 
 #include <common_types.h>
-#include <trac.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-#include "ssx.h"
+#include "pk.h"
 #ifdef __cplusplus
 }
 #endif
-
-#ifndef NO_TRAC_STRINGS
 
 #ifdef FIRD_DEBUG
 #define TRACDCOMP(frmt,args...) DBG_PRINT(frmt,##args)
@@ -46,14 +43,12 @@ extern "C" {
 #define TRACDCOMP(frmt,args...)
 #endif // FIRD_DEBUG
 
-#define TRACFCOMP(frmt,args...) TRACE(&g_des_array[INF_TRACE_DESCRIPTOR],INFO_MRK frmt,##args)
-
-#else // NO_TRAC_STRINGS
-
 #define TRACDCOMP(frmt,args...)
 #define TRACFCOMP(frmt,args...)
 
-#endif // NO_TRAC_STRINGS
+#define TRAC_IMP(frmt,args...)  PK_TRACE(frmt,##args)
+#define TRAC_ERR(frmt,args...)  PK_TRACE(frmt,##args)
+#define TRAC_INF(frmt,args...)  PK_TRACE(frmt,##args)
 
 typedef uint32_t errorHndl_t;
 
@@ -92,7 +87,7 @@ int32_t xscom_read( uint32_t i_address, uint64_t * o_data );
 int32_t xscom_write( uint32_t i_address, uint64_t i_data );
 
 /* Sleep */
-void sleep( SsxInterval i_nanoseconds );
+void sleep( PkInterval i_nanoseconds );
 
 
 #endif

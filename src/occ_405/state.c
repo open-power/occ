@@ -35,8 +35,7 @@
 #include "cmdh_fsp_cmds_datacnfg.h"
 #include "cmdh_fsp.h"
 #include "proc_data.h"
-#include "scom.h"
-#include <fir_data_collect.h>
+#include <homer.h>
 #include <dimm.h>
 #include "pgpe_interface.h"
 #include "pstate_pgpe_occ_api.h"

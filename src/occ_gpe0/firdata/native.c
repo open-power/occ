@@ -24,12 +24,12 @@
 /* IBM_PROLOG_END_TAG                                                     */
 
 #include <native.h>
-#include <scom.h>
-#include <trac.h>
+#include <scom_trgt.h>
+#include <scom_util.h>
 
-void sleep( SsxInterval i_nanoseconds )
+void sleep( PkInterval i_nanoseconds )
 {
-    ssx_sleep(SSX_NANOSECONDS(i_nanoseconds));
+    pk_sleep(PK_NANOSECONDS(i_nanoseconds));
 }
 
 int TRACE_XSCOM=0;
@@ -37,19 +37,21 @@ int TRACE_XSCOM=0;
 int32_t xscom_read( uint32_t i_address, uint64_t * o_data )
 {
     int32_t rc = SUCCESS;
-
     *o_data = 0;
 
-    rc = getscom_ffdc( i_address, o_data, NULL );
+    //P9 SCOM logic requires a target. However, if we're here, then it doesn't
+    //matter which target we pass in, so long as isMaster is true. This will
+    //allow to take the branch of code that schedules GPE scom job. See
+    //src/occ_405/firdata/scom_util.c for more info.
+    SCOM_Trgt_t l_tempTarget;
+    l_tempTarget.type = TRGT_PROC;
+    l_tempTarget.isMaster = TRUE;
+    l_tempTarget.procUnitPos = 0;
+
+    rc = SCOM_getScom(l_tempTarget, i_address, o_data);
     if ( SUCCESS != rc )
     {
         TRAC_ERR( "SCOM error in xscom_read wrapper, rc=%d", rc );
-    }
-
-    if ( TRACE_XSCOM )
-    {
-        TRACFCOMP( "xscom_read(%08X)=%08X%08X", i_address,
-                   (uint32_t)(*o_data>>32), (uint32_t)(*o_data) );
     }
 
     return rc;
@@ -59,16 +61,19 @@ int32_t xscom_write( uint32_t i_address, uint64_t i_data )
 {
     int32_t rc = SUCCESS;
 
-    rc = putscom_ffdc( i_address, i_data, NULL );
+    //P9 SCOM logic requires a target. However, if we're here, then it doesn't
+    //matter which target we pass in, so long as isMaster is true. This will
+    //allow to take the branch of code that schedules GPE scom job. See
+    //src/occ_405/firdata/scom_util.c for more info.
+    SCOM_Trgt_t l_tempTarget;
+    l_tempTarget.type = TRGT_PROC;
+    l_tempTarget.isMaster = TRUE;
+    l_tempTarget.procUnitPos = 0;
+
+    rc = SCOM_putScom(l_tempTarget, i_address, i_data);
     if ( SUCCESS != rc )
     {
         TRAC_ERR( "SCOM error in xscom_write wrapper, rc=%d", rc );
-    }
-
-    if ( TRACE_XSCOM )
-    {
-        TRACFCOMP( "xscom_write(%08X)=%08X%08X", i_address,
-                   (uint32_t)(i_data>>32), (uint32_t)i_data);
     }
 
     return rc;

@@ -27,7 +27,6 @@
 #define _LPC_H
 
 #include <native.h>
-#include <errl.h>
 
 /**
  * @enum LPC::TransType
@@ -41,12 +40,12 @@ typedef enum  {
 errorHndl_t lpc_read( LpcTransType i_type,
                       uint32_t i_addr,
                       uint8_t* o_data,
-                      size_t i_size );
+                      uint32_t i_size );
 
 errorHndl_t lpc_write( LpcTransType i_type,
                        uint32_t i_addr,
                        uint8_t* i_data,
-                       size_t i_size );
+                       uint32_t i_size );
 
 uint32_t checkAddr(LpcTransType i_type,
                    uint32_t i_addr);

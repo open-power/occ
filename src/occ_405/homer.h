@@ -67,6 +67,15 @@
 #define PPMR_OFFSET_HOMER    0x00300000                             // PPMR image HOMER offset
 #define PPMR_ADDRESS_HOMER   (HOMER_BASE_ADDRESS+PPMR_OFFSET_HOMER) // PPMR image memory address
 
+extern uint32_t G_fir_master;
+#define OCC_SET_FIR_MASTER(_fm_t) (G_fir_master = _fm_t)
+#define OCC_IS_FIR_MASTER()       ((G_fir_master == FIR_OCC_IS_FIR_MASTER) ? TRUE : FALSE)
+
+enum fir_master
+{
+    FIR_OCC_NOT_FIR_MASTER              = 0x00000000,
+    FIR_OCC_IS_FIR_MASTER               = 0x00000001
+};
 
 // Version(s) of HOMER host data currently supported
 typedef enum homer_version

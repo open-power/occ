@@ -23,10 +23,6 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-/*#include <stdio.h> */
-#include <endian.h>
-#include <assert.h>
-
 #include <native.h>
 #include <ecc.h>
 
@@ -127,7 +123,7 @@ static uint8_t syndromeMatrix[] = {
 uint8_t parity_check( uint64_t i_data )
 {
     int ones = 0;
-    size_t x;
+    uint32_t x;
     for( x=0; x<(sizeof(i_data)*8); x++ )
     {
         if( i_data & (0x8000000000000000ull >> x) )
@@ -203,13 +199,16 @@ uint8_t correctECC(uint64_t* io_data, uint8_t* io_ecc)
 }
 
 void injectECC(const uint8_t* i_src,
-               size_t i_srcSz,
+               uint32_t i_srcSz,
                uint8_t* o_dst)
 {
-    assert(0 == (i_srcSz % sizeof(uint64_t)));
+    if (0 != (i_srcSz % sizeof(uint64_t)))
+    {
+        return;
+    }
 
-    size_t i = 0;
-    size_t o = 0;
+    uint32_t i = 0;
+    uint32_t o = 0;
     for(i = 0, o = 0;
         i < i_srcSz;
         i += sizeof(uint64_t), o += sizeof(uint64_t) + sizeof(uint8_t))
@@ -226,13 +225,16 @@ void injectECC(const uint8_t* i_src,
 }
 
 eccStatus removeECC(uint8_t* io_src,
-                    uint8_t* o_dst, size_t i_dstSz)
+                    uint8_t* o_dst, uint32_t i_dstSz)
 {
-    assert(0 == (i_dstSz % sizeof(uint64_t)));
+    if (0 != (i_dstSz % sizeof(uint64_t)))
+    {
+        return -1;
+    }
 
     eccStatus rc = ECC_CLEAN;
 
-    size_t i = 0, o = 0;
+    uint32_t i = 0, o = 0;
     for(i = 0, o = 0;
         o < i_dstSz;
         i += sizeof(uint64_t) + sizeof(uint8_t), o += sizeof(uint64_t))

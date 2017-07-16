@@ -52,8 +52,6 @@
 #include <homer.h>
 #include <amec_health.h>
 #include <amec_freq.h>
-#include "scom.h"
-#include <fir_data_collect.h>
 #include <pss_service_codes.h>
 #include <dimm.h>
 #include "occhw_shared_data.h"
@@ -62,11 +60,7 @@
 #include <p9_pstates_occ.h>
 #include <wof.h>
 #include "pgpe_service_codes.h"
-#include <native.h>
-#include <ast_mboxdd.h>
-#include <pnor_mboxdd.h>
 #include <common.h>
-pnorMbox_t l_pnorMbox;
 
 extern uint32_t __ssx_boot; // Function address is 32 bits
 extern uint32_t G_occ_phantom_critical_count;
@@ -153,6 +147,11 @@ void create_tlb_entry(uint32_t address, uint32_t size);
 //Macro creates a 'bridge' handler that converts the initial fast-mode to full
 //mode interrupt handler
 SSX_IRQ_FAST2FULL(pmc_hw_error_fast, pmc_hw_error_isr);
+
+
+FIR_HEAP_BUFFER(uint8_t G_fir_heap[FIR_HEAP_SECTION_SIZE]);
+FIR_PARMS_BUFFER(uint8_t G_fir_data_parms[FIR_PARMS_SECTION_SIZE]);
+uint32_t G_fir_master = FIR_OCC_NOT_FIR_MASTER;
 
 /*
  * Function Specification
@@ -2062,6 +2061,7 @@ int main(int argc, char **argv)
     homer_log_access_error(l_homerrc,
                            l_ssxrc,
                            l_occ_int_type);
+
     // Get the FIR Master indicator
     uint32_t l_fir_master = FIR_OCC_NOT_FIR_MASTER;
     l_homerrc = homer_hd_map_read_unmap(HOMER_FIR_MASTER,
@@ -2103,6 +2103,10 @@ int main(int argc, char **argv)
                                l_ssxrc,
                                (uint32_t)&G_fir_data_parms[0]);
     }
+
+    //Set the fir_heap and fir_params pointer in the shared buffer
+    G_shared_gpe_data.fir_heap_buffer_ptr   = (uint32_t)G_fir_heap;
+    G_shared_gpe_data.fir_params_buffer_ptr = (uint32_t)G_fir_data_parms;
 
     //TODO: RTC 134619: Currently causes an SSX Panic due to SSX believing the
     //                  interrupt is not owned by the 405. The fix is to update

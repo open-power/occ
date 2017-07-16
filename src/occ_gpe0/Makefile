@@ -35,6 +35,7 @@ endif
 
 PK_MAKE_DIR := $(PK_SRCDIR)/$(PPE_TYPE)
 OBJS := $(addprefix $(OBJDIR)/, $(TOP_OBJECTS))
+OBJDIRS = $(sort $(dir ${OBJS}))
 PKLIB := $(OBJDIR)/pk/libpk.a
 COMMONLIB := $(OBJDIR)/commonlib/libcommon.a
 OCCLIB := $(OBJDIR)/occlib/libocc.a
@@ -67,10 +68,13 @@ $(LINK_SCRIPT): link.cmd
 	$(CPP) -E -x c -P $(DEFS) link.cmd -o $(LINK_SCRIPT)
 
 #Create an obj directory if needed
-$(LINK_OBJS) $(OBJS) $(OBJS:.o=.d): | $(OBJDIR)
+$(LINK_OBJS) $(OBJS) $(OBJS:.o=.d): | $(OBJDIR) $(OBJDIRS)
 
 $(OBJDIR):
 	mkdir -p $(OBJDIR)
+
+$(OBJDIRS):
+	mkdir -p $(OBJDIRS)
 
 $(PPETOOLS_OBJDIR)/ppetracepp: $(PPETOOLS_OBJDIR)
 	g++ -O3 -w -g -I$(PPETRACEPP_DIR)/ $(PPETRACEPP_DIR)/ppetracepp.C -o $(PPETOOLS_OBJDIR)/ppetracepp

@@ -60,7 +60,20 @@ typedef struct gpe_shared_data
 {
     uint32_t    nest_freq_div;  // Nest freq / 4
     uint32_t    spipss_spec_p9; // Which APSS spec to use
-    uint32_t    reserved[62];
+    uint32_t    fir_heap_buffer_ptr; 
+    uint32_t    fir_params_buffer_ptr;
+    uint32_t    reserved[60];
 } gpe_shared_data_t;
+
+
+#define HOMER_FIR_PARM_SIZE             (3 * 1024)
+
+/* This size has to agree with the size _FIR_PARMS_SECTION_SIZE defined in the */
+/* OCC linker command file. */
+#define FIR_PARMS_SECTION_SIZE          0x1000
+
+// This size has to agree with the size _FIR_HEAP_SECTION_SIZE defined in the
+// OCC linker command file.
+#define FIR_HEAP_SECTION_SIZE           0x3000
 
 #endif //_GPE_EXPORT_H

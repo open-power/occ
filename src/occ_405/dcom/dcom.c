@@ -39,7 +39,6 @@
 #include <proc_pstate.h>
 #include <amec_data.h>
 #include <amec_sys.h>
-#include "scom.h"
 #include "pss_constants.h"
 
 extern uint8_t G_occ_interrupt_type;

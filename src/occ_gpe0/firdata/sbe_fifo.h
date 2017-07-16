@@ -66,7 +66,7 @@ struct statusHeader
 struct ffdc_struct
 {
     const void* ptr;
-    size_t      size;
+    uint32_t      size;
 };
 
 struct fifoPutScomRequest

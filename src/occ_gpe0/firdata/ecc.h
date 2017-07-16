@@ -58,7 +58,7 @@ typedef uint8_t eccBitfields;
  *
  *  @note i_srcSz must be a multiple of 8 bytes.
  */
-void injectECC(const uint8_t* i_src, size_t i_srcSz,
+void injectECC(const uint8_t* i_src, uint32_t i_srcSz,
                uint8_t* o_dst);
 
 /** Remove ECC from a data stream.
@@ -70,7 +70,7 @@ void injectECC(const uint8_t* i_src, size_t i_srcSz,
  *  @note i_dstSz must be a multiple of 8 bytes.
  */
 eccStatus removeECC(uint8_t* io_src,
-                    uint8_t* o_dst, size_t i_dstSz);
+                    uint8_t* o_dst, uint32_t i_dstSz);
 
 
 #endif

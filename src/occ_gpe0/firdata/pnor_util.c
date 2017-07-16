@@ -41,7 +41,7 @@ pnorMbox_t* g_pnorMbox;
 /* Cache to queue up PNOR writes */
 uint8_t g_write_cache[PAGE_PROGRAM_BYTES];
 /* Current position of data inside write cache */
-size_t g_write_cache_index = 0;
+uint32_t g_write_cache_index = 0;
 
 /**
  * @brief Write 8 bytes of data into PNOR starting
@@ -67,10 +67,10 @@ int32_t pnor_write_8B( uint64_t i_data )
        a big chunk of data to write.  This is more efficient
        and avoids handling the write boundary of the PP
        command internally. */
-//    size_t cpsz = 9;
+//    uint32_t cpsz = 9;
 
     uint8_t data8[8];
-    size_t cpsz = 8;
+    uint32_t cpsz = 8;
 
     if( (g_write_cache_index + cpsz) > PAGE_PROGRAM_BYTES )
     {
@@ -166,7 +166,7 @@ int32_t PNOR_writeFirData( HOMER_PnorInfo_t i_pnorInfo,
 
         uint32_t idx = 0;
         uint64_t dataChunk  = 0;
-        size_t sz_dataChunk = sizeof(uint64_t);
+        uint32_t sz_dataChunk = sizeof(uint64_t);
 
         /* Add PNOR data 8 bytes at a time. */
         for ( idx = 0; idx < i_bufSize; idx += sz_dataChunk )

@@ -73,7 +73,7 @@ export IMAGE_SRCDIR = $(abspath .)
 endif
 
 ifndef IMG_INCLUDES
-export IMG_INCLUDES = -I$(IMAGE_SRCDIR)
+export IMG_INCLUDES = -I$(IMAGE_SRCDIR) -I$(IMAGE_SRCDIR)/firdata/
 endif
 
 ifndef GLOBAL_INCLUDES

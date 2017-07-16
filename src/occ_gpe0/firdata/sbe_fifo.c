@@ -23,7 +23,6 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 #include "sbe_fifo.h"
-#include <trac.h>
 #include <fsi.h>
 #include <native.h>
 

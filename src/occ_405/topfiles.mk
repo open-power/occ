@@ -64,16 +64,6 @@ TOP-C-SOURCES = amec/amec_analytics.c \
                 dimm/dimm.c \
                 dimm/dimm_control.c \
                 errl/errl.c \
-                firdata/ast_mboxdd.c \
-                firdata/firData.c \
-                firdata/fir_data_collect.c \
-                firdata/fsi.c \
-                firdata/native.c \
-                firdata/pnor_mboxdd.c \
-                firdata/sbe_fifo.c \
-                firdata/scom_addr_util.c \
-                firdata/scom_trgt.c \
-                firdata/scom_util.c \
                 homer.c \
                 lock/lock.c \
                 main.c \
@@ -104,16 +94,7 @@ TOP-C-SOURCES = amec/amec_analytics.c \
                 thread/threadSch.c \
                 timer/timer.c \
                 trac/trac_interface.c \
-                wof/wof.c \
-		firdata/scom_addr_util.c \
-                firdata/firData.c \
-                firdata/fir_data_collect.c \
-                firdata/fsi.c \
-                firdata/lpc.c \
-                firdata/native.c \
-                firdata/pnor_util.c \
-                firdata/scom_trgt.c \
-                firdata/scom_util.c
+                wof/wof.c
 
 TOP-S-SOURCES = cmdh/ll_ffdc.S \
 

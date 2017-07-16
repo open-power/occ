@@ -115,7 +115,7 @@ errorHndl_t hwInit(pnorMbox_t* i_pnorMbox)
 
 errorHndl_t readFlash(pnorMbox_t* i_pnorMbox,
                       uint32_t i_addr,
-                      size_t i_size,
+                      uint32_t i_size,
                       void* o_data)
 {
     errorHndl_t l_err = NO_ERROR;
@@ -132,7 +132,7 @@ errorHndl_t readFlash(pnorMbox_t* i_pnorMbox,
         while (i_size)
         {
             uint32_t l_lpcAddr;
-            size_t l_chunkLen;
+            uint32_t l_chunkLen;
 
             l_err = adjustMboxWindow(i_pnorMbox,
                                      false,
@@ -172,7 +172,7 @@ errorHndl_t readFlash(pnorMbox_t* i_pnorMbox,
 
 errorHndl_t writeFlash(pnorMbox_t* i_pnorMbox,
                        uint32_t i_addr,
-                       size_t i_size,
+                       uint32_t i_size,
                        void* i_data)
 {
     errorHndl_t l_err = NO_ERROR;
@@ -192,7 +192,7 @@ errorHndl_t writeFlash(pnorMbox_t* i_pnorMbox,
         while (i_size)
         {
             uint32_t l_lpcAddr;
-            size_t l_chunkLen;
+            uint32_t l_chunkLen;
 
             l_err = adjustMboxWindow(i_pnorMbox,
                                      true,
@@ -257,8 +257,8 @@ errorHndl_t writeFlash(pnorMbox_t* i_pnorMbox,
 
 errorHndl_t adjustMboxWindow(pnorMbox_t* i_pnorMbox,
                                     bool i_isWrite, uint32_t i_reqAddr,
-                                    size_t i_reqSize, uint32_t *o_lpcAddr,
-                                    size_t *o_chunkLen)
+                                    uint32_t i_reqSize, uint32_t *o_lpcAddr,
+                                    uint32_t *o_chunkLen)
 {
     errorHndl_t l_err = NO_ERROR;
     uint32_t l_pos, l_wSize, l_reqSize;
@@ -277,7 +277,7 @@ errorHndl_t adjustMboxWindow(pnorMbox_t* i_pnorMbox,
             (i_pnorMbox->iv_curWindowWrite || !i_isWrite) &&
             i_reqAddr >= i_pnorMbox->iv_curWindowOffset && i_reqAddr < l_wEnd)
         {
-            size_t l_gap = (l_wEnd - i_reqAddr);
+            uint32_t l_gap = (l_wEnd - i_reqAddr);
 
             *o_lpcAddr = i_pnorMbox->iv_curWindowLpcOffset +
                           (i_reqAddr - i_pnorMbox->iv_curWindowOffset);
@@ -365,7 +365,7 @@ errorHndl_t adjustMboxWindow(pnorMbox_t* i_pnorMbox,
     return l_err;
 }
 
-errorHndl_t writeDirty(pnorMbox_t* i_pnorMbox, uint32_t i_addr, size_t i_size)
+errorHndl_t writeDirty(pnorMbox_t* i_pnorMbox, uint32_t i_addr, uint32_t i_size)
 {
     /* To pass a correct "size" for both protocol versions, we
      * calculate the block-aligned start and end.
