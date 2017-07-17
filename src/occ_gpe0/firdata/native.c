@@ -42,7 +42,7 @@ int32_t xscom_read( uint32_t i_address, uint64_t * o_data )
     //P9 SCOM logic requires a target. However, if we're here, then it doesn't
     //matter which target we pass in, so long as isMaster is true. This will
     //allow to take the branch of code that schedules GPE scom job. See
-    //src/occ_405/firdata/scom_util.c for more info.
+    //src/occ_gpe0/firdata/scom_util.c for more info.
     SCOM_Trgt_t l_tempTarget;
     l_tempTarget.type = TRGT_PROC;
     l_tempTarget.isMaster = TRUE;
@@ -64,7 +64,7 @@ int32_t xscom_write( uint32_t i_address, uint64_t i_data )
     //P9 SCOM logic requires a target. However, if we're here, then it doesn't
     //matter which target we pass in, so long as isMaster is true. This will
     //allow to take the branch of code that schedules GPE scom job. See
-    //src/occ_405/firdata/scom_util.c for more info.
+    //src/occ_gpe0/firdata/scom_util.c for more info.
     SCOM_Trgt_t l_tempTarget;
     l_tempTarget.type = TRGT_PROC;
     l_tempTarget.isMaster = TRUE;

@@ -152,6 +152,9 @@ SSX_IRQ_FAST2FULL(pmc_hw_error_fast, pmc_hw_error_isr);
 FIR_HEAP_BUFFER(uint8_t G_fir_heap[FIR_HEAP_SECTION_SIZE]);
 FIR_PARMS_BUFFER(uint8_t G_fir_data_parms[FIR_PARMS_SECTION_SIZE]);
 uint32_t G_fir_master = FIR_OCC_NOT_FIR_MASTER;
+bool G_fir_collection_request_created = FALSE;
+GPE_BUFFER(ipc_scom_op_t G_scom_op);
+GpeRequest G_fir_collection_request;
 
 /*
  * Function Specification
@@ -1687,6 +1690,8 @@ void Main_thread_routine(void *private)
         dcache_flush(g_trac_err_buffer, TRACE_BUFFER_SIZE);
 
         static bool L_fir_collection_completed = FALSE;
+        uint32_t l_rc = 0;
+
         // Look for FIR collection flag and status
         if (G_fir_collection_required && !L_fir_collection_completed)
         {
@@ -1695,12 +1700,29 @@ void Main_thread_routine(void *private)
             // FIR collection
             if (OCC_IS_FIR_MASTER())
             {
-//                fir_data_collect();
-                L_fir_collection_completed = TRUE;
+                //Need to schedule a task on GPE to start fir collection
+                if(!G_fir_collection_request_created) //Only need to create request once
+                {
+                    TRAC_IMP("fir data collection: creating gpe request");
+                    l_rc = gpe_request_create(&G_fir_collection_request,//Request
+                                              &G_async_gpe_queue0,     //Queue
+                                              IPC_ST_FIR_COLLECTION,   //Function ID
+                                              NULL,                    //GPE arguments
+                                              SSX_SECONDS(5),          //Timeout
+                                              NULL,                    //Callback function
+                                              NULL,                    //Callback args
+                                              ASYNC_REQUEST_BLOCKING); //Options
+                    if(l_rc == 0)
+                    {
+                        G_fir_collection_request_created = TRUE;
+                        TRAC_IMP("fir data collection: scheduling gpe request");
+                        gpe_request_schedule(&G_fir_collection_request);
+                        L_fir_collection_completed = TRUE;
+                        G_fir_collection_required = FALSE;
+                    }
+                }
             }
-            TRAC_IMP("fir data collection done");
 
-            G_fir_collection_required = FALSE;
             // Error reporting is skipped while FIR collection is required so we
             // don't get reset in flight.  If anyone is listening send the
             // error alert now.
@@ -1710,6 +1732,7 @@ void Main_thread_routine(void *private)
             {
                 notify_host(INTR_REASON_HTMGT_SERVICE_REQUIRED);
             }
+            TRAC_IMP("fir data collection done");
         }
 
         if( l_ssxrc == SSX_OK)

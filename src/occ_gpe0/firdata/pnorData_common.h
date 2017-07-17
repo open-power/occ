@@ -144,8 +144,8 @@ static inline PNOR_Trgt_t PNOR_getTrgt( uint32_t i_trgtType, uint32_t i_chipPos,
 /* NOTE: This structure is 4-byte word aligned. */
 typedef struct __attribute__((packed))
 {
-    uint32_t addr;  /** 32-bit address */
     uint64_t val;   /** 64-bit value */
+    uint32_t addr;  /** 32-bit address */
 
 } PNOR_Reg_t;
 

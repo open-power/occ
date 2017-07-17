@@ -30,8 +30,7 @@
 #include <scom_util.h>
 #include "scom_addr_util.h"
 #include <sbe_fifo.h>
-
-bool G_request_created = FALSE;
+#include <ppe42_scom.h>
 
 enum {
     /*FSI addresses are byte offsets, so need to multiply by 4
@@ -340,47 +339,6 @@ int32_t translate_addr( SCOM_Trgt_t i_trgt, uint64_t i_addr, uint64_t * o_addr )
 }
 
 /**
- * @brief  Performs a getscom operation with no address translation.
- * @param  i_chip Chip to SCOM.
- * @param  i_addr Address to SCOM.
- * @param  o_val  Returned value.
- * @return Non-SUCCESS if an internal function fails. SUCCESS otherwise.
- */
-int32_t getscomraw( SCOM_Trgt_t i_chip, uint32_t i_addr, uint64_t * o_val )
-{
-    int32_t l_rc = SUCCESS;
-
-    //Use SBE FIFO if it's a slave proc
-    if(!i_chip.isMaster)
-    {
-        return getFifoScom(&i_chip, i_addr, o_val);
-    }
-    *o_val = 0;
-    l_rc = FAIL;
-
-    return l_rc;
-}
-
-/**
- * @brief  Perform a putscom operation with no address translation.
- * @param  i_chip Chip to SCOM.
- * @param  i_addr Address to SCOM.
- * @param  i_val  Value to write.
- * @return Non-SUCCESS if an internal function fails. SUCCESS otherwise.
- */
-int32_t putscomraw( SCOM_Trgt_t i_chip, uint32_t i_addr, uint64_t i_val )
-{
-    int32_t l_rc = SUCCESS;
-
-    //Use SBE FIFO if it's a slave proc
-    if(!i_chip.isMaster)
-    {
-        return putFifoScom(&i_chip, i_addr, i_val);
-    }
-    return l_rc;
-}
-
-/**
  * @brief  Executes standard getscom.
  * @param  i_trgt Chip to SCOM.
  * @param  i_addr Address to SCOM.
@@ -399,8 +357,15 @@ int32_t SCOM_getScom( SCOM_Trgt_t i_trgt, uint32_t i_addr, uint64_t * o_val )
     rc = translate_addr( i_trgt, i_addr, &trans_addr );
     if ( SUCCESS == rc )
     {
-        /* Do the SCOM. */
-        rc = getscomraw( chip_targ, trans_addr, o_val );
+        //Use SBE FIFO if it's a slave proc
+        if(!chip_targ.isMaster)
+        {
+            return getFifoScom(&chip_targ, trans_addr, o_val);
+        }
+        else
+        {
+            rc = getscom_abs(trans_addr, o_val);
+        }
     }
 
     return rc;
@@ -447,7 +412,14 @@ int32_t SCOM_getIdScom( SCOM_Trgt_t i_trgt, uint64_t i_addr, uint32_t * o_val )
     data_buffer |= 0x8000000000000000;
 
     /* perform write before the read with the new */
-    rc = putscomraw( i_trgt, phys_addr, data_buffer );
+    if(!chip_targ.isMaster)
+    {
+        rc = putFifoScom(&chip_targ, phys_addr, data_buffer);
+    }
+    else
+    {
+        rc = putscom_abs(phys_addr, data_buffer);
+    }
     if ( SUCCESS != rc ) return rc;
 
     // Loop on read until we see done, error, or we timeout
@@ -457,7 +429,15 @@ int32_t SCOM_getIdScom( SCOM_Trgt_t i_trgt, uint64_t i_addr, uint32_t * o_val )
     {
         /* Now perform the op requested using the passed in */
         /* IO_Buffer to pass the read data back to caller. */
-        rc = getscomraw( chip_targ, phys_addr, &(scomout.data64) );
+        //Use SBE FIFO if it's a slave proc
+        if(!chip_targ.isMaster)
+        {
+            rc = getFifoScom(&chip_targ, trans_addr, &(scomout.data64));
+        }
+        else
+        {
+            rc = getscom_abs(trans_addr, &(scomout.data64));
+        }
         if ( SUCCESS != rc ) return rc;
 
         /* Check for PIB error. */
@@ -512,7 +492,14 @@ int32_t SCOM_putScom( SCOM_Trgt_t i_trgt, uint32_t i_addr, uint64_t i_val )
     if ( SUCCESS == l_rc )
     {
         /* Do the SCOM. */
-        l_rc = putscomraw( l_chip_targ, l_trans_addr, i_val );
+        if(!l_chip_targ.isMaster)
+        {
+            return putFifoScom(&l_chip_targ, i_addr, i_val);
+        }
+        else
+        {
+            l_rc = putscom_abs(l_trans_addr, i_val);
+        }
     }
 
     return l_rc;

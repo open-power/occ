@@ -34,7 +34,7 @@
 #define PK_TRACE_VERSION 2
 
 #ifndef PK_TRACE_SZ
-#define PK_TRACE_SZ 256
+#define PK_TRACE_SZ 4096 //@pragupta_todo -- only for debug
 #endif
 
 //Fail compilation if size is not a power of 2

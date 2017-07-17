@@ -48,7 +48,7 @@ void fir_data_collect(void)
 
     // Homer data section and size
     uint8_t *l_hBuf = (uint8_t*) G_gpe_shared_data->fir_params_buffer_ptr;
-    uint32_t l_hBufSize = HOMER_FIR_PARM_SIZE;
+    uint32_t l_hBufSize = FIR_PARMS_SECTION_SIZE;
 
     // PNOR working buffer in SRAM and size
     uint8_t *l_pBuf = (uint8_t*) G_gpe_shared_data->fir_heap_buffer_ptr;

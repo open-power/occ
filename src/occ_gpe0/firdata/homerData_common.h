@@ -163,6 +163,7 @@ typedef struct __attribute__((packed))
 /* NOTE: This structure is 4-byte word aligned. */
 typedef struct __attribute__((packed))
 {
+
     uint32_t chipType :  4; /** See HOMER_ChipType_t. */
     uint32_t trgtType :  6; /** See TrgtType_t. */
     uint32_t regType  :  4; /** See RegType_t. */

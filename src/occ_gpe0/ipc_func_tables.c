@@ -36,6 +36,7 @@ void gpe_get_core_data(ipc_msg_t* cmd, void* arg);
 void gpe_get_nest_dts(ipc_msg_t* cmd, void* arg);
 
 void ipc_scom_operation(ipc_msg_t* cmd, void* arg);
+void ipc_fir_collection(ipc_msg_t* cmd, void* arg);
 
 void gpe0_nop(ipc_msg_t* cmd, void* arg);
 
@@ -71,7 +72,7 @@ IPC_HANDLER(gpe_get_core_data, 0)            // 6 - IPC_ST_GET_CORE_DATA_FUNCID
 IPC_HANDLER(ipc_scom_operation, 0)           // 7 - IPC_ST_SCOM_OPERATION
 IPC_HANDLER(gpe0_nop, 0)                     // 8 - IPC_ST_GPE0_NOP
 IPC_HANDLER(gpe_get_nest_dts, 0)             // 9 - IPC_ST_GET_NEST_DTS_FUNCID
-IPC_HANDLER_DEFAULT                          // 10
+IPC_HANDLER(ipc_fir_collection, 0)           // 10 - IPC_ST_FIR_COLLECTION
 IPC_HANDLER_DEFAULT                          // 11
 IPC_HANDLER_DEFAULT                          // 12
 IPC_HANDLER_DEFAULT                          // 13
