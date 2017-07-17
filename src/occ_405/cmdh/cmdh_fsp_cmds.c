@@ -145,6 +145,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     ERRL_RC                     l_rc  = ERRL_RC_INTERNAL_FAIL;
     uint8_t                     k = 0, l_max_sensors = 0;
+    uint8_t                     l_err_hist_idx = 0, l_sens_list_idx = 0;
     cmdh_poll_sensor_db_t       l_sensorHeader;
 
     // Set pointer to start of o_rsp_ptr
@@ -562,7 +563,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
     l_sensorHeader.length = sizeof(cmdh_poll_extn_sensor_t);
     l_sensorHeader.count  = 0;
 
-    cmdh_poll_extn_sensor_t l_extnSensorList[4] = {{0}};
+    cmdh_poll_extn_sensor_t l_extnSensorList[MAX_EXTN_SENSORS] = {{0}};
     l_extnSensorList[l_sensorHeader.count].name = EXTN_NAME_FMIN;
     uint16_t freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
     l_extnSensorList[l_sensorHeader.count].data[0] = proc_freq2pstate(freq);
@@ -593,6 +594,45 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
         l_extnSensorList[l_sensorHeader.count].data[2] = CONVERT_UINT16_UINT8_LOW(freq);
     }
     l_sensorHeader.count++;
+
+    // add any non-0 error history counts
+    for(l_err_hist_idx=0; l_err_hist_idx < ERR_HISTORY_SIZE; l_err_hist_idx++)
+    {
+        if(G_error_history[l_err_hist_idx])
+        {
+            if(l_sens_list_idx == 0)
+            {
+                // first one to add fill in name
+                l_extnSensorList[l_sensorHeader.count].name = EXTN_NAME_ERRHIST;
+                l_extnSensorList[l_sensorHeader.count].data[l_sens_list_idx] = l_err_hist_idx;
+                l_sens_list_idx++;
+                l_extnSensorList[l_sensorHeader.count].data[l_sens_list_idx] = G_error_history[l_err_hist_idx];
+                l_sens_list_idx++;
+            }
+            else if(l_sens_list_idx < 5)  // room in current extended error history sensor?
+            {
+                l_extnSensorList[l_sensorHeader.count].data[l_sens_list_idx] = l_err_hist_idx;
+                l_sens_list_idx++;
+                l_extnSensorList[l_sensorHeader.count].data[l_sens_list_idx] = G_error_history[l_err_hist_idx];
+                l_sens_list_idx++;
+            }
+            else // no room start another extended error history sensor
+            {
+                l_sensorHeader.count++;
+                l_extnSensorList[l_sensorHeader.count].name = EXTN_NAME_ERRHIST;
+                l_sens_list_idx = 0;
+                l_extnSensorList[l_sensorHeader.count].data[l_sens_list_idx] = l_err_hist_idx;
+                l_sens_list_idx++;
+                l_extnSensorList[l_sensorHeader.count].data[l_sens_list_idx] = G_error_history[l_err_hist_idx];
+                l_sens_list_idx++;
+            }
+        }
+    }
+    if(l_sens_list_idx)
+    {
+        l_sensorHeader.count++;
+    }
+
 
     // Copy header to response buffer.
     memcpy ((void *) &(o_rsp_ptr->data[l_rsp_index]), (void *)&l_sensorHeader, sizeof(l_sensorHeader));

@@ -39,6 +39,8 @@ enum procModuleId
     PROC_TASK_NEST_DTS_MOD          = PROC_COMP_ID | 0x06,
     PROC_NEST_DTS_INIT_MOD          = PROC_COMP_ID | 0x07,
     PROC_24X7_MOD                   = PROC_COMP_ID | 0x08,
+    PROC_POP_OPAL_TBL_TO_MEM_MOD    = PROC_COMP_ID | 0x09,
+    PROC_CHECK_FOR_OPAL_UPDATES_MOD = PROC_COMP_ID | 0x0A,
 };
 
 #endif /* #ifndef _PROC_DATA_SERVICE_CODES_H_ */

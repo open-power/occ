@@ -69,7 +69,9 @@ typedef enum
 #define EXTN_NAME_FNOM    0x464E4F4D // "FNOM"
 #define EXTN_NAME_FTURBO  0x46540000 // "FT"
 #define EXTN_NAME_FUTURBO 0x46555400 // "FUT"
+#define EXTN_NAME_ERRHIST 0x45525248 // "ERRH"
 
+#define MAX_EXTN_SENSORS 32
 //---------------------------------------------------------
 // Poll Command
 //---------------------------------------------------------

@@ -143,6 +143,7 @@ enum occReasonCode
     SENSOR_MAIN_MEM_ERROR           = 0xF0,
 
     INBAND_CMD_ERROR                = 0xF1,
+    OPAL_TABLE_UPDATE_ERROR         = 0xF2,
 
     /// Success!
     OCC_SUCCESS_REASON_CODE         = 0xFF,

@@ -146,12 +146,13 @@ uint32_t dcom_calc_slv_outbox_addr( const dcom_slv_outbox_doorbell_t * i_doorbel
 // End Function Specification
 void task_dcom_tx_slv_outbox( task_t *i_self)
 {
-    static bool l_error = FALSE;
-    uint32_t    l_orc = OCC_SUCCESS_REASON_CODE;
-    uint32_t    l_orc_ext = OCC_NO_EXTENDED_RC;
+    static bool    L_error = FALSE;
+    static uint8_t L_bce_not_ready_count = 0;
+    uint32_t       l_orc = OCC_SUCCESS_REASON_CODE;
+    uint32_t       l_orc_ext = OCC_NO_EXTENDED_RC;
     // Use a static local bool to track whether the BCE request used
     // here has ever been successfully created at least once
-    static bool L_bce_slv_outbox_tx_request_created_once = FALSE;
+    static bool    L_bce_slv_outbox_tx_request_created_once = FALSE;
 
     DCOM_DBG("3. TX Slave Outboxes\n");
 
@@ -162,6 +163,7 @@ void task_dcom_tx_slv_outbox( task_t *i_self)
         if(G_slave_pbax_rc)
         {
             TRAC_ERR("task_dcom_tx_slv_outbox: PBAX Send Failure in transimitting doorbell - RC[%08X]", G_slave_pbax_rc);
+            INCREMENT_ERR_HISTORY(ERR_DCOM_SLAVE_PBAX_SEND_FAIL);
         }
 
         // Build/setup outbox
@@ -221,16 +223,19 @@ void task_dcom_tx_slv_outbox( task_t *i_self)
             // DO NOT proceed with request create and schedule.
             l_proceed_with_request_and_schedule = FALSE;
 
-            // Trace important information from the request
-            TRAC_INFO("BCE slv outbox tx request not idle and not complete, \
-                      callback_rc=%d options=0x%x state=0x%x abort_state=0x%x \
-                      completion_state=0x%x",
-                      G_slv_outbox_tx_pba_request.request.callback_rc,
-                      G_slv_outbox_tx_pba_request.request.options,
-                      G_slv_outbox_tx_pba_request.request.state,
-                      G_slv_outbox_tx_pba_request.request.abort_state,
-                      G_slv_outbox_tx_pba_request.request.completion_state);
-            TRAC_INFO("NOT proceeding with BCE slv outbox tx request and schedule");
+            if(L_bce_not_ready_count == DCOM_TRACE_NOT_IDLE_AFTER_CONSEC_TIMES)
+            {
+                // Trace important information from the request
+                TRAC_INFO("BCE slv outbox tx request not idle and not complete, \
+                          callback_rc=%d options=0x%x state=0x%x abort_state=0x%x \
+                          completion_state=0x%x",
+                          G_slv_outbox_tx_pba_request.request.callback_rc,
+                          G_slv_outbox_tx_pba_request.request.options,
+                          G_slv_outbox_tx_pba_request.request.state,
+                          G_slv_outbox_tx_pba_request.request.abort_state,
+                          G_slv_outbox_tx_pba_request.request.completion_state);
+                TRAC_INFO("NOT proceeding with BCE slv outbox tx request and schedule");
+            }
         }
         else
         {
@@ -240,6 +245,13 @@ void task_dcom_tx_slv_outbox( task_t *i_self)
         // Only proceed if the BCE request state checked out
         if (l_proceed_with_request_and_schedule)
         {
+            if(L_bce_not_ready_count >= DCOM_TRACE_NOT_IDLE_AFTER_CONSEC_TIMES)  // previously not idle
+            {
+               TRAC_INFO("BCE slv outbox tx request idle and complete after %d times", L_bce_not_ready_count);
+            }
+
+            L_bce_not_ready_count = 0;
+
             // set up outbox copy request
             l_ssxrc = bce_request_create(
                             &G_slv_outbox_tx_pba_request,       // Block copy object
@@ -289,10 +301,15 @@ void task_dcom_tx_slv_outbox( task_t *i_self)
                 break;
             }
         }
+        else
+        {
+            L_bce_not_ready_count++;
+            INCREMENT_ERR_HISTORY(ERR_DCOM_TX_SLV_OUTBOX);
+        }
 
     } while (0);
 
-    if ( l_orc != OCC_SUCCESS_REASON_CODE && l_error == FALSE)
+    if ( l_orc != OCC_SUCCESS_REASON_CODE && L_error == FALSE)
     {
         // Create and commit error
         // See return code doxygen tags for error description
@@ -316,7 +333,7 @@ void task_dcom_tx_slv_outbox( task_t *i_self)
         // request a reset
         REQUEST_RESET( l_errl );
 
-        l_error = TRUE;
+        L_error = TRUE;
 
     }
 

@@ -80,7 +80,8 @@ void setbit_slvoutbox_complete(uint8_t i_bit)
 // End Function Specification
 void task_dcom_rx_slv_outboxes( task_t *i_self)
 {
-    static uint32_t  L_wait4slaves = 0;
+    static uint32_t L_wait4slaves = 0;
+    static uint8_t  L_bce_not_ready_count = 0;
     uint32_t        l_orc = OCC_SUCCESS_REASON_CODE;
     uint32_t        l_orc_ext = OCC_NO_EXTENDED_RC;
     uint8_t         l_slv_response_mask = 0;
@@ -216,16 +217,20 @@ void task_dcom_rx_slv_outboxes( task_t *i_self)
                     // represents a hang condition that we can't recover from.
                     // DO NOT proceed with request create and schedule.
                     l_proceed_with_request_and_schedule = FALSE;
-                    // Trace important information from the request
-                    TRAC_INFO("BCE slv outbox rx request not idle and not complete, callback_rc[%d] options[0x%x] state[0x%x] abort_state[0x%x] completion_state[0x%x]",
-                              G_slv_outbox_rx_pba_request[l_slv].request.callback_rc,
-                              G_slv_outbox_rx_pba_request[l_slv].request.options,
-                              G_slv_outbox_rx_pba_request[l_slv].request.state,
-                              G_slv_outbox_rx_pba_request[l_slv].request.abort_state,
-                              G_slv_outbox_rx_pba_request[l_slv].request.completion_state);
 
-                    TRAC_INFO("NOT proceeding with BCE slv outbox rx request and schedule for slave[0x%02X]",
-                              l_slv);
+                    if(L_bce_not_ready_count == DCOM_TRACE_NOT_IDLE_AFTER_CONSEC_TIMES)
+                    {
+                        // Trace important information from the request
+                        TRAC_INFO("BCE slv outbox rx request not idle and not complete, callback_rc[%d] options[0x%x] state[0x%x] abort_state[0x%x] completion_state[0x%x]",
+                                  G_slv_outbox_rx_pba_request[l_slv].request.callback_rc,
+                                  G_slv_outbox_rx_pba_request[l_slv].request.options,
+                                  G_slv_outbox_rx_pba_request[l_slv].request.state,
+                                  G_slv_outbox_rx_pba_request[l_slv].request.abort_state,
+                                  G_slv_outbox_rx_pba_request[l_slv].request.completion_state);
+
+                        TRAC_INFO("NOT proceeding with BCE slv outbox rx request and schedule for slave[0x%02X]",
+                                  l_slv);
+                    }
                 }
                 else
                 {
@@ -235,6 +240,13 @@ void task_dcom_rx_slv_outboxes( task_t *i_self)
                 // Only proceed if the BCE request state checked out
                 if (l_proceed_with_request_and_schedule)
                 {
+                    if(L_bce_not_ready_count >= DCOM_TRACE_NOT_IDLE_AFTER_CONSEC_TIMES) // previously not idle
+                    {
+                       TRAC_INFO("BCE slv outbox rx request idle and complete after %d times", L_bce_not_ready_count);
+                    }
+
+                    L_bce_not_ready_count = 0;
+
                     // Copy request from main memory to SRAM
                     l_ssxrc = bce_request_create(
                                     &G_slv_outbox_rx_pba_request[l_slv],             // block copy object
@@ -282,6 +294,11 @@ void task_dcom_rx_slv_outboxes( task_t *i_self)
                         l_orc_ext = ERC_BCE_REQUEST_SCHEDULE_FAILURE;
                         break;
                     }
+                }
+                else
+                {
+                    L_bce_not_ready_count++;
+                    INCREMENT_ERR_HISTORY(ERR_DCOM_RX_SLV_OUTBOX);
                 }
             }
             else
@@ -366,7 +383,8 @@ uint32_t dcom_rx_slv_outbox_doorbell( void )
 
     if (l_pbarc != 0)
     {
-        // Failure occurred but only trace it once
+        INCREMENT_ERR_HISTORY(ERR_DCOM_MASTER_PBAX_READ_FAIL);
+
         TRAC_ERR("Master PBAX Read Failure in receiving unicast slave doorbells - RC[%08X]", l_pbarc);
 
         // Handle pbax read failure on queue 1

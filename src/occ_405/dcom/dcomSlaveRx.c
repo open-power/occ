@@ -95,6 +95,7 @@ void dcom_rx_slv_inbox_callback( void )
 // End Function Specification
 void task_dcom_rx_slv_inbox( task_t *i_self)
 {
+    static uint8_t L_bce_not_ready_count = 0;
     uint32_t    l_orc = OCC_SUCCESS_REASON_CODE;
     uint32_t    l_orc_ext = OCC_NO_EXTENDED_RC;
     uint64_t    l_start = ssx_timebase_get();
@@ -195,16 +196,19 @@ void task_dcom_rx_slv_inbox( task_t *i_self)
                     // DO NOT proceed with request create and schedule.
                     l_proceed_with_request_and_schedule = FALSE;
 
-                    // Trace important information from the request
-                    TRAC_INFO("BCE slv inbox rx request not idle and not complete, \
-                              callback_rc=%d options=0x%x state=0x%x abort_state=0x%x \
-                              completion_state=0x%x",
-                              G_slv_inbox_rx_pba_request.request.callback_rc,
-                              G_slv_inbox_rx_pba_request.request.options,
-                              G_slv_inbox_rx_pba_request.request.state,
-                              G_slv_inbox_rx_pba_request.request.abort_state,
-                              G_slv_inbox_rx_pba_request.request.completion_state);
-                    TRAC_INFO("NOT proceeding with BCE slv inbox rx request and schedule");
+                    if(L_bce_not_ready_count == DCOM_TRACE_NOT_IDLE_AFTER_CONSEC_TIMES)
+                    {
+                        // Trace important information from the request
+                        TRAC_INFO("BCE slv inbox rx request not idle and not complete, \
+                                  callback_rc=%d options=0x%x state=0x%x abort_state=0x%x \
+                                  completion_state=0x%x",
+                                  G_slv_inbox_rx_pba_request.request.callback_rc,
+                                  G_slv_inbox_rx_pba_request.request.options,
+                                  G_slv_inbox_rx_pba_request.request.state,
+                                  G_slv_inbox_rx_pba_request.request.abort_state,
+                                  G_slv_inbox_rx_pba_request.request.completion_state);
+                        TRAC_INFO("NOT proceeding with BCE slv inbox rx request and schedule");
+                    }
                 }
                 else
                 {
@@ -214,6 +218,13 @@ void task_dcom_rx_slv_inbox( task_t *i_self)
                 // Only proceed if the BCE request state checked out
                 if (l_proceed_with_request_and_schedule)
                 {
+                    if(L_bce_not_ready_count >= DCOM_TRACE_NOT_IDLE_AFTER_CONSEC_TIMES)  // previously not idle
+                    {
+                       TRAC_INFO("BCE slv inbox rx request idle and complete after %d times", L_bce_not_ready_count);
+                    }
+
+                    L_bce_not_ready_count = 0;
+
                     // Copy request from main memory to SRAM
                     l_ssxrc = bce_request_create(
                                     &G_slv_inbox_rx_pba_request,        // Block copy object
@@ -263,6 +274,11 @@ void task_dcom_rx_slv_inbox( task_t *i_self)
                         break;
                     }
                     break;
+                }
+                else
+                {
+                    L_bce_not_ready_count++;
+                    INCREMENT_ERR_HISTORY(ERR_DCOM_RX_SLV_INBOX);
                 }
             }
             else
@@ -356,6 +372,7 @@ uint32_t dcom_rx_slv_inbox_doorbell( void )
         // We got an error reading from the PBAX, return to caller
         if ( l_pbarc != 0 )
         {
+            INCREMENT_ERR_HISTORY(ERR_DCOM_SLAVE_PBAX_READ_FAIL);
             G_dcomTime.slave.doorbellErrorFlags |= DCOM_DOORBELL_HW_ERR;
             // Failure occurred
             TRAC_ERR("Slave PBAX Read Failure in receiving multicast doorbell from master - RC[%08X]", l_pbarc);
@@ -461,6 +478,7 @@ void task_dcom_wait_for_master( task_t *i_self)
     uint32_t            l_num_read              = 0;
     static bool         L_first_doorbell_rcvd   = FALSE;
     static bool         L_queue_enabled         = FALSE;
+    static bool         L_Pmax_error_logged     = FALSE;
     static uint32_t     L_pobid_retries_left    = POBID_RETRIES;
     static uint16_t     L_no_master_doorbell_cnt = 0;
     static uint16_t     L_trace_every_count = 1;
@@ -504,48 +522,52 @@ void task_dcom_wait_for_master( task_t *i_self)
                     G_apss_lower_pmax_rail = TRUE;
 
                     // Create and commit this error only once
-                    TRAC_ERR("Detected a problem with slave data collection: soft time-out[%d]. Lowering Pmax_rail!",
-                             APSS_DATA_FAIL_PMAX_RAIL);
+                    if(!L_Pmax_error_logged)
+                    {
+                       TRAC_ERR("Detected a problem with slave data collection: soft time-out[%d]. Lowering Pmax_rail!",
+                                APSS_DATA_FAIL_PMAX_RAIL);
 
-                    /* @
-                     * @errortype
-                     * @moduleid    DCOM_MID_TASK_WAIT_FOR_MASTER
-                     * @reasoncode  APSS_SLV_SHORT_TIMEOUT
-                     * @userdata1   Time-out value
-                     * @userdata4   OCC_NO_EXTENDED_RC
-                     * @devdesc     Detected a problem with APSS data collection (short time-out)
-                     */
-                    errlHndl_t  l_errl = createErrl(
-                                                    DCOM_MID_TASK_WAIT_FOR_MASTER,  //modId
-                                                    APSS_SLV_SHORT_TIMEOUT,         //reasoncode
-                                                    OCC_NO_EXTENDED_RC,             //Extended reason code
-                                                    ERRL_SEV_INFORMATIONAL,         //Severity
-                                                    NULL,                           //Trace Buf
-                                                    DEFAULT_TRACE_SIZE,             //Trace Size
-                                                    APSS_DATA_FAIL_PMAX_RAIL,       //userdata1
-                                                    0                               //userdata2
-                                                   );
+                       /* @
+                        * @errortype
+                        * @moduleid    DCOM_MID_TASK_WAIT_FOR_MASTER
+                        * @reasoncode  APSS_SLV_SHORT_TIMEOUT
+                        * @userdata1   Time-out value
+                        * @userdata4   OCC_NO_EXTENDED_RC
+                        * @devdesc     Detected a problem with APSS data collection (short time-out)
+                        */
+                       errlHndl_t  l_errl = createErrl(
+                                                       DCOM_MID_TASK_WAIT_FOR_MASTER,  //modId
+                                                       APSS_SLV_SHORT_TIMEOUT,         //reasoncode
+                                                       OCC_NO_EXTENDED_RC,             //Extended reason code
+                                                       ERRL_SEV_INFORMATIONAL,         //Severity
+                                                       NULL,                           //Trace Buf
+                                                       DEFAULT_TRACE_SIZE,             //Trace Size
+                                                       APSS_DATA_FAIL_PMAX_RAIL,       //userdata1
+                                                       0                               //userdata2
+                                                      );
 
-                    // Callout to firmware
-                    addCalloutToErrl(l_errl,
-                                     ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                                     ERRL_COMPONENT_ID_FIRMWARE,
-                                     ERRL_CALLOUT_PRIORITY_MED);
+                       // Callout to firmware
+                       addCalloutToErrl(l_errl,
+                                        ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                                        ERRL_COMPONENT_ID_FIRMWARE,
+                                        ERRL_CALLOUT_PRIORITY_MED);
 
-                    // Callout to processor
-                    addCalloutToErrl(l_errl,
-                                     ERRL_CALLOUT_TYPE_HUID,
-                                     G_sysConfigData.proc_huid,
-                                     ERRL_CALLOUT_PRIORITY_LOW);
+                       // Callout to processor
+                       addCalloutToErrl(l_errl,
+                                        ERRL_CALLOUT_TYPE_HUID,
+                                        G_sysConfigData.proc_huid,
+                                        ERRL_CALLOUT_PRIORITY_LOW);
 
-                    // Callout to APSS
-                    addCalloutToErrl(l_errl,
-                                     ERRL_CALLOUT_TYPE_HUID,
-                                     G_sysConfigData.apss_huid,
-                                     ERRL_CALLOUT_PRIORITY_LOW);
+                       // Callout to APSS
+                       addCalloutToErrl(l_errl,
+                                        ERRL_CALLOUT_TYPE_HUID,
+                                        G_sysConfigData.apss_huid,
+                                        ERRL_CALLOUT_PRIORITY_LOW);
 
-                    setErrlActions(l_errl, ERRL_ACTIONS_MANUFACTURING_ERROR);
-                    commitErrl(&l_errl);
+                       setErrlActions(l_errl, ERRL_ACTIONS_MANUFACTURING_ERROR);
+                       commitErrl(&l_errl);
+                       L_Pmax_error_logged = TRUE;
+                    }
                 }
 
                 if (L_no_master_doorbell_cnt == APSS_DATA_FAIL_MAX)

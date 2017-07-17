@@ -94,14 +94,17 @@ void Dcom_thread_routine(void *arg)
         // --------------------------------------------------
         G_dcom_thread_counter++;
 
-// NOTE: Temporary system config must say we are FSP system so
-// that we don't try to access main memory here.
         // --------------------------------------------------
         // Check if we need to update the opal table
+        // only start checking after OCC has gone thru state change
         // --------------------------------------------------
-        if(G_sysConfigData.system_type.kvm)
+        if( (CURRENT_STATE() >= OCC_STATE_OBSERVATION) || (isSafeStateRequested()) )
         {
-            check_for_opal_updates();
+            // stop checking if we hit a critical error trying to update memory
+            if(G_opal_table_update_state != OPAL_TABLE_UPDATE_CRITICAL_ERROR)
+            {
+                check_for_opal_updates();
+            }
         }
 
         // --------------------------------------------------

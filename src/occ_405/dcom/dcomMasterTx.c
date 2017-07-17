@@ -89,6 +89,8 @@ uint32_t dcom_build_slv_inbox(void)
     // interrupt context.
     if(G_pbax_rc)
     {
+        INCREMENT_ERR_HISTORY(ERR_DCOM_MASTER_PBAX_SEND_FAIL);
+
         if (!L_traced)
         {
             TRAC_INFO("PBAX Send Failure in transimitting multicast doorbell - RC[%08X], packet[%d]", G_pbax_rc, G_pbax_packet);
@@ -225,6 +227,7 @@ uint32_t dcom_which_buffer(void)
 void task_dcom_tx_slv_inbox( task_t *i_self)
 {
     static bool L_error = FALSE;
+    static uint8_t L_bce_not_ready_count = 0;
     uint32_t    l_orc = OCC_SUCCESS_REASON_CODE;
     uint32_t    l_orc_ext = OCC_NO_EXTENDED_RC;
     uint64_t    l_start = ssx_timebase_get();
@@ -320,14 +323,17 @@ void task_dcom_tx_slv_inbox( task_t *i_self)
                 // DO NOT proceed with request create and schedule.
                 l_proceed_with_request_and_schedule = FALSE;
 
-                // Trace important information from the request
-                TRAC_INFO("BCE slv inbox tx request not idle and not complete: callback_rc[%d] options[0x%x] state[0x%x] abort_state[0x%x] completion_state[0x%x]",
-                          G_slv_inbox_tx_pba_request.request.callback_rc,
-                          G_slv_inbox_tx_pba_request.request.options,
-                          G_slv_inbox_tx_pba_request.request.state,
-                          G_slv_inbox_tx_pba_request.request.abort_state,
-                          G_slv_inbox_tx_pba_request.request.completion_state);
-                TRAC_INFO("NOT proceeding with BCE slv inbox tx request and schedule");
+                if(L_bce_not_ready_count == DCOM_TRACE_NOT_IDLE_AFTER_CONSEC_TIMES)
+                {
+                   // Trace important information from the request
+                   TRAC_INFO("BCE slv inbox tx request not idle and not complete: callback_rc[%d] options[0x%x] state[0x%x] abort_state[0x%x] completion_state[0x%x]",
+                             G_slv_inbox_tx_pba_request.request.callback_rc,
+                             G_slv_inbox_tx_pba_request.request.options,
+                             G_slv_inbox_tx_pba_request.request.state,
+                             G_slv_inbox_tx_pba_request.request.abort_state,
+                             G_slv_inbox_tx_pba_request.request.completion_state);
+                   TRAC_INFO("NOT proceeding with BCE slv inbox tx request and schedule");
+                }
             }
             else
             {
@@ -337,6 +343,13 @@ void task_dcom_tx_slv_inbox( task_t *i_self)
             // Only proceed if the BCE request state checked out
             if (l_proceed_with_request_and_schedule)
             {
+                if(L_bce_not_ready_count >= DCOM_TRACE_NOT_IDLE_AFTER_CONSEC_TIMES)  // previously not idle
+                {
+                   TRAC_INFO("BCE slv inbox tx request idle and complete after %d times", L_bce_not_ready_count);
+                }
+
+                L_bce_not_ready_count = 0;
+
                 // Set up inboxes copy request
                 l_ssxrc = bce_request_create(
                                 &G_slv_inbox_tx_pba_request,        // Block copy object
@@ -389,6 +402,12 @@ void task_dcom_tx_slv_inbox( task_t *i_self)
                     break;
                 }
             }
+            else
+            {
+                L_bce_not_ready_count++;
+                INCREMENT_ERR_HISTORY(ERR_DCOM_TX_SLV_INBOX);
+            }
+
             // Moved the break statement here in case we decide not to
             // schedule the BCE request.
             break;
@@ -402,6 +421,8 @@ void task_dcom_tx_slv_inbox( task_t *i_self)
             }
             else
             {
+                INCREMENT_ERR_HISTORY(ERR_DCOM_APSS_COMPLETE_TIMEOUT);
+
                 //Failure occurred, step up the FAIL_COUNT
                 APSS_FAIL();
 

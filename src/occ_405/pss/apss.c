@@ -141,6 +141,8 @@ void dumpHexString(const void *i_data, const unsigned int len, const char *strin
 // End Function Specification
 void do_apss_recovery(void)
 {
+    INCREMENT_ERR_HISTORY(ERR_INVALID_APSS_DATA);
+
     if (!G_apss_data_traced)
     {
         INTR_TRAC_ERR("detected invalid power data[%08x%08x]",

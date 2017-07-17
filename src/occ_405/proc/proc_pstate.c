@@ -66,11 +66,19 @@ pstateStatus G_proc_pstate_status = PSTATES_DISABLED;
 PMCR_OWNER G_proc_pmcr_owner = PMCR_OWNER_HOST;
 
 // OPAL Dynamic data, updated whenever any OCC G_opal_table.dynamic parameter change
+// Since this is happening multiple times need to keep track of it being scheduled
 DMA_BUFFER( opal_dynamic_table_t G_opal_dynamic_table ) = {{0}};
+bool G_opal_dynamic_bce_req_scheduled = false;
+BceRequest G_opal_dynamic_bce_req;
+#define OPAL_DYNAMIC_UPDATE_BCE_RETRIES 2
 
 // OPAL Static data, updated once at transition to active state
 DMA_BUFFER( opal_static_table_t  G_opal_static_table )  = {{0}};
+BceRequest G_opal_static_bce_req;
 
+
+
+volatile uint8_t G_opal_table_update_state = OPAL_TABLE_UPDATE_IDLE;
 
 // Function Specification
 //
@@ -157,30 +165,36 @@ Pstate proc_freq2pstate(uint32_t i_freq_mhz)
 //
 // Name:  proc_pstate_kvm_setup
 //
-// Description: Get everything set up for KVM mode
+// Description: Copy Pstate table to OPAL shared memory this should only be called once
+//    when going to active state
 //
 // End Function Specification
 void proc_pstate_kvm_setup()
 {
-    do
+    TRAC_IMP("proc_pstate_kvm_setup: populate static OPAL data");
+
+    // Initialize the opal table in SRAM (sets valid bit)
+    populate_opal_static_data();
+
+    // copy sram image into mainstore HOMER
+    populate_opal_tbl_to_mem(OPAL_STATIC);
+}
+
+// Function Specification
+//
+// Name:  opal_table_bce_callback
+//
+// Description: Callback function for populate_opal_tbl_to_mem() BCE request
+//              NO TRACING OR CALLING FUNCTIONS THAT TRACE ALLOWED
+//
+// End Function Specification
+void opal_table_bce_callback( void )
+{
+    // If the BCE that just finished was for a dynamic table update notify host
+    if(G_opal_table_update_state == OPAL_TABLE_UPDATE_DYNAMIC_COPY)
     {
-        //only run this in KVM mode
-        if(!G_sysConfigData.system_type.kvm)
-        {
-            TRAC_ERR("proc_pstate_kvm_setup: called in a non OPAL system");
-            break;
-        }
-
-        TRAC_INFO("proc_pstate_kvm_setup: populate static OPAL data");
-
-        // Initialize the opal table in SRAM (sets valid bit)
-        populate_opal_static_data();
-
-        // copy sram image into mainstore HOMER
-        populate_opal_tbl_to_mem(OPAL_STATIC);
-        TRAC_IMP("proc_pstate_kvm_setup: RUNNING IN KVM MODE");
-
-    }while(0);
+        G_opal_table_update_state = OPAL_TABLE_UPDATE_NOTIFY_HOST;
+    }
 }
 
 // Function Specification
@@ -210,10 +224,11 @@ void populate_opal_dynamic_data()
     G_opal_dynamic_table.dynamic.mem_throt_status     = G_amec_opal_mem_throt_reason;
     G_opal_dynamic_table.dynamic.quick_power_drop     = AMEC_INTF_GET_OVERSUBSCRIPTION();
     G_opal_dynamic_table.dynamic.power_shift_ratio    = G_sysConfigData.psr;
-    G_opal_dynamic_table.dynamic.power_cap_type       = G_master_pcap_data.source;
-    G_opal_dynamic_table.dynamic.min_power_cap        = G_master_pcap_data.soft_min_pcap;
-    G_opal_dynamic_table.dynamic.max_power_cap        = G_master_pcap_data.max_pcap;
-    G_opal_dynamic_table.dynamic.current_power_cap    = G_master_pcap_data.current_pcap;
+    G_opal_dynamic_table.dynamic.power_cap_type       = G_sysConfigData.pcap.source;
+    G_opal_dynamic_table.dynamic.min_power_cap        = G_sysConfigData.pcap.hard_min_pcap;
+    G_opal_dynamic_table.dynamic.max_power_cap        = G_sysConfigData.pcap.max_pcap;
+    G_opal_dynamic_table.dynamic.current_power_cap    = g_amec->pcap.active_node_pcap;
+    G_opal_dynamic_table.dynamic.soft_min_power_cap   = G_sysConfigData.pcap.soft_min_pcap;
 }
 
 // Function Specification
@@ -294,21 +309,33 @@ void populate_opal_tbl_to_mem(opalDataType opal_data_type)
     uint32_t l_reasonCode = 0;
     uint32_t l_extReasonCode = 0;
 
-    uint32_t mainstore_address;
-    uint32_t sram_address;
-    size_t block_size;
-
+    // Set up copy request for type of data being updated.  NOTE:  only DYNAMIC uses the callback
     if(opal_data_type == OPAL_STATIC)
     {
-        mainstore_address = OPAL_STATIC_ADDRESS_HOMER;
-        sram_address      = (uint32_t) &G_opal_static_table;
-        block_size        = (size_t) sizeof(G_opal_static_table);
+        // static is only updated when going active and should be blocking to make sure
+        // this complets before reporting back that the state change finished
+        l_ssxrc = bce_request_create(&G_opal_static_bce_req,                // block copy object
+                                     &G_pba_bcue_queue,                     // sram to mainstore copy engine
+                                     OPAL_STATIC_ADDRESS_HOMER,             // mainstore address
+                                     (uint32_t) &G_opal_static_table,       // sram starting address
+                                     (size_t) sizeof(G_opal_static_table),  // size of copy
+                                     SSX_SECONDS(2),                        // timeout
+                                     NULL,                                  // no call back
+                                     NULL,                                  // call back arguments
+                                     ASYNC_REQUEST_BLOCKING);
     }
     else if(opal_data_type == OPAL_DYNAMIC)
     {
-        mainstore_address = OPAL_DYNAMIC_ADDRESS_HOMER;
-        sram_address      =(uint32_t) &G_opal_dynamic_table;
-        block_size        = (size_t) sizeof(G_opal_dynamic_table);
+        // dynamic data can be updated while active and should NOT be blocking
+        l_ssxrc = bce_request_create(&G_opal_dynamic_bce_req,               // block copy object
+                                     &G_pba_bcue_queue,                     // sram to mainstore copy engine
+                                     OPAL_DYNAMIC_ADDRESS_HOMER,            // mainstore address
+                                     (uint32_t) &G_opal_dynamic_table,      // sram starting address
+                                     (size_t) sizeof(G_opal_dynamic_table), // size of copy
+                                     SSX_WAIT_FOREVER,                      // no timeout
+              (AsyncRequestCallback) opal_table_bce_callback,               // call back
+                                     NULL,                                  // call back arguments
+                                     ASYNC_CALLBACK_IMMEDIATE);
     }
     else
     {
@@ -318,39 +345,32 @@ void populate_opal_tbl_to_mem(opalDataType opal_data_type)
 
     do
     {
-        BceRequest pba_copy;
-        // Set up copy request
-        l_ssxrc = bce_request_create(
-                       &pba_copy,                   // block copy object
-                       &G_pba_bcue_queue,           // sram to mainstore copy engine
-                       mainstore_address,           // mainstore address
-                       sram_address,                // sram starting address
-                       block_size,                  // size of copy
-                       SSX_WAIT_FOREVER,            // no timeout
-                       NULL,                        // call back
-                       NULL,                        // call back arguments
-                       ASYNC_REQUEST_BLOCKING       // callback mask
-                       );
-
         if(l_ssxrc != SSX_OK)
         {
             TRAC_ERR("populate_opal_tbl_to_mem: PBA request create failure rc=[%08X]",
                      -l_ssxrc);
             /*
              * @errortype
-             * @moduleid    MAIN_STATE_TRANSITION_MID
-             * @reasoncode  SSX_GENERIC_FAILURE
+             * @moduleid    PROC_POP_OPAL_TBL_TO_MEM_MOD
+             * @reasoncode  OPAL_TABLE_UPDATE_ERROR
              * @userdata1   RC for PBA block-copy engine
              * @userdata4   ERC_BCE_REQUEST_CREATE_FAILURE
              * @devdesc     Failed to create BCUE request
              */
-            l_reasonCode = SSX_GENERIC_FAILURE;
+            l_reasonCode = OPAL_TABLE_UPDATE_ERROR;
             l_extReasonCode = ERC_BCE_REQUEST_CREATE_FAILURE;
             break;
         }
 
         // Do actual copying
-        l_ssxrc = bce_request_schedule(&pba_copy);
+        if(opal_data_type == OPAL_STATIC)
+        {
+            l_ssxrc = bce_request_schedule(&G_opal_static_bce_req);
+        }
+        else
+        {
+            l_ssxrc = bce_request_schedule(&G_opal_dynamic_bce_req);
+        }
 
         if(l_ssxrc != SSX_OK)
         {
@@ -358,13 +378,13 @@ void populate_opal_tbl_to_mem(opalDataType opal_data_type)
                      -l_ssxrc);
             /*
              * @errortype
-             * @moduleid    MAIN_STATE_TRANSITION_MID
-             * @reasoncode  SSX_GENERIC_FAILURE
+             * @moduleid    PROC_POP_OPAL_TBL_TO_MEM_MOD
+             * @reasoncode  OPAL_TABLE_UPDATE_ERROR
              * @userdata1   RC for PBA block-copy engine
              * @userdata4   ERC_BCE_REQUEST_SCHEDULE_FAILURE
              * @devdesc     Failed to copy OPAL data by using BCUE
              */
-            l_reasonCode = SSX_GENERIC_FAILURE;
+            l_reasonCode = OPAL_TABLE_UPDATE_ERROR;
             l_extReasonCode = ERC_BCE_REQUEST_SCHEDULE_FAILURE;
             break;
         }
@@ -372,22 +392,43 @@ void populate_opal_tbl_to_mem(opalDataType opal_data_type)
 
     if ( l_ssxrc != SSX_OK )
     {
-        errlHndl_t l_errl = createErrl(MAIN_STATE_TRANSITION_MID,  //modId
-                                       l_reasonCode,               //reasoncode
-                                       l_extReasonCode,            //Extended reason code
-                                       ERRL_SEV_UNRECOVERABLE,     //Severity
-                                       NULL,                       //Trace Buf
-                                       0,                          //Trace Size
-                                       -l_ssxrc,                   //userdata1
-                                       0);                         //userdata2
+        // set back to idle since callback won't happen
+        if( (opal_data_type == OPAL_DYNAMIC) &&
+            (G_opal_table_update_state == OPAL_TABLE_UPDATE_DYNAMIC_COPY) )
+        {
+            G_opal_table_update_state = OPAL_TABLE_UPDATE_IDLE;
+        }
 
-        // Callout firmware
-        addCalloutToErrl(l_errl,
-                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                         ERRL_COMPONENT_ID_FIRMWARE,
-                         ERRL_CALLOUT_PRIORITY_HIGH);
+        // data in main mem only matters for OPAL so only log error if OPAL
+        if(G_sysConfigData.system_type.kvm)
+        {
+            errlHndl_t l_errl = createErrl(PROC_POP_OPAL_TBL_TO_MEM_MOD,  //modId
+                                           l_reasonCode,                  //reasoncode
+                                           l_extReasonCode,               //Extended reason code
+                                           ERRL_SEV_UNRECOVERABLE,        //Severity
+                                           NULL,                          //Trace Buf
+                                           0,                             //Trace Size
+                                           -l_ssxrc,                      //userdata1
+                                           0);                            //userdata2
 
-        commitErrl(&l_errl);
+            // Callout firmware
+            addCalloutToErrl(l_errl,
+                             ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                             ERRL_COMPONENT_ID_FIRMWARE,
+                             ERRL_CALLOUT_PRIORITY_HIGH);
+
+            // Callout processor
+            addCalloutToErrl(l_errl,
+                             ERRL_CALLOUT_TYPE_HUID,
+                             G_sysConfigData.proc_huid,
+                             ERRL_CALLOUT_PRIORITY_MED);
+
+            commitErrl(&l_errl);
+        }
+    }
+    else if(opal_data_type == OPAL_DYNAMIC)
+    {
+        G_opal_dynamic_bce_req_scheduled = true;
     }
 }
 
@@ -396,52 +437,177 @@ void populate_opal_tbl_to_mem(opalDataType opal_data_type)
 //
 // Name: check_for_opal_updates
 //
-// Description: Checks if the opal table needs an update
-//              and updates if necessary.
+// Description: Checks if any of the dynamic fields in the opal shared memory
+//              needs to be updated and updates if necessary.
 //
 // End Function Specification
 void check_for_opal_updates(void)
 {
-    bool throttle_change = false;
+    bool           dynamic_data_change = false;
+    bool           l_log_crit_error = false;
+    static uint8_t L_num_bce_checks = 0;
 
-    // if throttle status change, update OPAL and notify host
-    if( (G_opal_dynamic_table.dynamic.proc_throt_status != G_amec_opal_proc_throt_reason) ||         // PROC throttle states changed
-        ((G_opal_dynamic_table.dynamic.proc_throt_status != OCC_RESET) && isSafeStateRequested()) ||  // OCC reset requested & OPAL not updated
-        (G_opal_dynamic_table.dynamic.mem_throt_status  != G_amec_opal_mem_throt_reason) )           // Mem throttle status changed
+    // check if BCE for previous change finished and now need to notify host
+    if(G_opal_table_update_state == OPAL_TABLE_UPDATE_NOTIFY_HOST)
     {
-        throttle_change = true;
-        TRAC_INFO("check_for_opal_updates: throttle status change - proc 0x%02X->0x%02X, mem: 0x%02X->0x%02X",
-                  G_opal_dynamic_table.dynamic.proc_throt_status, G_amec_opal_proc_throt_reason,
-                  G_opal_dynamic_table.dynamic.mem_throt_status, G_amec_opal_mem_throt_reason);
-        update_dynamic_opal_data();
+         // regardless of if we notify host we are done with this change
+         G_opal_table_update_state = OPAL_TABLE_UPDATE_IDLE;
+
+         if(G_sysConfigData.system_type.kvm)  // only notify if OPAL
+         {
+              notify_host(INTR_REASON_OPAL_SHARED_MEM_CHANGE);
+         }
     }
 
-    // else, if a dynamic OPAL parameter changed, update OPAL dynamic table and OPAL data in memory
-    else if(G_opal_dynamic_table.dynamic.occ_state         != CURRENT_STATE()                  ||
-            G_opal_dynamic_table.dynamic.quick_power_drop  != AMEC_INTF_GET_OVERSUBSCRIPTION() ||
-            G_opal_dynamic_table.dynamic.power_shift_ratio != G_sysConfigData.psr              ||
-            G_opal_dynamic_table.dynamic.power_cap_type    != G_master_pcap_data.source        ||
-            G_opal_dynamic_table.dynamic.min_power_cap     != G_master_pcap_data.soft_min_pcap ||
-            G_opal_dynamic_table.dynamic.max_power_cap     != G_master_pcap_data.max_pcap      ||
-            G_opal_dynamic_table.dynamic.current_power_cap != G_master_pcap_data.current_pcap  )
+    // check if previous change is not complete
+    else if( (G_opal_table_update_state == OPAL_TABLE_UPDATE_DYNAMIC_COPY) ||
+             (G_opal_dynamic_bce_req_scheduled && !(async_request_is_idle(&G_opal_dynamic_bce_req.request))) )
     {
-        if (G_opal_dynamic_table.dynamic.occ_state         != CURRENT_STATE())
-            TRAC_INFO("check_for_opal_updates: state changed from 0x%02X->0x%02X", G_opal_dynamic_table.dynamic.occ_state, CURRENT_STATE());
-        if (G_opal_dynamic_table.dynamic.quick_power_drop  != AMEC_INTF_GET_OVERSUBSCRIPTION())
-            TRAC_INFO("check_for_opal_updates: qpd changed from 0x%02X->0x%02X", G_opal_dynamic_table.dynamic.quick_power_drop, AMEC_INTF_GET_OVERSUBSCRIPTION());
-        if (G_opal_dynamic_table.dynamic.power_cap_type    != G_master_pcap_data.source        ||
-            G_opal_dynamic_table.dynamic.min_power_cap     != G_master_pcap_data.soft_min_pcap ||
-            G_opal_dynamic_table.dynamic.max_power_cap     != G_master_pcap_data.max_pcap      ||
-            G_opal_dynamic_table.dynamic.current_power_cap != G_master_pcap_data.current_pcap)
-            TRAC_INFO("check_for_opal_updates: power cap change");
-
-        update_dynamic_opal_data();
+         if(L_num_bce_checks <= OPAL_DYNAMIC_UPDATE_BCE_RETRIES)
+         {
+             L_num_bce_checks++;
+         }
+         else
+         {
+             TRAC_ERR("check_for_opal_updates: BCE not idle %u times, done retrying", L_num_bce_checks);
+             l_log_crit_error = true;
+         }
     }
 
-    // A throttle status change, notify host after copying dynamic OPAL data
-    if(throttle_change)
+    else if(G_opal_table_update_state == OPAL_TABLE_UPDATE_BCE_FAIL)
     {
-        notify_host(INTR_REASON_OPAL_SHARED_MEM_CHANGE);
+         // BCE failed re-populate the data and retry the BCE if under retry count
+         if(L_num_bce_checks <= OPAL_DYNAMIC_UPDATE_BCE_RETRIES)
+         {
+             dynamic_data_change = true;
+         }
+         else
+         {
+             TRAC_ERR("check_for_opal_updates: BCE failed %u times, done retrying", L_num_bce_checks);
+             l_log_crit_error = true;
+         }
+    }
+
+    else  // check if any of the data changed
+    {
+        // check if processor throttle status changed if going to safe state check for reset status
+        // else just check for any change since not in safe state
+        if( isSafeStateRequested() )
+        {
+            if(G_opal_dynamic_table.dynamic.proc_throt_status != OCC_RESET)
+            {
+                dynamic_data_change = true;
+                TRAC_INFO("check_for_opal_updates: safe state processor throttle status change - 0x%02X->0x%02X",
+                           G_opal_dynamic_table.dynamic.proc_throt_status, G_amec_opal_proc_throt_reason);
+            }
+        }
+        else if(G_opal_dynamic_table.dynamic.proc_throt_status != G_amec_opal_proc_throt_reason)
+        {
+            dynamic_data_change = true;
+            TRAC_INFO("check_for_opal_updates: processor throttle status change - 0x%02X->0x%02X",
+                       G_opal_dynamic_table.dynamic.proc_throt_status, G_amec_opal_proc_throt_reason);
+        }
+
+        // check if memory throttle status or Quick Power Drop changed
+        if( (G_opal_dynamic_table.dynamic.mem_throt_status != G_amec_opal_mem_throt_reason) ||
+            (G_opal_dynamic_table.dynamic.quick_power_drop != AMEC_INTF_GET_OVERSUBSCRIPTION()) ) 
+        {
+            dynamic_data_change = true;
+            TRAC_INFO("check_for_opal_updates: memory throttle status - 0x%02X->0x%02X QPD - 0x%02X->0x%02X",
+                       G_opal_dynamic_table.dynamic.mem_throt_status, G_amec_opal_mem_throt_reason,
+                       G_opal_dynamic_table.dynamic.quick_power_drop, AMEC_INTF_GET_OVERSUBSCRIPTION());
+        }
+
+        // check for OCC state change
+        if(G_opal_dynamic_table.dynamic.occ_state != CURRENT_STATE())
+        {
+            dynamic_data_change = true;
+            TRAC_INFO("check_for_opal_updates: OCC state change 0x%02X->0x%02X",
+                       G_opal_dynamic_table.dynamic.occ_state, CURRENT_STATE());
+        }
+
+        // check for change in power cap data must look at slave copy
+        // do NOT use G_master_pcap_data as that is not populated on slaves
+        if( (G_opal_dynamic_table.dynamic.min_power_cap      != G_sysConfigData.pcap.hard_min_pcap) ||
+            (G_opal_dynamic_table.dynamic.max_power_cap      != G_sysConfigData.pcap.max_pcap)      ||
+            (G_opal_dynamic_table.dynamic.soft_min_power_cap != G_sysConfigData.pcap.soft_min_pcap) ||
+            (G_opal_dynamic_table.dynamic.power_shift_ratio  != G_sysConfigData.psr)                ||
+            (G_opal_dynamic_table.dynamic.power_cap_type     != G_sysConfigData.pcap.source)        ||
+            (G_opal_dynamic_table.dynamic.current_power_cap  != g_amec->pcap.active_node_pcap) )
+        {
+            dynamic_data_change = true;
+            TRAC_INFO("check_for_opal_updates: soft min Pcap = 0x%04X->0x%04X hard min Pcap = 0x%04X->0x%04X",
+                       G_opal_dynamic_table.dynamic.soft_min_power_cap, G_sysConfigData.pcap.soft_min_pcap,
+                       G_opal_dynamic_table.dynamic.min_power_cap, G_sysConfigData.pcap.hard_min_pcap);
+
+            TRAC_INFO("check_for_opal_updates: max Pcap = 0x%04X->0x%04X active Pcap = 0x%04X->0x%04X",
+                       G_opal_dynamic_table.dynamic.max_power_cap, G_sysConfigData.pcap.max_pcap,
+                       G_opal_dynamic_table.dynamic.current_power_cap, g_amec->pcap.active_node_pcap);
+
+            TRAC_INFO("check_for_opal_updates: Pcap PSR = %u->%u Pcap source = %u->%u",
+                       G_opal_dynamic_table.dynamic.power_shift_ratio, G_sysConfigData.psr,
+                       G_opal_dynamic_table.dynamic.power_cap_type, G_sysConfigData.pcap.source);
+        }
+    }  // else check for changes
+
+    // If there was a change copy to main memory and notify host when BCE finishes
+    if(dynamic_data_change)
+    {
+        G_opal_table_update_state = OPAL_TABLE_UPDATE_DYNAMIC_COPY;
+        update_dynamic_opal_data();
+
+        // if the BCE schedule fails the state will go back to IDLE, retry next time called
+        if(G_opal_table_update_state == OPAL_TABLE_UPDATE_IDLE)
+        {
+            G_opal_table_update_state = OPAL_TABLE_UPDATE_BCE_FAIL;
+            L_num_bce_checks++;
+        }
+        else
+        {
+            L_num_bce_checks = 0;
+        }
+    }
+    else if(l_log_crit_error)
+    {
+         // stop trying to update dynamic data, this only really matters on OPAL systems so
+         // only log the error if OPAL
+         G_opal_table_update_state = OPAL_TABLE_UPDATE_CRITICAL_ERROR;
+
+         if(G_sysConfigData.system_type.kvm)
+         {
+             // Create and commit error
+             /* @
+              * @errortype
+              * @moduleid    PROC_CHECK_FOR_OPAL_UPDATES_MOD
+              * @reasoncode  OPAL_TABLE_UPDATE_ERROR
+              * @userdata1   0
+              * @userdata2   0
+              * @userdata4   ERC_GENERIC_TIMEOUT
+              * @devdesc     BCE request failure to update dynamic opal table
+              */
+             errlHndl_t l_errl = createErrl(PROC_CHECK_FOR_OPAL_UPDATES_MOD, // Module ID
+                                            OPAL_TABLE_UPDATE_ERROR,         // Reason code
+                                            ERC_GENERIC_TIMEOUT,             // Extended reason code
+                                            ERRL_SEV_UNRECOVERABLE,          // Severity
+                                            NULL,                            // Trace Buffers
+                                            DEFAULT_TRACE_SIZE,              // Trace Size
+                                            0,                               // Userdata1
+                                            0);                              // Userdata2
+
+            // Callout firmware
+            addCalloutToErrl(l_errl,
+                             ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                             ERRL_COMPONENT_ID_FIRMWARE,
+                             ERRL_CALLOUT_PRIORITY_HIGH);
+
+            // Callout processor
+            addCalloutToErrl(l_errl,
+                             ERRL_CALLOUT_TYPE_HUID,
+                             G_sysConfigData.proc_huid,
+                             ERRL_CALLOUT_PRIORITY_MED);
+
+             commitErrl(&l_errl);
+         }
     }
 }
 
@@ -457,7 +623,7 @@ void check_for_opal_updates(void)
 void update_dynamic_opal_data (void)
 {
 
-    // Initialize the opal table in SRAM (sets valid bit)
+    // Initialize the dynamic opal table in SRAM
     populate_opal_dynamic_data();
 
     // copy sram image into mainstore HOMER

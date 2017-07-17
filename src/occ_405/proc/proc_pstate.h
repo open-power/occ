@@ -94,14 +94,14 @@ typedef struct __attribute__ ((packed))
     uint16_t             min_power_cap;
     uint16_t             max_power_cap;
     uint16_t             current_power_cap;
-
+    uint16_t             soft_min_power_cap;
 } opal_dynamic_t;
 
 // This size must be a multiple of 128
 typedef struct __attribute__ ((packed))
 {
-    opal_dynamic_t       dynamic;       // Dynamic OPAL parameters: 16B
-    uint8_t              pad[112];      // Reserved dynamic space: 112B
+    opal_dynamic_t       dynamic;       // Dynamic OPAL parameters: 18B
+    uint8_t              pad[110];      // Reserved dynamic space: 110B
 } opal_dynamic_table_t __attribute__ ((aligned (128)));
 
 #define PSTATE_ENTRIES 256    // number of generated PSTATES entries in OPAL table
@@ -124,6 +124,18 @@ extern uint8_t     G_desired_pstate[MAXIMUM_QUADS];
 
 extern opal_dynamic_table_t G_opal_dynamic_table;
 extern opal_static_table_t G_opal_static_table;
+
+// States for updating opal data in main memory
+typedef enum
+{
+    OPAL_TABLE_UPDATE_IDLE = 0x00,            // No dynmaic table update in process
+    OPAL_TABLE_UPDATE_DYNAMIC_COPY = 0x01,    // BCE scheduled to copy dynamic date to main memory
+    OPAL_TABLE_UPDATE_NOTIFY_HOST = 0x02,     // BCE copy finished notify host
+    OPAL_TABLE_UPDATE_BCE_FAIL = 0x03,        // BCE failed, retry
+    OPAL_TABLE_UPDATE_CRITICAL_ERROR = 0x04,  // Critical BCE error, stop trying to update dynamic data
+} OPAL_TABLE_UPDATE_STATE;
+
+extern volatile uint8_t G_opal_table_update_state;
 
 // Helper function to translate from Frequency to nearest Pstate
 Pstate proc_freq2pstate(uint32_t i_freq_mhz);

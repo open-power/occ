@@ -1405,7 +1405,6 @@ errlHndl_t data_store_power_cap(const cmdh_fsp_cmd_t * i_cmd_ptr,
     cmdh_pcap_config_t * l_cmd_ptr = (cmdh_pcap_config_t *)i_cmd_ptr;
     uint16_t                        l_data_length = 0;
     uint32_t                        l_pcap_data_sz = 0;
-    static uint8_t                  L_pcap_count = 0;
     bool                            l_invalid_input = TRUE; //Assume bad input
 
     l_data_length = CONVERT_UINT8_ARRAY_UINT16(l_cmd_ptr->data_length[0], l_cmd_ptr->data_length[1]);
@@ -1475,8 +1474,7 @@ errlHndl_t data_store_power_cap(const cmdh_fsp_cmd_t * i_cmd_ptr,
         // It tells the master and slave code that there is new
         // pcap data.  This should not be incremented until
         // after the packet data has been copied into G_master_pcap_data.
-        L_pcap_count++;
-        G_master_pcap_data.pcap_data_count = L_pcap_count;
+        G_master_pcap_data.pcap_data_count++;
 
         // Change Data Request Mask to indicate we got the data
         // G_data_cnfg->data_mask |= DATA_MASK_PCAP_PRESENT;

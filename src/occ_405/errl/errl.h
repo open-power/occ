@@ -280,6 +280,16 @@ typedef enum {
     ERR_AVSBUS_VDN_OVER_TEMPERATURE =  8,
     ERR_AVSBUS_VDD_OVER_CURRENT     =  9,
     ERR_AVSBUS_VDN_OVER_CURRENT     = 10,
+    ERR_INVALID_APSS_DATA           = 11,
+    ERR_DCOM_APSS_COMPLETE_TIMEOUT  = 12,
+    ERR_DCOM_TX_SLV_INBOX           = 13,
+    ERR_DCOM_RX_SLV_INBOX           = 14,
+    ERR_DCOM_TX_SLV_OUTBOX          = 15,
+    ERR_DCOM_RX_SLV_OUTBOX          = 16,
+    ERR_DCOM_MASTER_PBAX_SEND_FAIL  = 17,
+    ERR_DCOM_SLAVE_PBAX_SEND_FAIL   = 18,
+    ERR_DCOM_MASTER_PBAX_READ_FAIL  = 19,
+    ERR_DCOM_SLAVE_PBAX_READ_FAIL   = 20,
 } ERR_HISTORY_INDEX;
 #define INCREMENT_ERR_HISTORY(errorIndex) { \
     if ((errorIndex < ERR_HISTORY_SIZE) && (G_error_history[errorIndex] < 255)) { \

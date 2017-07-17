@@ -99,6 +99,9 @@
 #define MAX_WAIT_FOR_SLAVES 400
 #define MAX_WAIT_FOR_MASTER 400
 
+// number of consecutive times a BCE request is not idle before tracing
+#define DCOM_TRACE_NOT_IDLE_AFTER_CONSEC_TIMES 3
+
 // general defines
 #define TOD_SIZE 6
 #define NUM_TOD_SENSORS 3
