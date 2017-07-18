@@ -30,6 +30,7 @@
 /// an example of how to add traces to the code.
 
 #include "pk.h"
+#include "pk_trace.h"
 #include "ipc_api.h"
 #include "ipc_ping.h"
 #include "gpe_export.h"
@@ -46,6 +47,8 @@ PkThread       G_main_thread;
 #define GPE_SHARED_DATA_SIZE 256
 
 gpe_shared_data_t * G_gpe_shared_data = (gpe_shared_data_t*) GPE_SHARED_DATA_ADDR;
+
+extern PkTraceBuffer* g_pk_trace_buf_ptr;
 
 //statically initialize a ping command message
 IPC_PING_CMD_CREATE(G_ping_cmd);
@@ -82,6 +85,10 @@ int main(int argc, char **argv)
     {
         l_timebase = PPE_TIMEBASE_HZ;
     }
+
+    // Mark the location of the trace buffer in shared data
+    G_gpe_shared_data->gpe0_tb_ptr = (uint32_t) g_pk_trace_buf_ptr;
+    G_gpe_shared_data->gpe0_tb_sz = sizeof(PkTraceBuffer);
 
     // initializes kernel data (stack, threads, timebase, timers, etc.)
     pk_initialize((PkAddress)G_kernel_stack,

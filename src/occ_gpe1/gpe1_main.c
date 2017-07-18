@@ -30,6 +30,7 @@
 /// an example of how to add traces to the code.
 
 #include "pk.h"
+#include "pk_trace.h"
 #include "ipc_api.h"
 #include "gpe_export.h"
 
@@ -43,6 +44,8 @@ uint8_t        G_kernel_stack[KERNEL_STACK_SIZE];
 
 gpe_shared_data_t * G_gpe_shared_data = (gpe_shared_data_t*) GPE_SHARED_DATA_ADDR;
 
+extern PkTraceBuffer* g_pk_trace_buf_ptr;
+
 // The main function is called by the boot code (after initializing some
 // registers)
 int main(int argc, char **argv)
@@ -55,6 +58,10 @@ int main(int argc, char **argv)
     {
         l_timebase = PPE_TIMEBASE_HZ;
     }
+
+    // Mark the location of the trace buffer in shared data
+    G_gpe_shared_data->gpe1_tb_ptr = (uint32_t) g_pk_trace_buf_ptr;
+    G_gpe_shared_data->gpe1_tb_sz = sizeof(PkTraceBuffer);
 
     // initializes kernel data (stack, threads, timebase, timers, etc.)
     pk_initialize((PkAddress)G_kernel_stack,

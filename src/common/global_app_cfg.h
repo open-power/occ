@@ -34,6 +34,9 @@
 // Turn off periodic GPE traces
 #define PK_TRACE_TIMER_OUTPUT 0
 
+// Increase size of GPE trace buffers
+#define PK_TRACE_SZ 1024
+
 // Redefine the default MSR to mask off SIB errors and avoid data machine checks
 // These SIB errors probably occur due to contention on the PIB
 #define PK_THREAD_MACHINE_CONTEXT_DEFAULT (MSR_SEM | MSR_UIE | MSR_EE | MSR_ME)

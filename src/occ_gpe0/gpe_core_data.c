@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -50,15 +50,19 @@ void gpe_get_core_data(ipc_msg_t* cmd, void* arg)
     uint32_t rc;    // return code
     ipc_async_cmd_t *async_cmd  = (ipc_async_cmd_t*)cmd;
     ipc_core_data_parms_t *args = (ipc_core_data_parms_t*) async_cmd->cmd_data;
-
+    static uint32_t L_trace = 0;
 
     rc = get_core_data(args->core_num,     // core ID
                        args->data);        // CoreData*
 
     if(rc)
     {
-        PK_TRACE("gpe_get_core_data: get_core_data failed, rc = 0x%08x, core = 0x%08x",
-                 rc, args->core_num);
+        if( !(L_trace & (1 << args->core_num)) )
+        {
+            PK_TRACE("gpe_get_core_data: get_core_data failed, rc = 0x%08x, core = 0x%08x",
+                     rc, args->core_num);
+            L_trace |= (1 << args->core_num);
+        }
         gpe_set_ffdc(&(args->error), args->core_num,
                       GPE_RC_GET_CORE_DATA_FAILED, rc);
     }

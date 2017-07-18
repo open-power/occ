@@ -54,7 +54,7 @@ uint32_t get_core_data(uint32_t i_core,
     // rc == 1 resource occupied  (see ppe42_scom.h)   Action: return with rc
     // rc == 2 Core is fenced, offline                 Action: return with rc
     // rc == 3 partial good
-    // rc == 4 address error
+    // rc == 4 address error (Can be caused by other device using bus)
     // rc == 5 clock error
     // rc == 6 packet error
     // rc == 7 timeout

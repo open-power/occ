@@ -60,9 +60,17 @@ typedef struct gpe_shared_data
 {
     uint32_t    nest_freq_div;  // Nest freq / 4
     uint32_t    spipss_spec_p9; // Which APSS spec to use
-    uint32_t    fir_heap_buffer_ptr; 
+    uint32_t    fir_heap_buffer_ptr;
     uint32_t    fir_params_buffer_ptr;
-    uint32_t    reserved[60];
+    uint32_t    gpe0_tb_ptr;
+    uint32_t    gpe0_tb_sz;
+    uint32_t    gpe1_tb_ptr;
+    uint32_t    gpe1_tb_sz;
+    uint32_t    pgpe_tb_ptr;
+    uint32_t    pgpe_tb_sz;
+    uint32_t    sgpe_tb_ptr;
+    uint32_t    sgpe_tb_sz;
+    uint32_t    reserved[52];
 } gpe_shared_data_t;
 
 
