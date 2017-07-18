@@ -115,6 +115,16 @@ typedef struct
 #define SIMICS_MICS_PER_TICK  20000 // slow down RTL to 20ms for Simics
 #define DCOM_TX_APSS_WAIT_TIME G_dcom_tx_apss_wait_time
 
+// core data collection time.  All cores collected one time thru tick table
+#define CORE_DATA_COLLECTION_US (MICS_PER_TICK * MAX_NUM_TICKS)
+//Number of samples per second for performance-related algorithms (e.g. UTILCy)
+#define AMEC_DPS_SAMPLING_RATE  (1000000 / CORE_DATA_COLLECTION_US)
+//Time interval for averaging utilization and frequency (IPS algorithm) 3 seconds
+#define AMEC_IPS_AVRG_INTERVAL           3
+// NOTE: for IPS timings to work, need to make sure the check for amec_mst_ips_main() is at the same frequency
+// i.e. core data is collected every CORE_DATA_COLLECTION_US the checking for amec_mst_ips_main() must be same.
+// If core data collection time changes must adjust the checking for amec_mst_ips_main() to match
+
 // The value of the current tick
 extern uint32_t G_current_tick;
 

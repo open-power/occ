@@ -119,44 +119,7 @@ void amec_mst_state_5(void);
 void amec_mst_state_6(void);
 void amec_mst_state_7(void);
 
-// Master SubState 0
-void amec_mst_substate_0_0(void);
-void amec_mst_substate_0_1(void);
-void amec_mst_substate_0_4(void);
-void amec_mst_substate_0_7(void);
-
-// Master SubState 3
-void amec_mst_substate_3_0(void);
-void amec_mst_substate_3_1(void);
-void amec_mst_substate_3_2(void);
-void amec_mst_substate_3_6(void);
-void amec_mst_substate_3_7(void);
-
-// Master Sub-SubState 3
-void amec_mst_sub_substate_3_0_0(void);
-void amec_mst_sub_substate_3_0_1(void);
-void amec_mst_sub_substate_3_0_7(void);
-
-// Master SubState 6
-void amec_mst_substate_6_0(void);
-void amec_mst_substate_6_1(void);
-void amec_mst_substate_6_2(void);
-void amec_mst_substate_6_3(void);
-void amec_mst_substate_6_4(void);
-void amec_mst_substate_6_5(void);
-void amec_mst_substate_6_6(void);
-void amec_mst_substate_6_7(void);
-
-void amec_mst_substate_3_0(void);
-void amec_mst_substate_3_1(void);
-
-void amec_mst_sub_substate_6_1_0(void);
-void amec_mst_sub_substate_6_1_1(void);
-void amec_mst_sub_substate_6_1_2(void);
-void amec_mst_sub_substate_6_1_3(void);
-void amec_mst_sub_substate_6_1_4(void);
-void amec_mst_sub_substate_6_1_5(void);
-void amec_mst_sub_substate_6_1_6(void);
-void amec_mst_sub_substate_6_1_7(void);
+// Master SubState 5 (odd SubStates currently unused)
+void amec_mst_substate_5_even(void);
 
 #endif

@@ -52,10 +52,10 @@
 // Defines/Enums
 //*************************************************************************/
 
-//Power cap mismatch threshold set to 8 ticks (2 milliseconds)
+//Power cap mismatch threshold set to 8 ticks
 #define PCAPS_MISMATCH_THRESHOLD 8
 
-//Power cap failure threshold set to 32 (ticks)
+//Power cap failure threshold set to 32 ticks
 #define PCAP_FAILURE_THRESHOLD 32
 
 //*************************************************************************/
@@ -91,98 +91,36 @@ uint16_t G_mst_soft_fmax = 0xFFFF;
 uint8_t  G_mst_violation_cnt[MAX_OCCS] = {0};
 
 // --------------------------------------------------------
-// AMEC Master State 6.1 Substate Table
+// AMEC Master State 5 Substate Table
 // --------------------------------------------------------
-// Each function inside this state table runs once every 128ms.
+// Each substate runs every 64th tick time = 64 * MICS_PER_TICK
 //
-const smh_tbl_t amec_mst_state_6_1_sub_substate_table[AMEC_SMH_STATES_PER_LVL] =
+const smh_tbl_t amec_mst_state_5_substate_table[AMEC_SMH_STATES_PER_LVL] =
 {
-  {amec_mst_sub_substate_6_1_0, NULL},
-  {amec_mst_sub_substate_6_1_1, NULL},
-  {amec_mst_sub_substate_6_1_2, NULL},
-  {amec_mst_sub_substate_6_1_3, NULL},
-  {amec_mst_sub_substate_6_1_4, NULL},
-  {amec_mst_sub_substate_6_1_5, NULL},
-  {amec_mst_sub_substate_6_1_6, NULL},
-  {amec_mst_sub_substate_6_1_7, NULL},
-};
-
-// --------------------------------------------------------
-// AMEC Master State 0 Substate Table
-// --------------------------------------------------------
-// Each function inside this state table runs once every 16ms.
-//
-// The 2 States are interleaved so each one runs every 4ms.
-//
-const smh_tbl_t amec_mst_state_0_substate_table[AMEC_SMH_STATES_PER_LVL] =
-{
-  {amec_mst_substate_0_0, NULL},
-  {amec_mst_substate_0_1, NULL},
-  {amec_mst_substate_0_0, NULL},
-  {amec_mst_substate_0_1, NULL},
-  {amec_mst_substate_0_0, NULL},
-  {amec_mst_substate_0_1, NULL},
-  {amec_mst_substate_0_0, NULL},
-  {amec_mst_substate_0_1, NULL},
-};
-
-// --------------------------------------------------------
-// AMEC Master State 3 Substate Table
-// --------------------------------------------------------
-// Each function inside this state table runs once every 16ms.
-//
-// The 2 States are interleaved so each one runs every 4ms.
-//
-const smh_tbl_t amec_mst_state_3_substate_table[AMEC_SMH_STATES_PER_LVL] =
-
-{
-  {amec_mst_substate_3_0, NULL},
-  {amec_mst_substate_3_1, NULL},
-  {amec_mst_substate_3_0, NULL},
-  {amec_mst_substate_3_1, NULL},
-  {amec_mst_substate_3_0, NULL},
-  {amec_mst_substate_3_1, NULL},
-  {amec_mst_substate_3_0, NULL},
-  {amec_mst_substate_3_1, NULL},
-};
-
-// --------------------------------------------------------
-// AMEC Master State 6 Substate Table
-// --------------------------------------------------------
-// Each function inside this state table runs once every 16ms.
-//
-// SubState1:  8 Sub-substates (128ms/sub-substate)
-//
-const smh_tbl_t amec_mst_state_6_substate_table[AMEC_SMH_STATES_PER_LVL] =
-{
-  {amec_mst_substate_6_0, NULL},
-  {amec_mst_substate_6_1, amec_mst_state_6_1_sub_substate_table},
-  {amec_mst_substate_6_2, NULL},
-  {amec_mst_substate_6_3, NULL},
-  {amec_mst_substate_6_4, NULL},
-  {amec_mst_substate_6_5, NULL},
-  {amec_mst_substate_6_6, NULL},
-  {amec_mst_substate_6_7, NULL},
+  {amec_mst_substate_5_even, NULL}, // Substate 5.0
+  {NULL,                     NULL}, // Substate 5.1 (not used)
+  {amec_mst_substate_5_even, NULL}, // Substate 5.2
+  {NULL,                     NULL}, // Substate 5.3 (not used)
+  {amec_mst_substate_5_even, NULL}, // Substate 5.4
+  {NULL,                     NULL}, // Substate 5.5 (not used)
+  {amec_mst_substate_5_even, NULL}, // Substate 5.6
+  {NULL,                     NULL}, // Substate 5.7 (not used)
 };
 
 // --------------------------------------------------------
 // Main AMEC Master State Table
 // --------------------------------------------------------
-// Each function inside this state table runs once every 2ms.
-//
-// State0:  2 Substates (4ms/substate)
-// State3:  2 Substates (4ms/substate)
-// State6:  8 Substates (16ms/substate)
+// Each function inside this state table runs once every MICS_PER_TICK * 8
 //
 const smh_tbl_t amec_mst_state_table[AMEC_SMH_STATES_PER_LVL] =
 {
-  {amec_mst_state_0, amec_mst_state_0_substate_table},
+  {amec_mst_state_0, NULL},
   {amec_mst_state_1, NULL},
   {amec_mst_state_2, NULL},
-  {amec_mst_state_3, amec_mst_state_3_substate_table},
+  {amec_mst_state_3, NULL},
   {amec_mst_state_4, NULL},
-  {amec_mst_state_5, NULL},
-  {amec_mst_state_6, amec_mst_state_6_substate_table},
+  {amec_mst_state_5, amec_mst_state_5_substate_table},
+  {amec_mst_state_6, NULL},
   {amec_mst_state_7, NULL},
 };
 
@@ -378,8 +316,7 @@ void amec_mst_check_pcaps_match(void)
                         G_pcaps_mismatch_count, l_prev_pcap, l_chip_id, G_slave_active_pcaps[l_chip_id].active_pcap,
                         G_slave_active_pcaps[l_chip_id].pcap_valid);
 
-                    //If mismatch occurs for 8 consecutive ticks
-                    //i.e 8 * 250 microsecs = 2 milliseconds,then reset occ
+                    //If mismatch occurs for 8 consecutive ticks then reset occ
                     if(G_pcaps_mismatch_count >= PCAPS_MISMATCH_THRESHOLD)
                     {
                         TRAC_ERR("Mismatch in OCC power cap values: pcap=%d, slave_active_pcap[%d]=%d(%d)",
@@ -936,33 +873,7 @@ void amec_mst_state_1(void){AMEC_DBG("\tAMEC Master State 1\n");}
 void amec_mst_state_2(void){AMEC_DBG("\tAMEC Master State 2\n");}
 void amec_mst_state_3(void){AMEC_DBG("\tAMEC Master State 3\n");}
 void amec_mst_state_4(void){AMEC_DBG("\tAMEC Master State 4\n");}
-
-void amec_mst_state_5(void)
-{
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
-    static uint16_t             l_counter = 0;
-
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
-    AMEC_DBG("\tAMEC Master State 5\n");
-
-    // Only execute if OCC is in the active state
-    if ( IS_OCC_STATE_ACTIVE() )
-    {
-        // Increment our local counter
-        l_counter++;
-
-        // Is it time to run the Idle Power Saver algorithm? (default is 3sec)
-        if (l_counter == AMEC_DPS_SAMPLING_RATE * AMEC_IPS_AVRG_INTERVAL)
-        {
-            l_counter = 0;
-            amec_mst_ips_main();
-        }
-    }
-}
+void amec_mst_state_5(void){AMEC_DBG("\tAMEC Master State 5\n");}
 
 void amec_mst_state_6(void)
 {
@@ -985,94 +896,43 @@ void amec_mst_state_7(void){AMEC_DBG("\tAMEC Master State 7\n");}
 
 // Function Specification
 //
-// Name: amec_mst_substate_0_0
-//       amec_mst_substate_0_1
+// Name: amec_mst_substate_5_even
 //
-// Description: master substate amec_mst_substate_0_0
-//              master substate amec_mst_substate_0_1
-//
-// End Function Specification
-void amec_mst_substate_0_0(void){AMEC_DBG("\tAMEC Master SubState 0.0\n");}
-void amec_mst_substate_0_1(void){AMEC_DBG("\tAMEC Master SubState 0.1\n");}
-
-// Function Specification
-//
-// Name: amec_mst_substate_6_0
-//       amec_mst_substate_6_1
-//       amec_mst_substate_6_2
-//       amec_mst_substate_6_3
-//       amec_mst_substate_6_4
-//       amec_mst_substate_6_5
-//       amec_mst_substate_6_6
-//       amec_mst_substate_6_7
-//
-// Description: master substate amec_mst_substate_6_0
-//              master substate amec_mst_substate_6_1
-//              master substate amec_mst_substate_6_2
-//              master substate amec_mst_substate_6_3
-//              master substate amec_mst_substate_6_4
-//              master substate amec_mst_substate_6_5
-//              master substate amec_mst_substate_6_6
-//              master substate amec_mst_substate_6_7
-//
-// Flow:              FN= None
+// Description: state 5 even numbered master substates for IPS
+//              gives state 5 substate function to be called every 16th tick
+//              This must be called at the same frequency as CORE_DATA_COLLECTION_US
+//              for IPS enter/exit timings to work correctly
+//              Time = MICS_PER_TICK * MAX_NUM_TICKS
+//              odd substates of state 5 are not currently used
 //
 // End Function Specification
-void amec_mst_substate_6_0(void){AMEC_DBG("\tAMEC Master State 6.0\n");}
-void amec_mst_substate_6_1(void){AMEC_DBG("\tAMEC Master State 6.1\n");}
-void amec_mst_substate_6_2(void){AMEC_DBG("\tAMEC Master State 6.2\n");}
-void amec_mst_substate_6_3(void){AMEC_DBG("\tAMEC Master State 6.3\n");}
-void amec_mst_substate_6_4(void){AMEC_DBG("\tAMEC Master State 6.4\n");}
-void amec_mst_substate_6_5(void){AMEC_DBG("\tAMEC Master State 6.5\n");}
-void amec_mst_substate_6_6(void){AMEC_DBG("\tAMEC Master State 6.6\n");}
-void amec_mst_substate_6_7(void){AMEC_DBG("\tAMEC Master State 6.7\n");}
+void amec_mst_substate_5_even(void)
+{
+    /*------------------------------------------------------------------------*/
+    /*  Local Variables                                                       */
+    /*------------------------------------------------------------------------*/
+    static uint16_t             l_counter = 0;
 
-// Function Specification
-//
-// Name: amec_mst_substate_3_0
-//       amec_mst_substate_3_1
-//
-// Description: master substate amec_mst_substate_3_0
-//              master substate amec_mst_substate_3_1
-//
-// Flow:              FN= None
-//
-// End Function Specification
-void amec_mst_substate_3_0(void){AMEC_DBG("\tAMEC Master State 3.0\n");}
-void amec_mst_substate_3_1(void){AMEC_DBG("\tAMEC Master State 3.1\n");}
+    /*------------------------------------------------------------------------*/
+    /*  Code                                                                  */
+    /*------------------------------------------------------------------------*/
+    AMEC_DBG("\tAMEC Master State 5 even substate\n");
 
+    // Only execute if OCC is in the active state
+    if ( IS_OCC_STATE_ACTIVE() )
+    {
+        // Increment our local counter
+        l_counter++;
 
-// Function Specification
-//
-// Name: amec_mst_substate_6_1_0
-//       amec_mst_substate_6_1_1
-//       amec_mst_substate_6_1_2
-//       amec_mst_substate_6_1_3
-//       amec_mst_substate_6_1_4
-//       amec_mst_substate_6_1_5
-//       amec_mst_substate_6_1_6
-//       amec_mst_substate_6_1_7
-//
-// Description: master substate amec_mst_substate_6_1_0
-//              master substate amec_mst_substate_6_1_1
-//              master substate amec_mst_substate_6_1_2
-//              master substate amec_mst_substate_6_1_3
-//              master substate amec_mst_substate_6_1_4
-//              master substate amec_mst_substate_6_1_5
-//              master substate amec_mst_substate_6_1_6
-//              master substate amec_mst_substate_6_1_7
-//
-// Flow:              FN= None
-//
-// End Function Specification
-void amec_mst_sub_substate_6_1_0(void){AMEC_DBG("\tAMEC Master State 6.1.0\n");}
-void amec_mst_sub_substate_6_1_1(void){AMEC_DBG("\tAMEC Master State 6.1.1\n");}
-void amec_mst_sub_substate_6_1_2(void){AMEC_DBG("\tAMEC Master State 6.1.2\n");}
-void amec_mst_sub_substate_6_1_3(void){AMEC_DBG("\tAMEC Master State 6.1.3\n");}
-void amec_mst_sub_substate_6_1_4(void){AMEC_DBG("\tAMEC Master State 6.1.4\n");}
-void amec_mst_sub_substate_6_1_5(void){AMEC_DBG("\tAMEC Master State 6.1.5\n");}
-void amec_mst_sub_substate_6_1_6(void){AMEC_DBG("\tAMEC Master State 6.1.6\n");}
-void amec_mst_sub_substate_6_1_7(void){AMEC_DBG("\tAMEC Master State 6.1.7\n");}
+        // Is it time to run the Idle Power Saver algorithm? (default is 3sec)
+        if (l_counter == AMEC_DPS_SAMPLING_RATE * AMEC_IPS_AVRG_INTERVAL)
+        {
+            l_counter = 0;
+            amec_mst_ips_main();
+        }
+    }
+}
+
 
 /*----------------------------------------------------------------------------*/
 /* End                                                                        */
