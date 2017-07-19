@@ -805,7 +805,11 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
         memset(&l_existBits, 0x00, sizeof(FirData_existBits_t) );
 
         /* Point past HOMER header to first chiplet info */
-        uint8_t       *l_bytePtr = io_fd->hBuf + sizeof(HOMER_Data_t);
+        /* The HOMER_Data_t struct may have some padding added after the struct
+         * to ensure the HOMER_Chip_t structs are 4-byte word aligned. */
+        uint32_t sz_word = sizeof(uint32_t);
+        uint32_t pad = (sz_word - (sizeof(HOMER_Data_t) % sz_word)) % sz_word;
+        uint8_t       *l_bytePtr = io_fd->hBuf + sizeof(HOMER_Data_t) + pad;
         HOMER_Chip_t  *l_chipPtr = NULL;
 
         TRAC_INFO("AddTgtsMain:numChips:%d", io_fd->hData->chipCount);
@@ -1265,8 +1269,11 @@ int32_t FirData_init( FirData_t * io_fd,
             break;
         }
 
-        /* Now, skip chip sections. */
-        reglist = io_fd->hBuf + sz_hData;
+        /* Now, skip chip sections. Note that the HOMER_Data_t struct may have
+         * some padding added after the struct to ensure the HOMER_Chip_t
+         * structs are 4-byte word aligned. */
+        uint32_t pad = (sz_u32 - (sz_hData % sz_u32)) % sz_u32;
+        reglist = io_fd->hBuf + sz_hData + pad;
         HOMER_Chip_t   *l_chiptPtr = NULL;
 
         /* Need to skip over chip list **/
