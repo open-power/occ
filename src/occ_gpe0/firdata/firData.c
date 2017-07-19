@@ -1410,7 +1410,7 @@ int32_t FirData_captureCsFirData( uint8_t * i_hBuf, uint32_t i_hBufSize,
         FirData_addTrgtsToPnor( &fd );
 
         /* Write Buffer to PNOR */
-        //rc = PNOR_writeFirData( fd.hData->pnorInfo, fd.pBuf, fd.pBufSize );
+        rc = PNOR_writeFirData( fd.hData->pnorInfo, fd.pBuf, fd.pBufSize );
         if ( SUCCESS != rc )
         {
             TRAC_ERR( FUNC"Failed to process FIR data" );

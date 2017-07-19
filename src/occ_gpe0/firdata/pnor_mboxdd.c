@@ -186,7 +186,6 @@ errorHndl_t writeFlash(pnorMbox_t* i_pnorMbox,
             return FAIL;
         }
 
-
         errorHndl_t l_flushErr = NO_ERROR;
 
         while (i_size)
@@ -194,24 +193,60 @@ errorHndl_t writeFlash(pnorMbox_t* i_pnorMbox,
             uint32_t l_lpcAddr;
             uint32_t l_chunkLen;
 
-            l_err = adjustMboxWindow(i_pnorMbox,
+
+            if (PAGE_PROGRAM_BYTES > i_size)
+            {
+                l_err = adjustMboxWindow(i_pnorMbox,
+                                     true,
+                                     i_addr,
+                                     PAGE_PROGRAM_BYTES,
+                                     &l_lpcAddr,
+                                     &l_chunkLen);
+            }
+            else
+            {
+                 l_err = adjustMboxWindow(i_pnorMbox,
                                      true,
                                      i_addr,
                                      i_size,
                                      &l_lpcAddr,
                                      &l_chunkLen);
+            }
 
             if (l_err)
             {
+                PK_TRACE("Error adjusting MBOX Window for addr: "
+                         "0x%x size: 0x%x", l_lpcAddr, i_size);
                 break;
             }
 
-            //Directly do LPC access to space pointed to by BMC
-            l_err = lpc_write(LPC_TRANS_FW, l_lpcAddr, i_data, l_chunkLen);
+            //For whatever reason LPC writes can only handle 4 bytes at a time
+            //We write 256 bytes from the previous functions, so break up the
+            //large write into 4 byte writes
+            uint32_t l_size_written = 0;
+            uint32_t l_lpc_write_size = 4; //in bytes
+            uint8_t *l_lpc_write_data = i_data;
 
-            if (l_err)
+            while ( (i_size) && (l_size_written < i_size) &&
+                     (l_size_written < l_chunkLen))
             {
-                break;
+                if (i_size - l_size_written < l_lpc_write_size)
+                {
+                    l_lpc_write_size = i_size - l_size_written;
+                }
+
+                //Directly do LPC access to space pointed to by BMC
+                l_err = lpc_write(LPC_TRANS_FW, l_lpcAddr,
+                                  l_lpc_write_data, l_lpc_write_size);
+
+                if (l_err)
+                {
+                    break;
+                }
+
+                l_lpc_write_data += l_lpc_write_size;
+                l_size_written += l_lpc_write_size;
+                l_lpcAddr += l_lpc_write_size;
             }
 
             //Tell BMC to push data from LPC space into PNOR
@@ -242,13 +277,8 @@ errorHndl_t writeFlash(pnorMbox_t* i_pnorMbox,
         if( l_err )
         {
             i_size = 0;
-        }
-
-        if(l_err)
-        {
             break;
         }
-
     }
     while(0);
 
@@ -301,6 +331,8 @@ errorHndl_t adjustMboxWindow(pnorMbox_t* i_pnorMbox,
          * Then open the new one at the right position. The required
          * alignment differs between protocol versions
          */
+        PK_TRACE("astMboxDD::adjustMboxWindow using protocol version: %d",
+                    i_pnorMbox->iv_protocolVersion);
         if (i_pnorMbox->iv_protocolVersion == 1)
         {
             l_wSize = i_isWrite ? i_pnorMbox->iv_writeWindowSize
@@ -333,6 +365,7 @@ errorHndl_t adjustMboxWindow(pnorMbox_t* i_pnorMbox,
 
         if (l_err)
         {
+            PK_TRACE("Error creating Window");
             break;
         }
 

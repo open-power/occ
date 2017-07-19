@@ -29,6 +29,7 @@
 #include <pnor_mboxdd.h>
 #include <pnor_util.h>
 #include <norflash.h>
+#include <firdata/ecc.h>
 
 /*================================================================= */
 /* The offset of the next byte to write */
@@ -36,7 +37,7 @@ uint32_t g_next_byte = 0xFFFFFFFF;
 /* Size of the FIRDATA section of PNOR */
 uint32_t g_pnor_size = 0;
 /* Global PNOR Mbox object */
-pnorMbox_t* g_pnorMbox;
+pnorMbox_t g_pnorMbox;
 
 /* Cache to queue up PNOR writes */
 uint8_t g_write_cache[PAGE_PROGRAM_BYTES];
@@ -53,38 +54,39 @@ int32_t pnor_write_8B( uint64_t i_data )
     if ( (g_next_byte == 0xFFFFFFFF) || /* initialized data */
          ((g_next_byte + g_pnor_size) < (g_next_byte + 9)) ) /* make sure there is room */
     {
-        TRACFCOMP("pnor_write_8B> g_next_byte=%.8X, g_pnor_size=%.8X",g_next_byte,g_pnor_size);
+        PK_TRACE("FAILURE: pnor_write_8B> g_next_byte=%.8X, g_pnor_size=%.8X",
+                  g_next_byte,g_pnor_size);
         /* must have been some error in the prep */
         return FAIL;
     }
 
-//@TODO: Do we need ECC, or does the BMC handle that for us now?
     /* Create 9-byte ECC-ified version */
-//    uint8_t data9[9];
-//    injectECC( (uint8_t*)(&i_data), 8, data9 );
+    uint8_t data9[9];
+    injectECC( (uint8_t*)(&i_data), 8, data9 );
 
     /* Copy data into the write cache until we queue up
        a big chunk of data to write.  This is more efficient
        and avoids handling the write boundary of the PP
        command internally. */
-//    uint32_t cpsz = 9;
-
-    uint8_t data8[8];
-    uint32_t cpsz = 8;
+    uint32_t cpsz = 9;
 
     if( (g_write_cache_index + cpsz) > PAGE_PROGRAM_BYTES )
     {
         cpsz = PAGE_PROGRAM_BYTES - g_write_cache_index;
     }
-     memcpy( &(g_write_cache[g_write_cache_index]), data8, cpsz );
-//    memcpy( &(g_write_cache[g_write_cache_index]), data9, cpsz );
+
+    int i;
+    for (i=0; i < cpsz; i++)
+    {
+        g_write_cache[g_write_cache_index+i] = data9[i];
+    }
 
     g_write_cache_index += cpsz;
 
     /* Write a complete chunk into the flash */
     if( g_write_cache_index == PAGE_PROGRAM_BYTES )
     {
-        errorHndl_t tmp = writeFlash( g_pnorMbox,
+        errorHndl_t tmp = writeFlash( &g_pnorMbox,
                                       g_next_byte,
                                       PAGE_PROGRAM_BYTES,
                                       g_write_cache );
@@ -97,21 +99,22 @@ int32_t pnor_write_8B( uint64_t i_data )
             return FAIL;
         }
         g_next_byte += PAGE_PROGRAM_BYTES;
-        memset( g_write_cache, 0xFF, PAGE_PROGRAM_BYTES );
+        for (i=0; i < PAGE_PROGRAM_BYTES; i++)
+        {
+            g_write_cache[i] = 0xFF;
+        }
         g_write_cache_index = 0;
 
-        if( (8 - cpsz) > 0 )
-        {
-            memcpy( &(g_write_cache[0]), &(data8[cpsz]), 8 - cpsz );
-            g_write_cache_index = 8 - cpsz;
-        }
-
         /* Handle the overflow */
-//        if( (9 - cpsz) > 0 )
-//        {
-//            memcpy( &(g_write_cache[0]), &(data9[cpsz]), 9 - cpsz );
-//            g_write_cache_index = 9 - cpsz;
-//        }
+        if( (9 - cpsz) > 0 )
+        {
+            for (i=0; i < 9-cpsz; i++)
+            {
+                g_write_cache[i] = data9[cpsz+i];
+            }
+
+            g_write_cache_index = 9 - cpsz;
+        }
     }
 
     return rc;
@@ -127,16 +130,17 @@ errorHndl_t pnor_prep( HOMER_PnorInfo_t* i_pnorInfo )
     errorHndl_t l_err = NO_ERROR;
 
     /* Figure out where to start */
-    TRACFCOMP("FIRDATA is at %.8X..%.8X", i_pnorInfo->pnorOffset, i_pnorInfo->pnorOffset+i_pnorInfo->pnorSize );
-    g_next_byte = i_pnorInfo->pnorOffset;
     g_pnor_size = i_pnorInfo->pnorSize;
+    g_next_byte = i_pnorInfo->pnorOffset;
+
+    TRAC_IMP("pnor_prep: pnorOffset:0x%08X pnorSize:0x%08X",
+            g_next_byte, g_pnor_size);
     memset( g_write_cache, 0xFF, PAGE_PROGRAM_BYTES );
 
     /* Can we rely on skiboot leaving things in a good state? */
-    l_err = hwInit(g_pnorMbox);
+    l_err = hwInit(&g_pnorMbox);
     if( l_err )
     {
-        TRACFCOMP("hwInit failed");
         /* hit an error, stop any writes from happening */
         g_next_byte = 0xFFFFFFFF;
         g_pnor_size = 0;
@@ -151,7 +155,6 @@ int32_t PNOR_writeFirData( HOMER_PnorInfo_t i_pnorInfo,
                            uint8_t * i_buf, uint32_t i_bufSize )
 {
     int32_t rc = SUCCESS;
-    TRACFCOMP(">>PNOR_writeFirData");
 
     do
     {
@@ -159,7 +162,7 @@ int32_t PNOR_writeFirData( HOMER_PnorInfo_t i_pnorInfo,
         errorHndl_t l_err = pnor_prep( &i_pnorInfo );
         if( l_err )
         {
-            TRACFCOMP("pnor_prep failed");
+            TRAC_ERR("PNOR_writeFirData: pnor_prepreturned failure");
             rc = FAIL;
             break; /*nothing more to do here*/
         }
@@ -171,7 +174,8 @@ int32_t PNOR_writeFirData( HOMER_PnorInfo_t i_pnorInfo,
         /* Add PNOR data 8 bytes at a time. */
         for ( idx = 0; idx < i_bufSize; idx += sz_dataChunk )
         {
-            memcpy( &dataChunk, &i_buf[idx], sz_dataChunk );
+            uint64_t* l_data_ptr = (uint64_t*)(&i_buf[idx]);
+            dataChunk = *l_data_ptr;
 
             rc = pnor_write_8B( dataChunk );
             if ( SUCCESS != rc )
@@ -185,10 +189,14 @@ int32_t PNOR_writeFirData( HOMER_PnorInfo_t i_pnorInfo,
         /* Add any extra bytes if they exist at the end of the buffer. */
         if ( idx != i_bufSize )
         {
+            int i;
             uint32_t extraBytes = idx - i_bufSize;
-
-            dataChunk = 0;
-            memcpy( &dataChunk, &i_buf[idx], extraBytes );
+            uint8_t* l_src_ptr = (uint8_t*)(&i_buf[idx]);
+            uint8_t* l_dest_ptr = (uint8_t*)(&dataChunk);
+            for (i = 0; i < extraBytes; i++)
+            {
+                l_dest_ptr[i] = l_src_ptr[i];
+            }
 
             rc = pnor_write_8B( dataChunk );
             if ( SUCCESS != rc )

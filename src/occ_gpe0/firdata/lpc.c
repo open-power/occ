@@ -208,11 +208,10 @@ errorHndl_t lpc_read( LpcTransType i_type,
     do {
         if( o_data == NULL )
         {
-            TRACFCOMP( "o_data is NULL!" );
+            TRAC_ERR("o_data is NULL!" );
             l_err = -2;
             break;
         }
-
 
         /* Generate the full absolute LPC address */
         l_addr = checkAddr( i_type, i_addr );
@@ -366,6 +365,7 @@ errorHndl_t lpc_write( LpcTransType i_type,
         //is expected to be left aligned
         //adding (size - 1) <-- to incorporate reading more than one byte
         //multiply by 8 to convert from byte to bits
+
         l_shift_amount = (7 - ((l_addr & 0x7) + (i_size-1))) * 8;
         l_data = (l_write_data << l_shift_amount);
 

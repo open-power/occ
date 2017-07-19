@@ -35,6 +35,7 @@
 #include <norflash.h>
 #include <ast_mboxdd.h>
 #include <lpc.h>
+#include <gpe_util.h>
 
 errorHndl_t writeRegSIO(uint8_t i_regAddr, uint8_t i_data)
 {
@@ -159,7 +160,8 @@ errorHndl_t doMessage( astMbox_t *io_mbox, mboxMessage_t *io_msg )
             {
                 break;
             }
-            sleep(1000);
+
+            busy_wait(1000);
         }
 
         if ( l_err )
