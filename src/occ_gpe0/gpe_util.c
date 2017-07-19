@@ -133,15 +133,16 @@ int wait_spi_completion(GpeErrorStruct *error, uint32_t reg, uint8_t timeout)
  *
  * Description:  a counting loop to simulate sleep calls, and is ISR safe.
  *
- * Inputs:       t_microseconds: time to sleep in microseconds
+ * Inputs:       i_microseconds: time to sleep in microseconds
  *
  * return:       none
  *
  * End Function Specification
  */
 
+extern gpe_shared_data_t * G_gpe_shared_data;
 
-void busy_wait(uint32_t t_microseconds)
+void busy_wait(uint32_t i_microseconds)
 {
     uint32_t start_decrementer_value;      // The decrementer register value at the beginning
     uint32_t end_decrementer_value;        // The decrementer register value at the end
@@ -150,20 +151,16 @@ void busy_wait(uint32_t t_microseconds)
     MFDEC(start_decrementer_value);        // get the decrementer register value at the beginning
     current_decrementer_value = start_decrementer_value;
 
-    // multiply the delay time by the 37.5 MHz external clock frequency.
-    // I believe that the ppe42_mullw macro works fine, but the
-    // compiler parameter settings seems broken.
-    // @todo: This is a temporary fix, use external frequency directive.
-    duration =  (t_microseconds << 5)
-        + (t_microseconds << 2)
-        + (t_microseconds)
-        + (t_microseconds >> 1);
+    // multiply the delay time by the external clock frequency.
+    duration = i_microseconds * (G_gpe_shared_data->nest_freq_div / 1000000);
 
     // Calculate the decrementer register value at the end of the busy wait period
     end_decrementer_value = start_decrementer_value - duration;
 
-    if(start_decrementer_value < end_decrementer_value);          // decrementer overflows during the busy wait?
+    if(start_decrementer_value < end_decrementer_value)           // decrementer overflows during the busy wait?
     {
+        PK_TRACE("busy_wait: overflow! start=0x%08X, end=0x%08X, duration=%d",
+                 start_decrementer_value, end_decrementer_value, duration);
         MFDEC(current_decrementer_value);
         while(current_decrementer_value < end_decrementer_value)  // Wait until Decrementer overflows
             MFDEC(current_decrementer_value);
