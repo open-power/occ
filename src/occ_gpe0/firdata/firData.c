@@ -83,7 +83,7 @@ typedef struct
 
 
 /* Uncomment for additional debug traces */
-#if 0
+#if 0 
 #define DEBUG_PRD_CHKSTOP_ANALYSIS
 #endif
 
@@ -949,15 +949,14 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
                            l_existBits.mcbist_mc_Mask,  l_existBits.mcs_mi_Mask,
                            l_existBits.mca_dmi_Mask );
 #endif
-
                 /* Add this PROC to the PNOR. */
                 sTrgt = SCOM_Trgt_getTrgt(TRGT_PROC, p, 0, fsi, isM);
                 full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, l_chipPtr );
+
                 /* noAttn is true when we have global regs but none */
                 /* indicate an attention is present                 */
                 if ( full ) break;
                 if ( noAttn ) continue; /* Skip other proc chiplets */
-
 
                 /* gather other chiplets on the processor */
                 for ( u = 0; u < MAX_XBUS_PER_PROC; u++ )
@@ -1159,7 +1158,6 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
                 }
                 if ( full ) break;
 
-                break; //@TODO remove when 2 proc support is in place
             } /* if processor chip type */
             else if  (HOMER_CHIP_CENTAUR == l_chipPtr->chipType)
             {

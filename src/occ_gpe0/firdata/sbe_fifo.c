@@ -26,6 +26,7 @@
 #include <fsi.h>
 #include <native.h>
 
+extern void busy_wait(uint32_t t_microseconds);
 /** @brief  Waits for FIFO to be ready to be written to
  *  @param  i_target The SCOM target.
  *  @return Non-SUCCESS if the SCOM fails. SUCCESS otherwise.
@@ -41,7 +42,7 @@ uint32_t waitUpFifoReady(SCOM_Trgt_t* i_target)
     do
     {
         //Read upstream status to see if there is room for more data
-        l_rc = getfsi(*i_target, l_addr, &l_data);
+        l_rc = getfsi(i_target, l_addr, &l_data);
         if(l_rc != SUCCESS)
         {
             TRAC_ERR("waitUpFifoReady: failed to getfsi from addr 0x%08x",
@@ -63,7 +64,7 @@ uint32_t waitUpFifoReady(SCOM_Trgt_t* i_target)
             break;
         }
 
-        sleep(10000); //sleep for 10,000 ns
+        busy_wait(10); //sleep for 10,000 ns
         l_elapsed_time_ns += 10000;
     }while(TRUE);
 
@@ -86,7 +87,7 @@ uint32_t waitDnFifoReady(SCOM_Trgt_t* i_target, uint32_t* o_status)
     {
         // read dnstream status to see if data ready to be read
         // or if has hit the EOT
-        l_rc = getfsi(*i_target, l_addr, o_status);
+        l_rc = getfsi(i_target, l_addr, o_status);
         if(l_rc != SUCCESS)
         {
             return l_rc;
@@ -96,11 +97,6 @@ uint32_t waitDnFifoReady(SCOM_Trgt_t* i_target, uint32_t* o_status)
             (*o_status & DNFIFO_STATUS_DEQUEUED_EOT_FLAG))
         {
             break;
-        }
-        else
-        {
-            TRAC_IMP("SBE status reg returned fifo empty or dequeued eot flag 0x%.8X",
-                      *o_status);
         }
 
         // Check for timeout
@@ -112,7 +108,7 @@ uint32_t waitDnFifoReady(SCOM_Trgt_t* i_target, uint32_t* o_status)
             break;
         }
 
-        sleep(10000); // wait for 10,000 ns
+        busy_wait(10); // wait for 10,000 ns
         l_elapsed_time_ns += 10000;
 
     }while(TRUE);
@@ -129,13 +125,11 @@ uint32_t writeRequest(SCOM_Trgt_t* i_target, uint32_t* i_fifoRequest)
 {
     uint32_t l_rc = SUCCESS;
 
-    TRAC_IMP("Enter writeRequest");
-
     // Ensure Downstream Max Transfer Counter is 0 non-0 can cause
     // protocol issues)
     uint32_t l_addr = SBE_FIFO_DNFIFO_MAX_TSFR;
     uint32_t l_data = 0;
-    l_rc = putfsi(*i_target, l_addr, l_data);
+    l_rc = putfsi(i_target, l_addr, l_data);
     if(l_rc != SUCCESS)
     {
         TRAC_ERR("writeRequest: failed to putfsi to addr 0x%08x",
@@ -159,7 +153,7 @@ uint32_t writeRequest(SCOM_Trgt_t* i_target, uint32_t* i_fifoRequest)
         }
 
         //Send data into fifo
-        l_rc = putfsi(*i_target, l_addr, *l_sent);
+        l_rc = putfsi(i_target, l_addr, *l_sent);
         if(l_rc != SUCCESS)
         {
             TRAC_ERR("writeRequest: failed to putfsi to addr 0x%08x",
@@ -179,13 +173,11 @@ uint32_t writeRequest(SCOM_Trgt_t* i_target, uint32_t* i_fifoRequest)
 
     l_addr = SBE_FIFO_UPFIFO_SIG_EOT;
     l_data = FSB_UPFIFO_SIG_EOT;
-    l_rc = putfsi(*i_target, l_addr, l_data);
+    l_rc = putfsi(i_target, l_addr, l_data);
     if(l_rc != SUCCESS)
     {
         TRAC_ERR("writeRequest: failed to putfsi to addr 0x%08x", l_addr);
     }
-
-    TRAC_IMP("Exit writeRequest");
 
     return l_rc;
 }
@@ -204,8 +196,6 @@ uint32_t readResponse(SCOM_Trgt_t* i_target,
 {
     uint32_t l_rc = SUCCESS;
     uint32_t l_readBuffer[READ_BUFFER_SIZE];
-
-    TRAC_IMP("Enter readResponse");
 
     // EOT is expected before the response buffer is full. Room for
     // the PCBPIB status or FFDC is included, but is only returned
@@ -261,7 +251,7 @@ uint32_t readResponse(SCOM_Trgt_t* i_target,
         }
 
         // Read next word
-        l_rc = getfsi(*i_target, SBE_FIFO_DNFIFO_DATA_OUT, &l_lastWord);
+        l_rc = getfsi(i_target, SBE_FIFO_DNFIFO_DATA_OUT, &l_lastWord);
         if(l_rc != SUCCESS)
         {
             return l_rc;
@@ -299,7 +289,7 @@ uint32_t readResponse(SCOM_Trgt_t* i_target,
 
     // Notify SBE that EOT has been received
     uint32_t l_eotSig = FSB_UPFIFO_SIG_EOT;
-    l_rc = putfsi(*i_target, SBE_FIFO_DNFIFO_ACK_EOT, l_eotSig);
+    l_rc = putfsi(i_target, SBE_FIFO_DNFIFO_ACK_EOT, l_eotSig);
     if(l_rc != SUCCESS)
     {
         return l_rc;
@@ -340,7 +330,6 @@ uint32_t readResponse(SCOM_Trgt_t* i_target,
         l_rc = FAIL;
     }
 
-    TRAC_IMP("Exit readResponse");
     return l_rc;
 }
 
@@ -358,8 +347,6 @@ uint32_t performFifoChipOp(SCOM_Trgt_t* i_target,
 {
     uint32_t l_rc = SUCCESS;
 
-    TRAC_IMP("Enter performFifoChipOp");
-
     l_rc = writeRequest(i_target, i_fifoRequest);
     if(l_rc != SUCCESS)
     {
@@ -370,8 +357,6 @@ uint32_t performFifoChipOp(SCOM_Trgt_t* i_target,
                         i_fifoRequest,
                         i_fifoResponse,
                         i_responseSize);
-
-    TRAC_IMP("Exit performFifoChioOp");
 
     return l_rc;
 }
@@ -385,8 +370,6 @@ uint32_t performFifoChipOp(SCOM_Trgt_t* i_target,
 int32_t putFifoScom(SCOM_Trgt_t* i_target, uint64_t i_addr, uint64_t i_data)
 {
     uint32_t l_rc = SUCCESS;
-
-    TRAC_IMP("Enter putFifoScom");
 
     struct fifoPutScomRequest  l_fifoRequest;
     struct fifoPutScomResponse l_fifoResponse;
@@ -403,8 +386,6 @@ int32_t putFifoScom(SCOM_Trgt_t* i_target, uint64_t i_addr, uint64_t i_data)
                              (uint32_t*)&l_fifoResponse,
                              sizeof(struct fifoPutScomResponse));
 
-    TRAC_IMP("Exit putFifoScom");
-
     return l_rc;
 }
 
@@ -417,8 +398,6 @@ int32_t putFifoScom(SCOM_Trgt_t* i_target, uint64_t i_addr, uint64_t i_data)
 int32_t getFifoScom(SCOM_Trgt_t* i_target, uint64_t i_addr, uint64_t* o_data)
 {
     uint32_t l_rc = SUCCESS;
-
-    TRAC_IMP("Enter getFifoScom");
 
     struct fifoGetScomRequest  l_fifoRequest;
     struct fifoGetScomResponse l_fifoResponse;
@@ -436,8 +415,6 @@ int32_t getFifoScom(SCOM_Trgt_t* i_target, uint64_t i_addr, uint64_t* o_data)
 
     //Always return data even if there is an error
     *o_data = l_fifoResponse.data;
-
-    TRAC_IMP("Exit getFifoScom");
 
     return l_rc;
 }

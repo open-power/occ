@@ -34,7 +34,7 @@
  * @param  o_val  Returned value.
  * @return Non-SUCCESS if an internal function fails. SUCCESS otherwise.
  */
-int32_t getfsi( SCOM_Trgt_t i_trgt, uint32_t i_addr, uint32_t * o_val );
+int32_t getfsi( SCOM_Trgt_t* i_trgt, uint32_t i_addr, uint32_t * o_val );
 
 /**
  * @brief  Write a FSI register.
@@ -43,5 +43,5 @@ int32_t getfsi( SCOM_Trgt_t i_trgt, uint32_t i_addr, uint32_t * o_val );
  * @param  o_val  Value to write.
  * @return Non-SUCCESS if an internal function fails. SUCCESS otherwise.
  */
-int32_t putfsi( SCOM_Trgt_t i_trgt, uint32_t i_addr, uint32_t i_val );
+int32_t putfsi( SCOM_Trgt_t* i_trgt, uint32_t i_addr, uint32_t i_val );
 

@@ -95,11 +95,11 @@ int32_t poll_for_complete( uint32_t * o_val )
 /**
  * @brief Read a FSI register
  */
-int32_t getfsi( SCOM_Trgt_t i_trgt, uint32_t i_addr, uint32_t * o_val )
+int32_t getfsi( SCOM_Trgt_t* i_trgt, uint32_t i_addr, uint32_t * o_val )
 {
     int32_t rc = SUCCESS;
 
-    uint32_t fsi_addr = i_trgt.fsiBaseAddr | i_addr;
+    uint32_t fsi_addr = i_trgt->fsiBaseAddr | i_addr;
 
     /* setup the OPB command register */
     /*  only supporting 4-byte access */
@@ -123,11 +123,11 @@ int32_t getfsi( SCOM_Trgt_t i_trgt, uint32_t i_addr, uint32_t * o_val )
 /**
  * @brief Write a FSI register
  */
-int32_t putfsi( SCOM_Trgt_t i_trgt, uint32_t i_addr, uint32_t i_val )
+int32_t putfsi( SCOM_Trgt_t* i_trgt, uint32_t i_addr, uint32_t i_val )
 {
     int32_t rc = SUCCESS;
 
-    uint32_t fsi_addr = i_trgt.fsiBaseAddr | i_addr;
+    uint32_t fsi_addr = i_trgt->fsiBaseAddr | i_addr;
 
     /* setup the OPB command register */
     /*  only supporting 4-byte access */
