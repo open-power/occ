@@ -1052,6 +1052,19 @@ bool read_oppb_params()
             break;
         }
 
+        // Confirm whether we have wof support
+        if(!(G_oppb.wof.wof_enabled))
+        {
+            MAIN_TRAC_INFO("OPPB has WOF disabled.(%d)",
+                    G_oppb.wof.wof_enabled);
+            set_clear_wof_disabled( SET, WOF_RC_OPPB_WOF_DISABLED );
+        }
+        else
+        {
+            MAIN_TRAC_INFO("OPPB has WOF enabled(%d)",
+                    G_oppb.wof.wof_enabled);
+        }
+
     } while (0);
 
     if (l_reasonCode)

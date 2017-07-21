@@ -64,6 +64,7 @@
 #define WOF_RC_DRIVER_WOF_DISABLED                 0x00008000
 #define WOF_RC_UTURBO_IS_ZERO                      0x00010000
 #define WOF_RC_OCC_WOF_DISABLED                    0x00020000
+#define WOF_RC_OPPB_WOF_DISABLED                   0x00040000
 
 //***************************************************************************
 // Temp space used to save hard coded addresses

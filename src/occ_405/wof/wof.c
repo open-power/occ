@@ -1291,10 +1291,10 @@ void set_clear_wof_disabled( uint8_t i_action,
             // Set the bit
             g_wof->wof_disabled |= i_bit_mask;
 
-
-            // If OCC has not yet been enabled through TMGT/HTMGT, skip
+            // If OCC has not yet been enabled through TMGT/HTMGT/OPPB, skip
             // error log
-            if( g_wof->wof_disabled & WOF_RC_OCC_WOF_DISABLED )
+            if( (g_wof->wof_disabled & WOF_RC_OCC_WOF_DISABLED) ||
+                (g_wof->wof_disabled & WOF_RC_OPPB_WOF_DISABLED) )
             {
                 INTR_TRAC_ERR("OCC encountered a WOF error before TMGT/HTMGT"
                               " enabled it. wof_disabled = 0x%08x",
@@ -1340,6 +1340,7 @@ void set_clear_wof_disabled( uint8_t i_action,
                     l_errl = amec_set_freq_range(CURRENT_MODE());
                     if(l_errl)
                     {
+                        INTR_TRAC_ERR("WOF: amec_set_freq_range reported an error");
                         commitErrl( &l_errl);
                     }
                 }
@@ -1351,10 +1352,23 @@ void set_clear_wof_disabled( uint8_t i_action,
             g_wof->wof_disabled &= ~i_bit_mask;
 
             // If TMGT/HTMGT is enabling WOF, check for any previous
-            // errors and log if they exist.
-            if( i_bit_mask == WOF_RC_OCC_WOF_DISABLED )
+            // errors and log if they exist and if they
+            // should log an error.
+            if( (i_bit_mask == WOF_RC_OCC_WOF_DISABLED) ||
+                (i_bit_mask == WOF_RC_OPPB_WOF_DISABLED) )
             {
-                if( g_wof->wof_disabled )
+
+                uint32_t disabled_mask = WOF_RC_OCC_WOF_DISABLED |
+                                         WOF_RC_OPPB_WOF_DISABLED;
+
+                // If OPPB or (H)TMGT still say wof is disabled, don't log
+                // any errors if the other is still set.
+                if( g_wof->wof_disabled & disabled_mask )
+                {
+                    break;
+                }
+                // Log any lingering errors.
+                else if( g_wof->wof_disabled & ERRL_RETURN_CODES )
                 {
                     l_logError = true;
                 }
