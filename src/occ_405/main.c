@@ -153,7 +153,6 @@ FIR_HEAP_BUFFER(uint8_t G_fir_heap[FIR_HEAP_SECTION_SIZE]);
 FIR_PARMS_BUFFER(uint8_t G_fir_data_parms[FIR_PARMS_SECTION_SIZE]);
 uint32_t G_fir_master = FIR_OCC_NOT_FIR_MASTER;
 bool G_fir_collection_request_created = FALSE;
-GPE_BUFFER(ipc_scom_op_t G_scom_op);
 GpeRequest G_fir_collection_request;
 
 /*
@@ -1716,7 +1715,11 @@ void Main_thread_routine(void *private)
                     {
                         G_fir_collection_request_created = TRUE;
                         TRAC_IMP("fir data collection: scheduling gpe request");
-                        gpe_request_schedule(&G_fir_collection_request);
+                        l_rc = gpe_request_schedule(&G_fir_collection_request);
+                        {
+                            TRAC_IMP("failed to schedule fir data collection job");
+                        }
+
                         L_fir_collection_completed = TRUE;
                         G_fir_collection_required = FALSE;
                     }

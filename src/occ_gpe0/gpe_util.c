@@ -223,7 +223,7 @@ void ipc_scom_operation(ipc_msg_t* cmd, void* arg)
  *
  * Name: ipc_fir_collection
  *
- * Description: Does a getscom or putscom for the 405
+ * Description: Does fir data collection in case of a checkstop
  *
  * End Function Specification
  */
