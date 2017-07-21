@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -151,8 +151,9 @@ void busy_wait(uint32_t i_microseconds)
     MFDEC(start_decrementer_value);        // get the decrementer register value at the beginning
     current_decrementer_value = start_decrementer_value;
 
-    // multiply the delay time by the external clock frequency.
-    duration = i_microseconds * (G_gpe_shared_data->nest_freq_div / 1000000);
+    // multiply the delay time by the external clock frequency (~37.5 MHz)
+    duration =  (i_microseconds * 37);
+    duration += (i_microseconds >> 1);
 
     // Calculate the decrementer register value at the end of the busy wait period
     end_decrementer_value = start_decrementer_value - duration;
