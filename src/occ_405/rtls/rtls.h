@@ -61,6 +61,7 @@ typedef enum {
     TASK_ID_MEMORY_CONTROL,        // Memory (centaur/dimm) control task
     TASK_ID_NEST_DTS,
     TASK_ID_24X7,                  // 24x7 data collection task
+    TASK_ID_GPE_TIMINGS,
     TASK_END  // This must always be the last enum in this list,
               // so that TASK_END always equals the last task ID + 1.
 } task_id_t;
@@ -73,7 +74,7 @@ typedef struct
   uint32_t amess_dur;       // Combined duration of last mstr & slv AMEC state
   uint8_t  amess_state;     // Last AMEC state that was run
   uint64_t rtl_start;       // SsxTimebase of Start of current RTL Tick
-  uint64_t rtl_start_gpe;   // SsxTimebase of Start of current RTL Tick (for GPE > 250us meas)
+  uint64_t rtl_start_gpe[2];   // SsxTimebase of Start of current RTL Tick (for GPE > 1 tick)
   uint32_t gpe_dur[2];      // Duration of the GPE Engines / tick
   GpeRequest* gpe0_timing_request;   // GPE Request that facilitates GPE WC meas
   GpeRequest* gpe1_timing_request;   // GPE Request that facilitates GPE WC meas

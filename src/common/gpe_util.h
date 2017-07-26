@@ -33,7 +33,7 @@
 
 void gpe_set_ffdc(GpeErrorStruct *o_error, uint32_t i_addr, uint32_t i_rc, uint64_t i_ffdc);
 
-int wait_spi_completion(GpeErrorStruct *error, uint32_t reg, uint8_t timeout);
+int wait_spi_completion(GpeErrorStruct *error, uint32_t reg, uint32_t timeout);
 
 // Read decrementer register
 #define MFDEC(reg_var) \

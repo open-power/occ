@@ -77,11 +77,13 @@ void gpe_set_ffdc(GpeErrorStruct *o_error, uint32_t i_addr, uint32_t i_rc, uint6
  * End Function Specification
  */
 
-int wait_spi_completion(GpeErrorStruct *error, uint32_t reg, uint8_t timeout)
+int wait_spi_completion(GpeErrorStruct *error, uint32_t reg, uint32_t i_timeout)
 {
     int         i = 0;
-    int         rc;
-    uint64_t    status;
+    int         rc = 0;
+    uint64_t    status = 0;
+    uint32_t    wait_time = 0;
+    uint32_t    num_reads = 0;
 
     if((reg != SPIPSS_P2S_STATUS_REG) && (reg != SPIPSS_ADC_STATUS_REG))
     {
@@ -91,9 +93,23 @@ int wait_spi_completion(GpeErrorStruct *error, uint32_t reg, uint8_t timeout)
     }
     else
     {
-        // Keep polling the P2S_ONGOING bits for timeout
-        for (i = 0; i< timeout; i++)
+        // Read the P2S_ONGOING bits every 10us for i_timeout, if i_timeout is less than 10
+        // just wait i_timeout and check once
+        if(i_timeout >= 10)
         {
+            wait_time = 10;
+            num_reads = i_timeout / 10;
+        }
+        else
+        {
+             wait_time = i_timeout;
+             num_reads = 1;
+        }
+
+        for (i = 0; i< num_reads; i++)
+        {
+            busy_wait(wait_time);
+
             rc = getscom_abs(reg, &status);
             if(rc)
             {
@@ -112,18 +128,15 @@ int wait_spi_completion(GpeErrorStruct *error, uint32_t reg, uint8_t timeout)
                 rc = 0;
                 break;
             }
-
-            // sleep for 1 microsecond before retry
-            busy_wait(1);
         }
     }
 
-    //Timed out waiting on P2S_ONGOING / HWCTRL_ONGOING bit.
-    if (i >= timeout)
+    // Check if timed out waiting on P2S_ONGOING / HWCTRL_ONGOING bit
+    if (i >= num_reads)
     {
         PK_TRACE("gpe0:wait_spi_completion Timed out waiting for p2s_ongoing to clear.");
-        gpe_set_ffdc(error, reg, GPE_RC_SPI_TIMEOUT, rc);
         rc = GPE_RC_SPI_TIMEOUT;
+        gpe_set_ffdc(error, reg, GPE_RC_SPI_TIMEOUT, rc);
     }
 
     return rc;

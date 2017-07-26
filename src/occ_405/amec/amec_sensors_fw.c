@@ -79,7 +79,169 @@ void amec_slv_update_smh_sensors(int i_smh_state, uint32_t i_duration)
 void amec_slv_update_gpe_sensors(uint8_t i_gpe_engine)
 {
     // Update the duration in the fw timing table
-    G_fw_timing.gpe_dur[i_gpe_engine] = DURATION_IN_US_UNTIL_NOW_FROM(G_fw_timing.rtl_start_gpe);
+    G_fw_timing.gpe_dur[i_gpe_engine] = DURATION_IN_US_UNTIL_NOW_FROM(G_fw_timing.rtl_start_gpe[i_gpe_engine]);
+}
+
+// Function Specification
+//
+// Name: task_gpe_timings
+//
+// Description: Kick off tasks to time GPEs
+//
+// Thread: RealTime Loop
+//
+// End Function Specification
+#define MAX_CONSEC_TRACE 4
+void task_gpe_timings(task_t * i_task)
+{
+    errlHndl_t l_err                = NULL;
+    int rc                          = 0;
+    int rc2                         = 0;
+    static bool L_first_call        = TRUE;
+    bool l_gpe0_idle, l_gpe1_idle;
+    static uint8_t L_consec_trace_count[2] = {0};
+    gpe_gpenxiramdbg_t xsr_sprg0 = {0};
+    gpe_gpenxiramedr_t ir_edr = {0};
+    gpe_gpenxidbgpro_t iar_xsr = {0};
+
+    // ------------------------------------------------------
+    // Kick off GPE programs to track WorstCase time in GPE
+    // and update the sensors.
+    // ------------------------------------------------------
+    if(NULL != G_fw_timing.gpe0_timing_request)
+    {
+        //Check if GPE0 was able to complete the last GPE job within 1 tick
+        l_gpe0_idle = async_request_is_idle(&G_fw_timing.gpe0_timing_request->request);
+
+        if(l_gpe0_idle)
+        {
+            //reset the consecutive trace count
+            L_consec_trace_count[0] = 0;
+
+            //Now check if successful too.
+            if( async_request_completed(&(G_fw_timing.gpe0_timing_request->request)) )
+            {
+                // GPEtickdur0 = duration of last tick's PORE-GPE0 duration
+                sensor_update( AMECSENSOR_PTR(GPEtickdur0), G_fw_timing.gpe_dur[0]);
+            }
+            //This case is expected on the first call of the function.
+            //After that, this should not happen.
+            else if(!L_first_call)
+            {
+                //Note: FFDC for this case is gathered by each task
+                //responsible for a GPE job.
+                TRAC_INFO("GPE0 task idle but GPE0 task did not complete");
+            }
+
+            // Schedule the GPE Routines that will run and update the worst
+            // case timings (via callback) after they complete.  These GPE
+            // routines are the last GPE routines added to the queue
+            // during the RTL tick.
+            G_fw_timing.rtl_start_gpe[0] = G_fw_timing.rtl_start;
+            rc  = gpe_request_schedule(G_fw_timing.gpe0_timing_request);
+        }
+        else
+        {
+            // Reset will eventually be requested due to not having power measurement
+            // data after X ticks, but add some additional FFDC to the trace that
+            // will tell us what GPE job is currently executing.
+            INCREMENT_ERR_HISTORY(ERRH_GPE0_NOT_IDLE);
+
+            if(L_consec_trace_count[0] < MAX_CONSEC_TRACE)
+            {
+               xsr_sprg0.fields.xsr = in32(GPE_GPE0XIXSR);
+               xsr_sprg0.fields.sprg0 = in32(GPE_GPE0XISPRG0);
+               ir_edr.fields.edr = in32(GPE_GPE0XIEDR);
+               ir_edr.fields.ir = in32(GPE_GPE0XIIR);
+               iar_xsr.fields.iar = in32(GPE_GPE0XIIAR);
+               TRAC_ERR("GPE0 programs did not complete within one tick. "
+                         "XSR[0x%08x]  IAR[0x%08x] IR[0x%08x] EDR[0x%08x] SPRG0[0x%08X]",
+                         xsr_sprg0.fields.xsr, iar_xsr.fields.iar,
+                         ir_edr.fields.ir, ir_edr.fields.edr, xsr_sprg0.fields.sprg0);
+                L_consec_trace_count[0]++;
+            }
+        }
+
+    }
+    if(NULL != G_fw_timing.gpe1_timing_request)
+    {
+        //Check if GPE1 was able to complete the last GPE job within 1 tick
+        l_gpe1_idle = async_request_is_idle(&G_fw_timing.gpe1_timing_request->request);
+
+        if(l_gpe1_idle)
+        {
+            //reset the consecutive trace count
+            L_consec_trace_count[1] = 0;
+
+            //Now check if successful too.
+            if( async_request_completed(&(G_fw_timing.gpe1_timing_request->request)) )
+            {
+                // GPEtickdur1 = duration of last tick's PORE-GPE1 duration
+                sensor_update( AMECSENSOR_PTR(GPEtickdur1), G_fw_timing.gpe_dur[1]);
+            }
+            //This case is expected on the first call of the function.
+            //After that, this should not happen.
+            else if(!L_first_call)
+            {
+                //Note: FFDC for this case is gathered by each task
+                //responsible for a GPE job.
+                TRAC_INFO("GPE1 task idle but GPE1 task did not complete");
+            }
+
+            // Schedule the GPE Routines that will run and update the worst
+            // case timings (via callback) after they complete.  These GPE
+            // routines are the last GPE routines added to the queue
+            // during the RTL tick.
+            G_fw_timing.rtl_start_gpe[1] = G_fw_timing.rtl_start;
+            rc2 = gpe_request_schedule(G_fw_timing.gpe1_timing_request);
+
+        }
+        else
+        {
+            INCREMENT_ERR_HISTORY(ERRH_GPE1_NOT_IDLE);
+
+            if(L_consec_trace_count[1] < MAX_CONSEC_TRACE)
+            {
+                xsr_sprg0.fields.xsr = in32(GPE_GPE1XIXSR);
+                xsr_sprg0.fields.sprg0 = in32(GPE_GPE1XISPRG0);
+                ir_edr.fields.edr = in32(GPE_GPE1XIEDR);
+                ir_edr.fields.ir = in32(GPE_GPE1XIIR);
+                iar_xsr.fields.iar = in32(GPE_GPE1XIIAR);
+                TRAC_ERR("GPE1 programs did not complete within one tick. "
+                         "XSR[0x%08x]  IAR[0x%08x] IR[0x%08x] EDR[0x%08x] SPRG0[0x%08X]",
+                         xsr_sprg0.fields.xsr, iar_xsr.fields.iar,
+                         ir_edr.fields.ir, ir_edr.fields.edr, xsr_sprg0.fields.sprg0);
+                L_consec_trace_count[1]++;
+            }
+        }
+    }
+    if(rc || rc2)
+    {
+        /* @
+         * @errortype
+         * @moduleid    AMEC_UPDATE_FW_SENSORS
+         * @reasoncode  SSX_GENERIC_FAILURE
+         * @userdata1   return code - gpe0
+         * @userdata2   return code - gpe1
+         * @userdata4   OCC_NO_EXTENDED_RC
+         * @devdesc     Failure to schedule PORE-GPE poreFlex object for FW timing
+         *              analysis.
+         */
+        l_err = createErrl(
+            AMEC_UPDATE_FW_SENSORS,             //modId
+            SSX_GENERIC_FAILURE,                //reasoncode
+            OCC_NO_EXTENDED_RC,                 //Extended reason code
+            ERRL_SEV_INFORMATIONAL,             //Severity
+            NULL,                               //Trace Buf
+            DEFAULT_TRACE_SIZE,                 //Trace Size
+            rc,                                 //userdata1
+            rc2);                               //userdata2
+
+        // commit error log
+        commitErrl( &l_err );
+    }
+
+    L_first_call = FALSE;
 }
 
 
@@ -95,13 +257,6 @@ void amec_slv_update_gpe_sensors(uint8_t i_gpe_engine)
 #define MAX_CONSEC_TRACE 4
 void amec_update_fw_sensors(void)
 {
-    errlHndl_t l_err                = NULL;
-    int rc                          = 0;
-    int rc2                         = 0;
-    static bool l_first_call        = TRUE;
-    bool l_gpe0_idle, l_gpe1_idle;
-    static uint8_t L_consec_trace_count[2] = {0};
-
     // ------------------------------------------------------
     // Update OCC Firmware Sensors from last tick
     // ------------------------------------------------------
@@ -120,140 +275,6 @@ void amec_update_fw_sensors(void)
     {
         // AMESSdurX = duration of last tick's AMEC state
         sensor_update( AMECSENSOR_ARRAY_PTR(AMESSdur0, l_last_state),  G_fw_timing.amess_dur);
-    }
-
-    // ------------------------------------------------------
-    // Kick off GPE programs to track WorstCase time in GPE
-    // and update the sensors.
-    // ------------------------------------------------------
-    if( (NULL != G_fw_timing.gpe0_timing_request) &&
-        (NULL != G_fw_timing.gpe1_timing_request) )
-    {
-        //Check if both GPE engines were able to complete the last GPE job on
-        //the queue within 1 tick.
-        l_gpe0_idle = async_request_is_idle(&G_fw_timing.gpe0_timing_request->request);
-        l_gpe1_idle = async_request_is_idle(&G_fw_timing.gpe1_timing_request->request);
-
-        if(l_gpe0_idle && l_gpe1_idle)
-        {
-            //reset the consecutive trace counts
-            L_consec_trace_count[0] = 0;
-            L_consec_trace_count[1] = 0;
-
-            //Both GPE engines finished on time. Now check if they were
-            //successful too.
-            if( async_request_completed(&(G_fw_timing.gpe0_timing_request->request)) &&
-                async_request_completed(&(G_fw_timing.gpe1_timing_request->request)) )
-            {
-                // GPEtickdur0 = duration of last tick's PORE-GPE0 duration
-                sensor_update( AMECSENSOR_PTR(GPEtickdur0), G_fw_timing.gpe_dur[0]);
-                // GPEtickdur1 = duration of last tick's PORE-GPE1 duration
-                sensor_update( AMECSENSOR_PTR(GPEtickdur1), G_fw_timing.gpe_dur[1]);
-            }
-            else
-            {
-                //This case is expected on the first call of the function.
-                //After that, this should not happen.
-                if(!l_first_call)
-                {
-                    //Note: FFDC for this case is gathered by each task
-                    //responsible for a GPE job.
-                    TRAC_INFO("GPE task idle but GPE task did not complete");
-                }
-                l_first_call = FALSE;
-            }
-
-            // Update Time used to measure GPE duration.
-            G_fw_timing.rtl_start_gpe = G_fw_timing.rtl_start;
-
-            // Schedule the GPE Routines that will run and update the worst
-            // case timings (via callback) after they complete.  These GPE
-            // routines are the last GPE routines added to the queue
-            // during the RTL tick.
-            rc  = gpe_request_schedule(G_fw_timing.gpe0_timing_request);
-            rc2 = gpe_request_schedule(G_fw_timing.gpe1_timing_request);
-
-            if(rc || rc2)
-            {
-                /* @
-                 * @errortype
-                 * @moduleid    AMEC_UPDATE_FW_SENSORS
-                 * @reasoncode  SSX_GENERIC_FAILURE
-                 * @userdata1   return code - gpe0
-                 * @userdata2   return code - gpe1
-                 * @userdata4   OCC_NO_EXTENDED_RC
-                 * @devdesc     Failure to schedule PORE-GPE poreFlex object for FW timing
-                 *              analysis.
-                 */
-                l_err = createErrl(
-                    AMEC_UPDATE_FW_SENSORS,             //modId
-                    SSX_GENERIC_FAILURE,                //reasoncode
-                    OCC_NO_EXTENDED_RC,                 //Extended reason code
-                    ERRL_SEV_INFORMATIONAL,             //Severity
-                    NULL,                               //Trace Buf
-                    DEFAULT_TRACE_SIZE,                 //Trace Size
-                    rc,                                 //userdata1
-                    rc2);                               //userdata2
-
-                // commit error log
-                commitErrl( &l_err );
-            }
-        }
-        else
-        {
-            gpe_gpenxiramdbg_t xsr_sprg0 = {0};
-            gpe_gpenxiramedr_t ir_edr = {0};
-            gpe_gpenxidbgpro_t iar_xsr = {0};
-
-            // Reset will eventually be requested due to not having power measurement
-            // data after X ticks, but add some additional FFDC to the trace that
-            // will tell us what GPE job is currently executing.
-            if(!l_gpe0_idle)
-            {
-                INCREMENT_ERR_HISTORY(ERRH_GPE0_NOT_IDLE);
-
-                if(L_consec_trace_count[0] < MAX_CONSEC_TRACE)
-                {
-                   xsr_sprg0.fields.xsr = in32(GPE_GPE0XIXSR);
-                   xsr_sprg0.fields.sprg0 = in32(GPE_GPE0XISPRG0);
-                   ir_edr.fields.edr = in32(GPE_GPE0XIEDR);
-                   ir_edr.fields.ir = in32(GPE_GPE0XIIR);
-                   iar_xsr.fields.iar = in32(GPE_GPE0XIIAR);
-                   TRAC_ERR("GPE0 programs did not complete within one tick. "
-                             "XSR[0x%08x]  IAR[0x%08x] IR[0x%08x] EDR[0x%08x] SPRG0[0x%08X]",
-                             xsr_sprg0.fields.xsr, iar_xsr.fields.iar,
-                             ir_edr.fields.ir, ir_edr.fields.edr, xsr_sprg0.fields.sprg0);
-                    L_consec_trace_count[0]++;
-                }
-            }
-            else
-            {
-                 L_consec_trace_count[0] = 0;
-            }
-
-            if(!l_gpe1_idle)
-            {
-                INCREMENT_ERR_HISTORY(ERRH_GPE1_NOT_IDLE);
-
-                if(L_consec_trace_count[1] < MAX_CONSEC_TRACE)
-                {
-                    xsr_sprg0.fields.xsr = in32(GPE_GPE1XIXSR);
-                    xsr_sprg0.fields.sprg0 = in32(GPE_GPE1XISPRG0);
-                    ir_edr.fields.edr = in32(GPE_GPE1XIEDR);
-                    ir_edr.fields.ir = in32(GPE_GPE1XIIR);
-                    iar_xsr.fields.iar = in32(GPE_GPE1XIIAR);
-                    TRAC_ERR("GPE1 programs did not complete within one tick. "
-                             "XSR[0x%08x]  IAR[0x%08x] IR[0x%08x] EDR[0x%08x] SPRG0[0x%08X]",
-                             xsr_sprg0.fields.xsr, iar_xsr.fields.iar,
-                             ir_edr.fields.ir, ir_edr.fields.edr, xsr_sprg0.fields.sprg0);
-                    L_consec_trace_count[1]++;
-                }
-            }
-            else
-            {
-                 L_consec_trace_count[1] = 0;
-            }
-        }
     }
 }
 

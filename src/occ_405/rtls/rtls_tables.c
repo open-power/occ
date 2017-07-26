@@ -34,6 +34,7 @@
 #include <centaur_control.h>
 #include "memory.h"
 #include "amec_master_smh.h"
+#include "amec_sensors_fw.h"
 #include "dimm.h"
 #include <common.h>
 
@@ -76,6 +77,8 @@
 // Don't run watchdog poke in all cases, expecially if a reset request is pending
 #define FLAGS_POKE_WDT RTL_FLAG_RUN | RTL_FLAG_MSTR | RTL_FLAG_NOTMSTR | RTL_FLAG_STANDBY | \
                        RTL_FLAG_OBS | RTL_FLAG_ACTIVE | RTL_FLAG_MSTR_READY | RTL_FLAG_NO_APSS | RTL_FLAG_APSS_NOT_INITD
+
+#define FLAGS_GPE_TIMINGS          RTL_FLAG_MSTR | RTL_FLAG_NOTMSTR | RTL_FLAG_OBS | RTL_FLAG_ACTIVE | RTL_FLAG_MSTR_READY | RTL_FLAG_NO_APSS | RTL_FLAG_RUN |                                       RTL_FLAG_APSS_NOT_INITD
 
 // TEMP/TODO RTC: 133824 - New GPU interface via main memory and SMBUS
 #define FLAGS_GPU_SM
@@ -123,6 +126,7 @@ task_t G_task_table[TASK_END] = {
     { FLAGS_MEMORY_CONTROL,        task_memory_control,            (void *) &G_memory_control_task },  // TASK_ID_MEMORY_CONTROL
     { FLAGS_NEST_DTS,              task_nest_dts,                  NULL },
     { FLAGS_24X7,                  task_24x7,                      NULL },  // TASK_ID_24X7
+    { FLAGS_GPE_TIMINGS,           task_gpe_timings,               NULL },  // TASK_ID_GPE_TIMINGS
 };
 
 const uint8_t G_tick0_seq[] = {
@@ -135,6 +139,7 @@ const uint8_t G_tick0_seq[] = {
                                 TASK_ID_MEMORY_CONTROL,
                                 TASK_ID_CORE_DATA_CONTROL,
                                 TASK_ID_24X7,
+                                TASK_ID_GPE_TIMINGS,
                                 TASK_ID_DCOM_WAIT_4_MSTR,
                                 TASK_ID_DCOM_RX_INBX,
                                 TASK_ID_DCOM_RX_OUTBX,
@@ -156,6 +161,7 @@ const uint8_t G_tick1_seq[] = {
                                 TASK_ID_CORE_DATA_CONTROL,
                                 TASK_ID_24X7,
                                 TASK_ID_POKE_WDT,
+                                TASK_ID_GPE_TIMINGS,
                                 TASK_ID_DCOM_WAIT_4_MSTR,
                                 TASK_ID_DCOM_RX_INBX,
                                 TASK_ID_DCOM_RX_OUTBX,
@@ -177,6 +183,7 @@ const uint8_t G_tick2_seq[] = {
                                 TASK_ID_MEMORY_CONTROL,
                                 TASK_ID_CORE_DATA_CONTROL,
                                 TASK_ID_24X7,
+                                TASK_ID_GPE_TIMINGS,
                                 TASK_ID_DCOM_WAIT_4_MSTR,
                                 TASK_ID_DCOM_RX_INBX,
                                 TASK_ID_DCOM_RX_OUTBX,
@@ -198,6 +205,7 @@ const uint8_t G_tick3_seq[] = {
                                 TASK_ID_MEMORY_CONTROL,
                                 TASK_ID_CORE_DATA_CONTROL,
                                 TASK_ID_24X7,
+                                TASK_ID_GPE_TIMINGS,
                                 TASK_ID_DCOM_WAIT_4_MSTR,
                                 TASK_ID_DCOM_RX_INBX,
                                 TASK_ID_DCOM_RX_OUTBX,
@@ -219,6 +227,7 @@ const uint8_t G_tick4_seq[] = {
                                 TASK_ID_MEMORY_CONTROL,
                                 TASK_ID_CORE_DATA_CONTROL,
                                 TASK_ID_24X7,
+                                TASK_ID_GPE_TIMINGS,
                                 TASK_ID_DCOM_WAIT_4_MSTR,
                                 TASK_ID_DCOM_RX_INBX,
                                 TASK_ID_DCOM_RX_OUTBX,
@@ -240,6 +249,7 @@ const uint8_t G_tick5_seq[] = {
                                 TASK_ID_CORE_DATA_CONTROL,
                                 TASK_ID_24X7,
                                 TASK_ID_POKE_WDT,
+                                TASK_ID_GPE_TIMINGS,
                                 TASK_ID_DCOM_WAIT_4_MSTR,
                                 TASK_ID_DCOM_RX_INBX,
                                 TASK_ID_DCOM_RX_OUTBX,
@@ -261,6 +271,7 @@ const uint8_t G_tick6_seq[] = {
                                 TASK_ID_MEMORY_CONTROL,
                                 TASK_ID_CORE_DATA_CONTROL,
                                 TASK_ID_24X7,
+                                TASK_ID_GPE_TIMINGS,
                                 TASK_ID_DCOM_WAIT_4_MSTR,
                                 TASK_ID_DCOM_RX_INBX,
                                 TASK_ID_DCOM_RX_OUTBX,
@@ -281,6 +292,7 @@ const uint8_t G_tick7_seq[] = {
                                 TASK_ID_MEMORY_CONTROL,
                                 TASK_ID_CORE_DATA_CONTROL,
                                 TASK_ID_24X7,
+                                TASK_ID_GPE_TIMINGS,
                                 TASK_ID_DCOM_WAIT_4_MSTR,
                                 TASK_ID_DCOM_RX_INBX,
                                 TASK_ID_DCOM_RX_OUTBX,
@@ -302,6 +314,7 @@ const uint8_t G_tick8_seq[] = {
                                 TASK_ID_MEMORY_CONTROL,
                                 TASK_ID_CORE_DATA_CONTROL,
                                 TASK_ID_24X7,
+                                TASK_ID_GPE_TIMINGS,
                                 TASK_ID_DCOM_WAIT_4_MSTR,
                                 TASK_ID_DCOM_RX_INBX,
                                 TASK_ID_DCOM_RX_OUTBX,
@@ -323,6 +336,7 @@ const uint8_t G_tick9_seq[] = {
                                 TASK_ID_CORE_DATA_CONTROL,
                                 TASK_ID_24X7,
                                 TASK_ID_POKE_WDT,
+                                TASK_ID_GPE_TIMINGS,
                                 TASK_ID_DCOM_WAIT_4_MSTR,
                                 TASK_ID_DCOM_RX_INBX,
                                 TASK_ID_DCOM_RX_OUTBX,
@@ -344,6 +358,7 @@ const uint8_t G_tick10_seq[] = {
                                 TASK_ID_MEMORY_CONTROL,
                                 TASK_ID_CORE_DATA_CONTROL,
                                 TASK_ID_24X7,
+                                TASK_ID_GPE_TIMINGS,
                                 TASK_ID_DCOM_WAIT_4_MSTR,
                                 TASK_ID_DCOM_RX_INBX,
                                 TASK_ID_DCOM_RX_OUTBX,
@@ -364,6 +379,7 @@ const uint8_t G_tick11_seq[] = {
                                 TASK_ID_MEMORY_CONTROL,
                                 TASK_ID_CORE_DATA_CONTROL,
                                 TASK_ID_24X7,
+                                TASK_ID_GPE_TIMINGS,
                                 TASK_ID_DCOM_WAIT_4_MSTR,
                                 TASK_ID_DCOM_RX_INBX,
                                 TASK_ID_DCOM_RX_OUTBX,
@@ -385,6 +401,7 @@ const uint8_t G_tick12_seq[] = {
                                 TASK_ID_MEMORY_CONTROL,
                                 TASK_ID_CORE_DATA_CONTROL,
                                 TASK_ID_24X7,
+                                TASK_ID_GPE_TIMINGS,
                                 TASK_ID_DCOM_WAIT_4_MSTR,
                                 TASK_ID_DCOM_RX_INBX,
                                 TASK_ID_DCOM_RX_OUTBX,
@@ -406,6 +423,7 @@ const uint8_t G_tick13_seq[] = {
                                 TASK_ID_CORE_DATA_CONTROL,
                                 TASK_ID_24X7,
                                 TASK_ID_POKE_WDT,
+                                TASK_ID_GPE_TIMINGS,
                                 TASK_ID_DCOM_WAIT_4_MSTR,
                                 TASK_ID_DCOM_RX_INBX,
                                 TASK_ID_DCOM_RX_OUTBX,
@@ -427,6 +445,7 @@ const uint8_t G_tick14_seq[] = {
                                 TASK_ID_MEMORY_CONTROL,
                                 TASK_ID_CORE_DATA_CONTROL,
                                 TASK_ID_24X7,
+                                TASK_ID_GPE_TIMINGS,
                                 TASK_ID_DCOM_WAIT_4_MSTR,
                                 TASK_ID_DCOM_RX_INBX,
                                 TASK_ID_DCOM_RX_OUTBX,
@@ -447,6 +466,7 @@ const uint8_t G_tick15_seq[] = {
                                 TASK_ID_MEMORY_CONTROL,
                                 TASK_ID_CORE_DATA_CONTROL,
                                 TASK_ID_24X7,
+                                TASK_ID_GPE_TIMINGS,
                                 TASK_ID_DCOM_WAIT_4_MSTR,
                                 TASK_ID_DCOM_RX_INBX,
                                 TASK_ID_DCOM_RX_OUTBX,

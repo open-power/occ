@@ -216,10 +216,10 @@ void apss_continue_pwr_meas_read(ipc_msg_t* cmd, void* arg)
 #endif
 
     do{
-        // wait for ADC completion, or timeout after 100 micro seconds.
+        // wait for ADC completion, or timeout after 120us (from Jordan for 16 channels)
         // scom register SPIPSS_ADC_STATUS_REG's bit 0 (HWCTRL_ONGOING)
         // indicates when completion occurs.
-        rc = wait_spi_completion(&(args->error), SPIPSS_ADC_STATUS_REG, 100);
+        rc = wait_spi_completion(&(args->error), SPIPSS_ADC_STATUS_REG, 120);
         if(rc) // Timeout Reached, and SPI transaction didn't complete
         {
             PK_TRACE("apss_continue_pwr_meas_read:wait_spi_completion Timed out, rc = 0x%08x",
@@ -360,18 +360,6 @@ void apss_complete_pwr_meas_read(ipc_msg_t* cmd, void* arg)
     apss_complete_args_t *args = (apss_complete_args_t*)async_cmd->cmd_data;
     uint32_t     rdata_reg = 0;
     do {
-        // wait for ADC completion, or timeout after 100 micro seconds.
-        // scom register SPIPSS_ADC_STATUS_REG's bit 0 (HWCTRL_ONGOING)
-        // indicates when completion occurs.
-        rc = wait_spi_completion(&(args->error), SPIPSS_ADC_STATUS_REG, 100);
-        if(rc) // Timeout Reached, and SPI transaction didn't complete
-        {
-            PK_TRACE("apss_complete_pwr_meas_read:wait_spi_completion Timed out, rc = 0x%08x",
-                     rc);
-            // FFDC already set inside wait_spi_completion
-            break;
-        }
-
         // Get Time of Day
         rc = getscom_abs(TOD_VALUE_REG, &args->meas_data[3]);
         if(rc)
@@ -379,6 +367,18 @@ void apss_complete_pwr_meas_read(ipc_msg_t* cmd, void* arg)
             PK_TRACE("apss_complete_pwr_meas_read: TOD_VALUE_REG getscom failed. rc = 0x%08x",
                      rc);
             gpe_set_ffdc(&(args->error), TOD_VALUE_REG, GPE_RC_SCOM_GET_FAILED, rc);
+            break;
+        }
+
+        // wait for completion, or timeout after 40us (from Jordan for GPIOs)
+        // scom register SPIPSS_ADC_STATUS_REG's bit 0 (HWCTRL_ONGOING)
+        // indicates when completion occurs.
+        rc = wait_spi_completion(&(args->error), SPIPSS_ADC_STATUS_REG, 40);
+        if(rc) // Timeout Reached, and SPI transaction didn't complete
+        {
+            PK_TRACE("apss_complete_pwr_meas_read:wait_spi_completion Timed out, rc = 0x%08x",
+                     rc);
+            // FFDC already set inside wait_spi_completion
             break;
         }
 

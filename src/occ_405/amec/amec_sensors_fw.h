@@ -47,6 +47,9 @@ void amec_slv_update_smh_sensors(int i_smh_state, uint32_t i_duration);
 // Function that updates the AMEC interim structures with GPE Engine Durations
 void amec_slv_update_gpe_sensors(uint8_t i_gpe_engine);
 
+// Function to kick of GPE timing nop task on both GPEs
+void task_gpe_timings( task_t * i_task );
+
 // Function that updates the AMEC FW sensors
 void amec_update_fw_sensors(void);
 
