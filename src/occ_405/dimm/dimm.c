@@ -273,11 +273,11 @@ void mark_dimm_failed()
 
     if (port == 0)
     {
-        INCREMENT_ERR_HISTORY(ERR_DIMM_I2C_PORT0);
+        INCREMENT_ERR_HISTORY(ERRH_DIMM_I2C_PORT0);
     }
     else
     {
-        INCREMENT_ERR_HISTORY(ERR_DIMM_I2C_PORT1);
+        INCREMENT_ERR_HISTORY(ERRH_DIMM_I2C_PORT1);
     }
 
     if (++G_dimm[port][dimm].errorCount > MAX_CONSECUTIVE_DIMM_RESETS)
@@ -734,7 +734,7 @@ void task_dimm_sm(struct task *i_self)
     static uint8_t L_readAttempt = 0;
     static bool L_readIssued = false;
     const uint8_t engine = G_sysConfigData.dimm_i2c_engine;
-    static bool L_occ_owns_lock = true;
+    static bool L_occ_owns_lock = false;
 
     if (G_mem_monitoring_allowed)
     {

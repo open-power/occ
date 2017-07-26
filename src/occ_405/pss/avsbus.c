@@ -516,11 +516,11 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
             if (i_cmdtype == AVSBUS_CURRENT)
             {
                 exrc = ERC_AVSBUS_VDD_CURRENT_FAILURE;
-                INCREMENT_ERR_HISTORY(ERR_AVSBUS_VDD_CURRENT);
+                INCREMENT_ERR_HISTORY(ERRH_AVSBUS_VDD_CURRENT);
             }
             else
             {
-                INCREMENT_ERR_HISTORY(ERR_AVSBUS_VDD_VOLTAGE);
+                INCREMENT_ERR_HISTORY(ERRH_AVSBUS_VDD_VOLTAGE);
             }
         }
         else
@@ -528,12 +528,12 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
             if (i_cmdtype == AVSBUS_CURRENT)
             {
                 exrc = ERC_AVSBUS_VDN_CURRENT_FAILURE;
-                INCREMENT_ERR_HISTORY(ERR_AVSBUS_VDN_CURRENT);
+                INCREMENT_ERR_HISTORY(ERRH_AVSBUS_VDN_CURRENT);
             }
             else
             {
                 exrc = ERC_AVSBUS_VDN_VOLTAGE_FAILURE;
-                INCREMENT_ERR_HISTORY(ERR_AVSBUS_VDN_VOLTAGE);
+                INCREMENT_ERR_HISTORY(ERRH_AVSBUS_VDN_VOLTAGE);
             }
         }
 
@@ -928,13 +928,13 @@ uint8_t process_avsbus_status()
                 if (vdd_status & AVSBUS_STATUS_OVER_TEMPERATURE_MASK)
                 {
                     foundOT = 1;
-                    INCREMENT_ERR_HISTORY(ERR_AVSBUS_VDD_OVER_TEMPERATURE);
+                    INCREMENT_ERR_HISTORY(ERRH_AVSBUS_VDD_OVER_TEMPERATURE);
                 }
 
                 if (vdd_status & AVSBUS_STATUS_OVER_CURRENT_MASK)
                 {
                     foundOC = 1;
-                    INCREMENT_ERR_HISTORY(ERR_AVSBUS_VDD_OVER_CURRENT);
+                    INCREMENT_ERR_HISTORY(ERRH_AVSBUS_VDD_OVER_CURRENT);
                 }
             }
             else
@@ -955,13 +955,13 @@ uint8_t process_avsbus_status()
                     {
                         foundOT = 1;
                     }
-                    INCREMENT_ERR_HISTORY(ERR_AVSBUS_VDN_OVER_TEMPERATURE);
+                    INCREMENT_ERR_HISTORY(ERRH_AVSBUS_VDN_OVER_TEMPERATURE);
                 }
 
                 if (vdn_status & AVSBUS_STATUS_OVER_CURRENT_MASK)
                 {
                     foundOC = 1;
-                    INCREMENT_ERR_HISTORY(ERR_AVSBUS_VDN_OVER_CURRENT);
+                    INCREMENT_ERR_HISTORY(ERRH_AVSBUS_VDN_OVER_CURRENT);
                 }
             }
             else
