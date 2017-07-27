@@ -36,11 +36,8 @@
 #include "gpe_export.h"
 
 #define KERNEL_STACK_SIZE  512
-#define MAIN_THREAD_STACK_SIZE 512
 
 uint8_t        G_kernel_stack[KERNEL_STACK_SIZE];
-uint8_t        G_main_thread_stack[MAIN_THREAD_STACK_SIZE];
-PkThread       G_main_thread;
 
 //Point to the GPE shared structure
 #define GPE_SHARED_DATA_ADDR 0xFFFB3C00
@@ -59,19 +56,6 @@ IPC_MSGQ_CREATE(G_gpe0_test_msgq0);
 //statically initialize an IPC message queue message.  Responses to
 //this message will automatically be placed on the message queue.
 IPC_MSGQ_MSG_CREATE(G_test_msg, IPC_ST_TEST_FUNC0, &G_gpe0_test_msgq0);
-
-
-// Main thread of execution. Currently does nothing
-void main_thread(void* arg)
-{
-    volatile uint64_t t_ticks = 0;
-
-    while(1)
-    {
-        pk_sleep(PK_MICROSECONDS(250));
-        t_ticks++;
-    }
-}
 
 // The main function is called by the boot code (after initializing some
 // registers)
@@ -113,26 +97,6 @@ int main(int argc, char **argv)
         PK_TRACE("ipc_enable failed with rc = 0x%08x", rc);
         pk_halt();
     }
-
-
-    //Initialize the thread control block for G_main_thread
-      pk_thread_create(&G_main_thread,
-                      (PkThreadRoutine)main_thread,
-                      (void*)NULL,
-                      (PkAddress)G_main_thread_stack,
-                      (size_t)MAIN_THREAD_STACK_SIZE,
-                      (PkThreadPriority)1);
-
-    //PK_TRACE_BIN("G_main_thread", &G_main_thread, sizeof(G_main_thread));
-
-    //Make G_main_thread runnable
-    pk_thread_resume(&G_main_thread);
-
-    PK_TRACE("Starting thread(s)");
-
-    // Start running the highest priority thread.
-    // This function never returns
-    pk_start_threads();
 
     return 0;
 }

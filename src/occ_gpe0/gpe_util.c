@@ -33,6 +33,8 @@
 
 #define SPIPSS_P2S_ONGOING_MASK 0x8000000000000000
 
+extern gpe_shared_data_t * G_gpe_shared_data;
+
 /*
  * Function Specification
  *
@@ -155,9 +157,6 @@ int wait_spi_completion(GpeErrorStruct *error, uint32_t reg, uint32_t i_timeout)
  *
  * End Function Specification
  */
-
-extern gpe_shared_data_t * G_gpe_shared_data;
-
 void busy_wait(uint32_t i_microseconds)
 {
     uint32_t start_decrementer_value;      // The decrementer register value at the beginning
@@ -176,8 +175,6 @@ void busy_wait(uint32_t i_microseconds)
 
     if(start_decrementer_value < end_decrementer_value)           // decrementer overflows during the busy wait?
     {
-        PK_TRACE("busy_wait: overflow! start=0x%08X, end=0x%08X, duration=%d",
-                 start_decrementer_value, end_decrementer_value, duration);
         MFDEC(current_decrementer_value);
         while(current_decrementer_value < end_decrementer_value)  // Wait until Decrementer overflows
             MFDEC(current_decrementer_value);
