@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -25,7 +25,7 @@
 
 /// \file ppe42_core.c
 /// \brief The final bits of PK runtime code required to complete the PPE42
-/// port. 
+/// port.
 ///
 /// The entry points in this file are considered 'core' routines that will
 /// always be present during runtime in any PK application.
@@ -42,7 +42,7 @@ typedef union
         uint32_t dec_start;
         uint32_t dec_change_tag;
     };
-}ppe42_timebase_data_t;
+} ppe42_timebase_data_t;
 
 ppe42_timebase_data_t ppe42_tb_data = {0};
 PkTimebase  ppe42_64bit_timebase = 0;
@@ -71,15 +71,21 @@ __pk_schedule_hardware_timeout(PkTimebase timeout)
     uint32_t         new_dec;
     uint32_t         dec;
 
-    if (timeout != PK_TIMEBASE_MAX) {
+    if (timeout != PK_TIMEBASE_MAX)
+    {
 
         now = pk_timebase_get();
 
-        if (timeout <= now) {
+        if (timeout <= now)
+        {
             new_dec = 1;
-        } else if ((timeout - now) > 0xffff0000) {
+        }
+        else if ((timeout - now) > 0xffff0000)
+        {
             new_dec = 0xffff0000;
-        } else {
+        }
+        else
+        {
             new_dec = timeout - now;
         }
 
@@ -108,16 +114,15 @@ __pk_schedule_hardware_timeout(PkTimebase timeout)
     PkTimebase       diff;
     uint32_t         new_dec;
 
-    if (timeout != PK_TIMEBASE_MAX) {
+    now = pk_timebase_get();
+    //update the 64bit accumulator with the current
+    ppe42_64bit_timebase =  now;
 
-        now = pk_timebase_get();
-
-        //update our 64bit accumulator with the current snapshot
-        ppe42_64bit_timebase = now;
-
+    if (timeout != PK_TIMEBASE_MAX)
+    {
         if (timeout <= now)
         {
-            new_dec = 1;
+            new_dec = PK_DEC_MIN;
         }
         else
         {
@@ -130,11 +135,15 @@ __pk_schedule_hardware_timeout(PkTimebase timeout)
             else
             {
                 new_dec = diff;
+
+                if(new_dec < PK_DEC_MIN)
+                {
+                    new_dec = PK_DEC_MIN;
+                }
             }
         }
 
         mtspr(SPRN_DEC, new_dec);
-
     }
 }
 

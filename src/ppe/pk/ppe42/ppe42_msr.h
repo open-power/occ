@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -44,6 +44,8 @@
 #define MSR_UIE     0x00010000      /* Unmaskable Interrupt Enable */
 #define MSR_EE      0x00008000      /* External Interrupt Enable */
 #define MSR_ME      0x00001000      /* Machine Check Exception Enable */
+#define MSR_IS2     0x00000800      /* Instance-Specific field 2 */
+#define MSR_IS3     0x00000400      /* Instance-Specific field 3 */
 #define MSR_IPE     0x00000100      /* Imprecise Mode Enable */
 #define MSR_SIBRCA  0x000000ff      /* SIB Return Code Accumulator */
 
@@ -55,6 +57,14 @@
 
 #define MSR_SEM_START_BIT       1
 #define MSR_SEM_LEN             7
+#define MSR_SEM1                0x40000000
+#define MSR_SEM2                0x20000000
+#define MSR_SEM3                0x10000000
+#define MSR_SEM4                0x08000000
+#define MSR_SEM5                0x04000000
+#define MSR_SEM6                0x02000000
+#define MSR_SEM7                0x01000000
+
 #define MSR_SIBRC_START_BIT     9
 #define MSR_SIBRC_LEN           3
 
@@ -64,9 +74,9 @@
 /// Move From MSR
 
 #define mfmsr()                               \
-   ({uint32_t __msr;                          \
-    asm volatile ("mfmsr %0" : "=r" (__msr)); \
-    __msr;})
+    ({uint32_t __msr;                          \
+        asm volatile ("mfmsr %0" : "=r" (__msr) : : "memory"); \
+        __msr;})
 
 
 /// Move to MSR
@@ -86,7 +96,7 @@
 /// operation is only guaranteed atomic in a critical section.
 
 #define andc_msr(x) \
-     mtmsr(mfmsr() & ~(x))
+    mtmsr(mfmsr() & ~(x))
 
 
 /// Write MSR[EE] with an immediate value (0/1)

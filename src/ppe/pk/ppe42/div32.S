@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/ppe/pk/ppe42/ppe42_string.h $                             */
+/* $Source: src/ppe/pk/ppe42/div32.S $                                    */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2017                             */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -22,52 +22,62 @@
 /* permissions and limitations under the License.                         */
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
-#ifndef __STRING_H
-#define __STRING_H
+#if (!defined(PSTATE_GPE) || NIMBUS_DD_LEVEL==10)
+    .nolist
+#include "ppe42_asm.h"
+    .list
+    .section    .text.divide,"ax",@progbits
+    .align 5
 
-#include <stdint.h>
-typedef uint32_t size_t;
+    ## The following code MUST be 32 byte aligned and fit in Icache
+    ## for optimum performance.
+udivmodsi4_loop:
+    cmplwbge    %r4, %r3, .L1
+    bdz         .L2
+    bwltz       %r4,.L1
+    rlwinm      %r4, %r4, 1, 0, 30
+    rlwinm      %r9, %r9, 1, 0, 30
+    b           udivmodsi4_loop
+.L2:
+    li          %r9,0
+.L1:
+    li          %r10,0
+.L5:
+    bwz         %r9, .L3
+    cmplwblt    %r3, %r4, .L4
+    subf        %r3, %r4, %r3
+    or          %r10, %r10, %r9
+.L4:
+    rlwinm      %r9, %r9, 31, 1, 31
+    rlwinm      %r4, %r4, 31, 1, 31
+    b           .L5
+.L3:
+    bwnz        %r5, .L6
+    mr          %r3,%r10
+.L6:
+    blr
 
-#ifndef NULL
-    #ifdef __cplusplus
-        #define NULL 0
-    #else
-        #define NULL ((void*)0)
-    #endif
+    .section    .text.__udivsi3,"ax",@progbits
+    .align      2
+    .globl  __udivsi3
+    .type   __udivsi3 @function
+__udivsi3:
+    li          %r5, 0
+    li          %r10, 33
+    mtctr       %r10
+    li          %r9,1
+    b           udivmodsi4_loop
+
+
+    .section    .text.__umodsi3,"ax",@progbits
+    .align      2
+    .globl __umodsi3
+    .type   __umodsi3, @function
+__umodsi3:
+    li          %r5, 1
+    li          %r10, 33
+    mtctr       %r10
+    li          %r9,1
+    b           udivmodsi4_loop
 #endif
 
-#ifndef __cplusplus
-    typedef int bool;
-    #define false 0
-    #define true 1
-#endif
-
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-void* memset(void* s, int c, size_t n) __attribute__ ((weak));
-//    void bzero(void *vdest, size_t len);   USE memset
-void* memcpy(void* dest, const void* src, size_t num) __attribute__ ((weak));
-void* memmove(void* vdest, const void* vsrc, size_t len)  __attribute__ ((weak));
-int memcmp(const void* p1, const void* p2, size_t len) __attribute__((weak, pure));
-void* memmem(const void* haystack, size_t haystacklen,
-             const void* needle, size_t needlelen) __attribute__((weak, pure));
-
-char* strcpy(char* d, const char* s)  __attribute__ ((weak));
-char* strncpy(char* d, const char* s, size_t l)  __attribute__ ((weak));
-int strcmp(const char* s1, const char* s2) __attribute__((weak, pure));
-size_t strlen(const char* s1) __attribute__((weak, pure));
-size_t strnlen(const char* s1, size_t n) __attribute__((weak, pure));
-
-char* strcat(char* d, const char* s)  __attribute__ ((weak));
-char* strncat(char* d, const char* s, size_t n)  __attribute__ ((weak));
-
-char* strchr(const char* s, int c) __attribute__((weak, pure));
-
-
-#ifdef __cplusplus
-};
-#endif
-
-#endif

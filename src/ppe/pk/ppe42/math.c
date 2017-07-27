@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016                             */
+/* Contributors Listed Below - COPYRIGHT 2016,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -29,38 +29,6 @@ extern "C"
 {
 #endif
 
-unsigned long
-udivmodsi4(unsigned long num, unsigned long den, int modwanted)
-{
-    unsigned long bit = 1;
-    unsigned long res = 0;
-
-    while (den < num && bit && !(den & (1L << 31)))
-    {
-        den <<= 1;
-        bit <<= 1;
-    }
-
-    while (bit)
-    {
-        if (num >= den)
-        {
-            num -= den;
-            res |= bit;
-        }
-
-        bit >>= 1;
-        den >>= 1;
-    }
-
-    if (modwanted)
-    {
-        return num;
-    }
-
-    return res;
-}
-
 // 64 bit divide.  Note: TBD add when needed
 //unsigned long long __udivdi3(unsigned long long a, unsigned long long b)
 //{
@@ -68,17 +36,75 @@ udivmodsi4(unsigned long num, unsigned long den, int modwanted)
 //    return c;
 //}
 
-// 32 bit unsigned integer divide
-unsigned long __udivsi3(unsigned long a, unsigned long b)
+
+#ifdef PSTATE_GPE
+#if (NIMBUS_DD_LEVEL != 10)
+
+#include "ocb_register_addresses.h"
+#define out64(addr, data) \
+    {\
+        unsigned long long __d = (data); \
+        unsigned long* __a = (unsigned long*)(addr); \
+        asm volatile \
+        (\
+         "stvd %1, %0 \n" \
+         : "=o"(*__a) \
+         : "r"(__d) \
+        ); \
+    }
+
+#define in64(addr) \
+    ({\
+        unsigned long long __d; \
+        unsigned long* __a = (unsigned long*)(addr); \
+        asm volatile \
+        (\
+         "lvd %0, %1 \n" \
+         :"=r"(__d) \
+         :"o"(*__a) \
+        ); \
+        __d; \
+    })
+
+
+unsigned long udivmodsi4(unsigned long long _a,
+                         unsigned long _mod)
 {
-    return udivmodsi4(a, b, 0);
+
+    out64(OCB_DERP, _a);
+
+    do
+    {
+        _a = in64(OCB_DORP);
+    }
+    while((~_a) == 0);
+
+    if(_mod)
+    {
+        return (unsigned long)_a;
+    }
+
+    return (unsigned long)(_a >> 32);
 }
 
-// 32 bit modulus
-unsigned long __umodsi3(unsigned long a, unsigned long b)
+unsigned long __udivsi3(unsigned long _a, unsigned long _b)
 {
-    return udivmodsi4(a, b, 1);
+    unsigned long long v =
+        ((unsigned long long)_a) << 32 |
+        ((unsigned long long)_b);
+
+    return udivmodsi4(v, 0);
 }
+
+unsigned long __umodsi3(unsigned long _a, unsigned long _b)
+{
+    unsigned long long v =
+        ((unsigned long long)_a) << 32 |
+        ((unsigned long long)_b);
+    return udivmodsi4(v, 1);
+}
+#endif
+#endif
 
 // 32 bit signed divide
 int __divsi3(int _a, int _b)
@@ -97,7 +123,7 @@ int __divsi3(int _a, int _b)
         neg = !neg;
     }
 
-    int c = __udivsi3((unsigned long)_a, (unsigned long)_b);
+    int c = (int)__udivsi3((unsigned long)_a, (unsigned long)_b);
 
     if(neg)
     {
@@ -106,6 +132,7 @@ int __divsi3(int _a, int _b)
 
     return c;
 }
+
 
 // 32 bit unsigned mutiply
 unsigned long __umulsi3(unsigned long _a, unsigned long _b)
@@ -182,6 +209,7 @@ unsigned long long __muldi3(unsigned long long _a, unsigned long long _b)
     return sum;
 }
 
+
 //float __mulsf3(float _a , float _b)
 //{
 //    // floating point math
@@ -203,5 +231,4 @@ unsigned long long __muldi3(unsigned long long _a, unsigned long long _b)
 #ifdef __cplusplus
 };
 #endif
-
 

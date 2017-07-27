@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -49,78 +49,8 @@
 // API return codes
 
 #define PK_OK                                 0
-#define PK_ILLEGAL_CONTEXT_THREAD_CONTEXT     0x00779002
-#define PK_ILLEGAL_CONTEXT_INTERRUPT_CONTEXT  0x00779003
-#define PK_ILLEGAL_CONTEXT_THREAD             0x00779004
-#define PK_ILLEGAL_CONTEXT_TIMER              0x00779005
-#define PK_INVALID_THREAD_AT_RESUME1          0x00779007
-#define PK_INVALID_THREAD_AT_RESUME2          0x00779008
-#define PK_INVALID_THREAD_AT_SUSPEND1         0x00779009
-#define PK_INVALID_THREAD_AT_SUSPEND2         0x0077900a
-#define PK_INVALID_THREAD_AT_DELETE           0x0077900b
-#define PK_INVALID_THREAD_AT_INFO             0x0077900c
-#define PK_INVALID_THREAD_AT_CHANGE           0x0077900d
-#define PK_INVALID_THREAD_AT_SWAP1            0x0077900e
-#define PK_INVALID_THREAD_AT_SWAP2            0x0077900f
-#define PK_INVALID_THREAD_AT_CREATE           0x00779010
-#define PK_INVALID_SEMAPHORE_AT_POST          0x00779011
-#define PK_INVALID_SEMAPHORE_AT_PEND          0x00779012
-#define PK_INVALID_SEMAPHORE_AT_RELEASE       0x00779013
-#define PK_INVALID_SEMAPHORE_AT_INFO          0x00779014
-#define PK_INVALID_SEMAPHORE_AT_CREATE        0x00779015
-#define PK_INVALID_TIMER_AT_SCHEDULE          0x00779016
-#define PK_INVALID_TIMER_AT_CANCEL            0x00779017
-#define PK_INVALID_TIMER_AT_INFO              0x00779018
-#define PK_INVALID_TIMER_AT_CREATE            0x00779019
-#define PK_INVALID_ARGUMENT_IRQ_SETUP         0x0077901a
-#define PK_INVALID_ARGUMENT_IRQ_HANDLER       0x0077901b
-#define PK_INVALID_ARGUMENT_INTERRUPT         0x00779024
-#define PK_INVALID_ARGUMENT_CONTEXT_SET       0x00779025
-#define PK_INVALID_ARGUMENT_CONTEXT_GET       0x00779026
-#define PK_INVALID_ARGUMENT_FIT               0x00779027
-#define PK_INVALID_ARGUMENT_WATCHDOG          0x00779028
-#define PK_INVALID_ARGUMENT_INIT              0x00779029
-#define PK_INVALID_ARGUMENT_SEMAPHORE         0x0077902a
-#define PK_INVALID_ARGUMENT_THREAD_CHANGE     0x0077902b
-#define PK_INVALID_ARGUMENT_THREAD_PRIORITY   0x0077902c
-#define PK_INVALID_ARGUMENT_THREAD1           0x0077902d
-#define PK_INVALID_ARGUMENT_THREAD2           0x0077902e
-#define PK_INVALID_ARGUMENT_THREAD3           0x0077902f
-#define PK_STACK_OVERFLOW                     0x00779030
-#define PK_TIMER_ACTIVE                       0x00779031
-#define PK_TIMER_NOT_ACTIVE                   0x00779032
-#define PK_PRIORITY_IN_USE_AT_RESUME          0x00779033
-#define PK_PRIORITY_IN_USE_AT_CHANGE          0x00779034
-#define PK_PRIORITY_IN_USE_AT_SWAP            0x00779035
-#define PK_SEMAPHORE_OVERFLOW                 0x00779036
-#define PK_SEMAPHORE_PEND_NO_WAIT             0x00779037
-#define PK_SEMAPHORE_PEND_TIMED_OUT           0x00779038
-#define PK_SEMAPHORE_PEND_WOULD_BLOCK         0x00779039
-#define PK_INVALID_DEQUE_SENTINEL             0x0077903a
-#define PK_INVALID_DEQUE_ELEMENT              0x0077903b
-#define PK_INVALID_OBJECT                     0x0077903c
 
-// Kernel panics
-
-#define PK_NO_TIMER_SUPPORT                   0x0077903d
-#define PK_START_THREADS_RETURNED             0x0077903e
-#define PK_UNIMPLEMENTED                      0x0077903f
-#define PK_SCHEDULING_INVARIANT               0x00779040
-#define PK_TIMER_HANDLER_INVARIANT            0x00779041
-#define PK_THREAD_TIMEOUT_STATE               0x00779045
-
-// Application-level panic offsets
-// (Use these as offsets for your application code panics and keep
-//  track of them locally in your application code domain, including
-//  sharing the panic defines with other developers making codes
-//  for the same engine.)
-
-#define PK_APP_OFFSET_SBE                     0x0077a000
-#define PK_APP_OFFSET_GPE0                    0x0077b000
-#define PK_APP_OFFSET_GPE1                    0x0077c000
-#define PK_APP_OFFSET_GPE2                    0x0077d000
-#define PK_APP_OFFSET_GPE3                    0x0077e000
-#define PK_APP_OFFSET_CME                     0x0077f000
+/// @see pk_panic_codes.h for valid return/panic codes
 
 /// \defgroup pk_thread_states PK Thread States
 ///
@@ -160,7 +90,7 @@
 /// blocked on a semaphore with timeout). The flag PK_THREAD_FLAG_TIMED_OUT
 /// indicates that a thread timer timed out before the thread became
 /// runnable.  Currently only the semaphore-pend-with-timeout code uses this
-/// flag. 
+/// flag.
 ///
 /// Note that a thread can be mapped and runnable (in the run queue) even
 /// though PK_THREAD_FLAG_SEMAPHORE_PEND and/or PK_THREAD_FLAG_TIMER_PEND
@@ -180,7 +110,7 @@
 //  Critical Sections
 
 /// Enter a critical section, saving the current machine
-/// context. 
+/// context.
 
 #define pk_critical_section_enter(pctx) \
     pk_interrupt_disable(pctx)
@@ -204,22 +134,22 @@
 
 // Application-overrideable definitions
 
-/// Control whether or not the API functions check for errors. 
+/// Control whether or not the API functions check for errors.
 ///
 /// This definition can be overriden by the application.
 
 #ifndef PK_ERROR_CHECK_API
-#define PK_ERROR_CHECK_API 1
+    #define PK_ERROR_CHECK_API 1
 #endif
 
 /// Control whether API errors cause kernel panics or return negative error
-/// codes. 
+/// codes.
 ///
 /// This selection is only valid if \c PK_ERROR_CHECK_API is defined
 /// non-0. This definition can be overriden by the application.
 
 #ifndef PK_ERROR_PANIC
-#define PK_ERROR_PANIC 1
+    #define PK_ERROR_PANIC 1
 #endif
 
 /// Control whether or not the PK kernel checks key invariants.
@@ -228,7 +158,7 @@
 /// definition can be overriden by the application.
 
 #ifndef PK_ERROR_CHECK_KERNEL
-#define PK_ERROR_CHECK_KERNEL 1
+    #define PK_ERROR_CHECK_KERNEL 1
 #endif
 
 /// Define the time interval type, which must be an unsigned type of a size
@@ -236,22 +166,22 @@
 /// overridden by the application.
 
 #ifndef PK_TIME_INTERVAL_TYPE
-#define PK_TIME_INTERVAL_TYPE uint64_t
+    #define PK_TIME_INTERVAL_TYPE uint64_t
 #endif
 
 /// Provide support for the PkTimer APIs in addition to the default
 /// initerrupt APIs.  This definition can be overridden by the application.
 
 #ifndef PK_TIMER_SUPPORT
-#define PK_TIMER_SUPPORT 1
+    #define PK_TIMER_SUPPORT 1
 #endif
 
 /// Provide support for the all PK APIs. Thread support requires/implies
 /// support for time services and semaphores.  This definition can be
-/// overridden by the application. 
+/// overridden by the application.
 
 #ifndef PK_THREAD_SUPPORT
-#define PK_THREAD_SUPPORT 1
+    #define PK_THREAD_SUPPORT 1
 #endif
 
 /// Control the level of stack checking.
@@ -259,7 +189,7 @@
 /// This definition can be overriden by the application.
 ///
 /// 0 : No stack prepatterning or checking is made for thread and kernel
-/// stacks. 
+/// stacks.
 ///
 /// 1 : Kernel interrupt stacks are prepatterned during
 /// \c pk_initialize(). Thread stacks are prepatterned during
@@ -270,9 +200,9 @@
 /// interrupt processing.  The maximum utilization is stored in
 /// the thread data structure.  The kernel will panic if stack overflow is
 /// detected. Stack utilization is not computed for the idle thread.
- 
+
 #ifndef PK_STACK_CHECK
-#define PK_STACK_CHECK 1
+    #define PK_STACK_CHECK 1
 #endif
 
 /// A hook for main()
@@ -283,7 +213,7 @@
 /// pk_app_cfg.h. The PK_MAIN_HOOK will run on the stack of main().
 
 #ifndef PK_MAIN_HOOK
-#define PK_MAIN_HOOK do {} while (0)
+    #define PK_MAIN_HOOK do {} while (0)
 #endif
 
 /// A hook for pk_start_threads()
@@ -291,18 +221,22 @@
 /// This hook macro is expanded in the call-tree of pk_start_threads() before
 /// threads are actually started.  The application can redefine this hook
 /// macro in (or in headers referred to in) the application header
-/// pk_app_cfg.h.  
+/// pk_app_cfg.h.
 ///
 /// The PK_START_THREADS_HOOK runs as a pseudo-interrupt handler on the
 /// kernel stack, with external interrupts disabled.
 
 #ifndef PK_START_THREADS_HOOK
-#define PK_START_THREADS_HOOK do {} while (0)
+    #define PK_START_THREADS_HOOK do {} while (0)
 #endif
 
 /// The maximum value of the \c PkTimebase type.
 
 #define PK_TIMEBASE_MAX ((PkTimebase)-1)
+
+/// The minimum count the DEC counter can have so as to not overrun PK
+///  with DEC interrupts.
+#define PK_DEC_MIN  32
 
 /// A special value that specifies that the timebase will not be reset during
 /// pk_init().
@@ -310,12 +244,12 @@
 #define PK_TIMEBASE_CONTINUES PK_TIMEBASE_MAX
 
 /// By convention, a timeout value indicating 'no waiting' in a call of \c
-/// pk_semaphore_pend(). 
+/// pk_semaphore_pend().
 
 #define PK_NO_WAIT 0
 
 /// By convention, a timeout value indicating 'wait forever' in a call of \c
-/// pk_semaphore_pend(). 
+/// pk_semaphore_pend().
 
 #define PK_WAIT_FOREVER ((PkInterval)-1)
 
@@ -375,15 +309,29 @@
     #define PK_NANOSECONDS(n) ( (PkInterval)( ( ((PK_BASE_FREQ_MHZ<<10)/1000) * (n) ) >> 10) )
 #endif
 
+/// Enable PK application tracing for latency measurments
+#ifndef PK_TRACE_PERF_ENABLE
+    #define PK_TRACE_PERF_ENABLE 0
+#endif
 
 /// Enable PK application tracing (enabled by default)
 #ifndef PK_TRACE_ENABLE
     #define PK_TRACE_ENABLE 1
 #endif
 
+/// Enable PK ctrl  (enabled by default)
+#ifndef PK_TRACE_CTRL_ENABLE
+    #define PK_TRACE_CTRL_ENABLE 1
+#endif
+
 /// Enable PK crit  (disabled by default)
 #ifndef PK_TRACE_CRIT_ENABLE
     #define PK_TRACE_CRIT_ENABLE 0
+#endif
+
+/// Enable PK ckpt  (disabled by default)
+#ifndef PK_TRACE_CKPT_ENABLE
+    #define PK_TRACE_CKPT_ENABLE 0
 #endif
 
 /// Enable Debug suppress  (disabled by default)
@@ -401,23 +349,34 @@
 //   override any other trace settings
 #if !PK_TRACE_ENABLE
     #undef PK_TRACE_DBG_SUPPRESS
+    #undef PK_TRACE_CTRL_ENABLE
     #undef PK_TRACE_CRIT_ENABLE
+    #undef PK_TRACE_CKPT_ENABLE
 
     #define PK_TRACE_DBG_SUPPRESS 1
+    #define PK_TRACE_CTRL_ENABLE 0
     #define PK_TRACE_CRIT_ENABLE 0
+    #define PK_TRACE_CKPT_ENABLE 0
 #endif
 
-// PK TRACE enabled & PK CRIT enabled implies all tracing on.
-// PK TRACE enabled & PK DBUG disabled implies   PK CRIT INFO tracing only.
-// PK TRACE enable & pK CRIT INFO disabled  && PK DBUG disabled implies
+// PK TRACE enabled implies all default tracing on.
+// PK TRACE enabled & PK CKPT DEBUG disabled implies PK CRIT INFO and CTRL ERROR tracing only.
+// PK TRACE enabled & PK CKPT DEBUG and CRIT INFO disabled implies PK CTRL ERROR tracing only.
+// PK TRACE enabled & PK CRIT INFO disabled && PK DEBUG disabled && PK ERROR disabled implies
 //          PK TRACE disabled
-#if PK_TRACE_ENABLE &&  PK_TRACE_DBG_SUPPRESS && !PK_TRACE_CRIT_ENABLE
+#if PK_TRACE_ENABLE &&  PK_TRACE_DBG_SUPPRESS && !PK_TRACE_CRIT_ENABLE && !PK_TRACE_CKPT_ENABLE && !PK_TRACE_CTRL_ENABLE
     #undef PK_TRACE_ENABLE
     #define PK_TRACE_ENABLE 0
 #endif
 
 
 //Application trace macros
+#if !PK_TRACE_PERF_ENABLE
+    #define PK_TRACE_PERF(...)
+#else
+    #define PK_TRACE_PERF(...) PKTRACE(__VA_ARGS__)
+#endif
+
 #if PK_TRACE_DBG_SUPPRESS
     #define PK_TRACE(...)
     #define PK_TRACE_BIN(str, bufp, buf_size)
@@ -426,10 +385,22 @@
     #define PK_TRACE_BIN(str, bufp, buf_size) PKTRACE_BIN(str, bufp, buf_size)
 #endif
 
+#if !PK_TRACE_CTRL_ENABLE
+    #define PK_TRACE_ERR(...)
+#else
+    #define PK_TRACE_ERR(...) PKTRACE(__VA_ARGS__)
+#endif
+
 #if !PK_TRACE_CRIT_ENABLE
     #define PK_TRACE_INF(...)
 #else
     #define PK_TRACE_INF(...) PKTRACE(__VA_ARGS__)
+#endif
+
+#if !PK_TRACE_CKPT_ENABLE
+    #define PK_TRACE_DBG(...)
+#else
+    #define PK_TRACE_DBG(...) PKTRACE(__VA_ARGS__)
 #endif
 
 //Kernel trace macros
@@ -445,9 +416,9 @@
 /// Add a string to the trace buffer with an optional register holding a 16bit value
 /// WARNING: This calls a c function which may clobber any of the volatile registers
 #if (PK_TRACE_SUPPORT && PK_TIMER_SUPPORT)
-#define PK_TRACE_ASM16(...) TRACE_ASM_HELPER16(VARG_COUNT(__VA_ARGS__), __VA_ARGS__)
+    #define PK_TRACE_ASM16(...) TRACE_ASM_HELPER16(VARG_COUNT(__VA_ARGS__), __VA_ARGS__)
 #else
-#define PK_TRACE_ASM16(...)
+    #define PK_TRACE_ASM16(...)
 #endif /* PK_TRACE_SUPPORT */
 
 /// The following macros are helper macros for tracing.  They should not be called
@@ -456,6 +427,7 @@
 #define VARG_COUNT(...) VARG_COUNT_HELPER(, ##__VA_ARGS__, 7, 6, 5, 4, 3, 2, 1, 0)
 
 #ifdef __ASSEMBLER__
+// *INDENT-OFF*
 #define TRACE_ASM_HELPER16_CALL(count, ...) TINY_TRACE_ASM ## count (__VA_ARGS__)
 #define TRACE_ASM_HELPER16(count, ...) TRACE_ASM_HELPER16_CALL(count, __VA_ARGS__)
 
@@ -484,7 +456,8 @@
         oris    %r3, %r3, \hash16
         bl      pk_trace_tiny
     .endm
-        
+
+// *INDENT-ON*
 #endif /*__ASSEMBLER__*/
 
 
@@ -522,7 +495,8 @@ typedef PK_TIME_INTERVAL_TYPE PkInterval;
 
 #include "pk_port_types.h"
 
-typedef struct {
+typedef struct
+{
 
     /// A priority queue of threads pending on the semaphore.
     PkThreadQueue pending_threads;
@@ -543,8 +517,8 @@ typedef struct {
 /// arrays of semaphores.
 #define PK_SEMAPHORE_INITIALIZATION(_initial_count, _max_count)        \
     {.pending_threads = 0,                                              \
-            .count = (_initial_count),                                  \
-            .max_count = (_max_count)}
+                        .count = (_initial_count),                                  \
+                                 .max_count = (_max_count)}
 
 
 /// Declare and initialize a semaphore
@@ -563,19 +537,19 @@ typedef struct {
 
 #define PKTRACE2(str, parm0) \
     ((sizeof(parm0) <= 2)? \
-        pk_trace_tiny(HASH_ARG_COMBO(str, parm0)): \
-        pk_trace_big(HASH_ARG_COMBO(str, 1), ((uint64_t)parm0) << 32, 0))
+     pk_trace_tiny(HASH_ARG_COMBO(str, parm0)): \
+     pk_trace_big(HASH_ARG_COMBO(str, 1), ((uint64_t)parm0) << 32, 0))
 
 #define PKTRACE3(str, parm0, parm1) \
-        pk_trace_big(HASH_ARG_COMBO(str, 2), ((((uint64_t)parm0) << 32) | parm1), 0)
+    pk_trace_big(HASH_ARG_COMBO(str, 2), ((((uint64_t)parm0) << 32) | parm1), 0)
 
 #define PKTRACE4(str, parm0, parm1, parm2) \
-        pk_trace_big(HASH_ARG_COMBO(str, 3), ((((uint64_t)parm0) << 32) | parm1),\
-                                             ((uint64_t)parm2) << 32 )
-        
+    pk_trace_big(HASH_ARG_COMBO(str, 3), ((((uint64_t)parm0) << 32) | parm1),\
+                 ((uint64_t)parm2) << 32 )
+
 #define PKTRACE5(str, parm0, parm1, parm2, parm3) \
-        pk_trace_big(HASH_ARG_COMBO(str, 4), ((((uint64_t)parm0) << 32) | parm1),\
-                                             ((((uint64_t)parm2) << 32) | parm3) )
+    pk_trace_big(HASH_ARG_COMBO(str, 4), ((((uint64_t)parm0) << 32) | parm1),\
+                 ((((uint64_t)parm2) << 32) | parm3) )
 
 #define PKTRACE6(...) pk_trace_tiny() //will fail at compile time
 #define PKTRACE7(...) pk_trace_tiny() //will fail at compile time
@@ -586,7 +560,7 @@ typedef struct {
 #if (PK_TRACE_SUPPORT && PK_TIMER_SUPPORT)
 #define PKTRACE(...) PKTRACE_HELPER(VARG_COUNT(__VA_ARGS__), __VA_ARGS__)
 #define PKTRACE_BIN(str, bufp, buf_size) \
-        pk_trace_binary(((buf_size < 255)? HASH_ARG_COMBO(str, buf_size): HASH_ARG_COMBO(str, 255)), bufp)
+    pk_trace_binary(((buf_size < 255)? HASH_ARG_COMBO(str, buf_size): HASH_ARG_COMBO(str, 255)), bufp)
 #else
 #define PKTRACE(...)
 #define PKTRACE_BIN(str, bufp, buf_size)
@@ -602,7 +576,8 @@ typedef struct {
 /// initial 'data member' of the structure.  This allows a pointer to a queue
 /// element to be cast to a pointer to an PkDeque and vice-versa.
 
-typedef struct PkDeque {
+typedef struct PkDeque
+{
 
     /// Pointer to the head or the next element in a deque.
     ///
@@ -621,7 +596,7 @@ typedef struct PkDeque {
 } PkDeque;
 
 
-typedef void (*PkTimerCallback)(void *);
+typedef void (*PkTimerCallback)(void*);
 
 #define PK_TIMER_CALLBACK(callback) void callback(void *)
 
@@ -629,13 +604,14 @@ struct PkTimer;
 
 /// The PK timer object
 
-typedef struct PkTimer {
+typedef struct PkTimer
+{
 
     /// The time queue management pointers
     ///
     /// This pointer container is defined as the first element of the
     /// structure to allow the PkTimer to be cast to an PkDeque and
-    /// vice-versa. 
+    /// vice-versa.
     PkDeque deque;
 
     /// The absolute timeout of the timer.
@@ -647,26 +623,27 @@ typedef struct PkTimer {
     /// timeouts this field is initialized to __pk_thread_timeout().
     PkTimerCallback callback;
 
-    /// Private data passed to the callback. 
+    /// Private data passed to the callback.
     ///
     /// For PK thread timers used to implement Sleep and semaphore pend this
     /// field is initialized to a pointer to the thread.
-    void *arg;
+    void* arg;
 
 } PkTimer;
 
 
 // Threads
 
-typedef void (*PkThreadRoutine)(void *arg);
+typedef void (*PkThreadRoutine)(void* arg);
 
 #define PK_THREAD_ROUTINE(f) void f(void *arg);
 
-typedef struct {
+typedef struct
+{
 
     /// Stack pointer saved during context switches.  Assembler code expects
     /// this to always be at address offset 0 from the thread pointer.
-    PkAddress saved_stack_pointer; 
+    PkAddress saved_stack_pointer;
 
     /// This is 1 past the last valid byte address of the thread stack.
     /// Assembler code expects this to always be at address offset (sizeof
@@ -679,8 +656,8 @@ typedef struct {
     PkAddress stack_base;
 
     /// If the thread is blocked on a semaphore, then this is the semaphore the
-    /// thread is blocked on. 
-    PkSemaphore *semaphore;
+    /// thread is blocked on.
+    PkSemaphore* semaphore;
 
     /// The thread priority.
     PkThreadPriority priority;
@@ -698,24 +675,25 @@ typedef struct {
 } PkThread;
 
 
-typedef void (*PkBhHandler)(void *);
+typedef void (*PkBhHandler)(void*);
 
 #define PK_BH_HANDLER(handler) void handler(void *)
 
-typedef struct {
+typedef struct
+{
 
     /// The bottom half queue management pointers
     ///
     /// This pointer container is defined as the first element of the
     /// structure to allow the PkBottomHalf to be cast to a PkDeque and
-    /// vice-versa. 
+    /// vice-versa.
     PkDeque deque;
 
     /// The bottom half handler
     PkBhHandler bh_handler;
 
-    /// Private data passed to the handler. 
-    void *arg;
+    /// Private data passed to the handler.
+    void* arg;
 
 } PkBottomHalf;
 
@@ -748,45 +726,45 @@ pk_timebase_get(void);
 
 // Timer APIs
 
-int 
-pk_timer_create(PkTimer         *timer,
-                 PkTimerCallback callback,
-                 void             *arg);
+int
+pk_timer_create(PkTimer*         timer,
+                PkTimerCallback callback,
+                void*             arg);
 
 
-int 
-pk_timer_schedule(PkTimer    *timer,
-                   PkInterval interval);
+int
+pk_timer_schedule(PkTimer*    timer,
+                  PkInterval interval);
 
-int 
-pk_timer_cancel(PkTimer *timer);
+int
+pk_timer_cancel(PkTimer* timer);
 
-int 
-pk_timer_info_get(PkTimer    *timer,
-                   PkTimebase *timeout,
-                   int         *active);
+int
+pk_timer_info_get(PkTimer*    timer,
+                  PkTimebase* timeout,
+                  int*         active);
 
 // Thread APIs
 
 int
-pk_thread_create(PkThread         *thread,
-                  PkThreadRoutine  thread_routine,
-                  void              *arg,
-                  PkAddress        stack,
-                  size_t            stack_size,
-                  PkThreadPriority priority);
+pk_thread_create(PkThread*         thread,
+                 PkThreadRoutine  thread_routine,
+                 void*              arg,
+                 PkAddress        stack,
+                 size_t            stack_size,
+                 PkThreadPriority priority);
 
 int
 pk_start_threads(void);
 
 int
-pk_thread_resume(PkThread *thread);
+pk_thread_resume(PkThread* thread);
 
 int
-pk_thread_suspend(PkThread *thread);
+pk_thread_suspend(PkThread* thread);
 
 int
-pk_thread_delete(PkThread *thread);
+pk_thread_delete(PkThread* thread);
 
 int
 pk_complete(void);
@@ -795,19 +773,19 @@ int
 pk_sleep(PkInterval interval);
 
 int
-pk_thread_info_get(PkThread         *thread,
-                    PkThreadState    *state,
-                    PkThreadPriority *priority,
-                    int               *runnable);
+pk_thread_info_get(PkThread*         thread,
+                   PkThreadState*    state,
+                   PkThreadPriority* priority,
+                   int*               runnable);
 
-int 
-pk_thread_priority_change(PkThread         *thread,
-                           PkThreadPriority new_priority,
-                           PkThreadPriority *old_priority);
+int
+pk_thread_priority_change(PkThread*         thread,
+                          PkThreadPriority new_priority,
+                          PkThreadPriority* old_priority);
 
 int
 pk_thread_at_priority(PkThreadPriority priority,
-                       PkThread         **thread);
+                      PkThread**         thread);
 
 int
 pk_thread_priority_swap(PkThread* thread_a, PkThread* thread_b);
@@ -816,29 +794,29 @@ pk_thread_priority_swap(PkThread* thread_a, PkThread* thread_b);
 // Semaphore APIs
 
 int
-pk_semaphore_create(PkSemaphore      *semaphore,
-                     PkSemaphoreCount initial_count,
-                     PkSemaphoreCount max_count);
+pk_semaphore_create(PkSemaphore*      semaphore,
+                    PkSemaphoreCount initial_count,
+                    PkSemaphoreCount max_count);
 
 int
-pk_semaphore_post(PkSemaphore *semaphore);
+pk_semaphore_post(PkSemaphore* semaphore);
 
 int
-pk_semaphore_pend(PkSemaphore *semaphore,
-                   PkInterval  timeout);
+pk_semaphore_pend(PkSemaphore* semaphore,
+                  PkInterval  timeout);
 
 int
-pk_semaphore_release_all(PkSemaphore *semaphore);
+pk_semaphore_release_all(PkSemaphore* semaphore);
 
 
 int
-pk_semaphore_info_get(PkSemaphore      *semaphore,
-                       PkSemaphoreCount *count,
-                       int               *pending);
+pk_semaphore_info_get(PkSemaphore*      semaphore,
+                      PkSemaphoreCount* count,
+                      int*               pending);
 
 void
-pk_semaphore_post_handler(void *arg, 
-                           PkIrqId irq);
+pk_semaphore_post_handler(void* arg,
+                          PkIrqId irq);
 
 // Misc. APIs
 
@@ -847,26 +825,26 @@ pk_halt() __attribute__ ((noreturn));
 
 // Deque APIs
 
-int 
-pk_deque_sentinel_create(PkDeque *deque);
+int
+pk_deque_sentinel_create(PkDeque* deque);
 
 #define PK_DEQUE_SENTINEL_INIT(dq_addr) \
-{\
-    .next = dq_addr, \
-    .previous = dq_addr \
-}
+    {\
+        .next = dq_addr, \
+                .previous = dq_addr \
+    }
 
 #define PK_DEQUE_SENTINEL_STATIC_CREATE(deque) \
     PkDeque deque = PK_DEQUE_SENTINEL_INIT(&deque)
 
-int 
-pk_deque_element_create(PkDeque *element);
+int
+pk_deque_element_create(PkDeque* element);
 
 #define PK_DEQUE_ELEMENT_INIT() \
-{\
-    .next = 0, \
-    .previous = 0 \
-}
+    {\
+        .next = 0, \
+                .previous = 0 \
+    }
 
 #define PK_DEQUE_ELEMENT_STATIC_CREATE(deque) \
     PkDeque deque = PK_DEQUE_ELEMENT_INIT()
@@ -879,8 +857,8 @@ pk_deque_element_create(PkDeque *element);
 ///
 /// \retval 1 The PkDeque is empty
 
-static inline int 
-pk_deque_is_empty(PkDeque *deque)
+static inline int
+pk_deque_is_empty(PkDeque* deque)
 {
     return (deque == deque->next);
 }
@@ -894,8 +872,8 @@ pk_deque_is_empty(PkDeque *deque)
 ///
 /// \retval 1 The element is currently enqueued
 
-static inline int 
-pk_deque_is_queued(PkDeque *element)
+static inline int
+pk_deque_is_queued(PkDeque* element)
 {
     return (element->next != 0);
 }
@@ -910,8 +888,8 @@ pk_deque_is_queued(PkDeque *element)
 /// It is an error to call this API on an element that is already enqueued,
 /// but the API does not check for this error.
 
-static inline void 
-pk_deque_push_back(PkDeque *deque, PkDeque *element)
+static inline void
+pk_deque_push_back(PkDeque* deque, PkDeque* element)
 {
     deque->previous->next = element;
     element->previous = deque->previous;
@@ -922,22 +900,22 @@ pk_deque_push_back(PkDeque *deque, PkDeque *element)
 
 /// Push an element at the head of a deque (LIFO order)
 ///
-/// \param deque The sentinel node of a deque 
+/// \param deque The sentinel node of a deque
 ///
 /// \param element Typically the PkDeque object of a queable structure
 ///
 /// It is an error to call this API on an element that is already enqueued,
 /// but the API does not check for this error.
 
-static inline void 
-pk_deque_push_front(PkDeque *deque, PkDeque *element)
+static inline void
+pk_deque_push_front(PkDeque* deque, PkDeque* element)
 {
     deque->next->previous = element;
     element->next = deque->next;
     element->previous = deque;
     deque->next = element;
 }
-    
+
 /// Pop an element from the head of a deque
 ///
 /// \param deque The sentinel node of a deque
@@ -949,15 +927,18 @@ pk_deque_push_front(PkDeque *deque, PkDeque *element)
 
 // The cast of 'head' is used to remove the 'volatile' attribute.
 
-static inline PkDeque *
-pk_deque_pop_front(PkDeque *deque)
+static inline PkDeque*
+pk_deque_pop_front(PkDeque* deque)
 {
-    PkDeque *head;
+    PkDeque* head;
 
-    if (pk_deque_is_empty(deque)) {
+    if (pk_deque_is_empty(deque))
+    {
         return 0;
-    } else {
-        head = (PkDeque *)(deque->next);
+    }
+    else
+    {
+        head = (PkDeque*)(deque->next);
         deque->next = head->next;
         deque->next->previous = deque;
         head->next = 0;
@@ -974,7 +955,7 @@ pk_deque_pop_front(PkDeque *deque)
 /// enqueued, but the API does not check for this error.
 
 static inline void
-pk_deque_delete(PkDeque *element)
+pk_deque_delete(PkDeque* element)
 {
     element->previous->next = element->next;
     element->next->previous = element->previous;
@@ -986,20 +967,25 @@ pk_deque_delete(PkDeque *element)
 extern PkDeque _pk_bh_queue;
 
 static inline void
-pk_bh_schedule(PkBottomHalf *bottom_half)
+pk_bh_schedule(PkBottomHalf* bottom_half)
 {
-    pk_deque_push_back(&_pk_bh_queue, (PkDeque *)bottom_half);
+    if(!pk_deque_is_queued((PkDeque*)bottom_half))
+    {
+        pk_deque_push_back(&_pk_bh_queue, (PkDeque*)bottom_half);
+    }
 }
 
 #define PK_BH_INIT(_handler, _arg) \
-{\
-    .deque = PK_DEQUE_ELEMENT_INIT(), \
-    .bh_handler = _handler, \
-    .arg = _arg \
-}
+    {\
+        .deque = PK_DEQUE_ELEMENT_INIT(), \
+                 .bh_handler = _handler, \
+                               .arg = _arg \
+    }
 
 #define PK_BH_STATIC_CREATE(bh_name, handler, arg) \
-PkBottomHalf bh_name = PK_BH_INIT(handler, arg)
+    PkBottomHalf bh_name  __attribute__((section (".sdata"))) = \
+            PK_BH_INIT(handler, arg)
+
 
 
 //Trace function prototypes
@@ -1013,7 +999,7 @@ void pk_trace_set_timebase(PkTimebase timebase);
 /// Cast a pointer to another type, in a way that won't cause warnings
 
 #define PK_CAST_POINTER(t, p) ((t)((PkAddress)(p)))
-        
+
 // Static Assert Macro for Compile time assertions.
 //   - This macro can be used both inside and outside of a function.
 //   - A value of false will cause the ASSERT to produce this error
@@ -1040,7 +1026,7 @@ void pk_trace_set_timebase(PkTimebase timebase);
 /// PK follows the Unix convention that a successful call of an API returns 0
 /// (PK_OK), but returns a negative code in the event of failure, or to
 /// provide further information. The error codes are all defined as manifest
-/// constants.  
+/// constants.
 ///
 /// Some negative codes returned by PK APIs are not considered errors.  These
 /// conditions are always checked, never cause a panic if they occur, and

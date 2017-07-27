@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2015,2016
+# Contributors Listed Below - COPYRIGHT 2015,2017
 # [+] International Business Machines Corp.
 #
 #
@@ -60,7 +60,7 @@ __pk_thread_context_initialize:
         ## R4 = thread_routine (param)
         ## R5 = private (param)
         ## R6 = thread stack pointer (computed)
-        ## R7 = scratch
+        ## D7 (R7,R8) = scratch
 
         .macro  _gpr_init, prefix, reg, val
         li      %r7, \val
@@ -110,6 +110,13 @@ __pk_thread_context_initialize:
         _gpr_init PK_CTX_GPR, 29, 0x2929       
         _gpr_init PK_CTX_GPR, 30, 0x3030       
         _gpr_init PK_CTX_GPR, 31, 0x3131
+
+#ifdef HWMACRO_GPE
+        ## Save the context of the PBASLVCTL reg
+        _liw    %r7,  PBA_SLVCTLN(PBASLVCTLN)
+        lvd     %d7, 0(%r7)
+        stvd    %d7, PK_CTX_PBASLVCTLV(%r6)
+#endif
 
         ## Initialize the kernel context on the thread stack.
         ## Note: Thread priority is set later each time the thread is

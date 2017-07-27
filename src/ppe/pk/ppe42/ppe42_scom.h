@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -32,8 +32,8 @@
 
 /// SCOM operations return non-zero error codes that may or may not indicate
 /// an actual error, depending on which SCOM is begin accessed.  This error
-/// code will appear in the MSR[SIBRC] field, bits[9:11] right after the 
-/// SCOM OP returns.  The error code value increases with the severity of the 
+/// code will appear in the MSR[SIBRC] field, bits[9:11] right after the
+/// SCOM OP returns.  The error code value increases with the severity of the
 /// error.
 #define PCB_ERROR_NONE              0
 #define PCB_ERROR_RESOURCE_OCCUPIED 1
@@ -44,61 +44,61 @@
 #define PCB_ERROR_PACKET_ERROR      6
 #define PCB_ERROR_TIMEOUT           7
 
-#ifdef __cplusplus 
+#ifdef __cplusplus
 extern "C" {
 #endif
 
 
 /// PPE Load Virtual Double operation
 #define PPE_LVD(_m_address, _m_data) \
-asm volatile \
+    asm volatile \
     ( \
-    "lvd %[data], 0(%[address]) \n" \
-    :  [data]"=r"(_m_data) \
-    :  [address]"b"(_m_address) \
+      "lvd %[data], 0(%[address]) \n" \
+      :  [data]"=r"(_m_data) \
+      :  [address]"b"(_m_address) \
     );
 
 
 // PPE Store Virtual Double operation
 #define PPE_STVD(_m_address, _m_data) \
-asm volatile \
+    asm volatile \
     ( \
-        "stvd %[data], 0(%[address]) \n" \
-        : [data]"=&r"(_m_data) \
-        : "[data]"(_m_data), \
-          [address]"b"(_m_address) \
-        : "memory" \
-     );
+      "stvd %[data], 0(%[address]) \n" \
+      : [data]"=&r"(_m_data) \
+      : "[data]"(_m_data), \
+      [address]"b"(_m_address) \
+      : "memory" \
+    );
 
 /// PPE Load Virtual Double Indexed operation
 #define PPE_LVDX(_m_base, _m_offset, _m_data) \
-asm volatile \
+    asm volatile \
     ( \
-    "lvdx %[data], %[base], %[offset] \n" \
-    :  [data]"=r"(_m_data) \
-    :  [base]"b"(_m_base), \
-       [offset]"r"(_m_offset) \
+      "lvdx %[data], %[base], %[offset] \n" \
+      :  [data]"=r"(_m_data) \
+      :  [base]"b"(_m_base), \
+      [offset]"r"(_m_offset) \
     );
 
 
 // PPE Store Virtual Double Indexed operation
 #define PPE_STVDX(_m_base, _m_offset, _m_data) \
-asm volatile \
+    asm volatile \
     ( \
-        "stvdx %[data], %[base], %[offset] \n" \
-        : [data]"=&r"(_m_data) \
-        : "[data]"(_m_data), \
-          [base]"b"(_m_base), \
-          [offset]"r"(_m_offset) \
-        : "memory" \
-     );
+      "stvdx %[data], %[base], %[offset] \n" \
+      : [data]"=&r"(_m_data) \
+      : "[data]"(_m_data), \
+      [base]"b"(_m_base), \
+      [offset]"r"(_m_offset) \
+      : "memory" \
+    );
 
 #define PPE_MFMSR(_m_data) \
-asm volatile \
+    asm volatile \
     ( \
-    "mfmsr %[data] \n" \
-    :  [data]"=&r"(*_m_data) \
-    :  "[data]"(*_m_data) \
+      "mfmsr %[data] \n" \
+      :  [data]"=&r"(*_m_data) \
+      :  "[data]"(*_m_data) \
     );
 
 /// @brief putscom with absolute address
@@ -115,7 +115,7 @@ uint32_t putscom_abs(const uint32_t i_address, uint64_t i_data);
 ///
 /// @retval     On PPE42 platform, unmasked errors will take machine check interrupts
 
-uint32_t getscom_abs( const uint32_t i_address, uint64_t *o_data);
+uint32_t getscom_abs( const uint32_t i_address, uint64_t* o_data);
 
 /// @brief Implementation of PPE putscom functionality
 /// @param [in] i_chiplet   Chiplet ID (@todo Should only be right justified)
@@ -133,7 +133,7 @@ uint32_t _putscom( const uint32_t i_chiplet, const uint32_t i_address, uint64_t 
 /// @param [in] i_data      Pointer to uint64_t data read
 ///
 /// @retval     On PPE42 platform, unmasked errors will take machine check interrupts
-uint32_t _getscom( uint32_t i_chiplet, uint32_t i_address, uint64_t *o_data);
+uint32_t _getscom( uint32_t i_chiplet, uint32_t i_address, uint64_t* o_data);
 
 extern inline uint32_t putscom(const uint32_t i_chiplet, const uint32_t i_address, uint64_t i_data)
 {
@@ -141,12 +141,17 @@ extern inline uint32_t putscom(const uint32_t i_chiplet, const uint32_t i_addres
 }
 
 
-extern inline uint32_t getscom(const uint32_t i_chiplet, const uint32_t i_address, uint64_t *o_data)
-{  
+extern inline uint32_t getscom(const uint32_t i_chiplet, const uint32_t i_address, uint64_t* o_data)
+{
     return _getscom(i_chiplet, i_address, o_data);
 }
 
-#ifdef __cplusplus 
+extern inline void putscom_norc(const uint32_t i_address, uint64_t i_data)
+{
+    PPE_STVD(i_address, i_data);
+}
+
+#ifdef __cplusplus
 } // extern C
 #endif
 

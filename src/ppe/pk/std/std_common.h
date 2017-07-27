@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -58,6 +58,7 @@
         _liw        r5, pk_unified_irq_prty_mask_handler
         mtlr        r5
         blrl            // On return, d5 contains task prty irq vec.
+        mfsprg      r3, 0 // In case r3 is modified by unified handler, restore to sprg0
 #else
         _lvdg       d5, STD_LCL_EISTR    #load the 64bit interrupt status into d5
 #endif        

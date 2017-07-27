@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -36,29 +36,33 @@
 #include "pk.h"
 #include "pk_trace.h"
 
-void pk_trace_timer_callback(void* arg);
 
-#if (PK_TRACE_SUPPORT && PK_TIMER_SUPPORT)
+#if (PK_TRACE_SUPPORT)
+#if  (PK_TIMER_SUPPORT)
+void pk_trace_timer_callback(void* arg);
+extern PkTimer       g_pk_trace_timer __attribute__((section (".sdata")));
 
 //Static initialization of the trace timer
-PkTimer g_pk_trace_timer =
+PkTimer g_pk_trace_timer __attribute__ ((section (".sdata"))) =
 {
     .deque = PK_DEQUE_ELEMENT_INIT(),
     .timeout = 0,
     .callback = pk_trace_timer_callback,
     .arg = 0,
 };
+#endif
 
 //Static initialization of the pk trace buffer
-PkTraceBuffer g_pk_trace_buf =
+PkTraceBuffer g_pk_trace_buf __attribute__ ((section (".sdata"))) =
 {
     .version            = PK_TRACE_VERSION,
     .image_str          = PPE_IMG_STRING,
     .hash_prefix        = PK_TRACE_HASH_PREFIX,
-    .partial_trace_hash = trace_ppe_hash("PARTIAL TRACE ENTRY. HASH_ID = %d", PK_TRACE_HASH_PREFIX),
+    .partial_trace_hash =
+    trace_ppe_hash("PARTIAL TRACE ENTRY. HASH_ID = %d", PK_TRACE_HASH_PREFIX),
     .size               = PK_TRACE_SZ,
     .max_time_change    = PK_TRACE_MTBT,
-    .hz                 = 500000000, //default value. Actual value is set in pk_init.c
+    .hz                 = 500000000, //default. Actual is set in pk_init.c
     .time_adj64         = 0,
     .state.word64       = 0,
     .cb                 = {0}
@@ -123,7 +127,7 @@ void pk_trace_tiny(uint32_t i_parm)
     pk_critical_section_exit(&ctx);
 }
 
-
+#if  (PK_TIMER_SUPPORT)
 // This function is called periodically in order to ensure that the max ticks
 // between trace entries is no more than what will fit inside a 32bit value.
 #ifndef PK_TRACE_TIMER_OUTPUT
@@ -150,5 +154,5 @@ void pk_trace_set_timebase(PkTimebase timebase)
 {
     g_pk_trace_buf.time_adj64 = timebase - pk_timebase_get();
 }
-
-#endif
+#endif  // PK_TIMER_SUPPORT
+#endif  // PK_TRACE_SUPPORT

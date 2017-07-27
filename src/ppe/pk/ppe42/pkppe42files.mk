@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2015,2016
+# Contributors Listed Below - COPYRIGHT 2015,2017
 # [+] International Business Machines Corp.
 #
 #
@@ -39,19 +39,21 @@
 PPE42-C-SOURCES = ppe42_core.c \
 		  ppe42_init.c \
 		  ppe42_irq_core.c\
+		  ppe42_irq_init.c\
 		  ppe42_gcc.c\
 		  ppe42_scom.c\
-		  ppe42_string.c\
 		  eabi.c\
-		  math.c
-				   
+		  math.c\
+		  ppe42_string.c
+
 PPE42-S-SOURCES =  ppe42_boot.S \
 		   ppe42_exceptions.S\
 		   div64.S\
-		   ppe42_timebase.S
+		   ppe42_timebase.S\
+		   div32.S
 
-PPE42-TIMER-C-SOURCES = 
-PPE42-TIMER-S-SOURCES = 
+PPE42-TIMER-C-SOURCES =
+PPE42-TIMER-S-SOURCES =
 
 PPE42-THREAD-C-SOURCES =
 PPE42-THREAD-S-SOURCES = ppe42_thread_init.S

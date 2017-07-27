@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -49,11 +49,11 @@ uint32_t putscom_abs(const uint32_t i_address, uint64_t i_data)
     // Perform the Store Virtual Double instruction
     PPE_STVD(i_address, i_data);
 
-    // Get the MSR[SIBRC] as the return code   
+    // Get the MSR[SIBRC] as the return code
     uint32_t rc = mfmsr();
-    rc = ((rc & MSR_SIBRC) >> (32-(MSR_SIBRC_START_BIT + MSR_SIBRC_LEN)));
+    rc = ((rc & MSR_SIBRC) >> (32 - (MSR_SIBRC_START_BIT + MSR_SIBRC_LEN)));
     return (rc);
-    
+
 }
 
 uint32_t _putscom( uint32_t i_chiplet_id, uint32_t i_address, uint64_t i_data)
@@ -62,37 +62,37 @@ uint32_t _putscom( uint32_t i_chiplet_id, uint32_t i_address, uint64_t i_data)
     // Perform the Store Virtual Double Index instruction
     PPE_STVDX(i_chiplet_id, i_address, i_data);
 
-    // Get the MSR[SIBRC] as the return code   
+    // Get the MSR[SIBRC] as the return code
     uint32_t rc = mfmsr();
-    rc = ((rc & MSR_SIBRC) >> (32-(MSR_SIBRC_START_BIT + MSR_SIBRC_LEN)));
+    rc = ((rc & MSR_SIBRC) >> (32 - (MSR_SIBRC_START_BIT + MSR_SIBRC_LEN)));
     return (rc);
 
 }
 
-uint32_t getscom_abs( const uint32_t i_address, uint64_t *o_data)
+uint32_t getscom_abs( const uint32_t i_address, uint64_t* o_data)
 {
     uint64_t temp;
     // Perform the Load Virtual Double instruction
     PPE_LVD(i_address, temp);
     PPE_STVD(o_data, temp);
 
-    // Get the MSR[SIBRC] as the return code   
+    // Get the MSR[SIBRC] as the return code
     uint32_t rc = mfmsr();
-    rc = ((rc & MSR_SIBRC) >> (32-(MSR_SIBRC_START_BIT + MSR_SIBRC_LEN)));
+    rc = ((rc & MSR_SIBRC) >> (32 - (MSR_SIBRC_START_BIT + MSR_SIBRC_LEN)));
     return (rc);
 }
 
 
-uint32_t _getscom( const uint32_t i_chiplet_id, const uint32_t i_address, uint64_t *o_data)
+uint32_t _getscom( const uint32_t i_chiplet_id, const uint32_t i_address, uint64_t* o_data)
 {
     uint64_t temp;
     // Perform the Load Virtual Double Index instruction
     PPE_LVDX(i_chiplet_id, i_address, temp);
     PPE_STVD(o_data, temp);
 
-    // Get the MSR[SIBRC] as the return code   
+    // Get the MSR[SIBRC] as the return code
     uint32_t rc = mfmsr();
-    rc = ((rc & MSR_SIBRC) >> (32-(MSR_SIBRC_START_BIT + MSR_SIBRC_LEN)));
+    rc = ((rc & MSR_SIBRC) >> (32 - (MSR_SIBRC_START_BIT + MSR_SIBRC_LEN)));
     return (rc);
 
 }

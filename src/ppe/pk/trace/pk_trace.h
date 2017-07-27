@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -295,7 +295,7 @@ typedef struct
     uint8_t             cb[PK_TRACE_SZ];
 }PkTraceBuffer; //pk_trace_buffer_t;
 
-extern PkTraceBuffer g_pk_trace_buf;
+extern PkTraceBuffer g_pk_trace_buf __attribute__((section (".sdata")));
 
 #ifdef PK_TRACE_BUFFER_WRAP_MARKER
     extern uint32_t G_wrap_mask;

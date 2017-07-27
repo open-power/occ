@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -30,30 +30,30 @@
 
 // Macros to define where declared code is actually compiled
 
-#ifdef __PPE42_C__
-#define IF__PPE42_CORE_C__(x) x
-#define UNLESS__PPE42_CORE_C__(x) 
+#ifdef __PPE42_CORE_C__
+    #define IF__PPE42_CORE_C__(x) x
+    #define UNLESS__PPE42_CORE_C__(x)
 #else
-#define IF__PPE42_CORE_C__(x)
-#define UNLESS__PPE42_CORE_C__(x) x
+    #define IF__PPE42_CORE_C__(x)
+    #define UNLESS__PPE42_CORE_C__(x) x
 #endif
 
 #ifdef __PPE42_IRQ_CORE_C__
-#define IF__PPE42_IRQ_CORE_C__(x) x
-#define UNLESS__PPE42_IRQ_CORE_C__(x) 
+    #define IF__PPE42_IRQ_CORE_C__(x) x
+    #define UNLESS__PPE42_IRQ_CORE_C__(x)
 #else
-#define IF__PPE42_IRQ_CORE_C__(x)
-#define UNLESS__PPE42_IRQ_CORE_C__(x) x
+    #define IF__PPE42_IRQ_CORE_C__(x)
+    #define UNLESS__PPE42_IRQ_CORE_C__(x) x
 #endif
 
 #ifdef HWMACRO_GPE
-#include "gpe.h"
+    #include "gpe.h"
 #elif defined(HWMACRO_STD)
-#include "std.h"
+    #include "std.h"
 #elif defined(HWMACRO_PPE)
-#include "ppe.h"
+    #include "ppe.h"
 #else
-#error "Macro Type not specified.  Are you building from the correct directory?"
+    #error "Macro Type not specified.  Are you building from the correct directory?"
 #endif
 
 
@@ -86,8 +86,8 @@
 
 /// ssize_t is defined explictly rather than bringing in all of <unistd.h>
 #ifndef __ssize_t_defined
-#define __ssize_t_defined
-typedef int ssize_t;
+    #define __ssize_t_defined
+    typedef int ssize_t;
 #endif
 
 /// A memory barrier
@@ -104,23 +104,28 @@ typedef int ssize_t;
 
 /// CouNT Leading Zeros Word
 #define cntlzw(x) \
-({uint32_t __x = (x); \
-  uint32_t __lzw; \
-  asm volatile ("cntlzw %0, %1" : "=r" (__lzw) : "r" (__x)); \
-  __lzw;})
+    ({uint32_t __x = (x); \
+        uint32_t __lzw; \
+        asm volatile ("cntlzw %0, %1" : "=r" (__lzw) : "r" (__x)); \
+        __lzw;})
 
 /// CouNT Leading Zeros : uint32_t
 static inline int
-cntlz32(uint32_t x) {
+cntlz32(uint32_t x)
+{
     return cntlzw(x);
 }
 
 /// CouNT Leading Zeros : uint64_t
 static inline int
-cntlz64(uint64_t x) {
-    if (x > 0xffffffff) {
+cntlz64(uint64_t x)
+{
+    if (x > 0xffffffff)
+    {
         return cntlz32(x >> 32);
-    } else {
+    }
+    else
+    {
         return 32 + cntlz32(x);
     }
 }
@@ -132,7 +137,7 @@ popcount32(uint32_t x)
 {
     return __builtin_popcount(x);
 }
-    
+
 
 /// 64-bit population count
 static inline int
@@ -149,84 +154,53 @@ popcount64(uint64_t x)
 
 /// 8-bit MMIO Write
 #define out8(addr, data) \
-do {*(volatile uint8_t *)(addr) = (data);} while(0)
+    do {*(volatile uint8_t *)(addr) = (data);} while(0)
 
 /// 8-bit MMIO Read
 #define in8(addr) \
-({uint8_t __data = *(volatile uint8_t *)(addr); __data;})
+    ({uint8_t __data = *(volatile uint8_t *)(addr); __data;})
 
 /// 16-bit MMIO Write
 #define out16(addr, data) \
-do {*(volatile uint16_t *)(addr) = (data);} while(0)
+    do {*(volatile uint16_t *)(addr) = (data);} while(0)
 
 /// 16-bit MMIO Read
 #define in16(addr) \
-({uint16_t __data = *(volatile uint16_t *)(addr); __data;})
+    ({uint16_t __data = *(volatile uint16_t *)(addr); __data;})
 
 /// 32-bit MMIO Write
 #define out32(addr, data) \
-do {*(volatile uint32_t *)(addr) = (data);} while(0)
+    do {*(volatile uint32_t *)(addr) = (data);} while(0)
 
 /// 32-bit MMIO Read
 #define in32(addr) \
-({uint32_t __data = *(volatile uint32_t *)(addr); __data;})
-
-#ifdef HWMACRO_GPE
+    ({uint32_t __data = *(volatile uint32_t *)(addr); __data;})
 
 /// 64-bit MMIO Write
 #define out64(addr, data) \
-    do { \
-        uint64_t __data = (data);                               \
-        volatile uint32_t *__addr_hi = (uint32_t *)(addr);      \
-        volatile uint32_t *__addr_lo = __addr_hi + 1;           \
-        *__addr_hi = (__data >> 32);                            \
-        *__addr_lo = (__data & 0xffffffff);                     \
-    } while(0)
-
-#else /* standard PPE's require a 64 bit write */
-
-/// 64-bit MMIO Write
-#define out64(addr, data) \
-{\
-    uint64_t __d = (data); \
-    uint32_t* __a = (uint32_t*)(addr); \
-    asm volatile \
-    (\
-        "stvd %1, %0 \n" \
-        : "=o"(*__a) \
-        : "r"(__d) \
-    ); \
-}
-
-#endif /* HWMACRO_GPE */
-
-#ifdef HWMACRO_GPE
-/// 64-bit MMIO Read
-#define in64(addr) \
-    ({                                                     \
-        uint64_t __data;                                   \
-        volatile uint32_t *__addr_hi = (uint32_t *)(addr); \
-        volatile uint32_t *__addr_lo = __addr_hi + 1;      \
-        __data = *__addr_hi;                               \
-        __data = (__data << 32) | *__addr_lo;              \
-        __data;})
-
-#else /* Standard PPE's require a 64 bit read */
+    {\
+        uint64_t __d = (data); \
+        uint32_t* __a = (uint32_t*)(addr); \
+        asm volatile \
+        (\
+         "stvd %1, %0 \n" \
+         : "=o"(*__a) \
+         : "r"(__d) \
+        ); \
+    }
 
 #define in64(addr) \
-({\
-    uint64_t __d; \
-    uint32_t* __a = (uint32_t*)(addr); \
-    asm volatile \
-    (\
-        "lvd %0, %1 \n" \
-        :"=r"(__d) \
-        :"o"(*__a) \
-    ); \
-    __d; \
-})
-    
-#endif  /* HWMACRO_GPE */
+    ({\
+        uint64_t __d; \
+        uint32_t* __a = (uint32_t*)(addr); \
+        asm volatile \
+        (\
+         "lvd %0, %1 \n" \
+         :"=r"(__d) \
+         :"o"(*__a) \
+        ); \
+        __d; \
+    })
 
 #endif  /* __ASSEMBLER__ */
 
@@ -238,6 +212,7 @@ do {*(volatile uint32_t *)(addr) = (data);} while(0)
 #define REVISION_STRING(symbol, rev) const char* symbol = rev;
 
 #else // __ASSEMBLER__
+// *INDENT-OFF*
 
 /// Store revision information as a global string constant
         .macro  .revision_string, symbol:req, rev:req
@@ -250,11 +225,13 @@ do {*(volatile uint32_t *)(addr) = (data);} while(0)
         .popsection
         .endm
 
+// *INDENT-ON*
 #endif  // __ASSEMBLER__
 
 
 
 #include "ppe42_context.h"
+#include "pk_panic_codes.h"
 
 // PPE42 stack characteristics for PK.  The pre-pattern pattern is selected
 // to be easily recognizable yet be an illegal instruction.
@@ -271,66 +248,61 @@ do {*(volatile uint32_t *)(addr) = (data);} while(0)
 #define PK_THREAD_OFFSET_STACK_LIMIT         4
 #define PK_THREAD_OFFSET_STACK_BASE          8
 
-// PK boot loader panic codes
-
-#define PPE42_BOOT_VECTORS_NOT_ALIGNED 0x00405001
-
-// Interrupt handler panic codes
-
-#define PPE42_DEFAULT_IRQ_HANDLER     0x00405010
-#define PPE42_DEFAULT_SPECIAL_HANDLER 0x00405011
-#define PPE42_PHANTOM_INTERRUPT       0x00405012
-#define PPE42_PROGRAM_HALT            0x00405013
-
-
-// Exception handling invariant panic codes
-
-#define PPE42_IRQ_FULL_EXIT_INVARIANT 0x00405020
-#define PPE42_IRQ_FAST2FULL_INVARIANT 0x00405021
-
-
-// API error panic codes
-
 
 // Application-overrideable definitions
 
-/// The default thread machine context has MSR[CE], MSR[EE] and MSR[ME] set,
-/// and all other MSR bits cleared.
+/// The default thread machine context has
+///  MSR[CE], MSR[EE] MSR[ME] MSR[IS0] MSR[IS1] MSR[IS2] set.
+///  MSR[IPE] is set if USE_PPE_IMPRECISE_MODE is defined.
+///  and all other MSR bits cleared.
+///
+///  MSR[IS0] = Data Cache Populate
+///  MSR[IS1] = Store Gathering
+///  MSR[IS2] = Instruction Cache Prefetch
+///  MSR[IS3] = Reserved
 ///
 /// The default definition allows external and machine check exceptions.  This
-/// definition can be overriden by the application.  
+/// definition can be overriden by the application.
 
 #ifndef PK_THREAD_MACHINE_CONTEXT_DEFAULT
-#define PK_THREAD_MACHINE_CONTEXT_DEFAULT \
-    (MSR_UIE | MSR_EE | MSR_ME)
 
-#endif
+#if defined(USE_PPE_IMPRECISE_MODE)
+
+#if defined(MASK_MSR_SEM6)
+
+#define PK_THREAD_MACHINE_CONTEXT_DEFAULT \
+    (MSR_UIE | MSR_EE | MSR_ME | MSR_IS0 | MSR_IS1 | MSR_IS2 | MSR_IPE | MSR_SEM6)
+
+#else
+
+#define PK_THREAD_MACHINE_CONTEXT_DEFAULT \
+    (MSR_UIE | MSR_EE | MSR_ME | MSR_IS0 | MSR_IS1 | MSR_IS2 | MSR_IPE)
+
+#endif  /*MASK_MSR_SEM6*/
+
+#else
+
+#if defined(MASK_MSR_SEM6)
+
+#define PK_THREAD_MACHINE_CONTEXT_DEFAULT \
+    (MSR_UIE | MSR_EE | MSR_ME | MSR_IS0 | MSR_IS1 | MSR_IS2 | MSR_SEM6)
+
+#else
+
+#define PK_THREAD_MACHINE_CONTEXT_DEFAULT \
+    (MSR_UIE | MSR_EE | MSR_ME | MSR_IS0 | MSR_IS1 | MSR_IS2)
+
+#endif  /*MASK_MSR_SEM6*/
+#endif  /*USE_PPE_IMPRECISE_MODE*/
+#endif  /*PK_THREAD_MACHINE_CONTEXT_DEFAULT*/
 
 
 #ifndef __ASSEMBLER__
 
-/// The PK kernel default panic sequence for C code
+/// The PK kernel default panic sequence for C code is to issue a trap
+/// instruction with DBCR[TRAP] set, which causes XSR[TRAP] <- 1
+/// and causes the PPE to halt.
 ///
-/// By default a kernel panic from C code forces external debug mode then
-/// generates a \c trap instruction followed by the error code.  The \a code
-/// argument must be a compile-time integer immediate. This definition can be
-/// overriden by the application.
-///
-/// The OCC may be running in internal debug mode for various reasons, and
-/// TRAP-ing in internal debug mode would lead to an infinite loop in the
-/// default Program Interrupt handler - which itself would be a TRAP (since
-/// that's the default implementation of PK_PANIC().  Therefore by default
-/// the panic is implemented as a special code sequence that forces the core
-/// into external debug mode before issuing a TRAP which will halt the core.
-/// To preserve the state we use the special global variables
-/// __pk_panic_save_dbcr0 and __pk_panic_save_r3 defined in ppe42_core.c.
-/// The original value of DBCR0 is destroyed, but can be recovered from the
-/// global.  In the end %r3 is reloaded from temporary storage and will be
-/// unchanged at the halt.
-///
-/// Note that there is a small chance that an interrupt will fire and
-/// interrupt this code before the halt - in general there is no way around
-/// this.
 ///
 /// The Simics environment does not model Debug events correctly. It executes
 /// the TRAP as an illegal instruction and branches to the Program Interrupt
@@ -339,39 +311,41 @@ do {*(volatile uint32_t *)(addr) = (data);} while(0)
 /// before the hardware trap.  The special-form magic instruction is
 /// recognized by our Simics support scripts which decode the kernel state and
 /// try to help the user interpret what happened based on the TRAP code.
+///   NOTE! SIMICS does not seem to recognize the "magic breakpoint" on PPE!
+
 
 #ifndef PK_PANIC
- 
-/*#define PK_PANIC(code)                                                 \
-    do {                                                                \
-        barrier();                                                      \
-        asm volatile ("stw     %r3, __pk_panic_save_r3@sda21(0)");     \
-        asm volatile ("mfdbcr0 %r3");                                   \
-        asm volatile ("stw     %r3, __pk_panic_save_dbcr0@sda21(0)");  \
-        asm volatile ("lwz     %r3, __pk_panic_dbcr0@sda21(0)");       \
-        asm volatile ("mtdbcr0 %r3");                                   \
-        asm volatile ("isync");                                         \
-        asm volatile ("lwz     %r3, __pk_panic_save_r3@sda21(0)");     \
-        asm volatile ("rlwimi  1,1,0,0,0");                             \
-        asm volatile ("trap");                                          \
+
+#if SIMICS_ENVIRONMENT
+#define PK_PANIC(code)                  \
+    do {                                \
+        asm volatile ("stw     %r3, __pk_panic_save_r3@sda21(0)");      \
+        asm volatile ("lwz     %r3, __pk_panic_dbcr@sda21(0)");         \
+        asm volatile ("mtdbcr  %r3");                                   \
         asm volatile (".long %0" : : "i" (code));                       \
-    } while (0)
-*/
-#define PK_PANIC(code)                                                 \
+    } while(0)
+#else
+#define PK_PANIC(code)                                                  \
     do {                                                                \
-        barrier();                                                      \
-        asm volatile ("b .");                                          \
+        asm volatile ("tw 31, %0, %1" : : "i" (code/256) , "i" (code%256)); \
     } while (0)
+#endif
+#endif // SIMICS_ENVIRONMENT
 
 // These variables are used by the PK_PANIC() definition above to save and
-// restore state. __pk_panic_dbcr0 is the value loaded into DBCR0 to force
-// traps to halt the OCC and freeze the timers.
+// restore state. __pk_panic_dbcr is the value loaded into DBCR to force
+// traps to halt the PPE and freeze the timers.
 
-//#ifdef __PPE42_CORE_C__
-//uint32_t __pk_panic_save_r3;
-//uint32_t __pk_panic_save_dbcr0;
-//uint32_t __pk_panic_dbcr0 = DBCR0_EDM | DBCR0_TDE | DBCR0_FT;
-//#endif
+#if SIMICS_ENVIRONMENT
+#ifdef __PPE42_CORE_C__
+uint32_t __pk_panic_save_r3;
+uint32_t __pk_panic_dbcr = DBCR_RST_HALT;
+#define __PK_PANIC_DEFS__
+#else
+#define __PK_PANIC_DEFS__                                               \
+        extern uint32_t __pk_panic_save_r3;                             \
+        extern uint32_t __pk_panic_dbcr;
+#endif //SIMICS_ENVIRONMENT
 
 #endif // PK_PANIC
 
@@ -384,7 +358,7 @@ do {*(volatile uint32_t *)(addr) = (data);} while(0)
 //#define SIMICS_MAGIC_BREAKPOINT asm volatile ("rlwimi 0,0,0,0,0")
 
 /// This is the Simics 'magic breakpoint' instruction including a memory
-/// barrier. 
+/// barrier.
 ///
 /// Note that the memory barrier guarantees that all variables held in
 /// registers are flushed to memory before the breakpoint, however this might
@@ -398,6 +372,7 @@ do {*(volatile uint32_t *)(addr) = (data);} while(0)
 */
 
 #else // __ASSEMBLER__
+// *INDENT-OFF*
 
 /// This is the Simics 'magic breakpoint' instruction.  An assembler macro
 /// form is also provided for use within macros.
@@ -421,15 +396,23 @@ do {*(volatile uint32_t *)(addr) = (data);} while(0)
 /// would require 10.
 
 #ifndef PK_PANIC
-        
+
 #define PK_PANIC(code) _pk_panic code
-
-        .macro  _pk_panic, code
-        b .
+#if SIMICS_ENVIRONMENT
+        .macro _pk_panic, code
+            stw     %r3, __pk_panic_save_r3@sda21(0)
+            lwz     %r3, __pk_panic_dbcr@sda21(0)
+            mtdbcr  %r3,
+            .long   (\code)
         .endm
-
+#else
+        .macro  _pk_panic, code
+            tw  31,(\code)/256, (\code)%256
+        .endm
+#endif // SIMICS_ENVIRONMENT
 #endif // PK_PANIC
 
+// *INDENT-ON*
 #endif // __ASSEMBLER__
 
 
@@ -454,10 +437,14 @@ do {*(volatile uint32_t *)(addr) = (data);} while(0)
 /// PK_THREAD_MACHINE_CONTEXT_DEFAULT. This definition can be overriden by
 /// the application.
 ///
-/// The default is to enable machine checks only.
+
 
 #ifndef PPE42_MSR_INITIAL
-#define PPE42_MSR_INITIAL MSR_ME
+#if defined(USE_PPE_IMPRECISE_MODE)
+#define PPE42_MSR_INITIAL (MSR_ME | MSR_IS0 | MSR_IS1 | MSR_IS2 | MSR_IPE)
+#else
+#define PPE42_MSR_INITIAL (MSR_ME | MSR_IS0 | MSR_IS1 | MSR_IS2)
+#endif
 #endif
 
 /// The \a argc argument passed to \c main(). This definition can be overriden
@@ -490,7 +477,7 @@ do {*(volatile uint32_t *)(addr) = (data);} while(0)
 typedef uint32_t PkMachineContext;
 
 /// Disable interrupts and return the current
-/// context.  
+/// context.
 ///
 /// \param context A pointer to an PkMachineContext, this is the context that
 ///                existed before interrupts were disabled. Typically this
@@ -504,13 +491,13 @@ typedef uint32_t PkMachineContext;
 
 UNLESS__PPE42_CORE_C__(extern)
 inline int
-pk_interrupt_disable(PkMachineContext *context)
+pk_interrupt_disable(PkMachineContext* context)
 {
-    *context = mfmsr();
+*context = mfmsr();
 
-    wrteei(0);
+wrteei(0);
 
-    return PK_OK;
+return PK_OK;
 }
 
 /// Set the machine context.
@@ -521,20 +508,21 @@ pk_interrupt_disable(PkMachineContext *context)
 ///
 /// \retval 0 Successful completion
 ///
-/// \retval -PK_INVALID_ARGUMENT_CONTEXT_SET A null pointer was provided as 
+/// \retval -PK_INVALID_ARGUMENT_CONTEXT_SET A null pointer was provided as
 /// the \a context argument or an illegal machine context was specified.
 
 UNLESS__PPE42_CORE_C__(extern)
 inline int
-pk_machine_context_set(PkMachineContext *context)
+pk_machine_context_set(PkMachineContext* context)
 {
-    if (PK_ERROR_CHECK_API) {
-        PK_ERROR_IF(context == 0, PK_INVALID_ARGUMENT_CONTEXT_SET);
-    }
+if (PK_ERROR_CHECK_API)
+{
+PK_ERROR_IF(context == 0, PK_INVALID_ARGUMENT_CONTEXT_SET);
+}
 
-    mtmsr(*context);
+mtmsr(*context);
 
-    return PK_OK;
+return PK_OK;
 }
 
 /// Get the machine context.
@@ -545,25 +533,26 @@ pk_machine_context_set(PkMachineContext *context)
 ///
 /// \retval 0 Successful completion
 ///
-/// \retval -PK_INVALID_ARGUMENT_CONTEXT_GET A null pointer was provided as 
+/// \retval -PK_INVALID_ARGUMENT_CONTEXT_GET A null pointer was provided as
 /// the \a context argument.
 
 UNLESS__PPE42_CORE_C__(extern)
 inline int
-pk_machine_context_get(PkMachineContext *context)
+pk_machine_context_get(PkMachineContext* context)
 {
-    if (PK_ERROR_CHECK_API) {
-        PK_ERROR_IF(context == 0, PK_INVALID_ARGUMENT_CONTEXT_GET);
-    }
+if (PK_ERROR_CHECK_API)
+{
+PK_ERROR_IF(context == 0, PK_INVALID_ARGUMENT_CONTEXT_GET);
+}
 
-    *context = mfmsr();
+*context = mfmsr();
 
-    return PK_OK;
+return PK_OK;
 }
 
 extern void __ctx_switch();
 /// The PK context switch for the PPE kernel
-//  There is no protected mode in PPE42 so just call kernel code 
+//  There is no protected mode in PPE42 so just call kernel code
 #define __pk_switch() __ctx_switch()
 
 
@@ -572,14 +561,14 @@ extern void __ctx_switch();
 /// behind the SP are for the initial subroutine's LR.
 
 static inline void
-__pk_stack_create_initial_frame(PkAddress *stack, size_t *size) \
+__pk_stack_create_initial_frame(PkAddress* stack, size_t* size)
 {
-    *stack -= 8;
-    *size -= 8; 
-    *((PK_STACK_TYPE *)(*stack)) = 0;
+*stack -= 8;
+* size -= 8;
+* ((PK_STACK_TYPE*)(*stack)) = 0;
 }
 
-/// The PK Kernel Context for PPE42 
+/// The PK Kernel Context for PPE42
 ///
 /// The PK portable kernel does not define how the kernel keeps track of
 /// whether PK is running, interrupt levels, and other debug
@@ -589,45 +578,47 @@ __pk_stack_create_initial_frame(PkAddress *stack, size_t *size) \
 /// In the PPE42 port, the kernel context is maintained in SPRG0.  This
 /// 32-bit value is treated as 6 distinct fields as indicated in the structure
 /// definition.
-typedef union {
+typedef union
+{
 
-    uint32_t value;
+uint32_t value;
 
-    struct {
+struct
+{
 
-        /// A flag indicating that PK is in thread mode after a call of
-        /// pk_start_threads(). 
-        unsigned thread_mode : 1;
+/// A flag indicating that PK is in thread mode after a call of
+/// pk_start_threads().
+unsigned thread_mode : 1;
 
-        /// If this field is non-zero then PK is processing an interrupt
-        /// and the \c irq field will contain the PkIrqId of the interrupt
-        /// that kicked off interrupt processing.
-        unsigned processing_interrupt : 1;
+/// If this field is non-zero then PK is processing an interrupt
+/// and the \c irq field will contain the PkIrqId of the interrupt
+/// that kicked off interrupt processing.
+unsigned processing_interrupt : 1;
 
-        /// The priority of the currently running thread.  In an interrupt
-        /// context, this is the priority of the thread that was interrupted.
-        unsigned thread_priority : 6;
+/// The priority of the currently running thread.  In an interrupt
+/// context, this is the priority of the thread that was interrupted.
+unsigned thread_priority : 6;
 
-        /// This bit tracks whether the current context can be discarded or
-        /// if the context must be saved.  If the processor takes an interrupt
-        /// and this bit is set, then the current context will be discarded.
-        /// This bit is set at the end of handling an interrupt and prior
-        /// to entering the wait enabled state.
-        unsigned discard_ctx : 1;
+/// This bit tracks whether the current context can be discarded or
+/// if the context must be saved.  If the processor takes an interrupt
+/// and this bit is set, then the current context will be discarded.
+/// This bit is set at the end of handling an interrupt and prior
+/// to entering the wait enabled state.
+unsigned discard_ctx : 1;
 
-        /// The PkIrqId of the currently running (or last run) handler.  If
-        /// \c processing_interrupt is set, then this is the
-        /// PkIrqId of the IRQ that is currently executing.
-        unsigned irq : 7;
+/// The PkIrqId of the currently running (or last run) handler.  If
+/// \c processing_interrupt is set, then this is the
+/// PkIrqId of the IRQ that is currently executing.
+unsigned irq : 7;
 
-        /// Each PPE application will define (or not) the interpretation of
-        /// this field.  Since SPRG0 is saved and restored during during thread
-        /// context switches, this field can be used to record the progress of
-        /// individual threads.  The kernel and/or application will provide
-        /// APIs or macros to read and write this field.
-        unsigned app_specific : 16;
+/// Each PPE application will define (or not) the interpretation of
+/// this field.  Since SPRG0 is saved and restored during during thread
+/// context switches, this field can be used to record the progress of
+/// individual threads.  The kernel and/or application will provide
+/// APIs or macros to read and write this field.
+unsigned app_specific : 16;
 
-    } fields;
+} fields;
 
 } __PkKernelContext;
 
@@ -636,21 +627,21 @@ typedef union {
 
 static inline uint16_t ppe42_app_ctx_get(void)
 {
-    __PkKernelContext __ctx;
-    __ctx.value = mfspr(SPRN_SPRG0);
-    return __ctx.fields.app_specific;
+__PkKernelContext __ctx;
+__ctx.value = mfspr(SPRN_SPRG0);
+return __ctx.fields.app_specific;
 }
 
 static inline void ppe42_app_ctx_set(uint16_t app_ctx)
 {
-    PkMachineContext    mctx;
-    __PkKernelContext   __ctx;
-    mctx = mfmsr();
-    wrteei(0);
-    __ctx.value = mfspr(SPRN_SPRG0);
-    __ctx.fields.app_specific = app_ctx;
-    mtspr(SPRN_SPRG0, __ctx.value);
-    mtmsr(mctx);
+PkMachineContext    mctx;
+__PkKernelContext   __ctx;
+mctx = mfmsr();
+wrteei(0);
+__ctx.value = mfspr(SPRN_SPRG0);
+__ctx.fields.app_specific = app_ctx;
+mtspr(SPRN_SPRG0, __ctx.value);
+mtmsr(mctx);
 }
 
 // These APIs are provided to the PK portable kernel by the port.
@@ -692,52 +683,52 @@ static inline void ppe42_app_ctx_set(uint16_t app_ctx)
 // queue).
 //
 // These queues are used both for the run queue and the pending queue
-// associated with every semaphore. 
+// associated with every semaphore.
 //
 // On PPE42 with 32 threads (implied), this is a job for a uint32_t and
-// cntlzw(). 
+// cntlzw().
 
 static inline void
-__pk_thread_queue_clear(volatile PkThreadQueue *queue)
+__pk_thread_queue_clear(volatile PkThreadQueue* queue)
 {
-    *queue = 0;
+*queue = 0;
 }
 
 static inline void
-__pk_thread_queue_insert(volatile PkThreadQueue *queue, PkThreadPriority priority)
+__pk_thread_queue_insert(volatile PkThreadQueue* queue, PkThreadPriority priority)
 {
-    *queue |= (0x80000000u >> priority);
+*queue |= (0x80000000u >> priority);
 }
 
 static inline void
-__pk_thread_queue_delete(volatile PkThreadQueue *queue, PkThreadPriority priority)
+__pk_thread_queue_delete(volatile PkThreadQueue* queue, PkThreadPriority priority)
 {
-    *queue &= ~(0x80000000u >> priority);
+*queue &= ~(0x80000000u >> priority);
 }
 
 static inline PkThreadPriority
-__pk_thread_queue_min(volatile PkThreadQueue *queue)
+__pk_thread_queue_min(volatile PkThreadQueue* queue)
 {
-    return cntlzw(*queue);
+return cntlzw(*queue);
 }
 
 static inline int
-__pk_thread_queue_member(volatile PkThreadQueue *queue, PkThreadPriority priority)
+__pk_thread_queue_member(volatile PkThreadQueue* queue, PkThreadPriority priority)
 {
-    return ((*queue >> (31 - priority)) & 1);
+return ((*queue >> (31 - priority)) & 1);
 }
 
 static inline void
-__pk_thread_queue_union(volatile PkThreadQueue *queue0, 
-                         volatile PkThreadQueue *queue1)
+__pk_thread_queue_union(volatile PkThreadQueue* queue0,
+volatile PkThreadQueue* queue1)
 {
-    *queue0 |= *queue1;
+*queue0 |= *queue1;
 }
 
 static inline int
-__pk_thread_queue_count(volatile PkThreadQueue* queue) 
+__pk_thread_queue_count(volatile PkThreadQueue* queue)
 {
-    return __builtin_popcount(*queue);
+return __builtin_popcount(*queue);
 }
 
 
@@ -791,13 +782,13 @@ __pk_thread_queue_count(volatile PkThreadQueue* queue)
 /// Once hit, restarting from the break requires clearing IAC4 and restarting
 /// instructions:
 ///
-/// \code 
+/// \code
 ///
 /// putspr pu.occ iac4 0
 /// cipinstruct pu.occ start
 ///
 /// \endcode
-/// 
+///
 /// The above restart processes is also encapsulated as the p8_tclEcmd
 /// procedure 'unbreakOcc'.
 ///

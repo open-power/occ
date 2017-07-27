@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -34,19 +34,19 @@
 /// we should try it.
 
 #ifdef __PK_CORE_C__
-#define IF__PK_CORE_C__(x) x
-#define UNLESS__PK_CORE_C__(x) 
+    #define IF__PK_CORE_C__(x) x
+    #define UNLESS__PK_CORE_C__(x)
 #else
-#define IF__PK_CORE_C__(x)
-#define UNLESS__PK_CORE_C__(x) x
+    #define IF__PK_CORE_C__(x)
+    #define UNLESS__PK_CORE_C__(x) x
 #endif
 
 #if PK_MINIMIZE_KERNEL_CODE_SPACE
-#define IF_PK_MINIMIZE_KERNEL_CODE_SPACE(x) x
-#define UNLESS_PK_MINIMIZE_KERNEL_CODE_SPACE(x) 
+    #define IF_PK_MINIMIZE_KERNEL_CODE_SPACE(x) x
+    #define UNLESS_PK_MINIMIZE_KERNEL_CODE_SPACE(x)
 #else
-#define IF_PK_MINIMIZE_KERNEL_CODE_SPACE(x)
-#define UNLESS_PK_MINIMIZE_KERNEL_CODE_SPACE(x) x
+    #define IF_PK_MINIMIZE_KERNEL_CODE_SPACE(x)
+    #define UNLESS_PK_MINIMIZE_KERNEL_CODE_SPACE(x) x
 #endif
 
 
@@ -60,11 +60,15 @@ volatile
 PkAddress __pk_saved_sp;
 
 /// The kernel stack; constant once defined by the call of
-/// pk_initialize(). 
+/// pk_initialize().
 
 UNLESS__PK_CORE_C__(extern)
 volatile
 PkAddress __pk_kernel_stack;
+
+UNLESS__PK_CORE_C__(extern)
+volatile
+PkAddress __pk_kernel_stack_limit;
 
 /// This is the run queue - the queue of mapped runnable tasks.
 UNLESS__PK_CORE_C__(extern)
@@ -74,7 +78,7 @@ PkThreadQueue __pk_run_queue;
 /// This flag is set by \c __pk_schedule() if a new highest-priority thread
 /// becomes runnable during an interrupt handler.  The context switch will
 /// take place at the end of interrupt processing, and the
-/// interrupt handling code will clear the flag. 
+/// interrupt handling code will clear the flag.
 
 UNLESS__PK_CORE_C__(extern)
 volatile
@@ -88,11 +92,11 @@ int __pk_delayed_switch;
 /// - After pk_initialize() but prior to pk_start_threads()
 ///
 /// - After pk_start_threads(), when no threads are runnable.  In this case
-/// the NULL (0) value indicates that the PK idle thread is 'running'. 
+/// the NULL (0) value indicates that the PK idle thread is 'running'.
 ///
 /// - After pk_start_threads(), when the current (non-idle) thread has
-/// completed or been deleted. 
-/// 
+/// completed or been deleted.
+///
 /// If \a __pk_current_thread == 0 then there is no requirement to save any
 /// register state on a context switch, either because the PK idle thread has
 /// no permanent context, or because any thread context on the kernel stack is
@@ -116,15 +120,15 @@ PkThread* __pk_current_thread;
 /// interrupts.
 ///
 /// \a __pk_next_thread may be NULL (0) under the following
-/// conditions: 
+/// conditions:
 ///
 /// - After pk_initialize() but prior to pk_start_threads(), assuming no
 /// threads have been made runnable.
 ///
 /// - After pk_start_threads(), when no threads are runnable.  In this case
 /// the NULL (0) value indicates that the PK idle thread is the next thread
-/// to 'run'. 
-/// 
+/// to 'run'.
+///
 /// If \a __pk_next_thread == 0 then there is no requirement to restore
 /// any register state on a context switch, because the PK idle thread has
 /// no permanent context.
@@ -163,14 +167,15 @@ size_t __pk_kernel_stack_size;
 
 UNLESS__PK_CORE_C__(extern)
 volatile
-PkThread* __pk_priority_map[PK_THREADS + 1];
+PkThread* __pk_priority_map[PK_THREADS + 1] __attribute__ ((section (".sdata")));
 
 /// The PK time queue structure
 ///
 /// This structure is defined for use by the kernel, however applications
 /// could also use this structure to define their own time queues.
 
-typedef struct {
+typedef struct
+{
 
     /// A sentinel node for the time queue.
     ///
@@ -200,7 +205,7 @@ typedef struct {
 } PkTimeQueue;
 
 UNLESS__PK_CORE_C__(extern)
-PkTimeQueue __pk_time_queue;
+PkTimeQueue __pk_time_queue __attribute__ ((section (".sdata")));
 
 /// Return a pointer to the PkThread object of the currently running thread,
 /// or NULL (0) if PK is idle or has not been started.
@@ -210,10 +215,10 @@ PkTimeQueue __pk_time_queue;
 /// does not (must not) use this API.
 
 UNLESS__PK_CORE_C__(extern)
-inline PkThread *
+inline PkThread*
 pk_current(void)
 {
-    return (PkThread *)__pk_current_thread;
+    return (PkThread*)__pk_current_thread;
 }
 
 /// Schedule the next timeout in a machine-specific way.
@@ -228,15 +233,26 @@ PK_TIMER_CALLBACK(__pk_thread_timeout);
 /// Generic stack initialization. Portable.
 
 int
-__pk_stack_init(PkAddress *stack,
-                 size_t     *size);
+__pk_stack_init(PkAddress* stack,
+                size_t*     size);
+
+void
+__pk_stack_check(uint32_t stack_base, uint32_t stack_limit);
+
+#define PK_KERNEL_STACK_CHECK() __pk_stack_check(__pk_kernel_stack, __pk_kernel_stack_limit)
+
+#define PK_THREAD_STACK_CHECK() \
+    { \
+        PkThread* thread = (PkThread*)__pk_current_thread; \
+        if (thread) __pk_stack_check(thread->stack_base, thread->stack_limit); \
+    }
 
 /// Machine-specific thread context initialization.
 
-void 
-__pk_thread_context_initialize(PkThread        *thread, 
-                                PkThreadRoutine thread_routine, 
-                                void             *arg);
+void
+__pk_thread_context_initialize(PkThread*        thread,
+                               PkThreadRoutine thread_routine,
+                               void*             arg);
 
 /// Machine specific resumption of __pk_next_thread at __pk_next_priority
 /// without saving the current context.
@@ -245,11 +261,11 @@ __pk_next_thread_resume(void);
 
 /// Schedule a timer in the time queue. Portable.
 void
-__pk_timer_schedule(PkTimer *timer);
+__pk_timer_schedule(PkTimer* timer);
 
 /// Remove a timer from the time queue. Portable.
 int
-__pk_timer_cancel(PkTimer *timer);
+__pk_timer_cancel(PkTimer* timer);
 
 void
 __pk_schedule(void);
@@ -258,7 +274,7 @@ __pk_schedule(void);
 // Call the application main(). Portable.
 
 void
-__pk_main(int argc, char **argv);
+__pk_main(int argc, char** argv);
 
 #endif  /* __ASSEMBLER__ */
 

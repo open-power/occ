@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -42,15 +42,16 @@
 /// _pk_critical_section_enter (\c _pk_critical_section_exit).
 ///
 /// \arg \c scrreg A scratch register required for the computation of
-/// \c _pk_critical_section_enter. 
+/// \c _pk_critical_section_enter.
 ///
 /// Forms:
-/// 
+///
 /// \b _pk_critical_section_enter \a priority, \a ctxreg, \a scrreg - Enter a
 /// critical section \n
 /// \b _pk_critical_section_exit \a ctxreg - Exit a critical section
 
 #ifdef __ASSEMBLER__
+// *INDENT-OFF*
 
         .set    _msr_ee_bit, MSR_EE_BIT
 
@@ -62,7 +63,7 @@
         .macro  _pk_critical_section_exit ctxreg
         mtmsr   \ctxreg
         .endm
-        
+
 // ****************************************************************************
 // PK context save/restore macros for 32-bit Embedded PowerPC
 // ****************************************************************************
@@ -131,7 +132,12 @@
         .set    PK_CTX_GPR0,        0x50 # Volatile;  Language specific
         .set    PK_CTX_KERNEL_CTX,  0x54 # Saved __PkKernelContext for IRQ
 
-        .set    PK_CTX_SIZE,        0x58  # Must be 8-byte aligned
+#ifdef HWMACRO_GPE
+        .set    PK_CTX_PBASLVCTLV,  0x58 # PBA slave controller value(8 bytes)
+        .set    PK_CTX_SIZE,        0x60 # Must be 8-byte aligned
+#else
+        .set    PK_CTX_SIZE,        0x58
+#endif
 
         ## ------------------------------------------------------------
         ## Push the interrupted context if necessary
@@ -143,7 +149,7 @@
         ## 8 Instructions
         ## ------------------------------------------------------------
         ##
-        
+
         .macro _pk_ctx_push_as_needed branch_addr:req
 
         stwu    %r1,    -PK_CTX_SIZE(%r1)
@@ -176,6 +182,7 @@
 #endif        
 
         .endm
+// *INDENT-ON*
 
 #else /* __ASSEMBLER__ */
 
@@ -184,7 +191,8 @@
 /// This is the structure of the stack area pointed to by
 /// thread->saved_stack_pointer when a thread is fully context-switched out.
 
-typedef struct {
+typedef struct
+{
     uint32_t r1;
     uint32_t linkage;
     uint32_t r3;
@@ -209,7 +217,9 @@ typedef struct {
     uint32_t srr1;
     uint32_t r0;
     uint32_t sprg0;
-
+#ifdef HWMACRO_GPE
+    uint64_t pbaslvctlv;
+#endif
 } PkThreadContext;
 
 

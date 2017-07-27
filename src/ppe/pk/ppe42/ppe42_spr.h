@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -39,29 +39,33 @@
 ///
 /// @{
 
- #define SPRN_XER         0x001 /// Fixed-point exception register    
- #define SPRN_LR          0x008 /// Link register                     
- #define SPRN_CTR         0x009 /// Count register
- #define SPRN_DEC         0x016 /// Decrementer
- #define SPRN_SRR0        0x01a /// Save/restore register 0           
- #define SPRN_SRR1        0x01b /// Save/restore register 1           
- #define SPRN_EDR         0x03d /// Error Data Register
- #define SPRN_ISR         0x03e /// Interrupt Status Register
- #define SPRN_IVPR        0x03f /// Interrupt Vector Prefix Register
- #define SPRN_SPRG0       0x110 /// SPR general register 0            
- #define SPRN_PIR         0x11e /// Processor Identification Register
- #define SPRN_PVR         0x11f /// Processor version register        
- #define SPRN_DBCR        0x134 /// Debug Control Register
- #define SPRN_DACR        0x13c /// Debug Address Compare Register
- #define SPRN_TSR         0x150 /// Timer Status Register
- #define SPRN_TCR         0x154 /// Timer Control Register
+#define SPRN_XER         0x001 /// Fixed-point exception register    
+#define SPRN_LR          0x008 /// Link register                     
+#define SPRN_CTR         0x009 /// Count register
+#define SPRN_DEC         0x016 /// Decrementer
+#define SPRN_SRR0        0x01a /// Save/restore register 0           
+#define SPRN_SRR1        0x01b /// Save/restore register 1           
+#define SPRN_EDR         0x03d /// Error Data Register
+#define SPRN_ISR         0x03e /// Interrupt Status Register
+#define SPRN_IVPR        0x03f /// Interrupt Vector Prefix Register
+#define SPRN_SPRG0       0x110 /// SPR general register 0            
+#define SPRN_PIR         0x11e /// Processor Identification Register
+#define SPRN_PVR         0x11f /// Processor version register        
+#define SPRN_DBCR        0x134 /// Debug Control Register
+#define SPRN_DACR        0x13c /// Debug Address Compare Register
+#define SPRN_TSR         0x150 /// Timer Status Register
+#define SPRN_TCR         0x154 /// Timer Control Register
 
 /* DBCR - Debug Control Register */
 
-#define DBCR_RST         0x30000000 /* Reset: 01=Soft Reset, 10=Hard Reset, 11=Halt */
+#define DBCR_RST_SOFT    0x10000000 /* Reset: 01=Soft Reset */
+#define DBCR_RST_HARD    0x20000000 /* Reset: 10=Hard Reset */
+#define DBCR_RST_HALT    0x30000000 /* Reset: 11=Halt */
 #define DBCR_TRAP        0x01000000 /* Trap Instruction Enable */
 #define DBCR_IACE        0x00800000 /* Instruction Address Compare Enable */
-#define DBCR_DACE        0x000c0000 /* Data Address Compare Enable: 01=store, 10=load, 11=both */
+#define DBCR_DACE_ST     0x00040000 /* Data Address Compare Enable: 01=store */
+#define DBCR_DACE_LD     0x00080000 /* Data Address Compare Enable: 10=load */
+#define DBCR_DACE_STLD   0x000C0000 /* Data Address Compare Enable: 11=both */
 
 /* TCR - Timer Control Register */
 
@@ -87,9 +91,11 @@
 
 #ifndef __ASSEMBLER__
 
-typedef union {
+typedef union
+{
     uint32_t value;
-    struct {
+    struct
+    {
         unsigned int wp       : 2;
         unsigned int wrc      : 2;
         unsigned int wie      : 1;
@@ -128,9 +134,9 @@ typedef union {
 ///  Note that \a sprn must be a compile-time constant.
 
 #define mfspr(sprn)                                             \
-   ({uint32_t __value;                                          \
-   asm volatile ("mfspr %0, %1" : "=r" (__value) : "i" (sprn)); \
-   __value;})    
+    ({uint32_t __value;                                          \
+        asm volatile ("mfspr %0, %1" : "=r" (__value) : "i" (sprn) : "memory"); \
+        __value;})
 
 
 /// Move to SPR
@@ -138,10 +144,10 @@ typedef union {
 ///  Note that \a sprn must be a compile-time constant.
 
 #define mtspr(sprn, value)                                        \
-   ({uint32_t __value = (value);                                  \
-     asm volatile ("mtspr %0, %1" : : "i" (sprn), "r" (__value)); \
-   })
-    
+    ({uint32_t __value = (value);                                  \
+        asm volatile ("mtspr %0, %1" : : "i" (sprn), "r" (__value) : "memory"); \
+    })
+
 
 /// Read-Modify-Write an SPR with OR (Set SPR bits)
 ///
@@ -163,6 +169,7 @@ typedef union {
 #endif  /* __ASSEMBLER__ */
 
 #ifdef __ASSEMBLER__
+// *INDENT-OFF*
 
         /// \cond
 
@@ -187,6 +194,7 @@ typedef union {
 
         /// \endcond
 
+// *INDENT-ON*
 #endif  /* __ASSEMBLER__ */
 
 #endif /* __PPE42_SPR_H__ */

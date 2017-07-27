@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -128,8 +128,8 @@ __reset_trap:
         #_liw    %r3, __vectors
         #andi.   %r4, %r3, 0x01ff
         #beq     1f
-        #_pk_panic PPE42_BOOT_VECTORS_NOT_ALIGNED
-#1:      
+        #_pk_panic PK_BOOT_VECTORS_NOT_ALIGNED
+#1:
         #mtivpr  %r3
         #sync
 

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -37,16 +37,16 @@
 #include "pk.h"
 
 #ifndef STATIC_IRQ_TABLE
-Ppe42IrqHandler __ppe42_irq_handlers[EXTERNAL_IRQS + 1];
+    Ppe42IrqHandler __ppe42_irq_handlers[EXTERNAL_IRQS + 1];
 #endif
 
 /// This function is installed by default for interrupts not explicitly set up
 /// by the application.  These interrupts should never fire.
 
-void 
+void
 __ppe42_default_irq_handler(void* arg, PkIrqId irq)
 {
-    PK_PANIC(PPE42_DEFAULT_IRQ_HANDLER);
+    PK_PANIC(PK_DEFAULT_IRQ_HANDLER);
 }
 
 
@@ -61,6 +61,6 @@ void __ppe42_phantom_irq_handler(void* arg, PkIrqId irq)
 {
     PK_PANIC(PPE42_PHANTOM_INTERRUPT);
 }
-    
+
 
 #undef __PPE42_IRQ_CORE_C__

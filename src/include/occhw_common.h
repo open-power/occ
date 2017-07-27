@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -41,8 +41,8 @@
 #define EXTERNAL_IRQS OCCHW_IRQS
 
 #ifndef __ASSEMBLER__
-#include <stdint.h>
-extern unsigned int g_ocb_timer_divider; //grm
+    #include <stdint.h>
+    extern unsigned int g_ocb_timer_divider;
 #endif
 
 ////////////////////////////////////////////////////////////////////////////
@@ -57,13 +57,13 @@ extern unsigned int g_ocb_timer_divider; //grm
 #define OCCHW_NDTSCPM            4
 
 #ifndef PROCESSOR_EC_LEVEL
-#define MURANO_DD10 1
+    #define MURANO_DD10 1
 #else
-#define MURANO_DD10 0
+    #define MURANO_DD10 0
 #endif
 
 #ifndef SIMICS_ENVIRONMENT
-#define SIMICS_ENVIRONMENT 0
+    #define SIMICS_ENVIRONMENT 0
 #endif
 
 /// OCC instance ID's that can be read from the PPE42 PIR and used in IPC operations.
@@ -81,11 +81,11 @@ extern unsigned int g_ocb_timer_divider; //grm
 
 /// Fail to compile if APPCFG_OCC_INSTANCE_ID is not defined somewhere or is out of range
 #ifndef APPCFG_OCC_INSTANCE_ID
-#error "APPCFG_OCC_INSTANCE_ID must be defined by the application"
+    #error "APPCFG_OCC_INSTANCE_ID must be defined by the application"
 #else
-#if ((APPCFG_OCC_INSTANCE_ID > OCCHW_INST_ID_MAX) || (APPCFG_OCC_INSTANCE_ID < 0))
-#warning "APPCFG_OCC_INSTANCE_ID is out of range"
-#endif
+    #if ((APPCFG_OCC_INSTANCE_ID > OCCHW_INST_ID_MAX) || (APPCFG_OCC_INSTANCE_ID < 0))
+        #warning "APPCFG_OCC_INSTANCE_ID is out of range"
+    #endif
 #endif
 #define OCCHW_INST_ID_SELF APPCFG_OCC_INSTANCE_ID
 
@@ -95,7 +95,7 @@ extern unsigned int g_ocb_timer_divider; //grm
 //
 // The SSX timebase is driven by the pervasive clock, which is nest / 4.  This
 // will typically be 600MHz, but may be 500MHz for power-constrained system
-// designs. 
+// designs.
 
 /// The pervasive hang timer divider used for the OCB timer
 ///
@@ -103,9 +103,9 @@ extern unsigned int g_ocb_timer_divider; //grm
 /// DD10 we need to use an approximate 64us timer
 
 #if MURANO_DD10
-#define OCB_TIMER_DIVIDER_DEFAULT (64 * 512)
+    #define OCB_TIMER_DIVIDER_DEFAULT (64 * 512)
 #else
-#define OCB_TIMER_DIVIDER_DEFAULT 512
+    #define OCB_TIMER_DIVIDER_DEFAULT 512
 #endif
 
 /// This is set to the above default at compile time but may be updated
@@ -235,23 +235,23 @@ extern unsigned int g_ocb_timer_divider; //grm
 /*
 #ifndef __ASSEMBLER__
 
-/// A Pstate type
-///
-/// Pstates are signed, but our register access macros operate on unsigned
-/// values.  To avoid bugs, Pstate register fields should always be extracted
-/// to a variable of type Pstate.  If the size of Pstate variables ever
-/// changes we will have to revisit this convention.
-typedef uint8_t Pstate;
+    /// A Pstate type
+    ///
+    /// Pstates are signed, but our register access macros operate on unsigned
+    /// values.  To avoid bugs, Pstate register fields should always be extracted
+    /// to a variable of type Pstate.  If the size of Pstate variables ever
+    /// changes we will have to revisit this convention.
+    typedef int8_t Pstate;
 
-/// A DPLL frequency code
-///
-/// DPLL frequency codes moved from 8 to 9 bits going from P7 to P8
-typedef uint16_t DpllCode;
+    /// A DPLL frequency code
+    ///
+    /// DPLL frequency codes moved from 8 to 9 bits going from P7 to P8
+    typedef uint16_t DpllCode;
 
-/// A VRM11 VID code
-typedef uint8_t Vid11;
+    /// A VRM11 VID code
+    typedef uint8_t Vid11;
 
-#endif  // __ASSEMBLER__ 
+#endif  // __ASSEMBLER__
 
 /// The minimum Pstate
 #define PSTATE_MIN -128
@@ -365,11 +365,11 @@ typedef uint8_t Vid11;
 // Macros for fields of PBA_MODECTL
 ////////////////////////////////////
 
-/// The 64KB OCI HTM marker space is enabled by default at 0x40070000
+/// The 64KB OCI HTM marker space is enabled by default at 0xC0070000
 ///
 /// See the comments for occhw_trace.h
 
-#define PBA_OCI_MARKER_BASE 0x40070000
+#define PBA_OCI_MARKER_BASE 0xC0070000
 
 
 // SSX Kernel reserved trace addresses, see occhw_trace.h.
@@ -397,23 +397,23 @@ typedef uint8_t Vid11;
 
 #define SSX_TRACE_STRINGS(var)                  \
     const char* var[16] = {                     \
-        "Critical IRQ Entry             ",      \
-        "Critical IRQ Exit              ",      \
-        "Noncritical IRQ Entry          ",      \
-        "Noncritical IRQ Exit           ",      \
-        "Thread Switch                  ",      \
-        "Thread Blocked : Sleep         ",      \
-        "Thread Unblocked : Wakeup      ",      \
-        "Thread Blocked : Semaphore     ",      \
-        "Thread Unblocked : Semaphore   ",      \
-        "Thread Unblocked : Sem. Timeout",      \
-        "Thread Suspended               ",      \
-        "Thread Deleted                 ",      \
-        "Thread Completed               ",      \
-        "Thread Mapped Runnable         ",      \
-        "Thread Mapped Semaphore Pend.  ",      \
-        "Thread Mapped Sleeping         ",      \
-    };
+                                                "Critical IRQ Entry             ",      \
+                                                "Critical IRQ Exit              ",      \
+                                                "Noncritical IRQ Entry          ",      \
+                                                "Noncritical IRQ Exit           ",      \
+                                                "Thread Switch                  ",      \
+                                                "Thread Blocked : Sleep         ",      \
+                                                "Thread Unblocked : Wakeup      ",      \
+                                                "Thread Blocked : Semaphore     ",      \
+                                                "Thread Unblocked : Semaphore   ",      \
+                                                "Thread Unblocked : Sem. Timeout",      \
+                                                "Thread Suspended               ",      \
+                                                "Thread Deleted                 ",      \
+                                                "Thread Completed               ",      \
+                                                "Thread Mapped Runnable         ",      \
+                                                "Thread Mapped Semaphore Pend.  ",      \
+                                                "Thread Mapped Sleeping         ",      \
+                          };
 
 
 // PBA transaction sizes for the block copy engines
@@ -494,7 +494,7 @@ typedef uint8_t Vid11;
 //     Cycles that ISU throttle was active and modeably IFU throttle request
 //     was not
 //
-//     <= sd_pc_uthrottle_active AND 
+//     <= sd_pc_uthrottle_active AND
 //        (NOT scom_isuonly_count_mode OR NOT trigger_didt_throttle)
 //
 // SPRN_IFU_ACTIVE_COUNTER
@@ -567,12 +567,13 @@ typedef uint8_t Vid11;
 /// return to DIMM_SENSOR_STATUS_VALID_OLD after this register is read.
 #define DIMM_SENSOR_STATUS_VALID_NEW 3
 
-
-/// OCCHW common panic codes
-#define OCCHW_INSTANCE_MISMATCH     0x00622400
-#define OCCHW_IRQ_ROUTING_ERROR     0x00622401
-#define OCCHW_XIR_INVALID_POINTER   0x00622402
-#define OCCHW_XIR_INVALID_GPE       0x00622403
-
+/// OCCHW SSX panic codes
+/// For PK panic codes, see pk_panic_codes.h
+#ifdef __SSX__
+    #define OCCHW_INSTANCE_MISMATCH     0x00622400
+    #define OCCHW_IRQ_ROUTING_ERROR     0x00622401
+    #define OCCHW_XIR_INVALID_POINTER   0x00622402
+    #define OCCHW_XIR_INVALID_GPE       0x00622403
+#endif
 
 #endif  /* __OCCHW_COMMON_H__ */

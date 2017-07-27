@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -102,7 +102,7 @@ __hwmacro_setup(void)
     if((owned_actual & g_ext_irqs_owned) != g_ext_irqs_owned)
     {
         //IRQ's were not routed to us correctly.
-        PK_PANIC(OCC_IRQ_ROUTING_ERROR);
+        PK_PANIC(OCCHW_IRQ_ROUTING_ERROR);
     }
 
     //Mask all external interrupts owned by this instance

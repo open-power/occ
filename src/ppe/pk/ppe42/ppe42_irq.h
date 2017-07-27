@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -54,19 +54,20 @@
 //  would most likely be a branch to an application-defined handler.
 
 #ifndef PPE42_MACHINE_CHECK_HANDLER
-#define PPE42_MACHINE_CHECK_HANDLER        PK_PANIC(0x0200)
+    #define PPE42_MACHINE_CHECK_HANDLER PK_PANIC( PPE42_MACHINE_CHECK_PANIC)
 #endif
 
 #ifndef PPE42_DATA_STORAGE_HANDLER
-#define PPE42_DATA_STORAGE_HANDLER         PK_PANIC(0x0300)
+    #define PPE42_DATA_STORAGE_HANDLER  PK_PANIC(PPE42_DATA_STORAGE_PANIC)
 #endif
 
 #ifndef PPE42_INSTRUCTION_STORAGE_HANDLER
-#define PPE42_INSTRUCTION_STORAGE_HANDLER  PK_PANIC(0x0400)
+#define PPE42_INSTRUCTION_STORAGE_HANDLER \
+    PK_PANIC(PPE42_INSTRUCTION_STORAGE_PANIC)
 #endif
 
 #ifndef PPE42_ALIGNMENT_HANDLER
-#define PPE42_ALIGNMENT_HANDLER            PK_PANIC(0x0600)
+    #define PPE42_ALIGNMENT_HANDLER     PK_PANIC(PPE42_DATA_ALIGNMENT_PANIC)
 #endif
 
 
@@ -89,12 +90,12 @@ typedef void (*PkIrqHandler)(void* arg, PkIrqId irq);
 #define PK_IRQ_HANDLER(f) void f(void* arg, PkIrqId irq)
 
 int pk_irq_setup(PkIrqId irq,
-                  int      polarity,
-                  int      trigger);
+                 int      polarity,
+                 int      trigger);
 
 int pk_irq_handler_set(PkIrqId      irq,
-                        PkIrqHandler handler,
-                        void*         arg);
+                       PkIrqHandler handler,
+                       void*         arg);
 
 void pk_irq_enable(PkIrqId irq);
 void pk_irq_disable(PkIrqId irq);
@@ -105,7 +106,7 @@ PK_IRQ_HANDLER(__ppe42_phantom_irq_handler);
 
 
 int
-ppe42_fit_setup(int tcr_fp, PkIrqHandler handler, void* arg);
+ppe42_fit_setup(PkIrqHandler handler, void* arg);
 
 
 ///  The address of the optional FIT interrupt handler
@@ -123,8 +124,8 @@ void* __ppe42_fit_arg;
 
 
 int
-ppe42_watchdog_setup(int tcr_wp, int tcr_wrc, 
-                      PkIrqHandler handler, void* arg);
+ppe42_watchdog_setup(int tcr_wp, int tcr_wrc,
+                     PkIrqHandler handler, void* arg);
 
 
 ///  The address of the optional Watchdog interrupt handler
@@ -164,17 +165,17 @@ void* __ppe42_debug_arg;
 //  correct order.  We need to bring in the system IRQ header here.
 
 #ifdef HWMACRO_GPE
-#include "gpe_irq.h"
+    #include "gpe_irq.h"
 #else
-#ifdef HWMACRO_STD
-#include "std_irq.h"
-#endif
+    #ifdef HWMACRO_STD
+        #include "std_irq.h"
+    #endif
 #endif
 
 /// \page ppe42_irq_macros_page PPE42 PK IRQ Assembler Macros
 ///
 ///
-        
+
 #ifndef __ASSEMBLER__
 
 
@@ -183,9 +184,10 @@ void* __ppe42_debug_arg;
 ///  to this structure will need to be reflected down into the interrupt
 ///  dispatch assembler code.
 
-typedef struct {
+typedef struct
+{
     PkIrqHandler handler;
-    void         *arg;
+    void*         arg;
 } Ppe42IrqHandler;
 
 
@@ -199,11 +201,11 @@ typedef struct {
 
 #define EXTERNAL_IRQ_TABLE_END \
     {__ppe42_phantom_irq_handler, 0}\
-};
+    };
 
 #define EXTERNAL_IRQ_TABLE_START \
-    Ppe42IrqHandler __ppe42_irq_handlers[EXTERNAL_IRQS + 1] = \
-{
+    Ppe42IrqHandler __ppe42_irq_handlers[EXTERNAL_IRQS + 1] __attribute__((section (".sdata"))) = \
+            {
 
 #else
 
@@ -218,7 +220,7 @@ typedef struct {
 #endif /*STATIC_IRQ_TABLE*/
 
 /// Interrupt handlers for real (implemented interrupts) plus one for the phantom interrupt handler
-extern Ppe42IrqHandler __ppe42_irq_handlers[EXTERNAL_IRQS + 1];
+extern Ppe42IrqHandler __ppe42_irq_handlers[EXTERNAL_IRQS + 1] __attribute__((section (".sdata")));
 
 
 /// The 'phantom interrupt' handler
@@ -231,7 +233,7 @@ extern Ppe42IrqHandler __ppe42_irq_handlers[EXTERNAL_IRQS + 1];
 
 UNLESS__PPE42_IRQ_CORE_C__(extern)
 Ppe42IrqHandler __ppe42_phantom_irq;
-    
+
 #endif  /* __ASSEMBLER__ */
 
 #endif  /* __PPE42_IRQ_H__ */

@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/ppe/pk/ppe42/ppe42_string.h $                             */
+/* $Source: src/ppe/pk/ppe42/endian.h $                                   */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2017                             */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -22,52 +22,27 @@
 /* permissions and limitations under the License.                         */
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
-#ifndef __STRING_H
-#define __STRING_H
+#ifndef __ENDIAN_H__
+#define __ENDIAN_H__
 
-#include <stdint.h>
-typedef uint32_t size_t;
-
-#ifndef NULL
-    #ifdef __cplusplus
-        #define NULL 0
-    #else
-        #define NULL ((void*)0)
-    #endif
-#endif
-
-#ifndef __cplusplus
-    typedef int bool;
-    #define false 0
-    #define true 1
-#endif
-
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-void* memset(void* s, int c, size_t n) __attribute__ ((weak));
-//    void bzero(void *vdest, size_t len);   USE memset
-void* memcpy(void* dest, const void* src, size_t num) __attribute__ ((weak));
-void* memmove(void* vdest, const void* vsrc, size_t len)  __attribute__ ((weak));
-int memcmp(const void* p1, const void* p2, size_t len) __attribute__((weak, pure));
-void* memmem(const void* haystack, size_t haystacklen,
-             const void* needle, size_t needlelen) __attribute__((weak, pure));
-
-char* strcpy(char* d, const char* s)  __attribute__ ((weak));
-char* strncpy(char* d, const char* s, size_t l)  __attribute__ ((weak));
-int strcmp(const char* s1, const char* s2) __attribute__((weak, pure));
-size_t strlen(const char* s1) __attribute__((weak, pure));
-size_t strnlen(const char* s1, size_t n) __attribute__((weak, pure));
-
-char* strcat(char* d, const char* s)  __attribute__ ((weak));
-char* strncat(char* d, const char* s, size_t n)  __attribute__ ((weak));
-
-char* strchr(const char* s, int c) __attribute__((weak, pure));
-
-
-#ifdef __cplusplus
-};
+#ifndef __PPE42__
+    #include_next <endian.h>
+#else
+    // Currently not provided with PPE42 native compiler as PPE42
+    // is compiled with no clib support.
+    // endian.h provides:
+    //  htobe16,
+    //  htole16,
+    //  be16toh,
+    //  le16toh,
+    //  htobe32,
+    //  htole32,
+    //  be32toh,
+    //  le32toh,
+    //  htobe64,
+    //  htole64,
+    //  be64toh,
+    //  le64toh
 #endif
 
 #endif

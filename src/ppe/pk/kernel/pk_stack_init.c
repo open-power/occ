@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -36,8 +36,8 @@
 
 #include "pk.h"
 
-/// Initialize a stack area.  
-/// 
+/// Initialize a stack area.
+///
 /// \param stack A pointer to the smallest legal address of the stack.  The
 /// stack address is modified as the stack is aligned and initialized.
 ///
@@ -48,17 +48,18 @@
 /// PK makes no assumptions about size or alignment of the area provided as a
 /// stack, and carefully aligns and initializes the stack.  Regardless of how
 /// the stack grows, the \a stack parameter is considered to be the lowest
-/// legal address of the stack.  
+/// legal address of the stack.
 
 int
-__pk_stack_init(PkAddress *stack,
-                 size_t     *size)
+__pk_stack_init(PkAddress* stack,
+                size_t*     size)
 {
     PkAddress mask;
     size_t excess, i, count;
-    PK_STACK_TYPE *p;
+    PK_STACK_TYPE* p;
 
-    if (PK_STACK_DIRECTION < 0) {
+    if (PK_STACK_DIRECTION < 0)
+    {
 
         // Stacks grow down.  The initial stack pointer is set to just above
         // the last allocated stack address.  This is legal for pre-decrement
@@ -69,7 +70,8 @@ __pk_stack_init(PkAddress *stack,
 
         *stack += *size;
 
-        if (!PK_STACK_PRE_DECREMENT) {
+        if (!PK_STACK_PRE_DECREMENT)
+        {
             *stack -= sizeof(PK_STACK_TYPE);
             *size -= sizeof(PK_STACK_TYPE);
         }
@@ -80,13 +82,19 @@ __pk_stack_init(PkAddress *stack,
         *size -= excess;
         *size = (*size / sizeof(PK_STACK_TYPE)) * sizeof(PK_STACK_TYPE);
 
-        if (PK_STACK_CHECK) {
-            p = (PK_STACK_TYPE *)(*stack);
+        if (PK_STACK_CHECK)
+        {
+            p = (PK_STACK_TYPE*)(*stack);
             count = *size / sizeof(PK_STACK_TYPE);
-            for (i = 0; i < count; i++) {
-                if (PK_STACK_PRE_DECREMENT) {
+
+            for (i = 0; i < count; i++)
+            {
+                if (PK_STACK_PRE_DECREMENT)
+                {
                     *(--p) = PK_STACK_PATTERN;
-                } else {
+                }
+                else
+                {
                     *(p--) = PK_STACK_PATTERN;
                 }
             }
@@ -94,11 +102,25 @@ __pk_stack_init(PkAddress *stack,
 
         __pk_stack_create_initial_frame(stack, size);
 
-    } else {
+    }
+    else
+    {
 
         PK_PANIC(PK_UNIMPLEMENTED);
     }
 
     return PK_OK;
+}
+
+
+void __pk_stack_check(uint32_t stack_base, uint32_t stack_limit)
+{
+    uint32_t stack_addr;
+    asm volatile ("mr %0, 1" : "=r" (stack_addr) : :);
+
+    if(stack_addr > stack_base || stack_addr < stack_limit)
+    {
+        PK_PANIC(PK_STACK_OVERFLOW);
+    }
 }
 

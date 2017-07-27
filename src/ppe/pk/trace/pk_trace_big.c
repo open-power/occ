@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -34,7 +34,7 @@
 #include "pk.h"
 #include "pk_trace.h"
 
-#if (PK_TRACE_SUPPORT && PK_TIMER_SUPPORT)
+#if (PK_TRACE_SUPPORT)
 void pk_trace_big(uint32_t i_hash_and_count,
                   uint64_t i_parm1, uint64_t i_parm2)
 {
@@ -106,6 +106,7 @@ void pk_trace_big(uint32_t i_hash_and_count,
     footer_ptr = (PkTraceBig*)ptr64;
     ptr64 = (uint64_t*)&g_pk_trace_buf.cb[cur_offset & PK_TRACE_CB_MASK];
     *ptr64 = i_parm1;
+
     if(parm_size > 8)
     {
         ptr64 = (uint64_t*)&g_pk_trace_buf.cb[(cur_offset + 8) & PK_TRACE_CB_MASK];
