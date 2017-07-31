@@ -267,64 +267,30 @@ void call_wof_main( void )
             if( (g_wof->wof_init_state >= PGPE_WOF_ENABLED_NO_PREV_DATA) &&
                 !g_wof->wof_disabled )
             {
-                // Only check if req active quads changed if we are
-                // in the fully enabled wof state
-                if(g_wof->wof_init_state == WOF_ENABLED)
+                // Normal execution of wof algorithm
+                if( !async_request_is_idle(&G_wof_vfrt_req.request) )
                 {
-                    // Read active quads from sram
-                    read_req_active_quads();
-
-                    // If the requested active quads changed last loop
-                    // Send vfrt with new req active quads
-                    if( g_wof->req_active_quad_update !=
-                        g_wof->prev_req_active_quads )
+                    if( L_vfrt_last_chance )
                     {
-                        // Calculate new quad step
-                        g_wof->quad_step_from_start =
-                                                calc_quad_step_from_start();
-                        // Compute new VFRT Main Memory address using new quads
-                        g_wof->next_vfrt_main_mem_addr =
-                                                 calc_vfrt_mainstore_addr();
-                        // Send new VFRT
-                        send_vfrt_to_pgpe( g_wof->next_vfrt_main_mem_addr );
-                        if(async_request_is_idle(&G_wof_vfrt_req.request))
-                        {
-                            g_wof->gpe_req_rc = gpe_request_schedule(&G_wof_vfrt_req);
-                        }
-                        else
-                        {
-                            INTR_TRAC_INFO("VFRT Request is not idle when"
-                                           "requested active quads changed");
-                        }
+                        INTR_TRAC_ERR("WOF Disabled! VFRT req timeout");
+                        set_clear_wof_disabled(SET,WOF_RC_VFRT_REQ_TIMEOUT);
+                    }
+                    else
+                    {
+                        INTR_TRAC_INFO("One more chance for vfrt request");
+                        L_vfrt_last_chance = true;
                     }
                 }
                 else
                 {
-                    // Normal execution of wof algorithm
-                    if( !async_request_is_idle(&G_wof_vfrt_req.request) )
-                    {
-                        if( L_vfrt_last_chance )
-                        {
-                            INTR_TRAC_ERR("WOF Disabled! VFRT req timeout");
-                            set_clear_wof_disabled(SET,WOF_RC_VFRT_REQ_TIMEOUT);
-                        }
-                        else
-                        {
-                            INTR_TRAC_INFO("One more chance for vfrt request");
-                            L_vfrt_last_chance = true;
-                        }
-                    }
-                    else
-                    {
-                        // Request is idle. Run wof algorithm
-                        wof_main();
+                    // Request is idle. Run wof algorithm
+                    wof_main();
 
-                        L_vfrt_last_chance = false;
-                        // Finally make sure we are in the fully enabled state
-                        if( g_wof->wof_init_state == PGPE_WOF_ENABLED_NO_PREV_DATA )
-                        {
-                            g_wof->wof_init_state = WOF_ENABLED;
-                        }
+                    L_vfrt_last_chance = false;
+                    // Finally make sure we are in the fully enabled state
+                    if( g_wof->wof_init_state == PGPE_WOF_ENABLED_NO_PREV_DATA )
+                    {
+                        g_wof->wof_init_state = WOF_ENABLED;
                     }
                 }
             } // >= PGPE_WOF_ENABLED_NO_PREV_DATA
