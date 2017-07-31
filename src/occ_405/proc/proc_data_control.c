@@ -155,13 +155,13 @@ void task_core_data_control( task_t * i_task )
                      * @reasoncode  PGPE_FAILURE
                      * @userdata1   rc
                      * @userdata2   clip update task idle?
-                     * @userdata4   ERC_PGPE_CLIP_UNSUCCESSFULL
+                     * @userdata4   ERC_PGPE_CLIP_FAILURE
                      * @devdesc     pgpe clip update returned an error
                      */
                     err = createErrl(
                                      RTLS_TASK_CORE_DATA_CONTROL_MOD,                  //ModId
                                      PGPE_FAILURE,                                     //Reasoncode
-                                     ERC_PGPE_CLIP_UNSUCCESSFULL,                      //Extended reason code
+                                     ERC_PGPE_CLIP_FAILURE,                            //Extended reason code
                                      ERRL_SEV_PREDICTIVE,                              //Severity
                                      NULL,                                             //Trace Buf
                                      DEFAULT_TRACE_SIZE,                               //Trace Size
@@ -209,13 +209,13 @@ void task_core_data_control( task_t * i_task )
                      * @reasoncode  PGPE_FAILURE
                      * @userdata1   rc
                      * @userdata2   pmcr set task idle?
-                     * @userdata4   ERC_PGPE_PMCR_UNSUCCESSFULL
+                     * @userdata4   ERC_PGPE_SET_PMCR_FAILURE
                      * @devdesc     pgpe PMCR set returned an error
                      */
                     err = createErrl(
                                      RTLS_TASK_CORE_DATA_CONTROL_MOD,               //ModId
                                      PGPE_FAILURE,                                  //Reasoncode
-                                     ERC_PGPE_PMCR_UNSUCCESSFULL,                   //Extended reason code
+                                     ERC_PGPE_SET_PMCR_FAILURE,                     //Extended reason code
                                      ERRL_SEV_PREDICTIVE,                           //Severity
                                      NULL,                                          //Trace Buf
                                      DEFAULT_TRACE_SIZE,                            //Trace Size

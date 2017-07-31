@@ -425,18 +425,18 @@ int pgpe_set_clip_blocking(Pstate i_pstate)
                  * @errortype
                  * @moduleid    PGPE_SET_CLIP_BLOCKING_MOD
                  * @reasoncode  PGPE_FAILURE
-                 * @userdata4   ERC_PGPE_NOT_IDLE
+                 * @userdata4   ERC_PGPE_CLIP_NOT_IDLE
                  * @devdesc     pgpe clip update not idle
                  */
                 err = createErrl(
                     PGPE_SET_CLIP_BLOCKING_MOD,    //ModId
-                    PGPE_FAILURE,                    //Reasoncode
-                    ERC_PGPE_NOT_IDLE,               //Extended reason code
-                    ERRL_SEV_PREDICTIVE,             //Severity
-                    NULL,                            //Trace Buf
-                    DEFAULT_TRACE_SIZE,              //Trace Size
-                    0,                               //Userdata1
-                    0                                //Userdata2
+                    PGPE_FAILURE,                  //Reasoncode
+                    ERC_PGPE_CLIP_NOT_IDLE,        //Extended reason code
+                    ERRL_SEV_PREDICTIVE,           //Severity
+                    NULL,                          //Trace Buf
+                    DEFAULT_TRACE_SIZE,            //Trace Size
+                    0,                             //Userdata1
+                    0                              //Userdata2
                 );
 
                 rc = PGPE_FAILURE;
@@ -561,8 +561,9 @@ int pgpe_set_clip_blocking(Pstate i_pstate)
 // End Function Specification
 int pgpe_clip_update(void)
 {
-    int rc = 0;              // return code
-    errlHndl_t  err = NULL;  // Error handler
+    int ext_rc = 0;              // function return code
+    int schedule_rc = 0;         // return code from PGPE schedule
+    errlHndl_t  err = NULL;      // Error handler
     uint32_t    l_wait_time = 0;
     static uint64_t L_last_list = 0xFFFFFFFFFFFFFFFF;
     static bool L_first_trace = TRUE;
@@ -583,13 +584,13 @@ int pgpe_clip_update(void)
                  * @moduleid    PGPE_CLIP_UPDATE_MOD
                  * @reasoncode  PGPE_FAILURE
                  * @userdata1   0
-                 * @userdata4   ERC_PGPE_NOT_IDLE
+                 * @userdata4   ERC_PGPE_CLIP_NOT_IDLE
                  * @devdesc     pgpe clip update not idle
                  */
                 err = createErrl(
                     PGPE_CLIP_UPDATE_MOD,            //ModId
                     PGPE_FAILURE,                    //Reasoncode
-                    ERC_PGPE_NOT_IDLE,               //Extended reason code
+                    ERC_PGPE_CLIP_NOT_IDLE,          //Extended reason code
                     ERRL_SEV_PREDICTIVE,             //Severity
                     NULL,                            //Trace Buf
                     DEFAULT_TRACE_SIZE,              //Trace Size
@@ -605,7 +606,7 @@ int pgpe_clip_update(void)
 
                 commitErrl(&err);
 
-                rc = PGPE_FAILURE;
+                ext_rc = ERC_PGPE_CLIP_NOT_IDLE;
                 break;
             }
 
@@ -648,19 +649,19 @@ int pgpe_clip_update(void)
             }
 
             // Schedule PGPE clip update IPC task
-            rc = gpe_request_schedule(&G_clip_update_req);
+            schedule_rc = gpe_request_schedule(&G_clip_update_req);
         }
         else
         {
             G_start_suspend_parms.msg_cb.rc = PGPE_RC_SUCCESS;
-            rc = 0;
+            ext_rc = 0;
         }
         // Confirm Successfull completion of PGPE clip update task
-        if(rc != 0)
+        if(schedule_rc != 0)
         {
             //Error in scheduling pgpe clip update task
             TRAC_ERR("pgpe_clip_update: Failed to schedule clip update pgpe task rc=%x",
-                     rc);
+                     schedule_rc);
 
             /* @
              * @errortype
@@ -668,26 +669,26 @@ int pgpe_clip_update(void)
              * @reasoncode  GPE_REQUEST_SCHEDULE_FAILURE
              * @userdata1   rc - gpe_request_schedule return code
              * @userdata2   0
-             * @userdata4   OCC_NO_EXTENDED_RC
+             * @userdata4   ERC_PGPE_CLIP_FAILURE
              * @devdesc     OCC Failed to schedule a GPE job for clip update
              */
             err = createErrl(
                 PGPE_CLIP_UPDATE_MOD,                   // modId
                 GPE_REQUEST_SCHEDULE_FAILURE,           // reasoncode
-                OCC_NO_EXTENDED_RC,                     // Extended reason code
+                ERC_PGPE_CLIP_FAILURE,                  // Extended reason code
                 ERRL_SEV_UNRECOVERABLE,                 // Severity
                 NULL,                                   // Trace Buf
                 DEFAULT_TRACE_SIZE,                     // Trace Size
-                rc,                                     // userdata1
+                schedule_rc,                            // userdata1
                 0                                       // userdata2
                 );
 
-            rc = GPE_REQUEST_SCHEDULE_FAILURE;
+            ext_rc = ERC_PGPE_CLIP_FAILURE;
             REQUEST_RESET(err);   //This will add a firmware callout for us
         }
     }while(0);
 
-    return rc;
+    return ext_rc;
 }
 
 
@@ -755,69 +756,120 @@ void pgpe_start_suspend_callback(void)
 // End Function Specification
 int pgpe_start_suspend(uint8_t action, PMCR_OWNER owner)
 {
-    int rc = 0;                // return code
+    int ext_rc = 0;            // return code
+    int schedule_rc = 0;       // return code
     errlHndl_t  err = NULL;    // Error handler
     pstateStatus l_current_pstate_status = G_proc_pstate_status;
 
-    // set the IPC parameters
-    G_start_suspend_parms.action     = action;
-    G_start_suspend_parms.pmcr_owner = owner;
-
-    if (!G_simics_environment)
+    // This task is only called on state changes and state changes should
+    // always wait for this task to complete therefore this task should always
+    // be idle when called.
+    if(!async_request_is_idle(&G_start_suspend_req.request))
     {
-        // set the G_proc_pstate_status to indicate transition
-        G_proc_pstate_status = PSTATES_IN_TRANSITION;
+        TRAC_ERR("pgpe_start_suspend: Start suspend task NOT Idle");
 
-        if (action == PGPE_ACTION_PSTATE_START)
-        {
-            TRAC_IMP("pgpe_start_suspend: scheduling enable of pstates (owner=0x%02X)", owner);
-        }
-        else if (action == PGPE_ACTION_PSTATE_STOP)
-        {
-            TRAC_IMP("pgpe_start_suspend: scheduling disable of pstates (owner=0x%02X)", owner);
-        }
-        // Schedule PGPE start_suspend task
-        rc = gpe_request_schedule(&G_start_suspend_req);
-    }
-
-    // couldn't schedule the IPC task?
-    if(rc != 0)
-    {
-        // restore pState status since it isn't going to change
-        G_proc_pstate_status = l_current_pstate_status;
-
-        //Error in scheduling pgpe start suspend task
-        TRAC_ERR("pgpe_start_suspend: Failed to schedule pgpe start_suspend task rc=%x",
-                 rc);
-        /* @
+        /*
          * @errortype
          * @moduleid    PGPE_START_SUSPEND_MOD
-         * @reasoncode  GPE_REQUEST_SCHEDULE_FAILURE
-         * @userdata1   rc - gpe_request_schedule return code
-         * @userdata4   OCC_NO_EXTENDED_RC
-         * @devdesc     OCC Failed to schedule a PGPE job for start_suspend
+         * @reasoncode  PGPE_FAILURE
+         * @userdata1   0
+         * @userdata4   ERC_PGPE_START_SUSPEND_NOT_IDLE
+         * @devdesc     pgpe start suspend task not idle
          */
         err = createErrl(
-            PGPE_START_SUSPEND_MOD,                 // modId
-            GPE_REQUEST_SCHEDULE_FAILURE,           // reasoncode
-            OCC_NO_EXTENDED_RC,                     // Extended reason code
-            ERRL_SEV_UNRECOVERABLE,                 // Severity
-            NULL,                                   // Trace Buf
-            DEFAULT_TRACE_SIZE,                     // Trace Size
-            rc,                                     // userdata1
-            0                                       // userdata2
-            );
+                         PGPE_START_SUSPEND_MOD,          //ModId
+                         PGPE_FAILURE,                    //Reasoncode
+                         ERC_PGPE_START_SUSPEND_NOT_IDLE, //Extended reason code
+                         ERRL_SEV_PREDICTIVE,             //Severity
+                         NULL,                            //Trace Buf
+                         DEFAULT_TRACE_SIZE,              //Trace Size
+                         0,                               //Userdata1
+                         0                                //Userdata2
+                        );
 
-        rc = GPE_REQUEST_SCHEDULE_FAILURE;
-        REQUEST_RESET(err);   //This will add a firmware callout for us
+        // Callout firmware
+        addCalloutToErrl(err,
+                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                         ERRL_COMPONENT_ID_FIRMWARE,
+                         ERRL_CALLOUT_PRIORITY_HIGH);
+
+        commitErrl(&err);
+
+        ext_rc = ERC_PGPE_START_SUSPEND_NOT_IDLE;
     }
 
-    if (G_simics_environment)
+    else  // start suspend task is idle, ok to schedule
     {
-        pgpe_start_suspend_callback();
+       // set the IPC parameters
+       G_start_suspend_parms.action     = action;
+       G_start_suspend_parms.pmcr_owner = owner;
+
+       if (!G_simics_environment)
+       {
+           // set the G_proc_pstate_status to indicate transition
+           G_proc_pstate_status = PSTATES_IN_TRANSITION;
+
+           if (action == PGPE_ACTION_PSTATE_START)
+           {
+               TRAC_IMP("pgpe_start_suspend: scheduling enable of pstates (owner=0x%02X)", owner);
+           }
+           else if (action == PGPE_ACTION_PSTATE_STOP)
+           {
+               TRAC_IMP("pgpe_start_suspend: scheduling disable of pstates (owner=0x%02X)", owner);
+           }
+           // Schedule PGPE start_suspend task
+           schedule_rc = gpe_request_schedule(&G_start_suspend_req);
+       }
+
+       // couldn't schedule the IPC task?
+       if(schedule_rc != 0)
+       {
+           // restore pState status since it isn't going to change
+           G_proc_pstate_status = l_current_pstate_status;
+
+           //Error in scheduling pgpe start suspend task
+           TRAC_ERR("pgpe_start_suspend: Failed to schedule pgpe start_suspend task rc=%x",
+                    schedule_rc);
+
+           ext_rc = ERC_PGPE_START_SUSPEND_FAILURE;
+
+           // Do NOT log an error and reset if this was called in OPAL
+           // environment to set nominal prior to host control (OCC ownership)
+           // if there is a real problem with setting ownership the error and
+           // reset will happen when setting owner to Host
+           if( (!G_sysConfigData.system_type.kvm) || (owner != PMCR_OWNER_OCC) )
+           {
+
+               /* @
+                * @errortype
+                * @moduleid    PGPE_START_SUSPEND_MOD
+                * @reasoncode  GPE_REQUEST_SCHEDULE_FAILURE
+                * @userdata1   rc - gpe_request_schedule return code
+                * @userdata4   ERC_PGPE_START_SUSPEND_FAILURE
+                * @devdesc     OCC Failed to schedule a PGPE job for start_suspend
+                */
+               err = createErrl(
+                                PGPE_START_SUSPEND_MOD,                 // modId
+                                GPE_REQUEST_SCHEDULE_FAILURE,           // reasoncode
+                                ERC_PGPE_START_SUSPEND_FAILURE,         // Extended reason code
+                                ERRL_SEV_UNRECOVERABLE,                 // Severity
+                                NULL,                                   // Trace Buf
+                                DEFAULT_TRACE_SIZE,                     // Trace Size
+                                schedule_rc,                            // userdata1
+                                0                                       // userdata2
+                               );
+
+               REQUEST_RESET(err);   //This will add a firmware callout for us
+           }
+      }
+
+      if (G_simics_environment)
+      {
+          pgpe_start_suspend_callback();
+      }
     }
 
-    return rc;
+    return ext_rc;
 }
 
 
@@ -833,7 +885,8 @@ int pgpe_start_suspend(uint8_t action, PMCR_OWNER owner)
 // End Function Specification
 int pgpe_pmcr_set(void)
 {
-    int rc = 0;              // return code
+    int ext_rc = 0;          // function return code
+    int schedule_rc = 0;     // RC from schedule request
     errlHndl_t  err = NULL;  // Error handler
 
     do
@@ -850,13 +903,13 @@ int pgpe_pmcr_set(void)
              * @moduleid    PGPE_PMCR_SET_MOD
              * @reasoncode  PGPE_FAILURE
              * @userdata1   0
-             * @userdata4   ERC_PGPE_NOT_IDLE
+             * @userdata4   ERC_PGPE_SET_PMCR_NOT_IDLE
              * @devdesc     pgpe pmcr set not idle
              */
             err = createErrl(
                 PGPE_PMCR_SET_MOD,               //ModId
                 PGPE_FAILURE,                    //Reasoncode
-                ERC_PGPE_NOT_IDLE,               //Extended reason code
+                ERC_PGPE_SET_PMCR_NOT_IDLE,      //Extended reason code
                 ERRL_SEV_PREDICTIVE,             //Severity
                 NULL,                            //Trace Buf
                 DEFAULT_TRACE_SIZE,              //Trace Size
@@ -872,48 +925,152 @@ int pgpe_pmcr_set(void)
 
             commitErrl(&err);
 
-            rc = PGPE_FAILURE;
+            ext_rc = ERC_PGPE_SET_PMCR_NOT_IDLE;
             break;
         }
 
         if (!G_simics_environment)
         {
             // Schedule PGPE PMCR update IPC task
-            rc = gpe_request_schedule(&G_pmcr_set_req);
+            schedule_rc = gpe_request_schedule(&G_pmcr_set_req);
         }
 
         // Confirm Successfull completion of PGPE PMCR update task
-        if(rc != 0)
+        if(schedule_rc != 0)
         {
             //Error in scheduling pgpe PMCR update task
-            TRAC_ERR("pgpe_pmcr_set: Failed to schedule PMCR setup pgpe task rc=%x",
-                     rc);
+            TRAC_ERR("pgpe_pmcr_set: Failed to schedule PMCR set pgpe task rc=%x",
+                     schedule_rc);
+            ext_rc = ERC_PGPE_SET_PMCR_FAILURE;
 
-            /* @
-             * @errortype
-             * @moduleid    PGPE_PMCR_SET_MOD
-             * @reasoncode  GPE_REQUEST_SCHEDULE_FAILURE
-             * @userdata1   rc - gpe_request_schedule return code
-             * @userdata2   0
-             * @userdata4   OCC_NO_EXTENDED_RC
-             * @devdesc     OCC Failed to schedule a PGPE job for PMCR update
-             */
-            err = createErrl(
-                PGPE_PMCR_SET_MOD,                      // modId
-                GPE_REQUEST_SCHEDULE_FAILURE,           // reasoncode
-                OCC_NO_EXTENDED_RC,                     // Extended reason code
-                ERRL_SEV_UNRECOVERABLE,                 // Severity
-                NULL,                                   // Trace Buf
-                DEFAULT_TRACE_SIZE,                     // Trace Size
-                rc,                                     // userdata1
-                0                                       // userdata2
-                );
+            // Do NOT log an error and reset if this was called in OPAL
+            // environment to set nominal prior to host control
+            if(!G_sysConfigData.system_type.kvm)
+            {
+                /* @
+                 * @errortype
+                 * @moduleid    PGPE_PMCR_SET_MOD
+                 * @reasoncode  GPE_REQUEST_SCHEDULE_FAILURE
+                 * @userdata1   rc - gpe_request_schedule return code
+                 * @userdata2   0
+                 * @userdata4   ERC_PGPE_SET_PMCR_FAILURE
+                 * @devdesc     OCC Failed to schedule a PGPE job for PMCR update
+                 */
+                err = createErrl(
+                    PGPE_PMCR_SET_MOD,                      // modId
+                    GPE_REQUEST_SCHEDULE_FAILURE,           // reasoncode
+                    ERC_PGPE_SET_PMCR_FAILURE,              // Extended reason code
+                    ERRL_SEV_UNRECOVERABLE,                 // Severity
+                    NULL,                                   // Trace Buf
+                    DEFAULT_TRACE_SIZE,                     // Trace Size
+                    schedule_rc,                            // userdata1
+                    0                                       // userdata2
+                    );
 
-            rc = GPE_REQUEST_SCHEDULE_FAILURE;
-            REQUEST_RESET(err);   //This will add a firmware callout for us
+                REQUEST_RESET(err);   //This will add a firmware callout for us
+            }
         }
     }
     while(0);
 
-    return rc;
+    return ext_rc;
+}
+
+// Function Specification
+//
+// Name: set_nominal_pstate
+//
+// Description: Make OCC the PMCR owner (if not already) and set the Pstate to nominal
+//              NOTE:  If this function needed to start Pstate protocol with OCC owner
+//                     it will exit that way.  The caller is responsible to decide what
+//                     to do with PMCR ownership / Pstate protocol afterwards
+//
+// End Function Specification
+int set_nominal_pstate(void)
+{
+    int l_rc = 0;
+    SsxTimebase l_start = ssx_timebase_get();
+    SsxInterval l_timeout =  SSX_SECONDS(1);
+    uint8_t     l_pstate;
+    uint8_t     l_quad = 0;
+
+   do
+   {
+       // Make sure we have received the frequency config data to know what nominal is
+       if( (!(DATA_get_present_cnfgdata() & DATA_MASK_FREQ_PRESENT)) ||
+           (G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL] == 0) )
+       {
+            TRAC_ERR("set_nominal_pstate: Nominal Frequency not known!");
+            l_rc = ERC_FW_ZERO_FREQ_LIMIT;
+            break;
+       }
+       // Make sure the set PMCR task is idle.
+       if(!async_request_is_idle(&G_pmcr_set_req.request))
+       {
+            TRAC_ERR("set_nominal_pstate: Set PMCR task not idle!");
+            l_rc = ERC_PGPE_SET_PMCR_NOT_IDLE;
+            break;
+       }
+
+       // Check if we need to enable Pstate protocol with OCC ownership
+       if( (G_proc_pstate_status != PSTATES_ENABLED) ||
+           (G_proc_pmcr_owner != PMCR_OWNER_OCC) )
+       {
+           // This should not be called if Pstate protocol is in transition
+           if(G_proc_pstate_status == PSTATES_IN_TRANSITION)
+           {
+               TRAC_ERR("set_nominal_pstate: Pstate protocol in transtion!");
+               l_rc = ERC_PGPE_START_SUSPEND_NOT_IDLE;
+               break;
+           }
+
+           l_rc = pgpe_start_suspend(PGPE_ACTION_PSTATE_START, PMCR_OWNER_OCC);
+           if(l_rc)
+           {
+               TRAC_ERR("set_nominal_pstate: Failed to start pstate protocol rc[0x%04X]", l_rc);
+               break;
+           }
+           // Wait for pstates to be enabled
+           ssx_sleep(SSX_MICROSECONDS(5));
+           while(G_proc_pstate_status != PSTATES_ENABLED)
+           {
+               if((ssx_timebase_get() - l_start) > l_timeout)
+               {
+                  l_rc = ERC_PGPE_TASK_TIMEOUT;
+                  TRAC_ERR("set_nominal_pstate: Timeout waiting for Pstates to be enabled");
+                  break;
+               }
+               ssx_sleep(SSX_MICROSECONDS(10));
+           }
+       }
+
+       if(l_rc)
+       {
+           TRAC_ERR("set_nominal_pstate: Failed to enable Pstates for OCC rc[0x%04X]", l_rc);
+           break;
+       }
+
+       // Pstate protocol is now enabled for OCC to set Pstate to nominal
+       l_pstate = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL]);
+       for (l_quad = 0; l_quad < MAXIMUM_QUADS; l_quad++)
+       {
+           // Update pmcr value (per quad) with nominal pstate and version (Version 1 (P9 format))
+           G_pmcr_set_parms.pmcr[l_quad] = ((uint64_t)l_pstate << 48) | 1;
+       }
+
+       //call PGPE IPC function to set Pstates
+       l_rc = pgpe_pmcr_set();
+       if(l_rc)
+       {
+           TRAC_ERR("set_nominal_pstate: Set nominal pstate[0x%02X] failed with rc[0x%04X]", l_pstate, l_rc);
+       }
+
+   } while(0);
+
+   if(!l_rc)
+   {
+       TRAC_IMP("set_nominal_pstate: Successfully set nominal Pstate = 0x%02X", l_pstate);
+   }
+
+   return l_rc;
 }

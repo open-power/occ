@@ -47,4 +47,6 @@ int pgpe_pmcr_set(void);
 int pgpe_start_suspend(uint8_t action, PMCR_OWNER owner);
 void pgpe_start_suspend_callback(void);
 
+int set_nominal_pstate(void);
+
 #endif /* #ifndef _PGPE_INTERFACE_H_ */

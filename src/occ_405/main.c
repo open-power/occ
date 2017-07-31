@@ -1822,13 +1822,13 @@ void Main_thread_routine(void *private)
              * @reasoncode  PGPE_FAILURE
              * @userdata1   start_suspend rc
              * @userdata2   0
-             * @userdata4   ERC_PGPE_UNSUCCESSFULL
+             * @userdata4   ERC_PGPE_START_SUSPEND_FAILURE
              * @devdesc     PGPE returned an error in response to start_suspend
              */
             errlHndl_t l_err = createErrl(
                         MAIN_THRD_ROUTINE_MID,                  // modId
                         PGPE_FAILURE,                           // reasoncode
-                        ERC_PGPE_UNSUCCESSFULL,                 // Extended reason code
+                        ERC_PGPE_START_SUSPEND_FAILURE,         // Extended reason code
                         ERRL_SEV_UNRECOVERABLE,                 // Severity
                         NULL,                                   // Trace Buf
                         DEFAULT_TRACE_SIZE,                     // Trace Size
