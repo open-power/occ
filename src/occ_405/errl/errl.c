@@ -341,7 +341,6 @@ errlHndl_t createErrl(
         l_rc->iv_userDetails.iv_fwLevel = 0;
         l_rc->iv_userDetails.iv_occId = G_pbax_id.chip_id;
         l_rc->iv_userDetails.iv_occRole = G_occ_role;
-        l_rc->iv_userDetails.iv_occRole = OCC_MASTER;
         l_rc->iv_userDetails.iv_operatingState = CURRENT_STATE();
     }
     else
