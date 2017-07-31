@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/common.h $                                            */
+/* $Source: src/occ_405/common.h $                                        */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -26,6 +26,9 @@
 #define _common_h
 
 #include <rtls.h>
+
+// Start of SRAM memory
+#define SRAM_START_ADDRESS_405      0xFFF40000
 
 // Reasons why the OCCMISC external interrupt was triggered
 typedef enum

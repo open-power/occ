@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -74,6 +74,14 @@ typedef enum
 #define ID_NUM_INVALID          0xFFFF
 
 #define SRAM_HEADER_HACK   0x48000042
+
+struct OCC_FLAGS
+{
+    uint16_t reserved      : 15;
+    uint16_t ipl_time_flag : 1; // Used to indicate whether OCC was started
+                                // during IPL. Used for IPL-time checkstop
+};
+
 #ifndef __ASSEMBLER__
 
 // Structure for the common image header (total size is 162 bytes).
@@ -132,6 +140,12 @@ struct image_header
     uint32_t version;                   // image version
     char image_id_str[IMAGE_ID_STR_SZ]; // image id string
     uint16_t aplt_id;                   // type: enum OCC_APLT
+    union
+    {
+        uint16_t flags;
+        struct OCC_FLAGS flag_bits;
+    } occ_flags;                        // bit field for occ flags
+    uint32_t nest_frequency;            // nest frequency
     uint8_t reserved[RESERVED_SZ];      // reserved for future use
 } __attribute__ ((__packed__));
 
@@ -188,6 +202,8 @@ const volatile imageHdr_t nameStr  __attribute__((section("imageHeader")))= \
     0,                                  /* version (filled in later by imageHdrScript) */ \
     IdStr,                              /* image_id_str */ \
     (uint16_t)IdNum,                    /* aplt_id */ \
+    {0},                                /* flags */ \
+    0,                                  /* nest frequency */ \
     {0}                                 /* reserved */ \
 };
 

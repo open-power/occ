@@ -62,6 +62,11 @@
 #include "pgpe_service_codes.h"
 #include <common.h>
 
+// Used to indicate if OCC was started during IPL, in which case OCC's only
+// job is to look for checkstops. This flag is set by hostboot in OCC's header
+// in SRAM
+bool G_ipl_time = false;
+
 extern uint32_t __ssx_boot; // Function address is 32 bits
 extern uint32_t G_occ_phantom_critical_count;
 extern uint32_t G_occ_phantom_noncritical_count;
@@ -1601,30 +1606,33 @@ void Main_thread_routine(void *private)
     dcom_initialize_roles();
     CHECKPOINT(ROLES_INITIALIZED);
 
-    // Sensor Initialization
-    // All Master & Slave Sensor are initialized here, it is up to the
-    // rest of the firmware if it uses them or not.
-    sensor_init_all();
-    CHECKPOINT(SENSORS_INITIALIZED);
+    if(!G_ipl_time)
+    {
+        // Sensor Initialization
+        // All Master & Slave Sensor are initialized here, it is up to the
+        // rest of the firmware if it uses them or not.
+        sensor_init_all();
+        CHECKPOINT(SENSORS_INITIALIZED);
 
-    // SPIVID Initialization must be done before Pstates
-    // All SPIVID inits are done by Hostboot, remove this section.
+        // SPIVID Initialization must be done before Pstates
+        // All SPIVID inits are done by Hostboot, remove this section.
 
-    //Initialize structures for collecting core data.
-    //It needs to run before RTLoop starts, as gpe request initialization
-    //needs to be done before task to collect core data starts.
-    proc_core_init();
-    CHECKPOINT(PROC_CORE_INITIALIZED);
+        //Initialize structures for collecting core data.
+        //It needs to run before RTLoop starts, as gpe request initialization
+        //needs to be done before task to collect core data starts.
+        proc_core_init();
+        CHECKPOINT(PROC_CORE_INITIALIZED);
 
-    // Initialize structures for collecting nest dts data.
-    // Needs to run before RTL to initialize the gpe request
-    nest_dts_init();
-    CHECKPOINT(NEST_DTS_INITIALIZED);
+        // Initialize structures for collecting nest dts data.
+        // Needs to run before RTL to initialize the gpe request
+        nest_dts_init();
+        CHECKPOINT(NEST_DTS_INITIALIZED);
 
-    // Run slave OCC init on all OCCs. Master-only initialization will be
-    // done after determining actual role. By default all OCCs are slave.
-    slave_occ_init();
-    CHECKPOINT(SLAVE_OCC_INITIALIZED);
+        // Run slave OCC init on all OCCs. Master-only initialization will be
+        // done after determining actual role. By default all OCCs are slave.
+        slave_occ_init();
+        CHECKPOINT(SLAVE_OCC_INITIALIZED);
+    } //G_ipl_time
 
     if (G_simics_environment)
     {
@@ -1655,8 +1663,11 @@ void Main_thread_routine(void *private)
     }
     else
     {
-        // Read hcode headers (PPMR, OCC pstate parameter block, PGPE, WOF)
-        read_hcode_headers();
+        if(!G_ipl_time)
+        {
+            // Read hcode headers (PPMR, OCC pstate parameter block, PGPE, WOF)
+            read_hcode_headers();
+        }
     }
 
     // Initialize watchdog timers. This needs to be right before
@@ -1667,26 +1678,33 @@ void Main_thread_routine(void *private)
     initWatchdogTimers();
     CHECKPOINT(WATCHDOG_INITIALIZED);
 
-    // Initialize Real time Loop Timer Interrupt
-    rtl_ocb_init();
-    CHECKPOINT(RTL_TIMER_INITIALIZED);
+    if(!G_ipl_time)
+    {
+        // Initialize Real time Loop Timer Interrupt
+        rtl_ocb_init();
+        CHECKPOINT(RTL_TIMER_INITIALIZED);
+    }
 
     // Initialize semaphores and timer for handling health monitor and
     // FFDC functions.
     initMainThrdSemAndTimer();
     CHECKPOINT(SEMS_AND_TIMERS_INITIALIZED);
 
-    //Initialize the thread scheduler.
-    //Other thread initialization is done here so that don't have to handle
-    // blocking commnad handler thread as FSP might start communicating
-    // through cmd handler thread in middle of the initialization.
-    initThreadScheduler();
+    if(!G_ipl_time)
+    {
+        //Initialize the thread scheduler.
+        //Other thread initialization is done here so that don't have to handle
+        // blocking commnad handler thread as FSP might start communicating
+        // through cmd handler thread in middle of the initialization.
+        initThreadScheduler();
+    }
 
     int l_ssxrc = SSX_OK;
     // initWatchdogTimers called before will start running the timer but
     // the interrupt handler will just restart the timer until we use this
     // enable switch to actually start the watchdog function.
 //    ENABLE_WDOG;
+
 
     while (TRUE)
     {
@@ -1700,6 +1718,13 @@ void Main_thread_routine(void *private)
         dcache_flush(g_trac_inf_buffer, TRACE_BUFFER_SIZE);
         dcache_flush(g_trac_imp_buffer, TRACE_BUFFER_SIZE);
         dcache_flush(g_trac_err_buffer, TRACE_BUFFER_SIZE);
+
+
+        // This task is not auto-scheduled during IPL, so run it manually
+        if(G_ipl_time)
+        {
+            task_misc_405_checks(NULL);
+        }
 
         static bool L_fir_collection_completed = FALSE;
         uint32_t l_rc = 0;
@@ -1729,8 +1754,10 @@ void Main_thread_routine(void *private)
                         G_fir_collection_request_created = TRUE;
                         TRAC_IMP("fir data collection: scheduling gpe request");
                         l_rc = gpe_request_schedule(&G_fir_collection_request);
+                        if(l_rc != SUCCESS)
                         {
-                            TRAC_IMP("failed to schedule fir data collection job");
+                            TRAC_IMP("failed to schedule fir data collection"
+                                     " job. RC = %x", (uint32_t)l_rc);
                         }
 
                         L_fir_collection_completed = TRUE;
@@ -1763,8 +1790,11 @@ void Main_thread_routine(void *private)
             }
             else
             {
-                // call health monitor routine
-                hmon_routine();
+                if(!G_ipl_time)
+                {
+                    // call health monitor routine
+                    hmon_routine();
+                }
             }
         }
 
@@ -1779,10 +1809,13 @@ void Main_thread_routine(void *private)
             }
             else
             {
-                // Only Master OCC will log call home data
-                if (OCC_MASTER == G_occ_role)
+                if(!G_ipl_time)
                 {
-                    chom_main();
+                    // Only Master OCC will log call home data
+                    if (OCC_MASTER == G_occ_role)
+                    {
+                        chom_main();
+                    }
                 }
             }
         }
@@ -1978,40 +2011,54 @@ int main(int argc, char **argv)
     homer_rc_t l_homerrc = HOMER_SUCCESS;
     homer_rc_t l_homerrc2 = HOMER_SUCCESS;
 
-    // Get the homer version
+    imageHdr_t* l_headerPtr = (imageHdr_t*)SRAM_START_ADDRESS_405;
+    G_ipl_time = l_headerPtr->occ_flags.flag_bits.ipl_time_flag;
+
+    // Set to whatever is in the header. Frequency will be overwritten
+    // below if necessary.
+    uint32_t l_tb_freq_hz = (l_headerPtr->nest_frequency * 1000000) / 4;
     uint32_t l_homer_version = 0;
-    l_homerrc = homer_hd_map_read_unmap(HOMER_VERSION,
-                                        &l_homer_version,
-                                        &l_ssxrc);
 
-    // Get proc_pb_frequency from HOMER host data and calculate the timebase
-    // frequency for the OCC. Pass the timebase frequency to ssx_initialize.
-    // The passed value must be in Hz. The occ 405 runs at 1/4 the proc
-    // frequency so the passed value is 1/4 of the proc_pb_frequency from the
-    // HOMER, ie. if the MRW says that proc_pb_frequency is 2400 MHz, then
-    // pass 600000000 (600MHz)
-
-    // The offset from the start of the HOMER is 0x000C0000, we will need to
-    // create a temporary mapping to this section of the HOMER with ppc405_mmu_map
-    // (at address 0x800C0000) read the value, convert it, and then unmap.
-
-    // Don't do a version check before reading the nest freq, it's present in
-    // all HOMER versions.
-    uint32_t l_tb_freq_hz = 0;
-    l_homerrc2 = homer_hd_map_read_unmap(HOMER_NEST_FREQ,
-                                         &G_nest_frequency_mhz,
-                                         &l_ssxrc2);
-
-    if ((HOMER_SUCCESS == l_homerrc2) || (HOMER_SSX_UNMAP_ERR == l_homerrc2))
+    if(!G_ipl_time)
     {
-        // Data is in Mhz upon return and needs to be converted to Hz and then
-        // quartered.
-        l_tb_freq_hz = G_nest_frequency_mhz * (1000000 / 4);
-    }
+        // Get the homer version
+        l_homerrc = homer_hd_map_read_unmap(HOMER_VERSION,
+                                            &l_homer_version,
+                                            &l_ssxrc);
+
+        // Get proc_pb_frequency from HOMER host data and calculate the timebase
+        // frequency for the OCC. Pass the timebase frequency to ssx_initialize.
+        // The passed value must be in Hz. The occ 405 runs at 1/4 the proc
+        // frequency so the passed value is 1/4 of the proc_pb_frequency from the
+        // HOMER, ie. if the MRW says that proc_pb_frequency is 2400 MHz, then
+        // pass 600000000 (600MHz)
+
+        // The offset from the start of the HOMER is 0x000C0000, we will need to
+        // create a temporary mapping to this section of the HOMER with ppc405_mmu_map
+        // (at address 0x800C0000) read the value, convert it, and then unmap.
+
+        // Don't do a version check before reading the nest freq, it's present in
+        // all HOMER versions.
+        l_homerrc2 = homer_hd_map_read_unmap(HOMER_NEST_FREQ,
+                                            &G_nest_frequency_mhz,
+                                            &l_ssxrc2);
+
+        if ((HOMER_SUCCESS == l_homerrc2) || (HOMER_SSX_UNMAP_ERR == l_homerrc2))
+        {
+            // Data is in Mhz upon return and needs to be converted to Hz and then
+            // quartered.
+            l_tb_freq_hz = G_nest_frequency_mhz * (1000000 / 4);
+        }
+        else
+        {
+            l_tb_freq_hz = PPC405_TIMEBASE_HZ;
+            G_nest_frequency_mhz = (l_tb_freq_hz * 4) / 1000000;
+        }
+    } //!G_ipl_time
     else
     {
-        l_tb_freq_hz = PPC405_TIMEBASE_HZ;
-        G_nest_frequency_mhz = (l_tb_freq_hz * 4) / 1000000;
+        MAIN_TRAC_INFO("freq = %d", l_tb_freq_hz);
+        G_nest_frequency_mhz = l_tb_freq_hz;
     }
 
     CHECKPOINT(SSX_STARTING);
@@ -2036,6 +2083,15 @@ int main(int argc, char **argv)
 
     MAIN_TRAC_INFO("Inside OCC Main");
 
+    if(G_ipl_time)
+    {
+        MAIN_TRAC_INFO("ipl flag is set");
+    }
+    else
+    {
+        MAIN_TRAC_INFO("ipl flag is NOT set");
+    }
+
     if (G_simics_environment == FALSE)
     {
         MAIN_TRAC_INFO("Currently not running in Simics environment");
@@ -2053,94 +2109,103 @@ int main(int argc, char **argv)
         }
     }
 
-    // Trace what happened before ssx initialization
-    MAIN_TRAC_INFO("HOMER accessed, rc=%d, version=%d, ssx_rc=%d",
-              l_homerrc, l_homer_version, l_ssxrc);
-
-    MAIN_TRAC_INFO("HOMER accessed, rc=%d, nest_freq=%d, ssx_rc=%d",
-              l_homerrc2, l_tb_freq_hz, l_ssxrc2);
-
-    // Handle any errors from the version access
-    homer_log_access_error(l_homerrc,
-                           l_ssxrc,
-                           l_homer_version);
-
-    // Handle any errors from the nest freq access
-    homer_log_access_error(l_homerrc2,
-                           l_ssxrc2,
-                           l_tb_freq_hz);
-
-    // Time to access any initialization data needed from the HOMER (besides the
-    // nest frequency which was required above to enable SSX and tracing).
-    CHECKPOINT(HOMER_ACCESS_INITS);
-
-    // Get OCC interrupt type from HOMER host data area. This will tell OCC
-    // which interrupt to Host it should be using.
-    uint32_t l_occ_int_type = 0;
-    l_homerrc = homer_hd_map_read_unmap(HOMER_INT_TYPE,
-                                        &l_occ_int_type,
-                                        &l_ssxrc);
-
-    if ((HOMER_SUCCESS == l_homerrc) || (HOMER_SSX_UNMAP_ERR == l_homerrc))
+    if(!G_ipl_time)
     {
-        G_occ_interrupt_type = (uint8_t) l_occ_int_type;
-    }
-    else
-    {
-        // if HOMER host data read fails, assume the FSP communication
-        // path as the default
-        G_occ_interrupt_type = FSP_SUPPORTED_OCC;
-        //G_occ_interrupt_type = PSIHB_INTERRUPT;
-    }
+        // Trace what happened before ssx initialization
+        MAIN_TRAC_INFO("HOMER accessed, rc=%d, version=%d, ssx_rc=%d",
+                        l_homerrc, l_homer_version, l_ssxrc);
 
-    MAIN_TRAC_INFO("HOMER accessed, rc=%d, host interrupt type=%d, ssx_rc=%d",
-                   l_homerrc, l_occ_int_type, l_ssxrc);
+        MAIN_TRAC_INFO("HOMER accessed, rc=%d, nest_freq=%d, ssx_rc=%d",
+                        l_homerrc2, l_tb_freq_hz, l_ssxrc2);
 
-    // Handle any errors from the interrupt type access
-    homer_log_access_error(l_homerrc,
-                           l_ssxrc,
-                           l_occ_int_type);
+        // Handle any errors from the version access
+        homer_log_access_error(l_homerrc,
+                               l_ssxrc,
+                               l_homer_version);
 
-    // Get the FIR Master indicator
-    uint32_t l_fir_master = FIR_OCC_NOT_FIR_MASTER;
-    l_homerrc = homer_hd_map_read_unmap(HOMER_FIR_MASTER,
-                                        &l_fir_master,
-                                        &l_ssxrc);
+        // Handle any errors from the nest freq access
+        homer_log_access_error(l_homerrc2,
+                               l_ssxrc2,
+                               l_tb_freq_hz);
 
-    if (((HOMER_SUCCESS == l_homerrc) || (HOMER_SSX_UNMAP_ERR == l_homerrc))
-        &&
-        (FIR_OCC_IS_FIR_MASTER == l_fir_master))
-    {
-        OCC_SET_FIR_MASTER(FIR_OCC_IS_FIR_MASTER);
-    }
-    else
-    {
-        OCC_SET_FIR_MASTER(FIR_OCC_NOT_FIR_MASTER);
-    }
+        // Time to access any initialization data needed from the HOMER (besides the
+        // nest frequency which was required above to enable SSX and tracing).
+        CHECKPOINT(HOMER_ACCESS_INITS);
 
-    TRAC_IMP("HOMER accessed, rc=%d, FIR master=%d, ssx_rc=%d",
-              l_homerrc, l_fir_master, l_ssxrc);
-
-    // Handle any errors from the FIR master access
-    homer_log_access_error(l_homerrc,
-                           l_ssxrc,
-                           l_fir_master);
-
-    // If this OCC is the FIR master read in the FIR collection parms
-    if (OCC_IS_FIR_MASTER())
-    {
-        // Read the FIR parms buffer
-        l_homerrc = homer_hd_map_read_unmap(HOMER_FIR_PARMS,
-                                            &G_fir_data_parms[0],
+        // Get OCC interrupt type from HOMER host data area. This will tell OCC
+        // which interrupt to Host it should be using.
+        uint32_t l_occ_int_type = 0;
+        l_homerrc = homer_hd_map_read_unmap(HOMER_INT_TYPE,
+                                            &l_occ_int_type,
                                             &l_ssxrc);
 
-        TRAC_IMP("HOMER accessed, rc=%d, FIR parms buffer 0x%x, ssx_rc=%d",
-                  l_homerrc, &G_fir_data_parms[0], l_ssxrc);
+        if ((HOMER_SUCCESS == l_homerrc) || (HOMER_SSX_UNMAP_ERR == l_homerrc))
+        {
+            G_occ_interrupt_type = (uint8_t) l_occ_int_type;
+        }
+        else
+        {
+            // if HOMER host data read fails, assume the FSP communication
+            // path as the default
+            G_occ_interrupt_type = FSP_SUPPORTED_OCC;
+            //G_occ_interrupt_type = PSIHB_INTERRUPT;
+        }
+
+        MAIN_TRAC_INFO("HOMER accessed, rc=%d, host interrupt type=%d, ssx_rc=%d",
+                       l_homerrc, l_occ_int_type, l_ssxrc);
+
+        // Handle any errors from the interrupt type access
+        homer_log_access_error(l_homerrc,
+                               l_ssxrc,
+                               l_occ_int_type);
+
+        // Get the FIR Master indicator
+        uint32_t l_fir_master = FIR_OCC_NOT_FIR_MASTER;
+        l_homerrc = homer_hd_map_read_unmap(HOMER_FIR_MASTER,
+                                            &l_fir_master,
+                                            &l_ssxrc);
+
+        if (((HOMER_SUCCESS == l_homerrc) || (HOMER_SSX_UNMAP_ERR == l_homerrc))
+            &&
+            (FIR_OCC_IS_FIR_MASTER == l_fir_master))
+        {
+            OCC_SET_FIR_MASTER(FIR_OCC_IS_FIR_MASTER);
+        }
+        else
+        {
+            OCC_SET_FIR_MASTER(FIR_OCC_NOT_FIR_MASTER);
+        }
+
+        TRAC_IMP("HOMER accessed, rc=%d, FIR master=%d, ssx_rc=%d",
+                  l_homerrc, l_fir_master, l_ssxrc);
 
         // Handle any errors from the FIR master access
         homer_log_access_error(l_homerrc,
                                l_ssxrc,
-                               (uint32_t)&G_fir_data_parms[0]);
+                               l_fir_master);
+
+        // If this OCC is the FIR master read in the FIR collection parms
+        if (OCC_IS_FIR_MASTER())
+        {
+            // Read the FIR parms buffer
+            l_homerrc = homer_hd_map_read_unmap(HOMER_FIR_PARMS,
+                                                &G_fir_data_parms[0],
+                                                &l_ssxrc);
+
+            TRAC_IMP("HOMER accessed, rc=%d, FIR parms buffer 0x%x, ssx_rc=%d",
+                      l_homerrc, &G_fir_data_parms[0], l_ssxrc);
+
+            // Handle any errors from the FIR master access
+            homer_log_access_error(l_homerrc,
+                                   l_ssxrc,
+                                   (uint32_t)&G_fir_data_parms[0]);
+        }
+    }//G_ipl_time
+    else
+    {
+        // No access to HOMER. Set this occ as FIR master
+        TRAC_IMP("I am the FIR master");
+        OCC_SET_FIR_MASTER(FIR_OCC_IS_FIR_MASTER);
     }
 
     //Set the fir_heap and fir_params pointer in the shared buffer

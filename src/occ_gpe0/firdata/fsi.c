@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/firdata/fsi.C $                                       */
+/* $Source: src/occ_gpe0/firdata/fsi.c $                                  */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -26,6 +26,7 @@
 #include <fsi.h>
 #include <scom_util.h>
 #include <native.h>
+#include <gpe_util.h>
 
 #define OPB_REG_CMD   0x00020010
 #define OPB_REG_STAT  0x00020011
@@ -76,7 +77,7 @@ int32_t poll_for_complete( uint32_t * o_val )
         /* Check for completion. Note: not checking for FSI errors. */
         if ( (read_data & OPB_STAT_BUSY) == 0 ) break; /* Not busy */
 
-        sleep( 10000 ); /* sleep for 10,000 ns */
+        busy_wait( 10 ); /* sleep for 10,000 ns */
         elapsed_time_ns += 10000;
 
     } while ( elapsed_time_ns <= MAX_OPB_TIMEOUT_NS );

@@ -26,6 +26,7 @@
 #include <native.h>
 #include <lpc.h>
 #include <scom_util.h>
+#include <gpe_util.h>
 
 #define    LPCHC_FW_SPACE   0xF0000000 /**< LPC Host Controller FW Space */
 #define    LPCHC_MEM_SPACE  0xE0000000 /**< LPC Host Controller Mem Space */
@@ -171,7 +172,7 @@ errorHndl_t pollComplete(CommandReg_t* i_ctrl,
             /* Want to start out incrementing by small numbers then get bigger
                to avoid a really tight loop in an error case so we'll increase
                the wait each time through */
-            sleep( LPC_POLL_INCR_NS*(++loop) );
+            busy_wait( (LPC_POLL_INCR_NS*(++loop)));
             poll_time += LPC_POLL_INCR_NS * loop;
         } while ( poll_time < LPC_POLL_TIME_NS );
 

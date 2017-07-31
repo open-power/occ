@@ -31,6 +31,7 @@
 #include "scom_addr_util.h"
 #include <sbe_fifo.h>
 #include <ppe42_scom.h>
+#include <gpe_util.h>
 
 enum {
     /*FSI addresses are byte offsets, so need to multiply by 4
@@ -452,7 +453,7 @@ int32_t SCOM_getIdScom( SCOM_Trgt_t i_trgt, uint64_t i_addr, uint32_t * o_val )
         /* Jump out when done. */
         if ( scomout.done ) break;
 
-        sleep( 10000 ); /* sleep for 10,000 ns */
+        busy_wait( 10 ); /* sleep for 10,000 ns */
         elapsed_indScom_time_ns += 10000;
 
     } while ( elapsed_indScom_time_ns <= 100000 ); /* wait for .1ms */

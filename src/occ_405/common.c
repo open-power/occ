@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/common.c $                                            */
+/* $Source: src/occ_405/common.c $                                        */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -31,6 +31,7 @@
 #include <occ_service_codes.h>
 
 uint8_t G_host_notifications_pending = 0;
+extern bool G_ipl_time;
 
 
 // Function Specification
@@ -54,6 +55,8 @@ void task_misc_405_checks(task_t *i_self)
 
     static bool L_checkstop_traced    = false;
     uint8_t     l_reason_code         = 0;
+    bool        l_create_errl         = false;
+
 
     do
     {
@@ -67,10 +70,28 @@ void task_misc_405_checks(task_t *i_self)
         // indicates if the system has check-stopped.
         l_oisr0_status.value = in32(OCB_OISR0); // read high order 32 bits of OISR0
 
+        // We're only interested in system checkstop during IPL, so only check
+        // for that if the IPL flag is set (in 405 main.c). If gpe0/1_error is
+        // set before ppc405 checkstop, then we won't get a chance to collect
+        // firdata, so only check for GPE0/1 errors in runtime.
+        if(G_ipl_time)
+        {
+            if(l_oisr0_status.fields.check_stop_ppc405)
+            {
+                l_create_errl = true;
+            }
+        }
+        else
+        {
+            if (l_oisr0_status.fields.check_stop_ppc405 ||   // System Checkstop
+                l_oisr0_status.fields.gpe0_error        ||   // GPE0 Halt
+                l_oisr0_status.fields.gpe1_error)            // GPE1 Halt
+            {
+                l_create_errl = true;
+            }
+        }
 
-        if (l_oisr0_status.fields.check_stop_ppc405 ||   // System Checkstop
-            l_oisr0_status.fields.gpe0_error        ||   // GPE0 Halt
-            l_oisr0_status.fields.gpe1_error)            // GPE1 Halt
+        if(l_create_errl)
         {
             errlHndl_t l_err = NULL;
 
