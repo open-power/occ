@@ -48,6 +48,7 @@
 /******************************************************************************/
 /* Globals                                                                    */
 /******************************************************************************/
+extern bool G_24x7_disabled;
 
 //*************************************************************************
 // Code
@@ -97,8 +98,12 @@ void task_gpe_timings(task_t * i_task)
     errlHndl_t l_err                = NULL;
     int rc                          = 0;
     int rc2                         = 0;
+    static uint8_t L_idleTicks      = 0;
+    static uint8_t L_busyTicks      = 0;
     static bool L_first_call        = TRUE;
-    bool l_gpe0_idle, l_gpe1_idle;
+    bool l_gpe0_idle                = TRUE;
+    bool l_gpe1_idle                = TRUE;
+
     static uint8_t L_consec_trace_count[2] = {0};
     gpe_gpenxiramdbg_t xsr_sprg0 = {0};
     gpe_gpenxiramedr_t ir_edr = {0};
@@ -239,6 +244,39 @@ void task_gpe_timings(task_t * i_task)
 
         // commit error log
         commitErrl( &l_err );
+    }
+
+    // Process GPEs timings and determine whether to disable/enable 24x7
+    if(l_gpe0_idle && l_gpe1_idle)
+    {
+        // Reset how many consecutive ticks we were busy for.
+        L_busyTicks = 0;
+
+        // If we were idle for at least 16 consecutive ticks, enable 24x7
+        if( L_idleTicks >= 15 )
+        {
+            G_24x7_disabled = FALSE;
+        }
+        else
+        {
+            L_idleTicks++;
+        }
+    }
+    else
+    {
+        // Reset how many consecutive ticks we were idle for
+        L_idleTicks = 0;
+
+        // If we were busy for at least 2 consecutive ticks, disable 24x7
+        if( L_busyTicks >= 1 )
+        {
+            G_24x7_disabled = TRUE;
+            INCREMENT_ERR_HISTORY(ERRH_24X7_DISABLED);
+        }
+        else
+        {
+            L_busyTicks++;
+        }
     }
 
     L_first_call = FALSE;

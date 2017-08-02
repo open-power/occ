@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -293,6 +293,7 @@ typedef enum {
     ERRH_DCOM_SLAVE_PBAX_READ_FAIL   =  0x15,
     ERRH_GPE0_NOT_IDLE               =  0x16,
     ERRH_GPE1_NOT_IDLE               =  0x17,
+    ERRH_24X7_DISABLED               =  0x18,
 } ERR_HISTORY_INDEX;
 #define INCREMENT_ERR_HISTORY(errorIndex) { \
     if ((errorIndex < ERR_HISTORY_SIZE) && (G_error_history[errorIndex] < 255)) { \
