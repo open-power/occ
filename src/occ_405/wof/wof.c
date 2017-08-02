@@ -1302,6 +1302,8 @@ void set_clear_wof_disabled( uint8_t i_action,
                 {
                     // Disable WOF
                     disable_wof();
+
+                    INTR_TRAC_INFO("WOF disabled, setting frequency ranges");
                     // Set the the frequency ranges
                     l_errl = amec_set_freq_range(CURRENT_MODE());
                     if(l_errl)

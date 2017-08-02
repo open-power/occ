@@ -121,7 +121,14 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
         l_freq_min = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
 
         // Set Max frequency (ultra turbo freq if wof enabled, to turbo freq otherwise)
-        l_freq_max = G_proc_fmax_mhz;
+        if( g_amec->wof.wof_disabled )
+        {
+            l_freq_max = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
+        }
+        else
+        {
+            l_freq_max = G_proc_fmax_mhz;
+        }
     }
     else if( VALID_MODE(i_mode) )  // Set to Max Freq Range for this mode
     {
@@ -261,7 +268,7 @@ void amec_slv_proc_voting_box(void)
     if (!G_allowPstates)
     {
         // Don't allow pstates to be sent until after initial mode has been set
-        if (CURRENT_MODE())
+        if ( (CURRENT_MODE()) || (G_sysConfigData.system_type.kvm) )
         {
             G_allowPstates = TRUE;
         }
