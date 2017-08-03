@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -93,6 +93,23 @@ void gpe_dimm_sm(ipc_msg_t* cmd, void* arg)
     args->error.error = 0;
     args->error.ffdc = 0;
 
+    // Need to mask machine checks for I2C master:
+    //
+    // Turn off MCR bit will prevent machine check on error on scom readings (MSR bits 1:7)
+    //   rc == 1 resource occupied  (see ppe42_scom.h)   Action: return with rc
+    //   rc == 2 Core is fenced, offline                 Action: return with rc
+    //   rc == 3 partial good
+    //   rc == 4 address error
+    //   rc == 5 clock error
+    //   rc == 6 packet error
+    //   rc == 7 timeout
+    //
+    // Clear: last SIB rc (SIBRC) and rc accumulator (SIMBRCA)
+    // Set: SIB Error Mask to prevent machine checks for any rcs
+    const uint32_t orig_msr = mfmsr();
+    const uint32_t msr = (orig_msr & ~(MSR_SIBRC | MSR_SIBRCA)) | MSR_SEM;
+    mtmsr(msr);
+
     switch(args->state)
     {
         case DIMM_STATE_INIT:
@@ -150,6 +167,9 @@ void gpe_dimm_sm(ipc_msg_t* cmd, void* arg)
         gpe_set_ffdc(&(args->error), 0x00, GPE_RC_IPC_SEND_FAILED, rc);
         pk_halt();
     }
+
+    // Restore original MSR and clear SIBRC and SIBRCA
+    mtmsr(orig_msr & ~(MSR_SIBRC | MSR_SIBRCA));
 
 } // end gpe_dimm_sm()
 
