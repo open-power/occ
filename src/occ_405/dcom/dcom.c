@@ -534,6 +534,17 @@ void task_dcom_parse_occfwmsg(task_t *i_self)
 
             if(l_change)
             {
+                // If Ultra Turbo is 0, disable WOF, else enable
+                if(G_sysConfigData.sys_mode_freq.table[OCC_MODE_UTURBO] == 0)
+                {
+                    set_clear_wof_disabled( SET, WOF_RC_UTURBO_IS_ZERO );
+                }
+                else
+                {
+                    set_clear_wof_disabled( CLEAR, WOF_RC_UTURBO_IS_ZERO );
+                    set_clear_wof_disabled( CLEAR, WOF_RC_OCC_WOF_DISABLED );
+                }
+
                 if(G_sysConfigData.sys_mode_freq.table[OCC_MODE_UTURBO] > G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO])
                 {
                     G_proc_fmax_mhz = G_sysConfigData.sys_mode_freq.table[OCC_MODE_UTURBO];
