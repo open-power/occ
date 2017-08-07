@@ -115,7 +115,14 @@ errlHndl_t AMEC_data_write_fcurr(const OCC_MODE i_mode)
     // in amec_set_freq_range() based on mode
     if((G_occ_interrupt_type != FSP_SUPPORTED_OCC) && (G_sysConfigData.system_type.kvm))
     {
-        g_amec->sys.fmax = G_proc_fmax_mhz;
+        if(g_amec->wof.wof_disabled)
+        {
+            g_amec->sys.fmax = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
+        }
+        else
+        {
+            g_amec->sys.fmax = G_proc_fmax_mhz;
+        }
         g_amec->sys.fmin = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
 
         TRAC_INFO("AMEC_data_write_fcurr: New frequency range Fmin[%u] Fmax[%u]",
