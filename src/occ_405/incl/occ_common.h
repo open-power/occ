@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -319,6 +319,10 @@ enum
 // Convert duration based in SsxTimestamps to milliseconds.
 #define DURATION_IN_MS_UNTIL_NOW_FROM(start_time) \
   (uint32_t) ((ssx_timebase_get() - (SsxTimebase) start_time) / ( SSX_TIMEBASE_FREQUENCY_HZ / 1000 ))
+
+// Convert duration based in SsxTimestamps to seconds.
+#define DURATION_IN_S_UNTIL_NOW_FROM(start_time) \
+  (uint32_t) ((ssx_timebase_get() - (SsxTimebase) start_time) / SSX_TIMEBASE_FREQUENCY_HZ )
 
 // Skip this typedef in x86 environment
 #ifndef OCC_X86_PARSER

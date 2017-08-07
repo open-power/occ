@@ -689,6 +689,9 @@ enum e_gsid
     TEMPGPU0,
     TEMPGPU1,
     TEMPGPU2,
+    TEMPGPU0MEM,
+    TEMPGPU1MEM,
+    TEMPGPU2MEM,
 
     // ------------------------------------------------------
     // Partition Sensors

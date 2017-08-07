@@ -78,6 +78,7 @@ typedef enum
     DATA_FRU_DIMM               = 0x02,
     DATA_FRU_VRM                = 0x03,
     DATA_FRU_GPU                = 0x04,
+    DATA_FRU_GPU_MEM            = 0x05,
     DATA_FRU_MAX,
 } eConfigDataFruType;
 
@@ -171,12 +172,15 @@ typedef struct __attribute__ ((packed))
     uint16_t total_non_gpu_max_pwr_watts;
     uint16_t total_proc_mem_pwr_drop_watts;
     uint16_t reserved;
-    uint32_t gpu0_sid;       // GPU0 Sensor ID
-    uint32_t gpu0_temp_sid;  // GPU0 Temperature Sensor ID
-    uint32_t gpu1_sid;       // GPU1 Sensor ID
-    uint32_t gpu1_temp_sid;  // GPU1 Temperature Sensor ID
-    uint32_t gpu2_sid;       // GPU2 Sensor ID
-    uint32_t gpu2_temp_sid;  // GPU2 Temperature Sensor ID
+    uint32_t gpu0_temp_sid;     // GPU0 Temperature Sensor ID
+    uint32_t gpu0_mem_temp_sid; // GPU0 Memory Temperature Sensor ID
+    uint32_t gpu0_sid;          // GPU0 Sensor ID for callout
+    uint32_t gpu1_temp_sid;     // GPU1 Temperature Sensor ID
+    uint32_t gpu1_mem_temp_sid; // GPU1 Memory Temperature Sensor ID
+    uint32_t gpu1_sid;          // GPU1 Sensor ID for callout
+    uint32_t gpu2_temp_sid;     // GPU2 Temperature Sensor ID
+    uint32_t gpu2_mem_temp_sid; // GPU2 Memory Temperature Sensor ID
+    uint32_t gpu2_sid;          // GPU2 Sensor ID for callout
 }cmdh_gpu_config_t;
 
 // Used by TMGT to send OCC the PCAP config data.

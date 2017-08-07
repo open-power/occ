@@ -43,6 +43,7 @@ INPUT ( amec_amester.o
         dpss.o
         errl.o
         ffdc.o
+        gpu.o
         homer.o
         ll_ffdc.o
         lock.o

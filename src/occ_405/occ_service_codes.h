@@ -86,6 +86,14 @@ enum occReasonCode
     PCAP_THROTTLE_POWER_LIMIT       = 0x61,
     /// Firmware Failure: equivalent to assertion failures
     INTERNAL_FW_FAILURE             = 0xA0,
+
+    /// Error with GPU tasks
+    GPU_FAILURE                     = 0xA1,
+    /// GPU core reached error threshold
+    GPU_ERROR_TEMP                  = 0xA2,
+    /// GPU memory reached error threshold
+    GPU_MEMORY_ERROR_TEMP           = 0xA3,
+
     /// Failure within the OCC Complex of the processor
     INTERNAL_HW_FAILURE             = 0xB0,
     /// OCC GPE halted due to checkstop
@@ -134,6 +142,7 @@ enum occReasonCode
     DIVIDE_BY_ZERO_ERROR            = 0xDD,
     INVALID_FREQUENCY               = 0xDE,
     WOF_RE_ENABLED                  = 0xDF,
+
 
 // NOTE: 0xE0 - 0xEF can NOT be used these are reserved for critical
 // OCC errors.  (H)TMGT will be looking for 0xEy ERRL_RC in cmd response RC
@@ -271,6 +280,16 @@ enum occExtReasonCode
 
     ERC_SMGR_NO_VALID_MODE_TRANSITION_CALL      = 0x00E0,
     ERC_SMGR_NO_VALID_STATE_TRANSITION_CALL     = 0x00E1,
+
+    ERC_GPU_COMPLETE_FAILURE                    = 0x00F0,
+    ERC_GPU_SCHEDULE_FAILURE                    = 0x00F1,
+    ERC_GPU_RESET_FAILURE                       = 0x00F2,
+    ERC_GPU_RESET_TIMEOUT                       = 0x00F3,
+    ERC_GPU_READ_TEMP_TIMEOUT                   = 0x00F4,
+    ERC_GPU_READ_MEM_TEMP_TIMEOUT               = 0x00F5,
+    ERC_GPU_READ_MEM_TEMP_CAPABLE_FAILURE       = 0x00F6,
+    ERC_GPU_INVALID_GPU_OPERATION               = 0x00F7,
+    ERC_GPU_NO_GPE_SUPPORT                      = 0x00FF,
 
     ERC_STATE_FROM_ALL_TO_STB_FAILURE           = 0x0123,
     ERC_STATE_FROM_ACT_TO_CHR_FAILURE           = 0x0124,

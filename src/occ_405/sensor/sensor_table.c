@@ -424,9 +424,12 @@ const sensor_ptr_t G_amec_sensor_list[] =
   // ------------------------------------------------------
   // GPU Sensors
   // ------------------------------------------------------
-  SENSOR_PTR(TEMPGPU0,              &g_amec_sys.proc[0].tempgpu0),
-  SENSOR_PTR(TEMPGPU1,              &g_amec_sys.proc[0].tempgpu1),
-  SENSOR_PTR(TEMPGPU2,              &g_amec_sys.proc[0].tempgpu2),
+  SENSOR_PTR(TEMPGPU0,              &g_amec_sys.gpu[0].tempgpu),
+  SENSOR_PTR(TEMPGPU1,              &g_amec_sys.gpu[1].tempgpu),
+  SENSOR_PTR(TEMPGPU2,              &g_amec_sys.gpu[2].tempgpu),
+  SENSOR_PTR(TEMPGPU0MEM,           &g_amec_sys.gpu[0].tempgpumem),
+  SENSOR_PTR(TEMPGPU1MEM,           &g_amec_sys.gpu[1].tempgpumem),
+  SENSOR_PTR(TEMPGPU2MEM,           &g_amec_sys.gpu[2].tempgpumem),
 
   // ------------------------------------------------------
   // Partition Sensors
@@ -620,6 +623,9 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   MINI_SENSOR_PTR( TEMPGPU0,     NULL),
   MINI_SENSOR_PTR( TEMPGPU1,     NULL),
   MINI_SENSOR_PTR( TEMPGPU2,     NULL),
+  MINI_SENSOR_PTR( TEMPGPU0MEM,  NULL),
+  MINI_SENSOR_PTR( TEMPGPU1MEM,  NULL),
+  MINI_SENSOR_PTR( TEMPGPU2MEM,  NULL),
 
   // ------------------------------------------------------
   // Partition Sensors

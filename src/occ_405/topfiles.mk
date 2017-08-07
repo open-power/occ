@@ -65,6 +65,7 @@ TOP-C-SOURCES = amec/amec_analytics.c \
                 dimm/dimm.c \
                 dimm/dimm_control.c \
                 errl/errl.c \
+                gpu/gpu.c \
                 homer.c \
                 lock/lock.c \
                 main.c \

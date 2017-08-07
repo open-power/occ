@@ -248,7 +248,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
     l_sensorHeader.count  = 0;
 
     //Initialize to max number of possible temperature sensors.
-    l_max_sensors = MAX_NUM_CORES + MAX_NUM_MEM_CONTROLLERS + (MAX_NUM_MEM_CONTROLLERS * NUM_DIMMS_PER_CENTAUR) + MAX_NUM_GPU_PER_DOMAIN;
+    l_max_sensors = MAX_NUM_CORES + MAX_NUM_MEM_CONTROLLERS + (MAX_NUM_MEM_CONTROLLERS * NUM_DIMMS_PER_CENTAUR) + (MAX_NUM_GPU_PER_DOMAIN * 2);
     l_max_sensors++;  // +1 for VRM
     cmdh_poll_temp_sensor_t l_tempSensorList[l_max_sensors];
     memset(l_tempSensorList, 0x00, sizeof(l_tempSensorList));
@@ -351,11 +351,24 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
     // Add GPU temperatures
     for (k=0; k<MAX_NUM_GPU_PER_DOMAIN; k++)
     {
-        if(GPU_PRESENT(k))
+        if(GPU_PRESENT(k))  // temp until GPU sensor IDs are sent make sensor ids "GPU"<gpu#>
         {
-            l_tempSensorList[l_sensorHeader.count].id = G_amec_sensor_list[TEMPGPU0 + k]->ipmi_sid;
+            // GPU core temperature
+            if(G_amec_sensor_list[TEMPGPU0 + k]->ipmi_sid)  // temp
+               l_tempSensorList[l_sensorHeader.count].id = G_amec_sensor_list[TEMPGPU0 + k]->ipmi_sid;
+            else
+               l_tempSensorList[l_sensorHeader.count].id = 0x47505500 | k;  // temp
             l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_GPU;
             l_tempSensorList[l_sensorHeader.count].value = (G_amec_sensor_list[TEMPGPU0 + k]->sample) & 0xFF;
+            l_sensorHeader.count++;
+
+            // GPU memory temperature
+            if(G_amec_sensor_list[TEMPGPU0 + k]->ipmi_sid)  // temp
+               l_tempSensorList[l_sensorHeader.count].id = G_amec_sensor_list[TEMPGPU0MEM + k]->ipmi_sid;
+            else
+               l_tempSensorList[l_sensorHeader.count].id = 0x47505500 | k;  // temp
+            l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_GPU_MEM;
+            l_tempSensorList[l_sensorHeader.count].value = (G_amec_sensor_list[TEMPGPU0MEM + k]->sample) & 0xFF;
             l_sensorHeader.count++;
         }
     }

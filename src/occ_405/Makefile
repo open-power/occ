@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2015,2016
+# Contributors Listed Below - COPYRIGHT 2015,2017
 # [+] International Business Machines Corp.
 #
 #
@@ -56,6 +56,7 @@ LIB_DIRS =  -L$(OBJDIR) \
             -L$(OBJDIR)/dcom \
             -L$(OBJDIR)/dimm \
             -L$(OBJDIR)/errl \
+            -L$(OBJDIR)/gpu \
             -L$(OBJDIR)/lock \
             -L$(OBJDIR)/pss \
             -L$(OBJDIR)/rtls \

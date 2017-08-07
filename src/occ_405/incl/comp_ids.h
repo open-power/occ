@@ -96,5 +96,9 @@
 #define PGPE_COMP_ID         0x1200
 #define PGPE_COMP_NAME       "PGPE"
 
+// GPU Interface
+#define GPU_COMP_ID          0x1300
+#define GPU_COMP_NAME        "GPU"
+
 #endif
 

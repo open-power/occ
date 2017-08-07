@@ -69,6 +69,7 @@ uint32_t G_curr_num_gpus_sys = 0;
 #define ADC_CONVERTED_VALUE(i_chan) \
     ((i_chan < MAX_APSS_ADC_CHANNELS) ? G_lastValidAdcValue[i_chan] : 0)
 
+extern bool    G_gpu_monitoring_allowed;
 extern uint8_t G_occ_interrupt_type;
 extern bool    G_vrm_thermal_monitoring;
 extern PWR_READING_TYPE  G_pwr_reading_type;
@@ -821,6 +822,11 @@ void amec_update_gpu_configuration(void)
         {
             G_gpu_config_done = TRUE;
             G_first_proc_gpu_config = l_valid_bitmask_proc;
+            if(G_first_proc_gpu_config)
+            {
+               // GPUs are present enable monitoring
+               G_gpu_monitoring_allowed = TRUE;
+            }
             G_first_sys_gpu_config = l_valid_bitmask_sys;
             G_first_num_gpus_sys = l_num_gpus_sys;
             TRAC_IMP("GPU presence detection completed. GPU configuration for this OCC: 0x%08X, total[%d]",

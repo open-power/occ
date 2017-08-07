@@ -1209,12 +1209,18 @@ errlHndl_t data_store_gpu(const cmdh_fsp_cmd_t * i_cmd_ptr,
     {
         G_sysConfigData.total_non_gpu_max_pwr_watts = l_cmd_ptr->total_non_gpu_max_pwr_watts;
         G_sysConfigData.total_proc_mem_pwr_drop_watts = l_cmd_ptr->total_proc_mem_pwr_drop_watts;
-        G_sysConfigData.gpu_sensor_ids[0]  = l_cmd_ptr->gpu0_sid;
+
         AMECSENSOR_PTR(TEMPGPU0)->ipmi_sid = l_cmd_ptr->gpu0_temp_sid;
-        G_sysConfigData.gpu_sensor_ids[1]  = l_cmd_ptr->gpu1_sid;
+        AMECSENSOR_PTR(TEMPGPU0MEM)->ipmi_sid = l_cmd_ptr->gpu0_mem_temp_sid;
+        G_sysConfigData.gpu_sensor_ids[0]  = l_cmd_ptr->gpu0_sid;
+
         AMECSENSOR_PTR(TEMPGPU1)->ipmi_sid = l_cmd_ptr->gpu1_temp_sid;
-        G_sysConfigData.gpu_sensor_ids[2]  = l_cmd_ptr->gpu2_sid;
+        AMECSENSOR_PTR(TEMPGPU1MEM)->ipmi_sid = l_cmd_ptr->gpu1_mem_temp_sid;
+        G_sysConfigData.gpu_sensor_ids[1]  = l_cmd_ptr->gpu1_sid;
+
         AMECSENSOR_PTR(TEMPGPU2)->ipmi_sid = l_cmd_ptr->gpu2_temp_sid;
+        AMECSENSOR_PTR(TEMPGPU2MEM)->ipmi_sid = l_cmd_ptr->gpu2_mem_temp_sid;
+        G_sysConfigData.gpu_sensor_ids[2]  = l_cmd_ptr->gpu2_sid;
 
         G_data_cnfg->data_mask |= DATA_MASK_GPU;
         CMDH_TRAC_IMP("data_store_gpu: Got valid GPU data packet");

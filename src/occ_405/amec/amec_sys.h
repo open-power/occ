@@ -430,6 +430,53 @@ typedef struct
 } amec_quad_t;
 
 //-------------------------------------------------------------
+// GPU Structures
+//-------------------------------------------------------------
+
+typedef struct {
+    bool     disabled;  // GPU has been marked failed and no longer monitored
+    bool     readOnce;  // Comm has been established with GPU
+    bool     overtempError;  // Core OT error has been logged against GPU
+    bool     memOvertempError;  // Memory OT error has been logged against GPU
+    bool     checkDriverLoaded;   // Indicates if need to check if driver is loaded
+    bool     driverLoaded;   // Indicates if GPU driver is loaded
+    bool     checkMemTempSupport; // Indicates if need to check if mem monitoring is supported
+    bool     memTempSupported; // Indicates if memory temperature monitoring is supported
+    uint8_t  memErrorCount; // count of consecutive GPU mem temp read failures
+    uint8_t  errorCount;   // count of consecutive GPU core temp read failures
+} gpuStatus_t;
+
+typedef struct {
+    bool     check_pwr_limit; // Indicates if need to read power limits from GPU
+    bool     pwr_limits_read;   // Indicates if power limits were read i.e. have min/max
+    uint32_t gpu_min_pcap_mw; // Min GPU power limit in mW read from the GPU
+    uint32_t gpu_max_pcap_mw; // Max GPU power limit in mW read from the GPU
+    uint32_t gpu_desired_pcap_mw;  // AMEC determined pcap in mW to set
+    uint32_t gpu_requested_pcap_mw;  // Requested power cap in mW sent to GPU
+    uint32_t gpu_actual_pcap_mw;  // Actual power cap in mW read back from the GPU
+} gpuPcap_t;
+
+
+typedef struct
+{
+  //-----------------------------------
+  // Sensors
+  //-----------------------------------
+  sensor_t tempgpu;    // GPU core temperature
+  sensor_t tempgpumem; // GPU HBM temperature
+
+  //-----------------------------------
+  // Data
+  //-----------------------------------
+  // General Status of GPU
+  gpuStatus_t status;
+
+  // GPU Power Cap Information
+  gpuPcap_t pcap;
+
+} amec_gpu_t;
+
+//-------------------------------------------------------------
 // Proc Structure
 //-------------------------------------------------------------
 typedef struct
@@ -467,11 +514,6 @@ typedef struct
 
   // Nimbus DIMM Sensors
   sensor_t       tempdimm[NUM_DIMM_PORTS*NUM_DIMMS_PER_I2CPORT];
-
- // GPU Sensors
-  sensor_t tempgpu0;
-  sensor_t tempgpu1;
-  sensor_t tempgpu2;
 
   sensor_t curvdn;
   sensor_t pwrvdd;
@@ -606,6 +648,9 @@ typedef struct
   //   - This is an array of 1.  This was initialized this way
   //     in the hopes of perhaps reusing some code from previous projects.
   amec_proc_t   proc[NUM_PROC_CHIPS_PER_OCC];
+
+  // GPU Data
+  amec_gpu_t   gpu[MAX_NUM_GPU_PER_DOMAIN];
 
   // OCC Firmware Data
   amec_fw_t     fw;

@@ -235,6 +235,7 @@ APP_INCLUDES =  -I$(IMAGE_SRCDIR)/rtls \
                 -I$(IMAGE_SRCDIR)/amec \
                 -I$(IMAGE_SRCDIR)/cent \
                 -I$(IMAGE_SRCDIR)/dimm \
+                -I$(IMAGE_SRCDIR)/gpu \
                 -I$(IMAGE_SRCDIR)/mem \
                 -I$(IMAGE_SRCDIR)/lock \
                 -I$(IMAGE_SRCDIR)/wof \
