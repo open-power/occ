@@ -163,8 +163,13 @@ bool FirData_addRegToPnor( FirData_t * io_fd, PNOR_Trgt_t * io_pTrgt,
             break;
         }
 
+        // Skip zero value registers.
+        if ( 0 == reg.val ) break;
 
-        if ( 0 == reg.val ) break; // Skip zero value registers.
+        // Skip chiplet global checkstop registers if only reporting
+        // xstop Broadcast via OOB
+        if ( ((i_addr & 0x00FFFFFF) == 0x040000) &&
+             ((reg.val & 0x3FFFFFFFFFFFFFFF) == 0) ) break;
 
 #ifdef DEBUG_PRD_CHKSTOP_ANALYSIS
         TRAC_IMP("addRegToPnor: got scom value, addr=0x%08X value=0x%08X %08X",
@@ -1217,7 +1222,6 @@ int32_t FirData_init( FirData_t * io_fd,
     int32_t rc = SUCCESS;
 
     uint32_t sz_hData    = sizeof(HOMER_Data_t);
-    uint32_t sz_pnoNoEcc = 0;
     uint32_t sz_u32      = sizeof(uint32_t);
     uint32_t sz_u64      = sizeof(uint64_t);
 
@@ -1259,11 +1263,11 @@ int32_t FirData_init( FirData_t * io_fd,
             break; /* nothing to analyze. */
         }
 
-        /* The actual maximum PNOR size may possibly be less then the PNOR data */
-        /* buffer. If so, adjust maximum size. */
-        sz_pnoNoEcc = (io_fd->hData->pnorInfo.pnorSize / 9) * 8;
-        if ( sz_pnoNoEcc < io_fd->maxPBufSize )
-            io_fd->maxPBufSize = sz_pnoNoEcc;
+        /* The actual max PNOR size may possibly be less then the PNOR data */
+        /* buffer. If so, adjust maximum size. Hostboot already handled ECC.*/
+        /* We have to use smaller of what OCC or Hostboot has.              */
+        if ( io_fd->hData->pnorInfo.pnorSize < io_fd->maxPBufSize )
+            io_fd->maxPBufSize = io_fd->hData->pnorInfo.pnorSize;
 
         /* Initialize the PNOR header data. */
         PNOR_Data_t pData;
