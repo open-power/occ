@@ -1906,8 +1906,8 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
                         // Store the hardware sensor ID
                         G_sysConfigData.dimm_huids[l_i2c_port][l_dimm_num] = l_data_set->hw_sensor_id;
-                        // Set bit vector of enabled DIMM sensors
-                        G_dimm_enabled_sensors.bytes[l_i2c_port] |= 0x80 >> l_dimm_num;
+                        // Set bit vector of present DIMM sensors (they will be enabled in task_dimm_sm)
+                        G_dimm_present_sensors.bytes[l_i2c_port] |= 0x80 >> l_dimm_num;
 
                         // Store the temperature sensor ID
                         g_amec->proc[0].memctl[l_i2c_port].centaur.dimm_temps[l_dimm_num].temp_sid =

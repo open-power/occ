@@ -51,6 +51,10 @@
 #define PEEK_ERROR_MASK                 0x00000000FC000000
 #define PEEK_MORE_DATA                  0x0000000002000000
 
+// 0-15: Bit Rate Divisor - 0x0049 gives approx 391kHz (and allows margin for clock variation)
+// 16-21: Port Number (0-5)
+// 22-26: reserved (0s)
+#define I2C_MODE_REG_DIVISOR    0x0049000000000000
 
 void dimm_set_ffdc(GpeErrorStruct *o_error, uint32_t i_addr, uint32_t i_rc, uint64_t i_ffdc);
 

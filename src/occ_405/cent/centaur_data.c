@@ -132,6 +132,7 @@ centaur_data_task_t G_centaur_data_task = {
 #endif
 
 dimm_sensor_flags_t G_dimm_enabled_sensors = {0};
+dimm_sensor_flags_t G_dimm_present_sensors = {0};
 
 //AMEC needs to know when data for a centaur has been collected.
 uint32_t G_updated_centaur_mask = 0;

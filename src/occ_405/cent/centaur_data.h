@@ -136,6 +136,7 @@ extern uint32_t G_updated_centaur_mask;
 
 //global bitmap of enabled dimm sensors
 extern dimm_sensor_flags_t G_dimm_enabled_sensors;
+extern dimm_sensor_flags_t G_dimm_present_sensors;
 
 //global bitmap of dimms that have ever gone over the error temperature
 extern dimm_sensor_flags_t G_dimm_overtemp_bitmap;

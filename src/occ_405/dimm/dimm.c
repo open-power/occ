@@ -293,7 +293,7 @@ void mark_dimm_failed()
          * @reasoncode  DIMM_GPE_FAILURE
          * @userdata1   GPE returned rc code
          * @userdata4   ERC_DIMM_COMPLETE_FAILURE
-         * @devdesc     Failure writing dimm i2c mode register
+         * @devdesc     Disabling DIMM due to repeated I2C failures
          */
         l_err = createErrl(DIMM_MID_MARK_DIMM_FAILED,
                            DIMM_GPE_FAILURE,
@@ -735,8 +735,18 @@ void task_dimm_sm(struct task *i_self)
     static bool L_readIssued = false;
     const uint8_t engine = G_sysConfigData.dimm_i2c_engine;
     static bool L_occ_owns_lock = false;
+    // 60,000 x 500us (tick time) x 2 (called every other tick) = 60 seconds
+    static unsigned int L_startup_delay = 60000;
 
-    if (G_mem_monitoring_allowed)
+    if (L_startup_delay > 0)
+    {
+        if (--L_startup_delay == 0)
+        {
+            TRAC_INFO("task_dimm_sm: Startup delay completed, DIMM temp collection will be started (0x%08X)", G_dimm_present_sensors.words[0]);
+            G_dimm_enabled_sensors = G_dimm_present_sensors;
+        }
+    }
+    else if (G_mem_monitoring_allowed)
     {
 #ifdef DEBUG_LOCK_TESTING
         SIMULATE_HOST();

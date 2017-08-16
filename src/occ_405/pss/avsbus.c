@@ -978,6 +978,8 @@ uint8_t process_avsbus_status()
         if ((foundOT == 1) && !loggedOT)
         {
             loggedOT = TRUE;
+            TRAC_ERR("process_avsbus_status: AVSBUS Over Temperature Warning (Vdd: 0x%08X, Vdn: 0x%08X)",
+                     vdd_status, vdn_status);
             /* @
              * @errortype
              * @moduleid    PSS_MID_AVSBUS_READ
@@ -1004,6 +1006,8 @@ uint8_t process_avsbus_status()
         if ((foundOC == 1) && !loggedOC)
         {
             loggedOC = TRUE;
+            TRAC_ERR("process_avsbus_status: AVSBUS Over Current Warning (Vdd: 0x%08X, Vdn: 0x%08X)",
+                     vdd_status, vdn_status);
             /* @
              * @errortype
              * @moduleid    PSS_MID_AVSBUS_READ

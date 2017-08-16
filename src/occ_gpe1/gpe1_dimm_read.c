@@ -268,7 +268,7 @@ void dimm_write_mode(ipc_msg_t* cmd, void* arg)
     // 0-15: Bit Rate Divisor - 0x0049 gives approx 391kHz (and allows margin for clock variation)
     // 16-21: Port Number (0-5)
     // 22-26: reserved (0s)
-    regValue = 0x0049000000000000;
+    regValue = I2C_MODE_REG_DIVISOR;
     if ((args->i2cPort > 0) && (args->i2cPort < 6))
     {
         regValue |= ((uint64_t)args->i2cPort << 42);
