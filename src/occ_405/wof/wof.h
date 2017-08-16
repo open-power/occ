@@ -65,6 +65,9 @@
 #define WOF_RC_UTURBO_IS_ZERO                      0x00010000
 #define WOF_RC_OCC_WOF_DISABLED                    0x00020000
 #define WOF_RC_OPPB_WOF_DISABLED                   0x00040000
+#define WOF_RC_SYSTEM_WOF_DISABLE                  0x00080000
+#define WOF_RC_RESET_LIMIT_REACHED                 0x00100000
+#define WOF_RC_UNSUPPORTED_FREQUENCIES             0x00200000
 
 //***************************************************************************
 // Temp space used to save hard coded addresses
@@ -86,6 +89,16 @@ enum wof_init_states
     PGPE_WOF_ENABLED_NO_PREV_DATA,  //4
     WOF_ENABLED,                    //5
 };
+
+// Enumeration to define reasons (H)TMGT is disabling WOF
+enum wof_disabled_htmgt_rc
+{
+    WOF_MISSING_ULTRA_TURBO     = 0x0000,
+    WOF_SYSTEM_DISABLED         = 0x0001,
+    WOF_RESET_LIMIT_REACHED     = 0x0002,
+    WOF_UNSUPPORTED_FREQ        = 0x0003,
+};
+
 
 // Enumeration
 enum wof_disabled_actions

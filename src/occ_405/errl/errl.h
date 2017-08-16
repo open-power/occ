@@ -87,6 +87,7 @@ typedef enum
 {
     ERRL_ACTIONS_CONSOLIDATE_ERRORS       = 0x01, //ignored by tmgt at this time
     ERRL_ACTIONS_MANUFACTURING_ERROR      = 0x08, //tmgt will set severity to predictive while in mfg mode
+    ERRL_ACTIONS_WOF_RESET_REQUIRED       = 0x20, //Soft reset without incrementing permanent safe mode count
     ERRL_ACTIONS_SAFE_MODE_REQUIRED       = 0x40, //immediate permanent safe mode without any recovery (checkstop)
     ERRL_ACTIONS_RESET_REQUIRED           = 0x80, //permanent safe mode after 3 recovery attempts
 } ERRL_ACTIONS_MASK;
@@ -236,7 +237,7 @@ struct ErrlEntry
         {
             uint8_t reset_required     : 1;  // Error is critical and requires OCC reset
             uint8_t safe_mode_required : 1;  // immediate permanent safe mode (used for checkstops)
-            uint8_t reserved5          : 1;
+            uint8_t wof_reset_required : 1;
             uint8_t reserved4          : 1;
             uint8_t mfg_error          : 1;  // Fan go to max,oversubscription,core above warning,Throttled.
             uint8_t reserved2          : 1;

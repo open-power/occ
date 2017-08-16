@@ -1076,7 +1076,15 @@ void calculate_ceff_ratio_vdd( void )
     // Prevent divide by zero
     if( g_wof->ceff_tdp_vdd == 0 )
     {
+        // Print debug info to help isolate offending variable
         INTR_TRAC_ERR("WOF Disabled! Ceff VDD divide by 0");
+        INTR_TRAC_ERR("iac_tdp_vdd = %d", G_oppb.lac_tdp_vdd_turbo_10ma );
+        INTR_TRAC_ERR("v_ratio     = %d", g_wof->v_ratio );
+        INTR_TRAC_ERR("f_ratio     = %d", g_wof->f_ratio );
+        INTR_TRAC_ERR("vdd_mv      = %d", G_oppb.operating_points[TURBO].vdd_mv);
+        INTR_TRAC_ERR("freq_mhz    = %d", G_oppb.operating_points[TURBO].frequency_mhz);
+        INTR_TRAC_ERR("v_clip_mv   = %d", g_wof->v_clip);
+        INTR_TRAC_ERR("f_clip_PS   = 0x%x", g_wof->f_clip_ps);
 
         // Return 0
         g_wof->ceff_ratio_vdd = 0;

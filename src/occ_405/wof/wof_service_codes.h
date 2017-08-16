@@ -42,6 +42,7 @@ enum wofModuleId
     ENABLE_WOF                          =  WOF_COMP_ID | 0x0B,
     SEND_INIT_VFRT                      =  WOF_COMP_ID | 0x0C,
     SET_CLEAR_WOF_DISABLED              =  WOF_COMP_ID | 0x0D,
+    CALL_WOF_MAIN                       =  WOF_COMP_ID | 0x0E,
 };
 
 

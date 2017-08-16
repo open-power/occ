@@ -125,6 +125,12 @@ typedef enum
     commitErrl(&error_log);\
 }
 
+#define REQUEST_WOF_RESET(error_log) \
+{\
+    reset_state_request(RESET_REQUESTED_DUE_TO_ERROR);\
+    setErrlActions(error_log, ERRL_ACTIONS_WOF_RESET_REQUIRED);\
+    commitErrl(&error_log);\
+}
 
 // Used by OCC FW to request that OCC go to Nominal because of an error
 #define REQUEST_NOMINAL() reset_state_request(NOMINAL_REQUESTED_DUE_TO_ERROR);

@@ -139,7 +139,6 @@ enum occReasonCode
     WOF_DISABLED_RC                 = 0xDA,
     WOF_VFRT_ALIGNMENT_ERROR        = 0xDB,
     INVALID_MAGIC_NUMBER            = 0xDC,
-    DIVIDE_BY_ZERO_ERROR            = 0xDD,
     INVALID_FREQUENCY               = 0xDE,
     WOF_RE_ENABLED                  = 0xDF,
 

@@ -329,15 +329,41 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 l_freq = G_proc_fmax_mhz;
             }
 
-            // If Ultra Turbo is 0, disable WOF, else enable
-            if( l_freq == 0 )
+            // Check if (H)TMGT will let WOF run, else clear flags
+            switch( l_freq )
             {
-                set_clear_wof_disabled( SET, WOF_RC_UTURBO_IS_ZERO );
-            }
-            else
-            {
-                set_clear_wof_disabled( CLEAR, WOF_RC_UTURBO_IS_ZERO );
-                set_clear_wof_disabled( CLEAR, WOF_RC_OCC_WOF_DISABLED );
+                case WOF_MISSING_ULTRA_TURBO:
+                    CMDH_TRAC_INFO("WOF Disabled due to 0 UT value.");
+                    set_clear_wof_disabled( SET, WOF_RC_UTURBO_IS_ZERO );
+                    l_freq = 0;
+                    break;
+
+                case WOF_SYSTEM_DISABLED:
+                    CMDH_TRAC_INFO("WOF Disabled due to SYSTEM_WOF_DISABLE");
+                    set_clear_wof_disabled( SET, WOF_RC_SYSTEM_WOF_DISABLE );
+                    l_freq = 0;
+                    break;
+
+                case WOF_RESET_LIMIT_REACHED:
+                    CMDH_TRAC_INFO("WOF Disabled due to reset limit");
+                    set_clear_wof_disabled( SET, WOF_RC_RESET_LIMIT_REACHED );
+                    l_freq = 0;
+                    break;
+
+                case WOF_UNSUPPORTED_FREQ:
+                    CMDH_TRAC_INFO("WOF Disabled due to unsupported frequency");
+                    set_clear_wof_disabled( SET, WOF_RC_UNSUPPORTED_FREQUENCIES );
+                    l_freq = 0;
+                    break;
+
+                default:
+                    CMDH_TRAC_INFO("WOF is Enabled! so far...");
+                    set_clear_wof_disabled( CLEAR, WOF_RC_UTURBO_IS_ZERO );
+                    set_clear_wof_disabled( CLEAR, WOF_RC_SYSTEM_WOF_DISABLE );
+                    set_clear_wof_disabled( CLEAR, WOF_RC_RESET_LIMIT_REACHED );
+                    set_clear_wof_disabled( CLEAR, WOF_RC_UNSUPPORTED_FREQUENCIES );
+                    set_clear_wof_disabled( CLEAR, WOF_RC_OCC_WOF_DISABLED );
+                    break;
             }
 
             l_table[OCC_MODE_UTURBO] = l_freq;

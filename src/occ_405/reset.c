@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/reset.c $                                             */
+/* $Source: src/occ_405/reset.c $                                         */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -91,7 +91,7 @@ void reset_state_request(uint8_t i_request)
 
       // If we have TMGT comm, and we aren't already in reset, set the reset
       // state to reset to enter the reset state machine.
-      if(G_reset_state < RESET_REQUESTED_DUE_TO_ERROR)
+      if( G_reset_state < RESET_REQUESTED_DUE_TO_ERROR )
       {
         TRAC_IMP("Activating reset required state.");
 
@@ -108,7 +108,7 @@ void reset_state_request(uint8_t i_request)
       break;
 
     case NOMINAL_REQUESTED_DUE_TO_ERROR:
-      if(G_reset_state < NOMINAL_REQUESTED_DUE_TO_ERROR)
+      if( G_reset_state < NOMINAL_REQUESTED_DUE_TO_ERROR )
       {
         TRAC_ERR("Going to Nominal because of error");
 
@@ -119,7 +119,7 @@ void reset_state_request(uint8_t i_request)
       break;
 
     case RESET_NOT_REQUESTED:
-      if(G_reset_state == NOMINAL_REQUESTED_DUE_TO_ERROR)
+      if( G_reset_state == NOMINAL_REQUESTED_DUE_TO_ERROR )
       {
         TRAC_IMP("Clearing Nominal Reset State because of error");
 
