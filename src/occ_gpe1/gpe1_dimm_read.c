@@ -35,6 +35,7 @@
 #include "gpe1.h"
 #include "gpe1_dimm.h"
 #include "dimm_structs.h"
+#include "i2c.h"
 
 void dimm_write_int_mask(ipc_msg_t* cmd, void* arg);
 void dimm_write_mode(ipc_msg_t* cmd, void* arg);

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -71,14 +71,6 @@ typedef enum
     DIMM_READ_SCHEDULE_FAILED =     0xFA,
     DIMM_READ_NOT_COMPLETE =        0xFF,
 } readStatus_e;
-
-typedef enum
-{
-    PIB_I2C_ENGINE_C = 0x01,
-    PIB_I2C_ENGINE_D = 0x02,
-    PIB_I2C_ENGINE_E = 0x03,
-    PIB_I2C_ENGINE_ALL = 0xFF,
-} PIB_I2C_ENGINE;
 
 typedef enum
 {

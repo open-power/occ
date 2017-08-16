@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_405/gpe/gpe1.h $                                      */
+/* $Source: src/occ_gpe1/gpe1.h $                                         */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -27,26 +27,6 @@
 #define _GPE1_H
 
 #include "gpe_export.h"
-
-
-// I2C SCOM Addresses:
-// (There are unique constants/addresses per engine, but to make the calls generic,
-//  these constants are defined instead of using the base constants)
-#define PIB_BASE                    0x000A0000
-// Engine B 0x00A0000
-// Engine C 0x00A1000
-// Engine D 0x00A2000
-// Engine E 0x00A3000
-#define SCOM_ENGINE_OFFSET(engine) (engine << 12)
-#define I2C_FIFO1_REG_READ          0x000A0004
-#define I2C_COMMAND_REG             0x000A0005
-#define I2C_MODE_REG                0x000A0006
-#define I2C_INTERRUPT_MASK_REG      0x000A0008
-#define I2C_STATUS_REG              0x000A000B // read
-#define I2C_IMM_RESET_I2C           0x000A000B // write
-#define I2C_BUSY_REGISTER           0x000A000E
-#define I2C_FIFO4_REG_READ          0x000A0012
-
 
 // Debug trace
 #ifdef GPE1_DEBUG

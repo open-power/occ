@@ -46,6 +46,7 @@
 #include "centaur_data.h"
 #include "amec_health.h"
 #include "memory_power_control.h"
+#include "i2c.h"
 
 extern bool G_mem_monitoring_allowed;
 extern memory_control_task_t G_memory_control_task;

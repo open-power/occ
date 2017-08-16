@@ -26,7 +26,7 @@
 #include <occ_common.h>
 #include <common_types.h>
 #include <occ_sys_config.h>
-#include <dimm.h>
+#include <i2c.h>
 
 // SysConfig Section Defines
 #define SYSCFG_DEFAULT_VERSION       0xff

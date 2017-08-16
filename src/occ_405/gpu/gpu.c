@@ -48,6 +48,7 @@
 #include "gpu.h"
 #include "gpu_structs.h"
 #include "gpu_service_codes.h"
+#include "i2c.h"
 
 #define GPU_TEMP_READ_1S  ( 1000000 / (MICS_PER_TICK * 2) )  // Number calls with assumption called every other tick
 

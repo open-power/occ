@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_405/gpe/gpe1_dimm.h $                                 */
+/* $Source: src/occ_gpe1/gpe1_dimm.h $                                    */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -27,34 +27,6 @@
 #define _GPE1_DIMM_H
 
 #include "gpe_export.h"
-
-#define PIB_BASE                                  0x000A0000
-// Engine B 0x00A0000
-// Engine C 0x00A1000
-// Engine D 0x00A2000
-// Engine E 0x00A3000
-#define I2C_FIFO1_REG_READ          0x000A0004
-#define I2C_COMMAND_REG             0x000A0005
-#define I2C_MODE_REG                0x000A0006
-#define I2C_INTERRUPT_MASK_REG      0x000A0008
-#define I2C_STATUS_REG              0x000A000B // read
-#define I2C_IMM_RESET_I2C           0x000A000B // write
-#define I2C_BUSY_REGISTER           0x000A000E
-#define I2C_FIFO4_REG_READ          0x000A0012
-
-#define SCOM_ENGINE_OFFSET(engine) (engine << 12)
-
-// I2C Status Register masks
-#define STATUS_ERROR_MASK               0xFC80000000000000
-#define STATUS_ERROR_OR_COMPLETE_MASK   0xFF80000000000000
-#define STATUS_COMPLETE_MASK            0x0100000000000000
-#define PEEK_ERROR_MASK                 0x00000000FC000000
-#define PEEK_MORE_DATA                  0x0000000002000000
-
-// 0-15: Bit Rate Divisor - 0x0049 gives approx 391kHz (and allows margin for clock variation)
-// 16-21: Port Number (0-5)
-// 22-26: reserved (0s)
-#define I2C_MODE_REG_DIVISOR    0x0049000000000000
 
 void dimm_set_ffdc(GpeErrorStruct *o_error, uint32_t i_addr, uint32_t i_rc, uint64_t i_ffdc);
 

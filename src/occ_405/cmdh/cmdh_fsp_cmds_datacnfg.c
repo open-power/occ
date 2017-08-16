@@ -45,6 +45,7 @@
 #include <avsbus.h>
 #include "p9_pstates_occ.h"
 #include <wof.h>
+#include <i2c.h>
 
 #define FREQ_FORMAT_PWR_MODE_NUM   6
 #define FREQ_FORMAT_BASE_DATA_SZ   (sizeof(cmdh_store_mode_freqs_t) - sizeof(cmdh_fsp_cmd_header_t))
