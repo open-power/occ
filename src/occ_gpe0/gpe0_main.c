@@ -35,7 +35,8 @@
 #include "ipc_ping.h"
 #include "gpe_export.h"
 
-#define KERNEL_STACK_SIZE  512
+/* Checkstop analysis is using at least 700 bytes */
+#define KERNEL_STACK_SIZE  1024
 
 uint8_t        G_kernel_stack[KERNEL_STACK_SIZE];
 
