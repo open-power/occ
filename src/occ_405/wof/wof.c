@@ -674,9 +674,10 @@ void read_shared_sram( void )
     g_wof->f_clip_freq = (proc_pstate2freq(g_wof->f_clip_ps))/1000;
 
     g_wof->v_clip  = l_wofstate.fields.vclip_mv;
-    g_wof->f_ratio = l_wofstate.fields.fratio;
-    g_wof->v_ratio = l_wofstate.fields.vratio;
-
+//    g_wof->f_ratio = l_wofstate.fields.fratio;
+//    g_wof->v_ratio = l_wofstate.fields.vratio;
+    g_wof->f_ratio = 1;
+    g_wof->v_ratio = 1;
     // Get the requested active quad update
     read_req_active_quads();
 
