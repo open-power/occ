@@ -56,7 +56,7 @@ typedef enum {
     TASK_ID_AMEC_SLAVE,            // AMEC SMH tasks
     TASK_ID_AMEC_MASTER,           // AMEC SMH tasks
     TASK_ID_CORE_DATA_CONTROL,
-//    TASK_ID_GPU_SM,                 // GPU State Machine TODO RTC: 133824
+    TASK_ID_GPU_SM,                 // GPU State Machine
     TASK_ID_DIMM_SM,               // DIMM State Machine
     TASK_ID_MEMORY_CONTROL,        // Memory (centaur/dimm) control task
     TASK_ID_NEST_DTS,
@@ -108,6 +108,10 @@ typedef struct
 #define MEMORY_DATA_RTL_FLAGS (RTL_FLAG_MSTR | RTL_FLAG_NOTMSTR | RTL_FLAG_OBS | \
                                RTL_FLAG_ACTIVE | RTL_FLAG_MSTR_READY | RTL_FLAG_NO_APSS | \
                                RTL_FLAG_RUN | RTL_FLAG_APSS_NOT_INITD)
+
+#define GPU_RTL_FLAGS (RTL_FLAG_MSTR | RTL_FLAG_NOTMSTR | RTL_FLAG_OBS | RTL_FLAG_ACTIVE | \
+                       RTL_FLAG_MSTR_READY | RTL_FLAG_NO_APSS | RTL_FLAG_RUN | \
+                       RTL_FLAG_APSS_NOT_INITD)
 
 // Tick Timer definitions:
 #define MICS_PER_TICK G_mics_per_tick // Number of micro-seconds per tick

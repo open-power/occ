@@ -23,12 +23,6 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-/// \file gpe0_main.c
-/// \brief Sample program that creates and starts a thread
-///
-/// This file demonstrates how to create a thread and run it.  It also provides
-/// an example of how to add traces to the code.
-
 #include "pk.h"
 #include "pk_trace.h"
 #include "ipc_api.h"

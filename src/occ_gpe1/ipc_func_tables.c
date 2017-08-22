@@ -32,6 +32,10 @@ void gpe1_nop(ipc_msg_t* cmd, void* arg);
 void gpe_reset_mem_deadman(ipc_msg_t* cmd, void* arg);
 void gpe_24x7(ipc_msg_t* cmd, void* arg);
 void gpe_mem_power_control(ipc_msg_t* cmd, void* arg);
+
+#ifdef OCC_GPU_SUPPORT
+void gpe_gpu_sm(ipc_msg_t* cmd, void* arg);
+#else
 void gpe_gpu_sm(ipc_msg_t* cmd, void* arg)
 {
   // No GPU support.  The 405 should only be calling this on OCC GPU supported
@@ -55,6 +59,7 @@ void gpe_gpu_sm(ipc_msg_t* cmd, void* arg)
       pk_halt();
   }
 }
+#endif
 
 // Function table for multi target (common) functions
 IPC_MT_FUNC_TABLE_START

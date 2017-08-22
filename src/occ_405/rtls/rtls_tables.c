@@ -38,6 +38,7 @@
 #include "dimm.h"
 #include <common.h>
 #include "sensor_get_tod_task.h"            // For task_get_tod()
+#include "gpu.h"
 
 //flags for task table
 #define APSS_TASK_FLAGS                  RTL_FLAG_MSTR |                    RTL_FLAG_OBS | RTL_FLAG_ACTIVE | RTL_FLAG_MSTR_READY |                    RTL_FLAG_RUN
@@ -64,6 +65,7 @@
 #define FLAGS_AMEC_MASTER                RTL_FLAG_MSTR |                    RTL_FLAG_OBS | RTL_FLAG_ACTIVE | RTL_FLAG_MSTR_READY | RTL_FLAG_NO_APSS | RTL_FLAG_RUN |                                       RTL_FLAG_APSS_NOT_INITD
 
 #define FLAGS_24X7                       RTL_FLAG_MSTR | RTL_FLAG_NOTMSTR | RTL_FLAG_OBS | RTL_FLAG_ACTIVE | RTL_FLAG_MSTR_READY | RTL_FLAG_NO_APSS | RTL_FLAG_RUN |                                       RTL_FLAG_APSS_NOT_INITD
+#define FLAGS_GPU_SM                     RTL_FLAG_NONE
 
 #define FLAGS_GET_TOD                    RTL_FLAG_MSTR | RTL_FLAG_NOTMSTR | RTL_FLAG_OBS | RTL_FLAG_ACTIVE | RTL_FLAG_MSTR_READY | RTL_FLAG_NO_APSS | RTL_FLAG_RUN |                                       RTL_FLAG_APSS_NOT_INITD
 
@@ -81,10 +83,6 @@
                        RTL_FLAG_OBS | RTL_FLAG_ACTIVE | RTL_FLAG_MSTR_READY | RTL_FLAG_NO_APSS | RTL_FLAG_APSS_NOT_INITD
 
 #define FLAGS_GPE_TIMINGS          RTL_FLAG_MSTR | RTL_FLAG_NOTMSTR | RTL_FLAG_OBS | RTL_FLAG_ACTIVE | RTL_FLAG_MSTR_READY | RTL_FLAG_NO_APSS | RTL_FLAG_RUN |                                       RTL_FLAG_APSS_NOT_INITD
-
-// TEMP/TODO RTC: 133824 - New GPU interface via main memory and SMBUS
-#define FLAGS_GPU_SM
-
 
 // Global tick sequences
 // The number and size of these will vary as the real tick sequences are developed over time.
@@ -122,8 +120,7 @@ task_t G_task_table[TASK_END] = {
     { FLAGS_AMEC_SLAVE,            task_amec_slave,                NULL },  // TASK_ID_AMEC_SLAVE
     { FLAGS_AMEC_MASTER,           task_amec_master,               NULL },  // TASK_ID_AMEC_MASTER
     { FLAGS_CORE_DATA_CONTROL,     task_core_data_control,         NULL },  // TASK_ID_CORE_DATA_CONTROL
-// TODO RTC: 133824 - New GPU interface via main memory and SMBUS
-//    { FLAGS_GPU_SM,                task_gpu_sm,                    NULL },  // TASK_ID_GPU_SM
+    { FLAGS_GPU_SM,                task_gpu_sm,                    NULL },  // TASK_ID_GPU_SM
     { FLAGS_MEMORY_DATA,           task_dimm_sm,                   NULL },  // TASK_ID_DIMM_SM
     { FLAGS_MEMORY_CONTROL,        task_memory_control,            (void *) &G_memory_control_task },  // TASK_ID_MEMORY_CONTROL
     { FLAGS_NEST_DTS,              task_nest_dts,                  NULL },
@@ -159,7 +156,7 @@ const uint8_t G_tick1_seq[] = {
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
                                 TASK_ID_CORE_DATA_LOW,
-                                //TASK_ID_GPU_SM,
+                                TASK_ID_GPU_SM,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_APSS_DONE,
                                 TASK_ID_MEMORY_CONTROL,
@@ -205,7 +202,7 @@ const uint8_t G_tick3_seq[] = {
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
                                 TASK_ID_NEST_DTS,
-                                //TASK_ID_GPU_SM,
+                                TASK_ID_GPU_SM,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_CORE_DATA_HIGH,
                                 TASK_ID_APSS_DONE,
@@ -251,7 +248,7 @@ const uint8_t G_tick5_seq[] = {
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
                                 TASK_ID_CORE_DATA_LOW,
-                                //TASK_ID_GPU_SM,
+                                TASK_ID_GPU_SM,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_APSS_DONE,
                                 TASK_ID_MEMORY_CONTROL,
@@ -296,7 +293,7 @@ const uint8_t G_tick6_seq[] = {
 const uint8_t G_tick7_seq[] = {
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
-                                //TASK_ID_GPU_SM,
+                                TASK_ID_GPU_SM,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_CORE_DATA_HIGH,
                                 TASK_ID_APSS_DONE,
@@ -342,7 +339,7 @@ const uint8_t G_tick9_seq[] = {
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
                                 TASK_ID_CORE_DATA_LOW,
-                                //TASK_ID_GPU_SM,
+                                TASK_ID_GPU_SM,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_APSS_DONE,
                                 TASK_ID_MEMORY_CONTROL,
@@ -387,7 +384,7 @@ const uint8_t G_tick10_seq[] = {
 const uint8_t G_tick11_seq[] = {
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
-                                //TASK_ID_GPU_SM,
+                                TASK_ID_GPU_SM,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_CORE_DATA_HIGH,
                                 TASK_ID_APSS_DONE,
@@ -433,7 +430,7 @@ const uint8_t G_tick13_seq[] = {
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
                                 TASK_ID_CORE_DATA_LOW,
-                                //TASK_ID_GPU_SM,
+                                TASK_ID_GPU_SM,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_APSS_DONE,
                                 TASK_ID_MEMORY_CONTROL,
@@ -478,7 +475,7 @@ const uint8_t G_tick14_seq[] = {
 const uint8_t G_tick15_seq[] = {
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
-                                //TASK_ID_GPU_SM,
+                                TASK_ID_GPU_SM,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_CORE_DATA_HIGH,
                                 TASK_ID_APSS_DONE,

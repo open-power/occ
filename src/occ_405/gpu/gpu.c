@@ -23,7 +23,6 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-//#define GPU_DEBUG
 #ifdef GPU_DEBUG
   #define GPU_DBG(frmt,args...)   DBG_PRINT(frmt,##args)
 #else
@@ -335,67 +334,69 @@ void mark_gpu_failed(const gpu_sm_args_t *i_arg)
 {
     uint32_t gpu_id = i_arg->gpu_id;
 
-    // ignore all errors if haven't reached timeout for comm established
-    if( (false == g_amec->gpu[gpu_id].status.readOnce) &&
-        (DURATION_IN_S_UNTIL_NOW_FROM(G_gpu_sm_start_time) < GPU_COMM_ESTAB_TIMEOUT_SECONDS) )
+    do
     {
-         // do nothing at this time
-         return;
-    }
-    if((false == g_amec->gpu[gpu_id].status.disabled) &&
-       (true == g_amec->gpu[gpu_id].status.readOnce))
-    {
-        INTR_TRAC_ERR("mark_gpu_failed: GPU%d failed in op/rc/count=0x%06X "
-                      "(ffdc 0x%08X%08X)",
-                      gpu_id, (i_arg->operation << 16) | (i_arg->error.rc << 8) | g_amec->gpu[gpu_id].status.errorCount,
-                      WORD_HIGH(i_arg->error.ffdc), WORD_LOW(i_arg->error.ffdc));
-    }
-
-    if( ( ++g_amec->gpu[gpu_id].status.errorCount > MAX_CONSECUTIVE_GPU_RESETS) &&
-        (false == g_amec->gpu[gpu_id].status.disabled) &&
-        (true == g_amec->gpu[gpu_id].status.readOnce))
-    {
-        G_gpu_state = GPU_STATE_IDLE;
-        // Disable this GPU, collect FFDC and log error
-        g_amec->gpu[gpu_id].status.disabled = true;
-
-        INTR_TRAC_ERR("mark_gpu_failed: disabling GPU%d due to %d consecutive errors (op=%d)",
-                      gpu_id, g_amec->gpu[gpu_id].status.errorCount, i_arg->operation);
-        errlHndl_t l_err = NULL;
-        /*
-         * @errortype
-         * @moduleid    GPU_MID_MARK_GPU_FAILED
-         * @reasoncode  GPU_FAILURE
-         * @userdata1   GPE returned rc code
-         * @userdata4   ERC_GPU_COMPLETE_FAILURE
-         * @devdesc     GPU failure
-         */
-        l_err = createErrl(GPU_MID_MARK_GPU_FAILED,
-                           GPU_FAILURE,
-                           ERC_GPU_COMPLETE_FAILURE,
-                           ERRL_SEV_PREDICTIVE,
-                           NULL,
-                           DEFAULT_TRACE_SIZE,
-                           i_arg->error.rc,
-                           0);
-
-        addUsrDtlsToErrl(l_err,
-                         (uint8_t*)&i_arg->error.ffdc,
-                         sizeof(i_arg->error.ffdc),
-                         ERRL_STRUCT_VERSION_1,
-                         ERRL_USR_DTL_BINARY_DATA);
-
-        // Callout the GPU if have sensor ID for it
-        if(G_sysConfigData.gpu_sensor_ids[gpu_id])
+        // ignore all errors if haven't reached timeout for comm established
+        if( (false == g_amec->gpu[gpu_id].status.readOnce) &&
+            (DURATION_IN_S_UNTIL_NOW_FROM(G_gpu_sm_start_time) < GPU_COMM_ESTAB_TIMEOUT_SECONDS) )
         {
-           addCalloutToErrl(l_err,
-                            ERRL_CALLOUT_TYPE_HUID,
-                            G_sysConfigData.gpu_sensor_ids[gpu_id],
-                            ERRL_CALLOUT_PRIORITY_MED);
+             // do nothing but reset at this time
+            break;
+        }
+        if((false == g_amec->gpu[gpu_id].status.disabled) &&
+           (true == g_amec->gpu[gpu_id].status.readOnce))
+        {
+            INTR_TRAC_ERR("mark_gpu_failed: GPU%d failed in op/rc/count=0x%06X "
+                          "(ffdc 0x%08X%08X)",
+                          gpu_id, (i_arg->operation << 16) | (i_arg->error.rc << 8) | g_amec->gpu[gpu_id].status.errorCount,
+                          WORD_HIGH(i_arg->error.ffdc), WORD_LOW(i_arg->error.ffdc));
         }
 
-        commitErrl(&l_err);
-    }
+        if( ( ++g_amec->gpu[gpu_id].status.errorCount > MAX_CONSECUTIVE_GPU_RESETS) &&
+            (false == g_amec->gpu[gpu_id].status.disabled) &&
+            (true == g_amec->gpu[gpu_id].status.readOnce))
+        {
+            G_gpu_state = GPU_STATE_IDLE;
+            // Disable this GPU, collect FFDC and log error
+            g_amec->gpu[gpu_id].status.disabled = true;
+
+            INTR_TRAC_ERR("mark_gpu_failed: disabling GPU%d due to %d consecutive errors (op=%d)",
+                          gpu_id, g_amec->gpu[gpu_id].status.errorCount, i_arg->operation);
+            errlHndl_t l_err = NULL;
+            /*
+             * @errortype
+             * @moduleid    GPU_MID_MARK_GPU_FAILED
+             * @reasoncode  GPU_FAILURE
+             * @userdata1   GPE returned rc code
+             * @userdata4   ERC_GPU_COMPLETE_FAILURE
+             * @devdesc     GPU failure
+             */
+            l_err = createErrl(GPU_MID_MARK_GPU_FAILED,
+                               GPU_FAILURE,
+                               ERC_GPU_COMPLETE_FAILURE,
+                               ERRL_SEV_PREDICTIVE,
+                               NULL,
+                               DEFAULT_TRACE_SIZE,
+                               i_arg->error.rc,
+                               0);
+            addUsrDtlsToErrl(l_err,
+                             (uint8_t*)&i_arg->error.ffdc,
+                             sizeof(i_arg->error.ffdc),
+                             ERRL_STRUCT_VERSION_1,
+                             ERRL_USR_DTL_BINARY_DATA);
+
+            // Callout the GPU if have sensor ID for it
+            if(G_sysConfigData.gpu_sensor_ids[gpu_id])
+            {
+               addCalloutToErrl(l_err,
+                                ERRL_CALLOUT_TYPE_HUID,
+                                G_sysConfigData.gpu_sensor_ids[gpu_id],
+                                ERRL_CALLOUT_PRIORITY_MED);
+            }
+
+            commitErrl(&l_err);
+        }
+    } while(0);
 
     // Reset GPU
     G_gpu_i2c_reset_required = true;
@@ -428,20 +429,21 @@ bool schedule_gpu_req(const gpu_op_req_e i_operation, gpu_sm_args_t i_new_args)
 
             // Read GPU memory temp capability
             case GPU_REQ_READ_CAPS_START:
-            case GPU_REQ_READ_CAPS_STOP:
-            case GPU_REQ_READ_CAPS:
-                break;
-
-            // Read GPU memory temp
-            case GPU_REQ_READ_TEMP_START:
-            case GPU_REQ_READ_TEMP_STOP:
-            case GPU_REQ_READ_TEMP:
+            case GPU_REQ_READ_CAPS_2:
+            case GPU_REQ_READ_CAPS_3:
+            case GPU_REQ_READ_CAPS_FINISH:
                 break;
 
             // Read GPU core temp
-            case GPU_REQ_READ_TEMP_SIMPLE_START:
-            case GPU_REQ_READ_TEMP_SIMPLE_STOP:
-            case GPU_REQ_READ_TEMP_SIMPLE:
+            case GPU_REQ_READ_TEMP_START:
+            case GPU_REQ_READ_TEMP_FINISH:
+                break;
+
+            // Read GPU memory temp
+            case GPU_REQ_READ_MEM_TEMP_START:
+            case GPU_REQ_READ_MEM_TEMP_2:
+            case GPU_REQ_READ_MEM_TEMP_3:
+            case GPU_REQ_READ_MEM_TEMP_FINISH:
                 break;
 
             // I2C reset
@@ -543,27 +545,27 @@ bool gpu_reset_sm()
 
     if (async_request_is_idle(&G_gpu_op_request.request))
     {
-       // check if the previous state was successfully scheduled and success/done
-       if( (L_reset_state != GPU_RESET_STATE_NEW) &&
-           (L_reset_state != GPU_RESET_STATE_RESET_SLAVE_WAIT) &&
-           (!L_scheduled || (GPE_RC_SUCCESS != G_gpu_op_req_args.error.rc)) )
-       {
-          // Check if failure was due to GPE image not having GPU support
-          if(G_gpu_op_req_args.error.rc == GPE_RC_NO_GPU_SUPPORT)
-          {
-             // No GPU Support, log error and disable all GPUs
-             INTR_TRAC_ERR("gpu_reset_sm: GPE image doesn't support GPUs!");
+        // check if the previous state was successfully scheduled and success/done
+        if( (L_reset_state != GPU_RESET_STATE_NEW) &&
+            (L_reset_state != GPU_RESET_STATE_RESET_SLAVE_WAIT) &&
+            (!L_scheduled || (GPE_RC_SUCCESS != G_gpu_op_req_args.error.rc)) )
+        {
+            // Check if failure was due to GPE image not having GPU support
+            if(G_gpu_op_req_args.error.rc == GPE_RC_NO_GPU_SUPPORT)
+            {
+                // No GPU Support, log error and disable all GPUs
+                INTR_TRAC_ERR("gpu_reset_sm: GPE image doesn't support GPUs!");
 
-             /*
-              * @errortype
-              * @moduleid    GPU_MID_GPU_RESET_SM
-              * @reasoncode  GPU_FAILURE
-              * @userdata1   0
-              * @userdata2   0
-              * @userdata4   ERC_GPU_NO_GPE_SUPPORT
-              * @devdesc     GPE1 image doesn't support GPU communication
-              */
-             errlHndl_t err = createErrl(GPU_MID_GPU_RESET_SM,
+                /*
+                 * @errortype
+                 * @moduleid    GPU_MID_GPU_RESET_SM
+                 * @reasoncode  GPU_FAILURE
+                 * @userdata1   0
+                 * @userdata2   0
+                 * @userdata4   ERC_GPU_NO_GPE_SUPPORT
+                 * @devdesc     GPE1 image doesn't support GPU communication
+                 */
+                errlHndl_t err = createErrl(GPU_MID_GPU_RESET_SM,
                                          GPU_FAILURE,
                                          ERC_GPU_NO_GPE_SUPPORT,
                                          ERRL_SEV_UNRECOVERABLE,
@@ -571,39 +573,41 @@ bool gpu_reset_sm()
                                          DEFAULT_TRACE_SIZE,
                                          0,
                                          0);
-             commitErrl(&err);
+                commitErrl(&err);
 
-             disable_all_gpus();
+                disable_all_gpus();
 
-             L_reset_state = GPU_RESET_STATE_NEW;
-             return FALSE;  // GPUs are not ready for communication
-          }
-          else
-          {
-             // Stay in current state if haven't reached state retry count
-             if(L_state_retry_count < MAX_GPU_RESET_STATE_RETRY)
-             {
-                // INC state retry count and retry current state
-                L_state_retry_count++;
-             }
-             else  // this reset attempt failed
-             {
-                // Stop trying if reached max resets
-                if(L_consec_reset_failure_count > MAX_CONSECUTIVE_GPU_RESETS)
+                L_reset_state = GPU_RESET_STATE_NEW;
+                return FALSE;  // GPUs are not ready for communication
+            }
+            else
+            {
+                // Stay in current state if haven't reached state retry count
+                if(L_state_retry_count < MAX_GPU_RESET_STATE_RETRY)
                 {
-                   INTR_TRAC_ERR("gpu_reset_sm: Max Resets reached failed at state 0x%02X",
-                                  L_reset_state);
+                    // INC state retry count and retry current state
+                    L_state_retry_count++;
+                }
+                else  // this reset attempt failed
+                {
+                    // Stop trying if reached max resets
+                    if( (L_consec_reset_failure_count > MAX_CONSECUTIVE_GPU_RESETS) &&
+                        (DURATION_IN_S_UNTIL_NOW_FROM(G_gpu_sm_start_time) >=
+                         GPU_COMM_ESTAB_TIMEOUT_SECONDS))
+                    {
+                        INTR_TRAC_ERR("gpu_reset_sm: Max Resets reached failed at state 0x%02X",
+                                      L_reset_state);
 
-                   /*
-                    * @errortype
-                    * @moduleid    GPU_MID_GPU_RESET_SM
-                    * @reasoncode  GPU_FAILURE
-                    * @userdata1   GPU reset state
-                    * @userdata2   0
-                    * @userdata4   ERC_GPU_RESET_FAILURE
-                    * @devdesc     Failure resetting GPU interface
-                    */
-                   errlHndl_t err = createErrl(GPU_MID_GPU_RESET_SM,
+                        /*
+                         * @errortype
+                         * @moduleid    GPU_MID_GPU_RESET_SM
+                         * @reasoncode  GPU_FAILURE
+                         * @userdata1   GPU reset state
+                         * @userdata2   0
+                         * @userdata4   ERC_GPU_RESET_FAILURE
+                         * @devdesc     Failure resetting GPU interface
+                         */
+                        errlHndl_t err = createErrl(GPU_MID_GPU_RESET_SM,
                                                GPU_FAILURE,
                                                ERC_GPU_RESET_FAILURE,
                                                ERRL_SEV_UNRECOVERABLE,
@@ -611,68 +615,64 @@ bool gpu_reset_sm()
                                                DEFAULT_TRACE_SIZE,
                                                L_reset_state,
                                                0);
-                   commitErrl(&err);
+                        commitErrl(&err);
 
-                   disable_all_gpus();
+                        disable_all_gpus();
 
-                   L_reset_state = GPU_RESET_STATE_NEW;
-                   return FALSE;  // GPUs are not ready for communication
-                }
-                else  // try the reset again from the beginning
-                {
-                   L_consec_reset_failure_count++;
-                   L_state_retry_count = 0;
-                   L_reset_state = GPU_RESET_STATE_RESET_MASTER;
-                }
-             }  // else reset attempt failed
-          }  // else GPE supports GPU
-       }// if previous state failed
-       else // success on last state go to next state and process it
-       {
-          L_state_retry_count = 0;
-          L_reset_state++;
-       }
+                        L_reset_state = GPU_RESET_STATE_NEW;
+                        return FALSE;  // GPUs are not ready for communication
+                    }
+                    else  // try the reset again from the beginning
+                    {
+                        L_consec_reset_failure_count++;
+                        L_state_retry_count = 0;
+                        L_reset_state = GPU_RESET_STATE_RESET_MASTER;
+                    }
+                }  // else reset attempt failed
+            }  // else GPE supports GPU
+        }// if previous state failed
+        else // success on last state go to next state and process it
+        {
+            L_state_retry_count = 0;
+            L_reset_state++;
+        }
 
-       L_scheduled = FALSE;  // default nothing scheduled
+        L_scheduled = FALSE;  // default nothing scheduled
 
-       switch (L_reset_state)
-       {
-           case GPU_RESET_STATE_RESET_MASTER:
-               G_new_gpu_req_args.data[0] = GPU_RESET_REQ_MASTER;
-               L_scheduled = schedule_gpu_req(GPU_REQ_RESET, G_new_gpu_req_args);
-               break;
+        switch (L_reset_state)
+        {
+            case GPU_RESET_STATE_INIT_BUS:
+                // Setup I2C Interrupt Mask Register
+                L_scheduled = schedule_gpu_req(GPU_REQ_INIT, G_new_gpu_req_args);
+                break;
 
-           case GPU_RESET_STATE_RESET_SLAVE:
-               G_new_gpu_req_args.data[0] = GPU_RESET_REQ_SLV;
-               L_scheduled = schedule_gpu_req(GPU_REQ_RESET, G_new_gpu_req_args);
-               break;
+            case GPU_RESET_STATE_RESET_MASTER:
+                G_new_gpu_req_args.data = GPU_RESET_REQ_MASTER;
+                L_scheduled = schedule_gpu_req(GPU_REQ_RESET, G_new_gpu_req_args);
+                break;
 
-           case GPU_RESET_STATE_RESET_SLAVE_WAIT:
-               // Delay to allow reset to complete
-               GPU_DBG("gpu_reset_sm: waiting during slave port 4 reset");
-               break;
+            case GPU_RESET_STATE_RESET_SLAVE:
+                G_new_gpu_req_args.data = GPU_RESET_REQ_SLV;
+                L_scheduled = schedule_gpu_req(GPU_REQ_RESET, G_new_gpu_req_args);
+                break;
 
-           case GPU_RESET_STATE_RESET_SLAVE_COMPLETE:
-               G_new_gpu_req_args.data[0] = GPU_RESET_REQ_SLV_COMPLETE;
-               L_scheduled = schedule_gpu_req(GPU_REQ_RESET, G_new_gpu_req_args);
-               break;
+            case GPU_RESET_STATE_RESET_SLAVE_WAIT:
+                // Delay to allow reset to complete
+                GPU_DBG("gpu_reset_sm: waiting during slave port 4 reset");
+                break;
 
-           case GPU_RESET_STATE_INIT:
-               // Notify GPE which GPUs are present
-               G_new_gpu_req_args.data[0] = (GPU_PRESENT(ID_GPU0)) ? GPU_STATE_PRESENT : 0;
-               G_new_gpu_req_args.data[1] = (GPU_PRESENT(ID_GPU1)) ? GPU_STATE_PRESENT : 0;
-               G_new_gpu_req_args.data[2] = (GPU_PRESENT(ID_GPU2)) ? GPU_STATE_PRESENT : 0;
-               // Setup I2C Interrupt Mask Register and Mode
-               L_scheduled = schedule_gpu_req(GPU_REQ_INIT, G_new_gpu_req_args);
-               break;
+            case GPU_RESET_STATE_RESET_SLAVE_COMPLETE:
+                G_new_gpu_req_args.data = GPU_RESET_REQ_SLV_COMPLETE;
+                L_scheduled = schedule_gpu_req(GPU_REQ_RESET, G_new_gpu_req_args);
+                break;
 
-           case GPU_RESET_STATE_INIT_COMPLETE:
-               // Reset and init is complete ready to start sending commands to the GPUs
-               l_complete = TRUE;
-               L_consec_reset_failure_count = 0;
-               // next time this is called will be to start a new reset
-               L_reset_state = GPU_RESET_STATE_NEW;
-               break;
+            case GPU_RESET_STATE_RESET_FINISH:
+                // Reset and init is complete ready to start sending commands to the GPUs
+                l_complete = TRUE;
+                L_consec_reset_failure_count = 0;
+                // next time this is called will be to start a new reset
+                L_reset_state = GPU_RESET_STATE_NEW;
+                break;
 
            default:
                INTR_TRAC_ERR("gpu_reset_sm: INVALID STATE: 0x%02X when reset is required", L_reset_state);
@@ -680,22 +680,22 @@ bool gpu_reset_sm()
                break;
        } // switch L_reset_state
 
-       if(L_scheduled)
-       {
-          GPU_DBG("gpu_reset_sm: Scheduled reset state 0x%02X", L_reset_state);
-       }
-       // check if the state was expected to have a schedule. Only new and slave wait
-       // don't schedule for all other states the schedule must have failed
-       else if( (L_reset_state != GPU_RESET_STATE_NEW) &&
-                (L_reset_state != GPU_RESET_STATE_RESET_SLAVE_WAIT) )
-       {
-          INTR_TRAC_ERR("gpu_reset_sm: failed to schedule state 0x%02X", L_reset_state);
-       }
+        if(L_scheduled)
+        {
+            GPU_DBG("gpu_reset_sm: Scheduled reset state 0x%02X", L_reset_state);
+        }
+        // check if the state was expected to have a schedule. Only new and slave wait
+        // don't schedule for all other states the schedule must have failed
+        else if( (L_reset_state != GPU_RESET_STATE_NEW) &&
+                 (L_reset_state != GPU_RESET_STATE_RESET_SLAVE_WAIT) )
+        {
+            INTR_TRAC_ERR("gpu_reset_sm: failed to schedule state 0x%02X", L_reset_state);
+        }
 
     } // if async_request_is_idle
     else
     {
-       INTR_TRAC_ERR("gpu_reset_sm: NOT idle for state 0x%02X", L_reset_state);
+        INTR_TRAC_ERR("gpu_reset_sm: NOT idle for state 0x%02X", L_reset_state);
     }
 
     return l_complete;
@@ -709,154 +709,152 @@ bool gpu_reset_sm()
 //              This function should only return that complete is TRUE when the temperature
 //              read is complete (or determined failed) and ready to start reading a different GPU
 //
-// Pre-Req:  Caller must have G_current_gpu_id set for GPU to read and
-//            verified G_gpu_op_request is idle to allow scheduling
+// Pre-Req:     Caller must have G_current_gpu_id set for GPU to read and
+//              verified G_gpu_op_request is idle to allow scheduling
 // End Function Specification
 bool gpu_read_temp_sm()
 {
     bool l_complete = FALSE;   // only return TRUE when the read is complete or failed
     uint16_t l_temp = 0;
     static bool L_scheduled = FALSE;  // indicates if a GPU GPE request was scheduled
-    static uint8_t L_read_failure_count = 0;
+    static uint8_t L_read_failure_count = 0; // Used for I2C errors
+
     static gpuReadTempState_e L_read_temp_state = GPU_STATE_READ_TEMP_NEW;  // 1st state for reading temp
 
     if (async_request_is_idle(&G_gpu_op_request.request))
     {
-       // If not starting a new read then need to check status of current state before moving on
-       // stay in current state if the schedule failed or the state isn't finished/failed
-       if( (L_read_temp_state != GPU_STATE_READ_TEMP_NEW) &&
-           (!L_scheduled || (GPE_RC_SUCCESS != G_gpu_op_req_args.error.rc)) )
-       {
-          // If reached retry count give up on this GPU
-          if(L_read_failure_count > MAX_GPU_READ_ATTEMPT)
-          {
-             mark_gpu_failed(&G_gpu_op_req_args);
+        // If not starting a new read then need to check status of current state before moving on
+        // stay in current state if the schedule failed or the state isn't finished/failed
+        if( (L_read_temp_state != GPU_STATE_READ_TEMP_NEW) &&
+             (!L_scheduled || (GPE_RC_SUCCESS != G_gpu_op_req_args.error.rc)) )
+        {
+            // If reached retry count give up on this GPU
+            if( (L_read_failure_count > MAX_GPU_READ_ATTEMPT) ||
+                (GPE_RC_I2C_ERROR == G_gpu_op_req_args.error.rc) )
+            {
+                mark_gpu_failed(&G_gpu_op_req_args);
 
-             L_read_temp_state = GPU_STATE_READ_TEMP_NEW;
-             return TRUE;  // Done with this GPU, let GPU SM move to next
-          }
-          else
-          {
-             // INC failure count and retry current state
-             L_read_failure_count++;
-          }
-       }
-       else // success on last state go to next state and process it
-       {
-          L_read_failure_count = 0;
-          L_read_temp_state++;
-       }
+                L_read_temp_state = GPU_STATE_READ_TEMP_NEW;
+                return TRUE;  // Done with this GPU, let GPU SM move to next
+            }
+            else
+            {
+                // INC failure count and retry current state
+                L_read_failure_count++;
+            }
+        }
+        else // success on last state go to next state and process it
+        {
+            L_read_failure_count = 0;
+            L_read_temp_state++;
+        }
 
-       L_scheduled = FALSE;  // default nothing scheduled
+        L_scheduled = FALSE;  // default nothing scheduled
 
-       switch (L_read_temp_state)
-       {
-           case GPU_STATE_READ_TEMP_START:
-               L_scheduled = schedule_gpu_req(GPU_REQ_READ_TEMP_SIMPLE_START, G_new_gpu_req_args);
+        switch (L_read_temp_state)
+        {
+            case GPU_STATE_READ_TEMP_START:
+                L_scheduled = schedule_gpu_req(GPU_REQ_READ_TEMP_START, G_new_gpu_req_args);
+                break;
+
+            case GPU_STATE_READ_TEMP_FINISH:
+                L_scheduled = schedule_gpu_req(GPU_REQ_READ_TEMP_FINISH, G_new_gpu_req_args);
+                break;
+
+            case GPU_STATE_READ_TEMP_COMPLETE:
+                if( (!g_amec->gpu[G_current_gpu_id].status.readOnce) &&
+                    (0 != G_gpu_op_req_args.data) ) // TODO: check for valid temp?
+                {
+                    g_amec->gpu[G_current_gpu_id].status.readOnce = true;
+                    TRAC_INFO("First successful attempt to read temp from GPU%d was on tick %d",
+                               G_current_gpu_id, CURRENT_TICK);
+                    // comm is now established update for capability checking to take place
+                    g_amec->gpu[G_current_gpu_id].status.checkMemTempSupport = TRUE;
+                    g_amec->gpu[G_current_gpu_id].status.checkDriverLoaded = TRUE;
+                }
+                // Update sensor
+                l_temp = G_gpu_op_req_args.data;
+                sensor_update(AMECSENSOR_PTR(TEMPGPU0 + G_current_gpu_id), l_temp);
+
+                // Clear all past errors
+                g_amec->gpu[G_current_gpu_id].status.errorCount = 0;
+
+                // check if there is an overtemp that hasn't been reported
+                if((G_data_cnfg->thrm_thresh.data[DATA_FRU_GPU].error) &&
+                   (l_temp > G_data_cnfg->thrm_thresh.data[DATA_FRU_GPU].error) &&
+                   (!g_amec->gpu[G_current_gpu_id].status.overtempError) )
+                {
+                    g_amec->gpu[G_current_gpu_id].status.overtempError = TRUE;
+
+                    INTR_TRAC_ERR("gpu_read_temp: GPU%d OT! temp[%d]",
+                                   G_current_gpu_id, l_temp);
+
+                    // Log an OT error
+                    /* @
+                     * @errortype
+                     * @moduleid    GPU_MID_GPU_READ_TEMP
+                     * @reasoncode  GPU_ERROR_TEMP
+                     * @userdata1   GPU ID
+                     * @userdata2   GPU memory temperature
+                     * @userdata4   OCC_NO_EXTENDED_RC
+                     * @devdesc     GPU memory has reached error temperature
+                     *
+                     */
+                    errlHndl_t l_err = createErrl(GPU_MID_GPU_READ_TEMP,
+                                                  GPU_ERROR_TEMP,
+                                                  OCC_NO_EXTENDED_RC,
+                                                  ERRL_SEV_PREDICTIVE,
+                                                  NULL,
+                                                  DEFAULT_TRACE_SIZE,
+                                                  G_current_gpu_id,
+                                                  l_temp);
+
+                    // Callout the over temperature procedure
+                    addCalloutToErrl(l_err,
+                                     ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                                     ERRL_COMPONENT_ID_OVER_TEMPERATURE,
+                                     ERRL_CALLOUT_PRIORITY_HIGH);
+
+                    // Callout the GPU if have sensor ID for it
+                    if(G_sysConfigData.gpu_sensor_ids[G_current_gpu_id])
+                    {
+                        addCalloutToErrl(l_err,
+                                         ERRL_CALLOUT_TYPE_HUID,
+                                         G_sysConfigData.gpu_sensor_ids[G_current_gpu_id],
+                                         ERRL_CALLOUT_PRIORITY_MED);
+                    }
+
+                    // Commit Error
+                    commitErrl(&l_err);
+
+                } // if OT error
+
+                // Done with this GPU ready to move to new one
+                L_read_temp_state = GPU_STATE_READ_TEMP_NEW;
+                l_complete = TRUE;
+                break;
+
+            default:
+                INTR_TRAC_ERR("gpu_read_temp_sm: INVALID STATE: 0x%02X", L_read_temp_state);
+                L_read_temp_state = GPU_STATE_READ_TEMP_NEW;
+                l_complete = TRUE;
                break;
+        } // switch L_read_temp_state
 
-           case GPU_STATE_READ_TEMP_STOP:
-               L_scheduled = schedule_gpu_req(GPU_REQ_READ_TEMP_SIMPLE_STOP, G_new_gpu_req_args);
-               break;
-
-           case GPU_STATE_READ_TEMP_READ:
-               L_scheduled = schedule_gpu_req(GPU_REQ_READ_TEMP_SIMPLE, G_new_gpu_req_args);
-               break;
-
-           case GPU_STATE_READ_TEMP_COMPLETE:
-               if( (!g_amec->gpu[G_current_gpu_id].status.readOnce) &&
-                   (0 != G_gpu_op_req_args.data[0]) ) // TODO: check for valid temp?
-               {
-                   g_amec->gpu[G_current_gpu_id].status.readOnce = true;
-                   TRAC_INFO("First successful attempt to read temp from GPU%d was on tick %d",
-                              G_current_gpu_id, CURRENT_TICK);
-                   // comm is now established update for capability checking to take place
-                   g_amec->gpu[G_current_gpu_id].status.checkMemTempSupport = TRUE;
-                   g_amec->gpu[G_current_gpu_id].status.checkDriverLoaded = TRUE;
-               }
-               // Update sensor
-               l_temp = G_gpu_op_req_args.data[0] >> 24;
-               sensor_update(AMECSENSOR_PTR(TEMPGPU0 + G_current_gpu_id), l_temp);
-
-               // Clear all past errors
-               g_amec->gpu[G_current_gpu_id].status.errorCount = 0;
-
-               // check if there is an overtemp that hasn't been reported
-               if((G_data_cnfg->thrm_thresh.data[DATA_FRU_GPU].error) &&
-                  (l_temp > G_data_cnfg->thrm_thresh.data[DATA_FRU_GPU].error) &&
-                  (!g_amec->gpu[G_current_gpu_id].status.overtempError) )
-               {
-                   g_amec->gpu[G_current_gpu_id].status.overtempError = TRUE;
-
-                   INTR_TRAC_ERR("gpu_read_temp: GPU%d OT! temp[%d]",
-                                  G_current_gpu_id, l_temp);
-
-                   // Log an OT error
-                   /* @
-                    * @errortype
-                    * @moduleid    GPU_MID_GPU_READ_TEMP
-                    * @reasoncode  GPU_ERROR_TEMP
-                    * @userdata1   GPU ID
-                    * @userdata2   GPU memory temperature
-                    * @userdata4   OCC_NO_EXTENDED_RC
-                    * @devdesc     GPU memory has reached error temperature
-                    *
-                    */
-                   errlHndl_t l_err = createErrl(GPU_MID_GPU_READ_TEMP,
-                                                 GPU_ERROR_TEMP,
-                                                 OCC_NO_EXTENDED_RC,
-                                                 ERRL_SEV_PREDICTIVE,
-                                                 NULL,
-                                                 DEFAULT_TRACE_SIZE,
-                                                 G_current_gpu_id,
-                                                 l_temp);
-
-                   // Callout the over temperature procedure
-                   addCalloutToErrl(l_err,
-                                    ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                                    ERRL_COMPONENT_ID_OVER_TEMPERATURE,
-                                    ERRL_CALLOUT_PRIORITY_HIGH);
-
-                   // Callout the GPU if have sensor ID for it
-                   if(G_sysConfigData.gpu_sensor_ids[G_current_gpu_id])
-                   {
-                      addCalloutToErrl(l_err,
-                                       ERRL_CALLOUT_TYPE_HUID,
-                                       G_sysConfigData.gpu_sensor_ids[G_current_gpu_id],
-                                       ERRL_CALLOUT_PRIORITY_MED);
-                   }
-
-                   // Commit Error
-                   commitErrl(&l_err);
-
-               } // if OT error
-
-               // Done with this GPU ready to move to new one
-               L_read_temp_state = GPU_STATE_READ_TEMP_NEW;
-               l_complete = TRUE;
-               break;
-
-           default:
-               INTR_TRAC_ERR("gpu_read_temp_sm: INVALID STATE: 0x%02X", L_read_temp_state);
-               L_read_temp_state = GPU_STATE_READ_TEMP_NEW;
-               l_complete = TRUE;
-               break;
-       } // switch L_read_temp_state
-
-       if(L_scheduled)
-       {
-          GPU_DBG("gpu_read_temp_sm: Scheduled read temp state 0x%02X at tick %d",
-                   L_read_temp_state, GPU_TICK);
-       }
-       else if(!l_complete)  // if not complete there must have been a failure on the schedule
-       {
-          INTR_TRAC_ERR("gpu_read_temp_sm: failed to schedule state 0x%02X", L_read_temp_state);
-       }
+        if(L_scheduled)
+        {
+            GPU_DBG("gpu_read_temp_sm: Scheduled read temp state 0x%02X at tick %d",
+                    L_read_temp_state, GPU_TICK);
+        }
+        else if(!l_complete)  // if not complete there must have been a failure on the schedule
+        {
+            INTR_TRAC_ERR("gpu_read_temp_sm: failed to schedule state 0x%02X", L_read_temp_state);
+        }
 
     } // if async_request_is_idle
     else
     {
-       INTR_TRAC_ERR("gpu_read_temp_sm: NOT idle for state 0x%02X", L_read_temp_state);
+        INTR_TRAC_ERR("gpu_read_temp_sm: NOT idle for state 0x%02X", L_read_temp_state);
     }
 
     return l_complete;
@@ -949,18 +947,21 @@ bool gpu_read_mem_temp_capability_sm()
                L_scheduled = schedule_gpu_req(GPU_REQ_READ_CAPS_START, G_new_gpu_req_args);
                break;
 
-           case GPU_STATE_READ_MEM_TEMP_CAPABLE_STOP:
-               L_scheduled = schedule_gpu_req(GPU_REQ_READ_CAPS_STOP, G_new_gpu_req_args);
+           case GPU_STATE_READ_MEM_TEMP_CAPABLE_2:
+               L_scheduled = schedule_gpu_req(GPU_REQ_READ_CAPS_2, G_new_gpu_req_args);
+               break;
+
+           case GPU_STATE_READ_MEM_TEMP_CAPABLE_3:
+               L_scheduled = schedule_gpu_req(GPU_REQ_READ_CAPS_3, G_new_gpu_req_args);
                break;
 
            case GPU_STATE_READ_MEM_TEMP_CAPABLE_READ:
-               L_scheduled = schedule_gpu_req(GPU_REQ_READ_CAPS, G_new_gpu_req_args);
+               L_scheduled = schedule_gpu_req(GPU_REQ_READ_CAPS_FINISH, G_new_gpu_req_args);
                break;
 
            case GPU_STATE_READ_MEM_TEMP_CAPABLE_COMPLETE:
                // Update capability
-               g_amec->gpu[G_current_gpu_id].status.memTempSupported = G_gpu_op_req_args.data[0] & 0x01;
-
+               g_amec->gpu[G_current_gpu_id].status.memTempSupported = G_gpu_op_req_args.data & 0x01;
                // Done with this GPU ready to move to new one
                L_read_cap_state = GPU_STATE_READ_MEM_TEMP_CAPABLE_NEW;
                l_complete = TRUE;
@@ -1089,20 +1090,20 @@ bool gpu_read_memory_temp_sm()
        switch (L_read_temp_state)
        {
            case GPU_STATE_READ_MEM_TEMP_START:
-               L_scheduled = schedule_gpu_req(GPU_REQ_READ_TEMP_START, G_new_gpu_req_args);
+               L_scheduled = schedule_gpu_req(GPU_REQ_READ_MEM_TEMP_START, G_new_gpu_req_args);
                break;
 
            case GPU_STATE_READ_MEM_TEMP_STOP:
-               L_scheduled = schedule_gpu_req(GPU_REQ_READ_TEMP_STOP, G_new_gpu_req_args);
+               L_scheduled = schedule_gpu_req(GPU_REQ_READ_MEM_TEMP_2, G_new_gpu_req_args);
                break;
 
            case GPU_STATE_READ_MEM_TEMP_READ:
-               L_scheduled = schedule_gpu_req(GPU_REQ_READ_TEMP, G_new_gpu_req_args);
+               L_scheduled = schedule_gpu_req(GPU_REQ_READ_MEM_TEMP_3, G_new_gpu_req_args);
                break;
 
            case GPU_STATE_READ_MEM_TEMP_COMPLETE:
                // Update sensor
-               l_temp = G_gpu_op_req_args.data[0] >> 24;
+               l_temp = G_gpu_op_req_args.data;
                sensor_update(AMECSENSOR_PTR(TEMPGPU0MEM + G_current_gpu_id), l_temp);
 
                // Clear past errors
@@ -1206,6 +1207,8 @@ bool gpu_sm_handle_idle_state(bool i_read_temp_start_needed, bool i_mem_temp_nee
     {
         // Check for next state in order of priority
 
+//TODO: Enable when functional
+#if 0
         // 1.  Need to set a power limit on a GPU?
         l_gpu_id = gpu_id_need_set_power_limit();
         if(l_gpu_id != 0xFF)
@@ -1216,6 +1219,7 @@ bool gpu_sm_handle_idle_state(bool i_read_temp_start_needed, bool i_mem_temp_nee
             l_new_state = TRUE;
             break;
         }
+#endif
 
         // 2.  check if Host needs lock
         if (!check_and_update_i2c_lock(GPU_I2C_ENGINE))
@@ -1227,6 +1231,8 @@ bool gpu_sm_handle_idle_state(bool i_read_temp_start_needed, bool i_mem_temp_nee
             break;
         }
 
+//TODO: Enable when functional
+#if 0
         // 3.  Need to check if driver is loaded?
         l_gpu_id = gpu_id_need_driver_check();
         if(l_gpu_id != 0xFF)
@@ -1276,6 +1282,7 @@ bool gpu_sm_handle_idle_state(bool i_read_temp_start_needed, bool i_mem_temp_nee
                }
             }
         }
+#endif
 
         // 6.  Time to start new temperature reads?
         if(i_read_temp_start_needed)
@@ -1332,6 +1339,7 @@ void task_gpu_sm(struct task *i_self)
     // are functional or GPU I2C interface is broken
     if(G_gpu_monitoring_allowed)
     {
+
         // Initialize the IPC commands if this is our first run
         if(L_gpu_first_run)
         {
@@ -1341,7 +1349,7 @@ void task_gpu_sm(struct task *i_self)
         }
 
         // Check if time to start reading temperatures
-        // GPU tempertures (core and memory) are only used for fan control which happens every 1s
+        // GPU temperatures (core and memory) are only used for fan control which happens every 1s
         // so there is no need to read the GPU temperatures any faster than every 1s
         if(!L_read_temp_start_needed)
         {
@@ -1355,6 +1363,7 @@ void task_gpu_sm(struct task *i_self)
         // make sure OCC owns the lock in order to send commands to the GPU
         if( (L_occ_owns_lock == FALSE) || (G_gpu_state == GPU_STATE_NO_LOCK) )
         {
+
             // Check if host gave up the I2C lock
             L_occ_owns_lock = check_and_update_i2c_lock(GPU_I2C_ENGINE);
             if (L_occ_owns_lock)
@@ -1557,4 +1566,6 @@ void task_gpu_sm(struct task *i_self)
            }
         }while((l_start_next_state) && (!l_next_state));
     } // GPU monitoring enabled
+
+
 } // end task_gpu_sm()

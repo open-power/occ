@@ -57,18 +57,19 @@ typedef enum
 typedef enum
 {
     GPU_REQ_INIT                        = 0x01, // Init interrupt registers
-    GPU_REQ_READ_CAPS_START             = 0x02, // Start reading capabilities
-    GPU_REQ_READ_CAPS_STOP              = 0x03,
-    GPU_REQ_READ_CAPS                   = 0x04,
-    GPU_REQ_READ_TEMP_SIMPLE_START      = 0x05, // Start reading GPU information
-    GPU_REQ_READ_TEMP_SIMPLE_STOP       = 0x06, // Read GPU temp register
-    GPU_REQ_READ_TEMP_SIMPLE            = 0x07, // Start reading GPU temperature
-    GPU_REQ_READ_TEMP_START             = 0x08, // Start reading GPU information
-    GPU_REQ_READ_TEMP_STOP              = 0x09, // Read GPU temp register
-    GPU_REQ_READ_TEMP                   = 0x0A, // Start reading GPU temperature
-    GPU_REQ_READ_PWR_LIMIT_START        = 0x0B, // Start reading GPU information
-    GPU_REQ_READ_PWR_LIMIT_STOP         = 0x0C, // Read GPU temp register
-    GPU_REQ_READ_PWR_LIMIT              = 0x0D, // Start reading pwr limit
+    GPU_REQ_READ_TEMP_START             = 0x02, // Start reading GPU information
+    GPU_REQ_READ_TEMP_FINISH            = 0x03, // Read GPU temp register
+    GPU_REQ_READ_MEM_TEMP_START         = 0x04, // Initiate memory temp reading
+    GPU_REQ_READ_MEM_TEMP_2             = 0x05, // mem temp step 2
+    GPU_REQ_READ_MEM_TEMP_3             = 0x06, // mem temp step 3
+    GPU_REQ_READ_MEM_TEMP_FINISH        = 0x07, // Get memory temp reading
+    GPU_REQ_READ_CAPS_START             = 0x08, // Start reading capabilities
+    GPU_REQ_READ_CAPS_2                 = 0x09, // Start reading capabilities
+    GPU_REQ_READ_CAPS_3                 = 0x0A, // Start reading capabilities
+    GPU_REQ_READ_CAPS_FINISH            = 0x0B,
+    GPU_REQ_READ_PWR_LIMIT_START        = 0x0C, // Start reading GPU information
+    GPU_REQ_READ_PWR_LIMIT_STOP         = 0x0D, // Read GPU temp register
+    GPU_REQ_READ_PWR_LIMIT              = 0x0E, // Start reading pwr limit
     GPU_REQ_RESET                       = 0x60, // Reset
 } gpu_op_req_e;
 
@@ -78,7 +79,7 @@ typedef struct
   GpeErrorStruct error;
   uint8_t gpu_id;
   uint8_t operation;
-  uint32_t data[MAX_GPUS];
+  uint64_t data;
 } gpu_sm_args_t;
 
 

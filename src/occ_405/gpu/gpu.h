@@ -52,12 +52,12 @@ typedef enum
 typedef enum
 {
     GPU_RESET_STATE_NEW                       = 0x01, // new reset attempt
-    GPU_RESET_STATE_RESET_MASTER              = 0x02, // Reset master
-    GPU_RESET_STATE_RESET_SLAVE               = 0x03, // Start of slave port 4 reset
-    GPU_RESET_STATE_RESET_SLAVE_WAIT          = 0x04,
-    GPU_RESET_STATE_RESET_SLAVE_COMPLETE      = 0x05,
-    GPU_RESET_STATE_INIT                      = 0x06,
-    GPU_RESET_STATE_INIT_COMPLETE             = 0x07,
+    GPU_RESET_STATE_INIT_BUS                  = 0x02,
+    GPU_RESET_STATE_RESET_MASTER              = 0x03, // Reset master
+    GPU_RESET_STATE_RESET_SLAVE               = 0x04, // Start of slave port 4 reset
+    GPU_RESET_STATE_RESET_SLAVE_WAIT          = 0x05,
+    GPU_RESET_STATE_RESET_SLAVE_COMPLETE      = 0x06,
+    GPU_RESET_STATE_RESET_FINISH              = 0x07,
 } gpuResetState_e;
 
 // States for reading GPU core temperature (gpu_read_temp_sm)
@@ -65,9 +65,8 @@ typedef enum
 {
     GPU_STATE_READ_TEMP_NEW      = 0x11, // new temp read
     GPU_STATE_READ_TEMP_START    = 0x12, // start write temp reg
-    GPU_STATE_READ_TEMP_STOP     = 0x13, // stop write/begin read
-    GPU_STATE_READ_TEMP_READ     = 0x14, // read temperature
-    GPU_STATE_READ_TEMP_COMPLETE = 0x15, // store temperature read
+    GPU_STATE_READ_TEMP_FINISH   = 0x13, // read temperature
+    GPU_STATE_READ_TEMP_COMPLETE = 0x14, // store temperature read
 } gpuReadTempState_e;
 
 // States for reading GPU memory temperature (gpu_read_mem_temp_sm)
@@ -85,9 +84,10 @@ typedef enum
 {
     GPU_STATE_READ_MEM_TEMP_CAPABLE_NEW      = 0x31,
     GPU_STATE_READ_MEM_TEMP_CAPABLE_START    = 0x32,
-    GPU_STATE_READ_MEM_TEMP_CAPABLE_STOP     = 0x33,
-    GPU_STATE_READ_MEM_TEMP_CAPABLE_READ     = 0x34,
-    GPU_STATE_READ_MEM_TEMP_CAPABLE_COMPLETE = 0x35,
+    GPU_STATE_READ_MEM_TEMP_CAPABLE_2        = 0x33,
+    GPU_STATE_READ_MEM_TEMP_CAPABLE_3        = 0x34,
+    GPU_STATE_READ_MEM_TEMP_CAPABLE_READ     = 0x35,
+    GPU_STATE_READ_MEM_TEMP_CAPABLE_COMPLETE = 0x36,
 } gpuReadMemTempCapableState_e;
 
 // GPU IPC initialization

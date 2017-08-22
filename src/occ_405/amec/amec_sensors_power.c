@@ -75,6 +75,7 @@ extern bool    G_vrm_thermal_monitoring;
 extern PWR_READING_TYPE  G_pwr_reading_type;
 extern bool    G_apss_present;
 extern OCCPstateParmBlock G_oppb;
+extern task_t G_task_table[TASK_END];
 
 //*************************************************************************/
 // Code
@@ -826,6 +827,7 @@ void amec_update_gpu_configuration(void)
             {
                // GPUs are present enable monitoring
                G_gpu_monitoring_allowed = TRUE;
+               G_task_table[TASK_ID_GPU_SM].flags = GPU_RTL_FLAGS;
             }
             G_first_sys_gpu_config = l_valid_bitmask_sys;
             G_first_num_gpus_sys = l_num_gpus_sys;
