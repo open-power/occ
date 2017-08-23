@@ -48,11 +48,13 @@
 #include "homer.h"
 #include <centaur_data.h>
 #include <avsbus.h>
-#include "cmdh_dbug_cmd.h"
 #include "wof.h"
 #include "sensor_main_memory.h"
 extern dimm_sensor_flags_t G_dimm_temp_expired_bitmap;
 extern bool G_vrm_thermal_monitoring;
+
+#include <gpe_export.h>
+extern gpe_shared_data_t G_shared_gpe_data;
 
 // This table contains tunable parameter information that can be exposed to
 // customers (only Master OCC should access/control this table)
@@ -889,9 +891,34 @@ void cmdh_dbug_get_trace (const cmdh_fsp_cmd_t * i_cmd_ptr,
     cmdh_dbug_get_trace_query_t *l_get_trace_query_ptr = (cmdh_dbug_get_trace_query_t*) i_cmd_ptr;
     cmdh_dbug_get_trace_resp_t *l_get_trace_resp_ptr = (cmdh_dbug_get_trace_resp_t*) o_rsp_ptr;
 
-    const trace_descriptor_array_t* l_trace_ptr = TRAC_get_td((char *)l_get_trace_query_ptr->comp);
-    l_rc = TRAC_get_buffer_partial(l_trace_ptr, l_get_trace_resp_ptr->data,&l_trace_buffer_size);
-    l_trace_size = l_trace_buffer_size;
+    if (memcmp((char *)l_get_trace_query_ptr->comp, "GP", 2) == 0)
+    {
+        // Return a GPE0/GPE1 trace buffer
+        if (l_get_trace_query_ptr->comp[2] == '0')
+        {
+            if (G_shared_gpe_data.gpe0_tb_ptr != 0)
+            {
+                l_trace_size = G_shared_gpe_data.gpe0_tb_sz;
+                memcpy(l_get_trace_resp_ptr->data, (uint8_t*)G_shared_gpe_data.gpe0_tb_ptr, (size_t)l_trace_size);
+            }
+        }
+        else if (l_get_trace_query_ptr->comp[2] == '1')
+        {
+            if (G_shared_gpe_data.gpe0_tb_ptr != 0)
+            {
+                l_trace_size = G_shared_gpe_data.gpe1_tb_sz;
+                memcpy(l_get_trace_resp_ptr->data, (uint8_t*)G_shared_gpe_data.gpe1_tb_ptr, (size_t)l_trace_size);
+            }
+        }
+        else l_rc = 255;
+    }
+    else
+    {
+        // Return a 405 trace buffer
+        const trace_descriptor_array_t* l_trace_ptr = TRAC_get_td((char *)l_get_trace_query_ptr->comp);
+        l_rc = TRAC_get_buffer_partial(l_trace_ptr, l_get_trace_resp_ptr->data,&l_trace_buffer_size);
+        l_trace_size = l_trace_buffer_size;
+    }
     if(l_rc==0)
     {
         G_rsp_status = ERRL_RC_SUCCESS;
@@ -1924,7 +1951,7 @@ uint8_t cmdh_set_user_pcap_common(uint16_t i_pcap,
 
             //Indicate there is new PCAP data available
             G_master_pcap_data.pcap_data_count++;
-            // if user pcap was just disabled set source to 0 (no user pcap) 
+            // if user pcap was just disabled set source to 0 (no user pcap)
             if(i_pcap == 0)
             {
                G_master_pcap_data.source = 0;
@@ -2089,7 +2116,7 @@ uint8_t cmdh_set_pcap_inband(const uint16_t  i_cmd_data_length,
         uint16_t l_pcap = CONVERT_UINT8_ARRAY_UINT16(l_cmd_ptr->power_cap[0],
                                                      l_cmd_ptr->power_cap[1]);
         l_rc = cmdh_set_user_pcap_common(l_pcap, IN_BAND);
-        
+
         // if successful copy the power cap to the response buffer and set the rsp length
         if(l_rc == ERRL_RC_SUCCESS)
         {

@@ -160,7 +160,7 @@ void update_i2c_lock(const lockOperation_e i_op, const uint8_t i_engine)
     {
         out32(OCB_OCCFLG_OR, occ_flags.value);
 
-        TRAC_IMP("update_i2c_lock: OCC has aquired lock for I2C engine %d", i_engine);
+        TRAC_IMP("update_i2c_lock: OCC has acquired lock for I2C engine %d", i_engine);
     }
 
 } // end update_i2c_lock()

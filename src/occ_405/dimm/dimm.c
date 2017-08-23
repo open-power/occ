@@ -58,11 +58,9 @@ uint8_t G_maxDimmPort = NUM_DIMM_PORTS - 1;
 bool     G_dimm_i2c_reset_required = false;
 uint32_t G_dimm_i2c_reset_cause = 0;
 
-#define MAX_CONSECUTIVE_DIMM_RESETS 1
-
 typedef struct {
     bool     disabled;
-    uint8_t  errorCount;
+    uint8_t  errorCount; // # consecutive errors for this DIMM
 } dimmData_t;
 dimmData_t G_dimm[NUM_DIMM_PORTS][NUM_DIMMS_PER_I2CPORT] = {{{false,0}}};
 
@@ -263,12 +261,17 @@ void mark_dimm_failed()
 {
     const uint8_t port = G_dimm_sm_args.i2cPort;
     const uint8_t dimm = G_dimm_sm_args.dimm;
-    INTR_TRAC_ERR("mark_dimm_failed: DIMM%04X failed in state/rc/count=0x%06X "
-                  "(ffdc 0x%08X%08X, completion_state 0x%02X)",
-                  DIMM_AND_PORT, (G_dimm_sm_args.state << 16) | (G_dimm_sm_args.error.rc << 8) | G_dimm[port][dimm].errorCount,
-                  WORD_HIGH(G_dimm_sm_args.error.ffdc),
-                  WORD_LOW(G_dimm_sm_args.error.ffdc),
-                  G_dimm_sm_request.request.completion_state);
+
+    // Trace the first 3 consecutive failures for this DIMM
+    if (G_dimm[port][dimm].errorCount < 3)
+    {
+        INTR_TRAC_ERR("mark_dimm_failed: DIMM%04X failed in state/rc/count=0x%06X "
+                      "(ffdc 0x%08X%08X, completion_state 0x%02X)",
+                      DIMM_AND_PORT, (G_dimm_sm_args.state << 16) | (G_dimm_sm_args.error.rc << 8) | G_dimm[port][dimm].errorCount,
+                      WORD_HIGH(G_dimm_sm_args.error.ffdc),
+                      WORD_LOW(G_dimm_sm_args.error.ffdc),
+                      G_dimm_sm_request.request.completion_state);
+    }
 
     g_amec->proc[0].memctl[port].centaur.dimm_temps[dimm].flags |= FRU_SENSOR_STATUS_ERROR;
 
@@ -281,43 +284,20 @@ void mark_dimm_failed()
         INCREMENT_ERR_HISTORY(ERRH_DIMM_I2C_PORT1);
     }
 
-    if (++G_dimm[port][dimm].errorCount > MAX_CONSECUTIVE_DIMM_RESETS)
+    if (G_dimm[port][dimm].errorCount < 255)
     {
-        // Disable collection on this DIMM, collect FFDC and log error
-        G_dimm[port][dimm].disabled = true;
-        INTR_TRAC_ERR("mark_dimm_failed: disabling DIMM%04X due to %d consecutive errors (state=%d)",
-                      DIMM_AND_PORT, G_dimm[port][dimm].errorCount, G_dimm_sm_args.state);
-        errlHndl_t l_err = NULL;
-        /*
-         * @errortype
-         * @moduleid    DIMM_MID_MARK_DIMM_FAILED
-         * @reasoncode  DIMM_GPE_FAILURE
-         * @userdata1   GPE returned rc code
-         * @userdata4   ERC_DIMM_COMPLETE_FAILURE
-         * @devdesc     Disabling DIMM due to repeated I2C failures
-         */
-        l_err = createErrl(DIMM_MID_MARK_DIMM_FAILED,
-                           DIMM_GPE_FAILURE,
-                           ERC_DIMM_COMPLETE_FAILURE,
-                           ERRL_SEV_PREDICTIVE,
-                           NULL,
-                           DEFAULT_TRACE_SIZE,
-                           G_dimm_sm_args.error.rc,
-                           0);
-        addUsrDtlsToErrl(l_err,
-                         (uint8_t*)&G_dimm_sm_request.ffdc,
-                         sizeof(G_dimm_sm_request.ffdc),
-                         ERRL_STRUCT_VERSION_1,
-                         ERRL_USR_DTL_BINARY_DATA);
-        addCalloutToErrl(l_err,
-                         ERRL_CALLOUT_TYPE_HUID,
-                         G_sysConfigData.dimm_huids[port][dimm],
-                         ERRL_CALLOUT_PRIORITY_HIGH);
-        //Mark DIMM as logged so we don't log it again
-        amec_mem_mark_logged(0, dimm,
-                             &G_cent_timeout_logged_bitmap,
-                             &G_dimm_timeout_logged_bitmap.bytes[port]);
-        commitErrl(&l_err);
+        ++G_dimm[port][dimm].errorCount;
+    }
+
+    if (false == G_dimm[port][dimm].disabled)
+    {
+        if(G_dimm_timeout_logged_bitmap.bytes[port] & (DIMM_SENSOR0 >> dimm))
+        {
+            //Health monitor has already logged a timeout for this DIMM
+            G_dimm[port][dimm].disabled = true;
+            INTR_TRAC_ERR("mark_dimm_failed: disabling DIMM%04X due to health monitor timeout (consecutive errors: %d)",
+                          DIMM_AND_PORT, G_dimm[port][dimm].errorCount);
+        }
     }
 
     // Reset DIMM I2C engine
@@ -471,6 +451,7 @@ uint8_t dimm_reset_sm()
         case DIMM_STATE_RESET_MASTER:
             if (DIMM_TICK == 0)
             {
+                TRAC_INFO("dimm_reset_sm: Initiating I2C reset of engine %d", G_sysConfigData.dimm_i2c_engine);
                 L_new_dimm_args.i2cEngine = G_sysConfigData.dimm_i2c_engine;
                 if (schedule_dimm_req(DIMM_STATE_RESET_MASTER, L_new_dimm_args))
                 {
@@ -710,6 +691,12 @@ void process_dimm_temp()
     // Store DIMM temp in sensor
     sensor_update(&g_amec->proc[0].tempdimm[DIMM_INDEX(port, dimm)], l_dimm_temp);
 
+    // Successful temp collected, reset error count
+    if (G_dimm[port][dimm].errorCount > 2)
+    {
+        INTR_TRAC_INFO("process_dimm_temp: successfully read temp for DIMM%04X (after %d consecutive errors)",
+                       DIMM_AND_PORT, G_dimm[port][dimm].errorCount);
+    }
     G_dimm[port][dimm].errorCount = 0;
 
 } // end process_dimm_temp()
@@ -736,18 +723,16 @@ void task_dimm_sm(struct task *i_self)
     static bool L_readIssued = false;
     const uint8_t engine = G_sysConfigData.dimm_i2c_engine;
     static bool L_occ_owns_lock = false;
-    // 60,000 x 500us (tick time) x 2 (called every other tick) = 60 seconds
-    static unsigned int L_startup_delay = 60000;
 
-    if (L_startup_delay > 0)
+    static unsigned int L_dimms_enabled = false;
+    if (!L_dimms_enabled)
     {
-        if (--L_startup_delay == 0)
-        {
-            TRAC_INFO("task_dimm_sm: Startup delay completed, DIMM temp collection will be started (0x%08X)", G_dimm_present_sensors.words[0]);
-            G_dimm_enabled_sensors = G_dimm_present_sensors;
-        }
+        L_dimms_enabled = true;
+        TRAC_INFO("task_dimm_sm: DIMM temp collection is being started (0x%08X)", G_dimm_present_sensors.words[0]);
+        G_dimm_enabled_sensors = G_dimm_present_sensors;
     }
-    else if (G_mem_monitoring_allowed)
+
+    if (G_mem_monitoring_allowed)
     {
 #ifdef DEBUG_LOCK_TESTING
         SIMULATE_HOST();
@@ -929,6 +914,7 @@ void task_dimm_sm(struct task *i_self)
                                     if ((DIMM_TICK == 0) || (DIMM_TICK == 8))
                                     {
                                         // If DIMM has huid/sensor then it should be present
+                                        // and if not disabled yet, start temp collection
                                         if (NIMBUS_DIMM_PRESENT(L_dimmPort,L_dimmIndex) &&
                                             (G_dimm[L_dimmPort][L_dimmIndex].disabled == false))
                                         {
