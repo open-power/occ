@@ -39,6 +39,7 @@
 #include "amec_service_codes.h" //For AMEC_MST_CHECK_PCAPS_MATCH
 #include "dcom.h"
 #include <amec_sensors_power.h>
+#include <cmdh_fsp_cmds.h>      // For G_apss_ch_to_function
 
 //*************************************************************************/
 // Externs
@@ -55,8 +56,11 @@
 //Power cap mismatch threshold set to 8 ticks
 #define PCAPS_MISMATCH_THRESHOLD 8
 
-//Power cap failure threshold set to 32 ticks
+//Power cap failure threshold with no GPUs set to 32 ticks
 #define PCAP_FAILURE_THRESHOLD 32
+
+//Power cap failure threshold with GPUs set to number of ticks for 100ms
+#define PCAP_GPU_FAILURE_THRESHOLD (100000 / MICS_PER_TICK)
 
 //*************************************************************************/
 // Structures
@@ -89,6 +93,8 @@ uint16_t G_mst_soft_fmin = 0;
 uint16_t G_mst_soft_fmax = 0xFFFF;
 //Counter of committed violations by the Slave OCCs
 uint8_t  G_mst_violation_cnt[MAX_OCCS] = {0};
+
+extern uint32_t G_first_num_gpus_sys;
 
 // --------------------------------------------------------
 // AMEC Master State 5 Substate Table
@@ -390,6 +396,8 @@ void amec_mst_check_under_pcap(void)
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
     errlHndl_t l_err = NULL;
+    uint8_t i = 0;
+    uint8_t l_apss_func_id = 0;
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
@@ -406,21 +414,29 @@ void amec_mst_check_under_pcap(void)
 
         G_over_cap_count++;
 
-        //Log error and reset OCC if count >= 32 (ticks)
-        if(G_over_cap_count >= PCAP_FAILURE_THRESHOLD)
+        // GPUs take longer for power limit to take effect if GPUs are present need to use
+        // a longer wait time before logging an error and resetting
+        if( ( (!G_first_num_gpus_sys) && (G_over_cap_count >= PCAP_FAILURE_THRESHOLD) ) ||
+            ( (G_first_num_gpus_sys) && (G_over_cap_count >= PCAP_GPU_FAILURE_THRESHOLD) ) )
         {
             TRAC_ERR("Failure to maintain power cap: Power Cap = %d ,"
-                     "PWRSYS = %d ,PWRPROC = %d ,PWRFAN = %d ,"
-                     "PWRMEM = %d",g_amec->pcap.active_node_pcap,
-                     AMECSENSOR_PTR(PWRSYS)->sample,
-                     AMECSENSOR_PTR(PWRPROC)->sample,
-                     AMECSENSOR_PTR(PWRFAN)->sample,
-                     AMECSENSOR_PTR(PWRMEM)->sample);
+                     "PWRSYS = %d",g_amec->pcap.active_node_pcap,
+                     AMECSENSOR_PTR(PWRSYS)->sample);
 
-            TRAC_ERR("PWRIO = %d , PWRSTORE = %d, PWRGPU = %d",
-                     AMECSENSOR_PTR(PWRIO)->sample,
-                     AMECSENSOR_PTR(PWRSTORE)->sample,
-                     AMECSENSOR_PTR(PWRGPU)->sample);
+            // Trace power per APSS channel to have the best breakdown for debug
+            for (i = 0; i < MAX_APSS_ADC_CHANNELS; i++)
+            {
+                l_apss_func_id = G_apss_ch_to_function[i];
+
+                if((l_apss_func_id != ADC_RESERVED) &&
+                   (l_apss_func_id != ADC_12V_SENSE) &&
+                   (l_apss_func_id != ADC_GND_REMOTE_SENSE) &&
+                   (l_apss_func_id != ADC_12V_STANDBY_CURRENT) )
+                {
+                    TRAC_ERR("APSS channel %d Function ID = %d Power = %dW", i, l_apss_func_id,
+                              AMECSENSOR_PTR(PWRAPSSCH0 + i)->sample);
+                }
+            }
 
             /* @
              * @errortype
@@ -458,11 +474,8 @@ void amec_mst_check_under_pcap(void)
     }
     else
     {
-        //Decrement count if node power under power cap value
-        if(G_over_cap_count > 0)
-        {
-            G_over_cap_count--;
-        }
+        // Clear counter
+        G_over_cap_count = 0;
     }
 
     return;

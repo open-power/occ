@@ -144,6 +144,7 @@ typedef enum
 {
     ERRL_CALLOUT_TYPE_HUID          = 0x01,
     ERRL_CALLOUT_TYPE_COMPONENT_ID  = 0x02,
+    ERRL_CALLOUT_TYPE_GPU_ID        = 0x03,
 } ERRL_CALLOUT_TYPE;
 
 /* TMGT-OCC Component Ids */

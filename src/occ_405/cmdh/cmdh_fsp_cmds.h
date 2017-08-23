@@ -157,9 +157,10 @@ typedef struct __attribute__ ((packed)) cmdh_poll_resp_v20
     uint32_t  errl_address;
     // BYTES 13 - 14: Error Log Length
     uint16_t  errl_length;
-    // BYTES 15 - 16: Reserved
+    // BYTE 15: Reserved
     uint8_t   _reserved_15;
-    uint8_t   _reserved_16;
+    // BYTE 16: GPU Configuration
+    uint8_t   gpu_presence;
     // BYTES 17 - 32 (16 bytes): OCC Code Level - ASCII string of OCC build level currently running.
     uint8_t   occ_level[16];
     // BYTES 33 - 38 (6 bytes):  ASCII eye catcher "SENSOR"

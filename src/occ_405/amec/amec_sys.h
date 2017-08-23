@@ -449,6 +449,7 @@ typedef struct {
 typedef struct {
     bool     check_pwr_limit; // Indicates if need to read power limits from GPU
     bool     pwr_limits_read;   // Indicates if power limits were read i.e. have min/max
+    bool     gpu_min_cap_required;   // Indicates if power limits were read i.e. have min/max
     uint32_t gpu_min_pcap_mw; // Min GPU power limit in mW read from the GPU
     uint32_t gpu_max_pcap_mw; // Max GPU power limit in mW read from the GPU
     uint32_t gpu_desired_pcap_mw;  // AMEC determined pcap in mW to set

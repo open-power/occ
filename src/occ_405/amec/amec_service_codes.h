@@ -66,6 +66,7 @@ enum occAmecModuleId
     AMEC_CALC_DTS_SENSORS            =    AMEC_COMP_ID | 0x16,
     AMEC_SET_FREQ_RANGE              =    AMEC_COMP_ID | 0x17,
     AMEC_UPDATE_APSS_GPIO            =    AMEC_COMP_ID | 0x18,
+    AMEC_GPU_PCAP_MID                =    AMEC_COMP_ID | 0x19,
 };
 
 /*----------------------------------------------------------------------------*/

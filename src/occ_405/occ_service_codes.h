@@ -289,6 +289,7 @@ enum occExtReasonCode
     ERC_GPU_READ_MEM_TEMP_TIMEOUT               = 0x00F5,
     ERC_GPU_READ_MEM_TEMP_CAPABLE_FAILURE       = 0x00F6,
     ERC_GPU_INVALID_GPU_OPERATION               = 0x00F7,
+    ERC_GPU_N_MODE_PCAP_CALC_FAILURE            = 0x00F8,
     ERC_GPU_NO_GPE_SUPPORT                      = 0x00FF,
 
     ERC_STATE_FROM_ALL_TO_STB_FAILURE           = 0x0123,

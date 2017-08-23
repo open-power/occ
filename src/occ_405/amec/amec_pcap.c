@@ -58,7 +58,6 @@ extern PWR_READING_TYPE  G_pwr_reading_type;
 //ppb_fmax
 #define PDROP_THRESH        0
 //Number of MHz to raise the proc_pcap_vote for every watt of available power
-//(DCM value should be less than SCM)
 #define PROC_MHZ_PER_WATT   28
 //Number of MHz to raise ppb_fmax per watt of available power. Depends on
 //number of procs in node.
@@ -75,6 +74,8 @@ uint32_t    G_mhz_per_pstate=0;
 uint8_t     G_over_pcap_count=0;
 
 extern uint16_t G_proc_fmax_mhz;   // max(turbo,uturbo) frequencies
+extern uint32_t G_first_proc_gpu_config;
+extern uint32_t G_first_num_gpus_sys;
 
 //*************************************************************************/
 // Function Prototypes
@@ -83,6 +84,170 @@ extern uint16_t G_proc_fmax_mhz;   // max(turbo,uturbo) frequencies
 //*************************************************************************/
 // Functions
 //*************************************************************************/
+
+//////////////////////////
+// Function Specification
+//
+// Name: amec_gpu_pcap
+//
+// Description: Determine power cap for GPUs
+//
+// Thread: Real Time Loop
+//
+// End Function Specification
+void amec_gpu_pcap(bool i_active_pcap_changed, int32_t i_avail_power)
+{
+    /*------------------------------------------------------------------------*/
+    /*  Local Variables                                                       */
+    /*------------------------------------------------------------------------*/
+    uint8_t  i = 0;
+    uint32_t l_gpu_cap_mw = 0;
+    static uint16_t L_total_gpu_pcap = 0;  // Current total GPU pcap in effect
+    static uint16_t L_n_mode_gpu_total_pcap = 0;  // Total GPU pcap required for oversubscription
+    static uint16_t L_active_psr_gpu_total_pcap = 0; // Total GPU pcap for the currently set pcap and PSR
+    static uint16_t L_per_gpu_pcap = 0;  // Amount of L_total_gpu_pcap for each GPU
+    static uint8_t L_psr = 100;   // PSR value used in L_active_psr_gpu_total_pcap calculation
+    static bool L_first_run = TRUE;  // for calculations done only 1 time
+
+    /*------------------------------------------------------------------------*/
+    /*  Code                                                                  */
+    /*------------------------------------------------------------------------*/
+    // If this is the first time running calculate the total GPU power cap for oversubscription
+    if(L_first_run)
+    {
+       if(g_amec->pcap.ovs_node_pcap > G_sysConfigData.total_non_gpu_max_pwr_watts)
+       {
+           // Take all non-GPU power away from the oversubscription power cap
+           L_n_mode_gpu_total_pcap = g_amec->pcap.ovs_node_pcap - G_sysConfigData.total_non_gpu_max_pwr_watts;
+           // Add back in the power that will be dropped by processor DVFS and memory throttling and give to GPUs
+           L_n_mode_gpu_total_pcap += G_sysConfigData.total_proc_mem_pwr_drop_watts;
+       }
+       else
+       {
+           // This should not happen, the total non GPU power should never be higher than the N mode cap
+           // Log error and set GPUs to minimum power cap
+           L_n_mode_gpu_total_pcap = 0; // this will set minimum GPU power cap
+
+           TRAC_ERR("amec_gpu_pcap: non GPU max power %dW is more than N mode pwr limit %dW",
+                     G_sysConfigData.total_non_gpu_max_pwr_watts, g_amec->pcap.ovs_node_pcap);
+
+           /* @
+            * @errortype
+            * @moduleid    AMEC_GPU_PCAP_MID
+            * @reasoncode  GPU_FAILURE
+            * @userdata1   N mode Power Cap watts
+            * @userdata2   Total non-GPU power watts
+            * @userdata4   ERC_GPU_N_MODE_PCAP_CALC_FAILURE
+            * @devdesc     Total non-GPU power more than N mode power cap
+            *
+            */
+           errlHndl_t l_err = createErrl(AMEC_GPU_PCAP_MID,
+                                         GPU_FAILURE,
+                                         ERC_GPU_N_MODE_PCAP_CALC_FAILURE,
+                                         ERRL_SEV_PREDICTIVE,
+                                         NULL,
+                                         DEFAULT_TRACE_SIZE,
+                                         g_amec->pcap.ovs_node_pcap,
+                                         G_sysConfigData.total_non_gpu_max_pwr_watts);
+
+           //Callout firmware
+           addCalloutToErrl(l_err,
+                            ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                            ERRL_COMPONENT_ID_FIRMWARE,
+                            ERRL_CALLOUT_PRIORITY_HIGH);
+           commitErrl(&l_err);
+       }
+    }  // if first run
+
+    // Calculate the total GPU power cap for the current active limit and PSR
+    // this only needs to be calculated if either the active limit or PSR changed
+    if( (L_first_run) || (i_active_pcap_changed) || (L_psr != G_sysConfigData.psr) )
+    {
+       L_psr = G_sysConfigData.psr;
+       if(g_amec->pcap.active_node_pcap > G_sysConfigData.total_non_gpu_max_pwr_watts)
+       {
+           // Take all non-GPU power away from the active power cap
+           L_active_psr_gpu_total_pcap = g_amec->pcap.active_node_pcap - G_sysConfigData.total_non_gpu_max_pwr_watts;
+           // Add back in the power that will be dropped by processor DVFS and memory throttling based on the PSR
+           // to give to GPUs
+           L_active_psr_gpu_total_pcap += ( (L_psr / 100) * G_sysConfigData.total_proc_mem_pwr_drop_watts );
+       }
+       else
+       {
+           // Set GPUs to minimum power cap
+           L_active_psr_gpu_total_pcap = 0;
+           TRAC_IMP("amec_gpu_pcap: non GPU max power %dW is more than active pwr limit %dW",
+                     G_sysConfigData.total_non_gpu_max_pwr_watts, g_amec->pcap.active_node_pcap);
+       }
+
+       // Total GPU power cap is the lower of oversubscription and active power limit
+       // must always account for oversubscription to ensure when a power supply is lost the OCC
+       // can react fast enough, GPU power capping is too slow and must have GPU power cap already
+       // set to account for oversubscription case
+       L_total_gpu_pcap = (L_n_mode_gpu_total_pcap < L_active_psr_gpu_total_pcap) ?
+                           L_n_mode_gpu_total_pcap : L_active_psr_gpu_total_pcap;
+
+       // Divide the total equally across all GPUs in the system
+       if(G_first_num_gpus_sys)
+       {
+          L_per_gpu_pcap = L_total_gpu_pcap / G_first_num_gpus_sys;
+       }
+       else
+       {
+           L_per_gpu_pcap = 0;
+           TRAC_ERR("amec_gpu_pcap: Called with no GPUs present!");
+       }
+    }
+
+    // Setup to send new power limit to GPUs. The actual sending of GPU power limit will be handled by task_gpu_sm()
+    for (i=0; i<MAX_NUM_GPU_PER_DOMAIN; i++)
+    {
+        // Before sending a GPU a power limit the power limits must be read from the GPU to know min/max GPU allows
+        if( GPU_PRESENT(i) && g_amec->gpu[i].pcap.pwr_limits_read )
+        {
+           l_gpu_cap_mw = L_per_gpu_pcap * 1000;  // convert W to mW
+
+           // GPU is present and have min/max power limits from GPU
+           // clip the GPU power limit to min/max GPU limit if needed
+           if(l_gpu_cap_mw < g_amec->gpu[i].pcap.gpu_min_pcap_mw)  // clip to min?
+           {
+              l_gpu_cap_mw = g_amec->gpu[i].pcap.gpu_min_pcap_mw;
+           }
+           else if(l_gpu_cap_mw > g_amec->gpu[i].pcap.gpu_max_pcap_mw)  // clip to max?
+           {
+              l_gpu_cap_mw = g_amec->gpu[i].pcap.gpu_max_pcap_mw;
+           }
+
+           // If not already at the min then set to min if trying to reduce power and proc/memory are at min
+           if( (i_avail_power < 0) && (g_amec->proc[0].pwr_votes.ppb_fmax == g_amec->sys.fmin) &&
+               (g_amec->pcap.active_mem_level) && (l_gpu_cap_mw != g_amec->gpu[i].pcap.gpu_min_pcap_mw) )
+           {
+              l_gpu_cap_mw = g_amec->gpu[i].pcap.gpu_min_pcap_mw;
+              if(g_amec->gpu[i].pcap.gpu_desired_pcap_mw != l_gpu_cap_mw)
+              {
+                 TRAC_ERR("amec_gpu_pcap: Forcing GPU%d to minimum pwr limit %dmW", i, l_gpu_cap_mw);
+                 g_amec->gpu[i].pcap.gpu_min_cap_required = TRUE;
+              }
+           }
+
+           // check if this is a new power limit
+           if(g_amec->gpu[i].pcap.gpu_desired_pcap_mw != l_gpu_cap_mw)
+           {
+              TRAC_IMP("amec_gpu_pcap: Updating GPU%d desired pcap %dmW to %dmW", i,
+                        g_amec->gpu[i].pcap.gpu_desired_pcap_mw, l_gpu_cap_mw);
+              g_amec->gpu[i].pcap.gpu_desired_pcap_mw = l_gpu_cap_mw;
+
+              if( (g_amec->gpu[i].pcap.gpu_min_cap_required) && (l_gpu_cap_mw != g_amec->gpu[i].pcap.gpu_min_pcap_mw) )
+              {
+                 TRAC_ERR("amec_gpu_pcap: GPU%d no longer requires minimum pwr limit %dmW", i, g_amec->gpu[i].pcap.gpu_min_pcap_mw);
+                 g_amec->gpu[i].pcap.gpu_min_cap_required = FALSE;
+              }
+           }
+        }
+    }  // for each GPU
+
+    L_first_run = FALSE;
+}
 
 
 //////////////////////////
@@ -101,6 +266,7 @@ void amec_pcap_calc(void)
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
     bool l_oversub_state  = 0;
+    bool l_active_pcap_changed = FALSE;
     uint16_t l_node_pwr = AMECSENSOR_PTR(PWRSYS)->sample;
     uint16_t l_p0_pwr   = AMECSENSOR_PTR(PWRPROC)->sample;
     int32_t l_avail_power = 0;
@@ -138,9 +304,17 @@ void amec_pcap_calc(void)
 
         // set this pcap as valid (needed by master for comparison)
         g_amec->pcap_valid = 1;
+        l_active_pcap_changed = TRUE;
     }
 
     l_avail_power = g_amec->pcap.active_node_pcap - l_node_pwr;
+
+    // Determine GPU power cap if there are GPUs present
+    if(G_first_proc_gpu_config)
+    {
+       amec_gpu_pcap(l_active_pcap_changed, l_avail_power);
+    }
+
     if(l_node_pwr != 0)
     {
         l_proc_fraction = ((uint32_t)(l_p0_pwr) << 16)/l_node_pwr;

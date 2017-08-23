@@ -52,6 +52,7 @@
 #include "sensor_main_memory.h"
 extern dimm_sensor_flags_t G_dimm_temp_expired_bitmap;
 extern bool G_vrm_thermal_monitoring;
+extern uint32_t G_first_proc_gpu_config;
 
 #include <gpe_export.h>
 extern gpe_shared_data_t G_shared_gpe_data;
@@ -223,7 +224,11 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
                  l_poll_rsp->errl_id, l_poll_rsp->errl_length, l_poll_rsp->errl_address);
     }
 
-    // Byte 15 - 16: reserved.
+    // Byte 15: reserved.
+
+    // Byte 16: GPU Configuration
+    l_poll_rsp->gpu_presence = (uint8_t)G_first_proc_gpu_config;
+
     // Byte 17 - 32 (16 bytes): OCC level
     memcpy( (void *) l_poll_rsp->occ_level, (void *) &G_occ_buildname[0], 16);
 
@@ -1165,21 +1170,17 @@ void cmdh_dbug_get_apss_data (const cmdh_fsp_cmd_t * i_cmd_ptr,
         //Get the data for each channel individually and write it to
         for (i = 0; i < MAX_APSS_ADC_CHANNELS; i++)
         {
+            l_resp_ptr->ApssCh[i].gain = G_sysConfigData.apss_cal[i].gain;
+            l_resp_ptr->ApssCh[i].offset = G_sysConfigData.apss_cal[i].offset;
+            l_resp_ptr->ApssCh[i].raw = G_dcom_slv_inbox_rx.adc[i];
+            l_resp_ptr->ApssCh[i].calculated = AMECSENSOR_PTR(PWRAPSSCH0 + i)->sample;
+            l_resp_ptr->ApssCh[i].func = G_apss_ch_to_function[i];
+            l_resp_ptr->ApssCh[i].ipmi_sid = AMECSENSOR_PTR(PWRAPSSCH0 + i)->ipmi_sid;
 
-            if(AMECSENSOR_PTR(PWRAPSSCH0 + i)->ipmi_sid != 0)
-            {
-                l_resp_ptr->ApssCh[i].gain = G_sysConfigData.apss_cal[i].gain;
-                l_resp_ptr->ApssCh[i].offset = G_sysConfigData.apss_cal[i].offset;
-                l_resp_ptr->ApssCh[i].raw = G_dcom_slv_inbox_rx.adc[i];
-                l_resp_ptr->ApssCh[i].calculated = AMECSENSOR_PTR(PWRAPSSCH0 + i)->sample;
-                l_resp_ptr->ApssCh[i].func = G_apss_ch_to_function[i];
-                l_resp_ptr->ApssCh[i].ipmi_sid = AMECSENSOR_PTR(PWRAPSSCH0 + i)->ipmi_sid;
-
-                TRAC_IMP("DBG__APSS Ch[%02d]:  Raw[0x%04x], Offset[0x%08x], Gain[0x%08x],",
-                         i, l_resp_ptr->ApssCh[i].raw, l_resp_ptr->ApssCh[i].offset, l_resp_ptr->ApssCh[i].gain);
-                TRAC_IMP("                     Pwr[0x%04x], FuncID[0x%02x], IPMI_sensorID[0x%X]",
-                         l_resp_ptr->ApssCh[i].calculated, l_resp_ptr->ApssCh[i].func, l_resp_ptr->ApssCh[i].ipmi_sid);
-            }
+            TRAC_IMP("DBG__APSS Ch[%02d]:  Raw[0x%04x], Offset[0x%08x], Gain[0x%08x],",
+                      i, l_resp_ptr->ApssCh[i].raw, l_resp_ptr->ApssCh[i].offset, l_resp_ptr->ApssCh[i].gain);
+            TRAC_IMP("                     Pwr[0x%04x], FuncID[0x%02x], IPMI_sensorID[0x%X]",
+                      l_resp_ptr->ApssCh[i].calculated, l_resp_ptr->ApssCh[i].func, l_resp_ptr->ApssCh[i].ipmi_sid);
         }
 
     }while(0);

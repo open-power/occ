@@ -389,7 +389,7 @@ void mark_gpu_failed(const gpu_sm_args_t *i_arg)
             if(G_sysConfigData.gpu_sensor_ids[gpu_id])
             {
                addCalloutToErrl(l_err,
-                                ERRL_CALLOUT_TYPE_HUID,
+                                ERRL_CALLOUT_TYPE_GPU_ID,
                                 G_sysConfigData.gpu_sensor_ids[gpu_id],
                                 ERRL_CALLOUT_PRIORITY_MED);
             }
@@ -819,7 +819,7 @@ bool gpu_read_temp_sm()
                     if(G_sysConfigData.gpu_sensor_ids[G_current_gpu_id])
                     {
                         addCalloutToErrl(l_err,
-                                         ERRL_CALLOUT_TYPE_HUID,
+                                         ERRL_CALLOUT_TYPE_GPU_ID,
                                          G_sysConfigData.gpu_sensor_ids[G_current_gpu_id],
                                          ERRL_CALLOUT_PRIORITY_MED);
                     }
@@ -916,7 +916,7 @@ bool gpu_read_mem_temp_capability_sm()
              if(G_sysConfigData.gpu_sensor_ids[G_current_gpu_id])
              {
                 addCalloutToErrl(l_err,
-                                 ERRL_CALLOUT_TYPE_HUID,
+                                 ERRL_CALLOUT_TYPE_GPU_ID,
                                  G_sysConfigData.gpu_sensor_ids[G_current_gpu_id],
                                  ERRL_CALLOUT_PRIORITY_MED);
              }
@@ -1060,7 +1060,7 @@ bool gpu_read_memory_temp_sm()
                  if(G_sysConfigData.gpu_sensor_ids[G_current_gpu_id])
                  {
                     addCalloutToErrl(l_err,
-                                     ERRL_CALLOUT_TYPE_HUID,
+                                     ERRL_CALLOUT_TYPE_GPU_ID,
                                      G_sysConfigData.gpu_sensor_ids[G_current_gpu_id],
                                      ERRL_CALLOUT_PRIORITY_MED);
                  }
@@ -1149,7 +1149,7 @@ bool gpu_read_memory_temp_sm()
                    if(G_sysConfigData.gpu_sensor_ids[G_current_gpu_id])
                    {
                       addCalloutToErrl(l_err,
-                                       ERRL_CALLOUT_TYPE_HUID,
+                                       ERRL_CALLOUT_TYPE_GPU_ID,
                                        G_sysConfigData.gpu_sensor_ids[G_current_gpu_id],
                                        ERRL_CALLOUT_PRIORITY_MED);
                    }
@@ -1498,6 +1498,11 @@ void task_gpu_sm(struct task *i_self)
                       // to let IDLE SM decide what to do next
                       g_amec->gpu[G_current_gpu_id].status.checkDriverLoaded = FALSE;
                       g_amec->gpu[G_current_gpu_id].status.driverLoaded = FALSE;
+                      if(g_amec->gpu[G_current_gpu_id].status.driverLoaded)
+                      {
+                          // Driver is loaded, read the power limits so we can start GPU power capping
+                          g_amec->gpu[G_current_gpu_id].pcap.check_pwr_limit = TRUE;
+                      }
                       G_gpu_state = GPU_STATE_IDLE;
                       l_start_next_state = TRUE;
                    }
@@ -1505,7 +1510,7 @@ void task_gpu_sm(struct task *i_self)
 
                case GPU_STATE_READ_PWR_LIMIT:
                    // Read power limits for current GPU
-                   if(1) // TODO
+                   if(1) // TODO read and set min/max GPU limit and set pwr_limits_read to TRUE if capping supported
                    {
                       // Read power limits complete for this GPU, go to IDLE state
                       // to let IDLE SM decide what to do next
