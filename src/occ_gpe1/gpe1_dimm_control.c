@@ -138,9 +138,9 @@ void gpe_reset_mem_deadman(ipc_msg_t* cmd, void* arg)
     // the ipc arguments passed through the ipc_msg_t structure, has a pointer
     // to the reset_mem_deadman_args_t struct.
 
+    static bool L_init_complete[NUM_NIMBUS_MCAS] = {FALSE};
     int      rc = 0;
-    // @TODO: uncomment when deadman timer scom registers are definied in simics. RTC: 163713
-    //uint64_t regValue; // a pointer to hold the putscom_abs register value
+    uint64_t regValue; // a pointer to hold get/put SCOM register value
     ipc_async_cmd_t *async_cmd = (ipc_async_cmd_t*)cmd;
     reset_mem_deadman_args_t *args = (reset_mem_deadman_args_t*)async_cmd->cmd_data;
 
@@ -148,30 +148,125 @@ void gpe_reset_mem_deadman(ipc_msg_t* cmd, void* arg)
     args->error.ffdc = 0;
 
     do
-    {   // read Deadman timer's SCOM Register for specified MCA (MC pair and port numbers)
-        // @TODO: uncomment when deadman timer scom registers are definied in simics. RTC: 163713, RTC: 163934
-#if 0
+    {
         int mca = args->mca; // Nimbus MCA; mc_pair = mca >>2 and port = mca & 3
 
+        // Part of init is to enable the deadman timer for this MCA
+        if(!L_init_complete[mca])
+        {
+            // Read STR Register 0
+            rc = getscom_abs(STR_REG0_MCA(mca), &regValue);
+
+            if(rc)
+            {
+                PK_TRACE("gpe_reset_mem_deadman: Failed to read STR0 to program deadman timer"
+                         " MCA:0x%08x, Address:0x%08x, rc:0x%08x", mca, STR_REG0_MCA(mca), rc);
+
+                gpe_set_ffdc(&(args->error), STR_REG0_MCA(mca),
+                             GPE_RC_SCOM_GET_FAILED, rc);
+                break;
+            }
+
+            // set the deadman timer to the max value: bits 57:60 = 0b1000
+            regValue |= 0x0000000000000040;
+            regValue &= ~(0x0000000000000038);
+
+            // Write Modified STR Register 0
+            rc = putscom_abs(STR_REG0_MCA(mca), regValue);
+
+            if(rc)
+            {
+                PK_TRACE("gpe_reset_mem_deadman: Failed to program deadman timer"
+                         " MCA:0x%08x, Data:0x%08x, rc:0x%08x", mca, (uint32_t)regValue, rc);
+
+                gpe_set_ffdc(&(args->error), STR_REG0_MCA(mca),
+                             GPE_RC_SCOM_PUT_FAILED, rc);
+                break;
+            }
+        }
+
+        // read Deadman timer's SCOM Register for specified MCA to reset the timer
         rc = getscom_abs(DEADMAN_TIMER_MCA(mca), &regValue);
         if(rc)
         {
             PK_TRACE("gpe_reset_mem_deadman: Deadman timer read failed"
-                     "MCA:0x%08x, Address:0x%08x, rc:0x%08x",
+                     " MCA:0x%08x, Address:0x%08x, rc:0x%08x",
                      mca, DEADMAN_TIMER_MCA(mca), rc);
 
             gpe_set_ffdc(&(args->error), DEADMAN_TIMER_MCA(mca),
                          GPE_RC_SCOM_GET_FAILED, rc);
             break;
         }
-        else
-        {
-            GPE1_DIMM_DBG("gpe_reset_mem_deadman: Deadman timer reset successfully"
-                     "MCA:0x%08x, Address:0x%08x, deadman value:0x%08x",
-                     mca, DEADMAN_TIMER_MCA(mca), regValue);
 
-        }
-#endif
+        // Now that we are poking the deadman timer as second part of init check for and clear
+        // any previous emergency throttle that may have happened from the last time OCC was running
+        if(!L_init_complete[mca])
+        {
+            L_init_complete[mca] = TRUE; // Done handling initialization
+
+            // Read Emergency Throttle Register
+            rc = getscom_abs(ER_THROTTLE_MCA(mca), &regValue);
+
+            if(rc)
+            {
+                PK_TRACE("gpe_reset_mem_deadman: Failed to read emergency throttle register"
+                         " MCA:0x%08x, Address:0x%08x, rc:0x%08x", mca, ER_THROTTLE_MCA(mca), rc);
+
+                gpe_set_ffdc(&(args->error), ER_THROTTLE_MCA(mca), GPE_RC_SCOM_GET_FAILED, rc);
+                break;
+            }
+
+            // clear Emergency Throttle In-Progress bit if set, this is indication that OCC has been
+            // re-started from permanent safe mode without an IPL 
+            if(regValue & ER_THROTTLE_IN_PROGRESS_MASK)
+            {
+                PK_TRACE("gpe_reset_mem_deadman: Enabled timer and clearing throttle for MCA:0x%08x", mca);
+                regValue &= ~(ER_THROTTLE_IN_PROGRESS_MASK);
+
+                // Write Modified Emergency Throttle Register
+                rc = putscom_abs(ER_THROTTLE_MCA(mca), regValue);
+
+                if(rc)
+                {
+                    PK_TRACE("gpe_reset_mem_deadman: Failed to clear emergency throttle"
+                             " MCA:0x%08x, rc:0x%08x", mca, rc);
+
+                    gpe_set_ffdc(&(args->error), ER_THROTTLE_MCA(mca), GPE_RC_SCOM_PUT_FAILED, rc);
+                    break;
+                }
+
+                // Clear the emergency throttle engaged FIR bit
+                rc = getscom_abs(MCA_CAL_FIR_REG_MCA(mca), &regValue);
+
+                if(rc)
+                {
+                    PK_TRACE("gpe_reset_mem_deadman: Failed to read MCA FIR register"
+                             " MCA:0x%08x, Address:0x%08x, rc:0x%08x",
+                             mca, MCA_CAL_FIR_REG_MCA(mca), rc);
+
+                    gpe_set_ffdc(&(args->error), MCA_CAL_FIR_REG_MCA(mca), GPE_RC_SCOM_GET_FAILED, rc);
+                    break;
+                }
+                regValue &= ~(MCA_FIR_THROTTLE_ENGAGED_MASK);
+
+                // Write Modified MCA FIR Register
+                rc = putscom_abs(MCA_CAL_FIR_REG_MCA(mca), regValue);
+
+                if(rc)
+                {
+                    PK_TRACE("gpe_reset_mem_deadman: Failed to clear emergency throttle FIR bit"
+                             " MCA:0x%08x, rc:0x%08x", mca, rc);
+
+                    gpe_set_ffdc(&(args->error), MCA_CAL_FIR_REG_MCA(mca), GPE_RC_SCOM_PUT_FAILED, rc);
+                    break;
+                }
+            }
+            else
+            {
+                PK_TRACE("gpe_reset_mem_deadman: Enabled timer for MCA:0x%08x", mca);
+            }
+        }  // if !L_init_complete
+
     } while(0);
 
     // send back a response, IPC success even if ffdc/rc are non zeros

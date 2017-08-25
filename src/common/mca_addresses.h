@@ -28,6 +28,7 @@
 
 #define NUM_NIMBUS_MC_PAIRS 2
 #define MAX_NUM_MCU_PORTS   4
+#define NUM_NIMBUS_MCAS (MAX_NUM_MCU_PORTS * NUM_NIMBUS_MC_PAIRS)
 
 // Base Address of NIMBUS MCA.
 #define DIMM_MCA_BASE_ADDRESS     0x07010800
@@ -43,14 +44,19 @@
 #define STR_REG0_OFFSET           0x0135
 #define STR_REG0_ADDRESS          (DIMM_MCA_BASE_ADDRESS + STR_REG0_OFFSET)
 
-
 #define N_M_TCR_OFFSET            0x0116
 #define N_M_TCR_ADDRESS           (DIMM_MCA_BASE_ADDRESS + N_M_TCR_OFFSET)
-
 
 #define DEADMAN_TIMER_OFFSET      0x013C
 #define DEADMAN_TIMER_ADDRESS     (DIMM_MCA_BASE_ADDRESS + DEADMAN_TIMER_OFFSET)
 
+#define EMERGENCY_THROTTLE_OFFSET  0x0125
+#define EMERGENCY_THROTTLE_ADDRESS (DIMM_MCA_BASE_ADDRESS + EMERGENCY_THROTTLE_OFFSET)
+#define ER_THROTTLE_IN_PROGRESS_MASK 0x8000000000000000
+
+#define MCA_CAL_FIR_OFFSET  0x0100
+#define MCA_CAL_FIR_ADDRESS (DIMM_MCA_BASE_ADDRESS + MCA_CAL_FIR_OFFSET)
+#define MCA_FIR_THROTTLE_ENGAGED_MASK 0x0200000000000000
 
 // Memory Power Control
 
@@ -75,6 +81,7 @@ mc23.port3        0x080108C0        + 0x00000134/5     = 0x080109F4     = 0x0801
 #define POWER_CTRL_REG0(mc,port) (POWER_CTRL_REG0_ADDRESS + MC_PORT_SPACE(mc,port))
 
 #define STR_REG0(mc,port) (STR_REG0_ADDRESS + MC_PORT_SPACE(mc,port))
+#define STR_REG0_MCA(mca) (STR_REG0_ADDRESS + MC_PORT_SPACE((mca>>2),(mca&3)))
 
 
 // DIMM Control
@@ -106,8 +113,38 @@ mc23.port3        0x080108C0        + 0x0000013C        = 0x080109FC
  */
 
 //  NIMBUS DIMM Deadman SCOM Register Addresses macro
-#define DEADMAN_TIMER_PORT(mc,port) (DEADMAN_TIMER_ADDRESS +  MC_PORT_SPACE(mc,port))
-
 #define DEADMAN_TIMER_MCA(mca) (DEADMAN_TIMER_ADDRESS + MC_PORT_SPACE((mca>>2),(mca&3)))
+
+// Emergency Mode Throttle Register
+/*
+MC/Port Address MCA Port Address  Emergency Throt Offset SCOM Address
+mc01.port0        0x07010800        + 0x00000125        = 0x07010925
+mc01.port1        0x07010840        + 0x00000125        = 0x07010965
+mc01.port2        0x07010880        + 0x00000125        = 0x070109A5
+mc01.port3        0x070108C0        + 0x00000125        = 0x070109E5
+mc23.port0        0x08010800        + 0x00000125        = 0x08010925
+mc23.port1        0x08010840        + 0x00000125        = 0x08010965
+mc23.port2        0x08010880        + 0x00000125        = 0x080109A5
+mc23.port3        0x080108C0        + 0x00000125        = 0x080109E5
+ */
+
+//  NIMBUS Emergency Throttle SCOM Register Addresses macro
+#define ER_THROTTLE_MCA(mca) (EMERGENCY_THROTTLE_ADDRESS + MC_PORT_SPACE((mca>>2),(mca&3)))
+
+// MCA Calibration Fault Isolation Register
+/*
+MC/Port Address MCA Port Address   MCA FIR Offset       SCOM Address
+mc01.port0        0x07010800        + 0x00000100        = 0x07010900
+mc01.port1        0x07010840        + 0x00000100        = 0x07010940
+mc01.port2        0x07010880        + 0x00000100        = 0x07010980
+mc01.port3        0x070108C0        + 0x00000100        = 0x070109C0
+mc23.port0        0x08010800        + 0x00000100        = 0x08010900
+mc23.port1        0x08010840        + 0x00000100        = 0x08010940
+mc23.port2        0x08010880        + 0x00000100        = 0x08010980
+mc23.port3        0x080108C0        + 0x00000100        = 0x080109C0
+ */
+
+//  NIMBUS MCA Calibration FIR SCOM Register Addresses macro
+#define MCA_CAL_FIR_REG_MCA(mca) (MCA_CAL_FIR_ADDRESS + MC_PORT_SPACE((mca>>2),(mca&3)))
 
 #endif // _MCA_ADDRESSES_H

@@ -67,9 +67,7 @@ void gpe_mem_power_control(ipc_msg_t* cmd, void* arg)
     args->error.ffdc = 0;
 
     do
-    {   // For now, just loop through all ports amd MCs. May be time consuming, and
-        // if this is the case will change code to set only one port/mc register pair
-
+    {
         // Read Power Control Register 0 SCOM
         rc = getscom_abs(POWER_CTRL_REG0(mc,port), &pcrRegValue);
 
@@ -133,6 +131,9 @@ void gpe_mem_power_control(ipc_msg_t* cmd, void* arg)
             //         and clears:
             //           -  disable_memory_clocks (STR(1)).
         case MEM_PWR_CTL_PD_AND_STR:
+        // HW bug with disabling memory clock, treat PD_AND_STR_CLK_STOP same as PD_AND_STR
+        // It is unknown if this will ever be fixed in a future RIT
+        case MEM_PWR_CTL_PD_AND_STR_CLK_STOP:
             pcrRegValue = SET_2BITS(pcrRegValue, PCR0_MASTER_ENABLE_BIT, PCR0_POWERDOWN_ENABLE_BIT);
             strRegValue = SET_BIT(strRegValue, STR0_STR_ENABLE_BIT);
 
@@ -144,10 +145,10 @@ void gpe_mem_power_control(ipc_msg_t* cmd, void* arg)
             //           -  power_down_enable (PCR0(22)),
             //           -  STR_enable (STR(0)),
             //           -  disable_memory_clocks (STR(1)).
-        case MEM_PWR_CTL_PD_AND_STR_CLK_STOP:
-            pcrRegValue = SET_2BITS(pcrRegValue, PCR0_MASTER_ENABLE_BIT, PCR0_POWERDOWN_ENABLE_BIT);
-            strRegValue = SET_2BITS(strRegValue, STR0_STR_ENABLE_BIT, STR0_DISABLE_MEMORY_CLOCKS_BIT);
-            break;
+//        case MEM_PWR_CTL_PD_AND_STR_CLK_STOP:
+//            pcrRegValue = SET_2BITS(pcrRegValue, PCR0_MASTER_ENABLE_BIT, PCR0_POWERDOWN_ENABLE_BIT);
+//            strRegValue = SET_2BITS(strRegValue, STR0_STR_ENABLE_BIT, STR0_DISABLE_MEMORY_CLOCKS_BIT);
+//            break;
 
         default:
             PK_TRACE("gpe_mem_power_control: Invalid memory power control command:0x%d",
