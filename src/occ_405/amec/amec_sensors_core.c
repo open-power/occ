@@ -56,6 +56,7 @@ extern data_cnfg_t * G_data_cnfg;
 void amec_calc_dts_sensors(CoreData * i_core_data_ptr, uint8_t i_core);
 void amec_calc_freq_and_util_sensors(CoreData * i_core_data_ptr, uint8_t i_core);
 void amec_calc_ips_sensors(CoreData * i_core_data_ptr, uint8_t i_core);
+void amec_calc_droop_sensors(CoreData * i_core_data_ptr, uint8_t i_core);
 
 //*************************************************************************/
 // Code
@@ -114,6 +115,11 @@ void amec_update_proc_core_sensors(uint8_t i_core)
     {
         amec_calc_ips_sensors(l_core_data_ptr,i_core);
     }
+
+    //-------------------------------------------------------
+    // Update voltage droop counters
+    //-------------------------------------------------------
+    amec_calc_droop_sensors(l_core_data_ptr, i_core);
 
     // ------------------------------------------------------
     // Update PREVIOUS values for next time
@@ -766,6 +772,22 @@ void amec_calc_ips_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
       temp32 = 0;
   }
   sensor_update( AMECSENSOR_ARRAY_PTR(IPSC0,i_core), (uint16_t) temp32);
+}
+
+// -------------------------------------------------
+//  Droop count sum for core and quad
+// ------------------------------------------------
+void amec_calc_droop_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
+{
+    //CoreData only has any new droop events since the last time CoreData was read
+    uint32_t l_quad_droops = i_core_data_ptr->droop.cache_large_event;
+    uint32_t l_core_droops = i_core_data_ptr->droop.core_small_event;
+    int l_quad = i_core / 4;
+    sensor_t * l_quad_sensor = AMECSENSOR_ARRAY_PTR(VOLTDROOPCNTQ0, l_quad);
+    sensor_t * l_core_sensor = AMECSENSOR_ARRAY_PTR(VOLTDROOPCNTC0, i_core);
+
+    sensor_update( l_core_sensor, l_core_droops);
+    sensor_update( l_quad_sensor, l_quad_droops);
 }
 
 /*----------------------------------------------------------------------------*/

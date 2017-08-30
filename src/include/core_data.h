@@ -68,6 +68,13 @@
 
 #define EMPATH_CORE_THREADS 4
 
+// Droop events  cache=bit37, cores = bits 42,46,50,54
+#define CACHE_VDM_LARGE_DROOP 0x0000000004000000ull
+#define CORE0_VDM_SMALL_DROOP 0x0000000000200000ull
+#define CORE1_VDM_SMALL_DROOP 0x0000000000020000ull
+#define CORE2_VDM_SMALL_DROOP 0x0000000000002000ull
+#define CORE3_VDM_SMALL_DROOP 0x0000000000000200ull
+
 
 typedef struct
 {
@@ -85,7 +92,6 @@ typedef struct
 typedef struct
 {
     uint32_t ifu_throttle;
-    //uint32_t isu_throttle;  // No longer exists
     uint32_t ifu_active;
     uint32_t undefined;
     uint32_t v_droop;         // new for p9
@@ -106,17 +112,23 @@ typedef struct
     sensor_result_t cache[2];
 } CoreDataDts;
 
+typedef struct
+{
+    uint32_t    cache_large_event;
+    uint32_t    core_small_event;
+} DroopEvents;
 
 //
 // The instance of this data object must be 8 byte aligned
 //
-typedef struct // 128
+typedef struct // 136 bytes
 {
     CoreDataEmpath             empath;    //32
     CoreDataThrottle           throttle;  //16
     CoreDataPerThread          per_thread[EMPATH_CORE_THREADS]; // 64
-    CoreDataDts                dts;  //8
-    uint64_t                   stop_state_hist;
+    CoreDataDts                dts;              // 8
+    uint64_t                   stop_state_hist;  // 8
+    DroopEvents                droop;            // 8
 } CoreData;
 
 #ifdef __cplusplus

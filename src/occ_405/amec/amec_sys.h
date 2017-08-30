@@ -295,6 +295,7 @@ typedef struct
   sensor_t tempc;
   sensor_t stopdeepreqc;
   sensor_t stopdeepactc;
+  sensor_t voltdroopcntc;
 
   //-----------------------------------
   // Previous Tick Data
@@ -427,6 +428,7 @@ typedef struct
 typedef struct
 {
     sensor_t tempq;
+    sensor_t voltdroopcntq;
 } amec_quad_t;
 
 //-------------------------------------------------------------

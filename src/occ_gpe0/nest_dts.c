@@ -22,6 +22,7 @@
 /* permissions and limitations under the License.                         */
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
+
 #include <nest_dts.h>
 #include <ppe42_msr.h>
 #include <ppe42_scom.h>
@@ -49,10 +50,8 @@ uint32_t get_nest_dts(NestDts_t* o_data)
     uint32_t org_sem = mfmsr() & MSR_SEM;
 
     // Clear SIBRC and SIBRCA
-    // mask off resource occupied/offline errors - will return these)
-    // SIB rc 3-7 will machine check (unless already masked)
-    mtmsr((mfmsr() & ~(MSR_SIBRC | MSR_SIBRCA))
-          | 0xe0000000);  //MASK SIBRC == 1 | SIBRC == 2
+    // mask off SIB errors as machine checks, return rc instead
+    mtmsr((mfmsr() & ~(MSR_SIBRC | MSR_SIBRCA)) | MSR_SEM);
 
     // Get DTS readings
     PPE_LVD(nest1Select + THERM_DTS_RESULT, value64);
@@ -93,4 +92,3 @@ uint32_t get_nest_dts(NestDts_t* o_data)
     return rc;
 
 }
-

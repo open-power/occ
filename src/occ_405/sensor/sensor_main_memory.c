@@ -102,6 +102,17 @@ typedef struct __attribute__ ((packed))
     MAIN_MEM_SENSOR(gsid_prefix##23 , smf_mode, master_only)
 
 /**
+ * Macro to build main_mem_sensor_t instance for all quads
+ */
+#define MAIN_MEM_QUAD_SENSORS(gsid_prefix, smf_mode, master_only) \
+    MAIN_MEM_SENSOR(gsid_prefix##0 , smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##1 , smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##2 , smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##3 , smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##4 , smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##5 , smf_mode, master_only)
+
+/**
  * Macro to build main_mem_sensor_t instances for all memory DIMMs.
  */
 #define MAIN_MEM_DIMM_SENSORS(gsid_prefix, smf_mode, master_only) \
@@ -168,6 +179,8 @@ main_mem_sensor_t G_main_mem_sensors[] =
     MAIN_MEM_SENSOR              (VOLTVDDSENSE,   true,     false),
     MAIN_MEM_SENSOR              (VOLTVDN,        true,     false),
     MAIN_MEM_SENSOR              (VOLTVDNSENSE,   true,     false),
+    MAIN_MEM_CORE_SENSORS        (VOLTDROOPCNTC,  true,     false),
+    MAIN_MEM_QUAD_SENSORS        (VOLTDROOPCNTQ,  true,     false),
 
     // AMEC_SENSOR_TYPE_TEMP:     gsid            smf_mode  master_only
     MAIN_MEM_SENSOR              (TEMPNEST,       false,    false),

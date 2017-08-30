@@ -34,6 +34,10 @@
 
 #define THERM_DTS_RESULT        0x00050000
 
+#define MAX_NUM_CORES   24
+#define CORES_PER_QUAD  4
+#define MAX_NUM_QUADS   (MAX_NUM_CORES/CORES_PER_QUAD)
+
 typedef union dts_sensor_result_reg
 {
     uint64_t value;

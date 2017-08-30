@@ -366,7 +366,8 @@ const sensor_ptr_t G_amec_sensor_list[] =
   // ------------------------------------------------------
   // Quad Sensors (6 each)
   // ------------------------------------------------------
-  QUAD_SENSOR_PTRS( TEMPQ,          &g_amec_sys.proc[0].quad, tempq),
+  QUAD_SENSOR_PTRS( TEMPQ,           &g_amec_sys.proc[0].quad, tempq),
+  QUAD_SENSOR_PTRS( VOLTDROOPCNTQ,   &g_amec_sys.proc[0].quad, voltdroopcntq),
 
   // ------------------------------------------------------
   // Regulator Sensors
@@ -393,6 +394,7 @@ const sensor_ptr_t G_amec_sensor_list[] =
   CORE_SENSOR_PTRS( TEMPC,          &g_amec_sys.proc[0].core, tempc),
   CORE_SENSOR_PTRS( STOPDEEPREQC,   &g_amec_sys.proc[0].core, stopdeepreqc),
   CORE_SENSOR_PTRS( STOPDEEPACTC,   &g_amec_sys.proc[0].core, stopdeepactc),
+  CORE_SENSOR_PTRS( VOLTDROOPCNTC,  &g_amec_sys.proc[0].core, voltdroopcntc),
 
   // ------------------------------------------------------
   // Memory Sensors
@@ -546,6 +548,7 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   // Quad Sensors (6 each)
   // ------------------------------------------------------
   QUAD_MINI_SENSOR_PTRS_NULL( TEMPQ ),
+  QUAD_MINI_SENSOR_PTRS_NULL( VOLTDROOPCNTQ),
 
   // ------------------------------------------------------
   // Regulator Sensors
@@ -571,6 +574,7 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   CORE_MINI_SENSOR_PTRS_NULL(         TEMPC ),
   CORE_MINI_SENSOR_PTRS_NULL(  STOPDEEPREQC ),
   CORE_MINI_SENSOR_PTRS_NULL(  STOPDEEPACTC ),
+  CORE_MINI_SENSOR_PTRS_NULL(  VOLTDROOPCNTC),
 
   // ------------------------------------------------------
   // Memory Sensors
