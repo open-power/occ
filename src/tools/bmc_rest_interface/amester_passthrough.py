@@ -91,6 +91,7 @@ class AMESTER:
             raise Exception("Failed to identify OCCs \n" + r.text)
         self.occ_list = list(j['data'].keys())
         self.occ_list.sort()
+        self.occ_list=self.occ_list[1:]
         if not self.occ_list:  # No OCC Objects identified on the DBUS, OCCs may not be active
             raise Exception("No Active OCCs found! \n")
 
