@@ -832,6 +832,9 @@ void calculate_core_leakage( void )
         {
             // Incorporate quad off into leakage
             idc_vdd += g_wof->idc_quad;
+
+            // Add in 4 cores worth of off leakage
+            idc_vdd += g_wof->all_cores_off_iso * NUM_CORES_PER_QUAD /24;
         }
         else // Quad i is on
         {
@@ -913,19 +916,7 @@ void calculate_core_leakage( void )
 
             // After all cores within the current quad have been processed,
             // incorporate calculations for cores that were off into leakage
-            // Calculate quadx_BAD_OFF_cores
-            g_wof->quad_bad_off_cores[quad_idx] =
-            (g_wof->all_cores_off_iso * G_oppb.iddq.good_normal_cores[quad_idx])
-            / 24;
-
-            // Scale to nest temp and add to overall leakage
-            idc_vdd +=
-            (scale(g_wof->quad_bad_off_cores[quad_idx],
-                 (g_wof->tempnest_sensor -
-                 (G_oppb.iddq.avgtemp_all_cores_off_caches_off[quad_v_idx]>>1))))
-            * num_cores_off_in_quad;
-            // After all cores have been processed in current quad, multiply
-            // the scaled value by the numer of cores that were off.
+            idc_vdd += g_wof->all_cores_off_iso * num_cores_off_in_quad /24;
 
             // Incorporate the cache into leakage calculation.
             // scale from nest to quad
@@ -1075,9 +1066,11 @@ void calculate_ceff_ratio_vdd( void )
                                                  g_wof->c_ratio_vdd_freq );
     // Calculate ceff_vdd
     // iac_vdd / (Vclip^1.3 * Fclip)
+    // NOTE: WOF Phase 1 to use VOLTVDDSENSE. Phase 2 will use v_clip
     g_wof->ceff_vdd =
                 calculate_effective_capacitance( g_wof->iac_vdd,
-                                                 (g_wof->v_clip*10), // mV->100uV
+                                               //(g_wof->v_clip*10),// mV->100uV
+                                                 g_wof->voltvddsense_sensor,
                                                  g_wof->f_clip_freq );
 
     // Prevent divide by zero
