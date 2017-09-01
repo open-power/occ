@@ -408,6 +408,7 @@ enum
     DBG_GRP_OFFSET              = 0x001BFC50,
     DBG_UNIT_OFFSET             = 0x001BFC58,
     DBG_TICS_OFFSET             = 0x001BFC60,
+    DBG_MARK                    = 0x001BFC68,
 //////////////////////////////////////////////////
     //cntl status values
     CNTL_STATUS_INIT            = 0x0,
@@ -436,6 +437,7 @@ enum
     //cntl cmd uav temp
     //CNTL_UAV_TEMP               = 0xFFFF807000000000,
     CNTL_UAV_TEMP               = 0x8000007000000000,
+    MARKER                      = 0xCAFEBABEFA11DEAD,
     //cntl block modes
     CNTL_MODE_MONITOR           = 0x0
 };

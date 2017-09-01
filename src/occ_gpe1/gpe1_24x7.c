@@ -86,6 +86,7 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
     static volatile uint64_t* L_mode = (uint64_t*) (CNTL_MODE_OFFSET | PBA_ENABLE);
     //
     static volatile uint64_t* L_tics_exceded = (uint64_t*) (DBG_TICS_OFFSET | PBA_ENABLE);
+    static volatile uint64_t* L_marker = (uint64_t*) (DBG_MARK | PBA_ENABLE);
     args->error.error = 0; // default success
     args->error.ffdc = 0;
        
@@ -173,6 +174,10 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
         L_configure = true;
         L_cur_speed = *L_speed;
         G_CUR_UAV = *L_uav;
+//SW399904 patch until HWP output for UAV is debugged.
+        G_CUR_UAV = CNTL_UAV_TEMP;
+        *L_marker = MARKER;
+//
         set_speed(&L_cur_speed,&L_CUR_DELAY,L_status);
         //set the state to 1 if reconfig is required. config scoms are split across multiple states starting from 1.
         L_current_state = 1;
