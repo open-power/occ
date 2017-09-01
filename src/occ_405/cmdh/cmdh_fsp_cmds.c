@@ -364,7 +364,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
             if(G_amec_sensor_list[TEMPGPU0 + k]->ipmi_sid)  // temp
                l_tempSensorList[l_sensorHeader.count].id = G_amec_sensor_list[TEMPGPU0 + k]->ipmi_sid;
             else
-               l_tempSensorList[l_sensorHeader.count].id = 0x47505500 | k;  // temp
+               l_tempSensorList[l_sensorHeader.count].id = 0xC6 + (9 * G_pbax_id.chip_id) + (k*3); // temp
             l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_GPU;
             l_tempSensorList[l_sensorHeader.count].value = (G_amec_sensor_list[TEMPGPU0 + k]->sample) & 0xFF;
             l_sensorHeader.count++;
@@ -373,7 +373,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
             if(G_amec_sensor_list[TEMPGPU0 + k]->ipmi_sid)  // temp
                l_tempSensorList[l_sensorHeader.count].id = G_amec_sensor_list[TEMPGPU0MEM + k]->ipmi_sid;
             else
-               l_tempSensorList[l_sensorHeader.count].id = 0x47505500 | k;  // temp
+               l_tempSensorList[l_sensorHeader.count].id = 0xC7 + (9 * G_pbax_id.chip_id) + (k*3); // temp
             l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_GPU_MEM;
             l_tempSensorList[l_sensorHeader.count].value = (G_amec_sensor_list[TEMPGPU0MEM + k]->sample) & 0xFF;
             l_sensorHeader.count++;

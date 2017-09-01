@@ -30,9 +30,9 @@
  * the OCC sensors to main memory.  See the header file for more information.
  */
 
-//******************************************************************************
+//******************************************************************************/
 // Includes
-//******************************************************************************
+//******************************************************************************/
 #include <sensor_main_memory.h>     // Primary header
 #include <stdint.h>                 // For uint*_t
 #include <string.h>                 // For memset(), memcpy()
@@ -48,9 +48,9 @@
 #include <cmdh_fsp_cmds.h>          // For G_apss_ch_to_function
 
 
-//******************************************************************************
+//******************************************************************************/
 // Main Memory Sensors - Private Defines/Structs/Globals
-//******************************************************************************
+//******************************************************************************/
 
 /**
  * Main memory sensor struct.  Represents one OCC sensor that should be copied
@@ -173,16 +173,22 @@ main_mem_sensor_t G_main_mem_sensors[] =
     MAIN_MEM_SENSOR              (TEMPNEST,       false,    false),
     MAIN_MEM_CORE_SENSORS        (TEMPPROCTHRMC,  false,    false),
     MAIN_MEM_DIMM_SENSORS        (TEMPDIMM,       false,    false),
-                                 
+    MAIN_MEM_SENSOR              (TEMPGPU0,       false,    false),
+    MAIN_MEM_SENSOR              (TEMPGPU1,       false,    false),
+    MAIN_MEM_SENSOR              (TEMPGPU2,       false,    false),
+    MAIN_MEM_SENSOR              (TEMPGPU0MEM,    false,    false),
+    MAIN_MEM_SENSOR              (TEMPGPU1MEM,    false,    false),
+    MAIN_MEM_SENSOR              (TEMPGPU2MEM,    false,    false),
+
     // AMEC_SENSOR_TYPE_UTIL:     gsid            smf_mode  master_only
     MAIN_MEM_CORE_SENSORS        (UTILC,          false,    false),
     MAIN_MEM_SENSOR              (UTIL,           false,    false),
     MAIN_MEM_CORE_SENSORS        (NUTILC,         false,    false),
-                                 
+
     // AMEC_SENSOR_TYPE_FREQ:     gsid            smf_mode  master_only
     MAIN_MEM_SENSOR              (FREQA,          true,     false),
     MAIN_MEM_CORE_SENSORS        (FREQAC,         true,     false),
-                                 
+
     // AMEC_SENSOR_TYPE_POWER:    gsid            smf_mode  master_only
     MAIN_MEM_SENSOR              (PWRSYS,         true,     true ),
     MAIN_MEM_SENSOR              (PWRGPU,         true,     false),
@@ -191,7 +197,7 @@ main_mem_sensor_t G_main_mem_sensors[] =
     MAIN_MEM_SENSOR              (PWRVDD,         true,     false),
     MAIN_MEM_SENSOR              (PWRVDN,         true,     false),
     MAIN_MEM_SENSOR              (PWRMEM,         true,     false),
-                                 
+
     // AMEC_SENSOR_TYPE_PERF:     gsid            smf_mode  master_only
     MAIN_MEM_SENSOR              (IPS,            false,    false),
     MAIN_MEM_CORE_SENSORS        (STOPDEEPACTC,   true,     false),
@@ -288,7 +294,7 @@ bool G_mm_sensors_bce_req_scheduled = false;
  *                               ^
  *                               |
  *                               field to modify later
- *   
+ *
  *   AA is the two byte value of field A, BBBB is the four byte value of field
  *   B, etc.
  *
@@ -774,7 +780,7 @@ void mm_sensors_save_last_write(uint32_t i_main_mem_addr, size_t i_byte_count)
         // Copy last 128 bytes into last write buffer
         memcpy(G_mm_sensors_last_write_buf, &G_mm_sensors_bce_buffer[l_offset],
                MM_SENSORS_MIN_WRITE_SIZE);
-        
+
         // Save main memory address where last 128 bytes were written
         G_mm_sensors_last_write_buf_addr = i_main_mem_addr + l_offset;
     }
@@ -984,7 +990,7 @@ void mm_sensors_write_sensor_names(void)
 
     // If we previously wrote bytes to the same 128-byte aligned address, copy
     // those bytes from the last write buffer.  This will retain the value of
-    // the bytes that precede the current names entry. 
+    // the bytes that precede the current names entry.
     if (G_mm_sensors_last_write_buf_addr == l_write_addr)
     {
         memcpy(G_mm_sensors_bce_buffer, G_mm_sensors_last_write_buf,
@@ -1181,7 +1187,7 @@ void mm_sensors_init_readings_counter(const main_mem_sensor_t * i_mm_sensor,
 /**
  * Stores sensor readings in the BCE buffer at the specified offset for the
  * specified sensor.
- * 
+ *
  * @param i_mm_sensor Main memory sensor whose readings to store
  * @param i_bce_buf_offset Offset in BCE buffer where readings should be stored
  * @param io_readings_offset Offset to current sensor's readings within Sensor

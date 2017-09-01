@@ -357,6 +357,20 @@ void mark_gpu_failed(const gpu_sm_args_t *i_arg)
             (true == g_amec->gpu[gpu_id].status.readOnce))
         {
             G_gpu_state = GPU_STATE_IDLE;
+
+            // Something has gone wrong and it may be that OPAL has put
+            // the GPU into reset. For now, if this happens we will just
+            // continue polling the GPU until it comes back.
+            g_amec->gpu[gpu_id].status.readOnce = false;
+            g_amec->gpu[gpu_id].status.checkDriverLoaded = true;
+            g_amec->gpu[gpu_id].status.driverLoaded = false;
+            g_amec->gpu[gpu_id].status.checkMemTempSupport = true;
+            g_amec->gpu[gpu_id].status.memTempSupported = false;
+            g_amec->gpu[gpu_id].status.memErrorCount = 0;
+            g_amec->gpu[gpu_id].status.errorCount = 0;
+
+// This code can be used if an interlock with OPAL is ever introduced
+#if 0
             // Disable this GPU, collect FFDC and log error
             g_amec->gpu[gpu_id].status.disabled = true;
 
@@ -395,6 +409,7 @@ void mark_gpu_failed(const gpu_sm_args_t *i_arg)
             }
 
             commitErrl(&l_err);
+#endif
         }
     } while(0);
 
@@ -626,7 +641,7 @@ bool gpu_reset_sm()
                     {
                         L_consec_reset_failure_count++;
                         L_state_retry_count = 0;
-                        L_reset_state = GPU_RESET_STATE_RESET_MASTER;
+                        L_reset_state = GPU_RESET_STATE_NEW;
                     }
                 }  // else reset attempt failed
             }  // else GPE supports GPU
@@ -718,7 +733,7 @@ bool gpu_read_temp_sm()
     uint16_t l_temp = 0;
     static bool L_scheduled = FALSE;  // indicates if a GPU GPE request was scheduled
     static uint8_t L_read_failure_count = 0; // Used for I2C errors
-
+    static bool L_trace_success = FALSE;
     static gpuReadTempState_e L_read_temp_state = GPU_STATE_READ_TEMP_NEW;  // 1st state for reading temp
 
     if (async_request_is_idle(&G_gpu_op_request.request))
@@ -766,8 +781,15 @@ bool gpu_read_temp_sm()
                     (0 != G_gpu_op_req_args.data) ) // TODO: check for valid temp?
                 {
                     g_amec->gpu[G_current_gpu_id].status.readOnce = true;
-                    TRAC_INFO("First successful attempt to read temp from GPU%d was on tick %d",
-                               G_current_gpu_id, CURRENT_TICK);
+
+                    // Only trace this once
+                    if(FALSE == L_trace_success)
+                    {
+                        TRAC_INFO("First successful attempt to read temp from GPU%d was on tick %d",
+                                   G_current_gpu_id, CURRENT_TICK);
+                        L_trace_success = TRUE;
+                    }
+
                     // comm is now established update for capability checking to take place
                     g_amec->gpu[G_current_gpu_id].status.checkMemTempSupport = TRUE;
                     g_amec->gpu[G_current_gpu_id].status.checkDriverLoaded = TRUE;
@@ -1546,8 +1568,21 @@ void task_gpu_sm(struct task *i_self)
            if(G_gpu_i2c_reset_required)
            {
                G_gpu_i2c_reset_required = FALSE;
-               G_gpu_state = GPU_STATE_RESET;
-               l_start_next_state = TRUE;
+
+               // before starting the reset check if OPAL needs the lock
+               L_occ_owns_lock = check_and_update_i2c_lock(GPU_I2C_ENGINE);
+               if (L_occ_owns_lock)
+               {
+                   // We still own the lock start the reset
+                   G_gpu_state = GPU_STATE_RESET;
+                   l_start_next_state = TRUE;
+               }
+               else
+               {
+                   // We don't own the lock, the reset will happen when we get the lock back
+                   G_gpu_state = GPU_STATE_NO_LOCK;
+                   l_start_next_state = FALSE;
+               }
                break;
            }
            else if(G_gpu_state == GPU_STATE_IDLE)
