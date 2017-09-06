@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2014,2016
+# Contributors Listed Below - COPYRIGHT 2014,2017
 # [+] International Business Machines Corp.
 #
 #
@@ -28,6 +28,10 @@ endif
 
 ifndef BASE_SRCDIR
 BASE_SRCDIR = $(abspath ./)
+endif
+
+ifndef BASE_BINDIR
+BASE_BINDIR = $(abspath ../bin)
 endif
 
 OBJDIR = $(BASE_OBJDIR)$(SUB_OBJDIR)
@@ -53,7 +57,11 @@ THASH	= $(PPETRACEPP_DIR)/tracehash.pl
 
 OCC_405_IMAGE_NAME = occ_405
 OCC_GPE0_IMAGE_NAME = occ_gpe0
+ifndef OPOCC_GPU_SUPPORT
 OCC_GPE1_IMAGE_NAME = occ_gpe1
+else
+OCC_GPE1_IMAGE_NAME = gpu_gpe1
+endif
 OCC_BOOTLOADER_DIR_NAME = occBootLoader
 OCC_BOOTLOADER_NAME = bootloader
 IMAGE_HDR_SCRIPT = imageHdrScript
@@ -62,12 +70,21 @@ COMBINE_IMAGE_SUBDIRS = occBootLoader occ_405 occ_gpe0 occ_gpe1
 COMBINEIMAGE = $(MAKE) combineImage -C $(dir)
 IMAGEFILE = $(OBJDIR)/image.bin
 
+
+ifndef OPOCC_GPU_SUPPORT
 NEEDED_IMAGES = \
      $(OBJDIR)/$(OCC_BOOTLOADER_DIR_NAME)/$(IMAGE_HDR_SCRIPT) \
      $(OBJDIR)/$(OCC_405_IMAGE_NAME)/$(OCC_405_IMAGE_NAME).out \
      $(OBJDIR)/$(OCC_GPE0_IMAGE_NAME)/$(OCC_GPE0_IMAGE_NAME).out \
      $(OBJDIR)/$(OCC_GPE1_IMAGE_NAME)/$(OCC_GPE1_IMAGE_NAME).out \
-     $(OBJDIR)/$(OCC_BOOTLOADER_DIR_NAME)/$(OCC_BOOTLOADER_NAME).out \
+     $(OBJDIR)/$(OCC_BOOTLOADER_DIR_NAME)/$(OCC_BOOTLOADER_NAME).out
+else
+NEEDED_IMAGES = \
+     $(OBJDIR)/$(OCC_BOOTLOADER_DIR_NAME)/$(IMAGE_HDR_SCRIPT) \
+     $(OBJDIR)/$(OCC_405_IMAGE_NAME)/$(OCC_405_IMAGE_NAME).out \
+     $(OBJDIR)/$(OCC_GPE0_IMAGE_NAME)/$(OCC_GPE0_IMAGE_NAME).out \
+     $(OBJDIR)/$(OCC_BOOTLOADER_DIR_NAME)/$(OCC_BOOTLOADER_NAME).out
+endif
 
 .PHONY : all
 all: ppetools $(NEEDED_IMAGES) combineImage tracehash
@@ -87,6 +104,7 @@ $(PPETOOLS_OBJDIR):
 .PHONY : needed_images
 needed_images: $(NEEDED_IMAGES)
 
+ifndef OPOCC_GPU_SUPPORT
 .PHONY : combineImage
 combineImage: $(NEEDED_IMAGES)
 	rm -rf $(IMAGEFILE)
@@ -97,6 +115,18 @@ combineImage: $(NEEDED_IMAGES)
 	$(OBJDIR)/$(OCC_GPE1_IMAGE_NAME)/$(OCC_GPE1_IMAGE_NAME).bin \
     t2 \
 	`md5sum $(OBJDIR)/$(OCC_405_IMAGE_NAME)/$(OCC_405_IMAGE_NAME).bin | cut -c 1-4`
+else
+.PHONY : combineImage
+combineImage: $(NEEDED_IMAGES)
+	rm -rf $(IMAGEFILE)
+	BASE_OBJDIR=$(BASE_OBJDIR) $(OBJDIR)/$(OCC_BOOTLOADER_DIR_NAME)/$(IMAGE_HDR_SCRIPT) \
+    $(OBJDIR)/$(OCC_BOOTLOADER_DIR_NAME)/$(OCC_BOOTLOADER_NAME).bin \
+	$(OBJDIR)/$(OCC_405_IMAGE_NAME)/$(OCC_405_IMAGE_NAME).bin \
+	$(OBJDIR)/$(OCC_GPE0_IMAGE_NAME)/$(OCC_GPE0_IMAGE_NAME).bin \
+	$(BASE_BINDIR)/$(OCC_GPE1_IMAGE_NAME).bin \
+    t2 \
+	`md5sum $(OBJDIR)/$(OCC_405_IMAGE_NAME)/$(OCC_405_IMAGE_NAME).bin | cut -c 1-4`
+endif
 
 #clean the obj directory
 .PHONY : clean

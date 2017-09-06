@@ -306,7 +306,7 @@ void occ_hw_error_isr(void *private, SsxIrqId irq, int priority)
     //set bit 50 of the OCC LFIR so that the PRDF component will log an error and callout the processor
     //TMGT will also see a problem and log an error but it will be informational.
 
-    // TODO: Determine how to set this without a SCOM.
+    // TODO: Determine how to set this without a SCOM. (RTC 134619)
 
     //Halt occ so that hardware will enter safe mode
     OCC_HALT(ERRL_RC_OCC_HW_ERROR);
