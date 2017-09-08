@@ -39,6 +39,7 @@
 //#define AVSDEBUG
 
 #ifdef AVSDEBUG
+#define DEBUG_TRACE_MAX  1
 static bool G_trace_scoms = TRUE;
   #define AVS_DBG(frmt,args...)  TRAC_INFO(frmt,##args)
   #define DEBUG_IN32(reg, result, name) if (G_trace_scoms) { TRAC_INFO(" in32(%08X) returned 0x%08X  "name, reg, result); }
@@ -73,7 +74,78 @@ const uint8_t     MAX_READ_ATTEMPTS = 8;
 const uint16_t    AVSBUS_STATUS_READ_ERROR = 0xFFFF;
 extern data_cnfg_t * G_data_cnfg;
 
+uint32_t avs_crc_calculate(const uint32_t i_avs_cmd);
+
 // NOTE: OCC must use Bridge B, because Bridge A is reserved for PGPE
+
+
+// Clear OT/OC bit in status reg for both busses
+uint32_t deglitch_status_errors(const uint8_t i_bus, const uint32_t i_status_mask)
+{
+    // Determine register based on the bus number
+    uint32_t o2scmd_reg = OCB_O2SCMD0B;
+    uint32_t o2swd_reg = OCB_O2SWD0B;
+    uint32_t o2sst_reg = OCB_O2SST0B;
+    if (i_bus != 0)
+    {
+        o2scmd_reg = OCB_O2SCMD1B;
+        o2swd_reg = OCB_O2SWD1B;
+        o2sst_reg = OCB_O2SST1B;
+    }
+
+    // Write O2SCMD[a][n]
+    //   o2s_clear_sticky_bits = 1
+    uint32_t value = 0x40000000;
+    DEBUG_OUT32(o2scmd_reg, value, "OCB_O2SCMDxB");
+    out32(o2scmd_reg, value);
+
+    // To deglitch the status bits, set the status bits you wish to clear with a 1. (in CmdData)
+    // After the write completes, if the status is still active, then the
+    // signal must be solid failure.
+
+    TRAC_INFO("deglitch_status_errors(AVSBUS %d,0x%08X)", i_bus, i_status_mask);
+    // AVS Bus command (write staus):
+    //   0:1   StartCode = 0b01
+    //   2:3   Cmd = 0b00 (write+commit)
+    //   4     CmdGroup = 0b0 (AVSBus)
+    //   5:8   CmdDataType (STATUS = 01110b)
+    //   9:12  Select (All rails / broadcast = 01111b )
+    //   13:28 CmdData (status bits to clear)
+    //   29:31 CRC
+    //   01000DDD DRRRRXXX XXXXXXXX XXXXXCCC
+    //   01000111 01111--- -------- -----CCC
+    uint32_t cmd_data = AVSBUS_STATUS_OVER_CURRENT_MASK | AVSBUS_STATUS_OVER_TEMPERATURE_MASK;
+    value = 0x47780000 | (cmd_data << 3);
+    // Calculate/add CRC
+    value |= avs_crc_calculate(value);
+    DEBUG_OUT32(o2swd_reg, value, "OCB_O2SWDxB");
+    out32(o2swd_reg, value);
+
+    // Wait for operation to complete (clear ongoing)
+    uint32_t l_status = in32(o2sst_reg);
+    DEBUG_IN32(o2sst_reg, l_status, "OCB_O2SSTxB");
+    unsigned int loops = 0;
+    while ((l_status & AVSBUS_STATUS_ONGOING) && (loops < 500))
+    {
+        // o2s_ongoing bit was still set (operation did not complete)
+        l_status = in32(o2sst_reg);
+        ++loops;
+    }
+    DEBUG_IN32(o2sst_reg, l_status, "OCB_O2SSTxB");
+    if (0 != (l_status & AVSBUS_STATUS_ERRORS))
+    {
+        TRAC_ERR("deglitch_status_errors(): error in status register: 0x%08X", l_status);
+    }
+    else if (l_status & AVSBUS_STATUS_ONGOING) // o2s_ongoing
+    {
+        TRAC_ERR("deglitch_status_errors(): timeout waiting for ongoing bit to clear (%d loops) 0x%08X", loops, l_status);
+    }
+
+    // return the last read status
+    return l_status;
+
+} // end deglitch_status_errors()
+
 
 // AVS Bus setup that must be done once (common between read/write operations)
 void avsbus_init()
@@ -181,6 +253,11 @@ void avsbus_init()
         out32(OCB_O2SCTRL21B, value);
     }
 
+    // Clear OC/OT masks in the status reg
+    const uint32_t error_mask = AVSBUS_STATUS_OVER_CURRENT_MASK | AVSBUS_STATUS_OVER_TEMPERATURE_MASK;
+    deglitch_status_errors(0, error_mask);
+    deglitch_status_errors(1, error_mask);
+
 } // end avsbus_init()
 
 
@@ -263,8 +340,6 @@ void avsbus_read_start(const avsbus_type_e i_type,
 
     static uint32_t L_trace_count[ERRORCOUNT_MAXTYPES][ERRORCOUNT_MAXCMDS] = {{0}};
     uint32_t *      l_trace_count = &L_trace_count[i_type][l_cmd_index];
-    uint32_t DEBUG_TRACE_MAX = 2;
-
     if (*l_trace_count < DEBUG_TRACE_MAX)
     {
         TRAC_INFO("avsbus_read_start: Vd%c %c - bus[%d] rail[%d]",
@@ -356,7 +431,6 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
 #ifdef AVSDEBUG
     static uint32_t L_trace_count[ERRORCOUNT_MAXTYPES][ERRORCOUNT_MAXCMDS] = {{0}};
     uint32_t *      l_trace_count = &L_trace_count[i_type][l_cmd_index];
-    uint32_t DEBUG_TRACE_MAX = 2;
     if (*l_trace_count < DEBUG_TRACE_MAX)
     {
         TRAC_INFO("avsbus_read: Vd%c %c - bus[%d] rail[%d]",
@@ -393,7 +467,7 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
     //   8:63  reserved
     // GrrrrBrF rrrrrrrr rrrrrrrr rrrrrrrr
 
-    if (0 != (l_status & 0x05000000))
+    if (0 != (l_status & AVSBUS_STATUS_ERRORS))
     {
         // error bit was set
         l_failure = TRUE;
@@ -413,7 +487,7 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
             rc = AVSBUS_ERROR;
         }
     }
-    else if (l_status & 0x80000000) // o2s_ongoing
+    else if (l_status & AVSBUS_STATUS_ONGOING) // o2s_ongoing
     {
         // o2s_ongoing bit was still set (operation did not complete)
         l_failure = TRUE;
@@ -601,7 +675,6 @@ void initiate_avsbus_read_status()
 
 #ifdef AVSDEBUG
     static uint32_t L_trace_count = 0;
-    uint32_t DEBUG_TRACE_MAX = 2;
 #endif
 
     unsigned int index;
@@ -711,7 +784,6 @@ uint16_t avsbus_read_status(const avsbus_type_e i_type)
 
 #ifdef AVSDEBUG
     static uint32_t L_trace_count = 0;
-    uint32_t DEBUG_TRACE_MAX = 2;
     if (L_trace_count < DEBUG_TRACE_MAX)
     {
         TRAC_INFO("avsbus_read_status: Vd%c - bus[%d] rail[%d]",
@@ -748,7 +820,7 @@ uint16_t avsbus_read_status(const avsbus_type_e i_type)
     //   8:63  reserved
     // GrrrrBrF rrrrrrrr rrrrrrrr rrrrrrrr
 
-    if (0 != (l_status & 0x05000000))
+    if (0 != (l_status & AVSBUS_STATUS_ERRORS))
     {
         // error bit was set
         l_failure = TRUE;
@@ -768,7 +840,7 @@ uint16_t avsbus_read_status(const avsbus_type_e i_type)
             rc = AVSBUS_ERROR;
         }
     }
-    else if (l_status & 0x80000000) // o2s_ongoing
+    else if (l_status & AVSBUS_STATUS_ONGOING) // o2s_ongoing
     {
         // o2s_ongoing bit was still set (operation did not complete)
         l_failure = TRUE;
@@ -836,6 +908,7 @@ uint16_t avsbus_read_status(const avsbus_type_e i_type)
             //  5-7   reserved
             //  8-15  reserved
             o_reading = (value >> 8) & 0x0000FFFF;
+
 
 #ifdef AVSDEBUG
             static uint16_t L_lastReading = 0;
@@ -917,6 +990,14 @@ uint8_t process_avsbus_status()
     uint8_t  foundOC = 0;
     uint16_t vdd_status = 0;
     uint16_t vdn_status = 0;
+    static bool L_vdd_ot_found = FALSE;
+    static bool L_vdd_oc_found = FALSE;
+    static bool L_vdn_ot_found = FALSE;
+    static bool L_vdn_oc_found = FALSE;
+    static bool L_vdd_ot_counted = FALSE;
+    static bool L_vdd_oc_counted = FALSE;
+    static bool L_vdn_ot_counted = FALSE;
+    static bool L_vdn_oc_counted = FALSE;
 
     if (G_vrm_thermal_monitoring)
     {
@@ -925,16 +1006,67 @@ uint8_t process_avsbus_status()
             vdd_status = avsbus_read_status(AVSBUS_VDD);
             if (vdd_status != AVSBUS_STATUS_READ_ERROR)
             {
-                if (vdd_status & AVSBUS_STATUS_OVER_TEMPERATURE_MASK)
+                if ((vdd_status & (AVSBUS_STATUS_OVER_TEMPERATURE_MASK|AVSBUS_STATUS_OVER_CURRENT_MASK)) == 0)
                 {
-                    foundOT = 1;
-                    INCREMENT_ERR_HISTORY(ERRH_AVSBUS_VDD_OVER_TEMPERATURE);
+                    // No OT/OC errors found
+                    if (L_vdd_ot_found) TRAC_INFO("process_avsbus_status: Vdd OT cleared");
+                    L_vdd_ot_found = FALSE;
+                    L_vdd_ot_counted = FALSE;
+                    if (L_vdd_oc_found) TRAC_INFO("process_avsbus_status: Vdd OC cleared");
+                    L_vdd_oc_found = FALSE;
+                    L_vdd_oc_counted = FALSE;
                 }
-
-                if (vdd_status & AVSBUS_STATUS_OVER_CURRENT_MASK)
+                else
                 {
-                    foundOC = 1;
-                    INCREMENT_ERR_HISTORY(ERRH_AVSBUS_VDD_OVER_CURRENT);
+                    // Deglitch error if needed
+                    uint32_t deglitch_mask = 0;
+                    if ((vdd_status & AVSBUS_STATUS_OVER_TEMPERATURE_MASK) && (!L_vdd_ot_found))
+                    {
+                        deglitch_mask |= AVSBUS_STATUS_OVER_TEMPERATURE_MASK;
+                        L_vdd_ot_found = TRUE;
+                    }
+                    if ((vdd_status & AVSBUS_STATUS_OVER_CURRENT_MASK) && (!L_vdd_oc_found))
+                    {
+                        deglitch_mask |= AVSBUS_STATUS_OVER_CURRENT_MASK;
+                        L_vdd_oc_found = TRUE;
+                    }
+                    if (deglitch_mask)
+                    {
+                        // Deglitch error bit(s)
+                        deglitch_status_errors(G_sysConfigData.avsbus_vdd.bus, deglitch_mask);
+
+                        // Clear error bit(s) since could be false reading
+                        vdd_status &= (~deglitch_mask);
+                    }
+
+                    // Process error (if already deglitched)
+                    if (vdd_status & AVSBUS_STATUS_OVER_TEMPERATURE_MASK)
+                    {
+                        foundOT = 1;
+                        if (!L_vdd_ot_counted)
+                        {
+                            INCREMENT_ERR_HISTORY(ERRH_AVSBUS_VDD_OVER_TEMPERATURE);
+                            L_vdd_ot_counted = TRUE;
+                        }
+                    }
+                    else
+                    {
+                        L_vdd_ot_counted = FALSE;
+                    }
+
+                    if (vdd_status & AVSBUS_STATUS_OVER_CURRENT_MASK)
+                    {
+                        foundOC = 1;
+                        if (!L_vdd_oc_counted)
+                        {
+                            INCREMENT_ERR_HISTORY(ERRH_AVSBUS_VDD_OVER_CURRENT);
+                            L_vdd_oc_counted = TRUE;
+                        }
+                    }
+                    else
+                    {
+                        L_vdd_oc_counted = FALSE;
+                    }
                 }
             }
             else
@@ -948,20 +1080,71 @@ uint8_t process_avsbus_status()
             vdn_status = avsbus_read_status(AVSBUS_VDN);
             if (vdn_status != AVSBUS_STATUS_READ_ERROR)
             {
-                if (vdn_status & AVSBUS_STATUS_OVER_TEMPERATURE_MASK)
+                if ((vdn_status & (AVSBUS_STATUS_OVER_TEMPERATURE_MASK|AVSBUS_STATUS_OVER_CURRENT_MASK)) == 0)
                 {
-                    // if no Vdd error, update OT result
-                    if (foundOT != 0xFF)
-                    {
-                        foundOT = 1;
-                    }
-                    INCREMENT_ERR_HISTORY(ERRH_AVSBUS_VDN_OVER_TEMPERATURE);
+                    // No OT/OC errors found
+                    if (L_vdn_ot_found) TRAC_INFO("process_avsbus_status: Vdn OT cleared");
+                    L_vdn_ot_found = FALSE;
+                    L_vdn_ot_counted = FALSE;
+                    if (L_vdn_oc_found) TRAC_INFO("process_avsbus_status: Vdn OC cleared");
+                    L_vdn_oc_found = FALSE;
+                    L_vdn_oc_counted = FALSE;
                 }
-
-                if (vdn_status & AVSBUS_STATUS_OVER_CURRENT_MASK)
+                else
                 {
-                    foundOC = 1;
-                    INCREMENT_ERR_HISTORY(ERRH_AVSBUS_VDN_OVER_CURRENT);
+                    // Deglitch error if needed
+                    uint32_t deglitch_mask = 0;
+                    if ((vdn_status & AVSBUS_STATUS_OVER_TEMPERATURE_MASK) && (!L_vdn_ot_found))
+                    {
+                        deglitch_mask |= AVSBUS_STATUS_OVER_TEMPERATURE_MASK;
+                        L_vdn_ot_found = TRUE;
+                    }
+                    if ((vdn_status & AVSBUS_STATUS_OVER_CURRENT_MASK) && (!L_vdn_oc_found))
+                    {
+                        deglitch_mask |= AVSBUS_STATUS_OVER_CURRENT_MASK;
+                        L_vdn_oc_found = TRUE;
+                    }
+                    if (deglitch_mask)
+                    {
+                        // Deglitch error bit(s)
+                        deglitch_status_errors(G_sysConfigData.avsbus_vdn.bus, deglitch_mask);
+
+                        // Clear error bit(s) since could be false reading
+                        vdn_status &= (~deglitch_mask);
+                    }
+
+                    // Process error (if already deglitched)
+                    if (vdn_status & AVSBUS_STATUS_OVER_TEMPERATURE_MASK)
+                    {
+                        // if no Vdd error, update OT result
+                        if (foundOT != 0xFF)
+                        {
+                            foundOT = 1;
+                        }
+                        if (!L_vdn_ot_counted)
+                        {
+                            INCREMENT_ERR_HISTORY(ERRH_AVSBUS_VDN_OVER_TEMPERATURE);
+                            L_vdn_ot_counted = TRUE;
+                        }
+                    }
+                    else
+                    {
+                        L_vdn_ot_counted = FALSE;
+                    }
+
+                    if (vdn_status & AVSBUS_STATUS_OVER_CURRENT_MASK)
+                    {
+                        foundOC = 1;
+                        if (!L_vdn_oc_counted)
+                        {
+                            INCREMENT_ERR_HISTORY(ERRH_AVSBUS_VDN_OVER_CURRENT);
+                            L_vdn_oc_counted = TRUE;
+                        }
+                    }
+                    else
+                    {
+                        L_vdn_oc_counted = FALSE;
+                    }
                 }
             }
             else

@@ -36,6 +36,9 @@ extern bool G_avsbus_vdn_monitoring;
 #define AVSBUS_STATUS_OVER_TEMPERATURE_MASK 0x1000
 #define AVSBUS_STATUS_OVER_POWER_MASK       0x0800
 
+#define AVSBUS_STATUS_ONGOING 0x80000000 // o2s_ongoing
+#define AVSBUS_STATUS_ERRORS  0x05000000 // write_while_bridge_busy_error | FSM error
+
 typedef enum
 {
     AVSBUS_VDD = 0x00,
