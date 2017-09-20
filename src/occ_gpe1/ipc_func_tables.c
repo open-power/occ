@@ -32,6 +32,7 @@ void gpe1_nop(ipc_msg_t* cmd, void* arg);
 void gpe_reset_mem_deadman(ipc_msg_t* cmd, void* arg);
 void gpe_24x7(ipc_msg_t* cmd, void* arg);
 void gpe_mem_power_control(ipc_msg_t* cmd, void* arg);
+void gpe_gpu_init(ipc_msg_t* cmd, void* arg);
 
 #ifdef OCC_GPU_SUPPORT
 void gpe_gpu_sm(ipc_msg_t* cmd, void* arg);
@@ -82,7 +83,7 @@ IPC_HANDLER(gpe_reset_mem_deadman, 0)      // 3 - IPC_ST_RESET_MEM_DEADMAN
 IPC_HANDLER(gpe_24x7, 0)                   // 4 - IPC_ST_24_X_7_FUNCID
 IPC_HANDLER(gpe_mem_power_control, 0)      // 5 - IPC_ST_MEM_POWER_CONTROL_FUNCID
 IPC_HANDLER(gpe_gpu_sm, 0)                 // 6 - IPC_ST_GPU_SM_FUNCID
-IPC_HANDLER_DEFAULT                        // 7
+IPC_HANDLER(gpe_gpu_init, 0)               // 7 - IPC_ST_GPE_GPU_INIT_FUNCID
 IPC_HANDLER_DEFAULT                        // 8
 IPC_HANDLER_DEFAULT                        // 9
 IPC_HANDLER_DEFAULT                        // 10

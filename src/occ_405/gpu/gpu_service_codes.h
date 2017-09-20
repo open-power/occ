@@ -42,6 +42,7 @@ enum gpuModuleId
     GPU_MID_GPU_CHECK_DRIVER_LOADED   =  GPU_COMP_ID | 0x09,
     GPU_MID_GPU_READ_PWR_LIMIT        =  GPU_COMP_ID | 0x0A,
     GPU_MID_GPU_SET_PWR_LIMIT         =  GPU_COMP_ID | 0x0B,
+    GPU_MID_GPE_GPU_INIT_SCHED_REQ    =  GPU_COMP_ID | 0x0C,
 };
 
 #endif /* #ifndef _GPU_SERVICE_CODES_H_ */

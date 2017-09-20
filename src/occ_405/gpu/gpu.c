@@ -81,9 +81,11 @@ uint32_t G_gpu_reset_cause = 0;
 
 // GPE Requests
 GpeRequest G_gpu_op_request;
+GpeRequest G_gpu_init_request;
 
 // GPE arguments
 GPE_BUFFER(gpu_sm_args_t  G_gpu_op_req_args);
+GPE_BUFFER(gpu_init_args_t G_gpu_init_args);
 
 gpu_sm_args_t G_new_gpu_req_args = {{{{0}}}};
 
@@ -444,6 +446,49 @@ void disable_all_gpus(void)
     }
 }
 
+
+// schedule request to init gpu info on gpe1
+void schedule_gpe_gpu_init_req()
+{
+    errlHndl_t err = NULL;
+    int rc = 0;
+
+    memset(&G_gpu_init_args, 0, sizeof(G_gpu_init_args));
+    // Need to add gpu i2c info
+    // G_gpu_init_args.gpu_i2c
+
+
+    rc = gpe_request_schedule(&G_gpu_init_request);
+    if (rc)
+    {
+        INTR_TRAC_ERR
+            ("schedule_gpe_gpu_init_req: gpe gpu init schedule failed w/rc=0x%08X", rc);
+        /*
+         * @errortype
+         * @moduleid    GPU_MID_GPE_GPU_INIT_SCHED_REQ
+         * @reasoncode  SSX_GENERIC_FAILURE
+         * @userdata1   GPE schedule returned code
+         * @userdata4   ERC_GPU_SCHEDULE_FAILURE
+         * @devdesc     Failed to schedule GPE GPU initial request
+         */
+        err = createErrl(GPU_MID_GPE_GPU_INIT_SCHED_REQ,
+                         SSX_GENERIC_FAILURE,
+                         ERC_GPU_SCHEDULE_FAILURE,
+                         ERRL_SEV_PREDICTIVE,
+                         NULL,
+                         DEFAULT_TRACE_SIZE,
+                         rc,
+                         0);
+        commitErrl(&err);
+
+        // release I2C lock to the host for this engine and stop monitoring
+        occ_i2c_lock_release(GPU_I2C_ENGINE);
+        G_gpu_monitoring_allowed = FALSE;
+    }
+
+}
+
+
 // Create GPU IPC requests
 void gpu_ipc_init()
 {
@@ -465,6 +510,22 @@ void gpu_ipc_init()
         if (rc)
         {
             TRAC_ERR("gpu_ipc_init: Failed to create GPE1 IPC request for GPU op req (rc=%d)", rc);
+            break;
+        }
+
+        // Initialize GPU support on GPE1
+        GPU_DBG("gpu_ipc_init: Creating GPE1 IPC request for GPU initialization");
+        rc = gpe_request_create(&G_gpu_init_request,
+                                &G_async_gpe_queue1,
+                                IPC_ST_GPE_GPU_INIT_FUNCID,
+                                &G_gpu_init_args,
+                                SSX_WAIT_FOREVER,
+                                NULL, // no callback
+                                NULL, // no args
+                                ASYNC_CALLBACK_IMMEDIATE);
+        if (rc)
+        {
+            TRAC_ERR("gpu_ipc_init: Failed to create GPE1 GPU init request. (rc=%d)", rc);
             break;
         }
     }
@@ -494,6 +555,11 @@ void gpu_ipc_init()
         // release I2C lock to the host for this engine and stop monitoring
         occ_i2c_lock_release(GPU_I2C_ENGINE);
         G_gpu_monitoring_allowed = FALSE;
+    }
+    else
+    {
+        //  gpe gpu init only needs to be done once, so do it here.
+        schedule_gpe_gpu_init_req();
     }
 }
 

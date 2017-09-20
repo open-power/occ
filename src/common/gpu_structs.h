@@ -98,5 +98,19 @@ typedef struct
   uint64_t data[3];
 } gpu_sm_args_t;
 
+typedef struct
+{
+    uint32_t pib_master;
+    uint32_t bus_voltage;
+    uint32_t port[MAX_GPUS];
+    uint32_t addr[MAX_GPUS];
+} gpu_i2c_info_t;
+
+typedef struct
+{
+  GpeErrorStruct error;
+  gpu_i2c_info_t  gpu_i2c;
+} gpu_init_args_t;
+
 #endif // _GPU_STRUCTS_H
 

@@ -55,4 +55,6 @@
 #define GPE_RC_GPU_DRIVER_CHANGE     0x81     // GPU in transition or just completed phase change
 #define GPE_RC_GPU_CMD_NOT_SUPPORTED 0x82     // GPU rejected command with no support
 #define GPE_RC_GPU_CMD_FAILED        0x83     // An error occurred in the last GPU operation
+#define GPE_RC_GPU_INIT_FAILED       0x84     // Failed to init GPU
+
 #endif //_GPE_ERR_H
