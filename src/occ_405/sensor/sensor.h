@@ -100,6 +100,7 @@ typedef enum
     AMEC_SENSOR_LOC_OCC         = 0x0020,
     AMEC_SENSOR_LOC_CORE        = 0x0040,
     AMEC_SENSOR_LOC_GPU         = 0x0080,
+    AMEC_SENSOR_LOC_QUAD        = 0x0100,
     AMEC_SENSOR_LOC_ALL         = 0xffff,
 }AMEC_SENSOR_LOC;
 
