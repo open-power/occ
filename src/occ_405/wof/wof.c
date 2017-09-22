@@ -1389,28 +1389,36 @@ void set_clear_wof_disabled( uint8_t i_action,
     // Check for error
     if( l_logError )
     {
-        // Create error log
-        /** @errortype
-         *  @moduleid   SET_CLEAR_WOF_DISABLED
-         *  @reasoncode WOF_DISABLED_RC
-         *  @userdata1  current wof_disabled
-         *  @userdata2  Bit requested to be set
-         *  @userdata4  OCC_NO_EXTENDED_RC
-         *  @devdesc    WOF has been disabled due to an error
-         */
-        l_errl = createErrl(
-                    SET_CLEAR_WOF_DISABLED,
-                    WOF_DISABLED_RC,
-                    OCC_NO_EXTENDED_RC,
-                    ERRL_SEV_UNRECOVERABLE,
-                    NULL,
-                    DEFAULT_TRACE_SIZE,
-                    g_wof->wof_disabled,
-                    i_bit_mask );
+        if( g_wof->wof_disabled & SUPPRESS_ERROR_RC )
+        {
+            INTR_TRAC_ERR("Encountered an error, but WOF is off. RC: 0x%08x",
+                    i_bit_mask);
+        }
+        else
+        {
+            // Create error log
+            /** @errortype
+             *  @moduleid   SET_CLEAR_WOF_DISABLED
+             *  @reasoncode WOF_DISABLED_RC
+             *  @userdata1  current wof_disabled
+             *  @userdata2  Bit requested to be set
+             *  @userdata4  OCC_NO_EXTENDED_RC
+             *  @devdesc    WOF has been disabled due to an error
+             */
+            l_errl = createErrl(
+                        SET_CLEAR_WOF_DISABLED,
+                        WOF_DISABLED_RC,
+                        OCC_NO_EXTENDED_RC,
+                        ERRL_SEV_UNRECOVERABLE,
+                        NULL,
+                        DEFAULT_TRACE_SIZE,
+                        g_wof->wof_disabled,
+                        i_bit_mask );
 
-        // commit the error log
-        commitErrl( &l_errl );
-        L_errorLogged = true;
+            // commit the error log
+            commitErrl( &l_errl );
+            L_errorLogged = true;
+        }
     }
 }
 

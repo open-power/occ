@@ -74,10 +74,16 @@
 //***************************************************************************
 #define PSTATE_TBL_ADDR 0xFFF2B85C
 
+
 // Reason codes which should NOT create an error log should be added here
 #define ERRL_RETURN_CODES ~(WOF_RC_MODE_CHANGE  | \
                             WOF_RC_STATE_CHANGE | \
                             WOF_RC_MODE_NO_SUPPORT_MASK)
+
+// Reason codes that if set, should suppress all other unrecoverable errors.
+#define SUPPRESS_ERROR_RC ~(ERRL_RETURN_CODES)
+
+
 
 // Enumeration to define the WOF initialization steps
 enum wof_init_states
