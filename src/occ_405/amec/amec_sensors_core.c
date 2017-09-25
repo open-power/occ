@@ -342,7 +342,6 @@ void amec_calc_freq_and_util_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
   uint32_t temp32      = 0;
   uint32_t temp32a     = 0;
   uint16_t temp16      = 0;
-  uint16_t temp16a     = 0;
   uint16_t l_core_util = 0;
   uint16_t l_core_freq = 0;
   uint16_t l_time_interval = 0;
@@ -425,9 +424,7 @@ void amec_calc_freq_and_util_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
   temp32 = temp32 - temp32a;
 
   temp32 = temp32 >> 8;       // Drop non-significant bits
-  temp16 = (uint16_t) temp32; // Cast to uint16 for mult below
-  temp16a = 10000;            // Mult * 10000 to get finer resolution for 0.01%
-  temp32 = ((uint32_t)temp16a)*((uint32_t)temp16);
+  temp32 = temp32 * 10000;    // .01% resolution
 
   temp32a = l_cycles4ms;   // Get Raw cycles
   temp32a = temp32a >> 8;  // Drop non-significant bits
@@ -478,9 +475,7 @@ void amec_calc_freq_and_util_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
     temp32 = temp32 - temp32a;
 
     temp32 = temp32 >> 8;        // Drop non-significant bits
-    temp16 = (uint16_t) temp32;  // Cast to uint16 for mult below
-    temp16a = 10000;             // Mult * 10000 to get finer resolution for 0.01%
-    temp32 = ((uint32_t)temp16a)*((uint32_t)temp16);
+    temp32 = temp32 * 10000;     // resolution 0.01%
 
     temp32a = l_cycles4ms;
     temp32a = temp32a >> 8;      // Drop non-significant bits
