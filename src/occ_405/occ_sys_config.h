@@ -295,6 +295,12 @@ typedef struct
     uint16_t    reserved3;               //reserved
 } mem_throt_config_data_t;
 
+// Per GPU I2C Info
+typedef struct
+{
+    uint8_t port;
+    uint8_t address;
+} gpuI2CInfo_t;
 
 // Sys Config Structure
 
@@ -434,7 +440,10 @@ typedef struct
   uint32_t gpu_sensor_ids[MAX_NUM_GPU_PER_DOMAIN];
   uint16_t total_non_gpu_max_pwr_watts;
   uint16_t total_proc_mem_pwr_drop_watts;
-  uint8_t  psr;  // power shifting ratio for power capping between GPU/Proc&mem
+  uint8_t  psr;                  // power shifting ratio for power capping between GPU/Proc&mem
+  uint8_t  gpu_i2c_engine;       // PIB I2CM engine for all GPUs
+  uint8_t  gpu_i2c_bus_voltage;  // GPU I2C bus voltage (1 = 0.1V)
+  gpuI2CInfo_t gpu_i2c_info[MAX_NUM_GPU_PER_DOMAIN];  // per GPU I2C info (port/address)
 
 } occSysConfigData_t;  __attribute__ ((__aligned__ (128)))
 

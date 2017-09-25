@@ -75,6 +75,13 @@ extern uint8_t G_occ_interrupt_type;
 
 extern uint16_t G_proc_fmax_mhz;      // Maximum frequency (uturbo if WOF enabled, otherwise turbo)
 extern OCCPstateParmBlock G_oppb;     // OCC Pstate Parameters Block Structure
+extern uint32_t G_first_proc_gpu_config;
+extern uint32_t G_first_num_gpus_sys;
+extern uint32_t G_curr_num_gpus_sys;
+extern uint32_t G_curr_proc_gpu_config;
+extern bool     G_gpu_config_done;
+extern bool     G_gpu_monitoring_allowed;
+extern task_t   G_task_table[TASK_END];
 
 typedef struct data_req_table
 {
@@ -1262,36 +1269,166 @@ errlHndl_t data_store_gpu(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                 cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     errlHndl_t l_err = NULL;
-    const uint8_t  GPU_VERSION = 0x01;
-    const uint16_t GPU_LENGTH = sizeof(cmdh_gpu_config_t) - sizeof(cmdh_fsp_cmd_header_t);
+    uint8_t i = 0;
+    uint8_t l_gpu_num = 0;
+    cmdh_gpu_config_v2_t *l_cmd_ptr = (cmdh_gpu_config_v2_t *)i_cmd_ptr;
+    uint16_t l_data_length = CMDH_DATALEN_FIELD_UINT16((&l_cmd_ptr->header));
+    uint16_t l_gpu_data_length = 0;
+    uint8_t  l_present_bit_mask = 0;  // Bit mask for present GPUs behind this OCC
 
-    cmdh_gpu_config_t *l_cmd_ptr = (cmdh_gpu_config_t *)i_cmd_ptr;
-    uint16_t l_data_length = CMDH_DATALEN_FIELD_UINT16(l_cmd_ptr);
-
-    if ((GPU_VERSION == l_cmd_ptr->version) && (GPU_LENGTH == l_data_length))
+    // parse data based on version. Version byte is located at same offset for all versions
+    if(l_cmd_ptr->header.version == 1)
     {
-        G_sysConfigData.total_non_gpu_max_pwr_watts = l_cmd_ptr->total_non_gpu_max_pwr_watts;
-        G_sysConfigData.total_proc_mem_pwr_drop_watts = l_cmd_ptr->total_proc_mem_pwr_drop_watts;
+        cmdh_gpu_config_t *l_cmd_ptr_v1 = (cmdh_gpu_config_t *)i_cmd_ptr;
+        l_data_length = CMDH_DATALEN_FIELD_UINT16(l_cmd_ptr_v1);
+        l_gpu_data_length = sizeof(cmdh_gpu_config_t) - sizeof(cmdh_fsp_cmd_header_t);
+        if(l_gpu_data_length == l_data_length)
+        {
+            G_sysConfigData.total_non_gpu_max_pwr_watts = l_cmd_ptr_v1->total_non_gpu_max_pwr_watts;
+            G_sysConfigData.total_proc_mem_pwr_drop_watts = l_cmd_ptr_v1->total_proc_mem_pwr_drop_watts;
 
-        AMECSENSOR_PTR(TEMPGPU0)->ipmi_sid = l_cmd_ptr->gpu0_temp_sid;
-        AMECSENSOR_PTR(TEMPGPU0MEM)->ipmi_sid = l_cmd_ptr->gpu0_mem_temp_sid;
-        G_sysConfigData.gpu_sensor_ids[0]  = l_cmd_ptr->gpu0_sid;
+            AMECSENSOR_PTR(TEMPGPU0)->ipmi_sid = l_cmd_ptr_v1->gpu0_temp_sid;
+            AMECSENSOR_PTR(TEMPGPU0MEM)->ipmi_sid = l_cmd_ptr_v1->gpu0_mem_temp_sid;
+            G_sysConfigData.gpu_sensor_ids[0]  = l_cmd_ptr_v1->gpu0_sid;
 
-        AMECSENSOR_PTR(TEMPGPU1)->ipmi_sid = l_cmd_ptr->gpu1_temp_sid;
-        AMECSENSOR_PTR(TEMPGPU1MEM)->ipmi_sid = l_cmd_ptr->gpu1_mem_temp_sid;
-        G_sysConfigData.gpu_sensor_ids[1]  = l_cmd_ptr->gpu1_sid;
+            AMECSENSOR_PTR(TEMPGPU1)->ipmi_sid = l_cmd_ptr_v1->gpu1_temp_sid;
+            AMECSENSOR_PTR(TEMPGPU1MEM)->ipmi_sid = l_cmd_ptr_v1->gpu1_mem_temp_sid;
+            G_sysConfigData.gpu_sensor_ids[1]  = l_cmd_ptr_v1->gpu1_sid;
 
-        AMECSENSOR_PTR(TEMPGPU2)->ipmi_sid = l_cmd_ptr->gpu2_temp_sid;
-        AMECSENSOR_PTR(TEMPGPU2MEM)->ipmi_sid = l_cmd_ptr->gpu2_mem_temp_sid;
-        G_sysConfigData.gpu_sensor_ids[2]  = l_cmd_ptr->gpu2_sid;
+            AMECSENSOR_PTR(TEMPGPU2)->ipmi_sid = l_cmd_ptr_v1->gpu2_temp_sid;
+            AMECSENSOR_PTR(TEMPGPU2MEM)->ipmi_sid = l_cmd_ptr_v1->gpu2_mem_temp_sid;
+            G_sysConfigData.gpu_sensor_ids[2]  = l_cmd_ptr_v1->gpu2_sid;
 
-        G_data_cnfg->data_mask |= DATA_MASK_GPU;
-        CMDH_TRAC_IMP("data_store_gpu: Got valid GPU data packet");
-    }
+            G_data_cnfg->data_mask |= DATA_MASK_GPU;
+            CMDH_TRAC_IMP("data_store_gpu: Got valid GPU data packet");
+        }
+        else
+        {
+            CMDH_TRAC_ERR("data_store_gpu: GPU version 1 invalid length Expected: 0x%04X  Received: 0x%04X",
+                          l_gpu_data_length, l_data_length);
+            cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_CMD_LEN, &l_err);
+        }
+    } // if version 1
+    else if(l_cmd_ptr->header.version == 2)
+    {
+        l_gpu_data_length = sizeof(cmdh_gpu_cfg_header_v2_t) - sizeof(cmdh_fsp_cmd_header_t);
+        l_gpu_data_length += (l_cmd_ptr->header.num_data_sets * sizeof(cmdh_gpu_set_v2_t));
+
+        if(l_gpu_data_length == l_data_length)
+        {
+            if( (l_cmd_ptr->header.gpu_i2c_engine == PIB_I2C_ENGINE_C) &&
+                ((l_cmd_ptr->header.gpu_i2c_bus_voltage == 0) || (l_cmd_ptr->header.gpu_i2c_bus_voltage == 18)) )
+            {
+                G_sysConfigData.gpu_i2c_engine = l_cmd_ptr->header.gpu_i2c_engine;
+                G_sysConfigData.gpu_i2c_bus_voltage = l_cmd_ptr->header.gpu_i2c_bus_voltage;
+                CMDH_TRAC_IMP("data_store_gpu: I2C engine = 0x%02X I2C bus voltage = %d deci volts",
+                               G_sysConfigData.gpu_i2c_engine, G_sysConfigData.gpu_i2c_bus_voltage);
+
+                G_sysConfigData.total_non_gpu_max_pwr_watts = l_cmd_ptr->header.total_non_gpu_max_pwr_watts;
+                G_sysConfigData.total_proc_mem_pwr_drop_watts = l_cmd_ptr->header.total_proc_mem_pwr_drop_watts;
+
+                // Store the individual GPU data
+                for(i=0; i<l_cmd_ptr->header.num_data_sets; i++)
+                {
+                    // Get the GPU number data is for
+                    l_gpu_num = l_cmd_ptr->gpu_data[i].gpu_num;
+
+                    if( (l_gpu_num >= 0) && (l_gpu_num < MAX_NUM_GPU_PER_DOMAIN) )
+                    {
+                        G_sysConfigData.gpu_i2c_info[l_gpu_num].port = l_cmd_ptr->gpu_data[i].i2c_port;
+                        G_sysConfigData.gpu_i2c_info[l_gpu_num].address = l_cmd_ptr->gpu_data[i].i2c_addr;
+
+                        // if port or i2c address is 0xFF the GPU will not be monitored
+                        if( (G_sysConfigData.gpu_i2c_info[l_gpu_num].port != 0xFF) &&
+                           (G_sysConfigData.gpu_i2c_info[l_gpu_num].address != 0xFF) )
+                        {
+                            CMDH_TRAC_IMP("data_store_gpu: GPU%d I2C port = 0x%02X address = 0x%02X", l_gpu_num,
+                                           G_sysConfigData.gpu_i2c_info[l_gpu_num].port,
+                                           G_sysConfigData.gpu_i2c_info[l_gpu_num].address);
+
+                            AMECSENSOR_PTR(TEMPGPU0 + l_gpu_num)->ipmi_sid = l_cmd_ptr->gpu_data[i].gpu_temp_sid;
+                            AMECSENSOR_PTR(TEMPGPU0MEM + l_gpu_num)->ipmi_sid = l_cmd_ptr->gpu_data[i].gpu_mem_temp_sid;
+                            G_sysConfigData.gpu_sensor_ids[l_gpu_num]  = l_cmd_ptr->gpu_data[i].gpu_sid;
+
+                            // If there is no APSS this data is giving GPU presence, mark this GPU as present
+                            if(G_pwr_reading_type != PWR_READING_TYPE_APSS)
+                            {
+                                l_present_bit_mask |= (0x01 << l_gpu_num);
+                            }
+                        }
+                        else
+                        {
+                            CMDH_TRAC_ERR("data_store_gpu: GPU%d NOT monitored Invalid I2C port = 0x%02X I2C address = 0x%02X",
+                                           l_gpu_num, G_sysConfigData.gpu_i2c_info[l_gpu_num].port,
+                                           G_sysConfigData.gpu_i2c_info[l_gpu_num].address);
+                        }
+                    }
+                    else
+                    {
+                        // We got an invalid GPU number
+                        CMDH_TRAC_ERR("data_store_gpu: Received invalid GPU number %d", l_gpu_num);
+                        cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
+                        break;
+                    }
+                } // for each GPU data set
+
+                // if there is no APSS for GPU presence then this data is the GPU presence
+                if(G_pwr_reading_type != PWR_READING_TYPE_APSS)
+                {
+                    if(l_err == NULL)
+                    {
+                        G_first_num_gpus_sys = l_cmd_ptr->header.total_num_gpus_system;
+                        G_curr_num_gpus_sys = G_first_num_gpus_sys;
+                        G_first_proc_gpu_config = l_present_bit_mask;
+                        G_curr_proc_gpu_config = G_first_proc_gpu_config;
+                        G_gpu_config_done = TRUE;
+
+                        if(G_first_proc_gpu_config)
+                        {
+                            // GPUs are present enable monitoring
+                            G_gpu_monitoring_allowed = TRUE;
+                            G_task_table[TASK_ID_GPU_SM].flags = GPU_RTL_FLAGS;
+                        }
+
+                        CMDH_TRAC_IMP("data_store_gpu: This OCC GPUs present mask = 0x%02X Total number GPUs present in system = %d",
+                                       G_first_proc_gpu_config, G_first_num_gpus_sys);
+
+                        G_data_cnfg->data_mask |= DATA_MASK_GPU;
+                        CMDH_TRAC_IMP("data_store_gpu: Got valid GPU data packet");
+                    }
+                    else
+                    {
+                        G_first_num_gpus_sys = 0;
+                        G_curr_num_gpus_sys = 0;
+                        G_first_proc_gpu_config = 0;
+                        G_curr_proc_gpu_config = 0;
+                        G_gpu_config_done = FALSE;
+                    }
+                }
+                else if(l_err == NULL)
+                {
+                    G_data_cnfg->data_mask |= DATA_MASK_GPU;
+                    CMDH_TRAC_IMP("data_store_gpu: Got valid GPU data packet");
+                }
+            }  // valid i2c engine and voltage
+            else
+            {
+                // We got an invalid I2C Engine and/or voltage
+                CMDH_TRAC_ERR("data_store_gpu: Received invalid I2C Engine/Voltage 0x%02X / %d",
+                               l_cmd_ptr->header.gpu_i2c_engine, l_cmd_ptr->header.gpu_i2c_bus_voltage);
+                cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
+            }
+        } // if length valid
+        else
+        {
+            CMDH_TRAC_ERR("data_store_gpu: GPU version 2 invalid length Expected: 0x%04X  Received: 0x%04X",
+                          l_gpu_data_length, l_data_length);
+            cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_CMD_LEN, &l_err);
+        }
+    } //else if version 2
     else
     {
-        CMDH_TRAC_ERR("data_store_gpu: Invalid GPU version/length (0x%02X/0x%04X))",
-                      l_cmd_ptr->version, l_data_length);
+        CMDH_TRAC_ERR("data_store_gpu: Invalid GPU version 0x%02X", l_cmd_ptr->header.version);
         cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
     }
 
@@ -1735,7 +1872,7 @@ errlHndl_t data_store_thrm_thresholds(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 G_data_cnfg->thrm_thresh.data[l_frutype].max_read_timeout =
                     l_cmd_ptr->data[i].max_read_timeout;
 
-                // Set a local flag if we get data for VRM FRU type
+                // Set a local flag if we get data for VRM OT status FRU type
                 if(l_frutype == DATA_FRU_VRM_OT_STATUS)
                 {
                     l_vrm_frutype = TRUE;

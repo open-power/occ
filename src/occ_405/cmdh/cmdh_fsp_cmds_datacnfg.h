@@ -36,6 +36,7 @@
 #include "cmdh_fsp.h"
 #include "cmdh_fsp_cmds.h"
 #include "apss.h"
+#include "occ_sys_config.h"
 
 // Enum of the various CnfgData command formats that
 // are sent to OCC over the TMGT<->OCC interface.
@@ -165,6 +166,37 @@ typedef struct __attribute__ ((packed))
 }cmdh_avsbus_config_t;
 
 // Used by TMGT to send OCC GPU data.
+// Header data for GPU version 2 cfg packet
+typedef struct __attribute__ ((packed))
+{
+    struct   cmdh_fsp_cmd_header;
+    uint8_t  format;
+    uint8_t  version;
+    uint16_t total_non_gpu_max_pwr_watts;
+    uint16_t total_proc_mem_pwr_drop_watts;
+    uint8_t  total_num_gpus_system;
+    uint8_t  gpu_i2c_engine;
+    uint8_t  gpu_i2c_bus_voltage;
+    uint8_t  num_data_sets;
+}cmdh_gpu_cfg_header_v2_t;
+
+typedef struct __attribute__ ((packed))
+{
+    uint8_t  gpu_num;          // number 0...2 for GPU data is for
+    uint8_t  i2c_port;         // I2C port for this GPU
+    uint8_t  i2c_addr;         // I2C slave address for this GPU
+    uint8_t  reserved;
+    uint32_t gpu_temp_sid;     // GPU Core Temperature Sensor ID
+    uint32_t gpu_mem_temp_sid; // GPU Memory Temperature Sensor ID
+    uint32_t gpu_sid;          // GPU Sensor ID for callout
+}cmdh_gpu_set_v2_t;
+
+typedef struct __attribute__ ((packed))
+{
+    cmdh_gpu_cfg_header_v2_t  header;
+    cmdh_gpu_set_v2_t         gpu_data[MAX_NUM_GPU_PER_DOMAIN];
+}cmdh_gpu_config_v2_t;
+
 typedef struct __attribute__ ((packed))
 {
     struct cmdh_fsp_cmd_header;

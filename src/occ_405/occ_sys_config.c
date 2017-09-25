@@ -230,6 +230,13 @@ occSysConfigData_t G_sysConfigData =
     .total_non_gpu_max_pwr_watts = 0,
     .total_proc_mem_pwr_drop_watts = 0,
     .psr = 100,  // default to 100% take all possible power away from CPU/memory first
+    .gpu_i2c_engine = PIB_I2C_ENGINE_C,  // default to engine C
+    .gpu_i2c_bus_voltage = 18,  // default to 1.8V
+    .gpu_i2c_info = {
+        [0]  {.port = 4, .address = 0x98},
+        [1]  {.port = 4, .address = 0x9A},
+        [2]  {.port = 4, .address = 0x9C},
+    },
 };
 
 
