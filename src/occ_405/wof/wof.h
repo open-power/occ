@@ -68,22 +68,18 @@
 #define WOF_RC_SYSTEM_WOF_DISABLE                  0x00080000
 #define WOF_RC_RESET_LIMIT_REACHED                 0x00100000
 #define WOF_RC_UNSUPPORTED_FREQUENCIES             0x00200000
+#define WOF_RC_NO_CONFIGURED_CORES                 0x00400000
 
 //***************************************************************************
 // Temp space used to save hard coded addresses
 //***************************************************************************
 #define PSTATE_TBL_ADDR 0xFFF2B85C
 
-
 // Reason codes which should NOT create an error log should be added here
 #define ERRL_RETURN_CODES ~(WOF_RC_MODE_CHANGE  | \
                             WOF_RC_STATE_CHANGE | \
-                            WOF_RC_MODE_NO_SUPPORT_MASK)
-
-// Reason codes that if set, should suppress all other unrecoverable errors.
-#define SUPPRESS_ERROR_RC ~(ERRL_RETURN_CODES)
-
-
+                            WOF_RC_MODE_NO_SUPPORT_MASK | \
+                            WOF_RC_NO_CONFIGURED_CORES)
 
 // Enumeration to define the WOF initialization steps
 enum wof_init_states
@@ -104,7 +100,6 @@ enum wof_disabled_htmgt_rc
     WOF_RESET_LIMIT_REACHED     = 0x0002,
     WOF_UNSUPPORTED_FREQ        = 0x0003,
 };
-
 
 // Enumeration
 enum wof_disabled_actions

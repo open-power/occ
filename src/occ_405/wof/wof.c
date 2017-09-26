@@ -35,7 +35,7 @@
 #include <occ_sys_config.h>
 #include <wof.h>
 #include <amec_freq.h>
-
+#include <pgpe_interface.h>
 //******************************************************************************
 // External Globals
 //******************************************************************************
@@ -355,7 +355,7 @@ void wof_main(void)
     send_vfrt_to_pgpe( g_wof->next_vfrt_main_mem_addr );
     if(async_request_is_idle(&G_wof_vfrt_req.request))
     {
-        g_wof->gpe_req_rc = gpe_request_schedule(&G_wof_vfrt_req);
+        g_wof->gpe_req_rc = pgpe_request_schedule(&G_wof_vfrt_req);
     }
     else
     {
@@ -1389,7 +1389,7 @@ void set_clear_wof_disabled( uint8_t i_action,
     // Check for error
     if( l_logError )
     {
-        if( g_wof->wof_disabled & SUPPRESS_ERROR_RC )
+        if( g_wof->wof_disabled & (~(ERRL_RETURN_CODES)) )
         {
             INTR_TRAC_ERR("Encountered an error, but WOF is off. RC: 0x%08x",
                     i_bit_mask);
@@ -1466,7 +1466,7 @@ void disable_wof( void )
             {
                 // Set parameters for the GpeRequest
                 G_wof_control_parms.action = PGPE_ACTION_WOF_OFF;
-                user_data_rc = gpe_request_schedule( &G_wof_control_req );
+                user_data_rc = pgpe_request_schedule( &G_wof_control_req );
 
                 if( user_data_rc != 0 )
                 {
@@ -1550,7 +1550,7 @@ bool enable_wof( void )
             // Set parameters for the GpeRequest
             G_wof_control_parms.action = PGPE_ACTION_WOF_ON;
 
-            rc = gpe_request_schedule( &G_wof_control_req );
+            rc = pgpe_request_schedule( &G_wof_control_req );
 
             if( rc != 0 )
             {
@@ -1655,7 +1655,7 @@ void send_initial_vfrt_to_pgpe( void )
     send_vfrt_to_pgpe( g_wof->next_vfrt_main_mem_addr );
     if(async_request_is_idle(&G_wof_vfrt_req.request))
     {
-        g_wof->gpe_req_rc =  gpe_request_schedule(&G_wof_vfrt_req);
+        g_wof->gpe_req_rc =  pgpe_request_schedule(&G_wof_vfrt_req);
     }
     else
     {

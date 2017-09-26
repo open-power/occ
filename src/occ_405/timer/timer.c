@@ -44,7 +44,8 @@
 extern uint32_t G_mainThreadLoopCounter;
 // Running in simics?
 extern bool G_simics_environment;
-
+// bit mask of configured cores
+extern uint32_t G_present_cores;
 //*************************************************************************/
 // Macros
 //*************************************************************************/
@@ -228,16 +229,13 @@ void init_mem_deadman_reset_task(void)
 void task_poke_watchdogs(struct task * i_self)
 {
     ocb_occhbr_t hbr;                          // OCC heart beat register
-
-    static bool             L_check_pgpe_beacon = false;  // Check GPE beacon this time?
+    static bool L_check_pgpe_beacon = false;  // Check GPE beacon this time?
 
 // 1. Enable OCC heartbeat
 
     hbr.fields.occ_heartbeat_count = 8000; // count corresponding to 8 ms
     hbr.fields.occ_heartbeat_en   = true;  // enable heartbeat timer
-
     out32(OCB_OCCHBR, hbr.value);             // Enable heartbeat register, and set it
-
 
 // 2. Reset memory deadman timer
     if(G_sysConfigData.mem_type == MEM_TYPE_NIMBUS)
@@ -245,18 +243,20 @@ void task_poke_watchdogs(struct task * i_self)
         manage_mem_deadman_task();
     }
 
-// 3. Verify PGPE Beacon is not frozen for 8 ms
-    if(true == L_check_pgpe_beacon)
+// 3. Verify PGPE Beacon is not frozen for 8 ms if there are cores configured
+    if(G_present_cores != 0)
     {
-        // Examine pgpe Beacon every other call (every 4ms)
-        if(!G_simics_environment) // PGPE Beacon is not implemented in simics
+        if(true == L_check_pgpe_beacon)
         {
-            check_pgpe_beacon();
+            // Examine pgpe Beacon every other call (every 4ms)
+            if(!G_simics_environment) // PGPE Beacon is not implemented in simics
+            {
+                check_pgpe_beacon();
+            }
         }
+        // toggle pgpe beacon check flag, check only once every other call (every 4ms)
+        L_check_pgpe_beacon = !L_check_pgpe_beacon;
     }
-
-    // toggle pgpe beacon check flag, check only once every other call (every 4ms)
-    L_check_pgpe_beacon = !L_check_pgpe_beacon;
 
 }
 

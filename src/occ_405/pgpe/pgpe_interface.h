@@ -29,23 +29,33 @@
 #include "errl.h"
 #include "state.h"
 #include "pstate_pgpe_occ_api.h"
+#include "occhw_async.h"
 
 void init_pgpe_ipcs(void);
 
 errlHndl_t pgpe_init_clips(void);
+
 errlHndl_t pgpe_init_pmcr(void);
+
 errlHndl_t pgpe_init_start_suspend(void);
+
 errlHndl_t pgpe_init_wof_control(void);
+
 errlHndl_t pgpe_init_wof_vfrt(void);
 
 int pgpe_set_clip_ranges(Pstate i_pstate);
+
 int pgpe_set_clip_blocking(Pstate i_pstate);
+
 int pgpe_clip_update(void);
 
 int pgpe_pmcr_set(void);
 
 int pgpe_start_suspend(uint8_t action, PMCR_OWNER owner);
+
 void pgpe_start_suspend_callback(void);
+
+int pgpe_request_schedule(GpeRequest* request);
 
 int set_nominal_pstate(void);
 

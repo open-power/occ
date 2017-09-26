@@ -49,7 +49,6 @@
 extern bool G_mem_monitoring_allowed;
 extern task_t G_task_table[TASK_END];  // Global task table
 extern bool G_simics_environment;
-
 extern pstateStatus G_proc_pstate_status;
 extern uint16_t G_proc_fmax_mhz;
 extern GpeRequest G_clip_update_req;
@@ -57,7 +56,8 @@ extern GPE_BUFFER(ipcmsg_clip_update_t*  G_clip_update_parms_ptr);
 
 // OCC is ready to transition to observation state?
 extern bool G_active_to_observation_ready;
-
+// bit mask of configured cores
+extern uint32_t G_present_cores;
 extern PMCR_OWNER G_proc_pmcr_owner;
 
 // State that OCC is currently in
@@ -592,79 +592,97 @@ errlHndl_t SMGR_observation_to_active()
                 }
             }
 
-            // Wait for pstates enablement completition.
-            SsxTimebase start = ssx_timebase_get();
-            SsxInterval timeout =  SSX_SECONDS(5);
-            while( ! proc_is_hwpstate_enabled() )
+            // If there are no cores configured, do not wait for PSTATES to
+            // become enabled.
+            if(G_present_cores != 0 )
             {
-                if ((ssx_timebase_get() - start) > timeout)
+                // Wait for pstates enablement completition.
+                SsxTimebase start = ssx_timebase_get();
+                SsxInterval timeout =  SSX_SECONDS(5);
+                while( ! proc_is_hwpstate_enabled() )
                 {
-                    l_rc = 1;
-                    if(FALSE == L_error_logged)
+                    if ((ssx_timebase_get() - start) > timeout)
                     {
-                        TRAC_ERR("SMGR_obs_to_active: Timeout waiting for Pstates to be enabled, "
-                                 "chips_present[%02x], Cores Present [%08x]",
-                                 G_sysConfigData.is_occ_present,
-                                 (uint32_t) ((in64(OCB_CCSR)) >> 32));
+                        l_rc = 1;
+                        if(FALSE == L_error_logged)
+                        {
+                            TRAC_ERR("SMGR_obs_to_active: Timeout waiting for Pstates to be enabled, "
+                                     "chips_present[%02x], Cores Present [%08x]",
+                                     G_sysConfigData.is_occ_present,
+                                     (uint32_t) ((in64(OCB_CCSR)) >> 32));
+                        }
+                        l_extRc = ERC_GENERIC_TIMEOUT;
+                        break;
                     }
-                    l_extRc = ERC_GENERIC_TIMEOUT;
-                    break;
+                    ssx_sleep(SSX_MICROSECONDS(10));
                 }
-                ssx_sleep(SSX_MICROSECONDS(10));
+
+                // if pstates are now enabled, all conditions are already met
+                // to transition to active state.
+                if(proc_is_hwpstate_enabled() )
+                {
+                    TRAC_IMP("SMGR_obs_to_active: Pstates are enabled, continuing with state trans");
+
+                    L_error_logged = FALSE;
+
+                    // Set the RTL Flags to indicate which tasks can run
+                    //   - Clear OBSERVATION b/c not in OBSERVATION State
+                    //   - Set ACTIVE b/c we're in ACTIVE State
+                    rtl_clr_run_mask_deferred(RTL_FLAG_OBS);
+                    rtl_set_run_mask_deferred(RTL_FLAG_ACTIVE);
+
+                    // Pstates enabled, update OPAL static table in main memory with pState info
+                    proc_pstate_kvm_setup();
+
+                    // Set the actual STATE now that we have finished everything else
+                    CURRENT_STATE() = OCC_STATE_ACTIVE;
+                    TRAC_IMP("SMGR: Observation to Active Transition Completed. OCC role = %d", G_occ_role);
+                }
+                else
+                {
+                    TRAC_ERR("SMGR: Observation to Active Transition Failed, because pstates are not enabled");
+                }
+
+                if(l_rc && FALSE == L_error_logged)
+                {
+                    L_error_logged = TRUE;
+                    /* @
+                     * @errortype
+                     * @moduleid    MAIN_STATE_TRANSITION_MID
+                     * @reasoncode  INTERNAL_FAILURE
+                     * @userdata1   SMGR_MASK_ACTIVE_READY
+                     * @userdata2   valid states
+                     * @userdata4   ERC_GENERIC_TIMEOUT
+                     * @devdesc     Failed changing from observation to active
+                     */
+                    l_errlHndl = createErrl(MAIN_STATE_TRANSITION_MID,        //modId
+                                            INTERNAL_FAILURE,                 //reasoncode
+                                            l_extRc,                          //Extended reason code
+                                            ERRL_SEV_UNRECOVERABLE,           //Severity
+                                            NULL,                             //Trace Buf
+                                            DEFAULT_TRACE_SIZE,               //Trace Size
+                                            SMGR_MASK_ACTIVE_READY,           //userdata1
+                                            SMGR_validate_get_valid_states());//userdata2
+
+                    // Callout firmware
+                    addCalloutToErrl(l_errlHndl,
+                                     ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                                     ERRL_COMPONENT_ID_FIRMWARE,
+                                     ERRL_CALLOUT_PRIORITY_HIGH);
+                }
+
             }
-
-            // if pstates are now enabled, all conditions are already met
-            // to transition to active state.
-            if(proc_is_hwpstate_enabled() )
+            else // We have no cores configured
             {
-                TRAC_IMP("SMGR_obs_to_active: Pstates are enabled, continuing with state trans");
-
-                L_error_logged = FALSE;
-
-                // Set the RTL Flags to indicate which tasks can run
-                //   - Clear OBSERVATION b/c not in OBSERVATION State
-                //   - Set ACTIVE b/c we're in ACTIVE State
+                // Set rtl flags to indicate which tasks can run since
+                // we do not have to wait for pstates to be enabled
                 rtl_clr_run_mask_deferred(RTL_FLAG_OBS);
                 rtl_set_run_mask_deferred(RTL_FLAG_ACTIVE);
 
-                // Pstates enabled, update OPAL static table in main memory with pState info
-                proc_pstate_kvm_setup();
-
                 // Set the actual STATE now that we have finished everything else
                 CURRENT_STATE() = OCC_STATE_ACTIVE;
-                TRAC_IMP("SMGR: Observation to Active Transition Completed. OCC role = %d", G_occ_role);
-            }
-            else
-            {
-                TRAC_ERR("SMGR: Observation to Active Transition Failed, because pstates are not enabled");
-            }
-
-            if(l_rc && FALSE == L_error_logged)
-            {
-                L_error_logged = TRUE;
-                /* @
-                 * @errortype
-                 * @moduleid    MAIN_STATE_TRANSITION_MID
-                 * @reasoncode  INTERNAL_FAILURE
-                 * @userdata1   SMGR_MASK_ACTIVE_READY
-                 * @userdata2   valid states
-                 * @userdata4   ERC_GENERIC_TIMEOUT
-                 * @devdesc     Failed changing from observation to active
-                 */
-                l_errlHndl = createErrl(MAIN_STATE_TRANSITION_MID,        //modId
-                                        INTERNAL_FAILURE,                 //reasoncode
-                                        l_extRc,                          //Extended reason code
-                                        ERRL_SEV_UNRECOVERABLE,           //Severity
-                                        NULL,                             //Trace Buf
-                                        DEFAULT_TRACE_SIZE,               //Trace Size
-                                        SMGR_MASK_ACTIVE_READY,           //userdata1
-                                        SMGR_validate_get_valid_states());//userdata2
-
-                // Callout firmware
-                addCalloutToErrl(l_errlHndl,
-                                 ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                                 ERRL_COMPONENT_ID_FIRMWARE,
-                                 ERRL_CALLOUT_PRIORITY_HIGH);
+                TRAC_IMP("SMGR: Observation to Active Transition Completed."
+                        " OCC role = %d", G_occ_role);
             }
         }   // Active Ready
         else
@@ -712,27 +730,43 @@ errlHndl_t SMGR_characterization_to_active()
             break;
         }
 
-        // Wait for ownership change to complete
-        SsxTimebase start = ssx_timebase_get();
-        SsxInterval timeout =  SSX_SECONDS(5);
-        while( ! proc_is_hwpstate_enabled() )
+        // If there are no cores configured, do not wait for PSTATES to
+        // become enabled.
+        if(G_present_cores != 0)
         {
-            if ((ssx_timebase_get() - start) > timeout)
+            // Wait for ownership change to complete
+            SsxTimebase start = ssx_timebase_get();
+            SsxInterval timeout =  SSX_SECONDS(5);
+            while( ! proc_is_hwpstate_enabled() )
             {
-                rc = 1;
-                TRAC_ERR("SMGR_char_to_active: Timeout waiting for PMCR ownership change");
-                break;
+                if ((ssx_timebase_get() - start) > timeout)
+                {
+                    rc = 1;
+                    TRAC_ERR("SMGR_char_to_active: Timeout waiting for PMCR ownership change");
+                    break;
+                }
+                ssx_sleep(SSX_MICROSECONDS(10));
             }
-            ssx_sleep(SSX_MICROSECONDS(10));
+
+            if(proc_is_hwpstate_enabled())
+            {
+                L_error_logged = FALSE;
+
+                // Set the RTL Flags to indicate which tasks can run
+                //   - Clear OBSERVATION b/c not in CHARACTERIZATION State
+                //   - Set ACTIVE b/c we're in ACTIVE State
+                rtl_clr_run_mask_deferred(RTL_FLAG_OBS);
+                rtl_set_run_mask_deferred(RTL_FLAG_ACTIVE);
+
+                // Set the actual STATE now that we have finished everything else
+                CURRENT_STATE() = OCC_STATE_ACTIVE;
+                TRAC_IMP("SMGR: Characterization to Active Transition Completed");
+            }
         }
-
-        if(proc_is_hwpstate_enabled())
+        else // We have no cores configured
         {
-            L_error_logged = FALSE;
-
-            // Set the RTL Flags to indicate which tasks can run
-            //   - Clear OBSERVATION b/c not in CHARACTERIZATION State
-            //   - Set ACTIVE b/c we're in ACTIVE State
+            // Set rtl flags to indicate which tasks can run since
+            // we do not have to wait for pstates to be enabled
             rtl_clr_run_mask_deferred(RTL_FLAG_OBS);
             rtl_set_run_mask_deferred(RTL_FLAG_ACTIVE);
 

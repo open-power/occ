@@ -45,6 +45,7 @@ extern pstateStatus G_proc_pstate_status;
 extern PMCR_OWNER G_proc_pmcr_owner;
 
 extern uint16_t G_proc_fmax_mhz;
+extern uint32_t G_present_cores;
 
 extern bool G_simics_environment;
 
@@ -649,7 +650,7 @@ int pgpe_clip_update(void)
             }
 
             // Schedule PGPE clip update IPC task
-            schedule_rc = gpe_request_schedule(&G_clip_update_req);
+            schedule_rc = pgpe_request_schedule(&G_clip_update_req);
         }
         else
         {
@@ -817,8 +818,9 @@ int pgpe_start_suspend(uint8_t action, PMCR_OWNER owner)
            {
                TRAC_IMP("pgpe_start_suspend: scheduling disable of pstates (owner=0x%02X)", owner);
            }
+
            // Schedule PGPE start_suspend task
-           schedule_rc = gpe_request_schedule(&G_start_suspend_req);
+           schedule_rc = pgpe_request_schedule(&G_start_suspend_req);
        }
 
        // couldn't schedule the IPC task?
@@ -932,7 +934,7 @@ int pgpe_pmcr_set(void)
         if (!G_simics_environment)
         {
             // Schedule PGPE PMCR update IPC task
-            schedule_rc = gpe_request_schedule(&G_pmcr_set_req);
+            schedule_rc = pgpe_request_schedule(&G_pmcr_set_req);
         }
 
         // Confirm Successfull completion of PGPE PMCR update task
@@ -1073,4 +1075,34 @@ int set_nominal_pstate(void)
    }
 
    return l_rc;
+}
+
+// Function Specification
+//
+// Name: pgpe_request_schedule
+//
+// Description: Wrapper function that takes care of any overhead associated
+//              with scheduling a GpeRequest to the PGPE
+//
+// End Function Specification
+int pgpe_request_schedule(GpeRequest* request)
+{
+    int rc = 0;
+    static uint8_t L_traceCount = 10;
+    // Before sending any IPC task to the PGPE, make sure there are cores
+    // configured
+    if( G_present_cores != 0 )
+    {
+        rc = gpe_request_schedule(request);
+    }
+    else
+    {
+        if( L_traceCount )
+        {
+            // If we skip the IPC task, just send successful return code
+            TRAC_INFO("No Configured Cores. Skipping PGPE-bound IPC tasks");
+            L_traceCount--;
+        }
+    }
+    return rc;
 }

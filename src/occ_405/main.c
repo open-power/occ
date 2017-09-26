@@ -80,7 +80,7 @@ extern GpeRequest G_meas_complete_request;
 extern apss_start_args_t    G_gpe_start_pwr_meas_read_args;
 extern apss_continue_args_t G_gpe_continue_pwr_meas_read_args;
 extern apss_complete_args_t G_gpe_complete_pwr_meas_read_args;
-
+extern uint32_t G_present_cores;
 extern uint32_t G_proc_fmin_khz;
 extern uint32_t G_proc_fmax_khz;
 extern wof_header_data_t G_wof_header;
@@ -1129,17 +1129,31 @@ void read_hcode_headers()
         if (read_ppmr_header() == FALSE) break;
         CHECKPOINT(PPMR_IMAGE_HEADER_READ);
 
-        // Read OCC pstates parameter block
-        if (read_oppb_params() == FALSE) break;
-        CHECKPOINT(OPPB_IMAGE_HEADER_READ);
+        // If there are no configured cores, skip reading these headers
+        // since they will no longer be used.
+        if(G_present_cores == 0)
+        {
+            TRAC_INFO("read_hcode_headers: No configured cores detected."
+                      " Skipping read_oppb_params(), read_pgpe_header(),"
+                      " and read_wof_header()");
+            set_clear_wof_disabled( SET, WOF_RC_NO_CONFIGURED_CORES );
+            G_proc_pstate_status = PSTATES_DISABLED;
+        }
+        else
+        {
+            // Read OCC pstates parameter block
+            if (read_oppb_params() == FALSE) break;
+            CHECKPOINT(OPPB_IMAGE_HEADER_READ);
 
-        // Read PGPE header file, extract OCC/PGPE Shared SRAM address and size,
-        if (read_pgpe_header() == FALSE) break;
-        CHECKPOINT(PGPE_IMAGE_HEADER_READ);
+            // Read PGPE header file, extract OCC/PGPE Shared SRAM address and size,
+            if (read_pgpe_header() == FALSE) break;
+            CHECKPOINT(PGPE_IMAGE_HEADER_READ);
 
-        // Extract important WOF data into global space
-        read_wof_header();
-        CHECKPOINT(WOF_IMAGE_HEADER_READ);
+            // Extract important WOF data into global space
+            read_wof_header();
+            CHECKPOINT(WOF_IMAGE_HEADER_READ);
+            set_clear_wof_disabled( CLEAR, WOF_RC_NO_CONFIGURED_CORES );
+        }
 
         // PGPE Beacon is not implemented in simics
         if (!G_simics_environment)
