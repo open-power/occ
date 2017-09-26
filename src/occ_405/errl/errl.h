@@ -296,6 +296,7 @@ typedef enum {
     ERRH_GPE0_NOT_IDLE               =  0x16,
     ERRH_GPE1_NOT_IDLE               =  0x17,
     ERRH_24X7_DISABLED               =  0x18,
+    ERRH_CEFF_RATIO_VDD_EXCURSION    =  0x19,
 } ERR_HISTORY_INDEX;
 #define INCREMENT_ERR_HISTORY(errorIndex) { \
     if ((errorIndex < ERR_HISTORY_SIZE) && (G_error_history[errorIndex] < 255)) { \

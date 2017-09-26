@@ -37,7 +37,9 @@
 #define PGPE_WOF_OFF                0
 #define PGPE_WOF_ON                 1
 #define NUM_CORES_PER_QUAD          4
-#define WOF_TABLES_OFFSET           0xC0000// Relative to PPMR_ADDRESS_HOMER
+#define WOF_TABLES_OFFSET           0xC0000 // Relative to PPMR_ADDRESS_HOMER
+#define MAX_CEFF_RATIO              10000   // 1.0 ratio = 10000
+                                            // (scaled to avoid floating point)
 //******************************************************************************
 // Bit Vector Masks
 //******************************************************************************
@@ -437,7 +439,9 @@ uint32_t scale_and_interpolate( uint16_t * i_leak_arr,
                                 uint16_t i_base_temp,
                                 uint16_t i_voltage );
 
-void print_data(void);
+void print_data( void );
 
-void print_oppb(void);
+void print_oppb( void );
+
+uint32_t prevent_over_current( uint32_t i_ceff_ratio );
 #endif

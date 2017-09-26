@@ -325,15 +325,15 @@ void call_wof_main( void )
 }
 
 /**
- *  wof_main
+ * wof_main
  *
- *  Description: Main Wof algorithm
+ * Description: Main Wof algorithm
  *
- *  Param: None
+ * Param: None
  *
- *  Return: None
+ * Return: None
  */
-void wof_main(void)
+void wof_main( void )
 {
 
     // Read out the sensor data needed for calculations
@@ -390,17 +390,17 @@ void wof_main(void)
 }
 
 /**
- *  calculate_step_from_start
+ * calculate_step_from_start
  *
- *  Description: Calculates the step number for the current VDN/VDD
+ * Description: Calculates the step number for the current VDN/VDD
  *
- *  Param[in]: i_ceff_vdx_ratio - The current Ceff_vdd or Ceff_vdn_ratio
- *                                to calculate the step for.
- *  Param[in]: i_step_size - The size of each step.
- *  Param[in]: i_min_ceff - The minimum step number for this VDN/VDD
- *  Param[in]: i_max_step - The maximum step number for this VDN/VDD
+ * Param[in]: i_ceff_vdx_ratio - The current Ceff_vdd or Ceff_vdn_ratio
+ *                               to calculate the step for.
+ * Param[in]: i_step_size - The size of each step.
+ * Param[in]: i_min_ceff - The minimum step number for this VDN/VDD
+ * Param[in]: i_max_step - The maximum step number for this VDN/VDD
  *
- *  Return: The calculated step for current Ceff_vdd/Ceff_vdn
+ * Return: The calculated step for current Ceff_vdd/Ceff_vdn
  */
 uint16_t calculate_step_from_start(uint16_t i_ceff_vdx_ratio,
                                    uint16_t i_step_size,
@@ -1119,7 +1119,9 @@ void calculate_ceff_ratio_vdd( void )
     else
     {
         // Save ceff_ratio_vdd. Multiply by 10000 to convert to correct granularity.
-        g_wof->ceff_ratio_vdd = (g_wof->ceff_vdd*10000) / g_wof->ceff_tdp_vdd;
+        // Prevent Over current by clipping to max of 100%
+        g_wof->ceff_ratio_vdd =
+           prevent_over_current((g_wof->ceff_vdd*10000) / g_wof->ceff_tdp_vdd);
     }
 }
 
@@ -2061,4 +2063,43 @@ void print_oppb( void )
     CMDH_TRAC_INFO("vdn_sysparm.loadline = %d", G_oppb.vdn_sysparm.loadline_uohm);
     CMDH_TRAC_INFO("vdn_sysparm.distloss = %d", G_oppb.vdn_sysparm.distloss_uohm);
     CMDH_TRAC_INFO("End OCCPstateParmBlock");
+}
+
+/**
+ * prevent_over_current
+ *
+ * Description: Determines whether ceff_ratio_vdd will cause an over-current
+ *              and clips it to a ratio of 1.0 if necessary.
+ *
+ * Param: Calculated ceff_ratio before clipping at 1.0
+ *
+ * Return: Clipped ceff_ratio
+ */
+uint32_t prevent_over_current( uint32_t i_ceff_ratio )
+{
+    static uint8_t L_oc_prevention_timer = 0;
+    uint32_t l_clipped_ratio = i_ceff_ratio;
+
+    if( i_ceff_ratio > MAX_CEFF_RATIO ) // 10000 = 1.0 ratio
+    {
+        INCREMENT_ERR_HISTORY( ERRH_CEFF_RATIO_VDD_EXCURSION );
+        l_clipped_ratio = MAX_CEFF_RATIO;
+
+        // If over current timer not started, start it.
+        if( L_oc_prevention_timer == 0 )
+        {
+            L_oc_prevention_timer = 10; // 10 WOF iterations
+        }
+        else
+        {
+            L_oc_prevention_timer--;
+        }
+    }
+    else if( L_oc_prevention_timer != 0 ) // Timer is running
+    {
+        l_clipped_ratio = MAX_CEFF_RATIO;
+        L_oc_prevention_timer--;
+    }
+
+    return l_clipped_ratio;
 }
