@@ -95,14 +95,16 @@ extern uint32_t G_first_num_gpus_sys;
 // Thread: Real Time Loop
 //
 // End Function Specification
-void amec_gpu_pcap(bool i_active_pcap_changed, int32_t i_avail_power)
+void amec_gpu_pcap(bool i_oversubscription, bool i_active_pcap_changed, int32_t i_avail_power)
 {
     /*------------------------------------------------------------------------*/
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
     uint8_t  i = 0;
     uint32_t l_gpu_cap_mw = 0;
+    uint16_t l_system_gpu_total_pcap = 0;  // total GPU pcap required by system based on if currently in oversub or not
     static uint16_t L_total_gpu_pcap = 0;  // Current total GPU pcap in effect
+    static uint16_t L_n_plus_1_mode_gpu_total_pcap = 0;  // Total GPU pcap required for N+1 (not in oversubscription)
     static uint16_t L_n_mode_gpu_total_pcap = 0;  // Total GPU pcap required for oversubscription
     static uint16_t L_active_psr_gpu_total_pcap = 0; // Total GPU pcap for the currently set pcap and PSR
     static uint16_t L_per_gpu_pcap = 0;  // Amount of L_total_gpu_pcap for each GPU
@@ -112,10 +114,12 @@ void amec_gpu_pcap(bool i_active_pcap_changed, int32_t i_avail_power)
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    // If this is the first time running calculate the total GPU power cap for oversubscription
+    // If this is the first time running calculate the total GPU power cap for system power caps (N and N+1)
     if(L_first_run)
     {
+       // calculate total GPU power cap for oversubscription
        if(g_amec->pcap.ovs_node_pcap > G_sysConfigData.total_non_gpu_max_pwr_watts)
+         
        {
            // Take all non-GPU power away from the oversubscription power cap
            L_n_mode_gpu_total_pcap = g_amec->pcap.ovs_node_pcap - G_sysConfigData.total_non_gpu_max_pwr_watts;
@@ -157,6 +161,50 @@ void amec_gpu_pcap(bool i_active_pcap_changed, int32_t i_avail_power)
                             ERRL_CALLOUT_PRIORITY_HIGH);
            commitErrl(&l_err);
        }
+
+       // calculate total GPU power cap for N+1 (not in oversubscription)
+       if(G_sysConfigData.pcap.system_pcap > G_sysConfigData.total_non_gpu_max_pwr_watts)
+       {
+           // Take all non-GPU power away from the N+1 power cap
+           L_n_plus_1_mode_gpu_total_pcap = G_sysConfigData.pcap.system_pcap - G_sysConfigData.total_non_gpu_max_pwr_watts;
+           // Add back in the power that will be dropped by processor DVFS and memory throttling and give to GPUs
+           L_n_plus_1_mode_gpu_total_pcap += G_sysConfigData.total_proc_mem_pwr_drop_watts;
+       }
+       else
+       {
+           // This should not happen, the total non GPU power should never be higher than the N+1 mode cap
+           // Log error and set GPUs to minimum power cap
+           L_n_plus_1_mode_gpu_total_pcap = 0; // this will set minimum GPU power cap
+
+           TRAC_ERR("amec_gpu_pcap: non GPU max power %dW is more than N+1 mode pwr limit %dW",
+                     G_sysConfigData.total_non_gpu_max_pwr_watts, G_sysConfigData.pcap.system_pcap);
+
+           /* @
+            * @errortype
+            * @moduleid    AMEC_GPU_PCAP_MID
+            * @reasoncode  GPU_FAILURE
+            * @userdata1   N+1 mode Power Cap watts
+            * @userdata2   Total non-GPU power watts
+            * @userdata4   ERC_GPU_N_PLUS_1_MODE_PCAP_CALC_FAILURE
+            * @devdesc     Total non-GPU power more than N+1 mode power cap
+            *
+            */
+           errlHndl_t l_err = createErrl(AMEC_GPU_PCAP_MID,
+                                         GPU_FAILURE,
+                                         ERC_GPU_N_PLUS_1_MODE_PCAP_CALC_FAILURE,
+                                         ERRL_SEV_PREDICTIVE,
+                                         NULL,
+                                         DEFAULT_TRACE_SIZE,
+                                         G_sysConfigData.pcap.system_pcap,
+                                         G_sysConfigData.total_non_gpu_max_pwr_watts);
+
+           //Callout firmware
+           addCalloutToErrl(l_err,
+                            ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                            ERRL_COMPONENT_ID_FIRMWARE,
+                            ERRL_CALLOUT_PRIORITY_HIGH);
+           commitErrl(&l_err);
+       }
     }  // if first run
 
     // Calculate the total GPU power cap for the current active limit and PSR
@@ -180,12 +228,23 @@ void amec_gpu_pcap(bool i_active_pcap_changed, int32_t i_avail_power)
                      G_sysConfigData.total_non_gpu_max_pwr_watts, g_amec->pcap.active_node_pcap);
        }
 
-       // Total GPU power cap is the lower of oversubscription and active power limit
-       // must always account for oversubscription to ensure when a power supply is lost the OCC
-       // can react fast enough, GPU power capping is too slow and must have GPU power cap already
-       // set to account for oversubscription case
-       L_total_gpu_pcap = (L_n_mode_gpu_total_pcap < L_active_psr_gpu_total_pcap) ?
-                           L_n_mode_gpu_total_pcap : L_active_psr_gpu_total_pcap;
+       // Total GPU power cap is the lower of system (N+1 or oversubscription depending on if in oversub)
+       // and the active power limit.  We do not need to always account for oversubscription since
+       // the automatic hw power brake will assert to the GPUs if there is a problem when oversub is
+       // entered from the time OCC can set and GPUs react to a new power limit
+       if(i_oversubscription)
+       {
+          // system in oversubscription use N mode cap
+          l_system_gpu_total_pcap = L_n_mode_gpu_total_pcap;
+       }
+       else
+       {
+          // system is not in oversubscription use N+1 mode cap
+          l_system_gpu_total_pcap = L_n_plus_1_mode_gpu_total_pcap;
+       }
+       
+       L_total_gpu_pcap = (l_system_gpu_total_pcap < L_active_psr_gpu_total_pcap) ?
+                           l_system_gpu_total_pcap : L_active_psr_gpu_total_pcap;
 
        // Divide the total equally across all GPUs in the system
        if(G_first_num_gpus_sys)
@@ -282,8 +341,8 @@ void amec_pcap_calc(void)
     l_oversub_state = AMEC_INTF_GET_OVERSUBSCRIPTION();
 
     // Determine the active power cap.  norm_node_pcap is set as lowest
-    // between sys and user in amec_data_write_pcap()
-    // when in oversub only use oversub pcap if lower than norm_node_pcap
+    // between sys (N+1 mode) and user in amec_data_write_pcap()
+    // when in oversub (N mode) only use oversub pcap if lower than norm_node_pcap
     // to handle user set power cap lower than the oversub power cap
     if( (TRUE == l_oversub_state) &&
         (g_amec->pcap.ovs_node_pcap < g_amec->pcap.norm_node_pcap) )
@@ -312,7 +371,7 @@ void amec_pcap_calc(void)
     // Determine GPU power cap if there are GPUs present
     if(G_first_proc_gpu_config)
     {
-       amec_gpu_pcap(l_active_pcap_changed, l_avail_power);
+       amec_gpu_pcap(l_oversub_state, l_active_pcap_changed, l_avail_power);
     }
 
     if(l_node_pwr != 0)

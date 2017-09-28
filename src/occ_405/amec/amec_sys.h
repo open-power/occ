@@ -436,27 +436,35 @@ typedef struct
 //-------------------------------------------------------------
 
 typedef struct {
-    bool     disabled;  // GPU has been marked failed and no longer monitored
-    bool     readOnce;  // Comm has been established with GPU
-    bool     overtempError;  // Core OT error has been logged against GPU
-    bool     memOvertempError;  // Memory OT error has been logged against GPU
+    bool     disabled;            // GPU has been marked failed and no longer monitored
+    bool     readOnce;            // Comm has been established with GPU
+    bool     commErrorLogged;     // GPU has been called out due to comm error
+    bool     overtempError;       // Core OT error has been logged against GPU
+    bool     memOvertempError;    // Memory OT error has been logged against GPU
     bool     checkDriverLoaded;   // Indicates if need to check if driver is loaded
-    bool     driverLoaded;   // Indicates if GPU driver is loaded
+    bool     driverLoaded;        // Indicates if GPU driver is loaded
     bool     checkMemTempSupport; // Indicates if need to check if mem monitoring is supported
-    bool     memTempSupported; // Indicates if memory temperature monitoring is supported
-    uint8_t  memErrorCount; // count of consecutive GPU mem temp read failures
-    uint8_t  errorCount;   // count of consecutive GPU core temp read failures
+    bool     memTempSupported;    // Indicates if memory temperature monitoring is supported
+    bool     notReset;            // '1' = GPU NOT in reset.  Read from OCC FLAGS register
+    bool     coreTempNotAvailable; // for fan control: '1' = core temp not available. (send 0 for fan control)
+    bool     memTempNotAvailable; // for fan control: '1' = Mem temp not available. (send 0 for fan control)
+    bool     coreTempFailure;     // for fan control: '1' = timeout failure reading core temp (send 0xFF for fan control)
+    bool     memTempFailure;      // for fan control: '1' = timeout failure reading Mem temp (send 0xFF for fan control)
+    uint8_t  memErrorCount;       // count of consecutive GPU mem temp read failures when GPU not in reset
+    uint8_t  errorCount;          // count of consecutive GPU core temp read failures when GPU not in reset
+    uint8_t  retryCount;          // count of consecutive GPU core temp read failures before I2C reset
 } gpuStatus_t;
 
 typedef struct {
-    bool     check_pwr_limit; // Indicates if need to read power limits from GPU
-    bool     pwr_limits_read;   // Indicates if power limits were read i.e. have min/max
-    bool     gpu_min_cap_required;   // Indicates if power limits were read i.e. have min/max
-    uint32_t gpu_min_pcap_mw; // Min GPU power limit in mW read from the GPU
-    uint32_t gpu_max_pcap_mw; // Max GPU power limit in mW read from the GPU
-    uint32_t gpu_desired_pcap_mw;  // AMEC determined pcap in mW to set
+    bool     check_pwr_limit;        // Indicates if need to read power limits from GPU
+    bool     pwr_limits_read;        // Indicates if power limits were read i.e. have min/max
+    bool     set_failed;             // Indicates if failed to set power limit
+    bool     gpu_min_cap_required;   // Indicates if GPU requires min cap
+    uint32_t gpu_min_pcap_mw;        // Min GPU power limit in mW read from the GPU
+    uint32_t gpu_max_pcap_mw;        // Max GPU power limit in mW read from the GPU
+    uint32_t gpu_desired_pcap_mw;    // AMEC determined pcap in mW to set
     uint32_t gpu_requested_pcap_mw;  // Requested power cap in mW sent to GPU
-    uint32_t gpu_actual_pcap_mw;  // Actual power cap in mW read back from the GPU
+    uint32_t gpu_default_pcap_mw;    // Default power cap in mW read from the GPU
 } gpuPcap_t;
 
 

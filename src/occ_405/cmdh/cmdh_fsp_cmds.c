@@ -348,7 +348,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
         const sensor_t *vrfan = getSensorByGsid(VRMPROCOT);
         if (vrfan != NULL)
         {
-            l_tempSensorList[l_sensorHeader.count].id = G_sysConfigData.proc_huid;
+            l_tempSensorList[l_sensorHeader.count].id = 0;
             l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_VRM;
             l_tempSensorList[l_sensorHeader.count].value = vrfan->sample & 0xFF;
             l_sensorHeader.count++;
@@ -358,24 +358,46 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
     // Add GPU temperatures
     for (k=0; k<MAX_NUM_GPU_PER_DOMAIN; k++)
     {
-        if(GPU_PRESENT(k))  // temp until GPU sensor IDs are sent make sensor ids "GPU"<gpu#>
+        if(GPU_PRESENT(k))
         {
             // GPU core temperature
-            if(G_amec_sensor_list[TEMPGPU0 + k]->ipmi_sid)  // temp
-               l_tempSensorList[l_sensorHeader.count].id = G_amec_sensor_list[TEMPGPU0 + k]->ipmi_sid;
-            else
-               l_tempSensorList[l_sensorHeader.count].id = 0xC6 + (9 * G_pbax_id.chip_id) + (k*3); // temp
+            l_tempSensorList[l_sensorHeader.count].id = G_amec_sensor_list[TEMPGPU0 + k]->ipmi_sid;
             l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_GPU;
-            l_tempSensorList[l_sensorHeader.count].value = (G_amec_sensor_list[TEMPGPU0 + k]->sample) & 0xFF;
+            if(g_amec->gpu[k].status.coreTempFailure)
+            {
+               // failed to read core temperature return 0xFF
+               l_tempSensorList[l_sensorHeader.count].value = 0xFF;
+            }
+            else if(g_amec->gpu[k].status.coreTempNotAvailable)
+            {
+               // core temperature not available return 0
+               l_tempSensorList[l_sensorHeader.count].value = 0;
+            }
+            else
+            {
+               // have a good core temperature return the reading
+               l_tempSensorList[l_sensorHeader.count].value = (G_amec_sensor_list[TEMPGPU0 + k]->sample) & 0xFF;
+            }
             l_sensorHeader.count++;
 
             // GPU memory temperature
-            if(G_amec_sensor_list[TEMPGPU0 + k]->ipmi_sid)  // temp
-               l_tempSensorList[l_sensorHeader.count].id = G_amec_sensor_list[TEMPGPU0MEM + k]->ipmi_sid;
-            else
-               l_tempSensorList[l_sensorHeader.count].id = 0xC7 + (9 * G_pbax_id.chip_id) + (k*3); // temp
+            l_tempSensorList[l_sensorHeader.count].id = G_amec_sensor_list[TEMPGPU0MEM + k]->ipmi_sid;
             l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_GPU_MEM;
-            l_tempSensorList[l_sensorHeader.count].value = (G_amec_sensor_list[TEMPGPU0MEM + k]->sample) & 0xFF;
+            if(g_amec->gpu[k].status.memTempFailure)
+            {
+               // failed to read memory temperature return 0xFF
+               l_tempSensorList[l_sensorHeader.count].value = 0xFF;
+            }
+            else if(g_amec->gpu[k].status.memTempNotAvailable)
+            {
+               // memory temperature not available return 0
+               l_tempSensorList[l_sensorHeader.count].value = 0;
+            }
+            else
+            {
+               // have a good memory temperature return the reading
+               l_tempSensorList[l_sensorHeader.count].value = (G_amec_sensor_list[TEMPGPU0MEM + k]->sample) & 0xFF;
+            }
             l_sensorHeader.count++;
         }
     }

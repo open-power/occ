@@ -458,12 +458,6 @@ void amec_data_write_pcap(void)
             g_amec->pcap.ovs_node_pcap = G_sysConfigData.pcap.hard_min_pcap;
         }
 
-        //Oversubscription pcap can NOT be higher than a customer set pcap.
-        if(g_amec->pcap.ovs_node_pcap > l_customer)
-        {
-            g_amec->pcap.ovs_node_pcap = l_customer;
-        }
-
         //for all new pcap data setting: If KVM, update the OPAL dynamic data
         if(G_sysConfigData.system_type.kvm)
         {

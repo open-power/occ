@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -1411,9 +1411,21 @@ typedef union ocb_occflg {
     uint32_t i2c_engine2_lock_occ  : 1;
     uint32_t i2c_engine3_lock_host : 1;
     uint32_t i2c_engine3_lock_occ  : 1;
-    uint32_t reserved_occ : 10;
+    uint32_t gpu0_reset_status     : 1;
+    uint32_t gpu1_reset_status     : 1;
+    uint32_t gpu2_reset_status     : 1;
+    uint32_t reserved_occ          : 3;
+    uint32_t wof_hcode_mode        : 2;
+    uint32_t active_quad_update    : 1;
+    uint32_t request_occ_safe      : 1;
 #else
-    uint32_t reserved_occ : 10;
+    uint32_t request_occ_safe      : 1;
+    uint32_t active_quad_update    : 1;
+    uint32_t wof_hcode_mode        : 2;
+    uint32_t reserved_occ          : 3;
+    uint32_t gpu2_reset_status     : 1;
+    uint32_t gpu1_reset_status     : 1;
+    uint32_t gpu0_reset_status     : 1;
     uint32_t i2c_engine3_lock_occ  : 1;
     uint32_t i2c_engine3_lock_host : 1;
     uint32_t i2c_engine2_lock_occ  : 1;

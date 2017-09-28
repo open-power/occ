@@ -51,6 +51,8 @@
 #define GPE_RC_GET_NEST_DTS_FAILED   0x61     // Failed to collect nest DTS temperatures
 
 // GPU Errors
-#define GPE_RC_NO_GPU_SUPPORT        0x8F     // GPE1 image doesn't support GPUs
-
+#define GPE_RC_NO_GPU_SUPPORT        0x80     // GPE1 image doesn't support GPUs
+#define GPE_RC_GPU_DRIVER_CHANGE     0x81     // GPU in transition or just completed phase change
+#define GPE_RC_GPU_CMD_NOT_SUPPORTED 0x82     // GPU rejected command with no support
+#define GPE_RC_GPU_CMD_FAILED        0x83     // An error occurred in the last GPU operation
 #endif //_GPE_ERR_H

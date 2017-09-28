@@ -87,12 +87,14 @@ enum occReasonCode
     /// Firmware Failure: equivalent to assertion failures
     INTERNAL_FW_FAILURE             = 0xA0,
 
+    /// Build problem, gpe1 image doesn't support GPU interface
+    GPU_NO_GPE_SUPPORT              = 0xA1,
     /// Error with GPU tasks
-    GPU_FAILURE                     = 0xA1,
+    GPU_FAILURE                     = 0xA2,
     /// GPU core reached error threshold
-    GPU_ERROR_TEMP                  = 0xA2,
+    GPU_ERROR_TEMP                  = 0xA3,
     /// GPU memory reached error threshold
-    GPU_MEMORY_ERROR_TEMP           = 0xA3,
+    GPU_MEMORY_ERROR_TEMP           = 0xA4,
 
     /// Failure within the OCC Complex of the processor
     INTERNAL_HW_FAILURE             = 0xB0,
@@ -289,7 +291,11 @@ enum occExtReasonCode
     ERC_GPU_READ_MEM_TEMP_CAPABLE_FAILURE       = 0x00F6,
     ERC_GPU_INVALID_GPU_OPERATION               = 0x00F7,
     ERC_GPU_N_MODE_PCAP_CALC_FAILURE            = 0x00F8,
+    ERC_GPU_N_PLUS_1_MODE_PCAP_CALC_FAILURE     = 0x00F9,
     ERC_GPU_NO_GPE_SUPPORT                      = 0x00FF,
+    ERC_GPU_CHECK_DRIVER_LOADED_FAILURE         = 0x0100,
+    ERC_GPU_READ_PWR_LIMIT_FAILURE              = 0x0101,
+    ERC_GPU_SET_PWR_LIMIT_FAILURE               = 0x0102,
 
     ERC_STATE_FROM_ALL_TO_STB_FAILURE           = 0x0123,
     ERC_STATE_FROM_ACT_TO_CHR_FAILURE           = 0x0124,

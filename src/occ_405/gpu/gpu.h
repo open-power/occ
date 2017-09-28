@@ -74,9 +74,10 @@ typedef enum
 {
     GPU_STATE_READ_MEM_TEMP_NEW      = 0x21,
     GPU_STATE_READ_MEM_TEMP_START    = 0x22,
-    GPU_STATE_READ_MEM_TEMP_STOP     = 0x23,
-    GPU_STATE_READ_MEM_TEMP_READ     = 0x24,
-    GPU_STATE_READ_MEM_TEMP_COMPLETE = 0x25,
+    GPU_STATE_READ_MEM_TEMP_2        = 0x23,
+    GPU_STATE_READ_MEM_TEMP_3        = 0x24,
+    GPU_STATE_READ_MEM_TEMP_READ     = 0x25,
+    GPU_STATE_READ_MEM_TEMP_COMPLETE = 0x26,
 } gpuReadMemTempState_e;
 
 // States for checking GPU memory temperature capability (gpu_read_mem_temp_capability_sm)
@@ -89,6 +90,39 @@ typedef enum
     GPU_STATE_READ_MEM_TEMP_CAPABLE_READ     = 0x35,
     GPU_STATE_READ_MEM_TEMP_CAPABLE_COMPLETE = 0x36,
 } gpuReadMemTempCapableState_e;
+
+// States for checking if GPU driver is loaded (gpu_check_driver_loaded_sm)
+typedef enum
+{
+    GPU_STATE_CHECK_DRIVER_LOADED_NEW      = 0x41,
+    GPU_STATE_CHECK_DRIVER_LOADED_START    = 0x42,
+    GPU_STATE_CHECK_DRIVER_LOADED_2        = 0x43,
+    GPU_STATE_CHECK_DRIVER_LOADED_3        = 0x44,
+    GPU_STATE_CHECK_DRIVER_LOADED_READ     = 0x45,
+    GPU_STATE_CHECK_DRIVER_LOADED_COMPLETE = 0x46,
+} gpuCheckDriverLoadedState_e;
+
+// States for reading GPU power limits (gpu_read_pwr_limit_sm)
+typedef enum
+{
+    GPU_STATE_READ_PWR_LIMIT_NEW      = 0x51,
+    GPU_STATE_READ_PWR_LIMIT_START    = 0x52,
+    GPU_STATE_READ_PWR_LIMIT_2        = 0x53,
+    GPU_STATE_READ_PWR_LIMIT_3        = 0x54,
+    GPU_STATE_READ_PWR_LIMIT_READ     = 0x55,
+    GPU_STATE_READ_PWR_LIMIT_COMPLETE = 0x56,
+} gpuReadPwrLimitState_e;
+
+// States for setting GPU power limit (gpu_set_pwr_limit_sm)
+typedef enum
+{
+    GPU_STATE_SET_PWR_LIMIT_NEW      = 0x61,
+    GPU_STATE_SET_PWR_LIMIT_START    = 0x62,
+    GPU_STATE_SET_PWR_LIMIT_2        = 0x63,
+    GPU_STATE_SET_PWR_LIMIT_3        = 0x64,
+    GPU_STATE_SET_PWR_LIMIT_READ     = 0x65,
+    GPU_STATE_SET_PWR_LIMIT_COMPLETE = 0x66,
+} gpuSetPwrLimitState_e;
 
 // GPU IPC initialization
 void gpu_ipc_init();

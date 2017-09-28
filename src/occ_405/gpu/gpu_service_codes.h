@@ -39,6 +39,9 @@ enum gpuModuleId
     GPU_MID_GPU_READ_TEMP             =  GPU_COMP_ID | 0x06,
     GPU_MID_GPU_READ_MEM_TEMP         =  GPU_COMP_ID | 0x07,
     GPU_MID_GPU_READ_MEM_TEMP_CAPABLE =  GPU_COMP_ID | 0x08,
+    GPU_MID_GPU_CHECK_DRIVER_LOADED   =  GPU_COMP_ID | 0x09,
+    GPU_MID_GPU_READ_PWR_LIMIT        =  GPU_COMP_ID | 0x0A,
+    GPU_MID_GPU_SET_PWR_LIMIT         =  GPU_COMP_ID | 0x0B,
 };
 
 #endif /* #ifndef _GPU_SERVICE_CODES_H_ */

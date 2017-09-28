@@ -41,6 +41,12 @@
 
 typedef enum
 {
+    GPU_CAP_MEM     = 0x00,
+    GPU_CAP_CORE    = 0x01
+} GPU_CAPABILITIES;
+
+typedef enum
+{
     ID_GPU0 = 0x00,
     ID_GPU1 = 0x01,
     ID_GPU2 = 0x02,
@@ -64,12 +70,21 @@ typedef enum
     GPU_REQ_READ_MEM_TEMP_3             = 0x06, // mem temp step 3
     GPU_REQ_READ_MEM_TEMP_FINISH        = 0x07, // Get memory temp reading
     GPU_REQ_READ_CAPS_START             = 0x08, // Start reading capabilities
-    GPU_REQ_READ_CAPS_2                 = 0x09, // Start reading capabilities
-    GPU_REQ_READ_CAPS_3                 = 0x0A, // Start reading capabilities
-    GPU_REQ_READ_CAPS_FINISH            = 0x0B,
-    GPU_REQ_READ_PWR_LIMIT_START        = 0x0C, // Start reading GPU information
-    GPU_REQ_READ_PWR_LIMIT_STOP         = 0x0D, // Read GPU temp register
-    GPU_REQ_READ_PWR_LIMIT              = 0x0E, // Start reading pwr limit
+    GPU_REQ_READ_CAPS_2                 = 0x09, // Capabilities read step 2
+    GPU_REQ_READ_CAPS_3                 = 0x0A, // Capabilities read step 3
+    GPU_REQ_READ_CAPS_FINISH            = 0x0B, // get capabilities
+    GPU_REQ_READ_PWR_LIMIT_START        = 0x10, // Start reading GPU power limit
+    GPU_REQ_READ_PWR_LIMIT_2            = 0x11,
+    GPU_REQ_READ_PWR_LIMIT_3            = 0x12,
+    GPU_REQ_READ_PWR_LIMIT_FINISH       = 0x13,
+    GPU_REQ_SET_PWR_LIMIT_START         = 0x20, // Start setting GPU power limit
+    GPU_REQ_SET_PWR_LIMIT_2             = 0x21,
+    GPU_REQ_SET_PWR_LIMIT_3             = 0x22,
+    GPU_REQ_SET_PWR_LIMIT_FINISH        = 0x23,
+    GPU_REQ_CHECK_DRIVER_START          = 0x31, // Start check driver loaded
+    GPU_REQ_CHECK_DRIVER_2              = 0x32,
+    GPU_REQ_CHECK_DRIVER_3              = 0x33,
+    GPU_REQ_CHECK_DRIVER_FINISH         = 0x34,
     GPU_REQ_RESET                       = 0x60, // Reset
 } gpu_op_req_e;
 
@@ -78,10 +93,10 @@ typedef struct
 {
   GpeErrorStruct error;
   uint8_t gpu_id;
+  uint8_t gpu_rc;
   uint8_t operation;
-  uint64_t data;
+  uint64_t data[3];
 } gpu_sm_args_t;
-
 
 #endif // _GPU_STRUCTS_H
 
