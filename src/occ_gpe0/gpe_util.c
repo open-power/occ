@@ -159,29 +159,24 @@ int wait_spi_completion(GpeErrorStruct *error, uint32_t reg, uint32_t i_timeout)
  */
 void busy_wait(uint32_t i_microseconds)
 {
-    uint32_t start_decrementer_value;      // The decrementer register value at the beginning
-    uint32_t end_decrementer_value;        // The decrementer register value at the end
-    uint32_t current_decrementer_value;    // The current decrementer register value
-    uint32_t duration;
-    MFDEC(start_decrementer_value);        // get the decrementer register value at the beginning
-    current_decrementer_value = start_decrementer_value;
+    uint32_t current_count = pk_timebase32_get();
+    uint32_t end_count = current_count +
+        PK_INTERVAL_SCALE((uint32_t)PK_MICROSECONDS(i_microseconds));
 
-    // multiply the delay time by the external clock frequency (~37.5 MHz)
-    duration =  (i_microseconds * 37);
-    duration += (i_microseconds >> 1);
-
-    // Calculate the decrementer register value at the end of the busy wait period
-    end_decrementer_value = start_decrementer_value - duration;
-
-    if(start_decrementer_value < end_decrementer_value)           // decrementer overflows during the busy wait?
+    // Handle wrap case
+    if(current_count > end_count)
     {
-        MFDEC(current_decrementer_value);
-        while(current_decrementer_value < end_decrementer_value)  // Wait until Decrementer overflows
-            MFDEC(current_decrementer_value);
+        // let counter roll over
+        while(current_count > end_count)
+        {
+            current_count = pk_timebase32_get();
+        }
     }
 
-    while (current_decrementer_value > end_decrementer_value)     // Wait until end_decrementer_value is reached
-        MFDEC(current_decrementer_value);
+    while (current_count < end_count)
+    {
+        current_count = pk_timebase32_get();
+    }
 }
 
 /*

@@ -128,9 +128,9 @@ __pk_schedule_hardware_timeout(PkTimebase timeout)
         {
             diff = (timeout - now);
 
-            if (diff > 0xfffffffful)
+            if (diff > 0xffff0000ull)
             {
-                new_dec = 0xffffffff;
+                new_dec = 0xffff0000;
             }
             else
             {

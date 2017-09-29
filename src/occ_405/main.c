@@ -2071,9 +2071,10 @@ int main(int argc, char **argv)
                    0,
                    l_tb_freq_hz);
 
-    // Store the nest / 4 frequency in shared SRAM so the GPEs
-    // can be initialized with the correct timebase as well.
-    G_shared_gpe_data.nest_freq_div = l_tb_freq_hz;
+    // The GPEs are configured to use the OCB_OTBR as a timebase.
+    // This counter runs at (nest freq)/64.  The 405 timebase frequency runs at
+    // (nest freq)/4, so divide this by 16 to get the gpe timebase frequency.
+    G_shared_gpe_data.nest_freq_div = l_tb_freq_hz/16;
 
     CHECKPOINT(SSX_INITIALIZED);
     // TRAC_XXX needs ssx services, traces can only be done after ssx_initialize

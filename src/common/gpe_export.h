@@ -58,7 +58,7 @@ typedef struct nop
 
 typedef struct gpe_shared_data
 {
-    uint32_t    nest_freq_div;  // Nest freq / 4
+    uint32_t    nest_freq_div;  // Nest freq / 64
     uint32_t    spipss_spec_p9; // Which APSS spec to use
     uint32_t    fir_heap_buffer_ptr;
     uint32_t    fir_params_buffer_ptr;
