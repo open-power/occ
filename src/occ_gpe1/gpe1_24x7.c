@@ -87,6 +87,10 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
     //
     static volatile uint64_t* L_tics_exceded = (uint64_t*) (DBG_TICS_OFFSET | PBA_ENABLE);
     static volatile uint64_t* L_marker = (uint64_t*) (DBG_MARK | PBA_ENABLE);
+    static volatile uint64_t* L_DBG_ITER = (uint64_t*) (DBG_ITER | PBA_ENABLE);
+    volatile uint8_t* L_DBG_STATE = (uint8_t*) (DBG_STATE | PBA_ENABLE);
+    //
+    //uint64_t temp;
     args->error.error = 0; // default success
     args->error.ffdc = 0;
        
@@ -98,6 +102,7 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
         PK_TRACE("gpe_24x7: First call since OCC started. ticks = 0");
         //set configure to true
         L_configure = true;
+        L_INIT = true;
         //initialize posting area
         initialize_postings();
 
@@ -138,28 +143,34 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
                L_DONT_RUN = true;
                *L_status = CNTL_STATUS_PAUSE;
                *L_cmd = CNTL_CMD_NOP;
+               PK_TRACE("gpe_24x7: in CNTL_CMD_PAUSE");
                break;
            case CNTL_CMD_RESUME:
                L_DONT_RUN = false;
                *L_status = CNTL_STATUS_RUN;
                *L_cmd = CNTL_CMD_NOP;
+               PK_TRACE("gpe_24x7: in CNTL_CMD_RESUME");
                break;
            case CNTL_CMD_CLEAR:
                L_DONT_RUN = false;
                L_INIT = true;
+               PK_TRACE("gpe_24x7: in CNTL_CMD_CLEAR, L_INIT set to true");
                *L_cmd = CNTL_CMD_NOP;
                break;
        }
     }
 //3.get any new speed setting
     if (*L_speed != L_cur_speed)
+      {
         L_INIT = true;
+        PK_TRACE("gpe_24x7: speed change, L_INIT set to true");
+       }
 //4.check for any system config changes via uav
-    if (*L_uav != G_CUR_UAV)
+    /*if (*L_uav != G_CUR_UAV)
     {
         L_INIT = true;
         L_PART_INIT = true;
-    }
+    }*/
     //initialize postings if required from new cmd or change of speed or UAV change.
     if (L_INIT)
     {
@@ -176,20 +187,25 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
         G_CUR_UAV = *L_uav;
 //SW399904 patch until HWP output for UAV is debugged.
         G_CUR_UAV = CNTL_UAV_TEMP;
-        *L_marker = MARKER;
+        *L_marker = MARKER1;
 //
         set_speed(&L_cur_speed,&L_CUR_DELAY,L_status);
         //set the state to 1 if reconfig is required. config scoms are split across multiple states starting from 1.
         L_current_state = 1;
+        PK_TRACE("gpe_24x7: in L_INIT L_current_state set to 1");
         L_INIT = false;
     }
 //5. Based on the current entry state number, appropriate group posting is done.
-//G1(1,5,9,13), G2(2,6,10,14), G3(3,7,11,15) in G4(4), G5(8), G6(12), G7(16).
+//G1,G2(states 1,3,5,7), 
+//G3(states 2,4,6,8) G4(state 2), G5(state 4), G6(state 6), G7(state 8).
 //during first time entry or a re-init is trigered, the current run is used for pmu configuration.
 //configuration will continue across multiple re-entry slots till all configuration scoms are done.
-//scoms are generally kept at 8 per slot, to prevent from exceeding 25us runtime buget.
+//scoms are generally kept at 16 per slot, to prevent from exceeding 50us runtime buget.
     if (L_DONT_RUN == false)
     {
+        putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
+        //PK_TRACE("gpe_24x7: begin state = %d",(int)L_current_state);
+        *L_DBG_STATE = L_current_state;
         switch(L_current_state)
         {
             case 1:
@@ -269,6 +285,8 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
                 if(L_configure)
                 {
                     configure_pmu(L_current_state, L_cur_speed);
+                    L_configure = false;
+                    *L_status = CNTL_STATUS_RUN;
                 }
                 else
                 {
@@ -371,11 +389,14 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
         L_current_state = 1;
     else
         L_current_state++;
+    //PK_TRACE("gpe_24x7: end state = %d",(int)L_current_state);
 
     // send back a response, IPC success even if ffdc/rc are non zeros
     rc = ipc_send_rsp(cmd, IPC_RC_SUCCESS);
+    //PK_TRACE("gpe_24x7: SRN exiting thread with rc =%d", rc);
     if(rc)
     {
+        *L_DBG_ITER = MARKER2;
         PK_TRACE("gpe_24x7: Failed to send response back. Halting GPE1");
         gpe_set_ffdc(&(args->error), 0x00, GPE_RC_IPC_SEND_FAILED, rc);
         pk_halt();
@@ -386,8 +407,18 @@ void configure_pmu(uint8_t state, uint64_t speed)
 {//write the configuration SCOMs for all pmus.
     int i,start = (state - 1) * 16,end = state * 16;
     static volatile uint64_t* L_conf_last = (uint64_t*) (DBG_CONF_OFFSET | PBA_ENABLE);
+    static volatile uint64_t* L_DBG_0 = (uint64_t*) (DBG_0 | PBA_ENABLE);
+    static volatile uint64_t* L_DBG_1 = (uint64_t*) (DBG_1 | PBA_ENABLE);
+    static volatile uint64_t* L_DBG_2 = (uint64_t*) (DBG_2 | PBA_ENABLE);
+    static volatile uint64_t* L_DBG_3 = (uint64_t*) (DBG_3 | PBA_ENABLE);
+    static volatile uint64_t* L_DBG_UAV = (uint64_t*) (DBG_UAV | PBA_ENABLE);
     putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
     
+    *L_DBG_UAV = G_CUR_UAV;
+    *L_DBG_3 = MARKER3;
+    *L_DBG_0 = (!(G_CUR_UAV & MASK_XLNK0));
+    *L_DBG_1 = (!(G_CUR_UAV & MASK_XLNK1));
+    *L_DBG_2 = (!(G_CUR_UAV & MASK_XLNK2));
     if(end > TOTAL_CONFIGS)
         end = TOTAL_CONFIGS;
     for(i = start; i < end; i++)
@@ -418,7 +449,7 @@ void configure_pmu(uint8_t state, uint64_t speed)
             continue;
         else if( ((i==24)||(i==25)||(i==26)||(i==27)) && (!(G_CUR_UAV & MASK_MCS2)||!(G_CUR_UAV & MASK_MCS3)) ) 
             continue;
-        else if( (i==28) && (!(G_CUR_UAV & MASK_XLNK0)||!(G_CUR_UAV & MASK_XLNK1)||!(G_CUR_UAV & MASK_XLNK2)) )
+        else if( (i==28) && ((!(G_CUR_UAV & MASK_XLNK0))||(!(G_CUR_UAV & MASK_XLNK1))||(!(G_CUR_UAV & MASK_XLNK2))) )
             continue;
         else if( ((i==29)||(i==30)||(i==31)||(i==32)) && !(G_CUR_UAV & MASK_NX) )
             continue;
@@ -517,7 +548,7 @@ void post_pmu_events(int grp)
             *post_addr = INC_UPD_COUNT;
             post_addr++;
             for(i=0; i<8; i++)
-            {
+            {   
                 getscom_abs(G_PMULETS_1[i], &u3.pmulet);
                 for(j=0; j<4; j++)
                 {
