@@ -1,4 +1,28 @@
 #!/bin/bash
+# IBM_PROLOG_BEGIN_TAG
+# This is an automatically generated prolog.
+#
+# $Source: src/tools/occtoolp9 $
+#
+# OpenPOWER OnChipController Project
+#
+# Contributors Listed Below - COPYRIGHT 2017
+# [+] International Business Machines Corp.
+#
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# permissions and limitations under the License.
+#
+# IBM_PROLOG_END_TAG
 
 blue=""
 red=""
@@ -22,6 +46,7 @@ poll_version="20"
 occ_cmd=""
 occ_cmd_data=""
 action=""
+newFlags=""
 
 
 interface="cronus"
@@ -107,17 +132,21 @@ function usage
     echo "           -h = help"
     echo "           -p = Send POLL command to the OCC"
     echo "           -X XX XXXXXX... = Send XX command to the OCC with specified cmd data"
-    echo "              -X 53 0500000001LLLLTTTT = list first 50 OCC sensors (LLLL=Location,TTTT=Type)"
-    echo "              -X 53 0600003d = get sensor details for GUID 0x003d"
+#    echo "              -X 53 0500000001LLLLTTTT = list first 50 OCC sensors (LLLL=Location,TTTT=Type)"
+#    echo "              -X 53 0600003d = get sensor details for GUID 0x003d"
+    echo "           -S type=0xTT,loc=0xLL = List specified sensors"
+    echo "           -S guid=0xGGGG = Get sensor details for specified GUID"
     echo "           -SL = List all OCC sensors"
     echo "           -SL0 = List all OCC sensors (including sensors with 0 readings)"
     echo "           -trace  Collect OCC Trace hex trace data"
     echo ""
     echo "         OPAL-PRD Only Commands:"
     echo "           -I = HTMGT info"
+    echo "           -IF <newValue> = Read/Set HTMGT internalFlags"
+    echo "           -ES = Attempt to Exit Safe mode"
     echo ""
     echo "         CRONUS Only Commands:"
-    echo "           -P = Send POLL command to the OCC and purge any elog, if found"
+    echo "           -P = Send POLL command to the OCC and collect/purge any elog, if found"
     echo "           -CMDRSP = Dump OCC Command/Response buffers from SRAM"
     echo ""
     echo "       options:"
@@ -150,6 +179,7 @@ quiet="-quiet"
 let purge=0
 # Default OCC/Processor
 let occ=0
+let node=0
 let bmcFound=0
 number=$RANDOM
 let "number %= 126"
@@ -174,6 +204,9 @@ else
     bmcPw="admin"
 fi
 let sendOccInstance=1
+let sensor_type=0xFFFF # all types
+let sensor_loc=0xFFFF  # all locations
+let sensor_guid=0xFFFF
 
 let passThru=0
 while [ -n "$(echo $1 | grep '-')" ]; do
@@ -186,6 +219,28 @@ while [ -n "$(echo $1 | grep '-')" ]; do
     -p ) occ_cmd="00"
          occ_cmd_data=$poll_version
          ;;
+
+    -S )
+        shift
+        if [[ "$1" =~ "type=" ]] || [[ "$1" =~ "loc=" ]]; then
+            action="SensorList"
+            if [[ "$1" =~ "type=" ]]; then
+                let sensor_type=${1#*type=};
+            fi
+            if [[ "$1" =~ "loc=" ]]; then
+                let sensor_loc=${1##*loc=};
+            fi
+        elif [[ "$1" =~ "guid=" ]]; then
+            action="SensorDump"
+            let sensor_guid=${1#*guid=};
+        else
+            echo "ERROR: -S option requires Type/Location (-S type=0xFF,loc=0xFF)"
+            echo "  Types: 0xffff=All, 0x1=Generic, 0x2=Current, 0x4=Voltage, 0x8=Temperature, 0x10=Utilization,"
+            echo "         0x20=Time, 0x40=Frequency, 0x80=Power, 0x200=Performance";
+            echo "  Location: 0xffff=All, 0x1=System, 0x2=Processor, 0x4=Partition, 0x8=Memory, 0x10=VRM, 0x20=OCC 0x40=Core"
+            exit 13
+        fi
+        ;;
 
     -SL )
         action="SensorList"
@@ -201,25 +256,28 @@ while [ -n "$(echo $1 | grep '-')" ]; do
         ;;
 
     -X )
-        if [ -n "$2" ] && ( [ ${#2} -eq 2 ] || [ ${#2} -eq 4 ] ); then
-             if [ "${2:0:2}" == "0x" ]; then
-                 occ_cmd="${2:2:2}"
-             else
-                 occ_cmd="$2"
-             fi
-             if [ -n "$3" ]; then
-                 let odd_length="${#3} & 1"
-                 if [ $odd_length -eq 0 ]; then
-                     if [ "${3:0:2}" == "0x" ]; then
-                         occ_cmd_data="${3:2}"
-                     else
-                         occ_cmd_data="$3"
-                     fi
-                 else
-                     echo -e "${red}ERROR: OCC command data must be even number of HEX digits${normal}"
-                     exit 12
-                 fi
-             fi
+        if [ -n "$2" ] && [ "${2:0:1}" != "-" ] && ( [ ${#2} -eq 2 ] || [ ${#2} -eq 4 ] ); then
+            shift
+            if [ "${1:0:2}" == "0x" ]; then
+                occ_cmd="${1:2:2}"
+            else
+                occ_cmd="$1"
+            fi
+            if [ -n "$2" ] && [ "${2:0:1}" != "-" ]; then
+                # Command Data
+                shift
+                let odd_length="${#1} & 1"
+                if [ $odd_length -eq 0 ]; then
+                    if [ "${1:0:2}" == "0x" ]; then
+                        occ_cmd_data="${1:2}"
+                    else
+                        occ_cmd_data="$1"
+                    fi
+                else
+                    echo -e "${red}ERROR: OCC command data must be even number of HEX digits${normal}"
+                    exit 12
+                fi
+            fi
          else
              echo -e "${red}ERROR: -X requires 2 byte command (in HEX)${normal}"
              exit 12
@@ -228,8 +286,19 @@ while [ -n "$(echo $1 | grep '-')" ]; do
 
         #### OPAL-PRD ONLY COMMANDS/OPTIONS:
 
+    -ES )
+        action="ExitSafe"
+        ;;
+
     -I )
         action="TMGTInfo"
+        ;;
+
+    -IF )
+        action="TMGTFlags"
+        if [ -n "$2" ]; then
+            let newFlags=$2
+        fi
         ;;
 
         #### CRONUS ONLY COMMANDS/OPTIONS:
@@ -657,8 +726,10 @@ function parse_rsp_poll
     printf "     Elog Len: 0x%04X\n" $elogLen
     let offset=$offset+2
     echo -en "$normal";
-    hexdump -s $offset -n 2 -e '" WOF Disabled: 0x" 2/1 "%02X" "\n"' ${binfile}
-    let offset=$offset+2
+    hexdump -s $offset -n 1 -e '"     reserved: 0x%02X\n"' ${binfile}
+    let offset=$offset+1
+    hexdump -s $offset -n 1 -e '"   GPU config: 0x%02X\n"' ${binfile}
+    let offset=$offset+1
     if [ $occRspLength -gt 17 ]; then
         hexdump -s $offset -n 16 -e '"   Code Level: " 16 "%_p" "\n"' ${binfile}
         let offset=$offset+16
@@ -730,7 +801,11 @@ function parse_rsp_poll
                             hexdump -s $offset -n $sensorLength -e '"         " 4/1 "%02X" " " 2/1 "%02X" "\n"' ${binfile}
                         elif [ "$sensor" == "POWR" ]; then
                             if [ $sensorFormat -ne $((0xA0)) ]; then
-                                hexdump -s $offset -n $sensorLength -e '"         " 4/1 "%02X" " " 1/1 "%02X" " " 1/1 "%02X" " " 2/1 "%02X" " " 4/1 "%02X" " " 8/1 "%02X" " " 2/1 "%02X" "\n"' ${binfile}
+                                #hexdump -s $offset -n $sensorLength -e '"         " 4/1 "%02X" " " 1/1 "%02X" " " 1/1 "%02X" " " 2/1 "%02X" " " 4/1 "%02X" " " 8/1 "%02X" " " 2/1 "%02X" "\n"' ${binfile}
+                                pwr="`hexdump -s $offset -n 22 -e '4/1 "%02X" " " 1/1 "%02X" " " 1/1 "%02X" " " 2/1 "%02X" " " 4/1 "%02X" " " 8/1 "%02X" " " 2/1 "%02X"' ${binfile}`"
+                                let func=0x${pwr:9:2}
+                                get_function_id $func
+                                printf "         $pwr    $funcid_name\n";
                             else
                                 # APSS-less
                                 let reading_offset=$offset+6
@@ -776,7 +851,16 @@ function parse_rsp_poll
                             let capoffset+=1
                             printf "$indent User Power Limit Source: %d\n" $pcap;
                         elif [ "$sensor" == "EXTN" ]; then
-                            hexdump -s $offset -n $sensorLength -e '"         " 4/1 "%02X" " " 1/1 "%02X" " " 1/1 "%02X" " " 6/1 "%02X""\n"' ${binfile}
+                            let flag_offset=$offset+4
+                            let flags="0x`hexdump -s $flag_offset -n 1 -e '"%02X"' ${binfile}`";
+                            let is_sensor="$flags & 0x80";
+                            if [ $is_sensor == 0 ]; then
+                                # Dump name as ASCII
+                                hexdump -s $offset -n $sensorLength -e '"           " 4/1 "%_p" "   " 1/1 "%02X" " " 1/1 "%02X" " " 6/1 "%02X""\n"' ${binfile}
+                            else
+                                # Dump sensor number in hex
+                                hexdump -s $offset -n $sensorLength -e '"         " 4/1 "%02X" " " 1/1 "%02X" " " 1/1 "%02X" " " 6/1 "%02X""\n"' ${binfile}
+                            fi
                         else
                             echo -e "${red}ERROR: Unknown sensor eye catcher: $sensor${normal}";
                         fi
@@ -827,6 +911,49 @@ function parse_rsp_poll
     fi
 } # end parse_rsp_poll()
 
+
+# Determine name/description associated with APSS Function IDs
+function get_function_id
+{
+    let funcid=$1
+    case $funcid in
+           1 ) funcid_name="Mem Proc 0" ;;
+           2 ) funcid_name="Mem Proc 1" ;;
+           3 ) funcid_name="Mem Proc 2" ;;
+           4 ) funcid_name="Mem Proc 3" ;;
+           5 ) funcid_name="Proc 0" ;;
+           6 ) funcid_name="Proc 1" ;;
+           7 ) funcid_name="Proc 2" ;;
+           8 ) funcid_name="Proc 3" ;;
+           9 ) funcid_name="Proc 0 cache/io/pcie" ;;
+          10 ) funcid_name="Proc 1 cache/io/pcie" ;;
+          11 ) funcid_name="Proc 2 cache/io/pcie" ;;
+          12 ) funcid_name="Proc 3 cache/io/pcie" ;;
+          13 ) funcid_name="IO A" ;;
+          14 ) funcid_name="IO B" ;;
+          15 ) funcid_name="IO C" ;;
+          16 ) funcid_name="Fans A" ;;
+          17 ) funcid_name="Fans B" ;;
+          18 ) funcid_name="Storage A" ;;
+          19 ) funcid_name="Storage B" ;;
+          20 ) funcid_name="(12V voltage sense)" ;;
+          21 ) funcid_name="(ground remote sense)" ;;
+          22 ) funcid_name="Total System Power" ;;
+          23 ) funcid_name="Memory Cache (Centaur)" ;;
+          24 ) funcid_name="Proc 0 GPU 0" ;;
+          25 ) funcid_name="Mem Proc 0-0" ;;
+          26 ) funcid_name="Mem Proc 0-1" ;;
+          27 ) funcid_name="Mem Proc 0-2" ;;
+          28 ) funcid_name="(12V standby current)" ;;
+          29 ) funcid_name="Proc 0 GPU 1" ;;
+          30 ) funcid_name="Proc 0 GPU 2" ;;
+          31 ) funcid_name="Proc 1 GPU 0" ;;
+          32 ) funcid_name="Proc 1 GPU 1" ;;
+          33 ) funcid_name="Proc 1 GPU 2" ;;
+           * ) funcid_name="" ;;
+    esac
+    #printf "$funcid => $funcid_name\n";
+}
 
 function parse_rsp_mfg
 {
@@ -917,6 +1044,32 @@ function parse_rsp_mfg
     fi
 
 } # end parse_rsp_mfg()
+
+
+function parse_rsp_debugpt
+{
+    # Response Data
+    let subcmd="0x${occ_cmd_data:0:2}"
+
+    if [ $subcmd -eq 3 ]; then # Trace Buffer
+        printf "  DEBUG Sub Cmd: 0x%02X  (Trace Buffer)\n" $subcmd
+        printf "   Trace Buffer: $ascii  (0x%s)\n" ${occ_cmd_data:6:8}
+        echo -e $(echo "${occ_cmd_data:6:6}" | sed -e 's/\(..\)/\\x\1/g')
+        #if [ "${occ_cmd_data:6:4}" == "4750" ]; then
+        #    echo "==> ppe2fsp ${binfile} ${binfile}.bin"
+        #    ppe2fsp ${binfile} ${binfile}.bin
+        #    echo "==> xxd ${bindfile}.bin"
+        #    xxd ${bindfile}.bin
+        #else
+            if [ $verbose -ne 0 ]; then
+                # -v to display all repeated data (like remaining 00s)
+                hexdump -C -v ${binfile}
+            else
+                hexdump -C    ${binfile}
+            fi
+        #fi
+    fi
+}
 
 
 function handle_occ_rsp
@@ -1021,31 +1174,34 @@ function handle_occ_rsp
 
     # Check for exception
     let key="$rspStatus & 0xF0"
+    let elogId=0
     if [ $key -eq 224 ]; then
         printf "${red}OCC EXCEPTION STATUS FOUND: 0x%02X ${normal}\n" $rspStatus;
         echo "Exception Data:"
-        hexdump -s $offset -n $length -e '"         " 2/1 "%02X" " " 2/1 "%02X" "\n"' ${binfile}
+        #hexdump -s $offset -n $length -e '"         " 2/1 "%02X" " " 2/1 "%02X" "\n"' ${binfile}
+        hexdump -C -v -s $offset -n $length ${binfile}
         echo ""
         let seqMismatch=0
-    fi
-
-    let elogId=0
-    if [ "$occ_cmd" == "00" ]; then # POLL COMMAND
-        parse_rsp_poll
-        if [ $elogId -ne 0 ]; then
-            process_elog
-        fi
-    elif [ "$occ_cmd" == "53" ]; then # MFG COMMAND
-        parse_rsp_mfg
     else
-        # Dump response as hex data
-        echo "Response Data:"
-        let remaining_bytes=$end_of_rsp_data-$offset
-        if [ $verbose -ne 0 ]; then
-            # -v to display all repeated data (like remaining 00s)
-            hexdump -C -v -s $offset -n $remaining_bytes ${binfile}
+        if [ "$occ_cmd" == "00" ]; then # POLL COMMAND
+            parse_rsp_poll
+            if [ $elogId -ne 0 ] && [ $elogAddr -ne 0 ] ; then
+                process_elog
+            fi
+        elif [ "$occ_cmd" == "40" ]; then # DEBUG PASSTHRU COMMAND
+            parse_rsp_debugpt
+        elif [ "$occ_cmd" == "53" ]; then # MFG COMMAND
+            parse_rsp_mfg
         else
-            hexdump -C    -s $offset -n $remaining_bytes ${binfile}
+            # Dump response as hex data
+            echo "Response Data:"
+            let remaining_bytes=$end_of_rsp_data-$offset
+            if [ $verbose -ne 0 ]; then
+                # -v to display all repeated data (like remaining 00s)
+                hexdump -C -v -s $offset -n $remaining_bytes ${binfile}
+            else
+                hexdump -C    -s $offset -n $remaining_bytes ${binfile}
+            fi
         fi
     fi
 } # end handle_occ_rsp()
@@ -1280,14 +1436,53 @@ function tmgt_info
 } # end tmgt_info()
 
 
+function tmgt_flags
+{
+    ### Dump HTMGT Internal Flags
+    echo "==> opal-prd --expert-mode htmgt-passthru 0x02"
+    $sudo opal-prd --expert-mode htmgt-passthru 0x02
+    let flagvalue=0x`$sudo opal-prd --expert-mode htmgt-passthru 0x02 | tr -d '\r\n' | sed 's/\s//g1'`
+    flags="";
+    let bitset="$flagvalue & 0x00800000";
+    if [ $bitset -ne 0 ]; then flags="$flags HaltOnSrc"; fi
+    let bitset="$flagvalue & 0x00000800";
+    if [ $bitset -ne 0 ]; then flags="$flags DisableMemConfig"; fi
+    let bitset="$flagvalue & 0x00000100";
+    if [ $bitset -ne 0 ]; then flags="$flags HaltOnResetFail"; fi
+    let bitset="$flagvalue & 0x00000080";
+    if [ $bitset -ne 0 ]; then flags="$flags ExtResetDisable"; fi
+    let bitset="$flagvalue & 0x00000040";
+    if [ $bitset -ne 0 ]; then flags="$flags DisableMemThrot"; fi
+    let bitset="$flagvalue & 0x00000020";
+    if [ $bitset -ne 0 ]; then flags="$flags IgnoreOccState"; fi
+    let bitset="$flagvalue & 0x00000010";
+    if [ $bitset -ne 0 ]; then flags="$flags HoldOccsInReset"; fi
+    let bitset="$flagvalue & 0x00000008";
+    if [ $bitset -ne 0 ]; then flags="$flags LoadDisabled"; fi
+    let bitset="$flagvalue & 0x00000004";
+    if [ $bitset -ne 0 ]; then flags="$flags TerminateOnErr"; fi
+    let bitset="$flagvalue & 0x00000002";
+    if [ $bitset -ne 0 ]; then flags="$flags ResetDisabled"; fi
+    let bitset="$flagvalue & 0x00000001";
+    if [ $bitset -ne 0 ]; then flags="$flags ExternalOverride"; fi
+    let bitset="$flagvalue & 0x007FF600";
+    if [ $bitset -ne 0 ]; then flags="$flags UnknownBit"; fi
+    printf "Flags: 0x%08X  $flags\n" $flagvalue
+
+    if [ -n "$newFlags" ]; then
+        newFlagValue=`printf "%08X" $newFlags`
+        echo "Updating internalFlags to: $newFlagValue"
+        ### Set HTMGT Internal Flags
+        echo "==> opal-prd --expert-mode htmgt-passthru 0x02 0x${newFlagValue:0:2} 0x${newFlagValue:2:2} 0x${newFlagValue:4:2} 0x${newFlagValue:6:2}"
+        $sudo opal-prd --expert-mode htmgt-passthru 0x02 0x${newFlagValue:0:2} 0x${newFlagValue:2:2} 0x${newFlagValue:4:2} 0x${newFlagValue:6:2}
+    fi
+}
+
+
 function occ_ffdc
 {
     echo ""
-    let occ=0
-    if [ -n "$2" ]; then
-        let occ=$2
-        let numOccs=1
-    fi
+    let numOccs=1
 
     while [ $numOccs -gt 0 ]; do
         echo "`hostname` OCC$occ FFDC Data:  (`date`)"
@@ -1304,11 +1499,7 @@ function occ_ffdc
 function occ_trace
 {
     echo ""
-    let occ=0
     let numOccs=1
-    if [ -n "$2" ]; then
-        let occ=$2
-    fi
 
     while [ $numOccs -gt 0 ]; do
         echo "`hostname` OCC$occ Trace:  (`date`)"
@@ -1322,6 +1513,123 @@ function occ_trace
         occ_cmd_data="030100494E4600" # INF traces
         send_occ_cmd
         handle_occ_rsp
+        occ_cmd_data="03010047503000" # GP0 traces
+        send_occ_cmd
+        handle_occ_rsp
+         # Need to run: ppe2fsp infile outfile
+        occ_cmd_data="03010047503100" # GP1 traces
+        send_occ_cmd
+        handle_occ_rsp
+         # Need to run: ppe2fsp infile outfile
+        let occ=$occ+1
+        let numOccs=$numOccs-1
+    done
+} # end occ_trace()
+
+
+function occ_trace_cronus
+{
+    echo ""
+    let numOccs=1
+
+    if [ -e "./occStringFile" ]; then
+        string_file="./occStringFile"
+    elif [ -e "/tmp/occStringFile" ]; then
+        string_file="/tmp/occStringFile"
+    elif [ -e "/nfs/occStringFile" ]; then
+        string_file="/nfs/occStringFile"
+    else
+        echo "WARNING: unable to find occStringFile"
+    fi
+
+    while [ $numOccs -gt 0 ]; do
+        echo -e "${bold}Collecting OCC$occ Trace via cronus:  (`date`)${normal}"
+        # Confirm eyecatcher is correct
+        getsram fffb4003 -ch $channel 4 -p$occ -n$node
+        getsram fffb4003 -ch $channel 4 -p$occ -n$node -exp 42455252 # "BERR"
+        let foundERR=$?
+        if [ $foundERR -eq 0 ]; then
+            # Remove old files
+            rm -f ./occTrace*.bin ./occTrace.ppe
+            echo -e "${bold}==> getsram fffb4000 8192 -p$occ -n$node -fb ./occTraceERR.bin -ch $channel ${normal}"
+            getsram                     fffb4000 8192 -p$occ -n$node -fb ./occTraceERR.bin -ch $channel
+            echo -e "${bold}==> getsram fffb6000 8192 -p$occ -n$node -fb ./occTraceINF.bin -ch $channel ${normal}"
+            getsram                     fffb6000 8192 -p$occ -n$node -fb ./occTraceINF.bin -ch $channel
+            echo -e "${bold}==> getsram fffb8000 8192 -p$occ -n$node -fb ./occTraceIMP.bin -ch $channel ${normal}"
+            getsram                     fffb8000 8192 -p$occ -n$node -fb ./occTraceIMP.bin -ch $channel
+
+            if [ -e "./ppe2fsp" ]; then
+                ppe2fsp_cmd="./ppe2fsp"
+            else
+                echo -e "${red}Unable to find ppe2fsp to convert GPE traces to FSP trace format${normal}"
+                echo "NOTE: Command is available in occ/obj/ppetools/ppe2fsp"
+                ppe2fsp_cmd="";
+            fi
+
+            GPE0ADDR=`getsram fffb3c10 4 -ch $channel | grep 00000000 | awk '{print $2}'`
+            GPE0SIZEHEX=`getsram fffb3c14 4 -ch $channel | grep 00000000 | awk '{print $2}'`
+            #echo "gpe0 $GPE0ADDR $GPE0SIZEHEX $GPE0SIZE"
+            #GPE0SIZE=`echo \$((16#$GPE0SIZEHEX))`
+            let GPE0SIZE=0x${GPE0SIZEHEX}
+            echo "gpe0 $GPE0ADDR $GPE0SIZEHEX $GPE0SIZE"
+            let gpe_addr=0x$GPE0ADDR
+            if [ $gpe_addr -ne 0 ]; then
+                echo -e "${bold}==> getsram $GPE0ADDR $GPE0SIZE -ch $channel -p$occ -n$node -fb ./occTraceGPE0.ppe ${normal}"
+                getsram                     $GPE0ADDR $GPE0SIZE -ch $channel -p$occ -n$node -fb ./occTraceGPE0.ppe
+
+                if [ -n "$ppe2fsp_cmd" ]; then
+                    echo -e "${bold}==> $ppe2fsp_cmd ./occTraceGPE0.ppe ./occTraceGPE0.bin ${normal}"
+                    $ppe2fsp_cmd ./occTraceGPE0.ppe ./occTraceGPE0.bin
+                    if [ $? -eq 0 ]; then
+                        rm -f ./occTraceGPE0.ppe
+                    else
+                        echo -e "${red}ERROR: Unable to convert occTraceGPE0.ppe to FSP trace format${normal}"
+                        rm -f ./occTraceGPE0.bin
+                    fi
+                else
+                    echo -e "${red}ERROR: unable to find ppe2fsp to convert GPE traces to FSP trace format${normal}"
+                fi
+            fi
+
+            GPE1ADDR=`getsram fffb3c18 4 -ch $channel | grep 00000000 | awk '{print $2}'`
+            GPE1SIZEHEX=`getsram fffb3c1c 4 -ch $channel | grep 00000000 | awk '{print $2}'`
+            #GPE1SIZE=`echo \$((16#$GPE1SIZEHEX))`
+            let GPE1SIZE=0x${GPE1SIZEHEX}
+            echo "gpe1 $GPE1ADDR $GPE1SIZEHEX $GPE1SIZE"
+            if [ $gpe_addr -ne 0 ]; then
+                echo -e "${bold}==> getsram $GPE1ADDR $GPE1SIZE -ch $channel -p$occ -n$node -fb ./occTraceGPE1.ppe ${normal}"
+                getsram                     $GPE1ADDR $GPE1SIZE -ch $channel -p$occ -n$node -fb ./occTraceGPE1.ppe
+
+                if [ -n "$ppe2fsp_cmd" ]; then
+                    echo -e "${bold}==> $ppe2fsp_cmd ./occTraceGPE1.ppe ./occTraceGPE1.bin ${normal}"
+                    $ppe2fsp_cmd ./occTraceGPE1.ppe ./occTraceGPE1.bin
+                    if [ $? -eq 0 ]; then
+                        rm -f ./occTraceGPE1.ppe
+                    else
+                        echo -e "${red}ERROR: Unable to convert occTraceGPE1.ppe to FSP trace format${normal}"
+                        rm -f ./occTraceGPE1.bin
+                    fi
+                fi
+            fi
+
+            if [ -n "$string_file" ]; then
+                if [ -e "./fsp-trace" ]; then
+                    fsptrace_cmd="./fsp-trace"
+                else
+                    #echo -e "${red}Unable to find fsp-trace to parse FSP traces${normal}"
+                    fsptrace_cmd="fsp-trace";
+                fi
+
+                if [ -n "$fsptrace_cmd" ]; then
+                    echo -e "${bold}==> $fsptrace_cmd -s $string_file ./*.bin ${normal}"
+                    $fsptrace_cmd -s $string_file ./*.bin
+                fi
+            else
+                echo "To parse: fsp-trace -s OCC_STRING_FILENAME ./occTrace*.bin"
+            fi
+        else
+            echo "ERROR: ERR eyecatcher was not found!  ABORTING TRACE COLLECTION"
+        fi
         let occ=$occ+1
         let numOccs=$numOccs-1
     done
@@ -1343,13 +1651,23 @@ fi
 #exit
 
 if [ -n "$action" ]; then
-    if [ "$action" == "SensorList" ]; then
+    if [ "$action" == "SensorDump" ]; then
+        # -X 53 0600003d = get sensor details for GUID 0x003d"
+        occ_cmd="53"
+        occ_cmd_data=`printf "0600%04X" $sensor_guid`
+        #echo "==> $occ_cmd $occ_cmd_data"
+        send_occ_cmd
+        handle_occ_rsp
+    elif [ "$action" == "SensorList" ]; then
+        printf "    Sensor Type: 0x%04X\n" $sensor_type
+        printf "Sensor Location: 0x%04X\n" $sensor_loc
         let more_sensors=1
         let first_sensor=0
         let skip_header=1
         while [ $more_sensors -ne 0 ]; do
+            # -X 53 0500000001LLLLTTTT = list first 50 OCC sensors (LLLL=Location,TTTT=Type)"
             occ_cmd="53"
-            occ_cmd_data=`printf "0500%04X%02XFFFFFFFF" $first_sensor $non_zero_sensors` # all sensors, all locations, all types
+            occ_cmd_data=`printf "0500%04X%02X%04X%04X" $first_sensor $non_zero_sensors $sensor_type $sensor_loc`
             #echo "==> $occ_cmd $occ_cmd_data"
             send_occ_cmd
             handle_occ_rsp # will update more_sensors and last_sensor
@@ -1357,6 +1675,19 @@ if [ -n "$action" ]; then
         done;
     elif [ "$action" == "OCCFFDC" ]; then
         occ_ffdc
+    elif [ "$action" == "ExitSafe" ]; then
+
+        if [ "$interface" == "opal" ]; then
+            ### Dump HTMGT and OCC states and status
+            tmgt_info
+            ### Attempt to exit safe mode
+            echo "==> opal-prd --expert-mode htmgt-passthru 0x05"
+            $sudo opal-prd --expert-mode htmgt-passthru 0x05
+            let rc=$?
+            echo "return status: $rc"
+        else
+            echo -e "${red}ERROR: Command only supported with opal-prd${normal} (not $interface)"
+        fi
     elif [ "$action" == "TMGTInfo" ]; then
 
         if [ "$interface" == "opal" ]; then
@@ -1364,8 +1695,19 @@ if [ -n "$action" ]; then
         else
             echo -e "${red}ERROR: Command only supported with opal-prd${normal} (not $interface)"
         fi
+    elif [ "$action" == "TMGTFlags" ]; then
+
+        if [ "$interface" == "opal" ]; then
+            tmgt_flags
+        else
+            echo -e "${red}ERROR: Command only supported with opal-prd${normal} (not $interface)"
+        fi
     elif [ "$action" == "trace" ]; then
-        occ_trace
+        if [ "$interface" == "opal" ]; then
+            occ_trace $occ
+        elif [ "$interface" == "cronus" ]; then
+            occ_trace_cronus
+        fi
     elif [ "$action" == "CmdRspBuffer" ]; then
         let buffer_size=128
         echo "OCC Command Buffers from SRAM ($cmd_sram_addr):"
@@ -1394,6 +1736,8 @@ if [ -n "$action" ]; then
             echo -e "${red}ERROR: failed reading response buffer from SRAM (rc=$rc)${normal}"
             exit 2;
         fi
+    else
+        echo -e "${red}ERROR: internal action of $action is not implemented by occtoolp9 script${normal}";
     fi
 else
     if [ $passThru -eq 1 ]; then
