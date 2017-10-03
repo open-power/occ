@@ -53,6 +53,10 @@ ifndef PK_SRCDIR
 export PK_SRCDIR = $(abspath ppe/pk)
 endif
 
+ifndef GPE1_BIN_IMAGE_PATH
+export GPE1_BIN_IMAGE_PATH = $(BASE_BINDIR)
+endif
+
 THASH	= $(PPETRACEPP_DIR)/tracehash.pl
 
 OCC_405_IMAGE_NAME = occ_405
@@ -123,7 +127,7 @@ combineImage: $(NEEDED_IMAGES)
     $(OBJDIR)/$(OCC_BOOTLOADER_DIR_NAME)/$(OCC_BOOTLOADER_NAME).bin \
 	$(OBJDIR)/$(OCC_405_IMAGE_NAME)/$(OCC_405_IMAGE_NAME).bin \
 	$(OBJDIR)/$(OCC_GPE0_IMAGE_NAME)/$(OCC_GPE0_IMAGE_NAME).bin \
-	$(BASE_BINDIR)/$(OCC_GPE1_IMAGE_NAME).bin \
+	$(GPE1_BIN_IMAGE_PATH)/$(OCC_GPE1_IMAGE_NAME).bin \
     t2 \
 	`md5sum $(OBJDIR)/$(OCC_405_IMAGE_NAME)/$(OCC_405_IMAGE_NAME).bin | cut -c 1-4`
 endif
