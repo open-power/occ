@@ -53,6 +53,8 @@
 extern dimm_sensor_flags_t G_dimm_temp_expired_bitmap;
 extern bool G_vrm_thermal_monitoring;
 extern uint32_t G_first_proc_gpu_config;
+extern bool G_vrm_vdd_temp_expired;
+
 
 #include <gpe_export.h>
 extern gpe_shared_data_t G_shared_gpe_data;
@@ -351,6 +353,26 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
             l_tempSensorList[l_sensorHeader.count].id = 0;
             l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_VRM_OT_STATUS;
             l_tempSensorList[l_sensorHeader.count].value = vrfan->sample & 0xFF;
+            l_sensorHeader.count++;
+        }
+    }
+
+    if (G_avsbus_vdd_monitoring)
+    {
+        // Add Vdd temp
+        const sensor_t *tempvdd = getSensorByGsid(TEMPVDD);
+        if (tempvdd != NULL)
+        {
+            l_tempSensorList[l_sensorHeader.count].id = AMECSENSOR_PTR(TEMPVDD)->ipmi_sid;
+            l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_VRM_VDD;
+            if (G_vrm_vdd_temp_expired)
+            {
+                l_tempSensorList[l_sensorHeader.count].value = 0xFF;
+            }
+            else
+            {
+                l_tempSensorList[l_sensorHeader.count].value = tempvdd->sample & 0xFF;
+            }
             l_sensorHeader.count++;
         }
     }

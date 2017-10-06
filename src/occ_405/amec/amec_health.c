@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -1010,7 +1010,7 @@ void amec_health_check_proc_timeout()
 // exceeded the error temperature sent in data format 0x13.
 //
 // End Function Specification
-void amec_health_check_vrm_vdd_temp()
+void amec_health_check_vrm_vdd_temp(const sensor_t *i_sensor)
 {
     /*------------------------------------------------------------------------*/
     /*  Local Variables                                                       */
@@ -1018,7 +1018,6 @@ void amec_health_check_vrm_vdd_temp()
     uint16_t                    l_ot_error;
     static uint32_t             L_error_count = 0;
     static BOOLEAN              L_ot_error_logged = FALSE;
-    sensor_t                    *l_sensor;
     errlHndl_t                  l_err = NULL;
 
     /*------------------------------------------------------------------------*/
@@ -1026,12 +1025,10 @@ void amec_health_check_vrm_vdd_temp()
     /*------------------------------------------------------------------------*/
     do
     {
-        // Get TEMPVDD sensor
-        l_sensor = getSensorByGsid(TEMPVDD);
         l_ot_error = g_amec->thermalvdd.ot_error;
 
         // Check to see if we exceeded our error temperature
-        if (l_sensor->sample > l_ot_error)
+        if (i_sensor->sample > l_ot_error)
         {
             // Increment the error counter for this FRU
             L_error_count++;
@@ -1048,7 +1045,7 @@ void amec_health_check_vrm_vdd_temp()
                 L_ot_error_logged = TRUE;
 
                 TRAC_ERR("amec_health_check_vrm_vdd_temp: VRM vdd has exceeded OT error! temp[%u] ot_error[%u]",
-                         l_sensor->sample,
+                         i_sensor->sample,
                          l_ot_error);
 
                 // Log an OT error
@@ -1069,7 +1066,7 @@ void amec_health_check_vrm_vdd_temp()
                                    NULL,
                                    DEFAULT_TRACE_SIZE,
                                    0,
-                                   l_sensor->sample_max);
+                                   i_sensor->sample_max);
 
                 // Callout the Ambient procedure
                 addCalloutToErrl(l_err,
@@ -1093,7 +1090,7 @@ void amec_health_check_vrm_vdd_temp()
             if (L_error_count >= AMEC_HEALTH_ERROR_TIMER)
             {
                 TRAC_INFO("amec_health_check_vrm_vdd_temp: VRM Vdd temp [%u] now below error temp [%u] after error_count [%u]",
-                          l_sensor->sample, l_ot_error, L_error_count);
+                          i_sensor->sample, l_ot_error, L_error_count);
             }
 
             // Reset the error counter for this FRU

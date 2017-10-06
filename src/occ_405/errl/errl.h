@@ -268,9 +268,6 @@ extern uint8_t      G_occErrIdCounter;
 
 extern errlHndl_t   G_occErrSlots[ERRL_MAX_SLOTS];
 
-// Array of error counters that are only cleared on OCC reset
-#define ERR_HISTORY_SIZE 32
-extern uint8_t G_error_history[ERR_HISTORY_SIZE];
 typedef enum {
     ERRH_AVSBUS_VDD_CURRENT          =  0x01,
     ERRH_AVSBUS_VDD_VOLTAGE          =  0x02,
@@ -297,7 +294,12 @@ typedef enum {
     ERRH_GPE1_NOT_IDLE               =  0x17,
     ERRH_24X7_DISABLED               =  0x18,
     ERRH_CEFF_RATIO_VDD_EXCURSION    =  0x19,
+    ERRH_AVSBUS_VDD_TEMPERATURE      =  0x1A,
+    ERR_HISTORY_SIZE                 =  0x20
 } ERR_HISTORY_INDEX;
+
+// Array of error counters that are only cleared on OCC reset
+extern uint8_t G_error_history[ERR_HISTORY_SIZE];
 #define INCREMENT_ERR_HISTORY(errorIndex) { \
     if ((errorIndex < ERR_HISTORY_SIZE) && (G_error_history[errorIndex] < 255)) { \
         ++G_error_history[errorIndex]; \

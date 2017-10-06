@@ -184,6 +184,7 @@ main_mem_sensor_t G_main_mem_sensors[] =
 
     // AMEC_SENSOR_TYPE_TEMP:     gsid            smf_mode  master_only
     MAIN_MEM_SENSOR              (TEMPNEST,       false,    false),
+    MAIN_MEM_SENSOR              (TEMPVDD,        false,    false),
     MAIN_MEM_CORE_SENSORS        (TEMPPROCTHRMC,  false,    false),
     MAIN_MEM_DIMM_SENSORS        (TEMPDIMM,       false,    false),
     MAIN_MEM_SENSOR              (TEMPGPU0,       false,    false),

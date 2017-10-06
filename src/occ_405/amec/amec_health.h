@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -51,7 +51,7 @@ void amec_mem_mark_logged(uint8_t i_cent,
                           uint8_t i_dimm,
                           uint8_t* i_clog_bitmap,
                           uint8_t* i_dlog_bitmap);
-void amec_health_check_vrm_vdd_temp(void);
+void amec_health_check_vrm_vdd_temp(const sensor_t *i_sensor);
 void amec_health_check_vrm_vdd_temp_timeout(void);
 
 #endif

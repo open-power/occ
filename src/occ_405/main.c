@@ -1414,7 +1414,7 @@ void hmon_routine()
     if (IS_OCC_STATE_OBSERVATION() || IS_OCC_STATE_ACTIVE() || IS_OCC_STATE_CHARACTERIZATION())
     {
         amec_health_check_proc_timeout();
-// enable with VRM Vdd read support        amec_health_check_vrm_vdd_temp_timeout();
+        amec_health_check_vrm_vdd_temp_timeout();
     }
 
     //if we are in observation, characterization, or active state with memory temperature data

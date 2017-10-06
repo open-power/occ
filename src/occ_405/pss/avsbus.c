@@ -39,7 +39,7 @@
 //#define AVSDEBUG
 
 #ifdef AVSDEBUG
-#define DEBUG_TRACE_MAX  1
+#define DEBUG_TRACE_MAX  2
 static bool G_trace_scoms = TRUE;
   #define AVS_DBG(frmt,args...)  TRAC_INFO(frmt,##args)
   #define DEBUG_IN32(reg, result, name) if (G_trace_scoms) { TRAC_INFO(" in32(%08X) returned 0x%08X  "name, reg, result); }
@@ -65,6 +65,9 @@ bool G_avsbus_vdn_monitoring = FALSE;
 extern uint32_t G_nest_frequency_mhz;
 #define AVSBUS_FREQUENCY_MHZ 10
 extern bool G_vrm_thermal_monitoring;
+
+extern bool G_vrm_vdd_temp_expired;
+void amec_health_check_vrm_vdd_temp(const sensor_t *i_sensor);
 
 // Number of read failures allowed before elog is created and reset requested.
 // This should be no longer than 4ms (or it will impact WOF calculations)
@@ -299,8 +302,6 @@ uint32_t avs_crc_calculate(const uint32_t i_avs_cmd)
 }
 
 
-#define ERRORCOUNT_MAXTYPES  2
-#define ERRORCOUNT_MAXCMDS   2
 // Initiate read for specified type (Vdd/Vdn) and cmd (Voltage/Current)
 void avsbus_read_start(const avsbus_type_e i_type,
                        const avsbus_cmdtype_e i_cmdtype)
@@ -333,12 +334,17 @@ void avsbus_read_start(const avsbus_type_e i_type,
         l_cmd_index = 1;
         l_trace_cmd = 'C';
     }
+    else if (i_cmdtype == AVSBUS_TEMPERATURE)
+    {
+        l_cmd_index = 2;
+        l_trace_cmd = 'T';
+    }
     if (AVSBUS_VDD != i_type)
     {
         l_trace_type = 'n';
     }
 
-    static uint32_t L_trace_count[ERRORCOUNT_MAXTYPES][ERRORCOUNT_MAXCMDS] = {{0}};
+    static uint32_t L_trace_count[AVSBUS_TYPE_MAX][AVSBUS_CMDS_MAX] = {{0}};
     uint32_t *      l_trace_count = &L_trace_count[i_type][l_cmd_index];
     if (*l_trace_count < DEBUG_TRACE_MAX)
     {
@@ -394,8 +400,8 @@ void avsbus_read_start(const avsbus_type_e i_type,
 } // end avsbus_read_start()
 
 
-// Read and return the voltage or current for specified rail
-// (voltage units are mV, current units are in 10mA)
+// Read and return the voltage, current, or temperature for specified rail
+// (voltage units are mV, current units are in 10mA, temperature in 0.1 C)
 uint16_t avsbus_read(const avsbus_type_e i_type,
                      const avsbus_cmdtype_e i_cmdtype)
 {
@@ -415,9 +421,14 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
         l_cmd_index = 1;
         l_trace_cmd = 'C';
     }
+    else if (i_cmdtype == AVSBUS_TEMPERATURE)
+    {
+        l_cmd_index = 2;
+        l_trace_cmd = 'T';
+    }
 
     // Static error counters for each type (Vdd/Vdn) and command (Voltage/Current)
-    static uint32_t L_error_count[ERRORCOUNT_MAXTYPES][ERRORCOUNT_MAXCMDS] = {{0}};
+    static uint32_t L_error_count[AVSBUS_TYPE_MAX][AVSBUS_CMDS_MAX] = {{0}};
     uint32_t *      l_error_count = &L_error_count[i_type][l_cmd_index];
 
     char l_trace_type = 'd';
@@ -429,7 +440,7 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
     }
 
 #ifdef AVSDEBUG
-    static uint32_t L_trace_count[ERRORCOUNT_MAXTYPES][ERRORCOUNT_MAXCMDS] = {{0}};
+    static uint32_t L_trace_count[AVSBUS_TYPE_MAX][AVSBUS_CMDS_MAX] = {{0}};
     uint32_t *      l_trace_count = &L_trace_count[i_type][l_cmd_index];
     if (*l_trace_count < DEBUG_TRACE_MAX)
     {
@@ -513,11 +524,11 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
         // Read the response data
         uint32_t value = in32(o2srd_reg);
         DEBUG_IN32(o2srd_reg, value, "OCB_O2SRDxB");
-        // AVS Bus response (read voltage or current):
+        // AVS Bus response (read voltage, current, or temperature):
         //   0:1   SlaveAck (0b00 from slave indicates good CRC and action was taken)
         //   2     0
         //   3:7   StatusResp
-        //   8:23  CmdData (LSB = 1mV or 10mA)
+        //   8:23  CmdData (LSB = 1mV or 10mA or 0.1C)
         //   24:28 Reserved (must be all 1s)
         //   29:31 CRC
         //   AA0SSSSS VVVVVVVV VVVVVVVV 11111CCC
@@ -555,13 +566,30 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
                     TRAC_INFO("avsbus_read: Successfully read Vd%c voltage %dmV [0x%08X]",
                               l_trace_type, o_reading, value);
                 }
-                else
+                else if (i_cmdtype == AVSBUS_CURRENT)
                 {
                     TRAC_INFO("avsbus_read: Successfully read Vd%c current %dx10mA [0x%08X]",
                               l_trace_type, o_reading, value);
                 }
             }
 #endif
+
+            if (i_cmdtype == AVSBUS_TEMPERATURE)
+            {
+#ifdef AVSDEBUG
+                if (*l_trace_count < DEBUG_TRACE_MAX)
+                {
+                    TRAC_INFO("avsbus_read: Successfully read Vd%c temperature %d/10 C [0x%08X]",
+                              l_trace_type, o_reading, value);
+                }
+#endif
+                // Update sensor (convert to degrees C) and validate it
+                sensor_t * l_sensor = AMECSENSOR_PTR(TEMPVDD);
+                sensor_update(l_sensor, (uint16_t)o_reading/10);
+                G_vrm_vdd_temp_expired = false;
+                amec_health_check_vrm_vdd_temp(l_sensor);
+            }
+
             if (*l_error_count)
             {
                 // Trace and clear the error count
@@ -592,9 +620,14 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
                 exrc = ERC_AVSBUS_VDD_CURRENT_FAILURE;
                 INCREMENT_ERR_HISTORY(ERRH_AVSBUS_VDD_CURRENT);
             }
-            else
+            else if (i_cmdtype == AVSBUS_VOLTAGE)
             {
                 INCREMENT_ERR_HISTORY(ERRH_AVSBUS_VDD_VOLTAGE);
+            }
+            else if (i_cmdtype == AVSBUS_TEMPERATURE)
+            {
+                exrc = ERC_AVSBUS_VDD_TEMPERATURE_FAILURE;
+                INCREMENT_ERR_HISTORY(ERRH_AVSBUS_VDD_TEMPERATURE);
             }
         }
         else
@@ -604,7 +637,7 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
                 exrc = ERC_AVSBUS_VDN_CURRENT_FAILURE;
                 INCREMENT_ERR_HISTORY(ERRH_AVSBUS_VDN_CURRENT);
             }
-            else
+            else if (i_cmdtype == AVSBUS_VOLTAGE)
             {
                 exrc = ERC_AVSBUS_VDN_VOLTAGE_FAILURE;
                 INCREMENT_ERR_HISTORY(ERRH_AVSBUS_VDN_VOLTAGE);
@@ -664,10 +697,10 @@ void initiate_avsbus_reads(avsbus_cmdtype_e i_cmdType)
 } // end initiate_avsbus_reads()
 
 
-// Initiate read for vr fan
+// Initiate read for error status bits (over-temperature, over-current)
 void initiate_avsbus_read_status()
 {
-    if (isSafeStateRequested() || (G_vrm_thermal_monitoring == FALSE))
+    if (isSafeStateRequested())
     {
         // No need to attempt read if OCC will be reset
         return;
@@ -678,7 +711,7 @@ void initiate_avsbus_read_status()
 #endif
 
     unsigned int index;
-    for (index = 0; index <= 1; ++index)
+    for (index = 0; index < AVSBUS_TYPE_MAX; ++index)
     {
         // Determine busses that are being monitored
         uint8_t bus = 0xFF;
@@ -771,7 +804,7 @@ uint16_t avsbus_read_status(const avsbus_type_e i_type)
     const uint8_t max_read_attempts = G_data_cnfg->thrm_thresh.data[DATA_FRU_VRM_OT_STATUS].max_read_timeout;
 
     // Static error counters for each type (Vdd/Vdn)
-    static uint32_t L_error_count[ERRORCOUNT_MAXTYPES] = {0};
+    static uint32_t L_error_count[AVSBUS_TYPE_MAX] = {0};
     uint32_t *      l_error_count = &L_error_count[i_type];
 
     char l_trace_type = 'd';
@@ -1158,7 +1191,7 @@ uint8_t process_avsbus_status()
         static bool loggedOT = FALSE;
         static bool loggedOC = FALSE;
         errlHndl_t l_err;
-        if ((foundOT == 1) && !loggedOT)
+        if ((foundOT == 1) && !loggedOT && G_vrm_thermal_monitoring)
         {
             loggedOT = TRUE;
             TRAC_ERR("process_avsbus_status: AVSBUS Over Temperature Warning (Vdd: 0x%08X, Vdn: 0x%08X)",

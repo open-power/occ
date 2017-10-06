@@ -259,6 +259,7 @@ enum occExtReasonCode
     ERC_AVSBUS_VDN_VOLTAGE_FAILURE              = 0x00AC,
     ERC_AVSBUS_VDN_CURRENT_FAILURE              = 0x00AD,
     ERC_AVSBUS_STATUS_FAILURE                   = 0x00AE,
+    ERC_AVSBUS_VDD_TEMPERATURE_FAILURE          = 0x00AF,
 
     ERC_PGPE_BEACON_TIMEOUT                     = 0x00B0,
     ERC_PGPE_CLIP_NOT_IDLE                      = 0x00B1,

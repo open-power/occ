@@ -591,12 +591,12 @@ void amec_update_avsbus_sensors(void)
         AVSBUS_STATE_INITIATE_READ      = 1,
         AVSBUS_STATE_PROCESS_CURRENT    = 2,
         AVSBUS_STATE_PROCESS_VOLTAGE    = 3,
-        AVSBUS_STATE_PROCESS_STATUS     = 4
+        AVSBUS_STATE_PROCESS_STATUS     = 4,
+        AVSBUS_STATE_PROCESS_TEMPERATURE= 5
     } L_avsbus_state = AVSBUS_STATE_INITIATE_READ;
 
-    // Number of Curr/Volt readings between Status readings
-#define NUM_VRM_READINGS_PER_STATUS 2
-    static unsigned int L_readingCount = 0;
+    // Flag to select either temperature or status to read on 3rd tick
+    static bool L_read_temp = true;
 
     if (isSafeStateRequested())
     {
@@ -626,31 +626,45 @@ void amec_update_avsbus_sensors(void)
             // Process the voltage readings
             process_avsbus_voltage();
 
-            if ((G_vrm_thermal_monitoring == FALSE) || (++L_readingCount < NUM_VRM_READINGS_PER_STATUS))
+            // Initiate read of temperature or error status (OT/OC)
+            if (L_read_temp)
             {
-                // Initiate read of currents
-                initiate_avsbus_reads(AVSBUS_CURRENT);
-                L_avsbus_state = AVSBUS_STATE_PROCESS_CURRENT;
+                // Initiate AVS Bus read for Vdd temperature
+                avsbus_read_start(AVSBUS_VDD, AVSBUS_TEMPERATURE);
+                L_avsbus_state = AVSBUS_STATE_PROCESS_TEMPERATURE;
             }
             else
             {
-                // Periodically read status for VR FAN (VRM OT WARNING)
                 initiate_avsbus_read_status();
                 L_avsbus_state = AVSBUS_STATE_PROCESS_STATUS;
-                L_readingCount = 0;
             }
+            // Toggle between reading temperature and status
+            L_read_temp = !L_read_temp;
             break;
 
         case AVSBUS_STATE_PROCESS_STATUS:
-            // Process the status
             {
-                // Update sensor with the OT status (0 / 1)
+                // Process the status
                 uint16_t otStatus = process_avsbus_status();
-                sensor_update(AMECSENSOR_PTR(VRMPROCOT), otStatus);
+                if (G_vrm_thermal_monitoring)
+                {
+                    // Update sensor with the OT status (0 / 1)
+                    sensor_update(AMECSENSOR_PTR(VRMPROCOT), otStatus);
+                }
+                // Back to reading currents
+                initiate_avsbus_reads(AVSBUS_CURRENT);
+                L_avsbus_state = AVSBUS_STATE_PROCESS_CURRENT;
             }
-            // Back to reading currents
-            initiate_avsbus_reads(AVSBUS_CURRENT);
-            L_avsbus_state = AVSBUS_STATE_PROCESS_CURRENT;
+            break;
+
+        case AVSBUS_STATE_PROCESS_TEMPERATURE:
+            {
+                // Read and process Vdd temperature
+                avsbus_read(AVSBUS_VDD, AVSBUS_TEMPERATURE);
+                // Back to reading currents
+                initiate_avsbus_reads(AVSBUS_CURRENT);
+                L_avsbus_state = AVSBUS_STATE_PROCESS_CURRENT;
+            }
             break;
 
         case AVSBUS_STATE_DISABLED:

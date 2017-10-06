@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -43,6 +43,7 @@ typedef enum
 {
     AVSBUS_VDD = 0x00,
     AVSBUS_VDN = 0x01,
+    AVSBUS_TYPE_MAX = 2 // Number of bus types
 } avsbus_type_e;
 
 typedef enum
@@ -50,7 +51,9 @@ typedef enum
     // This enum contains the AVS Bus CmdDataType that can be read
     AVSBUS_VOLTAGE          = 0x00,
     AVSBUS_CURRENT          = 0x02,
-    AVSBUS_STATUS           = 0x0E
+    AVSBUS_TEMPERATURE      = 0x03,
+    AVSBUS_STATUS           = 0x0E,
+    AVSBUS_CMDS_MAX = 4 // Number of supported AVS bus commands
 } avsbus_cmdtype_e;
 
 // Setup the AVS Bus for reading
@@ -59,6 +62,10 @@ void avsbus_init();
 // Initiate AVS Bus read for specified cmdtype (Voltage / Current)
 // (results can then be read on the next tick)
 void initiate_avsbus_reads(avsbus_cmdtype_e i_cmdType);
+
+// Initiate read for specified type (Vdd/Vdn) and cmd (Voltage/Current/Temperature)
+void avsbus_read_start(const avsbus_type_e i_type,
+                       const avsbus_cmdtype_e i_cmdtype);
 
 // Process AVS Bus read results (or errors) for specified bus/cmdtype.
 // Returns the data requested (voltage units are mV, current units are in 10mA)
