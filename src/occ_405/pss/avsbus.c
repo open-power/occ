@@ -768,7 +768,7 @@ uint16_t avsbus_read_status(const avsbus_type_e i_type)
 
     uint16_t o_reading = 0;
     bool l_failure = FALSE;
-    const uint8_t max_read_attempts = G_data_cnfg->thrm_thresh.data[DATA_FRU_VRM].max_read_timeout;
+    const uint8_t max_read_attempts = G_data_cnfg->thrm_thresh.data[DATA_FRU_VRM_OT_STATUS].max_read_timeout;
 
     // Static error counters for each type (Vdd/Vdn)
     static uint32_t L_error_count[ERRORCOUNT_MAXTYPES] = {0};

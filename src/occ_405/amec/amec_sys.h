@@ -362,6 +362,7 @@ typedef struct
   sensor_t vrhot_mem_proc;
 
   sensor_t vrfan;
+  sensor_t tempvdd;
 
   // Chip Sensors
   sensor_t todclock0;
@@ -687,6 +688,8 @@ typedef struct
   amec_controller_t     thermaldimm;
   // Thermal Controller based on VRHOT signal from processor VRM
   amec_controller_t     vrhotproc;
+  // Thermal Controller based on VRM Vdd temperatures
+  amec_controller_t     thermalvdd;
 
   // Oversubscription Status
   oversub_status_t      oversub_status;

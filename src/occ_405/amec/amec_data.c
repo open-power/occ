@@ -261,10 +261,39 @@ errlHndl_t AMEC_data_write_thrm_thresholds(const OCC_MODE i_mode)
         TRAC_INFO("AMEC_data_write_thrm_thresholds: Setting %u as DVFS setpoint for DIMM",
                   l_dvfs_temp);
 
-        g_amec->vrhotproc.setpoint = l_frudata[DATA_FRU_VRM].error_count;
+        g_amec->vrhotproc.setpoint = l_frudata[DATA_FRU_VRM_OT_STATUS].error_count;
 
         TRAC_INFO("AMEC_data_write_thrm_thresholds: Setting %u as DVFS setpoint for VRHOT",
                   g_amec->vrhotproc.setpoint);
+
+        // Store the VRM Vdd thermal data
+        if(i_mode == OCC_MODE_NOMINAL)
+        {
+            l_dvfs_temp = l_frudata[DATA_FRU_VRM_VDD].dvfs;
+            l_error = l_frudata[DATA_FRU_VRM_VDD].error;
+        }
+        else
+        {
+            l_dvfs_temp = l_frudata[DATA_FRU_VRM_VDD].pm_dvfs;
+            if(i_mode == OCC_MODE_TURBO)
+            {
+                //Need to log an error if we dvfs in static turbo mode (for mfg)
+                l_error = l_dvfs_temp;
+            }
+            else
+            {
+                l_error = l_frudata[DATA_FRU_VRM_VDD].pm_error;
+            }
+        }
+        // Store the DVFS thermal setpoint in 0.1 degrees C
+        g_amec->thermalvdd.setpoint = l_dvfs_temp * 10;
+        // Store the error temperature for OT detection
+        g_amec->thermalvdd.ot_error = l_error;
+        // Store the temperature timeout value
+        g_amec->thermalvdd.temp_timeout = l_frudata[DATA_FRU_VRM_VDD].max_read_timeout;
+
+        TRAC_INFO("AMEC_data_write_thrm_thresholds: Setting %u as DVFS setpoint for VRM Vdd",
+                  l_dvfs_temp);
 
     } while(0);
 

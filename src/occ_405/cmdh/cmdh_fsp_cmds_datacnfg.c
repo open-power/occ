@@ -57,6 +57,7 @@
 #define DATA_PCAP_VERSION_20       0x20
 
 #define DATA_SYS_VERSION_20        0x20
+#define DATA_SYS_VERSION_21        0x21
 
 #define DATA_APSS_VERSION20        0x20
 
@@ -1565,7 +1566,7 @@ errlHndl_t data_store_sys_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
     errlHndl_t                      l_err = NULL;
 
     // Cast the command to the struct for this format
-    cmdh_sys_config_v20_t * l_cmd_ptr = (cmdh_sys_config_v20_t *)i_cmd_ptr;
+    cmdh_sys_config_v21_t * l_cmd_ptr = (cmdh_sys_config_v21_t *)i_cmd_ptr;
     uint16_t                        l_data_length = 0;
     uint32_t                        l_sys_data_sz = 0;
     bool                            l_invalid_input = TRUE; //Assume bad input
@@ -1577,6 +1578,14 @@ errlHndl_t data_store_sys_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
     if(l_cmd_ptr->version == DATA_SYS_VERSION_20)
     {
         l_sys_data_sz = sizeof(cmdh_sys_config_v20_t) - sizeof(cmdh_fsp_cmd_header_t);
+        if(l_sys_data_sz == l_data_length)
+        {
+            l_invalid_input = FALSE;
+        }
+    }
+    else if(l_cmd_ptr->version == DATA_SYS_VERSION_21)
+    {
+        l_sys_data_sz = sizeof(cmdh_sys_config_v21_t) - sizeof(cmdh_fsp_cmd_header_t);
         if(l_sys_data_sz == l_data_length)
         {
             l_invalid_input = FALSE;
@@ -1613,28 +1622,32 @@ errlHndl_t data_store_sys_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
                          ERRL_COMPONENT_ID_FIRMWARE,
                          ERRL_CALLOUT_PRIORITY_HIGH);
     }
-    else
+    else  // version and length is valid, store the data
     {
-        if(l_cmd_ptr->version == DATA_SYS_VERSION_20)
-        {
-            // Copy data
-            G_sysConfigData.system_type.byte    = l_cmd_ptr->sys_config.system_type;
-            G_sysConfigData.backplane_huid      = l_cmd_ptr->sys_config.backplane_sid;
-            G_sysConfigData.apss_huid           = l_cmd_ptr->sys_config.apss_sid;
-            G_sysConfigData.proc_huid           = l_cmd_ptr->sys_config.proc_sid;
-            CNFG_DBG("data_store_sys_config: SystemType[0x%02X] BPSID[0x%08X] APSSSID[0x%08X] ProcSID[0x%08X]",
-                     G_sysConfigData.system_type.byte, G_sysConfigData.backplane_huid, G_sysConfigData.apss_huid,
-                     G_sysConfigData.proc_huid);
+        // Copy data that is common to all versions
+        G_sysConfigData.system_type.byte    = l_cmd_ptr->sys_config.system_type;
+        G_sysConfigData.backplane_huid      = l_cmd_ptr->sys_config.backplane_sid;
+        G_sysConfigData.apss_huid           = l_cmd_ptr->sys_config.apss_sid;
+        G_sysConfigData.proc_huid           = l_cmd_ptr->sys_config.proc_sid;
+        CNFG_DBG("data_store_sys_config: SystemType[0x%02X] BPSID[0x%08X] APSSSID[0x%08X] ProcSID[0x%08X]",
+                  G_sysConfigData.system_type.byte, G_sysConfigData.backplane_huid, G_sysConfigData.apss_huid,
+                  G_sysConfigData.proc_huid);
 
-            //Write core temp and freq sensor ids
-            //Core Temp and Freq sensors are always in sequence in the table
-            for (l_coreIndex = 0; l_coreIndex < MAX_CORES; l_coreIndex++)
-            {
-                AMECSENSOR_PTR(TEMPPROCTHRMC0 + l_coreIndex)->ipmi_sid = l_cmd_ptr->sys_config.core_sid[(l_coreIndex * 2)];
-                AMECSENSOR_PTR(FREQAC0 + l_coreIndex)->ipmi_sid = l_cmd_ptr->sys_config.core_sid[(l_coreIndex * 2) + 1];
-                CNFG_DBG("data_store_sys_config: Core[%d] TempSID[0x%08X] FreqSID[0x%08X]", l_coreIndex,
-                         AMECSENSOR_PTR(TEMPPROCTHRMC0 + l_coreIndex)->ipmi_sid, AMECSENSOR_PTR(FREQAC0 + l_coreIndex)->ipmi_sid);
-            }
+        //Write core temp and freq sensor ids
+        //Core Temp and Freq sensors are always in sequence in the table
+        for (l_coreIndex = 0; l_coreIndex < MAX_CORES; l_coreIndex++)
+        {
+            AMECSENSOR_PTR(TEMPPROCTHRMC0 + l_coreIndex)->ipmi_sid = l_cmd_ptr->sys_config.core_sid[(l_coreIndex * 2)];
+            AMECSENSOR_PTR(FREQAC0 + l_coreIndex)->ipmi_sid = l_cmd_ptr->sys_config.core_sid[(l_coreIndex * 2) + 1];
+            CNFG_DBG("data_store_sys_config: Core[%d] TempSID[0x%08X] FreqSID[0x%08X]", l_coreIndex,
+                     AMECSENSOR_PTR(TEMPPROCTHRMC0 + l_coreIndex)->ipmi_sid, AMECSENSOR_PTR(FREQAC0 + l_coreIndex)->ipmi_sid);
+        }
+
+        if(l_cmd_ptr->version == DATA_SYS_VERSION_21)
+        {
+            // Copy the additional data for version 21
+            G_sysConfigData.vrm_vdd_huid      = l_cmd_ptr->vrm_vdd_sid;
+            AMECSENSOR_PTR(TEMPVDD)->ipmi_sid = l_cmd_ptr->vrm_vdd_temp_sid;
         }
 
         // Change Data Request Mask to indicate we got this data
@@ -1723,7 +1736,7 @@ errlHndl_t data_store_thrm_thresholds(const cmdh_fsp_cmd_t * i_cmd_ptr,
                     l_cmd_ptr->data[i].max_read_timeout;
 
                 // Set a local flag if we get data for VRM FRU type
-                if(l_frutype == DATA_FRU_VRM)
+                if(l_frutype == DATA_FRU_VRM_OT_STATUS)
                 {
                     l_vrm_frutype = TRUE;
                 }
@@ -1759,7 +1772,7 @@ errlHndl_t data_store_thrm_thresholds(const cmdh_fsp_cmd_t * i_cmd_ptr,
             // Also, make the error count very high so that the health
             // monitor doesn't complain about VRHOT being asserted.
             G_vrm_thermal_monitoring = FALSE;
-            G_data_cnfg->thrm_thresh.data[DATA_FRU_VRM].error_count = 0xFF;
+            G_data_cnfg->thrm_thresh.data[DATA_FRU_VRM_OT_STATUS].error_count = 0xFF;
             CMDH_TRAC_IMP("data_store_thrm_thresholds: No VRM limits received. OCC will not monitor AVS bus status");
         }
 

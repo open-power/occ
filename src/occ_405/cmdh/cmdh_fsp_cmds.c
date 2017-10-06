@@ -349,7 +349,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
         if (vrfan != NULL)
         {
             l_tempSensorList[l_sensorHeader.count].id = 0;
-            l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_VRM;
+            l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_VRM_OT_STATUS;
             l_tempSensorList[l_sensorHeader.count].value = vrfan->sample & 0xFF;
             l_sensorHeader.count++;
         }

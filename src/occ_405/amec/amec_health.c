@@ -67,6 +67,9 @@ uint8_t G_cent_temp_expired_bitmap = 0;
 // Array to store the update tag of each core's temperature sensor
 uint32_t G_core_temp_update_tag[MAX_NUM_CORES] = {0};
 
+// Reading VRM Vdd temperature timedout?
+bool G_vrm_vdd_temp_expired = false;
+
 //*************************************************************************/
 // Function Declarations
 //*************************************************************************/
@@ -398,13 +401,13 @@ void amec_health_check_dimm_timeout()
                          * @reasoncode  FRU_TEMP_TIMEOUT
                          * @userdata1   timeout value in seconds
                          * @userdata2   0
-                         * @userdata4   OCC_NO_EXTENDED_RC
+                         * @userdata4   ERC_AMEC_DIMM_TEMP_TIMEOUT
                          * @devdesc     Failed to read a memory DIMM temperature
                          *
                          */
                         l_err = createErrl(AMEC_HEALTH_CHECK_DIMM_TIMEOUT,    //modId
                                            FRU_TEMP_TIMEOUT,                  //reasoncode
-                                           OCC_NO_EXTENDED_RC,                //Extended reason code
+                                           ERC_AMEC_DIMM_TEMP_TIMEOUT,        //Extended reason code
                                            ERRL_SEV_PREDICTIVE,               //Severity
                                            NULL,                              //Trace Buf
                                            DEFAULT_TRACE_SIZE,                //Trace Size
@@ -706,14 +709,14 @@ void amec_health_check_cent_timeout()
                  * @reasoncode  FRU_TEMP_TIMEOUT
                  * @userdata1   timeout value in seconds
                  * @userdata2   0
-                 * @userdata4   OCC_NO_EXTENDED_RC
+                 * @userdata4   ERC_AMEC_CENT_TEMP_TIMEOUT
                  * @devdesc     Failed to read a centaur memory controller
                  *              temperature
                  *
                  */
                 l_err = createErrl(AMEC_HEALTH_CHECK_CENT_TIMEOUT,    //modId
                                    FRU_TEMP_TIMEOUT,                  //reasoncode
-                                   OCC_NO_EXTENDED_RC,                //Extended reason code
+                                   ERC_AMEC_CENT_TEMP_TIMEOUT,        //Extended reason code
                                    ERRL_SEV_PREDICTIVE,               //Severity
                                    NULL,                              //Trace Buf
                                    DEFAULT_TRACE_SIZE,                //Trace Size
@@ -997,6 +1000,192 @@ void amec_health_check_proc_timeout()
             }
         }
     }while(0);
+}
+
+// Function Specification
+//
+// Name:  amec_health_check_vrm_vdd_temp
+//
+// Description: This function checks if the VRM Vdd temperature has
+// exceeded the error temperature sent in data format 0x13.
+//
+// End Function Specification
+void amec_health_check_vrm_vdd_temp()
+{
+    /*------------------------------------------------------------------------*/
+    /*  Local Variables                                                       */
+    /*------------------------------------------------------------------------*/
+    uint16_t                    l_ot_error;
+    static uint32_t             L_error_count = 0;
+    static BOOLEAN              L_ot_error_logged = FALSE;
+    sensor_t                    *l_sensor;
+    errlHndl_t                  l_err = NULL;
+
+    /*------------------------------------------------------------------------*/
+    /*  Code                                                                  */
+    /*------------------------------------------------------------------------*/
+    do
+    {
+        // Get TEMPVDD sensor
+        l_sensor = getSensorByGsid(TEMPVDD);
+        l_ot_error = g_amec->thermalvdd.ot_error;
+
+        // Check to see if we exceeded our error temperature
+        if (l_sensor->sample > l_ot_error)
+        {
+            // Increment the error counter for this FRU
+            L_error_count++;
+
+            // Trace and log error the first time this occurs
+            if (L_error_count == AMEC_HEALTH_ERROR_TIMER)
+            {
+                // Have we logged an OT error for this FRU already?
+                if (L_ot_error_logged == TRUE)
+                {
+                    break;
+                }
+
+                L_ot_error_logged = TRUE;
+
+                TRAC_ERR("amec_health_check_vrm_vdd_temp: VRM vdd has exceeded OT error! temp[%u] ot_error[%u]",
+                         l_sensor->sample,
+                         l_ot_error);
+
+                // Log an OT error
+                /* @
+                 * @errortype
+                 * @moduleid    AMEC_HEALTH_CHECK_VRM_VDD_TEMP
+                 * @reasoncode  VRM_VDD_ERROR_TEMP
+                 * @userdata1   0
+                 * @userdata2   Fru peak temperature sensor
+                 * @devdesc     VRM Vdd has reached error temperature
+                 *              threshold and is called out in this error log.
+                 *
+                 */
+                l_err = createErrl(AMEC_HEALTH_CHECK_VRM_VDD_TEMP,
+                                   VRM_VDD_ERROR_TEMP,
+                                   ERC_AMEC_PROC_ERROR_OVER_TEMPERATURE,
+                                   ERRL_SEV_PREDICTIVE,
+                                   NULL,
+                                   DEFAULT_TRACE_SIZE,
+                                   0,
+                                   l_sensor->sample_max);
+
+                // Callout the Ambient procedure
+                addCalloutToErrl(l_err,
+                                 ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                                 ERRL_COMPONENT_ID_OVER_TEMPERATURE,
+                                 ERRL_CALLOUT_PRIORITY_HIGH);
+
+                // Callout VRM Vdd
+                addCalloutToErrl(l_err,
+                                 ERRL_CALLOUT_TYPE_HUID,
+                                 G_sysConfigData.vrm_vdd_huid,
+                                 ERRL_CALLOUT_PRIORITY_MED);
+
+                // Commit Error
+                commitErrl(&l_err);
+            }
+        }
+        else
+        {
+            // Trace that we have now dropped below the error threshold
+            if (L_error_count >= AMEC_HEALTH_ERROR_TIMER)
+            {
+                TRAC_INFO("amec_health_check_vrm_vdd_temp: VRM Vdd temp [%u] now below error temp [%u] after error_count [%u]",
+                          l_sensor->sample, l_ot_error, L_error_count);
+            }
+
+            // Reset the error counter for this FRU
+            L_error_count = 0;
+        }
+    }while (0);
+
+}
+
+// Function Specification
+//
+// Name:  amec_health_check_vrm_vdd_temp_timeout
+//
+// Description: This function checks if OCC has failed to read the VRM Vdd
+// temperature and if it has exceeded the maximum allowed number of retries.
+//
+// End Function Specification
+void amec_health_check_vrm_vdd_temp_timeout()
+{
+    /*------------------------------------------------------------------------*/
+    /*  Local Variables                                                       */
+    /*------------------------------------------------------------------------*/
+    errlHndl_t                  l_err = NULL;
+    uint32_t                    l_update_tag = 0;
+    static uint32_t             L_read_fail_cnt = 0;
+    static BOOLEAN              L_error_logged = FALSE;
+    static uint32_t             L_vdd_temp_update_tag = 0;
+
+    /*------------------------------------------------------------------------*/
+    /*  Code                                                                  */
+    /*------------------------------------------------------------------------*/
+
+    // Check if VRM Vdd temperature sensor has been updated by checking the sensor update tag
+    // If the update tag is not changing, then temperature sensor is not being updated.
+    l_update_tag = AMECSENSOR_PTR(TEMPVDD)->update_tag;
+    if (l_update_tag != L_vdd_temp_update_tag)
+    {
+        // We were able to read VRM Vdd temperature
+        L_read_fail_cnt = 0;
+        G_vrm_vdd_temp_expired = false;
+        L_vdd_temp_update_tag = l_update_tag;
+    }
+    else
+    {
+        // Failed to read VRM Vdd temperature sensor
+        L_read_fail_cnt++;
+
+        // Check if we have reached the maximum read time allowed
+        if((L_read_fail_cnt == g_amec->thermalvdd.temp_timeout) &&
+           (g_amec->thermalvdd.temp_timeout != 0xFF))
+        {
+            //temperature has expired.  Notify control algorithms
+            G_vrm_vdd_temp_expired = true;
+
+            // Log error one time
+            if (L_error_logged == FALSE)
+            {
+                L_error_logged = TRUE;
+
+                TRAC_ERR("Timed out reading VRM Vdd temperature for timeout[%u]",
+                          g_amec->thermalvdd.temp_timeout);
+
+                /* @
+                 * @errortype
+                 * @moduleid    AMEC_HEALTH_CHECK_VRM_VDD_TIMEOUT
+                 * @reasoncode  FRU_TEMP_TIMEOUT
+                 * @userdata1   timeout value in seconds
+                 * @userdata2   0
+                 * @userdata4   ERC_AMEC_VRM_VDD_TEMP_TIMEOUT
+                 * @devdesc     Failed to read VRM Vdd temperature.
+                 *
+                 */
+                l_err = createErrl(AMEC_HEALTH_CHECK_VRM_VDD_TIMEOUT, //modId
+                                   FRU_TEMP_TIMEOUT,                  //reasoncode
+                                   ERC_AMEC_VRM_VDD_TEMP_TIMEOUT,     //Extended reason code
+                                   ERRL_SEV_PREDICTIVE,               //Severity
+                                   NULL,                              //Trace Buf
+                                   DEFAULT_TRACE_SIZE,                //Trace Size
+                                   g_amec->thermalvdd.temp_timeout,   //userdata1
+                                   0);                                //userdata2
+
+                // Callout the VRM
+                addCalloutToErrl(l_err,
+                                 ERRL_CALLOUT_TYPE_HUID,
+                                 G_sysConfigData.vrm_vdd_huid,
+                                 ERRL_CALLOUT_PRIORITY_MED);
+
+                // Commit error log and request reset
+                REQUEST_RESET(l_err);
+            }
+        } // if reached timeout
+    } // else failed to read temp
 }
 
 /*----------------------------------------------------------------------------*/

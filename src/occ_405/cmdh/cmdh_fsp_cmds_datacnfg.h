@@ -76,9 +76,10 @@ typedef enum
     DATA_FRU_PROC               = 0x00,
     DATA_FRU_CENTAUR            = 0x01,
     DATA_FRU_DIMM               = 0x02,
-    DATA_FRU_VRM                = 0x03,
+    DATA_FRU_VRM_OT_STATUS      = 0x03,  // this is just a bit indicating OT or not
     DATA_FRU_GPU                = 0x04,
     DATA_FRU_GPU_MEM            = 0x05,
+    DATA_FRU_VRM_VDD            = 0x06,  // this is an actual temperature reading for VRM Vdd
     DATA_FRU_MAX,
 } eConfigDataFruType;
 
@@ -217,6 +218,16 @@ typedef struct __attribute__ ((packed))
     uint8_t              version;
     cmdh_sys_config_data_v20_t   sys_config;
 }cmdh_sys_config_v20_t;
+
+typedef struct __attribute__ ((packed))
+{
+    struct cmdh_fsp_cmd_header;
+    uint8_t                      format;
+    uint8_t                      version;
+    cmdh_sys_config_data_v20_t   sys_config;
+    uint32_t                     vrm_vdd_sid;        // VRM Vdd Sensor ID for hw callout
+    uint32_t                     vrm_vdd_temp_sid;   // VRM Vdd Temperature sensor ID
+}cmdh_sys_config_v21_t;
 
 // Used by TMGT to send OCC the IPS config data.
 typedef struct __attribute__ ((packed))

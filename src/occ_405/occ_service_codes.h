@@ -61,8 +61,8 @@ enum occReasonCode
     EXTERNAL_INTERFACE_FAILURE      = 0x18,
     /// Incorrect number of active quads reported
     INVALID_ACTIVE_QUAD_COUNT       = 0x19,
-    /// VRM reached error threshold (VR_HOT asserted)
-    VRM_ERROR_TEMP                  = 0x20,
+    /// VRM Vdd reached error temperature threshold
+    VRM_VDD_ERROR_TEMP              = 0x20,
     /// VR_FAN  - AVS Bus over-temperature reported
     VRM_VRFAN_WARNING               = 0x22,
     /// GPIO_VR_HOT_MEM_PROC signal from APSS asserted
@@ -210,9 +210,9 @@ enum occExtReasonCode
 
     ERC_AMEC_PROC_ERROR_OVER_TEMPERATURE        = 0x002F,
 
-    ERC_APLT_INIT_FAILURE                       = 0x0030,
-    ERC_APLT_START_VERSION_MISMATCH             = 0x0031,
-    ERC_APLT_START_CHECKSUM_MISMATCH            = 0x0032,
+    ERC_AMEC_VRM_VDD_TEMP_TIMEOUT               = 0x0030,
+    ERC_AMEC_DIMM_TEMP_TIMEOUT                  = 0x0031,
+    ERC_AMEC_CENT_TEMP_TIMEOUT                  = 0x0032,
 
     ERC_CMDH_MBOX_REQST_FAILURE                 = 0x0040,
     ERC_CMDH_INTERNAL_FAILURE                   = 0x0041,

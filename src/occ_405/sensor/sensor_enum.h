@@ -145,6 +145,7 @@ enum e_gsid
     CURVDD,
     CURVDN,
     VRMPROCOT,
+    TEMPVDD,
 
     // ------------------------------------------------------
     // Core Sensors
