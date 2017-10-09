@@ -111,6 +111,8 @@ void amec_gpu_pcap(bool i_oversubscription, bool i_active_pcap_changed, int32_t 
     static uint8_t L_psr = 100;   // PSR value used in L_active_psr_gpu_total_pcap calculation
     static bool L_first_run = TRUE;  // for calculations done only 1 time
 
+    static uint32_t L_last_pcap_traced[MAX_NUM_GPU_PER_DOMAIN] = {0};
+
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
@@ -119,7 +121,6 @@ void amec_gpu_pcap(bool i_oversubscription, bool i_active_pcap_changed, int32_t 
     {
        // calculate total GPU power cap for oversubscription
        if(g_amec->pcap.ovs_node_pcap > G_sysConfigData.total_non_gpu_max_pwr_watts)
-         
        {
            // Take all non-GPU power away from the oversubscription power cap
            L_n_mode_gpu_total_pcap = g_amec->pcap.ovs_node_pcap - G_sysConfigData.total_non_gpu_max_pwr_watts;
@@ -242,7 +243,7 @@ void amec_gpu_pcap(bool i_oversubscription, bool i_active_pcap_changed, int32_t 
           // system is not in oversubscription use N+1 mode cap
           l_system_gpu_total_pcap = L_n_plus_1_mode_gpu_total_pcap;
        }
-       
+
        L_total_gpu_pcap = (l_system_gpu_total_pcap < L_active_psr_gpu_total_pcap) ?
                            l_system_gpu_total_pcap : L_active_psr_gpu_total_pcap;
 
@@ -292,8 +293,15 @@ void amec_gpu_pcap(bool i_oversubscription, bool i_active_pcap_changed, int32_t 
            // check if this is a new power limit
            if(g_amec->gpu[i].pcap.gpu_desired_pcap_mw != l_gpu_cap_mw)
            {
-              TRAC_IMP("amec_gpu_pcap: Updating GPU%d desired pcap %dmW to %dmW", i,
-                        g_amec->gpu[i].pcap.gpu_desired_pcap_mw, l_gpu_cap_mw);
+              if( (g_amec->gpu[i].pcap.gpu_desired_pcap_mw != 0) ||
+                  (L_last_pcap_traced[i] != l_gpu_cap_mw) )
+              {
+                 L_last_pcap_traced[i] = l_gpu_cap_mw;
+                 TRAC_IMP("amec_gpu_pcap: Updating GPU%d desired pcap %dmW to %dmW", i,
+                          g_amec->gpu[i].pcap.gpu_desired_pcap_mw, l_gpu_cap_mw);
+
+              }
+
               g_amec->gpu[i].pcap.gpu_desired_pcap_mw = l_gpu_cap_mw;
 
               if( (g_amec->gpu[i].pcap.gpu_min_cap_required) && (l_gpu_cap_mw != g_amec->gpu[i].pcap.gpu_min_pcap_mw) )

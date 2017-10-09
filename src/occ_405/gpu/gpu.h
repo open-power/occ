@@ -43,7 +43,7 @@ typedef enum
     GPU_STATE_CHECK_MEM_TEMP_CAPABLE    = 0x30, // Read memory temperature capability
     GPU_STATE_CHECK_DRIVER_LOADED       = 0x40, // Check if Driver loaded
     GPU_STATE_READ_PWR_LIMIT            = 0x50, // Read Power Limits
-    GPU_STATE_SET_PWR_LIMIT             = 0x60, // Set Power Limit
+    GPU_STATE_SET_PWR_LIMIT             = 0x70, // Set Power Limit
     GPU_STATE_IDLE                      = 0xFE, // Ok to schedule new task
     GPU_STATE_NO_LOCK                   = 0xFF  // Host owns, no communication allowed
 } gpuState_e;
@@ -106,22 +106,48 @@ typedef enum
 typedef enum
 {
     GPU_STATE_READ_PWR_LIMIT_NEW      = 0x51,
-    GPU_STATE_READ_PWR_LIMIT_START    = 0x52,
-    GPU_STATE_READ_PWR_LIMIT_2        = 0x53,
-    GPU_STATE_READ_PWR_LIMIT_3        = 0x54,
-    GPU_STATE_READ_PWR_LIMIT_READ     = 0x55,
-    GPU_STATE_READ_PWR_LIMIT_COMPLETE = 0x56,
+    GPU_STATE_READ_PWR_LIMIT_1_START  = 0x52,
+    GPU_STATE_READ_PWR_LIMIT_1_2      = 0x53,
+    GPU_STATE_READ_PWR_LIMIT_1_3      = 0x54,
+    GPU_STATE_READ_PWR_LIMIT_1_FINISH = 0x55,
+    GPU_STATE_READ_PWR_LIMIT_2_START  = 0x56,
+    GPU_STATE_READ_PWR_LIMIT_2_2      = 0x57,
+    GPU_STATE_READ_PWR_LIMIT_2_FINISH = 0x58,
+    GPU_STATE_READ_PWR_LIMIT_3_START  = 0x59,
+    GPU_STATE_READ_PWR_LIMIT_3_2      = 0x5A,
+    GPU_STATE_READ_PWR_LIMIT_3_3      = 0x5B,
+    GPU_STATE_READ_PWR_LIMIT_3_FINISH = 0x5C,
+    GPU_STATE_READ_PWR_LIMIT_4_START  = 0x5D,
+    GPU_STATE_READ_PWR_LIMIT_4_2      = 0x5E,
+    GPU_STATE_READ_PWR_LIMIT_4_3      = 0x5F,
+    GPU_STATE_READ_PWR_LIMIT_4_FINISH = 0x60,
+    GPU_STATE_READ_PWR_LIMIT_5_START  = 0x61,
+    GPU_STATE_READ_PWR_LIMIT_5_2      = 0x62,
+    GPU_STATE_READ_PWR_LIMIT_5_3      = 0x63,
+    GPU_STATE_READ_PWR_LIMIT_5_FINISH = 0x64,
+    GPU_STATE_READ_PWR_LIMIT_COMPLETE = 0x65,
 } gpuReadPwrLimitState_e;
 
 // States for setting GPU power limit (gpu_set_pwr_limit_sm)
 typedef enum
 {
-    GPU_STATE_SET_PWR_LIMIT_NEW      = 0x61,
-    GPU_STATE_SET_PWR_LIMIT_START    = 0x62,
-    GPU_STATE_SET_PWR_LIMIT_2        = 0x63,
-    GPU_STATE_SET_PWR_LIMIT_3        = 0x64,
-    GPU_STATE_SET_PWR_LIMIT_READ     = 0x65,
-    GPU_STATE_SET_PWR_LIMIT_COMPLETE = 0x66,
+    GPU_STATE_SET_PWR_LIMIT_NEW      = 0x71,
+    GPU_STATE_SET_PWR_LIMIT_1_START  = 0x72,
+    GPU_STATE_SET_PWR_LIMIT_1_1      = 0x73,
+    GPU_STATE_SET_PWR_LIMIT_1_2      = 0x74,
+    GPU_STATE_SET_PWR_LIMIT_1_FINISH = 0x75,
+    GPU_STATE_SET_PWR_LIMIT_2_START  = 0x76,
+    GPU_STATE_SET_PWR_LIMIT_2_1      = 0x77,
+    GPU_STATE_SET_PWR_LIMIT_2_2      = 0x78,
+    GPU_STATE_SET_PWR_LIMIT_2_FINISH = 0x79,
+    GPU_STATE_SET_PWR_LIMIT_3_START  = 0x7A,
+    GPU_STATE_SET_PWR_LIMIT_3_2      = 0x7B,
+    GPU_STATE_SET_PWR_LIMIT_3_3      = 0x7C,
+    GPU_STATE_SET_PWR_LIMIT_3_FINISH = 0x7D,
+    GPU_STATE_SET_PWR_LIMIT_4_START  = 0x7E,
+    GPU_STATE_SET_PWR_LIMIT_4_2      = 0x7F,
+    GPU_STATE_SET_PWR_LIMIT_4_FINISH = 0x80,
+    GPU_STATE_SET_PWR_LIMIT_COMPLETE = 0x81,
 } gpuSetPwrLimitState_e;
 
 // GPU IPC initialization

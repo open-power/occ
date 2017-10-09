@@ -62,30 +62,72 @@ typedef enum
 // GPU Request Operations
 typedef enum
 {
-    GPU_REQ_INIT                        = 0x01, // Init interrupt registers
-    GPU_REQ_READ_TEMP_START             = 0x02, // Start reading GPU information
-    GPU_REQ_READ_TEMP_FINISH            = 0x03, // Read GPU temp register
-    GPU_REQ_READ_MEM_TEMP_START         = 0x04, // Initiate memory temp reading
-    GPU_REQ_READ_MEM_TEMP_2             = 0x05, // mem temp step 2
-    GPU_REQ_READ_MEM_TEMP_3             = 0x06, // mem temp step 3
-    GPU_REQ_READ_MEM_TEMP_FINISH        = 0x07, // Get memory temp reading
-    GPU_REQ_READ_CAPS_START             = 0x08, // Start reading capabilities
-    GPU_REQ_READ_CAPS_2                 = 0x09, // Capabilities read step 2
-    GPU_REQ_READ_CAPS_3                 = 0x0A, // Capabilities read step 3
-    GPU_REQ_READ_CAPS_FINISH            = 0x0B, // get capabilities
-    GPU_REQ_READ_PWR_LIMIT_START        = 0x10, // Start reading GPU power limit
-    GPU_REQ_READ_PWR_LIMIT_2            = 0x11,
-    GPU_REQ_READ_PWR_LIMIT_3            = 0x12,
-    GPU_REQ_READ_PWR_LIMIT_FINISH       = 0x13,
-    GPU_REQ_SET_PWR_LIMIT_START         = 0x20, // Start setting GPU power limit
-    GPU_REQ_SET_PWR_LIMIT_2             = 0x21,
-    GPU_REQ_SET_PWR_LIMIT_3             = 0x22,
-    GPU_REQ_SET_PWR_LIMIT_FINISH        = 0x23,
-    GPU_REQ_CHECK_DRIVER_START          = 0x31, // Start check driver loaded
+    // Initialize the GPU state machine and I2C engine
+    GPU_REQ_INIT                        = 0x01,
+
+    // Read GPU core temperature
+    GPU_REQ_READ_TEMP_START             = 0x02,
+    GPU_REQ_READ_TEMP_FINISH            = 0x03,
+
+    // Read GPU memory temperature
+    GPU_REQ_READ_MEM_TEMP_START         = 0x04,
+    GPU_REQ_READ_MEM_TEMP_2             = 0x05,
+    GPU_REQ_READ_MEM_TEMP_3             = 0x06,
+    GPU_REQ_READ_MEM_TEMP_FINISH        = 0x07,
+
+    // Read thermal capabilities
+    GPU_REQ_READ_CAPS_START             = 0x08,
+    GPU_REQ_READ_CAPS_2                 = 0x09,
+    GPU_REQ_READ_CAPS_3                 = 0x0A,
+    GPU_REQ_READ_CAPS_FINISH            = 0x0B,
+
+    // Set GPU power cap
+    GPU_REQ_SET_PWR_LIMIT_1_START       = 0x20,
+    GPU_REQ_SET_PWR_LIMIT_1_1           = 0x21,
+    GPU_REQ_SET_PWR_LIMIT_1_2           = 0x22,
+    GPU_REQ_SET_PWR_LIMIT_1_FINISH      = 0x23,
+    GPU_REQ_SET_PWR_LIMIT_2_START       = 0x24,
+    GPU_REQ_SET_PWR_LIMIT_2_1           = 0x25,
+    GPU_REQ_SET_PWR_LIMIT_2_2           = 0x26,
+    GPU_REQ_SET_PWR_LIMIT_2_FINISH      = 0x27,
+    GPU_REQ_SET_PWR_LIMIT_3_START       = 0x28,
+    GPU_REQ_SET_PWR_LIMIT_3_2           = 0x29,
+    GPU_REQ_SET_PWR_LIMIT_3_3           = 0x2A,
+    GPU_REQ_SET_PWR_LIMIT_3_FINISH      = 0x2B,
+    GPU_REQ_SET_PWR_LIMIT_4_START       = 0x2C,
+    GPU_REQ_SET_PWR_LIMIT_4_2           = 0x2D,
+    GPU_REQ_SET_PWR_LIMIT_4_FINISH      = 0x2E,
+
+
+    // Start check driver loaded
+    GPU_REQ_CHECK_DRIVER_START          = 0x31,
     GPU_REQ_CHECK_DRIVER_2              = 0x32,
     GPU_REQ_CHECK_DRIVER_3              = 0x33,
     GPU_REQ_CHECK_DRIVER_FINISH         = 0x34,
-    GPU_REQ_RESET                       = 0x60, // Reset
+
+    // Read power limit policy
+    GPU_REQ_GET_PWR_LIMIT_1_START       = 0x40,
+    GPU_REQ_GET_PWR_LIMIT_1_2           = 0x41,
+    GPU_REQ_GET_PWR_LIMIT_1_3           = 0x42,
+    GPU_REQ_GET_PWR_LIMIT_1_FINISH      = 0x43,
+    GPU_REQ_GET_PWR_LIMIT_2_START       = 0x44,
+    GPU_REQ_GET_PWR_LIMIT_2_2           = 0x45,
+    GPU_REQ_GET_PWR_LIMIT_2_FINISH      = 0x46,
+    GPU_REQ_GET_PWR_LIMIT_3_START       = 0x47,
+    GPU_REQ_GET_PWR_LIMIT_3_2           = 0x48,
+    GPU_REQ_GET_PWR_LIMIT_3_3           = 0x49,
+    GPU_REQ_GET_PWR_LIMIT_3_FINISH      = 0x4A,
+    GPU_REQ_GET_PWR_LIMIT_4_START       = 0x4B,
+    GPU_REQ_GET_PWR_LIMIT_4_2           = 0x4C,
+    GPU_REQ_GET_PWR_LIMIT_4_3           = 0x4D,
+    GPU_REQ_GET_PWR_LIMIT_4_FINISH      = 0x4E,
+    GPU_REQ_GET_PWR_LIMIT_5_START       = 0x4F,
+    GPU_REQ_GET_PWR_LIMIT_5_2           = 0x50,
+    GPU_REQ_GET_PWR_LIMIT_5_3           = 0x51,
+    GPU_REQ_GET_PWR_LIMIT_5_FINISH      = 0x52,
+
+    // Reset the I2C master and slave
+    GPU_REQ_RESET                       = 0x60,
 } gpu_op_req_e;
 
 // GPU arguments
