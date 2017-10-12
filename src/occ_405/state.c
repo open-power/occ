@@ -40,6 +40,7 @@
 #include "pgpe_interface.h"
 #include "pstate_pgpe_occ_api.h"
 #include "amec_sys.h"
+#include "wof.h"
 
 // Maximum time to wait for a PGPE task before timeout
 // must wait at least 1 tick time to ensure proc_data_control() runs to set
@@ -296,6 +297,9 @@ errlHndl_t SMGR_all_to_standby()
 
     TRAC_IMP("SMGR: Transition from State (%d) to Standby Started", CURRENT_STATE());
 
+    // set STATE_CHANGE WOF disabled flag
+    set_clear_wof_disabled( SET, WOF_RC_STATE_CHANGE );
+
     // if Psates in transition (a pgpe_start_suspend IPC call still running),
     // wait until it is settled up to WAIT_PGPE_TASK_TIMEOUT usec
     while( (G_proc_pstate_status == PSTATES_IN_TRANSITION) &&
@@ -531,6 +535,8 @@ errlHndl_t SMGR_observation_to_active()
            (SMGR_validate_get_valid_states() & SMGR_MASK_ACTIVE_READY))
         {
             TRAC_IMP("SMGR: Observation to Active Transition Started");
+            // Clear STATE_CHANGE WOF disabled flag
+            set_clear_wof_disabled( CLEAR, WOF_RC_STATE_CHANGE );
             l_pstate = proc_freq2pstate(G_proc_fmax_mhz);
             l_rc = pgpe_set_clip_blocking(l_pstate);
 
@@ -715,6 +721,8 @@ errlHndl_t SMGR_characterization_to_active()
 
     do
     {
+        // Clear STATE_CHANGE WOF disabled flag
+        set_clear_wof_disabled( CLEAR, WOF_RC_STATE_CHANGE );
         // change PMCR ownership via an IPC call to PGPE based on system type.
         if(G_sysConfigData.system_type.kvm)
         {
@@ -825,6 +833,8 @@ errlHndl_t SMGR_active_to_observation()
 
     do
     {
+        // Set STATE_CHANGE WOF disabled
+        set_clear_wof_disabled( SET, WOF_RC_STATE_CHANGE );
         // wait until task_core_data_control() declares that
         // OCC is ready to transition to Observation state
         while(!G_active_to_observation_ready)
@@ -973,6 +983,8 @@ errlHndl_t SMGR_active_to_characterization()
 
     do
     {
+        // set STATE_CHANGE WOF disabled flag
+        set_clear_wof_disabled( SET, WOF_RC_STATE_CHANGE );
         // set pstate clips
         l_pstate = proc_freq2pstate(G_proc_fmax_mhz);
         rc = pgpe_set_clip_blocking(l_pstate);
@@ -1109,6 +1121,9 @@ errlHndl_t SMGR_all_to_safe()
     {
        G_occ_external_req_state = OCC_STATE_SAFE;
     }
+
+    // set STATE_CHANGE WOF disabled flag
+    set_clear_wof_disabled( SET, WOF_RC_STATE_CHANGE );
 
     // If we are master, we will wait 15ms to go to full on safe mode
     // This is to give the slaves time to see that we are broadcasting

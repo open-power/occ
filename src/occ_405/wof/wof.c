@@ -131,6 +131,9 @@ void call_wof_main( void )
     // Variable to ensure we do not keep trying to send the wof control
     static bool L_wof_control_last_chance = false;
 
+    // Variable to keep track of PState enablement to prevent setting/clearing
+    // wof_disabled bit every iteration.
+    static uint8_t L_pstate_protocol_off = 0;
     // GpeRequest more than 1 extra time.
     bool enable_success = false;
     do
@@ -153,13 +156,22 @@ void call_wof_main( void )
             g_wof->vfrt_callback_error = 0;
         }
 
+        // If the 405 turned WOF off on pgpe and it is the only bit set
+        // clear the bit so we can re-enable WOF
+        if( g_wof->pgpe_wof_off &&
+           (g_wof->wof_disabled == WOF_RC_PGPE_WOF_DISABLED) )
+        {
+            g_wof->pgpe_wof_off = 0;
+            set_clear_wof_disabled( CLEAR, WOF_RC_PGPE_WOF_DISABLED );
+        }
+
         // Make sure wof has not been disabled
         if( g_wof->wof_disabled )
         {
-            if( g_wof->pgpe_wof_off )
+            if( g_wof->pgpe_wof_disabled )
             {
                 set_clear_wof_disabled( SET, WOF_RC_PGPE_WOF_DISABLED );
-                g_wof->pgpe_wof_off = 0;
+                g_wof->pgpe_wof_disabled = 0;
             }
             break;
         }
@@ -167,9 +179,23 @@ void call_wof_main( void )
         // Make sure Pstate Protocol is on
         if(G_proc_pstate_status != PSTATES_ENABLED)
         {
-            INTR_TRAC_ERR("WOF Disabled! Pstate Protocol off");
-            set_clear_wof_disabled( SET, WOF_RC_PSTATE_PROTOCOL_OFF );
+            if( L_pstate_protocol_off == 0 )
+            {
+                INTR_TRAC_ERR("WOF Disabled! Pstate Protocol off");
+                set_clear_wof_disabled( SET, WOF_RC_PSTATE_PROTOCOL_OFF );
+                L_pstate_protocol_off = 1;
+            }
+            // Since Pstates are off, break out
             break;
+        }
+        else if(G_proc_pstate_status == PSTATES_ENABLED)
+        {
+            if( L_pstate_protocol_off == 1 )
+            {
+                INTR_TRAC_INFO("Pstate Protocol on! Clearing PSTATE_PROTOCOL_OFF");
+                set_clear_wof_disabled( CLEAR, WOF_RC_PSTATE_PROTOCOL_OFF );
+                L_pstate_protocol_off = 0;
+            }
         }
 
         // Ensure the OCC is active
@@ -1622,7 +1648,7 @@ void wof_control_callback( void )
     if( G_wof_control_parms.msg_cb.rc == PGPE_WOF_RC_NOT_ENABLED )
     {
         // PGPE cannot enable wof
-        g_wof->pgpe_wof_off = 1;
+        g_wof->pgpe_wof_disabled = 1;
     }
     else if( G_wof_control_parms.msg_cb.rc == PGPE_RC_SUCCESS)
     {
@@ -1633,7 +1659,7 @@ void wof_control_callback( void )
         }
         else
         {
-            // Record that PGPE has WOF turned off
+            // Record that 405 turned PGPE WOF off
             g_wof->pgpe_wof_off = 1;
         }
     }

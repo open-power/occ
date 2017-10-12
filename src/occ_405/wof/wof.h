@@ -305,8 +305,10 @@ typedef struct
     // Keeps track of whether we got an error in wof_vfrt_callback to be
     // logged later
     uint8_t vfrt_callback_error;
-    // Keeps track of whether or /not we just turned off wof on the PGPE
+    // Keeps track of whether the 405 was the one who disabled WOF on the PGPE
     uint8_t pgpe_wof_off;
+    // Keeps track of whether or not the PGPE can enable WOF
+    uint8_t pgpe_wof_disabled;
     // Offset into main memory with the beginning of the wof vfrt data as base
     uint32_t vfrt_mm_offset;
     // Return code returned from a bad VFRT request
