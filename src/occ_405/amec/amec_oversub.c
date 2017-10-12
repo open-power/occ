@@ -35,6 +35,7 @@
 #include <occ_sys_config.h>
 #include <amec_service_codes.h>
 #include <pgpe_interface.h>
+#include <amec_freq.h>
 
 //*************************************************************************/
 // Externs
@@ -137,6 +138,7 @@ void amec_oversub_isr(void)
 // End Function Specification
 void amec_oversub_check(void)
 {
+    errlHndl_t l_errl = NULL;
     static BOOLEAN              L_prev_ovs_state = FALSE;  // oversub happened
 
     // oversubscription condition happened?
@@ -147,6 +149,7 @@ void amec_oversub_check(void)
             L_prev_ovs_state = TRUE;
 
             TRAC_ERR("Oversubscription condition happened");
+
             /* @
              * @errortype
              * @moduleid    AMEC_SLAVE_CHECK_PERFORMANCE
@@ -155,14 +158,14 @@ void amec_oversub_check(void)
              * @userdata4   ERC_AMEC_SLAVE_OVS_STATE
              * @devdesc     Oversubscription condition happened
              */
-            errlHndl_t l_errl = createErrl(AMEC_SLAVE_CHECK_PERFORMANCE,//modId
-                                          OVERSUB_ALERT,                //reasoncode
-                                          ERC_AMEC_SLAVE_OVS_STATE,     //Extended reason code
-                                          ERRL_SEV_INFORMATIONAL,       //Severity
-                                          NULL,                         //Trace Buf
-                                          DEFAULT_TRACE_SIZE,           //Trace Size
-                                          L_prev_ovs_state,             //userdata1
-                                          0);                           //userdata2
+            l_errl = createErrl(AMEC_SLAVE_CHECK_PERFORMANCE,//modId
+                                OVERSUB_ALERT,                //reasoncode
+                                ERC_AMEC_SLAVE_OVS_STATE,     //Extended reason code
+                                ERRL_SEV_INFORMATIONAL,       //Severity
+                                NULL,                         //Trace Buf
+                                DEFAULT_TRACE_SIZE,           //Trace Size
+                                L_prev_ovs_state,             //userdata1
+                                0);                           //userdata2
 
             // set the mfg action flag (allows callout to be added to info error)
             setErrlActions(l_errl, ERRL_ACTIONS_MANUFACTURING_ERROR);
@@ -175,17 +178,36 @@ void amec_oversub_check(void)
 
             // Commit Error
             commitErrl(&l_errl);
+
+            // set max frequency for oversubscription
+            l_errl = amec_set_freq_range(CURRENT_MODE());
+            if(l_errl)
+            {
+                TRAC_ERR("amec_oversub_check: committing error reported by amec_set_freq_range");
+                commitErrl( &l_errl);
+            }
         }
     }
     else
     {
-        L_prev_ovs_state = FALSE;
+        if(L_prev_ovs_state)
+        {
+            L_prev_ovs_state = FALSE;
+            TRAC_IMP("Oversubscription condition cleared");
+
+            // re-set max frequency since no longer in oversubscription
+            l_errl = amec_set_freq_range(CURRENT_MODE());
+            if(l_errl)
+            {
+                TRAC_ERR("amec_oversub_check: committing error reported by amec_set_freq_range");
+                commitErrl( &l_errl);
+            }
+        }
     }
 
     // Figure out the over-subscription reason
     if(g_amec->oversub_status.oversubReasonLatchCount > 1)
     {
-        // TODO -- RTC 155565 -- Try to figure out why we throttled based on APSS GPIO pins
         if( g_amec->oversub_status.oversubReasonLatchCount == OVERSUB_REASON_COUNT_TIMEOUT)
         {
             g_amec->oversub_status.oversubReason = INDETERMINATE;

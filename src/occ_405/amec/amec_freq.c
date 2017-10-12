@@ -92,7 +92,8 @@ opal_mem_voting_reason_t  G_amec_opal_mem_throt_reason  = NO_MEM_THROTTLE;
 // Name: amec_set_freq_range
 //
 // Description: Set the frequency range for AMEC
-//              This function will run on mode changes and cnfg_data changes
+//              This function will run on mode changes, cnfg_data changes
+//              and oversubscription changes
 //
 // Thread: RealTime Loop
 //
@@ -120,7 +121,7 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
     {
         l_freq_min = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
 
-        // Set Max frequency (ultra turbo freq if wof enabled, to turbo freq otherwise)
+        // Set Max frequency (turbo if wof off, otherwise max possible (ultra turbo)
         if( g_amec->wof.wof_disabled )
         {
             l_freq_max = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
@@ -139,6 +140,7 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
           (i_mode == OCC_MODE_FMF) || (i_mode == OCC_MODE_DYN_POWER_SAVE) ||
           (i_mode == OCC_MODE_DYN_POWER_SAVE_FP) )
       {
+          // clip to turbo if WOF is disabled
           if( g_amec->wof.wof_disabled )
           {
               l_freq_max = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
@@ -152,6 +154,29 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
       {
           l_freq_max = G_sysConfigData.sys_mode_freq.table[i_mode];
       }
+    }
+
+    // check if need to lower max frequency due to being in oversubscription.  0 oversub freq means no freq limitation
+    if( AMEC_INTF_GET_OVERSUBSCRIPTION() && (G_sysConfigData.sys_mode_freq.table[OCC_MODE_OVERSUB]) &&
+       (G_sysConfigData.sys_mode_freq.table[OCC_MODE_OVERSUB] < l_freq_max) )
+    {
+        // If oversub is lower than system minimum then set to min
+        if(G_sysConfigData.sys_mode_freq.table[OCC_MODE_OVERSUB] < l_freq_min)
+        {
+            TRAC_IMP("amec_set_freq_range: max frequency lowered from %u to system min %u due to oversubscription",
+                      l_freq_max,
+                      l_freq_min);
+
+            l_freq_max = l_freq_min;
+        }
+        else
+	{
+            TRAC_IMP("amec_set_freq_range: max frequency lowered from %u to %u due to Oversubscription",
+                      l_freq_max,
+                      G_sysConfigData.sys_mode_freq.table[OCC_MODE_OVERSUB]);
+
+            l_freq_max = G_sysConfigData.sys_mode_freq.table[OCC_MODE_OVERSUB];
+        }
     }
 
     if( (l_freq_min == 0) || (l_freq_max == 0) )
@@ -228,11 +253,6 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
       // Copy the PPM frequency information into g_amec
       memcpy(g_amec->part_mode_freq, l_ppm_freq, sizeof(l_ppm_freq));
 
-      TRAC_INFO("amec_set_freq_range: PPM Fmin[%u] Fnom[%u] Fmax[%u] min_speed[%u]",
-                l_ppm_freq[OCC_INTERNAL_MODE_NOM].fmin,
-                l_ppm_freq[OCC_INTERNAL_MODE_NOM].fmax,
-                l_ppm_freq[OCC_INTERNAL_MODE_DPS].fmax,
-                l_ppm_freq[OCC_INTERNAL_MODE_DPS_MP].min_speed);
     }
     return l_err;
 }

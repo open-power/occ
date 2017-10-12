@@ -40,12 +40,12 @@
 // Returns the 'Requested' SMS Mode
 #define VALID_MODE(mode)  ((mode < OCC_MODE_COUNT) ? 1 : 0)
 
-// Typedef of the various modes that TMGT can put OCC into.
+// Typedef of the various modes
 typedef enum
 {
     OCC_MODE_NOCHANGE          = 0x00,
     OCC_MODE_NOMINAL           = 0x01,
-    // reserved                = 0x02,
+    OCC_MODE_OVERSUB           = 0x02,  // not a settable mode, just used to store oversubscription max freq
     OCC_MODE_TURBO             = 0x03,
     OCC_MODE_SAFE              = 0x04,
     OCC_MODE_PWRSAVE           = 0x05,
