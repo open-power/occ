@@ -108,7 +108,7 @@ SECTIONS
 
     _SDA_BASE_ = .;
     .sdata  . : { *(.sdata*) . = ALIGN(128); } > sram
-    .sbss   . : { *(.sbss*)  . = ALIGN(128); } > sram
+    .sbss   . : { *(.sbss.debug) *(.sbss*)  . = ALIGN(128); } > sram
 
     // Other read-write data
     // It's not clear why boot.S is generating empty .glink,.iplt

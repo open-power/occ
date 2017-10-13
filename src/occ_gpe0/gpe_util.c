@@ -163,11 +163,14 @@ void busy_wait(uint32_t i_microseconds)
     uint32_t end_count = current_count +
         PK_INTERVAL_SCALE((uint32_t)PK_MICROSECONDS(i_microseconds));
 
-    // Handle wrap case
+    // end_count rolled over, Need to wait for roll-over of timebase
     if(current_count > end_count)
     {
-        // let counter roll over
-        while(current_count > end_count)
+        // If there is a high priority interrupt (DEC), the timebase could
+        // increment more than once between readings and if end_count value is
+        // very small then the roll-over could be missed, so just look at upper
+        // bit instead of comparing against end_count.
+        while((0x80000000 & current_count) != 0)
         {
             current_count = pk_timebase32_get();
         }

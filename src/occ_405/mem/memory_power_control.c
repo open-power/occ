@@ -35,6 +35,11 @@ GpeRequest G_mem_power_control_req;
 // GPE arguments
 GPE_BUFFER(mem_power_control_args_t  G_mem_power_control_args);
 
+/**
+ * GPE shared data area for gpe1 tracebuffer and size
+ */
+extern gpe_shared_data_t G_shared_gpe_data;
+
 
 // Function Specification
 //
@@ -260,6 +265,12 @@ int gpe_mem_power_control(uint8_t mem_pwr_ctl, uint8_t mca, uint8_t wait_idle_gp
                         0,                               //Userdata1
                         0                                //Userdata2
                         );
+
+                    addUsrDtlsToErrl(err,
+                                     (uint8_t *) G_shared_gpe_data.gpe1_tb_ptr,
+                                     G_shared_gpe_data.gpe1_tb_sz,
+                                     ERRL_USR_DTL_STRUCT_VERSION_1,
+                                     ERRL_USR_DTL_TRACE_DATA);
 
                     commitErrl(&err);
 

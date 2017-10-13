@@ -32,8 +32,16 @@
 #include <apss_structs.h>
 #include "gpe_util.h"
 
+#define MAX_EXECUTION_TIMER (PK_INTERVAL_SCALE((uint32_t)PK_MICROSECONDS(250)))
+
 extern uint8_t G_apss_mode;
 extern gpe_shared_data_t * G_gpe_shared_data;
+
+
+uint32_t g_max_apss_start __attribute__((section(".sbss.debug"))) = 0;
+uint32_t g_max_apss_cont  __attribute__((section(".sbss.debug")))  = 0;
+uint32_t g_max_apss_comp  __attribute__((section(".sbss.debug")))  = 0;
+
 /*
  * Function Specifications:
  *
@@ -58,6 +66,9 @@ void apss_start_pwr_meas_read(ipc_msg_t* cmd, void* arg)
 #ifdef DEBUG_APSS_SEQ
     PK_TRACE("apss_start_pwr_meas_read: enter");
 #endif
+    uint32_t end_time = 0;
+    uint32_t diff_time = 0;
+    uint32_t start_time = pk_timebase32_get();
 
     int      rc;
     uint64_t regValue; // a pointer to hold the putscom_abs register value
@@ -172,6 +183,21 @@ void apss_start_pwr_meas_read(ipc_msg_t* cmd, void* arg)
 #ifdef DEBUG_APSS_SEQ
     PK_TRACE("apss_start_pwr_meas_read: calling ipc_send_rsp()");
 #endif
+    end_time = pk_timebase32_get();
+
+    diff_time = end_time - start_time;
+
+    if(diff_time > g_max_apss_start)
+    {
+        g_max_apss_start = diff_time;
+
+        if(diff_time > MAX_EXECUTION_TIMER)
+        {
+            PK_TRACE("apss_start_pwr_meas_read took longer than expected. Delta OTBR: %x",
+                     diff_time);
+        }
+    }
+
 
     // send back a response, IPC success even if ffdc/rc are non zeros
     rc = ipc_send_rsp(cmd, IPC_RC_SUCCESS);
@@ -205,6 +231,10 @@ void apss_continue_pwr_meas_read(ipc_msg_t* cmd, void* arg)
 {
     // the ipc arguments are passed through the ipc_msg_t structure, has a pointer
     // to the G_gpe_continue_pwr_meas_read_args
+
+    uint32_t end_time = 0;
+    uint32_t diff_time = 0;
+    uint32_t start_time = pk_timebase32_get();
 
     uint64_t     regValue = 0;
     int          rc;
@@ -318,6 +348,21 @@ void apss_continue_pwr_meas_read(ipc_msg_t* cmd, void* arg)
     PK_TRACE("apss_continue_pwr_meas_read: calling ipc_send_rsp()");
 #endif
 
+    end_time = pk_timebase32_get();
+
+    diff_time = end_time - start_time;
+
+    if(diff_time > g_max_apss_cont)
+    {
+        g_max_apss_cont = diff_time;
+
+        if(diff_time > MAX_EXECUTION_TIMER)
+        {
+            PK_TRACE("apss_continue took longer than expected. Delta OTBR: %x",
+                     diff_time);
+        }
+    }
+
     // send back a response, IPC success (even if ffdc/rc are non zeros)
     rc = ipc_send_rsp(cmd, IPC_RC_SUCCESS);
     if(rc)
@@ -354,6 +399,10 @@ void apss_complete_pwr_meas_read(ipc_msg_t* cmd, void* arg)
 #ifdef DEBUG_APSS_SEQ
     PK_TRACE("apss_complete_pwr_meas_read: enter");
 #endif
+    uint32_t end_time = 0;
+    uint32_t diff_time = 0;
+    uint32_t start_time = pk_timebase32_get();
+
 
     int          rc;
     ipc_async_cmd_t *async_cmd = (ipc_async_cmd_t*)cmd;
@@ -404,6 +453,20 @@ void apss_complete_pwr_meas_read(ipc_msg_t* cmd, void* arg)
 #ifdef DEBUG_APSS_SEQ
     PK_TRACE("apss_complete_pwr_meas_read: calling ipc_send_rsp()");
 #endif
+    end_time = pk_timebase32_get();
+
+    diff_time = end_time - start_time;
+
+    if(diff_time > g_max_apss_comp)
+    {
+        g_max_apss_comp = diff_time;
+
+        if(diff_time > MAX_EXECUTION_TIMER)
+        {
+            PK_TRACE("apss_complete took longer than expected. Delta OTBR: %x",
+                     diff_time);
+        }
+    }
 
     // send back a response, IPC success (even if ffdc/rc are non zeros)
     rc = ipc_send_rsp(cmd, IPC_RC_SUCCESS);

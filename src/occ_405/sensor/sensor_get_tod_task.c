@@ -87,7 +87,8 @@
 typedef enum 
 {
     GET_TOD_ERRL_USR_DTLS_NONE,         ///< No data to store
-    GET_TOD_ERRL_USR_DTLS_GPE_FFDC      ///< ffdc value from GPE0 in G_get_tod_args
+    GET_TOD_ERRL_USR_DTLS_GPE_FFDC,     ///< ffdc value from GPE0 in G_get_tod_args
+    GET_TOD_ERRL_USR_DTLS_GPE_TRACE,    ///< get GPE0 trace buffer
 } GET_TOD_ERRL_USR_DTLS_DATA;
 
 
@@ -129,6 +130,10 @@ uint8_t G_get_tod_error_count = 0;
  */
 bool G_get_tod_enabled = true;
 
+/**
+ * GPE shared data area for gpe0 tracebuffer and size
+ */
+extern gpe_shared_data_t G_shared_gpe_data;
 
 //******************************************************************************
 // Private Functions
@@ -222,6 +227,16 @@ void get_tod_log_error(uint16_t i_modId, uint8_t i_reasonCode,
                          ERRL_USR_DTL_BINARY_DATA);
     }
 
+    if (i_usrDtlsData == GET_TOD_ERRL_USR_DTLS_GPE_TRACE)
+    {
+
+        addUsrDtlsToErrl(l_errl,
+                         (uint8_t *) G_shared_gpe_data.gpe0_tb_ptr,
+                         G_shared_gpe_data.gpe0_tb_sz,
+                         ERRL_USR_DTL_STRUCT_VERSION_1,
+                         ERRL_USR_DTL_TRACE_DATA);
+    }
+
     // Add processor callout
     addCalloutToErrl(l_errl,
                      ERRL_CALLOUT_TYPE_HUID,
@@ -283,8 +298,12 @@ bool get_tod_is_request_idle(void)
          * @userdata4   ERC_GENERIC_TIMEOUT
          * @devdesc     GPE request not finished after waiting repeatedly
          */
-        get_tod_log_error(GET_TOD_IS_REQ_IDLE_MOD, GPE_REQUEST_TASK_NOT_IDLE,
-                          ERC_GENERIC_TIMEOUT, 0, 0, GET_TOD_ERRL_USR_DTLS_NONE);
+        get_tod_log_error(GET_TOD_IS_REQ_IDLE_MOD,
+                          GPE_REQUEST_TASK_NOT_IDLE,
+                          ERC_GENERIC_TIMEOUT,
+                          0,
+                          0,
+                          GET_TOD_ERRL_USR_DTLS_GPE_TRACE);
     }
 
     // Return false since request is not idle
