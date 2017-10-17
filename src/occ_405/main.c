@@ -61,6 +61,7 @@
 #include <wof.h>
 #include "pgpe_service_codes.h"
 #include <common.h>
+#include "p9_memmap_occ_sram.h"
 
 // Used to indicate if OCC was started during IPL, in which case OCC's only
 // job is to look for checkstops. This flag is set by hostboot in OCC's header
@@ -1172,25 +1173,23 @@ void read_hcode_headers()
  * Name: gpe_reset
  *
  * Description: Force a GPE to start executing instructions at the reset vector
+ * Only supports GPE0 and GPE1
  *
  * End Function Specification
  */
 void gpe_reset(uint32_t instance_id)
 {
+
 #define XCR_CMD_HRESET      0x60000000
 #define XCR_CMD_TOGGLE_XSR  0x40000000
 #define XCR_CMD_RESUME      0x20000000
-#define GPE_SRAM_BASE       0xFFF00000
 
-    uint32_t l_gpe_sram_addr = (instance_id * 0x10000) + GPE_SRAM_BASE;
+    uint32_t l_gpe_sram_addr = GPE0_SRAM_BASE_ADDR;
 
-    // GPE0 is at 0xFFF01000
-    // GPE1 is at 0xFFF10000
-    // GPE2 is at 0xFFF20000
-    // GPE3 is at 0xFFF30000
-    if(0 == instance_id)
+    if(1 == instance_id)
     {
-        l_gpe_sram_addr += 0x1000;
+        l_gpe_sram_addr = GPE1_SRAM_BASE_ADDR;
+
     }
 
     out32(GPE_GPENIVPR(instance_id), l_gpe_sram_addr);
@@ -1199,6 +1198,58 @@ void gpe_reset(uint32_t instance_id)
     out32(GPE_GPENXIXCR(instance_id), XCR_CMD_TOGGLE_XSR);
     out32(GPE_GPENXIXCR(instance_id), XCR_CMD_TOGGLE_XSR);
     out32(GPE_GPENXIXCR(instance_id), XCR_CMD_RESUME);
+}
+
+/*
+ * Set up share_gpe_data struct
+ */
+void set_shared_gpe_data()
+{
+    uint32_t sram_addr;
+
+    sram_addr = in32(GPE_GPENIVPR(OCCHW_INST_ID_GPE0));
+    if(0 != sram_addr)
+    {
+        sram_addr += GPE_DEBUG_PTRS_OFFSET;
+
+        G_shared_gpe_data.gpe0_tb_ptr =
+            *((uint32_t *)(sram_addr + PK_TRACE_PTR_OFFSET));
+        G_shared_gpe_data.gpe0_tb_sz =
+            *((uint32_t *)(sram_addr + PK_TRACE_SIZE_OFFSET));
+    }
+
+    sram_addr = in32(GPE_GPENIVPR(OCCHW_INST_ID_GPE1));
+    if(0 != sram_addr)
+    {
+        sram_addr += GPE_DEBUG_PTRS_OFFSET;
+
+        G_shared_gpe_data.gpe1_tb_ptr =
+            *((uint32_t *)(sram_addr + PK_TRACE_PTR_OFFSET));
+        G_shared_gpe_data.gpe1_tb_sz =
+            *((uint32_t *)(sram_addr + PK_TRACE_SIZE_OFFSET));
+    }
+
+    sram_addr = in32(GPE_GPENIVPR(OCCHW_INST_ID_GPE2));
+    if(0 != sram_addr)
+    {
+        sram_addr += PGPE_DEBUG_PTRS_OFFSET;
+
+        G_shared_gpe_data.pgpe_tb_ptr =
+            *((uint32_t *)(sram_addr + PK_TRACE_PTR_OFFSET));
+        G_shared_gpe_data.pgpe_tb_sz =
+            *((uint32_t *)(sram_addr + PK_TRACE_SIZE_OFFSET));
+    }
+
+    sram_addr = in32(GPE_GPENIVPR(OCCHW_INST_ID_GPE3));
+    if(0 != sram_addr)
+    {
+        sram_addr += SGPE_DEBUG_PTRS_OFFSET;
+
+        G_shared_gpe_data.sgpe_tb_ptr =
+            *((uint32_t *)(sram_addr + PK_TRACE_PTR_OFFSET));
+        G_shared_gpe_data.sgpe_tb_sz =
+            *((uint32_t *)(sram_addr + PK_TRACE_SIZE_OFFSET));
+    }
 }
 
 /*
@@ -1252,6 +1303,8 @@ void occ_ipc_setup()
         gpe_reset(OCCHW_INST_ID_GPE1);
 
         MAIN_TRAC_INFO("GPE's taken out of reset");
+
+        set_shared_gpe_data();
 
     }while(0);
 
