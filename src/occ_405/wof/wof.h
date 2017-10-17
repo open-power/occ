@@ -79,8 +79,14 @@
 #define ERRL_RETURN_CODES ~(WOF_RC_MODE_CHANGE  | \
                             WOF_RC_STATE_CHANGE | \
                             WOF_RC_MODE_NO_SUPPORT_MASK | \
-                            WOF_RC_NO_CONFIGURED_CORES)
+                            WOF_RC_NO_CONFIGURED_CORES | \
+                            WOF_RC_RESET_LIMIT_REACHED | \
+                            WOF_RC_UTURBO_IS_ZERO | \
+                            WOF_RC_PSTATE_PROTOCOL_OFF )
 
+// Reason codes that should NOT request a reset should be added here
+#define IGNORE_WOF_RESET (WOF_RC_SYSTEM_WOF_DISABLE | \
+                          WOF_RC_UNSUPPORTED_FREQUENCIES )
 // Enumeration to define the WOF initialization steps
 enum wof_init_states
 {

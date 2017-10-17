@@ -1415,8 +1415,19 @@ void set_clear_wof_disabled( uint8_t i_action,
                         g_wof->wof_disabled,
                         i_bit_mask );
 
-            // commit the error log
-            commitErrl( &l_errl );
+            // Reset if on OpenPower
+            if( (G_sysConfigData.system_type.kvm) )
+            {
+                if(i_bit_mask & ~(IGNORE_WOF_RESET) )
+                {
+                    REQUEST_WOF_RESET( l_errl );
+                }
+            }
+            else // Otherwise, just commit
+            {
+                commitErrl( &l_errl );
+            }
+
             L_errorLogged = true;
         }
     }
