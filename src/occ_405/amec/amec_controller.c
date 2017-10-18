@@ -156,6 +156,88 @@ void amec_controller_proc_thermal()
     }
 }
 
+// Function Specification
+//
+// Name: amec_controller_vrm_vdd_thermal
+//
+// Description: This function implements the Proportional Controller for the
+//              VRM Vdd thermal control. Although it doesn't return any
+//              results, it populates the thermal vote in the field
+//              g_amec->thermalvdd.speed_request.
+//
+// Task Flags:
+//
+// End Function Specification
+void amec_controller_vrm_vdd_thermal()
+{
+    /*------------------------------------------------------------------------*/
+    /*  Local Variables                                                       */
+    /*------------------------------------------------------------------------*/
+    uint16_t                      l_vdd_temp_tenthsC = 0;
+    uint16_t                      l_residue = 0;
+    uint16_t                      l_old_residue = 0;
+    int16_t                       l_thermal_diff = 0;
+    int16_t                       l_cpu_speed = 0;
+    int16_t                       l_throttle_chg = 0;
+    int32_t                       l_throttle = 0;
+    sensor_t                    * l_sensor = NULL;
+
+    /*------------------------------------------------------------------------*/
+    /*  Code                                                                  */
+    /*------------------------------------------------------------------------*/
+    // Get VRM Vdd temperature sensor
+    l_sensor = getSensorByGsid(TEMPVDD);
+
+    // Convert current Vdd temperature to 0.1 degrees C
+    l_vdd_temp_tenthsC = l_sensor->sample * 10;
+
+    // Calculate the temperature difference from the DVFS setpoint
+    l_thermal_diff = g_amec->thermalvdd.setpoint - l_vdd_temp_tenthsC;
+
+    // Proportional Controller for the thermal control loop
+    l_throttle = (int32_t) l_thermal_diff * g_amec->thermalvdd.Pgain;
+    l_residue = (uint16_t) l_throttle;
+    l_throttle_chg = (int16_t) (l_throttle >> 16);
+
+    // don't allow a throttle change more than step limit
+    if ((int16_t) l_throttle_chg > (int16_t) g_amec->sys.speed_step_limit)
+    {
+        l_throttle_chg = g_amec->sys.speed_step_limit;
+    }
+    else
+    {
+        if ((int16_t) l_throttle_chg < ((int16_t) (-g_amec->sys.speed_step_limit)))
+        {
+            l_throttle_chg = (int16_t)(-g_amec->sys.speed_step_limit);
+        }
+    }
+
+    // Calculate the new thermal CPU speed request
+    l_cpu_speed = g_amec->thermalvdd.speed_request +
+        (int16_t)(l_throttle_chg * g_amec->sys.speed_step);
+
+    // Proceed with residue summation to correctly follow set-point
+    l_old_residue = g_amec->thermalvdd.total_res;
+    g_amec->thermalvdd.total_res += l_residue;
+    if (g_amec->thermalvdd.total_res < l_old_residue)
+    {
+        l_cpu_speed += g_amec->sys.speed_step;
+    }
+
+    // Enforce actuator saturation limits
+    if (l_cpu_speed > g_amec->sys.max_speed)
+        l_cpu_speed = g_amec->sys.max_speed;
+    if (l_cpu_speed < g_amec->sys.min_speed)
+        l_cpu_speed = g_amec->sys.min_speed;
+
+    // Generate the new thermal speed request
+    g_amec->thermalvdd.speed_request = l_cpu_speed;
+    // Calculate frequency request based on thermal speed request
+    g_amec->thermalvdd.freq_request = amec_controller_speed2freq(
+            g_amec->thermalvdd.speed_request,
+            g_amec->sys.fmax);
+}
+
 //*************************************************************************
 // Function Specification
 //

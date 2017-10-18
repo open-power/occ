@@ -81,6 +81,7 @@ typedef enum
     AMEC_VOTING_REASON_OVERRIDE_CORE    = 0x00020000,
     AMEC_VOTING_REASON_IPS              = 0x00040000,
     AMEC_VOTING_REASON_APSS_PMAX        = 0x00080000,
+    AMEC_VOTING_REASON_VDD_THRM         = 0x00100000,
 }amec_freq_voting_reason_t;
 
 
@@ -116,8 +117,10 @@ typedef enum {
     POWER_SUPPLY_FAILURE            = 0x03,
     OVERCURRENT                     = 0x04,
     OCC_RESET                       = 0x05,
-    PCAP_EXCEED_PTURBO              = 0x06,
-    PROC_OVERTEMP_EXCEED_PTURBO     = 0x07,
+    PCAP_EXCEED_REPORT              = 0x06,
+    PROC_OVERTEMP_EXCEED_REPORT     = 0x07,
+    VDD_OVERTEMP                    = 0x08,
+    VDD_OVERTEMP_EXCEED_REPORT      = 0x09,
     MANUFACTURING_OVERRIDE          = 0xAA,
 }amec_proc_voting_reason_t;
 

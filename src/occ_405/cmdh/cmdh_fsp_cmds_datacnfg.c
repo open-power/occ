@@ -1849,6 +1849,17 @@ errlHndl_t data_store_thrm_thresholds(const cmdh_fsp_cmd_t * i_cmd_ptr,
             break;
         }
 
+        // clear all FRU types to 0xFF (not defined) to prevent errors when (H)TMGT doesn't send thresholds for a FRU type
+        for(i=0; i<DATA_FRU_MAX; i++)
+        {
+            G_data_cnfg->thrm_thresh.data[i].fru_type = i;
+            G_data_cnfg->thrm_thresh.data[i].dvfs     = 0xFF;
+            G_data_cnfg->thrm_thresh.data[i].error    = 0xFF;
+            G_data_cnfg->thrm_thresh.data[i].pm_dvfs  = 0xFF;
+            G_data_cnfg->thrm_thresh.data[i].pm_error = 0xFF;
+            G_data_cnfg->thrm_thresh.data[i].max_read_timeout = 0xFF;
+        }
+
         // Store the base data
         G_data_cnfg->thrm_thresh.version          = l_cmd_ptr->version;
         G_data_cnfg->thrm_thresh.proc_core_weight = l_cmd_ptr->proc_core_weight;

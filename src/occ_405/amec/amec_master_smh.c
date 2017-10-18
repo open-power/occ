@@ -59,8 +59,8 @@
 //Power cap failure threshold with no GPUs set to 32 ticks
 #define PCAP_FAILURE_THRESHOLD 32
 
-//Power cap failure threshold with GPUs set to number of ticks for 100ms
-#define PCAP_GPU_FAILURE_THRESHOLD (100000 / MICS_PER_TICK)
+//Power cap failure threshold with GPUs set to number of ticks for 2s
+#define PCAP_GPU_FAILURE_THRESHOLD (2000000 / MICS_PER_TICK)
 
 //*************************************************************************/
 // Structures
@@ -398,6 +398,9 @@ void amec_mst_check_under_pcap(void)
     errlHndl_t l_err = NULL;
     uint8_t i = 0;
     uint8_t l_apss_func_id = 0;
+    uint32_t l_trace[MAX_APSS_ADC_CHANNELS] = {0};  // used to trace per channel data
+    uint8_t l_trace_idx = 0;
+
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
@@ -424,6 +427,7 @@ void amec_mst_check_under_pcap(void)
                      AMECSENSOR_PTR(PWRSYS)->sample);
 
             // Trace power per APSS channel to have the best breakdown for debug
+            // compress traces to 4 max to save space on OP systems
             for (i = 0; i < MAX_APSS_ADC_CHANNELS; i++)
             {
                 l_apss_func_id = G_apss_ch_to_function[i];
@@ -433,9 +437,36 @@ void amec_mst_check_under_pcap(void)
                    (l_apss_func_id != ADC_GND_REMOTE_SENSE) &&
                    (l_apss_func_id != ADC_12V_STANDBY_CURRENT) )
                 {
-                    TRAC_ERR("APSS channel %d Function ID = %d Power = %dW", i, l_apss_func_id,
-                              AMECSENSOR_PTR(PWRAPSSCH0 + i)->sample);
+                    l_trace[l_trace_idx] = (i << 24) | (l_apss_func_id << 16) | (AMECSENSOR_PTR(PWRAPSSCH0 + i)->sample);
+                    l_trace_idx++;
                 }
+            }
+            while(l_trace_idx != 0)
+            {
+               if(l_trace_idx >=4)
+               {
+                  TRAC_ERR("APSS channel/FuncID/Power: [%08X], [%08X], [%08X], [%08X]",
+                             l_trace[l_trace_idx-1], l_trace[l_trace_idx-2], l_trace[l_trace_idx-3], l_trace[l_trace_idx-4]);
+                  l_trace_idx -= 4;
+               }
+               else if(l_trace_idx == 3)
+               {
+                  TRAC_ERR("APSS channel/FuncID/Power: [%08X], [%08X], [%08X]",
+                             l_trace[l_trace_idx-1], l_trace[l_trace_idx-2], l_trace[l_trace_idx-3]);
+                  l_trace_idx = 0;
+               }
+               else if(l_trace_idx == 2)
+               {
+                  TRAC_ERR("APSS channel/FuncID/Power: [%08X], [%08X]",
+                             l_trace[l_trace_idx-1], l_trace[l_trace_idx-2]);
+                  l_trace_idx = 0;
+               }
+               else // l_trace_idx == 1
+               {
+                  TRAC_ERR("APSS channel/FuncID/Power: [%08X]",
+                             l_trace[l_trace_idx-1]);
+                  l_trace_idx = 0;
+               }
             }
 
             /* @

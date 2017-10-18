@@ -60,6 +60,7 @@ extern bool G_vrm_vdd_temp_expired;
 
 #include <gpe_export.h>
 extern gpe_shared_data_t G_shared_gpe_data;
+extern opal_proc_voting_reason_t G_amec_opal_proc_throt_reason;
 
 // This table contains tunable parameter information that can be exposed to
 // customers (only Master OCC should access/control this table)
@@ -170,12 +171,29 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
         uint32_t l_freq_reason = g_amec->proc[0].core[k].f_reason;
         if ( l_freq_reason & (AMEC_VOTING_REASON_PROC_THRM | AMEC_VOTING_REASON_VRHOT_THRM) )
         {
-            l_poll_rsp->ext_status.dvfs_due_to_ot = 1;
+            // only set DVFS bit if throttling below frequency to report throttling
+            if(G_amec_opal_proc_throt_reason == CPU_OVERTEMP)
+            {
+               l_poll_rsp->ext_status.dvfs_due_to_ot = 1;
+            }
+        }
+
+        if ( l_freq_reason & AMEC_VOTING_REASON_VDD_THRM )
+        {
+            // only set DVFS bit if throttling below frequency to report throttling
+            if(G_amec_opal_proc_throt_reason == VDD_OVERTEMP)
+            {
+               l_poll_rsp->ext_status.dvfs_due_to_vdd_ot = 1;
+            }
         }
 
         if ( l_freq_reason & (AMEC_VOTING_REASON_PPB | AMEC_VOTING_REASON_PMAX | AMEC_VOTING_REASON_PWR) )
         {
-            l_poll_rsp->ext_status.dvfs_due_to_pwr = 1;
+            // only set DVFS bit if throttling below frequency to report throttling
+            if(G_amec_opal_proc_throt_reason == POWERCAP)
+            {
+               l_poll_rsp->ext_status.dvfs_due_to_pwr = 1;
+            }
         }
     }
 

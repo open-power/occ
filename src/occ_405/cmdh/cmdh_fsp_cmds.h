@@ -116,14 +116,14 @@ typedef struct __attribute__ ((packed)) cmdh_poll_resp_v20
     {
         struct
         {
-            uint8_t dvfs_due_to_ot  : 1;   // 1 => OCC clipped max Pstate due to an over temp.
-            uint8_t dvfs_due_to_pwr : 1;   // 1 => OCC clipped max Psate due to reaching pcap limit.
-            uint8_t mthrot_due_to_ot: 1;   // 1 => OCC throttled memory due to an over temp.
-            uint8_t n_power         : 1;   // 1 => Server running without redundant power.
-            uint8_t _reserved_3     : 1;
-            uint8_t sync_request    : 1;   // 1 => OCC needs to restart snapshot buffers
-            uint8_t _reserved_1     : 1;
-            uint8_t _reserved_0     : 1;
+            uint8_t dvfs_due_to_ot     : 1;   // 1 => OCC clipped max Pstate due to a processor over temp.
+            uint8_t dvfs_due_to_pwr    : 1;   // 1 => OCC clipped max Psate due to reaching pcap limit.
+            uint8_t mthrot_due_to_ot   : 1;   // 1 => OCC throttled memory due to an over temp.
+            uint8_t n_power            : 1;   // 1 => Server running without redundant power.
+            uint8_t dvfs_due_to_vdd_ot : 1;   // 1 => OCC clipped max Pstate due to VRM Vdd over temp.
+            uint8_t sync_request       : 1;   // 1 => OCC needs to restart snapshot buffers
+            uint8_t _reserved_1        : 1;
+            uint8_t _reserved_0        : 1;
         };
         uint8_t word;
     } ext_status;

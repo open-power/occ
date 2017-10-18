@@ -282,6 +282,9 @@ void amec_slv_proc_voting_box(void)
     amec_proc_voting_reason_t       l_kvm_throt_reason = NO_THROTTLE;
     amec_part_t                     *l_part = NULL;
 
+    // frequency threshold for reporting throttling
+    uint16_t l_report_throttle_freq = G_sysConfigData.system_type.report_dvfs_nom ?  G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL] : G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
+
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
@@ -307,9 +310,9 @@ void amec_slv_proc_voting_box(void)
         l_chip_fmax = g_amec->proc[0].pwr_votes.ppb_fmax;
         l_chip_reason = AMEC_VOTING_REASON_PPB;
 
-        if( G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO] < l_chip_fmax)
+        if(l_report_throttle_freq <= l_chip_fmax)
         {
-            l_kvm_throt_reason = PCAP_EXCEED_PTURBO;
+            l_kvm_throt_reason = PCAP_EXCEED_REPORT;
         }
         else
         {
@@ -340,13 +343,29 @@ void amec_slv_proc_voting_box(void)
         l_chip_fmax = g_amec->thermalproc.freq_request;
         l_chip_reason = AMEC_VOTING_REASON_PROC_THRM;
 
-        if( G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO] < l_chip_fmax)
+        if( l_report_throttle_freq <= l_chip_fmax)
         {
-            l_kvm_throt_reason = PROC_OVERTEMP_EXCEED_PTURBO;
+            l_kvm_throt_reason = PROC_OVERTEMP_EXCEED_REPORT;
         }
         else
         {
             l_kvm_throt_reason = CPU_OVERTEMP;
+        }
+    }
+
+    //Thermal controller input based on VRM Vdd temperature
+    if(g_amec->thermalvdd.freq_request < l_chip_fmax)
+    {
+        l_chip_fmax = g_amec->thermalvdd.freq_request;
+        l_chip_reason = AMEC_VOTING_REASON_VDD_THRM;
+
+        if( l_report_throttle_freq <= l_chip_fmax)
+        {
+            l_kvm_throt_reason = VDD_OVERTEMP_EXCEED_REPORT;
+        }
+        else
+        {
+            l_kvm_throt_reason = VDD_OVERTEMP;
         }
     }
 
@@ -356,9 +375,9 @@ void amec_slv_proc_voting_box(void)
         l_chip_fmax = g_amec->vrhotproc.freq_request;
         l_chip_reason = AMEC_VOTING_REASON_VRHOT_THRM;
 
-        if(G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO] < l_chip_fmax)
+        if(l_report_throttle_freq <= l_chip_fmax)
         {
-            l_kvm_throt_reason = PROC_OVERTEMP_EXCEED_PTURBO;
+            l_kvm_throt_reason = PROC_OVERTEMP_EXCEED_REPORT;
         }
         else
         {
@@ -393,6 +412,7 @@ void amec_slv_proc_voting_box(void)
                         // Before enforcing a soft Fmin, make sure we don't
                         // have a thermal or power emergency
                         if(!(l_chip_reason & (AMEC_VOTING_REASON_PROC_THRM |
+                                              AMEC_VOTING_REASON_VDD_THRM |
                                               AMEC_VOTING_REASON_VRHOT_THRM |
                                               AMEC_VOTING_REASON_PPB |
                                               AMEC_VOTING_REASON_PMAX |
@@ -428,9 +448,9 @@ void amec_slv_proc_voting_box(void)
                     l_core_freq = g_amec->proc[0].pwr_votes.proc_pcap_vote;
                     l_core_reason = AMEC_VOTING_REASON_PWR;
 
-                    if(G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO] < l_core_freq)
+                    if(l_report_throttle_freq <= l_core_freq)
                     {
-                        l_kvm_throt_reason = PCAP_EXCEED_PTURBO;
+                        l_kvm_throt_reason = PCAP_EXCEED_REPORT;
                     }
                     else
                     {
@@ -544,19 +564,17 @@ void amec_slv_proc_voting_box(void)
         }
     }//End of for loop
 
-    //convert POWERCAP reason to POWER_SUPPLY_FAILURE if ovs is asserted
-    if((l_kvm_throt_reason == POWERCAP) && AMEC_INTF_GET_OVERSUBSCRIPTION())
+    //check if there was a throttle reason change
+    if(l_kvm_throt_reason != G_amec_opal_proc_throt_reason)
     {
-        l_kvm_throt_reason = POWER_SUPPLY_FAILURE;
-    }
-
-    //check if we need to update the throttle reason in homer
-    if(G_sysConfigData.system_type.kvm &&
-       (l_kvm_throt_reason != G_amec_opal_proc_throt_reason))
-    {
-        //Notify dcom thread to update the table
+        //Always update G_amec_opal_proc_throt_reason, this is used to set poll rsp bits for all system types
         G_amec_opal_proc_throt_reason = l_kvm_throt_reason;
-        ssx_semaphore_post(&G_dcomThreadWakeupSem);
+
+        // Only if running OPAL need to notify dcom thread to update the table in HOMER for OPAL
+        if(G_sysConfigData.system_type.kvm)
+        {
+            ssx_semaphore_post(&G_dcomThreadWakeupSem);
+        }
     }
 }
 

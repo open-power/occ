@@ -547,6 +547,9 @@ void amec_slv_state_2(void)
   //-------------------------------------------------------
   amec_update_centaur_sensors(CENTAUR_2);
 */
+
+  // Call VRM Vdd thermal controller
+  amec_controller_vrm_vdd_thermal();
 }
 
 

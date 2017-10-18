@@ -250,6 +250,13 @@ void amec_init_gamec_struct(void)
   g_amec->thermalproc.freq_request = -1; //unconstrained frequency vote
   g_amec->thermalproc.total_res = 0;
 
+  // Initialize thermal controller for VRM Vdd
+  g_amec->thermalvdd.setpoint = 850; // 850 = 85.0 C
+  g_amec->thermalvdd.Pgain = 1000;
+  g_amec->thermalvdd.speed_request = 1000;
+  g_amec->thermalvdd.freq_request = -1; //unconstrained frequency vote
+  g_amec->thermalvdd.total_res = 0;
+
   // Initialize thermal controller based on DIMM temperatures
   g_amec->thermaldimm.setpoint = 850; //In 0.1 degrees C -> 850 = 85.0 C
   g_amec->thermaldimm.Pgain = 30000;

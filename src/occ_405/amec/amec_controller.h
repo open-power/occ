@@ -91,6 +91,16 @@ typedef struct amec_controller
 void amec_controller_proc_thermal();
 
 /**
+ *  Thermal Control Loop based on VRM Vdd temperature
+ *
+ *  This function implements the Proportional Controller for the VRM Vdd thermal
+ *  control loop. Although it doesn't return any results, it populates the
+ *  thermal vote in the field g_amec->thermalvdd.speed_request.
+ *
+ */
+void amec_controller_vrm_vdd_thermal();
+
+/**
  *  Thermal Control Loop based on Centaur temperatures.
  *
  *  This function implements a Proportional Controller for the

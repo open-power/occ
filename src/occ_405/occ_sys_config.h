@@ -74,10 +74,11 @@ typedef union
 {
     struct
     {
-        uint8_t     kvm:        1;
-        uint8_t     reserved:   5;
-        uint8_t     ite:        1;
-        uint8_t     single:     1;
+        uint8_t     kvm:              1;
+        uint8_t     reserved:         3;
+        uint8_t     report_dvfs_nom:  1;
+        uint8_t     reserved_2:       2;
+        uint8_t     single:           1;
     };
     uint8_t byte;
 } eSystemType;
@@ -332,7 +333,7 @@ typedef struct
 
   // Instead of system-type, lets try to send all system attributes
   // that matter instead of having tables in OCC code.
-  eSystemType system_type;  // OCC usage of this byte is TBD
+  eSystemType system_type;
 
   // Processor HUID - HUID for this OCC processor, used by OCC for processor error call out
   uint32_t proc_huid;
