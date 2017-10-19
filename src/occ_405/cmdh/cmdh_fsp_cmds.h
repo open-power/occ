@@ -378,7 +378,7 @@ typedef enum
     // free = 0x05
     DBUG_SET_PEXE_EVENT     = 0x06,
     DBUG_GET_AME_SENSOR     = 0x07,
-    // free = 0x08,
+    DBUG_DUMP_GPU_TIMINGS   = 0x08,
     DBUG_PEEK               = 0x09,
     DBUG_POKE               = 0x0A,
     DBUG_DUMP_THEMAL        = 0x0B,

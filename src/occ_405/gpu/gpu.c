@@ -53,6 +53,9 @@
 #define GPU_TEMP_READ_1S  ( 1000000 / (MICS_PER_TICK * 2) )
 #define GPU_TIMEOUT ( 5000000 / (MICS_PER_TICK *2) )
 
+#define GPU_TICKS_TO_100MS ( 100000 / (MICS_PER_TICK * 2) )
+#define GPU_TICKS_TO_1S ( 1000000 / (MICS_PER_TICK * 2) )
+
 // Number of consecutive failures to ignore after GPU is taken out of reset to give GPU init time
 #define GPU_INIT_ERROR_COUNT 300  // approximately 300 seconds
 
@@ -92,6 +95,33 @@ GPE_BUFFER(gpu_init_args_t G_gpu_init_args);
 gpu_sm_args_t G_new_gpu_req_args = {{{{0}}}};
 
 uint8_t G_current_gpu_id = 0;   // ID 0..2 of GPU currently being processed
+
+gpuTimingTable_t G_gpu_tick_times;
+
+void update_gpu_tick_sensor(gpuTimingSensor_t *sensor, uint32_t ticks)
+{
+    if(ticks > sensor->max)
+    {
+        sensor->max = ticks;
+    }
+
+    if(ticks > GPU_TICKS_TO_1S)
+    {
+        sensor->count_1s++;
+    }
+    else if( (ticks > GPU_TICKS_TO_100MS) )
+    {
+        sensor->count_100ms++;
+    }
+    else
+    {
+        sensor->count_lt100ms++;
+    }
+
+    sensor->count++;
+    sensor->accum += ticks;
+    sensor->avg = sensor->accum / sensor->count;
+}
 
 // Find first present non-failed GPU. returns 0xFF if no GPUs present/functional
 uint8_t get_first_gpu(void)
@@ -1085,6 +1115,10 @@ bool gpu_check_driver_loaded_sm()
     static gpuCheckDriverLoadedState_e L_check_driver_state = GPU_STATE_CHECK_DRIVER_LOADED_NEW;
     static bool L_error_logged[MAX_NUM_GPU_PER_DOMAIN] = {FALSE};
 
+    static uint32_t L_num_ticks = 0;
+
+    L_num_ticks++;
+
     if (async_request_is_idle(&G_gpu_op_request.request))
     {
        // If not starting a new read then need to check status of current state before moving on
@@ -1186,6 +1220,7 @@ bool gpu_check_driver_loaded_sm()
        switch (L_check_driver_state)
        {
            case GPU_STATE_CHECK_DRIVER_LOADED_START:
+               L_num_ticks = 1;
                L_scheduled = schedule_gpu_req(GPU_REQ_CHECK_DRIVER_START, G_new_gpu_req_args);
                break;
 
@@ -1202,6 +1237,9 @@ bool gpu_check_driver_loaded_sm()
                break;
 
            case GPU_STATE_CHECK_DRIVER_LOADED_COMPLETE:
+                // Update GPU tick timing table
+                update_gpu_tick_sensor(&G_gpu_tick_times.checkdriver[G_current_gpu_id], L_num_ticks);
+
                // Update driver loaded
                l_new_driver_loaded = G_gpu_op_req_args.data[0] & 0x01;
                if(l_new_driver_loaded != g_amec->gpu[G_current_gpu_id].status.driverLoaded)
@@ -1291,6 +1329,10 @@ bool gpu_read_pwr_limit_sm()
 
     static uint32_t L_last_min[MAX_NUM_GPU_PER_DOMAIN] = {0};
     static uint32_t L_last_max[MAX_NUM_GPU_PER_DOMAIN] = {0};
+
+    static uint32_t L_num_ticks = 0;
+
+    L_num_ticks++;
 
     if (async_request_is_idle(&G_gpu_op_request.request))
     {
@@ -1409,6 +1451,7 @@ bool gpu_read_pwr_limit_sm()
         {
             // Step 1
             case GPU_STATE_READ_PWR_LIMIT_1_START:
+                L_num_ticks = 1;
                 L_scheduled = schedule_gpu_req(GPU_REQ_GET_PWR_LIMIT_1_START, G_new_gpu_req_args);
                 break;
 
@@ -1440,7 +1483,7 @@ bool gpu_read_pwr_limit_sm()
 
             // Step 3
             case GPU_STATE_READ_PWR_LIMIT_3_START:
-                GPU_DBG("gpu_read_pwr_limit_sm: took %d ticks to finish read pcap", L_attempts);
+                GPU_DBG("gpu_read_pwr_limit_sm: took %d ticks to finish read pcap for GPU%d", L_attempts, G_current_gpu_id);
                 L_scheduled = schedule_gpu_req(GPU_REQ_GET_PWR_LIMIT_3_START, G_new_gpu_req_args);
                 break;
 
@@ -1494,6 +1537,8 @@ bool gpu_read_pwr_limit_sm()
                 break;
 
             case GPU_STATE_READ_PWR_LIMIT_COMPLETE:
+                update_gpu_tick_sensor(&G_gpu_tick_times.getpcap[G_current_gpu_id], L_num_ticks);
+
                 g_amec->gpu[G_current_gpu_id].pcap.check_pwr_limit = FALSE;
                 // Update power limits
                 g_amec->gpu[G_current_gpu_id].pcap.pwr_limits_read = TRUE;
@@ -1567,6 +1612,10 @@ bool gpu_set_pwr_limit_sm()
     static uint32_t L_attempts = 0;
 
     static uint32_t L_last_pcap[MAX_NUM_GPU_PER_DOMAIN] = {0};
+
+    static uint32_t L_num_ticks = 0;
+
+    L_num_ticks++;
 
     if (async_request_is_idle(&G_gpu_op_request.request))
     {
@@ -1686,6 +1735,7 @@ bool gpu_set_pwr_limit_sm()
         {
             // Step 1
             case GPU_STATE_SET_PWR_LIMIT_1_START:
+                L_num_ticks = 1;
                 L_scheduled = schedule_gpu_req(GPU_REQ_SET_PWR_LIMIT_1_START, G_new_gpu_req_args);
                 break;
 
@@ -1754,7 +1804,8 @@ bool gpu_set_pwr_limit_sm()
                 break;
 
             case GPU_STATE_SET_PWR_LIMIT_COMPLETE:
-                GPU_DBG("gpu_set_pwr_limit_sm: took %d ticks to finish setting pcap", L_attempts);
+                update_gpu_tick_sensor(&G_gpu_tick_times.setpcap[G_current_gpu_id], L_num_ticks);
+                GPU_DBG("gpu_set_pwr_limit_sm: took %d ticks to finish setting pcap for GPU%d", L_attempts, G_current_gpu_id);
                 // Update the requested power limit since it was successfully sent
                 // NOTE: want this value to be sent back from the GPE to know what was set in case AMEC
                 // has caluclated a new desired pcap while this one was already in process of being set
@@ -1818,6 +1869,10 @@ bool gpu_read_temp_sm()
     static bool L_trace_success = FALSE;
     static gpuReadTempState_e L_read_temp_state = GPU_STATE_READ_TEMP_NEW;  // 1st state for reading temp
 
+    static uint32_t L_num_ticks = 0;
+
+    L_num_ticks++;
+
     if (async_request_is_idle(&G_gpu_op_request.request))
     {
         // If not starting a new read then need to check status of current state before moving on
@@ -1852,6 +1907,7 @@ bool gpu_read_temp_sm()
         switch (L_read_temp_state)
         {
             case GPU_STATE_READ_TEMP_START:
+                L_num_ticks = 1;
                 L_scheduled = schedule_gpu_req(GPU_REQ_READ_TEMP_START, G_new_gpu_req_args);
                 break;
 
@@ -1860,6 +1916,7 @@ bool gpu_read_temp_sm()
                 break;
 
             case GPU_STATE_READ_TEMP_COMPLETE:
+                update_gpu_tick_sensor(&G_gpu_tick_times.coretemp[G_current_gpu_id], L_num_ticks);
                 if( (!g_amec->gpu[G_current_gpu_id].status.readOnce) &&
                     (0 != G_gpu_op_req_args.data[0]) )
                 {
@@ -1987,6 +2044,10 @@ bool gpu_read_mem_temp_capability_sm()
     static gpuReadMemTempCapableState_e L_read_cap_state = GPU_STATE_READ_MEM_TEMP_CAPABLE_NEW;
     static bool L_error_logged[MAX_NUM_GPU_PER_DOMAIN] = {FALSE};
 
+    static uint32_t L_num_ticks = 0;
+
+    L_num_ticks++;
+
     if (async_request_is_idle(&G_gpu_op_request.request))
     {
        // If not starting a new read then need to check status of current state before moving on
@@ -2087,6 +2148,7 @@ bool gpu_read_mem_temp_capability_sm()
        switch (L_read_cap_state)
        {
            case GPU_STATE_READ_MEM_TEMP_CAPABLE_START:
+               L_num_ticks = 1;
                L_scheduled = schedule_gpu_req(GPU_REQ_READ_CAPS_START, G_new_gpu_req_args);
                break;
 
@@ -2103,6 +2165,7 @@ bool gpu_read_mem_temp_capability_sm()
                break;
 
            case GPU_STATE_READ_MEM_TEMP_CAPABLE_COMPLETE:
+               update_gpu_tick_sensor(&G_gpu_tick_times.capabilities[G_current_gpu_id], L_num_ticks);
                // Update capability
                g_amec->gpu[G_current_gpu_id].status.memTempSupported = G_gpu_op_req_args.data[0] & 0x01;
 
@@ -2167,6 +2230,10 @@ bool gpu_read_memory_temp_sm()
     static bool L_scheduled = FALSE;  // indicates if a GPU GPE request was scheduled
     static uint8_t L_read_failure_count = 0;
     static gpuReadMemTempState_e L_read_temp_state = GPU_STATE_READ_MEM_TEMP_NEW;  // 1st state for reading temp
+
+    static uint32_t L_num_ticks = 0;
+
+    L_num_ticks++;
 
     if (async_request_is_idle(&G_gpu_op_request.request))
     {
@@ -2281,6 +2348,7 @@ bool gpu_read_memory_temp_sm()
        switch (L_read_temp_state)
        {
            case GPU_STATE_READ_MEM_TEMP_START:
+               L_num_ticks = 1;
                L_scheduled = schedule_gpu_req(GPU_REQ_READ_MEM_TEMP_START, G_new_gpu_req_args);
                break;
 
@@ -2297,6 +2365,7 @@ bool gpu_read_memory_temp_sm()
                 break;
 
            case GPU_STATE_READ_MEM_TEMP_COMPLETE:
+               update_gpu_tick_sensor(&G_gpu_tick_times.memtemp[G_current_gpu_id], L_num_ticks);
                // Update sensor
                l_temp = G_gpu_op_req_args.data[0];
                sensor_update(AMECSENSOR_PTR(TEMPGPU0MEM + G_current_gpu_id), l_temp);

@@ -50,6 +50,8 @@
 #include <avsbus.h>
 #include "wof.h"
 #include "sensor_main_memory.h"
+#include "gpu.h"
+
 extern dimm_sensor_flags_t G_dimm_temp_expired_bitmap;
 extern bool G_vrm_thermal_monitoring;
 extern uint32_t G_first_proc_gpu_config;
@@ -1416,6 +1418,55 @@ void cmdh_dbug_clear_ame_sensor(const cmdh_fsp_cmd_t * i_cmd_ptr,
     G_rsp_status = l_rc;
 }
 
+void cmdh_dump_gpu_timings(void)
+{
+    extern gpuTimingTable_t G_gpu_tick_times;
+    int i = 0;
+
+    for( ; i < MAX_NUM_GPU_PER_DOMAIN; i++)
+    {
+        TRAC_INFO("=======================================GPU%d===================================================", i);
+        TRAC_INFO("|                          Max           Avg           1s count     100ms count  <100ms count|");
+        TRAC_INFO("| Core Temperatures        %-5d ticks   %-5d ticks   %-5d        %-5d        %-5d",
+                  G_gpu_tick_times.coretemp[i].max,
+                  G_gpu_tick_times.coretemp[i].avg,
+                  G_gpu_tick_times.coretemp[i].count_1s,
+                  G_gpu_tick_times.coretemp[i].count_100ms,
+                  G_gpu_tick_times.coretemp[i].count_lt100ms);
+        TRAC_INFO("| Mem  Temperatures        %-5d ticks   %-5d ticks   %-5d        %-5d        %-5d",
+                  G_gpu_tick_times.memtemp[i].max,
+                  G_gpu_tick_times.memtemp[i].avg,
+                  G_gpu_tick_times.memtemp[i].count_1s,
+                  G_gpu_tick_times.memtemp[i].count_100ms,
+                  G_gpu_tick_times.memtemp[i].count_lt100ms);
+        TRAC_INFO("| Check Driver Loaded      %-5d ticks   %-5d ticks   %-5d        %-5d        %-5d",
+                  G_gpu_tick_times.checkdriver[i].max,
+                  G_gpu_tick_times.checkdriver[i].avg,
+                  G_gpu_tick_times.checkdriver[i].count_1s,
+                  G_gpu_tick_times.checkdriver[i].count_100ms,
+                  G_gpu_tick_times.checkdriver[i].count_lt100ms);
+        TRAC_INFO("| Mem  Capabilities        %-5d ticks   %-5d ticks   %-5d        %-5d        %-5d",
+                  G_gpu_tick_times.capabilities[i].max,
+                  G_gpu_tick_times.capabilities[i].avg,
+                  G_gpu_tick_times.capabilities[i].count_1s,
+                  G_gpu_tick_times.capabilities[i].count_100ms,
+                  G_gpu_tick_times.capabilities[i].count_lt100ms);
+        TRAC_INFO("| Read Power Policy        %-5d ticks   %-5d ticks   %-5d        %-5d        %-5d",
+                  G_gpu_tick_times.getpcap[i].max,
+                  G_gpu_tick_times.getpcap[i].avg,
+                  G_gpu_tick_times.getpcap[i].count_1s,
+                  G_gpu_tick_times.getpcap[i].count_100ms,
+                  G_gpu_tick_times.getpcap[i].count_lt100ms);
+        TRAC_INFO("| Set Power Cap            %-5d ticks   %-5d ticks   %-5d        %-5d        %-5d",
+                  G_gpu_tick_times.setpcap[i].max,
+                  G_gpu_tick_times.setpcap[i].avg,
+                  G_gpu_tick_times.setpcap[i].count_1s,
+                  G_gpu_tick_times.setpcap[i].count_100ms,
+                  G_gpu_tick_times.setpcap[i].count_lt100ms);
+        TRAC_INFO("==============================================================================================", i);
+    }
+}
+
 // Function Specification
 //
 // Name:  dbug_parse_cmd
@@ -1458,6 +1509,10 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
     // Act on Debug Sub-Command
     switch ( l_sub_cmd )
     {
+        case DBUG_DUMP_GPU_TIMINGS:
+            cmdh_dump_gpu_timings();
+            break;
+
         case DBUG_GET_AME_SENSOR:
             cmdh_dbug_get_ame_sensor(i_cmd_ptr, o_rsp_ptr);
             break;

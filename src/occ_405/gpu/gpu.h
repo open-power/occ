@@ -156,5 +156,26 @@ void gpu_ipc_init();
 // GPU state machine
 void task_gpu_sm(struct task *i_self);
 
+typedef struct gpuTimingSensor
+{
+    uint32_t max;
+    uint32_t avg;
+    uint32_t count_1s;
+    uint32_t count_100ms;
+    uint32_t count_lt100ms;
+    uint64_t accum;
+    uint64_t count;
+} gpuTimingSensor_t;
+
+// Table for GPU timings
+typedef struct gpuTimingTable
+{
+    gpuTimingSensor_t getpcap[MAX_NUM_GPU_PER_DOMAIN];
+    gpuTimingSensor_t setpcap[MAX_NUM_GPU_PER_DOMAIN];
+    gpuTimingSensor_t coretemp[MAX_NUM_GPU_PER_DOMAIN];
+    gpuTimingSensor_t memtemp[MAX_NUM_GPU_PER_DOMAIN];
+    gpuTimingSensor_t capabilities[MAX_NUM_GPU_PER_DOMAIN];
+    gpuTimingSensor_t checkdriver[MAX_NUM_GPU_PER_DOMAIN];
+} gpuTimingTable_t;
 
 #endif //_GPU_H
