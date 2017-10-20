@@ -1028,7 +1028,7 @@ void amec_health_check_vrm_vdd_temp(const sensor_t *i_sensor)
         l_ot_error = g_amec->thermalvdd.ot_error;
 
         // Check to see if we exceeded our error temperature
-        if (i_sensor->sample > l_ot_error)
+        if ((l_ot_error != 0) && (i_sensor->sample > l_ot_error))
         {
             // Increment the error counter for this FRU
             L_error_count++;
