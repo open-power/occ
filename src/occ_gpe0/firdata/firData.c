@@ -83,7 +83,7 @@ typedef struct
 
 
 /* Uncomment for additional debug traces */
-#if 0 
+#if 0
 #define DEBUG_PRD_CHKSTOP_ANALYSIS
 #endif
 
@@ -152,10 +152,10 @@ bool FirData_addRegToPnor( FirData_t * io_fd, PNOR_Trgt_t * io_pTrgt,
         rc = SCOM_getScom( i_sTrgt, i_addr, &(reg.val) );
         if ( SUCCESS != rc )
         {
-            TRAC_ERR( "[FirData_addRegToPnor] t=%d p=%d u=%d rc=%d ",
-                i_sTrgt.type, i_sTrgt.procPos, i_sTrgt.procUnitPos, rc);
-            TRAC_ERR( "addr=0x%08x val=0x%08x%08x",i_addr,
-                      (uint32_t)(reg.val >> 32), (uint32_t)reg.val );
+            TRAC_ERR( "SCOM ERROR: rc=%d t=%u p=%u u=%u",
+                      rc, i_sTrgt.type, i_sTrgt.procPos, i_sTrgt.procUnitPos );
+            TRAC_ERR( "            addr=0x%08x val=0x%08x%08x",
+                      i_addr, (uint32_t)(reg.val >> 32), (uint32_t)reg.val );
 
             if ( io_pTrgt->scomErrs < PNOR_Trgt_MAX_SCOM_ERRORS )
                 io_pTrgt->scomErrs++;
@@ -175,7 +175,7 @@ bool FirData_addRegToPnor( FirData_t * io_fd, PNOR_Trgt_t * io_pTrgt,
         TRAC_IMP("addRegToPnor: got scom value, addr=0x%08X value=0x%08X %08X",
                 i_addr, (uint32_t)(reg.val>>32), reg.val);
 #endif
-        
+
         full = FirData_addDataToPnor( io_fd, &reg, sizeof(reg) );
         if ( full ) break;
 
@@ -768,7 +768,7 @@ bool FirData_addTrgtToPnor( FirData_t * io_fd, SCOM_Trgt_t i_sTrgt,
     /* had some issue with local var return in diff function so take out */
     /* init to zero */
     PNOR_Trgt_t tmp_pTrgt; memset( &tmp_pTrgt, 0x00, sizeof(tmp_pTrgt) );
- 
+
     tmp_pTrgt.trgtType = i_sTrgt.type;
     tmp_pTrgt.chipPos  = i_sTrgt.procPos,
     tmp_pTrgt.unitPos  = i_sTrgt.procUnitPos;
@@ -947,7 +947,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
                 TRAC_IMP(" Masks XBUS:%X OBUS:%X ",
                            l_existBits.xbusMask, l_existBits.obusMask);
                 TRAC_IMP(" Masks EC:%X EQ:%X EX:%X",
-                           l_existBits.ecMask, l_existBits.eqMask, l_existBits.exMask); 
+                           l_existBits.ecMask, l_existBits.eqMask, l_existBits.exMask);
                 TRAC_IMP(" Masks CAPP:%X PEC:%X PHB:%X",l_existBits.cappMask,
                            l_existBits.pecMask, l_existBits.phbMask );
                 TRAC_IMP(" Masks MCBIST:%X MCS:%X MCA:%X",

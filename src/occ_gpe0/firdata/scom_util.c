@@ -361,11 +361,21 @@ int32_t SCOM_getScom( SCOM_Trgt_t i_trgt, uint32_t i_addr, uint64_t * o_val )
         //Use SBE FIFO if it's a slave proc
         if(!chip_targ.isMaster)
         {
-            return getFifoScom(&chip_targ, trans_addr, o_val);
+            rc = getFifoScom(&chip_targ, trans_addr, o_val);
         }
         else
         {
             rc = getscom_abs(trans_addr, o_val);
+
+            // Add exception for chiplet offline errors on the UNIT_CS or
+            // HOST_ATTN broadcast registers. The value returned will still be
+            // valid. Even though one or more of the chiplets may have been
+            // offline.
+            if ( 2 == rc &&
+                 (0x50040018 == i_addr || 0x50040009 == i_addr) )
+            {
+                rc = SUCCESS;
+            }
         }
     }
 

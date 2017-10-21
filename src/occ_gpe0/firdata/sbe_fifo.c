@@ -386,6 +386,13 @@ int32_t putFifoScom(SCOM_Trgt_t* i_target, uint64_t i_addr, uint64_t i_data)
                              (uint32_t*)&l_fifoResponse,
                              sizeof(struct fifoPutScomResponse));
 
+    if ( l_rc != SUCCESS )
+    {
+        // Reset the FIFO for subsequent SCOMs
+        uint32_t l_data = 0xDEAD;
+        putfsi( i_target, 0x2450, l_data );
+    }
+
     return l_rc;
 }
 
@@ -412,6 +419,13 @@ int32_t getFifoScom(SCOM_Trgt_t* i_target, uint64_t i_addr, uint64_t* o_data)
                              (uint32_t*)&l_fifoRequest,
                              (uint32_t*)&l_fifoResponse,
                              sizeof(struct fifoGetScomResponse));
+
+    if ( l_rc != SUCCESS )
+    {
+        // Reset the FIFO for subsequent SCOMs
+        uint32_t l_data = 0xDEAD;
+        putfsi( i_target, 0x2450, l_data );
+    }
 
     //Always return data even if there is an error
     *o_data = l_fifoResponse.data;
