@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -336,7 +336,7 @@ errlHndl_t cmdh_snapshot_sync(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
 // Function Specification
 //
-// Name: cmdh_
+// Name: cmdh_snapshot_callback
 //
 // Description: Called from timer every 30seconds to store cimp data into
 //              an array of 20 cimp snapshots. Then it triggers the generation

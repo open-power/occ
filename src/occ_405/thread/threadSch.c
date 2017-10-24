@@ -40,6 +40,9 @@
 // Thread Timer to reprioritize the threads
 SsxTimer G_threadSchTimer;
 
+// Snapshot timer object
+extern SsxTimer G_snapshotTimer;
+
 // Index of highest priority thread in G_scheduledThreads
 uint16_t G_threadSchedulerIndex = 0;
 
@@ -159,7 +162,6 @@ void initThreadScheduler(void)
         MAIN_TRAC_INFO("Error creating timer: RC: %d", l_timerRc);
     }
 
-/* TEMP -- NOT USED IN PHASE1
     // Create snapshot timer
     l_snapshotTimerRc = ssx_timer_create(&G_snapshotTimer, cmdh_snapshot_callback, 0);
     // Check for errors creating the timer
@@ -176,7 +178,6 @@ void initThreadScheduler(void)
     {
         MAIN_TRAC_INFO("Error creating timer: RC: %d", l_snapshotTimerRc);
     }
-*/
 
     // If there are any errors creating the threads or starting the
     // timer create an error log to pass back.
