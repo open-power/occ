@@ -1304,7 +1304,10 @@ void occ_ipc_setup()
 
         MAIN_TRAC_INFO("GPE's taken out of reset");
 
-        set_shared_gpe_data();
+        if (!G_ipl_time)
+        {
+            set_shared_gpe_data();
+        }
 
     }while(0);
 
