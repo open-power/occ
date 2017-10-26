@@ -166,11 +166,11 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
         PK_TRACE("gpe_24x7: speed change, L_INIT set to true");
        }
 //4.check for any system config changes via uav
-    /*if (*L_uav != G_CUR_UAV)
+    if (*L_uav != G_CUR_UAV)
     {
         L_INIT = true;
         L_PART_INIT = true;
-    }*/
+    }
     //initialize postings if required from new cmd or change of speed or UAV change.
     if (L_INIT)
     {
@@ -186,7 +186,7 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
         L_cur_speed = *L_speed;
         G_CUR_UAV = *L_uav;
 //SW399904 patch until HWP output for UAV is debugged.
-        G_CUR_UAV = CNTL_UAV_TEMP;
+        //G_CUR_UAV = CNTL_UAV_TEMP;
         *L_marker = MARKER1;
 //
         set_speed(&L_cur_speed,&L_CUR_DELAY,L_status);
@@ -425,29 +425,31 @@ void configure_pmu(uint8_t state, uint64_t speed)
     {
 //check the availability of unit before writing the configurations to the config scoms.
 //use the unit wise masks to acertain availability of a unit.
-        if( (i==4) && !(G_CUR_UAV & MASK_MCS4) )
+//in Nimbus, MCA is present instead of MBAs and they are updated at the location for MBAs.
+//MBAs need to be checked to see which MC poerts are configured.
+        if( (i==4) && !(G_CUR_UAV & MASK_MBA4) )
             continue;
-        else if( (i==5) && !(G_CUR_UAV & MASK_MCS5) )
+        else if( (i==5) && !(G_CUR_UAV & MASK_MBA5) )
             continue;
-        else if( (i==6) && !(G_CUR_UAV & MASK_MCS6) )
+        else if( (i==6) && !(G_CUR_UAV & MASK_MBA6) )
             continue;
-        else if( (i==7) && !(G_CUR_UAV & MASK_MCS7) )
+        else if( (i==7) && !(G_CUR_UAV & MASK_MBA7) )
             continue;
-        else if( ((i==8)||(i==9)||(i==10)||(i==11)) && (!(G_CUR_UAV & MASK_MCS4)||!(G_CUR_UAV & MASK_MCS5)) )
+        else if( ((i==8)||(i==9)||(i==10)||(i==11)) && (!(G_CUR_UAV & MASK_MBA4)||!(G_CUR_UAV & MASK_MBA5)) )
             continue;
-        else if( ((i==12)||(i==13)||(i==14)||(i==15)) && (!(G_CUR_UAV & MASK_MCS6)||!(G_CUR_UAV & MASK_MCS7)) )
+        else if( ((i==12)||(i==13)||(i==14)||(i==15)) && (!(G_CUR_UAV & MASK_MBA6)||!(G_CUR_UAV & MASK_MBA7)) )
             continue;
-        else if( (i==16) && !(G_CUR_UAV & MASK_MCS0) )
+        else if( (i==16) && !(G_CUR_UAV & MASK_MBA0) )
             continue;
-        else if( (i==17) && !(G_CUR_UAV & MASK_MCS1) )
+        else if( (i==17) && !(G_CUR_UAV & MASK_MBA1) )
             continue;
-        else if( (i==18) && !(G_CUR_UAV & MASK_MCS2) )
+        else if( (i==18) && !(G_CUR_UAV & MASK_MBA2) )
             continue;
-        else if( (i==19) && !(G_CUR_UAV & MASK_MCS3) )
+        else if( (i==19) && !(G_CUR_UAV & MASK_MBA3) )
             continue;
-        else if( ((i==20)||(i==21)||(i==22)||(i==23)) && (!(G_CUR_UAV & MASK_MCS0)||!(G_CUR_UAV & MASK_MCS1)) )
+        else if( ((i==20)||(i==21)||(i==22)||(i==23)) && (!(G_CUR_UAV & MASK_MBA0)||!(G_CUR_UAV & MASK_MBA1)) )
             continue;
-        else if( ((i==24)||(i==25)||(i==26)||(i==27)) && (!(G_CUR_UAV & MASK_MCS2)||!(G_CUR_UAV & MASK_MCS3)) ) 
+        else if( ((i==24)||(i==25)||(i==26)||(i==27)) && (!(G_CUR_UAV & MASK_MBA2)||!(G_CUR_UAV & MASK_MBA3)) ) 
             continue;
         else if( (i==28) && ((!(G_CUR_UAV & MASK_XLNK0))||(!(G_CUR_UAV & MASK_XLNK1))||(!(G_CUR_UAV & MASK_XLNK2))) )
             continue;
