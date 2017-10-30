@@ -86,18 +86,4 @@ left_justify_centaur_config(ChipConfig config)
 
 #endif // __ASSEMBLER__
 
-
-#define CHIP_CONFIG_CORE_BASE 0
-#define CHIP_CONFIG_CORE(n) \
-    ((0x8000000000000000ull >> CHIP_CONFIG_CORE_BASE) >> (n))
-
-#define CHIP_CONFIG_MCS_BASE 16
-#define CHIP_CONFIG_MCS(n) \
-    ((0x8000000000000000ull >> CHIP_CONFIG_MCS_BASE) >> (n))
-
-#define CHIP_CONFIG_CENTAUR_BASE 24
-#define CHIP_CONFIG_CENTAUR(n) \
-    ((0x8000000000000000ull >> CHIP_CONFIG_CENTAUR_BASE) >> (n))
-
-
 #endif  /* __CHIP_CONFIG_H__ */

@@ -58,6 +58,7 @@ extern uint32_t G_first_proc_gpu_config;
 extern bool G_vrm_vdd_temp_expired;
 extern bool G_reset_prep;
 extern uint16_t G_amester_max_data_length;
+extern uint8_t G_occ_interrupt_type;
 
 #include <gpe_export.h>
 extern gpe_shared_data_t G_shared_gpe_data;
@@ -156,8 +157,8 @@ errlHndl_t cmdh_tmgt_poll (const cmdh_fsp_cmd_t * i_cmd_ptr,
 ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     ERRL_RC                     l_rc  = ERRL_RC_INTERNAL_FAIL;
-    uint8_t                     k = 0, l_max_sensors = 0;
-    uint8_t                     l_err_hist_idx = 0, l_sens_list_idx = 0;
+    int                         k = 0, l_max_sensors = 0;
+    int                         l_err_hist_idx = 0, l_sens_list_idx = 0;
     cmdh_poll_sensor_db_t       l_sensorHeader;
 
     // Set pointer to start of o_rsp_ptr
@@ -330,7 +331,8 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
             if (CENTAUR_PRESENT(l_cent))
             {
                 //Add entry for centaurs.
-                l_tempSensorList[l_sensorHeader.count].id = g_amec->proc[0].memctl[l_cent].centaur.temp_sid;
+                uint32_t l_temp_sid = g_amec->proc[0].memctl[l_cent].centaur.temp_sid;
+                l_tempSensorList[l_sensorHeader.count].id = l_temp_sid;
                 l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_CENTAUR;
                 if (G_cent_timeout_logged_bitmap & (CENTAUR0_PRESENT_MASK >> l_cent))
                 {
@@ -340,14 +342,23 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
                 {
                     l_tempSensorList[l_sensorHeader.count].value = (g_amec->proc[0].memctl[l_cent].centaur.centaur_hottest.cur_temp) & 0xFF;
                 }
+
                 l_sensorHeader.count++;
 
                 //Add entries for present dimms associated with current centaur l_cent.
                 for(l_dimm=0; l_dimm < NUM_DIMMS_PER_CENTAUR; l_dimm++)
                 {
-                    if (g_amec->proc[0].memctl[l_cent].centaur.dimm_temps[l_dimm].temp_sid != 0)
+                    l_temp_sid = g_amec->proc[0].memctl[l_cent].centaur.dimm_temps[l_dimm].temp_sid;
+
+                    // TODO temp fix until the dimm numbering gets sorted out
+                    if(FSP_SUPPORTED_OCC == G_occ_interrupt_type && l_temp_sid == 0)
                     {
-                        l_tempSensorList[l_sensorHeader.count].id = g_amec->proc[0].memctl[l_cent].centaur.dimm_temps[l_dimm].temp_sid;
+                        l_temp_sid = 1 + l_dimm; // If sid is zero them make up a sid for FSP
+                    }
+
+                    if (l_temp_sid != 0)
+                    {
+                        l_tempSensorList[l_sensorHeader.count].id = l_temp_sid;
                         l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_DIMM;
                         //If a dimm timed out long enough, we should return 0xFFFF for that sensor.
                         if (G_dimm_temp_expired_bitmap.bytes[l_cent] & (DIMM_SENSOR0 >> l_dimm))
@@ -454,7 +465,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
     // Write data to resp buffer if any.
     if (l_sensorHeader.count)
     {
-        uint8_t l_sensordataSz = l_sensorHeader.count * l_sensorHeader.length;
+        int l_sensordataSz = l_sensorHeader.count * l_sensorHeader.length;
         // Copy sensor data into response buffer.
         memcpy ((void *) &(o_rsp_ptr->data[l_rsp_index]), (void *)l_tempSensorList, l_sensordataSz);
         // Increment index into response buffer.
@@ -490,7 +501,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
     // Write data to outbuffer if any.
     if (l_sensorHeader.count)
     {
-        uint8_t l_sensordataSz = l_sensorHeader.count * l_sensorHeader.length;
+        int l_sensordataSz = l_sensorHeader.count * l_sensorHeader.length;
         // Copy sensor data into response buffer.
         memcpy ((void *) &(o_rsp_ptr->data[l_rsp_index]), (void *)l_freqSensorList, l_sensordataSz);
         // Increment index into response buffer.
@@ -779,7 +790,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
     // Write data to outbuffer if any.
     if (l_sensorHeader.count)
     {
-        uint8_t l_sensordataSz = l_sensorHeader.count * l_sensorHeader.length;
+        int l_sensordataSz = l_sensorHeader.count * l_sensorHeader.length;
         // Copy sensor data into response buffer.
         memcpy ((void *) &(o_rsp_ptr->data[l_rsp_index]), (void *)l_extnSensorList, l_sensordataSz);
         // Increment index into response buffer.
@@ -966,7 +977,7 @@ errlHndl_t cmdh_clear_elog (const   cmdh_fsp_cmd_t * i_cmd_ptr,
                             cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     cmdh_clear_elog_query_t *l_cmd_ptr = (cmdh_clear_elog_query_t *) i_cmd_ptr;
-    uint8_t l_SlotNum = ERRL_INVALID_SLOT;
+    int l_SlotNum = ERRL_INVALID_SLOT;
     errlHndl_t l_err = INVALID_ERR_HNDL;
     errlHndl_t l_oci_address = INVALID_ERR_HNDL;
 
@@ -1067,7 +1078,7 @@ void cmdh_dbug_get_trace (const cmdh_fsp_cmd_t * i_cmd_ptr,
 void cmdh_dbug_get_ame_sensor (const cmdh_fsp_cmd_t * i_cmd_ptr,
                                cmdh_fsp_rsp_t * o_rsp_ptr)
 {
-    uint8_t                      l_rc = ERRL_RC_SUCCESS;
+    int                          l_rc = ERRL_RC_SUCCESS;
     uint16_t                     l_type = 0;
     uint16_t                     l_location = 0;
     uint16_t                     i = 0;

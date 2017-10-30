@@ -26,6 +26,7 @@
 #include "ipc_async_cmd.h"
 #include "gpe1_dimm.h"
 #include "gpu_structs.h"
+#include "gpe_centaur.h"
 
 void gpe_dimm_control(ipc_msg_t* cmd, void* arg);
 void gpe1_nop(ipc_msg_t* cmd, void* arg);
@@ -84,9 +85,9 @@ IPC_HANDLER(gpe_24x7, 0)                   // 4 - IPC_ST_24_X_7_FUNCID
 IPC_HANDLER(gpe_mem_power_control, 0)      // 5 - IPC_ST_MEM_POWER_CONTROL_FUNCID
 IPC_HANDLER(gpe_gpu_sm, 0)                 // 6 - IPC_ST_GPU_SM_FUNCID
 IPC_HANDLER(gpe_gpu_init, 0)               // 7 - IPC_ST_GPE_GPU_INIT_FUNCID
-IPC_HANDLER_DEFAULT                        // 8
-IPC_HANDLER_DEFAULT                        // 9
-IPC_HANDLER_DEFAULT                        // 10
+IPC_HANDLER(gpe_centaur_scom, 0)           // 8 - IPC_ST_CENTAUR_SCOM_FUNCID
+IPC_HANDLER(gpe_centaur_data, 0)           // 9 - IPC_ST_CENTAUR_DATA_FUNCID
+IPC_HANDLER(gpe_centaur_init, 0)           // 10 -IPC_ST_CENTAUR_INIT_FUNCID
 IPC_HANDLER_DEFAULT                        // 11
 IPC_HANDLER_DEFAULT                        // 12
 IPC_HANDLER_DEFAULT                        // 13

@@ -43,6 +43,7 @@
 #include "sensor_enum.h"
 #include "amec_service_codes.h"
 #include <amec_sensors_centaur.h>
+#include "centaur_mem_data.h"
 
 /******************************************************************************/
 /* Globals                                                                    */
@@ -57,12 +58,9 @@ extern uint8_t      G_centaur_nest_lfir6;
 /******************************************************************************/
 /* Forward Declarations                                                       */
 /******************************************************************************/
-/* TODO - RTC 163359 Centaur support */
-#if 0
-void amec_update_dimm_dts_sensors(MemData * i_sensor_cache, uint8_t i_centaur);
-void amec_update_centaur_dts_sensors(MemData * i_sensor_cache, uint8_t i_centaur);
-void amec_perfcount_getmc( MemData * i_sensor_cache, uint8_t i_centaur);
-#endif
+void amec_update_dimm_dts_sensors(CentaurMemData * i_sensor_cache, uint8_t i_centaur);
+void amec_update_centaur_dts_sensors(CentaurMemData * i_sensor_cache, uint8_t i_centaur);
+void amec_perfcount_getmc( CentaurMemData * i_sensor_cache, uint8_t i_centaur);
 
 /******************************************************************************/
 /* Code                                                                       */
@@ -80,11 +78,9 @@ void amec_perfcount_getmc( MemData * i_sensor_cache, uint8_t i_centaur);
 // End Function Specification
 void amec_update_centaur_sensors(uint8_t i_centaur)
 {
-/* TODO - RTC 163359 Centaur support */
-#if 0
     if(CENTAUR_PRESENT(i_centaur))
     {
-        MemData * l_sensor_cache = cent_get_centaur_data_ptr(i_centaur);
+        CentaurMemData * l_sensor_cache = cent_get_centaur_data_ptr(i_centaur);
         if(CENTAUR_UPDATED(i_centaur))
         {
             amec_update_dimm_dts_sensors(l_sensor_cache, i_centaur);
@@ -93,7 +89,6 @@ void amec_update_centaur_sensors(uint8_t i_centaur)
         amec_perfcount_getmc(l_sensor_cache, i_centaur);
         CLEAR_CENTAUR_UPDATED(i_centaur);
     }
-#endif
 }
 
 // Function Specification
@@ -106,9 +101,7 @@ void amec_update_centaur_sensors(uint8_t i_centaur)
 // Thread: RealTime Loop
 //
 // End Function Specification
-/* TODO - RTC 163359 Centaur support */
-#if 0
-void amec_update_dimm_dts_sensors(MemData * i_sensor_cache, uint8_t i_centaur)
+void amec_update_dimm_dts_sensors(CentaurMemData * i_sensor_cache, uint8_t i_centaur)
 {
 #define MIN_VALID_DIMM_TEMP 1
 #define MAX_VALID_DIMM_TEMP 125 //according to Mike Pardiek
@@ -246,20 +239,17 @@ void amec_update_dimm_dts_sensors(MemData * i_sensor_cache, uint8_t i_centaur)
     L_ran_once[i_centaur] = TRUE;
     AMEC_DBG("Centaur[%d]: HotDimm=%d\n",i_centaur,l_hottest_dimm_temp);
 }
-#endif
 
 // Function Specification
 //
 // Name: amec_update_centaur_dts_sensors
 //
-// Description: Updates sensors taht have data grabbed by the fast core data
+// Description: Updates sensors that have data grabbed by the fast core data
 //
 // Thread: RealTime Loop
 //
 // End Function Specification
-/* TODO - RTC 163359 Centaur support */
-#if 0
-void amec_update_centaur_dts_sensors(MemData * i_sensor_cache, uint8_t i_centaur)
+void amec_update_centaur_dts_sensors(CentaurMemData * i_sensor_cache, uint8_t i_centaur)
 {
 #define MIN_VALID_CENT_TEMP 1
 #define MAX_VALID_CENT_TEMP 125 //according to Mike Pardiek
@@ -377,7 +367,6 @@ void amec_update_centaur_dts_sensors(MemData * i_sensor_cache, uint8_t i_centaur
 
     AMEC_DBG("Centaur[%d]: HotCentaur=%d\n",i_centaur,l_dts);
 }
-#endif
 
 // Function Specification
 //
@@ -393,7 +382,7 @@ void amec_update_centaur_temp_sensors(void)
     uint32_t k, l_hot;
 
     // -----------------------------------------------------------
-    // Find hottest temperature from all centaurs for this P8 chip
+    // Find hottest temperature from all centaurs for this Proc chip
     // -----------------------------------------------------------
     for(l_hot = 0, k=0; k < MAX_NUM_CENTAURS; k++)
     {
@@ -406,7 +395,7 @@ void amec_update_centaur_temp_sensors(void)
     AMEC_DBG("HotCentaur=%d\n",l_hot);
 
     // --------------------------------------------------------
-    // Find hottest temperature from all DIMMs for this P8 chip
+    // Find hottest temperature from all DIMMs for this Proc chip
     // --------------------------------------------------------
     for(l_hot = 0, k=0; k < MAX_NUM_CENTAURS; k++)
     {
@@ -430,9 +419,8 @@ void amec_update_centaur_temp_sensors(void)
 // Thread: RealTime Loop
 //
 // End Function Specification
-/* TODO - RTC 163359 Centaur support */
-#if 0
-void amec_perfcount_getmc( MemData * i_sensor_cache,
+
+void amec_perfcount_getmc( CentaurMemData * i_sensor_cache,
                            uint8_t i_centaur)
 {
     /*------------------------------------------------------------------------*/
@@ -452,7 +440,7 @@ void amec_perfcount_getmc( MemData * i_sensor_cache,
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
 
-    MemData * l_sensor_cache = i_sensor_cache;
+    CentaurMemData * l_sensor_cache = i_sensor_cache;
 
     for(i_mc_id=0; i_mc_id<2; i_mc_id++)
     {
@@ -682,18 +670,17 @@ void amec_perfcount_getmc( MemData * i_sensor_cache,
     // ------------------------------------------------------------
     tempreg = g_amec->proc[0].memctl[i_centaur].centaur.portpair[0].perf.memread2ms;
     tempreg += g_amec->proc[0].memctl[i_centaur].centaur.portpair[1].perf.memread2ms;
-    sensor_update( (&(g_amec->proc[0].memctl[i_centaur].mrd2ms)), tempreg);
+    sensor_update( (&(g_amec->proc[0].memctl[i_centaur].mrd)), tempreg);
 
     // -------------------------------------------------------------
     // Sensor:  MWRMx (0.01 Mrps) Memory write requests per sec
     // -------------------------------------------------------------
     tempreg = g_amec->proc[0].memctl[i_centaur].centaur.portpair[0].perf.memwrite2ms;
     tempreg += g_amec->proc[0].memctl[i_centaur].centaur.portpair[1].perf.memwrite2ms;
-    sensor_update( (&(g_amec->proc[0].memctl[i_centaur].mwr2ms)), tempreg);
+    sensor_update( (&(g_amec->proc[0].memctl[i_centaur].mwr)), tempreg);
 
     return;
 }
-#endif
 
 /*----------------------------------------------------------------------------*/
 /* End                                                                        */

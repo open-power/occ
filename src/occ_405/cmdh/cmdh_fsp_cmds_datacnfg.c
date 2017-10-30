@@ -2052,16 +2052,7 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 }
                 else
                 {
-                    // TODO: RTC 163359 - OCC Centaur Support
-                    //G_sysConfigData.mem_type = MEM_TYPE_CUMULUS;
-
-                    CMDH_TRAC_ERR("data_store_mem_cfg: Invalid mem type 0x%02X in config data packet version[0x%02X] num_data_sets[%u]",
-                                  data_sets_ptr[0].memory_type,
-                                  l_cmd_ptr->header.version,
-                                  num_data_sets);
-
-                    cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
-                    break;
+                    G_sysConfigData.mem_type = MEM_TYPE_CUMULUS;
                 }
 
                 // Store the hardware sensor ID and the temperature sensor ID
@@ -2156,16 +2147,8 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                     }
                     else  // must be cumulus and the "memory type" byte is the centaur#
                     {
-                        CMDH_TRAC_ERR("data_store_mem_cfg: Invalid mem type 0x%02X in config data packet entry %d (entry 0 type: 0x%02X)",
-                                      l_data_set->memory_type, i, G_sysConfigData.mem_type);
-
-                        cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
-                        break;
-
-#if 0
-                        // TODO: RTC 163359 - OCC Centaur Support
                         // per spec for cumulus memory type is the centaur# and dimm info1 is DIMM#
-                        uint8_t l_centaur_num = l_data_set->memory_type;
+                        int l_centaur_num = l_data_set->memory_type;
                         l_dimm_num = l_data_set->dimm_info1;
 
                         // Validate the centaur and dimm #'s for this data set
@@ -2202,7 +2185,7 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
                             l_num_dimms++;
                         }
-#endif
+
                     } // Cumulus
                 } // for each data set
             } // else no data sets given

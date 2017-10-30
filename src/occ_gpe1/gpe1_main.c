@@ -33,10 +33,11 @@
 #include "pk_trace.h"
 #include "ipc_api.h"
 #include "gpe_export.h"
+#include "gpe_centaur.h"
 
 #define KERNEL_STACK_SIZE  512
 
-uint8_t        G_kernel_stack[KERNEL_STACK_SIZE];
+uint64_t        G_kernel_stack[KERNEL_STACK_SIZE/8];
 
 //Point to the GPE shared structure
 #define GPE_SHARED_DATA_ADDR 0xFFFB3C00

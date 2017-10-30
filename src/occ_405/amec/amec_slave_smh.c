@@ -429,8 +429,12 @@ void amec_slv_common_tasks_post(void)
         // Call amec_power_control
         amec_power_control();
 
-        // Apply memory power control, if needed.
-        amec_mem_power_control();
+        if (MEM_TYPE_CUMULUS != G_sysConfigData.mem_type)
+        {
+            // Nimbus only
+            // Apply memory power control, if needed.
+            amec_mem_power_control();
+        }
 
         // Call the OCC slave's processor voting box
         amec_slv_proc_voting_box();
@@ -488,12 +492,11 @@ void amec_slv_state_0(void)
 {
   AMEC_DBG("\tAMEC Slave State 0\n");
 
-/* Not yet supported  TODO Centaur support RTC 163359
   //-------------------------------------------------------
   // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
   amec_update_centaur_sensors(CENTAUR_0);
-*/
+
   //-------------------------------------------------------
   // Update vector sensors
   //-------------------------------------------------------
@@ -522,7 +525,6 @@ void amec_slv_state_1(void)
 {
   AMEC_DBG("\tAMEC Slave State 1\n");
 
-/* Not yet supported   TODO Centaur support RTC 163359
   //-------------------------------------------------------
   // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
@@ -532,7 +534,6 @@ void amec_slv_state_1(void)
   // Update Proc Level Centaur/DIMM Temperature sensors
   //-------------------------------------------------------
   amec_update_centaur_temp_sensors();
-*/
 }
 
 
@@ -547,12 +548,10 @@ void amec_slv_state_2(void)
 {
   AMEC_DBG("\tAMEC Slave State 2\n");
 
-/* Not yet supported   TODO Centaur support RTC 163359
   //-------------------------------------------------------
   // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
   amec_update_centaur_sensors(CENTAUR_2);
-*/
 
   // Call VRM Vdd thermal controller
   amec_controller_vrm_vdd_thermal();
@@ -575,9 +574,7 @@ void amec_slv_state_3(void)
   //-------------------------------------------------------
   // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
-/* Not yet supported   TODO Centaur support RTC 163359
   amec_update_centaur_sensors(CENTAUR_3);
-*/
 
   //-------------------------------------------------------
   // Perform amec_analytics (set amec_analytics_slot to 3)
@@ -601,12 +598,10 @@ void amec_slv_state_4(void)
 {
     AMEC_DBG("\tAMEC Slave State 4\n");
 
-/* Not yet supported  TODO Centaur support RTC 163359
   //-------------------------------------------------------
   // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
   amec_update_centaur_sensors(CENTAUR_4);
-*/
 
     //-------------------------------------------------------
     // Run WOF Algorithm
@@ -629,9 +624,9 @@ void amec_slv_state_5(void)
   AMEC_DBG("\tAMEC Slave State 5\n");
 
   //-------------------------------------------------------
-  // Update Centaur sensors (for this tick) TODO Centaur support RTC 163359
+  // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
-//  amec_update_centaur_sensors(CENTAUR_5);
+  amec_update_centaur_sensors(CENTAUR_5);
 
   //-------------------------------------------------------
   // Update partition sensors for DPS algorithms (for this tick)
@@ -654,12 +649,10 @@ void amec_slv_state_6(void)
 {
   AMEC_DBG("\tAMEC Slave State 6\n");
 
-/* Not yet supported  TODO Centaur support RTC 163359
   //-------------------------------------------------------
   // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
   amec_update_centaur_sensors(CENTAUR_6);
-*/
 }
 
 
@@ -674,12 +667,10 @@ void amec_slv_state_7(void)
 {
   AMEC_DBG("\tAMEC Slave State 7\n");
 
-/* Not yet supported   TODO Centaur support RTC 163359
   //-------------------------------------------------------
   // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
   amec_update_centaur_sensors(CENTAUR_7);
-*/
 }
 
 // Function Specification
@@ -1313,9 +1304,11 @@ void amec_slv_substate_7_0(void)
     // Call memory thermal controller based on DIMM temperature
     amec_controller_dimm_thermal();
 
-    // Call memory thermal controller based on Centaur temperature
-    // TODO: RTC 163359 - OCC Centaur Support
-    //amec_controller_centaur_thermal();
+    if (MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type)
+    {
+        // Call memory thermal controller based on Centaur temperature
+        amec_controller_centaur_thermal();
+    }
 
 }
 

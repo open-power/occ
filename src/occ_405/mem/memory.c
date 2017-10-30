@@ -31,6 +31,7 @@
 #include "dimm_control.h"
 #include "centaur_control.h"
 #include "centaur_data.h"
+#include "centaur_structs.h"
 #include "memory_service_codes.h"
 #include <occ_service_codes.h>  // for SSX_GENERIC_FAILURE
 #include "amec_sys.h"
@@ -40,8 +41,7 @@ extern dimm_control_args_t  G_dimm_control_args;
 extern task_t G_task_table[TASK_END];
 
 
-// TODO: RTC 163359  - uncomment when Centaur code is enabled
-//extern GpeScomParms G_centaur_control_reg_parms;
+extern CentaurScomParms_t G_centaur_control_reg_parms;
 
 // This array identifies dimm throttle limits for both Centaurs (Cumulus) and
 // rdimms (Nimbus) based systems.
@@ -106,8 +106,7 @@ void task_memory_control( task_t * i_task )
     }
     else if (MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type)
     {
-// TODO: RTC 163359 - uncomment when Centaur code is enabled
-//        gpe_rc = G_centaur_control_reg_parms.rc;
+        gpe_rc = G_centaur_control_reg_parms.error.rc;
     }
 
     do
@@ -152,12 +151,10 @@ void task_memory_control( task_t * i_task )
                 {
                     if(!(L_gpe_fail_logged & (CENTAUR0_PRESENT_MASK >> memIndex)))
                     {
-// TODO: RTC 163359 - uncomment when Centaur code is enabled
-/*                        if (!check_centaur_checkstop(memIndex))
+                        if (!check_centaur_checkstop(memControlTask))
                         {
                             L_gpe_fail_logged |= CENTAUR0_PRESENT_MASK >> memIndex;
-                            }
-*/
+                        }
                     }
                 }
                 //Request failed. Keep count of failures and request a reset if we reach a
@@ -227,8 +224,7 @@ void task_memory_control( task_t * i_task )
             {
                 break;
             }
-// TODO RTC: 163359 - centaur code not ready yet
-//            rc = centaur_control(memIndex);  // Control one centaur
+            rc = centaur_control(memControlTask);  // Control one centaur
         }
 
         if(rc)
@@ -243,8 +239,7 @@ void task_memory_control( task_t * i_task )
                 }
                 else if (MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type)
                 {
-// TODO RTC: 163359 - uncomment when Centaur code is enabled
-//              gpe_rc = G_centaur_control_reg_parms.rc;
+                    gpe_rc = G_centaur_control_reg_parms.error.rc;
                 }
 
                 //Error in schedule gpe memory (dimm/centaur) control
@@ -370,29 +365,8 @@ void memory_init()
             }
             else
             {
-                // TODO RTC: 163359 - CUMULUS NOT SUPPORTED YET IN PHASE1
-#if 0
                 TRAC_INFO("memory_init: calling centaur_init()");
                 centaur_init(); //no rc, handles errors internally
-#endif
-                TRAC_ERR("memory_init: invalid memory type 0x%02X", G_sysConfigData.mem_type);
-                /*
-                 * @errortype
-                 * @moduleid    MEM_MID_MEMORY_INIT
-                 * @reasoncode  MEMORY_INIT_FAILED
-                 * @userdata1   memory type
-                 * @userdata2   0
-                 * @devdesc     Invalid memory type detected
-                 */
-                errlHndl_t err = createErrl(MEM_MID_MEMORY_INIT,
-                                            MEMORY_INIT_FAILED,
-                                            OCC_NO_EXTENDED_RC,
-                                            ERRL_SEV_PREDICTIVE,
-                                            NULL,
-                                            DEFAULT_TRACE_SIZE,
-                                            G_sysConfigData.mem_type,
-                                            0);
-                REQUEST_RESET(err);
             }
 
             // check if the init resulted in a reset

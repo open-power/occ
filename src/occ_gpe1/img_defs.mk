@@ -94,6 +94,10 @@ ifndef PK_SRCDIR
 export PK_SRCDIR = $(abspath ../ppe/pk)
 endif
 
+ifndef OCCHW_SRCDIR
+export OCCHW_SRCDIR = $(abspath ../ssx/occhw)
+endif
+
 ifndef COMMONLIB_SRCDIR
 export COMMONLIB_SRCDIR = $(abspath ../lib/common)
 endif
@@ -111,16 +115,11 @@ $(warning The CTEPATH variable is not defined; Defaulting to /afs/awd)
 export CTEPATH = /afs/awd/projects/cte
 endif
 
-ifdef P2P_ENABLE
-# TODO
-else
-
 # libs needed by compiler
 ifndef PPE_TOOL_PATH
 PPE_TOOL_PATH = $(CTEPATH)/tools/ppetools/prod
 LD_LIBRARY_PATH += :$(PPE_TOOL_PATH)/lib:
 export LD_LIBRARY_PATH
-endif
 
 ifndef GCC-TOOL-PREFIX
 GCC-TOOL-PREFIX = $(PPE_TOOL_PATH)/bin/powerpc-eabi-
@@ -203,11 +202,19 @@ DEFS += $(GCC-DEFS)
 
 ############################################################################
 
-INCLUDES += $(IMG_INCLUDES) $(GLOBAL_INCLUDES) \
-	-I$(PK_SRCDIR)/kernel -I$(PK_SRCDIR)/ppe42 -I$(PK_SRCDIR)/trace \
-	-I$(PK_SRCDIR)/$(PPE_TYPE) -I$(PK_SRCDIR)/../../include \
-	-I$(PK_SRCDIR)/../../include/registers -I$(OCCLIB_SRCDIR) -I$(COMMONLIB_SRCDIR) \
-    -I$(OCC_COMMON_TYPES_DIR) -I$(IMAGE_SRCDIR)/../common
+INCLUDES += $(IMG_INCLUDES)
+INCLUDES += $(GLOBAL_INCLUDES)
+INCLUDES += -I$(PK_SRCDIR)/kernel
+INCLUDES += -I$(PK_SRCDIR)/ppe42
+INCLUDES += -I$(PK_SRCDIR)/trace
+INCLUDES += -I$(PK_SRCDIR)/$(PPE_TYPE)
+INCLUDES += -I$(PK_SRCDIR)/../../include
+INCLUDES += -I$(PK_SRCDIR)/../../include/registers
+INCLUDES += -I$(OCCLIB_SRCDIR)
+INCLUDES += -I$(COMMONLIB_SRCDIR)
+INCLUDES += -I$(OCC_COMMON_TYPES_DIR)
+INCLUDES += -I$(IMAGE_SRCDIR)/../common
+INCLUDES += -I$(OCCHW_SRCDIR)
 
 ifdef P2P_ENABLE
 PIPE-CFLAGS = -pipe -Wa,-m405

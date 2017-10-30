@@ -32,7 +32,8 @@
 #include <occ_common.h>
 #include <ssx.h>
 #include "rtls.h"
-//#include "gpe_data.h"
+#include "centaur_mem_data.h"
+#include "centaur_structs.h"
 #include "occ_sys_config.h"
 #include "memory.h"
 
@@ -107,26 +108,24 @@ enum eOccCentaurs
 //*************************************************************************
 
 //Centaur data collect structures used for task data pointers
-// TEMP -- PORE ISSUES
-/*
+
 struct centaur_data_task {
         uint8_t start_centaur;
         uint8_t current_centaur;
         uint8_t end_centaur;
         uint8_t prev_centaur;
-        MemData * centaur_data_ptr;
-        PoreFlex gpe_req;
+        CentaurMemData * centaur_data_ptr;
+        GpeRequest gpe_req;
 } __attribute__ ((__packed__));
 typedef struct centaur_data_task centaur_data_task_t;
-*/
+
 
 //*************************************************************************
 // Globals
 //*************************************************************************
 
 //Global centaur structures used for task data pointers
-// TEMP -- COMMENTED OUT DUE TO PORE ISSUES
-//extern centaur_data_task_t G_centaur_data_task;
+extern centaur_data_task_t G_centaur_data_task;
 
 //Global is bitmask of centaurs
 extern uint32_t G_present_centaurs;
@@ -164,7 +163,7 @@ extern uint16_t G_configured_mbas;
 //*************************************************************************
 
 //Collect centaur data for all centaur in specified range
-void task_centaur_data( task_t * i_task );
+void centaur_data( void );
 
 //Initialize structures for collecting centaur data.
 //void centaur_init( void ) INIT_SECTION;
@@ -173,14 +172,11 @@ void centaur_init( void );
 //handles centaur i2c recovery and other workarounds
 void cent_recovery(uint32_t i_cent);
 
-//Determines if a centaur has a channel checkstop (returns TRUE is it has a
-//channel checkstop, FALSE otherwise)
-bool cent_chan_checkstop(const uint8_t i_cent);
-
 //Returns a pointer to the most up-to-date centaur data for the centaur
 //associated with the specified OCC centaur id.
-// TEMP -- WHERE IS MemData ??
-//MemData * cent_get_centaur_data_ptr( const uint8_t i_centaur_id );
+CentaurMemData * cent_get_centaur_data_ptr( const uint8_t i_centaur_id );
 
+
+uint32_t centaur_configuration_create( CentaurConfiguration_t * i_centaurConfiguration );
 #endif //_CENTAUR_DATA_H
 

@@ -35,9 +35,10 @@
 #include <cmdh_fsp.h>
 #include <cmdh_fsp_cmds.h>
 #include <memory.h>
-//#include <gpe_data.h>
+#include <centaur_data.h>
 #include <proc_data.h>
 #include <apss.h>
+#include "centaur_mem_data.h"
 
 //*************************************************************************/
 // Externs
@@ -149,30 +150,27 @@ void dbug_err_inject(const cmdh_fsp_cmd_t * i_cmd_ptr,
 void dbug_centaur_dump(const cmdh_fsp_cmd_t * i_cmd_ptr,
                              cmdh_fsp_rsp_t * i_rsp_ptr)
 {
-/* TODO - RTC 163359 Centaur support */
-#if 0
     uint16_t l_datalen = 0;
     uint8_t l_jj=0;
 
     // Determine the size of the data we are returning
-    l_datalen = (sizeof(MemData) * MAX_NUM_CENTAURS);
+    l_datalen = (sizeof(CentaurMemData) * MAX_NUM_CENTAURS);
 
     // Fill out the response with the data we are returning
     for(l_jj=0; l_jj < MAX_NUM_CENTAURS; l_jj++)
     {
-        MemData * l_sensor_cache_ptr =
+        CentaurMemData * l_sensor_cache_ptr =
             cent_get_centaur_data_ptr(l_jj);
 
-        memcpy((void *)&(i_rsp_ptr->data[l_jj*sizeof(MemData)]),
+        memcpy((void *)&(i_rsp_ptr->data[l_jj*sizeof(CentaurMemData)]),
                (void *)l_sensor_cache_ptr,
-               sizeof(MemData));
+               sizeof(CentaurMemData));
     }
 
     // Fill out the rest of the response data
     i_rsp_ptr->data_length[0] = CONVERT_UINT16_UINT8_HIGH(l_datalen);
     i_rsp_ptr->data_length[1] = CONVERT_UINT16_UINT8_LOW(l_datalen);
     G_rsp_status              = ERRL_RC_SUCCESS;
-#endif
     return;
 }
 

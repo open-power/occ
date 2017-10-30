@@ -526,8 +526,6 @@ enum e_gsid
     TEMPDIMM14,
     TEMPDIMM15,
 
-    // TODO: RTC 163359 - Determine if we want to store individual DIMM temps for CENTAUR
-    // or continue to use max DIMM temp/location under each CENTAUR.
     TEMPDIMMAXM0,
     TEMPDIMMAXM1,
     TEMPDIMMAXM2,
