@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -39,7 +39,6 @@ enum pssModuleId
     PSS_MID_DPSS_RD_STATUS         =  PSS_COMP_ID | 0x06,
     PSS_MID_DO_APSS_RECOVERY       =  PSS_COMP_ID | 0x07,
     PSS_MID_AVSBUS_READ            =  PSS_COMP_ID | 0x08,
-    PSS_MID_AVSBUS_READ_STATUS     =  PSS_COMP_ID | 0x09,
 };
 
 #endif /* #ifndef _PSS_SERVICE_CODES_H_ */

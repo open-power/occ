@@ -575,17 +575,23 @@ void update_avsbus_power_sensors(const avsbus_type_e i_type)
 // Name: amec_update_avsbus_sensors
 //
 // Description: Read AVS Bus data and update sensors (called every tick)
-//   The very first tick kicks off a read of the currents for both buses (Vdd/Vdn).
-//   The next tick will process the currents and then start a read of the voltages.
-//   The next tick will process the voltages and then start a read of the currents.
-//   (readings for each bus will essentially be updated every 2 ticks)
+//   Tick 0: start read current (for Vdd/Vdn)
+//   Tick 1: process current, start voltage read (Vdd/Vdn)
+//   Tick 2: process voltage, start Vdd temp read
+//   Tick 3: process Vdd temp, start current read (Vdd/Vdn)
+//   Tick 4: process current, start voltage read (Vdd/Vdn)
+//   Tick 5: process voltage, start status read (Vdd/Vdn)
+//   Tick 6: process status, start current read (Vdd/Vdn)
+//   (back to tick 1)
+//
+//   Vdd/Vdn current and voltage are read every 3 ticks
+//   Vdd temperature and status is read every 6 ticks
 //
 // Thread: RealTime Loop
 //
 // End Function Specification
 void amec_update_avsbus_sensors(void)
 {
-
     static enum {
         AVSBUS_STATE_DISABLED           = 0,
         AVSBUS_STATE_INITIATE_READ      = 1,
