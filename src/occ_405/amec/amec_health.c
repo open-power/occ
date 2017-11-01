@@ -920,7 +920,7 @@ void amec_health_check_proc_timeout()
     {
         for(i=0; i<MAX_NUM_CORES; i++)
         {
-            if(!CORE_PRESENT(i))
+            if(!CORE_PRESENT(i) || CORE_OFFLINE(i))
             {
                 // If this core is not present, move on
                 continue;

@@ -387,7 +387,7 @@ void amec_slv_proc_voting_box(void)
 
     for (k=0; k<MAX_NUM_CORES; k++)
     {
-        if(CORE_PRESENT(k))
+        if( CORE_PRESENT(k) && !CORE_OFFLINE(k) )
         {
             l_core_freq = l_chip_fmax;
             l_core_reason = l_chip_reason;
@@ -556,11 +556,12 @@ void amec_slv_proc_voting_box(void)
             {
                 g_amec->proc[0].core_max_freq = l_core_freq;
             }
-        }
+        } // if core present and not offline
         else
         {
-            l_core_freq = 0;
-            l_core_reason = 0;
+            //Set f_request to 0 so this core is ignored in amec_slv_freq_smh()
+            g_amec->proc[0].core[k].f_request = 0;
+            g_amec->proc[0].core[k].f_reason = 0;
         }
     }//End of for loop
 
@@ -600,7 +601,8 @@ void amec_slv_freq_smh(void)
     uint8_t     core_idx = 0;   // loop through cores within each quad
     Pstate      pmax[MAXIMUM_QUADS] = {0}; // max pstate (min frequency) within each quad
     Pstate      pmax_chip = 0;  // highest Pstate (lowest frequency) across all quads
-    bool        l_atLeast1Core[MAXIMUM_QUADS] = {FALSE};  // at least 1 core present in quad
+    bool        l_atLeast1Core[MAXIMUM_QUADS] = {FALSE};  // at least 1 core present and online in quad
+    bool        l_atLeast1Quad = FALSE;    // at least 1 quad online
     static bool L_mfg_set_trace[MAXIMUM_QUADS] = {FALSE};
     static bool L_mfg_clear_trace[MAXIMUM_QUADS] = {FALSE};
 
@@ -619,6 +621,7 @@ void amec_slv_freq_smh(void)
             if(g_amec->proc[0].core[core_num].f_request != 0)
             {
                l_atLeast1Core[quad] = TRUE;
+               l_atLeast1Quad = TRUE;
                // The higher the pstate number, the lower the frequency
                if(pmax[quad] <  proc_freq2pstate(g_amec->proc[0].core[core_num].f_request))
                {
@@ -630,45 +633,49 @@ void amec_slv_freq_smh(void)
         }
     }
 
-    // check for mfg quad Pstate request and set Pstate for each quad
-    for (quad = 0; quad < MAXIMUM_QUADS; quad++)
+    // Skip determining new frequency if all cores in all quads are offline
+    if(l_atLeast1Quad)
     {
-        // set quad with no cores present to lowest frequency for the chip
-        if(l_atLeast1Core[quad] == FALSE)
-           pmax[quad] = pmax_chip;
-
-        // check if there is a mnfg Pstate request for this quad
-        if(g_amec->mnfg_parms.quad_pstate[quad] != 0xFF)
+        // check for mfg quad Pstate request and set Pstate for each quad
+        for (quad = 0; quad < MAXIMUM_QUADS; quad++)
         {
-           // use mnfg request if it is a lower frequency (higher pState)
-           if(g_amec->mnfg_parms.quad_pstate[quad] > pmax[quad])
-              pmax[quad] = g_amec->mnfg_parms.quad_pstate[quad];
+            // set quad with no cores present to lowest frequency for the chip
+            if(l_atLeast1Core[quad] == FALSE)
+               pmax[quad] = pmax_chip;
 
-           if(L_mfg_clear_trace[quad] == FALSE)
-              L_mfg_set_trace[quad] = TRUE;
-        }
-        else if(L_mfg_clear_trace[quad] == TRUE)
-        {
-            TRAC_INFO("amec_slv_freq_smh: mfg Quad %d Pstate request cleared. New Pstate = 0x%02x", quad, pmax[quad]);
-            L_mfg_clear_trace[quad] = FALSE;
-        }
+            // check if there is a mnfg Pstate request for this quad
+            if(g_amec->mnfg_parms.quad_pstate[quad] != 0xFF)
+            {
+               // use mnfg request if it is a lower frequency (higher pState)
+               if(g_amec->mnfg_parms.quad_pstate[quad] > pmax[quad])
+                  pmax[quad] = g_amec->mnfg_parms.quad_pstate[quad];
+
+               if(L_mfg_clear_trace[quad] == FALSE)
+                  L_mfg_set_trace[quad] = TRUE;
+            }
+            else if(L_mfg_clear_trace[quad] == TRUE)
+            {
+                TRAC_INFO("amec_slv_freq_smh: mfg Quad %d Pstate request cleared. New Pstate = 0x%02x", quad, pmax[quad]);
+                L_mfg_clear_trace[quad] = FALSE;
+            }
 
 #ifdef PROC_DEBUG
-        if (G_desired_pstate[quad] != pmax[quad])
-        {
-            TRAC_IMP("Updating Quad %d's Pstate to %d", quad, pmax[quad]);
-        }
+            if (G_desired_pstate[quad] != pmax[quad])
+            {
+                TRAC_IMP("Updating Quad %d's Pstate to %d", quad, pmax[quad]);
+            }
 #endif
-        // update quad pstate request
-        G_desired_pstate[quad] = pmax[quad];
+            // update quad pstate request
+            G_desired_pstate[quad] = pmax[quad];
 
-        if(L_mfg_set_trace[quad] == TRUE)
-        {
-            TRAC_INFO("amec_slv_freq_smh: mfg Quad %d Pstate request set = 0x%02x", quad, pmax[quad]);
-            L_mfg_set_trace[quad] = FALSE;
-            L_mfg_clear_trace[quad] = TRUE;
+            if(L_mfg_set_trace[quad] == TRUE)
+            {
+                TRAC_INFO("amec_slv_freq_smh: mfg Quad %d Pstate request set = 0x%02x", quad, pmax[quad]);
+                L_mfg_set_trace[quad] = FALSE;
+                L_mfg_clear_trace[quad] = TRUE;
+            }
         }
-    }
+    }  // if at least 1 core online
 }
 
 

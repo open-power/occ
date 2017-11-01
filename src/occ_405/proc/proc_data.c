@@ -86,6 +86,9 @@ uint32_t G_updated_core_mask = 0;
 // without error.
 uint32_t G_empath_error_core_mask = 0;
 
+//AMEC needs to know cores that are offline
+uint32_t G_core_offline_mask = 0;
+
 //Global G_present_cores is bitmask of all cores
 //(1 = present, 0 = not present. Core 0 has the most significant bit)
 uint32_t G_present_cores = 0;
@@ -128,6 +131,7 @@ void task_core_data( task_t * i_task )
     CoreData  * l_temp = NULL; // Used for pointer swapping
     bulk_core_data_task_t * l_bulk_core_data_ptr = (bulk_core_data_task_t *)i_task->data_ptr;
     ipc_core_data_parms_t * l_parms = (ipc_core_data_parms_t*)(l_bulk_core_data_ptr->gpe_req.cmd_data);
+    static uint32_t L_trace_core_failure = 0;
 
     do
     {
@@ -160,8 +164,8 @@ void task_core_data( task_t * i_task )
         //A request is not considered complete until both the engine job
         //has finished without error and any callback has run to completion.
 
-        if( async_request_completed(&l_bulk_core_data_ptr->gpe_req.request)
-            &&
+        if( async_request_completed(&l_bulk_core_data_ptr->gpe_req.request) &&
+            (l_parms->error.rc == 0) &&
             CORE_PRESENT(l_bulk_core_data_ptr->current_core) )
         {
             //If the previous GPE request succeeded then swap core_data_ptr
@@ -184,7 +188,7 @@ void task_core_data( task_t * i_task )
             //Core data has been collected so set the bit in global mask.
             //AMEC code will know which cores to update sensors for. AMEC is
             //responsible for clearing the bit later on.
-            G_updated_core_mask |= CORE0_PRESENT_MASK >> (l_bulk_core_data_ptr->current_core);
+            G_updated_core_mask |= (CORE0_PRESENT_MASK >> (l_bulk_core_data_ptr->current_core));
 
             // Presumptively clear the empath error mask
             G_empath_error_core_mask &=
@@ -196,6 +200,24 @@ void task_core_data( task_t * i_task )
         if( !CORE_PRESENT(l_bulk_core_data_ptr->current_core))
         {
             G_core_data_ptrs[l_bulk_core_data_ptr->current_core] = &G_core_data[MAX_NUM_FW_CORES+NUM_CORE_DATA_DOUBLE_BUF+NUM_CORE_DATA_EMPTY_BUF-1];
+        }
+        else if(l_parms->error.rc != 0)
+        {
+            // Check if failure is due to being offline (in stop 2 or greater)
+            if(l_parms->error.ffdc == PCB_ERROR_CHIPLET_OFFLINE)
+            {
+                // Mark core offline so it is ignored in control loops and to avoid health monitor logging error
+                G_core_offline_mask |= (CORE0_PRESENT_MASK >> (l_bulk_core_data_ptr->current_core));
+            }
+            else if( !(L_trace_core_failure & (1 << l_bulk_core_data_ptr->current_core)) )
+            {
+               // trace error, if it continues health monitor will see and log error
+               INTR_TRAC_ERR("task_core_data: core %d data collection failed RC[0x%08X] FFDC[0x%08X%08X]",
+                              l_bulk_core_data_ptr->current_core, l_parms->error.rc,
+                              (uint32_t)(l_parms->error.ffdc >> 32),
+                              (uint32_t)l_parms->error.ffdc);
+               L_trace_core_failure |= (1 << l_bulk_core_data_ptr->current_core);
+            }
         }
 
         //Update current core
@@ -217,6 +239,8 @@ void task_core_data( task_t * i_task )
             //1. Setup the get core data parms
             l_parms->core_num = l_bulk_core_data_ptr->current_core;
             l_parms->data = (CoreData*) l_bulk_core_data_ptr->core_data_ptr;
+            l_parms->error.error = 0;  // default no error
+            l_parms->error.ffdc = 0;
 
             // Static array to record the last timestamp a get_per_core_data task was
             // scheduled for a core.
@@ -242,13 +266,6 @@ void task_core_data( task_t * i_task )
                 if (G_get_per_core_data_max_schedule_intervals[l_current_core] < l_elapsed_us)
                 {
                     G_get_per_core_data_max_schedule_intervals[l_current_core] = l_elapsed_us;
-                }
-                // Also sniff if the request has actually completed, it is checked above but
-                // the schedule proceeds regardless which could be dangerous...
-                if (!async_request_completed(&l_bulk_core_data_ptr->gpe_req.request))
-                {
-                    INTR_TRAC_ERR("Async get_per_core_data task for core=%d not complete!",
-                             l_current_core);
                 }
             }
 
