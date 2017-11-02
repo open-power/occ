@@ -210,8 +210,6 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
         l_poll_rsp->ext_status.n_power = 1;
     }
 
-    // TODO RTC 165947: Sync request bit set here
-
     // Byte 3
     l_poll_rsp->occ_pres_mask   = G_sysConfigData.is_occ_present;
     // Byte 4
