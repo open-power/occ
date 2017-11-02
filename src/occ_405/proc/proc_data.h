@@ -50,9 +50,10 @@
 #define NUM_CORE_DATA_DOUBLE_BUF 2
 #define NUM_CORE_DATA_EMPTY_BUF  1
 
-#define LO_CORES_MASK       0xfff00000
-#define HI_CORES_MASK       0x000fff00
-#define HW_CORES_MASK       0xffffff00
+#define LO_CORES_MASK            0xfff00000
+#define HI_CORES_MASK            0x000fff00
+#define HW_CORES_MASK            0xffffff00
+#define QUAD0_CORES_PRESENT_MASK 0xf0000000
 
 enum eOccProcCores
 {
@@ -103,6 +104,9 @@ extern uint32_t G_present_cores;
 //AMEC needs to know when data for a core has been collected.
 extern uint32_t G_updated_core_mask;
 
+//AMEC needs to know when a core is offline
+extern uint32_t G_core_offline_mask;
+
 // External reference to empath error mask
 extern uint32_t G_empath_error_core_mask;
 
@@ -119,6 +123,17 @@ extern bool G_nest_dts_data_valid;
 // Evaluates to true if an empath collection error has occurred on a core
 #define CORE_EMPATH_ERROR(occ_core_id) \
         ((CORE0_PRESENT_MASK >> occ_core_id) & G_empath_error_core_mask)
+
+// Evaluates to true if the specified core is offline
+#define CORE_OFFLINE(occ_core_id) \
+         ((CORE0_PRESENT_MASK >> occ_core_id) & G_core_offline_mask)
+
+#define CLEAR_CORE_OFFLINE(occ_core_id) \
+         G_core_offline_mask &= ~(CORE0_PRESENT_MASK >> occ_core_id)
+
+// Evaluates to true if the specified quad has at least 1 active present core
+#define QUAD_ONLINE(occ_quad_id) \
+         ( (QUAD0_CORES_PRESENT_MASK >> (occ_quad_id*4)) & ((~G_core_offline_mask) & G_present_cores) )
 
 //Collect bulk core data for all cores in specified range
 void task_core_data( task_t * i_task );

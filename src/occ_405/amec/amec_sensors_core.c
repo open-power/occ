@@ -74,9 +74,14 @@ void amec_calc_droop_sensors(CoreData * i_core_data_ptr, uint8_t i_core);
 void amec_update_proc_core_sensors(uint8_t i_core)
 {
   CoreData  *l_core_data_ptr;
-  uint16_t  l_temp16 = 0;
   uint32_t  l_temp32 = 0;
+  uint16_t  l_core_temp = 0;
+  uint16_t  l_temp16 = 0;
+  uint16_t  l_core_util = 0;
+  uint16_t  l_core_freq = 0;
+  uint16_t  l_time_interval = 0;
   uint8_t   i = 0;
+  uint8_t   l_quad = i_core / 4;     // Quad this core resides in
 
   // Make sure the core is present, and that it has updated data.
   if(CORE_PRESENT(i_core) && CORE_UPDATED(i_core))
@@ -95,8 +100,8 @@ void amec_update_proc_core_sensors(uint8_t i_core)
     //-------------------------------------------------------
     // Util / Freq
     //-------------------------------------------------------
-    // Skip this update if there was an empath collection error
-    if (!CORE_EMPATH_ERROR(i_core))
+    // Skip this update if there was an empath collection error or if previously offline
+    if (!CORE_EMPATH_ERROR(i_core) && !CORE_OFFLINE(i_core))
     {
         amec_calc_freq_and_util_sensors(l_core_data_ptr,i_core);
     }
@@ -105,13 +110,16 @@ void amec_update_proc_core_sensors(uint8_t i_core)
     // Performance counter - This function should be called
     // after amec_calc_freq_and_util_sensors().
     //-------------------------------------------------------
-    amec_calc_dps_util_counters(i_core);
+    if(!CORE_OFFLINE(i_core))
+    {
+        amec_calc_dps_util_counters(i_core);
+    }
 
     //-------------------------------------------------------
     // IPS
     //-------------------------------------------------------
     // Skip this update if there was an empath collection error
-    if (!CORE_EMPATH_ERROR(i_core))
+    if (!CORE_EMPATH_ERROR(i_core) && !CORE_OFFLINE(i_core))
     {
         amec_calc_ips_sensors(l_core_data_ptr,i_core);
     }
@@ -162,7 +170,83 @@ void amec_update_proc_core_sensors(uint8_t i_core)
     l_temp16 = (uint16_t)(G_dcom_slv_inbox_doorbell_rx.tod>>45);
     // hi 3 bits in 0.796 day resolution with 512MHz TOD clock
     sensor_update( AMECSENSOR_PTR(TODclock2), l_temp16);
-  }
+
+    // Core must be online that it was updated and now that the sensors have been updated make sure
+    // the core offline bit is off for this core.  Clearing this prior to updating the temperature
+    // sensors may result in a false processor timeout error in health monitor
+    CLEAR_CORE_OFFLINE(i_core);
+  } // if core present and updated
+
+  else if(CORE_OFFLINE(i_core))
+  {
+    // core wasn't updated due to being offline, update sensors accordingly
+
+    // Determine "core" temperature that will be returned in the poll for fan control
+    // If there is at least 1 core online within the same quad use the quad temp else use the nest
+    if(QUAD_ONLINE(l_quad))
+    {
+       l_core_temp = AMECSENSOR_ARRAY_PTR(TEMPQ0, l_quad)->sample;
+    }
+    else
+    {
+       l_core_temp = getSensorByGsid(TEMPNEST)->sample;
+    }
+    if(l_core_temp)
+    {
+       sensor_update(AMECSENSOR_ARRAY_PTR(TEMPPROCTHRMC0,i_core), l_core_temp);
+    }
+
+    // Update utilization and frequency sensors to 0
+    sensor_update(AMECSENSOR_ARRAY_PTR(NUTILC0, i_core), 0);
+    sensor_update(AMECSENSOR_ARRAY_PTR(UTILC0, i_core), 0);
+    sensor_update(AMECSENSOR_ARRAY_PTR(IPSC0, i_core), 0);
+    sensor_update(AMECSENSOR_ARRAY_PTR(NOTBZEC0, i_core), 0);
+    sensor_update(AMECSENSOR_ARRAY_PTR(NOTFINC0, i_core), 0);
+    sensor_update(AMECSENSOR_ARRAY_PTR(FREQAC0, i_core), 0);
+    for(i=0; i<MAX_THREADS_PER_CORE; i++)
+    {
+      g_amec->proc[0].core[i_core].thread[i].util4ms_thread = 0;
+    }
+
+    // Make updates for rolling average
+    // Determine the time interval for the rolling average calculation
+    l_time_interval = AMEC_DPS_SAMPLING_RATE * AMEC_IPS_AVRG_INTERVAL;
+
+    // Increment sample count
+    if(g_amec->proc[0].core[i_core].sample_count < UINT16_MAX)
+    {
+       g_amec->proc[0].core[i_core].sample_count++;
+    }
+
+    if(g_amec->proc[0].core[i_core].sample_count == l_time_interval)
+    {
+        // Increase resolution of the UTIL accumulator by two decimal places
+        l_temp32 = (uint32_t)AMECSENSOR_ARRAY_PTR(UTILC0,i_core)->accumulator * 100;
+        // Calculate average utilization of this core
+        l_temp32 = l_temp32 / g_amec->proc[0].core[i_core].sample_count;
+        g_amec->proc[0].core[i_core].avg_util = l_temp32;
+
+        // Increase resolution of the FREQA accumulator by two decimal places
+        l_temp32 = (uint32_t)AMECSENSOR_ARRAY_PTR(FREQAC0,i_core)->accumulator * 100;
+        // Calculate average frequency of this core
+        l_temp32 = l_temp32 / g_amec->proc[0].core[i_core].sample_count;
+        g_amec->proc[0].core[i_core].avg_freq = l_temp32;
+    }
+    else if(g_amec->proc[0].core[i_core].sample_count > l_time_interval)
+    {
+        // Calculate average utilization for this core
+        l_temp32 = (uint32_t) g_amec->proc[0].core[i_core].avg_util;
+        l_temp32 = l_temp32 * (l_time_interval-1);
+        l_temp32 = l_temp32 + l_core_util*100;
+        g_amec->proc[0].core[i_core].avg_util = l_temp32 / l_time_interval;
+
+        // Calculate average frequency for this core
+        l_temp32 = (uint32_t) g_amec->proc[0].core[i_core].avg_freq;
+        l_temp32 = l_temp32 * (l_time_interval-1);
+        l_temp32 = l_temp32 + l_core_freq*100;
+        g_amec->proc[0].core[i_core].avg_freq = l_temp32 / l_time_interval;
+    }
+  } // else if core offline
 }
 
 // Function Specification

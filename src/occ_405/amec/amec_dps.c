@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -84,7 +84,7 @@ void amec_dps_update_core_util(void)
         // Update moving average of util_slack and util_active for all cores
         for(l_idx=0; l_idx<MAX_NUM_CORES; l_idx++)
         {
-            if (!CORE_PRESENT(l_idx))
+            if (!CORE_PRESENT(l_idx) || CORE_OFFLINE(l_idx))
             {
                 continue; //nothing to do if the core's disabled
             }
@@ -351,7 +351,7 @@ void amec_dps_main(void)
     for (l_idx=0; l_idx<MAX_NUM_CORES; l_idx++)
     {
         // Find the first valid core and send its frequency
-        if (CORE_PRESENT(l_idx))
+        if (CORE_PRESENT(l_idx) && !CORE_OFFLINE(l_idx))
         {
             G_dcom_slv_outbox_tx.factual =
                 AMECSENSOR_ARRAY_PTR(FREQREQC0,l_idx)->sample;
