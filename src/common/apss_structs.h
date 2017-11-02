@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -35,7 +35,7 @@
 // List of supported APSS Modes set in occ_gpe0/apss_init.c
 #define APSS_MODE_COMPOSITE     0
 #define APSS_MODE_AUTO2         1
-
+#define MAX_APSS_ADC_CHANNELS   16
 
 /* This data structure holds the common args data structures between the  */
 /* 405 and the GPE0, used in IPC communications.                          */

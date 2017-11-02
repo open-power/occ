@@ -331,5 +331,12 @@ extern const char G_occ_buildname[16];
 
 int memcmp ( const void * ptr1, const void * ptr2, size_t num );
 
+// struct to hold error history data
+typedef struct __attribute__ ((packed))
+{
+    uint8_t error_id;
+    uint8_t error_count;
+} error_history_count_t;
+
 #endif //_OCC_COMMON_H
 

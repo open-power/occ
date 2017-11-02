@@ -103,12 +103,13 @@
 #define DCOM_TRACE_NOT_IDLE_AFTER_CONSEC_TIMES 3
 
 // general defines
-#define TOD_SIZE 6
-#define NUM_TOD_SENSORS 3
-#define SLV_INBOX_RSV_SIZE 150
-#define SLV_MAILBOX_SIZE 32
-#define SLV_OUTBOX_RSV_SIZE 618
-#define DOORBELL_RSV_SIZE 1
+#define TOD_SIZE            6
+#define NUM_TOD_SENSORS     3
+#define SLV_INBOX_RSV_SIZE  150
+#define SLV_MAILBOX_SIZE    32
+#define SLV_OUTBOX_RSV_SIZE 602
+#define DOORBELL_RSV_SIZE   1
+#define DCOM_MAX_ERRH_ENTRIES    8
 
 #define DCOM_250us_GAP 1
 #define DCOM_4MS_GAP 8
@@ -212,7 +213,7 @@ typedef struct __attribute__ ((packed))
     uint16_t tempprocavg;                                        // [172]
     uint16_t tempprocthermal;                                    // [174]
     uint16_t utilcy[MAX_CORES];                                  // [176]
-    uint16_t vrfan;                                              // [224]
+    uint16_t tempvdd;                                            // [224]
     uint16_t reserved2;                                          // [226]
     uint16_t mrd2msp0mx[MAX_NUM_MEM_CONTROLLERS];                // [228]
     uint16_t mwr2msp0mx[MAX_NUM_MEM_CONTROLLERS];                // [244]
@@ -230,10 +231,12 @@ typedef struct __attribute__ ((packed))
     // Factual (i.e., actual frequency requested by this OCC slave)
     uint16_t factual;                                            // [372]
 
+    // Error history counts
+    error_history_count_t errhCount[DCOM_MAX_ERRH_ENTRIES];      // [374] - 16 bytes
     // Reserved Bytes
     union
     {
-        uint8_t  reserved[SLV_OUTBOX_RSV_SIZE];                  // [374] - 618 bytes
+        uint8_t  reserved[SLV_OUTBOX_RSV_SIZE];                  // [390] - 602 bytes
         struct __attribute__ ((packed))
         {
             uint8_t _reserved_1;

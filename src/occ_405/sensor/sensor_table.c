@@ -559,7 +559,7 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   MINI_SENSOR_PTR( CURVDD,          NULL),
   MINI_SENSOR_PTR( CURVDN,          NULL),
   MINI_SENSOR_PTR( VRMPROCOT,       NULL),
-  MINI_SENSOR_PTR( TEMPVDD,         NULL),
+  MINI_SENSOR_PTR( TEMPVDD,         &G_dcom_slv_outbox_tx.tempvdd),
 
   // ------------------------------------------------------
   // Core Sensors (24 of each)

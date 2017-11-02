@@ -51,6 +51,9 @@ dcom_slv_outbox_doorbell_t G_dcom_slv_outbox_doorbell_tx;
 STATIC_ASSERT(  (NUM_BYTES_IN_SLAVE_OUTBOX != (sizeof(G_dcom_slv_outbox_tx)))  );
 uint32_t G_slave_pbax_rc = 0;
 
+// Access to the global error history count array
+extern uint8_t G_error_history[ERR_HISTORY_SIZE];
+
 // Function Specification
 //
 // Name: dcom_build_slv_outbox
@@ -60,12 +63,12 @@ uint32_t G_slave_pbax_rc = 0;
 //              Build the slave outboxes so slave can send to master
 //
 // End Function Specification
-
 uint32_t dcom_build_slv_outbox(void)
 {
     // Locals
     uint32_t l_addr_of_slv_outbox_in_main_mem = 0;
-
+    uint32_t l_errh_idx = 0;
+    uint8_t  l_num_errh_added = 0;
     static uint8_t      L_seq = 0xFF;
 
     L_seq++;
@@ -89,6 +92,24 @@ uint32_t dcom_build_slv_outbox(void)
     G_dcom_slv_outbox_doorbell_tx.active_node_pcap = g_amec->pcap.active_node_pcap;
     G_dcom_slv_outbox_doorbell_tx.addr_slv_outbox_buffer = l_addr_of_slv_outbox_in_main_mem;
 
+    // Collect the error history counts to send to master
+    for( l_errh_idx = 0; l_errh_idx < ERR_HISTORY_SIZE; l_errh_idx++ )
+    {
+        if( G_error_history[l_errh_idx] > 0 )
+        {
+            G_dcom_slv_outbox_tx.errhCount[l_num_errh_added].error_id =
+                                                             l_errh_idx;
+            G_dcom_slv_outbox_tx.errhCount[l_num_errh_added].error_count =
+                                                G_error_history[l_errh_idx];
+            l_num_errh_added++;
+
+            // make sure we only add up to 8 error histories
+            if( l_num_errh_added == DCOM_MAX_ERRH_ENTRIES )
+            {
+                break;
+            }
+        }
+    }
 
     return l_addr_of_slv_outbox_in_main_mem;
 }

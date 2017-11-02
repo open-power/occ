@@ -40,10 +40,13 @@ extern amec_sys_t g_amec_sys;
 
 // chom timer
 uint32_t g_chom_gen_periodic_log_timer;
+
 // track which power mode has been during the polling period
 uint8_t  g_chom_pwr_modes[OCC_INTERNAL_MODE_MAX_NUM]; // Nominal, SPS, DPS, DPS-MP, FFO
+
 // force immediate chom log flag
 uint8_t  g_chom_force;
+
 // chom data log
 ChomLogData_t   g_chom_log;
 ChomLogData_t * g_chom = &g_chom_log;
@@ -54,57 +57,47 @@ STATIC_ASSERT( sizeof(ChomLogData_t) > CHOM_LOG_DATA_MAX );
 
 // Chom Sensors Table
 //   Some of the chom sensors need multiple mini-sensor to calculate
-//   the max, summstion of temperature or bandwidth
+//   the max, summation of temperature or bandwidth
 //   mark those mini-sensor "NULL" and will be updated
 //   from "chom_update_sensors()"
 
 const uint16_t * g_chom_sensor_table[CHOM_NUM_OF_SENSORS] =
 {   // Node total power (DC)
     &g_amec_sys.sys.pwrsys.sample,
-    // Socket power
-    &g_amec_sys.proc[0].pwrproc.sample,
-    &G_dcom_slv_outbox_rx[1].pwrproc,
-    &G_dcom_slv_outbox_rx[2].pwrproc,
-    &G_dcom_slv_outbox_rx[3].pwrproc,
-    &G_dcom_slv_outbox_rx[4].pwrproc,
-    &G_dcom_slv_outbox_rx[5].pwrproc,
-    &G_dcom_slv_outbox_rx[6].pwrproc,
-    &G_dcom_slv_outbox_rx[7].pwrproc,
-    // Memory power
-    &G_dcom_slv_outbox_rx[0].pwr250usmemp0,
-    &G_dcom_slv_outbox_rx[1].pwr250usmemp0,
-    &G_dcom_slv_outbox_rx[2].pwr250usmemp0,
-    &G_dcom_slv_outbox_rx[3].pwr250usmemp0,
-    &G_dcom_slv_outbox_rx[4].pwr250usmemp0,
-    &G_dcom_slv_outbox_rx[5].pwr250usmemp0,
-    &G_dcom_slv_outbox_rx[6].pwr250usmemp0,
-    &G_dcom_slv_outbox_rx[7].pwr250usmemp0,
-    // Fan power
-    &g_amec_sys.fan.pwr250usfan.sample,
+    // APSS sensors 1 per channel (16 total)
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
     // Processor frequency
     &G_dcom_slv_outbox_rx[0].freqa,
     &G_dcom_slv_outbox_rx[1].freqa,
     &G_dcom_slv_outbox_rx[2].freqa,
     &G_dcom_slv_outbox_rx[3].freqa,
-    &G_dcom_slv_outbox_rx[4].freqa,
-    &G_dcom_slv_outbox_rx[5].freqa,
-    &G_dcom_slv_outbox_rx[6].freqa,
-    &G_dcom_slv_outbox_rx[7].freqa,
     // Processor utilization sensor
     &G_dcom_slv_outbox_rx[0].util,
     &G_dcom_slv_outbox_rx[1].util,
     &G_dcom_slv_outbox_rx[2].util,
     &G_dcom_slv_outbox_rx[3].util,
-    &G_dcom_slv_outbox_rx[4].util,
-    &G_dcom_slv_outbox_rx[5].util,
-    &G_dcom_slv_outbox_rx[6].util,
-    &G_dcom_slv_outbox_rx[7].util,
-    // Max Core temperature for all processors in the node
-    NULL,
-    // Max Centaur temperature for all Centaurs in the node
-    NULL,
-    // Max Dimm temperature for all Dimms in the node
-    NULL,
+    // Processor temperature sensors
+    &G_dcom_slv_outbox_rx[0].tempprocthermal,
+    &G_dcom_slv_outbox_rx[1].tempprocthermal,
+    &G_dcom_slv_outbox_rx[2].tempprocthermal,
+    &G_dcom_slv_outbox_rx[3].tempprocthermal,
+    // Centaur temperature sensors
+    &G_dcom_slv_outbox_rx[0].temp2mscent,
+    &G_dcom_slv_outbox_rx[1].temp2mscent,
+    &G_dcom_slv_outbox_rx[2].temp2mscent,
+    &G_dcom_slv_outbox_rx[3].temp2mscent,
+    // DIMM temperature sensors
+    &G_dcom_slv_outbox_rx[0].tempdimmthrm,
+    &G_dcom_slv_outbox_rx[1].tempdimmthrm,
+    &G_dcom_slv_outbox_rx[2].tempdimmthrm,
+    &G_dcom_slv_outbox_rx[3].tempdimmthrm,
+    // VRM VDD temperatures
+    // TEMPVDDP0 ~ TEMPVDDP7
+    &G_dcom_slv_outbox_rx[0].tempvdd,
+    &G_dcom_slv_outbox_rx[1].tempvdd,
+    &G_dcom_slv_outbox_rx[2].tempvdd,
+    &G_dcom_slv_outbox_rx[3].tempvdd,
     // Instructions per second sensor
     NULL,
     // Memory bandwidth for process memory controller
@@ -116,15 +109,8 @@ const uint16_t * g_chom_sensor_table[CHOM_NUM_OF_SENSORS] =
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
     // P3M0 ~ P3M7
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-    // P4M0 ~ P4M7
-    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-    // P5M0 ~ P5M7
-    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-    // P6M0 ~ P6M7
-    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-    // P7M0 ~ P7M7
-    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
 };
+
 
 // Function Specification
 //
@@ -176,13 +162,16 @@ void chom_data_reset()
 // End Function Specification
 void chom_update_sensors()
 {
-    uint16_t l_max_core_temp = 0;
-    uint16_t l_max_cent_temp = 0;
-    uint16_t l_max_dimm_temp = 0;
     uint32_t l_mips = 0;
     uint16_t l_mem_rw = 0;
     uint16_t l_sample = 0;
-    uint16_t i = 0, j = 0, k = 0;
+
+    static uint32_t L_memBWNumSamples[NUM_CHOM_MODES][MAX_NUM_MEM_CONTROLLERS] = {{0}};
+
+    // Use FMF as default
+    static uint32_t * L_curNumSamplePtr = L_memBWNumSamples[CHOM_MODE_FMF];
+
+    uint16_t i = 0, j = 0;
 
     // Is the current mode different than previous poll
     if (g_chom->nodeData.curPwrMode != CURRENT_MODE())
@@ -207,39 +196,48 @@ void chom_update_sensors()
         {
             case OCC_MODE_NOMINAL:
                 g_chom_pwr_modes[OCC_INTERNAL_MODE_NOM] = 1;
+                L_curNumSamplePtr = L_memBWNumSamples[CHOM_MODE_NOMINAL];
                 break;
 
             case OCC_MODE_PWRSAVE:
                 g_chom_pwr_modes[OCC_INTERNAL_MODE_SPS] = 1;
+                L_curNumSamplePtr = L_memBWNumSamples[CHOM_MODE_SPS];
                 break;
 
             case OCC_MODE_DYN_POWER_SAVE:
                 g_chom_pwr_modes[OCC_INTERNAL_MODE_DPS] = 1;
+                L_curNumSamplePtr = L_memBWNumSamples[CHOM_MODE_DPS];
                 break;
 
             case OCC_MODE_DYN_POWER_SAVE_FP:
                 g_chom_pwr_modes[OCC_INTERNAL_MODE_DPS_MP] = 1;
+                L_curNumSamplePtr = L_memBWNumSamples[CHOM_MODE_DPS_MP];
                 break;
 
             case OCC_MODE_FFO:
                 g_chom_pwr_modes[OCC_INTERNAL_MODE_FFO] = 1;
+                L_curNumSamplePtr = L_memBWNumSamples[CHOM_MODE_FFO];
                 break;
 
             case OCC_MODE_NOM_PERFORMANCE:
                 g_chom_pwr_modes[OCC_INTERNAL_MODE_NOM_PERF] = 1;
+                L_curNumSamplePtr = L_memBWNumSamples[CHOM_MODE_NOM_PERF];
                 break;
 
             case OCC_MODE_MAX_PERFORMANCE:
                 g_chom_pwr_modes[OCC_INTERNAL_MODE_MAX_PERF] = 1;
+                L_curNumSamplePtr = L_memBWNumSamples[CHOM_MODE_MAX_PERF];
                 break;
 
             case OCC_MODE_FMF:
                 g_chom_pwr_modes[OCC_INTERNAL_MODE_FMF] = 1;
+                L_curNumSamplePtr = L_memBWNumSamples[CHOM_MODE_FMF];
                 break;
 
             default:
                 TRAC_INFO("chom_update_sensors: Cannot record chom data for mode 0x%02X",
                           g_chom->sensorData[0].pwrMode.mode);
+                L_curNumSamplePtr = L_memBWNumSamples[CHOM_MODE_FMF];
                 break;
         }
     }
@@ -247,58 +245,87 @@ void chom_update_sensors()
     // update number of samples
     g_chom->sensorData[0].pwrMode.numOfSamples++;
 
-    // update chom sensors which has multiple mini-sensor source
-    for (i = 0 ; i<MAX_OCCS ; i++)
+    // update APSS
+    uint16_t l_apss_idx = CHOMPWRAPSSCH0;
+    uint16_t l_current_channel = 0;
+    for( i = 0; i < MAX_APSS_ADC_CHANNELS; i++ )
     {
-        if (G_dcom_slv_outbox_rx[i].tempprocthermal > l_max_core_temp)
-        {
-            l_max_core_temp = G_dcom_slv_outbox_rx[i].tempprocthermal;
-        }
+        // Transfer data from AMEC sensor to CHOM sensor
+        l_current_channel = AMECSENSOR_ARRAY_PTR( PWRAPSSCH0, i )->sample;
+       // TRAC_INFO("channel %d reading: %d", i, l_current_channel);
+        g_chom->sensorData[0].sensor[l_apss_idx].sample = l_current_channel;
 
-        if (G_dcom_slv_outbox_rx[i].temp2mscent > l_max_cent_temp)
-        {
-            l_max_cent_temp = G_dcom_slv_outbox_rx[i].temp2mscent;
-        }
-
-        if (G_dcom_slv_outbox_rx[i].tempdimmthrm > l_max_dimm_temp)
-        {
-            l_max_dimm_temp = G_dcom_slv_outbox_rx[i].tempdimmthrm;
-        }
+        // Send the corresponding function ID in the node data
+        g_chom->nodeData.channelFuncIds[i] =
+                         G_apss_ch_to_function[i];
+        l_apss_idx++;
     }
-    g_chom->sensorData[0].sensor[CHOMTEMPPROC].sample = l_max_core_temp;
-    g_chom->sensorData[0].sensor[CHOMTEMPCENT].sample = l_max_cent_temp;
-    g_chom->sensorData[0].sensor[CHOMTEMPDIMM].sample = l_max_dimm_temp;
+
 
     // update MIPS
-    k = 0;
-    for (i=0 ; i<MAX_OCCS ; i++)
+    uint16_t l_mips_count = 0;
+    uint16_t l_mem_idx = CHOMBWP0M0;
+
+    // Loop through OCCs updating chom sensors
+    for ( i = 0; i < CHOM_MAX_OCCS; i++ )
     {
-        if (0 != G_dcom_slv_outbox_rx[i].ips4msp0)
+        // count MIPS
+        if ( 0 != G_dcom_slv_outbox_rx[i].ips4msp0 )
         {
             l_mips += G_dcom_slv_outbox_rx[i].ips4msp0;
-            k++;
+            l_mips_count++;
         }
-    }
-    if (k != 0)
-    {
-        g_chom->sensorData[0].sensor[CHOMIPS].sample = (l_mips/k);
+
+        // update memory bandwidth
+        for ( j = 0; j < MAX_NUM_MEM_CONTROLLERS; j++)
+        {
+            l_mem_rw = G_dcom_slv_outbox_rx[i].mrd2msp0mx[j] +
+                       G_dcom_slv_outbox_rx[i].mwr2msp0mx[j];
+
+            // If l_mem_rw == 0, do not add to sensor
+            if(l_mem_rw != 0)
+            {
+                g_chom->sensorData[0].sensor[l_mem_idx].sample = l_mem_rw;
+                L_curNumSamplePtr[j]++;
+
+                // Calculate the averages/min/max for the memory bandwidth sensors
+                l_sample = g_chom->sensorData[0].sensor[l_mem_idx].sample;
+
+                if (g_chom->sensorData[0].sensor[l_mem_idx].sampleMin > l_sample)
+                {
+                    g_chom->sensorData[0].sensor[l_mem_idx].sampleMin = l_sample;
+                }
+                if (g_chom->sensorData[0].sensor[l_mem_idx].sampleMax < l_sample)
+                {
+                    g_chom->sensorData[0].sensor[l_mem_idx].sampleMax = l_sample;
+                }
+
+                g_chom->sensorData[0].sensor[l_mem_idx].accumulator += l_sample;
+                g_chom->sensorData[0].sensor[l_mem_idx].average =
+                                 (g_chom->sensorData[0].sensor[l_mem_idx].accumulator /
+                                  L_curNumSamplePtr[j]);
+            }
+            l_mem_idx++;
+        }
     }
 
-    // update memory bandwidth
-    k = CHOMBWP0M0;
-    for (i=0 ; i<MAX_OCCS ; i++)
+    // Update MIPS
+    if (l_mips_count != 0)
     {
-        for (j=0 ; j<MAX_NUM_MEM_CONTROLLERS ; j++)
-        {
-            l_mem_rw = G_dcom_slv_outbox_rx[i].mrd2msp0mx[j]+G_dcom_slv_outbox_rx[i].mwr2msp0mx[j];
-            g_chom->sensorData[0].sensor[k].sample = l_mem_rw;
-            k++;
-        }
+        g_chom->sensorData[0].sensor[CHOMIPS].sample = (l_mips/l_mips_count);
     }
 
     // loop through all sensors and update data from mini-sensors
     for (i = 0 ; i<CHOM_NUM_OF_SENSORS ; i++)
-    {   // update sample, min, max, average sensor data
+    {
+        // Skip memory bandwidth controllers since handled above
+        if( i == CHOMBWP0M0 )
+        {
+            i += (MAX_NUM_MEMORY_SENSORS-1);
+            continue;
+        }
+
+        // update sample, min, max, average sensor data
         if (NULL != g_chom_sensor_table[i])
         {
             // directly mapping to mini-sensor
@@ -319,6 +346,46 @@ void chom_update_sensors()
         g_chom->sensorData[0].sensor[i].average = (g_chom->sensorData[0].sensor[i].accumulator/
                                                    g_chom->sensorData[0].pwrMode.numOfSamples);
     }
+
+    // Collect the error history data
+    int proc_idx = 0, errh_idx = 0, slv_idx = 0, entry_idx = 0;
+
+    // get the master proc index
+    uint8_t master_id = G_pbax_id.chip_id;
+
+    // Iterate through procs
+    for( proc_idx = 0; proc_idx < CHOM_MAX_OCCS; proc_idx++ )
+    {
+        // If we are on the master proc, skip it since it is already
+        // present in the call home log
+        if( proc_idx == master_id )
+        {
+            continue;
+        }
+        else
+        {
+            // Iterate through each proc's error history counts
+            for( errh_idx = 0; errh_idx < DCOM_MAX_ERRH_ENTRIES; errh_idx++)
+            {
+                // If the entry id is 0, we have reached the end of error history
+                // counts for this proc
+                // If entry_idx is 4, we have reached our limit of entries to collect
+                if((G_dcom_slv_outbox_rx[proc_idx].errhCount[errh_idx].error_id == 0) ||
+                   (entry_idx >= CHOM_MAX_ERRH_ENTRIES))
+                {
+                    break;
+                }
+                else
+                {
+                    // Add the error history to the chom data
+                    g_chom->nodeData.errhCounts[slv_idx][entry_idx] =
+                        G_dcom_slv_outbox_rx[proc_idx].errhCount[errh_idx];
+                    slv_idx++;
+                    entry_idx++;
+                }
+            }
+        }
+    }
 }
 
 
@@ -336,7 +403,7 @@ void chom_gen_periodic_log()
     errlHndl_t     l_errlHndl       = NULL;
 
     TRAC_INFO("Enter chom_gen_periodic_log");
-
+    TRAC_INFO("chom size = %d", sizeof(*g_chom));
     // update total time
     g_chom->nodeData.totalTime = g_chom_gen_periodic_log_timer;
 

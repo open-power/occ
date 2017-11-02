@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/thread/chom.h $                                       */
+/* $Source: src/occ_405/thread/chom.h $                                   */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -28,61 +28,70 @@
 
 #include <occ_common.h>
 #include <trac_interface.h>
+#include <apss.h>
 
 #define  CHOM_GEN_LOG_PERIODIC_TIME     86400 // seconds in a day
-#define  CHOM_VERSION                   0x00
+#define  CHOM_VERSION                   0x01
 // Max size of chom data log
 #define  CHOM_LOG_DATA_MAX              3072
-
-// List of call home sensors
+// Max number of memory bandwidth CHOM sensors
+#define  MAX_NUM_MEMORY_SENSORS         32
+// Max number of procs Call Home will get data for
+#define CHOM_MAX_OCCS                   4
+// Max number of error history entries to add to all home log
+#define CHOM_MAX_ERRH_ENTRIES            4
+// List of call home sensors (Max 126)
 enum
 {
     // Node total power (DC)
     CHOMPWR                = 0,
-    // Socket power
-    CHOMPWRS0,
-    CHOMPWRS1,
-    CHOMPWRS2,
-    CHOMPWRS3,
-    CHOMPWRS4,
-    CHOMPWRS5,
-    CHOMPWRS6,
-    CHOMPWRS7,
-    // Memory power
-    CHOMPWRM0,
-    CHOMPWRM1,
-    CHOMPWRM2,
-    CHOMPWRM3,
-    CHOMPWRM4,
-    CHOMPWRM5,
-    CHOMPWRM6,
-    CHOMPWRM7,
-    // Fan power
-    CHOMPWRFAN,
+    // APSS Channels
+    CHOMPWRAPSSCH0,
+    CHOMPWRAPSSCH1,
+    CHOMPWRAPSSCH2,
+    CHOMPWRAPSSCH3,
+    CHOMPWRAPSSCH4,
+    CHOMPWRAPSSCH5,
+    CHOMPWRAPSSCH6,
+    CHOMPWRAPSSCH7,
+    CHOMPWRAPSSCH8,
+    CHOMPWRAPSSCH9,
+    CHOMPWRAPSSCH10,
+    CHOMPWRAPSSCH11,
+    CHOMPWRAPSSCH12,
+    CHOMPWRAPSSCH13,
+    CHOMPWRAPSSCH14,
+    CHOMPWRAPSSCH15,
     // Processor frequency
     CHOMFREQP0,
     CHOMFREQP1,
     CHOMFREQP2,
     CHOMFREQP3,
-    CHOMFREQP4,
-    CHOMFREQP5,
-    CHOMFREQP6,
-    CHOMFREQP7,
     // Processor utilization sensor
     CHOMUTILP0,
     CHOMUTILP1,
     CHOMUTILP2,
     CHOMUTILP3,
-    CHOMUTILP4,
-    CHOMUTILP5,
-    CHOMUTILP6,
-    CHOMUTILP7,
-    // Max core temperature for all processors in the node
-    CHOMTEMPPROC,
-    // Max Centaur temperature for all Centaurs in the node
-    CHOMTEMPCENT,
-    // Max Dimm temperature for all Dimms in the node
-    CHOMTEMPDIMM,
+    // Proc temperatures across all nodes
+    CHOMTEMPPROC0,
+    CHOMTEMPPROC1,
+    CHOMTEMPPROC2,
+    CHOMTEMPPROC3,
+    // Centaur temperature for all Centaurs in the node
+    CHOMTEMPCENTP0,
+    CHOMTEMPCENTP1,
+    CHOMTEMPCENTP2,
+    CHOMTEMPCENTP3,
+    // Dimm temperature for all Dimms in the node
+    CHOMTEMPDIMMP0,
+    CHOMTEMPDIMMP1,
+    CHOMTEMPDIMMP2,
+    CHOMTEMPDIMMP3,
+    // VRM VDD temperature per proc
+    CHOMTEMPVDDP0,
+    CHOMTEMPVDDP1,
+    CHOMTEMPVDDP2,
+    CHOMTEMPVDDP3,
     // Instructions per second sensor
     CHOMIPS,
     // Memory bandwidth for process memory controller
@@ -118,43 +127,23 @@ enum
     CHOMBWP3M5,
     CHOMBWP3M6,
     CHOMBWP3M7,
-    CHOMBWP4M0,
-    CHOMBWP4M1,
-    CHOMBWP4M2,
-    CHOMBWP4M3,
-    CHOMBWP4M4,
-    CHOMBWP4M5,
-    CHOMBWP4M6,
-    CHOMBWP4M7,
-    CHOMBWP5M0,
-    CHOMBWP5M1,
-    CHOMBWP5M2,
-    CHOMBWP5M3,
-    CHOMBWP5M4,
-    CHOMBWP5M5,
-    CHOMBWP5M6,
-    CHOMBWP5M7,
-    CHOMBWP6M0,
-    CHOMBWP6M1,
-    CHOMBWP6M2,
-    CHOMBWP6M3,
-    CHOMBWP6M4,
-    CHOMBWP6M5,
-    CHOMBWP6M6,
-    CHOMBWP6M7,
-    CHOMBWP7M0,
-    CHOMBWP7M1,
-    CHOMBWP7M2,
-    CHOMBWP7M3,
-    CHOMBWP7M4,
-    CHOMBWP7M5,
-    CHOMBWP7M6,
-    CHOMBWP7M7,
-
     // The number of chom sensors reported
     CHOM_NUM_OF_SENSORS
 };
 
+enum chom_supported_modes
+{
+    CHOM_MODE_NOMINAL,
+    CHOM_MODE_SPS,
+    CHOM_MODE_DPS,
+    CHOM_MODE_DPS_MP,
+    CHOM_MODE_FFO,
+    CHOM_MODE_NOM_PERF,
+    CHOM_MODE_MAX_PERF,
+    CHOM_MODE_FMF,
+    // number of modes required to run Call home
+    NUM_CHOM_MODES
+};
 // Call home sensor Structure
 struct ChomSensor
 {
@@ -167,14 +156,6 @@ struct ChomSensor
 
 typedef struct ChomSensor ChomSensor_t;
 
-// CPI data structure
-struct ChomCpiData
-{
-    uint8_t     proc;
-    uint32_t    cpi;
-}__attribute__ ((__packed__));
-
-typedef struct ChomCpiData ChomCpiData_t;
 
 // Power mode structure
 struct ChomPwrMode
@@ -193,8 +174,10 @@ struct ChomNodeData
     uint8_t        curPwrMode;                    // the current power mode at the time of the polling event
     uint32_t       totalTime;                     // duration of the polling period
     uint8_t        modeInLog;                     // the number of different power mode in the polling period
-    ChomCpiData_t  cpiData[MAX_OCCS];             // Chip Packing Interface data, 5 bytes per processor
+    uint8_t        channelFuncIds[MAX_APSS_ADC_CHANNELS];
     uint16_t       numSensors;                    // the number of sensors for which call home data was collected
+    // error history counts. Only collect on up to 3 slaves, excluding master
+    error_history_count_t errhCounts[CHOM_MAX_OCCS-1][CHOM_MAX_ERRH_ENTRIES];
 } __attribute__ ((__packed__));
 
 typedef struct ChomNodeData ChomNodeData_t;
