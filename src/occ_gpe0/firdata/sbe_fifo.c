@@ -25,8 +25,25 @@
 #include "sbe_fifo.h"
 #include <fsi.h>
 #include <native.h>
+#include <string.h>
 
 extern void busy_wait(uint32_t t_microseconds);
+
+enum
+{
+    RC_RESP_DATA_OVERFLOW        = 1001,
+    RC_RESP_MIN_SIZE_INVALID     = 1002,
+    RC_RESP_DISTANCE_INVALID     = 1003,
+    RC_RESP_MAGIC_WORD_INVALID   = 1004,
+    RC_RESP_UNEXPECTED_CMD       = 1005,
+    RC_RESP_UNEXPECTED_DATA_SIZE = 1006,
+
+    RC_RESP_SCOM_ERROR = 1010,
+
+    RC_FIFO_TIMEOUT_UP = 1021,
+    RC_FIFO_TIMEOUT_DN = 1022,
+};
+
 /** @brief  Waits for FIFO to be ready to be written to
  *  @param  i_target The SCOM target.
  *  @return Non-SUCCESS if the SCOM fails. SUCCESS otherwise.
@@ -58,7 +75,7 @@ uint32_t waitUpFifoReady(SCOM_Trgt_t* i_target)
         //Check for timeout
         if(l_elapsed_time_ns >= MAX_UP_FIFO_TIMEOUT_NS)
         {
-            l_rc = FAIL;
+            l_rc = RC_FIFO_TIMEOUT_UP;
             TRAC_ERR("waitUpFifoReady: timeout occurred while waiting for"
                      " FIFO to clear");
             break;
@@ -104,7 +121,7 @@ uint32_t waitDnFifoReady(SCOM_Trgt_t* i_target, uint32_t* o_status)
         {
             TRAC_ERR("waitDnFifoReady: timeout waiting for downstream FIFO"
                       " to be empty.");
-            l_rc = FAIL;
+            l_rc = RC_FIFO_TIMEOUT_DN;
             break;
         }
 
@@ -182,181 +199,184 @@ uint32_t writeRequest(SCOM_Trgt_t* i_target, uint32_t* i_fifoRequest)
     return l_rc;
 }
 
+// For error path debug.
+void printBuffer( uint32_t* i_readBuffer, uint32_t i_wordsReceived )
+{
+    // OCC traces only support max 4 arguments and trace buffers very limited.
+    // So try to print as many entries as possible on one line as possible.
+    uint32_t i = 0;
+    for ( i = 0; i < i_wordsReceived; i+=4 )
+    {
+        uint32_t j = i_wordsReceived - i;
+        if ( 4 <= j )
+        {
+            TRAC_ERR( "    %08x %08x %08x %08x", i_readBuffer[i],
+                      i_readBuffer[i+1], i_readBuffer[i+2], i_readBuffer[i+3] );
+        }
+        else if ( 3 == j )
+        {
+            TRAC_ERR( "    %08x %08x %08x", i_readBuffer[i], i_readBuffer[i+1],
+                      i_readBuffer[i+2] );
+        }
+        else if ( 2 == j )
+        {
+            TRAC_ERR( "    %08x %08x", i_readBuffer[i], i_readBuffer[i+1] );
+        }
+        else if ( 1 == j )
+        {
+            TRAC_ERR( "    %08x", i_readBuffer[i] );
+        }
+    }
+}
+
 /** @brief  Reads and processes the FIFO response
- *  @param  i_target The SCOM target.
- *  @param  i_fifoRequest the original FIFO request.
- *  @param  o_fifoResponse the FIFO response.
- *  @param  i_responseSize the expected size of the response.
- *  @return Non-SUCCESS if the SCOM fails. SUCCESS otherwise.
+ *  @param  i_target       The SCOM target.
+ *  @param  i_fifoReqCmd   The FIFO request command.
+ *  @param  o_responseData The returned response data (getSCOMs only).
+ *  @return Non-SUCCESS on error, otherwise SUCCESS.
  */
-uint32_t readResponse(SCOM_Trgt_t* i_target,
-                      uint32_t* i_fifoRequest,
-                      uint32_t* o_fifoResponse,
-                      uint32_t  i_responseSize)
+uint32_t readResponse( SCOM_Trgt_t* i_target, FifoCmd_t* i_fifoReqCmd,
+                       uint64_t* o_responseData )
 {
     uint32_t l_rc = SUCCESS;
-    uint32_t l_readBuffer[READ_BUFFER_SIZE];
 
-    // EOT is expected before the response buffer is full. Room for
-    // the PCBPIB status or FFDC is included, but is only returned
-    // if there is an error. The last received word has the distance
-    // to the status, which is placed at the end of the returned data
-    // in order to reflect errors during transfer.
+    memset( o_responseData, 0, sizeof(uint64_t) ); // Just in case.
 
-    uint32_t* l_received = o_fifoResponse; // advance as words are received
-    uint32_t  l_maxWords = i_responseSize / sizeof(uint32_t);
-    uint32_t  l_wordsReceived = 0; // Used to validata the "distance" to status
-    bool      l_eotReceived = FALSE;
-    uint32_t  l_lastWord = 0; // Last word received. Final read is the "distance"
-                             // in words to the status header.
-    bool      l_overRun = FALSE;
+    uint32_t readBuffer[READ_BUFFER_SIZE];
+    uint32_t wordsReceived = 0;
 
     do
     {
-        // Wait for data to be ready to receive (download) or if the EOT
-        // has been sent. If not EOT, then data ready to receive.
+        // Wait to read data or EOT from the FIFO.
         uint32_t l_status = 0;
-        l_rc = waitDnFifoReady(i_target, &l_status);
-        if(l_rc != SUCCESS)
+        l_rc = waitDnFifoReady( i_target, &l_status );
+        if ( SUCCESS != l_rc )
         {
             return l_rc;
         }
 
-        if(l_status & DNFIFO_STATUS_DEQUEUED_EOT_FLAG)
+        // Check for EOT.
+        if ( l_status & DNFIFO_STATUS_DEQUEUED_EOT_FLAG )
         {
-            l_eotReceived = TRUE;
-            // Ignore EOT dummy word
-            if(l_wordsReceived >= (sizeof(struct statusHeader) / sizeof(uint32_t)))
-            {
-                if(l_overRun == FALSE)
-                {
-                    l_received--;
-                    l_wordsReceived--;
-                    l_lastWord = o_fifoResponse[l_wordsReceived-1];
-                }
-                else
-                {
-                    l_lastWord = l_readBuffer[l_wordsReceived-2];
-                }
-            }
-            break;
+            // There should be a word at the end of the buffer containing a EOT
+            // dummy word, which can be ignored.
+            if ( 0 < wordsReceived ) wordsReceived--;
+
+            break; // Nothing more to read.
         }
 
-        // When error occurs, SBE will write more than l_maxWords
-        // we have to keep reading 1 word at a time until we get EOT
-        // or more than READ_BUFFER_SIZE. Save what we read in the buffer
-        if(l_wordsReceived >= l_maxWords)
+        // Ensure there is enough room in the buffer to read the next word.
+        if ( READ_BUFFER_SIZE <= wordsReceived )
         {
-            l_overRun = TRUE;
+            TRAC_ERR( "readResponse: data overflow without EOT. "
+                      "wordsReceived=%u", wordsReceived );
+            printBuffer( readBuffer, wordsReceived );
+            return RC_RESP_DATA_OVERFLOW;
         }
 
-        // Read next word
-        l_rc = getfsi(i_target, SBE_FIFO_DNFIFO_DATA_OUT, &l_lastWord);
-        if(l_rc != SUCCESS)
+        // Read the next word.
+        l_rc = getfsi( i_target, SBE_FIFO_DNFIFO_DATA_OUT,
+                       &readBuffer[wordsReceived] );
+        if ( SUCCESS != l_rc )
         {
             return l_rc;
         }
 
-        l_readBuffer[l_wordsReceived] = l_lastWord;
+        // Increment the number of words received.
+        wordsReceived++;
 
-        if(l_overRun == FALSE)
+    } while ( TRUE );
+
+    // The only path that allows us to get here is if we successfully received
+    // the EOT. Notify the SBE that it has been received.
+    l_rc = putfsi( i_target, SBE_FIFO_DNFIFO_ACK_EOT, FSB_UPFIFO_SIG_EOT );
+    if ( SUCCESS != l_rc )
+    {
+        return l_rc;
+    }
+
+    // At a minimum, the response should have returned enough data to contain
+    // the status header and a word that contains the distance from the end of
+    // the response to the beginning of the status header.
+    uint32_t l_minWords = (sizeof(FifoRespStatus_t) / sizeof(uint32_t)) + 1;
+    if ( wordsReceived < l_minWords )
+    {
+        TRAC_ERR( "readResponse: minimum response size is invalid. "
+                  "wordsReceived=%u", wordsReceived );
+        printBuffer( readBuffer, wordsReceived );
+        return RC_RESP_MIN_SIZE_INVALID;
+    }
+
+    // The distance between the end of the response to the beginning of the
+    // status header is stored in the last word in the buffer.
+    uint32_t distance = readBuffer[wordsReceived-1];
+    if ( distance < l_minWords || wordsReceived < distance )
+    {
+        TRAC_ERR( "readResponse: invalid response distance. wordsReceived=%u "
+                  "distance=%u", wordsReceived, distance );
+        printBuffer( readBuffer, wordsReceived );
+        return RC_RESP_DISTANCE_INVALID;
+    }
+
+    // Check for a successful response.
+    uint32_t numDataWords = wordsReceived - distance;
+    FifoRespStatus_t* status = (FifoRespStatus_t*)(&readBuffer[numDataWords]);
+
+    if ( FIFO_STATUS_MAGIC != status->magic )
+    {
+        TRAC_ERR( "readResponse: invalid magic word. magic=0x%04x",
+                  status->magic );
+        printBuffer( readBuffer, wordsReceived );
+        return RC_RESP_MAGIC_WORD_INVALID;
+    }
+
+    // Verify that this response was for the command that was sent.
+    if ( i_fifoReqCmd->u != status->command.u )
+    {
+        TRAC_ERR( "readResponse: unexpected response command. cmd=0x%08x",
+                  status->command.u );
+        printBuffer( readBuffer, wordsReceived );
+        return RC_RESP_UNEXPECTED_CMD;
+    }
+
+    // For getSCOMs only, get the response data (if it exists) regardless if
+    // there was a SCOM error.
+    uint32_t expDataWords = 0;
+    if ( SBE_FIFO_CMD_GET_SCOM == status->command.s.type )
+    {
+        expDataWords = sizeof(uint64_t) / sizeof(uint32_t);
+        if ( expDataWords == numDataWords )
         {
-            *l_received = l_lastWord; // Copy to returned output buffer
-            l_received++; // Advance to the next position
+            memcpy( o_responseData, &readBuffer[0], sizeof(uint64_t) );
         }
-        l_wordsReceived++;
-
-        if(l_wordsReceived > READ_BUFFER_SIZE)
-        {
-            TRAC_ERR("readResponse: data overflow without EOT");
-            l_rc = FAIL;
-            return l_rc;
-        }
-
-    }while(TRUE);
-
-    // At this point, l_wordsReceived of words received.
-    // l_received points to 1 word past last word received.
-    // l_lastWord has last word received, which is "distance" to status
-    // EOT is expected before running out of response buffer
-    if(!l_eotReceived)
-    {
-        l_rc = FAIL;
-        TRAC_ERR("readResponse: no EOT cmd = 0x%08x size = %d",
-                 i_fifoRequest[1], i_responseSize);
-        return l_rc;
     }
 
-    // Notify SBE that EOT has been received
-    uint32_t l_eotSig = FSB_UPFIFO_SIG_EOT;
-    l_rc = putfsi(i_target, SBE_FIFO_DNFIFO_ACK_EOT, l_eotSig);
-    if(l_rc != SUCCESS)
+    // Check for SCOM errors.
+    if ( (SBE_PRI_OPERATION_SUCCESSFUL != status->primaryStatus  ) ||
+         (SBE_SEC_OPERATION_SUCCESSFUL != status->secondaryStatus) )
     {
-        return l_rc;
+        // NOTE: If there was some sort of SCOM error, there should be an FFDC
+        //       section after the status. At this time, we have no use for the
+        //       data so it will be ignored for now.
+
+        TRAC_ERR( "readResponse: unexpected response status. cmd=0x%08x "
+                  "primaryStatus=0x%08x secondaryStatus=0x%08x",
+                  i_fifoReqCmd->u, status->primaryStatus,
+                  status->secondaryStatus );
+        printBuffer( readBuffer, wordsReceived );
+        return RC_RESP_SCOM_ERROR;
     }
 
-    // Determine if transmission is successful.
-    // Last word received has the distance to status in words including itself.
-    // l_wordsReceived has number of words received.
-    // Need to have received at least status header and distance word.
-    if((l_lastWord      < (sizeof(struct statusHeader)/sizeof(uint32_t) + 1)) ||
-       (l_wordsReceived < (sizeof(struct statusHeader)/sizeof(uint32_t) + 1)) ||
-       (l_lastWord      > l_wordsReceived))
+    // The command was successful. Ensure the response data was at least a
+    // valid size.
+    if ( expDataWords != numDataWords )
     {
-        TRAC_ERR("readResponse: invalid status distance. Cmd = 0x%08x distance"
-                 " = %d allocated response size = %d received word size = %d",
-                 i_fifoRequest[1], l_lastWord, i_responseSize, l_wordsReceived);
-        l_rc = FAIL;
-        return l_rc;
+        TRAC_ERR( "readResponse: unexpected response data size. cmd=0x%08x "
+                  "wordsReceived=%u distance=%u", i_fifoReqCmd->u,
+                  wordsReceived, distance );
+        printBuffer( readBuffer, wordsReceived );
+        return RC_RESP_UNEXPECTED_DATA_SIZE;
     }
-
-    // Check status for success.
-    // l_received points one word past last word received.
-    // l_lastWord has number of words to status header including self.
-    uint32_t* l_statusTmp = (l_overRun == FALSE) ? (l_received - l_lastWord) :
-                                             &l_readBuffer[l_wordsReceived - 1];
-    struct statusHeader* l_statusHeader = (struct statusHeader*)l_statusTmp;
-    if((FIFO_STATUS_MAGIC != l_statusHeader->magic) ||
-       (SBE_PRI_OPERATION_SUCCESSFUL != l_statusHeader->primaryStatus) ||
-       (SBE_SEC_OPERATION_SUCCESSFUL != l_statusHeader->secondaryStatus))
-    {
-        TRAC_ERR("readResponse: failing downstream status cmd = 0x%08x magic = "
-                 "0x%08x primary status = 0x%08x secondary status = 0x%08x",
-                 i_fifoRequest[1],
-                 l_statusHeader->magic,
-                 l_statusHeader->primaryStatus,
-                 l_statusHeader->secondaryStatus);
-
-        l_rc = FAIL;
-    }
-
-    return l_rc;
-}
-
-/** @brief  Performs a FIFO operation (read or write)
- *  @param  i_target The SCOM target.
- *  @param  i_fifoRequest the FIFO request data structure
- *  @param  i_fifoResponse the response from SBE
- *  @param  i_responseSize the size of the response
- *  @return Non-SUCCESS if the operation fails. SUCCESS otherwise.
- */
-uint32_t performFifoChipOp(SCOM_Trgt_t* i_target,
-                           uint32_t* i_fifoRequest,
-                           uint32_t* i_fifoResponse,
-                           uint32_t  i_responseSize)
-{
-    uint32_t l_rc = SUCCESS;
-
-    l_rc = writeRequest(i_target, i_fifoRequest);
-    if(l_rc != SUCCESS)
-    {
-        return l_rc;
-    }
-
-    l_rc = readResponse(i_target,
-                        i_fifoRequest,
-                        i_fifoResponse,
-                        i_responseSize);
 
     return l_rc;
 }
@@ -372,19 +392,19 @@ int32_t putFifoScom(SCOM_Trgt_t* i_target, uint64_t i_addr, uint64_t i_data)
     uint32_t l_rc = SUCCESS;
 
     struct fifoPutScomRequest  l_fifoRequest;
-    struct fifoPutScomResponse l_fifoResponse;
-
     l_fifoRequest.wordCnt = PUT_SCOM_REQUEST_WORD_CNT;
     l_fifoRequest.reserved = 0;
-    l_fifoRequest.commandClass = SBE_FIFO_CLASS_SCOM_ACCESS;
-    l_fifoRequest.command = SBE_FIFO_CMD_PUT_SCOM;
+    l_fifoRequest.command.s.class = SBE_FIFO_CLASS_SCOM_ACCESS;
+    l_fifoRequest.command.s.type  = SBE_FIFO_CMD_PUT_SCOM;
     l_fifoRequest.address = i_addr;
     l_fifoRequest.data = i_data;
 
-    l_rc = performFifoChipOp(i_target,
-                             (uint32_t*)&l_fifoRequest,
-                             (uint32_t*)&l_fifoResponse,
-                             sizeof(struct fifoPutScomResponse));
+    l_rc = writeRequest( i_target, (uint32_t*)&l_fifoRequest );
+    if ( SUCCESS == l_rc )
+    {
+        uint64_t unused = 0;
+        l_rc = readResponse( i_target, &l_fifoRequest.command, &unused );
+    }
 
     if ( l_rc != SUCCESS )
     {
@@ -407,18 +427,17 @@ int32_t getFifoScom(SCOM_Trgt_t* i_target, uint64_t i_addr, uint64_t* o_data)
     uint32_t l_rc = SUCCESS;
 
     struct fifoGetScomRequest  l_fifoRequest;
-    struct fifoGetScomResponse l_fifoResponse;
-
     l_fifoRequest.wordCnt = GET_SCOM_REQUEST_WORD_CNT;
     l_fifoRequest.reserved = 0;
-    l_fifoRequest.commandClass = SBE_FIFO_CLASS_SCOM_ACCESS;
-    l_fifoRequest.command = SBE_FIFO_CMD_GET_SCOM;
+    l_fifoRequest.command.s.class = SBE_FIFO_CLASS_SCOM_ACCESS;
+    l_fifoRequest.command.s.type  = SBE_FIFO_CMD_GET_SCOM;
     l_fifoRequest.address = i_addr;
 
-    l_rc = performFifoChipOp(i_target,
-                             (uint32_t*)&l_fifoRequest,
-                             (uint32_t*)&l_fifoResponse,
-                             sizeof(struct fifoGetScomResponse));
+    l_rc = writeRequest( i_target, (uint32_t*)&l_fifoRequest );
+    if ( SUCCESS == l_rc )
+    {
+        l_rc = readResponse( i_target, &l_fifoRequest.command, o_data );
+    }
 
     if ( l_rc != SUCCESS )
     {
@@ -426,9 +445,6 @@ int32_t getFifoScom(SCOM_Trgt_t* i_target, uint64_t i_addr, uint64_t* o_data)
         uint32_t l_data = 0xDEAD;
         putfsi( i_target, 0x2450, l_data );
     }
-
-    //Always return data even if there is an error
-    *o_data = l_fifoResponse.data;
 
     return l_rc;
 }

@@ -54,53 +54,42 @@
 #define SBE_PRI_OPERATION_SUCCESSFUL 0x00
 #define SBE_SEC_OPERATION_SUCCESSFUL 0x00
 
-struct statusHeader
+typedef union
+{
+    struct
+    {
+        uint8_t class;
+        uint8_t type;
+    } PACKED s;
+
+    uint16_t u;
+
+} FifoCmd_t;
+
+typedef struct
 {
     uint16_t magic; //set to 0xC0DE
-    uint8_t  commandClass;
-    uint8_t  command;
+    FifoCmd_t command;
     uint16_t primaryStatus;
     uint16_t secondaryStatus;
-} PACKED;
 
-struct ffdc_struct
-{
-    const void* ptr;
-    uint32_t      size;
-};
+} PACKED FifoRespStatus_t;
 
 struct fifoPutScomRequest
 {
     uint32_t wordCnt;
     uint16_t reserved;
-    uint8_t  commandClass;
-    uint8_t  command;
+    FifoCmd_t command;
     uint64_t address;
     uint64_t data;
-} PACKED;
-
-struct fifoPutScomResponse
-{
-    struct statusHeader status;
-    struct ffdc_struct  ffdc;  //ffdc data
-    uint32_t            status_distance; //distance to status
 } PACKED;
 
 struct fifoGetScomRequest
 {
     uint32_t wordCnt;
     uint16_t reserved;
-    uint8_t  commandClass;
-    uint8_t  command;
+    FifoCmd_t command;
     uint64_t address;
-} PACKED;
-
-struct fifoGetScomResponse
-{
-    uint64_t            data;  //Data (0..31) + (32..63)
-    struct statusHeader status;
-    struct ffdc_struct  ffdc;  //ffdc data
-    uint32_t            status_distance; // distance to status
 } PACKED;
 
 /** @brief  Performs a write SCOM operation using SBE FIFO
