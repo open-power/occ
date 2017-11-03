@@ -433,18 +433,37 @@ int32_t getFifoScom(SCOM_Trgt_t* i_target, uint64_t i_addr, uint64_t* o_data)
     l_fifoRequest.command.s.type  = SBE_FIFO_CMD_GET_SCOM;
     l_fifoRequest.address = i_addr;
 
-    l_rc = writeRequest( i_target, (uint32_t*)&l_fifoRequest );
-    if ( SUCCESS == l_rc )
+    do
     {
-        l_rc = readResponse( i_target, &l_fifoRequest.command, o_data );
-    }
+        l_rc = writeRequest( i_target, (uint32_t*)&l_fifoRequest );
+        if ( SUCCESS != l_rc ) break;
 
-    if ( l_rc != SUCCESS )
-    {
-        // Reset the FIFO for subsequent SCOMs
-        uint32_t l_data = 0xDEAD;
-        putfsi( i_target, 0x2450, l_data );
-    }
+        // The request has been made. Now check the response. If the response
+        // timed out or had malformed data, retry the request. This may happen
+        // if the BMC issued a request at the same time as the OCC. In theory,
+        // this should never happen because the BMC should stop sending requests
+        // once a checkstop occurs. However, this is protection just in case
+        // there is any overlap in the timing.
+        l_rc = readResponse( i_target, &l_fifoRequest.command, o_data );
+        if ( RC_FIFO_TIMEOUT_DN             != l_rc &&
+             RC_RESP_DATA_OVERFLOW          != l_rc &&
+             RC_RESP_MIN_SIZE_INVALID       != l_rc &&
+             RC_RESP_DISTANCE_INVALID       != l_rc &&
+             RC_RESP_MAGIC_WORD_INVALID     != l_rc &&
+             RC_RESP_UNEXPECTED_CMD         != l_rc &&
+             RC_RESP_UNEXPECTED_DATA_SIZE   != l_rc )
+        {
+            break;
+        }
+
+        if ( l_rc != SUCCESS )
+        {
+            // Reset the FIFO for subsequent SCOMs
+            uint32_t l_data = 0xDEAD;
+            putfsi( i_target, 0x2450, l_data );
+        }
+
+    } while ( TRUE );
 
     return l_rc;
 }
