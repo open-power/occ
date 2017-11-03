@@ -775,8 +775,10 @@ bool FirData_addTrgtToPnor( FirData_t * io_fd, SCOM_Trgt_t i_sTrgt,
 
     *o_noAttn = false; /* Must be false if there are no global regs. */
 
+#ifdef DEBUG_PRD_CHKSTOP_ANALYSIS
     TRAC_IMP( "FIRDATA: t=%d p=%d u=%d FSI=0x%08x", i_sTrgt.type,
               i_sTrgt.procPos, i_sTrgt.procUnitPos, (uint32_t)i_sTrgt.fsiBaseAddr);
+#endif
 
     do
     {
