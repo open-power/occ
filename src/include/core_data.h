@@ -75,6 +75,18 @@
 #define CORE2_VDM_SMALL_DROOP 0x0000000000002000ull
 #define CORE3_VDM_SMALL_DROOP 0x0000000000000200ull
 
+// return codes:
+#define SIBRC_RESOURCE_OCCUPIED (1)
+#define SIBRC_CORE_FENCED       (2)
+#define SIBRC_PARTIAL_GOOD      (3)
+#define SIBRC_ADDRESS_ERROR     (4)
+#define SIBRC_CLOCK_ERROR       (5)
+#define SIBRC_PACKET_ERROR      (6)
+#define SIBRC_TIMEOUT           (7)
+
+#define EMPATH_VALID    (1)
+
+#define WORKAROUND_SCOM_ADDRESS  0x10800
 
 typedef struct
 {
@@ -119,7 +131,8 @@ typedef struct
 } DroopEvents;
 
 //
-// The instance of this data object must be 8 byte aligned
+// The instance of this data object must be 8 byte aligned and
+// size must be muliple of 8
 //
 typedef struct // 136 bytes
 {
@@ -129,6 +142,8 @@ typedef struct // 136 bytes
     CoreDataDts                dts;              // 8
     uint64_t                   stop_state_hist;  // 8
     DroopEvents                droop;            // 8
+    uint32_t                   reserved;         // 4
+    uint32_t                   empathValid;      // 4
 } CoreData;
 
 #ifdef __cplusplus
