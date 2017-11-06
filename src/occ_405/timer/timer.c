@@ -526,6 +526,24 @@ void check_pgpe_beacon(void)
                                        pgpe_beacon,                // userdata1
                                        G_pgpe_header.beacon_sram_addr); // userdata2
 
+                    //Add firmware callout
+                    addCalloutToErrl(l_err,
+                                     ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                                     ERRL_COMPONENT_ID_FIRMWARE,
+                                     ERRL_CALLOUT_PRIORITY_HIGH);
+
+                    //Add processor callout
+                    addCalloutToErrl(l_err,
+                                     ERRL_CALLOUT_TYPE_HUID,
+                                     G_sysConfigData.proc_huid,
+                                     ERRL_CALLOUT_PRIORITY_MED);
+
+                    //Add planar callout
+                    addCalloutToErrl(l_err,
+                                     ERRL_CALLOUT_TYPE_HUID,
+                                     G_sysConfigData.backplane_huid,
+                                     ERRL_CALLOUT_PRIORITY_LOW);
+
                     // Commit error log and request reset
                     REQUEST_RESET(l_err);
                 }

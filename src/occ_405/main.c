@@ -147,12 +147,10 @@ extern uint8_t g_trac_inf_buffer[];
 extern uint8_t g_trac_imp_buffer[];
 extern uint8_t g_trac_err_buffer[];
 
-void pmc_hw_error_isr(void *private, SsxIrqId irq, int priority);
 void create_tlb_entry(uint32_t address, uint32_t size);
 
 //Macro creates a 'bridge' handler that converts the initial fast-mode to full
 //mode interrupt handler
-SSX_IRQ_FAST2FULL(pmc_hw_error_fast, pmc_hw_error_isr);
 
 
 FIR_HEAP_BUFFER(uint8_t G_fir_heap[FIR_HEAP_SECTION_SIZE]);
@@ -196,223 +194,6 @@ void check_runtime_environment(void)
     else
     {
         G_shared_gpe_data.spipss_spec_p9 = 0;
-    }
-}
-
-/*
- * Function Specification
- *
- * Name: pmc_hw_error_isr
- *
- * Description: Handles IRQ for PMCLFIR bit being set.  Only bits that are
- *              unmasked (0x1010843) and have action0 (0x1010846) set to 1
- *              and action1 (0x1010847) set to 0 will cause this interupt
- *              (OISR0[9]) to fire. This runs in a non critical context
- *              (tracing allowed).
- *
- *
- * End Function Specification
- */
-void pmc_hw_error_isr(void *private, SsxIrqId irq, int priority)
-{
-    // TODO: RTC 134619; enable Interrupt handlers for HW errors
-    //       --  uncomment currently unused vars upon implementation
-    //errlHndl_t  l_err;
-    //pmc_ffdc_data_t l_pmc_ffdc;
-    SsxMachineContext ctx;
-
-    // Mask this interrupt
-    ssx_irq_disable(irq);
-
-    // disable critical interrupts
-    ssx_critical_section_enter( SSX_NONCRITICAL, &ctx );
-
-    // clear this irq status in OISR0
-    ssx_irq_status_clear(irq);
-
-    // dump a bunch of FFDC registers
-    //fill_pmc_ffdc_buffer(&l_pmc_ffdc);
-
-    MAIN_TRAC_ERR("PMC Failure detected through OISR0[9]!!!");
-    /* @
-     * @moduleid   PMC_HW_ERROR_ISR
-     * @reasonCode PMC_FAILURE
-     * @severity   ERRL_SEV_PREDICTIVE
-     * @userdata1  0
-     * @userdata2  0
-     * @userdata4  OCC_NO_EXTENDED_RC
-     * @devdesc    Failure detected in processor
-     *             power management controller (PMC)
-     */
-/* TEMP NO MORE PMC - RTC 161456
-    l_err = createErrl( PMC_HW_ERROR_ISR,          // i_modId,
-                        PMC_FAILURE,               // i_reasonCode,
-                        OCC_NO_EXTENDED_RC,
-                        ERRL_SEV_PREDICTIVE,
-                        NULL,                      // tracDesc_t i_trace,
-                        DEFAULT_TRACE_SIZE,        // i_traceSz,
-                        0,                         // i_userData1,
-                        0);                        // i_userData2
-    //Add our register dump to the error log
-    addUsrDtlsToErrl(l_err,
-            (uint8_t*) &l_pmc_ffdc,
-            sizeof(l_pmc_ffdc),
-            ERRL_USR_DTL_STRUCT_VERSION_1,
-            ERRL_USR_DTL_BINARY_DATA);
-
-    //Add firmware callout
-    addCalloutToErrl(l_err,
-            ERRL_CALLOUT_TYPE_COMPONENT_ID,
-            ERRL_COMPONENT_ID_FIRMWARE,
-            ERRL_CALLOUT_PRIORITY_HIGH);
-
-    //Add processor callout
-    addCalloutToErrl(l_err,
-            ERRL_CALLOUT_TYPE_HUID,
-            G_sysConfigData.proc_huid,
-            ERRL_CALLOUT_PRIORITY_MED);
-
-    //Add planar callout
-    addCalloutToErrl(l_err,
-            ERRL_CALLOUT_TYPE_HUID,
-            G_sysConfigData.backplane_huid,
-            ERRL_CALLOUT_PRIORITY_LOW);
-
-    REQUEST_RESET(l_err);
-*/
-    // Unmask this interrupt
-    ssx_irq_enable(irq);
-
-    // re-enable non-critical interrupts
-    ssx_critical_section_exit( &ctx );
-}
-
-/*
- * Function Specification
- *
- * Name: occ_hw_error_isr
- *
- * Description: Handles IRQ for OCCLFIR bit being set.  Only bits
- *              that are unmasked (0x1010803) and have action0 (0x1010806)
- *              set to 1 and action1 (0x1010807) set to 0 will cause this
- *              interupt (OISR0[2]) to fire.  This runs in a critical
- *              context (no tracing!).
- *
- * End Function Specification
- */
-//NOTE: use "putscom pu 6B111 0 3 101 -ib -p1" to inject the error.
-#define OCC_LFIR_SPARE_BIT50 0x0000000000002000ull
-void occ_hw_error_isr(void *private, SsxIrqId irq, int priority)
-{
-    //set bit 50 of the OCC LFIR so that the PRDF component will log an error and callout the processor
-    //TMGT will also see a problem and log an error but it will be informational.
-
-    // TODO: Determine how to set this without a SCOM. (RTC 134619)
-
-    //Halt occ so that hardware will enter safe mode
-    OCC_HALT(ERRL_RC_OCC_HW_ERROR);
-}
-
-// Enable and register any ISR's that need to be set up as early as possible.
-void occ_irq_setup()
-{
-    int         l_rc;
-    errlHndl_t  l_err;
-
-    do
-    {
-
-        // ------------- OCC Error IRQ Setup ------------------
-
-        // Disable the IRQ while we work on it
-        ssx_irq_disable(OCCHW_IRQ_OCC_ERROR);
-
-        // Set up the IRQ
-        l_rc = ssx_irq_setup(OCCHW_IRQ_OCC_ERROR,
-                             SSX_IRQ_POLARITY_ACTIVE_HIGH,
-                             SSX_IRQ_TRIGGER_EDGE_SENSITIVE);
-        if(l_rc)
-        {
-            MAIN_TRAC_ERR("occ_irq_setup: ssx_irq_setup(OCCHW_IRQ_OCC_ERROR) failed with rc=0x%08x", l_rc);
-            break;
-        }
-
-        // Register the IRQ handler with SSX
-        l_rc = ssx_irq_handler_set(OCCHW_IRQ_OCC_ERROR,
-                                   occ_hw_error_isr,
-                                   NULL,
-                                   SSX_CRITICAL);
-        if(l_rc)
-        {
-            MAIN_TRAC_ERR("occ_irq_setup: ssx_irq_handler_set(OCCHW_IRQ_OCC_ERROR) failed with rc=0x%08x", l_rc);
-            break;
-        }
-
-        //enable the IRQ
-        ssx_irq_status_clear(OCCHW_IRQ_OCC_ERROR);
-        ssx_irq_enable(OCCHW_IRQ_OCC_ERROR);
-
-
-        // ------------- PMC Error IRQ Setup ------------------
-/* TODO - RTC: 134619 -- IS THIS NO LONGER A THING IN P9??
-
-        // Disable the IRQ while we work on it
-        ssx_irq_disable(OCCHW_IRQ_PMC_ERROR);
-
-        // Set up the IRQ
-        l_rc = ssx_irq_setup(OCCHW_IRQ_PMC_ERROR,
-                             SSX_IRQ_POLARITY_ACTIVE_HIGH,
-                             SSX_IRQ_TRIGGER_EDGE_SENSITIVE);
-        if(l_rc)
-        {
-            MAIN_TRAC_ERR("occ_irq_setup: ssx_irq_setup(OCCHW_IRQ_PMC_ERROR) failed with rc=0x%08x", l_rc);
-            break;
-        }
-
-        // Register the IRQ handler with SSX
-        l_rc = ssx_irq_handler_set(OCCHW_IRQ_PMC_ERROR,
-                                   pmc_hw_error_fast,
-                                   NULL,
-                                   SSX_NONCRITICAL);
-        if(l_rc)
-        {
-            MAIN_TRAC_ERR("occ_irq_setup: ssx_irq_handler_set(OCCHW_IRQ_PMC_ERROR) failed with rc=0x%08x", l_rc);
-            break;
-        }
-
-        //enable the IRQ
-        ssx_irq_status_clear(OCCHW_IRQ_PMC_ERROR);
-        ssx_irq_enable(OCCHW_IRQ_PMC_ERROR);
-END TODO */
-    }while(0);
-
-    if(l_rc)
-    {
-        //single error for all error cases, just look at trace to see where it failed.
-        /* @
-         * @moduleid   OCC_IRQ_SETUP
-         * @reasonCode SSX_GENERIC_FAILURE
-         * @severity   ERRL_SEV_UNRECOVERABLE
-         * @userdata1  SSX return code
-         * @userdata4  OCC_NO_EXTENDED_RC
-         * @devdesc    Firmware failure initializing IRQ
-         */
-        l_err = createErrl( OCC_IRQ_SETUP,             // i_modId,
-                            SSX_GENERIC_FAILURE,       // i_reasonCode,
-                            OCC_NO_EXTENDED_RC,
-                            ERRL_SEV_UNRECOVERABLE,
-                            NULL,                      // tracDesc_t i_trace,
-                            DEFAULT_TRACE_SIZE,        //Trace Size
-                            l_rc,                      // i_userData1,
-                            0);                        // i_userData2
-
-        //Callout firmware
-        addCalloutToErrl(l_err,
-                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                         ERRL_COMPONENT_ID_FIRMWARE,
-                         ERRL_CALLOUT_PRIORITY_HIGH);
-
-        commitErrl(&l_err);
     }
 }
 
@@ -1316,13 +1097,13 @@ void occ_ipc_setup()
         // Log single error for all error cases, just look at trace to see where it failed.
         /* @
          * @moduleid   OCC_IPC_SETUP
-         * @reasonCode IPC_GENERIC_FAILURE
+         * @reasonCode SSX_GENERIC_FAILURE
          * @severity   ERRL_SEV_UNRECOVERABLE
          * @userdata1  IPC return code
          * @userdata4  OCC_NO_EXTENDED_RC
          * @devdesc    Firmware failure initializing IPC
          */
-        l_err = createErrl( OCC_IRQ_SETUP,             // i_modId,
+        l_err = createErrl( OCC_IPC_SETUP,             // i_modId,
                             SSX_GENERIC_FAILURE,       // i_reasonCode,
                             OCC_NO_EXTENDED_RC,
                             ERRL_SEV_UNRECOVERABLE,
@@ -2284,20 +2065,6 @@ int main(int argc, char **argv)
     G_shared_gpe_data.fir_heap_buffer_ptr   = (uint32_t)G_fir_heap;
     G_shared_gpe_data.fir_params_buffer_ptr = (uint32_t)G_fir_data_parms;
 
-    //TODO: RTC 134619: Currently causes an SSX Panic due to SSX believing the
-    //                  interrupt is not owned by the 405. The fix is to update
-    //                  both occhw_interrupts.h and ssx_app_cfg.h. The change
-    //                  in occhw_interrupts.h is to change the owner. The change
-    //                  in ssx_app_cfg.h is to add OCCHW_IRQ_OCC_ERROR to the
-    //                  APPCFG_EXT_IRQS_CONFIG irq setup table.
-/*
-    // enable and register additional interrupt handlers
-    CHECKPOINT(INITIALIZING_IRQS);
-
-    occ_irq_setup();
-
-    CHECKPOINT(IRQS_INITIALIZED);
-*/
     // enable IPC and start GPEs
     CHECKPOINT(INITIALIZING_IPC);
 

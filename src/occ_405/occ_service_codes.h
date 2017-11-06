@@ -100,8 +100,6 @@ enum occReasonCode
     INTERNAL_HW_FAILURE             = 0xB0,
     /// OCC GPE halted due to checkstop
     OCC_GPE_HALTED                  = 0xB1,
-    /// PMC Failure
-    PMC_FAILURE                     = 0xB2,
     /// Data passed as an argument or returned from a function is invalid
     INTERNAL_INVALID_INPUT_DATA     = 0xB3,
     /// RTL detected a system checkstop
@@ -320,8 +318,7 @@ enum occModuleId
     MAIN_STATE_TRANSITION_MID       =  MAIN_COMP_ID | 0x05,
     MAIN_MODE_TRANSITION_MID        =  MAIN_COMP_ID | 0x06,
     MAIN_SYSTEM_HALTED_MID          =  MAIN_COMP_ID | 0x07,
-    OCC_IRQ_SETUP                   =  MAIN_COMP_ID | 0x08,
-    PMC_HW_ERROR_ISR                =  MAIN_COMP_ID | 0x09,
+    OCC_IPC_SETUP                   =  MAIN_COMP_ID | 0x08,
     GETSCOM_FFDC_MID                =  MAIN_COMP_ID | 0x0a,
     PUTSCOM_FFDC_MID                =  MAIN_COMP_ID | 0x0b,
     HMON_ROUTINE_MID                =  MAIN_COMP_ID | 0x0c,
