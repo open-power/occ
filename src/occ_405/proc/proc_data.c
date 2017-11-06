@@ -190,9 +190,17 @@ void task_core_data( task_t * i_task )
             //responsible for clearing the bit later on.
             G_updated_core_mask |= (CORE0_PRESENT_MASK >> (l_bulk_core_data_ptr->current_core));
 
-            // Presumptively clear the empath error mask
-            G_empath_error_core_mask &=
+            // set  or clear the empath error mask
+            if(l_temp->empathValid)
+            {
+                G_empath_error_core_mask &=
                     ~(CORE0_PRESENT_MASK >> (l_bulk_core_data_ptr->current_core));
+            }
+            else
+            {
+                G_empath_error_core_mask |=
+                    (CORE0_PRESENT_MASK >> (l_bulk_core_data_ptr->current_core));
+            }
         }
 
         // If the core is not present, then we need to point to the empty G_core_data
