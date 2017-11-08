@@ -153,6 +153,8 @@ int wait_spi_completion(GpeErrorStruct *error, uint32_t reg, uint32_t i_timeout)
  *
  * Inputs:       i_microseconds: time to sleep in microseconds
  *
+ * Note:         i_microseconds must be < (2^16)/nest_freq microseconds
+ *                  about 114 seconds for the fastest nest_freq supported.
  * return:       none
  *
  * End Function Specification
@@ -160,25 +162,32 @@ int wait_spi_completion(GpeErrorStruct *error, uint32_t reg, uint32_t i_timeout)
 void busy_wait(uint32_t i_microseconds)
 {
     uint32_t current_count = pk_timebase32_get();
-    uint32_t end_count = current_count +
+    uint32_t prev_count = current_count;
+    uint32_t timebase_zero_adjust = -current_count;
+    uint32_t change_timeout = 0;
+    uint32_t end_count =
         PK_INTERVAL_SCALE((uint32_t)PK_MICROSECONDS(i_microseconds));
 
-    // end_count rolled over, Need to wait for roll-over of timebase
-    if(current_count > end_count)
+    while((current_count + timebase_zero_adjust) < end_count)
     {
-        // If there is a high priority interrupt (DEC), the timebase could
-        // increment more than once between readings and if end_count value is
-        // very small then the roll-over could be missed, so just look at upper
-        // bit instead of comparing against end_count.
-        while((0x80000000 & current_count) != 0)
-        {
-            current_count = pk_timebase32_get();
-        }
-    }
+        prev_count = current_count;
 
-    while (current_count < end_count)
-    {
         current_count = pk_timebase32_get();
+
+        if(prev_count == current_count)
+        {
+            ++change_timeout;
+            if(change_timeout > 32)
+            {
+                PK_TRACE("TIMEBASE is not moving!");
+                // timebase is not moving
+                break;
+            }
+        }
+        else
+        {
+            change_timeout = 0;
+        }
     }
 }
 
