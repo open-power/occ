@@ -702,6 +702,15 @@ void process_dimm_temp()
 } // end process_dimm_temp()
 
 
+void disable_all_dimms()
+{
+    if (G_mem_monitoring_allowed)
+    {
+        TRAC_INFO("disable_all_dimms: DIMM temp collection is being stopped");
+        G_mem_monitoring_allowed = false;
+    }
+    occ_i2c_lock_release(G_dimm_sm_args.i2cEngine);
+}
 
 // Function Specification
 //
@@ -746,9 +755,8 @@ void task_dimm_sm(struct task *i_self)
                 // I2C failure occurred during a reset...
                 INTR_TRAC_ERR("task_dimm_sm: Failure during I2C reset - memory monitoring disabled");
                 // release I2C lock to the host for this engine and stop monitoring
-                occ_i2c_lock_release(G_dimm_sm_args.i2cEngine);
                 L_occ_owns_lock = false;
-                G_mem_monitoring_allowed = false;
+                disable_all_dimms();
             }
             else
             {
