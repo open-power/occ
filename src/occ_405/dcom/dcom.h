@@ -273,8 +273,10 @@ typedef struct
             uint16_t adc[MAX_APSS_ADC_CHANNELS];    // 32 bytes
             // Time of Day Clock from the last APSS reading
             uint64_t tod;                           //  8 bytes
+            // Apss reset in progress
+            uint8_t apss_recovery_in_progress;      //  1 byte
             // Reserved
-            uint8_t  _reserved_1[51];               // 51 bytes
+            uint8_t  _reserved_1[50];               // 50 bytes
             // Counter in case we want to determine sequence errors
             uint8_t  magic_counter;                 //  1 byte
             // Magic Number for denoting the end of the packet

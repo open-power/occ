@@ -198,7 +198,9 @@ void amec_update_apss_sensors(void)
 {
     // Need to check to make sure APSS data has been received
     // via slave inbox first
-    if (G_slv_inbox_received && (G_pwr_reading_type == PWR_READING_TYPE_APSS))
+    if (G_slv_inbox_received &&
+       (G_pwr_reading_type == PWR_READING_TYPE_APSS) &&
+       (0 == G_dcom_slv_inbox_doorbell_rx.apss_recovery_in_progress))
     {
         uint8_t l_proc   = G_pbax_id.chip_id;
         uint32_t temp32  = 0;

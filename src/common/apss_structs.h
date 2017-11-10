@@ -91,4 +91,8 @@ typedef struct {
   uint64_t meas_data[4]; // G_apss_pwr_meas (2nd block of data) (output from APSS)
 } apss_complete_args_t;
 
+typedef struct {
+  GpeErrorStruct error;
+} apss_reset_args_t;
+
 #endif //_APSS_STRUCTS_H

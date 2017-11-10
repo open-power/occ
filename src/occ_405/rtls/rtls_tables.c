@@ -72,6 +72,7 @@
 #define FLAGS_APSS_START_MEAS            APSS_TASK_FLAGS
 #define FLAGS_APSS_CONT_MEAS             APSS_TASK_FLAGS
 #define FLAGS_APSS_DONE_MEAS             APSS_TASK_FLAGS
+#define FLAGS_APSS_RESET                 RTL_FLAG_MSTR |                    RTL_FLAG_OBS | RTL_FLAG_ACTIVE | RTL_FLAG_MSTR_READY
 
 #define FLAGS_DCOM_PARSE_OCC_FW_MSG      RTL_FLAG_MSTR | RTL_FLAG_NOTMSTR | RTL_FLAG_OBS | RTL_FLAG_ACTIVE | RTL_FLAG_MSTR_READY | RTL_FLAG_NO_APSS | RTL_FLAG_RUN | RTL_FLAG_STANDBY | RTL_FLAG_RST_REQ | RTL_FLAG_APSS_NOT_INITD
 #define FLAGS_MISC_405_CHECKS            RTL_FLAG_MSTR | RTL_FLAG_NOTMSTR | RTL_FLAG_OBS | RTL_FLAG_ACTIVE | RTL_FLAG_MSTR_READY | RTL_FLAG_NO_APSS | RTL_FLAG_RUN | RTL_FLAG_STANDBY | RTL_FLAG_RST_REQ | RTL_FLAG_APSS_NOT_INITD
@@ -127,9 +128,11 @@ task_t G_task_table[TASK_END] = {
     { FLAGS_24X7,                  task_24x7,                      NULL },  // TASK_ID_24X7
     { FLAGS_GPE_TIMINGS,           task_gpe_timings,               NULL },  // TASK_ID_GPE_TIMINGS
     { FLAGS_GET_TOD,               task_get_tod,                   NULL },  // TASK_ID_GET_TOD
+    { FLAGS_APSS_RESET,            task_apss_reset,                NULL },  // TASK_APSS_RESET
 };
 
 const uint8_t G_tick0_seq[] = {
+                                TASK_ID_APSS_RESET,
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
                                 TASK_ID_CORE_DATA_LOW,
@@ -176,6 +179,7 @@ const uint8_t G_tick1_seq[] = {
                                 TASK_END };
 
 const uint8_t G_tick2_seq[] = {
+                                TASK_ID_APSS_RESET,
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
                                 TASK_ID_CORE_DATA_LOW,
@@ -222,6 +226,7 @@ const uint8_t G_tick3_seq[] = {
                                 TASK_END };
 
 const uint8_t G_tick4_seq[] = {
+                                TASK_ID_APSS_RESET,
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
                                 TASK_ID_CORE_DATA_LOW,
@@ -268,6 +273,7 @@ const uint8_t G_tick5_seq[] = {
                                 TASK_END };
 
 const uint8_t G_tick6_seq[] = {
+                                TASK_ID_APSS_RESET,
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
                                 TASK_ID_CORE_DATA_LOW,
@@ -313,6 +319,7 @@ const uint8_t G_tick7_seq[] = {
                                 TASK_END };
 
 const uint8_t G_tick8_seq[] = {
+                                TASK_ID_APSS_RESET,
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
                                 TASK_ID_CORE_DATA_LOW,
@@ -359,6 +366,7 @@ const uint8_t G_tick9_seq[] = {
                                 TASK_END };
 
 const uint8_t G_tick10_seq[] = {
+                                TASK_ID_APSS_RESET,
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
                                 TASK_ID_CORE_DATA_LOW,
@@ -404,6 +412,7 @@ const uint8_t G_tick11_seq[] = {
                                 TASK_END };
 
 const uint8_t G_tick12_seq[] = {
+                                TASK_ID_APSS_RESET,
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
                                 TASK_ID_CORE_DATA_LOW,
@@ -450,6 +459,7 @@ const uint8_t G_tick13_seq[] = {
                                 TASK_END };
 
 const uint8_t G_tick14_seq[] = {
+                                TASK_ID_APSS_RESET,
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
                                 TASK_ID_CORE_DATA_LOW,

@@ -59,18 +59,23 @@ uint64_t G_gpe_apss_time_start;
 uint64_t G_gpe_apss_time_end;
 
 // Flag for requesting APSS recovery when OCC detects all zeroes or data out of sync
-bool G_apss_recovery_requested = FALSE;
+volatile bool G_apss_recovery_requested = FALSE;
 bool G_apss_data_traced = FALSE;
 GPE_BUFFER(apss_start_args_t    G_gpe_start_pwr_meas_read_args);
 GPE_BUFFER(apss_continue_args_t G_gpe_continue_pwr_meas_read_args);
 GPE_BUFFER(apss_complete_args_t G_gpe_complete_pwr_meas_read_args);
+GPE_BUFFER(apss_reset_args_t    G_gpe_apss_reset_args);
 
 GpeRequest G_meas_start_request;
 GpeRequest G_meas_cont_request;
 GpeRequest G_meas_complete_request;
+GpeRequest G_init_gpio_request;
+GpeRequest G_init_mode_request;
+GpeRequest G_apss_reset_request;
 
 // Up / down counter for redundant apss failures
 uint32_t G_backup_fail_count = 0;
+uint32_t G_apss_reset_count = 0;
 
 #ifdef DEBUG_APSS_SEQ
 uint32_t G_sequence_start = 0;
@@ -144,9 +149,11 @@ void dumpHexString(const void *i_data, const unsigned int len, const char *strin
 // End Function Specification
 void do_apss_recovery(void)
 {
+    errlHndl_t l_err = NULL;
+
     if (!G_apss_data_traced)
     {
-        INTR_TRAC_ERR("detected invalid power data[%08x%08x]",
+        INTR_TRAC_ERR("detected invalid power data[%08x%08x]. Requesting APSS reset.",
              (uint32_t)(G_gpe_continue_pwr_meas_read_args.meas_data[0] >> 32),
              (uint32_t)(G_gpe_continue_pwr_meas_read_args.meas_data[0] & 0x00000000ffffffffull));
         G_apss_data_traced = TRUE;
@@ -160,6 +167,12 @@ void do_apss_recovery(void)
         {
             // Increment the up/down counter
             G_backup_fail_count++;
+
+            rtl_stop_task(TASK_ID_APSS_START);
+            rtl_stop_task(TASK_ID_APSS_CONT);
+            rtl_stop_task(TASK_ID_APSS_DONE);
+
+            rtl_start_task(TASK_ID_APSS_RESET);
         }
         else
         {
@@ -179,14 +192,14 @@ void do_apss_recovery(void)
              * @userdata4   OCC_NO_EXTENDED_RC
              * @devdesc     Redundant APSS failure.  Power Management Redundancy Lost.
              */
-            errlHndl_t l_err = createErrl(PSS_MID_DO_APSS_RECOVERY,
-                                          REDUNDANT_APSS_GPE_FAILURE,
-                                          OCC_NO_EXTENDED_RC,
-                                          ERRL_SEV_PREDICTIVE,
-                                          NULL,
-                                          DEFAULT_TRACE_SIZE,
-                                          0,
-                                          0);
+            l_err = createErrl(PSS_MID_DO_APSS_RECOVERY,
+                               REDUNDANT_APSS_GPE_FAILURE,
+                               OCC_NO_EXTENDED_RC,
+                               ERRL_SEV_PREDICTIVE,
+                               NULL,
+                               DEFAULT_TRACE_SIZE,
+                               0,
+                               0);
 
             // APSS callout
             addCalloutToErrl(l_err,
@@ -210,6 +223,45 @@ void do_apss_recovery(void)
                              ERRL_CALLOUT_PRIORITY_MED);
 
             commitErrl(&l_err);
+        }
+    }
+    else
+    {
+        rtl_stop_task(TASK_ID_APSS_START);
+        rtl_stop_task(TASK_ID_APSS_CONT);
+        rtl_stop_task(TASK_ID_APSS_DONE);
+
+        if(G_apss_reset_count < APSS_MAX_NUM_RESET_RETRIES)
+        {
+            ++G_apss_reset_count;
+            rtl_start_task(TASK_ID_APSS_RESET);
+        }
+        else
+        {
+            /*
+             * @errortype
+             * @moduleid    PSS_MID_DO_APSS_RECOVERY
+             * @reasoncode  APSS_HARD_FAILURE
+             * @userdata1   0
+             * @userdata2   0
+             * @userdata4   ERC_APSS_RESET_FAILURE
+             * @devdesc     apss reset failed 3 times
+             */
+            l_err = createErrl(PSS_MID_DO_APSS_RECOVERY,
+                               APSS_HARD_FAILURE,
+                               ERC_APSS_RESET_FAILURE,
+                               ERRL_SEV_UNRECOVERABLE,
+                               NULL,
+                               DEFAULT_TRACE_SIZE,
+                               0,
+                               0);
+
+            addCalloutToErrl(l_err,
+                             ERRL_CALLOUT_TYPE_HUID,
+                             G_sysConfigData.apss_huid,
+                             ERRL_CALLOUT_PRIORITY_HIGH);
+
+            REQUEST_RESET(l_err);
         }
     }
 }
@@ -412,7 +464,7 @@ void task_apss_continue_pwr_meas(struct task *i_self)
             break;
         }
 
-        //Don't run anything if apss recovery is in progress
+        // Don't run anything if apps recovery has been requested
         if(G_apss_recovery_requested)
         {
             break;
@@ -551,6 +603,12 @@ void task_apss_continue_pwr_meas(struct task *i_self)
 // End Function Specification
 #define APSS_ADC_SEQ_MASK  0xf000f000f000f000ull
 #define APSS_ADC_SEQ_CHECK 0x0000100020003000ull
+
+#ifdef DEBUG_APSS_RESET
+// Make var in cacheless section
+GPE_BUFFER(volatile int g_force_apss_reset) = 0;
+#endif
+
 void reformat_meas_data()
 {
     // NO TRACING ALLOWED IN CRITICAL INTERRUPT (any IPC callback functions)
@@ -566,7 +624,11 @@ void reformat_meas_data()
         }
 
         // Check that the first 4 sequence nibbles are 0, 1, 2, 3 in the ADC data
-        if (((G_gpe_continue_pwr_meas_read_args.meas_data[0] & APSS_ADC_SEQ_MASK) != APSS_ADC_SEQ_CHECK) ||
+        if(
+#ifdef DEBUG_APSS_RESET
+           g_force_apss_reset ||
+#endif
+           ((G_gpe_continue_pwr_meas_read_args.meas_data[0] & APSS_ADC_SEQ_MASK) != APSS_ADC_SEQ_CHECK) ||
              !(G_gpe_continue_pwr_meas_read_args.meas_data[0] & ~APSS_ADC_SEQ_MASK))
         {
             // Recovery will begin on the next tick
@@ -574,6 +636,9 @@ void reformat_meas_data()
             // Indicate that collection completed but is invalid so tx_slv_inbox will stop waiting for valid data
             G_ApssPwrMeasDoneInvalid = TRUE;
             G_apss_recovery_requested = TRUE;
+#ifdef DEBUG_APSS_RESET
+            g_force_apss_reset = 0;
+#endif
             break;
         }
         else
@@ -649,11 +714,10 @@ void task_apss_complete_pwr_meas(struct task *i_self)
         }
         if(G_apss_recovery_requested)
         {
-            // Allow apss measurement to proceed on next tick
-            G_apss_recovery_requested = FALSE;
+            // Just in case it's possible to get here after G_apss_recovery_requested is true,
+            // but before apss reset starts
             break;
         }
-
 
         if (L_scheduled)
         {
@@ -831,7 +895,6 @@ bool apss_gpio_get(uint8_t i_pin_number, uint8_t *o_pin_value)
 errlHndl_t initialize_apss(void)
 {
     errlHndl_t l_err = NULL;
-    GpeRequest l_request;   //Used once here to initialize apss.
     uint8_t    l_retryCount = 0;
     // Initialize APSS
 
@@ -855,7 +918,7 @@ errlHndl_t initialize_apss(void)
 
         // Create/schedule IPC_ST_APSS_INIT_GPIO_FUNCID and wait for it to complete (BLOCKING)
         TRAC_INFO("initialize_apss: Creating request for GPE_apss_initialize_gpio");
-        gpe_request_create(&l_request,                                // request
+        gpe_request_create(&G_init_gpio_request,                      // request
                            &G_async_gpe_queue0,                       // queue
                            IPC_ST_APSS_INIT_GPIO_FUNCID,              // Function ID
                            &G_gpe_apss_initialize_gpio_args,          // GPE argument_ptr
@@ -866,10 +929,10 @@ errlHndl_t initialize_apss(void)
 
         // Schedule the request to be executed
         TRAC_INFO("initialize_apss: Scheduling request for IPC_ST_APSS_INIT_GPIO_FUNCID");
-        gpe_request_schedule(&l_request);
+        gpe_request_schedule(&G_init_gpio_request);
 
         // Check for a timeout only; will create the error below.
-        if(ASYNC_REQUEST_STATE_TIMED_OUT == l_request.request.completion_state)
+        if(ASYNC_REQUEST_STATE_TIMED_OUT == G_init_gpio_request.request.completion_state)
         {
             // For whatever reason, we hit a timeout.  It could be either
             // that the HW did not work, or the request didn't ever make
@@ -881,10 +944,10 @@ errlHndl_t initialize_apss(void)
 
 
         TRAC_INFO("initialize_apss: GPE_apss_initialize_gpio completed w/rc=0x%08x",
-                  l_request.request.completion_state);
+                  G_init_gpio_request.request.completion_state);
 
         // Only continue if initializaton completed without any errors.
-        if ((ASYNC_REQUEST_STATE_COMPLETE == l_request.request.completion_state) &&
+        if ((ASYNC_REQUEST_STATE_COMPLETE == G_init_gpio_request.request.completion_state) &&
             (G_gpe_apss_initialize_gpio_args.error.rc == ERRL_RC_SUCCESS))
         {
             // Setup the mode structure to pass to the GPE program
@@ -899,7 +962,7 @@ errlHndl_t initialize_apss(void)
 
             // Create/schedule GPE_apss_set_mode and wait for it to complete (BLOCKING)
             TRAC_INFO("initialize_apss: Creating request for GPE_apss_set_mode");
-            gpe_request_create(&l_request,                              // request
+            gpe_request_create(&G_init_mode_request,                    // request
                                &G_async_gpe_queue0,                     // queue
                                IPC_ST_APSS_INIT_MODE_FUNCID,            // Function ID
                                &G_gpe_apss_set_mode_args,               // GPE argument_ptr
@@ -908,10 +971,10 @@ errlHndl_t initialize_apss(void)
                                NULL,                                    // callback arg
                                ASYNC_REQUEST_BLOCKING);                 // options
             //Schedule set_mode
-            gpe_request_schedule(&l_request);
+            gpe_request_schedule(&G_init_mode_request);
 
             // Check for a timeout, will create the error log later
-            if(ASYNC_REQUEST_STATE_TIMED_OUT == l_request.request.completion_state)
+            if(ASYNC_REQUEST_STATE_TIMED_OUT == G_init_mode_request.request.completion_state)
             {
                 // For whatever reason, we hit a timeout.  It could be either
                 // that the HW did not work, or the request didn't ever make
@@ -922,10 +985,10 @@ errlHndl_t initialize_apss(void)
             }
 
             TRAC_INFO("initialize_apss: GPE_apss_set_mode completed w/rc=0x%08x",
-                          l_request.request.completion_state);
+                          G_init_mode_request.request.completion_state);
 
             //Continue only if mode set was successful.
-            if ((ASYNC_REQUEST_STATE_COMPLETE != l_request.request.completion_state) ||
+            if ((ASYNC_REQUEST_STATE_COMPLETE != G_init_mode_request.request.completion_state) ||
                 (G_gpe_apss_set_mode_args.error.rc != ERRL_RC_SUCCESS))
             {
                 /*
@@ -944,8 +1007,8 @@ errlHndl_t initialize_apss(void)
                                    ERRL_SEV_UNRECOVERABLE,              // i_severity
                                    NULL,                                // i_trace,
                                    0x0000,                              // i_traceSz,
-                                   l_request.request.completion_state,  // i_userData1,
-                                   l_request.request.abort_state);      // i_userData2
+                                   G_init_mode_request.request.completion_state,  // i_userData1,
+                                   G_init_mode_request.request.abort_state);      // i_userData2
                 addUsrDtlsToErrl(l_err,
                                  (uint8_t*)&G_gpe_apss_set_mode_args,
                                  sizeof(G_gpe_apss_set_mode_args),
@@ -973,8 +1036,8 @@ errlHndl_t initialize_apss(void)
                                ERRL_SEV_UNRECOVERABLE,              // i_severity
                                NULL,                                // tracDesc_t i_trace,
                                0x0000,                              // i_traceSz,
-                               l_request.request.completion_state,  // i_userData1,
-                               l_request.request.abort_state);      // i_userData2
+                               G_init_gpio_request.request.completion_state,  // i_userData1,
+                               G_init_gpio_request.request.abort_state);      // i_userData2
 
             addUsrDtlsToErrl(l_err,
                              (uint8_t*)&G_gpe_apss_initialize_gpio_args,
@@ -1021,6 +1084,36 @@ errlHndl_t initialize_apss(void)
                                NULL,                                         // callback arg
                                ASYNC_CALLBACK_IMMEDIATE);                    // options
 
+            // Active state versions of initialization requests
+            TRAC_INFO("initialize_apss: Creating request G_init_gpio_request for active state.");
+            gpe_request_create(&G_init_gpio_request,                      // request
+                               &G_async_gpe_queue0,                       // queue
+                               IPC_ST_APSS_INIT_GPIO_FUNCID,              // Function ID
+                               &G_gpe_apss_initialize_gpio_args,          // GPE argument_ptr
+                               SSX_WAIT_FOREVER,                          // timeout
+                               NULL,                                      // callback
+                               NULL,                                      // callback arg
+                               ASYNC_CALLBACK_IMMEDIATE);                 // options
+
+            TRAC_INFO("initialize_apss: Creating request G_init_mode_request for active state.");
+            gpe_request_create(&G_init_mode_request,                    // request
+                               &G_async_gpe_queue0,                     // queue
+                               IPC_ST_APSS_INIT_MODE_FUNCID,            // Function ID
+                               &G_gpe_apss_set_mode_args,               // GPE argument_ptr
+                               SSX_WAIT_FOREVER,                        // timeout
+                               NULL,                                    // callback
+                               NULL,                                    // callback arg
+                               ASYNC_CALLBACK_IMMEDIATE);               // options
+
+            TRAC_INFO("initialize_apss: Creating request G_reset_request.");
+            gpe_request_create(&G_apss_reset_request,                   // request
+                               &G_async_gpe_queue0,                     // queue
+                               IPC_ST_APSS_RESET_FUNCID,                // Function ID
+                               &G_gpe_apss_reset_args,                  // GPE argument_ptr
+                               SSX_WAIT_FOREVER,                        // timeout
+                               NULL,                                    // callback
+                               NULL,                                    // callback arg
+                               ASYNC_CALLBACK_IMMEDIATE);               // options
             // Successfully initialized APSS, no need to go through again. Let's leave.
             break;
         }
@@ -1042,3 +1135,276 @@ errlHndl_t initialize_apss(void)
 
     return l_err;
 }
+
+void task_apss_reset(task_t *i_self)
+{
+    int schedule_rc  = 0;
+    static  int L_apss_reset_state = APSS_RESET_STATE_START;
+
+    static bool L_scheduled_reset = FALSE;
+    static bool L_scheduled_init_gpio = FALSE;
+    static bool L_scheduled_init_mode = FALSE;
+
+    static bool L_reset_ffdc_collected = FALSE;
+    static bool L_init_gpio_ffdc_collected = FALSE;
+    static bool L_init_mode_ffdc_collected = FALSE;
+
+    APSS_DBG("Calling task_apss_reset. State %d",L_apss_reset_state);
+
+    do
+    {
+        if(L_scheduled_reset)
+        {
+            if (!async_request_is_idle(&G_apss_reset_request.request))
+            {
+                INTR_TRAC_INFO("E>task_apss_reset: gpe apss reset request "
+                               "is not idle.");
+                break;
+            }
+
+            if((ASYNC_REQUEST_STATE_COMPLETE !=
+                G_apss_reset_request.request.completion_state) ||
+               (0 != G_gpe_apss_reset_args.error.error))
+            {
+                INTR_TRAC_ERR("task_apss_reset: reset request failed with "
+                              "rc:0x%08x, ffdc:0x%08X%08X. "
+                              "CompletionState:0x%X.",
+                              G_gpe_apss_reset_args.error.rc,
+                              (uint32_t) (G_gpe_apss_reset_args.error.ffdc >> 32),
+                              (uint32_t) G_gpe_apss_reset_args.error.ffdc,
+                              G_apss_reset_request.request.completion_state);
+                if(!L_reset_ffdc_collected)
+                {
+                    errlHndl_t err = NULL;
+
+                    /*
+                     *  @errortype
+                     *  @moduleid   PSS_MID_APSS_RESET
+                     *  @reasoncode APSS_GPE_FAILURE
+                     *  @userdata1  GPE return code
+                     *  @userdata2  0
+                     *  @userdata4  ERC_APSS_RESET_FAILURE
+                     *  @devdesc    Failed to reset apss
+                     */
+                    err = createErrl(PSS_MID_APSS_RESET,    // moduleId
+                                     APSS_GPE_FAILURE,      //reasonCode
+                                     ERC_APSS_RESET_FAILURE,
+                                     ERRL_SEV_INFORMATIONAL,
+                                     NULL,
+                                     DEFAULT_TRACE_SIZE,
+                                     G_gpe_apss_reset_args.error.rc,
+                                     0);
+                    addUsrDtlsToErrl(err,
+                                     (uint8_t*)&G_apss_reset_request.ffdc,
+                                     sizeof(G_apss_reset_request.ffdc),
+                                     ERRL_STRUCT_VERSION_1,
+                                     ERRL_USR_DTL_BINARY_DATA);
+                    commitErrl(&err);
+
+                    L_reset_ffdc_collected = TRUE;
+                }
+            }
+        }
+
+        if(L_scheduled_init_gpio)
+        {
+            if (!async_request_is_idle(&G_init_gpio_request.request))
+            {
+                INTR_TRAC_INFO("E>task_apss_reset: gpe apss init gpio request "
+                               "is not idle.");
+                break;
+            }
+
+            if((ASYNC_REQUEST_STATE_COMPLETE !=
+                G_init_gpio_request.request.completion_state) ||
+               (0 != G_gpe_apss_initialize_gpio_args.error.error))
+            {
+                INTR_TRAC_ERR("task_apss_reset: reset request failed with "
+                              "rc:0x%08x, ffdc:0x%08X%08X. "
+                              "CompletionState:0x%X.",
+                              G_gpe_apss_initialize_gpio_args.error.rc,
+                              (uint32_t) (G_gpe_apss_initialize_gpio_args.error.ffdc >> 32),
+                              (uint32_t) G_gpe_apss_initialize_gpio_args.error.ffdc,
+                              G_init_gpio_request.request.completion_state);
+
+                if(!L_init_gpio_ffdc_collected)
+                {
+                    errlHndl_t err = NULL;
+
+                    /*
+                     *  @errortype
+                     *  @moduleid   PSS_MID_APSS_RESET
+                     *  @reasoncode APSS_GPE_FAILURE
+                     *  @userdata1  GPE return code
+                     *  @userdata2  0
+                     *  @userdata4  ERC_PSS_GPIO_INIT_FAIL
+                     *  @devdesc    Failed to reset apss
+                     */
+                    err = createErrl(PSS_MID_APSS_RESET,    // moduleId
+                                     APSS_GPE_FAILURE,      //reasonCode
+                                     ERC_PSS_GPIO_INIT_FAIL,
+                                     ERRL_SEV_INFORMATIONAL,
+                                     NULL,
+                                     DEFAULT_TRACE_SIZE,
+                                     G_gpe_apss_initialize_gpio_args.error.rc,
+                                     0);
+                    addUsrDtlsToErrl(err,
+                                     (uint8_t*)&G_init_gpio_request.ffdc,
+                                     sizeof(G_init_gpio_request.ffdc),
+                                     ERRL_STRUCT_VERSION_1,
+                                     ERRL_USR_DTL_BINARY_DATA);
+                    commitErrl(&err);
+
+                    L_init_gpio_ffdc_collected = TRUE;
+                }
+            }
+        }
+
+        if(L_scheduled_init_mode)
+        {
+            if (!async_request_is_idle(&G_init_mode_request.request))
+            {
+                INTR_TRAC_INFO("E>task_apss_reset: gpe apss init mode request "
+                               "is not idle.");
+                break;
+            }
+
+            if((ASYNC_REQUEST_STATE_COMPLETE !=
+                G_init_mode_request.request.completion_state) ||
+               (0 != G_gpe_apss_set_mode_args.error.error))
+            {
+                INTR_TRAC_ERR("task_apss_reset: reset request failed with "
+                              "rc:0x%08x, ffdc:0x%08X%08X. "
+                              "CompletionState:0x%X.",
+                              G_gpe_apss_set_mode_args.error.rc,
+                              (uint32_t) (G_gpe_apss_set_mode_args.error.ffdc >> 32),
+                              (uint32_t) G_gpe_apss_set_mode_args.error.ffdc,
+                              G_init_mode_request.request.completion_state);
+
+                if(!L_init_mode_ffdc_collected)
+                {
+                    errlHndl_t err = NULL;
+
+                    /*
+                     *  @errortype
+                     *  @moduleid   PSS_MID_APSS_RESET
+                     *  @reasoncode APSS_GPE_FAILURE
+                     *  @userdata1  GPE return code
+                     *  @userdata2  0
+                     *  @userdata4  ERC_PSS_COMPOSITE_MODE_FAIL
+                     *  @devdesc    Failed to reset apss
+                     */
+                    err = createErrl(PSS_MID_APSS_RESET,    // moduleId
+                                     APSS_GPE_FAILURE,      //reasonCode
+                                     ERC_PSS_COMPOSITE_MODE_FAIL,
+                                     ERRL_SEV_INFORMATIONAL,
+                                     NULL,
+                                     DEFAULT_TRACE_SIZE,
+                                     G_gpe_apss_set_mode_args.error.rc,
+                                     0);
+                    addUsrDtlsToErrl(err,
+                                     (uint8_t*)&G_init_mode_request.ffdc,
+                                     sizeof(G_init_mode_request.ffdc),
+                                     ERRL_STRUCT_VERSION_1,
+                                     ERRL_USR_DTL_BINARY_DATA);
+                    commitErrl(&err);
+
+                    L_init_mode_ffdc_collected = TRUE;
+                }
+            }
+        }
+
+        switch (L_apss_reset_state)
+        {
+            case APSS_RESET_STATE_START:
+            case APSS_RESET_STATE_WAIT_1MS:
+                // TOGGLE apss reset GPIO pin
+                schedule_rc = gpe_request_schedule(&G_apss_reset_request);
+                L_scheduled_reset = TRUE;
+                break;
+
+            case APSS_RESET_STATE_WAIT_DONE:
+
+                G_gpe_apss_initialize_gpio_args.error.error = 0;
+                G_gpe_apss_initialize_gpio_args.error.ffdc = 0;
+
+                schedule_rc = gpe_request_schedule(&G_init_gpio_request);
+
+                L_scheduled_reset = FALSE;
+                L_scheduled_init_gpio = TRUE;
+                break;
+
+            case APSS_RESET_STATE_REINIT:
+
+                G_gpe_apss_set_mode_args.error.error = 0;
+                G_gpe_apss_set_mode_args.error.ffdc = 0;
+
+                schedule_rc = gpe_request_schedule(&G_init_mode_request);
+
+                L_scheduled_init_gpio = FALSE;
+                L_scheduled_init_mode = TRUE;
+                break;
+
+            case APSS_RESET_STATE_COMPLETE:
+                L_apss_reset_state = -1;
+                L_scheduled_init_mode = FALSE;
+
+                // Disable this task
+                rtl_stop_task(TASK_ID_APSS_RESET);
+
+                // Resuming your regulary scheduled programs.
+                rtl_start_task(TASK_ID_APSS_START);
+                rtl_start_task(TASK_ID_APSS_CONT);
+                rtl_start_task(TASK_ID_APSS_DONE);
+
+                G_apss_recovery_requested = FALSE;
+                G_apss_data_traced = FALSE;
+
+                break;
+
+            default:
+                break;
+        }
+
+        if(schedule_rc)
+        {
+            errlHndl_t err = NULL;
+
+            INTR_TRAC_ERR("task_apss_reset: schedule failed w/rc=0x%08X (%d us)", schedule_rc,
+                          (int) ((ssx_timebase_get())/(SSX_TIMEBASE_FREQUENCY_HZ/1000000)));
+
+            /*
+             * @errortype
+             * @moduleid    PSS_MID_APSS_RESET
+             * @reasoncode  SSX_GENERIC_FAILURE
+             * @userdata1   GPE shedule returned rc code
+             * @userdata2   APSS reset state
+             * @userdata4   ERC_APSS_SCHEDULE_FAILURE
+             * @devdesc     task_apss_start_pwr_meas schedule failed
+             */
+            err = createErrl(PSS_MID_APSS_RESET,
+                               SSX_GENERIC_FAILURE,
+                               ERC_APSS_SCHEDULE_FAILURE,
+                               ERRL_SEV_PREDICTIVE,
+                               NULL,
+                               DEFAULT_TRACE_SIZE,
+                               schedule_rc,
+                               L_apss_reset_state);
+
+            // Request reset since this should never happen.
+            REQUEST_RESET(err);
+
+            L_scheduled_reset = FALSE;
+            L_scheduled_init_gpio = FALSE;
+            L_scheduled_init_mode = FALSE;
+            break;
+        }
+
+        ++L_apss_reset_state;
+
+    }
+    while(0);
+
+    APSS_DBG("task_apss_reset finished w/rc=0x%08X\n", rc);
+}
+

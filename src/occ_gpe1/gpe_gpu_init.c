@@ -39,7 +39,7 @@ void gpe_gpu_init(ipc_msg_t* cmd, void* arg)
         gpe_set_ffdc(&(args->error), 0, GPE_RC_GPU_INIT_FAILED, rc);
     }
 
-    // pin0 as output, pin1 as input, pin3 unchanged
+    // pin0 as output, pin1 as input, pin2 unchanged
     data64 &= 0xBfffffffffffffffull;
     data64 |= 0x8000000000000000ull;
 
