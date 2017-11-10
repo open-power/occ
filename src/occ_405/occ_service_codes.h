@@ -189,6 +189,7 @@ enum occExtReasonCode
     ERC_APSS_ADC_OUT_OF_RANGE_FAILURE           = 0x0026,
     ERC_APSS_ADC_DUPLICATED_FAILURE             = 0x0027,
     ERC_APSS_NO_VALID_DATA                      = 0x0028,
+    ERC_APSS_RESET_FAILURE                      = 0x0029,
 
     ERC_AMEC_PCAPS_MISMATCH_FAILURE             = 0x002A,
     ERC_AMEC_UNDER_PCAP_FAILURE                 = 0x002B,

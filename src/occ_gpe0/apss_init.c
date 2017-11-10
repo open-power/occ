@@ -29,6 +29,11 @@
 #include "pss_constants.h"
 #include <apss_structs.h>       //H file common with occ_405
 #include "gpe_util.h"
+#include "p9_misc_scom_addresses.h"
+
+// PV_CP0_P_PRV_GPIO2
+#define APSS_RESET_GPIO (0x2000000000000000ull)
+
 
 // Default to Auto-2 for now, should get set when the mode
 // is initialized, and before any APSS data is gathered.
@@ -201,6 +206,45 @@ void apss_init_gpio(ipc_msg_t* cmd, void* arg)
                 break;
             }
         }//End of port while loop.
+        if (rc)
+        {
+            break;
+        }
+
+        // Enable GPIO that's used for APSS resets
+        //
+        // Set APSS_RESET_GPIO output high before enabling it's output
+
+        regValue = APSS_RESET_GPIO;
+        rc = putscom_abs(PU_GPIO_OUTPUT_OR, regValue);
+        if(rc)
+        {
+            PK_TRACE("apss_init: APSS_RESET_GPIO_OUTPUT low failed. rc:0x%08x",rc);
+            gpe_set_ffdc(&(args->error), 0, GPE_RC_SCOM_PUT_FAILED, rc);
+            break;
+        }
+
+        // Read output enable pins.
+        rc = getscom_abs(PU_GPIO_OUTPUT_EN, &regValue);
+        if(rc)
+        {
+            PK_TRACE("apss_init: Read APSS_RESET_GPIO_OUTPUT_EN failed. rc:0x%08x",rc);
+            gpe_set_ffdc(&(args->error), 0, GPE_RC_SCOM_GET_FAILED, rc);
+            break;
+        }
+
+        // Enable APSS_RESET_GPIO as output
+        regValue |= APSS_RESET_GPIO;
+
+        rc = putscom_abs(PU_GPIO_OUTPUT_EN, regValue);
+        if(rc)
+        {
+            PK_TRACE("apss_init: APSS_RESET_GPIO_OUTPUT_EN failed. rc:0x%08x",rc);
+            gpe_set_ffdc(&(args->error), 0, GPE_RC_SCOM_PUT_FAILED, rc);
+            break;
+        }
+
+
     }while(0);
 
     // send back a successful response.  OCC will check rc and ffdc
@@ -351,5 +395,50 @@ void apss_init_mode(ipc_msg_t* cmd, void* arg)
     if(rc == 0 && ipc_rc == IPC_RC_SUCCESS) // if ipc_send_rc, wont reach this instruction (pk_halt)
     {
         PK_TRACE("apss_init_mode: completed successfully.");
+    }
+}
+
+
+// ----------------------------------------------------
+// Toggle the output of the APSS RESET pin
+// ----------------------------------------------------
+void apss_toggle_hw_reset(ipc_msg_t* cmd, void* arg)
+{
+    static int g_apss_reset_state = ~(0);
+
+    int rc = 0;
+    uint32_t apss_reset_address;
+    ipc_async_cmd_t     *async_cmd = (ipc_async_cmd_t*)cmd;
+    initGpioArgs_t      *args = (initGpioArgs_t*)async_cmd->cmd_data;
+
+    if(g_apss_reset_state) // not in reset
+    {
+        apss_reset_address = PU_GPIO_OUTPUT_CLR;
+    }
+    else
+    {
+        apss_reset_address = PU_GPIO_OUTPUT_OR;
+    }
+    g_apss_reset_state = ~g_apss_reset_state;
+    PK_TRACE("apss_toggle_apss_hw_reset: %d",(uint16_t)g_apss_reset_state);
+
+
+    // Set/clear GPIO2 output
+    rc = putscom_abs(apss_reset_address, APSS_RESET_GPIO);
+    if(rc)
+    {
+        PK_TRACE("apss_toggle_hw_reset: APSS_RESET_GPIO_OUTPUT toggle failed. rc:0x%08x",rc);
+        gpe_set_ffdc(&(args->error), 0, GPE_RC_SCOM_PUT_FAILED, rc);
+    }
+
+    // send back a successful response.  OCC will check rc and ffdc
+    rc = ipc_send_rsp(cmd, IPC_RC_SUCCESS);
+
+    if(rc)
+    {
+        PK_TRACE("apss_toggle_hw_reset: Failed to send response back. rc = 0x%08x. Halting GPE0",
+                 rc);
+        gpe_set_ffdc(&(args->error), 0x00, rc, 0);
+        pk_halt();
     }
 }

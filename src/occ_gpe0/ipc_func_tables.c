@@ -32,6 +32,7 @@ void apss_init_mode(ipc_msg_t* cmd, void* arg);
 void apss_start_pwr_meas_read(ipc_msg_t* cmd, void* arg);
 void apss_continue_pwr_meas_read(ipc_msg_t* cmd, void* arg);
 void apss_complete_pwr_meas_read(ipc_msg_t* cmd, void* arg);
+void apss_toggle_hw_reset(ipc_msg_t* cmd, void* arg);
 void gpe_get_core_data(ipc_msg_t* cmd, void* arg);
 void gpe_get_nest_dts(ipc_msg_t* cmd, void* arg);
 void gpe_get_tod(ipc_msg_t* cmd, void* arg);
@@ -75,7 +76,7 @@ IPC_HANDLER(gpe0_nop, 0)                     // 8 - IPC_ST_GPE0_NOP
 IPC_HANDLER(gpe_get_nest_dts, 0)             // 9 - IPC_ST_GET_NEST_DTS_FUNCID
 IPC_HANDLER(ipc_fir_collection, 0)           // 10 - IPC_ST_FIR_COLLECTION
 IPC_HANDLER(gpe_get_tod, 0)                  // 11 - IPC_ST_GET_TOD_FUNCID
-IPC_HANDLER_DEFAULT                          // 12
+IPC_HANDLER(apss_toggle_hw_reset, 0)         // 12 - IPC_ST_APSS_RESET_FUNCID
 IPC_HANDLER_DEFAULT                          // 13
 IPC_HANDLER_DEFAULT                          // 14
 IPC_HANDLER_DEFAULT                          // 15

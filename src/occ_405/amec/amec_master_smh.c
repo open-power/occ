@@ -905,8 +905,11 @@ void amec_mst_common_tasks_post(void)
       //Call OCC pcaps mismatch function
       amec_mst_check_pcaps_match();
 
-      //Call check under power cap function
-      amec_mst_check_under_pcap();
+      if(0 == G_dcom_slv_inbox_doorbell_rx.apss_recovery_in_progress)
+      {
+        //Call check under power cap function
+        amec_mst_check_under_pcap();
+      }
   }
 }
 

@@ -63,6 +63,7 @@ typedef enum {
     TASK_ID_24X7,                  // 24x7 data collection task
     TASK_ID_GPE_TIMINGS,
     TASK_ID_GET_TOD,               // Get time of day task
+    TASK_ID_APSS_RESET,            // (HW) reset APSS
     TASK_END  // This must always be the last enum in this list,
               // so that TASK_END always equals the last task ID + 1.
 } task_id_t;

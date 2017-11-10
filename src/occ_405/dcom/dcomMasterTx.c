@@ -183,6 +183,7 @@ uint32_t dcom_build_slv_inbox(void)
     G_dcom_slv_inbox_doorbell_tx.gpio[0] = G_apss_pwr_meas.gpio[0];
     G_dcom_slv_inbox_doorbell_tx.gpio[1] = G_apss_pwr_meas.gpio[1];
     G_dcom_slv_inbox_doorbell_tx.tod = G_apss_pwr_meas.tod;
+    G_dcom_slv_inbox_doorbell_tx.apss_recovery_in_progress = G_apss_recovery_requested;
 
     G_dcom_slv_inbox_doorbell_tx.magic_counter++;
     G_dcom_slv_inbox_doorbell_tx.magic2 = PBAX_MAGIC_NUMBER_32B;
@@ -245,7 +246,9 @@ void task_dcom_tx_slv_inbox( task_t *i_self)
     {
         // If we are in standby or no APSS present, we need to fake out
         // the APSS data since we aren't talking to APSS.
-        if( (OCC_STATE_STANDBY == CURRENT_STATE()) || (G_pwr_reading_type != PWR_READING_TYPE_APSS) )
+        if( (OCC_STATE_STANDBY == CURRENT_STATE()) ||
+            (G_pwr_reading_type != PWR_READING_TYPE_APSS) ||
+            G_apss_recovery_requested )
         {
            G_ApssPwrMeasCompleted = TRUE;
         }
