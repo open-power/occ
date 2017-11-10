@@ -115,6 +115,11 @@ const uint8_t G_smgr_state_trans_count = sizeof(G_smgr_state_trans)/sizeof(smgr_
 uint32_t G_smgr_validate_data_active_mask = SMGR_VALIDATE_DATA_ACTIVE_MASK_HARDCODES;
 uint32_t G_smgr_validate_data_observation_mask = SMGR_VALIDATE_DATA_OBSERVATION_MASK_HARDCODES;
 
+
+void disable_all_dimms();
+void disable_all_gpus();
+
+
 // Function Specification
 //
 // Name: SMGR_is_state_transitioning
@@ -331,6 +336,12 @@ errlHndl_t SMGR_all_to_standby()
     //   - Clear OBSERVATION b/c not in CHARACTERIZATION State
     rtl_clr_run_mask_deferred(RTL_FLAG_ACTIVE | RTL_FLAG_OBS );
     rtl_set_run_mask_deferred(RTL_FLAG_STANDBY);
+
+    // Stop reading DIMM temps
+    disable_all_dimms();
+
+    // Stop monitoring GPUs
+    disable_all_gpus();
 
     // Set the actual STATE now that we have finished everything else
     CURRENT_STATE() = OCC_STATE_STANDBY;
@@ -1140,6 +1151,12 @@ errlHndl_t SMGR_all_to_safe()
     // Only reset task & wdt task will run from now on
     // !!! There is no recovery to this except a reset !!!
     rtl_set_run_mask_deferred(RTL_FLAG_RST_REQ);
+
+    // Stop reading DIMM temps
+    disable_all_dimms();
+
+    // Stop monitoring GPUs
+    disable_all_gpus();
 
     // Notes:
     //  - We can still talk to FSP
