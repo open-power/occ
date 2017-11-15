@@ -39,6 +39,7 @@
 #include "sensor.h"
 #include "gpe_24x7_structs.h"
 
+extern uint8_t G_occ_interrupt_type;
 
 //Global array of core data buffers
 GPE_BUFFER(CoreData G_core_data[MAX_NUM_FW_CORES+NUM_CORE_DATA_DOUBLE_BUF+NUM_CORE_DATA_EMPTY_BUF]) = {{{0}}};
@@ -678,6 +679,12 @@ void task_24x7(task_t * i_task)
 {
     static uint8_t L_numTicks = 0x00;  // never called since OCC started
     static bool    L_idle_trace = FALSE;
+
+    // workaround SW407903 don't run 24x7 on FSP systems
+    if(G_occ_interrupt_type == FSP_SUPPORTED_OCC)
+    {
+        return;
+    }
 
     if (!G_24x7_disabled)
     {
