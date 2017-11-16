@@ -848,7 +848,6 @@ uint16_t avsbus_read_status(const avsbus_type_e i_type)
 
     // Since read was started in previous tick, it should have already completed
     // (no need to poll/wait on o2s_ongoing)
-    enum occReasonCode rc = OCC_SUCCESS_REASON_CODE;
     uint32_t l_status = in32(OCB_O2SSTxB[l_data.bus]);
     DEBUG_IN32(OCB_O2SSTxB[l_data.bus], l_status, "OCB_O2SSTxB");
     // OCC O2S Status Register
@@ -869,7 +868,6 @@ uint16_t avsbus_read_status(const avsbus_type_e i_type)
         {
             TRAC_ERR("avsbus_read_status: Error found in Vd%c O2SST[0x%08X] = [0x%08X]",
                      l_trace_type, OCB_O2SSTxB[l_data.bus], l_status);
-            rc = AVSBUS_ERROR;
         }
     }
     else if (l_status & AVSBUS_STATUS_ONGOING) // o2s_ongoing
@@ -881,7 +879,6 @@ uint16_t avsbus_read_status(const avsbus_type_e i_type)
         {
             TRAC_ERR("avsbus_read_status: Vd%c timeout waiting for o2s_ongoing change O2SST[0x%08X] = [0x%08X]",
                      l_trace_type, OCB_O2SSTxB[l_data.bus], l_status);
-            rc = AVSBUS_TIMEOUT;
         }
     }
 
@@ -909,7 +906,6 @@ uint16_t avsbus_read_status(const avsbus_type_e i_type)
             {
                 TRAC_ERR("avsbus_read_status: CRC mismatch in Vd%c rsp O2SRD[0x%08X] = [0x%08X] (calculated CRC 0x%08X)",
                          l_trace_type, OCB_O2SRDxB[l_data.bus], value, crc);
-                rc = AVSBUS_CRC_ERROR;
             }
         }
         // Check for valid command operation and extract read data
@@ -950,7 +946,6 @@ uint16_t avsbus_read_status(const avsbus_type_e i_type)
             if ((*l_error_count == 1) || (*l_error_count == MAX_READ_ATTEMPTS))
             {
                 TRAC_ERR("avsbus_read_status: SlaveAck reported no action taken[0x%08X]", value);
-                rc = AVSBUS_ERROR;
             }
         }
     }
