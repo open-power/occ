@@ -174,8 +174,9 @@ errlHndl_t AMEC_data_write_thrm_thresholds(const OCC_MODE i_mode)
         l_frudata = l_data->data;
 
         // Store the processor thermal data
-        if(i_mode == OCC_MODE_NOMINAL)
+        if ((i_mode == OCC_MODE_NOMINAL) || (G_sysConfigData.system_type.kvm))
         {
+            // use normal thresholds for Nominal or OPAL
             l_dvfs_temp = l_frudata[DATA_FRU_PROC].dvfs;
             l_error = l_frudata[DATA_FRU_PROC].error;
         }
@@ -203,8 +204,9 @@ errlHndl_t AMEC_data_write_thrm_thresholds(const OCC_MODE i_mode)
                   l_dvfs_temp);
 
         // Store the Centaur thermal data
-        if(i_mode == OCC_MODE_NOMINAL)
+        if ((i_mode == OCC_MODE_NOMINAL) || (G_sysConfigData.system_type.kvm))
         {
+            // use normal thresholds for Nominal or OPAL
             l_dvfs_temp = l_frudata[DATA_FRU_CENTAUR].dvfs;
             l_error = l_frudata[DATA_FRU_CENTAUR].error;
         }
@@ -233,8 +235,9 @@ errlHndl_t AMEC_data_write_thrm_thresholds(const OCC_MODE i_mode)
                   l_dvfs_temp);
 
         // Store the DIMM thermal data
-        if(i_mode == OCC_MODE_NOMINAL)
+        if ((i_mode == OCC_MODE_NOMINAL) || (G_sysConfigData.system_type.kvm))
         {
+            // use normal thresholds for Nominal or OPAL
             l_dvfs_temp = l_frudata[DATA_FRU_DIMM].dvfs;
             l_error = l_frudata[DATA_FRU_DIMM].error;
         }
@@ -267,8 +270,9 @@ errlHndl_t AMEC_data_write_thrm_thresholds(const OCC_MODE i_mode)
                   g_amec->vrhotproc.setpoint);
 
         // Store the VRM Vdd thermal data
-        if(i_mode == OCC_MODE_NOMINAL)
+        if ((i_mode == OCC_MODE_NOMINAL) || (G_sysConfigData.system_type.kvm))
         {
+            // use normal thresholds for Nominal or OPAL
             l_dvfs_temp = l_frudata[DATA_FRU_VRM_VDD].dvfs;
             l_error = l_frudata[DATA_FRU_VRM_VDD].error;
         }
