@@ -24,6 +24,7 @@
 /* IBM_PROLOG_END_TAG                                                     */
 #include <stdio.h>
 #include <stdint.h>
+#include <sys/stat.h>
 
 // NOTE: This tool is to be used when FFDC is dumped by the OCC, and currently
 //       only accepts input files in binary format.
@@ -162,18 +163,6 @@ uint16_t get_uint16(FILE* i_fhndl)
     return ret;
 }
 
-int file_length_valid(FILE* i_fhndl, uint16_t i_exp_size)
-{
-    uint32_t len = 0;
-
-    while(EOF != fgetc(i_fhndl))
-    {
-        len++;
-    }
-
-    return (len < i_exp_size) ? 0 : 1;
-}
-
 void get_thread_data(FILE* i_fhndl, thread_dump_t * i_thrd)
 {
     uint32_t i = 0;
@@ -297,16 +286,22 @@ int main(int argc, char** argv)
         }
     }
 
+    // Get file size
+    fseek(ffdc_file, 0, SEEK_END);
+    const unsigned int file_size = ftell(ffdc_file);
+    fseek(ffdc_file, 0, SEEK_SET);
+
     // Binary file is open, parse it
     data.seq = fgetc(ffdc_file);
     data.cmd = fgetc(ffdc_file);
     data.excp = fgetc(ffdc_file);
     data.len = get_uint16(ffdc_file);
 
-    if( (!file_length_valid(ffdc_file, data.len)) )
+    if (file_size < data.len)
     {
-        fprintf(stderr, "ERROR: FFDC file not valid size\n");
-        return -1;
+        fprintf(stderr, "WARNING: FFDC file size (%d) is less than what was expected (%d)\n",
+                file_size, data.len);
+        // fgetc will continue to return 0xFF once the end of file is reached
     }
 
     if(fseek(ffdc_file, 5, SEEK_SET))

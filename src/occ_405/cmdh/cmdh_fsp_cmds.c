@@ -611,14 +611,19 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
         // OCC can't support power capping without knowing the system power
         if(G_pwr_reading_type != PWR_READING_TYPE_NONE)
         {
-           l_pcapData.current = g_amec->pcap.active_node_pcap;
-           l_pcapData.system = G_amec_sensor_list[PWRSYS]->sample;
-           l_pcapData.n = G_sysConfigData.pcap.oversub_pcap;
-           l_pcapData.max = G_sysConfigData.pcap.max_pcap;
-           l_pcapData.hard_min = G_sysConfigData.pcap.hard_min_pcap;
-           l_pcapData.soft_min = G_sysConfigData.pcap.soft_min_pcap;
-           l_pcapData.user = G_sysConfigData.pcap.current_pcap;
-           l_pcapData.source = G_sysConfigData.pcap.source;
+            if ((G_sysConfigData.system_type.non_redund_ps == false) ||
+                (! AMEC_INTF_GET_OVERSUBSCRIPTION()))
+            {
+                l_pcapData.current = g_amec->pcap.active_node_pcap;
+            }
+            // else OCC is not running pcap algorithim so leave current cap as 0
+            l_pcapData.system = G_amec_sensor_list[PWRSYS]->sample;
+            l_pcapData.n = G_sysConfigData.pcap.oversub_pcap;
+            l_pcapData.max = G_sysConfigData.pcap.max_pcap;
+            l_pcapData.hard_min = G_sysConfigData.pcap.hard_min_pcap;
+            l_pcapData.soft_min = G_sysConfigData.pcap.soft_min_pcap;
+            l_pcapData.user = G_sysConfigData.pcap.current_pcap;
+            l_pcapData.source = G_sysConfigData.pcap.source;
         }
 
         // Copy header to response buffer.

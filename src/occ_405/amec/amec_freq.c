@@ -156,26 +156,31 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
       }
     }
 
-    // check if need to lower max frequency due to being in oversubscription.  0 oversub freq means no freq limitation
-    if( AMEC_INTF_GET_OVERSUBSCRIPTION() && (G_sysConfigData.sys_mode_freq.table[OCC_MODE_OVERSUB]) &&
-       (G_sysConfigData.sys_mode_freq.table[OCC_MODE_OVERSUB] < l_freq_max) )
+    // if (redundant ps policy is being enforced)
+    if (G_sysConfigData.system_type.non_redund_ps == false)
     {
-        // If oversub is lower than system minimum then set to min
-        if(G_sysConfigData.sys_mode_freq.table[OCC_MODE_OVERSUB] < l_freq_min)
+        // OVERSUB is actually TURBO
+        // check if need to lower max frequency due to being in oversubscription.  0 oversub freq means no freq limitation
+        if( AMEC_INTF_GET_OVERSUBSCRIPTION() && (G_sysConfigData.sys_mode_freq.table[OCC_MODE_OVERSUB]) &&
+            (G_sysConfigData.sys_mode_freq.table[OCC_MODE_OVERSUB] < l_freq_max) )
         {
-            TRAC_IMP("amec_set_freq_range: max frequency lowered from %u to system min %u due to oversubscription",
-                      l_freq_max,
-                      l_freq_min);
+            // If oversub is lower than system minimum then set to min
+            if(G_sysConfigData.sys_mode_freq.table[OCC_MODE_OVERSUB] < l_freq_min)
+            {
+                TRAC_IMP("amec_set_freq_range: max frequency lowered from %u to system min %u due to oversubscription",
+                         l_freq_max,
+                         l_freq_min);
 
-            l_freq_max = l_freq_min;
-        }
-        else
-	{
-            TRAC_IMP("amec_set_freq_range: max frequency lowered from %u to %u due to Oversubscription",
-                      l_freq_max,
-                      G_sysConfigData.sys_mode_freq.table[OCC_MODE_OVERSUB]);
+                l_freq_max = l_freq_min;
+            }
+            else
+            {
+                TRAC_IMP("amec_set_freq_range: max frequency lowered from %u to %u due to Oversubscription",
+                         l_freq_max,
+                         G_sysConfigData.sys_mode_freq.table[OCC_MODE_OVERSUB]);
 
-            l_freq_max = G_sysConfigData.sys_mode_freq.table[OCC_MODE_OVERSUB];
+                l_freq_max = G_sysConfigData.sys_mode_freq.table[OCC_MODE_OVERSUB];
+            }
         }
     }
 

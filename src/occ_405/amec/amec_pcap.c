@@ -327,12 +327,8 @@ void amec_gpu_pcap(bool i_oversubscription, bool i_active_pcap_changed, int32_t 
 // Thread: Real Time Loop
 //
 // End Function Specification
-void amec_pcap_calc(void)
+void amec_pcap_calc(const bool i_oversub_state)
 {
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
-    bool l_oversub_state  = 0;
     bool l_active_pcap_changed = FALSE;
     uint16_t l_node_pwr = AMECSENSOR_PTR(PWRSYS)->sample;
     uint16_t l_p0_pwr   = AMECSENSOR_PTR(PWRPROC)->sample;
@@ -342,17 +338,11 @@ void amec_pcap_calc(void)
     static uint32_t L_prev_node_pcap = 0;
     static bool L_apss_error_traced = FALSE;
 
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
-
-    l_oversub_state = AMEC_INTF_GET_OVERSUBSCRIPTION();
-
     // Determine the active power cap.  norm_node_pcap is set as lowest
     // between sys (N+1 mode) and user in amec_data_write_pcap()
     // when in oversub (N mode) only use oversub pcap if lower than norm_node_pcap
     // to handle user set power cap lower than the oversub power cap
-    if( (TRUE == l_oversub_state) &&
+    if( (TRUE == i_oversub_state) &&
         (g_amec->pcap.ovs_node_pcap < g_amec->pcap.norm_node_pcap) )
     {
         g_amec->pcap.active_node_pcap = g_amec->pcap.ovs_node_pcap;
@@ -379,7 +369,7 @@ void amec_pcap_calc(void)
     // Determine GPU power cap if there are GPUs present
     if(G_first_proc_gpu_config)
     {
-       amec_gpu_pcap(l_oversub_state, l_active_pcap_changed, l_avail_power);
+       amec_gpu_pcap(i_oversub_state, l_active_pcap_changed, l_avail_power);
     }
 
     if(l_node_pwr != 0)
@@ -617,39 +607,47 @@ void amec_power_control(void)
 
     if(G_pwr_reading_type == PWR_READING_TYPE_APSS)
     {
-       // Calculate the pcap for the proc, memory and the power capping limit
-       // for nominal cores.
-       amec_pcap_calc();
+        const bool l_oversub_state = AMEC_INTF_GET_OVERSUBSCRIPTION();
 
-       // skip processor changes until memory is un-capped
-       if(!g_amec->pcap.active_mem_level)
-       {
-          // Calculate voting box input freq for staying with the current pcap
-          amec_pcap_controller();
+        // if (power supply policy == redundant) or (not in oversubscription)
+        if ((G_sysConfigData.system_type.non_redund_ps == FALSE) ||
+            (l_oversub_state == FALSE))
+        {
+            // Calculate the pcap for the proc, memory and the power capping limit
+            // for nominal cores.
+            amec_pcap_calc(l_oversub_state);
 
-          // Calculate the performance preserving bounds voting box input freq
-          amec_ppb_fmax_calc();
-       }
+            // skip processor changes until memory is un-capped
+            if(!g_amec->pcap.active_mem_level)
+            {
+                // Calculate voting box input freq for staying with the current pcap
+                amec_pcap_controller();
 
-       // Update the Processor and Memory Throttle due to power sensors
-       if(g_amec->proc[0].pwr_votes.proc_pcap_vote < G_proc_fmax_mhz)
-       {
-          // Frequency is being throttled due to power cap
-          sensor_update(AMECSENSOR_PTR(PROCPWRTHROT), 1);
-       }
-       else  // not currently throttled due to power
-       {
-          sensor_update(AMECSENSOR_PTR(PROCPWRTHROT), 0);
-       }
-       if(g_amec->pcap.active_mem_level != 0)
-       {
-          // Memory is being throttled due to power cap
-          sensor_update(AMECSENSOR_PTR(MEMPWRTHROT), 1);
-       }
-       else  // not currently throttled due to power
-       {
-          sensor_update(AMECSENSOR_PTR(MEMPWRTHROT), 0);
-       }
+                // Calculate the performance preserving bounds voting box input freq
+                amec_ppb_fmax_calc();
+            }
+
+            // Update the Processor and Memory Throttle due to power sensors
+            if(g_amec->proc[0].pwr_votes.proc_pcap_vote < G_proc_fmax_mhz)
+            {
+                // Frequency is being throttled due to power cap
+                sensor_update(AMECSENSOR_PTR(PROCPWRTHROT), 1);
+            }
+            else  // not currently throttled due to power
+            {
+                sensor_update(AMECSENSOR_PTR(PROCPWRTHROT), 0);
+            }
+            if(g_amec->pcap.active_mem_level != 0)
+            {
+                // Memory is being throttled due to power cap
+                sensor_update(AMECSENSOR_PTR(MEMPWRTHROT), 1);
+            }
+            else  // not currently throttled due to power
+            {
+                sensor_update(AMECSENSOR_PTR(MEMPWRTHROT), 0);
+            }
+        }
+        // else, dont run pcap algorithm while: oversubscription AND non-redundant ps
     }
     else
     {

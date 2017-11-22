@@ -646,8 +646,12 @@ void gpu_ipc_init()
     }
     else
     {
-        //  gpe gpu init only needs to be done once, so do it here.
-        schedule_gpe_gpu_init_req();
+        // if (redundant ps policy is set)
+        if (G_sysConfigData.system_type.non_redund_ps == false)
+        {
+            // gpe gpu init only needs to be done once, so do it here.
+            schedule_gpe_gpu_init_req();
+        }
     }
 }
 
