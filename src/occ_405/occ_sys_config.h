@@ -77,7 +77,8 @@ typedef union
         uint8_t     kvm:              1;
         uint8_t     reserved:         3;
         uint8_t     report_dvfs_nom:  1;
-        uint8_t     reserved_2:       2;
+        uint8_t     reserved_2:       1;
+        uint8_t     non_redund_ps:    1;
         uint8_t     single:           1;
     };
     uint8_t byte;
