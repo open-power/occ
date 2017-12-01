@@ -463,7 +463,7 @@ uint8_t calc_quad_step_from_start( void )
 uint32_t calc_vfrt_mainstore_addr( void )
 {
     // Wof tables address calculation
-    // (Base_addr + 
+    // (Base_addr +
     // (sizeof VFRT * (total active quads * ( (g_wof->vdn_step_from_start * vdd_size) + (g_wof->vdd_step_from_start) ) + (g_wof->quad_step_from_start))))
     g_wof->vfrt_mm_offset = g_wof->vfrt_block_size *
                     (( g_wof->active_quads_size *
@@ -498,7 +498,7 @@ void copy_vfrt_to_sram( void )
  */
     // Static variable to trac which buffer is open for use
     // 0 = PING; 1 = PONG;
-    uint8_t * l_buffer_address;
+    uint8_t * l_buffer_address = G_sram_vfrt_ping_buffer;
     if(g_wof->curr_ping_pong_buf == (uint32_t)G_sram_vfrt_ping_buffer)
     {
         // Switch to pong buffer
@@ -527,7 +527,7 @@ void copy_vfrt_to_sram( void )
  *
  * Description: Callback function for G_wof_vfrt_req GPE request to
  *              confirm the new VFRT is being used by the PGPE and
- *              record the switch on the 405. Also updates the 
+ *              record the switch on the 405. Also updates the
  *              initialization
  */
 void wof_vfrt_callback( void )
@@ -918,7 +918,7 @@ void calculate_core_leakage( void )
                     G_oppb.iddq.avgtemp_all_good_cores_off,
                     quad_v_idx,
                     g_wof->tempprocthrmc[core_idx],
-                    g_wof->v_core_100uV[quad_idx]) 
+                    g_wof->v_core_100uV[quad_idx])
                     +
                     (g_wof->all_cores_off_iso * G_oppb.iddq.good_normal_cores[quad_idx])
                      / 24;
