@@ -546,6 +546,9 @@ void task_dcom_wait_for_master( task_t *i_self)
                                                        0                               //userdata2
                                                       );
 
+                       // Mfg flag must get set before adding callouts
+                       setErrlActions(l_errl, ERRL_ACTIONS_MANUFACTURING_ERROR);
+
                        // Callout to firmware
                        addCalloutToErrl(l_errl,
                                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
@@ -564,7 +567,6 @@ void task_dcom_wait_for_master( task_t *i_self)
                                         G_sysConfigData.apss_huid,
                                         ERRL_CALLOUT_PRIORITY_LOW);
 
-                       setErrlActions(l_errl, ERRL_ACTIONS_MANUFACTURING_ERROR);
                        commitErrl(&l_errl);
                        L_Pmax_error_logged = TRUE;
                     }
@@ -589,7 +591,7 @@ void task_dcom_wait_for_master( task_t *i_self)
                                     DCOM_MID_TASK_WAIT_FOR_MASTER,  //modId
                                     APSS_SLV_LONG_TIMEOUT,          //reasoncode
                                     OCC_NO_EXTENDED_RC,             //Extended reason code
-                                    ERRL_SEV_INFORMATIONAL,         //Severity
+                                    ERRL_SEV_UNRECOVERABLE,         //Severity
                                     NULL,                           //Trace Buf
                                     DEFAULT_TRACE_SIZE,             //Trace Size
                                     APSS_DATA_FAIL_MAX,             //userdata1

@@ -824,6 +824,10 @@ void addCalloutToErrl(
         //increment actual number of callout
         io_err->iv_numCallouts++;
     }
+    else
+    {
+        TRAC_ERR("Callout type 0x%02X was NOT added to elog", i_type);
+    }
 }
 
 
