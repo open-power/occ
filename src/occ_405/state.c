@@ -545,74 +545,75 @@ errlHndl_t SMGR_observation_to_active()
         if(SMGR_MASK_ACTIVE_READY ==
            (SMGR_validate_get_valid_states() & SMGR_MASK_ACTIVE_READY))
         {
+
             TRAC_IMP("SMGR: Observation to Active Transition Started");
             // Clear STATE_CHANGE WOF disabled flag
             set_clear_wof_disabled( CLEAR, WOF_RC_STATE_CHANGE );
-            l_pstate = proc_freq2pstate(G_proc_fmax_mhz);
-            l_rc = pgpe_set_clip_blocking(l_pstate);
-
-            if(l_rc)
-            {
-                TRAC_ERR("SMGR_obs_to_active: Set Pstate clips failed rc[%08X]", l_rc);
-                break;
-            }
-
-            else // Clips set with no errors, enable Pstates on PGPE
-            {
-                // Pstates are enabled via an IPC call to PGPE, which will set the
-                // G_proc_pstate_status flag. PMCR owner is set based on system type.
-
-                if(G_sysConfigData.system_type.kvm)
-                {
-                    // Before giving host control of Pstates set the Pstate to nominal
-                    // if this fails still give host ownership of Pstates and just log an info error.
-                    // The boot just won't be as fast as OPAL would like running at nominal.  If there
-                    // is something seriuosly wrong that caused this to fail it will be detected
-                    // as it was before OCC put in support to set nominal for booting
-                    l_rc = set_nominal_pstate();
-                    if(l_rc)
-                    {
-                       TRAC_ERR("SMGR_obs_to_active OPAL: Failed to set nominal pstate rc[0x%04X]", l_rc);
-                       /* @
-                        * @errortype
-                        * @moduleid    MAIN_STATE_TRANSITION_MID
-                        * @reasoncode  INTERNAL_FW_FAILURE
-                        * @userdata1   rc from set_nominal_pstate
-                        * @userdata2   0
-                        * @userdata4   ERC_PGPE_SET_NOMINAL_FAILURE
-                        * @devdesc     Failed to set nominal Pstate before host
-                        */
-                       l_errlHndl = createErrl(MAIN_STATE_TRANSITION_MID,        //modId
-                                               INTERNAL_FW_FAILURE,              //reasoncode
-                                               ERC_PGPE_SET_NOMINAL_FAILURE,     //Extended reason code
-                                               ERRL_SEV_INFORMATIONAL,           //Severity
-                                               NULL,                             //Trace Buf
-                                               DEFAULT_TRACE_SIZE,               //Trace Size
-                                               l_rc,                             //userdata1
-                                               0);                               //userdata2
-                       commitErrl(&l_errlHndl);
-                       l_errlHndl = NULL;
-                       l_rc = 0;
-                    }
-
-                    // now give Host Pstate ownership
-                    l_rc = pgpe_start_suspend(PGPE_ACTION_PSTATE_START, PMCR_OWNER_HOST);
-                }
-                else
-                {
-                    l_rc = pgpe_start_suspend(PGPE_ACTION_PSTATE_START, PMCR_OWNER_OCC);
-                }
-                if(l_rc)
-                {
-                    TRAC_ERR("SMGR_obs_to_active: Failed to start pstate protocol rc[%08X]", l_rc);
-                    break;
-                }
-            }
 
             // If there are no cores configured, do not wait for PSTATES to
             // become enabled.
             if(G_present_cores != 0 )
             {
+                l_pstate = proc_freq2pstate(G_proc_fmax_mhz);
+                l_rc = pgpe_set_clip_blocking(l_pstate);
+
+                if(l_rc)
+                {
+                    TRAC_ERR("SMGR_obs_to_active: Set Pstate clips failed rc[%08X]", l_rc);
+                    break;
+                }
+                else // Clips set with no errors, enable Pstates on PGPE
+                {
+                    // Pstates are enabled via an IPC call to PGPE, which will set the
+                    // G_proc_pstate_status flag. PMCR owner is set based on system type.
+                    if(G_sysConfigData.system_type.kvm)
+                    {
+                        // Before giving host control of Pstates set the Pstate to nominal
+                        // if this fails still give host ownership of Pstates and just log an info error.
+                        // The boot just won't be as fast as OPAL would like running at nominal.  If there
+                        // is something seriuosly wrong that caused this to fail it will be detected
+                        // as it was before OCC put in support to set nominal for booting
+                        l_rc = set_nominal_pstate();
+                        if(l_rc)
+                        {
+                           TRAC_ERR("SMGR_obs_to_active OPAL: Failed to set nominal pstate rc[0x%04X]", l_rc);
+                           /* @
+                            * @errortype
+                            * @moduleid    MAIN_STATE_TRANSITION_MID
+                            * @reasoncode  INTERNAL_FW_FAILURE
+                            * @userdata1   rc from set_nominal_pstate
+                            * @userdata2   0
+                            * @userdata4   ERC_PGPE_SET_NOMINAL_FAILURE
+                            * @devdesc     Failed to set nominal Pstate before host
+                            */
+                           l_errlHndl = createErrl(MAIN_STATE_TRANSITION_MID,        //modId
+                                                   INTERNAL_FW_FAILURE,              //reasoncode
+                                                   ERC_PGPE_SET_NOMINAL_FAILURE,     //Extended reason code
+                                                   ERRL_SEV_INFORMATIONAL,           //Severity
+                                                   NULL,                             //Trace Buf
+                                                   DEFAULT_TRACE_SIZE,               //Trace Size
+                                                   l_rc,                             //userdata1
+                                                   0);                               //userdata2
+                           commitErrl(&l_errlHndl);
+                           l_errlHndl = NULL;
+                           l_rc = 0;
+                        }
+
+                        // now give Host Pstate ownership
+                        l_rc = pgpe_start_suspend(PGPE_ACTION_PSTATE_START, PMCR_OWNER_HOST);
+                    }
+                    else
+                    {
+                        l_rc = pgpe_start_suspend(PGPE_ACTION_PSTATE_START, PMCR_OWNER_OCC);
+                    }
+
+                    if(l_rc)
+                    {
+                        TRAC_ERR("SMGR_obs_to_active: Failed to start pstate protocol rc[%08X]", l_rc);
+                        break;
+                    }
+                }
+
                 // Wait for pstates enablement completition.
                 SsxTimebase start = ssx_timebase_get();
                 SsxInterval timeout =  SSX_SECONDS(5);
