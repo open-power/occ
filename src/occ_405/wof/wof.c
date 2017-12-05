@@ -498,7 +498,7 @@ void copy_vfrt_to_sram( void )
  */
     // Static variable to trac which buffer is open for use
     // 0 = PING; 1 = PONG;
-    uint8_t * l_buffer_address;
+    uint8_t * l_buffer_address = G_sram_vfrt_ping_buffer;
     if(g_wof->curr_ping_pong_buf == (uint32_t)G_sram_vfrt_ping_buffer)
     {
         // Switch to pong buffer
