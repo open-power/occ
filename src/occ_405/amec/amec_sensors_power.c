@@ -262,10 +262,16 @@ void amec_update_apss_sensors(void)
 
         //Update channel specific sensors based on saved pairing between function Ids and Channels.
 
-        uint32_t l_vdd = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.vdd[l_proc]);
-        uint32_t l_vcs_vio_vpcie = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.vcs_vio_vpcie[l_proc]);
-        temp32 = ((l_vcs_vio_vpcie + l_vdd) * l_bulk_voltage)/ADCMULT_TO_UNITS;
-        sensor_update(AMECSENSOR_PTR(PWRPROC), (uint16_t) temp32);
+        // Make sure there is a channel for processor power else proc power sensor is using AVS bus and will
+        // be updated in update_avsbus_power_sensors() instead
+        if( (G_sysConfigData.apss_adc_map.vdd[l_proc] != SYSCFG_INVALID_ADC_CHAN) ||
+            (G_sysConfigData.apss_adc_map.vcs_vio_vpcie[l_proc] != SYSCFG_INVALID_ADC_CHAN) )
+        {
+            uint32_t l_vdd = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.vdd[l_proc]);
+            uint32_t l_vcs_vio_vpcie = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.vcs_vio_vpcie[l_proc]);
+            temp32 = ((l_vcs_vio_vpcie + l_vdd) * l_bulk_voltage)/ADCMULT_TO_UNITS;
+            sensor_update(AMECSENSOR_PTR(PWRPROC), (uint16_t) temp32);
+        }
 
         // Save off the combined power from all modules
         for (l_idx=0; l_idx < MAX_NUM_CHIP_MODULES; l_idx++)
@@ -555,9 +561,13 @@ void update_avsbus_power_sensors(const avsbus_type_e i_type)
             //                    = v(100uV) * i(10mA) / 1,000,000
             const uint32_t l_power = l_chip_voltage_100uv * l_current_10ma / 1000000;
             sensor_update(AMECSENSOR_PTR(l_powerSensor), (uint16_t)l_power);
-            if(G_pwr_reading_type != PWR_READING_TYPE_APSS)
+
+            // check if there is an APSS with processor channel that would be providing the processor power sensor
+            if( ( G_pwr_reading_type != PWR_READING_TYPE_APSS ) ||
+                ( (G_sysConfigData.apss_adc_map.vdd[G_pbax_id.chip_id] == SYSCFG_INVALID_ADC_CHAN) &&
+                  (G_sysConfigData.apss_adc_map.vcs_vio_vpcie[G_pbax_id.chip_id] == SYSCFG_INVALID_ADC_CHAN) ) )
             {
-               // no APSS, update the processor power sensor with total processor power
+               // no proc pwr from APSS, update the processor power sensor with AVS bus total processor power
                // Vdd + Vdn + fixed adder for parts not measured (i.e. Vddr, Vcs, Vio etc)
                sensor_t *l_sensor2 = getSensorByGsid(l_powerSensor2);
                const uint16_t l_proc_power = (uint16_t)l_power + l_sensor2->sample + G_sysConfigData.proc_power_adder;
