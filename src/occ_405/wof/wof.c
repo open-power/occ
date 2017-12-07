@@ -47,6 +47,7 @@ extern GpeRequest   G_wof_vfrt_req;
 extern GpeRequest   G_wof_control_req;
 extern uint32_t     G_nest_frequency_mhz;
 extern pstateStatus G_proc_pstate_status;
+extern uint8_t G_occ_interrupt_type;
 //******************************************************************************
 // Globals
 //******************************************************************************
@@ -126,7 +127,7 @@ void call_wof_main( void )
 {
     // Variable to ensure we do not keep trying to send vfrt GpeRequest
     // more than 1 extra time.
-    static bool L_vfrt_last_chance = false;
+    static uint8_t L_vfrt_last_chance = MAX_VFRT_CHANCES;
 
     // Variable to ensure we do not keep trying to send the wof control
     static bool L_wof_control_last_chance = false;
@@ -218,9 +219,10 @@ void call_wof_main( void )
                     case INITIAL_VFRT_SENT_WAITING:
                         // Check if request is still processing.
                         // Init state updated in wof_vfrt_callback
-                        if( !async_request_is_idle(&G_wof_vfrt_req.request) )
+                        if( (!async_request_is_idle(&G_wof_vfrt_req.request)) ||
+                             (g_wof->vfrt_state != STANDBY) )
                         {
-                            if( L_vfrt_last_chance )
+                            if( L_vfrt_last_chance == 0 )
                             {
                                 INTR_TRAC_ERR("WOF Disabled!"
                                               " Init VFRT request timeout");
@@ -228,15 +230,17 @@ void call_wof_main( void )
                             }
                             else
                             {
-                                INTR_TRAC_INFO("one more chance sending initial VFRT");
-                                L_vfrt_last_chance = true;
+                                INTR_TRAC_INFO("initial VFRT NOT idle."
+                                               " %d more chance(s)",
+                                               L_vfrt_last_chance );
+                                L_vfrt_last_chance--;
                             }
                         }
                         break;
 
                     case INITIAL_VFRT_SUCCESS:
                         // We made it this far. Reset Last chance
-                        L_vfrt_last_chance = false;
+                        L_vfrt_last_chance = MAX_VFRT_CHANCES;
 
                         // Send wof control on gpe request
                         // If enable_success returns true, init state was set
@@ -294,17 +298,19 @@ void call_wof_main( void )
                 !g_wof->wof_disabled )
             {
                 // Normal execution of wof algorithm
-                if( !async_request_is_idle(&G_wof_vfrt_req.request) )
+                if( (!async_request_is_idle(&G_wof_vfrt_req.request)) ||
+                    (g_wof->vfrt_state != STANDBY) )
                 {
-                    if( L_vfrt_last_chance )
+                    if( L_vfrt_last_chance == 0 )
                     {
                         INTR_TRAC_ERR("WOF Disabled! VFRT req timeout");
                         set_clear_wof_disabled(SET,WOF_RC_VFRT_REQ_TIMEOUT);
                     }
                     else
                     {
-                        INTR_TRAC_INFO("One more chance for vfrt request");
-                        L_vfrt_last_chance = true;
+                        INTR_TRAC_INFO("VFRT NOT idle. %d more chance(s)",
+                                        L_vfrt_last_chance);
+                        L_vfrt_last_chance--;
                     }
                 }
                 else
@@ -312,7 +318,7 @@ void call_wof_main( void )
                     // Request is idle. Run wof algorithm
                     wof_main();
 
-                    L_vfrt_last_chance = false;
+                    L_vfrt_last_chance = MAX_VFRT_CHANCES;
                     // Finally make sure we are in the fully enabled state
                     if( g_wof->wof_init_state == PGPE_WOF_ENABLED_NO_PREV_DATA )
                     {
@@ -379,14 +385,6 @@ void wof_main( void )
 
     // Send the new vfrt to the PGPE
     send_vfrt_to_pgpe( g_wof->next_vfrt_main_mem_addr );
-    if(async_request_is_idle(&G_wof_vfrt_req.request))
-    {
-        g_wof->gpe_req_rc = pgpe_request_schedule(&G_wof_vfrt_req);
-    }
-    else
-    {
-        INTR_TRAC_ERR("VFRT REQUEST at end of wof_main() timed out");
-    }
 }
 
 /**
@@ -478,16 +476,17 @@ uint32_t calc_vfrt_mainstore_addr( void )
 
 
 /**
- * copy_vfrt_to_sram
+ * copy_vfrt_to_sram_callback
  *
- * Description: Call back function to copy VFRT into SRAM ping/pong buffer
- *              This call will also tell the PGPE that a new VFRT is available
+ * Description: Call back function to BCE request to copy VFRT into SRAM
+ *              ping/pong buffer. This call will also tell the PGPE
+ *              that a new VFRT is available
  *
  * Param[in]: i_parms - pointer to a struct that will hold data necessary to
  *                      the calculation.
  *                      -Pointer to vfrt table temp buffer
  */
-void copy_vfrt_to_sram( void )
+void copy_vfrt_to_sram_callback( void )
 {
 /*
  *
@@ -520,6 +519,13 @@ void copy_vfrt_to_sram( void )
     // Set the parameters for the GpeRequest
     G_wof_vfrt_parms.homer_vfrt_ptr = (HomerVFRTLayout_t*)l_buffer_address;
     G_wof_vfrt_parms.active_quads = g_wof->req_active_quad_update;
+
+    if( g_wof->vfrt_state != STANDBY )
+    {
+        // Set vfrt state to let OCC know it needs to schedule the IPC command
+        g_wof->vfrt_state = NEED_TO_SCHEDULE;
+    }
+
 }
 
 /**
@@ -532,6 +538,10 @@ void copy_vfrt_to_sram( void )
  */
 void wof_vfrt_callback( void )
 {
+    // Update the VFRT state to indicate a new IPC message can be
+    // scheduled regardless of the RC of the previous one.
+    g_wof->vfrt_state = STANDBY;
+
     // Confirm the WOF VFRT PGPE request has completed with no errors
     if( G_wof_vfrt_parms.msg_cb.rc == PGPE_WOF_RC_VFRT_QUAD_MISMATCH )
     {
@@ -567,7 +577,7 @@ void wof_vfrt_callback( void )
  * send_vfrt_to_pgpe
  *
  * Description: Function to copy new VFRT from Mainstore to local SRAM buffer
- *              and calls copy_vfrt_to_sram callback function to send new VFRT
+ *              and calls copy_vfrt_to_sram_callback function to send new VFRT
  *              to the PGPE
  *              Note: If desired VFRT is the same as previous, skip.
  *
@@ -576,8 +586,6 @@ void wof_vfrt_callback( void )
 void send_vfrt_to_pgpe( uint32_t i_vfrt_main_mem_addr )
 {
     int l_ssxrc = SSX_OK;
-    uint32_t l_reasonCode = 0;
-    uint32_t l_extReasonCode = 0;
 
     do
     {
@@ -611,44 +619,30 @@ void send_vfrt_to_pgpe( uint32_t i_vfrt_main_mem_addr )
                              (uint32_t) &G_vfrt_temp_buff, // SRAM start address
                              MIN_BCE_REQ_SIZE,  // size of copy
                              SSX_WAIT_FOREVER,            // no timeout
-                             (AsyncRequestCallback)copy_vfrt_to_sram,
+                             (AsyncRequestCallback)copy_vfrt_to_sram_callback,
                              NULL,
                              ASYNC_CALLBACK_IMMEDIATE );
 
             if(l_ssxrc != SSX_OK)
             {
                 INTR_TRAC_ERR("send_vfrt_to_pgpe: BCDE request create failure rc=[%08X]", -l_ssxrc);
-                /*
-                 * @errortype
-                 * @moduleid    SEND_VFRT_TO_PGPE
-                 * @reasoncode  SSX_GENERIC_FAILURE
-                 * @userdata1   RC for BCE block-copy engine
-                 * @userdata2   Internal function checkpoint
-                 * @userdata4   ERC_BCE_REQUEST_CREATE_FAILURE
-                 * @devdesc     Failed to create BCDE request
-                 */
-                l_reasonCode = SSX_GENERIC_FAILURE;
-                l_extReasonCode = ERC_BCE_REQUEST_CREATE_FAILURE;
                 break;
             }
 
-            // Do the actual copy
-            l_ssxrc = bce_request_schedule( &G_vfrt_req );
-
-            if(l_ssxrc != SSX_OK)
+            // Make sure we are in correct vfrt state
+            if( g_wof->vfrt_state == STANDBY )
             {
-                INTR_TRAC_ERR("send_vfrt_to_pgpe: BCE request schedule failure rc=[%08X]", -l_ssxrc);
-                /*
-                 * @errortype
-                 * @moduleid    SEND_VFRT_TO_PGPE
-                 * @reasoncode  SSX_GENERIC_FAILURE
-                 * @userdata1   RC for BCE block-copy engine
-                 * @userdata4   ERC_BCE_REQUEST_SCHEDULE_FAILURE
-                 * @devdesc     Failed to read PPMR data by using BCDE
-                 */
-                l_reasonCode = SSX_GENERIC_FAILURE;
-                l_extReasonCode = ERC_BCE_REQUEST_SCHEDULE_FAILURE;
-                break;
+                // Set the VFRT state to ensure asynchronous order of operations
+                g_wof->vfrt_state = SEND_INIT;
+
+                // Do the actual copy
+                l_ssxrc = bce_request_schedule( &G_vfrt_req );
+
+                if(l_ssxrc != SSX_OK)
+                {
+                    INTR_TRAC_ERR("send_vfrt_to_pgpe: BCE request schedule failure rc=[%08X]", -l_ssxrc);
+                    break;
+                }
             }
         }
     }while( 0 );
@@ -656,23 +650,8 @@ void send_vfrt_to_pgpe( uint32_t i_vfrt_main_mem_addr )
     // Check for errors and log, if any
     if( l_ssxrc != SSX_OK )
     {
-        errlHndl_t l_errl = createErrl(SEND_VFRT_TO_PGPE,        //modId
-                                       l_reasonCode,             //reasoncode
-                                       l_extReasonCode,          //Extended reason code
-                                       ERRL_SEV_UNRECOVERABLE,   //Severity
-                                       NULL,                     //Trace Buf
-                                       0,                        //Trace Size
-                                       -l_ssxrc,                 //userdata1
-                                       0);                       //userdata2
-
-        // Callout firmware
-        addCalloutToErrl(l_errl,
-                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                         ERRL_COMPONENT_ID_FIRMWARE,
-                         ERRL_CALLOUT_PRIORITY_HIGH);
-
-        // Commit error log
-        commitErrl(&l_errl);
+        // Formally disable WOF
+        set_clear_wof_disabled( SET, WOF_RC_IPC_FAILURE );
 
         return;
     }
@@ -1284,6 +1263,9 @@ void set_clear_wof_disabled( uint8_t i_action,
     {
         if( i_action == SET )
         {
+            // Set the vfrt state back to standby
+            g_wof->vfrt_state = STANDBY;
+
             // Set the bit
             g_wof->wof_disabled |= i_bit_mask;
 
@@ -1444,7 +1426,7 @@ void set_clear_wof_disabled( uint8_t i_action,
                         i_bit_mask );
 
             // Reset if on OpenPower
-            if( (G_sysConfigData.system_type.kvm) )
+            if( G_occ_interrupt_type != FSP_SUPPORTED_OCC )
             {
                 if(i_bit_mask & ~(IGNORE_WOF_RESET) )
                 {
@@ -1673,6 +1655,49 @@ void wof_control_callback( void )
     }
 }
 
+
+/**
+ * schedule_vfrt_request
+ *
+ * Description: Called from amec_slv_common_tasks_post every 500us. Checks
+ *              to see if a new VFRT table is ready to be sent to the PGPE
+ *              and if so, sends it and sets the vfrt state
+ */
+void schedule_vfrt_request( void )
+{
+    if( (g_wof->vfrt_state == NEED_TO_SCHEDULE ) &&
+        (async_request_is_idle(&G_wof_vfrt_req.request)) )
+    {
+        g_wof->gpe_req_rc = pgpe_request_schedule(&G_wof_vfrt_req);
+
+        // Check to make sure IPC request was scheduled correctly
+        if( g_wof->gpe_req_rc != 0 )
+        {
+            // If we were attempting to send the initial VFRT request,
+            // reset the state machine so we can start the process
+            // over
+            if( g_wof->wof_init_state == INITIAL_VFRT_SENT_WAITING )
+            {
+                g_wof->wof_init_state = WOF_DISABLED;
+            }
+
+            INTR_TRAC_ERR("schedule_vfrt_request: Error sending VFRT! gperc=%d"
+                            g_wof->gpe_req_rc );
+
+            // Formally disable wof
+            set_clear_wof_disabled( SET, WOF_RC_IPC_FAILURE );
+
+            // Reset the global return code after logging the error
+            g_wof->gpe_req_rc = 0;
+        }
+
+        // Update vfrt state
+        g_wof->vfrt_state = SCHEDULED;
+    }
+}
+
+
+
 /**
  * send_initial_vfrt_to_pgpe
  *
@@ -1692,53 +1717,6 @@ void send_initial_vfrt_to_pgpe( void )
 
     // Send the final vfrt to shared OCC-PGPE SRAM.
     send_vfrt_to_pgpe( g_wof->next_vfrt_main_mem_addr );
-    if(async_request_is_idle(&G_wof_vfrt_req.request))
-    {
-        g_wof->gpe_req_rc =  pgpe_request_schedule(&G_wof_vfrt_req);
-    }
-    else
-    {
-        INTR_TRAC_INFO("Intial vfrt request was NOT idle");
-    }
-
-    // Check to make sure IPC request was scheduled correctly
-    if( g_wof->gpe_req_rc != 0 )
-    {
-        INTR_TRAC_ERR("send_initial_vfrt: Error sending initial VFRT! gperc=%d",
-                g_wof->gpe_req_rc);
-        //Error in scheduling wof_vfrt task
-        /* @
-         * @errortype
-         * @moduleid    SEND_INIT_VFRT
-         * @reasoncode  GPE_REQUEST_SCHEDULE_FAILURE
-         * @userdata1   rc - gpe_request_schedule return code
-         * @userdata2   0
-         * @userdata4   OCC_NO_EXTENDED_RC
-         * @devdesc     OCC Failed to schedule a GPE job for wof vfrt
-         */
-        errlHndl_t l_errl = createErrl(
-            SEND_INIT_VFRT,                   // modId
-            GPE_REQUEST_SCHEDULE_FAILURE,        // reasoncode
-            OCC_NO_EXTENDED_RC,                  // Extended reason code
-            ERRL_SEV_UNRECOVERABLE,              // Severity
-            NULL,                                // Trace Buf
-            DEFAULT_TRACE_SIZE,                  // Trace Size
-            g_wof->gpe_req_rc,                   // userdata1
-            0                                    // userdata2
-            );
-
-        // Callout firmware
-        addCalloutToErrl(l_errl,
-                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                         ERRL_COMPONENT_ID_FIRMWARE,
-                         ERRL_CALLOUT_PRIORITY_HIGH);
-
-        // Commit error log
-        commitErrl(&l_errl);
-
-        // Reset the global return code after logging the error
-        g_wof->gpe_req_rc = 0;
-    }
 
     // Update Init state
     if(g_wof->wof_init_state < INITIAL_VFRT_SENT_WAITING)

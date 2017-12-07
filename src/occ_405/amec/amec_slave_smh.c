@@ -402,7 +402,7 @@ void amec_slv_common_tasks_pre(void)
 
 // Function Specification
 //
-// Name: amec_slv_cmmon_tasks_post
+// Name: amec_slv_common_tasks_post
 //
 // Description: Runs all the functions that need to run post-AMEC-State-Machine
 //              This function will run every tick.
@@ -447,9 +447,15 @@ void amec_slv_common_tasks_post(void)
         // Call the every tick trace recording if it has been configured via Amester.
         // If not configured, this call will return immediately.
         amec_tb_record(AMEC_TB_EVERY_TICK);
+
+        // Check to see if a VFRT IPC request needs to be sent to the PGPE
+        schedule_vfrt_request();
       }
       else
+      {
          L_active_1tick = TRUE;
+      }
+
   }
   // if an OPAL system & just transitioned to CHAR or OBS state, set proc mnfg override
   else if ( (IS_OCC_STATE_CHARACTERIZATION() || IS_OCC_STATE_OBSERVATION()) &&
