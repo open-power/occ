@@ -43,8 +43,6 @@ enum occReasonCode
     OVERSUB_ALERT                   = 0x05,
     /// Failure to maintain a hard power cap
     POWER_CAP_FAILURE               = 0x06,
-    /// Fans are in full speed
-    FAN_FULL_SPEED                  = 0x08,
     /// Timed out reading a FRU temperature
     FRU_TEMP_TIMEOUT                = 0x09,
     /// Processor reached error threshold
@@ -59,8 +57,6 @@ enum occReasonCode
     SSX_GENERIC_FAILURE             = 0x17,
     /// Failure to handshake with an external fw entity (HB, FSP, PHYP, etc)
     EXTERNAL_INTERFACE_FAILURE      = 0x18,
-    /// Incorrect number of active quads reported
-    INVALID_ACTIVE_QUAD_COUNT       = 0x19,
     /// VRM Vdd reached error temperature threshold
     VRM_VDD_ERROR_TEMP              = 0x20,
     /// VR_FAN  - AVS Bus over-temperature reported
@@ -108,8 +104,6 @@ enum occReasonCode
     OCC_SYSTEM_HALTED               = 0xB5,
     ///  Reset PBA Queue due to PBAX Read Failure
     PBAX_QUEUE_RESET                = 0xBA,
-    ///  PBAX failure sending doorbell to slaves
-    PBAX_ERROR                      = 0xBB,
     ///  Request to read APSS data failed.
     APSS_GPE_FAILURE                = 0xC0,
     /// AVS Bus output over-current reported
@@ -122,8 +116,6 @@ enum occReasonCode
     APSS_HARD_FAILURE               = 0xC5,
     ///  Request to read redundant APSS data failed
     REDUNDANT_APSS_GPE_FAILURE      = 0xCB,
-    ///  Request to read DIMM data failed.
-    DIMM_GPE_FAILURE                = 0xD0,
     MEMORY_INIT_FAILED              = 0xD1,
     DIMM_INVALID_STATE              = 0xD2,
 
@@ -137,9 +129,7 @@ enum occReasonCode
     GPE_REQUEST_TASK_NOT_IDLE       = 0xD7,
     GPE_REQUEST_RC_FAILURE          = 0xD8,
 
-    WOF_VFRT_REQ_FAILURE            = 0xD9,
     WOF_DISABLED_RC                 = 0xDA,
-    WOF_VFRT_ALIGNMENT_ERROR        = 0xDB,
     INVALID_MAGIC_NUMBER            = 0xDC,
     INVALID_FREQUENCY               = 0xDE,
     WOF_RE_ENABLED                  = 0xDF,

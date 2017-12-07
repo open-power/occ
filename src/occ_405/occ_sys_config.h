@@ -345,9 +345,6 @@ typedef struct
   // APSS HUID - Used by OCC for APSS error call out
   uint32_t apss_huid;
 
-  // DPSS HUID - Used by OCC for DPSS error call out
-  uint32_t dpss_huid;
-
   // VRM Vdd HUID - Used by OCC for VRM Vdd error call out
   uint32_t vrm_vdd_huid;
 

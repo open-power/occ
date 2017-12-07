@@ -47,6 +47,7 @@
 #include "common.h"
 #include "state.h"
 #include "i2c.h"
+#include <amec_sys.h>
 
 extern bool G_mem_monitoring_allowed;
 
@@ -318,7 +319,7 @@ bool check_and_update_i2c_lock(const uint8_t i_engine)
                              * @reasoncode  OCI_WRITE_FAILURE
                              * @userdata1   I2C engine number
                              * @userdata2   OCC Flags register
-                             * @devdesc     Invalid memory type detected
+                             * @devdesc     OCI write failure setting I2C ownership bit
                              */
                             errlHndl_t err = createErrl(I2C_LOCK_UPDATE,
                                                         OCI_WRITE_FAILURE,
@@ -328,6 +329,19 @@ bool check_and_update_i2c_lock(const uint8_t i_engine)
                                                         DEFAULT_TRACE_SIZE,
                                                         i_engine,
                                                         verify_occflags.value);
+
+                            //Callout firmware
+                            addCalloutToErrl(err,
+                                             ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                                             ERRL_COMPONENT_ID_FIRMWARE,
+                                             ERRL_CALLOUT_PRIORITY_MED);
+
+                            //Callout processor
+                            addCalloutToErrl(err,
+                                             ERRL_CALLOUT_TYPE_HUID,
+                                             G_sysConfigData.proc_huid,
+                                             ERRL_CALLOUT_PRIORITY_LOW);
+
                             REQUEST_RESET(err);
                             occ_owns_lock = false;
                             break;

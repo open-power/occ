@@ -37,6 +37,7 @@
 #define PGPE_WOF_OFF                0
 #define PGPE_WOF_ON                 1
 #define NUM_CORES_PER_QUAD          4
+#define MAX_VFRT_CHANCES            2
 #define WOF_TABLES_OFFSET           0xC0000 // Relative to PPMR_ADDRESS_HOMER
 #define MAX_CEFF_RATIO              10000   // 1.0 ratio = 10000
                                             // (scaled to avoid floating point)
@@ -71,6 +72,7 @@
 #define WOF_RC_RESET_LIMIT_REACHED                 0x00100000
 #define WOF_RC_UNSUPPORTED_FREQUENCIES             0x00200000
 #define WOF_RC_NO_CONFIGURED_CORES                 0x00400000
+#define WOF_RC_IPC_FAILURE                         0x00800000
 
 //***************************************************************************
 // Temp space used to save hard coded addresses
@@ -98,6 +100,15 @@ enum wof_init_states
     WOF_CONTROL_ON_SENT_WAITING,    //3
     PGPE_WOF_ENABLED_NO_PREV_DATA,  //4
     WOF_ENABLED,                    //5
+};
+
+// Enumeration to define VFRT send state
+enum vfrt_send_states
+{
+    STANDBY,
+    SEND_INIT,
+    NEED_TO_SCHEDULE,
+    SCHEDULED,
 };
 
 // Enumeration to define reasons (H)TMGT is disabling WOF
@@ -323,7 +334,8 @@ typedef struct
     uint32_t c_ratio_vdn_volt;
     // Frequency used in ceff_ratio_vdn calc
     uint32_t c_ratio_vdn_freq;
-
+    // Holds the state of various async operations relating to sending a VFRT
+    uint8_t vfrt_state;
     uint32_t all_cores_off_before;
     //OPPB variables
     uint8_t good_quads_per_sort;
@@ -377,7 +389,7 @@ uint8_t calc_quad_step_from_start( void );
 
 uint32_t calc_vfrt_mainstore_addr( void );
 
-void copy_vfrt_to_sram( void );
+void copy_vfrt_to_sram_callback( void );
 
 void wof_vfrt_callback( void );
 
@@ -444,4 +456,6 @@ void print_data( void );
 void print_oppb( void );
 
 uint32_t prevent_over_current( uint32_t i_ceff_ratio );
+
+void schedule_vfrt_request( void );
 #endif

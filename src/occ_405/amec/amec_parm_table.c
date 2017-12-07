@@ -234,6 +234,7 @@ amec_parm_t g_amec_parm_list[] = {
     AMEC_PARM_UINT32(PARM_VDD_RATIO_FREQ, "vddRatioFreq", &g_amec_sys.wof.c_ratio_vdd_freq),
     AMEC_PARM_UINT32(PARM_VDN_RATIO_VOLT, "vdnRatioVolt", &g_amec_sys.wof.c_ratio_vdn_volt),
     AMEC_PARM_UINT32(PARM_VDN_RATIO_FREQ, "vdnRatioFreq", &g_amec_sys.wof.c_ratio_vdn_freq),
+    AMEC_PARM_UINT8(PARM_VFRT_STATE,"vfrtState", &g_amec_sys.wof.vfrt_state),
     AMEC_PARM_UINT32(PARM_CORES_OFF_B4,"Allcoresoffb4", &g_amec_sys.wof.all_cores_off_before),
     AMEC_PARM_UINT8(PARM_GOOD_QUADS_PER_SORT, "QuadsPerSort", &g_amec_sys.wof.good_quads_per_sort),
     AMEC_PARM_UINT8(PARM_NORMAL_CORES_PER_SORT, "CoresPerSort", &g_amec_sys.wof.good_normal_cores_per_sort),

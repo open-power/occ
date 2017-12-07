@@ -148,7 +148,7 @@ void dcom_initialize_roles(void)
          * @userdata1   PBAXCFG (upper)
          * @userdata2   PBAXCFG (lower)
          * @userdata4   ERC_CHIP_IDS_INVALID
-         * @devdesc     Failure determining OCC role
+         * @devdesc     Failure to determine OCC chip ID
          */
         errlHndl_t  l_errl = createErrl(
             DCOM_MID_INIT_ROLES,            //ModId
