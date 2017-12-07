@@ -103,7 +103,6 @@ void task_gpe_timings(task_t * i_task)
     static bool L_first_call        = TRUE;
     bool l_gpe0_idle                = TRUE;
     bool l_gpe1_idle                = TRUE;
-
     static uint8_t L_consec_trace_count[2] = {0};
     gpe_gpenxiramdbg_t xsr_sprg0 = {0};
     gpe_gpenxiramedr_t ir_edr = {0};
@@ -251,31 +250,26 @@ void task_gpe_timings(task_t * i_task)
     {
         // Reset how many consecutive ticks we were busy for.
         L_busyTicks = 0;
+        L_idleTicks++;
 
-        // If we were idle for at least 16 consecutive ticks, enable 24x7
-        if( L_idleTicks >= 15 )
+        // If we were idle for a complete cycle thru all ticks, re-enable 24x7
+        if( L_idleTicks >= MAX_NUM_TICKS )
         {
             G_24x7_disabled = FALSE;
-        }
-        else
-        {
-            L_idleTicks++;
         }
     }
     else
     {
         // Reset how many consecutive ticks we were idle for
         L_idleTicks = 0;
+        L_busyTicks++;
 
-        // If we were busy for at least 2 consecutive ticks, disable 24x7
-        if( L_busyTicks >= 1 )
+        // disable 24x7 if it isn't already, this will stay disabled until we can run all
+        // ticks consecutively
+        if( !G_24x7_disabled )
         {
             G_24x7_disabled = TRUE;
             INCREMENT_ERR_HISTORY(ERRH_24X7_DISABLED);
-        }
-        else
-        {
-            L_busyTicks++;
         }
     }
 

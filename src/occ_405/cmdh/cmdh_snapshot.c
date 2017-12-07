@@ -382,9 +382,8 @@ void cmdh_snapshot_callback(void * arg)
         g_cmdh_snapshot_reset   = FALSE;
         g_cmdh_snapshot_cur_index = CMDH_SNAPSHOT_DEFAULT_CUR_INDEX;
     }
-    else
+    else if (IS_OCC_STATE_OBSERVATION() || IS_OCC_STATE_ACTIVE() || IS_OCC_STATE_CHARACTERIZATION())
     {
-
         uint32_t l_pwr_accum_diff =  0;
         uint32_t l_pwr_uptag_diff =  0;
 

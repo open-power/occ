@@ -43,6 +43,9 @@
 //*************************************************************************/
 #define PPB_NOM_DROP_DELAY 4    //ticks
 
+//Number of consecutive ticks with power available to wait before un-throttling memory
+#define UNTHROTTLE_MEMORY_DELAY   2   // ticks
+
 //*************************************************************************/
 // Structures
 //*************************************************************************/
@@ -337,6 +340,7 @@ void amec_pcap_calc(const bool i_oversub_state)
     uint32_t l_proc_fraction = 0;
     static uint32_t L_prev_node_pcap = 0;
     static bool L_apss_error_traced = FALSE;
+    static uint32_t L_ticks_mem_pwr_available = 0;
 
     // Determine the active power cap.  norm_node_pcap is set as lowest
     // between sys (N+1 mode) and user in amec_data_write_pcap()
@@ -400,10 +404,16 @@ void amec_pcap_calc(const bool i_oversub_state)
 
             if(l_avail_power >= mem_pwr_diff)
             {
-                TRAC_IMP("PCAP: Un-Throttling memory");
-                g_amec->pcap.active_mem_level = 0;
-                // don't let the proc have any available power this tick
-                l_avail_power = 0;
+                L_ticks_mem_pwr_available++;
+
+                if(L_ticks_mem_pwr_available == UNTHROTTLE_MEMORY_DELAY)
+                {
+                    TRAC_IMP("PCAP: Un-Throttling memory");
+                    g_amec->pcap.active_mem_level = 0;
+                    L_ticks_mem_pwr_available = 0;
+                    // don't let the proc have any available power this tick
+                    l_avail_power = 0;
+                }
             }
         }
         // check if need to reduce power and frequency is already at the min
@@ -415,6 +425,7 @@ void amec_pcap_calc(const bool i_oversub_state)
             {
                 TRAC_IMP("PCAP: Throttling memory");
                 g_amec->pcap.active_mem_level = 1;
+                L_ticks_mem_pwr_available = 0;
             }
         }
         else
