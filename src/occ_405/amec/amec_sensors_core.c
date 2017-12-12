@@ -76,6 +76,7 @@ void amec_update_proc_core_sensors(uint8_t i_core)
   CoreData  *l_core_data_ptr;
   uint32_t  l_temp32 = 0;
   uint16_t  l_core_temp = 0;
+  uint16_t  l_quad_temp = 0;
   uint16_t  l_temp16 = 0;
   uint16_t  l_core_util = 0;
   uint16_t  l_core_freq = 0;
@@ -183,9 +184,11 @@ void amec_update_proc_core_sensors(uint8_t i_core)
 
     // Determine "core" temperature that will be returned in the poll for fan control
     // If there is at least 1 core online within the same quad use the quad temp else use the nest
-    if(QUAD_ONLINE(l_quad))
+    // verify quad temp is valid (not zero) this may be 0 if there were no valid quad DTS
+    l_quad_temp = AMECSENSOR_ARRAY_PTR(TEMPQ0, l_quad)->sample;
+    if( (QUAD_ONLINE(l_quad)) && l_quad_temp )
     {
-       l_core_temp = AMECSENSOR_ARRAY_PTR(TEMPQ0, l_quad)->sample;
+       l_core_temp = l_quad_temp;
     }
     else
     {
@@ -265,8 +268,6 @@ void amec_calc_dts_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
 {
 #define DTS_PER_CORE     2
 #define QUAD_DTS_PER_CORE     2
-#define DTS_INVALID_MASK 0x0C00
-
 
     uint32_t      l_coreTemp = 0;
     uint8_t       k = 0;
@@ -297,12 +298,13 @@ void amec_calc_dts_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
             //Check validity
             if (i_core_data_ptr->dts.core[k].fields.valid)
             {
-                l_coreDts[k] = i_core_data_ptr->dts.core[k].fields.reading;
+                // temperature is only 8 bits of reading field
+                l_coreDts[k] = (i_core_data_ptr->dts.core[k].fields.reading & 0xFF);
                 l_coreDtsCnt++;
 
-                //Hardware bug workaround:  Temperatures reaching 0 degrees C
-                //can show up as negative numbers.  To fix this, we discount
-                //values that have the 2 MSB's set.
+                //Hardware bug workaround:  Module test will detect bad DTS and write coefficients
+                //to force a reading of 0 or negative to indicate the DTS is bad.
+                //Throw out any DTS that is bad
                 if(((l_coreDts[k] & DTS_INVALID_MASK) == DTS_INVALID_MASK) ||
                     (l_coreDts[k] == 0))
                 {
@@ -338,12 +340,19 @@ void amec_calc_dts_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
         // DTS values regardless of weight.
         for (k = 0; k < QUAD_DTS_PER_CORE; k++)
         {
-            if (i_core_data_ptr->dts.cache[k].fields.valid)
+            // temperature is only 8 bits of reading field
+            l_quadDtsTemp = (i_core_data_ptr->dts.cache[k].fields.reading & 0xFF);
+
+            if( (i_core_data_ptr->dts.cache[k].fields.valid) &&
+                ((l_quadDtsTemp & DTS_INVALID_MASK) != DTS_INVALID_MASK) &&
+                (l_quadDtsTemp != 0) )
             {
-                l_quadDts[k] = i_core_data_ptr->dts.cache[k].fields.reading;
+                l_quadDts[k] = l_quadDtsTemp;
                 l_quadDtsCnt++;
             }
         }
+
+        l_quadDtsTemp = 0;
 
         if(l_quadDtsCnt)
         {
