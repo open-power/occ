@@ -512,10 +512,16 @@ CoreData * proc_get_bulk_core_data_ptr( const uint8_t i_occ_core_id )
 // End Function Specification
 void task_nest_dts( task_t * i_task )
 {
+#define MAX_NUM_NEST_DTS     3
+
     errlHndl_t  l_err = NULL;  // Error handler
     int         l_rc = 0;      // Return code
     ipc_nest_dts_parms_t * l_parms = (ipc_nest_dts_parms_t*)(G_nest_dts_gpe_req.cmd_data);
     uint16_t    l_avg = 0;
+    uint16_t    l_nestDtsTemp = 0;
+    uint8_t     l_nestDtsCnt = 0;  // Number of valid Nest DTSs
+    uint8_t     k = 0;
+    bool        l_nestDtsValid = FALSE;
     static bool L_scheduled = FALSE;
     static bool L_idle_trace = FALSE;
     static bool L_incomplete_trace = FALSE;
@@ -543,15 +549,47 @@ void task_nest_dts( task_t * i_task )
             if ((ASYNC_REQUEST_STATE_COMPLETE == G_nest_dts_gpe_req.request.completion_state) &&
                 (0 == G_nest_dts_parms.error.error))
             {
-                if (l_parms->data.sensor0.fields.valid &&
-                    l_parms->data.sensor1.fields.valid &&
-                    l_parms->data.sensor2.fields.valid)
+                for (k = 0; k < MAX_NUM_NEST_DTS; k++)
                 {
-                    // Calculate the average of the 3 Nest DTS temps
-                    l_avg = l_parms->data.sensor0.fields.reading +
-                            l_parms->data.sensor1.fields.reading +
-                            l_parms->data.sensor2.fields.reading;
-                    l_avg = l_avg / 3;
+                    // check valid and temperature for current nest DTS being processed
+                    if(k == 0)
+                    {
+                        l_nestDtsValid = l_parms->data.sensor0.fields.valid;
+                        // temperature is only 8 bits of reading field
+                        l_nestDtsTemp = (l_parms->data.sensor0.fields.reading & 0xFF);
+                    }
+                    else if(k == 1)
+                    {
+                        l_nestDtsValid = l_parms->data.sensor1.fields.valid;
+                        // temperature is only 8 bits of reading field
+                        l_nestDtsTemp = (l_parms->data.sensor1.fields.reading & 0xFF);
+                    }
+                    else if(k == 2)
+                    {
+                        l_nestDtsValid = l_parms->data.sensor2.fields.valid;
+                        // temperature is only 8 bits of reading field
+                        l_nestDtsTemp = (l_parms->data.sensor2.fields.reading & 0xFF);
+                    }
+                    else // shouldn't happen
+                    {
+                        break;
+                    }
+
+                    //Hardware bug workaround:  Module test will detect bad DTS and write coefficients
+                    //to force a reading of 0 or negative to indicate the DTS is bad.
+                    //Ignore any DTS that is not valid or marked bad
+                    if( (l_nestDtsValid) && ( (l_nestDtsTemp & DTS_INVALID_MASK) != DTS_INVALID_MASK) &&
+                        (l_nestDtsTemp != 0) )
+                    {
+                        l_avg += l_nestDtsTemp;
+                        l_nestDtsCnt++;
+                    }
+                } //for loop
+
+                if(l_nestDtsCnt)
+                {
+                    // Calculate the average of the valid Nest DTS temps
+                    l_avg = l_avg / l_nestDtsCnt;
 
                     // Mark the data as valid and update sensor
                     G_nest_dts_data_valid = TRUE;
@@ -559,10 +597,10 @@ void task_nest_dts( task_t * i_task )
                 }
                 else
                 {
-                    // Mark the data as invalid
+                    // No valid nest DTS, Mark the data as invalid
                     G_nest_dts_data_valid = FALSE;
                 }
-            }
+            } // if request completed without error
             else
             {
                 // Async request not finished, mark data invalid
