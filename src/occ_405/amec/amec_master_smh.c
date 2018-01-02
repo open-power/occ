@@ -358,12 +358,6 @@ void amec_mst_check_pcaps_match(void)
                                          ERRL_CALLOUT_TYPE_HUID,
                                          G_sysConfigData.apss_huid,
                                          ERRL_CALLOUT_PRIORITY_HIGH);
-
-                        //Callout to DPSS
-                        addCalloutToErrl(l_err,
-                                         ERRL_CALLOUT_TYPE_HUID,
-                                         G_sysConfigData.dpss_huid,
-                                         ERRL_CALLOUT_PRIORITY_HIGH);
                         //Reset OCC
                         REQUEST_RESET(l_err);
                     }

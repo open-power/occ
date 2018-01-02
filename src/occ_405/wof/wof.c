@@ -1430,6 +1430,18 @@ void set_clear_wof_disabled( uint8_t i_action,
             {
                 if(i_bit_mask & ~(IGNORE_WOF_RESET) )
                 {
+                    //Callout firmware
+                    addCalloutToErrl(l_errl,
+                                     ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                                     ERRL_COMPONENT_ID_FIRMWARE,
+                                     ERRL_CALLOUT_PRIORITY_HIGH);
+
+                    //Callout processor
+                    addCalloutToErrl(l_errl,
+                                     ERRL_CALLOUT_TYPE_HUID,
+                                     G_sysConfigData.proc_huid,
+                                     ERRL_CALLOUT_PRIORITY_MED);
+
                     REQUEST_WOF_RESET( l_errl );
                 }
             }
