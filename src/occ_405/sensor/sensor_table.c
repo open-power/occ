@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -38,7 +38,7 @@ extern amec_sys_t g_amec_sys;
 // Will paste number onto enum 'sensor base name'
 #define SENSOR_W_NUM(sensor,num) sensor##num
 
-// This will paste a number onto a sensor name base to create the full enum
+// These will paste a number onto a sensor name base to create the full enum
 // representation of the sensor name
 #define SENSOR_W_CENTAUR_NUM_HELPER(sensor_name, memc,centL,cent,ppL,pp) sensor_name##memc##centL##cent##ppL##pp
 #define SENSOR_W_CENTAUR_NUM(sensor_name, memc,cent,pp) SENSOR_W_CENTAUR_NUM_HELPER(sensor_name,memc,C,cent,P,pp)
@@ -115,7 +115,7 @@ extern amec_sys_t g_amec_sys;
   [SENSOR_W_NUM(sensor, 15)] = ptrbase.ptrmember[15]
 
 // Will define a set of "centaur_port_pair sensor pointers" by passing in
-// base sensor nameand ptr to [0] entry of array of 16 memcontroller sensors
+// base sensor name and ptr to [0] entry of array of 16 memcontroller sensors
 #define PORTPAIR_SENSOR_PTRS(sensor,ptrbase,ptrmember,ptrsnsr) \
   [SENSOR_W_CENTAUR_NUM(sensor, 0, 0, 0)] = ptrbase[0].ptrmember[0].ptrsnsr, \
   [SENSOR_W_CENTAUR_NUM(sensor, 0, 0, 1)] = ptrbase[0].ptrmember[1].ptrsnsr, \
@@ -133,7 +133,6 @@ extern amec_sys_t g_amec_sys;
   [SENSOR_W_CENTAUR_NUM(sensor, 6, 0, 1)] = ptrbase[6].ptrmember[1].ptrsnsr, \
   [SENSOR_W_CENTAUR_NUM(sensor, 7, 0, 0)] = ptrbase[7].ptrmember[0].ptrsnsr, \
   [SENSOR_W_CENTAUR_NUM(sensor, 7, 0, 1)] = ptrbase[7].ptrmember[1].ptrsnsr
-
 
 // Will create an entry in the G_amec_mini_sensor_list with a pointer at
 // the sensor index (gsid) passed in by "sensor"
@@ -391,7 +390,6 @@ const sensor_ptr_t G_amec_sensor_list[] =
   CORE_SENSOR_PTRS( TEMPPROCTHRMC , &g_amec_sys.proc[0].core, tempprocthermal),
   CORE_SENSOR_PTRS( UTILC ,         &g_amec_sys.proc[0].core, util),
   CORE_SENSOR_PTRS( NUTILC ,        &g_amec_sys.proc[0].core, nutil3s),
-  CORE_SENSOR_PTRS( MSTLC ,         &g_amec_sys.proc[0].core, mstl2ms),
   CORE_SENSOR_PTRS( TEMPC,          &g_amec_sys.proc[0].core, tempc),
   CORE_SENSOR_PTRS( STOPDEEPREQC,   &g_amec_sys.proc[0].core, stopdeepreqc),
   CORE_SENSOR_PTRS( STOPDEEPACTC,   &g_amec_sys.proc[0].core, stopdeepactc),
@@ -400,8 +398,10 @@ const sensor_ptr_t G_amec_sensor_list[] =
   // ------------------------------------------------------
   // Memory Sensors
   // ------------------------------------------------------
-  MEMCONTROL_SENSOR_PTRS(MRDM,          &g_amec_sys.proc[0].memctl, mrd2ms),
-  MEMCONTROL_SENSOR_PTRS(MWRM,          &g_amec_sys.proc[0].memctl, mwr2ms),
+  MEMCONTROL_SENSOR_PTRS(MRDM,          &g_amec_sys.proc[0].memctl, mrd),
+  MEMCONTROL_SENSOR_PTRS(MWRM,          &g_amec_sys.proc[0].memctl, mwr),
+  MEMCONTROL_SENSOR_PTRS(MEMSPM,        &g_amec_sys.proc[0].memctl, memsp),
+  MEMCONTROL_SENSOR_PTRS(MEMSPSTATM,    &g_amec_sys.proc[0].memctl, memspstat),
   MEMCONTROL_SENSOR_PTRS(MIRCM,         &g_amec_sys.proc[0].memctl, centaur.mirc2ms),
   MEMCONTROL_SENSOR_PTRS(MLP2M,         &g_amec_sys.proc[0].memctl, centaur.mlp2ms),
   DIMM_SENSOR_PTRS(TEMPDIMM,            &g_amec_sys.proc[0],        tempdimm),
@@ -572,7 +572,6 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   CORE_MINI_SENSOR_PTRS_NULL( TEMPPROCTHRMC ),
   CORE_MINI_SENSOR_PTRS(              UTILC, &G_dcom_slv_outbox_tx.utilcy        ),
   CORE_MINI_SENSOR_PTRS(             NUTILC, &G_dcom_slv_outbox_tx.nutil3sp0cy   ),
-  CORE_MINI_SENSOR_PTRS_NULL(         MSTLC ),
   CORE_MINI_SENSOR_PTRS_NULL(         TEMPC ),
   CORE_MINI_SENSOR_PTRS_NULL(  STOPDEEPREQC ),
   CORE_MINI_SENSOR_PTRS_NULL(  STOPDEEPACTC ),
@@ -582,8 +581,10 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   // Memory Sensors
   // ------------------------------------------------------
 
-  MEMCONTROL_MINI_SENSOR_PTRS(MRDM, &G_dcom_slv_outbox_tx.mrd2msp0mx), //
-  MEMCONTROL_MINI_SENSOR_PTRS(MWRM, &G_dcom_slv_outbox_tx.mwr2msp0mx), //
+  MEMCONTROL_MINI_SENSOR_PTRS(MRDM, &G_dcom_slv_outbox_tx.mrd),
+  MEMCONTROL_MINI_SENSOR_PTRS(MWRM, &G_dcom_slv_outbox_tx.mwr),
+  MEMCONTROL_MINI_SENSOR_PTRS_NULL(MEMSPM),
+  MEMCONTROL_MINI_SENSOR_PTRS_NULL(MEMSPSTATM),
   MEMCONTROL_MINI_SENSOR_PTRS_NULL(MIRCM),
   MEMCONTROL_MINI_SENSOR_PTRS_NULL(MLP2M),
 

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -351,31 +351,6 @@ enum e_gsid
     NUTILC22,
     NUTILC23,
 
-    MSTLC0,
-    MSTLC1,
-    MSTLC2,
-    MSTLC3,
-    MSTLC4,
-    MSTLC5,
-    MSTLC6,
-    MSTLC7,
-    MSTLC8,
-    MSTLC9,
-    MSTLC10,
-    MSTLC11,
-    MSTLC12,
-    MSTLC13,
-    MSTLC14,
-    MSTLC15,
-    MSTLC16,
-    MSTLC17,
-    MSTLC18,
-    MSTLC19,
-    MSTLC20,
-    MSTLC21,
-    MSTLC22,
-    MSTLC23,
-
     TEMPC0,
     TEMPC1,
     TEMPC2,
@@ -496,6 +471,24 @@ enum e_gsid
     MWRM5,
     MWRM6,
     MWRM7,
+
+    MEMSPM0,
+    MEMSPM1,
+    MEMSPM2,
+    MEMSPM3,
+    MEMSPM4,
+    MEMSPM5,
+    MEMSPM6,
+    MEMSPM7,
+
+    MEMSPSTATM0,
+    MEMSPSTATM1,
+    MEMSPSTATM2,
+    MEMSPSTATM3,
+    MEMSPSTATM4,
+    MEMSPSTATM5,
+    MEMSPSTATM6,
+    MEMSPSTATM7,
 
     MIRCM0,
     MIRCM1,

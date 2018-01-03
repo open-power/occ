@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/dimm_structs.h $                                          */
+/* $Source: src/common/dimm_structs.h $                                   */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016                             */
+/* Contributors Listed Below - COPYRIGHT 2016,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -77,6 +77,11 @@ typedef union
     };
 } dimm_n_value_t;
 
+typedef struct
+{
+    uint32_t m_value;
+    uint32_t need_m;
+} dimm_m_value_t;
 
 typedef struct
 {
@@ -84,13 +89,28 @@ typedef struct
     uint8_t mc;
     uint8_t port;
     dimm_n_value_t dimmNumeratorValues;
+    dimm_m_value_t dimmDenominatorValues;
+    uint32_t need_run;
 } dimm_control_args_t;
 
+typedef struct
+{
+    uint32_t mba_read_cnt;
+    uint32_t mba_write_cnt;
+} perf_mon_count0_t;
+
+typedef struct
+{
+    uint32_t med_idle_cnt;
+    uint32_t high_idle_cnt;
+} perf_mon_counts_t;
 
 typedef struct
 {
     GpeErrorStruct error;
     uint8_t mca;
+    perf_mon_count0_t rd_wr_counts;
+    perf_mon_counts_t idle_counts;
 } reset_mem_deadman_args_t;
 
 #endif // _DIMM_STRUCTS_H

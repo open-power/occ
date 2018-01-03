@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -33,6 +33,7 @@
 #include "centaur_data.h"
 #include "memory_service_codes.h"
 #include <occ_service_codes.h>  // for SSX_GENERIC_FAILURE
+#include "amec_sys.h"
 
 extern bool G_mem_monitoring_allowed;
 extern dimm_control_args_t  G_dimm_control_args;
@@ -50,17 +51,7 @@ extern task_t G_task_table[TASK_END];
 //
 // For Cumulus systems, only the first two columns (corresponding to the two mba
 // pairs mba01 and mba23) are used.
-memory_throttle_t G_memoryThrottleLimits[MAX_NUM_MEM_CONTROLLERS][MAX_NUM_MCU_PORTS] =
-{
-    {{0}, {0}, {0}, {0}},
-    {{0}, {0}, {0}, {0}},
-    {{0}, {0}, {0}, {0}},
-    {{0}, {0}, {0}, {0}},
-    {{0}, {0}, {0}, {0}},
-    {{0}, {0}, {0}, {0}},
-    {{0}, {0}, {0}, {0}},
-    {{0}, {0}, {0}, {0}}
-};
+memory_throttle_t G_memoryThrottleLimits[MAX_NUM_MEM_CONTROLLERS][MAX_NUM_MCU_PORTS] = {{{0}}};
 
 //Memory structure used for task data pointers in both Cumulus (Centaur)
 //and Nimbus (RDIMM) systems.
@@ -102,6 +93,9 @@ void task_memory_control( task_t * i_task )
 
     uint32_t       gpe_rc = 0;
 
+    uint8_t mc   = 0;
+    uint8_t port = 0;
+
     // Pointer to the task data structure
     memory_control_task_t* memControlTask =  (memory_control_task_t*) i_task->data_ptr;
 
@@ -119,6 +113,8 @@ void task_memory_control( task_t * i_task )
     do
     {
         memIndex = memControlTask->curMemIndex;
+        mc   = memIndex>>2;
+        port = memIndex&3;
 
         //First, check to see if the previous GPE request still running
         //A request is considered idle if it is not attached to any of the
@@ -177,12 +173,20 @@ void task_memory_control( task_t * i_task )
             {
                 //request completed successfully.  reset the timeout.
                 L_scom_timeout[memIndex] = 0;
+
+                // Store M value if needed
+                if(G_dimm_control_args.dimmDenominatorValues.need_m)
+                {
+                    g_amec->sys.dimm_m_values[mc][port].m_value =
+                        G_dimm_control_args.dimmDenominatorValues.m_value;
+                    g_amec->sys.dimm_m_values[mc][port].need_m = FALSE;
+                    TRAC_INFO("M Value for MC%d P%d is 0x%08X", mc, port, g_amec->sys.dimm_m_values[mc][port].m_value);
+                }
             }
         }//if(L_gpe_scheduled)
 
-        //The previous GPE job completed. Now get ready for the next job.
+        //The previous GPE job completed, get ready for the next job.
         L_gpe_scheduled = FALSE;
-
 
         //Update current dimm/centaur index if we didn't fail
         memControlTask->prevMemIndex = memIndex;
@@ -196,7 +200,6 @@ void task_memory_control( task_t * i_task )
         }
         memControlTask->curMemIndex = memIndex;
 
-
         if (MEM_TYPE_NIMBUS ==  G_sysConfigData.mem_type)
         {
             if(!NIMBUS_DIMM_INDEX_THROTTLING_CONFIGURED(memIndex))
@@ -205,8 +208,8 @@ void task_memory_control( task_t * i_task )
             }
 
             // control dimm specified by mc,port
-            uint8_t mc   = memIndex>>2;
-            uint8_t port = memIndex&3;
+            mc   = memIndex>>2;
+            port = memIndex&3;
 
             // Do the update_nlimit, calculate new N values, check whether throttle values
             // were updated, then Schedule GPE request, rc if problem, else L_gpe_schedule

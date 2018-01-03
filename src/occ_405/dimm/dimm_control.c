@@ -79,16 +79,49 @@ bool dimm_control(uint8_t mc, uint8_t port)
     // GPE1 G_dimm_control_args.dimmNumeratorValues struct
     // and populate G_dimm_control_args.mc/port values
     // corresponding to dimm to be throttled.
-    G_dimm_control_args.dimmNumeratorValues.new_n = FALSE; // Reset New N Value Flag prior to calling
+
+    // Reset New N Value Flag prior to calling
+    G_dimm_control_args.dimmNumeratorValues.new_n = FALSE;
     populate_dimm_control_args(g_amec->mem_speed_request, mc, port,
                                &G_dimm_control_args);
 
+    // Only need to update the static throttle sensors once
+    static bool L_mem_static_throttle_update[NUM_NIMBUS_MC_PAIRS][MAX_NUM_MCU_PORTS] = {{0}};
+
+    // Update memory throttle sensors
+    if( (g_amec->sys.dimm_m_values[mc][port].need_m != TRUE) &&
+        (g_amec->sys.dimm_m_values[mc][port].m_value != 0) )
+    {
+        uint32_t l_nm_val, l_sensor_offset = 0;
+        l_sensor_offset = (mc * MAX_NUM_MCU_PORTS) + port;
+
+        // Update current memory throttle
+        l_nm_val = g_amec->sys.current_dimm_n_values[mc][port].slot_n * 4000;
+        l_nm_val /= g_amec->sys.dimm_m_values[mc][port].m_value;
+
+        sensor_update( AMECSENSOR_ARRAY_PTR(MEMSPM0,l_sensor_offset), l_nm_val);
+
+        if(!L_mem_static_throttle_update[mc][port])
+        {
+            // Update static memory throttle
+            l_nm_val = G_sysConfigData.mem_throt_limits[mc][port].nom_n_per_mba * 4000;
+            l_nm_val /= g_amec->sys.dimm_m_values[mc][port].m_value;
+
+            sensor_update( AMECSENSOR_ARRAY_PTR(MEMSPSTATM0,l_sensor_offset), l_nm_val);
+
+            L_mem_static_throttle_update[mc][port] = TRUE;
+        }
+    }
+
     // Check if the throttle value has been updated since the last time we
     // sent it.  If it has, then send a new value, otherwise do nothing.
-    if(G_dimm_control_args.dimmNumeratorValues.new_n)
+    if(G_dimm_control_args.need_run)
     {
-        DIMM_DBG("dimm throttle control changed: MC=%d. port=%d , Throttle=%d",
-                  mc, port, g_amec->mem_speed_request);
+        if(G_dimm_control_args.dimmNumeratorValues.new_n)
+        {
+            DIMM_DBG("dimm throttle control changed: MC=%d. port=%d , Throttle=%d",
+                     mc, port, g_amec->mem_speed_request);
+        }
         return TRUE;
     }
 
@@ -197,7 +230,6 @@ void dimm_update_nlimits(uint8_t mc, uint8_t port)
 // Thread: RTL
 //
 // End Function Specification
-
 #define DIMM_THROTTLE_100_PERCENT_VALUE 1000
 void populate_dimm_control_args(uint16_t i_throttle, uint8_t mc, uint8_t port,
                                 dimm_control_args_t * dimm_control_args)
@@ -226,9 +258,23 @@ void populate_dimm_control_args(uint16_t i_throttle, uint8_t mc, uint8_t port,
             dimm_control_args->dimmNumeratorValues.word32 = dimm_nvalue.word32;
             g_amec->sys.current_dimm_n_values[mc][port].word32 =
                 dimm_nvalue.word32;
-            dimm_control_args->dimmNumeratorValues.new_n = 1;
+            dimm_control_args->dimmNumeratorValues.new_n = TRUE;
+        }
+
+        // Indicate if we need the M value
+        dimm_control_args->dimmDenominatorValues.need_m =
+            g_amec->sys.dimm_m_values[mc][port].need_m;
+
+        if(dimm_control_args->dimmDenominatorValues.need_m ||
+           dimm_control_args->dimmNumeratorValues.new_n)
+        {
             dimm_control_args->mc = mc;
             dimm_control_args->port = port;
+            dimm_control_args->need_run = TRUE;
+        }
+        else
+        {
+            dimm_control_args->need_run = FALSE;
         }
     }
 }

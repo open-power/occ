@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -143,6 +143,7 @@ const uint8_t G_tick0_seq[] = {
                                 TASK_ID_MEMORY_CONTROL,
                                 TASK_ID_CORE_DATA_CONTROL,
                                 TASK_ID_24X7,
+                                TASK_ID_POKE_WDT,
                                 TASK_ID_GPE_TIMINGS,
                                 TASK_ID_DCOM_WAIT_4_MSTR,
                                 TASK_ID_DCOM_RX_INBX,
@@ -190,6 +191,7 @@ const uint8_t G_tick2_seq[] = {
                                 TASK_ID_MEMORY_CONTROL,
                                 TASK_ID_CORE_DATA_CONTROL,
                                 TASK_ID_24X7,
+                                TASK_ID_POKE_WDT,
                                 TASK_ID_GPE_TIMINGS,
                                 TASK_ID_DCOM_WAIT_4_MSTR,
                                 TASK_ID_DCOM_RX_INBX,
@@ -213,6 +215,7 @@ const uint8_t G_tick3_seq[] = {
                                 TASK_ID_MEMORY_CONTROL,
                                 TASK_ID_CORE_DATA_CONTROL,
                                 TASK_ID_24X7,
+                                TASK_ID_POKE_WDT,
                                 TASK_ID_GPE_TIMINGS,
                                 TASK_ID_DCOM_WAIT_4_MSTR,
                                 TASK_ID_DCOM_RX_INBX,
@@ -237,6 +240,7 @@ const uint8_t G_tick4_seq[] = {
                                 TASK_ID_MEMORY_CONTROL,
                                 TASK_ID_CORE_DATA_CONTROL,
                                 TASK_ID_24X7,
+                                TASK_ID_POKE_WDT,
                                 TASK_ID_GPE_TIMINGS,
                                 TASK_ID_DCOM_WAIT_4_MSTR,
                                 TASK_ID_DCOM_RX_INBX,
@@ -284,6 +288,7 @@ const uint8_t G_tick6_seq[] = {
                                 TASK_ID_MEMORY_CONTROL,
                                 TASK_ID_CORE_DATA_CONTROL,
                                 TASK_ID_24X7,
+                                TASK_ID_POKE_WDT,
                                 TASK_ID_GPE_TIMINGS,
                                 TASK_ID_DCOM_WAIT_4_MSTR,
                                 TASK_ID_DCOM_RX_INBX,
@@ -306,6 +311,7 @@ const uint8_t G_tick7_seq[] = {
                                 TASK_ID_MEMORY_CONTROL,
                                 TASK_ID_CORE_DATA_CONTROL,
                                 TASK_ID_24X7,
+                                TASK_ID_POKE_WDT,
                                 TASK_ID_GPE_TIMINGS,
                                 TASK_ID_DCOM_WAIT_4_MSTR,
                                 TASK_ID_DCOM_RX_INBX,
@@ -330,6 +336,7 @@ const uint8_t G_tick8_seq[] = {
                                 TASK_ID_MEMORY_CONTROL,
                                 TASK_ID_CORE_DATA_CONTROL,
                                 TASK_ID_24X7,
+                                TASK_ID_POKE_WDT,
                                 TASK_ID_GPE_TIMINGS,
                                 TASK_ID_DCOM_WAIT_4_MSTR,
                                 TASK_ID_DCOM_RX_INBX,
@@ -377,6 +384,7 @@ const uint8_t G_tick10_seq[] = {
                                 TASK_ID_MEMORY_CONTROL,
                                 TASK_ID_CORE_DATA_CONTROL,
                                 TASK_ID_24X7,
+                                TASK_ID_POKE_WDT,
                                 TASK_ID_GPE_TIMINGS,
                                 TASK_ID_DCOM_WAIT_4_MSTR,
                                 TASK_ID_DCOM_RX_INBX,
@@ -399,6 +407,7 @@ const uint8_t G_tick11_seq[] = {
                                 TASK_ID_MEMORY_CONTROL,
                                 TASK_ID_CORE_DATA_CONTROL,
                                 TASK_ID_24X7,
+                                TASK_ID_POKE_WDT,
                                 TASK_ID_GPE_TIMINGS,
                                 TASK_ID_DCOM_WAIT_4_MSTR,
                                 TASK_ID_DCOM_RX_INBX,
@@ -423,6 +432,7 @@ const uint8_t G_tick12_seq[] = {
                                 TASK_ID_MEMORY_CONTROL,
                                 TASK_ID_CORE_DATA_CONTROL,
                                 TASK_ID_24X7,
+                                TASK_ID_POKE_WDT,
                                 TASK_ID_GPE_TIMINGS,
                                 TASK_ID_DCOM_WAIT_4_MSTR,
                                 TASK_ID_DCOM_RX_INBX,
@@ -470,6 +480,7 @@ const uint8_t G_tick14_seq[] = {
                                 TASK_ID_MEMORY_CONTROL,
                                 TASK_ID_CORE_DATA_CONTROL,
                                 TASK_ID_24X7,
+                                TASK_ID_POKE_WDT,
                                 TASK_ID_GPE_TIMINGS,
                                 TASK_ID_DCOM_WAIT_4_MSTR,
                                 TASK_ID_DCOM_RX_INBX,
@@ -492,6 +503,7 @@ const uint8_t G_tick15_seq[] = {
                                 TASK_ID_MEMORY_CONTROL,
                                 TASK_ID_CORE_DATA_CONTROL,
                                 TASK_ID_24X7,
+                                TASK_ID_POKE_WDT,
                                 TASK_ID_GPE_TIMINGS,
                                 TASK_ID_DCOM_WAIT_4_MSTR,
                                 TASK_ID_DCOM_RX_INBX,

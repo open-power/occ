@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2017,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2017,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -134,6 +134,19 @@ typedef struct __attribute__ ((packed))
     MAIN_MEM_SENSOR(gsid_prefix##15 , smf_mode, master_only)
 
 /**
+ * Macro to build main_mem_sensor_t instances for all memory controllers.
+ */
+#define MAIN_MEM_MEMORY_SENSORS(gsid_prefix, smf_mode, master_only) \
+    MAIN_MEM_SENSOR(gsid_prefix##0 , smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##1 , smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##2 , smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##3 , smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##4 , smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##5 , smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##6 , smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##7 , smf_mode, master_only)
+
+/**
  * Macro to build main_mem_sensor_t instances for all APSS channels.
  */
 #define MAIN_MEM_APSSCH_SENSORS(gsid_prefix, smf_mode, master_only) \
@@ -222,7 +235,11 @@ main_mem_sensor_t G_main_mem_sensors[] =
     MAIN_MEM_SENSOR              (PROCPWRTHROT,   false,    false),
     MAIN_MEM_SENSOR              (PROCOTTHROT,    false,    false),
     MAIN_MEM_SENSOR              (MEMPWRTHROT,    false,    false),
-    MAIN_MEM_SENSOR              (MEMOTTHROT,     false,    false)
+    MAIN_MEM_SENSOR              (MEMOTTHROT,     false,    false),
+    MAIN_MEM_MEMORY_SENSORS      (MRDM,           false,    false),
+    MAIN_MEM_MEMORY_SENSORS      (MWRM,           false,    false),
+    MAIN_MEM_MEMORY_SENSORS      (MEMSPSTATM,     true,     false),
+    MAIN_MEM_MEMORY_SENSORS      (MEMSPM,         false,    false),
 };
 
 /**

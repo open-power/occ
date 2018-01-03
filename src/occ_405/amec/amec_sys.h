@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -254,9 +254,11 @@ typedef struct
   // Sub-structures under MemCtl
   amec_centaur_t      centaur;
 
-  // Sensors
-  sensor_t mrd2ms;
-  sensor_t mwr2ms;
+  // Performance Sensors
+  sensor_t mrd;
+  sensor_t mwr;
+  sensor_t memspstat;
+  sensor_t memsp;
 
 } amec_memctl_t;
 
@@ -389,6 +391,9 @@ typedef struct
 
   // Memory Throttle Sent Last time to DIMM Throttle Register
   dimm_n_value_t current_dimm_n_values[NUM_NIMBUS_MC_PAIRS][MAX_NUM_MCU_PORTS];
+
+  // M Values for NM Throttling Control (counts DRAM clock cycles)
+  dimm_m_value_t dimm_m_values[NUM_NIMBUS_MC_PAIRS][MAX_NUM_MCU_PORTS];
 
   // Current Memory Power Control values (applied last through GPE1)
   uint8_t current_mem_pwr_ctl;

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -36,6 +36,7 @@
 #include <dimm_structs.h>
 #include <occ_sys_config.h>
 #include <pgpe_shared.h>
+#include <sensor.h>
 
 //*************************************************************************/
 // Externs
@@ -216,7 +217,7 @@ void init_mem_deadman_reset_task(void)
 //
 // Name: task_poke_watchdogs
 //
-// Description: Called every 2ms on both master and slaves while in observation
+// Description: Called every 500us on both master and slaves while in observation
 //               and active state. It performs the following:
 //               1. Enable/Reset the OCC heartbeat, setting the count to 8ms.
 //               2. Reset memory deadman timer for 1 MCA (by a GPE1 IPC task).
@@ -226,10 +227,11 @@ void init_mem_deadman_reset_task(void)
 //                  to the PGPE Beacon count then log an error and request reset.
 //
 // End Function Specification
+#define TASK_PGPE_BEACON_RUN_TICK_COUNT 8
 void task_poke_watchdogs(struct task * i_self)
 {
     ocb_occhbr_t hbr;                          // OCC heart beat register
-    static bool L_check_pgpe_beacon = false;  // Check GPE beacon this time?
+    static int L_check_pgpe_beacon_count = 0;  // Check GPE beacon this time?
 
 // 1. Enable OCC heartbeat
 
@@ -246,18 +248,20 @@ void task_poke_watchdogs(struct task * i_self)
 // 3. Verify PGPE Beacon is not frozen for 8 ms if there are cores configured
     if(G_present_cores != 0)
     {
-        if(true == L_check_pgpe_beacon)
+        if(L_check_pgpe_beacon_count >= TASK_PGPE_BEACON_RUN_TICK_COUNT)
         {
-            // Examine pgpe Beacon every other call (every 4ms)
+            // Examine pgpe Beacon every 4ms
             if(!G_simics_environment) // PGPE Beacon is not implemented in simics
             {
                 check_pgpe_beacon();
             }
+            L_check_pgpe_beacon_count = 0;
         }
-        // toggle pgpe beacon check flag, check only once every other call (every 4ms)
-        L_check_pgpe_beacon = !L_check_pgpe_beacon;
+        else
+        {
+            L_check_pgpe_beacon_count++;
+        }
     }
-
 }
 
 // Function Specification
@@ -266,14 +270,15 @@ void task_poke_watchdogs(struct task * i_self)
 //
 // Description: Verify that if a memory deadman_task was scheduled on GPE1 last cycle
 //              then it is completed. Then if there is a new task to be scheduled
-//              for this cycle, then schedule it on the GPE1 engine.
-//              Called every 2ms.
+//              for this cycle, then schedule it on the GPE1 engine. This task
+//              is also used to collect memory performance measurements.
+//              Called every 500us.
 //
 // End Function Specification
 
 // MAX number of timeout cycles allowed for memory deadman IPC task
 // before logging an error
-#define MEM_DEADMAN_TASK_TIMEOUT 2
+#define MEM_DEADMAN_TASK_TIMEOUT 8
 
 void manage_mem_deadman_task(void)
 {
@@ -288,6 +293,11 @@ void manage_mem_deadman_task(void)
     static bool    L_gpe_idle_traced    = false;
     static bool    L_gpe_timeout_logged = false;
     static bool    L_gpe_had_1_tick     = false;
+
+    // There is no way to synchronously start or stop the counter, so must
+    // take the difference between two readings.
+    static perf_mon_count0_t L_last_reading[NUM_NIMBUS_MCAS] = {{0}};
+    uint32_t l_rd_wr_diff = 0;
 
     uint32_t       gpe_rc = G_gpe_reset_mem_deadman_args.error.rc;  // IPC task rc
 
@@ -337,6 +347,19 @@ void manage_mem_deadman_task(void)
             {
                 //Reset the timeout.
                 L_scom_timeout[mca] = 0;
+
+                // Update read/write sensors
+                l_rd_wr_diff = G_gpe_reset_mem_deadman_args.rd_wr_counts.mba_read_cnt
+                     - L_last_reading[mca].mba_read_cnt;
+                l_rd_wr_diff = ((l_rd_wr_diff*25)/1000);
+                sensor_update(AMECSENSOR_ARRAY_PTR(MRDM0,mca), l_rd_wr_diff);
+
+                l_rd_wr_diff = G_gpe_reset_mem_deadman_args.rd_wr_counts.mba_write_cnt
+                     - L_last_reading[mca].mba_write_cnt;
+                l_rd_wr_diff = ((l_rd_wr_diff*25)/1000);
+                sensor_update(AMECSENSOR_ARRAY_PTR(MWRM0,mca), l_rd_wr_diff);
+                // Update last read/write measurement
+                L_last_reading[mca] = G_gpe_reset_mem_deadman_args.rd_wr_counts;
             }
         }
 
@@ -345,16 +368,12 @@ void manage_mem_deadman_task(void)
 
 
         //We didn't fail, update mca (irrespective of whether it will be scheduled)
+        mca++;
         if ( mca >= NUM_NIMBUS_MCAS )
         {
             mca  = 0;
         }
-        else
-        {
-            mca++;
-        }
         G_gpe_reset_mem_deadman_args.mca = mca;
-
 
         // If the MCA is not configured, break
         if(!NIMBUS_DIMM_INDEX_THROTTLING_CONFIGURED(mca))

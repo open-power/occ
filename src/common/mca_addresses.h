@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -31,32 +31,35 @@
 #define NUM_NIMBUS_MCAS (MAX_NUM_MCU_PORTS * NUM_NIMBUS_MC_PAIRS)
 
 // Base Address of NIMBUS MCA.
-#define DIMM_MCA_BASE_ADDRESS     0x07010800
+#define DIMM_MCA_BASE_ADDRESS           0x07010800
 
-#define MCA_MCPAIR_SPACE          0x01000000
-#define MCA_PORT_SPACE            0x40
-#define MC_PORT_SPACE(mc,port)    ((MCA_MCPAIR_SPACE * (mc)) + ( MCA_PORT_SPACE * (port)))
+#define MCA_MCPAIR_SPACE                0x01000000
+#define MCA_PORT_SPACE                  0x40
+#define MC_PORT_SPACE(mc,port)          ((MCA_MCPAIR_SPACE * (mc)) + ( MCA_PORT_SPACE * (port)))
 
 
-#define POWER_CTRL_REG0_OFFSET    0x0134
-#define POWER_CTRL_REG0_ADDRESS   (DIMM_MCA_BASE_ADDRESS + POWER_CTRL_REG0_OFFSET)
+#define POWER_CTRL_REG0_OFFSET          0x0134
+#define POWER_CTRL_REG0_ADDRESS         (DIMM_MCA_BASE_ADDRESS + POWER_CTRL_REG0_OFFSET)
 
-#define STR_REG0_OFFSET           0x0135
-#define STR_REG0_ADDRESS          (DIMM_MCA_BASE_ADDRESS + STR_REG0_OFFSET)
+#define STR_REG0_OFFSET                 0x0135
+#define STR_REG0_ADDRESS                (DIMM_MCA_BASE_ADDRESS + STR_REG0_OFFSET)
 
-#define N_M_TCR_OFFSET            0x0116
-#define N_M_TCR_ADDRESS           (DIMM_MCA_BASE_ADDRESS + N_M_TCR_OFFSET)
+#define PERF_MON_COUNTS0_OFFSET          0x0137
+#define PERF_MON_COUNTS0_ADDRESS         (DIMM_MCA_BASE_ADDRESS + PERF_MON_COUNTS0_OFFSET)
 
-#define DEADMAN_TIMER_OFFSET      0x013C
-#define DEADMAN_TIMER_ADDRESS     (DIMM_MCA_BASE_ADDRESS + DEADMAN_TIMER_OFFSET)
+#define N_M_TCR_OFFSET                  0x0116
+#define N_M_TCR_ADDRESS                 (DIMM_MCA_BASE_ADDRESS + N_M_TCR_OFFSET)
 
-#define EMERGENCY_THROTTLE_OFFSET  0x0125
-#define EMERGENCY_THROTTLE_ADDRESS (DIMM_MCA_BASE_ADDRESS + EMERGENCY_THROTTLE_OFFSET)
-#define ER_THROTTLE_IN_PROGRESS_MASK 0x8000000000000000
+#define PERF_MON_COUNTS_IDLE_OFFSET     0x013C
+#define PERF_MON_COUNTS_IDLE_ADDRESS    (DIMM_MCA_BASE_ADDRESS + PERF_MON_COUNTS_IDLE_OFFSET)
 
-#define MCA_CAL_FIR_OFFSET  0x0100
-#define MCA_CAL_FIR_ADDRESS (DIMM_MCA_BASE_ADDRESS + MCA_CAL_FIR_OFFSET)
-#define MCA_FIR_THROTTLE_ENGAGED_MASK 0x0200000000000000
+#define EMERGENCY_THROTTLE_OFFSET       0x0125
+#define EMERGENCY_THROTTLE_ADDRESS      (DIMM_MCA_BASE_ADDRESS + EMERGENCY_THROTTLE_OFFSET)
+#define ER_THROTTLE_IN_PROGRESS_MASK    0x8000000000000000
+
+#define MCA_CAL_FIR_OFFSET              0x0100
+#define MCA_CAL_FIR_ADDRESS             (DIMM_MCA_BASE_ADDRESS + MCA_CAL_FIR_OFFSET)
+#define MCA_FIR_THROTTLE_ENGAGED_MASK   0x0200000000000000
 
 // Memory Power Control
 
@@ -101,7 +104,7 @@ mc23.port3        0x080108C0        + 0x00000116        = 0x080109D6
 #define N_M_DIMM_TCR(mc,port) (N_M_TCR_ADDRESS + MC_PORT_SPACE(mc,port))
 
 /*
-MC/Port Address MCA Port Address   Deadman Offset       SCOM Address
+MC/Port Address MCA Port Address   "Deadman" Offset       SCOM Address
 mc01.port0        0x07010800        + 0x0000013C        = 0x0701093C
 mc01.port1        0x07010840        + 0x0000013C        = 0x0701097C
 mc01.port2        0x07010880        + 0x0000013C        = 0x070109BC
@@ -112,8 +115,25 @@ mc23.port2        0x08010880        + 0x0000013C        = 0x080109BC
 mc23.port3        0x080108C0        + 0x0000013C        = 0x080109FC
  */
 
-//  NIMBUS DIMM Deadman SCOM Register Addresses macro
-#define DEADMAN_TIMER_MCA(mca) (DEADMAN_TIMER_ADDRESS + MC_PORT_SPACE((mca>>2),(mca&3)))
+// NIMBUS DIMM Performance Monitor -- Idle Threshold Counter
+// This register effectively acts as a deadman register.
+// Reading it will reset the deadman counter.
+#define PERF_MON_COUNTS_IDLE_MCA(mca) (PERF_MON_COUNTS_IDLE_ADDRESS + MC_PORT_SPACE((mca>>2),(mca&3)))
+
+/*
+MC/Port Address MCA Port Address   "Deadman" Offset       SCOM Address
+mc01.port0        0x07010800        + 0x00000137        = 0x07010937
+mc01.port1        0x07010840        + 0x00000137        = 0x07010977
+mc01.port2        0x07010880        + 0x00000137        = 0x070109B7
+mc01.port3        0x070108C0        + 0x00000137        = 0x070109F7
+mc23.port0        0x08010800        + 0x00000137        = 0x08010937
+mc23.port1        0x08010840        + 0x00000137        = 0x08010977
+mc23.port2        0x08010880        + 0x00000137        = 0x080109B7
+mc23.port3        0x080108C0        + 0x00000137        = 0x080109F7
+ */
+
+// NIMBUS DIMM Performance Monitor -- Read/Write Count
+#define PERF_MON_COUNTS0_MCA(mca) (PERF_MON_COUNTS0_ADDRESS + MC_PORT_SPACE((mca>>2),(mca&3)))
 
 // Emergency Mode Throttle Register
 /*

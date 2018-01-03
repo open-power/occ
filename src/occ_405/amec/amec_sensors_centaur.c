@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -472,7 +472,7 @@ void amec_perfcount_getmc( MemData * i_sensor_cache,
         // ---------------------------------------------------------------------------
 
         // Extract write bandwidth
-        temp32new = (templ); // left shift into top 20 bits of 32 bits
+        temp32new = (templ);
 
         temp32 = temp32new - g_amec->proc[0].memctl[i_centaur].centaur.portpair[i_mc_id].perf.wr_cnt_accum;
         g_amec->proc[0].memctl[i_centaur].centaur.portpair[i_mc_id].perf.wr_cnt_accum = temp32new;  // Save latest accumulator away for next time
@@ -487,7 +487,7 @@ void amec_perfcount_getmc( MemData * i_sensor_cache,
         // -------------------------------------------------------------------------
 
         // Extract read bandwidth
-        temp32new = (tempu); // left shift into top 20 bits of 32 bits
+        temp32new = (tempu);
 
         temp32 = temp32new - g_amec->proc[0].memctl[i_centaur].centaur.portpair[i_mc_id].perf.rd_cnt_accum;
         g_amec->proc[0].memctl[i_centaur].centaur.portpair[i_mc_id].perf.rd_cnt_accum = temp32new;  // Save latest accumulator away for next time

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -47,7 +47,6 @@
  *
  * End Function Specification
  */
-
 void gpe_dimm_control(ipc_msg_t* cmd, void* arg)
 {
     // Note: arg was set to 0 in ipc func table (ipc_func_tables.c), so don't use it.
@@ -76,6 +75,18 @@ void gpe_dimm_control(ipc_msg_t* cmd, void* arg)
 
             gpe_set_ffdc(&(args->error), N_M_DIMM_TCR(mc,port),
                          GPE_RC_SCOM_GET_FAILED, rc);
+            break;
+        }
+
+        // Store the M values if needed
+        if( args->dimmDenominatorValues.need_m )
+        {
+            args->dimmDenominatorValues.m_value = ((regValue & 0x1FFF80000) >> 19);
+        }
+
+        // If this isn't set, we didn't need to set the N value, just needed M
+        if(!args->dimmNumeratorValues.new_n)
+        {
             break;
         }
 
@@ -121,7 +132,7 @@ void gpe_dimm_control(ipc_msg_t* cmd, void* arg)
  *
  * Name: gpe_reset_mem_deadman
  *
- * Description:  Read memory deadman timer for one MCA
+ * Description:  Read memory performance counter for one MCA.
  *               This effectively resets the memory deadman timer
  *
  * Inputs:       cmd is a pointer to IPC msg's cmd and cmd_data struct
@@ -176,7 +187,7 @@ void gpe_reset_mem_deadman(ipc_msg_t* cmd, void* arg)
 
             if(rc)
             {
-                PK_TRACE("gpe_reset_mem_deadman: Failed to program deadman timer"
+                PK_TRACE("gpe_reset_mem_deadman: Failed to program deadman timer (STR REG0)"
                          " MCA:0x%08x, Data:0x%08x, rc:0x%08x", mca, (uint32_t)regValue, rc);
 
                 gpe_set_ffdc(&(args->error), STR_REG0_MCA(mca),
@@ -185,17 +196,22 @@ void gpe_reset_mem_deadman(ipc_msg_t* cmd, void* arg)
             }
         }
 
-        // read Deadman timer's SCOM Register for specified MCA to reset the timer
-        rc = getscom_abs(DEADMAN_TIMER_MCA(mca), &regValue);
+        // The "Deadman" timer is reset by reading from this performance monitor counts register
+        rc = getscom_abs(PERF_MON_COUNTS_IDLE_MCA(mca), &regValue);
         if(rc)
         {
-            PK_TRACE("gpe_reset_mem_deadman: Deadman timer read failed"
+            PK_TRACE("gpe_reset_mem_deadman: Performance Monitor Counts read failed"
                      " MCA:0x%08x, Address:0x%08x, rc:0x%08x",
-                     mca, DEADMAN_TIMER_MCA(mca), rc);
+                     mca, PERF_MON_COUNTS_IDLE_MCA(mca), rc);
 
-            gpe_set_ffdc(&(args->error), DEADMAN_TIMER_MCA(mca),
+            gpe_set_ffdc(&(args->error), PERF_MON_COUNTS_IDLE_MCA(mca),
                          GPE_RC_SCOM_GET_FAILED, rc);
             break;
+        }
+        else
+        {
+            args->idle_counts.med_idle_cnt = ((regValue & 0xFFFFFFFF00000000) >> 32);
+            args->idle_counts.high_idle_cnt = (regValue & 0xFFFFFFFF);
         }
 
         // Now that we are poking the deadman timer as second part of init check for and clear
@@ -217,7 +233,7 @@ void gpe_reset_mem_deadman(ipc_msg_t* cmd, void* arg)
             }
 
             // clear Emergency Throttle In-Progress bit if set, this is indication that OCC has been
-            // re-started from permanent safe mode without an IPL 
+            // re-started from permanent safe mode without an IPL
             if(regValue & ER_THROTTLE_IN_PROGRESS_MASK)
             {
                 PK_TRACE("gpe_reset_mem_deadman: Enabled timer and clearing throttle for MCA:0x%08x", mca);
@@ -266,6 +282,24 @@ void gpe_reset_mem_deadman(ipc_msg_t* cmd, void* arg)
                 PK_TRACE("gpe_reset_mem_deadman: Enabled timer for MCA:0x%08x", mca);
             }
         }  // if !L_init_complete
+
+        // In addition to resetting the "deadman" counter, get some performance information
+        rc = getscom_abs(PERF_MON_COUNTS0_MCA(mca), &regValue);
+        if(rc)
+        {
+            PK_TRACE("gpe_reset_mem_deadman: Performance Monitor Counts0 read failed"
+                     " MCA:0x%08x, Address:0x%08x, rc:0x%08x",
+                     mca, PERF_MON_COUNTS0_MCA(mca), rc);
+
+            gpe_set_ffdc(&(args->error), PERF_MON_COUNTS0_MCA(mca),
+                         GPE_RC_SCOM_GET_FAILED, rc);
+            break;
+        }
+        else
+        {
+            args->rd_wr_counts.mba_read_cnt = ((regValue & 0xFFFFFFFF00000000) >> 32);
+            args->rd_wr_counts.mba_write_cnt = (regValue & 0xFFFFFFFF);
+        }
 
     } while(0);
 

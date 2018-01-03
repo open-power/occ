@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -229,7 +229,7 @@ void amec_init_gamec_struct(void)
   /*  Local Variables                                                       */
   /*------------------------------------------------------------------------*/
   uint16_t l_idx = 0;
-
+  uint16_t l_idx2 = 0;
   /*------------------------------------------------------------------------*/
   /*  Code                                                                  */
   /*------------------------------------------------------------------------*/
@@ -343,6 +343,15 @@ void amec_init_gamec_struct(void)
 
   // Initialize to no VRM faults
   g_amec->sys.vrm_fault_status = 0;
+
+  // Initialize saying we need the M value
+  for(l_idx=0; l_idx < NUM_NIMBUS_MC_PAIRS; l_idx++)
+  {
+    for(l_idx2=0; l_idx2 < MAX_NUM_MCU_PORTS; l_idx2++)
+    {
+      g_amec->sys.dimm_m_values[l_idx][l_idx2].need_m = TRUE;
+    }
+  }
 
   // Initialize wof_disabled
   g_amec->wof.wof_disabled = WOF_RC_OCC_WOF_DISABLED;

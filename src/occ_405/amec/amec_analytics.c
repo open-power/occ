@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -307,13 +307,13 @@ void amec_analytics_main(void)
                 for (j=0; j<8; j++)     // Group 45 supports all 8 Centaurs per OCC
                 {
                   g_amec->g44_avg[(i*MSA)+l] = g_amec->g44_avg[(i*MSA)+l] +
-                    (UINT32)(g_amec->proc[i].memctl[j].mrd2ms.sample/78); // memory read bandwidth
+                    (UINT32)(g_amec->proc[i].memctl[j].mrd.sample/78); // memory read bandwidth
                   l=l+1;
                 }
                 for (j=0; j<8; j++)     // Group 45 supports all 8 Centaurs per OCC
                 {
                   g_amec->g44_avg[(i*MSA)+l] = g_amec->g44_avg[(i*MSA)+l] +
-                    (UINT32)(g_amec->proc[i].memctl[j].mwr2ms.sample/78); // memory write bandwidth
+                    (UINT32)(g_amec->proc[i].memctl[j].mwr.sample/78); // memory write bandwidth
                   l=l+1;
                 }
 

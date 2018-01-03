@@ -279,8 +279,8 @@ void chom_update_sensors()
         // update memory bandwidth
         for ( j = 0; j < MAX_NUM_MEM_CONTROLLERS; j++)
         {
-            l_mem_rw = G_dcom_slv_outbox_rx[i].mrd2msp0mx[j] +
-                       G_dcom_slv_outbox_rx[i].mwr2msp0mx[j];
+            l_mem_rw = G_dcom_slv_outbox_rx[i].mrd[j] +
+                       G_dcom_slv_outbox_rx[i].mwr[j];
 
             // If l_mem_rw == 0, do not add to sensor
             if(l_mem_rw != 0)
