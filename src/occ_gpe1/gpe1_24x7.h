@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -34,18 +34,18 @@
 #define TOTAL_CONFIG_SCOMS 60
 #define TOTAL_COUNTER_SCOMS 71
 //
+#define MAX_32 4294967295ULL
+#define MAX_48 281474976710655ULL
 static volatile uint64_t  G_CUR_UAV = 0;
+static volatile uint64_t  G_CUR_MODE = 0;
+static volatile uint64_t  G_MBA_pmulets[24];
+static volatile uint64_t  G_PHB_pmulets[24];
 uint64_t G_PMU_CONFIGS_8[][2] = 
 {
 //cnpm//
-    //{0x5011c13, 0x92aaaa82ac000bf8},//0
-    //{0x5011c13, 0x92aaaaaaac002bf8},//0
     {0x5011c13, 0x92aaaaaaac000bf8},//0
-    //{0x5011c14, 0x92a8aaaaac000bf8},//1
-    //{0x5011c14, 0x92a8aaaaac002bf8},//1
     {0x5011c14, 0x92a8aaaaac000bf8},//1
     {0x5011c15, 0xaaaaaaaaaaaaaaaa},//2
-    //{0x5011c16, 0x0400c0ffffffff00},//3
     {0x5011c16, 0x0400c0ff00ff0000},//3
 //MC23//
     {0x3010829, 0x0500000000000000},//port0//4
@@ -53,18 +53,12 @@ uint64_t G_PMU_CONFIGS_8[][2] =
     {0x30108a9, 0x0500000000000000},//port2//6
     {0x30108b9, 0x0500000000000000},//port3//7
     {0x301083c, 0x0000000000000000},//port0,1//8
-    //{0x301083d, 0x0000000053457500},//port0,1//9
     {0x301083d, 0x000000005345755b},//port0,1//9
-    //{0x301083e, 0x0000000000000000},//port0,1//10
     {0x301083e, 0x6471000000000000},//port0,1//10
-    //{0x301083f, 0x00c0800000000000},//port0,1//11
     {0x301083f, 0x00f0800000000000},//port0,1//11
     {0x30108bc, 0x0000000000000000},//port2,3//12
-    //{0x30108bd, 0x000000000000005b},//port2,3//13
     {0x30108bd, 0x0000000000000000},//port2,3//13
-    //{0x30108be, 0x64715345755b6000},//port2,3//14
     {0x30108be, 0x00005345755b6000},//port2,3//14
-    //{0x30108bf, 0x003e800000000000},//port2,3//15
     {0x30108bf, 0x000e800000000000},//port2,3//15
 //MC01//
     {0x5010829, 0x0500000000000000},//port0//16
@@ -72,9 +66,7 @@ uint64_t G_PMU_CONFIGS_8[][2] =
     {0x50108a9, 0x0500000000000000},//port2//18
     {0x50108b9, 0x0500000000000000},//port3//19
     {0x501083c, 0x0000000000000000},//port0,1//20
-    //{0x501083d, 0x0000000053457557},//port0,1//21
     {0x501083d, 0x000000005345755b},//port0,1//21
-    //{0x501083e, 0x5471000000000000},//port0,1//22
     {0x501083e, 0x6471000000000000},//port0,1//22
     {0x501083f, 0x00f0800000000000},//port0,1//23
     {0x50108bc, 0x0000000000000000},//port2,3//24
@@ -82,28 +74,20 @@ uint64_t G_PMU_CONFIGS_8[][2] =
     {0x50108be, 0x00005345755b6000},//port2,3//26
     {0x50108bf, 0x000e800000000000},//port2,3//27
 //xlinks//
-    {0x501341a, 0xff015daad55aa000},//all xlinks//28
+    {0x501341a, 0xff015daa15555000},//all xlinks//28
 //nx//
-    {0x20110a6, 0xcaa00000e0000000},//29
-    {0x20110a9, 0xcaa04924f0000000},//30
+    {0x20110a6, 0xcaa0000080000000},//29
+    {0x20110a9, 0xcaa0492480000000},//30
     {0x2011054, 0x0000000000000000},//31
     {0x2011055, 0x00000000600002aa},//32
 //nvlinks-NTL,ATS,XTS//
-    //{0x501111e, 0x90aa01444f8a0000},//NTL0//33
-    {0x501111e, 0xb0aa01444f8a0000},//NTL0//33
-    //{0x501113e, 0x90aa01444f8a0000},//NTL1//34
-    {0x501113e, 0xb0aa01444f8a0000},//NTL1//34
-    //{0x501131e, 0x90aa01444f8a0000},//NTL2//35
-    {0x501131e, 0xb0aa01444f8a0000},//NTL2//35
-    //{0x501133e, 0x90aa01444f8a0000},//NTL3//36
-    {0x501133e, 0xb0aa01444f8a0000},//NTL3//36
-    //{0x501151e, 0x90aa01444f8a0000},//NTL4//37
-    {0x501151e, 0xb0aa01444f8a0000},//NTL4//37
-    //{0x501153e, 0x90aa01444f8a0000},//NTL5//38
-    {0x501153e, 0xb0aa01444f8a0000},//NTL5//38
-    //{0x5011600, 0x80aa420000000000},//ATS//39
+    {0x501111e, 0xb0aa0144868a0000},//NTL0//33
+    {0x501113e, 0xb0aa0144868a0000},//NTL1//34
+    {0x501131e, 0xb0aa0144868a0000},//NTL2//35
+    {0x501133e, 0xb0aa0144868a0000},//NTL3//36
+    {0x501151e, 0xb0aa0144868a0000},//NTL4//37
+    {0x501153e, 0xb0aa0144868a0000},//NTL5//38
     {0x5011600, 0xb0aa420000000000},//ATS//39
-    //{0x5011645, 0x80aa03050d0e0000},//XTS//40
     {0x5011645, 0xb0aa03050d0e0000},//XTS//40
 //PHB
     {0xd010917, 0x8000011516190000},//PHB0//41
@@ -113,11 +97,8 @@ uint64_t G_PMU_CONFIGS_8[][2] =
     {0xf010957, 0x8000011516190000},//PHB4//45
     {0xf010997, 0x8000011516190000},//PHB5//46
 //nvlinks-NPCQ//
-    //{0x50110C7, 0x80aa1012181a0000},//NPCQ01//47
     {0x50110C7, 0x90aa1012181a0000},//NPCQ01//47
-    //{0x50112C7, 0x80aa1012181a0000},//NPCQ02//48
     {0x50112C7, 0x90aa1012181a0000},//NPCQ02//48
-    //{0x50114C7, 0x80aa1012181a0000},//NPCQ03//49
     {0x50114C7, 0x90aa1012181a0000},//NPCQ03//49
 //CAPP
     {0x2010814, 0x8058812200000000},//CAPP01//50
@@ -135,12 +116,9 @@ uint64_t G_PMU_CONFIGS_8[][2] =
 uint64_t G_PMU_CONFIGS_16[][2] = 
 {
 //cnpm
-    //{0x5011c13, 0x92aaaa82ac000bf8},//0
     {0x5011c13, 0x92aaaaaaac000bf8},//0
-    //{0x5011c14, 0x92a8aaaaac000bf8},//1
     {0x5011c14, 0x92a8aaaaac000bf8},//1
     {0x5011c15, 0x5555555555555555},//2
-    //{0x5011c16, 0x0400c0ffffffff00},//3
     {0x5011c16, 0x0400c0ff00ff0000},//3
 //MC23//	                        
     {0x3010829, 0x0500000000000000},//port0//4
@@ -148,18 +126,12 @@ uint64_t G_PMU_CONFIGS_16[][2] =
     {0x30108a9, 0x0500000000000000},//port2//6
     {0x30108b9, 0x0500000000000000},//port3//7
     {0x301083c, 0x0000000000000000},//port0,1//8
-    //{0x301083d, 0x0000000053457500},//port0,1//9
     {0x301083d, 0x000000005345755b},//port0,1//9
-    //{0x301083e, 0x0000000000000000},//port0,1//10
     {0x301083e, 0x6471000000000000},//port0,1//10
-    //{0x301083f, 0x00c0800000000000},//port0,1//11
     {0x301083f, 0x00f0800000000000},//port0,1//11
     {0x30108bc, 0x0000000000000000},//port2,3//12
-    //{0x30108bd, 0x000000000000005b},//port2,3//13
     {0x30108bd, 0x0000000000000000},//port2,3//13
-    //{0x30108be, 0x64715345755b6000},//port2,3//14
     {0x30108be, 0x00005345755b6000},//port2,3//14
-    //{0x30108bf, 0x003e800000000000},//port2,3//15
     {0x30108bf, 0x000e800000000000},//port2,3//15
 //MC01//                            
     {0x5010829, 0x0500000000000000},//port0//16
@@ -167,9 +139,7 @@ uint64_t G_PMU_CONFIGS_16[][2] =
     {0x50108a9, 0x0500000000000000},//port2//18
     {0x50108b9, 0x0500000000000000},//port3//19
     {0x501083c, 0x0000000000000000},//port0,1//20
-    //{0x501083d, 0x0000000053457557},//port0,1//21
     {0x501083d, 0x000000005345755b},//port0,1//21
-    //{0x501083e, 0x5471000000000000},//port0,1//22
     {0x501083e, 0x6471000000000000},//port0,1//22
     {0x501083f, 0x00f0800000000000},//port0,1//23
     {0x50108bc, 0x0000000000000000},//port2,3//24
@@ -177,28 +147,20 @@ uint64_t G_PMU_CONFIGS_16[][2] =
     {0x50108be, 0x00005345755b6000},//port2,3//26
     {0x50108bf, 0x000e800000000000},//port2,3//27
 //xlinks                            
-    {0x501341a, 0xff015d55d55aa000},//all xlinks//28
+    {0x501341a, 0xff015d5515555000},//all xlinks//28
 //nx                                
-    {0x20110a6, 0xc5500000e0000000},//29
-    {0x20110a9, 0xc5504924f0000000},//30
+    {0x20110a6, 0xc550000080000000},//29
+    {0x20110a9, 0xc550492480000000},//30
     {0x2011054, 0x0000000000000000},//31
     {0x2011055, 0x00000000600002aa},//32
 //nvlinks-NTL,ATS,XTS//             
-    //{0x501111e, 0x805501444f8a0000},//NTL0//33
-    {0x501111e, 0xb05501444f8a0000},//NTL0//33
-    //{0x501113e, 0x805501444f8a0000},//NTL1//34
-    {0x501113e, 0xb05501444f8a0000},//NTL1//34
-    //{0x501131e, 0x805501444f8a0000},//NTL2//35
-    {0x501131e, 0xb05501444f8a0000},//NTL2//35
-    //{0x501133e, 0x805501444f8a0000},//NTL3//36
-    {0x501133e, 0xb05501444f8a0000},//NTL3//36
-    //{0x501151e, 0x805501444f8a0000},//NTL4//37
-    {0x501151e, 0xb05501444f8a0000},//NTL4//37
-    //{0x501153e, 0x805501444f8a0000},//NTL5//38
-    {0x501153e, 0xb05501444f8a0000},//NTL5//38
-    //{0x5011600, 0x8055420000000000},//ATS//39
+    {0x501111e, 0xb0550144868a0000},//NTL0//33
+    {0x501113e, 0xb0550144868a0000},//NTL1//34
+    {0x501131e, 0xb0550144868a0000},//NTL2//35
+    {0x501133e, 0xb0550144868a0000},//NTL3//36
+    {0x501151e, 0xb0550144868a0000},//NTL4//37
+    {0x501153e, 0xb0550144868a0000},//NTL5//38
     {0x5011600, 0xb055420000000000},//ATS//39
-    //{0x5011645, 0x805503050d0e0000},//XTS//40
     {0x5011645, 0xb05503050d0e0000},//XTS//40
 //PHB                               
     {0xd010917, 0x8000011516190000},//PHB0//41
@@ -208,11 +170,8 @@ uint64_t G_PMU_CONFIGS_16[][2] =
     {0xf010957, 0x8000011516190000},//PHB4//45
     {0xf010997, 0x8000011516190000},//PHB5//46
 //nvlinks-NPCQ//                    
-    //{0x50110C7, 0x80551012181a0000},//NPCQ01//47
     {0x50110C7, 0x90551012181a0000},//NPCQ01//47
-    //{0x50112C7, 0x80551012181a0000},//NPCQ02//48
     {0x50112C7, 0x90551012181a0000},//NPCQ02//48
-    //{0x50114C7, 0x80551012181a0000},//NPCQ03//49
     {0x50114C7, 0x90551012181a0000},//NPCQ03//49
 //CAPP                              
     {0x2010814, 0x803840a100000000},//CAPP01//50
@@ -360,13 +319,10 @@ uint64_t G_PMULETS_6[] =
 uint64_t G_PMULETS_7[] =
 {
 //NPCQ01
-    //0x5011086,//0//64
     0x50110c6,//0//64
 //NPCQ02
-    //0x5011186,//1//65
     0x50112c6,//1//65
 //NPCQ03
-    //0x5011286,//2//66
     0x50114c6,//2//66
 //CAPP01
     0x2010815,//3//67
@@ -448,6 +404,11 @@ enum
     POST_OFFSET_G7_5            = 0x00180708,
     POST_OFFSET_G7_6            = 0x00180748,
     POST_OFFSET_G7T             = 0x00180768,
+//DEBUG mode offsets start here
+    POSTING_START_DBG           = 0x00190000,
+    POST_OFFSET_DBG1H           = 0x00190000,
+    POST_OFFSET_DBG1T           = 0x00190108,
+//
     //CONTROL BLOCK FIELD OFFSETS
     //cntl block @ last 1k of 24x7 space
     CNTL_STATUS_OFFSET          = 0x001BFC00,
@@ -455,22 +416,29 @@ enum
     CNTL_SPEED_OFFSET           = 0x001BFC10,
     CNTL_UAV_OFFSET             = 0x001BFC18,
     CNTL_MODE_OFFSET            = 0x001BFC20,
+    CNTL_MODE_STATE_OFFSET      = 0x001BFC28,
 ///////////////////////////////////////////////////
     //error tracking fields(internal)
     //last conf scom
-    DBG_CONF_OFFSET             = 0x001BFC40,
-    DBG_GRP_OFFSET              = 0x001BFC50,
-    DBG_UNIT_OFFSET             = 0x001BFC58,
-    DBG_TICS_OFFSET             = 0x001BFC60,
-    DBG_MARK                    = 0x001AFC00,
-    DBG_ITER                    = 0x001AFC08,
-    DBG_STATE                   = 0x001AFC10,
-    DBG_CONF_I                  = 0x001AFC18,
-    DBG_UAV                     = 0x001AFC20,
-    DBG_0                       = 0x001AFC28,
-    DBG_1                       = 0x001AFC30,
-    DBG_2                       = 0x001AFC38,
-    DBG_3                       = 0x001AFC40,
+    DBG_VER_OFFSET              = 0x001AFC00,
+    DBG_CONF_OFFSET             = 0x001AFC08,
+    DBG_GRP_OFFSET              = 0x001AFC10,
+    DBG_UNIT_OFFSET             = 0x001AFC18,
+    DBG_TICS_OFFSET             = 0x001AFC20,
+    DBG_MARK                    = 0x001AFC28,
+    DBG_ITER                    = 0x001AFC30,
+    DBG_STATE                   = 0x001AFC38,
+    DBG_CONF_I                  = 0x001AFC40,
+    DBG_UAV                     = 0x001AFC48,
+    DBG_0                       = 0x001AFC50,
+    DBG_1                       = 0x001AFC58,
+    DBG_2                       = 0x001AFC60,
+    DBG_3                       = 0x001AFC68,
+    DBG_4                       = 0x001AFC70,
+    DBG_5                       = 0x001AFC78,
+    DBG_6                       = 0x001AFC80,
+    DBG_7                       = 0x001AFC88,
+    DBG_8                       = 0x001AFC90,
 //////////////////////////////////////////////////
     //cntl status values
     CNTL_STATUS_INIT            = 0x0,
@@ -496,14 +464,17 @@ enum
     CNTL_SPEED_512MS            = 0x9,
     CNTL_SPEED_1024MS           = 0xA,
     CNTL_SPEED_2048MS           = 0xB,
-    //cntl cmd uav temp
     CNTL_UAV_TEMP               = 0xFFFF8073F007E000,
-    //CNTL_UAV_TEMP               = 0xf800007000000000,
     MARKER1                     = 0xCAFEBABEFA11DEA1,
     MARKER2                     = 0xCAFEBABEFA11DEA2,
     MARKER3                     = 0xCAFEBABEFA11DEA3,
+    MARKER4                     = 0xCAFEBABEFA11DEA4,
+    MARKER5                     = 0xCAFEBABEFA11DEA5,
     //cntl block modes
-    CNTL_MODE_MONITOR           = 0x0
+    CNTL_MODE_MONITOR           = 0x0,
+    CNTL_MODE_DEBUG1            = 0x1,
+    //code version
+    VERSION                     = 0x0000000100000005
 };
 //MASKS used to identify individual units from Unit availability vector (UAV)
 enum MASKS
@@ -567,4 +538,6 @@ void configure_pmu (uint8_t, uint64_t);
 void post_pmu_events (int);
 void initialize_postings();
 void set_speed(uint64_t*, uint8_t*, volatile uint64_t*);
+uint64_t get_mba_event(uint64_t, uint64_t);
+uint64_t get_phb_event(uint64_t, uint64_t);
 #endif //_GPE1_24x7_H
