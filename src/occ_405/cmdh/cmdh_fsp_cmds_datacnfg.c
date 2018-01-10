@@ -260,6 +260,7 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
     uint32_t                        l_mode_data_sz;
     uint16_t                        l_freq = 0;
     uint16_t                        l_table[OCC_MODE_COUNT] = {0};
+    uint16_t                        l_pgpe_max_freq_mhz = (G_oppb.frequency_max_khz / 1000);
 
     do
     {
@@ -303,13 +304,13 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
             break;
         }
 
-        // This should never happen but verify that nominal frequency is <= G_proc_fmax_mhz
-        if(l_freq > G_proc_fmax_mhz)
+        // This should never happen but verify that nominal frequency is <= OPPB max
+        if(l_freq > l_pgpe_max_freq_mhz)
         {
             CMDH_TRAC_ERR("Nominal Frequency[%d] (MHz)) is higher than "
-                          "G_proc_fmax_mhz[%d], clipping Nominal Frequency",
-                          l_freq, G_proc_fmax_mhz);
-            l_freq = G_proc_fmax_mhz;
+                          "OPPB max[%d], clipping Nominal Frequency",
+                          l_freq, l_pgpe_max_freq_mhz);
+            l_freq = l_pgpe_max_freq_mhz;
         }
 
         l_table[OCC_MODE_NOMINAL] = l_freq;
@@ -325,13 +326,13 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
                            l_table[OCC_MODE_NOMINAL]);
             l_freq = l_table[OCC_MODE_NOMINAL];
         }
-        // Verify that turbo frequency is <= G_proc_fmax_mhz
-        else if(l_freq > G_proc_fmax_mhz)
+        // Verify that turbo frequency is <= OPPB max
+        else if(l_freq > l_pgpe_max_freq_mhz)
         {
             CMDH_TRAC_ERR("Turbo Frequency[%d] (MHz)) is higher than "
-                          "G_proc_fmax_mhz[%d], clip Turbo Frequency",
-                          l_freq, G_proc_fmax_mhz);
-            l_freq = G_proc_fmax_mhz;
+                          "OPPB max[%d], clip Turbo Frequency",
+                          l_freq, l_pgpe_max_freq_mhz);
+            l_freq = l_pgpe_max_freq_mhz;
         }
         l_table[OCC_MODE_TURBO] = l_freq;
         CMDH_TRAC_INFO("Turbo frequency = %d MHz", l_freq);
@@ -351,13 +352,13 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         // Bytes 9-10 Ultr Turbo Frequency Point
         l_freq = (l_buf[6] << 8 | l_buf[7]);
-        // Verify that ultra turbo frequency is <= G_proc_fmax_mhz
-        if(l_freq  > G_proc_fmax_mhz)
+        // Verify that ultra turbo frequency is <= OPPB max
+        if(l_freq  > l_pgpe_max_freq_mhz)
         {
             CMDH_TRAC_ERR("Ultra Turbo Frequency[%d] (MHz) is higher than PGPE's "
-                          "Max freq (G_proc_fmax_mhz[%d]) clip Ultra Turbo Frequency",
-                          l_freq, G_proc_fmax_mhz);
-            l_freq = G_proc_fmax_mhz;
+                          "Max freq (OPPB max[%d]) clip Ultra Turbo Frequency",
+                          l_freq, l_pgpe_max_freq_mhz);
+            l_freq = l_pgpe_max_freq_mhz;
         }
 
         // Check if (H)TMGT will let WOF run, else clear flags

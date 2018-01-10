@@ -40,6 +40,7 @@
 #include "dcom.h"
 #include <amec_sensors_power.h>
 #include <cmdh_fsp_cmds.h>      // For G_apss_ch_to_function
+#include "common.h"             // For ignore_pgpe_error()
 
 //*************************************************************************/
 // Externs
@@ -399,110 +400,121 @@ void amec_mst_check_under_pcap(void)
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-
-    // Check if done everything possible to shed power and power still above a hard power cap
-    // ppb_fmax = Fmin and PWRSYS > Node power cap and
-    // Node power cap >=  hard_min_pcap AND memory is throttled
-    if((g_amec->proc[0].pwr_votes.ppb_fmax == g_amec->sys.fmin) &&
-       (AMECSENSOR_PTR(PWRSYS)->sample > g_amec->pcap.active_node_pcap) &&
-       (g_amec->pcap.active_node_pcap >= G_sysConfigData.pcap.hard_min_pcap) &&
-       (g_amec->pcap.active_mem_level != 0) )
+    do
     {
-
-        G_over_cap_count++;
-
-        // GPUs take longer for power limit to take effect if GPUs are present need to use
-        // a longer wait time before logging an error and resetting
-        if( ( (!G_first_num_gpus_sys) && (G_over_cap_count >= PCAP_FAILURE_THRESHOLD) ) ||
-            ( (G_first_num_gpus_sys) && (G_over_cap_count >= PCAP_GPU_FAILURE_THRESHOLD) ) )
+        // Check if done everything possible to shed power and power still above a hard power cap
+        // ppb_fmax = Fmin and PWRSYS > Node power cap and
+        // Node power cap >=  hard_min_pcap AND memory is throttled
+        if((g_amec->proc[0].pwr_votes.ppb_fmax == g_amec->sys.fmin) &&
+           (AMECSENSOR_PTR(PWRSYS)->sample > g_amec->pcap.active_node_pcap) &&
+           (g_amec->pcap.active_node_pcap >= G_sysConfigData.pcap.hard_min_pcap) &&
+           (g_amec->pcap.active_mem_level != 0) )
         {
-            TRAC_ERR("Failure to maintain power cap: Power Cap = %d ,"
-                     "PWRSYS = %d",g_amec->pcap.active_node_pcap,
-                     AMECSENSOR_PTR(PWRSYS)->sample);
-
-            // Trace power per APSS channel to have the best breakdown for debug
-            // compress traces to 4 max to save space on OP systems
-            for (i = 0; i < MAX_APSS_ADC_CHANNELS; i++)
+            // Check if we are to ignore pgpe errors meaning the PGPE cannot set frequency which could
+            // cause this over power event.  This will not cover if a different OCC is not able to shed
+            // power due to PGPE which would require to add this status to occ-occ communication
+            if(ignore_pgpe_error())
             {
-                l_apss_func_id = G_apss_ch_to_function[i];
+                // make sure count is cleared to give time for frequency to be set once PGPE can set it
+                G_over_cap_count = 0;
+                INCREMENT_ERR_HISTORY(ERRH_OVER_PCAP_IGNORED);
+                break;
+            }
 
-                if((l_apss_func_id != ADC_RESERVED) &&
-                   (l_apss_func_id != ADC_12V_SENSE) &&
-                   (l_apss_func_id != ADC_GND_REMOTE_SENSE) &&
-                   (l_apss_func_id != ADC_12V_STANDBY_CURRENT) )
+            G_over_cap_count++;
+
+            // GPUs take longer for power limit to take effect if GPUs are present need to use
+            // a longer wait time before logging an error and resetting
+            if( ( (!G_first_num_gpus_sys) && (G_over_cap_count >= PCAP_FAILURE_THRESHOLD) ) ||
+                ( (G_first_num_gpus_sys) && (G_over_cap_count >= PCAP_GPU_FAILURE_THRESHOLD) ) )
+            {
+                TRAC_ERR("Failure to maintain power cap: Power Cap = %d ,"
+                         "PWRSYS = %d",g_amec->pcap.active_node_pcap,
+                         AMECSENSOR_PTR(PWRSYS)->sample);
+
+                // Trace power per APSS channel to have the best breakdown for debug
+                // compress traces to 4 max to save space on OP systems
+                for (i = 0; i < MAX_APSS_ADC_CHANNELS; i++)
                 {
-                    l_trace[l_trace_idx] = (i << 24) | (l_apss_func_id << 16) | (AMECSENSOR_PTR(PWRAPSSCH0 + i)->sample);
-                    l_trace_idx++;
+                    l_apss_func_id = G_apss_ch_to_function[i];
+
+                    if((l_apss_func_id != ADC_RESERVED) &&
+                       (l_apss_func_id != ADC_12V_SENSE) &&
+                       (l_apss_func_id != ADC_GND_REMOTE_SENSE) &&
+                       (l_apss_func_id != ADC_12V_STANDBY_CURRENT) )
+                    {
+                        l_trace[l_trace_idx] = (i << 24) | (l_apss_func_id << 16) | (AMECSENSOR_PTR(PWRAPSSCH0 + i)->sample);
+                        l_trace_idx++;
+                    }
                 }
+                while(l_trace_idx != 0)
+                {
+                   if(l_trace_idx >=4)
+                   {
+                      TRAC_ERR("APSS channel/FuncID/Power: [%08X], [%08X], [%08X], [%08X]",
+                                l_trace[l_trace_idx-1], l_trace[l_trace_idx-2], l_trace[l_trace_idx-3], l_trace[l_trace_idx-4]);
+                      l_trace_idx -= 4;
+                   }
+                   else if(l_trace_idx == 3)
+                   {
+                      TRAC_ERR("APSS channel/FuncID/Power: [%08X], [%08X], [%08X]",
+                                l_trace[l_trace_idx-1], l_trace[l_trace_idx-2], l_trace[l_trace_idx-3]);
+                      l_trace_idx = 0;
+                   }
+                   else if(l_trace_idx == 2)
+                   {
+                      TRAC_ERR("APSS channel/FuncID/Power: [%08X], [%08X]",
+                                 l_trace[l_trace_idx-1], l_trace[l_trace_idx-2]);
+                      l_trace_idx = 0;
+                   }
+                   else // l_trace_idx == 1
+                   {
+                      TRAC_ERR("APSS channel/FuncID/Power: [%08X]",
+                                l_trace[l_trace_idx-1]);
+                      l_trace_idx = 0;
+                   }
+                }
+
+                /* @
+                 * @errortype
+                 * @moduleid    AMEC_MST_CHECK_UNDER_PCAP
+                 * @reasoncode  POWER_CAP_FAILURE
+                 * @userdata1   Power Cap
+                 * @userdata2   PWRSYS (Node Power)
+                 * @devdesc     Failure to maintain max power limits
+                 *
+                 */
+                l_err = createErrl( AMEC_MST_CHECK_UNDER_PCAP,
+                                    POWER_CAP_FAILURE,
+                                    ERC_AMEC_UNDER_PCAP_FAILURE,
+                                    ERRL_SEV_PREDICTIVE,
+                                    NULL,
+                                    DEFAULT_TRACE_SIZE,
+                                    g_amec->pcap.active_node_pcap,
+                                    AMECSENSOR_PTR(PWRSYS)->sample);
+
+                //Callout to firmware
+                addCalloutToErrl(l_err,
+                                 ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                                 ERRL_COMPONENT_ID_FIRMWARE,
+                                 ERRL_CALLOUT_PRIORITY_HIGH);
+
+                //Callout to APSS
+                addCalloutToErrl(l_err,
+                                 ERRL_CALLOUT_TYPE_HUID,
+                                 G_sysConfigData.apss_huid,
+                                 ERRL_CALLOUT_PRIORITY_HIGH);
+
+                //Reset OCC
+                REQUEST_RESET(l_err);
             }
-            while(l_trace_idx != 0)
-            {
-               if(l_trace_idx >=4)
-               {
-                  TRAC_ERR("APSS channel/FuncID/Power: [%08X], [%08X], [%08X], [%08X]",
-                             l_trace[l_trace_idx-1], l_trace[l_trace_idx-2], l_trace[l_trace_idx-3], l_trace[l_trace_idx-4]);
-                  l_trace_idx -= 4;
-               }
-               else if(l_trace_idx == 3)
-               {
-                  TRAC_ERR("APSS channel/FuncID/Power: [%08X], [%08X], [%08X]",
-                             l_trace[l_trace_idx-1], l_trace[l_trace_idx-2], l_trace[l_trace_idx-3]);
-                  l_trace_idx = 0;
-               }
-               else if(l_trace_idx == 2)
-               {
-                  TRAC_ERR("APSS channel/FuncID/Power: [%08X], [%08X]",
-                             l_trace[l_trace_idx-1], l_trace[l_trace_idx-2]);
-                  l_trace_idx = 0;
-               }
-               else // l_trace_idx == 1
-               {
-                  TRAC_ERR("APSS channel/FuncID/Power: [%08X]",
-                             l_trace[l_trace_idx-1]);
-                  l_trace_idx = 0;
-               }
-            }
-
-            /* @
-             * @errortype
-             * @moduleid    AMEC_MST_CHECK_UNDER_PCAP
-             * @reasoncode  POWER_CAP_FAILURE
-             * @userdata1   Power Cap
-             * @userdata2   PWRSYS (Node Power)
-             * @devdesc     Failure to maintain max power limits
-             *
-             */
-            l_err = createErrl( AMEC_MST_CHECK_UNDER_PCAP,
-                                POWER_CAP_FAILURE,
-                                ERC_AMEC_UNDER_PCAP_FAILURE,
-                                ERRL_SEV_PREDICTIVE,
-                                NULL,
-                                DEFAULT_TRACE_SIZE,
-                                g_amec->pcap.active_node_pcap,
-                                AMECSENSOR_PTR(PWRSYS)->sample);
-
-            //Callout to firmware
-            addCalloutToErrl(l_err,
-                             ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                             ERRL_COMPONENT_ID_FIRMWARE,
-                             ERRL_CALLOUT_PRIORITY_HIGH);
-
-            //Callout to APSS
-            addCalloutToErrl(l_err,
-                             ERRL_CALLOUT_TYPE_HUID,
-                             G_sysConfigData.apss_huid,
-                             ERRL_CALLOUT_PRIORITY_HIGH);
-
-            //Reset OCC
-            REQUEST_RESET(l_err);
         }
-    }
-    else
-    {
-        // Clear counter
-        G_over_cap_count = 0;
-    }
-
+        else
+        {
+            // Clear counter
+            G_over_cap_count = 0;
+        }
+    }while(0);
     return;
 }
 

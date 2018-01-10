@@ -246,4 +246,32 @@ bool notify_host(const ext_intr_reason_t i_reason)
     return notify_success;
 }
 
+// Called prior to logging any error related to the PGPE or Pstate control
+// i.e. PGPE communication, maintaining power cap...
+// During prolonged droop events the PGPE can be non-responsive and don't have frequency control so doing a pm reset will
+// not help.  The PGPE will set a bit in the OCC FLAGS register to indicate when in this condition for the OCC to ignore errors
+// Returns true if the error should be ignored
+bool ignore_pgpe_error(void)
+{
+    static bool  L_last_ignore_error = false;
+           bool  l_ignore_error      = false;
+           ocb_occflg_t occ_flags    = {0};
+
+    // Check if the bit to ignore errors is set in the OCC Flags register
+    occ_flags.value = in32(OCB_OCCFLG);
+
+    if (occ_flags.fields.pm_reset_suppress == 1)
+    {
+        l_ignore_error = true;
+    }
+
+    // Trace if this is a change from the last time this was called
+    if (L_last_ignore_error != l_ignore_error)
+    {
+        TRAC_ERR("ignore_pgpe_error: OCCFLG pm_reset_suppress was %d and is now %d", L_last_ignore_error, l_ignore_error);
+        L_last_ignore_error = l_ignore_error;
+    }
+
+    return l_ignore_error;
+}
 

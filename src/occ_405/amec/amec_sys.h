@@ -535,6 +535,10 @@ typedef struct
 
   // Calculations & Interim Data
   uint16_t core_max_freq;               // Maximum requested freq for all cores on chip.
+  uint16_t core_min_freq;               // for debug.  Minimum requested freq for all cores on chip.
+  uint8_t  current_clip_count;          // for debug.  #consecutive ticks core_max_freq is below max possible for same reason
+  uint32_t chip_f_reason_history;       // for debug.  bit mask history of all frequency reason(s) for the chip
+  uint32_t f_reason;                    // for debug.  current reason across all cores driving the lowest f request
 
   // Parameters used through Amester interface
   // Note: keep core arrays here, not in per-cores structure so one parameter

@@ -40,13 +40,18 @@
 #include "rtls_service_codes.h"
 #include "proc_pstate.h"
 #include "occ_util.h"
+#include "common.h"             // For ignore_pgpe_error()
 
-// The the GPE parameter fields for PGPE IPC calls.
+// The GPE parameter fields for PGPE IPC calls.
 extern GPE_BUFFER(ipcmsg_clip_update_t  G_clip_update_parms);
 extern GPE_BUFFER(ipcmsg_set_pmcr_t     G_pmcr_set_parms);
 
 extern GpeRequest G_clip_update_req;
 extern GpeRequest G_pmcr_set_req;
+
+// number of ticks to wait on clip/pmcr request to complete before checking to log an error
+// this must give the PGPE at least 1ms, doubling that time to 2ms to be safe
+#define SUPPRESS_PGPE_ERR_WAIT_TICKS 4  // 2ms
 
 extern bool G_state_transition_occuring;     // A state transition is currently going on?
 
@@ -68,9 +73,15 @@ bool G_allowPstates = FALSE;
 void task_core_data_control( task_t * i_task )
 {
     errlHndl_t      err            = NULL;   //Error handler
-    static bool     L_trace_logged = false;  // trace logging to avoid unnecessarily repeatig logs
+    static bool     L_trace_logged = false;  // trace logging to avoid unnecessarily repeating logs
+    static bool     L_current_timeout_recorded = FALSE; 
     Pstate          l_pstate;
     static uint64_t L_last = 0xFFFFFFFFFFFFFFFF;
+    static uint64_t L_ignore_wait_count = 0; // number of consecutive ticks IPC task failed
+    bool            l_check_failure = false;
+    int             l_request_is_idle = 0;
+    uint8_t         l_request_rc = 0;
+    enum occExtReasonCode l_ext_rc = OCC_NO_EXTENDED_RC;
 
     // Once a state transition process starts, task data control
     // stops updating the PMCR/CLIPS updates, this way, the state
@@ -123,7 +134,7 @@ void task_core_data_control( task_t * i_task )
                 G_active_to_observation_ready = true;
             }
         }
-    }
+    } // if in state transition
     else
     {
         L_trace_logged = false;
@@ -131,24 +142,23 @@ void task_core_data_control( task_t * i_task )
         if (G_allowPstates)
         {
             // perform Pstate/clip control if previous IPC call completed successfully
-            // if not idle, ignore cycle
-            // if an error was returned, log an error, and request reset
-            if(G_sysConfigData.system_type.kvm) // OPAL system
+            if(G_sysConfigData.system_type.kvm) // OPAL system uses clip update request
             {
+                l_request_is_idle = async_request_is_idle(&G_clip_update_req.request);
+                l_request_rc = G_clip_update_parms.msg_cb.rc;
+
                 // confirm that the clip update IPC from last cycle
                 // has successfully completed on PGPE (with no errors)
-                if( async_request_is_idle(&G_clip_update_req.request) &&  //clip_update/set_clip_ranges completed
-                    (G_clip_update_parms.msg_cb.rc == PGPE_RC_SUCCESS) ) // with no errors
+                if( (l_request_is_idle) &&              //clip_update/set_clip_ranges completed
+                    (l_request_rc == PGPE_RC_SUCCESS) ) // with no errors
                 {
                     //call PGPE IPC function to update the clips
                     pgpe_clip_update();
                 }
-                else if(G_clip_update_parms.msg_cb.rc != PGPE_RC_SUCCESS)
+                else
                 {
-                    // an earlier clip update IPC call has not completed, trace and log an error
-                    TRAC_ERR("task_core_data_control: clip update IPC task returned an error, %d",
-                             G_clip_update_parms.msg_cb.rc);
-
+                    l_check_failure = true;
+                    l_ext_rc = ERC_PGPE_CLIP_FAILURE;
                     /*
                      * @errortype
                      * @moduleid    RTLS_TASK_CORE_DATA_CONTROL_MOD
@@ -158,23 +168,15 @@ void task_core_data_control( task_t * i_task )
                      * @userdata4   ERC_PGPE_CLIP_FAILURE
                      * @devdesc     pgpe clip update returned an error
                      */
-                    err = createErrl(
-                                     RTLS_TASK_CORE_DATA_CONTROL_MOD,                  //ModId
-                                     PGPE_FAILURE,                                     //Reasoncode
-                                     ERC_PGPE_CLIP_FAILURE,                            //Extended reason code
-                                     ERRL_SEV_PREDICTIVE,                              //Severity
-                                     NULL,                                             //Trace Buf
-                                     DEFAULT_TRACE_SIZE,                               //Trace Size
-                                     G_clip_update_parms.msg_cb.rc,                    //Userdata1
-                                     async_request_is_idle(&G_clip_update_req.request) //Userdata2
-                                    );
                 }
             }
             else
             {
-                // NON OPAL System, OCC owns PMCR:
-                if( async_request_is_idle(&G_pmcr_set_req.request) &&     // PMCR IPC from last TICK completed
-                    (G_pmcr_set_parms.msg_cb.rc == PGPE_RC_SUCCESS) )     // with no errors
+                // NON OPAL System, OCC owns PMCR and uses PMCR set request
+                l_request_is_idle = async_request_is_idle(&G_pmcr_set_req.request);
+                l_request_rc = G_pmcr_set_parms.msg_cb.rc;
+                if( (l_request_is_idle) &&                  // PMCR IPC from last TICK completed
+                    (l_request_rc == PGPE_RC_SUCCESS) )     // with no errors
                 {
                     //The previous Non-OPAL PGPE request succeeded
                     uint64_t pstateList = 0;
@@ -190,19 +192,17 @@ void task_core_data_control( task_t * i_task )
                     if (L_last != pstateList)
                     {
                         L_last = pstateList;
-                        TRAC_IMP("task_core_data_control: calling pmcr_set() w/pstates: 0x%08X%04X",
-                                 WORD_HIGH(pstateList), WORD_LOW(pstateList)>>16);
+                        TRAC_INFO("task_core_data_control: calling pmcr_set() w/pstates: 0x%08X%04X",
+                                  WORD_HIGH(pstateList), WORD_LOW(pstateList)>>16);
                         //call PGPE IPC function to update Pstates
                         pgpe_pmcr_set();
                     }
 
                 }
-                else if(G_pmcr_set_parms.msg_cb.rc != PGPE_RC_SUCCESS)
+                else
                 {
-                    // an earlier clip update IPC call has not completed, trace and log an error
-                    TRAC_ERR("task_core_data_control: pstate update IPC task returned an error, %d",
-                             G_pmcr_set_parms.msg_cb.rc);
-
+                    l_check_failure = true;
+                    l_ext_rc = ERC_PGPE_SET_PMCR_FAILURE;
                     /*
                      * @errortype
                      * @moduleid    RTLS_TASK_CORE_DATA_CONTROL_MOD
@@ -212,27 +212,69 @@ void task_core_data_control( task_t * i_task )
                      * @userdata4   ERC_PGPE_SET_PMCR_FAILURE
                      * @devdesc     pgpe PMCR set returned an error
                      */
+                }
+            }
+        } // if pstates allowed
+
+        // Common error handling for all systems
+        if(l_check_failure)
+        {
+            // an earlier clip update IPC call has not completed
+            L_ignore_wait_count++;
+
+            // Only log the error if we are not to ignore PGPE errors and have
+            // waited enough time for the PGPE to give this indication
+            if(L_ignore_wait_count >= SUPPRESS_PGPE_ERR_WAIT_TICKS)
+            {
+                if(!ignore_pgpe_error())
+                {
+                    TRAC_ERR("task_core_data_control: pstate update IPC task did not complete successfully, idle?[%d] rc[%08X]",
+                              l_request_is_idle, l_request_rc);
+
                     err = createErrl(
                                      RTLS_TASK_CORE_DATA_CONTROL_MOD,               //ModId
                                      PGPE_FAILURE,                                  //Reasoncode
-                                     ERC_PGPE_SET_PMCR_FAILURE,                     //Extended reason code
+                                     l_ext_rc,                                      //Extended reason code
                                      ERRL_SEV_PREDICTIVE,                           //Severity
                                      NULL,                                          //Trace Buf
                                      DEFAULT_TRACE_SIZE,                            //Trace Size
-                                     G_pmcr_set_parms.msg_cb.rc,                    //Userdata1
-                                     async_request_is_idle(&G_pmcr_set_req.request) //Userdata2
+                                     l_request_rc,                                  //Userdata1
+                                     l_request_is_idle                              //Userdata2
                                     );
+
+                    //Add firmware callout
+                    addCalloutToErrl(err,
+                                     ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                                     ERRL_COMPONENT_ID_FIRMWARE,
+                                     ERRL_CALLOUT_PRIORITY_HIGH);
+
+                    //Add processor callout
+                    addCalloutToErrl(err,
+                                     ERRL_CALLOUT_TYPE_HUID,
+                                     G_sysConfigData.proc_huid,
+                                     ERRL_CALLOUT_PRIORITY_MED);
+
+                    // commit error log
+                    REQUEST_RESET(err);
+                }
+                else
+                {
+                    // Wait forever for PGPE to respond
+                    // Put a mark on the wall so we know we hit this state
+                    if(!L_current_timeout_recorded)
+                    {
+                        INCREMENT_ERR_HISTORY(ERRH_PSTATE_CHANGE_IGNORED);
+                        L_current_timeout_recorded = TRUE;
+                    }
                 }
             }
         }
-        // else pstates not allowed yet
-
-        if(err)
+        else
         {
-            // commit error log
-            REQUEST_RESET(err);
+             // no error, clear the error wait count
+             L_ignore_wait_count = 0;
+             L_current_timeout_recorded = FALSE;
         }
-    }
-
+    } // else not in a state transition
     return;
 }

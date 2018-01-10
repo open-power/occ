@@ -49,4 +49,7 @@ void task_misc_405_checks(task_t *i_self);
 // Returns true if notification was sent, false if interrupt already outstanding
 bool notify_host(const ext_intr_reason_t i_reason);
 
+// Returns true if PGPE error should be ignored
+bool ignore_pgpe_error(void);
+
 #endif // _common_h

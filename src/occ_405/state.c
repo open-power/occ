@@ -224,7 +224,8 @@ errlHndl_t SMGR_standby_to_characterization()
 
             if(rc)
             {
-                TRAC_ERR("SMGR: failed to set pstate clips.");
+                TRAC_ERR("SMGR: failed to set pstate clips. rc[0x%08X] OCCFLG[0x%08X]",
+                         rc, in32(OCB_OCCFLG));
                 break;
             }
             else // successfully set clips; enable pstates, then start transition
@@ -235,7 +236,8 @@ errlHndl_t SMGR_standby_to_characterization()
 
                 if(rc)
                 {
-                    TRAC_ERR("SMGR: failed to start the pstate protocol for char owner on PGPE.");
+                    TRAC_ERR("SMGR: failed to start the pstate protocol for char owner on PGPE. rc[0x%08X] OCCFLG[0x%08X]",
+                              rc, in32(OCB_OCCFLG));
                     break;
                 }
                 else // Clips set and pstates started successfully, start transition
@@ -318,7 +320,8 @@ errlHndl_t SMGR_all_to_standby()
     // check for timeout while waiting for pgpe_start_suspend() IPC completion
     if(wait_time >= WAIT_PGPE_TASK_TIMEOUT)
     {
-        TRAC_ERR("SMGR_all_to_standby: Timeout waiting for Pstates start/suspend IPC task");
+        TRAC_ERR("SMGR_all_to_standby: Timeout waiting for Pstates start/suspend IPC task. OCCFLG[0x%08X]",
+                  in32(OCB_OCCFLG));
     }
     // Stop Pstates if enabled
     else if(G_proc_pstate_status == PSTATES_ENABLED)
@@ -326,7 +329,8 @@ errlHndl_t SMGR_all_to_standby()
         rc = pgpe_start_suspend(PGPE_ACTION_PSTATE_STOP, G_proc_pmcr_owner);
         if(rc)
         {
-            TRAC_ERR("SMGR_all_to_standby: Failed to stop the pstate protocol on PGPE. rc[%08X]", rc);
+            TRAC_ERR("SMGR_all_to_standby: Failed to stop the pstate protocol on PGPE. rc[0x%08X] OCCFLG[0x%08X]",
+                      rc, in32(OCB_OCCFLG));
         }
     }
 
@@ -372,7 +376,8 @@ errlHndl_t SMGR_characterization_to_observation()
         rc = pgpe_set_clip_blocking(l_pstate);
         if(rc)
         {
-            TRAC_ERR("SMGR_char_to_obs: failed to set pstate clip to legacy turbo rc[%08X]", rc);
+            TRAC_ERR("SMGR_char_to_obs: failed to set pstate clip to legacy turbo rc[%08X] OCCFLG[0x%08X]",
+                      rc, in32(OCB_OCCFLG));
             break;
         }
         else // clips set to legacy turbo; stop pstate protocol
@@ -380,7 +385,8 @@ errlHndl_t SMGR_characterization_to_observation()
             rc = pgpe_start_suspend(PGPE_ACTION_PSTATE_STOP, G_proc_pmcr_owner);
             if(rc)
             {
-                TRAC_ERR("SMGR_char_to_obs: Failed to stop pstate protocol rc[%08X]", rc);
+                TRAC_ERR("SMGR_char_to_obs: Failed to stop pstate protocol rc[%08X] OCCFLG[0x%08X]",
+                          rc, in32(OCB_OCCFLG));
                 break;
             }
             else // Clips tightened successfully, and pstates disabled: perform transition
@@ -452,13 +458,15 @@ errlHndl_t SMGR_observation_to_characterization()
                      "since OCC is not active ready.");
             break;
         }
+
         // set pstate clips
         l_pstate = proc_freq2pstate(G_proc_fmax_mhz);
         rc = pgpe_set_clip_blocking(l_pstate);
 
         if(rc)
         {
-            TRAC_ERR("SMGR_obs_to_char: failed to set pstate clips rc[%08X]", rc);
+            TRAC_ERR("SMGR_obs_to_char: failed to set pstate clips rc[0x%08X] OCCFLG[0x%08X]",
+                     rc, in32(OCB_OCCFLG));
             break;
         }
         else // successfully set clips; enable pstates, then start transition
@@ -468,7 +476,8 @@ errlHndl_t SMGR_observation_to_characterization()
 
             if(rc)
             {
-                TRAC_ERR("SMGR_obs_to_char: failed to start pstate protocol rc[%08X]", rc);
+                TRAC_ERR("SMGR_obs_to_char: failed to start pstate protocol rc[0x%08X] OCCFLG[0x%08X]",
+                         rc, in32(OCB_OCCFLG));
                 break;
             }
             else // Clips set successfully and pstates enabled; complete transition
@@ -527,6 +536,7 @@ errlHndl_t SMGR_observation_to_active()
     static bool     L_error_logged = FALSE;  // To prevent trace and error log happened over and over
     int             l_extRc = OCC_NO_EXTENDED_RC;
     int             l_rc = 0;
+    uint32_t        l_user_data = 0;
     Pstate          l_pstate;
 
     // clear mnfg quad pstate request to default OCC to control all quads
@@ -559,7 +569,20 @@ errlHndl_t SMGR_observation_to_active()
 
                 if(l_rc)
                 {
-                    TRAC_ERR("SMGR_obs_to_active: Set Pstate clips failed rc[%08X]", l_rc);
+                    /* @
+                     * @errortype
+                     * @moduleid    MAIN_STATE_TRANSITION_MID
+                     * @reasoncode  INTERNAL_FAILURE
+                     * @userdata1   OCB_OCCFLG
+                     * @userdata2   l_rc
+                     * @userdata4   ERC_PGPE_CLIP_FAILURE
+                     * @devdesc     Failure seting Pstate clips on observation to active transition
+                     */
+
+                    l_extRc = ERC_PGPE_CLIP_FAILURE;
+                    l_user_data = in32(OCB_OCCFLG);
+                    TRAC_ERR("SMGR_obs_to_active: Set Pstate clips failed rc[0x%08X] OCCFLG[0x%08X]",
+                              l_rc, l_user_data);
                     break;
                 }
                 else // Clips set with no errors, enable Pstates on PGPE
@@ -609,7 +632,20 @@ errlHndl_t SMGR_observation_to_active()
 
                     if(l_rc)
                     {
-                        TRAC_ERR("SMGR_obs_to_active: Failed to start pstate protocol rc[%08X]", l_rc);
+                        /* @
+                         * @errortype
+                         * @moduleid    MAIN_STATE_TRANSITION_MID
+                         * @reasoncode  INTERNAL_FAILURE
+                         * @userdata1   OCB_OCCFLG
+                         * @userdata2   l_rc
+                         * @userdata4   ERC_PGPE_START_SUSPEND_FAILURE
+                         * @devdesc     Failure enabling pstates on observation to active transition
+                         */
+
+                        l_extRc = ERC_PGPE_START_SUSPEND_FAILURE;
+                        l_user_data = in32(OCB_OCCFLG);
+                        TRAC_ERR("SMGR_obs_to_active: Failed to start pstate protocol rc[0x%08X] OCCFLG[0x%08X]",
+                                  l_rc, l_user_data);
                         break;
                     }
                 }
@@ -621,15 +657,24 @@ errlHndl_t SMGR_observation_to_active()
                 {
                     if ((ssx_timebase_get() - start) > timeout)
                     {
+                        /* @
+                         * @errortype
+                         * @moduleid    MAIN_STATE_TRANSITION_MID
+                         * @reasoncode  INTERNAL_FAILURE
+                         * @userdata1   OCB_OCCFLG
+                         * @userdata2   l_rc
+                         * @userdata4   ERC_GENERIC_TIMEOUT
+                         * @devdesc     Timeout waiting for pstate enable on observation to active transition
+                         */
+
                         l_rc = 1;
+                        l_extRc = ERC_GENERIC_TIMEOUT;
+                        l_user_data = in32(OCB_OCCFLG);
                         if(FALSE == L_error_logged)
                         {
                             TRAC_ERR("SMGR_obs_to_active: Timeout waiting for Pstates to be enabled, "
-                                     "chips_present[%02x], Cores Present [%08x]",
-                                     G_sysConfigData.is_occ_present,
-                                     (uint32_t) ((in64(OCB_CCSR)) >> 32));
+                                     "OCCFLG[0x%08X]", l_user_data);
                         }
-                        l_extRc = ERC_GENERIC_TIMEOUT;
                         break;
                     }
                     ssx_sleep(SSX_MICROSECONDS(10));
@@ -660,35 +705,6 @@ errlHndl_t SMGR_observation_to_active()
                 {
                     TRAC_ERR("SMGR: Observation to Active Transition Failed, because pstates are not enabled");
                 }
-
-                if(l_rc && FALSE == L_error_logged)
-                {
-                    L_error_logged = TRUE;
-                    /* @
-                     * @errortype
-                     * @moduleid    MAIN_STATE_TRANSITION_MID
-                     * @reasoncode  INTERNAL_FAILURE
-                     * @userdata1   SMGR_MASK_ACTIVE_READY
-                     * @userdata2   valid states
-                     * @userdata4   ERC_GENERIC_TIMEOUT
-                     * @devdesc     Failed changing from observation to active
-                     */
-                    l_errlHndl = createErrl(MAIN_STATE_TRANSITION_MID,        //modId
-                                            INTERNAL_FAILURE,                 //reasoncode
-                                            l_extRc,                          //Extended reason code
-                                            ERRL_SEV_UNRECOVERABLE,           //Severity
-                                            NULL,                             //Trace Buf
-                                            DEFAULT_TRACE_SIZE,               //Trace Size
-                                            SMGR_MASK_ACTIVE_READY,           //userdata1
-                                            SMGR_validate_get_valid_states());//userdata2
-
-                    // Callout firmware
-                    addCalloutToErrl(l_errlHndl,
-                                     ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                                     ERRL_COMPONENT_ID_FIRMWARE,
-                                     ERRL_CALLOUT_PRIORITY_HIGH);
-                }
-
             }
             else // We have no cores configured
             {
@@ -705,6 +721,19 @@ errlHndl_t SMGR_observation_to_active()
         }   // Active Ready
         else
         {
+            /* @
+             * @errortype
+             * @moduleid    MAIN_STATE_TRANSITION_MID
+             * @reasoncode  INTERNAL_FAILURE
+             * @userdata1   SMGR_MASK_ACTIVE_READY
+             * @userdata2   l_rc
+             * @userdata4   ERC_STATE_FROM_OBS_TO_ACT_FAILURE
+             * @devdesc     Failed changing from observation to active due to OCC not ready
+             */
+
+            l_rc = 2;
+            l_extRc = ERC_STATE_FROM_OBS_TO_ACT_FAILURE;
+            l_user_data = SMGR_MASK_ACTIVE_READY;
             TRAC_ERR("SMGR: Observation to Active Transition Failed, "
                      "OCC is not Active Ready cnfgdata=0x%08x, reqd=0x%08x",
                      DATA_get_present_cnfgdata(),
@@ -712,6 +741,24 @@ errlHndl_t SMGR_observation_to_active()
         }
     } while (0);
 
+    if(l_rc && (FALSE == L_error_logged))
+    {
+        L_error_logged = TRUE;
+        l_errlHndl = createErrl(MAIN_STATE_TRANSITION_MID,        //modId
+                                INTERNAL_FAILURE,                 //reasoncode
+                                l_extRc,                          //Extended reason code
+                                ERRL_SEV_UNRECOVERABLE,           //Severity
+                                NULL,                             //Trace Buf
+                                DEFAULT_TRACE_SIZE,               //Trace Size
+                                l_user_data,                      //userdata1
+                                l_rc);                            //userdata2
+
+        // Callout firmware
+        addCalloutToErrl(l_errlHndl,
+                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                         ERRL_COMPONENT_ID_FIRMWARE,
+                         ERRL_CALLOUT_PRIORITY_HIGH);
+    }
 
     return l_errlHndl;
 }
@@ -746,7 +793,8 @@ errlHndl_t SMGR_characterization_to_active()
         }
         if(rc)
         {
-            TRAC_ERR("SMGR_char_to_active: Failed to change PMCR ownership rc[%08X]", rc);
+            TRAC_ERR("SMGR_char_to_active: Failed to change PMCR ownership rc[0x%08X] OCCFLG[0x%08X]",
+                      rc, in32(OCB_OCCFLG));
             break;
         }
 
@@ -762,7 +810,8 @@ errlHndl_t SMGR_characterization_to_active()
                 if ((ssx_timebase_get() - start) > timeout)
                 {
                     rc = 1;
-                    TRAC_ERR("SMGR_char_to_active: Timeout waiting for PMCR ownership change");
+                    TRAC_ERR("SMGR_char_to_active: Timeout waiting for PMCR ownership change. OCCFLG[0x%08X]",
+                              in32(OCB_OCCFLG));
                     break;
                 }
                 ssx_sleep(SSX_MICROSECONDS(10));
@@ -838,6 +887,7 @@ errlHndl_t SMGR_characterization_to_active()
 errlHndl_t SMGR_active_to_observation()
 {
     int              rc         = 0;
+    enum occExtReasonCode ext_rc = OCC_NO_EXTENDED_RC;
     errlHndl_t       l_errlHndl = NULL;
     uint8_t          wait_time  = 0;
 
@@ -864,7 +914,8 @@ errlHndl_t SMGR_active_to_observation()
         // check for timeout while waiting for pgpe_start_suspend() IPC completion
         if(wait_time > WAIT_PGPE_TASK_TIMEOUT)
         {
-            TRAC_ERR("SMGR_act_to_obs: Timeout waiting for G_active_to_observation_ready flag.");
+            TRAC_ERR("SMGR_act_to_obs: Timeout waiting for G_active_to_observation_ready flag. OCCFLG[0x%08X]",
+                         in32(OCB_OCCFLG));
 
             /* @
              * @errortype
@@ -874,21 +925,7 @@ errlHndl_t SMGR_active_to_observation()
              * @userdata4   ERC_PGPE_ACTIVE_TO_OBSERVATION_TIMEOUT
              * @devdesc     timeout waiting for pstates start/suspend task
              */
-            l_errlHndl = createErrl(MAIN_STATE_TRANSITION_MID,              //modId
-                                    PGPE_FAILURE,                           //reasoncode
-                                    ERC_PGPE_ACTIVE_TO_OBSERVATION_TIMEOUT, //Extended reason code
-                                    ERRL_SEV_UNRECOVERABLE,                 //Severity
-                                    NULL,                                   //Trace Buf
-                                    DEFAULT_TRACE_SIZE,                     //Trace Size
-                                    wait_time,                              //userdata1
-                                    0);                                     //userdata2
-
-            // Callout firmware
-            addCalloutToErrl(l_errlHndl,
-                             ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                             ERRL_COMPONENT_ID_FIRMWARE,
-                             ERRL_CALLOUT_PRIORITY_HIGH);
-
+            ext_rc = ERC_PGPE_ACTIVE_TO_OBSERVATION_TIMEOUT;
             rc = PGPE_FAILURE;
             break;
         }
@@ -912,7 +949,8 @@ errlHndl_t SMGR_active_to_observation()
         // check for timeout while waiting for Pstate clips IPC completion
         if(wait_time > WAIT_PGPE_TASK_TIMEOUT)
         {
-            TRAC_ERR("SMGR_act_to_obs: Timeout waiting for clip update IPC task");
+            TRAC_ERR("SMGR_act_to_obs: Timeout waiting for clip update IPC task OCCFLG[0x%08X]",
+                         in32(OCB_OCCFLG));
 
             /* @
              * @errortype
@@ -922,21 +960,7 @@ errlHndl_t SMGR_active_to_observation()
              * @userdata4   ERC_PGPE_TASK_TIMEOUT
              * @devdesc     timeout waiting for pstates start/suspend task
              */
-            l_errlHndl = createErrl(MAIN_STATE_TRANSITION_MID,          //modId
-                                    PGPE_FAILURE,                       //reasoncode
-                                    ERC_PGPE_TASK_TIMEOUT,              //Extended reason code
-                                    ERRL_SEV_UNRECOVERABLE,             //Severity
-                                    NULL,                               //Trace Buf
-                                    DEFAULT_TRACE_SIZE,                 //Trace Size
-                                    wait_time,                          //userdata1
-                                    0);                                 //userdata2
-
-            // Callout firmware
-            addCalloutToErrl(l_errlHndl,
-                             ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                             ERRL_COMPONENT_ID_FIRMWARE,
-                             ERRL_CALLOUT_PRIORITY_HIGH);
-
+            ext_rc = ERC_PGPE_TASK_TIMEOUT;
             rc = PGPE_FAILURE;
             break;
         }
@@ -944,7 +968,10 @@ errlHndl_t SMGR_active_to_observation()
         rc = pgpe_start_suspend(PGPE_ACTION_PSTATE_STOP, G_proc_pmcr_owner);
         if(rc)
         {
-            TRAC_ERR("SMGR_act_to_obs: failed to stop the pstate protocol on PGPE.");
+            TRAC_ERR("SMGR_act_to_obs: failed to stop the pstate protocol on PGPE rc[0x%08X] OCCFLG[0x%08X]",
+                         rc, in32(OCB_OCCFLG));
+            ext_rc = ERC_PGPE_TASK_TIMEOUT;
+            rc = PGPE_FAILURE;
             break;
         }
         else // Pstates Disabled and clips set successfully, perform state transition
@@ -968,6 +995,20 @@ errlHndl_t SMGR_active_to_observation()
     if(rc)
     {
         TRAC_ERR("SMGR: Failed with rc = %d to switch to Observation state", rc);
+        l_errlHndl = createErrl(MAIN_STATE_TRANSITION_MID,            //modId
+                                  rc,                                     //reasoncode
+                                  ext_rc, //Extended reason code
+                                  ERRL_SEV_UNRECOVERABLE,                 //Severity
+                                  NULL,                                   //Trace Buf
+                                  DEFAULT_TRACE_SIZE,                     //Trace Size
+                                  wait_time,                              //userdata1
+                                  0);                                     //userdata2
+
+        // Callout firmware
+        addCalloutToErrl(l_errlHndl,
+                            ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                            ERRL_COMPONENT_ID_FIRMWARE,
+                            ERRL_CALLOUT_PRIORITY_HIGH);
     }
     else
     {
@@ -1003,7 +1044,8 @@ errlHndl_t SMGR_active_to_characterization()
 
         if(rc)
         {
-            TRAC_ERR("SMGR_act_to_char: failed to set pstate clips.");
+            TRAC_ERR("SMGR_act_to_char: failed to set pstate clips. rc[0x%08X] OCCFLG[0x%08X]",
+                        rc, in32(OCB_OCCFLG));
             break;
         }
         else // clips set successfully, keep pstates enabled, but change ownership
@@ -1012,7 +1054,8 @@ errlHndl_t SMGR_active_to_characterization()
 
             if(rc)
             {
-                TRAC_ERR("SMGR: failed to change PMCR ownership.");
+                TRAC_ERR("SMGR: failed to change PMCR ownership. rc[0x%08X] OCCFLG[0x%08X]",
+                         rc, in32(OCB_OCCFLG));
                 break;
             }
             else // Request successfully scheduled on PGPE now verify it completed
@@ -1025,7 +1068,8 @@ errlHndl_t SMGR_active_to_characterization()
                   if ((ssx_timebase_get() - start) > timeout)
                   {
                       rc = 1;
-                      TRAC_ERR("SMGR_active_to_char: Timeout waiting for PMCR ownership change");
+                      TRAC_ERR("SMGR_active_to_char: Timeout waiting for PMCR ownership change. rc[0x%08X] OCCFLG[0x%08X]",
+                                rc, in32(OCB_OCCFLG));
                       break;
                   }
                   ssx_sleep(SSX_MICROSECONDS(10));

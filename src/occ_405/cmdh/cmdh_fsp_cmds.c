@@ -682,6 +682,28 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
     }
     l_sensorHeader.count++;
 
+    l_extnSensorList[l_sensorHeader.count].name = EXTN_NAME_CLIP;
+    // get Pstate for the current minimum maximum frequency OCC is allowing
+    // actual frequency is driven down by the lowest max frequency across all cores
+    freq = g_amec->proc[0].core_min_freq;
+    if (freq > 0)
+    {
+        l_extnSensorList[l_sensorHeader.count].data[0] = proc_freq2pstate(freq);
+    }
+    else
+    {
+        l_extnSensorList[l_sensorHeader.count].data[0] = 0xFF;
+    }
+
+    // current counter will be 0 if not currently clipping
+    l_extnSensorList[l_sensorHeader.count].data[1] = g_amec->proc[0].current_clip_count;
+    // clip history reason
+    l_extnSensorList[l_sensorHeader.count].data[2] = CONVERT_UINT32_UINT8_UPPER_HIGH(g_amec->proc[0].chip_f_reason_history);
+    l_extnSensorList[l_sensorHeader.count].data[3] = CONVERT_UINT32_UINT8_UPPER_LOW(g_amec->proc[0].chip_f_reason_history);
+    l_extnSensorList[l_sensorHeader.count].data[4] = CONVERT_UINT32_UINT8_LOWER_HIGH(g_amec->proc[0].chip_f_reason_history);
+    l_extnSensorList[l_sensorHeader.count].data[5] = CONVERT_UINT32_UINT8_LOWER_LOW(g_amec->proc[0].chip_f_reason_history);
+    l_sensorHeader.count++;
+
     // add any non-0 error history counts
     for(l_err_hist_idx=0; l_err_hist_idx < ERR_HISTORY_SIZE; l_err_hist_idx++)
     {
