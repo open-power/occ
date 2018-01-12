@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -374,9 +374,10 @@ typedef struct __attribute__ ((packed)) cmdh_reset_prep
 typedef enum
 {
     DBUG_DUMP_WOF_DATA      = 0x01,
+    // free = 0x02
     DBUG_GET_TRACE          = 0x03,
     DBUG_CLEAR_TRACE        = 0x04,
-    // free = 0x05
+    DBUG_ALLOW_TRACE        = 0x05,
     DBUG_SET_PEXE_EVENT     = 0x06,
     DBUG_GET_AME_SENSOR     = 0x07,
     DBUG_DUMP_GPU_TIMINGS   = 0x08,
@@ -389,7 +390,11 @@ typedef enum
     DBUG_MEM_PWR_CTL        = 0x0F,
     DBUG_PERFCOUNT          = 0x10,
     DBUG_TEST_INTF          = 0x11,
+    // free = 0x12
+    // free = 0x13
     DBUG_INJECT_ERRL        = 0x14,
+    // free = 0x15
+    // free = 0x16
     DBUG_GPIO_READ          = 0x17,
     DBUG_FSP_ATTN           = 0x18,
     DBUG_CALCULATE_MAX_DIFF = 0x19,
@@ -398,7 +403,7 @@ typedef enum
     DBUG_INJECT_ERR         = 0x1C,
     DBUG_VERIFY_V_F         = 0x1D,
     DBUG_DUMP_PPM_DATA      = 0x1E,
-
+    // free = 0x1F
     DBUG_FLUSH_DCACHE       = 0x20,
     DBUG_INVALIDATE_DCACHE  = 0x21,
     DBUG_CENTAUR_SENSOR_CACHE = 0x22,
@@ -574,6 +579,24 @@ typedef struct __attribute__ ((packed))
     uint32_t    wof_disabled;
     uint8_t     checksum[CMDH_FSP_CHECKSUM_SIZE];
 } cmdh_dbug_wof_control_rsp_t;
+
+// DBUG_ALLOW_TRACE command struct
+typedef struct __attribute__ ((packed))
+{
+    struct      cmdh_fsp_cmd_header;
+    uint8_t     sub_cmd;
+    uint8_t     action;
+    uint16_t    trace_flags;
+}cmdh_dbug_allow_trace_cmd_t;
+
+// DBUG_ALLOW_TRACE response struct
+typedef struct __attribute__ ((packed))
+{
+    struct      cmdh_fsp_rsp_header;
+    uint16_t    trace_flags;
+    uint8_t     checksum[CMDH_FSP_CHECKSUM_SIZE];
+}cmdh_dbug_allow_trace_rsp_t;
+
 //---------------------------------------------------------
 // Tunable Parameter Command
 //---------------------------------------------------------
