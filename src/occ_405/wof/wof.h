@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -458,4 +458,7 @@ void print_oppb( void );
 uint32_t prevent_over_current( uint32_t i_ceff_ratio );
 
 void schedule_vfrt_request( void );
+
+inline uint32_t multiply_ratio( uint32_t i_operating_point,
+                                uint32_t i_ratio );
 #endif

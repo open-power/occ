@@ -37,6 +37,7 @@
 #include "occ_sys_config.h"
 #include "p9_pstates_common.h"
 #include "pgpe_interface.h"
+#include "pgpe_shared.h"
 #include "rtls_service_codes.h"
 #include "proc_pstate.h"
 #include "occ_util.h"
@@ -55,6 +56,7 @@ extern GpeRequest G_pmcr_set_req;
 
 extern bool G_state_transition_occuring;     // A state transition is currently going on?
 
+extern uint8_t G_allow_trace_flags;
 // a global flag used by task_core_data_control() to indicate
 // that the OCC is ready to transition to observation state
 // (after initiatibg a clip update IPC task if needed)
@@ -121,7 +123,10 @@ void task_core_data_control( task_t * i_task )
                 // pclip of highest quad frequency corresponds to a frequency higher than legacy turbo
                 if(pclip < l_pstate)
                 {
-                    TRAC_INFO("task_core_data_control: updating clip max to pstate 0x%02X (from 0x%02X)", l_pstate, pclip);
+                    if( G_allow_trace_flags & PGPE_ALLOW_CLIP_TRACE )
+                    {
+                        TRAC_INFO("task_core_data_control: updating clip max to pstate 0x%02X (from 0x%02X)", l_pstate, pclip);
+                    }
                     // set the all quads to same pstate
                     memset(G_desired_pstate, l_pstate, MAXIMUM_QUADS);
                     //call PGPE IPC function to update the clips
@@ -192,8 +197,12 @@ void task_core_data_control( task_t * i_task )
                     if (L_last != pstateList)
                     {
                         L_last = pstateList;
-                        TRAC_INFO("task_core_data_control: calling pmcr_set() w/pstates: 0x%08X%04X",
-                                  WORD_HIGH(pstateList), WORD_LOW(pstateList)>>16);
+
+                        if( G_allow_trace_flags & PGPE_ALLOW_PMCR_TRACE )
+                        {
+                            TRAC_INFO("task_core_data_control: calling pmcr_set() w/pstates: 0x%08X%04X",
+                                 WORD_HIGH(pstateList), WORD_LOW(pstateList)>>16);
+                        }
                         //call PGPE IPC function to update Pstates
                         pgpe_pmcr_set();
                     }

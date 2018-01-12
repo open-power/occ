@@ -99,6 +99,7 @@ uint8_t G_mst_tunable_parameter_overwrite = 0;
 //Reverse association of channel to function.
 uint8_t G_apss_ch_to_function[MAX_APSS_ADC_CHANNELS] = {0};
 
+uint16_t G_allow_trace_flags = 0x0000;
 
 ERRL_RC cmdh_poll_v20 (cmdh_fsp_rsp_t * i_rsp_ptr);
 
@@ -1413,6 +1414,57 @@ void cmdh_dbug_dump_wof_data( const cmdh_fsp_cmd_t * i_cmd_ptr,
 
 // Function Specification
 //
+// Name: cmdh_dbug_allow_trace
+//
+// Description: Set/Clear flags that allow/prevent certain traces to appear
+//
+// End Function Specification
+void cmdh_dbug_allow_trace( const cmdh_fsp_cmd_t * i_cmd_ptr,
+                            cmdh_fsp_rsp_t * o_rsp_ptr )
+{
+    const cmdh_dbug_allow_trace_cmd_t * l_cmd_ptr =
+                                 (cmdh_dbug_allow_trace_cmd_t*)i_cmd_ptr;
+    cmdh_dbug_allow_trace_rsp_t * l_rsp_ptr =
+                                 (cmdh_dbug_allow_trace_rsp_t*)o_rsp_ptr;
+
+    uint8_t l_rc = ERRL_RC_SUCCESS;
+    uint16_t l_resp_data_length = sizeof(G_allow_trace_flags);
+
+    if((NULL == l_cmd_ptr) || (NULL == l_rsp_ptr))
+    {
+        l_rc = ERRL_RC_INTERNAL_FAIL;
+    }
+    else
+    {
+        if( l_cmd_ptr->action == SET )
+        {
+            G_allow_trace_flags |= l_cmd_ptr->trace_flags;
+        }
+        else
+        {
+            G_allow_trace_flags = 0x0000;
+        }
+    }
+
+    TRAC_INFO("DEBUG - allow_trace FLAGS 0x%04x Action: %d",
+            G_allow_trace_flags,
+            l_cmd_ptr->action);
+
+    // fill in response data length
+    if( l_rsp_ptr != NULL )
+    {
+        l_rsp_ptr->data_length[0] = CONVERT_UINT16_UINT8_HIGH(l_resp_data_length);
+        l_rsp_ptr->data_length[1] = CONVERT_UINT16_UINT8_LOW(l_resp_data_length);
+    }
+    G_rsp_status = l_rc;
+    return;
+}
+
+
+
+
+// Function Specification
+//
 // Name: cmdh_dbug_clear_ame_sensor
 //
 // Description: Clears minimum and maximum fields in one sensor.
@@ -1592,6 +1644,10 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         case DBUG_DUMP_WOF_DATA:
             cmdh_dbug_dump_wof_data(i_cmd_ptr, o_rsp_ptr);
+            break;
+
+        case DBUG_ALLOW_TRACE:
+            cmdh_dbug_allow_trace( i_cmd_ptr, o_rsp_ptr );
             break;
 
         case DBUG_POKE:

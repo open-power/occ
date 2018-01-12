@@ -739,10 +739,9 @@ void read_shared_sram( void )
     g_wof->f_clip_freq = (proc_pstate2freq(g_wof->f_clip_ps))/1000;
 
     g_wof->v_clip  = l_wofstate.fields.vclip_mv;
-//    g_wof->f_ratio = l_wofstate.fields.fratio;
-//    g_wof->v_ratio = l_wofstate.fields.vratio;
+
+    g_wof->v_ratio = l_wofstate.fields.vratio;
     g_wof->f_ratio = 1;
-    g_wof->v_ratio = 1;
     // Get the requested active quad update
     read_req_active_quads();
 
@@ -1117,11 +1116,17 @@ void calculate_ceff_ratio_vdd( void )
     // Get Vturbo and convert to 100uV (mV -> 100uV) = mV*10
     // Multiply by Vratio
     g_wof->c_ratio_vdd_volt =
-        (G_oppb.operating_points[TURBO].vdd_mv*10) * g_wof->v_ratio;
+         multiply_ratio( (G_oppb.operating_points[TURBO].vdd_mv*10),
+                         g_wof->v_ratio );
 
     // Get Fturbo and multiply by Fratio
     g_wof->c_ratio_vdd_freq =
         G_oppb.operating_points[TURBO].frequency_mhz * g_wof->f_ratio;
+    /* TODO Uncomment once we use f_ratio from PGPE
+    g_wof->c_ratio_vdd_freq =
+         multiply_ratio( G_oppb.operating_points[TURBO].frequency_mhz,
+                         g_wof->f_ratio );
+    */
 
     // Calculate ceff_tdp_vdd
     // iac_tdp_vdd / ((Vturbo*Vratio)^1.3 * (Fturbo*Fratio))
@@ -1189,6 +1194,25 @@ inline void calculate_AC_currents( void )
 inline uint32_t core_powered_on(uint8_t i_core_num)
 {
     return ( g_wof->core_pwr_on & (0x80000000 >> i_core_num));
+}
+
+/** multiply_ratio
+ *
+ *  Description: Helper function to multiply V/F Ratio's by their
+ *               operating point preserving the correct granularity
+ *
+ *  Param[in]: i_operating_point - Operating point taken from the OPPB
+ *  Param[in]: i_ratio - the V/F ratio taken from shared OCC-PGPE SRAM
+ *
+ *  Return: Operating point * ratio
+ */
+inline uint32_t multiply_ratio( uint32_t i_operating_point,
+                                uint32_t i_ratio )
+{
+    // We get i_ratio from the PGPE ranging from 0x0000 to 0xffff
+    // These hex values conceptually translate from 0.0 to 1.0
+    // Extra math is used to convert units to avoid floating point math.
+    return ((((i_ratio*10000)/0xFFFF) * i_operating_point) / 10000);
 }
 
 /**
@@ -1485,28 +1509,26 @@ void set_clear_wof_disabled( uint8_t i_action,
                         g_wof->wof_disabled,
                         i_bit_mask );
 
-            // Reset if on OpenPower
-            if( G_occ_interrupt_type != FSP_SUPPORTED_OCC )
+            // Reset if on Reason Code requires it.
+            if(i_bit_mask & ~(IGNORE_WOF_RESET) )
             {
-                if(i_bit_mask & ~(IGNORE_WOF_RESET) )
-                {
-                    //Callout firmware
-                    addCalloutToErrl(l_errl,
-                                     ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                                     ERRL_COMPONENT_ID_FIRMWARE,
-                                     ERRL_CALLOUT_PRIORITY_HIGH);
+                //Callout firmware
+                addCalloutToErrl(l_errl,
+                                 ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                                 ERRL_COMPONENT_ID_FIRMWARE,
+                                 ERRL_CALLOUT_PRIORITY_HIGH);
 
-                    //Callout processor
-                    addCalloutToErrl(l_errl,
-                                     ERRL_CALLOUT_TYPE_HUID,
-                                     G_sysConfigData.proc_huid,
-                                     ERRL_CALLOUT_PRIORITY_MED);
+                //Callout processor
+                addCalloutToErrl(l_errl,
+                                 ERRL_CALLOUT_TYPE_HUID,
+                                 G_sysConfigData.proc_huid,
+                                 ERRL_CALLOUT_PRIORITY_MED);
 
-                    REQUEST_WOF_RESET( l_errl );
-                }
+                REQUEST_WOF_RESET( l_errl );
             }
-            else // Otherwise, just commit
+            else
             {
+                // Just commit the error log
                 commitErrl( &l_errl );
             }
 

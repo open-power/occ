@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -43,6 +43,10 @@
 #define PGPE_WOF_TBLS_ADDR_OFFSET              0x58
 #define PGPE_WOF_TBLS_LEN_OFFSET               0x5C
 
+// PGPE Command Trace Masks
+#define PGPE_ALLOW_PMCR_TRACE           0x0001
+#define PGPE_ALLOW_CLIP_TRACE           0x0002
+#define PGPE_ALLOW_VFRT_TRACE           0x0004
 
 // This size must be a multiple of 128
 typedef struct __attribute__ ((packed))
