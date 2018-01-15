@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -37,6 +37,7 @@
 #include "ssx.h"
 #include "wof.h"
 #include "amec_sys.h"
+#include "common.h"             // For ignore_pgpe_error()
 
 // Maximum waiting time (usec) for clip update IPC task
 #define CLIP_UPDATE_TIMEOUT 100  // maximum waiting time (usec) for clip update IPC task
@@ -420,26 +421,29 @@ int pgpe_set_clip_blocking(Pstate i_pstate)
             if(wait_time > CLIP_UPDATE_TIMEOUT)
             {
                 // an earlier clip update IPC call has not completed, trace and log an error
-                TRAC_ERR("pgpe_set_clip_blocking: clip update IPC task is not Idle");
+                // only trace and log an error if we are not to ignore
+                if(!ignore_pgpe_error())
+                {
+                    TRAC_ERR("pgpe_set_clip_blocking: clip update IPC task is not Idle");
 
-                /*
-                 * @errortype
-                 * @moduleid    PGPE_SET_CLIP_BLOCKING_MOD
-                 * @reasoncode  PGPE_FAILURE
-                 * @userdata4   ERC_PGPE_CLIP_NOT_IDLE
-                 * @devdesc     pgpe clip update not idle
-                 */
-                err = createErrl(
-                    PGPE_SET_CLIP_BLOCKING_MOD,    //ModId
-                    PGPE_FAILURE,                  //Reasoncode
-                    ERC_PGPE_CLIP_NOT_IDLE,        //Extended reason code
-                    ERRL_SEV_PREDICTIVE,           //Severity
-                    NULL,                          //Trace Buf
-                    DEFAULT_TRACE_SIZE,            //Trace Size
-                    0,                             //Userdata1
-                    0                              //Userdata2
-                );
-
+                    /*
+                     * @errortype
+                     * @moduleid    PGPE_SET_CLIP_BLOCKING_MOD
+                     * @reasoncode  PGPE_FAILURE
+                     * @userdata4   ERC_PGPE_CLIP_NOT_IDLE
+                     * @devdesc     pgpe clip update not idle
+                     */
+                    err = createErrl(
+                        PGPE_SET_CLIP_BLOCKING_MOD,    //ModId
+                        PGPE_FAILURE,                  //Reasoncode
+                        ERC_PGPE_CLIP_NOT_IDLE,        //Extended reason code
+                        ERRL_SEV_PREDICTIVE,           //Severity
+                        NULL,                          //Trace Buf
+                        DEFAULT_TRACE_SIZE,            //Trace Size
+                        0,                             //Userdata1
+                        0                              //Userdata2
+                    );
+                }
                 rc = PGPE_FAILURE;
                 break;
             }
@@ -475,26 +479,29 @@ int pgpe_set_clip_blocking(Pstate i_pstate)
         {
             if(wait_time > CLIP_UPDATE_TIMEOUT)
             {
-                TRAC_ERR("pgpe_set_clip_blocking: clip update IPC task timeout!");
+                // only trace and log an error if we are not to ignore
+                if(!ignore_pgpe_error())
+                {
+                    TRAC_ERR("pgpe_set_clip_blocking: clip update IPC task timeout!");
 
-                /*
-                 * @errortype
-                 * @moduleid    PGPE_SET_CLIP_BLOCKING_MOD
-                 * @reasoncode  GPE_REQUEST_TASK_TIMEOUT
-                 * @userdata4   OCC_NO_EXTENDED_RC
-                 * @devdesc     pgpe clip update timeout
-                 */
-                err = createErrl(
-                    PGPE_SET_CLIP_BLOCKING_MOD,    //ModId
-                    GPE_REQUEST_TASK_TIMEOUT,        //Reasoncode
-                    OCC_NO_EXTENDED_RC,              //Extended reason code
-                    ERRL_SEV_PREDICTIVE,             //Severity
-                    NULL,                            //Trace Buf
-                    DEFAULT_TRACE_SIZE,              //Trace Size
-                    0,                               //Userdata1
-                    0                                //Userdata2
-                    );
-
+                    /*
+                     * @errortype
+                     * @moduleid    PGPE_SET_CLIP_BLOCKING_MOD
+                     * @reasoncode  GPE_REQUEST_TASK_TIMEOUT
+                     * @userdata4   OCC_NO_EXTENDED_RC
+                     * @devdesc     pgpe clip update timeout
+                     */
+                    err = createErrl(
+                        PGPE_SET_CLIP_BLOCKING_MOD,    //ModId
+                        GPE_REQUEST_TASK_TIMEOUT,        //Reasoncode
+                        OCC_NO_EXTENDED_RC,              //Extended reason code
+                        ERRL_SEV_PREDICTIVE,             //Severity
+                        NULL,                            //Trace Buf
+                        DEFAULT_TRACE_SIZE,              //Trace Size
+                        0,                               //Userdata1
+                        0                                //Userdata2
+                        );
+                }
                 rc = GPE_REQUEST_TASK_TIMEOUT;
                 break;
             }
@@ -514,7 +521,7 @@ int pgpe_set_clip_blocking(Pstate i_pstate)
         // IPC task completed. check for errors
         if ( G_clip_update_parms.msg_cb.rc != PGPE_RC_SUCCESS )
         {
-            // clip update IPC call has not completed, trace and log an error
+            // clip update IPC call failed, trace and log an error
             TRAC_ERR("pgpe_set_clip_blocking: clip update IPC task "
                      "returned an error [0x%08X]",
                      G_clip_update_parms.msg_cb.rc);
@@ -542,10 +549,11 @@ int pgpe_set_clip_blocking(Pstate i_pstate)
         }
     } while (0);
 
+    // request reset
     if(err)
     {
         REQUEST_RESET(err);
-    }
+    }        
 
     return(rc);
 }
@@ -577,35 +585,39 @@ int pgpe_clip_update(void)
         {
             if(l_wait_time > CLIP_UPDATE_TIMEOUT)
             {
-                // an earlier clip update IPC call has not completed, trace and log an error
-                TRAC_ERR("pgpe_clip_update: clip update IPC task is not Idle");
+                // only trace and log an error if we are not to ignore
+                if(!ignore_pgpe_error())
+                {
+                    // an earlier clip update IPC call has not completed, trace and log an error
+                    TRAC_ERR("pgpe_clip_update: clip update IPC task is not Idle");
 
-                /*
-                 * @errortype
-                 * @moduleid    PGPE_CLIP_UPDATE_MOD
-                 * @reasoncode  PGPE_FAILURE
-                 * @userdata1   0
-                 * @userdata4   ERC_PGPE_CLIP_NOT_IDLE
-                 * @devdesc     pgpe clip update not idle
-                 */
-                err = createErrl(
-                    PGPE_CLIP_UPDATE_MOD,            //ModId
-                    PGPE_FAILURE,                    //Reasoncode
-                    ERC_PGPE_CLIP_NOT_IDLE,          //Extended reason code
-                    ERRL_SEV_PREDICTIVE,             //Severity
-                    NULL,                            //Trace Buf
-                    DEFAULT_TRACE_SIZE,              //Trace Size
-                    0,                               //Userdata1
-                    0                                //Userdata2
-                    );
+                    /*
+                     * @errortype
+                     * @moduleid    PGPE_CLIP_UPDATE_MOD
+                     * @reasoncode  PGPE_FAILURE
+                     * @userdata1   0
+                     * @userdata4   ERC_PGPE_CLIP_NOT_IDLE
+                     * @devdesc     pgpe clip update not idle
+                     */
+                    err = createErrl(
+                        PGPE_CLIP_UPDATE_MOD,            //ModId
+                        PGPE_FAILURE,                    //Reasoncode
+                        ERC_PGPE_CLIP_NOT_IDLE,          //Extended reason code
+                        ERRL_SEV_PREDICTIVE,             //Severity
+                        NULL,                            //Trace Buf
+                        DEFAULT_TRACE_SIZE,              //Trace Size
+                        0,                               //Userdata1
+                        0                                //Userdata2
+                        );
 
-                // Callout firmware
-                addCalloutToErrl(err,
-                                 ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                                 ERRL_COMPONENT_ID_FIRMWARE,
-                                 ERRL_CALLOUT_PRIORITY_HIGH);
+                    // Callout firmware
+                    addCalloutToErrl(err,
+                                     ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                                     ERRL_COMPONENT_ID_FIRMWARE,
+                                     ERRL_CALLOUT_PRIORITY_HIGH);
 
-                commitErrl(&err);
+                    commitErrl(&err);
+                }
 
                 ext_rc = ERC_PGPE_CLIP_NOT_IDLE;
                 break;
@@ -765,35 +777,38 @@ int pgpe_start_suspend(uint8_t action, PMCR_OWNER owner)
     // be idle when called.
     if(!async_request_is_idle(&G_start_suspend_req.request))
     {
-        TRAC_ERR("pgpe_start_suspend: Start suspend task NOT Idle");
+        // only trace and log an error if we are not to ignore
+        if(!ignore_pgpe_error())
+        {
+            TRAC_ERR("pgpe_start_suspend: Start suspend task NOT Idle");
 
-        /*
-         * @errortype
-         * @moduleid    PGPE_START_SUSPEND_MOD
-         * @reasoncode  PGPE_FAILURE
-         * @userdata1   0
-         * @userdata4   ERC_PGPE_START_SUSPEND_NOT_IDLE
-         * @devdesc     pgpe start suspend task not idle
-         */
-        err = createErrl(
-                         PGPE_START_SUSPEND_MOD,          //ModId
-                         PGPE_FAILURE,                    //Reasoncode
-                         ERC_PGPE_START_SUSPEND_NOT_IDLE, //Extended reason code
-                         ERRL_SEV_PREDICTIVE,             //Severity
-                         NULL,                            //Trace Buf
-                         DEFAULT_TRACE_SIZE,              //Trace Size
-                         0,                               //Userdata1
-                         0                                //Userdata2
-                        );
+            /*
+             * @errortype
+             * @moduleid    PGPE_START_SUSPEND_MOD
+             * @reasoncode  PGPE_FAILURE
+             * @userdata1   0
+             * @userdata4   ERC_PGPE_START_SUSPEND_NOT_IDLE
+             * @devdesc     pgpe start suspend task not idle
+             */
+            err = createErrl(
+                             PGPE_START_SUSPEND_MOD,          //ModId
+                             PGPE_FAILURE,                    //Reasoncode
+                             ERC_PGPE_START_SUSPEND_NOT_IDLE, //Extended reason code
+                             ERRL_SEV_PREDICTIVE,             //Severity
+                             NULL,                            //Trace Buf
+                             DEFAULT_TRACE_SIZE,              //Trace Size
+                             0,                               //Userdata1
+                             0                                //Userdata2
+                            );
 
-        // Callout firmware
-        addCalloutToErrl(err,
-                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                         ERRL_COMPONENT_ID_FIRMWARE,
-                         ERRL_CALLOUT_PRIORITY_HIGH);
+            // Callout firmware
+            addCalloutToErrl(err,
+                             ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                             ERRL_COMPONENT_ID_FIRMWARE,
+                             ERRL_CALLOUT_PRIORITY_HIGH);
 
-        commitErrl(&err);
-
+            commitErrl(&err);
+        }
         ext_rc = ERC_PGPE_START_SUSPEND_NOT_IDLE;
     }
 
@@ -895,36 +910,39 @@ int pgpe_pmcr_set(void)
         // This check is a safety feature in case caller didn't check IPC is idle.
         if(!async_request_is_idle(&G_pmcr_set_req.request))
         {
-            // an earlier PMCR update IPC call has not completed, trace and log an error
-            TRAC_ERR("pgpe_pmcr_set: PMCR update IPC task is not Idle");
+            // an earlier PMCR update IPC call has not completed
+            // only trace and log an error if we are not to ignore
+            if(!ignore_pgpe_error())
+            {
+                TRAC_ERR("pgpe_pmcr_set: PMCR update IPC task is not Idle");
 
-            /*
-             * @errortype
-             * @moduleid    PGPE_PMCR_SET_MOD
-             * @reasoncode  PGPE_FAILURE
-             * @userdata1   0
-             * @userdata4   ERC_PGPE_SET_PMCR_NOT_IDLE
-             * @devdesc     pgpe pmcr set not idle
-             */
-            err = createErrl(
-                PGPE_PMCR_SET_MOD,               //ModId
-                PGPE_FAILURE,                    //Reasoncode
-                ERC_PGPE_SET_PMCR_NOT_IDLE,      //Extended reason code
-                ERRL_SEV_PREDICTIVE,             //Severity
-                NULL,                            //Trace Buf
-                DEFAULT_TRACE_SIZE,              //Trace Size
-                0,                               //Userdata1
-                0                                //Userdata2
-                );
+                /*
+                 * @errortype
+                 * @moduleid    PGPE_PMCR_SET_MOD
+                 * @reasoncode  PGPE_FAILURE
+                 * @userdata1   0
+                 * @userdata4   ERC_PGPE_SET_PMCR_NOT_IDLE
+                 * @devdesc     pgpe pmcr set not idle
+                 */
+                err = createErrl(
+                    PGPE_PMCR_SET_MOD,               //ModId
+                    PGPE_FAILURE,                    //Reasoncode
+                    ERC_PGPE_SET_PMCR_NOT_IDLE,      //Extended reason code
+                    ERRL_SEV_PREDICTIVE,             //Severity
+                    NULL,                            //Trace Buf
+                    DEFAULT_TRACE_SIZE,              //Trace Size
+                    0,                               //Userdata1
+                    0                                //Userdata2
+                    );
 
-            // Callout firmware
-            addCalloutToErrl(err,
-                             ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                             ERRL_COMPONENT_ID_FIRMWARE,
-                             ERRL_CALLOUT_PRIORITY_HIGH);
+                // Callout firmware
+                addCalloutToErrl(err,
+                                 ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                                 ERRL_COMPONENT_ID_FIRMWARE,
+                                 ERRL_CALLOUT_PRIORITY_HIGH);
 
-            commitErrl(&err);
-
+                commitErrl(&err);
+            }
             ext_rc = ERC_PGPE_SET_PMCR_NOT_IDLE;
             break;
         }
@@ -1007,7 +1025,7 @@ int set_nominal_pstate(void)
        // Make sure the set PMCR task is idle.
        if(!async_request_is_idle(&G_pmcr_set_req.request))
        {
-            TRAC_ERR("set_nominal_pstate: Set PMCR task not idle!");
+            TRAC_ERR("set_nominal_pstate: Set PMCR task not idle! OCCFLG[0x%08X]", in32(OCB_OCCFLG));
             l_rc = ERC_PGPE_SET_PMCR_NOT_IDLE;
             break;
        }
@@ -1019,7 +1037,7 @@ int set_nominal_pstate(void)
            // This should not be called if Pstate protocol is in transition
            if(G_proc_pstate_status == PSTATES_IN_TRANSITION)
            {
-               TRAC_ERR("set_nominal_pstate: Pstate protocol in transtion!");
+               TRAC_ERR("set_nominal_pstate: Pstate protocol in transtion! OCCFLG[0x%08X]", in32(OCB_OCCFLG));
                l_rc = ERC_PGPE_START_SUSPEND_NOT_IDLE;
                break;
            }
@@ -1037,7 +1055,7 @@ int set_nominal_pstate(void)
                if((ssx_timebase_get() - l_start) > l_timeout)
                {
                   l_rc = ERC_PGPE_TASK_TIMEOUT;
-                  TRAC_ERR("set_nominal_pstate: Timeout waiting for Pstates to be enabled");
+                  TRAC_ERR("set_nominal_pstate: Timeout waiting for Pstates to be enabled! OCCFLG[0x%08X]", in32(OCB_OCCFLG));
                   break;
                }
                ssx_sleep(SSX_MICROSECONDS(10));

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -149,8 +149,6 @@ typedef enum
     ERRL_RC_WDOG_TIMER          = 0xE2,
     // Halting due to OCB timer expiration
     ERRL_RC_OCB_TIMER           = 0xE3,
-    // Halting due to unmasked OCCLFIR bit being set (see OISR0 bit 2)
-    ERRL_RC_OCC_HW_ERROR        = 0xE4,
     // Halting due to failure during init
     ERRL_RC_OCC_INIT_FAILURE    = 0xE5,
     // The command is being processed by OCC

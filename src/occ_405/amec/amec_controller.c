@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -457,16 +457,25 @@ uint16_t amec_controller_speed2freq (const uint16_t i_speed, const uint16_t i_fm
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    l_temp16 = i_fmax;
-    l_tempreg = (uint16_t)i_speed;
-    l_temp32 = ((uint32_t)l_tempreg)*((uint32_t)l_temp16);
-    l_temp16 = (uint16_t)1000;
-    l_divide32[1] = (uint32_t)l_temp16;
-    l_divide32[0] = (uint32_t)l_temp32;
-    l_divide32[0] /= l_divide32[1];
-    l_temp32 = l_divide32[0];
-    l_freq = (uint16_t)l_temp32; /* freq will always fit in 16 bits */
-
+    // to handle max freq changing (i.e. mode change) between now and running amec_slv_proc_voting_box
+    // if speed is unconstrained set freq to unconstrained so voting box will use
+    // the most recent maximum frequency
+    if(i_speed >= g_amec->sys.max_speed)
+    {
+        l_freq = 0xFFFF;
+    }
+    else
+    {
+        l_temp16 = i_fmax;
+        l_tempreg = (uint16_t)i_speed;
+        l_temp32 = ((uint32_t)l_tempreg)*((uint32_t)l_temp16);
+        l_temp16 = (uint16_t)1000;
+        l_divide32[1] = (uint32_t)l_temp16;
+        l_divide32[0] = (uint32_t)l_temp32;
+        l_divide32[0] /= l_divide32[1];
+        l_temp32 = l_divide32[0];
+        l_freq = (uint16_t)l_temp32; /* freq will always fit in 16 bits */
+    }
     return l_freq;
 }
 

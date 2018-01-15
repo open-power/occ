@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -96,8 +96,6 @@ enum occReasonCode
     INTERNAL_HW_FAILURE             = 0xB0,
     /// OCC GPE halted due to checkstop
     OCC_GPE_HALTED                  = 0xB1,
-    /// PMC Failure
-    PMC_FAILURE                     = 0xB2,
     /// Data passed as an argument or returned from a function is invalid
     INTERNAL_INVALID_INPUT_DATA     = 0xB3,
     /// RTL detected a system checkstop
@@ -288,7 +286,7 @@ enum occExtReasonCode
     ERC_GPU_READ_PWR_LIMIT_FAILURE              = 0x0101,
     ERC_GPU_SET_PWR_LIMIT_FAILURE               = 0x0102,
 
-    ERC_STATE_FROM_ALL_TO_STB_FAILURE           = 0x0123,
+    ERC_STATE_FROM_OBS_TO_ACT_FAILURE           = 0x0123,
     ERC_STATE_FROM_ACT_TO_CHR_FAILURE           = 0x0124,
     ERC_STATE_FROM_CHR_TO_ACT_FAILURE           = 0x0125,
     ERC_STATE_FROM_CHR_TO_OBS_FAILURE           = 0x0126,
@@ -310,8 +308,7 @@ enum occModuleId
     MAIN_STATE_TRANSITION_MID       =  MAIN_COMP_ID | 0x05,
     MAIN_MODE_TRANSITION_MID        =  MAIN_COMP_ID | 0x06,
     MAIN_SYSTEM_HALTED_MID          =  MAIN_COMP_ID | 0x07,
-    OCC_IRQ_SETUP                   =  MAIN_COMP_ID | 0x08,
-    PMC_HW_ERROR_ISR                =  MAIN_COMP_ID | 0x09,
+    OCC_IPC_SETUP                   =  MAIN_COMP_ID | 0x08,
     GETSCOM_FFDC_MID                =  MAIN_COMP_ID | 0x0a,
     PUTSCOM_FFDC_MID                =  MAIN_COMP_ID | 0x0b,
     HMON_ROUTINE_MID                =  MAIN_COMP_ID | 0x0c,

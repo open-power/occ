@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -250,8 +250,6 @@ enum
     SSX_INITIALIZED             = 0x02ff,
     TRACE_INITIALIZED           = 0x0310,
     HOMER_ACCESS_INITS          = 0x0318,
-    INITIALIZING_IRQS           = 0x0320,
-    IRQS_INITIALIZED            = 0x032f,
     INITIALIZING_IPC            = 0x0330,
     IPC_INITIALIZED             = 0x033f,
     MAIN_THREAD_STARTED         = 0x03ff,

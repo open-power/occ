@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -282,6 +282,10 @@ void amec_slv_proc_voting_box(void)
     uint16_t                        k = 0;
     uint16_t                        l_chip_fmax = g_amec->sys.fmax;
     uint16_t                        l_core_freq = 0;
+    uint16_t                        l_core_freq_max = 0;  // max freq across all cores
+    uint16_t                        l_core_freq_min = g_amec->sys.fmax;  // min freq across all cores
+    uint32_t                        l_current_reason = 0;  // used for debug purposes
+    static uint32_t                 L_last_reason = 0;     // used for debug purposes
     uint32_t                        l_chip_reason = 0;
     uint32_t                        l_core_reason = 0;
     amec_proc_voting_reason_t       l_kvm_throt_reason = NO_THROTTLE;
@@ -305,9 +309,6 @@ void amec_slv_proc_voting_box(void)
     // Voting Box for CPU speed.
     // This function implements the voting box to decide which input gets the right
     // to actuate the system.
-
-    //Reset the maximum core frequency requested prior to recalculation.
-    g_amec->proc[0].core_max_freq = 0;
 
     // PPB_FMAX
     if(g_amec->proc[0].pwr_votes.ppb_fmax < l_chip_fmax)
@@ -516,6 +517,12 @@ void amec_slv_proc_voting_box(void)
             //STORE core frequency and reason
             g_amec->proc[0].core[k].f_request = l_core_freq;
             g_amec->proc[0].core[k].f_reason = l_core_reason;
+            if(l_core_freq < l_core_freq_min)
+            {
+                // store the new lowest frequency and reason to be used after all cores checked
+                l_core_freq_min = l_core_freq;
+                l_current_reason = l_core_reason;
+            }
 
             // Update the Amester parameter telling us the reason. Needed for
             // parameter array.
@@ -557,9 +564,9 @@ void amec_slv_proc_voting_box(void)
             }
 #endif
 
-            if(l_core_freq > g_amec->proc[0].core_max_freq)
+            if(l_core_freq > l_core_freq_max)
             {
-                g_amec->proc[0].core_max_freq = l_core_freq;
+                l_core_freq_max = l_core_freq;
             }
         } // if core present and not offline
         else
@@ -569,6 +576,15 @@ void amec_slv_proc_voting_box(void)
             g_amec->proc[0].core[k].f_reason = 0;
         }
     }//End of for loop
+
+    // update max core frequency if not 0 i.e. all cores offline (stop 2 or greater)
+    // this is used by power capping alg, updating to 0 will cause power throttling when not needed
+    if(l_core_freq_max)
+    {
+        g_amec->proc[0].core_max_freq = l_core_freq_max;
+        // update the overall reason driving frequency across all cores
+        g_amec->proc[0].f_reason = l_current_reason;
+    }
 
     //check if there was a throttle reason change
     if(l_kvm_throt_reason != G_amec_opal_proc_throt_reason)
@@ -581,6 +597,36 @@ void amec_slv_proc_voting_box(void)
         {
             ssx_semaphore_post(&G_dcomThreadWakeupSem);
         }
+    }
+    // For debug... if lower than max update vars returned in poll response to give clipping reason
+    g_amec->proc[0].core_min_freq = l_core_freq_min;
+    if(l_core_freq_min < g_amec->sys.fmax)
+    {
+        if(l_current_reason == L_last_reason)
+        {
+            // same reason INC counter
+            if(g_amec->proc[0].current_clip_count != 0xFF)
+            {
+                 g_amec->proc[0].current_clip_count++;
+            }
+        }
+        else
+        {
+            // new reason update history and set counter to 1
+            L_last_reason = l_current_reason;
+            g_amec->proc[0].current_clip_count = 1;
+            if( (g_amec->proc[0].chip_f_reason_history & l_current_reason) == 0)
+            {
+                g_amec->proc[0].chip_f_reason_history |= l_current_reason;
+                TRAC_IMP("First time throttling for reason[0x%08X] History[0x%08X] freq = %d",
+                          l_current_reason, g_amec->proc[0].chip_f_reason_history, l_core_freq_min);
+            }
+        }
+    }
+    else // no active clipping
+    {
+        L_last_reason = 0;
+        g_amec->proc[0].current_clip_count = 0;
     }
 }
 

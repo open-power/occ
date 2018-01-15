@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -69,6 +69,7 @@ typedef enum
 #define EXTN_NAME_FNOM    0x464E4F4D // "FNOM"
 #define EXTN_NAME_FTURBO  0x46540000 // "FT"
 #define EXTN_NAME_FUTURBO 0x46555400 // "FUT"
+#define EXTN_NAME_CLIP    0x434C4950 // "CLIP"
 #define EXTN_NAME_ERRHIST 0x45525248 // "ERRH"
 
 #define MAX_EXTN_SENSORS 32
@@ -121,7 +122,7 @@ typedef struct __attribute__ ((packed)) cmdh_poll_resp_v20
             uint8_t mthrot_due_to_ot   : 1;   // 1 => OCC throttled memory due to an over temp.
             uint8_t n_power            : 1;   // 1 => Server running without redundant power.
             uint8_t dvfs_due_to_vdd_ot : 1;   // 1 => OCC clipped max Pstate due to VRM Vdd over temp.
-            uint8_t sync_request       : 1;   // 1 => OCC needs to restart snapshot buffers
+            uint8_t _reserved_2        : 1;
             uint8_t _reserved_1        : 1;
             uint8_t _reserved_0        : 1;
         };

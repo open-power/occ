@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -36,6 +36,7 @@
 #include <wof.h>
 #include <amec_freq.h>
 #include <pgpe_interface.h>
+#include "common.h"             // For ignore_pgpe_error()
 //******************************************************************************
 // External Globals
 //******************************************************************************
@@ -132,6 +133,11 @@ void call_wof_main( void )
     // Variable to ensure we do not keep trying to send the wof control
     static bool L_wof_control_last_chance = false;
 
+    // Variable to keep track of logging timeouts being ignored
+    // Since WOF runs every 4ms we have already waited more than the required 1ms for PGPE
+    // to set the bit to give ignore indication so no additional timer needed before checking
+    static bool L_current_timeout_recorded = false;
+
     // Variable to keep track of PState enablement to prevent setting/clearing
     // wof_disabled bit every iteration.
     static uint8_t L_pstate_protocol_off = 0;
@@ -222,18 +228,28 @@ void call_wof_main( void )
                         if( (!async_request_is_idle(&G_wof_vfrt_req.request)) ||
                              (g_wof->vfrt_state != STANDBY) )
                         {
-                            if( L_vfrt_last_chance == 0 )
+                            if( (L_vfrt_last_chance == 0) && (!ignore_pgpe_error()) )
                             {
                                 INTR_TRAC_ERR("WOF Disabled!"
                                               " Init VFRT request timeout");
                                 set_clear_wof_disabled( SET, WOF_RC_VFRT_REQ_TIMEOUT);
                             }
-                            else
+                            else if(L_vfrt_last_chance != 0)
                             {
                                 INTR_TRAC_INFO("initial VFRT NOT idle."
                                                " %d more chance(s)",
                                                L_vfrt_last_chance );
                                 L_vfrt_last_chance--;
+                            }
+                            else
+                            {
+                                // Wait forever for PGPE to respond
+                                // Put a mark on the wall so we know we hit this state
+                                if(!L_current_timeout_recorded)
+                                {
+                                    INCREMENT_ERR_HISTORY(ERRH_VFRT_TIMEOUT_IGNORED);
+                                    L_current_timeout_recorded = TRUE;
+                                }
                             }
                         }
                         break;
@@ -247,16 +263,27 @@ void call_wof_main( void )
                         enable_success = enable_wof();
                         if( !enable_success )
                         {
-                            if( L_wof_control_last_chance )
+                            // Treat as an error only if not currently ignoring PGPE failures
+                            if( L_wof_control_last_chance && (!ignore_pgpe_error()) )
                             {
                                 INTR_TRAC_ERR("WOF Disabled! Control req timeout(1)");
                                 set_clear_wof_disabled(SET, WOF_RC_CONTROL_REQ_TIMEOUT);
                             }
-                            else
+                            else if(!L_wof_control_last_chance)
                             {
                                 INTR_TRAC_ERR("One more chance for WOF "
                                         "control request(1)");
                                 L_wof_control_last_chance = true;
+                            }
+                            else
+                            {
+                                // Wait forever for PGPE to respond
+                                // Put a mark on the wall so we know we hit this state
+                                if(!L_current_timeout_recorded)
+                                {
+                                    INCREMENT_ERR_HISTORY(ERRH_WOF_CONTROL_TIMEOUT_IGNORED);
+                                    L_current_timeout_recorded = TRUE;
+                                }
                             }
                         }
                         else
@@ -264,6 +291,8 @@ void call_wof_main( void )
                             // Reset the last chance variable
                             // Init state updated in enable_wof
                             L_wof_control_last_chance = false;
+
+                            L_current_timeout_recorded = FALSE;
                         }
                         break;
 
@@ -271,17 +300,32 @@ void call_wof_main( void )
                         // check if request is still processing.
                         if( !async_request_is_idle(&G_wof_control_req.request) )
                         {
-                            if( L_wof_control_last_chance )
+                            // Treat as an error only if not currently ignoring PGPE failures
+                            if( L_wof_control_last_chance && (!ignore_pgpe_error()) )
                             {
                                 INTR_TRAC_ERR("WOF Disabled! Control req timeout(2)");
                                 set_clear_wof_disabled(SET, WOF_RC_CONTROL_REQ_TIMEOUT);
                             }
-                            else
+                            else if(!L_wof_control_last_chance)
                             {
                                 INTR_TRAC_ERR("One more chance for WOF "
                                         "control request(2)");
                                 L_wof_control_last_chance = true;
                             }
+                            else
+                            {
+                                // Wait forever for PGPE to respond
+                                // Put a mark on the wall so we know we hit this state
+                                if(!L_current_timeout_recorded)
+                                {
+                                    INCREMENT_ERR_HISTORY(ERRH_WOF_CONTROL_TIMEOUT_IGNORED);
+                                    L_current_timeout_recorded = TRUE;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            L_current_timeout_recorded = FALSE;
                         }
                         // Init state updated in wof_control_callback
                         break;
@@ -303,8 +347,22 @@ void call_wof_main( void )
                 {
                     if( L_vfrt_last_chance == 0 )
                     {
-                        INTR_TRAC_ERR("WOF Disabled! VFRT req timeout");
-                        set_clear_wof_disabled(SET,WOF_RC_VFRT_REQ_TIMEOUT);
+                        // Treat as an error only if not currently ignoring PGPE failures
+                        if(!ignore_pgpe_error())
+                        {
+                            INTR_TRAC_ERR("WOF Disabled! VFRT req timeout");
+                            set_clear_wof_disabled(SET,WOF_RC_VFRT_REQ_TIMEOUT);
+                        }
+                        else
+                        {
+                            // Wait forever for PGPE to respond
+                            // Put a mark on the wall so we know we hit this state
+                            if(!L_current_timeout_recorded)
+                            {
+                                INCREMENT_ERR_HISTORY(ERRH_VFRT_TIMEOUT_IGNORED);
+                                L_current_timeout_recorded = TRUE;
+                            }
+                        }
                     }
                     else
                     {
@@ -315,6 +373,8 @@ void call_wof_main( void )
                 }
                 else
                 {
+                    L_current_timeout_recorded = FALSE;
+
                     // Request is idle. Run wof algorithm
                     wof_main();
 
