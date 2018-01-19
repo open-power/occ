@@ -73,6 +73,7 @@
 #define WOF_RC_UNSUPPORTED_FREQUENCIES             0x00200000
 #define WOF_RC_NO_CONFIGURED_CORES                 0x00400000
 #define WOF_RC_IPC_FAILURE                         0x00800000
+#define WOF_RC_USER_DISABLED_WOF                   0x01000000
 
 //***************************************************************************
 // Temp space used to save hard coded addresses
@@ -86,7 +87,8 @@
                             WOF_RC_NO_CONFIGURED_CORES | \
                             WOF_RC_RESET_LIMIT_REACHED | \
                             WOF_RC_UTURBO_IS_ZERO | \
-                            WOF_RC_PSTATE_PROTOCOL_OFF )
+                            WOF_RC_PSTATE_PROTOCOL_OFF | \
+                            WOF_RC_USER_DISABLED_WOF )
 
 // Reason codes that should NOT request a reset should be added here
 #define IGNORE_WOF_RESET (WOF_RC_SYSTEM_WOF_DISABLE | \

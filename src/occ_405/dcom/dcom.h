@@ -167,11 +167,11 @@ typedef struct __attribute__ ((packed))
     uint16_t step_down;                                             // [62] -  2 bytes
     uint16_t epsilon_perc;                                          // [64] -  2 bytes
     uint16_t tlutil;                                                // [66] -  2 bytes
-    uint8_t  tunable_param_overwrite;                               // [68] -  1 byte
+    uint8_t  wof_enable;                                            // [68] -  1 byte
+    uint8_t  tunable_param_overwrite;                               // [69] -  1 byte
 
     // Soft frequency boundaries
-    uint16_t soft_fmin;                                             // [69] -  2 bytes
-    uint8_t  pad;                                                   // [71] -  1 bytes
+    uint16_t soft_fmin;                                             // [70] -  2 bytes
     uint16_t soft_fmax;                                             // [72] -  2 bytes
 
     // Reserved Bytes

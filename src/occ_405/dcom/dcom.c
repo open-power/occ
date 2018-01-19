@@ -595,11 +595,30 @@ void task_dcom_parse_occfwmsg(task_t *i_self)
 
         if(G_dcom_slv_inbox_rx.tunable_param_overwrite == 1)
         {
+            // parameter(s) overwritten by user
             g_amec->slv_dps_param_overwrite = TRUE;
         }
-        else
+        else // ==2 use defaults for all parameters
         {
             g_amec->slv_dps_param_overwrite = FALSE;
+        }
+
+        // check if user has WOF enabled
+        if(G_dcom_slv_inbox_rx.wof_enable)
+        {
+            if(g_amec->wof.wof_disabled & WOF_RC_USER_DISABLED_WOF)
+            {
+               set_clear_wof_disabled( CLEAR, WOF_RC_USER_DISABLED_WOF );
+               TRAC_INFO("User enabled WOF! wof_disabled = 0x%08X", g_amec->wof.wof_disabled);
+            }
+        }
+        else // user has WOF disabled
+        {
+            if(!(g_amec->wof.wof_disabled & WOF_RC_USER_DISABLED_WOF))
+            {
+               set_clear_wof_disabled( SET, WOF_RC_USER_DISABLED_WOF );
+               TRAC_INFO("User disabled WOF! wof_disabled = 0x%08X", g_amec->wof.wof_disabled);
+            }
         }
     }
 

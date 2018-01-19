@@ -839,6 +839,9 @@ bool read_oppb_params()
             break;
         }
 
+        MAIN_TRAC_IMP("read_oppb_header: PGPE Frequency data: min[%dkHz], max[%dkHz], step[%dkHz], pState min[%d]",
+                          G_oppb.frequency_min_khz, G_oppb.frequency_max_khz,
+                          G_oppb.frequency_step_khz, G_oppb.pstate_min);
         // Confirm whether we have wof support
         if(!(G_oppb.wof.wof_enabled))
         {

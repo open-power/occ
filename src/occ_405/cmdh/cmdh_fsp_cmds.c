@@ -75,6 +75,7 @@ cmdh_tunable_param_table_t G_mst_tunable_parameter_table[CMDH_DEFAULT_TUNABLE_PA
     {7,   "Utilization threshold to determine active cores with slack",  3,  0,  980,  0,    1000},
     {8,   "Enable/disable frequency delta between cores",                0,  0,  0,    0,    1   },
     {9,   "Maximum frequency delta between cores",                       2,  0,  10,   10,   100 },
+    {10,  "Enable/disable Workload Optimized Frequency",                 0,  0,  1,    0,    1   },
 };
 
 // The first two columns of this table are the default tunable parameter values
@@ -90,6 +91,7 @@ cmdh_tunable_param_table_ext_t G_mst_tunable_parameter_table_ext[CMDH_DEFAULT_TU
     {980, 10,  980 },
     {0,   1,   0   },
     {10,  1,   10  },
+    {1,   1,   0   },
 };
 
 // Flag to indicate that new tunable parameter values need to be written

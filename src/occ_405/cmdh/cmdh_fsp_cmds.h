@@ -603,7 +603,7 @@ typedef struct __attribute__ ((packed))
 
 // Default number of tunable parameters available
 // NOTE: update this value if any new tunable parameter is added into the table
-#define CMDH_DEFAULT_TUNABLE_PARAM_NUM   9
+#define CMDH_DEFAULT_TUNABLE_PARAM_NUM   10
 // Max size for string containing the tunable parameter name
 #define CMDH_TUNABLE_PARAM_NAME_MAX_SIZE 60
 
