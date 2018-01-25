@@ -1258,7 +1258,7 @@ inline int32_t interpolate_linear( int32_t i_X,
                                    int32_t i_y1,
                                    int32_t i_y2 )
 {
-    return (i_X - i_x1)*((i_y2 - i_y1) / (i_x2 - i_x1)) + i_y1;
+    return ( ((i_X - i_x1)*(i_y2 - i_y1)) / (i_x2 - i_x1) ) + i_y1;
 }
 
 /**
@@ -1940,10 +1940,12 @@ uint32_t scale_and_interpolate( uint16_t * i_leak_arr,
     int16_t upper_delta = i_base_temp - (i_avgtemp_arr[i_idx+1] >> 1);
 
     // Scale the currents based on the delta temperature
+    // Note: leakage arrays are in 0.5mA. Multiply by 5 to convert
+    //       to 10mA
     uint32_t scaled_lower_leak = scale( i_leak_arr[i_idx],
-                                        lower_delta );
+                                        lower_delta )*5;
     uint32_t scaled_upper_leak = scale( i_leak_arr[i_idx+1],
-                                        upper_delta );
+                                        upper_delta )*5;
 
     // Approximate current between the scaled currents using linear
     // interpolation and return the result
