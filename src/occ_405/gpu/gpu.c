@@ -51,7 +51,7 @@
 
 // Number calls with assumption the GPU SM task is called every other tick
 #define GPU_TEMP_READ_1S  ( 1000000 / (MICS_PER_TICK * 2) )
-#define GPU_TIMEOUT ( 5000000 / (MICS_PER_TICK *2) )
+#define GPU_TIMEOUT ( 10000000 / (MICS_PER_TICK *2) )
 
 #define GPU_TICKS_TO_100MS ( 100000 / (MICS_PER_TICK * 2) )
 #define GPU_TICKS_TO_1S ( 1000000 / (MICS_PER_TICK * 2) )
