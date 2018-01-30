@@ -707,6 +707,30 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
     l_extnSensorList[l_sensorHeader.count].data[5] = CONVERT_UINT32_UINT8_LOWER_LOW(g_amec->proc[0].chip_f_reason_history);
     l_sensorHeader.count++;
 
+    // WOF clip info from PGPE
+    l_extnSensorList[l_sensorHeader.count].name = EXTN_NAME_WOFC;
+    if(g_amec->wof.wof_disabled)
+    {
+        // WOF disabled put 0xFF for clip followed by WOF disable reason
+        l_extnSensorList[l_sensorHeader.count].data[0] = 0xFF;
+        l_extnSensorList[l_sensorHeader.count].data[1] = 0x00;
+        l_extnSensorList[l_sensorHeader.count].data[2] = CONVERT_UINT32_UINT8_UPPER_HIGH(g_amec->wof.wof_disabled);
+        l_extnSensorList[l_sensorHeader.count].data[3] = CONVERT_UINT32_UINT8_UPPER_LOW(g_amec->wof.wof_disabled);
+        l_extnSensorList[l_sensorHeader.count].data[4] = CONVERT_UINT32_UINT8_LOWER_HIGH(g_amec->wof.wof_disabled);
+        l_extnSensorList[l_sensorHeader.count].data[5] = CONVERT_UINT32_UINT8_LOWER_LOW(g_amec->wof.wof_disabled);
+    }
+    else
+    {
+        // WOF is enabled return WOF information from PGPE
+        // These are read from PGPE shared SRAM every WOF cycle
+        l_extnSensorList[l_sensorHeader.count].data[0] = g_amec->wof.f_clip_ps;
+        l_extnSensorList[l_sensorHeader.count].data[1] = CONVERT_UINT16_UINT8_HIGH(g_amec->wof.v_clip);
+        l_extnSensorList[l_sensorHeader.count].data[2] = CONVERT_UINT16_UINT8_LOW(g_amec->wof.v_clip);
+        l_extnSensorList[l_sensorHeader.count].data[3] = CONVERT_UINT16_UINT8_HIGH(g_amec->wof.v_ratio);
+        l_extnSensorList[l_sensorHeader.count].data[4] = CONVERT_UINT16_UINT8_LOW(g_amec->wof.v_ratio);
+    }
+    l_sensorHeader.count++;
+
     // add any non-0 error history counts
     for(l_err_hist_idx=0; l_err_hist_idx < ERR_HISTORY_SIZE; l_err_hist_idx++)
     {

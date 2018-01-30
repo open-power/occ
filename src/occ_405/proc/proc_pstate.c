@@ -123,7 +123,7 @@ Pstate proc_freq2pstate(uint32_t i_freq_mhz)
 {
     int8_t   l_pstate = 0;
     int8_t   l_temp_pstate = 0;
-    int32_t  l_temp_freq = 0;
+    int32_t  l_temp_freq_khz = 0;
     uint32_t l_freq_khz = 0;
 
     do
@@ -131,28 +131,42 @@ Pstate proc_freq2pstate(uint32_t i_freq_mhz)
         // Freq Units need to be in kHz, not Mhz for the following calculations
         l_freq_khz = i_freq_mhz * 1000;
 
-        // Make sure that we don't ever get a frequency below the min Freq from
-        // def file
+        // Return Pmin if the frequency is below or equal to the min Freq for the lowest Pstate
+        if(l_freq_khz <= G_oppb.frequency_min_khz )
+        {
+            l_pstate = G_oppb.pstate_min;
+            break;
+        }
+
         if(i_freq_mhz < G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY])
         {
             l_freq_khz =  G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY] * 1000;
         }
 
-        if(l_freq_khz < G_proc_fmax_mhz * 1000)
+        if(l_freq_khz < G_oppb.frequency_max_khz)
         {
-            // First, calculate the delta between passed in freq, and Pmin
-            l_temp_freq = l_freq_khz - G_oppb.frequency_min_khz;
+            // First, calculate the delta between passed in freq, and Pmax
+            l_temp_freq_khz = G_oppb.frequency_max_khz - l_freq_khz;
 
             // Next, calculate how many Pstate steps there are in that delta
-            l_temp_pstate = l_temp_freq / (int32_t) G_oppb.frequency_step_khz;
+            l_temp_pstate = l_temp_freq_khz / (int32_t) G_oppb.frequency_step_khz;
 
-            // Lastly, calculate Pstate, by adding delta Pstate steps to Pmin
-            l_pstate = G_oppb.pstate_min - l_temp_pstate;
+            // Higher Pstates are lower frequency, add number of steps to the highest frequency Pstate
+            l_pstate = PMAX + l_temp_pstate;
+
+            // As an extra safety check make sure the calculated Pstate is not out of the PGPE range
+            // this should never happen!
+            if(l_pstate > G_oppb.pstate_min)
+            {
+                TRAC_ERR("proc_freq2pstate: Invalid calculated Pstate[%d] for freq[%dkHz] PGPE min Pstate[%d] freq[%dkHz]",
+                          l_pstate, l_freq_khz, G_oppb.pstate_min, G_oppb.frequency_min_khz);
+                l_pstate = G_oppb.pstate_min;
+            }
         }
         else
         {
-            // Freq is higher than maximum frequency -- return Pmax
-            l_pstate = PMAX + (G_oppb.frequency_max_khz - G_proc_fmax_mhz*1000)/G_oppb.frequency_step_khz;
+            // Freq is higher than or equal to the maximum frequency -- return Pmax
+            l_pstate = PMAX;
         }
     }
     while(0);

@@ -281,18 +281,6 @@ void amec_gpu_pcap(bool i_oversubscription, bool i_active_pcap_changed, int32_t 
               l_gpu_cap_mw = g_amec->gpu[i].pcap.gpu_max_pcap_mw;
            }
 
-           // If not already at the min then set to min if trying to reduce power and proc/memory are at min
-           if( (i_avail_power < 0) && (g_amec->proc[0].pwr_votes.ppb_fmax == g_amec->sys.fmin) &&
-               (g_amec->pcap.active_mem_level) && (l_gpu_cap_mw != g_amec->gpu[i].pcap.gpu_min_pcap_mw) )
-           {
-              l_gpu_cap_mw = g_amec->gpu[i].pcap.gpu_min_pcap_mw;
-              if(g_amec->gpu[i].pcap.gpu_desired_pcap_mw != l_gpu_cap_mw)
-              {
-                 TRAC_ERR("amec_gpu_pcap: Forcing GPU%d to minimum pwr limit %dmW", i, l_gpu_cap_mw);
-                 g_amec->gpu[i].pcap.gpu_min_cap_required = TRUE;
-              }
-           }
-
            // check if this is a new power limit
            if(g_amec->gpu[i].pcap.gpu_desired_pcap_mw != l_gpu_cap_mw)
            {
@@ -306,12 +294,6 @@ void amec_gpu_pcap(bool i_oversubscription, bool i_active_pcap_changed, int32_t 
               }
 
               g_amec->gpu[i].pcap.gpu_desired_pcap_mw = l_gpu_cap_mw;
-
-              if( (g_amec->gpu[i].pcap.gpu_min_cap_required) && (l_gpu_cap_mw != g_amec->gpu[i].pcap.gpu_min_pcap_mw) )
-              {
-                 TRAC_ERR("amec_gpu_pcap: GPU%d no longer requires minimum pwr limit %dmW", i, g_amec->gpu[i].pcap.gpu_min_pcap_mw);
-                 g_amec->gpu[i].pcap.gpu_min_cap_required = FALSE;
-              }
            }
         }
     }  // for each GPU
@@ -417,15 +399,17 @@ void amec_pcap_calc(const bool i_oversub_state)
             }
         }
         // check if need to reduce power and frequency is already at the min
-        else if((l_avail_power < 0) && (g_amec->proc[0].pwr_votes.ppb_fmax == g_amec->sys.fmin))
+        else if(l_avail_power < 0)
         {
-            // frequency at min now shed additional power by throttling
-            // memory if memory is currently un-throttled due to power
-            if (g_amec->pcap.active_mem_level == 0)
+            L_ticks_mem_pwr_available = 0;
+
+            // if memory is not throttled and frequency is at min shed additional power
+            // by throttling memory
+            if( (g_amec->pcap.active_mem_level == 0) &&
+                (g_amec->proc[0].pwr_votes.ppb_fmax == g_amec->sys.fmin) )
             {
                 TRAC_IMP("PCAP: Throttling memory");
                 g_amec->pcap.active_mem_level = 1;
-                L_ticks_mem_pwr_available = 0;
             }
         }
         else
