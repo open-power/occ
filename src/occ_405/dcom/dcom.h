@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -103,12 +103,12 @@
 #define DCOM_TRACE_NOT_IDLE_AFTER_CONSEC_TIMES 3
 
 // general defines
-#define TOD_SIZE            6
-#define NUM_TOD_SENSORS     3
-#define SLV_INBOX_RSV_SIZE  150
-#define SLV_MAILBOX_SIZE    32
-#define SLV_OUTBOX_RSV_SIZE 602
-#define DOORBELL_RSV_SIZE   1
+#define TOD_SIZE                 6
+#define NUM_TOD_SENSORS          3
+#define SLV_INBOX_RSV_SIZE       150
+#define SLV_MAILBOX_SIZE         32
+#define SLV_OUTBOX_RSV_SIZE      598
+#define DOORBELL_RSV_SIZE        1
 #define DCOM_MAX_ERRH_ENTRIES    8
 
 #define DCOM_250us_GAP 1
@@ -233,10 +233,13 @@ typedef struct __attribute__ ((packed))
 
     // Error history counts
     error_history_count_t errhCount[DCOM_MAX_ERRH_ENTRIES];      // [374] - 16 bytes
+
+    // Frequency Clip History
+    uint32_t fClipHist;                                          // [390] - 4 bytes
     // Reserved Bytes
     union
     {
-        uint8_t  reserved[SLV_OUTBOX_RSV_SIZE];                  // [390] - 602 bytes
+        uint8_t  reserved[SLV_OUTBOX_RSV_SIZE];                  // [422] - 598 bytes
         struct __attribute__ ((packed))
         {
             uint8_t _reserved_1;

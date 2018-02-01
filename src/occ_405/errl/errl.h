@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -200,7 +200,7 @@ struct ErrlUserDetails
     uint8_t     iv_version;             // User Details Version
     uint8_t     iv_reserved;            // Reserved
     uint16_t    iv_modId;               // Module Id
-    uint32_t    iv_fwLevel;             // Firmware Level
+    uint32_t    iv_fclipHistory;        // Frequency Clip History
     uint64_t    iv_timeStamp;           // Time Stamp
     uint8_t     iv_occId;               // OCC ID
     uint8_t     iv_occRole;             // OCC Role

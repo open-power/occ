@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -1198,7 +1198,7 @@ void hmon_routine()
 
     //if we are in observation, characterization, or activate state, then monitor the processor
     //and VRM Vdd temperatures for timeout conditions
-    if (IS_OCC_STATE_OBSERVATION() || IS_OCC_STATE_ACTIVE() || IS_OCC_STATE_CHARACTERIZATION())
+    if( (IS_OCC_STATE_OBSERVATION() || IS_OCC_STATE_ACTIVE() || IS_OCC_STATE_CHARACTERIZATION()) && (!SMGR_is_state_transitioning()) )
     {
         amec_health_check_proc_timeout();
         amec_health_check_vrm_vdd_temp_timeout();
@@ -1206,8 +1206,8 @@ void hmon_routine()
 
     //if we are in observation, characterization, or active state with memory temperature data
     // being collected then monitor the temperature collections for overtemp and timeout conditions
-    if((IS_OCC_STATE_OBSERVATION() || IS_OCC_STATE_ACTIVE() || IS_OCC_STATE_CHARACTERIZATION()) &&
-       rtl_task_is_runnable(TASK_ID_DIMM_SM))
+    if( (IS_OCC_STATE_OBSERVATION() || IS_OCC_STATE_ACTIVE() || IS_OCC_STATE_CHARACTERIZATION()) &&
+       (rtl_task_is_runnable(TASK_ID_DIMM_SM)) && (!SMGR_is_state_transitioning()) )
     {
         // For Cumulus systems only, check for centaur timeout and overtemp errors
         if (MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type)

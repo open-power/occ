@@ -56,7 +56,7 @@ extern GpeRequest G_pmcr_set_req;
 
 extern bool G_state_transition_occuring;     // A state transition is currently going on?
 
-extern uint8_t G_allow_trace_flags;
+extern uint16_t G_allow_trace_flags;
 // a global flag used by task_core_data_control() to indicate
 // that the OCC is ready to transition to observation state
 // (after initiatibg a clip update IPC task if needed)
@@ -123,7 +123,7 @@ void task_core_data_control( task_t * i_task )
                 // pclip of highest quad frequency corresponds to a frequency higher than legacy turbo
                 if(pclip < l_pstate)
                 {
-                    if( G_allow_trace_flags & PGPE_ALLOW_CLIP_TRACE )
+                    if( G_allow_trace_flags & ALLOW_CLIP_TRACE )
                     {
                         TRAC_INFO("task_core_data_control: updating clip max to pstate 0x%02X (from 0x%02X)", l_pstate, pclip);
                     }
@@ -198,7 +198,7 @@ void task_core_data_control( task_t * i_task )
                     {
                         L_last = pstateList;
 
-                        if( G_allow_trace_flags & PGPE_ALLOW_PMCR_TRACE )
+                        if( G_allow_trace_flags & ALLOW_PMCR_TRACE )
                         {
                             TRAC_INFO("task_core_data_control: calling pmcr_set() w/pstates: 0x%08X%04X",
                                  WORD_HIGH(pstateList), WORD_LOW(pstateList)>>16);

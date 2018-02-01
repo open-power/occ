@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -33,6 +33,7 @@
 #include <common.h>
 #include <ocb_firmware_registers.h>
 #include <ocb_register_addresses.h>
+#include <amec_sys.h>
 
 uint32_t    G_occErrSlotBits = 0x000000000;
 uint8_t     G_occErrIdCounter= 0x00;
@@ -66,7 +67,6 @@ uint8_t G_error_history[ERR_HISTORY_SIZE] = {0};
 
 extern uint8_t G_occ_interrupt_type;
 extern bool G_fir_collection_required;
-
 
 // Function Specification
 //
@@ -305,11 +305,11 @@ errlHndl_t createErrl(
         // save off default size
         l_rc->iv_userDetails.iv_entrySize = sizeof( ErrlEntry_t );
 
-        // add trace
-        addTraceToErrl( i_trace, i_traceSz,  l_rc );
-
         // add error history
         addErrHistory( l_rc );
+
+        // add trace
+        addTraceToErrl( i_trace, i_traceSz,  l_rc );
 
         // save off entry Id
         l_rc->iv_entryId = l_id;
@@ -338,7 +338,7 @@ errlHndl_t createErrl(
         l_rc->iv_numCallouts = 0;
 
         // save off occ fields
-        l_rc->iv_userDetails.iv_fwLevel = 0;
+        l_rc->iv_userDetails.iv_fclipHistory = g_amec->proc[0].chip_f_reason_history;
         l_rc->iv_userDetails.iv_occId = G_pbax_id.chip_id;
         l_rc->iv_userDetails.iv_occRole = G_occ_role;
         l_rc->iv_userDetails.iv_operatingState = CURRENT_STATE();

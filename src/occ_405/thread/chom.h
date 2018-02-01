@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -31,14 +31,14 @@
 #include <apss.h>
 
 #define  CHOM_GEN_LOG_PERIODIC_TIME     86400 // seconds in a day
-#define  CHOM_VERSION                   0x01
+#define  CHOM_VERSION                   0x02
 // Max size of chom data log
 #define  CHOM_LOG_DATA_MAX              3072
 // Max number of memory bandwidth CHOM sensors
 #define  MAX_NUM_MEMORY_SENSORS         32
 // Max number of procs Call Home will get data for
 #define CHOM_MAX_OCCS                   4
-// Max number of error history entries to add to all home log
+// Max number of error history entries to add to call home log
 #define CHOM_MAX_ERRH_ENTRIES            4
 // List of call home sensors (Max 126)
 enum
@@ -178,6 +178,7 @@ struct ChomNodeData
     uint16_t       numSensors;                    // the number of sensors for which call home data was collected
     // error history counts. Only collect on up to 3 slaves, excluding master
     error_history_count_t errhCounts[CHOM_MAX_OCCS-1][CHOM_MAX_ERRH_ENTRIES];
+    uint32_t       fClipHist[CHOM_MAX_OCCS-1];
 } __attribute__ ((__packed__));
 
 typedef struct ChomNodeData ChomNodeData_t;

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -347,8 +347,8 @@ void chom_update_sensors()
                                                    g_chom->sensorData[0].pwrMode.numOfSamples);
     }
 
-    // Collect the error history data
-    int proc_idx = 0, errh_idx = 0, slv_idx = 0, entry_idx = 0;
+    // Collect the error history data and fclip history
+    int proc_idx = 0, errh_idx = 0, slv_idx = 0, entry_idx = 0, clip_idx = 0;
 
     // get the master proc index
     uint8_t master_id = G_pbax_id.chip_id;
@@ -364,6 +364,11 @@ void chom_update_sensors()
         }
         else
         {
+            // Add Fclip history
+            g_chom->nodeData.fClipHist[clip_idx] =
+                G_dcom_slv_outbox_rx[proc_idx].fClipHist;
+            clip_idx++;
+
             // Iterate through each proc's error history counts
             for( errh_idx = 0; errh_idx < DCOM_MAX_ERRH_ENTRIES; errh_idx++)
             {

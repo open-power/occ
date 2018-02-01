@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -32,7 +32,7 @@
 
 uint8_t G_host_notifications_pending = 0;
 extern bool G_ipl_time;
-
+extern uint16_t G_allow_trace_flags;
 
 // Function Specification
 //
@@ -158,6 +158,7 @@ void task_misc_405_checks(task_t *i_self)
 bool notify_host(const ext_intr_reason_t i_reason)
 {
     bool notify_success = false;
+    static bool L_first_trace = true;
     //TRAC_INFO("notify_host(0x%02X) called (G_host_notifications_pending=0x%02X)", i_reason, G_host_notifications_pending);
 
     // Use input reason unless there are outstanding notifications pending
@@ -228,7 +229,14 @@ bool notify_host(const ext_intr_reason_t i_reason)
 
             out32(OCB_OCCMISC_OR, new_occmisc.value);
             notify_success = true;
-            TRAC_INFO("notify_host: notification of reason 0x%02X has been sent", notifyReason);
+
+            if( (G_allow_trace_flags & ALLOW_OPAL_TRACE) ||
+                (L_first_trace) )
+            {
+                TRAC_INFO("notify_host: notification of reason 0x%02X has been sent",
+                           notifyReason);
+                L_first_trace = false;
+            }
             G_host_notifications_pending &= ~notifyReason;
         }
         else

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -48,6 +48,9 @@ extern opal_mem_voting_reason_t  G_amec_opal_mem_throt_reason;
 
 //Global OCC Pstate Parameters Block Structure
 extern OCCPstateParmBlock G_oppb;
+
+//Trace flags
+extern uint16_t G_allow_trace_flags;
 
 //Holds Fmax for ease of proc_freq2pstate calculation = max(fturbo,futurbo)
 uint16_t G_proc_fmax_mhz;
@@ -459,6 +462,9 @@ void check_for_opal_updates(void)
     bool           dynamic_data_change = false;
     bool           l_log_crit_error = false;
     static uint8_t L_num_bce_checks = 0;
+    static bool    L_first_throttle_trace = true;
+    static bool    L_first_unthrottle_trace = true;
+    static bool    L_first_mem_trace = true;
 
     // check if BCE for previous change finished and now need to notify host
     if(G_opal_table_update_state == OPAL_TABLE_UPDATE_NOTIFY_HOST)
@@ -517,18 +523,52 @@ void check_for_opal_updates(void)
         else if(G_opal_dynamic_table.dynamic.proc_throt_status != G_amec_opal_proc_throt_reason)
         {
             dynamic_data_change = true;
-            TRAC_INFO("check_for_opal_updates: processor throttle status change - 0x%02X->0x%02X",
-                       G_opal_dynamic_table.dynamic.proc_throt_status, G_amec_opal_proc_throt_reason);
+
+            // Only want to trace the first time we throttle, and the first
+            // time we unthrottle. If ALLOW_OPAL_TRACE is set, trace every time
+            bool l_trace = false;
+            if( (G_allow_trace_flags & ALLOW_OPAL_TRACE) ||
+                (L_first_throttle_trace) )
+            {
+                l_trace = true;
+                L_first_throttle_trace = false;
+            }
+            else if( (G_amec_opal_proc_throt_reason == 0) &&
+                     (L_first_unthrottle_trace) )
+            {
+                    l_trace = true;
+                    L_first_unthrottle_trace = false;
+            }
+
+            if(l_trace)
+            {
+                TRAC_INFO("check_for_opal_updates: "
+                        "processor throttle status change - 0x%02X->0x%02X",
+                        G_opal_dynamic_table.dynamic.proc_throt_status,
+                        G_amec_opal_proc_throt_reason);
+            }
         }
 
         // check if memory throttle status or Quick Power Drop changed
         if( (G_opal_dynamic_table.dynamic.mem_throt_status != G_amec_opal_mem_throt_reason) ||
-            (G_opal_dynamic_table.dynamic.quick_power_drop != AMEC_INTF_GET_OVERSUBSCRIPTION()) ) 
+            (G_opal_dynamic_table.dynamic.quick_power_drop != AMEC_INTF_GET_OVERSUBSCRIPTION()) )
         {
             dynamic_data_change = true;
-            TRAC_INFO("check_for_opal_updates: memory throttle status - 0x%02X->0x%02X QPD - 0x%02X->0x%02X",
-                       G_opal_dynamic_table.dynamic.mem_throt_status, G_amec_opal_mem_throt_reason,
-                       G_opal_dynamic_table.dynamic.quick_power_drop, AMEC_INTF_GET_OVERSUBSCRIPTION());
+
+            if( (G_allow_trace_flags & ALLOW_OPAL_TRACE  ) ||
+                (L_first_mem_trace) ||
+                (G_opal_dynamic_table.dynamic.quick_power_drop !=
+                 AMEC_INTF_GET_OVERSUBSCRIPTION()) )
+            {
+               TRAC_INFO("check_for_opal_updates:"
+                       " memory throttle status - 0x%02X->0x%02X"
+                       " QPD - 0x%02X->0x%02X",
+                       G_opal_dynamic_table.dynamic.mem_throt_status,
+                       G_amec_opal_mem_throt_reason,
+                       G_opal_dynamic_table.dynamic.quick_power_drop,
+                       AMEC_INTF_GET_OVERSUBSCRIPTION());
+                L_first_mem_trace = false;
+            }
         }
 
         // check for OCC state change
@@ -622,6 +662,7 @@ void check_for_opal_updates(void)
              commitErrl(&l_errl);
          }
     }
+
 }
 
 

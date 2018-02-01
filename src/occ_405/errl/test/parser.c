@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -168,7 +168,7 @@ struct ErrlUserDetails
     uint8_t     iv_version;             // User Details Version
     uint8_t     iv_reserved;            // Reserved
     uint16_t    iv_modId;               // Module Id
-    uint32_t    iv_fwLevel;             // Firmware Level
+    uint32_t    iv_fclipHistory;        // Frequency Clip History
     uint64_t    iv_timeStamp;           // Time Stamp
     uint8_t     iv_occId;               // OCC ID
     uint8_t     iv_occRole;             // OCC Role
@@ -251,7 +251,7 @@ main()
     printf(" UserDetails    : \n" );
     printf(" Version        : 0x%02X \n", l_log.iv_userDetails.iv_version );
     printf(" Module Id      : 0x%04X \n", ntohs(l_log.iv_userDetails.iv_modId) );
-    printf(" Firmware Level : 0x%08X \n", l_log.iv_userDetails.iv_fwLevel );
+    printf(" FClip History  : 0x%08X \n", l_log.iv_userDetails.iv_fclipHistory );
     printf(" Time           : 0x%08X \n", l_log.iv_userDetails.iv_timeStamp );
     printf(" OCC ID         : 0x%02X \n", l_log.iv_userDetails.iv_occId );
     printf(" OCC Role       : 0x%02X \n", l_log.iv_userDetails.iv_occRole );

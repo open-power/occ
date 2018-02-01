@@ -51,7 +51,7 @@ extern uint32_t G_present_cores;
 
 extern bool G_simics_environment;
 
-extern uint8_t G_allow_trace_flags;
+extern uint16_t G_allow_trace_flags;
 // IPC GPE Requests
 GpeRequest G_clip_update_req;
 GpeRequest G_pmcr_set_req;
@@ -656,7 +656,7 @@ int pgpe_clip_update(void)
                 }
                 else
                 {
-                    if(G_allow_trace_flags & PGPE_ALLOW_CLIP_TRACE)
+                    if(G_allow_trace_flags & ALLOW_CLIP_TRACE)
                     {
                         TRAC_INFO("pgpe_clip_update: Scheduling clip update: min[0x%02X], max[0x%08X%04X]",
                               G_clip_update_parms.ps_val_clip_min[0],

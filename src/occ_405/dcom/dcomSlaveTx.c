@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -110,6 +110,9 @@ uint32_t dcom_build_slv_outbox(void)
             }
         }
     }
+
+    // Add Frequency Clip history
+    G_dcom_slv_outbox_tx.fClipHist = g_amec->proc[0].chip_f_reason_history;
 
     return l_addr_of_slv_outbox_in_main_mem;
 }

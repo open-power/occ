@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -29,11 +29,11 @@
 #include "amec_pcap.h"
 #include "amec_sys.h"
 #include "amec_service_codes.h"
+#include "common.h"
 #include <occ_common.h>
 #include <occ_sys_config.h>
 #include <dcom.h>
 #include <trac.h>
-
 //*************************************************************************/
 // Externs
 //*************************************************************************/
@@ -54,7 +54,7 @@
 // Globals
 //*************************************************************************/
 extern PWR_READING_TYPE  G_pwr_reading_type;
-
+extern uint16_t G_allow_trace_flags;
 //Number of ticks to wait before dropping below nominal frequency
 #define PWR_SETTLED_TICKS   4
 //Number of watts power must be below the node power cap before raising
@@ -323,6 +323,8 @@ void amec_pcap_calc(const bool i_oversub_state)
     static uint32_t L_prev_node_pcap = 0;
     static bool L_apss_error_traced = FALSE;
     static uint32_t L_ticks_mem_pwr_available = 0;
+    static bool L_trace_pcap_throttle = true;
+    static bool L_trace_pcap_unthrottle = true;
 
     // Determine the active power cap.  norm_node_pcap is set as lowest
     // between sys (N+1 mode) and user in amec_data_write_pcap()
@@ -388,9 +390,14 @@ void amec_pcap_calc(const bool i_oversub_state)
             {
                 L_ticks_mem_pwr_available++;
 
-                if(L_ticks_mem_pwr_available == UNTHROTTLE_MEMORY_DELAY)
+                if( L_ticks_mem_pwr_available == UNTHROTTLE_MEMORY_DELAY )
                 {
-                    TRAC_IMP("PCAP: Un-Throttling memory");
+                    if( L_trace_pcap_unthrottle ||
+                       (G_allow_trace_flags & ALLOW_MEM_TRACE) )
+                    {
+                        TRAC_IMP("PCAP: Un-Throttling memory");
+                        L_trace_pcap_unthrottle = false;
+                    }
                     g_amec->pcap.active_mem_level = 0;
                     L_ticks_mem_pwr_available = 0;
                     // don't let the proc have any available power this tick
@@ -408,7 +415,12 @@ void amec_pcap_calc(const bool i_oversub_state)
             if( (g_amec->pcap.active_mem_level == 0) &&
                 (g_amec->proc[0].pwr_votes.ppb_fmax == g_amec->sys.fmin) )
             {
-                TRAC_IMP("PCAP: Throttling memory");
+                if( L_trace_pcap_throttle ||
+                   (G_allow_trace_flags & ALLOW_MEM_TRACE) )
+                {
+                    TRAC_IMP("PCAP: Throttling memory");
+                    L_trace_pcap_throttle = false;
+                }
                 g_amec->pcap.active_mem_level = 1;
             }
         }

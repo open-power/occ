@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/cent/centaur_control.c $                              */
+/* $Source: src/occ_405/dimm/dimm_control.c $                             */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -35,6 +35,7 @@
 #include "state.h"
 #include "amec_sys.h"
 #include "memory.h"
+#include "common.h"
 
 //GPE IPC request and parms for the GPE job used for DIMM modules control.
 //extern GpeRequest G_dimm_control_request;
@@ -52,7 +53,8 @@ extern memory_control_task_t G_memory_control_task;
 //   (0x21, format 0x12)
 extern uint16_t G_configured_mbas;
 
-
+// Bit vector that allows certain traces to run
+extern uint16_t G_allow_trace_flags;
 //////////////////////////
 // Function Specification
 //
@@ -116,17 +118,12 @@ void dimm_update_nlimits(uint8_t mc, uint8_t port)
     /*------------------------------------------------------------------------*/
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
-    static uint32_t L_trace_throttle_count = 0;
+    static bool L_first_trace = true;
     uint16_t l_port_dimm_maxn = 0, l_slot_dimm_maxn = 0;
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    if (L_trace_throttle_count == 0)
-    {
-        L_trace_throttle_count = G_configured_mbas;
-    }
-
     do
     {
         memory_throttle_t* l_active_limits;
@@ -165,10 +162,8 @@ void dimm_update_nlimits(uint8_t mc, uint8_t port)
             {
                 l_active_limits->max_n_per_mba = l_slot_dimm_maxn;
 
-                //Don't trace all MCAs changing, just trace one they will all
-                //be the same unless there is a different number of DIMMs behind
-                //the MCAs or a mix of DIMM sizes is supported
-                if(L_trace_throttle_count == G_configured_mbas)
+                if( (L_first_trace) ||
+                    (G_allow_trace_flags & ALLOW_MEM_TRACE) )
                 {
                     TRAC_IMP("dimm_update_nlimits: New DIMM slot throttle values: "
                              "MC#|Port:[0x%04x], "
@@ -177,10 +172,9 @@ void dimm_update_nlimits(uint8_t mc, uint8_t port)
                              (uint32_t)( (l_active_limits->max_n_per_mba << 16) |
                                          l_active_limits->min_n_per_mba),
                              l_active_limits->max_n_per_chip);
+                    L_first_trace = false;
                 }
             }
-
-            L_trace_throttle_count &= ~(0x8000 >> ((mc * (MAX_NUM_MCU_PORTS)) + port));
 
         } // NIMBUS_DIMM_THROTTLING_CONFIGURED ?
 

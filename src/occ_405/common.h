@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -26,6 +26,13 @@
 #define _common_h
 
 #include <rtls.h>
+
+// Allow Trace Masks
+#define ALLOW_PMCR_TRACE       0x0001
+#define ALLOW_CLIP_TRACE       0x0002
+#define ALLOW_VFRT_TRACE       0x0004
+#define ALLOW_OPAL_TRACE       0x0008
+#define ALLOW_MEM_TRACE        0x0010
 
 // Start of SRAM memory
 #define SRAM_START_ADDRESS_405      0xFFF40000
