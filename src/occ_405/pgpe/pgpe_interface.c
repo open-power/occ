@@ -43,8 +43,9 @@
 // Maximum waiting time (usec) for clip update IPC task
 #define CLIP_UPDATE_TIMEOUT 100  // maximum waiting time (usec) for clip update IPC task
 
-extern pstateStatus G_proc_pstate_status;
-extern PMCR_OWNER G_proc_pmcr_owner;
+extern volatile pstateStatus G_proc_pstate_status;
+extern volatile PMCR_OWNER G_proc_pmcr_owner;
+extern volatile bool G_set_pStates;
 
 extern uint16_t G_proc_fmax_mhz;
 extern uint32_t G_present_cores;
@@ -66,8 +67,8 @@ GPE_BUFFER(ipcmsg_start_stop_t    G_start_suspend_parms);
 GPE_BUFFER(ipcmsg_wof_control_t   G_wof_control_parms);
 GPE_BUFFER(ipcmsg_wof_vfrt_t      G_wof_vfrt_parms);
 
-// Used to track failure of start_suspend callback
-int G_ss_pgpe_rc;               // pgpe return codes
+// Used to track PGPE return code of start_suspend callback
+volatile int G_ss_pgpe_rc = PGPE_RC_SUCCESS;
 
 
 // Function Specification
@@ -644,9 +645,10 @@ int pgpe_clip_update(void)
                 G_clip_update_parms.ps_val_clip_max[quad] = G_desired_pstate[quad];
             }
 
-
-            if (pstate_list != L_last_list)
+            // Always send request on PowerVM, on OPAL only send the request if there was a change or need to force a send
+            if( (pstate_list != L_last_list) || (!G_sysConfigData.system_type.kvm) || (G_set_pStates) )
             {
+                G_set_pStates = FALSE;
                 if (L_first_trace)
                 {
                     TRAC_IMP("pgpe_clip_update: Scheduling clip update: min[0x%02X], max[0x%08X%04X]",
@@ -654,20 +656,18 @@ int pgpe_clip_update(void)
                              WORD_HIGH(pstate_list), WORD_LOW(pstate_list)>>16);
                     L_first_trace = FALSE;
                 }
-                else
+                // always trace change on PowerVM since setting clips is very rare with PowerVM which uses PMCR set
+                else if( (G_allow_trace_flags & ALLOW_CLIP_TRACE) || (!G_sysConfigData.system_type.kvm) )
                 {
-                    if(G_allow_trace_flags & ALLOW_CLIP_TRACE)
-                    {
-                        TRAC_INFO("pgpe_clip_update: Scheduling clip update: min[0x%02X], max[0x%08X%04X]",
-                              G_clip_update_parms.ps_val_clip_min[0],
-                             WORD_HIGH(pstate_list), WORD_LOW(pstate_list)>>16);
-                    }
+                    TRAC_INFO("pgpe_clip_update: Scheduling clip update: min[0x%02X], max[0x%08X%04X]",
+                               G_clip_update_parms.ps_val_clip_min[0],
+                               WORD_HIGH(pstate_list), WORD_LOW(pstate_list)>>16);
                 }
                 L_last_list = pstate_list;
-            }
 
-            // Schedule PGPE clip update IPC task
-            schedule_rc = pgpe_request_schedule(&G_clip_update_req);
+                // Schedule PGPE clip update IPC task
+                schedule_rc = pgpe_request_schedule(&G_clip_update_req);
+            }
         }
         else
         {

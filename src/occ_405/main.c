@@ -73,7 +73,7 @@ extern uint32_t G_occ_phantom_critical_count;
 extern uint32_t G_occ_phantom_noncritical_count;
 extern uint8_t G_occ_interrupt_type;
 extern uint8_t G_occ_role;
-extern pstateStatus G_proc_pstate_status;
+extern volatile pstateStatus G_proc_pstate_status;
 
 extern GpeRequest G_meas_start_request;
 extern GpeRequest G_meas_cont_request;
@@ -99,7 +99,7 @@ ppmr_header_t G_ppmr_header;       // PPMR Header layout format
 pgpe_header_data_t G_pgpe_header;  // Selected fields from PGPE Header
 OCCPstateParmBlock G_oppb;         // OCC Pstate Parameters Block Structure
 extern uint16_t G_proc_fmax_mhz;   // max(turbo,uturbo) frequencies
-extern int G_ss_pgpe_rc;
+extern volatile int G_ss_pgpe_rc;
 
 // Buffer to hold the wof header
 DMA_BUFFER(temp_bce_request_buffer_t G_temp_bce_buff) = {{0}};
@@ -1198,7 +1198,8 @@ void hmon_routine()
 
     //if we are in observation, characterization, or activate state, then monitor the processor
     //and VRM Vdd temperatures for timeout conditions
-    if( (IS_OCC_STATE_OBSERVATION() || IS_OCC_STATE_ACTIVE() || IS_OCC_STATE_CHARACTERIZATION()) && (!SMGR_is_state_transitioning()) )
+    if( (IS_OCC_STATE_OBSERVATION() || IS_OCC_STATE_ACTIVE() || IS_OCC_STATE_CHARACTERIZATION()) &&
+        (!SMGR_is_state_transitioning()) )
     {
         amec_health_check_proc_timeout();
         amec_health_check_vrm_vdd_temp_timeout();
@@ -1207,7 +1208,7 @@ void hmon_routine()
     //if we are in observation, characterization, or active state with memory temperature data
     // being collected then monitor the temperature collections for overtemp and timeout conditions
     if( (IS_OCC_STATE_OBSERVATION() || IS_OCC_STATE_ACTIVE() || IS_OCC_STATE_CHARACTERIZATION()) &&
-       (rtl_task_is_runnable(TASK_ID_DIMM_SM)) && (!SMGR_is_state_transitioning()) )
+        (rtl_task_is_runnable(TASK_ID_DIMM_SM)) && (!SMGR_is_state_transitioning()) )
     {
         // For Cumulus systems only, check for centaur timeout and overtemp errors
         if (MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type)
@@ -1491,7 +1492,6 @@ void Main_thread_routine(void *private)
 
     if (G_simics_environment)
     {
-        extern pstateStatus G_proc_pstate_status;
         // TEMP Hack to enable Active State, until PGPE is ready
         G_proc_pstate_status = PSTATES_ENABLED;
 
@@ -1702,8 +1702,10 @@ void Main_thread_routine(void *private)
         if( (G_proc_pstate_status == PSTATES_FAILED) &&
             (FALSE == isSafeStateRequested()) &&
             (CURRENT_STATE() != OCC_STATE_SAFE) &&
-            (CURRENT_STATE() != OCC_STATE_STANDBY) )
+            (CURRENT_STATE() != OCC_STATE_STANDBY) &&
+            (!SMGR_is_state_transitioning()) )
         {
+            MAIN_TRAC_ERR("Pstate start/suspend command failed PGPE RC[0x%04X]", G_ss_pgpe_rc);
             /* @
              * @errortype
              * @moduleid    MAIN_THRD_ROUTINE_MID

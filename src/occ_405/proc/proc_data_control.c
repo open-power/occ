@@ -54,13 +54,11 @@ extern GpeRequest G_pmcr_set_req;
 // this must give the PGPE at least 1ms, doubling that time to 2ms to be safe
 #define SUPPRESS_PGPE_ERR_WAIT_TICKS 4  // 2ms
 
-extern bool G_state_transition_occuring;     // A state transition is currently going on?
-
+// A state transition is currently going on?
+extern volatile bool G_state_transition_occuring;
+// Need to send Pstates even if they didn't "change"?
+extern volatile bool G_set_pStates;
 extern uint16_t G_allow_trace_flags;
-// a global flag used by task_core_data_control() to indicate
-// that the OCC is ready to transition to observation state
-// (after initiatibg a clip update IPC task if needed)
-bool G_active_to_observation_ready = false;
 
 // Only allow pstates after mode change.
 bool G_allowPstates = FALSE;
@@ -77,7 +75,6 @@ void task_core_data_control( task_t * i_task )
     errlHndl_t      err            = NULL;   //Error handler
     static bool     L_trace_logged = false;  // trace logging to avoid unnecessarily repeating logs
     static bool     L_current_timeout_recorded = FALSE; 
-    Pstate          l_pstate;
     static uint64_t L_last = 0xFFFFFFFFFFFFFFFF;
     static uint64_t L_ignore_wait_count = 0; // number of consecutive ticks IPC task failed
     bool            l_check_failure = false;
@@ -91,53 +88,12 @@ void task_core_data_control( task_t * i_task )
     // with the task_core_data_control IPC tasks.
     if(G_state_transition_occuring)
     {
+        L_ignore_wait_count = 0;
+        L_current_timeout_recorded = FALSE;
         if(L_trace_logged == false)
         {
             TRAC_INFO("task_core_data_control: Pstate Control stopped because a state transition started.");
             L_trace_logged = true;
-        }
-
-        // Only Transitioning to Observation state necessitates clip update
-        // (if the last clip update was higher than legacy turbo).
-        if ((G_occ_master_state == OCC_STATE_OBSERVATION) &&
-            !G_active_to_observation_ready)
-        {
-            // confirm that the last clip update IPC successfully completed on PGPE (with no errors)
-            if( async_request_is_idle(&G_clip_update_req.request) &&  //clip_update/set_clip_ranges completed
-                (G_clip_update_parms.msg_cb.rc == PGPE_RC_SUCCESS) ) // with no errors
-            {
-                uint8_t quad = 0;
-                Pstate pclip = 0xff;    // Initialize pclip to 0xff (lowest possible frequency)
-
-                // Only if last clip update sent to PGPE is larger than legacy turbo,
-                // send new clips with legacy turbo values, otherwise, no action needed.
-                for (quad = 0; quad < MAXIMUM_QUADS; quad++)
-                {
-                    if(G_clip_update_parms.ps_val_clip_max[quad] < pclip)
-                    {
-                        // minimum pclip value corresponds to pstate of maximum frequency
-                        pclip = G_clip_update_parms.ps_val_clip_max[quad];
-                    }
-                }
-                l_pstate = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO]);
-                // pclip of highest quad frequency corresponds to a frequency higher than legacy turbo
-                if(pclip < l_pstate)
-                {
-                    if( G_allow_trace_flags & ALLOW_CLIP_TRACE )
-                    {
-                        TRAC_INFO("task_core_data_control: updating clip max to pstate 0x%02X (from 0x%02X)", l_pstate, pclip);
-                    }
-                    // set the all quads to same pstate
-                    memset(G_desired_pstate, l_pstate, MAXIMUM_QUADS);
-                    //call PGPE IPC function to update the clips
-                    pgpe_clip_update();
-                }
-
-                //Whether clips have been lowered from frequencies higher than legacy turbo
-                //frequency, or already lower than turbo frequency, OCC is now ready to
-                //transition to Observation state.
-                G_active_to_observation_ready = true;
-            }
         }
     } // if in state transition
     else
@@ -193,9 +149,12 @@ void task_core_data_control( task_t * i_task )
                         G_pmcr_set_parms.pmcr[quad] = ((uint64_t) G_desired_pstate[quad] << 48) | 1;
                     }
 
-                    // Only send pstates if they changed
-                    if (L_last != pstateList)
+                    // Only send pstates if they changed or first time after going active from char state
+                    // in characterization state the user is writing the PMCR, need to make sure we write
+                    // it back to desired Pstates
+                    if( (L_last != pstateList) || (G_set_pStates) )
                     {
+                        G_set_pStates = FALSE;
                         L_last = pstateList;
 
                         if( G_allow_trace_flags & ALLOW_PMCR_TRACE )
@@ -237,8 +196,8 @@ void task_core_data_control( task_t * i_task )
             {
                 if(!ignore_pgpe_error())
                 {
-                    TRAC_ERR("task_core_data_control: pstate update IPC task did not complete successfully, idle?[%d] rc[%08X]",
-                              l_request_is_idle, l_request_rc);
+                    TRAC_ERR("task_core_data_control: pstate[0x%02X] update IPC task did not complete successfully, idle?[%d] rc[%08X]",
+                              G_desired_pstate[0], l_request_is_idle, l_request_rc);
 
                     err = createErrl(
                                      RTLS_TASK_CORE_DATA_CONTROL_MOD,               //ModId

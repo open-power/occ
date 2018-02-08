@@ -61,11 +61,10 @@ uint8_t         G_desired_pstate[MAXIMUM_QUADS];
 // initialized to PSTATES_DISABLED, turns to PSTATES_ENABLED only after
 // the PGPE IPC that enable pstates completes successfully. While the IPC
 // task is still running, this variable be set to PSTATES_IN_TRANSITION
-pstateStatus G_proc_pstate_status = PSTATES_DISABLED;
-
+volatile pstateStatus G_proc_pstate_status = PSTATES_DISABLED;
 
 // A Global parameter indicating the owner of the PMCR.
-PMCR_OWNER G_proc_pmcr_owner = PMCR_OWNER_HOST;
+volatile PMCR_OWNER G_proc_pmcr_owner = PMCR_OWNER_HOST;
 
 // OPAL Dynamic data, updated whenever any OCC G_opal_table.dynamic parameter change
 // Since this is happening multiple times need to keep track of it being scheduled

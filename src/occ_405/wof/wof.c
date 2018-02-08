@@ -47,7 +47,7 @@ extern GPE_BUFFER(ipcmsg_wof_control_t G_wof_control_parms);
 extern GpeRequest   G_wof_vfrt_req;
 extern GpeRequest   G_wof_control_req;
 extern uint32_t     G_nest_frequency_mhz;
-extern pstateStatus G_proc_pstate_status;
+extern volatile pstateStatus G_proc_pstate_status;
 extern uint8_t G_occ_interrupt_type;
 //******************************************************************************
 // Globals
