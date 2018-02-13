@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -1770,6 +1770,13 @@ errlHndl_t data_store_sys_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
         CNFG_DBG("data_store_sys_config: SystemType[0x%02X] BPSID[0x%08X] APSSSID[0x%08X] ProcSID[0x%08X]",
                   G_sysConfigData.system_type.byte, G_sysConfigData.backplane_huid, G_sysConfigData.apss_huid,
                   G_sysConfigData.proc_huid);
+
+        // Check to see if we have to disable WOF due to no mode set yet on PowerVM
+        if( !G_sysConfigData.system_type.kvm &&
+           (CURRENT_MODE() == OCC_MODE_NOCHANGE) )
+        {
+            set_clear_wof_disabled(SET, WOF_RC_MODE_NO_SUPPORT_MASK);
+        }
 
         //Write core temp and freq sensor ids
         //Core Temp and Freq sensors are always in sequence in the table

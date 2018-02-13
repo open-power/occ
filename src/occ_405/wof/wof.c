@@ -659,11 +659,16 @@ void send_vfrt_to_pgpe( uint32_t i_vfrt_main_mem_addr )
             break;
         }
 
-        if( (i_vfrt_main_mem_addr == g_wof->curr_vfrt_main_mem_addr ) &&
+        // Check if PGPE explicitely requested a new vfrt
+        ocb_occflg_t occ_flags = {0};
+        occ_flags.value = in32(OCB_OCCFLG);
+
+        if( ((i_vfrt_main_mem_addr == g_wof->curr_vfrt_main_mem_addr ) &&
             (g_wof->req_active_quad_update ==
-             g_wof->prev_req_active_quads) )
+             g_wof->prev_req_active_quads)) &&
+            (!occ_flags.fields.active_quad_update) )
         {
-            // VFRT and requested active quads are unchanged. Skip
+            // VFRT and requested active quads are unchanged.
             break;
         }
         // Either the Main memory address changed or req active quads changed
@@ -1547,6 +1552,8 @@ void set_clear_wof_disabled( uint8_t i_action,
 void disable_wof( void )
 {
     errlHndl_t l_errl = NULL;
+    uint8_t l_prev_state = g_wof->wof_init_state;
+
     // Disable wof on 405
     g_wof->wof_init_state = WOF_DISABLED;
 
@@ -1556,65 +1563,73 @@ void disable_wof( void )
     int user_data_rc = 0;
     do
     {
-        // Make sure IPC command is idle
-        if(async_request_is_idle(&G_wof_control_req.request))
+        if(l_prev_state >= WOF_CONTROL_ON_SENT_WAITING)
         {
-
-            // Check to see if a previous wof control IPC message observed an error
-            if( g_wof->control_ipc_rc != 0 )
+            // Make sure IPC command is idle
+            if(async_request_is_idle(&G_wof_control_req.request))
             {
-                INTR_TRAC_ERR("Unknown error from wof control IPC message");
-                /** @
-                 *  @errortype
-                 *  @moduleid   DISABLE_WOF
-                 *  @reasoncode GPE_REQUEST_RC_FAILURE
-                 *  @userdata1  rc - wof_control rc
-                 *  @userdata2  0
-                 *  @userdata4  OCC_NO_EXTENDED_RC
-                 *  @devdesc    OCC Failure from sending wof control
-                 */
-                user_data_rc = g_wof->control_ipc_rc;
-                g_wof->control_ipc_rc = 0;
-                reasonCode = GPE_REQUEST_RC_FAILURE;
-            }
-            else
-            {
-                // Set parameters for the GpeRequest
-                G_wof_control_parms.action = PGPE_ACTION_WOF_OFF;
-                user_data_rc = pgpe_request_schedule( &G_wof_control_req );
 
-                if( user_data_rc != 0 )
+                // Check to see if a previous wof control IPC message observed an error
+                if( g_wof->control_ipc_rc != 0 )
                 {
+                    INTR_TRAC_ERR("Unknown error from wof control IPC message(disable)");
+                    INTR_TRAC_ERR("Return Code = 0x%x", g_wof->control_ipc_rc);
                     /** @
                      *  @errortype
                      *  @moduleid   DISABLE_WOF
-                     *  @reasoncode GPE_REQUEST_SCHEDULE_FAILURE
-                     *  @userdata1  rc - gpe_request_schedule return code
+                     *  @reasoncode GPE_REQUEST_RC_FAILURE
+                     *  @userdata1  rc - wof_control rc
                      *  @userdata2  0
                      *  @userdata4  OCC_NO_EXTENDED_RC
-                     *  @devdesc    OCC Failed to schedule a GPE job for enabling wof
+                     *  @devdesc    OCC Failure from sending wof control
                      */
-                    reasonCode = GPE_REQUEST_SCHEDULE_FAILURE;
-                    INTR_TRAC_ERR("disable_wof() - Error when sending WOF Control"
-                                 " OFF IPC command! RC = %x", user_data_rc );
+                    user_data_rc = g_wof->control_ipc_rc;
+                    g_wof->control_ipc_rc = 0;
+                    reasonCode = GPE_REQUEST_RC_FAILURE;
+                }
+                else
+                {
+                    // Set parameters for the GpeRequest
+                    G_wof_control_parms.action = PGPE_ACTION_WOF_OFF;
+                    user_data_rc = pgpe_request_schedule( &G_wof_control_req );
+
+                    if( user_data_rc != 0 )
+                    {
+                        /** @
+                         *  @errortype
+                         *  @moduleid   DISABLE_WOF
+                         *  @reasoncode GPE_REQUEST_SCHEDULE_FAILURE
+                         *  @userdata1  rc - gpe_request_schedule return code
+                         *  @userdata2  0
+                         *  @userdata4  OCC_NO_EXTENDED_RC
+                         *  @devdesc    OCC Failed to schedule a GPE job for enabling wof
+                         */
+                        reasonCode = GPE_REQUEST_SCHEDULE_FAILURE;
+                        INTR_TRAC_ERR("disable_wof() - Error when sending WOF Control"
+                                     " OFF IPC command! RC = %x", user_data_rc );
+                    }
+                }
+
+                if( user_data_rc != 0 )
+                {
+                    l_errl = createErrl(
+                            DISABLE_WOF,
+                            reasonCode,
+                            OCC_NO_EXTENDED_RC,
+                            ERRL_SEV_PREDICTIVE,
+                            NULL,
+                            DEFAULT_TRACE_SIZE,
+                            user_data_rc,
+                            0);
+
+                    // commit the error log
+                    commitErrl( &l_errl );
                 }
             }
-
-            if( user_data_rc != 0 )
-            {
-                l_errl = createErrl(
-                        DISABLE_WOF,
-                        reasonCode,
-                        OCC_NO_EXTENDED_RC,
-                        ERRL_SEV_PREDICTIVE,
-                        NULL,
-                        DEFAULT_TRACE_SIZE,
-                        user_data_rc,
-                        0);
-
-                // commit the error log
-                commitErrl( &l_errl );
-            }
+        }
+        else
+        {
+            INTR_TRAC_IMP("WOF has not been enabled so no need to disable");
         }
     }while( 0 );
 }
@@ -1644,7 +1659,8 @@ bool enable_wof( void )
         // Check to see if a previous wof control IPC message observed an error
         if( g_wof->control_ipc_rc != 0 )
         {
-            INTR_TRAC_ERR("Unknown error from wof control IPC message");
+            INTR_TRAC_ERR("Unknown error from wof control IPC message(enable)");
+            INTR_TRAC_ERR("Return Code = 0x%X", g_wof->control_ipc_rc);
             rc = g_wof->control_ipc_rc;
             bit_to_set = WOF_RC_CONTROL_REQ_FAILURE;
             g_wof->control_ipc_rc = 0;
