@@ -92,7 +92,7 @@ cmdh_tunable_param_table_ext_t G_mst_tunable_parameter_table_ext[CMDH_DEFAULT_TU
     {980, 10,  980 },
     {0,   1,   0   },
     {10,  1,   10  },
-    {1,   1,   0   },
+    {1,   1,   1   },
 };
 
 // Flag to indicate that new tunable parameter values need to be written
