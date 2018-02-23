@@ -56,7 +56,7 @@ extern dimm_sensor_flags_t G_dimm_temp_expired_bitmap;
 extern bool G_vrm_thermal_monitoring;
 extern uint32_t G_first_proc_gpu_config;
 extern bool G_vrm_vdd_temp_expired;
-
+extern bool G_reset_prep;
 
 #include <gpe_export.h>
 extern gpe_shared_data_t G_shared_gpe_data;
@@ -807,6 +807,8 @@ errlHndl_t cmdh_reset_prep (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         TRAC_IMP("cmdh_reset_prep: Prep for reset command received! reason[0x%.2X]",
                  l_cmd_ptr->reason);
+
+        G_reset_prep = true;
 
         // Command Handling
         switch( l_cmd_ptr->reason )

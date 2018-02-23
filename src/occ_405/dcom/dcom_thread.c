@@ -38,6 +38,9 @@
 #include <proc_pstate.h>
 #include <amec_freq.h>
 
+// Reset Prep command received from HTMGT?
+bool G_reset_prep = false;
+
 // Debug Counter to make sure dcom thread is running
 uint16_t G_dcom_thread_counter = 0;
 
@@ -126,6 +129,9 @@ void Dcom_thread_routine(void *arg)
 
         // Override State if we are in SAFE state already
         l_newOccState = ( OCC_STATE_SAFE == CURRENT_STATE() ) ? OCC_STATE_NOCHANGE : l_newOccState;
+
+        // Don't allow state change if reset prep was recieved
+        l_newOccState = G_reset_prep ? OCC_STATE_NOCHANGE : l_newOccState;
 
         if( (OCC_STATE_NOCHANGE != l_newOccState)
             || (OCC_MODE_NOCHANGE != l_newOccMode) )

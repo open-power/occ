@@ -43,23 +43,20 @@
 #include "wof.h"
 
 // Maximum time to wait for a PGPE task before timeout
-// must wait at least 1 tick time to ensure proc_data_control() runs to set
-// clips on active->obs state transition
-#define WAIT_PGPE_TASK_TIMEOUT (MICS_PER_TICK + 20)
+#define WAIT_PGPE_TASK_TIMEOUT (MICS_PER_TICK * 4)
 
 extern bool G_mem_monitoring_allowed;
 extern task_t G_task_table[TASK_END];  // Global task table
 extern bool G_simics_environment;
-extern pstateStatus G_proc_pstate_status;
+extern volatile pstateStatus G_proc_pstate_status;
 extern uint16_t G_proc_fmax_mhz;
 extern GpeRequest G_clip_update_req;
 extern GPE_BUFFER(ipcmsg_clip_update_t*  G_clip_update_parms_ptr);
+extern volatile int G_ss_pgpe_rc;
 
-// OCC is ready to transition to observation state?
-extern bool G_active_to_observation_ready;
 // bit mask of configured cores
 extern uint32_t G_present_cores;
-extern PMCR_OWNER G_proc_pmcr_owner;
+extern volatile PMCR_OWNER G_proc_pmcr_owner;
 
 // State that OCC is currently in
 OCC_STATE          G_occ_internal_state     = OCC_STATE_STANDBY;
@@ -71,7 +68,10 @@ OCC_STATE          G_occ_internal_req_state = OCC_STATE_NOCHANGE;
 OCC_STATE          G_occ_external_req_state = OCC_STATE_NOCHANGE;
 
 // Indicates if we are currently in a state transition
-bool               G_state_transition_occuring = FALSE;
+volatile bool      G_state_transition_occuring = FALSE;
+
+// Indicates if we need to force sending Pstates on a state change
+volatile bool      G_set_pStates            = FALSE;
 
 // State that OCC Master is requesting
 OCC_STATE          G_occ_master_state       = OCC_STATE_NOCHANGE;
@@ -207,66 +207,92 @@ errlHndl_t SMGR_standby_to_characterization()
     errlHndl_t  l_errlHndl = NULL;
     int         rc = 0;
     static bool L_error_logged = FALSE;  // To prevent trace and error log happened over and over
-    Pstate      l_pstate;
+
     do
     {
-        // characterization state will have Pstate protocol enabled check that all data for active
-        // is available (frequency points)
-        if( SMGR_MASK_ACTIVE_READY ==
-            (SMGR_validate_get_valid_states() & SMGR_MASK_ACTIVE_READY))
+        // Must be active ready if transitioning to characterization state
+        if( (SMGR_MASK_ACTIVE_READY !=
+             (SMGR_validate_get_valid_states() & SMGR_MASK_ACTIVE_READY)) )
         {
-            L_error_logged = FALSE;
-            TRAC_IMP("SMGR: Standby to Characterization State Transition Started");
+            TRAC_ERR("SMGR: failed to transition to characterization state "
+                     "since OCC is not active ready.");
+            rc = INTERNAL_FAILURE;
+            break;
+        }
 
-            // set pstate clips
-            l_pstate = proc_freq2pstate(G_proc_fmax_mhz);
-            rc = pgpe_set_clip_blocking(l_pstate);
+        L_error_logged = FALSE;
+        TRAC_IMP("SMGR: Standby to Characterization State Transition Started");
+
+        if(G_present_cores == 0)
+        {
+            TRAC_IMP("SMGR_standby_to_characterization: No configured cores, skipping PGPE calls");
+            break;
+        }
+
+        // set pstate clips to full range of max Pstate 0 to support meltbox
+        rc = pgpe_set_clip_blocking(0);
+
+        if(rc)
+        {
+            TRAC_ERR("SMGR: failed to set pstate clips. rc[0x%08X] OCCFLG[0x%08X]",
+                     rc, in32(OCB_OCCFLG));
+            break;
+        }
+        else // successfully set clips; enable pstates
+        {
+            // Start pstates on PGPE and set Characterization as owner
+            rc = pgpe_start_suspend(PGPE_ACTION_PSTATE_START, PMCR_OWNER_CHAR);
 
             if(rc)
             {
-                TRAC_ERR("SMGR: failed to set pstate clips. rc[0x%08X] OCCFLG[0x%08X]",
-                         rc, in32(OCB_OCCFLG));
+                TRAC_ERR("SMGR: failed to start the pstate protocol for char owner on PGPE. rc[0x%08X] OCCFLG[0x%08X]",
+                          rc, in32(OCB_OCCFLG));
                 break;
             }
-            else // successfully set clips; enable pstates, then start transition
+            else // Request successfully scheduled on PGPE now verify it completed
             {
-
-                // Start pstates on PGPE and set Characterization as owner
-                rc = pgpe_start_suspend(PGPE_ACTION_PSTATE_START, PMCR_OWNER_CHAR);
-
-                if(rc)
-                {
-                    TRAC_ERR("SMGR: failed to start the pstate protocol for char owner on PGPE. rc[0x%08X] OCCFLG[0x%08X]",
-                              rc, in32(OCB_OCCFLG));
-                    break;
-                }
-                else // Clips set and pstates started successfully, start transition
-                {
-                    memory_init();
-
-                    // Set the RTL Flags to indicate which tasks can run
-                    //   - Set OBSERVATION flags in Characterization State
-                    rtl_clr_run_mask_deferred(RTL_FLAG_STANDBY);
-                    rtl_set_run_mask_deferred(RTL_FLAG_OBS);
-
-                    // Set the actual STATE now that we have finished everything else
-                    CURRENT_STATE() = OCC_STATE_CHARACTERIZATION;
-
-                    TRAC_IMP("SMGR: Standby to Characterization Transition Completed");
-                }
+               // Wait for ownership change to complete
+               SsxTimebase start = ssx_timebase_get();
+               SsxInterval timeout =  SSX_SECONDS(5);
+               while( ! proc_is_hwpstate_enabled() )
+               {
+                  if ((ssx_timebase_get() - start) > timeout)
+                  {
+                      rc = 1;
+                      TRAC_ERR("SMGR_standby_to_char: Timeout waiting for PMCR ownership change. rc[0x%08X] OCCFLG[0x%08X]",
+                                rc, in32(OCB_OCCFLG));
+                      break;
+                  }
+                  ssx_sleep(SSX_MICROSECONDS(10));
+               }
             }
         }
     } while (0);
 
-    if(l_errlHndl && (false == L_error_logged))
+    if(!rc)
+    {
+        // Clips set and pstates started successfully (or no cores) finish the state change
+        memory_init();
+
+        // Set the RTL Flags to indicate which tasks can run
+        //   - Set OBSERVATION flags in Characterization State
+        rtl_clr_run_mask_deferred(RTL_FLAG_STANDBY);
+        rtl_set_run_mask_deferred(RTL_FLAG_OBS);
+
+        // Set the actual STATE now that we have finished everything else
+        CURRENT_STATE() = OCC_STATE_CHARACTERIZATION;
+
+        TRAC_IMP("SMGR: Standby to Characterization Transition Completed");
+    }
+    else if(false == L_error_logged)
     {
         L_error_logged = TRUE;
-        TRAC_ERR("SMGR: Standby to Characterization Transition Failed due to not ACTIVE_READY");
+        TRAC_ERR("SMGR: Standby to Characterization Transition Failed");
         /* @
          * @errortype
          * @moduleid    MAIN_STATE_TRANSITION_MID
          * @reasoncode  INTERNAL_FAILURE
-         * @userdata1   none
+         * @userdata1   rc
          * @userdata4   ERC_STATE_FROM_STB_TO_CHR_FAILURE
          * @devdesc     Failed changing from standby to characterization
          */
@@ -276,7 +302,7 @@ errlHndl_t SMGR_standby_to_characterization()
                                 ERRL_SEV_UNRECOVERABLE,             //Severity
                                 NULL,                               //Trace Buf
                                 DEFAULT_TRACE_SIZE,                 //Trace Size
-                                0,                                  //userdata1
+                                rc,                                 //userdata1
                                 0);                                 //userdata2
 
         // Callout firmware
@@ -299,7 +325,7 @@ errlHndl_t SMGR_standby_to_characterization()
 // End Function Specification
 errlHndl_t SMGR_all_to_standby()
 {
-    uint8_t     wait_time = 0;
+    uint32_t    wait_time = 0;
     int         rc;
 
     TRAC_IMP("SMGR: Transition from State (%d) to Standby Started", CURRENT_STATE());
@@ -371,6 +397,13 @@ errlHndl_t SMGR_characterization_to_observation()
 
     do
     {
+        if(G_present_cores == 0)
+        {
+            // no configured cores, skip all PGPE comm
+            TRAC_IMP("SMGR_characterization_to_observation: No configured cores, skipping PGPE calls");
+            break;
+        }
+
         // set clips to legacy turbo
         l_pstate = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO]);
         rc = pgpe_set_clip_blocking(l_pstate);
@@ -388,13 +421,6 @@ errlHndl_t SMGR_characterization_to_observation()
                 TRAC_ERR("SMGR_char_to_obs: Failed to stop pstate protocol rc[%08X] OCCFLG[0x%08X]",
                           rc, in32(OCB_OCCFLG));
                 break;
-            }
-            else // Clips tightened successfully, and pstates disabled: perform transition
-            {
-                // No RTL Flag changes; only state change
-                CURRENT_STATE() = OCC_STATE_OBSERVATION;
-
-                TRAC_IMP("SMGR: Characterization to Observation Transition Completed");
             }
         }
     } while (0);
@@ -426,6 +452,13 @@ errlHndl_t SMGR_characterization_to_observation()
                          ERRL_COMPONENT_ID_FIRMWARE,
                          ERRL_CALLOUT_PRIORITY_HIGH);
     }
+    else // Clips set and pstates disabled (or no cores)
+    {
+        // No RTL Flag changes; only state change
+        CURRENT_STATE() = OCC_STATE_OBSERVATION;
+
+        TRAC_IMP("SMGR: Characterization to Observation Transition Completed");
+    }
 
     return l_errlHndl;
 }
@@ -443,7 +476,6 @@ errlHndl_t SMGR_observation_to_characterization()
     int         rc             = 0;
     errlHndl_t  l_errlHndl     = NULL;
     static bool L_error_logged = FALSE;  // To prevent trace and error logging over and over
-    Pstate      l_pstate;
     TRAC_IMP("SMGR: Observation to Characterization Transition Started");
 
     // no change in RTL flags, just turn-on pstate protocol, and set clips
@@ -456,12 +488,19 @@ errlHndl_t SMGR_observation_to_characterization()
         {
             TRAC_ERR("SMGR: failed to transition to characterization state "
                      "since OCC is not active ready.");
+            rc = INTERNAL_FAILURE;
             break;
         }
 
-        // set pstate clips
-        l_pstate = proc_freq2pstate(G_proc_fmax_mhz);
-        rc = pgpe_set_clip_blocking(l_pstate);
+        if(G_present_cores == 0)
+        {
+            // no configured cores, skip all PGPE comm
+            TRAC_IMP("SMGR_observation_to_characterization: No configured cores, skipping PGPE calls");
+            break;
+        }
+
+        // set pstate clips to full range of max Pstate 0 to support meltbox
+        rc = pgpe_set_clip_blocking(0);
 
         if(rc)
         {
@@ -469,7 +508,7 @@ errlHndl_t SMGR_observation_to_characterization()
                      rc, in32(OCB_OCCFLG));
             break;
         }
-        else // successfully set clips; enable pstates, then start transition
+        else // successfully set clips; enable pstates with characterization as owner
         {
             // Start pstates on PGPE and set Characterization as owner
             rc = pgpe_start_suspend(PGPE_ACTION_PSTATE_START, PMCR_OWNER_CHAR);
@@ -480,17 +519,34 @@ errlHndl_t SMGR_observation_to_characterization()
                          rc, in32(OCB_OCCFLG));
                 break;
             }
-            else // Clips set successfully and pstates enabled; complete transition
+            else // Request successfully scheduled on PGPE now verify it completed
             {
-                // Set the actual STATE now that we have finished everything else
-                CURRENT_STATE() = OCC_STATE_CHARACTERIZATION;
-
-                TRAC_IMP("SMGR: Observation to Characterization Transition Completed");
+               // Wait for ownership change to complete
+               SsxTimebase start = ssx_timebase_get();
+               SsxInterval timeout =  SSX_SECONDS(5);
+               while( ! proc_is_hwpstate_enabled() )
+               {
+                  if ((ssx_timebase_get() - start) > timeout)
+                  {
+                      rc = 1;
+                      TRAC_ERR("SMGR_obs_to_char: Timeout waiting for PMCR ownership change. rc[0x%08X] OCCFLG[0x%08X]",
+                                rc, in32(OCB_OCCFLG));
+                      break;
+                  }
+                  ssx_sleep(SSX_MICROSECONDS(10));
+               }
             }
         }
     } while (0);
 
-    if(rc && (false == L_error_logged))
+    if(!rc)
+    {
+        // Clips and PMCR owner set (or no cores) finish the state change
+        CURRENT_STATE() = OCC_STATE_CHARACTERIZATION;
+
+        TRAC_IMP("SMGR: Observation to Characterization Transition Completed");
+    }
+    else if(false == L_error_logged)
     {
         L_error_logged = TRUE;
         TRAC_ERR("SMGR: Observation to Characterization Transition Failed");
@@ -587,6 +643,8 @@ errlHndl_t SMGR_observation_to_active()
                 }
                 else // Clips set with no errors, enable Pstates on PGPE
                 {
+                    TRAC_IMP("SMGR_obs_to_active: Successfully set Pstate clip max[0x%02X]", l_pstate);
+
                     // Pstates are enabled via an IPC call to PGPE, which will set the
                     // G_proc_pstate_status flag. PMCR owner is set based on system type.
                     if(G_sysConfigData.system_type.kvm)
@@ -686,16 +744,20 @@ errlHndl_t SMGR_observation_to_active()
                 {
                     TRAC_IMP("SMGR_obs_to_active: Pstates are enabled, continuing with state trans");
 
+                    // Pstates enabled, update OPAL static table in main memory with pState info
+                    proc_pstate_kvm_setup();
+
                     L_error_logged = FALSE;
+
+                    // force a set of Pstates for first time going active, handle case where coming from
+                    // characterization state where user was manually writing Pstates
+                    G_set_pStates = TRUE;
 
                     // Set the RTL Flags to indicate which tasks can run
                     //   - Clear OBSERVATION b/c not in OBSERVATION State
                     //   - Set ACTIVE b/c we're in ACTIVE State
                     rtl_clr_run_mask_deferred(RTL_FLAG_OBS);
                     rtl_set_run_mask_deferred(RTL_FLAG_ACTIVE);
-
-                    // Pstates enabled, update OPAL static table in main memory with pState info
-                    proc_pstate_kvm_setup();
 
                     // Set the actual STATE now that we have finished everything else
                     CURRENT_STATE() = OCC_STATE_ACTIVE;
@@ -772,105 +834,22 @@ errlHndl_t SMGR_observation_to_active()
 // End Function Specification
 errlHndl_t SMGR_characterization_to_active()
 {
-    int         rc         = 0;
     errlHndl_t  l_errlHndl = NULL;
-    static bool L_error_logged = FALSE;  // To prevent trace and error log happened over and over
 
     TRAC_IMP("SMGR: Characterization to Active Transition Started");
 
-    do
+    // Characterization is really the same as observation state to the OCC, perform obs to active transition
+    // to move from char to active
+    l_errlHndl = SMGR_observation_to_active();
+
+    if(l_errlHndl)
     {
-        // Clear STATE_CHANGE WOF disabled flag
-        set_clear_wof_disabled( CLEAR, WOF_RC_STATE_CHANGE );
-        // change PMCR ownership via an IPC call to PGPE based on system type.
-        if(G_sysConfigData.system_type.kvm)
-        {
-            rc = pgpe_start_suspend(PGPE_ACTION_PSTATE_START, PMCR_OWNER_HOST);
-        }
-        else
-        {
-            rc = pgpe_start_suspend(PGPE_ACTION_PSTATE_START, PMCR_OWNER_OCC);
-        }
-        if(rc)
-        {
-            TRAC_ERR("SMGR_char_to_active: Failed to change PMCR ownership rc[0x%08X] OCCFLG[0x%08X]",
-                      rc, in32(OCB_OCCFLG));
-            break;
-        }
+        TRAC_ERR("SMGR: Characterization to Active Transition Failed");
+    }
 
-        // If there are no cores configured, do not wait for PSTATES to
-        // become enabled.
-        if(G_present_cores != 0)
-        {
-            // Wait for ownership change to complete
-            SsxTimebase start = ssx_timebase_get();
-            SsxInterval timeout =  SSX_SECONDS(5);
-            while( ! proc_is_hwpstate_enabled() )
-            {
-                if ((ssx_timebase_get() - start) > timeout)
-                {
-                    rc = 1;
-                    TRAC_ERR("SMGR_char_to_active: Timeout waiting for PMCR ownership change. OCCFLG[0x%08X]",
-                              in32(OCB_OCCFLG));
-                    break;
-                }
-                ssx_sleep(SSX_MICROSECONDS(10));
-            }
-
-            if(proc_is_hwpstate_enabled())
-            {
-                L_error_logged = FALSE;
-
-                // Set the RTL Flags to indicate which tasks can run
-                //   - Clear OBSERVATION b/c not in CHARACTERIZATION State
-                //   - Set ACTIVE b/c we're in ACTIVE State
-                rtl_clr_run_mask_deferred(RTL_FLAG_OBS);
-                rtl_set_run_mask_deferred(RTL_FLAG_ACTIVE);
-
-                // Set the actual STATE now that we have finished everything else
-                CURRENT_STATE() = OCC_STATE_ACTIVE;
-                TRAC_IMP("SMGR: Characterization to Active Transition Completed");
-            }
-        }
-        else // We have no cores configured
-        {
-            // Set rtl flags to indicate which tasks can run since
-            // we do not have to wait for pstates to be enabled
-            rtl_clr_run_mask_deferred(RTL_FLAG_OBS);
-            rtl_set_run_mask_deferred(RTL_FLAG_ACTIVE);
-
-            // Set the actual STATE now that we have finished everything else
-            CURRENT_STATE() = OCC_STATE_ACTIVE;
-            TRAC_IMP("SMGR: Characterization to Active Transition Completed");
-        }
-    } while (0);
-
-    if(rc && (false == L_error_logged))
+    else
     {
-        L_error_logged = TRUE;
-        /* @
-         * @errortype
-         * @moduleid    MAIN_STATE_TRANSITION_MID
-         * @reasoncode  INTERNAL_FAILURE
-         * @userdata1   rc
-         * @userdata2   valid states
-         * @userdata4   ERC_STATE_FROM_CHR_TO_ACT_FAILURE
-         * @devdesc     Failed changing from characterization to active
-         */
-        l_errlHndl = createErrl(MAIN_STATE_TRANSITION_MID,           //modId
-                                INTERNAL_FAILURE,                    //reasoncode
-                                ERC_STATE_FROM_CHR_TO_ACT_FAILURE,   //Extended reason code
-                                ERRL_SEV_UNRECOVERABLE,              //Severity
-                                NULL,                                //Trace Buf
-                                DEFAULT_TRACE_SIZE,                  //Trace Size
-                                rc,                                  //userdata1
-                                SMGR_validate_get_valid_states());   //userdata2
-
-        // Callout firmware
-        addCalloutToErrl(l_errlHndl,
-                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                         ERRL_COMPONENT_ID_FIRMWARE,
-                         ERRL_CALLOUT_PRIORITY_HIGH);
+        TRAC_IMP("SMGR: Characterization to Active Transition Completed");
     }
 
     return l_errlHndl;
@@ -889,7 +868,8 @@ errlHndl_t SMGR_active_to_observation()
     int              rc         = 0;
     enum occExtReasonCode ext_rc = OCC_NO_EXTENDED_RC;
     errlHndl_t       l_errlHndl = NULL;
-    uint8_t          wait_time  = 0;
+    uint32_t         wait_time  = 0;
+    Pstate           l_pstate;
 
     TRAC_IMP("SMGR: Active to Observation Transition Started");
 
@@ -897,16 +877,28 @@ errlHndl_t SMGR_active_to_observation()
     {
         // Set STATE_CHANGE WOF disabled
         set_clear_wof_disabled( SET, WOF_RC_STATE_CHANGE );
-        // wait until task_core_data_control() declares that
-        // OCC is ready to transition to Observation state
-        while(!G_active_to_observation_ready)
-        {
-            if(wait_time > WAIT_PGPE_TASK_TIMEOUT)
-            {
-                break;
-            }
 
-            // Sleep enables context switching.
+        if(G_present_cores == 0)
+        {
+            TRAC_IMP("SMGR_active_to_observation: No configured cores, skipping PGPE calls");
+            break;
+        }
+
+        // set clips to legacy turbo
+        l_pstate = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO]);
+        rc = pgpe_set_clip_blocking(l_pstate);
+        if(rc)
+        {
+            TRAC_ERR("SMGR_active_to_observation: failed to set pstate clip to legacy turbo rc[%08X] OCCFLG[0x%08X]",
+                      rc, in32(OCB_OCCFLG));
+            break;
+        }
+
+        // make sure start_suspend task is idle
+        while( (G_proc_pstate_status == PSTATES_IN_TRANSITION) &&
+               (wait_time < WAIT_PGPE_TASK_TIMEOUT) )
+        {
+            // wait until pgpe_start_suspend call is completed. Sleep enables context switching.
             ssx_sleep(SSX_MICROSECONDS(10));
             wait_time += 10;
         }
@@ -914,43 +906,8 @@ errlHndl_t SMGR_active_to_observation()
         // check for timeout while waiting for pgpe_start_suspend() IPC completion
         if(wait_time > WAIT_PGPE_TASK_TIMEOUT)
         {
-            TRAC_ERR("SMGR_act_to_obs: Timeout waiting for G_active_to_observation_ready flag. OCCFLG[0x%08X]",
-                         in32(OCB_OCCFLG));
-
-            /* @
-             * @errortype
-             * @moduleid    MAIN_STATE_TRANSITION_MID
-             * @reasoncode  PGPE_FAILURE
-             * @userdata1   wait_time
-             * @userdata4   ERC_PGPE_ACTIVE_TO_OBSERVATION_TIMEOUT
-             * @devdesc     timeout waiting for pstates start/suspend task
-             */
-            ext_rc = ERC_PGPE_ACTIVE_TO_OBSERVATION_TIMEOUT;
-            rc = PGPE_FAILURE;
-            break;
-        }
-
-        wait_time = 0;
-
-        // wait until clip update task is done
-        while(!async_request_is_idle(&G_clip_update_req.request))
-        {
-            if(wait_time > WAIT_PGPE_TASK_TIMEOUT)
-            {
-                break;
-            }
-
-            // wait until pgpe_start_suspend call is completed.
-            // Sleep enables context switching.
-            ssx_sleep(SSX_MICROSECONDS(10));
-            wait_time += 10;
-        }
-
-        // check for timeout while waiting for Pstate clips IPC completion
-        if(wait_time > WAIT_PGPE_TASK_TIMEOUT)
-        {
-            TRAC_ERR("SMGR_act_to_obs: Timeout waiting for clip update IPC task OCCFLG[0x%08X]",
-                         in32(OCB_OCCFLG));
+            TRAC_ERR("SMGR_act_to_obs: Timeout waiting for Pstates start/suspend IPC task. OCCFLG[0x%08X]",
+                      in32(OCB_OCCFLG));
 
             /* @
              * @errortype
@@ -968,26 +925,31 @@ errlHndl_t SMGR_active_to_observation()
         rc = pgpe_start_suspend(PGPE_ACTION_PSTATE_STOP, G_proc_pmcr_owner);
         if(rc)
         {
-            TRAC_ERR("SMGR_act_to_obs: failed to stop the pstate protocol on PGPE rc[0x%08X] OCCFLG[0x%08X]",
+            TRAC_ERR("SMGR_act_to_obs: failed to stop PGPE pstate protocol rc[0x%08X] OCCFLG[0x%08X]",
                          rc, in32(OCB_OCCFLG));
-            ext_rc = ERC_PGPE_TASK_TIMEOUT;
+            ext_rc = ERC_PGPE_START_SUSPEND_FAILURE;
             rc = PGPE_FAILURE;
             break;
         }
-        else // Pstates Disabled and clips set successfully, perform state transition
+        else // Wait for Pstates to be Disabled then perform state transition
         {
-            // Set the RTL Flags to indicate which tasks can run
-            //   - Set OBSERVATION b/c in OBSERVATION State
-            //   - Clear ACTIVE b/c not in ACTIVE State
-            rtl_clr_run_mask_deferred(RTL_FLAG_ACTIVE);
-            rtl_set_run_mask_deferred(RTL_FLAG_OBS);
+            wait_time = 0;
+            while( (G_proc_pstate_status != PSTATES_DISABLED) &&
+                   (wait_time < WAIT_PGPE_TASK_TIMEOUT) )
+            {
+                ssx_sleep(SSX_MICROSECONDS(10));
+                wait_time += 10;
+            }
 
-            // Set the actual STATE now that we have finished everything else
-            CURRENT_STATE() = OCC_STATE_OBSERVATION;
-
-            // clear G_active_to_observation_ready flag again
-            // (for next active_to_observation transition)
-            G_active_to_observation_ready = false;
+            // check for timeout while waiting for pgpe_start_suspend() IPC completion
+            if(wait_time >= WAIT_PGPE_TASK_TIMEOUT)
+            {
+                TRAC_ERR("SMGR_active_to_observation: Timeout waiting for Pstate protocol disable. RC[0x%04X] OCCFLG[0x%08X]",
+                          G_ss_pgpe_rc, in32(OCB_OCCFLG));
+                ext_rc = ERC_PGPE_ACTIVE_TO_OBSERVATION_TIMEOUT;
+                rc = PGPE_FAILURE;
+                break;
+            }
         }
 
     } while (0);
@@ -1012,6 +974,14 @@ errlHndl_t SMGR_active_to_observation()
     }
     else
     {
+        // Set the RTL Flags to indicate which tasks can run
+        //   - Set OBSERVATION b/c in OBSERVATION State
+        //   - Clear ACTIVE b/c not in ACTIVE State
+        rtl_clr_run_mask_deferred(RTL_FLAG_ACTIVE);
+        rtl_set_run_mask_deferred(RTL_FLAG_OBS);
+
+        // Set the actual STATE now that we have finished everything else
+        CURRENT_STATE() = OCC_STATE_OBSERVATION;
         TRAC_IMP("SMGR: Active to Observation Transition Completed");
     }
 
@@ -1029,8 +999,8 @@ errlHndl_t SMGR_active_to_observation()
 errlHndl_t SMGR_active_to_characterization()
 {
     int          rc         = 0;
+    uint32_t     wait_time  = 0;
     errlHndl_t   l_errlHndl = NULL;
-    Pstate       l_pstate;
 
     TRAC_IMP("SMGR: Active to Characterization Transition Started");
 
@@ -1038,9 +1008,16 @@ errlHndl_t SMGR_active_to_characterization()
     {
         // set STATE_CHANGE WOF disabled flag
         set_clear_wof_disabled( SET, WOF_RC_STATE_CHANGE );
-        // set pstate clips
-        l_pstate = proc_freq2pstate(G_proc_fmax_mhz);
-        rc = pgpe_set_clip_blocking(l_pstate);
+
+        if(G_present_cores == 0)
+        {
+            // no configured cores, skip all PGPE comm
+            TRAC_IMP("SMGR_active_to_characterization: No configured cores, skipping PGPE calls");
+            break;
+        }
+
+        // set pstate clips to full range of max Pstate 0 to support meltbox
+        rc = pgpe_set_clip_blocking(0);
 
         if(rc)
         {
@@ -1048,44 +1025,50 @@ errlHndl_t SMGR_active_to_characterization()
                         rc, in32(OCB_OCCFLG));
             break;
         }
-        else // clips set successfully, keep pstates enabled, but change ownership
+
+        // make sure start_suspend task is idle
+        while( (G_proc_pstate_status == PSTATES_IN_TRANSITION) &&
+               (wait_time < WAIT_PGPE_TASK_TIMEOUT) )
         {
-            rc = pgpe_start_suspend(PGPE_ACTION_PSTATE_START, PMCR_OWNER_CHAR);
+            // wait until pgpe_start_suspend call is completed. Sleep enables context switching.
+            ssx_sleep(SSX_MICROSECONDS(10));
+            wait_time += 10;
+        }
 
-            if(rc)
-            {
-                TRAC_ERR("SMGR: failed to change PMCR ownership. rc[0x%08X] OCCFLG[0x%08X]",
-                         rc, in32(OCB_OCCFLG));
-                break;
-            }
-            else // Request successfully scheduled on PGPE now verify it completed
-            {
-               // Wait for ownership change to complete
-               SsxTimebase start = ssx_timebase_get();
-               SsxInterval timeout =  SSX_SECONDS(5);
-               while( ! proc_is_hwpstate_enabled() )
-               {
-                  if ((ssx_timebase_get() - start) > timeout)
-                  {
-                      rc = 1;
-                      TRAC_ERR("SMGR_active_to_char: Timeout waiting for PMCR ownership change. rc[0x%08X] OCCFLG[0x%08X]",
-                                rc, in32(OCB_OCCFLG));
-                      break;
-                  }
-                  ssx_sleep(SSX_MICROSECONDS(10));
-               }
-               if(proc_is_hwpstate_enabled())
-               {
-                   // Set the RTL Flags to indicate which tasks can run
-                   //   - Set OBSERVATION RTL flags for Characterization State
-                   //   - Clear ACTIVE b/c not in ACTIVE State
-                   rtl_clr_run_mask_deferred(RTL_FLAG_ACTIVE);
-                   rtl_set_run_mask_deferred(RTL_FLAG_OBS);
+        // check for timeout while waiting for pgpe_start_suspend() IPC completion
+        if(wait_time >= WAIT_PGPE_TASK_TIMEOUT)
+        {
+            TRAC_ERR("SMGR_active_to_characterization: Timeout waiting for Pstates start/suspend IPC task. OCCFLG[0x%08X]",
+                      in32(OCB_OCCFLG));
+            rc = PGPE_FAILURE;
+            break;
+        }
 
-                   // Set the actual STATE now that we have finished everything else
-                   CURRENT_STATE() = OCC_STATE_CHARACTERIZATION;
-               }
-            }
+        // change PMCR ownership to characterization
+        rc = pgpe_start_suspend(PGPE_ACTION_PSTATE_START, PMCR_OWNER_CHAR);
+
+        if(rc)
+        {
+            TRAC_ERR("SMGR_active_to_char: failed to change PMCR ownership. rc[0x%08X] OCCFLG[0x%08X]",
+                     rc, in32(OCB_OCCFLG));
+            break;
+        }
+        else // Request successfully scheduled on PGPE now verify it completed
+        {
+           // Wait for ownership change to complete
+           SsxTimebase start = ssx_timebase_get();
+           SsxInterval timeout =  SSX_SECONDS(5);
+           while( ! proc_is_hwpstate_enabled() )
+           {
+              if ((ssx_timebase_get() - start) > timeout)
+              {
+                  rc = 1;
+                  TRAC_ERR("SMGR_active_to_char: Timeout waiting for PMCR ownership change. rc[0x%08X] OCCFLG[0x%08X]",
+                            rc, in32(OCB_OCCFLG));
+                  break;
+              }
+              ssx_sleep(SSX_MICROSECONDS(10));
+           }
         }
     } while (0);
 
@@ -1117,6 +1100,15 @@ errlHndl_t SMGR_active_to_characterization()
     }
     else
     {
+        // successfully changed to characterization state
+        // Set the RTL Flags to indicate which tasks can run
+        //   - Set OBSERVATION RTL flags for Characterization State
+        //   - Clear ACTIVE b/c not in ACTIVE State
+        rtl_clr_run_mask_deferred(RTL_FLAG_ACTIVE);
+        rtl_set_run_mask_deferred(RTL_FLAG_OBS);
+
+        // Set the actual STATE now that we have finished everything else
+        CURRENT_STATE() = OCC_STATE_CHARACTERIZATION;
         TRAC_IMP("SMGR: Active to Characterization Transition Completed");
     }
 
