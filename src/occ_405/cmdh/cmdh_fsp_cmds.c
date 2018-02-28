@@ -57,7 +57,7 @@ extern bool G_vrm_thermal_monitoring;
 extern uint32_t G_first_proc_gpu_config;
 extern bool G_vrm_vdd_temp_expired;
 extern bool G_reset_prep;
-
+extern uint16_t G_amester_max_data_length;
 
 #include <gpe_export.h>
 extern gpe_shared_data_t G_shared_gpe_data;
@@ -1963,11 +1963,11 @@ errlHndl_t cmdh_amec_pass_through(const cmdh_fsp_cmd_t * i_cmd_ptr,
             l_rc = ERRL_RC_SUCCESS;
         }
 
-        // Protect IPMI from overflowing a buffer
-        if(l_rsp_data_length > IPMI_MAX_MSG_SIZE)
+        // Protect from overflowing buffer
+        if(l_rsp_data_length > G_amester_max_data_length)
         {
             TRAC_ERR("amester_entry_point returned too much data. Got back %d bytes, but we only support sending %d bytes to IPMI",
-                     l_rsp_data_length, IPMI_MAX_MSG_SIZE);
+                     l_rsp_data_length, G_amester_max_data_length);
             /* @
              * @errortype
              * @moduleid    AMEC_AMESTER_INTERFACE
@@ -1985,7 +1985,7 @@ errlHndl_t cmdh_amec_pass_through(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 NULL,                               //Trace Buf
                 DEFAULT_TRACE_SIZE,                 //Trace Size
                 l_rsp_data_length,                  //userdata1
-                IPMI_MAX_MSG_SIZE                   //userdata2
+                G_amester_max_data_length           //userdata2
             );
 
             l_rc = ERRL_RC_INTERNAL_FAIL;

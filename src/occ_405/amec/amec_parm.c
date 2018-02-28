@@ -35,6 +35,7 @@
 //*************************************************************************/
 // Externs
 //*************************************************************************/
+extern uint16_t G_amester_max_data_length;
 
 //*************************************************************************/
 // Defines/Enums
@@ -100,7 +101,7 @@ void amec_parm_get_config(const IPMIMsg_t *i_psMsg,
 
     for (; l_id < AMEC_PARM_NUMBER_OF_PARAMETERS; l_id++)
     {
-    if (l_j + strlen(g_amec_parm_list[l_id].name) + 1 + 10 >= IPMI_MAX_MSG_SIZE)
+    if (l_j + strlen(g_amec_parm_list[l_id].name) + 1 + 10 >= G_amester_max_data_length)
     {
         // +1 = null terminator in name.
         // +10 = type, mode, vector_length, length (optional)
@@ -150,7 +151,7 @@ void amec_parm_read(const IPMIMsg_t *const i_psMsg,
     /*------------------------------------------------------------------------*/
     AMEC_PARM_GUID              l_id;
     UINT16                      i=0;  // output index
-    UINT16                      l_maxresponse = IPMI_MAX_MSG_SIZE - 1; // -1 since return code is 1B
+    UINT16                      l_maxresponse = G_amester_max_data_length - 1; // -1 since return code is 1B
     UINT8                       *l_src_ptr; // pointer to first byte of data
     UINT8                       *l_end_ptr; // mark end of data
     UINT32                      b;  // start byte
