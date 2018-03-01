@@ -48,7 +48,6 @@
 // Externs
 //*************************************************************************/
 extern uint32_t G_present_hw_cores;
-
 //*************************************************************************/
 // Macros
 //*************************************************************************/
@@ -56,6 +55,10 @@ extern uint32_t G_present_hw_cores;
 //*************************************************************************/
 // Defines/Enums
 //*************************************************************************/
+// default length to IPMI limit so we don't break AMESTER using IPMI
+// Updated AMESTER can send command to increase the length on systems that do not
+// use IPMI and support a larger data length to improve AMESTER performance
+uint16_t G_amester_max_data_length = IPMI_MAX_MSG_SIZE;
 
 ///Maximum size of trace buffer
 // NOTE:  Any names in this file using timescale will NOT be kept in sync
@@ -338,7 +341,7 @@ uint8_t amester_api( const IPMIMsg_t * i_msg,
     uint16_t l_sensor_id = 0;  // sensor id
     uint16_t l_sensor_count = 0; // sensor count
     uint8_t l_sensor_type = 0; // sensor type
-    uint16_t l_maxlen = 0, l_retlen = 0;  // for echo command and 0xff command
+    uint16_t l_maxlen = 0, l_retlen = 0;  // for echo command, 0xfd and 0xff commands
     uint16_t l_resp_length = *io_resp_length;
     sensorrec_t SensorInfo;
 
@@ -358,7 +361,7 @@ uint8_t amester_api( const IPMIMsg_t * i_msg,
             for (l_in = 1; l_in + 1 < i_msg->u8CmdDataLen; l_in=l_in+2)
             {
                 // exit when a return message is filled. -1 is for IPMI return code
-                if (l_out + AME_SDRS > IPMI_MAX_MSG_SIZE - 1) break;
+                if (l_out + AME_SDRS > (G_amester_max_data_length - 1)) break;
 
                 // Get the next sensor
                 l_sensor_id = CONVERT_UINT8_ARRAY_UINT16(i_msg->au8CmdData_ptr[l_in],
@@ -482,8 +485,8 @@ uint8_t amester_api( const IPMIMsg_t * i_msg,
                     break;
                 }
 
-                // max response length is IPMI_MAX_MSG_SIZE
-                if( ((l_final_length+(*io_resp_length)) < IPMI_MAX_MSG_SIZE) &&
+                // max response length is G_amester_max_data_length
+                if( ((l_final_length+(*io_resp_length)) < G_amester_max_data_length) &&
                     ((l_final_length+(*io_resp_length)) < l_resp_length ) )
                 {
                     memcpy( o_resp, l_temp_buffer, *io_resp_length); // Copy to final output buffer
@@ -569,10 +572,39 @@ uint8_t amester_api( const IPMIMsg_t * i_msg,
             l_rc = COMPCODE_PARAM_OUT_OF_RANGE;
             break;
 
+        // Configure AMESTER data length
+        case 0xfd:
+            *io_resp_length = 0;
+            // Check command data length
+            if (i_msg->u8CmdDataLen == 3)
+            {
+                l_maxlen = CONVERT_UINT8_ARRAY_UINT16( i_msg->au8CmdData_ptr[1],
+                                                       i_msg->au8CmdData_ptr[2]);
+
+                // make sure the OCC command/response buffer supports the size -6 byte header
+                // and the length isn't going below the IPMI limit (save performance)
+                if( (l_maxlen > (CMDH_FSP_CMD_SIZE - 6)) ||
+                    (l_maxlen < IPMI_MAX_MSG_SIZE) )
+                {
+                    l_rc = COMPCODE_PARAM_OUT_OF_RANGE;
+                }
+                else
+                {
+                    G_amester_max_data_length = l_maxlen;
+                    l_rc = COMPCODE_NORMAL;
+                }
+
+            }
+            else
+            {
+                l_rc = COMPCODE_REQ_DATA_LEN_INVALID;
+            }
+            break;
+
         // Note: Amester uses the echo command to figure out how much data it is
         // allowed to send in 1 message to OCC.
         case 0xfe: //echo
-            l_maxlen = IPMI_MAX_MSG_SIZE - 1;  // -1 for completion code
+            l_maxlen = G_amester_max_data_length - 1;  // -1 for completion code
             l_retlen = l_maxlen;
 
             // Pick the smaller of the input length and max output length.
@@ -597,7 +629,7 @@ uint8_t amester_api( const IPMIMsg_t * i_msg,
         // Note: Amester uses this command to find out the maximum length output
         // message OCC supports.
         case 0xff:
-            l_maxlen = IPMI_MAX_MSG_SIZE - 1;  // -1 for completion code
+            l_maxlen = G_amester_max_data_length - 1;  // -1 for completion code
 
             if (i_msg->u8CmdDataLen == 3)
             {
@@ -605,9 +637,9 @@ uint8_t amester_api( const IPMIMsg_t * i_msg,
                                                        i_msg->au8CmdData_ptr[2]);
             }
 
-            if (l_maxlen > IPMI_MAX_MSG_SIZE -1)
+            if (l_maxlen > (G_amester_max_data_length -1))
             {
-                l_maxlen = IPMI_MAX_MSG_SIZE -1;
+                l_maxlen = G_amester_max_data_length -1;
             }
 
             // Check length
@@ -875,7 +907,7 @@ uint8_t amester_manual_throttle( const IPMIMsg_t * i_msg,
                     l_rc=COMPCODE_NORMAL;
                     break;
 
-                case 37:   // parameter 37: Read out (IPMI_MAX_MSG_SIZE-2*STREAM_VECTOR_SIZE) byte vector from
+                case 37:   // parameter 37: Read out (G_amester_max_data_length-2*STREAM_VECTOR_SIZE) byte vector from
                            // streaming buffer
                     g_amec->read_stream_index=(uint32_t)((i_msg->au8CmdData_ptr[2]<<8)+i_msg->au8CmdData_ptr[3]);
                     temp1=i_msg->au8CmdData_ptr[4];
@@ -1178,7 +1210,7 @@ void amec_tb_cmd_info(const IPMIMsg_t *i_psMsg,
 
     for(; l_id < AMEC_TB_NUMBER_OF_TRACES; l_id++)
     {
-        if(l_j + AMEC_TB_CONFIG_SIZE >= IPMI_MAX_MSG_SIZE) break; // end of response buffer
+        if(l_j + AMEC_TB_CONFIG_SIZE >= G_amester_max_data_length) break; // end of response buffer
 
         l_src = g_amec_tb_list[l_id].name;
         while(*l_src != 0)
@@ -1423,7 +1455,6 @@ void amec_tb_cmd_read(const IPMIMsg_t *i_psMsg,
     /*------------------------------------------------------------------------*/
     amec_tb_t *l_trace;
     UINT16 l_i=0;  // output index
-    UINT16 l_maxresponse = IPMI_MAX_MSG_SIZE - 1; // -1 since return code is 1B
     UINT32 l_j; // index to copy from
 
     /*------------------------------------------------------------------------*/
@@ -1448,8 +1479,8 @@ void amec_tb_cmd_read(const IPMIMsg_t *i_psMsg,
             i_psMsg->au8CmdData_ptr[5]
             );
 
-        // Copy bytes to be read into response buffer
-        for(l_i = 0; l_i < l_maxresponse; l_i++, l_j++)
+        // Copy bytes to be read into response buffer. -1 since return code is 1B
+        for(l_i = 0; l_i < (G_amester_max_data_length - 1); l_i++, l_j++)
         {
             if(l_j >= l_trace->size) // wrap around to beginning of buffer.
             {
