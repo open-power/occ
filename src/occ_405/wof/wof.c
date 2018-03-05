@@ -1045,7 +1045,7 @@ uint32_t calculate_effective_capacitance( uint32_t i_iAC,
                                           uint32_t i_frequency )
 {
     // Prevent divide by zero
-    if( i_frequency == 0 )
+    if( (i_frequency == 0)  || (i_voltage == 0) )
     {
         // Return 0 causing caller to disable wof.
         return 0;
@@ -1115,63 +1115,71 @@ void calculate_ceff_ratio_vdn( void )
  */
 void calculate_ceff_ratio_vdd( void )
 {
-    // Read iac_tdp_vdd from OCCPstateParmBlock struct
-    g_wof->iac_tdp_vdd =
-            multiply_ratio( G_oppb.lac_tdp_vdd_turbo_10ma,
-                            g_wof->v_ratio );
-
-
-    // Get Vturbo and convert to 100uV (mV -> 100uV) = mV*10
-    // Multiply by Vratio
-    g_wof->c_ratio_vdd_volt = G_oppb.operating_points[TURBO].vdd_mv * 10;
-
-    // Get Fturbo and multiply by Fratio
-    g_wof->c_ratio_vdd_freq =
-        G_oppb.operating_points[TURBO].frequency_mhz * g_wof->f_ratio;
-    /* TODO Uncomment once we use f_ratio from PGPE
-    g_wof->c_ratio_vdd_freq =
-         multiply_ratio( G_oppb.operating_points[TURBO].frequency_mhz,
-                         g_wof->f_ratio );
-    */
-
-    // Calculate ceff_tdp_vdd
-    // iac_tdp_vdd / ((Vturbo*Vratio)^1.3 * (Fturbo*Fratio))
-    g_wof->ceff_tdp_vdd =
-                calculate_effective_capacitance( g_wof->iac_tdp_vdd,
-                                                 g_wof->c_ratio_vdd_volt,
-                                                 g_wof->c_ratio_vdd_freq );
-    // Calculate ceff_vdd
-    // iac_vdd / (Vclip^1.3 * Fclip)
-    // NOTE: WOF Phase 1 to use VOLTVDDSENSE. Phase 2 will use v_clip
-    g_wof->ceff_vdd =
-                calculate_effective_capacitance( g_wof->iac_vdd,
-                                               //(g_wof->v_clip*10),// mV->100uV
-                                                 g_wof->voltvddsense_sensor,
-                                                 g_wof->f_clip_freq );
-
-    // Prevent divide by zero
-    if( g_wof->ceff_tdp_vdd == 0 )
+    // If we get v_ratio of 0 from pgpe, force ceff_ratio_vdd to 0;
+    if( g_wof->v_ratio == 0 )
     {
-        // Print debug info to help isolate offending variable
-        INTR_TRAC_ERR("WOF Disabled! Ceff VDD divide by 0");
-        INTR_TRAC_ERR("iac_tdp_vdd = %d", G_oppb.lac_tdp_vdd_turbo_10ma );
-        INTR_TRAC_ERR("v_ratio     = %d", g_wof->v_ratio );
-        INTR_TRAC_ERR("f_ratio     = %d", g_wof->f_ratio );
-        INTR_TRAC_ERR("vdd_mv      = %d", G_oppb.operating_points[TURBO].vdd_mv);
-        INTR_TRAC_ERR("freq_mhz    = %d", G_oppb.operating_points[TURBO].frequency_mhz);
-        INTR_TRAC_ERR("v_clip_mv   = %d", g_wof->v_clip);
-        INTR_TRAC_ERR("f_clip_PS   = 0x%x", g_wof->f_clip_ps);
-
-        // Return 0
         g_wof->ceff_ratio_vdd = 0;
-        set_clear_wof_disabled(SET, WOF_RC_DIVIDE_BY_ZERO);
     }
     else
     {
-        // Save ceff_ratio_vdd. Multiply by 10000 to convert to correct granularity.
-        // Prevent Over current by clipping to max of 100%
-        g_wof->ceff_ratio_vdd =
-           prevent_over_current((g_wof->ceff_vdd*10000) / g_wof->ceff_tdp_vdd);
+        // Read iac_tdp_vdd from OCCPstateParmBlock struct
+        g_wof->iac_tdp_vdd =
+                multiply_ratio( G_oppb.lac_tdp_vdd_turbo_10ma,
+                                g_wof->v_ratio );
+
+
+        // Get Vturbo and convert to 100uV (mV -> 100uV) = mV*10
+        // Multiply by Vratio
+        g_wof->c_ratio_vdd_volt = G_oppb.operating_points[TURBO].vdd_mv * 10;
+
+        // Get Fturbo and multiply by Fratio
+        g_wof->c_ratio_vdd_freq =
+            G_oppb.operating_points[TURBO].frequency_mhz * g_wof->f_ratio;
+        /* TODO Uncomment once we use f_ratio from PGPE
+        g_wof->c_ratio_vdd_freq =
+             multiply_ratio( G_oppb.operating_points[TURBO].frequency_mhz,
+                             g_wof->f_ratio );
+        */
+
+        // Calculate ceff_tdp_vdd
+        // iac_tdp_vdd / ((Vturbo*Vratio)^1.3 * (Fturbo*Fratio))
+        g_wof->ceff_tdp_vdd =
+                    calculate_effective_capacitance( g_wof->iac_tdp_vdd,
+                                                     g_wof->c_ratio_vdd_volt,
+                                                     g_wof->c_ratio_vdd_freq );
+        // Calculate ceff_vdd
+        // iac_vdd / (Vclip^1.3 * Fclip)
+        // NOTE: WOF Phase 1 to use VOLTVDDSENSE. Phase 2 will use v_clip
+        g_wof->ceff_vdd =
+                    calculate_effective_capacitance( g_wof->iac_vdd,
+                                                   //(g_wof->v_clip*10),// mV->100uV
+                                                     g_wof->voltvddsense_sensor,
+                                                     g_wof->f_clip_freq );
+
+        // Prevent divide by zero
+        if( g_wof->ceff_tdp_vdd == 0 )
+        {
+            // Print debug info to help isolate offending variable
+            INTR_TRAC_ERR("WOF Disabled! Ceff VDD divide by 0");
+            INTR_TRAC_ERR("iac_tdp_vdd = %d", G_oppb.lac_tdp_vdd_turbo_10ma );
+            INTR_TRAC_ERR("v_ratio     = %d", g_wof->v_ratio );
+            INTR_TRAC_ERR("f_ratio     = %d", g_wof->f_ratio );
+            INTR_TRAC_ERR("vdd_mv      = %d", G_oppb.operating_points[TURBO].vdd_mv);
+            INTR_TRAC_ERR("freq_mhz    = %d", G_oppb.operating_points[TURBO].frequency_mhz);
+            INTR_TRAC_ERR("v_clip_mv   = %d", g_wof->v_clip);
+            INTR_TRAC_ERR("f_clip_PS   = 0x%x", g_wof->f_clip_ps);
+
+            // Return 0
+            g_wof->ceff_ratio_vdd = 0;
+            set_clear_wof_disabled(SET, WOF_RC_DIVIDE_BY_ZERO);
+        }
+        else
+        {
+            // Save ceff_ratio_vdd. Multiply by 10000 to convert to correct granularity.
+            // Prevent Over current by clipping to max of 100%
+            g_wof->ceff_ratio_vdd =
+               prevent_over_current((g_wof->ceff_vdd*10000) / g_wof->ceff_tdp_vdd);
+        }
     }
 }
 
