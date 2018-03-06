@@ -1551,37 +1551,37 @@ void cmdh_dump_gpu_timings(void)
     {
         TRAC_INFO("=======================================GPU%d===================================================", i);
         TRAC_INFO("|                          Max           Avg           1s count     100ms count  <100ms count|");
-        TRAC_INFO("| Core Temperatures        %-5d ticks   %-5d ticks   %-5d        %-5d        %-5d",
+        TRAC_INFO("| Core Temperatures        %-5d msecs   %-5d msecs   %-5d        %-5d        %-5d",
                   G_gpu_tick_times.coretemp[i].max,
                   G_gpu_tick_times.coretemp[i].avg,
                   G_gpu_tick_times.coretemp[i].count_1s,
                   G_gpu_tick_times.coretemp[i].count_100ms,
                   G_gpu_tick_times.coretemp[i].count_lt100ms);
-        TRAC_INFO("| Mem  Temperatures        %-5d ticks   %-5d ticks   %-5d        %-5d        %-5d",
+        TRAC_INFO("| Mem  Temperatures        %-5d msecs   %-5d msecs   %-5d        %-5d        %-5d",
                   G_gpu_tick_times.memtemp[i].max,
                   G_gpu_tick_times.memtemp[i].avg,
                   G_gpu_tick_times.memtemp[i].count_1s,
                   G_gpu_tick_times.memtemp[i].count_100ms,
                   G_gpu_tick_times.memtemp[i].count_lt100ms);
-        TRAC_INFO("| Check Driver Loaded      %-5d ticks   %-5d ticks   %-5d        %-5d        %-5d",
+        TRAC_INFO("| Check Driver Loaded      %-5d msecs   %-5d msecs   %-5d        %-5d        %-5d",
                   G_gpu_tick_times.checkdriver[i].max,
                   G_gpu_tick_times.checkdriver[i].avg,
                   G_gpu_tick_times.checkdriver[i].count_1s,
                   G_gpu_tick_times.checkdriver[i].count_100ms,
                   G_gpu_tick_times.checkdriver[i].count_lt100ms);
-        TRAC_INFO("| Mem  Capabilities        %-5d ticks   %-5d ticks   %-5d        %-5d        %-5d",
+        TRAC_INFO("| Mem  Capabilities        %-5d msecs   %-5d msecs   %-5d        %-5d        %-5d",
                   G_gpu_tick_times.capabilities[i].max,
                   G_gpu_tick_times.capabilities[i].avg,
                   G_gpu_tick_times.capabilities[i].count_1s,
                   G_gpu_tick_times.capabilities[i].count_100ms,
                   G_gpu_tick_times.capabilities[i].count_lt100ms);
-        TRAC_INFO("| Read Power Policy        %-5d ticks   %-5d ticks   %-5d        %-5d        %-5d",
+        TRAC_INFO("| Read Power Policy        %-5d msecs   %-5d msecs   %-5d        %-5d        %-5d",
                   G_gpu_tick_times.getpcap[i].max,
                   G_gpu_tick_times.getpcap[i].avg,
                   G_gpu_tick_times.getpcap[i].count_1s,
                   G_gpu_tick_times.getpcap[i].count_100ms,
                   G_gpu_tick_times.getpcap[i].count_lt100ms);
-        TRAC_INFO("| Set Power Cap            %-5d ticks   %-5d ticks   %-5d        %-5d        %-5d",
+        TRAC_INFO("| Set Power Cap            %-5d msecs   %-5d msecs   %-5d        %-5d        %-5d",
                   G_gpu_tick_times.setpcap[i].max,
                   G_gpu_tick_times.setpcap[i].avg,
                   G_gpu_tick_times.setpcap[i].count_1s,

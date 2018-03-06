@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -828,12 +828,12 @@ bool schedule_gpu_req(const gpu_op_req_e i_operation, gpu_sm_args_t i_new_args)
 
             // Set GPU Power Limit
             case GPU_REQ_SET_PWR_LIMIT_1_START:
-            case GPU_REQ_SET_PWR_LIMIT_1_1:
             case GPU_REQ_SET_PWR_LIMIT_1_2:
+            case GPU_REQ_SET_PWR_LIMIT_1_3:
             case GPU_REQ_SET_PWR_LIMIT_1_FINISH:
             case GPU_REQ_SET_PWR_LIMIT_2_START:
-            case GPU_REQ_SET_PWR_LIMIT_2_1:
             case GPU_REQ_SET_PWR_LIMIT_2_2:
+            case GPU_REQ_SET_PWR_LIMIT_2_3:
             case GPU_REQ_SET_PWR_LIMIT_2_FINISH:
             case GPU_REQ_SET_PWR_LIMIT_3_START:
             case GPU_REQ_SET_PWR_LIMIT_3_2:
@@ -1336,6 +1336,8 @@ bool gpu_read_pwr_limit_sm()
 
     static uint32_t L_num_ticks = 0;
 
+    static bool L_retry_necessary = FALSE;
+
     L_num_ticks++;
 
     if (async_request_is_idle(&G_gpu_op_request.request))
@@ -1354,6 +1356,12 @@ bool gpu_read_pwr_limit_sm()
                 L_state_failure_count = 0;
                 L_attempts++;
             }
+            else if( (L_read_pwr_limit_state == GPU_STATE_READ_PWR_LIMIT_1_3) &&
+                     (GPE_RC_GPU_BUSY == G_gpu_op_req_args.error.rc) )
+            {
+                L_read_pwr_limit_state = GPU_STATE_READ_PWR_LIMIT_1_FINISH;
+                L_retry_necessary = TRUE;
+            }
             // Check if failure was due to driver change
             else if(G_gpu_op_req_args.error.rc == GPE_RC_GPU_DRIVER_CHANGE)
             {
@@ -1364,6 +1372,7 @@ bool gpu_read_pwr_limit_sm()
                 L_read_pwr_limit_failure_count[G_current_gpu_id] = 0; // clear failure count since there's a driver change
                 L_read_pwr_limit_state = GPU_STATE_READ_PWR_LIMIT_NEW;
                 L_attempts = 0;
+                L_retry_necessary = FALSE;
                 return TRUE;  // Done with this GPU, let GPU SM move to next
             }
 
@@ -1446,7 +1455,17 @@ bool gpu_read_pwr_limit_sm()
         else // success on last state go to next state and process it
         {
             L_state_failure_count = 0;
-            L_read_pwr_limit_state++;
+            if( (GPU_STATE_READ_PWR_LIMIT_1_FINISH == L_read_pwr_limit_state) &&
+                (L_retry_necessary) )
+            {
+                // Let SM move on
+                L_read_pwr_limit_state = GPU_STATE_READ_PWR_LIMIT_NEW;
+                return TRUE;
+            }
+            else
+            {
+                L_read_pwr_limit_state++;
+            }
         }
 
         L_scheduled = FALSE;  // default nothing scheduled
@@ -1455,7 +1474,8 @@ bool gpu_read_pwr_limit_sm()
         {
             // Step 1
             case GPU_STATE_READ_PWR_LIMIT_1_START:
-                L_num_ticks = 1;
+                if(!L_retry_necessary) L_num_ticks = 1;
+                L_retry_necessary = FALSE;
                 L_scheduled = schedule_gpu_req(GPU_REQ_GET_PWR_LIMIT_1_START, G_new_gpu_req_args);
                 break;
 
@@ -1619,6 +1639,8 @@ bool gpu_set_pwr_limit_sm()
 
     static uint32_t L_num_ticks = 0;
 
+    static bool L_retry_necessary = FALSE;
+
     L_num_ticks++;
 
     if (async_request_is_idle(&G_gpu_op_request.request))
@@ -1637,6 +1659,12 @@ bool gpu_set_pwr_limit_sm()
                 L_state_failure_count = 0;
                 L_attempts++;
             }
+            else if( (L_set_pwr_limit_state == GPU_STATE_SET_PWR_LIMIT_3_3) &&
+                     (GPE_RC_GPU_BUSY == G_gpu_op_req_args.error.rc) )
+            {
+                 L_set_pwr_limit_state = GPU_STATE_SET_PWR_LIMIT_3_FINISH;
+                 L_retry_necessary = TRUE;
+            }
             // Check if failure was due to driver change
             else if(G_gpu_op_req_args.error.rc == GPE_RC_GPU_DRIVER_CHANGE)
             {
@@ -1647,6 +1675,7 @@ bool gpu_set_pwr_limit_sm()
                 L_set_pwr_limit_failure_count[G_current_gpu_id] = 0; // clear failure count since there's a driver change
                 L_set_pwr_limit_state = GPU_STATE_SET_PWR_LIMIT_NEW;
                 L_attempts = 0;
+                L_retry_necessary = FALSE;
                 return TRUE;  // Done with this GPU, let GPU SM move to next
             }
             // If reached retry count give up on this read
@@ -1660,6 +1689,8 @@ bool gpu_set_pwr_limit_sm()
                     // It will be retried if detected that GPU is put in reset and then taken out or driver change
                     g_amec->gpu[G_current_gpu_id].pcap.set_failed = true;
                     L_set_pwr_limit_failure_count[G_current_gpu_id] = 0;
+                    INTR_TRAC_ERR("gpu_set_pwr_limit: Timedout setting power limit %d for GPU%d [attempts:%d][state_fail:%d]",
+                                  G_gpu_op_req_args.data[0], G_current_gpu_id, L_attempts, L_state_failure_count);
                 }
                 // if GPU is not in reset then INC error count and check if reached threshold
                 if(g_amec->gpu[G_current_gpu_id].status.notReset)
@@ -1730,7 +1761,17 @@ bool gpu_set_pwr_limit_sm()
         else // success on last state go to next state and process it
         {
             L_state_failure_count = 0;
-            L_set_pwr_limit_state++;
+            if( (GPU_STATE_SET_PWR_LIMIT_4_FINISH == L_set_pwr_limit_state ) &&
+                (L_retry_necessary) )
+            {
+                // Let SM move to next
+                L_set_pwr_limit_state = GPU_STATE_SET_PWR_LIMIT_NEW;
+                return TRUE;
+            }
+            else
+            {
+                L_set_pwr_limit_state++;
+            }
         }
 
         L_scheduled = FALSE;  // default nothing scheduled
@@ -1739,16 +1780,17 @@ bool gpu_set_pwr_limit_sm()
         {
             // Step 1
             case GPU_STATE_SET_PWR_LIMIT_1_START:
-                L_num_ticks = 1;
+                if(!L_retry_necessary) L_num_ticks = 1;
+                L_retry_necessary = FALSE;
                 L_scheduled = schedule_gpu_req(GPU_REQ_SET_PWR_LIMIT_1_START, G_new_gpu_req_args);
-                break;
-
-            case GPU_STATE_SET_PWR_LIMIT_1_1:
-                L_scheduled = schedule_gpu_req(GPU_REQ_SET_PWR_LIMIT_1_1, G_new_gpu_req_args);
                 break;
 
             case GPU_STATE_SET_PWR_LIMIT_1_2:
                 L_scheduled = schedule_gpu_req(GPU_REQ_SET_PWR_LIMIT_1_2, G_new_gpu_req_args);
+                break;
+
+            case GPU_STATE_SET_PWR_LIMIT_1_3:
+                L_scheduled = schedule_gpu_req(GPU_REQ_SET_PWR_LIMIT_1_3, G_new_gpu_req_args);
                 break;
 
             case GPU_STATE_SET_PWR_LIMIT_1_FINISH:
@@ -1764,12 +1806,12 @@ bool gpu_set_pwr_limit_sm()
                 L_scheduled = schedule_gpu_req(GPU_REQ_SET_PWR_LIMIT_2_START, G_new_gpu_req_args);
                 break;
 
-            case GPU_STATE_SET_PWR_LIMIT_2_1:
-                L_scheduled = schedule_gpu_req(GPU_REQ_SET_PWR_LIMIT_2_1, G_new_gpu_req_args);
-                break;
-
             case GPU_STATE_SET_PWR_LIMIT_2_2:
                 L_scheduled = schedule_gpu_req(GPU_REQ_SET_PWR_LIMIT_2_2, G_new_gpu_req_args);
+                break;
+
+            case GPU_STATE_SET_PWR_LIMIT_2_3:
+                L_scheduled = schedule_gpu_req(GPU_REQ_SET_PWR_LIMIT_2_3, G_new_gpu_req_args);
                 break;
 
             case GPU_STATE_SET_PWR_LIMIT_2_FINISH:

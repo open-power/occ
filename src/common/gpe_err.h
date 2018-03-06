@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -56,5 +56,6 @@
 #define GPE_RC_GPU_CMD_NOT_SUPPORTED 0x82     // GPU rejected command with no support
 #define GPE_RC_GPU_CMD_FAILED        0x83     // An error occurred in the last GPU operation
 #define GPE_RC_GPU_INIT_FAILED       0x84     // Failed to init GPU
+#define GPE_RC_GPU_BUSY              0x85
 
 #endif //_GPE_ERR_H

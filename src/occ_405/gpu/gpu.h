@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -133,12 +133,12 @@ typedef enum
 {
     GPU_STATE_SET_PWR_LIMIT_NEW      = 0x71,
     GPU_STATE_SET_PWR_LIMIT_1_START  = 0x72,
-    GPU_STATE_SET_PWR_LIMIT_1_1      = 0x73,
-    GPU_STATE_SET_PWR_LIMIT_1_2      = 0x74,
+    GPU_STATE_SET_PWR_LIMIT_1_2      = 0x73,
+    GPU_STATE_SET_PWR_LIMIT_1_3      = 0x74,
     GPU_STATE_SET_PWR_LIMIT_1_FINISH = 0x75,
     GPU_STATE_SET_PWR_LIMIT_2_START  = 0x76,
-    GPU_STATE_SET_PWR_LIMIT_2_1      = 0x77,
-    GPU_STATE_SET_PWR_LIMIT_2_2      = 0x78,
+    GPU_STATE_SET_PWR_LIMIT_2_2      = 0x77,
+    GPU_STATE_SET_PWR_LIMIT_2_3      = 0x78,
     GPU_STATE_SET_PWR_LIMIT_2_FINISH = 0x79,
     GPU_STATE_SET_PWR_LIMIT_3_START  = 0x7A,
     GPU_STATE_SET_PWR_LIMIT_3_2      = 0x7B,

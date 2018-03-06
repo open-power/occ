@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -83,12 +83,12 @@ typedef enum
 
     // Set GPU power cap
     GPU_REQ_SET_PWR_LIMIT_1_START       = 0x20,
-    GPU_REQ_SET_PWR_LIMIT_1_1           = 0x21,
-    GPU_REQ_SET_PWR_LIMIT_1_2           = 0x22,
+    GPU_REQ_SET_PWR_LIMIT_1_2           = 0x21,
+    GPU_REQ_SET_PWR_LIMIT_1_3           = 0x22,
     GPU_REQ_SET_PWR_LIMIT_1_FINISH      = 0x23,
     GPU_REQ_SET_PWR_LIMIT_2_START       = 0x24,
-    GPU_REQ_SET_PWR_LIMIT_2_1           = 0x25,
-    GPU_REQ_SET_PWR_LIMIT_2_2           = 0x26,
+    GPU_REQ_SET_PWR_LIMIT_2_2           = 0x25,
+    GPU_REQ_SET_PWR_LIMIT_2_3           = 0x26,
     GPU_REQ_SET_PWR_LIMIT_2_FINISH      = 0x27,
     GPU_REQ_SET_PWR_LIMIT_3_START       = 0x28,
     GPU_REQ_SET_PWR_LIMIT_3_2           = 0x29,
@@ -97,7 +97,6 @@ typedef enum
     GPU_REQ_SET_PWR_LIMIT_4_START       = 0x2C,
     GPU_REQ_SET_PWR_LIMIT_4_2           = 0x2D,
     GPU_REQ_SET_PWR_LIMIT_4_FINISH      = 0x2E,
-
 
     // Start check driver loaded
     GPU_REQ_CHECK_DRIVER_START          = 0x31,
