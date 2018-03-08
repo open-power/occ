@@ -82,6 +82,7 @@ typedef enum
     AMEC_VOTING_REASON_IPS              = 0x00040000,
     AMEC_VOTING_REASON_APSS_PMAX        = 0x00080000,
     AMEC_VOTING_REASON_VDD_THRM         = 0x00100000,
+    AMEC_VOTING_REASON_VRM_N            = 0x00200000,
 }amec_freq_voting_reason_t;
 
 

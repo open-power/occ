@@ -51,7 +51,7 @@
 
 #define FREQ_FORMAT_20_NUM_FREQS   6
 #define DATA_FREQ_VERSION_20       0x20
-#define FREQ_FORMAT_21_NUM_FREQS   7
+#define FREQ_FORMAT_21_NUM_FREQS   8
 #define DATA_FREQ_VERSION_21       0x21
 
 #define DATA_PCAP_VERSION_20       0x20
@@ -70,6 +70,8 @@
 #define DATA_MEM_CFG_VERSION_21    0x21
 
 #define DATA_MEM_THROT_VERSION_20  0x20
+
+#define DATA_VRM_FAULT_VERSION     0x01
 
 extern uint8_t G_occ_interrupt_type;
 
@@ -475,14 +477,19 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
             // Bytes 15-16 Oversubscription Max Frequency
             l_freq = (l_buf[12] << 8 | l_buf[13]);
             l_table[OCC_MODE_OVERSUB] = l_freq;
+            // Bytes 17-18 VRM N mode Max Frequency
+            l_freq = (l_buf[14] << 8 | l_buf[15]);
+            l_table[OCC_MODE_VRM_N] = l_freq;
         }
         else
         {
-            // Version 0x20 limit oversubscription frequency to turbo
+            // Version 0x20 limit oversubscription and VRM N mode frequency to turbo
             l_table[OCC_MODE_OVERSUB] = l_table[OCC_MODE_TURBO];
+            l_table[OCC_MODE_VRM_N] = l_table[OCC_MODE_TURBO];
         }
 
         CMDH_TRAC_INFO("Oversubscription max frequency = %d MHz", l_table[OCC_MODE_OVERSUB]);
+        CMDH_TRAC_INFO("VRM N mode max frequency = %d MHz", l_table[OCC_MODE_VRM_N]);
 
         // inconsistent Frequency Points?
         if((l_table[OCC_MODE_UTURBO] < l_table[OCC_MODE_TURBO] && l_table[OCC_MODE_UTURBO]) ||
@@ -2487,6 +2494,67 @@ errlHndl_t data_store_ips_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
 // Function Specification
 //
+// Name:  data_store_vrm_fault
+//
+// Description: Store VRM fault status from TMGT
+//
+// End Function Specification
+errlHndl_t data_store_vrm_fault(const cmdh_fsp_cmd_t * i_cmd_ptr,
+                                      cmdh_fsp_rsp_t * o_rsp_ptr)
+{
+    errlHndl_t          l_err = NULL;
+    cmdh_vrm_fault_t   *l_cmd_ptr = (cmdh_vrm_fault_t *)i_cmd_ptr; // Cast the command to the struct for this format
+    uint16_t            l_data_length = CMDH_DATALEN_FIELD_UINT16(l_cmd_ptr);
+    uint32_t            l_data_sz = sizeof(cmdh_vrm_fault_t) - sizeof(cmdh_fsp_cmd_header_t);
+
+
+    // Check length and version
+    if((l_cmd_ptr->version != DATA_VRM_FAULT_VERSION) ||
+       ( l_data_sz != l_data_length) )
+    {
+        CMDH_TRAC_ERR("data_store_vrm_fault: Invalid version[%d] expected[%d] or length[%d] expected[%d]",
+                       l_cmd_ptr->version, DATA_VRM_FAULT_VERSION, l_data_length, l_data_sz);
+
+        /* @
+         * @errortype
+         * @moduleid    DATA_STORE_VRM_FAULT
+         * @reasoncode  INVALID_INPUT_DATA
+         * @userdata1   data size
+         * @userdata2   packet version
+         * @userdata4   OCC_NO_EXTENDED_RC
+         * @devdesc     OCC recieved an invalid VRM fault data packet from the FSP
+         */
+        l_err = createErrl(DATA_STORE_VRM_FAULT,
+                           INVALID_INPUT_DATA,
+                           OCC_NO_EXTENDED_RC,
+                           ERRL_SEV_UNRECOVERABLE,
+                           NULL,
+                           DEFAULT_TRACE_SIZE,
+                           l_data_length,
+                           (uint32_t)l_cmd_ptr->version);
+
+        // Callout firmware
+        addCalloutToErrl(l_err,
+                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                         ERRL_COMPONENT_ID_FIRMWARE,
+                         ERRL_CALLOUT_PRIORITY_HIGH);
+    }
+    else
+    {
+        // Save the VRM fault status
+        g_amec->sys.vrm_fault_status = l_cmd_ptr->vrm_fault_status;
+
+        // Change Data Request Mask to indicate we got this data
+        G_data_cnfg->data_mask |= DATA_MASK_VRM_FAULT;
+
+        CMDH_TRAC_IMP("Got VRM fault status = 0x%02X", g_amec->sys.vrm_fault_status);
+    }
+
+    return l_err;
+} // end data_store_vrm_fault()
+
+// Function Specification
+//
 // Name:   DATA_store_cnfgdata
 //
 // Description: Process Set Configuration Data cmd based on format (type) byte
@@ -2620,6 +2688,16 @@ errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
             if(NULL == l_errlHndl)
             {
                 l_new_data = DATA_MASK_MEM_THROT;
+            }
+            break;
+
+        case DATA_FORMAT_VRM_FAULT:
+            // Handle VRM fault status
+            l_errlHndl = data_store_vrm_fault(i_cmd_ptr, o_rsp_ptr);
+
+            if(NULL == l_errlHndl)
+            {
+                l_new_data = DATA_MASK_VRM_FAULT;
             }
             break;
 

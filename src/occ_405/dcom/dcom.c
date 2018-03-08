@@ -513,9 +513,10 @@ void task_dcom_parse_occfwmsg(task_t *i_self)
         {
             for(l_mode =0; l_mode<OCC_MODE_COUNT; l_mode++)
             {
-                // Don't trust a frequency of 0x0000 except for oversubscription and Ultra Turbo
+                // Don't trust a frequency of 0x0000 except for oversubscription, VRM N and Ultra Turbo
                 if( (0 != G_dcom_slv_inbox_rx.sys_mode_freq.table[l_mode]) ||
                     (l_mode == OCC_MODE_OVERSUB) ||
+                    (l_mode == OCC_MODE_VRM_N)   ||
                     (l_mode == OCC_MODE_UTURBO) )
                 {
                     if(G_sysConfigData.sys_mode_freq.table[l_mode]

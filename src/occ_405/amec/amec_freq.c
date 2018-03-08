@@ -159,7 +159,6 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
     // if (redundant ps policy is being enforced)
     if (G_sysConfigData.system_type.non_redund_ps == false)
     {
-        // OVERSUB is actually TURBO
         // check if need to lower max frequency due to being in oversubscription.  0 oversub freq means no freq limitation
         if( AMEC_INTF_GET_OVERSUBSCRIPTION() && (G_sysConfigData.sys_mode_freq.table[OCC_MODE_OVERSUB]) &&
             (G_sysConfigData.sys_mode_freq.table[OCC_MODE_OVERSUB] < l_freq_max) )
@@ -309,6 +308,15 @@ void amec_slv_proc_voting_box(void)
     // Voting Box for CPU speed.
     // This function implements the voting box to decide which input gets the right
     // to actuate the system.
+
+    // If there is an active VRM fault and a defined VRM N frequency less than max use it
+    if( (g_amec->sys.vrm_fault_status) &&
+        (G_sysConfigData.sys_mode_freq.table[OCC_MODE_VRM_N]) &&
+        (G_sysConfigData.sys_mode_freq.table[OCC_MODE_VRM_N] < l_chip_fmax) )
+    {
+        l_chip_fmax = G_sysConfigData.sys_mode_freq.table[OCC_MODE_VRM_N];
+        l_chip_reason = AMEC_VOTING_REASON_VRM_N;
+    }
 
     // PPB_FMAX
     if(g_amec->proc[0].pwr_votes.ppb_fmax < l_chip_fmax)

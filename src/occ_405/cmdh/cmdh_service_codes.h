@@ -41,5 +41,6 @@ enum occCmdhModuleId
     DATA_GET_IPS_DATA                   =  CMDH_COMP_ID | 0x0A,
     DATA_GET_RESET_PREP_ERRL            =  CMDH_COMP_ID | 0x0B,
     CMDH_OCC_INTERRUPT_TYPE             =  CMDH_COMP_ID | 0x0C,
+    DATA_STORE_VRM_FAULT                =  CMDH_COMP_ID | 0x0D,
 };
 #endif

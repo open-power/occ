@@ -53,6 +53,7 @@ typedef enum
    DATA_FORMAT_THRM_THRESHOLDS       = 0x13,
    DATA_FORMAT_AVSBUS_CONFIG         = 0x14,
    DATA_FORMAT_GPU                   = 0x15,
+   DATA_FORMAT_VRM_FAULT             = 0x21,
 } eConfigDataFormatVersion;
 
 // Enum of the various Cnfg Data Masks that are used
@@ -70,6 +71,7 @@ typedef enum
    DATA_MASK_MEM_CFG               = 0x00000200,
    DATA_MASK_MEM_THROT             = 0x00000400,
    DATA_MASK_GPU                   = 0x00000800,
+   DATA_MASK_VRM_FAULT             = 0x00001000,
 } eConfigDataPriorityMask;
 
 typedef enum
@@ -446,6 +448,16 @@ typedef struct __attribute__ ((packed))
     cmdh_mem_throt_header_t      header;
     cmdh_mem_throt_data_set_t    data_set[1];
 } cmdh_mem_throt_t;
+
+// Used by TMGT to send OCC VRM Fault status
+typedef struct __attribute__ ((packed))
+{
+    struct                  cmdh_fsp_cmd_header;
+    uint8_t                 format;
+    uint8_t                 version;
+    uint8_t                 vrm_fault_status;
+    uint8_t                 reserved;
+}cmdh_vrm_fault_t;
 
 // Used to mark present the config data TMGT has sent us.
 typedef struct data_cnfg

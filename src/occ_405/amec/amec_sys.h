@@ -392,6 +392,9 @@ typedef struct
 
   // Current Memory Power Control values (applied last through GPE1)
   uint8_t current_mem_pwr_ctl;
+
+  // Current VRM Fault status as recieved from VRM fault config data packet
+  uint8_t vrm_fault_status;
 } amec_systemwide_t;
 
 

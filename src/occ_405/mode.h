@@ -57,6 +57,7 @@ typedef enum
     OCC_MODE_FFO               = 0x0B,
     OCC_MODE_FMF               = 0x0C,
     OCC_MODE_UTURBO            = 0x0D,  // not a settable mode, just used to store UT freq
+    OCC_MODE_VRM_N             = 0x0E,  // not a settable mode, just used to store VRM N mode max freq
 
     // Make sure this is after the last valid mode
     OCC_MODE_COUNT,
