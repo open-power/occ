@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -684,7 +684,7 @@ void process_dimm_temp()
     if (l_dimm_temp >= g_amec->thermaldimm.ot_error)
     {
         //Set a bit so that this dimm can be called out by the thermal thread
-        G_dimm_overtemp_bitmap.bytes[port] |= 1 << dimm;
+        G_dimm_overtemp_bitmap.bytes[port] |= DIMM_SENSOR0 >> dimm;
     }
 
     l_fru->cur_temp = l_dimm_temp;
