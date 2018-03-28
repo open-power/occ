@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -157,6 +157,7 @@ errlHndl_t AMEC_data_write_thrm_thresholds(const OCC_MODE i_mode)
     cmdh_thrm_thresholds_set_t  *l_frudata = NULL;
     uint8_t                     l_dvfs_temp = 0;
     uint8_t                     l_error = 0;
+    bool                        l_pm_limits = false;
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
@@ -182,6 +183,9 @@ errlHndl_t AMEC_data_write_thrm_thresholds(const OCC_MODE i_mode)
         }
         else
         {
+            l_pm_limits = true;
+            TRAC_INFO("AMEC_data_write_thrm_thresholds: Using PM limits");
+
             l_dvfs_temp = l_frudata[DATA_FRU_PROC].pm_dvfs;
             if(i_mode == OCC_MODE_TURBO)
             {
@@ -200,11 +204,11 @@ errlHndl_t AMEC_data_write_thrm_thresholds(const OCC_MODE i_mode)
         // Store the temperature timeout value
         g_amec->thermalproc.temp_timeout = l_frudata[DATA_FRU_PROC].max_read_timeout;
 
-        TRAC_INFO("AMEC_data_write_thrm_thresholds: Setting %u as DVFS setpoint for processor",
-                  l_dvfs_temp);
+        TRAC_INFO("AMEC_data_write_thrm_thresholds: Processor setpoints - DVFS: %u, Error: %u",
+                  l_dvfs_temp, l_error);
 
         // Store the Centaur thermal data
-        if ((i_mode == OCC_MODE_NOMINAL) || (G_sysConfigData.system_type.kvm))
+        if (!l_pm_limits)
         {
             // use normal thresholds for Nominal or OPAL
             l_dvfs_temp = l_frudata[DATA_FRU_CENTAUR].dvfs;
@@ -231,11 +235,11 @@ errlHndl_t AMEC_data_write_thrm_thresholds(const OCC_MODE i_mode)
         // Store the temperature timeout value
         g_amec->thermalcent.temp_timeout = l_frudata[DATA_FRU_CENTAUR].max_read_timeout;
 
-        TRAC_INFO("AMEC_data_write_thrm_thresholds: Setting %u as DVFS setpoint for Centaur",
-                  l_dvfs_temp);
+        TRAC_INFO("AMEC_data_write_thrm_thresholds: Centaur setpoints - DVFS: %u, Error: %u",
+                  l_dvfs_temp, l_error);
 
         // Store the DIMM thermal data
-        if ((i_mode == OCC_MODE_NOMINAL) || (G_sysConfigData.system_type.kvm))
+        if (!l_pm_limits)
         {
             // use normal thresholds for Nominal or OPAL
             l_dvfs_temp = l_frudata[DATA_FRU_DIMM].dvfs;
@@ -261,8 +265,8 @@ errlHndl_t AMEC_data_write_thrm_thresholds(const OCC_MODE i_mode)
         // Store the temperature timeout value
         g_amec->thermaldimm.temp_timeout = l_frudata[DATA_FRU_DIMM].max_read_timeout;
 
-        TRAC_INFO("AMEC_data_write_thrm_thresholds: Setting %u as DVFS setpoint for DIMM",
-                  l_dvfs_temp);
+        TRAC_INFO("AMEC_data_write_thrm_thresholds: DIMM setpoints - DVFS: %u, Error: %u",
+                  l_dvfs_temp, l_error);
 
         g_amec->vrhotproc.setpoint = l_frudata[DATA_FRU_VRM_OT_STATUS].error_count;
 
@@ -270,7 +274,7 @@ errlHndl_t AMEC_data_write_thrm_thresholds(const OCC_MODE i_mode)
                   g_amec->vrhotproc.setpoint);
 
         // Store the VRM Vdd thermal data
-        if ((i_mode == OCC_MODE_NOMINAL) || (G_sysConfigData.system_type.kvm))
+        if (!l_pm_limits)
         {
             // use normal thresholds for Nominal or OPAL
             l_dvfs_temp = l_frudata[DATA_FRU_VRM_VDD].dvfs;
@@ -296,8 +300,8 @@ errlHndl_t AMEC_data_write_thrm_thresholds(const OCC_MODE i_mode)
         // Store the temperature timeout value
         g_amec->thermalvdd.temp_timeout = l_frudata[DATA_FRU_VRM_VDD].max_read_timeout;
 
-        TRAC_INFO("AMEC_data_write_thrm_thresholds: Setting %u as DVFS setpoint for VRM Vdd",
-                  l_dvfs_temp);
+        TRAC_INFO("AMEC_data_write_thrm_thresholds: VRM Vdd setpoints - DVFS: %u, Error: %u",
+                  l_dvfs_temp, l_error);
 
     } while(0);
 

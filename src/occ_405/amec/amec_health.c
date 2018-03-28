@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -171,10 +171,6 @@ void amec_health_check_dimm_temp()
     l_sensor = getSensorByGsid(TEMPDIMMTHRM);
     l_cur_temp = l_sensor->sample;
     l_max_temp = l_sensor->sample_max;
-    TRAC_ERR("amec_health_check_dimm_temp: DIMM reached error temp[%d]. cur_max[%d], hist_max[%d]",
-             l_ot_error,
-             l_cur_temp,
-             l_max_temp);
 
     //iterate over all dimms
     for(l_port = 0; l_port < l_max_port; l_port++)
@@ -184,16 +180,21 @@ void amec_health_check_dimm_temp()
                          G_dimm_overtemp_logged_bitmap.bytes[l_port];
 
         //skip to next port if no new callouts for this one
-        if(!l_new_callouts)
+        if (!l_new_callouts || (G_dimm_overtemp_bitmap.bytes[l_port] == 0))
         {
             continue;
         }
 
+        TRAC_ERR("amec_health_check_dimm_temp: DIMM reached error temp[%d]. current[%d], hist_max[%d], port[%d]",
+                 l_ot_error,
+                 l_cur_temp,
+                 l_max_temp,
+                 l_port);
+
         //find the dimm(s) that need to be called out for this port
         for(l_dimm = 0; l_dimm < NUM_DIMMS_PER_CENTAUR; l_dimm++)
         {
-            if(!(l_new_callouts & (DIMM_SENSOR0 >> l_dimm)) &&
-                G_dimm_overtemp_bitmap.bytes[l_port])
+            if (!(l_new_callouts & (DIMM_SENSOR0 >> l_dimm)))
             {
                 continue;
             }
@@ -217,8 +218,8 @@ void amec_health_check_dimm_temp()
                      * @errortype
                      * @moduleid    AMEC_HEALTH_CHECK_DIMM_TEMP
                      * @reasoncode  DIMM_ERROR_TEMP
-                     * @userdata1   Maximum dimm temperature
-                     * @userdata2   Dimm temperature threshold
+                     * @userdata1   Maximum DIMM temperature
+                     * @userdata2   DIMM temperature threshold
                      * @userdata4   OCC_NO_EXTENDED_RC
                      * @devdesc     Memory DIMM(s) exceeded maximum safe
                      *              temperature.
@@ -321,7 +322,7 @@ void amec_health_check_dimm_timeout()
                 if(G_dimm_temp_expired_bitmap.bytes[l_port])
                 {
                     G_dimm_temp_expired_bitmap.bytes[l_port] = 0;
-                    TRAC_INFO("All dimm sensors for centaur %d have been updated", l_port);
+                    TRAC_INFO("All DIMM sensors for port %d have been updated", l_port);
                 }
                 continue;
             }
@@ -519,7 +520,7 @@ void amec_health_check_cent_temp()
     l_sensor = getSensorByGsid(TEMPCENT);
     l_cur_temp = l_sensor->sample;
     l_max_temp = l_sensor->sample_max;
-    TRAC_ERR("amec_health_check_cent_temp: Centaur reached error temp[%d]. cur_max[%d], hist_max[%d] bitmap[0x%02X]",
+    TRAC_ERR("amec_health_check_cent_temp: Centaur reached error temp[%d]. current[%d], hist_max[%d], bitmap[0x%02X]",
              l_ot_error,
              l_cur_temp,
              l_max_temp,
