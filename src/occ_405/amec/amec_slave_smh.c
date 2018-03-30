@@ -429,7 +429,7 @@ void amec_slv_common_tasks_post(void)
         // Call amec_power_control
         amec_power_control();
 
-        if (MEM_TYPE_CUMULUS != G_sysConfigData.mem_type)
+        if (MEM_TYPE_NIMBUS == G_sysConfigData.mem_type)
         {
             // Nimbus only
             // Apply memory power control, if needed.

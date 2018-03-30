@@ -2098,9 +2098,6 @@ errlHndl_t cmdh_tmgt_get_field_debug_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
         }
         else
         {
-            TRAC_INFO("get_field_debug_data: Numbers of sensors found[%u]",
-                      l_num_of_sensors);
-
             // Populate the response data packet
             l_resp_ptr->num_sensors = l_num_of_sensors;
             for (i=0; i<l_num_of_sensors; i++)

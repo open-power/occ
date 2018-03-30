@@ -144,12 +144,8 @@ void initWatchdogTimers()
         commitErrl(&l_err);
     }
 
-    // initialize memory deadman timer's IPC task
-    if(G_sysConfigData.mem_type == MEM_TYPE_NIMBUS)
-    {
-        // Initialize the GPE1 IPC task that resets the deadman timer.
-        init_mem_deadman_reset_task();
-    }
+    // We can't initialize memory here since we do not know what type of memory we have
+    // until comm is established with (H)TMGT to tell us
 }
 
 // Function Specification
@@ -208,7 +204,7 @@ void init_mem_deadman_reset_task(void)
             0                                   //userdata2
             );
 
-        CHECKPOINT_FAIL_AND_HALT(l_err);
+        REQUEST_RESET(l_err);   //This will add a firmware callout for us
     }
 
 }
@@ -272,7 +268,7 @@ void task_poke_watchdogs(struct task * i_self)
 //              then it is completed. Then if there is a new task to be scheduled
 //              for this cycle, then schedule it on the GPE1 engine. This task
 //              is also used to collect memory performance measurements.
-//              Called every 500us.
+//              Called every 500us.  This should only be called on NIMBUS!
 //
 // End Function Specification
 
@@ -293,6 +289,14 @@ void manage_mem_deadman_task(void)
     static bool    L_gpe_idle_traced    = false;
     static bool    L_gpe_timeout_logged = false;
     static bool    L_gpe_had_1_tick     = false;
+    static bool    L_init_complete      = false;
+
+    if(!L_init_complete)
+    {
+       // Initialize the GPE1 IPC task that resets the deadman timer.
+       init_mem_deadman_reset_task();
+       L_init_complete = true;
+    }
 
     // There is no way to synchronously start or stop the counter, so must
     // take the difference between two readings.

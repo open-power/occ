@@ -203,7 +203,7 @@ occSysConfigData_t G_sysConfigData =
     // -----------------------------------------------------------
     .centaur_huids = {0},
     .dimm_huids = {{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0}},
-    .mem_type = MEM_TYPE_NIMBUS,
+    .mem_type = MEM_TYPE_UNKNOWN,
     .dimm_i2c_engine = PIB_I2C_ENGINE_E,
     .ips_mem_pwr_ctl = MEM_PWR_CTL_OFF,
     .default_mem_pwr_ctl = MEM_PWR_CTL_OFF,

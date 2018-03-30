@@ -74,8 +74,9 @@ typedef enum
 
 typedef enum
 {
-    MEM_TYPE_CUMULUS = 0x00,
-    MEM_TYPE_NIMBUS  = 0xFF
+    MEM_TYPE_UNKNOWN = 0x00,
+    MEM_TYPE_CUMULUS = 0xCC,
+    MEM_TYPE_NIMBUS  = 0xFF   // Nimbus must be 0xFF per interface with (H)TMGT
 } MEMORY_TYPE;
 
 // Generic memory initialization to handle init for all memory types
