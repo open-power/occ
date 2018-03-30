@@ -992,15 +992,16 @@ bool gpu_reset_sm()
                     // Stop trying if reached max resets
                     if(L_consec_reset_failure_count > MAX_CONSECUTIVE_GPU_RESETS)
                     {
-                        INTR_TRAC_ERR("gpu_reset_sm: Max Resets reached failed at state 0x%02X",
-                                      L_reset_state);
+                        INTR_TRAC_ERR("gpu_reset_sm: Max Resets reached! state[0x%02X] rc[0x%08X] addr[0x%08X] ffdc[0x%08X%08X]",
+                                      L_reset_state, G_gpu_op_req_args.error.rc, G_gpu_op_req_args.error.addr,
+                                      (uint32_t) (G_gpu_op_req_args.error.ffdc >> 32), (uint32_t) G_gpu_op_req_args.error.ffdc);
 
                         /*
                          * @errortype
                          * @moduleid    GPU_MID_GPU_RESET_SM
                          * @reasoncode  GPU_FAILURE
                          * @userdata1   GPU reset state
-                         * @userdata2   0
+                         * @userdata2   GPE failure RC
                          * @userdata4   ERC_GPU_RESET_FAILURE
                          * @devdesc     Failure resetting GPU interface
                          */
@@ -1011,7 +1012,7 @@ bool gpu_reset_sm()
                                                NULL,
                                                DEFAULT_TRACE_SIZE,
                                                L_reset_state,
-                                               0);
+                                               G_gpu_op_req_args.error.rc);
                         commitErrl(&err);
 
                         disable_all_gpus();
@@ -1023,7 +1024,7 @@ bool gpu_reset_sm()
                     {
                         L_consec_reset_failure_count++;
                         L_state_retry_count = 0;
-                        L_reset_state = GPU_RESET_STATE_NEW;
+                        L_reset_state = GPU_RESET_STATE_INIT_BUS;
                     }
                 }  // else reset attempt failed
             }  // else GPE supports GPU
