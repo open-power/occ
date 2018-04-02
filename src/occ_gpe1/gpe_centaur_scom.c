@@ -327,10 +327,6 @@ int centaur_scom_rmw(CentaurConfiguration_t* i_config,
         data64 |= *i_data;
 
         rc = putscom_abs(oci_addr, data64);
-        if(i_scom_address == 0x3010416)
-        {
-            PK_TRACE("N/M RMW PUTSCOM: %08x%08x",(uint32_t)(data64>>32),(uint32_t)data64);
-        }
     }
 
     pbaslvctl_reset(&(i_config->scomParms));
@@ -376,38 +372,6 @@ int centaur_scom_rmw_all(CentaurConfiguration_t* i_config,
     return rc_from_sibrc();
 }
 
-
-int centaur_scom_sync(CentaurConfiguration_t* i_config,
-                      uint64_t i_data)
-{
-    int rc = 0;
-    uint32_t addr = (PBA_BAR_CENTAUR << 28);
-    uint64_t pba_slvctln_save;
-
-    pbaslvctl_reset(&(i_config->scomParms));
-    pba_slvctln_save = pbaslvctl_setup(&(i_config->scomParms));
-
-    // sync setup
-    pba_slvctln_t slvctl;
-    PPE_LVD((i_config->scomParms).slvctl_address, slvctl.value);
-    slvctl.fields.extaddr = (i_config->syncSlaveControl).fields.extaddr;
-    PPE_STVD((i_config->scomParms).slvctl_address, slvctl.value);
-
-    PPE_STVD(addr, i_data);
-
-    pbaslvctl_reset(&(i_config->scomParms));
-    PPE_STVD((i_config->scomParms).slvctl_address, pba_slvctln_save);
-
-    return rc;
-}
-
-
-int centaur_scom_sync_all(CentaurConfiguration_t* i_config,
-                          uint64_t i_data)
-{
-    return centaur_scom_sync(i_config,
-                             (uint64_t)(i_config->config << 24) | i_data);
-}
 
 // read centaur data sensor cache
 int centaur_get_mem_data(CentaurConfiguration_t* i_config,
@@ -481,9 +445,10 @@ int centaur_get_mem_data(CentaurConfiguration_t* i_config,
 
     // TODO if RC then check for centaur channel checkstop
     // The MCFIR reg no longer contains a bit for CHANNEL_FAIL_SIGNAL_ACTIVE.
-    // No equivalent has been identified yet for P9.
+    // No equivalent has been identified yet for P9. Marc Gollub will provide
+    // if needed.
     // Return rc = CENTAUR_CHANNEL_CHECKSTOP
-    
+
     // HW bug work-around
     rc = putscom_abs(PBA_BARMSKN(PBA_BAR_CENTAUR), barMskOrg);
     if(rc)
@@ -552,16 +517,6 @@ void gpe_scom_centaur(CentaurConfiguration_t* i_config,
                                      i_parms->scomList[i].scom,
                                      i_parms->scomList[i].mask,
                                      i_parms->scomList[i].data);
-                break;
-
-            case CENTAUR_SCOM_CENTAUR_SYNC:
-                centaur_scom_sync(i_config,
-                                  i_parms->scomList[i].data);
-                break;
-
-            case CENTAUR_SCOM_CENTAUR_SYNC_ALL:
-                centaur_scom_sync(i_config,
-                                  i_parms->scomList[i].data);
                 break;
 
             default:

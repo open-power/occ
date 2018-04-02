@@ -838,13 +838,13 @@ void centaur_data( void )
                  * @reasoncode  SSX_GENERIC_FAILURE
                  * @userdata1   rc - Return code of failing function
                  * @userdata2   0
-                 * @userdata4   ERC_CENTAUR_PORE_FLEX_SCHEDULE_FAILURE
+                 * @userdata4   ERC_CENTAUR_GPE_REQUEST_SCHEDULE_FAILURE
                  * @devdesc     Failed to get centaur data
                  */
                 l_err = createErrl(
                         CENT_TASK_DATA_MOD,                     //modId
                         SSX_GENERIC_FAILURE,                    //reasoncode
-                        ERC_CENTAUR_PORE_FLEX_SCHEDULE_FAILURE, //Extended reason code
+                        ERC_CENTAUR_GPE_REQUEST_SCHEDULE_FAILURE, //Extended reason code
                         ERRL_SEV_PREDICTIVE,                    //Severity
                         NULL,                                   //Trace Buf
                         DEFAULT_TRACE_SIZE,                     //Trace Size
@@ -1065,7 +1065,8 @@ void centaur_init( void )
         L_scomList[0].mask = l_mbscfg.value;
 
         //set up the data bits
-        l_mbscfg.fields.occ_deadman_timer_sel = CENT_DEADMAN_TIMER_2SEC;
+        // TODO RTC 190643 disable until phyp has centaur support
+        l_mbscfg.fields.occ_deadman_timer_sel = 0; // CENT_DEADMAN_TIMER_2SEC;
         L_scomList[0].data = l_mbscfg.value;
 
         /// Set up Centaur Scom Registers - array of Scoms

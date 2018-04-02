@@ -165,13 +165,8 @@ int gpe_centaur_configuration_create(CentaurConfiguration_t* o_config)
     int rc = 0;
     unsigned int i  = 0;
     mcfgpr_t   mcfgpr;
-    // mcifir_t   mcifir;
-    // mcsmode0_t mcsmode0;
-    pba_slvctln_t slvctl;
-    int         designatedSync = -1;
     uint64_t    bar = 0;
     uint64_t    mask = 0;
-    uint64_t    base = 0;
     uint64_t*   ptr = (uint64_t*)o_config;
 
     // Prevent unwanted interrupts from scom errors
@@ -187,9 +182,10 @@ int gpe_centaur_configuration_create(CentaurConfiguration_t* o_config)
 
     do
     {
-        // Create the setups for the GPE procedures. The 'dataParms' are the
-        // setup for accessing the Centaur sensor cache.  The 'scomParms' are
-        // the setup for accessing Centaur SCOMs.
+        // Create the PBASLV configurations for the GPE procedures.
+        // The 'dataParms' define the PBASLV setup needed to access the
+        // Centaur sensor cache.  The 'scomParms' define the PBASLV setup
+        // needed to access the Centaur SCOMs.
 
         rc = gpe_pba_parms_create(&(o_config->dataParms),
                                   PBA_SLAVE_CENTAUR,
@@ -215,49 +211,33 @@ int gpe_centaur_configuration_create(CentaurConfiguration_t* o_config)
             break;
         }
 
-        // Go into each MCS on the chip, and for all enabled MCS get a couple
-        // of SCOMs and check configuration items for correctness. If any of
-        // the Centaur are configured, exactly one of the MCS must be
-        // designated to receive the SYNC commands.
+        // Iterate through each MCS on the chip and check configuration.
 
         // Note that the code uniformly treats SCOM failures of the MCFGPR
-        // registers as an unconfigured Centaur. This works both for Murano,
-        // which only defines the final 4 MCS, as well as for our VBU models
-        // where some of the "valid" MCS are not in the simulation models.
+        // registers as an unconfigured Centaur. This works both for real 
+        // hardware,  as well as for our VBU models where some of the "valid"
+        // MCS are not in the simulation models.
 
         for (i = 0; i < OCCHW_NCENTAUR; ++i)
         {
             uint64_t val64;
 
-            // If can't scom then assume not configured
-            //rc = getscom_abs(MCFIR[i / 2], &(mcifir.value));
+            //FIR bits have changed from p8 TODO Marc Golub to provide what
+            //firchecks need to be done for P9 
 
-            //if (rc)
-            //{
-            //    rc = 0;
-            //    continue;
-            //}
-
-            // See Cumulus MC "Datapath Fault Isolation Register"  Is it right???
-            //FIR bits have changed from p8 TODO do we need to look at the fir
-            //for P9 ??
-            //if (mcifir.fields.channel_fail_signal_active)
-            //{
-            //    continue;
-            //}
-
-            // Routine p9c_set_inband_addr.C uses MCRSVDE and MCRSVDF to set
-            //   inband address (MCFGPR)
-            //
+            // Verify that inband scom has been setup. If not then
+            // assume the centaur is either non-existant or not configured.
+            // Setup is provided by HWP p9c_set_inband_addr.C
             rc = getscom_abs(MCFGPR[i], &(mcfgpr.value));
 
             if (rc)
             {
+                // ignore if can't be scomed.
                 rc = 0;
                 continue;
             }
 
-            // TODO ENGD work-around until gets pushed up.
+            // TODO RTC 190643 ENGD work-around until change gets pushed up into a driver.
             // Turn on bit 25 in mode0 regs. They should all have the same value
             rc = getscom_abs(0x05010811, &val64);
             val64 |= 0x0000004000000000ull;
@@ -273,7 +253,7 @@ int gpe_centaur_configuration_create(CentaurConfiguration_t* o_config)
             }
 
 
-            // The 31-bit base-address is moved to begin at bit 8 in the
+            // The 31-bit base-address (inband scom BAR) corresponds to bits [8:38] in the
             // 64-bit PowerBus address.
             // Set the HOST/OCC bit in the address.
             o_config->baseAddress[i] =
@@ -282,26 +262,9 @@ int gpe_centaur_configuration_create(CentaurConfiguration_t* o_config)
             PK_TRACE_DBG("Centar[%d] Base Address: %016llx",i,o_config->baseAddress[i]);
 
 
-            // TODO this bit no longer exists
-            // If this MCS is configured to be the designated SYNC unit, it
-            // must be the only one.
-
-            //if (mcsmode0.fields.enable_centaur_sync)
-            //{
-            //    if (designatedSync > 0)
-            //    {
-            //        PK_TRACE_DBG("Both MCS %d and %d are designated "
-            //                     "for Centaur Sync",
-            //                     designatedSync, i);
-            //        rc = CENTAUR_MULTIPLE_DESIGNATED_SYNC;
-            //        break;
-
-            //    }
-            //    else
-            //    {
-            //        designatedSync = i;
-            //    }
-            //}
+            // NOTE: P9 no longer has a mode bit to specify a "designated SYNC"
+            // Centaur Spec says SYNC is needed for Z series, and for POR.
+            // Since neither applys here, it will not longer be done by OCC.
 
 
             // Add the Centaur to the configuration
@@ -311,85 +274,6 @@ int gpe_centaur_configuration_create(CentaurConfiguration_t* o_config)
         if (rc)
         {
             break;
-        }
-
-
-        // In p9 the enable_centaur_sync is no longer available as a mode bit.
-        // TODO  Anything to do?
-        // P8:
-        // If Centaur are configured, make sure at least one of the MCS will
-        // handle the SYNC. If so, convert its base address into an address
-        // for issuing SYNC commands by setting bits 27 (OCC) 28 and 29
-        // (Sync), then insert this address into the extended address field of
-        // a PBA slave control register image. gsc_scom_centaur() then merges
-        // this extended address into the PBA slave control register (which
-        // has been set up for Centaur SCOM) to do the SYNC.
-
-        // In the override mode (i_setup > 1) we tag the first valid MCS
-        // to recieve the sync if the firmware has not set it up correctly.
-
-        if (o_config->config)
-        {
-#if defined(__P8_DESIGNATED_SYNC__)
-
-            if (designatedSync < 0)
-            {
-                if (i_setup <= 1)
-                {
-                    PK_TRACE_DBG("No MCS is designated for Centaur SYNC");
-                    rc = CENTAUR_NO_DESIGNATED_SYNC;
-                    break;
-
-                }
-                else
-                {
-
-                    designatedSync =
-                        cntlz32(o_config->config << CHIP_CONFIG_MCS_BASE);
-
-                    rc = _getscom(designatedSync, MCSMODE0, &(mcsmode0.value));
-
-                    if (rc)
-                    {
-                        PK_TRACE_DBG("Unexpected rc = 0x%08x "
-                                     "SCOMing MCSMODE0(%d)",
-                                     (uint32_t)rc,
-                                     designatedSync);
-
-                        rc = CENTAUR_MCSMODE0_SCOM_FAILURE;
-                        break;
-                    }
-
-                    mcsmode0.fields.enable_centaur_sync = 1;
-
-                    rc = _putscom(designatedSync, MCSMODE0, mcsmode0.value);
-
-                    if (rc)
-                    {
-                        PK_TRACE_DBG("Unexpected rc = 0x%08x "
-                                     "SCOMing MCSMODE0(%d)",
-                                     (uint32_t)rc,
-                                     designatedSync);
-
-                        rc = CENTAUR_MCSMODE0_SCOM_FAILURE;
-                        break;
-                    }
-                }
-            }
-
-#else
-            // first centaur found
-            designatedSync = cntlz32(o_config->config << CHIP_CONFIG_MCS_BASE);
-#endif
-            // Set the OCC/HOST bit in the PBA
-            base = o_config->baseAddress[designatedSync] | PBA_HOST_OCC_CFG;
-
-            //Pick out the PBA address sub field that will be set by the slvctl extaddr
-            //bits [23:36]
-            slvctl.value = 0;
-            slvctl.fields.extaddr = base >> 27;
-
-            o_config->syncSlaveControl.value = slvctl.value;
         }
 
 

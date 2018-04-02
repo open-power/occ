@@ -62,8 +62,7 @@ typedef enum
 {
   NM_THROTTLE_MBA01       = 0,
   NM_THROTTLE_MBA23       = 1,
-  MBS_THROTTLE_SYNC       = 2,
-  NUM_CENT_THROTTLE_SCOMS = 3,
+  NUM_CENT_THROTTLE_SCOMS = 2,
 } eCentaurThrottleRegs;
 
 
@@ -287,7 +286,6 @@ bool centaur_control( memory_control_task_t * i_memControlTask )
         /// Set up Centuar Scom Registers - array of Scoms
         ///   [0]:  N/M Throttle MBA01
         ///   [1]:  N/M Throttle MBA23
-        ///   [2]:  MB SYNC
 
         //only write to MBA01 if configured
         if(MBA_CONFIGURED(l_cent, 0))
@@ -321,20 +319,9 @@ bool centaur_control( memory_control_task_t * i_memControlTask )
             G_centaurThrottle[NM_THROTTLE_MBA23].commandType = CENTAUR_SCOM_NOP;
         }
 
-
-        /// [2]: Set up the SYNC
-        ///
-        ///    0:7  select mask of MCS units
-        ///    8:15 select the sync type (12 = N/M throttle)
-        ///   57:63 must be zeros to address DW0 in cacheline
-        //G_centaurThrottle[MBS_THROTTLE_SYNC].commandType = CENTAUR_SCOM_NOP;
-        G_centaurThrottle[MBS_THROTTLE_SYNC].commandType = CENTAUR_SCOM_CENTAUR_SYNC_ALL;
-        G_centaurThrottle[MBS_THROTTLE_SYNC].data = CENTAUR_RESET_N_M_THROTTLE_COUNTER_SYNC |
-                                                    CENTAUR_MYSTERY_SYNC; //This is the "PC" sync bit
-
         /// Set up GPE parameters
         l_parms->scomList     = G_centaurThrottle;
-        l_parms->entries      = 2;
+        l_parms->entries      = NUM_CENT_THROTTLE_SCOMS;
         l_parms->error.ffdc   = 0;
 
         // Update the last sent throttle value, this will get
@@ -415,7 +402,7 @@ void centaur_control_init( void )
 
     if( l_rc_gpe )
     {
-        //If fail to create pore flex object then there is a problem.
+        //If fail to create gpe request  then there is a problem.
         TRAC_ERR("centaur_control_init: Failed to initialize centaur control task [l_rc_gpe=0x%x]", l_rc_gpe);
 
         /* @
@@ -424,13 +411,13 @@ void centaur_control_init( void )
          * @reasoncode  SSX_GENERIC_FAILURE
          * @userdata1   l_rc_gpe  - Return code of failing function
          * @userdata2   0
-         * @userdata4   ERC_CENTAUR_PORE_FLEX_CREATE_FAILURE
+         * @userdata4   ERC_CENTAUR_GPE_REQUEST_CREATE_FAILURE
          * @devdesc     Failed to initialize GPE routine
          */
         l_err = createErrl(
                 CENTAUR_INIT_MOD,                           //modId
                 SSX_GENERIC_FAILURE,                        //reasoncode
-                ERC_CENTAUR_PORE_FLEX_CREATE_FAILURE,       //Extended reason code
+                ERC_CENTAUR_GPE_REQUEST_CREATE_FAILURE,     //Extended reason code
                 ERRL_SEV_PREDICTIVE,                        //Severity
                 NULL,                                       //Trace Buf
                 DEFAULT_TRACE_SIZE,                         //Trace Size
