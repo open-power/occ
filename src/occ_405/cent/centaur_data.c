@@ -1066,7 +1066,7 @@ void centaur_init( void )
 
         //set up the data bits
         // TODO RTC 190643 disable until phyp has centaur support
-        l_mbscfg.fields.occ_deadman_timer_sel = 0; // CENT_DEADMAN_TIMER_2SEC;
+        l_mbscfg.fields.occ_deadman_timer_sel = CENT_DEADMAN_TIMER_2SEC;
         L_scomList[0].data = l_mbscfg.value;
 
         /// Set up Centaur Scom Registers - array of Scoms
