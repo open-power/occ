@@ -383,6 +383,13 @@ void call_wof_main( void )
                     if( g_wof->wof_init_state == PGPE_WOF_ENABLED_NO_PREV_DATA )
                     {
                         g_wof->wof_init_state = WOF_ENABLED;
+                        // Set the the frequency ranges
+                        errlHndl_t l_errl = amec_set_freq_range(CURRENT_MODE());
+                        if(l_errl)
+                        {
+                            INTR_TRAC_ERR("call_wof_main: amec_set_freq_range reported an error");
+                            commitErrl( &l_errl);
+                        }
                     }
                 }
             } // >= PGPE_WOF_ENABLED_NO_PREV_DATA
@@ -521,7 +528,7 @@ uint8_t calc_quad_step_from_start( void )
 uint32_t calc_vfrt_mainstore_addr( void )
 {
     // Wof tables address calculation
-    // (Base_addr + 
+    // (Base_addr +
     // (sizeof VFRT * (total active quads * ( (g_wof->vdn_step_from_start * vdd_size) + (g_wof->vdd_step_from_start) ) + (g_wof->quad_step_from_start))))
     g_wof->vfrt_mm_offset = g_wof->vfrt_block_size *
                     (( g_wof->active_quads_size *
@@ -593,7 +600,7 @@ void copy_vfrt_to_sram_callback( void )
  *
  * Description: Callback function for G_wof_vfrt_req GPE request to
  *              confirm the new VFRT is being used by the PGPE and
- *              record the switch on the 405. Also updates the 
+ *              record the switch on the 405. Also updates the
  *              initialization
  */
 void wof_vfrt_callback( void )
@@ -961,7 +968,7 @@ void calculate_core_leakage( void )
                     G_oppb.iddq.avgtemp_all_good_cores_off,
                     quad_v_idx,
                     g_wof->tempprocthrmc[core_idx],
-                    g_wof->v_core_100uV[quad_idx]) 
+                    g_wof->v_core_100uV[quad_idx])
                     +
                     (g_wof->all_cores_off_iso * G_oppb.iddq.good_normal_cores[quad_idx])
                      / 24;
@@ -1479,13 +1486,6 @@ void set_clear_wof_disabled( uint8_t i_action,
 
                 // commit the error log
                 commitErrl( &l_errl );
-
-                // Set the the frequency ranges
-                l_errl = amec_set_freq_range(CURRENT_MODE());
-                if(l_errl)
-                {
-                    commitErrl( &l_errl);
-                }
             }
         }
         else
