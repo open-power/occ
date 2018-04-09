@@ -50,4 +50,11 @@ void gpe_scom_centaur(CentaurConfiguration_t* i_config,
 int centaur_get_mem_data(CentaurConfiguration_t* i_config,
                          CentaurGetMemDataParms_t* i_parms);
 
+/**
+ * Check for channel checkstop
+ * @param[in] The ordinal centaur number
+ * @return [0 | return code]
+ */
+int check_channel_chkstp(unsigned int i_centaur);
+
 #endif

@@ -491,9 +491,14 @@ bool check_centaur_checkstop(memory_control_task_t * i_memControlTask )
 
         commitErrl(&l_err);
 
-        return TRUE; // a centaur channel checkstop error occured
+        return FALSE; // error was not a channel checkstop
     }
-    return FALSE;    // No centaur channel checkstop errors
+    else
+    {
+        // Remove the centaur sensor and all dimm sensors behind it.
+        cent_chan_checkstop(cent);
+    }
+    return TRUE;    // Centaur channel checkstop
 
 }
 

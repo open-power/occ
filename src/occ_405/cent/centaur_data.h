@@ -176,7 +176,11 @@ void cent_recovery(uint32_t i_cent);
 //associated with the specified OCC centaur id.
 CentaurMemData * cent_get_centaur_data_ptr( const uint8_t i_centaur_id );
 
-
+// Create the centaur configuration object
 uint32_t centaur_configuration_create( CentaurConfiguration_t * i_centaurConfiguration );
+
+// Remove centaur from enabled sensor list due to channel checkstop
+void cent_chan_checkstop(uint32_t i_cent);
+
 #endif //_CENTAUR_DATA_H
 

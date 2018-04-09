@@ -51,7 +51,7 @@ typedef union mcfgpr
 } mcfgpr_t;
 
 
-typedef union mcsmode0
+typedef union mcmcicfg
 {
     uint64_t value;
     struct
@@ -67,16 +67,20 @@ typedef union mcsmode0
     struct
     {
 #ifdef _BIG_ENDIAN
-        uint64_t reserved0 : 64;
+        uint64_t dontCare0 : 47;
+        uint64_t disable_channel_fail : 1;
+        uint64_t dontCare1 : 16;
 #else
-        uint64_t reserved0 : 64;
+        uint64_t dontcare1 : 16;
+        uint64_t disable_channel_fail ; 1;
+        uint64_t dontCare0 : 47;
 #endif
     } fields;
-} mcsmode0_t;
+} mcmcicfg_t;
 
 
 
-typedef union mcifir
+typedef union mcchifir
 {
     uint64_t value;
     struct
@@ -92,11 +96,31 @@ typedef union mcifir
     struct
     {
 #ifdef _BIG_ENDIAN
-        uint64_t reserved0 : 64;
+        uint64_t fir_scom_wr_perr : 1;
+        uint64_t fir_scom_cfg_perr : 1;
+        uint64_t fir_dsrc_no_forward_progress : 1;
+        uint64_t fir_dsrc_perf_degrad : 1;
+        uint64_t fir_dmi_channel_fail : 1;
+        uint64_t fir_channel_init_timeout : 1;
+        uint64_t fir_channel_interlock_err : 1;
+        uint64_t dontCare0 : 5;
+        uint64_t fir_replay_buffer_ue : 1;
+        uint64_t dontCare1 : 1;
+        uint64_t fir_replay_buffer_overrun : 1;
+        uint64_t fir_df_sm_perr : 1;
+        uint64_t fir_cen_checkstop : 1;
+        uint64_t dontCare2 : 15;
+        uint64_t fir_dsff_tag_overrun : 1;
+        uint64_t dontCare3 : 7;
+        uint64_t fir_dsff_mca_async_cmd_error : 2;
+        uint64_t fir_dsff_seq_error : 1;
+        uint64_t dontCare4 : 18;
+        uint64_t fir_dsff_timeout : 1;
+        uint64_t dontCare5 : 2;
 #else
-        uint64_t reserved0 : 64;
+        uint64_t dontCare  : 64;
 #endif // _BIG_ENDIAN
     } fields;
-} mcifir_t;
+} mcchifir_t;
 
 #endif

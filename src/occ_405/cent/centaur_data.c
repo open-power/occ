@@ -192,9 +192,26 @@ uint8_t      G_centaur_nest_lfir6 = 0;
 //number of SC polls to wait between i2c recovery attempts
 #define CENT_SC_MAX_INTERVAL 256
 
-//determine scom address of MCIFIR register for given Centaur n
-#define MCS0_MCIFIR_N(n) \
-        ( (n<4)? (MCS0_MCIFIR + ((MCS1_MCIFIR - MCS0_MCIFIR) * (n))) : (MCS4_MCIFIR + ((MCS5_MCIFIR - MCS4_MCIFIR) * (n-4))) )
+// There was a centaur channel checkstop, remove the centaur from the enabled bitmask.
+void cent_chan_checkstop(uint32_t i_cent)
+{
+    if(CENTAUR_PRESENT(i_cent))
+    {
+        //remove checkstopped centaur from presence bitmap
+        G_present_centaurs &= ~(CENTAUR_BY_MASK(i_cent));
+
+        // remove the dimm temperature sensors behind this centaur
+        G_dimm_enabled_sensors.bytes[i_cent] = 0;
+
+        TRAC_IMP("Channel checkstop detected on Centaur[%d] G_present_centaurs[0x%08X]",
+                 i_cent,
+                 G_present_centaurs);
+
+        TRAC_IMP("Updated bitmap of enabled dimm temperature sensors: 0x%08X %08X",
+                 G_dimm_enabled_sensors.words[0],
+                 G_dimm_enabled_sensors.words[1]);
+    }
+}
 
 void cent_recovery(uint32_t i_cent)
 {
@@ -255,9 +272,13 @@ void cent_recovery(uint32_t i_cent)
             G_cent_scom_gpe_parms.error.rc) &&
            (!(L_cent_callouts & l_cent_mask)))
         {
-            // Check if the centaur has a channel checkstop. If it does, then do not
-            // log any errors
-            if(G_cent_scom_gpe_parms.error.rc != CENTAUR_CHANNEL_CHECKSTOP)
+            // Check if the centaur has a channel checkstop. If it does then remove the centaur
+            // from the enabled sensor bit map and do not log any errors
+            if(G_cent_scom_gpe_parms.error.rc == CENTAUR_CHANNEL_CHECKSTOP)
+            {
+                cent_chan_checkstop(l_prev_cent);
+            }
+            else // Make error log for inband scom errors
             {
                 //Mark the centaur as being called out
                 L_cent_callouts |= l_cent_mask;
@@ -641,9 +662,13 @@ void centaur_data( void )
             //(as long as the request was scheduled).
             if(!async_request_completed(&l_centaur_data_ptr->gpe_req.request) || l_parms->error.rc )
             {
-                // Check if the centaur has a channel checkstop. If it does, then do not
-                // log any errors
-                if(G_cent_scom_gpe_parms.error.rc != CENTAUR_CHANNEL_CHECKSTOP)
+                // Check if the centaur has a channel checkstop. If it does then do not
+                // log any errors, but remove the centaur from the config
+                if(l_parms->error.rc == CENTAUR_CHANNEL_CHECKSTOP)
+                {
+                    cent_chan_checkstop(l_centaur_data_ptr->prev_centaur);
+                }
+                else  // log the error if it was not a CENTAUR_CHANNEL_CHECKSTOP
                 {
                     //log an error the first time this happens but keep on running.
                     //eventually, we will timeout on the dimm & centaur temps not being updated
@@ -868,7 +893,7 @@ void centaur_data( void )
     }
     while(0);
 
-    //handle centaur i2c recovery requests and centaur workaround - Needed for P9??
+    //handle centaur i2c recovery requests and centaur workaround.
     if(CENTAUR_PRESENT(l_centaur_data_ptr->current_centaur))
     {
         cent_recovery(l_centaur_data_ptr->current_centaur);

@@ -36,12 +36,13 @@
  * @returns the OCI address to scom the centaur
  * @Post The extended address field in the PBASLVCNT is set
  */
-uint32_t centaur_scom_setup(CentaurConfiguration_t* i_config,
+int centaur_scom_setup(CentaurConfiguration_t* i_config,
                             uint32_t i_centaur_instance,
-                            uint32_t i_scom_address)
+                            uint32_t i_scom_address,
+                            uint32_t *o_oci_addr)
 {
-    uint32_t oci_addr = 0;
- #if defined(__PBASLV__)
+    int rc = 0;
+#if defined(__USE_PBASLV__)
    pba_slvctln_t slvctln;
 #endif
     uint64_t pb_addr = i_config->baseAddress[i_centaur_instance];
@@ -63,34 +64,49 @@ uint32_t centaur_scom_setup(CentaurConfiguration_t* i_config,
     pb_addr  |= 0x0000000002000000ull;
     pb_addr  |= ((uint64_t)scom_address << 3);
 
- #if defined(__PBASLV__)
+#if defined(__USE_PBASLV__)
     // put bits 23:36 of address into slvctln extended addr
     PPE_LVD((i_config->scomParms).slvctl_address, slvctln.value);
     slvctln.fields.extaddr = pb_addr >> 27;
     PPE_STVD((i_config->scomParms).slvctl_address, slvctln.value);
-#endif
+#else
     // HW bug work-around
     {
-        // workaround - don't use extr addr - use pbabar.
+        // workaround - don't use extraddr - use pbabar.
         uint64_t barMsk = 0;
         // put the PBA in the BAR
-        putscom_abs(PBA_BARN(PBA_BAR_CENTAUR), pb_addr);
-        putscom_abs(PBA_BARMSKN(PBA_BAR_CENTAUR), barMsk);
+        rc = putscom_abs(PBA_BARN(PBA_BAR_CENTAUR), pb_addr);
+        if(rc)
+        {
+            PK_TRACE("centaur_scom_setup. putscom fail on PBABAR."
+                     " rc = %d",rc);
+        }
+        else
+        {
+            rc = putscom_abs(PBA_BARMSKN(PBA_BAR_CENTAUR), barMsk);
+            if(rc)
+            {
+                PK_TRACE("centaur_scom_setup. putscom fail on PBABARMSK"
+                         " rc = %d",rc);
+            }
+        }
     }
+#endif
     // make oci address
-    oci_addr = (uint32_t)(pb_addr & 0x07ffffffull);
+    *o_oci_addr = (uint32_t)(pb_addr & 0x07ffffffull);
 
     // upper nibble is PBA region and BAR_SELECT
-    oci_addr  |= ((PBA_BAR_CENTAUR | 0x8) << 28);
-    PK_TRACE_DBG("Centaur OCI scom addr: %08x",oci_addr);
-    return oci_addr;
+    *o_oci_addr  |= ((PBA_BAR_CENTAUR | 0x8) << 28);
+    PK_TRACE_DBG("Centaur OCI scom addr: %08x",*o_oci_addr);
+    return rc;
 }
 
-uint32_t centaur_sensorcache_setup(CentaurConfiguration_t* i_config,
-                                   uint32_t i_centaur_instance)
+int centaur_sensorcache_setup(CentaurConfiguration_t* i_config,
+                                   uint32_t i_centaur_instance,
+                                   uint32_t * o_oci_addr)
 {
-    uint32_t oci_addr = 0;
-#if defined(__PBASLV__)
+    int rc = 0;
+#if defined(__USE_PBASLV__)
     pba_slvctln_t slvctln;
 #endif
     uint64_t pb_addr = i_config->baseAddress[i_centaur_instance];
@@ -98,25 +114,39 @@ uint32_t centaur_sensorcache_setup(CentaurConfiguration_t* i_config,
     // bit 38 set OCI master, bits 39,40 Centaur thermal sensors '10'b
     pb_addr |= 0x0000000003000000ull;
 
-#if defined(__PBASLV__)
+#if defined(__USE_PBASLV__)
     PPE_LVD((i_config->dataParms).slvctl_address, slvctln.value);
     slvctln.fields.extaddr = pb_addr >> 27;
     PPE_STVD((i_config->dataParms).slvctl_address, slvctln.value);
-#endif
+#else
     {
-        // HW bug workaround - don't use extr addr - use pbabar.
+        // HW bug workaround - don't use extaddr - use pbabar.
         uint64_t barMsk = 0;
         // put the PBA in the BAR
-        putscom_abs(PBA_BARN(PBA_BAR_CENTAUR), pb_addr);
-        putscom_abs(PBA_BARMSKN(PBA_BAR_CENTAUR), barMsk);
+        rc = putscom_abs(PBA_BARN(PBA_BAR_CENTAUR), pb_addr);
+        if (rc)
+        {
+            PK_TRACE("centaur_sensorcache_setup: putscom fail on PBABAR,"
+                     " rc = %d",rc);
+        }
+        else
+        {
+            rc = putscom_abs(PBA_BARMSKN(PBA_BAR_CENTAUR), barMsk);
+            if (rc)
+            {
+                PK_TRACE("centaur_sensrocache_setup: putscom fail on"
+                         " PBABARMSK, rc = %d",rc);
+            }
+        }
     }
+#endif
     // make oci address
-    oci_addr = (uint32_t)(pb_addr & 0x07ffffffull);
+    *o_oci_addr = (uint32_t)(pb_addr & 0x07ffffffull);
 
     // PBA space bits[0:1] = '10'  bar select bits[3:4]
-    oci_addr |= ((PBA_BAR_CENTAUR | 0x8) << 28);
+    *o_oci_addr |= ((PBA_BAR_CENTAUR | 0x8) << 28);
 
-     return oci_addr;
+    return rc;
 }
 
 void pbaslvctl_reset(GpePbaParms* i_pba_parms)
@@ -170,6 +200,7 @@ int centaur_get_scom_vector(CentaurConfiguration_t* i_config,
                             uint32_t i_scom_address,
                             uint64_t* o_data)
 {
+    int rc = 0;
     int instance = 0;
     uint64_t pba_slvctln_save;
 
@@ -183,9 +214,17 @@ int centaur_get_scom_vector(CentaurConfiguration_t* i_config,
     {
         if( CHIP_CONFIG_CENTAUR(instance) & (i_config->config))
         {
-            uint32_t oci_addr =
-                centaur_scom_setup(i_config, instance, i_scom_address);
+            uint32_t oci_addr;
+            rc = centaur_scom_setup(i_config,
+                                    instance,
+                                    i_scom_address,
+                                    &oci_addr);
 
+            if(rc)
+            {
+                // Already traced.
+                break;
+            }
             // read centaur scom
             PPE_LVD(oci_addr, *o_data);
         }
@@ -201,7 +240,11 @@ int centaur_get_scom_vector(CentaurConfiguration_t* i_config,
     pbaslvctl_reset(&(i_config->scomParms));
     PPE_STVD((i_config->scomParms).slvctl_address, pba_slvctln_save);
 
-    return rc_from_sibrc();
+    if(!rc)
+    {
+        rc = rc_from_sibrc();
+    }
+    return rc;
 }
 
 int centaur_get_scom(CentaurConfiguration_t* i_config,
@@ -216,10 +259,12 @@ int centaur_get_scom(CentaurConfiguration_t* i_config,
     pbaslvctl_reset(&(i_config->scomParms));
     pba_slvctln_save = pbaslvctl_setup(&(i_config->scomParms));
 
-    oci_addr =
-        centaur_scom_setup(i_config, i_centaur_instance, i_scom_address);
+    rc = centaur_scom_setup(i_config,
+                            i_centaur_instance,
+                            i_scom_address,
+                            &oci_addr);
 
-    if( CHIP_CONFIG_CENTAUR(i_centaur_instance) & (i_config->config))
+    if( !rc && (CHIP_CONFIG_CENTAUR(i_centaur_instance) & (i_config->config)))
     {
         // read centaur scom
         rc = getscom_abs(oci_addr, o_data);
@@ -242,6 +287,7 @@ int centaur_put_scom_all(CentaurConfiguration_t* i_config,
                          uint32_t i_scom_address,
                          uint64_t i_data)
 {
+    int rc = 0;
     int instance = 0;
     uint64_t pba_slvctln_save;
 
@@ -255,8 +301,17 @@ int centaur_put_scom_all(CentaurConfiguration_t* i_config,
     {
         if( CHIP_CONFIG_CENTAUR(instance) & (i_config->config))
         {
-            uint32_t oci_addr =
-                centaur_scom_setup(i_config, instance, i_scom_address);
+            uint32_t oci_addr;
+            rc = centaur_scom_setup(i_config,
+                                    instance,
+                                    i_scom_address,
+                                    &oci_addr);
+
+            if(rc)
+            {
+                // Already traced in centaur_scom_setup
+                break;
+            }
 
             // centaur scom
             PPE_STVD(oci_addr, i_data);
@@ -267,7 +322,11 @@ int centaur_put_scom_all(CentaurConfiguration_t* i_config,
     pbaslvctl_reset(&(i_config->scomParms));
     PPE_STVD((i_config->scomParms).slvctl_address, pba_slvctln_save);
 
-    return rc_from_sibrc();
+    if(!rc)
+    {
+        rc = rc_from_sibrc();
+    }
+    return rc;
 }
 
 int centaur_put_scom(CentaurConfiguration_t* i_config,
@@ -282,17 +341,22 @@ int centaur_put_scom(CentaurConfiguration_t* i_config,
     pbaslvctl_reset(&(i_config->scomParms));
     pba_slvctln_save = pbaslvctl_setup(&(i_config->scomParms));
 
-    oci_addr =
-        centaur_scom_setup(i_config, i_centaur_instance, i_scom_address);
+    rc = centaur_scom_setup(i_config,
+                            i_centaur_instance,
+                            i_scom_address,
+                            &oci_addr);
 
-    if( CHIP_CONFIG_CENTAUR(i_centaur_instance) & (i_config->config))
+    if(!rc)
     {
-        // write centaur scom
-        rc = putscom_abs(oci_addr, i_data);
-    }
-    else
-    {
-        rc = CENTAUR_INVALID_SCOM;
+        if(CHIP_CONFIG_CENTAUR(i_centaur_instance) & (i_config->config))
+        {
+            // write centaur scom
+            rc = putscom_abs(oci_addr, i_data);
+        }
+        else
+        {
+            rc = CENTAUR_INVALID_SCOM;
+        }
     }
 
     // gpe_pba_cntl function?
@@ -317,16 +381,21 @@ int centaur_scom_rmw(CentaurConfiguration_t* i_config,
     pbaslvctl_reset(&(i_config->scomParms));
     pba_slvctln_save = pbaslvctl_setup(&(i_config->scomParms));
 
-    oci_addr =
-        centaur_scom_setup(i_config, i_centaur_instance, i_scom_address);
-
-    rc = getscom_abs(oci_addr, &data64);
+    rc = centaur_scom_setup(i_config,
+                            i_centaur_instance,
+                            i_scom_address,
+                            &oci_addr);
     if(!rc)
     {
-        data64 &= (i_mask ^ 0xffffffffffffffffull);
-        data64 |= *i_data;
 
-        rc = putscom_abs(oci_addr, data64);
+        rc = getscom_abs(oci_addr, &data64);
+        if(!rc)
+        {
+            data64 &= (i_mask ^ 0xffffffffffffffffull);
+            data64 |= *i_data;
+
+            rc = putscom_abs(oci_addr, data64);
+        }
     }
 
     pbaslvctl_reset(&(i_config->scomParms));
@@ -341,6 +410,7 @@ int centaur_scom_rmw_all(CentaurConfiguration_t* i_config,
                          uint64_t i_mask,
                          uint64_t i_data)
 {
+    int rc = 0;
     int instance = 0;
     uint64_t pba_slvctln_save;
 
@@ -355,8 +425,16 @@ int centaur_scom_rmw_all(CentaurConfiguration_t* i_config,
         if( CHIP_CONFIG_CENTAUR(instance) & (i_config->config))
         {
             uint64_t data64;
-            uint32_t oci_addr =
-                centaur_scom_setup(i_config, instance, i_scom_address);
+            uint32_t oci_addr;
+            rc = centaur_scom_setup(i_config,
+                                    instance,
+                                    i_scom_address,
+                                    &oci_addr);
+            if(rc)
+            {
+                // Already traced in centaur_scom_setup
+                break;
+            }
 
             PPE_LVD(oci_addr, data64);
             data64 &= (i_mask ^ 0xffffffffffffffffull);
@@ -369,7 +447,11 @@ int centaur_scom_rmw_all(CentaurConfiguration_t* i_config,
 
     PPE_STVD((i_config->scomParms).slvctl_address, pba_slvctln_save);
 
-    return rc_from_sibrc();
+    if(!rc)
+    {
+        rc = rc_from_sibrc();
+    }
+    return rc;
 }
 
 
@@ -381,16 +463,8 @@ int centaur_get_mem_data(CentaurConfiguration_t* i_config,
     uint32_t oci_addr = 0;
     uint64_t pba_slvctln_save;
     uint64_t data64 = 0;
-    uint64_t barMskOrg = 0;
 
     i_parms->error.rc = CENTAUR_GET_MEM_DATA_DIED;
-
-    // HW bug work-around
-    rc = getscom_abs(PBA_BARMSKN(PBA_BAR_CENTAUR), &barMskOrg);
-    if(rc)
-    {
-        PK_TRACE("Workaround failed to read bar mask. rc = %x",rc);
-    }
 
     pbaslvctl_reset(&(i_config->dataParms));
     pba_slvctln_save = pbaslvctl_setup(&(i_config->dataParms));
@@ -404,23 +478,21 @@ int centaur_get_mem_data(CentaurConfiguration_t* i_config,
         }
         else
         {
-            oci_addr = centaur_sensorcache_setup(i_config, i_parms->collect);
+            rc = centaur_sensorcache_setup(i_config, i_parms->collect,&oci_addr);
 
-            // Poke the Centaur sensor cache by writing to base address.
-            data64 = 0;
-            PPE_STVD(oci_addr, data64);
-
-            // Read 128 bytes from centaur cache
-            int i;
-            for(i = 0; i < 128; i += 8)
+            if(!rc)
             {
-                PPE_LVDX(oci_addr, i, data64);
-                PPE_STVDX((i_parms->data), i, data64);
+                // Read 128 bytes from centaur cache
+                int i;
+                for(i = 0; i < 128; i += 8)
+                {
+                    PPE_LVDX(oci_addr, i, data64);
+                    PPE_STVDX((i_parms->data), i, data64);
+                }
             }
         }
     }
-    // TODO Decide to keep this or not.
-#if defined(__JUNK__)
+
     if(!rc && i_parms->update != -1)
     {
         if((i_parms->update >= OCCHW_NCENTAUR) ||
@@ -430,31 +502,34 @@ int centaur_get_mem_data(CentaurConfiguration_t* i_config,
         }
         else
         {
-            oci_addr = centaur_sensorcache_setup(i_config, i_parms->update);
+            rc = centaur_sensorcache_setup(i_config, i_parms->update,&oci_addr);
 
-            //PK_TRACE("CACHE POKE: %08x",oci_addr);
-            // Writing a zero to this address "pokes" the centaur.
-            data64 = 0;
-            PPE_STVD(oci_addr, data64);
+            if(!rc)
+            {
+                // Writing a zero to this address tells the centaur to update
+                // the sensor cache.
+                data64 = 0;
+                PPE_STVD(oci_addr, data64);
+            }
         }
     }
-#endif
 
     pbaslvctl_reset(&(i_config->dataParms));
     PPE_STVD((i_config->dataParms).slvctl_address, pba_slvctln_save);
 
-    // TODO if RC then check for centaur channel checkstop
-    // The MCFIR reg no longer contains a bit for CHANNEL_FAIL_SIGNAL_ACTIVE.
-    // No equivalent has been identified yet for P9. Marc Gollub will provide
-    // if needed.
-    // Return rc = CENTAUR_CHANNEL_CHECKSTOP
-
-    // HW bug work-around
-    rc = putscom_abs(PBA_BARMSKN(PBA_BAR_CENTAUR), barMskOrg);
-    if(rc)
+    if(!rc)
     {
-        PK_TRACE("Work around Failed to set bar mask. rc = %x",rc);
+        int instance =  i_parms->collect;
+        if(instance == -1)
+        {
+            instance = i_parms->update;
+        }
+        if (instance != -1)
+        {
+            rc = check_channel_chkstp(instance);
+        }
     }
+
 
     i_parms->error.rc = rc;
     return rc;

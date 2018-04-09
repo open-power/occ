@@ -50,28 +50,28 @@ const uint32_t MCFGPR[OCCHW_NCENTAUR] =
     MCS_3_MCRSVDF
 };
 
-//const uint32_t MCSMODE0[OCCHW_NCENTAUR / 2] __attribute__((section(".sdata2"))) =
-//{
-//    MCS_0_MCMODE0,
-//    MCS_1_MCMODE0,
-//    MCS_2_MCMODE0,
-//    MCS_3_MCMODE0
-//};
-
-//const uint32_t MCFIR[OCCHW_NCENTAUR / 2] __attribute((section(".sdata2"))) =
-//{
-//    MCS_0_MCFIR,
-//    MCS_1_MCFIR,
-//    MCS_2_MCFIR,
-//    MCS_3_MCFIR
-//};
-
-const uint32_t MCFGP[OCCHW_NCENTAUR/2] =
+const uint32_t MCCHIFIR[OCCHW_NCENTAUR] =
 {
-    MCS_0_MCFGP,
-    MCS_1_MCFGP,
-    MCS_2_MCFGP,
-    MCS_3_MCFGP
+    MCP_CHAN0_CHI_FIR,
+    MCP_CHAN1_CHI_FIR,
+    MCP_CHAN2_CHI_FIR,
+    MCP_CHAN3_CHI_FIR,
+    MCP_CHAN4_CHI_FIR,
+    MCP_CHAN5_CHI_FIR,
+    MCP_CHAN6_CHI_FIR,
+    MCP_CHAN7_CHI_FIR
+};
+
+const uint32_t MCMCICFG1Q[OCCHW_NCENTAUR] =
+{
+    MCP_CHAN0_CHI_MCICFG1Q,
+    MCP_CHAN1_CHI_MCICFG1Q,
+    MCP_CHAN2_CHI_MCICFG1Q,
+    MCP_CHAN3_CHI_MCICFG1Q,
+    MCP_CHAN4_CHI_MCICFG1Q,
+    MCP_CHAN5_CHI_MCICFG1Q,
+    MCP_CHAN6_CHI_MCICFG1Q,
+    MCP_CHAN7_CHI_MCICFG1Q
 };
 
 ///////////////////////////////////////////////////////////////
@@ -222,8 +222,15 @@ int gpe_centaur_configuration_create(CentaurConfiguration_t* o_config)
         {
             uint64_t val64;
 
-            //FIR bits have changed from p8 TODO Marc Golub to provide what
-            //firchecks need to be done for P9 
+            // check for channel checkstop
+            rc = check_channel_chkstp(i);
+            if (rc)
+            {
+                // If scom failed OR there is a channel checkstop then
+                // Centaur is not usable.
+                rc = 0;
+                continue;
+            }
 
             // Verify that inband scom has been setup. If not then
             // assume the centaur is either non-existant or not configured.
@@ -420,3 +427,53 @@ int gpe_centaur_configuration_create(CentaurConfiguration_t* o_config)
     return rc;
 }
 
+int check_channel_chkstp(unsigned int i_centaur)
+{
+    int rc = 0;
+    mcchifir_t chifir;
+    mcmcicfg_t chicfg;
+
+    do
+    {
+        rc = getscom_abs(MCCHIFIR[i_centaur], &(chifir.value));
+        if (rc)
+        {
+            PK_TRACE("MCCHIFIR scom failed. rc = %d",rc);
+            break;
+        }
+
+        if(chifir.fields.fir_dsrc_no_forward_progress ||
+           chifir.fields.fir_dmi_channel_fail  ||
+           chifir.fields.fir_channel_init_timeout ||
+           chifir.fields.fir_channel_interlock_err ||
+           chifir.fields.fir_replay_buffer_ue ||
+           chifir.fields.fir_replay_buffer_overrun ||
+           chifir.fields.fir_df_sm_perr ||
+           chifir.fields.fir_cen_checkstop ||
+           chifir.fields.fir_dsff_tag_overrun ||
+           chifir.fields.fir_dsff_mca_async_cmd_error ||
+           chifir.fields.fir_dsff_seq_error ||
+           chifir.fields.fir_dsff_timeout)
+        {
+            PK_TRACE("MCCHIFIR: %08x%08x for channel %d",
+                     chifir.words.high_order,
+                     chifir.words.low_order,
+                     i_centaur);
+
+            rc = getscom_abs(MCMCICFG1Q[i_centaur], &(chicfg.value));
+            if (rc)
+            {
+                PK_TRACE("MCMCICFG scom failed. rc = %d",rc);
+                break;
+            }
+
+            PK_TRACE("MCMCICFG1Q %08x%08x",
+                chicfg.words.high_order,
+                chicfg.words.low_order);
+
+            rc = CENTAUR_CHANNEL_CHECKSTOP;
+        }
+    } while(0);
+
+    return rc;
+}
