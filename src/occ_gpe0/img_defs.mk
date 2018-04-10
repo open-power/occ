@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2015,2017
+# Contributors Listed Below - COPYRIGHT 2015,2018
 # [+] International Business Machines Corp.
 #
 #
@@ -111,10 +111,6 @@ $(warning The CTEPATH variable is not defined; Defaulting to /afs/awd)
 export CTEPATH = /afs/awd/projects/cte
 endif
 
-ifdef P2P_ENABLE
-# TODO
-else
-
 # libs needed by compiler
 ifndef PPE_TOOL_PATH
 PPE_TOOL_PATH = $(CTEPATH)/tools/ppetools/prod
@@ -124,12 +120,6 @@ endif
 
 ifndef GCC-TOOL-PREFIX
 GCC-TOOL-PREFIX = $(PPE_TOOL_PATH)/bin/powerpc-eabi-
-endif
-
-endif
-
-ifndef P2P_SRCDIR
-export P2P_SRCDIR $(abspath ../ppe/tools/PowerPCtoPPE)
 endif
 
 ifndef PPETRACEPP_DIR
@@ -161,10 +151,6 @@ CPP     = $(GCC-TOOL-PREFIX)gcc
 TCXX    = $(PPETRACEPP_DIR)/ppetracepp $(GCC-TOOL-PREFIX)g++
 CXX     = $(GCC-TOOL-PREFIX)g++
 
-ifdef P2P_ENABLE
-PCP     = $(P2P_SRCDIR)/ppc-ppe-pcp.py
-endif
-
 ifeq "$(PK_TIMER_SUPPORT)" ""
 PK_TIMER_SUPPORT  = 1
 endif
@@ -185,11 +171,7 @@ endif
 
 
 ifndef GCC-O-LEVEL
-ifdef P2P_ENABLE
-GCC-O-LEVEL = -O -g
-else
 GCC-O-LEVEL = -Os
-endif
 endif
 
 GCC-DEFS += -DIMAGE_NAME=$(IMAGE_NAME)
@@ -209,23 +191,6 @@ INCLUDES += $(IMG_INCLUDES) $(GLOBAL_INCLUDES) \
 	-I$(PK_SRCDIR)/../../include/registers -I$(OCCLIB_SRCDIR) -I$(COMMONLIB_SRCDIR) \
     -I$(OCC_COMMON_TYPES_DIR) -I$(IMAGE_SRCDIR)/../common
 
-ifdef P2P_ENABLE
-PIPE-CFLAGS = -pipe -Wa,-m405
-
-GCC-CFLAGS += -Wall -fsigned-char -msoft-float  \
-	-mcpu=405 -mmulhw -mmultiple \
-	-meabi -msdata=eabi -ffreestanding -fno-common \
-	-fno-inline-functions-called-once \
-	-ffixed-r11 -ffixed-r12 \
-    -ffixed-r14 -ffixed-r15 -ffixed-r16 -ffixed-r17 \
-    -ffixed-r18 -ffixed-r19 -ffixed-r20 -ffixed-r21 \
-    -ffixed-r22 -ffixed-r23 -ffixed-r24 -ffixed-r25 \
-    -ffixed-r26 -ffixed-r27 \
-    -ffixed-cr1 -ffixed-cr2 -ffixed-cr3 -ffixed-cr4 \
-    -ffixed-cr5 -ffixed-cr6 -ffixed-cr7 -Werror \
-    -std=gnu89
-
-else
 PIPE-CFLAGS = -pipe
 
 GCC-CFLAGS += -g -gpubnames -gdwarf-3
@@ -240,7 +205,6 @@ GCC-CFLAGS += -ffreestanding
 GCC-CFLAGS += -fno-common
 GCC-CFLAGS += -fno-inline-functions-called-once
 GCC-CFLAGS += -std=gnu89
-endif
 
 CFLAGS      =  -c $(GCC-CFLAGS) $(PIPE-CFLAGS) $(GCC-O-LEVEL) $(INCLUDES)
 
@@ -250,13 +214,8 @@ CPPFLAGS    = -E
 
 ASFLAGS		= -mppe42
 
-ifdef P2P_ENABLE
-#use this to disable sda optimizations
-#PCP-FLAG    =  
-else
 #use this to enable sda optimizations
 PCP-FLAG = -e
-endif
 ############################################################################
 
 #override the GNU Make implicit rule for going from a .c to a .o
@@ -298,19 +257,5 @@ $(OBJDIR)/%.d: %.S
 	sed 's,\($*\)\.d[ :]*,\1.es $@ : ,g' < $@.$$$$ > $@; \
 	rm -f $@.$$$$
 
-
-ifndef P2P_ENABLE
-
 $(OBJDIR)/%.o: $(OBJDIR)/%.s
 	$(AS) $(ASFLAGS) -o $@ $<
-
-else
-
-$(OBJDIR)/%.es: $(OBJDIR)/%.s
-	$(PCP) $(PCP-FLAG) -f $<
-.PRECIOUS: $(OBJDIR)/%.es
-
-$(OBJDIR)/%.o: $(OBJDIR)/%.es
-	$(AS) $(ASFLAGS) -o $@ $<
-
-endif
