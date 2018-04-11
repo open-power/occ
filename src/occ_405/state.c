@@ -326,7 +326,6 @@ errlHndl_t SMGR_standby_to_characterization()
 errlHndl_t SMGR_all_to_standby()
 {
     uint32_t    wait_time = 0;
-    int         rc;
 
     TRAC_IMP("SMGR: Transition from State (%d) to Standby Started", CURRENT_STATE());
 
@@ -349,18 +348,9 @@ errlHndl_t SMGR_all_to_standby()
         TRAC_ERR("SMGR_all_to_standby: Timeout waiting for Pstates start/suspend IPC task. OCCFLG[0x%08X]",
                   in32(OCB_OCCFLG));
     }
-    // Stop Pstates if enabled
-    else if(G_proc_pstate_status == PSTATES_ENABLED)
-    {
-        rc = pgpe_start_suspend(PGPE_ACTION_PSTATE_STOP, G_proc_pmcr_owner);
-        if(rc)
-        {
-            TRAC_ERR("SMGR_all_to_standby: Failed to stop the pstate protocol on PGPE. rc[0x%08X] OCCFLG[0x%08X]",
-                      rc, in32(OCB_OCCFLG));
-        }
-    }
+    // Leave pState protocol alone so if we are exiting active state the PGPE will take action
+    // when the watchdog goes off
 
-    // Pstates should be disabled, ready to safely transition to standby
     // Set the RTL Flags to indicate which tasks can run
     //   - Clear ACTIVE b/c not in ACTIVE State
     //   - Clear OBSERVATION b/c not in CHARACTERIZATION State
