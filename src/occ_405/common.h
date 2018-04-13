@@ -33,6 +33,7 @@
 #define ALLOW_VFRT_TRACE       0x0004
 #define ALLOW_OPAL_TRACE       0x0008
 #define ALLOW_MEM_TRACE        0x0010
+#define ALLOW_AVSBUS_TRACE     0x0020
 
 // Start of SRAM memory
 #define SRAM_START_ADDRESS_405      0xFFF40000

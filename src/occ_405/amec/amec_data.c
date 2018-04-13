@@ -268,11 +268,6 @@ errlHndl_t AMEC_data_write_thrm_thresholds(const OCC_MODE i_mode)
         TRAC_INFO("AMEC_data_write_thrm_thresholds: DIMM setpoints - DVFS: %u, Error: %u",
                   l_dvfs_temp, l_error);
 
-        g_amec->vrhotproc.setpoint = l_frudata[DATA_FRU_VRM_OT_STATUS].error_count;
-
-        TRAC_INFO("AMEC_data_write_thrm_thresholds: Setting %u as DVFS setpoint for VRHOT",
-                  g_amec->vrhotproc.setpoint);
-
         // Store the VRM Vdd thermal data
         if (!l_pm_limits)
         {

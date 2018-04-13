@@ -144,7 +144,6 @@ enum e_gsid
     VOLTVDN,
     CURVDD,
     CURVDN,
-    VRMPROCOT,
     TEMPVDD,
 
     // ------------------------------------------------------

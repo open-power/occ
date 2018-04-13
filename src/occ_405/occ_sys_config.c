@@ -166,6 +166,8 @@ occSysConfigData_t G_sysConfigData =
     },
 
     .proc_power_adder = 0,
+    .vdd_current_rollover_10mA = 0xffff,
+    .vdd_max_current_10mA = 0xffff,
 
     // -----------------------------------------------------------
     // Power Cap Initializations

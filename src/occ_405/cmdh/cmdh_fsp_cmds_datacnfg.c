@@ -113,9 +113,6 @@ cmdh_ips_config_data_t G_ips_config_data = {0};
 
 bool G_mem_monitoring_allowed = FALSE;
 
-// Flag will get enabled when OCC receives Thermal Threshold data
-bool G_vrm_thermal_monitoring = FALSE;
-
 // Will get set when receiving APSS config data
 PWR_READING_TYPE G_pwr_reading_type = PWR_READING_TYPE_NONE;
 
@@ -1146,15 +1143,19 @@ errlHndl_t data_store_avsbus_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                     cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     errlHndl_t l_err = NULL;
-    const uint8_t  AVSBUS_VERSION = 0x01;
-    const uint16_t AVSBUS_LENGTH = sizeof(cmdh_avsbus_config_t) - sizeof(cmdh_fsp_cmd_header_t);
+    const uint8_t  AVSBUS_VERSION_1 = 0x01;
+    const uint8_t  AVSBUS_VERSION_2 = 0x02;
+    const uint16_t AVSBUS_V1_LENGTH = sizeof(cmdh_avsbus_config_t) - sizeof(cmdh_fsp_cmd_header_t);
+    const uint16_t AVSBUS_V2_LENGTH = sizeof(cmdh_avsbus_v2_config_t) - sizeof(cmdh_fsp_cmd_header_t);
     bool l_invalid_data = FALSE;
 
     cmdh_avsbus_config_t *l_cmd_ptr = (cmdh_avsbus_config_t *)i_cmd_ptr;
     uint16_t l_data_length = CMDH_DATALEN_FIELD_UINT16(l_cmd_ptr);
 
-    if ((AVSBUS_VERSION == l_cmd_ptr->version) && (AVSBUS_LENGTH == l_data_length))
+    if ( ((AVSBUS_VERSION_1 == l_cmd_ptr->version) && (AVSBUS_V1_LENGTH == l_data_length)) ||
+         ((AVSBUS_VERSION_2 == l_cmd_ptr->version) && (AVSBUS_V2_LENGTH == l_data_length)) )
     {
+        // common code for all versions
         // Validate Vdd
         if ((l_cmd_ptr->vdd_bus == 0) || (l_cmd_ptr->vdd_bus == 1))
         {
@@ -1215,10 +1216,10 @@ errlHndl_t data_store_avsbus_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
         }
         else
         {
-            if (l_cmd_ptr->vdd_bus != 0xFF)
+            if (l_cmd_ptr->vdn_bus != 0xFF)
             {
                 CMDH_TRAC_ERR("data_store_avsbus_config: Invalid Vdn data (%d / %d)",
-                              l_cmd_ptr->vdd_bus, l_cmd_ptr->vdd_rail);
+                              l_cmd_ptr->vdn_bus, l_cmd_ptr->vdn_rail);
                 l_invalid_data = TRUE;
             }
             else
@@ -1249,6 +1250,23 @@ errlHndl_t data_store_avsbus_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
     else
     {
         G_sysConfigData.proc_power_adder = l_cmd_ptr->proc_power_adder;
+
+        // Vdd Current roll over workaround is enabled if we received Version 2
+        if(AVSBUS_VERSION_2 == l_cmd_ptr->version)
+        {
+            cmdh_avsbus_v2_config_t *l_cmd_ptr_v2 = (cmdh_avsbus_v2_config_t *)i_cmd_ptr;
+            G_sysConfigData.vdd_current_rollover_10mA = (uint32_t)l_cmd_ptr_v2->vdd_current_rollover;
+            G_sysConfigData.vdd_max_current_10mA = (uint32_t)l_cmd_ptr_v2->vdd_max_current;
+        }
+        else
+        {
+            // Vdd Current roll over workaround is disabled
+            G_sysConfigData.vdd_current_rollover_10mA = 0xFFFF;  // no rollover
+            G_sysConfigData.vdd_max_current_10mA = 0xFFFF;
+        }
+
+        CMDH_TRAC_INFO("data_store_avsbus_config: Vdd Current roll over at 0x%08X max 0x%08X",
+                        G_sysConfigData.vdd_current_rollover_10mA, G_sysConfigData.vdd_max_current_10mA);
 
         // We can use vdd/vdn. Clear NO_VDD_VDN_READ mask
         set_clear_wof_disabled( CLEAR, WOF_RC_INVALID_VDD_VDN );
@@ -1829,7 +1847,6 @@ errlHndl_t data_store_thrm_thresholds(const cmdh_fsp_cmd_t * i_cmd_ptr,
     cmdh_thrm_thresholds_v20_t*     l_cmd_ptr = (cmdh_thrm_thresholds_v20_t*)i_cmd_ptr;
     uint8_t                         l_num_data_sets = 0;
     bool                            l_invalid_input = TRUE; //Assume bad input
-    bool                            l_vrm_frutype = FALSE;
 
     do
     {
@@ -1898,10 +1915,11 @@ errlHndl_t data_store_thrm_thresholds(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 G_data_cnfg->thrm_thresh.data[l_frutype].max_read_timeout =
                     l_cmd_ptr->data[i].max_read_timeout;
 
-                // Set a local flag if we get data for VRM OT status FRU type
+                // VRM OT status is no longer supported since the OCC supports reading Vdd temperature
+                // Trace if VRM OT status FRU type is received and just ignore it
                 if(l_frutype == DATA_FRU_VRM_OT_STATUS)
                 {
-                    l_vrm_frutype = TRUE;
+                    CMDH_TRAC_IMP("data_store_thrm_thresholds: Received deprecated VRM OT STATUS type will be ignored");
                 }
 
                 // Useful trace for debugging
@@ -1920,23 +1938,6 @@ errlHndl_t data_store_thrm_thresholds(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
                 break;
             }
-        }
-
-        // Did we get data for VRM FRU type?
-        if(l_vrm_frutype)
-        {
-            // Then, set a global variable so that OCC attempts to talk to
-            // the VRMs
-            G_vrm_thermal_monitoring = TRUE;
-        }
-        else
-        {
-            // No VRM data was received, so do not read AVS Bus status from VRMs
-            // Also, make the error count very high so that the health
-            // monitor doesn't complain about VRHOT being asserted.
-            G_vrm_thermal_monitoring = FALSE;
-            G_data_cnfg->thrm_thresh.data[DATA_FRU_VRM_OT_STATUS].error_count = 0xFF;
-            CMDH_TRAC_IMP("data_store_thrm_thresholds: No VRM limits received. OCC will not monitor AVS bus status");
         }
 
     } while(0);

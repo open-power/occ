@@ -31,6 +31,8 @@
 extern bool G_avsbus_vdd_monitoring;
 extern bool G_avsbus_vdn_monitoring;
 
+extern uint32_t G_check_vdd_current_10mA_for_rollover;
+
 #define AVSBUS_STATUS_OVER_CURRENT_MASK     0x4000
 #define AVSBUS_STATUS_UNDER_VOLTAGE_MASK    0x2000
 #define AVSBUS_STATUS_OVER_TEMPERATURE_MASK 0x1000
@@ -78,10 +80,13 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
 // (results can then be read on the next tick)
 void initiate_avsbus_read_status();
 
-// Read the status from AVS Bus and return 1 if over-temperature was found for either bus
-// or 0 if no OT was found.  0xFF will be returned if there was an error reading status
-// on either bus.  Mfg error will be logged for the first OT or first OC condition.
-// Error history counters will be incremented for any over-temp/over-current condition.
-uint8_t process_avsbus_status();
+// Read the status from AVS Bus
+// Error history counters will be incremented for any over-current condition.
+void process_avsbus_status();
 
+// Calculate chip voltage and power from AVSbus readings and update sensors
+void update_avsbus_power_sensors(const avsbus_type_e i_type);
+
+// Error history counters will be incremented for any over-current condition.
+uint32_t clear_status_errors(const uint8_t i_bus, const uint32_t i_status_mask);
 #endif //_AVSBUS_H
