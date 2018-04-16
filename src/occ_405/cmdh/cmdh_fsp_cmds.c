@@ -53,7 +53,6 @@
 #include "gpu.h"
 
 extern dimm_sensor_flags_t G_dimm_temp_expired_bitmap;
-extern bool G_vrm_thermal_monitoring;
 extern uint32_t G_first_proc_gpu_config;
 extern bool G_vrm_vdd_temp_expired;
 extern bool G_reset_prep;
@@ -171,7 +170,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
     for ( k = 0; k < MAX_NUM_CORES; k++ )
     {
         uint32_t l_freq_reason = g_amec->proc[0].core[k].f_reason;
-        if ( l_freq_reason & (AMEC_VOTING_REASON_PROC_THRM | AMEC_VOTING_REASON_VRHOT_THRM) )
+        if ( l_freq_reason & AMEC_VOTING_REASON_PROC_THRM )
         {
             // only set DVFS bit if throttling below frequency to report throttling
             if(G_amec_opal_proc_throt_reason == CPU_OVERTEMP)
@@ -361,19 +360,6 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
                     }
                 }
             }
-        }
-    }
-
-    if (G_vrm_thermal_monitoring)
-    {
-        // Add VRFAN
-        const sensor_t *vrfan = getSensorByGsid(VRMPROCOT);
-        if (vrfan != NULL)
-        {
-            l_tempSensorList[l_sensorHeader.count].id = 0;
-            l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_VRM_OT_STATUS;
-            l_tempSensorList[l_sensorHeader.count].value = vrfan->sample & 0xFF;
-            l_sensorHeader.count++;
         }
     }
 

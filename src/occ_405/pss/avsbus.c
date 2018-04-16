@@ -62,17 +62,21 @@ static bool G_trace_scoms = TRUE;
 bool G_avsbus_vdd_monitoring = FALSE;
 bool G_avsbus_vdn_monitoring = FALSE;
 
+// Vdd Current reading to check if it rolled over (0 when no roll over checking required)
+uint32_t G_check_vdd_current_10mA_for_rollover = 0;
+
+extern uint16_t G_allow_trace_flags;
 extern uint32_t G_nest_frequency_mhz;
 #define AVSBUS_FREQUENCY_MHZ 10
-extern bool G_vrm_thermal_monitoring;
 
 extern bool G_vrm_vdd_temp_expired;
 void amec_health_check_vrm_vdd_temp(const sensor_t *i_sensor);
 
 // Number of read failures allowed before elog is created and reset requested.
-// This should be no longer than 4ms (or it will impact WOF calculations)
-// (readings are taken every 500us => 500us * 8 = 4ms)
-const uint8_t     MAX_READ_ATTEMPTS = 8;
+// If readings take longer than 4ms, it will impact WOF calculations.
+// Voltage/Current are read every 4 ticks (2ms).
+// Because 3 read attemps would take 6ms (> 4ms), an error needs to be logged.
+const uint8_t     MAX_READ_ATTEMPTS = 3;
 
 const uint16_t    AVSBUS_STATUS_READ_ERROR = 0xFFFF;
 extern data_cnfg_t * G_data_cnfg;
@@ -81,33 +85,49 @@ uint32_t avs_crc_calculate(const uint32_t i_avs_cmd);
 
 // NOTE: OCC must use Bridge B, because Bridge A is reserved for PGPE
 
+// Registers are based on bus number
+const uint32_t OCB_O2SCMDxB[2] = { OCB_O2SCMD0B, OCB_O2SCMD1B };
+const uint32_t OCB_O2SWDxB[2]  = { OCB_O2SWD0B,  OCB_O2SWD1B };
+const uint32_t OCB_O2SSTxB[2]  = { OCB_O2SST0B,  OCB_O2SST1B };
+const uint32_t OCB_O2SRDxB[2]  = { OCB_O2SRD0B,  OCB_O2SRD1B };
 
-// Clear OT/OC bit in status reg for both busses
-uint32_t deglitch_status_errors(const uint8_t i_bus, const uint32_t i_status_mask)
+// Wait for operation to complete (clear ongoing)
+uint32_t wait_for_complete(const uint8_t i_bus)
 {
-    // Determine register based on the bus number
-    uint32_t o2scmd_reg = OCB_O2SCMD0B;
-    uint32_t o2swd_reg = OCB_O2SWD0B;
-    uint32_t o2sst_reg = OCB_O2SST0B;
-    if (i_bus != 0)
+    uint32_t l_status = in32(OCB_O2SSTxB[i_bus]);
+    DEBUG_IN32(OCB_O2SSTxB[i_bus], l_status, "OCB_O2SSTxB");
+    unsigned int loops = 0;
+    while ((l_status & AVSBUS_STATUS_ONGOING) && (loops < 500))
     {
-        o2scmd_reg = OCB_O2SCMD1B;
-        o2swd_reg = OCB_O2SWD1B;
-        o2sst_reg = OCB_O2SST1B;
+        // o2s_ongoing bit was still set (operation did not complete)
+        l_status = in32(OCB_O2SSTxB[i_bus]);
+        ++loops;
+    }
+    DEBUG_IN32(OCB_O2SSTxB[i_bus], l_status, "OCB_O2SSTxB");
+    if (0 != (l_status & AVSBUS_STATUS_ERRORS))
+    {
+        TRAC_ERR("wait_for_complete(): error in status register: 0x%08X", l_status);
+    }
+    else if (l_status & AVSBUS_STATUS_ONGOING) // o2s_ongoing
+    {
+        TRAC_ERR("wait_for_complete(): timeout waiting for ongoing bit to clear (%d loops) 0x%08X", loops, l_status);
     }
 
+    return l_status;
+}
+
+
+// Clear bits i_status_mask in status reg for i_bus
+uint32_t clear_status_errors(const uint8_t i_bus, const uint32_t i_status_mask)
+{
     // Write O2SCMD[a][n]
     //   o2s_clear_sticky_bits = 1
     uint32_t value = 0x40000000;
-    DEBUG_OUT32(o2scmd_reg, value, "OCB_O2SCMDxB");
-    out32(o2scmd_reg, value);
+    DEBUG_OUT32(OCB_O2SCMDxB[i_bus], value, "OCB_O2SCMDxB");
+    out32(OCB_O2SCMDxB[i_bus], value);
 
-    // To deglitch the status bits, set the status bits you wish to clear with a 1. (in CmdData)
-    // After the write completes, if the status is still active, then the
-    // signal must be solid failure.
-
-    TRAC_INFO("deglitch_status_errors(AVSBUS %d,0x%08X)", i_bus, i_status_mask);
-    // AVS Bus command (write staus):
+    // To clear status bits write the status bits you wish to clear with a 1. (in CmdData)
+    // AVS Bus command (write status):
     //   0:1   StartCode = 0b01
     //   2:3   Cmd = 0b00 (write+commit)
     //   4     CmdGroup = 0b0 (AVSBus)
@@ -117,37 +137,50 @@ uint32_t deglitch_status_errors(const uint8_t i_bus, const uint32_t i_status_mas
     //   29:31 CRC
     //   01000DDD DRRRRXXX XXXXXXXX XXXXXCCC
     //   01000111 01111--- -------- -----CCC
-    uint32_t cmd_data = AVSBUS_STATUS_OVER_CURRENT_MASK | AVSBUS_STATUS_OVER_TEMPERATURE_MASK;
+    uint32_t cmd_data = i_status_mask;
     value = 0x47780000 | (cmd_data << 3);
     // Calculate/add CRC
     value |= avs_crc_calculate(value);
-    DEBUG_OUT32(o2swd_reg, value, "OCB_O2SWDxB");
-    out32(o2swd_reg, value);
+    DEBUG_OUT32(OCB_O2SWDxB[i_bus], value, "OCB_O2SWDxB");
+    out32(OCB_O2SWDxB[i_bus], value);
 
     // Wait for operation to complete (clear ongoing)
-    uint32_t l_status = in32(o2sst_reg);
-    DEBUG_IN32(o2sst_reg, l_status, "OCB_O2SSTxB");
-    unsigned int loops = 0;
-    while ((l_status & AVSBUS_STATUS_ONGOING) && (loops < 500))
-    {
-        // o2s_ongoing bit was still set (operation did not complete)
-        l_status = in32(o2sst_reg);
-        ++loops;
-    }
-    DEBUG_IN32(o2sst_reg, l_status, "OCB_O2SSTxB");
-    if (0 != (l_status & AVSBUS_STATUS_ERRORS))
-    {
-        TRAC_ERR("deglitch_status_errors(): error in status register: 0x%08X", l_status);
-    }
-    else if (l_status & AVSBUS_STATUS_ONGOING) // o2s_ongoing
-    {
-        TRAC_ERR("deglitch_status_errors(): timeout waiting for ongoing bit to clear (%d loops) 0x%08X", loops, l_status);
-    }
+    const uint32_t l_status = wait_for_complete(i_bus);
 
     // return the last read status
     return l_status;
 
-} // end deglitch_status_errors()
+} // end clear_status_errors()
+
+
+// Re-sync AVS bus to try to recover from errors
+// Reference: chips/p9/procedures/hwp/lib/p9_avsbus_lib.C
+//            chips/p9/procedures/ppe_closed/pgpe/pstate_gpe/avs_driver.c
+uint32_t avsbus_resync(const uint8_t i_bus)
+{
+    // clear sticky bits in o2s_status_reg
+    // Write O2SCMD[a][n]
+    //   o2s_clear_sticky_bits = 1
+    uint32_t value = 0x40000000;
+    DEBUG_OUT32(OCB_O2SCMDxB[i_bus], value, "OCB_O2SCMDxB");
+    out32(OCB_O2SCMDxB[i_bus], value);
+
+    // Drive AVS transaction with a frame value 0xFFFFFFFF (idle frame)
+    // to initialize the AVS slave.
+    // In principle this only has to be done once. Though docs suggest
+    // that due to noise on the chip this init should be done periodically.
+    TRAC_INFO("avsbus_resync: Send idle frame (bus %d)", i_bus);
+    value = 0xFFFFFFFF;
+    DEBUG_OUT32(OCB_O2SWDxB[i_bus], value, "OCB_O2SWDxB");
+    out32(OCB_O2SWDxB[i_bus], value);
+
+    // Wait for operation to complete (clear ongoing)
+    const uint32_t l_status = wait_for_complete(i_bus);
+
+    // return the last read status
+    return l_status;
+
+} // end avsbus_resync()
 
 
 // AVS Bus setup that must be done once (common between read/write operations)
@@ -256,10 +289,19 @@ void avsbus_init()
         out32(OCB_O2SCTRL21B, value);
     }
 
-    // Clear OC/OT masks in the status reg
-    const uint32_t error_mask = AVSBUS_STATUS_OVER_CURRENT_MASK | AVSBUS_STATUS_OVER_TEMPERATURE_MASK;
-    deglitch_status_errors(0, error_mask);
-    deglitch_status_errors(1, error_mask);
+    // Re-sync AVS bus and clear OC bits in status regs and
+    const uint32_t error_mask = AVSBUS_STATUS_OVER_CURRENT_MASK;
+    if (bus0_monitoring)
+    {
+        avsbus_resync(0);
+        clear_status_errors(0, error_mask);
+    }
+    if (bus1_monitoring)
+    {
+        avsbus_resync(1);
+        clear_status_errors(1, error_mask);
+    }
+
 
 } // end avsbus_init()
 
@@ -353,20 +395,11 @@ void avsbus_read_start(const avsbus_type_e i_type,
     }
 #endif
 
-    // Determine register based on the bus number
-    uint32_t o2scmd_reg = OCB_O2SCMD0B;
-    uint32_t o2swd_reg = OCB_O2SWD0B;
-    if (1 == l_data.bus)
-    {
-        o2scmd_reg = OCB_O2SCMD1B;
-        o2swd_reg = OCB_O2SWD1B;
-    }
-
     // Write O2SCMD[a][n]
     //   o2s_clear_sticky_bits = 1
     uint32_t value = 0x40000000;
-    DEBUG_OUT32(o2scmd_reg, value, "OCB_O2SCMDxB");
-    out32(o2scmd_reg, value);
+    DEBUG_OUT32(OCB_O2SCMDxB[l_data.bus], value, "OCB_O2SCMDxB");
+    out32(OCB_O2SCMDxB[l_data.bus], value);
 
     // Write O2SWD[a][n] - write commands and initiate hardware operation
     //   o2s_wdata with content
@@ -382,8 +415,8 @@ void avsbus_read_start(const avsbus_type_e i_type,
     value = 0x7007FFF8 | ((uint32_t) i_cmdtype << 23) | ((uint32_t)l_data.rail << 19);
     // Calculate/add CRC
     value |= avs_crc_calculate(value);
-    DEBUG_OUT32(o2swd_reg, value, "OCB_O2SWDxB");
-    out32(o2swd_reg, value);
+    DEBUG_OUT32(OCB_O2SWDxB[l_data.bus], value, "OCB_O2SWDxB");
+    out32(OCB_O2SWDxB[l_data.bus], value);
 
     // Read has been started so now just wait for HW to complete
 
@@ -449,15 +482,6 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
     }
 #endif
 
-    // Determine register based on the bus number
-    uint32_t o2sst_reg = OCB_O2SST0B;
-    uint32_t o2srd_reg = OCB_O2SRD0B;
-    if (1 == l_data.bus)
-    {
-        o2sst_reg = OCB_O2SST1B;
-        o2srd_reg = OCB_O2SRD1B;
-    }
-
     // HW: Wait for bus op to complete
     // HW: arbitration between two bridges
     // HW: o2s_ongoing: 0 -> 1
@@ -467,8 +491,8 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
     // Since read was started in previous tick, it should have already completed
     // (no need to poll/wait on o2s_ongoing)
     enum occReasonCode rc = OCC_SUCCESS_REASON_CODE;
-    uint32_t l_status = in32(o2sst_reg);
-    DEBUG_IN32(o2sst_reg, l_status, "OCB_O2SSTxB");
+    uint32_t l_status = in32(OCB_O2SSTxB[l_data.bus]);
+    DEBUG_IN32(OCB_O2SSTxB[l_data.bus], l_status, "OCB_O2SSTxB");
     // OCC O2S Status Register
     //   0     o2s_ongoing
     //   1:4   reserved
@@ -486,7 +510,7 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
         if ((*l_error_count == 1) || (*l_error_count == MAX_READ_ATTEMPTS))
         {
             TRAC_ERR("avsbus_read: Error found in Vd%c %c O2SST[0x%08X] = [0x%08X]",
-                     l_trace_type, l_trace_cmd, o2sst_reg, l_status);
+                     l_trace_type, l_trace_cmd, OCB_O2SSTxB[l_data.bus], l_status);
             /*
              * @errortype
              * @moduleid    PSS_MID_AVSBUS_READ
@@ -506,7 +530,7 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
         if ((*l_error_count == 1) || (*l_error_count == MAX_READ_ATTEMPTS))
         {
             TRAC_ERR("avsbus_read: Vd%c %c timeout waiting for o2s_ongoing change O2SST[0x%08X] = [0x%08X]",
-                     l_trace_type, l_trace_cmd, o2sst_reg, l_status);
+                     l_trace_type, l_trace_cmd, OCB_O2SSTxB[l_data.bus], l_status);
             /*
              * @errortype
              * @moduleid    PSS_MID_AVSBUS_READ
@@ -522,8 +546,8 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
     if (FALSE == l_failure)
     {
         // Read the response data
-        uint32_t value = in32(o2srd_reg);
-        DEBUG_IN32(o2srd_reg, value, "OCB_O2SRDxB");
+        uint32_t value = in32(OCB_O2SRDxB[l_data.bus]);
+        DEBUG_IN32(OCB_O2SRDxB[l_data.bus], value, "OCB_O2SRDxB");
         // AVS Bus response (read voltage, current, or temperature):
         //   0:1   SlaveAck (0b00 from slave indicates good CRC and action was taken)
         //   2     0
@@ -542,7 +566,7 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
             if ((*l_error_count == 1) || (*l_error_count == MAX_READ_ATTEMPTS))
             {
                 TRAC_ERR("avsbus_read: CRC mismatch in Vd%c %c rsp O2SRD[0x%08X] = [0x%08X] (calculated CRC 0x%08X)",
-                         l_trace_type, l_trace_cmd, o2srd_reg, value, crc);
+                         l_trace_type, l_trace_cmd, OCB_O2SRDxB[l_data.bus], value, crc);
                 /*
                  * @errortype
                  * @moduleid    PSS_MID_AVSBUS_READ
@@ -650,7 +674,6 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
                      *l_error_count, l_trace_type, l_trace_cmd);
             G_avsbus_vdd_monitoring = FALSE;
             G_avsbus_vdn_monitoring = FALSE;
-            G_vrm_thermal_monitoring = FALSE;
             errlHndl_t l_err = createErrl(PSS_MID_AVSBUS_READ,
                                           rc,
                                           exrc,
@@ -665,6 +688,11 @@ uint16_t avsbus_read(const avsbus_type_e i_type,
                              G_sysConfigData.proc_huid,
                              ERRL_CALLOUT_PRIORITY_MED);
             REQUEST_RESET(l_err);
+        }
+        else
+        {
+            // Force a re-sync after any failure
+            avsbus_resync(l_data.bus);
         }
     }
 
@@ -697,7 +725,7 @@ void initiate_avsbus_reads(avsbus_cmdtype_e i_cmdType)
 } // end initiate_avsbus_reads()
 
 
-// Initiate read for error status bits (over-temperature, over-current)
+// Initiate read for error status bits (over-current)
 void initiate_avsbus_read_status()
 {
     if (isSafeStateRequested())
@@ -725,20 +753,6 @@ void initiate_avsbus_read_status()
         }
         if (bus != 0xFF)
         {
-            // Determine register based on the bus number
-            uint32_t o2scmd_reg = OCB_O2SCMD0B;
-            uint32_t o2swd_reg = OCB_O2SWD0B;
-            if (0 == bus)
-            {
-                o2scmd_reg = OCB_O2SCMD0B;
-                o2swd_reg = OCB_O2SWD0B;
-            }
-            else
-            {
-                o2scmd_reg = OCB_O2SCMD1B;
-                o2swd_reg = OCB_O2SWD1B;
-            }
-
 #ifdef AVSDEBUG
             if (L_trace_count < DEBUG_TRACE_MAX)
             {
@@ -749,8 +763,8 @@ void initiate_avsbus_read_status()
             // Write O2SCMD[a][n]
             //   o2s_clear_sticky_bits = 1
             uint32_t value = 0x40000000;
-            DEBUG_OUT32(o2scmd_reg, value, "OCB_O2SCMDxB");
-            out32(o2scmd_reg, value);
+            DEBUG_OUT32(OCB_O2SCMDxB[bus], value, "OCB_O2SCMDxB");
+            out32(OCB_O2SCMDxB[bus], value);
 
             // Write O2SWD[a][n] - write commands and initiate hardware operation
             //   o2s_wdata with content
@@ -767,8 +781,8 @@ void initiate_avsbus_read_status()
             value = 0x777FFFF8;
             // Calculate/add CRC
             value |= avs_crc_calculate(value);
-            DEBUG_OUT32(o2swd_reg, value, "OCB_O2SWDxB");
-            out32(o2swd_reg, value);
+            DEBUG_OUT32(OCB_O2SWDxB[bus], value, "OCB_O2SWDxB");
+            out32(OCB_O2SWDxB[bus], value);
         }
     }
 
@@ -788,12 +802,10 @@ void initiate_avsbus_read_status()
 
 
 // Process AVS Bus read status results (or errors)
-// Predictive error will be logged after "VRMs: max_read_timeout" failures
-// and a mfg error will be committed.
 // Returns the status data or AVSBUS_STATUS_READ_ERROR on error
 uint16_t avsbus_read_status(const avsbus_type_e i_type)
 {
-    if (isSafeStateRequested() || (G_vrm_thermal_monitoring == FALSE))
+    if (isSafeStateRequested())
     {
         // No need to process data if OCC will be reset
         return 0;
@@ -801,7 +813,6 @@ uint16_t avsbus_read_status(const avsbus_type_e i_type)
 
     uint16_t o_reading = 0;
     bool l_failure = FALSE;
-    const uint8_t max_read_attempts = G_data_cnfg->thrm_thresh.data[DATA_FRU_VRM_OT_STATUS].max_read_timeout;
 
     // Static error counters for each type (Vdd/Vdn)
     static uint32_t L_error_count[AVSBUS_TYPE_MAX] = {0};
@@ -824,15 +835,6 @@ uint16_t avsbus_read_status(const avsbus_type_e i_type)
     }
 #endif
 
-    // Determine register based on the bus number
-    uint32_t o2sst_reg = OCB_O2SST0B;
-    uint32_t o2srd_reg = OCB_O2SRD0B;
-    if (1 == l_data.bus)
-    {
-        o2sst_reg = OCB_O2SST1B;
-        o2srd_reg = OCB_O2SRD1B;
-    }
-
     // HW: Wait for bus op to complete
     // HW: arbitration between two bridges
     // HW: o2s_ongoing: 0 -> 1
@@ -841,9 +843,8 @@ uint16_t avsbus_read_status(const avsbus_type_e i_type)
 
     // Since read was started in previous tick, it should have already completed
     // (no need to poll/wait on o2s_ongoing)
-    enum occReasonCode rc = OCC_SUCCESS_REASON_CODE;
-    uint32_t l_status = in32(o2sst_reg);
-    DEBUG_IN32(o2sst_reg, l_status, "OCB_O2SSTxB");
+    uint32_t l_status = in32(OCB_O2SSTxB[l_data.bus]);
+    DEBUG_IN32(OCB_O2SSTxB[l_data.bus], l_status, "OCB_O2SSTxB");
     // OCC O2S Status Register
     //   0     o2s_ongoing
     //   1:4   reserved
@@ -858,19 +859,10 @@ uint16_t avsbus_read_status(const avsbus_type_e i_type)
         // error bit was set
         l_failure = TRUE;
         (*l_error_count)++;
-        if ((*l_error_count == 1) || (*l_error_count == max_read_attempts))
+        if ((*l_error_count == 1) || (*l_error_count == MAX_READ_ATTEMPTS))
         {
             TRAC_ERR("avsbus_read_status: Error found in Vd%c O2SST[0x%08X] = [0x%08X]",
-                     l_trace_type, o2sst_reg, l_status);
-            /*
-             * @errortype
-             * @moduleid    PSS_MID_AVSBUS_READ_STATUS
-             * @reasoncode  AVSBUS_ERROR
-             * @userdata1   AVS Bus type/bus/rail
-             * @userdata2   status
-             * @devdesc     Error encountered when reading AVS Bus
-             */
-            rc = AVSBUS_ERROR;
+                     l_trace_type, OCB_O2SSTxB[l_data.bus], l_status);
         }
     }
     else if (l_status & AVSBUS_STATUS_ONGOING) // o2s_ongoing
@@ -878,27 +870,18 @@ uint16_t avsbus_read_status(const avsbus_type_e i_type)
         // o2s_ongoing bit was still set (operation did not complete)
         l_failure = TRUE;
         (*l_error_count)++;
-        if ((*l_error_count == 1) || (*l_error_count == max_read_attempts))
+        if ((*l_error_count == 1) || (*l_error_count == MAX_READ_ATTEMPTS))
         {
             TRAC_ERR("avsbus_read_status: Vd%c timeout waiting for o2s_ongoing change O2SST[0x%08X] = [0x%08X]",
-                     l_trace_type, o2sst_reg, l_status);
-            /*
-             * @errortype
-             * @moduleid    PSS_MID_AVSBUS_READ_STATUS
-             * @reasoncode  AVSBUS_TIMEOUT
-             * @userdata1   AVS Bus type/bus/rail
-             * @userdata2   status
-             * @devdesc     Timeout when reading AVS Bus
-             */
-            rc = AVSBUS_TIMEOUT;
+                     l_trace_type, OCB_O2SSTxB[l_data.bus], l_status);
         }
     }
 
     if (FALSE == l_failure)
     {
         // Read the response data
-        uint32_t value = in32(o2srd_reg);
-        DEBUG_IN32(o2srd_reg, value, "OCB_O2SRDxB");
+        uint32_t value = in32(OCB_O2SRDxB[l_data.bus]);
+        DEBUG_IN32(OCB_O2SRDxB[l_data.bus], value, "OCB_O2SRDxB");
         // AVS Bus response (read status):
         //   0:1   SlaveAck (0b00 from slave indicates good CRC and action was taken)
         //   2     0
@@ -914,19 +897,10 @@ uint16_t avsbus_read_status(const avsbus_type_e i_type)
         {
             l_failure = TRUE;
             (*l_error_count)++;
-            if ((*l_error_count == 1) || (*l_error_count == max_read_attempts))
+            if ((*l_error_count == 1) || (*l_error_count == MAX_READ_ATTEMPTS))
             {
                 TRAC_ERR("avsbus_read_status: CRC mismatch in Vd%c rsp O2SRD[0x%08X] = [0x%08X] (calculated CRC 0x%08X)",
-                         l_trace_type, o2srd_reg, value, crc);
-                /*
-                 * @errortype
-                 * @moduleid    PSS_MID_AVSBUS_READ_STATUS
-                 * @reasoncode  AVSBUS_CRC_ERROR
-                 * @userdata1   AVS Bus type/bus/rail
-                 * @userdata2   status
-                 * @devdesc     CRC error reading AVS Bus
-                 */
-                rc = AVSBUS_CRC_ERROR;
+                         l_trace_type, OCB_O2SRDxB[l_data.bus], value, crc);
             }
         }
         // Check for valid command operation and extract read data
@@ -964,39 +938,24 @@ uint16_t avsbus_read_status(const avsbus_type_e i_type)
         {
             l_failure = TRUE;
             (*l_error_count)++;
-            if ((*l_error_count == 1) || (*l_error_count == max_read_attempts))
+            if ((*l_error_count == 1) || (*l_error_count == MAX_READ_ATTEMPTS))
             {
                 TRAC_ERR("avsbus_read_status: SlaveAck reported no action taken[0x%08X]", value);
-                rc = AVSBUS_ERROR;
             }
         }
     }
 
     if (l_failure)
     {
-        if (*l_error_count == max_read_attempts)
+        if (*l_error_count == MAX_READ_ATTEMPTS)
         {
             TRAC_ERR("avsbus_read_status: Reached %d consecutive Vd%c errors reading status",
                      *l_error_count, l_trace_type);
-            G_avsbus_vdd_monitoring = FALSE;
-            G_avsbus_vdn_monitoring = FALSE;
-            G_vrm_thermal_monitoring = FALSE;
-            errlHndl_t l_err = createErrl(PSS_MID_AVSBUS_READ_STATUS,
-                                          rc,
-                                          ERC_AVSBUS_STATUS_FAILURE,
-                                          ERRL_SEV_PREDICTIVE,
-                                          NULL,
-                                          DEFAULT_TRACE_SIZE,
-                                          (i_type << 16) | (l_data.bus << 8) | l_data.rail,
-                                          l_status);
-            setErrlActions(l_err, ERRL_ACTIONS_MANUFACTURING_ERROR);
-            // add processor callout
-            addCalloutToErrl(l_err,
-                             ERRL_CALLOUT_TYPE_HUID,
-                             G_sysConfigData.proc_huid,
-                             ERRL_CALLOUT_PRIORITY_MED);
-            commitErrl(&l_err);
+            // Reading AVS bus status is not critical, so don't stop monitoring or commit error
         }
+
+        // Force a re-sync after any failure
+        avsbus_resync(l_data.bus);
         o_reading = AVSBUS_STATUS_READ_ERROR;
     }
 
@@ -1013,243 +972,96 @@ uint16_t avsbus_read_status(const avsbus_type_e i_type)
 } // end avsbus_read_status()
 
 
-// Read the status from AVS Bus and return 1 if over-temperature was found for either bus
-// or 0 if no OT was found.  0xFF will be returned if there was an error reading status.
-// Error history counters will be incremented for any over-temp/over-current condition.
-// Mfg error will be logged for the first OT or first OC condition.
-uint8_t process_avsbus_status()
+// Read the status from AVS Bus and apply Vdd current roll over workaround if needed
+// Error history counters will be incremented for any over-current condition.
+void process_avsbus_status()
 {
-    uint8_t  foundOT = 0;
-    uint8_t  foundOC = 0;
     uint16_t vdd_status = 0;
     uint16_t vdn_status = 0;
-    static bool L_vdd_ot_found = FALSE;
     static bool L_vdd_oc_found = FALSE;
-    static bool L_vdn_ot_found = FALSE;
     static bool L_vdn_oc_found = FALSE;
-    static bool L_vdd_ot_counted = FALSE;
-    static bool L_vdd_oc_counted = FALSE;
-    static bool L_vdn_ot_counted = FALSE;
-    static bool L_vdn_oc_counted = FALSE;
 
-    if (G_vrm_thermal_monitoring)
+    if (G_avsbus_vdd_monitoring)
     {
-        if (G_avsbus_vdd_monitoring)
+        vdd_status = avsbus_read_status(AVSBUS_VDD);
+        if (vdd_status != AVSBUS_STATUS_READ_ERROR)
         {
-            vdd_status = avsbus_read_status(AVSBUS_VDD);
-            if (vdd_status != AVSBUS_STATUS_READ_ERROR)
+            if ((vdd_status & AVSBUS_STATUS_OVER_CURRENT_MASK) == 0)
             {
-                if ((vdd_status & (AVSBUS_STATUS_OVER_TEMPERATURE_MASK|AVSBUS_STATUS_OVER_CURRENT_MASK)) == 0)
+                // No OC errors found
+                if (L_vdd_oc_found)
                 {
-                    // No OT/OC errors found
-                    if (L_vdd_ot_found) TRAC_INFO("process_avsbus_status: Vdd OT cleared");
-                    L_vdd_ot_found = FALSE;
-                    L_vdd_ot_counted = FALSE;
-                    if (L_vdd_oc_found) TRAC_INFO("process_avsbus_status: Vdd OC cleared");
                     L_vdd_oc_found = FALSE;
-                    L_vdd_oc_counted = FALSE;
-                }
-                else
-                {
-                    // Deglitch error if needed
-                    uint32_t deglitch_mask = 0;
-                    if ((vdd_status & AVSBUS_STATUS_OVER_TEMPERATURE_MASK) && (!L_vdd_ot_found))
-                    {
-                        deglitch_mask |= AVSBUS_STATUS_OVER_TEMPERATURE_MASK;
-                        L_vdd_ot_found = TRUE;
-                    }
-                    if ((vdd_status & AVSBUS_STATUS_OVER_CURRENT_MASK) && (!L_vdd_oc_found))
-                    {
-                        deglitch_mask |= AVSBUS_STATUS_OVER_CURRENT_MASK;
-                        L_vdd_oc_found = TRUE;
-                    }
-                    if (deglitch_mask)
-                    {
-                        // Deglitch error bit(s)
-                        deglitch_status_errors(G_sysConfigData.avsbus_vdd.bus, deglitch_mask);
-
-                        // Clear error bit(s) since could be false reading
-                        vdd_status &= (~deglitch_mask);
-                    }
-
-                    // Process error (if already deglitched)
-                    if (vdd_status & AVSBUS_STATUS_OVER_TEMPERATURE_MASK)
-                    {
-                        foundOT = 1;
-                        if (!L_vdd_ot_counted)
-                        {
-                            INCREMENT_ERR_HISTORY(ERRH_AVSBUS_VDD_OVER_TEMPERATURE);
-                            L_vdd_ot_counted = TRUE;
-                        }
-                    }
-                    else
-                    {
-                        L_vdd_ot_counted = FALSE;
-                    }
-
-                    if (vdd_status & AVSBUS_STATUS_OVER_CURRENT_MASK)
-                    {
-                        foundOC = 1;
-                        if (!L_vdd_oc_counted)
-                        {
-                            INCREMENT_ERR_HISTORY(ERRH_AVSBUS_VDD_OVER_CURRENT);
-                            L_vdd_oc_counted = TRUE;
-                        }
-                    }
-                    else
-                    {
-                        L_vdd_oc_counted = FALSE;
-                    }
                 }
             }
-            else
+            else // Over current warning bit is set
             {
-                // 0xFF indicates error reading status
-                foundOT = 0xFF;
+                INCREMENT_ERR_HISTORY(ERRH_AVSBUS_VDD_OVER_CURRENT);
+                L_vdd_oc_found = TRUE;
+            }
+
+            // Was updating Vdd Current sensor on hold to check if the reading rolled over?
+            if (G_check_vdd_current_10mA_for_rollover)
+            {
+                uint32_t l_current = G_check_vdd_current_10mA_for_rollover;
+
+                // over current bit gets set when there is a roll over
+                if (L_vdd_oc_found)
+                {
+                   // add the rollover point (from AVSbus config data) to the Current reading
+                   l_current += G_sysConfigData.vdd_current_rollover_10mA;
+                   // sanity check for valid rollover, make sure it isn't over the theoretical max (from AVSbus config data)
+                   if(l_current > G_sysConfigData.vdd_max_current_10mA)
+                   {
+                        // went over the theoretical max don't apply the roll over
+                        INCREMENT_ERR_HISTORY(ERRH_VDD_CURRENT_ROLLOVER_MAX);
+                        l_current = G_check_vdd_current_10mA_for_rollover;
+                   }
+                }
+
+                // Now it is ok to update the sensor with Current value in unit 10mA
+                sensor_update(AMECSENSOR_PTR(CURVDD), (uint16_t)l_current);
+
+                // Update the chip voltage and power sensors after every current reading
+                update_avsbus_power_sensors(AVSBUS_VDD);
+
+                // clear so we know we have a new reading next time
+                G_check_vdd_current_10mA_for_rollover = 0;
             }
         }
-        if (G_avsbus_vdn_monitoring)
+        else
         {
-            vdn_status = avsbus_read_status(AVSBUS_VDN);
-            if (vdn_status != AVSBUS_STATUS_READ_ERROR)
+            // error reading status
+            INCREMENT_ERR_HISTORY(ERRH_AVSBUS_VDD_STATUS_READ_FAIL);
+        }
+    }
+    if (G_avsbus_vdn_monitoring)
+    {
+        vdn_status = avsbus_read_status(AVSBUS_VDN);
+        if (vdn_status != AVSBUS_STATUS_READ_ERROR)
+        {
+            if ((vdn_status & AVSBUS_STATUS_OVER_CURRENT_MASK) == 0)
             {
-                if ((vdn_status & (AVSBUS_STATUS_OVER_TEMPERATURE_MASK|AVSBUS_STATUS_OVER_CURRENT_MASK)) == 0)
-                {
-                    // No OT/OC errors found
-                    if (L_vdn_ot_found) TRAC_INFO("process_avsbus_status: Vdn OT cleared");
-                    L_vdn_ot_found = FALSE;
-                    L_vdn_ot_counted = FALSE;
-                    if (L_vdn_oc_found) TRAC_INFO("process_avsbus_status: Vdn OC cleared");
-                    L_vdn_oc_found = FALSE;
-                    L_vdn_oc_counted = FALSE;
-                }
-                else
-                {
-                    // Deglitch error if needed
-                    uint32_t deglitch_mask = 0;
-                    if ((vdn_status & AVSBUS_STATUS_OVER_TEMPERATURE_MASK) && (!L_vdn_ot_found))
-                    {
-                        deglitch_mask |= AVSBUS_STATUS_OVER_TEMPERATURE_MASK;
-                        L_vdn_ot_found = TRUE;
-                    }
-                    if ((vdn_status & AVSBUS_STATUS_OVER_CURRENT_MASK) && (!L_vdn_oc_found))
-                    {
-                        deglitch_mask |= AVSBUS_STATUS_OVER_CURRENT_MASK;
-                        L_vdn_oc_found = TRUE;
-                    }
-                    if (deglitch_mask)
-                    {
-                        // Deglitch error bit(s)
-                        deglitch_status_errors(G_sysConfigData.avsbus_vdn.bus, deglitch_mask);
-
-                        // Clear error bit(s) since could be false reading
-                        vdn_status &= (~deglitch_mask);
-                    }
-
-                    // Process error (if already deglitched)
-                    if (vdn_status & AVSBUS_STATUS_OVER_TEMPERATURE_MASK)
-                    {
-                        // if no Vdd error, update OT result
-                        if (foundOT != 0xFF)
-                        {
-                            foundOT = 1;
-                        }
-                        if (!L_vdn_ot_counted)
-                        {
-                            INCREMENT_ERR_HISTORY(ERRH_AVSBUS_VDN_OVER_TEMPERATURE);
-                            L_vdn_ot_counted = TRUE;
-                        }
-                    }
-                    else
-                    {
-                        L_vdn_ot_counted = FALSE;
-                    }
-
-                    if (vdn_status & AVSBUS_STATUS_OVER_CURRENT_MASK)
-                    {
-                        foundOC = 1;
-                        if (!L_vdn_oc_counted)
-                        {
-                            INCREMENT_ERR_HISTORY(ERRH_AVSBUS_VDN_OVER_CURRENT);
-                            L_vdn_oc_counted = TRUE;
-                        }
-                    }
-                    else
-                    {
-                        L_vdn_oc_counted = FALSE;
-                    }
-                }
+                // No OC errors found
+                if (L_vdn_oc_found) TRAC_INFO("process_avsbus_status: Vdn OC cleared");
+                L_vdn_oc_found = FALSE;
             }
-            else
+            else // Over current warning bit is set
             {
-                // 0xFF indicates error reading status
-                foundOT = 0xFF;
+                INCREMENT_ERR_HISTORY(ERRH_AVSBUS_VDN_OVER_CURRENT);
+                L_vdn_oc_found = TRUE;
+                // Clear the over current error bit so we get a new read next time
+                clear_status_errors(G_sysConfigData.avsbus_vdn.bus, AVSBUS_STATUS_OVER_CURRENT_MASK);
             }
         }
-
-        // Log an error the first time either condition is asserted
-        static bool loggedOT = FALSE;
-        static bool loggedOC = FALSE;
-        errlHndl_t l_err;
-        if ((foundOT == 1) && !loggedOT && G_vrm_thermal_monitoring)
+        else
         {
-            loggedOT = TRUE;
-            TRAC_ERR("process_avsbus_status: AVSBUS Over Temperature Warning (Vdd: 0x%08X, Vdn: 0x%08X)",
-                     vdd_status, vdn_status);
-            /* @
-             * @errortype
-             * @moduleid    PSS_MID_AVSBUS_READ
-             * @reasoncode  VRM_VRFAN_WARNING
-             * @userdata1   Vdd Status
-             * @userdata2   Vdn Status
-             * @devdesc     VRFAN / over-temperature asserted
-             */
-            l_err = createErrl(PSS_MID_AVSBUS_READ,
-                               VRM_VRFAN_WARNING,
-                               OCC_NO_EXTENDED_RC,
-                               ERRL_SEV_INFORMATIONAL,
-                               NULL,
-                               DEFAULT_TRACE_SIZE,
-                               vdd_status, vdn_status);
-            setErrlActions(l_err, ERRL_ACTIONS_MANUFACTURING_ERROR);
-            // add processor callout
-            addCalloutToErrl(l_err,
-                             ERRL_CALLOUT_TYPE_HUID,
-                             G_sysConfigData.proc_huid,
-                             ERRL_CALLOUT_PRIORITY_MED);
-            commitErrl(&l_err);
-        }
-        if ((foundOC == 1) && !loggedOC)
-        {
-            loggedOC = TRUE;
-            TRAC_ERR("process_avsbus_status: AVSBUS Over Current Warning (Vdd: 0x%08X, Vdn: 0x%08X)",
-                     vdd_status, vdn_status);
-            /* @
-             * @errortype
-             * @moduleid    PSS_MID_AVSBUS_READ
-             * @reasoncode  VRM_OVER_CURRENT_WARNING
-             * @userdata1   Vdd Status
-             * @userdata2   Vdn Status
-             * @devdesc     Output over-current asserted
-             */
-            l_err = createErrl(PSS_MID_AVSBUS_READ,
-                               VRM_OVER_CURRENT_WARNING,
-                               OCC_NO_EXTENDED_RC,
-                               ERRL_SEV_INFORMATIONAL,
-                               NULL,
-                               DEFAULT_TRACE_SIZE,
-                               vdd_status, vdn_status);
-            setErrlActions(l_err, ERRL_ACTIONS_MANUFACTURING_ERROR);
-            // add processor callout
-            addCalloutToErrl(l_err,
-                             ERRL_CALLOUT_TYPE_HUID,
-                             G_sysConfigData.proc_huid,
-                             ERRL_CALLOUT_PRIORITY_MED);
-            commitErrl(&l_err);
+            // error reading status
+            INCREMENT_ERR_HISTORY(ERRH_AVSBUS_VDN_STATUS_READ_FAIL);
         }
     }
 
-    return foundOT;
+    return;
 
 } // end process_avsbus_status()
 

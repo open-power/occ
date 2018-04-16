@@ -77,7 +77,7 @@ typedef enum
     DATA_FRU_PROC               = 0x00,
     DATA_FRU_CENTAUR            = 0x01,
     DATA_FRU_DIMM               = 0x02,
-    DATA_FRU_VRM_OT_STATUS      = 0x03,  // this is just a bit indicating OT or not
+    DATA_FRU_VRM_OT_STATUS      = 0x03,  // this is just for the bit and is no longer being supported
     DATA_FRU_GPU                = 0x04,
     DATA_FRU_GPU_MEM            = 0x05,
     DATA_FRU_VRM_VDD            = 0x06,  // this is an actual temperature reading for VRM Vdd
@@ -164,6 +164,22 @@ typedef struct __attribute__ ((packed))
     uint8_t  vdn_rail;
     uint16_t proc_power_adder;
 }cmdh_avsbus_config_t;
+
+// Version 2 AVS Bus config data.
+typedef struct __attribute__ ((packed))
+{
+    struct cmdh_fsp_cmd_header;
+    uint8_t  format;
+    uint8_t  version;
+    uint8_t  vdd_bus;
+    uint8_t  vdd_rail;
+    uint16_t reserved1;
+    uint8_t  vdn_bus;
+    uint8_t  vdn_rail;
+    uint16_t proc_power_adder;
+    uint16_t vdd_current_rollover;
+    uint16_t vdd_max_current;
+}cmdh_avsbus_v2_config_t;
 
 // Used by TMGT to send OCC GPU data.
 // Header data for GPU version 2 cfg packet

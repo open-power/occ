@@ -122,7 +122,7 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
         l_freq_min = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
 
         // Set Max frequency (turbo if wof off, otherwise max possible (ultra turbo)
-        if( g_amec->wof.wof_disabled )
+        if( g_amec->wof.wof_disabled || (g_amec->wof.wof_init_state != WOF_ENABLED) )
         {
             l_freq_max = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
         }
@@ -141,7 +141,7 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
           (i_mode == OCC_MODE_DYN_POWER_SAVE_FP) )
       {
           // clip to turbo if WOF is disabled
-          if( g_amec->wof.wof_disabled )
+          if( g_amec->wof.wof_disabled || (g_amec->wof.wof_init_state != WOF_ENABLED) )
           {
               l_freq_max = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
           }
@@ -375,22 +375,6 @@ void amec_slv_proc_voting_box(void)
         }
     }
 
-    // Controller request based on VRHOT signal from processor regulator
-    if(g_amec->vrhotproc.freq_request < l_chip_fmax)
-    {
-        l_chip_fmax = g_amec->vrhotproc.freq_request;
-        l_chip_reason = AMEC_VOTING_REASON_VRHOT_THRM;
-
-        if(l_report_throttle_freq <= l_chip_fmax)
-        {
-            l_kvm_throt_reason = PROC_OVERTEMP_EXCEED_REPORT;
-        }
-        else
-        {
-            l_kvm_throt_reason = CPU_OVERTEMP;
-        }
-    }
-
     for (k=0; k<MAX_NUM_CORES; k++)
     {
         if( CORE_PRESENT(k) && !CORE_OFFLINE(k) )
@@ -419,7 +403,6 @@ void amec_slv_proc_voting_box(void)
                         // have a thermal or power emergency
                         if(!(l_chip_reason & (AMEC_VOTING_REASON_PROC_THRM |
                                               AMEC_VOTING_REASON_VDD_THRM |
-                                              AMEC_VOTING_REASON_VRHOT_THRM |
                                               AMEC_VOTING_REASON_PPB |
                                               AMEC_VOTING_REASON_PMAX |
                                               AMEC_VOTING_REASON_CONN_OC)))

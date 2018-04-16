@@ -71,7 +71,6 @@ uint32_t G_curr_num_gpus_sys = 0;
 
 extern bool    G_gpu_monitoring_allowed;
 extern uint8_t G_occ_interrupt_type;
-extern bool    G_vrm_thermal_monitoring;
 extern PWR_READING_TYPE  G_pwr_reading_type;
 extern bool    G_apss_present;
 extern OCCPstateParmBlock G_oppb;
@@ -433,8 +432,22 @@ void process_avsbus_current()
         uint32_t current = avsbus_read(AVSBUS_VDD, AVSBUS_CURRENT);
         if (current != 0)
         {
-            // Current value stored in the sensor should be in 10mA (A scale -2)
-            sensor_update(AMECSENSOR_PTR(CURVDD), (uint16_t)current);
+            // If Vdd Current rolls over prior to 0xFFFF then we need to check if
+            // this reading rolled over from the status reg before updating the sensor
+            if (G_sysConfigData.vdd_current_rollover_10mA != 0xFFFF)
+            {
+                 G_check_vdd_current_10mA_for_rollover = current;
+            }
+            else
+            {
+                // don't need to check if this reading rolled over
+                G_check_vdd_current_10mA_for_rollover = 0;
+                // Update sensor Current value stored in the sensor should be in 10mA (A scale -2)
+                sensor_update(AMECSENSOR_PTR(CURVDD), (uint16_t)current);
+
+                // Update the chip voltage and power sensors after every current reading
+                update_avsbus_power_sensors(AVSBUS_VDD);
+            }
         }
     }
     if (G_avsbus_vdn_monitoring)
@@ -445,6 +458,9 @@ void process_avsbus_current()
         {
             // Current value stored in the sensor should be in 10mA (A scale -2)
             sensor_update(AMECSENSOR_PTR(CURVDN), (uint16_t)current);
+
+            // Update the chip voltage and power sensors after every current reading
+            update_avsbus_power_sensors(AVSBUS_VDN);
         }
     }
 }
@@ -577,41 +593,98 @@ void update_avsbus_power_sensors(const avsbus_type_e i_type)
 // Name: amec_update_avsbus_sensors
 //
 // Description: Read AVS Bus data and update sensors (called every tick)
-//   The very first tick kicks off a read of the currents for both buses (Vdd/Vdn).
-//   The next tick will process the currents and then start a read of the voltages.
-//   The next tick will process the voltages and then start a read of the currents.
-//   (readings for each bus will essentially be updated every 2 ticks)
+//   Tick 0: start Vdd temp read
+//   Tick 1: process Vdd temp, start voltage read (Vdd/Vdn)
+//   Tick 2: process voltage, start current read (Vdd/Vdn)
+//   Tick 3: process current, start status read (Vdd/Vdn)
+//   Tick 4: process status, start Vdd temp read
+//   (back to tick 1)
 //
 // Thread: RealTime Loop
 //
 // End Function Specification
 void amec_update_avsbus_sensors(void)
 {
-
+    // general order Vdd temp, voltage, current, status, Vdd temp, voltage....
+    // status must happen immediately after current to handle if current overflow is enabled
     static enum {
         AVSBUS_STATE_DISABLED           = 0,
         AVSBUS_STATE_INITIATE_READ      = 1,
-        AVSBUS_STATE_PROCESS_CURRENT    = 2,
+        AVSBUS_STATE_PROCESS_TEMPERATURE= 2,
         AVSBUS_STATE_PROCESS_VOLTAGE    = 3,
-        AVSBUS_STATE_PROCESS_STATUS     = 4,
-        AVSBUS_STATE_PROCESS_TEMPERATURE= 5
+        AVSBUS_STATE_PROCESS_CURRENT    = 4,
+        AVSBUS_STATE_PROCESS_STATUS     = 5
     } L_avsbus_state = AVSBUS_STATE_INITIATE_READ;
-
-    // Flag to select either temperature or status to read on 3rd tick
-    static bool L_read_temp = true;
 
     if (isSafeStateRequested())
     {
         L_avsbus_state = AVSBUS_STATE_DISABLED;
         G_avsbus_vdd_monitoring = FALSE;
         G_avsbus_vdn_monitoring = FALSE;
-        G_vrm_thermal_monitoring = FALSE;
     }
 
     switch (L_avsbus_state)
     {
         case AVSBUS_STATE_INITIATE_READ:
-            // Start first AVS Bus read of current
+            // Start reading from AVS bus, what we start with depends on the amec slave state
+            // with goal of processing status on the same tick that WOF runs (amec slave state 4)
+            // Want processing of Temperature on state 1, voltage on 2, current on 3, to give status on 4
+            // can only start with temperature or voltage, since the status must be last and requires
+            // voltage and current to have been read in order to update the power sensor
+            switch ( G_amec_slv_state.state )
+            {
+                case 0:
+                case 4:
+                    // Initiate AVS Bus read for Vdd temperature
+                    // temperature will be processed on next tick (state 1/5)
+                    TRAC_IMP("amec_update_avsbus_sensors: Starting with temperature in slave state %d", G_amec_slv_state.state);
+                    avsbus_read_start(AVSBUS_VDD, AVSBUS_TEMPERATURE);
+                    L_avsbus_state = AVSBUS_STATE_PROCESS_TEMPERATURE;
+                    break;
+                case 1:
+                case 5:
+                    // Initiate read of voltages
+                    // voltages will be processed on next tick (state 2/6)
+                    TRAC_IMP("amec_update_avsbus_sensors: Starting with voltage in slave state %d", G_amec_slv_state.state);
+                    initiate_avsbus_reads(AVSBUS_VOLTAGE);
+                    L_avsbus_state = AVSBUS_STATE_PROCESS_VOLTAGE;
+                    break;
+                case 2:
+                case 3:
+                case 6:
+                case 7:
+                    // Need to wait another tick, can only start with temperature or voltage readings
+                    break;
+                default:
+                    // this should never happen, this would mean the whole state machine is broken!
+                    // just start reading with temperature
+                    TRAC_ERR("amec_update_avsbus_sensors: INVALID AMEC SLAVE STATE 0x%02X", G_amec_slv_state.state);
+                    avsbus_read_start(AVSBUS_VDD, AVSBUS_TEMPERATURE);
+                    L_avsbus_state = AVSBUS_STATE_PROCESS_TEMPERATURE;
+                    break;
+            }
+
+            break;  // case AVSBUS_STATE_INITIATE_READ
+
+        case AVSBUS_STATE_PROCESS_TEMPERATURE:
+                // Read and process Vdd temperature
+                avsbus_read(AVSBUS_VDD, AVSBUS_TEMPERATURE);
+
+                // Initiate read of voltages
+                initiate_avsbus_reads(AVSBUS_VOLTAGE);
+                L_avsbus_state = AVSBUS_STATE_PROCESS_VOLTAGE;
+            break;
+
+        case AVSBUS_STATE_PROCESS_VOLTAGE:
+            // Process the voltage readings
+            process_avsbus_voltage();
+
+            // Initiate read of currents
+            // Before starting the Current read clear the Vdd OCW bit if it is being used for rollover detection
+            if (G_sysConfigData.vdd_current_rollover_10mA != 0xFFFF)
+            {
+                clear_status_errors(G_sysConfigData.avsbus_vdd.bus, AVSBUS_STATUS_OVER_CURRENT_MASK);
+            }
             initiate_avsbus_reads(AVSBUS_CURRENT);
             L_avsbus_state = AVSBUS_STATE_PROCESS_CURRENT;
             break;
@@ -619,53 +692,20 @@ void amec_update_avsbus_sensors(void)
         case AVSBUS_STATE_PROCESS_CURRENT:
             // Process the current readings
             process_avsbus_current();
-            // Initiate read of voltages
-            initiate_avsbus_reads(AVSBUS_VOLTAGE);
-            L_avsbus_state = AVSBUS_STATE_PROCESS_VOLTAGE;
-            break;
 
-        case AVSBUS_STATE_PROCESS_VOLTAGE:
-            // Process the voltage readings
-            process_avsbus_voltage();
-
-            // Initiate read of temperature or error status (OT/OC)
-            if (L_read_temp)
-            {
-                // Initiate AVS Bus read for Vdd temperature
-                avsbus_read_start(AVSBUS_VDD, AVSBUS_TEMPERATURE);
-                L_avsbus_state = AVSBUS_STATE_PROCESS_TEMPERATURE;
-            }
-            else
-            {
-                initiate_avsbus_read_status();
-                L_avsbus_state = AVSBUS_STATE_PROCESS_STATUS;
-            }
-            // Toggle between reading temperature and status
-            L_read_temp = !L_read_temp;
+            // Initiate read of status
+            initiate_avsbus_read_status();
+            L_avsbus_state = AVSBUS_STATE_PROCESS_STATUS;
             break;
 
         case AVSBUS_STATE_PROCESS_STATUS:
             {
                 // Process the status
-                uint16_t otStatus = process_avsbus_status();
-                if (G_vrm_thermal_monitoring)
-                {
-                    // Update sensor with the OT status (0 / 1)
-                    sensor_update(AMECSENSOR_PTR(VRMPROCOT), otStatus);
-                }
-                // Back to reading currents
-                initiate_avsbus_reads(AVSBUS_CURRENT);
-                L_avsbus_state = AVSBUS_STATE_PROCESS_CURRENT;
-            }
-            break;
+                process_avsbus_status();
 
-        case AVSBUS_STATE_PROCESS_TEMPERATURE:
-            {
-                // Read and process Vdd temperature
-                avsbus_read(AVSBUS_VDD, AVSBUS_TEMPERATURE);
-                // Back to reading currents
-                initiate_avsbus_reads(AVSBUS_CURRENT);
-                L_avsbus_state = AVSBUS_STATE_PROCESS_CURRENT;
+                // Initiate read of Vdd temperature
+                avsbus_read_start(AVSBUS_VDD, AVSBUS_TEMPERATURE);
+                L_avsbus_state = AVSBUS_STATE_PROCESS_TEMPERATURE;
             }
             break;
 
@@ -676,16 +716,6 @@ void amec_update_avsbus_sensors(void)
             TRAC_ERR("amec_update_avsbus_sensors: INVALID AVSBUS STATE 0x%02X", L_avsbus_state);
             L_avsbus_state = AVSBUS_STATE_INITIATE_READ;
             break;
-    }
-
-    // Update the chip voltage and power sensors after every reading
-    if (G_avsbus_vdd_monitoring)
-    {
-        update_avsbus_power_sensors(AVSBUS_VDD);
-    }
-    if (G_avsbus_vdn_monitoring)
-    {
-        update_avsbus_power_sensors(AVSBUS_VDN);
     }
 
 } // end amec_update_avsbus_sensors()

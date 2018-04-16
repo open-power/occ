@@ -267,11 +267,6 @@ void amec_init_gamec_struct(void)
   g_amec->thermalcent.Pgain = 30000;
   g_amec->thermalcent.speed_request = AMEC_MEMORY_MAX_STEP;
 
-  // Initialize controler based on VRHOT signal from processor regulator
-  g_amec->vrhotproc.setpoint = 100;
-  g_amec->vrhotproc.freq_request = -1;
-  g_amec->vrhotproc.speed_request = 1000;
-
   // Initialize component power caps
   g_amec->pcap.active_proc_pcap = 0;
   g_amec->pcap.active_mem_level = 0;

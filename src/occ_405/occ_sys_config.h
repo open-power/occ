@@ -377,6 +377,8 @@ typedef struct
   avsbusData_t avsbus_vdd;
   avsbusData_t avsbus_vdn;
   uint16_t     proc_power_adder;
+  uint32_t     vdd_current_rollover_10mA;
+  uint32_t     vdd_max_current_10mA;
 
   // ------------------------------------
   // Power Cap Configuration Data updated by Slaves

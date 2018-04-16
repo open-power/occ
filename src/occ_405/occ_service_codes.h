@@ -59,8 +59,6 @@ enum occReasonCode
     EXTERNAL_INTERFACE_FAILURE      = 0x18,
     /// VRM Vdd reached error temperature threshold
     VRM_VDD_ERROR_TEMP              = 0x20,
-    /// VR_FAN  - AVS Bus over-temperature reported
-    VRM_VRFAN_WARNING               = 0x22,
     /// GPIO_VR_HOT_MEM_PROC signal from APSS asserted
     VR_HOT_MEM_PROC_ASSERTED        = 0x23,
     /// DIMM reached error threshold
@@ -104,8 +102,6 @@ enum occReasonCode
     PBAX_QUEUE_RESET                = 0xBA,
     ///  Request to read APSS data failed.
     APSS_GPE_FAILURE                = 0xC0,
-    /// AVS Bus output over-current reported
-    VRM_OVER_CURRENT_WARNING        = 0xC1,
     /// Slave OCC failed to receive new APSS data over a short time interval
     APSS_SLV_SHORT_TIMEOUT          = 0xC3,
     /// Slave OCC failed to receive new APSS data over a long time interval

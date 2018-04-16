@@ -383,6 +383,13 @@ void call_wof_main( void )
                     if( g_wof->wof_init_state == PGPE_WOF_ENABLED_NO_PREV_DATA )
                     {
                         g_wof->wof_init_state = WOF_ENABLED;
+                        // Set the the frequency ranges
+                        errlHndl_t l_errl = amec_set_freq_range(CURRENT_MODE());
+                        if(l_errl)
+                        {
+                            INTR_TRAC_ERR("call_wof_main: amec_set_freq_range reported an error");
+                            commitErrl( &l_errl);
+                        }
                     }
                 }
             } // >= PGPE_WOF_ENABLED_NO_PREV_DATA
@@ -1479,13 +1486,6 @@ void set_clear_wof_disabled( uint8_t i_action,
 
                 // commit the error log
                 commitErrl( &l_errl );
-
-                // Set the the frequency ranges
-                l_errl = amec_set_freq_range(CURRENT_MODE());
-                if(l_errl)
-                {
-                    commitErrl( &l_errl);
-                }
             }
         }
         else

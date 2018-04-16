@@ -593,6 +593,7 @@ errlHndl_t SMGR_observation_to_active()
     int             l_extRc = OCC_NO_EXTENDED_RC;
     int             l_rc = 0;
     uint32_t        l_user_data = 0;
+    uint32_t        l_freq = 0;
     Pstate          l_pstate;
 
     // clear mnfg quad pstate request to default OCC to control all quads
@@ -620,7 +621,23 @@ errlHndl_t SMGR_observation_to_active()
             // become enabled.
             if(G_present_cores != 0 )
             {
-                l_pstate = proc_freq2pstate(G_proc_fmax_mhz);
+                if(G_sysConfigData.system_type.kvm)
+                {
+                     // OCC controls frequency via clip
+                     // set clip to nominal/turbo until WOF is fully enabled
+                     if(G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO] > G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL])
+                         l_freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
+                     else
+                         l_freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL];
+
+                     l_pstate = proc_freq2pstate(l_freq);
+                }
+                else
+                {
+                    // OCC controls frequency with PMCR so ok to set clips wide open
+                    // the OCC won't actually write UT to PMCR unless WOF is fully enabled
+                    l_pstate = proc_freq2pstate(G_proc_fmax_mhz);
+                }
                 l_rc = pgpe_set_clip_blocking(l_pstate);
 
                 if(l_rc)
