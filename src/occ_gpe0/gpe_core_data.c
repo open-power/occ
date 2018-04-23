@@ -57,7 +57,9 @@ void gpe_get_core_data(ipc_msg_t* cmd, void* arg)
 
     if(rc)
     {
-        if( !(L_trace & (1 << args->core_num)) )
+        // trace non-offline error once per core.
+        // offline errors are normal with stop states and ignored by the 405
+        if( (!(L_trace & (1 << args->core_num))) && (rc != PCB_ERROR_CHIPLET_OFFLINE) )
         {
             PK_TRACE("gpe_get_core_data: get_core_data failed, rc = 0x%08x, core = 0x%08x",
                      rc, args->core_num);
