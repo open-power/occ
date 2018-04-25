@@ -54,6 +54,7 @@
 
 extern dimm_sensor_flags_t G_dimm_temp_expired_bitmap;
 extern uint32_t G_first_proc_gpu_config;
+extern uint32_t G_first_sys_gpu_config;
 extern bool G_vrm_vdd_temp_expired;
 extern bool G_reset_prep;
 extern uint16_t G_amester_max_data_length;
@@ -515,14 +516,29 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
                 (G_apss_ch_to_function[k] != ADC_GND_REMOTE_SENSE) &&
                 (G_apss_ch_to_function[k] != ADC_12V_STANDBY_CURRENT))
             {
-                l_pwrSensorList[l_sensorHeader.count].id = G_amec_sensor_list[PWRAPSSCH0 + k]->ipmi_sid;
-                l_pwrSensorList[l_sensorHeader.count].function_id = G_apss_ch_to_function[k];
-                l_pwrSensorList[l_sensorHeader.count].apss_channel = k;
-                l_pwrSensorList[l_sensorHeader.count].reserved = 0;
-                l_pwrSensorList[l_sensorHeader.count].current = G_amec_sensor_list[PWRAPSSCH0 + k]->sample;
-                l_pwrSensorList[l_sensorHeader.count].accumul = G_amec_sensor_list[PWRAPSSCH0 + k]->accumulator;
-                l_pwrSensorList[l_sensorHeader.count].update_tag  = G_amec_sensor_list[PWRAPSSCH0 + k]->update_tag;
-                l_sensorHeader.count++;
+                // only return channel power for GPU if the GPU is present
+                if( ( (G_apss_ch_to_function[k] != ADC_GPU_0_0) &&
+                      (G_apss_ch_to_function[k] != ADC_GPU_0_1) &&
+                      (G_apss_ch_to_function[k] != ADC_GPU_0_2) &&
+                      (G_apss_ch_to_function[k] != ADC_GPU_1_0) &&
+                      (G_apss_ch_to_function[k] != ADC_GPU_1_1) &&
+                      (G_apss_ch_to_function[k] != ADC_GPU_1_2) ) ||
+                    ( (G_apss_ch_to_function[k] == ADC_GPU_0_0) && (G_first_sys_gpu_config & 0x01) ) ||
+                    ( (G_apss_ch_to_function[k] == ADC_GPU_0_1) && (G_first_sys_gpu_config & 0x02) ) ||
+                    ( (G_apss_ch_to_function[k] == ADC_GPU_0_2) && (G_first_sys_gpu_config & 0x04) ) ||
+                    ( (G_apss_ch_to_function[k] == ADC_GPU_1_0) && (G_first_sys_gpu_config & 0x08) ) ||
+                    ( (G_apss_ch_to_function[k] == ADC_GPU_1_1) && (G_first_sys_gpu_config & 0x10) ) ||
+                    ( (G_apss_ch_to_function[k] == ADC_GPU_1_2) && (G_first_sys_gpu_config & 0x20) ) )
+                { 
+                    l_pwrSensorList[l_sensorHeader.count].id = G_amec_sensor_list[PWRAPSSCH0 + k]->ipmi_sid;
+                    l_pwrSensorList[l_sensorHeader.count].function_id = G_apss_ch_to_function[k];
+                    l_pwrSensorList[l_sensorHeader.count].apss_channel = k;
+                    l_pwrSensorList[l_sensorHeader.count].reserved = 0;
+                    l_pwrSensorList[l_sensorHeader.count].current = G_amec_sensor_list[PWRAPSSCH0 + k]->sample;
+                    l_pwrSensorList[l_sensorHeader.count].accumul = G_amec_sensor_list[PWRAPSSCH0 + k]->accumulator;
+                    l_pwrSensorList[l_sensorHeader.count].update_tag  = G_amec_sensor_list[PWRAPSSCH0 + k]->update_tag;
+                    l_sensorHeader.count++;
+                }
             }
         }
 
