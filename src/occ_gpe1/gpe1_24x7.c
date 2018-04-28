@@ -33,28 +33,24 @@
 #include "gpe_pba_cntl.h"
 #include "gpe1_24x7.h"
 #include "string.h"
+
 /*
  * Function Specifications:
  *
  * Name: gpe_24x7
- *
  * Description:  24x7 code on the GPE.  Owned by the performance team
- *
  * Inputs:       cmd is a pointer to IPC msg's cmd and cmd_data struct
- *
  * Outputs:      error: sets rc, address, and ffdc in the cmd_data's
  *                      GpeErrorStruct
  *
  * End Function Specification
  */
-//uint8_t G_test_array_24x7[100];
-//uint64_t* test_addr = (uint64_t*) (TEST_ADDR | PBA_ENABLE);
 void gpe_24x7(ipc_msg_t* cmd, void* arg)
 {
     // Note: arg was set to 0 in ipc func table (ipc_func_tables.c), so don't use it.
     // the ipc arguments passed through the ipc_msg_t structure, has a pointer
     // to the gpe_24x7_args_t struct.
-    
+   
     int      rc = 0;
     int      iter = 0;
     ipc_async_cmd_t *async_cmd = (ipc_async_cmd_t*)cmd;
@@ -62,7 +58,7 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
 
     uint8_t ticks = args->numTicksPassed; // number of 500us ticks since last call
     static uint8_t  L_current_state = 1;  // 24x7 collection "state" to execute when called
-    //
+
     static uint8_t  L_DELAY_1 = 0;  
     static uint8_t  L_DELAY_2 = 0;  
     static uint8_t  L_DELAY_3 = 0;  
@@ -73,11 +69,12 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
     static uint8_t  L_CUR_DELAY = 0;  
     static uint64_t  L_cur_speed = 0;  
     static uint64_t  L_prev_status = 0;  
-    //
+
     static bool L_configure = false;
     static bool L_DONT_RUN = false;
     static bool L_INIT = false;
     static bool L_PART_INIT = false;
+
     //
     //control block memory area.
     //
@@ -87,21 +84,51 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
     static volatile uint64_t* L_uav = (uint64_t*) (CNTL_UAV_OFFSET | PBA_ENABLE);
     static volatile uint64_t* L_mode = (uint64_t*) (CNTL_MODE_OFFSET | PBA_ENABLE);
     static volatile uint64_t* L_mode_state = (uint64_t*) (CNTL_MODE_STATE_OFFSET | PBA_ENABLE);
-    //
+
     static volatile uint64_t* L_version = (uint64_t*) (DBG_VER_OFFSET | PBA_ENABLE);
     static volatile uint64_t* L_tics_exceded = (uint64_t*) (DBG_TICS_OFFSET | PBA_ENABLE);
     static volatile uint64_t* L_marker = (uint64_t*) (DBG_MARK | PBA_ENABLE);
     static volatile uint64_t* L_DBG_ITER = (uint64_t*) (DBG_ITER | PBA_ENABLE);
     volatile uint8_t* L_DBG_STATE = (uint8_t*) (DBG_STATE | PBA_ENABLE);
+
     //uint64_t temp;
     args->error.error = 0; // default success
     args->error.ffdc = 0;
-       
+
+    //Populate version details
+    //------------------------
+    /**
+     * 24x7 Version 
+     * [00:03] - Major revision
+     * [04:11] - Minor revision
+     * [12:15] - Bug fix release number
+     * [16:23] - Day
+     * [24:31] - Month
+     * [32:47] - Year
+     * [48:63] - Reserved
+     **/
+    uint64_t VERSION = 0;
+    static uint64_t ver_major  = 0x1;
+    static uint64_t ver_minor  = 0x0;
+    static uint64_t ver_bugfix = 0x0;
+    static uint64_t ver_day    = 0x27;   // Day: 27
+    static uint64_t ver_month  = 0x04;   // Month: 04
+    static uint64_t ver_year   = 0x2018; // Year:2018
+
+    VERSION |= (ver_major  << 60);
+    VERSION |= (ver_minor  << 52);
+    VERSION |= (ver_bugfix << 48);
+    VERSION |= (ver_day    << 40);
+    VERSION |= (ver_month  << 32);
+    VERSION |= (ver_year   << 16);
+
+
     //PBA Slave setup. Do this each time you enter this loop to be safe.
     gpe_pba_reset();
     if(ticks == 0)  // First time 24x7 called since OCC started?
     {
 //1. read and update the control block 
+//------------------------------------
         PK_TRACE("gpe_24x7: First call since OCC started. ticks = 0");
         //set configure to true
         L_configure = true;
@@ -137,7 +164,9 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
         putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
         *L_tics_exceded ++;
     }
+
 //2. get any new command
+//----------------------
     if (*L_cmd != CNTL_CMD_NOP)
     {
        putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
@@ -168,20 +197,26 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
                break;
        }
     }
+
 //3.get any new speed setting
+//---------------------------
     if (*L_speed != L_cur_speed)
     {
         L_INIT = true;
         PK_TRACE("gpe_24x7: speed change, L_INIT set to true");
         set_speed(&L_cur_speed,&L_CUR_DELAY,L_status);
     }
+
 //4.check for any system config changes via uav
+//---------------------------------------------
     if (*L_uav != G_CUR_UAV)
     {
         L_INIT = true;
         L_PART_INIT = true;
     }
+
 //5.check for mode change
+//-----------------------
     if (*L_mode != G_CUR_MODE)
     {
         L_INIT = true;
@@ -214,13 +249,14 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
 //SW399904 patch until HWP output for UAV is debugged.
         //G_CUR_UAV = CNTL_UAV_TEMP;
         *L_marker = MARKER1;
-//
+
         set_speed(&L_cur_speed,&L_CUR_DELAY,L_status);
         //set the state to 1 if reconfig is required. config scoms are split across multiple states starting from 1.
         L_current_state = 1;
         PK_TRACE("gpe_24x7: in L_INIT L_current_state set to 1");
         L_INIT = false;
     }
+
 //5. Based on the current entry state number, appropriate group posting is done.
 //G1,G2(states 1,3,5,7), 
 //G3(states 2,4,6,8) G4(state 2), G5(state 4), G6(state 6), G7(state 8).
@@ -438,6 +474,9 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
     }
 }
 
+/**
+ * Function: configure_pmu
+ **/
 void configure_pmu(uint8_t state, uint64_t speed)
 {//write the configuration SCOMs for all pmus.
     int i,start = (state - 1) * 16,end = state * 16;
@@ -546,7 +585,9 @@ void configure_pmu(uint8_t state, uint64_t speed)
     }
 }
 
-
+/**
+ * function: post_pmu_events
+ **/
 void post_pmu_events(int grp)
 {//read the scom pmulets. split/extract the counters.accumulate to main memory.
     volatile uint64_t* post_addr;
@@ -1306,6 +1347,9 @@ void post_pmu_events(int grp)
     }
 }
 
+/**
+ * function: initialize_postings
+ **/
 void initialize_postings()
 {//initialize posting area.
     volatile uint64_t* post_addr;
@@ -1319,6 +1363,9 @@ void initialize_postings()
     }
 }
 
+/**
+ * function: set_speed
+ **/
 void set_speed(uint64_t* speed, uint8_t* delay, volatile uint64_t* status)
 {//set counter-scom read delay according to speed setting.
     switch(*speed)
@@ -1365,6 +1412,9 @@ void set_speed(uint64_t* speed, uint8_t* delay, volatile uint64_t* status)
      }
 }
 
+/**
+ * function: get_mba_event
+ **/
 uint64_t get_mba_event(uint64_t cur, uint64_t prev)
 {
     if(cur >= prev)
@@ -1374,6 +1424,9 @@ uint64_t get_mba_event(uint64_t cur, uint64_t prev)
     return prev;
 }
 
+/**
+ * function: get_phb_event
+ **/
 uint64_t get_phb_event(uint64_t cur, uint64_t prev)
 {
     if(cur >= prev)
