@@ -25,21 +25,24 @@
 
 #ifndef _GPE1_24x7_H
     #define _GPE1_24x7_H
-//
+
 //PMU config table defined below.
+//------------------------------
 #define TOTAL_CONFIGS 60
 #define TOTAL_POSTINGS 238
 #define INC_UPD_COUNT 1
-//
+
 #define TOTAL_CONFIG_SCOMS 60
 #define TOTAL_COUNTER_SCOMS 71
-//
+
 #define MAX_32 4294967295ULL
 #define MAX_48 281474976710655ULL
+
 static volatile uint64_t  G_CUR_UAV = 0;
 static volatile uint64_t  G_CUR_MODE = 0;
 static volatile uint64_t  G_MBA_pmulets[24];
 static volatile uint64_t  G_PHB_pmulets[24];
+
 uint64_t G_PMU_CONFIGS_8[][2] = 
 {
 //cnpm//
@@ -185,8 +188,10 @@ uint64_t G_PMU_CONFIGS_16[][2] =
     {0x4010822, 0x1000000000000000},//CAPP02//58
     {0x4010817, 0x0000000000000000} //CAPP02//59
 };
-//
+
+
 //PMU counters below
+//------------------
 uint64_t G_PMULETS_1[] =
 {
 //CNPM counters (4 east and 4 west)
@@ -332,6 +337,9 @@ uint64_t G_PMULETS_7[] =
     0x4010825//6//70
 };
 
+/**
+ * Groups 
+ **/
 enum groups {G1=1,G2=2,G3=3,G4=4,G5=5,G6=6,G7=7};
 
 enum
@@ -350,19 +358,24 @@ enum
     PBASLVCTL3_C0040030         = 0xC0040030,
     PBASLV_SET_DMA              = 0x97005EC000000000,
     PBASLV_SET_ATOMIC           = 0x97405EC060000000,
+
     //POSTING OFFSETS for groups
+    //--------------------------
     POSTING_START               = 0x00180000,//1MB + 512KB
-//
+
+    // Group G1 - CNPM counters
     POST_OFFSET_G1H             = 0x00180000,
     POST_OFFSET_G1T             = 0x00180108,
-//
+
+    // Group G2 - XLINK
     POST_OFFSET_G2H             = 0x00180110,
     POST_OFFSET_G2_1            = 0x00180118,
     POST_OFFSET_G2_2            = 0x00180158,
     POST_OFFSET_G2_3            = 0x00180198,
     POST_OFFSET_G2_4            = 0x001801D8,
     POST_OFFSET_G2T             = 0x00180218,
-//
+
+    // Group G3 - INTL
     POST_OFFSET_G3H             = 0x00180220,
     POST_OFFSET_G3_1            = 0x00180228,
     POST_OFFSET_G3_2            = 0x00180248,
@@ -372,7 +385,8 @@ enum
     POST_OFFSET_G3_6            = 0x001802C8,
     POST_OFFSET_G3_7            = 0x001802E8,
     POST_OFFSET_G3T             = 0x00180328,
-//
+
+    // Group G4 - PHB 0-5
     POST_OFFSET_G4H             = 0x00180330,
     POST_OFFSET_G4a             = 0x00180338,
     POST_OFFSET_G4b             = 0x00180358,
@@ -381,21 +395,24 @@ enum
     POST_OFFSET_G4e             = 0x001803B8,
     POST_OFFSET_G4f             = 0x001803D8,
     POST_OFFSET_G4T             = 0x00180438,
-//
+
+    // Group G5 - MBA 0-3
     POST_OFFSET_G5H             = 0x00180440,
     POST_OFFSET_G5_1            = 0x00180448,
     POST_OFFSET_G5_2            = 0x00180460,
     POST_OFFSET_G5_3            = 0x00180478,
     POST_OFFSET_G5_4            = 0x00180490,
     POST_OFFSET_G5T             = 0x00180548,
-//
+
+    // Group G6 - MBA 4-7
     POST_OFFSET_G6H             = 0x00180550,
     POST_OFFSET_G6_1            = 0x00180558,
     POST_OFFSET_G6_2            = 0x00180570,
     POST_OFFSET_G6_3            = 0x00180588,
     POST_OFFSET_G6_4            = 0x001805A0,
     POST_OFFSET_G6T             = 0x00180658,
-//
+
+    // Group G7 - NPCQ/CAPP
     POST_OFFSET_G7H             = 0x00180660,
     POST_OFFSET_G7_1            = 0x00180668,
     POST_OFFSET_G7_2            = 0x00180688,
@@ -404,11 +421,12 @@ enum
     POST_OFFSET_G7_5            = 0x00180708,
     POST_OFFSET_G7_6            = 0x00180748,
     POST_OFFSET_G7T             = 0x00180768,
-//DEBUG mode offsets start here
+
+    //DEBUG mode offsets start here
     POSTING_START_DBG           = 0x00190000,
     POST_OFFSET_DBG1H           = 0x00190000,
     POST_OFFSET_DBG1T           = 0x00190108,
-//
+
     //CONTROL BLOCK FIELD OFFSETS
     //cntl block @ last 1k of 24x7 space
     CNTL_STATUS_OFFSET          = 0x001BFC00,
@@ -417,7 +435,8 @@ enum
     CNTL_UAV_OFFSET             = 0x001BFC18,
     CNTL_MODE_OFFSET            = 0x001BFC20,
     CNTL_MODE_STATE_OFFSET      = 0x001BFC28,
-///////////////////////////////////////////////////
+
+    ///////////////////////////////////////////////////
     //error tracking fields(internal)
     //last conf scom
     DBG_VER_OFFSET              = 0x001AFC00,
@@ -439,7 +458,8 @@ enum
     DBG_6                       = 0x001AFC80,
     DBG_7                       = 0x001AFC88,
     DBG_8                       = 0x001AFC90,
-//////////////////////////////////////////////////
+
+    //////////////////////////////////////////////////
     //cntl status values
     CNTL_STATUS_INIT            = 0x0,
     CNTL_STATUS_RUN             = 0x1,
@@ -474,8 +494,10 @@ enum
     CNTL_MODE_MONITOR           = 0x0,
     CNTL_MODE_DEBUG1            = 0x1,
     //code version
-    VERSION                     = 0x0000000100000005
+    //VERSION                     = 0x0000000100000005
 };
+
+
 //MASKS used to identify individual units from Unit availability vector (UAV)
 enum MASKS
 {
@@ -531,6 +553,8 @@ enum MASKS
     MASK_NVLNK4 = 0x4000,
     MASK_NVLNK5 = 0x2000
 };
+
+
 //
 //function declarations below.
 //
@@ -540,4 +564,5 @@ void initialize_postings();
 void set_speed(uint64_t*, uint8_t*, volatile uint64_t*);
 uint64_t get_mba_event(uint64_t, uint64_t);
 uint64_t get_phb_event(uint64_t, uint64_t);
+
 #endif //_GPE1_24x7_H
