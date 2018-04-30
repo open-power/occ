@@ -50,18 +50,13 @@ typedef struct
     /// APIs mb_id(), mb_chip_type() and mb_ec_level().
     centaur_device_id_t deviceId[OCCHW_NCENTAUR];
 
-    /// The image of the PBA slave control register to use for the SYNC command
-    ///
-    /// The PowerBus address used to accomplish a Centaur SYNC is
-    /// constant. To simplify the procedures the PBA slave control register
-    /// (containing the extended address portion of the address) is
-    /// pre-computed and stored here.
-    ///
+    /// Designated sync scom address
     /// \note One and Only one of the MCS units can be targeted with SYNC
     /// commands. The design includes a private bus connecting all MCS on the
     /// chip that allows this "SYNC master" to broadcast the SYNC to all other
-    /// MCS on the chip.  Currently not used in P9
-    pba_slvctln_t syncSlaveControl;
+    /// MCS on the chip.
+    uint32_t mcSyncAddr;
+    uint32_t reserved; // keep 8 byte aligned
 
     /// A GpePbaParms parameter block for gpe_mem_data()
     ///
@@ -177,8 +172,12 @@ typedef enum
     /// Centaur. Currently unsupported for gpe_scom_p8().
     CENTAUR_SCOM_RMW_ALL,
 
+    // Send Centaur SYNC to broadcast new throttle values.
+    CENTAUR_SCOM_CENTAUR_SYNC,
+
 }  centaur_scom_operation_t;
 
+#define MCS_MCSYNC_SYNC_GO 0x0000800000000000ull
 
 // BAR and PBA_SLAVE assigned to gpe1 centaur
 //  - @see POWER Energy Management Hcode/HWP spec

@@ -50,6 +50,14 @@ const uint32_t MCFGPR[OCCHW_NCENTAUR] =
     MCS_3_MCRSVDF
 };
 
+const uint32_t MCSYNC[OCCHW_NCENTAUR/2] =
+{
+    MCS_0_MCSYNC,
+    MCS_1_MCSYNC,
+    MCS_2_MCSYNC,
+    MCS_3_MCSYNC
+};
+
 const uint32_t MCCHIFIR[OCCHW_NCENTAUR] =
 {
     MCP_CHAN0_CHI_FIR,
@@ -168,6 +176,7 @@ int gpe_centaur_configuration_create(CentaurConfiguration_t* o_config)
     uint64_t    bar = 0;
     uint64_t    mask = 0;
     uint64_t*   ptr = (uint64_t*)o_config;
+    int designated_sync = -1;
 
     // Prevent unwanted interrupts from scom errors
     const uint32_t orig_msr = mfmsr() & MSR_SEM;
@@ -220,8 +229,6 @@ int gpe_centaur_configuration_create(CentaurConfiguration_t* o_config)
 
         for (i = 0; i < OCCHW_NCENTAUR; ++i)
         {
-            uint64_t val64;
-
             // check for channel checkstop
             rc = check_channel_chkstp(i);
             if (rc)
@@ -244,15 +251,6 @@ int gpe_centaur_configuration_create(CentaurConfiguration_t* o_config)
                 continue;
             }
 
-            // TODO RTC 190643 ENGD work-around until change gets pushed up into a driver.
-            // Turn on bit 25 in mode0 regs. They should all have the same value
-            rc = getscom_abs(0x05010811, &val64);
-            val64 |= 0x0000004000000000ull;
-            rc = putscom_abs(0x05010811, val64);
-            rc = putscom_abs(0x05010891, val64);
-            rc = putscom_abs(0x03010811, val64);
-            rc = putscom_abs(0x03010891, val64);
-
             // If inband scom is not configured then assume the centaur does not exist
             if (!mcfgpr.fields.mcfgprq_valid)
             {
@@ -268,12 +266,6 @@ int gpe_centaur_configuration_create(CentaurConfiguration_t* o_config)
 
             PK_TRACE_DBG("Centar[%d] Base Address: %016llx",i,o_config->baseAddress[i]);
 
-
-            // NOTE: P9 no longer has a mode bit to specify a "designated SYNC"
-            // Centaur Spec says SYNC is needed for Z series, and for POR.
-            // Since neither applys here, it will not longer be done by OCC.
-
-
             // Add the Centaur to the configuration
             o_config->config |= (CHIP_CONFIG_MCS(i) | CHIP_CONFIG_CENTAUR(i));
         }
@@ -282,6 +274,32 @@ int gpe_centaur_configuration_create(CentaurConfiguration_t* o_config)
         {
             break;
         }
+
+        // Find the designated sync
+        for (i = 0; i < (OCCHW_NCENTAUR/2); ++i)
+        {
+            uint64_t mcsync;
+            rc = getscom_abs(MCSYNC[i], &mcsync);
+            if (rc)
+            {
+                PK_TRACE("getscom failed on MCSYNC, rc = %d. The first configured MC will be the designated sync",rc);
+                rc = 0;
+            }
+            if (mcsync != 0)
+            {
+                designated_sync = i;
+                // There can only be one sync, so stop searching.
+                break;
+            }
+        }
+
+        if (designated_sync < 0)
+        {
+            designated_sync = cntlz32(o_config->config << CHIP_CONFIG_MCS_BASE);
+            PK_TRACE("No designated sync found, using MCS(%d)",designated_sync);
+        }
+
+        o_config->mcSyncAddr = MCSYNC[designated_sync];
 
 
         // Configure the PBA BAR and PBA BARMSK.

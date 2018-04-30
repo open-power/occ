@@ -30,6 +30,11 @@
 #define    MCS_3_MCRSVDE    0x0301088E
 #define    MCS_3_MCRSVDF    0x0301088F
 
+#define    MCS_0_MCSYNC     0x05010815
+#define    MCS_1_MCSYNC     0x05010895
+#define    MCS_2_MCSYNC     0x03010815
+#define    MCS_3_MCSYNC     0x03010895
+
 // MC Memory Configuration Register FIR/CFG
 #define    MCP_CHAN0_CHI_FIR        0x07010900
 #define    MCP_CHAN1_CHI_FIR        0x07010940
@@ -48,6 +53,5 @@
 #define    MCP_CHAN5_CHI_MCICFG1Q   0x0801094E
 #define    MCP_CHAN6_CHI_MCICFG1Q   0x0801098E
 #define    MCP_CHAN7_CHI_MCICFG1Q   0x080109CE
-
 
 #endif

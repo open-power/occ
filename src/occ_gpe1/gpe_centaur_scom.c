@@ -536,15 +536,50 @@ int centaur_get_mem_data(CentaurConfiguration_t* i_config,
 }
 
 
-// CentaurConfiguration needs to be setup before this is called
+int centaur_scom_sync(CentaurConfiguration_t* i_config)
+{
+    uint64_t data;
+    int rc = 0;
+    do
+    {
+        rc = getscom_abs(i_config->mcSyncAddr,&data);
+        if (rc)
+        {
+            PK_TRACE("centaur_scom_sync: getscom failed. rc = %d",rc);
+            break;
+        }
 
+        data &= ~MCS_MCSYNC_SYNC_GO;
+
+        rc = putscom_abs(i_config->mcSyncAddr, data);
+        if (rc)
+        {
+            PK_TRACE("centaur_scom_sync: reset sync putscom failed. rc = %d",rc);
+            break;
+        }
+
+        data |= MCS_MCSYNC_SYNC_GO;
+
+        rc = putscom_abs(i_config->mcSyncAddr, data);
+        if (rc)
+        {
+            PK_TRACE("centaur_scom_sync: set sync putscom failed. rc = %d",rc);
+            break;
+        }
+    } while (0);
+
+    return rc;
+}
+
+
+// CentaurConfiguration needs to be setup before this is called
 void gpe_scom_centaur(CentaurConfiguration_t* i_config,
                       CentaurScomParms_t* i_parms)
 {
     int i;
+    int rc = 0;
     mtmsr((mfmsr() & ~(MSR_SIBRC | MSR_SIBRCA)) | MSR_SEM);
 
-    // Do reset and pba_setup here?
     for(i = 0; i < i_parms->entries; ++i)
     {
         switch(i_parms->scomList[i].commandType)
@@ -553,49 +588,58 @@ void gpe_scom_centaur(CentaurConfiguration_t* i_config,
                 break;
 
             case CENTAUR_SCOM_READ:
-                centaur_get_scom(i_config,
-                                 i_parms->scomList[i].instanceNumber,
-                                 i_parms->scomList[i].scom,
-                                 &(i_parms->scomList[i].data));
+                rc =centaur_get_scom(i_config,
+                                     i_parms->scomList[i].instanceNumber,
+                                     i_parms->scomList[i].scom,
+                                     &(i_parms->scomList[i].data));
                 break;
 
             case CENTAUR_SCOM_WRITE:
-                centaur_put_scom(i_config,
-                                 i_parms->scomList[i].instanceNumber,
-                                 i_parms->scomList[i].scom,
-                                 i_parms->scomList[i].data);
+                rc = centaur_put_scom(i_config,
+                                      i_parms->scomList[i].instanceNumber,
+                                      i_parms->scomList[i].scom,
+                                      i_parms->scomList[i].data);
                 break;
 
             case CENTAUR_SCOM_RMW:
-                centaur_scom_rmw(i_config,
-                                 i_parms->scomList[i].instanceNumber,
-                                 i_parms->scomList[i].scom,
-                                 i_parms->scomList[i].mask,
-                                 &(i_parms->scomList[i].data));
+                rc = centaur_scom_rmw(i_config,
+                                      i_parms->scomList[i].instanceNumber,
+                                      i_parms->scomList[i].scom,
+                                      i_parms->scomList[i].mask,
+                                      &(i_parms->scomList[i].data));
                 break;
 
             case CENTAUR_SCOM_READ_VECTOR:
-                centaur_get_scom_vector(i_config,
-                                        i_parms->scomList[i].scom,
-                                        i_parms->scomList[i].pData
-                                       );
+                rc = centaur_get_scom_vector(i_config,
+                                             i_parms->scomList[i].scom,
+                                             i_parms->scomList[i].pData
+                                            );
                 break;
 
             case CENTAUR_SCOM_WRITE_ALL:
-                centaur_put_scom_all(i_config,
-                                     i_parms->scomList[i].scom,
-                                     i_parms->scomList[i].data);
+                rc = centaur_put_scom_all(i_config,
+                                          i_parms->scomList[i].scom,
+                                          i_parms->scomList[i].data);
                 break;
 
             case CENTAUR_SCOM_RMW_ALL:
-                centaur_scom_rmw_all(i_config,
-                                     i_parms->scomList[i].scom,
-                                     i_parms->scomList[i].mask,
-                                     i_parms->scomList[i].data);
+                rc = centaur_scom_rmw_all(i_config,
+                                          i_parms->scomList[i].scom,
+                                          i_parms->scomList[i].mask,
+                                          i_parms->scomList[i].data);
+                break;
+
+            case CENTAUR_SCOM_CENTAUR_SYNC:
+                rc = centaur_scom_sync(i_config);
                 break;
 
             default:
                 break;
         };
+        i_parms->error.rc = rc;
+        if (rc)
+        {
+            break;
+        }
     }
 }

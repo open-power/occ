@@ -62,7 +62,8 @@ typedef enum
 {
   NM_THROTTLE_MBA01       = 0,
   NM_THROTTLE_MBA23       = 1,
-  NUM_CENT_THROTTLE_SCOMS = 2,
+  MBS_THROTTLE_SYNC       = 2,
+  NUM_CENT_THROTTLE_SCOMS = 3,
 } eCentaurThrottleRegs;
 
 
@@ -318,6 +319,8 @@ bool centaur_control( memory_control_task_t * i_memControlTask )
         {
             G_centaurThrottle[NM_THROTTLE_MBA23].commandType = CENTAUR_SCOM_NOP;
         }
+
+        G_centaurThrottle[MBS_THROTTLE_SYNC].commandType = CENTAUR_SCOM_CENTAUR_SYNC;
 
         /// Set up GPE parameters
         l_parms->scomList     = G_centaurThrottle;
