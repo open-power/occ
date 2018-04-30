@@ -32,6 +32,8 @@
 #include "ppe42_msr.h"
 #include "ppe42_scom.h"
 #include "cme_register_addresses.h"
+#include "cppm_register_addresses.h"
+#include "cppm_firmware_registers.h"
 #include "pk.h"
 
 #define CME_VDSR_BASE (CME_SCOM_VDSR & 0x00ffffff)
@@ -39,6 +41,7 @@
 // Global variables
 uint32_t g_vdm_cache_large_droop_count[MAX_NUM_QUADS]__attribute__((section (".sbss")));
 uint32_t g_vdm_core_small_droop_count[MAX_NUM_CORES]__attribute__((section (".sbss")));
+int g_fused_core = FUSED_UNKNOWN;
 
 uint32_t get_core_data(uint32_t i_core,
                        CoreData* o_data)
@@ -163,7 +166,33 @@ uint32_t get_core_data(uint32_t i_core,
         // Send command to select which emmpath counter to read
         do
         {
-            uint64_t empath_scom_data = CORE_RAW_CYCLES;
+           uint64_t empath_scom_data = CORE_RAW_CYCLES;
+
+           if(FUSED_UNKNOWN == g_fused_core)
+            {
+                cppm_cpmmr_t cpmmr;
+                rc = getscom(coreSelect, CPPM_CPMMR, &(cpmmr.value));
+                if (rc)
+                {
+                    // Retry on next tick
+                    break;
+                }
+
+                if (1 == cpmmr.fields.fused_core_mode)
+                {
+                    g_fused_core = FUSED_TRUE;
+                }
+                else
+                {
+                    g_fused_core = FUSED_FALSE;
+                }
+            }
+
+            if(g_fused_core == FUSED_TRUE && ((i_core % 2) != 0))
+            {
+                empath_scom_data |= SELECT_ODD_CORE;
+            }
+
             rc = putscom(coreSelect, PC_OCC_SPRC, empath_scom_data);
             if (rc)
             {

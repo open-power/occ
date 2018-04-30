@@ -39,6 +39,7 @@
 #define TOD_VALUE_REG           0x00040020
 #define STOP_STATE_HIST_OCC_REG 0x000F0112
 
+#define SELECT_ODD_CORE             0x100
 #define CORE_RAW_CYCLES             0x200
 #define CORE_RUN_CYCLES             0x208
 #define CORE_WORKRATE_BUSY          0x210
@@ -87,6 +88,13 @@
 #define EMPATH_VALID    (1)
 
 #define WORKAROUND_SCOM_ADDRESS  0x10800
+
+typedef enum
+{
+    FUSED_UNKNOWN,
+    FUSED_FALSE,
+    FUSED_TRUE
+} FusedCore;
 
 typedef struct
 {

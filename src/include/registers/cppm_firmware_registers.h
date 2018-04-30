@@ -61,7 +61,9 @@ typedef union cppm_cpmmr {
 #ifdef _BIG_ENDIAN
     uint64_t ppm_write_disable : 1;
     uint64_t ppm_write_override : 1;
-    uint64_t reserved1 : 10;
+    uint64_t reserved0 : 7;
+    uint64_t fused_core_mode : 1;
+    uint64_t reserved1 : 2;
     uint64_t cme_err_notify_dis : 1;
     uint64_t wkup_notify_select : 1;
     uint64_t enable_pece : 1;
@@ -73,7 +75,9 @@ typedef union cppm_cpmmr {
     uint64_t enable_pece : 1;
     uint64_t wkup_notify_select : 1;
     uint64_t cme_err_notify_dis : 1;
-    uint64_t reserved1 : 10;
+    uint64_t reserved1 : 2;
+    uint64_t fused_core_mode : 1;
+    uint64_t reserved0 : 7;
     uint64_t ppm_write_override : 1;
     uint64_t ppm_write_disable : 1;
 #endif // _BIG_ENDIAN
