@@ -41,7 +41,7 @@
 #include "common.h"             // For ignore_pgpe_error()
 
 // Maximum waiting time (usec) for clip update IPC task
-#define CLIP_UPDATE_TIMEOUT 100  // maximum waiting time (usec) for clip update IPC task
+#define CLIP_UPDATE_TIMEOUT 500  // maximum waiting time (usec) for clip update IPC task
 
 extern volatile pstateStatus G_proc_pstate_status;
 extern volatile PMCR_OWNER G_proc_pmcr_owner;
