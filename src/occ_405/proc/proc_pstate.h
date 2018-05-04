@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -85,7 +85,10 @@ typedef struct __attribute__ ((packed))
 typedef struct __attribute__ ((packed))
 {
     uint8_t              occ_state;
-    uint8_t              reserved[4];
+    uint8_t              dynamic_major_version;
+    uint8_t              dynamic_minor_version;
+    uint8_t              gpus_present;
+    uint8_t              reserved[1];
     uint8_t              proc_throt_status;
     uint8_t              mem_throt_status;
     uint8_t              quick_power_drop;
@@ -105,6 +108,7 @@ typedef struct __attribute__ ((packed))
 } opal_dynamic_table_t __attribute__ ((aligned (128)));
 
 #define PSTATE_ENTRIES 256    // number of generated PSTATES entries in OPAL table
+#define DYNAMIC_MINOR_V_GPU_PRESENCE 1    // OPAL Dynamic minor version for GPU support
 
 // This size must be a multiple of 128
 typedef struct __attribute__ ((packed))

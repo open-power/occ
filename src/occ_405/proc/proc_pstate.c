@@ -52,6 +52,11 @@ extern OCCPstateParmBlock G_oppb;
 //Trace flags
 extern uint16_t G_allow_trace_flags;
 
+// Indicates if we have determined GPU presence
+extern bool G_gpu_config_done;
+// GPU Present bit mask
+extern uint32_t G_first_proc_gpu_config;
+
 //Holds Fmax for ease of proc_freq2pstate calculation = max(fturbo,futurbo)
 uint16_t G_proc_fmax_mhz;
 
@@ -225,6 +230,15 @@ void populate_opal_dynamic_data()
 
     // Dynamic OPAL runtime data
     G_opal_dynamic_table.dynamic.occ_state            = CURRENT_STATE();
+
+    // Add GPUs presence if this is a system that has GPUs OCC would monitor
+    if(G_gpu_config_done)
+    {
+        // set minor version to indicate OCC determined GPU presence, this is so
+        // OPAL can tell the difference between no GPUs present and fw that didn't support
+        G_opal_dynamic_table.dynamic.dynamic_minor_version = DYNAMIC_MINOR_V_GPU_PRESENCE;
+        G_opal_dynamic_table.dynamic.gpus_present = G_first_proc_gpu_config;
+    }
 
     //If safe state is requested then that overrides anything from amec
     if(isSafeStateRequested())
@@ -599,6 +613,15 @@ void check_for_opal_updates(void)
             TRAC_INFO("check_for_opal_updates: Pcap PSR = %u->%u Pcap source = %u->%u",
                        G_opal_dynamic_table.dynamic.power_shift_ratio, G_sysConfigData.psr,
                        G_opal_dynamic_table.dynamic.power_cap_type, G_sysConfigData.pcap.source);
+        }
+
+        // check if GPU presence was determined
+        if( (G_opal_dynamic_table.dynamic.dynamic_minor_version != DYNAMIC_MINOR_V_GPU_PRESENCE) &&
+            (G_gpu_config_done) )
+        {
+            dynamic_data_change = true;
+            TRAC_INFO("check_for_opal_updates: GPU presence determined = 0x%04X",
+                       G_first_proc_gpu_config);
         }
     }  // else check for changes
 
