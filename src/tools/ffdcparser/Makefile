@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2016
+# Contributors Listed Below - COPYRIGHT 2016,2018
 # [+] International Business Machines Corp.
 #
 #
@@ -22,5 +22,6 @@
 # permissions and limitations under the License.
 #
 # IBM_PROLOG_END_TAG
-all: ffdcparser.c
+all: ffdcparser.c wofparser.c
 	gcc ffdcparser.c -o ../../../obj/ppetools/ffdcparser
+	gcc wofparser.c -o ../../../obj/ppetools/wofparser
