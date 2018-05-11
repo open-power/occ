@@ -167,7 +167,7 @@ typedef struct __attribute__ ((packed))
 } wof_header_data_t;
 
 // Structure used in g_amec
-typedef struct
+typedef struct __attribute__ ((packed))
 {
     // Bit vector where each bit signifies a different failure case
     uint32_t wof_disabled;
