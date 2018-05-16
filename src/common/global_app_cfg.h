@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -41,6 +41,9 @@
 // These SIB errors probably occur due to contention on the PIB
 #define PK_THREAD_MACHINE_CONTEXT_DEFAULT (MSR_SEM | MSR_UIE | MSR_EE | MSR_ME)
 #define PPE42_MSR_INITIAL (MSR_SEM | MSR_ME)
+
+// Enable GPE IPC Timers
+#define GPE_IPC_TIMERS
 
 // If we are using the OCB timebase then assume
 // a frequency of 37.5Mhz.  Otherwise, the default is to use
