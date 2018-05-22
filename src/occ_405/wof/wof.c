@@ -1103,10 +1103,10 @@ void calculate_ceff_ratio_vdn( void )
     if( g_wof->ceff_tdp_vdn == 0 )
     {
         INTR_TRAC_ERR("WOF Disabled! Ceff VDN divide by 0");
-
+        print_oppb();
         // Return 0
         g_wof->ceff_ratio_vdn = 0;
-        set_clear_wof_disabled(SET, WOF_RC_DIVIDE_BY_ZERO);
+        set_clear_wof_disabled(SET, WOF_RC_DIVIDE_BY_ZERO_VDN);
     }
     else
     {
@@ -1176,9 +1176,10 @@ void calculate_ceff_ratio_vdd( void )
             INTR_TRAC_ERR("v_clip_mv   = %d", g_wof->v_clip);
             INTR_TRAC_ERR("f_clip_PS   = 0x%x", g_wof->f_clip_ps);
 
+            print_oppb();
             // Return 0
             g_wof->ceff_ratio_vdd = 0;
-            set_clear_wof_disabled(SET, WOF_RC_DIVIDE_BY_ZERO);
+            set_clear_wof_disabled(SET, WOF_RC_DIVIDE_BY_ZERO_VDD);
         }
         else
         {
@@ -1374,6 +1375,17 @@ void set_clear_wof_disabled( uint8_t i_action,
             // Set the bit
             g_wof->wof_disabled |= i_bit_mask;
 
+
+            // If user is trying to force a reset even though WOF is disabled,
+            // Skip straight to error log creation
+            if( (g_wof->wof_disabled) &&
+                (i_bit_mask == WOF_RC_RESET_DEBUG_CMD) )
+            {
+                INTR_TRAC_INFO("User Requested WOF reset!");
+                l_logError = true;
+                break;
+            }
+
             // If OCC has not yet been enabled through TMGT/HTMGT/OPPB, skip
             // error log
             if( (g_wof->wof_disabled & WOF_RC_OCC_WOF_DISABLED) ||
@@ -1497,7 +1509,8 @@ void set_clear_wof_disabled( uint8_t i_action,
     // Check for error
     if( l_logError )
     {
-        if( g_wof->wof_disabled & (~(ERRL_RETURN_CODES)) )
+        if( (g_wof->wof_disabled & (~(ERRL_RETURN_CODES))) &&
+            (i_bit_mask != WOF_RC_RESET_DEBUG_CMD)  )
         {
             INTR_TRAC_ERR("Encountered an error, but WOF is off. RC: 0x%08x",
                     i_bit_mask);

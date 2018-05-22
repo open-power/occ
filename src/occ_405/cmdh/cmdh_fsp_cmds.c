@@ -1454,6 +1454,16 @@ void cmdh_dbug_dump_wof_data( const cmdh_fsp_cmd_t * i_cmd_ptr,
     return;
 }
 
+void cmdh_dbug_force_wof_reset( const cmdh_fsp_cmd_t * i_cmd_ptr,
+                                cmdh_fsp_rsp_t * o_rsp_ptr)
+{
+    TRAC_INFO("DEBUG - Forcing WOF Reset");
+    set_clear_wof_disabled( SET, WOF_RC_RESET_DEBUG_CMD );
+    G_rsp_status = ERRL_RC_SUCCESS;
+}
+
+
+
 // Function Specification
 //
 // Name: cmdh_dbug_allow_trace
@@ -1686,6 +1696,10 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         case DBUG_DUMP_WOF_DATA:
             cmdh_dbug_dump_wof_data(i_cmd_ptr, o_rsp_ptr);
+            break;
+
+        case DBUG_FORCE_WOF_RESET:
+            cmdh_dbug_force_wof_reset(i_cmd_ptr, o_rsp_ptr);
             break;
 
         case DBUG_ALLOW_TRACE:

@@ -375,7 +375,7 @@ typedef struct __attribute__ ((packed)) cmdh_reset_prep
 typedef enum
 {
     DBUG_DUMP_WOF_DATA      = 0x01,
-    // free = 0x02
+    DBUG_FORCE_WOF_RESET    = 0x02,
     DBUG_GET_TRACE          = 0x03,
     DBUG_CLEAR_TRACE        = 0x04,
     DBUG_ALLOW_TRACE        = 0x05,

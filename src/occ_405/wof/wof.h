@@ -60,7 +60,7 @@
 #define WOF_RC_STATE_CHANGE                        0x00000100
 #define WOF_RC_MODE_CHANGE                         0x00000200
 #define WOF_RC_MODE_NO_SUPPORT_MASK                0x00000400
-#define WOF_RC_DIVIDE_BY_ZERO                      0x00000800
+#define WOF_RC_DIVIDE_BY_ZERO_VDD                  0x00000800
 #define WOF_RC_VFRT_REQ_FAILURE                    0x00001000
 #define WOF_RC_CONTROL_REQ_FAILURE                 0x00002000
 #define WOF_RC_VFRT_ALIGNMENT_ERROR                0x00004000
@@ -74,6 +74,8 @@
 #define WOF_RC_NO_CONFIGURED_CORES                 0x00400000
 #define WOF_RC_IPC_FAILURE                         0x00800000
 #define WOF_RC_USER_DISABLED_WOF                   0x01000000
+#define WOF_RC_RESET_DEBUG_CMD                     0x02000000
+#define WOF_RC_DIVIDE_BY_ZERO_VDN                  0x04000000
 
 //***************************************************************************
 // Temp space used to save hard coded addresses
