@@ -42,6 +42,7 @@ enum
 
     RC_FIFO_TIMEOUT_UP = 1021,
     RC_FIFO_TIMEOUT_DN = 1022,
+    RC_FIFO_TIMEOUT_RESET = 1023,
 };
 
 /** @brief  Waits for FIFO to be ready to be written to
@@ -133,6 +134,56 @@ uint32_t waitDnFifoReady(SCOM_Trgt_t* i_target, uint32_t* o_status)
     return l_rc;
 }
 
+/** @brief  Reset FIFO
+ *  @param  i_target. The SCOM target.
+ *  @return SUCCESS | returncode
+ */
+uint32_t upFifoReset(SCOM_Trgt_t* i_target)
+{
+    uint32_t l_rc = SUCCESS;
+    uint64_t l_elapsed_time_ns = 0;
+    uint32_t l_addr = SBE_FIFO_UPFIFO_REQ_RESET;
+    uint32_t l_data = 0xDEAD;
+
+    l_rc = putfsi(i_target, l_addr, l_data);
+    if(l_rc != SUCCESS)
+    {
+        TRAC_ERR("upFifoReset:putfsi failed. rc = %d",l_rc);
+    }
+    else
+    {
+        l_addr = SBE_FIFO_UPFIFO_STATUS;
+
+        do
+        {
+            l_rc = getfsi(i_target, l_addr, &l_data);
+            if(l_rc != SUCCESS)
+            {
+                break;
+            }
+
+            // Wait for bit to clear
+            if((l_data & UPFIFO_STATUS_FIFO_NOTREADY) == 0)
+            {
+                break;
+            }
+
+            if(l_elapsed_time_ns >= MAX_UP_FIFO_TIMEOUT_NS)
+            {
+                TRAC_ERR("upFifoReset: timeout waiting for upstream"
+                         " FIFO to reset.");
+                l_rc = RC_FIFO_TIMEOUT_RESET;
+                break;
+            }
+
+            busy_wait(10); // wait for 10,000 ns
+            l_elapsed_time_ns += 10000;
+
+        } while(TRUE);
+    }
+    return l_rc;
+}
+
 /** @brief  Writes a request to FIFO
  *  @param  i_target The SCOM target.
  *  @param  i_fifoRequest the request to execute.
@@ -202,7 +253,7 @@ uint32_t writeRequest(SCOM_Trgt_t* i_target, uint32_t* i_fifoRequest)
 // For error path debug.
 void printBuffer( uint32_t* i_readBuffer, uint32_t i_wordsReceived )
 {
-    // OCC traces only support max 4 arguments and trace buffers very limited.
+    // GPE traces only support max 4 arguments and trace buffers very limited.
     // So try to print as many entries as possible on one line as possible.
     uint32_t i = 0;
     for ( i = 0; i < i_wordsReceived; i+=4 )
@@ -409,8 +460,7 @@ int32_t putFifoScom(SCOM_Trgt_t* i_target, uint64_t i_addr, uint64_t i_data)
     if ( l_rc != SUCCESS )
     {
         // Reset the FIFO for subsequent SCOMs
-        uint32_t l_data = 0xDEAD;
-        putfsi( i_target, 0x2450, l_data );
+        upFifoReset(i_target);
     }
 
     return l_rc;
@@ -459,8 +509,12 @@ int32_t getFifoScom(SCOM_Trgt_t* i_target, uint64_t i_addr, uint64_t* o_data)
         if ( l_rc != SUCCESS )
         {
             // Reset the FIFO for subsequent SCOMs
-            uint32_t l_data = 0xDEAD;
-            putfsi( i_target, 0x2450, l_data );
+            uint32_t resetRc = upFifoReset(i_target);
+            if(resetRc == RC_FIFO_TIMEOUT_RESET)
+            {
+                // timeout msg already traced, Return original fail rc.
+                break;
+            }
         }
 
     } while ( TRUE );
