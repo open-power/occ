@@ -31,6 +31,7 @@
 #include <gpe_export.h>
 
 extern gpe_shared_data_t * G_gpe_shared_data;
+extern void busy_wait(uint32_t t_microseconds);
 
 /*
  * Function Specification
@@ -53,6 +54,8 @@ void fir_data_collect(void)
     // PNOR working buffer in SRAM and size
     uint8_t *l_pBuf = (uint8_t*) G_gpe_shared_data->fir_heap_buffer_ptr;
     uint32_t l_pBufSize = FIR_HEAP_SECTION_SIZE;
+
+    busy_wait(2000000);  // wait two seconds
 
     l_rc = FirData_captureCsFirData(l_hBuf,
                                     l_hBufSize,
