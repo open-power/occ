@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -293,6 +293,34 @@ enum occExtReasonCode
 
     ERC_STATE_HEARTBEAT_CFG_FAILURE             = 0x0180,
     ERC_RTL_TIME_EXCEEDED                       = 0x0190,
+
+    ERC_WOF_NO_WOF_HEADER_MASK                  = 0x0200,
+    ERC_WOF_INVALID_ACTIVE_QUADS                = 0x0201,
+    ERC_WOF_INVALID_VDD_VDN                     = 0x0202,
+    ERC_WOF_PGPE_REQ_NOT_IDLE                   = 0x0203,
+    ERC_WOF_PGPE_WOF_DISABLED                   = 0x0204,
+    ERC_WOF_PSTATE_PROTOCOL_OFF                 = 0x0205,
+    ERC_WOF_VFRT_REQ_TIMEOUT                    = 0x0206,
+    ERC_WOF_CONTROL_REQ_TIMEOUT                 = 0x0207,
+    ERC_WOF_STATE_CHANGE                        = 0x0208,
+    ERC_WOF_MODE_CHANGE                         = 0x0209,
+    ERC_WOF_MODE_NO_SUPPORT_MASK                = 0x020A,
+    ERC_WOF_DIVIDE_BY_ZERO_VDD                  = 0x020B,
+    ERC_WOF_VFRT_REQ_FAILURE                    = 0x020C,
+    ERC_WOF_CONTROL_REQ_FAILURE                 = 0x020D,
+    ERC_WOF_VFRT_ALIGNMENT_ERROR                = 0x020E,
+    ERC_WOF_DRIVER_WOF_DISABLED                 = 0x020F,
+    ERC_WOF_UTURBO_IS_ZERO                      = 0x0210,
+    ERC_WOF_OCC_WOF_DISABLED                    = 0x0211,
+    ERC_WOF_OPPB_WOF_DISABLED                   = 0x0212,
+    ERC_WOF_SYSTEM_WOF_DISABLE                  = 0x0213,
+    ERC_WOF_RESET_LIMIT_REACHED                 = 0x0214,
+    ERC_WOF_UNSUPPORTED_FREQUENCIES             = 0x0215,
+    ERC_WOF_NO_CONFIGURED_CORES                 = 0x0216,
+    ERC_WOF_IPC_FAILURE                         = 0x0217,
+    ERC_WOF_USER_DISABLED_WOF                   = 0x0218,
+    ERC_WOF_RESET_DEBUG_CMD                     = 0x0219,
+    ERC_WOF_DIVIDE_BY_ZERO_VDN                  = 0x021A,
 };
 
 // Error log Module Ids

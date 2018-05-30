@@ -330,7 +330,9 @@ errlHndl_t SMGR_all_to_standby()
     TRAC_IMP("SMGR: Transition from State (%d) to Standby Started", CURRENT_STATE());
 
     // set STATE_CHANGE WOF disabled flag
-    set_clear_wof_disabled( SET, WOF_RC_STATE_CHANGE );
+    set_clear_wof_disabled( SET,
+                            WOF_RC_STATE_CHANGE,
+                            ERC_WOF_STATE_CHANGE );
 
     // if Psates in transition (a pgpe_start_suspend IPC call still running),
     // wait until it is settled up to WAIT_PGPE_TASK_TIMEOUT usec
@@ -605,7 +607,9 @@ errlHndl_t SMGR_observation_to_active()
 
             TRAC_IMP("SMGR: Observation to Active Transition Started");
             // Clear STATE_CHANGE WOF disabled flag
-            set_clear_wof_disabled( CLEAR, WOF_RC_STATE_CHANGE );
+            set_clear_wof_disabled( CLEAR,
+                                    WOF_RC_STATE_CHANGE,
+                                    ERC_WOF_STATE_CHANGE );
 
             // If there are no cores configured, do not wait for PSTATES to
             // become enabled.
@@ -883,7 +887,9 @@ errlHndl_t SMGR_active_to_observation()
     do
     {
         // Set STATE_CHANGE WOF disabled
-        set_clear_wof_disabled( SET, WOF_RC_STATE_CHANGE );
+        set_clear_wof_disabled( SET,
+                                WOF_RC_STATE_CHANGE,
+                                ERC_WOF_STATE_CHANGE );
 
         if(G_present_cores == 0)
         {
@@ -1014,7 +1020,9 @@ errlHndl_t SMGR_active_to_characterization()
     do
     {
         // set STATE_CHANGE WOF disabled flag
-        set_clear_wof_disabled( SET, WOF_RC_STATE_CHANGE );
+        set_clear_wof_disabled( SET,
+                                WOF_RC_STATE_CHANGE,
+                                ERC_WOF_STATE_CHANGE );
 
         if(G_present_cores == 0)
         {
@@ -1178,7 +1186,9 @@ errlHndl_t SMGR_all_to_safe()
     }
 
     // set STATE_CHANGE WOF disabled flag
-    set_clear_wof_disabled( SET, WOF_RC_STATE_CHANGE );
+    set_clear_wof_disabled( SET,
+                            WOF_RC_STATE_CHANGE,
+                            ERC_WOF_STATE_CHANGE );
 
     // If we are master, we will wait 15ms to go to full on safe mode
     // This is to give the slaves time to see that we are broadcasting

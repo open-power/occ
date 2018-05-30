@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -274,7 +274,9 @@ errlHndl_t SMGR_mode_transition_to_nominal()
     CURRENT_MODE() = OCC_MODE_NOMINAL;
 
     // WOF is disabled in nominal mode
-    set_clear_wof_disabled( SET, WOF_RC_MODE_NO_SUPPORT_MASK );
+    set_clear_wof_disabled( SET,
+                            WOF_RC_MODE_NO_SUPPORT_MASK,
+                            ERC_WOF_MODE_NO_SUPPORT_MASK );
     TRAC_IMP("SMGR: Mode to Nominal Transition Completed");
 
     return l_errlHndl;
@@ -300,7 +302,9 @@ errlHndl_t SMGR_mode_transition_to_powersave()
     CURRENT_MODE() = OCC_MODE_PWRSAVE;
 
     // WOF is disabled in SPS mode
-    set_clear_wof_disabled( SET, WOF_RC_MODE_NO_SUPPORT_MASK );
+    set_clear_wof_disabled( SET,
+                            WOF_RC_MODE_NO_SUPPORT_MASK,
+                            ERC_WOF_MODE_NO_SUPPORT_MASK );
 
     TRAC_IMP("SMGR: Mode to PowerSave Transition Completed");
 
@@ -328,7 +332,9 @@ errlHndl_t SMGR_mode_transition_to_dynpowersave()
     CURRENT_MODE() = OCC_MODE_DYN_POWER_SAVE;
 
     // WOF is enabled in DPS, clear the mode bit
-    set_clear_wof_disabled( CLEAR, WOF_RC_MODE_NO_SUPPORT_MASK );
+    set_clear_wof_disabled( CLEAR,
+                            WOF_RC_MODE_NO_SUPPORT_MASK,
+                            ERC_WOF_MODE_NO_SUPPORT_MASK );
 
     TRAC_IMP("SMGR: Mode to Dynamic PowerSave-Favor Energy Transition Completed");
 
@@ -353,7 +359,9 @@ errlHndl_t SMGR_mode_transition_to_dynpowersave_fp()
 
     CURRENT_MODE() = OCC_MODE_DYN_POWER_SAVE_FP;
     // WOF is enabled in DPS-FP, clear the mode bit
-    set_clear_wof_disabled( CLEAR, WOF_RC_MODE_NO_SUPPORT_MASK );
+    set_clear_wof_disabled( CLEAR,
+                            WOF_RC_MODE_NO_SUPPORT_MASK,
+                            ERC_WOF_MODE_NO_SUPPORT_MASK );
 
     TRAC_IMP("SMGR: Mode to Dynamic PowerSave-Favor Performance Transition Completed");
 
@@ -380,7 +388,9 @@ errlHndl_t SMGR_mode_transition_to_turbo()
     CURRENT_MODE() = OCC_MODE_TURBO;
 
     // WOF is disabled in turbo mode
-    set_clear_wof_disabled( SET, WOF_RC_MODE_NO_SUPPORT_MASK );
+    set_clear_wof_disabled( SET,
+                            WOF_RC_MODE_NO_SUPPORT_MASK,
+                            ERC_WOF_MODE_NO_SUPPORT_MASK );
 
     TRAC_IMP("SMGR: Mode to Turbo Transition Completed");
 
@@ -406,7 +416,9 @@ errlHndl_t SMGR_mode_transition_to_ffo()
 
     CURRENT_MODE() = OCC_MODE_FFO;
     // WOF is disabled in FFO
-    set_clear_wof_disabled( SET, WOF_RC_MODE_NO_SUPPORT_MASK );
+    set_clear_wof_disabled( SET,
+                            WOF_RC_MODE_NO_SUPPORT_MASK,
+                            ERC_WOF_MODE_NO_SUPPORT_MASK );
 
     TRAC_IMP("SMGR: Mode to FFO Transition Completed");
 
@@ -431,7 +443,9 @@ errlHndl_t SMGR_mode_transition_to_fmf()
 
     CURRENT_MODE() = OCC_MODE_FMF;
     // WOF is enabled in FMF, clear the mode bit
-    set_clear_wof_disabled( CLEAR, WOF_RC_MODE_NO_SUPPORT_MASK );
+    set_clear_wof_disabled( CLEAR,
+                            WOF_RC_MODE_NO_SUPPORT_MASK,
+                            ERC_WOF_MODE_NO_SUPPORT_MASK );
     TRAC_IMP("SMGR: Mode to FMF Transition Completed");
 
     return l_errlHndl;
@@ -455,7 +469,9 @@ errlHndl_t SMGR_mode_transition_to_nom_perf()
 
     CURRENT_MODE() = OCC_MODE_NOM_PERFORMANCE;
     // WOF is enabled in nominal performance mode, clear the mode bit
-    set_clear_wof_disabled( CLEAR, WOF_RC_MODE_NO_SUPPORT_MASK );
+    set_clear_wof_disabled( CLEAR,
+                            WOF_RC_MODE_NO_SUPPORT_MASK,
+                            ERC_WOF_MODE_NO_SUPPORT_MASK );
 
     TRAC_IMP("SMGR: Mode to Nominal Performance Transition Completed");
 
@@ -480,7 +496,9 @@ errlHndl_t SMGR_mode_transition_to_max_perf()
 
     CURRENT_MODE() = OCC_MODE_MAX_PERFORMANCE;
     // WOF is enabled in max performance mode, clear the mode bit
-    set_clear_wof_disabled( CLEAR, WOF_RC_MODE_NO_SUPPORT_MASK );
+    set_clear_wof_disabled( CLEAR,
+                            WOF_RC_MODE_NO_SUPPORT_MASK,
+                            ERC_WOF_MODE_NO_SUPPORT_MASK );
 
     TRAC_IMP("SMGR: Mode to Maximum Performance Transition Completed");
 

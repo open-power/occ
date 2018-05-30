@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -540,12 +540,18 @@ void task_dcom_parse_occfwmsg(task_t *i_self)
                 // If Ultra Turbo is 0, disable WOF, else enable
                 if(G_sysConfigData.sys_mode_freq.table[OCC_MODE_UTURBO] == 0)
                 {
-                    set_clear_wof_disabled( SET, WOF_RC_UTURBO_IS_ZERO );
+                    set_clear_wof_disabled( SET,
+                                            WOF_RC_UTURBO_IS_ZERO,
+                                            ERC_WOF_UTURBO_IS_ZERO );
                 }
                 else
                 {
-                    set_clear_wof_disabled( CLEAR, WOF_RC_UTURBO_IS_ZERO );
-                    set_clear_wof_disabled( CLEAR, WOF_RC_OCC_WOF_DISABLED );
+                    set_clear_wof_disabled( CLEAR,
+                                            WOF_RC_UTURBO_IS_ZERO,
+                                            ERC_WOF_UTURBO_IS_ZERO );
+                    set_clear_wof_disabled( CLEAR,
+                                            WOF_RC_OCC_WOF_DISABLED,
+                                            ERC_WOF_OCC_WOF_DISABLED );
                 }
 
                 if(G_sysConfigData.sys_mode_freq.table[OCC_MODE_UTURBO] > G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO])
@@ -609,7 +615,9 @@ void task_dcom_parse_occfwmsg(task_t *i_self)
         {
             if(g_amec->wof.wof_disabled & WOF_RC_USER_DISABLED_WOF)
             {
-               set_clear_wof_disabled( CLEAR, WOF_RC_USER_DISABLED_WOF );
+               set_clear_wof_disabled( CLEAR,
+                                       WOF_RC_USER_DISABLED_WOF,
+                                       ERC_WOF_USER_DISABLED_WOF );
                TRAC_INFO("User enabled WOF! wof_disabled = 0x%08X", g_amec->wof.wof_disabled);
             }
         }
@@ -617,7 +625,9 @@ void task_dcom_parse_occfwmsg(task_t *i_self)
         {
             if(!(g_amec->wof.wof_disabled & WOF_RC_USER_DISABLED_WOF))
             {
-               set_clear_wof_disabled( SET, WOF_RC_USER_DISABLED_WOF );
+               set_clear_wof_disabled( SET,
+                                       WOF_RC_USER_DISABLED_WOF,
+                                       ERC_WOF_USER_DISABLED_WOF );
                TRAC_INFO("User disabled WOF! wof_disabled = 0x%08X", g_amec->wof.wof_disabled);
             }
         }

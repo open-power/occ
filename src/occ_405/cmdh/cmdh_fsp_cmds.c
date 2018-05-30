@@ -1458,7 +1458,9 @@ void cmdh_dbug_force_wof_reset( const cmdh_fsp_cmd_t * i_cmd_ptr,
                                 cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     TRAC_INFO("DEBUG - Forcing WOF Reset");
-    set_clear_wof_disabled( SET, WOF_RC_RESET_DEBUG_CMD );
+    set_clear_wof_disabled( SET,
+                            WOF_RC_RESET_DEBUG_CMD,
+                            ERC_WOF_RESET_DEBUG_CMD );
     G_rsp_status = ERRL_RC_SUCCESS;
 }
 

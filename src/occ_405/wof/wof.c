@@ -149,7 +149,9 @@ void call_wof_main( void )
         // PGPE wof disabled bit
         if(g_wof->wof_init_state == PGPE_WOF_ENABLED_NO_PREV_DATA)
         {
-            set_clear_wof_disabled( CLEAR, WOF_RC_PGPE_WOF_DISABLED );
+            set_clear_wof_disabled( CLEAR,
+                                    WOF_RC_PGPE_WOF_DISABLED,
+                                    ERC_WOF_PGPE_WOF_DISABLED );
         }
 
         // If error logged in callback, record now
@@ -157,7 +159,10 @@ void call_wof_main( void )
         {
             INTR_TRAC_ERR("Got a bad RC in wof_vfrt_callback: 0x%x",
                     g_wof->wof_vfrt_req_rc);
-            set_clear_wof_disabled( SET, WOF_RC_VFRT_REQ_FAILURE );
+            set_clear_wof_disabled( SET,
+                                    WOF_RC_VFRT_REQ_FAILURE,
+                                    ERC_WOF_VFRT_REQ_FAILURE );
+
             // After official error recorded, prevent this code
             // from running from same setting of the var.
             g_wof->vfrt_callback_error = 0;
@@ -169,7 +174,10 @@ void call_wof_main( void )
            (g_wof->wof_disabled == WOF_RC_PGPE_WOF_DISABLED) )
         {
             g_wof->pgpe_wof_off = 0;
-            set_clear_wof_disabled( CLEAR, WOF_RC_PGPE_WOF_DISABLED );
+            set_clear_wof_disabled( CLEAR,
+                                    WOF_RC_PGPE_WOF_DISABLED,
+                                    ERC_WOF_PGPE_WOF_DISABLED );
+
         }
 
         // Make sure wof has not been disabled
@@ -177,7 +185,9 @@ void call_wof_main( void )
         {
             if( g_wof->pgpe_wof_disabled )
             {
-                set_clear_wof_disabled( SET, WOF_RC_PGPE_WOF_DISABLED );
+                set_clear_wof_disabled( SET,
+                                        WOF_RC_PGPE_WOF_DISABLED,
+                                        ERC_WOF_PGPE_WOF_DISABLED );
                 g_wof->pgpe_wof_disabled = 0;
             }
             break;
@@ -189,7 +199,9 @@ void call_wof_main( void )
             if( L_pstate_protocol_off == 0 )
             {
                 INTR_TRAC_ERR("WOF Disabled! Pstate Protocol off");
-                set_clear_wof_disabled( SET, WOF_RC_PSTATE_PROTOCOL_OFF );
+                set_clear_wof_disabled( SET,
+                                        WOF_RC_PSTATE_PROTOCOL_OFF,
+                                        ERC_WOF_PSTATE_PROTOCOL_OFF );
                 L_pstate_protocol_off = 1;
             }
             // Since Pstates are off, break out
@@ -200,7 +212,9 @@ void call_wof_main( void )
             if( L_pstate_protocol_off == 1 )
             {
                 INTR_TRAC_INFO("Pstate Protocol on! Clearing PSTATE_PROTOCOL_OFF");
-                set_clear_wof_disabled( CLEAR, WOF_RC_PSTATE_PROTOCOL_OFF );
+                set_clear_wof_disabled( CLEAR,
+                                        WOF_RC_PSTATE_PROTOCOL_OFF,
+                                        ERC_WOF_PSTATE_PROTOCOL_OFF );
                 L_pstate_protocol_off = 0;
             }
         }
@@ -232,7 +246,9 @@ void call_wof_main( void )
                             {
                                 INTR_TRAC_ERR("WOF Disabled!"
                                               " Init VFRT request timeout");
-                                set_clear_wof_disabled( SET, WOF_RC_VFRT_REQ_TIMEOUT);
+                                set_clear_wof_disabled( SET,
+                                                        WOF_RC_VFRT_REQ_TIMEOUT,
+                                                        ERC_WOF_VFRT_REQ_TIMEOUT );
                             }
                             else if(L_vfrt_last_chance != 0)
                             {
@@ -267,7 +283,9 @@ void call_wof_main( void )
                             if( L_wof_control_last_chance && (!ignore_pgpe_error()) )
                             {
                                 INTR_TRAC_ERR("WOF Disabled! Control req timeout(1)");
-                                set_clear_wof_disabled(SET, WOF_RC_CONTROL_REQ_TIMEOUT);
+                                set_clear_wof_disabled(SET,
+                                                       WOF_RC_CONTROL_REQ_TIMEOUT,
+                                                       ERC_WOF_CONTROL_REQ_TIMEOUT);
                             }
                             else if(!L_wof_control_last_chance)
                             {
@@ -304,7 +322,9 @@ void call_wof_main( void )
                             if( L_wof_control_last_chance && (!ignore_pgpe_error()) )
                             {
                                 INTR_TRAC_ERR("WOF Disabled! Control req timeout(2)");
-                                set_clear_wof_disabled(SET, WOF_RC_CONTROL_REQ_TIMEOUT);
+                                set_clear_wof_disabled(SET,
+                                                       WOF_RC_CONTROL_REQ_TIMEOUT,
+                                                       ERC_WOF_CONTROL_REQ_TIMEOUT );
                             }
                             else if(!L_wof_control_last_chance)
                             {
@@ -351,7 +371,9 @@ void call_wof_main( void )
                         if(!ignore_pgpe_error())
                         {
                             INTR_TRAC_ERR("WOF Disabled! VFRT req timeout");
-                            set_clear_wof_disabled(SET,WOF_RC_VFRT_REQ_TIMEOUT);
+                            set_clear_wof_disabled(SET,
+                                                   WOF_RC_VFRT_REQ_TIMEOUT,
+                                                   ERC_WOF_VFRT_REQ_TIMEOUT);
                         }
                         else
                         {
@@ -661,7 +683,9 @@ void send_vfrt_to_pgpe( uint32_t i_vfrt_main_mem_addr )
         {
             INTR_TRAC_ERR("VFRT Main Memory address NOT 128-byte aligned:"
                     " 0x%08x", i_vfrt_main_mem_addr);
-            set_clear_wof_disabled(SET, WOF_RC_VFRT_ALIGNMENT_ERROR);
+            set_clear_wof_disabled(SET,
+                                   WOF_RC_VFRT_ALIGNMENT_ERROR,
+                                   ERC_WOF_VFRT_ALIGNMENT_ERROR);
 
             break;
         }
@@ -723,7 +747,9 @@ void send_vfrt_to_pgpe( uint32_t i_vfrt_main_mem_addr )
     if( l_ssxrc != SSX_OK )
     {
         // Formally disable WOF
-        set_clear_wof_disabled( SET, WOF_RC_IPC_FAILURE );
+        set_clear_wof_disabled( SET,
+                                WOF_RC_IPC_FAILURE,
+                                ERC_WOF_IPC_FAILURE );
 
         return;
     }
@@ -1047,12 +1073,12 @@ void calculate_nest_leakage( void )
  *
  * Return: The calculated effective capacitance
  */
-uint32_t calculate_effective_capacitance( uint32_t i_iAC,
-                                          uint32_t i_voltage,
-                                          uint32_t i_frequency )
+uint32_t calculate_effective_capacitance( uint32_t i_iAC_10ma,
+                                          uint32_t i_voltage_100uV,
+                                          uint32_t i_frequency_mhz )
 {
     // Prevent divide by zero
-    if( (i_frequency == 0)  || (i_voltage == 0) )
+    if( (i_frequency_mhz == 0)  || (i_voltage_100uV == 0) )
     {
         // Return 0 causing caller to disable wof.
         return 0;
@@ -1060,10 +1086,10 @@ uint32_t calculate_effective_capacitance( uint32_t i_iAC,
 
     // Compute V^1.3 using a best-fit equation
     // (V^1.3) = (21374 * (voltage in 100uV) - 50615296)>>10
-    uint32_t v_exp_1_dot_3 = (21374 * i_voltage - 50615296)>>10;
+    uint32_t v_exp_1_dot_3 = (21374 * i_voltage_100uV - 50615296) >> 10;
 
     // Compute I / (V^1.3)
-    uint32_t I = i_iAC << 14; // * 16384
+    uint32_t I = i_iAC_10ma << 14; // * 16384
 
     // Prevent divide by zero
     if( v_exp_1_dot_3 == 0 )
@@ -1077,7 +1103,7 @@ uint32_t calculate_effective_capacitance( uint32_t i_iAC,
 
     // Divide by frequency and return the final value.
     // (I / (V^1.3 * F)) == I / V^1.3 /F
-    return c_eff / i_frequency;
+    return c_eff / i_frequency_mhz;
 }
 
 /**
@@ -1106,7 +1132,10 @@ void calculate_ceff_ratio_vdn( void )
         print_oppb();
         // Return 0
         g_wof->ceff_ratio_vdn = 0;
-        set_clear_wof_disabled(SET, WOF_RC_DIVIDE_BY_ZERO_VDN);
+
+        set_clear_wof_disabled(SET,
+                               WOF_RC_DIVIDE_BY_ZERO_VDN,
+                               ERC_WOF_DIVIDE_BY_ZERO_VDN);
     }
     else
     {
@@ -1179,7 +1208,10 @@ void calculate_ceff_ratio_vdd( void )
             print_oppb();
             // Return 0
             g_wof->ceff_ratio_vdd = 0;
-            set_clear_wof_disabled(SET, WOF_RC_DIVIDE_BY_ZERO_VDD);
+
+            set_clear_wof_disabled(SET,
+                                   WOF_RC_DIVIDE_BY_ZERO_VDD,
+                                   ERC_WOF_DIVIDE_BY_ZERO_VDD);
         }
         else
         {
@@ -1355,9 +1387,12 @@ void read_sensor_data( void )
  * Param[in]: i_bit_mask - The bit to set or clear. If setting a bit,
  *                         this will be added to the errorlog created
  *                         as userdata1
+ * Param[in]: i_ext_rc - The extended reason code to be added to
+ *                       error log
  */
 void set_clear_wof_disabled( uint8_t i_action,
-                             uint32_t i_bit_mask )
+                             uint32_t i_bit_mask,
+                             uint16_t i_ext_rc )
 {
     // Keep track of whether an error has already been logged
     static bool L_errorLogged = false;
@@ -1523,13 +1558,13 @@ void set_clear_wof_disabled( uint8_t i_action,
              *  @reasoncode WOF_DISABLED_RC
              *  @userdata1  current wof_disabled
              *  @userdata2  Bit requested to be set
-             *  @userdata4  OCC_NO_EXTENDED_RC
+             *  @userdata4  Unique extended RC given by caller
              *  @devdesc    WOF has been disabled due to an error
              */
             l_errl = createErrl(
                         SET_CLEAR_WOF_DISABLED,
                         WOF_DISABLED_RC,
-                        OCC_NO_EXTENDED_RC,
+                        i_ext_rc,
                         ERRL_SEV_UNRECOVERABLE,
                         NULL,
                         DEFAULT_TRACE_SIZE,
@@ -1668,9 +1703,10 @@ bool enable_wof( void )
 {
     INTR_TRAC_IMP("WOF is being enabled...");
     uint32_t reasonCode = 0;
-    bool result = true;
+    bool     result     = true;
     uint32_t bit_to_set = 0;
-    int rc = 0;
+    int      rc         = 0;
+    uint16_t erc        = 0;
     // Make sure IPC command is idle.
     if(!async_request_is_idle( &G_wof_control_req.request ) )
     {
@@ -1684,6 +1720,7 @@ bool enable_wof( void )
             INTR_TRAC_ERR("Unknown error from wof control IPC message(enable)");
             INTR_TRAC_ERR("Return Code = 0x%X", g_wof->control_ipc_rc);
             rc = g_wof->control_ipc_rc;
+            erc = ERC_WOF_CONTROL_REQ_FAILURE;
             bit_to_set = WOF_RC_CONTROL_REQ_FAILURE;
             g_wof->control_ipc_rc = 0;
             /** @
@@ -1719,6 +1756,7 @@ bool enable_wof( void )
                  *  @devdesc    OCC Failed to schedule a GPE job for enabling wof
                  */
                 bit_to_set = WOF_RC_PGPE_WOF_DISABLED;
+                erc = ERC_WOF_PGPE_WOF_DISABLED;
                 reasonCode = GPE_REQUEST_SCHEDULE_FAILURE;
             }
             else
@@ -1733,7 +1771,7 @@ bool enable_wof( void )
             errlHndl_t l_errl = createErrl(
                     ENABLE_WOF,
                     reasonCode,
-                    OCC_NO_EXTENDED_RC,
+                    erc,
                     ERRL_SEV_PREDICTIVE,
                     NULL,
                     DEFAULT_TRACE_SIZE,
@@ -1741,7 +1779,7 @@ bool enable_wof( void )
                     0);
 
             result = false;
-            set_clear_wof_disabled( SET, bit_to_set );
+            set_clear_wof_disabled( SET, bit_to_set, erc );
 
             // Commit the error
             commitErrl( &l_errl );
@@ -1817,7 +1855,7 @@ void schedule_vfrt_request( void )
                             g_wof->gpe_req_rc );
 
             // Formally disable wof
-            set_clear_wof_disabled( SET, WOF_RC_IPC_FAILURE );
+            set_clear_wof_disabled( SET, WOF_RC_IPC_FAILURE, ERC_WOF_IPC_FAILURE );
 
             // Reset the global return code after logging the error
             g_wof->gpe_req_rc = 0;

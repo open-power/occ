@@ -463,7 +463,9 @@ void read_wof_header(void)
         if ( l_error )
         {
             // We were unable to get the WOF header thus it should not be run.
-            set_clear_wof_disabled( SET, WOF_RC_NO_WOF_HEADER_MASK );
+            set_clear_wof_disabled( SET,
+                                    WOF_RC_NO_WOF_HEADER_MASK,
+                                    ERC_WOF_NO_WOF_HEADER_MASK );
         }
     }
     else
@@ -471,7 +473,9 @@ void read_wof_header(void)
         // We were unable to get the WOF header thus it should not be run.
         MAIN_TRAC_ERR("read_wof_header(): WOF header address is 0 or NOT"
                 " 128-byte aligned, WOF is disabled");
-        set_clear_wof_disabled( SET, WOF_RC_NO_WOF_HEADER_MASK );
+        set_clear_wof_disabled( SET,
+                                WOF_RC_NO_WOF_HEADER_MASK,
+                                ERC_WOF_NO_WOF_HEADER_MASK );
     }
 } // end read_wof_header()
 
@@ -847,7 +851,9 @@ bool read_oppb_params()
         {
             MAIN_TRAC_INFO("OPPB has WOF disabled.(%d)",
                     G_oppb.wof.wof_enabled);
-            set_clear_wof_disabled( SET, WOF_RC_OPPB_WOF_DISABLED );
+            set_clear_wof_disabled( SET,
+                                    WOF_RC_OPPB_WOF_DISABLED,
+                                    ERC_WOF_OPPB_WOF_DISABLED );
         }
         else
         {
@@ -921,7 +927,9 @@ void read_hcode_headers()
             TRAC_INFO("read_hcode_headers: No configured cores detected."
                       " Skipping read_oppb_params(), read_pgpe_header(),"
                       " and read_wof_header()");
-            set_clear_wof_disabled( SET, WOF_RC_NO_CONFIGURED_CORES );
+            set_clear_wof_disabled( SET,
+                                    WOF_RC_NO_CONFIGURED_CORES,
+                                    ERC_WOF_NO_CONFIGURED_CORES );
             G_proc_pstate_status = PSTATES_DISABLED;
         }
         else
@@ -937,7 +945,9 @@ void read_hcode_headers()
             // Extract important WOF data into global space
             read_wof_header();
             CHECKPOINT(WOF_IMAGE_HEADER_READ);
-            set_clear_wof_disabled( CLEAR, WOF_RC_NO_CONFIGURED_CORES );
+            set_clear_wof_disabled( CLEAR,
+                                    WOF_RC_NO_CONFIGURED_CORES,
+                                    ERC_WOF_NO_CONFIGURED_CORES );
         }
 
         // PGPE Beacon is not implemented in simics

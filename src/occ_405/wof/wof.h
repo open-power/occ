@@ -431,8 +431,9 @@ uint32_t calculate_effective_capacitance( uint32_t i_iAC,
 
 void read_sensor_data( void );
 
-void set_clear_wof_disabled( uint8_t i_action,
-                             uint32_t i_bit_mask );
+void set_clear_wof_disabled( uint8_t  i_action,
+                             uint32_t i_bit_mask,
+                             uint16_t i_ext_rc );
 
 void disable_wof( void );
 

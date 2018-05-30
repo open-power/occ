@@ -365,35 +365,53 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
         {
             case WOF_MISSING_ULTRA_TURBO:
                 CMDH_TRAC_INFO("WOF Disabled due to 0 UT value.");
-                set_clear_wof_disabled( SET, WOF_RC_UTURBO_IS_ZERO );
+                set_clear_wof_disabled( SET,
+                                        WOF_RC_UTURBO_IS_ZERO,
+                                        ERC_WOF_UTURBO_IS_ZERO );
                 l_freq = 0;
                 break;
 
             case WOF_SYSTEM_DISABLED:
                 CMDH_TRAC_INFO("WOF Disabled due to SYSTEM_WOF_DISABLE");
-                set_clear_wof_disabled( SET, WOF_RC_SYSTEM_WOF_DISABLE );
+                set_clear_wof_disabled( SET,
+                                        WOF_RC_SYSTEM_WOF_DISABLE,
+                                        ERC_WOF_SYSTEM_WOF_DISABLE );
                 l_freq = 0;
                 break;
 
             case WOF_RESET_LIMIT_REACHED:
                 CMDH_TRAC_INFO("WOF Disabled due to reset limit");
-                set_clear_wof_disabled( SET, WOF_RC_RESET_LIMIT_REACHED );
+                set_clear_wof_disabled( SET,
+                                        WOF_RC_RESET_LIMIT_REACHED,
+                                        ERC_WOF_RESET_LIMIT_REACHED );
                 l_freq = 0;
                 break;
 
             case WOF_UNSUPPORTED_FREQ:
                 CMDH_TRAC_INFO("WOF Disabled due to unsupported frequency");
-                set_clear_wof_disabled( SET, WOF_RC_UNSUPPORTED_FREQUENCIES );
+                set_clear_wof_disabled( SET,
+                                        WOF_RC_UNSUPPORTED_FREQUENCIES,
+                                        ERC_WOF_UNSUPPORTED_FREQUENCIES );
                 l_freq = 0;
                 break;
 
             default:
                 CMDH_TRAC_INFO("WOF is Enabled! so far...");
-                set_clear_wof_disabled( CLEAR, WOF_RC_UTURBO_IS_ZERO );
-                set_clear_wof_disabled( CLEAR, WOF_RC_SYSTEM_WOF_DISABLE );
-                set_clear_wof_disabled( CLEAR, WOF_RC_RESET_LIMIT_REACHED );
-                set_clear_wof_disabled( CLEAR, WOF_RC_UNSUPPORTED_FREQUENCIES );
-                set_clear_wof_disabled( CLEAR, WOF_RC_OCC_WOF_DISABLED );
+                set_clear_wof_disabled( CLEAR,
+                                        WOF_RC_UTURBO_IS_ZERO,
+                                        ERC_WOF_UTURBO_IS_ZERO );
+                set_clear_wof_disabled( CLEAR,
+                                        WOF_RC_SYSTEM_WOF_DISABLE,
+                                        ERC_WOF_SYSTEM_WOF_DISABLE );
+                set_clear_wof_disabled( CLEAR,
+                                        WOF_RC_RESET_LIMIT_REACHED,
+                                        ERC_WOF_SYSTEM_WOF_DISABLE );
+                set_clear_wof_disabled( CLEAR,
+                                        WOF_RC_UNSUPPORTED_FREQUENCIES,
+                                        ERC_WOF_UNSUPPORTED_FREQUENCIES );
+                set_clear_wof_disabled( CLEAR,
+                                        WOF_RC_OCC_WOF_DISABLED,
+                                        ERC_WOF_OCC_WOF_DISABLED );
                 break;
         }
 
@@ -1244,7 +1262,9 @@ errlHndl_t data_store_avsbus_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         CMDH_TRAC_ERR("WOF Disabled! Invalid VDD/VDN");
         // If cannot use vdd/vdn, cannot run wof algorithm.
-        set_clear_wof_disabled( SET, WOF_RC_INVALID_VDD_VDN );
+        set_clear_wof_disabled( SET,
+                                WOF_RC_INVALID_VDD_VDN,
+                                ERC_WOF_INVALID_VDD_VDN );
 
     }
     else
@@ -1269,7 +1289,9 @@ errlHndl_t data_store_avsbus_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
                         G_sysConfigData.vdd_current_rollover_10mA, G_sysConfigData.vdd_max_current_10mA);
 
         // We can use vdd/vdn. Clear NO_VDD_VDN_READ mask
-        set_clear_wof_disabled( CLEAR, WOF_RC_INVALID_VDD_VDN );
+        set_clear_wof_disabled( CLEAR,
+                                WOF_RC_INVALID_VDD_VDN,
+                                ERC_WOF_INVALID_VDD_VDN );
         avsbus_init();
     }
 
@@ -1800,7 +1822,9 @@ errlHndl_t data_store_sys_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
         if( !G_sysConfigData.system_type.kvm &&
            (CURRENT_MODE() == OCC_MODE_NOCHANGE) )
         {
-            set_clear_wof_disabled(SET, WOF_RC_MODE_NO_SUPPORT_MASK);
+            set_clear_wof_disabled(SET,
+                                   WOF_RC_MODE_NO_SUPPORT_MASK,
+                                   ERC_WOF_MODE_NO_SUPPORT_MASK);
         }
 
         //Write core temp and freq sensor ids
