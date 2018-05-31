@@ -28,11 +28,11 @@
 
 //PMU config table defined below.
 //------------------------------
-#define TOTAL_CONFIGS 60
+#define TOTAL_CONFIGS 61
 #define TOTAL_POSTINGS 238
 #define INC_UPD_COUNT 1
 
-#define TOTAL_CONFIG_SCOMS 60
+#define TOTAL_CONFIG_SCOMS 61
 #define TOTAL_COUNTER_SCOMS 71
 
 #define MAX_32 4294967295ULL
@@ -77,7 +77,7 @@ uint64_t G_PMU_CONFIGS_8[][2] =
     {0x50108be, 0x00005345755b6000},//port2,3//26
     {0x50108bf, 0x000e800000000000},//port2,3//27
 //xlinks//
-    {0x501341a, 0xff015daa15555000},//all xlinks//28
+    {0x501341a, 0xff115daa15555000},//all xlinks//28
 //nx//
     {0x20110a6, 0xcaa0000080000000},//29
     {0x20110a9, 0xcaa0492480000000},//30
@@ -113,7 +113,9 @@ uint64_t G_PMU_CONFIGS_8[][2] =
     {0x4010816, 0x6000000000000000},//CAPP02//56
     {0x4010824, 0x8058914202000000},//CAPP02//57
     {0x4010822, 0x1000000000000000},//CAPP02//58
-    {0x4010817, 0x0000000000000000} //CAPP02//59
+    {0x4010817, 0x0000000000000000},//CAPP02//59
+//alinks//
+    {0x501381a, 0xff115daa05555000}//all alinks//60
 };
 
 uint64_t G_PMU_CONFIGS_16[][2] = 
@@ -150,7 +152,7 @@ uint64_t G_PMU_CONFIGS_16[][2] =
     {0x50108be, 0x00005345755b6000},//port2,3//26
     {0x50108bf, 0x000e800000000000},//port2,3//27
 //xlinks                            
-    {0x501341a, 0xff015d5515555000},//all xlinks//28
+    {0x501341a, 0xff115d5515555000},//all xlinks//28
 //nx                                
     {0x20110a6, 0xc550000080000000},//29
     {0x20110a9, 0xc550492480000000},//30
@@ -186,7 +188,9 @@ uint64_t G_PMU_CONFIGS_16[][2] =
     {0x4010816, 0x6000000000000000},//CAPP02//56
     {0x4010824, 0x803850c102000000},//CAPP02//57
     {0x4010822, 0x1000000000000000},//CAPP02//58
-    {0x4010817, 0x0000000000000000} //CAPP02//59
+    {0x4010817, 0x0000000000000000},//CAPP02//59
+//alinks//
+    {0x501341a, 0xff115d5505555000}//all alinks//60
 };
 
 
@@ -337,6 +341,31 @@ uint64_t G_PMULETS_7[] =
     0x4010825//6//70
 };
 
+//Alink - fips920
+uint64_t G_PMULETS_2_2a[] =
+{//Alink0
+    0x501381b,//0-even
+    0x501381c,//1-odd
+};
+
+uint64_t G_PMULETS_2_2b[] =
+{//Alink1
+    0x501381d,//2-even
+    0x501381e,//3-odd
+};
+
+uint64_t G_PMULETS_2_2c[] =
+{//Alink2
+    0x501381f,//4-even
+    0x5013820,//5-odd
+};
+
+uint64_t G_PMULETS_2_2d[] =
+{//Alink3
+    0x5013821,//6-even
+    0x5013822,//7-odd
+};
+
 /**
  * Groups 
  **/
@@ -375,7 +404,7 @@ enum
     POST_OFFSET_G2_4            = 0x001801D8,
     POST_OFFSET_G2T             = 0x00180218,
 
-    // Group G3 - INTL
+    // Group G3 - NTL
     POST_OFFSET_G3H             = 0x00180220,
     POST_OFFSET_G3_1            = 0x00180228,
     POST_OFFSET_G3_2            = 0x00180248,
@@ -404,6 +433,10 @@ enum
     POST_OFFSET_G5_4            = 0x00180490,
     POST_OFFSET_G5T             = 0x00180548,
 
+    // Group G2 - ALINK 0-1 - part of G5 MBA0-3
+    POST_OFFSET_G2_A0           = 0x001804A8,
+    POST_OFFSET_G2_A1           = 0x001804E8,
+
     // Group G6 - MBA 4-7
     POST_OFFSET_G6H             = 0x00180550,
     POST_OFFSET_G6_1            = 0x00180558,
@@ -411,6 +444,10 @@ enum
     POST_OFFSET_G6_3            = 0x00180588,
     POST_OFFSET_G6_4            = 0x001805A0,
     POST_OFFSET_G6T             = 0x00180658,
+
+    // Group G2 - ALINK 2-3 - part of G5 MBA4-7
+    POST_OFFSET_G2_A2           = 0x001805B8,
+    POST_OFFSET_G2_A3           = 0x001805F8,
 
     // Group G7 - NPCQ/CAPP
     POST_OFFSET_G7H             = 0x00180660,
