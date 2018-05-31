@@ -108,11 +108,11 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
      * [48:63] - Reserved
      **/
     uint64_t VERSION = 0;
-    static uint64_t ver_major  = 0x1;
+    static uint64_t ver_major  = 0x2;
     static uint64_t ver_minor  = 0x0;
     static uint64_t ver_bugfix = 0x0;
-    static uint64_t ver_day    = 0x27;   // Day: 27
-    static uint64_t ver_month  = 0x04;   // Month: 04
+    static uint64_t ver_day    = 0x31;   // Day: 27
+    static uint64_t ver_month  = 0x05;   // Month: 04
     static uint64_t ver_year   = 0x2018; // Year:2018
 
     VERSION |= (ver_major  << 60);
@@ -479,6 +479,7 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
  **/
 void configure_pmu(uint8_t state, uint64_t speed)
 {//write the configuration SCOMs for all pmus.
+    uint64_t temp;
     int i,start = (state - 1) * 16,end = state * 16;
     static volatile uint64_t* L_conf_last = (uint64_t*) (DBG_CONF_OFFSET | PBA_ENABLE);
     static volatile uint64_t* L_DBG_0 = (uint64_t*) (DBG_0 | PBA_ENABLE);
@@ -572,13 +573,35 @@ void configure_pmu(uint8_t state, uint64_t speed)
             //1.for speeds till 8ms- 8 bit prescale
             if((speed == CNTL_SPEED_1MS)||(speed == CNTL_SPEED_2MS)||(speed == CNTL_SPEED_4MS)||(speed == CNTL_SPEED_8MS))
             {
-                putscom_abs(G_PMU_CONFIGS_8[i][0], G_PMU_CONFIGS_8[i][1]);
+                // Fix for defect SW430218 - 24x7 to touch only XTS Config2 bits [0:47]
+                if ( G_PMU_CONFIGS_8[i][0] == 0x5011645 )
+                {
+                    getscom_abs(G_PMU_CONFIGS_8[i][0], &temp);
+                    temp &= (0xFFFF);
+                    temp |= G_PMU_CONFIGS_8[i][1];
+                    putscom_abs(G_PMU_CONFIGS_8[i][0], temp);
+                }
+                else
+                {
+                    putscom_abs(G_PMU_CONFIGS_8[i][0], G_PMU_CONFIGS_8[i][1]);
+                }
                 *L_conf_last = (uint64_t)i;            
             }
             //2.for all speeds above 8 ms till 2s - 16bit prescale
             else
             {
-                putscom_abs(G_PMU_CONFIGS_16[i][0], G_PMU_CONFIGS_16[i][1]);
+                // Fix for defect SW430218 - 24x7 to touch only XTS Config2 bits [0:47]
+                if ( G_PMU_CONFIGS_16[i][0] == 0x5011645 )
+                {
+                    getscom_abs(G_PMU_CONFIGS_16[i][0], &temp);
+                    temp &= (0xFFFF);
+                    temp |= G_PMU_CONFIGS_16[i][1];
+                    putscom_abs(G_PMU_CONFIGS_16[i][0], temp);
+                }
+                else
+                {
+                    putscom_abs(G_PMU_CONFIGS_16[i][0], G_PMU_CONFIGS_16[i][1]);
+                }
                 *L_conf_last = (uint64_t)i;            
             }
         }
@@ -594,6 +617,7 @@ void post_pmu_events(int grp)
     static int L_phb_events =0;    
     static volatile uint64_t* L_DBG_GRP = (uint64_t*) (DBG_GRP_OFFSET | PBA_ENABLE);
     static volatile uint64_t* L_DBG_UNIT = (uint64_t*) (DBG_UNIT_OFFSET | PBA_ENABLE);
+    static bool L_X_A_LINKS_flag = false;
     //static volatile uint64_t* L_DBG_4 = (uint64_t*) (DBG_4 | PBA_ENABLE);
     //static volatile uint64_t* L_DBG_5 = (uint64_t*) (DBG_5 | PBA_ENABLE);
     //static volatile uint64_t* L_DBG_6 = (uint64_t*) (DBG_6 | PBA_ENABLE);
@@ -658,7 +682,11 @@ void post_pmu_events(int grp)
                 post_addr = (uint64_t*) (POST_OFFSET_DBG1T | PBA_ENABLE);
             *post_addr = INC_UPD_COUNT;
             break;
-        case G2://XLINKS and NX. Read scoms based on availability.
+        case G2://XLINKS,NX and ALINKS. Read scoms based on availability.
+            if (L_X_A_LINKS_flag)   //Here do xlink-[0:2] and nx
+            {
+                L_X_A_LINKS_flag = false;
+
             *L_DBG_GRP = 2;
             post_addr = (uint64_t*) (POST_OFFSET_G2H | PBA_ENABLE);
             putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
@@ -742,6 +770,89 @@ void post_pmu_events(int grp)
             }
             post_addr = (uint64_t*) (POST_OFFSET_G2T | PBA_ENABLE);
             *post_addr = INC_UPD_COUNT;
+            }
+            else    //Here do alink [0:3]
+            {
+                L_X_A_LINKS_flag = true;
+
+            if ((G_CUR_UAV & MASK_ALNK0) > 0)
+            {
+                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
+                *L_DBG_UNIT = 1;
+                post_addr = (uint64_t*) (POST_OFFSET_G2_A0 | PBA_ENABLE);
+                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
+                getscom_abs(G_PMULETS_2_2a[0], &u3.pmulet);
+                for(j=0; j<4; j++)
+                {
+                    *post_addr = (uint64_t)u3.ev.e[j];
+                    post_addr++;
+                }
+                getscom_abs(G_PMULETS_2_2a[1], &u3.pmulet);
+                for(j=0; j<4; j++)
+                {
+                    *post_addr = (uint64_t)u3.ev.e[j];
+                    post_addr++;
+                }
+            }
+            if ((G_CUR_UAV & MASK_ALNK1) > 0)
+            {
+                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
+                *L_DBG_UNIT = 1;
+                post_addr = (uint64_t*) (POST_OFFSET_G2_A1 | PBA_ENABLE);
+                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
+                getscom_abs(G_PMULETS_2_2b[0], &u3.pmulet);
+                for(j=0; j<4; j++)
+                {
+                    *post_addr = (uint64_t)u3.ev.e[j];
+                    post_addr++;
+                }
+                getscom_abs(G_PMULETS_2_2b[1], &u3.pmulet);
+                for(j=0; j<4; j++)
+                {
+                    *post_addr = (uint64_t)u3.ev.e[j];
+                    post_addr++;
+                }
+            }
+
+            if ((G_CUR_UAV & MASK_ALNK2) > 0)
+            {
+                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
+                *L_DBG_UNIT = 1;
+                post_addr = (uint64_t*) (POST_OFFSET_G2_A2 | PBA_ENABLE);
+                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
+                getscom_abs(G_PMULETS_2_2c[0], &u3.pmulet);
+                for(j=0; j<4; j++)
+                {
+                    *post_addr = (uint64_t)u3.ev.e[j];
+                    post_addr++;
+                }
+                getscom_abs(G_PMULETS_2_2c[1], &u3.pmulet);
+                for(j=0; j<4; j++)
+                {
+                    *post_addr = (uint64_t)u3.ev.e[j];
+                    post_addr++;
+                }
+            }
+            if ((G_CUR_UAV & MASK_ALNK3) > 0)
+            {
+                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
+                *L_DBG_UNIT = 1;
+                post_addr = (uint64_t*) (POST_OFFSET_G2_A3 | PBA_ENABLE);
+                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
+                getscom_abs(G_PMULETS_2_2d[0], &u3.pmulet);
+                for(j=0; j<4; j++)
+                {
+                    *post_addr = (uint64_t)u3.ev.e[j];
+                    post_addr++;
+                }
+                getscom_abs(G_PMULETS_2_2d[1], &u3.pmulet);
+                for(j=0; j<4; j++)
+                {
+                    *post_addr = (uint64_t)u3.ev.e[j];
+                    post_addr++;
+                }
+            }
+            }
             break;
         case G3://NVLINKS -NTL,ATS,XTS
             *L_DBG_GRP = 3;
