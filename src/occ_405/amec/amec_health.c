@@ -311,8 +311,17 @@ void amec_health_check_dimm_timeout()
             break;
         }
 
+        uint8_t l_max_port; // #ports in nimbus/#centaurs in cumulus
+        if(G_sysConfigData.mem_type == MEM_TYPE_NIMBUS)
+        {
+            l_max_port = NUM_DIMM_PORTS;
+        }
+        else // MEM_TYPE_CUMULUS
+        {
+            l_max_port = MAX_NUM_CENTAURS;
+        }
         //iterate across all ports incrementing dimm sensor timers as needed
-        for(l_port = 0; l_port < NUM_DIMM_PORTS; l_port++)
+        for(l_port = 0; l_port < l_max_port; l_port++)
         {
             //any dimm timers on this port need incrementing?
             if(!l_need_inc.bytes[l_port])

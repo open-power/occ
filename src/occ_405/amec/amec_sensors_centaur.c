@@ -54,6 +54,9 @@ uint8_t             G_cent_overtemp_bitmap = 0;
 uint8_t             G_cent_temp_updated_bitmap = 0;
 extern uint8_t      G_centaur_needs_recovery;
 extern uint8_t      G_centaur_nest_lfir6;
+extern uint64_t G_inject_dimm;
+extern uint32_t G_inject_dimm_trace[MAX_NUM_CENTAURS][NUM_DIMMS_PER_CENTAUR];
+
 
 /******************************************************************************/
 /* Forward Declarations                                                       */
@@ -121,6 +124,29 @@ void amec_update_dimm_dts_sensors(CentaurMemData * i_sensor_cache, uint8_t i_cen
         {
             continue;
         }
+
+
+        if (g_amec->proc[0].memctl[i_centaur].centaur.dimm_temps[k].temp_sid) // DIMM has sensor ID
+        {
+            if ((G_inject_dimm & ((uint64_t)1 << ((i_centaur * 8) + k))) == 0)
+            {
+                if (G_inject_dimm_trace[i_centaur][k] != 0)
+                {
+                    TRAC_INFO("amec_update_dimm_dts_sensors: stopping injection of errors for DIMM%04X", (i_centaur<<8)|k);
+                    G_inject_dimm_trace[i_centaur][k] = 0;
+                }
+            }
+            else
+            {
+                if (G_inject_dimm_trace[i_centaur][k] == 0)
+                {
+                    TRAC_INFO("amec_update_dimm_dts_sensors: injecting errors for DIMM%04X", (i_centaur<<8)|k);
+                    G_inject_dimm_trace[i_centaur][k] = 1;
+                }
+                continue; // Skip this DIMM
+            }
+        }
+
 
         l_sens_status = i_sensor_cache->scache.dimm_thermal_sensor[k].fields.status;
         fru_temp_t* l_fru = &g_amec->proc[0].memctl[i_centaur].centaur.dimm_temps[k];

@@ -104,6 +104,8 @@ uint8_t G_mst_tunable_parameter_overwrite = 0;
 uint8_t G_apss_ch_to_function[MAX_APSS_ADC_CHANNELS] = {0};
 
 uint16_t G_allow_trace_flags = 0x0000;
+uint32_t G_internal_flags    = 0x00000000;
+extern uint64_t G_inject_dimm;
 
 ERRL_RC cmdh_poll_v20 (cmdh_fsp_rsp_t * i_rsp_ptr);
 
@@ -326,6 +328,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
     }
     else if (G_sysConfigData.mem_type == MEM_TYPE_CUMULUS)
     {
+        static bool l_traced_missing_sid = FALSE;
         for (l_cent=0; l_cent < MAX_NUM_MEM_CONTROLLERS; l_cent++)
         {
             if (CENTAUR_PRESENT(l_cent))
@@ -350,9 +353,13 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
                 {
                     l_temp_sid = g_amec->proc[0].memctl[l_cent].centaur.dimm_temps[l_dimm].temp_sid;
 
-                    // TODO temp fix until the dimm numbering gets sorted out
-                    if(FSP_SUPPORTED_OCC == G_occ_interrupt_type && l_temp_sid == 0)
+                    if((FSP_SUPPORTED_OCC == G_occ_interrupt_type) && (l_temp_sid == 0) && (g_amec->proc[0].memctl[l_cent].centaur.dimm_temps[l_dimm].cur_temp != 0))
                     {
+                        if (!l_traced_missing_sid)
+                        {
+                            CMDH_TRAC_ERR("cmdh_poll_v20: DIMM%04X sensor not defined but temperature was non-zero", ((l_cent << 8)|l_dimm));
+                            l_traced_missing_sid = TRUE;
+                        }
                         l_temp_sid = 1 + l_dimm; // If sid is zero them make up a sid for FSP
                     }
 
@@ -529,7 +536,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
                     ( (G_apss_ch_to_function[k] == ADC_GPU_1_0) && (G_first_sys_gpu_config & 0x08) ) ||
                     ( (G_apss_ch_to_function[k] == ADC_GPU_1_1) && (G_first_sys_gpu_config & 0x10) ) ||
                     ( (G_apss_ch_to_function[k] == ADC_GPU_1_2) && (G_first_sys_gpu_config & 0x20) ) )
-                { 
+                {
                     l_pwrSensorList[l_sensorHeader.count].id = G_amec_sensor_list[PWRAPSSCH0 + k]->ipmi_sid;
                     l_pwrSensorList[l_sensorHeader.count].function_id = G_apss_ch_to_function[k];
                     l_pwrSensorList[l_sensorHeader.count].apss_channel = k;
@@ -1516,6 +1523,136 @@ void cmdh_dbug_allow_trace( const cmdh_fsp_cmd_t * i_cmd_ptr,
 
 
 
+// Function Specification
+//
+// Name: cmdh_dbug_dimm_inject
+//
+// Description: Set/Clear internal debug flags
+//
+// End Function Specification
+void cmdh_dbug_dimm_inject( const cmdh_fsp_cmd_t * i_cmd_ptr,
+                               cmdh_fsp_rsp_t * o_rsp_ptr )
+{
+    const cmdh_dbug_dimm_inject_cmd_t * l_cmd_ptr =
+                                 (cmdh_dbug_dimm_inject_cmd_t*)i_cmd_ptr;
+    cmdh_dbug_dimm_inject_rsp_t * l_rsp_ptr =
+                                 (cmdh_dbug_dimm_inject_rsp_t*)o_rsp_ptr;
+
+    uint8_t l_rc = ERRL_RC_SUCCESS;
+    // confirm inject data length (ignore sub_command byte)
+    const uint16_t inject_length = CMDH_DATALEN_FIELD_UINT16(l_cmd_ptr) - 1;
+
+    if((NULL == l_cmd_ptr) || (NULL == l_rsp_ptr))
+    {
+        l_rc = ERRL_RC_INTERNAL_FAIL;
+    }
+    // Command Length Check
+    else if ((inject_length != 0) && (inject_length != MAX_NUM_CENTAURS))
+    {
+        TRAC_ERR("cmdh_dbug_dimm_inject: Invalid inject data length %u (expected %u)",
+                 inject_length, MAX_NUM_CENTAURS);
+        l_rc = ERRL_RC_INVALID_CMD_LEN;
+    }
+    else
+    {
+        if (inject_length == MAX_NUM_CENTAURS)
+        {
+            TRAC_INFO("cmdh_dbug_dimm_inject: updating DIMM inject mask from 0x%08X.%08X to 0x%08X.%08X",
+                      G_inject_dimm >> 32, G_inject_dimm & 0xFFFFFFFF,
+                      l_cmd_ptr->inject_mask >> 32, l_cmd_ptr->inject_mask & 0xFFFFFFFF);
+            G_inject_dimm = l_cmd_ptr->inject_mask;
+
+            unsigned int l_cent;
+            for(l_cent = 0; l_cent < MAX_NUM_CENTAURS; l_cent++)
+            {
+                uint8_t dimms = (G_inject_dimm >> (l_cent*8)) & 0xFF;
+                if (dimms != 0)
+                {
+                    unsigned int k;
+                    for(k=0; k < NUM_DIMMS_PER_CENTAUR; k++)
+                    {
+                        if (dimms & (1 << k))
+                        {
+                            if(!CENTAUR_SENSOR_ENABLED(l_cent, k))
+                            {
+                                TRAC_ERR("cmdh_dbug_dimm_inject: centaur%d DIMM%d is not enabled", l_cent, k);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // else just return current values
+
+        // Return the current DIMM inject mask
+        if( l_rsp_ptr != NULL )
+        {
+            l_rsp_ptr->data_length[0] = 0x00;
+            l_rsp_ptr->data_length[1] = MAX_NUM_CENTAURS;
+            memcpy(&o_rsp_ptr->data[0], &G_inject_dimm, MAX_NUM_CENTAURS);
+        }
+    }
+    G_rsp_status = l_rc;
+    return;
+}
+
+
+
+// Function Specification
+//
+// Name: cmdh_dbug_internal_flags
+//
+// Description: Set/Clear internal debug flags
+//
+// End Function Specification
+void cmdh_dbug_internal_flags( const cmdh_fsp_cmd_t * i_cmd_ptr,
+                               cmdh_fsp_rsp_t * o_rsp_ptr )
+{
+    const cmdh_dbug_internal_flags_cmd_t * l_cmd_ptr =
+                                 (cmdh_dbug_internal_flags_cmd_t*)i_cmd_ptr;
+    cmdh_dbug_internal_flags_rsp_t * l_rsp_ptr =
+                                 (cmdh_dbug_internal_flags_rsp_t*)o_rsp_ptr;
+
+    uint8_t l_rc = ERRL_RC_SUCCESS;
+    const unsigned int flag_size = sizeof(G_internal_flags);
+    // data length (ignore sub_command byte)
+    const uint16_t data_length = CMDH_DATALEN_FIELD_UINT16(l_cmd_ptr) - 1;
+
+    if ((NULL == l_cmd_ptr) || (NULL == l_rsp_ptr))
+    {
+        l_rc = ERRL_RC_INTERNAL_FAIL;
+    }
+    else if ((data_length != 0) && (data_length != flag_size))
+    {
+        TRAC_ERR("cmdh_dbug_dimm_inject: Invalid internal flags length %u (expected %u)",
+                 data_length, flag_size);
+        l_rc = ERRL_RC_INVALID_CMD_LEN;
+    }
+    else
+    {
+        if (data_length == flag_size)
+        {
+            TRAC_INFO("DEBUG - updating internal flags from 0x%08X to 0x%08X",
+                      G_internal_flags, l_cmd_ptr->flags);
+
+            G_internal_flags = l_cmd_ptr->flags;
+        }
+
+        // always respond with the current flag value
+        if( l_rsp_ptr != NULL )
+        {
+            l_rsp_ptr->data_length[0] = 0x00;
+            l_rsp_ptr->data_length[1] = flag_size;
+            // Fill in response data
+            memcpy(&o_rsp_ptr->data[0], &G_internal_flags, flag_size);
+        }
+    }
+
+    G_rsp_status = l_rc;
+    return;
+}
+
+
 
 // Function Specification
 //
@@ -1706,6 +1843,14 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         case DBUG_ALLOW_TRACE:
             cmdh_dbug_allow_trace( i_cmd_ptr, o_rsp_ptr );
+            break;
+
+        case DBUG_DIMM_INJECT:
+            cmdh_dbug_dimm_inject( i_cmd_ptr, o_rsp_ptr );
+            break;
+
+        case DBUG_INTERNAL_FLAGS:
+            cmdh_dbug_internal_flags( i_cmd_ptr, o_rsp_ptr );
             break;
 
         case DBUG_POKE:

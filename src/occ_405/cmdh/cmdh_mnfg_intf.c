@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -368,7 +368,6 @@ uint8_t cmdh_mnfg_list_sensors(const cmdh_fsp_cmd_t * i_cmd_ptr,
         // Do sanity check on the function inputs
         if ((NULL == i_cmd_ptr) || (NULL == o_rsp_ptr))
         {
-// TODO RTC 132348: THESE TRACES NEED TO BE VERIFIED
             TRAC_ERR("cmdh_mnfg_list_sensors: invalid pointers. cmd[0x%08x] rsp[0x%08x]",
                      (uint32_t) i_cmd_ptr, (uint32_t) o_rsp_ptr);
             l_rc = ERRL_RC_INTERNAL_FAIL;
@@ -506,7 +505,6 @@ uint8_t cmdh_mnfg_get_sensor(const cmdh_fsp_cmd_t * i_cmd_ptr,
         // Do sanity check on the function inputs
         if ((NULL == i_cmd_ptr) || (NULL == o_rsp_ptr))
         {
-// TODO RTC 132348: THESE TRACES NEED TO BE VERIFIED
             TRAC_ERR("cmdh_mnfg_get_sensor: invalid pointers. cmd[0x%08x] rsp[0x%08x]",
                      (uint32_t) i_cmd_ptr, (uint32_t) o_rsp_ptr);
             l_rc = ERRL_RC_INTERNAL_FAIL;

@@ -51,6 +51,9 @@
 extern bool G_mem_monitoring_allowed;
 extern memory_control_task_t G_memory_control_task;
 
+uint64_t G_inject_dimm = 0;
+uint32_t G_inject_dimm_trace[MAX_NUM_CENTAURS][NUM_DIMMS_PER_CENTAUR] = {{0}};
+
 uint8_t G_dimm_state = DIMM_STATE_INIT;     // Curret state of DIMM state machine
 // G_maxDimmPort is the maximum I2C port number (1 indicates port 0 and 1 are valid)
 uint8_t G_maxDimmPort = NUM_DIMM_PORTS - 1;
@@ -848,8 +851,24 @@ void task_dimm_sm(struct task *i_self)
                                         case DIMM_STATE_READ_TEMP:
                                             if (L_readIssued)
                                             {
-                                                // Validate  and store temperature
-                                                process_dimm_temp();
+                                                if ((G_inject_dimm & ((uint64_t)1 << ((L_dimmPort * 8) + L_dimmIndex))) == 0)
+                                                {
+                                                    if (G_inject_dimm_trace[L_dimmPort][L_dimmIndex] != 0)
+                                                    {
+                                                        TRAC_INFO("task_dimm_sm: stopping injection of errors for DIMM%04X", DIMM_INDEX(L_dimmPort, L_dimmIndex));
+                                                        G_inject_dimm_trace[L_dimmPort][L_dimmIndex] = 0;
+                                                    }
+                                                    // Validate  and store temperature
+                                                    process_dimm_temp();
+                                                }
+                                                else
+                                                {
+                                                    if (G_inject_dimm_trace[L_dimmPort][L_dimmIndex] == 0)
+                                                    {
+                                                        TRAC_INFO("task_dimm_sm: injecting errors for DIMM%04X", DIMM_INDEX(L_dimmPort, L_dimmIndex));
+                                                        G_inject_dimm_trace[L_dimmPort][L_dimmIndex] = 1;
+                                                    }
+                                                }
 
                                                 // Move on to next DIMM
                                                 use_next_dimm(&L_dimmPort, &L_dimmIndex);

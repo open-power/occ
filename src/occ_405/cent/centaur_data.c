@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -1029,49 +1029,49 @@ void centaur_init( void )
 
         // Set up recovery scom list entries
         G_cent_scom_list_entry[L4_LINE_DELETE].scom  = MBCCFGQ_REG;                //scom address
-        G_cent_scom_list_entry[L4_LINE_DELETE].commandType = CENTAUR_SCOM_RMW;         //scom operation to perform
+        G_cent_scom_list_entry[L4_LINE_DELETE].commandType = CENTAUR_SCOM_RMW;     //scom operation to perform
         G_cent_scom_list_entry[L4_LINE_DELETE].mask = LINE_DELETE_ON_NEXT_CE;      //mask of bits to change
         G_cent_scom_list_entry[L4_LINE_DELETE].data = LINE_DELETE_ON_NEXT_CE;      //scom data (always set the bit)
 
         //one time init for reading LFIR6
         G_cent_scom_list_entry[READ_NEST_LFIR6].scom  = CENT_NEST_LFIR_REG;         //scom address
-        G_cent_scom_list_entry[READ_NEST_LFIR6].commandType = CENTAUR_SCOM_READ;        //scom operation to perform
+        G_cent_scom_list_entry[READ_NEST_LFIR6].commandType = CENTAUR_SCOM_READ;    //scom operation to perform
         G_cent_scom_list_entry[READ_NEST_LFIR6].mask = 0;                           //mask (not used for reads)
         G_cent_scom_list_entry[READ_NEST_LFIR6].data = 0;                           //scom data (initialize to 0)
 
         //one time init for reading centaur thermal status register
         G_cent_scom_list_entry[READ_THERM_STATUS].scom  = CENT_THRM_STATUS_REG;     //scom address
-        G_cent_scom_list_entry[READ_THERM_STATUS].commandType = CENTAUR_SCOM_READ;      //scom operation to perform
+        G_cent_scom_list_entry[READ_THERM_STATUS].commandType = CENTAUR_SCOM_READ;  //scom operation to perform
         G_cent_scom_list_entry[READ_THERM_STATUS].mask = 0;                         //mask (not used for reads)
         G_cent_scom_list_entry[READ_THERM_STATUS].data = 0;                         //scom data (initialize to 0)
 
         //one time init to reset the centaur dts FSM
         G_cent_scom_list_entry[RESET_DTS_FSM].scom  = CENT_THRM_CTRL_REG;           //scom address
-        G_cent_scom_list_entry[RESET_DTS_FSM].commandType = CENTAUR_SCOM_NOP;           //init to no-op (only runs if needed)
+        G_cent_scom_list_entry[RESET_DTS_FSM].commandType = CENTAUR_SCOM_NOP;       //init to no-op (only runs if needed)
         G_cent_scom_list_entry[RESET_DTS_FSM].mask = 0;                             //mask (not used for writes)
         G_cent_scom_list_entry[RESET_DTS_FSM].data = CENT_THRM_CTRL4;               //scom data (sets bit4)
 
         //one time init to clear centaur NEST LFIR 6
         G_cent_scom_list_entry[CLEAR_NEST_LFIR6].scom  = CENT_NEST_LFIR_AND_REG;    //scom address
-        G_cent_scom_list_entry[CLEAR_NEST_LFIR6].commandType = CENTAUR_SCOM_NOP;        //init to no-op (only runs if needed)
+        G_cent_scom_list_entry[CLEAR_NEST_LFIR6].commandType = CENTAUR_SCOM_NOP;    //init to no-op (only runs if needed)
         G_cent_scom_list_entry[CLEAR_NEST_LFIR6].mask = 0;                          //mask (not used for writes)
         G_cent_scom_list_entry[CLEAR_NEST_LFIR6].data = ~CENT_NEST_LFIR6;           //scom data
 
         //one time init to disable centaur sensor cache
         G_cent_scom_list_entry[DISABLE_SC].scom  = SCAC_CONFIG_REG;                 //scom address
-        G_cent_scom_list_entry[DISABLE_SC].commandType = CENTAUR_SCOM_NOP;              //init to no-op (only runs if needed)
+        G_cent_scom_list_entry[DISABLE_SC].commandType = CENTAUR_SCOM_NOP;          //init to no-op (only runs if needed)
         G_cent_scom_list_entry[DISABLE_SC].mask = SCAC_MASTER_ENABLE;               //mask of bits to change
         G_cent_scom_list_entry[DISABLE_SC].data = 0;                                //scom data (disable sensor cache)
 
         //one time init to enable centaur sensor cache
         G_cent_scom_list_entry[ENABLE_SC].scom  = SCAC_CONFIG_REG;                  //scom address
-        G_cent_scom_list_entry[ENABLE_SC].commandType = CENTAUR_SCOM_NOP;               //init to no-op (only runs if needed)
+        G_cent_scom_list_entry[ENABLE_SC].commandType = CENTAUR_SCOM_NOP;           //init to no-op (only runs if needed)
         G_cent_scom_list_entry[ENABLE_SC].mask = SCAC_MASTER_ENABLE;                //mask of bits to change
         G_cent_scom_list_entry[ENABLE_SC].data = SCAC_MASTER_ENABLE;                //scom data (enable sensor cache)
 
         //one time init for reading centaur sensor cache lfir
         G_cent_scom_list_entry[READ_SCAC_LFIR].scom  = SCAC_LFIR_REG;               //scom address
-        G_cent_scom_list_entry[READ_SCAC_LFIR].commandType = CENTAUR_SCOM_READ;         //scom operation to perform
+        G_cent_scom_list_entry[READ_SCAC_LFIR].commandType = CENTAUR_SCOM_READ;     //scom operation to perform
         G_cent_scom_list_entry[READ_SCAC_LFIR].mask = 0;                            //mask (not used for reads)
         G_cent_scom_list_entry[READ_SCAC_LFIR].data = 0;                            //scom data (initialize to 0)
 
@@ -1090,7 +1090,6 @@ void centaur_init( void )
         L_scomList[0].mask = l_mbscfg.value;
 
         //set up the data bits
-        // TODO RTC 190643 disable until phyp has centaur support
         l_mbscfg.fields.occ_deadman_timer_sel = CENT_DEADMAN_TIMER_2SEC;
         L_scomList[0].data = l_mbscfg.value;
 

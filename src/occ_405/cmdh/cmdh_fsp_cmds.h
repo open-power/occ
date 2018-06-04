@@ -37,6 +37,7 @@
 #include "cmdh_fsp_cmds_datacnfg.h"
 #include "sensor.h"
 #include "apss.h"
+#include "occ_sys_config.h"
 
 // Enum of the various commands that may be sent to OCC
 typedef enum
@@ -394,7 +395,7 @@ typedef enum
     // free = 0x12
     // free = 0x13
     DBUG_INJECT_ERRL        = 0x14,
-    // free = 0x15
+    DBUG_DIMM_INJECT        = 0x15,
     // free = 0x16
     DBUG_GPIO_READ          = 0x17,
     DBUG_FSP_ATTN           = 0x18,
@@ -404,7 +405,7 @@ typedef enum
     DBUG_INJECT_ERR         = 0x1C,
     DBUG_VERIFY_V_F         = 0x1D,
     DBUG_DUMP_PPM_DATA      = 0x1E,
-    // free = 0x1F
+    DBUG_INTERNAL_FLAGS     = 0x1F,
     DBUG_FLUSH_DCACHE       = 0x20,
     DBUG_INVALIDATE_DCACHE  = 0x21,
     DBUG_CENTAUR_SENSOR_CACHE = 0x22,
@@ -597,6 +598,40 @@ typedef struct __attribute__ ((packed))
     uint16_t    trace_flags;
     uint8_t     checksum[CMDH_FSP_CHECKSUM_SIZE];
 }cmdh_dbug_allow_trace_rsp_t;
+
+// DBUG_DIMM_INJECT command struct
+typedef struct __attribute__ ((packed))
+{
+    struct      cmdh_fsp_cmd_header;
+    uint8_t     sub_cmd;
+    uint64_t    inject_mask;
+}cmdh_dbug_dimm_inject_cmd_t;
+
+// DBUG_DIMM_INJECT response struct
+typedef struct __attribute__ ((packed))
+{
+    struct      cmdh_fsp_rsp_header;
+    uint64_t    inject_mask;
+    uint8_t     checksum[CMDH_FSP_CHECKSUM_SIZE];
+}cmdh_dbug_dimm_inject_rsp_t;
+
+// DBUG_INTERNAL_FLAGS command struct
+typedef struct __attribute__ ((packed))
+{
+    struct      cmdh_fsp_cmd_header;
+    uint8_t     sub_cmd;
+    uint32_t    flags;
+}cmdh_dbug_internal_flags_cmd_t;
+
+// DBUG_INTERNAL_FLAGS response struct
+typedef struct __attribute__ ((packed))
+{
+    struct      cmdh_fsp_rsp_header;
+    uint32_t    flags;
+    uint8_t     checksum[CMDH_FSP_CHECKSUM_SIZE];
+}cmdh_dbug_internal_flags_rsp_t;
+
+extern uint32_t G_internal_flags;
 
 //---------------------------------------------------------
 // Tunable Parameter Command
