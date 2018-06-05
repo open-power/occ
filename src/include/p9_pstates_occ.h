@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -53,7 +53,7 @@ extern "C" {
 #define OCC_PARMSBLOCK_MAGIC 0x4f43435050423030ull /* OCCPPB00 */
 
 /// IDDQ Reading Type
-/// Each entry is 2 bytes. The values are in 6.25mA units; this allow for a
+/// Each entry is 2 bytes. The values are in 5mA units; this allow for a
 /// maximum value of 409.6A to be represented.
 ///
 typedef uint16_t iddq_entry_t;
@@ -107,35 +107,35 @@ typedef struct
     /// Spare
     uint8_t     spare[8];
 
-    /// IVDD ALL Good Cores ON; 6.25mA units
+    /// IVDD ALL Good Cores ON; 5mA units
     iddq_entry_t ivdd_all_good_cores_on_caches_on[IDDQ_MEASUREMENTS];
 
-    /// IVDD ALL Cores OFF; 6.25mA units
+    /// IVDD ALL Cores OFF; 5mA units
     iddq_entry_t ivdd_all_cores_off_caches_off[IDDQ_MEASUREMENTS];
 
-    /// IVDD ALL Good Cores OFF; 6.25mA units
+    /// IVDD ALL Good Cores OFF; 5mA units
     iddq_entry_t ivdd_all_good_cores_off_good_caches_on[IDDQ_MEASUREMENTS];
 
-    /// IVDD Quad 0 Good Cores ON, Caches ON; 6.25mA units
+    /// IVDD Quad 0 Good Cores ON, Caches ON; 5mA units
     iddq_entry_t ivdd_quad_good_cores_on_good_caches_on[MAXIMUM_QUADS][IDDQ_MEASUREMENTS];
 
-    /// IVDDN  6.25mA units
+    /// IVDDN  5mA units
     iddq_entry_t ivdn[IDDQ_MEASUREMENTS];
 
 
-    /// IVDD ALL Good Cores ON, Caches ON; 6.25mA units
+    /// IVDD ALL Good Cores ON, Caches ON; 0.5C units
     avgtemp_entry_t avgtemp_all_good_cores_on[IDDQ_MEASUREMENTS];
 
-    /// avgtemp ALL Cores OFF, Caches OFF; 6.25mA units
+    /// avgtemp ALL Cores OFF, Caches OFF; 0.5C units
     avgtemp_entry_t avgtemp_all_cores_off_caches_off[IDDQ_MEASUREMENTS];
 
-    /// avgtemp ALL Good Cores OFF, Caches ON; 6.25mA units
+    /// avgtemp ALL Good Cores OFF, Caches ON; 0.5C units
     avgtemp_entry_t avgtemp_all_good_cores_off[IDDQ_MEASUREMENTS];
 
-    /// avgtemp Quad 0 Good Cores ON, Caches ON; 6.25mA units
+    /// avgtemp Quad 0 Good Cores ON, Caches ON; 0.5C units
     avgtemp_entry_t avgtemp_quad_good_cores_on[MAXIMUM_QUADS][IDDQ_MEASUREMENTS];
 
-    /// avgtempN ; 6.25mA units
+    /// avgtempN ; 0.5C units
     avgtemp_entry_t avgtemp_vdn[IDDQ_MEASUREMENTS];
 
     /// spare (per MVPD documentation
