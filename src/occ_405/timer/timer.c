@@ -562,6 +562,7 @@ void check_pgpe_beacon(void)
             // pgpe beacon changed over the last 4 ms
             L_pgpe_beacon_unchanged_4ms = false;
             L_unchanged_count = 0;
+            L_prev_pgpe_beacon = pgpe_beacon;
         }
     } while(0);
 
