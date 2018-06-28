@@ -631,8 +631,6 @@ typedef struct __attribute__ ((packed))
     uint8_t     checksum[CMDH_FSP_CHECKSUM_SIZE];
 }cmdh_dbug_internal_flags_rsp_t;
 
-extern uint32_t G_internal_flags;
-
 //---------------------------------------------------------
 // Tunable Parameter Command
 //---------------------------------------------------------

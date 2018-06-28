@@ -37,6 +37,7 @@
 // Externs
 //*************************************************************************/
 extern bool G_simics_environment;
+extern bool G_log_gpe1_error;
 
 //*************************************************************************/
 // Defines/Enums
@@ -391,6 +392,17 @@ void amec_health_check_dimm_timeout()
                     continue;
                 }
 
+                // To prevent DIMMs from incorrectly being called out, don't log errors if there have
+                // been timeouts with GPE1 tasks not finishing
+                if(G_error_history[ERRH_GPE1_NOT_IDLE] > g_amec->thermaldimm.temp_timeout)
+                {
+                    TRAC_ERR("Timed out reading DIMM temperature due to GPE1 issues");
+                    // give notification that GPE1 error should now be logged which will reset the OCC
+                    G_log_gpe1_error = TRUE;
+                    // no reason to check anymore since all DIMMs are collected from the same GPE
+                    break;
+                }
+
                 TRAC_ERR("Timed out reading DIMM%04X temperature (cur_temp[%d] flags[0x%02X])",
                          (l_port<<8)|l_dimm, l_fru->cur_temp, l_fru->flags);
 
@@ -435,6 +447,11 @@ void amec_health_check_dimm_timeout()
                     l_callouts_count++;
                 }
             } //iterate over all dimms
+            if(G_log_gpe1_error)
+            {
+                // Going to be resetting so no reason to check anymore ports
+                break;
+            }
         } //iterate over all ports
 
         if(l_err)
@@ -706,6 +723,17 @@ void amec_health_check_cent_timeout()
             if(G_cent_timeout_logged_bitmap & (CENTAUR0_PRESENT_MASK >> l_cent))
             {
                 continue;
+            }
+
+            // To prevent Centaurs from incorrectly being called out, don't log errors if there have
+            // been timeouts with GPE1 tasks not finishing
+            if(G_error_history[ERRH_GPE1_NOT_IDLE] > g_amec->thermalcent.temp_timeout)
+            {
+                TRAC_ERR("Timed out reading centaur temperature due to GPE1 issues");
+                // give notification that GPE1 error should now be logged which will reset the OCC
+                G_log_gpe1_error = TRUE;
+                // no reason to check anymore since all Centaurs are collected from the same GPE
+                break;
             }
 
             TRAC_ERR("Timed out reading centaur temperature on cent[%d] temp[%d] flags[0x%02X]",

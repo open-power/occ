@@ -716,7 +716,8 @@ void task_24x7(task_t * i_task)
     static uint8_t L_numTicks = 0x00;  // never called since OCC started
     static bool    L_idle_trace = FALSE;
 
-    if (!G_24x7_disabled)
+    // Schedule 24x7 task if it hasn't been disabled
+    if( (!G_24x7_disabled) && !(G_internal_flags & INT_FLAG_DISABLE_24X7) )
     {
        // Schedule 24x7 task if idle
        if (!async_request_is_idle(&G_24x7_request.request))

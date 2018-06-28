@@ -310,6 +310,11 @@ extern fsp_cmd_t G_htmgt_cmd_buffer;
 extern fsp_rsp_t G_htmgt_rsp_buffer;
 extern uint8_t  G_rsp_status;
 
+// Defines for Internal flags used for debug
+// To set flags:  tmgtclient -X 0x40 --data 0x1f<4 byte value for G_internal_flags>
+extern uint32_t G_internal_flags;
+#define INT_FLAG_DISABLE_24X7 0x00000001
+
 void notifyCmdhWakeupCondition(eCmdhWakeupThreadMask i_cond);
 void clearCmdhWakeupCondition(eCmdhWakeupThreadMask i_cond);
 int cmdh_thread_wait_for_wakeup(void);

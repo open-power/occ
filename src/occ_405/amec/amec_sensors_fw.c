@@ -49,6 +49,7 @@
 /* Globals                                                                    */
 /******************************************************************************/
 extern bool G_24x7_disabled;
+bool G_log_gpe1_error = FALSE;
 
 //*************************************************************************
 // Code
@@ -203,8 +204,10 @@ void task_gpe_timings(task_t * i_task)
         else
         {
             INCREMENT_ERR_HISTORY(ERRH_GPE1_NOT_IDLE);
+            // Log error and request reset if GPE1 issue has gone on long enough to cause real issues
+            // i.e. timeout collecting memory temperatures
 
-            if(L_consec_trace_count[1] < MAX_CONSEC_TRACE)
+            if( (L_consec_trace_count[1] < MAX_CONSEC_TRACE) || (G_log_gpe1_error) )
             {
                 xsr_sprg0.fields.xsr = in32(GPE_GPE1XIXSR);
                 xsr_sprg0.fields.sprg0 = in32(GPE_GPE1XISPRG0);
@@ -216,6 +219,31 @@ void task_gpe_timings(task_t * i_task)
                          xsr_sprg0.fields.xsr, iar_xsr.fields.iar,
                          ir_edr.fields.ir, ir_edr.fields.edr, xsr_sprg0.fields.sprg0);
                 L_consec_trace_count[1]++;
+
+                if(G_log_gpe1_error)
+                {
+                  TRAC_ERR("GPE1 not idle causing timeouts, need to reset!!!");
+                  /* @
+                   * @errortype
+                   * @moduleid    AMEC_UPDATE_FW_SENSORS
+                   * @reasoncode  GPE_REQUEST_TASK_TIMEOUT
+                   * @userdata1   0
+                   * @userdata2   0
+                   * @userdata4   ERC_AMEC_GPE1_TIMEOUT
+                   * @devdesc     Tasks on GPE1 failing to complete
+                   */
+                  l_err = createErrl(AMEC_UPDATE_FW_SENSORS,             //modId
+                                       GPE_REQUEST_TASK_TIMEOUT,           //reasoncode
+                                       ERC_AMEC_GPE1_TIMEOUT,              //Extended reason code
+                                       ERRL_SEV_UNRECOVERABLE,             //Severity
+                                       NULL,                               //Trace Buf
+                                       DEFAULT_TRACE_SIZE,                 //Trace Size
+                                       0,                                  //userdata1
+                                       0);                                 //userdata2
+
+                  // Commit error log and request reset
+                  REQUEST_RESET(l_err);
+                }
             }
         }
     }

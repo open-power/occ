@@ -198,6 +198,7 @@ enum occExtReasonCode
     ERC_AMEC_VRM_VDD_TEMP_TIMEOUT               = 0x0030,
     ERC_AMEC_DIMM_TEMP_TIMEOUT                  = 0x0031,
     ERC_AMEC_CENT_TEMP_TIMEOUT                  = 0x0032,
+    ERC_AMEC_GPE1_TIMEOUT                       = 0x0033,
 
     ERC_CMDH_MBOX_REQST_FAILURE                 = 0x0040,
     ERC_CMDH_INTERNAL_FAILURE                   = 0x0041,
