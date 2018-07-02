@@ -6,7 +6,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2017
+# Contributors Listed Below - COPYRIGHT 2017,2018
 # [+] International Business Machines Corp.
 #
 #
@@ -144,6 +144,7 @@ function usage
     echo "           -I = HTMGT info"
     echo "           -IF <newValue> = Read/Set HTMGT internalFlags"
     echo "           -ES = Attempt to Exit Safe mode"
+    echo "           -W  = Get WOF reset reasons for ALL OCCs"
     echo ""
     echo "         CRONUS Only Commands:"
     echo "           -P = Send POLL command to the OCC and collect/purge any elog, if found"
@@ -292,6 +293,10 @@ while [ -n "$(echo $1 | grep '-')" ]; do
 
     -I )
         action="TMGTInfo"
+        ;;
+
+    -W )
+        action="WOFRR"
         ;;
 
     -IF )
@@ -1436,6 +1441,48 @@ function tmgt_info
 } # end tmgt_info()
 
 
+
+function wof_reset_reasons
+{
+    ### Dump WOF reset reasons and OCC instance ID
+    echo "==> opal-prd --expert-mode htmgt-passthru 0x0A"
+    $sudo opal-prd --expert-mode htmgt-passthru 0x0A | sed 's/\s//g' > /tmp/wofrr.bin
+    # get status of first cmd in piped cmdline
+    let rc=${PIPESTATUS[0]}
+    if [ $rc -eq 0 ]; then
+        while read line; do
+            if [ ${#line} -gt 0 ]; then
+                #First read the output data into one variable
+                alldata=$alldata$line
+            fi
+        done < /tmp/wofrr.bin
+    else
+        echo "ERROR: opal-prd occ passthru command failed with rc=$rc"
+    fi
+
+    # Data length should be multiple of 10. Each OCC has a 2 digit ID followed
+    # by the 8 digit WOF Reset reason vector
+    if [ $((${#alldata}%10)) -ne 0 ]; then
+        echo "ERROR: Data is unexpected length. Aborting..."
+    else
+        numOccs=$((${#alldata}/10))
+        current_index=0
+        for (( i=0; i<$numOccs; i++ ))
+        do
+            #Move to the next 10 digit block
+            current_line=${alldata:${current_index}:10}
+            #Extract OCC Instance
+            let occId=0x${current_line:0:2}
+            #Extract wof_disabled bit vector
+            let wofRR=0x${current_line:2:8}
+            printf "OCC%X WOF Reset Reasons: 0x%08X\n" $occId $wofRR
+            #Increment index
+            current_index=$current_index+10
+        done
+    fi
+} # end wof_reset_reasons
+
+
 function tmgt_flags
 {
     ### Dump HTMGT Internal Flags
@@ -1692,6 +1739,13 @@ if [ -n "$action" ]; then
 
         if [ "$interface" == "opal" ]; then
             tmgt_info
+        else
+            echo -e "${red}ERROR: Command only supported with opal-prd${normal} (not $interface)"
+        fi
+    elif [ "$action" == "WOFRR" ]; then
+
+        if [ "$interface" == "opal" ]; then
+            wof_reset_reasons
         else
             echo -e "${red}ERROR: Command only supported with opal-prd${normal} (not $interface)"
         fi
