@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -35,7 +35,7 @@
 #include "gpe_export.h"
 #include "gpe_centaur.h"
 
-#define KERNEL_STACK_SIZE  512
+#define KERNEL_STACK_SIZE  1024
 
 uint64_t        G_kernel_stack[KERNEL_STACK_SIZE/8];
 
