@@ -67,6 +67,4 @@ bool centaur_control( memory_control_task_t * i_memControlTask );
 //void centaur_control_init( void ) INIT_SECTION;
 void centaur_control_init( void );
 
-bool check_centaur_checkstop( memory_control_task_t * i_memControlTask );
-
 #endif //_CENTAUR_CONTROL_H

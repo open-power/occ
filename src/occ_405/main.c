@@ -1597,11 +1597,12 @@ void Main_thread_routine(void *private)
         // Look for FIR collection flag and status
         if (G_fir_collection_required && !L_fir_collection_completed)
         {
-            TRAC_IMP("fir data collection starting");
             // If this OCC is the FIR master and PNOR access is allowed perform
             // FIR collection
             if (OCC_IS_FIR_MASTER())
             {
+                TRAC_IMP("fir data collection starting");
+
                 //Need to schedule a task on GPE to start fir collection
                 if(!G_fir_collection_request_created) //Only need to create request once
                 {
@@ -1629,6 +1630,7 @@ void Main_thread_routine(void *private)
                         G_fir_collection_required = FALSE;
                     }
                 }
+                TRAC_IMP("fir data collection done");
             }
 
             // Error reporting is skipped while FIR collection is required so we
@@ -1640,7 +1642,6 @@ void Main_thread_routine(void *private)
             {
                 notify_host(INTR_REASON_HTMGT_SERVICE_REQUIRED);
             }
-            TRAC_IMP("fir data collection done");
         }
 
         if( l_ssxrc == SSX_OK)

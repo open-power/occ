@@ -87,7 +87,6 @@ void task_memory_control( task_t * i_task )
     int            rc        = 0;       // Return code
     uint8_t        memIndex;
     static bool    L_gpe_scheduled   = FALSE;
-    static uint8_t L_gpe_fail_logged = 0;
     static bool    L_gpe_idle_traced = FALSE;
     static bool    L_gpe_had_1_tick  = FALSE;
 
@@ -147,24 +146,23 @@ void task_memory_control( task_t * i_task )
         {
             if(!async_request_completed(&memControlTask->gpe_req.request) || gpe_rc)
             {
-                if (MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type)
+                // ignore error and stop monitoring this centaur if there is a channel checkstop
+                if( (MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type) &&
+                    (gpe_rc == CENTAUR_CHANNEL_CHECKSTOP) )
                 {
-                    if(!(L_gpe_fail_logged & (CENTAUR0_PRESENT_MASK >> memIndex)))
+                    // Remove the centaur sensor and all dimm sensors behind it.
+                    cent_chan_checkstop(memControlTask->curMemIndex);
+                }
+                else
+                {
+                    //Request failed. Keep count of failures and request a reset if we reach a
+                    //max retry count
+                    L_scom_timeout[memIndex]++;
+                    if(L_scom_timeout[memIndex] == MEMORY_CONTROL_SCOM_TIMEOUT)
                     {
-                        if (!check_centaur_checkstop(memControlTask))
-                        {
-                            L_gpe_fail_logged |= CENTAUR0_PRESENT_MASK >> memIndex;
-                        }
+                        break;
                     }
                 }
-                //Request failed. Keep count of failures and request a reset if we reach a
-                //max retry count
-                L_scom_timeout[memIndex]++;
-                if(L_scom_timeout[memIndex] == MEMORY_CONTROL_SCOM_TIMEOUT)
-                {
-                    break;
-                }
-
             }//if(!async_request_completed(&memControlTask->gpe_req.request) || l_parms->rc)
             else
             {

@@ -328,7 +328,9 @@ void cent_recovery(uint32_t i_cent)
                                  ERRL_CALLOUT_TYPE_HUID,
                                  G_sysConfigData.proc_huid,
                                  ERRL_CALLOUT_PRIORITY_MED);
-                commitErrl(&l_err);
+
+                // recovery is failing, ask for OCC reset to try to recover
+                REQUEST_RESET(l_err);
             }
         }
 
@@ -671,9 +673,9 @@ void centaur_data( void )
                 else  // log the error if it was not a CENTAUR_CHANNEL_CHECKSTOP
                 {
                     //log an error the first time this happens but keep on running.
+                    //This should be informational (except mfg) since we are going to retry
                     //eventually, we will timeout on the dimm & centaur temps not being updated
-                    //and fans will go to max speed (probably won't be able to throttle for
-                    //same reason we can't access the centaur here).
+                    //if this is a hard failure which will call out the Centaur at that point.  
                     if(!L_gpe_error_logged)
                     {
                         L_gpe_error_logged = TRUE;
@@ -696,12 +698,15 @@ void centaur_data( void )
                                 CENT_TASK_DATA_MOD,                     //modId
                                 CENT_SCOM_ERROR,                        //reasoncode
                                 OCC_NO_EXTENDED_RC,                     //Extended reason code
-                                ERRL_SEV_PREDICTIVE,                    //Severity
+                                ERRL_SEV_INFORMATIONAL,                 //Severity
                                 NULL,                                   //Trace Buf
                                 DEFAULT_TRACE_SIZE,                     //Trace Size
                                 l_parms->error.rc,                            //userdata1
                                 0                                       //userdata2
                                 );
+
+                        //force severity to predictive if mfg ipl (allows callout to be added to info error)
+                        setErrlActions(l_err, ERRL_ACTIONS_MANUFACTURING_ERROR);
 
                         addUsrDtlsToErrl(l_err,                                   //io_err
                                 (uint8_t *) &(l_centaur_data_ptr->gpe_req.ffdc),  //i_dataPtr,
