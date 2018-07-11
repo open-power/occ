@@ -894,6 +894,12 @@ void amec_update_gpu_configuration(void)
             G_first_num_gpus_sys = l_num_gpus_sys;
             TRAC_IMP("GPU presence detection completed. GPU configuration for this OCC: 0x%08X, total[%d]",
                      G_curr_proc_gpu_config, G_curr_num_gpus_sys);
+
+            // Only if running OPAL need to notify dcom thread to update GPU presence in HOMER for OPAL
+            if(G_sysConfigData.system_type.kvm)
+            {
+                ssx_semaphore_post(&G_dcomThreadWakeupSem);
+            }
         }
         else if (G_curr_sys_gpu_config != G_first_sys_gpu_config)
         {
