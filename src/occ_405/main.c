@@ -617,6 +617,7 @@ bool read_ppmr_header(void)
     uint32_t userdata2 = 0;
 
     MAIN_TRAC_INFO("read_ppmr_header(0x%08X)", PPMR_ADDRESS_HOMER);
+
     // create a DTLB entry for the PPMR image header
     create_tlb_entry(PPMR_ADDRESS_HOMER, sizeof(ppmr_header_t));
 

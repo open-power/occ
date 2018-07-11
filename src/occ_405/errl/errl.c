@@ -939,7 +939,7 @@ void setErrlActions(errlHndl_t io_err, const uint8_t i_mask)
          && ( io_err != INVALID_ERR_HNDL )
          && (io_err->iv_userDetails.iv_committed == 0) )
     {
-        // set the appropriate action bits$
+        // set the appropriate action bits
         io_err->iv_actions.word |= i_mask;
     }
 }

@@ -112,6 +112,7 @@ typedef enum
     ERRL_USR_DTL_CALLHOME_DATA  = 0x02,
     ERRL_USR_DTL_BINARY_DATA    = 0x03,
     ERRL_USR_DTL_HISTORY_DATA   = 0x04,
+    ERRL_USR_DTL_WOF_DATA       = 0x05,
 } ERRL_USR_DETAIL_TYPE;
 
 // These are the possible OCC States.

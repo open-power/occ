@@ -1410,7 +1410,6 @@ void set_clear_wof_disabled( uint8_t i_action,
             // Set the bit
             g_wof->wof_disabled |= i_bit_mask;
 
-
             // If user is trying to force a reset even though WOF is disabled,
             // Skip straight to error log creation
             if( (g_wof->wof_disabled) &&
@@ -1567,9 +1566,16 @@ void set_clear_wof_disabled( uint8_t i_action,
                         i_ext_rc,
                         ERRL_SEV_UNRECOVERABLE,
                         NULL,
-                        DEFAULT_TRACE_SIZE,
+                        WOF_TRACE_SIZE,
                         g_wof->wof_disabled,
                         i_bit_mask );
+
+            // Add WOF parameters to error log
+            addUsrDtlsToErrl( l_errl,
+                              (uint8_t*)g_wof,
+                              sizeof(*g_wof),
+                              ERRL_STRUCT_VERSION_1,
+                              ERRL_USR_DTL_WOF_DATA);
 
             // Reset if on Reason Code requires it.
             if(i_bit_mask & ~(IGNORE_WOF_RESET) )

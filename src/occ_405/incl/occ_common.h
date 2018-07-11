@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -287,6 +287,7 @@ enum
     CF_FSI_MB_TIMEOUT           = 0x01,
 };
 
+#define WOF_TRACE_SIZE     1236
 #define DEFAULT_TRACE_SIZE 1536
 #define MAX_OCCS       8
 #define MAX_CORES      24

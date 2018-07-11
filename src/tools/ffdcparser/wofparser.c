@@ -58,7 +58,7 @@ void dump_wof_data(wof_data_t * data)
         printf("vdn_percent[%d]: %d\n", i, data->vdn_percent[i]);
     printf("socket_power_w: %d\n", data->socket_power_w);
     printf("nest_freq_mhz: %d\n", data->nest_freq_mhz);
-    printf("nom_freq_mhz: %d\n", data->nom_freq_mhz);
+    printf("wof_tables_mhz: %d\n", data->nom_freq_mhz);
     printf("rdp_capacity: %d\n", data->rdp_capacity);
     printf("wof_tbls_src_tag: 0x%X\n", data->wof_tbls_src_tag);
     printf("package_name_hi: 0x%08x\n", data->package_name_hi);
