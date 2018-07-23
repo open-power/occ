@@ -32,6 +32,7 @@
 #include <common_types.h>
 #include <stddef.h>
 #include <string.h>
+#include <stdint.h>
 
 //*************************************************************************/
 // Externs
@@ -197,9 +198,9 @@ int displaySize(char * i_file)
                     unsigned long int l_addr = 0;
                     unsigned long int l_offset = 0;
                     unsigned long int l_size = 0;
-                    sscanf(l_str,"%s %s %s %x %x %x ",l_str1,l_sec,
+                    sscanf(l_str,"%s %s %s %lx %lx %lx ",l_str1,l_sec,
                            l_str1,&l_addr,&l_offset,&l_size);
-                    printf("%-25.25s : 0x%08x : %d\t(HEX: %x ) \n",l_sec,
+                    printf("%-25.25s : 0x%08lx : %d\t(HEX: %lx ) \n",l_sec,
                            l_addr,(int)l_size,l_size);
                     l_totalSz += l_size;
                 }
@@ -629,10 +630,10 @@ int main(int argc, char* argv[])
     FILE * l_fileGPE1Ptr = NULL;
     int l_rc = SUCCESS_RC;
 
-    unsigned long int l_405_sz  = 0;
-    unsigned long int l_gpe0_sz = 0;
-    unsigned long int l_gpe1_sz = 0;
-    unsigned long int l_bootLdr_sz = 0;
+    uint32_t l_405_sz  = 0;
+    uint32_t l_gpe0_sz = 0;
+    uint32_t l_gpe1_sz = 0;
+    uint32_t l_bootLdr_sz = 0;
 
     do
     {
@@ -864,7 +865,7 @@ int main(int argc, char* argv[])
         //=====================
         // Write image versions
         //=====================
-        unsigned long int l_version = 0;
+        uint32_t l_version = 0;
 
         // Bootloader
         sprintf((char*)&l_version, "%s",argv[5]);
@@ -949,7 +950,7 @@ int main(int argc, char* argv[])
             break;
         }
 
-        unsigned long int l_405_addr = 0, l_btldr_addr = 0;
+        uint32_t l_405_addr = 0, l_btldr_addr = 0;
 
         // Read ep_addr fields
 
@@ -1066,7 +1067,7 @@ int main(int argc, char* argv[])
         //====================
 
         // 405
-        unsigned long int l_checksum = calImageChecksum(l_file405Ptr, false);
+        uint32_t l_checksum = calImageChecksum(l_file405Ptr, false);
         l_checksum = htonl(l_checksum);
         l_rc = write(l_file405Ptr, &l_checksum,CHECKSUM_FIELD_LEN,
                      CHECKSUM_FIELD_OFFSET);
