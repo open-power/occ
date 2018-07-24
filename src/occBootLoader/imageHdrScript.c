@@ -865,10 +865,10 @@ int main(int argc, char* argv[])
         //=====================
         // Write image versions
         //=====================
-        uint32_t l_version = 0;
+        char l_version[VERSION_LEN];
 
         // Bootloader
-        sprintf((char*)&l_version, "%s",argv[5]);
+        strncpy(l_version, argv[5], VERSION_LEN);
         l_rc = write(l_bootLdrPtr, &l_version, VERSION_LEN, VERSION_OFFSET);
         if( l_rc != 0)
         {
@@ -880,7 +880,7 @@ int main(int argc, char* argv[])
         }
 
         // 405
-        sprintf((char*)&l_version, "%s",argv[6]);
+        strncpy(l_version, argv[6], VERSION_LEN);
         l_rc = write(l_file405Ptr, &l_version, VERSION_LEN, VERSION_OFFSET);
         if( l_rc != 0)
         {
