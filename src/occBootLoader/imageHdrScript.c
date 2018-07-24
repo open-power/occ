@@ -437,8 +437,12 @@ int dumpHdr(char * i_fileStr)
         printf("boot_writeable_size:\t 0x%08x \n",htonl( l_hdrPtr[idx++]));
         printf("zero_data_addr:\t\t 0x%08x\n", htonl( l_hdrPtr[idx++]));
         printf("zero_data_size:\t\t 0x%08x \n", htonl( l_hdrPtr[idx++]));
+        printf("gpe0_size:\t\t 0x%08x \n", htonl( l_hdrPtr[idx++]));
+        printf("gpe1_size:\t\t 0x%08x \n", htonl( l_hdrPtr[idx++]));
         printf("ep_addr:\t\t 0x%08x\n", htonl( l_hdrPtr[idx++]));
         printf("checksum:\t\t 0x%08x\n", htonl( l_hdrPtr[idx++]));
+        printf("gpe0_checksum:\t\t 0x%08x\n", htonl( l_hdrPtr[idx++]));
+        printf("gpe1_checksum:\t\t 0x%08x\n", htonl( l_hdrPtr[idx++]));
         printf("version:\t\t %.*s\n", VERSION_LEN,(char*)&l_hdrPtr[idx++]);
         printf("image_id_str:\t\t %s\n",(char*)(&l_hdrPtr[idx]));
         idx += (IMAGE_ID_STR_SZ/4);
