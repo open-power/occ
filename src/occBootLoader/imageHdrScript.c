@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -32,6 +32,8 @@
 #include <common_types.h>
 #include <stddef.h>
 #include <string.h>
+#include <stdint.h>
+#include <arpa/inet.h>
 
 //*************************************************************************/
 // Externs
@@ -197,16 +199,16 @@ int displaySize(char * i_file)
                     unsigned long int l_addr = 0;
                     unsigned long int l_offset = 0;
                     unsigned long int l_size = 0;
-                    sscanf(l_str,"%s %s %s %x %x %x ",l_str1,l_sec,
+                    sscanf(l_str,"%s %s %s %lx %lx %lx ",l_str1,l_sec,
                            l_str1,&l_addr,&l_offset,&l_size);
-                    printf("%-25.25s : 0x%08x : %d\t(HEX: %x ) \n",l_sec,
+                    printf("%-25.25s : 0x%08lx : %d\t(HEX: %lx ) \n",l_sec,
                            l_addr,(int)l_size,l_size);
                     l_totalSz += l_size;
                 }
             }
         } // end while loop
         printf("===========================================================\n");
-        printf("%-25.25s :            : %d\t(HEX: %x )  \n","Total",
+        printf("%-25.25s :            : %d\t(HEX: %lx )  \n","Total",
                (int)l_totalSz,l_totalSz);
         printf("===========================================================\n");
 
@@ -324,7 +326,7 @@ int combineImage(FILE * i_file1)
 
         if( l_readSz != l_sz1)
         {
-            printf("Failed to read input file, readSz: 0x%x,l_sz: 0x%x\n",
+            printf("Failed to read input file, readSz: 0x%zx,l_sz: 0x%lx\n",
                    l_readSz,l_sz1);
             l_rc = -1;
             break;
@@ -335,7 +337,7 @@ int combineImage(FILE * i_file1)
 
         if( l_writeSz != l_sz1)
         {
-            printf("Error writing data. Written Sz :0x%x,Expected Sz:0x%x\n",
+            printf("Error writing data. Written Sz :0x%zx,Expected Sz:0x%lx\n",
                    l_writeSz,l_sz1);
             l_rc = FAILURE_RC;
         }
@@ -412,7 +414,7 @@ int dumpHdr(char * i_fileStr)
 
         if( l_readSz != l_sz)
         {
-            printf("Failed to read file: %s,readSz: 0x%x,l_sz: 0x%x\n",
+            printf("Failed to read file: %s,readSz: 0x%zx,l_sz: 0x%lx\n",
                    i_fileStr,l_readSz,l_sz);
             l_rc = -1;
             break;
@@ -435,8 +437,12 @@ int dumpHdr(char * i_fileStr)
         printf("boot_writeable_size:\t 0x%08x \n",htonl( l_hdrPtr[idx++]));
         printf("zero_data_addr:\t\t 0x%08x\n", htonl( l_hdrPtr[idx++]));
         printf("zero_data_size:\t\t 0x%08x \n", htonl( l_hdrPtr[idx++]));
+        printf("gpe0_size:\t\t 0x%08x \n", htonl( l_hdrPtr[idx++]));
+        printf("gpe1_size:\t\t 0x%08x \n", htonl( l_hdrPtr[idx++]));
         printf("ep_addr:\t\t 0x%08x\n", htonl( l_hdrPtr[idx++]));
         printf("checksum:\t\t 0x%08x\n", htonl( l_hdrPtr[idx++]));
+        printf("gpe0_checksum:\t\t 0x%08x\n", htonl( l_hdrPtr[idx++]));
+        printf("gpe1_checksum:\t\t 0x%08x\n", htonl( l_hdrPtr[idx++]));
         printf("version:\t\t %.*s\n", VERSION_LEN,(char*)&l_hdrPtr[idx++]);
         printf("image_id_str:\t\t %s\n",(char*)(&l_hdrPtr[idx]));
         idx += (IMAGE_ID_STR_SZ/4);
@@ -516,7 +522,7 @@ unsigned long int calImageChecksum(FILE * i_filePtr, bool i_gpeFile)
         }
     }
 
-    fprintf(stdout,"Checksum: 0x%08X\t\tSize: 0x%08X\n", l_checksum, l_counter);
+    fprintf(stdout,"Checksum: 0x%08lX\t\tSize: 0x%08lX\n", l_checksum, l_counter);
     return l_checksum;
 }
 
@@ -539,7 +545,7 @@ int write(FILE * i_filePtr,
 
     if( l_rc != 0)
     {
-        printf("Failed to seek offset: [0x%x] while writing to file,rc: %d\n",
+        printf("Failed to seek offset: [0x%lx] while writing to file,rc: %d\n",
                i_dataOffset,l_rc);
         l_rc = FAILURE_RC;
     }
@@ -549,7 +555,7 @@ int write(FILE * i_filePtr,
 
         if( l_writeSz != i_dataSz)
         {
-            printf("Error writing data. Written Sz :0x%x,Expected Sz:0x%x\n",
+            printf("Error writing data. Written Sz :0x%zx,Expected Sz:0x%lx\n",
                    l_writeSz,i_dataSz);
             l_rc = FAILURE_RC;
         }
@@ -629,10 +635,10 @@ int main(int argc, char* argv[])
     FILE * l_fileGPE1Ptr = NULL;
     int l_rc = SUCCESS_RC;
 
-    unsigned long int l_405_sz  = 0;
-    unsigned long int l_gpe0_sz = 0;
-    unsigned long int l_gpe1_sz = 0;
-    unsigned long int l_bootLdr_sz = 0;
+    uint32_t l_405_sz  = 0;
+    uint32_t l_gpe0_sz = 0;
+    uint32_t l_gpe1_sz = 0;
+    uint32_t l_bootLdr_sz = 0;
 
     do
     {
@@ -817,7 +823,7 @@ int main(int argc, char* argv[])
         {
             printf("Failed to write bootloader image size in the file: %s, "
                    "rc: %d, IMAGE_SZ_FIELD_LEN: %d, "
-                   "IMAGE_SZ_FIELD_OFFSET: %d\n",ARG_BOOTLOADER_BIN,l_rc,
+                   "IMAGE_SZ_FIELD_OFFSET: %zd\n",ARG_BOOTLOADER_BIN,l_rc,
                    IMAGE_SZ_FIELD_LEN,IMAGE_SZ_FIELD_OFFSET);
             l_rc = FAILURE_RC;
             break;
@@ -830,7 +836,7 @@ int main(int argc, char* argv[])
         {
             printf("Failed to write 405 image size in the file: %s, "
                    "rc: %d, IMAGE_SZ_FIELD_LEN: %d, "
-                   "IMAGE_SZ_FIELD_OFFSET: %d\n",ARG_405_BIN,l_rc,
+                   "IMAGE_SZ_FIELD_OFFSET: %zd\n",ARG_405_BIN,l_rc,
                    IMAGE_SZ_FIELD_LEN,IMAGE_SZ_FIELD_OFFSET);
             l_rc = FAILURE_RC;
             break;
@@ -843,7 +849,7 @@ int main(int argc, char* argv[])
         {
             printf("Failed to write GPE0 image size in the file: %s, "
                    "rc: %d, IMAGE_SZ_FIELD_LEN: %d, "
-                   "GPE0_SZ_FIELD_OFFSET: %d\n",ARG_405_BIN,l_rc,
+                   "GPE0_SZ_FIELD_OFFSET: %zd\n",ARG_405_BIN,l_rc,
                    IMAGE_SZ_FIELD_LEN,GPE0_SZ_FIELD_OFFSET);
             l_rc = FAILURE_RC;
             break;
@@ -855,7 +861,7 @@ int main(int argc, char* argv[])
         {
             printf("Failed to write GPE1 image size in the file: %s, "
                    "rc: %d, IMAGE_SZ_FIELD_LEN: %d, "
-                   "GPE1_SZ_FIELD_OFFSET: %d\n",ARG_405_BIN,l_rc,
+                   "GPE1_SZ_FIELD_OFFSET: %zd\n",ARG_405_BIN,l_rc,
                    IMAGE_SZ_FIELD_LEN,GPE1_SZ_FIELD_OFFSET);
             l_rc = FAILURE_RC;
             break;
@@ -864,27 +870,27 @@ int main(int argc, char* argv[])
         //=====================
         // Write image versions
         //=====================
-        unsigned long int l_version = 0;
+        char l_version[VERSION_LEN];
 
         // Bootloader
-        sprintf((char*)&l_version, "%s",argv[5]);
+        strncpy(l_version, argv[5], VERSION_LEN);
         l_rc = write(l_bootLdrPtr, &l_version, VERSION_LEN, VERSION_OFFSET);
         if( l_rc != 0)
         {
             printf("Failed to write version in the file: %s, "
-                   "rc: %d, VERSION_LEN: %d, VERSION_OFFSET: %d\n",
+                   "rc: %d, VERSION_LEN: %d, VERSION_OFFSET: %zd\n",
                    ARG_BOOTLOADER_BIN, l_rc, VERSION_LEN, VERSION_OFFSET);
             l_rc = FAILURE_RC;
             break;
         }
 
         // 405
-        sprintf((char*)&l_version, "%s",argv[6]);
+        strncpy(l_version, argv[6], VERSION_LEN);
         l_rc = write(l_file405Ptr, &l_version, VERSION_LEN, VERSION_OFFSET);
         if( l_rc != 0)
         {
             printf("Failed to write version in the file: %s, "
-                   "rc: %d, VERSION_LEN: %d, VERSION_OFFSET: %d\n",
+                   "rc: %d, VERSION_LEN: %d, VERSION_OFFSET: %zd\n",
                    ARG_405_BIN, l_rc, VERSION_LEN, VERSION_OFFSET);
             l_rc = FAILURE_RC;
             break;
@@ -903,7 +909,7 @@ int main(int argc, char* argv[])
             if( l_rc != 0)
             {
                 printf("Failed to write id_str in the file: %s, "
-                       "rc: %d ID_STR_LEN: %d, ID_STR_OFFSET: %d\n",
+                       "rc: %d ID_STR_LEN: %d, ID_STR_OFFSET: %zd\n",
                        ARG_BOOTLOADER_BIN, l_rc, ID_STR_LEN,ID_STR_OFFSET);
                 l_rc = FAILURE_RC;
                 break;
@@ -918,7 +924,7 @@ int main(int argc, char* argv[])
             if( l_rc != 0)
             {
                 printf("Failed to write id_str in the file: %s, "
-                       "rc: %d ID_STR_LEN: %d, ID_STR_OFFSET: %d\n",
+                       "rc: %d ID_STR_LEN: %d, ID_STR_OFFSET: %zd\n",
                        ARG_405_BIN, l_rc, ID_STR_LEN,ID_STR_OFFSET);
                 l_rc = FAILURE_RC;
                 break;
@@ -933,7 +939,7 @@ int main(int argc, char* argv[])
         l_rc = fseek(l_bootLdrPtr, ADDRESS_OFFSET, SEEK_SET);
         if( l_rc != 0)
         {
-            printf("Failed to seek ep_address offset: 0x%x of the file: %s, "
+            printf("Failed to seek ep_address offset: 0x%zx of the file: %s, "
                    "rc: %d\n",ADDRESS_OFFSET,ARG_BOOTLOADER_BIN,l_rc);
             l_rc = FAILURE_RC;
             break;
@@ -943,13 +949,13 @@ int main(int argc, char* argv[])
         l_rc = fseek(l_file405Ptr, ADDRESS_OFFSET, SEEK_SET);
         if( l_rc != 0)
         {
-            printf("Failed to seek ep_address offset: 0x%x of the file: %s, "
+            printf("Failed to seek ep_address offset: 0x%zx of the file: %s, "
                    "rc: %d\n",ADDRESS_OFFSET,ARG_405_BIN,l_rc);
             l_rc = FAILURE_RC;
             break;
         }
 
-        unsigned long int l_405_addr = 0, l_btldr_addr = 0;
+        uint32_t l_405_addr = 0, l_btldr_addr = 0;
 
         // Read ep_addr fields
 
@@ -958,7 +964,7 @@ int main(int argc, char* argv[])
         if( l_readSz != ADDRESS_LEN)
         {
             printf("Failed to read address for ep_branch calculation. File: %s, "
-                   "readSz: 0x%x, ADDRESS_LEN: 0x%x\n",ARG_405_BIN,l_readSz,
+                   "readSz: 0x%zx, ADDRESS_LEN: 0x%x\n",ARG_405_BIN,l_readSz,
                    ADDRESS_LEN);
             l_rc = FAILURE_RC;
             break;
@@ -969,7 +975,7 @@ int main(int argc, char* argv[])
         if( l_readSz != ADDRESS_LEN)
         {
             printf("Failed to read address for ep_branch calculation. File: %s, "
-                   "readSz: 0x%x, ADDRESS_LEN: 0x%x\n",ARG_BOOTLOADER_BIN,l_readSz,
+                   "readSz: 0x%zx, ADDRESS_LEN: 0x%x\n",ARG_BOOTLOADER_BIN,l_readSz,
                    ADDRESS_LEN);
             l_rc = FAILURE_RC;
             break;
@@ -992,7 +998,7 @@ int main(int argc, char* argv[])
         {
             printf("Failed to write ep_branch_inst in the file: %s, "
                    "rc: %d, EP_BRANCH_INST_LEN: %d, "
-                   "EP_BRANCH_INST_OFFSET: %d\n",ARG_405_BIN,l_rc,
+                   "EP_BRANCH_INST_OFFSET: %zd\n",ARG_405_BIN,l_rc,
                    EP_BRANCH_INST_LEN,EP_BRANCH_INST_OFFSET);
             l_rc = FAILURE_RC;
             break;
@@ -1011,7 +1017,7 @@ int main(int argc, char* argv[])
         {
             printf("Failed to write ep_branch_inst in the file: %s, "
                    "rc: %d, EP_BRANCH_INST_LEN: %d, "
-                   "EP_BRANCH_INST_OFFSET: %d\n",ARG_BOOTLOADER_BIN,l_rc,
+                   "EP_BRANCH_INST_OFFSET: %zd\n",ARG_BOOTLOADER_BIN,l_rc,
                    EP_BRANCH_INST_LEN,EP_BRANCH_INST_OFFSET);
             l_rc = FAILURE_RC;
             break;
@@ -1045,7 +1051,7 @@ int main(int argc, char* argv[])
         l_rc = fseek(l_fileGPE0Ptr, 0, SEEK_SET);
         if( l_rc != 0)
         {
-            printf("Failed to seek ep_address offset: 0x%x of the file: %s, "
+            printf("Failed to seek ep_address offset: 0x%zx of the file: %s, "
                    "rc: %d\n",ADDRESS_OFFSET,ARG_GPE0_BIN,l_rc);
             l_rc = FAILURE_RC;
             break;
@@ -1055,7 +1061,7 @@ int main(int argc, char* argv[])
         l_rc = fseek(l_fileGPE1Ptr, 0, SEEK_SET);
         if( l_rc != 0)
         {
-            printf("Failed to seek ep_address offset: 0x%x of the file: %s, "
+            printf("Failed to seek ep_address offset: 0x%zx of the file: %s, "
                    "rc: %d\n",ADDRESS_OFFSET,ARG_GPE1_BIN,l_rc);
             l_rc = FAILURE_RC;
             break;
@@ -1066,7 +1072,7 @@ int main(int argc, char* argv[])
         //====================
 
         // 405
-        unsigned long int l_checksum = calImageChecksum(l_file405Ptr, false);
+        uint32_t l_checksum = calImageChecksum(l_file405Ptr, false);
         l_checksum = htonl(l_checksum);
         l_rc = write(l_file405Ptr, &l_checksum,CHECKSUM_FIELD_LEN,
                      CHECKSUM_FIELD_OFFSET);
@@ -1074,7 +1080,7 @@ int main(int argc, char* argv[])
         {
             printf("Failed to write image checksum in the file: %s, "
                    "rc: %d,IMAGE_SZ_FIELD_LEN: %d, "
-                   "CHECKSUM_FIELD_OFFSET: %d\n",ARG_405_BIN,l_rc,
+                   "CHECKSUM_FIELD_OFFSET: %zd\n",ARG_405_BIN,l_rc,
                    CHECKSUM_FIELD_LEN,CHECKSUM_FIELD_OFFSET);
             l_rc = FAILURE_RC;
             break;
@@ -1089,7 +1095,7 @@ int main(int argc, char* argv[])
         {
             printf("Failed to write image checksum in the file: %s, "
                    "rc: %d,IMAGE_SZ_FIELD_LEN: %d, "
-                   "CHECKSUM_FIELD_OFFSET: %d\n",ARG_BOOTLOADER_BIN,l_rc,
+                   "CHECKSUM_FIELD_OFFSET: %zd\n",ARG_BOOTLOADER_BIN,l_rc,
                    CHECKSUM_FIELD_LEN,CHECKSUM_FIELD_OFFSET);
             l_rc = FAILURE_RC;
             break;
@@ -1104,7 +1110,7 @@ int main(int argc, char* argv[])
         {
             printf("Failed to write image checksum in the file: %s, "
                    "rc: %d,IMAGE_SZ_FIELD_LEN: %d, "
-                   "CHECKSUM_GPE0_FIELD_OFFSET: %d\n",ARG_405_BIN,l_rc,
+                   "CHECKSUM_GPE0_FIELD_OFFSET: %zd\n",ARG_405_BIN,l_rc,
                    CHECKSUM_FIELD_LEN,CHECKSUM_GPE0_FIELD_OFFSET);
             l_rc = FAILURE_RC;
             break;
@@ -1119,7 +1125,7 @@ int main(int argc, char* argv[])
         {
             printf("Failed to write image checksum in the file: %s, "
                    "rc: %d,IMAGE_SZ_FIELD_LEN: %d, "
-                   "CHECKSUM_GPE1_FIELD_OFFSET: %d\n",ARG_405_BIN,l_rc,
+                   "CHECKSUM_GPE1_FIELD_OFFSET: %zd\n",ARG_405_BIN,l_rc,
                    CHECKSUM_FIELD_LEN,CHECKSUM_GPE1_FIELD_OFFSET);
             l_rc = FAILURE_RC;
             break;
