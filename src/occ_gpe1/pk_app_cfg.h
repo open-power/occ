@@ -60,4 +60,7 @@
 // PBA Slave allocated to Gpe 1 is PBA_SLAVE 2. SET PBASLVCTLN to 2 here.
 #define PBASLVCTLN 2
 
+#define PPE42_MACHINE_CHECK_HANDLER \
+    b __gpe1_machine_check_handler
+
 #endif /*__PK_APP_CFG_H__*/

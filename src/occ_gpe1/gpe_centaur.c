@@ -23,6 +23,7 @@ void gpe_centaur_init(ipc_msg_t* i_cmd, void* i_arg)
     }
     else
     {
+        PK_TRACE("Centaur_configuration. MSR:%08x",mfmsr());
         rc = gpe_centaur_configuration_create(G_centaur_config);
     }
 
@@ -42,10 +43,16 @@ void gpe_centaur_init(ipc_msg_t* i_cmd, void* i_arg)
 
 void gpe_centaur_scom(ipc_msg_t* i_cmd, void* i_arg)
 {
+    static int g_log_once = 0;
     int      rc;
     ipc_async_cmd_t *async_cmd = (ipc_async_cmd_t*)i_cmd;
     CentaurScomParms_t * scomParms = (CentaurScomParms_t*)async_cmd->cmd_data;
 
+    if(g_log_once == 0)
+    {
+        g_log_once = 1;
+        PK_TRACE("Centaur Scom. MSR:%08x",mfmsr());
+    }
     gpe_scom_centaur(G_centaur_config, scomParms);
 
     // Send response
@@ -64,12 +71,18 @@ void gpe_centaur_scom(ipc_msg_t* i_cmd, void* i_arg)
 
 void gpe_centaur_data(ipc_msg_t* i_cmd, void* i_arg)
 {
+    static int g_log_once = 0;
     int      rc;
     ipc_async_cmd_t *async_cmd = (ipc_async_cmd_t*)i_cmd;
 
     CentaurGetMemDataParms_t * dataParms =
         (CentaurGetMemDataParms_t *)async_cmd->cmd_data;
 
+    if(g_log_once == 0)
+    {
+        g_log_once = 1;
+        PK_TRACE("Centaur Data. MSR:%08x",mfmsr());
+    }
     rc = centaur_get_mem_data(G_centaur_config, dataParms);
 
     dataParms->error.rc = rc;

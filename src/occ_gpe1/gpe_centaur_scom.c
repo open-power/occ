@@ -24,10 +24,62 @@
 #include "pba_register_addresses.h"
 #include "ppe42_msr.h"
 
+#define CENTAUR_ACCESS_READ 1
+#define CENTAUR_ACCESS_WRITE 2
+
 /**
  * @file centaur_scom
  * @brief scom access from gpe to a centaur
  */
+
+uint32_t g_centaur_access_state = CENTAUR_ACCESS_INACTIVE;
+
+int centaur_access(CentaurConfiguration_t* i_config,
+                   uint32_t i_instance,
+                   uint32_t i_oci_addr,
+                   uint64_t * io_data,
+                   int      i_read_write)
+{
+    int rc = 0;
+    uint32_t org_msr = mfmsr();
+    uint32_t msr = org_msr | MSR_SEM; // Mask off SIB from generating mck.
+
+    g_centaur_access_state = CENTAUR_ACCESS_IN_PROGRESS;
+
+    if(i_read_write == CENTAUR_ACCESS_READ)
+    {
+        mtmsr(msr);
+        sync();
+        PPE_LVD(i_oci_addr, *io_data);
+    }
+    else
+    {
+        // Set PPE to precise mode for stores so that in the case of a machine
+        // check, there is a predictable instruction address to resume on.
+        msr &= ~MSR_IPE;
+        mtmsr(msr);
+        sync();
+
+        PPE_STVD(i_oci_addr, *io_data);
+    }
+
+    // Poll SIB error or machine check
+    if((mfmsr() & MSR_SIBRC) ||
+       g_centaur_access_state != CENTAUR_ACCESS_IN_PROGRESS)
+    {
+        // Take centaur out of config
+        PK_TRACE("Removing Centaur %d from list of configured Centaurs",
+                 i_instance);
+
+        i_config->config &= ~(CHIP_CONFIG_CENTAUR(i_instance));
+
+        // This will cause the 405 to remove the centaur sensor.
+        rc = CENTAUR_CHANNEL_CHECKSTOP;
+    }
+    g_centaur_access_state = CENTAUR_ACCESS_INACTIVE;
+    mtmsr(org_msr);
+    return rc;
+}
 
 /**
  * Setup the PBASLVCTLN extended address and calculate the OCI scom address
@@ -74,6 +126,10 @@ int centaur_scom_setup(CentaurConfiguration_t* i_config,
     {
         // workaround - don't use extraddr - use pbabar.
         uint64_t barMsk = 0;
+
+        // Mask SIB from generating mck
+        mtmsr(mfmsr() | MSR_SEM);
+
         // put the PBA in the BAR
         rc = putscom_abs(PBA_BARN(PBA_BAR_CENTAUR), pb_addr);
         if(rc)
@@ -122,6 +178,10 @@ int centaur_sensorcache_setup(CentaurConfiguration_t* i_config,
     {
         // HW bug workaround - don't use extaddr - use pbabar.
         uint64_t barMsk = 0;
+
+        // Mask SIB from generating mck
+        mtmsr(mfmsr() | MSR_SEM);
+
         // put the PBA in the BAR
         rc = putscom_abs(PBA_BARN(PBA_BAR_CENTAUR), pb_addr);
         if (rc)
@@ -174,33 +234,14 @@ uint64_t pbaslvctl_setup(GpePbaParms* i_pba_parms)
     return slvctl_val_org;
 }
 
-// Get the most severe rc from the sibrca field in the msr
-int rc_from_sibrc()
-{
-    int rc = 0;
-    uint32_t sibrca = (mfmsr() & 0x0000007f);
-    if(sibrca)
-    {
-        uint32_t mask = 1;
-        rc = 7;
-        for(; mask != 0x00000080; mask <<=1)
-        {
-            if( mask & sibrca )
-            {
-                break;
-            }
-            --rc;
-        }
-    }
-    return rc;
-}
-
 // Get data from each existing centaur.
 int centaur_get_scom_vector(CentaurConfiguration_t* i_config,
                             uint32_t i_scom_address,
                             uint64_t* o_data)
 {
     int rc = 0;
+    int access_rc = 0;
+    int pba_rc = 0;
     int instance = 0;
     uint64_t pba_slvctln_save;
 
@@ -215,18 +256,32 @@ int centaur_get_scom_vector(CentaurConfiguration_t* i_config,
         if( CHIP_CONFIG_CENTAUR(instance) & (i_config->config))
         {
             uint32_t oci_addr;
-            rc = centaur_scom_setup(i_config,
-                                    instance,
-                                    i_scom_address,
-                                    &oci_addr);
+            pba_rc = centaur_scom_setup(i_config,
+                                        instance,
+                                        i_scom_address,
+                                        &oci_addr);
 
-            if(rc)
+            if(pba_rc)
             {
+                rc = pba_rc;
                 // Already traced.
-                break;
+                // Trumps any access error
+                *o_data = 0;
             }
+
             // read centaur scom
-            PPE_LVD(oci_addr, *o_data);
+            access_rc = centaur_access(i_config,
+                                        instance,
+                                        oci_addr,
+                                        o_data,
+                                        CENTAUR_ACCESS_READ);
+            if(!rc && access_rc)
+            {
+                // not critical, but don't touch this centaur again.
+                rc = access_rc;
+                *o_data = 0;
+                // continue
+            }
         }
         else
         {
@@ -240,10 +295,6 @@ int centaur_get_scom_vector(CentaurConfiguration_t* i_config,
     pbaslvctl_reset(&(i_config->scomParms));
     PPE_STVD((i_config->scomParms).slvctl_address, pba_slvctln_save);
 
-    if(!rc)
-    {
-        rc = rc_from_sibrc();
-    }
     return rc;
 }
 
@@ -267,7 +318,11 @@ int centaur_get_scom(CentaurConfiguration_t* i_config,
     if( !rc && (CHIP_CONFIG_CENTAUR(i_centaur_instance) & (i_config->config)))
     {
         // read centaur scom
-        rc = getscom_abs(oci_addr, o_data);
+        rc = centaur_access(i_config,
+                            i_centaur_instance,
+                            oci_addr,
+                            o_data,
+                            CENTAUR_ACCESS_READ);
     }
     else
     {
@@ -288,44 +343,50 @@ int centaur_put_scom_all(CentaurConfiguration_t* i_config,
                          uint64_t i_data)
 {
     int rc = 0;
+    int pba_rc = 0;
+    int access_rc = 0;
     int instance = 0;
     uint64_t pba_slvctln_save;
 
     pbaslvctl_reset(&(i_config->scomParms));
     pba_slvctln_save = pbaslvctl_setup(&(i_config->scomParms));
 
-    // clear SIB errors in MSR
-    mtmsr((mfmsr() & ~(MSR_SIBRC | MSR_SIBRCA)));
-
     for(instance = 0; instance < OCCHW_NCENTAUR; ++instance)
     {
         if( CHIP_CONFIG_CENTAUR(instance) & (i_config->config))
         {
             uint32_t oci_addr;
-            rc = centaur_scom_setup(i_config,
+            pba_rc = centaur_scom_setup(i_config,
                                     instance,
                                     i_scom_address,
                                     &oci_addr);
 
-            if(rc)
+            if(pba_rc)
             {
                 // Already traced in centaur_scom_setup
-                break;
+                // Trumps access_rc
+                rc = pba_rc;
             }
 
             // centaur scom
-            PPE_STVD(oci_addr, i_data);
+            access_rc = centaur_access(i_config,
+                                       instance,
+                                       oci_addr,
+                                       &i_data,
+                                       CENTAUR_ACCESS_WRITE);
+            if(!rc && access_rc)
+            {
+                // Centaur won't be touched again.
+                rc = access_rc;
+                // continue
+            }
         }
     }
 
-    // gpe_pba_cntl function?
+    // reset pba slave
     pbaslvctl_reset(&(i_config->scomParms));
     PPE_STVD((i_config->scomParms).slvctl_address, pba_slvctln_save);
 
-    if(!rc)
-    {
-        rc = rc_from_sibrc();
-    }
     return rc;
 }
 
@@ -351,15 +412,15 @@ int centaur_put_scom(CentaurConfiguration_t* i_config,
         if(CHIP_CONFIG_CENTAUR(i_centaur_instance) & (i_config->config))
         {
             // write centaur scom
-            rc = putscom_abs(oci_addr, i_data);
-        }
-        else
-        {
-            rc = CENTAUR_INVALID_SCOM;
+            rc = centaur_access(i_config,
+                                i_centaur_instance,
+                                oci_addr,
+                                &i_data,
+                                CENTAUR_ACCESS_WRITE);
         }
     }
 
-    // gpe_pba_cntl function?
+    // reset pba slave
     pbaslvctl_reset(&(i_config->scomParms));
     PPE_STVD((i_config->scomParms).slvctl_address, pba_slvctln_save);
 
@@ -388,13 +449,22 @@ int centaur_scom_rmw(CentaurConfiguration_t* i_config,
     if(!rc)
     {
 
-        rc = getscom_abs(oci_addr, &data64);
+        rc = centaur_access(i_config,
+                            i_centaur_instance,
+                            oci_addr,
+                            &data64,
+                            CENTAUR_ACCESS_READ);
+
         if(!rc)
         {
             data64 &= (i_mask ^ 0xffffffffffffffffull);
             data64 |= *i_data;
 
-            rc = putscom_abs(oci_addr, data64);
+            rc = centaur_access(i_config,
+                                i_centaur_instance,
+                                oci_addr,
+                                &data64,
+                                CENTAUR_ACCESS_WRITE);
         }
     }
 
@@ -411,14 +481,13 @@ int centaur_scom_rmw_all(CentaurConfiguration_t* i_config,
                          uint64_t i_data)
 {
     int rc = 0;
+    int pba_rc = 0;
+    int access_rc = 0;
     int instance = 0;
     uint64_t pba_slvctln_save;
 
     pbaslvctl_reset(&(i_config->scomParms));
     pba_slvctln_save = pbaslvctl_setup(&(i_config->scomParms));
-
-    // clear SIB errors in MSR
-    mtmsr((mfmsr() & ~(MSR_SIBRC | MSR_SIBRCA)));
 
     for(instance = 0; (instance < OCCHW_NCENTAUR); ++instance)
     {
@@ -426,20 +495,41 @@ int centaur_scom_rmw_all(CentaurConfiguration_t* i_config,
         {
             uint64_t data64;
             uint32_t oci_addr;
-            rc = centaur_scom_setup(i_config,
-                                    instance,
-                                    i_scom_address,
-                                    &oci_addr);
-            if(rc)
+            pba_rc = centaur_scom_setup(i_config,
+                                        instance,
+                                        i_scom_address,
+                                        &oci_addr);
+            if(pba_rc)
             {
+                rc = pba_rc;
                 // Already traced in centaur_scom_setup
-                break;
+                // Trumps any access_rc
             }
+            if(!pba_rc)
+            {
 
-            PPE_LVD(oci_addr, data64);
-            data64 &= (i_mask ^ 0xffffffffffffffffull);
-            data64 |= i_data;
-            PPE_STVD(oci_addr, data64);
+                access_rc = centaur_access(i_config,
+                                           instance,
+                                           oci_addr,
+                                           &data64,
+                                           CENTAUR_ACCESS_READ);
+
+                if(!access_rc)
+                {
+                    data64 &= (i_mask ^ 0xffffffffffffffffull);
+                    data64 |= i_data;
+
+                    access_rc = centaur_access(i_config,
+                                               instance,
+                                               oci_addr,
+                                               &data64,
+                                               CENTAUR_ACCESS_WRITE);
+                }
+            }
+            if(!rc && access_rc)
+            {
+                rc = access_rc;
+            }
 
             pbaslvctl_reset(&(i_config->scomParms));
         }
@@ -447,10 +537,6 @@ int centaur_scom_rmw_all(CentaurConfiguration_t* i_config,
 
     PPE_STVD((i_config->scomParms).slvctl_address, pba_slvctln_save);
 
-    if(!rc)
-    {
-        rc = rc_from_sibrc();
-    }
     return rc;
 }
 
@@ -469,6 +555,10 @@ int centaur_get_mem_data(CentaurConfiguration_t* i_config,
     pbaslvctl_reset(&(i_config->dataParms));
     pba_slvctln_save = pbaslvctl_setup(&(i_config->dataParms));
 
+    // Clear SIB error accumulator bits & mask SIB errors from
+    // generating machine checks
+    mtmsr((mfmsr() & ~(MSR_SIBRC | MSR_SIBRCA)) | MSR_SEM);
+
     if(i_parms->collect != -1)
     {
         if((i_parms->collect >= OCCHW_NCENTAUR) ||
@@ -482,6 +572,9 @@ int centaur_get_mem_data(CentaurConfiguration_t* i_config,
 
             if(!rc)
             {
+                uint32_t org_msr = mfmsr();
+                mtmsr(org_msr | MSR_SEM); // Mask off SIB errors from gen mck
+                g_centaur_access_state = CENTAUR_ACCESS_IN_PROGRESS;
                 // Read 128 bytes from centaur cache
                 int i;
                 for(i = 0; i < 128; i += 8)
@@ -489,28 +582,52 @@ int centaur_get_mem_data(CentaurConfiguration_t* i_config,
                     PPE_LVDX(oci_addr, i, data64);
                     PPE_STVDX((i_parms->data), i, data64);
                 }
+
+                // Poll for SIB errors or machine check
+                if((mfmsr() & MSR_SIBRC) ||
+                   g_centaur_access_state != CENTAUR_ACCESS_IN_PROGRESS)
+                {
+                    // Take centaur out of config list
+                    PK_TRACE("Removing Centaur %d from list of configured Centaurs",
+                             i_parms->collect);
+                    i_config->config &= ~(CHIP_CONFIG_CENTAUR(i_parms->collect));
+
+                    // This rc will cause the 405 to remove this centaur sensor
+                    rc = CENTAUR_CHANNEL_CHECKSTOP;
+                }
+                mtmsr(org_msr);
+                g_centaur_access_state = CENTAUR_ACCESS_INACTIVE;
             }
         }
     }
 
-    if(!rc && i_parms->update != -1)
+    if(i_parms->update != -1)
     {
+        int update_rc = 0;
         if((i_parms->update >= OCCHW_NCENTAUR) ||
            (0 == (CHIP_CONFIG_CENTAUR(i_parms->update) & (i_config->config))))
         {
-            rc = CENTAUR_GET_MEM_DATA_UPDATE_INVALID;
+            update_rc = CENTAUR_GET_MEM_DATA_UPDATE_INVALID;
         }
         else
         {
-            rc = centaur_sensorcache_setup(i_config, i_parms->update,&oci_addr);
+            update_rc = centaur_sensorcache_setup(i_config, i_parms->update,&oci_addr);
 
-            if(!rc)
+            if(!update_rc)
             {
                 // Writing a zero to this address tells the centaur to update
-                // the sensor cache.
+                // the sensor cache for the next centaur.
                 data64 = 0;
-                PPE_STVD(oci_addr, data64);
+                update_rc = centaur_access(i_config,
+                                           i_parms->update,
+                                           oci_addr,
+                                           &data64,
+                                           CENTAUR_ACCESS_WRITE);
             }
+        }
+        if(!rc && update_rc)
+        {
+            rc = update_rc;
         }
     }
 

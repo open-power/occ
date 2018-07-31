@@ -57,4 +57,5 @@ int centaur_get_mem_data(CentaurConfiguration_t* i_config,
  */
 int check_channel_chkstp(unsigned int i_centaur);
 
+extern uint32_t g_centaur_access_state;
 #endif

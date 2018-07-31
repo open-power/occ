@@ -40,7 +40,7 @@
 // Redefine the default MSR to mask off SIB errors and avoid data machine checks
 // These SIB errors probably occur due to contention on the PIB
 #define PK_THREAD_MACHINE_CONTEXT_DEFAULT (MSR_SEM | MSR_UIE | MSR_EE | MSR_ME)
-#define PPE42_MSR_INITIAL (MSR_SEM | MSR_ME)
+#define PPE42_MSR_INITIAL (MSR_SEM | MSR_ME | MSR_UIE )
 
 // Enable GPE IPC Timers
 #define GPE_IPC_TIMERS
