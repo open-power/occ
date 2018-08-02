@@ -44,18 +44,103 @@
 //*************************************************************************/
 // Defines/Enums
 //*************************************************************************/
+///Max string length of trace component name
+#define OCC_TRACE_NAME_SIZE     4
+
+// Size of data returned for debug DMA read
+#define CMDH_DEBUG_DMA_READ_SIZE  1024
+
+// Enum of the various Debug commands that may be sent to OCC
+// over the TMGT<->OCC interface.  This is the first byte of data in the debug command
+typedef enum
+{
+    DBUG_DUMP_WOF_DATA      = 0x01,
+    DBUG_FORCE_WOF_RESET    = 0x02,
+    DBUG_GET_TRACE          = 0x03,
+    DBUG_CLEAR_TRACE        = 0x04,
+    DBUG_ALLOW_TRACE        = 0x05,
+//  free = 0x06,
+    DBUG_GET_AME_SENSOR     = 0x07,
+    DBUG_DUMP_GPU_TIMINGS   = 0x08,
+    DBUG_PEEK               = 0x09,
+//  free = 0x0A,
+//  free = 0x0B,
+//  free = 0x0C,
+    DBUG_DUMP_RAW_AD        = 0x0D,
+//  free = 0x0E,
+//  free = 0x0F,
+//  free = 0x10,
+//  free = 0x11,
+//  free = 0x12
+//  free = 0x13
+    DBUG_INJECT_ERRL       = 0x14,
+    DBUG_DIMM_INJECT       = 0x15,
+//  free  = 0x16
+//  free  = 0x17,
+//  free  = 0x18,
+//  free  = 0x19,
+//  free  = 0x1A,
+//  free  = 0x1B,
+//  free  = 0x1C,
+//  free  = 0x1D,
+//  free  = 0x1E,
+    DBUG_INTERNAL_FLAGS     = 0x1F,
+    DBUG_FLUSH_DCACHE       = 0x20,
+//  free  = 0x21,
+    DBUG_CENTAUR_SENSOR_CACHE = 0x22,
+    DBUG_DUMP_PROC_DATA     = 0x23,
+    DBUG_GEN_CHOM_LOG       = 0x24,
+    DBUG_DUMP_APSS_DATA     = 0x25,
+    DBUG_DUMP_AME_SENSOR    = 0x26,
+    DBUG_CLEAR_AME_SENSOR   = 0x27,
+    DBUG_WOF_CONTROL        = 0x28
+} DBUG_CMD;
 
 //*************************************************************************/
 // Structures
 //*************************************************************************/
-// Structure that is passed into cmdhDbugcmd function
-// when it is called
-typedef struct
-{
-  cmdh_fsp_cmd_t * i_cmd_ptr;
-  cmdh_fsp_rsp_t * io_rsp_ptr;
-} cmdhDbugCmdArg_t;
 
+// Used by OCC tool to get trace, version 0.
+typedef struct __attribute__ ((packed))
+{
+    struct    cmdh_fsp_cmd_header;
+    int8_t    sub_cmd;
+    int16_t   size_request;
+    int8_t    comp[OCC_TRACE_NAME_SIZE];
+}cmdh_dbug_get_trace_query_t;
+
+// Used by OCC to response "get trace" cmd, version 0.
+typedef struct __attribute__ ((packed))
+{
+    struct    cmdh_fsp_rsp_header;
+    uint8_t   data[0];
+}cmdh_dbug_get_trace_resp_t;
+
+#define CMDH_DBUG_GET_TRACE_RESP_LEN 6  // size_request(2) and occ_comp_sram_offset(4)
+
+// Used by occtool to get AME sensor data
+typedef struct __attribute__ ((packed))
+{
+    struct     cmdh_fsp_cmd_header;
+    uint8_t    sub_cmd;
+    uint16_t   type;
+    uint16_t   location;
+}cmdh_dbug_get_sensor_query_t;
+
+// Max number of sensors that can be returned with cmdh_dbug_get_ame_sensor command
+#define CMDH_DBUG_MAX_NUM_SENSORS  50
+// Size of standard response header (5 bytes) plus checksum (2 bytes)
+#define CMDH_DBUG_FSP_RESP_LEN     7
+
+// Used by OCC firmware to respond "cmdh_dbug_get_ame_sensor" debug command
+typedef struct __attribute__ ((packed))
+{
+    struct                  cmdh_fsp_rsp_header;
+    uint16_t                num_sensors;
+    cmdh_dbug_sensor_list_t sensor[CMDH_DBUG_MAX_NUM_SENSORS];
+    uint8_t                 filler;
+    uint16_t                checksum;
+}cmdh_dbug_get_sensor_resp_t;
 
 /**
  * struct cmdh_dbug_inject_errl_query_t;
@@ -68,6 +153,134 @@ typedef struct __attribute__ ((packed))
     char        comp[OCC_TRACE_NAME_SIZE];
 }cmdh_dbug_inject_errl_query_t;
 
+// Used by OCC to debug on real hardware
+typedef struct __attribute__ ((packed))
+{
+    struct    cmdh_fsp_cmd_header;
+    uint8_t   sub_cmd;
+    uint8_t   type;
+    uint16_t  size;
+    uint32_t  address;
+}cmdh_dbug_peek_t;
+
+typedef struct __attribute__ ((packed))
+{
+    uint8_t     func;
+    uint16_t    raw;
+    uint16_t    calculated;
+    uint32_t    ipmi_sid;
+    uint32_t    offset;
+    uint32_t    gain;
+}cmdh_dbug_apss_data_t;
+
+// Used to get the APSS raw values
+typedef struct __attribute__ ((packed))
+{
+    struct                  cmdh_fsp_rsp_header;
+    cmdh_dbug_apss_data_t   ApssCh[MAX_APSS_ADC_CHANNELS];
+    uint8_t                 checksum[2];
+} cmdh_dbug_apss_data_resp_t;
+
+// DBUG_DUMP_AME_SENSOR command struct
+typedef struct __attribute__ ((packed))
+{
+    struct   cmdh_fsp_cmd_header;  // Standard command header
+    uint8_t  sub_cmd;              // Debug sub-command
+    uint16_t gsid;                 // Global Sensor ID
+} cmdh_dbug_dump_ame_sensor_cmd_t;
+
+// DBUG_DUMP_AME_SENSOR response struct
+typedef struct __attribute__ ((packed))
+{
+    struct        cmdh_fsp_rsp_header;               // Standard response header
+    sensor_info_t sensor_info;                       // Static sensor fields
+    sensor_t      sensor;                            // Dynamic sensor fields
+    uint8_t       checksum[CMDH_FSP_CHECKSUM_SIZE];  // Checksum
+} cmdh_dbug_dump_ame_sensor_rsp_t;
+
+// DBUG_CLEAR_AME_SENSOR command struct
+typedef struct __attribute__ ((packed))
+{
+    struct   cmdh_fsp_cmd_header;  // Standard command header
+    uint8_t  sub_cmd;              // Debug sub-command
+    uint16_t gsid;                 // Global Sensor ID
+    uint16_t clear_type;           // Fields to clear (AMEC_SENSOR_CLEAR_TYPE)
+} cmdh_dbug_clear_ame_sensor_cmd_t;
+
+// DBUG_CLEAR_AME_SENSOR response struct
+typedef struct __attribute__ ((packed))
+{
+    struct   cmdh_fsp_rsp_header;               // Standard response header
+    sensor_t sensor;                            // Dynamic sensor fields
+    uint8_t  checksum[CMDH_FSP_CHECKSUM_SIZE];  // Checksum
+} cmdh_dbug_clear_ame_sensor_rsp_t;
+
+// DBUG_WOF_CONTROL command struct
+typedef struct __attribute__ ((packed))
+{
+    struct      cmdh_fsp_cmd_header;    // Standard command header
+    uint8_t     sub_cmd;                // Debug sub-command
+    uint8_t     action;                 // CLEAR(0) or SET(1)
+    uint32_t    wof_rc;                 // Bit to set
+} cmdh_dbug_wof_control_cmd_t;
+
+// DBUG_WOF_CONTROL response struct
+typedef struct __attribute__ ((packed))
+{
+    struct      cmdh_fsp_rsp_header;
+    uint32_t    wof_disabled;
+    uint8_t     checksum[CMDH_FSP_CHECKSUM_SIZE];
+} cmdh_dbug_wof_control_rsp_t;
+
+// DBUG_ALLOW_TRACE command struct
+typedef struct __attribute__ ((packed))
+{
+    struct      cmdh_fsp_cmd_header;
+    uint8_t     sub_cmd;
+    uint8_t     action;
+    uint16_t    trace_flags;
+}cmdh_dbug_allow_trace_cmd_t;
+
+// DBUG_ALLOW_TRACE response struct
+typedef struct __attribute__ ((packed))
+{
+    struct      cmdh_fsp_rsp_header;
+    uint16_t    trace_flags;
+    uint8_t     checksum[CMDH_FSP_CHECKSUM_SIZE];
+}cmdh_dbug_allow_trace_rsp_t;
+
+// DBUG_DIMM_INJECT command struct
+typedef struct __attribute__ ((packed))
+{
+    struct      cmdh_fsp_cmd_header;
+    uint8_t     sub_cmd;
+    uint64_t    inject_mask;
+}cmdh_dbug_dimm_inject_cmd_t;
+
+// DBUG_DIMM_INJECT response struct
+typedef struct __attribute__ ((packed))
+{
+    struct      cmdh_fsp_rsp_header;
+    uint64_t    inject_mask;
+    uint8_t     checksum[CMDH_FSP_CHECKSUM_SIZE];
+}cmdh_dbug_dimm_inject_rsp_t;
+
+// DBUG_INTERNAL_FLAGS command struct
+typedef struct __attribute__ ((packed))
+{
+    struct      cmdh_fsp_cmd_header;
+    uint8_t     sub_cmd;
+    uint32_t    flags;
+}cmdh_dbug_internal_flags_cmd_t;
+
+// DBUG_INTERNAL_FLAGS response struct
+typedef struct __attribute__ ((packed))
+{
+    struct      cmdh_fsp_rsp_header;
+    uint32_t    flags;
+    uint8_t     checksum[CMDH_FSP_CHECKSUM_SIZE];
+}cmdh_dbug_internal_flags_rsp_t;
+
 //*************************************************************************
 // Globals
 //*************************************************************************
@@ -75,7 +288,6 @@ typedef struct __attribute__ ((packed))
 //*************************************************************************
 // Function Prototypes
 //*************************************************************************
-errlHndl_t cmdhDbugCmd(void * i_arg);
 
 //*************************************************************************
 // Functions

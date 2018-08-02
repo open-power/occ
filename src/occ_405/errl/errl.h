@@ -301,7 +301,23 @@ typedef enum {
     ERRH_WOF_CONTROL_TIMEOUT_IGNORED =  0x1D,
     ERRH_PSTATE_CHANGE_IGNORED       =  0x1E,
     ERRH_VDD_CURRENT_ROLLOVER_MAX    =  0x1F,
-    ERR_HISTORY_SIZE                 =  0x20
+    ERRH_CORE_SMALL_DROOP            =  0x20,
+    ERRH_CACHE_LARGE_DROOP           =  0x21,
+    ERRH_RESERVED22                  =  0x22,
+    ERRH_RESERVED23                  =  0x23,
+    ERRH_RESERVED24                  =  0x24,
+    ERRH_RESERVED25                  =  0x25,
+    ERRH_RESERVED26                  =  0x26,
+    ERRH_RESERVED27                  =  0x27,
+    ERRH_RESERVED28                  =  0x28,
+    ERRH_RESERVED29                  =  0x29,
+    ERRH_RESERVED2A                  =  0x2A,
+    ERRH_RESERVED2B                  =  0x2B,
+    ERRH_RESERVED2C                  =  0x2C,
+    ERRH_RESERVED2D                  =  0x2D,
+    ERRH_RESERVED2E                  =  0x2E,
+    ERRH_RESERVED2F                  =  0x2F,
+    ERR_HISTORY_SIZE                 =  0x30
 } ERR_HISTORY_INDEX;
 
 // Array of error counters that are only cleared on OCC reset

@@ -876,6 +876,16 @@ void amec_calc_droop_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
 
     sensor_update( l_core_sensor, l_core_droops);
     sensor_update( l_quad_sensor, l_quad_droops);
+
+    // Update ERRH counters so it is known voltage droops are happening in call home data
+    if(l_core_droops)
+    {
+       INCREMENT_ERR_HISTORY(ERRH_CORE_SMALL_DROOP);
+    }
+    if(l_quad_droops)
+    {
+       INCREMENT_ERR_HISTORY(ERRH_CACHE_LARGE_DROOP);
+    }
 }
 
 /*----------------------------------------------------------------------------*/

@@ -365,84 +365,13 @@ typedef struct __attribute__ ((packed)) cmdh_reset_prep
 }cmdh_reset_prep_t;
 
 //---------------------------------------------------------
-// Debug Command
+// Get Field Debug Data
 //---------------------------------------------------------
 
-///Max string length of trace component name
-#define OCC_TRACE_NAME_SIZE     4
-
-// Enum of the various Debug commands that may be sent to OCC
-// over the TMGT<->OCC interface.
-typedef enum
-{
-    DBUG_DUMP_WOF_DATA      = 0x01,
-    DBUG_FORCE_WOF_RESET    = 0x02,
-    DBUG_GET_TRACE          = 0x03,
-    DBUG_CLEAR_TRACE        = 0x04,
-    DBUG_ALLOW_TRACE        = 0x05,
-    DBUG_SET_PEXE_EVENT     = 0x06,
-    DBUG_GET_AME_SENSOR     = 0x07,
-    DBUG_DUMP_GPU_TIMINGS   = 0x08,
-    DBUG_PEEK               = 0x09,
-    DBUG_POKE               = 0x0A,
-    DBUG_DUMP_THEMAL        = 0x0B,
-    DBUG_DUMP_POWER         = 0x0C,
-    DBUG_DUMP_RAW_AD        = 0x0D,
-    DBUG_DVFS_SLEW          = 0x0E,
-    DBUG_MEM_PWR_CTL        = 0x0F,
-    DBUG_PERFCOUNT          = 0x10,
-    DBUG_TEST_INTF          = 0x11,
-    // free = 0x12
-    // free = 0x13
-    DBUG_INJECT_ERRL        = 0x14,
-    DBUG_DIMM_INJECT        = 0x15,
-    // free = 0x16
-    DBUG_GPIO_READ          = 0x17,
-    DBUG_FSP_ATTN           = 0x18,
-    DBUG_CALCULATE_MAX_DIFF = 0x19,
-    DBUG_FORCE_ELOG         = 0x1A,
-    DBUG_SWITCH_PHASE       = 0x1B,
-    DBUG_INJECT_ERR         = 0x1C,
-    DBUG_VERIFY_V_F         = 0x1D,
-    DBUG_DUMP_PPM_DATA      = 0x1E,
-    DBUG_INTERNAL_FLAGS     = 0x1F,
-    DBUG_FLUSH_DCACHE       = 0x20,
-    DBUG_INVALIDATE_DCACHE  = 0x21,
-    DBUG_CENTAUR_SENSOR_CACHE = 0x22,
-    DBUG_DUMP_PROC_DATA     = 0x23,
-    DBUG_GEN_CHOM_LOG       = 0x24,
-    DBUG_DUMP_APSS_DATA     = 0x25,
-    DBUG_DUMP_AME_SENSOR    = 0x26,
-    DBUG_CLEAR_AME_SENSOR   = 0x27,
-    DBUG_WOF_CONTROL        = 0x28
-} DBUG_CMD;
-
-// Used by OCC tool to get trace, version 0.
-typedef struct __attribute__ ((packed))
-{
-    struct    cmdh_fsp_cmd_header;
-    int8_t    sub_cmd;
-    int16_t   size_request;
-    int8_t    comp[OCC_TRACE_NAME_SIZE];
-}cmdh_dbug_get_trace_query_t;
-
-// Used by OCC to response "get trace" cmd, version 0.
-typedef struct __attribute__ ((packed))
-{
-    struct    cmdh_fsp_rsp_header;
-    uint8_t   data[0];
-}cmdh_dbug_get_trace_resp_t;
-
-#define CMDH_DBUG_GET_TRACE_RESP_LEN 6  // size_request(2) and occ_comp_sram_offset(4)
-
-// Used by occtool to get AME sensor data
-typedef struct __attribute__ ((packed))
-{
-    struct     cmdh_fsp_cmd_header;
-    uint8_t    sub_cmd;
-    uint16_t   type;
-    uint16_t   location;
-}cmdh_dbug_get_sensor_query_t;
+// Size of trace data for a trace buffer
+#define CMDH_FIELD_TRACE_DATA_SIZE  1024
+// Max number of sensors for field debug data
+#define CMDH_FIELD_MAX_NUM_SENSORS  50
 
 typedef struct cmdh_dbug_sensor_list
 {
@@ -453,26 +382,6 @@ typedef struct cmdh_dbug_sensor_list
     uint16_t    sample_max;
     uint32_t    ipmi_sid;
 }cmdh_dbug_sensor_list_t;
-
-// Max number of sensors that can be returned with cmdh_dbug_get_ame_sensor command
-#define CMDH_DBUG_MAX_NUM_SENSORS  50
-// Size of standard response header (5 bytes) plus checksum (2 bytes)
-#define CMDH_DBUG_FSP_RESP_LEN     7
-
-// Used by OCC firmware to respond "cmdh_dbug_get_ame_sensor" debug command
-typedef struct __attribute__ ((packed))
-{
-    struct                  cmdh_fsp_rsp_header;
-    uint16_t                num_sensors;
-    cmdh_dbug_sensor_list_t sensor[CMDH_DBUG_MAX_NUM_SENSORS];
-    uint8_t                 filler;
-    uint16_t                checksum;
-}cmdh_dbug_get_sensor_resp_t;
-
-// Size of trace data for a trace buffer
-#define CMDH_FIELD_TRACE_DATA_SIZE  1024
-// Max number of sensors for field debug data
-#define CMDH_FIELD_MAX_NUM_SENSORS  50
 
 // Used by OCC to response "GET_FIELD_DEBUG_DATA" cmd
 typedef struct __attribute__ ((packed))
@@ -503,133 +412,6 @@ typedef struct __attribute__ ((packed))
     uint8_t    version;
 }cmdh_get_field_debug_data_query_t;
 
-// Used by OCC to debug on real hardware
-typedef struct __attribute__ ((packed))
-{
-    struct    cmdh_fsp_cmd_header;
-    uint8_t   sub_cmd;
-    uint8_t   type;
-    uint16_t  size;
-    uint32_t  oci_address;
-}cmdh_dbug_peek_t;
-
-typedef struct __attribute__ ((packed))
-{
-    uint8_t     func;
-    uint16_t    raw;
-    uint16_t    calculated;
-    uint32_t    ipmi_sid;
-    uint32_t    offset;
-    uint32_t    gain;
-}cmdh_dbug_apss_data_t;
-
-// Used to get the APSS raw values
-typedef struct __attribute__ ((packed))
-{
-    struct                  cmdh_fsp_rsp_header;
-    cmdh_dbug_apss_data_t   ApssCh[MAX_APSS_ADC_CHANNELS];
-    uint8_t                 checksum[2];
-} cmdh_dbug_apss_data_resp_t;
-
-// DBUG_DUMP_AME_SENSOR command struct
-typedef struct __attribute__ ((packed))
-{
-    struct   cmdh_fsp_cmd_header;  // Standard command header
-    uint8_t  sub_cmd;              // Debug sub-command
-    uint16_t gsid;                 // Global Sensor ID
-} cmdh_dbug_dump_ame_sensor_cmd_t;
-
-// DBUG_DUMP_AME_SENSOR response struct
-typedef struct __attribute__ ((packed))
-{
-    struct        cmdh_fsp_rsp_header;               // Standard response header
-    sensor_info_t sensor_info;                       // Static sensor fields
-    sensor_t      sensor;                            // Dynamic sensor fields
-    uint8_t       checksum[CMDH_FSP_CHECKSUM_SIZE];  // Checksum
-} cmdh_dbug_dump_ame_sensor_rsp_t;
-
-// DBUG_CLEAR_AME_SENSOR command struct
-typedef struct __attribute__ ((packed))
-{
-    struct   cmdh_fsp_cmd_header;  // Standard command header
-    uint8_t  sub_cmd;              // Debug sub-command
-    uint16_t gsid;                 // Global Sensor ID
-    uint16_t clear_type;           // Fields to clear (AMEC_SENSOR_CLEAR_TYPE)
-} cmdh_dbug_clear_ame_sensor_cmd_t;
-
-// DBUG_CLEAR_AME_SENSOR response struct
-typedef struct __attribute__ ((packed))
-{
-    struct   cmdh_fsp_rsp_header;               // Standard response header
-    sensor_t sensor;                            // Dynamic sensor fields
-    uint8_t  checksum[CMDH_FSP_CHECKSUM_SIZE];  // Checksum
-} cmdh_dbug_clear_ame_sensor_rsp_t;
-
-// DBUG_WOF_CONTROL command struct
-typedef struct __attribute__ ((packed))
-{
-    struct      cmdh_fsp_cmd_header;    // Standard command header
-    uint8_t     sub_cmd;                // Debug sub-command
-    uint8_t     action;                 // CLEAR(0) or SET(1)
-    uint32_t    wof_rc;                 // Bit to set
-} cmdh_dbug_wof_control_cmd_t;
-
-// DBUG_WOF_CONTROL response struct
-typedef struct __attribute__ ((packed))
-{
-    struct      cmdh_fsp_rsp_header;
-    uint32_t    wof_disabled;
-    uint8_t     checksum[CMDH_FSP_CHECKSUM_SIZE];
-} cmdh_dbug_wof_control_rsp_t;
-
-// DBUG_ALLOW_TRACE command struct
-typedef struct __attribute__ ((packed))
-{
-    struct      cmdh_fsp_cmd_header;
-    uint8_t     sub_cmd;
-    uint8_t     action;
-    uint16_t    trace_flags;
-}cmdh_dbug_allow_trace_cmd_t;
-
-// DBUG_ALLOW_TRACE response struct
-typedef struct __attribute__ ((packed))
-{
-    struct      cmdh_fsp_rsp_header;
-    uint16_t    trace_flags;
-    uint8_t     checksum[CMDH_FSP_CHECKSUM_SIZE];
-}cmdh_dbug_allow_trace_rsp_t;
-
-// DBUG_DIMM_INJECT command struct
-typedef struct __attribute__ ((packed))
-{
-    struct      cmdh_fsp_cmd_header;
-    uint8_t     sub_cmd;
-    uint64_t    inject_mask;
-}cmdh_dbug_dimm_inject_cmd_t;
-
-// DBUG_DIMM_INJECT response struct
-typedef struct __attribute__ ((packed))
-{
-    struct      cmdh_fsp_rsp_header;
-    uint64_t    inject_mask;
-    uint8_t     checksum[CMDH_FSP_CHECKSUM_SIZE];
-}cmdh_dbug_dimm_inject_rsp_t;
-
-// DBUG_INTERNAL_FLAGS command struct
-typedef struct __attribute__ ((packed))
-{
-    struct      cmdh_fsp_cmd_header;
-    uint8_t     sub_cmd;
-    uint32_t    flags;
-}cmdh_dbug_internal_flags_cmd_t;
-
-// DBUG_INTERNAL_FLAGS response struct
-typedef struct __attribute__ ((packed))
-{
-    struct      cmdh_fsp_rsp_header;
-    uint32_t    flags;
-    uint8_t     checksum[CMDH_FSP_CHECKSUM_SIZE];
-}cmdh_dbug_internal_flags_rsp_t;
 
 //---------------------------------------------------------
 // Tunable Parameter Command
