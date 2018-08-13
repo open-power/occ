@@ -326,15 +326,17 @@ void amec_pcap_calc(const bool i_oversub_state)
     static bool L_trace_pcap_throttle = true;
     static bool L_trace_pcap_unthrottle = true;
 
-    // Determine the active power cap.  norm_node_pcap is set as lowest
-    // between sys (N+1 mode) and user in amec_data_write_pcap()
-    // when in oversub (N mode) only use oversub pcap if lower than norm_node_pcap
-    // to handle user set power cap lower than the oversub power cap
+    // Determine the active power cap.
+    // when in oversub (N mode) only use oversub pcap if lower than user set pcap
+    // OCC should allow N mode to be higher than N+1 (don't compare against norm_node_pcap)
+    // N mode may be higher on some systems due to ps issue reporting higher power in N mode
     if( (TRUE == i_oversub_state) &&
-        (g_amec->pcap.ovs_node_pcap < g_amec->pcap.norm_node_pcap) )
+        (g_amec->pcap.ovs_node_pcap < G_sysConfigData.pcap.current_pcap) )
     {
         g_amec->pcap.active_node_pcap = g_amec->pcap.ovs_node_pcap;
     }
+    // norm_node_pcap is set as lowest between sys (N+1 mode) and
+    // user in amec_data_write_pcap()
     else
     {
         g_amec->pcap.active_node_pcap = g_amec->pcap.norm_node_pcap;
