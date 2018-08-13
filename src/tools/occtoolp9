@@ -47,7 +47,9 @@ occ_cmd=""
 occ_cmd_data=""
 action=""
 newFlags=""
+let in_safe=0
 
+temp_filename="/tmp/${USER}_occtoolp9.tmp";
 
 interface="cronus"
 if [ -z "$BMCIP" ]; then
@@ -91,7 +93,7 @@ function convertToBinary
                     strippedLine=`echo ${strippedLine:8:36} | sed 's#\s##g'`
                     #echo "LINE3: $strippedLine"
                     #strippedLine=`echo ${strippedLine:10:36} | sed 's#\s##g'`
-                    if [ $skipped_bytes == 0 ]; then
+                    if [ $skipped_bytes -eq 0 ]; then
                         # Skip response header
                         let rsp_length=0x${strippedLine:6:4}
                         #echo "Rsp Length: $rsp_length"
@@ -116,7 +118,9 @@ function convertToBinary
             echo -n -e "\x$byte" >> $outfile
         done
         if [ -e "$outfile" ]; then
-            echo "Converted $infile to binary: $outfile";
+            if [ $verbose -ne 0 ]; then
+                echo "Converted $infile to binary: $outfile";
+            fi
         fi
     else
         echo "ERROR: No output file name specified for convertToBinary"
@@ -131,14 +135,20 @@ function usage
     echo "       commands:"
     echo "           -h = help"
     echo "           -p = Send POLL command to the OCC"
-    echo "           -X XX XXXXXX... = Send XX command to the OCC with specified cmd data"
+    echo "           -X CC DDDDDD... = Send CC command to the OCC with specified cmd data (all data in hex)"
 #    echo "              -X 53 0500000001LLLLTTTT = list first 50 OCC sensors (LLLL=Location,TTTT=Type)"
 #    echo "              -X 53 0600003d = get sensor details for GUID 0x003d"
     echo "           -S type=0xTT,loc=0xLL = List specified sensors"
+    echo "              Sensor Types: 0xFF=All, 0x1=Generic, 0x2=Current, 0x4=Voltage, 0x8=Temperature,"
+    echo "                     0x10=Utilization, 0x20=Time, 0x40=Frequency, 0x80=Power, 0x200=Performance"
+    echo "              Sensor Locations: 0xFF=All, 0x1=System, 0x2=Processor, 0x4=Partition, 0x8=Memory,"
+    echo "                     0x10=VRM, 0x20=OCC 0x40=Core"
     echo "           -S guid=0xGGGG = Get sensor details for specified GUID"
     echo "           -SL = List all OCC sensors"
     echo "           -SL0 = List all OCC sensors (including sensors with 0 readings)"
     echo "           -trace  Collect OCC Trace hex trace data"
+    echo "              -s stringFile = specify string file for parsing traces (CRONUS only)"
+    echo "           -wof    Display WOF status"
     echo ""
     echo "         OPAL-PRD Only Commands:"
     echo "           -I = HTMGT info"
@@ -166,11 +176,6 @@ function usage
     echo ""
 #    echo "       TODO:"
 #    echo "           -OF OCC FFDC"
-#    echo "           -S type=TT,loc=LL = List all OCC sensors"
-#    echo "              Sensor Types: 0xFFFF=All, 0x1=Generic, 0x2=Current, 0x4=Voltage, 0x8=Temperature,"
-#    echo "                     0x10=Utilization, 0x20=Time, 0x40=Frequency, 0x80=Power, 0x200=Performance"
-#    echo "              Sensor Locations: 0xFFFF=All, 0x1=System, 0x2=Processor, 0x4=Partition, 0x8=Memory,"
-#    echo "                     0x10=VRM, 0x20=OCC 0x40=Core"
     exit 0
 }
 
@@ -190,6 +195,9 @@ let seqMismatch=0
 let channel=3
 let non_zero_sensors=1
 let skip_header=0
+let sensor_summary=0
+let use_gpe_string=1
+string_file=""
 
 if [ -n "$bmcId" ]; then
     bmcId="$bmcId"
@@ -221,6 +229,16 @@ while [ -n "$(echo $1 | grep '-')" ]; do
          occ_cmd_data=$poll_version
          ;;
 
+    -s )
+        shift
+        if [ -s "$1" ]; then
+            string_file="$1"
+        else
+            echo "ERROR: -s option requires occStringFile location"
+            exit 16
+        fi
+        ;;
+
     -S )
         shift
         if [[ "$1" =~ "type=" ]] || [[ "$1" =~ "loc=" ]]; then
@@ -234,11 +252,17 @@ while [ -n "$(echo $1 | grep '-')" ]; do
         elif [[ "$1" =~ "guid=" ]]; then
             action="SensorDump"
             let sensor_guid=${1#*guid=};
+        elif [[ "$1" =~ "GUID=" ]]; then
+            action="SensorDump"
+            let sensor_summary=1
+            let skip_header=1
+            let sensor_guid=${1#*guid=};
         else
             echo "ERROR: -S option requires Type/Location (-S type=0xFF,loc=0xFF)"
-            echo "  Types: 0xffff=All, 0x1=Generic, 0x2=Current, 0x4=Voltage, 0x8=Temperature, 0x10=Utilization,"
-            echo "         0x20=Time, 0x40=Frequency, 0x80=Power, 0x200=Performance";
-            echo "  Location: 0xffff=All, 0x1=System, 0x2=Processor, 0x4=Partition, 0x8=Memory, 0x10=VRM, 0x20=OCC 0x40=Core"
+            echo "  Sensor Types: 0xFF=All, 0x1=Generic, 0x2=Current, 0x4=Voltage, 0x8=Temperature,"
+            echo "         0x10=Utilization, 0x20=Time, 0x40=Frequency, 0x80=Power, 0x200=Performance"
+            echo "  Sensor Locations: 0xFF=All, 0x1=System, 0x2=Processor, 0x4=Partition, 0x8=Memory,"
+            echo "         0x10=VRM, 0x20=OCC 0x40=Core"
             exit 13
         fi
         ;;
@@ -254,6 +278,16 @@ while [ -n "$(echo $1 | grep '-')" ]; do
 
     -trace )
         action="trace"
+        ;;
+
+    -TRACE )
+        let use_gpe_string=0
+        action="trace"
+        ;;
+
+    -wof )
+        occ_cmd="40"
+        occ_cmd_data="01" # WOF Data Structure
         ;;
 
     -X )
@@ -311,6 +345,7 @@ while [ -n "$(echo $1 | grep '-')" ]; do
     -ch )
         if [ -n "$2" ]; then
             let channel=$2
+            shift;
         else
             echo -e "${red}ERROR: -ch requires channel number${normal}"
             exit 13
@@ -358,6 +393,7 @@ while [ -n "$(echo $1 | grep '-')" ]; do
     -f )
         if [ -n "$2" ] && [ -e "$2" ]; then
             inputfile="$2"
+            shift
         else
             echo -e "${red}ERROR: -f requires a input filename${normal}"
             exit -2;
@@ -384,6 +420,7 @@ while [ -n "$(echo $1 | grep '-')" ]; do
     -pw )
         if [ -n "$2" ]; then
             bmcPw="$2"
+            shift
         else
             echo -e "${red}ERROR: -pw requires BMC password${normal}"
             exit 13
@@ -619,7 +656,9 @@ function send_occ_cmd
             exit 2;
         fi
     elif [ "$interface" == "opal" ]; then
-        echo -e "${blue}Sending 0x$occ_cmd command to OCC${occ} (via opal-prd)...${normal}"
+        if [ $sensor_summary -eq 0 ]; then
+            echo -e "${blue}Sending 0x$occ_cmd command to OCC${occ} (via opal-prd)...${normal}"
+        fi
         # First, store the command in command buffer in SRAM
         let cmd_data_length=${#occ_cmd_data}/2
         let csum=0x"$sequence"+0x$occ_cmd+$cmd_data_length; # seq# + cmd + length
@@ -650,7 +689,9 @@ function send_occ_cmd
         else
             #echo "Parsing poll data:"
             #./occ_poll -pt -f /tmp/htmgt.bin
-            echo "Converting $rsp_file to $binfile..."
+            if [ $verbose -ne 0 ]; then
+                echo "Converting $rsp_file to $binfile..."
+            fi
             convertToBinary $rsp_file $binfile
         fi
     else
@@ -670,11 +711,11 @@ function parse_rsp_poll
     let bitset="$rstatus & 0x80";
     if [ $bitset -ne 0 ]; then flags=" Master"; fi
     let bitset="$rstatus & 0x40";
-    if [ $bitset -ne 0 ]; then flags="$flags FIRMaster"; fi
+    if [ $bitset -ne 0 ]; then flags="$flags CollectFIR"; fi
     let bitset="$rstatus & 0x10";
     if [ $bitset -ne 0 ]; then flags="$flags OCCPmcrOwner"; fi
     let bitset="$rstatus & 0x08";
-    if [ $bitset -ne 0 ]; then flags="$flags AttnEnabled"; fi
+    if [ $bitset -ne 0 ]; then flags="$flags SIMICS"; fi
     let bitset="$rstatus & 0x02";
     if [ $bitset -ne 0 ]; then flags="$flags ObsReady"; fi
     let bitset="$rstatus & 0x01";
@@ -685,13 +726,15 @@ function parse_rsp_poll
     let xstatus="0x`hexdump -s $offset -n 1 -e '"%02X"' ${binfile}`"
     flags=""
     let bitset="$xstatus & 0x80";
-    if [ $bitset -ne 0 ]; then flags=" DVS-OT"; fi
+    if [ $bitset -ne 0 ]; then flags=" DVFS-OT"; fi
     let bitset="$xstatus & 0x40";
-    if [ $bitset -ne 0 ]; then flags="$flags DVS-power"; fi
+    if [ $bitset -ne 0 ]; then flags="$flags DVFS-power"; fi
     let bitset="$xstatus & 0x20";
     if [ $bitset -ne 0 ]; then flags="$flags MemThrottle-OT"; fi
     let bitset="$xstatus & 0x10";
     if [ $bitset -ne 0 ]; then flags="$flags QckPwrDrop"; fi
+    let bitset="$xstatus & 0x08";
+    if [ $bitset -ne 0 ]; then flags="$flags DVFS-Vdd-OT"; fi
     if [ -n "$flags" ]; then
         flags="($flags )";
         echo -en "$bold";
@@ -800,10 +843,47 @@ function parse_rsp_poll
                     if [ $G_powerArch == "p9" ]; then
                         #hexdump -s $offset -n $sensorLength -e '"  " 16/1 "%02X" "\n"' ${binfile}
                         if [ "$sensor" == "TEMP" ]; then
-                            hexdump -s $offset -n $sensorLength -e '"         " 4/1 "%02X" " " 1/1 "%02X" " " 1/1 "%02X""\n"' ${binfile}
                             #hexdump -s $offset -n $sensorLength -e '"=0x" 2/1 "%02X" " "1/2 "%d" "\n"' ${binfile}
+                            #hexdump -s $offset -n $sensorLength -e '"         " 4/1 "%02X" " " 1/1 "%02X" " " 1/1 "%02X""\n"' ${binfile}
+                            for ((i = 0; i < $sensorLength; i+=6)); do
+                                let index=$offset+$i
+                                sensor_id=`hexdump -s $index -n 4 -e '4/1 "%02X"' ${binfile}`;
+                                let index+=4
+                                let fru_type=0x`hexdump -s $index -n 1 -e '1/1 "%02X"' ${binfile}`;
+                                get_fru_string $fru_type
+                                let index+=1
+                                let value=0x`hexdump -s $index -n 1 -e '1/1 "%02X"' ${binfile}`;
+                                printf "         $sensor_id %02X %02X  " $fru_type $value;
+                                if [ $fru_type -eq 3 ]; then # vrm ot
+                                    if [ $value -eq 0 ]; then
+                                        printf "(VRM not over-temperature)\n" $fru_type $value;
+                                    else
+                                        printf "(VRM Over-Temperature)\n" $fru_type $value;
+                                    fi
+                                else
+                                    if [ $value -eq 0 ]; then
+                                        printf "(N/A %s)\n" $fru_string;
+                                    elif [ $value -ne $((0xFF)) ]; then
+                                        printf "(%2dC %s)\n" $value $fru_string;
+                                    else
+                                        printf "(ERROR)\n" $fru_type $value;
+                                    fi
+                                fi
+                            done
                         elif [ "$sensor" == "FREQ" ]; then
-                            hexdump -s $offset -n $sensorLength -e '"         " 4/1 "%02X" " " 2/1 "%02X" "\n"' ${binfile}
+                            #hexdump -s $offset -n $sensorLength -e '"         " 4/1 "%02X" " " 2/1 "%02X" "\n"' ${binfile}
+                            for ((i = 0; i < $sensorLength; i+=6)); do
+                                let index=$offset+$i
+                                sensor_id=`hexdump -s $index -n 4 -e '4/1 "%02X"' ${binfile}`;
+                                let index+=4
+                                let value=0x`hexdump -s $index -n 2 -e '2/1 "%02X"' ${binfile}`;
+                                printf "         $sensor_id %04X" $value;
+                                if [ $value -ne 0 ]; then
+                                    printf "  (%dMHz)\n" $value;
+                                else
+                                    printf "\n";
+                                fi
+                            done
                         elif [ "$sensor" == "POWR" ]; then
                             if [ $sensorFormat -ne $((0xA0)) ]; then
                                 #hexdump -s $offset -n $sensorLength -e '"         " 4/1 "%02X" " " 1/1 "%02X" " " 1/1 "%02X" " " 2/1 "%02X" " " 4/1 "%02X" " " 8/1 "%02X" " " 2/1 "%02X" "\n"' ${binfile}
@@ -856,12 +936,45 @@ function parse_rsp_poll
                             let capoffset+=1
                             printf "$indent User Power Limit Source: %d\n" $pcap;
                         elif [ "$sensor" == "EXTN" ]; then
+                            sensor_id=`hexdump -s $offset -n 4 -e '4/1 "%02X"' ${binfile}`;
                             let flag_offset=$offset+4
                             let flags="0x`hexdump -s $flag_offset -n 1 -e '"%02X"' ${binfile}`";
                             let is_sensor="$flags & 0x80";
-                            if [ $is_sensor == 0 ]; then
+                            if [ $is_sensor -eq 0 ]; then
                                 # Dump name as ASCII
-                                hexdump -s $offset -n $sensorLength -e '"           " 4/1 "%_p" "   " 1/1 "%02X" " " 1/1 "%02X" " " 6/1 "%02X""\n"' ${binfile}
+                                if [ $sensor_id == "45525248" ]; then # ERRH (error history)
+                                    #hexdump -s $offset -n $sensorLength -e '"           " 4/1 "%_p" "   " 1/1 "%02X" " " 1/1 "%02X" " " 2/1 "%02X" " " 2/1 "%02X" " " 2/1 "%02X""\n"' ${binfile}
+                                    hist_data=`hexdump -s $offset -n $sensorLength -e ' 4/1 "%_p" "   " 1/1 "%02X" " " 1/1 "%02X" " " 6/1 "%02X""\n"' ${binfile}`
+                                    let hist_id=0x${hist_data:13:2}
+                                    let hist_count=0x${hist_data:15:2}
+                                    get_history_name $hist_id
+                                    history_desc="${hist_name}:${hist_count}"
+                                    let hist_id=0x${hist_data:17:2}
+                                    if [ $hist_id -gt 0 ]; then
+                                        let hist_count=0x${hist_data:19:2}
+                                        get_history_name $hist_id
+                                        history_desc="$history_desc, $hist_id"
+                                        let hist_id=0x${hist_data:21:2}
+                                        if [ $hist_id -gt 0 ]; then
+                                            let hist_count=0x${hist_data:23:2}
+                                            get_history_name $hist_id
+                                            history_desc="$history_desc, $hist_id"
+                                        fi
+                                    fi
+                                    printf "           $hist_data    $history_desc\n";
+                                    #printf "         $pwr    $funcid_name\n";
+                                elif [ $sensor_id == "464D494E" ] || [ $sensor_id == "464E4F4D" ] || [ $sensor_id == "46540000" ] || [ $sensor_id == "46555400" ]; then # FMIN,FNOM,FT,FUT
+                                    freq_data=`hexdump -s $offset -n $sensorLength -e ' 4/1 "%_p" "   " 1/1 "%02X" " " 1/1 "%02X" " " 6/1 "%02X""\n"' ${binfile}`
+                                    let freq_pstate=0x${freq_data:13:2}
+                                    let freq_value=0x${freq_data:15:4}
+                                    if [ $freq_value != 0 ]; then
+                                        printf "           $freq_data    pSstate: %3d / %d MHz\n" $freq_pstate $freq_value;
+                                    else
+                                        printf "           $freq_data    N/A\n";
+                                    fi
+                                else
+                                    hexdump -s $offset -n $sensorLength -e '"           " 4/1 "%_p" "   " 1/1 "%02X" " " 1/1 "%02X" " " 6/1 "%02X""\n"' ${binfile}
+                                fi
                             else
                                 # Dump sensor number in hex
                                 hexdump -s $offset -n $sensorLength -e '"         " 4/1 "%02X" " " 1/1 "%02X" " " 1/1 "%02X" " " 6/1 "%02X""\n"' ${binfile}
@@ -960,6 +1073,64 @@ function get_function_id
     #printf "$funcid => $funcid_name\n";
 }
 
+# Determine name/description associated with APSS Function IDs
+function get_history_name
+{
+    let id=$1
+    case $id in
+           1 ) hist_name="VddCurrent" ;;
+           2 ) hist_name="VddVoltage" ;;
+           3 ) hist_name="VdnCurrent" ;;
+           4 ) hist_name="VdnVoltage" ;;
+           5 ) hist_name="DimmI2cPort0" ;;
+           6 ) hist_name="DimmI2cPort1" ;;
+           7 ) hist_name="VddOverTemp" ;;
+           8 ) hist_name="VdnOverTemp" ;;
+           9 ) hist_name="VddOverCurrent" ;;
+          10 ) hist_name="VdnOverCurrent" ;;
+          11 ) hist_name="ApssData" ;;
+          12 ) hist_name="ApssComplete" ;;
+          13 ) hist_name="ApssTimeout" ;;
+          14 ) hist_name="DcomTxSlvInbox" ;;
+          15 ) hist_name="DcomRxSlvInbox" ;;
+          16 ) hist_name="DcomTxSlvOutbox" ;;
+          17 ) hist_name="DcomRxSlvOutbox" ;;
+          18 ) hist_name="DcomMstPbaxSend" ;;
+          19 ) hist_name="DcomSlvPbaxSend" ;;
+          20 ) hist_name="DcomMstPbaxRead" ;;
+          21 ) hist_name="DcomSlvPbaxRead" ;;
+          22 ) hist_name="Gpe0NotIdle" ;;
+          23 ) hist_name="Gpe1NotIdle" ;;
+          24 ) hist_name="24x7Disabled" ;;
+          25 ) hist_name="CeffRatioVdd" ;;
+          26 ) hist_name="VddTemp" ;;
+          27 ) hist_name="OverPcapIgn" ;;
+          28 ) hist_name="VFRTTimeoutIgn" ;;
+          29 ) hist_name="WOFControlTimeoutIgn" ;;
+          30 ) hist_name="PstateChangeIngored" ;;
+          31 ) hist_name="VddCurrentRolloverMax" ;;
+          32 ) hist_name="CoreSmallDroop" ;;
+          33 ) hist_name="CoreLargeDroop" ;;
+           * ) hist_name="" ;;
+    esac
+    #printf "$funcid => $funcid_name\n";
+}
+
+function get_fru_string
+{
+    let fru=$1
+    case $fru in
+        0 ) fru_string="core" ;;
+        1 ) fru_string="centaur" ;;
+        2 ) fru_string="dimm" ;;
+        3 ) fru_string="vrm-ot" ;;
+        4 ) fru_string="gpu" ;;
+        5 ) fru_string="gpu-mem" ;;
+        6 ) fru_string="vrm-vdd" ;;
+        * ) fru_string="" ;;
+    esac
+}
+
 function parse_rsp_mfg
 {
     # Response Data
@@ -993,47 +1164,84 @@ function parse_rsp_mfg
             let last_sensor=$guid
         done
     elif [ $subcmd -eq 6 ]; then # GET SENSOR INFO
-        printf "  MFG Sub Cmd: 0x%02X  (Get Sensor Info)\n" $subcmd
+        if [ $sensor_summary -eq 0 ]; then
+            printf "  MFG Sub Cmd: 0x%02X  (Get Sensor Info)\n" $subcmd
+        fi
 
         let unit_offset=$offset+29
         units="`hexdump -s $unit_offset -n  4 -v -e '"%_p"' ${binfile} | sed 's/\\.//g'`"
-
+        if [ "$units" == "%" ]; then
+            units="%%"
+        fi
         let guid="0x`hexdump -s $offset -n 2 -e '4/1 "%02X"' ${binfile}`"
-        printf "         GUID: 0x%04X\n" $guid
         let offset=$offset+2
-        let sample="0x`hexdump -s $offset -n 2 -e '4/1 "%02X"' ${binfile}`"
-        printf "Latest Sample: %6d $units (0x%04X)\n" $sample $sample
-        let offset=$offset+2
-        let sensStatus="0x`hexdump -s $offset -n 1 -e '"%02X"' ${binfile}`"
-        printf "       Status: 0x%02X\n" $sensStatus
-        let offset=$offset+1
-        let sample="0x`hexdump -s $offset -n 4 -e '4/1 "%02X"' ${binfile}`"
-        printf "  Accumulator: %d  (0x%08X)\n" $sample $sample
-        let offset=$offset+4
-        let sample="0x`hexdump -s $offset -n 2 -e '4/1 "%02X"' ${binfile}`"
-        printf "   Min Sample: %6d $units (0x%04X)\n" $sample $sample
-        let offset=$offset+2
-        let sample="0x`hexdump -s $offset -n 2 -e '4/1 "%02X"' ${binfile}`"
-        printf "   Max Sample: %6d $units (0x%04X)\n" $sample $sample
-        let offset=$offset+2
-        name="`hexdump -s $offset -n 16 -v -e '"%_p"' ${binfile}`"
-        echo   "  Sensor Name: $name"
-        let offset=$offset+16
-        #units="`hexdump -s $offset -n  4 -v -e '"%_p"' ${binfile}`"
-        echo "        Units: $units"
-        let offset=$offset+4
-        let sample="0x`hexdump -s $offset -n 4 -e '4/1 "%02X"' ${binfile}`"
-        printf "  Update Freq: 0x%08X\n" $sample
-        let offset=$offset+4
-        let sample="0x`hexdump -s $offset -n 4 -e '4/1 "%02X"' ${binfile}`"
-        printf " Scale Factor: 0x%08X\n" $sample
-        let offset=$offset+4
-        let sample="0x`hexdump -s $offset -n 2 -e '4/1 "%02X"' ${binfile}`"
-        printf " Sen Location: 0x%04X\n" $sample
-        let offset=$offset+2
-        let sample="0x`hexdump -s $offset -n 2 -e '4/1 "%02X"' ${binfile}`"
-        printf "  Sensor Type: 0x%04X\n" $sample
-        let offset=$offset+2
+        if [ $sensor_summary -eq 0 ]; then
+            printf "         GUID: 0x%04X\n" $guid
+            let sample="0x`hexdump -s $offset -n 2 -e '4/1 "%02X"' ${binfile}`"
+            printf "Latest Sample: %6d $units (0x%04X)\n" $sample $sample
+            let offset=$offset+2
+            let sensStatus="0x`hexdump -s $offset -n 1 -e '"%02X"' ${binfile}`"
+            printf "       Status: 0x%02X\n" $sensStatus
+            let offset=$offset+1
+            let sample="0x`hexdump -s $offset -n 4 -e '4/1 "%02X"' ${binfile}`"
+            printf "  Accumulator: %d  (0x%08X)\n" $sample $sample
+            let offset=$offset+4
+            let sample="0x`hexdump -s $offset -n 2 -e '4/1 "%02X"' ${binfile}`"
+            printf "   Min Sample: %6d $units (0x%04X)\n" $sample $sample
+            let offset=$offset+2
+            let sample="0x`hexdump -s $offset -n 2 -e '4/1 "%02X"' ${binfile}`"
+            printf "   Max Sample: %6d $units (0x%04X)\n" $sample $sample
+            let offset=$offset+2
+            name="`hexdump -s $offset -n 16 -v -e '"%_p"' ${binfile}`"
+            echo   "  Sensor Name: $name"
+            let offset=$offset+16
+            #units="`hexdump -s $offset -n  4 -v -e '"%_p"' ${binfile}`"
+            echo "        Units: $units"
+            let offset=$offset+4
+            let sample="0x`hexdump -s $offset -n 4 -e '4/1 "%02X"' ${binfile}`"
+            printf "  Update Freq: 0x%08X\n" $sample
+            let offset=$offset+4
+            let sample="0x`hexdump -s $offset -n 4 -e '4/1 "%02X"' ${binfile}`"
+            let mantissa="($sample >> 8)";
+            let exponent="($sample & 0xFF)";
+            if [ $exponent -gt 128 ]; then
+                let exponent=$exponent-256;
+            fi
+            printf " Scale Factor: 0x%08X  (%dx10^%d)\n" $sample $mantissa $exponent
+            let offset=$offset+4
+            let sample="0x`hexdump -s $offset -n 2 -e '4/1 "%02X"' ${binfile}`"
+            printf " Sen Location: 0x%04X\n" $sample
+            let offset=$offset+2
+            let sample="0x`hexdump -s $offset -n 2 -e '4/1 "%02X"' ${binfile}`"
+            printf "  Sensor Type: 0x%04X\n" $sample
+            let offset=$offset+2
+        else
+            let sample="0x`hexdump -s $offset -n 2 -e '4/1 "%02X"' ${binfile}`"
+            let offset=$offset+2
+            let sensStatus="0x`hexdump -s $offset -n 1 -e '"%02X"' ${binfile}`"
+            let offset=$offset+1
+            let acc="0x`hexdump -s $offset -n 4 -e '4/1 "%02X"' ${binfile}`"
+            let offset=$offset+4
+            let sample_min="0x`hexdump -s $offset -n 2 -e '4/1 "%02X"' ${binfile}`"
+            let offset=$offset+2
+            let sample_max="0x`hexdump -s $offset -n 2 -e '4/1 "%02X"' ${binfile}`"
+            let offset=$offset+2
+            name="`hexdump -s $offset -n 16 -v -e '"%_p"' ${binfile}`"
+            let offset=$offset+16
+            let offset=$offset+4
+            let freq="0x`hexdump -s $offset -n 4 -e '4/1 "%02X"' ${binfile}`"
+            let offset=$offset+4
+            let scale="0x`hexdump -s $offset -n 4 -e '4/1 "%02X"' ${binfile}`"
+            let offset=$offset+4
+            let sloc="0x`hexdump -s $offset -n 2 -e '4/1 "%02X"' ${binfile}`"
+            let offset=$offset+2
+            let stype="0x`hexdump -s $offset -n 2 -e '4/1 "%02X"' ${binfile}`"
+            printf "    GUID Sample  Stat      Accum     Min    Max Name             U    UpdFreq ScaleFactr    Loc   Type\n"
+            printf "  0x%04X %6d  0x%02X 0x%08X  %6d %6d %s %s 0x%08X 0x%08X 0x%04X 0x%04X\n" \
+                $guid $sample $sensStatus $acc $sample_min $sample_max $name $units $freq $scale $sloc $stype
+            # ignore any extra bytes
+            let offset=$end_of_rsp_data
+        fi
     else
         printf "  MFG Sub Cmd: 0x%02X\n" $subcmd
         let remaining_bytes=$end_of_rsp_data-$offset
@@ -1054,25 +1262,102 @@ function parse_rsp_mfg
 function parse_rsp_debugpt
 {
     # Response Data
+    let offset=0
     let subcmd="0x${occ_cmd_data:0:2}"
 
     if [ $subcmd -eq 3 ]; then # Trace Buffer
         printf "  DEBUG Sub Cmd: 0x%02X  (Trace Buffer)\n" $subcmd
         printf "   Trace Buffer: $ascii  (0x%s)\n" ${occ_cmd_data:6:8}
         echo -e $(echo "${occ_cmd_data:6:6}" | sed -e 's/\(..\)/\\x\1/g')
-        #if [ "${occ_cmd_data:6:4}" == "4750" ]; then
+        #if [ "${occ_cmd_data:6:4}" == "4750" ]; then # "GP"
         #    echo "==> ppe2fsp ${binfile} ${binfile}.bin"
         #    ppe2fsp ${binfile} ${binfile}.bin
         #    echo "==> xxd ${bindfile}.bin"
         #    xxd ${bindfile}.bin
-        #else
-            if [ $verbose -ne 0 ]; then
-                # -v to display all repeated data (like remaining 00s)
-                hexdump -C -v ${binfile}
-            else
-                hexdump -C    ${binfile}
-            fi
         #fi
+    elif [ $subcmd -eq 1 ]; then # WOF Data Structure
+        #let elogAddr="0x`hexdump -s $offset -n 4 -e '4/1 "%02X"' ${binfile}`"
+        #xxd -l 32 ${binfile}
+        #echo "WOF status:"
+        let offset=0
+        if [ "$interface" == "cronus" ]; then
+            let offset=4
+        fi
+        let wof_status=0x`hexdump -s $offset -n 4 -e '4/1 "%02X"' ${binfile}`
+        #echo "wof_status=$wof_status";
+        flags=""
+        if [ $wof_status -eq 0 ]; then
+            flags="Enabled";
+        else
+            let bitset="$wof_status & 0x04000000";
+            if [ $bitset -ne 0 ]; then flags="$flags DivideByZeroVdn"; fi
+            let bitset="$wof_status & 0x02000000";
+            if [ $bitset -ne 0 ]; then flags="$flags ResetDebugCmd"; fi
+            let bitset="$wof_status & 0x01000000";
+            if [ $bitset -ne 0 ]; then flags="$flags UserDisabledWof"; fi
+            let bitset="$wof_status & 0x00800000";
+            if [ $bitset -ne 0 ]; then flags="$flags IpcFailure"; fi
+            let bitset="$wof_status & 0x00400000";
+            if [ $bitset -ne 0 ]; then flags="$flags NoConfiguredCores"; fi
+            let bitset="$wof_status & 0x00200000";
+            if [ $bitset -ne 0 ]; then flags="$flags UnsupportedFreq"; fi
+            let bitset="$wof_status & 0x00100000";
+            if [ $bitset -ne 0 ]; then flags="$flags ResetLimitReached"; fi
+            let bitset="$wof_status & 0x00080000";
+            if [ $bitset -ne 0 ]; then flags="$flags SystemWofDisabled"; fi
+            let bitset="$wof_status & 0x00040000";
+            if [ $bitset -ne 0 ]; then flags="$flags OppbWofDisabled"; fi
+            let bitset="$wof_status & 0x00020000";
+            if [ $bitset -ne 0 ]; then flags="$flags OccWofDisabled"; fi
+            let bitset="$wof_status & 0x00010000";
+            if [ $bitset -ne 0 ]; then flags="$flags UTurboIsZero"; fi
+            let bitset="$wof_status & 0x00008000";
+            if [ $bitset -ne 0 ]; then flags="$flags DriverWofDisabled"; fi
+            let bitset="$wof_status & 0x00004000";
+            if [ $bitset -ne 0 ]; then flags="$flags VfrtAlignmentError"; fi
+            let bitset="$wof_status & 0x00002000";
+            if [ $bitset -ne 0 ]; then flags="$flags ControlReqFailure"; fi
+            let bitset="$wof_status & 0x00001000";
+            if [ $bitset -ne 0 ]; then flags="$flags VfrtReqFailure"; fi
+            let bitset="$wof_status & 0x00000800";
+            if [ $bitset -ne 0 ]; then flags="$flags DivideByZeroVdd"; fi
+            let bitset="$wof_status & 0x00000400";
+            if [ $bitset -ne 0 ]; then flags="$flags ModeNoSupport"; fi
+            let bitset="$wof_status & 0x00000200";
+            if [ $bitset -ne 0 ]; then flags="$flags ModeChange"; fi
+            let bitset="$wof_status & 0x00000100";
+            if [ $bitset -ne 0 ]; then flags="$flags StateChange"; fi
+            let bitset="$wof_status & 0x00000080";
+            if [ $bitset -ne 0 ]; then flags="$flags ControLReqTimeout"; fi
+            let bitset="$wof_status & 0x00000040";
+            if [ $bitset -ne 0 ]; then flags="$flags VfrtReqTimeout"; fi
+            let bitset="$wof_status & 0x00000020";
+            if [ $bitset -ne 0 ]; then flags="$flags PstateProtocolOff"; fi
+            let bitset="$wof_status & 0x00000010";
+            if [ $bitset -ne 0 ]; then flags="$flags PgpeWofDisabled"; fi
+            let bitset="$wof_status & 0x00000008";
+            if [ $bitset -ne 0 ]; then flags="$flags PgpeReqNotIdle"; fi
+            let bitset="$wof_status & 0x00000004";
+            if [ $bitset -ne 0 ]; then flags="$flags InvalidVddVdn"; fi
+            let bitset="$wof_status & 0x00000002";
+            if [ $bitset -ne 0 ]; then flags="$flags InvalidActiveQuads"; fi
+            let bitset="$wof_status & 0x00000001";
+            if [ $bitset -ne 0 ]; then flags="$flags NoWofHeaderMask"; fi
+        fi
+        printf "   WOF Status: 0x%08X  ($flags )\n" $wof_status
+        # Set verbose flag so full dump of data is done (including repeated lines)
+        let verbose=1
+    fi
+
+    if [ $offset -lt $end_of_rsp_data ]; then
+        # Dump response as hex data
+        let remaining_bytes=$end_of_rsp_data-$offset
+        if [ $verbose -ne 0 ]; then
+            # -v to display all repeated data (like remaining 00s)
+            hexdump -C -v -s $offset -n $remaining_bytes ${binfile}
+        else
+            hexdump -C    -s $offset -n $remaining_bytes ${binfile}
+        fi
     fi
 }
 
@@ -1218,7 +1503,7 @@ function process_elog
         echo ""
         printf "${bold}==> Retrieving elog from POLL (id 0x%02X, addr 0x%08X, len 0x%04X)${normal}\n" $elogId $elogAddr $elogLen;
         if [ $verbose -ne 0 ]; then
-            printf "${bold}==> getsram %08X %d -p${occ} -ch $channel $quiet  (read ELOG data from SRAM)${normal}" $elogAddr $elogLen
+            printf "${bold}==> getsram %08X %d -p${occ} -ch $channel $quiet  (read ELOG data from SRAM)${normal}\n" $elogAddr $elogLen
         fi
         sramAddr=`printf "%08X" $elogAddr`
         echo "getsram $sramAddr $elogLen -p${occ} -ch $channel $quiet -fb elog.bin"
@@ -1331,9 +1616,16 @@ function tmgt_info
 {
     ### Dump HTMGT and OCC states and status
     echo "==> opal-prd --expert-mode htmgt-passthru 0x01"
-    $sudo opal-prd --expert-mode htmgt-passthru 0x01 | sed 's/\s//g' > /tmp/htmgt.bin
+    $sudo opal-prd --expert-mode htmgt-passthru 0x01 | sed 's/\s//g' > $temp_filename
     # get status of first cmd in piped cmdline
     let rc=${PIPESTATUS[0]}
+    #01000903 00000000 00000000 00000000
+    #00030101 01000000 00000000 c3000100
+    if [ $verbose -ne 0 ]; then
+        echo -n "Raw Data:"
+        cat $temp_filename
+        echo ""
+    fi
     let inSafe=0
     let numOccs=0
     if [ $rc -eq 0 ]; then
@@ -1345,6 +1637,9 @@ function tmgt_info
                     let numOccs=0x${line:0:2}
                     let master=0x${line:2:2}
                     let state=0x${line:4:2}
+                    if [ $state -eq 4 ]; then
+                        let in_safe=1
+                    fi
                     let targState=0x${line:6:2}
                     let count=0x${line:8:2}
                     let pstype=0x${line:10:2}
@@ -1389,7 +1684,8 @@ function tmgt_info
                     let failed=0x${line:16:2}
                     let needReset=0x${line:18:2}
                     let resetReason=0x${line:20:2} #
-                    let count=0x${line:22:2}
+                    let wof_reset_count=0x${line:22:1}
+                    let count=0x${line:23:1}
                     pollRsp=${line:24:8}
                     type="Slave "
                     if [ $master -eq $inst ]; then
@@ -1424,16 +1720,16 @@ function tmgt_info
                     elif [ $needReset -ne 0 ]; then
                         flags="${flags}NEEDSRESET "
                     fi
-                    echo "OCC${inst}: $type $stateText($(printf "0x%02X" $state)) resetCount:$count  $flags pollRsp:0x${pollRsp}..."
+                    echo "OCC${inst}: $type $stateText($(printf "0x%02X" $state)) resetCount:$count wofResets:$wof_reset_count $flags pollRsp:0x${pollRsp}..."
                 fi
             fi
-        done < /tmp/htmgt.bin
+        done < $temp_filename
     else
         echo "ERROR: opal-prd occ passthru command failed with rc=$rc"
     fi
-
-    #01000903 00000000 00000000 00000000
-    #00030101 01000000 00000000 c3000100
+    if [ -e "$temp_filename" ]; then
+        rm -rf $temp_filename
+    fi
 
     if [ $rc -eq 0 ] && [ $inSafe -ne 0 ]; then
         let rc=4
@@ -1579,14 +1875,16 @@ function occ_trace_cronus
     echo ""
     let numOccs=1
 
-    if [ -e "./occStringFile" ]; then
-        string_file="./occStringFile"
-    elif [ -e "/tmp/occStringFile" ]; then
-        string_file="/tmp/occStringFile"
-    elif [ -e "/nfs/occStringFile" ]; then
-        string_file="/nfs/occStringFile"
-    else
-        echo "WARNING: unable to find occStringFile"
+    if [ -z "$string_file" ]; then
+        if [ -e "./occStringFile" ]; then
+            string_file="./occStringFile"
+        elif [ -e "/tmp/occStringFile" ]; then
+            string_file="/tmp/occStringFile"
+        elif [ -e "/nfs/occStringFile" ]; then
+            string_file="/nfs/occStringFile"
+        else
+            echo "WARNING: unable to find occStringFile"
+        fi
     fi
 
     while [ $numOccs -gt 0 ]; do
@@ -1659,14 +1957,14 @@ function occ_trace_cronus
                 fi
             fi
 
-            if [ -n "$string_file" ]; then
-                if [ -e "./fsp-trace" ]; then
-                    fsptrace_cmd="./fsp-trace"
-                else
-                    #echo -e "${red}Unable to find fsp-trace to parse FSP traces${normal}"
-                    fsptrace_cmd="fsp-trace";
-                fi
+            if [ -e "./fsp-trace" ]; then
+                fsptrace_cmd="./fsp-trace"
+            else
+                #echo -e "${red}Unable to find fsp-trace to parse FSP traces${normal}"
+                fsptrace_cmd="fsp-trace";
+            fi
 
+            if [ -n "$string_file" ]; then
                 if [ -n "$fsptrace_cmd" ]; then
                     echo -e "${bold}==> $fsptrace_cmd -s $string_file ./*.bin ${normal}"
                     $fsptrace_cmd -s $string_file ./*.bin
@@ -1714,7 +2012,7 @@ if [ -n "$action" ]; then
         while [ $more_sensors -ne 0 ]; do
             # -X 53 0500000001LLLLTTTT = list first 50 OCC sensors (LLLL=Location,TTTT=Type)"
             occ_cmd="53"
-            occ_cmd_data=`printf "0500%04X%02X%04X%04X" $first_sensor $non_zero_sensors $sensor_type $sensor_loc`
+            occ_cmd_data=`printf "0500%04X%02X%04X%04X" $first_sensor $non_zero_sensors $sensor_loc $sensor_type`
             #echo "==> $occ_cmd $occ_cmd_data"
             send_occ_cmd
             handle_occ_rsp # will update more_sensors and last_sensor
@@ -1723,15 +2021,18 @@ if [ -n "$action" ]; then
     elif [ "$action" == "OCCFFDC" ]; then
         occ_ffdc
     elif [ "$action" == "ExitSafe" ]; then
-
         if [ "$interface" == "opal" ]; then
             ### Dump HTMGT and OCC states and status
             tmgt_info
-            ### Attempt to exit safe mode
-            echo "==> opal-prd --expert-mode htmgt-passthru 0x05"
-            $sudo opal-prd --expert-mode htmgt-passthru 0x05
-            let rc=$?
-            echo "return status: $rc"
+            if [ $in_safe -ne 0 ]; then
+                ### Attempt to exit safe mode
+                echo "==> opal-prd --expert-mode htmgt-passthru 0x05"
+                $sudo opal-prd --expert-mode htmgt-passthru 0x05
+                let rc=$?
+                echo "return status: $rc"
+            else
+                echo "System is not currently in safe mode!"
+            fi
         else
             echo -e "${red}ERROR: Command only supported with opal-prd${normal} (not $interface)"
         fi
