@@ -15,6 +15,7 @@ INPUT ( amec_amester.o
         amec_sensors_fw.o
         amec_sensors_power.o
         amec_sensors_centaur.o
+        amec_sensors_ocmb.o
         amec_sensors_core.o
         amec_slave_smh.o
         amec_tasks.o
@@ -22,6 +23,8 @@ INPUT ( amec_amester.o
         avsbus.o
         centaur_control.o
         centaur_data.o
+        ocmb_control.o
+        ocmb_data.o
         chom.o
         cmdh_dbug_cmd.o
         cmdh_fsp_cmds_datacnfg.o

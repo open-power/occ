@@ -39,12 +39,15 @@ TOP-C-SOURCES = amec/amec_controller.c \
                 amec/amec_sensors_fw.c \
                 amec/amec_sensors_power.c \
                 amec/amec_sensors_centaur.c \
+                amec/amec_sensors_ocmb.c \
                 amec/amec_sensors_core.c \
                 amec/amec_slave_smh.c \
                 amec/amec_tasks.c \
                 amec/sensor_power.c \
                 cent/centaur_control.c \
                 cent/centaur_data.c \
+                cent/ocmb_control.c \
+                cent/ocmb_data.c \
                 cmdh/cmdh_dbug_cmd.c \
                 cmdh/cmdh_fsp_cmds_datacnfg.c \
                 cmdh/cmdh_fsp_cmds.c \

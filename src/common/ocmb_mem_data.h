@@ -1,7 +1,7 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_gpe1/occ_gpe1_machine_check_handler.c $               */
+/* $Source: src/common/ocmb_mem_data.h $                                  */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
@@ -22,47 +22,66 @@
 /* permissions and limitations under the License.                         */
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
-#include "pk_panic_codes.h"
-#include "gpe_membuf.h"
-#include "pk.h"
 
-#define OCI_ADDR_BAR_MASK 0xf0000000
-#define OCI_ADDR_BAR1 0x90000000
+/* This header file is used by both occ_405 and occ_gpe1.                 */
+/* Contains common structures and globals.                                */
+#if !defined(__OCMB_MEM_DATA_H__)
+#define __OCMB_MEM_DATA_H__
 
-extern uint32_t gpe1_machine_check_handler(uint32_t srr0,
-                                           uint32_t srr1,
-                                           uint32_t edr);
-extern uint32_t g_inband_access_state;
-
-uint32_t gpe1_machine_check_handler(uint32_t srr0,
-                                    uint32_t srr1,
-                                    uint32_t edr)
+typedef union
 {
-    PK_TRACE("GPE1 Machine check! SRR0:%08x SRR1: %08x EDR:%08x",
-             srr0,
-             srr1,
-             edr);
-
-    // It's possible to get back-to-back machine checks for the same condition
-    // so MEMBUF_CHANNEL_CHECKSTOP may already be set. Also check that the
-    // machine check was due to a MEMBUF PBA Access (PBABAR1)
-    if((g_inband_access_state == INBAND_ACCESS_IN_PROGRESS ||
-       g_inband_access_state == MEMBUF_CHANNEL_CHECKSTOP) &&
-       ((edr & OCI_ADDR_BAR_MASK) == OCI_ADDR_BAR1))
+    uint16_t value;
+    struct
     {
-        // Returning this to OCC405 will cause sensor to be removed from
-        // active list
-        g_inband_access_state = MEMBUF_CHANNEL_CHECKSTOP;
+        uint16_t ubdts0_err      : 1;
+        uint16_t ubdts0_valid    : 1;
+        uint16_t ubdts0_present  : 1;
+        uint16_t memdts0_err     : 1;
+        uint16_t memdts0_valid   : 1;
+        uint16_t memdts0_present : 1;
+        uint16_t memdts1_err     : 1;
+        uint16_t memdts1_valid   : 1;
+        uint16_t memdts1_present : 1;
+        uint16_t event           : 1;
+        uint16_t initial_packet0 : 1;
+        uint16_t reserved        : 5;
 
-        // The instruction that caused the machine check should
-        // be a double word load or store.
-        // move the IAR to the instruction after the one that caused
-        // the machine check.
-        srr0 += 4;
-    }
-    else
+    } fields;
+} ocmb_status_t;
+
+typedef union
+{
+    uint32_t value;
+    struct
     {
-        PK_PANIC( PPE42_MACHINE_CHECK_PANIC );
-    }
-    return srr0;
-}
+        uint32_t initial_packet1 : 1;
+        uint32_t reserved2       : 7;
+        uint32_t reserved1       : 24;
+    } fields;
+} ocmb_pkt1_status_t;
+
+
+typedef struct
+{
+    ocmb_status_t status;
+    uint16_t ubdts0;             // Membuf thermal sensor
+    uint16_t memdts[2];          // dimm0/1/ thermal sensor
+    uint32_t mba_rd;             // MBA reads
+    uint32_t mba_wr;             // MBA writes
+    uint32_t mba_act;            // MBA activations
+    uint32_t mba_powerups;
+    uint8_t  self_timed_refresh;  // lp2_exists
+    uint8_t  reserved1;
+    uint16_t reserved2;
+    uint32_t frame_count;
+
+    uint32_t mba_arr_cnt_base;
+    uint32_t mba_arr_cnt_low;
+    uint32_t mba_arr_cnt_med;
+    uint32_t mba_arr_cnt_high;
+    ocmb_pkt1_status_t status1;
+    uint32_t reserved4;
+    uint64_t reserved5;
+} OcmbMemData;
+
+#endif

@@ -30,8 +30,9 @@
 #include "memory_power_control.h"
 #include "dimm_control.h"
 #include "centaur_control.h"
+#include "ocmb_membuf.h"
 #include "centaur_data.h"
-#include "centaur_structs.h"
+#include "membuf_structs.h"
 #include "memory_service_codes.h"
 #include <occ_service_codes.h>  // for SSX_GENERIC_FAILURE
 #include "amec_sys.h"
@@ -41,7 +42,7 @@ extern dimm_control_args_t  G_dimm_control_args;
 extern task_t G_task_table[TASK_END];
 
 
-extern CentaurScomParms_t G_centaur_control_reg_parms;
+extern MemBufScomParms_t G_membuf_control_reg_parms;
 
 // This array identifies dimm throttle limits for both Centaurs (Cumulus) and
 // rdimms (Nimbus) based systems.
@@ -105,7 +106,11 @@ void task_memory_control( task_t * i_task )
     }
     else if (MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type)
     {
-        gpe_rc = G_centaur_control_reg_parms.error.rc;
+        gpe_rc = G_membuf_control_reg_parms.error.rc;
+    }
+    else if (MEM_TYPE_OCM == G_sysConfigData.mem_type)
+    {
+        gpe_rc = G_membuf_control_reg_parms.error.rc;
     }
 
     do
@@ -148,7 +153,7 @@ void task_memory_control( task_t * i_task )
             {
                 // ignore error and stop monitoring this centaur if there is a channel checkstop
                 if( (MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type) &&
-                    (gpe_rc == CENTAUR_CHANNEL_CHECKSTOP) )
+                    (gpe_rc == MEMBUF_CHANNEL_CHECKSTOP) )
                 {
                     // Remove the centaur sensor and all dimm sensors behind it.
                     cent_chan_checkstop(memControlTask->curMemIndex);
@@ -224,6 +229,16 @@ void task_memory_control( task_t * i_task )
             }
             rc = centaur_control(memControlTask);  // Control one centaur
         }
+        else if (MEM_TYPE_OCM == G_sysConfigData.mem_type)
+        {
+            // We use the same macros for Ocmb and Centaur
+            if(!CENTAUR_PRESENT(memIndex) ||
+               (!MBA_CONFIGURED(memIndex, 0) && !MBA_CONFIGURED(memIndex, 1)))
+            {
+                break;
+            }
+            rc = ocmb_control(memControlTask);
+        }
 
         if(rc)
         {
@@ -237,7 +252,7 @@ void task_memory_control( task_t * i_task )
                 }
                 else if (MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type)
                 {
-                    gpe_rc = G_centaur_control_reg_parms.error.rc;
+                    gpe_rc = G_membuf_control_reg_parms.error.rc;
                 }
 
                 //Error in schedule gpe memory (dimm/centaur) control
@@ -361,10 +376,17 @@ void memory_init()
                 // Init DIMM state manager IPC request
                 memory_nimbus_init();
             }
+            else if (MEM_TYPE_CUMULUS == G_sysConfigData.mem_type)
+            {
+                centaur_init(); //no rc, handles errors internally
+            }
+            else if (MEM_TYPE_OCM == G_sysConfigData.mem_type)
+            {
+                ocmb_init();
+            }
             else
             {
-                TRAC_INFO("memory_init: calling centaur_init()");
-                centaur_init(); //no rc, handles errors internally
+                TRAC_ERR("memory_init: Uknown memory type");
             }
 
             // check if the init resulted in a reset

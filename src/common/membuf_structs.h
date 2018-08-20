@@ -1,7 +1,7 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_gpe1/occ_gpe1_machine_check_handler.c $               */
+/* $Source: src/common/membuf_structs.h $                                 */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
@@ -22,47 +22,71 @@
 /* permissions and limitations under the License.                         */
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
-#include "pk_panic_codes.h"
-#include "gpe_membuf.h"
-#include "pk.h"
 
-#define OCI_ADDR_BAR_MASK 0xf0000000
-#define OCI_ADDR_BAR1 0x90000000
+/* This header file is used by both occ_405 and occ_gpe1.                 */
+/* Contains common structures and globals.                                */
+#if !defined(_MEMBUF_STRUCTS_H)
+#define _MEMBUF_STRUCTS_H
 
-extern uint32_t gpe1_machine_check_handler(uint32_t srr0,
-                                           uint32_t srr1,
-                                           uint32_t edr);
-extern uint32_t g_inband_access_state;
+#include "stdint.h"
+#include "gpe_export.h"
+#include "membuf_configuration.h"
 
-uint32_t gpe1_machine_check_handler(uint32_t srr0,
-                                    uint32_t srr1,
-                                    uint32_t edr)
+// IPC message payload for call to gpe_membuf_init()
+typedef struct
 {
-    PK_TRACE("GPE1 Machine check! SRR0:%08x SRR1: %08x EDR:%08x",
-             srr0,
-             srr1,
-             edr);
+    GpeErrorStruct error;
+    MemBufConfiguration_t * membufConfiguration;
+    uint32_t mem_type;
 
-    // It's possible to get back-to-back machine checks for the same condition
-    // so MEMBUF_CHANNEL_CHECKSTOP may already be set. Also check that the
-    // machine check was due to a MEMBUF PBA Access (PBABAR1)
-    if((g_inband_access_state == INBAND_ACCESS_IN_PROGRESS ||
-       g_inband_access_state == MEMBUF_CHANNEL_CHECKSTOP) &&
-       ((edr & OCI_ADDR_BAR_MASK) == OCI_ADDR_BAR1))
-    {
-        // Returning this to OCC405 will cause sensor to be removed from
-        // active list
-        g_inband_access_state = MEMBUF_CHANNEL_CHECKSTOP;
+} MemBufConfigParms_t;
 
-        // The instruction that caused the machine check should
-        // be a double word load or store.
-        // move the IAR to the instruction after the one that caused
-        // the machine check.
-        srr0 += 4;
-    }
-    else
-    {
-        PK_PANIC( PPE42_MACHINE_CHECK_PANIC );
-    }
-    return srr0;
-}
+// IPC message payload for call to gpe_membuf_scom()
+typedef struct
+{
+    GpeErrorStruct error;
+
+    /**
+     * Input: The SCOM list
+     * This is a pointer to an array of scomList_t objects
+     * describing the sequence of commands to execute.
+     */
+    scomList_t* scomList;
+
+    /**
+     * Input: The number of entries in the scomList.
+     * @note It is considered an error if \a entries is 0, under the
+     * assumption that the caller must have neglected to initialize the
+     * structure.
+     */
+    int     entries;
+
+} MemBufScomParms_t;
+
+// IPC message payload for call to gpe_membuf_data()
+typedef struct
+{
+    GpeErrorStruct error;
+
+    /**
+     * The index (0 .. NMEMBUF - 1) of the MemBuf whose sensor cache
+     * data to collect, or -1 to bypass collection.
+     */
+    int collect;
+
+    /**
+     * The index (0 .. NMEMBUF - 1) of the MemBuf to "poke" to cause it
+     * to begin collecting the next round of data into its sensor cache, or
+     * -1 to bypass updating
+     */
+    int update;
+
+    /**
+     * Pointer to data collected.  Needs to be set if collect != -1
+     * otherwise it's not used.
+     */
+    uint64_t * data;
+} MemBufGetMemDataParms_t;
+
+
+#endif

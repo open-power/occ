@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_405/cent/centaur_data_service_codes.h $               */
+/* $Source: src/occ_405/amec/amec_sensors_ocmb.h $                        */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2018                             */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -23,48 +23,14 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-#ifndef _CENTAUR_DATA_SERVICE_CODES_H_
-#define _CENTAUR_DATA_SERVICE_CODES_H_
-
-//*************************************************************************
-// Includes
-//*************************************************************************
-#include <comp_ids.h>
-
-//*************************************************************************
-// Externs
-//*************************************************************************
-
-//*************************************************************************
-// Macros
-//*************************************************************************
-
-//*************************************************************************
-// Defines/Enums
-//*************************************************************************
-enum centModuleId
-{
-    CENT_TASK_DATA_MOD       = CENT_COMP_ID | 0x00,
-    CENTAUR_INIT_MOD         = CENT_COMP_ID | 0x01,
-    CENT_CONTROL_MOD         = CENT_COMP_ID | 0x02,
-    CENT_RECOVERY_MOD        = CENT_COMP_ID | 0x03,
-    OCMB_INIT_MOD            = CENT_COMP_ID | 0x04,
-};
-
-//*************************************************************************
-// Structures
-//*************************************************************************
-
-//*************************************************************************
-// Globals
-//*************************************************************************
+#ifndef _AMEC_SENSORS_OCMB_H
+#define _AMEC_SENSORS_OCMB_H
 
 //*************************************************************************
 // Function Prototypes
 //*************************************************************************
+void amec_update_ocmb_sensors(uint8_t i_membuf);
+void amec_update_ocmb_temp_sensors(void);
 
-//*************************************************************************
-// Functions
-//*************************************************************************
+#endif
 
-#endif /* #ifndef _CENTAUR_DATA_SERVICE_CODES_H_ */

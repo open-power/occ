@@ -33,7 +33,7 @@
 #include <ssx.h>
 #include "rtls.h"
 #include "centaur_mem_data.h"
-#include "centaur_structs.h"
+#include "membuf_structs.h"
 #include "occ_sys_config.h"
 #include "memory.h"
 
@@ -109,15 +109,15 @@ enum eOccCentaurs
 
 //Centaur data collect structures used for task data pointers
 
-struct centaur_data_task {
-        uint8_t start_centaur;
-        uint8_t current_centaur;
-        uint8_t end_centaur;
-        uint8_t prev_centaur;
-        CentaurMemData * centaur_data_ptr;
+struct membuf_data_task {
+        uint8_t start_membuf;
+        uint8_t current_membuf;
+        uint8_t end_membuf;
+        uint8_t prev_membuf;
+        CentaurMemData * membuf_data_ptr;
         GpeRequest gpe_req;
 } __attribute__ ((__packed__));
-typedef struct centaur_data_task centaur_data_task_t;
+typedef struct membuf_data_task membuf_data_task_t;
 
 
 //*************************************************************************
@@ -125,7 +125,7 @@ typedef struct centaur_data_task centaur_data_task_t;
 //*************************************************************************
 
 //Global centaur structures used for task data pointers
-extern centaur_data_task_t G_centaur_data_task;
+extern membuf_data_task_t G_membuf_data_task;
 
 //Global is bitmask of centaurs
 extern uint32_t G_present_centaurs;
@@ -158,6 +158,9 @@ extern uint8_t G_cent_temp_updated_bitmap;
 //bitmap of configured MBA's (2 per centaur, lsb is centaur0/mba0)
 extern uint16_t G_configured_mbas;
 
+//global Message payload for collecting membuf sensor cache data.
+extern MemBufGetMemDataParms_t G_membuf_data_parms;
+
 //*************************************************************************
 // Function Prototypes
 //*************************************************************************
@@ -176,11 +179,12 @@ void cent_recovery(uint32_t i_cent);
 //associated with the specified OCC centaur id.
 CentaurMemData * cent_get_centaur_data_ptr( const uint8_t i_centaur_id );
 
-// Create the centaur configuration object
-uint32_t centaur_configuration_create( CentaurConfiguration_t * i_centaurConfiguration );
+// Create the global membuf configuration object
+uint32_t membuf_configuration_create( );
 
 // Remove centaur from enabled sensor list due to channel checkstop
 void cent_chan_checkstop(uint32_t i_cent);
 
+void ocmb_init(void);
 #endif //_CENTAUR_DATA_H
 

@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_gpe1/occ_gpe1_machine_check_handler.c $               */
+/* $Source: src/include/registers/ocmb_register_addresses.h $             */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -22,47 +22,18 @@
 /* permissions and limitations under the License.                         */
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
-#include "pk_panic_codes.h"
-#include "gpe_membuf.h"
-#include "pk.h"
+#ifndef __OCMB_REGISTER_ADDRESSES_H__
+#define __OCMB_REGISTER_ADDRESSES_H__
 
-#define OCI_ADDR_BAR_MASK 0xf0000000
-#define OCI_ADDR_BAR1 0x90000000
 
-extern uint32_t gpe1_machine_check_handler(uint32_t srr0,
-                                           uint32_t srr1,
-                                           uint32_t edr);
-extern uint32_t g_inband_access_state;
+#define MMIO_MERRCTL  0x080108ea
+#define MMIO_MFIR     0x08010870
+#define MMIO_MFIR_AND 0x08010871
 
-uint32_t gpe1_machine_check_handler(uint32_t srr0,
-                                    uint32_t srr1,
-                                    uint32_t edr)
-{
-    PK_TRACE("GPE1 Machine check! SRR0:%08x SRR1: %08x EDR:%08x",
-             srr0,
-             srr1,
-             edr);
+// N/M Throtling Control
+#define OCMB_MBA_FARB3Q 0x08011418
 
-    // It's possible to get back-to-back machine checks for the same condition
-    // so MEMBUF_CHANNEL_CHECKSTOP may already be set. Also check that the
-    // machine check was due to a MEMBUF PBA Access (PBABAR1)
-    if((g_inband_access_state == INBAND_ACCESS_IN_PROGRESS ||
-       g_inband_access_state == MEMBUF_CHANNEL_CHECKSTOP) &&
-       ((edr & OCI_ADDR_BAR_MASK) == OCI_ADDR_BAR1))
-    {
-        // Returning this to OCC405 will cause sensor to be removed from
-        // active list
-        g_inband_access_state = MEMBUF_CHANNEL_CHECKSTOP;
+#define OCMB_IB_SENSOR_CACHE_ADDR (0x40084200 >> 3)
+#define OCMB_IB_BAR_B_BIT (0x0000000080000000ull)
 
-        // The instruction that caused the machine check should
-        // be a double word load or store.
-        // move the IAR to the instruction after the one that caused
-        // the machine check.
-        srr0 += 4;
-    }
-    else
-    {
-        PK_PANIC( PPE42_MACHINE_CHECK_PANIC );
-    }
-    return srr0;
-}
+#endif

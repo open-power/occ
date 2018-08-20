@@ -33,7 +33,12 @@
 #include "pk_trace.h"
 #include "ipc_api.h"
 #include "gpe_export.h"
-#include "gpe_centaur.h"
+#include "gpe_membuf.h"
+
+#if defined(__OCMB_UNIT_TEST__)
+#include "membuf_structs.h"
+#include "ocmb_mem_data.h"
+#endif
 
 #define KERNEL_STACK_SIZE  1024
 
@@ -46,6 +51,18 @@ uint64_t        G_kernel_stack[KERNEL_STACK_SIZE/8];
 gpe_shared_data_t * G_gpe_shared_data = (gpe_shared_data_t*) GPE_SHARED_DATA_ADDR;
 
 extern PkTraceBuffer* g_pk_trace_buf_ptr;
+
+#if defined(__OCMB_UNIT_TEST__)
+MemBufGetMemDataParms_t G_dataParms;
+MemBufConfiguration_t G_membufConfiguration;
+OcmbMemData G_escache;
+
+extern MemBufConfiguration_t * G_membuf_config;
+
+int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config);
+int get_ocmb_sensorcache(MemBufConfiguration_t* i_config,
+                         MemBufGetMemDataParms_t* i_parms);
+#endif
 
 // The main function is called by the boot code (after initializing some
 // registers)
@@ -87,7 +104,17 @@ int main(int argc, char **argv)
         PK_TRACE("ipc_enable failed with rc = 0x%08x", rc);
         pk_halt();
     }
+#if defined(__OCMB_UNIT_TEST__)
+    G_dataParms.error.rc = 0;
+    G_dataParms.collect = 0;
+    G_dataParms.update = -1;
+    G_dataParms.data = (uint64_t*)(&G_escache);
+    G_membuf_config = &G_membufConfiguration;
 
+    rc = get_ocmb_sensorcache(&G_membufConfiguration, &G_dataParms);
+
+    PK_TRACE("get_ocmb_sensorcache rc = %x",rc);
+#endif
     return 0;
 }
 

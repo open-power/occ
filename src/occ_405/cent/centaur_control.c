@@ -39,7 +39,7 @@
 #include "rtls.h"
 #include "apss.h"
 #include "state.h"
-#include "centaur_structs.h"
+#include "membuf_structs.h"
 #include "centaur_firmware_registers.h"
 #include "centaur_register_addresses.h"
 #include "amec_sys.h"
@@ -64,7 +64,7 @@ typedef enum
   NM_THROTTLE_MBA23       = 1,
   MBS_THROTTLE_SYNC       = 2,
   NUM_CENT_THROTTLE_SCOMS = 3,
-} eCentaurThrottleRegs;
+} eMemBufThrottleRegs;
 
 
 //*************************************************************************/
@@ -78,9 +78,9 @@ typedef enum
 //Pore flex request for the GPE job that is used for centaur init.
 GpeRequest G_centaur_control_request;
 
-// @see CentaurScomParms in  centaur_structs.h
-GPE_BUFFER(CentaurScomParms_t G_centaur_control_reg_parms);
-// scomList_t  @see centaur_configuration.h
+// @see CentaurScomParms in  membuf_structs.h
+GPE_BUFFER(MemBufScomParms_t G_membuf_control_reg_parms);
+// scomList_t  @see membuf_configuration.h
 GPE_BUFFER(scomList_t G_centaurThrottle[NUM_CENT_THROTTLE_SCOMS]);
 
 //bitmap of configured MBA's (2 per centaur, lsb is centaur 0/mba 0)
@@ -244,8 +244,8 @@ bool centaur_control( memory_control_task_t * i_memControlTask )
     amec_centaur_t      *l_cent_ptr = NULL;
     int                 l_cent = i_memControlTask->curMemIndex;
 
-    CentaurScomParms_t * l_parms =
-          (CentaurScomParms_t *)(i_memControlTask->gpe_req.cmd_data);
+    MemBufScomParms_t * l_parms =
+          (MemBufScomParms_t *)(i_memControlTask->gpe_req.cmd_data);
 
     do
     {
@@ -292,7 +292,7 @@ bool centaur_control( memory_control_task_t * i_memControlTask )
         if(MBA_CONFIGURED(l_cent, 0))
         {
             /// [0]: Set up N/M throttle MBA01
-            G_centaurThrottle[NM_THROTTLE_MBA01].commandType = CENTAUR_SCOM_RMW;
+            G_centaurThrottle[NM_THROTTLE_MBA01].commandType = MEMBUF_SCOM_RMW;
             G_centaurThrottle[NM_THROTTLE_MBA01].instanceNumber = l_cent;
             // Set up value to be written
             l_mbafarbq.fields.cfg_nm_n_per_mba = l_mba01_n_per_mba;
@@ -301,14 +301,14 @@ bool centaur_control( memory_control_task_t * i_memControlTask )
         }
         else
         {
-            G_centaurThrottle[NM_THROTTLE_MBA01].commandType = CENTAUR_SCOM_NOP;
+            G_centaurThrottle[NM_THROTTLE_MBA01].commandType = MEMBUF_SCOM_NOP;
         }
 
         //only write to MBA23 if configured
         if(MBA_CONFIGURED(l_cent, 1))
         {
             /// [1]: Set up N/M throttle MBA23
-            G_centaurThrottle[NM_THROTTLE_MBA23].commandType = CENTAUR_SCOM_RMW;
+            G_centaurThrottle[NM_THROTTLE_MBA23].commandType = MEMBUF_SCOM_RMW;
             G_centaurThrottle[NM_THROTTLE_MBA23].instanceNumber = l_cent;
             // Set up value to be written
             l_mbafarbq.fields.cfg_nm_n_per_mba = l_mba23_n_per_mba;
@@ -317,10 +317,10 @@ bool centaur_control( memory_control_task_t * i_memControlTask )
         }
         else
         {
-            G_centaurThrottle[NM_THROTTLE_MBA23].commandType = CENTAUR_SCOM_NOP;
+            G_centaurThrottle[NM_THROTTLE_MBA23].commandType = MEMBUF_SCOM_NOP;
         }
 
-        G_centaurThrottle[MBS_THROTTLE_SYNC].commandType = CENTAUR_SCOM_CENTAUR_SYNC;
+        G_centaurThrottle[MBS_THROTTLE_SYNC].commandType = MEMBUF_SCOM_MEMBUF_SYNC;
 
         /// Set up GPE parameters
         l_parms->scomList     = G_centaurThrottle;
@@ -377,9 +377,9 @@ void centaur_control_init( void )
         G_centaurThrottle[NM_THROTTLE_MBA23].mask = l_mbafarbq.value;
 
         // Set up GPE parameters
-        G_centaur_control_reg_parms.error.ffdc = 0;
-        G_centaur_control_reg_parms.entries    = 0;
-        G_centaur_control_reg_parms.scomList   = &G_centaurThrottle[0];
+        G_membuf_control_reg_parms.error.ffdc = 0;
+        G_membuf_control_reg_parms.entries    = 0;
+        G_membuf_control_reg_parms.scomList   = &G_centaurThrottle[0];
 
         //--------------------------------------------------
         // Initializes GPE Centaur Control Task, but
@@ -388,8 +388,8 @@ void centaur_control_init( void )
         l_rc_gpe = gpe_request_create(
                 &G_memory_control_task.gpe_req,            // gpe_req for the task
                 &G_async_gpe_queue1,                       // queue
-                IPC_ST_CENTAUR_SCOM_FUNCID,                // Function ID
-                &G_centaur_control_reg_parms,              // parm for the task
+                IPC_ST_MEMBUF_SCOM_FUNCID,                 // Function ID
+                &G_membuf_control_reg_parms,              // parm for the task
                 SSX_WAIT_FOREVER,                          //
                 NULL,                                      // callback
                 NULL,                                      // callback argument
@@ -429,7 +429,7 @@ void centaur_control_init( void )
                 );
 
         addUsrDtlsToErrl(l_err,                                           //io_err
-                         (uint8_t *) &G_centaur_control_request.ffdc,     //i_dataPtr,
+                         (uint8_t *) &G_memory_control_task.gpe_req.ffdc, //i_dataPtr,
                          sizeof(GpeFfdc),                                 //i_size
                          ERRL_USR_DTL_STRUCT_VERSION_1,                   //version
                          ERRL_USR_DTL_BINARY_DATA);                       //type

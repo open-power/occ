@@ -971,9 +971,9 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
                 ADD_SUBUNITS_TO_PNOR( omicMask, MC, OMIC )
             END_UNIT_LOOP
         }
-        else if ( HOMER_CHIP_EXPLORER == chipHdr->chipType )
+        else if ( HOMER_CHIP_OCMB == chipHdr->chipType )
         {
-            // NOTE: The Explorer chip does not have any unit data.
+            // NOTE: The Ocmb chip does not have any unit data.
 
             isM = false; // processor chips only.
 
@@ -1136,9 +1136,9 @@ int32_t FirData_init( FirData_t * io_fd,
             {
                 reglist += sizeof(HOMER_ChipAxone_t);
             }
-            else if (HOMER_CHIP_EXPLORER == l_chiptPtr->chipType)
+            else if (HOMER_CHIP_OCMB == l_chiptPtr->chipType)
             {
-                // There is no chip unit data for Explorer.
+                // There is no chip unit data for Ocmb.
             }
             else
             {

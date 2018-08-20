@@ -27,7 +27,7 @@
 #undef powerpc
 
 #ifndef INITIAL_STACK_SIZE
-#define INITIAL_STACK_SIZE 256
+#define INITIAL_STACK_SIZE 512
 #endif
 
 OUTPUT_FORMAT(elf32-powerpc);

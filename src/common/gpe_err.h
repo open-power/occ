@@ -44,6 +44,7 @@
 #define GPE_RC_INVALID_MEM_PWR_CTL   0x20     // Invalid value for the memory power control command
 // Centaur  mem ctl codes
 #define GPE_RC_CONFIG_DATA_NULL_PTR  0x30     // centaurConfiguration data ptr NULL
+#define GPE_RC_INVALID_MEMBUF_TYPE   0x31     // membuf type is not valid.
 
 // APSS Specific gpe return Codes
 #define GPE_RC_INVALID_APSS_MODE     0x40     // OCC requested undefined APSS mode

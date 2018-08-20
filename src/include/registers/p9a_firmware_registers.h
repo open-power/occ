@@ -1,7 +1,7 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_gpe1/occ_gpe1_machine_check_handler.c $               */
+/* $Source: src/include/registers/p9a_firmware_registers.h $              */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
@@ -22,47 +22,58 @@
 /* permissions and limitations under the License.                         */
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
-#include "pk_panic_codes.h"
-#include "gpe_membuf.h"
-#include "pk.h"
 
-#define OCI_ADDR_BAR_MASK 0xf0000000
-#define OCI_ADDR_BAR1 0x90000000
+/* This header file is used by both occ_405 and occ_gpe1.                 */
+/* Contains common structures and globals.                                */
+#if !defined(__P9A_FIRMWARE_REGISTERS_H__)
+#define __P9A_FIRMWARE_REGISTERS_H__
 
-extern uint32_t gpe1_machine_check_handler(uint32_t srr0,
-                                           uint32_t srr1,
-                                           uint32_t edr);
-extern uint32_t g_inband_access_state;
-
-uint32_t gpe1_machine_check_handler(uint32_t srr0,
-                                    uint32_t srr1,
-                                    uint32_t edr)
+typedef union mcfgpr
 {
-    PK_TRACE("GPE1 Machine check! SRR0:%08x SRR1: %08x EDR:%08x",
-             srr0,
-             srr1,
-             edr);
-
-    // It's possible to get back-to-back machine checks for the same condition
-    // so MEMBUF_CHANNEL_CHECKSTOP may already be set. Also check that the
-    // machine check was due to a MEMBUF PBA Access (PBABAR1)
-    if((g_inband_access_state == INBAND_ACCESS_IN_PROGRESS ||
-       g_inband_access_state == MEMBUF_CHANNEL_CHECKSTOP) &&
-       ((edr & OCI_ADDR_BAR_MASK) == OCI_ADDR_BAR1))
+    uint64_t value;
+    struct
     {
-        // Returning this to OCC405 will cause sensor to be removed from
-        // active list
-        g_inband_access_state = MEMBUF_CHANNEL_CHECKSTOP;
-
-        // The instruction that caused the machine check should
-        // be a double word load or store.
-        // move the IAR to the instruction after the one that caused
-        // the machine check.
-        srr0 += 4;
-    }
-    else
+#ifdef _BIG_ENDIAN
+        uint32_t high_order;
+        uint32_t low_order;
+#else
+        uint32_t low_order;
+        uint32_t high_order;
+#endif // _BIG_ENDIAN
+    } words;
+    struct
     {
-        PK_PANIC( PPE42_MACHINE_CHECK_PANIC );
-    }
-    return srr0;
-}
+#ifdef _BIG_ENDIAN
+        uint64_t config_valid : 1;
+        uint64_t mmio_valid : 1;
+        uint64_t config_group_addr : 31;
+        uint64_t mmio_group_base_addr : 31;
+#else
+        uint64_t mmio_group_base_addr : 31;
+        uint64_t config_group_addr : 31;
+        uint64_t mmio_valid : 1;
+        uint64_t config_valid : 1;
+#endif // _BIG_ENDIAN
+    } fields;
+} mcfgpr_t;
+
+
+typedef union
+{
+    uint64_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint64_t dont_care : 56;
+        uint64_t addr_extension_group_id : 4;
+        uint64_t addr_extension_chip_id : 3;
+        uint64_t dont_care1 : 1;
+#else
+        uint64_t dont_care1 : 1;
+        uint64_t addr_extension_chip_id : 3;
+        uint64_t addr_extension_group_id : 4;
+        uint64_t dont_care : 56;
+#endif
+    } fields;
+} pb_mode_t;
+#endif

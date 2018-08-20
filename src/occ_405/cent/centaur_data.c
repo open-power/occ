@@ -38,10 +38,11 @@
 #include "apss.h"
 #include "state.h"
 #include "occhw_scom.h"
-#include "centaur_structs.h"
+#include "membuf_structs.h"
 #include "centaur_mem_data.h"
 #include "centaur_firmware_registers.h"
 #include "centaur_register_addresses.h"
+#include "dimm.h"  // MEM_TYPE_
 
 //*************************************************************************/
 // Externs
@@ -111,19 +112,19 @@ GPE_BUFFER(CentaurMemData G_centaur_data[NUM_CENTAUR_DATA_BUFF +
 //pore request for scoming centaur registers
 GpeRequest G_cent_scom_req;   // p8/working/procedures/ssx/pgp/pgp_async.h
 
-//input/output parameters for IPC_ST_CENTAUR_SCOM()
-GPE_BUFFER(CentaurScomParms_t G_cent_scom_gpe_parms);
+//input/output parameters for IPC_ST_MEMBUF_SCOM()
+GPE_BUFFER(MemBufScomParms_t G_cent_scom_gpe_parms);
 
 //scom command list entry
 GPE_BUFFER(scomList_t G_cent_scom_list_entry[NUM_CENT_OPS]);
 
-//buffer for storing output from running IPC_ST_CENTAUR_SCOM()
+//buffer for storing output from running IPC_ST_MEMBUF_SCOM()
 GPE_BUFFER(uint64_t G_cent_scom_data[MAX_NUM_CENTAURS]) = {0};
 
-// parms for call to IPC_ST_CENTAUR_INIT_FUNCID
-GPE_BUFFER(CentaurConfigParms_t G_gpe_centaur_config_args);
+// parms for call to IPC_ST_MEMBUF_INIT_FUNCID
+GPE_BUFFER(MemBufConfigParms_t G_gpe_centaur_config_args);
 
-GPE_BUFFER(CentaurConfiguration_t G_centaurConfiguration);
+GPE_BUFFER(MemBufConfiguration_t G_membufConfiguration);
 //Global array of centaur data pointers
 CentaurMemData * G_centaur_data_ptrs[MAX_NUM_CENTAURS] = { &G_centaur_data[0],
    &G_centaur_data[1], &G_centaur_data[2], &G_centaur_data[3],
@@ -131,18 +132,18 @@ CentaurMemData * G_centaur_data_ptrs[MAX_NUM_CENTAURS] = { &G_centaur_data[0],
    &G_centaur_data[7]};
 
 //Global structures for gpe get mem data parms
-GPE_BUFFER(CentaurGetMemDataParms_t G_centaur_data_parms);
+GPE_BUFFER(MemBufGetMemDataParms_t G_membuf_data_parms);
 
 //Pore flex request for the GPE job that is used for centaur init.
 GpeRequest G_centaur_reg_gpe_req;
 
 //Centaur structures used for task data pointers.
-centaur_data_task_t G_centaur_data_task = {
-    .start_centaur = 0,
-    .current_centaur = 0,
-    .end_centaur = 7,
-    .prev_centaur = 7,
-    .centaur_data_ptr = &G_centaur_data[MAX_NUM_CENTAURS]
+membuf_data_task_t G_membuf_data_task = {
+    .start_membuf = 0,
+    .current_membuf = 0,
+    .end_membuf = 7,
+    .prev_membuf = 7,
+    .membuf_data_ptr = &G_centaur_data[MAX_NUM_CENTAURS]
 };
 
 
@@ -274,7 +275,7 @@ void cent_recovery(uint32_t i_cent)
         {
             // Check if the centaur has a channel checkstop. If it does then remove the centaur
             // from the enabled sensor bit map and do not log any errors
-            if(G_cent_scom_gpe_parms.error.rc == CENTAUR_CHANNEL_CHECKSTOP)
+            if(G_cent_scom_gpe_parms.error.rc == MEMBUF_CHANNEL_CHECKSTOP)
             {
                 cent_chan_checkstop(l_prev_cent);
             }
@@ -284,7 +285,7 @@ void cent_recovery(uint32_t i_cent)
                 L_cent_callouts |= l_cent_mask;
 
                 // There was an error doing the recovery scoms
-                TRAC_ERR("cent_recovery: IPC_ST_CENTAUR_SCOM failed. rc[0x%08x] cent[%d] entries[%d] errorIndex[0x%08X]",
+                TRAC_ERR("cent_recovery: IPC_ST_MEMBUF_SCOM failed. rc[0x%08x] cent[%d] entries[%d] errorIndex[0x%08X]",
                          G_cent_scom_gpe_parms.error.rc,
                          l_prev_cent,
                          G_cent_scom_gpe_parms.entries,
@@ -449,17 +450,17 @@ void cent_recovery(uint32_t i_cent)
         //check if this centaur requires lfir6 recovery
         if(G_centaur_nest_lfir6 & l_cent_mask)
         {
-            //Set the command type from CENTAUR_SCOM_NOP to CENTAUR_SCOM_RMW
+            //Set the command type from MEMBUF_SCOM_NOP to MEMBUF_SCOM_RMW
             //these entries will reset the centaur DTS FSM and clear LFIR 6
             //if recovery worked, LFIR 6 should remain cleared.
-            G_cent_scom_list_entry[RESET_DTS_FSM].commandType = CENTAUR_SCOM_WRITE;
-            G_cent_scom_list_entry[CLEAR_NEST_LFIR6].commandType = CENTAUR_SCOM_WRITE;
+            G_cent_scom_list_entry[RESET_DTS_FSM].commandType = MEMBUF_SCOM_WRITE;
+            G_cent_scom_list_entry[CLEAR_NEST_LFIR6].commandType = MEMBUF_SCOM_WRITE;
         }
         else
         {
             //these ops aren't needed so disable them
-            G_cent_scom_list_entry[RESET_DTS_FSM].commandType = CENTAUR_SCOM_NOP;
-            G_cent_scom_list_entry[CLEAR_NEST_LFIR6].commandType = CENTAUR_SCOM_NOP;
+            G_cent_scom_list_entry[RESET_DTS_FSM].commandType = MEMBUF_SCOM_NOP;
+            G_cent_scom_list_entry[CLEAR_NEST_LFIR6].commandType = MEMBUF_SCOM_NOP;
         }
 
         //Decrement the delay counter for centaur i2c recovery
@@ -489,13 +490,13 @@ void cent_recovery(uint32_t i_cent)
                 //clear the request for i2c recovery here
                 G_centaur_needs_recovery &= ~l_cent_mask;
 
-                //Set the command type from CENTAUR_SCOM_NOP to CENTAUR_SCOM_RMW
+                //Set the command type from MEMBUF_SCOM_NOP to MEMBUF_SCOM_RMW
                 //this entry will disable the centaur sensor cache and
                 //set a flag to finish the recovery in a later call of this
                 //function (cent_recovery for a given centaur is called every
                 //2 msec)
-                G_cent_scom_list_entry[DISABLE_SC].commandType = CENTAUR_SCOM_RMW;
-                G_cent_scom_list_entry[ENABLE_SC].commandType = CENTAUR_SCOM_NOP;
+                G_cent_scom_list_entry[DISABLE_SC].commandType = MEMBUF_SCOM_RMW;
+                G_cent_scom_list_entry[ENABLE_SC].commandType = MEMBUF_SCOM_NOP;
                 L_i2c_finish_recovery[i_cent] = TRUE;
             }
         }
@@ -515,8 +516,8 @@ void cent_recovery(uint32_t i_cent)
             }
 
             //these ops aren't needed so disable them
-            G_cent_scom_list_entry[DISABLE_SC].commandType = CENTAUR_SCOM_NOP;
-            G_cent_scom_list_entry[ENABLE_SC].commandType = CENTAUR_SCOM_NOP;
+            G_cent_scom_list_entry[DISABLE_SC].commandType = MEMBUF_SCOM_NOP;
+            G_cent_scom_list_entry[ENABLE_SC].commandType = MEMBUF_SCOM_NOP;
 
             // Finish the i2c recovery if it was started for this centaur
             if(L_i2c_finish_recovery[i_cent] == TRUE)
@@ -527,11 +528,11 @@ void cent_recovery(uint32_t i_cent)
                 //clear the finish_recovery flag for this centaur
                 L_i2c_finish_recovery[i_cent] = FALSE;
 
-                //Set the command type from CENTAUR_SCOM_NOP to CENTAUR_SCOM_RMW
+                //Set the command type from MEMBUF_SCOM_NOP to MEMBUF_SCOM_RMW
                 //this entry will re-enable the centaur sensor cache
                 //which will also cause the i2c master to be reset
-                G_cent_scom_list_entry[DISABLE_SC].commandType = CENTAUR_SCOM_NOP;
-                G_cent_scom_list_entry[ENABLE_SC].commandType = CENTAUR_SCOM_RMW;
+                G_cent_scom_list_entry[DISABLE_SC].commandType = MEMBUF_SCOM_NOP;
+                G_cent_scom_list_entry[ENABLE_SC].commandType = MEMBUF_SCOM_RMW;
             }
         }
 
@@ -596,9 +597,9 @@ void centaur_data( void )
     errlHndl_t    l_err   = NULL;    // Error handler
     int           rc      = 0;       // Return code
     CentaurMemData  *    l_temp  = NULL;
-    centaur_data_task_t * l_centaur_data_ptr = &G_centaur_data_task;
-    CentaurGetMemDataParms_t  * l_parms =
-        (CentaurGetMemDataParms_t *)(l_centaur_data_ptr->gpe_req.cmd_data);
+    membuf_data_task_t * l_centaur_data_ptr = &G_membuf_data_task;
+    MemBufGetMemDataParms_t  * l_parms =
+        (MemBufGetMemDataParms_t *)(l_centaur_data_ptr->gpe_req.cmd_data);
     static bool   L_gpe_scheduled = FALSE;
     static bool   L_gpe_error_logged = FALSE;
     static bool   L_gpe_had_1_tick = FALSE;
@@ -608,16 +609,16 @@ void centaur_data( void )
         // ------------------------------------------
         // Centaur Data Task Variable Initial State
         // ------------------------------------------
-        // ->current_centaur:  the one that was just 'written' to last tick to
+        // ->current_membuf:  the one that was just 'written' to last tick to
         //                     kick off the sensor cache population in the
-        //                     centaur.  It will be 'read from' during this tick.
+        //                     membuf.  It will be 'read from' during this tick.
         //
-        // ->prev_centaur:     the one that was 'read from' during the last tick
+        // ->prev_membuf:     the one that was 'read from' during the last tick
         //                     and will be used to update the
         //                     G_updated_centaur_mask during this tick.
         //
-        // ->centaur_data_ptr: points to G_centaur_data_ptrs[] for
-        //                     the centaur that is referenced by prev_centaur
+        // ->membuf_data_ptr: points to G_centaur_data_ptrs[] for
+        //                     the centaur that is referenced by prev_membuf
         //                     (the one that was just 'read')
 
         //First, check to see if the previous GPE request still running
@@ -648,7 +649,7 @@ void centaur_data( void )
 
         //Need to complete collecting data for all assigned centaurs from
         //previous interval and tick 0 is the current tick before collect data again.
-        if( (l_centaur_data_ptr->current_centaur == l_centaur_data_ptr->end_centaur)
+        if( (l_centaur_data_ptr->current_membuf == l_centaur_data_ptr->end_membuf)
             && ((CURRENT_TICK & (MAX_NUM_TICKS - 1)) != 0) )
         {
             CENT_DBG("Did not collect centaur data. Need to wait for tick.");
@@ -666,11 +667,11 @@ void centaur_data( void )
             {
                 // Check if the centaur has a channel checkstop. If it does then do not
                 // log any errors, but remove the centaur from the config
-                if(l_parms->error.rc == CENTAUR_CHANNEL_CHECKSTOP)
+                if(l_parms->error.rc == MEMBUF_CHANNEL_CHECKSTOP)
                 {
-                    cent_chan_checkstop(l_centaur_data_ptr->prev_centaur);
+                    cent_chan_checkstop(l_centaur_data_ptr->prev_membuf);
                 }
-                else  // log the error if it was not a CENTAUR_CHANNEL_CHECKSTOP
+                else  // log the error if it was not a MEMBUF_CHANNEL_CHECKSTOP
                 {
                     //log an error the first time this happens but keep on running.
                     //This should be informational (except mfg) since we are going to retry
@@ -683,8 +684,8 @@ void centaur_data( void )
                         // There was an error collecting the centaur sensor cache
                         TRAC_ERR("task_centaur_data: gpe_get_mem_data failed. rc=0x%08x, cur=%d, prev=%d",
                                  l_parms->error.rc,
-                                 l_centaur_data_ptr->current_centaur,
-                                 l_centaur_data_ptr->prev_centaur);
+                                 l_centaur_data_ptr->current_membuf,
+                                 l_centaur_data_ptr->prev_membuf);
                         /* @
                          * @errortype
                          * @moduleid    CENT_TASK_DATA_MOD
@@ -714,8 +715,16 @@ void centaur_data( void )
                                 ERRL_USR_DTL_STRUCT_VERSION_1,                    //version
                                 ERRL_USR_DTL_BINARY_DATA);                        //type
 
+
+                        // Capture the GPE1 trace buffer
+                        addUsrDtlsToErrl(l_err,
+                                         (uint8_t *) G_shared_gpe_data.gpe1_tb_ptr,
+                                         G_shared_gpe_data.gpe1_tb_sz,
+                                         ERRL_USR_DTL_STRUCT_VERSION_1,
+                                         ERRL_USR_DTL_TRACE_DATA);
+
                         //Callouts depend on the return code of the gpe_get_mem_data procedure
-                        if(l_parms->error.rc == CENTAUR_GET_MEM_DATA_DIED)
+                        if(l_parms->error.rc == MEMBUF_GET_MEM_DATA_DIED)
                         {
                             //callout the processor
                             addCalloutToErrl(l_err,
@@ -723,14 +732,15 @@ void centaur_data( void )
                                              G_sysConfigData.proc_huid,
                                              ERRL_CALLOUT_PRIORITY_LOW);
                         }
-                        else if(l_parms->error.rc == CENTAUR_GET_MEM_DATA_SENSOR_CACHE_FAILED)
+                        else if(l_parms->error.rc == CENTAUR_GET_MEM_DATA_SENSOR_CACHE_FAILED ||
+                                l_parms->error.rc == MEMBUF_SCACHE_ERROR)
                         {
                             //callout the previous centaur if present
-                            if(CENTAUR_PRESENT(l_centaur_data_ptr->prev_centaur))
+                            if(CENTAUR_PRESENT(l_centaur_data_ptr->prev_membuf))
                             {
                                 addCalloutToErrl(l_err,
                                                  ERRL_CALLOUT_TYPE_HUID,
-                                                 G_sysConfigData.centaur_huids[l_centaur_data_ptr->prev_centaur],
+                                                 G_sysConfigData.centaur_huids[l_centaur_data_ptr->prev_membuf],
                                                  ERRL_CALLOUT_PRIORITY_HIGH);
                             }
 
@@ -743,11 +753,11 @@ void centaur_data( void )
                         else if(l_parms->error.rc == CENTAUR_GET_MEM_DATA_UPDATE_FAILED)
                         {
                             //callout the current centaur if present
-                            if(CENTAUR_PRESENT(l_centaur_data_ptr->current_centaur))
+                            if(CENTAUR_PRESENT(l_centaur_data_ptr->current_membuf))
                             {
                                 addCalloutToErrl(l_err,
                                                  ERRL_CALLOUT_TYPE_HUID,
-                                                 G_sysConfigData.centaur_huids[l_centaur_data_ptr->current_centaur],
+                                                 G_sysConfigData.centaur_huids[l_centaur_data_ptr->current_membuf],
                                                  ERRL_CALLOUT_PRIORITY_HIGH);
                             }
 
@@ -775,18 +785,18 @@ void centaur_data( void )
                 //If the previous GPE request succeeded then swap l_centaur_data_ptr
                 //with the global one. The gpe routine will write new data into
                 //a buffer that is not being accessed by the RTLoop code.
-                l_temp = l_centaur_data_ptr->centaur_data_ptr;
-                l_centaur_data_ptr->centaur_data_ptr =
-                    G_centaur_data_ptrs[l_centaur_data_ptr->current_centaur];
-                G_centaur_data_ptrs[l_centaur_data_ptr->prev_centaur] = l_temp;
+                l_temp = l_centaur_data_ptr->membuf_data_ptr;
+                l_centaur_data_ptr->membuf_data_ptr =
+                    G_centaur_data_ptrs[l_centaur_data_ptr->current_membuf];
+                G_centaur_data_ptrs[l_centaur_data_ptr->prev_membuf] = l_temp;
 
                 //Centaur data has been collected so set the bit in global mask.
                 //AMEC code will know which centaur to update sensors for. AMEC is
                 //responsible for clearing the bit later on.
                 // prev centaur is the one that was just 'read from' in the last tick
-                if( CENTAUR_PRESENT(l_centaur_data_ptr->prev_centaur) )
+                if( CENTAUR_PRESENT(l_centaur_data_ptr->prev_membuf) )
                 {
-                    G_updated_centaur_mask |= CENTAUR_BY_MASK(l_centaur_data_ptr->prev_centaur);
+                    G_updated_centaur_mask |= CENTAUR_BY_MASK(l_centaur_data_ptr->prev_membuf);
                 }
             }
         }//if(L_gpe_scheduled)
@@ -794,48 +804,48 @@ void centaur_data( void )
         // If the centaur is not present, then we need to point to the empty G_centaur_data
         // so that we don't use old/stale data from a leftover G_centaur_data
         // (this is very handy for debug...)
-        if( !CENTAUR_PRESENT(l_centaur_data_ptr->current_centaur))
+        if( !CENTAUR_PRESENT(l_centaur_data_ptr->current_membuf))
         {
-            G_centaur_data_ptrs[l_centaur_data_ptr->current_centaur] = &G_centaur_data[9];
+            G_centaur_data_ptrs[l_centaur_data_ptr->current_membuf] = &G_centaur_data[9];
         }
 
         //Update current centaur
-        if ( l_centaur_data_ptr->current_centaur >= l_centaur_data_ptr->end_centaur )
+        if ( l_centaur_data_ptr->current_membuf >= l_centaur_data_ptr->end_membuf )
         {
-            l_centaur_data_ptr->prev_centaur = l_centaur_data_ptr->current_centaur;
-            l_centaur_data_ptr->current_centaur = l_centaur_data_ptr->start_centaur;
+            l_centaur_data_ptr->prev_membuf = l_centaur_data_ptr->current_membuf;
+            l_centaur_data_ptr->current_membuf = l_centaur_data_ptr->start_membuf;
         }
         else
         {
-            l_centaur_data_ptr->prev_centaur = l_centaur_data_ptr->current_centaur;
-            l_centaur_data_ptr->current_centaur++;
+            l_centaur_data_ptr->prev_membuf = l_centaur_data_ptr->current_membuf;
+            l_centaur_data_ptr->current_membuf++;
         }
 
         // ------------------------------------------
-        // Centaur Data Task Variable State Changed
+        // Membuf Data Task Variable State Changed
         // ------------------------------------------
-        // ->current_centaur:  the one that will be 'written' to in order to
+        // ->current_membuf:  the one that will be 'written' to in order to
         //                     kick off the sensor cache population in the
-        //                     centaur.
+        //                     membuf.
         //
-        // ->prev_centaur:     the one that will be 'read from', meaning have
-        //                     the sensor cache transferred from the Centaur
-        //                     to l_centaur_data_ptr->centaur_data_ptr
+        // ->prev_membuf:     the one that will be 'read from', meaning have
+        //                     the sensor cache transferred from the membuf
+        //                     to l_centaur_data_ptr->membuf_data_ptr
         //
-        // ->centaur_data_ptr: points to G_centaur_data_ptrs[] for
-        //                     the centaur that is referenced by prev_centaur
+        // ->membuf_data_ptr: points to G_centaur_data_ptrs[] for
+        //                     the centaur that is referenced by prev_membuf
         //                     (the one that will be 'read')
 
         //If centaur is not present then skip it. This task assigned to this centaur will
         //be idle during this time it would have collected the data.
-        if( CENTAUR_PRESENT(l_centaur_data_ptr->current_centaur)
-            || CENTAUR_PRESENT(l_centaur_data_ptr->prev_centaur) )
+        if( CENTAUR_PRESENT(l_centaur_data_ptr->current_membuf)
+            || CENTAUR_PRESENT(l_centaur_data_ptr->prev_membuf) )
         {
             // Setup the 'get centaur data' parms
             // ->config controls which Centaur we are reading from
-            if( CENTAUR_PRESENT(l_centaur_data_ptr->prev_centaur) ){
+            if( CENTAUR_PRESENT(l_centaur_data_ptr->prev_membuf) ){
               // If prev centaur is present, do the read of the sensor cache
-              l_parms->collect = l_centaur_data_ptr->prev_centaur;
+              l_parms->collect = l_centaur_data_ptr->prev_membuf;
             }
             else{
               // If prev centaur is not present, don't do the read of the sensor cache.
@@ -843,16 +853,16 @@ void centaur_data( void )
             }
 
             // ->config_update controls which Centaur we are writing to
-            if( CENTAUR_PRESENT(l_centaur_data_ptr->current_centaur) ){
+            if( CENTAUR_PRESENT(l_centaur_data_ptr->current_membuf) ){
               // If cur centaur is present, do the write to kick off the sensor cache collect
-              l_parms->update = l_centaur_data_ptr->current_centaur;
+              l_parms->update = l_centaur_data_ptr->current_membuf;
             }
             else{
               // If cur centaur is not present, don't do the write to kick off the sensor cache collect
               l_parms->update = -1;
             }
 
-            l_parms->data = (uint64_t *)(l_centaur_data_ptr->centaur_data_ptr);
+            l_parms->data = (uint64_t *)(l_centaur_data_ptr->membuf_data_ptr);
             l_parms->error.ffdc = 0;
 
             // Pore flex schedule gpe_get_mem_data
@@ -899,9 +909,12 @@ void centaur_data( void )
     while(0);
 
     //handle centaur i2c recovery requests and centaur workaround.
-    if(CENTAUR_PRESENT(l_centaur_data_ptr->current_centaur))
+    if(CENTAUR_PRESENT(l_centaur_data_ptr->current_membuf))
     {
-        cent_recovery(l_centaur_data_ptr->current_centaur);
+        if (MEM_TYPE_CUMULUS == G_sysConfigData.mem_type)
+        {
+            cent_recovery(l_centaur_data_ptr->current_membuf);
+        }
     }
     return;
 }
@@ -923,7 +936,7 @@ int cent_get_enabled_sensors()
     {
         // Set up scom list entry (there's only 1)
         G_cent_scom_list_entry[0].scom  = CENTAUR_SENSCACHE_ENABLE;       //scom address
-        G_cent_scom_list_entry[0].commandType = CENTAUR_SCOM_READ_VECTOR;     //scom operation to perform
+        G_cent_scom_list_entry[0].commandType = MEMBUF_SCOM_READ_VECTOR;     //scom operation to perform
         G_cent_scom_list_entry[0].instanceNumber = 0;                     //Ignored for READ_VECTOR operation
         G_cent_scom_list_entry[0].pData = (uint64_t *) G_cent_scom_data;  //scom data will be stored here
 
@@ -936,7 +949,7 @@ int cent_get_enabled_sensors()
         l_rc = gpe_request_create(
                &G_cent_scom_req,                        // gpe_req for the task
                &G_async_gpe_queue1,                     // queue
-               IPC_ST_CENTAUR_SCOM_FUNCID,              // Function ID
+               IPC_ST_MEMBUF_SCOM_FUNCID,              // Function ID
                &G_cent_scom_gpe_parms,       // parm for the task
                SSX_SECONDS(2),                          // timeout
                NULL,                                    // callback
@@ -985,7 +998,7 @@ void centaur_init( void )
     int        rc      = 0;    // Return code
     int        l_jj    = 0;     // Indexer
     static scomList_t   L_scomList[2]       SECTION_ATTRIBUTE(".noncacheable");
-    static CentaurScomParms_t L_centaur_reg_parms SECTION_ATTRIBUTE(".noncacheable");
+    static MemBufScomParms_t L_centaur_reg_parms SECTION_ATTRIBUTE(".noncacheable");
 
     do
     {
@@ -998,7 +1011,7 @@ void centaur_init( void )
         /// Before anything else, we need to call this procedure to
         /// determine which Centaurs are out there, their config info.
         /// and Type/EC Level
-        rc = centaur_configuration_create(&G_centaurConfiguration);
+        rc = membuf_configuration_create();
         if( rc )
         {
             break;
@@ -1015,14 +1028,13 @@ void centaur_init( void )
 
             if( CENTAUR_BY_MASK(l_jj) )
             {
-                if( G_centaurConfiguration.baseAddress[l_jj] )
+                if( G_membufConfiguration.baseAddress[l_jj] )
                 {
                     // G_cent_ba is != 0, so a valid Bar Address was found
                     // This means there is a VALID centaur there.
                     G_present_centaurs |= (CENTAUR0_PRESENT_MASK >> l_jj);
 
-                    // Trace out the CFAM Chip ID, which includes Type & EC
-                    TRAC_INFO("centaur_init: Centaur[%d] Found, Chip Id= 0x%08x",l_jj);
+                    TRAC_INFO("centaur_init: Centaur[%d] Found",l_jj);
                 }
             }
         }
@@ -1034,49 +1046,49 @@ void centaur_init( void )
 
         // Set up recovery scom list entries
         G_cent_scom_list_entry[L4_LINE_DELETE].scom  = MBCCFGQ_REG;                //scom address
-        G_cent_scom_list_entry[L4_LINE_DELETE].commandType = CENTAUR_SCOM_RMW;     //scom operation to perform
+        G_cent_scom_list_entry[L4_LINE_DELETE].commandType = MEMBUF_SCOM_RMW;     //scom operation to perform
         G_cent_scom_list_entry[L4_LINE_DELETE].mask = LINE_DELETE_ON_NEXT_CE;      //mask of bits to change
         G_cent_scom_list_entry[L4_LINE_DELETE].data = LINE_DELETE_ON_NEXT_CE;      //scom data (always set the bit)
 
         //one time init for reading LFIR6
         G_cent_scom_list_entry[READ_NEST_LFIR6].scom  = CENT_NEST_LFIR_REG;         //scom address
-        G_cent_scom_list_entry[READ_NEST_LFIR6].commandType = CENTAUR_SCOM_READ;    //scom operation to perform
+        G_cent_scom_list_entry[READ_NEST_LFIR6].commandType = MEMBUF_SCOM_READ;    //scom operation to perform
         G_cent_scom_list_entry[READ_NEST_LFIR6].mask = 0;                           //mask (not used for reads)
         G_cent_scom_list_entry[READ_NEST_LFIR6].data = 0;                           //scom data (initialize to 0)
 
         //one time init for reading centaur thermal status register
         G_cent_scom_list_entry[READ_THERM_STATUS].scom  = CENT_THRM_STATUS_REG;     //scom address
-        G_cent_scom_list_entry[READ_THERM_STATUS].commandType = CENTAUR_SCOM_READ;  //scom operation to perform
+        G_cent_scom_list_entry[READ_THERM_STATUS].commandType = MEMBUF_SCOM_READ;  //scom operation to perform
         G_cent_scom_list_entry[READ_THERM_STATUS].mask = 0;                         //mask (not used for reads)
         G_cent_scom_list_entry[READ_THERM_STATUS].data = 0;                         //scom data (initialize to 0)
 
         //one time init to reset the centaur dts FSM
         G_cent_scom_list_entry[RESET_DTS_FSM].scom  = CENT_THRM_CTRL_REG;           //scom address
-        G_cent_scom_list_entry[RESET_DTS_FSM].commandType = CENTAUR_SCOM_NOP;       //init to no-op (only runs if needed)
+        G_cent_scom_list_entry[RESET_DTS_FSM].commandType = MEMBUF_SCOM_NOP;       //init to no-op (only runs if needed)
         G_cent_scom_list_entry[RESET_DTS_FSM].mask = 0;                             //mask (not used for writes)
         G_cent_scom_list_entry[RESET_DTS_FSM].data = CENT_THRM_CTRL4;               //scom data (sets bit4)
 
         //one time init to clear centaur NEST LFIR 6
         G_cent_scom_list_entry[CLEAR_NEST_LFIR6].scom  = CENT_NEST_LFIR_AND_REG;    //scom address
-        G_cent_scom_list_entry[CLEAR_NEST_LFIR6].commandType = CENTAUR_SCOM_NOP;    //init to no-op (only runs if needed)
+        G_cent_scom_list_entry[CLEAR_NEST_LFIR6].commandType = MEMBUF_SCOM_NOP;    //init to no-op (only runs if needed)
         G_cent_scom_list_entry[CLEAR_NEST_LFIR6].mask = 0;                          //mask (not used for writes)
         G_cent_scom_list_entry[CLEAR_NEST_LFIR6].data = ~CENT_NEST_LFIR6;           //scom data
 
         //one time init to disable centaur sensor cache
         G_cent_scom_list_entry[DISABLE_SC].scom  = SCAC_CONFIG_REG;                 //scom address
-        G_cent_scom_list_entry[DISABLE_SC].commandType = CENTAUR_SCOM_NOP;          //init to no-op (only runs if needed)
+        G_cent_scom_list_entry[DISABLE_SC].commandType = MEMBUF_SCOM_NOP;          //init to no-op (only runs if needed)
         G_cent_scom_list_entry[DISABLE_SC].mask = SCAC_MASTER_ENABLE;               //mask of bits to change
         G_cent_scom_list_entry[DISABLE_SC].data = 0;                                //scom data (disable sensor cache)
 
         //one time init to enable centaur sensor cache
         G_cent_scom_list_entry[ENABLE_SC].scom  = SCAC_CONFIG_REG;                  //scom address
-        G_cent_scom_list_entry[ENABLE_SC].commandType = CENTAUR_SCOM_NOP;           //init to no-op (only runs if needed)
+        G_cent_scom_list_entry[ENABLE_SC].commandType = MEMBUF_SCOM_NOP;           //init to no-op (only runs if needed)
         G_cent_scom_list_entry[ENABLE_SC].mask = SCAC_MASTER_ENABLE;                //mask of bits to change
         G_cent_scom_list_entry[ENABLE_SC].data = SCAC_MASTER_ENABLE;                //scom data (enable sensor cache)
 
         //one time init for reading centaur sensor cache lfir
         G_cent_scom_list_entry[READ_SCAC_LFIR].scom  = SCAC_LFIR_REG;               //scom address
-        G_cent_scom_list_entry[READ_SCAC_LFIR].commandType = CENTAUR_SCOM_READ;     //scom operation to perform
+        G_cent_scom_list_entry[READ_SCAC_LFIR].commandType = MEMBUF_SCOM_READ;     //scom operation to perform
         G_cent_scom_list_entry[READ_SCAC_LFIR].mask = 0;                            //mask (not used for reads)
         G_cent_scom_list_entry[READ_SCAC_LFIR].data = 0;                            //scom data (initialize to 0)
 
@@ -1085,7 +1097,7 @@ void centaur_init( void )
         /// NOTE: max timeout is about 2 seconds.
 
         L_scomList[0].scom        = CENTAUR_MBSCFGQ;
-        L_scomList[0].commandType = CENTAUR_SCOM_RMW_ALL;
+        L_scomList[0].commandType = MEMBUF_SCOM_RMW_ALL;
 
         centaur_mbscfgq_t l_mbscfg;
         l_mbscfg.value = 0;
@@ -1102,7 +1114,7 @@ void centaur_init( void )
         ///   [1]: clear the emergency throttle bit
 
         L_scomList[1].scom        = CENTAUR_MBSEMERTHROQ;
-        L_scomList[1].commandType = CENTAUR_SCOM_RMW_ALL;
+        L_scomList[1].commandType = MEMBUF_SCOM_RMW_ALL;
 
         centaur_mbsemerthroq_t l_mbs_et;
         l_mbs_et.value = 0;
@@ -1122,7 +1134,7 @@ void centaur_init( void )
         rc = gpe_request_create(
                 &G_centaur_reg_gpe_req,             //gpe_req for the task
                 &G_async_gpe_queue1,                //queue
-                IPC_ST_CENTAUR_SCOM_FUNCID,         // Function ID
+                IPC_ST_MEMBUF_SCOM_FUNCID,         // Function ID
                 &L_centaur_reg_parms,               //parm for the task
                 SSX_SECONDS(5),                     //timeout
                 NULL,                               //callback
@@ -1140,7 +1152,7 @@ void centaur_init( void )
         // Check for errors on Scom
         if(rc || L_centaur_reg_parms.error.rc)
         {
-           TRAC_ERR("centaur_init: IPC_ST_CENTAUR_SCOM failure. rc = 0x%08x, gpe_rc = 0x%08x, address = 0x%08x",
+           TRAC_ERR("centaur_init: IPC_ST_MEMBUF_SCOM failure. rc = 0x%08x, gpe_rc = 0x%08x, address = 0x%08x",
                    rc,
                    L_centaur_reg_parms.error.rc,
                    L_centaur_reg_parms.error.addr);
@@ -1156,17 +1168,17 @@ void centaur_init( void )
         /// to gather the 'centaur' data, but we will set them to
         /// invalid (-1) until the task sets them up
 
-        G_centaur_data_parms.error.ffdc =  0;
-        G_centaur_data_parms.collect = -1;
-        G_centaur_data_parms.update  = -1;
-        G_centaur_data_parms.data    =  0;
+        G_membuf_data_parms.error.ffdc =  0;
+        G_membuf_data_parms.collect = -1;
+        G_membuf_data_parms.update  = -1;
+        G_membuf_data_parms.data    =  0;
 
         //Initializes existing PoreFlex object for centaur data
         rc = gpe_request_create(
-                &G_centaur_data_task.gpe_req,     //gpe_req for the task
+                &G_membuf_data_task.gpe_req,     //gpe_req for the task
                 &G_async_gpe_queue1,              //queue
-                IPC_ST_CENTAUR_DATA_FUNCID,       //Function ID
-                &G_centaur_data_parms, //parm for the task
+                IPC_ST_MEMBUF_DATA_FUNCID,       //Function ID
+                &G_membuf_data_parms, //parm for the task
                 SSX_WAIT_FOREVER,                 //
                 NULL,                             //callback
                 NULL,                             //callback argument
@@ -1174,7 +1186,7 @@ void centaur_init( void )
 
         if(rc)
         {
-            TRAC_ERR("centaur_init: gpe_request_create failed for G_centaur_data_task.gpe_req. rc = 0x%08x", rc);
+            TRAC_ERR("centaur_init: gpe_request_create failed for G_membuf_data_task.gpe_req. rc = 0x%08x", rc);
             break;
         }
 
@@ -1182,7 +1194,7 @@ void centaur_init( void )
         rc = gpe_request_create(
                 &G_cent_scom_req,                  // gpe_req for the task
                 &G_async_gpe_queue1,               // queue
-                IPC_ST_CENTAUR_SCOM_FUNCID,        // entry point
+                IPC_ST_MEMBUF_SCOM_FUNCID,        // entry point
                 &G_cent_scom_gpe_parms, // parm for the task
                 SSX_WAIT_FOREVER,                  //
                 NULL,                              // callback
@@ -1275,19 +1287,27 @@ CentaurMemData * cent_get_centaur_data_ptr( const uint8_t i_occ_centaur_id )
     }
 }
 
-uint32_t centaur_configuration_create( CentaurConfiguration_t * i_centaurConfiguration )
+uint32_t membuf_configuration_create( )
 {
     bool rc = 0;
     GpeRequest l_request;
 
     do
     {
-        G_gpe_centaur_config_args.centaurConfiguration = i_centaurConfiguration;
+        G_gpe_centaur_config_args.membufConfiguration = &G_membufConfiguration;
+        if(MEM_TYPE_CUMULUS == G_sysConfigData.mem_type)
+        {
+            G_gpe_centaur_config_args.mem_type = MEMTYPE_CENTAUR;
+        }
+        else
+        {
+            G_gpe_centaur_config_args.mem_type = MEMTYPE_OCMB;
+        }
 
         rc = gpe_request_create(
                                 &l_request,                 // request
                                 &G_async_gpe_queue1,        // gpe queue
-                                IPC_ST_CENTAUR_INIT_FUNCID, // Function Id
+                                IPC_ST_MEMBUF_INIT_FUNCID, // Function Id
                                 &G_gpe_centaur_config_args, // GPE arg_ptr
                                 SSX_SECONDS(5),             // timeout
                                 NULL,                       // callback
@@ -1295,22 +1315,22 @@ uint32_t centaur_configuration_create( CentaurConfiguration_t * i_centaurConfigu
                                 ASYNC_REQUEST_BLOCKING);
         if( rc )
         {
-            TRAC_ERR("centaur_configuration_create: gpe_request_create failed for"
-                     " IPC_ST_CENTAUR_INIT_FUNCID. rc = 0x%08x",rc);
+            TRAC_ERR("membuf_configuration_create: gpe_request_create failed for"
+                     " IPC_ST_MEMBUF_INIT_FUNCID. rc = 0x%08x",rc);
             break;
         }
 
-        TRAC_INFO("centaur_configuration_create: Scheduling request for IPC_ST_CENTAUR_INIT_FUNCID");
+        TRAC_INFO("membuf_configuration_create: Scheduling request for IPC_ST_MEMBUF_INIT_FUNCID");
         gpe_request_schedule(&l_request);
 
-        TRAC_INFO("centaur_configuration_create: GPE_centaur_configuration_create w/rc=0x%08x",
+        TRAC_INFO("membuf_configuration_create: GPE_membuf_configuration_create w/rc=0x%08x",
                   l_request.request.completion_state);
 
         if(ASYNC_REQUEST_STATE_COMPLETE != l_request.request.completion_state)
         {
             rc = l_request.request.completion_state;
 
-            TRAC_ERR("centaur_configuration_create: IPC_ST_CENTAUR_INIT_FUNCID"
+            TRAC_ERR("membuf_configuration_create: IPC_ST_MEMBUF_INIT_FUNCID"
                      " request did not complete.");
             break;
         }
@@ -1318,7 +1338,7 @@ uint32_t centaur_configuration_create( CentaurConfiguration_t * i_centaurConfigu
         if (G_gpe_centaur_config_args.error.rc != GPE_RC_SUCCESS)
         {
             rc = G_gpe_centaur_config_args.error.rc;
-            TRAC_ERR("centaur_configuration_create: IPC_ST_CENTAUR_INIT_FUNCID"
+            TRAC_ERR("membuf_configuration_create: IPC_ST_MEMBUF_INIT_FUNCID"
                      " failed with rc=0x%08x.",
                      rc);
             break;

@@ -1031,7 +1031,7 @@ void task_dimm_sm(struct task *i_self)
                 }
             }
         }
-        else // G_sysConfigData.mem_type is Centaur
+        else // G_sysConfigData.mem_type is Cumulus(Centaur) or Axone(Ocmb)
         {
             centaur_data();
         }

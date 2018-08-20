@@ -142,7 +142,7 @@ typedef enum
 {
     HOMER_CHIP_NIMBUS,   /** P9 Nimbus processor chip */
     HOMER_CHIP_AXONE,    /** P9 Axone processor chip */
-    HOMER_CHIP_EXPLORER, /** Explorer memory buffer chip */
+    HOMER_CHIP_OCMB,     /** OCMB memory buffer chip */
 
     HOMER_CHIP_INVALID = 0xff, /** Invalid chip */
 

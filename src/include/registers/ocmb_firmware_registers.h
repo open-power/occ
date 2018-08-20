@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_gpe1/occ_gpe1_machine_check_handler.c $               */
+/* $Source: src/include/registers/ocmb_firmware_registers.h $             */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -22,47 +22,72 @@
 /* permissions and limitations under the License.                         */
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
-#include "pk_panic_codes.h"
-#include "gpe_membuf.h"
-#include "pk.h"
+#ifndef __OCMB_FIRMWARE_REGISTERS_H__
+#define __OCMB_FIRMWARE_REGISTERS_H__
 
-#define OCI_ADDR_BAR_MASK 0xf0000000
-#define OCI_ADDR_BAR1 0x90000000
+#include <stdint.h>
 
-extern uint32_t gpe1_machine_check_handler(uint32_t srr0,
-                                           uint32_t srr1,
-                                           uint32_t edr);
-extern uint32_t g_inband_access_state;
-
-uint32_t gpe1_machine_check_handler(uint32_t srr0,
-                                    uint32_t srr1,
-                                    uint32_t edr)
+typedef union ocmb_mmio_merrctl
 {
-    PK_TRACE("GPE1 Machine check! SRR0:%08x SRR1: %08x EDR:%08x",
-             srr0,
-             srr1,
-             edr);
-
-    // It's possible to get back-to-back machine checks for the same condition
-    // so MEMBUF_CHANNEL_CHECKSTOP may already be set. Also check that the
-    // machine check was due to a MEMBUF PBA Access (PBABAR1)
-    if((g_inband_access_state == INBAND_ACCESS_IN_PROGRESS ||
-       g_inband_access_state == MEMBUF_CHANNEL_CHECKSTOP) &&
-       ((edr & OCI_ADDR_BAR_MASK) == OCI_ADDR_BAR1))
+    uint64_t value;
+    struct
     {
-        // Returning this to OCC405 will cause sensor to be removed from
-        // active list
-        g_inband_access_state = MEMBUF_CHANNEL_CHECKSTOP;
+        uint32_t high_order;
+        uint32_t low_order;
+    } words;
 
-        // The instruction that caused the machine check should
-        // be a double word load or store.
-        // move the IAR to the instruction after the one that caused
-        // the machine check.
-        srr0 += 4;
-    }
-    else
+    struct
     {
-        PK_PANIC( PPE42_MACHINE_CHECK_PANIC );
-    }
-    return srr0;
-}
+        uint64_t dont_care0: 52;
+        uint64_t snsc_master_enable : 1;
+        uint64_t dont_care1: 11;
+    } fields;
+
+} mmio_merrctl_t;
+
+#define SNSC_MASTER_ENABLED 1
+#define SNSC_MASTER_DISABLED 0
+
+typedef union ocmb_mmio_mfir
+{
+    uint64_t value;
+    struct
+    {
+        uint32_t high_order;
+        uint32_t low_order;
+    } words;
+
+    struct
+    {
+        uint64_t dont_care0: 7;
+        uint64_t snsc_both_starts_err: 1;
+        uint64_t snsc_mult_seq_perr:   1;
+        uint64_t snsc_fsm_perr:        1;
+        uint64_t snsc_reg_perr:        1;
+        uint64_t dont_care1: 53;
+    } fields;
+} mmio_mfir_t;
+
+typedef union ocmb_mba_farb3q
+{
+    uint64_t value;
+    struct
+    {
+        uint32_t high_order;
+        uint32_t low_order;
+    } words;
+
+    struct
+    {
+        uint64_t cfg_nm_n_per_slot:     15; //mba
+        uint64_t cfg_nm_n_per_port:     16; //chip
+        uint64_t cfg_nm_m:              14;
+        uint64_t cfg_nm_ras_weight:      3;
+        uint64_t cfg_nm_cas_weight:      3;
+        uint64_t reserved0:              2;
+        uint64_t cfg_nm_change_after_sync: 1;
+        uint64_t reserved1:             10;
+    } fields;
+} ocmb_mba_farb3q_t;
+
+#endif
