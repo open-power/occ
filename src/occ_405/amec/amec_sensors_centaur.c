@@ -88,8 +88,8 @@ void amec_update_centaur_sensors(uint8_t i_centaur)
         {
             amec_update_dimm_dts_sensors(l_sensor_cache, i_centaur);
             amec_update_centaur_dts_sensors(l_sensor_cache, i_centaur);
+            amec_perfcount_getmc(l_sensor_cache, i_centaur);
         }
-        amec_perfcount_getmc(l_sensor_cache, i_centaur);
         CLEAR_CENTAUR_UPDATED(i_centaur);
     }
 }
@@ -491,8 +491,8 @@ void amec_perfcount_getmc( CentaurMemData * i_sensor_cache,
         temp32 = temp32new - g_amec->proc[0].memctl[i_centaur].centaur.portpair[i_mc_id].perf.wr_cnt_accum;
         g_amec->proc[0].memctl[i_centaur].centaur.portpair[i_mc_id].perf.wr_cnt_accum = temp32new;  // Save latest accumulator away for next time
 
-        // Read every 4 ms....to convert to 0.01 Mrps = ((4ms read * 250)/10000)
-        tempreg = ((temp32*25)/1000);
+        // Read every 8 ms....to convert to 0.01 Mrps = ((8ms read * 125)/10000)
+        tempreg = ((temp32*125)/10000);
 
         g_amec->proc[0].memctl[i_centaur].centaur.portpair[i_mc_id].perf.memwrite2ms = tempreg;
 
@@ -506,8 +506,8 @@ void amec_perfcount_getmc( CentaurMemData * i_sensor_cache,
         temp32 = temp32new - g_amec->proc[0].memctl[i_centaur].centaur.portpair[i_mc_id].perf.rd_cnt_accum;
         g_amec->proc[0].memctl[i_centaur].centaur.portpair[i_mc_id].perf.rd_cnt_accum = temp32new;  // Save latest accumulator away for next time
 
-        // Read every 4 ms....to convert to 0.01 Mrps = ((4ms read * 250)/10000)
-        tempreg = ((temp32*25)/1000);
+        // Read every 8 ms....to convert to 0.01 Mrps = ((8ms read * 125)/10000)
+        tempreg = ((temp32*125)/10000);
 
         g_amec->proc[0].memctl[i_centaur].centaur.portpair[i_mc_id].perf.memread2ms = tempreg;
 
@@ -582,8 +582,8 @@ void amec_perfcount_getmc( CentaurMemData * i_sensor_cache,
         temp32 = temp32new - g_amec->proc[0].memctl[i_centaur].centaur.portpair[i_mc_id].perf.l4_rd_cnt_accum;
         g_amec->proc[0].memctl[i_centaur].centaur.portpair[i_mc_id].perf.l4_rd_cnt_accum = temp32new;  // Save latest accumulator away for next time
 
-        // Read every 4 ms....to convert to 0.01 Mrps = ((4ms read * 250)/10000)
-        tempreg = ((temp32*25)/1000);
+        // Read every 8 ms....to convert to 0.01 Mrps = ((8ms read * 125)/10000)
+        tempreg = ((temp32*125)/10000);
         tempreg2 = g_amec->proc[0].memctl[i_centaur].centaur.portpair[i_mc_id].perf.memread2ms;
         // Firmware workaround for hardware bug: hits - memreads ~= hits
         tempreg = tempreg - tempreg2;
@@ -603,8 +603,8 @@ void amec_perfcount_getmc( CentaurMemData * i_sensor_cache,
         temp32 = temp32new - g_amec->proc[0].memctl[i_centaur].centaur.portpair[i_mc_id].perf.l4_wr_cnt_accum;
         g_amec->proc[0].memctl[i_centaur].centaur.portpair[i_mc_id].perf.l4_wr_cnt_accum = temp32new;  // Save latest accumulator away for next time
 
-        // Read every 4 ms....to convert to 0.01 Mrps = ((4ms read * 250)/10000)
-        tempreg = ((temp32*25)/1000);
+        // Read every 8 ms....to convert to 0.01 Mrps = ((8ms read * 125)/10000)
+        tempreg = ((temp32*125)/10000);
 
         tempreg2 = g_amec->proc[0].memctl[i_centaur].centaur.portpair[i_mc_id].perf.memwrite2ms;
         // Firmware workaround for hardware bug: hits - memwrites ~= hits
@@ -625,8 +625,8 @@ void amec_perfcount_getmc( CentaurMemData * i_sensor_cache,
         temp32 = temp32new - g_amec->proc[0].memctl[i_centaur].centaur.portpair[i_mc_id].perf.intreq_base_accum;
         g_amec->proc[0].memctl[i_centaur].centaur.portpair[i_mc_id].perf.intreq_base_accum = temp32new;  // Save latest accumulator away for next time
 
-        // Read every 4 ms....to convert to 0.01 Mrps = ((4ms read * 250)/10000)
-        tempreg = ((temp32*25)/1000);
+        // Read every 8 ms....to convert to 0.01 Mrps = ((8ms read * 125)/10000)
+        tempreg = ((temp32*125)/10000);
         g_amec->proc[0].memctl[i_centaur].centaur.portpair[i_mc_id].perf.mirb2ms = tempreg;
         sensor_update(AMECSENSOR_PORTPAIR_PTR(mirb2ms,i_centaur,i_mc_id), tempreg);
 
@@ -637,8 +637,8 @@ void amec_perfcount_getmc( CentaurMemData * i_sensor_cache,
         temp32 = temp32new - g_amec->proc[0].memctl[i_centaur].centaur.portpair[i_mc_id].perf.intreq_low_accum;
         g_amec->proc[0].memctl[i_centaur].centaur.portpair[i_mc_id].perf.intreq_low_accum = temp32new;  // Save latest accumulator away for next time
 
-        // Read every 4 ms....to convert to 0.01 Mrps = ((4ms read * 250)/10000)
-        tempreg = ((temp32*25)/1000);
+        // Read every 8 ms....to convert to 0.01 Mrps = ((8ms read * 125)/10000)
+        tempreg = ((temp32*125)/10000);
         g_amec->proc[0].memctl[i_centaur].centaur.portpair[i_mc_id].perf.mirl2ms = tempreg;
         sensor_update(AMECSENSOR_PORTPAIR_PTR(mirl2ms,i_centaur,i_mc_id), tempreg);
 
@@ -649,8 +649,8 @@ void amec_perfcount_getmc( CentaurMemData * i_sensor_cache,
         temp32 = temp32new - g_amec->proc[0].memctl[i_centaur].centaur.portpair[i_mc_id].perf.intreq_med_accum;
         g_amec->proc[0].memctl[i_centaur].centaur.portpair[i_mc_id].perf.intreq_med_accum = temp32new;  // Save latest accumulator away for next time
 
-        // Read every 4 ms....to convert to 0.01 Mrps = ((4ms read * 250)/10000)
-        tempreg = ((temp32*25)/1000);
+        // Read every 8 ms....to convert to 0.01 Mrps = ((8ms read * 125)/10000)
+        tempreg = ((temp32*125)/10000);
         g_amec->proc[0].memctl[i_centaur].centaur.portpair[i_mc_id].perf.mirm2ms = tempreg;
         sensor_update(AMECSENSOR_PORTPAIR_PTR(mirm2ms,i_centaur,i_mc_id), tempreg);
 
@@ -661,8 +661,8 @@ void amec_perfcount_getmc( CentaurMemData * i_sensor_cache,
         temp32 = temp32new - g_amec->proc[0].memctl[i_centaur].centaur.portpair[i_mc_id].perf.intreq_high_accum;
         g_amec->proc[0].memctl[i_centaur].centaur.portpair[i_mc_id].perf.intreq_high_accum = temp32new;  // Save latest accumulator away for next time
 
-        // Read every 4 ms....to convert to 0.01 Mrps = ((4ms read * 250)/10000)
-        tempreg = ((temp32*25)/1000);
+        // Read every 8 ms....to convert to 0.01 Mrps = ((8ms read * 125)/10000)
+        tempreg = ((temp32*125)/10000);
         g_amec->proc[0].memctl[i_centaur].centaur.portpair[i_mc_id].perf.mirh2ms = tempreg;
         sensor_update(AMECSENSOR_PORTPAIR_PTR(mirh2ms,i_centaur,i_mc_id), tempreg);
     }
@@ -674,8 +674,8 @@ void amec_perfcount_getmc( CentaurMemData * i_sensor_cache,
     temp32 = temp32new - g_amec->proc[0].memctl[i_centaur].centaur.perf.intreq_highlatency_accum;
     g_amec->proc[0].memctl[i_centaur].centaur.perf.intreq_highlatency_accum = temp32new;  // Save latest accumulator away for next time
 
-    // Read every 4 ms....to convert to 0.01 Mrps = ((4ms read * 250)/10000)
-    tempreg = ((temp32*25)/1000);
+    // Read every 8 ms....to convert to 0.01 Mrps = ((8ms read * 125)/10000)
+    tempreg = ((temp32*125)/10000);
     g_amec->proc[0].memctl[i_centaur].centaur.perf.mirc2ms = tempreg;
     sensor_update((&(g_amec->proc[0].memctl[i_centaur].centaur.mirc2ms)), tempreg);
 
@@ -686,8 +686,8 @@ void amec_perfcount_getmc( CentaurMemData * i_sensor_cache,
     temp32 = temp32new - g_amec->proc[0].memctl[i_centaur].centaur.perf.lp2exit_accum;
     g_amec->proc[0].memctl[i_centaur].centaur.perf.lp2exit_accum = temp32new;  // Save latest accumulator away for next time
 
-    // Read every 4 ms....to convert to 0.01 Mrps = ((4ms read * 250)/10000)
-    tempreg = ((temp32*25)/1000);
+    // Read every 8 ms....to convert to 0.01 Mrps = ((8ms read * 125)/10000)
+    tempreg = ((temp32*125)/10000);
     g_amec->proc[0].memctl[i_centaur].centaur.perf.mlp2_2ms = tempreg;
     sensor_update((&(g_amec->proc[0].memctl[i_centaur].centaur.mlp2ms)), tempreg);
 
