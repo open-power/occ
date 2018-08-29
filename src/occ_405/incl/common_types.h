@@ -45,7 +45,7 @@ typedef int           INT;
 typedef void          VOID;
 
 // Skip this typedef in x86 environment
-#ifndef OCC_X86_PARSER
+#if !defined(OCC_X86_PARSER) && !defined(__cplusplus)
 typedef uint8_t       bool;
 #endif
 

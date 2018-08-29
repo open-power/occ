@@ -42,6 +42,7 @@ errorHndl_t hwInit(pnorMbox_t* i_pnorMbox)
     errorHndl_t l_err = NO_ERROR;
     uint8_t* l_data;
     int i;
+    int l_arg_size = 0;
     do
     {
         //Current window starts closed
@@ -65,7 +66,8 @@ errorHndl_t hwInit(pnorMbox_t* i_pnorMbox)
 
         l_getInfoMsg.iv_cmd = MBOX_C_GET_MBOX_INFO;
         put8(&l_getInfoMsg, 0, 2);
-        l_err = doMessage(&i_pnorMbox->iv_mbox, &l_getInfoMsg);
+        l_arg_size = 1;
+        l_err = doMessage(&i_pnorMbox->iv_mbox, &l_getInfoMsg, l_arg_size);
         if (l_err)
         {
             TRAC_ERR("doMessage to ping BMC failed with rc=0x%x", l_err);
@@ -89,7 +91,8 @@ errorHndl_t hwInit(pnorMbox_t* i_pnorMbox)
         //Now get the size of the flash
         mboxMessage_t l_getSizeMsg;
         l_getSizeMsg.iv_cmd = MBOX_C_GET_FLASH_INFO;
-        l_err = doMessage(&i_pnorMbox->iv_mbox, &l_getSizeMsg);
+        l_arg_size = 0;
+        l_err = doMessage(&i_pnorMbox->iv_mbox, &l_getSizeMsg, l_arg_size);
         if (l_err)
         {
             TRAC_ERR("doMessage failed to get flash size rc=0x%x", l_err);
@@ -220,9 +223,9 @@ errorHndl_t writeFlash(pnorMbox_t* i_pnorMbox,
                 break;
             }
 
-            //For whatever reason LPC writes can only handle 4 bytes at a time
-            //We write 256 bytes from the previous functions, so break up the
-            //large write into 4 byte writes
+            //LPC writes are done via LPC scom interface and can only handle 4 
+            //bytes at a time. We write 256 bytes from the previous functions,
+            // so break up the large write into 4 byte writes
             uint32_t l_size_written = 0;
             uint32_t l_lpc_write_size = 4; //in bytes
             uint8_t *l_lpc_write_data = i_data;
@@ -263,9 +266,6 @@ errorHndl_t writeFlash(pnorMbox_t* i_pnorMbox,
         }
 
         /* We flush whether we had an error or not.
-         *
-         * NOTE: It would help the daemon a lot if we moved that out of here
-         * and instead had a single flush call over a series of writes.
          */
         l_flushErr = writeFlush(i_pnorMbox);
 
@@ -292,6 +292,7 @@ errorHndl_t adjustMboxWindow(pnorMbox_t* i_pnorMbox,
 {
     errorHndl_t l_err = NO_ERROR;
     uint32_t l_pos, l_wSize, l_reqSize;
+    int l_arg_size = 0;
 
     do
     {
@@ -361,7 +362,8 @@ errorHndl_t adjustMboxWindow(pnorMbox_t* i_pnorMbox,
 
         put16(&winMsg, 0, l_pos >> i_pnorMbox->iv_blockShift);
         put16(&winMsg, 2, l_reqSize >> i_pnorMbox->iv_blockShift);
-        l_err = doMessage(&i_pnorMbox->iv_mbox, &winMsg);
+        l_arg_size = 4;
+        l_err = doMessage(&i_pnorMbox->iv_mbox, &winMsg, l_arg_size);
 
         if (l_err)
         {
@@ -406,6 +408,7 @@ errorHndl_t writeDirty(pnorMbox_t* i_pnorMbox, uint32_t i_addr, uint32_t i_size)
     uint32_t l_blockMask = (1u << i_pnorMbox->iv_blockShift) - 1;
     uint32_t l_start     = i_addr & ~l_blockMask;
     uint32_t l_end       = ((i_addr + i_size) + l_blockMask) & ~l_blockMask;
+    int l_arg_size = 0;
 
     mboxMessage_t dirtyMsg;
     dirtyMsg.iv_cmd = MBOX_C_MARK_WRITE_DIRTY;
@@ -422,16 +425,18 @@ errorHndl_t writeDirty(pnorMbox_t* i_pnorMbox, uint32_t i_addr, uint32_t i_size)
         put16(&dirtyMsg, 2, (l_end - l_start) >> i_pnorMbox->iv_blockShift);
     }
 
-    return doMessage(&i_pnorMbox->iv_mbox, &dirtyMsg);
+    l_arg_size = 4;
+    return doMessage(&i_pnorMbox->iv_mbox, &dirtyMsg, l_arg_size);
 }
 
 errorHndl_t writeFlush(pnorMbox_t* i_pnorMbox)
 {
     mboxMessage_t flushMsg;
     flushMsg.iv_cmd = MBOX_C_WRITE_FLUSH;
+    int l_arg_size = 0;
 
     put16(&flushMsg, 0, 0);
     put32(&flushMsg, 2, 0);
 
-    return doMessage(&i_pnorMbox->iv_mbox, &flushMsg);
+    return doMessage(&i_pnorMbox->iv_mbox, &flushMsg, l_arg_size);
 }

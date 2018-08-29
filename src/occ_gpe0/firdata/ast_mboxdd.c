@@ -37,6 +37,9 @@
 #include <lpc.h>
 #include <gpe_util.h>
 
+int ipmi_sendCommand(mboxMessage_t *io_msg, int i_arg_size);
+
+
 errorHndl_t writeRegSIO(uint8_t i_regAddr, uint8_t i_data)
 {
     errorHndl_t l_err = NO_ERROR;
@@ -105,7 +108,8 @@ errorHndl_t mboxIn(uint64_t i_addr, uint8_t *o_byte)
                      len );
 }
 
-errorHndl_t doMessage( astMbox_t *io_mbox, mboxMessage_t *io_msg )
+
+errorHndl_t doMessage( astMbox_t *io_mbox, mboxMessage_t *io_msg, int i_arg_size )
 {
     uint8_t* l_data = (uint8_t*)io_msg;
     errorHndl_t l_err = NO_ERROR;
@@ -116,128 +120,137 @@ errorHndl_t doMessage( astMbox_t *io_mbox, mboxMessage_t *io_msg )
 
     io_msg->iv_seq = io_mbox->iv_mboxMsgSeq++;
 
-    do
+    //First try to send the message over IPMI
+    l_err = ipmi_sendCommand(io_msg, i_arg_size);
+
+    // If it didn't work then try to access the AST MBOX via LPC
+    // This is allowd for the case of an older BMC. Eventually it could
+    // be removed.
+    if(l_err)
     {
-        /* Write message out */
-        for (i = 0; i < BMC_MBOX_DATA_REGS && !l_err; i++)
+        do
         {
-            l_err = mboxOut(i, l_data[i]);
-        }
-
-        if ( l_err )
-        {
-            break;
-        }
-
-        /* Clear status1 response bit as it was just set via reg write*/
-        l_err = mboxOut(MBOX_STATUS_1, MBOX_STATUS1_RESP);
-
-        if ( l_err )
-        {
-            break;
-        }
-
-        /* Ping BMC */
-        l_err = mboxOut(MBOX_HOST_CTRL, MBOX_CTRL_INT_SEND);
-
-        if ( l_err )
-        {
-            break;
-        }
-
-        /* Wait for response */
-        while ( l_loops++ < MBOX_MAX_RESP_WAIT_US && !l_err )
-        {
-            l_err = mboxIn(MBOX_STATUS_1, &l_stat1);
+            /* Write message out */
+            for (i = 0; i < BMC_MBOX_DATA_REGS && !l_err; i++)
+            {
+                l_err = mboxOut(i, l_data[i]);
+            }
 
             if ( l_err )
             {
-                TRAC_ERR("doMessage error from MBOX_STATUS_1");
                 break;
             }
 
-            if ( l_stat1 & MBOX_STATUS1_RESP )
+            /* Clear status1 response bit as it was just set via reg write*/
+            l_err = mboxOut(MBOX_STATUS_1, MBOX_STATUS1_RESP);
+
+            if ( l_err )
             {
                 break;
             }
 
-            busy_wait(1000);
-        }
+            /* Ping BMC */
+            l_err = mboxOut(MBOX_HOST_CTRL, MBOX_CTRL_INT_SEND);
 
-        if ( l_err )
-        {
-            TRAC_ERR( "Got error waiting for response !");
-            break;
-        }
-
-        if ( !(l_stat1 & MBOX_STATUS1_RESP) )
-        {
-            TRAC_ERR( "Timeout waiting for response !");
-
-            // Don't try to interrupt the BMC anymore
-            l_err = mboxOut(MBOX_HOST_CTRL, 0);
-            if ( l_err)
+            if ( l_err )
             {
-                //Note the command failed
-                TRAC_ERR( "Error communicating with MBOX daemon");
-                TRAC_ERR( "Mbox status 1 reg: %x", l_stat1);
+                break;
             }
 
-            // Tell the code below that we generated the error
-            //  (not an LPC error)
-            l_prot_error = true;
-            break;
+            /* Wait for response */
+            while ( l_loops++ < MBOX_MAX_RESP_WAIT_US && !l_err )
+            {
+                l_err = mboxIn(MBOX_STATUS_1, &l_stat1);
+
+                if ( l_err )
+                {
+                    TRAC_ERR("doMessage error from MBOX_STATUS_1");
+                    break;
+                }
+
+                if ( l_stat1 & MBOX_STATUS1_RESP )
+                {
+                    break;
+                }
+
+                busy_wait(1000);
+            }
+
+            if ( l_err )
+            {
+                TRAC_ERR( "Got error waiting for response !");
+                break;
+            }
+
+            if ( !(l_stat1 & MBOX_STATUS1_RESP) )
+            {
+                TRAC_ERR( "Timeout waiting for response !");
+
+                // Don't try to interrupt the BMC anymore
+                l_err = mboxOut(MBOX_HOST_CTRL, 0);
+                if ( l_err)
+                {
+                    //Note the command failed
+                    TRAC_ERR( "Error communicating with MBOX daemon");
+                    TRAC_ERR( "Mbox status 1 reg: %x", l_stat1);
+                }
+
+                // Tell the code below that we generated the error
+                //  (not an LPC error)
+                l_prot_error = true;
+                break;
+            }
+
+            /* Clear status */
+            l_err = mboxOut(MBOX_STATUS_1, MBOX_STATUS1_RESP);
+            if (l_err)
+            {
+                TRAC_ERR( "Got error clearing status");
+                break;
+            }
+
+            // Remember some message fields before they get overwritten
+            // by the response
+            uint8_t old_seq = io_msg->iv_seq;
+
+            // Read response
+            for (i = 0; i < BMC_MBOX_DATA_REGS && !l_err; i++)
+            {
+                l_err = mboxIn(i, &l_data[i]);
+            }
+
+            if ( l_err )
+            {
+                TRAC_ERR( "Got error reading response !");
+                break;
+            }
+
+            if (old_seq != io_msg->iv_seq)
+            {
+                TRAC_ERR( "bad sequence number in mbox message, got %d want %d",
+                          io_msg->iv_seq, old_seq);
+                l_err = -1;
+                break;
+            }
+
+            if (io_msg->iv_resp != MBOX_R_SUCCESS)
+            {
+                TRAC_ERR( "BMC mbox command failed with err %d",
+                          io_msg->iv_resp);
+                l_err = -1;
+                // Tell code below that we generated the error (not an LPC error)
+                l_prot_error = true;
+                break;
+            }
+
         }
+        while(0);
 
-        /* Clear status */
-        l_err = mboxOut(MBOX_STATUS_1, MBOX_STATUS1_RESP);
-        if (l_err)
+        // If we got an LPC error, commit it and generate our own
+        if ( l_err && !l_prot_error )
         {
-            TRAC_ERR( "Got error clearing status");
-            break;
-        }
-
-        // Remember some message fields before they get overwritten
-        // by the response
-        uint8_t old_seq = io_msg->iv_seq;
-
-        // Read response
-        for (i = 0; i < BMC_MBOX_DATA_REGS && !l_err; i++)
-        {
-            l_err = mboxIn(i, &l_data[i]);
-        }
-
-        if ( l_err )
-        {
-            TRAC_ERR( "Got error reading response !");
-            break;
-        }
-
-        if (old_seq != io_msg->iv_seq)
-        {
-            TRAC_ERR( "bad sequence number in mbox message, got %d want %d",
-                       io_msg->iv_seq, old_seq);
             l_err = -1;
-            break;
         }
-
-        if (io_msg->iv_resp != MBOX_R_SUCCESS)
-        {
-            TRAC_ERR( "BMC mbox command failed with err %d",
-                       io_msg->iv_resp);
-            l_err = -1;
-            // Tell code below that we generated the error (not an LPC error)
-            l_prot_error = true;
-            break;
-        }
-
-    }
-    while(0);
-
-    // If we got an LPC error, commit it and generate our own
-    if ( l_err && !l_prot_error )
-    {
-        l_err = -1;
     }
 
     return l_err;
