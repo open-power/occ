@@ -237,7 +237,7 @@ typedef struct {
  *
  *  @return Error from operation
  */
-errorHndl_t doMessage( astMbox_t *io_mbox, mboxMessage_t *io_msg );
+errorHndl_t doMessage( astMbox_t *io_mbox, mboxMessage_t *io_msg, int i_arg_size );
 
 enum
 {

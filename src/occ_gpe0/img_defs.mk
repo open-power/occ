@@ -94,6 +94,10 @@ ifndef PK_SRCDIR
 export PK_SRCDIR = $(abspath ../ppe/pk)
 endif
 
+ifndef PPE_STDINCDIR
+export PPE_STDINCDIR = $(abspath ../ppe/std)
+endif
+
 ifndef COMMONLIB_SRCDIR
 export COMMONLIB_SRCDIR = $(abspath ../lib/common)
 endif
@@ -148,7 +152,7 @@ OBJCOPY = $(GCC-TOOL-PREFIX)objcopy
 TCPP    = $(PPETOOLS_OBJDIR)/ppetracepp $(GCC-TOOL-PREFIX)gcc
 THASH	= $(PPETRACEPP_DIR)/tracehash.pl
 CPP     = $(GCC-TOOL-PREFIX)gcc
-TCXX    = $(PPETRACEPP_DIR)/ppetracepp $(GCC-TOOL-PREFIX)g++
+TCXX    = $(PPETOOLS_OBJDIR)/ppetracepp $(GCC-TOOL-PREFIX)g++
 CXX     = $(GCC-TOOL-PREFIX)g++
 
 ifeq "$(PK_TIMER_SUPPORT)" ""
@@ -189,7 +193,7 @@ INCLUDES += $(IMG_INCLUDES) $(GLOBAL_INCLUDES) \
 	-I$(PK_SRCDIR)/kernel -I$(PK_SRCDIR)/ppe42 -I$(PK_SRCDIR)/trace \
 	-I$(PK_SRCDIR)/$(PPE_TYPE) -I$(PK_SRCDIR)/../../include \
 	-I$(PK_SRCDIR)/../../include/registers -I$(OCCLIB_SRCDIR) -I$(COMMONLIB_SRCDIR) \
-    -I$(OCC_COMMON_TYPES_DIR) -I$(IMAGE_SRCDIR)/../common
+    -I$(OCC_COMMON_TYPES_DIR) -I$(IMAGE_SRCDIR)/../common -I$(PPE_STDINCDIR)
 
 PIPE-CFLAGS = -pipe
 
@@ -201,14 +205,15 @@ GCC-CFLAGS += -fdata-sections
 GCC-CFLAGS += -msoft-float
 GCC-CFLAGS += -mcpu=ppe42
 GCC-CFLAGS += -meabi
+GCC-CFLAGS += -msdata=eabi
 GCC-CFLAGS += -ffreestanding
 GCC-CFLAGS += -fno-common
 GCC-CFLAGS += -fno-inline-functions-called-once
-GCC-CFLAGS += -std=gnu89
 
-CFLAGS      =  -c $(GCC-CFLAGS) $(PIPE-CFLAGS) $(GCC-O-LEVEL) $(INCLUDES)
+CFLAGS      =  -c -std=gnu89 $(GCC-CFLAGS) $(PIPE-CFLAGS) $(GCC-O-LEVEL) $(INCLUDES)
 
-CXXFLAGS    = -nostdinc++ -fno-rtti -fno-exceptions $(CFLAGS)
+CXXFLAGS    = -c -std=c++11 -nostdinc++ -fno-rtti -fno-exceptions \
+                   $(GCC-CFLAGS) $(PIPE-CFLAGS) $(GCC-O-LEVEL) $(INCLUDES)
 
 CPPFLAGS    = -E
 
@@ -223,6 +228,12 @@ PCP-FLAG = -e
 
 $(OBJDIR)/%.s: %.c
 	$(TCC) $(CFLAGS) $(DEFS) -S -o $@ $<
+
+%.o: %.C
+
+$(OBJDIR)/%.s: %.C
+	$(TCXX) $(CXXFLAGS) $(DEFS) -S -o $@ $<
+
 
 #override the GNU Make implicit rule for going from a .S to a .o
 %.o: %.S
@@ -242,6 +253,13 @@ $(OBJDIR)/%.d: %.c
 	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
 	sed 's,\($*\)\.d[ :]*,\1.s $@ : ,g' < $@ > $@.$$$$; \
 	sed 's,\($*\)\.d[ :]*,\1.es $@ : ,g' < $@.$$$$ > $@; \
+	rm -f $@.$$$$
+
+$(OBJDIR)/%.d: %.C
+	@set -e; rm -f $@; \
+	echo -n "$(OBJDIR)/" > $@.$$$$; \
+	$(CXX) -MM $(INCLUDES) $(CPPFLAGS) $(DEFS) $< >> $@.$$$$; \
+	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
 	rm -f $@.$$$$
 
 $(OBJDIR)/%.d: %.S

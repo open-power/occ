@@ -35,6 +35,7 @@ extern "C" {
 #include "pk.h"
 #ifdef __cplusplus
 }
+typedef uint32_t trace_hash_val; // bug in trace function for c++
 #endif
 
 #ifdef FIRD_DEBUG
@@ -87,7 +88,7 @@ int32_t xscom_read( uint32_t i_address, uint64_t * o_data );
 int32_t xscom_write( uint32_t i_address, uint64_t i_data );
 
 /* Sleep */
-void sleep( PkInterval i_nanoseconds );
+void sleep( uint32_t i_microseconds );
 
 
 #endif
