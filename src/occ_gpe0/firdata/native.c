@@ -26,10 +26,12 @@
 #include <native.h>
 #include <scom_trgt.h>
 #include <scom_util.h>
+#include "gpe_util.h"
 
-void sleep( PkInterval i_nanoseconds )
+void sleep( uint32_t i_microseconds )
 {
-    pk_sleep(PK_NANOSECONDS(i_nanoseconds));
+    // pk_sleep not available because GPE0 is running PK in threadless mode
+    busy_wait(i_microseconds);
 }
 
 int TRACE_XSCOM=0;
