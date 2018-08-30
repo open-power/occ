@@ -73,6 +73,7 @@ typedef enum
     AMEC_SENSOR_TYPE_FREQ       = 0x0040,
     AMEC_SENSOR_TYPE_POWER      = 0x0080,
     AMEC_SENSOR_TYPE_PERF       = 0x0200,
+    AMEC_SENSOR_TYPE_WOF        = 0x0400,
     AMEC_SENSOR_TYPE_ALL        = 0xffff,
 }AMEC_SENSOR_TYPE;
 // Changes to sensor type bits would require changes to select sensor groups command

@@ -434,20 +434,17 @@ const sensor_ptr_t G_amec_sensor_list[] =
   SENSOR_PTR(TEMPGPU2MEM,           &g_amec_sys.gpu[2].tempgpumem),
 
   // ------------------------------------------------------
-  // Partition Sensors
+  // Partition Sensors -- no PLPM support only 1 core group sensor
+  // additional sensors must be added if AMEC_PART_MAX_PART is ever changed to be more than 1
   // ------------------------------------------------------
   SENSOR_PTR( UTILSLCG000,          &g_amec_sys.part_config.part_list[0].util2msslack),
-  SENSOR_PTR( UTILSLCG001,          &g_amec_sys.part_config.part_list[1].util2msslack),
-  SENSOR_PTR( UTILSLCG002,          &g_amec_sys.part_config.part_list[2].util2msslack),
-  SENSOR_PTR( UTILSLCG003,          &g_amec_sys.part_config.part_list[3].util2msslack),
-  SENSOR_PTR( UTILSLCG004,          &g_amec_sys.part_config.part_list[4].util2msslack),
-  SENSOR_PTR( UTILSLCG005,          &g_amec_sys.part_config.part_list[5].util2msslack),
-  SENSOR_PTR( UTILSLCG006,          &g_amec_sys.part_config.part_list[6].util2msslack),
-  SENSOR_PTR( UTILSLCG007,          &g_amec_sys.part_config.part_list[7].util2msslack),
-  SENSOR_PTR( UTILSLCG008,          &g_amec_sys.part_config.part_list[8].util2msslack),
-  SENSOR_PTR( UTILSLCG009,          &g_amec_sys.part_config.part_list[9].util2msslack),
-  SENSOR_PTR( UTILSLCG010,          &g_amec_sys.part_config.part_list[10].util2msslack),
-  SENSOR_PTR( UTILSLCG011,          &g_amec_sys.part_config.part_list[11].util2msslack),
+
+  // ------------------------------------------------------
+  // WOF Sensors
+  // ------------------------------------------------------
+  SENSOR_PTR( CEFFVDDRATIO,         &g_amec_sys.wof_sensors.ceff_ratio_vdd_sensor),
+  SENSOR_PTR( CEFFVDNRATIO,         &g_amec_sys.wof_sensors.ceff_ratio_vdn_sensor),
+  SENSOR_PTR( VRATIO,               &g_amec_sys.wof_sensors.v_ratio_sensor),
 
 };
 STATIC_ASSERT(   (NUMBER_OF_SENSORS_IN_LIST != (sizeof(G_amec_sensor_list)/sizeof(sensor_ptr_t)))   );
@@ -636,17 +633,13 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   // Partition Sensors
   // ------------------------------------------------------
   MINI_SENSOR_PTR( UTILSLCG000,  NULL),
-  MINI_SENSOR_PTR( UTILSLCG001,  NULL),
-  MINI_SENSOR_PTR( UTILSLCG002,  NULL),
-  MINI_SENSOR_PTR( UTILSLCG003,  NULL),
-  MINI_SENSOR_PTR( UTILSLCG004,  NULL),
-  MINI_SENSOR_PTR( UTILSLCG005,  NULL),
-  MINI_SENSOR_PTR( UTILSLCG006,  NULL),
-  MINI_SENSOR_PTR( UTILSLCG007,  NULL),
-  MINI_SENSOR_PTR( UTILSLCG008,  NULL),
-  MINI_SENSOR_PTR( UTILSLCG009,  NULL),
-  MINI_SENSOR_PTR( UTILSLCG010,  NULL),
-  MINI_SENSOR_PTR( UTILSLCG011,  NULL),
+
+  // ------------------------------------------------------
+  // WOF Sensors
+  // ------------------------------------------------------
+  SENSOR_PTR( CEFFVDDRATIO,   NULL),
+  SENSOR_PTR( CEFFVDNRATIO,   NULL),
+  SENSOR_PTR( VRATIO,         NULL),
 };
 STATIC_ASSERT(   (NUMBER_OF_SENSORS_IN_LIST != (sizeof(G_amec_mini_sensor_list)/sizeof(uint16_t *)))   );
 STATIC_ASSERT(   (MAX_AMEC_SENSORS < (sizeof(G_amec_mini_sensor_list)/sizeof(uint16_t *)))   );

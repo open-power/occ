@@ -45,6 +45,7 @@
 // Maximum time to wait for a PGPE task before timeout
 #define WAIT_PGPE_TASK_TIMEOUT (MICS_PER_TICK * 4)
 
+extern bool G_allowPstates;
 extern bool G_mem_monitoring_allowed;
 extern task_t G_task_table[TASK_END];  // Global task table
 extern bool G_simics_environment;
@@ -763,6 +764,13 @@ errlHndl_t SMGR_observation_to_active()
                     // force a set of Pstates for first time going active, handle case where coming from
                     // characterization state where user was manually writing Pstates
                     G_set_pStates = TRUE;
+
+                    // for powerVM the clip is set to UT, need to make sure we determine new freq before
+                    // 1st write to PMCR to prevent writing the clip to the PMCR and going to UT
+                    if(!G_sysConfigData.system_type.kvm)
+                    {
+                         G_allowPstates = FALSE;
+                    }
 
                     // Set the RTL Flags to indicate which tasks can run
                     //   - Clear OBSERVATION b/c not in OBSERVATION State

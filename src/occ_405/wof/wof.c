@@ -779,6 +779,8 @@ void read_shared_sram( void )
     g_wof->v_clip  = l_wofstate.fields.vclip_mv;
 
     g_wof->v_ratio = l_wofstate.fields.vratio;
+    sensor_update(AMECSENSOR_PTR(VRATIO), (uint16_t)l_wofstate.fields.vratio);
+
     g_wof->f_ratio = 1;
     // Get the requested active quad update
     read_req_active_quads();
@@ -1140,6 +1142,7 @@ void calculate_ceff_ratio_vdn( void )
     else
     {
         g_wof->ceff_ratio_vdn = g_wof->ceff_vdn / g_wof->ceff_tdp_vdn;
+        sensor_update(AMECSENSOR_PTR(CEFFVDNRATIO), (uint16_t)g_wof->ceff_ratio_vdn);
     }
 }
 
@@ -1151,6 +1154,8 @@ void calculate_ceff_ratio_vdn( void )
  */
 void calculate_ceff_ratio_vdd( void )
 {
+    uint32_t l_raw_ceff_ratio = 0;
+
     // If we get v_ratio of 0 from pgpe, force ceff_ratio_vdd to 0;
     if( g_wof->v_ratio == 0 )
     {
@@ -1215,10 +1220,14 @@ void calculate_ceff_ratio_vdd( void )
         }
         else
         {
-            // Save ceff_ratio_vdd. Multiply by 10000 to convert to correct granularity.
-            // Prevent Over current by clipping to max of 100%
-            g_wof->ceff_ratio_vdd =
-               prevent_over_current((g_wof->ceff_vdd*10000) / g_wof->ceff_tdp_vdd);
+            // Save raw ceff ratio vdd to a sensor, this sensor is NOT to be used by the WOF alg
+            // Multiply by 10000 to convert to correct granularity.
+            l_raw_ceff_ratio = (g_wof->ceff_vdd*10000) / g_wof->ceff_tdp_vdd;
+            sensor_update(AMECSENSOR_PTR(CEFFVDDRATIO), (uint16_t)l_raw_ceff_ratio);
+
+            // Now check the raw ceff ratio to prevent Over current by clipping to max of 100%
+            // this is saved to the parameter used by the rest of the wof alg
+            g_wof->ceff_ratio_vdd = prevent_over_current(l_raw_ceff_ratio);
         }
     }
 }

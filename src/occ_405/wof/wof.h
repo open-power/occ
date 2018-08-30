@@ -369,6 +369,16 @@ typedef struct __attribute__ ((packed))
     uint8_t avgtemp_vdn[CORE_IDDQ_MEASUREMENTS];
 } amec_wof_t;
 
+// Structure for sensors used in g_amec for AMESTER
+// these will contain raw values any clipping for WOF alg will be represented
+// in the parameter above in amec_wof_t
+typedef struct __attribute__ ((packed))
+{
+    sensor_t ceff_ratio_vdd_sensor;
+    sensor_t ceff_ratio_vdn_sensor;
+    sensor_t v_ratio_sensor;
+} amec_wof_sensors_t;
+
 typedef struct __attribute__ ((packed))
 {
     uint8_t data[MIN_BCE_REQ_SIZE];

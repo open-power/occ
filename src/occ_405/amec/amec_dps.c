@@ -156,7 +156,7 @@ void amec_dps_partition_update_sensors(const uint16_t i_part_id)
     uint32_t                    l_cg_slack_accumulator = 0;
     uint16_t                    l_cg_util_slack_perc = 0;
     uint32_t                    l_divide32[2] = {0, 0};
-
+    static bool                 L_trace = FALSE;
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
@@ -184,7 +184,17 @@ void amec_dps_partition_update_sensors(const uint16_t i_part_id)
     }
 
     // Update the sensor of the utilization slack
-    sensor_update(&g_amec->part_config.part_list[i_part_id].util2msslack, l_cg_util_slack_perc);
+    // verify the sensor exists for the core group
+    if(i_part_id < AMEC_PART_MAX_PART)
+    {
+        sensor_update(&g_amec->part_config.part_list[i_part_id].util2msslack, l_cg_util_slack_perc);
+    }
+    else if(!L_trace)
+    {
+        // indicates missing support for sensors based on AMEC_PART_MAX_PART
+        TRAC_ERR("amec_dps_partition_update_sensors: Invalid part id[0x%04x]", i_part_id);
+        L_trace = TRUE;
+    }
 }
 
 // Function Specification
@@ -207,6 +217,7 @@ void amec_dps_partition_alg(const uint16_t i_part_id)
     uint16_t                    l_temp16 = 0;
     uint32_t                    l_divide32[2] = {0, 0};
     OCC_INTERNAL_MODE           l_part_policy = 0xFF;
+    static bool                 L_trace = FALSE;
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
@@ -227,6 +238,18 @@ void amec_dps_partition_alg(const uint16_t i_part_id)
 
     case 41:
         // Type 41 algorithm
+        // verify the part id is valid
+        if(i_part_id >= AMEC_PART_MAX_PART)
+        {
+            if(!L_trace)
+            {
+                // indicates missing support for sensors based on AMEC_PART_MAX_PART
+                TRAC_ERR("amec_dps_partition_alg: Invalid part id[0x%04x]", i_part_id);
+                L_trace = TRUE;
+            }
+            break;
+        }
+
         // l_tempreg=measure of slack over gamma time interval on a per core basis
         l_tempreg = (uint16_t)g_amec->part_config.part_list[i_part_id].util2msslack.sample;
         // Convert to 10000 is equivalent to 100.00% utilization.

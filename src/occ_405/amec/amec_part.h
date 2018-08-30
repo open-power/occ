@@ -49,8 +49,11 @@
 // Number of cores in system
 #define AMEC_PART_NUM_CORES     (MAX_NUM_OCC * MAX_NUM_CORES)
 
-// On a given OCC, only 12 partitions can be defined
-#define AMEC_PART_MAX_PART      MAX_NUM_CORES
+// No support for PLPM, all cores will be in the same core group (partition)
+// The main PLPM code will stay but the partition sensors were removed for all but the
+// one core group in order to save SRAM
+// If this ever changes then there must be sensors UTILSLCGx defined for each core group possible
+#define AMEC_PART_MAX_PART      1
 
 // Invalid core group ID
 #define AMEC_PART_INVALID_ID    0xFF

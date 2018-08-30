@@ -721,6 +721,8 @@ typedef struct
   // WOF structure
   amec_wof_t            wof;
 
+  // WOF sensors
+  amec_wof_sensors_t    wof_sensors;
 
   //---------------------------------------------------------
   //

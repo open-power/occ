@@ -719,17 +719,13 @@ enum e_gsid
     // Partition Sensors
     // ------------------------------------------------------
     UTILSLCG000,
-    UTILSLCG001,
-    UTILSLCG002,
-    UTILSLCG003,
-    UTILSLCG004,
-    UTILSLCG005,
-    UTILSLCG006,
-    UTILSLCG007,
-    UTILSLCG008,
-    UTILSLCG009,
-    UTILSLCG010,
-    UTILSLCG011,
+
+    // ------------------------------------------------------
+    // WOF Sensors
+    // ------------------------------------------------------
+    CEFFVDDRATIO,
+    CEFFVDNRATIO,
+    VRATIO,
 
     // ------------------------------------------------------
     // END of Sensor List (this must be last entry)
