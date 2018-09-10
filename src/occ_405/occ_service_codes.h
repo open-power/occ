@@ -61,6 +61,8 @@ enum occReasonCode
     VRM_VDD_ERROR_TEMP              = 0x20,
     /// GPIO_VR_HOT_MEM_PROC signal from APSS asserted
     VR_HOT_MEM_PROC_ASSERTED        = 0x23,
+    /// GPIO_EPOW signal from APSS asserted
+    EPOW_ASSERTED                   = 0x24,
     /// DIMM reached error threshold
     DIMM_ERROR_TEMP                 = 0x30,
     /// Frequency limited due to oversubscription condition

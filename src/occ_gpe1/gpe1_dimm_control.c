@@ -32,6 +32,128 @@
 #include "dimm_structs.h"
 #include "mca_addresses.h"
 #include "gpe1.h"
+#include "gpe1_dimm.h"
+
+/*
+ * Function Specifications:
+ *
+ * Name: gpe_scom_nvdimms_nimbus
+ *
+ * Description: Sends SCOMs to NVDIMMs to tell them to back up their data.
+ *              Occurs when GPIO_EPOW is asserted.
+ *
+ * Inputs:      cmd is a pointer to IPC msg's cmd and cmd_data struct
+ *
+ * End Function Specification
+ */
+void gpe_scom_nvdimms_nimbus(ipc_msg_t* cmd, void* arg)
+{
+    int rc = 0;
+    int mc = 0;
+    int port = 0;
+    uint64_t mbarpc_regValue = 0;
+    uint64_t mbastr_regValue = 0;
+    ipc_async_cmd_t *async_cmd = (ipc_async_cmd_t*)cmd;
+
+    epow_gpio_args_t *args = (epow_gpio_args_t*)async_cmd->cmd_data;
+
+    // Debug trace - Can remove
+    PK_TRACE("gpe_scom_nvdimms_nimbus: configured_mbas: 0x%04x",
+                args->configured_mbas );
+
+    // Iterate over each bit in configured_mbas
+    // If mc is configured, send scoms
+    uint16_t mask = 0x8000;
+    for (mc = 0; mc < NUM_MBAS_NIMBUS; mc++)
+    {
+        for (port = 0; port < NUM_PORTS_PER_MBA; port++)
+        {
+            if (args->configured_mbas & mask)
+            {
+                PK_TRACE("gpe_scom_nvdimms_nimbus: scoms for mc: %d, port: %d", mc, port);
+
+                const uint32_t reg_MBARPC0Q = POWER_CTRL_REG0(mc,port);
+                // Step 1 - In MBARPC0Q, disable power domain control, set domain
+                //          to MAXALL_MINALL(0b000), and enable minimum domain
+                //          reduction
+                //          bit  2   - power domain control,
+                //          bits 3:5 - min/max domains
+                //          bit  22  - domain reduction
+                rc = getscom_abs(reg_MBARPC0Q, &mbarpc_regValue);
+                if (rc)
+                {
+                    PK_TRACE("E>gpe_scom_nvdimms_nimbus: Failed to read (MBARPC0Q) Reg:0x%08X, rc:0x%08x",
+                             reg_MBARPC0Q, rc);
+                }
+                else
+                {
+                    mbarpc_regValue &= 0xC3FFFFFFFFFFFFFF; // zero out bits 2-5
+                    mbarpc_regValue |= 0x0000020000000000; // set bit 22
+                    rc = putscom_abs(reg_MBARPC0Q, mbarpc_regValue);
+                    if (rc)
+                    {
+                        PK_TRACE("E>gpe_scom_nvdimms_nimbus: Failed to disable power domain control (MBARPC0Q)"
+                                 " Reg:0x%08X, Data:0x%08X %08X, rc:0x%08x",
+                                 reg_MBARPC0Q, WORD_HIGH(mbarpc_regValue), WORD_LOW(mbarpc_regValue), rc);
+                        gpe_set_ffdc(&(args->error), reg_MBARPC0Q,
+                                     GPE_RC_SCOM_PUT_FAILED, rc);
+                    }
+
+                    // Step 2 - In MBASTR0Q, enable STR entry
+                    //          bit  0   - STR enable
+                    const uint32_t reg_MBASTR0Q = STR_REG0(mc,port);
+                    rc = getscom_abs(reg_MBASTR0Q, &mbastr_regValue);
+                    if (rc)
+                    {
+                        PK_TRACE("E>gpe_scom_nvdimms_nimbus: Failed to read (MBASTR0Q) Reg:0x%08X, rc:0x%08x",
+                                 reg_MBASTR0Q, rc);
+                    }
+                    else
+                    {
+                        mbastr_regValue |= 0x8000000000000000; // set bit 0
+                        rc = putscom_abs(reg_MBASTR0Q, mbastr_regValue);
+                        if (rc)
+                        {
+                            PK_TRACE("E>gpe_scom_nvdimms_nimbus: Failed to enable STR entry (MBASTR0Q)"
+                                     " Reg:0x%08X, Data:0x%08X %08X, rc:0x%08x",
+                                     reg_MBASTR0Q, WORD_HIGH(mbastr_regValue), WORD_LOW(mbastr_regValue), rc);
+                            gpe_set_ffdc(&(args->error), reg_MBASTR0Q,
+                                         GPE_RC_SCOM_PUT_FAILED, rc);
+                        }
+                    }
+
+                    // Step 3 - In MBARPC0Q, re-enable power domain control
+                    //          bit  2   - power domain control
+                    mbarpc_regValue |= 0x2000000000000000; // set bit 2
+                    rc = putscom_abs(reg_MBARPC0Q, mbarpc_regValue);
+                    if (rc)
+                    {
+                        PK_TRACE(">gpe_scom_nvdimms_nimbus: Failed to re-enable power domain control (MBARPC0Q)"
+                                 " Reg:0x%08X, Data:0x%08X %08X, rc:0x%08x",
+                                 reg_MBARPC0Q, WORD_HIGH(mbarpc_regValue), WORD_LOW(mbarpc_regValue), rc);
+                        gpe_set_ffdc(&(args->error), reg_MBARPC0Q,
+                                     GPE_RC_SCOM_PUT_FAILED, rc);
+                    }
+                }
+            }
+            mask = mask >> 1;
+        } // for each MBA port
+    } // for each MC
+
+    PK_TRACE("gpe_scom_nvdimms_nimbus: completed (rc=%d)", rc);
+
+    // Always send back success
+    rc = ipc_send_rsp(cmd, IPC_RC_SUCCESS);
+    if(rc)
+    {
+        PK_TRACE("E>gpe_scom_nvdimms_nimbus: Failed to send response back (rc=%d)", rc);
+        gpe_set_ffdc(&(args->error), 0x00, GPE_RC_IPC_SEND_FAILED, rc);
+        pk_halt();
+    }
+
+    PK_TRACE("gpe_scom_nvdimms_nimbus: exiting");
+
+} // end gpe_scom_nvdimms_nimbus()
 
 /*
  * Function Specifications:
@@ -121,7 +243,7 @@ void gpe_dimm_control(ipc_msg_t* cmd, void* arg)
     rc = ipc_send_rsp(cmd, IPC_RC_SUCCESS);
     if(rc)
     {
-        PK_TRACE("gpe_dimm_control: Failed to send response back. Halting GPE1", rc);
+        PK_TRACE("E>gpe_dimm_control: Failed to send response back. Halting GPE1 (rc=%d)", rc);
         gpe_set_ffdc(&(args->error), 0x00, GPE_RC_IPC_SEND_FAILED, rc);
         pk_halt();
     }
@@ -307,7 +429,7 @@ void gpe_reset_mem_deadman(ipc_msg_t* cmd, void* arg)
     rc = ipc_send_rsp(cmd, IPC_RC_SUCCESS);
     if(rc)
     {
-        PK_TRACE("gpe_reset_mem_deadman: Failed to send response back. Halting GPE1", rc);
+        PK_TRACE("E>gpe_reset_mem_deadman: Failed to send response back. Halting GPE1 (rc=%d)", rc);
         gpe_set_ffdc(&(args->error), 0x00, GPE_RC_IPC_SEND_FAILED, rc);
         pk_halt();
     }

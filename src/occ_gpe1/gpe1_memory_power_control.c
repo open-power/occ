@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -48,7 +48,6 @@
  *
  * End Function Specification
  */
-
 void gpe_mem_power_control(ipc_msg_t* cmd, void* arg)
 {
     // Note: arg was set to 0 in ipc func table (ipc_func_tables.c), so don't use it.

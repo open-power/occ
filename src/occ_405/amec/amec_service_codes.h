@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -69,6 +69,7 @@ enum occAmecModuleId
     AMEC_GPU_PCAP_MID                 =    AMEC_COMP_ID | 0x19,
     AMEC_HEALTH_CHECK_VRM_VDD_TEMP    =    AMEC_COMP_ID | 0x1A,
     AMEC_HEALTH_CHECK_VRM_VDD_TIMEOUT =    AMEC_COMP_ID | 0x1B,
+    AMEC_UPDATE_APSS_SENSORS          =    AMEC_COMP_ID | 0x1C,
 };
 
 /*----------------------------------------------------------------------------*/

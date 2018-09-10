@@ -372,34 +372,34 @@ void amec_slave_init()
 
   // Initializes the GPE routine that will be used to measure the worst case
   // timings for GPE0
-  rc  = gpe_request_create(&G_gpe_nop_request[0],        //gpe_req for the task
-                           &G_async_gpe_queue0,          //queue
-                           IPC_ST_GPE0_NOP,              //Function ID
-                           NULL,                         //parm for the task
-                           SSX_WAIT_FOREVER,             //no timeout
-                           (AsyncRequestCallback)
-                            amec_slv_update_gpe_sensors, //callback
-                           (void *) GPE_ENGINE_0,        //callback argument
-                           ASYNC_CALLBACK_IMMEDIATE );   //options
+  rc  = gpe_request_create( &G_gpe_nop_request[0],         //gpe_req for the task
+                            &G_async_gpe_queue0,           //GPE0 queue
+                            IPC_ST_GPE0_NOP,               //Function ID
+                            NULL,                          //parm for the task
+                            SSX_WAIT_FOREVER,              //no timeout
+                            (AsyncRequestCallback)
+                             amec_slv_update_gpe_sensors,  //callback
+                            (void *) GPE_ENGINE_0,         //callback argument
+                            ASYNC_CALLBACK_IMMEDIATE );    //options
 
   // Initializes the GPE routine that will be used to measure the worst case
   // timings for GPE1
-  rc2 = gpe_request_create( &G_gpe_nop_request[1],       //gpe_req for the task
-                          &G_async_gpe_queue1,           //queue
-                          IPC_ST_GPE1_NOP,               //Function ID
-                          NULL,                          //parm for the task
-                          SSX_WAIT_FOREVER,              //no timeout
-                          (AsyncRequestCallback)
-                           amec_slv_update_gpe_sensors,  //callback
-                          (void *) GPE_ENGINE_1,         //callback argument
-                          ASYNC_CALLBACK_IMMEDIATE );    //options
+  rc2 = gpe_request_create( &G_gpe_nop_request[1],         //gpe_req for the task
+                            &G_async_gpe_queue1,           //GPE1 queue
+                            IPC_ST_GPE1_NOP,               //Function ID
+                            NULL,                          //parm for the task
+                            SSX_WAIT_FOREVER,              //no timeout
+                            (AsyncRequestCallback)
+                            amec_slv_update_gpe_sensors,   //callback
+                            (void *) GPE_ENGINE_1,         //callback argument
+                            ASYNC_CALLBACK_IMMEDIATE );    //options
 
   // If we couldn't create the GpeRequest objects, there must be a major problem
   // so we will log an error and halt OCC.
   if( rc || rc2 )
   {
     //If fail to create GpeRequest object then there is a problem.
-    TRAC_ERR("Failed to create GPE duration GpeRequest object[0x%x, 0x%x]", rc, rc2 );
+    TRAC_ERR("Failed to create GPE duration GpeRequest object[0x%x, 0x%x]", rc, rc2);
 
     /* @
      * @errortype

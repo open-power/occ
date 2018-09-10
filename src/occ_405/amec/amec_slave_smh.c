@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -381,23 +381,21 @@ void amec_slv_update_main_mem_sensors(void)
 // End Function Specification
 void amec_slv_common_tasks_pre(void)
 {
-  AMEC_DBG("\tAMEC Slave Pre-State Common\n");
+    AMEC_DBG("\tAMEC Slave Pre-State Common\n");
 
-  // Update the FW Worst Case sensors every tick
-  amec_update_fw_sensors();
+    // Update the FW Worst Case sensors every tick
+    amec_update_fw_sensors();
 
-  // Update the sensors that come from the APSS every tick
-  amec_update_apss_sensors();
+    // Update the sensors that come from the APSS every tick
+    // If sensors were not updated due to EPOW event, skip remaining tasks
+    if (amec_update_apss_sensors())
+    {
+        // Read the AVS Bus sensors (Vdd / Vdn)
+        amec_update_avsbus_sensors();
 
-  // Read the AVS Bus sensors (Vdd / Vdn)
-  amec_update_avsbus_sensors();
-
-  // Call the stream buffer recording function
-  // TODO: RTC 163683 - AMEC analytics
-  //amec_analytics_sb_recording();
-
-  // Over-subscription check
-  amec_oversub_check();
+        // Over-subscription check
+        amec_oversub_check();
+    }
 }
 
 // Function Specification
@@ -575,13 +573,6 @@ void amec_slv_state_3(void)
   // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
   amec_update_centaur_sensors(CENTAUR_3);
-
-  //-------------------------------------------------------
-  // Perform amec_analytics (set amec_analytics_slot to 3)
-  //-------------------------------------------------------
-/* TODO: RTC 163683 - AMEC analytics
-  amec_analytics_main();
-*/
 }
 
 
@@ -865,7 +856,7 @@ void amec_slv_substate_1_7(void)
 //
 // Description: even numbered slave substates
 //              gives state 2 substate function to be called every 16th tick
-//              Time = 16 * MICS_PER_TICK 
+//              Time = 16 * MICS_PER_TICK
 //              odd substates of state 2 are not currently used
 //
 // End Function Specification
@@ -1252,7 +1243,7 @@ void amec_slv_substate_5_7(void)
 //
 // Description: Called for every substate of state 6
 //              gives state 6 substate function to be called every 8th tick
-//              Time = 8 * MICS_PER_TICK 
+//              Time = 8 * MICS_PER_TICK
 //
 // End Function Specification
 void amec_slv_substate_6_all(void)

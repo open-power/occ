@@ -113,4 +113,9 @@ typedef struct
     perf_mon_counts_t idle_counts;
 } reset_mem_deadman_args_t;
 
+typedef struct {
+    GpeErrorStruct error;
+    uint16_t configured_mbas;
+} epow_gpio_args_t;
+
 #endif // _DIMM_STRUCTS_H

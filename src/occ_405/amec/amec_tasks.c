@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -270,12 +270,16 @@ void task_amec_slave( task_t *i_self)
 
   amec_slv_common_tasks_pre();
 
-  amec_generic_smh( amec_slv_state_table, &G_amec_slv_state, &G_amec_slv_state_timings );
+  if (FALSE == isSafeStateRequested())
+  {
+      amec_generic_smh( amec_slv_state_table, &G_amec_slv_state, &G_amec_slv_state_timings );
 
-  amec_slv_common_tasks_post();
+      amec_slv_common_tasks_post();
 
-  // Set the total AMEC int task time for this tick, to the duration of the slave tasks.
-  G_fw_timing.ameint_dur = DURATION_IN_US_UNTIL_NOW_FROM(l_start);
+      // Set the total AMEC int task time for this tick, to the duration of the slave tasks.
+      G_fw_timing.ameint_dur = DURATION_IN_US_UNTIL_NOW_FROM(l_start);
+  }
+
 }
 
 /*----------------------------------------------------------------------------*/

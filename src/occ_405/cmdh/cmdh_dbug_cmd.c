@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -51,6 +51,7 @@
 // Externs
 //*************************************************************************/
 extern uint64_t G_inject_dimm;
+uint8_t G_injected_epow_asserted = 0;
 extern gpe_shared_data_t G_shared_gpe_data;
 
 //*************************************************************************/
@@ -634,8 +635,36 @@ void cmdh_dbug_allow_trace( const cmdh_fsp_cmd_t * i_cmd_ptr,
 }
 
 
-
 // Function Specification
+//
+// Name: cmdh_dbug_trigger_epow
+//
+// Description: Injects a fake epow event to trigger the EPOW asserted code path
+//              for debug purposes. It will be cleared after event is processed.
+//
+// End Function Specification
+void cmdh_dbug_trigger_epow( void )
+{
+    // Make sure gpio is valid
+    uint8_t l_epow_value = 1;
+    const bool l_epow_valid = apss_gpio_get(G_sysConfigData.apss_gpio_map.nvdimm_epow, &l_epow_value);
+    if (l_epow_valid)
+    {
+        G_injected_epow_asserted = 1;
+        TRAC_INFO("cmdh_dbug_trigger_epow: DEBUG - Injecting EPOW for NVDIMM testing");
+        G_rsp_status = ERRL_RC_SUCCESS;
+    }
+    else
+    {
+        TRAC_ERR("cmdh_dbug_trigger_epow: Rejected because EPOW GPIO is not valid");
+        G_rsp_status = ERRL_RC_INVALID_DATA;
+    }
+
+    return;
+}
+
+
+/// Function Specification
 //
 // Name: cmdh_dbug_dimm_inject
 //
@@ -1117,6 +1146,10 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         case DBUG_INTERNAL_FLAGS:
             cmdh_dbug_internal_flags( i_cmd_ptr, o_rsp_ptr );
+            break;
+
+        case DBUG_TRIGGER_EPOW: // NVDIMM EPOW injection
+            cmdh_dbug_trigger_epow();
             break;
 
         case DBUG_FLUSH_DCACHE:

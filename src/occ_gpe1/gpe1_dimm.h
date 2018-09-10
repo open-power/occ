@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -25,6 +25,9 @@
 
 #ifndef _GPE1_DIMM_H
 #define _GPE1_DIMM_H
+
+#define NUM_MBAS_NIMBUS 2
+#define NUM_PORTS_PER_MBA 4
 
 #include "gpe_export.h"
 

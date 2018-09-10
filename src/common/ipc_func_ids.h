@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -78,6 +78,7 @@ IPC_FUNCIDS_TABLE_START
         IPC_FUNC_ID(IPC_ST_CENTAUR_SCOM_FUNCID)
         IPC_FUNC_ID(IPC_ST_CENTAUR_DATA_FUNCID)
         IPC_FUNC_ID(IPC_ST_CENTAUR_INIT_FUNCID)
+        IPC_FUNC_ID(IPC_ST_EPOW_GPIO_ASSERT_FUNCID)
     IPC_FUNCIDS_ST_END(OCCHW_INST_ID_GPE1)
 
     //Functions that are only supported by GPE2 should be defined here

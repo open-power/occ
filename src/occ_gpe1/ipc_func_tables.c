@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -34,6 +34,7 @@ void gpe_reset_mem_deadman(ipc_msg_t* cmd, void* arg);
 void gpe_24x7(ipc_msg_t* cmd, void* arg);
 void gpe_mem_power_control(ipc_msg_t* cmd, void* arg);
 void gpe_gpu_init(ipc_msg_t* cmd, void* arg);
+void gpe_scom_nvdimms_nimbus(ipc_msg_t* cmd, void* arg);
 
 #ifdef OCC_GPU_SUPPORT
 void gpe_gpu_sm(ipc_msg_t* cmd, void* arg);
@@ -88,7 +89,7 @@ IPC_HANDLER(gpe_gpu_init, 0)               // 7 - IPC_ST_GPE_GPU_INIT_FUNCID
 IPC_HANDLER(gpe_centaur_scom, 0)           // 8 - IPC_ST_CENTAUR_SCOM_FUNCID
 IPC_HANDLER(gpe_centaur_data, 0)           // 9 - IPC_ST_CENTAUR_DATA_FUNCID
 IPC_HANDLER(gpe_centaur_init, 0)           // 10 -IPC_ST_CENTAUR_INIT_FUNCID
-IPC_HANDLER_DEFAULT                        // 11
+IPC_HANDLER(gpe_scom_nvdimms_nimbus, 0)    // 11 -IPC_ST_EPOW_GPIO_ASSERT_FUNCID
 IPC_HANDLER_DEFAULT                        // 12
 IPC_HANDLER_DEFAULT                        // 13
 IPC_HANDLER_DEFAULT                        // 14

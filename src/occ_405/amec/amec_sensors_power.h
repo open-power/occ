@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -44,7 +44,8 @@
 
 // Function that is called by AMEC State Machine that will update the AMEC
 // sensors for data that comes from the APSS (Power Data from APSS ADCs)
-void amec_update_apss_sensors(void);
+// Returns False if GPIO EPOW was asserted (sensors not updated)
+bool amec_update_apss_sensors(void);
 
 // Function that is called by AMEC State Machine that will update the AMEC
 // sensors for GPIO data collected from the APSS.
@@ -58,4 +59,9 @@ void amec_update_avsbus_sensors(void);
 // successfully determined
 void amec_update_gpu_configuration(void);
 
+// Helper function called when updating the AMEC sensors for GPIO to detect
+// GPIO_EPOW. If it has been asserted, we send an IPC command to GPE1 to
+// perform some SCOMs allowing NVDIMMs to back up their data.
+// Returns TRUE if EPOW was asserted.
+bool epow_gpio_asserted(void);
 #endif // _AMEC_SENSORS_POWER_H

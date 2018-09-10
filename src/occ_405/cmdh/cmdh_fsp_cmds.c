@@ -57,8 +57,11 @@ extern bool G_vrm_vdd_temp_expired;
 extern bool G_reset_prep;
 extern uint16_t G_amester_max_data_length;
 extern uint8_t G_occ_interrupt_type;
+extern bool G_epow_gpio_scheduled;
+extern GpeRequest G_epow_gpio_detected_req;
 
 extern opal_proc_voting_reason_t G_amec_opal_proc_throt_reason;
+
 
 // This table contains tunable parameter information that can be exposed to
 // customers (only Master OCC should access/control this table)
@@ -830,6 +833,27 @@ errlHndl_t cmdh_reset_prep (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
     do
     {
+        if (G_epow_gpio_scheduled)
+        {
+            // Check to see if EPOW_GPIO IPC request is not idle. If not, sleep
+            // 4ms to give it time to finish and then continue.
+            if(!async_request_is_idle(&G_epow_gpio_detected_req.request))
+            {
+                TRAC_IMP("cmdh_reset_prep: EPOW IPC request is NOT idle. Sleeping for 4ms");
+                ssx_sleep(SSX_MILLISECONDS(4));
+                if(!async_request_is_idle(&G_epow_gpio_detected_req.request))
+                {
+                    TRAC_ERR("cmdh_reset_prep: EPOW IPC request is still NOT idle. completion state=0x%08X",
+                             G_epow_gpio_detected_req.request.completion_state);
+                }
+            }
+            else
+            {
+                TRAC_IMP("cmdh_reset_prep: EPOW IPC request IS idle. completion state=0x%08X",
+                         G_epow_gpio_detected_req.request.completion_state);
+            }
+        }
+
         // Command Length Check - make sure we at least have a version number
         if( CMDH_DATALEN_FIELD_UINT16(i_cmd_ptr) < CMDH_RESET_PREP_MIN_DATALEN)
         {
