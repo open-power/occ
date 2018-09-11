@@ -91,9 +91,12 @@ opal_mem_voting_reason_t  G_amec_opal_mem_throt_reason  = NO_MEM_THROTTLE;
 //
 // Name: amec_set_freq_range
 //
-// Description: Set the frequency range for AMEC
-//              This function will run on mode changes, cnfg_data changes
-//              and oversubscription changes
+// Description: Set the frequency range for AMEC based on mode only
+//              NOTE:  Any other clipping of frequency should be done in
+//                     amec_slv_proc_voting_box() (called every tick)
+//                     so the CLIP history in poll response will accurately
+//                     show all clipping for the given mode the system is in
+//              This function will run on mode changes and cnfg_data changes
 //
 // Thread: RealTime Loop
 //
@@ -154,33 +157,6 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
       {
           l_freq_max = G_sysConfigData.sys_mode_freq.table[i_mode];
       }
-    }
-
-    // if (redundant ps policy is being enforced)
-    if (G_sysConfigData.system_type.non_redund_ps == false)
-    {
-        // check if need to lower max frequency due to being in oversubscription.  0 oversub freq means no freq limitation
-        if( AMEC_INTF_GET_OVERSUBSCRIPTION() && (G_sysConfigData.sys_mode_freq.table[OCC_MODE_OVERSUB]) &&
-            (G_sysConfigData.sys_mode_freq.table[OCC_MODE_OVERSUB] < l_freq_max) )
-        {
-            // If oversub is lower than system minimum then set to min
-            if(G_sysConfigData.sys_mode_freq.table[OCC_MODE_OVERSUB] < l_freq_min)
-            {
-                TRAC_IMP("amec_set_freq_range: max frequency lowered from %u to system min %u due to oversubscription",
-                         l_freq_max,
-                         l_freq_min);
-
-                l_freq_max = l_freq_min;
-            }
-            else
-            {
-                TRAC_IMP("amec_set_freq_range: max frequency lowered from %u to %u due to Oversubscription",
-                         l_freq_max,
-                         G_sysConfigData.sys_mode_freq.table[OCC_MODE_OVERSUB]);
-
-                l_freq_max = G_sysConfigData.sys_mode_freq.table[OCC_MODE_OVERSUB];
-            }
-        }
     }
 
     if( (l_freq_min == 0) || (l_freq_max == 0) )
@@ -309,7 +285,20 @@ void amec_slv_proc_voting_box(void)
     // This function implements the voting box to decide which input gets the right
     // to actuate the system.
 
-    // If there is an active VRM fault and a defined VRM N frequency less than max use it
+    // check for oversubscription if redundant ps policy (oversubscription) is being enforced
+    if (G_sysConfigData.system_type.non_redund_ps == false)
+    {
+        // If in oversubscription and there is a defined (non 0) OVERSUB frequency less than max then use it
+        if( (AMEC_INTF_GET_OVERSUBSCRIPTION()) &&
+            (G_sysConfigData.sys_mode_freq.table[OCC_MODE_OVERSUB]) &&
+            (G_sysConfigData.sys_mode_freq.table[OCC_MODE_OVERSUB] < l_chip_fmax) )
+        {
+            l_chip_fmax = G_sysConfigData.sys_mode_freq.table[OCC_MODE_OVERSUB];
+            l_chip_reason = AMEC_VOTING_REASON_OVERSUB;
+        }
+    }
+
+    // If there is an active VRM fault and a defined (non 0) VRM N frequency less than max use it
     if( (g_amec->sys.vrm_fault_status) &&
         (G_sysConfigData.sys_mode_freq.table[OCC_MODE_VRM_N]) &&
         (G_sysConfigData.sys_mode_freq.table[OCC_MODE_VRM_N] < l_chip_fmax) )

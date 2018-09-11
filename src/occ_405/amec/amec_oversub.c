@@ -178,14 +178,6 @@ void amec_oversub_check(void)
 
             // Commit Error
             commitErrl(&l_errl);
-
-            // set max frequency for oversubscription
-            l_errl = amec_set_freq_range(CURRENT_MODE());
-            if(l_errl)
-            {
-                TRAC_ERR("amec_oversub_check: committing error reported by amec_set_freq_range");
-                commitErrl( &l_errl);
-            }
         }
     }
     else
@@ -194,14 +186,6 @@ void amec_oversub_check(void)
         {
             L_prev_ovs_state = FALSE;
             TRAC_IMP("Oversubscription condition cleared");
-
-            // re-set max frequency since no longer in oversubscription
-            l_errl = amec_set_freq_range(CURRENT_MODE());
-            if(l_errl)
-            {
-                TRAC_ERR("amec_oversub_check: committing error reported by amec_set_freq_range");
-                commitErrl( &l_errl);
-            }
         }
     }
 
