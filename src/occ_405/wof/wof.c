@@ -1569,22 +1569,12 @@ void set_clear_wof_disabled( uint8_t i_action,
              *  @userdata4  Unique extended RC given by caller
              *  @devdesc    WOF has been disabled due to an error
              */
-            l_errl = createErrl(
-                        SET_CLEAR_WOF_DISABLED,
-                        WOF_DISABLED_RC,
-                        i_ext_rc,
-                        ERRL_SEV_UNRECOVERABLE,
-                        NULL,
-                        WOF_TRACE_SIZE,
-                        g_wof->wof_disabled,
-                        i_bit_mask );
-
-            // Add WOF parameters to error log
-            addUsrDtlsToErrl( l_errl,
-                              (uint8_t*)g_wof,
-                              sizeof(*g_wof),
-                              ERRL_STRUCT_VERSION_1,
-                              ERRL_USR_DTL_WOF_DATA);
+            l_errl = createPgpeErrl(SET_CLEAR_WOF_DISABLED,
+                                    WOF_DISABLED_RC,
+                                    i_ext_rc,
+                                    ERRL_SEV_UNRECOVERABLE,
+                                    g_wof->wof_disabled,
+                                    i_bit_mask );
 
             // Reset if on Reason Code requires it.
             if(i_bit_mask & ~(IGNORE_WOF_RESET) )

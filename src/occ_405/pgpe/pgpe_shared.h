@@ -29,6 +29,11 @@
 #define OPPB_MAGIC_NUMBER_10         0x4F43435050423030ull   // "OCCPPB00"
 #define PGPE_MAGIC_NUMBER_10         0x504750455F312E30ull   // "PGPE_1.0"
 
+// Address and offset to find PGPE PK trace
+#define PGPE_DEBUG_PTRS_ADDR           0xFFF20200   // 0xfff20000 + 0x200
+#define PGPE_DEBUG_TRACE_ADDR_OFFSET   0x04
+#define PGPE_DEBUG_TRACE_SIZE_OFFSET   0x08
+
 // Offset addresses of PGPE Header parameters (relative to start address)
 #define PGPE_SHARED_SRAM_ADDR_OFFSET           0x0c
 #define PGPE_SHARED_SRAM_LEN_OFFSET            0x14

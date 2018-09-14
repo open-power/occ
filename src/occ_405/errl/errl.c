@@ -34,6 +34,8 @@
 #include <ocb_firmware_registers.h>
 #include <ocb_register_addresses.h>
 #include <amec_sys.h>
+#include <pgpe_shared.h>
+#include <wof.h>
 
 uint32_t    G_occErrSlotBits = 0x000000000;
 uint8_t     G_occErrIdCounter= 0x00;
@@ -67,6 +69,7 @@ uint8_t G_error_history[ERR_HISTORY_SIZE] = {0};
 
 extern uint8_t G_occ_interrupt_type;
 extern bool G_fir_collection_required;
+extern amec_sys_t g_amec_sys;
 
 // Function Specification
 //
@@ -292,12 +295,12 @@ errlHndl_t createErrl(
     uint64_t    l_time = 0;
     uint8_t     l_id = 0;
     uint8_t     l_errSlot = getErrSlotNumAndErrId( i_sev, &l_id, &l_time);
-    static uint8_t traceCount = 5;
+    static uint8_t L_traceCount = 5;
 
 
     if ( l_errSlot != ERRL_INVALID_SLOT )
     {
-        TRAC_INFO("Creating error log in slot [%d]", l_errSlot);
+        TRAC_INFO("createErrl: Creating error log in slot [%d]", l_errSlot);
 
         // get slot pointer
         l_rc = G_occErrSlots[ l_errSlot ];
@@ -345,16 +348,111 @@ errlHndl_t createErrl(
     }
     else
     {
-        if( traceCount > 0 )
+        if( L_traceCount > 0 )
         {
-            TRAC_INFO("Error Logs are FULL  - Slot [%d]", l_errSlot);
-            traceCount--;
+            TRAC_INFO("createErrl: Error Logs are FULL  - Slot [%d]", l_errSlot);
+            L_traceCount--;
         }
     }
 
     return l_rc;
 }
 
+// Function Specification
+//
+// Name:  createPgpeErrl
+//
+// Description: Create an Error Log due to a PGPE failure
+//
+// End Function Specification
+errlHndl_t createPgpeErrl(const uint16_t i_modId,
+                          const uint8_t i_reasonCode,
+                          const uint16_t i_extReasonCode,
+                          const ERRL_SEVERITY i_sev,
+                          const uint32_t i_userData1,
+                          const uint32_t i_userData2)
+{
+    errlHndl_t  l_err = INVALID_ERR_HNDL;
+    uint64_t    l_time = 0;
+    uint8_t     l_id = 0;
+    uint8_t     l_errSlot = getErrSlotNumAndErrId( i_sev, &l_id, &l_time);
+    static uint8_t L_traceCount = 5;
+
+
+    if ( l_errSlot != ERRL_INVALID_SLOT )
+    {
+        TRAC_INFO("createPgpeErrl: Creating error log in slot [%d]", l_errSlot);
+
+        // get slot pointer
+        l_err = G_occErrSlots[ l_errSlot ];
+
+        // save off default size
+        l_err->iv_userDetails.iv_entrySize = sizeof( ErrlEntry_t );
+
+        // add error history
+        addErrHistory( l_err );
+
+        // if this is a WOF error add WOF parameters to error log
+        // only add for FSP systems where there is support for larger error logs
+        if( (i_reasonCode == WOF_DISABLED_RC) &&
+            (G_occ_interrupt_type == FSP_SUPPORTED_OCC) )
+        {
+           addUsrDtlsToErrl( l_err,
+                             (uint8_t*)&(g_amec_sys.wof),
+                             sizeof(amec_wof_t),
+                             ERRL_USR_DTL_STRUCT_VERSION_1,
+                             ERRL_USR_DTL_WOF_DATA);
+        }
+
+        // add PGPE specific data
+        addPgpeDataToErrl( l_err );
+
+        // add trace last, it will only add upto size that is left
+        addTraceToErrl( NULL, DEFAULT_TRACE_SIZE,  l_err );
+
+        // save off entry Id
+        l_err->iv_entryId = l_id;
+
+        //Save off version info
+        l_err->iv_version = ERRL_STRUCT_VERSION_1;
+
+        // save off time
+        l_err->iv_userDetails.iv_timeStamp = l_time;
+
+        // set severity
+        l_err->iv_severity = i_sev;
+
+        l_err->iv_extendedRC = i_extReasonCode;
+
+        // save off user detail section version
+        l_err->iv_userDetails.iv_version = ERRL_USR_DTL_STRUCT_VERSION_1;
+
+        // save off rest of input parameters
+        l_err->iv_userDetails.iv_modId = i_modId;
+        l_err->iv_reasonCode = i_reasonCode;
+        l_err->iv_userDetails.iv_userData1 = i_userData1;
+        l_err->iv_userDetails.iv_userData2 = i_userData2;
+
+        // set callout count to 0
+        l_err->iv_numCallouts = 0;
+
+        // save off occ fields
+        l_err->iv_userDetails.iv_fclipHistory = g_amec->proc[0].chip_f_reason_history;
+        l_err->iv_userDetails.iv_occId = G_pbax_id.chip_id;
+        l_err->iv_userDetails.iv_occRole = G_occ_role;
+        l_err->iv_userDetails.iv_operatingState = CURRENT_STATE();
+    }
+    else
+    {
+        if( L_traceCount > 0 )
+        {
+            TRAC_INFO("createPgpeErrl: Error Logs are FULL - Slot [%d]", l_errSlot);
+            L_traceCount--;
+        }
+    }
+
+    return l_err;
+}
 
 // Function Specification
 //
@@ -410,7 +508,7 @@ void addTraceToErrl(
 
         //adjust user details entry size to available size (word align )
         uint16_t l_availableSize = MAX_ERRL_ENTRY_SZ - (io_err->iv_userDetails.iv_entrySize + l_headerSz );
-        l_usrDtlsEntry.iv_size = ( i_traceSz < l_availableSize ) ? i_traceSz : l_availableSize; // @jh001c
+        l_usrDtlsEntry.iv_size = ( i_traceSz < l_availableSize ) ? i_traceSz : l_availableSize;
 
         //set type
         l_usrDtlsEntry.iv_type = (uint8_t) ERRL_USR_DTL_TRACE_DATA;
@@ -583,6 +681,53 @@ void addErrHistory(errlHndl_t io_err)
 
 } // end addErrHistory()
 
+// Function Specification
+//
+// Name:  addPgpeDataToErrl
+//
+// Description: Add PGPE specific data to log
+//              NOTE:  checking for valid error log and size will be done when addUsrDtlsToErrl() is called
+// End Function Specification
+void addPgpeDataToErrl(errlHndl_t io_err)
+{
+    // Build buffer with the data from PM Hcode
+    // Add PGPE PK trace
+    uint8_t l_buffer[MAX_PGPE_DBUG_DATA] = {0};
+    uint32_t l_trace_sram_addr = in32(PGPE_DEBUG_PTRS_ADDR + PGPE_DEBUG_TRACE_ADDR_OFFSET);
+    // use non-cachable address
+    l_trace_sram_addr &= 0xF7FFFFFF;
+
+    // get the data length, we will clip to our allowed max size if needed
+    uint32_t l_data_length = in32(PGPE_DEBUG_PTRS_ADDR + PGPE_DEBUG_TRACE_SIZE_OFFSET);
+    if(l_data_length > MAX_PGPE_DBUG_DATA)
+    {
+        TRAC_INFO("addPgpeDataToErrl: clipping pgpe trace size from %d to %d",
+                   l_data_length, MAX_PGPE_DBUG_DATA);
+        l_data_length = MAX_PGPE_DBUG_DATA;
+    }
+    // make sure address and length are non-zero
+    if(l_trace_sram_addr && l_data_length)
+    {
+       memcpy( (void *) &l_buffer[0],
+               (void *) l_trace_sram_addr,
+               (size_t) l_data_length );
+
+       // Add the data to the error log
+       addUsrDtlsToErrl( io_err,
+                        (uint8_t*)l_buffer,
+                        (uint16_t)l_data_length,
+                        ERRL_USR_DTL_STRUCT_VERSION_1,
+                        ERRL_USR_DTL_PGPE_PK_TRACE);
+
+       // set action bit to force this error to be sent to BMC so it is seen even if info
+       setErrlActions(io_err, ERRL_ACTIONS_FORCE_SEND);
+    }
+    else
+    {
+        TRAC_ERR("PGPE trace address[%d] or length[%d] is 0!", l_trace_sram_addr, l_data_length);
+    }
+
+} // end addPgpeDataToErrl()
 
 // Function Specification
 //
@@ -929,7 +1074,6 @@ void setErrlSevToInfo( errlHndl_t io_err )
 // Description: Set Actions to an Error Log
 //
 // End Function Specification
-// @jh001a
 void setErrlActions(errlHndl_t io_err, const uint8_t i_mask)
 {
     // check if handle is valid

@@ -299,6 +299,8 @@ typedef cmdh_fsp_rsp_t smgr_setmodestate_resp_t;
 //---------------------------------------------------------
 // Clear Elog Command
 //---------------------------------------------------------
+#define CLEAR_ELOG_V0_CMD_LEN    1
+#define CLEAR_ELOG_V1_CMD_LEN    4
 
 // Used by TMGT to clear elog data state, version 0.
 typedef struct __attribute__ ((packed))
@@ -306,6 +308,16 @@ typedef struct __attribute__ ((packed))
     struct    cmdh_fsp_cmd_header;
     uint8_t   elog_id;
 }cmdh_clear_elog_query_t;
+
+// Used by TMGT to clear elog data state, version 1.
+typedef struct __attribute__ ((packed))
+{
+    struct    cmdh_fsp_cmd_header;
+    uint8_t   version;
+    uint8_t   elog_id;
+    uint8_t   elog_source;
+    uint8_t   reserved;
+}cmdh_clear_elog_version_t;
 
 //---------------------------------------------------------
 // Get Elog Command
