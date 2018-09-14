@@ -37,6 +37,7 @@
 #include <occ_sys_config.h>
 #include <pgpe_shared.h>
 #include <sensor.h>
+#include <amec_sensors_centaur.h>
 
 //*************************************************************************/
 // Externs
@@ -301,6 +302,7 @@ void manage_mem_deadman_task(void)
     // There is no way to synchronously start or stop the counter, so must
     // take the difference between two readings.
     static perf_mon_count0_t L_last_reading[NUM_NIMBUS_MCAS] = {{0}};
+    static bool L_read_once[NUM_NIMBUS_MCAS] = {0};
     uint32_t l_rd_wr_diff = 0;
 
     uint32_t       gpe_rc = G_gpe_reset_mem_deadman_args.error.rc;  // IPC task rc
@@ -352,18 +354,21 @@ void manage_mem_deadman_task(void)
                 //Reset the timeout.
                 L_scom_timeout[mca] = 0;
 
-                // Update read/write sensors
-                l_rd_wr_diff = G_gpe_reset_mem_deadman_args.rd_wr_counts.mba_read_cnt
-                     - L_last_reading[mca].mba_read_cnt;
+                // Update read sensors
+                l_rd_wr_diff = G_gpe_reset_mem_deadman_args.rd_wr_counts.mba_read_cnt;
+                l_rd_wr_diff = amec_diff_adjust_for_overflow(l_rd_wr_diff, L_last_reading[mca].mba_read_cnt);
                 l_rd_wr_diff = ((l_rd_wr_diff*25)/1000);
-                sensor_update(AMECSENSOR_ARRAY_PTR(MRDM0,mca), l_rd_wr_diff);
+                if(L_read_once[mca]) sensor_update(AMECSENSOR_ARRAY_PTR(MRDM0,mca), l_rd_wr_diff);
 
-                l_rd_wr_diff = G_gpe_reset_mem_deadman_args.rd_wr_counts.mba_write_cnt
-                     - L_last_reading[mca].mba_write_cnt;
+                // Update write sensors
+                l_rd_wr_diff = G_gpe_reset_mem_deadman_args.rd_wr_counts.mba_write_cnt;
+                l_rd_wr_diff = amec_diff_adjust_for_overflow(l_rd_wr_diff, L_last_reading[mca].mba_write_cnt);
                 l_rd_wr_diff = ((l_rd_wr_diff*25)/1000);
-                sensor_update(AMECSENSOR_ARRAY_PTR(MWRM0,mca), l_rd_wr_diff);
+                if(L_read_once[mca]) sensor_update(AMECSENSOR_ARRAY_PTR(MWRM0,mca), l_rd_wr_diff);
+
                 // Update last read/write measurement
                 L_last_reading[mca] = G_gpe_reset_mem_deadman_args.rd_wr_counts;
+                L_read_once[mca] = TRUE;
             }
         }
 

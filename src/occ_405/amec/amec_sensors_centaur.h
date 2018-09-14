@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -31,6 +31,7 @@
 //*************************************************************************
 void amec_update_centaur_sensors(uint8_t i_centaur);
 void amec_update_centaur_temp_sensors(void);
+uint32_t amec_diff_adjust_for_overflow(uint32_t i_new_value, uint32_t i_old_value);
 
 #endif
 

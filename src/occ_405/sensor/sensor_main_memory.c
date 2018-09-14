@@ -956,9 +956,18 @@ void mm_sensors_init_names_entry(const main_mem_sensor_t * i_mm_sensor,
     // Set entry struct field values
     memcpy(o_entry->name,  l_sensor_info->name,         MAX_SENSOR_NAME_SZ);
     memcpy(o_entry->units, l_sensor_info->sensor.units, MAX_SENSOR_UNIT_SZ);
+    if( (MEM_TYPE_NIMBUS == G_sysConfigData.mem_type) &&
+        ( ((l_gsid >= MRDM0) && (l_gsid <= MRDM7)) ||
+          ((l_gsid >= MWRM0) && (l_gsid <= MWRM7)) ) )
+    {
+        o_entry->scale_factor         = AMEFP(64, -5);
+    }
+    else
+    {
+        o_entry->scale_factor         = l_sensor_info->sensor.scalefactor;
+    }
     o_entry->gsid                     = l_gsid;
     o_entry->freq                     = l_sensor_info->sensor.freq;
-    o_entry->scale_factor             = l_sensor_info->sensor.scalefactor;
     o_entry->type                     = l_sensor_info->sensor.type;
     o_entry->location                 = l_sensor_info->sensor.location;
     o_entry->sensor_structure_version = i_mm_sensor->struct_ver;
