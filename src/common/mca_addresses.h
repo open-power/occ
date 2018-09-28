@@ -44,11 +44,14 @@
 #define STR_REG0_OFFSET                 0x0135
 #define STR_REG0_ADDRESS                (DIMM_MCA_BASE_ADDRESS + STR_REG0_OFFSET)
 
-#define PERF_MON_COUNTS0_OFFSET          0x0137
-#define PERF_MON_COUNTS0_ADDRESS         (DIMM_MCA_BASE_ADDRESS + PERF_MON_COUNTS0_OFFSET)
+#define PERF_MON_COUNTS0_OFFSET         0x0137
+#define PERF_MON_COUNTS0_ADDRESS        (DIMM_MCA_BASE_ADDRESS + PERF_MON_COUNTS0_OFFSET)
 
 #define N_M_TCR_OFFSET                  0x0116
 #define N_M_TCR_ADDRESS                 (DIMM_MCA_BASE_ADDRESS + N_M_TCR_OFFSET)
+
+#define DDR_IF_SCOM_CTRL_OFFSET         0x0118
+#define DDR_IF_SCOM_CTRL_ADDRESS        (DIMM_MCA_BASE_ADDRESS + DDR_IF_SCOM_CTRL_OFFSET)
 
 #define PERF_MON_COUNTS_IDLE_OFFSET     0x013C
 #define PERF_MON_COUNTS_IDLE_ADDRESS    (DIMM_MCA_BASE_ADDRESS + PERF_MON_COUNTS_IDLE_OFFSET)
@@ -63,22 +66,22 @@
 
 // Memory Power Control
 
-//Power Control Register 0 and STR Register 0 there are 4 each (1 per MCU port)
+//Power Control Register 0:     MC#.PORT#.SRQ.PC.MBARPC0Q
+//STR Register 0:               MC#.PORT#.SRQ.PC.MBASTR0Q
+//DDR Interface SCOM Control:   MC#.PORT#.SRQ.MBA_FARB5Q
+//there are 4 each (1 per MCU port)
 //OCC knows present MCU ports from the memory throttle config packet
 
-//Power control reg 0:  MCP.PORT#.SRQ.PC.MBARPC0Q
-//STR reg 0:            MCP.PORT#.SRQ.PC.MBASTR0Q
-
-/*                                 PWR_CTRL/STR REG   Power Ctl reg 0     STR reg 0
-MC/Port Address MCA Port Address    Control Addr       SCOM Address     SCOM Address
-mc01.port0        0x07010800        + 0x00000134/5     = 0x07010934     = 0x07010935
-mc01.port1        0x07010840        + 0x00000134/5     = 0x07010974     = 0x07010975
-mc01.port2        0x07010880        + 0x00000134/5     = 0x070109B4     = 0x070109B5
-mc01.port3        0x070108C0        + 0x00000134/5     = 0x070109F4     = 0x070109F5
-mc23.port0        0x08010800        + 0x00000134/5     = 0x08010934     = 0x08010935
-mc23.port1        0x08010840        + 0x00000134/5     = 0x08010974     = 0x08010975
-mc23.port2        0x08010880        + 0x00000134/5     = 0x080109B4     = 0x080109B5
-mc23.port3        0x080108C0        + 0x00000134/5     = 0x080109F4     = 0x080109F5
+/*                                  PC / STR / SCtl   Power Ctl reg 0     STR reg 0    DDR IF SCOM CTRL
+MC/Port Address MCA Port Address    Control Addr       SCOM Address     SCOM Address     SCOM Address
+mc01.port0        0x07010800        + 0x134/135/118    = 0x07010934     = 0x07010935     = 0x07010918
+mc01.port1        0x07010840        + 0x134/135/118    = 0x07010974     = 0x07010975     = 0x07010958
+mc01.port2        0x07010880        + 0x134/135/118    = 0x070109B4     = 0x070109B5     = 0x07010998
+mc01.port3        0x070108C0        + 0x134/135/118    = 0x070109F4     = 0x070109F5     = 0x070109d8
+mc23.port0        0x08010800        + 0x134/135/118    = 0x08010934     = 0x08010935     = 0x08010918
+mc23.port1        0x08010840        + 0x134/135/118    = 0x08010974     = 0x08010975     = 0x08010958
+mc23.port2        0x08010880        + 0x134/135/118    = 0x080109B4     = 0x080109B5     = 0x08010998
+mc23.port3        0x080108C0        + 0x134/135/118    = 0x080109F4     = 0x080109F5     = 0x080109d8
  */
 
 #define POWER_CTRL_REG0(mc,port) (POWER_CTRL_REG0_ADDRESS + MC_PORT_SPACE(mc,port))
@@ -86,6 +89,7 @@ mc23.port3        0x080108C0        + 0x00000134/5     = 0x080109F4     = 0x0801
 #define STR_REG0(mc,port) (STR_REG0_ADDRESS + MC_PORT_SPACE(mc,port))
 #define STR_REG0_MCA(mca) (STR_REG0_ADDRESS + MC_PORT_SPACE((mca>>2),(mca&3)))
 
+#define DDR_IF_SCOM_CTRL(mc,port) (DDR_IF_SCOM_CTRL_ADDRESS + MC_PORT_SPACE(mc,port))
 
 // DIMM Control
 /*
