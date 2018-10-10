@@ -70,6 +70,9 @@ typedef uint32_t errorHndl_t;
 #define be64toh(x) (x)
 #define htobe64(x) (x)
 
+#if defined(KILOBYTE)
+#undef KILOBYTE
+#endif
 #define KILOBYTE  (1024ul)              /**< 1 KB */
 #define MEGABYTE  (1024 * 1024ul)       /**< 1 MB */
 #define GIGABYTE  (MEGABYTE * 1024ul)   /**< 1 GB */

@@ -100,6 +100,7 @@ occ_CFILES += firdata/lpc.c
 occ_CFILES += firdata/native.c
 occ_CFILES += firdata/nor_micron.c
 occ_CFILES += firdata/pnor_util.c
+occ_CFILES += firdata/pnor_ipmi.c
 occ_CFILES += firdata/scom_trgt.c
 occ_CFILES += firdata/scom_util.c
 occ_CFILES += firdata/sfc_ast2400.c

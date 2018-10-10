@@ -30,6 +30,10 @@
 #include <ecc.h>
 #include <pnor_util.h>
 #include <norflash.h>
+#include <pnor_ipmi.h>
+
+#define USE_IPMI 1
+#define USE_SFC 2
 
 /*================================================================= */
 /* The offset of the next byte to write */
@@ -46,7 +50,7 @@ size_t g_write_cache_index = 0;
 /**
  * @brief Write 8 bytes of data into PNOR starting
  */
-int32_t pnor_write_8B( uint64_t i_data )
+int32_t pnor_write_8B( uint64_t i_data, hioPnorInfo_t * i_hioInfo )
 {
     int32_t rc = SUCCESS;
 
@@ -74,13 +78,25 @@ int32_t pnor_write_8B( uint64_t i_data )
     memcpy( &(g_write_cache[g_write_cache_index]), data9, cpsz );
     g_write_cache_index += cpsz;
 
-    /* Write a complete chunk into the flash */    
+    /* Write a complete chunk into the flash */
     if( g_write_cache_index == PAGE_PROGRAM_BYTES )
     {
-        errorHndl_t tmp = writeFlash( &g_sfc,
-                                      g_next_byte,
-                                      PAGE_PROGRAM_BYTES,
-                                      g_write_cache );
+        errorHndl_t tmp = NO_ERROR;
+        if(i_hioInfo->iv_useIPMI == true)
+        {
+            tmp = ipmiWriteFlash( i_hioInfo,
+                                  g_next_byte,
+                                  PAGE_PROGRAM_BYTES,
+                                  g_write_cache
+                                );
+        }
+        else
+        {
+            tmp = writeFlash( &g_sfc,
+                              g_next_byte,
+                              PAGE_PROGRAM_BYTES,
+                              g_write_cache );
+        }
         if ( NO_ERROR != tmp )
         {
             TRACFCOMP("pnor_write_8B> writeFlash failed");
@@ -109,7 +125,8 @@ int32_t pnor_write_8B( uint64_t i_data )
  * @brief Perform any necessary operations to prepare
  *        the PNOR hw/code for writing
  */
-errorHndl_t pnor_prep( HOMER_PnorInfo_t* i_pnorInfo )
+errorHndl_t pnor_prep( HOMER_PnorInfo_t* i_pnorInfo,
+                       hioPnorInfo_t * hioPnorInfo)
 {
     errorHndl_t l_err = NO_ERROR;
 
@@ -117,31 +134,32 @@ errorHndl_t pnor_prep( HOMER_PnorInfo_t* i_pnorInfo )
     g_sfc.iv_flashWorkarounds = i_pnorInfo->norWorkarounds;
 
     /* Figure out where to start */
-    TRACFCOMP("FIRDATA is at %.8X..%.8X", i_pnorInfo->pnorOffset, i_pnorInfo->pnorOffset+i_pnorInfo->pnorSize );
+    TRACFCOMP("FIRDATA is at %.8X..%.8X",
+              i_pnorInfo->pnorOffset,
+              i_pnorInfo->pnorOffset+i_pnorInfo->pnorSize );
+
     g_next_byte = i_pnorInfo->pnorOffset;
     g_pnor_size = i_pnorInfo->pnorSize;
     memset( g_write_cache, 0xFF, PAGE_PROGRAM_BYTES );
 
-    /* Can we rely on skiboot leaving things in a good state? */
-    l_err = hwInit(&g_sfc);
-    if( l_err )
-    {
-        TRACFCOMP("hwInit failed");
-        /* hit an error, stop any writes from happening */
-        g_next_byte = 0xFFFFFFFF;
-        g_pnor_size = 0;
-    }
+    // First try IPMI interface.  If it does not work then fall back to SFC.
+    l_err = getInfo(hioPnorInfo);
 
-    /* Future Improvement
-       Enable write mode once at the beginning to avoid extra
-       reg operations turning it on and off 
-    l_err = enableWriteMode(g_sfc);
-    if( l_err )
+    if (hioPnorInfo->iv_useIPMI == false)
     {
-        g_next_byte = 0xFFFFFFFF;
-        g_pnor_size = 0;
+        TRACFCOMP("IPMI interface not available rc = %d. Using SFC",
+                  l_err);
+
+        /* Can we rely on skiboot leaving things in a good state? */
+        l_err = hwInit(&g_sfc);
+        if( l_err )
+        {
+            TRACFCOMP("hwInit failed");
+            /* hit an error, stop any writes from happening */
+            g_next_byte = 0xFFFFFFFF;
+            g_pnor_size = 0;
+        }
     }
-    */
 
     return l_err;
 }
@@ -152,12 +170,14 @@ int32_t PNOR_writeFirData( HOMER_PnorInfo_t i_pnorInfo,
                            uint8_t * i_buf, uint32_t i_bufSize )
 {
     int32_t rc = SUCCESS;
+    hioPnorInfo_t hioInfo;
+
     TRACFCOMP(">>PNOR_writeFirData");
 
     do
     {
         /* Initialize the PNOR data. */
-        errorHndl_t l_err = pnor_prep( &i_pnorInfo );
+        errorHndl_t l_err = pnor_prep( &i_pnorInfo, &hioInfo );
         if( l_err )
         {
             TRACFCOMP("pnor_prep failed");
@@ -167,17 +187,20 @@ int32_t PNOR_writeFirData( HOMER_PnorInfo_t i_pnorInfo,
 
         uint32_t idx = 0;
 
-        /* Erase the section. */
-        for( idx = i_pnorInfo.pnorOffset;
-             idx < (i_pnorInfo.pnorOffset+i_pnorInfo.pnorSize);
-             idx += 4096 )
+        if(hioInfo.iv_useIPMI == false)
         {
-            l_err = eraseFlash(&g_sfc,idx);
-            if( l_err )
+            /* Erase the section. */
+            for( idx = i_pnorInfo.pnorOffset;
+                 idx < (i_pnorInfo.pnorOffset+i_pnorInfo.pnorSize);
+                 idx += 4096 )
             {
-                TRACFCOMP("eraseFlash failed");
-                rc = FAIL;
-                break; /*nothing more to do here*/
+                l_err = eraseFlash(&g_sfc,idx);
+                if( l_err )
+                {
+                    TRACFCOMP("eraseFlash failed");
+                    rc = FAIL;
+                    break; /*nothing more to do here*/
+                }
             }
         }
 
@@ -189,7 +212,7 @@ int32_t PNOR_writeFirData( HOMER_PnorInfo_t i_pnorInfo,
         {
             memcpy( &dataChunk, &i_buf[idx], sz_dataChunk );
 
-            rc = pnor_write_8B( dataChunk );
+            rc = pnor_write_8B( dataChunk, &hioInfo );
             if ( SUCCESS != rc )
             {
                 TRACFCOMP( "pnor_write_8B() failed during FIR write" );
@@ -206,7 +229,7 @@ int32_t PNOR_writeFirData( HOMER_PnorInfo_t i_pnorInfo,
             dataChunk = 0;
             memcpy( &dataChunk, &i_buf[idx], extraBytes );
 
-            rc = pnor_write_8B( dataChunk );
+            rc = pnor_write_8B( dataChunk, &hioInfo );
             if ( SUCCESS != rc )
             {
                 TRACFCOMP( "pnor_write_8B() failed during blank fill" );
@@ -220,7 +243,7 @@ int32_t PNOR_writeFirData( HOMER_PnorInfo_t i_pnorInfo,
               idx += sz_dataChunk )
         {
             dataChunk = 0xFFFFFFFFFFFFFFFFull;
-            rc = pnor_write_8B( dataChunk );
+            rc = pnor_write_8B( dataChunk, &hioInfo );
             if ( SUCCESS != rc )
             {
                 TRACFCOMP( "pnor_write_8B() failed during ECC fill" );

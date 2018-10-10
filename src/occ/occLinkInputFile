@@ -45,6 +45,7 @@ INPUT ( amec_init.o
         native.o
         nor_micron.o
         pnor_util.o
+        pnor_ipmi.o
         scom_trgt.o
         scom_util.o
         sfc_ast2400.o
