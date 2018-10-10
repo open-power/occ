@@ -171,4 +171,8 @@ mc23.port3        0x080108C0        + 0x00000100        = 0x080109C0
 //  NIMBUS MCA Calibration FIR SCOM Register Addresses macro
 #define MCA_CAL_FIR_REG_MCA(mca) (MCA_CAL_FIR_ADDRESS + MC_PORT_SPACE((mca>>2),(mca&3)))
 
+// MCBIST Control Register:      MC#.MCBIST.MBA_SCOMFIR.MCB_CNTLQ
+#define MCBIST_BASE_ADDRESS      0x070123DB
+#define MCBIST_CTRL_REG(mc)      (MCBIST_BASE_ADDRESS + (MCA_MCPAIR_SPACE * (mc)))
+
 #endif // _MCA_ADDRESSES_H

@@ -100,6 +100,7 @@ void gpe_scom_nvdimms_nimbus(ipc_msg_t* cmd, void* arg)
     int rc = 0;
     int mc = 0;
     int port = 0;
+    uint64_t regValue = 0;
     uint64_t mbarpc_regValue = 0;
     uint64_t mbastr_regValue = 0;
     ipc_async_cmd_t *async_cmd = (ipc_async_cmd_t*)cmd;
@@ -115,6 +116,30 @@ void gpe_scom_nvdimms_nimbus(ipc_msg_t* cmd, void* arg)
     uint16_t mask = 0x8000;
     for (mc = 0; mc < NUM_MBAS_NIMBUS; mc++)
     {
+        const uint32_t reg_MCBIST = MCBIST_CTRL_REG(mc);
+        rc = getscom_abs(reg_MCBIST, &regValue);
+        if (rc)
+        {
+            PK_TRACE("E>gpe_scom_nvdimms_nimbus: Failed to read (MCBIST) Reg:0x%08X, rc:0x%08x",
+                     reg_MCBIST, rc);
+        }
+        else
+        {
+            // Step 1 - In MCBIST_CTRL_REG, stop mcbist
+            //          (must be done first)
+            //
+            //          bit  1   - MCB_STOP
+            regValue |= 0x4000000000000000; // stop mcbist (set bit 1)
+            rc = putscom_abs(reg_MCBIST, regValue);
+            if (rc)
+            {
+                PK_TRACE("E>gpe_scom_nvdimms_nimbus: Failed to stop mcbist (MCBIST)"
+                         " Reg:0x%08X, Data:0x%08X %08X, rc:0x%08x",
+                         reg_MCBIST, WORD_HIGH(regValue), WORD_LOW(regValue), rc);
+                gpe_set_ffdc(&(args->error), reg_MCBIST, GPE_RC_SCOM_PUT_FAILED, rc);
+            }
+        }
+
         for (port = 0; port < NUM_PORTS_PER_MBA; port++)
         {
             if (args->configured_mbas & mask)
@@ -130,10 +155,10 @@ void gpe_scom_nvdimms_nimbus(ipc_msg_t* cmd, void* arg)
                 }
                 else
                 {
-                    // Step 1 - In MBARPC0Q, disable power domain control
-                    //          (must be done first, before domains are set)
+                    // Step 2 - In MBARPC0Q, disable power domain control
+                    //          (must be done before domains are set)
                     //
-                    //          bit  2   - power domain control,
+                    //          bit  2   - power domain control
                     mbarpc_regValue &= 0xDFFFFFFFFFFFFFFF; // disable power control (clear bit 2)
                     rc = putscom_abs(reg_MBARPC0Q, mbarpc_regValue);
                     if (rc)
@@ -145,13 +170,14 @@ void gpe_scom_nvdimms_nimbus(ipc_msg_t* cmd, void* arg)
                                      GPE_RC_SCOM_PUT_FAILED, rc);
                     }
 
-                    // Step 2 - In MBARPC0Q, set domain to MAXALL_MINALL(0b000),
-                    //          and enable minimum domain reduction
+                    // Step 3 - In MBARPC0Q, set domain to MAXALL_MIN0(0b010),
+                    //          disable minimum domain reduction and set power down delay to 0
                     //
-                    //          bits 3:5 - min/max domains
-                    //          bit  22  - domain reduction
-                    mbarpc_regValue &= 0xE3FFFFFFFFFFFFFF; // zero out bits 3-5
-                    mbarpc_regValue |= 0x0000020000000000; // set bit 22
+                    //          bits 3:5   - min/max domains
+                    //          bit  22    - min domain reduction enable
+                    //          bit  23:32 - min domain reduction time
+                    mbarpc_regValue &= 0xEBFFFC007FFFFFFF; // MAXALL_MIN0 & delay (clear bits 3,5,22-32)
+                    mbarpc_regValue |= 0x0800000000000000; // MAXALL_MIN0 (set bit 4)
                     rc = putscom_abs(reg_MBARPC0Q, mbarpc_regValue);
                     if (rc)
                     {
@@ -162,9 +188,10 @@ void gpe_scom_nvdimms_nimbus(ipc_msg_t* cmd, void* arg)
                                      GPE_RC_SCOM_PUT_FAILED, rc);
                     }
 
-                    // Step 3 - In MBASTR0Q, enable STR entry
+                    // Step 4 - In MBASTR0Q, enable STR entry and set entry delay to 0
                     //
-                    //          bit  0   - STR enable
+                    //          bit  0    - STR enable
+                    //          bit  2:11 - STR entry time
                     const uint32_t reg_MBASTR0Q = STR_REG0(mc,port);
                     rc = getscom_abs(reg_MBASTR0Q, &mbastr_regValue);
                     if (rc)
@@ -174,6 +201,7 @@ void gpe_scom_nvdimms_nimbus(ipc_msg_t* cmd, void* arg)
                     }
                     else
                     {
+                        mbastr_regValue &= 0xC00FFFFFFFFFFFFF; // set entry time to 0 (clear bits 2-11)
                         mbastr_regValue |= 0x8000000000000000; // enable STR (set bit 0)
                         rc = putscom_abs(reg_MBASTR0Q, mbastr_regValue);
                         if (rc)
@@ -186,7 +214,7 @@ void gpe_scom_nvdimms_nimbus(ipc_msg_t* cmd, void* arg)
                         }
                     }
 
-                    // Step 4 - In MBARPC0Q, re-enable power domain control
+                    // Step 5 - In MBARPC0Q, re-enable power domain control
                     //
                     //          bit  2   - power domain control
                     mbarpc_regValue |= 0x2000000000000000; // enable power control (set bit 2)
@@ -218,10 +246,9 @@ void gpe_scom_nvdimms_nimbus(ipc_msg_t* cmd, void* arg)
         {
             if (args->configured_mbas & mask)
             {
-                // Step 5 - In FARB5Q (DDR Interface SCOM Control), assert ddr_resetn
+                // Step 6 - In FARB5Q (DDR Interface SCOM Control), assert ddr_resetn
                 //
                 //          bit  4   - assert ddr_resetn
-                uint64_t regValue = 0;
                 const uint32_t reg_FARB5Q = DDR_IF_SCOM_CTRL(mc,port);
                 rc = getscom_abs(reg_FARB5Q, &regValue);
                 if (rc)

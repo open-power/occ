@@ -712,7 +712,11 @@ void disable_all_dimms()
         TRAC_INFO("disable_all_dimms: DIMM temp collection is being stopped");
         G_mem_monitoring_allowed = false;
     }
-    occ_i2c_lock_release(G_dimm_sm_args.i2cEngine);
+
+    if (MEM_TYPE_NIMBUS == G_sysConfigData.mem_type)
+    {
+        occ_i2c_lock_release(G_dimm_sm_args.i2cEngine);
+    }
 }
 
 // Function Specification
@@ -749,7 +753,7 @@ void task_dimm_sm(struct task *i_self)
 #ifdef DEBUG_LOCK_TESTING
         SIMULATE_HOST();
 #endif
-        if (MEM_TYPE_NIMBUS ==  G_sysConfigData.mem_type)
+        if (MEM_TYPE_NIMBUS == G_sysConfigData.mem_type)
         {
 
             // First handle any outstanding I2C reset

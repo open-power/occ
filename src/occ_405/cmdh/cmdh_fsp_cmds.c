@@ -1023,7 +1023,7 @@ errlHndl_t cmdh_clear_elog (const   cmdh_fsp_cmd_t * i_cmd_ptr,
           l_elog_id = l_cmd_ptr->elog_id;
           // version 0 only supported elogs from the 405
           l_elog_source = ERRL_SOURCE_405;
-       } 
+       }
        else if( (l_data_length == CLEAR_ELOG_V1_CMD_LEN) &&
                 (l_cmd_version_ptr->version == 1) )
        {
