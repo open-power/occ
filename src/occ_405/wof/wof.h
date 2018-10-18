@@ -379,6 +379,7 @@ typedef struct __attribute__ ((packed))
     uint8_t quad5CoresCachesOnT[CORE_IDDQ_MEASUREMENTS];
     uint8_t quad6CoresCachesOnT[CORE_IDDQ_MEASUREMENTS];
     uint8_t avgtemp_vdn[CORE_IDDQ_MEASUREMENTS];
+    uint32_t full_leakage_08v_mA;
     uint64_t pgpe_wof_values_dw0;
     uint64_t pgpe_wof_values_dw1;
     uint64_t pgpe_wof_values_dw2;
@@ -450,6 +451,8 @@ inline int32_t interpolate_linear( int32_t i_X,
                                    int32_t i_x2,
                                    int32_t i_y1,
                                    int32_t i_y2 );
+
+void calculate_temperature_scaling_08V( void );
 
 uint32_t calculate_multiplier( int32_t i_temp );
 

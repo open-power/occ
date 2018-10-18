@@ -86,28 +86,72 @@ uint16_t G_iddq_voltages[CORE_IDDQ_MEASUREMENTS] =
     11000
 };
 
-// Approximate y = 1.3^((T-tvpd_leak)/10)
-// Interpolate (T-tvpd_leak) in the table below to find m.
+// Approximate y = full_leakage_08V^(-((T-tvpd_leak)/257.731))*1.45^((T-tvpd_leak)/10)
+// full_leakage_08V is not data we have, it is a ALL core,cache,quad ON leakage measure they do at MFT.
+// We can estimate by using the IQ data at 0.8v * 24/#sort cores
+
+// Interpolate (T-tvpd_leak) for full leakage 0.8V in the table below to find m.
 // y ~= (T*m) >> 10     (shift out 10 bits)
 // Error in estimation is no more than 0.9%
 // The first column represents the result of T-tvpd_leak where T is the
-// associated temperature sensor. The second column represents the associated
-// m(slope) when the delta temp the first value.
-int16_t G_wof_iddq_mult_table[][2] = {
-    //Delta Temperature in C, m
-    {-50, 276},
-    {-40, 359},
-    {-30, 466},
-    {-20, 606},
-    {-10, 788},
-    {0,   1024},
-    {10,  1331},
-    {20,  1731},
-    {30,  2250},
-    {40,  2925},
-    {50,  3802}
+// associated temperature sensor.
+// The second column represents the associated m(slope) with the delta temp (first column)
+#define NUM_FULL_LEAKAGE_08V 10
+#define WOF_IDDQ_MULT_TABLE_N 21
+uint32_t G_wof_mft_full_leakage_08V[WOF_IDDQ_MULT_TABLE_N + 1][NUM_FULL_LEAKAGE_08V] = {
+    // First row is header of voltage values in mA remaining rows are m values
+    // for the full leakage @0.8V for each temperature in first column of G_wof_iddq_mult_table
+    // this table is used for one time interpolation to create the final m values in
+    // G_wof_iddq_mult_table (the temperatures are not repeated in this table)
+    {20000, 30000, 40000, 50000, 60000, 70000, 80000, 90000, 100000, 110000}, // header in mA
+    {  171,   191,   207,   220,   231,   241,   250,   258,    265,    272}, // -70 temp delta
+    {  195,   216,   232,   245,   257,   267,   276,   285,    292,    299}, // -65 temp delta
+    {  221,   243,   260,   274,   286,   296,   306,   314,    322,    329}, // -60 temp delta
+    {  251,   274,   292,   306,   318,   328,   338,   347,    354,    362}, // -55 temp delta
+    {  286,   309,   327,   341,   354,   364,   374,   382,    390,    398}, // -50 temp delta
+    {  325,   348,   366,   381,   393,   404,   413,   422,    430,    437}, // -45 temp delta
+    {  369,   393,   411,   425,   437,   448,   457,   466,    473,    480}, // -40 temp delta
+    {  419,   443,   460,   474,   486,   497,   506,   514,    521,    528}, // -35 temp delta
+    {  476,   499,   516,   530,   541,   551,   559,   567,    574,    581}, // -30 temp delta
+    {  541,   563,   578,   591,   602,   611,   619,   626,    632,    638}, // -25 temp delta
+    {  615,   634,   648,   660,   669,   677,   684,   691,    696,    701}, // -20 temp delta
+    {  698,   715,   727,   736,   744,   751,   757,   762,    767,    771}, // -15 temp delta
+    {  793,   806,   815,   822,   828,   833,   837,   841,    844,    847}, // -10 temp delta
+    {  901,   908,   913,   917,   921,   923,   926,   928,    930,    932}, // -5 temp delta
+    { 1024,  1024,  1024,  1024,  1024,  1024,  1024,  1024,   1024,   1024}, //  0 temp delta
+    { 1163,  1154,  1148,  1143,  1139,  1136,  1133,  1130,   1128,   1126}, //  5 temp delta
+    { 1322,  1301,  1287,  1276,  1267,  1259,  1253,  1247,   1242,   1237}, //  10 temp delta
+    { 1502,  1467,  1442,  1424,  1409,  1396,  1385,  1376,   1368,   1360}, //  15 temp delta
+    { 1706,  1654,  1617,  1589,  1567,  1548,  1532,  1518,   1506,   1495}, //  20 temp delta
+    { 1939,  1864,  1813,  1774,  1743,  1717,  1695,  1676,   1659,   1643}, //  25 temp delta
+    { 2203,  2101,  2032,  1980,  1938,  1904,  1874,  1849,   1826,   1806}  //  30 temp delta
 };
-#define WOF_IDDQ_MULT_TABLE_N 11
+
+// P9':  The 2nd column (m values) are just initial values and will be updated based on
+// full leakage @0.8V (a one time calculation).  P9 will keep the same values.
+int16_t G_wof_iddq_mult_table[WOF_IDDQ_MULT_TABLE_N][2] = {
+    {-70, 163},
+    {-65, 186},
+    {-60, 212},
+    {-55, 242},
+    {-50, 276},
+    {-45, 314},
+    {-40, 359},
+    {-35, 409},
+    {-30, 466},
+    {-25, 531},
+    {-20, 606},
+    {-15, 691},
+    {-10, 788},
+    {-5,  898},
+    {0,   1024},
+    {5,   1168},
+    {10,  1331},
+    {15,  1518},
+    {20,  1731},
+    {25,  1973},
+    {30,  2250}
+};
 
 //******************************************************************************
 // Function Definitions
@@ -1413,6 +1457,63 @@ inline int32_t interpolate_linear( int32_t i_X,
     return ( ((i_X - i_x1)*(i_y2 - i_y1)) / (i_x2 - i_x1) ) + i_y1;
 }
 
+
+/**
+ * calculate_temperature_scaling_08V
+ *
+ * Description: This function calculates the full leakage @0.8V and does interpolation
+ *               to determine the m for G_wof_iddq_mult_table
+ *               This is a one time calculation.
+ */
+void calculate_temperature_scaling_08V( void )
+{
+    int leakage_idx;
+    int i;
+
+    // estimate full leakage@0.8V by using IQ data all core, cache ON @0.8V * 24/#sort cores
+    // 0.8V is the 3rd entry in the IQ data in 5mA unit *5 to convert to mA
+    g_wof->full_leakage_08v_mA = (g_wof->allGoodCoresCachesOn[2] * 5) * 24 / g_wof->good_normal_cores_per_sort;
+
+    // First row of G_wof_mft_full_leakage_08V has the leakage values in mA find the index
+    if( g_wof->full_leakage_08v_mA < G_wof_mft_full_leakage_08V[0][0] )
+    {
+        leakage_idx = 0;
+    }
+    else if( g_wof->full_leakage_08v_mA >= G_wof_mft_full_leakage_08V[0][NUM_FULL_LEAKAGE_08V-1] )
+    {
+        leakage_idx = NUM_FULL_LEAKAGE_08V-2;
+    }
+    else
+    {
+        for(leakage_idx = 0 ; leakage_idx < NUM_FULL_LEAKAGE_08V-1; leakage_idx++)
+        {
+            if( (g_wof->full_leakage_08v_mA >= G_wof_mft_full_leakage_08V[0][leakage_idx]) &&
+                (g_wof->full_leakage_08v_mA <= G_wof_mft_full_leakage_08V[0][leakage_idx+1]) )
+            {
+                break;
+            }
+        }
+    }
+    // Interpolate the m values in G_wof_mft_full_leakage_08V and write to G_wof_iddq_mult_table
+    for(i=0; i < WOF_IDDQ_MULT_TABLE_N; i++)
+    {
+        G_wof_iddq_mult_table[i][1] = interpolate_linear( g_wof->full_leakage_08v_mA,
+                                                          G_wof_mft_full_leakage_08V[0][leakage_idx],
+                                                          G_wof_mft_full_leakage_08V[0][leakage_idx+1],
+                                                          G_wof_mft_full_leakage_08V[i+1][leakage_idx],
+                                                          G_wof_mft_full_leakage_08V[i+1][leakage_idx+1]);
+        // only trace first and last entries of table
+        if( (i == 0) ||
+            (i == (WOF_IDDQ_MULT_TABLE_N - 1) ) )
+        {
+           TRAC_IMP("calculate_temperature_scaling_08V: G_wof_iddq_mult_table[%d] = %d , %d ",
+                     i,
+                     G_wof_iddq_mult_table[i][0],
+                     G_wof_iddq_mult_table[i][1]);
+        }
+    }
+}
+
 /**
  * calculate_multiplier
  *
@@ -1422,14 +1523,15 @@ inline int32_t interpolate_linear( int32_t i_X,
  * the values of the 'm' column in order to find the appropriate multiplier
  *
  * Param: the delta temp between tvpd_leak and a temperature sensor. Used
- *        to find the appropriate row index into G_wof_iddq_mult_table.
+ *        to find the appropriate row/column index into G_wof_iddq_mult_table.
  *
  * Return: The multiplier representing the temperature factor
  */
 uint32_t calculate_multiplier( int32_t i_temp )
 {
-    int mult_idx;
+    int mult_idx;  // row index (temperature delta) into G_wof_iddq_mult_table[][]
 
+    // find the row based on the delta temperature (i_temp)
     if( i_temp < G_wof_iddq_mult_table[0][0] )
     {
         mult_idx = 0;
@@ -2061,8 +2163,7 @@ int get_voltage_index( uint32_t i_voltage )
 /**
  * scale
  *
- * Description: Performs i_current*IDDQ_TEMP_FACTOR^(i_delta_temp)/10
- *              where IDDQ_TEMP_FACTOR == 1.3
+ * Description: Performs i_current*full_leakage_08V^(-((T-tvpd_leak)/257.731))*1.45^((T-tvpd_leak)/10)
  *              Note: The calculation is performed by doing a lookup
  *              in G_wof_iddq_mult_table based on the passed in delta temp.
  *
@@ -2110,8 +2211,7 @@ uint32_t scale_and_interpolate( uint16_t * i_leak_arr,
     int16_t upper_delta = i_base_temp - (i_avgtemp_arr[i_idx+1] >> 1);
 
     // Scale the currents based on the delta temperature
-    // Note: leakage arrays are in 0.5mA. Multiply by 5 to convert
-    //       to 10mA
+    // Note: leakage arrays are in 5mA. Multiply by 5 to convert to mA
     uint32_t scaled_lower_leak = scale( i_leak_arr[i_idx],
                                         lower_delta )*5;
     uint32_t scaled_upper_leak = scale( i_leak_arr[i_idx+1],

@@ -440,8 +440,6 @@ void read_wof_header(void)
             MAIN_TRAC_INFO("MAIN: VFRT block size %d", G_wof_header.vfrt_block_size);
              // Make wof header data visible to amester
             g_amec->wof.version              = G_wof_header.version;
-            // TODO: RTC 174543 - Read vfrt blck size from header once correct
-            //                    in SRAM
             g_amec->wof.vfrt_block_size      = 256;
             g_amec->wof.vfrt_blck_hdr_sz     = G_wof_header.vfrt_blck_hdr_sz;
             g_amec->wof.vfrt_data_size       = G_wof_header.vfrt_data_size;
@@ -467,6 +465,12 @@ void read_wof_header(void)
             g_amec->wof.wof_tbls_src_tag     = G_wof_header.wof_tbls_src_tag;
             g_amec->wof.package_name_hi      = G_wof_header.package_name_hi;
             g_amec->wof.package_name_lo      = G_wof_header.package_name_lo;
+
+            // one time calculation needed for WOF temperature scaling starting with P9'
+            if(G_pgpe_shared_sram_V_I_readings)
+            {
+               calculate_temperature_scaling_08V();
+            }
 
             // Initialize wof init state to zero
             g_amec->wof.wof_init_state  = WOF_DISABLED;
