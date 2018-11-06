@@ -48,6 +48,9 @@ occ_cmd_data=""
 action=""
 newFlags=""
 let in_safe=0
+let toolkit=0
+guidList=()
+guidListCount=0
 
 temp_filename="/tmp/${USER}_occtoolp9.tmp";
 
@@ -193,7 +196,7 @@ let number=$number+1
 sequence=$(printf "%02x" $number)
 let seqMismatch=0
 let channel=3
-let non_zero_sensors=1
+let only_non_zero_sensors=1
 let skip_header=0
 let sensor_summary=0
 let use_gpe_string=1
@@ -249,6 +252,8 @@ while [ -n "$(echo $1 | grep '-')" ]; do
             if [[ "$1" =~ "loc=" ]]; then
                 let sensor_loc=${1##*loc=};
             fi
+            # If user specified type/loc then list all sensors
+            let only_non_zero_sensors=0
         elif [[ "$1" =~ "guid=" ]]; then
             action="SensorDump"
             let sensor_guid=${1#*guid=};
@@ -273,7 +278,12 @@ while [ -n "$(echo $1 | grep '-')" ]; do
 
     -SL0 )
         action="SensorList"
-        let non_zero_sensors=0
+        let only_non_zero_sensors=0
+        ;;
+
+    -tk )
+        let toolkit=1
+        let channel=2
         ;;
 
     -trace )
@@ -774,7 +784,7 @@ function parse_rsp_poll
     printf "     Elog Len: 0x%04X\n" $elogLen
     let offset=$offset+2
     echo -en "$normal";
-    hexdump -s $offset -n 1 -e '"     reserved: 0x%02X\n"' ${binfile}
+    hexdump -s $offset -n 1 -e '"  Elog Source: 0x%02X\n"' ${binfile}
     let offset=$offset+1
     hexdump -s $offset -n 1 -e '"   GPU config: 0x%02X\n"' ${binfile}
     let offset=$offset+1
@@ -953,12 +963,12 @@ function parse_rsp_poll
                                     if [ $hist_id -gt 0 ]; then
                                         let hist_count=0x${hist_data:19:2}
                                         get_history_name $hist_id
-                                        history_desc="$history_desc, $hist_id"
+                                        history_desc="$history_desc, ${hist_name}:${hist_count}"
                                         let hist_id=0x${hist_data:21:2}
                                         if [ $hist_id -gt 0 ]; then
                                             let hist_count=0x${hist_data:23:2}
                                             get_history_name $hist_id
-                                            history_desc="$history_desc, $hist_id"
+                                            history_desc="$history_desc, ${hist_name}:${hist_count}"
                                         fi
                                     fi
                                     printf "           $hist_data    $history_desc\n";
@@ -971,6 +981,16 @@ function parse_rsp_poll
                                         printf "           $freq_data    pSstate: %3d / %d MHz\n" $freq_pstate $freq_value;
                                     else
                                         printf "           $freq_data    N/A\n";
+                                    fi
+                                elif [ $sensor_id == "434C4950" ]; then # CLIP
+                                    freq_data=`hexdump -s $offset -n $sensorLength -e ' 4/1 "%_p" "   " 1/1 "%02X" " " 1/1 "%02X" " " 6/1 "%02X""\n"' ${binfile}`
+                                    let freq_pstate=0x${freq_data:13:2}
+                                    comment=""
+                                    if [ $freq_pstate -eq 0 ]; then
+                                        comment=" OCC is NOT clipping the pstate"
+                                        hexdump -s $offset -n $sensorLength -e '"           " 4/1 "%_p" "   " 1/1 "%02X" " " 1/1 "%02X" " " 6/1 "%02X""    OCC is NOT clipping the pstate\n"' ${binfile}
+                                    else
+                                        hexdump -s $offset -n $sensorLength -e '"           " 4/1 "%_p" "   " 1/1 "%02X" " " 1/1 "%02X" " " 6/1 "%02X""\n"' ${binfile}
                                     fi
                                 else
                                     hexdump -s $offset -n $sensorLength -e '"           " 4/1 "%_p" "   " 1/1 "%02X" " " 1/1 "%02X" " " 6/1 "%02X""\n"' ${binfile}
@@ -1131,6 +1151,7 @@ function get_fru_string
     esac
 }
 
+let displayed_header=0
 function parse_rsp_mfg
 {
     # Response Data
@@ -1160,6 +1181,8 @@ function parse_rsp_mfg
             let sample="0x`hexdump -s $offset -n 2 -e '4/1 "%02X"' ${binfile}`"
             #printf "Latest Sample[%2d]: %6d $units (0x%04X)\n" $index $sample $sample
             printf "    [%2d] GUID: 0x%04X / %s  Sample: %6d $units (0x%04X)\n" $index $guid $name $sample $sample
+            let guidList[$guidListCount]=$guid
+            let guidListCount=$guidListCount+1
             let offset=$offset+2
             let last_sensor=$guid
         done
@@ -1236,9 +1259,14 @@ function parse_rsp_mfg
             let sloc="0x`hexdump -s $offset -n 2 -e '4/1 "%02X"' ${binfile}`"
             let offset=$offset+2
             let stype="0x`hexdump -s $offset -n 2 -e '4/1 "%02X"' ${binfile}`"
-            printf "    GUID Sample  Stat      Accum     Min    Max Name             U    UpdFreq ScaleFactr    Loc   Type\n"
-            printf "  0x%04X %6d  0x%02X 0x%08X  %6d %6d %s %s 0x%08X 0x%08X 0x%04X 0x%04X\n" \
-                $guid $sample $sensStatus $acc $sample_min $sample_max $name $units $freq $scale $sloc $stype
+            if [ $displayed_header -eq 0 ]; then
+                printf "    GUID Name             Sample     Min    Max U    Stat   Accum     UpdFreq   ScaleFactr   Loc   Type\n"
+                let displayed_header=1
+            fi
+            if [ $sensStatus -eq 0 ]; then
+                printf "  0x%04X %s %6d  %6d %6d %-4s 0x%02X 0x%08X 0x%08X 0x%08X 0x%04X 0x%04X\n" \
+                    $guid $name $sample $sample_min $sample_max $units $sensStatus $acc $freq $scale $sloc $stype
+            fi
             # ignore any extra bytes
             let offset=$end_of_rsp_data
         fi
@@ -1499,7 +1527,8 @@ function handle_occ_rsp
 
 function process_elog
 {
-    if [ -z $bmc ] && [ -z "$inputfile" ]; then
+    if [ "$interface" == "cronus" ]; then
+    #if [ -z $bmc ] && [ -z "$inputfile" ]; then
         echo ""
         printf "${bold}==> Retrieving elog from POLL (id 0x%02X, addr 0x%08X, len 0x%04X)${normal}\n" $elogId $elogAddr $elogLen;
         if [ $verbose -ne 0 ]; then
@@ -1607,7 +1636,7 @@ function process_elog
             printf "${bold}==> Ignoring elog from POLL (id 0x%02X, addr 0x%08X, len 0x%04X)${normal}\n" $elogId $elogAddr $elogLen;
         fi
     else
-        printf "${red}Note: Unable to read elog data via IPMI, use cronus (id 0x%02X, addr 0x%08X, len 0x%04X)${normal}\n" $elogId $elogAddr $elogLen;
+        printf "\n${red}Note: Unable to read elog sram data via $interface, use cronus (OCC logid 0x%02X, addr 0x%08X, len 0x%04X)${normal}\n" $elogId $elogAddr $elogLen;
     fi
 } # end process_elog()
 
@@ -1619,8 +1648,10 @@ function tmgt_info
     $sudo opal-prd --expert-mode htmgt-passthru 0x01 | sed 's/\s//g' > $temp_filename
     # get status of first cmd in piped cmdline
     let rc=${PIPESTATUS[0]}
-    #01000903 00000000 00000000 00000000
-    #00030101 01000000 00000000 c3000100
+    #echo "020003030000000000002ada00000000" > $temp_filename
+    #echo "000301010100000000000000c3100300" >> $temp_filename
+    #echo "01030000010000000000000003900200" >> $temp_filename
+    #let rc=0
     if [ $verbose -ne 0 ]; then
         echo -n "Raw Data:"
         cat $temp_filename
@@ -1670,9 +1701,13 @@ function tmgt_info
                     fi
                     if [ $safe -ne 0 ]; then
                         let inSafe=1
-                        echo "HTMGT State: $stateText($(printf "0x%02X" $state)), $numOccs OCC (master:OCC$master), resetCount:$count,  (SAFE MODE: rc=0x${safeRc} / OCC$safeInst)"
+                        echo "HTMGT State: $stateText($(printf "0x%02X" $state)), $numOccs OCC (master:OCC$master), resetCount:$count,  (SAFE MODE: rc=0x${safeRc}/OCC$safeInst)"
                     else
-                        echo "HTMGT State: $stateText($(printf "0x%02X" $state)), $numOccs OCC (master:OCC$master), resetCount:$count"
+                        if [ $safeRc == "0000" ]; then
+                            echo "HTMGT State: $stateText($(printf "0x%02X" $state)), $numOccs OCC (master:OCC$master), resetCount:$count"
+                        else
+                            echo "HTMGT State: $stateText($(printf "0x%02X" $state)), $numOccs OCC (master:OCC$master), resetCount:$count (last reset due to rc=0x${safeRc}/OCC$safeInst)"
+                        fi
                     fi
                 else
                     let inst=0x${line:0:2}
@@ -1687,6 +1722,7 @@ function tmgt_info
                     let wof_reset_count=0x${line:22:1}
                     let count=0x${line:23:1}
                     pollRsp=${line:24:8}
+                    let pollRspExtStatus=0x${pollRsp:2:2}
                     type="Slave "
                     if [ $master -eq $inst ]; then
                         type="Master"
@@ -1720,7 +1756,22 @@ function tmgt_info
                     elif [ $needReset -ne 0 ]; then
                         flags="${flags}NEEDSRESET "
                     fi
-                    echo "OCC${inst}: $type $stateText($(printf "0x%02X" $state)) resetCount:$count wofResets:$wof_reset_count $flags pollRsp:0x${pollRsp}..."
+                    if [ $pollRspExtStatus -eq 0 ]; then
+                        echo "OCC${inst}: $type $stateText($(printf "0x%02X" $state)) resetCount:$count wofResets:$wof_reset_count $flags pollRsp:0x${pollRsp}..."
+                    else
+                        extflags="";
+                        let bitset="$pollRspExtStatus & 0x10";
+                        if [ $bitset -ne 0 ]; then extflags="$extflags QuickPowerDrop"; fi
+                        let bitset="$pollRspExtStatus & 0x80";
+                        if [ $bitset -ne 0 ]; then extflags="$extflags Throttle-ProcOverTemp"; fi
+                        let bitset="$pollRspExtStatus & 0x40";
+                        if [ $bitset -ne 0 ]; then extflags="$extflags Throttle-Power"; fi
+                        let bitset="$pollRspExtStatus & 0x20";
+                        if [ $bitset -ne 0 ]; then extflags="$extflags MemThrot-OverTemp"; fi
+                        let bitset="$pollRspExtStatus & 0x08";
+                        if [ $bitset -ne 0 ]; then extflags="$extflags Throttle-VddOverTemp"; fi
+                        echo "OCC${inst}: $type $stateText($(printf "0x%02X" $state)) resetCount:$count wofResets:$wof_reset_count $flags pollRsp:0x${pollRsp}... ($extflags )"
+                    fi
                 fi
             fi
         done < $temp_filename
@@ -1887,11 +1938,18 @@ function occ_trace_cronus
         fi
     fi
 
+    let min_sram_size=4
+    if [ $toolkit -ne 0 ]; then
+        let min_sram_size=8
+    fi
     while [ $numOccs -gt 0 ]; do
         echo -e "${bold}Collecting OCC$occ Trace via cronus:  (`date`)${normal}"
         # Confirm eyecatcher is correct
-        getsram fffb4003 -ch $channel 4 -p$occ -n$node
-        getsram fffb4003 -ch $channel 4 -p$occ -n$node -exp 42455252 # "BERR"
+        if [ $verbose -ne 0 ]; then
+            echo "==> getsram fffb4003 $min_sram_size -ch $channel -p$occ -n$node -exp 42455252"
+        fi
+        getsram fffb4003 $min_sram_size -ch $channel -p$occ -n$node
+        getsram fffb4003 $min_sram_size -ch $channel -p$occ -n$node -exp 42455252 # "BERR"
         let foundERR=$?
         if [ $foundERR -eq 0 ]; then
             # Remove old files
@@ -1911,8 +1969,8 @@ function occ_trace_cronus
                 ppe2fsp_cmd="";
             fi
 
-            GPE0ADDR=`getsram fffb3c10 4 -ch $channel | grep 00000000 | awk '{print $2}'`
-            GPE0SIZEHEX=`getsram fffb3c14 4 -ch $channel | grep 00000000 | awk '{print $2}'`
+            GPE0ADDR=`getsram fffb3c10 $min_sram_size -ch $channel | grep 00000000 | awk '{print $2}'`
+            GPE0SIZEHEX=`getsram fffb3c14 $min_sram_size -ch $channel | grep 00000000 | awk '{print $2}'`
             #echo "gpe0 $GPE0ADDR $GPE0SIZEHEX $GPE0SIZE"
             #GPE0SIZE=`echo \$((16#$GPE0SIZEHEX))`
             let GPE0SIZE=0x${GPE0SIZEHEX}
@@ -1936,8 +1994,8 @@ function occ_trace_cronus
                 fi
             fi
 
-            GPE1ADDR=`getsram fffb3c18 4 -ch $channel | grep 00000000 | awk '{print $2}'`
-            GPE1SIZEHEX=`getsram fffb3c1c 4 -ch $channel | grep 00000000 | awk '{print $2}'`
+            GPE1ADDR=`getsram fffb3c18 $min_sram_size -ch $channel | grep 00000000 | awk '{print $2}'`
+            GPE1SIZEHEX=`getsram fffb3c1c $min_sram_size -ch $channel | grep 00000000 | awk '{print $2}'`
             #GPE1SIZE=`echo \$((16#$GPE1SIZEHEX))`
             let GPE1SIZE=0x${GPE1SIZEHEX}
             echo "gpe1 $GPE1ADDR $GPE1SIZEHEX $GPE1SIZE"
@@ -2006,18 +2064,37 @@ if [ -n "$action" ]; then
     elif [ "$action" == "SensorList" ]; then
         printf "    Sensor Type: 0x%04X\n" $sensor_type
         printf "Sensor Location: 0x%04X\n" $sensor_loc
+        if [ $only_non_zero_sensors -eq 1 ]; then
+            printf "    (only displaying non-zero sensors)\n"
+        fi
+
+        # Collect the list of applicable sensors (and their sample value)
         let more_sensors=1
         let first_sensor=0
         let skip_header=1
         while [ $more_sensors -ne 0 ]; do
             # -X 53 0500000001LLLLTTTT = list first 50 OCC sensors (LLLL=Location,TTTT=Type)"
             occ_cmd="53"
-            occ_cmd_data=`printf "0500%04X%02X%04X%04X" $first_sensor $non_zero_sensors $sensor_loc $sensor_type`
-            #echo "==> $occ_cmd $occ_cmd_data"
+            occ_cmd_data=`printf "0500%04X%02X%04X%04X" $first_sensor $only_non_zero_sensors $sensor_loc $sensor_type`
             send_occ_cmd
             handle_occ_rsp # will update more_sensors and last_sensor
             let first_sensor=$last_sensor+1
         done;
+
+        # Display sensor details (min, max, etc for each one)
+        if [ $guidListCount -gt 0 ]; then
+            printf "\nSensor Details: (found $guidListCount sensors, details only for Status of 0x00)\n";
+            let index=0
+            let sensor_summary=1
+            while [ $index -lt $guidListCount ]; do
+                # -X 53 0600003d = get sensor details for GUID 0x003d"
+                occ_cmd="53"
+                occ_cmd_data=`printf "0600%04X" ${guidList[$index]}`
+                send_occ_cmd
+                handle_occ_rsp
+                let index=$index+1
+            done;
+        fi
     elif [ "$action" == "OCCFFDC" ]; then
         occ_ffdc
     elif [ "$action" == "ExitSafe" ]; then
