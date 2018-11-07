@@ -405,33 +405,34 @@ void amec_update_centaur_dts_sensors(CentaurMemData * i_sensor_cache, uint8_t i_
 // End Function Specification
 void amec_update_centaur_temp_sensors(void)
 {
-    uint32_t k, l_hot;
+    uint32_t k;
+    uint16_t l_hot_centaur = 0;
+    uint16_t l_hot_dimm = 0;
 
     // -----------------------------------------------------------
-    // Find hottest temperature from all centaurs for this Proc chip
+    // Find hottest Centaur and DIMM temp from all centaurs for this Proc chip
     // -----------------------------------------------------------
-    for(l_hot = 0, k=0; k < MAX_NUM_CENTAURS; k++)
+    for(k=0; k < MAX_NUM_CENTAURS; k++)
     {
-        if(g_amec->proc[0].memctl[k].centaur.centaur_hottest.cur_temp > l_hot)
+        if(CENTAUR_PRESENT(k))
         {
-            l_hot = g_amec->proc[0].memctl[k].centaur.centaur_hottest.cur_temp;
-        }
-    }
-    sensor_update(&g_amec->proc[0].temp2mscent,l_hot);
-    AMEC_DBG("HotCentaur=%d\n",l_hot);
+            // check if this is the hottest Centaur
+            if(g_amec->proc[0].memctl[k].centaur.centaur_hottest.cur_temp > l_hot_centaur)
+            {
+                l_hot_centaur = (uint16_t)g_amec->proc[0].memctl[k].centaur.centaur_hottest.cur_temp;
+            }
 
-    // --------------------------------------------------------
-    // Find hottest temperature from all DIMMs for this Proc chip
-    // --------------------------------------------------------
-    for(l_hot = 0, k=0; k < MAX_NUM_CENTAURS; k++)
-    {
-        if(g_amec->proc[0].memctl[k].centaur.tempdimmax.sample > l_hot)
-        {
-            l_hot = g_amec->proc[0].memctl[k].centaur.tempdimmax.sample;
+            // check if this Centaur has the hottest DIMM
+            if(g_amec->proc[0].memctl[k].centaur.tempdimmax.sample > l_hot_dimm)
+            {
+                l_hot_dimm = g_amec->proc[0].memctl[k].centaur.tempdimmax.sample;
+            }
         }
     }
-    sensor_update(&g_amec->proc[0].tempdimmthrm,l_hot);
-    AMEC_DBG("HotDimm=%d\n",l_hot);
+
+    sensor_update(&g_amec->proc[0].temp2mscent,l_hot_centaur);
+    sensor_update(&g_amec->proc[0].tempdimmthrm,l_hot_dimm);
+    AMEC_DBG("HotCentaur=[%d]  HotDimm=[%d]",l_hot_centaur, l_hot_dimm);
 }
 
 // Function Specification

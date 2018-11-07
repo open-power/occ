@@ -493,7 +493,8 @@ void amec_slv_state_0(void)
   //-------------------------------------------------------
   // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
-  amec_update_centaur_sensors(CENTAUR_0);
+  if (MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type)
+      amec_update_centaur_sensors(CENTAUR_0);
 
   //-------------------------------------------------------
   // Update vector sensors
@@ -526,12 +527,15 @@ void amec_slv_state_1(void)
   //-------------------------------------------------------
   // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
-  amec_update_centaur_sensors(CENTAUR_1);
+  if (MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type)
+  {
+      amec_update_centaur_sensors(CENTAUR_1);
 
-  //-------------------------------------------------------
-  // Update Proc Level Centaur/DIMM Temperature sensors
-  //-------------------------------------------------------
-  amec_update_centaur_temp_sensors();
+      //-------------------------------------------------------
+      // Update Proc Level Centaur/DIMM Temperature sensors
+      //-------------------------------------------------------
+      amec_update_centaur_temp_sensors();
+  }
 }
 
 
@@ -549,7 +553,8 @@ void amec_slv_state_2(void)
   //-------------------------------------------------------
   // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
-  amec_update_centaur_sensors(CENTAUR_2);
+  if (MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type)
+      amec_update_centaur_sensors(CENTAUR_2);
 
   // Call VRM Vdd thermal controller
   amec_controller_vrm_vdd_thermal();
@@ -572,7 +577,8 @@ void amec_slv_state_3(void)
   //-------------------------------------------------------
   // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
-  amec_update_centaur_sensors(CENTAUR_3);
+  if (MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type)
+      amec_update_centaur_sensors(CENTAUR_3);
 }
 
 
@@ -592,7 +598,8 @@ void amec_slv_state_4(void)
   //-------------------------------------------------------
   // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
-  amec_update_centaur_sensors(CENTAUR_4);
+  if (MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type)
+      amec_update_centaur_sensors(CENTAUR_4);
 
     //-------------------------------------------------------
     // Run WOF Algorithm
@@ -617,7 +624,8 @@ void amec_slv_state_5(void)
   //-------------------------------------------------------
   // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
-  amec_update_centaur_sensors(CENTAUR_5);
+  if (MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type)
+      amec_update_centaur_sensors(CENTAUR_5);
 
   //-------------------------------------------------------
   // Update partition sensors for DPS algorithms (for this tick)
@@ -643,7 +651,8 @@ void amec_slv_state_6(void)
   //-------------------------------------------------------
   // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
-  amec_update_centaur_sensors(CENTAUR_6);
+  if (MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type)
+      amec_update_centaur_sensors(CENTAUR_6);
 }
 
 
@@ -661,7 +670,8 @@ void amec_slv_state_7(void)
   //-------------------------------------------------------
   // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
-  amec_update_centaur_sensors(CENTAUR_7);
+  if (MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type)
+      amec_update_centaur_sensors(CENTAUR_7);
 }
 
 // Function Specification
