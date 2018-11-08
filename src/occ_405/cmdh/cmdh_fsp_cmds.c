@@ -62,6 +62,7 @@ extern GpeRequest G_epow_gpio_detected_req;
 
 extern opal_proc_voting_reason_t G_amec_opal_proc_throt_reason;
 
+extern bool G_htmgt_notified_of_error;
 
 // This table contains tunable parameter information that can be exposed to
 // customers (only Master OCC should access/control this table)
@@ -104,6 +105,7 @@ uint8_t G_apss_ch_to_function[MAX_APSS_ADC_CHANNELS] = {0};
 
 ERRL_RC cmdh_poll_v20 (cmdh_fsp_rsp_t * i_rsp_ptr);
 
+#define MAX_CONSECUTIVE_HCODE_ELOGS 2
 
 // Function Specification
 //
@@ -144,6 +146,7 @@ errlHndl_t cmdh_tmgt_poll (const cmdh_fsp_cmd_t * i_cmd_ptr,
     return l_errlHndl;
 }
 
+
 // Function Specification
 //
 // Name:  cmdh_poll_v20
@@ -157,6 +160,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
     int                         k = 0, l_max_sensors = 0;
     int                         l_err_hist_idx = 0, l_sens_list_idx = 0;
     cmdh_poll_sensor_db_t       l_sensorHeader;
+    static unsigned int         L_num_hcode_elogs = 0;
 
     // Set pointer to start of o_rsp_ptr
     cmdh_poll_resp_v20_fixed_t * l_poll_rsp = (cmdh_poll_resp_v20_fixed_t *) o_rsp_ptr;
@@ -224,29 +228,70 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
     l_poll_rsp->ips_status.word = 0;
     l_poll_rsp->ips_status.ips_enabled = G_ips_config_data.iv_ipsEnabled;
     l_poll_rsp->ips_status.ips_active = AMEC_mst_get_ips_active_status();
-    // Byte 8:
-    l_poll_rsp->errl_id         = getOldestErrlID();
-    // Byte 9 - 12:
-    l_poll_rsp->errl_address    = getErrlOCIAddrByID(l_poll_rsp->errl_id);
-    // Byte 13 - 14:
-    l_poll_rsp->errl_length     = getErrlLengthByID(l_poll_rsp->errl_id);
-
-            //If errl_id is not 0, then neither address or length should be zero.
-            //This should not happen, but if it does tmgt will create an error log that
-            //includes the data at the errl slot address given that can be used for debug.
-            //NOTE: One cause for a false errlog id is corruption of data in one errl slot
-            //      due to writing data greater than the size of the previous slot.  For
-            //      example writing the CallHome errorlog (3kb) into a regular sized (2kb) slot.
-            //      Make sure to verify the order of the memory allocation for the errl slots.
+    // Error Log:
+    bool check_405_elogs = true;
+    // if (405 has no elogs) OR (have not hit max consecutive hcode elogs)
+    if ((getOldestErrlID() == 0) || (L_num_hcode_elogs < MAX_CONSECUTIVE_HCODE_ELOGS))
+    {
+        // Check for HCODE errors
+        hcode_elog_entry_t elog_entry;
+        unsigned int index = 0;
+        for (; index < G_hcode_elog_table_slots; ++index)
+        {
+            elog_entry.value = in64(&G_hcode_elog_table[index]);
+            if (elog_entry.value != 0)
+            { // Found HCODE elog
+                if (elog_entry.fields.source != ERRL_SOURCE_405)
+                {
+                    ++L_num_hcode_elogs;
+                    // Byte 8:
+                    l_poll_rsp->errl_id         = elog_entry.fields.id;
+                    // Byte 9 - 12:
+                    l_poll_rsp->errl_address    = elog_entry.fields.address;
+                    // Byte 13 - 14:
+                    l_poll_rsp->errl_length     = elog_entry.fields.length;
+                    // Byte 15:
+                    l_poll_rsp->errl_source     = elog_entry.fields.source;
+                    check_405_elogs = false;
+                    break;
+                }
+                else
+                {
+                    TRAC_ERR("cmdh_poll_v20: ignoring HCODE error with 405 source (id:0x%02X, len:0x%04X, address:0x%08X)",
+                             elog_entry.fields.id, elog_entry.fields.length, elog_entry.fields.address);
+                    // Zero out error log entry in list so hcode can reuse
+                    out64(&G_hcode_elog_table[index], 0);
+                    G_htmgt_notified_of_error = false;
+                }
+            }
+        }
+    }
+    if (check_405_elogs)
+    { // No, HCODE errors, check/add any 405 elog
+        L_num_hcode_elogs = 0;
+        // Byte 8:
+        l_poll_rsp->errl_id         = getOldestErrlID();
+        // Byte 9 - 12:
+        l_poll_rsp->errl_address    = getErrlOCIAddrByID(l_poll_rsp->errl_id);
+        // Byte 13 - 14:
+        l_poll_rsp->errl_length     = getErrlLengthByID(l_poll_rsp->errl_id);
+        // Byte 15:
+        l_poll_rsp->errl_source     = ERRL_SOURCE_405;
+    }
+    //If errl_id is not 0, then neither address or length should be zero.
+    //This should not happen, but if it does TMGT will create an error log that
+    //includes the data at the errl slot address given that can be used for debug.
+    //NOTE: One cause for a false errlog id is corruption of data in one errl slot
+    //      due to writing data greater than the size of the previous slot.  For
+    //      example writing the CallHome errorlog (3kb) into a regular sized (2kb) slot.
+    //      Make sure to verify the order of the memory allocation for the errl slots.
     if ( (l_poll_rsp->errl_id != 0) &&
          ((l_poll_rsp->errl_address == 0) || (l_poll_rsp->errl_length == 0)))
     {
-        TRAC_ERR("An error ID has been sent via poll but the address or size is 0. "
-                 "ErrlId:0x%X, sz:0x%X, address:0x%X.",
-                 l_poll_rsp->errl_id, l_poll_rsp->errl_length, l_poll_rsp->errl_address);
+        TRAC_ERR("cmdh_poll_v20: error log sent with bad data "
+                 "(id:0x%02X, source:0x%02X, len:0x%04X, address:0x%08X)",
+                 l_poll_rsp->errl_id, l_poll_rsp->errl_source, l_poll_rsp->errl_length, l_poll_rsp->errl_address);
     }
-
-    // Byte 15: reserved.
 
     // Byte 16: GPU Configuration
     l_poll_rsp->gpu_presence = (uint8_t)G_first_proc_gpu_config;
@@ -1043,37 +1088,52 @@ errlHndl_t cmdh_clear_elog (const   cmdh_fsp_cmd_t * i_cmd_ptr,
        switch(l_elog_source)
        {
            case ERRL_SOURCE_405:
-              // Get Errl Array index
-              l_SlotNum = getErrSlotNumByErrId(l_elog_id);
+               // Get Errl Array index
+               l_SlotNum = getErrSlotNumByErrId(l_elog_id);
 
-              // Get ERRL address
-              l_oci_address = (errlHndl_t)getErrSlotOCIAddr(l_SlotNum);
+               // Get ERRL address
+               l_oci_address = (errlHndl_t)getErrSlotOCIAddr(l_SlotNum);
 
-              if ((l_oci_address != NULL) &&
-                  (l_oci_address != INVALID_ERR_HNDL))
-              {
-                 // clear only one Errl by ID
-                 l_err = deleteErrl(&l_oci_address);
-              }
-              else
-              {
-                 CMDH_TRAC_ERR("cmdh_clear_elog: 405 error log ID[0x%02X] not found", l_elog_id);
-                 l_rc = ERRL_RC_INVALID_DATA;
-              }
+               if ((l_oci_address != NULL) &&
+                   (l_oci_address != INVALID_ERR_HNDL))
+               {
+                   // clear only one Errl by ID
+                   l_err = deleteErrl(&l_oci_address);
+               }
+               else
+               {
+                   CMDH_TRAC_ERR("cmdh_clear_elog: 405 error log ID[0x%02X] not found", l_elog_id);
+                   l_rc = ERRL_RC_INVALID_DATA;
+               }
+               break;
 
-              break;
+           default: // non-405 error log
+               {
+                   unsigned int index = 0;
+                   for (; index < G_hcode_elog_table_slots; ++index)
+                   {
+                       hcode_elog_entry_t elog_entry;
+                       elog_entry.value = in64(&G_hcode_elog_table[index]);
+                       if ((elog_entry.fields.id == l_elog_id) && (elog_entry.fields.source == l_elog_source))
+                       {
+                           CMDH_TRAC_INFO("cmdh_clear_elog: Clearing HCODE elog id 0x%02X from source 0x%02X",
+                                          l_elog_id, l_elog_source);
 
-           case ERRL_SOURCE_PGPE:
-           case ERRL_SOURCE_XGPE:
-              // TBD
-              CMDH_TRAC_INFO("cmdh_clear_elog: Cleared PM Hcode elog id 0x%02X from source 0x%02X",
-                              l_elog_id, l_elog_source);
-              break;
-
-           default:
-              CMDH_TRAC_ERR("cmdh_clear_elog: Invalid error log source 0x%02X", l_elog_source);
-              l_rc = ERRL_RC_INVALID_DATA;
-              break;
+                           // Zero out error log entry in list so hcode can reuse
+                           out64(&G_hcode_elog_table[index], 0);
+                           break;
+                       }
+                   }
+                   if (index == G_hcode_elog_table_slots)
+                   {
+                       // Did not find matching entry in hcode table for non-405 error
+                       CMDH_TRAC_ERR("cmdh_clear_elog: Could not find elog id 0x%02X with source 0x%02X",
+                                     l_elog_id, l_elog_source);
+                       l_rc = ERRL_RC_INVALID_DATA;
+                   }
+                   G_htmgt_notified_of_error = false;
+               }
+               break;
        }
     }while(0);
 

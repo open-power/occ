@@ -28,6 +28,7 @@
 
 #include <occ_common.h>
 #include <trac_interface.h>
+#include <pstate_pgpe_occ_api.h>
 
 // Used as default for invalid slot number
 static const uint8_t  ERRL_INVALID_SLOT = 0xFF;
@@ -127,6 +128,7 @@ typedef enum
     ERRL_USR_DTL_HISTORY_DATA   = 0x04,
     ERRL_USR_DTL_WOF_DATA       = 0x05,
     ERRL_USR_DTL_PGPE_PK_TRACE  = 0x06,
+    ERRL_USR_DTL_PGPE_DATA      = 0x07,
 } ERRL_USR_DETAIL_TYPE;
 
 // These are the possible OCC States.
@@ -282,6 +284,12 @@ extern uint32_t     G_occErrSlotBits;
 extern uint8_t      G_occErrIdCounter;
 
 extern errlHndl_t   G_occErrSlots[ERRL_MAX_SLOTS];
+
+// Shared SRAM offset to access the HCODE Error Log Table
+#define HCODE_ELOG_TABLE_SRAM_OFFSET     0x40
+#define HCODE_ELOG_TABLE_MAGIC_NUMBER    0x454C5443   // "ELTC"
+extern hcode_elog_entry_t *G_hcode_elog_table;
+extern uint32_t            G_hcode_elog_table_slots;
 
 typedef enum {
     ERRH_AVSBUS_VDD_CURRENT          =  0x01,

@@ -64,6 +64,9 @@ errlHndl_t  G_occErrSlots[ERRL_MAX_SLOTS] = {
                 (errlHndl_t) G_callslot
                 };
 
+hcode_elog_entry_t *G_hcode_elog_table = NULL;
+uint32_t            G_hcode_elog_table_slots = 0;
+
 // Array of error counters that are only cleared on OCC reset
 uint8_t G_error_history[ERR_HISTORY_SIZE] = {0};
 
@@ -749,9 +752,9 @@ void reportErrorLog( errlHndl_t i_err, uint16_t i_entrySize )
     // Defer the interrupt if FIR collection is required
     if (!G_fir_collection_required)
     {
-        // If this system is using PSIHB complex, send an interrupt to Host so that
+        // If this system is not FSP, send an interrupt to Host so that
         // Host can inform HTMGT to collect the error log
-        if (G_occ_interrupt_type == PSIHB_INTERRUPT)
+        if (G_occ_interrupt_type != FSP_SUPPORTED_OCC)
         {
             notify_host(INTR_REASON_HTMGT_SERVICE_REQUIRED);
         }

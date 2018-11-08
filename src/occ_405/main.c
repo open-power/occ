@@ -62,6 +62,7 @@
 #include "pgpe_service_codes.h"
 #include <common.h>
 #include "p9_memmap_occ_sram.h"
+#include "pstate_pgpe_occ_api.h"
 
 // Used to indicate if OCC was started during IPL, in which case OCC's only
 // job is to look for checkstops. This flag is set by hostboot in OCC's header
@@ -521,8 +522,20 @@ bool read_pgpe_header(void)
             G_pgpe_header.wof_tables_addr = in32(PGPE_HEADER_ADDR + PGPE_WOF_TBLS_ADDR_OFFSET);
             G_pgpe_header.wof_tables_length = in32(PGPE_HEADER_ADDR + PGPE_WOF_TBLS_LEN_OFFSET);
 
-            MAIN_TRAC_IMP("Shared SRAM Address[0x%08x], PGPE Beacon Address[0x%08x]",
-                          G_pgpe_header.shared_sram_addr, G_pgpe_header.beacon_sram_addr);
+            const uint32_t hcode_elog_table_addr = G_pgpe_header.shared_sram_addr + HCODE_ELOG_TABLE_SRAM_OFFSET;
+            if (HCODE_ELOG_TABLE_MAGIC_NUMBER == in32(hcode_elog_table_addr))
+            {
+                G_hcode_elog_table_slots = (in32(hcode_elog_table_addr + 4) >> 24);
+                G_hcode_elog_table = (hcode_elog_entry_t*)(hcode_elog_table_addr + 8);
+            }
+            else
+            {
+                G_hcode_elog_table_slots = 0;
+                G_hcode_elog_table = 0;
+            }
+
+            MAIN_TRAC_IMP("Shared SRAM Address[0x%08x], PGPE Beacon Address[0x%08x], HCODE Elog Table [0x%08X] (%d slots)",
+                          G_pgpe_header.shared_sram_addr, G_pgpe_header.beacon_sram_addr, G_hcode_elog_table, G_hcode_elog_table_slots);
             MAIN_TRAC_IMP("WOF Tables Main Memory Address[0x%08x], Len[0x%08x], "
                           "Req Active Quads Address[0x%08x], "
                           "WOF State address[0x%08x]",

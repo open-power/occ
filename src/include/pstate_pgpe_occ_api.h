@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -61,14 +61,15 @@ enum MESSAGE_ID_IPI2HI
 //
 #define PGPE_RC_SUCCESS                         0x01
 #define PGPE_WOF_RC_NOT_ENABLED                 0x10
-#define PGPE_RC_PSTATES_DISABLED                0x11
-#define PGPE_RC_REQ_PSTATE_ALREADY_STARTED      0x12
-#define PGPE_RC_REQ_PSTATE_ALREADY_SUSPENDED    0x13
+#define PGPE_RC_PSTATES_NOT_STARTED             0x11
 #define PGPE_RC_OCC_NOT_PMCR_OWNER              0x14
+#define PGPE_RC_PM_COMPLEX_SUSPEND_SAFE_MODE    0x15
 // Active quad mismatch with requested active quads.  PGPE did not switch
 // to using the new VFRT.  The original VFRT is still being used.
 #define PGPE_WOF_RC_VFRT_QUAD_MISMATCH  0x20
 #define PGPE_RC_REQ_WHILE_PENDING_ACK   0x21
+#define PGPE_RC_NULL_VFRT_POINTER       0x22
+#define PGPE_RC_INVALID_PMCR_OWNER         0x23
 
 //
 // PMCR Owner
@@ -138,7 +139,7 @@ typedef struct ipcmsg_wof_vfrt
     uint8_t         active_quads; // OCC updated with the Active Quads that it
     // is using for its Ceff calculations
     uint8_t         pad;
-    HomerVFRTLayout_t*   homer_vfrt_ptr;     // Voltage Frequency Ratio Table
+    HomerVFRTLayout_t* homer_vfrt_ptr;
 } ipcmsg_wof_vfrt_t;
 
 
@@ -167,92 +168,12 @@ typedef struct
 
 typedef struct
 {
-    /// Number of Pstate Table entries
-    uint32_t                entries;
-
     /// Internal VDD voltage ID at the output of the PFET header
     OCCPstateTable_entry_t  table[MAX_OCC_PSTATE_TABLE_ENTRIES];
 
 } OCCPstateTable_t;
 
 // End Pstate Table
-// -----------------------------------------------------------------------------
-
-// -----------------------------------------------------------------------------
-// Start FFDC
-
-/// Scopes of the First Failure Data Capture (FFDC) registers
-enum scope_type
-{
-    FFDC_CHIP = 0,  // Address is chip scope (eg absolute)
-    FFDC_QUAD = 1,  // Address + 0x01000000*quad for good quads from 0 to 5
-    FFDC_CORE = 2,  // Address + 0x01000000*core for good cores from 0 to 23
-    FFDC_CME = 3    // Address if EX is even; Address + 0x400*EX for EX odd for good Exs from 0 to 11
-};
-
-/// Address types of First Failure Data Capture (FFDC) register addresses
-enum scope_type1
-{
-    FFDC_OCI  = 0,   // Address is an OCI address
-    FFDC_SCOM = 1    // Address is a SCOM address
-};
-
-/// Register definition of the Hcode FFDC register list
-#define MAX_FFDC_REG_LIST 12
-typedef struct
-{
-    uint32_t            address;
-    /*    union address_attribute
-        {
-            uint32_t value;
-            struct
-            {
-                uint32_t    address_type : 16;
-                uint32_t    scope        : 16;
-            } attr;
-        }*/
-} Hcode_FFDC_entry_t;
-
-/// Hcode FFDC register list
-typedef struct
-{
-    /// Number of FFDC address list entries
-    uint32_t            list_entries;
-
-    /// FFDC Address list
-    Hcode_FFDC_entry_t  list[MAX_FFDC_REG_LIST];
-} Hcode_FFDC_list_t;
-
-
-
-/// Hcode FFDC register list
-/// @todo RTC: 161183  Fill out the rest of this FFDC list
-/// @note The reserved FFDC space for registers and traces set aside in the
-/// OCC is 1KB.   On the register side, the following list will generate
-/// 12B of content (4B address, 8B data) x the good entries per scope.
-/// CHIP scope are not dependent on partial good or currently active and will
-/// take 12B x 8 = 96B.  CME scope entries will, at maximum, generate 12B x
-/// 12 CMEs x  4 SCOMs = 576B..  The overall  totla for registers is 96 + 576
-///
-/*typedef struct Hcode_FFDC_list
-{
-
-    {PERV_TP_OCC_SCOM_OCCLFIR,  FFDC_SCOM, FFDC_CHIP }, // OCC LFIR
-    {PU_PBAFIR,                 FFDC_SCOM, FFDC_CHIP }, // PBA LFIR
-    {EX_CME_SCOM_LFIR,          FFDC_SCOM, FFDC_CME  }, // CME LFIR
-    {PU_GPE3_GPEDBG_OCI,        FFDC_OCI,  FFDC_CHIP }, // SGPE XSR, SPRG0
-    {PU_GPE3_GPEDDR_OCI,        FFDC_OCI,  FFDC_CHIP }, // SGPE IR, EDR
-    {PU_GPE3_PPE_XIDBGPRO,      FFDC_OCI,  FFDC_CHIP }, // SGPE XSR, IAR
-    {PU_GPE2_GPEDBG_OCI,        FFDC_OCI,  FFDC_CHIP }, // PGPE XSR, SPRG0
-    {PU_GPE2_GPEDDR_OCI,        FFDC_OCI,  FFDC_CHIP }, // PGPE IR, EDR
-    {PU_GPE2_PPE_XIDBGPRO,      FFDC_OCI,  FFDC_CHIP }, // PGPE XSR, IAR
-    {EX_PPE_XIRAMDBG,           FFDC_SCOM, FFDC_CME  }, // CME XSR, SPRG0
-    {EX_PPE_XIRAMEDR,           FFDC_SCOM, FFDC_CME  }, // CME IR, EDR
-    {EX_PPE_XIDBGPRO,           FFDC_SCOM, FFDC_CME  }, // CME XSR, IAR
-
-};*/
-
-// End FFDC
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
@@ -335,6 +256,32 @@ typedef union requested_active_quads
 // End Quad State
 // -----------------------------------------------------------------------------
 
+// -----------------------------------------------------------------------------
+// Start Error Log Table
+
+#define MAX_HCODE_ELOG_ENTRIES 16
+
+typedef union hcode_elog_entry
+{
+    uint64_t value;
+    struct {
+        uint8_t  id;
+        uint8_t  source;
+        uint16_t length;
+        uint32_t address;
+    } fields;
+} hcode_elog_entry_t;
+
+typedef struct pgpe_error_table
+{
+    uint32_t            magic; // "ELTC" (Error Log Table of Contents)
+    uint8_t             total_log_slots;
+    uint8_t             reserved[3];
+    hcode_elog_entry_t  elog[MAX_HCODE_ELOG_ENTRIES];
+} pgpe_error_table_t;
+
+// End Error Log Table
+// -----------------------------------------------------------------------------
 
 typedef struct
 {
@@ -356,8 +303,14 @@ typedef struct
     ///Requested Active Quads
     requested_active_quads_t    req_active_quads;
 
-    /// FFDC Address list
-    Hcode_FFDC_list_t   ffdc_list;
+    // PGPE Produced WOF Values
+    uint64_t            pgpe_produced_wof_values[2];
+
+    // Reserved
+    uint64_t            reserved;
+
+    // Error Log Table
+    pgpe_error_table_t  pgpe_error_table;
 
     /// Pstate Table
     OCCPstateTable_t    pstate_table;

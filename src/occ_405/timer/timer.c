@@ -38,6 +38,7 @@
 #include <pgpe_shared.h>
 #include <sensor.h>
 #include <amec_sensors_centaur.h>
+#include <common.h>
 
 //*************************************************************************/
 // Externs
@@ -76,6 +77,8 @@ SSX_IRQ_FAST2FULL(ocbTHndler, ocbTHndlerFull);
 // Globals
 //*************************************************************************/
 bool G_wdog_enabled = false;
+extern uint8_t G_occ_interrupt_type;
+bool G_htmgt_notified_of_error = false;
 
 // memory deadman is a per port timer that the MCU uses to verify that
 // the memory's power and thermal are properly monitored. The memory deadman
@@ -222,6 +225,7 @@ void init_mem_deadman_reset_task(void)
 //                  Verify PGPE is still functional by reading PGPE Beacon from
 //                  SRAM if after 8ms (2 consecutive checks) there is no change
 //                  to the PGPE Beacon count then log an error and request reset.
+//               4. Check for PGPE error in shared SRAM
 //
 // End Function Specification
 #define TASK_PGPE_BEACON_RUN_TICK_COUNT 8
@@ -257,6 +261,22 @@ void task_poke_watchdogs(struct task * i_self)
         else
         {
             L_check_pgpe_beacon_count++;
+        }
+    }
+
+// 4. Check if PGPE has an error to report (non-FSP systems)
+    if ((G_occ_interrupt_type != FSP_SUPPORTED_OCC) && (G_htmgt_notified_of_error == false))
+    {
+        unsigned int index = 0;
+        for (; index < G_hcode_elog_table_slots; ++index)
+        {
+            if (in64(&G_hcode_elog_table[index]) != 0)
+            {
+                // Found HCODE elog
+                notify_host(INTR_REASON_HTMGT_SERVICE_REQUIRED);
+                G_htmgt_notified_of_error = true;
+                break;
+            }
         }
     }
 }
