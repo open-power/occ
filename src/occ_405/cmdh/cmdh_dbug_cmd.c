@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -130,11 +130,11 @@ void dbug_err_inject(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
     if (G_rsp_status == ERRL_RC_INTERNAL_FAIL)
     {
-        TRAC_ERR("cmdh_dbug_inject_errl: Fail creating ERR Log\n");
+        TRAC_ERR("cmdh_dbug_inject_errl: Fail creating ERR Log");
     }
     else
     {
-        TRAC_INFO("cmdh_dbug_inject_errl: inject errl for COMP : %s\n", l_cmd_ptr->comp);
+        TRAC_INFO("cmdh_dbug_inject_errl: inject errl for COMP : %s", l_cmd_ptr->comp);
     }
 
     return;
@@ -254,7 +254,7 @@ errlHndl_t cmdhDbugCmd(void * i_arg)
     l_sub_cmd = l_cmd_ptr->data[0];
 
     // Trace that a debug command was run
-    TRAC_INFO("Debug Command: Sub:0x%02x\n", l_sub_cmd);
+    TRAC_INFO("Debug Command: Sub:0x%02x", l_sub_cmd);
 
     // Build up a successful default response
     G_rsp_status  = ERRL_RC_SUCCESS;

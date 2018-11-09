@@ -47,6 +47,9 @@ uint8_t  g_chom_pwr_modes[OCC_INTERNAL_MODE_MAX_NUM]; // Nominal, SPS, DPS, DPS-
 // force immediate chom log flag
 uint8_t  g_chom_force;
 
+// indicates that chom data has been reset
+bool    g_chom_reset = FALSE;
+
 // chom data log
 ChomLogData_t   g_chom_log;
 ChomLogData_t * g_chom = &g_chom_log;
@@ -149,7 +152,8 @@ void chom_data_reset()
     g_chom_gen_periodic_log_timer = 0;
     // reset flag
     g_chom_force = FALSE;
-
+    // reset static data
+    g_chom_reset = TRUE;
 }
 
 
@@ -170,6 +174,12 @@ void chom_update_sensors()
 
     // Use FMF as default
     static uint32_t * L_curNumSamplePtr = L_memBWNumSamples[CHOM_MODE_FMF];
+
+    if(TRUE == g_chom_reset)
+    {
+        memset(L_memBWNumSamples, 0, sizeof(L_memBWNumSamples));
+        g_chom_reset = FALSE;
+    }
 
     uint16_t i = 0, j = 0;
 

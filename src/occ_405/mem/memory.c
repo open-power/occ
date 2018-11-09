@@ -177,7 +177,7 @@ void task_memory_control( task_t * i_task )
                     g_amec->sys.dimm_m_values[mc][port].m_value =
                         G_dimm_control_args.dimmDenominatorValues.m_value;
                     g_amec->sys.dimm_m_values[mc][port].need_m = FALSE;
-                    TRAC_INFO("M Value for MC%d P%d is 0x%08X", mc, port, g_amec->sys.dimm_m_values[mc][port].m_value);
+                    MEM_DBG("M Value for MC%d P%d is 0x%08X", mc, port, g_amec->sys.dimm_m_values[mc][port].m_value);
                 }
             }
         }//if(L_gpe_scheduled)
