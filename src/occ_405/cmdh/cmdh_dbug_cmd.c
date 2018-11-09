@@ -956,11 +956,11 @@ void dbug_err_inject(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
     if (G_rsp_status == ERRL_RC_INTERNAL_FAIL)
     {
-        TRAC_ERR("cmdh_dbug_inject_errl: Fail creating ERR Log\n");
+        TRAC_ERR("cmdh_dbug_inject_errl: Fail creating ERR Log");
     }
     else
     {
-        TRAC_INFO("cmdh_dbug_inject_errl: inject errl for COMP : %s\n", l_cmd_ptr->comp);
+        TRAC_INFO("cmdh_dbug_inject_errl: inject errl for COMP : %s", l_cmd_ptr->comp);
     }
 
     return;
@@ -1090,7 +1090,7 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         default:
             // Trace the rest of the debug commands.
-            TRAC_INFO("Debug Command: Sub:0x%02x\n", l_sub_cmd);
+            TRAC_INFO("Debug Command: Sub:0x%02x", l_sub_cmd);
 
             break;
     }
