@@ -246,7 +246,7 @@ uint64_t get_uint64(FILE* i_fhndl)
         byte = fgetc(i_fhndl);
         if(EOF != byte)
         {
-            ret |= (byte << (i*8));
+            ret |= ((uint64_t)byte << (i*8));
         }
     }
 

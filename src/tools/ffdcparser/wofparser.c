@@ -60,9 +60,15 @@ void dump_wof_data(wof_data_t * data)
     printf("nest_freq_mhz: %d\n", data->nest_freq_mhz);
     printf("wof_tables_mhz: %d\n", data->nom_freq_mhz);
     printf("rdp_capacity: %d\n", data->rdp_capacity);
-    printf("wof_tbls_src_tag: 0x%X\n", data->wof_tbls_src_tag);
-    printf("package_name_hi: 0x%08x\n", data->package_name_hi);
-    printf("package_name_lo: 0x%08x\n", data->package_name_lo);
+    printf("wof_tbls_src_tag: 0x%016llX  \"", data->wof_tbls_src_tag);
+    unsigned char *c = (unsigned char *)&data->wof_tbls_src_tag;
+    for( i = 0; i < 8; i++) printf("%c", c[7-i]);  printf("\"\n");
+    printf("package_name_hi:  0x%016llX  \"", data->package_name_hi);
+    c = (unsigned char *)&data->package_name_hi;
+    for( i = 0; i < 8; i++) printf("%c", c[7-i]);  printf("\"\n");
+    printf("package_name_lo:  0x%016llx  \"", data->package_name_lo);
+    c = (unsigned char *)&data->package_name_lo;
+    for( i = 0; i < 8; i++) printf("%c", c[7-i]);  printf("\"\n");
     printf("vdd_step_from_start: %d\n", data->vdd_step_from_start);
     printf("vdn_step_from_start: %d\n", data->vdn_step_from_start);
     printf("quad_step_from_start: %d\n", data->quad_step_from_start);
@@ -190,11 +196,27 @@ void dump_wof_data(wof_data_t * data)
         printf("avgtemp_vdn[%d]: %d\n",i, data->avgtemp_vdn[i]);
 }
 
+
+#define skip_if_unpacked(bytes) \
+    if (!packed) \
+    { \
+        unsigned int i; \
+        for(i = 0; i < bytes; i++ ) \
+        { \
+            unsigned char c = fgetc(wof_file); \
+            if (c != 0x00) \
+                printf("skip_if_unpacked: WARNING removing non-zero padding byte: 0x%02X\n", c); \
+            /*printf("PACKING: ignoring 0x%02X\n", c);*/ \
+        } \
+    }
+
+
 int main(int argc, char** argv)
 {
     FILE*       wof_file = NULL;
     wof_data_t  data = {0};
     uint32_t    i = 0;
+    unsigned int packed = 1;
 
     // Verify a file was passed as an argument
     if(argc < 2)
@@ -210,6 +232,11 @@ int main(int argc, char** argv)
             fprintf(stderr, "ERROR: %s cannot be opened or does not exist\n", argv[1]);
             return -1;
         }
+    }
+    if (argc>2)
+    {
+        fprintf(stderr, "Additional parameter found: ASSUMING UNPACKED STRUCTURE...\n");
+        packed = 0;
     }
 
     // Get file size
@@ -227,6 +254,7 @@ int main(int argc, char** argv)
     // Populate struct from file data
     data.wof_disabled   = get_uint32(wof_file);
     data.version        = fgetc(wof_file);
+    skip_if_unpacked(1);
     data.vfrt_block_size= get_uint16(wof_file);
     data.vfrt_blck_hdr_sz = get_uint16(wof_file);
     data.vfrt_data_size = get_uint16(wof_file);
@@ -250,17 +278,20 @@ int main(int argc, char** argv)
     data.nest_freq_mhz = get_uint16(wof_file);
     data.nom_freq_mhz = get_uint16(wof_file);
     data.rdp_capacity = get_uint16(wof_file);
+    skip_if_unpacked(2);
     data.wof_tbls_src_tag = get_uint64(wof_file);
     data.package_name_hi = get_uint64(wof_file);
     data.package_name_lo = get_uint64(wof_file);
     data.vdd_step_from_start = get_uint16(wof_file);
     data.vdn_step_from_start = get_uint16(wof_file);
     data.quad_step_from_start = fgetc(wof_file);
+    skip_if_unpacked(3);
     for(i = 0; i < MAXIMUM_QUADS; i++)
         data.v_core_100uV[i] = get_uint32(wof_file);
     data.core_pwr_on = get_uint32(wof_file);
     for(i = 0; i < MAXIMUM_QUADS; i++)
         data.cores_on_per_quad[i] = fgetc(wof_file);
+    skip_if_unpacked(2);
     data.voltvddsense_sensor = get_uint32(wof_file);
     for(i = 0; i < MAX_NUM_CORES; i++)
         data.tempprocthrmc[i] = get_uint16(wof_file);
@@ -275,6 +306,7 @@ int main(int argc, char** argv)
     for(i = 0; i < MAXIMUM_QUADS; i++)
         data.quad_v_idx[i] = fgetc(wof_file);
     data.quad_ivrm_states = fgetc(wof_file);
+    skip_if_unpacked(3);
     data.idc_vdd = get_uint32(wof_file);
     data.idc_vdn = get_uint32(wof_file);
     data.idc_quad = get_uint32(wof_file);
@@ -285,6 +317,7 @@ int main(int argc, char** argv)
     data.f_ratio = get_uint16(wof_file);
     data.v_clip = get_uint16(wof_file);
     data.f_clip_ps = fgetc(wof_file);
+    skip_if_unpacked(1);
     data.f_clip_freq = get_uint32(wof_file);
     data.ceff_tdp_vdd = get_uint32(wof_file);
     data.ceff_vdd = get_uint32(wof_file);
@@ -293,6 +326,7 @@ int main(int argc, char** argv)
     data.ceff_vdn = get_uint32(wof_file);
     data.ceff_ratio_vdn = get_uint32(wof_file);
     data.chip_volt_idx = fgetc(wof_file);
+    skip_if_unpacked(3);
     data.all_cores_off_iso = get_uint32(wof_file);
     data.all_good_caches_on_iso = get_uint32(wof_file);
     data.all_caches_off_iso = get_uint32(wof_file);
@@ -305,6 +339,7 @@ int main(int argc, char** argv)
     data.req_active_quad_update = fgetc(wof_file);
     data.prev_req_active_quads = fgetc(wof_file);
     data.num_active_quads = fgetc(wof_file);
+    skip_if_unpacked(1);
     data.curr_ping_pong_buf = get_uint32(wof_file);
     data.next_ping_pong_buf = get_uint32(wof_file);
     data.curr_vfrt_main_mem_addr = get_uint32(wof_file);
@@ -312,24 +347,29 @@ int main(int argc, char** argv)
     data.vfrt_tbls_main_mem_addr = get_uint32(wof_file);
     data.vfrt_tbls_len = get_uint32(wof_file);
     data.wof_init_state = fgetc(wof_file);
+    skip_if_unpacked(3);
     data.quad_state_0_addr = get_uint32(wof_file);
     data.quad_state_1_addr = get_uint32(wof_file);
     data.pgpe_wof_state_addr = get_uint32(wof_file);
     data.req_active_quads_addr = get_uint32(wof_file);
     data.core_leakage_percent = get_uint16(wof_file);
+    skip_if_unpacked(2);
     data.pstate_tbl_sram_addr = get_uint32(wof_file);
     data.gpe_req_rc = get_uint32(wof_file);
     data.control_ipc_rc = get_uint32(wof_file);
     data.vfrt_callback_error = fgetc(wof_file);
     data.pgpe_wof_off = fgetc(wof_file);
     data.pgpe_wof_disabled = fgetc(wof_file);
+    skip_if_unpacked(1);
     data.vfrt_mm_offset = get_uint32(wof_file);
     data.wof_vfrt_req_rc = fgetc(wof_file);
+    skip_if_unpacked(3);
     data.c_ratio_vdd_volt = get_uint32(wof_file);
     data.c_ratio_vdd_freq = get_uint32(wof_file);
     data.c_ratio_vdn_volt = get_uint32(wof_file);
     data.c_ratio_vdn_freq = get_uint32(wof_file);
     data.vfrt_state = fgetc(wof_file);
+    skip_if_unpacked(3);
     data.all_cores_off_before = get_uint32(wof_file);
     data.good_quads_per_sort = fgetc(wof_file);
     data.good_normal_cores_per_sort = fgetc(wof_file);
@@ -338,6 +378,7 @@ int main(int argc, char** argv)
         data.good_normal_cores[i] = fgetc(wof_file);
     for(i = 0; i < MAXIMUM_QUADS; i++)
         data.good_caches[i] = fgetc(wof_file);
+    skip_if_unpacked(1);
     for(i = 0; i < CORE_IDDQ_MEASUREMENTS; i++)
         data.allGoodCoresCachesOn[i] = get_uint16(wof_file);
     for(i = 0; i < CORE_IDDQ_MEASUREMENTS; i++)
