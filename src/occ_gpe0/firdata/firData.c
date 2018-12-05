@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_405/firdata/firData.c $                               */
+/* $Source: src/occ_gpe0/firdata/firData.c $                              */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -821,7 +821,7 @@ bool FirData_addTrgtToPnor( FirData_t * io_fd, SCOM_Trgt_t i_sTrgt,
 }
 
 
-/*------------------------------------------------------------------------------ */
+/*----------------------------------------------------------------------------*/
 
 /** @brief Iterates through configured targets and adds the data to PNOR.
  *  @param io_fd The FIR data stuct.
@@ -841,108 +841,107 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
     SCOM_Trgt_t sTrgt;
     FirData_existBits_t  l_existBits;
 
-    do
+    memset(&l_existBits, 0x00, sizeof(FirData_existBits_t) );
+
+    /* Point past HOMER header to first chiplet info */
+    /* The HOMER_Data_t struct may have some padding added after the struct */
+    /* to ensure the HOMER_Chip_t structs are 4-byte word aligned. */
+    uint32_t sz_word = sizeof(uint32_t);
+    uint32_t pad = (sz_word - (sizeof(HOMER_Data_t) % sz_word)) % sz_word;
+    uint8_t       *l_bytePtr = io_fd->hBuf + sizeof(HOMER_Data_t) + pad;
+    HOMER_Chip_t  *l_chipPtr = NULL;
+
+    // Start iterating all chips in the HOMER data.
+    uint32_t i = 0;
+    for ( i = 0; i < io_fd->hData->chipCount; i++ )
     {
-        memset(&l_existBits, 0x00, sizeof(FirData_existBits_t) );
+        l_chipPtr = (HOMER_Chip_t *)l_bytePtr;
 
-        /* Point past HOMER header to first chiplet info */
-        /* The HOMER_Data_t struct may have some padding added after the struct */
-        /* to ensure the HOMER_Chip_t structs are 4-byte word aligned. */
-        uint32_t sz_word = sizeof(uint32_t);
-        uint32_t pad = (sz_word - (sizeof(HOMER_Data_t) % sz_word)) % sz_word;
-        uint8_t       *l_bytePtr = io_fd->hBuf + sizeof(HOMER_Data_t) + pad;
-        HOMER_Chip_t  *l_chipPtr = NULL;
+        /* get FSI base address and chip position (proc or centaur) */
+        fsi = l_chipPtr->fsiBaseAddr;
+        p   = l_chipPtr->chipPos;
 
-        /* Iterate ALL CHIPs  */
-        for ( p = 0; p < io_fd->hData->chipCount; p++ )
+        /* Is this a PROC or Centaur chip ? */
+        if ( (HOMER_CHIP_NIMBUS  == l_chipPtr->chipType) ||
+             (HOMER_CHIP_CUMULUS == l_chipPtr->chipType)   )
         {
-            l_chipPtr = (HOMER_Chip_t *)l_bytePtr;
+            /* To access the 'chiplet exist' structure */
+            l_bytePtr += sizeof(HOMER_Chip_t);
 
-            /* get FSI base address and chip position (proc or centaur) */
-            fsi = l_chipPtr->fsiBaseAddr;
-            p   = l_chipPtr->chipPos;
-
-            /* Is this a PROC or Centaur chip ? */
-            if ( (HOMER_CHIP_NIMBUS  == l_chipPtr->chipType) ||
-                 (HOMER_CHIP_CUMULUS == l_chipPtr->chipType)   )
+            /* 'Existing chiplet area' varies in size  */
+            if (HOMER_CHIP_NIMBUS == l_chipPtr->chipType)
             {
-                /* To access the 'chiplet exist' structure */
-                l_bytePtr += sizeof(HOMER_Chip_t);
+                HOMER_ChipNimbus_t  *l_nimExistBitPtr =
+                                    (HOMER_ChipNimbus_t *)l_bytePtr;
 
-                /* 'Existing chiplet area' varies in size  */
-                if (HOMER_CHIP_NIMBUS == l_chipPtr->chipType)
-                {
-                    HOMER_ChipNimbus_t  *l_nimExistBitPtr =
-                                        (HOMER_ChipNimbus_t *)l_bytePtr;
+                /* get master proc indicator */
+                isM = l_nimExistBitPtr->isMaster;
 
-                    /* get master proc indicator */
-                    isM = l_nimExistBitPtr->isMaster;
+                /* Exist bit structure can differ so move to      */
+                /* common format and left justify for ease of use */
+                l_existBits.xbusMask = ((uint32_t)(l_nimExistBitPtr->xbusMask))
+                                        << (32 - MAX_XBUS_PER_PROC);
+                l_existBits.obusMask = ((uint32_t)(l_nimExistBitPtr->obusMask))
+                                        << (32 - MAX_OBUS_PER_PROC);
+                l_existBits.ecMask   = ((uint32_t)(l_nimExistBitPtr->ecMask))
+                                        << (32 - MAX_EC_PER_PROC);
+                l_existBits.eqMask   = ((uint32_t)(l_nimExistBitPtr->eqMask))
+                                        << (32 - MAX_EQ_PER_PROC);
+                l_existBits.exMask   = ((uint32_t)(l_nimExistBitPtr->exMask))
+                                        << (32 - MAX_EX_PER_PROC);
+                l_existBits.mcbist_mc_Mask = ((uint32_t)(l_nimExistBitPtr->mcbistMask))
+                                              << (32 - MAX_MCBIST_PER_PROC);
+                l_existBits.mcs_mi_Mask    = ((uint32_t)(l_nimExistBitPtr->mcsMask))
+                                              << (32 - MAX_MCS_PER_PROC);
+                l_existBits.mca_dmi_Mask   = ((uint32_t)(l_nimExistBitPtr->mcaMask))
+                                              << (32 - MAX_MCA_PER_PROC);
+                l_existBits.cappMask = ((uint32_t)(l_nimExistBitPtr->cappMask))
+                                        << (32 - MAX_CAPP_PER_PROC);
+                l_existBits.pecMask  = ((uint32_t)(l_nimExistBitPtr->pecMask))
+                                        << (32 - MAX_PEC_PER_PROC);
+                l_existBits.phbMask  = ((uint32_t)(l_nimExistBitPtr->phbMask))
+                                        << (32 - MAX_PHB_PER_PROC);
 
-                    /* Exist bit structure can differ so move to      */
-                    /* common format and left justify for ease of use */
-                    l_existBits.xbusMask = ((uint32_t)(l_nimExistBitPtr->xbusMask))
-                                            << (32 - MAX_XBUS_PER_PROC);
-                    l_existBits.obusMask = ((uint32_t)(l_nimExistBitPtr->obusMask))
-                                            << (32 - MAX_OBUS_PER_PROC);
-                    l_existBits.ecMask   = ((uint32_t)(l_nimExistBitPtr->ecMask))
-                                            << (32 - MAX_EC_PER_PROC);
-                    l_existBits.eqMask   = ((uint32_t)(l_nimExistBitPtr->eqMask))
-                                            << (32 - MAX_EQ_PER_PROC);
-                    l_existBits.exMask   = ((uint32_t)(l_nimExistBitPtr->exMask))
-                                            << (32 - MAX_EX_PER_PROC);
-                    l_existBits.mcbist_mc_Mask = ((uint32_t)(l_nimExistBitPtr->mcbistMask))
-                                                  << (32 - MAX_MCBIST_PER_PROC);
-                    l_existBits.mcs_mi_Mask    = ((uint32_t)(l_nimExistBitPtr->mcsMask))
-                                                  << (32 - MAX_MCS_PER_PROC);
-                    l_existBits.mca_dmi_Mask   = ((uint32_t)(l_nimExistBitPtr->mcaMask))
-                                                  << (32 - MAX_MCA_PER_PROC);
-                    l_existBits.cappMask = ((uint32_t)(l_nimExistBitPtr->cappMask))
-                                            << (32 - MAX_CAPP_PER_PROC);
-                    l_existBits.pecMask  = ((uint32_t)(l_nimExistBitPtr->pecMask))
-                                            << (32 - MAX_PEC_PER_PROC);
-                    l_existBits.phbMask  = ((uint32_t)(l_nimExistBitPtr->phbMask))
-                                            << (32 - MAX_PHB_PER_PROC);
+                /* advance our pointer to next chip type */
+                l_bytePtr += sizeof(HOMER_ChipNimbus_t);
 
-                    /* advance our pointer to next chip type */
-                    l_bytePtr += sizeof(HOMER_ChipNimbus_t);
+            } /* if nimbus */
+            else if (HOMER_CHIP_CUMULUS == l_chipPtr->chipType)
+            {
+                HOMER_ChipCumulus_t  *l_cumExistBitPtr =
+                                    (HOMER_ChipCumulus_t *)l_bytePtr;
 
-                } /* if nimbus */
-                else if (HOMER_CHIP_CUMULUS == l_chipPtr->chipType)
-                {
-                    HOMER_ChipCumulus_t  *l_cumExistBitPtr =
-                                        (HOMER_ChipCumulus_t *)l_bytePtr;
+                /* get master proc indicator */
+                isM = l_cumExistBitPtr->isMaster;
 
-                    /* get master proc indicator */
-                    isM = l_cumExistBitPtr->isMaster;
+                /* Exist bit structure can differ so move to      */
+                /* common format and left justify for ease of use */
+                l_existBits.xbusMask = ((uint32_t)(l_cumExistBitPtr->xbusMask))
+                                        << (32 - MAX_XBUS_PER_PROC);
+                l_existBits.obusMask = ((uint32_t)(l_cumExistBitPtr->obusMask))
+                                        << (32 - MAX_OBUS_PER_PROC);
+                l_existBits.ecMask   = ((uint32_t)(l_cumExistBitPtr->ecMask))
+                                        << (32 - MAX_EC_PER_PROC);
+                l_existBits.eqMask   = ((uint32_t)(l_cumExistBitPtr->eqMask))
+                                        << (32 - MAX_EQ_PER_PROC);
+                l_existBits.exMask   = ((uint32_t)(l_cumExistBitPtr->exMask))
+                                        << (32 - MAX_EX_PER_PROC);
+                l_existBits.mcbist_mc_Mask = ((uint32_t)(l_cumExistBitPtr->mcMask))
+                                              << (32 - MAX_MC_PER_PROC);
+                l_existBits.mcs_mi_Mask    = ((uint32_t)(l_cumExistBitPtr->miMask))
+                                              << (32 - MAX_MI_PER_PROC);
+                l_existBits.mca_dmi_Mask   = ((uint32_t)(l_cumExistBitPtr->dmiMask))
+                                              << (32 - MAX_DMI_PER_PROC);
+                l_existBits.cappMask = ((uint32_t)(l_cumExistBitPtr->cappMask))
+                                        << (32 - MAX_CAPP_PER_PROC);
+                l_existBits.pecMask  = ((uint32_t)(l_cumExistBitPtr->pecMask))
+                                        << (32 - MAX_PEC_PER_PROC);
+                l_existBits.phbMask  = ((uint32_t)(l_cumExistBitPtr->phbMask))
+                                        << (32 - MAX_PHB_PER_PROC);
 
-                    /* Exist bit structure can differ so move to      */
-                    /* common format and left justify for ease of use */
-                    l_existBits.xbusMask = ((uint32_t)(l_cumExistBitPtr->xbusMask))
-                                            << (32 - MAX_XBUS_PER_PROC);
-                    l_existBits.obusMask = ((uint32_t)(l_cumExistBitPtr->obusMask))
-                                            << (32 - MAX_OBUS_PER_PROC);
-                    l_existBits.ecMask   = ((uint32_t)(l_cumExistBitPtr->ecMask))
-                                            << (32 - MAX_EC_PER_PROC);
-                    l_existBits.eqMask   = ((uint32_t)(l_cumExistBitPtr->eqMask))
-                                            << (32 - MAX_EQ_PER_PROC);
-                    l_existBits.exMask   = ((uint32_t)(l_cumExistBitPtr->exMask))
-                                            << (32 - MAX_EX_PER_PROC);
-                    l_existBits.mcbist_mc_Mask = ((uint32_t)(l_cumExistBitPtr->mcMask))
-                                                  << (32 - MAX_MC_PER_PROC);
-                    l_existBits.mcs_mi_Mask    = ((uint32_t)(l_cumExistBitPtr->miMask))
-                                                  << (32 - MAX_MI_PER_PROC);
-                    l_existBits.mca_dmi_Mask   = ((uint32_t)(l_cumExistBitPtr->dmiMask))
-                                                  << (32 - MAX_DMI_PER_PROC);
-                    l_existBits.cappMask = ((uint32_t)(l_cumExistBitPtr->cappMask))
-                                            << (32 - MAX_CAPP_PER_PROC);
-                    l_existBits.pecMask  = ((uint32_t)(l_cumExistBitPtr->pecMask))
-                                            << (32 - MAX_PEC_PER_PROC);
-                    l_existBits.phbMask  = ((uint32_t)(l_cumExistBitPtr->phbMask))
-                                            << (32 - MAX_PHB_PER_PROC);
-
-                    /* advance our pointer to next chip type */
-                    l_bytePtr += sizeof(HOMER_ChipCumulus_t);
-                } /* else if cumulus */
+                /* advance our pointer to next chip type */
+                l_bytePtr += sizeof(HOMER_ChipCumulus_t);
+            } /* else if cumulus */
 
 
 #ifdef DEBUG_PRD_CHKSTOP_ANALYSIS
@@ -956,244 +955,242 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
                            l_existBits.mcbist_mc_Mask,  l_existBits.mcs_mi_Mask,
                            l_existBits.mca_dmi_Mask );
 #endif
-                /* Add this PROC to the PNOR. */
-                sTrgt = SCOM_Trgt_getTrgt(TRGT_PROC, p, 0, fsi, isM);
+            /* Add this PROC to the PNOR. */
+            sTrgt = SCOM_Trgt_getTrgt(TRGT_PROC, p, 0, fsi, isM);
+            full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, l_chipPtr );
+
+            /* noAttn is true when we have global regs but none */
+            /* indicate an attention is present                 */
+            if ( full ) break;
+            if ( noAttn ) continue; /* Skip other proc chiplets */
+
+            /* gather other chiplets on the processor */
+            for ( u = 0; u < MAX_XBUS_PER_PROC; u++ )
+            {
+                /* Check if the XBUS  is configured. */
+                if ( 0 == (l_existBits.xbusMask  & (0x80000000 >> u)) ) continue;
+
+                /* Add this XBUS to the PNOR. */
+                sTrgt = SCOM_Trgt_getTrgt(TRGT_XBUS, p, u, fsi, isM);
                 full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, l_chipPtr );
-
-                /* noAttn is true when we have global regs but none */
-                /* indicate an attention is present                 */
                 if ( full ) break;
-                if ( noAttn ) continue; /* Skip other proc chiplets */
+            }
+            if ( full ) break;
 
-                /* gather other chiplets on the processor */
-                for ( u = 0; u < MAX_XBUS_PER_PROC; u++ )
-                {
-                    /* Check if the XBUS  is configured. */
-                    if ( 0 == (l_existBits.xbusMask  & (0x80000000 >> u)) ) continue;
-
-                    /* Add this XBUS to the PNOR. */
-                    sTrgt = SCOM_Trgt_getTrgt(TRGT_XBUS, p, u, fsi, isM);
-                    full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, l_chipPtr );
-                    if ( full ) break;
-                }
-                if ( full ) break;
-
-                /* gather other chiplets on the processor */
-                for ( u = 0; u < MAX_OBUS_PER_PROC; u++ )
-                {
-                    /* Check if the OBUS  is configured. */
-                    if ( 0 == (l_existBits.obusMask  & (0x80000000 >> u)) ) continue;
-
-                    /* Add this OBUS to the PNOR. */
-                    sTrgt = SCOM_Trgt_getTrgt(TRGT_OBUS, p, u, fsi, isM);
-                    full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, l_chipPtr );
-                    if ( full ) break;
-                }
-                if ( full ) break;
-
-                /* gather more proc chiplets  */
-                for ( u = 0; u < MAX_CAPP_PER_PROC; u++ )
-                {
-                    /* Check if the CAPP is configured. */
-                    if ( 0 == (l_existBits.cappMask  & (0x80000000 >> u)) ) continue;
-
-                    /* Add this CAPP to the PNOR. */
-                    sTrgt = SCOM_Trgt_getTrgt(TRGT_CAPP, p, u, fsi, isM);
-                    full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, l_chipPtr );
-                    if ( full ) break;
-                }
-                if ( full ) break;
-
-                /* gather other chiplets on the processor */
-                for ( u = 0; u < MAX_PEC_PER_PROC; u++ )
-                {
-                    /* Check if the PEC is configured. */
-                    if ( 0 == (l_existBits.pecMask  & (0x80000000 >> u)) ) continue;
-
-                    /* Add this PEC to the PNOR. */
-                    sTrgt = SCOM_Trgt_getTrgt(TRGT_PEC, p, u, fsi, isM);
-                    full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, l_chipPtr );
-                    if ( full ) break;
-                    if ( noAttn ) continue; /* Skip the rest */
-
-                    /* gather PHB's under the PEC  */
-                    /*  ************************** */
-                    /*  PEC0-> PHB0                */
-                    /*  PEC1-> PHB1 PHB2           */
-                    /*  PEC2-> PHB3 PHB4 PHB5      */
-                    /*  ************************** */
-                    uint32_t l_PhbPos;
-
-                    /* u will be 0, l_unit 0             */
-                    /* u will be 1, l_unit 0 and 1       */
-                    /* u will be 2, l_unit 0 and 1 and 2 */
-                    for ( l_unit = 0; l_unit < (u+1); l_unit++ )
-                    {
-                        l_PhbPos = u + l_unit;
-                        /** When we hit PEC2, need to bump PHB position */
-                        if  ((MAX_PEC_PER_PROC - 1) == u)
-                        {
-                            l_PhbPos++;
-                        } /* if last PEC unit */
-
-                        /* Check if the PHB is configured. */
-                        if ( 0 == (l_existBits.phbMask  & (0x80000000 >> l_PhbPos)) ) continue;
-
-                        /* Add this PHB to the PNOR. */
-                        sTrgt = SCOM_Trgt_getTrgt(TRGT_PHB, p, l_PhbPos, fsi, isM);
-                        full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, l_chipPtr );
-                        if ( full ) break;
-                        if ( noAttn ) continue; /* Skip the rest */
-
-                    } /* end for on PHB chiplet */
-                    if ( full ) break;
-
-                } /* end for on PEC chiplet */
-                if ( full ) break;
-
-                /* gather other chiplets on the processor */
-                for ( u = 0; u < MAX_EC_PER_PROC; u++ )
-                {
-                    /* Check if the EC  is configured. */
-                    if ( 0 == (l_existBits.ecMask  & (0x80000000 >> u)) ) continue;
-
-                    /* Add this EC to the PNOR. */
-                    sTrgt = SCOM_Trgt_getTrgt(TRGT_EC, p, u, fsi, isM);
-                    full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, l_chipPtr );
-                    if ( full ) break;
-                    if ( noAttn ) continue; /* Skip the rest */
-
-                } /* end for on EC chiplet */
-                if ( full ) break;
-
-                /* gather other chiplets on the processor */
-                for ( u = 0; u < MAX_EQ_PER_PROC; u++ )
-                {
-                    /* Check if the EQ is configured. */
-                    if ( 0 == (l_existBits.eqMask  & (0x80000000 >> u)) ) continue;
-
-                    /* Add this EQ to the PNOR. */
-                    sTrgt = SCOM_Trgt_getTrgt(TRGT_EQ, p, u, fsi, isM);
-                    full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, l_chipPtr );
-                    if ( full ) break;
-                    if ( noAttn ) continue; /* Skip the rest */
-
-                    /* gather other chiplets on the processor */
-                    uint32_t l_ExPerEq = (MAX_EX_PER_PROC/MAX_EQ_PER_PROC);
-                    uint32_t l_ExPos;
-
-                    for (l_unit=0; l_unit < l_ExPerEq; l_unit++)
-                    {
-                        l_ExPos = (l_ExPerEq * u) + l_unit;
-
-                        /* Check if the EX is configured. */
-                        if ( 0 == (l_existBits.exMask  & (0x80000000 >> l_ExPos)) ) continue;
-
-                        /* Add this EX to the PNOR. */
-                        sTrgt = SCOM_Trgt_getTrgt(TRGT_EX, p, l_ExPos, fsi, isM);
-                        full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, l_chipPtr );
-                        if ( full ) break;
-                        if ( noAttn ) continue; /* Skip the rest */
-
-                    } /* end for on EX chiplet */
-                    if ( full ) break;
-
-                } /* end for on EQ chiplet */
-                if ( full ) break;
-
-
-                /* processor type can impact next few units */
-                TrgtType_t  l_pnorTarget = (HOMER_CHIP_NIMBUS == l_chipPtr->chipType) ?
-                                            TRGT_MCBIST : TRGT_MC;
-                uint32_t    l_maxPerProc = (HOMER_CHIP_NIMBUS == l_chipPtr->chipType) ?
-                                            MAX_MCBIST_PER_PROC : MAX_MC_PER_PROC;
-
-                TrgtType_t  l_pnorTarg2 = (HOMER_CHIP_NIMBUS == l_chipPtr->chipType) ?
-                      TRGT_MCA : TRGT_DMI;
-                uint32_t    l_maxPerProc2 = (HOMER_CHIP_NIMBUS == l_chipPtr->chipType) ?
-                      MAX_MCA_PER_PROC : MAX_DMI_PER_PROC;
-
-                uint32_t l_UnitPerMc = l_maxPerProc2 / l_maxPerProc;
-                uint8_t  l_unitNumber;
-
-                for ( u = 0; u < l_maxPerProc; u++ )
-                {
-                    /* Check if MCBIST / MC is configured. */
-                    if ( 0 == (l_existBits.mcbist_mc_Mask  & (0x80000000 >> u)) ) continue;
-
-                    /* Add this MCBIST or MC to the PNOR. */
-                    sTrgt = SCOM_Trgt_getTrgt(l_pnorTarget, p, u, fsi, isM);
-                    full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, l_chipPtr );
-                    if ( full ) break;
-                    if ( noAttn ) continue; /* Skip the rest */
-
-                    /* Grab underlying MCA/DMI chiplet */
-                    for ( l_unit = 0; l_unit < l_UnitPerMc; l_unit++ )
-                    {
-                        /* u=0 or 1 while  l_unit is 0 thru 3 */
-                        /* Leading to unit number 0:3 or 4:7  */
-                        l_unitNumber = l_unit + (u * l_UnitPerMc);
-                        /* Check if the MCA / DMI is configured. */
-                        if ( 0 == (l_existBits.mca_dmi_Mask  & (0x80000000 >> l_unitNumber)) ) continue;
-
-                        /* Add this MCA / DMI to the PNOR. */
-                        sTrgt = SCOM_Trgt_getTrgt(l_pnorTarg2, p, l_unitNumber, fsi, isM);
-                        full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, l_chipPtr );
-                        if ( full ) break;
-
-                    } /* end for on MCA/DMI */
-                    if ( full ) break;
-
-                } /* end for on MCBIST */
-                if ( full ) break;
-
-
-                l_pnorTarget = (HOMER_CHIP_NIMBUS == l_chipPtr->chipType) ?
-                                           TRGT_MCS : TRGT_MI;
-                l_maxPerProc = (HOMER_CHIP_NIMBUS == l_chipPtr->chipType) ?
-                                           MAX_MCS_PER_PROC : MAX_MI_PER_PROC;
-
-                for ( u = 0; u < l_maxPerProc; u++ )
-                {
-                    /* Check if the MCS / MI is configured. */
-                    if ( 0 == (l_existBits.mcs_mi_Mask  & (0x80000000 >> u)) ) continue;
-
-                    /* Add this MCS or MI to the PNOR. */
-                    sTrgt = SCOM_Trgt_getTrgt(l_pnorTarget, p, u, fsi, isM);
-                    full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, l_chipPtr );
-                    if ( full ) break;
-                }
-                if ( full ) break;
-
-            } /* if processor chip type */
-            else if  (HOMER_CHIP_CENTAUR == l_chipPtr->chipType)
+            /* gather other chiplets on the processor */
+            for ( u = 0; u < MAX_OBUS_PER_PROC; u++ )
             {
-                /* HOMER_ChipCentaur_t  *l_cenExistBitPtr =
-                                       (HOMER_ChipCentaur_t *)l_bytePtr; */
-                /* uint32_t l_mbaMask = ((uint32_t) l_cenExistBitPtr->mbaMask) <<
-                                         (sizeof(uint32_t) - MAX_MBA_PER_MEMBUF) */
+                /* Check if the OBUS  is configured. */
+                if ( 0 == (l_existBits.obusMask  & (0x80000000 >> u)) ) continue;
 
-                /* we have Centaur chipPos in 'p'  and fsi address in 'fsi'  */
+                /* Add this OBUS to the PNOR. */
+                sTrgt = SCOM_Trgt_getTrgt(TRGT_OBUS, p, u, fsi, isM);
+                full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, l_chipPtr );
+                if ( full ) break;
+            }
+            if ( full ) break;
 
-                /*  add this centaur later and iterate thru l_mbaMask */
-                /*  don't need for initial support */
-                /* TODO RTC 173614  -- with CUMULUS   */
-
-                /* advance our pointer to next chip type */
-                l_bytePtr += sizeof(HOMER_ChipCentaur_t);
-
-            } /* end if centaur chip type */
-            else
+            /* gather more proc chiplets  */
+            for ( u = 0; u < MAX_CAPP_PER_PROC; u++ )
             {
-                /* unexpected chip type */
-                TRAC_ERR( "addTrgtsToPnor saw invalid chip:0x%X",
-                          (uint32_t)l_chipPtr->chipType );
-                break;
-            } /* end if centaur chip type */
+                /* Check if the CAPP is configured. */
+                if ( 0 == (l_existBits.cappMask  & (0x80000000 >> u)) ) continue;
 
-        } /* end for on all CHIPS we have in homer data */
+                /* Add this CAPP to the PNOR. */
+                sTrgt = SCOM_Trgt_getTrgt(TRGT_CAPP, p, u, fsi, isM);
+                full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, l_chipPtr );
+                if ( full ) break;
+            }
+            if ( full ) break;
 
-    } while (0);
+            /* gather other chiplets on the processor */
+            for ( u = 0; u < MAX_PEC_PER_PROC; u++ )
+            {
+                /* Check if the PEC is configured. */
+                if ( 0 == (l_existBits.pecMask  & (0x80000000 >> u)) ) continue;
+
+                /* Add this PEC to the PNOR. */
+                sTrgt = SCOM_Trgt_getTrgt(TRGT_PEC, p, u, fsi, isM);
+                full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, l_chipPtr );
+                if ( full ) break;
+                if ( noAttn ) continue; /* Skip the rest */
+
+                /* gather PHB's under the PEC  */
+                /*  ************************** */
+                /*  PEC0-> PHB0                */
+                /*  PEC1-> PHB1 PHB2           */
+                /*  PEC2-> PHB3 PHB4 PHB5      */
+                /*  ************************** */
+                uint32_t l_PhbPos;
+
+                /* u will be 0, l_unit 0             */
+                /* u will be 1, l_unit 0 and 1       */
+                /* u will be 2, l_unit 0 and 1 and 2 */
+                for ( l_unit = 0; l_unit < (u+1); l_unit++ )
+                {
+                    l_PhbPos = u + l_unit;
+                    /** When we hit PEC2, need to bump PHB position */
+                    if  ((MAX_PEC_PER_PROC - 1) == u)
+                    {
+                        l_PhbPos++;
+                    } /* if last PEC unit */
+
+                    /* Check if the PHB is configured. */
+                    if ( 0 == (l_existBits.phbMask  & (0x80000000 >> l_PhbPos)) ) continue;
+
+                    /* Add this PHB to the PNOR. */
+                    sTrgt = SCOM_Trgt_getTrgt(TRGT_PHB, p, l_PhbPos, fsi, isM);
+                    full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, l_chipPtr );
+                    if ( full ) break;
+                    if ( noAttn ) continue; /* Skip the rest */
+
+                } /* end for on PHB chiplet */
+                if ( full ) break;
+
+            } /* end for on PEC chiplet */
+            if ( full ) break;
+
+            /* gather other chiplets on the processor */
+            for ( u = 0; u < MAX_EC_PER_PROC; u++ )
+            {
+                /* Check if the EC  is configured. */
+                if ( 0 == (l_existBits.ecMask  & (0x80000000 >> u)) ) continue;
+
+                /* Add this EC to the PNOR. */
+                sTrgt = SCOM_Trgt_getTrgt(TRGT_EC, p, u, fsi, isM);
+                full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, l_chipPtr );
+                if ( full ) break;
+                if ( noAttn ) continue; /* Skip the rest */
+
+            } /* end for on EC chiplet */
+            if ( full ) break;
+
+            /* gather other chiplets on the processor */
+            for ( u = 0; u < MAX_EQ_PER_PROC; u++ )
+            {
+                /* Check if the EQ is configured. */
+                if ( 0 == (l_existBits.eqMask  & (0x80000000 >> u)) ) continue;
+
+                /* Add this EQ to the PNOR. */
+                sTrgt = SCOM_Trgt_getTrgt(TRGT_EQ, p, u, fsi, isM);
+                full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, l_chipPtr );
+                if ( full ) break;
+                if ( noAttn ) continue; /* Skip the rest */
+
+                /* gather other chiplets on the processor */
+                uint32_t l_ExPerEq = (MAX_EX_PER_PROC/MAX_EQ_PER_PROC);
+                uint32_t l_ExPos;
+
+                for (l_unit=0; l_unit < l_ExPerEq; l_unit++)
+                {
+                    l_ExPos = (l_ExPerEq * u) + l_unit;
+
+                    /* Check if the EX is configured. */
+                    if ( 0 == (l_existBits.exMask  & (0x80000000 >> l_ExPos)) ) continue;
+
+                    /* Add this EX to the PNOR. */
+                    sTrgt = SCOM_Trgt_getTrgt(TRGT_EX, p, l_ExPos, fsi, isM);
+                    full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, l_chipPtr );
+                    if ( full ) break;
+                    if ( noAttn ) continue; /* Skip the rest */
+
+                } /* end for on EX chiplet */
+                if ( full ) break;
+
+            } /* end for on EQ chiplet */
+            if ( full ) break;
+
+
+            /* processor type can impact next few units */
+            TrgtType_t  l_pnorTarget = (HOMER_CHIP_NIMBUS == l_chipPtr->chipType) ?
+                                        TRGT_MCBIST : TRGT_MC;
+            uint32_t    l_maxPerProc = (HOMER_CHIP_NIMBUS == l_chipPtr->chipType) ?
+                                        MAX_MCBIST_PER_PROC : MAX_MC_PER_PROC;
+
+            TrgtType_t  l_pnorTarg2 = (HOMER_CHIP_NIMBUS == l_chipPtr->chipType) ?
+                  TRGT_MCA : TRGT_DMI;
+            uint32_t    l_maxPerProc2 = (HOMER_CHIP_NIMBUS == l_chipPtr->chipType) ?
+                  MAX_MCA_PER_PROC : MAX_DMI_PER_PROC;
+
+            uint32_t l_UnitPerMc = l_maxPerProc2 / l_maxPerProc;
+            uint8_t  l_unitNumber;
+
+            for ( u = 0; u < l_maxPerProc; u++ )
+            {
+                /* Check if MCBIST / MC is configured. */
+                if ( 0 == (l_existBits.mcbist_mc_Mask  & (0x80000000 >> u)) ) continue;
+
+                /* Add this MCBIST or MC to the PNOR. */
+                sTrgt = SCOM_Trgt_getTrgt(l_pnorTarget, p, u, fsi, isM);
+                full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, l_chipPtr );
+                if ( full ) break;
+                if ( noAttn ) continue; /* Skip the rest */
+
+                /* Grab underlying MCA/DMI chiplet */
+                for ( l_unit = 0; l_unit < l_UnitPerMc; l_unit++ )
+                {
+                    /* u=0 or 1 while  l_unit is 0 thru 3 */
+                    /* Leading to unit number 0:3 or 4:7  */
+                    l_unitNumber = l_unit + (u * l_UnitPerMc);
+                    /* Check if the MCA / DMI is configured. */
+                    if ( 0 == (l_existBits.mca_dmi_Mask  & (0x80000000 >> l_unitNumber)) ) continue;
+
+                    /* Add this MCA / DMI to the PNOR. */
+                    sTrgt = SCOM_Trgt_getTrgt(l_pnorTarg2, p, l_unitNumber, fsi, isM);
+                    full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, l_chipPtr );
+                    if ( full ) break;
+
+                } /* end for on MCA/DMI */
+                if ( full ) break;
+
+            } /* end for on MCBIST */
+            if ( full ) break;
+
+
+            l_pnorTarget = (HOMER_CHIP_NIMBUS == l_chipPtr->chipType) ?
+                                       TRGT_MCS : TRGT_MI;
+            l_maxPerProc = (HOMER_CHIP_NIMBUS == l_chipPtr->chipType) ?
+                                       MAX_MCS_PER_PROC : MAX_MI_PER_PROC;
+
+            for ( u = 0; u < l_maxPerProc; u++ )
+            {
+                /* Check if the MCS / MI is configured. */
+                if ( 0 == (l_existBits.mcs_mi_Mask  & (0x80000000 >> u)) ) continue;
+
+                /* Add this MCS or MI to the PNOR. */
+                sTrgt = SCOM_Trgt_getTrgt(l_pnorTarget, p, u, fsi, isM);
+                full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, l_chipPtr );
+                if ( full ) break;
+            }
+            if ( full ) break;
+
+        } /* if processor chip type */
+        else if  (HOMER_CHIP_CENTAUR == l_chipPtr->chipType)
+        {
+            /* HOMER_ChipCentaur_t  *l_cenExistBitPtr =
+                                   (HOMER_ChipCentaur_t *)l_bytePtr; */
+            /* uint32_t l_mbaMask = ((uint32_t) l_cenExistBitPtr->mbaMask) <<
+                                     (sizeof(uint32_t) - MAX_MBA_PER_MEMBUF) */
+
+            /* we have Centaur chipPos in 'p'  and fsi address in 'fsi'  */
+
+            /*  add this centaur later and iterate thru l_mbaMask */
+            /*  don't need for initial support */
+            /* TODO RTC 173614  -- with CUMULUS   */
+
+            /* advance our pointer to next chip type */
+            l_bytePtr += sizeof(HOMER_ChipCentaur_t);
+
+        } /* end if centaur chip type */
+        else
+        {
+            /* unexpected chip type */
+            TRAC_ERR( "addTrgtsToPnor saw invalid chip:0x%X",
+                      (uint32_t)l_chipPtr->chipType );
+            break;
+        } /* end if centaur chip type */
+
+    } /* end for on all CHIPS we have in homer data */
 
 } /* end FirData_addTrgtsToPnor */
 
