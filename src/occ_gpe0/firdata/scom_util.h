@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_405/firdata/scom_util.h $                             */
+/* $Source: src/occ_gpe0/firdata/scom_util.h $                            */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -72,6 +72,22 @@ typedef enum
 {
     N2_PCIS0_0_RING_ID = 0x3,   ///< PCIS0_0
 } p9_n2_ring_id_t;
+
+typedef enum
+{
+    P9A_MC_OMIC0_RING_ID = 0x4,      ///< OMIC0
+    P9A_MC_OMIC2_RING_ID = 0x6,      ///< OMIC2
+    P9A_MC_OMIC0_PPE_RING_ID = 0x9,  ///< OMIC0 PPE
+    P9A_MC_OMIC2_PPE_RING_ID = 0xB,  ///< OMIC2 PPE
+} p9a_mc_ring_id_t;
+
+typedef enum
+{
+    P9A_MC_DSTL_CHAN0_SAT_ID = 0x4,   ///< DSTL registers channel 0
+    P9A_MC_DSTL_CHAN3_SAT_ID = 0x7,   ///< DSTL registers channel 3
+    P9A_MC_USTL_CHAN0_SAT_ID = 0x8,   ///< USTL registers channel 0
+    P9A_MC_USTL_CHAN3_SAT_ID = 0xB,   ///< USTL registers channel 3
+} p9a_mc_sat_id_t;
 
 /** @brief  Performs a hardware scom on a regular register.
  *  @param  i_trgt The SCOM target.
