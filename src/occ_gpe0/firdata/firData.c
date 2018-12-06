@@ -930,8 +930,6 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
                                               << (32 - MAX_MC_PER_PROC);
                 l_existBits.mcs_mi_Mask    = ((uint32_t)(l_cumExistBitPtr->miMask))
                                               << (32 - MAX_MI_PER_PROC);
-                l_existBits.mca_dmi_Mask   = ((uint32_t)(l_cumExistBitPtr->dmiMask))
-                                              << (32 - MAX_DMI_PER_PROC);
                 l_existBits.cappMask = ((uint32_t)(l_cumExistBitPtr->cappMask))
                                         << (32 - MAX_CAPP_PER_PROC);
                 l_existBits.pecMask  = ((uint32_t)(l_cumExistBitPtr->pecMask))
@@ -1102,26 +1100,16 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
 
 
             /* processor type can impact next few units */
-            TrgtType_t  l_pnorTarget = (HOMER_CHIP_NIMBUS == l_chipPtr->chipType) ?
-                                        TRGT_MCBIST : TRGT_MC;
-            uint32_t    l_maxPerProc = (HOMER_CHIP_NIMBUS == l_chipPtr->chipType) ?
-                                        MAX_MCBIST_PER_PROC : MAX_MC_PER_PROC;
-
-            TrgtType_t  l_pnorTarg2 = (HOMER_CHIP_NIMBUS == l_chipPtr->chipType) ?
-                  TRGT_MCA : TRGT_DMI;
-            uint32_t    l_maxPerProc2 = (HOMER_CHIP_NIMBUS == l_chipPtr->chipType) ?
-                  MAX_MCA_PER_PROC : MAX_DMI_PER_PROC;
-
-            uint32_t l_UnitPerMc = l_maxPerProc2 / l_maxPerProc;
+            uint32_t l_UnitPerMc = MAX_MCA_PER_PROC / MAX_MCBIST_PER_PROC;
             uint8_t  l_unitNumber;
 
-            for ( u = 0; u < l_maxPerProc; u++ )
+            for ( u = 0; u < MAX_MCBIST_PER_PROC; u++ )
             {
                 /* Check if MCBIST / MC is configured. */
                 if ( 0 == (l_existBits.mcbist_mc_Mask  & (0x80000000 >> u)) ) continue;
 
                 /* Add this MCBIST or MC to the PNOR. */
-                sTrgt = SCOM_Trgt_getTrgt(l_pnorTarget, p, u, fsi, isM);
+                sTrgt = SCOM_Trgt_getTrgt(TRGT_MCBIST, p, u, fsi, isM);
                 full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, l_chipPtr );
                 if ( full ) break;
                 if ( noAttn ) continue; /* Skip the rest */
@@ -1136,7 +1124,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
                     if ( 0 == (l_existBits.mca_dmi_Mask  & (0x80000000 >> l_unitNumber)) ) continue;
 
                     /* Add this MCA / DMI to the PNOR. */
-                    sTrgt = SCOM_Trgt_getTrgt(l_pnorTarg2, p, l_unitNumber, fsi, isM);
+                    sTrgt = SCOM_Trgt_getTrgt(TRGT_MCA, p, l_unitNumber, fsi, isM);
                     full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, l_chipPtr );
                     if ( full ) break;
 
@@ -1147,18 +1135,13 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
             if ( full ) break;
 
 
-            l_pnorTarget = (HOMER_CHIP_NIMBUS == l_chipPtr->chipType) ?
-                                       TRGT_MCS : TRGT_MI;
-            l_maxPerProc = (HOMER_CHIP_NIMBUS == l_chipPtr->chipType) ?
-                                       MAX_MCS_PER_PROC : MAX_MI_PER_PROC;
-
-            for ( u = 0; u < l_maxPerProc; u++ )
+            for ( u = 0; u < MAX_MCS_PER_PROC; u++ )
             {
                 /* Check if the MCS / MI is configured. */
                 if ( 0 == (l_existBits.mcs_mi_Mask  & (0x80000000 >> u)) ) continue;
 
                 /* Add this MCS or MI to the PNOR. */
-                sTrgt = SCOM_Trgt_getTrgt(l_pnorTarget, p, u, fsi, isM);
+                sTrgt = SCOM_Trgt_getTrgt(TRGT_MCS, p, u, fsi, isM);
                 full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, l_chipPtr );
                 if ( full ) break;
             }

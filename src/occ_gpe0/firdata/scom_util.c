@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_405/firdata/scom_util.c $                             */
+/* $Source: src/occ_gpe0/firdata/scom_util.c $                            */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -97,7 +97,7 @@ int32_t translate_addr( SCOM_Trgt_t i_trgt, uint64_t i_addr, uint64_t * o_addr )
     //The following translation logic is a copy of p9_scominfo_createChipUnitScomAddr
     //function from EKB (chips/p9/common/scominfo/p9_scominfo.C)
 
-    if(i_trgt.type == TRGT_PROC || i_trgt.type == TRGT_MEMBUF)
+    if(i_trgt.type == TRGT_PROC || i_trgt.type == TRGT_OCMB)
     {
         //No need to translate here.
         //We already assigned i_addr to o_addr above, so just return SUCCESS.
@@ -199,39 +199,6 @@ int32_t translate_addr( SCOM_Trgt_t i_trgt, uint64_t i_addr, uint64_t * o_addr )
     {
         set_chiplet_id(EC00_CHIPLET_ID + l_chip_unit_num, o_addr);
     }
-    else if(i_trgt.type == TRGT_MBA) //MBA
-    {
-        if( (i_addr & MBA_MASK) == MBA_BASEADDR )
-        {
-            /* 0x00000000_03010400  MBA 0  # MBA01 */
-            /* 0x00000000_03010C00  MBA 1  # MBA23 */
-            if( l_chip_unit_num == 1 )
-            {
-                *o_addr |= 0x00000800;
-            }
-        }
-        else if( (i_addr & MBA_MASK) == TCM_MBA_BASEADDR )
-        {
-            /* 0x00000000_03010880  MBA 0  # Trace for MBA01 */
-            /* 0x00000000_030110C0  MBA 1  # Trace for MBA23 */
-            *o_addr |= (l_chip_unit_num * 0x840);
-        }
-        else if( (i_addr & MBA_MASK) == IND_MBA_BASEADDR )
-        {
-            /* 0x00000000_03011400  MBA 0  # DPHY01 (indirect addressing) */
-            /* 0x00000000_03011800  MBA 1  # DPHY23 (indirect addressing) */
-            /* 0x80000000_0301143f  MBA 0  # DPHY01 (indirect addressing) */
-            /* 0x80000000_0301183f  MBA 1  # DPHY23 (indirect addressing) */
-            /* 0x80000000_0701143f  MBA 0  # DPHY01 (indirect addressing) */
-            /* 0x80000000_0701183f  MBA 1  # DPHY23 (indirect addressing) */
-            if( l_chip_unit_num == 1 )
-            {
-                /* 030114zz->030118zz */
-                *o_addr &= 0xFFFFFFFFFFFFFBFF;
-                *o_addr |= 0x0000000000000800;
-            }
-        }
-    }
     else if(i_trgt.type == TRGT_MCS || //MCS
             i_trgt.type == TRGT_MI) //MI TODO RTC 175488
     {
@@ -273,59 +240,6 @@ int32_t translate_addr( SCOM_Trgt_t i_trgt, uint64_t i_addr, uint64_t * o_addr )
             uint8_t l_mcs_sat_offset = 0x2F & get_sat_offset(i_addr);
             l_mcs_sat_offset |= (l_chip_unit_num % 2) << 4;
             set_sat_offset(l_mcs_sat_offset, o_addr);
-        }
-    }
-    else if(i_trgt.type == TRGT_DMI) //DMI  TODO RTC 175488
-    {
-        if(get_chiplet_id(i_addr) == N3_CHIPLET_ID || get_chiplet_id(i_addr) == N1_CHIPLET_ID)
-        {
-            set_chiplet_id(N3_CHIPLET_ID - 2 * (l_chip_unit_num / 4), o_addr);
-            set_sat_id(2 * ((l_chip_unit_num / 2) % 2), o_addr);
-            uint8_t l_sat_offset = get_sat_offset(i_addr);
-            l_sat_offset = (l_sat_offset & 0xF) + ((2 + (l_chip_unit_num % 2)) << 4);
-            set_sat_offset(l_sat_offset, o_addr);
-        }
-        else if(get_chiplet_id(i_addr) == MC01_CHIPLET_ID || get_chiplet_id(i_addr) == MC23_CHIPLET_ID)
-        {
-            if(get_ring(i_addr) == P9C_MC_CHAN_RING_ID)
-            {
-                set_chiplet_id(MC01_CHIPLET_ID + l_chip_unit_num / 4, o_addr);
-                uint8_t l_sat_id = get_sat_id(i_addr);
-                l_sat_id = l_sat_id & 0xC;
-                set_sat_id(l_sat_id + l_chip_unit_num % 4, o_addr);
-            }
-            else if(get_ring(i_addr) == P9C_MC_BIST_RING_ID)
-            {
-                set_chiplet_id(MC01_CHIPLET_ID + l_chip_unit_num / 4, o_addr);
-                uint8_t l_sat_offset = get_sat_offset(i_addr);
-                l_sat_offset = (l_sat_offset & 0xF) + ((l_chip_unit_num % 2) << 4);
-                set_sat_offset(l_sat_offset, o_addr);
-            }
-            else if(get_ring(i_addr) == P9C_MC_IO_RING_ID)
-            {
-                set_chiplet_id(MC01_CHIPLET_ID + l_chip_unit_num / 4, o_addr);
-                uint8_t l_rxtx_group = get_rxtx_group_id(i_addr);
-                l_rxtx_group = l_rxtx_group & 0xF0;
-
-                switch(l_chip_unit_num % 4)
-                {
-                    case 0:
-                        l_rxtx_group += 3;
-                        break;
-                    case 1:
-                        l_rxtx_group += 2;
-                        break;
-                    case 2:
-                        l_rxtx_group += 0;
-                        break;
-                    case 3:
-                        l_rxtx_group += 1;
-                        break;
-                    default:
-                        break;
-                }
-                set_rxtx_group_id(l_rxtx_group, o_addr);
-            }
         }
     }
     else
