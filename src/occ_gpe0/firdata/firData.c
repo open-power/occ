@@ -843,11 +843,18 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
         // Various other variables used below.
         uint32_t mask = 0;
 
+#define PROC_MAX(TYPE) MAX_##TYPE##_PER_PROC
+
 #define ADD_TO_PNOR( TYPE, UNIT ) \
     sTrgt = SCOM_Trgt_getTrgt( TRGT_##TYPE, p, (UNIT), fsi, isM ); \
     full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, chipHdr ); \
     if ( full ) break; \
     if ( noAttn ) continue;
+
+#define ADD_UNIT_TO_PNOR( MASK, TYPE, UNIT ) \
+    mask = 1 << ((PROC_MAX(TYPE)-1) - UNIT); \
+    if ( 0 == (chipData->MASK & mask) ) continue; \
+    ADD_TO_PNOR( TYPE, UNIT )
 
         if ( HOMER_CHIP_NIMBUS == chipHdr->chipType )
         {
@@ -862,44 +869,28 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
             /* gather other chiplets on the processor */
             for ( u = 0; u < MAX_XBUS_PER_PROC; u++ )
             {
-                /* Check if the XBUS  is configured. */
-                mask = 1 << ((MAX_XBUS_PER_PROC-1) - u);
-                if ( 0 == (chipData->xbusMask & mask) ) continue;
-
-                ADD_TO_PNOR( XBUS, u )
+                ADD_UNIT_TO_PNOR( xbusMask, XBUS, u )
             }
             if ( full ) break;
 
             /* gather other chiplets on the processor */
             for ( u = 0; u < MAX_OBUS_PER_PROC; u++ )
             {
-                /* Check if the OBUS  is configured. */
-                mask = 1 << ((MAX_OBUS_PER_PROC-1) - u);
-                if ( 0 == (chipData->obusMask & mask) ) continue;
-
-                ADD_TO_PNOR( OBUS, u )
+                ADD_UNIT_TO_PNOR( obusMask, OBUS, u )
             }
             if ( full ) break;
 
             /* gather more proc chiplets  */
             for ( u = 0; u < MAX_CAPP_PER_PROC; u++ )
             {
-                /* Check if the CAPP is configured. */
-                mask = 1 << ((MAX_CAPP_PER_PROC-1) - u);
-                if ( 0 == (chipData->cappMask & mask) ) continue;
-
-                ADD_TO_PNOR( CAPP, u )
+                ADD_UNIT_TO_PNOR( cappMask, CAPP, u )
             }
             if ( full ) break;
 
             /* gather other chiplets on the processor */
             for ( u = 0; u < MAX_PEC_PER_PROC; u++ )
             {
-                /* Check if the PEC is configured. */
-                mask = 1 << ((MAX_PEC_PER_PROC-1) - u);
-                if ( 0 == (chipData->pecMask & mask) ) continue;
-
-                ADD_TO_PNOR( PEC, u )
+                ADD_UNIT_TO_PNOR( pecMask, PEC, u )
 
                 /* gather PHB's under the PEC  */
                 /*  ************************** */
@@ -921,11 +912,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
                         l_PhbPos++;
                     } /* if last PEC unit */
 
-                    /* Check if the PHB is configured. */
-                    mask = 1 << ((MAX_PHB_PER_PROC-1) - l_PhbPos);
-                    if ( 0 == (chipData->phbMask & mask) ) continue;
-
-                    ADD_TO_PNOR( PHB, l_PhbPos )
+                    ADD_UNIT_TO_PNOR( phbMask, PHB, l_PhbPos )
 
                 } /* end for on PHB chiplet */
                 if ( full ) break;
@@ -936,11 +923,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
             /* gather other chiplets on the processor */
             for ( u = 0; u < MAX_EC_PER_PROC; u++ )
             {
-                /* Check if the EC  is configured. */
-                mask = 1 << ((MAX_EC_PER_PROC-1) - u);
-                if ( 0 == (chipData->ecMask & mask) ) continue;
-
-                ADD_TO_PNOR( EC, u )
+                ADD_UNIT_TO_PNOR( ecMask, EC, u )
 
             } /* end for on EC chiplet */
             if ( full ) break;
@@ -948,11 +931,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
             /* gather other chiplets on the processor */
             for ( u = 0; u < MAX_EQ_PER_PROC; u++ )
             {
-                /* Check if the EQ is configured. */
-                mask = 1 << ((MAX_EQ_PER_PROC-1) - u);
-                if ( 0 == (chipData->eqMask & mask) ) continue;
-
-                ADD_TO_PNOR( EQ, u )
+                ADD_UNIT_TO_PNOR( eqMask, EQ, u )
 
                 /* gather other chiplets on the processor */
                 uint32_t l_ExPerEq = (MAX_EX_PER_PROC/MAX_EQ_PER_PROC);
@@ -962,11 +941,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
                 {
                     l_ExPos = (l_ExPerEq * u) + l_unit;
 
-                    /* Check if the EX is configured. */
-                    mask = 1 << ((MAX_EX_PER_PROC-1) - l_ExPos);
-                    if ( 0 == (chipData->exMask & mask) ) continue;
-
-                    ADD_TO_PNOR( EX, l_ExPos )
+                    ADD_UNIT_TO_PNOR( exMask, EX, l_ExPos )
 
                 } /* end for on EX chiplet */
                 if ( full ) break;
@@ -981,11 +956,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
 
             for ( u = 0; u < MAX_MCBIST_PER_PROC; u++ )
             {
-                /* Check if MCBIST / MC is configured. */
-                mask = 1 << ((MAX_MCBIST_PER_PROC-1) - u);
-                if ( 0 == (chipData->mcbistMask & mask) ) continue;
-
-                ADD_TO_PNOR( MCBIST, u )
+                ADD_UNIT_TO_PNOR( mcbistMask, MCBIST, u )
 
                 /* Grab underlying MCA chiplet */
                 for ( l_unit = 0; l_unit < l_UnitPerMc; l_unit++ )
@@ -993,11 +964,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
                     /* u=0 or 1 while  l_unit is 0 thru 3 */
                     /* Leading to unit number 0:3 or 4:7  */
                     l_unitNumber = l_unit + (u * l_UnitPerMc);
-                    /* Check if the MCA is configured. */
-                    mask = 1 << ((MAX_MCA_PER_PROC-1) - l_unitNumber);
-                    if ( 0 == (chipData->mcaMask & mask) ) continue;
-
-                    ADD_TO_PNOR( MCA, l_unitNumber )
+                    ADD_UNIT_TO_PNOR( mcaMask, MCA, l_unitNumber )
 
                 } /* end for on MCA/DMI */
                 if ( full ) break;
@@ -1008,11 +975,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
 
             for ( u = 0; u < MAX_MCS_PER_PROC; u++ )
             {
-                /* Check if the MCS / MI is configured. */
-                mask = 1 << ((MAX_MCS_PER_PROC-1) - u);
-                if ( 0 == (chipData->mcsMask & mask) ) continue;
-
-                ADD_TO_PNOR( MCS, u )
+                ADD_UNIT_TO_PNOR( mcsMask, MCS, u )
             }
             if ( full ) break;
 
@@ -1024,7 +987,9 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
             break;
         }
 
+#undef PROC_MAX
 #undef ADD_TO_PNOR
+#undef ADD_UNIT_TO_PNOR
 
     }
 }
