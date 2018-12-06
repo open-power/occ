@@ -809,52 +809,51 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
     bool full   = false;
     bool noAttn = false;
 
-    uint8_t p  = 0;
     uint8_t u  = 0;
     uint8_t l_unit = 0;
 
     bool     isM = false;
-    uint32_t fsi = 0;
 
     SCOM_Trgt_t sTrgt;
 
-    /* Point past HOMER header to first chiplet info */
-    /* The HOMER_Data_t struct may have some padding added after the struct */
-    /* to ensure the HOMER_Chip_t structs are 4-byte word aligned. */
+    // We will need to keep track of where we are in the HOMER buffer.
+    uint8_t * byteIdx = io_fd->hBuf;
+
+    // We already have a pointer to the HOMER header data io_fd->hData. So skip
+    // past it.
+    byteIdx += sizeof(HOMER_Data_t);
+
+    // The HOMER_Data_t struct may have some padding added after the struct to
+    // ensure the HOMER_Chip_t structs are 4-byte word aligned.
     uint32_t sz_word = sizeof(uint32_t);
     uint32_t pad = (sz_word - (sizeof(HOMER_Data_t) % sz_word)) % sz_word;
-    uint8_t       *l_bytePtr = io_fd->hBuf + sizeof(HOMER_Data_t) + pad;
-    HOMER_Chip_t  *l_chipPtr = NULL;
+    byteIdx += pad;
 
     // Start iterating all chips in the HOMER data.
     uint32_t i = 0;
     for ( i = 0; i < io_fd->hData->chipCount; i++ )
     {
-        l_chipPtr = (HOMER_Chip_t *)l_bytePtr;
+        // Keep a pointer of the current chip header.
+        HOMER_Chip_t * chipHdr = (HOMER_Chip_t *) byteIdx;
+        byteIdx += sizeof(HOMER_Chip_t);
 
-        /* get FSI base address and chip position (proc or centaur) */
-        fsi = l_chipPtr->fsiBaseAddr;
-        p   = l_chipPtr->chipPos;
+        // Get FSI base address and chip position.
+        uint32_t fsi = chipHdr->fsiBaseAddr;
+        uint8_t  p   = chipHdr->chipPos;
 
         uint32_t mask = 0;
 
-        if ( HOMER_CHIP_NIMBUS == l_chipPtr->chipType )
+        if ( HOMER_CHIP_NIMBUS == chipHdr->chipType )
         {
-            /* To access the 'chiplet exist' structure */
-            l_bytePtr += sizeof(HOMER_Chip_t);
+            // Keep a pointer of the current chip data.
+            HOMER_ChipNimbus_t * chipData = (HOMER_ChipNimbus_t *) byteIdx;
+            byteIdx += sizeof(HOMER_ChipNimbus_t);
 
-            HOMER_ChipNimbus_t * chipData =
-                                    (HOMER_ChipNimbus_t *)l_bytePtr;
-
-            /* get master proc indicator */
             isM = chipData->isMaster;
-
-            /* advance our pointer to next chip type */
-            l_bytePtr += sizeof(HOMER_ChipNimbus_t);
 
             /* Add this PROC to the PNOR. */
             sTrgt = SCOM_Trgt_getTrgt(TRGT_PROC, p, 0, fsi, isM);
-            full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, l_chipPtr );
+            full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, chipHdr );
 
             /* noAttn is true when we have global regs but none */
             /* indicate an attention is present                 */
@@ -870,7 +869,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
 
                 /* Add this XBUS to the PNOR. */
                 sTrgt = SCOM_Trgt_getTrgt(TRGT_XBUS, p, u, fsi, isM);
-                full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, l_chipPtr );
+                full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, chipHdr );
                 if ( full ) break;
             }
             if ( full ) break;
@@ -884,7 +883,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
 
                 /* Add this OBUS to the PNOR. */
                 sTrgt = SCOM_Trgt_getTrgt(TRGT_OBUS, p, u, fsi, isM);
-                full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, l_chipPtr );
+                full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, chipHdr );
                 if ( full ) break;
             }
             if ( full ) break;
@@ -898,7 +897,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
 
                 /* Add this CAPP to the PNOR. */
                 sTrgt = SCOM_Trgt_getTrgt(TRGT_CAPP, p, u, fsi, isM);
-                full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, l_chipPtr );
+                full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, chipHdr );
                 if ( full ) break;
             }
             if ( full ) break;
@@ -912,7 +911,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
 
                 /* Add this PEC to the PNOR. */
                 sTrgt = SCOM_Trgt_getTrgt(TRGT_PEC, p, u, fsi, isM);
-                full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, l_chipPtr );
+                full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, chipHdr );
                 if ( full ) break;
                 if ( noAttn ) continue; /* Skip the rest */
 
@@ -942,7 +941,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
 
                     /* Add this PHB to the PNOR. */
                     sTrgt = SCOM_Trgt_getTrgt(TRGT_PHB, p, l_PhbPos, fsi, isM);
-                    full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, l_chipPtr );
+                    full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, chipHdr );
                     if ( full ) break;
                     if ( noAttn ) continue; /* Skip the rest */
 
@@ -961,7 +960,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
 
                 /* Add this EC to the PNOR. */
                 sTrgt = SCOM_Trgt_getTrgt(TRGT_EC, p, u, fsi, isM);
-                full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, l_chipPtr );
+                full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, chipHdr );
                 if ( full ) break;
                 if ( noAttn ) continue; /* Skip the rest */
 
@@ -977,7 +976,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
 
                 /* Add this EQ to the PNOR. */
                 sTrgt = SCOM_Trgt_getTrgt(TRGT_EQ, p, u, fsi, isM);
-                full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, l_chipPtr );
+                full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, chipHdr );
                 if ( full ) break;
                 if ( noAttn ) continue; /* Skip the rest */
 
@@ -995,7 +994,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
 
                     /* Add this EX to the PNOR. */
                     sTrgt = SCOM_Trgt_getTrgt(TRGT_EX, p, l_ExPos, fsi, isM);
-                    full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, l_chipPtr );
+                    full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, chipHdr );
                     if ( full ) break;
                     if ( noAttn ) continue; /* Skip the rest */
 
@@ -1018,7 +1017,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
 
                 /* Add this MCBIST to the PNOR. */
                 sTrgt = SCOM_Trgt_getTrgt(TRGT_MCBIST, p, u, fsi, isM);
-                full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, l_chipPtr );
+                full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, chipHdr );
                 if ( full ) break;
                 if ( noAttn ) continue; /* Skip the rest */
 
@@ -1034,7 +1033,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
 
                     /* Add this MCA / DMI to the PNOR. */
                     sTrgt = SCOM_Trgt_getTrgt(TRGT_MCA, p, l_unitNumber, fsi, isM);
-                    full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, l_chipPtr );
+                    full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, chipHdr );
                     if ( full ) break;
 
                 } /* end for on MCA/DMI */
@@ -1052,7 +1051,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
 
                 /* Add this MCS or MI to the PNOR. */
                 sTrgt = SCOM_Trgt_getTrgt(TRGT_MCS, p, u, fsi, isM);
-                full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, l_chipPtr );
+                full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, chipHdr );
                 if ( full ) break;
             }
             if ( full ) break;
@@ -1061,7 +1060,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
         else
         {
             TRAC_ERR( "[FirData_addTrgtsToPnor] invalid chip type:0x%x",
-                      (uint32_t)l_chipPtr->chipType );
+                      (uint32_t)chipHdr->chipType );
             break;
         }
     }
