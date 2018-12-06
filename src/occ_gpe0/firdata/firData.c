@@ -806,15 +806,8 @@ bool FirData_addTrgtToPnor( FirData_t * io_fd, SCOM_Trgt_t i_sTrgt,
  */
 void FirData_addTrgtsToPnor( FirData_t * io_fd )
 {
-    bool full   = false;
-    bool noAttn = false;
-
     uint8_t u  = 0;
     uint8_t l_unit = 0;
-
-    bool     isM = false;
-
-    SCOM_Trgt_t sTrgt;
 
     // We will need to keep track of where we are in the HOMER buffer.
     uint8_t * byteIdx = io_fd->hBuf;
@@ -841,7 +834,20 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
         uint32_t fsi = chipHdr->fsiBaseAddr;
         uint8_t  p   = chipHdr->chipPos;
 
+        bool full   = false; // PNOR data is full so exit
+        bool noAttn = false; // No attns found, continue to next chip or unit
+
+        SCOM_Trgt_t sTrgt; // Chip or unit SCOM target
+        bool isM = false;  // Is this chip the master processor?
+
+        // Various other variables used below.
         uint32_t mask = 0;
+
+#define ADD_TO_PNOR( TYPE, UNIT ) \
+    sTrgt = SCOM_Trgt_getTrgt( TRGT_##TYPE, p, (UNIT), fsi, isM ); \
+    full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, chipHdr ); \
+    if ( full ) break; \
+    if ( noAttn ) continue;
 
         if ( HOMER_CHIP_NIMBUS == chipHdr->chipType )
         {
@@ -851,14 +857,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
 
             isM = chipData->isMaster;
 
-            /* Add this PROC to the PNOR. */
-            sTrgt = SCOM_Trgt_getTrgt(TRGT_PROC, p, 0, fsi, isM);
-            full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, chipHdr );
-
-            /* noAttn is true when we have global regs but none */
-            /* indicate an attention is present                 */
-            if ( full ) break;
-            if ( noAttn ) continue; /* Skip other proc chiplets */
+            ADD_TO_PNOR( PROC, 0 )
 
             /* gather other chiplets on the processor */
             for ( u = 0; u < MAX_XBUS_PER_PROC; u++ )
@@ -867,10 +866,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
                 mask = 1 << ((MAX_XBUS_PER_PROC-1) - u);
                 if ( 0 == (chipData->xbusMask & mask) ) continue;
 
-                /* Add this XBUS to the PNOR. */
-                sTrgt = SCOM_Trgt_getTrgt(TRGT_XBUS, p, u, fsi, isM);
-                full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, chipHdr );
-                if ( full ) break;
+                ADD_TO_PNOR( XBUS, u )
             }
             if ( full ) break;
 
@@ -881,10 +877,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
                 mask = 1 << ((MAX_OBUS_PER_PROC-1) - u);
                 if ( 0 == (chipData->obusMask & mask) ) continue;
 
-                /* Add this OBUS to the PNOR. */
-                sTrgt = SCOM_Trgt_getTrgt(TRGT_OBUS, p, u, fsi, isM);
-                full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, chipHdr );
-                if ( full ) break;
+                ADD_TO_PNOR( OBUS, u )
             }
             if ( full ) break;
 
@@ -895,10 +888,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
                 mask = 1 << ((MAX_CAPP_PER_PROC-1) - u);
                 if ( 0 == (chipData->cappMask & mask) ) continue;
 
-                /* Add this CAPP to the PNOR. */
-                sTrgt = SCOM_Trgt_getTrgt(TRGT_CAPP, p, u, fsi, isM);
-                full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, chipHdr );
-                if ( full ) break;
+                ADD_TO_PNOR( CAPP, u )
             }
             if ( full ) break;
 
@@ -909,11 +899,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
                 mask = 1 << ((MAX_PEC_PER_PROC-1) - u);
                 if ( 0 == (chipData->pecMask & mask) ) continue;
 
-                /* Add this PEC to the PNOR. */
-                sTrgt = SCOM_Trgt_getTrgt(TRGT_PEC, p, u, fsi, isM);
-                full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, chipHdr );
-                if ( full ) break;
-                if ( noAttn ) continue; /* Skip the rest */
+                ADD_TO_PNOR( PEC, u )
 
                 /* gather PHB's under the PEC  */
                 /*  ************************** */
@@ -939,11 +925,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
                     mask = 1 << ((MAX_PHB_PER_PROC-1) - l_PhbPos);
                     if ( 0 == (chipData->phbMask & mask) ) continue;
 
-                    /* Add this PHB to the PNOR. */
-                    sTrgt = SCOM_Trgt_getTrgt(TRGT_PHB, p, l_PhbPos, fsi, isM);
-                    full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, chipHdr );
-                    if ( full ) break;
-                    if ( noAttn ) continue; /* Skip the rest */
+                    ADD_TO_PNOR( PHB, l_PhbPos )
 
                 } /* end for on PHB chiplet */
                 if ( full ) break;
@@ -958,11 +940,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
                 mask = 1 << ((MAX_EC_PER_PROC-1) - u);
                 if ( 0 == (chipData->ecMask & mask) ) continue;
 
-                /* Add this EC to the PNOR. */
-                sTrgt = SCOM_Trgt_getTrgt(TRGT_EC, p, u, fsi, isM);
-                full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, chipHdr );
-                if ( full ) break;
-                if ( noAttn ) continue; /* Skip the rest */
+                ADD_TO_PNOR( EC, u )
 
             } /* end for on EC chiplet */
             if ( full ) break;
@@ -974,11 +952,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
                 mask = 1 << ((MAX_EQ_PER_PROC-1) - u);
                 if ( 0 == (chipData->eqMask & mask) ) continue;
 
-                /* Add this EQ to the PNOR. */
-                sTrgt = SCOM_Trgt_getTrgt(TRGT_EQ, p, u, fsi, isM);
-                full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, chipHdr );
-                if ( full ) break;
-                if ( noAttn ) continue; /* Skip the rest */
+                ADD_TO_PNOR( EQ, u )
 
                 /* gather other chiplets on the processor */
                 uint32_t l_ExPerEq = (MAX_EX_PER_PROC/MAX_EQ_PER_PROC);
@@ -992,11 +966,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
                     mask = 1 << ((MAX_EX_PER_PROC-1) - l_ExPos);
                     if ( 0 == (chipData->exMask & mask) ) continue;
 
-                    /* Add this EX to the PNOR. */
-                    sTrgt = SCOM_Trgt_getTrgt(TRGT_EX, p, l_ExPos, fsi, isM);
-                    full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, chipHdr );
-                    if ( full ) break;
-                    if ( noAttn ) continue; /* Skip the rest */
+                    ADD_TO_PNOR( EX, l_ExPos )
 
                 } /* end for on EX chiplet */
                 if ( full ) break;
@@ -1015,11 +985,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
                 mask = 1 << ((MAX_MCBIST_PER_PROC-1) - u);
                 if ( 0 == (chipData->mcbistMask & mask) ) continue;
 
-                /* Add this MCBIST to the PNOR. */
-                sTrgt = SCOM_Trgt_getTrgt(TRGT_MCBIST, p, u, fsi, isM);
-                full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, chipHdr );
-                if ( full ) break;
-                if ( noAttn ) continue; /* Skip the rest */
+                ADD_TO_PNOR( MCBIST, u )
 
                 /* Grab underlying MCA chiplet */
                 for ( l_unit = 0; l_unit < l_UnitPerMc; l_unit++ )
@@ -1031,10 +997,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
                     mask = 1 << ((MAX_MCA_PER_PROC-1) - l_unitNumber);
                     if ( 0 == (chipData->mcaMask & mask) ) continue;
 
-                    /* Add this MCA / DMI to the PNOR. */
-                    sTrgt = SCOM_Trgt_getTrgt(TRGT_MCA, p, l_unitNumber, fsi, isM);
-                    full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, chipHdr );
-                    if ( full ) break;
+                    ADD_TO_PNOR( MCA, l_unitNumber )
 
                 } /* end for on MCA/DMI */
                 if ( full ) break;
@@ -1049,10 +1012,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
                 mask = 1 << ((MAX_MCS_PER_PROC-1) - u);
                 if ( 0 == (chipData->mcsMask & mask) ) continue;
 
-                /* Add this MCS or MI to the PNOR. */
-                sTrgt = SCOM_Trgt_getTrgt(TRGT_MCS, p, u, fsi, isM);
-                full = FirData_addTrgtToPnor( io_fd, sTrgt, &noAttn, chipHdr );
-                if ( full ) break;
+                ADD_TO_PNOR( MCS, u )
             }
             if ( full ) break;
 
@@ -1063,6 +1023,9 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
                       (uint32_t)chipHdr->chipType );
             break;
         }
+
+#undef ADD_TO_PNOR
+
     }
 }
 
