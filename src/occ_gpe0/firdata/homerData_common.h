@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_405/firdata/homerData_common.h $                      */
+/* $Source: src/occ_gpe0/firdata/homerData_common.h $                     */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2018                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -141,8 +141,6 @@ static inline HOMER_Data_t HOMER_getData()
 typedef enum
 {
     HOMER_CHIP_NIMBUS,  /** P9 Nimbus processor chip */
-    HOMER_CHIP_CUMULUS, /** P9 Cumulus processor chip */
-    HOMER_CHIP_CENTAUR, /** Centaur memory buffer chip */
 
 } HOMER_ChipType_t;
 
@@ -163,7 +161,6 @@ typedef struct __attribute__((packed))
 /* NOTE: This structure is 4-byte word aligned. */
 typedef struct __attribute__((packed))
 {
-
     uint32_t chipType :  4; /** See HOMER_ChipType_t. */
     uint32_t trgtType :  6; /** See TrgtType_t. */
     uint32_t regType  :  4; /** See RegType_t. */
@@ -214,57 +211,6 @@ typedef struct __attribute__((packed))
 static inline HOMER_ChipNimbus_t HOMER_initChipNimbus()
 {
     HOMER_ChipNimbus_t c; memset( &c, 0x00, sizeof(c) ); /* init to zero */
-
-    return c;
-}
-
-/*----------------------------------------------------------------------------*/
-
-/** Information specific to a P9 Cumulus processor chip. */
-/* NOTE: This structure is 4-byte word aligned. */
-typedef struct __attribute__((packed))
-{
-    uint32_t isMaster :  1; /** 1 if this is the master PROC, 0 otherwise */
-    uint32_t xbusMask :  3; /** Mask of configured XBUS units (0-2) */
-    uint32_t obusMask :  4; /** Mask of configured OBUS units (0-3) */
-    uint32_t ecMask   : 24; /** Mask of configured EC units (0-23) */
-
-    uint32_t eqMask   :  6; /** Mask of configured EQ units (0-5) */
-    uint32_t exMask   : 12; /** Mask of configured EX units (0-11) */
-    uint32_t mcMask   :  2; /** Mask of configured MC units (0-1) */
-    uint32_t miMask   :  4; /** Mask of configured MI units (0-3) */
-    uint32_t dmiMask  :  8; /** Mask of configured DMI units (0-7) */
-
-    uint32_t cappMask :  2; /** Mask of configured CAPP units (0-1) */
-    uint32_t pecMask  :  3; /** Mask of configured PEC units (0-2) */
-    uint32_t phbMask  :  6; /** Mask of configured PHB units (0-5) */
-    uint32_t reserved : 21;
-
-} HOMER_ChipCumulus_t;
-
-/** @return An initialized HOMER_ChipCumulus_t struct. */
-static inline HOMER_ChipCumulus_t HOMER_initChipCumulus()
-{
-    HOMER_ChipCumulus_t c; memset( &c, 0x00, sizeof(c) ); /* init to zero */
-
-    return c;
-}
-
-/*----------------------------------------------------------------------------*/
-
-/** Information specific to a Centaur memory buffer chip. */
-/* NOTE: This structure is 4-byte word aligned. */
-typedef struct __attribute__((packed))
-{
-    uint32_t mbaMask  :  2; /** Mask of configured MBA units (0-1) */
-    uint32_t reserved : 30;
-
-} HOMER_ChipCentaur_t;
-
-/** @return An initialized HOMER_ChipCentaur_t struct. */
-static inline HOMER_ChipCentaur_t HOMER_initChipCentaur()
-{
-    HOMER_ChipCentaur_t c; memset( &c, 0x00, sizeof(c) ); /* init to zero */
 
     return c;
 }
