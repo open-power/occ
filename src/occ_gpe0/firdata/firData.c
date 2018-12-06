@@ -856,6 +856,14 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
     if ( 0 == (chipData->MASK & mask) ) continue; \
     ADD_TO_PNOR( TYPE, UNIT )
 
+#define START_UNIT_LOOP( ITR, MAX ) \
+    for ( ITR = 0; ITR < (MAX); ITR++ ) \
+    {
+
+#define END_UNIT_LOOP \
+    } \
+    if ( full ) break;
+
         if ( HOMER_CHIP_NIMBUS == chipHdr->chipType )
         {
             // Keep a pointer of the current chip data.
@@ -866,46 +874,30 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
 
             ADD_TO_PNOR( PROC, 0 )
 
-            /* gather other chiplets on the processor */
-            for ( u = 0; u < MAX_XBUS_PER_PROC; u++ )
-            {
+            START_UNIT_LOOP( u, PROC_MAX(XBUS) )
                 ADD_UNIT_TO_PNOR( xbusMask, XBUS, u )
-            }
-            if ( full ) break;
+            END_UNIT_LOOP
 
-            /* gather other chiplets on the processor */
-            for ( u = 0; u < MAX_OBUS_PER_PROC; u++ )
-            {
+            START_UNIT_LOOP( u, PROC_MAX(OBUS) )
                 ADD_UNIT_TO_PNOR( obusMask, OBUS, u )
-            }
-            if ( full ) break;
+            END_UNIT_LOOP
 
-            /* gather more proc chiplets  */
-            for ( u = 0; u < MAX_CAPP_PER_PROC; u++ )
-            {
+            START_UNIT_LOOP( u, PROC_MAX(CAPP) )
                 ADD_UNIT_TO_PNOR( cappMask, CAPP, u )
-            }
-            if ( full ) break;
+            END_UNIT_LOOP
 
-            /* gather other chiplets on the processor */
-            for ( u = 0; u < MAX_PEC_PER_PROC; u++ )
-            {
+            START_UNIT_LOOP( u, PROC_MAX(PEC) )
                 ADD_UNIT_TO_PNOR( pecMask, PEC, u )
 
-                /* gather PHB's under the PEC  */
-                /*  ************************** */
-                /*  PEC0-> PHB0                */
-                /*  PEC1-> PHB1 PHB2           */
-                /*  PEC2-> PHB3 PHB4 PHB5      */
-                /*  ************************** */
-                uint32_t l_PhbPos;
+                // The PEC unit number matches the number of PHBs under
+                // that PEC.
+                START_UNIT_LOOP( l_unit, u + 1 )
 
-                /* u will be 0, l_unit 0             */
-                /* u will be 1, l_unit 0 and 1       */
-                /* u will be 2, l_unit 0 and 1 and 2 */
-                for ( l_unit = 0; l_unit < (u+1); l_unit++ )
-                {
-                    l_PhbPos = u + l_unit;
+                    // Calculate the PHB unit position.
+                    //   PEC0-> PHB0
+                    //   PEC1-> PHB1 PHB2
+                    //   PEC2-> PHB3 PHB4 PHB5
+                    uint32_t l_PhbPos = u + l_unit;
                     /** When we hit PEC2, need to bump PHB position */
                     if  ((MAX_PEC_PER_PROC - 1) == u)
                     {
@@ -914,70 +906,53 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
 
                     ADD_UNIT_TO_PNOR( phbMask, PHB, l_PhbPos )
 
-                } /* end for on PHB chiplet */
-                if ( full ) break;
+                END_UNIT_LOOP
 
-            } /* end for on PEC chiplet */
-            if ( full ) break;
+            END_UNIT_LOOP
 
-            /* gather other chiplets on the processor */
-            for ( u = 0; u < MAX_EC_PER_PROC; u++ )
-            {
+            START_UNIT_LOOP( u, PROC_MAX(EC) )
                 ADD_UNIT_TO_PNOR( ecMask, EC, u )
 
-            } /* end for on EC chiplet */
-            if ( full ) break;
+            END_UNIT_LOOP
 
-            /* gather other chiplets on the processor */
-            for ( u = 0; u < MAX_EQ_PER_PROC; u++ )
-            {
+            START_UNIT_LOOP( u, PROC_MAX(EQ) )
                 ADD_UNIT_TO_PNOR( eqMask, EQ, u )
 
                 /* gather other chiplets on the processor */
                 uint32_t l_ExPerEq = (MAX_EX_PER_PROC/MAX_EQ_PER_PROC);
                 uint32_t l_ExPos;
 
-                for (l_unit=0; l_unit < l_ExPerEq; l_unit++)
-                {
+                START_UNIT_LOOP( l_unit, l_ExPerEq )
                     l_ExPos = (l_ExPerEq * u) + l_unit;
 
                     ADD_UNIT_TO_PNOR( exMask, EX, l_ExPos )
 
-                } /* end for on EX chiplet */
-                if ( full ) break;
+                END_UNIT_LOOP
 
-            } /* end for on EQ chiplet */
-            if ( full ) break;
+            END_UNIT_LOOP
 
 
             /* processor type can impact next few units */
             uint32_t l_UnitPerMc = MAX_MCA_PER_PROC / MAX_MCBIST_PER_PROC;
             uint8_t  l_unitNumber;
 
-            for ( u = 0; u < MAX_MCBIST_PER_PROC; u++ )
-            {
+            START_UNIT_LOOP( u, PROC_MAX(MCBIST) )
                 ADD_UNIT_TO_PNOR( mcbistMask, MCBIST, u )
 
-                /* Grab underlying MCA chiplet */
-                for ( l_unit = 0; l_unit < l_UnitPerMc; l_unit++ )
-                {
+                START_UNIT_LOOP( l_unit, l_UnitPerMc )
                     /* u=0 or 1 while  l_unit is 0 thru 3 */
                     /* Leading to unit number 0:3 or 4:7  */
                     l_unitNumber = l_unit + (u * l_UnitPerMc);
                     ADD_UNIT_TO_PNOR( mcaMask, MCA, l_unitNumber )
 
-                } /* end for on MCA/DMI */
-                if ( full ) break;
+                END_UNIT_LOOP
 
-            } /* end for on MCBIST */
-            if ( full ) break;
+            END_UNIT_LOOP
 
 
-            for ( u = 0; u < MAX_MCS_PER_PROC; u++ )
-            {
+            START_UNIT_LOOP( u, PROC_MAX(MCS) )
                 ADD_UNIT_TO_PNOR( mcsMask, MCS, u )
-            }
-            if ( full ) break;
+            END_UNIT_LOOP
 
         }
         else
@@ -990,6 +965,8 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
 #undef PROC_MAX
 #undef ADD_TO_PNOR
 #undef ADD_UNIT_TO_PNOR
+#undef START_UNIT_LOOP
+#undef END_UNIT_LOOP
 
     }
 }
