@@ -863,6 +863,18 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
     } \
     if ( full ) break;
 
+#define ADD_UNITS_TO_PNOR( MASK, TYPE ) \
+    START_UNIT_LOOP( u1, PROC_MAX(TYPE) ) \
+        ADD_UNIT_TO_PNOR( MASK, TYPE, u1 ) \
+    END_UNIT_LOOP
+
+#define ADD_SUBUNITS_TO_PNOR( MASK, P_TYPE, C_TYPE ) \
+    subUnitMax = PROC_MAX(C_TYPE) / PROC_MAX(P_TYPE); \
+    START_UNIT_LOOP( u2, subUnitMax ) \
+        u3 = (subUnitMax * u1) + u2; \
+        ADD_UNIT_TO_PNOR( MASK, C_TYPE, u3 ) \
+    END_UNIT_LOOP
+
         if ( HOMER_CHIP_NIMBUS == chipHdr->chipType )
         {
             // Keep a pointer of the current chip data.
@@ -873,17 +885,11 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
 
             ADD_TO_PNOR( PROC, 0 )
 
-            START_UNIT_LOOP( u1, PROC_MAX(XBUS) )
-                ADD_UNIT_TO_PNOR( xbusMask, XBUS, u1 )
-            END_UNIT_LOOP
+            ADD_UNITS_TO_PNOR( xbusMask, XBUS )
 
-            START_UNIT_LOOP( u1, PROC_MAX(OBUS) )
-                ADD_UNIT_TO_PNOR( obusMask, OBUS, u1 )
-            END_UNIT_LOOP
+            ADD_UNITS_TO_PNOR( obusMask, OBUS )
 
-            START_UNIT_LOOP( u1, PROC_MAX(CAPP) )
-                ADD_UNIT_TO_PNOR( cappMask, CAPP, u1 )
-            END_UNIT_LOOP
+            ADD_UNITS_TO_PNOR( cappMask, CAPP )
 
             START_UNIT_LOOP( u1, PROC_MAX(PEC) )
 
@@ -906,36 +912,19 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
 
             END_UNIT_LOOP
 
-            START_UNIT_LOOP( u1, PROC_MAX(EC) )
-                ADD_UNIT_TO_PNOR( ecMask, EC, u1 )
-            END_UNIT_LOOP
+            ADD_UNITS_TO_PNOR( ecMask, EC )
 
             START_UNIT_LOOP( u1, PROC_MAX(EQ) )
-                ADD_UNIT_TO_PNOR( eqMask, EQ, u1 )
-
-                subUnitMax = PROC_MAX(EX) / PROC_MAX(EQ);
-                START_UNIT_LOOP( u2, subUnitMax )
-                    u3 = (subUnitMax * u1) + u2;
-                    ADD_UNIT_TO_PNOR( exMask, EX, u3 )
-                END_UNIT_LOOP
-
+                ADD_UNIT_TO_PNOR(     eqMask, EQ, u1 )
+                ADD_SUBUNITS_TO_PNOR( exMask, EQ, EX )
             END_UNIT_LOOP
 
             START_UNIT_LOOP( u1, PROC_MAX(MCBIST) )
-                ADD_UNIT_TO_PNOR( mcbistMask, MCBIST, u1 )
-
-                subUnitMax = PROC_MAX(MCA) / PROC_MAX(MCBIST);
-                START_UNIT_LOOP( u2, subUnitMax )
-                    u3 = (subUnitMax * u1) + u2;
-                    ADD_UNIT_TO_PNOR( mcaMask, MCA, u3 )
-                END_UNIT_LOOP
-
+                ADD_UNIT_TO_PNOR(     mcbistMask, MCBIST, u1  )
+                ADD_SUBUNITS_TO_PNOR( mcaMask,    MCBIST, MCA )
             END_UNIT_LOOP
 
-            START_UNIT_LOOP( u1, PROC_MAX(MCS) )
-                ADD_UNIT_TO_PNOR( mcsMask, MCS, u1 )
-            END_UNIT_LOOP
-
+            ADD_UNITS_TO_PNOR( mcsMask, MCS )
         }
         else
         {
@@ -949,6 +938,8 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
 #undef ADD_UNIT_TO_PNOR
 #undef START_UNIT_LOOP
 #undef END_UNIT_LOOP
+#undef ADD_UNITS_TO_PNOR
+#undef ADD_SUBUNITS_TO_PNOR
 
     }
 }
