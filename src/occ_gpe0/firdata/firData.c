@@ -886,10 +886,10 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
             ADD_TO_PNOR( PROC, 0 )
 
             ADD_UNITS_TO_PNOR( xbusMask, XBUS )
-
             ADD_UNITS_TO_PNOR( obusMask, OBUS )
-
             ADD_UNITS_TO_PNOR( cappMask, CAPP )
+            ADD_UNITS_TO_PNOR( ecMask,   EC   )
+            ADD_UNITS_TO_PNOR( mcsMask,  MCS  )
 
             START_UNIT_LOOP( u1, PROC_MAX(PEC) )
 
@@ -912,8 +912,6 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
 
             END_UNIT_LOOP
 
-            ADD_UNITS_TO_PNOR( ecMask, EC )
-
             START_UNIT_LOOP( u1, PROC_MAX(EQ) )
                 ADD_UNIT_TO_PNOR(     eqMask, EQ, u1 )
                 ADD_SUBUNITS_TO_PNOR( exMask, EQ, EX )
@@ -923,8 +921,63 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
                 ADD_UNIT_TO_PNOR(     mcbistMask, MCBIST, u1  )
                 ADD_SUBUNITS_TO_PNOR( mcaMask,    MCBIST, MCA )
             END_UNIT_LOOP
+        }
+        else if ( HOMER_CHIP_AXONE == chipHdr->chipType )
+        {
+            // Keep a pointer of the current chip data.
+            HOMER_ChipAxone_t * chipData = (HOMER_ChipAxone_t *) byteIdx;
+            byteIdx += sizeof(HOMER_ChipAxone_t);
 
-            ADD_UNITS_TO_PNOR( mcsMask, MCS )
+            isM = chipData->isMaster;
+
+            ADD_TO_PNOR( PROC, 0 )
+
+            ADD_UNITS_TO_PNOR( xbusMask, XBUS )
+            ADD_UNITS_TO_PNOR( obusMask, OBUS )
+            ADD_UNITS_TO_PNOR( cappMask, CAPP )
+            ADD_UNITS_TO_PNOR( ecMask,   EC   )
+            ADD_UNITS_TO_PNOR( npuMask,  NPU  )
+            ADD_UNITS_TO_PNOR( miMask,   MI   )
+
+            START_UNIT_LOOP( u1, PROC_MAX(PEC) )
+
+                ADD_UNIT_TO_PNOR( pecMask, PEC, u1 )
+
+                // The PEC unit number matches the number of PHBs under
+                // that PEC.
+                START_UNIT_LOOP( u2, u1 + 1 )
+
+                    // Calculate the PHB unit position.
+                    //   PEC0-> PHB0
+                    //   PEC1-> PHB1 PHB2
+                    //   PEC2-> PHB3 PHB4 PHB5
+                    u3 = u1 + u2;
+                    if ( (PROC_MAX(PEC) - 1) == u1 ) u3++;
+
+                    ADD_UNIT_TO_PNOR( phbMask, PHB, u3 )
+
+                END_UNIT_LOOP
+
+            END_UNIT_LOOP
+
+            START_UNIT_LOOP( u1, PROC_MAX(EQ) )
+                ADD_UNIT_TO_PNOR(     eqMask, EQ, u1 )
+                ADD_SUBUNITS_TO_PNOR( exMask, EQ, EX )
+            END_UNIT_LOOP
+
+            START_UNIT_LOOP( u1, PROC_MAX(MC) )
+                ADD_UNIT_TO_PNOR(     mcMask,   MC, u1   )
+                ADD_SUBUNITS_TO_PNOR( mccMask,  MC, MCC  )
+                ADD_SUBUNITS_TO_PNOR( omicMask, MC, OMIC )
+            END_UNIT_LOOP
+        }
+        else if ( HOMER_CHIP_EXPLORER == chipHdr->chipType )
+        {
+            // NOTE: The Explorer chip does not have any unit data.
+
+            isM = false; // processor chips only.
+
+            ADD_TO_PNOR( OCMB, 0 );
         }
         else
         {
@@ -1078,6 +1131,14 @@ int32_t FirData_init( FirData_t * io_fd,
             if (HOMER_CHIP_NIMBUS == l_chiptPtr->chipType)
             {
                 reglist += sizeof(HOMER_ChipNimbus_t);
+            }
+            else if (HOMER_CHIP_AXONE == l_chiptPtr->chipType)
+            {
+                reglist += sizeof(HOMER_ChipAxone_t);
+            }
+            else if (HOMER_CHIP_EXPLORER == l_chiptPtr->chipType)
+            {
+                // There is no chip unit data for Explorer.
             }
             else
             {
