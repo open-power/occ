@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -152,6 +152,8 @@ occSysConfigData_t G_sysConfigData =
         .gpu[1][0]           = SYSCFG_INVALID_ADC_CHAN,
         .gpu[1][1]           = SYSCFG_INVALID_ADC_CHAN,
         .gpu[1][2]           = SYSCFG_INVALID_ADC_CHAN,
+        .sense_volt2         = SYSCFG_INVALID_ADC_CHAN,
+        .total_current_volt2 = SYSCFG_INVALID_ADC_CHAN,
     },
 
     .apssGpioPortsMode =   {0, 0},

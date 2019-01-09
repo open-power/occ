@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -201,6 +201,9 @@ enum occExtReasonCode
     ERC_AMEC_DIMM_TEMP_TIMEOUT                  = 0x0031,
     ERC_AMEC_CENT_TEMP_TIMEOUT                  = 0x0032,
     ERC_AMEC_GPE1_TIMEOUT                       = 0x0033,
+
+    ERC_APSS_MISSING_ADC_VOLT_SENSE_2           = 0x0038,
+    ERC_APSS_GPU_VOLTAGE_CONFLICT               = 0x0039,
 
     ERC_CMDH_MBOX_REQST_FAILURE                 = 0x0040,
     ERC_CMDH_INTERNAL_FAILURE                   = 0x0041,

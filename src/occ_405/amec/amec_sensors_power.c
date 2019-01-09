@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -84,6 +84,10 @@ extern task_t G_task_table[TASK_END];
 
 extern uint16_t G_configured_mbas;
 extern uint8_t G_injected_epow_asserted;
+extern uint8_t G_gpu_volt_type[MAX_GPU_DOMAINS][MAX_NUM_GPU_PER_DOMAIN];
+
+#define GPU0_USING_VOLT2(proc, channel) ((channel == G_sysConfigData.apss_adc_map.gpu[proc][0]) && (G_gpu_volt_type[proc][0] == 2))
+#define GPU1_USING_VOLT2(proc, channel) ((channel == G_sysConfigData.apss_adc_map.gpu[proc][1]) && (G_gpu_volt_type[proc][1] == 2))
 
 //*************************************************************************/
 // Code
@@ -152,7 +156,7 @@ uint32_t amec_value_from_apss_adc(uint8_t i_chan)
          * gain adjusted output: 1024mV * 10,000 mA/V = 10,240,000 (mV . mA)/V
          * Reduced value: adjusted/1000 = 10,240 mA
          *
-         * Note that in the case of the remote ground and 12V sense the gain
+         * Note that in the case of the remote ground and voltage sense the gain
          * values are in V/V so the returned value is actually in mVs.
          *
          * Max returnable value is 4,294,967,295 mA or approx. 4.3 MA
@@ -193,6 +197,7 @@ uint32_t amec_value_from_apss_adc(uint8_t i_chan)
 
 #define ADCMULT_TO_UNITS 1000000
 #define ADCMULT_ROUND ADCMULT_TO_UNITS/2
+#define ROUND_POWER(value) ((((uint64_t)value) + ADCMULT_ROUND) / ADCMULT_TO_UNITS)
 // Function Specification
 //
 // Name: amec_update_apss_sensors
@@ -218,7 +223,6 @@ bool amec_update_apss_sensors(void)
             uint8_t l_proc   = G_pbax_id.chip_id;
             uint32_t temp32  = 0;
             uint8_t  l_idx   = 0;
-            uint32_t l_bulk_current_sum = 0;
 
             // Check GPIO_EPOW. Skip everything if asserted
             if (epow_gpio_asserted())
@@ -233,25 +237,22 @@ bool amec_update_apss_sensors(void)
             for (l_idx = 0; l_idx < MAX_APSS_ADC_CHANNELS; l_idx++)
             {
                 // These values returned are gain adjusted. The APSS readings for
-                // the remote ground and 12V sense are returned in mVs, all other
+                // the remote ground and voltage sense are returned in mVs, all other
                 // readings are treated as mAs.
                 G_lastValidAdcValue[l_idx] = amec_value_from_apss_adc(l_idx);
-
-                // Add up all channels now, we will subtract ones later that don't
-                // count towards the system power
-                l_bulk_current_sum += G_lastValidAdcValue[l_idx];
             }
 
             // --------------------------------------------------------------
-            // Convert 12Vsense into interim value - this has to happen first
+            // Convert voltages into interim value - this has to happen first
             // --------------------------------------------------------------
             // Calculations involving bulk_voltage must be 64bit so final result
             // does not get truncated (before dividing by ADCMULT_TO_UNITS)
             uint64_t l_bulk_voltage = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.sense_12v);
+            uint64_t l_bulk_voltage_2 = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.sense_volt2);
 
             if (OCC_MASTER == G_occ_role)
             {
-                // Update channel sensors for all channels (except 12v sense and gnd)
+                // Update channel sensors for all channels (except voltage sense and gnd)
                 for (l_idx = 0; l_idx < MAX_APSS_ADC_CHANNELS; l_idx++)
                 {
                     if(l_idx == G_sysConfigData.apss_adc_map.current_12v_stby)
@@ -261,9 +262,18 @@ bool amec_update_apss_sensors(void)
                         sensor_update(AMECSENSOR_PTR(CUR12VSTBY), (uint16_t) temp32);
                     }
                     else if((l_idx != G_sysConfigData.apss_adc_map.sense_12v) &&
+                            (l_idx != G_sysConfigData.apss_adc_map.sense_volt2) &&
                             (l_idx != G_sysConfigData.apss_adc_map.remote_gnd))
                     {
-                        temp32 = ((ADC_CONVERTED_VALUE(l_idx) * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
+                        uint64_t l_bulk_v = l_bulk_voltage;
+                        if ( GPU0_USING_VOLT2(0, l_idx) || GPU1_USING_VOLT2(0, l_idx) ||
+                             GPU0_USING_VOLT2(1, l_idx) || GPU1_USING_VOLT2(1, l_idx) ||
+                             (l_idx == G_sysConfigData.apss_adc_map.total_current_volt2) )
+                        {
+                            // Channel is using Voltge 2
+                            l_bulk_v = l_bulk_voltage_2;
+                        }
+                        temp32 = ROUND_POWER(ADC_CONVERTED_VALUE(l_idx) * l_bulk_v);
                         sensor_update(AMECSENSOR_PTR(PWRAPSSCH0 + l_idx), (uint16_t) temp32);
                     }
                 }
@@ -291,7 +301,7 @@ bool amec_update_apss_sensors(void)
             {
                 uint32_t l_vdd = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.vdd[l_proc]);
                 uint32_t l_vcs_vio_vpcie = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.vcs_vio_vpcie[l_proc]);
-                temp32 = ((l_vcs_vio_vpcie + l_vdd) * l_bulk_voltage)/ADCMULT_TO_UNITS;
+                temp32 = ROUND_POWER((l_vcs_vio_vpcie + l_vdd) * l_bulk_voltage);
                 sensor_update(AMECSENSOR_PTR(PWRPROC), (uint16_t) temp32);
             }
 
@@ -300,7 +310,7 @@ bool amec_update_apss_sensors(void)
             {
                 uint32_t l_vd = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.vdd[l_idx]);
                 uint32_t l_vpcie = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.vcs_vio_vpcie[l_idx]);
-                g_amec->proc_snr_pwr[l_idx] =  ((l_vpcie + l_vd) * l_bulk_voltage)/ADCMULT_TO_UNITS;
+                g_amec->proc_snr_pwr[l_idx] = ROUND_POWER((l_vpcie + l_vd) * l_bulk_voltage);
             }
 
             // All readings from APSS come back as milliUnits, so if we want
@@ -317,14 +327,14 @@ bool amec_update_apss_sensors(void)
             // Fans: Add up all Fan channels
             temp32  = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.fans[0]);
             temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.fans[1]);
-            temp32  = ((temp32  * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
+            temp32  = ROUND_POWER(temp32  * l_bulk_voltage);
             sensor_update( AMECSENSOR_PTR(PWRFAN), (uint16_t)temp32);
 
             // I/O: Add up all I/O channels
             temp32  = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.io[0]);
             temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.io[1]);
             temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.io[2]);
-            temp32 = ((temp32  * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
+            temp32 = ROUND_POWER(temp32  * l_bulk_voltage);
             sensor_update( AMECSENSOR_PTR(PWRIO), (uint16_t)temp32);
 
             // Memory: Add up all channels for the same processor.
@@ -337,7 +347,7 @@ bool amec_update_apss_sensors(void)
             {
                 temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.mem_cache);
             }
-            temp32 = ((temp32  * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
+            temp32 = ROUND_POWER(temp32  * l_bulk_voltage);
             sensor_update( AMECSENSOR_PTR(PWRMEM), (uint16_t)temp32);
 
             // Save off the combined power from all memory
@@ -347,46 +357,103 @@ bool amec_update_apss_sensors(void)
                 l_temp += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.memory[l_idx][1]);
                 l_temp += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.memory[l_idx][2]);
                 l_temp += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.memory[l_idx][3]);
-                g_amec->mem_snr_pwr[l_idx] = ((l_temp  * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
+                g_amec->mem_snr_pwr[l_idx] = ROUND_POWER(l_temp  * l_bulk_voltage);
             }
 
             // Storage/Media
             temp32  = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.storage_media[0]);
             temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.storage_media[1]);
-            temp32  = ((temp32  * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
+            temp32  = ROUND_POWER(temp32  * l_bulk_voltage);
             sensor_update( AMECSENSOR_PTR(PWRSTORE), (uint16_t)temp32);
 
             // Save total GPU adapter for this proc
             if (l_proc < MAX_GPU_DOMAINS)
             {
-                temp32 = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.gpu[l_proc][0]);
-                temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.gpu[l_proc][1]);
-                temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.gpu[l_proc][2]);
-                temp32 = ((temp32 * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
+                // GPU0
+                uint64_t l_bulk_v = l_bulk_voltage;
+                if (G_gpu_volt_type[l_proc][0] == 2)
+                {
+                    l_bulk_v = l_bulk_voltage_2;
+                }
+                temp32 = l_bulk_v * ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.gpu[l_proc][0]);
+                // GPU1
+                if (G_gpu_volt_type[l_proc][1] == 2)
+                {
+                    l_bulk_v = l_bulk_voltage_2;
+                }
+                else
+                {
+                    l_bulk_v = l_bulk_voltage;
+                }
+                temp32 += l_bulk_v * ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.gpu[l_proc][1]);
+                // GPU2
+                temp32 += l_bulk_voltage * ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.gpu[l_proc][2]);
+                temp32 = ROUND_POWER(temp32);
                 sensor_update( AMECSENSOR_PTR(PWRGPU), (uint16_t)temp32);
             }
 
             // ----------------------------------------------------
             // Convert Raw Bulk Power from APSS into sensors
             // ----------------------------------------------------
-            // We don't get this adc channel in some systems, we have to add it manually.
-            // With valid sysconfig data the code here should automatically use what
-            // is provided by the APSS if it is available, or manually sum it up if not.
-            temp32 = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.total_current_12v);
-            temp32 = ((temp32 * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
-
-            // To calculated the total 12V current based on a sum of all ADC channels,
-            // Subract adc channels that don't measure power
-            l_bulk_current_sum -= ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.sense_12v);
-            l_bulk_current_sum -= ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.remote_gnd);
-            l_bulk_current_sum -= ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.current_12v_stby);
-
-            // If we don't have a ADC channel that measures the bulk 12v power, use
-            // the ADC sum instead
-            if(0 == temp32)
+            // Not all systems provide a total system current/power, in which case it must be calculated.
+            temp32 = 0;
+            const uint32_t syspwr_volt1 = l_bulk_voltage   * ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.total_current_12v);
+            const uint32_t syspwr_volt2 = l_bulk_voltage_2 * ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.total_current_volt2);
+            if(0 != syspwr_volt1)
             {
-                temp32 = ((l_bulk_current_sum * l_bulk_voltage)+ADCMULT_ROUND)/ADCMULT_TO_UNITS;
+                // Total System Power (voltage 1 (12V)) was provided, use directly
+                temp32 = syspwr_volt1;
+                if (0 != syspwr_volt2)
+                {
+                    // Total System Power (voltage 2) was provided, use directly
+                    temp32 += syspwr_volt2;
+                }
+                else
+                {
+                    // No Total System Power (voltage 2) - Add powers for GPUs using voltage 2
+                    for (l_idx = 0; l_idx < MAX_APSS_ADC_CHANNELS; l_idx++)
+                    {
+                        if ( GPU0_USING_VOLT2(0, l_idx) || GPU1_USING_VOLT2(0, l_idx) ||
+                             GPU0_USING_VOLT2(1, l_idx) || GPU1_USING_VOLT2(1, l_idx) )
+                        {
+                            temp32 += l_bulk_voltage_2 * G_lastValidAdcValue[l_idx];
+                        }
+                    }
+                }
             }
+            else
+            {
+                // No Total System Power (voltage 1 (12V)) - Add powers for channels using voltage 1
+                for (l_idx = 0; l_idx < MAX_APSS_ADC_CHANNELS; l_idx++)
+                {
+                    if ( (0 != syspwr_volt2) &&
+                         ( GPU0_USING_VOLT2(0, l_idx) || GPU1_USING_VOLT2(0, l_idx) ||
+                           GPU0_USING_VOLT2(1, l_idx) || GPU1_USING_VOLT2(1, l_idx) ) )
+                    {
+                        // Total System Power (voltage 2) was provided, so skip GPU channels using voltage 2
+                        continue;
+                    }
+
+                    uint64_t l_bulk_v = l_bulk_voltage;
+                    if ( GPU0_USING_VOLT2(0, l_idx) || GPU1_USING_VOLT2(0, l_idx) ||
+                         GPU0_USING_VOLT2(1, l_idx) || GPU1_USING_VOLT2(1, l_idx) ||
+                         (l_idx == G_sysConfigData.apss_adc_map.total_current_volt2) )
+                    {
+                        // GPU (or total current) is using voltage 2
+                        l_bulk_v = l_bulk_voltage_2;
+                    }
+
+                    if ((l_idx != G_sysConfigData.apss_adc_map.sense_12v) &&
+                        (l_idx != G_sysConfigData.apss_adc_map.remote_gnd) &&
+                        (l_idx != G_sysConfigData.apss_adc_map.current_12v_stby) &&
+                        (l_idx != G_sysConfigData.apss_adc_map.sense_volt2))
+                    {
+                        // Add power for this channel
+                        temp32 += l_bulk_v * G_lastValidAdcValue[l_idx];
+                    }
+                }
+            }
+            temp32 = ROUND_POWER(temp32);
             sensor_update(AMECSENSOR_PTR(PWRSYS), (uint16_t)temp32);
 
             // Calculate average frequency of all OCCs.
