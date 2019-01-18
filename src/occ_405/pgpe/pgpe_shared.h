@@ -29,6 +29,12 @@
 #define OPPB_MAGIC_NUMBER_10         0x4F43435050423030ull   // "OCCPPB00"
 #define PGPE_MAGIC_NUMBER_10         0x504750455F312E30ull   // "PGPE_1.0"
 
+// magic number for OCC-PGPE Shared Sram
+#define OPS_MAGIC_NUMBER_P9          0x4F505330ull   // "OPS0"
+#define OPS_MAGIC_NUMBER_P9_PRIME    0x4F505331ull   // "OPS1"
+#define OPS_MAGIC_NUMBER_P10         0x4F505332ull   // "OPS2"
+
+
 // Address and offset to find PGPE PK trace
 #define PGPE_DEBUG_PTRS_ADDR           0xFFF20200   // 0xfff20000 + 0x200
 #define PGPE_DEBUG_TRACE_ADDR_OFFSET   0x04
@@ -47,6 +53,7 @@
 #define PGPE_REQUESTED_ACTIVE_QUAD_ADDR_OFFSET 0x54
 #define PGPE_WOF_TBLS_ADDR_OFFSET              0x58
 #define PGPE_WOF_TBLS_LEN_OFFSET               0x5C
+#define PGPE_PRODUCED_WOF_VALUES_ADDR_OFFSET   0x78
 
 // This size must be a multiple of 128
 typedef struct __attribute__ ((packed))
@@ -87,6 +94,7 @@ typedef struct __attribute__ ((packed))
     uint32_t requested_active_quad_sram_addr;
     uint32_t wof_tables_addr;
     uint32_t wof_tables_length;
+    uint32_t pgpe_produced_wof_values_addr;
 } pgpe_header_data_t;
 
 extern pgpe_header_data_t G_pgpe_header;

@@ -47,6 +47,7 @@
 #include "amec_oversub.h"
 #include "avsbus.h"
 #include <p9_pstates_occ.h>
+#include <wof.h>
 /******************************************************************************/
 /* Globals                                                                    */
 /******************************************************************************/
@@ -84,6 +85,8 @@ extern task_t G_task_table[TASK_END];
 
 extern uint16_t G_configured_mbas;
 extern uint8_t G_injected_epow_asserted;
+extern bool    G_pgpe_shared_sram_V_I_readings;
+
 extern uint8_t G_gpu_volt_type[MAX_GPU_DOMAINS][MAX_NUM_GPU_PER_DOMAIN];
 
 #define GPU0_USING_VOLT2(proc, channel) ((channel == G_sysConfigData.apss_adc_map.gpu[proc][0]) && (G_gpu_volt_type[proc][0] == 2))
@@ -695,6 +698,7 @@ void update_avsbus_power_sensors(const avsbus_type_e i_type)
 // Name: amec_update_avsbus_sensors
 //
 // Description: Read AVS Bus data and update sensors (called every tick)
+//  If reading V/I from AVSbus
 //   Tick 0: start read current (for Vdd/Vdn)
 //   Tick 1: process current, start voltage read (Vdd/Vdn)
 //   Tick 2: process voltage, start Vdd temp read
@@ -706,6 +710,16 @@ void update_avsbus_power_sensors(const avsbus_type_e i_type)
 //
 //   Vdd/Vdn current and voltage are read every 3 ticks
 //   Vdd temperature and status is read every 6 ticks
+//
+//  If reading V/I from OCC-PGPE Shared SRAM
+//   Tick 0: start read current (for Vdd)
+//   Tick 1: process current, start status read (Vdd)
+//   Tick 2: process status, start Vdd temp read
+//   Tick 3: process Vdd temp, start current read (Vdd)
+//   (back to tick 1)
+//
+//   Vdd current is read every 3 ticks
+//   Vdd temperature and status is read every 3 ticks
 //
 // Thread: RealTime Loop
 //
@@ -733,53 +747,103 @@ void amec_update_avsbus_sensors(void)
     switch (L_avsbus_state)
     {
         case AVSBUS_STATE_INITIATE_READ:
-            // Start reading from AVS bus, what we start with depends on the amec slave state
-            // with goal of processing status on the same tick that WOF runs (amec slave state 4)
-            // Want processing of Temperature on state 1, voltage on 2, current on 3, to give status on 4
-            // can only start with temperature or voltage, since the status must be last and requires
-            // voltage and current to have been read in order to update the power sensor
-            switch ( G_amec_slv_state.state )
+            // Start reading from AVS bus
+            if(!G_pgpe_shared_sram_V_I_readings)
             {
-                case 0:
-                case 4:
+                // Start reading from AVS bus, what we start with depends on the amec slave state
+                // with goal of processing status on the same tick that WOF runs (amec slave state 4)
+                // Want processing of Temperature on state 1, voltage on 2, current on 3, to give status on 4
+                // can only start with temperature or voltage, since the status must be last and requires
+                // voltage and current to have been read in order to update the power sensor
+                switch ( G_amec_slv_state.state )
+                {
+                    case 0:
+                    case 4:
+                        // Initiate AVS Bus read for Vdd temperature
+                        // temperature will be processed on next tick (state 1/5)
+                        TRAC_IMP("amec_update_avsbus_sensors: Starting with temperature in slave state %d", G_amec_slv_state.state);
+                        avsbus_read_start(AVSBUS_VDD, AVSBUS_TEMPERATURE);
+                        L_avsbus_state = AVSBUS_STATE_PROCESS_TEMPERATURE;
+                        break;
+                    case 1:
+                    case 5:
+                        // Initiate read of voltages
+                        // voltages will be processed on next tick (state 2/6)
+                        TRAC_IMP("amec_update_avsbus_sensors: Starting with voltage in slave state %d", G_amec_slv_state.state);
+                        initiate_avsbus_reads(AVSBUS_VOLTAGE);
+                        L_avsbus_state = AVSBUS_STATE_PROCESS_VOLTAGE;
+                        break;
+                    case 2:
+                    case 3:
+                    case 6:
+                    case 7:
+                        // Need to wait another tick, can only start with temperature or voltage readings
+                        break;
+                    default:
+                        // this should never happen, this would mean the whole state machine is broken!
+                        // just start reading with temperature
+                        TRAC_ERR("amec_update_avsbus_sensors: INVALID AMEC SLAVE STATE 0x%02X", G_amec_slv_state.state);
+                        avsbus_read_start(AVSBUS_VDD, AVSBUS_TEMPERATURE);
+                        L_avsbus_state = AVSBUS_STATE_PROCESS_TEMPERATURE;
+                        break;
+                }  // switch G_amec_slv_state.state
+
+            }  // if reading V/I from AVSbus
+            else
+            {
+                // we are reading V/I from PGPE except if internal flag got set for OCC
+                // to read Vdd Current in order to handle rollover detection
+                if(G_internal_flags & INT_FLAG_ENABLE_VDD_CURRENT_READ)
+                {
+                    // Vdd current enabled, start with initiate read of Vdd current
+                    // Before starting the Current read clear the Vdd OCW bit if it is being used for rollover detection
+                    if (G_sysConfigData.vdd_current_rollover_10mA != 0xFFFF)
+                    {
+                        clear_status_errors(G_sysConfigData.avsbus_vdd.bus, AVSBUS_STATUS_OVER_CURRENT_MASK);
+                    }
+                    initiate_avsbus_reads(AVSBUS_CURRENT);
+                    L_avsbus_state = AVSBUS_STATE_PROCESS_CURRENT;
+                }
+                else
+                {
                     // Initiate AVS Bus read for Vdd temperature
-                    // temperature will be processed on next tick (state 1/5)
-                    TRAC_IMP("amec_update_avsbus_sensors: Starting with temperature in slave state %d", G_amec_slv_state.state);
                     avsbus_read_start(AVSBUS_VDD, AVSBUS_TEMPERATURE);
                     L_avsbus_state = AVSBUS_STATE_PROCESS_TEMPERATURE;
-                    break;
-                case 1:
-                case 5:
-                    // Initiate read of voltages
-                    // voltages will be processed on next tick (state 2/6)
-                    TRAC_IMP("amec_update_avsbus_sensors: Starting with voltage in slave state %d", G_amec_slv_state.state);
-                    initiate_avsbus_reads(AVSBUS_VOLTAGE);
-                    L_avsbus_state = AVSBUS_STATE_PROCESS_VOLTAGE;
-                    break;
-                case 2:
-                case 3:
-                case 6:
-                case 7:
-                    // Need to wait another tick, can only start with temperature or voltage readings
-                    break;
-                default:
-                    // this should never happen, this would mean the whole state machine is broken!
-                    // just start reading with temperature
-                    TRAC_ERR("amec_update_avsbus_sensors: INVALID AMEC SLAVE STATE 0x%02X", G_amec_slv_state.state);
-                    avsbus_read_start(AVSBUS_VDD, AVSBUS_TEMPERATURE);
-                    L_avsbus_state = AVSBUS_STATE_PROCESS_TEMPERATURE;
-                    break;
-            }
+                }
+            }  // else reading V/I from PGPE Shared SRAM
 
             break;  // case AVSBUS_STATE_INITIATE_READ
 
         case AVSBUS_STATE_PROCESS_TEMPERATURE:
-                // Read and process Vdd temperature
-                avsbus_read(AVSBUS_VDD, AVSBUS_TEMPERATURE);
+            // Read and process Vdd temperature
+            avsbus_read(AVSBUS_VDD, AVSBUS_TEMPERATURE);
 
+            // determine what to read next
+            if(!G_pgpe_shared_sram_V_I_readings)
+            {
                 // Initiate read of voltages
                 initiate_avsbus_reads(AVSBUS_VOLTAGE);
                 L_avsbus_state = AVSBUS_STATE_PROCESS_VOLTAGE;
+            }
+            else if(G_internal_flags & INT_FLAG_ENABLE_VDD_CURRENT_READ)
+            {
+                // Initiate read of Vdd current
+                // this will only read Vdd since Vdn monitoring was turned off due to G_pgpe_shared_sram_V_I_readings
+                // in data_store_avsbus_config()
+                // Before starting the Current read clear the Vdd OCW bit if it is being used for rollover detection
+                if (G_sysConfigData.vdd_current_rollover_10mA != 0xFFFF)
+                {
+                    clear_status_errors(G_sysConfigData.avsbus_vdd.bus, AVSBUS_STATUS_OVER_CURRENT_MASK);
+                }
+                initiate_avsbus_reads(AVSBUS_CURRENT);
+                L_avsbus_state = AVSBUS_STATE_PROCESS_CURRENT;
+            }
+            else
+            {
+                // Initiate read of status
+                initiate_avsbus_read_status();
+                L_avsbus_state = AVSBUS_STATE_PROCESS_STATUS;
+            }
             break;
 
         case AVSBUS_STATE_PROCESS_VOLTAGE:
@@ -823,6 +887,13 @@ void amec_update_avsbus_sensors(void)
             TRAC_ERR("amec_update_avsbus_sensors: INVALID AVSBUS STATE 0x%02X", L_avsbus_state);
             L_avsbus_state = AVSBUS_STATE_INITIATE_READ;
             break;
+    }
+
+    // if we are using V/I readings from PGPE Shared memory, read and update the sensors now
+    // this will also save the data for WOF to use on this tick
+    if(G_pgpe_shared_sram_V_I_readings)
+    {
+        read_pgpe_produced_wof_values();
     }
 
 } // end amec_update_avsbus_sensors()

@@ -37,7 +37,19 @@
 #define PGPE_WOF_OFF                0
 #define PGPE_WOF_ON                 1
 #define NUM_CORES_PER_QUAD          4
-#define MAX_VFRT_CHANCES            2
+
+// default number of chances for WOF running every 8th tick, actual timeout
+// used will be adjusted if WOF runs every tick
+#define MAX_VFRT_CHANCES_EVERY_8TH_TICK  2  // 8ms = 4ms * 2
+#define MAX_VFRT_CHANCES_EVERY_TICK  16  // 8ms = 500us * 16
+#define MAX_VFRT_CHANCES G_max_vfrt_chances
+#define MAX_WOF_CONTROL_CHANCES_EVERY_8TH_TICK  2  // 8ms = 4ms * 2
+#define MAX_WOF_CONTROL_CHANCES_EVERY_TICK  16  // 8ms = 500us * 16
+#define MAX_WOF_CONTROL_CHANCES G_max_wof_control_chances
+extern uint8_t G_max_vfrt_chances;
+extern uint8_t G_max_wof_control_chances;
+
+
 #define WOF_TABLES_OFFSET           0xC0000 // Relative to PPMR_ADDRESS_HOMER
 #define MAX_CEFF_RATIO              10000   // 1.0 ratio = 10000
                                             // (scaled to avoid floating point)
@@ -367,6 +379,10 @@ typedef struct __attribute__ ((packed))
     uint8_t quad5CoresCachesOnT[CORE_IDDQ_MEASUREMENTS];
     uint8_t quad6CoresCachesOnT[CORE_IDDQ_MEASUREMENTS];
     uint8_t avgtemp_vdn[CORE_IDDQ_MEASUREMENTS];
+    uint64_t pgpe_wof_values_dw0;
+    uint64_t pgpe_wof_values_dw1;
+    uint64_t pgpe_wof_values_dw2;
+    uint64_t pgpe_wof_values_dw3;
 } amec_wof_t;
 
 // Structure for sensors used in g_amec for AMESTER
@@ -410,6 +426,8 @@ void wof_vfrt_callback( void );
 void send_vfrt_to_pgpe( uint32_t i_vfrt_address );
 
 void read_shared_sram( void );
+
+void read_pgpe_produced_wof_values( void );
 
 void calculate_core_voltage( void );
 

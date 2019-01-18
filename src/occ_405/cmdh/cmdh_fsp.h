@@ -314,6 +314,7 @@ extern uint8_t  G_rsp_status;
 // To set flags:  tmgtclient -X 0x40 --data 0x1f<4 byte value for G_internal_flags>
 extern uint32_t G_internal_flags;
 #define INT_FLAG_DISABLE_24X7 0x00000001
+#define INT_FLAG_ENABLE_VDD_CURRENT_READ 0x00000008
 
 void notifyCmdhWakeupCondition(eCmdhWakeupThreadMask i_cond);
 void clearCmdhWakeupCondition(eCmdhWakeupThreadMask i_cond);

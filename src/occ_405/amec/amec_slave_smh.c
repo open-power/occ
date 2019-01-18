@@ -71,6 +71,7 @@ extern dcom_slv_inbox_t G_dcom_slv_inbox_rx;
 extern opal_proc_voting_reason_t G_amec_opal_proc_throt_reason;
 extern uint16_t G_proc_fmax_mhz;
 extern GpeRequest G_wof_vfrt_req;
+extern bool G_pgpe_shared_sram_V_I_readings;
 
 //*************************************************************************
 // Macros
@@ -446,12 +447,21 @@ void amec_slv_common_tasks_post(void)
         // Call the OCC slave's performance check
         amec_slv_check_perf();
 
-        // Call the every tick trace recording if it has been configured via Amester.
-        // If not configured, this call will return immediately.
-        amec_tb_record(AMEC_TB_EVERY_TICK);
+        //-------------------------------------------------------
+        // Run WOF Algorithm if we are getting readings from PGPE
+        // Else WOF will run in slave state 4
+        //-------------------------------------------------------
+        if(G_pgpe_shared_sram_V_I_readings)
+        {
+            call_wof_main();
+        }
 
         // Check to see if a VFRT IPC request needs to be sent to the PGPE
         schedule_vfrt_request();
+
+        // Call the every tick trace recording if it has been configured via Amester.
+        // If not configured, this call will return immediately.
+        amec_tb_record(AMEC_TB_EVERY_TICK);
       }
       else
       {
@@ -601,10 +611,15 @@ void amec_slv_state_4(void)
   if (MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type)
       amec_update_centaur_sensors(CENTAUR_4);
 
-    //-------------------------------------------------------
-    // Run WOF Algorithm
-    //-------------------------------------------------------
-    call_wof_main();
+  //-------------------------------------------------------
+  // Run WOF Algorithm if we are NOT getting readings from PGPE
+  // Else WOF will run every tick with new PGPE readings
+  //-------------------------------------------------------
+  if(!G_pgpe_shared_sram_V_I_readings)
+  {
+      call_wof_main();
+  }
+
 }
 
 

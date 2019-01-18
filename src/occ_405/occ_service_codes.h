@@ -264,6 +264,8 @@ enum occExtReasonCode
     ERC_PGPE_ACTIVE_TO_OBSERVATION_TIMEOUT      = 0x00B9,
     ERC_PGPE_TASK_TIMEOUT                       = 0x00BA,
     ERC_PGPE_INVALID_ADDRESS                    = 0x00BB,
+    ERC_OPS_INVALID_MAGIC_NUMBER                = 0x00BC,
+    ERC_PGPE_WOF_VALUES_INVALID_ADDRESS         = 0x00BD,
 
     ERC_WOF_QUAD_COUNT_FAILURE                  = 0x00C0,
     ERC_WOF_CONTROL_ERROR                       = 0x00C1,

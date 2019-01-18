@@ -69,6 +69,19 @@
 // in SRAM
 bool G_ipl_time = false;
 
+// Defaults for Reading V/I from OCC-PGPE Shared SRAM
+// if reading from shared SRAM is supported we will read every tick and
+// run WOF every tick.  All defaults will assume not supported.
+
+// indication on where OCC is getting voltage/current readings from
+// PGPE shared SRAM or reading directly from AVSbus
+bool G_pgpe_shared_sram_V_I_readings = false;
+
+// timeout, as number of WOF ticks, for PGPE VFRT command
+uint8_t G_max_vfrt_chances = MAX_VFRT_CHANCES_EVERY_8TH_TICK;
+// timeout, as number of WOF ticks, for PGPE WOF Control command
+uint8_t G_max_wof_control_chances = MAX_WOF_CONTROL_CHANCES_EVERY_8TH_TICK;
+
 extern uint32_t __ssx_boot; // Function address is 32 bits
 extern uint32_t G_occ_phantom_critical_count;
 extern uint32_t G_occ_phantom_noncritical_count;
@@ -501,6 +514,7 @@ bool read_pgpe_header(void)
     uint32_t userdata1 = 0;
     uint32_t userdata2 = 0;
     uint64_t magic_number = 0;
+    uint32_t pgpe_shared_magic_number = 0;
 
     MAIN_TRAC_INFO("read_pgpe_header(0x%08X)", PGPE_HEADER_ADDR);
     do
@@ -521,6 +535,7 @@ bool read_pgpe_header(void)
             G_pgpe_header.requested_active_quad_sram_addr = in32(PGPE_HEADER_ADDR + PGPE_REQUESTED_ACTIVE_QUAD_ADDR_OFFSET);
             G_pgpe_header.wof_tables_addr = in32(PGPE_HEADER_ADDR + PGPE_WOF_TBLS_ADDR_OFFSET);
             G_pgpe_header.wof_tables_length = in32(PGPE_HEADER_ADDR + PGPE_WOF_TBLS_LEN_OFFSET);
+            G_pgpe_header.pgpe_produced_wof_values_addr = in32(PGPE_HEADER_ADDR + PGPE_PRODUCED_WOF_VALUES_ADDR_OFFSET);
 
             const uint32_t hcode_elog_table_addr = G_pgpe_header.shared_sram_addr + HCODE_ELOG_TABLE_SRAM_OFFSET;
             if (HCODE_ELOG_TABLE_MAGIC_NUMBER == in32(hcode_elog_table_addr))
@@ -559,6 +574,73 @@ bool read_pgpe_header(void)
                 l_extReasonCode = ERC_PGPE_INVALID_ADDRESS;
                 userdata1 = WORD_LOW(G_pgpe_header.beacon_sram_addr);
                 userdata2 = WORD_LOW(G_pgpe_header.shared_sram_addr);
+                break;
+            }
+            // verify what version of OCC-PGPE shared SRAM we have so we know how we are reading
+            // voltage and current
+            pgpe_shared_magic_number = in32(G_pgpe_header.shared_sram_addr);
+            // older PGPE P9 code didn't fill in the magic number, if 0 assume P9
+            if( (pgpe_shared_magic_number == 0) ||
+                (pgpe_shared_magic_number == OPS_MAGIC_NUMBER_P9) )
+            {
+                // no support for reading voltage/current from PGPE, OCC reads via AVS bus
+                G_pgpe_shared_sram_V_I_readings = false;
+                MAIN_TRAC_IMP("Reading V/I from AVSbus for PGPE shared SRAM magic number[0x%08x]",
+                               pgpe_shared_magic_number);
+            }
+            else if(pgpe_shared_magic_number == OPS_MAGIC_NUMBER_P9_PRIME)
+            {
+                if (G_pgpe_header.pgpe_produced_wof_values_addr == 0)
+                {
+                    // don't have a valid address
+                    MAIN_TRAC_ERR("read_pgpe_header: PGPE Produced WOF Values Address is 0! 0 Address read from [0x%08X]",
+                                   WORD_LOW(PGPE_HEADER_ADDR + PGPE_PRODUCED_WOF_VALUES_ADDR_OFFSET));
+                    /*
+                     * @errortype
+                     * @moduleid    READ_PGPE_HEADER
+                     * @reasoncode  SSX_GENERIC_FAILURE
+                     * @userdata1   lower word of PGPE Produced WOF values sram address
+                     * @userdata2   lower word of SRAM address PGPE Produced WOF values SRAM addr was read from
+                     * @userdata4   ERC_PGPE_WOF_VALUES_INVALID_ADDRESS
+                     * @devdesc     Invalid sram address for PGPE Produced WOF values from PGPE header
+                     */
+                    l_reasonCode = SSX_GENERIC_FAILURE;
+                    l_extReasonCode = ERC_PGPE_WOF_VALUES_INVALID_ADDRESS;
+                    userdata1 = WORD_LOW(G_pgpe_header.pgpe_produced_wof_values_addr);
+                    userdata2 = WORD_LOW(PGPE_HEADER_ADDR + PGPE_PRODUCED_WOF_VALUES_ADDR_OFFSET);
+                    break;
+                }
+                else
+                {
+                    // read voltage/current from OCC-PGPE shared SRAM
+                    MAIN_TRAC_IMP("Reading V/I from PGPE Shared SRAM addr[0x%08X] for Magic Number[0x%08X]",
+                               G_pgpe_header.pgpe_produced_wof_values_addr, pgpe_shared_magic_number);
+                    G_pgpe_shared_sram_V_I_readings = true;
+
+                    // this also means we will be running WOF every tick, update WOF timeouts
+                    // for runnning every tick to keep same timeout
+                    G_max_vfrt_chances = MAX_VFRT_CHANCES_EVERY_TICK;
+                    G_max_wof_control_chances = MAX_WOF_CONTROL_CHANCES_EVERY_TICK;
+                }
+            }
+            else
+            {
+                // magic number not supported
+                MAIN_TRAC_ERR("read_pgpe_header: Invalid PGPE Shared SRAM Magic number. Addr[0x%08X], Magic Number[0x%08X]",
+                               G_pgpe_header.shared_sram_addr, pgpe_shared_magic_number);
+                /* @
+                 * @errortype
+                 * @moduleid    READ_PGPE_HEADER
+                 * @reasoncode  INVALID_MAGIC_NUMBER
+                 * @userdata1   OCC PGPE Shared SRAM magic number
+                 * @userdata2   0
+                 * @userdata4   ERC_OPS_INVALID_MAGIC_NUMBER
+                 * @devdesc     Invalid magic number in OCC PGPE Shared SRAM
+                 */
+                l_reasonCode = INVALID_MAGIC_NUMBER;
+                l_extReasonCode = ERC_OPS_INVALID_MAGIC_NUMBER;
+                userdata1 = pgpe_shared_magic_number;
+                userdata2 = 0;
                 break;
             }
         }

@@ -36,6 +36,7 @@
 #include <wof.h>
 #include <amec_freq.h>
 #include <pgpe_interface.h>
+#include <avsbus.h>
 #include "common.h"             // For ignore_pgpe_error()
 //******************************************************************************
 // External Globals
@@ -49,6 +50,8 @@ extern GpeRequest   G_wof_control_req;
 extern uint32_t     G_nest_frequency_mhz;
 extern volatile pstateStatus G_proc_pstate_status;
 extern uint8_t G_occ_interrupt_type;
+extern bool    G_pgpe_shared_sram_V_I_readings;
+
 //******************************************************************************
 // Globals
 //******************************************************************************
@@ -117,25 +120,22 @@ int16_t G_wof_iddq_mult_table[][2] = {
  *              such that the WOF algorithm can run. This includes making
  *              sure the PGPE is ready to perform WOF calculations and enforcing
  *              when WOF should wait a tick to perform a calc or disable wof
- *              entirely. Called from amec_slave_smh.c::amec_slv_state_4.
- *              This should run every 4ms, if HW_MICS_PER_TICK changes adjust calls
- *              to this function (use amec substates) to keep this called every 4ms
+ *              entirely. Called from amec_slave_smh.c::amec_slv_common_tasks_post.
  * Param: None
  *
  * Return: None
  */
 void call_wof_main( void )
 {
-    // Variable to ensure we do not keep trying to send vfrt GpeRequest
-    // more than 1 extra time.
-    static uint8_t L_vfrt_last_chance = MAX_VFRT_CHANCES;
+    // Timeout for VFRT to complete
+    static uint8_t L_vfrt_last_chance = MAX_VFRT_CHANCES_EVERY_TICK;
 
-    // Variable to ensure we do not keep trying to send the wof control
-    static bool L_wof_control_last_chance = false;
+    // Timeout for WOF Control to complete
+    static uint8_t L_wof_control_last_chance = MAX_WOF_CONTROL_CHANCES_EVERY_TICK;
 
     // Variable to keep track of logging timeouts being ignored
-    // Since WOF runs every 4ms we have already waited more than the required 1ms for PGPE
-    // to set the bit to give ignore indication so no additional timer needed before checking
+    // WOF runs every 500us all timeouts must be at least 1ms for PGPE
+    // to have time to set the bit to give ignore indication
     static bool L_current_timeout_recorded = false;
 
     // Variable to keep track of PState enablement to prevent setting/clearing
@@ -231,6 +231,10 @@ void call_wof_main( void )
                     // For each possible initialization state,
                     // do the appropriate action
                     case WOF_DISABLED:
+                        // Reset timeouts for VFRT response and WOF control
+                        L_vfrt_last_chance = MAX_VFRT_CHANCES;
+                        L_wof_control_last_chance = MAX_WOF_CONTROL_CHANCES;
+
                         // calculate initial vfrt, send gpeRequest
                         // Initial vfrt is the last vfrt in Main memory
                         send_initial_vfrt_to_pgpe();
@@ -252,9 +256,11 @@ void call_wof_main( void )
                             }
                             else if(L_vfrt_last_chance != 0)
                             {
-                                INTR_TRAC_INFO("initial VFRT NOT idle."
-                                               " %d more chance(s)",
-                                               L_vfrt_last_chance );
+                                if( L_vfrt_last_chance == 1 )
+                                {
+                                    INTR_TRAC_INFO("initial VFRT NOT idle. Last chance out of %d chances",
+                                                    MAX_VFRT_CHANCES);
+                                }
                                 L_vfrt_last_chance--;
                             }
                             else
@@ -280,18 +286,21 @@ void call_wof_main( void )
                         if( !enable_success )
                         {
                             // Treat as an error only if not currently ignoring PGPE failures
-                            if( L_wof_control_last_chance && (!ignore_pgpe_error()) )
+                            if( (L_wof_control_last_chance == 0) && (!ignore_pgpe_error()) )
                             {
                                 INTR_TRAC_ERR("WOF Disabled! Control req timeout(1)");
                                 set_clear_wof_disabled(SET,
                                                        WOF_RC_CONTROL_REQ_TIMEOUT,
                                                        ERC_WOF_CONTROL_REQ_TIMEOUT);
                             }
-                            else if(!L_wof_control_last_chance)
+                            else if(L_wof_control_last_chance != 0)
                             {
-                                INTR_TRAC_ERR("One more chance for WOF "
-                                        "control request(1)");
-                                L_wof_control_last_chance = true;
+                                if(L_wof_control_last_chance == 1 )
+                                {
+                                    INTR_TRAC_ERR("Last chance for WOF control request(1) out of %d chances ",
+                                                   MAX_WOF_CONTROL_CHANCES);
+                                }
+                                L_wof_control_last_chance--;
                             }
                             else
                             {
@@ -308,7 +317,7 @@ void call_wof_main( void )
                         {
                             // Reset the last chance variable
                             // Init state updated in enable_wof
-                            L_wof_control_last_chance = false;
+                            L_wof_control_last_chance = MAX_WOF_CONTROL_CHANCES;
 
                             L_current_timeout_recorded = FALSE;
                         }
@@ -319,18 +328,21 @@ void call_wof_main( void )
                         if( !async_request_is_idle(&G_wof_control_req.request) )
                         {
                             // Treat as an error only if not currently ignoring PGPE failures
-                            if( L_wof_control_last_chance && (!ignore_pgpe_error()) )
+                            if( (L_wof_control_last_chance == 0) && (!ignore_pgpe_error()) )
                             {
                                 INTR_TRAC_ERR("WOF Disabled! Control req timeout(2)");
                                 set_clear_wof_disabled(SET,
                                                        WOF_RC_CONTROL_REQ_TIMEOUT,
                                                        ERC_WOF_CONTROL_REQ_TIMEOUT );
                             }
-                            else if(!L_wof_control_last_chance)
+                            else if(L_wof_control_last_chance != 0)
                             {
-                                INTR_TRAC_ERR("One more chance for WOF "
-                                        "control request(2)");
-                                L_wof_control_last_chance = true;
+                                if(L_wof_control_last_chance == 1 )
+                                {
+                                    INTR_TRAC_ERR("Last chance for WOF control request(2) out of %d chances ",
+                                                   MAX_WOF_CONTROL_CHANCES);
+                                }
+                                L_wof_control_last_chance--;
                             }
                             else
                             {
@@ -388,8 +400,11 @@ void call_wof_main( void )
                     }
                     else
                     {
-                        INTR_TRAC_INFO("VFRT NOT idle. %d more chance(s)",
-                                        L_vfrt_last_chance);
+                        if( L_vfrt_last_chance == 1 )
+                        {
+                            INTR_TRAC_INFO("VFRT NOT idle. Last chance out of %d chances",
+                                            MAX_VFRT_CHANCES);
+                        }
                         L_vfrt_last_chance--;
                     }
                 }
@@ -430,12 +445,13 @@ void call_wof_main( void )
  */
 void wof_main( void )
 {
+    // Some sensors may be updated from PGPE data so we must read PGPE data before reading sensors
+    // Read out PGPE data from shared SRAM
+    read_shared_sram();
 
     // Read out the sensor data needed for calculations
     read_sensor_data();
 
-    // Read out PGPE data from shared SRAM
-    read_shared_sram();
     // Calculate the core voltage per quad
     calculate_core_voltage();
 
@@ -782,6 +798,11 @@ void read_shared_sram( void )
     sensor_update(AMECSENSOR_PTR(VRATIO), (uint16_t)l_wofstate.fields.vratio);
 
     g_wof->f_ratio = 1;
+
+    // the PGPE produced WOF values were already read in this tick from amec_update_avsbus_sensors()
+    // required to read them in every tick regardless of WOF running so voltage and current sensors
+    // are updated even when WOF isn't running
+
     // Get the requested active quad update
     read_req_active_quads();
 
@@ -808,6 +829,74 @@ void read_shared_sram( void )
     g_wof->quad_ivrm_states =
            (((uint8_t)G_quad_state_0.fields.ivrm_state) << 4)
           | ((uint8_t)G_quad_state_1.fields.ivrm_state);
+}
+
+/**
+ * read_pgpe_produced_wof_values
+ *
+ * Description: Read the PGPE Produced WOF values from OCC-PGPE shared SRAM and
+ *              update sensors
+ */
+void read_pgpe_produced_wof_values( void )
+{
+    uint16_t l_voltage = 0;
+    uint16_t l_current = 0;
+
+    pgpe_wof_values_t l_PgpeWofValues;
+    l_PgpeWofValues.dw0.value = in64(G_pgpe_header.pgpe_produced_wof_values_addr);
+    l_PgpeWofValues.dw1.value = in64(G_pgpe_header.pgpe_produced_wof_values_addr + 0x08);
+    l_PgpeWofValues.dw2.value = in64(G_pgpe_header.pgpe_produced_wof_values_addr + 0x10);
+    l_PgpeWofValues.dw3.value = in64(G_pgpe_header.pgpe_produced_wof_values_addr + 0x18);
+
+    // save Vdd voltage to sensor
+    l_voltage = (uint16_t)l_PgpeWofValues.dw2.fields.vdd_avg_mv;
+    if (l_voltage != 0)
+    {
+        // Voltage value stored in the sensor should be in 100uV (mV scale -1)
+        l_voltage *= 10;
+        sensor_update(AMECSENSOR_PTR(VOLTVDD), l_voltage);
+    }
+
+    // save Vdn voltage to sensor
+    l_voltage = (uint16_t)l_PgpeWofValues.dw2.fields.vdn_avg_mv;
+    if (l_voltage != 0)
+    {
+        // Voltage value stored in the sensor should be in 100uV (mV scale -1)
+        l_voltage *= 10;
+        sensor_update(AMECSENSOR_PTR(VOLTVDN), l_voltage);
+    }
+
+    // don't use Vdd current from PGPE if it was enabled for OCC to read from AVSbus
+    if(!(G_internal_flags & INT_FLAG_ENABLE_VDD_CURRENT_READ))
+    {
+        // Save Vdd current to sensor
+        l_current = (uint16_t)l_PgpeWofValues.dw1.fields.idd_avg_ma;
+        if (l_current != 0)
+        {
+            // Current value stored in the sensor should be in 10mA (A scale -2)
+            // Reading from SRAM is already in 10mA
+            sensor_update(AMECSENSOR_PTR(CURVDD), l_current);
+        }
+    }
+
+    // Save Vdn current to sensor
+    l_current = (uint16_t)l_PgpeWofValues.dw1.fields.idn_avg_ma;
+    if (l_current != 0)
+    {
+        // Current value stored in the sensor should be in 10mA (A scale -2)
+        // Reading from SRAM is already in 10mA
+        sensor_update(AMECSENSOR_PTR(CURVDN), l_current);
+    }
+
+    // Update the chip voltage and power sensors
+    update_avsbus_power_sensors(AVSBUS_VDD);
+    update_avsbus_power_sensors(AVSBUS_VDN);
+
+    // save the PGPE WOF values
+    g_wof->pgpe_wof_values_dw0 = l_PgpeWofValues.dw0.value;
+    g_wof->pgpe_wof_values_dw1 = l_PgpeWofValues.dw1.value;
+    g_wof->pgpe_wof_values_dw2 = l_PgpeWofValues.dw2.value;
+    g_wof->pgpe_wof_values_dw3 = l_PgpeWofValues.dw3.value;
 }
 
 /**

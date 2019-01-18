@@ -84,6 +84,7 @@ extern uint32_t G_curr_proc_gpu_config;
 extern bool     G_gpu_config_done;
 extern bool     G_gpu_monitoring_allowed;
 extern task_t   G_task_table[TASK_END];
+extern bool     G_pgpe_shared_sram_V_I_readings;
 
 typedef struct data_req_table
 {
@@ -1343,6 +1344,8 @@ errlHndl_t data_store_avsbus_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
         {
             if ((l_cmd_ptr->vdd_rail >= 0) && (l_cmd_ptr->vdd_rail <= 15))
             {
+                // may be getting Vdd from PGPE but this could be enabled with internal flag
+                // for OCC to handle overflow, that checking will be done in amec_update_avsbus_sensors()
                 G_avsbus_vdd_monitoring = TRUE;
                 G_sysConfigData.avsbus_vdd.bus = l_cmd_ptr->vdd_bus;
                 G_sysConfigData.avsbus_vdd.rail = l_cmd_ptr->vdd_rail;
@@ -1376,17 +1379,27 @@ errlHndl_t data_store_avsbus_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
         {
             if ((l_cmd_ptr->vdn_rail >= 0) && (l_cmd_ptr->vdn_rail <= 15))
             {
-                G_avsbus_vdn_monitoring = TRUE;
-                G_sysConfigData.avsbus_vdn.bus = l_cmd_ptr->vdn_bus;
-                G_sysConfigData.avsbus_vdn.rail = l_cmd_ptr->vdn_rail;
-                CNFG_DBG("data_store_avsbus_config: Vdn bus[%d] rail[%d]",
-                         G_sysConfigData.avsbus_vdn.bus, G_sysConfigData.avsbus_vdn.rail);
-
-                if (G_avsbus_vdd_monitoring &&
-                    (G_sysConfigData.avsbus_vdd.bus == G_sysConfigData.avsbus_vdn.bus))
+                if(G_pgpe_shared_sram_V_I_readings)
                 {
-                    CMDH_TRAC_ERR("data_store_avsbus_config: Vdd and Vdn can not use the same AVS bus");
-                    l_invalid_data = TRUE;
+                    // going to be getting Vdn from PGPE and no way to enable from AVSbus
+                    CMDH_TRAC_INFO("Reading Vdn from PGPE turning off Vdn monitoring");
+                    G_avsbus_vdn_monitoring = FALSE;
+                }
+
+                else
+                {
+                    G_avsbus_vdn_monitoring = TRUE;
+                    G_sysConfigData.avsbus_vdn.bus = l_cmd_ptr->vdn_bus;
+                    G_sysConfigData.avsbus_vdn.rail = l_cmd_ptr->vdn_rail;
+                    CNFG_DBG("data_store_avsbus_config: Vdn bus[%d] rail[%d]",
+                             G_sysConfigData.avsbus_vdn.bus, G_sysConfigData.avsbus_vdn.rail);
+
+                    if (G_avsbus_vdd_monitoring &&
+                        (G_sysConfigData.avsbus_vdd.bus == G_sysConfigData.avsbus_vdn.bus))
+                    {
+                        CMDH_TRAC_ERR("data_store_avsbus_config: Vdd and Vdn can not use the same AVS bus");
+                        l_invalid_data = TRUE;
+                    }
                 }
             }
             else
@@ -1418,7 +1431,8 @@ errlHndl_t data_store_avsbus_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
         l_invalid_data = TRUE;
     }
 
-    if (l_invalid_data || !G_avsbus_vdd_monitoring || !G_avsbus_vdn_monitoring)
+    if( (l_invalid_data) ||
+        ( !G_pgpe_shared_sram_V_I_readings && (!G_avsbus_vdd_monitoring || !G_avsbus_vdn_monitoring) ) )
     {
         cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
         G_avsbus_vdd_monitoring = FALSE;

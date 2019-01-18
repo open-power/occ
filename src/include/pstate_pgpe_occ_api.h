@@ -1,25 +1,19 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/include/pstate_pgpe_occ_api.h $                           */
+/* $Source: chips/p9/common/pmlib/include/pstate_pgpe_occ_api.h $         */
 /*                                                                        */
-/* OpenPOWER OnChipController Project                                     */
+/* IBM CONFIDENTIAL                                                       */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2019                        */
+/* EKB Project                                                            */
+/*                                                                        */
+/* COPYRIGHT 2015,2019                                                    */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
-/* Licensed under the Apache License, Version 2.0 (the "License");        */
-/* you may not use this file except in compliance with the License.       */
-/* You may obtain a copy of the License at                                */
-/*                                                                        */
-/*     http://www.apache.org/licenses/LICENSE-2.0                         */
-/*                                                                        */
-/* Unless required by applicable law or agreed to in writing, software    */
-/* distributed under the License is distributed on an "AS IS" BASIS,      */
-/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
-/* implied. See the License for the specific language governing           */
-/* permissions and limitations under the License.                         */
+/* The source code for this program is not published or otherwise         */
+/* divested of its trade secrets, irrespective of what has been           */
+/* deposited with the U.S. Copyright Office.                              */
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 /// @file  p9_pstates_pgpe_occ_api.h
@@ -30,7 +24,6 @@
 // *HWP Team            : PM
 // *HWP Level           : 1
 // *HWP Consumed by     : PGPE:OCC
-
 
 #ifndef __P9_PSTATES_PGPE_API_H__
 #define __P9_PSTATES_PGPE_API_H__
@@ -53,7 +46,7 @@ enum MESSAGE_ID_IPI2HI
     MSGID_405_CLIPS         = 2,
     MSGID_405_SET_PMCR      = 3,
     MSGID_405_WOF_CONTROL   = 4,
-    MSGID_405_WOF_VFRT      = 5
+    MSGID_405_WOF_VRT       = 5
 };
 
 //
@@ -67,9 +60,9 @@ enum MESSAGE_ID_IPI2HI
 // Active quad mismatch with requested active quads.  PGPE did not switch
 // to using the new VFRT.  The original VFRT is still being used.
 #define PGPE_WOF_RC_VFRT_QUAD_MISMATCH  0x20
-#define PGPE_RC_REQ_WHILE_PENDING_ACK   0x21
-#define PGPE_RC_NULL_VFRT_POINTER       0x22
-#define PGPE_RC_INVALID_PMCR_OWNER         0x23
+#define PGPE_RC_REQ_WHILE_PENDING_ACK           0x21
+#define PGPE_RC_NULL_VRT_POINTER                0x22
+#define PGPE_RC_INVALID_PMCR_OWNER              0x23
 
 //
 // PMCR Owner
@@ -142,13 +135,12 @@ typedef struct ipcmsg_wof_vfrt
     HomerVFRTLayout_t* homer_vfrt_ptr;
 } ipcmsg_wof_vfrt_t;
 
-
 // -----------------------------------------------------------------------------
 // Start Pstate Table
 
 #define MAX_OCC_PSTATE_TABLE_ENTRIES 256
 
-/// Pstate Table produce by the PGPE for consumption by OCC Firmware
+/// Pstate Table produced by the PGPE for consumption by OCC Firmware
 ///
 /// This structure defines the Pstate Table content
 /// -- 16B structure
@@ -174,6 +166,81 @@ typedef struct
 } OCCPstateTable_t;
 
 // End Pstate Table
+// -----------------------------------------------------------------------------
+// Start FFDC
+
+/// Scopes of the First Failure Data Capture (FFDC) registers
+enum scope_type
+{
+    FFDC_CHIP = 0,  // Address is chip scope (eg absolute)
+    FFDC_QUAD = 1,  // Address + 0x01000000*quad for good quads from 0 to 5
+    FFDC_CORE = 2,  // Address + 0x01000000*core for good cores from 0 to 23
+    FFDC_CME = 3    // Address if EX is even; Address + 0x400*EX for EX odd for good Exs from 0 to 11
+};
+
+/// Address types of First Failure Data Capture (FFDC) register addresses
+enum scope_type1
+{
+    FFDC_OCI  = 0,   // Address is an OCI address
+    FFDC_SCOM = 1    // Address is a SCOM address
+};
+
+/// Register definition of the Hcode FFDC register list
+#define MAX_FFDC_REG_LIST 12
+typedef struct
+{
+    uint32_t            address;
+    /*    union address_attribute
+        {
+            uint32_t value;
+            struct
+            {
+                uint32_t    address_type : 16;
+                uint32_t    scope        : 16;
+            } attr;
+        }*/
+} Hcode_FFDC_entry_t;
+
+/// Hcode FFDC register list
+typedef struct
+{
+    /// Number of FFDC address list entries
+    uint32_t            list_entries;
+
+    /// FFDC Address list
+    Hcode_FFDC_entry_t  list[MAX_FFDC_REG_LIST];
+} Hcode_FFDC_list_t;
+
+
+
+/// Hcode FFDC register list
+/// @todo RTC: 161183  Fill out the rest of this FFDC list
+/// @note The reserved FFDC space for registers and traces set aside in the
+/// OCC is 1KB.   On the register side, the following list will generate
+/// 12B of content (4B address, 8B data) x the good entries per scope.
+/// CHIP scope are not dependent on partial good or currently active and will
+/// take 12B x 8 = 96B.  CME scope entries will, at maximum, generate 12B x
+/// 12 CMEs x  4 SCOMs = 576B..  The overall  totla for registers is 96 + 576
+///
+/*typedef struct Hcode_FFDC_list
+{
+
+    {PERV_TP_OCC_SCOM_OCCLFIR,  FFDC_SCOM, FFDC_CHIP }, // OCC LFIR
+    {PU_PBAFIR,                 FFDC_SCOM, FFDC_CHIP }, // PBA LFIR
+    {EX_CME_SCOM_LFIR,          FFDC_SCOM, FFDC_CME  }, // CME LFIR
+    {PU_GPE3_GPEDBG_OCI,        FFDC_OCI,  FFDC_CHIP }, // SGPE XSR, SPRG0
+    {PU_GPE3_GPEDDR_OCI,        FFDC_OCI,  FFDC_CHIP }, // SGPE IR, EDR
+    {PU_GPE3_PPE_XIDBGPRO,      FFDC_OCI,  FFDC_CHIP }, // SGPE XSR, IAR
+    {PU_GPE2_GPEDBG_OCI,        FFDC_OCI,  FFDC_CHIP }, // PGPE XSR, SPRG0
+    {PU_GPE2_GPEDDR_OCI,        FFDC_OCI,  FFDC_CHIP }, // PGPE IR, EDR
+    {PU_GPE2_PPE_XIDBGPRO,      FFDC_OCI,  FFDC_CHIP }, // PGPE XSR, IAR
+    {EX_PPE_XIRAMDBG,           FFDC_SCOM, FFDC_CME  }, // CME XSR, SPRG0
+    {EX_PPE_XIRAMEDR,           FFDC_SCOM, FFDC_CME  }, // CME IR, EDR
+    {EX_PPE_XIDBGPRO,           FFDC_SCOM, FFDC_CME  }, // CME XSR, IAR
+
+};*/
+
+// End FFDC
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
@@ -282,6 +349,157 @@ typedef struct pgpe_error_table
 
 // End Error Log Table
 // -----------------------------------------------------------------------------
+typedef struct
+{
+    union
+    {
+        uint64_t value;
+        struct
+        {
+            uint32_t high_order;
+            uint32_t low_order;
+        } words;
+        struct
+        {
+            uint64_t average_pstate             : 8;
+            uint64_t average_frequency_pstate   : 8;
+            uint64_t clip_pstate                : 8;
+            uint64_t reserved                   : 8;
+            uint64_t vratio_inst                : 16;
+            uint64_t vratio_avg                 : 16;
+        } fields;
+    } dw0;
+    union
+    {
+        uint64_t value;
+        struct
+        {
+            uint32_t high_order;
+            uint32_t low_order;
+        } words;
+        struct
+        {
+            uint64_t idd_avg_ma                 : 16;
+            uint64_t ics_avg_ma                 : 16;
+            uint64_t idn_avg_ma                 : 16;
+            uint64_t iio_avg_ma                 : 16;
+
+        } fields;
+    } dw1;
+    union
+    {
+        uint64_t value;
+        struct
+        {
+            uint32_t high_order;
+            uint32_t low_order;
+        } words;
+        struct
+        {
+            uint64_t vdd_avg_mv                 : 16;
+            uint64_t vcs_avg_mv                 : 16;
+            uint64_t vdn_avg_mv                 : 16;
+            uint64_t vio_avg_mv                 : 16;
+        } fields;
+    } dw2;
+    union
+    {
+        uint64_t value;
+        struct
+        {
+            uint32_t high_order;
+            uint32_t low_order;
+        } words;
+        struct
+        {
+            uint64_t ocs_avg_0p01pct            : 16;
+            uint64_t reserved                   : 48;
+        } fields;
+    } dw3;
+} pgpe_wof_values_t;
+
+typedef struct
+{
+    union
+    {
+        uint64_t value;
+        struct
+        {
+            uint32_t high_order;
+            uint32_t low_order;
+        } words;
+        struct
+        {
+            uint64_t magic_word                 : 32; //ELTC
+            uint64_t total_log_slots            : 8;
+            uint64_t reserved                   : 24;
+        } fields;
+    } dw0;
+    union
+    {
+        uint64_t value;
+        struct
+        {
+            uint32_t high_order;
+            uint32_t low_order;
+        } words;
+        struct
+        {
+            uint64_t errlog_id                  : 8;
+            uint64_t errlog_src                 : 8;
+            uint64_t errlog_len                 : 16;
+            uint64_t pgpe_critical_log_address  : 32;
+        } fields;
+    } dw1;
+    union
+    {
+        uint64_t value;
+        struct
+        {
+            uint32_t high_order;
+            uint32_t low_order;
+        } words;
+        struct
+        {
+            uint64_t errlog_id                  : 8;
+            uint64_t errlog_src                 : 8;
+            uint64_t errlog_len                 : 16;
+            uint64_t pgpe_info_log_address      : 32;
+        } fields;
+    } dw2;
+    union
+    {
+        uint64_t value;
+        struct
+        {
+            uint32_t high_order;
+            uint32_t low_order;
+        } words;
+        struct
+        {
+            uint64_t errlog_id                  : 8;
+            uint64_t errlog_src                 : 8;
+            uint64_t errlog_len                 : 16;
+            uint64_t sgpe_critical_log_address  : 32;
+        } fields;
+    } dw3;
+    union
+    {
+        uint64_t value;
+        struct
+        {
+            uint32_t high_order;
+            uint32_t low_order;
+        } words;
+        struct
+        {
+            uint64_t errlog_id                  : 8;
+            uint64_t errlog_src                 : 8;
+            uint64_t errlog_len                 : 16;
+            uint64_t sgpe_info_log_address      : 32;
+        } fields;
+    } dw4;
+} errlog_idx_t;
 
 typedef struct
 {
@@ -297,20 +515,24 @@ typedef struct
     /// Actual Pstate 1 - Quads 4, 5
     quad_state1_t       quad_pstate_1;
 
-    ///PGPE WOF State
+    /// PGPE Produced WOF State
     pgpe_wof_state_t    pgpe_wof_state;
 
-    ///Requested Active Quads
+   ///Requested Active Quads
     requested_active_quads_t    req_active_quads;
 
-    // PGPE Produced WOF Values
-    uint64_t            pgpe_produced_wof_values[2];
+    //PGPE WOF Values
+    pgpe_wof_values_t    pgpe_wof_values;
 
-    // Reserved
-    uint64_t            reserved;
+    //Reserved
+    uint64_t            reserved1;
 
-    // Error Log Table
+    /// Hcode Error Log Index
+    errlog_idx_t        errlog_idx;
     pgpe_error_table_t  pgpe_error_table;
+
+    //Reserved
+    uint64_t            reserved2[24];
 
     /// Pstate Table
     OCCPstateTable_t    pstate_table;
@@ -321,4 +543,4 @@ typedef struct
 } // end extern C
 #endif
 
-#endif    /* __P9_PSTATES_PGPE_API_H__ */
+#endif    /* __PSTATES_PGPE_OCC_API_H__ */

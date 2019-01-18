@@ -261,6 +261,10 @@ amec_parm_t g_amec_parm_list[] = {
     AMEC_PARM_UINT8_ARRAY(PARM_QUAD_ALL_ON_5_T, "q5CorsCachesOnT", &g_amec_sys.wof.quad5CoresCachesOnT, MAXIMUM_QUADS),
     AMEC_PARM_UINT8_ARRAY(PARM_QUAD_ALL_ON_6_T, "q6CorsCachesOnT", &g_amec_sys.wof.quad6CoresCachesOnT, MAXIMUM_QUADS),
     AMEC_PARM_UINT8_ARRAY(PARM_AVGTEMP_VDN, "avgtemp_vdn", &g_amec_sys.wof.avgtemp_vdn, MAXIMUM_QUADS),
+    AMEC_PARM_UINT64(PARM_PGPE_WOF_DW0, "PGPE_WOF_dw0", &g_amec_sys.wof.pgpe_wof_values_dw0 ),
+    AMEC_PARM_UINT64(PARM_PGPE_WOF_DW1, "PGPE_WOF_dw1", &g_amec_sys.wof.pgpe_wof_values_dw1 ),
+    AMEC_PARM_UINT64(PARM_PGPE_WOF_DW2, "PGPE_WOF_dw2", &g_amec_sys.wof.pgpe_wof_values_dw2 ),
+    AMEC_PARM_UINT64(PARM_PGPE_WOF_DW3, "PGPE_WOF_dw3", &g_amec_sys.wof.pgpe_wof_values_dw3 ),
 
     // End WOF parameters
 };
