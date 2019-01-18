@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -286,7 +286,7 @@ extern uint8_t      G_occErrIdCounter;
 extern errlHndl_t   G_occErrSlots[ERRL_MAX_SLOTS];
 
 // Shared SRAM offset to access the HCODE Error Log Table
-#define HCODE_ELOG_TABLE_SRAM_OFFSET     0x40
+#define HCODE_ELOG_TABLE_SRAM_OFFSET     0x48
 #define HCODE_ELOG_TABLE_MAGIC_NUMBER    0x454C5443   // "ELTC"
 extern hcode_elog_entry_t *G_hcode_elog_table;
 extern uint32_t            G_hcode_elog_table_slots;

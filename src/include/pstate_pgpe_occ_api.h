@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -259,7 +259,7 @@ typedef union requested_active_quads
 // -----------------------------------------------------------------------------
 // Start Error Log Table
 
-#define MAX_HCODE_ELOG_ENTRIES 16
+#define MAX_HCODE_ELOG_ENTRIES 28
 
 typedef union hcode_elog_entry
 {
