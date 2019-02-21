@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -296,14 +296,12 @@ errlHndl_t SMGR_standby_to_characterization()
          * @userdata4   ERC_STATE_FROM_STB_TO_CHR_FAILURE
          * @devdesc     Failed changing from standby to characterization
          */
-        l_errlHndl = createErrl(MAIN_STATE_TRANSITION_MID,          //modId
-                                INTERNAL_FAILURE,                   //reasoncode
-                                ERC_STATE_FROM_STB_TO_CHR_FAILURE,  //Extended reason code
-                                ERRL_SEV_UNRECOVERABLE,             //Severity
-                                NULL,                               //Trace Buf
-                                DEFAULT_TRACE_SIZE,                 //Trace Size
-                                rc,                                 //userdata1
-                                0);                                 //userdata2
+        l_errlHndl = createPgpeErrl(MAIN_STATE_TRANSITION_MID,          //modId
+                                    INTERNAL_FAILURE,                   //reasoncode
+                                    ERC_STATE_FROM_STB_TO_CHR_FAILURE,  //Extended reason code
+                                    ERRL_SEV_UNRECOVERABLE,             //Severity
+                                    rc,                                 //userdata1
+                                    0);                                 //userdata2
 
         // Callout firmware
         addCalloutToErrl(l_errlHndl,
@@ -437,14 +435,12 @@ errlHndl_t SMGR_characterization_to_observation()
          * @userdata4   ERC_STATE_FROM_CHR_TO_OBS_FAILURE
          * @devdesc     Failed changing from observation to characterization
          */
-        l_errlHndl = createErrl(MAIN_STATE_TRANSITION_MID,          //modId
-                                INTERNAL_FAILURE,                   //reasoncode
-                                ERC_STATE_FROM_CHR_TO_OBS_FAILURE,  //Extended reason code
-                                ERRL_SEV_UNRECOVERABLE,             //Severity
-                                NULL,                               //Trace Buf
-                                DEFAULT_TRACE_SIZE,                 //Trace Size
-                                rc,                                 //userdata1
-                                0);                                 //userdata2
+        l_errlHndl = createPgpeErrl(MAIN_STATE_TRANSITION_MID,          //modId
+                                    INTERNAL_FAILURE,                   //reasoncode
+                                    ERC_STATE_FROM_CHR_TO_OBS_FAILURE,  //Extended reason code
+                                    ERRL_SEV_UNRECOVERABLE,             //Severity
+                                    rc,                                 //userdata1
+                                    0);                                 //userdata2
 
         // Callout firmware
         addCalloutToErrl(l_errlHndl,
@@ -558,14 +554,12 @@ errlHndl_t SMGR_observation_to_characterization()
          * @userdata4   ERC_STATE_FROM_OBS_TO_CHR_FAILURE
          * @devdesc     Failed changing from observation to characterization
          */
-        l_errlHndl = createErrl(MAIN_STATE_TRANSITION_MID,          //modId
-                                INTERNAL_FAILURE,                   //reasoncode
-                                ERC_STATE_FROM_OBS_TO_CHR_FAILURE,  //Extended reason code
-                                ERRL_SEV_UNRECOVERABLE,             //Severity
-                                NULL,                               //Trace Buf
-                                DEFAULT_TRACE_SIZE,                 //Trace Size
-                                rc,                                 //userdata1
-                                0);                                 //userdata2
+        l_errlHndl = createPgpeErrl(MAIN_STATE_TRANSITION_MID,          //modId
+                                    INTERNAL_FAILURE,                   //reasoncode
+                                    ERC_STATE_FROM_OBS_TO_CHR_FAILURE,  //Extended reason code
+                                    ERRL_SEV_UNRECOVERABLE,             //Severity
+                                    rc,                                 //userdata1
+                                    0);                                 //userdata2
 
         // Callout firmware
         addCalloutToErrl(l_errlHndl,
@@ -684,14 +678,12 @@ errlHndl_t SMGR_observation_to_active()
                             * @userdata4   ERC_PGPE_SET_NOMINAL_FAILURE
                             * @devdesc     Failed to set nominal Pstate before host
                             */
-                           l_errlHndl = createErrl(MAIN_STATE_TRANSITION_MID,        //modId
-                                                   INTERNAL_FW_FAILURE,              //reasoncode
-                                                   ERC_PGPE_SET_NOMINAL_FAILURE,     //Extended reason code
-                                                   ERRL_SEV_INFORMATIONAL,           //Severity
-                                                   NULL,                             //Trace Buf
-                                                   DEFAULT_TRACE_SIZE,               //Trace Size
-                                                   l_rc,                             //userdata1
-                                                   0);                               //userdata2
+                           l_errlHndl = createPgpeErrl(MAIN_STATE_TRANSITION_MID,        //modId
+                                                       INTERNAL_FW_FAILURE,              //reasoncode
+                                                       ERC_PGPE_SET_NOMINAL_FAILURE,     //Ext rc
+                                                       ERRL_SEV_INFORMATIONAL,           //Severity
+                                                       l_rc,                             //userdata1
+                                                       0);                               //userdata2
                            commitErrl(&l_errlHndl);
                            l_errlHndl = NULL;
                            l_rc = 0;
@@ -823,14 +815,12 @@ errlHndl_t SMGR_observation_to_active()
     if(l_rc && (FALSE == L_error_logged))
     {
         L_error_logged = TRUE;
-        l_errlHndl = createErrl(MAIN_STATE_TRANSITION_MID,        //modId
-                                INTERNAL_FAILURE,                 //reasoncode
-                                l_extRc,                          //Extended reason code
-                                ERRL_SEV_UNRECOVERABLE,           //Severity
-                                NULL,                             //Trace Buf
-                                DEFAULT_TRACE_SIZE,               //Trace Size
-                                l_user_data,                      //userdata1
-                                l_rc);                            //userdata2
+        l_errlHndl = createPgpeErrl(MAIN_STATE_TRANSITION_MID,        //modId
+                                    INTERNAL_FAILURE,                 //reasoncode
+                                    l_extRc,                          //Extended reason code
+                                    ERRL_SEV_UNRECOVERABLE,           //Severity
+                                    l_user_data,                      //userdata1
+                                    l_rc);                            //userdata2
 
         // Callout firmware
         addCalloutToErrl(l_errlHndl,
@@ -974,14 +964,12 @@ errlHndl_t SMGR_active_to_observation()
     if(rc)
     {
         TRAC_ERR("SMGR: Failed with rc = %d to switch to Observation state", rc);
-        l_errlHndl = createErrl(MAIN_STATE_TRANSITION_MID,            //modId
-                                  rc,                                     //reasoncode
-                                  ext_rc, //Extended reason code
-                                  ERRL_SEV_UNRECOVERABLE,                 //Severity
-                                  NULL,                                   //Trace Buf
-                                  DEFAULT_TRACE_SIZE,                     //Trace Size
-                                  wait_time,                              //userdata1
-                                  0);                                     //userdata2
+        l_errlHndl = createPgpeErrl(MAIN_STATE_TRANSITION_MID,         //modId
+                                    rc,                                //reasoncode
+                                    ext_rc,                            //Extended reason code
+                                    ERRL_SEV_UNRECOVERABLE,            //Severity
+                                    wait_time,                         //userdata1
+                                    0);                                //userdata2
 
         // Callout firmware
         addCalloutToErrl(l_errlHndl,
@@ -1100,14 +1088,12 @@ errlHndl_t SMGR_active_to_characterization()
          * @userdata4   ERC_STATE_FROM_ACT_TO_CHR_FAILURE
          * @devdesc     Failed changing from standby to observation
          */
-        l_errlHndl = createErrl(MAIN_STATE_TRANSITION_MID,        //modId
-                                INTERNAL_FAILURE,                 //reasoncode
-                                ERC_STATE_FROM_ACT_TO_CHR_FAILURE,//Extended reason code
-                                ERRL_SEV_UNRECOVERABLE,           //Severity
-                                NULL,                             //Trace Buf
-                                DEFAULT_TRACE_SIZE,               //Trace Size
-                                rc,                                //userdata1
-                                0);                               //userdata2
+        l_errlHndl = createPgpeErrl(MAIN_STATE_TRANSITION_MID,         //modId
+                                    INTERNAL_FAILURE,                  //reasoncode
+                                    ERC_STATE_FROM_ACT_TO_CHR_FAILURE, //Extended reason code
+                                    ERRL_SEV_UNRECOVERABLE,            //Severity
+                                    rc,                                //userdata1
+                                    0);                                //userdata2
 
         // Callout firmware
         addCalloutToErrl(l_errlHndl,

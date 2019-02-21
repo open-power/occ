@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -436,16 +436,12 @@ int pgpe_set_clip_blocking(Pstate i_pstate)
                      * @userdata4   ERC_PGPE_CLIP_NOT_IDLE
                      * @devdesc     pgpe clip update not idle
                      */
-                    err = createErrl(
-                        PGPE_SET_CLIP_BLOCKING_MOD,    //ModId
-                        PGPE_FAILURE,                  //Reasoncode
-                        ERC_PGPE_CLIP_NOT_IDLE,        //Extended reason code
-                        ERRL_SEV_PREDICTIVE,           //Severity
-                        NULL,                          //Trace Buf
-                        DEFAULT_TRACE_SIZE,            //Trace Size
-                        0,                             //Userdata1
-                        0                              //Userdata2
-                    );
+                    err = createPgpeErrl(PGPE_SET_CLIP_BLOCKING_MOD,    //ModId
+                                         PGPE_FAILURE,                  //Reasoncode
+                                         ERC_PGPE_CLIP_NOT_IDLE,        //Extended reason code
+                                         ERRL_SEV_PREDICTIVE,           //Severity
+                                         0,                             //Userdata1
+                                         0);                            //Userdata2
                 }
                 rc = PGPE_FAILURE;
                 break;
@@ -486,7 +482,6 @@ int pgpe_set_clip_blocking(Pstate i_pstate)
                 if(!ignore_pgpe_error())
                 {
                     TRAC_ERR("pgpe_set_clip_blocking: clip update IPC task timeout!");
-
                     /*
                      * @errortype
                      * @moduleid    PGPE_SET_CLIP_BLOCKING_MOD
@@ -494,16 +489,12 @@ int pgpe_set_clip_blocking(Pstate i_pstate)
                      * @userdata4   OCC_NO_EXTENDED_RC
                      * @devdesc     pgpe clip update timeout
                      */
-                    err = createErrl(
-                        PGPE_SET_CLIP_BLOCKING_MOD,    //ModId
-                        GPE_REQUEST_TASK_TIMEOUT,        //Reasoncode
-                        OCC_NO_EXTENDED_RC,              //Extended reason code
-                        ERRL_SEV_PREDICTIVE,             //Severity
-                        NULL,                            //Trace Buf
-                        DEFAULT_TRACE_SIZE,              //Trace Size
-                        0,                               //Userdata1
-                        0                                //Userdata2
-                        );
+                    err = createPgpeErrl(PGPE_SET_CLIP_BLOCKING_MOD,      //ModId
+                                         GPE_REQUEST_TASK_TIMEOUT,        //Reasoncode
+                                         OCC_NO_EXTENDED_RC,              //Extended reason code
+                                         ERRL_SEV_PREDICTIVE,             //Severity
+                                         0,                               //Userdata1
+                                         0);                              //Userdata2
                 }
                 rc = GPE_REQUEST_TASK_TIMEOUT;
                 break;
@@ -537,16 +528,12 @@ int pgpe_set_clip_blocking(Pstate i_pstate)
              * @userdata4   OCC_NO_EXTENDED_RC
              * @devdesc     pgpe clip update returned a failure code
              */
-            err = createErrl(
-                PGPE_SET_CLIP_BLOCKING_MOD,         //ModId
-                GPE_REQUEST_RC_FAILURE,               //Reasoncode
-                OCC_NO_EXTENDED_RC,                   //Extended reason code
-                ERRL_SEV_PREDICTIVE,                  //Severity
-                NULL,                                 //Trace Buf
-                DEFAULT_TRACE_SIZE,                   //Trace Size
-                G_clip_update_parms.msg_cb.rc,   //Userdata1
-                0                                     //Userdata2
-                );
+            err = createPgpeErrl(PGPE_SET_CLIP_BLOCKING_MOD,      //ModId
+                                 GPE_REQUEST_RC_FAILURE,          //Reasoncode
+                                 OCC_NO_EXTENDED_RC,              //Extended reason code
+                                 ERRL_SEV_PREDICTIVE,             //Severity
+                                 G_clip_update_parms.msg_cb.rc,   //Userdata1
+                                 0);                              //Userdata2
 
             rc = GPE_REQUEST_RC_FAILURE;
         }
@@ -556,7 +543,7 @@ int pgpe_set_clip_blocking(Pstate i_pstate)
     if(err)
     {
         REQUEST_RESET(err);
-    }        
+    }
 
     return(rc);
 }
@@ -602,16 +589,12 @@ int pgpe_clip_update(void)
                      * @userdata4   ERC_PGPE_CLIP_NOT_IDLE
                      * @devdesc     pgpe clip update not idle
                      */
-                    err = createErrl(
-                        PGPE_CLIP_UPDATE_MOD,            //ModId
-                        PGPE_FAILURE,                    //Reasoncode
-                        ERC_PGPE_CLIP_NOT_IDLE,          //Extended reason code
-                        ERRL_SEV_PREDICTIVE,             //Severity
-                        NULL,                            //Trace Buf
-                        DEFAULT_TRACE_SIZE,              //Trace Size
-                        0,                               //Userdata1
-                        0                                //Userdata2
-                        );
+                    err = createPgpeErrl(PGPE_CLIP_UPDATE_MOD,            //ModId
+                                         PGPE_FAILURE,                    //Reasoncode
+                                         ERC_PGPE_CLIP_NOT_IDLE,          //Extended reason code
+                                         ERRL_SEV_PREDICTIVE,             //Severity
+                                         0,                               //Userdata1
+                                         0);                              //Userdata2
 
                     // Callout firmware
                     addCalloutToErrl(err,
@@ -690,16 +673,12 @@ int pgpe_clip_update(void)
              * @userdata4   ERC_PGPE_CLIP_FAILURE
              * @devdesc     OCC Failed to schedule a GPE job for clip update
              */
-            err = createErrl(
-                PGPE_CLIP_UPDATE_MOD,                   // modId
-                GPE_REQUEST_SCHEDULE_FAILURE,           // reasoncode
-                ERC_PGPE_CLIP_FAILURE,                  // Extended reason code
-                ERRL_SEV_UNRECOVERABLE,                 // Severity
-                NULL,                                   // Trace Buf
-                DEFAULT_TRACE_SIZE,                     // Trace Size
-                schedule_rc,                            // userdata1
-                0                                       // userdata2
-                );
+            err = createPgpeErrl(PGPE_CLIP_UPDATE_MOD,            // modId
+                                 GPE_REQUEST_SCHEDULE_FAILURE,    // reasoncode
+                                 ERC_PGPE_CLIP_FAILURE,           // Extended reason code
+                                 ERRL_SEV_UNRECOVERABLE,          // Severity
+                                 schedule_rc,                     // userdata1
+                                 0);                              //Userdata2
 
             ext_rc = ERC_PGPE_CLIP_FAILURE;
             REQUEST_RESET(err);   //This will add a firmware callout for us
@@ -795,16 +774,12 @@ int pgpe_start_suspend(uint8_t action, PMCR_OWNER owner)
              * @userdata4   ERC_PGPE_START_SUSPEND_NOT_IDLE
              * @devdesc     pgpe start suspend task not idle
              */
-            err = createErrl(
-                             PGPE_START_SUSPEND_MOD,          //ModId
-                             PGPE_FAILURE,                    //Reasoncode
-                             ERC_PGPE_START_SUSPEND_NOT_IDLE, //Extended reason code
-                             ERRL_SEV_PREDICTIVE,             //Severity
-                             NULL,                            //Trace Buf
-                             DEFAULT_TRACE_SIZE,              //Trace Size
-                             0,                               //Userdata1
-                             0                                //Userdata2
-                            );
+            err = createPgpeErrl(PGPE_START_SUSPEND_MOD,          //ModId
+                                 PGPE_FAILURE,                    //Reasoncode
+                                 ERC_PGPE_START_SUSPEND_NOT_IDLE, //Extended reason code
+                                 ERRL_SEV_PREDICTIVE,             //Severity
+                                 0,                               //Userdata1
+                                 0);                              //Userdata2
 
             // Callout firmware
             addCalloutToErrl(err,
@@ -868,16 +843,12 @@ int pgpe_start_suspend(uint8_t action, PMCR_OWNER owner)
                 * @userdata4   ERC_PGPE_START_SUSPEND_FAILURE
                 * @devdesc     OCC Failed to schedule a PGPE job for start_suspend
                 */
-               err = createErrl(
-                                PGPE_START_SUSPEND_MOD,                 // modId
-                                GPE_REQUEST_SCHEDULE_FAILURE,           // reasoncode
-                                ERC_PGPE_START_SUSPEND_FAILURE,         // Extended reason code
-                                ERRL_SEV_UNRECOVERABLE,                 // Severity
-                                NULL,                                   // Trace Buf
-                                DEFAULT_TRACE_SIZE,                     // Trace Size
-                                schedule_rc,                            // userdata1
-                                0                                       // userdata2
-                               );
+               err = createPgpeErrl(PGPE_START_SUSPEND_MOD,          // modId
+                                    GPE_REQUEST_SCHEDULE_FAILURE,    // reasoncode
+                                    ERC_PGPE_START_SUSPEND_FAILURE,  // Extended reason code
+                                    ERRL_SEV_UNRECOVERABLE,          // Severity
+                                    schedule_rc,                     // userdata1
+                                    0);                              //Userdata2
 
                REQUEST_RESET(err);   //This will add a firmware callout for us
            }
@@ -929,16 +900,12 @@ int pgpe_pmcr_set(void)
                  * @userdata4   ERC_PGPE_SET_PMCR_NOT_IDLE
                  * @devdesc     pgpe pmcr set not idle
                  */
-                err = createErrl(
-                    PGPE_PMCR_SET_MOD,               //ModId
-                    PGPE_FAILURE,                    //Reasoncode
-                    ERC_PGPE_SET_PMCR_NOT_IDLE,      //Extended reason code
-                    ERRL_SEV_PREDICTIVE,             //Severity
-                    NULL,                            //Trace Buf
-                    DEFAULT_TRACE_SIZE,              //Trace Size
-                    0,                               //Userdata1
-                    0                                //Userdata2
-                    );
+                err = createPgpeErrl(PGPE_PMCR_SET_MOD,               //ModId
+                                     PGPE_FAILURE,                    //Reasoncode
+                                     ERC_PGPE_SET_PMCR_NOT_IDLE,      //Extended reason code
+                                     ERRL_SEV_PREDICTIVE,             //Severity
+                                     0,                               //Userdata1
+                                     0);                              //Userdata2
 
                 // Callout firmware
                 addCalloutToErrl(err,
@@ -979,16 +946,12 @@ int pgpe_pmcr_set(void)
                  * @userdata4   ERC_PGPE_SET_PMCR_FAILURE
                  * @devdesc     OCC Failed to schedule a PGPE job for PMCR update
                  */
-                err = createErrl(
-                    PGPE_PMCR_SET_MOD,                      // modId
-                    GPE_REQUEST_SCHEDULE_FAILURE,           // reasoncode
-                    ERC_PGPE_SET_PMCR_FAILURE,              // Extended reason code
-                    ERRL_SEV_UNRECOVERABLE,                 // Severity
-                    NULL,                                   // Trace Buf
-                    DEFAULT_TRACE_SIZE,                     // Trace Size
-                    schedule_rc,                            // userdata1
-                    0                                       // userdata2
-                    );
+                err = createPgpeErrl(PGPE_PMCR_SET_MOD,               // modId
+                                     GPE_REQUEST_SCHEDULE_FAILURE,    // reasoncode
+                                     ERC_PGPE_SET_PMCR_FAILURE,       // Extended reason code
+                                     ERRL_SEV_UNRECOVERABLE,          // Severity
+                                     schedule_rc,                     // userdata1
+                                     0);                              //Userdata2
 
                 REQUEST_RESET(err);   //This will add a firmware callout for us
             }

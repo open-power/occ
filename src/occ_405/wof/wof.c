@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -1513,15 +1513,12 @@ void set_clear_wof_disabled( uint8_t i_action,
              *  @userdata4  OCC_NO_EXTENDED_RC
              *  @devdesc    WOF has been disabled due to an error
              */
-            l_errl = createErrl(
-                        SET_CLEAR_WOF_DISABLED,
-                        WOF_DISABLED_RC,
-                        OCC_NO_EXTENDED_RC,
-                        ERRL_SEV_UNRECOVERABLE,
-                        NULL,
-                        DEFAULT_TRACE_SIZE,
-                        g_wof->wof_disabled,
-                        i_bit_mask );
+            l_errl = createPgpeErrl(SET_CLEAR_WOF_DISABLED,
+                                    WOF_DISABLED_RC,
+                                    OCC_NO_EXTENDED_RC,
+                                    ERRL_SEV_UNRECOVERABLE,
+                                    g_wof->wof_disabled,
+                                    i_bit_mask );
 
             // Reset if on Reason Code requires it.
             if(i_bit_mask & ~(IGNORE_WOF_RESET) )

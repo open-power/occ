@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -200,16 +200,12 @@ void task_core_data_control( task_t * i_task )
                     TRAC_ERR("task_core_data_control: pstate[0x%02X] update IPC task did not complete successfully, idle?[%d] rc[%08X]",
                               G_desired_pstate[0], l_request_is_idle, l_request_rc);
 
-                    err = createErrl(
-                                     RTLS_TASK_CORE_DATA_CONTROL_MOD,               //ModId
-                                     PGPE_FAILURE,                                  //Reasoncode
-                                     l_ext_rc,                                      //Extended reason code
-                                     ERRL_SEV_PREDICTIVE,                           //Severity
-                                     NULL,                                          //Trace Buf
-                                     DEFAULT_TRACE_SIZE,                            //Trace Size
-                                     l_request_rc,                                  //Userdata1
-                                     l_request_is_idle                              //Userdata2
-                                    );
+                    err = createPgpeErrl(RTLS_TASK_CORE_DATA_CONTROL_MOD,               //ModId
+                                         PGPE_FAILURE,                                  //Reasoncode
+                                         l_ext_rc,                                      //Extended reason code
+                                         ERRL_SEV_PREDICTIVE,                           //Severity
+                                         l_request_rc,                                  //Userdata1
+                                         l_request_is_idle);                            //Userdata2
 
                     //Add firmware callout
                     addCalloutToErrl(err,

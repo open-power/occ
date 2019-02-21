@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -517,14 +517,12 @@ void check_pgpe_beacon(void)
                      * @userdata4   ERC_PGPE_BEACON_TIMEOUT
                      * @devdesc     PGPE Beacon timeout
                      */
-                    l_err = createErrl(POKE_WD_TIMERS,             // mod id
-                                       PGPE_FAILURE,               // reason code
-                                       ERC_PGPE_BEACON_TIMEOUT,    // Extended reason code
-                                       ERRL_SEV_UNRECOVERABLE,     // severity
-                                       NULL,                       // trace buffer
-                                       DEFAULT_TRACE_SIZE,         //Trace Size
-                                       pgpe_beacon,                // userdata1
-                                       G_pgpe_header.beacon_sram_addr); // userdata2
+                    l_err = createPgpeErrl(POKE_WD_TIMERS,                  // mod id
+                                           PGPE_FAILURE,                    // reason code
+                                           ERC_PGPE_BEACON_TIMEOUT,         // Extended reason code
+                                           ERRL_SEV_UNRECOVERABLE,          // severity
+                                           pgpe_beacon,                     // userdata1
+                                           G_pgpe_header.beacon_sram_addr); // userdata2
 
                     //Add firmware callout
                     addCalloutToErrl(l_err,

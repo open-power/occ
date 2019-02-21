@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -1708,16 +1708,13 @@ void Main_thread_routine(void *private)
              * @userdata4   ERC_PGPE_START_SUSPEND_FAILURE
              * @devdesc     PGPE returned an error in response to start_suspend
              */
-            errlHndl_t l_err = createErrl(
-                        MAIN_THRD_ROUTINE_MID,                  // modId
-                        PGPE_FAILURE,                           // reasoncode
-                        ERC_PGPE_START_SUSPEND_FAILURE,         // Extended reason code
-                        ERRL_SEV_UNRECOVERABLE,                 // Severity
-                        NULL,                                   // Trace Buf
-                        DEFAULT_TRACE_SIZE,                     // Trace Size
-                        G_ss_pgpe_rc,                           // userdata1
-                        0                                       // userdata2
-                    );
+            errlHndl_t l_err = createPgpeErrl(MAIN_THRD_ROUTINE_MID,                  // modId
+                                              PGPE_FAILURE,                           // reasoncode
+                                              ERC_PGPE_START_SUSPEND_FAILURE,         // Extended reason code
+                                              ERRL_SEV_UNRECOVERABLE,                 // Severity
+                                              G_ss_pgpe_rc,                           // userdata1
+                                              0                                       // userdata2
+                                             );
 
             REQUEST_RESET(l_err);
         }
