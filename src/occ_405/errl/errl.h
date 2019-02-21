@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -55,6 +55,9 @@ static const uint32_t INVALID_ERR = 0xFFFFFFFF;
 
 // USED to determine the number of all trace buffer types. Now have (INF/IMP/ERR)
 #define NUM_OF_TRACE_TYPE 3
+
+// maximum size of PGPE debug data will be added for ERRL_USR_DTL_PGPE_PK_TRACE
+#define MAX_PGPE_DBUG_DATA 0x300
 
 // These bits are used to acquire a slot number.  When used with the global
 // slot bit mask, we are able to get 7 slots for predictive/unrecoverable errors,
@@ -112,6 +115,8 @@ typedef enum
     ERRL_USR_DTL_CALLHOME_DATA  = 0x02,
     ERRL_USR_DTL_BINARY_DATA    = 0x03,
     ERRL_USR_DTL_HISTORY_DATA   = 0x04,
+    ERRL_USR_DTL_WOF_DATA       = 0x05,
+    ERRL_USR_DTL_PGPE_PK_TRACE  = 0x06,
 } ERRL_USR_DETAIL_TYPE;
 
 // These are the possible OCC States.
@@ -334,6 +339,15 @@ errlHndl_t createErrl(
             const uint32_t i_userData2
             );
 
+/* Create an Error Log due to a PGPE failure */
+errlHndl_t createPgpeErrl(
+            const uint16_t i_modId,
+            const uint8_t i_reasonCode,
+            const uint16_t i_extReasonCode,
+            const ERRL_SEVERITY i_sev,
+            const uint32_t i_userData1,
+            const uint32_t i_userData2
+            );
 
 /* Add Trace Data to Error Log */
 void addTraceToErrl(
@@ -344,6 +358,9 @@ void addTraceToErrl(
 
 // Add Error history data to the Error Log
 void addErrHistory(errlHndl_t io_err);
+
+// Add PGPE specific data to the Error Log
+void addPgpeDataToErrl(errlHndl_t io_err);
 
 /* Commit the Error Log */
 void commitErrl( errlHndl_t * io_err );
