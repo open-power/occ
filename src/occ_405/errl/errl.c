@@ -386,6 +386,16 @@ errlHndl_t createPgpeErrl(const uint16_t i_modId,
     {
         TRAC_INFO("createPgpeErrl: Creating error log in slot [%d]", l_errSlot);
 
+       // Trace a few regs for PGPE debug
+       uint32_t l_oisr0_status; // OCC Interrupt Source 0 Register
+       uint32_t l_oisr1_status; // OCC Interrupt Source 1 Register
+       uint32_t l_occs2_status; // OCC Scratch 2
+       l_oisr0_status = in32(OCB_OISR0);
+       l_oisr1_status = in32(OCB_OISR1);
+       l_occs2_status = in32(OCB_OCCS2);
+       TRAC_IMP("createPgpeErrl: OISR0=0x%08X, OISR1=0x%08X, OCCS2=0x%08X",
+                l_oisr0_status, l_oisr1_status, l_occs2_status);
+
         // get slot pointer
         l_err = G_occErrSlots[ l_errSlot ];
 
