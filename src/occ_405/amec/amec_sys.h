@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -724,15 +724,8 @@ typedef struct
   // WOF sensors
   amec_wof_sensors_t    wof_sensors;
 
-  //---------------------------------------------------------
-  //
-  // Parameters for analytics function
-  //
-  //---------------------------------------------------------
   // 32 bit counter of 250usec ticks
   uint32_t      r_cnt;
-  // array holding sensor ptrs for writing to stream vector
-  void          *stream_vector_map[STREAM_VECTOR_SIZE_EX];
   void          * ptr_probe250us[NUM_AMEC_FW_PROBES];       // array holding ptrs to data that is read by probe250us sensors
   // 32-bit ptr to streaming buffer which contains 16 bit elements
   uint16_t      *ptr_stream_buffer;
@@ -766,28 +759,6 @@ typedef struct
   uint8_t       l4_powerdown_requestm;
   // indicates which of the L4 Centaurs is being monitored by probe.
   uint16_t      probe_l4_centaur;
-  uint32_t      g44_avg[MAX_NUM_CHIP_MODULES*MAX_SENSORS_ANALYTICS];
-  // parameter driven selection of analytics group
-  uint16_t      analytics_group;
-  // parameter to select which chip to monitor analytics on
-  uint8_t       analytics_chip;
-  // parameter to select which analytics options (=0 just selected chip)
-  uint8_t       analytics_option;
-  // 8-bit value used to throw away frames until good output has been averaged in amec_analytics buffer outputs
-  uint8_t       analytics_bad_output_count;
-  // Total number of chips used in analytics sensor capture
-  uint8_t       analytics_total_chips;
-  // Current offset in cyclic thermal group output (8 in cycle)
-  uint8_t       analytics_thermal_offset;
-  // Selects which type of Group 44 averaging is done on per thread data:
-  // default=0 (average of non-zero thread utilizations), =1 (average of N), =2 (max of N)
-  uint8_t       analytics_threadmode;
-  // Has the maximum number of threads per core for this processor architecture or for SMT modes. Default=4 on P7+.
-  uint8_t       analytics_threadcountmax;
-  // Which of 8 time slots that amec_analytics is called in
-  uint8_t       analytics_slot;
-  // Used to hold selected analytics group
-  uint16_t      analytics_array[STREAM_VECTOR_SIZE_EX];
   // holds the sum of all the memory power sensors (32msec)
   uint16_t      total_memory_power;
   uint16_t  probetemp[NUM_AMEC_FW_PROBES];                  // array holding temporary probe data

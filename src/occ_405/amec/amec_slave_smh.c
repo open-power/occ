@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -53,7 +53,6 @@
 #include <amec_amester.h>
 #include <amec_oversub.h>
 #include <amec_health.h>
-#include <amec_analytics.h>
 #include <common.h>
 #include <occhw_async.h>
 #include <wof.h>

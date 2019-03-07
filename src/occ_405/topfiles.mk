@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2015,2017
+# Contributors Listed Below - COPYRIGHT 2015,2019
 # [+] International Business Machines Corp.
 #
 #
@@ -22,8 +22,7 @@
 # permissions and limitations under the License.
 #
 # IBM_PROLOG_END_TAG
-TOP-C-SOURCES = amec/amec_analytics.c \
-                amec/amec_controller.c \
+TOP-C-SOURCES = amec/amec_controller.c \
                 amec/amec_data.c \
                 amec/amec_dps.c \
                 amec/amec_freq.c \

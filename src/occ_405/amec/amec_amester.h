@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/amec/amec_amester.h $                                 */
+/* $Source: src/occ_405/amec/amec_amester.h $                             */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -108,8 +108,6 @@
 #define INJECTION_BUFFER_SIZE   32    // Size of injection buffer (must be a power of 2)
 #define STREAM_VECTOR_SIZE_EX   74    // # of 16 bit elements in a stream vector
 #define STREAM_BUFFER_SIZE  (40*1*STREAM_VECTOR_SIZE_EX)  // Stream buffer size in 16 bit samples for recording real time data to stream to Amester
-#define MAX_SENSORS_ANALYTICS   134   // Maximum sensors making up the analytics group 45 (includes all Centaur data & L4 data & supports 12 cores)
-#define MSA                     MAX_SENSORS_ANALYTICS
 
 #define OCA_MAX_ENTRIES         0 // no POWER7 OCA on POWER8
 #define AMEC_TB_SENSORS_MAX     40

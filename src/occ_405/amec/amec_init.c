@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -299,19 +299,6 @@ void amec_init_gamec_struct(void)
   g_amec->stream_vector_delay=0;     // Delay in msec before recording can begin
   g_amec->stream_vector_rate=0xff;   // Invalid setting: requires IPMI command to select initial rate
 
-  //Initialize analytics parameters
-  g_amec->analytics_group=45;        // Default to analytics Group 45
-  g_amec->analytics_chip=0;          // Default to which chip to perform analytics on
-  g_amec->analytics_bad_output_count=0;   // Number of frames to discard before recording analytics output
-  g_amec->analytics_total_chips=MAX_NUM_CHIP_MODULES;  // Default to do all chips in the system
-  g_amec->analytics_threadmode=1;    // Default is average of all N threads (may be altered with IPMI command)
-  g_amec->analytics_threadcountmax=8;// Default is 8 threads per core (may be altered with IPMI command)
-  g_amec->analytics_total_chips=4;   // For Tuleta force to only 2 DCM sockets, 4 chips
-  g_amec->analytics_option=1;        // =0 means cycle through all chips, =1 means only work with analytics_chip
-  g_amec->analytics_thermal_offset=0;// Reset offset to 0 for thermal output group
-  g_amec->analytics_slot=4;          // Time slot associated with when the amec_analytics function is called (out of 8 slots)
-  // Set entire averaging buffer to zero
-  memset (&g_amec->g44_avg, 0, 4*(MAX_SENSORS_ANALYTICS*MAX_NUM_CHIP_MODULES));
   for(l_idx=0; l_idx<NUM_AMEC_FW_PROBES; l_idx++)
   {
      g_amec->ptr_probe250us[l_idx] = &g_amec->sys.pwrsys.sample;
@@ -319,18 +306,10 @@ void amec_init_gamec_struct(void)
      g_amec->index_probe250us[l_idx] = 0;    // Initialize all offsets to 0 (used only if size > 2)
   }
 
-//  g_amec->ptr_probe250us[2] = &g_amec->g44_avg[(0*MSA)+49];
-//  g_amec->ptr_probe250us[2] = g_amec->ptr_probe250us[2]+2;  // Point to low 16 bits of g44_avg
-//  g_amec->ptr_probe250us[3] = &g_amec->proc[0].core[0].thread[0].util2ms_thread;
   g_amec->ptr_probe250us[1] = &g_amec->sys.pwrsys.sample;
   g_amec->ptr_probe250us[2] = &g_amec->r_cnt;
   g_amec->ptr_probe250us[2] = g_amec->ptr_probe250us[2]+2;  // Point to low 16 bits of r_cnt
   g_amec->ptr_probe250us[3] = &g_amec->r_cnt;
-//  g_amec->ptr_probe250us[4] = &g_amec->testscom1;
-//  g_amec->ptr_probe250us[5] = &g_amec->traffic_delay;       // holds loop delay for holding up memory traffic
-//  g_amec->ptr_probe250us[6] = &g_amec->testscom1;
-//  g_amec->ptr_probe250us[6] = g_amec->ptr_probe250us[6]+2; // Point to low 16 bits of testscom1
-//  g_amec->ptr_probe250us[7] = &g_amec->task_centaur_data_count;
 
   // Initialize the current_mem_pwr_ctl to indicate that memory power control is not supported
   // update memory control registers only if new ips/default memory power control is different
