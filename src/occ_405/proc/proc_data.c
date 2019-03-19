@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -715,67 +715,78 @@ void task_24x7(task_t * i_task)
 {
     static uint8_t L_numTicks = 0x00;  // never called since OCC started
     static bool    L_idle_trace = FALSE;
+    static bool    L_logged_disable = FALSE;
 
     // Schedule 24x7 task if it hasn't been disabled
     if( (!G_24x7_disabled) && !(G_internal_flags & INT_FLAG_DISABLE_24X7) )
     {
-       // Schedule 24x7 task if idle
-       if (!async_request_is_idle(&G_24x7_request.request))
-       {
-           if(!L_idle_trace)
-           {
-               INTR_TRAC_ERR("task_24x7: request not idle");
-               L_idle_trace = TRUE;
-           }
-           L_numTicks++;
-       }
-       else
-       {
-         if(L_idle_trace)
-         {
-            INTR_TRAC_INFO("task_24x7: previously was not idle and is now idle after %d ticks", L_numTicks);
-            L_idle_trace = FALSE;
-         }
-         // Clear errors and init parameters for GPE task
-         G_24x7_parms.error.error = 0;
-         G_24x7_parms.numTicksPassed = L_numTicks;
+        // Schedule 24x7 task if idle
+        if (!async_request_is_idle(&G_24x7_request.request))
+        {
+            if(!L_idle_trace)
+            {
+                INTR_TRAC_ERR("task_24x7: request not idle");
+                L_idle_trace = TRUE;
+            }
+            L_numTicks++;
+        }
+        else
+        {
+            if(L_idle_trace)
+            {
+                INTR_TRAC_INFO("task_24x7: previously was not idle and is now idle after %d ticks", L_numTicks);
+                L_idle_trace = FALSE;
+            }
+            // Clear errors and init parameters for GPE task
+            G_24x7_parms.error.error = 0;
+            G_24x7_parms.numTicksPassed = L_numTicks;
+            if (L_logged_disable)
+            {
+                INTR_TRAC_INFO("task_24x7: schedule re-enabled");
+                L_logged_disable = FALSE;
+            }
 
-         int l_rc = gpe_request_schedule(&G_24x7_request);
-         if (0 == l_rc)
-         {
-             L_numTicks = 1;  // next time called will be 1 tick later
-         }
-         else
-         {
-            errlHndl_t l_err = NULL;
-            INTR_TRAC_ERR("task_24x7: schedule failed w/rc=0x%08X (%d us)",
-                          l_rc, (int) ((ssx_timebase_get())/(SSX_TIMEBASE_FREQUENCY_HZ/1000000)));
-            /*
-             * @errortype
-             * @moduleid    PROC_24X7_MOD
-             * @reasoncode  SSX_GENERIC_FAILURE
-             * @userdata1   gpe_request_schedule return code
-             * @userdata4   ERC_24X7_GPE_SCHEDULE_FAILURE
-             * @devdesc     Failure to schedule 24x7 GpeRequest
-             */
-            l_err = createErrl(
-                                PROC_24X7_MOD,                            //ModId
-                                SSX_GENERIC_FAILURE,                      //Reasoncode
-                                ERC_24X7_GPE_SCHEDULE_FAILURE,            //Extended reason code
-                                ERRL_SEV_PREDICTIVE,                      //Severity
-                                NULL,                                     //Trace Buf
-                                DEFAULT_TRACE_SIZE,                       //Trace Size
-                                l_rc,                                     //Userdata1
-                                0                                         //Userdata2
-            );
+            int l_rc = gpe_request_schedule(&G_24x7_request);
+            if (0 == l_rc)
+            {
+                L_numTicks = 1;  // next time called will be 1 tick later
+            }
+            else
+            {
+                errlHndl_t l_err = NULL;
+                INTR_TRAC_ERR("task_24x7: schedule failed w/rc=0x%08X (%d us)",
+                              l_rc, (int) ((ssx_timebase_get())/(SSX_TIMEBASE_FREQUENCY_HZ/1000000)));
+                /*
+                 * @errortype
+                 * @moduleid    PROC_24X7_MOD
+                 * @reasoncode  SSX_GENERIC_FAILURE
+                 * @userdata1   gpe_request_schedule return code
+                 * @userdata4   ERC_24X7_GPE_SCHEDULE_FAILURE
+                 * @devdesc     Failure to schedule 24x7 GpeRequest
+                 */
+                l_err = createErrl(
+                                   PROC_24X7_MOD,                            //ModId
+                                   SSX_GENERIC_FAILURE,                      //Reasoncode
+                                   ERC_24X7_GPE_SCHEDULE_FAILURE,            //Extended reason code
+                                   ERRL_SEV_PREDICTIVE,                      //Severity
+                                   NULL,                                     //Trace Buf
+                                   DEFAULT_TRACE_SIZE,                       //Trace Size
+                                   l_rc,                                     //Userdata1
+                                   0                                         //Userdata2
+                                  );
 
-            // Request reset since this should never happen.
-            REQUEST_RESET(l_err);
-          }
-       }
+                // Request reset since this should never happen.
+                REQUEST_RESET(l_err);
+            }
+        }
     }  // !G_24x7_disabled
     else
     {
+        if (! L_logged_disable)
+        {
+            INTR_TRAC_INFO("task_24x7: not scheduled due to disable");
+            L_logged_disable = TRUE;
+        }
         // 24x7 is disabled INC number ticks so 24x7 knows how many ticks it was disabled for
         L_numTicks++;
     }

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -50,9 +50,6 @@
 #define N_M_TCR_OFFSET                  0x0116
 #define N_M_TCR_ADDRESS                 (DIMM_MCA_BASE_ADDRESS + N_M_TCR_OFFSET)
 
-#define DDR_IF_SCOM_CTRL_OFFSET         0x0118
-#define DDR_IF_SCOM_CTRL_ADDRESS        (DIMM_MCA_BASE_ADDRESS + DDR_IF_SCOM_CTRL_OFFSET)
-
 #define PERF_MON_COUNTS_IDLE_OFFSET     0x013C
 #define PERF_MON_COUNTS_IDLE_ADDRESS    (DIMM_MCA_BASE_ADDRESS + PERF_MON_COUNTS_IDLE_OFFSET)
 
@@ -89,7 +86,10 @@ mc23.port3        0x080108C0        + 0x134/135/118    = 0x080109F4     = 0x0801
 #define STR_REG0(mc,port) (STR_REG0_ADDRESS + MC_PORT_SPACE(mc,port))
 #define STR_REG0_MCA(mca) (STR_REG0_ADDRESS + MC_PORT_SPACE((mca>>2),(mca&3)))
 
-#define DDR_IF_SCOM_CTRL(mc,port) (DDR_IF_SCOM_CTRL_ADDRESS + MC_PORT_SPACE(mc,port))
+// Required for NVDIMM procedure
+#define DDR_IF_SCOM_CTRL(mc,port)    (DIMM_MCA_BASE_ADDRESS + 0x0118 + MC_PORT_SPACE(mc,port))
+#define FINAL_ARB_PARMS(mc,port)     (DIMM_MCA_BASE_ADDRESS + 0x0113 + MC_PORT_SPACE(mc,port))
+#define DDR_PORT_STATUS_REG(mc,port) (DIMM_MCA_BASE_ADDRESS + 0x0119 + MC_PORT_SPACE(mc,port))
 
 // DIMM Control
 /*

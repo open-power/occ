@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -481,7 +481,7 @@ void task_dcom_wait_for_master( task_t *i_self)
     static bool         L_Pmax_error_logged     = FALSE;
     static uint32_t     L_pobid_retries_left    = POBID_RETRIES;
     static uint16_t     L_no_master_doorbell_cnt = 0;
-    static uint16_t     L_trace_every_count = 1;
+
 
     DCOM_DBG("0. Wait for Master\n");
 
@@ -507,17 +507,15 @@ void task_dcom_wait_for_master( task_t *i_self)
                 // counter
                 L_no_master_doorbell_cnt++;
 
-                if (L_no_master_doorbell_cnt % L_trace_every_count == 0)
+                if ((L_no_master_doorbell_cnt <= 10) || (L_no_master_doorbell_cnt % 10000 == 0))
                 {
+                    // Trace first 10 occurances and then every 10,000
                     TRAC_INFO("task_dcom_wait_for_master: experiencing data collection problems! fail_count=%i",
                               L_no_master_doorbell_cnt);
                 }
 
                 if (L_no_master_doorbell_cnt == APSS_DATA_FAIL_PMAX_RAIL)
                 {
-                    // Now only trace every 1000th occurrence
-                    L_trace_every_count = 1000;
-
                     // Inform AMEC that Pmax_rail needs to change
                     G_apss_lower_pmax_rail = TRUE;
 
@@ -728,7 +726,6 @@ void task_dcom_wait_for_master( task_t *i_self)
              // the no_master_doorbell counter
              G_apss_lower_pmax_rail = FALSE;
              L_no_master_doorbell_cnt = 0;
-             L_trace_every_count = 1;
         }
 
         // Got a multicast doorbell

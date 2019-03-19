@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -33,6 +33,8 @@
 uint8_t G_host_notifications_pending = 0;
 extern bool G_ipl_time;
 extern uint16_t G_allow_trace_flags;
+extern uint8_t G_occ_interrupt_type;
+#define TICKS_TO_DELAY_CHECKSTOP_PROCESSING 4
 
 // Function Specification
 //
@@ -56,7 +58,7 @@ void task_misc_405_checks(task_t *i_self)
     static bool L_checkstop_traced    = false;
     uint8_t     l_reason_code         = 0;
     bool        l_create_errl         = false;
-
+    static unsigned int L_delay_cstop = TICKS_TO_DELAY_CHECKSTOP_PROCESSING;
 
     do
     {
@@ -87,7 +89,28 @@ void task_misc_405_checks(task_t *i_self)
                 l_oisr0_status.fields.gpe0_error        ||   // GPE0 Halt
                 l_oisr0_status.fields.gpe1_error)            // GPE1 Halt
             {
-                l_create_errl = true;
+                if(l_oisr0_status.fields.check_stop_ppc405)
+                {
+                    // For FSP systems, delay the system checkstop processing to allow NVDIMM procedure to run
+                    if ((G_occ_interrupt_type == FSP_SUPPORTED_OCC) && (L_delay_cstop > 0))
+                    {
+                        if (L_delay_cstop == TICKS_TO_DELAY_CHECKSTOP_PROCESSING)
+                        {
+                            TRAC_IMP("task_misc_405_checks: System checkstop detected by RTL: OISR0[0x%08x] - delaying halt (tick=%d)",
+                                     l_oisr0_status.value, CURRENT_TICK);
+                        }
+                        --L_delay_cstop;
+                    }
+                    else
+                    {
+                        l_create_errl = true;
+                    }
+                }
+                else
+                {
+                    // GPE0/GPE1 Halt
+                    l_create_errl = true;
+                }
             }
         }
 

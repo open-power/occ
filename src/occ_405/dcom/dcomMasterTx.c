@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -37,6 +37,9 @@
 #include <proc_pstate.h>
 #include <amec_sys.h>
 #include <amec_master_smh.h>
+
+extern bool G_epow_triggered;
+bool epow_gpio_asserted(const bool i_from_slave_inbox);
 
 extern UINT8 g_amec_tb_record; // From amec_amester.c for syncronized traces
 extern PWR_READING_TYPE  G_pwr_reading_type;
@@ -114,11 +117,11 @@ uint32_t dcom_build_slv_inbox(void)
                 G_apss_pwr_meas.adc,
                 sizeof( G_dcom_slv_inbox_tx[l_slv_idx].adc));
 
-         memcpy( G_dcom_slv_inbox_tx[l_slv_idx].gpio,
+        memcpy( G_dcom_slv_inbox_tx[l_slv_idx].gpio,
                 G_apss_pwr_meas.gpio,
                 sizeof( G_dcom_slv_inbox_tx[l_slv_idx].gpio));
 
-         memcpy( G_dcom_slv_inbox_tx[l_slv_idx].tod,
+        memcpy( G_dcom_slv_inbox_tx[l_slv_idx].tod,
                 &G_apss_pwr_meas.tod,
                 sizeof( G_dcom_slv_inbox_tx[l_slv_idx].tod));
 
@@ -192,6 +195,15 @@ uint32_t dcom_build_slv_inbox(void)
     G_dcom_slv_inbox_doorbell_tx.magic_counter++;
     G_dcom_slv_inbox_doorbell_tx.magic2 = PBAX_MAGIC_NUMBER_32B;
 
+    if (IS_OCC_STATE_ACTIVE() && (!isSafeStateRequested()))
+    {
+        // If the EPOW is asserted, master should start handling it right away (vs waiting to handle as a slave)
+        memcpy(G_dcom_slv_inbox_rx.gpio,
+               G_apss_pwr_meas.gpio,
+               sizeof( G_dcom_slv_inbox_rx.gpio));
+        epow_gpio_asserted(TRUE);
+    }
+
     return l_addr_of_slv_inbox_in_main_mem;
 }
 
@@ -232,7 +244,7 @@ uint32_t dcom_which_buffer(void)
 void task_dcom_tx_slv_inbox( task_t *i_self)
 {
     static bool L_error = FALSE;
-    static uint8_t L_bce_not_ready_count = 0;
+    static unsigned int L_bce_not_ready_count = 0;
     uint32_t    l_orc = OCC_SUCCESS_REASON_CODE;
     uint32_t    l_orc_ext = OCC_NO_EXTENDED_RC;
     uint64_t    l_start = ssx_timebase_get();
@@ -240,6 +252,7 @@ void task_dcom_tx_slv_inbox( task_t *i_self)
     bool        l_pwr_meas_complete_invalid = FALSE;
     bool        l_request_reset = FALSE;
     bool        l_ssx_failure = FALSE;
+
     // Use a static local bool to track whether the BCE request used
     // here has ever been successfully created at least once
     static bool L_bce_slv_inbox_tx_request_created_once = FALSE;
@@ -254,7 +267,7 @@ void task_dcom_tx_slv_inbox( task_t *i_self)
             (G_pwr_reading_type != PWR_READING_TYPE_APSS) ||
             G_apss_recovery_requested )
         {
-           G_ApssPwrMeasCompleted = TRUE;
+            G_ApssPwrMeasCompleted = TRUE;
         }
 
         l_pwr_meas = G_ApssPwrMeasCompleted;
@@ -296,7 +309,7 @@ void task_dcom_tx_slv_inbox( task_t *i_self)
             else if (l_req_idle && l_req_complete)
             {
                 // Most likely case first.  The request was created
-                // and scheduled and has completed without error.  Proceed.
+                // and scheduled and has completed without error.
                 // Proceed with request create and schedule.
                 l_proceed_with_request_and_schedule = TRUE;
             }
@@ -334,19 +347,15 @@ void task_dcom_tx_slv_inbox( task_t *i_self)
 
                 if(L_bce_not_ready_count == DCOM_TRACE_NOT_IDLE_AFTER_CONSEC_TIMES)
                 {
-                   // Trace important information from the request
-                   TRAC_INFO("BCE slv inbox tx request not idle and not complete: callback_rc[%d] options[0x%x] state[0x%x] abort_state[0x%x] completion_state[0x%x]",
-                             G_slv_inbox_tx_pba_request.request.callback_rc,
-                             G_slv_inbox_tx_pba_request.request.options,
-                             G_slv_inbox_tx_pba_request.request.state,
-                             G_slv_inbox_tx_pba_request.request.abort_state,
-                             G_slv_inbox_tx_pba_request.request.completion_state);
-                   TRAC_INFO("NOT proceeding with BCE slv inbox tx request and schedule");
+                    // Trace important information from the request
+                    TRAC_INFO("BCE slv inbox tx request not idle and not complete: callback_rc[%d] options[0x%x] state[0x%x] abort_state[0x%x] completion_state[0x%x]",
+                              G_slv_inbox_tx_pba_request.request.callback_rc,
+                              G_slv_inbox_tx_pba_request.request.options,
+                              G_slv_inbox_tx_pba_request.request.state,
+                              G_slv_inbox_tx_pba_request.request.abort_state,
+                              G_slv_inbox_tx_pba_request.request.completion_state);
+                    TRAC_INFO("NOT proceeding with BCE slv inbox tx request and schedule");
                 }
-            }
-            else
-            {
-                // This case is not possible. Ignore it.
             }
 
             // Only proceed if the BCE request state checked out

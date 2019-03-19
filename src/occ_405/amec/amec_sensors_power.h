@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -62,6 +62,7 @@ void amec_update_gpu_configuration(void);
 // Helper function called when updating the AMEC sensors for GPIO to detect
 // GPIO_EPOW. If it has been asserted, we send an IPC command to GPE1 to
 // perform some SCOMs allowing NVDIMMs to back up their data.
+// Set i_from_slave_inbox to TRUE when called as a slave
 // Returns TRUE if EPOW was asserted.
-bool epow_gpio_asserted(void);
+bool epow_gpio_asserted(const bool i_from_slave_inbox);
 #endif // _AMEC_SENSORS_POWER_H

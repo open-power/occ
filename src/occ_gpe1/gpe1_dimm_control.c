@@ -266,7 +266,61 @@ void gpe_scom_nvdimms_nimbus(ipc_msg_t* cmd, void* arg)
                                  GPE_RC_SCOM_PUT_FAILED, rc);
                 }
 
-                // Step 6 - In FARB5Q (DDR Interface SCOM Control), assert ddr_resetn
+                // Step 6 (new) - In FARB0Q (Final Arb parameters), disable rcd recovery
+                //
+                //          bit  54   - Disable the rcd recovery procedure
+                const uint32_t reg_FARB0Q = FINAL_ARB_PARMS(mc,port);
+                rc = getscom_abs(reg_FARB0Q, &regValue);
+                if (rc)
+                {
+                    PK_TRACE("E>gpe_scom_nvdimms_nimbus: Failed to read (FARB0Q) Reg:0x%08X, rc:0x%08x",
+                             reg_FARB0Q, rc);
+                }
+                else
+                {
+                    regValue |= 0x0000000000000200; // disable rcd recovery procedure (set bit 54)
+                    rc = putscom_abs(reg_FARB0Q, regValue);
+                    if (rc)
+                    {
+                        PK_TRACE("E>gpe_scom_nvdimms_nimbus: Failed to disable rcd procedure (FARB0Q)"
+                                 " Reg:0x%08X, Data:0x%08X %08X, rc:0x%08x",
+                                 reg_FARB0Q, WORD_HIGH(regValue), WORD_LOW(regValue), rc);
+                        gpe_set_ffdc(&(args->error), reg_FARB0Q,
+                                     GPE_RC_SCOM_PUT_FAILED, rc);
+                    }
+                }
+
+                // Step 7 (new) - In FARB6Q (DDR Port Status Register), check if DRAMS are in STR
+                //
+                //          bit  15  - Indicates if DRAMS on this port are in STR
+                const uint32_t reg_FARB6Q = DDR_PORT_STATUS_REG(mc,port);
+                PK_TRACE("gpe_scom_nvdimms_nimbus: Waiting for DRAM to reach STR (0x%08X)", reg_FARB6Q);
+                uint64_t lastReg = 0;
+                do
+                {
+                    rc = getscom_abs(reg_FARB6Q, &regValue);
+                    if (rc)
+                    {
+                        PK_TRACE("E>gpe_scom_nvdimms_nimbus: Failed to read (FARB6Q) Reg:0x%08X, rc:0x%08x",
+                                 reg_FARB6Q, rc);
+                        break;
+                    }
+                    else
+                    {
+                        if (lastReg != regValue)
+                        {
+                            PK_TRACE("gpe_scom_nvdimms_nimbus: FARB6Q = 0x%08X %08X", WORD_HIGH(regValue), WORD_LOW(regValue));
+                            lastReg = regValue;
+                        }
+                    }
+                }
+                while ((regValue & 0x0001000000000000) == 0); // wait for bit 15 to get set
+                if (rc == 0)
+                {
+                    PK_TRACE("gpe_scom_nvdimms_nimbus: DRAM is in STR");
+                }
+
+                // Step 8 (was 6) - In FARB5Q (DDR Interface SCOM Control), assert ddr_resetn
                 //
                 //          bit  4   - assert ddr_resetn
                 const uint32_t reg_FARB5Q = DDR_IF_SCOM_CTRL(mc,port);
