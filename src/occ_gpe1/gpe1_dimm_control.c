@@ -98,23 +98,139 @@ void gpe1_sleep(uint32_t i_microseconds)
 void gpe_scom_nvdimms_nimbus(ipc_msg_t* cmd, void* arg)
 {
     int rc = 0;
-    int mc = 0;
+    int mc = 1;
     int port = 0;
+    uint32_t regAddr = 0;
     uint64_t regValue = 0;
-    uint64_t mbarpc_regValue = 0;
-    uint64_t mbastr_regValue = 0;
     ipc_async_cmd_t *async_cmd = (ipc_async_cmd_t*)cmd;
 
     epow_gpio_args_t *args = (epow_gpio_args_t*)async_cmd->cmd_data;
 
-    PK_TRACE("gpe_scom_nvdimms_nimbus: configured_mbas: 0x%04x",
-                args->configured_mbas );
+    PK_TRACE("gpe_scom_nvdimms_nimbus: configured_mbas: 0x%04x", args->configured_mbas );
 
-    // If mc is configured, send scoms
+    // Step 1: Stop mcbist, select all ports (or just the ports with NVDIMM, but we are going down anyways so who cares)
+    //
+    // MC01.MCBIST.MBA_SCOMFIR.MCB_CNTLQ - MCBIST Control Register
+    //     bit 0:       start bit
+    //     bit 1:       stop bit
+    //     bit 2:5      ports to run MCBIST
+    //
+    regAddr = MCBIST_CTRL_REG(mc);
+    rc = getscom_abs(regAddr, &regValue);
+    if (rc)
+    {
+        PK_TRACE("E>gpe_scom_nvdimms_nimbus: Failed to read MCB_CNTLQ Reg:0x%08X, rc:0x%08x",
+                 regAddr, rc);
+    }
+    else
+    {
+        regValue |= 0x7C00000000000000; // set stop bit and all ports
+        PK_TRACE("gpe_scom_nvdimms_nimbus: Writing MCB_CNTLQ (0x%08X) to 0x%08X%08X",
+                 regAddr, WORD_HIGH(regValue), WORD_LOW(regValue));
+        rc = putscom_abs(regAddr, regValue);
+        if (rc)
+        {
+            PK_TRACE("E>gpe_scom_nvdimms_nimbus: Failed to update MCB_CNTLQ"
+                     " Reg:0x%08X, Data:0x%08X %08X, rc:0x%08x",
+                     regAddr, WORD_HIGH(regValue), WORD_LOW(regValue), rc);
+            gpe_set_ffdc(&(args->error), regAddr,
+                         GPE_RC_SCOM_PUT_FAILED, rc);
+        }
+    }
+
+    // Step 2: Enable maint. addr and broadcast
+    //
+    // MC01.MCBIST.MBA_SCOMFIR.MCBAGRAQ - Address Generator Configuration Register
+    //     bit 10       enable maint address mode
+    //     bit 11       enable maint_addr_mode to broadcast commands to multiple ports
+    regAddr = 0x070123D6 + (MCA_MCPAIR_SPACE * mc);
+    rc = getscom_abs(regAddr, &regValue);
+    if (rc)
+    {
+        PK_TRACE("E>gpe_scom_nvdimms_nimbus: Failed to read MCBAGRAQ Reg:0x%08X, rc:0x%08x",
+                 regAddr, rc);
+    }
+    else
+    {
+        regValue |= 0x0030000000000000; // enable maintenance address & broadcast
+        PK_TRACE("gpe_scom_nvdimms_nimbus: Writing MCBAGRAQ (0x%08X) to 0x%08X%08X",
+                 regAddr, WORD_HIGH(regValue), WORD_LOW(regValue));
+        rc = putscom_abs(regAddr, regValue);
+        if (rc)
+        {
+            PK_TRACE("E>gpe_scom_nvdimms_nimbus: Failed to update MCBAGRAQ"
+                     " Reg:0x%08X, Data:0x%08X %08X, rc:0x%08x",
+                     regAddr, WORD_HIGH(regValue), WORD_LOW(regValue), rc);
+            gpe_set_ffdc(&(args->error), regAddr,
+                         GPE_RC_SCOM_PUT_FAILED, rc);
+        }
+    }
+
+    // Step 3: Enable sync for broadcast
+    //
+    // MC01.MCBIST.MBA_SCOMFIR.MCBCFGQ - MCBIST Configuration Register
+    //     bit 0        Enable sync for broadcast
+    regAddr = 0x070123E0 + (MCA_MCPAIR_SPACE * mc);
+    rc = getscom_abs(regAddr, &regValue);
+    if (rc)
+    {
+        PK_TRACE("E>gpe_scom_nvdimms_nimbus: Failed to read MCBCFGQ Reg:0x%08X, rc:0x%08x",
+                 regAddr, rc);
+    }
+    else
+    {
+        regValue |= 0x8000000000000000; // enable sync for broadcast
+        PK_TRACE("gpe_scom_nvdimms_nimbus: Writing MCBCFGQ (0x%08X) to 0x%08X%08X",
+                 regAddr, WORD_HIGH(regValue), WORD_LOW(regValue));
+        rc = putscom_abs(regAddr, regValue);
+        if (rc)
+        {
+            PK_TRACE("E>gpe_scom_nvdimms_nimbus: Failed to update MCBCFGQ"
+                     " Reg:0x%08X, Data:0x%08X %08X, rc:0x%08x",
+                     regAddr, WORD_HIGH(regValue), WORD_LOW(regValue), rc);
+            gpe_set_ffdc(&(args->error), regAddr,
+                         GPE_RC_SCOM_PUT_FAILED, rc);
+        }
+    }
+
+    // Step 4: required for DDR_RESETn
+    //
+    // MC01.MCBIST.MBA_SCOMFIR.CCS_MODEQ - Configured Command Sequence Mode Register
+    //     bit 60       Idle pattern for CCS DDR Address Bank Bit 2
+    regAddr = 0x070123A7 + (MCA_MCPAIR_SPACE * mc);
+    rc = getscom_abs(regAddr, &regValue);
+    if (rc)
+    {
+        PK_TRACE("E>gpe_scom_nvdimms_nimbus: Failed to read CCS_MODEQ Reg:0x%08X, rc:0x%08x",
+                 regAddr, rc);
+    }
+    else
+    {
+        regValue |= 0x0000000000000008;
+        PK_TRACE("gpe_scom_nvdimms_nimbus: Writing CCS_MODEQ (0x%08X) to 0x%08X%08X",
+                 regAddr, WORD_HIGH(regValue), WORD_LOW(regValue));
+        rc = putscom_abs(regAddr, regValue);
+        if (rc)
+        {
+            PK_TRACE("E>gpe_scom_nvdimms_nimbus: Failed to update CCS_MODEQ"
+                     " Reg:0x%08X, Data:0x%08X %08X, rc:0x%08x",
+                     regAddr, WORD_HIGH(regValue), WORD_LOW(regValue), rc);
+            gpe_set_ffdc(&(args->error), regAddr,
+                         GPE_RC_SCOM_PUT_FAILED, rc);
+        }
+    }
+
+    // Step 5: Enable CCS address mux and allow RESETn per NVDIMM port
+    //
+    // MC01.PORT0.SRQ.MBA_FARB5Q - DDR Interface SCOM Control
+    //      bit 5:      CCS Addresss Mux Sel
+    //      bit 6:      CSS_INST_ARR0 will be driven out to DDR Resetn
+
+    // Iterate over each bit in configured_mbas for MCS3 (MCA port 6 and 7)
 
     // OCC does not know which slots the NVDIMMs are installed in.
     // NVDIMMs will only be installed in ports 6 & 7
-    // To expedite the save of data, the scoms will only be done for those 2 ports
+    // To expedite the save of data, some scoms will only be done for those 2 ports
     // mc=0 => MCS0 --> MCA port 0 --> DIMM0/1
     //                  MCA port 1 --> DIMM0/1
     //         MCS1 --> MCA port 2 --> DIMM0/1
@@ -123,230 +239,63 @@ void gpe_scom_nvdimms_nimbus(ipc_msg_t* cmd, void* arg)
     //                  MCA port 5 --> DIMM0/1
     //         MCS3 --> MCA port 6 --> DIMM0/1 (potential NVDIMMs)
     //                  MCA port 7 --> DIMM0/1 (potential NVDIMMs)
-
-    mc = 1;
-
-    // Step 0 - In MCFGP, set MCFGP_VALID
-    //
-    //          bit  0    - MCFGP_VALID
-    const uint32_t MCFGP_ADDRESS_MCS3 = 0x0301088A;
-    rc = getscom_abs(MCFGP_ADDRESS_MCS3, &regValue);
-    if (rc)
-    {
-        PK_TRACE("E>gpe_scom_nvdimms_nimbus: Failed to read (MCFGP) Reg:0x%08X, rc:0x%08x",
-                 MCFGP_ADDRESS_MCS3, rc);
-    }
-    else
-    {
-        regValue |= 0x8000000000000000; // set MCFGP_VALID (bit 0)
-        PK_TRACE("gpe_scom_nvdimms_nimbus: Writing MCFGP (0x%08X) to 0x%08X%08X",
-                 MCFGP_ADDRESS_MCS3, WORD_HIGH(regValue), WORD_LOW(regValue));
-        rc = putscom_abs(MCFGP_ADDRESS_MCS3, regValue);
-        if (rc)
-        {
-            PK_TRACE("E>gpe_scom_nvdimms_nimbus: Failed to set MCFGP_VALID (MCFGP)"
-                     " Reg:0x%08X, Data:0x%08X %08X, rc:0x%08x",
-                     MCFGP_ADDRESS_MCS3, WORD_HIGH(regValue), WORD_LOW(regValue), rc);
-            gpe_set_ffdc(&(args->error), MCFGP_ADDRESS_MCS3,
-                         GPE_RC_SCOM_PUT_FAILED, rc);
-        }
-    }
-
-    const uint32_t reg_MCBIST = MCBIST_CTRL_REG(mc);
-    rc = getscom_abs(reg_MCBIST, &regValue);
-    if (rc)
-    {
-        PK_TRACE("E>gpe_scom_nvdimms_nimbus: Failed to read (MCBIST) Reg:0x%08X, rc:0x%08x",
-                 reg_MCBIST, rc);
-    }
-    else
-    {
-        // Step 1 - In MCBIST_CTRL_REG, stop mcbist
-        //          (must be done first)
-        //
-        //          bit  1   - MCB_STOP
-        regValue |= 0x4000000000000000; // stop mcbist (set bit 1)
-        rc = putscom_abs(reg_MCBIST, regValue);
-        if (rc)
-        {
-            PK_TRACE("E>gpe_scom_nvdimms_nimbus: Failed to stop mcbist (MCBIST)"
-                     " Reg:0x%08X, Data:0x%08X %08X, rc:0x%08x",
-                     reg_MCBIST, WORD_HIGH(regValue), WORD_LOW(regValue), rc);
-            gpe_set_ffdc(&(args->error), reg_MCBIST, GPE_RC_SCOM_PUT_FAILED, rc);
-        }
-    }
-
-    // Iterate over each bit in configured_mbas for MCS3 (MCA port 6 and 7)
     uint16_t mask = 0x8000 >> 6; // Starting at MCS3 / MCA port 6
     for (port = 2; port < NUM_PORTS_PER_MBA; ++port)
     {
         if (args->configured_mbas & mask)
         {
-            PK_TRACE("gpe_scom_nvdimms_nimbus: scoms for mc: %d, port: %d", mc, port);
-
-            const uint32_t reg_MBARPC0Q = POWER_CTRL_REG0(mc,port);
-            rc = getscom_abs(reg_MBARPC0Q, &mbarpc_regValue);
+            regAddr = DDR_IF_SCOM_CTRL(mc,port);
+            PK_TRACE("gpe_scom_nvdimms_nimbus: MBA_FARB5Q (0x%08X) for mc: %d, port: %d ", regAddr, mc, port);
+            rc = getscom_abs(regAddr, &regValue);
             if (rc)
             {
-                PK_TRACE("E>gpe_scom_nvdimms_nimbus: Failed to read (MBARPC0Q) Reg:0x%08X, rc:0x%08x",
-                         reg_MBARPC0Q, rc);
+                PK_TRACE("E>gpe_scom_nvdimms_nimbus: Failed to read (MBA_FARB5Q) Reg:0x%08X, rc:0x%08x",
+                         regAddr, rc);
             }
             else
             {
-                // Step 2 - In MBARPC0Q, disable power domain control
-                //          (must be done before domains are set)
-                //
-                //          bit  2   - power domain control
-                mbarpc_regValue &= 0xDFFFFFFFFFFFFFFF; // disable power control (clear bit 2)
-                rc = putscom_abs(reg_MBARPC0Q, mbarpc_regValue);
+                regValue |= 0x0600000000000000; // set bit 5 and 6
+                rc = putscom_abs(regAddr, regValue);
                 if (rc)
                 {
-                    PK_TRACE("E>gpe_scom_nvdimms_nimbus: Failed to disable power domain control (MBARPC0Q)"
+                    PK_TRACE("E>gpe_scom_nvdimms_nimbus: Failed to update MBA_FARB5Q"
                              " Reg:0x%08X, Data:0x%08X %08X, rc:0x%08x",
-                             reg_MBARPC0Q, WORD_HIGH(mbarpc_regValue), WORD_LOW(mbarpc_regValue), rc);
-                    gpe_set_ffdc(&(args->error), reg_MBARPC0Q,
+                             regAddr, WORD_HIGH(regValue), WORD_LOW(regValue), rc);
+                    gpe_set_ffdc(&(args->error), regAddr,
                                  GPE_RC_SCOM_PUT_FAILED, rc);
-                }
-
-                // Step 3 - In MBARPC0Q, set domain to MAXALL_MIN0(0b010),
-                //          disable minimum domain reduction and set power down delay to 0
-                //
-                //          bits 3:5   - min/max domains
-                //          bit  22    - min domain reduction enable
-                //          bit  23:32 - min domain reduction time
-                mbarpc_regValue &= 0xEBFFFC007FFFFFFF; // MAXALL_MIN0 & delay (clear bits 3,5,22-32)
-                mbarpc_regValue |= 0x0800000000000000; // MAXALL_MIN0 (set bit 4)
-                rc = putscom_abs(reg_MBARPC0Q, mbarpc_regValue);
-                if (rc)
-                {
-                    PK_TRACE("E>gpe_scom_nvdimms_nimbus: Failed to set domains (MBARPC0Q)"
-                             " Reg:0x%08X, Data:0x%08X %08X, rc:0x%08x",
-                             reg_MBARPC0Q, WORD_HIGH(mbarpc_regValue), WORD_LOW(mbarpc_regValue), rc);
-                    gpe_set_ffdc(&(args->error), reg_MBARPC0Q,
-                                 GPE_RC_SCOM_PUT_FAILED, rc);
-                }
-
-                // Step 4 - In MBASTR0Q, enable STR entry and set entry delay to 0
-                //
-                //          bit  0    - STR enable
-                //          bit  2:11 - STR entry time
-                const uint32_t reg_MBASTR0Q = STR_REG0(mc,port);
-                rc = getscom_abs(reg_MBASTR0Q, &mbastr_regValue);
-                if (rc)
-                {
-                    PK_TRACE("E>gpe_scom_nvdimms_nimbus: Failed to read (MBASTR0Q) Reg:0x%08X, rc:0x%08x",
-                             reg_MBASTR0Q, rc);
-                }
-                else
-                {
-                    mbastr_regValue &= 0xC00FFFFFFFFFFFFF; // set entry time to 0 (clear bits 2-11)
-                    mbastr_regValue |= 0x8000000000000000; // enable STR (set bit 0)
-                    rc = putscom_abs(reg_MBASTR0Q, mbastr_regValue);
-                    if (rc)
-                    {
-                        PK_TRACE("E>gpe_scom_nvdimms_nimbus: Failed to enable STR entry (MBASTR0Q)"
-                                 " Reg:0x%08X, Data:0x%08X %08X, rc:0x%08x",
-                                 reg_MBASTR0Q, WORD_HIGH(mbastr_regValue), WORD_LOW(mbastr_regValue), rc);
-                        gpe_set_ffdc(&(args->error), reg_MBASTR0Q,
-                                     GPE_RC_SCOM_PUT_FAILED, rc);
-                    }
-                }
-
-                // Step 5 - In MBARPC0Q, re-enable power domain control
-                //
-                //          bit  2   - power domain control
-                mbarpc_regValue |= 0x2000000000000000; // enable power control (set bit 2)
-                rc = putscom_abs(reg_MBARPC0Q, mbarpc_regValue);
-                if (rc)
-                {
-                    PK_TRACE("E>gpe_scom_nvdimms_nimbus: Failed to re-enable power domain control (MBARPC0Q)"
-                             " Reg:0x%08X, Data:0x%08X %08X, rc:0x%08x",
-                             reg_MBARPC0Q, WORD_HIGH(mbarpc_regValue), WORD_LOW(mbarpc_regValue), rc);
-                    gpe_set_ffdc(&(args->error), reg_MBARPC0Q,
-                                 GPE_RC_SCOM_PUT_FAILED, rc);
-                }
-
-                // Step 6 (new) - In FARB0Q (Final Arb parameters), disable rcd recovery
-                //
-                //          bit  54   - Disable the rcd recovery procedure
-                const uint32_t reg_FARB0Q = FINAL_ARB_PARMS(mc,port);
-                rc = getscom_abs(reg_FARB0Q, &regValue);
-                if (rc)
-                {
-                    PK_TRACE("E>gpe_scom_nvdimms_nimbus: Failed to read (FARB0Q) Reg:0x%08X, rc:0x%08x",
-                             reg_FARB0Q, rc);
-                }
-                else
-                {
-                    regValue |= 0x0000000000000200; // disable rcd recovery procedure (set bit 54)
-                    rc = putscom_abs(reg_FARB0Q, regValue);
-                    if (rc)
-                    {
-                        PK_TRACE("E>gpe_scom_nvdimms_nimbus: Failed to disable rcd procedure (FARB0Q)"
-                                 " Reg:0x%08X, Data:0x%08X %08X, rc:0x%08x",
-                                 reg_FARB0Q, WORD_HIGH(regValue), WORD_LOW(regValue), rc);
-                        gpe_set_ffdc(&(args->error), reg_FARB0Q,
-                                     GPE_RC_SCOM_PUT_FAILED, rc);
-                    }
-                }
-
-                // Step 7 (new) - In FARB6Q (DDR Port Status Register), check if DRAMS are in STR
-                //
-                //          bit  15  - Indicates if DRAMS on this port are in STR
-                const uint32_t reg_FARB6Q = DDR_PORT_STATUS_REG(mc,port);
-                PK_TRACE("gpe_scom_nvdimms_nimbus: Waiting for DRAM to reach STR (0x%08X)", reg_FARB6Q);
-                uint64_t lastReg = 0;
-                do
-                {
-                    rc = getscom_abs(reg_FARB6Q, &regValue);
-                    if (rc)
-                    {
-                        PK_TRACE("E>gpe_scom_nvdimms_nimbus: Failed to read (FARB6Q) Reg:0x%08X, rc:0x%08x",
-                                 reg_FARB6Q, rc);
-                        break;
-                    }
-                    else
-                    {
-                        if (lastReg != regValue)
-                        {
-                            PK_TRACE("gpe_scom_nvdimms_nimbus: FARB6Q = 0x%08X %08X", WORD_HIGH(regValue), WORD_LOW(regValue));
-                            lastReg = regValue;
-                        }
-                    }
-                }
-                while ((regValue & 0x0001000000000000) == 0); // wait for bit 15 to get set
-                if (rc == 0)
-                {
-                    PK_TRACE("gpe_scom_nvdimms_nimbus: DRAM is in STR");
-                }
-
-                // Step 8 (was 6) - In FARB5Q (DDR Interface SCOM Control), assert ddr_resetn
-                //
-                //          bit  4   - assert ddr_resetn
-                const uint32_t reg_FARB5Q = DDR_IF_SCOM_CTRL(mc,port);
-                rc = getscom_abs(reg_FARB5Q, &regValue);
-                if (rc)
-                {
-                    PK_TRACE("E>gpe_scom_nvdimms_nimbus: Failed to read (FARB5Q) Reg:0x%08X, rc:0x%08x",
-                             reg_FARB5Q, rc);
-                }
-                else
-                {
-                    regValue &= 0xF7FFFFFFFFFFFFFF; // assert ddr_resetn (clear bit 4)
-                    rc = putscom_abs(reg_FARB5Q, regValue);
-                    if (rc)
-                    {
-                        PK_TRACE("E>gpe_scom_nvdimms_nimbus: Failed to assert ddr_resetn (FARB5Q)"
-                                 " Reg:0x%08X, Data:0x%08X %08X, rc:0x%08x",
-                                 reg_FARB5Q, WORD_HIGH(regValue), WORD_LOW(regValue), rc);
-                        gpe_set_ffdc(&(args->error), reg_FARB5Q,
-                                     GPE_RC_SCOM_PUT_FAILED, rc);
-                    }
                 }
             }
         }
         mask = mask >> 1;
     } // for each MBA port
+
+    // Step 6: Start CCS
+    //
+    // MC01.MCBIST.MBA_SCOMFIR.CCS_CNTLQ - Configured Command Sequence Control Register
+    //     bit 0:       start bit
+    //
+    regAddr = 0x070123A5 + (MCA_MCPAIR_SPACE * mc);
+    rc = getscom_abs(regAddr, &regValue);
+    if (rc)
+    {
+        PK_TRACE("E>gpe_scom_nvdimms_nimbus: Failed to read CCS_CNTLQ Reg:0x%08X, rc:0x%08x",
+                 regAddr, rc);
+    }
+    else
+    {
+        regValue |= 0x8000000000000000; // set start bit
+        PK_TRACE("gpe_scom_nvdimms_nimbus: Writing CCS_CNTLQ (0x%08X) to 0x%08X%08X",
+                 regAddr, WORD_HIGH(regValue), WORD_LOW(regValue));
+        rc = putscom_abs(regAddr, regValue);
+        if (rc)
+        {
+            PK_TRACE("E>gpe_scom_nvdimms_nimbus: Failed to update CCS_CNTLQ"
+                     " Reg:0x%08X, Data:0x%08X %08X, rc:0x%08x",
+                     regAddr, WORD_HIGH(regValue), WORD_LOW(regValue), rc);
+            gpe_set_ffdc(&(args->error), regAddr,
+                         GPE_RC_SCOM_PUT_FAILED, rc);
+        }
+    }
 
     PK_TRACE("gpe_scom_nvdimms_nimbus: completed (rc=%d)", rc);
 

@@ -88,8 +88,6 @@ mc23.port3        0x080108C0        + 0x134/135/118    = 0x080109F4     = 0x0801
 
 // Required for NVDIMM procedure
 #define DDR_IF_SCOM_CTRL(mc,port)    (DIMM_MCA_BASE_ADDRESS + 0x0118 + MC_PORT_SPACE(mc,port))
-#define FINAL_ARB_PARMS(mc,port)     (DIMM_MCA_BASE_ADDRESS + 0x0113 + MC_PORT_SPACE(mc,port))
-#define DDR_PORT_STATUS_REG(mc,port) (DIMM_MCA_BASE_ADDRESS + 0x0119 + MC_PORT_SPACE(mc,port))
 
 // DIMM Control
 /*
