@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -542,9 +542,11 @@ bool read_pgpe_header(void)
             G_pgpe_header.pgpe_produced_wof_values_addr = in32(PGPE_HEADER_ADDR + PGPE_PRODUCED_WOF_VALUES_ADDR_OFFSET);
 
             const uint32_t hcode_elog_table_addr = G_pgpe_header.shared_sram_addr + HCODE_ELOG_TABLE_SRAM_OFFSET;
-            if (HCODE_ELOG_TABLE_MAGIC_NUMBER == in32(hcode_elog_table_addr))
+            hcode_error_table_t hcode_etable;
+            hcode_etable.dw0.value = in64(hcode_elog_table_addr);
+            if (HCODE_ELOG_TABLE_MAGIC_NUMBER == hcode_etable.dw0.fields.magic_word)
             {
-                G_hcode_elog_table_slots = (in32(hcode_elog_table_addr + 4) >> 24);
+                G_hcode_elog_table_slots = hcode_etable.dw0.fields.total_log_slots;
                 G_hcode_elog_table = (hcode_elog_entry_t*)(hcode_elog_table_addr + 8);
             }
             else

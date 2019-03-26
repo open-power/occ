@@ -238,27 +238,27 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
         unsigned int index = 0;
         for (; index < G_hcode_elog_table_slots; ++index)
         {
-            elog_entry.value = in64(&G_hcode_elog_table[index]);
-            if (elog_entry.value != 0)
+            elog_entry.dw0.value = in64(&G_hcode_elog_table[index]);
+            if (elog_entry.dw0.value != 0)
             { // Found HCODE elog
-                if (elog_entry.fields.source != ERRL_SOURCE_405)
+                if (elog_entry.dw0.fields.errlog_src != ERRL_SOURCE_405)
                 {
                     ++L_num_hcode_elogs;
                     // Byte 8:
-                    l_poll_rsp->errl_id         = elog_entry.fields.id;
+                    l_poll_rsp->errl_id         = elog_entry.dw0.fields.errlog_id;
                     // Byte 9 - 12:
-                    l_poll_rsp->errl_address    = elog_entry.fields.address;
+                    l_poll_rsp->errl_address    = elog_entry.dw0.fields.errlog_addr;
                     // Byte 13 - 14:
-                    l_poll_rsp->errl_length     = elog_entry.fields.length;
+                    l_poll_rsp->errl_length     = elog_entry.dw0.fields.errlog_len;
                     // Byte 15:
-                    l_poll_rsp->errl_source     = elog_entry.fields.source;
+                    l_poll_rsp->errl_source     = elog_entry.dw0.fields.errlog_src;
                     check_405_elogs = false;
                     break;
                 }
                 else
                 {
                     TRAC_ERR("cmdh_poll_v20: ignoring HCODE error with 405 source (id:0x%02X, len:0x%04X, address:0x%08X)",
-                             elog_entry.fields.id, elog_entry.fields.length, elog_entry.fields.address);
+                             elog_entry.dw0.fields.errlog_id, elog_entry.dw0.fields.errlog_len, elog_entry.dw0.fields.errlog_addr);
                     // Zero out error log entry in list so hcode can reuse
                     out64(&G_hcode_elog_table[index], 0);
                     G_htmgt_notified_of_error = false;
@@ -1132,8 +1132,8 @@ errlHndl_t cmdh_clear_elog (const   cmdh_fsp_cmd_t * i_cmd_ptr,
                    for (; index < G_hcode_elog_table_slots; ++index)
                    {
                        hcode_elog_entry_t elog_entry;
-                       elog_entry.value = in64(&G_hcode_elog_table[index]);
-                       if ((elog_entry.fields.id == l_elog_id) && (elog_entry.fields.source == l_elog_source))
+                       elog_entry.dw0.value = in64(&G_hcode_elog_table[index]);
+                       if ((elog_entry.dw0.fields.errlog_id == l_elog_id) && (elog_entry.dw0.fields.errlog_src == l_elog_source))
                        {
                            CMDH_TRAC_INFO("cmdh_clear_elog: Clearing HCODE elog id 0x%02X from source 0x%02X",
                                           l_elog_id, l_elog_source);

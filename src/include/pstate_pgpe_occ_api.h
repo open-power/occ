@@ -1,19 +1,25 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: chips/p9/common/pmlib/include/pstate_pgpe_occ_api.h $         */
+/* $Source: src/include/pstate_pgpe_occ_api.h $                           */
 /*                                                                        */
-/* IBM CONFIDENTIAL                                                       */
+/* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* EKB Project                                                            */
-/*                                                                        */
-/* COPYRIGHT 2015,2019                                                    */
+/* Contributors Listed Below - COPYRIGHT 2016,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
-/* The source code for this program is not published or otherwise         */
-/* divested of its trade secrets, irrespective of what has been           */
-/* deposited with the U.S. Copyright Office.                              */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 /// @file  p9_pstates_pgpe_occ_api.h
@@ -25,6 +31,7 @@
 // *HWP Level           : 1
 // *HWP Consumed by     : PGPE:OCC
 
+
 #ifndef __P9_PSTATES_PGPE_API_H__
 #define __P9_PSTATES_PGPE_API_H__
 
@@ -34,6 +41,7 @@
 extern "C" {
 #endif
 
+#define HCODE_OCC_SHARED_MAGIC_NUMBER   0x4F505330 //OPS0
 
 //---------------
 // IPC from 405
@@ -46,7 +54,7 @@ enum MESSAGE_ID_IPI2HI
     MSGID_405_CLIPS         = 2,
     MSGID_405_SET_PMCR      = 3,
     MSGID_405_WOF_CONTROL   = 4,
-    MSGID_405_WOF_VRT       = 5
+    MSGID_405_WOF_VFRT      = 5
 };
 
 //
@@ -60,9 +68,9 @@ enum MESSAGE_ID_IPI2HI
 // Active quad mismatch with requested active quads.  PGPE did not switch
 // to using the new VFRT.  The original VFRT is still being used.
 #define PGPE_WOF_RC_VFRT_QUAD_MISMATCH  0x20
-#define PGPE_RC_REQ_WHILE_PENDING_ACK           0x21
-#define PGPE_RC_NULL_VRT_POINTER                0x22
-#define PGPE_RC_INVALID_PMCR_OWNER              0x23
+#define PGPE_RC_REQ_WHILE_PENDING_ACK   0x21
+#define PGPE_RC_NULL_VFRT_POINTER       0x22
+#define PGPE_RC_INVALID_PMCR_OWNER         0x23
 
 //
 // PMCR Owner
@@ -135,12 +143,13 @@ typedef struct ipcmsg_wof_vfrt
     HomerVFRTLayout_t* homer_vfrt_ptr;
 } ipcmsg_wof_vfrt_t;
 
+
 // -----------------------------------------------------------------------------
 // Start Pstate Table
 
 #define MAX_OCC_PSTATE_TABLE_ENTRIES 256
 
-/// Pstate Table produced by the PGPE for consumption by OCC Firmware
+/// Pstate Table produce by the PGPE for consumption by OCC Firmware
 ///
 /// This structure defines the Pstate Table content
 /// -- 16B structure
@@ -160,12 +169,17 @@ typedef struct
 
 typedef struct
 {
+    /// Number of Pstate Table entries
+    uint32_t                entries;
+
     /// Internal VDD voltage ID at the output of the PFET header
     OCCPstateTable_entry_t  table[MAX_OCC_PSTATE_TABLE_ENTRIES];
 
 } OCCPstateTable_t;
 
 // End Pstate Table
+// -----------------------------------------------------------------------------
+
 // -----------------------------------------------------------------------------
 // Start FFDC
 
@@ -323,32 +337,6 @@ typedef union requested_active_quads
 // End Quad State
 // -----------------------------------------------------------------------------
 
-// -----------------------------------------------------------------------------
-// Start Error Log Table
-
-#define MAX_HCODE_ELOG_ENTRIES 28
-
-typedef union hcode_elog_entry
-{
-    uint64_t value;
-    struct {
-        uint8_t  id;
-        uint8_t  source;
-        uint16_t length;
-        uint32_t address;
-    } fields;
-} hcode_elog_entry_t;
-
-typedef struct pgpe_error_table
-{
-    uint32_t            magic; // "ELTC" (Error Log Table of Contents)
-    uint8_t             total_log_slots;
-    uint8_t             reserved[3];
-    hcode_elog_entry_t  elog[MAX_HCODE_ELOG_ENTRIES];
-} pgpe_error_table_t;
-
-// End Error Log Table
-// -----------------------------------------------------------------------------
 typedef struct
 {
     union
@@ -418,7 +406,44 @@ typedef struct
     } dw3;
 } pgpe_wof_values_t;
 
+// -----------------------------------------------------------------------------
+// Start Error Log Table
+
+/// Maximum number of error log entries available
+#define MAX_HCODE_ELOG_ENTRIES 4
+
+/// Index into the array of error log entries
+enum elog_entry_index
+{
+    ELOG_PGPE_CRITICAL      = 0,
+    ELOG_PGPE_INFO          = 1,
+    ELOG_SGPE_CRITICAL      = 2,
+    ELOG_SGPE_INFO          = 3,
+};
+
+/// Structure of an individual error log entry
 typedef struct
+{
+    union
+    {
+        uint64_t value;
+        struct
+        {
+            uint32_t high_order;
+            uint32_t low_order;
+        } words;
+        struct
+        {
+            uint64_t errlog_id                  : 8;
+            uint64_t errlog_src                 : 8;
+            uint64_t errlog_len                 : 16;
+            uint64_t errlog_addr                : 32;
+        } fields;
+    } dw0;
+} hcode_elog_entry_t;
+
+/// Full Error Log Table
+typedef struct hcode_error_table
 {
     union
     {
@@ -435,71 +460,13 @@ typedef struct
             uint64_t reserved                   : 24;
         } fields;
     } dw0;
-    union
-    {
-        uint64_t value;
-        struct
-        {
-            uint32_t high_order;
-            uint32_t low_order;
-        } words;
-        struct
-        {
-            uint64_t errlog_id                  : 8;
-            uint64_t errlog_src                 : 8;
-            uint64_t errlog_len                 : 16;
-            uint64_t pgpe_critical_log_address  : 32;
-        } fields;
-    } dw1;
-    union
-    {
-        uint64_t value;
-        struct
-        {
-            uint32_t high_order;
-            uint32_t low_order;
-        } words;
-        struct
-        {
-            uint64_t errlog_id                  : 8;
-            uint64_t errlog_src                 : 8;
-            uint64_t errlog_len                 : 16;
-            uint64_t pgpe_info_log_address      : 32;
-        } fields;
-    } dw2;
-    union
-    {
-        uint64_t value;
-        struct
-        {
-            uint32_t high_order;
-            uint32_t low_order;
-        } words;
-        struct
-        {
-            uint64_t errlog_id                  : 8;
-            uint64_t errlog_src                 : 8;
-            uint64_t errlog_len                 : 16;
-            uint64_t sgpe_critical_log_address  : 32;
-        } fields;
-    } dw3;
-    union
-    {
-        uint64_t value;
-        struct
-        {
-            uint32_t high_order;
-            uint32_t low_order;
-        } words;
-        struct
-        {
-            uint64_t errlog_id                  : 8;
-            uint64_t errlog_src                 : 8;
-            uint64_t errlog_len                 : 16;
-            uint64_t sgpe_info_log_address      : 32;
-        } fields;
-    } dw4;
-} errlog_idx_t;
+
+    /// Array of error log entries (index with enum elog_entry_index)
+    hcode_elog_entry_t  elog[MAX_HCODE_ELOG_ENTRIES];
+} hcode_error_table_t;
+
+// End Error Log Table
+// -----------------------------------------------------------------------------
 
 typedef struct
 {
@@ -515,10 +482,10 @@ typedef struct
     /// Actual Pstate 1 - Quads 4, 5
     quad_state1_t       quad_pstate_1;
 
-    /// PGPE Produced WOF State
+    ///PGPE WOF State
     pgpe_wof_state_t    pgpe_wof_state;
 
-   ///Requested Active Quads
+    ///Requested Active Quads
     requested_active_quads_t    req_active_quads;
 
     //PGPE WOF Values
@@ -528,8 +495,7 @@ typedef struct
     uint64_t            reserved1;
 
     /// Hcode Error Log Index
-    errlog_idx_t        errlog_idx;
-    pgpe_error_table_t  pgpe_error_table;
+    hcode_error_table_t  errlog_idx;
 
     //Reserved
     uint64_t            reserved2[24];
@@ -543,4 +509,4 @@ typedef struct
 } // end extern C
 #endif
 
-#endif    /* __PSTATES_PGPE_OCC_API_H__ */
+#endif    /* __P9_PSTATES_PGPE_API_H__ */
