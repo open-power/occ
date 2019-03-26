@@ -48,7 +48,7 @@
 #define MAX_WOF_CONTROL_CHANCES G_max_wof_control_chances
 extern uint8_t G_max_vfrt_chances;
 extern uint8_t G_max_wof_control_chances;
-
+extern uint32_t G_max_ceff_ratio;
 
 #define WOF_TABLES_OFFSET           0xC0000 // Relative to PPMR_ADDRESS_HOMER
 #define MAX_CEFF_RATIO              10000   // 1.0 ratio = 10000
@@ -57,6 +57,10 @@ extern uint8_t G_max_wof_control_chances;
 // Bit Vector Masks
 //******************************************************************************
 #define IVRM_STATE_QUAD_MASK 0x80
+
+#define OCS_PGPE_DIRTY_MASK 0x40
+#define OCS_PGPE_DIRTY_TYPE_MASK 0x20
+
 
 //******************************************************************************
 // WOF Reason Code Masks
@@ -384,6 +388,16 @@ typedef struct __attribute__ ((packed))
     uint64_t pgpe_wof_values_dw1;
     uint64_t pgpe_wof_values_dw2;
     uint64_t pgpe_wof_values_dw3;
+    uint8_t  ocs_dirty;  // Set by PGPE read from OCC Flag 0 register
+    uint16_t ocs_increase_ceff; // Fixed CeffRatio increase addr defined in attribute
+    uint16_t ocs_decrease_ceff; // Fixed CeffRatio decrease addr defined in attribute
+    uint16_t vdd_oc_ceff_add;  // OCC calculated CeffRatio Addr
+    uint16_t vdd_ceff_ratio_adj_prev;  // Final adjusted CeffRatio from previous tick
+    uint32_t vdd_avg_tdp_100uv;
+    uint32_t ocs_not_dirty_count; // count of number of times not dirty (type 0)
+    uint32_t ocs_not_dirty_type1_count;  // count of not dirty (type 1) this counter should be 0
+    uint32_t ocs_dirty_type0_count;  // count of number of times dirty with type hold (0)
+    uint32_t ocs_dirty_type1_count;  // count of number of times dirty with type act (1)
 } amec_wof_t;
 
 // Structure for sensors used in g_amec for AMESTER
@@ -394,6 +408,7 @@ typedef struct __attribute__ ((packed))
     sensor_t ceff_ratio_vdd_sensor;
     sensor_t ceff_ratio_vdn_sensor;
     sensor_t v_ratio_sensor;
+    sensor_t ocs_addr_sensor;
 } amec_wof_sensors_t;
 
 typedef struct __attribute__ ((packed))
@@ -440,17 +455,17 @@ void calculate_ceff_ratio_vdn( void );
 
 void calculate_ceff_ratio_vdd( void );
 
-inline void calculate_AC_currents( void );
+void calculate_AC_currents( void );
 
-inline uint32_t  core_powered_on( uint8_t i_core_num );
+uint32_t  core_powered_on( uint8_t i_core_num );
 
 uint8_t num_cores_on_in_quad( uint8_t i_quad_num );
 
-inline int32_t interpolate_linear( int32_t i_X,
-                                   int32_t i_x1,
-                                   int32_t i_x2,
-                                   int32_t i_y1,
-                                   int32_t i_y2 );
+int32_t interpolate_linear( int32_t i_X,
+                            int32_t i_x1,
+                            int32_t i_x2,
+                            int32_t i_y1,
+                            int32_t i_y2 );
 
 void calculate_temperature_scaling_08V( void );
 
@@ -495,6 +510,6 @@ uint32_t prevent_over_current( uint32_t i_ceff_ratio );
 
 void schedule_vfrt_request( void );
 
-inline uint32_t multiply_ratio( uint32_t i_operating_point,
+uint32_t multiply_ratio( uint32_t i_operating_point,
                                 uint32_t i_ratio );
 #endif

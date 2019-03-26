@@ -266,6 +266,15 @@ amec_parm_t g_amec_parm_list[] = {
     AMEC_PARM_UINT64(PARM_PGPE_WOF_DW1, "PGPE_WOF_dw1", &g_amec_sys.wof.pgpe_wof_values_dw1 ),
     AMEC_PARM_UINT64(PARM_PGPE_WOF_DW2, "PGPE_WOF_dw2", &g_amec_sys.wof.pgpe_wof_values_dw2 ),
     AMEC_PARM_UINT64(PARM_PGPE_WOF_DW3, "PGPE_WOF_dw3", &g_amec_sys.wof.pgpe_wof_values_dw3 ),
+    AMEC_PARM_UINT8(PARM_OCS_DIRTY,"OCS_DIRTY_BITS", &g_amec_sys.wof.ocs_dirty),
+    AMEC_PARM_UINT16(PARM_OCS_CEFF_UP_ADDR,"OcsFixedUpAmt", &g_amec_sys.wof.ocs_increase_ceff),
+    AMEC_PARM_UINT16(PARM_OCS_CEFF_DOWN_ADDR,"OcsFixedDownAmt", &g_amec_sys.wof.ocs_decrease_ceff),
+    AMEC_PARM_UINT16(PARM_OCS_CALC_ADDR,"OCS_CALC_ADDR", &g_amec_sys.wof.vdd_oc_ceff_add),
+    AMEC_PARM_UINT32(PARM_VDD_TDP_100UV,"VDD_TDP_100UV", &g_amec_sys.wof.vdd_avg_tdp_100uv),
+    AMEC_PARM_UINT32(PARM_OCS_NOT_DIRTY_TYPE0_CNT,"NotDirtyTyp0Cnt", &g_amec_sys.wof.ocs_not_dirty_count),
+    AMEC_PARM_UINT32(PARM_OCS_NOT_DIRTY_TYPE1_CNT,"NotDirtyTyp1Cnt", &g_amec_sys.wof.ocs_not_dirty_type1_count),
+    AMEC_PARM_UINT32(PARM_OCS_DIRTY_TYPE0_CNT,"DirtyTyp0Cnt", &g_amec_sys.wof.ocs_dirty_type0_count),
+    AMEC_PARM_UINT32(PARM_OCS_DIRTY_TYPE1_CNT,"DirtyTyp1Cnt", &g_amec_sys.wof.ocs_dirty_type1_count),
     // End WOF parameters
 };
 

@@ -46,6 +46,7 @@
 #include "chom.h"
 #include "wof.h"
 #include "gpu.h"
+#include "p9_pstates_occ.h"
 
 //*************************************************************************/
 // Externs
@@ -53,6 +54,7 @@
 extern uint64_t G_inject_dimm;
 uint8_t G_injected_epow_asserted = 0;
 extern gpe_shared_data_t G_shared_gpe_data;
+extern OCCPstateParmBlock G_oppb;
 
 //*************************************************************************/
 // Macros
@@ -95,7 +97,7 @@ void cmdh_dbug_get_trace (const cmdh_fsp_cmd_t * i_cmd_ptr,
                           cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     UINT l_rc = 0;
-    UINT l_trace_buffer_size = CMDH_FSP_RSP_SIZE-CMDH_DBUG_FSP_RESP_LEN-8;  // tmgt reserved 8 bytes
+    UINT l_trace_buffer_size = CMDH_FSP_RSP_DATA_SIZE;
     UINT16 l_trace_size = 0;
     cmdh_dbug_get_trace_query_t *l_get_trace_query_ptr = (cmdh_dbug_get_trace_query_t*) i_cmd_ptr;
     cmdh_dbug_get_trace_resp_t *l_get_trace_resp_ptr = (cmdh_dbug_get_trace_resp_t*) o_rsp_ptr;
@@ -584,6 +586,69 @@ void cmdh_dbug_force_wof_reset( const cmdh_fsp_cmd_t * i_cmd_ptr,
     G_rsp_status = ERRL_RC_SUCCESS;
 }
 
+void cmdh_dbug_dump_oppb( const cmdh_fsp_cmd_t * i_cmd_ptr,
+                                 cmdh_fsp_rsp_t * o_rsp_ptr)
+{
+    // Put important contents used by OCC for WOF into INFO trace buffer
+    print_oppb();
+
+    // return the full OPPB (up to max return size) in the response buffer
+    uint16_t l_len = (sizeof(G_oppb) > CMDH_FSP_RSP_DATA_SIZE ) ? CMDH_FSP_RSP_DATA_SIZE : sizeof(G_oppb);
+
+    memcpy((void*)&(o_rsp_ptr->data[0]),
+           (void*)&(G_oppb),
+           l_len);
+
+    // Fill in the response data length
+    o_rsp_ptr->data_length[0] = CONVERT_UINT16_UINT8_HIGH(l_len);
+    o_rsp_ptr->data_length[1] = CONVERT_UINT16_UINT8_LOW(l_len);
+
+    G_rsp_status = ERRL_RC_SUCCESS;
+}
+
+// Function Specification
+//
+// Name: cmdh_dbug_wof_ocs
+//
+// Description: Writes data related to OCS support
+//
+// End Function Specification
+void cmdh_dbug_wof_ocs( const cmdh_fsp_cmd_t * i_cmd_ptr,
+                              cmdh_fsp_rsp_t * o_rsp_ptr)
+{
+    const cmdh_dbug_wof_ocs_cmd_t * l_cmd_ptr = (cmdh_dbug_wof_ocs_cmd_t*) i_cmd_ptr;
+    cmdh_dbug_wof_ocs_rsp_t * l_rsp_ptr = (cmdh_dbug_wof_ocs_rsp_t*) o_rsp_ptr;
+    uint8_t  l_rc = ERRL_RC_SUCCESS;
+    uint16_t l_resp_data_length = sizeof(g_amec->wof.ocs_increase_ceff) + sizeof(g_amec->wof.ocs_decrease_ceff);
+
+     // Do sanity check on the function inputs
+    if ((NULL == l_cmd_ptr) || (NULL == l_rsp_ptr))
+    {
+        l_rc = ERRL_RC_INTERNAL_FAIL;
+    }
+    else
+    {
+        // Save the OCS up and down addrs
+        g_amec->wof.ocs_increase_ceff = l_cmd_ptr->ceff_up_amount;
+        g_amec->wof.ocs_decrease_ceff = l_cmd_ptr->ceff_down_amount;
+
+        TRAC_INFO("DEBUG - OCS Ceff Adders written up[%d] down[%d]",
+                   g_amec->wof.ocs_increase_ceff, g_amec->wof.ocs_decrease_ceff);
+
+        // Fill in response data
+        l_rsp_ptr->ceff_up_amount = g_amec->wof.ocs_increase_ceff;
+        l_rsp_ptr->ceff_down_amount = g_amec->wof.ocs_decrease_ceff;
+    }
+
+    // Fill in response data length
+    if( l_rsp_ptr != NULL )
+    {
+        l_rsp_ptr->data_length[0] = CONVERT_UINT16_UINT8_HIGH(l_resp_data_length);
+        l_rsp_ptr->data_length[1] = CONVERT_UINT16_UINT8_LOW(l_resp_data_length);
+    }
+    G_rsp_status = l_rc;
+    return;
+}
 
 
 // Function Specification
@@ -1182,6 +1247,14 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         case DBUG_WOF_CONTROL:
             cmdh_dbug_wof_control(i_cmd_ptr, o_rsp_ptr);
+            break;
+
+        case DBUG_WOF_OCS:
+            cmdh_dbug_wof_ocs(i_cmd_ptr, o_rsp_ptr);
+            break;
+
+        case DBUG_DUMP_OPPB:
+            cmdh_dbug_dump_oppb(i_cmd_ptr, o_rsp_ptr);
             break;
 
         default:

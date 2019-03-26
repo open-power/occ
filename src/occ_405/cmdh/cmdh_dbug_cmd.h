@@ -59,7 +59,7 @@ typedef enum
     DBUG_GET_TRACE          = 0x03,
     DBUG_CLEAR_TRACE        = 0x04,
     DBUG_ALLOW_TRACE        = 0x05,
-//  free = 0x06,
+    DBUG_DUMP_OPPB          = 0x06,
     DBUG_GET_AME_SENSOR     = 0x07,
     DBUG_DUMP_GPU_TIMINGS   = 0x08,
     DBUG_PEEK               = 0x09,
@@ -93,7 +93,8 @@ typedef enum
     DBUG_DUMP_APSS_DATA     = 0x25,
     DBUG_DUMP_AME_SENSOR    = 0x26,
     DBUG_CLEAR_AME_SENSOR   = 0x27,
-    DBUG_WOF_CONTROL        = 0x28
+    DBUG_WOF_CONTROL        = 0x28,
+    DBUG_WOF_OCS            = 0x29
 } DBUG_CMD;
 
 //*************************************************************************/
@@ -128,6 +129,7 @@ typedef struct __attribute__ ((packed))
 }cmdh_dbug_get_sensor_query_t;
 
 // Max number of sensors that can be returned with cmdh_dbug_get_ame_sensor command
+
 #define CMDH_DBUG_MAX_NUM_SENSORS  50
 // Size of standard response header (5 bytes) plus checksum (2 bytes)
 #define CMDH_DBUG_FSP_RESP_LEN     7
@@ -231,6 +233,24 @@ typedef struct __attribute__ ((packed))
     uint32_t    wof_disabled;
     uint8_t     checksum[CMDH_FSP_CHECKSUM_SIZE];
 } cmdh_dbug_wof_control_rsp_t;
+
+// DBUG_WOF_OCS command struct
+typedef struct __attribute__ ((packed))
+{
+    struct      cmdh_fsp_cmd_header;    // Standard command header
+    uint8_t     sub_cmd;                // Debug sub-command
+    uint16_t    ceff_up_amount;           // OCS Ceff Addr going up
+    uint16_t    ceff_down_amount;         // OCS Ceff Addr going down
+} cmdh_dbug_wof_ocs_cmd_t;
+
+// DBUG_WOF_OCS response struct
+typedef struct __attribute__ ((packed))
+{
+    struct      cmdh_fsp_rsp_header;
+    uint16_t    ceff_up_amount;
+    uint16_t    ceff_down_amount;
+    uint8_t     checksum[CMDH_FSP_CHECKSUM_SIZE];
+} cmdh_dbug_wof_ocs_rsp_t;
 
 // DBUG_ALLOW_TRACE command struct
 typedef struct __attribute__ ((packed))

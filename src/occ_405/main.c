@@ -82,6 +82,8 @@ uint8_t G_max_vfrt_chances = MAX_VFRT_CHANCES_EVERY_8TH_TICK;
 // timeout, as number of WOF ticks, for PGPE WOF Control command
 uint8_t G_max_wof_control_chances = MAX_WOF_CONTROL_CHANCES_EVERY_8TH_TICK;
 
+uint32_t G_max_ceff_ratio = MAX_CEFF_RATIO;
+
 extern uint32_t __ssx_boot; // Function address is 32 bits
 extern uint32_t G_occ_phantom_critical_count;
 extern uint32_t G_occ_phantom_noncritical_count;
@@ -474,6 +476,14 @@ void read_wof_header(void)
 
             // Initialize wof init state to zero
             g_amec->wof.wof_init_state  = WOF_DISABLED;
+
+            // Initialize OCS increase/decrease amounts to one step
+            g_amec->wof.ocs_increase_ceff = g_amec->wof.vdd_step;
+            g_amec->wof.ocs_decrease_ceff = g_amec->wof.vdd_step;
+
+            // calculate max ceff ratio from header info
+            G_max_ceff_ratio = ( g_amec->wof.vdd_start +
+                                (g_amec->wof.vdd_step * (g_amec->wof.vdd_size - 1) ) );
 
         }while( 0 );
 

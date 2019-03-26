@@ -316,7 +316,7 @@ typedef enum {
     ERRH_GPE0_NOT_IDLE               =  0x16,
     ERRH_GPE1_NOT_IDLE               =  0x17,
     ERRH_24X7_DISABLED               =  0x18,
-    ERRH_CEFF_RATIO_VDD_EXCURSION    =  0x19,
+    ERRH_CEFF_RATIO_VDD_EXCURSION    =  0x19,  // P9 prime: OCS Dirty+type '1' (Act)
     ERRH_AVSBUS_VDD_TEMPERATURE      =  0x1A,
     ERRH_OVER_PCAP_IGNORED           =  0x1B,
     ERRH_VFRT_TIMEOUT_IGNORED        =  0x1C,
@@ -325,7 +325,7 @@ typedef enum {
     ERRH_VDD_CURRENT_ROLLOVER_MAX    =  0x1F,
     ERRH_CORE_SMALL_DROOP            =  0x20,
     ERRH_CACHE_LARGE_DROOP           =  0x21,
-    ERRH_RESERVED22                  =  0x22,
+    ERRH_OCS_DIRTY_BLOCK             =  0x22,  // P9 prime: OCS Dirty+type '0' (block)
     ERRH_RESERVED23                  =  0x23,
     ERRH_RESERVED24                  =  0x24,
     ERRH_RESERVED25                  =  0x25,
