@@ -2028,7 +2028,9 @@ errlHndl_t data_store_sys_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
     }
 
     return l_err;
-}
+
+} // end data_store_sys_config()
+
 
 // Function Specification
 //
@@ -2170,7 +2172,7 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
     cmdh_mem_cfg_v21_t*             l_cmd_ptr = (cmdh_mem_cfg_v21_t*)i_cmd_ptr;
     uint16_t                        l_data_length = 0;
     uint16_t                        l_exp_data_length = 0;
-    uint8_t                         l_num_centaurs = 0;
+    uint8_t                         l_num_mem_bufs = 0;
     uint8_t                         l_num_dimms = 0;
     uint8_t                         l_i2c_engine;
     uint8_t                         l_i2c_port;
@@ -2247,11 +2249,19 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
             {
                 // Store the memory type.  Memory must all be the same type, save from first and verify remaining
                 G_sysConfigData.mem_type = data_sets_ptr[0].memory_type;
+                unsigned int max_membuf = MAX_NUM_CENTAURS;
+                unsigned int max_dimms_per_membuf = NUM_DIMMS_PER_CENTAUR;
                 if(G_sysConfigData.mem_type == MEM_TYPE_NIMBUS)
                 {
                     // Nimbus type -- dimm_info1 is I2C engine which must be the same
                     // save from first entry and verify remaining
                     G_sysConfigData.dimm_i2c_engine = data_sets_ptr[0].dimm_info1;
+                }
+                else if (IS_OCM_MEM_TYPE(G_sysConfigData.mem_type))
+                {
+                    G_sysConfigData.mem_type = MEM_TYPE_OCM;
+                    max_membuf = MAX_NUM_OCMBS;
+                    max_dimms_per_membuf = NUM_DIMMS_PER_OCMB;
                 }
                 else
                 {
@@ -2275,8 +2285,8 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                     }
 
                     // Verify matching memory type and process based on memory type
-                    if( (l_data_set->memory_type == G_sysConfigData.mem_type) &&
-                        (l_data_set->memory_type == MEM_TYPE_NIMBUS) )
+                    if ((G_sysConfigData.mem_type == MEM_TYPE_NIMBUS) &&
+                        (l_data_set->memory_type  == MEM_TYPE_NIMBUS))
                     {
                         // Nimbus type:  dimm info is I2C Engine, I2C Port, I2C Address
                         l_i2c_engine = l_data_set->dimm_info1;
@@ -2347,49 +2357,70 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
                         l_num_dimms++;
 
-                    }
-                    else  // must be cumulus and the "memory type" byte is the centaur#
+                    } // end Nimbus
+                    else if ((G_sysConfigData.mem_type == MEM_TYPE_OCM) ||
+                             (G_sysConfigData.mem_type == MEM_TYPE_CUMULUS))
                     {
-                        // per spec for cumulus memory type is the centaur# and dimm info1 is DIMM#
-                        int l_centaur_num = l_data_set->memory_type;
+                        unsigned int l_membuf_num = l_data_set->memory_type;
                         l_dimm_num = l_data_set->dimm_info1;
+                        bool l_type_mismatch = FALSE;
 
-                        // Validate the centaur and dimm #'s for this data set
-                        if( (l_centaur_num >= MAX_NUM_CENTAURS) ||
-                            (l_dimm_num != 0xFF && l_dimm_num >= NUM_DIMMS_PER_CENTAUR) )
+                        if (IS_OCM_MEM_TYPE(l_data_set->memory_type))
                         {
-                            CMDH_TRAC_ERR("data_store_mem_cfg: Invalid dimm or centaur number. entry=%d, cent=%d, dimm=%d",
-                                          i,
-                                          l_centaur_num,
-                                          l_dimm_num);
+                            // Get the physical location from type
+                            l_membuf_num &= OCMB_TYPE_LOCATION_MASK;
+                            if (G_sysConfigData.mem_type != MEM_TYPE_OCM)
+                            {
+                                l_type_mismatch = TRUE;
+                            }
+                        }
+                        else if (G_sysConfigData.mem_type != MEM_TYPE_CUMULUS)
+                        {
+                            l_type_mismatch = TRUE;
+                        }
+
+                        // Validate the memory buffer and dimm count for this data set
+                        if ((l_type_mismatch) || (l_membuf_num >= max_membuf) ||
+                            ((l_dimm_num != 0xFF) && (l_dimm_num >= max_dimms_per_membuf)))
+                        {
+                            CMDH_TRAC_ERR("data_store_mem_cfg: Invalid memory data for type 0x%02X "
+                                          "(entry %d: type/mem_buf[0x%02X], dimm[0x%02X])",
+                                          G_sysConfigData.mem_type, i, l_data_set->memory_type, l_dimm_num);
                             cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
                             break;
                         }
 
-                        // Per the spec, if dimm_num = 0xFF then this is a centaur ID
-                        if(l_dimm_num == 0xFF)
+                        if(l_dimm_num == 0xFF) // sensors are for the Memory Buffer itself (Centaur/OCMB)
                         {
                             // Store the hardware sensor ID
-                            G_sysConfigData.centaur_huids[l_centaur_num] = l_data_set->hw_sensor_id;
+                            G_sysConfigData.centaur_huids[l_membuf_num] = l_data_set->hw_sensor_id;
 
                             // Store the temperature sensor ID
-                            g_amec->proc[0].memctl[l_centaur_num].centaur.temp_sid = l_data_set->temp_sensor_id;
+                            g_amec->proc[0].memctl[l_membuf_num].centaur.temp_sid = l_data_set->temp_sensor_id;
 
-                            l_num_centaurs++;
+                            l_num_mem_bufs++;
                         }
-                        else
+                        else // individual DIMM
                         {
                             // Store the hardware sensor ID
-                            G_sysConfigData.dimm_huids[l_centaur_num][l_dimm_num] = l_data_set->hw_sensor_id;
+                            G_sysConfigData.dimm_huids[l_membuf_num][l_dimm_num] = l_data_set->hw_sensor_id;
 
                             // Store the temperature sensor ID
-                            g_amec->proc[0].memctl[l_centaur_num].centaur.dimm_temps[l_dimm_num].temp_sid =
+                            g_amec->proc[0].memctl[l_membuf_num].centaur.dimm_temps[l_dimm_num].temp_sid =
                                 l_data_set->temp_sensor_id;
 
                             l_num_dimms++;
                         }
+                    } // end CENTAUR/OCMB
+                    else
+                    {
+                        // MISMATCH ON MEMORY TYPE!!
+                        CMDH_TRAC_ERR("data_store_mem_cfg: Mismatched memory types at index %d (0x%02X vs 0x%02X)",
+                                      i, G_sysConfigData.mem_type, l_data_set->memory_type);
 
-                    } // Cumulus
+                        cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
+                        break;
+                    }
                 } // for each data set
             } // else no data sets given
         } // version 0x20
@@ -2406,8 +2437,8 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
     {
         // If there were no errors, indicate that we got this data
         G_data_cnfg->data_mask |= DATA_MASK_MEM_CFG;
-        CMDH_TRAC_IMP("data_store_mem_cfg: Got valid mem cfg packet. type=0x%02X, #cent=%d, #dimm=%d",
-                      G_sysConfigData.mem_type, l_num_centaurs, l_num_dimms);
+        CMDH_TRAC_IMP("data_store_mem_cfg: Got valid mem cfg packet. type=0x%02X, #mem bufs=%d, #dimm=%d",
+                      G_sysConfigData.mem_type, l_num_mem_bufs, l_num_dimms);
 
         // No errors so we can enable memory monitoring if the data indicates it should be enabled
         if(num_data_sets == 0)  // num data sets of 0 indicates memory monitoring disabled
@@ -2436,7 +2467,8 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
     }
 
     return l_err;
-}
+
+} // end data_store_mem_cfg()
 
 
 // Function Specification
@@ -2498,9 +2530,11 @@ errlHndl_t data_store_mem_throt(const cmdh_fsp_cmd_t * i_cmd_ptr,
             cmdh_mem_throt_data_set_t* l_data_set = &l_cmd_ptr->data_set[i];
             uint16_t * l_n_ptr;
 
-            uint8_t mc=-1, port=-1, cent=-1, mba=-1; // dimm/centaur Info Parameters
+            uint8_t mc=-1, port=-1, mem_buf=-1, mba=-1; // dimm/centaur Info Parameters
+            unsigned int max_membuf = MAX_NUM_CENTAURS;
+            unsigned int max_mbas_per_membuf = NUM_MBAS_PER_CENTAUR;
 
-            if(MEM_TYPE_NIMBUS ==  G_sysConfigData.mem_type)
+            if (MEM_TYPE_NIMBUS == G_sysConfigData.mem_type)
             {
                 mc   = l_data_set->mem_throt_info.nimbus.mc_num;
                 port = l_data_set->mem_throt_info.nimbus.port_num;
@@ -2508,8 +2542,8 @@ errlHndl_t data_store_mem_throt(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 // Validate the Nimbus Info parameters:
                 // - MC num (0 for MC01, and 1 for MC23)
                 // - and Port Number (0-3)
-                if(mc   >= NUM_NIMBUS_MC_PAIRS ||
-                   port >= MAX_NUM_MCU_PORTS)
+                if((mc   >= NUM_NIMBUS_MC_PAIRS) ||
+                   (port >= MAX_NUM_MCU_PORTS))
                 {
                     CMDH_TRAC_ERR("data_store_mem_throt: Invalid MC or Port numbers."
                                   " entry=%d, mc=%d, port=%d",
@@ -2518,25 +2552,29 @@ errlHndl_t data_store_mem_throt(const cmdh_fsp_cmd_t * i_cmd_ptr,
                     break;
                 }
             }
-            else if(MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type)
+            else if ((MEM_TYPE_CUMULUS == G_sysConfigData.mem_type) ||
+                     (MEM_TYPE_OCM == G_sysConfigData.mem_type))
             {
-                cent = l_data_set->mem_throt_info.cumulus.centaur_num;
-                mba  = l_data_set->mem_throt_info.cumulus.mba_num;
-
-                // Validate the Cumulus Info parameters:
-                // - Centaur num (0-7)
-                // - and MBA num (0 for MBA01, and 1 for MBA23)
-                if(cent >= MAX_NUM_CENTAURS ||
-                   mba  >= NUM_MBAS_PER_CENTAUR)
+                if (MEM_TYPE_OCM == G_sysConfigData.mem_type)
                 {
-                    CMDH_TRAC_ERR("data_store_mem_throt: Invalid mba or centaur number. "
-                                  "entry=%d, cent=%d, mba=%d",
-                                  i, cent, mba);
+                    max_membuf = MAX_NUM_OCMBS;
+                    max_mbas_per_membuf = NUM_MBAS_PER_OCMB;
+                }
+
+                mem_buf = l_data_set->mem_throt_info.membuf.membuf_num;
+                mba  = l_data_set->mem_throt_info.membuf.mba_num;
+
+                // Validate parameters
+                if((mem_buf >= max_membuf) ||
+                   (mba >= max_mbas_per_membuf))
+                {
+                    CMDH_TRAC_ERR("data_store_mem_throt: Invalid memory data for type 0x%02X "
+                                  "(entry %d: mem_buf[%d], mba[%d])",
+                                  G_sysConfigData.mem_type, i, mem_buf, mba);
                     cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
                     break;
                 }
             }
-
 
             // Copy into a temporary buffer while we check for N values of 0
             memcpy(&l_temp_set, &(l_data_set->min_n_per_mba), sizeof(mem_throt_config_data_t));
@@ -2547,15 +2585,15 @@ errlHndl_t data_store_mem_throt(const cmdh_fsp_cmd_t * i_cmd_ptr,
             {
                 if(!(*l_n_ptr))
                 {
-                    if(MEM_TYPE_NIMBUS ==  G_sysConfigData.mem_type)
+                    if(MEM_TYPE_NIMBUS == G_sysConfigData.mem_type)
                     {
                         CMDH_TRAC_ERR("data_store_mem_throt: RDIMM Throttle value[%d] is 0!"
                                       " mc[%d] port[%d]", l_index, mc, port);
                     }
-                    else if(MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type)
+                    else
                     {
-                        CMDH_TRAC_ERR("data_store_mem_throt: Centaur DIMM Throttle N value is 0!"
-                                      " cent[%d] mba[%d]", cent, mba);
+                        CMDH_TRAC_ERR("data_store_mem_throt: DIMM Throttle N value is 0!"
+                                      " mem_buf[%d] mba[%d]", mem_buf, mba);
                     }
                     cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
                     break;
@@ -2576,13 +2614,14 @@ errlHndl_t data_store_mem_throt(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
                 CONFIGURE_NIMBUS_DIMM_THROTTLING(l_configured_mbas, mc, port);
             }
-            else if(MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type)
+            else if ((MEM_TYPE_CUMULUS == G_sysConfigData.mem_type) ||
+                     (MEM_TYPE_OCM == G_sysConfigData.mem_type))
             {
-                memcpy(&G_sysConfigData.mem_throt_limits[cent][mba],
+                memcpy(&G_sysConfigData.mem_throt_limits[mem_buf][mba],
                        &(l_data_set->min_n_per_mba),
                        sizeof(mem_throt_config_data_t));
 
-                l_configured_mbas |= 1 << ((cent* NUM_MBAS_PER_CENTAUR) + mba);
+                l_configured_mbas |= 1 << ((mem_buf * max_mbas_per_membuf) + mba);
             }
 
             // Add memory power
@@ -2610,7 +2649,9 @@ errlHndl_t data_store_mem_throt(const cmdh_fsp_cmd_t * i_cmd_ptr,
     }
 
     return l_err;
-}
+
+} // end data_store_mem_throt()
+
 
 // Function Specification
 //

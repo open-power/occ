@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -418,18 +418,18 @@ typedef struct __attribute__ ((packed))
     uint8_t   port_num;              // Physical port # [0-3]
 } cmdh_mem_throt_nimbus_info_t;
 
-// Provides memory throttle min and max values for Cumulus systems
+// Provides memory throttle min and max values for Cumulus/Axone systems
 typedef struct __attribute__ ((packed))
 {
-    uint8_t   centaur_num;           // Physical centaur# [0-7]
-    uint8_t   mba_num;               // Memory Buffer within centaur [0-1]
-} cmdh_mem_throt_cumulus_info_t;
+    uint8_t   membuf_num;            // Physical memory buffer# (Centaur/OCMB)
+    uint8_t   mba_num;               // unit within memory buffer
+} cmdh_mem_throt_membuf_info_t;
 
 // Nimbus/Cumulus dimm/centaur Info
 typedef union cmdh_mem_throt_data_set
 {
     cmdh_mem_throt_nimbus_info_t  nimbus;
-    cmdh_mem_throt_cumulus_info_t cumulus;
+    cmdh_mem_throt_membuf_info_t  membuf;
 } cmdh_mem_throt_info_t;
 
 typedef struct __attribute__ ((packed))

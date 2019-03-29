@@ -46,6 +46,7 @@
 #define MAX_NUM_POWER_SUPPLIES   4
 #define MAX_NUM_MEM_CONTROLLERS  8
 #define MAX_NUM_CENTAURS         8
+#define MAX_NUM_OCMBS            8
 #define NUM_PROC_VRMS            2
 #define MAX_GPU_PRES_SIGNALS     6
 #define GPU_PRES_SIGN_PER_OCC    3
@@ -67,6 +68,11 @@
                 (NUM_DIMMS_PER_MEM_CONTROLLER/NUM_CENTAURS_PER_MEM_CONTROLLER)
 #define NUM_MBAS_PER_CENTAUR            2
 
+#define NUM_MBAS_PER_OCMB               1
+#define NUM_DIMMS_PER_OCMB              2
+#define OCMB_TYPE_LOCATION_MASK (MAX_NUM_OCMBS-1)
+#define IS_OCM_MEM_TYPE(type) (((type) & (~OCMB_TYPE_LOCATION_MASK)) == MEM_TYPE_OCM)
+
 #define UPPER_LIMIT_PROC_FREQ_MHZ     6000
 
 // System Structures
@@ -75,7 +81,8 @@ typedef union
     struct
     {
         uint8_t     kvm:              1;
-        uint8_t     reserved:         3;
+        uint8_t     smf:              1;
+        uint8_t     reserved:         2;
         uint8_t     report_dvfs_nom:  1;
         uint8_t     reserved_2:       1;
         uint8_t     non_redund_ps:    1;

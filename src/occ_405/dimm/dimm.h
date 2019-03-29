@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -76,6 +76,7 @@ typedef enum
 {
     MEM_TYPE_UNKNOWN = 0x00,
     MEM_TYPE_CUMULUS = 0xCC,
+    MEM_TYPE_OCM     = 0xA0,
     MEM_TYPE_NIMBUS  = 0xFF   // Nimbus must be 0xFF per interface with (H)TMGT
 } MEMORY_TYPE;
 
