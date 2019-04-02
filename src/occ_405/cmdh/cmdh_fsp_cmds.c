@@ -63,6 +63,7 @@ extern GpeRequest G_epow_gpio_detected_req;
 extern opal_proc_voting_reason_t G_amec_opal_proc_throt_reason;
 
 extern bool G_htmgt_notified_of_error;
+extern bool G_smf_mode;
 
 // This table contains tunable parameter information that can be exposed to
 // customers (only Master OCC should access/control this table)
@@ -1357,92 +1358,108 @@ errlHndl_t cmdh_amec_pass_through(const cmdh_fsp_cmd_t * i_cmd_ptr,
     uint8_t                         l_rc          = 0;
     uint16_t                        l_rsp_data_length = CMDH_FSP_RSP_DATA_SIZE;
     errl_generic_resp_t*            l_err_resp_ptr = (errl_generic_resp_t*)o_rsp_ptr;
+    static bool L_traced_reject = FALSE;
 
-    do
+    if (G_smf_mode == false)
     {
-
-        // Function Inputs Sanity Check
-        if( (NULL == i_cmd_ptr) || (NULL == o_rsp_ptr) )
+        do
         {
-            l_rc = ERRL_RC_INTERNAL_FAIL;
-            break;
-        }
+            // Function Inputs Sanity Check
+            if( (NULL == i_cmd_ptr) || (NULL == o_rsp_ptr) )
+            {
+                l_rc = ERRL_RC_INTERNAL_FAIL;
+                break;
+            }
 
-        // Byte0 is ipmi command number
-        l_IPMImsg.u8Cmd = i_cmd_ptr->data[0];
+            // Byte0 is ipmi command number
+            l_IPMImsg.u8Cmd = i_cmd_ptr->data[0];
 
-        //set the ipmi command data size, byte0 and byte1 is ipmi header
-        l_IPMImsg.u8CmdDataLen = CONVERT_UINT8_ARRAY_UINT16( i_cmd_ptr->data_length[0],
-                                                             i_cmd_ptr->data_length[1])
-                                 - AMEC_AME_CMD_HEADER_SZ;
+            //set the ipmi command data size, byte0 and byte1 is ipmi header
+            l_IPMImsg.u8CmdDataLen = CONVERT_UINT8_ARRAY_UINT16( i_cmd_ptr->data_length[0],
+                                                                 i_cmd_ptr->data_length[1])
+                - AMEC_AME_CMD_HEADER_SZ;
 
-        // Set the ipmi command data buffer
-        l_IPMImsg.au8CmdData_ptr = (uint8_t *)&i_cmd_ptr->data[AMEC_AME_CMD_HEADER_SZ];
+            // Set the ipmi command data buffer
+            l_IPMImsg.au8CmdData_ptr = (uint8_t *)&i_cmd_ptr->data[AMEC_AME_CMD_HEADER_SZ];
 
-        // Call the amester entry point
-        l_rc = amester_entry_point( &l_IPMImsg,
-                                    &l_rsp_data_length,
-                                    o_rsp_ptr->data);
+            // Call the amester entry point
+            l_rc = amester_entry_point( &l_IPMImsg,
+                                        &l_rsp_data_length,
+                                        o_rsp_ptr->data);
 
-        if(COMPCODE_NORMAL != l_rc)
+            if(COMPCODE_NORMAL != l_rc)
+            {
+                TRAC_ERR("amester_entry_point failured, rc (ipmi completion code) = %d", l_rc);
+
+                // Just put the rc in the return packet and return success
+                l_rsp_data_length = 1;
+                o_rsp_ptr->data[0] = l_rc;
+                l_rc = ERRL_RC_SUCCESS;
+            }
+
+            // Protect from overflowing buffer
+            if(l_rsp_data_length > G_amester_max_data_length)
+            {
+                TRAC_ERR("amester_entry_point returned too much data. Got back %d bytes, but we only support sending %d bytes to IPMI",
+                         l_rsp_data_length, G_amester_max_data_length);
+                /* @
+                 * @errortype
+                 * @moduleid    AMEC_AMESTER_INTERFACE
+                 * @reasoncode  INTERNAL_FAILURE
+                 * @userdata1   response data length
+                 * @userdata2   max data length
+                 * @userdata4   OCC_NO_EXTENDED_RC
+                 * @devdesc     amester_entry_point returned too much data.
+                 */
+                l_errlHndl = createErrl(
+                                        AMEC_AMESTER_INTERFACE,             //modId
+                                        INTERNAL_FAILURE,                   //reasoncode
+                                        OCC_NO_EXTENDED_RC,                 //Extended reason code
+                                        ERRL_SEV_INFORMATIONAL,             //Severity
+                                        NULL,                               //Trace Buf
+                                        DEFAULT_TRACE_SIZE,                 //Trace Size
+                                        l_rsp_data_length,                  //userdata1
+                                        G_amester_max_data_length           //userdata2
+                                       );
+
+                l_rc = ERRL_RC_INTERNAL_FAIL;
+                break;
+            }
+            // Set response rc and length
+            G_rsp_status = ERRL_RC_SUCCESS;
+            o_rsp_ptr->data_length[0] = ((uint8_t *)&l_rsp_data_length)[0];
+            o_rsp_ptr->data_length[1] = ((uint8_t *)&l_rsp_data_length)[1];
+
+        }while(0);
+
+        if(l_rc)
         {
-            TRAC_ERR("amester_entry_point failured, rc (ipmi completion code) = %d", l_rc);
+            l_err_resp_ptr->data_length[0] = 0;
+            l_err_resp_ptr->data_length[1] = 1;
+            G_rsp_status = l_rc;
 
-            // Just put the rc in the return packet and return success
-            l_rsp_data_length = 1;
-            o_rsp_ptr->data[0] = l_rc;
-            l_rc = ERRL_RC_SUCCESS;
+            if(l_errlHndl)
+            {
+                l_err_resp_ptr->log_id = l_errlHndl->iv_entryId;
+            }
+            else
+            {
+                l_err_resp_ptr->log_id = 0;
+            }
         }
-
-        // Protect from overflowing buffer
-        if(l_rsp_data_length > G_amester_max_data_length)
-        {
-            TRAC_ERR("amester_entry_point returned too much data. Got back %d bytes, but we only support sending %d bytes to IPMI",
-                     l_rsp_data_length, G_amester_max_data_length);
-            /* @
-             * @errortype
-             * @moduleid    AMEC_AMESTER_INTERFACE
-             * @reasoncode  INTERNAL_FAILURE
-             * @userdata1   response data length
-             * @userdata2   max data length
-             * @userdata4   OCC_NO_EXTENDED_RC
-             * @devdesc     amester_entry_point returned too much data.
-             */
-            l_errlHndl = createErrl(
-                AMEC_AMESTER_INTERFACE,             //modId
-                INTERNAL_FAILURE,                   //reasoncode
-                OCC_NO_EXTENDED_RC,                 //Extended reason code
-                ERRL_SEV_INFORMATIONAL,             //Severity
-                NULL,                               //Trace Buf
-                DEFAULT_TRACE_SIZE,                 //Trace Size
-                l_rsp_data_length,                  //userdata1
-                G_amester_max_data_length           //userdata2
-            );
-
-            l_rc = ERRL_RC_INTERNAL_FAIL;
-            break;
-        }
-        // Set response rc and length
-        G_rsp_status = ERRL_RC_SUCCESS;
-        o_rsp_ptr->data_length[0] = ((uint8_t *)&l_rsp_data_length)[0];
-        o_rsp_ptr->data_length[1] = ((uint8_t *)&l_rsp_data_length)[1];
-
-    }while(0);
-
-    if(l_rc)
+    }
+    else
     {
-        l_err_resp_ptr->data_length[0] = 0;
-        l_err_resp_ptr->data_length[1] = 1;
-        G_rsp_status = l_rc;
-
-        if(l_errlHndl)
+        if (!L_traced_reject)
         {
-            l_err_resp_ptr->log_id = l_errlHndl->iv_entryId;
+            TRAC_ERR("cmdh_amec_pass_through: Amester not supported in SMF mode");
+            L_traced_reject = TRUE;
         }
-        else
-        {
-            l_err_resp_ptr->log_id = 0;
-        }
+        // Return error to TMGT w/no log
+        G_rsp_status = ERRL_RC_NO_SUPPORT_IN_SMF_MODE;
+        o_rsp_ptr->data_length[0] = 0;
+        o_rsp_ptr->data_length[1] = 1;
+        o_rsp_ptr->data[0] = 0x00; // no error log
     }
 
     return l_errlHndl;

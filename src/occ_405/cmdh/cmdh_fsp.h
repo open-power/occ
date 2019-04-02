@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -145,6 +145,8 @@ typedef enum
     ERRL_RC_INTERNAL_FAIL       = 0x15,
     // The OCC cannot accept the command in its present state
     ERRL_RC_INVALID_STATE       = 0x16,
+    // The specified command is not supported in Secure Memory Facility mode
+    ERRL_RC_NO_SUPPORT_IN_SMF_MODE = 0x17,
     // This is a panic response
     ERRL_RC_PANIC               = 0xE0,
     // This is a checkpoint response

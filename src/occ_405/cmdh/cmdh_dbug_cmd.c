@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -73,6 +73,7 @@ extern OCCPstateParmBlock G_oppb;
 //*************************************************************************/
 uint16_t G_allow_trace_flags = 0x0000;
 uint32_t G_internal_flags    = 0x00000000;
+extern bool G_smf_mode;
 
 // SSX Block Copy Request for copying data from HOMER to SRAM
 BceRequest G_debug_pba_request;
@@ -272,129 +273,148 @@ void cmdh_dbug_peek (const cmdh_fsp_cmd_t * i_cmd_ptr,
     uint8_t            l_type    = l_cmd_ptr->type;
     uint32_t           l_addr    = l_cmd_ptr->address;
     int                l_ssxrc   = SSX_OK;
+    static bool L_traced_reject = FALSE;
 
+    if (G_smf_mode == false)
+    {
 #if PPC405_MMU_SUPPORT
-    static Ppc405MmuMap       L_mmuMapHomer;
-    static Ppc405MmuMap       L_mmuMapCommon;
+        static Ppc405MmuMap       L_mmuMapHomer;
+        static Ppc405MmuMap       L_mmuMapCommon;
 #endif
 
-    switch(l_type)
-    {
-        case 0x01:    // OCI Direct Read
-            // Make sure we don't overflow our response buffer
-            l_len = (l_len > CMDH_FSP_RSP_DATA_SIZE ) ? CMDH_FSP_RSP_DATA_SIZE : l_len;
+        switch(l_type)
+        {
+            case 0x01:    // OCI Direct Read
+                // Make sure we don't overflow our response buffer
+                l_len = (l_len > CMDH_FSP_RSP_DATA_SIZE ) ? CMDH_FSP_RSP_DATA_SIZE : l_len;
 
-            // Read the data
-            memcpy( (void *) &o_rsp_ptr->data[0],
-                    (void *) l_addr,
-                    (size_t) l_len );
-            break;
+                // Read the data
+                memcpy( (void *) &o_rsp_ptr->data[0],
+                        (void *) l_addr,
+                        (size_t) l_len );
+                break;
 
-        case 0x02:    // DMA Read
-            // Make sure address is 128 byte aligned required for block copy
-            if(l_addr % 128)
-	    {
-                TRAC_ERR("cmdh_dbug_peek: Address 0x%08X is not 128 byte aligned", l_addr);
-                // no error handling for debug just respond with 0 bytes
-                l_len = 0;
-            }
-            else
-	    {
-                // only 1 length is supported by the OCC
-                // ignore input length and set length to CMDH_DEBUG_DMA_READ_SIZE
-                l_len = CMDH_DEBUG_DMA_READ_SIZE;
-
-                // Copy data from main memory to SRAM
-                // Set up a copy request
-                l_ssxrc = bce_request_create(&G_debug_pba_request,                // block copy object
-                                             &G_pba_bcde_queue,                   // mainstore to sram copy engine
-                                             l_addr,                              // mainstore address
-                                             (uint32_t)&G_debug_dma_buffer,       // sram starting address
-                                             l_len,                               // size of copy
-                                             SSX_SECONDS(1),                      // timeout
-                                             NULL,                                // no call back
-                                             NULL,                                // no call back arguments
-                                             ASYNC_REQUEST_BLOCKING);             // blocking request
-
-                if(l_ssxrc != SSX_OK)
+            case 0x02:    // DMA Read
+                // Make sure address is 128 byte aligned required for block copy
+                if(l_addr % 128)
                 {
-                    TRAC_ERR("cmdh_dbug_peek: BCDE request create failure rc=[%08X]", -l_ssxrc);
+                    TRAC_ERR("cmdh_dbug_peek: Address 0x%08X is not 128 byte aligned", l_addr);
                     // no error handling for debug just respond with 0 bytes
                     l_len = 0;
                 }
                 else
                 {
-                    // Do actual copying
-                    l_ssxrc = bce_request_schedule(&G_debug_pba_request);
+                    // only 1 length is supported by the OCC
+                    // ignore input length and set length to CMDH_DEBUG_DMA_READ_SIZE
+                    l_len = CMDH_DEBUG_DMA_READ_SIZE;
+
+                    // Copy data from main memory to SRAM
+                    // Set up a copy request
+                    l_ssxrc = bce_request_create(&G_debug_pba_request,                // block copy object
+                                                 &G_pba_bcde_queue,                   // mainstore to sram copy engine
+                                                 l_addr,                              // mainstore address
+                                                 (uint32_t)&G_debug_dma_buffer,       // sram starting address
+                                                 l_len,                               // size of copy
+                                                 SSX_SECONDS(1),                      // timeout
+                                                 NULL,                                // no call back
+                                                 NULL,                                // no call back arguments
+                                                 ASYNC_REQUEST_BLOCKING);             // blocking request
 
                     if(l_ssxrc != SSX_OK)
                     {
-                        TRAC_ERR("cmdh_dbug_peek: BCE request schedule failure rc=[%08X]", -l_ssxrc);
+                        TRAC_ERR("cmdh_dbug_peek: BCDE request create failure rc=[%08X]", -l_ssxrc);
                         // no error handling for debug just respond with 0 bytes
                         l_len = 0;
                     }
                     else
                     {
-                        // Copy to response buffer
-                        memcpy((void *) &o_rsp_ptr->data[0],
-                               &G_debug_dma_buffer,
-                               l_len);
+                        // Do actual copying
+                        l_ssxrc = bce_request_schedule(&G_debug_pba_request);
+
+                        if(l_ssxrc != SSX_OK)
+                        {
+                            TRAC_ERR("cmdh_dbug_peek: BCE request schedule failure rc=[%08X]", -l_ssxrc);
+                            // no error handling for debug just respond with 0 bytes
+                            l_len = 0;
+                        }
+                        else
+                        {
+                            // Copy to response buffer
+                            memcpy((void *) &o_rsp_ptr->data[0],
+                                   &G_debug_dma_buffer,
+                                   l_len);
+                        }
                     }
-                }
-            } // else address is 128 byte aligned
+                } // else address is 128 byte aligned
 
-            break;
+                break;
 
-        case 0x03:   // Invalidate Cache
-            //dcache_invalidate( (void *) l_addr, l_len );
-            l_len = 0;
-            break;
+            case 0x03:   // Invalidate Cache
+                //dcache_invalidate( (void *) l_addr, l_len );
+                l_len = 0;
+                break;
 
-        case 0x04:   // Flush Cache
-            dcache_flush( (void *) l_addr, l_len );
-            l_len = 0;
-            break;
+            case 0x04:   // Flush Cache
+                dcache_flush( (void *) l_addr, l_len );
+                l_len = 0;
+                break;
 #if PPC405_MMU_SUPPORT
-        case 0x05:   // MMU Map Mainstore
-            // Map mainstore to oci space so that we can peek at it
+            case 0x05:   // MMU Map Mainstore
+                // Map mainstore to oci space so that we can peek at it
 
-            // HOMER Image
-            ppc405_mmu_map(HOMER_BASE_ADDRESS, // Mainstore address (BAR0, offset 0)
-                           HOMER_BASE_ADDRESS, // OCI address 0x0 (BAR0)
-                           HOMER_SPACE_SIZE,   // Size
-                           0,                  // TLB hi flags
-                           0,                  // TLB lo flags
-                           &L_mmuMapHomer); // map pointer
+                // HOMER Image
+                ppc405_mmu_map(HOMER_BASE_ADDRESS, // Mainstore address (BAR0, offset 0)
+                               HOMER_BASE_ADDRESS, // OCI address 0x0 (BAR0)
+                               HOMER_SPACE_SIZE,   // Size
+                               0,                  // TLB hi flags
+                               0,                  // TLB lo flags
+                               &L_mmuMapHomer); // map pointer
 
-            // COMMON Image = Communal OCC Memory Map On Node
-            ppc405_mmu_map(COMMON_BASE_ADDRESS, // Mainstore address (BAR2, offset 0)
-                           COMMON_BASE_ADDRESS, // OCI address 0xA0000000
-                           COMMON_SPACE_SIZE,   // Size
-                           0,                              // TLB hi flags
-                           0,                              // TLB lo flags
-                           &L_mmuMapCommon); // map pointer
-            l_len = 0;
-            break;
-        case 0x06:   // MMU UnMap Mainstore
-            // HOMER Image
-            ppc405_mmu_unmap(&L_mmuMapHomer);
+                // COMMON Image = Communal OCC Memory Map On Node
+                ppc405_mmu_map(COMMON_BASE_ADDRESS, // Mainstore address (BAR2, offset 0)
+                               COMMON_BASE_ADDRESS, // OCI address 0xA0000000
+                               COMMON_SPACE_SIZE,   // Size
+                               0,                              // TLB hi flags
+                               0,                              // TLB lo flags
+                               &L_mmuMapCommon); // map pointer
+                l_len = 0;
+                break;
+            case 0x06:   // MMU UnMap Mainstore
+                // HOMER Image
+                ppc405_mmu_unmap(&L_mmuMapHomer);
 
-            // COMMON Image = Communal OCC Memory Map On Node
-            ppc405_mmu_unmap(&L_mmuMapCommon);
+                // COMMON Image = Communal OCC Memory Map On Node
+                ppc405_mmu_unmap(&L_mmuMapCommon);
 
-            l_len = 0;
-            break;
+                l_len = 0;
+                break;
 #endif
-        default:
-            // Didn't do anything, respond with zero bytes
-            l_len = 0;
-            break;
+            default:
+                // Didn't do anything, respond with zero bytes
+                l_len = 0;
+                break;
+        }
+
+        G_rsp_status = ERRL_RC_SUCCESS;
+        o_rsp_ptr->data_length[0] = CONVERT_UINT16_UINT8_HIGH(l_len);
+        o_rsp_ptr->data_length[1] = CONVERT_UINT16_UINT8_LOW(l_len);
+    }
+    else
+    {
+        if (!L_traced_reject)
+        {
+            TRAC_ERR("cmdh_dbug_peek: Peek not supported in SMF mode");
+            L_traced_reject = TRUE;
+        }
+
+        // Return error to TMGT w/no log
+        G_rsp_status = ERRL_RC_NO_SUPPORT_IN_SMF_MODE;
+        o_rsp_ptr->data_length[0] = 0;
+        o_rsp_ptr->data_length[1] = 1;
+        o_rsp_ptr->data[0] = 0x00; // no error log
     }
 
-    G_rsp_status = ERRL_RC_SUCCESS;
-    o_rsp_ptr->data_length[0] = CONVERT_UINT16_UINT8_HIGH(l_len);
-    o_rsp_ptr->data_length[1] = CONVERT_UINT16_UINT8_LOW(l_len);
-}
+} // end cmdh_dbug_peek()
 
 
 // Function Specification
@@ -830,7 +850,7 @@ void cmdh_dbug_internal_flags( const cmdh_fsp_cmd_t * i_cmd_ptr,
     }
     else if ((data_length != 0) && (data_length != flag_size))
     {
-        TRAC_ERR("cmdh_dbug_dimm_inject: Invalid internal flags length %u (expected %u)",
+        TRAC_ERR("cmdh_dbug_internal_flags: Invalid internal flags length %u (expected %u)",
                  data_length, flag_size);
         l_rc = ERRL_RC_INVALID_CMD_LEN;
     }

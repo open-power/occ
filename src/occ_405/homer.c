@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/homer.c $                                             */
+/* $Source: src/occ_405/homer.c $                                         */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -123,6 +123,9 @@ homer_rc_t __attribute__((optimize("O1"))) homer_hd_map_read_unmap(const homer_r
                     break;
                 case HOMER_FIR_PARMS:
                     memcpy(o_host_data, &(l_hdcfg_data->firParms[0]), HOMER_FIR_PARM_SIZE);
+                    break;
+                case HOMER_SMF_MODE:
+                    *(uint32_t *)o_host_data = l_hdcfg_data->smfMode;
                     break;
                 default:
                     l_rc = HOMER_UNKNOWN_ID;

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -34,7 +34,8 @@
 #include <sensor_service_codes.h> // sensor module ids
 #include <occ_service_codes.h>    // sensor module ids
 #include <sensor.h>               // For Sensor defines
-#include <sensor_query_list.h>      // For args to command
+#include <sensor_query_list.h>    // For args to command
+#include <sensor_main_memory.h>
 
 //*************************************************************************/
 // Externs
@@ -55,6 +56,7 @@
 //*************************************************************************/
 // Globals
 //*************************************************************************/
+extern bool G_smf_mode;
 
 //*************************************************************************/
 // Function Prototypes
@@ -226,6 +228,25 @@ errlHndl_t querySensorList(const querySensorListArg_t * i_argPtr)
                 if ((i_loc & G_sensor_info[l_cnt].sensor.location) == 0)
                 {
                     continue;
+                }
+
+                if (G_smf_mode)
+                {
+                    // Prevent adding sensors that are not supported in SMF mode
+                    uint16_t l_index;
+                    bool l_skip = FALSE;
+                    for (l_index = 0; l_index < MAIN_MEM_SENSOR_COUNT; ++l_index)
+                    {
+                        if (G_main_mem_sensors[l_index].gsid == l_cnt)
+                        {
+                            if (G_main_mem_sensors[l_index].smf_mode == 0)
+                            {
+                                l_skip = TRUE;
+                            }
+                            break;
+                        }
+                    }
+                    if (l_skip) continue;
                 }
 
                 if (o_sensors != NULL)

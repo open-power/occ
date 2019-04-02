@@ -110,6 +110,8 @@ void print_core_data_sensors(uint8_t core);
 void print_core_status(uint8_t core);
 #endif
 
+extern bool G_smf_mode;
+
 // Function Specification
 //
 // Name: task_core_data
@@ -718,7 +720,7 @@ void task_24x7(task_t * i_task)
     static bool    L_logged_disable = FALSE;
 
     // Schedule 24x7 task if it hasn't been disabled
-    if( (!G_24x7_disabled) && !(G_internal_flags & INT_FLAG_DISABLE_24X7) )
+    if( (!G_24x7_disabled) && !(G_internal_flags & INT_FLAG_DISABLE_24X7))
     {
         // Schedule 24x7 task if idle
         if (!async_request_is_idle(&G_24x7_request.request))

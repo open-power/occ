@@ -106,6 +106,7 @@ extern uint32_t G_khz_per_pstate;
 
 extern uint8_t G_proc_pmin;
 extern uint8_t G_proc_pmax;
+extern bool G_smf_mode;
 
 extern PWR_READING_TYPE  G_pwr_reading_type;
 
@@ -2091,10 +2092,10 @@ int main(int argc, char **argv)
     {
         // Trace what happened before ssx initialization
         MAIN_TRAC_INFO("HOMER accessed, rc=%d, version=%d, ssx_rc=%d",
-                        l_homerrc, l_homer_version, l_ssxrc);
+                       l_homerrc, l_homer_version, l_ssxrc);
 
         MAIN_TRAC_INFO("HOMER accessed, rc=%d, nest_freq=%d, ssx_rc=%d",
-                        l_homerrc2, l_tb_freq_hz, l_ssxrc2);
+                       l_homerrc2, l_tb_freq_hz, l_ssxrc2);
 
         // Handle any errors from the version access
         homer_log_access_error(l_homerrc,
@@ -2155,7 +2156,7 @@ int main(int argc, char **argv)
         }
 
         TRAC_IMP("HOMER accessed, rc=%d, FIR master=%d, ssx_rc=%d",
-                  l_homerrc, l_fir_master, l_ssxrc);
+                 l_homerrc, l_fir_master, l_ssxrc);
 
         // Handle any errors from the FIR master access
         homer_log_access_error(l_homerrc,
@@ -2171,13 +2172,39 @@ int main(int argc, char **argv)
                                                 &l_ssxrc);
 
             TRAC_IMP("HOMER accessed, rc=%d, FIR parms buffer 0x%x, ssx_rc=%d",
-                      l_homerrc, &G_fir_data_parms[0], l_ssxrc);
+                     l_homerrc, &G_fir_data_parms[0], l_ssxrc);
 
             // Handle any errors from the FIR master access
             homer_log_access_error(l_homerrc,
                                    l_ssxrc,
                                    (uint32_t)&G_fir_data_parms[0]);
         }
+
+
+        // Get the SMF mode indicator
+        uint32_t l_smf_mode = SMF_MODE_NOT_ENABLED;
+        l_homerrc = homer_hd_map_read_unmap(HOMER_SMF_MODE,
+                                            &l_smf_mode,
+                                            &l_ssxrc);
+
+        if (((HOMER_SUCCESS == l_homerrc) || (HOMER_SSX_UNMAP_ERR == l_homerrc)) &&
+            (SMF_MODE_ENABLED == l_smf_mode))
+        {
+            G_smf_mode = true;
+        }
+        else
+        {
+            G_smf_mode = false;
+        }
+
+        TRAC_IMP("HOMER accessed, rc=%d, SMF mode=%d, ssx_rc=%d",
+                 l_homerrc, l_smf_mode, l_ssxrc);
+
+        // Handle any errors
+        homer_log_access_error(l_homerrc,
+                               l_ssxrc,
+                               l_smf_mode);
+
     }//G_ipl_time
     else
     {

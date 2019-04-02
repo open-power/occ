@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2017,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2017,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -60,7 +60,7 @@
  * These buffers contain the dynamic sensor data, such as the current sample,
  * timestamp, and maximum value.  The OCC alternates between the two buffers so
  * that one buffer is always complete and readable by OPAL.
- * 
+ *
  * For more information see the OCC Firmware Interface Specification document.
  */
 
@@ -235,6 +235,20 @@ typedef struct __attribute__ ((packed))
      sizeof(mm_sensor_readings_full_t) : \
      sizeof(mm_sensor_readings_counter_t))
 
+/**
+ * Main memory sensor struct.  Represents one OCC sensor that should be copied
+ * to main memory.  Uses bit fields to reduce memory usage.
+ */
+typedef struct __attribute__ ((packed))
+{
+    uint16_t gsid;             ///< Global Sensor ID
+    uint8_t  smf_mode    : 1;  ///< Is sensor copied when SMF mode enabled?
+    uint8_t  master_only : 1;  ///< Is sensor only available from master OCC?
+    uint8_t  valid       : 1;  ///< Is sensor valid (able to be copied)?
+    uint8_t  enabled     : 1;  ///< Is sensor enabled (chosen to be copied)?
+    uint8_t  struct_ver  : 2;  ///< See MM_SENSOR_NAMES_STRUCT_VERSION_VALUES
+} main_mem_sensor_t;
+
 
 //******************************************************************************
 // Globals
@@ -251,7 +265,17 @@ extern bool G_main_mem_sensors_initialized;
  * enabled only a subset of sensors will be copied to main memory.  Default
  * value is false (not enabled).
  */
-extern bool G_main_mem_sensors_smf_mode_enabled;
+extern bool G_smf_mode;
+
+extern main_mem_sensor_t G_main_mem_sensors[337];
+
+/**
+ * Number of main memory sensors (in G_main_mem_sensors).
+ *
+ * Note that some sensors might not be valid or enabled, and as a result they
+ * will not be copied to main memory.
+ */
+#define MAIN_MEM_SENSOR_COUNT (sizeof(G_main_mem_sensors) / sizeof(G_main_mem_sensors[0]))
 
 
 //******************************************************************************

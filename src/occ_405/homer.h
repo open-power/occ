@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/homer.h $                                             */
+/* $Source: src/occ_405/homer.h $                                         */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -77,6 +77,12 @@ enum fir_master
     FIR_OCC_IS_FIR_MASTER               = 0x00000001
 };
 
+enum smf_mode_e
+{
+    SMF_MODE_NOT_ENABLED = 0x00000000,
+    SMF_MODE_ENABLED     = 0x00000001
+};
+
 // Version(s) of HOMER host data currently supported
 typedef enum homer_version
 {
@@ -91,6 +97,7 @@ typedef enum homer_read_var
     HOMER_INT_TYPE,
     HOMER_FIR_MASTER,
     HOMER_FIR_PARMS,
+    HOMER_SMF_MODE,
     HOMER_LAST_VAR
 } homer_read_var_t;
 
@@ -114,7 +121,8 @@ struct occHostConfigDataArea
     uint32_t occInterruptType;
     uint32_t firMaster;
     uint8_t  firParms[HOMER_FIR_PARM_SIZE];
-    uint8_t  __reserved[HOMER_HD_SZ - (4 * sizeof(uint32_t)) - HOMER_FIR_PARM_SIZE];
+    uint32_t smfMode;
+    uint8_t  __reserved[HOMER_HD_SZ - (5 * sizeof(uint32_t)) - HOMER_FIR_PARM_SIZE];
 }__attribute__ ((__packed__));
 typedef struct occHostConfigDataArea occHostConfigDataArea_t;
 

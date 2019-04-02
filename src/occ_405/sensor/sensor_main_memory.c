@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2017,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2017,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -52,19 +52,6 @@
 // Main Memory Sensors - Private Defines/Structs/Globals
 //******************************************************************************/
 
-/**
- * Main memory sensor struct.  Represents one OCC sensor that should be copied
- * to main memory.  Uses bit fields to reduce memory usage.
- */
-typedef struct __attribute__ ((packed))
-{
-    uint16_t gsid;             ///< Global Sensor ID
-    uint8_t  smf_mode    : 1;  ///< Is sensor copied when SMF mode enabled?
-    uint8_t  master_only : 1;  ///< Is sensor only available from master OCC?
-    uint8_t  valid       : 1;  ///< Is sensor valid (able to be copied)?
-    uint8_t  enabled     : 1;  ///< Is sensor enabled (chosen to be copied)?
-    uint8_t  struct_ver  : 2;  ///< See MM_SENSOR_NAMES_STRUCT_VERSION_VALUES
-} main_mem_sensor_t;
 
 /**
  * Macro to build one main_mem_sensor_t instance.
@@ -241,14 +228,6 @@ main_mem_sensor_t G_main_mem_sensors[] =
     MAIN_MEM_MEMORY_SENSORS      (MEMSPSTATM,     true,     false),
     MAIN_MEM_MEMORY_SENSORS      (MEMSPM,         false,    false),
 };
-
-/**
- * Number of main memory sensors (in G_main_mem_sensors).
- *
- * Note that some sensors might not be valid or enabled, and as a result they
- * will not be copied to main memory.
- */
-#define MAIN_MEM_SENSOR_COUNT (sizeof(G_main_mem_sensors) / sizeof(G_main_mem_sensors[0]))
 
 /*
  * Check if Sensor Names Block is too small to hold all of the main memory
@@ -455,14 +434,12 @@ uint32_t G_mm_sensor_readings_buf_addr;
 
 
 //******************************************************************************
-// Public Globals
+// Public Globals (see description in header file)
 //******************************************************************************
 
-// See description in header file
 bool G_main_mem_sensors_initialized = false;
 
-// See description in header file
-bool G_main_mem_sensors_smf_mode_enabled = false;
+bool G_smf_mode = false;
 
 
 //******************************************************************************
@@ -486,7 +463,7 @@ void mm_sensors_init_internals(void)
         main_mem_sensor_t * l_mm_sensor = &G_main_mem_sensors[l_index];
 
         // Set valid field based on SMF mode and OCC role
-        if (G_main_mem_sensors_smf_mode_enabled && !l_mm_sensor->smf_mode)
+        if (G_smf_mode && !l_mm_sensor->smf_mode)
         {
             // SMF mode is enabled and sensor is not copied when in SMF mode
             l_mm_sensor->valid = false;

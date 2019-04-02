@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -441,7 +441,7 @@ void cmdh_build_errl_rsp(const cmdh_fsp_cmd_t * i_cmd_ptr,
                     ERRL_USR_DTL_BINARY_DATA);     //type
         }
 
-        // Fill out the response lod_id with the error id
+        // Fill out the response log_id with the error id
         l_errl_rsp_ptr->log_id = getErrlLogId(*l_errlHndlPtr);
     }
     else
