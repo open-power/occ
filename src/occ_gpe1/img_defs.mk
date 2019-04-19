@@ -216,6 +216,7 @@ GCC-CFLAGS += -meabi
 GCC-CFLAGS += -ffreestanding
 GCC-CFLAGS += -fno-common
 GCC-CFLAGS += -fno-inline-functions-called-once
+GCC-CFLAGS += -fno-asynchronous-unwind-tables
 GCC-CFLAGS += -std=gnu89
 
 CFLAGS      =  -c $(GCC-CFLAGS) $(PIPE-CFLAGS) $(GCC-O-LEVEL) $(INCLUDES)
