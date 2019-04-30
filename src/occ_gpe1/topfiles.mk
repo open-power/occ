@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2015,2017
+# Contributors Listed Below - COPYRIGHT 2015,2019
 # [+] International Business Machines Corp.
 #
 #
@@ -23,10 +23,10 @@
 #
 # IBM_PROLOG_END_TAG
 
-TOP-C-SOURCES = gpe1_main.c gpe1_dimm_read.c gpe1_dimm_reset.c nop.c \
-                pk_app_irq_table.c ipc_func_tables.c gpe1_dimm_control.c \
-                gpe1_24x7.c gpe1_memory_power_control.c gpe_gpu_init.c \
-                gpe_membuf_scom.c gpe_centaur.c \
+TOP-C-SOURCES = gpe1_main.c nop.c \
+                pk_app_irq_table.c ipc_func_tables.c \
+                gpe1_24x7.c gpe_gpu_init.c \
+                gpe_membuf_scom.c \
                 gpe_membuf.c occ_gpe1_machine_check_handler.c \
                 gpe_ocmb.c
 

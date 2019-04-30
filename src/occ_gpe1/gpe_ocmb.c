@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -95,12 +95,232 @@ int membuf_put_scom(MemBufConfiguration_t* i_config,
                      uint32_t i_scom_address,
                      uint64_t i_data);
 
+
+int check_and_reset_mmio_fir(MemBufConfiguration_t * i_config,unsigned int i_membuf);
+
+
 void swap_u32(uint32_t * data32)
 {
     uint32_t val = *data32;
     val = ((val << 8) & 0xff00ff00) | ((val >> 8) & 0x00ff00ff);
     *data32 = (val << 16) | (val >> 16);
 }
+
+
+/**
+ * Create PBA slave configuration parameters.
+ * @param[in] ptr tor param data area to be filled out.
+ * @param[in] PBA slave to use.
+ * @param[in] write ttype (@see occhw_pba_common.h)
+ * @param[in] write tsize (@see occhw_pba_common.h)
+ * @param[in] read_ttype  (@see occhw_pba_common.h)
+ * @return [SUCCESS | return code]
+ */
+int gpe_pba_parms_create(GpePbaParms* parms,
+                         int slave,
+                         int write_ttype,
+                         int write_tsize,
+                         int read_ttype)
+{
+    pba_slvctln_t* slvctl, *mask;
+    pba_slvrst_t* slvrst;
+    pba_slvrst_t* slvrst_in_progress;
+    uint64_t all1 = 0xffffffffffffffffull;
+
+    parms->slave_id = slave;
+
+    slvctl = &(parms->slvctl);
+    mask = &(parms->mask);
+    slvrst = &(parms->slvrst);
+    slvrst_in_progress = &(parms->slvrst_in_progress);
+
+    parms->slvctl_address = PBA_SLVCTLN(slave);
+
+    slvrst->value = 0;
+    slvrst->fields.set = PBA_SLVRST_SET(slave);
+
+    slvrst_in_progress->value = 0;
+    slvrst_in_progress->fields.in_prog = PBA_SLVRST_IN_PROG(slave);
+
+    slvctl->value = 0;
+    mask->value = 0;
+
+    slvctl->fields.enable = 1;
+    mask->fields.enable = all1;
+
+    slvctl->fields.mid_match_value = OCI_MASTER_ID_GPE1;
+    mask->fields.mid_match_value = all1;
+
+    slvctl->fields.mid_care_mask = all1;
+    mask->fields.mid_care_mask = all1;
+
+    slvctl->fields.write_ttype = write_ttype;
+    mask->fields.write_ttype = all1;
+
+    slvctl->fields.write_tsize = write_tsize;
+    mask->fields.write_tsize = all1;
+
+    slvctl->fields.read_ttype = read_ttype;
+    mask->fields.read_ttype = all1;
+
+    slvctl->fields.buf_alloc_a = 1;
+    slvctl->fields.buf_alloc_b = 1;
+    slvctl->fields.buf_alloc_c = 1;
+    slvctl->fields.buf_alloc_w = 1;
+    mask->fields.buf_alloc_a = 1;
+    mask->fields.buf_alloc_b = 1;
+    mask->fields.buf_alloc_c = 1;
+    mask->fields.buf_alloc_w = 1;
+
+    if (read_ttype == PBA_READ_TTYPE_CI_PR_RD)
+    {
+
+        slvctl->fields.buf_invalidate_ctl = 1;
+        mask->fields.buf_invalidate_ctl = all1;
+
+        slvctl->fields.read_prefetch_ctl = PBA_READ_PREFETCH_NONE;
+        mask->fields.read_prefetch_ctl = all1;
+
+    }
+    else
+    {
+
+        slvctl->fields.buf_invalidate_ctl = 0;
+        mask->fields.buf_invalidate_ctl = all1;
+    }
+
+    mask->value = ~(mask->value);
+
+    return 0;
+
+} // end gpe_pba_parms_create()
+
+
+/**
+ * Configure the PBABAR for inband access
+ * @param[in] Configuration information
+ */
+int configure_pba_bar_for_inband_access(MemBufConfiguration_t * i_config)
+{
+    uint64_t bar = 0;
+    uint64_t barMsk = PBA_BARMSKN_MASK_MASK;
+    uint64_t mask = 0;
+    int i = 0;
+    int rc = 0;
+
+    do
+    {
+        // Configure the PBA BAR and PBA BARMSK.
+        // Set the BARMSK bits such that:
+        // -PBA[8:22] are provided by the PBABAR.
+        // -PBA[23:36] are provided by the PBASLVCTL ExtrAddr field
+        // -PBA[37:43] are provided by the OCI addr[5:11]
+        // PBA[44:63] will always come from the OCI addr[12:31]
+        // Note: This code should no longer be needed when the BAR/BARMSK is set
+        // by PHYP.
+        if (i_config->config != 0)
+        {
+
+            for (i = 0; i < OCCHW_N_MEMBUF; ++i)
+            {
+                bar |= i_config->baseAddress[i];
+            }
+
+            bar &= ~barMsk;
+
+            PK_TRACE_DBG("PBABAR(%d): %016llx", PBA_BAR_MEMBUF, bar);
+            PK_TRACE_DBG("PBABARMSK: %016llx", barMsk);
+
+            rc = putscom_abs(PBA_BARMSKN(PBA_BAR_MEMBUF), barMsk);
+
+            if (rc)
+            {
+                PK_TRACE_DBG("Unexpected rc = 0x%08x SCOMing PBA_BARMSKN(%d)\n",
+                             (uint32_t)rc, PBA_BAR_MEMBUF);
+                rc = MEMBUF_BARMSKN_PUTSCOM_FAILURE;
+                break;
+            }
+
+            rc = putscom_abs(PBA_BARN(PBA_BAR_MEMBUF), bar);
+            if (rc)
+            {
+                PK_TRACE_DBG("Unexpected rc = 0x%08x SCOMing PBA_BARN(%d)\n",
+                             (uint32_t)rc, PBA_BAR_MEMBUF);
+                rc = MEMBUF_BARN_PUTSCOM_FAILURE;
+                break;
+            }
+        }
+
+        // Do an independent check that every membuf base address
+        // can be generated by the combination of the current BAR and
+        // BAR Mask, along with the initial requirement that the mask must
+        // include at least bits 38:43.
+
+        if (i_config->config != 0)
+        {
+            rc = getscom_abs(PBA_BARN(PBA_BAR_MEMBUF), &bar);
+
+            if (rc)
+            {
+                PK_TRACE_DBG("Unexpected rc = 0x%08x SCOMing PBA_BARN(%d)\n",
+                             (uint32_t)rc, PBA_BAR_MEMBUF);
+                rc = MEMBUF_BARN_GETSCOM_FAILURE;
+                break;
+            }
+
+            rc = getscom_abs(PBA_BARMSKN(PBA_BAR_MEMBUF), &mask);
+
+            if (rc)
+            {
+                PK_TRACE_DBG("Unexpected rc = 0x%08x SCOMing PBA_BARMSKN(%d)\n",
+                             (uint32_t)rc, PBA_BAR_MEMBUF);
+                rc = MEMBUF_BARMSKN_GETSCOM_FAILURE;
+                break;
+            }
+
+            bar = bar & PBA_BARN_ADDR_MASK;
+            mask = mask & PBA_BARMSKN_MASK_MASK;
+
+            if ((mask & 0x0000000003f00000ull) != 0x0000000003f00000ull)
+            {
+
+                PK_TRACE("PBA BAR mask (%d) does not cover bits 38:43\n", PBA_BAR_MEMBUF);
+                rc = MEMBUF_MASK_ERROR;
+                break;
+            }
+
+            for (i = 0; i < OCCHW_N_MEMBUF; ++i)
+            {
+                if (i_config->baseAddress[i] != 0)
+                {
+                    if ((i_config->baseAddress[i] & ~mask) !=
+                        (bar & ~mask))
+                    {
+
+                        PK_TRACE("BAR/Mask (%d) error for MCS/membuf %d",
+                                 PBA_BAR_MEMBUF, i);
+
+                        PK_TRACE("    base = 0x%08x%08x",
+                                 (uint32_t)(i_config->baseAddress[i]>>32),
+                                 (uint32_t)(i_config->baseAddress[i]));
+
+                        PK_TRACE("    bar  = 0x%08x%08x"
+                                 "    mask = 0x%08x%08x",
+                                 (uint32_t)(bar >> 32),
+                                 (uint32_t)(bar),
+                                 (uint32_t)(mask >> 32),
+                                 (uint32_t)(mask));
+
+                        rc = MEMBUF_BAR_MASK_ERROR;
+                        break;
+                    }
+                }
+            }
+        }
+    } while(0);
+    return rc;
+
+} // end configure_pba_bar_for_inband_access()
 
 
 int ocmb_check_sensor_cache_enabled(MemBufConfiguration_t * i_config,
@@ -401,6 +621,12 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
     return rc;
 }
 
+/**
+ * Check for OCMBr sensor errors
+ * @param[in] Configuration information
+ * @param[in] The ordinal membuf number
+ * @return [0 | return code]
+ */
 int check_and_reset_mmio_fir(MemBufConfiguration_t* i_config, unsigned int i_membuf)
 {
     int rc = 0;
@@ -600,7 +826,7 @@ int get_ocmb_sensorcache(MemBufConfiguration_t* i_config,
                                  i_parms->collect);
                         i_config->config &= ~(CHIP_CONFIG_MEMBUF(i_parms->collect));
 
-                        // This rc will cause the 405 to remove this centaur sensor
+                        // This rc will cause the 405 to remove this membuf sensor
                         rc = MEMBUF_CHANNEL_CHECKSTOP;
                     }
                     mtmsr(org_msr);

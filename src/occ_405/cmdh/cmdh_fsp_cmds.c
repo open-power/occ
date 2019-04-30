@@ -33,7 +33,6 @@
 #include "state.h"
 #include "cmdh_fsp_cmds.h"
 #include "proc_pstate.h"
-#include "centaur_data.h"
 #include <amec_data.h>
 #include "amec_amester.h"
 #include "amec_service_codes.h"
@@ -44,10 +43,11 @@
 #include "amec_master_smh.h"
 #include <proc_data.h>
 #include "homer.h"
-#include <centaur_data.h>
 #include <avsbus.h>
 #include "wof.h"
 #include "sensor_main_memory.h"
+#include "memory.h"
+#include "memory_data.h"
 #include "gpu.h"
 
 extern dimm_sensor_flags_t G_dimm_temp_expired_bitmap;
@@ -57,8 +57,6 @@ extern bool G_vrm_vdd_temp_expired;
 extern bool G_reset_prep;
 extern uint16_t G_amester_max_data_length;
 extern uint8_t G_occ_interrupt_type;
-extern bool G_epow_gpio_scheduled;
-extern GpeRequest G_epow_gpio_detected_req;
 
 extern opal_proc_voting_reason_t G_amec_opal_proc_throt_reason;
 
@@ -206,7 +204,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
 
     //If memory is being throttled due to OverTemp or due to Failure to read sensors set mthrot_due_to_ot bit.
     if (((g_amec->mem_throttle_reason == AMEC_MEM_VOTING_REASON_DIMM) ||
-         (g_amec->mem_throttle_reason == AMEC_MEM_VOTING_REASON_CENT)))
+         (g_amec->mem_throttle_reason == AMEC_MEM_VOTING_REASON_MEMBUF)))
     {
         l_poll_rsp->ext_status.mthrot_due_to_ot = 1;
     }
@@ -323,12 +321,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
     l_sensorHeader.count  = 0;
 
     //Initialize to max number of possible temperature sensors.
-    unsigned int max_dimms_per_membuf = NUM_DIMMS_PER_CENTAUR;
-    if (G_sysConfigData.mem_type == MEM_TYPE_OCM)
-    {
-        max_dimms_per_membuf = NUM_DIMMS_PER_OCMB;
-    }
-    l_max_sensors = MAX_NUM_CORES + MAX_NUM_MEM_CONTROLLERS + (MAX_NUM_MEM_CONTROLLERS * max_dimms_per_membuf) + (MAX_NUM_GPU_PER_DOMAIN * 2);
+    l_max_sensors = MAX_NUM_CORES + MAX_NUM_MEM_CONTROLLERS + (MAX_NUM_MEM_CONTROLLERS * NUM_DIMMS_PER_OCMB) + (MAX_NUM_GPU_PER_DOMAIN * 2);
     l_max_sensors++;  // +1 for VRM
     cmdh_poll_temp_sensor_t l_tempSensorList[l_max_sensors];
     memset(l_tempSensorList, 0x00, sizeof(l_tempSensorList));
@@ -345,88 +338,58 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
         }
     }
 
-    // Add the DIMM and centaur temperatures
-    uint8_t l_cent, l_port, l_dimm = 0;
-    if(G_sysConfigData.mem_type == MEM_TYPE_NIMBUS)
+    // Add the memory temperatures
+    uint8_t l_membuf, l_dimm = 0;
+    static bool l_traced_missing_sid = FALSE;
+    for (l_membuf=0; l_membuf < MAX_NUM_MEM_CONTROLLERS; l_membuf++)
     {
-        for (l_port=0; l_port < NUM_DIMM_PORTS; l_port++)
+        if (MEMBUF_PRESENT(l_membuf))
         {
-            for(l_dimm=0; l_dimm < max_dimms_per_membuf; l_dimm++)
+            //Add entry for membufs.
+            uint32_t l_temp_sid = g_amec->proc[0].memctl[l_membuf].membuf.temp_sid;
+            l_tempSensorList[l_sensorHeader.count].id = l_temp_sid;
+            l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_MEMBUF;
+            if (G_membuf_timeout_logged_bitmap & (MEMBUF0_PRESENT_MASK >> l_membuf))
             {
-                if (g_amec->proc[0].memctl[l_port].centaur.dimm_temps[l_dimm].temp_sid != 0)
+                l_tempSensorList[l_sensorHeader.count].value = 0xFF;
+            }
+            else
+            {
+                l_tempSensorList[l_sensorHeader.count].value = (g_amec->proc[0].memctl[l_membuf].membuf.membuf_hottest.cur_temp) & 0xFF;
+            }
+
+            l_sensorHeader.count++;
+
+            //Add entries for present dimms associated with current memory buffer l_membuf.
+            for(l_dimm=0; l_dimm < NUM_DIMMS_PER_OCMB; l_dimm++)
+            {
+                l_temp_sid = g_amec->proc[0].memctl[l_membuf].membuf.dimm_temps[l_dimm].temp_sid;
+
+                if((FSP_SUPPORTED_OCC == G_occ_interrupt_type) && (l_temp_sid == 0) && (g_amec->proc[0].memctl[l_membuf].membuf.dimm_temps[l_dimm].cur_temp != 0))
                 {
-                    l_tempSensorList[l_sensorHeader.count].id = g_amec->proc[0].memctl[l_port].centaur.dimm_temps[l_dimm].temp_sid;
+                    if (!l_traced_missing_sid)
+                    {
+                        CMDH_TRAC_ERR("cmdh_poll_v20: DIMM%04X sensor not defined but temperature was non-zero", ((l_membuf << 8)|l_dimm));
+                        l_traced_missing_sid = TRUE;
+                    }
+                    l_temp_sid = 1 + l_dimm; // If sid is zero them make up a sid for FSP
+                }
+
+                if (l_temp_sid != 0)
+                {
+                    l_tempSensorList[l_sensorHeader.count].id = l_temp_sid;
                     l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_DIMM;
                     //If a dimm timed out long enough, we should return 0xFFFF for that sensor.
-                    if (G_dimm_temp_expired_bitmap.bytes[l_port] & (DIMM_SENSOR0 >> l_dimm))
+                    if (G_dimm_temp_expired_bitmap.bytes[l_membuf] & (DIMM_SENSOR0 >> l_dimm))
                     {
                         l_tempSensorList[l_sensorHeader.count].value = 0xFF;
                     }
                     else
                     {
-                        l_tempSensorList[l_sensorHeader.count].value = (g_amec->proc[0].memctl[l_port].centaur.dimm_temps[l_dimm].cur_temp) & 0xFF;
+                        l_tempSensorList[l_sensorHeader.count].value = (g_amec->proc[0].memctl[l_membuf].membuf.dimm_temps[l_dimm].cur_temp & 0xFF);
                     }
 
                     l_sensorHeader.count++;
-                }
-            }
-        }
-    }
-    else if ((G_sysConfigData.mem_type == MEM_TYPE_CUMULUS) ||
-             (G_sysConfigData.mem_type == MEM_TYPE_OCM))
-    {
-
-        static bool l_traced_missing_sid = FALSE;
-        for (l_cent=0; l_cent < MAX_NUM_MEM_CONTROLLERS; l_cent++)
-        {
-            if (CENTAUR_PRESENT(l_cent))
-            {
-                //Add entry for centaurs.
-                uint32_t l_temp_sid = g_amec->proc[0].memctl[l_cent].centaur.temp_sid;
-                l_tempSensorList[l_sensorHeader.count].id = l_temp_sid;
-                l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_CENTAUR;
-                if (G_cent_timeout_logged_bitmap & (CENTAUR0_PRESENT_MASK >> l_cent))
-                {
-                    l_tempSensorList[l_sensorHeader.count].value = 0xFF;
-                }
-                else
-                {
-                    l_tempSensorList[l_sensorHeader.count].value = (g_amec->proc[0].memctl[l_cent].centaur.centaur_hottest.cur_temp) & 0xFF;
-                }
-
-                l_sensorHeader.count++;
-
-                //Add entries for present dimms associated with current centaur l_cent.
-                for(l_dimm=0; l_dimm < max_dimms_per_membuf; l_dimm++)
-                {
-                    l_temp_sid = g_amec->proc[0].memctl[l_cent].centaur.dimm_temps[l_dimm].temp_sid;
-
-                    if((FSP_SUPPORTED_OCC == G_occ_interrupt_type) && (l_temp_sid == 0) && (g_amec->proc[0].memctl[l_cent].centaur.dimm_temps[l_dimm].cur_temp != 0))
-                    {
-                        if (!l_traced_missing_sid)
-                        {
-                            CMDH_TRAC_ERR("cmdh_poll_v20: DIMM%04X sensor not defined but temperature was non-zero", ((l_cent << 8)|l_dimm));
-                            l_traced_missing_sid = TRUE;
-                        }
-                        l_temp_sid = 1 + l_dimm; // If sid is zero them make up a sid for FSP
-                    }
-
-                    if (l_temp_sid != 0)
-                    {
-                        l_tempSensorList[l_sensorHeader.count].id = l_temp_sid;
-                        l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_DIMM;
-                        //If a dimm timed out long enough, we should return 0xFFFF for that sensor.
-                        if (G_dimm_temp_expired_bitmap.bytes[l_cent] & (DIMM_SENSOR0 >> l_dimm))
-                        {
-                            l_tempSensorList[l_sensorHeader.count].value = 0xFF;
-                        }
-                        else
-                        {
-                            l_tempSensorList[l_sensorHeader.count].value = (g_amec->proc[0].memctl[l_cent].centaur.dimm_temps[l_dimm].cur_temp & 0xFF);
-                        }
-
-                        l_sensorHeader.count++;
-                    }
                 }
             }
         }
@@ -905,27 +868,6 @@ errlHndl_t cmdh_reset_prep (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
     do
     {
-        if (G_epow_gpio_scheduled)
-        {
-            // Check to see if EPOW_GPIO IPC request is not idle. If not, sleep
-            // 4ms to give it time to finish and then continue.
-            if(!async_request_is_idle(&G_epow_gpio_detected_req.request))
-            {
-                TRAC_IMP("cmdh_reset_prep: EPOW IPC request is NOT idle. Sleeping for 4ms");
-                ssx_sleep(SSX_MILLISECONDS(4));
-                if(!async_request_is_idle(&G_epow_gpio_detected_req.request))
-                {
-                    TRAC_ERR("cmdh_reset_prep: EPOW IPC request is still NOT idle. completion state=0x%08X",
-                             G_epow_gpio_detected_req.request.completion_state);
-                }
-            }
-            else
-            {
-                TRAC_IMP("cmdh_reset_prep: EPOW IPC request IS idle. completion state=0x%08X",
-                         G_epow_gpio_detected_req.request.completion_state);
-            }
-        }
-
         // Command Length Check - make sure we at least have a version number
         if( CMDH_DATALEN_FIELD_UINT16(i_cmd_ptr) < CMDH_RESET_PREP_MIN_DATALEN)
         {

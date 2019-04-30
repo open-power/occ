@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -47,12 +47,7 @@ void gpe_membuf_init(ipc_msg_t* i_cmd, void* i_arg)
     }
     else
     {
-        if(payload->mem_type == MEMTYPE_CENTAUR)
-        {
-            PK_TRACE("Centaur_configuration. MSR:%08x",mfmsr());
-            rc = gpe_centaur_configuration_create(G_membuf_config);
-        }
-        else if(payload->mem_type == MEMTYPE_OCMB)
+        if(payload->mem_type == MEMTYPE_OCMB)
         {
             PK_TRACE("Ocmb_configuration. MSR:%08x",mfmsr());
             rc = gpe_ocmb_configuration_create(G_membuf_config);
@@ -119,16 +114,9 @@ void gpe_membuf_data(ipc_msg_t* i_cmd, void* i_arg)
     if(g_log_once == 0)
     {
         g_log_once = 1;
-        PK_TRACE("Centaur Data. MSR:%08x",mfmsr());
+        PK_TRACE("MemBuf Data. MSR:%08x",mfmsr());
     }
-    if(G_membuf_config->membuf_type == MEMTYPE_CENTAUR)
-    {
-        rc = get_centaur_sensorcache(G_membuf_config, dataParms);
-    }
-    else
-    {
-        rc = get_ocmb_sensorcache(G_membuf_config, dataParms);
-    }
+    rc = get_ocmb_sensorcache(G_membuf_config, dataParms);
 
     dataParms->error.rc = rc;
 

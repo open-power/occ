@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -27,52 +27,43 @@
 #include <trac.h>
 
 #include "memory.h"
-#include "memory_power_control.h"
-#include "dimm_control.h"
-#include "centaur_control.h"
+#include "memory_data.h"
 #include "ocmb_membuf.h"
-#include "centaur_data.h"
 #include "membuf_structs.h"
 #include "memory_service_codes.h"
 #include <occ_service_codes.h>  // for SSX_GENERIC_FAILURE
 #include "amec_sys.h"
 
 extern bool G_mem_monitoring_allowed;
-extern dimm_control_args_t  G_dimm_control_args;
 extern task_t G_task_table[TASK_END];
 
+//bitmap of configured MBA's (2 per memory buffer, lsb is membuf 0/mba 0)
+//same variable used for tracking bit maps of rdimms (4 per mc, 2 mc pairs)
+uint16_t G_configured_mbas = 0;
 
 extern MemBufScomParms_t G_membuf_control_reg_parms;
 
-// This array identifies dimm throttle limits for both Centaurs (Cumulus) and
-// rdimms (Nimbus) based systems.
-//
-// For Nimbus systems, only the first two rows (corresponding to memory controller
-// pairs M01 and M23) are used.
-//
-// For Cumulus systems, only the first two columns (corresponding to the two mba
-// pairs mba01 and mba23) are used.
+// This array identifies dimm throttle limits
 memory_throttle_t G_memoryThrottleLimits[MAX_NUM_MEM_CONTROLLERS][MAX_NUM_MCU_PORTS] = {{{0}}};
 
-//Memory structure used for task data pointers in both Cumulus (Centaur)
-//and Nimbus (RDIMM) systems.
+//Memory structure used for task data pointers
 memory_control_task_t G_memory_control_task =
 {
-    .startMemIndex        = 0,  // First Memory Control Index (Centaur/MC_pair|port)
+    .startMemIndex        = 0,  // First Memory Control Index (membuf/MC_pair|port)
     .prevMemIndex         = 7,  // Previous Memory Control Index written to
     .curMemIndex          = 0,  // Current Memory Control Index
     .endMemIndex          = 7,  // Last Memory Control Index
     .traceThresholdFlags  = 0,  // Trace Throttle Flags
 };
 
+void ocmb_init(void);
+
 
 // Function Specification
 //
 // Name: task_memory_control
 //
-// Description: Performs system memory control:
-//             - for Nimbus:  calls dimm_control() to control dimms power
-//             - for Cumulus: calls centaur_control() to control centaur power
+// Description: Performs system memory control: to control memory power
 //
 // End Function Specification
 
@@ -81,7 +72,7 @@ memory_control_task_t G_memory_control_task =
 
 void task_memory_control( task_t * i_task )
 {
-    //track # of consecutive failures on a specific Centaur/RDIMM
+    //track # of consecutive failures on a specific membuf/DIMM
     static uint8_t L_scom_timeout[MAX_NUM_MEM_CONTROLLERS] = {0};
 
     errlHndl_t     l_err     = NULL;    // Error handler
@@ -99,19 +90,7 @@ void task_memory_control( task_t * i_task )
     // Pointer to the task data structure
     memory_control_task_t* memControlTask =  (memory_control_task_t*) i_task->data_ptr;
 
-
-    if (MEM_TYPE_NIMBUS ==  G_sysConfigData.mem_type)
-    {
-        gpe_rc = G_dimm_control_args.error.rc;
-    }
-    else if (MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type)
-    {
-        gpe_rc = G_membuf_control_reg_parms.error.rc;
-    }
-    else if (MEM_TYPE_OCM == G_sysConfigData.mem_type)
-    {
-        gpe_rc = G_membuf_control_reg_parms.error.rc;
-    }
+    gpe_rc = G_membuf_control_reg_parms.error.rc;
 
     do
     {
@@ -151,44 +130,25 @@ void task_memory_control( task_t * i_task )
         {
             if(!async_request_completed(&memControlTask->gpe_req.request) || gpe_rc)
             {
-                // ignore error and stop monitoring this centaur if there is a channel checkstop
-                if( (MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type) &&
-                    (gpe_rc == MEMBUF_CHANNEL_CHECKSTOP) )
+                //Request failed. Keep count of failures and request a reset if we reach a
+                //max retry count
+                L_scom_timeout[memIndex]++;
+                if(L_scom_timeout[memIndex] == MEMORY_CONTROL_SCOM_TIMEOUT)
                 {
-                    // Remove the centaur sensor and all dimm sensors behind it.
-                    cent_chan_checkstop(memControlTask->curMemIndex);
+                    break;
                 }
-                else
-                {
-                    //Request failed. Keep count of failures and request a reset if we reach a
-                    //max retry count
-                    L_scom_timeout[memIndex]++;
-                    if(L_scom_timeout[memIndex] == MEMORY_CONTROL_SCOM_TIMEOUT)
-                    {
-                        break;
-                    }
-                }
-            }//if(!async_request_completed(&memControlTask->gpe_req.request) || l_parms->rc)
+            }
             else
             {
                 //request completed successfully.  reset the timeout.
                 L_scom_timeout[memIndex] = 0;
-
-                // Store M value if needed
-                if(G_dimm_control_args.dimmDenominatorValues.need_m)
-                {
-                    g_amec->sys.dimm_m_values[mc][port].m_value =
-                        G_dimm_control_args.dimmDenominatorValues.m_value;
-                    g_amec->sys.dimm_m_values[mc][port].need_m = FALSE;
-                    MEM_DBG("M Value for MC%d P%d is 0x%08X", mc, port, g_amec->sys.dimm_m_values[mc][port].m_value);
-                }
             }
-        }//if(L_gpe_scheduled)
+        }
 
         //The previous GPE job completed, get ready for the next job.
         L_gpe_scheduled = FALSE;
 
-        //Update current dimm/centaur index if we didn't fail
+        //Update current dimm/membuf index if we didn't fail
         memControlTask->prevMemIndex = memIndex;
         if ( memIndex >= memControlTask->endMemIndex )
         {
@@ -200,62 +160,20 @@ void task_memory_control( task_t * i_task )
         }
         memControlTask->curMemIndex = memIndex;
 
-        if (MEM_TYPE_NIMBUS ==  G_sysConfigData.mem_type)
+        if(!MEMBUF_PRESENT(memIndex) ||
+           (!MBA_CONFIGURED(memIndex, 0) && !MBA_CONFIGURED(memIndex, 1)))
         {
-            if(!NIMBUS_DIMM_INDEX_THROTTLING_CONFIGURED(memIndex))
-            {
-                break;
-            }
-
-            // control dimm specified by mc,port
-            mc   = memIndex>>2;
-            port = memIndex&3;
-
-            // Do the update_nlimit, calculate new N values, check whether throttle values
-            // were updated, then Schedule GPE request, rc if problem, else L_gpe_schedule
-            rc = dimm_control(mc, port);
-
-            MEM_DBG("memIndex=%d, mc|port=0x%%04X, rc=%d",
-                    memIndex, mc<<8| port, rc);
-
-        }
-        else if (MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type)
-        {
-            //If centaur is not present or neither MBA is configured then skip it.
-            if(!CENTAUR_PRESENT(memIndex) ||
-               (!MBA_CONFIGURED(memIndex, 0) && !MBA_CONFIGURED(memIndex, 1)))
-            {
-                break;
-            }
-            rc = centaur_control(memControlTask);  // Control one centaur
-        }
-        else if (MEM_TYPE_OCM == G_sysConfigData.mem_type)
-        {
-            // We use the same macros for Ocmb and Centaur
-            if(!CENTAUR_PRESENT(memIndex) ||
-               (!MBA_CONFIGURED(memIndex, 0) && !MBA_CONFIGURED(memIndex, 1)))
-            {
-                break;
-            }
-            rc = ocmb_control(memControlTask);
+            break;
         }
 
+        rc = ocmb_control(memControlTask);
         if(rc)
         {
             rc = gpe_request_schedule(&G_memory_control_task.gpe_req);
 
             if( rc )
             {
-                if (MEM_TYPE_NIMBUS ==  G_sysConfigData.mem_type)
-                {
-                    gpe_rc = G_dimm_control_args.error.rc;
-                }
-                else if (MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type)
-                {
-                    gpe_rc = G_membuf_control_reg_parms.error.rc;
-                }
-
-                //Error in schedule gpe memory (dimm/centaur) control
+                //Error in schedule gpe memory (dimm/membuf) control
                 TRAC_ERR("task_memory_control: Failed to schedule memory control gpe rc=%x",
                          rc);
 
@@ -295,32 +213,16 @@ void task_memory_control( task_t * i_task )
 
     } while(0);
 
-
-//Global centaur structures used for task data pointers
-
+    //Global membuf structures used for task data pointers
 
     if(L_scom_timeout[memIndex] == MEMORY_CONTROL_SCOM_TIMEOUT)
     {
-        if (MEM_TYPE_NIMBUS ==  G_sysConfigData.mem_type)
-        {
-            if(memIndex>>2)
-            {
-                TRAC_ERR("task_memory_control: Timeout scomming MC23:port[%d]", memIndex&3);
-            }
-            else
-            {
-                TRAC_ERR("task_memory_control: Timeout scomming MC01:port[%d]", memIndex&3);
-            }
-        }
-        else if (MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type)
-        {
-            TRAC_ERR("task_memory_control: Timeout scomming centaur[%d]", memIndex);
-        }
+        TRAC_ERR("task_memory_control: Timeout scomming memory buffer[%d]", memIndex);
         /* @
          * @errortype
          * @moduleid    MEM_MID_TASK_MEMORY_CONTROL
          * @reasoncode  INTERNAL_FAILURE
-         * @userdata1   centaur/memIndex number
+         * @userdata1   membuf/memIndex number
          * @userdata2   0
          * @userdata4   OCC_NO_EXTENDED_RC
          * @devdesc     Timed out trying to set the memory throttle settings
@@ -343,10 +245,10 @@ void task_memory_control( task_t * i_task )
                 ERRL_USR_DTL_STRUCT_VERSION_1,                //version
                 ERRL_USR_DTL_BINARY_DATA);                    //type
 
-        //callout the centaur
+        //callout the membuf
         addCalloutToErrl(l_err,
                          ERRL_CALLOUT_TYPE_HUID,
-                         G_sysConfigData.centaur_huids[memIndex],
+                         G_sysConfigData.membuf_huids[memIndex],
                          ERRL_CALLOUT_PRIORITY_MED);
 
         //callout the processor
@@ -367,20 +269,10 @@ void memory_init()
 {
     if(G_mem_monitoring_allowed)
     {
-        // Check if memory task is running (default task is for NIMBUS)
-        const task_id_t mem_task = TASK_ID_DIMM_SM;
-        if(!rtl_task_is_runnable(mem_task))
+        // Check if memory task is running
+        if(!rtl_task_is_runnable(TASK_ID_MEMORY_DATA))
         {
-            if (MEM_TYPE_NIMBUS ==  G_sysConfigData.mem_type)
-            {
-                // Init DIMM state manager IPC request
-                memory_nimbus_init();
-            }
-            else if (MEM_TYPE_CUMULUS == G_sysConfigData.mem_type)
-            {
-                centaur_init(); //no rc, handles errors internally
-            }
-            else if (MEM_TYPE_OCM == G_sysConfigData.mem_type)
+            if (MEM_TYPE_OCM == G_sysConfigData.mem_type)
             {
                 ocmb_init();
             }
@@ -399,19 +291,21 @@ void memory_init()
             {
                 // Initialization was successful.  Set task flags to allow memory
                 // tasks to run and also prevent from doing initialization again.
-                G_task_table[mem_task].flags = MEMORY_DATA_RTL_FLAGS;
+                G_task_table[TASK_ID_MEMORY_DATA].flags = MEMORY_DATA_RTL_FLAGS;
                 G_task_table[TASK_ID_MEMORY_CONTROL].flags = MEMORY_CONTROL_RTL_FLAGS;
             }
         }
     }
 
-    // if memory power control is enabled (version 21 memory configurtion
-    // command is received), create GPE1 memory power control IPC task
-    if((G_sysConfigData.ips_mem_pwr_ctl     != MEM_PWR_CTL_NO_SUPPORT ) &&
-       (G_sysConfigData.default_mem_pwr_ctl != MEM_PWR_CTL_NO_SUPPORT ))
-    {
-        gpe_init_mem_power_control();
-    }
-
 } // end memory_init()
+
+
+void disable_all_dimms()
+{
+    if (G_mem_monitoring_allowed)
+    {
+        TRAC_INFO("disable_all_dimms: DIMM temp collection is being stopped");
+        G_mem_monitoring_allowed = false;
+    }
+}
 

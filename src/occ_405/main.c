@@ -41,7 +41,6 @@
 #include <dcom.h>
 #include <rtls.h>
 #include <proc_data.h>
-#include <centaur_data.h>
 #include <dpss.h>
 #include <state.h>
 #include <amec_sys.h>
@@ -53,7 +52,6 @@
 #include <amec_health.h>
 #include <amec_freq.h>
 #include <pss_service_codes.h>
-#include <dimm.h>
 #include "occhw_shared_data.h"
 #include <pgpe_shared.h>
 #include <gpe_register_addresses.h>
@@ -1331,18 +1329,13 @@ void hmon_routine()
     //if we are in observation, characterization, or active state with memory temperature data
     // being collected then monitor the temperature collections for overtemp and timeout conditions
     if( (IS_OCC_STATE_OBSERVATION() || IS_OCC_STATE_ACTIVE() || IS_OCC_STATE_CHARACTERIZATION()) &&
-        (rtl_task_is_runnable(TASK_ID_DIMM_SM)) && (!SMGR_is_state_transitioning()) )
+        (rtl_task_is_runnable(TASK_ID_MEMORY_DATA)) && (!SMGR_is_state_transitioning()) )
     {
-        // For Cumulus systems only, check for centaur timeout and overtemp errors
-        if ((MEM_TYPE_CUMULUS == G_sysConfigData.mem_type) ||
-            (MEM_TYPE_OCM == G_sysConfigData.mem_type))
-        {
-            amec_health_check_cent_timeout();
-            amec_health_check_cent_temp();
-        }
+        // Check for memory buffer timeout and overtemp errors
+        amec_health_check_membuf_timeout();
+        amec_health_check_membuf_temp();
 
-        // For both Nimbus and Cumulus systems, check for rdimm-modules/centaur-dimm
-        // timeout and overtemp
+        // Check for DIMM timeout and overtemp errors
         amec_health_check_dimm_timeout();
         amec_health_check_dimm_temp();
     }

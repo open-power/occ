@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -44,10 +44,6 @@
 //*************************************************************************
 enum tracReasonCodes
 {
-    TRAC_ERROR_BLOCK_ALLOCATE                       =  TRAC_COMP_ID | 0x00,
-    TRAC_ERROR_COMP_NOT_FOUND                       =  TRAC_COMP_ID | 0x01,
-    TRAC_MEM_ALLOC_FAIL                             =  TRAC_COMP_ID | 0x02,
-    TRAC_MEM_BUFF_TOO_SMALL                         =  TRAC_COMP_ID | 0x03,
     TRAC_INVALID_PARM                               =  TRAC_COMP_ID | 0x04,
     TRAC_DATA_SIZE_TOO_LARGE                        =  TRAC_COMP_ID | 0x05,
     TRAC_DATA_SIZE_LESS_THAN_HEADER_SIZE            =  TRAC_COMP_ID | 0x06,

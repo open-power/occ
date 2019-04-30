@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -24,17 +24,12 @@
 /* IBM_PROLOG_END_TAG                                                     */
 #include "ipc_api.h"
 #include "ipc_async_cmd.h"
-#include "gpe1_dimm.h"
 #include "gpu_structs.h"
 #include "gpe_membuf.h"
 
-void gpe_dimm_control(ipc_msg_t* cmd, void* arg);
 void gpe1_nop(ipc_msg_t* cmd, void* arg);
-void gpe_reset_mem_deadman(ipc_msg_t* cmd, void* arg);
 void gpe_24x7(ipc_msg_t* cmd, void* arg);
-void gpe_mem_power_control(ipc_msg_t* cmd, void* arg);
 void gpe_gpu_init(ipc_msg_t* cmd, void* arg);
-void gpe_scom_nvdimms_nimbus(ipc_msg_t* cmd, void* arg);
 
 #ifdef OCC_GPU_SUPPORT
 void gpe_gpu_sm(ipc_msg_t* cmd, void* arg);
@@ -78,18 +73,18 @@ IPC_MT_FUNC_TABLE_END
 
 // Function table for single target (processor-specific) functions
 IPC_ST_FUNC_TABLE_START
-IPC_HANDLER(gpe_dimm_sm, 0)                // 0 - IPC_ST_DIMM_SM_FUNCID
-IPC_HANDLER(gpe_dimm_control, 0)           // 1 - IPC_ST_DIMM_CONTROL_FUNCID
-IPC_HANDLER(gpe1_nop, 0)                   // 2 - IPC_ST_GPE1_NOP
-IPC_HANDLER(gpe_reset_mem_deadman, 0)      // 3 - IPC_ST_RESET_MEM_DEADMAN
-IPC_HANDLER(gpe_24x7, 0)                   // 4 - IPC_ST_24_X_7_FUNCID
-IPC_HANDLER(gpe_mem_power_control, 0)      // 5 - IPC_ST_MEM_POWER_CONTROL_FUNCID
-IPC_HANDLER(gpe_gpu_sm, 0)                 // 6 - IPC_ST_GPU_SM_FUNCID
-IPC_HANDLER(gpe_gpu_init, 0)               // 7 - IPC_ST_GPE_GPU_INIT_FUNCID
-IPC_HANDLER(gpe_membuf_scom, 0)            // 8 - IPC_ST_MEMBUF_SCOM_FUNCID
-IPC_HANDLER(gpe_membuf_data, 0)            // 9 - IPC_ST_MEMBUF_DATA_FUNCID
-IPC_HANDLER(gpe_membuf_init, 0)            // 10 -IPC_ST_MEMBUF_INIT_FUNCID
-IPC_HANDLER(gpe_scom_nvdimms_nimbus, 0)    // 11 -IPC_ST_EPOW_GPIO_ASSERT_FUNCID
+IPC_HANDLER(gpe1_nop, 0)                   // 0 - IPC_ST_GPE1_NOP
+IPC_HANDLER(gpe_24x7, 0)                   // 1 - IPC_ST_24_X_7_FUNCID
+IPC_HANDLER(gpe_gpu_sm, 0)                 // 2 - IPC_ST_GPU_SM_FUNCID
+IPC_HANDLER(gpe_gpu_init, 0)               // 3 - IPC_ST_GPE_GPU_INIT_FUNCID
+IPC_HANDLER(gpe_membuf_scom, 0)            // 4 - IPC_ST_MEMBUF_SCOM_FUNCID
+IPC_HANDLER(gpe_membuf_data, 0)            // 5 - IPC_ST_MEMBUF_DATA_FUNCID
+IPC_HANDLER(gpe_membuf_init, 0)            // 6 - IPC_ST_MEMBUF_INIT_FUNCID
+IPC_HANDLER_DEFAULT                        // 7
+IPC_HANDLER_DEFAULT                        // 8
+IPC_HANDLER_DEFAULT                        // 9
+IPC_HANDLER_DEFAULT                        // 10
+IPC_HANDLER_DEFAULT                        // 11
 IPC_HANDLER_DEFAULT                        // 12
 IPC_HANDLER_DEFAULT                        // 13
 IPC_HANDLER_DEFAULT                        // 14

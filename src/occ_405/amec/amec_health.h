@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -43,11 +43,11 @@
 
 void amec_health_check_proc_temp(void);
 void amec_health_check_proc_timeout(void);
-void amec_health_check_cent_temp(void);
-void amec_health_check_cent_timeout(void);
+void amec_health_check_membuf_temp(void);
+void amec_health_check_membuf_timeout(void);
 void amec_health_check_dimm_temp(void);
 void amec_health_check_dimm_timeout(void);
-void amec_mem_mark_logged(uint8_t i_cent,
+void amec_mem_mark_logged(uint8_t i_membuf,
                           uint8_t i_dimm,
                           uint8_t* i_clog_bitmap,
                           uint8_t* i_dlog_bitmap);

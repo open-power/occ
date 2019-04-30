@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_405/dimm/dimm_control.h $                             */
+/* $Source: src/occ_405/mem/memory_data.c $                               */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016                             */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -23,17 +23,51 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
+
+#include <ssx.h>
+#include <occhw_async.h>
+
+#include <trac_interface.h>
+#include <trac.h>
 #include <occ_common.h>
-#include "dimm_structs.h"
-#include "rtls.h"
+#include <comp_ids.h>
+#include <occ_service_codes.h>
+#include <state.h>
+#include <occ_sys_config.h>
+#include "sensor.h"
+#include "amec_sys.h"
+#include "lock.h"
+#include "common.h"
+#include "memory.h"
+#include "memory_data.h"
+#include "amec_health.h"
+#include "i2c.h"
 
-#ifndef _DIMM_CONTROL_H
-#define _DIMM_CONTROL_H
+extern bool G_mem_monitoring_allowed;
 
-bool dimm_control(uint8_t mc, uint8_t port);
-void dimm_update_nlimits(uint8_t mc, uint8_t port);
-void populate_dimm_control_args(uint16_t i_throttle, uint8_t mc, uint8_t port,
-                                dimm_control_args_t * dimm_control_args);
-uint16_t convert_speed2numerator(uint16_t i_throttle, uint16_t min_n_value, uint16_t max_n_value);
 
-#endif //_DIMM_CONTROL_H
+// Function Specification
+//
+// Name:  task_memory_data
+//
+// Description: Called every other tick to collect memory temperatures
+//
+// Task Flags: RTL_FLAG_ACTIVE
+//
+// End Function Specification
+void task_memory_data(struct task *i_self)
+{
+    static unsigned int L_dimms_enabled = false;
+    if (!L_dimms_enabled)
+    {
+        L_dimms_enabled = true;
+        TRAC_INFO("task_memory_data: Memory temperature collection is being started (0x%08X)", G_dimm_present_sensors.words[0]);
+        G_dimm_enabled_sensors = G_dimm_present_sensors;
+    }
+
+    if (G_mem_monitoring_allowed)
+    {
+        ocmb_data();
+    }
+
+} // end task_memory_data()

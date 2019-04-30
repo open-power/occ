@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -97,7 +97,7 @@ extern BOOLEAN G_non_dps_power_limited;
 typedef enum
 {
     AMEC_MEM_VOTING_REASON_INIT     = 0x00,
-    AMEC_MEM_VOTING_REASON_CENT     = 0x01,
+    AMEC_MEM_VOTING_REASON_MEMBUF   = 0x01,
     AMEC_MEM_VOTING_REASON_DIMM     = 0x02,
     AMEC_MEM_VOTING_REASON_SLEW     = 0x03,
 }amec_mem_voting_reason_t;

@@ -35,13 +35,12 @@
 #include <cmdh_fsp.h>
 #include <cmdh_fsp_cmds.h>
 #include <memory.h>
-#include <centaur_data.h>
+#include <memory_data.h>
 #include <proc_data.h>
 #include <apss.h>
 #include <gpe_export.h>
 #include "sensor_query_list.h"
 #include "amec_sys.h"
-#include "centaur_mem_data.h"
 #include "dcom.h"
 #include "chom.h"
 #include "wof.h"
@@ -51,8 +50,6 @@
 //*************************************************************************/
 // Externs
 //*************************************************************************/
-extern uint64_t G_inject_dimm;
-uint8_t G_injected_epow_asserted = 0;
 extern gpe_shared_data_t G_shared_gpe_data;
 extern OCCPstateParmBlock G_oppb;
 
@@ -74,6 +71,8 @@ extern OCCPstateParmBlock G_oppb;
 uint16_t G_allow_trace_flags = 0x0000;
 uint32_t G_internal_flags    = 0x00000000;
 extern bool G_smf_mode;
+uint64_t G_inject_dimm = 0;
+uint32_t G_inject_dimm_trace[MAX_NUM_OCMBS][NUM_DIMMS_PER_OCMB] = {{0}};
 
 // SSX Block Copy Request for copying data from HOMER to SRAM
 BceRequest G_debug_pba_request;
@@ -720,35 +719,6 @@ void cmdh_dbug_allow_trace( const cmdh_fsp_cmd_t * i_cmd_ptr,
 }
 
 
-// Function Specification
-//
-// Name: cmdh_dbug_trigger_epow
-//
-// Description: Injects a fake epow event to trigger the EPOW asserted code path
-//              for debug purposes. It will be cleared after event is processed.
-//
-// End Function Specification
-void cmdh_dbug_trigger_epow( void )
-{
-    // Make sure gpio is valid
-    uint8_t l_epow_value = 1;
-    const bool l_epow_valid = apss_gpio_get(G_sysConfigData.apss_gpio_map.nvdimm_epow, &l_epow_value);
-    if (l_epow_valid)
-    {
-        G_injected_epow_asserted = 1;
-        TRAC_INFO("cmdh_dbug_trigger_epow: DEBUG - Injecting EPOW for NVDIMM testing");
-        G_rsp_status = ERRL_RC_SUCCESS;
-    }
-    else
-    {
-        TRAC_ERR("cmdh_dbug_trigger_epow: Rejected because EPOW GPIO is not valid");
-        G_rsp_status = ERRL_RC_INVALID_DATA;
-    }
-
-    return;
-}
-
-
 /// Function Specification
 //
 // Name: cmdh_dbug_dimm_inject
@@ -773,35 +743,35 @@ void cmdh_dbug_dimm_inject( const cmdh_fsp_cmd_t * i_cmd_ptr,
         l_rc = ERRL_RC_INTERNAL_FAIL;
     }
     // Command Length Check
-    else if ((inject_length != 0) && (inject_length != MAX_NUM_CENTAURS))
+    else if ((inject_length != 0) && (inject_length != MAX_NUM_OCMBS))
     {
         TRAC_ERR("cmdh_dbug_dimm_inject: Invalid inject data length %u (expected %u)",
-                 inject_length, MAX_NUM_CENTAURS);
+                 inject_length, MAX_NUM_OCMBS);
         l_rc = ERRL_RC_INVALID_CMD_LEN;
     }
     else
     {
-        if (inject_length == MAX_NUM_CENTAURS)
+        if (inject_length == MAX_NUM_OCMBS)
         {
             TRAC_INFO("cmdh_dbug_dimm_inject: updating DIMM inject mask from 0x%08X.%08X to 0x%08X.%08X",
                       G_inject_dimm >> 32, G_inject_dimm & 0xFFFFFFFF,
                       l_cmd_ptr->inject_mask >> 32, l_cmd_ptr->inject_mask & 0xFFFFFFFF);
             G_inject_dimm = l_cmd_ptr->inject_mask;
 
-            unsigned int l_cent;
-            for(l_cent = 0; l_cent < MAX_NUM_CENTAURS; l_cent++)
+            unsigned int l_membuf;
+            for(l_membuf = 0; l_membuf < MAX_NUM_OCMBS; l_membuf++)
             {
-                uint8_t dimms = (G_inject_dimm >> (l_cent*8)) & 0xFF;
+                uint8_t dimms = (G_inject_dimm >> (l_membuf*8)) & 0xFF;
                 if (dimms != 0)
                 {
                     unsigned int k;
-                    for(k=0; k < NUM_DIMMS_PER_CENTAUR; k++)
+                    for(k=0; k < NUM_DIMMS_PER_OCMB; k++)
                     {
                         if (dimms & (1 << k))
                         {
-                            if(!CENTAUR_SENSOR_ENABLED(l_cent, k))
+                            if(!MEMBUF_SENSOR_ENABLED(l_membuf, k))
                             {
-                                TRAC_ERR("cmdh_dbug_dimm_inject: centaur%d DIMM%d is not enabled", l_cent, k);
+                                TRAC_ERR("cmdh_dbug_dimm_inject: membuf%d DIMM%d is not enabled", l_membuf, k);
                             }
                         }
                     }
@@ -814,8 +784,8 @@ void cmdh_dbug_dimm_inject( const cmdh_fsp_cmd_t * i_cmd_ptr,
         if( l_rsp_ptr != NULL )
         {
             l_rsp_ptr->data_length[0] = 0x00;
-            l_rsp_ptr->data_length[1] = MAX_NUM_CENTAURS;
-            memcpy(&o_rsp_ptr->data[0], &G_inject_dimm, MAX_NUM_CENTAURS);
+            l_rsp_ptr->data_length[1] = MAX_NUM_OCMBS;
+            memcpy(&o_rsp_ptr->data[0], &G_inject_dimm, MAX_NUM_OCMBS);
         }
     }
     G_rsp_status = l_rc;
@@ -1053,29 +1023,28 @@ void dbug_err_inject(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
 // Function Specification
 //
-// Name:  dbug_centaur_dump
+// Name:  dbug_membuf_dump
 //
 // Description: Injects an error
 //
 // End Function Specification
-void dbug_centaur_dump(const cmdh_fsp_cmd_t * i_cmd_ptr,
+void dbug_membuf_dump(const cmdh_fsp_cmd_t * i_cmd_ptr,
                              cmdh_fsp_rsp_t * i_rsp_ptr)
 {
     uint16_t l_datalen = 0;
     uint8_t l_jj=0;
 
     // Determine the size of the data we are returning
-    l_datalen = (sizeof(CentaurMemData) * MAX_NUM_CENTAURS);
+    l_datalen = (sizeof(OcmbMemData) * MAX_NUM_MEMBUFS);
 
     // Fill out the response with the data we are returning
-    for(l_jj=0; l_jj < MAX_NUM_CENTAURS; l_jj++)
+    for(l_jj=0; l_jj < MAX_NUM_MEMBUFS; l_jj++)
     {
-        CentaurMemData * l_sensor_cache_ptr =
-            cent_get_centaur_data_ptr(l_jj);
+        OcmbMemData * l_sensor_cache_ptr = get_membuf_data_ptr(l_jj);
 
-        memcpy((void *)&(i_rsp_ptr->data[l_jj*sizeof(CentaurMemData)]),
+        memcpy((void *)&(i_rsp_ptr->data[l_jj*sizeof(OcmbMemData)]),
                (void *)l_sensor_cache_ptr,
-               sizeof(CentaurMemData));
+               sizeof(OcmbMemData));
     }
 
     // Fill out the rest of the response data
@@ -1233,16 +1202,12 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
             cmdh_dbug_internal_flags( i_cmd_ptr, o_rsp_ptr );
             break;
 
-        case DBUG_TRIGGER_EPOW: // NVDIMM EPOW injection
-            cmdh_dbug_trigger_epow();
-            break;
-
         case DBUG_FLUSH_DCACHE:
             dcache_flush_all();
             break;
 
-        case DBUG_CENTAUR_SENSOR_CACHE:
-             dbug_centaur_dump(i_cmd_ptr, o_rsp_ptr);
+        case DBUG_MEMBUF_SENSOR_CACHE:
+             dbug_membuf_dump(i_cmd_ptr, o_rsp_ptr);
              break;
 
         case DBUG_DUMP_PROC_DATA:

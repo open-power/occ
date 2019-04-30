@@ -38,9 +38,6 @@
 #include <amec_sys.h>
 #include <amec_master_smh.h>
 
-extern bool G_epow_triggered;
-bool epow_gpio_asserted(const bool i_from_slave_inbox);
-
 extern UINT8 g_amec_tb_record; // From amec_amester.c for syncronized traces
 extern PWR_READING_TYPE  G_pwr_reading_type;
 
@@ -194,15 +191,6 @@ uint32_t dcom_build_slv_inbox(void)
 
     G_dcom_slv_inbox_doorbell_tx.magic_counter++;
     G_dcom_slv_inbox_doorbell_tx.magic2 = PBAX_MAGIC_NUMBER_32B;
-
-    if (IS_OCC_STATE_ACTIVE() && (!isSafeStateRequested()))
-    {
-        // If the EPOW is asserted, master should start handling it right away (vs waiting to handle as a slave)
-        memcpy(G_dcom_slv_inbox_rx.gpio,
-               G_apss_pwr_meas.gpio,
-               sizeof( G_dcom_slv_inbox_rx.gpio));
-        epow_gpio_asserted(TRUE);
-    }
 
     return l_addr_of_slv_inbox_in_main_mem;
 }

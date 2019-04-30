@@ -45,12 +45,10 @@
 #include <amec_sensors_core.h>
 #include <amec_sensors_power.h>
 #include <memory.h>
-#include <amec_sensors_centaur.h>
 #include <amec_sensors_ocmb.h>
 #include <amec_sensors_fw.h>
 #include <amec_freq.h>
 #include <amec_data.h>
-#include <centaur_data.h>
 #include <amec_amester.h>
 #include <amec_oversub.h>
 #include <amec_health.h>
@@ -58,7 +56,6 @@
 #include <occhw_async.h>
 #include <wof.h>
 #include <pgpe_interface.h>
-#include <memory_power_control.h>
 #include <state.h>                      // For CURRENT_STATE(), OCC_STATE_*
 #include <cmdh_fsp_cmds_datacnfg.h>     // For DATA_get_present_cnfgdata()
 #include <sensor_main_memory.h>         // For main_mem_sensors_*()
@@ -428,13 +425,6 @@ void amec_slv_common_tasks_post(void)
         // Call amec_power_control
         amec_power_control();
 
-        if (MEM_TYPE_NIMBUS == G_sysConfigData.mem_type)
-        {
-            // Nimbus only
-            // Apply memory power control, if needed.
-            amec_mem_power_control();
-        }
-
         // Call the OCC slave's processor voting box
         amec_slv_proc_voting_box();
 
@@ -501,15 +491,11 @@ void amec_slv_state_0(void)
   AMEC_DBG("\tAMEC Slave State 0\n");
 
   //-------------------------------------------------------
-  // Update Centaur sensors (for this tick)
+  // Update memory buffer sensors (for this tick)
   //-------------------------------------------------------
-  if(MEM_TYPE_CUMULUS == G_sysConfigData.mem_type)
+  if(MEM_TYPE_OCM == G_sysConfigData.mem_type)
   {
-      amec_update_centaur_sensors(CENTAUR_0);
-  }
-  else if(MEM_TYPE_OCM == G_sysConfigData.mem_type)
-  {
-      amec_update_ocmb_sensors(CENTAUR_0);
+      amec_update_ocmb_sensors(MEMBUF_0);
   }
 
   //-------------------------------------------------------
@@ -539,21 +525,13 @@ void amec_slv_state_0(void)
 void amec_slv_state_1(void)
 {
     AMEC_DBG("\tAMEC Slave State 1\n");
-    if(MEM_TYPE_CUMULUS == G_sysConfigData.mem_type)
-    {
-        //-------------------------------------------------------
-        // Update Centaur sensors (for this tick)
-        //-------------------------------------------------------
-        amec_update_centaur_sensors(CENTAUR_1);
 
-        //-------------------------------------------------------
-        // Update Proc Level Centaur/DIMM Temperature sensors
-        //-------------------------------------------------------
-        amec_update_centaur_temp_sensors();
-    }
-    else if(MEM_TYPE_OCM == G_sysConfigData.mem_type)
+    //-------------------------------------------------------
+    // Update memory buffer sensors (for this tick)
+    //-------------------------------------------------------
+    if(MEM_TYPE_OCM == G_sysConfigData.mem_type)
     {
-        amec_update_ocmb_sensors(CENTAUR_1);
+        amec_update_ocmb_sensors(MEMBUF_1);
         amec_update_ocmb_temp_sensors();
     }
 }
@@ -571,15 +549,11 @@ void amec_slv_state_2(void)
   AMEC_DBG("\tAMEC Slave State 2\n");
 
   //-------------------------------------------------------
-  // Update Centaur sensors (for this tick)
+  // Update memory buffer sensors (for this tick)
   //-------------------------------------------------------
-  if(MEM_TYPE_CUMULUS == G_sysConfigData.mem_type)
+  if(MEM_TYPE_OCM == G_sysConfigData.mem_type)
   {
-      amec_update_centaur_sensors(CENTAUR_2);
-  }
-  else if(MEM_TYPE_OCM == G_sysConfigData.mem_type)
-  {
-      amec_update_ocmb_sensors(CENTAUR_2);
+      amec_update_ocmb_sensors(MEMBUF_2);
   }
 
   // Call VRM Vdd thermal controller
@@ -601,15 +575,11 @@ void amec_slv_state_3(void)
   AMEC_DBG("\tAMEC Slave State 3\n");
 
   //-------------------------------------------------------
-  // Update Centaur sensors (for this tick)
+  // Update memory buffer sensors (for this tick)
   //-------------------------------------------------------
-  if(MEM_TYPE_CUMULUS == G_sysConfigData.mem_type)
+  if(MEM_TYPE_OCM == G_sysConfigData.mem_type)
   {
-      amec_update_centaur_sensors(CENTAUR_3);
-  }
-  else if(MEM_TYPE_OCM == G_sysConfigData.mem_type)
-  {
-      amec_update_ocmb_sensors(CENTAUR_3);
+      amec_update_ocmb_sensors(MEMBUF_3);
   }
 }
 
@@ -628,15 +598,11 @@ void amec_slv_state_4(void)
   AMEC_DBG("\tAMEC Slave State 4\n");
 
   //-------------------------------------------------------
-  // Update Centaur sensors (for this tick)
+  // Update memory buffer sensors (for this tick)
   //-------------------------------------------------------
-  if(MEM_TYPE_CUMULUS == G_sysConfigData.mem_type)
+  if(MEM_TYPE_OCM == G_sysConfigData.mem_type)
   {
-      amec_update_centaur_sensors(CENTAUR_4);
-  }
-  else if(MEM_TYPE_OCM == G_sysConfigData.mem_type)
-  {
-      amec_update_ocmb_sensors(CENTAUR_4);
+      amec_update_ocmb_sensors(MEMBUF_4);
   }
 
   //-------------------------------------------------------
@@ -665,15 +631,11 @@ void amec_slv_state_5(void)
   AMEC_DBG("\tAMEC Slave State 5\n");
 
   //-------------------------------------------------------
-  // Update Centaur sensors (for this tick)
+  // Update memory buffer sensors (for this tick)
   //-------------------------------------------------------
-  if(MEM_TYPE_CUMULUS == G_sysConfigData.mem_type)
+  if(MEM_TYPE_OCM == G_sysConfigData.mem_type)
   {
-      amec_update_centaur_sensors(CENTAUR_5);
-  }
-  else if(MEM_TYPE_OCM == G_sysConfigData.mem_type)
-  {
-      amec_update_ocmb_sensors(CENTAUR_5);
+      amec_update_ocmb_sensors(MEMBUF_5);
   }
 
   //-------------------------------------------------------
@@ -698,15 +660,11 @@ void amec_slv_state_6(void)
   AMEC_DBG("\tAMEC Slave State 6\n");
 
   //-------------------------------------------------------
-  // Update Centaur sensors (for this tick)
+  // Update memory buffer sensors (for this tick)
   //-------------------------------------------------------
-  if(MEM_TYPE_CUMULUS == G_sysConfigData.mem_type)
+  if(MEM_TYPE_OCM == G_sysConfigData.mem_type)
   {
-      amec_update_centaur_sensors(CENTAUR_6);
-  }
-  else if(MEM_TYPE_OCM == G_sysConfigData.mem_type)
-  {
-      amec_update_ocmb_sensors(CENTAUR_6);
+      amec_update_ocmb_sensors(MEMBUF_6);
   }
 }
 
@@ -723,15 +681,11 @@ void amec_slv_state_7(void)
   AMEC_DBG("\tAMEC Slave State 7\n");
 
   //-------------------------------------------------------
-  // Update Centaur sensors (for this tick)
+  // Update memory buffer sensors (for this tick)
   //-------------------------------------------------------
-  if(MEM_TYPE_CUMULUS == G_sysConfigData.mem_type)
+  if(MEM_TYPE_OCM == G_sysConfigData.mem_type)
   {
-      amec_update_centaur_sensors(CENTAUR_7);
-  }
-  else if(MEM_TYPE_OCM == G_sysConfigData.mem_type)
-  {
-      amec_update_ocmb_sensors(CENTAUR_7);
+      amec_update_ocmb_sensors(MEMBUF_7);
   }
 }
 
@@ -1366,12 +1320,11 @@ void amec_slv_substate_7_0(void)
     // Call memory thermal controller based on DIMM temperature
     amec_controller_dimm_thermal();
 
-    if (MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type)
+    if(MEM_TYPE_OCM == G_sysConfigData.mem_type)
     {
-        // Call memory thermal controller based on Centaur temperature
-        amec_controller_centaur_thermal();
+        // Call memory thermal controller based on membuf temperature
+        amec_controller_membuf_thermal();
     }
-
 }
 
 void amec_slv_substate_7_1(void)

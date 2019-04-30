@@ -6,7 +6,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2016
+# Contributors Listed Below - COPYRIGHT 2016,2019
 # [+] International Business Machines Corp.
 #
 #
@@ -73,7 +73,7 @@ NUM_ZERO_ENTRIES=$(${OBJDUMP} -Dz ${OCC_405_OUT} \
 
 # Error message if there are missing/incomplete sensors in G_amec_sensor_list
 if [ ${NUM_ZERO_ENTRIES} -ne 0 ]; then
-    echo ERROR: There are ${NUM_ZERO_ENTRIES} missing entries in G_amec_sensor_list!
+    echo ERROR: There are ${NUM_ZERO_ENTRIES} missing entries in G_amec_sensor_list! >&2
     ERROR=1
 fi
 
@@ -91,7 +91,7 @@ if [ ${NUM_ZERO_ENTRIES} -ne 0 ]; then
     NUM_MISSING=`expr ${NUM_ZERO_ENTRIES} / 2`
     NUM_MISSING2=`expr ${NUM_MISSING} + 1`
     RANGE=${NUM_MISSING}-${NUM_MISSING2}
-    echo ERROR: There are approximately ${RANGE} missing entries in G_sensor_info!
+    echo ERROR: There are approximately ${RANGE} missing entries in G_sensor_info! >&2
     ERROR=1
 fi
 

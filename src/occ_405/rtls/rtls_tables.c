@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -30,15 +30,14 @@
 #include "state.h"
 #include "proc_data.h"
 #include "proc_data_control.h"
-#include <centaur_data.h>
-#include <centaur_control.h>
 #include "memory.h"
 #include "amec_master_smh.h"
 #include "amec_sensors_fw.h"
-#include "dimm.h"
+#include "memory_data.h"
 #include <common.h>
 #include "sensor_get_tod_task.h"            // For task_get_tod()
 #include "gpu.h"
+
 
 //flags for task table
 #define APSS_TASK_FLAGS                  RTL_FLAG_MSTR | RTL_FLAG_NOTMSTR |  RTL_FLAG_OBS | RTL_FLAG_ACTIVE | RTL_FLAG_MSTR_READY |                    RTL_FLAG_RUN
@@ -122,7 +121,7 @@ task_t G_task_table[TASK_END] = {
     { FLAGS_AMEC_MASTER,           task_amec_master,               NULL },  // TASK_ID_AMEC_MASTER
     { FLAGS_CORE_DATA_CONTROL,     task_core_data_control,         NULL },  // TASK_ID_CORE_DATA_CONTROL
     { FLAGS_GPU_SM,                task_gpu_sm,                    NULL },  // TASK_ID_GPU_SM
-    { FLAGS_MEMORY_DATA,           task_dimm_sm,                   NULL },  // TASK_ID_DIMM_SM
+    { FLAGS_MEMORY_DATA,           task_memory_data,               NULL },  // TASK_ID_MEMORY_DATA
     { FLAGS_MEMORY_CONTROL,        task_memory_control,            (void *) &G_memory_control_task },  // TASK_ID_MEMORY_CONTROL
     { FLAGS_NEST_DTS,              task_nest_dts,                  NULL },
     { FLAGS_24X7,                  task_24x7,                      NULL },  // TASK_ID_24X7
@@ -136,7 +135,7 @@ const uint8_t G_tick0_seq[] = {
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
                                 TASK_ID_CORE_DATA_LOW,
-                                TASK_ID_DIMM_SM,
+                                TASK_ID_MEMORY_DATA,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_CORE_DATA_HIGH,
                                 TASK_ID_APSS_DONE,
@@ -184,7 +183,7 @@ const uint8_t G_tick2_seq[] = {
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
                                 TASK_ID_CORE_DATA_LOW,
-                                TASK_ID_DIMM_SM,
+                                TASK_ID_MEMORY_DATA,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_CORE_DATA_HIGH,
                                 TASK_ID_APSS_DONE,
@@ -233,7 +232,7 @@ const uint8_t G_tick4_seq[] = {
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
                                 TASK_ID_CORE_DATA_LOW,
-                                TASK_ID_DIMM_SM,
+                                TASK_ID_MEMORY_DATA,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_CORE_DATA_HIGH,
                                 TASK_ID_APSS_DONE,
@@ -281,7 +280,7 @@ const uint8_t G_tick6_seq[] = {
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
                                 TASK_ID_CORE_DATA_LOW,
-                                TASK_ID_DIMM_SM,
+                                TASK_ID_MEMORY_DATA,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_CORE_DATA_HIGH,
                                 TASK_ID_APSS_DONE,
@@ -329,7 +328,7 @@ const uint8_t G_tick8_seq[] = {
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
                                 TASK_ID_CORE_DATA_LOW,
-                                TASK_ID_DIMM_SM,
+                                TASK_ID_MEMORY_DATA,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_CORE_DATA_HIGH,
                                 TASK_ID_APSS_DONE,
@@ -377,7 +376,7 @@ const uint8_t G_tick10_seq[] = {
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
                                 TASK_ID_CORE_DATA_LOW,
-                                TASK_ID_DIMM_SM,
+                                TASK_ID_MEMORY_DATA,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_CORE_DATA_HIGH,
                                 TASK_ID_APSS_DONE,
@@ -425,7 +424,7 @@ const uint8_t G_tick12_seq[] = {
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
                                 TASK_ID_CORE_DATA_LOW,
-                                TASK_ID_DIMM_SM,
+                                TASK_ID_MEMORY_DATA,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_CORE_DATA_HIGH,
                                 TASK_ID_APSS_DONE,
@@ -473,7 +472,7 @@ const uint8_t G_tick14_seq[] = {
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
                                 TASK_ID_CORE_DATA_LOW,
-                                TASK_ID_DIMM_SM,
+                                TASK_ID_MEMORY_DATA,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_CORE_DATA_HIGH,
                                 TASK_ID_APSS_DONE,

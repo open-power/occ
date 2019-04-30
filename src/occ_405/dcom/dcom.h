@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -33,12 +33,6 @@
 #include <rtls.h>
 #include <apss.h>
 #include <proc_pstate.h>
-
-// Max Centaur Throttles
-#define MAX_CENTAUR_THROTTLES 8
-
-// Max Interleave Group Throttles
-#define MAX_MEM_INTERLEAVE_GROUP_THROTTLES 8
 
 // OCC roles
 #define OCC_SLAVE         0
@@ -219,7 +213,7 @@ typedef struct __attribute__ ((packed))
     uint16_t mwr[MAX_NUM_MEM_CONTROLLERS];                       // [244]
     uint16_t coreReserved[MAX_CORES];                            // [260]
     uint16_t todclock[NUM_TOD_SENSORS];                          // [308]
-    uint16_t temp2mscent;                                        // [314]
+    uint16_t tempmembufthrm;                                     // [314]
     uint16_t tempdimmthrm;                                       // [316]
     uint16_t util;                                               // [318]
     uint16_t ips4msp0;                                           // [320]

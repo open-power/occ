@@ -51,8 +51,6 @@ enum occReasonCode
     PROC_TEMP_TIMEOUT               = 0x11,
     // OCI write did not retain value
     OCI_WRITE_FAILURE               = 0x12,
-    /// Processor SCOM failure
-    PROC_SCOM_ERROR                 = 0x16,
     /// Any failure coming from the SSX RTOS code
     SSX_GENERIC_FAILURE             = 0x17,
     /// Failure to handshake with an external fw entity (HB, FSP, PHYP, etc)
@@ -61,20 +59,16 @@ enum occReasonCode
     VRM_VDD_ERROR_TEMP              = 0x20,
     /// GPIO_VR_HOT_MEM_PROC signal from APSS asserted
     VR_HOT_MEM_PROC_ASSERTED        = 0x23,
-    /// GPIO_EPOW signal from APSS asserted
-    EPOW_ASSERTED                   = 0x24,
     /// DIMM reached error threshold
     DIMM_ERROR_TEMP                 = 0x30,
     /// Frequency limited due to oversubscription condition
     OVERSUB_LIMIT_ALERT             = 0x33,
     /// Invalid configuration data (MRW, etc.)
     INVALID_CONFIG_DATA             = 0x34,
-    /// Centaur reached error threshold
-    CENT_ERROR_TEMP                 = 0x40,
-    /// Centaur in-band scom failure
-    CENT_SCOM_ERROR                 = 0x41,
-    /// Centaur FIR bit set
-    CENT_LFIR_ERROR                 = 0x42,
+    /// MemBuf reached error threshold
+    MEMBUF_ERROR_TEMP               = 0x40,
+    /// MemBuf in-band scom failure
+    MEMBUF_SCOM_ERROR               = 0x41,
     AVSBUS_TIMEOUT                  = 0x50,
     AVSBUS_ERROR                    = 0x51,
     AVSBUS_CRC_ERROR                = 0x52,
@@ -112,8 +106,6 @@ enum occReasonCode
     APSS_HARD_FAILURE               = 0xC5,
     ///  Request to read redundant APSS data failed
     REDUNDANT_APSS_GPE_FAILURE      = 0xCB,
-    MEMORY_INIT_FAILED              = 0xD1,
-    DIMM_INVALID_STATE              = 0xD2,
 
     // PGPE Generic RC
     PGPE_FAILURE                    = 0xD3,
@@ -150,19 +142,10 @@ enum occExtReasonCode
 
     ERC_GENERIC_TIMEOUT                         = 0x0001,
     ERC_INVALID_INPUT_DATA                      = 0x0002,
-    ERC_MMU_MAP_FAILURE                         = 0x0003,
-    ERC_MMU_UNMAP_FAILURE                       = 0x0004,
     ERC_BCE_REQUEST_CREATE_FAILURE              = 0x0005,
     ERC_BCE_REQUEST_SCHEDULE_FAILURE            = 0x0006,
 
     ERC_RUNNING_SEM_PENDING_FAILURE             = 0x0007,
-    ERC_RUNNING_SEM_POSTING_FAILURE             = 0x0008,
-    ERC_WAKEUP_SEM_PENDING_FAILURE              = 0x0009,
-    ERC_WAKEUP_SEM_POSTING_FAILURE              = 0x000a,
-    ERC_FINISHED_SEM_PENDING_FAILURE            = 0x000b,
-    ERC_FINISHED_SEM_POSTING_FAILURE            = 0x000c,
-    ERC_CALLER_SEM_POSTING_FAILURE              = 0x000d,
-    ERC_CREATE_SEM_FAILURE                      = 0x000e,
 
     ERC_LOW_CORE_GPE_REQUEST_CREATE_FAILURE     = 0x000f,
     ERC_HIGH_CORE_GPE_REQUEST_CREATE_FAILURE    = 0x0010,
@@ -170,17 +153,13 @@ enum occExtReasonCode
     ERC_SSX_IRQ_SETUP_FAILURE                   = 0x0012,
     ERC_SSX_IRQ_HANDLER_SET_FAILURE             = 0x0013,
     ERC_PPC405_WD_SETUP_FAILURE                 = 0x0014,
-    ERC_OCB_WD_SETUP_FAILURE                    = 0x0015,
     ERC_ARG_POINTER_FAILURE                     = 0x0016,
 
     ERC_PSS_GPIO_INIT_FAIL                      = 0x0017,
     ERC_PSS_COMPOSITE_MODE_FAIL                 = 0x0019,
 
-    ERC_PROC_CONTROL_TASK_FAILURE               = 0x001a,
-
-    ERC_CENTAUR_GPE_REQUEST_CREATE_FAILURE      = 0x0021,
-    ERC_CENTAUR_GPE_REQUEST_SCHEDULE_FAILURE    = 0x0022,
-    ERC_CENTAUR_INTERNAL_FAILURE                = 0x0023,
+    ERC_MEMBUF_GPE_REQUEST_CREATE_FAILURE       = 0x0021,
+    ERC_MEMBUF_GPE_REQUEST_SCHEDULE_FAILURE     = 0x0022,
 
     ERC_APSS_GPIO_OUT_OF_RANGE_FAILURE          = 0x0024,
     ERC_APSS_GPIO_DUPLICATED_FAILURE            = 0x0025,
@@ -199,13 +178,12 @@ enum occExtReasonCode
 
     ERC_AMEC_VRM_VDD_TEMP_TIMEOUT               = 0x0030,
     ERC_AMEC_DIMM_TEMP_TIMEOUT                  = 0x0031,
-    ERC_AMEC_CENT_TEMP_TIMEOUT                  = 0x0032,
+    ERC_AMEC_MEMBUF_TEMP_TIMEOUT                = 0x0032,
     ERC_AMEC_GPE1_TIMEOUT                       = 0x0033,
 
     ERC_APSS_MISSING_ADC_VOLT_SENSE_2           = 0x0038,
     ERC_APSS_GPU_VOLTAGE_CONFLICT               = 0x0039,
 
-    ERC_CMDH_MBOX_REQST_FAILURE                 = 0x0040,
     ERC_CMDH_INTERNAL_FAILURE                   = 0x0041,
     ERC_CMDH_THRM_DATA_MISSING                  = 0x0042,
     ERC_CMDH_IPS_DATA_MISSING                   = 0x0043,
@@ -213,8 +191,6 @@ enum occExtReasonCode
 
     ERC_CHIP_IDS_INVALID                        = 0x0050,
     ERC_GETSCOM_FAILURE                         = 0x0051,
-    ERC_GETSCOM_TPC_GP0_FAILURE                 = 0x0052,
-    ERC_PNOR_OWNERSHIP_NOT_AVAILABLE            = 0x0053,
 
     ERC_HOMER_MAIN_ACCESS_ERROR                 = 0x0060,
     ERC_HOMER_MAIN_SSX_ERROR                    = 0x0061,
@@ -222,9 +198,6 @@ enum occExtReasonCode
     ERC_APSS_SCHEDULE_FAILURE                   = 0x0062,
     ERC_APSS_COMPLETE_FAILURE                   = 0x0063,
 
-    ERC_PROC_CONTROL_INIT_FAILURE               = 0x0064,
-    ERC_PROC_PSTATE_INSTALL_FAILURE             = 0x0065,
-    ERC_PROC_CORE_DATA_EMPATH_ERROR             = 0x0066,
     ERC_NEST_DTS_GPE_REQUEST_CREATE_FAILURE     = 0x0067,
 
     ERC_BCE_REQ_CREATE_READ_FAILURE             = 0x0070,
@@ -235,11 +208,7 @@ enum occExtReasonCode
     ERC_BCE_REQ_SCHED_WRITE_FAILURE             = 0x0075,
     ERC_BCE_REQ_CALLBACK_TIMEOUT                = 0x0076,
 
-    ERC_DIMM_SCHEDULE_FAILURE                   = 0x0080,
-    ERC_DIMM_COMPLETE_FAILURE                   = 0x0081,
-
     ERC_MEM_CONTROL_SCHEDULE_FAILURE            = 0x0080,
-    ERC_MEM_CONTROL_COMPLETE_FAILURE            = 0x0081,
 
     ERC_FW_ZERO_FREQ_LIMIT                      = 0x0090,
 
@@ -249,7 +218,6 @@ enum occExtReasonCode
     ERC_AVSBUS_VDD_CURRENT_FAILURE              = 0x00AB,
     ERC_AVSBUS_VDN_VOLTAGE_FAILURE              = 0x00AC,
     ERC_AVSBUS_VDN_CURRENT_FAILURE              = 0x00AD,
-    ERC_AVSBUS_STATUS_FAILURE                   = 0x00AE,
     ERC_AVSBUS_VDD_TEMPERATURE_FAILURE          = 0x00AF,
 
     ERC_PGPE_BEACON_TIMEOUT                     = 0x00B0,
@@ -260,15 +228,11 @@ enum occExtReasonCode
     ERC_PGPE_START_SUSPEND_FAILURE              = 0x00B5,
     ERC_PGPE_SET_NOMINAL_FAILURE                = 0x00B6,
     ERC_PGPE_CLIP_FAILURE                       = 0x00B7,
-    ERC_PGPE_PPMR_OPPB_SIZE_MISMATCH            = 0x00B8,
     ERC_PGPE_ACTIVE_TO_OBSERVATION_TIMEOUT      = 0x00B9,
     ERC_PGPE_TASK_TIMEOUT                       = 0x00BA,
     ERC_PGPE_INVALID_ADDRESS                    = 0x00BB,
     ERC_OPS_INVALID_MAGIC_NUMBER                = 0x00BC,
     ERC_PGPE_WOF_VALUES_INVALID_ADDRESS         = 0x00BD,
-
-    ERC_WOF_QUAD_COUNT_FAILURE                  = 0x00C0,
-    ERC_WOF_CONTROL_ERROR                       = 0x00C1,
 
     ERC_24X7_GPE_CREATE_FAILURE                 = 0x00D0,
     ERC_24X7_GPE_SCHEDULE_FAILURE               = 0x00D1,
@@ -279,8 +243,6 @@ enum occExtReasonCode
     ERC_GPU_COMPLETE_FAILURE                    = 0x00F0,
     ERC_GPU_SCHEDULE_FAILURE                    = 0x00F1,
     ERC_GPU_RESET_FAILURE                       = 0x00F2,
-    ERC_GPU_RESET_TIMEOUT                       = 0x00F3,
-    ERC_GPU_READ_TEMP_TIMEOUT                   = 0x00F4,
     ERC_GPU_READ_MEM_TEMP_TIMEOUT               = 0x00F5,
     ERC_GPU_READ_MEM_TEMP_CAPABLE_FAILURE       = 0x00F6,
     ERC_GPU_INVALID_GPU_OPERATION               = 0x00F7,
@@ -293,31 +255,25 @@ enum occExtReasonCode
 
     ERC_STATE_FROM_OBS_TO_ACT_FAILURE           = 0x0123,
     ERC_STATE_FROM_ACT_TO_CHR_FAILURE           = 0x0124,
-    ERC_STATE_FROM_CHR_TO_ACT_FAILURE           = 0x0125,
     ERC_STATE_FROM_CHR_TO_OBS_FAILURE           = 0x0126,
     ERC_STATE_FROM_OBS_TO_CHR_FAILURE           = 0x0127,
     ERC_STATE_FROM_STB_TO_CHR_FAILURE           = 0x0128,
     ERC_STATE_FROM_STB_TO_OBS_FAILURE           = 0x0129,
 
-    ERC_STATE_HEARTBEAT_CFG_FAILURE             = 0x0180,
     ERC_RTL_TIME_EXCEEDED                       = 0x0190,
 
     ERC_WOF_NO_WOF_HEADER_MASK                  = 0x0200,
-    ERC_WOF_INVALID_ACTIVE_QUADS                = 0x0201,
     ERC_WOF_INVALID_VDD_VDN                     = 0x0202,
-    ERC_WOF_PGPE_REQ_NOT_IDLE                   = 0x0203,
     ERC_WOF_PGPE_WOF_DISABLED                   = 0x0204,
     ERC_WOF_PSTATE_PROTOCOL_OFF                 = 0x0205,
     ERC_WOF_VFRT_REQ_TIMEOUT                    = 0x0206,
     ERC_WOF_CONTROL_REQ_TIMEOUT                 = 0x0207,
     ERC_WOF_STATE_CHANGE                        = 0x0208,
-    ERC_WOF_MODE_CHANGE                         = 0x0209,
     ERC_WOF_MODE_NO_SUPPORT_MASK                = 0x020A,
     ERC_WOF_DIVIDE_BY_ZERO_VDD                  = 0x020B,
     ERC_WOF_VFRT_REQ_FAILURE                    = 0x020C,
     ERC_WOF_CONTROL_REQ_FAILURE                 = 0x020D,
     ERC_WOF_VFRT_ALIGNMENT_ERROR                = 0x020E,
-    ERC_WOF_DRIVER_WOF_DISABLED                 = 0x020F,
     ERC_WOF_UTURBO_IS_ZERO                      = 0x0210,
     ERC_WOF_OCC_WOF_DISABLED                    = 0x0211,
     ERC_WOF_OPPB_WOF_DISABLED                   = 0x0212,
@@ -342,30 +298,13 @@ enum occModuleId
     MAIN_MODE_TRANSITION_MID        =  MAIN_COMP_ID | 0x06,
     MAIN_SYSTEM_HALTED_MID          =  MAIN_COMP_ID | 0x07,
     OCC_IPC_SETUP                   =  MAIN_COMP_ID | 0x08,
-    GETSCOM_FFDC_MID                =  MAIN_COMP_ID | 0x0a,
-    PUTSCOM_FFDC_MID                =  MAIN_COMP_ID | 0x0b,
     HMON_ROUTINE_MID                =  MAIN_COMP_ID | 0x0c,
-    FIR_DATA_MID                    =  MAIN_COMP_ID | 0x0e,
     CMDH_DBUG_MID                   =  MAIN_COMP_ID | 0x0f,
     I2C_LOCK_UPDATE                 =  MAIN_COMP_ID | 0x10,
     CREATE_TLB_ENTRY                =  MAIN_COMP_ID | 0x11,
     READ_PGPE_HEADER                =  MAIN_COMP_ID | 0x12,
     READ_PPMR_HEADER                =  MAIN_COMP_ID | 0x13,
     READ_OPPB_PARAMS                =  MAIN_COMP_ID | 0x14,
-    MAIN_SMGR_MID                   =  MAIN_COMP_ID | 0x15,
-    READ_WOF_HEADER                 =  MAIN_COMP_ID | 0x16,
-};
-
-enum occUserDataType
-{
-    OCC_FULL_ELOG_TYPE              =   0x0000,                 // complete error log data
-    OCC_TRACE_TYPE                  =   0x0002,                 // OCC trace (from TMGT)
-    OCC_EXCEPTION_TYPE              =   0x00E0,                 // OCC exception data (from TMGT)
-};
-
-enum occUserDataVersion
-{
-    OCC_FULL_ELOG_TYPE_VER1         =   0x0001,                 // complete error log data ver 1
 };
 
 #endif /* #ifndef _OCC_SERVICE_CODES_H_ */

@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/trac/trac.h $                                         */
+/* $Source: src/occ_405/trac/trac.h $                                     */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -180,26 +180,6 @@ extern void dumpHexString(const void *i_data, const unsigned int len, const char
   #define PROC_DBG_HEXDUMP(data, len, string)
 #endif
 
-#ifdef CENT_DEBUG
-  #define CENT_DBG(frmt,args...)  \
-          DBG_PRINT(frmt,##args)
-  #define CENT_DBG_HEXDUMP(data, len, string)  \
-          DEBUG_HEXDUMP(data, len, string)
-#else
-  #define CENT_DBG(frmt,args...)
-  #define CENT_DBG_HEXDUMP(data, len, string)
-#endif
-
-#ifdef THRD_DEBUG
-  #define THRD_DBG(frmt,args...)  \
-          DBG_PRINT(frmt,##args)
-  #define THRD_DBG_HEXDUMP(data, len, string)  \
-          DEBUG_HEXDUMP(data, len, string)
-#else
-  #define THRD_DBG(frmt,args...)
-  #define THRD_DBG_HEXDUMP(data, len, string)
-#endif
-
 #ifdef AMEC_DEBUG
   #define AMEC_DBG(frmt,args...)  \
           DBG_PRINT(frmt,##args)
@@ -220,16 +200,6 @@ extern void dumpHexString(const void *i_data, const unsigned int len, const char
   #define DCOM_DBG_HEXDUMP(data, len, string)
 #endif
 
-#ifdef ERRL_DEBUG
-  #define ERRL_DBG(frmt,args...)  \
-          DBG_PRINT(frmt,##args)
-  #define ERRL_DBG_HEXDUMP(data, len, string)  \
-          DEBUG_HEXDUMP(data, len, string)
-#else
-  #define ERRL_DBG(frmt,args...)
-  #define ERRL_DBG_HEXDUMP(data, len, string)
-#endif
-
 #ifdef APSS_DEBUG
   #define APSS_DBG(frmt,args...)  \
           DBG_PRINT(frmt,##args)
@@ -238,16 +208,6 @@ extern void dumpHexString(const void *i_data, const unsigned int len, const char
 #else
   #define APSS_DBG(frmt,args...)
   #define APSS_DBG_HEXDUMP(data, len, string)
-#endif
-
-#ifdef DPSS_DEBUG
-  #define DPSS_DBG(frmt,args...)  \
-          DBG_PRINT(frmt,##args)
-  #define DPSS_DBG_HEXDUMP(data, len, string)  \
-          DEBUG_HEXDUMP(data, len, string)
-#else
-  #define DPSS_DBG(frmt,args...)
-  #define DPSS_DBG_HEXDUMP(data, len, string)
 #endif
 
 #ifdef CMDH_DEBUG
@@ -270,16 +230,6 @@ extern void dumpHexString(const void *i_data, const unsigned int len, const char
   #define SNSR_DBG_HEXDUMP(data, len, string)
 #endif
 
-#ifdef TMER_DEBUG
-  #define TMER_DBG(frmt,args...)  \
-          DBG_PRINT(frmt,##args)
-  #define TMER_DBG_HEXDUMP(data, len, string)  \
-          DEBUG_HEXDUMP(data, len, string)
-#else
-  #define TMER_DBG(frmt,args...)
-  #define TMER_DBG_HEXDUMP(data, len, string)
-#endif
-
 #ifdef CNFG_DEBUG
   #define CNFG_DBG(frmt,args...)  \
           DBG_PRINT(frmt,##args)
@@ -288,16 +238,6 @@ extern void dumpHexString(const void *i_data, const unsigned int len, const char
 #else
   #define CNFG_DBG(frmt,args...)
   #define CNFG_DBG_HEXDUMP(data, len, string)
-#endif
-
-#ifdef DIMM_DEBUG
-  #define DIMM_DBG(frmt,args...)  \
-          DBG_PRINT(frmt,##args)
-  #define DIMM_DBG_HEXDUMP(data, len, string)  \
-          DEBUG_HEXDUMP(data, len, string)
-#else
-  #define DIMM_DBG(frmt,args...)
-  #define DIMM_DBG_HEXDUMP(data, len, string)
 #endif
 
 #ifdef MEM_DEBUG
@@ -319,34 +259,22 @@ extern void dumpHexString(const void *i_data, const unsigned int len, const char
 #define MAIN_DBG(frmt,args...)
 #define RTLS_DBG(frmt,args...)
 #define PROC_DBG(frmt,args...)
-#define THRD_DBG(frmt,args...)
 #define AMEC_DBG(frmt,args...)
 #define DCOM_DBG(frmt,args...)
-#define ERRL_DBG(frmt,args...)
-#define CENT_DBG(frmt,args...)
 #define CMDH_DBG(frmt,args...)
 #define APSS_DBG(frmt,args...)
-#define DPSS_DBG(frmt,args...)
 #define SNSR_DBG(frmt,args...)
-#define TMER_DBG(frmt,args...)
 #define CNFG_DBG(frmt,args...)
-#define DIMM_DBG(frmt,args...)
 
 #define MAIN_DBG_HEXDUMP(frmt,args...)
 #define RTLS_DBG_HEXDUMP(frmt,args...)
 #define PROC_DBG_HEXDUMP(frmt,args...)
-#define THRD_DBG_HEXDUMP(frmt,args...)
 #define AMEC_DBG_HEXDUMP(frmt,args...)
 #define DCOM_DBG_HEXDUMP(frmt,args...)
-#define ERRL_DBG_HEXDUMP(frmt,args...)
-#define CENT_DBG_HEXDUMP(frmt,args...)
 #define CMDH_DBG_HEXDUMP(frmt,args...)
 #define APSS_DBG_HEXDUMP(frmt,args...)
-#define DPSS_DBG_HEXDUMP(frmt,args...)
 #define SNSR_DBG_HEXDUMP(frmt,args...)
-#define TMER_DBG_HEXDUMP(frmt,args...)
 #define CNFG_DBG_HEXDUMP(frmt,args...)
-#define DIMM_DBG_HEXDUMP(frmt,args...)
 
 #endif
 

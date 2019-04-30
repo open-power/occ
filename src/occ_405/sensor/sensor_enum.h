@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -114,17 +114,17 @@ enum e_gsid
     IPS,
     PWRPROC,
     PWRMEM,
-    TEMPPROCAVG,
-    TEMPPROCTHRM,
+    TEMPPROCAVG,    // Average of all TEMPPROCTHRMC core temperatures
+    TEMPPROCTHRM,   // Maximum of all TEMPPROCTHRMC core temperatures
     UTIL,
-    TEMPNEST,
+    TEMPNEST,       // average temperature of nest DTS sensors
     VOLTVDDSENSE,   // chip voltage (remote sense adjusted for loadline)
     VOLTVDNSENSE,   // chip voltage (remote sense adjusted for loadline)
     PWRVDD,         // calculated from AVSBUS data
     PWRVDN,         // calculated from AVSBUS data
     PROCPWRTHROT,
     PROCOTTHROT,
-    TEMPQ0,
+    TEMPQ0,         // Average temperature of quad DTS sensors for processor quad#
     TEMPQ1,
     TEMPQ2,
     TEMPQ3,
@@ -144,7 +144,7 @@ enum e_gsid
     VOLTVDN,
     CURVDD,
     CURVDN,
-    TEMPVDD,
+    TEMPVDD,        // VRM Vdd temperature
 
     // ------------------------------------------------------
     // Core Sensors
@@ -275,7 +275,7 @@ enum e_gsid
     NOTFINC22,
     NOTFINC23,
 
-    TEMPPROCTHRMC0,
+    TEMPPROCTHRMC0,     // Combined weighted core/quad temperature for core#
     TEMPPROCTHRMC1,
     TEMPPROCTHRMC2,
     TEMPPROCTHRMC3,
@@ -350,7 +350,7 @@ enum e_gsid
     NUTILC22,
     NUTILC23,
 
-    TEMPC0,
+    TEMPC0,         // Average temperature of core DTS sensors for processor core#
     TEMPC1,
     TEMPC2,
     TEMPC3,
@@ -453,7 +453,7 @@ enum e_gsid
     // ------------------------------------------------------
     // Memory Sensors
     // ------------------------------------------------------
-    MRDM0,
+    MRDM0,          // Memory read requests per sec for MC
     MRDM1,
     MRDM2,
     MRDM3,
@@ -462,7 +462,7 @@ enum e_gsid
     MRDM6,
     MRDM7,
 
-    MWRM0,
+    MWRM0,          // Memory write requests per sec for MC
     MWRM1,
     MWRM2,
     MWRM3,
@@ -471,7 +471,7 @@ enum e_gsid
     MWRM6,
     MWRM7,
 
-    MEMSPM0,
+    MEMSPM0,        // Current memory throttle level setting for MCA
     MEMSPM1,
     MEMSPM2,
     MEMSPM3,
@@ -480,7 +480,7 @@ enum e_gsid
     MEMSPM6,
     MEMSPM7,
 
-    MEMSPSTATM0,
+    MEMSPSTATM0,    // Static memory throttle level setting for MCA
     MEMSPSTATM1,
     MEMSPSTATM2,
     MEMSPSTATM3,
@@ -498,7 +498,7 @@ enum e_gsid
     MIRCM6,
     MIRCM7,
 
-    MLP2M0,
+    MLP2M0,         // Number of LP2 exits for memory controller
     MLP2M1,
     MLP2M2,
     MLP2M3,
@@ -507,25 +507,16 @@ enum e_gsid
     MLP2M6,
     MLP2M7,
 
-    // Individual DIMM temperatures (NIMBUS)
-    TEMPDIMM00,
-    TEMPDIMM01,
-    TEMPDIMM02,
-    TEMPDIMM03,
-    TEMPDIMM04,
-    TEMPDIMM05,
-    TEMPDIMM06,
-    TEMPDIMM07,
-    TEMPDIMM08,
-    TEMPDIMM09,
-    TEMPDIMM10,
-    TEMPDIMM11,
-    TEMPDIMM12,
-    TEMPDIMM13,
-    TEMPDIMM14,
-    TEMPDIMM15,
+    TEMPMEMBUF0,    // Individual Memory Buffer temperatures
+    TEMPMEMBUF1,
+    TEMPMEMBUF2,
+    TEMPMEMBUF3,
+    TEMPMEMBUF4,
+    TEMPMEMBUF5,
+    TEMPMEMBUF6,
+    TEMPMEMBUF7,
 
-    TEMPDIMMAXM0,
+    TEMPDIMMAXM0,   // Max DIMM temperature for Memory Buffer
     TEMPDIMMAXM1,
     TEMPDIMMAXM2,
     TEMPDIMMAXM3,
@@ -534,7 +525,7 @@ enum e_gsid
     TEMPDIMMAXM6,
     TEMPDIMMAXM7,
 
-    LOCDIMMAXM0,
+    LOCDIMMAXM0,    // Location of Max DIMM temperature for Memory Buffer
     LOCDIMMAXM1,
     LOCDIMMAXM2,
     LOCDIMMAXM3,
@@ -543,11 +534,11 @@ enum e_gsid
     LOCDIMMAXM6,
     LOCDIMMAXM7,
 
-    MEMPWRTHROT,
-    MEMOTTHROT,
+    MEMPWRTHROT,    // Count of memory throttled due to power
+    MEMOTTHROT,     // Count of memory throttled due to over temperature
 
     // ------------------------------------------------------
-    // Centaur Sensors - 8 MemC/Proc - 1 Cent/MemC - 2 PP/Cent
+    // Memory Buffers - 8 MemC/Proc - 1 MemB/MemC - 2 PP/MemB
     // ------------------------------------------------------
     MACM0C0P0,
     MACM0C0P1,
@@ -702,8 +693,8 @@ enum e_gsid
     M4WRM7C0P0,
     M4WRM7C0P1,
 
-    TEMPCENT,
-    TEMPDIMMTHRM,
+    TEMPMEMBUFTHRM, // Hottest memory buffer temperature for this OCC
+    TEMPDIMMTHRM,   // Hottest DIMM temperature across all DIMMs for this OCC
 
     // ------------------------------------------------------
     // GPU Sensors

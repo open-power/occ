@@ -276,18 +276,7 @@ static uint8_t amester_get_sensor_info( uint8_t* o_resp, uint16_t* io_resp_lengt
                     break;
                 }
 
-                if( (MEM_TYPE_NIMBUS == G_sysConfigData.mem_type) &&
-                     ( ((i_sensor >= MRDM0) &&
-                        (i_sensor <= MRDM7)) ||
-                       ((i_sensor >= MWRM0) &&
-                        (i_sensor <= MWRM7)) ) )
-                {
-                    *((uint32_t *)o_resp) = AMEFP(64, -5);
-                }
-                else
-                {
-                    *((uint32_t *)o_resp) = l_sensorInfo.sensor.scalefactor;
-                }
+                *((uint32_t *)o_resp) = l_sensorInfo.sensor.scalefactor;
                 *io_resp_length = l_length;
                 break;
             }
@@ -319,18 +308,7 @@ static uint8_t amester_get_sensor_info( uint8_t* o_resp, uint16_t* io_resp_lengt
                 *((uint32_t *)dest) = l_sensorInfo.sensor.freq;
                 dest+= 4;
 
-                if( (MEM_TYPE_NIMBUS == G_sysConfigData.mem_type) &&
-                     ( ((i_sensor >= MRDM0) &&
-                        (i_sensor <= MRDM7)) ||
-                       ((i_sensor >= MWRM0) &&
-                        (i_sensor <= MWRM7)) ) )
-                {
-                    *((uint32_t *)dest) = AMEFP(64, -5);
-                }
-                else
-                {
-                    *((uint32_t *)dest) = l_sensorInfo.sensor.scalefactor;
-                }
+                *((uint32_t *)dest) = l_sensorInfo.sensor.scalefactor;
                 dest+= 4;
 
                 *io_resp_length = (uint8_t) ((uint32_t)dest - (uint32_t)o_resp);

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -42,8 +42,8 @@
 
 // Memory Power Control Error
 #define GPE_RC_INVALID_MEM_PWR_CTL   0x20     // Invalid value for the memory power control command
-// Centaur  mem ctl codes
-#define GPE_RC_CONFIG_DATA_NULL_PTR  0x30     // centaurConfiguration data ptr NULL
+// Membuf mem ctl codes
+#define GPE_RC_CONFIG_DATA_NULL_PTR  0x30     // configuration data ptr NULL
 #define GPE_RC_INVALID_MEMBUF_TYPE   0x31     // membuf type is not valid.
 
 // APSS Specific gpe return Codes

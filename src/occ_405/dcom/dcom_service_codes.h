@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -36,12 +36,9 @@ enum dcomModuleId
     DCOM_MID_INIT_PBAX_QUEUES       =  DCOM_COMP_ID | 0x03,
     DCOM_MID_TASK_RX_SLV_OUTBOX     =  DCOM_COMP_ID | 0x04,
     DCOM_MID_TASK_TX_SLV_OUTBOX     =  DCOM_COMP_ID | 0x05,
-    DCOM_MID_SLV_OUTBOX_TX_DOORBELL =  DCOM_COMP_ID | 0x06,
     DCOM_MID_TASK_WAIT_FOR_MASTER   =  DCOM_COMP_ID | 0x07,
-    DCOM_MID_ERROR_CHECK            =  DCOM_COMP_ID | 0x08,
     DCOM_MID_WAIT_FOR_MASTER        =  DCOM_COMP_ID | 0x09,
     DCOM_MID_PBAX_ERROR_HANDLER     =  DCOM_COMP_ID | 0x0A,
-    DCOM_MID_BUILD_SLV_INBOX        =  DCOM_COMP_ID | 0x0B,
 };
 
 #endif /* #ifndef _DCOM_SERVICE_CODES_H_ */

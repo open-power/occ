@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -207,16 +207,16 @@ errlHndl_t AMEC_data_write_thrm_thresholds(const OCC_MODE i_mode)
         TRAC_INFO("AMEC_data_write_thrm_thresholds: Processor setpoints - DVFS: %u, Error: %u",
                   l_dvfs_temp, l_error);
 
-        // Store the Centaur thermal data
+        // Store the membuf thermal data
         if (!l_pm_limits)
         {
             // use normal thresholds for Nominal or OPAL
-            l_dvfs_temp = l_frudata[DATA_FRU_CENTAUR].dvfs;
-            l_error = l_frudata[DATA_FRU_CENTAUR].error;
+            l_dvfs_temp = l_frudata[DATA_FRU_MEMBUF].dvfs;
+            l_error = l_frudata[DATA_FRU_MEMBUF].error;
         }
         else
         {
-            l_dvfs_temp = l_frudata[DATA_FRU_CENTAUR].pm_dvfs;
+            l_dvfs_temp = l_frudata[DATA_FRU_MEMBUF].pm_dvfs;
             if(i_mode == OCC_MODE_TURBO)
             {
                 //Need to log an error if we throttle in static turbo mode (for mfg)
@@ -224,18 +224,18 @@ errlHndl_t AMEC_data_write_thrm_thresholds(const OCC_MODE i_mode)
             }
             else
             {
-                l_error = l_frudata[DATA_FRU_CENTAUR].pm_error;
+                l_error = l_frudata[DATA_FRU_MEMBUF].pm_error;
             }
         }
 
         // Store the DVFS thermal setpoint in 0.1 degrees C
-        g_amec->thermalcent.setpoint = l_dvfs_temp * 10;
+        g_amec->thermalmembuf.setpoint = l_dvfs_temp * 10;
         // Store the error temperature for OT detection
-        g_amec->thermalcent.ot_error = l_error;
+        g_amec->thermalmembuf.ot_error = l_error;
         // Store the temperature timeout value
-        g_amec->thermalcent.temp_timeout = l_frudata[DATA_FRU_CENTAUR].max_read_timeout;
+        g_amec->thermalmembuf.temp_timeout = l_frudata[DATA_FRU_MEMBUF].max_read_timeout;
 
-        TRAC_INFO("AMEC_data_write_thrm_thresholds: Centaur setpoints - DVFS: %u, Error: %u",
+        TRAC_INFO("AMEC_data_write_thrm_thresholds: membuf setpoints - DVFS: %u, Error: %u",
                   l_dvfs_temp, l_error);
 
         // Store the DIMM thermal data

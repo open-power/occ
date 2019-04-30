@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -67,15 +67,15 @@
 // representation of the sensor name
 #define SENSOR_W_NUM(sensor_name, num) sensor_name##num
 
-#define SENSOR_W_CENTAUR_NUM_HELPER(sensor_name, memc,centL,cent,ppL,pp) sensor_name##memc##centL##cent##ppL##pp
-#define SENSOR_W_CENTAUR_NUM(sensor_name, memc,cent,pp) SENSOR_W_CENTAUR_NUM_HELPER(sensor_name,memc,C,cent,P,pp)
+#define SENSOR_W_MEMBUF_NUM_HELPER(sensor_name, memc,membufL,membuf,ppL,pp) sensor_name##memc##membufL##membuf##ppL##pp
+#define SENSOR_W_MEMBUF_NUM(sensor_name, memc,membuf,pp) SENSOR_W_MEMBUF_NUM_HELPER(sensor_name,memc,C,membuf,P,pp)
 
 // These will stringify the enum so to create the sensor name.  This will help
 // save keystrokes, as well as reduce typos & copy paste errors.
 #define SENSOR_STRING(sensor_name) #sensor_name
 
-#define CENTAUR_SENSOR_STRING_HELPER(sensor_name, memc,centL,cent,ppL,pp) SENSOR_STRING(sensor_name##memc##centL##cent##ppL##pp)
-#define CENTAUR_SENSOR_STRING(sensor_name,memc,cent,pp)  CENTAUR_SENSOR_STRING_HELPER(sensor_name, memc,C,cent,P,pp)
+#define MEMBUF_SENSOR_STRING_HELPER(sensor_name, memc,membufL,membuf,ppL,pp) SENSOR_STRING(sensor_name##memc##membufL##membuf##ppL##pp)
+#define MEMBUF_SENSOR_STRING(sensor_name,memc,membuf,pp)  MEMBUF_SENSOR_STRING_HELPER(sensor_name, memc,C,membuf,P,pp)
 
 // This will create a set of 6 sensor entries into the sensor list table.
 // (one for each quad...)  The base name of the sensor enum must be passed
@@ -208,40 +208,40 @@
 
 
 // This will create a set of 16 sensor entries into the sensor list table.
-// (one for each centaur...)  The base name of the sensor enum must be passed
+// (one for each membuf...)  The base name of the sensor enum must be passed
 // and this macro will take care of the paste & stringify operations.
-#define SEN_CENTR_ENTRY_SET(sensor_name, units, type, location, number, frequency, scaleFactor)  \
-  [SENSOR_W_CENTAUR_NUM(sensor_name,0,0,0)] = {.name = CENTAUR_SENSOR_STRING(sensor_name,0,0,0),   \
+#define SEN_MEMBUF_ENTRY_SET(sensor_name, units, type, location, number, frequency, scaleFactor)  \
+  [SENSOR_W_MEMBUF_NUM(sensor_name,0,0,0)] = {.name = MEMBUF_SENSOR_STRING(sensor_name,0,0,0),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_CENTAUR_NUM(sensor_name,0,0,1)] = {.name = CENTAUR_SENSOR_STRING(sensor_name,0,0,1),   \
+  [SENSOR_W_MEMBUF_NUM(sensor_name,0,0,1)] = {.name = MEMBUF_SENSOR_STRING(sensor_name,0,0,1),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_CENTAUR_NUM(sensor_name,1,0,0)] = {.name = CENTAUR_SENSOR_STRING(sensor_name,1,0,0),   \
+  [SENSOR_W_MEMBUF_NUM(sensor_name,1,0,0)] = {.name = MEMBUF_SENSOR_STRING(sensor_name,1,0,0),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_CENTAUR_NUM(sensor_name,1,0,1)] = {.name = CENTAUR_SENSOR_STRING(sensor_name,1,0,1),   \
+  [SENSOR_W_MEMBUF_NUM(sensor_name,1,0,1)] = {.name = MEMBUF_SENSOR_STRING(sensor_name,1,0,1),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_CENTAUR_NUM(sensor_name,2,0,0)] = {.name = CENTAUR_SENSOR_STRING(sensor_name,2,0,0),   \
+  [SENSOR_W_MEMBUF_NUM(sensor_name,2,0,0)] = {.name = MEMBUF_SENSOR_STRING(sensor_name,2,0,0),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_CENTAUR_NUM(sensor_name,2,0,1)] = {.name = CENTAUR_SENSOR_STRING(sensor_name,2,0,1),   \
+  [SENSOR_W_MEMBUF_NUM(sensor_name,2,0,1)] = {.name = MEMBUF_SENSOR_STRING(sensor_name,2,0,1),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_CENTAUR_NUM(sensor_name,3,0,0)] = {.name = CENTAUR_SENSOR_STRING(sensor_name,3,0,0),   \
+  [SENSOR_W_MEMBUF_NUM(sensor_name,3,0,0)] = {.name = MEMBUF_SENSOR_STRING(sensor_name,3,0,0),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_CENTAUR_NUM(sensor_name,3,0,1)] = {.name = CENTAUR_SENSOR_STRING(sensor_name,3,0,1),   \
+  [SENSOR_W_MEMBUF_NUM(sensor_name,3,0,1)] = {.name = MEMBUF_SENSOR_STRING(sensor_name,3,0,1),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_CENTAUR_NUM(sensor_name,4,0,0)] = {.name = CENTAUR_SENSOR_STRING(sensor_name,4,0,0),   \
+  [SENSOR_W_MEMBUF_NUM(sensor_name,4,0,0)] = {.name = MEMBUF_SENSOR_STRING(sensor_name,4,0,0),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_CENTAUR_NUM(sensor_name,4,0,1)] = {.name = CENTAUR_SENSOR_STRING(sensor_name,4,0,1),   \
+  [SENSOR_W_MEMBUF_NUM(sensor_name,4,0,1)] = {.name = MEMBUF_SENSOR_STRING(sensor_name,4,0,1),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_CENTAUR_NUM(sensor_name,5,0,0)] = {.name = CENTAUR_SENSOR_STRING(sensor_name,5,0,0),   \
+  [SENSOR_W_MEMBUF_NUM(sensor_name,5,0,0)] = {.name = MEMBUF_SENSOR_STRING(sensor_name,5,0,0),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_CENTAUR_NUM(sensor_name,5,0,1)] = {.name = CENTAUR_SENSOR_STRING(sensor_name,5,0,1),   \
+  [SENSOR_W_MEMBUF_NUM(sensor_name,5,0,1)] = {.name = MEMBUF_SENSOR_STRING(sensor_name,5,0,1),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_CENTAUR_NUM(sensor_name,6,0,0)] = {.name = CENTAUR_SENSOR_STRING(sensor_name,6,0,0),   \
+  [SENSOR_W_MEMBUF_NUM(sensor_name,6,0,0)] = {.name = MEMBUF_SENSOR_STRING(sensor_name,6,0,0),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_CENTAUR_NUM(sensor_name,6,0,1)] = {.name = CENTAUR_SENSOR_STRING(sensor_name,6,0,1),   \
+  [SENSOR_W_MEMBUF_NUM(sensor_name,6,0,1)] = {.name = MEMBUF_SENSOR_STRING(sensor_name,6,0,1),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_CENTAUR_NUM(sensor_name,7,0,0)] = {.name = CENTAUR_SENSOR_STRING(sensor_name,7,0,0),   \
+  [SENSOR_W_MEMBUF_NUM(sensor_name,7,0,0)] = {.name = MEMBUF_SENSOR_STRING(sensor_name,7,0,0),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_CENTAUR_NUM(sensor_name,7,0,1)] = {.name = CENTAUR_SENSOR_STRING(sensor_name,7,0,1),   \
+  [SENSOR_W_MEMBUF_NUM(sensor_name,7,0,1)] = {.name = MEMBUF_SENSOR_STRING(sensor_name,7,0,1),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}
 
 
@@ -355,26 +355,26 @@ const sensor_info_t G_sensor_info[]   =
   SENS_MEMC_ENTRY_SET(     MEMSPSTATM,   "%\0",   AMEC_SENSOR_TYPE_UTIL,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM,   AMEEFP_EVERY_8TH_TICK_HZ, AMEFP(  1, -1) ),
   SENS_MEMC_ENTRY_SET(          MIRCM, "eps\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM,   AMEEFP_EVERY_8TH_TICK_HZ, AMEFP(  1, 0) ),
   SENS_MEMC_ENTRY_SET(          MLP2M, "eps\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM,   AMEEFP_EVERY_8TH_TICK_HZ, AMEFP(  1, 0) ),
-  SENS_DIMM_ENTRY_SET(       TEMPDIMM,   "C\0",   AMEC_SENSOR_TYPE_TEMP,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_128TH_TICK_HZ, AMEFP(  1, 0) ),
+  SENS_MEMC_ENTRY_SET(     TEMPMEMBUF,   "C\0",   AMEC_SENSOR_TYPE_TEMP,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_128TH_TICK_HZ, AMEFP(  1, 0) ),
   SENS_MEMC_ENTRY_SET(    TEMPDIMMAXM,   "C\0",   AMEC_SENSOR_TYPE_TEMP,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM,   AMEEFP_EVERY_8TH_TICK_HZ, AMEFP(  1, 0) ),
   SENS_MEMC_ENTRY_SET(     LOCDIMMAXM, "loc\0",   AMEC_SENSOR_TYPE_TEMP,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM,   AMEEFP_EVERY_8TH_TICK_HZ, AMEFP(  1, 0) ),
   SENSOR_INFO_T_ENTRY(    MEMPWRTHROT,   "#\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM,       AMEEFP_EVERY_TICK_HZ, AMEFP(  1, 0) ),
   SENSOR_INFO_T_ENTRY(     MEMOTTHROT,   "#\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM,  AMEEFP_EVERY_64TH_TICK_HZ, AMEFP(  1, 0) ),
 
-  /* ==CentaurSensors==    NameString  Units                     Type              Location             Number                Freq            ScaleFactor   */
-  SEN_CENTR_ENTRY_SET(           MACM, "rps\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ,   AMEFP(  1, 0)  ),
-  SEN_CENTR_ENTRY_SET(           MPUM, "rps\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ,   AMEFP(  1, 0)  ),
-  SEN_CENTR_ENTRY_SET(          MIRBM, "eps\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ,   AMEFP(  1, 0)  ),
-  SEN_CENTR_ENTRY_SET(          MIRLM, "eps\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ,   AMEFP(  1, 0)  ),
-  SEN_CENTR_ENTRY_SET(          MIRMM, "eps\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ,   AMEFP(  1, 0)  ),
-  SEN_CENTR_ENTRY_SET(          MIRHM, "eps\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ,   AMEFP(  1, 0)  ),
-  SEN_CENTR_ENTRY_SET(           MTSM, "cnt\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ,   AMEFP(  1, 0)  ),
-  SEN_CENTR_ENTRY_SET(          M4RDM, "GBs\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ,   AMEFP(  128, -5)  ),
-  SEN_CENTR_ENTRY_SET(          M4WRM, "GBs\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ,   AMEFP(  128, -5)  ),
+  /* ==MembufSensors==     NameString  Units                     Type              Location             Number                Freq            ScaleFactor   */
+  SEN_MEMBUF_ENTRY_SET(          MACM, "rps\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ,   AMEFP(  1, 0)  ),
+  SEN_MEMBUF_ENTRY_SET(          MPUM, "rps\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ,   AMEFP(  1, 0)  ),
+  SEN_MEMBUF_ENTRY_SET(         MIRBM, "eps\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ,   AMEFP(  1, 0)  ),
+  SEN_MEMBUF_ENTRY_SET(         MIRLM, "eps\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ,   AMEFP(  1, 0)  ),
+  SEN_MEMBUF_ENTRY_SET(         MIRMM, "eps\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ,   AMEFP(  1, 0)  ),
+  SEN_MEMBUF_ENTRY_SET(         MIRHM, "eps\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ,   AMEFP(  1, 0)  ),
+  SEN_MEMBUF_ENTRY_SET(          MTSM, "cnt\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ,   AMEFP(  1, 0)  ),
+  SEN_MEMBUF_ENTRY_SET(         M4RDM, "GBs\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ,   AMEFP(  128, -5)  ),
+  SEN_MEMBUF_ENTRY_SET(         M4WRM, "GBs\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ,   AMEFP(  128, -5)  ),
 
 
   /* ==MemSummarySensors== NameString  Units                     Type              Location             Number                Freq            ScaleFactor   */
-  SENSOR_INFO_T_ENTRY(       TEMPCENT,   "C\0",   AMEC_SENSOR_TYPE_TEMP,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM,   AMEEFP_EVERY_8TH_TICK_HZ, AMEFP(  1, 0)  ),
+  SENSOR_INFO_T_ENTRY( TEMPMEMBUFTHRM,   "C\0",   AMEC_SENSOR_TYPE_TEMP,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM,   AMEEFP_EVERY_8TH_TICK_HZ, AMEFP(  1, 0)  ),
   SENSOR_INFO_T_ENTRY(   TEMPDIMMTHRM,   "C\0",   AMEC_SENSOR_TYPE_TEMP,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_128TH_TICK_HZ, AMEFP(  1, 0)  ),
 
   /* ==GPUSensors==      NameString  Units                      Type              Location             Number        Freq         ScaleFactor   */

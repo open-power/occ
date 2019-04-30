@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -67,18 +67,13 @@ IPC_FUNCIDS_TABLE_START
     //Functions that are only supported by GPE1 should be defined here
     //These function ID's can only be sent to GPE1
     IPC_FUNCIDS_ST_START(OCCHW_INST_ID_GPE1)
-        IPC_FUNC_ID(IPC_ST_DIMM_SM_FUNCID)
-        IPC_FUNC_ID(IPC_ST_DIMM_CONTROL_FUNCID)
         IPC_FUNC_ID(IPC_ST_GPE1_NOP)
-        IPC_FUNC_ID(IPC_ST_RESET_MEM_DEADMAN)
         IPC_FUNC_ID(IPC_ST_24_X_7_FUNCID)
-        IPC_FUNC_ID(IPC_ST_MEM_POWER_CONTROL_FUNCID)
         IPC_FUNC_ID(IPC_ST_GPU_SM_FUNCID)
         IPC_FUNC_ID(IPC_ST_GPE_GPU_INIT_FUNCID)
         IPC_FUNC_ID(IPC_ST_MEMBUF_SCOM_FUNCID)
         IPC_FUNC_ID(IPC_ST_MEMBUF_DATA_FUNCID)
         IPC_FUNC_ID(IPC_ST_MEMBUF_INIT_FUNCID)
-        IPC_FUNC_ID(IPC_ST_EPOW_GPIO_ASSERT_FUNCID)
     IPC_FUNCIDS_ST_END(OCCHW_INST_ID_GPE1)
 
     //Functions that are only supported by GPE2 should be defined here

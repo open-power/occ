@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_405/cent/centaur_control.h $                          */
+/* $Source: src/occ_405/mem/memory_service_codes.h $                      */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015                             */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -35,9 +35,9 @@
 enum memModuleId
 {
     MEM_MID_TASK_MEMORY_CONTROL    = MEM_COMP_ID | 0x00,
-    MEM_MID_MEMORY_INIT            = MEM_COMP_ID | 0x01,
-    MEM_MID_MEM_INIT_POWER_CONTROL = MEM_COMP_ID | 0x02,
-    MEM_MID_GPE_MEM_POWER_CONTROL  = MEM_COMP_ID | 0x03,
+    MEM_MID_MEM_INIT_POWER_CONTROL = MEM_COMP_ID | 0x01,
+    MEM_MID_TASK_DATA              = MEM_COMP_ID | 0x02,
+    MEM_MID_OCMB_INIT_MOD          = MEM_COMP_ID | 0x03,
 };
 
 #endif // _MEMORY_SERVICE_CODES_H

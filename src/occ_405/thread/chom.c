@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -85,11 +85,11 @@ const uint16_t * g_chom_sensor_table[CHOM_NUM_OF_SENSORS] =
     &G_dcom_slv_outbox_rx[1].tempprocthermal,
     &G_dcom_slv_outbox_rx[2].tempprocthermal,
     &G_dcom_slv_outbox_rx[3].tempprocthermal,
-    // Centaur temperature sensors
-    &G_dcom_slv_outbox_rx[0].temp2mscent,
-    &G_dcom_slv_outbox_rx[1].temp2mscent,
-    &G_dcom_slv_outbox_rx[2].temp2mscent,
-    &G_dcom_slv_outbox_rx[3].temp2mscent,
+    // Membuf temperature sensors
+    &G_dcom_slv_outbox_rx[0].tempmembufthrm,
+    &G_dcom_slv_outbox_rx[1].tempmembufthrm,
+    &G_dcom_slv_outbox_rx[2].tempmembufthrm,
+    &G_dcom_slv_outbox_rx[3].tempmembufthrm,
     // DIMM temperature sensors
     &G_dcom_slv_outbox_rx[0].tempdimmthrm,
     &G_dcom_slv_outbox_rx[1].tempdimmthrm,

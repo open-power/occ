@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -87,7 +87,7 @@ typedef enum
     DBUG_INTERNAL_FLAGS     = 0x1F,
     DBUG_FLUSH_DCACHE       = 0x20,
 //  free  = 0x21,
-    DBUG_CENTAUR_SENSOR_CACHE = 0x22,
+    DBUG_MEMBUF_SENSOR_CACHE = 0x22,
     DBUG_DUMP_PROC_DATA     = 0x23,
     DBUG_GEN_CHOM_LOG       = 0x24,
     DBUG_DUMP_APSS_DATA     = 0x25,
@@ -130,9 +130,11 @@ typedef struct __attribute__ ((packed))
 
 // Max number of sensors that can be returned with cmdh_dbug_get_ame_sensor command
 
-#define CMDH_DBUG_MAX_NUM_SENSORS  50
-// Size of standard response header (5 bytes) plus checksum (2 bytes)
-#define CMDH_DBUG_FSP_RESP_LEN     7
+// Size of standard response header plus checksum
+#define CMDH_DBUG_FSP_RESP_LEN     (CMDH_FSP_SEQ_CMD_RC_SIZE + CMDH_FSP_DATALEN_SIZE + CMDH_FSP_CHECKSUM_SIZE)
+
+#define CMDH_DBUG_MAX_SENSOR_SPACE   (CMDH_FSP_RSP_DATA_SIZE - 2/*num_sensors*/)
+#define CMDH_DBUG_MAX_NUM_SENSORS    ((unsigned int)CMDH_DBUG_MAX_SENSOR_SPACE / sizeof(cmdh_dbug_sensor_list_t))
 
 // Used by OCC firmware to respond "cmdh_dbug_get_ame_sensor" debug command
 typedef struct __attribute__ ((packed))
@@ -140,8 +142,6 @@ typedef struct __attribute__ ((packed))
     struct                  cmdh_fsp_rsp_header;
     uint16_t                num_sensors;
     cmdh_dbug_sensor_list_t sensor[CMDH_DBUG_MAX_NUM_SENSORS];
-    uint8_t                 filler;
-    uint16_t                checksum;
 }cmdh_dbug_get_sensor_resp_t;
 
 /**

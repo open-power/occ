@@ -38,16 +38,11 @@ TOP-C-SOURCES = amec/amec_controller.c \
                 amec/amec_perfcount.c \
                 amec/amec_sensors_fw.c \
                 amec/amec_sensors_power.c \
-                amec/amec_sensors_centaur.c \
                 amec/amec_sensors_ocmb.c \
                 amec/amec_sensors_core.c \
                 amec/amec_slave_smh.c \
                 amec/amec_tasks.c \
                 amec/sensor_power.c \
-                cent/centaur_control.c \
-                cent/centaur_data.c \
-                cent/ocmb_control.c \
-                cent/ocmb_data.c \
                 cmdh/cmdh_dbug_cmd.c \
                 cmdh/cmdh_fsp_cmds_datacnfg.c \
                 cmdh/cmdh_fsp_cmds.c \
@@ -64,15 +59,15 @@ TOP-C-SOURCES = amec/amec_controller.c \
                 dcom/dcomMasterTx.c \
                 dcom/dcomSlaveRx.c \
                 dcom/dcomSlaveTx.c \
-                dimm/dimm.c \
-                dimm/dimm_control.c \
                 errl/errl.c \
                 gpu/gpu.c \
                 homer.c \
                 lock/lock.c \
                 main.c \
                 mem/memory.c \
-                mem/memory_power_control.c \
+                mem/memory_data.c \
+                mem/ocmb_control.c \
+                mem/ocmb_data.c \
                 mode.c \
                 occ_sys_config.c \
                 occbuildname.c \

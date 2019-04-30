@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -31,10 +31,8 @@
 enum gpuModuleId
 {
     GPU_MID_INIT                      =  GPU_COMP_ID | 0x00,
-    GPU_MID_GPU_SM                    =  GPU_COMP_ID | 0x01,
     GPU_MID_MARK_GPU_FAILED           =  GPU_COMP_ID | 0x02,
     GPU_MID_GPU_SCHED_REQ             =  GPU_COMP_ID | 0x03,
-    GPU_MID_GPU_SCHED_RSP             =  GPU_COMP_ID | 0x04,
     GPU_MID_GPU_RESET_SM              =  GPU_COMP_ID | 0x05,
     GPU_MID_GPU_READ_TEMP             =  GPU_COMP_ID | 0x06,
     GPU_MID_GPU_READ_MEM_TEMP         =  GPU_COMP_ID | 0x07,

@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_gpe1/gpe1_dimm.h $                                    */
+/* $Source: src/occ_405/mem/ocmb_membuf.h $                               */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -22,18 +22,26 @@
 /* permissions and limitations under the License.                         */
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
+#ifndef __OCMB_MEMBUF_H__
+#define __OCMB_MEMBUF_H__
 
-#ifndef _GPE1_DIMM_H
-#define _GPE1_DIMM_H
-
-#define NUM_MBAS_NIMBUS 2
-#define NUM_PORTS_PER_MBA 4
-
-#include "gpe_export.h"
-
-void dimm_set_ffdc(GpeErrorStruct *o_error, uint32_t i_addr, uint32_t i_rc, uint64_t i_ffdc);
-
-void gpe_dimm_sm(ipc_msg_t* cmd, void* arg);
+#include "ssx.h"
+#include "memory.h"
+#include "membuf_structs.h"
 
 
-#endif //_GPE1_DIMM_H
+extern MemBufConfiguration_t G_membufConfiguration;
+
+/**
+ *  Control ocmb memory buffer thottling
+ *  @param[in] The memroy control task
+ *  @return TRUE if throttle values changed, otherwise FALSE.
+ */
+bool ocmb_control( memory_control_task_t * i_memControlTask );
+
+/**
+ * Initialize structures for throttle control on ocmb memory data buffer
+ */
+void ocmb_control_init( void );
+
+#endif

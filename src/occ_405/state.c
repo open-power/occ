@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -25,7 +25,6 @@
 
 #include <occ_common.h>
 #include <common_types.h>
-#include <centaur_data.h>
 #include "ssx_io.h"
 #include "trac.h"
 #include "rtls.h"
@@ -36,11 +35,11 @@
 #include "cmdh_fsp.h"
 #include "proc_data.h"
 #include <homer.h>
-#include <dimm.h>
 #include "pgpe_interface.h"
 #include "pstate_pgpe_occ_api.h"
 #include "amec_sys.h"
 #include "wof.h"
+#include "memory.h"
 
 // Maximum time to wait for a PGPE task before timeout
 #define WAIT_PGPE_TASK_TIMEOUT (MICS_PER_TICK * 4)
@@ -117,7 +116,6 @@ uint32_t G_smgr_validate_data_active_mask = SMGR_VALIDATE_DATA_ACTIVE_MASK_HARDC
 uint32_t G_smgr_validate_data_observation_mask = SMGR_VALIDATE_DATA_OBSERVATION_MASK_HARDCODES;
 
 
-void disable_all_dimms();
 void disable_all_gpus();
 
 

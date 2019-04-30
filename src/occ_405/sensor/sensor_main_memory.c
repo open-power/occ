@@ -167,6 +167,9 @@
  * memory in the Sensor Readings Buffer.  This will minimize the number of BCE
  * copy operations needed to update the sensor readings when some sensors are
  * disabled.
+ *
+ * NOTE: When sensors are added/removed, be sure to also update
+ *       MAIN_MEM_NUM_SENSORS in sensor_main_memory.h
  */
 main_mem_sensor_t G_main_mem_sensors[] =
 {
@@ -186,7 +189,8 @@ main_mem_sensor_t G_main_mem_sensors[] =
     MAIN_MEM_SENSOR              (TEMPNEST,       false,    false),
     MAIN_MEM_SENSOR              (TEMPVDD,        false,    false),
     MAIN_MEM_CORE_SENSORS        (TEMPPROCTHRMC,  false,    false),
-    MAIN_MEM_DIMM_SENSORS        (TEMPDIMM,       false,    false),
+    MAIN_MEM_MEMORY_SENSORS      (TEMPMEMBUF,     false,    false),
+    MAIN_MEM_SENSOR              (TEMPDIMMTHRM,   false,    false),
     MAIN_MEM_SENSOR              (TEMPGPU0,       false,    false),
     MAIN_MEM_SENSOR              (TEMPGPU1,       false,    false),
     MAIN_MEM_SENSOR              (TEMPGPU2,       false,    false),
@@ -227,6 +231,8 @@ main_mem_sensor_t G_main_mem_sensors[] =
     MAIN_MEM_MEMORY_SENSORS      (MWRM,           false,    false),
     MAIN_MEM_MEMORY_SENSORS      (MEMSPSTATM,     true,     false),
     MAIN_MEM_MEMORY_SENSORS      (MEMSPM,         false,    false),
+
+    // NOTE: update MAIN_MEM_NUM_SENSORS when sensors are added/removed
 };
 
 /*
@@ -933,16 +939,7 @@ void mm_sensors_init_names_entry(const main_mem_sensor_t * i_mm_sensor,
     // Set entry struct field values
     memcpy(o_entry->name,  l_sensor_info->name,         MAX_SENSOR_NAME_SZ);
     memcpy(o_entry->units, l_sensor_info->sensor.units, MAX_SENSOR_UNIT_SZ);
-    if( (MEM_TYPE_NIMBUS == G_sysConfigData.mem_type) &&
-        ( ((l_gsid >= MRDM0) && (l_gsid <= MRDM7)) ||
-          ((l_gsid >= MWRM0) && (l_gsid <= MWRM7)) ) )
-    {
-        o_entry->scale_factor         = AMEFP(64, -5);
-    }
-    else
-    {
-        o_entry->scale_factor         = l_sensor_info->sensor.scalefactor;
-    }
+    o_entry->scale_factor             = l_sensor_info->sensor.scalefactor;
     o_entry->gsid                     = l_gsid;
     o_entry->freq                     = l_sensor_info->sensor.freq;
     o_entry->type                     = l_sensor_info->sensor.type;

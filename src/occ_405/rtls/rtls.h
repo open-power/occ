@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -57,8 +57,8 @@ typedef enum {
     TASK_ID_AMEC_MASTER,           // AMEC SMH tasks
     TASK_ID_CORE_DATA_CONTROL,
     TASK_ID_GPU_SM,                 // GPU State Machine
-    TASK_ID_DIMM_SM,               // DIMM State Machine
-    TASK_ID_MEMORY_CONTROL,        // Memory (centaur/dimm) control task
+    TASK_ID_MEMORY_DATA,           // Memory data collection task
+    TASK_ID_MEMORY_CONTROL,        // Memory control task
     TASK_ID_NEST_DTS,
     TASK_ID_24X7,                  // 24x7 data collection task
     TASK_ID_GPE_TIMINGS,

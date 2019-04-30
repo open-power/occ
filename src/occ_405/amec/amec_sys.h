@@ -41,7 +41,6 @@
 #include <amec_pcap.h>
 #include <amec_smh.h>
 #include <wof.h>
-#include "dimm_structs.h"
 
 //*************************************************************************
 // Externs
@@ -168,7 +167,7 @@ typedef union
         uint32_t mba_n: 16;
         uint32_t chip_n: 16;
     };
-} amec_cent_mem_speed_t;
+} amec_mem_speed_t;
 
 typedef struct
 {
@@ -186,8 +185,8 @@ typedef struct
   amec_chpair_perf_counter_t perf;
 
   // The most recent throttle value sent to this MBA
-  // This is used to only send values to the centaur when it changes.
-  amec_cent_mem_speed_t last_mem_speed_sent;
+  // This is used to only send values to the membuf when it changes.
+  amec_mem_speed_t last_mem_speed_sent;
 } amec_portpair_t;
 
 typedef struct
@@ -197,15 +196,13 @@ typedef struct
 
   uint16_t mirc2ms;
   uint16_t mlp2_2ms;
-} amec_centaur_perf_counter_t;
+} amec_membuf_perf_counter_t;
 
-#define FRU_SENSOR_STATUS_STALLED       0x01
 #define FRU_SENSOR_STATUS_ERROR         0x02
 #define FRU_SENSOR_STATUS_VALID_OLD     0x04
 #define FRU_TEMP_OUT_OF_RANGE           0x08
-#define FRU_SENSOR_STATUS_INVALID       0x10 //centaur only
+#define FRU_SENSOR_STATUS_INVALID       0x10 //membuf only
 #define FRU_TEMP_FAST_CHANGE            0x20
-#define FRU_SENSOR_CENT_NEST_FIR6       0x40 //centaur only
 
 typedef struct
 {
@@ -218,18 +215,18 @@ typedef struct
 
 typedef struct
 {
-  // Sub-structures under Centaur
+  // Sub-structures under memory buffer
   union
   {
-      amec_portpair_t       portpair[NUM_PORT_PAIRS_PER_CENTAUR];
-      amec_portpair_t       mba[NUM_PORT_PAIRS_PER_CENTAUR];
+      amec_portpair_t       portpair[NUM_PORT_PAIRS_PER_MEM_BUF];
+      amec_portpair_t       mba[NUM_PORT_PAIRS_PER_MEM_BUF];
   };  // Just a different name to refer to same thing
 
   // Sensors
   sensor_t mlp2ms;
   sensor_t mirc2ms;
 
-  //hottest dimm temperature behind this centaur
+  //hottest dimm temperature behind this membuf
   sensor_t tempdimmax;
 
   //which of the 8 dimm temperatures was the hottest temperature
@@ -237,22 +234,25 @@ typedef struct
   sensor_t locdimmax;
 
   // Current dimm tempuratures
-  fru_temp_t dimm_temps[NUM_DIMMS_PER_CENTAUR];
+  fru_temp_t dimm_temps[NUM_DIMMS_PER_OCMB];
 
-  // Hottest centaur temperature for this centaur
-  fru_temp_t centaur_hottest;
+  // Temperature of this membuf
+  sensor_t tempmembuf;
+
+  // Hottest membuf temperature for this membuf
+  fru_temp_t membuf_hottest;
 
   // Sensor ID for reporting temperature to BMC and FSP
   uint32_t  temp_sid;
 
-  amec_centaur_perf_counter_t perf;
+  amec_membuf_perf_counter_t perf;
 
-} amec_centaur_t;
+} amec_membuf_t;
 
 typedef struct
 {
   // Sub-structures under MemCtl
-  amec_centaur_t      centaur;
+  amec_membuf_t      membuf;
 
   // Performance Sensors
   sensor_t mrd;
@@ -388,12 +388,6 @@ typedef struct
   // Speed step limit
   uint16_t speed_step_limit;
 
-  // Memory Throttle Sent Last time to DIMM Throttle Register
-  dimm_n_value_t current_dimm_n_values[NUM_NIMBUS_MC_PAIRS][MAX_NUM_MCU_PORTS];
-
-  // M Values for NM Throttling Control (counts DRAM clock cycles)
-  dimm_m_value_t dimm_m_values[NUM_NIMBUS_MC_PAIRS][MAX_NUM_MCU_PORTS];
-
   // Current Memory Power Control values (applied last through GPE1)
   uint8_t current_mem_pwr_ctl;
 
@@ -525,13 +519,10 @@ typedef struct
   vectorSensor_t util_vector;
 
   // Memory Summary Sensors
-  sensor_t temp2mscent;
+  sensor_t tempmembufthrm;
   sensor_t tempdimmthrm;
   sensor_t mempwrthrot;
   sensor_t memotthrot;
-
-  // Nimbus DIMM Sensors
-  sensor_t       tempdimm[NUM_DIMM_PORTS*NUM_DIMMS_PER_I2CPORT];
 
   sensor_t curvdn;
   sensor_t pwrvdd;
@@ -692,8 +683,8 @@ typedef struct
   //---------------------------------------------------------
   // Thermal Controller based on processor temperatures
   amec_controller_t     thermalproc;
-  // Thermal Controller based on Centaur temperatures
-  amec_controller_t     thermalcent;
+  // Thermal Controller based on membuf temperatures
+  amec_controller_t     thermalmembuf;
   // Thermal Controller based on DIMM temperatures
   amec_controller_t     thermaldimm;
   // Thermal Controller based on VRM Vdd temperatures
@@ -751,14 +742,6 @@ typedef struct
   uint8_t       stream_vector_group;
   // input from TMGT to signal a reset of the OCC is desired (!=0)
   uint8_t       reset_prep;
-  // holds current state of L4 state machine for Centaur k
-  uint16_t      cent_l4_state[MAX_NUM_CENTAURS];
-  // holds current state of L4 IPL state machine for Centaur k
-  uint16_t      cent_l4_ipl_state[MAX_NUM_CENTAURS];
-  // input from OCC master to signal a desire to power down the L4s (!=0)
-  uint8_t       l4_powerdown_requestm;
-  // indicates which of the L4 Centaurs is being monitored by probe.
-  uint16_t      probe_l4_centaur;
   // holds the sum of all the memory power sensors (32msec)
   uint16_t      total_memory_power;
   uint16_t  probetemp[NUM_AMEC_FW_PROBES];                  // array holding temporary probe data

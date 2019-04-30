@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -118,3 +118,21 @@ int main(int argc, char **argv)
     return 0;
 }
 
+
+/*
+ * Function Specification
+ *
+ * Name: gpe_set_ffdc
+ *
+ * Description: Fills up the error struct with the given data.
+ *
+ * End Function Specification
+ */
+void gpe_set_ffdc(GpeErrorStruct *o_error, uint32_t i_addr, uint32_t i_rc, uint64_t i_ffdc)
+{
+
+    o_error->addr = i_addr;
+    //Return codes defined in gpe_err.h
+    o_error->rc = i_rc;
+    o_error->ffdc = i_ffdc;
+}

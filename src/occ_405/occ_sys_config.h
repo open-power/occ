@@ -34,7 +34,6 @@
 #endif
 #include <state.h>
 #include <apss.h>
-#include <dimm.h>
 #include <mem_structs.h>
 
 #define MAX_NUM_OCC              4
@@ -43,9 +42,8 @@
 #define NUM_CORES_PER_QUAD       4
 #define MAX_THREADS_PER_CORE     4
 #define MAX_NUM_CHIP_MODULES     4
-#define MAX_NUM_POWER_SUPPLIES   4
 #define MAX_NUM_MEM_CONTROLLERS  8
-#define MAX_NUM_CENTAURS         8
+#define MAX_NUM_MEMBUFS          8
 #define MAX_NUM_OCMBS            8
 #define NUM_PROC_VRMS            2
 #define MAX_GPU_PRES_SIGNALS     6
@@ -53,20 +51,10 @@
 
 #define MAX_NUM_MCU_PORTS        4
 
-#define MC01                     0
-#define MC23                     1
-#define NUM_NIMBUS_MC_PAIRS      2
-
-#define NUM_NIMBUS_MCAS          (MAX_NUM_MCU_PORTS * NUM_NIMBUS_MC_PAIRS)
-
 #define NUM_DIMMS_PER_MEM_CONTROLLER    8
 
 #define NUM_PROC_CHIPS_PER_OCC          1
-#define NUM_CENTAURS_PER_MEM_CONTROLLER 1
-#define NUM_PORT_PAIRS_PER_CENTAUR      2
-#define NUM_DIMMS_PER_CENTAUR           \
-                (NUM_DIMMS_PER_MEM_CONTROLLER/NUM_CENTAURS_PER_MEM_CONTROLLER)
-#define NUM_MBAS_PER_CENTAUR            2
+#define NUM_PORT_PAIRS_PER_MEM_BUF      2
 
 #define NUM_MBAS_PER_OCMB               1
 #define NUM_DIMMS_PER_OCMB              2
@@ -95,14 +83,12 @@ typedef union
 #define SYSCFG_INVALID_PIN           0xff
 
 #define MAX_VRFAN_SIGNALS       4
-#define MAX_APSS_MEM_TEMPS      8
 #define MAX_ADC_IO_DOMAINS      3
 #define MAX_ADC_FAN_DOMAINS     2
 #define MAX_ADC_STORAGE_DOMAINS 2
 #define MAX_CENT_EN_VCACHE      4
 #define MAX_DOM_OC_LATCH        4
-#define MAX_CONN_OC_SIGNALS     5
-#define MAX_PROC_CENT_CH        4
+#define MAX_PROC_MEMBUF_CH      4
 #define MAX_GPU_DOMAINS         2
 #define MAX_NUM_GPU_PER_DOMAIN  3
 
@@ -225,7 +211,7 @@ typedef struct
 {
   // Value stored will be APSS ADC Channel Number, if rail is not present, set
   // to INVALID = xFF
-  uint8_t memory[MAX_NUM_CHIP_MODULES][MAX_PROC_CENT_CH];
+  uint8_t memory[MAX_NUM_CHIP_MODULES][MAX_PROC_MEMBUF_CH];
   uint8_t vdd[MAX_NUM_CHIP_MODULES];
   uint8_t io[MAX_ADC_IO_DOMAINS];
   uint8_t fans[MAX_ADC_FAN_DOMAINS];
@@ -426,26 +412,20 @@ typedef struct
   // --------------------------------------
   // Memory Configuration Data
   // --------------------------------------
-  uint32_t centaur_huids[MAX_NUM_CENTAURS];
-  uint32_t dimm_huids[MAX_NUM_CENTAURS][NUM_DIMMS_PER_CENTAUR];
+  uint32_t membuf_huids[MAX_NUM_MEMBUFS];
+  uint32_t dimm_huids[MAX_NUM_MEMBUFS][NUM_DIMMS_PER_OCMB];
   uint8_t mem_type;
-  uint8_t dimm_i2c_engine;
   uint8_t ips_mem_pwr_ctl;     // IPS memory power control
   uint8_t default_mem_pwr_ctl; // default memory power control
 
   // --------------------------------------
   // Memory Throttle limits
   // --------------------------------------
-  // This array holds throttle configuration parameters for
-  // both nimbus and cumulus systems.
+  // This array holds throttle configuration parameters for memory
 
   // Throttle limits are layout:
-  // - Nimbus: mem_throt_limits[mc_pair][port]
-  //           mc_pair = 0/1 for MC01/MC23, port=0-3
-  //              (only first two rows populated)
-
-  // - Cumulus mem_throt_limits[cent][mba]
-  //           cent=0-8, mba = 0/1 for mba01/mba23
+  //   mem_throt_limits[membuf][mba]
+  //           membuf=0-8, mba = 0/1 for mba01/mba23
   //              (only first two columns populated)
   mem_throt_config_data_t mem_throt_limits[MAX_NUM_MEM_CONTROLLERS][MAX_NUM_MCU_PORTS];
 

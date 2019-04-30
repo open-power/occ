@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -40,8 +40,8 @@ extern amec_sys_t g_amec_sys;
 
 // These will paste a number onto a sensor name base to create the full enum
 // representation of the sensor name
-#define SENSOR_W_CENTAUR_NUM_HELPER(sensor_name, memc,centL,cent,ppL,pp) sensor_name##memc##centL##cent##ppL##pp
-#define SENSOR_W_CENTAUR_NUM(sensor_name, memc,cent,pp) SENSOR_W_CENTAUR_NUM_HELPER(sensor_name,memc,C,cent,P,pp)
+#define SENSOR_W_MEMBUF_NUM_HELPER(sensor_name, memc,membufL,membuf,ppL,pp) sensor_name##memc##membufL##membuf##ppL##pp
+#define SENSOR_W_MEMBUF_NUM(sensor_name, memc,membuf,pp) SENSOR_W_MEMBUF_NUM_HELPER(sensor_name,memc,C,membuf,P,pp)
 
 // Will define a set of "core sensor pointers" by passing in base sensor name
 // and ptr to [0] entry of array of 24 core sensors
@@ -114,25 +114,25 @@ extern amec_sys_t g_amec_sys;
   [SENSOR_W_NUM(sensor, 14)] = ptrbase.ptrmember[14], \
   [SENSOR_W_NUM(sensor, 15)] = ptrbase.ptrmember[15]
 
-// Will define a set of "centaur_port_pair sensor pointers" by passing in
+// Will define a set of "membuf_port_pair sensor pointers" by passing in
 // base sensor name and ptr to [0] entry of array of 16 memcontroller sensors
 #define PORTPAIR_SENSOR_PTRS(sensor,ptrbase,ptrmember,ptrsnsr) \
-  [SENSOR_W_CENTAUR_NUM(sensor, 0, 0, 0)] = ptrbase[0].ptrmember[0].ptrsnsr, \
-  [SENSOR_W_CENTAUR_NUM(sensor, 0, 0, 1)] = ptrbase[0].ptrmember[1].ptrsnsr, \
-  [SENSOR_W_CENTAUR_NUM(sensor, 1, 0, 0)] = ptrbase[1].ptrmember[0].ptrsnsr, \
-  [SENSOR_W_CENTAUR_NUM(sensor, 1, 0, 1)] = ptrbase[1].ptrmember[1].ptrsnsr, \
-  [SENSOR_W_CENTAUR_NUM(sensor, 2, 0, 0)] = ptrbase[2].ptrmember[0].ptrsnsr, \
-  [SENSOR_W_CENTAUR_NUM(sensor, 2, 0, 1)] = ptrbase[2].ptrmember[1].ptrsnsr, \
-  [SENSOR_W_CENTAUR_NUM(sensor, 3, 0, 0)] = ptrbase[3].ptrmember[0].ptrsnsr, \
-  [SENSOR_W_CENTAUR_NUM(sensor, 3, 0, 1)] = ptrbase[3].ptrmember[1].ptrsnsr, \
-  [SENSOR_W_CENTAUR_NUM(sensor, 4, 0, 0)] = ptrbase[4].ptrmember[0].ptrsnsr, \
-  [SENSOR_W_CENTAUR_NUM(sensor, 4, 0, 1)] = ptrbase[4].ptrmember[1].ptrsnsr, \
-  [SENSOR_W_CENTAUR_NUM(sensor, 5, 0, 0)] = ptrbase[5].ptrmember[0].ptrsnsr, \
-  [SENSOR_W_CENTAUR_NUM(sensor, 5, 0, 1)] = ptrbase[5].ptrmember[1].ptrsnsr, \
-  [SENSOR_W_CENTAUR_NUM(sensor, 6, 0, 0)] = ptrbase[6].ptrmember[0].ptrsnsr, \
-  [SENSOR_W_CENTAUR_NUM(sensor, 6, 0, 1)] = ptrbase[6].ptrmember[1].ptrsnsr, \
-  [SENSOR_W_CENTAUR_NUM(sensor, 7, 0, 0)] = ptrbase[7].ptrmember[0].ptrsnsr, \
-  [SENSOR_W_CENTAUR_NUM(sensor, 7, 0, 1)] = ptrbase[7].ptrmember[1].ptrsnsr
+  [SENSOR_W_MEMBUF_NUM(sensor, 0, 0, 0)] = ptrbase[0].ptrmember[0].ptrsnsr, \
+  [SENSOR_W_MEMBUF_NUM(sensor, 0, 0, 1)] = ptrbase[0].ptrmember[1].ptrsnsr, \
+  [SENSOR_W_MEMBUF_NUM(sensor, 1, 0, 0)] = ptrbase[1].ptrmember[0].ptrsnsr, \
+  [SENSOR_W_MEMBUF_NUM(sensor, 1, 0, 1)] = ptrbase[1].ptrmember[1].ptrsnsr, \
+  [SENSOR_W_MEMBUF_NUM(sensor, 2, 0, 0)] = ptrbase[2].ptrmember[0].ptrsnsr, \
+  [SENSOR_W_MEMBUF_NUM(sensor, 2, 0, 1)] = ptrbase[2].ptrmember[1].ptrsnsr, \
+  [SENSOR_W_MEMBUF_NUM(sensor, 3, 0, 0)] = ptrbase[3].ptrmember[0].ptrsnsr, \
+  [SENSOR_W_MEMBUF_NUM(sensor, 3, 0, 1)] = ptrbase[3].ptrmember[1].ptrsnsr, \
+  [SENSOR_W_MEMBUF_NUM(sensor, 4, 0, 0)] = ptrbase[4].ptrmember[0].ptrsnsr, \
+  [SENSOR_W_MEMBUF_NUM(sensor, 4, 0, 1)] = ptrbase[4].ptrmember[1].ptrsnsr, \
+  [SENSOR_W_MEMBUF_NUM(sensor, 5, 0, 0)] = ptrbase[5].ptrmember[0].ptrsnsr, \
+  [SENSOR_W_MEMBUF_NUM(sensor, 5, 0, 1)] = ptrbase[5].ptrmember[1].ptrsnsr, \
+  [SENSOR_W_MEMBUF_NUM(sensor, 6, 0, 0)] = ptrbase[6].ptrmember[0].ptrsnsr, \
+  [SENSOR_W_MEMBUF_NUM(sensor, 6, 0, 1)] = ptrbase[6].ptrmember[1].ptrsnsr, \
+  [SENSOR_W_MEMBUF_NUM(sensor, 7, 0, 0)] = ptrbase[7].ptrmember[0].ptrsnsr, \
+  [SENSOR_W_MEMBUF_NUM(sensor, 7, 0, 1)] = ptrbase[7].ptrmember[1].ptrsnsr
 
 // Will create an entry in the G_amec_mini_sensor_list with a pointer at
 // the sensor index (gsid) passed in by "sensor"
@@ -239,42 +239,42 @@ extern amec_sys_t g_amec_sys;
 // Will define a set of "memory controller mini sensor ptrs" by passing in
 // base sensor nameand ptr to [0] entry of array of 8 memcontroller sensors
 #define PORTPAIR_MINI_SENSOR_PTRS(sensor,ptr) \
-  [SENSOR_W_CENTAUR_NUM(sensor, 0, 0, 0)] = ptr[ 0], \
-  [SENSOR_W_CENTAUR_NUM(sensor, 0, 0, 1)] = ptr[ 1], \
-  [SENSOR_W_CENTAUR_NUM(sensor, 1, 0, 0)] = ptr[ 2], \
-  [SENSOR_W_CENTAUR_NUM(sensor, 1, 0, 1)] = ptr[ 3], \
-  [SENSOR_W_CENTAUR_NUM(sensor, 2, 0, 0)] = ptr[ 4], \
-  [SENSOR_W_CENTAUR_NUM(sensor, 2, 0, 1)] = ptr[ 5], \
-  [SENSOR_W_CENTAUR_NUM(sensor, 3, 0, 0)] = ptr[ 6], \
-  [SENSOR_W_CENTAUR_NUM(sensor, 3, 0, 1)] = ptr[ 7], \
-  [SENSOR_W_CENTAUR_NUM(sensor, 4, 0, 0)] = ptr[ 8], \
-  [SENSOR_W_CENTAUR_NUM(sensor, 4, 0, 1)] = ptr[ 9], \
-  [SENSOR_W_CENTAUR_NUM(sensor, 5, 0, 0)] = ptr[10], \
-  [SENSOR_W_CENTAUR_NUM(sensor, 5, 0, 1)] = ptr[11], \
-  [SENSOR_W_CENTAUR_NUM(sensor, 6, 0, 0)] = ptr[12], \
-  [SENSOR_W_CENTAUR_NUM(sensor, 6, 0, 1)] = ptr[13], \
-  [SENSOR_W_CENTAUR_NUM(sensor, 7, 0, 0)] = ptr[14], \
-  [SENSOR_W_CENTAUR_NUM(sensor, 7, 0, 1)] = ptr[15]
+  [SENSOR_W_MEMBUF_NUM(sensor, 0, 0, 0)] = ptr[ 0], \
+  [SENSOR_W_MEMBUF_NUM(sensor, 0, 0, 1)] = ptr[ 1], \
+  [SENSOR_W_MEMBUF_NUM(sensor, 1, 0, 0)] = ptr[ 2], \
+  [SENSOR_W_MEMBUF_NUM(sensor, 1, 0, 1)] = ptr[ 3], \
+  [SENSOR_W_MEMBUF_NUM(sensor, 2, 0, 0)] = ptr[ 4], \
+  [SENSOR_W_MEMBUF_NUM(sensor, 2, 0, 1)] = ptr[ 5], \
+  [SENSOR_W_MEMBUF_NUM(sensor, 3, 0, 0)] = ptr[ 6], \
+  [SENSOR_W_MEMBUF_NUM(sensor, 3, 0, 1)] = ptr[ 7], \
+  [SENSOR_W_MEMBUF_NUM(sensor, 4, 0, 0)] = ptr[ 8], \
+  [SENSOR_W_MEMBUF_NUM(sensor, 4, 0, 1)] = ptr[ 9], \
+  [SENSOR_W_MEMBUF_NUM(sensor, 5, 0, 0)] = ptr[10], \
+  [SENSOR_W_MEMBUF_NUM(sensor, 5, 0, 1)] = ptr[11], \
+  [SENSOR_W_MEMBUF_NUM(sensor, 6, 0, 0)] = ptr[12], \
+  [SENSOR_W_MEMBUF_NUM(sensor, 6, 0, 1)] = ptr[13], \
+  [SENSOR_W_MEMBUF_NUM(sensor, 7, 0, 0)] = ptr[14], \
+  [SENSOR_W_MEMBUF_NUM(sensor, 7, 0, 1)] = ptr[15]
 
 // Will define a set of "memc mini-sensor pointers" as NULL, since not
 // every sensor must have a mini-sensor.
 #define PORTPAIR_MINI_SENSOR_PTRS_NULL(sensor) \
-  [SENSOR_W_CENTAUR_NUM(sensor, 0, 0, 0)] = NULL, \
-  [SENSOR_W_CENTAUR_NUM(sensor, 0, 0, 1)] = NULL, \
-  [SENSOR_W_CENTAUR_NUM(sensor, 1, 0, 0)] = NULL, \
-  [SENSOR_W_CENTAUR_NUM(sensor, 1, 0, 1)] = NULL, \
-  [SENSOR_W_CENTAUR_NUM(sensor, 2, 0, 0)] = NULL, \
-  [SENSOR_W_CENTAUR_NUM(sensor, 2, 0, 1)] = NULL, \
-  [SENSOR_W_CENTAUR_NUM(sensor, 3, 0, 0)] = NULL, \
-  [SENSOR_W_CENTAUR_NUM(sensor, 3, 0, 1)] = NULL, \
-  [SENSOR_W_CENTAUR_NUM(sensor, 4, 0, 0)] = NULL, \
-  [SENSOR_W_CENTAUR_NUM(sensor, 4, 0, 1)] = NULL, \
-  [SENSOR_W_CENTAUR_NUM(sensor, 5, 0, 0)] = NULL, \
-  [SENSOR_W_CENTAUR_NUM(sensor, 5, 0, 1)] = NULL, \
-  [SENSOR_W_CENTAUR_NUM(sensor, 6, 0, 0)] = NULL, \
-  [SENSOR_W_CENTAUR_NUM(sensor, 6, 0, 1)] = NULL, \
-  [SENSOR_W_CENTAUR_NUM(sensor, 7, 0, 0)] = NULL, \
-  [SENSOR_W_CENTAUR_NUM(sensor, 7, 0, 1)] = NULL
+  [SENSOR_W_MEMBUF_NUM(sensor, 0, 0, 0)] = NULL, \
+  [SENSOR_W_MEMBUF_NUM(sensor, 0, 0, 1)] = NULL, \
+  [SENSOR_W_MEMBUF_NUM(sensor, 1, 0, 0)] = NULL, \
+  [SENSOR_W_MEMBUF_NUM(sensor, 1, 0, 1)] = NULL, \
+  [SENSOR_W_MEMBUF_NUM(sensor, 2, 0, 0)] = NULL, \
+  [SENSOR_W_MEMBUF_NUM(sensor, 2, 0, 1)] = NULL, \
+  [SENSOR_W_MEMBUF_NUM(sensor, 3, 0, 0)] = NULL, \
+  [SENSOR_W_MEMBUF_NUM(sensor, 3, 0, 1)] = NULL, \
+  [SENSOR_W_MEMBUF_NUM(sensor, 4, 0, 0)] = NULL, \
+  [SENSOR_W_MEMBUF_NUM(sensor, 4, 0, 1)] = NULL, \
+  [SENSOR_W_MEMBUF_NUM(sensor, 5, 0, 0)] = NULL, \
+  [SENSOR_W_MEMBUF_NUM(sensor, 5, 0, 1)] = NULL, \
+  [SENSOR_W_MEMBUF_NUM(sensor, 6, 0, 0)] = NULL, \
+  [SENSOR_W_MEMBUF_NUM(sensor, 6, 0, 1)] = NULL, \
+  [SENSOR_W_MEMBUF_NUM(sensor, 7, 0, 0)] = NULL, \
+  [SENSOR_W_MEMBUF_NUM(sensor, 7, 0, 1)] = NULL
 
 //****************************************************************************
 // Sensor Pointer Table
@@ -401,26 +401,27 @@ const sensor_ptr_t G_amec_sensor_list[] =
   MEMCONTROL_SENSOR_PTRS(MWRM,          &g_amec_sys.proc[0].memctl, mwr),
   MEMCONTROL_SENSOR_PTRS(MEMSPM,        &g_amec_sys.proc[0].memctl, memsp),
   MEMCONTROL_SENSOR_PTRS(MEMSPSTATM,    &g_amec_sys.proc[0].memctl, memspstat),
-  MEMCONTROL_SENSOR_PTRS(MIRCM,         &g_amec_sys.proc[0].memctl, centaur.mirc2ms),
-  MEMCONTROL_SENSOR_PTRS(MLP2M,         &g_amec_sys.proc[0].memctl, centaur.mlp2ms),
-  DIMM_SENSOR_PTRS(TEMPDIMM,            &g_amec_sys.proc[0],        tempdimm),
-  MEMCONTROL_SENSOR_PTRS(TEMPDIMMAXM,   &g_amec_sys.proc[0].memctl, centaur.tempdimmax),
-  MEMCONTROL_SENSOR_PTRS(LOCDIMMAXM,    &g_amec_sys.proc[0].memctl, centaur.locdimmax),
+  MEMCONTROL_SENSOR_PTRS(MIRCM,         &g_amec_sys.proc[0].memctl, membuf.mirc2ms),
+  MEMCONTROL_SENSOR_PTRS(MLP2M,         &g_amec_sys.proc[0].memctl, membuf.mlp2ms),
+  MEMCONTROL_SENSOR_PTRS(TEMPMEMBUF,    &g_amec_sys.proc[0].memctl, membuf.tempmembuf),
+  MEMCONTROL_SENSOR_PTRS(TEMPDIMMAXM,   &g_amec_sys.proc[0].memctl, membuf.tempdimmax),
+  MEMCONTROL_SENSOR_PTRS(LOCDIMMAXM,    &g_amec_sys.proc[0].memctl, membuf.locdimmax),
+
   SENSOR_PTR(MEMPWRTHROT,               &g_amec_sys.proc[0].mempwrthrot),
   SENSOR_PTR(MEMOTTHROT,                &g_amec_sys.proc[0].memotthrot),
 
-  PORTPAIR_SENSOR_PTRS(MACM,        &g_amec_sys.proc[0].memctl, centaur.portpair, mac2ms),
-  PORTPAIR_SENSOR_PTRS(MPUM,        &g_amec_sys.proc[0].memctl, centaur.portpair, mpu2ms),
-  PORTPAIR_SENSOR_PTRS(MIRBM,       &g_amec_sys.proc[0].memctl, centaur.portpair, mirb2ms),
-  PORTPAIR_SENSOR_PTRS(MIRLM,       &g_amec_sys.proc[0].memctl, centaur.portpair, mirl2ms),
-  PORTPAIR_SENSOR_PTRS(MIRMM,       &g_amec_sys.proc[0].memctl, centaur.portpair, mirm2ms),
-  PORTPAIR_SENSOR_PTRS(MIRHM,       &g_amec_sys.proc[0].memctl, centaur.portpair, mirh2ms),
-  PORTPAIR_SENSOR_PTRS(MTSM,        &g_amec_sys.proc[0].memctl, centaur.portpair, mts2ms),
-  PORTPAIR_SENSOR_PTRS(M4RDM,       &g_amec_sys.proc[0].memctl, centaur.portpair, m4rd2ms),
-  PORTPAIR_SENSOR_PTRS(M4WRM,       &g_amec_sys.proc[0].memctl, centaur.portpair, m4wr2ms),
+  PORTPAIR_SENSOR_PTRS(MACM,        &g_amec_sys.proc[0].memctl, membuf.portpair, mac2ms),
+  PORTPAIR_SENSOR_PTRS(MPUM,        &g_amec_sys.proc[0].memctl, membuf.portpair, mpu2ms),
+  PORTPAIR_SENSOR_PTRS(MIRBM,       &g_amec_sys.proc[0].memctl, membuf.portpair, mirb2ms),
+  PORTPAIR_SENSOR_PTRS(MIRLM,       &g_amec_sys.proc[0].memctl, membuf.portpair, mirl2ms),
+  PORTPAIR_SENSOR_PTRS(MIRMM,       &g_amec_sys.proc[0].memctl, membuf.portpair, mirm2ms),
+  PORTPAIR_SENSOR_PTRS(MIRHM,       &g_amec_sys.proc[0].memctl, membuf.portpair, mirh2ms),
+  PORTPAIR_SENSOR_PTRS(MTSM,        &g_amec_sys.proc[0].memctl, membuf.portpair, mts2ms),
+  PORTPAIR_SENSOR_PTRS(M4RDM,       &g_amec_sys.proc[0].memctl, membuf.portpair, m4rd2ms),
+  PORTPAIR_SENSOR_PTRS(M4WRM,       &g_amec_sys.proc[0].memctl, membuf.portpair, m4wr2ms),
 
 
-  SENSOR_PTR(TEMPCENT,              &g_amec_sys.proc[0].temp2mscent),
+  SENSOR_PTR(TEMPMEMBUFTHRM,        &g_amec_sys.proc[0].tempmembufthrm),
   SENSOR_PTR(TEMPDIMMTHRM,          &g_amec_sys.proc[0].tempdimmthrm),
 
   // ------------------------------------------------------
@@ -582,24 +583,7 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   MEMCONTROL_MINI_SENSOR_PTRS_NULL(MEMSPSTATM),
   MEMCONTROL_MINI_SENSOR_PTRS_NULL(MIRCM),
   MEMCONTROL_MINI_SENSOR_PTRS_NULL(MLP2M),
-
-  MINI_SENSOR_PTR( TEMPDIMM00,     NULL),
-  MINI_SENSOR_PTR( TEMPDIMM01,     NULL),
-  MINI_SENSOR_PTR( TEMPDIMM02,     NULL),
-  MINI_SENSOR_PTR( TEMPDIMM03,     NULL),
-  MINI_SENSOR_PTR( TEMPDIMM04,     NULL),
-  MINI_SENSOR_PTR( TEMPDIMM05,     NULL),
-  MINI_SENSOR_PTR( TEMPDIMM06,     NULL),
-  MINI_SENSOR_PTR( TEMPDIMM07,     NULL),
-  MINI_SENSOR_PTR( TEMPDIMM08,     NULL),
-  MINI_SENSOR_PTR( TEMPDIMM09,     NULL),
-  MINI_SENSOR_PTR( TEMPDIMM10,     NULL),
-  MINI_SENSOR_PTR( TEMPDIMM11,     NULL),
-  MINI_SENSOR_PTR( TEMPDIMM12,     NULL),
-  MINI_SENSOR_PTR( TEMPDIMM13,     NULL),
-  MINI_SENSOR_PTR( TEMPDIMM14,     NULL),
-  MINI_SENSOR_PTR( TEMPDIMM15,     NULL),
-
+  MEMCONTROL_MINI_SENSOR_PTRS_NULL(TEMPMEMBUF),
   MEMCONTROL_MINI_SENSOR_PTRS_NULL(TEMPDIMMAXM),
   MEMCONTROL_MINI_SENSOR_PTRS_NULL(LOCDIMMAXM),
 
@@ -616,7 +600,7 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   PORTPAIR_MINI_SENSOR_PTRS_NULL(M4RDM),
   PORTPAIR_MINI_SENSOR_PTRS_NULL(M4WRM),
 
-  MINI_SENSOR_PTR( TEMPCENT,        &G_dcom_slv_outbox_tx.temp2mscent),
+  MINI_SENSOR_PTR( TEMPMEMBUFTHRM,  &G_dcom_slv_outbox_tx.tempmembufthrm),
   MINI_SENSOR_PTR( TEMPDIMMTHRM,    &G_dcom_slv_outbox_tx.tempdimmthrm),
 
   // ------------------------------------------------------

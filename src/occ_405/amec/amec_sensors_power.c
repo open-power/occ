@@ -57,12 +57,6 @@ uint32_t G_lastValidAdcValue[MAX_APSS_ADC_CHANNELS] = {0};
 // Indicates if we have determined GPU presence
 bool G_gpu_config_done = FALSE;
 
-// GPE Request Structure used to communicate an EPOW GPIO event to GPE1 for NVDIMMs
-GpeRequest G_epow_gpio_detected_req;
-GPE_BUFFER(epow_gpio_args_t G_epow_gpio_parms);
-bool G_epow_gpio_scheduled = FALSE;
-bool G_epow_triggered = FALSE;
-
 
 // Bitmap of GPUs present
 uint32_t G_first_proc_gpu_config = 0;
@@ -228,13 +222,6 @@ bool amec_update_apss_sensors(void)
             uint32_t temp32  = 0;
             uint8_t  l_idx   = 0;
 
-            // Check GPIO_EPOW. Skip everything if asserted
-            if (epow_gpio_asserted(FALSE))
-            {
-                l_sensors_updated = FALSE;
-                break;
-            }
-
             // ----------------------------------------------------
             // Convert all ADC Channels immediately
             // ----------------------------------------------------
@@ -346,7 +333,7 @@ bool amec_update_apss_sensors(void)
             temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.memory[l_proc][1]);
             temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.memory[l_proc][2]);
             temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.memory[l_proc][3]);
-            //Only for FSP-LESS systems do we add in Centaur power because it is measured on its own A/D channel, but is part of memory power
+            //Only for FSP-LESS systems do we add in membuf power because it is measured on its own A/D channel, but is part of memory power
             if (FSP_SUPPORTED_OCC != G_occ_interrupt_type)
             {
                 temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.mem_cache);
@@ -1072,123 +1059,3 @@ void amec_update_gpu_configuration(void)
         }
     }
 }
-
-// Function Specification
-//
-// Name: epow_gpio_asserted
-//
-// Description: Check if the GPIO EPOW was asserted
-//              If asserted:
-//                Call GPE1 task to notify NVDIMMs to back up their data
-//                Create unrecoverable error (EPOW_ASSERTED) and request safe mode
-//                Return TRUE
-//
-// Thread: RealTime Loop
-//
-// End Function Specification
-bool epow_gpio_asserted(const bool i_from_slave_inbox)
-{
-    bool    l_epow_valid = FALSE;
-    uint8_t l_epow_value = 1;
-    static bool L_epow_asserted = FALSE;
-    static bool L_epow_scheduled = FALSE;
-
-    // Get the value of GPIO_EPOW and make sure it is valid
-    l_epow_valid = apss_gpio_get(G_sysConfigData.apss_gpio_map.nvdimm_epow,
-                                 &l_epow_value);
-
-    // DEBUG TRACE
-    static bool L_trace = TRUE;
-    if (G_injected_epow_asserted && L_trace)
-    {
-        TRAC_IMP("epow_gpio_asserted: G_injected_epow_asserted was set to true!");
-        TRAC_IMP("epow_gpio_asserted: epow valid? %c, nvdimm epow: 0x%02X",
-                 l_epow_valid?'y':'n', G_sysConfigData.apss_gpio_map.nvdimm_epow);
-        L_trace = false;
-    }
-
-    if (L_epow_asserted)
-    {
-        // EPOW was asserted during the last call
-
-        if (! L_epow_scheduled)
-        {
-            if ((OCC_MASTER != G_occ_role) || i_from_slave_inbox)
-            {
-                TRAC_IMP("epow_gpio_asserted: GPIO EPOW Detected! Notifying GPE1 (tick=%d)", CURRENT_TICK);
-
-                // GPIO_EPOW was asserted create GpeRequest object to notify GPE1
-                int l_rc = gpe_request_create(&G_epow_gpio_detected_req,       // Task Request
-                                              &G_async_gpe_queue1,             // GPE1 queue
-                                              IPC_ST_EPOW_GPIO_ASSERT_FUNCID,  // Function ID
-                                              &G_epow_gpio_parms,              // Task Parameters
-                                              SSX_WAIT_FOREVER,                // No timeout
-                                              NULL,                            // No callback
-                                              NULL,                            // No callback parms
-                                              ASYNC_CALLBACK_IMMEDIATE);       // Options
-                if (0 == l_rc)
-                {
-                    // Need to send the configured MBA's bit field to GPE1
-                    G_epow_gpio_parms.configured_mbas = G_configured_mbas;
-                    l_rc = gpe_request_schedule(&G_epow_gpio_detected_req);
-                    if (0 == l_rc)
-                    {
-                        G_epow_gpio_scheduled = TRUE;
-                    }
-                    else
-                    {
-                        TRAC_ERR("epow_gpio_asserted: schedule failed w/rc=0x%08X", l_rc);
-                    }
-                }
-                else
-                {
-                    TRAC_ERR("epow_gpio_asserted: Failed to create epow_gpio_detected IPC task (rc=%d)", l_rc);
-                }
-
-                // Create informational error and request safe mode since system is powering off
-                /*
-                 * @errortype
-                 * @moduleid    AMEC_UPDATE_APSS_SENSORS
-                 * @reasoncode  EPOW_ASSERTED
-                 * @userdata1   GPE IPC RC
-                 * @userdata2   Configured MBAs
-                 * @userdata4   OCC_NO_EXTENDED_RC
-                 * @devdesc     GPIO_EPOW was asserted
-                 */
-                errlHndl_t l_err = createErrl(AMEC_UPDATE_APSS_SENSORS,
-                                              EPOW_ASSERTED,
-                                              OCC_NO_EXTENDED_RC,
-                                              ERRL_SEV_INFORMATIONAL,
-                                              NULL,
-                                              DEFAULT_TRACE_SIZE,
-                                              l_rc,
-                                              G_configured_mbas);
-                REQUEST_SAFE_MODE( l_err );
-
-                L_epow_scheduled = TRUE;
-            }
-            else
-            {
-                TRAC_IMP("epow_gpio_asserted: GPIO EPOW Detected! skipping GPE1 notification (role=0x%02X, tick=%d)",
-                         G_occ_role, CURRENT_TICK);
-            }
-        }
-    }
-    else if (l_epow_valid && !l_epow_value) // Signal is active-low
-    {
-        // EPOW has been detected
-        L_epow_asserted = TRUE;
-
-        // Disable 24x7 to prevent GPE halt due (24x7 main memory access after epow procedure runs)
-        if ((G_internal_flags & INT_FLAG_DISABLE_24X7) == 0)
-        {
-            TRAC_IMP("epow_gpio_asserted: GPIO EPOW Detected! Disabling 24x7");
-            G_internal_flags |= INT_FLAG_DISABLE_24X7;
-        }
-    }
-
-    return L_epow_asserted;
-}
-/*----------------------------------------------------------------------------*/
-/* End                                                                        */
-/*----------------------------------------------------------------------------*/

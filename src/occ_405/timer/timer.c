@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -33,11 +33,9 @@
 #include <occ_service_codes.h>      // Reason codes
 #include <timer_service_codes.h>    // Module Id
 #include <cmdh_fsp.h>               // for RCs in the checkpoint macros
-#include <dimm_structs.h>
 #include <occ_sys_config.h>
 #include <pgpe_shared.h>
 #include <sensor.h>
-#include <amec_sensors_centaur.h>
 #include <common.h>
 
 //*************************************************************************/
@@ -79,14 +77,6 @@ SSX_IRQ_FAST2FULL(ocbTHndler, ocbTHndlerFull);
 bool G_wdog_enabled = false;
 extern uint8_t G_occ_interrupt_type;
 bool G_htmgt_notified_of_error = false;
-
-// memory deadman is a per port timer that the MCU uses to verify that
-// the memory's power and thermal are properly monitored. The memory deadman
-// timers can be programmed 100 ms to 28 s. Reading the deadman timer's SCOM
-// register resets its value. If the OCC fails to reset the deadman SCOM
-// and the timer is expired, emergency throttle mode will be enforced.
-GpeRequest G_reset_mem_deadman_request;                              // IPC request
-GPE_BUFFER(reset_mem_deadman_args_t G_gpe_reset_mem_deadman_args);   // IPC args
 
 //*************************************************************************/
 // Function Prototypes
@@ -154,78 +144,16 @@ void initWatchdogTimers()
 
 // Function Specification
 //
-// Name: init_mem_deadman_reset_task
-//
-// Description:
-//
-// End Function Specification
-void init_mem_deadman_reset_task(void)
-{
-    errlHndl_t l_err = NULL;
-    int        rc = 0;
-
-    // Initialize memory deadman timer reset task arguments
-    G_gpe_reset_mem_deadman_args.error.error = 0;
-    G_gpe_reset_mem_deadman_args.error.ffdc  = 0;
-    G_gpe_reset_mem_deadman_args.mca         = 0;
-
-    TRAC_INFO("init_mem_deadman_reset_task: Creating request for GPE deadman reset task");
-    rc = gpe_request_create(&G_reset_mem_deadman_request,       // request
-                       &G_async_gpe_queue1,                     // GPE1 queue
-                       IPC_ST_RESET_MEM_DEADMAN,                // Function ID
-                       &G_gpe_reset_mem_deadman_args,           // GPE argument_ptr
-                       SSX_SECONDS(5),                          // timeout
-                       NULL,                                    // callback
-                       NULL,                                    // callback arg
-                       ASYNC_CALLBACK_IMMEDIATE);               // options
-
-    // If we couldn't create the GpeRequest objects, there must be a major problem
-    // so we will log an error and halt OCC.
-    if(rc)
-    {
-        //Failed to create GpeRequest object, log an error.
-        TRAC_ERR("Failed to create memory deadman GpeRequest object[0x%x]", rc);
-
-        /* @
-         * @errortype
-         * @moduleid    INIT_WD_TIMERS
-         * @reasoncode  GPE_REQUEST_CREATE_FAILURE
-         * @userdata1   gpe_request_create return code
-         * @userdata2   0
-         * @userdata4   OCC_NO_EXTENDED_RC
-         * @devdesc     Failure to create GpeRequest object for
-         *              memory deadman reset IPC task.
-         *
-         */
-        l_err = createErrl(
-            INIT_WD_TIMERS,                     //modId
-            GPE_REQUEST_CREATE_FAILURE,         //reasoncode
-            OCC_NO_EXTENDED_RC,                 //Extended reason code
-            ERRL_SEV_PREDICTIVE,                //Severity
-            NULL,                               //Trace Buf
-            DEFAULT_TRACE_SIZE,                 //Trace Size
-            rc,                                 //userdata1
-            0                                   //userdata2
-            );
-
-        REQUEST_RESET(l_err);   //This will add a firmware callout for us
-    }
-
-}
-
-// Function Specification
-//
 // Name: task_poke_watchdogs
 //
 // Description: Called every 500us on both master and slaves while in observation
 //               and active state. It performs the following:
 //               1. Enable/Reset the OCC heartbeat, setting the count to 8ms.
-//               2. Reset memory deadman timer for 1 MCA (by a GPE1 IPC task).
-//               3. Every 4ms (every other time called):
+//               2. Every 4ms (every other time called):
 //                  Verify PGPE is still functional by reading PGPE Beacon from
 //                  SRAM if after 8ms (2 consecutive checks) there is no change
 //                  to the PGPE Beacon count then log an error and request reset.
-//               4. Check for PGPE error in shared SRAM
+//               3. Check for PGPE error in shared SRAM
 //
 // End Function Specification
 #define TASK_PGPE_BEACON_RUN_TICK_COUNT 8
@@ -240,13 +168,7 @@ void task_poke_watchdogs(struct task * i_self)
     hbr.fields.occ_heartbeat_en   = true;  // enable heartbeat timer
     out32(OCB_OCCHBR, hbr.value);             // Enable heartbeat register, and set it
 
-// 2. Reset memory deadman timer
-    if(G_sysConfigData.mem_type == MEM_TYPE_NIMBUS)
-    {
-        manage_mem_deadman_task();
-    }
-
-// 3. Verify PGPE Beacon is not frozen for 8 ms if there are cores configured
+// 2. Verify PGPE Beacon is not frozen for 8 ms if there are cores configured
     if(G_present_cores != 0)
     {
         if(L_check_pgpe_beacon_count >= TASK_PGPE_BEACON_RUN_TICK_COUNT)
@@ -264,7 +186,7 @@ void task_poke_watchdogs(struct task * i_self)
         }
     }
 
-// 4. Check if PGPE has an error to report (non-FSP systems)
+// 3. Check if PGPE has an error to report (non-FSP systems)
     if ((G_occ_interrupt_type != FSP_SUPPORTED_OCC) && (G_htmgt_notified_of_error == false))
     {
         unsigned int index = 0;
@@ -279,223 +201,6 @@ void task_poke_watchdogs(struct task * i_self)
             }
         }
     }
-}
-
-// Function Specification
-//
-// Name: manage_mem_deadman_task
-//
-// Description: Verify that if a memory deadman_task was scheduled on GPE1 last cycle
-//              then it is completed. Then if there is a new task to be scheduled
-//              for this cycle, then schedule it on the GPE1 engine. This task
-//              is also used to collect memory performance measurements.
-//              Called every 500us.  This should only be called on NIMBUS!
-//
-// End Function Specification
-
-// MAX number of timeout cycles allowed for memory deadman IPC task
-// before logging an error
-#define MEM_DEADMAN_TASK_TIMEOUT 8
-
-void manage_mem_deadman_task(void)
-{
-    //if a task is scheduled, verify that it is completed ...
-    //track # of consecutive failures on a specific RDIMM
-    static uint8_t L_scom_timeout[NUM_NIMBUS_MCAS] = {0};
-
-    errlHndl_t     l_err     = NULL; // Error handler
-    int            rc        = 0;    // Return code
-    uint8_t        mca;              // MCA of last memory deadman task (scheduled/not-configured)
-    static bool    L_gpe_scheduled      = false;
-    static bool    L_gpe_idle_traced    = false;
-    static bool    L_gpe_timeout_logged = false;
-    static bool    L_gpe_had_1_tick     = false;
-    static bool    L_init_complete      = false;
-
-    if(!L_init_complete)
-    {
-       // Initialize the GPE1 IPC task that resets the deadman timer.
-       init_mem_deadman_reset_task();
-       L_init_complete = true;
-    }
-
-    // There is no way to synchronously start or stop the counter, so must
-    // take the difference between two readings.
-    static perf_mon_count0_t L_last_reading[NUM_NIMBUS_MCAS] = {{0}};
-    static bool L_read_once[NUM_NIMBUS_MCAS] = {0};
-    uint32_t l_rd_wr_diff = 0;
-
-    uint32_t       gpe_rc = G_gpe_reset_mem_deadman_args.error.rc;  // IPC task rc
-
-    do
-    {   // mca of last memory deadman task (either not-configured or scheduled).
-        mca = G_gpe_reset_mem_deadman_args.mca;
-
-        //First, check to see if the previous GPE request still running
-        if( !(async_request_is_idle(&G_reset_mem_deadman_request.request)) )
-        {
-            L_scom_timeout[mca]++;
-            //This can happen due to variability in when the task runs
-            if(!L_gpe_idle_traced && L_gpe_had_1_tick)
-            {
-                TRAC_INFO("manage_mem_deadman_task: GPE is still running. mca[%d]", mca);
-                L_gpe_idle_traced = true;
-            }
-            L_gpe_had_1_tick = true;
-            break;
-        }
-        else
-        {
-            //Request is idle
-            L_gpe_had_1_tick = false;
-            if(L_gpe_idle_traced)
-            {
-                TRAC_INFO("manage_mem_deadman_task: GPE completed. mca[%d]", mca);
-                L_gpe_idle_traced = false;
-            }
-        }
-
-        //check scom status
-        if(L_gpe_scheduled)
-        {
-            if(!async_request_completed(&G_reset_mem_deadman_request.request) || gpe_rc)
-            {
-                //Request failed. Keep count of failures and log an error if we reach a
-                //max retry count
-                L_scom_timeout[mca]++;
-                if(L_scom_timeout[mca] >= MEM_DEADMAN_TASK_TIMEOUT)
-                {
-                    break;
-                }
-
-            }
-            else // A Task was scheduled last cycle, completed successfully, no errors
-            {
-                //Reset the timeout.
-                L_scom_timeout[mca] = 0;
-
-                // Update read sensors
-                l_rd_wr_diff = G_gpe_reset_mem_deadman_args.rd_wr_counts.mba_read_cnt;
-                l_rd_wr_diff = amec_diff_adjust_for_overflow(l_rd_wr_diff, L_last_reading[mca].mba_read_cnt);
-                l_rd_wr_diff = ((l_rd_wr_diff*25)/1000);
-                if(L_read_once[mca]) sensor_update(AMECSENSOR_ARRAY_PTR(MRDM0,mca), l_rd_wr_diff);
-
-                // Update write sensors
-                l_rd_wr_diff = G_gpe_reset_mem_deadman_args.rd_wr_counts.mba_write_cnt;
-                l_rd_wr_diff = amec_diff_adjust_for_overflow(l_rd_wr_diff, L_last_reading[mca].mba_write_cnt);
-                l_rd_wr_diff = ((l_rd_wr_diff*25)/1000);
-                if(L_read_once[mca]) sensor_update(AMECSENSOR_ARRAY_PTR(MWRM0,mca), l_rd_wr_diff);
-
-                // Update last read/write measurement
-                L_last_reading[mca] = G_gpe_reset_mem_deadman_args.rd_wr_counts;
-                L_read_once[mca] = TRUE;
-            }
-        }
-
-        //The previous GPE job completed. Now get ready for the next job.
-        L_gpe_scheduled = false;
-
-
-        //We didn't fail, update mca (irrespective of whether it will be scheduled)
-        mca++;
-        if ( mca >= NUM_NIMBUS_MCAS )
-        {
-            mca  = 0;
-        }
-        G_gpe_reset_mem_deadman_args.mca = mca;
-
-        // If the MCA is not configured, break
-        if(!NIMBUS_DIMM_INDEX_THROTTLING_CONFIGURED(mca))
-        {
-            break;
-        }
-
-        // The MCA is configured, and the previous IPC task completed successfully
-        rc = gpe_request_schedule(&G_reset_mem_deadman_request);
-
-        // Always log an error if gpe request schedule fails
-        if( rc )
-        {
-            //Error in schedule gpe memory deadman reset task
-            TRAC_ERR("manage_mem_deadman_task: Failed to schedule memory deadman reset task rc=%x",
-                     rc);
-
-            /* @
-             * @errortype
-             * @moduleid    POKE_WD_TIMERS
-             * @reasoncode  GPE_REQUEST_SCHEDULE_FAILURE
-             * @userdata1   rc - gpe_request_schedule return code
-             * @userdata2   0
-             * @userdata4   OCC_NO_EXTENDED_RC
-             * @devdesc     OCC Failed to schedule a GPE job for memory deadman reset
-             */
-            l_err = createErrl(
-                POKE_WD_TIMERS,                         // modId
-                GPE_REQUEST_SCHEDULE_FAILURE,           // reasoncode
-                OCC_NO_EXTENDED_RC,                     // Extended reason code
-                ERRL_SEV_UNRECOVERABLE,                 // Severity
-                NULL,                                   // Trace Buf
-                DEFAULT_TRACE_SIZE,                     // Trace Size
-                rc,                                     // userdata1
-                0                                       // userdata2
-                );
-
-            addUsrDtlsToErrl(
-                l_err,                                            //io_err
-                (uint8_t *) &(G_reset_mem_deadman_request.ffdc),  //i_dataPtr,
-                sizeof(G_reset_mem_deadman_request.ffdc),         //i_size
-                ERRL_USR_DTL_STRUCT_VERSION_1,                    //version
-                ERRL_USR_DTL_BINARY_DATA);                        //type
-
-            REQUEST_RESET(l_err);   //This will add a firmware callout for us
-            break;
-
-        }
-
-        // Successfully scheduled a new memory deadman timer gpe IPC request
-        L_gpe_scheduled = true;
-
-    } while(0);
-
-
-    if(L_scom_timeout[mca] >= MEM_DEADMAN_TASK_TIMEOUT && L_gpe_timeout_logged == false)
-    {
-        TRAC_ERR("manage_mem_deadman_task: Timeout scomming MCA[%d]", mca);
-
-        /* @
-         * @errortype
-         * @moduleid    POKE_WD_TIMERS
-         * @reasoncode  GPE_REQUEST_TASK_TIMEOUT
-         * @userdata1   mca number
-         * @userdata2   0
-         * @userdata4   OCC_NO_EXTENDED_RC
-         * @devdesc     Timed out trying to reset the memory deadman timer.
-         */
-
-        l_err = createErrl(
-                POKE_WD_TIMERS,                         // modId
-                GPE_REQUEST_TASK_TIMEOUT,               // reasoncode
-                OCC_NO_EXTENDED_RC,                     // Extended reason code
-                ERRL_SEV_PREDICTIVE,                    // Severity
-                NULL,                                   // Trace Buf
-                DEFAULT_TRACE_SIZE,                     // Trace Size
-                mca,                                    // userdata1
-                0                                       // userdata2
-                );
-
-        addUsrDtlsToErrl(l_err,                                   //io_err
-                (uint8_t *) &(G_reset_mem_deadman_request.ffdc),  //i_dataPtr,
-                sizeof(G_reset_mem_deadman_request.ffdc),         //i_size
-                ERRL_USR_DTL_STRUCT_VERSION_1,                    //version
-                ERRL_USR_DTL_BINARY_DATA);                        //type
-
-        // Commit Error Log
-        commitErrl(&l_err);
-
-        L_gpe_timeout_logged = true;
-    }
-
-    return;
 }
 
 // Function Specification

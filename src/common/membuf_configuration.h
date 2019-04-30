@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -30,11 +30,10 @@
 
 //#include "occhw_common.h"
 #include "gpe_pba_parms.h"
-#include "centaur_firmware_registers.h"
+#include "ocmb_firmware_registers.h"
 
 #define OCCHW_N_MEMBUF           8
 
-#define MEMTYPE_CENTAUR          1
 #define MEMTYPE_OCMB             2
 
 /// Error return codes set/returned by gpe_*_configuration_create()
@@ -67,12 +66,6 @@ typedef struct
     ///
     uint64_t baseAddress[OCCHW_N_MEMBUF];
 
-    /// Contents of the Centaur device id register which includes cfam_id
-    //  and module_id.
-    //  (Not used on OCMB)
-    ///
-    uint64_t deviceId[OCCHW_N_MEMBUF];
-
     /// Designated sync scom address
     /// \note One and Only one of the MCS units can be targeted with SYNC
     /// commands. The design includes a private bus connecting all MCS on the
@@ -80,7 +73,7 @@ typedef struct
     /// MCS on the chip.
     uint32_t mcSyncAddr;
 
-    // Membuf_type is MEMTYPE_CENTAUR | MEMTYPE_OCMB | etc.
+    // Membuf_type is MEMTYPE_OCMB | etc.
     uint32_t membuf_type; // keep 8 byte aligned
 
     /// A GpePbaParms parameter block for gpe_mem_data()

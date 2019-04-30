@@ -67,17 +67,11 @@ int inband_access(MemBufConfiguration_t* i_config,
                      (uint32_t)((*io_data)>>32),
                      (uint32_t)((*io_data)),
                      i_oci_addr);
-        if(i_config->membuf_type != MEMTYPE_CENTAUR)
-        {
-            swap_u64(io_data);
-        }
+        swap_u64(io_data);
     }
     else
     {
-        if(i_config->membuf_type != MEMTYPE_CENTAUR)
-        {
-            swap_u64(io_data);
-        }
+        swap_u64(io_data);
         // Set PPE to precise mode for stores so that in the case of a machine
         // check, there is a predictable instruction address to resume on.
 
@@ -132,23 +126,6 @@ int inband_scom_setup(MemBufConfiguration_t* i_config,
 #endif
     uint64_t pb_addr = i_config->baseAddress[i_membuf_instance];
 
-    if(i_config->membuf_type == MEMTYPE_CENTAUR)
-    {
-        // Break address into componets
-        uint32_t local = i_scom_address & 0x00001fff;
-        uint32_t port  = i_scom_address & 0x000f0000;
-        uint32_t slave = i_scom_address & 0x03000000;
-        uint32_t multi = i_scom_address & 0xc0000000;
-
-        // compress to 21 bits for P9
-        scom_address =
-            local +
-            (port >> 3) +
-            (slave >> 7) +
-            (multi >> 11);
-        // P9: Turn on bit 38 to indicate OCC
-        pb_addr  |= 0x0000000002000000ull;
-    }
     pb_addr  |= ((uint64_t)scom_address << 3);
 
 #if defined(__USE_PBASLV__)
@@ -217,6 +194,14 @@ uint64_t pbaslvctl_setup(GpePbaParms* i_pba_parms)
     return slvctl_val_org;
 }
 
+/**
+ * Scom all of the membufs with the same SCOM address.
+ * @param[in] The MemBufConfig object
+ * @param[in] The SCOM address
+ * @param[out] The array of data collected. Must be large enough to hold
+ *             uint64_t data from each membuf.
+ * @return [0 | return code]
+ */
 // Get data from each existing membuf.
 int membuf_get_scom_vector(MemBufConfiguration_t* i_config,
                             uint32_t i_scom_address,
@@ -589,14 +574,7 @@ void gpe_inband_scom(MemBufConfiguration_t* i_config,
                 break;
 
             case MEMBUF_SCOM_MEMBUF_SYNC:
-                if( i_config->membuf_type == MEMTYPE_CENTAUR)
-                {
-                    rc = centaur_throttle_sync(i_config);
-                }
-                else
-                {
-                    rc = ocmb_throttle_sync(i_config);
-                }
+                rc = ocmb_throttle_sync(i_config);
                 break;
 
             default:

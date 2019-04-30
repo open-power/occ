@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -257,7 +257,6 @@ enum
     SENSORS_INITIALIZED         = 0x05ff,
     PROC_CORE_INITIALIZED       = 0x06ff,
     NEST_DTS_INITIALIZED        = 0x0700,
-    CENTAUR_INITIALIZED         = 0x07ff,
     SLAVE_OCC_INITIALIZED       = 0x08ff,
     READ_HCODE_HEADERS          = 0x0900,
     PPMR_IMAGE_HEADER_READ      = 0x0910,
@@ -267,24 +266,12 @@ enum
     WATCHDOG_INITIALIZED        = 0x09ff,
     RTL_TIMER_INITIALIZED       = 0x0aff,
     SEMS_AND_TIMERS_INITIALIZED = 0x0bff,
-    APP_SEMS_CREATED            = 0x0c10,
-    APP_MEM_MAPPED              = 0x0c20,
-    APP_ADDR_INITIALIZED        = 0x0c30,
-    APP_MEM_UNMAP               = 0x0c40,
-    APPLETS_INITIALIZED         = 0x0cff,
     CMDH_THREAD_STARTED         = 0x0dff,
     INIT_OCB                    = 0x0e05,
     OCB_DOORBELL_INITIALIZED    = 0x0e06,
     OCB_INITIALIZED             = 0x0e07,
     COMM_INIT_COMPLETED         = 0x0eff,
-    ABOUT_TO_HALT               = 0x0f00,
     COMM_INIT_FAILURE           = 0xeeff,
-};
-
-// Checkpoint flags (one byte bitmap)
-enum
-{
-    CF_FSI_MB_TIMEOUT           = 0x01,
 };
 
 #define DEFAULT_TRACE_SIZE 1536

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -101,15 +101,15 @@ void amec_controller_proc_thermal();
 void amec_controller_vrm_vdd_thermal();
 
 /**
- *  Thermal Control Loop based on Centaur temperatures.
+ *  Thermal Control Loop based on membuf temperatures.
  *
  *  This function implements a Proportional Controller for the
- *  thermal control loop based on Centaur temperatures.
+ *  thermal control loop based on membuf temperatures.
  *  Although it doesn't return any results, it populates the
- *  thermal vote in the field g_amec->thermalcent.speed_request.
+ *  thermal vote in the field g_amec->thermalmembuf.speed_request.
  *
  */
-void amec_controller_centaur_thermal();
+void amec_controller_membuf_thermal();
 
 /**
  *  Thermal Control Loop based on DIMM temperatures.

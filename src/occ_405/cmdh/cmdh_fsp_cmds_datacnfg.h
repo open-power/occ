@@ -77,7 +77,7 @@ typedef enum
 typedef enum
 {
     DATA_FRU_PROC               = 0x00,
-    DATA_FRU_CENTAUR            = 0x01,
+    DATA_FRU_MEMBUF             = 0x01,
     DATA_FRU_DIMM               = 0x02,
     DATA_FRU_VRM_OT_STATUS      = 0x03,  // this is just for the bit and is no longer being supported
     DATA_FRU_GPU                = 0x04,
@@ -331,7 +331,7 @@ typedef struct __attribute__ ((packed))
 
 typedef struct __attribute__ ((packed))
 {
-    uint8_t              fru_type; // 0: proc, 1: centaur, 2: dimm, 3: vrm
+    uint8_t              fru_type; // 0: proc, 1: membuf, 2: dimm, 3: vrm
 //  dvfs/pm_dvfs and error/pm_error fields define the temperature trigger
 //  points for DVFS/Throttling and error/FRU callouts, respectively.
 //  a 0xFF entry indicates that the coresponding temperature trigger
@@ -376,7 +376,7 @@ typedef struct __attribute__ ((packed))
 }cmdh_mem_cfg_header_v21_t;
 
 // Config packet definition used by TMGT to
-// send sensor mappings for centaurs and dimms
+// send sensor mappings for membufs and dimms
 
 typedef struct __attribute__ ((packed))
 {
@@ -411,30 +411,16 @@ typedef struct __attribute__ ((packed))
 }cmdh_mem_throt_header_t;
 
 
-// Provides memory throttle min and max values for Nimbus systems
+// Provides memory throttle min and max values
 typedef struct __attribute__ ((packed))
 {
-    uint8_t   mc_num;                // Physical MC: [0=MC01, 1=MC23]
-    uint8_t   port_num;              // Physical port # [0-3]
-} cmdh_mem_throt_nimbus_info_t;
-
-// Provides memory throttle min and max values for Cumulus/Axone systems
-typedef struct __attribute__ ((packed))
-{
-    uint8_t   membuf_num;            // Physical memory buffer# (Centaur/OCMB)
+    uint8_t   membuf_num;            // Physical memory buffer#
     uint8_t   mba_num;               // unit within memory buffer
-} cmdh_mem_throt_membuf_info_t;
-
-// Nimbus/Cumulus dimm/centaur Info
-typedef union cmdh_mem_throt_data_set
-{
-    cmdh_mem_throt_nimbus_info_t  nimbus;
-    cmdh_mem_throt_membuf_info_t  membuf;
 } cmdh_mem_throt_info_t;
 
 typedef struct __attribute__ ((packed))
 {
-    cmdh_mem_throt_info_t mem_throt_info;        // Nimbus/Cumulus information header
+    cmdh_mem_throt_info_t mem_throt_info;        // membuf information header
 
     uint16_t              min_n_per_mba;         // Lowest per MBA allowed numerator
     uint16_t              min_mem_power;         // Max mem Power @min (x0.01W)

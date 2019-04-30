@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -30,7 +30,8 @@
 #include "amec_sys.h"
 #include "amec_service_codes.h"
 #include "occ_service_codes.h"
-#include <centaur_data.h>
+#include <memory.h>
+#include <memory_data.h>
 #include <proc_data.h>
 
 //*************************************************************************/
@@ -56,14 +57,14 @@ dimm_sensor_flags_t G_dimm_timeout_logged_bitmap = {0};
 // Are any dimms currently in the timedout state (bitmap of dimm)?
 dimm_sensor_flags_t G_dimm_temp_expired_bitmap = {0};
 
-// Have we already called out the centaur for timeout (bitmap of centaurs)?
-uint8_t G_cent_timeout_logged_bitmap = 0;
+// Have we already called out the membuf for timeout (bitmap of membufs)
+uint8_t G_membuf_timeout_logged_bitmap = 0;
 
-// Have we already called out the centaur for overtemp (bitmap of centaurs)?
-uint8_t G_cent_overtemp_logged_bitmap = 0;
+// Have we already called out the membuf for overtemp (bitmap of membufs)
+uint8_t G_membuf_overtemp_logged_bitmap = 0;
 
-// Are any dimms currently in the timedout state (bitmap of centaurs)?
-uint8_t G_cent_temp_expired_bitmap = 0;
+// Are any dimms currently in the timedout state (bitmap of membufs)
+uint8_t G_membuf_temp_expired_bitmap = 0;
 
 // Array to store the update tag of each core's temperature sensor
 uint32_t G_core_temp_update_tag[MAX_NUM_CORES] = {0};
@@ -75,51 +76,24 @@ bool G_vrm_vdd_temp_expired = false;
 // Function Declarations
 //*************************************************************************/
 
-//*************************************************************************/
-// Functions
-//*************************************************************************/
-uint64_t amec_mem_get_huid(uint8_t i_cent, uint8_t i_dimm)
+uint64_t amec_mem_get_huid(uint8_t i_membuf, uint8_t i_dimm)
 {
-    uint64_t l_huid;
-
-    if(i_dimm == 0xff)
-    {
-        //we're being asked for a centaur huid
-        l_huid = G_sysConfigData.centaur_huids[i_cent];
-    }
-    else
-    {
-        //we're being asked for a dimm huid
-        l_huid = G_sysConfigData.dimm_huids[i_cent][i_dimm];
-        if(l_huid == 0)
-        {
-            if (MEM_TYPE_CUMULUS == G_sysConfigData.mem_type)
-            {
-                //if we don't have a valid dimm huid, use the centaur huid.
-                l_huid = G_sysConfigData.centaur_huids[i_cent];
-            }
-            else
-            {
-                // else NIMBUS huid of 0 indicates not present (should never get called)
-                TRAC_ERR("amec_mem_get_huid: DIMM%04X did not have a HUID to call out!", (i_cent<<8)|i_dimm);
-            }
-        }
-    }
-    return l_huid;
+    return 0;
 }
 
-//If i_dimm is 0xff it is assumed that the caller wishes to
-//mark the centaur as being logged.  Otherwise, it is assumed
-//that the dimm should be marked.
-void amec_mem_mark_logged(uint8_t i_cent,
+
+// If i_dimm is 0xff it is assumed that the caller wishes to
+// mark the membuf as being logged.  Otherwise, it is assumed
+// that the dimm should be marked.
+void amec_mem_mark_logged(uint8_t i_membuf,
                           uint8_t i_dimm,
                           uint8_t* i_clog_bitmap,
                           uint8_t* i_dlog_bitmap)
 {
     if(i_dimm == 0xff)
     {
-        //mark the centaur as being called out.
-        *i_clog_bitmap |= CENTAUR0_PRESENT_MASK >> i_cent;
+        //mark the membuf as being called out.
+        *i_clog_bitmap |= MEMBUF0_PRESENT_MASK >> i_membuf;
     }
     else
     {
@@ -146,20 +120,10 @@ void amec_health_check_dimm_temp()
     sensor_t                    *l_sensor;
     uint8_t                     l_dimm;
     uint8_t                     l_port;
-    uint8_t                     l_max_port; // #ports in nimbus/#centaurs in cumulus
     uint32_t                    l_callouts_count = 0;
     uint8_t                     l_new_callouts;
     uint64_t                    l_huid;
     errlHndl_t                  l_err = NULL;
-
-    if(G_sysConfigData.mem_type == MEM_TYPE_NIMBUS)
-    {
-        l_max_port = NUM_DIMM_PORTS;
-    }
-    else // MEM_TYPE_CUMULUS
-    {
-        l_max_port = MAX_NUM_CENTAURS;
-    }
 
     // Check to see if any dimms have reached the error temperature that
     // haven't been called out already
@@ -174,7 +138,7 @@ void amec_health_check_dimm_temp()
     l_max_temp = l_sensor->sample_max;
 
     //iterate over all dimms
-    for(l_port = 0; l_port < l_max_port; l_port++)
+    for(l_port = 0; l_port < MAX_NUM_OCMBS; l_port++)
     {
         //only callout a dimm if it hasn't been called out already
         l_new_callouts = G_dimm_overtemp_bitmap.bytes[l_port] ^
@@ -193,7 +157,7 @@ void amec_health_check_dimm_temp()
                  l_port);
 
         //find the dimm(s) that need to be called out for this port
-        for(l_dimm = 0; l_dimm < NUM_DIMMS_PER_CENTAUR; l_dimm++)
+        for(l_dimm = 0; l_dimm < NUM_DIMMS_PER_OCMB; l_dimm++)
         {
             if (!(l_new_callouts & (DIMM_SENSOR0 >> l_dimm)))
             {
@@ -201,10 +165,10 @@ void amec_health_check_dimm_temp()
             }
 
             fru_temp_t* l_fru;
-            l_fru = &g_amec->proc[0].memctl[l_port].centaur.dimm_temps[l_dimm];
+            l_fru = &g_amec->proc[0].memctl[l_port].membuf.dimm_temps[l_dimm];
             amec_mem_mark_logged(l_port,
                                  l_dimm,
-                                 &G_cent_overtemp_logged_bitmap,
+                                 &G_membuf_overtemp_logged_bitmap,
                                  &G_dimm_overtemp_logged_bitmap.bytes[l_port]);
             TRAC_ERR("amec_health_check_dimm_temp: DIMM%04X overtemp - %dC",
                      (l_port<<8)|l_dimm, l_fru->cur_temp);
@@ -267,9 +231,9 @@ void amec_health_check_dimm_temp()
  *
  * Name: amec_health_check_dimm_timeout
  *
- * Description: Check for centaur-dimm/rdimm-modules timeout condition
+ * Description: Check for membuf/dimm timeout condition
  *              as defined in thermal control thresholds
- *              (MAX_READ_TIMEOUT field for Centaur/DIMM FRU Type)
+ *              (MAX_READ_TIMEOUT field for membuf/DIMM FRU Type)
  *
  * End Function Specification
  */
@@ -312,17 +276,8 @@ void amec_health_check_dimm_timeout()
             break;
         }
 
-        uint8_t l_max_port; // #ports in nimbus/#centaurs in cumulus
-        if(G_sysConfigData.mem_type == MEM_TYPE_NIMBUS)
-        {
-            l_max_port = NUM_DIMM_PORTS;
-        }
-        else // MEM_TYPE_CUMULUS
-        {
-            l_max_port = MAX_NUM_CENTAURS;
-        }
         //iterate across all ports incrementing dimm sensor timers as needed
-        for(l_port = 0; l_port < l_max_port; l_port++)
+        for(l_port = 0; l_port < MAX_NUM_OCMBS; l_port++)
         {
             //any dimm timers on this port need incrementing?
             if(!l_need_inc.bytes[l_port])
@@ -338,7 +293,7 @@ void amec_health_check_dimm_timeout()
             }
 
             //There's at least one dimm requiring an increment, find the dimm
-            for(l_dimm = 0; l_dimm < NUM_DIMMS_PER_CENTAUR; l_dimm++)
+            for(l_dimm = 0; l_dimm < NUM_DIMMS_PER_OCMB; l_dimm++)
             {
                 //not this one, check if we need to clear the dimm timeout and go to the next one
                 if(!(l_need_inc.bytes[l_port] & (DIMM_SENSOR0 >> l_dimm)))
@@ -352,7 +307,7 @@ void amec_health_check_dimm_timeout()
                 }
 
                 //we found one.
-                l_fru = &g_amec->proc[0].memctl[l_port].centaur.dimm_temps[l_dimm];
+                l_fru = &g_amec->proc[0].memctl[l_port].membuf.dimm_temps[l_dimm];
 
                 //increment timer
                 l_fru->sample_age++;
@@ -409,7 +364,7 @@ void amec_health_check_dimm_timeout()
                 //Mark DIMM as logged so we don't log it more than once
                 amec_mem_mark_logged(l_port,
                                      l_dimm,
-                                     &G_cent_timeout_logged_bitmap,
+                                     &G_membuf_timeout_logged_bitmap,
                                      &G_dimm_timeout_logged_bitmap.bytes[l_port]);
 
                 // Create single elog with up to MAX_CALLOUTS
@@ -465,8 +420,8 @@ void amec_health_check_dimm_timeout()
             break;
         }
 
-        //iterate across all centaurs/ports clearing dimm sensor timers as needed
-        for(l_port = 0; l_port < MAX_NUM_CENTAURS; l_port++)
+        //iterate across all membufs/ports clearing dimm sensor timers as needed
+        for(l_port = 0; l_port < MAX_NUM_OCMBS; l_port++)
         {
 
             if(!l_need_clr.bytes[l_port])
@@ -475,7 +430,7 @@ void amec_health_check_dimm_timeout()
             }
 
             //iterate over all dimms
-            for(l_dimm = 0; l_dimm < NUM_DIMMS_PER_CENTAUR; l_dimm++)
+            for(l_dimm = 0; l_dimm < NUM_DIMMS_PER_OCMB; l_dimm++)
             {
                 //not this one, go to next one
                 if(!(l_need_clr.bytes[l_port] & (DIMM_SENSOR0 >> l_dimm)))
@@ -484,7 +439,7 @@ void amec_health_check_dimm_timeout()
                 }
 
                 //we found one.
-                l_fru = &g_amec->proc[0].memctl[l_port].centaur.dimm_temps[l_dimm];
+                l_fru = &g_amec->proc[0].memctl[l_port].membuf.dimm_temps[l_dimm];
 
                 //clear timer
                 l_fru->sample_age = 0;
@@ -498,7 +453,7 @@ void amec_health_check_dimm_timeout()
                 }
 
             }//iterate over all dimms
-        }//iterate over all centaurs/ports
+        }//iterate over all membufs/ports
     }while(0);
     L_ran_once = TRUE;
 
@@ -509,22 +464,22 @@ void amec_health_check_dimm_timeout()
 /*
  * Function Specification
  *
- * Name: amec_health_check_cent_dimm_temp
+ * Name: amec_health_check_membuf_temp
  *
- * Description: Check if the centaur's dimm chips temperature exceeds the error
+ * Description: Check if the membuf's dimm chips temperature exceeds the error
  *               temperature as defined in thermal control thresholds
- *              (ERROR field for Centaur FRU Type)
+ *              (ERROR field for membuf FRU Type)
  *
  * End Function Specification
  */
-void amec_health_check_cent_temp()
+void amec_health_check_membuf_temp()
 {
     /*------------------------------------------------------------------------*/
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
     uint16_t                    l_ot_error, l_cur_temp, l_max_temp;
     sensor_t                    *l_sensor;
-    uint32_t                    l_cent;
+    uint32_t                    l_membuf;
     uint32_t                    l_callouts_count = 0;
     uint8_t                     l_new_callouts;
     uint64_t                    l_huid;
@@ -534,54 +489,55 @@ void amec_health_check_cent_temp()
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
 
-    // Check to see if any centaurs have reached the error temperature that
+    // Check to see if any membufs have reached the error temperature that
     // haven't been called out already
-    l_new_callouts = G_cent_overtemp_bitmap ^ G_cent_overtemp_logged_bitmap;
+    l_new_callouts = G_membuf_overtemp_bitmap ^ G_membuf_overtemp_logged_bitmap;
     if(!l_new_callouts)
     {
         return;
     }
 
-    l_ot_error = g_amec->thermalcent.ot_error;
-    l_sensor = getSensorByGsid(TEMPCENT);
+    l_ot_error = g_amec->thermalmembuf.ot_error;
+    // Get hottest membuf sensor
+    l_sensor = getSensorByGsid(TEMPMEMBUFTHRM);
     l_cur_temp = l_sensor->sample;
     l_max_temp = l_sensor->sample_max;
-    TRAC_ERR("amec_health_check_cent_temp: Centaur reached error temp[%d]. current[%d], hist_max[%d], bitmap[0x%02X]",
+    TRAC_ERR("amec_health_check_membuf_temp: membuf reached error temp[%d]. current[%d], hist_max[%d], bitmap[0x%02X]",
              l_ot_error,
              l_cur_temp,
              l_max_temp,
              l_new_callouts);
 
-    //find the centaur(s) that need to be called out
-    for(l_cent = 0; l_cent < MAX_NUM_CENTAURS; l_cent++)
+    //find the membuf(s) that need to be called out
+    for(l_membuf = 0; l_membuf < MAX_NUM_OCMBS; l_membuf++)
     {
-        if(!(l_new_callouts & (CENTAUR0_PRESENT_MASK >> l_cent)))
+        if(!(l_new_callouts & (MEMBUF0_PRESENT_MASK >> l_membuf)))
         {
             continue;
         }
 
-        l_huid = amec_mem_get_huid(l_cent, 0xff);
+        l_huid = G_sysConfigData.membuf_huids[l_membuf];
 
-        amec_mem_mark_logged(l_cent,
+        amec_mem_mark_logged(l_membuf,
                              0xff,
-                             &G_cent_overtemp_logged_bitmap,
-                             &G_dimm_overtemp_logged_bitmap.bytes[l_cent]);
+                             &G_membuf_overtemp_logged_bitmap,
+                             &G_dimm_overtemp_logged_bitmap.bytes[l_membuf]);
 
         //If we don't have an error log for the callout, create one
         if(!l_err)
         {
             /* @
              * @errortype
-             * @moduleid    AMEC_HEALTH_CHECK_CENT_TEMP
-             * @reasoncode  CENT_ERROR_TEMP
-             * @userdata1   Maximum centaur temperature
-             * @userdata2   Centaur temperature threshold
+             * @moduleid    AMEC_HEALTH_CHECK_MEMBUF_TEMP
+             * @reasoncode  MEMBUF_ERROR_TEMP
+             * @userdata1   Maximum membuf temperature
+             * @userdata2   membuf temperature threshold
              * @userdata4   OCC_NO_EXTENDED_RC
-             * @devdesc     Centaur memory controller(s) exceeded maximum safe
+             * @devdesc     memory controller(s) exceeded maximum safe
              *              temperature.
              */
-            l_err = createErrl(AMEC_HEALTH_CHECK_CENT_TEMP,    //modId
-                               CENT_ERROR_TEMP,                //reasoncode
+            l_err = createErrl(AMEC_HEALTH_CHECK_MEMBUF_TEMP,  //modId
+                               MEMBUF_ERROR_TEMP,              //reasoncode
                                OCC_NO_EXTENDED_RC,             //Extended reason code
                                ERRL_SEV_PREDICTIVE,            //Severity
                                NULL,                           //Trace Buf
@@ -597,7 +553,7 @@ void amec_health_check_cent_temp()
             l_callouts_count = 1;
         }
 
-        // Callout centaur
+        // Callout membuf
         addCalloutToErrl(l_err,
                          ERRL_CALLOUT_TYPE_HUID,
                          l_huid,
@@ -612,7 +568,7 @@ void amec_health_check_cent_temp()
             commitErrl(&l_err);
         }
 
-    }//iterate over centaurs
+    }//iterate over membufs
 
     if(l_err)
     {
@@ -623,19 +579,19 @@ void amec_health_check_cent_temp()
 /*
  * Function Specification
  *
- * Name: amec_health_check_cent_timeout
+ * Name: amec_health_check_membuf_timeout
  *
- * Description: Check for centaur timeout condition
+ * Description: Check for membuf timeout condition
  *              as defined in thermal control thresholds
- *              (MAX_READ_TIMEOUT field for Centaur FRU Type)
+ *              (MAX_READ_TIMEOUT field for membuf FRU Type)
  *
  * End Function Specification
  */
-void amec_health_check_cent_timeout()
+void amec_health_check_membuf_timeout()
 {
     static uint8_t L_temp_update_bitmap_prev = 0;
     uint8_t l_need_inc, l_need_clr, l_temp_update_bitmap;
-    uint8_t l_cent;
+    uint8_t l_membuf;
     fru_temp_t* l_fru;
     errlHndl_t  l_err = NULL;
     uint32_t    l_callouts_count = 0;
@@ -644,18 +600,18 @@ void amec_health_check_cent_timeout()
 
     do
     {
-        //For every centaur sensor there are 3 cases to consider
+        //For every membuf sensor there are 3 cases to consider
         //
-        //1) centaur is present and not updated (need to increment timer and check for timeout)
-        //2) centaur is present and updated but wasn't updated on previous check (need to clear timer)
-        //3) centaur is present and updated and was updated on previous check (do nothing)
+        //1) membuf is present and not updated (need to increment timer and check for timeout)
+        //2) membuf is present and updated but wasn't updated on previous check (need to clear timer)
+        //3) membuf is present and updated and was updated on previous check (do nothing)
 
-        //Grab snapshot of G_cent_temp_update_bitmap and clear it
-        l_temp_update_bitmap = G_cent_temp_updated_bitmap;
-        G_cent_temp_updated_bitmap = 0;
+        //Grab snapshot of G_membuf_temp_update_bitmap and clear it
+        l_temp_update_bitmap = G_membuf_temp_updated_bitmap;
+        G_membuf_temp_updated_bitmap = 0;
 
         //check if we need to increment any timers
-        l_need_inc = G_present_centaurs & ~l_temp_update_bitmap;
+        l_need_inc = G_present_membufs & ~l_temp_update_bitmap;
 
         //check if we need to clear any timers
         l_need_clr = l_temp_update_bitmap & ~L_temp_update_bitmap_prev;
@@ -670,23 +626,23 @@ void amec_health_check_cent_timeout()
         //save off the previous bitmap of updated sensors
         L_temp_update_bitmap_prev = l_temp_update_bitmap;
 
-        //iterate across all centaurs incrementing timers as needed
-        for(l_cent = 0; l_cent < MAX_NUM_CENTAURS; l_cent++)
+        //iterate across all membufs incrementing timers as needed
+        for(l_membuf = 0; l_membuf < MAX_NUM_OCMBS; l_membuf++)
         {
-            //does this centaur timer need incrementing?
-            if(!(l_need_inc & (CENTAUR0_PRESENT_MASK >> l_cent)))
+            //does this membuf timer need incrementing?
+            if(!(l_need_inc & (MEMBUF0_PRESENT_MASK >> l_membuf)))
             {
-                //temperature was updated for this centaur. Clear the timeout bit for this centaur.
-                if(G_cent_temp_expired_bitmap & (CENTAUR0_PRESENT_MASK >> l_cent))
+                //temperature was updated for this membuf. Clear the timeout bit for this membuf.
+                if(G_membuf_temp_expired_bitmap & (MEMBUF0_PRESENT_MASK >> l_membuf))
                 {
-                    G_cent_temp_expired_bitmap &= ~(CENTAUR0_PRESENT_MASK >> l_cent);
-                    TRAC_INFO("centaur %d temps have been updated", l_cent);
+                    G_membuf_temp_expired_bitmap &= ~(MEMBUF0_PRESENT_MASK >> l_membuf);
+                    TRAC_INFO("membuf %d temps have been updated", l_membuf);
                 }
                 continue;
             }
 
-            //This centaur requires an increment
-            l_fru = &g_amec->proc[0].memctl[l_cent].centaur.centaur_hottest;
+            //This membuf requires an increment
+            l_fru = &g_amec->proc[0].memctl[l_membuf].membuf.membuf_hottest;
 
             //increment timer
             l_fru->sample_age++;
@@ -700,74 +656,74 @@ void amec_health_check_cent_timeout()
             //info trace each transition to not having a new temperature
             if(l_fru->sample_age == 1)
             {
-                TRAC_INFO("Failed to read centaur temperature on cent[%d] temp[%d] flags[0x%02X]",
-                              l_cent, l_fru->cur_temp, l_fru->flags);
+                TRAC_INFO("Failed to read membuf temperature on membuf[%d] temp[%d] flags[0x%02X]",
+                              l_membuf, l_fru->cur_temp, l_fru->flags);
             }
 
             //check if the temperature reading is still useable
-            if(g_amec->thermalcent.temp_timeout == 0xff ||
-               l_fru->sample_age < g_amec->thermalcent.temp_timeout)
+            if(g_amec->thermalmembuf.temp_timeout == 0xff ||
+               l_fru->sample_age < g_amec->thermalmembuf.temp_timeout)
             {
                 continue;
             }
 
-            //temperature has expired.  Notify control algorithms which centaur.
-            if(!(G_cent_temp_expired_bitmap & (CENTAUR0_PRESENT_MASK >> l_cent)))
+            //temperature has expired.  Notify control algorithms which membuf.
+            if(!(G_membuf_temp_expired_bitmap & (MEMBUF0_PRESENT_MASK >> l_membuf)))
             {
-                G_cent_temp_expired_bitmap |= CENTAUR0_PRESENT_MASK >> l_cent;
-                TRAC_ERR("Timed out reading centaur temperature sensor on cent %d",
-                         l_cent);
+                G_membuf_temp_expired_bitmap |= MEMBUF0_PRESENT_MASK >> l_membuf;
+                TRAC_ERR("Timed out reading membuf temperature sensor on membuf %d",
+                         l_membuf);
             }
 
             //If we've already logged an error for this FRU go to the next one.
-            if(G_cent_timeout_logged_bitmap & (CENTAUR0_PRESENT_MASK >> l_cent))
+            if(G_membuf_timeout_logged_bitmap & (MEMBUF0_PRESENT_MASK >> l_membuf))
             {
                 continue;
             }
 
-            // To prevent Centaurs from incorrectly being called out, don't log errors if there have
+            // To prevent membufs from incorrectly being called out, don't log errors if there have
             // been timeouts with GPE1 tasks not finishing
-            if(G_error_history[ERRH_GPE1_NOT_IDLE] > g_amec->thermalcent.temp_timeout)
+            if(G_error_history[ERRH_GPE1_NOT_IDLE] > g_amec->thermalmembuf.temp_timeout)
             {
-                TRAC_ERR("Timed out reading centaur temperature due to GPE1 issues");
+                TRAC_ERR("Timed out reading membuf temperature due to GPE1 issues");
                 // give notification that GPE1 error should now be logged which will reset the OCC
                 G_log_gpe1_error = TRUE;
-                // no reason to check anymore since all Centaurs are collected from the same GPE
+                // no reason to check anymore since all membufs are collected from the same GPE
                 break;
             }
 
-            TRAC_ERR("Timed out reading centaur temperature on cent[%d] temp[%d] flags[0x%02X]",
-                     l_cent, l_fru->cur_temp, l_fru->flags);
+            TRAC_ERR("Timed out reading membuf temperature on membuf[%d] temp[%d] flags[0x%02X]",
+                     l_membuf, l_fru->cur_temp, l_fru->flags);
 
             if(!l_err)
             {
                 /* @
                  * @errortype
-                 * @moduleid    AMEC_HEALTH_CHECK_CENT_TIMEOUT
+                 * @moduleid    AMEC_HEALTH_CHECK_MEMBUF_TIMEOUT
                  * @reasoncode  FRU_TEMP_TIMEOUT
                  * @userdata1   timeout value in seconds
                  * @userdata2   0
-                 * @userdata4   ERC_AMEC_CENT_TEMP_TIMEOUT
-                 * @devdesc     Failed to read a centaur memory controller
+                 * @userdata4   ERC_AMEC_MEMBUF_TEMP_TIMEOUT
+                 * @devdesc     Failed to read a membuf memory controller
                  *              temperature
                  *
                  */
-                l_err = createErrl(AMEC_HEALTH_CHECK_CENT_TIMEOUT,    //modId
+                l_err = createErrl(AMEC_HEALTH_CHECK_MEMBUF_TIMEOUT,  //modId
                                    FRU_TEMP_TIMEOUT,                  //reasoncode
-                                   ERC_AMEC_CENT_TEMP_TIMEOUT,        //Extended reason code
+                                   ERC_AMEC_MEMBUF_TEMP_TIMEOUT,      //Extended reason code
                                    ERRL_SEV_PREDICTIVE,               //Severity
                                    NULL,                              //Trace Buf
                                    DEFAULT_TRACE_SIZE,                //Trace Size
-                                   g_amec->thermalcent.temp_timeout,  //userdata1
+                                   g_amec->thermalmembuf.temp_timeout,  //userdata1
                                    0);                                //userdata2
 
                 l_callouts_count = 0;
             }
 
-            //Get the HUID for the centaur
-            l_huid = amec_mem_get_huid(l_cent, 0xff);
+            //Get the HUID for the membuf
+            l_huid = G_sysConfigData.membuf_huids[l_membuf];
 
-            // Callout centaur
+            // Callout membuf
             addCalloutToErrl(l_err,
                              ERRL_CALLOUT_TYPE_HUID,
                              l_huid,
@@ -782,35 +738,35 @@ void amec_health_check_cent_timeout()
                 commitErrl(&l_err);
             }
 
-            //Mark centaur as logged so we don't log it more than once
-            amec_mem_mark_logged(l_cent,
+            //Mark membuf as logged so we don't log it more than once
+            amec_mem_mark_logged(l_membuf,
                                  0xff,
-                                 &G_cent_timeout_logged_bitmap,
-                                 &G_dimm_timeout_logged_bitmap.bytes[l_cent]);
-        } //iterate over all centaurs
+                                 &G_membuf_timeout_logged_bitmap,
+                                 &G_dimm_timeout_logged_bitmap.bytes[l_membuf]);
+        } //iterate over all membufs
 
         if(l_err)
         {
             commitErrl(&l_err);
         }
 
-        //skip clearing timers if no centaurs need it
+        //skip clearing timers if no membufs need it
         if(!l_need_clr)
         {
             break;
         }
 
-        //iterate across all centaurs clearing timers as needed
-        for(l_cent = 0; l_cent < MAX_NUM_CENTAURS; l_cent++)
+        //iterate across all membufs clearing timers as needed
+        for(l_membuf = 0; l_membuf < MAX_NUM_OCMBS; l_membuf++)
         {
             //not this one, go to next one
-            if(!(l_need_clr & (CENTAUR0_PRESENT_MASK >> l_cent)))
+            if(!(l_need_clr & (MEMBUF0_PRESENT_MASK >> l_membuf)))
             {
                 continue;
             }
 
             //we found one.
-            l_fru = &g_amec->proc[0].memctl[l_cent].centaur.centaur_hottest;
+            l_fru = &g_amec->proc[0].memctl[l_membuf].membuf.membuf_hottest;
 
             //clear timer
             l_fru->sample_age = 0;
@@ -818,11 +774,11 @@ void amec_health_check_cent_timeout()
             //info trace each time we recover
             if(L_ran_once)
             {
-                TRAC_INFO("centaur temperature collection has resumed on cent[%d] temp[%d]",
-                          l_cent, l_fru->cur_temp);
+                TRAC_INFO("membuf temperature collection has resumed on membuf[%d] temp[%d]",
+                          l_membuf, l_fru->cur_temp);
             }
 
-        }//iterate over all centaurs
+        }//iterate over all membufs
     }while(0);
     L_ran_once = TRUE;
 }

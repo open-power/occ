@@ -27,6 +27,7 @@
 #include <common_types.h>
 #include <occ_sys_config.h>
 #include <i2c.h>
+#include <memory.h>
 
 // SysConfig Section Defines
 #define SYSCFG_DEFAULT_VERSION       0xff
@@ -203,17 +204,16 @@ occSysConfigData_t G_sysConfigData =
     .master_ppb_fmax = 0xFFFF,
 
     // -----------------------------------------------------------
-    // Centaur/DIMM Initialization
+    // MemBuf/DIMM Initialization
     // -----------------------------------------------------------
-    .centaur_huids = {0},
-    .dimm_huids = {{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0}},
-    .mem_type = MEM_TYPE_UNKNOWN,
-    .dimm_i2c_engine = PIB_I2C_ENGINE_E,
+    .membuf_huids = {0},
+    .dimm_huids = {{0,0},{0,0}},
+    .mem_type = MEM_TYPE_OCM,
     .ips_mem_pwr_ctl = MEM_PWR_CTL_OFF,
     .default_mem_pwr_ctl = MEM_PWR_CTL_OFF,
 
     // -------------------------------------------------------------------
-    // Memory Throttle Limits Initialization (for both Nimbus and Cumulus)
+    // Memory Throttle Limits Initialization
     // -------------------------------------------------------------------
     .mem_throt_limits =
     {

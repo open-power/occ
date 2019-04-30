@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -35,7 +35,7 @@
 // Externs
 //*************************************************************************
 extern dimm_sensor_flags_t G_dimm_temp_expired_bitmap;
-extern uint8_t G_cent_temp_expired_bitmap;
+extern uint8_t G_membuf_temp_expired_bitmap;
 //*************************************************************************
 // Macros
 //*************************************************************************
@@ -346,17 +346,17 @@ void amec_controller_dimm_thermal()
 //*************************************************************************
 // Function Specification
 //
-// Name: amec_controller_centaur_thermal
+// Name: amec_controller_membuf_thermal
 //
 // Description: This function implements the Proportional Controller for the
-//              centaur thermal control. Although it doesn't return any
+//              membuf thermal control. Although it doesn't return any
 //              results, it populates the thermal vote in the field
-//              g_amec->thermalcent.speed_request.
+//              g_amec->thermalmembuf.speed_request.
 //
 // Task Flags:
 //
 // End Function Specification
-void amec_controller_centaur_thermal()
+void amec_controller_membuf_thermal()
 {
     /*------------------------------------------------------------------------*/
     /*  Local Variables                                                       */
@@ -373,31 +373,31 @@ void amec_controller_centaur_thermal()
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    // Get TEMPCENT sensor value
-    l_sensor = getSensorByGsid(TEMPCENT);
+    // Get hottest membuf sensor
+    l_sensor = getSensorByGsid(TEMPMEMBUFTHRM);
 
-    if(G_cent_temp_expired_bitmap)
+    if(G_membuf_temp_expired_bitmap)
     {
         //we were not able to get a valid temperature.  Assume it is 1 degree
         //over the setpoint.
-        l_thermal_winner = g_amec->thermalcent.setpoint + 10;
+        l_thermal_winner = g_amec->thermalmembuf.setpoint + 10;
     }
     else
     {
-        // Use the highest temperature of all Centaur in 0.1 degrees C
+        // Use the highest temperature of all membuf in 0.1 degrees C
         l_thermal_winner = l_sensor->sample * 10;
     }
 
     // Check if there is an error
-    if (g_amec->thermalcent.setpoint == l_thermal_winner)
+    if (g_amec->thermalmembuf.setpoint == l_thermal_winner)
         return;
 
     // Calculate the thermal control error
-    l_error = g_amec->thermalcent.setpoint - l_thermal_winner;
+    l_error = g_amec->thermalmembuf.setpoint - l_thermal_winner;
 
-    // Proportional Controller for the thermal control loop based on CENTAUR
+    // Proportional Controller for the thermal control loop based on membuf
     // temperatures
-    l_throttle = (int32_t) l_error * g_amec->thermalcent.Pgain;
+    l_throttle = (int32_t) l_error * g_amec->thermalmembuf.Pgain;
     l_residue = (uint16_t) l_throttle;
     l_throttle_chg = (int16_t) (l_throttle >> 16);
 
@@ -413,14 +413,14 @@ void amec_controller_centaur_thermal()
         }
     }
 
-    // Calculate the new thermal speed request for Centaurs
-    l_mem_speed = g_amec->thermalcent.speed_request +
+    // Calculate the new thermal speed request for membufs
+    l_mem_speed = g_amec->thermalmembuf.speed_request +
         (int16_t) l_throttle_chg * AMEC_MEMORY_STEP_SIZE;
 
     // Proceed with residue summation to correctly follow set-point
-    l_old_residue = g_amec->thermalcent.total_res;
-    g_amec->thermalcent.total_res += l_residue;
-    if (g_amec->thermalcent.total_res < l_old_residue)
+    l_old_residue = g_amec->thermalmembuf.total_res;
+    g_amec->thermalmembuf.total_res += l_residue;
+    if (g_amec->thermalmembuf.total_res < l_old_residue)
     {
         l_mem_speed += AMEC_MEMORY_STEP_SIZE;
     }
@@ -432,7 +432,7 @@ void amec_controller_centaur_thermal()
         l_mem_speed = AMEC_MEMORY_MIN_STEP;
 
     // Generate the new thermal speed request
-    g_amec->thermalcent.speed_request = (uint16_t) l_mem_speed;
+    g_amec->thermalmembuf.speed_request = (uint16_t) l_mem_speed;
 }
 
 //*************************************************************************

@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_405/amec/amec_sensors_centaur.c $                     */
+/* $Source: src/occ_405/amec/amec_sensors_ocmb.c $                        */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -35,7 +35,7 @@
 #include "occ_service_codes.h"  // for SSX_GENERIC_FAILURE
 #include "dcom.h"
 #include "memory.h"
-#include "centaur_data.h"
+#include "memory_data.h"
 #include "amec_smh.h"
 #include "amec_slave_smh.h"
 #include <trac.h>
@@ -48,11 +48,12 @@
 /******************************************************************************/
 /* Globals                                                                    */
 /******************************************************************************/
-extern dimm_sensor_flags_t G_dimm_overtemp_bitmap;
-extern dimm_sensor_flags_t G_dimm_temp_updated_bitmap;
-extern uint8_t             G_cent_overtemp_bitmap;
-extern uint8_t             G_cent_temp_updated_bitmap;
-extern uint8_t      G_centaur_needs_recovery;
+dimm_sensor_flags_t G_dimm_overtemp_bitmap = {0};
+dimm_sensor_flags_t G_dimm_temp_updated_bitmap = {0};
+uint8_t             G_membuf_overtemp_bitmap = 0;
+uint8_t             G_membuf_temp_updated_bitmap = 0;
+
+extern uint8_t      G_membuf_needs_recovery;
 extern uint64_t G_inject_dimm;
 extern uint32_t G_inject_dimm_trace[MAX_NUM_OCMBS][NUM_DIMMS_PER_OCMB];
 
@@ -81,17 +82,16 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache, uint8_t i_membuf);
 // End Function Specification
 void amec_update_ocmb_sensors(uint8_t i_membuf)
 {
-    if(CENTAUR_PRESENT(i_membuf))
+    if(MEMBUF_PRESENT(i_membuf))
     {
-        OcmbMemData * l_sensor_cache =
-            (OcmbMemData *)cent_get_centaur_data_ptr(i_membuf);
-        if(CENTAUR_UPDATED(i_membuf))
+        OcmbMemData * l_sensor_cache = get_membuf_data_ptr(i_membuf);
+        if(MEMBUF_UPDATED(i_membuf))
         {
             amec_update_ocmb_dimm_dts_sensors(l_sensor_cache, i_membuf);
             amec_update_ocmb_dts_sensors(l_sensor_cache, i_membuf);
             amec_perfcount_ocmb_getmc(l_sensor_cache, i_membuf);
         }
-        CLEAR_CENTAUR_UPDATED(i_membuf);
+        CLEAR_MEMBUF_UPDATED(i_membuf);
     }
 }
 
@@ -103,9 +103,9 @@ void amec_update_ocmb_sensors(uint8_t i_membuf)
 //
 // Thread: RealTime Loop
 //
-// Note: The ocmb cache data uses the same space as the Centaur
-//       membuf cache data, so some of the centaur attributes apply to
-//       Ocmb data as well as Centaur.
+// Note: The ocmb cache data uses the same space as the
+//       membuf cache data, so some of the membuf attributes apply to
+//       Ocmb data as well as membuf.
 //
 // End Function Specification
 void amec_update_ocmb_dimm_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_membuf)
@@ -119,17 +119,18 @@ void amec_update_ocmb_dimm_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_m
     uint32_t l_hottest_dimm_loc = NUM_DIMMS_PER_OCMB;
     int32_t  l_dimm_temp, l_prev_temp;
     static uint8_t L_ran_once[MAX_NUM_OCMBS] = {FALSE};
+    amec_membuf_t* l_membuf_ptr = &g_amec->proc[0].memctl[i_membuf].membuf;
 
     // Harvest thermal data for all dimms
     for(k=0; k < NUM_DIMMS_PER_OCMB; k++)
     {
-        if(!CENTAUR_SENSOR_ENABLED(i_membuf, k))
+        if(!MEMBUF_SENSOR_ENABLED(i_membuf, k))
         {
             continue;
         }
 
 #ifdef __INJECT_DIMM__
-        if (g_amec->proc[0].memctl[i_membuf].centaur.dimm_temps[k].temp_sid) // DIMM has sensor ID
+        if (l_membuf_ptr->dimm_temps[k].temp_sid) // DIMM has sensor ID
         {
             if ((G_inject_dimm & ((uint64_t)1 << ((i_membuf * 8) + k))) == 0)
             {
@@ -151,7 +152,7 @@ void amec_update_ocmb_dimm_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_m
         }
 #endif
 
-        fru_temp_t* l_fru = &g_amec->proc[0].memctl[i_membuf].centaur.dimm_temps[k];
+        fru_temp_t* l_fru = &l_membuf_ptr->dimm_temps[k];
 
         l_dimm_temp = i_sensor_cache->memdts[k];
         l_prev_temp = l_fru->cur_temp;
@@ -245,7 +246,7 @@ void amec_update_ocmb_dimm_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_m
             if(i_sensor_cache->status.fields.memdts0_err ||
                i_sensor_cache->status.fields.memdts1_err)
             {
-                G_centaur_needs_recovery |= CENTAUR0_PRESENT_MASK >> i_membuf;
+                G_membuf_needs_recovery |= MEMBUF0_PRESENT_MASK >> i_membuf;
             }
         }
 
@@ -257,7 +258,7 @@ void amec_update_ocmb_dimm_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_m
         }
     }
 
-    // Find hottest temperature from all DIMMs for this centaur
+    // Find hottest temperature from all DIMMs for this membuf
     for(l_hottest_dimm_temp = 0, k = 0; k < NUM_DIMMS_PER_OCMB; k++)
     {
         if(l_dts[k] > l_hottest_dimm_temp)
@@ -265,22 +266,20 @@ void amec_update_ocmb_dimm_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_m
             l_hottest_dimm_temp = l_dts[k];
             l_hottest_dimm_loc = k;
         }
-        g_amec->proc[0].memctl[i_membuf].centaur.dimm_temps[k].cur_temp =  l_dts[k];
+        l_membuf_ptr->dimm_temps[k].cur_temp =  l_dts[k];
     }
-
-    amec_centaur_t* l_centaur_ptr = &g_amec->proc[0].memctl[i_membuf].centaur;
 
     //only update location if hottest dimm temp is greater than previous maximum
-    if(l_hottest_dimm_temp > l_centaur_ptr->tempdimmax.sample_max)
+    if(l_hottest_dimm_temp > l_membuf_ptr->tempdimmax.sample_max)
     {
-        sensor_update(&l_centaur_ptr->locdimmax, l_hottest_dimm_loc);
+        sensor_update(&l_membuf_ptr->locdimmax, l_hottest_dimm_loc);
     }
 
-    //update the max dimm temperature sensor for this centaur
-    sensor_update(&l_centaur_ptr->tempdimmax, l_hottest_dimm_temp);
+    //update the max dimm temperature sensor for this membuf
+    sensor_update(&l_membuf_ptr->tempdimmax, l_hottest_dimm_temp);
 
     L_ran_once[i_membuf] = TRUE;
-    AMEC_DBG("Centaur[%d]: HotDimm=%d\n",i_membuf,l_hottest_dimm_temp);
+    AMEC_DBG("Membuf[%d]: HotDimm=%d\n",i_membuf,l_hottest_dimm_temp);
 }
 
 // Function Specification
@@ -304,7 +303,8 @@ void amec_update_ocmb_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_membuf
 
     l_sens_temp = i_sensor_cache->ubdts0;
 
-    fru_temp_t* l_fru = &g_amec->proc[0].memctl[i_membuf].centaur.centaur_hottest;
+    amec_membuf_t* l_membuf_ptr = &g_amec->proc[0].memctl[i_membuf].membuf;
+    fru_temp_t* l_fru = &l_membuf_ptr->membuf_hottest;
 
     l_prev_temp = l_fru->cur_temp;
     if(!l_prev_temp)
@@ -342,7 +342,7 @@ void amec_update_ocmb_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_membuf
                 l_dts = l_prev_temp - MAX_MEM_TEMP_CHANGE;
                 if(!l_fru->flags)
                 {
-                    TRAC_INFO("membuf temp fell faster than reasonable: cent[%d] prev[%d] cur[%d]",
+                    TRAC_INFO("membuf temp fell faster than reasonable: membuf[%d] prev[%d] cur[%d]",
                                   i_membuf, l_prev_temp, l_sens_temp);
                     l_fru->flags |= FRU_TEMP_FAST_CHANGE;
                 }
@@ -354,7 +354,7 @@ void amec_update_ocmb_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_membuf
             }
 
             //Notify thermal thread that temperature has been updated
-            G_cent_temp_updated_bitmap |= CENTAUR0_PRESENT_MASK >> i_membuf;
+            G_membuf_temp_updated_bitmap |= MEMBUF0_PRESENT_MASK >> i_membuf;
 
             //clear error flags
             l_fru->flags &= FRU_TEMP_FAST_CHANGE;
@@ -381,14 +381,17 @@ void amec_update_ocmb_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_membuf
     L_ran_once[i_membuf] = TRUE;
 
     //Check if at or above the error temperature
-    if(l_dts >= g_amec->thermalcent.ot_error)
+    if(l_dts >= g_amec->thermalmembuf.ot_error)
     {
         //Set a bit so that this dimm can be called out by the thermal thread
-        G_cent_overtemp_bitmap |= (CENTAUR0_PRESENT_MASK >> i_membuf);
+        G_membuf_overtemp_bitmap |= (MEMBUF0_PRESENT_MASK >> i_membuf);
     }
 
-    // Update Interim Data - later this will get picked up to form centaur sensor
-    g_amec->proc[0].memctl[i_membuf].centaur.centaur_hottest.cur_temp = l_dts;
+    // Update Interim Data - later this will get picked up to form membuf sensor
+    l_membuf_ptr->membuf_hottest.cur_temp = l_dts;
+
+    // Update individual membuf temperature
+    sensor_update(&l_membuf_ptr->tempmembuf, l_dts);
 
     AMEC_DBG("Membuf[%d]: HotMembuf=%d\n",i_membuf,l_dts);
 }
@@ -397,7 +400,7 @@ void amec_update_ocmb_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_membuf
 //
 // Name: amec_update_ocmb_temp_sensors
 //
-// Description: Updates thermal sensors that have data grabbed by the centaur.
+// Description: Updates thermal sensors that have data grabbed by the membuf.
 //
 // Thread: RealTime Loop
 //
@@ -414,20 +417,18 @@ void amec_update_ocmb_temp_sensors(void)
     // -----------------------------------------------------------
     for(k=0; k < MAX_NUM_OCMBS; k++)
     {
-        if(g_amec->proc[0].memctl[k].centaur.centaur_hottest.cur_temp > l_hot_mb)
+        if(g_amec->proc[0].memctl[k].membuf.membuf_hottest.cur_temp > l_hot_mb)
         {
-            l_hot_mb = g_amec->proc[0].memctl[k].centaur.centaur_hottest.cur_temp;
+            l_hot_mb = g_amec->proc[0].memctl[k].membuf.membuf_hottest.cur_temp;
         }
-        if(g_amec->proc[0].memctl[k].centaur.tempdimmax.sample > l_hot_dimm)
+        if(g_amec->proc[0].memctl[k].membuf.tempdimmax.sample > l_hot_dimm)
         {
-            l_hot_dimm = g_amec->proc[0].memctl[k].centaur.tempdimmax.sample;
+            l_hot_dimm = g_amec->proc[0].memctl[k].membuf.tempdimmax.sample;
         }
     }
-    sensor_update(&g_amec->proc[0].temp2mscent,l_hot_mb);
-    AMEC_DBG("HotMembuf=%d\n",l_hot_mb);
-
+    sensor_update(&g_amec->proc[0].tempmembufthrm,l_hot_mb);
     sensor_update(&g_amec->proc[0].tempdimmthrm,l_hot_dimm);
-    AMEC_DBG("HotDimm=%d\n",l_hot_dimm);
+    AMEC_DBG("HotMembuf=%d, HotDimm=%d\n", l_hot_mb, l_hot_dimm);
 
 }
 
@@ -437,14 +438,14 @@ void amec_update_ocmb_temp_sensors(void)
 // Name: amec_perfcount_ocmb_getmc
 //
 // Description: Updates performance sensors that have data grabbed by the
-// centaur.
+// membuf.
 //
 // Thread: RealTime Loop
 //
 // End Function Specification
 
 void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
-                           uint8_t i_membuf)
+                                uint8_t i_membuf)
 {
     /*------------------------------------------------------------------------*/
     /*  Local Variables                                                       */
@@ -456,7 +457,7 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
     uint32_t                    tempreg     = 0;
 
     #define AMECSENSOR_PORTPAIR_PTR(sensor_base,idx,idx2) \
-        (&(g_amec->proc[0].memctl[idx].centaur.portpair[idx2].sensor_base))
+        (&(g_amec->proc[0].memctl[idx].membuf.portpair[idx2].sensor_base))
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
@@ -474,14 +475,14 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
     // Extract write bandwidth
     temp32new = (templ);
 
-    temp32 = g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.wr_cnt_accum;
+    temp32 = g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.wr_cnt_accum;
     temp32 = amec_diff_adjust_for_overflow(temp32new, temp32);
-    g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.wr_cnt_accum = temp32new;  // Save latest accumulator away for next time
+    g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.wr_cnt_accum = temp32new;  // Save latest accumulator away for next time
 
     // Read every 8 ms....to convert to 0.01 Mrps = ((8ms read * 125)/10000)
     tempreg = ((temp32*125)/10000);
 
-    g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.memwrite2ms = tempreg;
+    g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.memwrite2ms = tempreg;
 
     // -------------------------------------------------------------------------
     // Interim Calculation:  MRDMx (0.01 Mrps) Memory read requests per sec
@@ -490,14 +491,14 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
     // Extract read bandwidth
     temp32new = (tempu);
 
-    temp32 = g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.rd_cnt_accum;
+    temp32 = g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.rd_cnt_accum;
     temp32 = amec_diff_adjust_for_overflow(temp32new, temp32);
-    g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.rd_cnt_accum = temp32new;  // Save latest accumulator away for next time
+    g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.rd_cnt_accum = temp32new;  // Save latest accumulator away for next time
 
     // Read every 8 ms....to convert to 0.01 Mrps = ((8ms read * 125)/10000)
     tempreg = ((temp32*125)/10000);
 
-    g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.memread2ms = tempreg;
+    g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.memread2ms = tempreg;
 
     // Go after second MC performance counter (power ups and activations)
     tempu = l_sensor_cache->mba_act;
@@ -510,11 +511,11 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
     temp32new = (templ); // left shift into top 20 bits of 32 bits
 
     // For DD1.0, we only have 1 channel field that we use; DD2.0 we need to add another channel
-    temp32 = g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.pwrup_cnt_accum;
+    temp32 = g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.pwrup_cnt_accum;
     temp32 = amec_diff_adjust_for_overflow(temp32new, temp32);
-    g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.pwrup_cnt_accum = temp32new;  // Save latest accumulator away for next time
+    g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.pwrup_cnt_accum = temp32new;  // Save latest accumulator away for next time
     tempreg=(uint16_t)(temp32>>12);   // Select upper 20 bits
-    g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.pwrup_cnt=(uint16_t)tempreg;
+    g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.pwrup_cnt=(uint16_t)tempreg;
     sensor_update(AMECSENSOR_PORTPAIR_PTR(mpu2ms,i_membuf,0), tempreg);
 
     // -------------------------------------------------------------------
@@ -526,109 +527,133 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
 
     temp32new = (temp32);   // left shift into top 20 bits of 32 bits
     // For DD1.0, we only have 1 channel field that we use; DD2.0 we need to add another channel
-    temp32 = g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.act_cnt_accum;
+    temp32 = g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.act_cnt_accum;
     temp32 = amec_diff_adjust_for_overflow(temp32new, temp32);
-    g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.act_cnt_accum = temp32new;  // Save latest accumulator away for next time
+    g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.act_cnt_accum = temp32new;  // Save latest accumulator away for next time
     tempreg=(uint16_t)(temp32>>12);   // Select lower 16 of 20 bits
-    g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.act_cnt=(uint16_t)tempreg;
+    g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.act_cnt=(uint16_t)tempreg;
     sensor_update(AMECSENSOR_PORTPAIR_PTR(mac2ms,i_membuf,0), tempreg);
 
     // --------------------------------------------------------------------------
-    // Sensor:  MTS (count) Last received Timestamp (frame count) from Centaur
+    // Sensor:  MTS (count) Last received Timestamp (frame count) from membuf
     // --------------------------------------------------------------------------
     // Extract framecount (clock is 266.6666666MHz * 0.032 / 4096)=2083.
     temp32new = l_sensor_cache->frame_count;
 
-    temp32 = g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.fr2_cnt_accum;
+    temp32 = g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.fr2_cnt_accum;
     temp32 = amec_diff_adjust_for_overflow(temp32new, temp32);
-    g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.fr2_cnt_accum = temp32new;  // Save latest accumulator away for next time
+    g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.fr2_cnt_accum = temp32new;  // Save latest accumulator away for next time
     tempreg=(uint16_t)(temp32>>12);   // Select upper 20 bits
 
-    g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.fr2_cnt=(uint16_t)tempreg;
+    g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.fr2_cnt=(uint16_t)tempreg;
     sensor_update(AMECSENSOR_PORTPAIR_PTR(mts2ms,i_membuf,0), tempreg);
 
     // ------------------------------------------------------------------------------
     // Sensor:  MIRB  (0.01 Mevents/s) Memory Inter-request arrival idle intervals
     // ------------------------------------------------------------------------------
     temp32new = l_sensor_cache->mba_arr_cnt_base;
-    temp32 = g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.intreq_base_accum;
+    temp32 = g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.intreq_base_accum;
     temp32 = amec_diff_adjust_for_overflow(temp32new, temp32);
-    g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.intreq_base_accum = temp32new;  // Save latest accumulator away for next time
+    g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.intreq_base_accum = temp32new;  // Save latest accumulator away for next time
 
     // Read every 8 ms....to convert to 0.01 Mrps = ((8ms read * 125)/10000)
     tempreg = ((temp32*125)/10000);
-    g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.mirb2ms = tempreg;
+    g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.mirb2ms = tempreg;
     sensor_update(AMECSENSOR_PORTPAIR_PTR(mirb2ms,i_membuf,0), tempreg);
 
     // --------------------------------------------------------------------------------------------------------
     // Sensor:  MIRL  (0.01 Mevents/s) Memory Inter-request arrival idle intervals longer than low threshold
     // --------------------------------------------------------------------------------------------------------
     temp32new = l_sensor_cache->mba_arr_cnt_low;
-    temp32 = g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.intreq_low_accum;
+    temp32 = g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.intreq_low_accum;
     temp32 = amec_diff_adjust_for_overflow(temp32new, temp32);
-    g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.intreq_low_accum = temp32new;  // Save latest accumulator away for next time
+    g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.intreq_low_accum = temp32new;  // Save latest accumulator away for next time
 
     // Read every 8 ms....to convert to 0.01 Mrps = ((8ms read * 125)/10000)
     tempreg = ((temp32*125)/10000);
-    g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.mirl2ms = tempreg;
+    g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.mirl2ms = tempreg;
     sensor_update(AMECSENSOR_PORTPAIR_PTR(mirl2ms,i_membuf,0), tempreg);
 
     // -----------------------------------------------------------------------------------------------------------
     // Sensor:  MIRM  (0.01 Mevents/s) Memory Inter-request arrival idle intervals longer than medium threshold
     // -----------------------------------------------------------------------------------------------------------
     temp32new = l_sensor_cache->mba_arr_cnt_med;
-    temp32 = g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.intreq_med_accum;
+    temp32 = g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.intreq_med_accum;
     temp32 = amec_diff_adjust_for_overflow(temp32new, temp32);
-    g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.intreq_med_accum = temp32new;  // Save latest accumulator away for next time
+    g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.intreq_med_accum = temp32new;  // Save latest accumulator away for next time
 
     // Read every 8 ms....to convert to 0.01 Mrps = ((8ms read * 125)/10000)
     tempreg = ((temp32*125)/10000);
-    g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.mirm2ms = tempreg;
+    g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.mirm2ms = tempreg;
     sensor_update(AMECSENSOR_PORTPAIR_PTR(mirm2ms,i_membuf,0), tempreg);
 
     // ---------------------------------------------------------------------------------------------------------
     // Sensor:  MIRH  (0.01 Mevents/s) Memory Inter-request arrival idle intervals longer than high threshold
     // ---------------------------------------------------------------------------------------------------------
     temp32new = l_sensor_cache->mba_arr_cnt_high;
-    temp32 = g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.intreq_high_accum;
+    temp32 = g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.intreq_high_accum;
     temp32 = amec_diff_adjust_for_overflow(temp32new, temp32);
-    g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.intreq_high_accum = temp32new;  // Save latest accumulator away for next time
+    g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.intreq_high_accum = temp32new;  // Save latest accumulator away for next time
 
     // Read every 8 ms....to convert to 0.01 Mrps = ((8ms read * 125)/10000)
     tempreg = ((temp32*125)/10000);
-    g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.mirh2ms = tempreg;
+    g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.mirh2ms = tempreg;
     sensor_update(AMECSENSOR_PORTPAIR_PTR(mirh2ms,i_membuf,0), tempreg);
 
     // ----------------------------------------------------
     // Sensor:  MLP2   (events/s) Number of LP2 exits
     // ----------------------------------------------------
     temp32new = l_sensor_cache->self_timed_refresh;
-    temp32 = g_amec->proc[0].memctl[i_membuf].centaur.perf.lp2exit_accum;
+    temp32 = g_amec->proc[0].memctl[i_membuf].membuf.perf.lp2exit_accum;
     temp32 = amec_diff_adjust_for_overflow(temp32new, temp32);
-    g_amec->proc[0].memctl[i_membuf].centaur.perf.lp2exit_accum = temp32new;  // Save latest accumulator away for next time
+    g_amec->proc[0].memctl[i_membuf].membuf.perf.lp2exit_accum = temp32new;  // Save latest accumulator away for next time
 
     // Read every 8 ms....to convert to 0.01 Mrps = ((8ms read * 125)/10000)
     tempreg = ((temp32*125)/10000);
-    g_amec->proc[0].memctl[i_membuf].centaur.perf.mlp2_2ms = tempreg;
-    sensor_update((&(g_amec->proc[0].memctl[i_membuf].centaur.mlp2ms)), tempreg);
+    g_amec->proc[0].memctl[i_membuf].membuf.perf.mlp2_2ms = tempreg;
+    sensor_update((&(g_amec->proc[0].memctl[i_membuf].membuf.mlp2ms)), tempreg);
 
     // ------------------------------------------------------------
     // Sensor:  MRDMx (0.01 Mrps) Memory read requests per sec
     // ------------------------------------------------------------
-    tempreg = g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.memread2ms;
-    tempreg += g_amec->proc[0].memctl[i_membuf].centaur.portpair[1].perf.memread2ms;
+    tempreg = g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.memread2ms;
+    tempreg += g_amec->proc[0].memctl[i_membuf].membuf.portpair[1].perf.memread2ms;
     sensor_update( (&(g_amec->proc[0].memctl[i_membuf].mrd)), tempreg);
 
     // -------------------------------------------------------------
     // Sensor:  MWRMx (0.01 Mrps) Memory write requests per sec
     // -------------------------------------------------------------
-    tempreg = g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.memwrite2ms;
-    tempreg += g_amec->proc[0].memctl[i_membuf].centaur.portpair[1].perf.memwrite2ms;
+    tempreg = g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.memwrite2ms;
+    tempreg += g_amec->proc[0].memctl[i_membuf].membuf.portpair[1].perf.memwrite2ms;
     sensor_update( (&(g_amec->proc[0].memctl[i_membuf].mwr)), tempreg);
 
     return;
 }
 
-/*----------------------------------------------------------------------------*/
-/* End                                                                        */
-/*----------------------------------------------------------------------------*/
+
+// Function Specification
+//
+// Name: amec_diff_adjust_for_overflow
+//
+// Description: Calculates the diff between 32-bit accumulator values
+//              while accounting for overflow.
+//
+// End Function Specification
+uint32_t amec_diff_adjust_for_overflow(uint32_t i_new_value, uint32_t i_old_value)
+{
+    uint32_t l_result = 0;
+    uint64_t l_overflow = 0;
+
+    if(i_new_value < i_old_value)
+    {
+        l_overflow = 0xFFFFFFFF + i_new_value;
+        l_overflow = l_overflow - i_old_value;
+        l_result = l_overflow;
+    }
+    else
+    {
+        l_result = i_new_value - i_old_value;
+    }
+
+    return l_result;
+}

@@ -225,14 +225,7 @@ void amec_init_vector_sensors(void)
 // End Function Specification
 void amec_init_gamec_struct(void)
 {
-  /*------------------------------------------------------------------------*/
-  /*  Local Variables                                                       */
-  /*------------------------------------------------------------------------*/
   uint16_t l_idx = 0;
-  uint16_t l_idx2 = 0;
-  /*------------------------------------------------------------------------*/
-  /*  Code                                                                  */
-  /*------------------------------------------------------------------------*/
 
   // Default the frequency range to something safe
   g_amec->sys.fmin = 2000;
@@ -262,10 +255,10 @@ void amec_init_gamec_struct(void)
   g_amec->thermaldimm.Pgain = 30000;
   g_amec->thermaldimm.speed_request = AMEC_MEMORY_MAX_STEP;
 
-  // Initialize thermal controller based on Centaur temperatures
-  g_amec->thermalcent.setpoint = 850; //In 0.1 degrees C -> 850 = 85.0 C
-  g_amec->thermalcent.Pgain = 30000;
-  g_amec->thermalcent.speed_request = AMEC_MEMORY_MAX_STEP;
+  // Initialize thermal controller based on membuf temperatures
+  g_amec->thermalmembuf.setpoint = 850; //In 0.1 degrees C -> 850 = 85.0 C
+  g_amec->thermalmembuf.Pgain = 30000;
+  g_amec->thermalmembuf.speed_request = AMEC_MEMORY_MAX_STEP;
 
   // Initialize component power caps
   g_amec->pcap.active_proc_pcap = 0;
@@ -317,15 +310,6 @@ void amec_init_gamec_struct(void)
 
   // Initialize to no VRM faults
   g_amec->sys.vrm_fault_status = 0;
-
-  // Initialize saying we need the M value
-  for(l_idx=0; l_idx < NUM_NIMBUS_MC_PAIRS; l_idx++)
-  {
-    for(l_idx2=0; l_idx2 < MAX_NUM_MCU_PORTS; l_idx2++)
-    {
-      g_amec->sys.dimm_m_values[l_idx][l_idx2].need_m = TRUE;
-    }
-  }
 
   // Initialize wof_disabled
   g_amec->wof.wof_disabled = WOF_RC_OCC_WOF_DISABLED;

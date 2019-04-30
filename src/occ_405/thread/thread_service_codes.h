@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -41,8 +41,6 @@ enum thrdModuleId
     THRD_MID_INIT_THREAD_SCHDLR     =  THRD_COMP_ID | 0x00,
     THRD_MID_THREAD_SWAP_CALLBACK   =  THRD_COMP_ID | 0x01,
     THRD_MID_GEN_CALLHOME_LOG       =  THRD_COMP_ID | 0x02,
-    THRD_THERMAL_VRM_FAN_CONTROL    =  THRD_COMP_ID | 0x03,
-    THRD_THERMAL_MAIN               =  THRD_COMP_ID | 0x04,
 };
 
 #endif /* #ifndef _THREAD_SERVICE_CODES_H_ */

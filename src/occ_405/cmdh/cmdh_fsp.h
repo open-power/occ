@@ -319,12 +319,13 @@ extern uint8_t  G_rsp_status;
 // Defines for Internal flags used for debug
 // To set flags:  tmgtclient -X 0x40 --data 0x1f<4 byte value for G_internal_flags>
 extern uint32_t G_internal_flags;
-#define INT_FLAG_DISABLE_24X7 0x00000001
-#define INT_FLAG_ENABLE_VDD_CURRENT_READ 0x00000008  // only applies if have at least PGPE P9' support
-#define INT_FLAG_ENABLE_OCS_HOLD_NEW 0x00000010  // only applies if P10_OCS is enabled
-#define INT_FLAG_ENABLE_P10_OCS 0x00000020  // will really only be enabled if also have at least PGPE P9' support
-#define INT_FLAG_DISABLE_CEFF_TRACKING 0x00000040 // enabled by default with PGPE P9' support
-#define INT_FLAG_ENABLE_WOF_CHAR_TEST 0x00000080  // special WOF testing mode requested by Frank
+#define INT_FLAG_DISABLE_24X7               0x00000001
+#define INT_FLAG_ENABLE_VDD_CURRENT_READ    0x00000008  // only applies if have at least PGPE P9' support
+#define INT_FLAG_ENABLE_OCS_HOLD_NEW        0x00000010  // only applies if P10_OCS is enabled
+#define INT_FLAG_ENABLE_P10_OCS             0x00000020  // will really only be enabled if also have at least PGPE P9' support
+#define INT_FLAG_DISABLE_CEFF_TRACKING      0x00000040  // enabled by default with PGPE P9' support
+#define INT_FLAG_ENABLE_WOF_CHAR_TEST       0x00000080  // special WOF testing mode requested by Frank
+#define INT_FLAG_ENABLE_MEMORY_CONFIG       0x00000100  // temporary flag to re-enable memory until testing completed
 
 void notifyCmdhWakeupCondition(eCmdhWakeupThreadMask i_cond);
 void clearCmdhWakeupCondition(eCmdhWakeupThreadMask i_cond);

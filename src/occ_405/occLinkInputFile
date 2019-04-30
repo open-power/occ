@@ -14,15 +14,12 @@ INPUT ( amec_amester.o
         amec_perfcount.o
         amec_sensors_fw.o
         amec_sensors_power.o
-        amec_sensors_centaur.o
         amec_sensors_ocmb.o
         amec_sensors_core.o
         amec_slave_smh.o
         amec_tasks.o
         apss.o
         avsbus.o
-        centaur_control.o
-        centaur_data.o
         ocmb_control.o
         ocmb_data.o
         chom.o
@@ -41,8 +38,6 @@ INPUT ( amec_amester.o
         dcomMasterTx.o
         dcomSlaveRx.o
         dcomSlaveTx.o
-        dimm.o
-        dimm_control.o
         dpss.o
         errl.o
         ffdc.o
@@ -52,7 +47,7 @@ INPUT ( amec_amester.o
         lock.o
         main.o
         memory.o
-        memory_power_control.o
+        memory_data.o
         mode.o
         occ_sys_config.o
         occbuildname.o

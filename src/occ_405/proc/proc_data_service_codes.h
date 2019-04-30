@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -32,10 +32,6 @@ enum procModuleId
 {
     PROC_TASK_CORE_DATA_MOD         = PROC_COMP_ID | 0x00,
     PROC_CORE_INIT_MOD              = PROC_COMP_ID | 0x01,
-    PROC_TASK_FAST_CORE_DATA_MOD    = PROC_COMP_ID | 0x02,
-    PROC_GPST_INIT_FAILURE_MOD      = PROC_COMP_ID | 0x03,
-    PROC_ENABLE_PSTATES_SMH_MOD     = PROC_COMP_ID | 0x04,
-    PROC_PSTATE_KVM_SETUP_MOD       = PROC_COMP_ID | 0x05,
     PROC_TASK_NEST_DTS_MOD          = PROC_COMP_ID | 0x06,
     PROC_NEST_DTS_INIT_MOD          = PROC_COMP_ID | 0x07,
     PROC_24X7_MOD                   = PROC_COMP_ID | 0x08,

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -35,10 +35,6 @@
 #define MAIN_COMP_ID         0x0100
 #define MAIN_COMP_NAME       "MAIN"
 
-
-#define ERRL_COMP_ID         0x0200
-#define ERRL_COMP_NAME       "ERRL"
-
 #define TRAC_COMP_ID         0x0300
 #define TRAC_COMP_NAME       "TRAC"
 
@@ -50,10 +46,6 @@
 
 #define SNSR_COMP_ID         0x0600
 #define SNSR_COMP_NAME       "SNSR"
-
-// Applet Manager
-#define APLT_COMP_ID         0x0700
-#define APLT_COMP_NAME       "APLT"
 
 #define PSS_COMP_ID          0x0800
 #define PSS_COMP_NAME        "PSS"
@@ -72,17 +64,9 @@
 #define AMEC_COMP_ID         0x0C00
 #define AMEC_COMP_NAME       "AMEC"
 
-// Centaur data
-#define CENT_COMP_ID         0x0D00
-#define CENT_COMP_NAME       "CENT"
-
 // Command Handler
 #define CMDH_COMP_ID         0x0E00
 #define CMDH_COMP_NAME       "CMDH"
-
-// DIMM State Manager
-#define DIMM_COMP_ID         0x0F00
-#define DIMM_COMP_NAME       "DIMM"
 
 // MEMORY Control
 #define MEM_COMP_ID          0x1000

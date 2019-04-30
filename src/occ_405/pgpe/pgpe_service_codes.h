@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -38,9 +38,7 @@ enum pgpeModuleId
     PGPE_CLIP_UPDATE_MOD             = PGPE_COMP_ID | 0x05,
     PGPE_START_SUSPEND_MOD           = PGPE_COMP_ID | 0x06,
     PGPE_PMCR_SET_MOD                = PGPE_COMP_ID | 0x07,
-    PGPE_SET_CLIP_RANGES_MOD         = PGPE_COMP_ID | 0x08,
     PGPE_SET_CLIP_BLOCKING_MOD       = PGPE_COMP_ID | 0x09,
-    PGPE_START_SUSPEND_CALLBACK_MOD  = PGPE_COMP_ID | 0x0A,
 };
 
 

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -91,9 +91,6 @@ volatile bool G_ApssPwrMeasCompleted = FALSE;
 
 // Used to tell slave inbox that pwr meas is complete but is invalid
 volatile bool G_ApssPwrMeasDoneInvalid = FALSE;
-
-// Used for debug to simulate an EPOW assertion event
-extern uint8_t G_injected_epow_asserted;
 
 // Function Specification
 //
@@ -673,17 +670,6 @@ void reformat_meas_data()
             memcpy(G_apss_pwr_meas.adc, &l_buffer[l_index], (G_apss_mode_config.numAdcChannelsToRead * 2));
             l_index += (G_apss_mode_config.numAdcChannelsToRead * 2);
             memcpy(G_apss_pwr_meas.gpio, &l_buffer[l_index], (G_apss_mode_config.numGpioPortsToRead * 2));
-
-            //Check if injected EPOW has been asserted via debug command
-            if( G_injected_epow_asserted )
-            {
-                uint8_t l_epow_port = G_sysConfigData.apss_gpio_map.nvdimm_epow /
-                    NUM_OF_APSS_PINS_PER_GPIO_PORT;
-                uint8_t l_epow_mask = 0x1 <<
-                    (G_sysConfigData.apss_gpio_map.nvdimm_epow %
-                     NUM_OF_APSS_PINS_PER_GPIO_PORT);
-                G_apss_pwr_meas.gpio[l_epow_port] &= (~l_epow_mask);
-            }
 
             // TOD is always located at same offset
             memcpy(&G_apss_pwr_meas.tod, &l_buffer[l_continue_meas_length+l_complete_meas_length-8], 8);

@@ -296,8 +296,8 @@ typedef enum {
     ERRH_AVSBUS_VDD_VOLTAGE          =  0x02,
     ERRH_AVSBUS_VDN_CURRENT          =  0x03,
     ERRH_AVSBUS_VDN_VOLTAGE          =  0x04,
-    ERRH_DIMM_I2C_PORT0              =  0x05,
-    ERRH_DIMM_I2C_PORT1              =  0x06,
+    // unused - 0x05
+    // unused - 0x06
     ERRH_AVSBUS_VDD_STATUS_READ_FAIL =  0x07,
     ERRH_AVSBUS_VDN_STATUS_READ_FAIL =  0x08,
     ERRH_AVSBUS_VDD_OVER_CURRENT     =  0x09,

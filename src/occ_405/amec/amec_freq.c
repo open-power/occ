@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -53,7 +53,7 @@
 //*************************************************************************
 // Externs
 //*************************************************************************
-extern uint8_t G_cent_temp_expired_bitmap;
+extern uint8_t G_membuf_temp_expired_bitmap;
 extern dimm_sensor_flags_t G_dimm_temp_expired_bitmap;
 
 extern uint16_t G_proc_fmax_mhz;
@@ -748,11 +748,11 @@ void amec_slv_mem_voting_box(void)
         kvm_reason = POWER_CAP;
     }
 
-    // Check vote from Centaur thermal control loop
-    if (l_vote > g_amec->thermalcent.speed_request)
+    // Check vote from membuf thermal control loop
+    if (l_vote > g_amec->thermalmembuf.speed_request)
     {
-        l_vote = g_amec->thermalcent.speed_request;
-        l_reason = AMEC_MEM_VOTING_REASON_CENT;
+        l_vote = g_amec->thermalmembuf.speed_request;
+        l_reason = AMEC_MEM_VOTING_REASON_MEMBUF;
         kvm_reason = MEMORY_OVER_TEMP;
     }
 
@@ -796,10 +796,10 @@ void amec_slv_mem_voting_box(void)
         {
             L_throttle_traced = TRUE;
             TRAC_INFO("Memory is being throttled. reason[%d] vote[%d] "
-                      "cent_expired[0x%02x] dimm_expired[0x%08x%08x]",
+                      "membuf_expired[0x%02x] dimm_expired[0x%08x%08x]",
                        l_reason,
                        l_vote,
-                       G_cent_temp_expired_bitmap,
+                       G_membuf_temp_expired_bitmap,
                        G_dimm_temp_expired_bitmap.words[0],
                        G_dimm_temp_expired_bitmap.words[1]);
         }

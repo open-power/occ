@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -77,11 +77,11 @@ enum
     CHOMTEMPPROC1,
     CHOMTEMPPROC2,
     CHOMTEMPPROC3,
-    // Centaur temperature for all Centaurs in the node
-    CHOMTEMPCENTP0,
-    CHOMTEMPCENTP1,
-    CHOMTEMPCENTP2,
-    CHOMTEMPCENTP3,
+    // Membuf temperature for all membufs in the node
+    CHOMTEMPMEMBUFP0,
+    CHOMTEMPMEMBUFP1,
+    CHOMTEMPMEMBUFP2,
+    CHOMTEMPMEMBUFP3,
     // Dimm temperature for all Dimms in the node
     CHOMTEMPDIMMP0,
     CHOMTEMPDIMMP1,

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -41,8 +41,6 @@
 #include <occ_common.h>
 #include <comp_ids.h>
 #include <occ_service_codes.h>
-#include "dimm.h"
-#include "dimm_service_codes.h"
 #include "lock.h"
 #include "common.h"
 #include "state.h"
@@ -63,7 +61,7 @@ typedef enum
 void host_i2c_lock_request()
 {
     ocb_occflg_t occ_flags = {0};
-    TRAC_INFO("host_i2c_lock_request called (tick %d / %d)", CURRENT_TICK, DIMM_TICK);
+    TRAC_INFO("host_i2c_lock_request called (tick %d)", CURRENT_TICK);
     occ_flags.fields.i2c_engine3_lock_host = 1;
     TRAC_INFO("host_i2c_lock_request - writing %04X to _OR(0x%08X)", occ_flags.value, OCB_OCCFLG_OR);
     out32(OCB_OCCFLG_OR, occ_flags.value);
@@ -84,7 +82,7 @@ void host_i2c_lock_request()
 // DEBUG: Simulate I2C lock release from host
 void host_i2c_lock_release()
 {
-    TRAC_INFO("host_i2c_lock_release called (tick %d / %d)", CURRENT_TICK, DIMM_TICK);
+    TRAC_INFO("host_i2c_lock_release called (tick %d)", CURRENT_TICK);
 
     ocb_occmisc_t occmiscreg = {0};
     ocb_occflg_t occ_flags = {0};
@@ -125,13 +123,13 @@ void update_i2c_lock(const lockOperation_e i_op, const uint8_t i_engine)
     flag.value = in32(OCB_OCCFLG);
     if (LOCK_RELEASE == i_op)
     {
-        LOCK_DBG("update_i2c_lock: I2C engine %d RELEASE - host=%d, occ=%d, dimmTick=%d",
-                 i_engine, flag.fields.i2c_engine3_lock_host, flag.fields.i2c_engine3_lock_occ, DIMM_TICK);
+        LOCK_DBG("update_i2c_lock: I2C engine %d RELEASE - host=%d, occ=%d, tick=%d",
+                 i_engine, flag.fields.i2c_engine3_lock_host, flag.fields.i2c_engine3_lock_occ, CURRENT_TICK);
     }
     else
     {
-        LOCK_DBG("update_i2c_lock: I2C engine %d LOCK    - host=%d, occ=%d, dimmTick=%d",
-                 i_engine, flag.fields.i2c_engine3_lock_host, flag.fields.i2c_engine3_lock_occ, DIMM_TICK);
+        LOCK_DBG("update_i2c_lock: I2C engine %d LOCK    - host=%d, occ=%d, tick=%d",
+                 i_engine, flag.fields.i2c_engine3_lock_host, flag.fields.i2c_engine3_lock_occ, CURRENT_TICK);
     }
 #endif
 
@@ -263,8 +261,8 @@ bool check_and_update_i2c_lock(const uint8_t i_engine)
             ocb_occflg_t original_occflags;
             original_occflags.value = in32(OCB_OCCFLG);
 
-            LOCK_DBG("check_and_update_i2c_lock: I2C engine %d - host=%d, occ=%d (dimmTick=%d)",
-                     i_engine, original_occflags.fields.i2c_engine3_lock_host, original_occflags.fields.i2c_engine3_lock_occ, DIMM_TICK);
+            LOCK_DBG("check_and_update_i2c_lock: I2C engine %d - host=%d, occ=%d (tick=%d)",
+                     i_engine, original_occflags.fields.i2c_engine3_lock_host, original_occflags.fields.i2c_engine3_lock_occ, CURRENT_TICK);
             if (occ_owns_i2c_lock(original_occflags, i_engine))
             {
                 if (host_wants_i2c_lock(original_occflags, i_engine))
