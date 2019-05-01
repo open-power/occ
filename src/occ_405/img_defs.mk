@@ -5,8 +5,9 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2015,2017
+# Contributors Listed Below - COPYRIGHT 2015,2019
 # [+] International Business Machines Corp.
+# [+] Timothy Pearson
 #
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -253,7 +254,8 @@ PIPE-CFLAGS = -pipe -Wa,-m405
 GCC-CFLAGS += -g -Wall -fsigned-char -msoft-float  \
 	-m32 -mbig-endian -mcpu=405 -mmultiple -mstring \
 	-meabi -msdata=eabi -ffreestanding -fno-common \
-	-fno-inline-functions-called-once -std=gnu89
+	-fno-inline-functions-called-once \
+	-fno-asynchronous-unwind-tables -std=gnu89
 
 CFLAGS      =  -c $(GCC-CFLAGS) $(PIPE-CFLAGS) $(GCC-O-LEVEL) $(INCLUDES)
 
