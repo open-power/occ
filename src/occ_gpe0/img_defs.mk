@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2015,2018
+# Contributors Listed Below - COPYRIGHT 2015,2019
 # [+] International Business Machines Corp.
 #
 #
@@ -209,6 +209,7 @@ GCC-CFLAGS += -msdata=eabi
 GCC-CFLAGS += -ffreestanding
 GCC-CFLAGS += -fno-common
 GCC-CFLAGS += -fno-inline-functions-called-once
+GCC-CFLAGS += -fno-asynchronous-unwind-tables
 
 CFLAGS      =  -c -std=gnu89 $(GCC-CFLAGS) $(PIPE-CFLAGS) $(GCC-O-LEVEL) $(INCLUDES)
 
