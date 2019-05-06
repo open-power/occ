@@ -1334,7 +1334,8 @@ void hmon_routine()
         (rtl_task_is_runnable(TASK_ID_DIMM_SM)) && (!SMGR_is_state_transitioning()) )
     {
         // For Cumulus systems only, check for centaur timeout and overtemp errors
-        if (MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type)
+        if ((MEM_TYPE_CUMULUS == G_sysConfigData.mem_type) ||
+            (MEM_TYPE_OCM == G_sysConfigData.mem_type))
         {
             amec_health_check_cent_timeout();
             amec_health_check_cent_temp();

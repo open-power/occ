@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -90,7 +90,7 @@ void ocmb_control_init( void )
 
         /* @
          * @errortype
-         * @moduleid    CENTAUR_INIT_MOD
+         * @moduleid    OCMB_INIT_MOD
          * @reasoncode  SSX_GENERIC_FAILURE
          * @userdata1   l_rc_gpe  - Return code of failing function
          * @userdata2   0

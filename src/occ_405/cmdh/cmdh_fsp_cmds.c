@@ -323,7 +323,12 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
     l_sensorHeader.count  = 0;
 
     //Initialize to max number of possible temperature sensors.
-    l_max_sensors = MAX_NUM_CORES + MAX_NUM_MEM_CONTROLLERS + (MAX_NUM_MEM_CONTROLLERS * NUM_DIMMS_PER_CENTAUR) + (MAX_NUM_GPU_PER_DOMAIN * 2);
+    unsigned int max_dimms_per_membuf = NUM_DIMMS_PER_CENTAUR;
+    if (G_sysConfigData.mem_type == MEM_TYPE_OCM)
+    {
+        max_dimms_per_membuf = NUM_DIMMS_PER_OCMB;
+    }
+    l_max_sensors = MAX_NUM_CORES + MAX_NUM_MEM_CONTROLLERS + (MAX_NUM_MEM_CONTROLLERS * max_dimms_per_membuf) + (MAX_NUM_GPU_PER_DOMAIN * 2);
     l_max_sensors++;  // +1 for VRM
     cmdh_poll_temp_sensor_t l_tempSensorList[l_max_sensors];
     memset(l_tempSensorList, 0x00, sizeof(l_tempSensorList));
@@ -346,7 +351,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
     {
         for (l_port=0; l_port < NUM_DIMM_PORTS; l_port++)
         {
-            for(l_dimm=0; l_dimm < NUM_DIMMS_PER_CENTAUR; l_dimm++)
+            for(l_dimm=0; l_dimm < max_dimms_per_membuf; l_dimm++)
             {
                 if (g_amec->proc[0].memctl[l_port].centaur.dimm_temps[l_dimm].temp_sid != 0)
                 {
@@ -367,8 +372,10 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
             }
         }
     }
-    else if (G_sysConfigData.mem_type == MEM_TYPE_CUMULUS)
+    else if ((G_sysConfigData.mem_type == MEM_TYPE_CUMULUS) ||
+             (G_sysConfigData.mem_type == MEM_TYPE_OCM))
     {
+
         static bool l_traced_missing_sid = FALSE;
         for (l_cent=0; l_cent < MAX_NUM_MEM_CONTROLLERS; l_cent++)
         {
@@ -390,7 +397,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
                 l_sensorHeader.count++;
 
                 //Add entries for present dimms associated with current centaur l_cent.
-                for(l_dimm=0; l_dimm < NUM_DIMMS_PER_CENTAUR; l_dimm++)
+                for(l_dimm=0; l_dimm < max_dimms_per_membuf; l_dimm++)
                 {
                     l_temp_sid = g_amec->proc[0].memctl[l_cent].centaur.dimm_temps[l_dimm].temp_sid;
 
