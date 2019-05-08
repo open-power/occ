@@ -1,19 +1,25 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: chips/p9/procedures/lib/pm/membuf_scom.c $                    */
+/* $Source: src/occ_gpe1/gpe_membuf_scom.c $                              */
 /*                                                                        */
-/* IBM CONFIDENTIAL                                                       */
+/* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* EKB Project                                                            */
-/*                                                                        */
-/* COPYRIGHT 2017                                                         */
+/* Contributors Listed Below - COPYRIGHT 2018,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
-/* The source code for this program is not published or otherwise         */
-/* divested of its trade secrets, irrespective of what has been           */
-/* deposited with the U.S. Copyright Office.                              */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 #include <stdint.h>
@@ -57,7 +63,7 @@ int inband_access(MemBufConfiguration_t* i_config,
         sync();
         PPE_LVD(i_oci_addr, *io_data);
 
-        PK_TRACE("inband read %08x%08x from %08x",
+        PK_TRACE_DBG("inband read %08x%08x from %08x",
                      (uint32_t)((*io_data)>>32),
                      (uint32_t)((*io_data)),
                      i_oci_addr);
@@ -82,7 +88,7 @@ int inband_access(MemBufConfiguration_t* i_config,
         uint64_t data64 = *io_data; //This makes PPE_STVD generate better code
         PPE_STVD(i_oci_addr, data64);
 
-        PK_TRACE("inband write %08x%08x to %08x",
+        PK_TRACE_DBG("inband write %08x%08x to %08x",
                      (uint32_t)((*io_data)>>32),
                      (uint32_t)((*io_data)),
                      i_oci_addr);
