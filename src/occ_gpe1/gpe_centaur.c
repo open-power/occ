@@ -1,19 +1,25 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: chips/p9/procedures/lib/pm/centaur_thermal_access.c $         */
+/* $Source: src/occ_gpe1/gpe_centaur.c $                                  */
 /*                                                                        */
-/* IBM CONFIDENTIAL                                                       */
+/* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* EKB Project                                                            */
-/*                                                                        */
-/* COPYRIGHT 2017                                                         */
+/* Contributors Listed Below - COPYRIGHT 2017,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
-/* The source code for this program is not published or otherwise         */
-/* divested of its trade secrets, irrespective of what has been           */
-/* deposited with the U.S. Copyright Office.                              */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 /**
@@ -183,6 +189,7 @@ int gpe_centaur_configuration_create(MemBufConfiguration_t* o_config)
     }
 
     o_config->configRc = MEMBUF_NOT_CONFIGURED;
+    o_config->membuf_type = MEMTYPE_CENTAUR;
 
     do
     {
@@ -218,7 +225,7 @@ int gpe_centaur_configuration_create(MemBufConfiguration_t* o_config)
         // Iterate through each MCS on the chip and check configuration.
 
         // Note that the code uniformly treats SCOM failures of the MCFGPR
-        // registers as an unconfigured Centaur. This works both for real 
+        // registers as an unconfigured Centaur. This works both for real
         // hardware,  as well as for our VBU models where some of the "valid"
         // MCS are not in the simulation models.
 
