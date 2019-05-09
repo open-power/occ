@@ -211,7 +211,7 @@ GCC-CFLAGS += -fsigned-char
 GCC-CFLAGS += -ffunction-sections
 GCC-CFLAGS += -fdata-sections
 GCC-CFLAGS += -msoft-float
-GCC-CFLAGS += -mcpu=ppe42
+GCC-CFLAGS += -mcpu=ppe42x
 GCC-CFLAGS += -meabi
 GCC-CFLAGS += -ffreestanding
 GCC-CFLAGS += -fno-common
@@ -225,7 +225,7 @@ CXXFLAGS    = -nostdinc++ -fno-rtti -fno-exceptions $(CFLAGS)
 
 CPPFLAGS    = -E
 
-ASFLAGS		= -mppe42
+ASFLAGS		= -mppe42x
 
 #use this to enable sda optimizations
 PCP-FLAG = -e
