@@ -1366,10 +1366,11 @@ void amec_slv_substate_7_0(void)
     // Call memory thermal controller based on DIMM temperature
     amec_controller_dimm_thermal();
 
-    if (MEM_TYPE_CUMULUS ==  G_sysConfigData.mem_type)
+    if ((MEM_TYPE_CUMULUS == G_sysConfigData.mem_type) ||
+        (MEM_TYPE_OCM == G_sysConfigData.mem_type))
     {
-        // Call memory thermal controller based on Centaur temperature
-        amec_controller_centaur_thermal();
+        // Call memory thermal controller based on membuf temperature
+        amec_controller_membuf_thermal();
     }
 
 }
