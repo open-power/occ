@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -33,7 +33,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 /// Retrieves the IRQ number for the specified OCC processor instance
 ///
-#define IPC_GET_IRQ(instance_id) (OCCHW_IRQ_IPI0_HI_PRIORITY + instance_id)
+#define IPC_GET_IRQ(instance_id) (G_ipi_irq[instance_id])
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Marks the start of the IPC function ID table

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -29,10 +29,36 @@
 #include "kernel.h"
 #include "ipc_api.h"
 #include "occhw_shared_data.h"
+#if __PPE42__
+    #include "ppe42_cache.h"
+#endif
+
+const uint8_t G_ipi_irq[OCCHW_MAX_INSTANCES] =
+{
+    OCCHW_IRQ_IPI0_HI_PRIORITY,
+    OCCHW_IRQ_IPI1_HI_PRIORITY,
+    OCCHW_IRQ_IPI2_HI_PRIORITY,
+    OCCHW_IRQ_IPI3_HI_PRIORITY,
+    OCCHW_IRQ_IPI4_HI_PRIORITY
+};
 
 /// If G_ipc_enabled is zero then calls to ipc_send_cmd() will return
 /// IPC_RC_SELF_BLOCKED.
 uint8_t     G_ipc_enabled = 0;
+
+
+///////////////////////////////////////////////////////////////////////////////
+///Default IPC Handler Done Hook
+///
+void ipc_irq_handler_default_done_hook() { }
+
+///
+///Function pointer that holds address to done hook
+///function. It is called inside the IPC IRQ handler when
+///all IPC msgs have been processed
+void (*G_ipc_irq_handler_done_hook)() = &ipc_irq_handler_default_done_hook;
+//Set the done hook function to empty default function
+//G_ipc_irq_handler_done_hook =  ;
 
 #ifndef STATIC_IPC_TABLES
     ipc_func_table_entry_t G_ipc_mt_handlers[IPC_MT_MAX_FUNCTIONS];
@@ -70,6 +96,9 @@ int ipc_send_msg(ipc_msg_t* msg, uint32_t target_id)
         KERN_CRITICAL_SECTION_ENTER(KERN_CRITICAL, &ctx);
 
         //Determine the number of entries in the buffer
+#if __PPE42__
+        dcbi(read_count);
+#endif
         num_entries = *write_count - *read_count;
 
         //If the cbuf isn't full, then add the message and raise an interrupt
@@ -83,6 +112,12 @@ int ipc_send_msg(ipc_msg_t* msg, uint32_t target_id)
 #ifdef GPE_IPC_TIMERS
             msg->begin_time = in32(OCB_OTBR);
 #endif
+
+#if __PPE42__
+            dcbf(write_count);
+            sync();
+#endif
+
             //raise the IPC interrupt on the target
             KERN_IRQ_STATUS_SET(IPC_GET_IRQ(target_id), 1);
         }
@@ -346,6 +381,7 @@ void ipc_process_cbuf(uint32_t sender_id)
         // If all buffers are empty then we're done
         if(sender_id > OCCHW_INST_ID_MAX)
         {
+            G_ipc_irq_handler_done_hook();
             break;
         }
 
@@ -368,7 +404,7 @@ void ipc_process_cbuf(uint32_t sender_id)
 /// saving/restoring the context that is required for calling a C
 /// function.
 ///
-/// NOTE: This is only needed for SSX.  PK only supports full interrupts.
+/// NOTE: This is only needed for SSX.  PPE42 only supports full interrupts.
 ///
 #ifdef __SSX__
     KERN_IRQ_FAST2FULL(ipc_irq_handler, ipc_irq_handler_full);
@@ -399,6 +435,8 @@ int ipc_init(void)
     }
 
 #endif
+
+
     return IPC_RC_SUCCESS;
 }
 
@@ -439,7 +477,6 @@ int ipc_enable(void)
 
         //Allow us to send out new commands
         G_ipc_enabled = 1;
-
     }
     while(0);
 
@@ -502,3 +539,10 @@ int ipc_disable(uint32_t target_id)
     return rc;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+/// Sets the IPC IRQ Done Hook function
+///
+void ipc_set_done_hook(void* f)
+{
+    G_ipc_irq_handler_done_hook = f;
+}

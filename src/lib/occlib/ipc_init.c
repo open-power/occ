@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -33,6 +33,25 @@
 
 #include "ipc_api.h"
 #include "ipc_ping.h"
+
+///////////////////////////////////////////////////////////////////////////////
+/// Initialize an IPC command message
+///
+void ipc_init_msg(ipc_msg_t* msg,
+                  uint32_t func_id,
+                  ipc_msg_handler_t resp_callback,
+                  void* callback_arg)
+{
+    KERN_DEQUE_ELEMENT_CREATE(&msg->node);
+    msg->func_id.word32 = func_id;
+    msg->ipc_rc = IPC_RC_SUCCESS;
+    msg->resp_callback = resp_callback;
+    msg->callback_arg = callback_arg;
+#ifdef GPE_IPC_TIMERS
+    msg->begin_time = 0;
+    msg->end_time = 0;
+#endif
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Associate an IPC function ID with a handler function
@@ -91,25 +110,9 @@ int ipc_set_handler(uint32_t            function_id,
     return rc;
 }
 
-///////////////////////////////////////////////////////////////////////////////
-/// Initialize an IPC command message
-///
-void ipc_init_msg(ipc_msg_t* msg,
-                  uint32_t func_id,
-                  ipc_msg_handler_t resp_callback,
-                  void* callback_arg)
-{
-    KERN_DEQUE_ELEMENT_CREATE(&msg->node);
-    msg->func_id.word32 = func_id;
-    msg->ipc_rc = IPC_RC_SUCCESS;
-    msg->resp_callback = resp_callback;
-    msg->callback_arg = callback_arg;
-#ifdef GPE_IPC_TIMERS
-    msg->begin_time = 0;
-    msg->end_time = 0;
-#endif
-}
 
+#if !defined(__IOTA__)
+// IOTA does not support threads, semaphores, deques, or the ipc_msgq
 ///////////////////////////////////////////////////////////////////////////////
 /// Initialize an IPC message queue.
 ///
@@ -156,3 +159,4 @@ int ipc_ping_cmd_init(ipc_ping_cmd_t* ping_cmd)
     return rc;
 }
 #endif /*IPC_ENABLE_PING*/
+#endif /* not __IOTA__ */
