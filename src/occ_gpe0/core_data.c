@@ -28,36 +28,26 @@
 ///
 
 #include "core_data.h"
-#include "p9_config.h"
+#include "eq_config.h"
 #include "ppe42_msr.h"
 #include "ppe42_scom.h"
-#include "cme_register_addresses.h"
-#include "cppm_register_addresses.h"
-#include "cppm_firmware_registers.h"
 #include "pk.h"
-
-#define CME_VDSR_BASE (CME_SCOM_VDSR & 0x00ffffff)
-
-// Global variables
-uint32_t g_vdm_cache_large_droop_count[MAX_NUM_QUADS]__attribute__((section (".sbss")));
-uint32_t g_vdm_core_small_droop_count[MAX_NUM_CORES]__attribute__((section (".sbss")));
-int g_fused_core = FUSED_UNKNOWN;
 
 uint32_t get_core_data(uint32_t i_core,
                        CoreData* o_data)
 {
     uint32_t rc = 0;
     uint32_t size = sizeof(CoreData) / sizeof(uint64_t);
-    uint64_t* ptr = (uint64_t*)o_data;
-    uint32_t coreSelect = CHIPLET_CORE_ID(i_core);
-    uint32_t quadSelect = CHIPLET_CACHE_ID((i_core / CORES_PER_QUAD));
-    uint64_t value64 = 0;
+    uint64_t* core_data64 = (uint64_t*)o_data;
+    uint32_t quadSelect = CHIPLET_QUAD_BASE((i_core / CORES_PER_QUAD));
+    uint32_t dtsCoreSelect = DTS_CHIPLET_CORE_OFFSET(i_core) + quadSelect;
+    uint32_t raceTrackSelect = quadSelect + EQ_DTS_RACETRACK_OFFSET;
 
-    uint32_t i,idx;
+    uint32_t i;
 
     for(i = 0; i < size; ++i)
     {
-        ptr[i] = 0;
+        core_data64[i] = 0;
     }
 
     // Turn off MCR bit to prevent machine check on error on scom readings bits 1:7
@@ -81,17 +71,16 @@ uint32_t get_core_data(uint32_t i_core,
     {
         dts_sensor_result_reg_t dts_scom_data;
 
-        rc = getscom(quadSelect,THERM_DTS_RESULT, &(dts_scom_data.value));
+        rc = getscom(raceTrackSelect,THERM_DTS_RESULT, &(dts_scom_data.value));
         if (rc)
         {
             break;
         }
 
-        // Store the quad DTS readings
-        o_data->dts.cache[0].result = dts_scom_data.half_words.reading[0];
-        o_data->dts.cache[1].result = dts_scom_data.half_words.reading[1];
+        // Store the Racetrace DTS reading
+        o_data->dts.racetrack.result = dts_scom_data.half_words.reading[0];
 
-        rc = getscom(coreSelect, THERM_DTS_RESULT, &(dts_scom_data.value));
+        rc = getscom(dtsCoreSelect, THERM_DTS_RESULT, &(dts_scom_data.value));
         if (rc)
         {
             break;
@@ -99,265 +88,170 @@ uint32_t get_core_data(uint32_t i_core,
 
         o_data->dts.core[0].result = dts_scom_data.half_words.reading[0];
         o_data->dts.core[1].result = dts_scom_data.half_words.reading[1];
+        o_data->dts.cache.result = dts_scom_data.half_words.reading[2];
 
-        // =============
-        // DROOP
-        // =============
-        // Read Droop events. Event bit == 0 indicates event occurred.
-        // Side effect of read: event bits are reset to 1 (no event) in hw
-        // Only quad large droop and core small drop events are of interest
-        rc = getscom(quadSelect, CME_VDSR_BASE, &value64);
-        if (rc)
-        {
-            // DROOP events are not critial. Leave event counts as zero
-            // and continue.
-            PK_TRACE("Could not read droop events! rc = %d",rc);
-            rc = 0;
-        }
-        else // update droop event counts
-        {
-
-            if((value64 & CACHE_VDM_LARGE_DROOP) == 0)
-            {
-                ++g_vdm_cache_large_droop_count[i_core / CORES_PER_QUAD];
-            }
-
-            idx = (i_core / CORES_PER_QUAD) * CORES_PER_QUAD;
-
-            if((value64 & CORE0_VDM_SMALL_DROOP) == 0)
-            {
-                ++g_vdm_core_small_droop_count[idx];
-            }
-
-            if((value64 & CORE1_VDM_SMALL_DROOP) == 0)
-            {
-                ++g_vdm_core_small_droop_count[idx+1];
-            }
-
-            if((value64 & CORE2_VDM_SMALL_DROOP) == 0)
-            {
-                ++g_vdm_core_small_droop_count[idx+2];
-            }
-
-            if((value64 & CORE3_VDM_SMALL_DROOP) == 0)
-            {
-                ++g_vdm_core_small_droop_count[idx+3];
-            }
-
-            // return the event status for the requested core and
-            // corresponding quad.
-            // Clear the counter for only the droop events returned.
-            if(g_vdm_cache_large_droop_count[i_core / CORES_PER_QUAD] != 0)
-            {
-                o_data->droop.cache_large_event = 1;
-                g_vdm_cache_large_droop_count[i_core / CORES_PER_QUAD] = 0;
-            }
-
-            if(g_vdm_core_small_droop_count[i_core] != 0)
-            {
-                o_data->droop.core_small_event = 1;
-                g_vdm_core_small_droop_count[i_core] = 0;
-            }
-        }
 
         // =============
         // EMPATH
         // =============
         // Send command to select which emmpath counter to read
-        do
-        {
-           uint64_t empath_scom_data = CORE_RAW_CYCLES;
+        uint64_t empath_scom_data = CORE_RAW_CYCLES;
 
-           if(FUSED_UNKNOWN == g_fused_core)
-            {
-                cppm_cpmmr_t cpmmr;
-                rc = getscom(coreSelect, CPPM_CPMMR, &(cpmmr.value));
-                if (rc)
-                {
-                    // Retry on next tick
-                    break;
-                }
-
-                if (1 == cpmmr.fields.fused_core_mode)
-                {
-                    g_fused_core = FUSED_TRUE;
-                }
-                else
-                {
-                    g_fused_core = FUSED_FALSE;
-                }
-            }
-
-            if(g_fused_core == FUSED_TRUE && ((i_core % 2) != 0))
-            {
-                empath_scom_data |= SELECT_ODD_CORE;
-            }
-
-            rc = putscom(coreSelect, PC_OCC_SPRC, empath_scom_data);
-            if (rc)
-            {
-                break;
-            }
-
-            // Read counters.
-            //  Counter selected auto increments to the next counter after each read.
-
-            //CORE_RAW_CYCLES
-            rc = getscom(coreSelect, PC_OCC_SPRD, &empath_scom_data);
-            if (rc)
-            {
-                break;
-            }
-            o_data->empath.raw_cycles = (uint32_t)empath_scom_data;
-
-            //CORE_RUN_CYCLES
-            rc = getscom(coreSelect, PC_OCC_SPRD, &empath_scom_data);
-            if (rc)
-            {
-                break;
-            }
-            o_data->empath.run_cycles = (uint32_t)empath_scom_data;
-
-            //CORE_WORKRATE_BUSY
-            rc = getscom(coreSelect, PC_OCC_SPRD,&empath_scom_data);
-            if (rc)
-            {
-                break;
-            }
-            o_data->empath.freq_sens_busy = (uint32_t)empath_scom_data;
-
-            //CORE_WORKRATE_FINISH
-            rc = getscom(coreSelect, PC_OCC_SPRD,&empath_scom_data);
-            if (rc)
-            {
-                break;
-            }
-            o_data->empath.freq_sens_finish = (uint32_t)empath_scom_data;
-
-            //CORE_MEM_HIER_A_LATENCY
-            rc = getscom(coreSelect, PC_OCC_SPRD,&empath_scom_data);
-            if (rc)
-            {
-                break;
-            }
-            o_data->empath.mem_latency_a = (uint32_t)empath_scom_data;
-
-            //CORE_MEM_HIER_B_LATENCY
-            rc = getscom(coreSelect, PC_OCC_SPRD,&empath_scom_data);
-            if (rc)
-            {
-                break;
-            }
-            o_data->empath.mem_latency_b = (uint32_t)empath_scom_data;
-
-            //CORE_MEM_HIER_C_ACCESS
-            rc = getscom(coreSelect, PC_OCC_SPRD,&empath_scom_data);
-            if (rc)
-            {
-                break;
-            }
-            o_data->empath.mem_access_c = (uint32_t)empath_scom_data;
-
-            int thread = 0;
-
-            for( ; thread < EMPATH_CORE_THREADS; ++thread )
-            {
-                // THREAD_RUN_CYCLES
-                rc = getscom(coreSelect, PC_OCC_SPRD,&empath_scom_data);
-                if (rc)
-                {
-                    break;
-                }
-                o_data->per_thread[thread].run_cycles = (uint32_t)empath_scom_data;
-
-                // THREAD_INST_DISP_UTIL
-                rc = getscom(coreSelect, PC_OCC_SPRD,&empath_scom_data);
-                if (rc)
-                {
-                    break;
-                }
-                o_data->per_thread[thread].dispatch = (uint32_t)empath_scom_data;
-
-                // THREAD_INST_COMP_UTIL
-                rc = getscom(coreSelect, PC_OCC_SPRD,&empath_scom_data);
-                if (rc)
-                {
-                    break;
-                }
-                o_data->per_thread[thread].completion = (uint32_t)empath_scom_data;
-
-                // THREAD_MEM_HEIR_C_ACCESS
-                rc = getscom(coreSelect, PC_OCC_SPRD,&empath_scom_data);
-                if (rc)
-                {
-                    break;
-                }
-                o_data->per_thread[thread].mem_c = (uint32_t)empath_scom_data;
-            }
-            if (rc)
-            {
-                break;
-            }
-
-            //IFU_THROTTLE_BLOCK_FETCH
-            rc = getscom(coreSelect, PC_OCC_SPRD,&empath_scom_data);
-            if (rc)
-            {
-                break;
-            }
-            o_data->throttle.ifu_throttle = (uint32_t)empath_scom_data;
-
-            //IFU_THROTTLE_ACTIVE
-            rc = getscom(coreSelect, PC_OCC_SPRD,&empath_scom_data);
-            if (rc)
-            {
-                break;
-            }
-            o_data->throttle.ifu_active = (uint32_t)empath_scom_data;
-
-            //VOLT_DROOP_THROTTLE_ACTIVE
-            rc = getscom(coreSelect, PC_OCC_SPRD,&empath_scom_data);
-            if (rc)
-            {
-                break;
-            }
-            o_data->throttle.v_droop = (uint32_t)empath_scom_data;
-
-            // TOD value
-            rc = getscom_abs(TOD_VALUE_REG,&empath_scom_data);
-            if (rc)
-            {
-                break;
-            }
-            o_data->empath.tod_2mhz = (uint32_t)(empath_scom_data >> 8); //[24..56]
-
-            // STOP_STATE_HIST_OCC_REG
-            rc = getscom(coreSelect, STOP_STATE_HIST_OCC_REG, &empath_scom_data);
-            if (rc)
-            {
-                break;
-            }
-            o_data->stop_state_hist = empath_scom_data;
-
-            o_data->empathValid = EMPATH_VALID;
-        } while(0); // EMPATH
-
+        uint32_t empathSelect = quadSelect + EMPATH_CORE_REGION(i_core);
+        rc = putscom(empathSelect, PC_OCC_SPRC, empath_scom_data);
         if (rc)
         {
-            // Work-around for HW problem. See SW407201
-            // If ADDRESS_ERROR then perform a SCOM write of all zeros to
-            // 2n010800 where n is the core number. Ignore ADDRESS_ERROR
-            // returned.  EMPATH_VALID will be left unset to indicate the
-            // EMPATH data is not valid, however, return SUCCESS to indicate
-            // the DTS data is good.
-            if(rc == SIBRC_ADDRESS_ERROR)
-            {
-                uint64_t zeros = 0;
-                putscom(coreSelect,WORKAROUND_SCOM_ADDRESS, zeros);
-                rc = 0;
-            }
+            break;
         }
 
+        // Read counters.
+        //  Counter selected auto increments to the next counter after each read.
+
+        //CORE_RAW_CYCLES
+        rc = getscom(empathSelect, PC_OCC_SPRD, &empath_scom_data);
+        if (rc)
+        {
+            break;
+        }
+        o_data->empath.raw_cycles = (uint32_t)empath_scom_data;
+
+        //CORE_RUN_CYCLES
+        rc = getscom(empathSelect, PC_OCC_SPRD, &empath_scom_data);
+        if (rc)
+        {
+            break;
+        }
+        o_data->empath.run_cycles = (uint32_t)empath_scom_data;
+
+        // Core instruction Complete Utilization Counter
+        rc = getscom(empathSelect, PC_OCC_SPRD, &empath_scom_data);
+        if (rc)
+        {
+            break;
+        }
+        o_data->empath.complete = (uint32_t)empath_scom_data;
+
+        //CORE_WORKRATE_BUSY
+        rc = getscom(empathSelect, PC_OCC_SPRD,&empath_scom_data);
+        if (rc)
+        {
+            break;
+        }
+        o_data->empath.freq_sens_busy = (uint32_t)empath_scom_data;
+
+        //CORE_WORKRATE_FINISH
+        rc = getscom(empathSelect, PC_OCC_SPRD,&empath_scom_data);
+        if (rc)
+        {
+            break;
+        }
+        o_data->empath.freq_sens_finish = (uint32_t)empath_scom_data;
+
+        //CORE_MEM_HIER_A_LATENCY
+        rc = getscom(empathSelect, PC_OCC_SPRD,&empath_scom_data);
+        if (rc)
+        {
+            break;
+        }
+        o_data->empath.mem_latency_a = (uint32_t)empath_scom_data;
+
+        //CORE_MEM_HIER_B_LATENCY
+        rc = getscom(empathSelect, PC_OCC_SPRD,&empath_scom_data);
+        if (rc)
+        {
+            break;
+        }
+        o_data->empath.mem_latency_b = (uint32_t)empath_scom_data;
+
+        //CORE_MEM_HIER_C_ACCESS
+        rc = getscom(empathSelect, PC_OCC_SPRD,&empath_scom_data);
+        if (rc)
+        {
+            break;
+        }
+        o_data->empath.mem_access_c = (uint32_t)empath_scom_data;
+
+        //IFU_THROTTLE_BLOCK_FETCH
+        rc = getscom(empathSelect, PC_OCC_SPRD,&empath_scom_data);
+        if (rc)
+        {
+            break;
+        }
+        o_data->throttle.ifu_throttle = (uint32_t)empath_scom_data;
+
+        //IFU_THROTTLE_ACTIVE
+        rc = getscom(empathSelect, PC_OCC_SPRD,&empath_scom_data);
+        if (rc)
+        {
+            break;
+        }
+        o_data->throttle.ifu_active = (uint32_t)empath_scom_data;
+
+        // Power Proxy
+        rc = getscom(empathSelect, PC_OCC_SPRD,&empath_scom_data);
+        if (rc)
+        {
+            break;
+        }
+        o_data->throttle.pwr_proxy = (uint32_t)empath_scom_data;
+
+        // Fine Throttle Blocked
+        rc = getscom(empathSelect, PC_OCC_SPRD,&empath_scom_data);
+        if (rc)
+        {
+            break;
+        }
+        o_data->throttle.fine_throttle = (uint32_t)empath_scom_data;
+
+        // Harsh Throttle Active
+        rc = getscom(empathSelect, PC_OCC_SPRD,&empath_scom_data);
+        if (rc)
+        {
+            break;
+        }
+        o_data->throttle.harsh_throttle = (uint32_t)empath_scom_data;
+
+        // Small Droop Present
+        rc = getscom(empathSelect, PC_OCC_SPRD,&empath_scom_data);
+        if (rc)
+        {
+            break;
+        }
+        o_data->droop.v_droop_small = (uint32_t)empath_scom_data;
+
+        // Large Droop Present
+        rc = getscom(empathSelect, PC_OCC_SPRD,&empath_scom_data);
+        if (rc)
+        {
+            break;
+        }
+        o_data->droop.v_droop_large = (uint32_t)empath_scom_data;
+
+        // MMA Activer
+        rc = getscom(empathSelect, PC_OCC_SPRD,&empath_scom_data);
+        if (rc)
+        {
+            break;
+        }
+        o_data->droop.mma_active = (uint32_t)empath_scom_data;
+
+        // TOD value
+        rc = getscom_abs(TOD_VALUE_REG,&empath_scom_data);
+        if (rc)
+        {
+            break;
+        }
+        o_data->tod_2mhz = (uint32_t)(empath_scom_data >> 8); //[24..56]
+
+        // STOP_STATE_HIST_OCC_REG TODO 213673 P10 exist?
+        //rc = getscom(empathSelect, STOP_STATE_HIST_OCC_REG, &empath_scom_data);
+        //if (rc)
+        //{
+        //    break;
+        //}
+        //o_data->stop_state_hist = empath_scom_data;
+
+        o_data->empathValid = EMPATH_VALID;
     } while(0);
 
     // Clear masks SIB masks (MSR_SEM)

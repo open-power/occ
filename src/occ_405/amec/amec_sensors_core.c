@@ -142,7 +142,7 @@ void amec_update_proc_core_sensors(uint8_t i_core)
     {
         g_amec->proc[0].core[i_core].prev_PC_RAW_CYCLES    = l_core_data_ptr->empath.raw_cycles;
         g_amec->proc[0].core[i_core].prev_PC_RUN_CYCLES    = l_core_data_ptr->empath.run_cycles;
-        g_amec->proc[0].core[i_core].prev_tod_2mhz         = l_core_data_ptr->empath.tod_2mhz;
+        g_amec->proc[0].core[i_core].prev_tod_2mhz         = l_core_data_ptr->tod_2mhz;
         g_amec->proc[0].core[i_core].prev_FREQ_SENS_BUSY   = l_core_data_ptr->empath.freq_sens_busy;
         g_amec->proc[0].core[i_core].prev_FREQ_SENS_FINISH = l_core_data_ptr->empath.freq_sens_finish;
     }
@@ -150,15 +150,6 @@ void amec_update_proc_core_sensors(uint8_t i_core)
     // Need to sum up all thread data for full core data
     g_amec->proc[0].core[i_core].prev_PC_COMPLETED = 0;
     g_amec->proc[0].core[i_core].prev_PC_DISPATCH = 0;
-    for(i=0; i<MAX_THREADS_PER_CORE; i++)
-    {
-        g_amec->proc[0].core[i_core].prev_PC_COMPLETED +=
-            l_core_data_ptr->per_thread[i].completion;
-        g_amec->proc[0].core[i_core].prev_PC_DISPATCH +=
-            l_core_data_ptr->per_thread[i].dispatch;
-        g_amec->proc[0].core[i_core].thread[i].prev_PC_RUN_Th_CYCLES = l_core_data_ptr->per_thread[i].run_cycles;
-    }
-
     // Final step is to update TOD sensors
     // Extract 32 bits with 16usec resolution
     l_temp32 = (uint32_t)(G_dcom_slv_inbox_doorbell_rx.tod>>13);
@@ -335,6 +326,10 @@ void amec_calc_dts_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
             sensor_update( AMECSENSOR_ARRAY_PTR(TEMPC0, i_core), l_dtsAvg);
         }
 
+        // In P10 there is one l3cache DTS and one Racetrack DTS -  TODO RTC 207919
+        // i_core_data_ptr->dts.cache.fields.reading
+        // i_core_data_ptr->dts.racetrack.fields.reading
+#if defined(_TODO_)
         // The Quad DTS value is considered only if we have a valid Quad DTS and
         // a non-zero quad weight. However we want to keep track of the raw Quad
         // DTS values regardless of weight.
@@ -351,6 +346,7 @@ void amec_calc_dts_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
                 l_quadDtsCnt++;
             }
         }
+#endif
 
         l_quadDtsTemp = 0;
 
@@ -439,7 +435,6 @@ void amec_calc_freq_and_util_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
   uint16_t l_core_freq = 0;
   uint16_t l_time_interval = 0;
   uint32_t l_cycles4ms = 0;
-  int i;
 
   // Read the high-order bytes of OCC Stop State History Register
   l_stop_state_hist_reg = (uint32_t) (i_core_data_ptr->stop_state_hist >> 32);
@@ -474,7 +469,7 @@ void amec_calc_freq_and_util_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
   temp32  = i_core_data_ptr->empath.raw_cycles;
   temp32a = g_amec->proc[0].core[i_core].prev_PC_RAW_CYCLES;
   temp32  = l_cycles4ms = temp32 - temp32a;
-  temp32a = (i_core_data_ptr->empath.tod_2mhz -
+  temp32a = (i_core_data_ptr->tod_2mhz -
              g_amec->proc[0].core[i_core].prev_tod_2mhz);
 
   if (0 == temp32a) temp32 = 0;
@@ -559,33 +554,6 @@ void amec_calc_freq_and_util_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
   temp32  = i_core_data_ptr->empath.raw_cycles;
   temp32a = g_amec->proc[0].core[i_core].prev_PC_RAW_Th_CYCLES;
   l_cycles4ms = temp32 - temp32a;
-
-  for(i=0; i<MAX_THREADS_PER_CORE; i++)
-  {
-    // Get Run Counters for Thread
-    temp32 = i_core_data_ptr->per_thread[i].run_cycles;
-    temp32a = g_amec->proc[0].core[i_core].thread[i].prev_PC_RUN_Th_CYCLES;
-    temp32 = temp32 - temp32a;
-
-    temp32 = temp32 >> 8;        // Drop non-significant bits
-    temp32 = temp32 * 10000;     // resolution 0.01%
-
-    temp32a = l_cycles4ms;
-    temp32a = temp32a >> 8;      // Drop non-significant bits
-
-    // Calculate Utilization
-    if (0 == temp32a) temp32 = 0; // Prevent divide by 0
-    else temp32 = temp32 / temp32a;
-
-    // Update per thread value for this core
-    if(l_core_sleep_winkle)
-    {
-        temp32 = 0;
-    }
-    g_amec->proc[0].core[i_core].thread[i].util4ms_thread = (uint16_t) temp32;
-  }
-
-  // No sensors to update for perThread Util
 
   // ------------------------------------------------------
   // Per Core Stop State Sensors
@@ -732,7 +700,7 @@ void amec_calc_ips_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
   UINT32                      ticks_2mhz = 0; // IPS sensor interval in 2mhz ticks
   BOOLEAN                     l_core_sleep_winkle = FALSE;
   uint32_t                    l_stop_state_hist_reg = 0;
-  uint8_t                     thread = 0;
+  //uint8_t                     thread = 0;
 
   // Read the high-order bytes of OCC Stop State History Register
   l_stop_state_hist_reg = (uint32_t) (i_core_data_ptr->stop_state_hist >> 32);
@@ -752,13 +720,6 @@ void amec_calc_ips_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
   cyc1 = i_core_data_ptr->empath.run_cycles;
   cyc2 = g_amec->proc[0].core[i_core].prev_PC_RUN_CYCLES;
   cyc2 = cyc1 - cyc2;
-
-  // Calculate core completion and dispatch (sum of all threads)
-  for ( thread = 0; thread < MAX_THREADS_PER_CORE; thread++ )
-  {
-    fin1 += i_core_data_ptr->per_thread[thread].completion;
-    disp1 += i_core_data_ptr->per_thread[thread].dispatch;
-  }
 
   // Calculate delta of completed instructions
   fin2 = g_amec->proc[0].core[i_core].prev_PC_COMPLETED;
@@ -848,7 +809,7 @@ void amec_calc_ips_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
   // Note: For an explanation regarding the multiply by 2, see the note under FREQAC0.
   // </amec_formula>
 
-  ticks_2mhz = i_core_data_ptr->empath.tod_2mhz -
+  ticks_2mhz = i_core_data_ptr->tod_2mhz -
       g_amec->proc[0].core[i_core].prev_tod_2mhz;
 
   if (0 == ticks_2mhz) temp32 = 0;
@@ -868,8 +829,8 @@ void amec_calc_ips_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
 void amec_calc_droop_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
 {
     //CoreData only has any new droop events since the last time CoreData was read
-    uint32_t l_quad_droops = i_core_data_ptr->droop.cache_large_event;
-    uint32_t l_core_droops = i_core_data_ptr->droop.core_small_event;
+    uint32_t l_quad_droops = i_core_data_ptr->droop.v_droop_large;
+    uint32_t l_core_droops = i_core_data_ptr->droop.v_droop_small;
     int l_quad = i_core / 4;
     sensor_t * l_quad_sensor = AMECSENSOR_ARRAY_PTR(VOLTDROOPCNTQ0, l_quad);
     sensor_t * l_core_sensor = AMECSENSOR_ARRAY_PTR(VOLTDROOPCNTC0, i_core);

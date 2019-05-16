@@ -513,8 +513,6 @@ CoreData * proc_get_bulk_core_data_ptr( const uint8_t i_occ_core_id )
 // End Function Specification
 void task_nest_dts( task_t * i_task )
 {
-#define MAX_NUM_NEST_DTS     3
-
     errlHndl_t  l_err = NULL;  // Error handler
     int         l_rc = 0;      // Return code
     ipc_nest_dts_parms_t * l_parms = (ipc_nest_dts_parms_t*)(G_nest_dts_gpe_req.cmd_data);
@@ -550,31 +548,12 @@ void task_nest_dts( task_t * i_task )
             if ((ASYNC_REQUEST_STATE_COMPLETE == G_nest_dts_gpe_req.request.completion_state) &&
                 (0 == G_nest_dts_parms.error.error))
             {
-                for (k = 0; k < MAX_NUM_NEST_DTS; k++)
+                for (k = 0; k < NEST_DTS_COUNT; k++)
                 {
                     // check valid and temperature for current nest DTS being processed
-                    if(k == 0)
-                    {
-                        l_nestDtsValid = l_parms->data.sensor0.fields.valid;
-                        // temperature is only 8 bits of reading field
-                        l_nestDtsTemp = (l_parms->data.sensor0.fields.reading & 0xFF);
-                    }
-                    else if(k == 1)
-                    {
-                        l_nestDtsValid = l_parms->data.sensor1.fields.valid;
-                        // temperature is only 8 bits of reading field
-                        l_nestDtsTemp = (l_parms->data.sensor1.fields.reading & 0xFF);
-                    }
-                    else if(k == 2)
-                    {
-                        l_nestDtsValid = l_parms->data.sensor2.fields.valid;
-                        // temperature is only 8 bits of reading field
-                        l_nestDtsTemp = (l_parms->data.sensor2.fields.reading & 0xFF);
-                    }
-                    else // shouldn't happen
-                    {
-                        break;
-                    }
+                    l_nestDtsValid = l_parms->data.sensor[k].fields.valid;
+                    // temperature is only 8 bits of reading field
+                    l_nestDtsTemp = (l_parms->data.sensor[k].fields.reading & 0xFF);
 
                     //Hardware bug workaround:  Module test will detect bad DTS and write coefficients
                     //to force a reading of 0 or negative to indicate the DTS is bad.
@@ -826,15 +805,9 @@ void print_core_data_sensors(uint8_t core)
         PROC_DBG("Sensor Cache   reading: 0x%04X [Valid:%d][Spare:%d][Trip:%d]",
                  l_core_data->dts.cache.fields.reading, l_core_data->dts.cache.fields.valid,
                  l_core_data->dts.cache.fields.spare, l_core_data->dts.cache.fields.thermal_trip);
-
-#ifdef PROC_DEBUG_DUMP
-        dumpHexString(&l_core_data->sensors_tod, sizeof(l_core_data->sensors_tod), "Sensor TOD");
-        dumpHexString(&l_core_data->sensors_v0, sizeof(l_core_data->sensors_v0), "Sensor VO");
-        dumpHexString(&l_core_data->sensors_v1, sizeof(l_core_data->sensors_v1), "Sensor V1");
-        dumpHexString(&l_core_data->sensors_v8, sizeof(l_core_data->sensors_v8), "Sensor V8");
-        dumpHexString(&l_core_data->sensors_v9, sizeof(l_core_data->sensors_v9), "Sensor V9");
-#endif
-
+        PROC_DBG("Sensor RaceTrack reading: 0x%04x [Valid:%d][Spare:%d][Trip:%d]",
+                 l_core_data->dts.racetrack.fields.reading, l_core_data->dts.racetrack.fields.valid,
+                 l_core_data->dts.racetrack.fields.space, l_core_data->dts.racetrack.fields.thermal_trip);
     }
     else
     {
