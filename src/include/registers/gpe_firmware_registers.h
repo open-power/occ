@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -31,11 +31,11 @@
 // *** WARNING *** - This file is generated automatically, do not edit.
 
 #ifndef SIXTYFOUR_BIT_CONSTANT
-#ifdef __ASSEMBLER__
-#define SIXTYFOUR_BIT_CONSTANT(x) x
-#else
-#define SIXTYFOUR_BIT_CONSTANT(x) x##ull
-#endif
+    #ifdef __ASSEMBLER__
+        #define SIXTYFOUR_BIT_CONSTANT(x) x
+    #else
+        #define SIXTYFOUR_BIT_CONSTANT(x) x##ull
+    #endif
 #endif
 
 #ifndef __ASSEMBLER__
@@ -45,10 +45,12 @@
 
 
 
-typedef union gpe_gpentsel {
+typedef union gpe_gpentsel
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -57,25 +59,28 @@ typedef union gpe_gpentsel {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t fit_sel : 4;
-    uint64_t watchdog_sel : 4;
-    uint64_t reserved1 : 56;
+        uint64_t fit_sel : 4;
+        uint64_t watchdog_sel : 4;
+        uint64_t reserved1 : 56;
 #else
-    uint64_t reserved1 : 56;
-    uint64_t watchdog_sel : 4;
-    uint64_t fit_sel : 4;
+        uint64_t reserved1 : 56;
+        uint64_t watchdog_sel : 4;
+        uint64_t fit_sel : 4;
 #endif // _BIG_ENDIAN
     } fields;
 } gpe_gpentsel_t;
 
 
 
-typedef union gpe_gpenivpr {
+typedef union gpe_gpenivpr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -84,23 +89,26 @@ typedef union gpe_gpenivpr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t ivpr : 23;
-    uint64_t reserved1 : 41;
+        uint64_t ivpr : 23;
+        uint64_t reserved1 : 41;
 #else
-    uint64_t reserved1 : 41;
-    uint64_t ivpr : 23;
+        uint64_t reserved1 : 41;
+        uint64_t ivpr : 23;
 #endif // _BIG_ENDIAN
     } fields;
 } gpe_gpenivpr_t;
 
 
 
-typedef union gpe_gpendbg {
+typedef union gpe_gpendbg
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -109,45 +117,48 @@ typedef union gpe_gpendbg {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t en_dbg : 1;
-    uint64_t halt_on_xstop : 1;
-    uint64_t halt_on_trig : 1;
-    uint64_t en_risctrace : 1;
-    uint64_t en_trace_full_iva : 1;
-    uint64_t dis_trace_extra : 1;
-    uint64_t dis_trace_stall : 1;
-    uint64_t en_wide_trace : 1;
-    uint64_t sync_timer_sel : 4;
-    uint64_t fir_trigger : 1;
-    uint64_t spare : 3;
-    uint64_t halt_input : 1;
-    uint64_t reserved1 : 47;
+        uint64_t en_dbg : 1;
+        uint64_t halt_on_xstop : 1;
+        uint64_t halt_on_trig : 1;
+        uint64_t en_risctrace : 1;
+        uint64_t en_trace_full_iva : 1;
+        uint64_t dis_trace_extra : 1;
+        uint64_t dis_trace_stall : 1;
+        uint64_t en_wide_trace : 1;
+        uint64_t sync_timer_sel : 4;
+        uint64_t fir_trigger : 1;
+        uint64_t spare : 3;
+        uint64_t halt_input : 1;
+        uint64_t reserved1 : 47;
 #else
-    uint64_t reserved1 : 47;
-    uint64_t halt_input : 1;
-    uint64_t spare : 3;
-    uint64_t fir_trigger : 1;
-    uint64_t sync_timer_sel : 4;
-    uint64_t en_wide_trace : 1;
-    uint64_t dis_trace_stall : 1;
-    uint64_t dis_trace_extra : 1;
-    uint64_t en_trace_full_iva : 1;
-    uint64_t en_risctrace : 1;
-    uint64_t halt_on_trig : 1;
-    uint64_t halt_on_xstop : 1;
-    uint64_t en_dbg : 1;
+        uint64_t reserved1 : 47;
+        uint64_t halt_input : 1;
+        uint64_t spare : 3;
+        uint64_t fir_trigger : 1;
+        uint64_t sync_timer_sel : 4;
+        uint64_t en_wide_trace : 1;
+        uint64_t dis_trace_stall : 1;
+        uint64_t dis_trace_extra : 1;
+        uint64_t en_trace_full_iva : 1;
+        uint64_t en_risctrace : 1;
+        uint64_t halt_on_trig : 1;
+        uint64_t halt_on_xstop : 1;
+        uint64_t en_dbg : 1;
 #endif // _BIG_ENDIAN
     } fields;
 } gpe_gpendbg_t;
 
 
 
-typedef union gpe_gpenstr {
+typedef union gpe_gpenstr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -156,29 +167,32 @@ typedef union gpe_gpenstr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t reserved1 : 12;
-    uint64_t pbase : 10;
-    uint64_t reserved2 : 7;
-    uint64_t size : 3;
-    uint64_t reserved3 : 32;
+        uint64_t reserved1 : 12;
+        uint64_t pbase : 10;
+        uint64_t reserved2 : 7;
+        uint64_t size : 3;
+        uint64_t reserved3 : 32;
 #else
-    uint64_t reserved3 : 32;
-    uint64_t size : 3;
-    uint64_t reserved2 : 7;
-    uint64_t pbase : 10;
-    uint64_t reserved1 : 12;
+        uint64_t reserved3 : 32;
+        uint64_t size : 3;
+        uint64_t reserved2 : 7;
+        uint64_t pbase : 10;
+        uint64_t reserved1 : 12;
 #endif // _BIG_ENDIAN
     } fields;
 } gpe_gpenstr_t;
 
 
 
-typedef union gpe_gpenmacr {
+typedef union gpe_gpenmacr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -187,33 +201,36 @@ typedef union gpe_gpenmacr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t mem_low_priority : 2;
-    uint64_t mem_high_priority : 2;
-    uint64_t local_low_priority : 2;
-    uint64_t local_high_priority : 2;
-    uint64_t sram_low_priority : 2;
-    uint64_t sram_high_priority : 2;
-    uint64_t reserved1 : 52;
+        uint64_t mem_low_priority : 2;
+        uint64_t mem_high_priority : 2;
+        uint64_t local_low_priority : 2;
+        uint64_t local_high_priority : 2;
+        uint64_t sram_low_priority : 2;
+        uint64_t sram_high_priority : 2;
+        uint64_t reserved1 : 52;
 #else
-    uint64_t reserved1 : 52;
-    uint64_t sram_high_priority : 2;
-    uint64_t sram_low_priority : 2;
-    uint64_t local_high_priority : 2;
-    uint64_t local_low_priority : 2;
-    uint64_t mem_high_priority : 2;
-    uint64_t mem_low_priority : 2;
+        uint64_t reserved1 : 52;
+        uint64_t sram_high_priority : 2;
+        uint64_t sram_low_priority : 2;
+        uint64_t local_high_priority : 2;
+        uint64_t local_low_priority : 2;
+        uint64_t mem_high_priority : 2;
+        uint64_t mem_low_priority : 2;
 #endif // _BIG_ENDIAN
     } fields;
 } gpe_gpenmacr_t;
 
 
 
-typedef union gpe_gpenxixcr {
+typedef union gpe_gpenxixcr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -222,23 +239,26 @@ typedef union gpe_gpenxixcr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t xcr : 32;
-    uint64_t reserved1 : 32;
+        uint64_t xcr : 32;
+        uint64_t reserved1 : 32;
 #else
-    uint64_t reserved1 : 32;
-    uint64_t xcr : 32;
+        uint64_t reserved1 : 32;
+        uint64_t xcr : 32;
 #endif // _BIG_ENDIAN
     } fields;
 } gpe_gpenxixcr_t;
 
 
 
-typedef union gpe_gpenxiramra {
+typedef union gpe_gpenxiramra
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -247,23 +267,26 @@ typedef union gpe_gpenxiramra {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t xcr : 32;
-    uint64_t sprg0 : 32;
+        uint64_t xcr : 32;
+        uint64_t sprg0 : 32;
 #else
-    uint64_t sprg0 : 32;
-    uint64_t xcr : 32;
+        uint64_t sprg0 : 32;
+        uint64_t xcr : 32;
 #endif // _BIG_ENDIAN
     } fields;
 } gpe_gpenxiramra_t;
 
 
 
-typedef union gpe_gpenxiramga {
+typedef union gpe_gpenxiramga
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -272,23 +295,26 @@ typedef union gpe_gpenxiramga {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t ir : 32;
-    uint64_t sprg0 : 32;
+        uint64_t ir : 32;
+        uint64_t sprg0 : 32;
 #else
-    uint64_t sprg0 : 32;
-    uint64_t ir : 32;
+        uint64_t sprg0 : 32;
+        uint64_t ir : 32;
 #endif // _BIG_ENDIAN
     } fields;
 } gpe_gpenxiramga_t;
 
 
 
-typedef union gpe_gpenxiramdbg {
+typedef union gpe_gpenxiramdbg
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -297,23 +323,26 @@ typedef union gpe_gpenxiramdbg {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t xsr : 32;
-    uint64_t sprg0 : 32;
+        uint64_t xsr : 32;
+        uint64_t sprg0 : 32;
 #else
-    uint64_t sprg0 : 32;
-    uint64_t xsr : 32;
+        uint64_t sprg0 : 32;
+        uint64_t xsr : 32;
 #endif // _BIG_ENDIAN
     } fields;
 } gpe_gpenxiramdbg_t;
 
 
 
-typedef union gpe_gpenxiramedr {
+typedef union gpe_gpenxiramedr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -322,23 +351,26 @@ typedef union gpe_gpenxiramedr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t ir : 32;
-    uint64_t edr : 32;
+        uint64_t ir : 32;
+        uint64_t edr : 32;
 #else
-    uint64_t edr : 32;
-    uint64_t ir : 32;
+        uint64_t edr : 32;
+        uint64_t ir : 32;
 #endif // _BIG_ENDIAN
     } fields;
 } gpe_gpenxiramedr_t;
 
 
 
-typedef union gpe_gpenxidbgpro {
+typedef union gpe_gpenxidbgpro
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -347,23 +379,26 @@ typedef union gpe_gpenxidbgpro {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t xsr : 32;
-    uint64_t iar : 32;
+        uint64_t xsr : 32;
+        uint64_t iar : 32;
 #else
-    uint64_t iar : 32;
-    uint64_t xsr : 32;
+        uint64_t iar : 32;
+        uint64_t xsr : 32;
 #endif // _BIG_ENDIAN
     } fields;
 } gpe_gpenxidbgpro_t;
 
 
 
-typedef union gpe_gpenxisib {
+typedef union gpe_gpenxisib
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -372,21 +407,24 @@ typedef union gpe_gpenxisib {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t sib_info : 64;
+        uint64_t sib_info : 64;
 #else
-    uint64_t sib_info : 64;
+        uint64_t sib_info : 64;
 #endif // _BIG_ENDIAN
     } fields;
 } gpe_gpenxisib_t;
 
 
 
-typedef union gpe_gpenximem {
+typedef union gpe_gpenximem
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -395,21 +433,24 @@ typedef union gpe_gpenximem {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t memory_info : 64;
+        uint64_t memory_info : 64;
 #else
-    uint64_t memory_info : 64;
+        uint64_t memory_info : 64;
 #endif // _BIG_ENDIAN
     } fields;
 } gpe_gpenximem_t;
 
 
 
-typedef union gpe_gpenxisgb {
+typedef union gpe_gpenxisgb
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -418,21 +459,24 @@ typedef union gpe_gpenxisgb {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t storegatherbuffer_info : 64;
+        uint64_t storegatherbuffer_info : 64;
 #else
-    uint64_t storegatherbuffer_info : 64;
+        uint64_t storegatherbuffer_info : 64;
 #endif // _BIG_ENDIAN
     } fields;
 } gpe_gpenxisgb_t;
 
 
 
-typedef union gpe_gpenxiicac {
+typedef union gpe_gpenxiicac
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -441,21 +485,24 @@ typedef union gpe_gpenxiicac {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t icache_info : 64;
+        uint64_t icache_info : 64;
 #else
-    uint64_t icache_info : 64;
+        uint64_t icache_info : 64;
 #endif // _BIG_ENDIAN
     } fields;
 } gpe_gpenxiicac_t;
 
 
 
-typedef union gpe_gpenxidcac {
+typedef union gpe_gpenxidcac
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -464,21 +511,24 @@ typedef union gpe_gpenxidcac {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t dcache_info : 64;
+        uint64_t dcache_info : 64;
 #else
-    uint64_t dcache_info : 64;
+        uint64_t dcache_info : 64;
 #endif // _BIG_ENDIAN
     } fields;
 } gpe_gpenxidcac_t;
 
 
 
-typedef union gpe_gpenoxixcr {
+typedef union gpe_gpenoxixcr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -487,23 +537,26 @@ typedef union gpe_gpenoxixcr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t xcr : 32;
-    uint64_t reserved1 : 32;
+        uint64_t xcr : 32;
+        uint64_t reserved1 : 32;
 #else
-    uint64_t reserved1 : 32;
-    uint64_t xcr : 32;
+        uint64_t reserved1 : 32;
+        uint64_t xcr : 32;
 #endif // _BIG_ENDIAN
     } fields;
 } gpe_gpenoxixcr_t;
 
 
 
-typedef union gpe_gpenxixsr {
+typedef union gpe_gpenxixsr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -512,23 +565,26 @@ typedef union gpe_gpenxixsr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t xsr : 32;
-    uint64_t reserved1 : 32;
+        uint64_t xsr : 32;
+        uint64_t reserved1 : 32;
 #else
-    uint64_t reserved1 : 32;
-    uint64_t xsr : 32;
+        uint64_t reserved1 : 32;
+        uint64_t xsr : 32;
 #endif // _BIG_ENDIAN
     } fields;
 } gpe_gpenxixsr_t;
 
 
 
-typedef union gpe_gpenxisprg0 {
+typedef union gpe_gpenxisprg0
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -537,23 +593,26 @@ typedef union gpe_gpenxisprg0 {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t sprg0 : 32;
-    uint64_t reserved1 : 32;
+        uint64_t sprg0 : 32;
+        uint64_t reserved1 : 32;
 #else
-    uint64_t reserved1 : 32;
-    uint64_t sprg0 : 32;
+        uint64_t reserved1 : 32;
+        uint64_t sprg0 : 32;
 #endif // _BIG_ENDIAN
     } fields;
 } gpe_gpenxisprg0_t;
 
 
 
-typedef union gpe_gpenxiedr {
+typedef union gpe_gpenxiedr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -562,23 +621,26 @@ typedef union gpe_gpenxiedr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t edr : 32;
-    uint64_t reserved1 : 32;
+        uint64_t edr : 32;
+        uint64_t reserved1 : 32;
 #else
-    uint64_t reserved1 : 32;
-    uint64_t edr : 32;
+        uint64_t reserved1 : 32;
+        uint64_t edr : 32;
 #endif // _BIG_ENDIAN
     } fields;
 } gpe_gpenxiedr_t;
 
 
 
-typedef union gpe_gpenxiir {
+typedef union gpe_gpenxiir
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -587,23 +649,26 @@ typedef union gpe_gpenxiir {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t ir : 32;
-    uint64_t reserved1 : 32;
+        uint64_t ir : 32;
+        uint64_t reserved1 : 32;
 #else
-    uint64_t reserved1 : 32;
-    uint64_t ir : 32;
+        uint64_t reserved1 : 32;
+        uint64_t ir : 32;
 #endif // _BIG_ENDIAN
     } fields;
 } gpe_gpenxiir_t;
 
 
 
-typedef union gpe_gpenxiiar {
+typedef union gpe_gpenxiiar
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -612,23 +677,26 @@ typedef union gpe_gpenxiiar {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t iar : 32;
-    uint64_t reserved1 : 32;
+        uint64_t iar : 32;
+        uint64_t reserved1 : 32;
 #else
-    uint64_t reserved1 : 32;
-    uint64_t iar : 32;
+        uint64_t reserved1 : 32;
+        uint64_t iar : 32;
 #endif // _BIG_ENDIAN
     } fields;
 } gpe_gpenxiiar_t;
 
 
 
-typedef union gpe_gpenxisibu {
+typedef union gpe_gpenxisibu
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -637,23 +705,26 @@ typedef union gpe_gpenxisibu {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t sib_info_upper : 32;
-    uint64_t reserved1 : 32;
+        uint64_t sib_info_upper : 32;
+        uint64_t reserved1 : 32;
 #else
-    uint64_t reserved1 : 32;
-    uint64_t sib_info_upper : 32;
+        uint64_t reserved1 : 32;
+        uint64_t sib_info_upper : 32;
 #endif // _BIG_ENDIAN
     } fields;
 } gpe_gpenxisibu_t;
 
 
 
-typedef union gpe_gpenxisibl {
+typedef union gpe_gpenxisibl
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -662,23 +733,26 @@ typedef union gpe_gpenxisibl {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t sib_info_lower : 32;
-    uint64_t reserved1 : 32;
+        uint64_t sib_info_lower : 32;
+        uint64_t reserved1 : 32;
 #else
-    uint64_t reserved1 : 32;
-    uint64_t sib_info_lower : 32;
+        uint64_t reserved1 : 32;
+        uint64_t sib_info_lower : 32;
 #endif // _BIG_ENDIAN
     } fields;
 } gpe_gpenxisibl_t;
 
 
 
-typedef union gpe_gpenximemu {
+typedef union gpe_gpenximemu
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -687,23 +761,26 @@ typedef union gpe_gpenximemu {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t memory_info_upper : 32;
-    uint64_t reserved1 : 32;
+        uint64_t memory_info_upper : 32;
+        uint64_t reserved1 : 32;
 #else
-    uint64_t reserved1 : 32;
-    uint64_t memory_info_upper : 32;
+        uint64_t reserved1 : 32;
+        uint64_t memory_info_upper : 32;
 #endif // _BIG_ENDIAN
     } fields;
 } gpe_gpenximemu_t;
 
 
 
-typedef union gpe_gpenximeml {
+typedef union gpe_gpenximeml
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -712,23 +789,26 @@ typedef union gpe_gpenximeml {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t memory_info_lower : 32;
-    uint64_t reserved1 : 32;
+        uint64_t memory_info_lower : 32;
+        uint64_t reserved1 : 32;
 #else
-    uint64_t reserved1 : 32;
-    uint64_t memory_info_lower : 32;
+        uint64_t reserved1 : 32;
+        uint64_t memory_info_lower : 32;
 #endif // _BIG_ENDIAN
     } fields;
 } gpe_gpenximeml_t;
 
 
 
-typedef union gpe_gpenxisgbu {
+typedef union gpe_gpenxisgbu
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -737,23 +817,26 @@ typedef union gpe_gpenxisgbu {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t sgb_info_upper : 32;
-    uint64_t reserved1 : 32;
+        uint64_t sgb_info_upper : 32;
+        uint64_t reserved1 : 32;
 #else
-    uint64_t reserved1 : 32;
-    uint64_t sgb_info_upper : 32;
+        uint64_t reserved1 : 32;
+        uint64_t sgb_info_upper : 32;
 #endif // _BIG_ENDIAN
     } fields;
 } gpe_gpenxisgbu_t;
 
 
 
-typedef union gpe_gpenxisgbl {
+typedef union gpe_gpenxisgbl
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -762,23 +845,26 @@ typedef union gpe_gpenxisgbl {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t sgb_info_lower : 32;
-    uint64_t reserved1 : 32;
+        uint64_t sgb_info_lower : 32;
+        uint64_t reserved1 : 32;
 #else
-    uint64_t reserved1 : 32;
-    uint64_t sgb_info_lower : 32;
+        uint64_t reserved1 : 32;
+        uint64_t sgb_info_lower : 32;
 #endif // _BIG_ENDIAN
     } fields;
 } gpe_gpenxisgbl_t;
 
 
 
-typedef union gpe_gpenxiicacu {
+typedef union gpe_gpenxiicacu
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -787,23 +873,26 @@ typedef union gpe_gpenxiicacu {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t icache_info_upper : 32;
-    uint64_t reserved1 : 32;
+        uint64_t icache_info_upper : 32;
+        uint64_t reserved1 : 32;
 #else
-    uint64_t reserved1 : 32;
-    uint64_t icache_info_upper : 32;
+        uint64_t reserved1 : 32;
+        uint64_t icache_info_upper : 32;
 #endif // _BIG_ENDIAN
     } fields;
 } gpe_gpenxiicacu_t;
 
 
 
-typedef union gpe_gpenxiicacl {
+typedef union gpe_gpenxiicacl
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -812,23 +901,26 @@ typedef union gpe_gpenxiicacl {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t icache_info_lower : 32;
-    uint64_t reserved1 : 32;
+        uint64_t icache_info_lower : 32;
+        uint64_t reserved1 : 32;
 #else
-    uint64_t reserved1 : 32;
-    uint64_t icache_info_lower : 32;
+        uint64_t reserved1 : 32;
+        uint64_t icache_info_lower : 32;
 #endif // _BIG_ENDIAN
     } fields;
 } gpe_gpenxiicacl_t;
 
 
 
-typedef union gpe_gpenxidcacu {
+typedef union gpe_gpenxidcacu
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -837,23 +929,26 @@ typedef union gpe_gpenxidcacu {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t dcache_info_upper : 32;
-    uint64_t reserved1 : 32;
+        uint64_t dcache_info_upper : 32;
+        uint64_t reserved1 : 32;
 #else
-    uint64_t reserved1 : 32;
-    uint64_t dcache_info_upper : 32;
+        uint64_t reserved1 : 32;
+        uint64_t dcache_info_upper : 32;
 #endif // _BIG_ENDIAN
     } fields;
 } gpe_gpenxidcacu_t;
 
 
 
-typedef union gpe_gpenxidcacl {
+typedef union gpe_gpenxidcacl
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -862,13 +957,14 @@ typedef union gpe_gpenxidcacl {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t dcache_info_lower : 32;
-    uint64_t reserved1 : 32;
+        uint64_t dcache_info_lower : 32;
+        uint64_t reserved1 : 32;
 #else
-    uint64_t reserved1 : 32;
-    uint64_t dcache_info_lower : 32;
+        uint64_t reserved1 : 32;
+        uint64_t dcache_info_lower : 32;
 #endif // _BIG_ENDIAN
     } fields;
 } gpe_gpenxidcacl_t;

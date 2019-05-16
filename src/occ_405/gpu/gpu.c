@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -472,7 +472,7 @@ void update_gpu_reset_status(void)
     // GPU reset status is in the OCC FLAGS register and is updated by OPAL
     // Read the current reset status for all GPUs.  A reset status of '1' indicates NOT in reset
     ocb_occflg_t occ_flags = {0};
-    occ_flags.value = in32(OCB_OCCFLG);
+    occ_flags.value = in32(OCB_OCCFLG0);
     bool not_in_reset[3] = {occ_flags.fields.gpu0_reset_status,
                             occ_flags.fields.gpu1_reset_status,
                             occ_flags.fields.gpu2_reset_status};

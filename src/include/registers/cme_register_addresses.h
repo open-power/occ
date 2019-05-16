@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -28,8 +28,7 @@
 /// \file cme_register_addresses.h
 /// \brief Symbolic addresses for the CME unit
 
-// Copied from
-// ekb/chips/p9/common/pmlib/include/registers/cme_register_addresses.h
+// *** WARNING *** - This file is generated automatically, do not edit.
 
 
 #define CME_FIRPIB_BASE 0x10012000

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -30,7 +30,7 @@
 // Allow Trace Masks
 #define ALLOW_PMCR_TRACE       0x0001
 #define ALLOW_CLIP_TRACE       0x0002
-#define ALLOW_VFRT_TRACE       0x0004
+#define ALLOW_VRT_TRACE        0x0004
 #define ALLOW_OPAL_TRACE       0x0008
 #define ALLOW_MEM_TRACE        0x0010
 #define ALLOW_AVSBUS_TRACE     0x0020
@@ -40,6 +40,7 @@
 // Start of SRAM memory
 #define SRAM_START_ADDRESS_405      0xFFF40000
 
+// OCB_OCCMISC has 3 bits reserved for OCC (ext_intr_reason)
 // Reasons why the OCCMISC external interrupt was triggered
 typedef enum
 {
@@ -48,6 +49,49 @@ typedef enum
     INTR_REASON_I2C_OWNERSHIP_CHANGE    = 0x02,
     INTR_REASON_OPAL_SHARED_MEM_CHANGE  = 0x01
 } ext_intr_reason_t;
+
+
+// OCB_OCCFLG0 and OCB_OCCFLG1 is defined by the OCC (instead of ocb_firmware_registers.h)
+// OCC currently uses OCCFLG0 with the following structure:
+typedef union ocb_occflg {
+
+    uint32_t value;
+    struct {
+#ifdef _BIG_ENDIAN
+    uint32_t reserved_gpe : 16;
+    uint32_t i2c_engine1_lock_host : 1;
+    uint32_t i2c_engine1_lock_occ  : 1;
+    uint32_t i2c_engine2_lock_host : 1;
+    uint32_t i2c_engine2_lock_occ  : 1;
+    uint32_t i2c_engine3_lock_host : 1;
+    uint32_t i2c_engine3_lock_occ  : 1;
+    uint32_t gpu0_reset_status     : 1;
+    uint32_t gpu1_reset_status     : 1;
+    uint32_t gpu2_reset_status     : 1;
+    uint32_t reserved_occ          : 2;
+    uint32_t pm_reset_suppress     : 1;
+    uint32_t wof_hcode_mode        : 2;
+    uint32_t active_quad_update    : 1;
+    uint32_t request_occ_safe      : 1;
+#else
+    uint32_t request_occ_safe      : 1;
+    uint32_t active_quad_update    : 1;
+    uint32_t wof_hcode_mode        : 2;
+    uint32_t pm_reset_suppress     : 1;
+    uint32_t reserved_occ          : 2;
+    uint32_t gpu2_reset_status     : 1;
+    uint32_t gpu1_reset_status     : 1;
+    uint32_t gpu0_reset_status     : 1;
+    uint32_t i2c_engine3_lock_occ  : 1;
+    uint32_t i2c_engine3_lock_host : 1;
+    uint32_t i2c_engine2_lock_occ  : 1;
+    uint32_t i2c_engine2_lock_host : 1;
+    uint32_t i2c_engine1_lock_occ  : 1;
+    uint32_t i2c_engine1_lock_host : 1;
+    uint32_t reserved_gpe : 16;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_occflg_t;
 
 
 // Miscellaneous checks to be done by 405

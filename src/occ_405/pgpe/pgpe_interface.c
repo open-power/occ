@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -58,14 +58,14 @@ GpeRequest G_clip_update_req;
 GpeRequest G_pmcr_set_req;
 GpeRequest G_start_suspend_req;
 GpeRequest G_wof_control_req;
-GpeRequest G_wof_vfrt_req;
+GpeRequest G_wof_vrt_req;
 
 // GPE parameter fields for PGPE IPC calls
 GPE_BUFFER(ipcmsg_clip_update_t   G_clip_update_parms);
 GPE_BUFFER(ipcmsg_set_pmcr_t      G_pmcr_set_parms);
 GPE_BUFFER(ipcmsg_start_stop_t    G_start_suspend_parms);
 GPE_BUFFER(ipcmsg_wof_control_t   G_wof_control_parms);
-GPE_BUFFER(ipcmsg_wof_vfrt_t      G_wof_vfrt_parms);
+GPE_BUFFER(ipcmsg_wof_vrt_t       G_wof_vrt_parms);
 
 // Used to track PGPE return code of start_suspend callback
 volatile int G_ss_pgpe_rc = PGPE_RC_SUCCESS;
@@ -104,7 +104,7 @@ void init_pgpe_ipcs(void)
         {
             break;
         }
-        err = pgpe_init_wof_vfrt();
+        err = pgpe_init_wof_vrt();
     }while(0);
 
     if(err)
@@ -346,45 +346,45 @@ errlHndl_t pgpe_init_wof_control(void)
 
 // Function Specification
 //
-// Name: pgpe_init_wof_vfrt
+// Name: pgpe_init_wof_vrt
 //
-// Description: Create PGPE WOF vfrt IPC messages (non-blocking).
+// Description: Create PGPE WOF vrt IPC messages (non-blocking).
 //
 // End Function Specification
-errlHndl_t pgpe_init_wof_vfrt(void)
+errlHndl_t pgpe_init_wof_vrt(void)
 {
     int rc;                    // return code
     errlHndl_t  err = NULL;    // Error handler
 
     do
     {
-        //Initializes the GpeRequest object for pgpe wof vfrt IPC
-        rc = gpe_request_create(&G_wof_vfrt_req,            // GpeRequest for the task
+        //Initializes the GpeRequest object for pgpe wof vrt IPC
+        rc = gpe_request_create(&G_wof_vrt_req,             // GpeRequest for the task
                                 &G_async_gpe_queue2,        // Queue
-                                IPC_MSGID_405_WOF_VFRT,     // Function ID
-                                &G_wof_vfrt_parms,          // Task parameters
+                                IPC_MSGID_405_WOF_VRT,      // Function ID
+                                &G_wof_vrt_parms,           // Task parameters
                                 SSX_WAIT_FOREVER,           // Timeout (none)
-                                (AsyncRequestCallback)wof_vfrt_callback, // Callback
+                                (AsyncRequestCallback)wof_vrt_callback, // Callback
                                 NULL,                       // Callback arguments
                                 ASYNC_CALLBACK_IMMEDIATE);  // Options
 
         if( rc )
         {
             // If we failed to create the GpeRequest then there is a serious problem.
-            MAIN_TRAC_ERR("pgpe_init_wof_vfrt: Failure creating the "
-                          "IPC_MSGID_405_WOF_VFRT GpeRequest. [RC=0x%08x]",
+            MAIN_TRAC_ERR("pgpe_init_wof_vrt: Failure creating the "
+                          "IPC_MSGID_405_WOF_VRT GpeRequest. [RC=0x%08x]",
                           rc );
 
             /*
              * @errortype
-             * @moduleid    PGPE_INIT_WOF_VFRT_MOD
+             * @moduleid    PGPE_INIT_WOF_VRT_MOD
              * @reasoncode  GPE_REQUEST_CREATE_FAILURE
              * @userdata1   gpe_request_create return code
              * @userdata4   OCC_NO_EXTENDED_RC
              * @devdesc     Failure to create wof control GpeRequest object
              */
             err = createErrl(
-                PGPE_INIT_WOF_VFRT_MOD,          //ModId
+                PGPE_INIT_WOF_VRT_MOD,          //ModId
                 GPE_REQUEST_CREATE_FAILURE,      //Reasoncode
                 OCC_NO_EXTENDED_RC,              //Extended reason code
                 ERRL_SEV_PREDICTIVE,             //Severity
@@ -410,7 +410,7 @@ errlHndl_t pgpe_init_wof_vfrt(void)
 //              and verifies a successful completion.
 //
 // End Function Specification
-int pgpe_set_clip_blocking(Pstate i_pstate)
+int pgpe_set_clip_blocking(Pstate_t i_pstate)
 {
     errlHndl_t   err = NULL;
     uint8_t      wait_time = 0;
@@ -623,9 +623,12 @@ int pgpe_clip_update(void)
             {
                 pstate_list |= ((uint64_t) G_desired_pstate[quad] << ((7-quad)*8));
 
+// TODO - RTC 213672 - ps_val_clip_min/max are no longer arrays
+#if 0
                 // Set clip bounds
                 G_clip_update_parms.ps_val_clip_min[quad] = proc_freq2pstate(g_amec->sys.fmin);
                 G_clip_update_parms.ps_val_clip_max[quad] = G_desired_pstate[quad];
+#endif
             }
 
             // Always send request on PowerVM, on OPAL only send the request if there was a change or need to force a send
@@ -635,7 +638,12 @@ int pgpe_clip_update(void)
                 if (L_first_trace)
                 {
                     TRAC_IMP("pgpe_clip_update: Scheduling clip update: min[0x%02X], max[0x%08X%04X]",
+// TODO - RTC 213672 - ps_val_clip_min/max are no longer arrays
+#if 0
                              G_clip_update_parms.ps_val_clip_min[0],
+#else
+                             0,
+#endif
                              WORD_HIGH(pstate_list), WORD_LOW(pstate_list)>>16);
                     L_first_trace = FALSE;
                 }
@@ -643,7 +651,12 @@ int pgpe_clip_update(void)
                 else if( (G_allow_trace_flags & ALLOW_CLIP_TRACE) || (!G_sysConfigData.system_type.kvm) )
                 {
                     TRAC_INFO("pgpe_clip_update: Scheduling clip update: min[0x%02X], max[0x%08X%04X]",
-                               G_clip_update_parms.ps_val_clip_min[0],
+//  TODO - RTC 213672 - ps_val_clip_min/max are no longer arrays
+#if 0
+                              G_clip_update_parms.ps_val_clip_min[0],
+#else
+                               0,
+#endif
                                WORD_HIGH(pstate_list), WORD_LOW(pstate_list)>>16);
                 }
                 L_last_list = pstate_list;
@@ -993,7 +1006,7 @@ int set_nominal_pstate(void)
        // Make sure the set PMCR task is idle.
        if(!async_request_is_idle(&G_pmcr_set_req.request))
        {
-            TRAC_ERR("set_nominal_pstate: Set PMCR task not idle! OCCFLG[0x%08X]", in32(OCB_OCCFLG));
+            TRAC_ERR("set_nominal_pstate: Set PMCR task not idle! OCCFLG0[0x%08X]", in32(OCB_OCCFLG0));
             l_rc = ERC_PGPE_SET_PMCR_NOT_IDLE;
             break;
        }
@@ -1005,7 +1018,7 @@ int set_nominal_pstate(void)
            // This should not be called if Pstate protocol is in transition
            if(G_proc_pstate_status == PSTATES_IN_TRANSITION)
            {
-               TRAC_ERR("set_nominal_pstate: Pstate protocol in transtion! OCCFLG[0x%08X]", in32(OCB_OCCFLG));
+               TRAC_ERR("set_nominal_pstate: Pstate protocol in transtion! OCCFLG0[0x%08X]", in32(OCB_OCCFLG0));
                l_rc = ERC_PGPE_START_SUSPEND_NOT_IDLE;
                break;
            }
@@ -1023,7 +1036,7 @@ int set_nominal_pstate(void)
                if((ssx_timebase_get() - l_start) > l_timeout)
                {
                   l_rc = ERC_PGPE_TASK_TIMEOUT;
-                  TRAC_ERR("set_nominal_pstate: Timeout waiting for Pstates to be enabled! OCCFLG[0x%08X]", in32(OCB_OCCFLG));
+                  TRAC_ERR("set_nominal_pstate: Timeout waiting for Pstates to be enabled! OCCFLG0[0x%08X]", in32(OCB_OCCFLG0));
                   break;
                }
                ssx_sleep(SSX_MICROSECONDS(10));
@@ -1040,8 +1053,11 @@ int set_nominal_pstate(void)
        l_pstate = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL]);
        for (l_quad = 0; l_quad < MAXIMUM_QUADS; l_quad++)
        {
+// TODO - RTC 213672 - pmcr is no longer an array
+#if 0
            // Update pmcr value (per quad) with nominal pstate and version (Version 1 (P9 format))
            G_pmcr_set_parms.pmcr[l_quad] = ((uint64_t)l_pstate << 48) | 1;
+#endif
        }
 
        //call PGPE IPC function to set Pstates

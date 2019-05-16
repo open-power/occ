@@ -120,7 +120,7 @@ int inband_scom_setup(MemBufConfiguration_t* i_config,
 {
     int rc = 0;
     uint32_t scom_address = i_scom_address;
-    // TODO use PBASLV in P10
+    // TODO use PBASLV in P10 - RTC 213672
 #if defined(__USE_PBASLV__)
    pba_slvctln_t slvctln;
 #endif
@@ -134,7 +134,7 @@ int inband_scom_setup(MemBufConfiguration_t* i_config,
     slvctln.fields.extaddr = pb_addr >> 27;
     PPE_STVD((i_config->scomParms).slvctl_address, slvctln.value);
 #else
-    // TODO P9 HW bug work-around - Use PBASLV in P10
+    // TODO P9 HW bug work-around - Use PBASLV in P10 - RTC 213672
     {
         // workaround - don't use extraddr - use pbabar.
         uint64_t barMsk = 0;

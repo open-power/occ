@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -709,7 +709,7 @@ typedef struct
     pba_bcde_set_t set;
 
     /// BCE PowerBus setup register
-    pba_bcde_pbadr_t pbadr;
+    pba_bcde_dr_t pbadr;
 
     /// BCE status register
     pba_bcde_stat_t stat;
@@ -1096,7 +1096,7 @@ typedef struct
     OciFfdc oci_ffdc;
 
     /// A copy of the OCB OCC_LFIR register at the time of the error
-    ocb_occlfir_t fir;
+    occ_scom_occlfir_t fir;
 
     /// A copy of the OCB Control/Status register for the channel at the time
     /// of the error.

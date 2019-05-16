@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -154,11 +154,11 @@ void task_gpe_timings(task_t * i_task)
 
             if(L_consec_trace_count[0] < MAX_CONSEC_TRACE)
             {
-               xsr_sprg0.fields.xsr = in32(GPE_GPE0XIXSR);
-               xsr_sprg0.fields.sprg0 = in32(GPE_GPE0XISPRG0);
-               ir_edr.fields.edr = in32(GPE_GPE0XIEDR);
-               ir_edr.fields.ir = in32(GPE_GPE0XIIR);
-               iar_xsr.fields.iar = in32(GPE_GPE0XIIAR);
+               xsr_sprg0.fields.xsr = in32(GPE_OCB_GPEXIXSR);
+               xsr_sprg0.fields.sprg0 = in32(GPE_OCB_GPEXISPRG0);
+               ir_edr.fields.edr = in32(GPE_OCB_GPEXIEDR);
+               ir_edr.fields.ir = in32(GPE_OCB_GPEXIIR);
+               iar_xsr.fields.iar = in32(GPE_OCB_GPEXIIAR);
                TRAC_ERR("GPE0 programs did not complete within one tick. "
                          "XSR[0x%08x]  IAR[0x%08x] IR[0x%08x] EDR[0x%08x] SPRG0[0x%08X]",
                          xsr_sprg0.fields.xsr, iar_xsr.fields.iar,
@@ -209,11 +209,13 @@ void task_gpe_timings(task_t * i_task)
 
             if( (L_consec_trace_count[1] < MAX_CONSEC_TRACE) || (G_log_gpe1_error) )
             {
-                xsr_sprg0.fields.xsr = in32(GPE_GPE1XIXSR);
-                xsr_sprg0.fields.sprg0 = in32(GPE_GPE1XISPRG0);
-                ir_edr.fields.edr = in32(GPE_GPE1XIEDR);
-                ir_edr.fields.ir = in32(GPE_GPE1XIIR);
-                iar_xsr.fields.iar = in32(GPE_GPE1XIIAR);
+                // TODO - RTC 213672 - THESE SHOULD BE GPE1 REGS, BUT NOT SURE HOW TO GET YET
+                xsr_sprg0.fields.xsr = in32(GPE_OCB_GPEXIXSR);
+                xsr_sprg0.fields.sprg0 = in32(GPE_OCB_GPEXISPRG0);
+                ir_edr.fields.edr = in32(GPE_OCB_GPEXIEDR);
+                ir_edr.fields.ir = in32(GPE_OCB_GPEXIIR);
+                iar_xsr.fields.iar = in32(GPE_OCB_GPEXIIAR);
+                // TODO - RTC 213672 - THESE SHOULD BE GPE1 REGS, BUT NOT SURE HOW TO GET YET
                 TRAC_ERR("GPE1 programs did not complete within one tick. "
                          "XSR[0x%08x]  IAR[0x%08x] IR[0x%08x] EDR[0x%08x] SPRG0[0x%08X]",
                          xsr_sprg0.fields.xsr, iar_xsr.fields.iar,

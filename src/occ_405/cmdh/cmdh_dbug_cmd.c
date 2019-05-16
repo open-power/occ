@@ -45,13 +45,13 @@
 #include "chom.h"
 #include "wof.h"
 #include "gpu.h"
-#include "p9_pstates_occ.h"
+#include "pstates_occ.H"
 
 //*************************************************************************/
 // Externs
 //*************************************************************************/
 extern gpe_shared_data_t G_shared_gpe_data;
-extern OCCPstateParmBlock G_oppb;
+extern OCCPstateParmBlock_t G_oppb;
 
 //*************************************************************************/
 // Macros

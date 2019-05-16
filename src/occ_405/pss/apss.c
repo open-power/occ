@@ -23,6 +23,8 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
+#define APSS_DEBUG
+
 #include "ssx.h"
 
 #include <occhw_async.h>
@@ -288,6 +290,7 @@ void task_apss_start_pwr_meas(struct task *i_self)
     static bool     L_ffdc_collected    = FALSE;
 
     // Create/schedule GPE_start_pwr_meas_read (non-blocking)
+    INTR_TRAC_ERR("CJC: GPE_start_pwr_meas_read started");
     APSS_DBG("GPE_start_pwr_meas_read started");
 
     do
@@ -901,6 +904,8 @@ errlHndl_t initialize_apss(void)
     uint8_t    l_retryCount = 0;
     // Initialize APSS
 
+    TRAC_INFO("CJC: initialize_apss()");
+
     while ( l_retryCount < APSS_MAX_NUM_INIT_RETRIES )
     {
         // Setup the GPIO init structure to pass to the PPE program
@@ -1408,6 +1413,7 @@ void task_apss_reset(task_t *i_self)
     }
     while(0);
 
-    APSS_DBG("task_apss_reset finished w/rc=0x%08X\n", rc);
-}
+    APSS_DBG("task_apss_reset finished w/rc=0x%08X\n", schedule_rc);
+
+} // end task_apss_reset()
 

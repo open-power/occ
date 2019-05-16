@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -32,7 +32,7 @@
 #include "trac.h"
 #include "rtls.h"
 #include "occ_common.h"
-#include "p9_pstates_common.h"
+#include "pstates_common.H"
 #include "state.h"
 #include "cmdh_fsp_cmds.h"
 #include "cmdh_dbug_cmd.h"
@@ -142,10 +142,10 @@ typedef enum
 extern volatile uint8_t G_opal_table_update_state;
 
 // Helper function to translate from Frequency to nearest Pstate
-Pstate proc_freq2pstate(uint32_t i_freq_mhz);
+Pstate_t proc_freq2pstate(uint32_t i_freq_mhz);
 
 // Helper function to translate from Pstate to nearest Frequency
-uint32_t proc_pstate2freq(Pstate i_pstate);
+uint32_t proc_pstate2freq(Pstate_t i_pstate);
 
 // Helper function to determine if we are in HW Pstate mode
 inline bool proc_is_hwpstate_enabled(void);

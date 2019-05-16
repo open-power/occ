@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -50,10 +50,14 @@
 #define QPPM_QACCR_CLR 0x100f0161
 #define QPPM_QACCR_OR 0x100f0162
 #define QPPM_QACSR 0x100f0163
+#define QPPM_EXCGCR 0x100f0165
+#define QPPM_EXCGCR_CLR 0x100f0166
+#define QPPM_EXCGCR_OR 0x100f0167
 #define QPPM_VDMCFGR 0x100f01b6
-#define QPPM_EDRAM_CTRL 0x100f01bd
-#define QPPM_EDRAM_CTRL_CLR 0x100f01be
-#define QPPM_EDRAM_CTRL_OR 0x100f01bf
+#define QPPM_VOLT_CHAR 0x100f01bb
+#define QPPM_QCCR 0x100f01bd
+#define QPPM_QCCR_CLR 0x100f01be
+#define QPPM_QCCR_OR 0x100f01bf
 
 #endif // __QPPM_REGISTER_ADDRESSES_H__
 

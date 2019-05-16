@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -42,13 +42,13 @@ uint64_t G_cfam_ec_level SECTION_ATTRIBUTE(".noncacheable") = 0;
 void
 _occhw_get_ids(void)
 {
-    tpc_gp0_t gp0;
+    tpc_cplt_conf0_t conf0;
     tpc_device_id_t deviceId;
     cfam_id_t cfamId;
 
-    getscom(TPC_GP0, &(gp0.value));
-    G_node_id = gp0.fields.tc_node_id_dc;
-    G_chip_id = gp0.fields.tc_chip_id_dc;
+    getscom(TPC_CPLT_CONF0, &(conf0.value));
+    G_node_id = conf0.fields.tc_unit_group_id_dc;
+    G_chip_id = conf0.fields.tc_unit_chip_id_dc;
 
     getscom(TPC_DEVICE_ID, &(deviceId.value));
     G_cfam_id = cfamId.value = deviceId.fields.cfam_id;
@@ -106,18 +106,18 @@ uint64_t G_core_configuration SECTION_ATTRIBUTE(".noncacheable") = 0;
 ///
 /// \bug in Simics we're doing this based on the PMC_CORE_DECONFIGURATION_REG
 /// pending Simics support for the base pervasive functionality
-#if 0
+
 void
 _occhw_get_chip_configuration(void)
 {
     if (SIMICS_ENVIRONMENT)
     {
 
-        pmc_core_deconfiguration_reg_t pcdr;
+        ocb_ccsr_t ccsr;
 
-        pcdr.value = in32(PMC_CORE_DECONFIGURATION_REG);
+        ccsr.value = in32(OCB_CCSR);
         G_chip_configuration =
-            ~((uint64_t)(pcdr.fields.core_chiplet_deconf_vector) << 48);
+            ((uint64_t)(ccsr.fields.core_config) << (64 - 24));
 
     }
     else
@@ -148,12 +148,13 @@ _occhw_get_chip_configuration(void)
             SSX_PANIC(OCCHW_ID_SCOM_ERROR_CONFIG);
         }
 
-        G_chip_configuration = (configuration << 16) & 0xffff000000000000ull;
+        /// \bug still shift 16 in p9?
+        G_chip_configuration = (configuration << 16) & 0xffffff0000000000ull;
     }
 
-    G_core_configuration = G_chip_configuration & 0xffff000000000000ull;
+    G_core_configuration = G_chip_configuration & 0xffffff0000000000ull;
 }
-#endif
+
 
 uint32_t core_configuration(void)
 {

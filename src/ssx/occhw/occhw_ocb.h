@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -34,6 +34,8 @@
 #include "occhw_common.h"
 #include "ocb_register_addresses.h"
 #include "ocb_firmware_registers.h"
+#include "occ_firmware_registers.h"
+#include "occ_register_addresses.h"
 
 #include "ppc405_irq.h"
 
@@ -88,7 +90,7 @@ ocb_timer_status_clear(SsxIrqId irq)
 {
     ocb_otrn_t otrn_reg;
     otrn_reg.value = 0;
-    otrn_reg.fields.timeout = 1;
+    otrn_reg.fields.timeout_n = 1;
     out32(OCB_OTRN(irq - OCCHW_IRQ_OCC_TIMER0), otrn_reg.value);
 }
 

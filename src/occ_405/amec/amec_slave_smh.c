@@ -67,7 +67,7 @@
 extern dcom_slv_inbox_t G_dcom_slv_inbox_rx;
 extern opal_proc_voting_reason_t G_amec_opal_proc_throt_reason;
 extern uint16_t G_proc_fmax_mhz;
-extern GpeRequest G_wof_vfrt_req;
+extern GpeRequest G_wof_vrt_req;
 extern bool G_pgpe_shared_sram_V_I_readings;
 
 //*************************************************************************
@@ -446,8 +446,8 @@ void amec_slv_common_tasks_post(void)
             call_wof_main();
         }
 
-        // Check to see if a VFRT IPC request needs to be sent to the PGPE
-        schedule_vfrt_request();
+        // Check to see if a VRT IPC request needs to be sent to the PGPE
+        schedule_vrt_request();
 
         // Call the every tick trace recording if it has been configured via Amester.
         // If not configured, this call will return immediately.

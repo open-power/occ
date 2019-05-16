@@ -26,6 +26,8 @@
 #ifndef _DCOMSLAVERX_C
 #define _DCOMSLAVERX_C
 
+//#define DCOM_DEBUG
+
 #include "ssx.h"
 #include "occhw_pba.h"
 #include <rtls.h>

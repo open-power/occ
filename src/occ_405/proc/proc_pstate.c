@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -40,14 +40,14 @@
 #include <amec_oversub.h>
 #include <amec_sys.h>
 #include <pstate_pgpe_occ_api.h>
-#include <p9_pstates_occ.h>
+#include <pstates_occ.H>
 
 //OPAL processor and memory throttle reason coming from the frequency voting boxes.
 extern opal_proc_voting_reason_t G_amec_opal_proc_throt_reason;
 extern opal_mem_voting_reason_t  G_amec_opal_mem_throt_reason;
 
 //Global OCC Pstate Parameters Block Structure
-extern OCCPstateParmBlock G_oppb;
+extern OCCPstateParmBlock_t G_oppb;
 
 //Trace flags
 extern uint16_t G_allow_trace_flags;
@@ -105,7 +105,7 @@ bool proc_is_hwpstate_enabled(void)
 // Description:  Convert Pstate to Frequency in kHz
 //
 // End Function Specification
-uint32_t proc_pstate2freq(Pstate i_pstate)
+uint32_t proc_pstate2freq(Pstate_t i_pstate)
 {
     // The higher the pstate number, the lower the frequency:
     // If passed in Pstate is lower than Pmin (higher pstate value),
@@ -126,7 +126,7 @@ uint32_t proc_pstate2freq(Pstate i_pstate)
 // Description:  Convert Frequency to Nearest Pstate
 //
 // End Function Specification
-Pstate proc_freq2pstate(uint32_t i_freq_mhz)
+Pstate_t proc_freq2pstate(uint32_t i_freq_mhz)
 {
     int8_t   l_pstate = 0;
     int8_t   l_temp_pstate = 0;
@@ -178,7 +178,7 @@ Pstate proc_freq2pstate(uint32_t i_freq_mhz)
     }
     while(0);
 
-    return (Pstate) l_pstate;
+    return (Pstate_t) l_pstate;
 }
 
 // Function Specification

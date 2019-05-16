@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -52,9 +52,7 @@
 #define PPM_PFOFF 0x000f011d
 #define PPM_SCRATCH0 0x000f011e
 #define PPM_SCRATCH1 0x000f011f
-#define PPM_CGCR 0x000f0165
-#define PPM_CGCR_CLR 0x000f0166
-#define PPM_CGCR_OR 0x000f0167
+#define PPM_CGCR 0x000f0164
 #define PPM_PIG 0x000f0180
 #define PPM_IVRMCR 0x000f01b0
 #define PPM_IVRMCR_CLR 0x000f01b1
@@ -65,6 +63,9 @@
 #define PPM_VDMCR 0x000f01b8
 #define PPM_VDMCR_CLR 0x000f01b9
 #define PPM_VDMCR_OR 0x000f01ba
+
+// Hand added
+#define PPM_ERROR 0x000f0121
 
 #endif // __PPM_REGISTER_ADDRESSES_H__
 

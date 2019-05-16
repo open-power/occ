@@ -54,11 +54,14 @@ void task_misc_405_checks(task_t *i_self)
 
     // Check for checkstops
     ocb_oisr0_t  l_oisr0_status;       // OCC Interrupt Source 0 Register
+    ocb_oisr1_t  l_oisr1_status;       // OCC Interrupt Source 1 Register
 
     static bool L_checkstop_traced    = false;
     uint8_t     l_reason_code         = 0;
     bool        l_create_errl         = false;
     static unsigned int L_delay_cstop = TICKS_TO_DELAY_CHECKSTOP_PROCESSING;
+    static uint32_t L_last0 = 0;
+    static uint32_t L_last1 = 0;
 
     do
     {
@@ -70,7 +73,18 @@ void task_misc_405_checks(task_t *i_self)
         // Look for a frozen GPE, a sign that the chip has stopped working or
         // halted.  This check also looks for an interrupt status flag that
         // indicates if the system has check-stopped.
+        l_oisr1_status.value = in32(OCB_OISR1); // read high order 32 bits of OISR1
+        if (L_last1 != l_oisr1_status.value) {
+            TRAC_IMP("task_misc_405_checks: OISR1=0x%08X", l_oisr1_status.value);
+            L_last1 = l_oisr1_status.value;
+        }
+
+        // TODO - RTC 213675 - any reason to check any OISR0 bits??
         l_oisr0_status.value = in32(OCB_OISR0); // read high order 32 bits of OISR0
+        if (L_last0 != l_oisr0_status.value) {
+            TRAC_IMP("task_misc_405_checks: OISR0=0x%08X", l_oisr0_status.value);
+            L_last0 = l_oisr0_status.value;
+        }
 
         // We're only interested in system checkstop during IPL, so only check
         // for that if the IPL flag is set (in 405 main.c). If gpe0/1_error is
@@ -78,26 +92,26 @@ void task_misc_405_checks(task_t *i_self)
         // firdata, so only check for GPE0/1 errors in runtime.
         if(G_ipl_time)
         {
-            if(l_oisr0_status.fields.check_stop_ppc405)
+            if(l_oisr1_status.fields.check_stop_ppc405)
             {
                 l_create_errl = true;
             }
         }
         else
         {
-            if (l_oisr0_status.fields.check_stop_ppc405 ||   // System Checkstop
-                l_oisr0_status.fields.gpe0_error        ||   // GPE0 Halt
-                l_oisr0_status.fields.gpe1_error)            // GPE1 Halt
+            if (l_oisr1_status.fields.check_stop_ppc405 ||   // System Checkstop
+                l_oisr1_status.fields.gpe0_error        ||   // GPE0 Halt
+                l_oisr1_status.fields.gpe1_error)            // GPE1 Halt
             {
-                if(l_oisr0_status.fields.check_stop_ppc405)
+                if(l_oisr1_status.fields.check_stop_ppc405)
                 {
                     // For FSP systems, delay the system checkstop processing to allow NVDIMM procedure to run
                     if ((G_occ_interrupt_type == FSP_SUPPORTED_OCC) && (L_delay_cstop > 0))
                     {
                         if (L_delay_cstop == TICKS_TO_DELAY_CHECKSTOP_PROCESSING)
                         {
-                            TRAC_IMP("task_misc_405_checks: System checkstop detected by RTL: OISR0[0x%08x] - delaying halt (tick=%d)",
-                                     l_oisr0_status.value, CURRENT_TICK);
+                            TRAC_IMP("task_misc_405_checks: System checkstop detected by RTL: OISR1[0x%08x] - delaying halt (tick=%d)",
+                                     l_oisr1_status.value, CURRENT_TICK);
                         }
                         --L_delay_cstop;
                     }
@@ -118,36 +132,36 @@ void task_misc_405_checks(task_t *i_self)
         {
             errlHndl_t l_err = NULL;
 
-            if (l_oisr0_status.fields.gpe0_error)
+            if (l_oisr1_status.fields.gpe0_error)
             {
-                TRAC_IMP("task_misc_405_checks: Frozen GPE0 detected by RTL: OISR0[0x%08x]",
-                         l_oisr0_status.value);
+                TRAC_IMP("task_misc_405_checks: Frozen GPE0 detected by RTL: OISR1[0x%08x]",
+                         l_oisr1_status.value);
                 l_reason_code = OCC_GPE_HALTED;
             }
 
-            if (l_oisr0_status.fields.gpe1_error)
+            if (l_oisr1_status.fields.gpe1_error)
             {
-                TRAC_IMP("task_misc_405_checks: Frozen GPE1 detected by RTL: OISR0[0x%08x]",
-                         l_oisr0_status.value);
+                TRAC_IMP("task_misc_405_checks: Frozen GPE1 detected by RTL: OISR1[0x%08x]",
+                         l_oisr1_status.value);
                 /*
                  * @errortype
                  * @moduleid    MAIN_SYSTEM_HALTED_MID
                  * @reasoncode  OCC_GPE_HALTED
-                 * @userdata1   OCB_OISR0
+                 * @userdata1   OCB_OISR1
                  * @devdesc     OCC detected frozen GPE
                  */
                 l_reason_code = OCC_GPE_HALTED;
             }
 
-            if (l_oisr0_status.fields.check_stop_ppc405)
+            if (l_oisr1_status.fields.check_stop_ppc405)
             {
-                TRAC_IMP("task_misc_405_checks: System checkstop detected by RTL: OISR0[0x%08x]",
-                         l_oisr0_status.value);
+                TRAC_IMP("task_misc_405_checks: System checkstop detected by RTL: OISR1[0x%08x]",
+                         l_oisr1_status.value);
                 /*
                  * @errortype
                  * @moduleid    MAIN_SYSTEM_HALTED_MID
                  * @reasoncode  OCC_SYSTEM_HALTED
-                 * @userdata1   OCB_OISR0
+                 * @userdata1   OCB_OISR1
                  * @devdesc     OCC detected system checkstop
                  */
                 l_reason_code = OCC_SYSTEM_HALTED;
@@ -161,7 +175,7 @@ void task_misc_405_checks(task_t *i_self)
                                ERRL_SEV_INFORMATIONAL,
                                NULL,
                                DEFAULT_TRACE_SIZE,
-                               l_oisr0_status.value,
+                               l_oisr1_status.value,
                                0 );
 
             // The commit code will check for the frozen GPE0 and system
@@ -217,13 +231,13 @@ bool notify_host(const ext_intr_reason_t i_reason)
     switch(notifyReason)
     {
         case INTR_REASON_HTMGT_SERVICE_REQUIRED:
-            new_occmisc.fields.ext_intr_service_required = 1;
+            new_occmisc.fields.ext_intr_reason = INTR_REASON_HTMGT_SERVICE_REQUIRED;
             break;
         case INTR_REASON_I2C_OWNERSHIP_CHANGE:
-            new_occmisc.fields.ext_intr_i2c_change = 1;
+            new_occmisc.fields.ext_intr_reason = INTR_REASON_I2C_OWNERSHIP_CHANGE;
             break;
         case INTR_REASON_OPAL_SHARED_MEM_CHANGE:
-            new_occmisc.fields.ext_intr_shmem_change = 1;
+            new_occmisc.fields.ext_intr_reason = INTR_REASON_OPAL_SHARED_MEM_CHANGE;
             break;
         default:
             INTR_TRAC_ERR("notify_host: Invalid reason specified: 0x%02X", notifyReason);
@@ -238,15 +252,13 @@ bool notify_host(const ext_intr_reason_t i_reason)
         current_occmisc.value = in32(OCB_OCCMISC);
         if (current_occmisc.fields.core_ext_intr == 0)
         {
-            if (current_occmisc.fields.ext_intr_service_required ||
-                current_occmisc.fields.ext_intr_i2c_change ||
-                current_occmisc.fields.ext_intr_shmem_change)
+            if (current_occmisc.fields.ext_intr_reason != 0)
             {
                 // clear external interrupt reason
                 current_occmisc.value = 0;
-                current_occmisc.fields.ext_intr_service_required = 1;
-                current_occmisc.fields.ext_intr_i2c_change = 1;
-                current_occmisc.fields.ext_intr_shmem_change = 1;
+                current_occmisc.fields.ext_intr_reason = (INTR_REASON_HTMGT_SERVICE_REQUIRED |
+                                                          INTR_REASON_I2C_OWNERSHIP_CHANGE |
+                                                          INTR_REASON_OPAL_SHARED_MEM_CHANGE);
                 out32(OCB_OCCMISC_CLR, current_occmisc.value);
             }
 
@@ -286,10 +298,10 @@ bool ignore_pgpe_error(void)
 {
     static bool  L_last_ignore_error = false;
            bool  l_ignore_error      = false;
-           ocb_occflg_t occ_flags    = {0};
+           ocb_occflg_t occ_flags   = {0};
 
     // Check if the bit to ignore errors is set in the OCC Flags register
-    occ_flags.value = in32(OCB_OCCFLG);
+    occ_flags.value = in32(OCB_OCCFLG0);
 
     if (occ_flags.fields.pm_reset_suppress == 1)
     {

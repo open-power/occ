@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2011,2017
+# Contributors Listed Below - COPYRIGHT 2011,2019
 # [+] International Business Machines Corp.
 #
 #
@@ -151,7 +151,7 @@
 # 312 (x138)        4       OCB_ONISR1
 # 316 (x13c)        4       OCB_OCISR0
 # 320 (x140)        4       OCB_OCISR1
-# 324 (x144)        4       OCB_OCCFLG
+# 324 (x144)        4       OCB_OCCFLG0
 # 328 (x148)        4       OCB_OCCHBR
 # 332 (x14c)        4       SSX timebase
 # 336 (x150)        16      Build name
@@ -371,8 +371,8 @@ OCISR0:                     .int
     .struct OCISR0 + 4
 OCISR1:                     .int
     .struct OCISR1 + 4
-OCCFLG:                     .int
-    .struct OCCFLG + 4
+OCCFLG0:                    .int
+    .struct OCCFLG0 + 4
 OCCHBR:                     .int
     .struct OCCHBR + 4
 FFDC_TIMEBASE:              .int
@@ -902,9 +902,9 @@ __save_ffdc_regs:
     # Save OCISR1
     _lwzi       %r5, %r5, OCB_OCISR1
     _stwi       %r5, %r3, OCISR1
-    # Save OCCFLG
-    _lwzi       %r5, %r5, OCB_OCCFLG
-    _stwi       %r5, %r3, OCCFLG
+    # Save OCCFLG0
+    _lwzi       %r5, %r5, OCB_OCCFLG0
+    _stwi       %r5, %r3, OCCFLG0
     # Save OCCHBR
     _lwzi       %r5, %r5, OCB_OCCHBR
     _stwi       %r5, %r3, OCCHBR
@@ -935,7 +935,7 @@ __save_ffdc_regs:
     # r6 gets the low 32 bits of the product of r3 and r4
     mullw       %r6, %r3, %r4
     # Put scom address in r3
-    _liwa       %r3, OCB_OCCLFIR
+    _liwa       %r3, OCC_SCOM_OCCLFIR
     # Save the FFDC buffer ptr in r4, _getscom saves the scom output at r4
     _liwa       %r4, OCCLFIR
     # Call _getscom (non-panic version with timeout), timeout is 10us

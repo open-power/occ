@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -45,9 +45,6 @@
 
 #define TRACE(i_td,i_string,args...)                  \
                 trace_adal_write_all(i_td,trace_adal_hash(i_string,-1),__LINE__,0,##args)
-
-#define TRACEBIN(i_td,i_string,i_ptr,i_size)          \
-                trac_write_bin(i_td,trace_adal_hash(i_string,0),__LINE__,i_ptr,i_size)
 
 #ifndef NO_TRAC_STRINGS
 

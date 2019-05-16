@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -28,7 +28,6 @@
 ///
 
 #include "core_data.h"
-#include "eq_config.h"
 #include "ppe42_msr.h"
 #include "ppe42_scom.h"
 #include "pk.h"
@@ -78,7 +77,8 @@ uint32_t get_core_data(uint32_t i_core,
         }
 
         // Store the Racetrace DTS reading
-        o_data->dts.racetrack.result = dts_scom_data.half_words.reading[0];
+        // TODO RTC 213672 - cache entry for racetrack?
+        o_data->dts.cache[1].result = dts_scom_data.half_words.reading[0];
 
         rc = getscom(dtsCoreSelect, THERM_DTS_RESULT, &(dts_scom_data.value));
         if (rc)
@@ -88,9 +88,12 @@ uint32_t get_core_data(uint32_t i_core,
 
         o_data->dts.core[0].result = dts_scom_data.half_words.reading[0];
         o_data->dts.core[1].result = dts_scom_data.half_words.reading[1];
-        o_data->dts.cache.result = dts_scom_data.half_words.reading[2];
+        // TODO RTC 213672 - which cache entry to use?
+        o_data->dts.cache[0].result = dts_scom_data.half_words.reading[2];
 
 
+        // TODO RTC 213672
+#if 0
         // =============
         // EMPATH
         // =============
@@ -217,7 +220,7 @@ uint32_t get_core_data(uint32_t i_core,
         {
             break;
         }
-        o_data->droop.v_droop_small = (uint32_t)empath_scom_data;
+        o_data->droop.core_small_event = (uint32_t)empath_scom_data;
 
         // Large Droop Present
         rc = getscom(empathSelect, PC_OCC_SPRD,&empath_scom_data);
@@ -225,7 +228,7 @@ uint32_t get_core_data(uint32_t i_core,
         {
             break;
         }
-        o_data->droop.v_droop_large = (uint32_t)empath_scom_data;
+        o_data->droop.cache_large_event = (uint32_t)empath_scom_data;
 
         // MMA Activer
         rc = getscom(empathSelect, PC_OCC_SPRD,&empath_scom_data);
@@ -241,7 +244,7 @@ uint32_t get_core_data(uint32_t i_core,
         {
             break;
         }
-        o_data->tod_2mhz = (uint32_t)(empath_scom_data >> 8); //[24..56]
+        o_data->empath.tod_2mhz = (uint32_t)(empath_scom_data >> 8); //[24..56]
 
         // STOP_STATE_HIST_OCC_REG TODO 213673 P10 exist?
         //rc = getscom(empathSelect, STOP_STATE_HIST_OCC_REG, &empath_scom_data);
@@ -252,6 +255,7 @@ uint32_t get_core_data(uint32_t i_core,
         //o_data->stop_state_hist = empath_scom_data;
 
         o_data->empathValid = EMPATH_VALID;
+#endif
     } while(0);
 
     // Clear masks SIB masks (MSR_SEM)

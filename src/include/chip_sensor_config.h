@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/include/p9_config.h $                                     */
+/* $Source: src/include/chip_sensor_config.h $                            */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -23,11 +23,17 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-/// \file p9_config.h
-/// \brief Chip configuration data structures for P9 OCC procedures
+/// \file chip_config.h
+/// \brief Chip configuration data structures for OCC procedures
+///
+//  *HWP HWP Owner: Doug Gilbert <dgilbert@us.ibm.com>
+//  *HWP FW Owner: Martha Broyles <mbroyles@us.ibm.com>
+//  *HWP Team: PM
+//  *HWP Level: 1
+//  *HWP Consumed by: OCC
 
-#ifndef __P9_GPE_CONFIG_H__
-#define __P9_GPE_CONFIG_H__
+#ifndef __CHIP_SENSOR_CONFIG_H__
+#define __CHIP_SENSOR_CONFIG_H__
 
 
 #include <stdint.h>
@@ -80,4 +86,4 @@ typedef union sensor_result
 #define CHIPLET_NEST_ID(n) \
     (((n) << 24) + CHIPLET_NEST_SCOM_BASE)
 
-#endif  /* __P9_GPE_CONFIG_H__ */
+#endif  /* __CHIP_SENSOR_CONFIG_H__ */

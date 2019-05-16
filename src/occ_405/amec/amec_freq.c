@@ -630,8 +630,8 @@ void amec_slv_freq_smh(void)
     uint8_t     quad = 0;       // loop through quads
     uint8_t     core_num = 0;   // core ID
     uint8_t     core_idx = 0;   // loop through cores within each quad
-    Pstate      pmax[MAXIMUM_QUADS] = {0}; // max pstate (min frequency) within each quad
-    Pstate      pmax_chip = 0;  // highest Pstate (lowest frequency) across all quads
+    Pstate_t      pmax[MAXIMUM_QUADS] = {0}; // max pstate (min frequency) within each quad
+    Pstate_t      pmax_chip = 0;  // highest Pstate (lowest frequency) across all quads
     bool        l_atLeast1Core[MAXIMUM_QUADS] = {FALSE};  // at least 1 core present and online in quad
     bool        l_atLeast1Quad = FALSE;    // at least 1 quad online
     static bool L_mfg_set_trace[MAXIMUM_QUADS] = {FALSE};

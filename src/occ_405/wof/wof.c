@@ -28,7 +28,7 @@
 #include <occhw_async.h>
 #include <pgpe_shared.h>
 #include <pstate_pgpe_occ_api.h>
-#include <p9_pstates_occ.h>
+#include <pstates_occ.H>
 #include <occ_service_codes.h>
 #include <wof_service_codes.h>
 #include <amec_sys.h>
@@ -42,10 +42,10 @@
 // External Globals
 //******************************************************************************
 extern amec_sys_t g_amec_sys;
-extern OCCPstateParmBlock G_oppb;
-extern GPE_BUFFER(ipcmsg_wof_vfrt_t G_wof_vfrt_parms);
+extern OCCPstateParmBlock_t G_oppb;
+extern GPE_BUFFER(ipcmsg_wof_vrt_t G_wof_vrt_parms);
 extern GPE_BUFFER(ipcmsg_wof_control_t G_wof_control_parms);
-extern GpeRequest   G_wof_vfrt_req;
+extern GpeRequest   G_wof_vrt_req;
 extern GpeRequest   G_wof_control_req;
 extern uint32_t     G_nest_frequency_mhz;
 extern volatile pstateStatus G_proc_pstate_status;
@@ -56,22 +56,25 @@ extern uint16_t G_allow_trace_flags;
 //******************************************************************************
 // Globals
 //******************************************************************************
-uint8_t G_sram_vfrt_ping_buffer[MIN_BCE_REQ_SIZE] __attribute__ ((section(".vfrt_ping_buffer")));
-uint8_t G_sram_vfrt_pong_buffer[MIN_BCE_REQ_SIZE] __attribute__ ((section(".vfrt_pong_buffer")));
+uint8_t G_sram_vrt_ping_buffer[MIN_BCE_REQ_SIZE] __attribute__ ((section(".vrt_ping_buffer")));
+uint8_t G_sram_vrt_pong_buffer[MIN_BCE_REQ_SIZE] __attribute__ ((section(".vrt_pong_buffer")));
 
-// BCE Request object for retrieving VFRT's from Mainstore
-BceRequest G_vfrt_req;
+// BCE Request object for retrieving VRT's from Mainstore
+BceRequest G_vrt_req;
 
-// Buffer to hold vfrt from main memory
-DMA_BUFFER(temp_bce_request_buffer_t G_vfrt_temp_buff) = {{0}};
+// Buffer to hold vrt from main memory
+DMA_BUFFER(temp_bce_request_buffer_t G_vrt_temp_buff) = {{0}};
 
 // Wof header struct
 wof_header_data_t G_wof_header __attribute__ ((section (".global_data")));
 
+// TODO - RTC 209558
+#if 0
 // Quad state structs to temporarily hold the data from the doublewords to
 // then populate in amec structure
 quad_state0_t G_quad_state_0 = {0};
 quad_state1_t G_quad_state_1 = {0};
+#endif
 
 // Create a pointer to amec WOF structure
 amec_wof_t * g_wof = &(g_amec_sys.wof);
@@ -172,8 +175,8 @@ int16_t G_wof_iddq_mult_table[WOF_IDDQ_MULT_TABLE_N][2] = {
  */
 void call_wof_main( void )
 {
-    // Timeout for VFRT to complete
-    static uint8_t L_vfrt_last_chance = MAX_VFRT_CHANCES_EVERY_TICK;
+    // Timeout for VRT to complete
+    static uint8_t L_vrt_last_chance = MAX_VRT_CHANCES_EVERY_TICK;
 
     // Timeout for WOF Control to complete
     static uint8_t L_wof_control_last_chance = MAX_WOF_CONTROL_CHANCES_EVERY_TICK;
@@ -200,17 +203,17 @@ void call_wof_main( void )
         }
 
         // If error logged in callback, record now
-        if( g_wof->vfrt_callback_error )
+        if( g_wof->vrt_callback_error )
         {
-            INTR_TRAC_ERR("Got a bad RC in wof_vfrt_callback: 0x%x",
-                    g_wof->wof_vfrt_req_rc);
+            INTR_TRAC_ERR("Got a bad RC in wof_vrt_callback: 0x%x",
+                    g_wof->wof_vrt_req_rc);
             set_clear_wof_disabled( SET,
-                                    WOF_RC_VFRT_REQ_FAILURE,
-                                    ERC_WOF_VFRT_REQ_FAILURE );
+                                    WOF_RC_VRT_REQ_FAILURE,
+                                    ERC_WOF_VRT_REQ_FAILURE );
 
             // After official error recorded, prevent this code
             // from running from same setting of the var.
-            g_wof->vfrt_callback_error = 0;
+            g_wof->vrt_callback_error = 0;
         }
 
         // If the 405 turned WOF off on pgpe and it is the only bit set
@@ -276,41 +279,41 @@ void call_wof_main( void )
                     // For each possible initialization state,
                     // do the appropriate action
                     case WOF_DISABLED:
-                        // Reset timeouts for VFRT response and WOF control
-                        L_vfrt_last_chance = MAX_VFRT_CHANCES;
+                        // Reset timeouts for VRT response and WOF control
+                        L_vrt_last_chance = MAX_VRT_CHANCES;
                         L_wof_control_last_chance = MAX_WOF_CONTROL_CHANCES;
 
                         // reset OC ceff adder
                         g_wof->vdd_oc_ceff_add = 0;
                         sensor_update(AMECSENSOR_PTR(OCS_ADDR), (uint16_t)g_wof->vdd_oc_ceff_add);
 
-                        // calculate initial vfrt, send gpeRequest
-                        // Initial vfrt is the last vfrt in Main memory
-                        send_initial_vfrt_to_pgpe();
+                        // calculate initial vrt, send gpeRequest
+                        // Initial vrt is the last vrt in Main memory
+                        send_initial_vrt_to_pgpe();
                         break;
 
-                    case INITIAL_VFRT_SENT_WAITING:
+                    case INITIAL_VRT_SENT_WAITING:
                         // Check if request is still processing.
-                        // Init state updated in wof_vfrt_callback
-                        if( (!async_request_is_idle(&G_wof_vfrt_req.request)) ||
-                             (g_wof->vfrt_state != STANDBY) )
+                        // Init state updated in wof_vrt_callback
+                        if( (!async_request_is_idle(&G_wof_vrt_req.request)) ||
+                             (g_wof->vrt_state != STANDBY) )
                         {
-                            if( (L_vfrt_last_chance == 0) && (!ignore_pgpe_error()) )
+                            if( (L_vrt_last_chance == 0) && (!ignore_pgpe_error()) )
                             {
                                 INTR_TRAC_ERR("WOF Disabled!"
-                                              " Init VFRT request timeout");
+                                              " Init VRT request timeout");
                                 set_clear_wof_disabled( SET,
-                                                        WOF_RC_VFRT_REQ_TIMEOUT,
-                                                        ERC_WOF_VFRT_REQ_TIMEOUT );
+                                                        WOF_RC_VRT_REQ_TIMEOUT,
+                                                        ERC_WOF_VRT_REQ_TIMEOUT );
                             }
-                            else if(L_vfrt_last_chance != 0)
+                            else if(L_vrt_last_chance != 0)
                             {
-                                if( L_vfrt_last_chance == 1 )
+                                if( L_vrt_last_chance == 1 )
                                 {
-                                    INTR_TRAC_INFO("initial VFRT NOT idle. Last chance out of %d chances",
-                                                    MAX_VFRT_CHANCES);
+                                    INTR_TRAC_INFO("initial VRT NOT idle. Last chance out of %d chances",
+                                                    MAX_VRT_CHANCES);
                                 }
-                                L_vfrt_last_chance--;
+                                L_vrt_last_chance--;
                             }
                             else
                             {
@@ -318,16 +321,16 @@ void call_wof_main( void )
                                 // Put a mark on the wall so we know we hit this state
                                 if(!L_current_timeout_recorded)
                                 {
-                                    INCREMENT_ERR_HISTORY(ERRH_VFRT_TIMEOUT_IGNORED);
+                                    INCREMENT_ERR_HISTORY(ERRH_VRT_TIMEOUT_IGNORED);
                                     L_current_timeout_recorded = TRUE;
                                 }
                             }
                         }
                         break;
 
-                    case INITIAL_VFRT_SUCCESS:
+                    case INITIAL_VRT_SUCCESS:
                         // We made it this far. Reset Last chance
-                        L_vfrt_last_chance = MAX_VFRT_CHANCES;
+                        L_vrt_last_chance = MAX_VRT_CHANCES;
 
                         // Send wof control on gpe request
                         // If enable_success returns true, init state was set
@@ -423,18 +426,18 @@ void call_wof_main( void )
                 !g_wof->wof_disabled )
             {
                 // Normal execution of wof algorithm
-                if( (!async_request_is_idle(&G_wof_vfrt_req.request)) ||
-                    (g_wof->vfrt_state != STANDBY) )
+                if( (!async_request_is_idle(&G_wof_vrt_req.request)) ||
+                    (g_wof->vrt_state != STANDBY) )
                 {
-                    if( L_vfrt_last_chance == 0 )
+                    if( L_vrt_last_chance == 0 )
                     {
                         // Treat as an error only if not currently ignoring PGPE failures
                         if(!ignore_pgpe_error())
                         {
-                            INTR_TRAC_ERR("WOF Disabled! VFRT req timeout");
+                            INTR_TRAC_ERR("WOF Disabled! VRT req timeout");
                             set_clear_wof_disabled(SET,
-                                                   WOF_RC_VFRT_REQ_TIMEOUT,
-                                                   ERC_WOF_VFRT_REQ_TIMEOUT);
+                                                   WOF_RC_VRT_REQ_TIMEOUT,
+                                                   ERC_WOF_VRT_REQ_TIMEOUT);
                         }
                         else
                         {
@@ -442,19 +445,19 @@ void call_wof_main( void )
                             // Put a mark on the wall so we know we hit this state
                             if(!L_current_timeout_recorded)
                             {
-                                INCREMENT_ERR_HISTORY(ERRH_VFRT_TIMEOUT_IGNORED);
+                                INCREMENT_ERR_HISTORY(ERRH_VRT_TIMEOUT_IGNORED);
                                 L_current_timeout_recorded = TRUE;
                             }
                         }
                     }
                     else
                     {
-                        if( L_vfrt_last_chance == 1 )
+                        if( L_vrt_last_chance == 1 )
                         {
-                            INTR_TRAC_INFO("VFRT NOT idle. Last chance out of %d chances",
-                                            MAX_VFRT_CHANCES);
+                            INTR_TRAC_INFO("VRT NOT idle. Last chance out of %d chances",
+                                            MAX_VRT_CHANCES);
                         }
-                        L_vfrt_last_chance--;
+                        L_vrt_last_chance--;
                     }
                 }
                 else
@@ -464,7 +467,7 @@ void call_wof_main( void )
                     // Request is idle. Run wof algorithm
                     wof_main();
 
-                    L_vfrt_last_chance = MAX_VFRT_CHANCES;
+                    L_vrt_last_chance = MAX_VRT_CHANCES;
                     // Finally make sure we are in the fully enabled state
                     if( g_wof->wof_init_state == PGPE_WOF_ENABLED_NO_PREV_DATA )
                     {
@@ -532,13 +535,13 @@ void wof_main( void )
 
     g_wof->quad_step_from_start = calc_quad_step_from_start();
 
-    // Compute the Main Memory address of the desired VFRT table given
+    // Compute the Main Memory address of the desired VRT table given
     // the calculated VDN, VDD, and Quad steps
-    g_wof->next_vfrt_main_mem_addr = calc_vfrt_mainstore_addr();
+    g_wof->next_vrt_main_mem_addr = calc_vrt_mainstore_addr();
 
 
-    // Send the new vfrt to the PGPE
-    send_vfrt_to_pgpe( g_wof->next_vfrt_main_mem_addr );
+    // Send the new vrt to the PGPE
+    send_vrt_to_pgpe( g_wof->next_vrt_main_mem_addr );
 }
 
 /**
@@ -605,14 +608,14 @@ uint8_t calc_quad_step_from_start( void )
 }
 
 /**
- * calc_vfrt_mainstore_address
+ * calc_vrt_mainstore_address
  *
- * Description: Calculates the VFRT address based on the Ceff vdd/vdn and quad
+ * Description: Calculates the VRT address based on the Ceff vdd/vdn and quad
  *              steps.
  *
- * Return: The desired VFRT main memory address
+ * Return: The desired VRT main memory address
  */
-uint32_t calc_vfrt_mainstore_addr( void )
+uint32_t calc_vrt_mainstore_addr( void )
 {
     static bool L_trace_char_test = true;
 
@@ -625,7 +628,7 @@ uint32_t calc_vfrt_mainstore_addr( void )
            L_trace_char_test = false;
        }
 
-       g_wof->vfrt_mm_offset = 0;
+       g_wof->vrt_mm_offset = 0;
     }
     else
     {
@@ -637,94 +640,99 @@ uint32_t calc_vfrt_mainstore_addr( void )
 
        // Wof tables address calculation
        // (Base_addr +
-       // (sizeof VFRT * (total active quads * ( (g_wof->vdn_step_from_start * vdd_size) + (g_wof->vdd_step_from_start) ) + (g_wof->quad_step_from_start))))
-       g_wof->vfrt_mm_offset = g_wof->vfrt_block_size *
+       // (sizeof VRT * (total active quads * ( (g_wof->vdn_step_from_start * vdd_size) + (g_wof->vdd_step_from_start) ) + (g_wof->quad_step_from_start))))
+       g_wof->vrt_mm_offset = g_wof->vrt_block_size *
                        (( g_wof->active_quads_size *
                        ((g_wof->vdn_step_from_start * g_wof->vdd_size) +
                        g_wof->vdd_step_from_start) ) + g_wof->quad_step_from_start);
     }
 
     // Skip the wof header at the beginning of wof tables
-    uint32_t wof_tables_base = g_wof->vfrt_tbls_main_mem_addr + WOF_HEADER_SIZE;
+    uint32_t wof_tables_base = g_wof->vrt_tbls_main_mem_addr + WOF_HEADER_SIZE;
 
-    return wof_tables_base + g_wof->vfrt_mm_offset;
+    return wof_tables_base + g_wof->vrt_mm_offset;
 }
 
 
 /**
- * copy_vfrt_to_sram_callback
+ * copy_vrt_to_sram_callback
  *
- * Description: Call back function to BCE request to copy VFRT into SRAM
+ * Description: Call back function to BCE request to copy VRT into SRAM
  *              ping/pong buffer. This call will also tell the PGPE
- *              that a new VFRT is available
+ *              that a new VRT is available
  *
  * Param[in]: i_parms - pointer to a struct that will hold data necessary to
  *                      the calculation.
- *                      -Pointer to vfrt table temp buffer
+ *                      -Pointer to vrt table temp buffer
  */
-void copy_vfrt_to_sram_callback( void )
+void copy_vrt_to_sram_callback( void )
 {
 /*
  *
  * find out which ping pong buffer to use
- * copy the vfrt to said ping pong buffer
- * save current vfrt address to global
- * send IPC command to pgpe to notify of new ping/pong vfrt address
+ * copy the vrt to said ping pong buffer
+ * save current vrt address to global
+ * send IPC command to pgpe to notify of new ping/pong vrt address
  */
     // Static variable to trac which buffer is open for use
     // 0 = PING; 1 = PONG;
-    uint8_t * l_buffer_address = G_sram_vfrt_ping_buffer;
-    if(g_wof->curr_ping_pong_buf == (uint32_t)G_sram_vfrt_ping_buffer)
+    uint8_t * l_buffer_address = G_sram_vrt_ping_buffer;
+    if(g_wof->curr_ping_pong_buf == (uint32_t)G_sram_vrt_ping_buffer)
     {
         // Switch to pong buffer
-        l_buffer_address = G_sram_vfrt_pong_buffer;
+        l_buffer_address = G_sram_vrt_pong_buffer;
     }
     else
     {
         // Switch to ping buffer
-        l_buffer_address = G_sram_vfrt_ping_buffer;
+        l_buffer_address = G_sram_vrt_ping_buffer;
     }
     // Update global "next" ping pong buffer for callback function
     g_wof->next_ping_pong_buf = (uint32_t)l_buffer_address;
 
-    // Copy the vfrt data into the buffer
+    // Copy the vrt data into the buffer
     memcpy( l_buffer_address,
-            &G_vfrt_temp_buff,
-            g_wof->vfrt_block_size );
+            &G_vrt_temp_buff,
+            g_wof->vrt_block_size );
 
+// TODO - RTC 209558
+#if 0
     // Set the parameters for the GpeRequest
-    G_wof_vfrt_parms.homer_vfrt_ptr = (HomerVFRTLayout_t*)l_buffer_address;
-    G_wof_vfrt_parms.active_quads = g_wof->req_active_quad_update;
+    G_wof_vrt_parms.homer_vrt_ptr = (HomerVRTLayout_t*)l_buffer_address;
+    G_wof_vrt_parms.active_quads = g_wof->req_active_quad_update;
+#endif
 
-    if( g_wof->vfrt_state != STANDBY )
+    if( g_wof->vrt_state != STANDBY )
     {
-        // Set vfrt state to let OCC know it needs to schedule the IPC command
-        g_wof->vfrt_state = NEED_TO_SCHEDULE;
+        // Set vrt state to let OCC know it needs to schedule the IPC command
+        g_wof->vrt_state = NEED_TO_SCHEDULE;
     }
 
 }
 
 /**
- * wof_vfrt_callback
+ * wof_vrt_callback
  *
- * Description: Callback function for G_wof_vfrt_req GPE request to
- *              confirm the new VFRT is being used by the PGPE and
+ * Description: Callback function for G_wof_vrt_req GPE request to
+ *              confirm the new VRT is being used by the PGPE and
  *              record the switch on the 405. Also updates the
  *              initialization
  */
-void wof_vfrt_callback( void )
+void wof_vrt_callback( void )
 {
-    // Update the VFRT state to indicate a new IPC message can be
+    // Update the VRT state to indicate a new IPC message can be
     // scheduled regardless of the RC of the previous one.
-    g_wof->vfrt_state = STANDBY;
+    g_wof->vrt_state = STANDBY;
 
-    // Confirm the WOF VFRT PGPE request has completed with no errors
-    if( G_wof_vfrt_parms.msg_cb.rc == PGPE_WOF_RC_VFRT_QUAD_MISMATCH )
+// TODO - RTC 209558
+#if 0
+    // Confirm the WOF VRT PGPE request has completed with no errors
+    if( G_wof_vrt_parms.msg_cb.rc == PGPE_WOF_RC_VRT_QUAD_MISMATCH )
     {
         // Rereading OCC-SRAM to update requested active quads
         read_req_active_quads();
     }
-    else if( G_wof_vfrt_parms.msg_cb.rc == PGPE_RC_SUCCESS )
+    else if( G_wof_vrt_parms.msg_cb.rc == PGPE_RC_SUCCESS )
     {
        // GpeRequest went through successfully. update global ping pong buffer
        g_wof->curr_ping_pong_buf = g_wof->next_ping_pong_buf;
@@ -732,98 +740,99 @@ void wof_vfrt_callback( void )
        // Update previous active quads
        g_wof->prev_req_active_quads = g_wof->req_active_quad_update;
 
-       // Update current vfrt_main_mem_address
-       g_wof->curr_vfrt_main_mem_addr = g_wof->next_vfrt_main_mem_addr;
+       // Update current vrt_main_mem_address
+       g_wof->curr_vrt_main_mem_addr = g_wof->next_vrt_main_mem_addr;
 
        // Update the wof_init_state based off the current state
-       if( g_wof->wof_init_state == INITIAL_VFRT_SENT_WAITING )
+       if( g_wof->wof_init_state == INITIAL_VRT_SENT_WAITING )
        {
-            g_wof->wof_init_state = INITIAL_VFRT_SUCCESS;
+            g_wof->wof_init_state = INITIAL_VRT_SUCCESS;
        }
     }
     else
     {
         // Disable WOF
-        g_wof->vfrt_callback_error = 1;
-        g_wof->wof_vfrt_req_rc = G_wof_vfrt_parms.msg_cb.rc;
+        g_wof->vrt_callback_error = 1;
+        g_wof->wof_vrt_req_rc = G_wof_vrt_parms.msg_cb.rc;
     }
+#endif
 }
 
 /**
- * send_vfrt_to_pgpe
+ * send_vrt_to_pgpe
  *
- * Description: Function to copy new VFRT from Mainstore to local SRAM buffer
- *              and calls copy_vfrt_to_sram_callback function to send new VFRT
+ * Description: Function to copy new VRT from Mainstore to local SRAM buffer
+ *              and calls copy_vrt_to_sram_callback function to send new VRT
  *              to the PGPE
- *              Note: If desired VFRT is the same as previous, skip.
+ *              Note: If desired VRT is the same as previous, skip.
  *
- * Param[in]: i_vfrt_main_mem_addr - Address of the desired vfrt table.
+ * Param[in]: i_vrt_main_mem_addr - Address of the desired vrt table.
  */
-void send_vfrt_to_pgpe( uint32_t i_vfrt_main_mem_addr )
+void send_vrt_to_pgpe( uint32_t i_vrt_main_mem_addr )
 {
     int l_ssxrc = SSX_OK;
 
     do
     {
         // First check if the address is 128-byte aligned. error if not.
-        if( i_vfrt_main_mem_addr % 128 )
+        if( i_vrt_main_mem_addr % 128 )
         {
-            INTR_TRAC_ERR("VFRT Main Memory address NOT 128-byte aligned:"
-                    " 0x%08x", i_vfrt_main_mem_addr);
+            INTR_TRAC_ERR("VRT Main Memory address NOT 128-byte aligned:"
+                    " 0x%08x", i_vrt_main_mem_addr);
             set_clear_wof_disabled(SET,
-                                   WOF_RC_VFRT_ALIGNMENT_ERROR,
-                                   ERC_WOF_VFRT_ALIGNMENT_ERROR);
+                                   WOF_RC_VRT_ALIGNMENT_ERROR,
+                                   ERC_WOF_VRT_ALIGNMENT_ERROR);
 
             break;
         }
 
-        // Check if PGPE explicitely requested a new vfrt
+        // Check if PGPE explicitely requested a new vrt
         ocb_occflg_t occ_flags = {0};
-        occ_flags.value = in32(OCB_OCCFLG);
+        occ_flags.value = in32(OCB_OCCFLG0);
 
-        if( ((i_vfrt_main_mem_addr == g_wof->curr_vfrt_main_mem_addr ) &&
+        if( ((i_vrt_main_mem_addr == g_wof->curr_vrt_main_mem_addr ) &&
             (g_wof->req_active_quad_update ==
              g_wof->prev_req_active_quads)) &&
             (!occ_flags.fields.active_quad_update) )
         {
-            // VFRT and requested active quads are unchanged.
+            // VRT and requested active quads are unchanged.
             break;
         }
         // Either the Main memory address changed or req active quads changed
-        // get VFRT based on new values
+        // get VRT based on new values
         else
         {
 
             // Create request
             l_ssxrc = bce_request_create(
-                             &G_vfrt_req,                 // block copy object
+                             &G_vrt_req,                 // block copy object
                              &G_pba_bcde_queue,           // main to sram copy engine
-                             i_vfrt_main_mem_addr,     //mainstore address
-                             (uint32_t) &G_vfrt_temp_buff, // SRAM start address
+                             i_vrt_main_mem_addr,     //mainstore address
+                             (uint32_t) &G_vrt_temp_buff, // SRAM start address
                              MIN_BCE_REQ_SIZE,  // size of copy
                              SSX_WAIT_FOREVER,            // no timeout
-                             (AsyncRequestCallback)copy_vfrt_to_sram_callback,
+                             (AsyncRequestCallback)copy_vrt_to_sram_callback,
                              NULL,
                              ASYNC_CALLBACK_IMMEDIATE );
 
             if(l_ssxrc != SSX_OK)
             {
-                INTR_TRAC_ERR("send_vfrt_to_pgpe: BCDE request create failure rc=[%08X]", -l_ssxrc);
+                INTR_TRAC_ERR("send_vrt_to_pgpe: BCDE request create failure rc=[%08X]", -l_ssxrc);
                 break;
             }
 
-            // Make sure we are in correct vfrt state
-            if( g_wof->vfrt_state == STANDBY )
+            // Make sure we are in correct vrt state
+            if( g_wof->vrt_state == STANDBY )
             {
-                // Set the VFRT state to ensure asynchronous order of operations
-                g_wof->vfrt_state = SEND_INIT;
+                // Set the VRT state to ensure asynchronous order of operations
+                g_wof->vrt_state = SEND_INIT;
 
                 // Do the actual copy
-                l_ssxrc = bce_request_schedule( &G_vfrt_req );
+                l_ssxrc = bce_request_schedule( &G_vrt_req );
 
                 if(l_ssxrc != SSX_OK)
                 {
-                    INTR_TRAC_ERR("send_vfrt_to_pgpe: BCE request schedule failure rc=[%08X]", -l_ssxrc);
+                    INTR_TRAC_ERR("send_vrt_to_pgpe: BCE request schedule failure rc=[%08X]", -l_ssxrc);
                     break;
                 }
             }
@@ -850,6 +859,8 @@ void send_vfrt_to_pgpe( uint32_t i_vfrt_main_mem_addr )
  */
 void read_shared_sram( void )
 {
+// TODO - RTC 209558
+#if 0
     // Get the actual quad states
     G_quad_state_0.value = in64(g_wof->quad_state_0_addr);
     G_quad_state_1.value = in64(g_wof->quad_state_1_addr);
@@ -905,6 +916,7 @@ void read_shared_sram( void )
     g_wof->quad_ivrm_states =
            (((uint8_t)G_quad_state_0.fields.ivrm_state) << 4)
           | ((uint8_t)G_quad_state_1.fields.ivrm_state);
+#endif
 }
 
 /**
@@ -917,7 +929,7 @@ void read_pgpe_produced_wof_values( void )
 {
     // Read in OCS bits from OCC Flag 0 register
     uint32_t occ_flags0 = 0;
-    occ_flags0 = in32(OCB_OCCFLG);
+    occ_flags0 = in32(OCB_OCCFLG0);
     g_wof->ocs_dirty = (uint8_t)(occ_flags0 & (OCS_PGPE_DIRTY_MASK | OCS_PGPE_DIRTY_TYPE_MASK));
 
     // INC counter for value of ocs_dirty
@@ -993,7 +1005,7 @@ void read_pgpe_produced_wof_values( void )
     if(!(G_internal_flags & INT_FLAG_DISABLE_CEFF_TRACKING))
     {
        // Average Frequency
-       l_freq = proc_pstate2freq((Pstate)l_PgpeWofValues.dw0.fields.average_frequency_pstate);
+       l_freq = proc_pstate2freq((Pstate_t)l_PgpeWofValues.dw0.fields.average_frequency_pstate);
        // value returned in kHz, save in MHz
        g_wof->c_ratio_vdd_freq = (l_freq / 1000);
        g_wof->f_clip_freq = g_wof->c_ratio_vdd_freq;
@@ -1066,6 +1078,8 @@ void calculate_core_voltage( void )
  */
 void calculate_core_leakage( void )
 {
+// TODO - RTC 209558
+#if 0
     uint16_t l_quad_cache;
     uint16_t idc_vdd = 0;
     uint16_t temperature = 0;
@@ -1229,6 +1243,7 @@ void calculate_core_leakage( void )
 
     // Finally, save the calculated leakage to amec
     g_wof->idc_vdd = idc_vdd;
+#endif
 }
 
 /**
@@ -1239,6 +1254,8 @@ void calculate_core_leakage( void )
  */
 void calculate_nest_leakage( void )
 {
+// TODO - RTC 209558
+#if 0
     // Get the VOLTVDN sensor to choose the appropriate nest voltage
     // index
     int l_nest_v_idx = get_voltage_index( g_wof->voltvdn_sensor );
@@ -1250,6 +1267,7 @@ void calculate_nest_leakage( void )
                               l_nest_v_idx,
                               g_wof->tempnest_sensor,
                               g_wof->voltvdn_sensor );
+#endif
 }
 
 /**
@@ -1314,7 +1332,10 @@ uint32_t calculate_effective_capacitance( uint32_t i_iAC_10ma,
 void calculate_ceff_ratio_vdn( void )
 {
     // Get ceff_tdp_vdn from OCCPPB
+// TODO - RTC 209558
+#if 0
     g_wof->ceff_tdp_vdn = G_oppb.ceff_tdp_vdn;
+#endif
 
     // Calculate ceff_vdn
     // iac_vdn/ (VOLTVDN^1.3 * Fnest)
@@ -1351,6 +1372,8 @@ void calculate_ceff_ratio_vdn( void )
  */
 void calculate_ceff_ratio_vdd( void )
 {
+// TODO - RTC 209558
+#if 0
     uint32_t l_raw_ceff_ratio = 0;
     static bool L_trace_not_tracking = true;
 
@@ -1517,6 +1540,7 @@ void calculate_ceff_ratio_vdd( void )
             g_wof->ceff_ratio_vdd = prevent_over_current(l_raw_ceff_ratio);
         }
     }  // else v_ratio != 0
+#endif
 }
 
 /**
@@ -1781,8 +1805,8 @@ void set_clear_wof_disabled( uint8_t i_action,
     {
         if( i_action == SET )
         {
-            // Set the vfrt state back to standby
-            g_wof->vfrt_state = STANDBY;
+            // Set the vrt state back to standby
+            g_wof->vrt_state = STANDBY;
 
             // Set the bit
             g_wof->wof_disabled |= i_bit_mask;
@@ -2200,31 +2224,31 @@ void wof_control_callback( void )
 
 
 /**
- * schedule_vfrt_request
+ * schedule_vrt_request
  *
  * Description: Called from amec_slv_common_tasks_post every 500us. Checks
- *              to see if a new VFRT table is ready to be sent to the PGPE
- *              and if so, sends it and sets the vfrt state
+ *              to see if a new VRT table is ready to be sent to the PGPE
+ *              and if so, sends it and sets the vrt state
  */
-void schedule_vfrt_request( void )
+void schedule_vrt_request( void )
 {
-    if( (g_wof->vfrt_state == NEED_TO_SCHEDULE ) &&
-        (async_request_is_idle(&G_wof_vfrt_req.request)) )
+    if( (g_wof->vrt_state == NEED_TO_SCHEDULE ) &&
+        (async_request_is_idle(&G_wof_vrt_req.request)) )
     {
-        g_wof->gpe_req_rc = pgpe_request_schedule(&G_wof_vfrt_req);
+        g_wof->gpe_req_rc = pgpe_request_schedule(&G_wof_vrt_req);
 
         // Check to make sure IPC request was scheduled correctly
         if( g_wof->gpe_req_rc != 0 )
         {
-            // If we were attempting to send the initial VFRT request,
+            // If we were attempting to send the initial VRT request,
             // reset the state machine so we can start the process
             // over
-            if( g_wof->wof_init_state == INITIAL_VFRT_SENT_WAITING )
+            if( g_wof->wof_init_state == INITIAL_VRT_SENT_WAITING )
             {
                 g_wof->wof_init_state = WOF_DISABLED;
             }
 
-            INTR_TRAC_ERR("schedule_vfrt_request: Error sending VFRT! gperc=%d"
+            INTR_TRAC_ERR("schedule_vrt_request: Error sending VRT! gperc=%d"
                             g_wof->gpe_req_rc );
 
             // Formally disable wof
@@ -2234,37 +2258,37 @@ void schedule_vfrt_request( void )
             g_wof->gpe_req_rc = 0;
         }
 
-        // Update vfrt state
-        g_wof->vfrt_state = SCHEDULED;
+        // Update vrt state
+        g_wof->vrt_state = SCHEDULED;
     }
 }
 
 
 
 /**
- * send_initial_vfrt_to_pgpe
+ * send_initial_vrt_to_pgpe
  *
- * Description: Function calculates the address of the final vfrt in Main Memory
+ * Description: Function calculates the address of the final vrt in Main Memory
  *              and subsequently sends that address to the PGPE to use via IPC
  *              command.
  */
-void send_initial_vfrt_to_pgpe( void )
+void send_initial_vrt_to_pgpe( void )
 {
     // Set the steps for VDN, VDD, and Quads to the max value
     g_wof->vdn_step_from_start  = g_wof->vdn_size - 1;
     g_wof->vdd_step_from_start  = g_wof->vdd_size - 1;
     g_wof->quad_step_from_start = MAXIMUM_QUADS - 1;
 
-    // Calculate the address of the final vfrt
-    g_wof->next_vfrt_main_mem_addr = calc_vfrt_mainstore_addr();
+    // Calculate the address of the final vrt
+    g_wof->next_vrt_main_mem_addr = calc_vrt_mainstore_addr();
 
-    // Send the final vfrt to shared OCC-PGPE SRAM.
-    send_vfrt_to_pgpe( g_wof->next_vfrt_main_mem_addr );
+    // Send the final vrt to shared OCC-PGPE SRAM.
+    send_vrt_to_pgpe( g_wof->next_vrt_main_mem_addr );
 
     // Update Init state
-    if(g_wof->wof_init_state < INITIAL_VFRT_SENT_WAITING)
+    if(g_wof->wof_init_state < INITIAL_VRT_SENT_WAITING)
     {
-        g_wof->wof_init_state = INITIAL_VFRT_SENT_WAITING;
+        g_wof->wof_init_state = INITIAL_VRT_SENT_WAITING;
     }
 
 }
@@ -2414,21 +2438,21 @@ uint32_t scale_and_interpolate( uint16_t * i_leak_arr,
 void print_data( void )
 {
     INTR_TRAC_INFO("ADDRESSES:");
-    INTR_TRAC_INFO("vfrt_tbls_main_mem_addr: 0x%08x", g_wof->vfrt_tbls_main_mem_addr);
+    INTR_TRAC_INFO("vrt_tbls_main_mem_addr: 0x%08x", g_wof->vrt_tbls_main_mem_addr);
     INTR_TRAC_INFO("pgpe_wof_state_addr:     0x%08x", g_wof->pgpe_wof_state_addr);
     INTR_TRAC_INFO("req_active_quads_addr:   0x%08x", g_wof->req_active_quads_addr);
     INTR_TRAC_INFO("quad_state_0_addr:       0x%08x", g_wof->quad_state_0_addr);
     INTR_TRAC_INFO("quad_state_1_addr:       0x%08x", g_wof->quad_state_1_addr);
     INTR_TRAC_INFO("pstate_tbl_sram_addr:    0x%08x", g_wof->pstate_tbl_sram_addr);
-    INTR_TRAC_INFO("pong buffer address:     0x%08x", (&G_sram_vfrt_pong_buffer));
-    INTR_TRAC_INFO("ping buffer address:     0x%08x", (&G_sram_vfrt_ping_buffer));
+    INTR_TRAC_INFO("pong buffer address:     0x%08x", (&G_sram_vrt_pong_buffer));
+    INTR_TRAC_INFO("ping buffer address:     0x%08x", (&G_sram_vrt_ping_buffer));
     INTR_TRAC_INFO("curr ping/pong addr:     0x%08x", g_wof->curr_ping_pong_buf);
     INTR_TRAC_INFO("next ping/pong addr:     0x%08x", g_wof->next_ping_pong_buf);
     INTR_TRAC_INFO("");
     INTR_TRAC_INFO("version:            %d", g_wof->version);
-    INTR_TRAC_INFO("vfrt_block_size:    %d",g_wof->vfrt_block_size);
-    INTR_TRAC_INFO("vfrt_blck_hdr_sz:   %d",g_wof->vfrt_blck_hdr_sz);
-    INTR_TRAC_INFO("vfrt_data_size:     %d ",g_wof->vfrt_data_size);
+    INTR_TRAC_INFO("vrt_block_size:    %d",g_wof->vrt_block_size);
+    INTR_TRAC_INFO("vrt_blck_hdr_sz:   %d",g_wof->vrt_blck_hdr_sz);
+    INTR_TRAC_INFO("vrt_data_size:     %d ",g_wof->vrt_data_size);
     INTR_TRAC_INFO("active_quads_size:  %d",g_wof->active_quads_size);
     INTR_TRAC_INFO("core_count:         %d",g_wof->core_count);
     INTR_TRAC_INFO("vdn_start:          %d",g_wof->vdn_start);
@@ -2453,7 +2477,7 @@ void print_data( void )
     INTR_TRAC_INFO("fclip_freq:         %d",g_wof->f_clip_freq);
     INTR_TRAC_INFO("vclip:              %d",g_wof->v_clip);
     INTR_TRAC_INFO("req_active_quads:   %x", g_wof->req_active_quad_update);
-    INTR_TRAC_INFO("vfrt_mm_offset:     0x%08x", g_wof->vfrt_mm_offset);
+    INTR_TRAC_INFO("vrt_mm_offset:     0x%08x", g_wof->vrt_mm_offset);
 }
 
 /**
@@ -2466,6 +2490,8 @@ void print_oppb( void )
 {
     CMDH_TRAC_INFO("Printing Contents of OCCPstateParmBlock");
 
+// TODO - RTC 209558
+#if 0
     int i;
     for(i = 0; i < VPD_PV_POINTS; i++)
     {
@@ -2476,6 +2502,7 @@ void print_oppb( void )
     }
     CMDH_TRAC_INFO("lac_tdp_vdd_turbo_10ma = %d", G_oppb.lac_tdp_vdd_turbo_10ma);
     CMDH_TRAC_INFO("lac_tdp_vdd_nominal_10ma = %d", G_oppb.lac_tdp_vdd_nominal_10ma);
+#endif
 }
 
 /**

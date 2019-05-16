@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -139,7 +139,7 @@
 /// be allocated on the stack if the stack frame could become invalid before
 /// the request completes.
 ///
-/// \todo Once all function is developed and tested, convert interrupt
+/// \future Once all function is developed and tested, convert interrupt
 /// handling to fast-mode assembler routines.
 
 #include "ssx.h"
@@ -175,19 +175,19 @@ SsxDeque G_ipc_deferred_queue;
 void
 oci_ffdc(OciFfdc* ffdc, int master_id)
 {
-// \todo, fix new pib access to dcr registers
-//    uint32_t oesr_lock_mask;
+    // \future, fix new pib access to dcr registers
+    //    uint32_t oesr_lock_mask;
 
-//    ffdc->oear.value = mfdcr(OCB_OEAR);
-//    ffdc->oesr.value = mfdcr(OCB_OESR);
+    //    ffdc->oear.value = mfdcr(OCB_OEAR);
+    //    ffdc->oesr.value = mfdcr(OCB_OESR);
 
-//    oesr_lock_mask = 0x30000000 >> (4 * master_id);
-//    if (ffdc->oesr.value & oesr_lock_mask) {
-//        ffdc->mine = 1;
-//        mtdcr(OCB_OESR, oesr_lock_mask);
-//    } else {
-//        ffdc->mine = 0;
-//    }
+    //    oesr_lock_mask = 0x30000000 >> (4 * master_id);
+    //    if (ffdc->oesr.value & oesr_lock_mask) {
+    //        ffdc->mine = 1;
+    //        mtdcr(OCB_OESR, oesr_lock_mask);
+    //    } else {
+    //        ffdc->mine = 0;
+    //    }
 }
 
 
@@ -476,7 +476,7 @@ async_handler(AsyncQueue* queue)
 /// specified. The caller will need to examine the request state if necessary
 /// to determine whether the request failed, was cancelled or timed out.
 ///
-/// \todo Consider making the critical section priority depend on the device
+/// \future Consider making the critical section priority depend on the device
 /// queue priority here, by adding a priority field to the queue. Without this
 /// we always have to run the async_handler() in an SSX_CRITICAL critical
 /// section.
@@ -973,6 +973,7 @@ async_callback_handler_full(void* arg, SsxIrqId irq, int priority)
 
         if (!request)
         {
+            ssx_irq_status_clear(irq);
             break;
         }
 
@@ -995,7 +996,6 @@ async_callback_handler_full(void* arg, SsxIrqId irq, int priority)
 
         if (!msg)
         {
-            ssx_irq_status_clear(irq);
             break;
         }
 

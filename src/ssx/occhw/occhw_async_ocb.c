@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -175,8 +175,7 @@ ocb_ffdc(int channel)
         else
         {
 
-//TODO: Need to get OCBCSRN another way besides scom
-//            getscom(OCB_OCBCSRN(channel), &(ffdc->csr.value));
+            getscom(OCB_OCBCSRN(channel), &(ffdc->csr.value));
 
             ffdc->shbr.value = in32(OCB_OCBSHBRN(channel));
             ffdc->shcs.value = in32(OCB_OCBSHCSN(channel));
@@ -192,8 +191,9 @@ ocb_ffdc(int channel)
 
         }
 
-//TODO: Need to get OCBLFIR another way
-//        getscom(OCB_OCCLFIR, &(ffdc->fir.value));
+        // TODO OCB_OCCLFIR not in P10
+        ffdc->fir.value = 0;
+        //getscom(OCB_OCCLFIR, &(ffdc->fir.value));
 
         oci_ffdc(&(ffdc->oci_ffdc), OCI_MASTER_ID_OCB);
 
@@ -735,11 +735,11 @@ ocb_read_engine_reset(OcbQueue* queue, size_t cq_length, int protocol)
 
     if (protocol == OCB_INTERRUPT_PROTOCOL_LAZY)
     {
-        cs.fields.push_intr_action = OCB_INTR_ACTION_FULL;
+        cs.fields.push_intr_action01 = OCB_INTR_ACTION_FULL;
     }
     else
     {
-        cs.fields.push_intr_action = OCB_INTR_ACTION_NOT_EMPTY;
+        cs.fields.push_intr_action01 = OCB_INTR_ACTION_NOT_EMPTY;
     }
 
     cs.fields.push_length = cq_length - 1;
@@ -791,11 +791,11 @@ ocb_write_engine_reset(OcbQueue* queue, size_t cq_length, int protocol)
 
     if (protocol == OCB_INTERRUPT_PROTOCOL_LAZY)
     {
-        cs.fields.pull_intr_action = OCB_INTR_ACTION_EMPTY;
+        cs.fields.pull_intr_action01 = OCB_INTR_ACTION_EMPTY;
     }
     else
     {
-        cs.fields.pull_intr_action = OCB_INTR_ACTION_NOT_FULL;
+        cs.fields.pull_intr_action01 = OCB_INTR_ACTION_NOT_FULL;
     }
 
     cs.fields.pull_length = cq_length - 1;
@@ -1019,18 +1019,18 @@ SSX_IRQ_FAST2FULL(ocb_error_handler, ocb_error_handler_full);
 void
 ocb_error_handler_full(void* arg, SsxIrqId irq, int priority)
 {
-    ocb_occlfir_t fir = {0};
-    ocb_occlfir_t fir_temp;
+#if defined(__TODO__) //  OCB_OCCLFIR no longer exists in P10 TODO
+    occ_scom_occlfir_t fir;
+    occ_scom_occlfir_t fir_temp;
     int channel;
     AsyncQueue* queue;
 
     ssx_irq_status_clear(irq);
 
-// TODO: Need to get OCCLFIR another way
-//    getscom(OCB_OCCLFIR, &(fir.value));
+    getscom(OCB_OCCLFIR, &(fir.value));
 
     fir_temp.value = 0;
-    fir_temp.fields.ocb_idc0_error = 1;
+    fir_temp.fields.ocb_idc_error = 1;
 
     for (channel = 0; channel < OCB_INDIRECT_CHANNELS; channel++)
     {
@@ -1061,15 +1061,17 @@ ocb_error_handler_full(void* arg, SsxIrqId irq, int priority)
         }
     }
 
-    if (fir.fields.ocb_db_oci_timeout |
-        fir.fields.ocb_db_oci_read_data_parity |
-        fir.fields.ocb_db_oci_slave_error |
-        fir.fields.ocb_pib_addr_parity_err |
-        fir.fields.ocb_db_pib_data_parity_err)
-    {
-
-        ocb_ffdc(-1);
-    }
+// TODO  P10 These bits are no longer in the fir
+//    if (fir.fields.ocb_db_oci_timeout |
+//        fir.fields.ocb_db_oci_read_data_parity |
+//        fir.fields.ocb_db_oci_slave_error |
+//        fir.fields.ocb_pib_addr_parity_err |
+//        fir.fields.ocb_db_pib_data_parity_err)
+//    {
+//
+//        ocb_ffdc(-1);
+//    }
+#endif
 }
 
 

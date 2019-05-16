@@ -55,11 +55,11 @@
 #include "occhw_shared_data.h"
 #include <pgpe_shared.h>
 #include <gpe_register_addresses.h>
-#include <p9_pstates_occ.h>
+#include <pstates_occ.H>
 #include <wof.h>
 #include "pgpe_service_codes.h"
 #include <common.h>
-#include "p9_memmap_occ_sram.h"
+//#include "p9_memmap_occ_sram.h"
 #include "pstate_pgpe_occ_api.h"
 
 // Used to indicate if OCC was started during IPL, in which case OCC's only
@@ -75,8 +75,8 @@ bool G_ipl_time = false;
 // PGPE shared SRAM or reading directly from AVSbus
 bool G_pgpe_shared_sram_V_I_readings = false;
 
-// timeout, as number of WOF ticks, for PGPE VFRT command
-uint8_t G_max_vfrt_chances = MAX_VFRT_CHANCES_EVERY_8TH_TICK;
+// timeout, as number of WOF ticks, for PGPE VRT command
+uint8_t G_max_vrt_chances = MAX_VRT_CHANCES_EVERY_8TH_TICK;
 // timeout, as number of WOF ticks, for PGPE WOF Control command
 uint8_t G_max_wof_control_chances = MAX_WOF_CONTROL_CHANCES_EVERY_8TH_TICK;
 
@@ -112,7 +112,7 @@ IMAGE_HEADER (G_mainAppImageHdr,__ssx_boot,MAIN_APP_ID,ID_NUM_INVALID);
 
 ppmr_header_t G_ppmr_header;       // PPMR Header layout format
 pgpe_header_data_t G_pgpe_header;  // Selected fields from PGPE Header
-OCCPstateParmBlock G_oppb;         // OCC Pstate Parameters Block Structure
+OCCPstateParmBlock_t G_oppb;       // OCC Pstate Parameters Block Structure
 extern uint16_t G_proc_fmax_mhz;   // max(turbo,uturbo) frequencies
 extern volatile int G_ss_pgpe_rc;
 
@@ -186,7 +186,7 @@ GpeRequest G_fir_collection_request;
 void check_runtime_environment(void)
 {
     uint64_t flags;
-    flags = in64(OCB_OCCFLG);
+    flags = in64(OCB_OCCFLG0);
 
     // NOTE: The lower 32 bits of this register have no latches on
     //       physical hardware and will return 0s, so we can use
@@ -205,6 +205,12 @@ void check_runtime_environment(void)
         G_shared_gpe_data.spipss_spec_p9 =
             (0 != (flags & 0x0000000000000002) ) ? FALSE : TRUE;
 
+        // TODO - RTC 213675 - determine what is needed
+        if (G_shared_gpe_data.spipss_spec_p9)
+        {
+            MAIN_TRAC_ERR("CJC: spipss_spec_p9 was true.  Clearing it");
+            G_shared_gpe_data.spipss_spec_p9 = FALSE;
+        }
     }
     else
     {
@@ -305,7 +311,8 @@ void create_tlb_entry(uint32_t address, uint32_t size)
  */
 void externalize_oppb( void )
 {
-
+    // TODO - RTC 209558
+#if 0
     g_amec->wof.good_quads_per_sort = G_oppb.iddq.good_quads_per_sort;
     g_amec->wof.good_normal_cores_per_sort = G_oppb.iddq.good_normal_cores_per_sort;
     g_amec->wof.good_caches_per_sort = G_oppb.iddq.good_caches_per_sort;
@@ -335,8 +342,8 @@ void externalize_oppb( void )
         g_amec->wof.quad5CoresCachesOnT[i] = G_oppb.iddq.avgtemp_quad_good_cores_on[4][i];
         g_amec->wof.quad6CoresCachesOnT[i] = G_oppb.iddq.avgtemp_quad_good_cores_on[5][i];
         g_amec->wof.avgtemp_vdn[i] = G_oppb.iddq.avgtemp_vdn[i];
-
     }
+#endif
 }
 
 /*
@@ -359,12 +366,12 @@ void read_wof_header(void)
 
     // Read active quads address, wof tables address, and wof tables len
     g_amec->wof.req_active_quads_addr   = G_pgpe_header.requested_active_quad_sram_addr;
-    g_amec->wof.vfrt_tbls_main_mem_addr = PPMR_ADDRESS_HOMER+WOF_TABLES_OFFSET;
-    g_amec->wof.vfrt_tbls_len           = G_pgpe_header.wof_tables_length;
+    g_amec->wof.vrt_tbls_main_mem_addr = PPMR_ADDRESS_HOMER+WOF_TABLES_OFFSET;
+    g_amec->wof.vrt_tbls_len           = G_pgpe_header.wof_tables_length;
     g_amec->wof.pgpe_wof_state_addr     = G_pgpe_header.wof_state_address;
     g_amec->wof.pstate_tbl_sram_addr    = G_pgpe_header.occ_pstate_table_sram_addr;
 
-    MAIN_TRAC_INFO("read_wof_header() 0x%08X", g_amec->wof.vfrt_tbls_main_mem_addr);
+    MAIN_TRAC_INFO("read_wof_header() 0x%08X", g_amec->wof.vrt_tbls_main_mem_addr);
 
     // Read in quad state addresses here once
     g_amec->wof.quad_state_0_addr = G_pgpe_header.actual_quad_status_sram_addr;
@@ -372,7 +379,7 @@ void read_wof_header(void)
                                     sizeof(uint64_t); //skip quad state 0
 
     // Set some of the fields in the pgpe header struct for next set of calcs
-    G_pgpe_header.wof_tables_addr = g_amec->wof.vfrt_tbls_main_mem_addr;
+    G_pgpe_header.wof_tables_addr = g_amec->wof.vrt_tbls_main_mem_addr;
 
     if (G_pgpe_header.wof_tables_addr != 0 &&
         G_pgpe_header.wof_tables_addr%128 == 0)
@@ -385,7 +392,7 @@ void read_wof_header(void)
             // Create request
             l_ssxrc = bce_request_create(&l_wof_header_req,              // block copy object
                                          &G_pba_bcde_queue,              // main to sram copy engine
-                                         g_amec->wof.vfrt_tbls_main_mem_addr,// mainstore address
+                                         g_amec->wof.vrt_tbls_main_mem_addr,// mainstore address
                                          (uint32_t) &G_temp_bce_buff,    // SRAM start address
                                          MIN_BCE_REQ_SIZE,               // size of copy
                                          SSX_WAIT_FOREVER,               // no timeout
@@ -438,12 +445,12 @@ void read_wof_header(void)
                 break;
             }
 
-            MAIN_TRAC_INFO("MAIN: VFRT block size %d", G_wof_header.vfrt_block_size);
+            MAIN_TRAC_INFO("MAIN: VRT block size %d", G_wof_header.vrt_block_size);
              // Make wof header data visible to amester
             g_amec->wof.version              = G_wof_header.version;
-            g_amec->wof.vfrt_block_size      = 256;
-            g_amec->wof.vfrt_blck_hdr_sz     = G_wof_header.vfrt_blck_hdr_sz;
-            g_amec->wof.vfrt_data_size       = G_wof_header.vfrt_data_size;
+            g_amec->wof.vrt_block_size      = 256;
+            g_amec->wof.vrt_blck_hdr_sz     = G_wof_header.vrt_blck_hdr_sz;
+            g_amec->wof.vrt_data_size       = G_wof_header.vrt_data_size;
             g_amec->wof.active_quads_size    = G_wof_header.active_quads_size;
             g_amec->wof.core_count           = G_wof_header.core_count;
             g_amec->wof.vdn_start            = G_wof_header.vdn_start;
@@ -538,6 +545,9 @@ bool read_pgpe_header(void)
         {
             G_pgpe_header.shared_sram_addr = in32(PGPE_HEADER_ADDR + PGPE_SHARED_SRAM_ADDR_OFFSET);
             G_pgpe_header.shared_sram_length = in32(PGPE_HEADER_ADDR + PGPE_SHARED_SRAM_LEN_OFFSET);
+            G_pgpe_header.global_pstate_parm_block_sram_addr = in32(PGPE_HEADER_ADDR + PGPE_GLOBAL_PSTATE_PARM_BLOCK_SRAM_ADDR);
+            G_pgpe_header.global_pstate_parm_block_homer_offset = in32(PGPE_HEADER_ADDR + PGPE_GLOBAL_PSTATE_PARM_BLOCK_OFFSET);
+            G_pgpe_header.global_pstate_parm_block_length = in32(PGPE_HEADER_ADDR + PGPE_GLOBAL_PSTATE_PARM_BLOCK_LENGTH);
             G_pgpe_header.generated_pstate_table_homer_offset = in32(PGPE_HEADER_ADDR + PGPE_GENERATED_PSTATE_TBL_ADDR_OFFSET);
             G_pgpe_header.generated_pstate_table_length = in32(PGPE_HEADER_ADDR + PGPE_GENERATED_PSTATE_TBL_SZ_OFFSET);
             G_pgpe_header.occ_pstate_table_sram_addr = in32(PGPE_HEADER_ADDR + PGPE_OCC_PSTATE_TBL_ADDR_OFFSET);
@@ -634,7 +644,7 @@ bool read_pgpe_header(void)
 
                     // this also means we will be running WOF every tick, update WOF timeouts
                     // for runnning every tick to keep same timeout
-                    G_max_vfrt_chances = MAX_VFRT_CHANCES_EVERY_TICK;
+                    G_max_vrt_chances = MAX_VRT_CHANCES_EVERY_TICK;
                     G_max_wof_control_chances = MAX_WOF_CONTROL_CHANCES_EVERY_TICK;
                 }
             }
@@ -855,7 +865,7 @@ bool read_oppb_params()
     const uint32_t oppb_address = PPMR_ADDRESS_HOMER + G_ppmr_header.oppb_offset;
 
     MAIN_TRAC_INFO("read_oppb_params(0x%08X)", oppb_address);
-    create_tlb_entry(oppb_address, sizeof(OCCPstateParmBlock));
+    create_tlb_entry(oppb_address, sizeof(OCCPstateParmBlock_t));
 
     do{
         // use block copy engine to read the OPPB header
@@ -866,7 +876,7 @@ bool read_oppb_params()
                                      &G_pba_bcde_queue,                   // mainstore to sram copy engine
                                      oppb_address,                        // mainstore address
                                      (uint32_t) &G_oppb,                  // sram starting address
-                                     (size_t) sizeof(OCCPstateParmBlock), // size of copy
+                                     (size_t) sizeof(OCCPstateParmBlock_t), // size of copy
                                      SSX_WAIT_FOREVER,                    // no timeout
                                      NULL,                                // no call back
                                      NULL,                                // no call back arguments
@@ -909,11 +919,11 @@ bool read_oppb_params()
             break;
         }
 
-        if (OPPB_MAGIC_NUMBER_10 != G_oppb.magic)
+        if (OPPB_MAGIC_NUMBER_10 != G_oppb.magic.value)
         {
             // The magic number is invalid .. Invalid or corrupt OPPB image header
             MAIN_TRAC_ERR("read_oppb_header: Invalid OPPB magic number: 0x%08X%08X",
-                          WORD_HIGH(G_oppb.magic), WORD_LOW(G_oppb.magic));
+                          WORD_HIGH(G_oppb.magic.value), WORD_LOW(G_oppb.magic.value));
             /* @
              * @errortype
              * @moduleid    READ_OPPB_PARAMS
@@ -924,8 +934,8 @@ bool read_oppb_params()
              * @devdesc     Invalid magic number in OPPB header
              */
             l_reasonCode = INVALID_MAGIC_NUMBER;
-            userdata1 = WORD_HIGH(G_oppb.magic);
-            userdata2 = WORD_LOW(G_oppb.magic);
+            userdata1 = WORD_HIGH(G_oppb.magic.value);
+            userdata2 = WORD_LOW(G_oppb.magic.value);
             break;
         }
 
@@ -958,6 +968,10 @@ bool read_oppb_params()
                           G_oppb.frequency_min_khz, G_oppb.frequency_max_khz,
                           G_oppb.frequency_step_khz, G_oppb.pstate_min);
         // Confirm whether we have wof support
+        // TODO - RTC 209558 - wof_enabled is part of GPPB: GlobalPstateParmBlock_t (attr.wof_enabled)
+#if 1
+        MAIN_TRAC_INFO("read_oppb_header: WOF is disabled");
+#else
         if(!(G_oppb.wof.wof_enabled))
         {
             MAIN_TRAC_INFO("OPPB has WOF disabled.(%d)",
@@ -971,6 +985,7 @@ bool read_oppb_params()
             MAIN_TRAC_INFO("OPPB has WOF enabled(%d)",
                     G_oppb.wof.wof_enabled);
         }
+#endif
 
     } while (0);
 
@@ -1016,6 +1031,81 @@ bool read_oppb_params()
 /*
  * Function Specification
  *
+ * Name: read_gppb_header
+ *
+ * Description: Read GPPB header
+ *
+ * Returns: TRUE if read was successful, else FALSE
+ *
+ * End Function Specification
+ */
+bool read_gppb_header(void)
+{
+    uint32_t l_reasonCode = 0;
+    uint32_t l_extReasonCode = OCC_NO_EXTENDED_RC;
+    uint32_t userdata1 = 0;
+    uint32_t userdata2 = 0;
+    uint64_t magic_number = 0;
+
+    MAIN_TRAC_INFO("read_gppb_header(0x%08X)", G_pgpe_header.global_pstate_parm_block_sram_addr);
+    do
+    {
+        // verify the validity of the magic number
+        magic_number = in64(G_pgpe_header.global_pstate_parm_block_sram_addr);
+        if (PGPE_MAGIC_NUMBER_10 == magic_number)
+        {
+        }
+        else
+        {
+            // The Magic number is invalid .. Invalid or corrupt PGPE image header
+            MAIN_TRAC_ERR("read_gppb_header: Invalid PGPE Magic number. Address[0x%08X], Magic Number[0x%08X%08X]",
+                          PGPE_HEADER_ADDR, WORD_HIGH(magic_number), WORD_LOW(magic_number));
+            /* @
+             * @errortype
+             * @moduleid    READ_GPPB_HEADER
+             * @reasoncode  INVALID_MAGIC_NUMBER
+             * @userdata1   High order 32 bits of retrieved PGPE magic number
+             * @userdata2   Low order 32 bits of retrieved PGPE magic number
+             * @userdata4   OCC_NO_EXTENDED_RC
+             * @devdesc     Invalid magic number in PGPE header
+             */
+            l_reasonCode = INVALID_MAGIC_NUMBER;
+            userdata1 = WORD_HIGH(magic_number);
+            userdata2 = WORD_LOW(magic_number);
+            break;
+        }
+    } while (0);
+
+    if ( l_reasonCode )
+    {
+        errlHndl_t l_errl = createErrl(READ_GPPB_HEADER,         //modId
+                                       l_reasonCode,             //reasoncode
+                                       l_extReasonCode,          //Extended reason code
+                                       ERRL_SEV_UNRECOVERABLE,   //Severity
+                                       NULL,                     //Trace Buf
+                                       DEFAULT_TRACE_SIZE,       //Trace Size
+                                       userdata1,                //userdata1
+                                       userdata2);               //userdata2
+
+        // Callout firmware
+        addCalloutToErrl(l_errl,
+                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                         ERRL_COMPONENT_ID_FIRMWARE,
+                         ERRL_CALLOUT_PRIORITY_HIGH);
+
+        REQUEST_RESET(l_errl);
+        return FALSE;
+    }
+
+    // Success
+    return TRUE;
+
+} // end read_gppb_header()
+
+
+/*
+ * Function Specification
+ *
  * Name: read_hcode_headers
  *
  * Description: Read and save hcode header data
@@ -1036,8 +1126,7 @@ void read_hcode_headers()
         if(G_present_cores == 0)
         {
             TRAC_INFO("read_hcode_headers: No configured cores detected."
-                      " Skipping read_oppb_params(), read_pgpe_header(),"
-                      " and read_wof_header()");
+                      " Skipping OPPB, PGPE, WOF, and GPPB headers");
             set_clear_wof_disabled( SET,
                                     WOF_RC_NO_CONFIGURED_CORES,
                                     ERC_WOF_NO_CONFIGURED_CORES );
@@ -1052,6 +1141,10 @@ void read_hcode_headers()
             // Read PGPE header file, extract OCC/PGPE Shared SRAM address and size,
             if (read_pgpe_header() == FALSE) break;
             CHECKPOINT(PGPE_IMAGE_HEADER_READ);
+
+            // Read Global Pstate Parameter Block header
+            if (read_gppb_header() == FALSE) break;
+            CHECKPOINT(GPPB_IMAGE_HEADER_READ);
 
             // Extract important WOF data into global space
             read_wof_header();
@@ -1084,7 +1177,8 @@ void read_hcode_headers()
  */
 void gpe_reset(uint32_t instance_id)
 {
-
+    // TODO - RTC 213672 - SRAM addresses not found and regs need to be per GPE
+#if 0
 #define XCR_CMD_HRESET      0x60000000
 #define XCR_CMD_TOGGLE_XSR  0x40000000
 #define XCR_CMD_RESUME      0x20000000
@@ -1097,12 +1191,13 @@ void gpe_reset(uint32_t instance_id)
 
     }
 
-    out32(GPE_GPENIVPR(instance_id), l_gpe_sram_addr);
+    out32(GPE_OCB_GPEIVPR, l_gpe_sram_addr);
 
-    out32(GPE_GPENXIXCR(instance_id), XCR_CMD_HRESET);
-    out32(GPE_GPENXIXCR(instance_id), XCR_CMD_TOGGLE_XSR);
-    out32(GPE_GPENXIXCR(instance_id), XCR_CMD_TOGGLE_XSR);
-    out32(GPE_GPENXIXCR(instance_id), XCR_CMD_RESUME);
+    out32(GPE_OCB_GPEXIXCR, XCR_CMD_HRESET);
+    out32(GPE_OCB_GPEXIXCR, XCR_CMD_TOGGLE_XSR);
+    out32(GPE_OCB_GPEXIXCR, XCR_CMD_TOGGLE_XSR);
+    out32(GPE_OCB_GPEXIXCR, XCR_CMD_RESUME);
+#endif
 }
 
 /*
@@ -1110,9 +1205,11 @@ void gpe_reset(uint32_t instance_id)
  */
 void set_shared_gpe_data()
 {
+    // TODO - RTC 213672 - OFFSET not found and regs need to be per GPE
+#if 0
     uint32_t sram_addr;
 
-    sram_addr = in32(GPE_GPENIVPR(OCCHW_INST_ID_GPE0));
+    sram_addr = in32(GPE_OCB_GPEIVPR);
     if(0 != sram_addr)
     {
         sram_addr += GPE_DEBUG_PTRS_OFFSET;
@@ -1123,7 +1220,7 @@ void set_shared_gpe_data()
             *((uint32_t *)(sram_addr + PK_TRACE_SIZE_OFFSET));
     }
 
-    sram_addr = in32(GPE_GPENIVPR(OCCHW_INST_ID_GPE1));
+    sram_addr = in32(GPE_OCB_GPEIVPR);
     if(0 != sram_addr)
     {
         sram_addr += GPE_DEBUG_PTRS_OFFSET;
@@ -1134,7 +1231,7 @@ void set_shared_gpe_data()
             *((uint32_t *)(sram_addr + PK_TRACE_SIZE_OFFSET));
     }
 
-    sram_addr = in32(GPE_GPENIVPR(OCCHW_INST_ID_GPE2));
+    sram_addr = in32(GPE_OCB_GPEIVPR);
     if(0 != sram_addr)
     {
         sram_addr += PGPE_DEBUG_PTRS_OFFSET;
@@ -1145,7 +1242,7 @@ void set_shared_gpe_data()
             *((uint32_t *)(sram_addr + PK_TRACE_SIZE_OFFSET));
     }
 
-    sram_addr = in32(GPE_GPENIVPR(OCCHW_INST_ID_GPE3));
+    sram_addr = in32(GPE_OCB_GPEIVPR);
     if(0 != sram_addr)
     {
         sram_addr += SGPE_DEBUG_PTRS_OFFSET;
@@ -1155,6 +1252,7 @@ void set_shared_gpe_data()
         G_shared_gpe_data.sgpe_tb_sz =
             *((uint32_t *)(sram_addr + PK_TRACE_SIZE_OFFSET));
     }
+#endif
 }
 
 /*
@@ -1609,29 +1707,36 @@ void Main_thread_routine(void *private)
 
     if (G_simics_environment)
     {
+        read_hcode_headers();
+
         // TEMP Hack to enable Active State, until PGPE is ready
         G_proc_pstate_status = PSTATES_ENABLED;
 
+        if(G_ppmr_header.magic_number == 0)
+        {
+            MAIN_TRAC_INFO("Main_thread_routine: Could not load hcode_headers\n");
+            CHECKPOINT(OPPB_IMAGE_HEADER_READ);
 
-        // Temp hack to Set up Key Globals for use by proc_freq2pstate functions
-        //G_oppb.frequency_max_khz  = 4322500;
-        //G_oppb.frequency_min_khz  = 2028250;
-        G_oppb.frequency_max_khz  = 2600000;
-        G_oppb.frequency_min_khz  = 2000000;
-        G_oppb.frequency_step_khz = 16667;
-        G_oppb.pstate_min         = PMAX +
-            ((G_oppb.frequency_max_khz - G_oppb.frequency_min_khz)/G_oppb.frequency_step_khz);
+            // Temp hack to Set up Key Globals for use by proc_freq2pstate functions
+            //G_oppb.frequency_max_khz  = 4322500;
+            //G_oppb.frequency_min_khz  = 2028250;
+            G_oppb.frequency_max_khz  = 2600000;
+            G_oppb.frequency_min_khz  = 2000000;
+            G_oppb.frequency_step_khz = 16667;
+            G_oppb.pstate_min         = PMAX +
+                ((G_oppb.frequency_max_khz - G_oppb.frequency_min_khz)/G_oppb.frequency_step_khz);
 
-        G_proc_fmax_mhz   = G_oppb.frequency_max_khz / 1000;
+            G_proc_fmax_mhz   = G_oppb.frequency_max_khz / 1000;
 
 
-        // Set globals used by amec for pcap calculation
-        // could have used G_oppb.frequency_step_khz in PCAP calculations
-        // instead, but using a separate varaible speeds up PCAP related
-        // calculations significantly, by eliminating division operations.
-        G_mhz_per_pstate = G_oppb.frequency_step_khz/1000;
+            // Set globals used by amec for pcap calculation
+            // could have used G_oppb.frequency_step_khz in PCAP calculations
+            // instead, but using a separate varaible speeds up PCAP related
+            // calculations significantly, by eliminating division operations.
+            G_mhz_per_pstate = G_oppb.frequency_step_khz/1000;
 
-        TRAC_INFO("Main_thread_routine: Pstate Key globals initialized to default values");
+            TRAC_INFO("Main_thread_routine: Pstate Key globals initialized to default values");
+        }
     }
     else
     {
@@ -2065,6 +2170,7 @@ int main(int argc, char **argv)
         MAIN_TRAC_INFO("ipl flag is NOT set");
     }
 
+    check_runtime_environment();
     if (G_simics_environment == FALSE)
     {
         MAIN_TRAC_INFO("Currently not running in Simics environment");
@@ -2085,10 +2191,10 @@ int main(int argc, char **argv)
     if(!G_ipl_time)
     {
         // Trace what happened before ssx initialization
-        MAIN_TRAC_INFO("HOMER accessed, rc=%d, version=%d, ssx_rc=%d",
+        MAIN_TRAC_INFO("HOMER accessed, rc=%d, version=0x%08X, ssx_rc=%d",
                        l_homerrc, l_homer_version, l_ssxrc);
 
-        MAIN_TRAC_INFO("HOMER accessed, rc=%d, nest_freq=%d, ssx_rc=%d",
+        MAIN_TRAC_INFO("HOMER accessed, rc=%d, nest_freq=%u Hz, ssx_rc=%d",
                        l_homerrc2, l_tb_freq_hz, l_ssxrc2);
 
         // Handle any errors from the version access
@@ -2257,4 +2363,3 @@ int main(int argc, char **argv)
 
     return 0;
 }
-

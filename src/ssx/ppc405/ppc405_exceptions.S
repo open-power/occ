@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -22,7 +22,7 @@
 /* permissions and limitations under the License.                         */
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
-        
+
 /// \file ppc405_exceptions.S
 /// \brief PPC405 exception vector area.
 ///
@@ -43,7 +43,7 @@
 ///
 /// .vectors_0100 - From 0x0100 to 0x081f.  The beginning of the table through
 ///                 the large space prior to the system call vector.
-/// 
+///
 /// .vectors_0c00 - From 0x0c00 to 0x0eff.  This is a moderately large area
 ///                 after the system call vector.
 ///
@@ -68,7 +68,7 @@
 
 ## declare and initializes global variables that hold external irq config data
         .occhw_irq_cfg_bitmaps
-        
+
 ### ****************************************************************************
 ### .vectors_0000 - Empty section ( Image header will be placed in this section
 ###                 from the linker command file )
@@ -81,9 +81,29 @@ __vectors:
 __vectors_0000:
 
 #ifndef SSX_NO_BOOT_VECTOR0
-        // FIXME: This is just a quick hack to get SSX running on simics -- grm
+        ### PM Simics and HWP p9_pm_occ_control (boot from sram) jump to
+        ### offset 0 to boot 405.
         .global __ssx_boot
         b __ssx_boot
+        .long 0
+        .long 0
+        .long 0
+        .long 0
+        .long 0
+        .long 0
+        .long 0
+        .long 0
+        .long 0
+        .long 0
+        .long 0
+        .long 0
+        .long 0
+        .long 0
+        .long 0
+        ### offset 0x40
+        b __ssx_boot
+        .long 0xfff40000
+
 #endif
 
 ### ****************************************************************************
@@ -102,8 +122,8 @@ __vectors_0100:
 __critical_interrupt:
 
         ## The critical interrupt handler entry point is re-entrant - A handler
-        ## may allow preemption, which could cause another entry here.  
-        
+        ## may allow preemption, which could cause another entry here.
+
         ## Entry invariants:
         ## 1. Critical interupts are disabled;
         ## 2. The SP points to a thread stack, the non-critical stack or
@@ -111,7 +131,7 @@ __critical_interrupt:
 
         ## Since fast-mode handlers can not use SSX services or alter the
         ## machine context, the exit of a fast mode handler is a simple RF(C)I.
-        
+
         ## Begin by pushing the fast context on the stack.
 
         _ssx_fast_ctx_push SSX_CRITICAL
@@ -119,16 +139,16 @@ __critical_interrupt:
         ## Load critical status 0 and the handler array base address.  Check
         ## for interrupts pending in status register 0 while the IRQ is
         ## computed and R5 is loaded with the critical flag.
-        
+
         _lwzi   %r3, %r3, OCB_OCISR0
         _liw    %r6, __ppc405_irq_handlers
         cmpwi   %r3, 0
         cntlzw  %r4, %r3
         li      %r5, SSX_CRITICAL
         bne+    critical_irq_found
-        
+
         ## No IRQ pending in interrupt set 0.  Try set 1.
-        
+
         _lwzi   %r3, %r3, OCB_OCISR1
         cmpwi   %r3, 0
         cntlzw  %r4, %r3
@@ -145,7 +165,7 @@ __critical_interrupt:
         ## R4 = irq
         ## R5 = SSX_CRITICAL
 
-critical_irq_found:     
+critical_irq_found:
 
         _save_update_kernel_context SSX_CRITICAL, %r4, %r7
         slwi    %r3, %r4, 3
@@ -153,20 +173,20 @@ critical_irq_found:
         lwz     %r3, 4(%r6)
         mtlr    %r7
         blrl
-                
-        ## Pop the stack/RFCI when (if) it returns here. 
+
+        ## Pop the stack/RFCI when (if) it returns here.
 
 fast_exit_critical:
-        
+
         _ssx_fast_ctx_pop_exit SSX_CRITICAL
 
         ## This is a phantom interrupt - we got interrupted but no status bits
         ## are set. The interrupt is marked as #64. The register used for the
         ## handler table address (R6) is set to the special structure for the
         ## phantom interrupt, with it's address adjusted to make it appear to
-        ## be the 64th entry in the table. 
+        ## be the 64th entry in the table.
 
-critical_phantom:       
+critical_phantom:
 
         _liw    %r6, __ppc405_phantom_irq
         subi    %r6, %r6, (64 * 8)
@@ -185,11 +205,11 @@ __machine_check:
         .org    __machine_check + 0x20
 
         .global __ssx_irq_fast2full
-__ssx_irq_fast2full:    
-        
+__ssx_irq_fast2full:
+
         ## Convert a fast-mode to a full-mode interrupt by saving the
         ## (volatile - fast) context, and switching to the appropriate system
-        ## stack. 
+        ## stack.
 
         ## Entry invariants:
         ## 1. The SP/stack must be exactly as it was when the fast-mode
@@ -205,7 +225,7 @@ __ssx_irq_fast2full:
         ## Start by pushing the (volatile - fast) context. Technically we also
         ## need to save the CR as our contract with the handler is not to
         ## disturb any of its register state.
-        
+
         _ssx_vol_fast_ctx_push  SSX_IRQ_CONTEXT
         mfcr    %r12
 
@@ -223,17 +243,17 @@ __ssx_irq_fast2full:
         ## and there's nothing left to do.
 
         cmpwi   %r9, 1
-        bne     1f      
+        bne     1f
 
         ## Otherwise, save the current stack pointer and switch to the critical
-        ## stack. 
-        
+        ## stack.
+
         _stwsd  %r1, __ssx_saved_sp_critical
         _lwzsd  %r1, __ssx_critical_stack
 
         ## Restore the CR and return to the now full-mode handler.
 
-1:      
+1:
         mtcr    %r12
         blr
 
@@ -247,7 +267,7 @@ __ssx_irq_fast2full:
 
         .cache_align
 fast2full_noncritical:
-        
+
         extrwi  %r9, %r8, 8, 8
         cmpwi   %r9, 1
         bne     1f
@@ -255,16 +275,16 @@ fast2full_noncritical:
         _stwsd  %r1, __ssx_saved_sp_noncritical
         _lwzsd  %r1, __ssx_noncritical_stack
 
-1:      
+1:
 
         .if     (SSX_ERROR_CHECK_KERNEL | SSX_ERROR_CHECK_API)
         cmpwi   %r9, 0
         bne     2f
         _ssx_panic PPC405_IRQ_FAST2FULL_INVARIANT
-2:      
-        .endif  
+2:
+        .endif
 
-        mtcr    %r12    
+        mtcr    %r12
         blr
 
 
@@ -280,7 +300,7 @@ __data_storage:
         .org    __data_storage + 0x20
 
         .global __ssx_irq_full_mode_exit
-__ssx_irq_full_mode_exit:       
+__ssx_irq_full_mode_exit:
 
         ## Exit a full-mode handler.
 
@@ -300,7 +320,7 @@ __ssx_irq_full_mode_exit:
         ## guarantee that we are exiting from a critical interrupt
         ## handler. This test is safe to make even if critical interrupts are
         ## enabled, because the variable is set exactly once in a critical
-        ## section. 
+        ## section.
 
         mfusprg0        %r3
         extrwi. %r4, %r3, 8, 0
@@ -321,7 +341,7 @@ __ssx_irq_full_mode_exit:
 
         _lwzsd  %r1, __ssx_saved_sp_critical
 
-full_exit_critical:     
+full_exit_critical:
         _ssx_vol_fast_ctx_pop   SSX_IRQ_CONTEXT, SSX_CRITICAL
         b       fast_exit_critical
 
@@ -347,11 +367,11 @@ __ssx_idle_thread:
 
         ## The idle thread 'uses' the non-critical stack.  Any register context
         ## pushed here is redundant and is wiped out/ignored every time the
-        ## idle thread is re-scheduled. 
-        
+        ## idle thread is re-scheduled.
+
         ## The idle thread simply establishes a default machine context and
         ## enters the wait-enable state.  The idle thread is always entered
-        ## with non-critical interrupts disabled.  
+        ## with non-critical interrupts disabled.
         ##
         ## The kernel context is initialized to indicate that the idle thread
         ## is running - the idle thread priority is SSX_THREADS, and the
@@ -359,13 +379,13 @@ __ssx_idle_thread:
         ##
         ## This loop can also be called from the SSX bootloader if main()
         ## returns - in which case we don't muck with the USPRG0 or the stack
-        ## pointer. 
+        ## pointer.
 
         li      %r3, (SSX_THREADS | PPC405_THREAD_MODE)
         mtusprg0        %r3
         _lwzsd  %r1, __ssx_noncritical_stack
-                
-__ssx_idle_thread_from_bootloader:      
+
+__ssx_idle_thread_from_bootloader:
 
         li      %r3, SSX_THREADS
         //SSX_TRACE_THREAD_SWITCH %r3, %r4
@@ -402,18 +422,18 @@ ssx_halt:
         ############################################################
 
         .org __vectors_0100 + 0x0400
-__external_interrupt:   
+__external_interrupt:
 
         ## The non-critical interrupt handler entry point is re-entrant - A
         ## handler may allow preemption, which could cause another entry here.
-        
+
         ## Entry invariants:
         ## 1. Non-critical interupts are disabled;
         ## 2. The SP points to a thread stack or the non-critical stack.
 
         ## Since fast-mode handlers can not use SSX services or alter the
         ## machine context, the exit of a fast mode handler is a simple RF(C)I.
-        
+
         ## Begin by pushing the fast context on the current stack.
 
         _ssx_fast_ctx_push SSX_NONCRITICAL
@@ -421,16 +441,16 @@ __external_interrupt:
         ## Load noncritical status 0 and the handler array base address.  Check
         ## for interrupts pending in status register 0 while the IRQ is
         ## computed and R5 is loaded with the noncritical flag.
-        
+
         _lwzi   %r3, %r3, OCB_ONISR0
         _liw    %r6, __ppc405_irq_handlers
         cmpwi   %r3, 0
         cntlzw  %r4, %r3
         li      %r5, SSX_NONCRITICAL
         bne+    noncritical_irq_found
-        
+
         ## No IRQ pending in interrupt set 0.  Try set 1.
-        
+
         _lwzi   %r3, %r3, OCB_ONISR1
         cmpwi   %r3, 0
         cntlzw  %r4, %r3
@@ -447,7 +467,7 @@ __external_interrupt:
         ## R4 = irq
         ## R5 = SSX_NONCRITICAL
 
-noncritical_irq_found:  
+noncritical_irq_found:
 
         _save_update_kernel_context SSX_NONCRITICAL, %r4, %r7
         slwi    %r3, %r4, 3
@@ -455,20 +475,20 @@ noncritical_irq_found:
         lwz     %r3, 4(%r6)
         mtlr    %r7
         blrl
-                
-        ## Pop the stack/RFI when (if) it returns here. 
+
+        ## Pop the stack/RFI when (if) it returns here.
 
 fast_exit_noncritical:
-        
+
         _ssx_fast_ctx_pop_exit SSX_NONCRITICAL
 
         ## This is a phantom interrupt - we got interrupted but no status bits
         ## are set. The interrupt is marked as #64. The register used for the
         ## handler table address (R6) is set to the special structure for the
         ## phantom interrupt, with it's address adjusted to make it appear to
-        ## be the 64th entry in the table. 
+        ## be the 64th entry in the table.
 
-noncritical_phantom:    
+noncritical_phantom:
 
         _liw    %r6, __ppc405_phantom_irq
         subi    %r6, %r6, (64 * 8)
@@ -484,7 +504,7 @@ __alignment_exception:
         PPC405_ALIGNMENT_HANDLER
 
         .org    __alignment_exception + 0x20
-pit_handler:            
+pit_handler:
 
         ## The portable timer handler of SSX a full-mode handler with the prototype:
         ## void (*ssx_timer_handler)(void).
@@ -500,7 +520,7 @@ pit_handler:
         _ssx_fast_ctx_push SSX_NONCRITICAL
         li      %r3, PPC405_IRQ_PIT
         _save_update_kernel_context SSX_NONCRITICAL, %r3, %r4
-        
+
         _liwa   %r3, TSR_PIS
         mttsr   %r3
         isync
@@ -518,7 +538,7 @@ __program_interrupt:
         PPC405_PROGRAM_HANDLER
 
         .org    __program_interrupt + 0x20
-        
+
         ## Exiting a full-mode non-critical handler is more complex than the
         ## critical case, because the handler may have made a new
         ## highest-priority thread runnable and we may need to go through a
@@ -526,42 +546,42 @@ __program_interrupt:
 
         ## Note that the idle thread is treated as a special case.  The idle
         ## thread has no permanent register context. To avoid having to
-        ## allocate a stack area for the idle thread, the idle thread 
+        ## allocate a stack area for the idle thread, the idle thread
         ## 'uses' the non-critical stack.  When the idle thread is interrupted
         ## the (redundant) context is pushed, but is then effectively lost.
         ## Whenever we restore the idle thread we simply reenter the idle
         ## thread entry point.
 
-        ## At entry:    
+        ## At entry:
         ## 1. R3 holds the value of USPRG0 (__SsxKernelContext)
 
         ## 33 linear instructions.
 
-full_exit_noncritical:  
-        
+full_exit_noncritical:
+
         ## Enter a critical section for the return from interrupt, in the event
         ## that the handler enabled preemption.
 
         _ssx_critical_section_enter     SSX_NONCRITICAL, %r4, %r5
 
-        ## If the non-critical count is > 1 then this is a nested interrupt 
+        ## If the non-critical count is > 1 then this is a nested interrupt
         ## and we can simply pop the context and RFI.  Note that it would
         ## violate a kernel/API invariant if this routine were entered from
-        ## outside an interrupt context (interrupt level == 0). 
+        ## outside an interrupt context (interrupt level == 0).
 
         extrwi. %r4, %r3, 8, 8
-        
+
         .if     (SSX_ERROR_CHECK_KERNEL | SSX_ERROR_CHECK_API)
         bne     1f
         _ssx_panic PPC405_IRQ_FULL_EXIT_INVARIANT
-1:      
+1:
         .endif
-        
+
         cmpwi   %r4, 1
         bne     exit_noncritical_without_switch
-                
+
         ## Otherwise, restore the saved stack pointer and continue.
-        
+
         _lwzsd  %r1, __ssx_saved_sp_noncritical
 
         ## If we are not in thread mode (i.e., we took an interrupt in an
@@ -593,13 +613,13 @@ exit_noncritical_without_switch:
         ## need to implement them here.
 
 noncritical_switch:
-                
+
         ## Clear the delayed switch flag and go to the context switch code to
-        ## finish the switch. 
+        ## finish the switch.
 
         li      %r3, 0
         _stwsd  %r3, __ssx_delayed_switch
-        
+
         b       thread_save_non_volatile_and_switch
 
 
@@ -626,14 +646,14 @@ __fpu_unavailable:
         ## occurs when we're about to exit the fast context, at a place
         ## where we can use any of the fast registers.
 
-__ssx_trace_critical_irq_exit:  
+__ssx_trace_critical_irq_exit:
         //SSX_TRACE_CRITICAL_IRQ_EXIT %r3, %r4
         blr
-        
-__ssx_trace_noncritical_irq_exit:       
+
+__ssx_trace_noncritical_irq_exit:
         //SSX_TRACE_NONCRITICAL_IRQ_EXIT %r3, %r4
         blr
-        
+
         ## >>>>>>>>>> Pack .vectors_0100 here. Room for ~900 bytes. <<<<<<<<<<
 
 ### ****************************************************************************
@@ -642,7 +662,7 @@ __ssx_trace_noncritical_irq_exit:
 
         .section .vectors_0c00, "ax", @progbits
         .global __vectors_0c00
-__vectors_0c00:         
+__vectors_0c00:
 
         ############################################################
         # 0x0c00 : System Call
@@ -650,8 +670,8 @@ __vectors_0c00:
 
         .org __vectors_0c00 + 0x0
         .global __ssx_next_thread_resume
-        
-__system_call:  
+
+__system_call:
 
         ## The system call exception is used by SSX as a handy way to start a
         ## context switch, as the continuation address and MSR of the thread to
@@ -664,37 +684,37 @@ __system_call:
 
         ## Begin by saving the volatile context of the current thread.
 
-        _ssx_fast_ctx_push SSX_NONCRITICAL      
+        _ssx_fast_ctx_push SSX_NONCRITICAL
         _ssx_vol_fast_ctx_push  SSX_THREAD_CONTEXT
 
-thread_save_non_volatile_and_switch:    
+thread_save_non_volatile_and_switch:
 
         ## Finish the thread context save by pushing the non-volatile context
         ## and saving the resulting stack pointer in the thread structure.  If
         ## the current thread is the idle thread this step is bypassed.
-        
+
         ## This symbol is also used as an entry point by the non-critical
         ## interrupt handler - non-critical interrupts are disabled here.
-        
+
         _lwzsd  %r3, __ssx_current_thread
         cmpwi   %r3, 0
         beq     __ssx_next_thread_resume
-        
+
         _ssx_non_vol_ctx_push
         stw     %r1, SSX_THREAD_OFFSET_SAVED_STACK_POINTER(%r3)
 
         ## The next thread becomes the current thread, and we switch to its
         ## stack - unless the new thread is the idle thread, in which case it
-        ## (the idle thread) is simply resumed.  
+        ## (the idle thread) is simply resumed.
 
 __ssx_next_thread_resume:
-        
+
         _lwzsd  %r3, __ssx_next_thread
         _stwsd  %r3, __ssx_current_thread
 
         cmpwi   %r3, 0
         beq     __ssx_idle_thread
-        
+
         lwz     %r1, SSX_THREAD_OFFSET_SAVED_STACK_POINTER(%r3)
 
         ## Restore the thread context and resume the new thread.  The kernel
@@ -703,25 +723,25 @@ __ssx_next_thread_resume:
 
         _ssx_non_vol_ctx_pop
         _ssx_vol_fast_ctx_pop   SSX_THREAD_CONTEXT, SSX_NONCRITICAL
-        
+
         _lbzsd  %r3, __ssx_next_priority
         //SSX_TRACE_THREAD_SWITCH %r3, %r4
-        ori     %r3, %r3, PPC405_THREAD_MODE            
+        ori     %r3, %r3, PPC405_THREAD_MODE
         mtusprg0 %r3
 
         _ssx_fast_ctx_pop
         rfi
 
         ## >>>>>>>> Pack .vectors_0c00 here - room for ~500 bytes <<<<<<<
-        
+
 ### ****************************************************************************
 ### .vectors_0f00
 ### ****************************************************************************
-        
+
         .section .vectors_0f00, "ax", @progbits
         .global __vectors_0f00
-__vectors_0f00: 
-        
+__vectors_0f00:
+
         ############################################################
         # 0x0f20 : APU Unavailable
         ############################################################
@@ -730,21 +750,21 @@ __vectors_0f00:
 __apu_unavailable:
 
         PPC405_APU_UNAVAILABLE_HANDLER
-        
+
         .org    __vectors_0f00 + 0x40 # 0x0f40
 
 fit_handler:
-        
+
         ## The FIT handler is user defined, and is a fast-mode handler. By
         ## convention the kernel clears the interrupt by writing the FIS back
         ## into the TSR.
-        
+
         _ssx_fast_ctx_push SSX_NONCRITICAL
-        
+
         _lwzsd  %r3, __ppc405_fit_arg
         li      %r4, PPC405_IRQ_FIT
         li      %r5, SSX_NONCRITICAL
-                
+
         _save_update_kernel_context SSX_NONCRITICAL, %r4, %r6
 
         _liwa   %r6, TSR_FIS
@@ -754,7 +774,7 @@ fit_handler:
         _lwzsd  %r6, __ppc405_fit_routine
         mtlr    %r6
         blrl
-        
+
         b       fast_exit_noncritical
 
 
@@ -764,27 +784,27 @@ fit_handler:
 
         .org    __vectors_0f00 + 0x100 # 0x1000
 __pit_interrupt:
-        
+
         b       pit_handler
 
         .org    __vectors_0f00 + 0x110 # 0x1010
-__fit_interrupt:        
+__fit_interrupt:
 
         b       fit_handler
 
         .org    __vectors_0f00 + 0x120 # 0x1020
-__watchdog_interrupt:   
+__watchdog_interrupt:
 
-        ## Watchdog setup is described in the SSX Specification. 
-        ## The kernel clears TSR[WIS] prior to calling the handler.  
+        ## Watchdog setup is described in the SSX Specification.
+        ## The kernel clears TSR[WIS] prior to calling the handler.
         ## The watchdog handler is a critical, fast-mode handler.
 
         _ssx_fast_ctx_push SSX_CRITICAL
-        
+
         _lwzsd  %r3, __ppc405_watchdog_arg
         li      %r4, PPC405_IRQ_WATCHDOG
         li      %r5, SSX_CRITICAL
-        
+
         _save_update_kernel_context SSX_CRITICAL, %r4, %r6
 
         _liwa   %r6, TSR_WIS
@@ -808,7 +828,7 @@ __data_tlb_miss:
         PPC405_DATA_TLB_MISS_HANDLER
 
         .org    __data_tlb_miss + 0x20
-debug_handler:          
+debug_handler:
 
         ## SSX does nothing upon reception of the debug interrupt other
         ## than calling the handler (if non-0). The debug handler is a
@@ -819,7 +839,7 @@ debug_handler:
         _lwzsd  %r3, __ppc405_debug_arg
         li      %r4, PPC405_IRQ_DEBUG
         li      %r5, SSX_CRITICAL
-        
+
         _save_update_kernel_context SSX_CRITICAL, %r4, %r6
 
         _lwzsd  %r6, __ppc405_debug_routine
@@ -827,10 +847,10 @@ debug_handler:
         mtlr    %r6
         beq     debug_exit
         blrl
-        
-debug_exit:     
+
+debug_exit:
         b       fast_exit_critical
-        
+
 
         ############################################################
         # 0x1200 : Instruction TLB Miss
@@ -850,7 +870,7 @@ __instruction_tlb_miss:
 ### ****************************************************************************
 
         .section .vectors_2000, "ax", @progbits
-        
+
         .global __vectors_2000
 __vectors_2000:
 
@@ -858,8 +878,8 @@ __vectors_2000:
         # 0x2000 : Debug Interrupt
         ############################################################
 
-__debug_interrupt:      
-        b       debug_handler   
+__debug_interrupt:
+        b       debug_handler
 
 // *INDENT-ON*
 /// \endcond

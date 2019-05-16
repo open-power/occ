@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -28,9 +28,9 @@
   and makes them accessible to Amester parameter for reading and
   writing.  Any memory location may become an Amester parameter.
 
-  To add a parameter, 
+  To add a parameter,
   1. Add a new parameter id number in the AMEC_PARM_ENUM below.
-  2. In the same position, add the parameter to g_amec_parm_list in 
+  2. In the same position, add the parameter to g_amec_parm_list in
      amec_parm_table.c
      There are macros that help in adding a parameter to the table.
      The macro typically takes a) the parameter id, b) a string name,
@@ -68,9 +68,9 @@ typedef enum
     PARM_TOD,
     // WOF Parameters
     PARM_WOF_HDR_VERSION,
-    PARM_VFRT_BLOCK_SIZE,
-    PARM_VFRT_BLOCK_HEADER_SZ,
-    PARM_VFRT_DATA_SIZE,
+    PARM_VRT_BLOCK_SIZE,
+    PARM_VRT_BLOCK_HEADER_SZ,
+    PARM_VRT_DATA_SIZE,
     PARM_ACTIVE_QUADS_SIZE,
     PARM_CORE_COUNT,
     PARM_VDN_START,
@@ -139,10 +139,10 @@ typedef enum
     PARM_NUM_ACTIVE_QUADS,
     PARM_CURR_PING_PONG_BUF,
     PARM_NEXT_PING_PONG_BUF,
-    PARM_CURR_VFRT_MAIN_MEM_ADDR,
-    PARM_NEXT_VFRT_MAIN_MEM_ADDR,
-    PARM_VFRT_TBLS_MAIN_MEM_ADDR,
-    PARM_VFRT_TBLS_LEN,
+    PARM_CURR_VRT_MAIN_MEM_ADDR,
+    PARM_NEXT_VRT_MAIN_MEM_ADDR,
+    PARM_VRT_TBLS_MAIN_MEM_ADDR,
+    PARM_VRT_TBLS_LEN,
     PARM_WOF_INIT_STATE,
     PARM_QUAD_STATE_0_ADDR,
     PARM_QUAD_STATE_1_ADDR,
@@ -152,15 +152,15 @@ typedef enum
     PARM_PSTATE_TBL_SRAM_ADDR,
     PARM_GPE_REQ_RC,
     PARM_CONTROL_IPC_RC,
-    PARM_VFRT_CALLBACK_ERR,
+    PARM_VRT_CALLBACK_ERR,
     PARM_PGPE_WOF_OFF,
-    PARM_VFRT_MM_OFFSET,
-    PARM_VFRT_REQ_RC,
+    PARM_VRT_MM_OFFSET,
+    PARM_VRT_REQ_RC,
     PARM_VDD_RATIO_VOLT,
     PARM_VDD_RATIO_FREQ,
     PARM_VDN_RATIO_VOLT,
     PARM_VDN_RATIO_FREQ,
-    PARM_VFRT_STATE,
+    PARM_VRT_STATE,
     PARM_CORES_OFF_B4,
     PARM_GOOD_QUADS_PER_SORT,
     PARM_NORMAL_CORES_PER_SORT,
@@ -217,7 +217,7 @@ typedef enum
     AMEC_PARM_TYPE_INT64,
     AMEC_PARM_TYPE_STRING,
     AMEC_PARM_TYPE_RAW
-		
+
 } AMEC_PARM_TYPE_ENUM;
 
 #define AMEC_PARM_MODE_NORMAL   (0x00)
@@ -233,9 +233,9 @@ typedef struct amec_parm_s
     /// value_ptr: pointer to data
     UINT8 *value_ptr;
     /// number of bytes in base data
-    UINT32 length; 
+    UINT32 length;
     /// vector_length is the number of items in the array pointed by value ptr.
-    UINT32 vector_length; 
+    UINT32 vector_length;
     /// Type of data
     UINT8 type : 4;
     /// Mode of data (read-write, read-only, etc.)
@@ -273,8 +273,8 @@ void amec_parm_get_config(const IPMIMsg_t *i_psMsg,
                           UINT8 *o_retval);
 
 /**
- * Read a parameter value 
- *  
+ * Read a parameter value
+ *
  */
 void amec_parm_read(const IPMIMsg_t *const i_psMsg,
                     UINT8 *const o_pu8Resp,
@@ -294,16 +294,16 @@ void amec_parm_write(const IPMIMsg_t *const i_psMsg,
  * Update parameter value before reading
  *
  * Some parameters need to be updated before reading.
- * For example, a parameter that points to double-buffered 
+ * For example, a parameter that points to double-buffered
  * that may be at a new memory location each time the
- * parameter is examined. 
+ * parameter is examined.
  * This routine only needs to be called when the parameter
  * has a 'preread' field with a value of 1.
  */
 void amec_parm_preread(AMEC_PARM_GUID i_parm_guid);
 
 /**
- * Update parameter value after writing 
+ * Update parameter value after writing
  *
  * Some parameters trigger actions after writing.
  * This routine only needs to be called when the parameter

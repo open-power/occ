@@ -958,11 +958,11 @@ void amec_health_check_proc_timeout()
                 l_core_data_ptr = proc_get_bulk_core_data_ptr(l_bad_core_index);
 
 
-                TRAC_ERR("Core Sensors[0x%04X%04X] L3Cache Sensor[0x%04X] Racetrack Sensor [0x%04X]",
+                TRAC_ERR("Core Sensors[0x%04X%04X] L3Cache Sensor[0x%04X%04X]",
                          (uint16_t)(l_core_data_ptr->dts.core[0].result ),
                          (uint16_t)(l_core_data_ptr->dts.core[1].result ),
-                         (uint16_t)(l_core_data_ptr->dts.cache.result),
-                         (uint16_t)(l_core_data_ptr->dts.racetrack.result));
+                         (uint16_t)(l_core_data_ptr->dts.cache[0].result),
+                         (uint16_t)(l_core_data_ptr->dts.cache[1].result));
 
                 /* @
                  * @errortype

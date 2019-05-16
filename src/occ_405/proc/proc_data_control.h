@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -29,7 +29,7 @@
 #include <occ_common.h>
 #include <ssx.h>
 #include "rtls.h"
-#include "p9_pstates_common.h"
+#include "pstates_common.H"
 #include "pstate_pgpe_occ_api.h"
 
 // Task that sets the PMCR, PMBR, PMICR

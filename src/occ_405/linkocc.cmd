@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -582,13 +582,13 @@ SECTIONS
 #if !PPC405_MMU_SUPPORT
     . = . - writethrough_offset;
     _LMA = . + writethrough_offset;
-    .vfrt_ping_buffer . : AT(_LMA) {*(vfrt_ping_buffer) . = ALIGN(_PING_BUFFER_SIZE);}
+    .vrt_ping_buffer . : AT(_LMA) {*(vrt_ping_buffer) . = ALIGN(_PING_BUFFER_SIZE);}
     _LMA = . + writethrough_offset;
-    .vfrt_pong_buffer . : AT(_LMA) {*(vfrt_pong_buffer) . = ALIGN(_PONG_BUFFER_SIZE);}
+    .vrt_pong_buffer . : AT(_LMA) {*(vrt_pong_buffer) . = ALIGN(_PONG_BUFFER_SIZE);}
     . = . + writethrough_offset;
 #else
-    .vfrt_ping_buffer . : {*(vfrt_ping_buffer) . = ALIGN(_PING_BUFFER_SIZE);} > sram
-    .vfrt_pong_buffer . : {*(vfrt_pong_buffer) . = ALIGN(_PONG_BUFFER_SIZE);} > sram
+    .vrt_ping_buffer . : {*(vrt_ping_buffer) . = ALIGN(_PING_BUFFER_SIZE);} > sram
+    .vrt_pong_buffer . : {*(vrt_pong_buffer) . = ALIGN(_PONG_BUFFER_SIZE);} > sram
 #endif
     . = __CUR_COUNTER__;
 

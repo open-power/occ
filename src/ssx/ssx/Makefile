@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2014,2016
+# Contributors Listed Below - COPYRIGHT 2014,2019
 # [+] International Business Machines Corp.
 #
 #
@@ -34,7 +34,7 @@ SSX_OBJECTS += ${SSX-TIMER-C-SOURCES:.c=.o}
 endif
 
 ifeq "$(SSX_THREAD_SUPPORT)" "1"
-SSX_OBJECTS += ${SSX-THREAD-C-SOURCES:.c=.o} 
+SSX_OBJECTS += ${SSX-THREAD-C-SOURCES:.c=.o}
 endif
 
 OBJS := $(addprefix $(OBJDIR)/, $(SSX_OBJECTS))

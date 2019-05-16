@@ -30,6 +30,7 @@
 #include <occ_service_codes.h>
 #include <occ_common.h>
 #include <homer.h>
+#include <trac.h>
 
 /*
  * Function Specification
@@ -98,25 +99,32 @@ homer_rc_t __attribute__((optimize("O1"))) homer_hd_map_read_unmap(const homer_r
         }
         else
         {
+            // TODO - RTC 213675
+#if 0
             // Check version, if ok handle ID requested. We need to support
             // current version as well as older ones
             if (HOMER_VERSION_P9 != l_hdcfg_data->version)
             {
                 l_rc = HOMER_UNSUPPORTED_HD_VERSION;
+                TRAC_ERR("homer_hd_map_read_unmap: expected version 0x%02X, but read 0x%02X", HOMER_VERSION_P9, l_hdcfg_data->version);
             }
             else
+#endif
             {
                 // HOMER_VERSION_P9 == l_hdcfg_data->version
                 switch (i_id)
                 {
                 case HOMER_VERSION:
                     *(uint32_t *)o_host_data = l_hdcfg_data->version;
+                    *(uint32_t *)o_host_data = HOMER_VERSION_P9; // TODO - RTC 213675
                     break;
                 case HOMER_NEST_FREQ:
                     *(uint32_t *)o_host_data = l_hdcfg_data->nestFrequency;
+                    *(uint32_t *)o_host_data = PPC405_TIMEBASE_HZ; // TODO - RTC 213675
                     break;
                 case HOMER_INT_TYPE:
                     *(uint32_t *)o_host_data = l_hdcfg_data->occInterruptType;
+                    *(uint32_t *)o_host_data = FSP_SUPPORTED_OCC; // TODO - RTC 213675
                     break;
                 case HOMER_FIR_MASTER:
                     *(uint32_t *)o_host_data = l_hdcfg_data->firMaster;

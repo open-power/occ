@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -31,11 +31,11 @@
 // *** WARNING *** - This file is generated automatically, do not edit.
 
 #ifndef SIXTYFOUR_BIT_CONSTANT
-#ifdef __ASSEMBLER__
-#define SIXTYFOUR_BIT_CONSTANT(x) x
-#else
-#define SIXTYFOUR_BIT_CONSTANT(x) x##ull
-#endif
+    #ifdef __ASSEMBLER__
+        #define SIXTYFOUR_BIT_CONSTANT(x) x
+    #else
+        #define SIXTYFOUR_BIT_CONSTANT(x) x##ull
+    #endif
 #endif
 
 #ifndef __ASSEMBLER__
@@ -45,10 +45,12 @@
 
 
 
-typedef union ppm_gpmmr {
+typedef union ppm_gpmmr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -57,7 +59,8 @@ typedef union ppm_gpmmr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t special_wkup_done : 1;
     uint64_t special_wkup_active : 1;
@@ -96,10 +99,12 @@ typedef union ppm_gpmmr {
 
 
 
-typedef union ppm_gpmmr_clr {
+typedef union ppm_gpmmr_clr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -108,7 +113,8 @@ typedef union ppm_gpmmr_clr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t special_wkup_done : 1;
     uint64_t special_wkup_active : 1;
@@ -147,10 +153,12 @@ typedef union ppm_gpmmr_clr {
 
 
 
-typedef union ppm_gpmmr_or {
+typedef union ppm_gpmmr_or
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -159,7 +167,8 @@ typedef union ppm_gpmmr_or {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t special_wkup_done : 1;
     uint64_t special_wkup_active : 1;
@@ -198,10 +207,12 @@ typedef union ppm_gpmmr_or {
 
 
 
-typedef union ppm_spwkup_otr {
+typedef union ppm_spwkup_otr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -210,7 +221,8 @@ typedef union ppm_spwkup_otr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t otr_special_wkup : 1;
     uint64_t reserved1 : 63;
@@ -223,10 +235,12 @@ typedef union ppm_spwkup_otr {
 
 
 
-typedef union ppm_spwkup_fsp {
+typedef union ppm_spwkup_fsp
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -235,7 +249,8 @@ typedef union ppm_spwkup_fsp {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t fsp_special_wkup : 1;
     uint64_t reserved1 : 63;
@@ -248,10 +263,12 @@ typedef union ppm_spwkup_fsp {
 
 
 
-typedef union ppm_spwkup_occ {
+typedef union ppm_spwkup_occ
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -260,7 +277,8 @@ typedef union ppm_spwkup_occ {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t occ_special_wkup : 1;
     uint64_t reserved1 : 63;
@@ -273,10 +291,12 @@ typedef union ppm_spwkup_occ {
 
 
 
-typedef union ppm_spwkup_hyp {
+typedef union ppm_spwkup_hyp
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -285,7 +305,8 @@ typedef union ppm_spwkup_hyp {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t hyp_special_wkup : 1;
     uint64_t reserved1 : 63;
@@ -298,10 +319,12 @@ typedef union ppm_spwkup_hyp {
 
 
 
-typedef union ppm_sshsrc {
+typedef union ppm_sshsrc
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -310,20 +333,25 @@ typedef union ppm_sshsrc {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t stop_gated : 1;
+        uint64_t special_wkup_done : 1;
     uint64_t stop_transition : 2;
-    uint64_t special_wkup_done : 1;
     uint64_t req_stop_level : 4;
     uint64_t act_stop_level : 4;
-    uint64_t reserved1 : 52;
+        uint64_t req_write_enable : 1;
+        uint64_t act_write_enable : 1;
+        uint64_t reserved1 : 50;
 #else
-    uint64_t reserved1 : 52;
+        uint64_t reserved1 : 50;
+        uint64_t act_write_enable : 1;
+        uint64_t req_write_enable : 1;
     uint64_t act_stop_level : 4;
     uint64_t req_stop_level : 4;
+        uint64_t stop_transition : 2;
     uint64_t special_wkup_done : 1;
-    uint64_t stop_transition : 2;
     uint64_t stop_gated : 1;
 #endif // _BIG_ENDIAN
     } fields;
@@ -331,10 +359,12 @@ typedef union ppm_sshsrc {
 
 
 
-typedef union ppm_sshfsp {
+typedef union ppm_sshfsp
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -343,35 +373,40 @@ typedef union ppm_sshfsp {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t stop_gated_fsp : 1;
-    uint64_t special_wkup_active_fsp : 1;
-    uint64_t stop_transition__fsp : 2;
-    uint64_t req_stop_level_fsp : 4;
-    uint64_t act_stop_level_fsp : 4;
+        uint64_t stop_gated : 1;
+        uint64_t special_wkup_done : 1;
+        uint64_t stop_transition : 2;
+        uint64_t req_stop_level : 4;
+        uint64_t act_stop_level : 4;
     uint64_t deepest_req_stop_level_fsp : 4;
     uint64_t deepest_act_stop_level_fsp : 4;
-    uint64_t reserved1 : 44;
+        uint64_t ivrm_enabled_history_fsp : 1;
+        uint64_t reserved1 : 43;
 #else
-    uint64_t reserved1 : 44;
+        uint64_t reserved1 : 43;
+        uint64_t ivrm_enabled_history_fsp : 1;
     uint64_t deepest_act_stop_level_fsp : 4;
     uint64_t deepest_req_stop_level_fsp : 4;
-    uint64_t act_stop_level_fsp : 4;
-    uint64_t req_stop_level_fsp : 4;
-    uint64_t stop_transition__fsp : 2;
-    uint64_t special_wkup_active_fsp : 1;
-    uint64_t stop_gated_fsp : 1;
+        uint64_t act_stop_level : 4;
+        uint64_t req_stop_level : 4;
+        uint64_t stop_transition : 2;
+        uint64_t special_wkup_done : 1;
+        uint64_t stop_gated : 1;
 #endif // _BIG_ENDIAN
     } fields;
 } ppm_sshfsp_t;
 
 
 
-typedef union ppm_sshocc {
+typedef union ppm_sshocc
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -380,35 +415,40 @@ typedef union ppm_sshocc {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t run_stop_occ : 1;
-    uint64_t special_wkup_active_occ : 1;
-    uint64_t stop_transition_occ : 2;
-    uint64_t req_stop_level_occ : 4;
-    uint64_t act_stop_level_occ : 4;
+        uint64_t stop_gated : 1;
+        uint64_t special_wkup_done : 1;
+        uint64_t stop_transition : 2;
+        uint64_t req_stop_level : 4;
+        uint64_t act_stop_level : 4;
     uint64_t deepest_req_stop_level_occ : 4;
     uint64_t deepest_act_stop_level_occ : 4;
-    uint64_t reserved1 : 44;
+        uint64_t ivrm_enabled_history_occ : 1;
+        uint64_t reserved1 : 43;
 #else
-    uint64_t reserved1 : 44;
+        uint64_t reserved1 : 43;
+        uint64_t ivrm_enabled_history_occ : 1;
     uint64_t deepest_act_stop_level_occ : 4;
     uint64_t deepest_req_stop_level_occ : 4;
-    uint64_t act_stop_level_occ : 4;
-    uint64_t req_stop_level_occ : 4;
-    uint64_t stop_transition_occ : 2;
-    uint64_t special_wkup_active_occ : 1;
-    uint64_t run_stop_occ : 1;
+        uint64_t act_stop_level : 4;
+        uint64_t req_stop_level : 4;
+        uint64_t stop_transition : 2;
+        uint64_t special_wkup_done : 1;
+        uint64_t stop_gated : 1;
 #endif // _BIG_ENDIAN
     } fields;
 } ppm_sshocc_t;
 
 
 
-typedef union ppm_sshotr {
+typedef union ppm_sshotr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -417,35 +457,40 @@ typedef union ppm_sshotr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t run_stop_otr : 1;
-    uint64_t special_wkup_active_otr : 1;
-    uint64_t stop_transition_otr : 2;
-    uint64_t req_stop_level_otr : 4;
-    uint64_t act_stop_level_otr : 4;
+        uint64_t stop_gated : 1;
+        uint64_t special_wkup_done : 1;
+        uint64_t stop_transition : 2;
+        uint64_t req_stop_level : 4;
+        uint64_t act_stop_level : 4;
     uint64_t deepest_req_stop_level_otr : 4;
     uint64_t deepest_act_stop_level_otr : 4;
-    uint64_t reserved1 : 44;
+        uint64_t ivrm_enabled_history_otr : 1;
+        uint64_t reserved1 : 43;
 #else
-    uint64_t reserved1 : 44;
+        uint64_t reserved1 : 43;
+        uint64_t ivrm_enabled_history_otr : 1;
     uint64_t deepest_act_stop_level_otr : 4;
     uint64_t deepest_req_stop_level_otr : 4;
-    uint64_t act_stop_level_otr : 4;
-    uint64_t req_stop_level_otr : 4;
-    uint64_t stop_transition_otr : 2;
-    uint64_t special_wkup_active_otr : 1;
-    uint64_t run_stop_otr : 1;
+        uint64_t act_stop_level : 4;
+        uint64_t req_stop_level : 4;
+        uint64_t stop_transition : 2;
+        uint64_t special_wkup_done : 1;
+        uint64_t stop_gated : 1;
 #endif // _BIG_ENDIAN
     } fields;
 } ppm_sshotr_t;
 
 
 
-typedef union ppm_sshhyp {
+typedef union ppm_sshhyp
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -454,35 +499,40 @@ typedef union ppm_sshhyp {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t run_stop_hyp : 1;
-    uint64_t special_wkup_active_hyp : 1;
-    uint64_t stop_transition_hyp : 2;
-    uint64_t req_stop_level_hyp : 4;
-    uint64_t act_stop_level_hyp : 4;
+        uint64_t stop_gated : 1;
+        uint64_t special_wkup_done : 1;
+        uint64_t stop_transition : 2;
+        uint64_t req_stop_level : 4;
+        uint64_t act_stop_level : 4;
     uint64_t deepest_req_stop_level_hyp : 4;
     uint64_t deepest_act_stop_level_hyp : 4;
-    uint64_t reserved1 : 44;
+        uint64_t ivrm_enabled_history_hyp : 1;
+        uint64_t reserved1 : 43;
 #else
-    uint64_t reserved1 : 44;
+        uint64_t reserved1 : 43;
+        uint64_t ivrm_enabled_history_hyp : 1;
     uint64_t deepest_act_stop_level_hyp : 4;
     uint64_t deepest_req_stop_level_hyp : 4;
-    uint64_t act_stop_level_hyp : 4;
-    uint64_t req_stop_level_hyp : 4;
-    uint64_t stop_transition_hyp : 2;
-    uint64_t special_wkup_active_hyp : 1;
-    uint64_t run_stop_hyp : 1;
+        uint64_t act_stop_level : 4;
+        uint64_t req_stop_level : 4;
+        uint64_t stop_transition : 2;
+        uint64_t special_wkup_done : 1;
+        uint64_t stop_gated : 1;
 #endif // _BIG_ENDIAN
     } fields;
 } ppm_sshhyp_t;
 
 
 
-typedef union ppm_pfcs {
+typedef union ppm_pfcs
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -491,7 +541,8 @@ typedef union ppm_pfcs {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t vdd_pfet_force_state : 2;
     uint64_t vcs_pfet_force_state : 2;
@@ -501,7 +552,8 @@ typedef union ppm_pfcs {
     uint64_t vcs_pfet_sel_override : 1;
     uint64_t vdd_pfet_regulation_finger_en : 1;
     uint64_t vdd_pfet_regulation_finger_value : 1;
-    uint64_t reserved1 : 2;
+        uint64_t reserved1 : 1;
+        uint64_t analog_logic_fence : 1;
     uint64_t vdd_pfet_enable_value : 8;
     uint64_t vdd_pfet_sel_value : 4;
     uint64_t vcs_pfet_enable_value : 8;
@@ -523,7 +575,8 @@ typedef union ppm_pfcs {
     uint64_t vcs_pfet_enable_value : 8;
     uint64_t vdd_pfet_sel_value : 4;
     uint64_t vdd_pfet_enable_value : 8;
-    uint64_t reserved1 : 2;
+        uint64_t analog_logic_fence : 1;
+        uint64_t reserved1 : 1;
     uint64_t vdd_pfet_regulation_finger_value : 1;
     uint64_t vdd_pfet_regulation_finger_en : 1;
     uint64_t vcs_pfet_sel_override : 1;
@@ -538,10 +591,12 @@ typedef union ppm_pfcs {
 
 
 
-typedef union ppm_pfcs_clr {
+typedef union ppm_pfcs_clr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -550,7 +605,8 @@ typedef union ppm_pfcs_clr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t vdd_pfet_force_state : 2;
     uint64_t vcs_pfet_force_state : 2;
@@ -560,7 +616,8 @@ typedef union ppm_pfcs_clr {
     uint64_t vcs_pfet_sel_override : 1;
     uint64_t vdd_pfet_regulation_finger_en : 1;
     uint64_t vdd_pfet_regulation_finger_value : 1;
-    uint64_t reserved1 : 2;
+        uint64_t reserved1 : 1;
+        uint64_t analog_logic_fence : 1;
     uint64_t vdd_pfet_enable_value : 8;
     uint64_t vdd_pfet_sel_value : 4;
     uint64_t vcs_pfet_enable_value : 8;
@@ -582,7 +639,8 @@ typedef union ppm_pfcs_clr {
     uint64_t vcs_pfet_enable_value : 8;
     uint64_t vdd_pfet_sel_value : 4;
     uint64_t vdd_pfet_enable_value : 8;
-    uint64_t reserved1 : 2;
+        uint64_t analog_logic_fence : 1;
+        uint64_t reserved1 : 1;
     uint64_t vdd_pfet_regulation_finger_value : 1;
     uint64_t vdd_pfet_regulation_finger_en : 1;
     uint64_t vcs_pfet_sel_override : 1;
@@ -597,10 +655,12 @@ typedef union ppm_pfcs_clr {
 
 
 
-typedef union ppm_pfcs_or {
+typedef union ppm_pfcs_or
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -609,7 +669,8 @@ typedef union ppm_pfcs_or {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t vdd_pfet_force_state : 2;
     uint64_t vcs_pfet_force_state : 2;
@@ -619,7 +680,8 @@ typedef union ppm_pfcs_or {
     uint64_t vcs_pfet_sel_override : 1;
     uint64_t vdd_pfet_regulation_finger_en : 1;
     uint64_t vdd_pfet_regulation_finger_value : 1;
-    uint64_t reserved1 : 2;
+        uint64_t reserved1 : 1;
+        uint64_t analog_logic_fence : 1;
     uint64_t vdd_pfet_enable_value : 8;
     uint64_t vdd_pfet_sel_value : 4;
     uint64_t vcs_pfet_enable_value : 8;
@@ -641,7 +703,8 @@ typedef union ppm_pfcs_or {
     uint64_t vcs_pfet_enable_value : 8;
     uint64_t vdd_pfet_sel_value : 4;
     uint64_t vdd_pfet_enable_value : 8;
-    uint64_t reserved1 : 2;
+        uint64_t analog_logic_fence : 1;
+        uint64_t reserved1 : 1;
     uint64_t vdd_pfet_regulation_finger_value : 1;
     uint64_t vdd_pfet_regulation_finger_en : 1;
     uint64_t vcs_pfet_sel_override : 1;
@@ -656,10 +719,12 @@ typedef union ppm_pfcs_or {
 
 
 
-typedef union ppm_pfdly {
+typedef union ppm_pfdly
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -668,7 +733,8 @@ typedef union ppm_pfdly {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t powdn_dly : 4;
     uint64_t powup_dly : 4;
@@ -683,10 +749,12 @@ typedef union ppm_pfdly {
 
 
 
-typedef union ppm_pfsns {
+typedef union ppm_pfsns
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -695,7 +763,8 @@ typedef union ppm_pfsns {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t vdd_pfets_enabled_sense : 1;
     uint64_t vdd_pfets_disabled_sense : 1;
@@ -704,9 +773,19 @@ typedef union ppm_pfsns {
     uint64_t reserved1 : 12;
     uint64_t tp_vdd_pfet_enable_actual : 8;
     uint64_t tp_vcs_pfet_enable_actual : 8;
-    uint64_t reserved2 : 32;
+        uint64_t reserved2 : 10;
+        uint64_t vdd_pg_state : 4;
+        uint64_t vdd_pg_sel : 4;
+        uint64_t vcs_pg_state : 4;
+        uint64_t vcs_pg_sel : 4;
+        uint64_t reserved3 : 6;
 #else
-    uint64_t reserved2 : 32;
+        uint64_t reserved3 : 6;
+        uint64_t vcs_pg_sel : 4;
+        uint64_t vcs_pg_state : 4;
+        uint64_t vdd_pg_sel : 4;
+        uint64_t vdd_pg_state : 4;
+        uint64_t reserved2 : 10;
     uint64_t tp_vcs_pfet_enable_actual : 8;
     uint64_t tp_vdd_pfet_enable_actual : 8;
     uint64_t reserved1 : 12;
@@ -720,10 +799,12 @@ typedef union ppm_pfsns {
 
 
 
-typedef union ppm_pfoff {
+typedef union ppm_pfoff
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -732,7 +813,8 @@ typedef union ppm_pfoff {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t vdd_voff_sel : 4;
     uint64_t vcs_voff_sel : 4;
@@ -747,10 +829,12 @@ typedef union ppm_pfoff {
 
 
 
-typedef union ppm_scratch0 {
+typedef union ppm_scratch0
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -759,7 +843,8 @@ typedef union ppm_scratch0 {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t data : 64;
 #else
@@ -770,10 +855,12 @@ typedef union ppm_scratch0 {
 
 
 
-typedef union ppm_scratch1 {
+typedef union ppm_scratch1
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -782,7 +869,8 @@ typedef union ppm_scratch1 {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t data : 64;
 #else
@@ -793,10 +881,12 @@ typedef union ppm_scratch1 {
 
 
 
-typedef union ppm_cgcr {
+typedef union ppm_cgcr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -805,7 +895,8 @@ typedef union ppm_cgcr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t clkglm_async_reset : 1;
     uint64_t reserved_1_21 : 2;
@@ -822,10 +913,12 @@ typedef union ppm_cgcr {
 
 
 
-typedef union ppm_cgcr_clr {
+typedef union ppm_pig
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -834,65 +927,8 @@ typedef union ppm_cgcr_clr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
-#ifdef _BIG_ENDIAN
-    uint64_t clkglm_async_reset : 1;
-    uint64_t reserved_1_21 : 2;
-    uint64_t clkglm_sel : 1;
-    uint64_t reserved2 : 60;
-#else
-    uint64_t reserved2 : 60;
-    uint64_t clkglm_sel : 1;
-    uint64_t reserved_1_21 : 2;
-    uint64_t clkglm_async_reset : 1;
-#endif // _BIG_ENDIAN
-    } fields;
-} ppm_cgcr_clr_t;
-
-
-
-typedef union ppm_cgcr_or {
-
-    uint64_t value;
-    struct {
-#ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
-#else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct {
-#ifdef _BIG_ENDIAN
-    uint64_t clkglm_async_reset : 1;
-    uint64_t reserved_1_21 : 2;
-    uint64_t clkglm_sel : 1;
-    uint64_t reserved2 : 60;
-#else
-    uint64_t reserved2 : 60;
-    uint64_t clkglm_sel : 1;
-    uint64_t reserved_1_21 : 2;
-    uint64_t clkglm_async_reset : 1;
-#endif // _BIG_ENDIAN
-    } fields;
-} ppm_cgcr_or_t;
-
-
-
-typedef union ppm_pig {
-
-    uint64_t value;
-    struct {
-#ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
-#else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t reserved1 : 1;
     uint64_t req_intr_type : 3;
@@ -903,9 +939,11 @@ typedef union ppm_pig {
     uint64_t granted__source : 2;
     uint64_t reserved3 : 1;
     uint64_t pending_source : 3;
-    uint64_t reserved4 : 24;
+        uint64_t network_reset__occurred : 1;
+        uint64_t reserved4 : 23;
 #else
-    uint64_t reserved4 : 24;
+        uint64_t reserved4 : 23;
+        uint64_t network_reset__occurred : 1;
     uint64_t pending_source : 3;
     uint64_t reserved3 : 1;
     uint64_t granted__source : 2;
@@ -921,10 +959,12 @@ typedef union ppm_pig {
 
 
 
-typedef union ppm_ivrmcr {
+typedef union ppm_ivrmcr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -933,7 +973,8 @@ typedef union ppm_ivrmcr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t ivrm_vid_valid : 1;
     uint64_t ivrm_bypass_b : 1;
@@ -954,10 +995,12 @@ typedef union ppm_ivrmcr {
 
 
 
-typedef union ppm_ivrmcr_clr {
+typedef union ppm_ivrmcr_clr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -966,7 +1009,8 @@ typedef union ppm_ivrmcr_clr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t ivrm_vid_valid : 1;
     uint64_t ivrm_bypass_b : 1;
@@ -987,10 +1031,12 @@ typedef union ppm_ivrmcr_clr {
 
 
 
-typedef union ppm_ivrmcr_or {
+typedef union ppm_ivrmcr_or
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -999,7 +1045,8 @@ typedef union ppm_ivrmcr_or {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t ivrm_vid_valid : 1;
     uint64_t ivrm_bypass_b : 1;
@@ -1020,10 +1067,12 @@ typedef union ppm_ivrmcr_or {
 
 
 
-typedef union ppm_ivrmst {
+typedef union ppm_ivrmst
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -1032,7 +1081,8 @@ typedef union ppm_ivrmst {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t ivrm_vid_done : 1;
     uint64_t reserved1 : 63;
@@ -1045,10 +1095,12 @@ typedef union ppm_ivrmst {
 
 
 
-typedef union ppm_ivrmdvr {
+typedef union ppm_ivrmdvr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -1057,7 +1109,8 @@ typedef union ppm_ivrmdvr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t ivrm_ivid : 8;
     uint64_t reserved_8_10 : 3;
@@ -1078,10 +1131,12 @@ typedef union ppm_ivrmdvr {
 
 
 
-typedef union ppm_ivrmavr {
+typedef union ppm_ivrmavr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -1090,30 +1145,29 @@ typedef union ppm_ivrmavr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t ivrm_ivid : 8;
-    uint64_t reserved1 : 3;
+        uint64_t ivrm_protect_active : 1;
+        uint64_t reserved1 : 2;
     uint64_t ivrm_pfet_strength : 5;
-    uint64_t reserved2 : 3;
-    uint64_t ivrm_enabled_history : 1;
-    uint64_t reserved3 : 4;
+        uint64_t reserved2 : 8;
     uint64_t ivrm_vid_valid : 1;
     uint64_t ivrm_bypass_b : 1;
     uint64_t ivrm_poweron : 1;
     uint64_t ivrm_vreg_slow_dc : 1;
-    uint64_t reserved4 : 36;
+        uint64_t reserved3 : 36;
 #else
-    uint64_t reserved4 : 36;
+        uint64_t reserved3 : 36;
     uint64_t ivrm_vreg_slow_dc : 1;
     uint64_t ivrm_poweron : 1;
     uint64_t ivrm_bypass_b : 1;
     uint64_t ivrm_vid_valid : 1;
-    uint64_t reserved3 : 4;
-    uint64_t ivrm_enabled_history : 1;
-    uint64_t reserved2 : 3;
+        uint64_t reserved2 : 8;
     uint64_t ivrm_pfet_strength : 5;
-    uint64_t reserved1 : 3;
+        uint64_t reserved1 : 2;
+        uint64_t ivrm_protect_active : 1;
     uint64_t ivrm_ivid : 8;
 #endif // _BIG_ENDIAN
     } fields;
@@ -1121,10 +1175,12 @@ typedef union ppm_ivrmavr {
 
 
 
-typedef union ppm_vdmcr {
+typedef union ppm_vdmcr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -1133,7 +1189,8 @@ typedef union ppm_vdmcr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t vdm_poweron : 1;
     uint64_t vdm_disable : 1;
@@ -1148,10 +1205,12 @@ typedef union ppm_vdmcr {
 
 
 
-typedef union ppm_vdmcr_clr {
+typedef union ppm_vdmcr_clr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -1160,7 +1219,8 @@ typedef union ppm_vdmcr_clr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t vdm_poweron : 1;
     uint64_t vdm_disable : 1;
@@ -1175,10 +1235,12 @@ typedef union ppm_vdmcr_clr {
 
 
 
-typedef union ppm_vdmcr_or {
+typedef union ppm_vdmcr_or
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -1187,7 +1249,8 @@ typedef union ppm_vdmcr_or {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t vdm_poweron : 1;
     uint64_t vdm_disable : 1;

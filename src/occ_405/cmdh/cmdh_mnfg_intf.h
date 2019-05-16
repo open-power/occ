@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -28,7 +28,7 @@
 
 #include "cmdh_fsp.h"
 #include "sensor.h"
-#include "p9_pstates_common.h"
+#include "pstates_common.H"
 
 typedef enum {
     MNFG_RUN_STOP_SLEW      = 0x02,

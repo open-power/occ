@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -31,11 +31,11 @@
 // *** WARNING *** - This file is generated automatically, do not edit.
 
 #ifndef SIXTYFOUR_BIT_CONSTANT
-#ifdef __ASSEMBLER__
-#define SIXTYFOUR_BIT_CONSTANT(x) x
-#else
-#define SIXTYFOUR_BIT_CONSTANT(x) x##ull
-#endif
+    #ifdef __ASSEMBLER__
+        #define SIXTYFOUR_BIT_CONSTANT(x) x
+    #else
+        #define SIXTYFOUR_BIT_CONSTANT(x) x##ull
+    #endif
 #endif
 
 #ifndef __ASSEMBLER__
@@ -45,238 +45,246 @@
 
 
 
-typedef union ocb_oisr0 {
+typedef union ocb_oisr0
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t debugger : 1;
-    uint32_t trace_trigger : 1;
-    uint32_t occ_error : 1;
-    uint32_t pba_error : 1;
-    uint32_t srt_error : 1;
-    uint32_t gpe0_error : 1;
-    uint32_t gpe1_error : 1;
-    uint32_t gpe2_error : 1;
-    uint32_t gpe3_error : 1;
-    uint32_t ppc405_halt : 1;
-    uint32_t ocb_error : 1;
-    uint32_t spipss_error : 1;
-    uint32_t check_stop_ppc405 : 1;
-    uint32_t check_stop_gpe0 : 1;
-    uint32_t check_stop_gpe1 : 1;
-    uint32_t check_stop_gpe2 : 1;
-    uint32_t check_stop_gpe3 : 1;
-    uint32_t occ_malf_alert : 1;
-    uint32_t adu_malf_alert : 1;
-    uint32_t external_trap : 1;
-    uint32_t ivrm_pvref_error : 1;
-    uint32_t occ_timer0 : 1;
-    uint32_t occ_timer1 : 1;
-    uint32_t avs_slave0 : 1;
-    uint32_t avs_slave1 : 1;
-    uint32_t ipi0_hi_priority : 1;
-    uint32_t ipi1_hi_priority : 1;
-    uint32_t ipi2_hi_priority : 1;
-    uint32_t ipi3_hi_priority : 1;
-    uint32_t ipi4_hi_priority : 1;
-    uint32_t adcfsm_ongoing : 1;
-    uint32_t spare_31 : 1;
+        uint32_t trace_trigger : 1;
+        uint32_t occ_error : 1;
+        uint32_t gpe2_error : 1;
+        uint32_t gpe3_error : 1;
+        uint32_t check_stop_gpe2 : 1;
+        uint32_t check_stop_gpe3 : 1;
+        uint32_t occ_malf_alert : 1;
+        uint32_t pvref_error : 1;
+        uint32_t ipi2 : 1;
+        uint32_t ipi3 : 1;
+        uint32_t debug_trigger : 1;
+        uint32_t spare : 1;
+        uint32_t pbax_pgpe_attn : 1;
+        uint32_t pbax_pgpe_push0 : 1;
+        uint32_t pbax_pgpe_push1 : 1;
+        uint32_t pba_overcurrent_indicator : 1;
+        uint32_t pmc_pcb_intr_type0_pending : 1;
+        uint32_t pmc_pcb_intr_type1_pending : 1;
+        uint32_t pmc_pcb_intr_type2_pending : 1;
+        uint32_t pmc_pcb_intr_type3_pending : 1;
+        uint32_t pmc_pcb_intr_type4_pending : 1;
+        uint32_t pmc_pcb_intr_type5_pending : 1;
+        uint32_t pmc_pcb_intr_type6_pending : 1;
+        uint32_t pmc_pcb_intr_type7_pending : 1;
+        uint32_t pmc_pcb_intr_type8_pending : 1;
+        uint32_t pmc_pcb_intr_type9_pending : 1;
+        uint32_t pmc_pcb_intr_typea_pending : 1;
+        uint32_t pmc_pcb_intr_typeb_pending : 1;
+        uint32_t pmc_pcb_intr_typec_pending : 1;
+        uint32_t pmc_pcb_intr_typed_pending : 1;
+        uint32_t pmc_pcb_intr_typee_pending : 1;
+        uint32_t pmc_pcb_intr_typef_pending : 1;
 #else
-    uint32_t spare_31 : 1;
-    uint32_t adcfsm_ongoing : 1;
-    uint32_t ipi4_hi_priority : 1;
-    uint32_t ipi3_hi_priority : 1;
-    uint32_t ipi2_hi_priority : 1;
-    uint32_t ipi1_hi_priority : 1;
-    uint32_t ipi0_hi_priority : 1;
-    uint32_t avs_slave1 : 1;
-    uint32_t avs_slave0 : 1;
-    uint32_t occ_timer1 : 1;
-    uint32_t occ_timer0 : 1;
-    uint32_t ivrm_pvref_error : 1;
-    uint32_t external_trap : 1;
-    uint32_t adu_malf_alert : 1;
-    uint32_t occ_malf_alert : 1;
-    uint32_t check_stop_gpe3 : 1;
-    uint32_t check_stop_gpe2 : 1;
-    uint32_t check_stop_gpe1 : 1;
-    uint32_t check_stop_gpe0 : 1;
-    uint32_t check_stop_ppc405 : 1;
-    uint32_t spipss_error : 1;
-    uint32_t ocb_error : 1;
-    uint32_t ppc405_halt : 1;
-    uint32_t gpe3_error : 1;
-    uint32_t gpe2_error : 1;
-    uint32_t gpe1_error : 1;
-    uint32_t gpe0_error : 1;
-    uint32_t srt_error : 1;
-    uint32_t pba_error : 1;
-    uint32_t occ_error : 1;
-    uint32_t trace_trigger : 1;
-    uint32_t debugger : 1;
+        uint32_t pmc_pcb_intr_typef_pending : 1;
+        uint32_t pmc_pcb_intr_typee_pending : 1;
+        uint32_t pmc_pcb_intr_typed_pending : 1;
+        uint32_t pmc_pcb_intr_typec_pending : 1;
+        uint32_t pmc_pcb_intr_typeb_pending : 1;
+        uint32_t pmc_pcb_intr_typea_pending : 1;
+        uint32_t pmc_pcb_intr_type9_pending : 1;
+        uint32_t pmc_pcb_intr_type8_pending : 1;
+        uint32_t pmc_pcb_intr_type7_pending : 1;
+        uint32_t pmc_pcb_intr_type6_pending : 1;
+        uint32_t pmc_pcb_intr_type5_pending : 1;
+        uint32_t pmc_pcb_intr_type4_pending : 1;
+        uint32_t pmc_pcb_intr_type3_pending : 1;
+        uint32_t pmc_pcb_intr_type2_pending : 1;
+        uint32_t pmc_pcb_intr_type1_pending : 1;
+        uint32_t pmc_pcb_intr_type0_pending : 1;
+        uint32_t pba_overcurrent_indicator : 1;
+        uint32_t pbax_pgpe_push1 : 1;
+        uint32_t pbax_pgpe_push0 : 1;
+        uint32_t pbax_pgpe_attn : 1;
+        uint32_t spare : 1;
+        uint32_t debug_trigger : 1;
+        uint32_t ipi3 : 1;
+        uint32_t ipi2 : 1;
+        uint32_t pvref_error : 1;
+        uint32_t occ_malf_alert : 1;
+        uint32_t check_stop_gpe3 : 1;
+        uint32_t check_stop_gpe2 : 1;
+        uint32_t gpe3_error : 1;
+        uint32_t gpe2_error : 1;
+        uint32_t occ_error : 1;
+        uint32_t trace_trigger : 1;
 #endif // _BIG_ENDIAN
     } fields;
 } ocb_oisr0_t;
 
 
 
-typedef union ocb_oisr0_clr {
+typedef union ocb_oisr0_clr
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t debugger : 1;
-    uint32_t trace_trigger : 1;
-    uint32_t occ_error : 1;
-    uint32_t pba_error : 1;
-    uint32_t srt_error : 1;
-    uint32_t gpe0_error : 1;
-    uint32_t gpe1_error : 1;
-    uint32_t gpe2_error : 1;
-    uint32_t gpe3_error : 1;
-    uint32_t ppc405_halt : 1;
-    uint32_t ocb_error : 1;
-    uint32_t spipss_error : 1;
-    uint32_t check_stop_ppc405 : 1;
-    uint32_t check_stop_gpe0 : 1;
-    uint32_t check_stop_gpe1 : 1;
-    uint32_t check_stop_gpe2 : 1;
-    uint32_t check_stop_gpe3 : 1;
-    uint32_t occ_malf_alert : 1;
-    uint32_t adu_malf_alert : 1;
-    uint32_t external_trap : 1;
-    uint32_t ivrm_pvref_error : 1;
-    uint32_t occ_timer0 : 1;
-    uint32_t occ_timer1 : 1;
-    uint32_t avs_slave0 : 1;
-    uint32_t avs_slave1 : 1;
-    uint32_t ipi0_hi_priority : 1;
-    uint32_t ipi1_hi_priority : 1;
-    uint32_t ipi2_hi_priority : 1;
-    uint32_t ipi3_hi_priority : 1;
-    uint32_t ipi4_hi_priority : 1;
-    uint32_t adcfsm_ongoing : 1;
-    uint32_t spare_31 : 1;
+        uint32_t trace_trigger : 1;
+        uint32_t occ_error : 1;
+        uint32_t gpe2_error : 1;
+        uint32_t gpe3_error : 1;
+        uint32_t check_stop_gpe2 : 1;
+        uint32_t check_stop_gpe3 : 1;
+        uint32_t occ_malf_alert : 1;
+        uint32_t pvref_error : 1;
+        uint32_t ipi2 : 1;
+        uint32_t ipi3 : 1;
+        uint32_t debug_trigger : 1;
+        uint32_t spare : 1;
+        uint32_t pbax_pgpe_attn : 1;
+        uint32_t pbax_pgpe_push0 : 1;
+        uint32_t pbax_pgpe_push1 : 1;
+        uint32_t pba_overcurrent_indicator : 1;
+        uint32_t pmc_pcb_intr_type0_pending : 1;
+        uint32_t pmc_pcb_intr_type1_pending : 1;
+        uint32_t pmc_pcb_intr_type2_pending : 1;
+        uint32_t pmc_pcb_intr_type3_pending : 1;
+        uint32_t pmc_pcb_intr_type4_pending : 1;
+        uint32_t pmc_pcb_intr_type5_pending : 1;
+        uint32_t pmc_pcb_intr_type6_pending : 1;
+        uint32_t pmc_pcb_intr_type7_pending : 1;
+        uint32_t pmc_pcb_intr_type8_pending : 1;
+        uint32_t pmc_pcb_intr_type9_pending : 1;
+        uint32_t pmc_pcb_intr_typea_pending : 1;
+        uint32_t pmc_pcb_intr_typeb_pending : 1;
+        uint32_t pmc_pcb_intr_typec_pending : 1;
+        uint32_t pmc_pcb_intr_typed_pending : 1;
+        uint32_t pmc_pcb_intr_typee_pending : 1;
+        uint32_t pmc_pcb_intr_typef_pending : 1;
 #else
-    uint32_t spare_31 : 1;
-    uint32_t adcfsm_ongoing : 1;
-    uint32_t ipi4_hi_priority : 1;
-    uint32_t ipi3_hi_priority : 1;
-    uint32_t ipi2_hi_priority : 1;
-    uint32_t ipi1_hi_priority : 1;
-    uint32_t ipi0_hi_priority : 1;
-    uint32_t avs_slave1 : 1;
-    uint32_t avs_slave0 : 1;
-    uint32_t occ_timer1 : 1;
-    uint32_t occ_timer0 : 1;
-    uint32_t ivrm_pvref_error : 1;
-    uint32_t external_trap : 1;
-    uint32_t adu_malf_alert : 1;
-    uint32_t occ_malf_alert : 1;
-    uint32_t check_stop_gpe3 : 1;
-    uint32_t check_stop_gpe2 : 1;
-    uint32_t check_stop_gpe1 : 1;
-    uint32_t check_stop_gpe0 : 1;
-    uint32_t check_stop_ppc405 : 1;
-    uint32_t spipss_error : 1;
-    uint32_t ocb_error : 1;
-    uint32_t ppc405_halt : 1;
-    uint32_t gpe3_error : 1;
-    uint32_t gpe2_error : 1;
-    uint32_t gpe1_error : 1;
-    uint32_t gpe0_error : 1;
-    uint32_t srt_error : 1;
-    uint32_t pba_error : 1;
-    uint32_t occ_error : 1;
-    uint32_t trace_trigger : 1;
-    uint32_t debugger : 1;
+        uint32_t pmc_pcb_intr_typef_pending : 1;
+        uint32_t pmc_pcb_intr_typee_pending : 1;
+        uint32_t pmc_pcb_intr_typed_pending : 1;
+        uint32_t pmc_pcb_intr_typec_pending : 1;
+        uint32_t pmc_pcb_intr_typeb_pending : 1;
+        uint32_t pmc_pcb_intr_typea_pending : 1;
+        uint32_t pmc_pcb_intr_type9_pending : 1;
+        uint32_t pmc_pcb_intr_type8_pending : 1;
+        uint32_t pmc_pcb_intr_type7_pending : 1;
+        uint32_t pmc_pcb_intr_type6_pending : 1;
+        uint32_t pmc_pcb_intr_type5_pending : 1;
+        uint32_t pmc_pcb_intr_type4_pending : 1;
+        uint32_t pmc_pcb_intr_type3_pending : 1;
+        uint32_t pmc_pcb_intr_type2_pending : 1;
+        uint32_t pmc_pcb_intr_type1_pending : 1;
+        uint32_t pmc_pcb_intr_type0_pending : 1;
+        uint32_t pba_overcurrent_indicator : 1;
+        uint32_t pbax_pgpe_push1 : 1;
+        uint32_t pbax_pgpe_push0 : 1;
+        uint32_t pbax_pgpe_attn : 1;
+        uint32_t spare : 1;
+        uint32_t debug_trigger : 1;
+        uint32_t ipi3 : 1;
+        uint32_t ipi2 : 1;
+        uint32_t pvref_error : 1;
+        uint32_t occ_malf_alert : 1;
+        uint32_t check_stop_gpe3 : 1;
+        uint32_t check_stop_gpe2 : 1;
+        uint32_t gpe3_error : 1;
+        uint32_t gpe2_error : 1;
+        uint32_t occ_error : 1;
+        uint32_t trace_trigger : 1;
 #endif // _BIG_ENDIAN
     } fields;
 } ocb_oisr0_clr_t;
 
 
 
-typedef union ocb_oisr0_or {
+typedef union ocb_oisr0_or
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t debugger : 1;
-    uint32_t trace_trigger : 1;
-    uint32_t occ_error : 1;
-    uint32_t pba_error : 1;
-    uint32_t srt_error : 1;
-    uint32_t gpe0_error : 1;
-    uint32_t gpe1_error : 1;
-    uint32_t gpe2_error : 1;
-    uint32_t gpe3_error : 1;
-    uint32_t ppc405_halt : 1;
-    uint32_t ocb_error : 1;
-    uint32_t spipss_error : 1;
-    uint32_t check_stop_ppc405 : 1;
-    uint32_t check_stop_gpe0 : 1;
-    uint32_t check_stop_gpe1 : 1;
-    uint32_t check_stop_gpe2 : 1;
-    uint32_t check_stop_gpe3 : 1;
-    uint32_t occ_malf_alert : 1;
-    uint32_t adu_malf_alert : 1;
-    uint32_t external_trap : 1;
-    uint32_t ivrm_pvref_error : 1;
-    uint32_t occ_timer0 : 1;
-    uint32_t occ_timer1 : 1;
-    uint32_t avs_slave0 : 1;
-    uint32_t avs_slave1 : 1;
-    uint32_t ipi0_hi_priority : 1;
-    uint32_t ipi1_hi_priority : 1;
-    uint32_t ipi2_hi_priority : 1;
-    uint32_t ipi3_hi_priority : 1;
-    uint32_t ipi4_hi_priority : 1;
-    uint32_t adcfsm_ongoing : 1;
-    uint32_t spare_31 : 1;
+        uint32_t trace_trigger : 1;
+        uint32_t occ_error : 1;
+        uint32_t gpe2_error : 1;
+        uint32_t gpe3_error : 1;
+        uint32_t check_stop_gpe2 : 1;
+        uint32_t check_stop_gpe3 : 1;
+        uint32_t occ_malf_alert : 1;
+        uint32_t pvref_error : 1;
+        uint32_t ipi2 : 1;
+        uint32_t ipi3 : 1;
+        uint32_t debug_trigger : 1;
+        uint32_t spare : 1;
+        uint32_t pbax_pgpe_attn : 1;
+        uint32_t pbax_pgpe_push0 : 1;
+        uint32_t pbax_pgpe_push1 : 1;
+        uint32_t pba_overcurrent_indicator : 1;
+        uint32_t pmc_pcb_intr_type0_pending : 1;
+        uint32_t pmc_pcb_intr_type1_pending : 1;
+        uint32_t pmc_pcb_intr_type2_pending : 1;
+        uint32_t pmc_pcb_intr_type3_pending : 1;
+        uint32_t pmc_pcb_intr_type4_pending : 1;
+        uint32_t pmc_pcb_intr_type5_pending : 1;
+        uint32_t pmc_pcb_intr_type6_pending : 1;
+        uint32_t pmc_pcb_intr_type7_pending : 1;
+        uint32_t pmc_pcb_intr_type8_pending : 1;
+        uint32_t pmc_pcb_intr_type9_pending : 1;
+        uint32_t pmc_pcb_intr_typea_pending : 1;
+        uint32_t pmc_pcb_intr_typeb_pending : 1;
+        uint32_t pmc_pcb_intr_typec_pending : 1;
+        uint32_t pmc_pcb_intr_typed_pending : 1;
+        uint32_t pmc_pcb_intr_typee_pending : 1;
+        uint32_t pmc_pcb_intr_typef_pending : 1;
 #else
-    uint32_t spare_31 : 1;
-    uint32_t adcfsm_ongoing : 1;
-    uint32_t ipi4_hi_priority : 1;
-    uint32_t ipi3_hi_priority : 1;
-    uint32_t ipi2_hi_priority : 1;
-    uint32_t ipi1_hi_priority : 1;
-    uint32_t ipi0_hi_priority : 1;
-    uint32_t avs_slave1 : 1;
-    uint32_t avs_slave0 : 1;
-    uint32_t occ_timer1 : 1;
-    uint32_t occ_timer0 : 1;
-    uint32_t ivrm_pvref_error : 1;
-    uint32_t external_trap : 1;
-    uint32_t adu_malf_alert : 1;
-    uint32_t occ_malf_alert : 1;
-    uint32_t check_stop_gpe3 : 1;
-    uint32_t check_stop_gpe2 : 1;
-    uint32_t check_stop_gpe1 : 1;
-    uint32_t check_stop_gpe0 : 1;
-    uint32_t check_stop_ppc405 : 1;
-    uint32_t spipss_error : 1;
-    uint32_t ocb_error : 1;
-    uint32_t ppc405_halt : 1;
-    uint32_t gpe3_error : 1;
-    uint32_t gpe2_error : 1;
-    uint32_t gpe1_error : 1;
-    uint32_t gpe0_error : 1;
-    uint32_t srt_error : 1;
-    uint32_t pba_error : 1;
-    uint32_t occ_error : 1;
-    uint32_t trace_trigger : 1;
-    uint32_t debugger : 1;
+        uint32_t pmc_pcb_intr_typef_pending : 1;
+        uint32_t pmc_pcb_intr_typee_pending : 1;
+        uint32_t pmc_pcb_intr_typed_pending : 1;
+        uint32_t pmc_pcb_intr_typec_pending : 1;
+        uint32_t pmc_pcb_intr_typeb_pending : 1;
+        uint32_t pmc_pcb_intr_typea_pending : 1;
+        uint32_t pmc_pcb_intr_type9_pending : 1;
+        uint32_t pmc_pcb_intr_type8_pending : 1;
+        uint32_t pmc_pcb_intr_type7_pending : 1;
+        uint32_t pmc_pcb_intr_type6_pending : 1;
+        uint32_t pmc_pcb_intr_type5_pending : 1;
+        uint32_t pmc_pcb_intr_type4_pending : 1;
+        uint32_t pmc_pcb_intr_type3_pending : 1;
+        uint32_t pmc_pcb_intr_type2_pending : 1;
+        uint32_t pmc_pcb_intr_type1_pending : 1;
+        uint32_t pmc_pcb_intr_type0_pending : 1;
+        uint32_t pba_overcurrent_indicator : 1;
+        uint32_t pbax_pgpe_push1 : 1;
+        uint32_t pbax_pgpe_push0 : 1;
+        uint32_t pbax_pgpe_attn : 1;
+        uint32_t spare : 1;
+        uint32_t debug_trigger : 1;
+        uint32_t ipi3 : 1;
+        uint32_t ipi2 : 1;
+        uint32_t pvref_error : 1;
+        uint32_t occ_malf_alert : 1;
+        uint32_t check_stop_gpe3 : 1;
+        uint32_t check_stop_gpe2 : 1;
+        uint32_t gpe3_error : 1;
+        uint32_t gpe2_error : 1;
+        uint32_t occ_error : 1;
+        uint32_t trace_trigger : 1;
 #endif // _BIG_ENDIAN
     } fields;
 } ocb_oisr0_or_t;
 
 
 
-typedef union ocb_oimr0 {
+typedef union ocb_oimr0
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_mask_n : 32;
 #else
@@ -287,10 +295,12 @@ typedef union ocb_oimr0 {
 
 
 
-typedef union ocb_oimr0_clr {
+typedef union ocb_oimr0_clr
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_mask_n : 32;
 #else
@@ -301,10 +311,12 @@ typedef union ocb_oimr0_clr {
 
 
 
-typedef union ocb_oimr0_or {
+typedef union ocb_oimr0_or
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_mask_n : 32;
 #else
@@ -315,10 +327,12 @@ typedef union ocb_oimr0_or {
 
 
 
-typedef union ocb_oitr0 {
+typedef union ocb_oitr0
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_type_n : 32;
 #else
@@ -329,10 +343,12 @@ typedef union ocb_oitr0 {
 
 
 
-typedef union ocb_oitr0_clr {
+typedef union ocb_oitr0_clr
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_type_n : 32;
 #else
@@ -343,10 +359,12 @@ typedef union ocb_oitr0_clr {
 
 
 
-typedef union ocb_oitr0_or {
+typedef union ocb_oitr0_or
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_type_n : 32;
 #else
@@ -357,10 +375,12 @@ typedef union ocb_oitr0_or {
 
 
 
-typedef union ocb_oiepr0 {
+typedef union ocb_oiepr0
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_edge_pol_n : 32;
 #else
@@ -371,10 +391,12 @@ typedef union ocb_oiepr0 {
 
 
 
-typedef union ocb_oiepr0_clr {
+typedef union ocb_oiepr0_clr
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_edge_pol_n : 32;
 #else
@@ -385,10 +407,12 @@ typedef union ocb_oiepr0_clr {
 
 
 
-typedef union ocb_oiepr0_or {
+typedef union ocb_oiepr0_or
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_edge_pol_n : 32;
 #else
@@ -399,238 +423,262 @@ typedef union ocb_oiepr0_or {
 
 
 
-typedef union ocb_oisr1 {
+typedef union ocb_oinkr0
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t pbax_occ_send_attn : 1;
-    uint32_t pbax_occ_push0 : 1;
-    uint32_t pbax_occ_push1 : 1;
-    uint32_t pba_bcde_attn : 1;
-    uint32_t pba_bcue_attn : 1;
-    uint32_t occ_strm0_pull : 1;
-    uint32_t occ_strm0_push : 1;
-    uint32_t occ_strm1_pull : 1;
-    uint32_t occ_strm1_push : 1;
-    uint32_t occ_strm2_pull : 1;
-    uint32_t occ_strm2_push : 1;
-    uint32_t occ_strm3_pull : 1;
-    uint32_t occ_strm3_push : 1;
-    uint32_t pmc_pcb_intr_type0_pending : 1;
-    uint32_t pmc_pcb_intr_type1_pending : 1;
-    uint32_t pmc_pcb_intr_type2_pending : 1;
-    uint32_t pmc_pcb_intr_type3_pending : 1;
-    uint32_t pmc_pcb_intr_type4_pending : 1;
-    uint32_t pmc_pcb_intr_type5_pending : 1;
-    uint32_t pmc_pcb_intr_type6_pending : 1;
-    uint32_t pmc_pcb_intr_type7_pending : 1;
-    uint32_t pmc_o2s_0a_ongoing : 1;
-    uint32_t pmc_o2s_0b_ongoing : 1;
-    uint32_t pmc_o2s_1a_ongoing : 1;
-    uint32_t pmc_o2s_1b_ongoing : 1;
-    uint32_t pssbridge_ongoing : 1;
-    uint32_t ipi0_lo_priority : 1;
-    uint32_t ipi1_lo_priority : 1;
-    uint32_t ipi2_lo_priority : 1;
-    uint32_t ipi3_lo_priority : 1;
-    uint32_t ipi4_lo_priority : 1;
-    uint32_t spare_31 : 1;
+        uint32_t interrupt_input_n : 32;
 #else
-    uint32_t spare_31 : 1;
-    uint32_t ipi4_lo_priority : 1;
-    uint32_t ipi3_lo_priority : 1;
-    uint32_t ipi2_lo_priority : 1;
-    uint32_t ipi1_lo_priority : 1;
-    uint32_t ipi0_lo_priority : 1;
-    uint32_t pssbridge_ongoing : 1;
-    uint32_t pmc_o2s_1b_ongoing : 1;
-    uint32_t pmc_o2s_1a_ongoing : 1;
-    uint32_t pmc_o2s_0b_ongoing : 1;
-    uint32_t pmc_o2s_0a_ongoing : 1;
-    uint32_t pmc_pcb_intr_type7_pending : 1;
-    uint32_t pmc_pcb_intr_type6_pending : 1;
-    uint32_t pmc_pcb_intr_type5_pending : 1;
-    uint32_t pmc_pcb_intr_type4_pending : 1;
-    uint32_t pmc_pcb_intr_type3_pending : 1;
-    uint32_t pmc_pcb_intr_type2_pending : 1;
-    uint32_t pmc_pcb_intr_type1_pending : 1;
-    uint32_t pmc_pcb_intr_type0_pending : 1;
-    uint32_t occ_strm3_push : 1;
-    uint32_t occ_strm3_pull : 1;
-    uint32_t occ_strm2_push : 1;
-    uint32_t occ_strm2_pull : 1;
-    uint32_t occ_strm1_push : 1;
-    uint32_t occ_strm1_pull : 1;
-    uint32_t occ_strm0_push : 1;
-    uint32_t occ_strm0_pull : 1;
-    uint32_t pba_bcue_attn : 1;
-    uint32_t pba_bcde_attn : 1;
-    uint32_t pbax_occ_push1 : 1;
-    uint32_t pbax_occ_push0 : 1;
-    uint32_t pbax_occ_send_attn : 1;
+        uint32_t interrupt_input_n : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_oinkr0_t;
+
+
+
+typedef union ocb_oisr1
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t debugger : 1;
+        uint32_t trace_trigger : 1;
+        uint32_t spare : 1;
+        uint32_t pba_error : 1;
+        uint32_t gpe0_error : 1;
+        uint32_t gpe1_error : 1;
+        uint32_t check_stop_ppc405 : 1;
+        uint32_t external_trap : 1;
+        uint32_t occ_timer0 : 1;
+        uint32_t occ_timer1 : 1;
+        uint32_t ipi0_hi_priority : 1;
+        uint32_t ipi1_hi_priority : 1;
+        uint32_t ipi4_hi_priority : 1;
+        uint32_t i2cm_intr : 1;
+        uint32_t spare_14 : 1;
+        uint32_t dcm_intf_ongoing : 1;
+        uint32_t pbax_occ_send_attn : 1;
+        uint32_t pbax_occ_push0 : 1;
+        uint32_t pbax_occ_push1 : 1;
+        uint32_t pba_bcde_attn : 1;
+        uint32_t pba_bcue_attn : 1;
+        uint32_t occ_strm0_pull : 1;
+        uint32_t occ_strm0_push : 1;
+        uint32_t occ_strm1_pull : 1;
+        uint32_t occ_strm1_push : 1;
+        uint32_t occ_strm2_pull : 1;
+        uint32_t occ_strm2_push : 1;
+        uint32_t occ_strm3_pull : 1;
+        uint32_t occ_strm3_push : 1;
+        uint32_t ipi0_lo_priority : 1;
+        uint32_t ipi1_lo_priority : 1;
+        uint32_t ipi4_lo_priority : 1;
+#else
+        uint32_t ipi4_lo_priority : 1;
+        uint32_t ipi1_lo_priority : 1;
+        uint32_t ipi0_lo_priority : 1;
+        uint32_t occ_strm3_push : 1;
+        uint32_t occ_strm3_pull : 1;
+        uint32_t occ_strm2_push : 1;
+        uint32_t occ_strm2_pull : 1;
+        uint32_t occ_strm1_push : 1;
+        uint32_t occ_strm1_pull : 1;
+        uint32_t occ_strm0_push : 1;
+        uint32_t occ_strm0_pull : 1;
+        uint32_t pba_bcue_attn : 1;
+        uint32_t pba_bcde_attn : 1;
+        uint32_t pbax_occ_push1 : 1;
+        uint32_t pbax_occ_push0 : 1;
+        uint32_t pbax_occ_send_attn : 1;
+        uint32_t dcm_intf_ongoing : 1;
+        uint32_t spare_14 : 1;
+        uint32_t i2cm_intr : 1;
+        uint32_t ipi4_hi_priority : 1;
+        uint32_t ipi1_hi_priority : 1;
+        uint32_t ipi0_hi_priority : 1;
+        uint32_t occ_timer1 : 1;
+        uint32_t occ_timer0 : 1;
+        uint32_t external_trap : 1;
+        uint32_t check_stop_ppc405 : 1;
+        uint32_t gpe1_error : 1;
+        uint32_t gpe0_error : 1;
+        uint32_t pba_error : 1;
+        uint32_t spare : 1;
+        uint32_t trace_trigger : 1;
+        uint32_t debugger : 1;
 #endif // _BIG_ENDIAN
     } fields;
 } ocb_oisr1_t;
 
 
 
-typedef union ocb_oisr1_clr {
+typedef union ocb_oisr1_clr
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t pbax_occ_send_attn : 1;
-    uint32_t pbax_occ_push0 : 1;
-    uint32_t pbax_occ_push1 : 1;
-    uint32_t pba_bcde_attn : 1;
-    uint32_t pba_bcue_attn : 1;
-    uint32_t occ_strm0_pull : 1;
-    uint32_t occ_strm0_push : 1;
-    uint32_t occ_strm1_pull : 1;
-    uint32_t occ_strm1_push : 1;
-    uint32_t occ_strm2_pull : 1;
-    uint32_t occ_strm2_push : 1;
-    uint32_t occ_strm3_pull : 1;
-    uint32_t occ_strm3_push : 1;
-    uint32_t pmc_pcb_intr_type0_pending : 1;
-    uint32_t pmc_pcb_intr_type1_pending : 1;
-    uint32_t pmc_pcb_intr_type2_pending : 1;
-    uint32_t pmc_pcb_intr_type3_pending : 1;
-    uint32_t pmc_pcb_intr_type4_pending : 1;
-    uint32_t pmc_pcb_intr_type5_pending : 1;
-    uint32_t pmc_pcb_intr_type6_pending : 1;
-    uint32_t pmc_pcb_intr_type7_pending : 1;
-    uint32_t pmc_o2s_0a_ongoing : 1;
-    uint32_t pmc_o2s_0b_ongoing : 1;
-    uint32_t pmc_o2s_1a_ongoing : 1;
-    uint32_t pmc_o2s_1b_ongoing : 1;
-    uint32_t pssbridge_ongoing : 1;
-    uint32_t ipi0_lo_priority : 1;
-    uint32_t ipi1_lo_priority : 1;
-    uint32_t ipi2_lo_priority : 1;
-    uint32_t ipi3_lo_priority : 1;
-    uint32_t ipi4_lo_priority : 1;
-    uint32_t spare_31 : 1;
+        uint32_t debugger : 1;
+        uint32_t trace_trigger : 1;
+        uint32_t spare : 1;
+        uint32_t pba_error : 1;
+        uint32_t gpe0_error : 1;
+        uint32_t gpe1_error : 1;
+        uint32_t check_stop_ppc405 : 1;
+        uint32_t external_trap : 1;
+        uint32_t occ_timer0 : 1;
+        uint32_t occ_timer1 : 1;
+        uint32_t ipi0_hi_priority : 1;
+        uint32_t ipi1_hi_priority : 1;
+        uint32_t ipi4_hi_priority : 1;
+        uint32_t i2cm_intr : 1;
+        uint32_t spare_14 : 1;
+        uint32_t dcm_intf_ongoing : 1;
+        uint32_t pbax_occ_send_attn : 1;
+        uint32_t pbax_occ_push0 : 1;
+        uint32_t pbax_occ_push1 : 1;
+        uint32_t pba_bcde_attn : 1;
+        uint32_t pba_bcue_attn : 1;
+        uint32_t occ_strm0_pull : 1;
+        uint32_t occ_strm0_push : 1;
+        uint32_t occ_strm1_pull : 1;
+        uint32_t occ_strm1_push : 1;
+        uint32_t occ_strm2_pull : 1;
+        uint32_t occ_strm2_push : 1;
+        uint32_t occ_strm3_pull : 1;
+        uint32_t occ_strm3_push : 1;
+        uint32_t ipi0_lo_priority : 1;
+        uint32_t ipi1_lo_priority : 1;
+        uint32_t ipi4_lo_priority : 1;
 #else
-    uint32_t spare_31 : 1;
-    uint32_t ipi4_lo_priority : 1;
-    uint32_t ipi3_lo_priority : 1;
-    uint32_t ipi2_lo_priority : 1;
-    uint32_t ipi1_lo_priority : 1;
-    uint32_t ipi0_lo_priority : 1;
-    uint32_t pssbridge_ongoing : 1;
-    uint32_t pmc_o2s_1b_ongoing : 1;
-    uint32_t pmc_o2s_1a_ongoing : 1;
-    uint32_t pmc_o2s_0b_ongoing : 1;
-    uint32_t pmc_o2s_0a_ongoing : 1;
-    uint32_t pmc_pcb_intr_type7_pending : 1;
-    uint32_t pmc_pcb_intr_type6_pending : 1;
-    uint32_t pmc_pcb_intr_type5_pending : 1;
-    uint32_t pmc_pcb_intr_type4_pending : 1;
-    uint32_t pmc_pcb_intr_type3_pending : 1;
-    uint32_t pmc_pcb_intr_type2_pending : 1;
-    uint32_t pmc_pcb_intr_type1_pending : 1;
-    uint32_t pmc_pcb_intr_type0_pending : 1;
-    uint32_t occ_strm3_push : 1;
-    uint32_t occ_strm3_pull : 1;
-    uint32_t occ_strm2_push : 1;
-    uint32_t occ_strm2_pull : 1;
-    uint32_t occ_strm1_push : 1;
-    uint32_t occ_strm1_pull : 1;
-    uint32_t occ_strm0_push : 1;
-    uint32_t occ_strm0_pull : 1;
-    uint32_t pba_bcue_attn : 1;
-    uint32_t pba_bcde_attn : 1;
-    uint32_t pbax_occ_push1 : 1;
-    uint32_t pbax_occ_push0 : 1;
-    uint32_t pbax_occ_send_attn : 1;
+        uint32_t ipi4_lo_priority : 1;
+        uint32_t ipi1_lo_priority : 1;
+        uint32_t ipi0_lo_priority : 1;
+        uint32_t occ_strm3_push : 1;
+        uint32_t occ_strm3_pull : 1;
+        uint32_t occ_strm2_push : 1;
+        uint32_t occ_strm2_pull : 1;
+        uint32_t occ_strm1_push : 1;
+        uint32_t occ_strm1_pull : 1;
+        uint32_t occ_strm0_push : 1;
+        uint32_t occ_strm0_pull : 1;
+        uint32_t pba_bcue_attn : 1;
+        uint32_t pba_bcde_attn : 1;
+        uint32_t pbax_occ_push1 : 1;
+        uint32_t pbax_occ_push0 : 1;
+        uint32_t pbax_occ_send_attn : 1;
+        uint32_t dcm_intf_ongoing : 1;
+        uint32_t spare_14 : 1;
+        uint32_t i2cm_intr : 1;
+        uint32_t ipi4_hi_priority : 1;
+        uint32_t ipi1_hi_priority : 1;
+        uint32_t ipi0_hi_priority : 1;
+        uint32_t occ_timer1 : 1;
+        uint32_t occ_timer0 : 1;
+        uint32_t external_trap : 1;
+        uint32_t check_stop_ppc405 : 1;
+        uint32_t gpe1_error : 1;
+        uint32_t gpe0_error : 1;
+        uint32_t pba_error : 1;
+        uint32_t spare : 1;
+        uint32_t trace_trigger : 1;
+        uint32_t debugger : 1;
 #endif // _BIG_ENDIAN
     } fields;
 } ocb_oisr1_clr_t;
 
 
 
-typedef union ocb_oisr1_or {
+typedef union ocb_oisr1_or
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t pbax_occ_send_attn : 1;
-    uint32_t pbax_occ_push0 : 1;
-    uint32_t pbax_occ_push1 : 1;
-    uint32_t pba_bcde_attn : 1;
-    uint32_t pba_bcue_attn : 1;
-    uint32_t occ_strm0_pull : 1;
-    uint32_t occ_strm0_push : 1;
-    uint32_t occ_strm1_pull : 1;
-    uint32_t occ_strm1_push : 1;
-    uint32_t occ_strm2_pull : 1;
-    uint32_t occ_strm2_push : 1;
-    uint32_t occ_strm3_pull : 1;
-    uint32_t occ_strm3_push : 1;
-    uint32_t pmc_pcb_intr_type0_pending : 1;
-    uint32_t pmc_pcb_intr_type1_pending : 1;
-    uint32_t pmc_pcb_intr_type2_pending : 1;
-    uint32_t pmc_pcb_intr_type3_pending : 1;
-    uint32_t pmc_pcb_intr_type4_pending : 1;
-    uint32_t pmc_pcb_intr_type5_pending : 1;
-    uint32_t pmc_pcb_intr_type6_pending : 1;
-    uint32_t pmc_pcb_intr_type7_pending : 1;
-    uint32_t pmc_o2s_0a_ongoing : 1;
-    uint32_t pmc_o2s_0b_ongoing : 1;
-    uint32_t pmc_o2s_1a_ongoing : 1;
-    uint32_t pmc_o2s_1b_ongoing : 1;
-    uint32_t pssbridge_ongoing : 1;
-    uint32_t ipi0_lo_priority : 1;
-    uint32_t ipi1_lo_priority : 1;
-    uint32_t ipi2_lo_priority : 1;
-    uint32_t ipi3_lo_priority : 1;
-    uint32_t ipi4_lo_priority : 1;
-    uint32_t spare_31 : 1;
+        uint32_t debugger : 1;
+        uint32_t trace_trigger : 1;
+        uint32_t spare : 1;
+        uint32_t pba_error : 1;
+        uint32_t gpe0_error : 1;
+        uint32_t gpe1_error : 1;
+        uint32_t check_stop_ppc405 : 1;
+        uint32_t external_trap : 1;
+        uint32_t occ_timer0 : 1;
+        uint32_t occ_timer1 : 1;
+        uint32_t ipi0_hi_priority : 1;
+        uint32_t ipi1_hi_priority : 1;
+        uint32_t ipi4_hi_priority : 1;
+        uint32_t i2cm_intr : 1;
+        uint32_t spare_14 : 1;
+        uint32_t dcm_intf_ongoing : 1;
+        uint32_t pbax_occ_send_attn : 1;
+        uint32_t pbax_occ_push0 : 1;
+        uint32_t pbax_occ_push1 : 1;
+        uint32_t pba_bcde_attn : 1;
+        uint32_t pba_bcue_attn : 1;
+        uint32_t occ_strm0_pull : 1;
+        uint32_t occ_strm0_push : 1;
+        uint32_t occ_strm1_pull : 1;
+        uint32_t occ_strm1_push : 1;
+        uint32_t occ_strm2_pull : 1;
+        uint32_t occ_strm2_push : 1;
+        uint32_t occ_strm3_pull : 1;
+        uint32_t occ_strm3_push : 1;
+        uint32_t ipi0_lo_priority : 1;
+        uint32_t ipi1_lo_priority : 1;
+        uint32_t ipi4_lo_priority : 1;
 #else
-    uint32_t spare_31 : 1;
-    uint32_t ipi4_lo_priority : 1;
-    uint32_t ipi3_lo_priority : 1;
-    uint32_t ipi2_lo_priority : 1;
-    uint32_t ipi1_lo_priority : 1;
-    uint32_t ipi0_lo_priority : 1;
-    uint32_t pssbridge_ongoing : 1;
-    uint32_t pmc_o2s_1b_ongoing : 1;
-    uint32_t pmc_o2s_1a_ongoing : 1;
-    uint32_t pmc_o2s_0b_ongoing : 1;
-    uint32_t pmc_o2s_0a_ongoing : 1;
-    uint32_t pmc_pcb_intr_type7_pending : 1;
-    uint32_t pmc_pcb_intr_type6_pending : 1;
-    uint32_t pmc_pcb_intr_type5_pending : 1;
-    uint32_t pmc_pcb_intr_type4_pending : 1;
-    uint32_t pmc_pcb_intr_type3_pending : 1;
-    uint32_t pmc_pcb_intr_type2_pending : 1;
-    uint32_t pmc_pcb_intr_type1_pending : 1;
-    uint32_t pmc_pcb_intr_type0_pending : 1;
-    uint32_t occ_strm3_push : 1;
-    uint32_t occ_strm3_pull : 1;
-    uint32_t occ_strm2_push : 1;
-    uint32_t occ_strm2_pull : 1;
-    uint32_t occ_strm1_push : 1;
-    uint32_t occ_strm1_pull : 1;
-    uint32_t occ_strm0_push : 1;
-    uint32_t occ_strm0_pull : 1;
-    uint32_t pba_bcue_attn : 1;
-    uint32_t pba_bcde_attn : 1;
-    uint32_t pbax_occ_push1 : 1;
-    uint32_t pbax_occ_push0 : 1;
-    uint32_t pbax_occ_send_attn : 1;
+        uint32_t ipi4_lo_priority : 1;
+        uint32_t ipi1_lo_priority : 1;
+        uint32_t ipi0_lo_priority : 1;
+        uint32_t occ_strm3_push : 1;
+        uint32_t occ_strm3_pull : 1;
+        uint32_t occ_strm2_push : 1;
+        uint32_t occ_strm2_pull : 1;
+        uint32_t occ_strm1_push : 1;
+        uint32_t occ_strm1_pull : 1;
+        uint32_t occ_strm0_push : 1;
+        uint32_t occ_strm0_pull : 1;
+        uint32_t pba_bcue_attn : 1;
+        uint32_t pba_bcde_attn : 1;
+        uint32_t pbax_occ_push1 : 1;
+        uint32_t pbax_occ_push0 : 1;
+        uint32_t pbax_occ_send_attn : 1;
+        uint32_t dcm_intf_ongoing : 1;
+        uint32_t spare_14 : 1;
+        uint32_t i2cm_intr : 1;
+        uint32_t ipi4_hi_priority : 1;
+        uint32_t ipi1_hi_priority : 1;
+        uint32_t ipi0_hi_priority : 1;
+        uint32_t occ_timer1 : 1;
+        uint32_t occ_timer0 : 1;
+        uint32_t external_trap : 1;
+        uint32_t check_stop_ppc405 : 1;
+        uint32_t gpe1_error : 1;
+        uint32_t gpe0_error : 1;
+        uint32_t pba_error : 1;
+        uint32_t spare : 1;
+        uint32_t trace_trigger : 1;
+        uint32_t debugger : 1;
 #endif // _BIG_ENDIAN
     } fields;
 } ocb_oisr1_or_t;
 
 
 
-typedef union ocb_oimr1 {
+typedef union ocb_oimr1
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_mask_n : 32;
 #else
@@ -641,10 +689,12 @@ typedef union ocb_oimr1 {
 
 
 
-typedef union ocb_oimr1_clr {
+typedef union ocb_oimr1_clr
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_mask_n : 32;
 #else
@@ -655,10 +705,12 @@ typedef union ocb_oimr1_clr {
 
 
 
-typedef union ocb_oimr1_or {
+typedef union ocb_oimr1_or
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_mask_n : 32;
 #else
@@ -669,10 +721,12 @@ typedef union ocb_oimr1_or {
 
 
 
-typedef union ocb_oitr1 {
+typedef union ocb_oitr1
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_type_n : 32;
 #else
@@ -683,10 +737,12 @@ typedef union ocb_oitr1 {
 
 
 
-typedef union ocb_oitr1_clr {
+typedef union ocb_oitr1_clr
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_type_n : 32;
 #else
@@ -697,10 +753,12 @@ typedef union ocb_oitr1_clr {
 
 
 
-typedef union ocb_oitr1_or {
+typedef union ocb_oitr1_or
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_type_n : 32;
 #else
@@ -711,10 +769,12 @@ typedef union ocb_oitr1_or {
 
 
 
-typedef union ocb_oiepr1 {
+typedef union ocb_oiepr1
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_edge_pol_n : 32;
 #else
@@ -725,10 +785,12 @@ typedef union ocb_oiepr1 {
 
 
 
-typedef union ocb_oiepr1_clr {
+typedef union ocb_oiepr1_clr
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_edge_pol_n : 32;
 #else
@@ -739,10 +801,12 @@ typedef union ocb_oiepr1_clr {
 
 
 
-typedef union ocb_oiepr1_or {
+typedef union ocb_oiepr1_or
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_edge_pol_n : 32;
 #else
@@ -753,24 +817,44 @@ typedef union ocb_oiepr1_or {
 
 
 
-typedef union ocb_oirr0a {
+typedef union ocb_oinkr1
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t interrupt_route_a_n : 32;
+        uint32_t interrupt_input_n : 32;
 #else
-    uint32_t interrupt_route_a_n : 32;
+        uint32_t interrupt_input_n : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_oinkr1_t;
+
+
+
+typedef union ocb_oirr0a
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t interrupt_route_a_n : 32;
+#else
+        uint32_t interrupt_route_a_n : 32;
 #endif // _BIG_ENDIAN
     } fields;
 } ocb_oirr0a_t;
 
 
 
-typedef union ocb_oirr0a_clr {
+typedef union ocb_oirr0a_clr
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_route_a_n : 32;
 #else
@@ -781,10 +865,12 @@ typedef union ocb_oirr0a_clr {
 
 
 
-typedef union ocb_oirr0a_or {
+typedef union ocb_oirr0a_or
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_route_a_n : 32;
 #else
@@ -795,10 +881,12 @@ typedef union ocb_oirr0a_or {
 
 
 
-typedef union ocb_oirr0b {
+typedef union ocb_oirr0b
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_route_a_n : 32;
 #else
@@ -809,10 +897,12 @@ typedef union ocb_oirr0b {
 
 
 
-typedef union ocb_oirr0b_clr {
+typedef union ocb_oirr0b_clr
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_route_a_n : 32;
 #else
@@ -823,10 +913,12 @@ typedef union ocb_oirr0b_clr {
 
 
 
-typedef union ocb_oirr0b_or {
+typedef union ocb_oirr0b_or
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_route_a_n : 32;
 #else
@@ -837,10 +929,12 @@ typedef union ocb_oirr0b_or {
 
 
 
-typedef union ocb_oirr0c {
+typedef union ocb_oirr0c
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_route_a_n : 32;
 #else
@@ -851,10 +945,12 @@ typedef union ocb_oirr0c {
 
 
 
-typedef union ocb_oirr0c_clr {
+typedef union ocb_oirr0c_clr
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_route_a_n : 32;
 #else
@@ -865,10 +961,12 @@ typedef union ocb_oirr0c_clr {
 
 
 
-typedef union ocb_oirr0c_or {
+typedef union ocb_oirr0c_or
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_route_a_n : 32;
 #else
@@ -879,10 +977,12 @@ typedef union ocb_oirr0c_or {
 
 
 
-typedef union ocb_oirr1a {
+typedef union ocb_oirr1a
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_route_a_n : 32;
 #else
@@ -893,10 +993,12 @@ typedef union ocb_oirr1a {
 
 
 
-typedef union ocb_oirr1a_clr {
+typedef union ocb_oirr1a_clr
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_route_a_n : 32;
 #else
@@ -907,10 +1009,12 @@ typedef union ocb_oirr1a_clr {
 
 
 
-typedef union ocb_oirr1a_or {
+typedef union ocb_oirr1a_or
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_route_a_n : 32;
 #else
@@ -921,10 +1025,12 @@ typedef union ocb_oirr1a_or {
 
 
 
-typedef union ocb_oirr1b {
+typedef union ocb_oirr1b
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_route_a_n : 32;
 #else
@@ -935,10 +1041,12 @@ typedef union ocb_oirr1b {
 
 
 
-typedef union ocb_oirr1b_clr {
+typedef union ocb_oirr1b_clr
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_route_a_n : 32;
 #else
@@ -949,10 +1057,12 @@ typedef union ocb_oirr1b_clr {
 
 
 
-typedef union ocb_oirr1b_or {
+typedef union ocb_oirr1b_or
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_route_a_n : 32;
 #else
@@ -963,10 +1073,12 @@ typedef union ocb_oirr1b_or {
 
 
 
-typedef union ocb_oirr1c {
+typedef union ocb_oirr1c
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_route_a_n : 32;
 #else
@@ -977,10 +1089,12 @@ typedef union ocb_oirr1c {
 
 
 
-typedef union ocb_oirr1c_clr {
+typedef union ocb_oirr1c_clr
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_route_a_n : 32;
 #else
@@ -991,10 +1105,12 @@ typedef union ocb_oirr1c_clr {
 
 
 
-typedef union ocb_oirr1c_or {
+typedef union ocb_oirr1c_or
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_route_a_n : 32;
 #else
@@ -1005,10 +1121,12 @@ typedef union ocb_oirr1c_or {
 
 
 
-typedef union ocb_onisr0 {
+typedef union ocb_onisr0
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_noncrit_status_n : 32;
 #else
@@ -1019,10 +1137,12 @@ typedef union ocb_onisr0 {
 
 
 
-typedef union ocb_ocisr0 {
+typedef union ocb_ocisr0
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_crit_status_n : 32;
 #else
@@ -1033,10 +1153,12 @@ typedef union ocb_ocisr0 {
 
 
 
-typedef union ocb_ouisr0 {
+typedef union ocb_ouisr0
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_uncon_status_n : 32;
 #else
@@ -1047,10 +1169,12 @@ typedef union ocb_ouisr0 {
 
 
 
-typedef union ocb_odisr0 {
+typedef union ocb_odisr0
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_debug_status_n : 32;
 #else
@@ -1061,10 +1185,12 @@ typedef union ocb_odisr0 {
 
 
 
-typedef union ocb_g0isr0 {
+typedef union ocb_g0isr0
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_gpe0_status_n : 32;
 #else
@@ -1075,10 +1201,12 @@ typedef union ocb_g0isr0 {
 
 
 
-typedef union ocb_g1isr0 {
+typedef union ocb_g1isr0
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_gpe1_status_n : 32;
 #else
@@ -1089,10 +1217,12 @@ typedef union ocb_g1isr0 {
 
 
 
-typedef union ocb_g2isr0 {
+typedef union ocb_g2isr0
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_gpe2_status_n : 32;
 #else
@@ -1103,10 +1233,12 @@ typedef union ocb_g2isr0 {
 
 
 
-typedef union ocb_g3isr0 {
+typedef union ocb_g3isr0
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_gpe3_status_n : 32;
 #else
@@ -1117,10 +1249,12 @@ typedef union ocb_g3isr0 {
 
 
 
-typedef union ocb_onisr1 {
+typedef union ocb_onisr1
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_noncrit_status_n : 32;
 #else
@@ -1131,10 +1265,12 @@ typedef union ocb_onisr1 {
 
 
 
-typedef union ocb_ocisr1 {
+typedef union ocb_ocisr1
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_crit_status_n : 32;
 #else
@@ -1145,10 +1281,12 @@ typedef union ocb_ocisr1 {
 
 
 
-typedef union ocb_ouisr1 {
+typedef union ocb_ouisr1
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_uncon_status_n : 32;
 #else
@@ -1159,10 +1297,12 @@ typedef union ocb_ouisr1 {
 
 
 
-typedef union ocb_odisr1 {
+typedef union ocb_odisr1
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_debug_status_n : 32;
 #else
@@ -1173,10 +1313,12 @@ typedef union ocb_odisr1 {
 
 
 
-typedef union ocb_g0isr1 {
+typedef union ocb_g0isr1
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_gpe0_status_n : 32;
 #else
@@ -1187,10 +1329,12 @@ typedef union ocb_g0isr1 {
 
 
 
-typedef union ocb_g1isr1 {
+typedef union ocb_g1isr1
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_gpe1_status_n : 32;
 #else
@@ -1201,10 +1345,12 @@ typedef union ocb_g1isr1 {
 
 
 
-typedef union ocb_g2isr1 {
+typedef union ocb_g2isr1
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_gpe2_status_n : 32;
 #else
@@ -1215,10 +1361,12 @@ typedef union ocb_g2isr1 {
 
 
 
-typedef union ocb_g3isr1 {
+typedef union ocb_g3isr1
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t interrupt_gpe3_status_n : 32;
 #else
@@ -1229,25 +1377,33 @@ typedef union ocb_g3isr1 {
 
 
 
-typedef union ocb_occmisc {
+typedef union ocb_occmisc
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t core_ext_intr : 1;
-    uint32_t ext_intr_service_required : 1;
-    uint32_t ext_intr_i2c_change : 1;
-    uint32_t ext_intr_shmem_change : 1;
-    uint32_t spare : 12;
+        uint32_t ext_intr_reason : 3;
+        uint32_t pvref_error_en : 2;
+        uint32_t pvref_error_gross : 1;
+        uint32_t pvref_error_fine : 1;
+        uint32_t firmware_fault : 1;
+        uint32_t firmware_notify : 1;
+        uint32_t spare : 6;
     uint32_t i2cm_intr_status : 3;
     uint32_t reserved1 : 13;
 #else
     uint32_t reserved1 : 13;
     uint32_t i2cm_intr_status : 3;
-    uint32_t spare : 11;
-    uint32_t ext_intr_shmem_change : 1;
-    uint32_t ext_intr_i2c_change : 1;
-    uint32_t ext_intr_service_required : 1;
+        uint32_t spare : 6;
+        uint32_t firmware_notify : 1;
+        uint32_t firmware_fault : 1;
+        uint32_t pvref_error_fine : 1;
+        uint32_t pvref_error_gross : 1;
+        uint32_t pvref_error_en : 2;
+        uint32_t ext_intr_reason : 3;
     uint32_t core_ext_intr : 1;
 #endif // _BIG_ENDIAN
     } fields;
@@ -1255,33 +1411,107 @@ typedef union ocb_occmisc {
 
 
 
-typedef union ocb_ohtmcr {
+typedef union ocb_occmisc_clr
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t core_ext_intr : 1;
+        uint32_t ext_intr_reason : 3;
+        uint32_t pvref_error_en : 2;
+        uint32_t pvref_error_gross : 1;
+        uint32_t pvref_error_fine : 1;
+        uint32_t firmware_fault : 1;
+        uint32_t firmware_notify : 1;
+        uint32_t spare : 6;
+        uint32_t i2cm_intr_status : 3;
+        uint32_t reserved1 : 13;
+#else
+        uint32_t reserved1 : 13;
+        uint32_t i2cm_intr_status : 3;
+        uint32_t spare : 6;
+        uint32_t firmware_notify : 1;
+        uint32_t firmware_fault : 1;
+        uint32_t pvref_error_fine : 1;
+        uint32_t pvref_error_gross : 1;
+        uint32_t pvref_error_en : 2;
+        uint32_t ext_intr_reason : 3;
+        uint32_t core_ext_intr : 1;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_occmisc_clr_t;
+
+
+
+typedef union ocb_occmisc_or
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t core_ext_intr : 1;
+        uint32_t ext_intr_reason : 3;
+        uint32_t pvref_error_en : 2;
+        uint32_t pvref_error_gross : 1;
+        uint32_t pvref_error_fine : 1;
+        uint32_t firmware_fault : 1;
+        uint32_t firmware_notify : 1;
+        uint32_t spare : 6;
+        uint32_t i2cm_intr_status : 3;
+        uint32_t reserved1 : 13;
+#else
+        uint32_t reserved1 : 13;
+        uint32_t i2cm_intr_status : 3;
+        uint32_t spare : 6;
+        uint32_t firmware_notify : 1;
+        uint32_t firmware_fault : 1;
+        uint32_t pvref_error_fine : 1;
+        uint32_t pvref_error_gross : 1;
+        uint32_t pvref_error_en : 2;
+        uint32_t ext_intr_reason : 3;
+        uint32_t core_ext_intr : 1;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_occmisc_or_t;
+
+
+
+typedef union ocb_ohtmcr
+{
+
+    uint32_t value;
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t htm_src_sel : 2;
     uint32_t htm_stop : 1;
     uint32_t htm_marker_slave_adrs : 3;
     uint32_t event2halt_mode : 2;
     uint32_t event2halt_en : 11;
-    uint32_t reserved1 : 4;
+        uint32_t reserved1 : 1;
+        uint32_t htm_gpe_src_sel : 2;
+        uint32_t reserved2 : 1;
     uint32_t event2halt_occ : 1;
     uint32_t event2halt_gpe0 : 1;
     uint32_t event2halt_gpe1 : 1;
     uint32_t event2halt_gpe2 : 1;
     uint32_t event2halt_gpe3 : 1;
-    uint32_t reserved2 : 3;
+        uint32_t reserved3 : 3;
     uint32_t event2halt_halt_state : 1;
 #else
     uint32_t event2halt_halt_state : 1;
-    uint32_t reserved2 : 3;
+        uint32_t reserved3 : 3;
     uint32_t event2halt_gpe3 : 1;
     uint32_t event2halt_gpe2 : 1;
     uint32_t event2halt_gpe1 : 1;
     uint32_t event2halt_gpe0 : 1;
     uint32_t event2halt_occ : 1;
-    uint32_t reserved1 : 4;
+        uint32_t reserved2 : 1;
+        uint32_t htm_gpe_src_sel : 2;
+        uint32_t reserved1 : 1;
     uint32_t event2halt_en : 11;
     uint32_t event2halt_mode : 2;
     uint32_t htm_marker_slave_adrs : 3;
@@ -1293,10 +1523,12 @@ typedef union ocb_ohtmcr {
 
 
 
-typedef union ocb_oehdr {
+typedef union ocb_oehdr
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t event2halt_delay : 20;
     uint32_t reserved1 : 12;
@@ -1309,10 +1541,12 @@ typedef union ocb_oehdr {
 
 
 
-typedef union ocb_ocicfg {
+typedef union ocb_ocicfg
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t m0_priority : 2;
     uint32_t m1_priority : 2;
@@ -1357,322 +1591,396 @@ typedef union ocb_ocicfg {
 
 
 
-typedef union ocb_occs0 {
+typedef union ocb_ocbstat
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t occ_scratch_n : 32;
+        uint32_t adcfsm_ongoing : 1;
+        uint32_t spare_1 : 1;
+        uint32_t pmc_o2s_0a_ongoing : 1;
+        uint32_t pmc_o2s_0b_ongoing : 1;
+        uint32_t pmc_o2s_1a_ongoing : 1;
+        uint32_t pmc_o2s_1b_ongoing : 1;
+        uint32_t pmc_o2s_2a_ongoing : 1;
+        uint32_t pmc_o2s_2b_ongoing : 1;
+        uint32_t avs_slave0 : 1;
+        uint32_t avs_slave1 : 1;
+        uint32_t avs_slave2 : 1;
+        uint32_t spare_11 : 1;
+        uint32_t derp0_ongoing : 1;
+        uint32_t derp1_ongoing : 1;
+        uint32_t derp2_ongoing : 1;
+        uint32_t derp3_ongoing : 1;
+        uint32_t reserved1 : 16;
 #else
-    uint32_t occ_scratch_n : 32;
+        uint32_t reserved1 : 16;
+        uint32_t derp3_ongoing : 1;
+        uint32_t derp2_ongoing : 1;
+        uint32_t derp1_ongoing : 1;
+        uint32_t derp0_ongoing : 1;
+        uint32_t spare_11 : 1;
+        uint32_t avs_slave2 : 1;
+        uint32_t avs_slave1 : 1;
+        uint32_t avs_slave0 : 1;
+        uint32_t pmc_o2s_2b_ongoing : 1;
+        uint32_t pmc_o2s_2a_ongoing : 1;
+        uint32_t pmc_o2s_1b_ongoing : 1;
+        uint32_t pmc_o2s_1a_ongoing : 1;
+        uint32_t pmc_o2s_0b_ongoing : 1;
+        uint32_t pmc_o2s_0a_ongoing : 1;
+        uint32_t spare_1 : 1;
+        uint32_t adcfsm_ongoing : 1;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_occs0_t;
+} ocb_ocbstat_t;
 
 
 
-typedef union ocb_occs1 {
-
-    uint32_t value;
-    struct {
-#ifdef _BIG_ENDIAN
-    uint32_t occ_scratch_n : 32;
-#else
-    uint32_t occ_scratch_n : 32;
-#endif // _BIG_ENDIAN
-    } fields;
-} ocb_occs1_t;
-
-
-
-typedef union ocb_occs2 {
+typedef union ocb_occhbr
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t occ_scratch_n : 32;
+        uint32_t occ_heartbeat_count : 16;
+        uint32_t occ_heartbeat_en : 1;
+        uint32_t reserved1 : 15;
 #else
-    uint32_t occ_scratch_n : 32;
-#endif // _BIG_ENDIAN
-    } fields;
-} ocb_occs2_t;
-
-
-
-typedef union ocb_occflg {
-
-    uint32_t value;
-    struct {
-#ifdef _BIG_ENDIAN
-    uint32_t reserved_gpe : 16;
-    uint32_t i2c_engine1_lock_host : 1;
-    uint32_t i2c_engine1_lock_occ  : 1;
-    uint32_t i2c_engine2_lock_host : 1;
-    uint32_t i2c_engine2_lock_occ  : 1;
-    uint32_t i2c_engine3_lock_host : 1;
-    uint32_t i2c_engine3_lock_occ  : 1;
-    uint32_t gpu0_reset_status     : 1;
-    uint32_t gpu1_reset_status     : 1;
-    uint32_t gpu2_reset_status     : 1;
-    uint32_t reserved_occ          : 2;
-    uint32_t pm_reset_suppress     : 1;
-    uint32_t wof_hcode_mode        : 2;
-    uint32_t active_quad_update    : 1;
-    uint32_t request_occ_safe      : 1;
-#else
-    uint32_t request_occ_safe      : 1;
-    uint32_t active_quad_update    : 1;
-    uint32_t wof_hcode_mode        : 2;
-    uint32_t pm_reset_suppress     : 1;
-    uint32_t reserved_occ          : 2;
-    uint32_t gpu2_reset_status     : 1;
-    uint32_t gpu1_reset_status     : 1;
-    uint32_t gpu0_reset_status     : 1;
-    uint32_t i2c_engine3_lock_occ  : 1;
-    uint32_t i2c_engine3_lock_host : 1;
-    uint32_t i2c_engine2_lock_occ  : 1;
-    uint32_t i2c_engine2_lock_host : 1;
-    uint32_t i2c_engine1_lock_occ  : 1;
-    uint32_t i2c_engine1_lock_host : 1;
-    uint32_t reserved_gpe : 16;
-#endif // _BIG_ENDIAN
-    } fields;
-} ocb_occflg_t;
-
-
-
-typedef union ocb_occhbr {
-
-    uint32_t value;
-    struct {
-#ifdef _BIG_ENDIAN
-    uint32_t occ_heartbeat_count : 16;
-    uint32_t occ_heartbeat_en : 1;
-    uint32_t reserved1 : 15;
-#else
-    uint32_t reserved1 : 15;
-    uint32_t occ_heartbeat_en : 1;
-    uint32_t occ_heartbeat_count : 16;
+        uint32_t reserved1 : 15;
+        uint32_t occ_heartbeat_en : 1;
+        uint32_t occ_heartbeat_count : 16;
 #endif // _BIG_ENDIAN
     } fields;
 } ocb_occhbr_t;
 
 
 
-typedef union ocb_ccsr {
+typedef union ocb_ccsr
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t core_config : 24;
-    uint32_t reserved_24_1 : 7;
-    uint32_t change_in_progress : 1;
+        uint32_t core_config : 32;
 #else
-    uint32_t change_in_progress : 1;
-    uint32_t reserved_24_1 : 7;
-    uint32_t core_config : 24;
+        uint32_t core_config : 32;
 #endif // _BIG_ENDIAN
     } fields;
 } ocb_ccsr_t;
 
 
 
-typedef union ocb_ccsr_clr {
+typedef union ocb_ccsr_clr
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t core_config : 24;
-    uint32_t reserved_24_1 : 7;
-    uint32_t change_in_progress : 1;
+        uint32_t core_config : 32;
 #else
-    uint32_t change_in_progress : 1;
-    uint32_t reserved_24_1 : 7;
-    uint32_t core_config : 24;
+        uint32_t core_config : 32;
 #endif // _BIG_ENDIAN
     } fields;
 } ocb_ccsr_clr_t;
 
 
 
-typedef union ocb_ccsr_or {
+typedef union ocb_ccsr_or
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t core_config : 24;
-    uint32_t reserved_24_1 : 7;
-    uint32_t change_in_progress : 1;
+        uint32_t core_config : 32;
 #else
-    uint32_t change_in_progress : 1;
-    uint32_t reserved_24_1 : 7;
-    uint32_t core_config : 24;
+        uint32_t core_config : 32;
 #endif // _BIG_ENDIAN
     } fields;
 } ocb_ccsr_or_t;
 
 
 
-typedef union ocb_qcsr {
+typedef union ocb_qssr
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t ex_config : 12;
-    uint32_t reserved_12_301 : 19;
-    uint32_t change_in_progress : 1;
+        uint32_t l2_stopped : 12;
+        uint32_t reserved1 : 2;
+        uint32_t quad_stopped : 6;
+        uint32_t stop_entry_ongoing : 6;
+        uint32_t stop_exit_ongoing : 6;
 #else
-    uint32_t change_in_progress : 1;
-    uint32_t reserved_12_301 : 19;
-    uint32_t ex_config : 12;
-#endif // _BIG_ENDIAN
-    } fields;
-} ocb_qcsr_t;
-
-
-
-typedef union ocb_qcsr_clr {
-
-    uint32_t value;
-    struct {
-#ifdef _BIG_ENDIAN
-    uint32_t ex_config : 12;
-    uint32_t reserved_12_301 : 19;
-    uint32_t change_in_progress : 1;
-#else
-    uint32_t change_in_progress : 1;
-    uint32_t reserved_12_301 : 19;
-    uint32_t ex_config : 12;
-#endif // _BIG_ENDIAN
-    } fields;
-} ocb_qcsr_clr_t;
-
-
-
-typedef union ocb_qcsr_or {
-
-    uint32_t value;
-    struct {
-#ifdef _BIG_ENDIAN
-    uint32_t ex_config : 12;
-    uint32_t reserved_12_301 : 19;
-    uint32_t change_in_progress : 1;
-#else
-    uint32_t change_in_progress : 1;
-    uint32_t reserved_12_301 : 19;
-    uint32_t ex_config : 12;
-#endif // _BIG_ENDIAN
-    } fields;
-} ocb_qcsr_or_t;
-
-
-
-typedef union ocb_qssr {
-
-    uint32_t value;
-    struct {
-#ifdef _BIG_ENDIAN
-    uint32_t l2_stopped : 12;
-    uint32_t l3_stopped : 12;
-    uint32_t quad_stopped : 6;
-    uint32_t reserved1 : 1;
-    uint32_t stop_in_progress : 1;
-#else
-    uint32_t stop_in_progress : 1;
-    uint32_t reserved1 : 1;
-    uint32_t quad_stopped : 6;
-    uint32_t l3_stopped : 12;
-    uint32_t l2_stopped : 12;
+        uint32_t stop_exit_ongoing : 6;
+        uint32_t stop_entry_ongoing : 6;
+        uint32_t quad_stopped : 6;
+        uint32_t reserved1 : 2;
+        uint32_t l2_stopped : 12;
 #endif // _BIG_ENDIAN
     } fields;
 } ocb_qssr_t;
 
 
 
-typedef union ocb_qssr_clr {
+typedef union ocb_qssr_clr
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t l2_stopped : 12;
-    uint32_t l3_stopped : 12;
-    uint32_t quad_stopped : 6;
-    uint32_t reserved1 : 1;
-    uint32_t stop_in_progress : 1;
+        uint32_t l2_stopped : 12;
+        uint32_t reserved1 : 2;
+        uint32_t quad_stopped : 6;
+        uint32_t stop_entry_ongoing : 6;
+        uint32_t stop_exit_ongoing : 6;
 #else
-    uint32_t stop_in_progress : 1;
-    uint32_t reserved1 : 1;
-    uint32_t quad_stopped : 6;
-    uint32_t l3_stopped : 12;
-    uint32_t l2_stopped : 12;
+        uint32_t stop_exit_ongoing : 6;
+        uint32_t stop_entry_ongoing : 6;
+        uint32_t quad_stopped : 6;
+        uint32_t reserved1 : 2;
+        uint32_t l2_stopped : 12;
 #endif // _BIG_ENDIAN
     } fields;
 } ocb_qssr_clr_t;
 
 
 
-typedef union ocb_qssr_or {
+typedef union ocb_qssr_or
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t l2_stopped : 12;
-    uint32_t l3_stopped : 12;
-    uint32_t quad_stopped : 6;
-    uint32_t reserved1 : 1;
-    uint32_t stop_in_progress : 1;
+        uint32_t l2_stopped : 12;
+        uint32_t reserved1 : 2;
+        uint32_t quad_stopped : 6;
+        uint32_t stop_entry_ongoing : 6;
+        uint32_t stop_exit_ongoing : 6;
 #else
-    uint32_t stop_in_progress : 1;
-    uint32_t reserved1 : 1;
-    uint32_t quad_stopped : 6;
-    uint32_t l3_stopped : 12;
-    uint32_t l2_stopped : 12;
+        uint32_t stop_exit_ongoing : 6;
+        uint32_t stop_entry_ongoing : 6;
+        uint32_t quad_stopped : 6;
+        uint32_t reserved1 : 2;
+        uint32_t l2_stopped : 12;
 #endif // _BIG_ENDIAN
     } fields;
 } ocb_qssr_or_t;
 
 
 
-typedef union ocb_otbr {
+typedef union ocb_otbr
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t ocb_timebase : 32;
+        uint32_t ocb_timebase : 32;
 #else
-    uint32_t ocb_timebase : 32;
+        uint32_t ocb_timebase : 32;
 #endif // _BIG_ENDIAN
     } fields;
 } ocb_otbr_t;
 
 
 
-typedef union ocb_otrn {
+typedef union ocb_occsn
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t timeout : 1;
-    uint32_t control : 1;
-    uint32_t auto_reload : 1;
-    uint32_t spare : 13;
-    uint32_t timer : 16;
+        uint32_t occ_scratch_n : 32;
 #else
-    uint32_t timer : 16;
-    uint32_t spare : 13;
-    uint32_t auto_reload : 1;
-    uint32_t control : 1;
-    uint32_t timeout : 1;
+        uint32_t occ_scratch_n : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_occsn_t;
+
+
+
+typedef union ocb_occsn_clr
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t occ_scratch_n : 32;
+#else
+        uint32_t occ_scratch_n : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_occsn_clr_t;
+
+
+
+typedef union ocb_occsn_or
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t occ_scratch_n : 32;
+#else
+        uint32_t occ_scratch_n : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_occsn_or_t;
+
+
+
+typedef union ocb_occflgn
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t occ_flags : 32;
+#else
+        uint32_t occ_flags : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_occflgn_t;
+
+
+
+typedef union ocb_occflgn_clr
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t occ_flags : 32;
+#else
+        uint32_t occ_flags : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_occflgn_clr_t;
+
+
+
+typedef union ocb_occflgn_or
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t occ_flags : 32;
+#else
+        uint32_t occ_flags : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_occflgn_or_t;
+
+
+
+typedef union ocb_opm
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+    uint32_t reserved1 : 1;
+        uint32_t master_match_value : 3;
+        uint32_t reserved2 : 1;
+        uint32_t master_mask_value : 3;
+        uint32_t read_count_enable : 1;
+        uint32_t write_count_enable : 1;
+        uint32_t command_count : 22;
+#else
+        uint32_t command_count : 22;
+        uint32_t write_count_enable : 1;
+        uint32_t read_count_enable : 1;
+        uint32_t master_mask_value : 3;
+        uint32_t reserved2 : 1;
+        uint32_t master_match_value : 3;
+    uint32_t reserved1 : 1;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_opm_t;
+
+
+
+typedef union ocb_otrn
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t timeout_n : 1;
+        uint32_t control_n : 1;
+        uint32_t auto_reload_n : 1;
+        uint32_t spare_n : 13;
+        uint32_t timer_n : 16;
+#else
+        uint32_t timer_n : 16;
+        uint32_t spare_n : 13;
+        uint32_t auto_reload_n : 1;
+        uint32_t control_n : 1;
+        uint32_t timeout_n : 1;
 #endif // _BIG_ENDIAN
     } fields;
 } ocb_otrn_t;
 
 
 
-typedef union ocb_ocbslbrn {
+typedef union ocb_derpn
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t dividend : 32;
+#else
+        uint32_t dividend : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_derpn_t;
+
+
+
+typedef union ocb_dorpn
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t quotient : 32;
+#else
+        uint32_t quotient : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_dorpn_t;
+
+
+
+typedef union ocb_ocbslbrn
+{
+
+    uint32_t value;
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t pull_oci_region : 3;
     uint32_t pull_start : 26;
@@ -1687,15 +1995,17 @@ typedef union ocb_ocbslbrn {
 
 
 
-typedef union ocb_ocbslcsn {
+typedef union ocb_ocbslcsn
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t pull_full : 1;
     uint32_t pull_empty : 1;
     uint32_t spare : 2;
-    uint32_t pull_intr_action : 2;
+        uint32_t pull_intr_action01 : 2;
     uint32_t pull_length : 5;
     uint32_t reserved1 : 2;
     uint32_t pull_write_ptr : 5;
@@ -1711,7 +2021,7 @@ typedef union ocb_ocbslcsn {
     uint32_t pull_write_ptr : 5;
     uint32_t reserved1 : 2;
     uint32_t pull_length : 5;
-    uint32_t pull_intr_action : 2;
+        uint32_t pull_intr_action01 : 2;
     uint32_t spare : 2;
     uint32_t pull_empty : 1;
     uint32_t pull_full : 1;
@@ -1721,10 +2031,12 @@ typedef union ocb_ocbslcsn {
 
 
 
-typedef union ocb_ocbslin {
+typedef union ocb_ocbslin
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t reserved1 : 32;
 #else
@@ -1735,10 +2047,12 @@ typedef union ocb_ocbslin {
 
 
 
-typedef union ocb_ocbshbrn {
+typedef union ocb_ocbshbrn
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t push_oci_region : 3;
     uint32_t push_start : 26;
@@ -1753,15 +2067,17 @@ typedef union ocb_ocbshbrn {
 
 
 
-typedef union ocb_ocbshcsn {
+typedef union ocb_ocbshcsn
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t push_full : 1;
     uint32_t push_empty : 1;
     uint32_t spare : 2;
-    uint32_t push_intr_action : 2;
+        uint32_t push_intr_action01 : 2;
     uint32_t push_length : 5;
     uint32_t reserved1 : 2;
     uint32_t push_write_ptr : 5;
@@ -1777,7 +2093,7 @@ typedef union ocb_ocbshcsn {
     uint32_t push_write_ptr : 5;
     uint32_t reserved1 : 2;
     uint32_t push_length : 5;
-    uint32_t push_intr_action : 2;
+        uint32_t push_intr_action01 : 2;
     uint32_t spare : 2;
     uint32_t push_empty : 1;
     uint32_t push_full : 1;
@@ -1787,10 +2103,12 @@ typedef union ocb_ocbshcsn {
 
 
 
-typedef union ocb_ocbshin {
+typedef union ocb_ocbshin
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t reserved1 : 32;
 #else
@@ -1801,10 +2119,12 @@ typedef union ocb_ocbshin {
 
 
 
-typedef union ocb_ocbsesn {
+typedef union ocb_ocbsesn
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t push_read_underflow : 1;
     uint32_t pull_write_overflow : 1;
@@ -1819,10 +2139,12 @@ typedef union ocb_ocbsesn {
 
 
 
-typedef union ocb_ocblwcrn {
+typedef union ocb_ocblwcrn
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t linear_window_enable : 1;
     uint32_t spare_0 : 2;
@@ -1839,10 +2161,12 @@ typedef union ocb_ocblwcrn {
 
 
 
-typedef union ocb_ocblwsrn {
+typedef union ocb_ocblwsrn
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t linear_window_scresp : 3;
     uint32_t spare0 : 5;
@@ -1857,10 +2181,12 @@ typedef union ocb_ocblwsrn {
 
 
 
-typedef union ocb_ocblwsbrn {
+typedef union ocb_ocblwsbrn
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t linear_window_region : 3;
     uint32_t linear_window_base : 7;
@@ -1875,270 +2201,1018 @@ typedef union ocb_ocblwsbrn {
 
 
 
-typedef union ocb_opit0cn {
+typedef union ocb_opit0qn
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t reserved1 : 20;
-    uint32_t pcb_intr_type_a_core_n : 12;
+        uint32_t reserved1 : 13;
+        uint32_t pcb_intr_payload : 19;
 #else
-    uint32_t pcb_intr_type_a_core_n : 12;
-    uint32_t reserved1 : 20;
+        uint32_t pcb_intr_payload : 19;
+        uint32_t reserved1 : 13;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_opit0cn_t;
+} ocb_opit0qn_t;
 
 
 
-typedef union ocb_opit1cn {
+typedef union ocb_opit1qn
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t reserved1 : 20;
-    uint32_t pcb_intr_type_a_core_n : 12;
+        uint32_t reserved1 : 13;
+        uint32_t pcb_intr_payload : 19;
 #else
-    uint32_t pcb_intr_type_a_core_n : 12;
-    uint32_t reserved1 : 20;
+        uint32_t pcb_intr_payload : 19;
+        uint32_t reserved1 : 13;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_opit1cn_t;
+} ocb_opit1qn_t;
 
 
 
-typedef union ocb_opit2cn {
+typedef union ocb_opit2qn
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t reserved1 : 20;
-    uint32_t pcb_intr_type_a_core_n : 12;
+        uint32_t reserved1 : 13;
+        uint32_t pcb_intr_payload : 19;
 #else
-    uint32_t pcb_intr_type_a_core_n : 12;
-    uint32_t reserved1 : 20;
+        uint32_t pcb_intr_payload : 19;
+        uint32_t reserved1 : 13;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_opit2cn_t;
+} ocb_opit2qn_t;
 
 
 
-typedef union ocb_opit3cn {
+typedef union ocb_opit3qn
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t reserved1 : 20;
-    uint32_t pcb_intr_type_a_core_n : 12;
+        uint32_t reserved1 : 13;
+        uint32_t pcb_intr_payload : 19;
 #else
-    uint32_t pcb_intr_type_a_core_n : 12;
-    uint32_t reserved1 : 20;
+        uint32_t pcb_intr_payload : 19;
+        uint32_t reserved1 : 13;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_opit3cn_t;
+} ocb_opit3qn_t;
 
 
 
-typedef union ocb_opit4cn {
+typedef union ocb_opit4qn
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t reserved1 : 20;
-    uint32_t pcb_intr_type_a_core_n : 12;
+        uint32_t reserved1 : 13;
+        uint32_t pcb_intr_payload : 19;
 #else
-    uint32_t pcb_intr_type_a_core_n : 12;
-    uint32_t reserved1 : 20;
+        uint32_t pcb_intr_payload : 19;
+        uint32_t reserved1 : 13;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_opit4cn_t;
+} ocb_opit4qn_t;
 
 
 
-typedef union ocb_opit5cn {
+typedef union ocb_opit5qn
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t reserved1 : 20;
-    uint32_t pcb_intr_type_a_core_n : 12;
+        uint32_t reserved1 : 13;
+        uint32_t pcb_intr_payload : 19;
 #else
-    uint32_t pcb_intr_type_a_core_n : 12;
-    uint32_t reserved1 : 20;
+        uint32_t pcb_intr_payload : 19;
+        uint32_t reserved1 : 13;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_opit5cn_t;
+} ocb_opit5qn_t;
 
 
 
-typedef union ocb_opit6qn {
+typedef union ocb_opit6qn
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t reserved1 : 28;
-    uint32_t pcb_intr_type_a_quad_n : 4;
+        uint32_t reserved1 : 13;
+        uint32_t pcb_intr_payload : 19;
 #else
-    uint32_t pcb_intr_type_a_quad_n : 4;
-    uint32_t reserved1 : 28;
+        uint32_t pcb_intr_payload : 19;
+        uint32_t reserved1 : 13;
 #endif // _BIG_ENDIAN
     } fields;
 } ocb_opit6qn_t;
 
 
 
-typedef union ocb_opit7qn {
+typedef union ocb_opit7qn
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t reserved1 : 31;
-    uint32_t pcb_intr_type_a_quad_n : 1;
+        uint32_t reserved1 : 13;
+        uint32_t pcb_intr_payload : 19;
 #else
-    uint32_t pcb_intr_type_a_quad_n : 1;
-    uint32_t reserved1 : 31;
+        uint32_t pcb_intr_payload : 19;
+        uint32_t reserved1 : 13;
 #endif // _BIG_ENDIAN
     } fields;
 } ocb_opit7qn_t;
 
 
 
-typedef union ocb_opit0cnrp {
+typedef union ocb_opit8cn
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t reserved1 : 22;
-    uint32_t pcb_intr_type_a_reset_core_n : 10;
+        uint32_t reserved1 : 13;
+        uint32_t pcb_intr_source_core : 2;
+        uint32_t pcb_intr_payload : 17;
 #else
-    uint32_t pcb_intr_type_a_reset_core_n : 10;
-    uint32_t reserved1 : 22;
+        uint32_t pcb_intr_payload : 17;
+        uint32_t pcb_intr_source_core : 2;
+        uint32_t reserved1 : 13;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_opit0cnrp_t;
+} ocb_opit8cn_t;
 
 
 
-typedef union ocb_opit1cnrp {
+typedef union ocb_opit9cn
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t reserved1 : 22;
-    uint32_t pcb_intr_type_a_reset_core_n : 10;
+        uint32_t reserved1 : 13;
+        uint32_t pcb_intr_source_core : 2;
+        uint32_t pcb_intr_payload : 17;
 #else
-    uint32_t pcb_intr_type_a_reset_core_n : 10;
-    uint32_t reserved1 : 22;
+        uint32_t pcb_intr_payload : 17;
+        uint32_t pcb_intr_source_core : 2;
+        uint32_t reserved1 : 13;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_opit1cnrp_t;
+} ocb_opit9cn_t;
 
 
 
-typedef union ocb_opit2cnrp {
+typedef union ocb_opitasvn
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t reserved1 : 22;
-    uint32_t pcb_intr_type_a_reset_core_n : 10;
+        uint32_t pcb_intr_payload_quad_0 : 4;
+        uint32_t pcb_intr_payload_quad_1 : 4;
+        uint32_t pcb_intr_payload_quad_2 : 4;
+        uint32_t pcb_intr_payload_quad_3 : 4;
+        uint32_t pcb_intr_payload_quad_4 : 4;
+        uint32_t pcb_intr_payload_quad_5 : 4;
+        uint32_t pcb_intr_payload_quad_6 : 4;
+        uint32_t pcb_intr_payload_quad_7 : 4;
 #else
-    uint32_t pcb_intr_type_a_reset_core_n : 10;
-    uint32_t reserved1 : 22;
+        uint32_t pcb_intr_payload_quad_7 : 4;
+        uint32_t pcb_intr_payload_quad_6 : 4;
+        uint32_t pcb_intr_payload_quad_5 : 4;
+        uint32_t pcb_intr_payload_quad_4 : 4;
+        uint32_t pcb_intr_payload_quad_3 : 4;
+        uint32_t pcb_intr_payload_quad_2 : 4;
+        uint32_t pcb_intr_payload_quad_1 : 4;
+        uint32_t pcb_intr_payload_quad_0 : 4;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_opit2cnrp_t;
+} ocb_opitasvn_t;
 
 
 
-typedef union ocb_opit3cnrp {
+typedef union ocb_opitbsvn
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t reserved1 : 22;
-    uint32_t pcb_intr_type_a_reset_core_n : 10;
+        uint32_t pcb_intr_payload_quad_0 : 4;
+        uint32_t pcb_intr_payload_quad_1 : 4;
+        uint32_t pcb_intr_payload_quad_2 : 4;
+        uint32_t pcb_intr_payload_quad_3 : 4;
+        uint32_t pcb_intr_payload_quad_4 : 4;
+        uint32_t pcb_intr_payload_quad_5 : 4;
+        uint32_t pcb_intr_payload_quad_6 : 4;
+        uint32_t pcb_intr_payload_quad_7 : 4;
 #else
-    uint32_t pcb_intr_type_a_reset_core_n : 10;
-    uint32_t reserved1 : 22;
+        uint32_t pcb_intr_payload_quad_7 : 4;
+        uint32_t pcb_intr_payload_quad_6 : 4;
+        uint32_t pcb_intr_payload_quad_5 : 4;
+        uint32_t pcb_intr_payload_quad_4 : 4;
+        uint32_t pcb_intr_payload_quad_3 : 4;
+        uint32_t pcb_intr_payload_quad_2 : 4;
+        uint32_t pcb_intr_payload_quad_1 : 4;
+        uint32_t pcb_intr_payload_quad_0 : 4;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_opit3cnrp_t;
+} ocb_opitbsvn_t;
 
 
 
-typedef union ocb_opit4cnrp {
+typedef union ocb_opitcsv
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t reserved1 : 22;
-    uint32_t pcb_intr_type_a_reset_core_n : 10;
+        uint32_t pcb_intr_payload_quad_0 : 4;
+        uint32_t pcb_intr_payload_quad_1 : 4;
+        uint32_t pcb_intr_payload_quad_2 : 4;
+        uint32_t pcb_intr_payload_quad_3 : 4;
+        uint32_t pcb_intr_payload_quad_4 : 4;
+        uint32_t pcb_intr_payload_quad_5 : 4;
+        uint32_t pcb_intr_payload_quad_6 : 4;
+        uint32_t pcb_intr_payload_quad_7 : 4;
 #else
-    uint32_t pcb_intr_type_a_reset_core_n : 10;
-    uint32_t reserved1 : 22;
+        uint32_t pcb_intr_payload_quad_7 : 4;
+        uint32_t pcb_intr_payload_quad_6 : 4;
+        uint32_t pcb_intr_payload_quad_5 : 4;
+        uint32_t pcb_intr_payload_quad_4 : 4;
+        uint32_t pcb_intr_payload_quad_3 : 4;
+        uint32_t pcb_intr_payload_quad_2 : 4;
+        uint32_t pcb_intr_payload_quad_1 : 4;
+        uint32_t pcb_intr_payload_quad_0 : 4;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_opit4cnrp_t;
+} ocb_opitcsv_t;
 
 
 
-typedef union ocb_opit5cnrp {
+typedef union ocb_opitdsv
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t reserved1 : 22;
-    uint32_t pcb_intr_type_a_reset_core_n : 10;
+        uint32_t pcb_intr_payload_quad_0 : 4;
+        uint32_t pcb_intr_payload_quad_1 : 4;
+        uint32_t pcb_intr_payload_quad_2 : 4;
+        uint32_t pcb_intr_payload_quad_3 : 4;
+        uint32_t pcb_intr_payload_quad_4 : 4;
+        uint32_t pcb_intr_payload_quad_5 : 4;
+        uint32_t pcb_intr_payload_quad_6 : 4;
+        uint32_t pcb_intr_payload_quad_7 : 4;
 #else
-    uint32_t pcb_intr_type_a_reset_core_n : 10;
-    uint32_t reserved1 : 22;
+        uint32_t pcb_intr_payload_quad_7 : 4;
+        uint32_t pcb_intr_payload_quad_6 : 4;
+        uint32_t pcb_intr_payload_quad_5 : 4;
+        uint32_t pcb_intr_payload_quad_4 : 4;
+        uint32_t pcb_intr_payload_quad_3 : 4;
+        uint32_t pcb_intr_payload_quad_2 : 4;
+        uint32_t pcb_intr_payload_quad_1 : 4;
+        uint32_t pcb_intr_payload_quad_0 : 4;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_opit5cnrp_t;
+} ocb_opitdsv_t;
 
 
 
-typedef union ocb_opit6qnrp {
+typedef union ocb_opitesv
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t reserved1 : 22;
-    uint32_t pcb_intr_type_a_reset_quad_n : 1;
-    uint32_t reserved2 : 9;
+        uint32_t pcb_intr_payload_quad_0 : 4;
+        uint32_t pcb_intr_payload_quad_1 : 4;
+        uint32_t pcb_intr_payload_quad_2 : 4;
+        uint32_t pcb_intr_payload_quad_3 : 4;
+        uint32_t pcb_intr_payload_quad_4 : 4;
+        uint32_t pcb_intr_payload_quad_5 : 4;
+        uint32_t pcb_intr_payload_quad_6 : 4;
+        uint32_t pcb_intr_payload_quad_7 : 4;
 #else
-    uint32_t reserved2 : 9;
-    uint32_t pcb_intr_type_a_reset_quad_n : 1;
-    uint32_t reserved1 : 22;
+        uint32_t pcb_intr_payload_quad_7 : 4;
+        uint32_t pcb_intr_payload_quad_6 : 4;
+        uint32_t pcb_intr_payload_quad_5 : 4;
+        uint32_t pcb_intr_payload_quad_4 : 4;
+        uint32_t pcb_intr_payload_quad_3 : 4;
+        uint32_t pcb_intr_payload_quad_2 : 4;
+        uint32_t pcb_intr_payload_quad_1 : 4;
+        uint32_t pcb_intr_payload_quad_0 : 4;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_opit6qnrp_t;
+} ocb_opitesv_t;
 
 
 
-typedef union ocb_opit7qnrp {
+typedef union ocb_opitfsv
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t reserved1 : 22;
-    uint32_t pcb_intr_type_a_reset_quad_n : 1;
-    uint32_t reserved2 : 9;
+        uint32_t pcb_intr_payload_quad_0 : 4;
+        uint32_t pcb_intr_payload_quad_1 : 4;
+        uint32_t pcb_intr_payload_quad_2 : 4;
+        uint32_t pcb_intr_payload_quad_3 : 4;
+        uint32_t pcb_intr_payload_quad_4 : 4;
+        uint32_t pcb_intr_payload_quad_5 : 4;
+        uint32_t pcb_intr_payload_quad_6 : 4;
+        uint32_t pcb_intr_payload_quad_7 : 4;
 #else
-    uint32_t reserved2 : 9;
-    uint32_t pcb_intr_type_a_reset_quad_n : 1;
-    uint32_t reserved1 : 22;
+        uint32_t pcb_intr_payload_quad_7 : 4;
+        uint32_t pcb_intr_payload_quad_6 : 4;
+        uint32_t pcb_intr_payload_quad_5 : 4;
+        uint32_t pcb_intr_payload_quad_4 : 4;
+        uint32_t pcb_intr_payload_quad_3 : 4;
+        uint32_t pcb_intr_payload_quad_2 : 4;
+        uint32_t pcb_intr_payload_quad_1 : 4;
+        uint32_t pcb_intr_payload_quad_0 : 4;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_opit7qnrp_t;
+} ocb_opitfsv_t;
 
 
 
-typedef union ocb_opitnpra {
+typedef union ocb_opit0qnrr
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t reserved1 : 13;
+        uint32_t pcb_intr_payload : 19;
+#else
+        uint32_t pcb_intr_payload : 19;
+        uint32_t reserved1 : 13;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_opit0qnrr_t;
+
+
+
+typedef union ocb_opit1qnrr
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t reserved1 : 13;
+        uint32_t pcb_intr_payload : 19;
+#else
+        uint32_t pcb_intr_payload : 19;
+        uint32_t reserved1 : 13;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_opit1qnrr_t;
+
+
+
+typedef union ocb_opit2qnrr
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t reserved1 : 13;
+        uint32_t pcb_intr_payload : 19;
+#else
+        uint32_t pcb_intr_payload : 19;
+        uint32_t reserved1 : 13;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_opit2qnrr_t;
+
+
+
+typedef union ocb_opit3qnrr
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t reserved1 : 13;
+        uint32_t pcb_intr_payload : 19;
+#else
+        uint32_t pcb_intr_payload : 19;
+        uint32_t reserved1 : 13;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_opit3qnrr_t;
+
+
+
+typedef union ocb_opit4qnrr
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t reserved1 : 13;
+        uint32_t pcb_intr_payload : 19;
+#else
+        uint32_t pcb_intr_payload : 19;
+        uint32_t reserved1 : 13;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_opit4qnrr_t;
+
+
+
+typedef union ocb_opit5qnrr
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t reserved1 : 13;
+        uint32_t pcb_intr_payload : 19;
+#else
+        uint32_t pcb_intr_payload : 19;
+        uint32_t reserved1 : 13;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_opit5qnrr_t;
+
+
+
+typedef union ocb_opit6qnrr
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t reserved1 : 13;
+        uint32_t pcb_intr_payload : 19;
+#else
+        uint32_t pcb_intr_payload : 19;
+        uint32_t reserved1 : 13;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_opit6qnrr_t;
+
+
+
+typedef union ocb_opit7qnrr
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t reserved1 : 13;
+        uint32_t pcb_intr_payload : 19;
+#else
+        uint32_t pcb_intr_payload : 19;
+        uint32_t reserved1 : 13;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_opit7qnrr_t;
+
+
+
+typedef union ocb_opit8cnrr
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t reserved1 : 13;
+        uint32_t pcb_intr_source_core : 2;
+        uint32_t pcb_intr_payload : 17;
+#else
+        uint32_t pcb_intr_payload : 17;
+        uint32_t pcb_intr_source_core : 2;
+        uint32_t reserved1 : 13;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_opit8cnrr_t;
+
+
+
+typedef union ocb_opit9cnrr
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t reserved1 : 13;
+        uint32_t pcb_intr_source_core : 2;
+        uint32_t pcb_intr_payload : 17;
+#else
+        uint32_t pcb_intr_payload : 17;
+        uint32_t pcb_intr_source_core : 2;
+        uint32_t reserved1 : 13;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_opit9cnrr_t;
+
+
+
+typedef union ocb_opitasvnrr
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t pcb_intr_payload_quad_0 : 4;
+        uint32_t pcb_intr_payload_quad_1 : 4;
+        uint32_t pcb_intr_payload_quad_2 : 4;
+        uint32_t pcb_intr_payload_quad_3 : 4;
+        uint32_t pcb_intr_payload_quad_4 : 4;
+        uint32_t pcb_intr_payload_quad_5 : 4;
+        uint32_t pcb_intr_payload_quad_6 : 4;
+        uint32_t pcb_intr_payload_quad_7 : 4;
+#else
+        uint32_t pcb_intr_payload_quad_7 : 4;
+        uint32_t pcb_intr_payload_quad_6 : 4;
+        uint32_t pcb_intr_payload_quad_5 : 4;
+        uint32_t pcb_intr_payload_quad_4 : 4;
+        uint32_t pcb_intr_payload_quad_3 : 4;
+        uint32_t pcb_intr_payload_quad_2 : 4;
+        uint32_t pcb_intr_payload_quad_1 : 4;
+        uint32_t pcb_intr_payload_quad_0 : 4;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_opitasvnrr_t;
+
+
+
+typedef union ocb_opitbsvnrr
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t pcb_intr_payload_quad_0 : 4;
+        uint32_t pcb_intr_payload_quad_1 : 4;
+        uint32_t pcb_intr_payload_quad_2 : 4;
+        uint32_t pcb_intr_payload_quad_3 : 4;
+        uint32_t pcb_intr_payload_quad_4 : 4;
+        uint32_t pcb_intr_payload_quad_5 : 4;
+        uint32_t pcb_intr_payload_quad_6 : 4;
+        uint32_t pcb_intr_payload_quad_7 : 4;
+#else
+        uint32_t pcb_intr_payload_quad_7 : 4;
+        uint32_t pcb_intr_payload_quad_6 : 4;
+        uint32_t pcb_intr_payload_quad_5 : 4;
+        uint32_t pcb_intr_payload_quad_4 : 4;
+        uint32_t pcb_intr_payload_quad_3 : 4;
+        uint32_t pcb_intr_payload_quad_2 : 4;
+        uint32_t pcb_intr_payload_quad_1 : 4;
+        uint32_t pcb_intr_payload_quad_0 : 4;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_opitbsvnrr_t;
+
+
+
+typedef union ocb_opitcsvrr
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t pcb_intr_payload_quad_0 : 4;
+        uint32_t pcb_intr_payload_quad_1 : 4;
+        uint32_t pcb_intr_payload_quad_2 : 4;
+        uint32_t pcb_intr_payload_quad_3 : 4;
+        uint32_t pcb_intr_payload_quad_4 : 4;
+        uint32_t pcb_intr_payload_quad_5 : 4;
+        uint32_t pcb_intr_payload_quad_6 : 4;
+        uint32_t pcb_intr_payload_quad_7 : 4;
+#else
+        uint32_t pcb_intr_payload_quad_7 : 4;
+        uint32_t pcb_intr_payload_quad_6 : 4;
+        uint32_t pcb_intr_payload_quad_5 : 4;
+        uint32_t pcb_intr_payload_quad_4 : 4;
+        uint32_t pcb_intr_payload_quad_3 : 4;
+        uint32_t pcb_intr_payload_quad_2 : 4;
+        uint32_t pcb_intr_payload_quad_1 : 4;
+        uint32_t pcb_intr_payload_quad_0 : 4;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_opitcsvrr_t;
+
+
+
+typedef union ocb_opitdsvrr
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t pcb_intr_payload_quad_0 : 4;
+        uint32_t pcb_intr_payload_quad_1 : 4;
+        uint32_t pcb_intr_payload_quad_2 : 4;
+        uint32_t pcb_intr_payload_quad_3 : 4;
+        uint32_t pcb_intr_payload_quad_4 : 4;
+        uint32_t pcb_intr_payload_quad_5 : 4;
+        uint32_t pcb_intr_payload_quad_6 : 4;
+        uint32_t pcb_intr_payload_quad_7 : 4;
+#else
+        uint32_t pcb_intr_payload_quad_7 : 4;
+        uint32_t pcb_intr_payload_quad_6 : 4;
+        uint32_t pcb_intr_payload_quad_5 : 4;
+        uint32_t pcb_intr_payload_quad_4 : 4;
+        uint32_t pcb_intr_payload_quad_3 : 4;
+        uint32_t pcb_intr_payload_quad_2 : 4;
+        uint32_t pcb_intr_payload_quad_1 : 4;
+        uint32_t pcb_intr_payload_quad_0 : 4;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_opitdsvrr_t;
+
+
+
+typedef union ocb_opitesvrr
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t pcb_intr_payload_quad_0 : 4;
+        uint32_t pcb_intr_payload_quad_1 : 4;
+        uint32_t pcb_intr_payload_quad_2 : 4;
+        uint32_t pcb_intr_payload_quad_3 : 4;
+        uint32_t pcb_intr_payload_quad_4 : 4;
+        uint32_t pcb_intr_payload_quad_5 : 4;
+        uint32_t pcb_intr_payload_quad_6 : 4;
+        uint32_t pcb_intr_payload_quad_7 : 4;
+#else
+        uint32_t pcb_intr_payload_quad_7 : 4;
+        uint32_t pcb_intr_payload_quad_6 : 4;
+        uint32_t pcb_intr_payload_quad_5 : 4;
+        uint32_t pcb_intr_payload_quad_4 : 4;
+        uint32_t pcb_intr_payload_quad_3 : 4;
+        uint32_t pcb_intr_payload_quad_2 : 4;
+        uint32_t pcb_intr_payload_quad_1 : 4;
+        uint32_t pcb_intr_payload_quad_0 : 4;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_opitesvrr_t;
+
+
+
+typedef union ocb_opitfsvrr
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t pcb_intr_payload_quad_0 : 4;
+        uint32_t pcb_intr_payload_quad_1 : 4;
+        uint32_t pcb_intr_payload_quad_2 : 4;
+        uint32_t pcb_intr_payload_quad_3 : 4;
+        uint32_t pcb_intr_payload_quad_4 : 4;
+        uint32_t pcb_intr_payload_quad_5 : 4;
+        uint32_t pcb_intr_payload_quad_6 : 4;
+        uint32_t pcb_intr_payload_quad_7 : 4;
+#else
+        uint32_t pcb_intr_payload_quad_7 : 4;
+        uint32_t pcb_intr_payload_quad_6 : 4;
+        uint32_t pcb_intr_payload_quad_5 : 4;
+        uint32_t pcb_intr_payload_quad_4 : 4;
+        uint32_t pcb_intr_payload_quad_3 : 4;
+        uint32_t pcb_intr_payload_quad_2 : 4;
+        uint32_t pcb_intr_payload_quad_1 : 4;
+        uint32_t pcb_intr_payload_quad_0 : 4;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_opitfsvrr_t;
+
+
+
+typedef union ocb_opitir
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t reserved1 : 5;
+        uint32_t pcb_intr_chiplet_id : 3;
+        uint32_t reserved2 : 1;
+        uint32_t pcb_intr_payload : 23;
+#else
+        uint32_t pcb_intr_payload : 23;
+        uint32_t reserved2 : 1;
+        uint32_t pcb_intr_chiplet_id : 3;
+        uint32_t reserved1 : 5;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_opitir_t;
+
+
+
+typedef union ocb_opit0pra
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t pcb_intr_type_n_pending_0 : 1;
+        uint32_t pcb_intr_type_n_pending_1 : 1;
+        uint32_t pcb_intr_type_n_pending_2 : 1;
+        uint32_t pcb_intr_type_n_pending_3 : 1;
+        uint32_t pcb_intr_type_n_pending_4 : 1;
+        uint32_t pcb_intr_type_n_pending_5 : 1;
+        uint32_t pcb_intr_type_n_pending_6 : 1;
+        uint32_t pcb_intr_type_n_pending_7 : 1;
+        uint32_t reserved1 : 24;
+#else
+        uint32_t reserved1 : 24;
+        uint32_t pcb_intr_type_n_pending_7 : 1;
+        uint32_t pcb_intr_type_n_pending_6 : 1;
+        uint32_t pcb_intr_type_n_pending_5 : 1;
+        uint32_t pcb_intr_type_n_pending_4 : 1;
+        uint32_t pcb_intr_type_n_pending_3 : 1;
+        uint32_t pcb_intr_type_n_pending_2 : 1;
+        uint32_t pcb_intr_type_n_pending_1 : 1;
+        uint32_t pcb_intr_type_n_pending_0 : 1;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_opit0pra_t;
+
+
+
+typedef union ocb_opit1pra
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t pcb_intr_type_n_pending_0 : 1;
+        uint32_t pcb_intr_type_n_pending_1 : 1;
+        uint32_t pcb_intr_type_n_pending_2 : 1;
+        uint32_t pcb_intr_type_n_pending_3 : 1;
+        uint32_t pcb_intr_type_n_pending_4 : 1;
+        uint32_t pcb_intr_type_n_pending_5 : 1;
+        uint32_t pcb_intr_type_n_pending_6 : 1;
+        uint32_t pcb_intr_type_n_pending_7 : 1;
+        uint32_t reserved1 : 24;
+#else
+        uint32_t reserved1 : 24;
+        uint32_t pcb_intr_type_n_pending_7 : 1;
+        uint32_t pcb_intr_type_n_pending_6 : 1;
+        uint32_t pcb_intr_type_n_pending_5 : 1;
+        uint32_t pcb_intr_type_n_pending_4 : 1;
+        uint32_t pcb_intr_type_n_pending_3 : 1;
+        uint32_t pcb_intr_type_n_pending_2 : 1;
+        uint32_t pcb_intr_type_n_pending_1 : 1;
+        uint32_t pcb_intr_type_n_pending_0 : 1;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_opit1pra_t;
+
+
+
+typedef union ocb_opit2pra
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t pcb_intr_type_n_pending_0 : 1;
+        uint32_t pcb_intr_type_n_pending_1 : 1;
+        uint32_t pcb_intr_type_n_pending_2 : 1;
+        uint32_t pcb_intr_type_n_pending_3 : 1;
+        uint32_t pcb_intr_type_n_pending_4 : 1;
+        uint32_t pcb_intr_type_n_pending_5 : 1;
+        uint32_t pcb_intr_type_n_pending_6 : 1;
+        uint32_t pcb_intr_type_n_pending_7 : 1;
+        uint32_t reserved1 : 24;
+#else
+        uint32_t reserved1 : 24;
+        uint32_t pcb_intr_type_n_pending_7 : 1;
+        uint32_t pcb_intr_type_n_pending_6 : 1;
+        uint32_t pcb_intr_type_n_pending_5 : 1;
+        uint32_t pcb_intr_type_n_pending_4 : 1;
+        uint32_t pcb_intr_type_n_pending_3 : 1;
+        uint32_t pcb_intr_type_n_pending_2 : 1;
+        uint32_t pcb_intr_type_n_pending_1 : 1;
+        uint32_t pcb_intr_type_n_pending_0 : 1;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_opit2pra_t;
+
+
+
+typedef union ocb_opit3pra
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t pcb_intr_type_n_pending_0 : 1;
+        uint32_t pcb_intr_type_n_pending_1 : 1;
+        uint32_t pcb_intr_type_n_pending_2 : 1;
+        uint32_t pcb_intr_type_n_pending_3 : 1;
+        uint32_t pcb_intr_type_n_pending_4 : 1;
+        uint32_t pcb_intr_type_n_pending_5 : 1;
+        uint32_t pcb_intr_type_n_pending_6 : 1;
+        uint32_t pcb_intr_type_n_pending_7 : 1;
+        uint32_t reserved1 : 24;
+#else
+        uint32_t reserved1 : 24;
+        uint32_t pcb_intr_type_n_pending_7 : 1;
+        uint32_t pcb_intr_type_n_pending_6 : 1;
+        uint32_t pcb_intr_type_n_pending_5 : 1;
+        uint32_t pcb_intr_type_n_pending_4 : 1;
+        uint32_t pcb_intr_type_n_pending_3 : 1;
+        uint32_t pcb_intr_type_n_pending_2 : 1;
+        uint32_t pcb_intr_type_n_pending_1 : 1;
+        uint32_t pcb_intr_type_n_pending_0 : 1;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_opit3pra_t;
+
+
+
+typedef union ocb_opit4pra
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t pcb_intr_type_n_pending_0 : 1;
+        uint32_t pcb_intr_type_n_pending_1 : 1;
+        uint32_t pcb_intr_type_n_pending_2 : 1;
+        uint32_t pcb_intr_type_n_pending_3 : 1;
+        uint32_t pcb_intr_type_n_pending_4 : 1;
+        uint32_t pcb_intr_type_n_pending_5 : 1;
+        uint32_t pcb_intr_type_n_pending_6 : 1;
+        uint32_t pcb_intr_type_n_pending_7 : 1;
+        uint32_t reserved1 : 24;
+#else
+        uint32_t reserved1 : 24;
+        uint32_t pcb_intr_type_n_pending_7 : 1;
+        uint32_t pcb_intr_type_n_pending_6 : 1;
+        uint32_t pcb_intr_type_n_pending_5 : 1;
+        uint32_t pcb_intr_type_n_pending_4 : 1;
+        uint32_t pcb_intr_type_n_pending_3 : 1;
+        uint32_t pcb_intr_type_n_pending_2 : 1;
+        uint32_t pcb_intr_type_n_pending_1 : 1;
+        uint32_t pcb_intr_type_n_pending_0 : 1;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_opit4pra_t;
+
+
+
+typedef union ocb_opit5pra
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t pcb_intr_type_n_pending_0 : 1;
+        uint32_t pcb_intr_type_n_pending_1 : 1;
+        uint32_t pcb_intr_type_n_pending_2 : 1;
+        uint32_t pcb_intr_type_n_pending_3 : 1;
+        uint32_t pcb_intr_type_n_pending_4 : 1;
+        uint32_t pcb_intr_type_n_pending_5 : 1;
+        uint32_t pcb_intr_type_n_pending_6 : 1;
+        uint32_t pcb_intr_type_n_pending_7 : 1;
+        uint32_t reserved1 : 24;
+#else
+        uint32_t reserved1 : 24;
+        uint32_t pcb_intr_type_n_pending_7 : 1;
+        uint32_t pcb_intr_type_n_pending_6 : 1;
+        uint32_t pcb_intr_type_n_pending_5 : 1;
+        uint32_t pcb_intr_type_n_pending_4 : 1;
+        uint32_t pcb_intr_type_n_pending_3 : 1;
+        uint32_t pcb_intr_type_n_pending_2 : 1;
+        uint32_t pcb_intr_type_n_pending_1 : 1;
+        uint32_t pcb_intr_type_n_pending_0 : 1;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_opit5pra_t;
+
+
+
+typedef union ocb_opit6pra
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t pcb_intr_type_n_pending_0 : 1;
+        uint32_t pcb_intr_type_n_pending_1 : 1;
+        uint32_t pcb_intr_type_n_pending_2 : 1;
+        uint32_t pcb_intr_type_n_pending_3 : 1;
+        uint32_t pcb_intr_type_n_pending_4 : 1;
+        uint32_t pcb_intr_type_n_pending_5 : 1;
+        uint32_t pcb_intr_type_n_pending_6 : 1;
+        uint32_t pcb_intr_type_n_pending_7 : 1;
+        uint32_t reserved1 : 24;
+#else
+        uint32_t reserved1 : 24;
+        uint32_t pcb_intr_type_n_pending_7 : 1;
+        uint32_t pcb_intr_type_n_pending_6 : 1;
+        uint32_t pcb_intr_type_n_pending_5 : 1;
+        uint32_t pcb_intr_type_n_pending_4 : 1;
+        uint32_t pcb_intr_type_n_pending_3 : 1;
+        uint32_t pcb_intr_type_n_pending_2 : 1;
+        uint32_t pcb_intr_type_n_pending_1 : 1;
+        uint32_t pcb_intr_type_n_pending_0 : 1;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_opit6pra_t;
+
+
+
+typedef union ocb_opit7pra
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+    uint32_t pcb_intr_type_n_pending_0 : 1;
+    uint32_t pcb_intr_type_n_pending_1 : 1;
+    uint32_t pcb_intr_type_n_pending_2 : 1;
+    uint32_t pcb_intr_type_n_pending_3 : 1;
+    uint32_t pcb_intr_type_n_pending_4 : 1;
+    uint32_t pcb_intr_type_n_pending_5 : 1;
+    uint32_t pcb_intr_type_n_pending_6 : 1;
+    uint32_t pcb_intr_type_n_pending_7 : 1;
+        uint32_t reserved1 : 24;
+#else
+        uint32_t reserved1 : 24;
+    uint32_t pcb_intr_type_n_pending_7 : 1;
+    uint32_t pcb_intr_type_n_pending_6 : 1;
+    uint32_t pcb_intr_type_n_pending_5 : 1;
+    uint32_t pcb_intr_type_n_pending_4 : 1;
+    uint32_t pcb_intr_type_n_pending_3 : 1;
+    uint32_t pcb_intr_type_n_pending_2 : 1;
+    uint32_t pcb_intr_type_n_pending_1 : 1;
+    uint32_t pcb_intr_type_n_pending_0 : 1;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_opit7pra_t;
+
+
+
+typedef union ocb_opit8prb
+{
+
+    uint32_t value;
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t pcb_intr_type_n_pending_0 : 1;
     uint32_t pcb_intr_type_n_pending_1 : 1;
@@ -2164,9 +3238,23 @@ typedef union ocb_opitnpra {
     uint32_t pcb_intr_type_n_pending_21 : 1;
     uint32_t pcb_intr_type_n_pending_22 : 1;
     uint32_t pcb_intr_type_n_pending_23 : 1;
-    uint32_t reserved1 : 8;
+        uint32_t pcb_intr_type_n_pending_24 : 1;
+        uint32_t pcb_intr_type_n_pending_25 : 1;
+        uint32_t pcb_intr_type_n_pending_26 : 1;
+        uint32_t pcb_intr_type_n_pending_27 : 1;
+        uint32_t pcb_intr_type_n_pending_28 : 1;
+        uint32_t pcb_intr_type_n_pending_29 : 1;
+        uint32_t pcb_intr_type_n_pending_30 : 1;
+        uint32_t pcb_intr_type_n_pending_31 : 1;
 #else
-    uint32_t reserved1 : 8;
+        uint32_t pcb_intr_type_n_pending_31 : 1;
+        uint32_t pcb_intr_type_n_pending_30 : 1;
+        uint32_t pcb_intr_type_n_pending_29 : 1;
+        uint32_t pcb_intr_type_n_pending_28 : 1;
+        uint32_t pcb_intr_type_n_pending_27 : 1;
+        uint32_t pcb_intr_type_n_pending_26 : 1;
+        uint32_t pcb_intr_type_n_pending_25 : 1;
+        uint32_t pcb_intr_type_n_pending_24 : 1;
     uint32_t pcb_intr_type_n_pending_23 : 1;
     uint32_t pcb_intr_type_n_pending_22 : 1;
     uint32_t pcb_intr_type_n_pending_21 : 1;
@@ -2193,14 +3281,16 @@ typedef union ocb_opitnpra {
     uint32_t pcb_intr_type_n_pending_0 : 1;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_opitnpra_t;
+} ocb_opit8prb_t;
 
 
 
-typedef union ocb_opitnpra_clr {
+typedef union ocb_opit9prb
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t pcb_intr_type_n_pending_0 : 1;
     uint32_t pcb_intr_type_n_pending_1 : 1;
@@ -2226,71 +3316,23 @@ typedef union ocb_opitnpra_clr {
     uint32_t pcb_intr_type_n_pending_21 : 1;
     uint32_t pcb_intr_type_n_pending_22 : 1;
     uint32_t pcb_intr_type_n_pending_23 : 1;
-    uint32_t reserved1 : 8;
+        uint32_t pcb_intr_type_n_pending_24 : 1;
+        uint32_t pcb_intr_type_n_pending_25 : 1;
+        uint32_t pcb_intr_type_n_pending_26 : 1;
+        uint32_t pcb_intr_type_n_pending_27 : 1;
+        uint32_t pcb_intr_type_n_pending_28 : 1;
+        uint32_t pcb_intr_type_n_pending_29 : 1;
+        uint32_t pcb_intr_type_n_pending_30 : 1;
+        uint32_t pcb_intr_type_n_pending_31 : 1;
 #else
-    uint32_t reserved1 : 8;
-    uint32_t pcb_intr_type_n_pending_23 : 1;
-    uint32_t pcb_intr_type_n_pending_22 : 1;
-    uint32_t pcb_intr_type_n_pending_21 : 1;
-    uint32_t pcb_intr_type_n_pending_20 : 1;
-    uint32_t pcb_intr_type_n_pending_19 : 1;
-    uint32_t pcb_intr_type_n_pending_18 : 1;
-    uint32_t pcb_intr_type_n_pending_17 : 1;
-    uint32_t pcb_intr_type_n_pending_16 : 1;
-    uint32_t pcb_intr_type_n_pending_15 : 1;
-    uint32_t pcb_intr_type_n_pending_14 : 1;
-    uint32_t pcb_intr_type_n_pending_13 : 1;
-    uint32_t pcb_intr_type_n_pending_12 : 1;
-    uint32_t pcb_intr_type_n_pending_11 : 1;
-    uint32_t pcb_intr_type_n_pending_10 : 1;
-    uint32_t pcb_intr_type_n_pending_9 : 1;
-    uint32_t pcb_intr_type_n_pending_8 : 1;
-    uint32_t pcb_intr_type_n_pending_7 : 1;
-    uint32_t pcb_intr_type_n_pending_6 : 1;
-    uint32_t pcb_intr_type_n_pending_5 : 1;
-    uint32_t pcb_intr_type_n_pending_4 : 1;
-    uint32_t pcb_intr_type_n_pending_3 : 1;
-    uint32_t pcb_intr_type_n_pending_2 : 1;
-    uint32_t pcb_intr_type_n_pending_1 : 1;
-    uint32_t pcb_intr_type_n_pending_0 : 1;
-#endif // _BIG_ENDIAN
-    } fields;
-} ocb_opitnpra_clr_t;
-
-
-
-typedef union ocb_opitnpra_or {
-
-    uint32_t value;
-    struct {
-#ifdef _BIG_ENDIAN
-    uint32_t pcb_intr_type_n_pending_0 : 1;
-    uint32_t pcb_intr_type_n_pending_1 : 1;
-    uint32_t pcb_intr_type_n_pending_2 : 1;
-    uint32_t pcb_intr_type_n_pending_3 : 1;
-    uint32_t pcb_intr_type_n_pending_4 : 1;
-    uint32_t pcb_intr_type_n_pending_5 : 1;
-    uint32_t pcb_intr_type_n_pending_6 : 1;
-    uint32_t pcb_intr_type_n_pending_7 : 1;
-    uint32_t pcb_intr_type_n_pending_8 : 1;
-    uint32_t pcb_intr_type_n_pending_9 : 1;
-    uint32_t pcb_intr_type_n_pending_10 : 1;
-    uint32_t pcb_intr_type_n_pending_11 : 1;
-    uint32_t pcb_intr_type_n_pending_12 : 1;
-    uint32_t pcb_intr_type_n_pending_13 : 1;
-    uint32_t pcb_intr_type_n_pending_14 : 1;
-    uint32_t pcb_intr_type_n_pending_15 : 1;
-    uint32_t pcb_intr_type_n_pending_16 : 1;
-    uint32_t pcb_intr_type_n_pending_17 : 1;
-    uint32_t pcb_intr_type_n_pending_18 : 1;
-    uint32_t pcb_intr_type_n_pending_19 : 1;
-    uint32_t pcb_intr_type_n_pending_20 : 1;
-    uint32_t pcb_intr_type_n_pending_21 : 1;
-    uint32_t pcb_intr_type_n_pending_22 : 1;
-    uint32_t pcb_intr_type_n_pending_23 : 1;
-    uint32_t reserved1 : 8;
-#else
-    uint32_t reserved1 : 8;
+        uint32_t pcb_intr_type_n_pending_31 : 1;
+        uint32_t pcb_intr_type_n_pending_30 : 1;
+        uint32_t pcb_intr_type_n_pending_29 : 1;
+        uint32_t pcb_intr_type_n_pending_28 : 1;
+        uint32_t pcb_intr_type_n_pending_27 : 1;
+        uint32_t pcb_intr_type_n_pending_26 : 1;
+        uint32_t pcb_intr_type_n_pending_25 : 1;
+        uint32_t pcb_intr_type_n_pending_24 : 1;
     uint32_t pcb_intr_type_n_pending_23 : 1;
     uint32_t pcb_intr_type_n_pending_22 : 1;
     uint32_t pcb_intr_type_n_pending_21 : 1;
@@ -2317,14 +3359,16 @@ typedef union ocb_opitnpra_or {
     uint32_t pcb_intr_type_n_pending_0 : 1;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_opitnpra_or_t;
+} ocb_opit9prb_t;
 
 
 
-typedef union ocb_opit6prb {
+typedef union ocb_opitaprc
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t pcb_intr_type_n_pending_0 : 1;
     uint32_t pcb_intr_type_n_pending_1 : 1;
@@ -2332,9 +3376,13 @@ typedef union ocb_opit6prb {
     uint32_t pcb_intr_type_n_pending_3 : 1;
     uint32_t pcb_intr_type_n_pending_4 : 1;
     uint32_t pcb_intr_type_n_pending_5 : 1;
-    uint32_t reserved1 : 26;
+        uint32_t pcb_intr_type_n_pending_6 : 1;
+        uint32_t pcb_intr_type_n_pending_7 : 1;
+        uint32_t reserved1 : 24;
 #else
-    uint32_t reserved1 : 26;
+        uint32_t reserved1 : 24;
+        uint32_t pcb_intr_type_n_pending_7 : 1;
+        uint32_t pcb_intr_type_n_pending_6 : 1;
     uint32_t pcb_intr_type_n_pending_5 : 1;
     uint32_t pcb_intr_type_n_pending_4 : 1;
     uint32_t pcb_intr_type_n_pending_3 : 1;
@@ -2343,14 +3391,16 @@ typedef union ocb_opit6prb {
     uint32_t pcb_intr_type_n_pending_0 : 1;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_opit6prb_t;
+} ocb_opitaprc_t;
 
 
 
-typedef union ocb_opit6prb_clr {
+typedef union ocb_opitbprc
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t pcb_intr_type_n_pending_0 : 1;
     uint32_t pcb_intr_type_n_pending_1 : 1;
@@ -2358,9 +3408,13 @@ typedef union ocb_opit6prb_clr {
     uint32_t pcb_intr_type_n_pending_3 : 1;
     uint32_t pcb_intr_type_n_pending_4 : 1;
     uint32_t pcb_intr_type_n_pending_5 : 1;
-    uint32_t reserved1 : 26;
+        uint32_t pcb_intr_type_n_pending_6 : 1;
+        uint32_t pcb_intr_type_n_pending_7 : 1;
+        uint32_t reserved1 : 24;
 #else
-    uint32_t reserved1 : 26;
+        uint32_t reserved1 : 24;
+        uint32_t pcb_intr_type_n_pending_7 : 1;
+        uint32_t pcb_intr_type_n_pending_6 : 1;
     uint32_t pcb_intr_type_n_pending_5 : 1;
     uint32_t pcb_intr_type_n_pending_4 : 1;
     uint32_t pcb_intr_type_n_pending_3 : 1;
@@ -2369,14 +3423,16 @@ typedef union ocb_opit6prb_clr {
     uint32_t pcb_intr_type_n_pending_0 : 1;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_opit6prb_clr_t;
+} ocb_opitbprc_t;
 
 
 
-typedef union ocb_opit6prb_or {
+typedef union ocb_opitcprc
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t pcb_intr_type_n_pending_0 : 1;
     uint32_t pcb_intr_type_n_pending_1 : 1;
@@ -2384,9 +3440,13 @@ typedef union ocb_opit6prb_or {
     uint32_t pcb_intr_type_n_pending_3 : 1;
     uint32_t pcb_intr_type_n_pending_4 : 1;
     uint32_t pcb_intr_type_n_pending_5 : 1;
-    uint32_t reserved1 : 26;
+        uint32_t pcb_intr_type_n_pending_6 : 1;
+        uint32_t pcb_intr_type_n_pending_7 : 1;
+        uint32_t reserved1 : 24;
 #else
-    uint32_t reserved1 : 26;
+        uint32_t reserved1 : 24;
+        uint32_t pcb_intr_type_n_pending_7 : 1;
+        uint32_t pcb_intr_type_n_pending_6 : 1;
     uint32_t pcb_intr_type_n_pending_5 : 1;
     uint32_t pcb_intr_type_n_pending_4 : 1;
     uint32_t pcb_intr_type_n_pending_3 : 1;
@@ -2395,14 +3455,16 @@ typedef union ocb_opit6prb_or {
     uint32_t pcb_intr_type_n_pending_0 : 1;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_opit6prb_or_t;
+} ocb_opitcprc_t;
 
 
 
-typedef union ocb_opit7prb {
+typedef union ocb_opitdprc
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t pcb_intr_type_n_pending_0 : 1;
     uint32_t pcb_intr_type_n_pending_1 : 1;
@@ -2410,9 +3472,13 @@ typedef union ocb_opit7prb {
     uint32_t pcb_intr_type_n_pending_3 : 1;
     uint32_t pcb_intr_type_n_pending_4 : 1;
     uint32_t pcb_intr_type_n_pending_5 : 1;
-    uint32_t reserved1 : 26;
+        uint32_t pcb_intr_type_n_pending_6 : 1;
+        uint32_t pcb_intr_type_n_pending_7 : 1;
+        uint32_t reserved1 : 24;
 #else
-    uint32_t reserved1 : 26;
+        uint32_t reserved1 : 24;
+        uint32_t pcb_intr_type_n_pending_7 : 1;
+        uint32_t pcb_intr_type_n_pending_6 : 1;
     uint32_t pcb_intr_type_n_pending_5 : 1;
     uint32_t pcb_intr_type_n_pending_4 : 1;
     uint32_t pcb_intr_type_n_pending_3 : 1;
@@ -2421,14 +3487,16 @@ typedef union ocb_opit7prb {
     uint32_t pcb_intr_type_n_pending_0 : 1;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_opit7prb_t;
+} ocb_opitdprc_t;
 
 
 
-typedef union ocb_opit7prb_clr {
+typedef union ocb_opiteprd
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t pcb_intr_type_n_pending_0 : 1;
     uint32_t pcb_intr_type_n_pending_1 : 1;
@@ -2436,9 +3504,13 @@ typedef union ocb_opit7prb_clr {
     uint32_t pcb_intr_type_n_pending_3 : 1;
     uint32_t pcb_intr_type_n_pending_4 : 1;
     uint32_t pcb_intr_type_n_pending_5 : 1;
-    uint32_t reserved1 : 26;
+        uint32_t pcb_intr_type_n_pending_6 : 1;
+        uint32_t pcb_intr_type_n_pending_7 : 1;
+        uint32_t reserved1 : 24;
 #else
-    uint32_t reserved1 : 26;
+        uint32_t reserved1 : 24;
+        uint32_t pcb_intr_type_n_pending_7 : 1;
+        uint32_t pcb_intr_type_n_pending_6 : 1;
     uint32_t pcb_intr_type_n_pending_5 : 1;
     uint32_t pcb_intr_type_n_pending_4 : 1;
     uint32_t pcb_intr_type_n_pending_3 : 1;
@@ -2447,14 +3519,16 @@ typedef union ocb_opit7prb_clr {
     uint32_t pcb_intr_type_n_pending_0 : 1;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_opit7prb_clr_t;
+} ocb_opiteprd_t;
 
 
 
-typedef union ocb_opit7prb_or {
+typedef union ocb_opitfprd
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t pcb_intr_type_n_pending_0 : 1;
     uint32_t pcb_intr_type_n_pending_1 : 1;
@@ -2462,9 +3536,13 @@ typedef union ocb_opit7prb_or {
     uint32_t pcb_intr_type_n_pending_3 : 1;
     uint32_t pcb_intr_type_n_pending_4 : 1;
     uint32_t pcb_intr_type_n_pending_5 : 1;
-    uint32_t reserved1 : 26;
+        uint32_t pcb_intr_type_n_pending_6 : 1;
+        uint32_t pcb_intr_type_n_pending_7 : 1;
+        uint32_t reserved1 : 24;
 #else
-    uint32_t reserved1 : 26;
+        uint32_t reserved1 : 24;
+        uint32_t pcb_intr_type_n_pending_7 : 1;
+        uint32_t pcb_intr_type_n_pending_6 : 1;
     uint32_t pcb_intr_type_n_pending_5 : 1;
     uint32_t pcb_intr_type_n_pending_4 : 1;
     uint32_t pcb_intr_type_n_pending_3 : 1;
@@ -2473,100 +3551,190 @@ typedef union ocb_opit7prb_or {
     uint32_t pcb_intr_type_n_pending_0 : 1;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_opit7prb_or_t;
+} ocb_opitfprd_t;
 
 
 
-typedef union ocb_o2sctrlf0a {
+typedef union ocb_o2sctrlfn
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t o2s_frame_size_an : 6;
-    uint32_t o2s_out_count1_an : 6;
-    uint32_t o2s_in_delay1_an : 6;
-    uint32_t o2s_in_count1_an : 6;
+        uint32_t o2s_frame_size_n : 6;
+        uint32_t o2s_out_count1_n : 6;
+        uint32_t o2s_in_delay1_n : 6;
+        uint32_t o2s_in_count1_n : 6;
     uint32_t reserved1 : 8;
 #else
     uint32_t reserved1 : 8;
-    uint32_t o2s_in_count1_an : 6;
-    uint32_t o2s_in_delay1_an : 6;
-    uint32_t o2s_out_count1_an : 6;
-    uint32_t o2s_frame_size_an : 6;
+        uint32_t o2s_in_count1_n : 6;
+        uint32_t o2s_in_delay1_n : 6;
+        uint32_t o2s_out_count1_n : 6;
+        uint32_t o2s_frame_size_n : 6;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_o2sctrlf0a_t;
+} ocb_o2sctrlfn_t;
 
 
 
-typedef union ocb_o2sctrls0a {
+typedef union ocb_o2sctrlsn
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t o2s_out_count2_an : 6;
-    uint32_t o2s_in_delay2_an : 6;
-    uint32_t o2s_in_count2_an : 6;
+        uint32_t o2s_out_count2_n : 6;
+        uint32_t o2s_in_delay2_n : 6;
+        uint32_t o2s_in_count2_n : 6;
     uint32_t reserved1 : 14;
 #else
     uint32_t reserved1 : 14;
-    uint32_t o2s_in_count2_an : 6;
-    uint32_t o2s_in_delay2_an : 6;
-    uint32_t o2s_out_count2_an : 6;
+        uint32_t o2s_in_count2_n : 6;
+        uint32_t o2s_in_delay2_n : 6;
+        uint32_t o2s_out_count2_n : 6;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_o2sctrls0a_t;
+} ocb_o2sctrlsn_t;
 
 
 
-typedef union ocb_o2sctrl10a {
+typedef union ocb_o2sctrl1n
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t o2s_bridge_enable_an : 1;
-    uint32_t o2sctrl1an_reserved_1 : 1;
-    uint32_t o2s_cpol_an : 1;
-    uint32_t o2s_cpha_an : 1;
-    uint32_t o2s_clock_divider_an : 10;
-    uint32_t o2sctrl1an_reserved_14_16 : 3;
-    uint32_t o2s_nr_of_frames_an : 1;
-    uint32_t reserved1 : 14;
+        uint32_t o2s_bridge_enable_n_a : 1;
+        uint32_t o2s_bridge_enable_n_b : 1;
+        uint32_t reserved1 : 2;
+        uint32_t o2s_clock_divider_n : 10;
+        uint32_t o2sctrl1n_reserved_14_16 : 3;
+        uint32_t o2s_nr_of_frames_n : 1;
+        uint32_t reserved2 : 2;
+        uint32_t slave_data_sample_delay : 7;
+        uint32_t reserved3 : 5;
 #else
-    uint32_t reserved1 : 14;
-    uint32_t o2s_nr_of_frames_an : 1;
-    uint32_t o2sctrl1an_reserved_14_16 : 3;
-    uint32_t o2s_clock_divider_an : 10;
-    uint32_t o2s_cpha_an : 1;
-    uint32_t o2s_cpol_an : 1;
-    uint32_t o2sctrl1an_reserved_1 : 1;
-    uint32_t o2s_bridge_enable_an : 1;
+        uint32_t reserved3 : 5;
+        uint32_t slave_data_sample_delay : 7;
+        uint32_t reserved2 : 2;
+        uint32_t o2s_nr_of_frames_n : 1;
+        uint32_t o2sctrl1n_reserved_14_16 : 3;
+        uint32_t o2s_clock_divider_n : 10;
+        uint32_t reserved1 : 2;
+        uint32_t o2s_bridge_enable_n_b : 1;
+        uint32_t o2s_bridge_enable_n_a : 1;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_o2sctrl10a_t;
+} ocb_o2sctrl1n_t;
 
 
 
-typedef union ocb_o2sctrl20a {
+typedef union ocb_o2sctrl2n
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t o2s_inter_frame_delay_an : 17;
-    uint32_t reserved1 : 15;
+        uint32_t o2s_inter_frame_delay_n : 16;
+        uint32_t reserved1 : 16;
 #else
-    uint32_t reserved1 : 15;
-    uint32_t o2s_inter_frame_delay_an : 17;
+        uint32_t reserved1 : 16;
+        uint32_t o2s_inter_frame_delay_n : 16;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_o2sctrl20a_t;
+} ocb_o2sctrl2n_t;
 
 
 
-typedef union ocb_o2sst0a {
+typedef union ocb_o2sstna
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t o2s_ongoing_an : 1;
+        uint32_t o2sstan_reserved_1_4 : 4;
+        uint32_t o2s_write_while_bridge_busy_err_an : 1;
+        uint32_t o2sstan_reserved_6 : 1;
+        uint32_t o2s_fsm_err_an : 1;
+        uint32_t reserved1 : 24;
+#else
+        uint32_t reserved1 : 24;
+        uint32_t o2s_fsm_err_an : 1;
+        uint32_t o2sstan_reserved_6 : 1;
+        uint32_t o2s_write_while_bridge_busy_err_an : 1;
+        uint32_t o2sstan_reserved_1_4 : 4;
+        uint32_t o2s_ongoing_an : 1;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_o2sstna_t;
+
+
+
+typedef union ocb_o2scmdna
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t o2scmdan_reserved_0 : 1;
+        uint32_t o2s_clear_sticky_bits_an : 1;
+        uint32_t reserved1 : 30;
+#else
+        uint32_t reserved1 : 30;
+        uint32_t o2s_clear_sticky_bits_an : 1;
+        uint32_t o2scmdan_reserved_0 : 1;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_o2scmdna_t;
+
+
+
+typedef union ocb_o2swdna
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t o2s_wdata_an : 32;
+#else
+        uint32_t o2s_wdata_an : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_o2swdna_t;
+
+
+
+typedef union ocb_o2srdna
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t o2s_rdata_an : 32;
+#else
+        uint32_t o2s_rdata_an : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_o2srdna_t;
+
+
+
+typedef union ocb_o2sstnb
+{
+
+    uint32_t value;
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t o2s_ongoing_an : 1;
     uint32_t o2sstan_reserved_1_4 : 4;
@@ -2583,14 +3751,16 @@ typedef union ocb_o2sst0a {
     uint32_t o2s_ongoing_an : 1;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_o2sst0a_t;
+} ocb_o2sstnb_t;
 
 
 
-typedef union ocb_o2scmd0a {
+typedef union ocb_o2scmdnb
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t o2scmdan_reserved_0 : 1;
     uint32_t o2s_clear_sticky_bits_an : 1;
@@ -2601,510 +3771,710 @@ typedef union ocb_o2scmd0a {
     uint32_t o2scmdan_reserved_0 : 1;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_o2scmd0a_t;
+} ocb_o2scmdnb_t;
 
 
 
-typedef union ocb_o2swd0a {
+typedef union ocb_o2swdnb
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t o2s_wdata_an : 32;
 #else
     uint32_t o2s_wdata_an : 32;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_o2swd0a_t;
+} ocb_o2swdnb_t;
 
 
 
-typedef union ocb_o2srd0a {
+typedef union ocb_o2srdnb
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t o2s_rdata_an : 32;
 #else
     uint32_t o2s_rdata_an : 32;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_o2srd0a_t;
+} ocb_o2srdnb_t;
 
 
 
-typedef union ocb_o2sctrlf0b {
+typedef union ocb_woficctrl
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t o2s_frame_size_an : 6;
-    uint32_t o2s_out_count1_an : 6;
-    uint32_t o2s_in_delay1_an : 6;
-    uint32_t o2s_in_count1_an : 6;
-    uint32_t reserved1 : 8;
+        uint32_t interchip_link_enable : 1;
+        uint32_t interchip_link_reset : 1;
+        uint32_t interchip_cpol : 1;
+        uint32_t interchip_cpha : 1;
+        uint32_t interchip_clock_divider : 10;
+        uint32_t reserved_141 : 1;
+        uint32_t interchip_wrap_enable : 1;
+        uint32_t interchip_interface_enable_north : 1;
+        uint32_t interchip_interface_enable_south : 1;
+        uint32_t interchip_sync_en : 1;
+        uint32_t reserved_192 : 1;
+        uint32_t interchip_ecc_gen_en : 1;
+        uint32_t interchip_ecc_check_en : 1;
+        uint32_t rx_fsm_freeze_on_ue : 1;
+        uint32_t interchip_reset_ecc_err : 1;
+        uint32_t reserved3 : 8;
 #else
-    uint32_t reserved1 : 8;
-    uint32_t o2s_in_count1_an : 6;
-    uint32_t o2s_in_delay1_an : 6;
-    uint32_t o2s_out_count1_an : 6;
-    uint32_t o2s_frame_size_an : 6;
+        uint32_t reserved3 : 8;
+        uint32_t interchip_reset_ecc_err : 1;
+        uint32_t rx_fsm_freeze_on_ue : 1;
+        uint32_t interchip_ecc_check_en : 1;
+        uint32_t interchip_ecc_gen_en : 1;
+        uint32_t reserved_192 : 1;
+        uint32_t interchip_sync_en : 1;
+        uint32_t interchip_interface_enable_south : 1;
+        uint32_t interchip_interface_enable_north : 1;
+        uint32_t interchip_wrap_enable : 1;
+        uint32_t reserved_141 : 1;
+        uint32_t interchip_clock_divider : 10;
+        uint32_t interchip_cpha : 1;
+        uint32_t interchip_cpol : 1;
+        uint32_t interchip_link_reset : 1;
+        uint32_t interchip_link_enable : 1;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_o2sctrlf0b_t;
+} ocb_woficctrl_t;
 
 
 
-typedef union ocb_o2sctrls0b {
+typedef union ocb_woficping
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t o2s_out_count2_an : 6;
-    uint32_t o2s_in_delay2_an : 6;
-    uint32_t o2s_in_count2_an : 6;
-    uint32_t reserved1 : 14;
+        uint32_t interchip_ping_send : 1;
+        uint32_t interchip_ping_mode : 1;
+        uint32_t interchip_ping_master : 1;
+        uint32_t interchip_ping_slave : 1;
+        uint32_t interchip_ping_detect_clear : 1;
+        uint32_t interchip_ping_dataop : 3;
+        uint32_t reserved1 : 24;
 #else
-    uint32_t reserved1 : 14;
-    uint32_t o2s_in_count2_an : 6;
-    uint32_t o2s_in_delay2_an : 6;
-    uint32_t o2s_out_count2_an : 6;
+        uint32_t reserved1 : 24;
+        uint32_t interchip_ping_dataop : 3;
+        uint32_t interchip_ping_detect_clear : 1;
+        uint32_t interchip_ping_slave : 1;
+        uint32_t interchip_ping_master : 1;
+        uint32_t interchip_ping_mode : 1;
+        uint32_t interchip_ping_send : 1;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_o2sctrls0b_t;
+} ocb_woficping_t;
 
 
 
-typedef union ocb_o2sctrl10b {
+typedef union ocb_woficstat
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t o2s_bridge_enable_an : 1;
-    uint32_t o2sctrl1an_reserved_1 : 1;
-    uint32_t o2s_cpol_an : 1;
-    uint32_t o2s_cpha_an : 1;
-    uint32_t o2s_clock_divider_an : 10;
-    uint32_t o2sctrl1an_reserved_14_16 : 3;
-    uint32_t o2s_nr_of_frames_an : 1;
-    uint32_t reserved1 : 14;
+        uint32_t interchip_ecc_ue : 1;
+        uint32_t interchip_ecc_ce : 1;
+        uint32_t reserved_2_31 : 2;
+        uint32_t interchip_tx_ongoing : 1;
+        uint32_t interchip_rx_ongoing : 1;
+        uint32_t interchip_ping_detected : 1;
+        uint32_t interchip_ping_ack_detected : 1;
+        uint32_t interchip_ping_detect_count : 8;
+        uint32_t interchip_tx_ecc : 8;
+        uint32_t interchip_rx_ecc : 8;
 #else
-    uint32_t reserved1 : 14;
-    uint32_t o2s_nr_of_frames_an : 1;
-    uint32_t o2sctrl1an_reserved_14_16 : 3;
-    uint32_t o2s_clock_divider_an : 10;
-    uint32_t o2s_cpha_an : 1;
-    uint32_t o2s_cpol_an : 1;
-    uint32_t o2sctrl1an_reserved_1 : 1;
-    uint32_t o2s_bridge_enable_an : 1;
+        uint32_t interchip_rx_ecc : 8;
+        uint32_t interchip_tx_ecc : 8;
+        uint32_t interchip_ping_detect_count : 8;
+        uint32_t interchip_ping_ack_detected : 1;
+        uint32_t interchip_ping_detected : 1;
+        uint32_t interchip_rx_ongoing : 1;
+        uint32_t interchip_tx_ongoing : 1;
+        uint32_t reserved_2_31 : 2;
+        uint32_t interchip_ecc_ce : 1;
+        uint32_t interchip_ecc_ue : 1;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_o2sctrl10b_t;
+} ocb_woficstat_t;
 
 
 
-typedef union ocb_o2sctrl20b {
+typedef union ocb_woficrd
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t o2s_inter_frame_delay_an : 17;
+        uint32_t wofcntl_rddata : 32;
+#else
+        uint32_t wofcntl_rddata : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_woficrd_t;
+
+
+
+typedef union ocb_woficwd
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t wocntl_wrdata_high : 32;
+#else
+        uint32_t wocntl_wrdata_high : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_woficwd_t;
+
+
+
+typedef union ocb_woficdcm1
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t dcm_message : 32;
+#else
+        uint32_t dcm_message : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_woficdcm1_t;
+
+
+
+typedef union ocb_woficdcm2
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t dcm_message : 32;
+#else
+        uint32_t dcm_message : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_woficdcm2_t;
+
+
+
+typedef union ocb_woficecc
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t inject_ecc_err : 1;
+        uint32_t continuous_inject : 1;
+        uint32_t inject_type : 1;
+        uint32_t inject_data_or_ecc : 1;
+        uint32_t reserved1 : 28;
+#else
+        uint32_t reserved1 : 28;
+        uint32_t inject_data_or_ecc : 1;
+        uint32_t inject_type : 1;
+        uint32_t continuous_inject : 1;
+        uint32_t inject_ecc_err : 1;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_woficecc_t;
+
+
+
+typedef union ocb_adccr0
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t adc_frame_size : 6;
+        uint32_t adc_out_count : 6;
+        uint32_t adc_in_delay : 6;
+        uint32_t adc_in_count : 6;
+        uint32_t reserved1 : 8;
+#else
+        uint32_t reserved1 : 8;
+        uint32_t adc_in_count : 6;
+        uint32_t adc_in_delay : 6;
+        uint32_t adc_out_count : 6;
+        uint32_t adc_frame_size : 6;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_adccr0_t;
+
+
+
+typedef union ocb_adccr1
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t hwctrl_fsm_enable : 1;
+        uint32_t hwctrl_device : 1;
+        uint32_t hwctrl_cpol : 1;
+        uint32_t hwctrl_cpha : 1;
+        uint32_t hwctrl_clock_divider : 10;
+        uint32_t hwctrl_nr_of_frames : 5;
+        uint32_t hwctrl_write_while_bridge_busy_scresp_en : 1;
+        uint32_t busy_response_code : 3;
+        uint32_t reserved1 : 9;
+#else
+        uint32_t reserved1 : 9;
+        uint32_t busy_response_code : 3;
+        uint32_t hwctrl_write_while_bridge_busy_scresp_en : 1;
+        uint32_t hwctrl_nr_of_frames : 5;
+        uint32_t hwctrl_clock_divider : 10;
+        uint32_t hwctrl_cpha : 1;
+        uint32_t hwctrl_cpol : 1;
+        uint32_t hwctrl_device : 1;
+        uint32_t hwctrl_fsm_enable : 1;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_adccr1_t;
+
+
+
+typedef union ocb_adccr2
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t hwctrl_inter_frame_delay : 17;
     uint32_t reserved1 : 15;
 #else
     uint32_t reserved1 : 15;
-    uint32_t o2s_inter_frame_delay_an : 17;
+        uint32_t hwctrl_inter_frame_delay : 17;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_o2sctrl20b_t;
+} ocb_adccr2_t;
 
 
 
-typedef union ocb_o2sst0b {
+typedef union ocb_adc_status
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t o2s_ongoing_an : 1;
-    uint32_t o2sstan_reserved_1_4 : 4;
-    uint32_t o2s_write_while_bridge_busy_err_an : 1;
-    uint32_t o2sstan_reserved_6 : 1;
-    uint32_t o2s_fsm_err_an : 1;
-    uint32_t reserved1 : 24;
+        uint32_t hwctrl_ongoing : 1;
+        uint32_t reserved1 : 3;
+        uint32_t hwctrl_invalid_number_of_frames : 1;
+        uint32_t hwctrl_write_while_bridge_busy_err : 1;
+        uint32_t reserved2 : 1;
+        uint32_t hwctrl_fsm_err : 1;
+        uint32_t reserved3 : 24;
 #else
-    uint32_t reserved1 : 24;
-    uint32_t o2s_fsm_err_an : 1;
-    uint32_t o2sstan_reserved_6 : 1;
-    uint32_t o2s_write_while_bridge_busy_err_an : 1;
-    uint32_t o2sstan_reserved_1_4 : 4;
-    uint32_t o2s_ongoing_an : 1;
+        uint32_t reserved3 : 24;
+        uint32_t hwctrl_fsm_err : 1;
+        uint32_t reserved2 : 1;
+        uint32_t hwctrl_write_while_bridge_busy_err : 1;
+        uint32_t hwctrl_invalid_number_of_frames : 1;
+        uint32_t reserved1 : 3;
+        uint32_t hwctrl_ongoing : 1;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_o2sst0b_t;
+} ocb_adc_status_t;
 
 
 
-typedef union ocb_o2scmd0b {
+typedef union ocb_adc_cmd
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t o2scmdan_reserved_0 : 1;
-    uint32_t o2s_clear_sticky_bits_an : 1;
-    uint32_t reserved1 : 30;
+        uint32_t hwctrl_start_sampling : 1;
+        uint32_t reserved1 : 31;
 #else
-    uint32_t reserved1 : 30;
-    uint32_t o2s_clear_sticky_bits_an : 1;
-    uint32_t o2scmdan_reserved_0 : 1;
+        uint32_t reserved1 : 31;
+        uint32_t hwctrl_start_sampling : 1;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_o2scmd0b_t;
+} ocb_adc_cmd_t;
 
 
 
-typedef union ocb_o2swd0b {
+typedef union ocb_adc_reset
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t o2s_wdata_an : 32;
+        uint32_t hwctrl_reset : 2;
+        uint32_t reserved1 : 30;
 #else
-    uint32_t o2s_wdata_an : 32;
+        uint32_t reserved1 : 30;
+        uint32_t hwctrl_reset : 2;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_o2swd0b_t;
+} ocb_adc_reset_t;
 
 
 
-typedef union ocb_o2srd0b {
+typedef union ocb_adc_wdata
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t o2s_rdata_an : 32;
+        uint32_t hwctrl_wdata : 16;
+        uint32_t reserved1 : 16;
 #else
-    uint32_t o2s_rdata_an : 32;
+        uint32_t reserved1 : 16;
+        uint32_t hwctrl_wdata : 16;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_o2srd0b_t;
+} ocb_adc_wdata_t;
 
 
 
-typedef union ocb_o2sctrlf1a {
+typedef union ocb_adc_rdata0
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t o2s_frame_size_an : 6;
-    uint32_t o2s_out_count1_an : 6;
-    uint32_t o2s_in_delay1_an : 6;
-    uint32_t o2s_in_count1_an : 6;
-    uint32_t reserved1 : 8;
+        uint32_t hwctrl_rdata0 : 16;
+        uint32_t hwctrl_rdata1 : 16;
 #else
-    uint32_t reserved1 : 8;
-    uint32_t o2s_in_count1_an : 6;
-    uint32_t o2s_in_delay1_an : 6;
-    uint32_t o2s_out_count1_an : 6;
-    uint32_t o2s_frame_size_an : 6;
+        uint32_t hwctrl_rdata1 : 16;
+        uint32_t hwctrl_rdata0 : 16;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_o2sctrlf1a_t;
+} ocb_adc_rdata0_t;
 
 
 
-typedef union ocb_o2sctrls1a {
+typedef union ocb_adc_rdata1
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t o2s_out_count2_an : 6;
-    uint32_t o2s_in_delay2_an : 6;
-    uint32_t o2s_in_count2_an : 6;
+        uint32_t hwctrl_rdata4 : 16;
+        uint32_t hwctrl_rdata5 : 16;
+#else
+        uint32_t hwctrl_rdata5 : 16;
+        uint32_t hwctrl_rdata4 : 16;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_adc_rdata1_t;
+
+
+
+typedef union ocb_adc_rdata2
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t hwctrl_rdata8 : 16;
+        uint32_t hwctrl_rdata9 : 16;
+#else
+        uint32_t hwctrl_rdata9 : 16;
+        uint32_t hwctrl_rdata8 : 16;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_adc_rdata2_t;
+
+
+
+typedef union ocb_adc_rdata3
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t hwctrl_rdata12 : 16;
+        uint32_t hwctrl_rdata13 : 16;
+#else
+        uint32_t hwctrl_rdata13 : 16;
+        uint32_t hwctrl_rdata12 : 16;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_adc_rdata3_t;
+
+
+
+typedef union ocb_adc_rdata4
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t hwctrl_rdata16 : 16;
+        uint32_t hwctrl_rdata17 : 16;
+#else
+        uint32_t hwctrl_rdata17 : 16;
+        uint32_t hwctrl_rdata16 : 16;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_adc_rdata4_t;
+
+
+
+typedef union ocb_adc_rdata5
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t hwctrl_rdata20 : 16;
+        uint32_t hwctrl_rdata21 : 16;
+#else
+        uint32_t hwctrl_rdata21 : 16;
+        uint32_t hwctrl_rdata20 : 16;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_adc_rdata5_t;
+
+
+
+typedef union ocb_adc_rdata6
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t hwctrl_rdata24 : 16;
+        uint32_t hwctrl_rdata25 : 16;
+#else
+        uint32_t hwctrl_rdata25 : 16;
+        uint32_t hwctrl_rdata24 : 16;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_adc_rdata6_t;
+
+
+
+typedef union ocb_adc_rdata7
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t hwctrl_rdata28 : 16;
+        uint32_t hwctrl_rdata29 : 16;
+#else
+        uint32_t hwctrl_rdata29 : 16;
+        uint32_t hwctrl_rdata28 : 16;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_adc_rdata7_t;
+
+
+
+typedef union ocb_p2s_100ns
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t p2s_100ns : 32;
+#else
+        uint32_t p2s_100ns : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_p2s_100ns_t;
+
+
+
+typedef union ocb_p2scr0
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t p2s_frame_size : 6;
+        uint32_t p2s_out_count1 : 6;
+        uint32_t p2s_in_delay1 : 6;
+        uint32_t p2s_in_count1 : 6;
+        uint32_t p2s_out_count2 : 6;
+        uint32_t p2s_in_delay2 : 2;
+#else
+        uint32_t p2s_in_delay2 : 2;
+        uint32_t p2s_out_count2 : 6;
+        uint32_t p2s_in_count1 : 6;
+        uint32_t p2s_in_delay1 : 6;
+        uint32_t p2s_out_count1 : 6;
+        uint32_t p2s_frame_size : 6;
+#endif // _BIG_ENDIAN
+    } fields;
+} ocb_p2scr0_t;
+
+
+
+typedef union ocb_p2scr1
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t p2s_bridge_enable : 1;
+        uint32_t p2s_device : 1;
+        uint32_t p2s_cpol : 1;
+        uint32_t p2s_cpha : 1;
+        uint32_t p2s_clock_divider : 10;
+        uint32_t p2scr1_reserved_2 : 3;
+        uint32_t p2s_nr_of_frames : 1;
     uint32_t reserved1 : 14;
 #else
     uint32_t reserved1 : 14;
-    uint32_t o2s_in_count2_an : 6;
-    uint32_t o2s_in_delay2_an : 6;
-    uint32_t o2s_out_count2_an : 6;
+        uint32_t p2s_nr_of_frames : 1;
+        uint32_t p2scr1_reserved_2 : 3;
+        uint32_t p2s_clock_divider : 10;
+        uint32_t p2s_cpha : 1;
+        uint32_t p2s_cpol : 1;
+        uint32_t p2s_device : 1;
+        uint32_t p2s_bridge_enable : 1;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_o2sctrls1a_t;
+} ocb_p2scr1_t;
 
 
 
-typedef union ocb_o2sctrl11a {
-
-    uint32_t value;
-    struct {
-#ifdef _BIG_ENDIAN
-    uint32_t o2s_bridge_enable_an : 1;
-    uint32_t o2sctrl1an_reserved_1 : 1;
-    uint32_t o2s_cpol_an : 1;
-    uint32_t o2s_cpha_an : 1;
-    uint32_t o2s_clock_divider_an : 10;
-    uint32_t o2sctrl1an_reserved_14_16 : 3;
-    uint32_t o2s_nr_of_frames_an : 1;
-    uint32_t reserved1 : 14;
-#else
-    uint32_t reserved1 : 14;
-    uint32_t o2s_nr_of_frames_an : 1;
-    uint32_t o2sctrl1an_reserved_14_16 : 3;
-    uint32_t o2s_clock_divider_an : 10;
-    uint32_t o2s_cpha_an : 1;
-    uint32_t o2s_cpol_an : 1;
-    uint32_t o2sctrl1an_reserved_1 : 1;
-    uint32_t o2s_bridge_enable_an : 1;
-#endif // _BIG_ENDIAN
-    } fields;
-} ocb_o2sctrl11a_t;
-
-
-
-typedef union ocb_o2sctrl21a {
+typedef union ocb_p2scr2
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t o2s_inter_frame_delay_an : 17;
+        uint32_t p2s_inter_frame_delay : 17;
     uint32_t reserved1 : 15;
 #else
     uint32_t reserved1 : 15;
-    uint32_t o2s_inter_frame_delay_an : 17;
+        uint32_t p2s_inter_frame_delay : 17;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_o2sctrl21a_t;
+} ocb_p2scr2_t;
 
 
 
-typedef union ocb_o2sst1a {
+typedef union ocb_p2s_status
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t o2s_ongoing_an : 1;
-    uint32_t o2sstan_reserved_1_4 : 4;
-    uint32_t o2s_write_while_bridge_busy_err_an : 1;
-    uint32_t o2sstan_reserved_6 : 1;
-    uint32_t o2s_fsm_err_an : 1;
-    uint32_t reserved1 : 24;
+        uint32_t p2s_ongoing : 1;
+        uint32_t reserved1 : 4;
+        uint32_t p2s_write_while_bridge_busy_err : 1;
+        uint32_t reserved2 : 1;
+        uint32_t p2s_fsm_err : 1;
+        uint32_t reserved3 : 24;
 #else
-    uint32_t reserved1 : 24;
-    uint32_t o2s_fsm_err_an : 1;
-    uint32_t o2sstan_reserved_6 : 1;
-    uint32_t o2s_write_while_bridge_busy_err_an : 1;
-    uint32_t o2sstan_reserved_1_4 : 4;
-    uint32_t o2s_ongoing_an : 1;
+        uint32_t reserved3 : 24;
+        uint32_t p2s_fsm_err : 1;
+        uint32_t reserved2 : 1;
+        uint32_t p2s_write_while_bridge_busy_err : 1;
+        uint32_t reserved1 : 4;
+        uint32_t p2s_ongoing : 1;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_o2sst1a_t;
+} ocb_p2s_status_t;
 
 
 
-typedef union ocb_o2scmd1a {
+typedef union ocb_p2s_cmd
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t o2scmdan_reserved_0 : 1;
-    uint32_t o2s_clear_sticky_bits_an : 1;
-    uint32_t reserved1 : 30;
+        uint32_t start_p2s_command : 1;
+        uint32_t reserved1 : 31;
 #else
-    uint32_t reserved1 : 30;
-    uint32_t o2s_clear_sticky_bits_an : 1;
-    uint32_t o2scmdan_reserved_0 : 1;
+        uint32_t reserved1 : 31;
+        uint32_t start_p2s_command : 1;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_o2scmd1a_t;
+} ocb_p2s_cmd_t;
 
 
 
-typedef union ocb_o2swd1a {
+typedef union ocb_p2s_wdata
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t o2s_wdata_an : 32;
+        uint32_t p2s_wdata : 32;
 #else
-    uint32_t o2s_wdata_an : 32;
+        uint32_t p2s_wdata : 32;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_o2swd1a_t;
+} ocb_p2s_wdata_t;
 
 
 
-typedef union ocb_o2srd1a {
+typedef union ocb_p2s_rdata
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint32_t o2s_rdata_an : 32;
+        uint32_t p2s_rdata : 32;
 #else
-    uint32_t o2s_rdata_an : 32;
+        uint32_t p2s_rdata : 32;
 #endif // _BIG_ENDIAN
     } fields;
-} ocb_o2srd1a_t;
+} ocb_p2s_rdata_t;
 
 
 
-typedef union ocb_o2sctrlf1b {
-
-    uint32_t value;
-    struct {
-#ifdef _BIG_ENDIAN
-    uint32_t o2s_frame_size_an : 6;
-    uint32_t o2s_out_count1_an : 6;
-    uint32_t o2s_in_delay1_an : 6;
-    uint32_t o2s_in_count1_an : 6;
-    uint32_t reserved1 : 8;
-#else
-    uint32_t reserved1 : 8;
-    uint32_t o2s_in_count1_an : 6;
-    uint32_t o2s_in_delay1_an : 6;
-    uint32_t o2s_out_count1_an : 6;
-    uint32_t o2s_frame_size_an : 6;
-#endif // _BIG_ENDIAN
-    } fields;
-} ocb_o2sctrlf1b_t;
-
-
-
-typedef union ocb_o2sctrls1b {
-
-    uint32_t value;
-    struct {
-#ifdef _BIG_ENDIAN
-    uint32_t o2s_out_count2_an : 6;
-    uint32_t o2s_in_delay2_an : 6;
-    uint32_t o2s_in_count2_an : 6;
-    uint32_t reserved1 : 14;
-#else
-    uint32_t reserved1 : 14;
-    uint32_t o2s_in_count2_an : 6;
-    uint32_t o2s_in_delay2_an : 6;
-    uint32_t o2s_out_count2_an : 6;
-#endif // _BIG_ENDIAN
-    } fields;
-} ocb_o2sctrls1b_t;
-
-
-
-typedef union ocb_o2sctrl11b {
-
-    uint32_t value;
-    struct {
-#ifdef _BIG_ENDIAN
-    uint32_t o2s_bridge_enable_an : 1;
-    uint32_t o2sctrl1an_reserved_1 : 1;
-    uint32_t o2s_cpol_an : 1;
-    uint32_t o2s_cpha_an : 1;
-    uint32_t o2s_clock_divider_an : 10;
-    uint32_t o2sctrl1an_reserved_14_16 : 3;
-    uint32_t o2s_nr_of_frames_an : 1;
-    uint32_t reserved1 : 14;
-#else
-    uint32_t reserved1 : 14;
-    uint32_t o2s_nr_of_frames_an : 1;
-    uint32_t o2sctrl1an_reserved_14_16 : 3;
-    uint32_t o2s_clock_divider_an : 10;
-    uint32_t o2s_cpha_an : 1;
-    uint32_t o2s_cpol_an : 1;
-    uint32_t o2sctrl1an_reserved_1 : 1;
-    uint32_t o2s_bridge_enable_an : 1;
-#endif // _BIG_ENDIAN
-    } fields;
-} ocb_o2sctrl11b_t;
-
-
-
-typedef union ocb_o2sctrl21b {
-
-    uint32_t value;
-    struct {
-#ifdef _BIG_ENDIAN
-    uint32_t o2s_inter_frame_delay_an : 17;
-    uint32_t reserved1 : 15;
-#else
-    uint32_t reserved1 : 15;
-    uint32_t o2s_inter_frame_delay_an : 17;
-#endif // _BIG_ENDIAN
-    } fields;
-} ocb_o2sctrl21b_t;
-
-
-
-typedef union ocb_o2sst1b {
-
-    uint32_t value;
-    struct {
-#ifdef _BIG_ENDIAN
-    uint32_t o2s_ongoing_an : 1;
-    uint32_t o2sstan_reserved_1_4 : 4;
-    uint32_t o2s_write_while_bridge_busy_err_an : 1;
-    uint32_t o2sstan_reserved_6 : 1;
-    uint32_t o2s_fsm_err_an : 1;
-    uint32_t reserved1 : 24;
-#else
-    uint32_t reserved1 : 24;
-    uint32_t o2s_fsm_err_an : 1;
-    uint32_t o2sstan_reserved_6 : 1;
-    uint32_t o2s_write_while_bridge_busy_err_an : 1;
-    uint32_t o2sstan_reserved_1_4 : 4;
-    uint32_t o2s_ongoing_an : 1;
-#endif // _BIG_ENDIAN
-    } fields;
-} ocb_o2sst1b_t;
-
-
-
-typedef union ocb_o2scmd1b {
-
-    uint32_t value;
-    struct {
-#ifdef _BIG_ENDIAN
-    uint32_t o2scmdan_reserved_0 : 1;
-    uint32_t o2s_clear_sticky_bits_an : 1;
-    uint32_t reserved1 : 30;
-#else
-    uint32_t reserved1 : 30;
-    uint32_t o2s_clear_sticky_bits_an : 1;
-    uint32_t o2scmdan_reserved_0 : 1;
-#endif // _BIG_ENDIAN
-    } fields;
-} ocb_o2scmd1b_t;
-
-
-
-typedef union ocb_o2swd1b {
-
-    uint32_t value;
-    struct {
-#ifdef _BIG_ENDIAN
-    uint32_t o2s_wdata_an : 32;
-#else
-    uint32_t o2s_wdata_an : 32;
-#endif // _BIG_ENDIAN
-    } fields;
-} ocb_o2swd1b_t;
-
-
-
-typedef union ocb_o2srd1b {
-
-    uint32_t value;
-    struct {
-#ifdef _BIG_ENDIAN
-    uint32_t o2s_rdata_an : 32;
-#else
-    uint32_t o2s_rdata_an : 32;
-#endif // _BIG_ENDIAN
-    } fields;
-} ocb_o2srd1b_t;
-
-
-
-typedef union ocb_ocr {
+typedef union ocb_ocr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -3113,7 +4483,8 @@ typedef union ocb_ocr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t core_reset : 1;
     uint64_t chip_reset : 1;
@@ -3148,10 +4519,12 @@ typedef union ocb_ocr {
 
 
 
-typedef union ocb_ocr_clr {
+typedef union ocb_ocr_clr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -3160,7 +4533,8 @@ typedef union ocb_ocr_clr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t core_reset : 1;
     uint64_t chip_reset : 1;
@@ -3195,10 +4569,12 @@ typedef union ocb_ocr_clr {
 
 
 
-typedef union ocb_ocr_or {
+typedef union ocb_ocr_or
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -3207,7 +4583,8 @@ typedef union ocb_ocr_or {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t core_reset : 1;
     uint64_t chip_reset : 1;
@@ -3242,10 +4619,12 @@ typedef union ocb_ocr_or {
 
 
 
-typedef union ocb_ocdbg {
+typedef union ocb_ocdbg
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -3254,7 +4633,8 @@ typedef union ocb_ocdbg {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t mst_dis_abusparen : 1;
     uint64_t mst_dis_beparen : 1;
@@ -3268,11 +4648,15 @@ typedef union ocb_ocdbg {
     uint64_t slv_dis_wrdbuspar : 1;
     uint64_t slv_dis_rddbusparen : 1;
     uint64_t slv_spare : 1;
-    uint64_t spare : 4;
+        uint64_t disable_opit_parity : 1;
+        uint64_t freeze_on_first_opit_perr : 1;
+        uint64_t spare : 2;
     uint64_t reserved1 : 48;
 #else
     uint64_t reserved1 : 48;
-    uint64_t spare : 4;
+        uint64_t spare : 2;
+        uint64_t freeze_on_first_opit_perr : 1;
+        uint64_t disable_opit_parity : 1;
     uint64_t slv_spare : 1;
     uint64_t slv_dis_rddbusparen : 1;
     uint64_t slv_dis_wrdbuspar : 1;
@@ -3291,10 +4675,12 @@ typedef union ocb_ocdbg {
 
 
 
-typedef union ocb_ojcfg {
+typedef union ocb_ojcfg
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -3303,7 +4689,8 @@ typedef union ocb_ojcfg {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t jtag_src_sel : 1;
     uint64_t run_tck : 1;
@@ -3324,10 +4711,12 @@ typedef union ocb_ojcfg {
 
 
 
-typedef union ocb_ojcfg_clr {
+typedef union ocb_ojcfg_clr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -3336,7 +4725,8 @@ typedef union ocb_ojcfg_clr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t jtag_src_sel : 1;
     uint64_t run_tck : 1;
@@ -3357,10 +4747,12 @@ typedef union ocb_ojcfg_clr {
 
 
 
-typedef union ocb_ojcfg_or {
+typedef union ocb_ojcfg_or
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -3369,7 +4761,8 @@ typedef union ocb_ojcfg_or {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t jtag_src_sel : 1;
     uint64_t run_tck : 1;
@@ -3390,10 +4783,12 @@ typedef union ocb_ojcfg_or {
 
 
 
-typedef union ocb_ojfrst {
+typedef union ocb_ojfrst
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -3402,7 +4797,8 @@ typedef union ocb_ojfrst {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t reserved1 : 64;
 #else
@@ -3413,10 +4809,12 @@ typedef union ocb_ojfrst {
 
 
 
-typedef union ocb_ojic {
+typedef union ocb_ojic
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -3425,7 +4823,8 @@ typedef union ocb_ojic {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t start_jtag_cmd : 1;
     uint64_t do_ir : 1;
@@ -3450,10 +4849,12 @@ typedef union ocb_ojic {
 
 
 
-typedef union ocb_ojic_clr {
+typedef union ocb_ojic_clr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -3462,7 +4863,8 @@ typedef union ocb_ojic_clr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t start_jtag_cmd : 1;
     uint64_t do_ir : 1;
@@ -3487,10 +4889,12 @@ typedef union ocb_ojic_clr {
 
 
 
-typedef union ocb_ojic_or {
+typedef union ocb_ojic_or
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -3499,7 +4903,8 @@ typedef union ocb_ojic_or {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t start_jtag_cmd : 1;
     uint64_t do_ir : 1;
@@ -3524,10 +4929,12 @@ typedef union ocb_ojic_or {
 
 
 
-typedef union ocb_ojstat {
+typedef union ocb_ojstat
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -3536,7 +4943,8 @@ typedef union ocb_ojstat {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t jtag_inprog : 1;
     uint64_t src_sel_eq1_err : 1;
@@ -3561,10 +4969,12 @@ typedef union ocb_ojstat {
 
 
 
-typedef union ocb_ojtdi {
+typedef union ocb_ojtdi
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -3573,7 +4983,8 @@ typedef union ocb_ojtdi {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t jtag_tdi : 32;
     uint64_t reserved1 : 32;
@@ -3586,10 +4997,12 @@ typedef union ocb_ojtdi {
 
 
 
-typedef union ocb_ojtdo {
+typedef union ocb_ojtdo
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -3598,7 +5011,8 @@ typedef union ocb_ojtdo {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t jtag_tdo : 32;
     uint64_t jtag_src_sel : 1;
@@ -3649,10 +5063,12 @@ typedef union ocb_ojtdo {
 
 
 
-typedef union ocb_ocbarn {
+typedef union ocb_ocbarn
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -3661,7 +5077,8 @@ typedef union ocb_ocbarn {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t oci_region : 3;
     uint64_t ocb_address : 26;
@@ -3676,10 +5093,12 @@ typedef union ocb_ocbarn {
 
 
 
-typedef union ocb_ocbcsrn {
+typedef union ocb_ocbcsrn
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -3688,7 +5107,8 @@ typedef union ocb_ocbcsrn {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t pull_read_underflow : 1;
     uint64_t push_write_overflow : 1;
@@ -3729,10 +5149,12 @@ typedef union ocb_ocbcsrn {
 
 
 
-typedef union ocb_ocbcsrn_clr {
+typedef union ocb_ocbcsrn_clr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -3741,7 +5163,8 @@ typedef union ocb_ocbcsrn_clr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t pull_read_underflow : 1;
     uint64_t push_write_overflow : 1;
@@ -3782,10 +5205,12 @@ typedef union ocb_ocbcsrn_clr {
 
 
 
-typedef union ocb_ocbcsrn_or {
+typedef union ocb_ocbcsrn_or
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -3794,7 +5219,8 @@ typedef union ocb_ocbcsrn_or {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t pull_read_underflow : 1;
     uint64_t push_write_overflow : 1;
@@ -3835,10 +5261,12 @@ typedef union ocb_ocbcsrn_or {
 
 
 
-typedef union ocb_ocbesrn {
+typedef union ocb_ocbesrn
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -3847,7 +5275,8 @@ typedef union ocb_ocbesrn {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t ocb_error_addr : 32;
     uint64_t reserved1 : 32;
@@ -3860,10 +5289,12 @@ typedef union ocb_ocbesrn {
 
 
 
-typedef union ocb_ocbdrn {
+typedef union ocb_ocbdrn
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -3872,7 +5303,8 @@ typedef union ocb_ocbdrn {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t ocb_data : 64;
 #else
@@ -3883,10 +5315,12 @@ typedef union ocb_ocbdrn {
 
 
 
-typedef union ocb_otdcr {
+typedef union ocb_otdcr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -3895,7 +5329,8 @@ typedef union ocb_otdcr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t trace_bus_en : 1;
     uint64_t ocb_trace_mux_sel : 1;
@@ -3914,10 +5349,12 @@ typedef union ocb_otdcr {
 
 
 
-typedef union ocb_oppcinj {
+typedef union ocb_oppcinj
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -3926,7 +5363,8 @@ typedef union ocb_oppcinj {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t oci_err_inj_dcu : 1;
     uint64_t oci_err_inj_icu : 1;
@@ -3945,10 +5383,12 @@ typedef union ocb_oppcinj {
 
 
 
-typedef union ocb_ostoear {
+typedef union ocb_ostoear
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -3957,7 +5397,8 @@ typedef union ocb_ostoear {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t occ_spcl_timeout_addr : 32;
     uint64_t reserved1 : 32;
@@ -3970,10 +5411,12 @@ typedef union ocb_ostoear {
 
 
 
-typedef union ocb_ostoesr {
+typedef union ocb_ostoesr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -3982,19 +5425,22 @@ typedef union ocb_ostoesr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t icu_timeout_error : 1;
     uint64_t icu_rnw : 1;
-    uint64_t reserved1 : 2;
+        uint64_t reserved_2_31 : 2;
     uint64_t dcu_timeout_error : 1;
     uint64_t dcu_rnw : 1;
-    uint64_t reserved2 : 58;
+        uint64_t reserved_6_72 : 2;
+        uint64_t reserved3 : 56;
 #else
-    uint64_t reserved2 : 58;
+        uint64_t reserved3 : 56;
+        uint64_t reserved_6_72 : 2;
     uint64_t dcu_rnw : 1;
     uint64_t dcu_timeout_error : 1;
-    uint64_t reserved1 : 2;
+        uint64_t reserved_2_31 : 2;
     uint64_t icu_rnw : 1;
     uint64_t icu_timeout_error : 1;
 #endif // _BIG_ENDIAN
@@ -4003,10 +5449,12 @@ typedef union ocb_ostoesr {
 
 
 
-typedef union ocb_orev {
+typedef union ocb_orev
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -4015,7 +5463,8 @@ typedef union ocb_orev {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t oci_arb_revision : 32;
     uint64_t reserved1 : 32;
@@ -4028,10 +5477,12 @@ typedef union ocb_orev {
 
 
 
-typedef union ocb_oesr {
+typedef union ocb_oesr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -4040,7 +5491,8 @@ typedef union ocb_oesr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t oci_m0_timeout_error : 1;
     uint64_t oci_m0_rw_status : 1;
@@ -4115,10 +5567,12 @@ typedef union ocb_oesr {
 
 
 
-typedef union ocb_oear {
+typedef union ocb_oear
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -4127,7 +5581,8 @@ typedef union ocb_oear {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t oci_timeout_addr : 32;
     uint64_t reserved1 : 32;
@@ -4140,10 +5595,12 @@ typedef union ocb_oear {
 
 
 
-typedef union ocb_oacr {
+typedef union ocb_oacr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -4152,7 +5609,8 @@ typedef union ocb_oacr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t oci_priority_mode : 1;
     uint64_t oci_priority_order : 3;
@@ -4173,10 +5631,12 @@ typedef union ocb_oacr {
 
 
 
-typedef union ocb_ocbear {
+typedef union ocb_ocbear
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -4185,10 +5645,11 @@ typedef union ocb_ocbear {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t ocb_error_address : 32;
-    uint64_t reserved1 : 3;
+        uint64_t reserved_32_341 : 3;
     uint64_t direct_bridge_source : 1;
     uint64_t indirect_bridge_0_source : 1;
     uint64_t indirect_bridge_1_source : 1;
@@ -4202,991 +5663,11 @@ typedef union ocb_ocbear {
     uint64_t indirect_bridge_1_source : 1;
     uint64_t indirect_bridge_0_source : 1;
     uint64_t direct_bridge_source : 1;
-    uint64_t reserved1 : 3;
+        uint64_t reserved_32_341 : 3;
     uint64_t ocb_error_address : 32;
 #endif // _BIG_ENDIAN
     } fields;
 } ocb_ocbear_t;
-
-
-
-typedef union ocb_occlfir {
-
-    uint64_t value;
-    struct {
-#ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
-#else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct {
-#ifdef _BIG_ENDIAN
-    uint64_t occ_fw0 : 1;
-    uint64_t occ_fw1 : 1;
-    uint64_t cme_error_notify : 1;
-    uint64_t stop_recovery_notify_prd : 1;
-    uint64_t occ_hb_error : 1;
-    uint64_t gpe0_watchdog_timeout : 1;
-    uint64_t gpe1_watchdog_timeout : 1;
-    uint64_t gpe2_watchdog_timeout : 1;
-    uint64_t gpe3_watchdog_timeout : 1;
-    uint64_t gpe0_error : 1;
-    uint64_t gpe1_error : 1;
-    uint64_t gpe2_error : 1;
-    uint64_t gpe3_error : 1;
-    uint64_t ocb_error : 1;
-    uint64_t srt_ue : 1;
-    uint64_t srt_ce : 1;
-    uint64_t srt_read_error : 1;
-    uint64_t srt_write_error : 1;
-    uint64_t srt_dataout_perr : 1;
-    uint64_t srt_oci_write_data_parity : 1;
-    uint64_t srt_oci_be_parity_err : 1;
-    uint64_t srt_oci_addr_parity_err : 1;
-    uint64_t gpe0_halted : 1;
-    uint64_t gpe1_halted : 1;
-    uint64_t gpe2_halted : 1;
-    uint64_t gpe3_halted : 1;
-    uint64_t external_trap : 1;
-    uint64_t ppc405_core_reset : 1;
-    uint64_t ppc405_chip_reset : 1;
-    uint64_t ppc405_system_reset : 1;
-    uint64_t ppc405_dbgmsrwe : 1;
-    uint64_t ppc405_dbgstopack : 1;
-    uint64_t ocb_db_oci_timeout : 1;
-    uint64_t ocb_db_oci_read_data_parity : 1;
-    uint64_t ocb_db_oci_slave_error : 1;
-    uint64_t ocb_pib_addr_parity_err : 1;
-    uint64_t ocb_db_pib_data_parity_err : 1;
-    uint64_t ocb_idc0_error : 1;
-    uint64_t ocb_idc1_error : 1;
-    uint64_t ocb_idc2_error : 1;
-    uint64_t ocb_idc3_error : 1;
-    uint64_t srt_fsm_err : 1;
-    uint64_t jtagacc_err : 1;
-    uint64_t spare_err_38 : 1;
-    uint64_t c405_ecc_ue : 1;
-    uint64_t c405_ecc_ce : 1;
-    uint64_t c405_oci_machinecheck : 1;
-    uint64_t sram_spare_direct_error0 : 1;
-    uint64_t sram_spare_direct_error1 : 1;
-    uint64_t sram_spare_direct_error2 : 1;
-    uint64_t sram_spare_direct_error3 : 1;
-    uint64_t gpe0_ocislv_err : 1;
-    uint64_t gpe1_ocislv_err : 1;
-    uint64_t gpe2_ocislv_err : 1;
-    uint64_t gpe3_ocislv_err : 1;
-    uint64_t c405icu_m_timeout : 1;
-    uint64_t c405dcu_m_timeout : 1;
-    uint64_t occ_complex_fault_safe : 1;
-    uint64_t spare_58_61 : 4;
-    uint64_t fir_parity_err_dup : 1;
-    uint64_t fir_parity_err : 1;
-#else
-    uint64_t fir_parity_err : 1;
-    uint64_t fir_parity_err_dup : 1;
-    uint64_t spare_58_61 : 4;
-    uint64_t occ_complex_fault_safe : 1;
-    uint64_t c405dcu_m_timeout : 1;
-    uint64_t c405icu_m_timeout : 1;
-    uint64_t gpe3_ocislv_err : 1;
-    uint64_t gpe2_ocislv_err : 1;
-    uint64_t gpe1_ocislv_err : 1;
-    uint64_t gpe0_ocislv_err : 1;
-    uint64_t sram_spare_direct_error3 : 1;
-    uint64_t sram_spare_direct_error2 : 1;
-    uint64_t sram_spare_direct_error1 : 1;
-    uint64_t sram_spare_direct_error0 : 1;
-    uint64_t c405_oci_machinecheck : 1;
-    uint64_t c405_ecc_ce : 1;
-    uint64_t c405_ecc_ue : 1;
-    uint64_t spare_err_38 : 1;
-    uint64_t jtagacc_err : 1;
-    uint64_t srt_fsm_err : 1;
-    uint64_t ocb_idc3_error : 1;
-    uint64_t ocb_idc2_error : 1;
-    uint64_t ocb_idc1_error : 1;
-    uint64_t ocb_idc0_error : 1;
-    uint64_t ocb_db_pib_data_parity_err : 1;
-    uint64_t ocb_pib_addr_parity_err : 1;
-    uint64_t ocb_db_oci_slave_error : 1;
-    uint64_t ocb_db_oci_read_data_parity : 1;
-    uint64_t ocb_db_oci_timeout : 1;
-    uint64_t ppc405_dbgstopack : 1;
-    uint64_t ppc405_dbgmsrwe : 1;
-    uint64_t ppc405_system_reset : 1;
-    uint64_t ppc405_chip_reset : 1;
-    uint64_t ppc405_core_reset : 1;
-    uint64_t external_trap : 1;
-    uint64_t gpe3_halted : 1;
-    uint64_t gpe2_halted : 1;
-    uint64_t gpe1_halted : 1;
-    uint64_t gpe0_halted : 1;
-    uint64_t srt_oci_addr_parity_err : 1;
-    uint64_t srt_oci_be_parity_err : 1;
-    uint64_t srt_oci_write_data_parity : 1;
-    uint64_t srt_dataout_perr : 1;
-    uint64_t srt_write_error : 1;
-    uint64_t srt_read_error : 1;
-    uint64_t srt_ce : 1;
-    uint64_t srt_ue : 1;
-    uint64_t ocb_error : 1;
-    uint64_t gpe3_error : 1;
-    uint64_t gpe2_error : 1;
-    uint64_t gpe1_error : 1;
-    uint64_t gpe0_error : 1;
-    uint64_t gpe3_watchdog_timeout : 1;
-    uint64_t gpe2_watchdog_timeout : 1;
-    uint64_t gpe1_watchdog_timeout : 1;
-    uint64_t gpe0_watchdog_timeout : 1;
-    uint64_t occ_hb_error : 1;
-    uint64_t stop_recovery_notify_prd : 1;
-    uint64_t cme_error_notify : 1;
-    uint64_t occ_fw1 : 1;
-    uint64_t occ_fw0 : 1;
-#endif // _BIG_ENDIAN
-    } fields;
-} ocb_occlfir_t;
-
-
-
-typedef union ocb_occlfir_and {
-
-    uint64_t value;
-    struct {
-#ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
-#else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct {
-#ifdef _BIG_ENDIAN
-    uint64_t occ_fw0 : 1;
-    uint64_t occ_fw1 : 1;
-    uint64_t cme_error_notify : 1;
-    uint64_t stop_recovery_notify_prd : 1;
-    uint64_t occ_hb_error : 1;
-    uint64_t gpe0_watchdog_timeout : 1;
-    uint64_t gpe1_watchdog_timeout : 1;
-    uint64_t gpe2_watchdog_timeout : 1;
-    uint64_t gpe3_watchdog_timeout : 1;
-    uint64_t gpe0_error : 1;
-    uint64_t gpe1_error : 1;
-    uint64_t gpe2_error : 1;
-    uint64_t gpe3_error : 1;
-    uint64_t ocb_error : 1;
-    uint64_t srt_ue : 1;
-    uint64_t srt_ce : 1;
-    uint64_t srt_read_error : 1;
-    uint64_t srt_write_error : 1;
-    uint64_t srt_dataout_perr : 1;
-    uint64_t srt_oci_write_data_parity : 1;
-    uint64_t srt_oci_be_parity_err : 1;
-    uint64_t srt_oci_addr_parity_err : 1;
-    uint64_t gpe0_halted : 1;
-    uint64_t gpe1_halted : 1;
-    uint64_t gpe2_halted : 1;
-    uint64_t gpe3_halted : 1;
-    uint64_t external_trap : 1;
-    uint64_t ppc405_core_reset : 1;
-    uint64_t ppc405_chip_reset : 1;
-    uint64_t ppc405_system_reset : 1;
-    uint64_t ppc405_dbgmsrwe : 1;
-    uint64_t ppc405_dbgstopack : 1;
-    uint64_t ocb_db_oci_timeout : 1;
-    uint64_t ocb_db_oci_read_data_parity : 1;
-    uint64_t ocb_db_oci_slave_error : 1;
-    uint64_t ocb_pib_addr_parity_err : 1;
-    uint64_t ocb_db_pib_data_parity_err : 1;
-    uint64_t ocb_idc0_error : 1;
-    uint64_t ocb_idc1_error : 1;
-    uint64_t ocb_idc2_error : 1;
-    uint64_t ocb_idc3_error : 1;
-    uint64_t srt_fsm_err : 1;
-    uint64_t jtagacc_err : 1;
-    uint64_t spare_err_38 : 1;
-    uint64_t c405_ecc_ue : 1;
-    uint64_t c405_ecc_ce : 1;
-    uint64_t c405_oci_machinecheck : 1;
-    uint64_t sram_spare_direct_error0 : 1;
-    uint64_t sram_spare_direct_error1 : 1;
-    uint64_t sram_spare_direct_error2 : 1;
-    uint64_t sram_spare_direct_error3 : 1;
-    uint64_t gpe0_ocislv_err : 1;
-    uint64_t gpe1_ocislv_err : 1;
-    uint64_t gpe2_ocislv_err : 1;
-    uint64_t gpe3_ocislv_err : 1;
-    uint64_t c405icu_m_timeout : 1;
-    uint64_t c405dcu_m_timeout : 1;
-    uint64_t occ_complex_fault_safe : 1;
-    uint64_t spare_58_61 : 4;
-    uint64_t fir_parity_err_dup : 1;
-    uint64_t fir_parity_err : 1;
-#else
-    uint64_t fir_parity_err : 1;
-    uint64_t fir_parity_err_dup : 1;
-    uint64_t spare_58_61 : 4;
-    uint64_t occ_complex_fault_safe : 1;
-    uint64_t c405dcu_m_timeout : 1;
-    uint64_t c405icu_m_timeout : 1;
-    uint64_t gpe3_ocislv_err : 1;
-    uint64_t gpe2_ocislv_err : 1;
-    uint64_t gpe1_ocislv_err : 1;
-    uint64_t gpe0_ocislv_err : 1;
-    uint64_t sram_spare_direct_error3 : 1;
-    uint64_t sram_spare_direct_error2 : 1;
-    uint64_t sram_spare_direct_error1 : 1;
-    uint64_t sram_spare_direct_error0 : 1;
-    uint64_t c405_oci_machinecheck : 1;
-    uint64_t c405_ecc_ce : 1;
-    uint64_t c405_ecc_ue : 1;
-    uint64_t spare_err_38 : 1;
-    uint64_t jtagacc_err : 1;
-    uint64_t srt_fsm_err : 1;
-    uint64_t ocb_idc3_error : 1;
-    uint64_t ocb_idc2_error : 1;
-    uint64_t ocb_idc1_error : 1;
-    uint64_t ocb_idc0_error : 1;
-    uint64_t ocb_db_pib_data_parity_err : 1;
-    uint64_t ocb_pib_addr_parity_err : 1;
-    uint64_t ocb_db_oci_slave_error : 1;
-    uint64_t ocb_db_oci_read_data_parity : 1;
-    uint64_t ocb_db_oci_timeout : 1;
-    uint64_t ppc405_dbgstopack : 1;
-    uint64_t ppc405_dbgmsrwe : 1;
-    uint64_t ppc405_system_reset : 1;
-    uint64_t ppc405_chip_reset : 1;
-    uint64_t ppc405_core_reset : 1;
-    uint64_t external_trap : 1;
-    uint64_t gpe3_halted : 1;
-    uint64_t gpe2_halted : 1;
-    uint64_t gpe1_halted : 1;
-    uint64_t gpe0_halted : 1;
-    uint64_t srt_oci_addr_parity_err : 1;
-    uint64_t srt_oci_be_parity_err : 1;
-    uint64_t srt_oci_write_data_parity : 1;
-    uint64_t srt_dataout_perr : 1;
-    uint64_t srt_write_error : 1;
-    uint64_t srt_read_error : 1;
-    uint64_t srt_ce : 1;
-    uint64_t srt_ue : 1;
-    uint64_t ocb_error : 1;
-    uint64_t gpe3_error : 1;
-    uint64_t gpe2_error : 1;
-    uint64_t gpe1_error : 1;
-    uint64_t gpe0_error : 1;
-    uint64_t gpe3_watchdog_timeout : 1;
-    uint64_t gpe2_watchdog_timeout : 1;
-    uint64_t gpe1_watchdog_timeout : 1;
-    uint64_t gpe0_watchdog_timeout : 1;
-    uint64_t occ_hb_error : 1;
-    uint64_t stop_recovery_notify_prd : 1;
-    uint64_t cme_error_notify : 1;
-    uint64_t occ_fw1 : 1;
-    uint64_t occ_fw0 : 1;
-#endif // _BIG_ENDIAN
-    } fields;
-} ocb_occlfir_and_t;
-
-
-
-typedef union ocb_occlfir_or {
-
-    uint64_t value;
-    struct {
-#ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
-#else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct {
-#ifdef _BIG_ENDIAN
-    uint64_t occ_fw0 : 1;
-    uint64_t occ_fw1 : 1;
-    uint64_t cme_error_notify : 1;
-    uint64_t stop_recovery_notify_prd : 1;
-    uint64_t occ_hb_error : 1;
-    uint64_t gpe0_watchdog_timeout : 1;
-    uint64_t gpe1_watchdog_timeout : 1;
-    uint64_t gpe2_watchdog_timeout : 1;
-    uint64_t gpe3_watchdog_timeout : 1;
-    uint64_t gpe0_error : 1;
-    uint64_t gpe1_error : 1;
-    uint64_t gpe2_error : 1;
-    uint64_t gpe3_error : 1;
-    uint64_t ocb_error : 1;
-    uint64_t srt_ue : 1;
-    uint64_t srt_ce : 1;
-    uint64_t srt_read_error : 1;
-    uint64_t srt_write_error : 1;
-    uint64_t srt_dataout_perr : 1;
-    uint64_t srt_oci_write_data_parity : 1;
-    uint64_t srt_oci_be_parity_err : 1;
-    uint64_t srt_oci_addr_parity_err : 1;
-    uint64_t gpe0_halted : 1;
-    uint64_t gpe1_halted : 1;
-    uint64_t gpe2_halted : 1;
-    uint64_t gpe3_halted : 1;
-    uint64_t external_trap : 1;
-    uint64_t ppc405_core_reset : 1;
-    uint64_t ppc405_chip_reset : 1;
-    uint64_t ppc405_system_reset : 1;
-    uint64_t ppc405_dbgmsrwe : 1;
-    uint64_t ppc405_dbgstopack : 1;
-    uint64_t ocb_db_oci_timeout : 1;
-    uint64_t ocb_db_oci_read_data_parity : 1;
-    uint64_t ocb_db_oci_slave_error : 1;
-    uint64_t ocb_pib_addr_parity_err : 1;
-    uint64_t ocb_db_pib_data_parity_err : 1;
-    uint64_t ocb_idc0_error : 1;
-    uint64_t ocb_idc1_error : 1;
-    uint64_t ocb_idc2_error : 1;
-    uint64_t ocb_idc3_error : 1;
-    uint64_t srt_fsm_err : 1;
-    uint64_t jtagacc_err : 1;
-    uint64_t spare_err_38 : 1;
-    uint64_t c405_ecc_ue : 1;
-    uint64_t c405_ecc_ce : 1;
-    uint64_t c405_oci_machinecheck : 1;
-    uint64_t sram_spare_direct_error0 : 1;
-    uint64_t sram_spare_direct_error1 : 1;
-    uint64_t sram_spare_direct_error2 : 1;
-    uint64_t sram_spare_direct_error3 : 1;
-    uint64_t gpe0_ocislv_err : 1;
-    uint64_t gpe1_ocislv_err : 1;
-    uint64_t gpe2_ocislv_err : 1;
-    uint64_t gpe3_ocislv_err : 1;
-    uint64_t c405icu_m_timeout : 1;
-    uint64_t c405dcu_m_timeout : 1;
-    uint64_t occ_complex_fault_safe : 1;
-    uint64_t spare_58_61 : 4;
-    uint64_t fir_parity_err_dup : 1;
-    uint64_t fir_parity_err : 1;
-#else
-    uint64_t fir_parity_err : 1;
-    uint64_t fir_parity_err_dup : 1;
-    uint64_t spare_58_61 : 4;
-    uint64_t occ_complex_fault_safe : 1;
-    uint64_t c405dcu_m_timeout : 1;
-    uint64_t c405icu_m_timeout : 1;
-    uint64_t gpe3_ocislv_err : 1;
-    uint64_t gpe2_ocislv_err : 1;
-    uint64_t gpe1_ocislv_err : 1;
-    uint64_t gpe0_ocislv_err : 1;
-    uint64_t sram_spare_direct_error3 : 1;
-    uint64_t sram_spare_direct_error2 : 1;
-    uint64_t sram_spare_direct_error1 : 1;
-    uint64_t sram_spare_direct_error0 : 1;
-    uint64_t c405_oci_machinecheck : 1;
-    uint64_t c405_ecc_ce : 1;
-    uint64_t c405_ecc_ue : 1;
-    uint64_t spare_err_38 : 1;
-    uint64_t jtagacc_err : 1;
-    uint64_t srt_fsm_err : 1;
-    uint64_t ocb_idc3_error : 1;
-    uint64_t ocb_idc2_error : 1;
-    uint64_t ocb_idc1_error : 1;
-    uint64_t ocb_idc0_error : 1;
-    uint64_t ocb_db_pib_data_parity_err : 1;
-    uint64_t ocb_pib_addr_parity_err : 1;
-    uint64_t ocb_db_oci_slave_error : 1;
-    uint64_t ocb_db_oci_read_data_parity : 1;
-    uint64_t ocb_db_oci_timeout : 1;
-    uint64_t ppc405_dbgstopack : 1;
-    uint64_t ppc405_dbgmsrwe : 1;
-    uint64_t ppc405_system_reset : 1;
-    uint64_t ppc405_chip_reset : 1;
-    uint64_t ppc405_core_reset : 1;
-    uint64_t external_trap : 1;
-    uint64_t gpe3_halted : 1;
-    uint64_t gpe2_halted : 1;
-    uint64_t gpe1_halted : 1;
-    uint64_t gpe0_halted : 1;
-    uint64_t srt_oci_addr_parity_err : 1;
-    uint64_t srt_oci_be_parity_err : 1;
-    uint64_t srt_oci_write_data_parity : 1;
-    uint64_t srt_dataout_perr : 1;
-    uint64_t srt_write_error : 1;
-    uint64_t srt_read_error : 1;
-    uint64_t srt_ce : 1;
-    uint64_t srt_ue : 1;
-    uint64_t ocb_error : 1;
-    uint64_t gpe3_error : 1;
-    uint64_t gpe2_error : 1;
-    uint64_t gpe1_error : 1;
-    uint64_t gpe0_error : 1;
-    uint64_t gpe3_watchdog_timeout : 1;
-    uint64_t gpe2_watchdog_timeout : 1;
-    uint64_t gpe1_watchdog_timeout : 1;
-    uint64_t gpe0_watchdog_timeout : 1;
-    uint64_t occ_hb_error : 1;
-    uint64_t stop_recovery_notify_prd : 1;
-    uint64_t cme_error_notify : 1;
-    uint64_t occ_fw1 : 1;
-    uint64_t occ_fw0 : 1;
-#endif // _BIG_ENDIAN
-    } fields;
-} ocb_occlfir_or_t;
-
-
-
-typedef union ocb_occlfirmask {
-
-    uint64_t value;
-    struct {
-#ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
-#else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct {
-#ifdef _BIG_ENDIAN
-    uint64_t occ_fw0_mask : 1;
-    uint64_t occ_fw1_mask : 1;
-    uint64_t spare_2_mask : 1;
-    uint64_t spare_3_mask : 1;
-    uint64_t occ_hb_malf_mask : 1;
-    uint64_t gpe0_watchdog_timeout_mask : 1;
-    uint64_t gpe1_watchdog_timeout_mask : 1;
-    uint64_t gpe2_watchdog_timeout_mask : 1;
-    uint64_t gpe3_watchdog_timeout_mask : 1;
-    uint64_t gpe0_error_mask : 1;
-    uint64_t gpe1_error_mask : 1;
-    uint64_t gpe2_error_mask : 1;
-    uint64_t gpe3_error_mask : 1;
-    uint64_t ocb_error_mask : 1;
-    uint64_t srt_ue_mask : 1;
-    uint64_t srt_ce_mask : 1;
-    uint64_t srt_read_error_mask : 1;
-    uint64_t srt_write_error_mask : 1;
-    uint64_t srt_dataout_perr_mask : 1;
-    uint64_t srt_oci_write_data_parity_mask : 1;
-    uint64_t srt_oci_be_parity_err_mask : 1;
-    uint64_t srt_oci_addr_parity_err_mask : 1;
-    uint64_t gpe0_halted_mask : 1;
-    uint64_t gpe1_halted_mask : 1;
-    uint64_t gpe2_halted_mask : 1;
-    uint64_t gpe3_halted_mask : 1;
-    uint64_t external_trap_mask : 1;
-    uint64_t ppc405_core_reset_mask : 1;
-    uint64_t ppc405_chip_reset_mask : 1;
-    uint64_t ppc405_system_reset_mask : 1;
-    uint64_t ppc405_dbgmsrwe_mask : 1;
-    uint64_t ppc405_dbgstopack_mask : 1;
-    uint64_t ocb_db_oci_timeout_mask : 1;
-    uint64_t ocb_db_oci_read_data_parity_mask : 1;
-    uint64_t ocb_db_oci_slave_error_mask : 1;
-    uint64_t ocb_pib_addr_parity_err_mask : 1;
-    uint64_t ocb_db_pib_data_parity_err_mask : 1;
-    uint64_t ocb_idc0_error_mask : 1;
-    uint64_t ocb_idc1_error_mask : 1;
-    uint64_t ocb_idc2_error_mask : 1;
-    uint64_t ocb_idc3_error_mask : 1;
-    uint64_t srt_fsm_err_mask : 1;
-    uint64_t jtagacc_err_mask : 1;
-    uint64_t spare_err_38_mask : 1;
-    uint64_t c405_ecc_ue_mask : 1;
-    uint64_t c405_ecc_ce_mask : 1;
-    uint64_t c405_oci_machinecheck_mask : 1;
-    uint64_t sram_spare_direct_error0_mask : 1;
-    uint64_t sram_spare_direct_error1_mask : 1;
-    uint64_t sram_spare_direct_error2_mask : 1;
-    uint64_t sram_spare_direct_error3_mask : 1;
-    uint64_t gpe0_ocislv_err_mask : 1;
-    uint64_t gpe1_ocislv_err_mask : 1;
-    uint64_t gpe2_ocislv_err_mask : 1;
-    uint64_t gpe3_ocislv_err_mask : 1;
-    uint64_t c405icu_m_timeout_mask : 1;
-    uint64_t c405dcu_m_timeout_mask : 1;
-    uint64_t occ_complex_fault_safe_mask : 1;
-    uint64_t spare_58_61_mask : 4;
-    uint64_t fir_parity_err_dup_mask : 1;
-    uint64_t fir_parity_err_mask : 1;
-#else
-    uint64_t fir_parity_err_mask : 1;
-    uint64_t fir_parity_err_dup_mask : 1;
-    uint64_t spare_58_61_mask : 4;
-    uint64_t occ_complex_fault_safe_mask : 1;
-    uint64_t c405dcu_m_timeout_mask : 1;
-    uint64_t c405icu_m_timeout_mask : 1;
-    uint64_t gpe3_ocislv_err_mask : 1;
-    uint64_t gpe2_ocislv_err_mask : 1;
-    uint64_t gpe1_ocislv_err_mask : 1;
-    uint64_t gpe0_ocislv_err_mask : 1;
-    uint64_t sram_spare_direct_error3_mask : 1;
-    uint64_t sram_spare_direct_error2_mask : 1;
-    uint64_t sram_spare_direct_error1_mask : 1;
-    uint64_t sram_spare_direct_error0_mask : 1;
-    uint64_t c405_oci_machinecheck_mask : 1;
-    uint64_t c405_ecc_ce_mask : 1;
-    uint64_t c405_ecc_ue_mask : 1;
-    uint64_t spare_err_38_mask : 1;
-    uint64_t jtagacc_err_mask : 1;
-    uint64_t srt_fsm_err_mask : 1;
-    uint64_t ocb_idc3_error_mask : 1;
-    uint64_t ocb_idc2_error_mask : 1;
-    uint64_t ocb_idc1_error_mask : 1;
-    uint64_t ocb_idc0_error_mask : 1;
-    uint64_t ocb_db_pib_data_parity_err_mask : 1;
-    uint64_t ocb_pib_addr_parity_err_mask : 1;
-    uint64_t ocb_db_oci_slave_error_mask : 1;
-    uint64_t ocb_db_oci_read_data_parity_mask : 1;
-    uint64_t ocb_db_oci_timeout_mask : 1;
-    uint64_t ppc405_dbgstopack_mask : 1;
-    uint64_t ppc405_dbgmsrwe_mask : 1;
-    uint64_t ppc405_system_reset_mask : 1;
-    uint64_t ppc405_chip_reset_mask : 1;
-    uint64_t ppc405_core_reset_mask : 1;
-    uint64_t external_trap_mask : 1;
-    uint64_t gpe3_halted_mask : 1;
-    uint64_t gpe2_halted_mask : 1;
-    uint64_t gpe1_halted_mask : 1;
-    uint64_t gpe0_halted_mask : 1;
-    uint64_t srt_oci_addr_parity_err_mask : 1;
-    uint64_t srt_oci_be_parity_err_mask : 1;
-    uint64_t srt_oci_write_data_parity_mask : 1;
-    uint64_t srt_dataout_perr_mask : 1;
-    uint64_t srt_write_error_mask : 1;
-    uint64_t srt_read_error_mask : 1;
-    uint64_t srt_ce_mask : 1;
-    uint64_t srt_ue_mask : 1;
-    uint64_t ocb_error_mask : 1;
-    uint64_t gpe3_error_mask : 1;
-    uint64_t gpe2_error_mask : 1;
-    uint64_t gpe1_error_mask : 1;
-    uint64_t gpe0_error_mask : 1;
-    uint64_t gpe3_watchdog_timeout_mask : 1;
-    uint64_t gpe2_watchdog_timeout_mask : 1;
-    uint64_t gpe1_watchdog_timeout_mask : 1;
-    uint64_t gpe0_watchdog_timeout_mask : 1;
-    uint64_t occ_hb_malf_mask : 1;
-    uint64_t spare_3_mask : 1;
-    uint64_t spare_2_mask : 1;
-    uint64_t occ_fw1_mask : 1;
-    uint64_t occ_fw0_mask : 1;
-#endif // _BIG_ENDIAN
-    } fields;
-} ocb_occlfirmask_t;
-
-
-
-typedef union ocb_occlfirmask_and {
-
-    uint64_t value;
-    struct {
-#ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
-#else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct {
-#ifdef _BIG_ENDIAN
-    uint64_t occ_fw0_mask : 1;
-    uint64_t occ_fw1_mask : 1;
-    uint64_t spare_2_mask : 1;
-    uint64_t spare_3_mask : 1;
-    uint64_t occ_hb_malf_mask : 1;
-    uint64_t gpe0_watchdog_timeout_mask : 1;
-    uint64_t gpe1_watchdog_timeout_mask : 1;
-    uint64_t gpe2_watchdog_timeout_mask : 1;
-    uint64_t gpe3_watchdog_timeout_mask : 1;
-    uint64_t gpe0_error_mask : 1;
-    uint64_t gpe1_error_mask : 1;
-    uint64_t gpe2_error_mask : 1;
-    uint64_t gpe3_error_mask : 1;
-    uint64_t ocb_error_mask : 1;
-    uint64_t srt_ue_mask : 1;
-    uint64_t srt_ce_mask : 1;
-    uint64_t srt_read_error_mask : 1;
-    uint64_t srt_write_error_mask : 1;
-    uint64_t srt_dataout_perr_mask : 1;
-    uint64_t srt_oci_write_data_parity_mask : 1;
-    uint64_t srt_oci_be_parity_err_mask : 1;
-    uint64_t srt_oci_addr_parity_err_mask : 1;
-    uint64_t gpe0_halted_mask : 1;
-    uint64_t gpe1_halted_mask : 1;
-    uint64_t gpe2_halted_mask : 1;
-    uint64_t gpe3_halted_mask : 1;
-    uint64_t external_trap_mask : 1;
-    uint64_t ppc405_core_reset_mask : 1;
-    uint64_t ppc405_chip_reset_mask : 1;
-    uint64_t ppc405_system_reset_mask : 1;
-    uint64_t ppc405_dbgmsrwe_mask : 1;
-    uint64_t ppc405_dbgstopack_mask : 1;
-    uint64_t ocb_db_oci_timeout_mask : 1;
-    uint64_t ocb_db_oci_read_data_parity_mask : 1;
-    uint64_t ocb_db_oci_slave_error_mask : 1;
-    uint64_t ocb_pib_addr_parity_err_mask : 1;
-    uint64_t ocb_db_pib_data_parity_err_mask : 1;
-    uint64_t ocb_idc0_error_mask : 1;
-    uint64_t ocb_idc1_error_mask : 1;
-    uint64_t ocb_idc2_error_mask : 1;
-    uint64_t ocb_idc3_error_mask : 1;
-    uint64_t srt_fsm_err_mask : 1;
-    uint64_t jtagacc_err_mask : 1;
-    uint64_t spare_err_38_mask : 1;
-    uint64_t c405_ecc_ue_mask : 1;
-    uint64_t c405_ecc_ce_mask : 1;
-    uint64_t c405_oci_machinecheck_mask : 1;
-    uint64_t sram_spare_direct_error0_mask : 1;
-    uint64_t sram_spare_direct_error1_mask : 1;
-    uint64_t sram_spare_direct_error2_mask : 1;
-    uint64_t sram_spare_direct_error3_mask : 1;
-    uint64_t gpe0_ocislv_err_mask : 1;
-    uint64_t gpe1_ocislv_err_mask : 1;
-    uint64_t gpe2_ocislv_err_mask : 1;
-    uint64_t gpe3_ocislv_err_mask : 1;
-    uint64_t c405icu_m_timeout_mask : 1;
-    uint64_t c405dcu_m_timeout_mask : 1;
-    uint64_t occ_complex_fault_safe_mask : 1;
-    uint64_t spare_58_61_mask : 4;
-    uint64_t fir_parity_err_dup_mask : 1;
-    uint64_t fir_parity_err_mask : 1;
-#else
-    uint64_t fir_parity_err_mask : 1;
-    uint64_t fir_parity_err_dup_mask : 1;
-    uint64_t spare_58_61_mask : 4;
-    uint64_t occ_complex_fault_safe_mask : 1;
-    uint64_t c405dcu_m_timeout_mask : 1;
-    uint64_t c405icu_m_timeout_mask : 1;
-    uint64_t gpe3_ocislv_err_mask : 1;
-    uint64_t gpe2_ocislv_err_mask : 1;
-    uint64_t gpe1_ocislv_err_mask : 1;
-    uint64_t gpe0_ocislv_err_mask : 1;
-    uint64_t sram_spare_direct_error3_mask : 1;
-    uint64_t sram_spare_direct_error2_mask : 1;
-    uint64_t sram_spare_direct_error1_mask : 1;
-    uint64_t sram_spare_direct_error0_mask : 1;
-    uint64_t c405_oci_machinecheck_mask : 1;
-    uint64_t c405_ecc_ce_mask : 1;
-    uint64_t c405_ecc_ue_mask : 1;
-    uint64_t spare_err_38_mask : 1;
-    uint64_t jtagacc_err_mask : 1;
-    uint64_t srt_fsm_err_mask : 1;
-    uint64_t ocb_idc3_error_mask : 1;
-    uint64_t ocb_idc2_error_mask : 1;
-    uint64_t ocb_idc1_error_mask : 1;
-    uint64_t ocb_idc0_error_mask : 1;
-    uint64_t ocb_db_pib_data_parity_err_mask : 1;
-    uint64_t ocb_pib_addr_parity_err_mask : 1;
-    uint64_t ocb_db_oci_slave_error_mask : 1;
-    uint64_t ocb_db_oci_read_data_parity_mask : 1;
-    uint64_t ocb_db_oci_timeout_mask : 1;
-    uint64_t ppc405_dbgstopack_mask : 1;
-    uint64_t ppc405_dbgmsrwe_mask : 1;
-    uint64_t ppc405_system_reset_mask : 1;
-    uint64_t ppc405_chip_reset_mask : 1;
-    uint64_t ppc405_core_reset_mask : 1;
-    uint64_t external_trap_mask : 1;
-    uint64_t gpe3_halted_mask : 1;
-    uint64_t gpe2_halted_mask : 1;
-    uint64_t gpe1_halted_mask : 1;
-    uint64_t gpe0_halted_mask : 1;
-    uint64_t srt_oci_addr_parity_err_mask : 1;
-    uint64_t srt_oci_be_parity_err_mask : 1;
-    uint64_t srt_oci_write_data_parity_mask : 1;
-    uint64_t srt_dataout_perr_mask : 1;
-    uint64_t srt_write_error_mask : 1;
-    uint64_t srt_read_error_mask : 1;
-    uint64_t srt_ce_mask : 1;
-    uint64_t srt_ue_mask : 1;
-    uint64_t ocb_error_mask : 1;
-    uint64_t gpe3_error_mask : 1;
-    uint64_t gpe2_error_mask : 1;
-    uint64_t gpe1_error_mask : 1;
-    uint64_t gpe0_error_mask : 1;
-    uint64_t gpe3_watchdog_timeout_mask : 1;
-    uint64_t gpe2_watchdog_timeout_mask : 1;
-    uint64_t gpe1_watchdog_timeout_mask : 1;
-    uint64_t gpe0_watchdog_timeout_mask : 1;
-    uint64_t occ_hb_malf_mask : 1;
-    uint64_t spare_3_mask : 1;
-    uint64_t spare_2_mask : 1;
-    uint64_t occ_fw1_mask : 1;
-    uint64_t occ_fw0_mask : 1;
-#endif // _BIG_ENDIAN
-    } fields;
-} ocb_occlfirmask_and_t;
-
-
-
-typedef union ocb_occlfirmask_or {
-
-    uint64_t value;
-    struct {
-#ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
-#else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct {
-#ifdef _BIG_ENDIAN
-    uint64_t occ_fw0_mask : 1;
-    uint64_t occ_fw1_mask : 1;
-    uint64_t spare_2_mask : 1;
-    uint64_t spare_3_mask : 1;
-    uint64_t occ_hb_malf_mask : 1;
-    uint64_t gpe0_watchdog_timeout_mask : 1;
-    uint64_t gpe1_watchdog_timeout_mask : 1;
-    uint64_t gpe2_watchdog_timeout_mask : 1;
-    uint64_t gpe3_watchdog_timeout_mask : 1;
-    uint64_t gpe0_error_mask : 1;
-    uint64_t gpe1_error_mask : 1;
-    uint64_t gpe2_error_mask : 1;
-    uint64_t gpe3_error_mask : 1;
-    uint64_t ocb_error_mask : 1;
-    uint64_t srt_ue_mask : 1;
-    uint64_t srt_ce_mask : 1;
-    uint64_t srt_read_error_mask : 1;
-    uint64_t srt_write_error_mask : 1;
-    uint64_t srt_dataout_perr_mask : 1;
-    uint64_t srt_oci_write_data_parity_mask : 1;
-    uint64_t srt_oci_be_parity_err_mask : 1;
-    uint64_t srt_oci_addr_parity_err_mask : 1;
-    uint64_t gpe0_halted_mask : 1;
-    uint64_t gpe1_halted_mask : 1;
-    uint64_t gpe2_halted_mask : 1;
-    uint64_t gpe3_halted_mask : 1;
-    uint64_t external_trap_mask : 1;
-    uint64_t ppc405_core_reset_mask : 1;
-    uint64_t ppc405_chip_reset_mask : 1;
-    uint64_t ppc405_system_reset_mask : 1;
-    uint64_t ppc405_dbgmsrwe_mask : 1;
-    uint64_t ppc405_dbgstopack_mask : 1;
-    uint64_t ocb_db_oci_timeout_mask : 1;
-    uint64_t ocb_db_oci_read_data_parity_mask : 1;
-    uint64_t ocb_db_oci_slave_error_mask : 1;
-    uint64_t ocb_pib_addr_parity_err_mask : 1;
-    uint64_t ocb_db_pib_data_parity_err_mask : 1;
-    uint64_t ocb_idc0_error_mask : 1;
-    uint64_t ocb_idc1_error_mask : 1;
-    uint64_t ocb_idc2_error_mask : 1;
-    uint64_t ocb_idc3_error_mask : 1;
-    uint64_t srt_fsm_err_mask : 1;
-    uint64_t jtagacc_err_mask : 1;
-    uint64_t spare_err_38_mask : 1;
-    uint64_t c405_ecc_ue_mask : 1;
-    uint64_t c405_ecc_ce_mask : 1;
-    uint64_t c405_oci_machinecheck_mask : 1;
-    uint64_t sram_spare_direct_error0_mask : 1;
-    uint64_t sram_spare_direct_error1_mask : 1;
-    uint64_t sram_spare_direct_error2_mask : 1;
-    uint64_t sram_spare_direct_error3_mask : 1;
-    uint64_t gpe0_ocislv_err_mask : 1;
-    uint64_t gpe1_ocislv_err_mask : 1;
-    uint64_t gpe2_ocislv_err_mask : 1;
-    uint64_t gpe3_ocislv_err_mask : 1;
-    uint64_t c405icu_m_timeout_mask : 1;
-    uint64_t c405dcu_m_timeout_mask : 1;
-    uint64_t occ_complex_fault_safe_mask : 1;
-    uint64_t spare_58_61_mask : 4;
-    uint64_t fir_parity_err_dup_mask : 1;
-    uint64_t fir_parity_err_mask : 1;
-#else
-    uint64_t fir_parity_err_mask : 1;
-    uint64_t fir_parity_err_dup_mask : 1;
-    uint64_t spare_58_61_mask : 4;
-    uint64_t occ_complex_fault_safe_mask : 1;
-    uint64_t c405dcu_m_timeout_mask : 1;
-    uint64_t c405icu_m_timeout_mask : 1;
-    uint64_t gpe3_ocislv_err_mask : 1;
-    uint64_t gpe2_ocislv_err_mask : 1;
-    uint64_t gpe1_ocislv_err_mask : 1;
-    uint64_t gpe0_ocislv_err_mask : 1;
-    uint64_t sram_spare_direct_error3_mask : 1;
-    uint64_t sram_spare_direct_error2_mask : 1;
-    uint64_t sram_spare_direct_error1_mask : 1;
-    uint64_t sram_spare_direct_error0_mask : 1;
-    uint64_t c405_oci_machinecheck_mask : 1;
-    uint64_t c405_ecc_ce_mask : 1;
-    uint64_t c405_ecc_ue_mask : 1;
-    uint64_t spare_err_38_mask : 1;
-    uint64_t jtagacc_err_mask : 1;
-    uint64_t srt_fsm_err_mask : 1;
-    uint64_t ocb_idc3_error_mask : 1;
-    uint64_t ocb_idc2_error_mask : 1;
-    uint64_t ocb_idc1_error_mask : 1;
-    uint64_t ocb_idc0_error_mask : 1;
-    uint64_t ocb_db_pib_data_parity_err_mask : 1;
-    uint64_t ocb_pib_addr_parity_err_mask : 1;
-    uint64_t ocb_db_oci_slave_error_mask : 1;
-    uint64_t ocb_db_oci_read_data_parity_mask : 1;
-    uint64_t ocb_db_oci_timeout_mask : 1;
-    uint64_t ppc405_dbgstopack_mask : 1;
-    uint64_t ppc405_dbgmsrwe_mask : 1;
-    uint64_t ppc405_system_reset_mask : 1;
-    uint64_t ppc405_chip_reset_mask : 1;
-    uint64_t ppc405_core_reset_mask : 1;
-    uint64_t external_trap_mask : 1;
-    uint64_t gpe3_halted_mask : 1;
-    uint64_t gpe2_halted_mask : 1;
-    uint64_t gpe1_halted_mask : 1;
-    uint64_t gpe0_halted_mask : 1;
-    uint64_t srt_oci_addr_parity_err_mask : 1;
-    uint64_t srt_oci_be_parity_err_mask : 1;
-    uint64_t srt_oci_write_data_parity_mask : 1;
-    uint64_t srt_dataout_perr_mask : 1;
-    uint64_t srt_write_error_mask : 1;
-    uint64_t srt_read_error_mask : 1;
-    uint64_t srt_ce_mask : 1;
-    uint64_t srt_ue_mask : 1;
-    uint64_t ocb_error_mask : 1;
-    uint64_t gpe3_error_mask : 1;
-    uint64_t gpe2_error_mask : 1;
-    uint64_t gpe1_error_mask : 1;
-    uint64_t gpe0_error_mask : 1;
-    uint64_t gpe3_watchdog_timeout_mask : 1;
-    uint64_t gpe2_watchdog_timeout_mask : 1;
-    uint64_t gpe1_watchdog_timeout_mask : 1;
-    uint64_t gpe0_watchdog_timeout_mask : 1;
-    uint64_t occ_hb_malf_mask : 1;
-    uint64_t spare_3_mask : 1;
-    uint64_t spare_2_mask : 1;
-    uint64_t occ_fw1_mask : 1;
-    uint64_t occ_fw0_mask : 1;
-#endif // _BIG_ENDIAN
-    } fields;
-} ocb_occlfirmask_or_t;
-
-
-
-typedef union ocb_occlfiract0 {
-
-    uint64_t value;
-    struct {
-#ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
-#else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct {
-#ifdef _BIG_ENDIAN
-    uint64_t fir_action0 : 64;
-#else
-    uint64_t fir_action0 : 64;
-#endif // _BIG_ENDIAN
-    } fields;
-} ocb_occlfiract0_t;
-
-
-
-typedef union ocb_occlfiract1 {
-
-    uint64_t value;
-    struct {
-#ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
-#else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct {
-#ifdef _BIG_ENDIAN
-    uint64_t fir_action1 : 64;
-#else
-    uint64_t fir_action1 : 64;
-#endif // _BIG_ENDIAN
-    } fields;
-} ocb_occlfiract1_t;
-
-
-
-typedef union ocb_occlfirwof {
-
-    uint64_t value;
-    struct {
-#ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
-#else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct {
-#ifdef _BIG_ENDIAN
-    uint64_t wof : 64;
-#else
-    uint64_t wof : 64;
-#endif // _BIG_ENDIAN
-    } fields;
-} ocb_occlfirwof_t;
-
-
-
-typedef union ocb_occerrrpt {
-
-    uint64_t value;
-    struct {
-#ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
-#else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct {
-#ifdef _BIG_ENDIAN
-    uint64_t sram_cerrrpt : 10;
-    uint64_t jtagacc_cerrpt : 6;
-    uint64_t c405_dcu_ecc_ue : 1;
-    uint64_t c405_dcu_ecc_ce : 1;
-    uint64_t c405_icu_ecc_ue : 1;
-    uint64_t c405_icu_ecc_ce : 1;
-    uint64_t gpe0_ocislv_err : 7;
-    uint64_t reserved1 : 1;
-    uint64_t gpe1_ocislv_err : 7;
-    uint64_t reserved2 : 1;
-    uint64_t gpe2_ocislv_err : 7;
-    uint64_t reserved3 : 1;
-    uint64_t gpe3_ocislv_err : 7;
-    uint64_t reserved4 : 1;
-    uint64_t ocb_ocislv_err : 7;
-    uint64_t reserved5 : 5;
-#else
-    uint64_t reserved5 : 5;
-    uint64_t ocb_ocislv_err : 7;
-    uint64_t reserved4 : 1;
-    uint64_t gpe3_ocislv_err : 7;
-    uint64_t reserved3 : 1;
-    uint64_t gpe2_ocislv_err : 7;
-    uint64_t reserved2 : 1;
-    uint64_t gpe1_ocislv_err : 7;
-    uint64_t reserved1 : 1;
-    uint64_t gpe0_ocislv_err : 7;
-    uint64_t c405_icu_ecc_ce : 1;
-    uint64_t c405_icu_ecc_ue : 1;
-    uint64_t c405_dcu_ecc_ce : 1;
-    uint64_t c405_dcu_ecc_ue : 1;
-    uint64_t jtagacc_cerrpt : 6;
-    uint64_t sram_cerrrpt : 10;
-#endif // _BIG_ENDIAN
-    } fields;
-} ocb_occerrrpt_t;
 
 
 #endif // __ASSEMBLER__

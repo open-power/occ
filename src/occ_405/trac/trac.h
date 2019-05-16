@@ -94,7 +94,7 @@ extern void dumpHexString(const void *i_data, const unsigned int len, const char
 #define DBG_PRINT(fmt,args...)  \
         TRACE(&g_des_array[INF_TRACE_DESCRIPTOR],DBG_MRK fmt,##args)
 #define DEBUG_HEXDUMP(data, len, string)  \
-        TRACEBIN(&g_des_array[INF_TRACE_DESCRIPTOR], string, data,len)
+        TRACE(&g_des_array[INF_TRACE_DESCRIPTOR],DBG_MRK string " %d byte HEX DUMP", len)
 
 #endif  //TRAC_TO_SIMICS
 

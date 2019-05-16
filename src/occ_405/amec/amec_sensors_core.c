@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -142,7 +142,7 @@ void amec_update_proc_core_sensors(uint8_t i_core)
     {
         g_amec->proc[0].core[i_core].prev_PC_RAW_CYCLES    = l_core_data_ptr->empath.raw_cycles;
         g_amec->proc[0].core[i_core].prev_PC_RUN_CYCLES    = l_core_data_ptr->empath.run_cycles;
-        g_amec->proc[0].core[i_core].prev_tod_2mhz         = l_core_data_ptr->tod_2mhz;
+        g_amec->proc[0].core[i_core].prev_tod_2mhz         = l_core_data_ptr->empath.tod_2mhz;
         g_amec->proc[0].core[i_core].prev_FREQ_SENS_BUSY   = l_core_data_ptr->empath.freq_sens_busy;
         g_amec->proc[0].core[i_core].prev_FREQ_SENS_FINISH = l_core_data_ptr->empath.freq_sens_finish;
     }
@@ -469,7 +469,7 @@ void amec_calc_freq_and_util_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
   temp32  = i_core_data_ptr->empath.raw_cycles;
   temp32a = g_amec->proc[0].core[i_core].prev_PC_RAW_CYCLES;
   temp32  = l_cycles4ms = temp32 - temp32a;
-  temp32a = (i_core_data_ptr->tod_2mhz -
+  temp32a = (i_core_data_ptr->empath.tod_2mhz -
              g_amec->proc[0].core[i_core].prev_tod_2mhz);
 
   if (0 == temp32a) temp32 = 0;
@@ -809,7 +809,7 @@ void amec_calc_ips_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
   // Note: For an explanation regarding the multiply by 2, see the note under FREQAC0.
   // </amec_formula>
 
-  ticks_2mhz = i_core_data_ptr->tod_2mhz -
+  ticks_2mhz = i_core_data_ptr->empath.tod_2mhz -
       g_amec->proc[0].core[i_core].prev_tod_2mhz;
 
   if (0 == ticks_2mhz) temp32 = 0;
@@ -829,8 +829,8 @@ void amec_calc_ips_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
 void amec_calc_droop_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
 {
     //CoreData only has any new droop events since the last time CoreData was read
-    uint32_t l_quad_droops = i_core_data_ptr->droop.v_droop_large;
-    uint32_t l_core_droops = i_core_data_ptr->droop.v_droop_small;
+    uint32_t l_quad_droops = i_core_data_ptr->droop.cache_large_event;
+    uint32_t l_core_droops = i_core_data_ptr->droop.core_small_event;
     int l_quad = i_core / 4;
     sensor_t * l_quad_sensor = AMECSENSOR_ARRAY_PTR(VOLTDROOPCNTQ0, l_quad);
     sensor_t * l_core_sensor = AMECSENSOR_ARRAY_PTR(VOLTDROOPCNTC0, i_core);

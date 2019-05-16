@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -483,20 +483,20 @@ void addTraceToErrl(
     void * l_traceAddr = io_err;
     uint16_t l_actualSizeOfUsrDtls = 0;
 
-    ocb_oisr0_t  l_oisr0_status;       // OCC Interrupt Source 0 Register
+    ocb_oisr1_t  l_oisr1_status;       // OCC Interrupt Source 1 Register
 
     static bool L_sys_checkstop_traced = FALSE;
 
     // Check if there is any system checkstop
-    l_oisr0_status.value    = in32(OCB_OISR0);
+    l_oisr1_status.value = in32(OCB_OISR1);
 
     // Level triggered interrupts?
-    if (l_oisr0_status.fields.check_stop_ppc405 &&
+    if (l_oisr1_status.fields.check_stop_ppc405 &&
         !L_sys_checkstop_traced)
     {
             L_sys_checkstop_traced = TRUE;
-            TRAC_IMP("addTraceToErrl: System checkstop detected: ppc405, OISR0[0x%08x]",
-                     l_oisr0_status.value);
+            TRAC_IMP("addTraceToErrl: System checkstop detected: ppc405, OISR1[0x%08x]",
+                     l_oisr1_status.value);
     }
 
     // 1. Check if error log is not null
@@ -781,7 +781,7 @@ void reportErrorLog( errlHndl_t i_err, uint16_t i_entrySize )
 // End Function Specification
 void commitErrl( errlHndl_t *io_err )
 {
-    ocb_oisr0_t l_oisr0_status;
+    ocb_oisr1_t l_oisr1_status;
 
     static bool L_log_commits_suspended_by_safe_mode = FALSE;
 
@@ -791,12 +791,12 @@ void commitErrl( errlHndl_t *io_err )
         if ((*io_err != NULL ) && ( *io_err != INVALID_ERR_HNDL ))
         {
             // Check if there is a system checkstop
-            l_oisr0_status.value = in32(OCB_OISR0);
+            l_oisr1_status.value = in32(OCB_OISR1);
 
-            if (l_oisr0_status.fields.check_stop_ppc405)
+            if (l_oisr1_status.fields.check_stop_ppc405)
             {
-                TRAC_IMP("commitErrl: System checkstop detected: ppc405, OISR0[0x%08x]",
-                         l_oisr0_status.value);
+                TRAC_IMP("commitErrl: System checkstop detected: ppc405, OISR1[0x%08x]",
+                         l_oisr1_status.value);
                 //Go to the reset state to minimize errors
                 reset_state_request(RESET_REQUESTED_DUE_TO_ERROR);
 

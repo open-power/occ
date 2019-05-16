@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -40,13 +40,13 @@
 
 // default number of chances for WOF running every 8th tick, actual timeout
 // used will be adjusted if WOF runs every tick
-#define MAX_VFRT_CHANCES_EVERY_8TH_TICK  2  // 8ms = 4ms * 2
-#define MAX_VFRT_CHANCES_EVERY_TICK  16  // 8ms = 500us * 16
-#define MAX_VFRT_CHANCES G_max_vfrt_chances
+#define MAX_VRT_CHANCES_EVERY_8TH_TICK  2  // 8ms = 4ms * 2
+#define MAX_VRT_CHANCES_EVERY_TICK  16  // 8ms = 500us * 16
+#define MAX_VRT_CHANCES G_max_vrt_chances
 #define MAX_WOF_CONTROL_CHANCES_EVERY_8TH_TICK  2  // 8ms = 4ms * 2
 #define MAX_WOF_CONTROL_CHANCES_EVERY_TICK  16  // 8ms = 500us * 16
 #define MAX_WOF_CONTROL_CHANCES G_max_wof_control_chances
-extern uint8_t G_max_vfrt_chances;
+extern uint8_t G_max_vrt_chances;
 extern uint8_t G_max_wof_control_chances;
 extern uint32_t G_max_ceff_ratio;
 
@@ -71,15 +71,15 @@ extern uint32_t G_max_ceff_ratio;
 #define WOF_RC_PGPE_REQ_NOT_IDLE                   0x00000008
 #define WOF_RC_PGPE_WOF_DISABLED                   0x00000010
 #define WOF_RC_PSTATE_PROTOCOL_OFF                 0x00000020
-#define WOF_RC_VFRT_REQ_TIMEOUT                    0x00000040
+#define WOF_RC_VRT_REQ_TIMEOUT                    0x00000040
 #define WOF_RC_CONTROL_REQ_TIMEOUT                 0x00000080
 #define WOF_RC_STATE_CHANGE                        0x00000100
 #define WOF_RC_MODE_CHANGE                         0x00000200
 #define WOF_RC_MODE_NO_SUPPORT_MASK                0x00000400
 #define WOF_RC_DIVIDE_BY_ZERO_VDD                  0x00000800
-#define WOF_RC_VFRT_REQ_FAILURE                    0x00001000
+#define WOF_RC_VRT_REQ_FAILURE                    0x00001000
 #define WOF_RC_CONTROL_REQ_FAILURE                 0x00002000
-#define WOF_RC_VFRT_ALIGNMENT_ERROR                0x00004000
+#define WOF_RC_VRT_ALIGNMENT_ERROR                0x00004000
 #define WOF_RC_DRIVER_WOF_DISABLED                 0x00008000
 #define WOF_RC_UTURBO_IS_ZERO                      0x00010000
 #define WOF_RC_OCC_WOF_DISABLED                    0x00020000
@@ -115,15 +115,15 @@ extern uint32_t G_max_ceff_ratio;
 enum wof_init_states
 {
     WOF_DISABLED,                   //0
-    INITIAL_VFRT_SENT_WAITING,      //1
-    INITIAL_VFRT_SUCCESS,           //2
+    INITIAL_VRT_SENT_WAITING,       //1
+    INITIAL_VRT_SUCCESS,            //2
     WOF_CONTROL_ON_SENT_WAITING,    //3
     PGPE_WOF_ENABLED_NO_PREV_DATA,  //4
     WOF_ENABLED,                    //5
 };
 
-// Enumeration to define VFRT send state
-enum vfrt_send_states
+// Enumeration to define VRT send state
+enum vrt_send_states
 {
     STANDBY,
     SEND_INIT,
@@ -156,9 +156,9 @@ typedef struct __attribute__ ((packed))
     uint32_t magic_number;
     uint8_t  reserved_1[3];
     uint8_t  version;
-    uint16_t vfrt_block_size;
-    uint16_t vfrt_blck_hdr_sz;
-    uint16_t vfrt_data_size;
+    uint16_t vrt_block_size;
+    uint16_t vrt_blck_hdr_sz;
+    uint16_t vrt_data_size;
     uint8_t  active_quads_size;
     uint8_t  core_count;
     uint16_t vdn_start;
@@ -191,9 +191,9 @@ typedef struct __attribute__ ((packed))
     uint32_t wof_disabled;
     // Data from wof header for debug
     uint8_t  version;
-    uint16_t vfrt_block_size;
-    uint16_t vfrt_blck_hdr_sz;
-    uint16_t vfrt_data_size;
+    uint16_t vrt_block_size;
+    uint16_t vrt_blck_hdr_sz;
+    uint16_t vrt_data_size;
     uint8_t  active_quads_size;
     uint8_t  core_count;
     uint16_t vdn_start;
@@ -307,16 +307,16 @@ typedef struct __attribute__ ((packed))
     uint32_t curr_ping_pong_buf;
     // The next ping pong buffer SRAM address to be used by PGPE if IPC request succeeds
     uint32_t next_ping_pong_buf;
-    // The current vfrt address in Main Memory that WOF pulled to give to PGPE
-    uint32_t curr_vfrt_main_mem_addr;
-    // The most recently calculated vfrt Main Memory address based off recently computed
+    // The current vrt address in Main Memory that WOF pulled to give to PGPE
+    uint32_t curr_vrt_main_mem_addr;
+    // The most recently calculated vrt Main Memory address based off recently computed
     // data. This is not what the PGPE is using. It is the candidate addr for the next
-    // vfrt
-    uint32_t next_vfrt_main_mem_addr;
-    // Main Memory address where the WOF VFRT tables are located
-    uint32_t vfrt_tbls_main_mem_addr;
-    // The length of the WOF VFRT data in main memory
-    uint32_t vfrt_tbls_len;
+    // vrt
+    uint32_t next_vrt_main_mem_addr;
+    // Main Memory address where the WOF VRT tables are located
+    uint32_t vrt_tbls_main_mem_addr;
+    // The length of the WOF VRT data in main memory
+    uint32_t vrt_tbls_len;
     // The state of the wof routine during initialization. states defined above
     uint8_t wof_init_state;
     // The address in shared OCC-PGPE SRAM of Quad State 0
@@ -335,17 +335,17 @@ typedef struct __attribute__ ((packed))
     uint32_t gpe_req_rc;
     // Return code of failed control message
     uint32_t control_ipc_rc;
-    // Keeps track of whether we got an error in wof_vfrt_callback to be
+    // Keeps track of whether we got an error in wof_vrt_callback to be
     // logged later
-    uint8_t vfrt_callback_error;
+    uint8_t vrt_callback_error;
     // Keeps track of whether the 405 was the one who disabled WOF on the PGPE
     uint8_t pgpe_wof_off;
     // Keeps track of whether or not the PGPE can enable WOF
     uint8_t pgpe_wof_disabled;
-    // Offset into main memory with the beginning of the wof vfrt data as base
-    uint32_t vfrt_mm_offset;
-    // Return code returned from a bad VFRT request
-    uint8_t wof_vfrt_req_rc;
+    // Offset into main memory with the beginning of the wof vrt data as base
+    uint32_t vrt_mm_offset;
+    // Return code returned from a bad VRT request
+    uint8_t wof_vrt_req_rc;
     // Voltage used in ceff_ratio_vdd calc
     uint32_t c_ratio_vdd_volt;
     // Frequency used in ceff_ratio_vdd calc
@@ -354,8 +354,8 @@ typedef struct __attribute__ ((packed))
     uint32_t c_ratio_vdn_volt;
     // Frequency used in ceff_ratio_vdn calc
     uint32_t c_ratio_vdn_freq;
-    // Holds the state of various async operations relating to sending a VFRT
-    uint8_t vfrt_state;
+    // Holds the state of various async operations relating to sending a VRT
+    uint8_t vrt_state;
     uint32_t all_cores_off_before;
     //OPPB variables
     uint8_t good_quads_per_sort;
@@ -433,13 +433,13 @@ uint8_t calc_quad_step_from_start( void );
 
 
 
-uint32_t calc_vfrt_mainstore_addr( void );
+uint32_t calc_vrt_mainstore_addr( void );
 
-void copy_vfrt_to_sram_callback( void );
+void copy_vrt_to_sram_callback( void );
 
-void wof_vfrt_callback( void );
+void wof_vrt_callback( void );
 
-void send_vfrt_to_pgpe( uint32_t i_vfrt_address );
+void send_vrt_to_pgpe( uint32_t i_vrt_address );
 
 void read_shared_sram( void );
 
@@ -487,7 +487,7 @@ bool enable_wof( void );
 
 void wof_control_callback( void );
 
-void send_initial_vfrt_to_pgpe( void );
+void send_initial_vrt_to_pgpe( void );
 
 void read_req_active_quads( void );
 
@@ -508,7 +508,7 @@ void print_oppb( void );
 
 uint32_t prevent_over_current( uint32_t i_ceff_ratio );
 
-void schedule_vfrt_request( void );
+void schedule_vrt_request( void );
 
 uint32_t multiply_ratio( uint32_t i_operating_point,
                                 uint32_t i_ratio );

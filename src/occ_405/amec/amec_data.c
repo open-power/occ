@@ -48,7 +48,7 @@
 #include <amec_data.h>
 #include <amec_freq.h>
 #include <pgpe_interface.h>
-#include <p9_pstates_occ.h>
+#include <pstates_occ.H>
 
 //*************************************************************************
 // Externs

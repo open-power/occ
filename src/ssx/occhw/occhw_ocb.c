@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -63,12 +63,17 @@ ocb_timer_reset(int timer,
     ocb_otrn_t otr;
     int ticks;
 
-    //printk("ocb_timer_reset(%d, %d, %d)\n",
-    //       timer, auto_reload, timeout_ns);
+    //SSX_TRACE("ocb_timer_reset(%d, %d, %d)\n", timer, auto_reload, timeout_ns);
 
     if (timeout_ns != 0)
     {
         ticks = MAX(1, timeout_ns / (1000000000 / OCB_TIMER_FREQUENCY_HZ));
+        // TODO: RTC 213672
+        if (ticks != ((uint16_t)ticks))
+        {
+            SSX_TRACE("ocb_timer_reset - ticks overflow: 0x%08X - setting to 0xFFFF\n", ticks);
+            ticks = 0xFFFF;
+        }
     }
     else
     {
@@ -86,10 +91,10 @@ ocb_timer_reset(int timer,
 
     otr.value = 0;
 
-    otr.fields.timeout = 1;
-    otr.fields.control = 1;
-    otr.fields.auto_reload = (auto_reload != 0);
-    otr.fields.timer = ticks;
+    otr.fields.timeout_n = 1;
+    otr.fields.control_n = 1;
+    otr.fields.auto_reload_n = (auto_reload != 0);
+    otr.fields.timer_n = ticks;
 
     out32(OCB_OTRN(timer), otr.value);
 

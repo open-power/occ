@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -31,11 +31,11 @@
 // *** WARNING *** - This file is generated automatically, do not edit.
 
 #ifndef SIXTYFOUR_BIT_CONSTANT
-#ifdef __ASSEMBLER__
-#define SIXTYFOUR_BIT_CONSTANT(x) x
-#else
-#define SIXTYFOUR_BIT_CONSTANT(x) x##ull
-#endif
+    #ifdef __ASSEMBLER__
+        #define SIXTYFOUR_BIT_CONSTANT(x) x
+    #else
+        #define SIXTYFOUR_BIT_CONSTANT(x) x##ull
+    #endif
 #endif
 
 #ifndef __ASSEMBLER__
@@ -45,10 +45,12 @@
 
 
 
-typedef union sramctl_srbar {
+typedef union sramctl_srbar
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t sram_region_qualifier : 2;
     uint32_t reserved : 3;
@@ -65,10 +67,12 @@ typedef union sramctl_srbar {
 
 
 
-typedef union sramctl_srmr {
+typedef union sramctl_srmr
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t sram_enable_remap : 1;
     uint32_t sram_arb_en_send_all_writes : 1;
@@ -95,10 +99,12 @@ typedef union sramctl_srmr {
 
 
 
-typedef union sramctl_srmap {
+typedef union sramctl_srmap
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t reserved : 1;
     uint32_t sram_remap_source : 12;
@@ -119,10 +125,12 @@ typedef union sramctl_srmap {
 
 
 
-typedef union sramctl_srear {
+typedef union sramctl_srear
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t sram_error_address : 16;
     uint32_t _reserved0 : 16;
@@ -135,10 +143,12 @@ typedef union sramctl_srear {
 
 
 
-typedef union sramctl_srbv0 {
+typedef union sramctl_srbv0
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t boot_vector_word0 : 32;
 #else
@@ -149,10 +159,12 @@ typedef union sramctl_srbv0 {
 
 
 
-typedef union sramctl_srbv1 {
+typedef union sramctl_srbv1
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t boot_vector_word1 : 32;
 #else
@@ -163,10 +175,12 @@ typedef union sramctl_srbv1 {
 
 
 
-typedef union sramctl_srbv2 {
+typedef union sramctl_srbv2
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t boot_vector_word2 : 32;
 #else
@@ -177,10 +191,12 @@ typedef union sramctl_srbv2 {
 
 
 
-typedef union sramctl_srbv3 {
+typedef union sramctl_srbv3
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t boot_vector_word3 : 32;
 #else
@@ -191,10 +207,12 @@ typedef union sramctl_srbv3 {
 
 
 
-typedef union sramctl_srchsw {
+typedef union sramctl_srchsw
+{
 
     uint32_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint32_t chksw_wrfsm_dly_dis : 1;
     uint32_t chksw_allow1_rd : 1;

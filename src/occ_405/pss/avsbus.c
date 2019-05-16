@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -225,13 +225,13 @@ void avsbus_init()
     value = 0x820FC000;
     if (bus0_monitoring)
     {
-        DEBUG_OUT32(OCB_O2SCTRLF0B, value, "OCB_O2SCTRLF0B");
-        out32(OCB_O2SCTRLF0B, value);
+        DEBUG_OUT32(OCB_O2SCTRLFN(0), value, "OCB_O2SCTRLF0");
+        out32(OCB_O2SCTRLFN(0), value);
     }
     if (bus1_monitoring)
     {
-        DEBUG_OUT32(OCB_O2SCTRLF1B, value, "OCB_O2SCTRLF1B");
-        out32(OCB_O2SCTRLF1B, value);
+        DEBUG_OUT32(OCB_O2SCTRLFN(1), value, "OCB_O2SCTRLF1");
+        out32(OCB_O2SCTRLFN(1), value);
     }
 
     // Write O2SCTRLS_[a][n]
@@ -241,13 +241,13 @@ void avsbus_init()
     value = 0x00080000;
     if (bus0_monitoring)
     {
-        DEBUG_OUT32(OCB_O2SCTRLS0B, value, "OCB_O2SCTRLS0B");
-        out32(OCB_O2SCTRLS0B, value);
+        DEBUG_OUT32(OCB_O2SCTRLSN(0), value, "OCB_O2SCTRLS0");
+        out32(OCB_O2SCTRLSN(0), value);
     }
     if (bus1_monitoring)
     {
-        DEBUG_OUT32(OCB_O2SCTRLS1B, value, "OCB_O2SCTRLS1B");
-        out32(OCB_O2SCTRLS1B, value);
+        DEBUG_OUT32(OCB_O2SCTRLSN(1), value, "OCB_O2SCTRLS1");
+        out32(OCB_O2SCTRLSN(1), value);
     }
 
     // Write O2SCTRL1_[a][n]
@@ -266,13 +266,13 @@ void avsbus_init()
     value |= (divider << 18);
     if (bus0_monitoring)
     {
-        TRAC_INFO("avsbus_init: reg[OCB_O2SCTRL10B] = 0x%08X", value);
-        out32(OCB_O2SCTRL10B, value);
+        TRAC_INFO("avsbus_init: reg[OCB_O2SCTRL10] = 0x%08X", value);
+        out32(OCB_O2SCTRL1N(0), value);
     }
     if (bus1_monitoring)
     {
-        TRAC_INFO("avsbus_init: reg[OCB_O2SCTRL11B] = 0x%08X", value);
-        out32(OCB_O2SCTRL11B, value);
+        TRAC_INFO("avsbus_init: reg[OCB_O2SCTRL11] = 0x%08X", value);
+        out32(OCB_O2SCTRL1N(1), value);
     }
 
     // Write O2SCTRL2_[a][n]
@@ -281,13 +281,13 @@ void avsbus_init()
     value = 0x00000000;
     if (bus0_monitoring)
     {
-        DEBUG_OUT32(OCB_O2SCTRL20B, value, "OCB_O2SCTRL20B");
-        out32(OCB_O2SCTRL20B, value);
+        DEBUG_OUT32(OCB_O2SCTRL2N(0), value, "OCB_O2SCTRL20");
+        out32(OCB_O2SCTRL2N(0), value);
     }
     if (bus1_monitoring)
     {
-        DEBUG_OUT32(OCB_O2SCTRL21B, value, "OCB_O2SCTRL21B");
-        out32(OCB_O2SCTRL21B, value);
+        DEBUG_OUT32(OCB_O2SCTRL2N(1), value, "OCB_O2SCTRL21");
+        out32(OCB_O2SCTRL2N(1), value);
     }
 
     // Re-sync AVS bus and clear OC bits in status regs and

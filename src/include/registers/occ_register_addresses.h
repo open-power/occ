@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/include/registers/p9a_misc_scom_addresses.h $             */
+/* $Source: src/include/registers/occ_register_addresses.h $              */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2019                             */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -22,22 +22,26 @@
 /* permissions and limitations under the License.                         */
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
-// Axone MC Primary Memory Configuration Register, Inband
-#define P9A_MI_0_MCFGPR0  0x0501080C
-#define P9A_MI_1_MCFGPR0  0x0501088C
-#define P9A_MI_2_MCFGPR0  0x0301080C
-#define P9A_MI_3_MCFGPR0  0x0301088C
+#ifndef __OCC_REGISTER_ADDRESSES_H__
+#define __OCC_REGISTER_ADDRESSES_H__
 
-#define P9A_MI_0_MCFGPR1  0x0501080D
-#define P9A_MI_1_MCFGPR1  0x0501088D
-#define P9A_MI_2_MCFGPR1  0x0301080D
-#define P9A_MI_3_MCFGPR1  0x0301088D
+/// \file occ_register_addresses.h
+/// \brief Symbolic addresses for the OCC unit
 
-// Axone MC Sync Command Register
-#define P9A_MI_0_MCSYNC   0x05010815
-#define P9A_MI_1_MCSYNC   0x05010895
-#define P9A_MI_2_MCSYNC   0x03010815
-#define P9A_MI_3_MCSYNC   0x03010895
+// *** WARNING *** - This file is generated automatically, do not edit.
 
-// Axone PB Mode register
-#define P9A_PU_NMMU_MMCQ_PB_MODE_REG 0x05012C15
+
+#define OCC_FIRPIB_BASE 0x01010800
+#define OCC_SCOM_OCCLFIR 0x01010800
+#define OCC_SCOM_OCCLFIR_AND 0x01010801
+#define OCC_SCOM_OCCLFIR_OR 0x01010802
+#define OCC_SCOM_OCCLFIRMASK 0x01010803
+#define OCC_SCOM_OCCLFIRMASK_AND 0x01010804
+#define OCC_SCOM_OCCLFIRMASK_OR 0x01010805
+#define OCC_SCOM_OCCLFIRACT0 0x01010806
+#define OCC_SCOM_OCCLFIRACT1 0x01010807
+#define OCC_SCOM_OCCERRRPT 0x0101080a
+#define OCC_SCOM_OCCERRRPT2 0x0101080b
+
+#endif // __OCC_REGISTER_ADDRESSES_H__
+

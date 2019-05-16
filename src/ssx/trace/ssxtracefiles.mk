@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2015,2016
+# Contributors Listed Below - COPYRIGHT 2015,2019
 # [+] International Business Machines Corp.
 #
 #
@@ -22,29 +22,39 @@
 # permissions and limitations under the License.
 #
 # IBM_PROLOG_END_TAG
-
 #  @file ssxtracefiles.mk
 #
 #  @brief mk for including SSX trace object files
-
+#
+#  @page ChangeLogs Change Logs
+#  @section ssxtracefiles.mk
+#  @verbatim
+#
+#
+# Change Log ******************************************************************
+# Flag     Defect/Feature  User        Date         Description
+# ------   --------------  ----------  ------------ -----------
+#
+# @endverbatim
+#
 ##########################################################################
 # Include Files
 ##########################################################################
 
-			
+
 
 ##########################################################################
 # Object Files
 ##########################################################################
 SSXTRACE-C-SOURCES = ssx_trace_core.c ssx_trace_big.c ssx_trace_binary.c
-				   
-SSXTRACE-S-SOURCES = 
 
-SSXTRACE-TIMER-C-SOURCES = 
-SSXTRACE-TIMER-S-SOURCES = 
+SSXTRACE-S-SOURCES =
 
-SSXTRACE-THREAD-C-SOURCES += 
-SSXTRACE-THREAD-S-SOURCES += 
+SSXTRACE-TIMER-C-SOURCES =
+SSXTRACE-TIMER-S-SOURCES =
+
+SSXTRACE-THREAD-C-SOURCES +=
+SSXTRACE-THREAD-S-SOURCES +=
 
 
 SSXTRACE_OBJECTS += $(SSXTRACE-C-SOURCES:.c=.o) $(SSXTRACE-S-SOURCES:.S=.o)

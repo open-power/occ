@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -27,7 +27,7 @@
 #define _PSS_CONSTANTS_H
 
 
-#define SPIPSS_REGISTER_BASE          0x00070000
+#define SPIPSS_REGISTER_BASE          0x0006C800
 #define SPIPSS_ADC_CTRL_REG0          (SPIPSS_REGISTER_BASE + 0x00)
 #define SPIPSS_ADC_CTRL_REG1          (SPIPSS_REGISTER_BASE + 0x01)
 #define SPIPSS_ADC_CTRL_REG2          (SPIPSS_REGISTER_BASE + 0x02)

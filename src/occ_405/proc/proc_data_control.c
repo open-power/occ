@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -35,7 +35,7 @@
 #include "apss.h"
 #include "state.h"
 #include "occ_sys_config.h"
-#include "p9_pstates_common.h"
+#include "pstates_common.H"
 #include "pgpe_interface.h"
 #include "pgpe_shared.h"
 #include "rtls_service_codes.h"
@@ -74,7 +74,7 @@ void task_core_data_control( task_t * i_task )
 {
     errlHndl_t      err            = NULL;   //Error handler
     static bool     L_trace_logged = false;  // trace logging to avoid unnecessarily repeating logs
-    static bool     L_current_timeout_recorded = FALSE; 
+    static bool     L_current_timeout_recorded = FALSE;
     static uint64_t L_last = 0xFFFFFFFFFFFFFFFF;
     static uint64_t L_ignore_wait_count = 0; // number of consecutive ticks IPC task failed
     bool            l_check_failure = false;
@@ -145,8 +145,11 @@ void task_core_data_control( task_t * i_task )
                     for (quad = 0; quad < MAXIMUM_QUADS; quad++)
                     {
                         pstateList |= ((uint64_t) G_desired_pstate[quad] << ((7-quad)*8));
+// TODO - RTC 213672 - pmcr is no longer an array
+#if 0
                         // Update pmcr value (per quad) with requested pstate and version (Version 1 (P9 format))
                         G_pmcr_set_parms.pmcr[quad] = ((uint64_t) G_desired_pstate[quad] << 48) | 1;
+#endif
                     }
 
                     // Only send pstates if they changed or first time after going active from char state

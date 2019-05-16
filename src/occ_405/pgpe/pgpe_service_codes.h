@@ -34,7 +34,7 @@ enum pgpeModuleId
     PGPE_INIT_PMCR_MOD               = PGPE_COMP_ID | 0x01,
     PGPE_INIT_START_SUSPEND_MOD      = PGPE_COMP_ID | 0x02,
     PGPE_INIT_WOF_CONTROL_MOD        = PGPE_COMP_ID | 0x03,
-    PGPE_INIT_WOF_VFRT_MOD           = PGPE_COMP_ID | 0x04,
+    PGPE_INIT_WOF_VRT_MOD            = PGPE_COMP_ID | 0x04,
     PGPE_CLIP_UPDATE_MOD             = PGPE_COMP_ID | 0x05,
     PGPE_START_SUSPEND_MOD           = PGPE_COMP_ID | 0x06,
     PGPE_PMCR_SET_MOD                = PGPE_COMP_ID | 0x07,

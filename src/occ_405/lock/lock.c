@@ -63,19 +63,19 @@ void host_i2c_lock_request()
     ocb_occflg_t occ_flags = {0};
     TRAC_INFO("host_i2c_lock_request called (tick %d)", CURRENT_TICK);
     occ_flags.fields.i2c_engine3_lock_host = 1;
-    TRAC_INFO("host_i2c_lock_request - writing %04X to _OR(0x%08X)", occ_flags.value, OCB_OCCFLG_OR);
-    out32(OCB_OCCFLG_OR, occ_flags.value);
+    TRAC_INFO("host_i2c_lock_request - writing %04X to _OR(0x%08X)", occ_flags.value, OCB_OCCFLG0_OR);
+    out32(OCB_OCCFLG0_OR, occ_flags.value);
 
-    occ_flags.value = in32(OCB_OCCFLG);
-    //TRAC_INFO("host_i2c_lock_request - 0x%08X returned value=0x%04X", OCB_OCCFLG, occ_flags.value);
+    occ_flags.value = in32(OCB_OCCFLG0);
+    //TRAC_INFO("host_i2c_lock_request - 0x%08X returned value=0x%04X", OCB_OCCFLG0, occ_flags.value);
     if (occ_flags.fields.i2c_engine3_lock_host != 1)
     {
-        TRAC_INFO("ERROR: host_i2c_lock_request - host not locked! (0x%08X value=0x%04X)", OCB_OCCFLG, occ_flags.value);
+        TRAC_INFO("ERROR: host_i2c_lock_request - host not locked! (0x%08X value=0x%04X)", OCB_OCCFLG0, occ_flags.value);
         occ_flags.fields.i2c_engine3_lock_host = 1;
         occ_flags.fields.i2c_engine3_lock_occ = 1;
-        out32(OCB_OCCFLG, occ_flags.value);
-        occ_flags.value = in32(OCB_OCCFLG);
-        TRAC_INFO("host_i2c_lock_request - write+read 0x%08X returned value=0x%04X", OCB_OCCFLG, occ_flags.value);
+        out32(OCB_OCCFLG0, occ_flags.value);
+        occ_flags.value = in32(OCB_OCCFLG0);
+        TRAC_INFO("host_i2c_lock_request - write+read 0x%08X returned value=0x%04X", OCB_OCCFLG0, occ_flags.value);
     }
 }
 
@@ -92,19 +92,19 @@ void host_i2c_lock_release()
 
     // Clear the host request
     occ_flags.fields.i2c_engine3_lock_host = 1;
-    TRAC_INFO("host_i2c_lock_release - writing %04X to _CLR(0x%08X)", occ_flags.value, OCB_OCCFLG_CLR);
-    out32(OCB_OCCFLG_CLR, occ_flags.value);
+    TRAC_INFO("host_i2c_lock_release - writing %04X to _CLR(0x%08X)", occ_flags.value, OCB_OCCFLG0_CLR);
+    out32(OCB_OCCFLG0_CLR, occ_flags.value);
 
-    occ_flags.value = in32(OCB_OCCFLG);
-    //TRAC_INFO("host_i2c_lock_release - 0x%08X returned value=0x%04X", OCB_OCCFLG, occ_flags.value);
+    occ_flags.value = in32(OCB_OCCFLG0);
+    //TRAC_INFO("host_i2c_lock_release - 0x%08X returned value=0x%04X", OCB_OCCFLG0, occ_flags.value);
     if (occ_flags.fields.i2c_engine3_lock_host != 0)
     {
-        TRAC_INFO("ERROR: host_i2c_lock_release - host not released! (0x%08X value=0x%04X)", OCB_OCCFLG, occ_flags.value);
+        TRAC_INFO("ERROR: host_i2c_lock_release - host not released! (0x%08X value=0x%04X)", OCB_OCCFLG0, occ_flags.value);
         occ_flags.fields.i2c_engine3_lock_host = 0;
         occ_flags.fields.i2c_engine3_lock_occ = 1;
-        out32(OCB_OCCFLG, occ_flags.value);
-        occ_flags.value = in32(OCB_OCCFLG);
-        TRAC_INFO("host_i2c_lock_release - write+read 0x%08X returned value=0x%04X", OCB_OCCFLG, occ_flags.value);
+        out32(OCB_OCCFLG0, occ_flags.value);
+        occ_flags.value = in32(OCB_OCCFLG0);
+        TRAC_INFO("host_i2c_lock_release - write+read 0x%08X returned value=0x%04X", OCB_OCCFLG0, occ_flags.value);
     }
 }
 #endif
@@ -120,7 +120,7 @@ void update_i2c_lock(const lockOperation_e i_op, const uint8_t i_engine)
 
 #ifdef DEBUG_LOCK_TESTING
     ocb_occflg_t flag;
-    flag.value = in32(OCB_OCCFLG);
+    flag.value = in32(OCB_OCCFLG0);
     if (LOCK_RELEASE == i_op)
     {
         LOCK_DBG("update_i2c_lock: I2C engine %d RELEASE - host=%d, occ=%d, tick=%d",
@@ -148,7 +148,7 @@ void update_i2c_lock(const lockOperation_e i_op, const uint8_t i_engine)
 
     if (LOCK_RELEASE == i_op)
     {
-        out32(OCB_OCCFLG_CLR, occ_flags.value);
+        out32(OCB_OCCFLG0_CLR, occ_flags.value);
 
         // OCC had the lock and host wants it, so send interrupt to host
         notify_host(INTR_REASON_I2C_OWNERSHIP_CHANGE);
@@ -157,7 +157,7 @@ void update_i2c_lock(const lockOperation_e i_op, const uint8_t i_engine)
     }
     else // LOCK_ACQUIRE
     {
-        out32(OCB_OCCFLG_OR, occ_flags.value);
+        out32(OCB_OCCFLG0_OR, occ_flags.value);
 
         TRAC_IMP("update_i2c_lock: OCC has acquired lock for I2C engine %d", i_engine);
     }
@@ -259,7 +259,7 @@ bool check_and_update_i2c_lock(const uint8_t i_engine)
         do
         {
             ocb_occflg_t original_occflags;
-            original_occflags.value = in32(OCB_OCCFLG);
+            original_occflags.value = in32(OCB_OCCFLG0);
 
             LOCK_DBG("check_and_update_i2c_lock: I2C engine %d - host=%d, occ=%d (tick=%d)",
                      i_engine, original_occflags.fields.i2c_engine3_lock_host, original_occflags.fields.i2c_engine3_lock_occ, CURRENT_TICK);
@@ -293,7 +293,7 @@ bool check_and_update_i2c_lock(const uint8_t i_engine)
                 // If neither lock bit is set, we must read back the register to make
                 // sure the host did not set at same time (lock conflict)
                 ocb_occflg_t verify_occflags;
-                verify_occflags.value = in32(OCB_OCCFLG);
+                verify_occflags.value = in32(OCB_OCCFLG0);
                 if (host_wants_i2c_lock(verify_occflags, i_engine))
                 {
                     // Host wrote their lock bit at same time, clear OCC lock and notify host

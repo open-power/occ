@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -32,11 +32,11 @@
 
 
 #define TPC_PERVPIB_BASE 0x00050000
-#define TPC_PERV_GP3 0x0005001b
+#define TPC_PERV_CTRL0 0x0005001a
 #define TPC_PIB_BASE 0x01000000
-#define TPC_GP0 0x01000000
-#define TPC_GP0_AND 0x01000004
-#define TPC_GP0_OR 0x01000005
+#define TPC_CPLT_CONF0 0x01000008
+#define TPC_CPLT_CONF0_AND 0x0100000c
+#define TPC_CPLT_CONF0_OR 0x0100000d
 #define TPC_MISCPIB_BASE 0x010f0000
 #define TPC_HPR2 0x010f0022
 #define TPC_TPCHIP_BASE 0x000f0000

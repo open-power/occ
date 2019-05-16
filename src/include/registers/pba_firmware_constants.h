@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -22,9 +22,8 @@
 /* permissions and limitations under the License.                         */
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
-
 #define PBA_BARN_CMD_SCOPE_MASK SIXTYFOUR_BIT_CONSTANT(0xe000000000000000)
-#define PBA_BARN_ADDR_MASK SIXTYFOUR_BIT_CONSTANT(0x00fffffffff00000)
+#define PBA_BARN_ADDR_MASK SIXTYFOUR_BIT_CONSTANT(0x0003fffffff00000)
 #define PBA_BARMSKN_MASK_MASK SIXTYFOUR_BIT_CONSTANT(0x000001fffff00000)
 #define PBA_BCUE_CTL_STOP SIXTYFOUR_BIT_CONSTANT(0x8000000000000000)
 #define PBA_BCUE_CTL_START SIXTYFOUR_BIT_CONSTANT(0x4000000000000000)

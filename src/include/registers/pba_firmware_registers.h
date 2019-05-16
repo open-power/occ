@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -22,7 +22,6 @@
 /* permissions and limitations under the License.                         */
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
-
 #ifndef __PBA_FIRMWARE_REGISTERS_H__
 #define __PBA_FIRMWARE_REGISTERS_H__
 
@@ -32,24 +31,26 @@
 // *** WARNING *** - This file is generated automatically, do not edit.
 
 #ifndef SIXTYFOUR_BIT_CONSTANT
-#ifdef __ASSEMBLER__
-#define SIXTYFOUR_BIT_CONSTANT(x) x
-#else
-#define SIXTYFOUR_BIT_CONSTANT(x) x##ull
-#endif
+    #ifdef __ASSEMBLER__
+        #define SIXTYFOUR_BIT_CONSTANT(x) x
+    #else
+        #define SIXTYFOUR_BIT_CONSTANT(x) x##ull
+    #endif
 #endif
 
 #ifndef __ASSEMBLER__
 
 #include <stdint.h>
-#include "pba_firmware_constants.h"
 
 
 
-typedef union pba_mode {
+
+typedef union pba_mode
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -58,7 +59,8 @@ typedef union pba_mode {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t reserved1 : 4;
     uint64_t dis_rearb : 1;
@@ -79,29 +81,25 @@ typedef union pba_mode {
     uint64_t dis_master_wr_pipe : 1;
     uint64_t en_slv_fairness : 1;
     uint64_t en_event_count : 1;
-    uint64_t pb_noci_event_sel : 1;
+        uint64_t reserved3 : 1;
     uint64_t slv_event_mux : 2;
     uint64_t enable_debug_bus : 1;
     uint64_t debug_pb_not_oci : 1;
     uint64_t debug_oci_mode : 5;
-    uint64_t reserved3 : 1;
+        uint64_t reserved4 : 1;
     uint64_t ocislv_fairness_mask : 5;
     uint64_t ocislv_rereq_hang_div : 5;
-    uint64_t dis_chgrate_count : 1;
-    uint64_t pbreq_event_mux : 2;
-    uint64_t reserved4 : 11;
+        uint64_t reserved5 : 14;
 #else
-    uint64_t reserved4 : 11;
-    uint64_t pbreq_event_mux : 2;
-    uint64_t dis_chgrate_count : 1;
+        uint64_t reserved5 : 14;
     uint64_t ocislv_rereq_hang_div : 5;
     uint64_t ocislv_fairness_mask : 5;
-    uint64_t reserved3 : 1;
+        uint64_t reserved4 : 1;
     uint64_t debug_oci_mode : 5;
     uint64_t debug_pb_not_oci : 1;
     uint64_t enable_debug_bus : 1;
     uint64_t slv_event_mux : 2;
-    uint64_t pb_noci_event_sel : 1;
+        uint64_t reserved3 : 1;
     uint64_t en_event_count : 1;
     uint64_t en_slv_fairness : 1;
     uint64_t dis_master_wr_pipe : 1;
@@ -127,10 +125,12 @@ typedef union pba_mode {
 
 
 
-typedef union pba_slvrst {
+typedef union pba_slvrst
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -139,7 +139,8 @@ typedef union pba_slvrst {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t set : 3;
     uint64_t reserved1 : 1;
@@ -160,10 +161,12 @@ typedef union pba_slvrst {
 
 
 
-typedef union pba_slvctln {
+typedef union pba_slvctln
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -172,7 +175,8 @@ typedef union pba_slvctln {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t enable : 1;
     uint64_t mid_match_value : 3;
@@ -221,10 +225,12 @@ typedef union pba_slvctln {
 
 
 
-typedef union pba_bcde_ctl {
+typedef union pba_bcde_ctl
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -233,7 +239,8 @@ typedef union pba_bcde_ctl {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t stop : 1;
     uint64_t start : 1;
@@ -248,10 +255,12 @@ typedef union pba_bcde_ctl {
 
 
 
-typedef union pba_bcde_set {
+typedef union pba_bcde_set
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -260,7 +269,8 @@ typedef union pba_bcde_set {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t reserved1 : 2;
     uint64_t copy_length : 6;
@@ -275,10 +285,12 @@ typedef union pba_bcde_set {
 
 
 
-typedef union pba_bcde_stat {
+typedef union pba_bcde_stat
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -287,7 +299,8 @@ typedef union pba_bcde_stat {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t running : 1;
     uint64_t waiting : 1;
@@ -316,10 +329,12 @@ typedef union pba_bcde_stat {
 
 
 
-typedef union pba_bcde_pbadr {
+typedef union pba_bcde_dr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -328,7 +343,8 @@ typedef union pba_bcde_pbadr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t reserved1 : 2;
     uint64_t pb_offset : 23;
@@ -345,14 +361,16 @@ typedef union pba_bcde_pbadr {
     uint64_t reserved1 : 2;
 #endif // _BIG_ENDIAN
     } fields;
-} pba_bcde_pbadr_t;
+} pba_bcde_dr_t;
 
 
 
-typedef union pba_bcde_ocibar {
+typedef union pba_bcde_ocibar
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -361,7 +379,8 @@ typedef union pba_bcde_ocibar {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t addr : 25;
     uint64_t reserved1 : 39;
@@ -374,10 +393,12 @@ typedef union pba_bcde_ocibar {
 
 
 
-typedef union pba_bcue_ctl {
+typedef union pba_bcue_ctl
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -386,7 +407,8 @@ typedef union pba_bcue_ctl {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t stop : 1;
     uint64_t start : 1;
@@ -401,10 +423,12 @@ typedef union pba_bcue_ctl {
 
 
 
-typedef union pba_bcue_set {
+typedef union pba_bcue_set
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -413,7 +437,8 @@ typedef union pba_bcue_set {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t reserved1 : 2;
     uint64_t copy_length : 6;
@@ -428,10 +453,12 @@ typedef union pba_bcue_set {
 
 
 
-typedef union pba_bcue_stat {
+typedef union pba_bcue_stat
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -440,7 +467,8 @@ typedef union pba_bcue_stat {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t running : 1;
     uint64_t waiting : 1;
@@ -469,10 +497,12 @@ typedef union pba_bcue_stat {
 
 
 
-typedef union pba_bcue_pbadr {
+typedef union pba_bcue_dr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -481,7 +511,8 @@ typedef union pba_bcue_pbadr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t reserved1 : 2;
     uint64_t pb_offset : 23;
@@ -498,14 +529,16 @@ typedef union pba_bcue_pbadr {
     uint64_t reserved1 : 2;
 #endif // _BIG_ENDIAN
     } fields;
-} pba_bcue_pbadr_t;
+} pba_bcue_dr_t;
 
 
 
-typedef union pba_bcue_ocibar {
+typedef union pba_bcue_ocibar
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -514,7 +547,8 @@ typedef union pba_bcue_ocibar {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t addr : 25;
     uint64_t reserved1 : 39;
@@ -527,10 +561,12 @@ typedef union pba_bcue_ocibar {
 
 
 
-typedef union pba_pbocrn {
+typedef union pba_ocrn
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -539,27 +575,26 @@ typedef union pba_pbocrn {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t reserved1 : 16;
-    uint64_t event : 16;
-    uint64_t reserved2 : 12;
-    uint64_t accum : 20;
+        uint64_t reserved1 : 44;
+        uint64_t count : 20;
 #else
-    uint64_t accum : 20;
-    uint64_t reserved2 : 12;
-    uint64_t event : 16;
-    uint64_t reserved1 : 16;
+        uint64_t count : 20;
+        uint64_t reserved1 : 44;
 #endif // _BIG_ENDIAN
     } fields;
-} pba_pbocrn_t;
+} pba_ocrn_t;
 
 
 
-typedef union pba_xsndtx {
+typedef union pba_xsndtx
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -568,7 +603,8 @@ typedef union pba_xsndtx {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t snd_scope : 3;
     uint64_t snd_qid : 1;
@@ -601,10 +637,12 @@ typedef union pba_xsndtx {
 
 
 
-typedef union pba_xcfg {
+typedef union pba_xcfg
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -613,7 +651,8 @@ typedef union pba_xcfg {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t pbax_en : 1;
     uint64_t reservation_en : 1;
@@ -650,10 +689,12 @@ typedef union pba_xcfg {
 
 
 
-typedef union pba_xsndstat {
+typedef union pba_xsndstat
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -662,7 +703,8 @@ typedef union pba_xsndstat {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t snd_in_progress : 1;
     uint64_t snd_error : 1;
@@ -683,10 +725,12 @@ typedef union pba_xsndstat {
 
 
 
-typedef union pba_xsnddat {
+typedef union pba_xsnddat
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -695,7 +739,8 @@ typedef union pba_xsnddat {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t pbax_datahi : 32;
     uint64_t pbax_datalo : 32;
@@ -708,10 +753,12 @@ typedef union pba_xsnddat {
 
 
 
-typedef union pba_xrcvstat {
+typedef union pba_xrcvstat
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -720,7 +767,8 @@ typedef union pba_xrcvstat {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t rcv_in_progress : 1;
     uint64_t rcv_error : 1;
@@ -741,10 +789,12 @@ typedef union pba_xrcvstat {
 
 
 
-typedef union pba_xshbrn {
+typedef union pba_xshbrn
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -753,7 +803,8 @@ typedef union pba_xshbrn {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t push_start : 29;
     uint64_t reserved1 : 35;
@@ -766,10 +817,12 @@ typedef union pba_xshbrn {
 
 
 
-typedef union pba_xshcsn {
+typedef union pba_xshcsn
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -778,12 +831,13 @@ typedef union pba_xshcsn {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t push_full : 1;
     uint64_t push_empty : 1;
     uint64_t reserved1 : 2;
-    uint64_t push_intr_action : 2;
+        uint64_t push_intr_action01 : 2;
     uint64_t push_length : 5;
     uint64_t reserved2 : 2;
     uint64_t push_write_ptr : 5;
@@ -801,7 +855,7 @@ typedef union pba_xshcsn {
     uint64_t push_write_ptr : 5;
     uint64_t reserved2 : 2;
     uint64_t push_length : 5;
-    uint64_t push_intr_action : 2;
+        uint64_t push_intr_action01 : 2;
     uint64_t reserved1 : 2;
     uint64_t push_empty : 1;
     uint64_t push_full : 1;
@@ -811,10 +865,12 @@ typedef union pba_xshcsn {
 
 
 
-typedef union pba_xshincn {
+typedef union pba_xshincn
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -823,7 +879,8 @@ typedef union pba_xshincn {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t reserved1 : 64;
 #else
@@ -834,10 +891,12 @@ typedef union pba_xshincn {
 
 
 
-typedef union pba_fir {
+typedef union pba_xisndtx
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -846,102 +905,353 @@ typedef union pba_fir {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint64_t snd_scope : 3;
+        uint64_t snd_qid : 1;
+        uint64_t snd_type : 1;
+        uint64_t snd_reservation : 1;
+        uint64_t reserved1 : 2;
+        uint64_t snd_groupid : 4;
+        uint64_t snd_chipid : 3;
+        uint64_t reserved2 : 1;
+        uint64_t vg_targe : 16;
+        uint64_t reserved3 : 27;
+        uint64_t snd_stop : 1;
+        uint64_t snd_cnt : 4;
+#else
+        uint64_t snd_cnt : 4;
+        uint64_t snd_stop : 1;
+        uint64_t reserved3 : 27;
+        uint64_t vg_targe : 16;
+        uint64_t reserved2 : 1;
+        uint64_t snd_chipid : 3;
+        uint64_t snd_groupid : 4;
+        uint64_t reserved1 : 2;
+        uint64_t snd_reservation : 1;
+        uint64_t snd_type : 1;
+        uint64_t snd_qid : 1;
+        uint64_t snd_scope : 3;
+#endif // _BIG_ENDIAN
+    } fields;
+} pba_xisndtx_t;
+
+
+
+typedef union pba_xicfg
+{
+
+    uint64_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t high_order;
+        uint32_t low_order;
+#else
+        uint32_t low_order;
+        uint32_t high_order;
+#endif // _BIG_ENDIAN
+    } words;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint64_t pbax_en : 1;
+        uint64_t reservation_en : 1;
+        uint64_t snd_reset : 1;
+        uint64_t rcv_reset : 1;
+        uint64_t rcv_groupid : 4;
+        uint64_t rcv_chipid : 3;
+        uint64_t reserved1 : 1;
+        uint64_t rcv_brdcst_group : 8;
+        uint64_t rcv_datato_div : 5;
+        uint64_t reserved2 : 2;
+        uint64_t snd_retry_count_overcom : 1;
+        uint64_t snd_retry_thresh : 8;
+        uint64_t snd_rsvto_div : 5;
+        uint64_t reserved3 : 23;
+#else
+        uint64_t reserved3 : 23;
+        uint64_t snd_rsvto_div : 5;
+        uint64_t snd_retry_thresh : 8;
+        uint64_t snd_retry_count_overcom : 1;
+        uint64_t reserved2 : 2;
+        uint64_t rcv_datato_div : 5;
+        uint64_t rcv_brdcst_group : 8;
+        uint64_t reserved1 : 1;
+        uint64_t rcv_chipid : 3;
+        uint64_t rcv_groupid : 4;
+        uint64_t rcv_reset : 1;
+        uint64_t snd_reset : 1;
+        uint64_t reservation_en : 1;
+        uint64_t pbax_en : 1;
+#endif // _BIG_ENDIAN
+    } fields;
+} pba_xicfg_t;
+
+
+
+typedef union pba_xisndstat
+{
+
+    uint64_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t high_order;
+        uint32_t low_order;
+#else
+        uint32_t low_order;
+        uint32_t high_order;
+#endif // _BIG_ENDIAN
+    } words;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint64_t snd_in_progress : 1;
+        uint64_t snd_error : 1;
+        uint64_t snd_phase_status : 2;
+        uint64_t snd_cnt_status : 4;
+        uint64_t snd_retry_count : 8;
+        uint64_t reserved1 : 48;
+#else
+        uint64_t reserved1 : 48;
+        uint64_t snd_retry_count : 8;
+        uint64_t snd_cnt_status : 4;
+        uint64_t snd_phase_status : 2;
+        uint64_t snd_error : 1;
+        uint64_t snd_in_progress : 1;
+#endif // _BIG_ENDIAN
+    } fields;
+} pba_xisndstat_t;
+
+
+
+typedef union pba_xisnddat
+{
+
+    uint64_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t high_order;
+        uint32_t low_order;
+#else
+        uint32_t low_order;
+        uint32_t high_order;
+#endif // _BIG_ENDIAN
+    } words;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint64_t pbax_datahi : 32;
+        uint64_t pbax_datalo : 32;
+#else
+        uint64_t pbax_datalo : 32;
+        uint64_t pbax_datahi : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} pba_xisnddat_t;
+
+
+
+typedef union pba_xircvstat
+{
+
+    uint64_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t high_order;
+        uint32_t low_order;
+#else
+        uint32_t low_order;
+        uint32_t high_order;
+#endif // _BIG_ENDIAN
+    } words;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint64_t rcv_in_progress : 1;
+        uint64_t rcv_error : 1;
+        uint64_t rcv_write_in_progress : 1;
+        uint64_t rcv_reservation_set : 1;
+        uint64_t rcv_capture : 16;
+        uint64_t reserved1 : 44;
+#else
+        uint64_t reserved1 : 44;
+        uint64_t rcv_capture : 16;
+        uint64_t rcv_reservation_set : 1;
+        uint64_t rcv_write_in_progress : 1;
+        uint64_t rcv_error : 1;
+        uint64_t rcv_in_progress : 1;
+#endif // _BIG_ENDIAN
+    } fields;
+} pba_xircvstat_t;
+
+
+
+typedef union pba_xishbrn
+{
+
+    uint64_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t high_order;
+        uint32_t low_order;
+#else
+        uint32_t low_order;
+        uint32_t high_order;
+#endif // _BIG_ENDIAN
+    } words;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint64_t push_start : 29;
+        uint64_t reserved1 : 35;
+#else
+        uint64_t reserved1 : 35;
+        uint64_t push_start : 29;
+#endif // _BIG_ENDIAN
+    } fields;
+} pba_xishbrn_t;
+
+
+
+typedef union pba_xishcsn
+{
+
+    uint64_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t high_order;
+        uint32_t low_order;
+#else
+        uint32_t low_order;
+        uint32_t high_order;
+#endif // _BIG_ENDIAN
+    } words;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint64_t push_full : 1;
+        uint64_t push_empty : 1;
+        uint64_t reserved1 : 2;
+        uint64_t push_intr_action01 : 2;
+        uint64_t push_length : 5;
+        uint64_t reserved2 : 2;
+        uint64_t push_write_ptr : 5;
+        uint64_t reserved3 : 3;
+        uint64_t push_read_ptr : 5;
+        uint64_t reserved4 : 5;
+        uint64_t push_enable : 1;
+        uint64_t reserved5 : 32;
+#else
+        uint64_t reserved5 : 32;
+        uint64_t push_enable : 1;
+        uint64_t reserved4 : 5;
+        uint64_t push_read_ptr : 5;
+        uint64_t reserved3 : 3;
+        uint64_t push_write_ptr : 5;
+        uint64_t reserved2 : 2;
+        uint64_t push_length : 5;
+        uint64_t push_intr_action01 : 2;
+        uint64_t reserved1 : 2;
+        uint64_t push_empty : 1;
+        uint64_t push_full : 1;
+#endif // _BIG_ENDIAN
+    } fields;
+} pba_xishcsn_t;
+
+
+
+typedef union pba_xishincn
+{
+
+    uint64_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t high_order;
+        uint32_t low_order;
+#else
+        uint32_t low_order;
+        uint32_t high_order;
+#endif // _BIG_ENDIAN
+    } words;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint64_t reserved1 : 64;
+#else
+        uint64_t reserved1 : 64;
+#endif // _BIG_ENDIAN
+    } fields;
+} pba_xishincn_t;
+
+
+
+typedef union pba_fir
+{
+
+    uint64_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t high_order;
+        uint32_t low_order;
+#else
+        uint32_t low_order;
+        uint32_t high_order;
+#endif // _BIG_ENDIAN
+    } words;
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t oci_apar_err : 1;
-    uint64_t pb_rdadrerr_fw : 1;
-    uint64_t pb_rddatato_fw : 1;
-    uint64_t pb_sue_fw : 1;
-    uint64_t pb_ue_fw : 1;
-    uint64_t pb_ce_fw : 1;
     uint64_t oci_slave_init : 1;
     uint64_t oci_wrpar_err : 1;
     uint64_t reserved1 : 1;
-    uint64_t pb_unexpcresp : 1;
-    uint64_t pb_unexpdata : 1;
-    uint64_t pb_parity_err : 1;
-    uint64_t pb_wradrerr_fw : 1;
-    uint64_t pb_badcresp : 1;
-    uint64_t pb_ackdead_fw_rd : 1;
-    uint64_t pb_operto : 1;
     uint64_t bcue_setup_err : 1;
-    uint64_t bcue_pb_ack_dead : 1;
-    uint64_t bcue_pb_adrerr : 1;
     uint64_t bcue_oci_daterr : 1;
     uint64_t bcde_setup_err : 1;
-    uint64_t bcde_pb_ack_dead : 1;
-    uint64_t bcde_pb_adrerr : 1;
-    uint64_t bcde_rddatato_err : 1;
-    uint64_t bcde_sue_err : 1;
-    uint64_t bcde_ue_err : 1;
-    uint64_t bcde_ce : 1;
     uint64_t bcde_oci_daterr : 1;
     uint64_t internal_err : 1;
-    uint64_t illegal_cache_op : 1;
     uint64_t oci_bad_reg_addr : 1;
     uint64_t axpush_wrerr : 1;
-    uint64_t axrcv_dlo_err : 1;
-    uint64_t axrcv_dlo_to : 1;
-    uint64_t axrcv_rsvdata_to : 1;
+        uint64_t axipush_wrerr : 1;
     uint64_t axflow_err : 1;
-    uint64_t axsnd_dhi_rtyto : 1;
-    uint64_t axsnd_dlo_rtyto : 1;
-    uint64_t axsnd_rsvto : 1;
+        uint64_t axiflow_err : 1;
     uint64_t axsnd_rsverr : 1;
-    uint64_t pb_ackdead_fw_wr : 1;
+        uint64_t axisnd_rsverr : 1;
     uint64_t reserved2 : 1;
     uint64_t reserved3 : 1;
     uint64_t reserved4 : 1;
-    uint64_t fir_parity_err2 : 1;
-    uint64_t fir_parity_err : 1;
-    uint64_t reserved5 : 18;
+        uint64_t reserved5 : 1;
+        uint64_t reserved6 : 44;
 #else
-    uint64_t reserved5 : 18;
-    uint64_t fir_parity_err : 1;
-    uint64_t fir_parity_err2 : 1;
+        uint64_t reserved6 : 44;
+        uint64_t reserved5 : 1;
     uint64_t reserved4 : 1;
     uint64_t reserved3 : 1;
     uint64_t reserved2 : 1;
-    uint64_t pb_ackdead_fw_wr : 1;
+        uint64_t axisnd_rsverr : 1;
     uint64_t axsnd_rsverr : 1;
-    uint64_t axsnd_rsvto : 1;
-    uint64_t axsnd_dlo_rtyto : 1;
-    uint64_t axsnd_dhi_rtyto : 1;
+        uint64_t axiflow_err : 1;
     uint64_t axflow_err : 1;
-    uint64_t axrcv_rsvdata_to : 1;
-    uint64_t axrcv_dlo_to : 1;
-    uint64_t axrcv_dlo_err : 1;
+        uint64_t axipush_wrerr : 1;
     uint64_t axpush_wrerr : 1;
     uint64_t oci_bad_reg_addr : 1;
-    uint64_t illegal_cache_op : 1;
     uint64_t internal_err : 1;
     uint64_t bcde_oci_daterr : 1;
-    uint64_t bcde_ce : 1;
-    uint64_t bcde_ue_err : 1;
-    uint64_t bcde_sue_err : 1;
-    uint64_t bcde_rddatato_err : 1;
-    uint64_t bcde_pb_adrerr : 1;
-    uint64_t bcde_pb_ack_dead : 1;
     uint64_t bcde_setup_err : 1;
     uint64_t bcue_oci_daterr : 1;
-    uint64_t bcue_pb_adrerr : 1;
-    uint64_t bcue_pb_ack_dead : 1;
     uint64_t bcue_setup_err : 1;
-    uint64_t pb_operto : 1;
-    uint64_t pb_ackdead_fw_rd : 1;
-    uint64_t pb_badcresp : 1;
-    uint64_t pb_wradrerr_fw : 1;
-    uint64_t pb_parity_err : 1;
-    uint64_t pb_unexpdata : 1;
-    uint64_t pb_unexpcresp : 1;
     uint64_t reserved1 : 1;
     uint64_t oci_wrpar_err : 1;
     uint64_t oci_slave_init : 1;
-    uint64_t pb_ce_fw : 1;
-    uint64_t pb_ue_fw : 1;
-    uint64_t pb_sue_fw : 1;
-    uint64_t pb_rddatato_fw : 1;
-    uint64_t pb_rdadrerr_fw : 1;
     uint64_t oci_apar_err : 1;
 #endif // _BIG_ENDIAN
     } fields;
@@ -949,10 +1259,12 @@ typedef union pba_fir {
 
 
 
-typedef union pba_fir_and {
+typedef union pba_fir_and
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -961,102 +1273,51 @@ typedef union pba_fir_and {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t oci_apar_err : 1;
-    uint64_t pb_rdadrerr_fw : 1;
-    uint64_t pb_rddatato_fw : 1;
-    uint64_t pb_sue_fw : 1;
-    uint64_t pb_ue_fw : 1;
-    uint64_t pb_ce_fw : 1;
     uint64_t oci_slave_init : 1;
     uint64_t oci_wrpar_err : 1;
     uint64_t reserved1 : 1;
-    uint64_t pb_unexpcresp : 1;
-    uint64_t pb_unexpdata : 1;
-    uint64_t pb_parity_err : 1;
-    uint64_t pb_wradrerr_fw : 1;
-    uint64_t pb_badcresp : 1;
-    uint64_t pb_ackdead_fw_rd : 1;
-    uint64_t pb_operto : 1;
     uint64_t bcue_setup_err : 1;
-    uint64_t bcue_pb_ack_dead : 1;
-    uint64_t bcue_pb_adrerr : 1;
     uint64_t bcue_oci_daterr : 1;
     uint64_t bcde_setup_err : 1;
-    uint64_t bcde_pb_ack_dead : 1;
-    uint64_t bcde_pb_adrerr : 1;
-    uint64_t bcde_rddatato_err : 1;
-    uint64_t bcde_sue_err : 1;
-    uint64_t bcde_ue_err : 1;
-    uint64_t bcde_ce : 1;
     uint64_t bcde_oci_daterr : 1;
     uint64_t internal_err : 1;
-    uint64_t illegal_cache_op : 1;
     uint64_t oci_bad_reg_addr : 1;
     uint64_t axpush_wrerr : 1;
-    uint64_t axrcv_dlo_err : 1;
-    uint64_t axrcv_dlo_to : 1;
-    uint64_t axrcv_rsvdata_to : 1;
+        uint64_t axipush_wrerr : 1;
     uint64_t axflow_err : 1;
-    uint64_t axsnd_dhi_rtyto : 1;
-    uint64_t axsnd_dlo_rtyto : 1;
-    uint64_t axsnd_rsvto : 1;
+        uint64_t axiflow_err : 1;
     uint64_t axsnd_rsverr : 1;
-    uint64_t pb_ackdead_fw_wr : 1;
+        uint64_t axisnd_rsverr : 1;
     uint64_t reserved2 : 1;
     uint64_t reserved3 : 1;
     uint64_t reserved4 : 1;
-    uint64_t fir_parity_err2 : 1;
-    uint64_t fir_parity_err : 1;
-    uint64_t reserved5 : 18;
+        uint64_t reserved5 : 1;
+        uint64_t reserved6 : 44;
 #else
-    uint64_t reserved5 : 18;
-    uint64_t fir_parity_err : 1;
-    uint64_t fir_parity_err2 : 1;
+        uint64_t reserved6 : 44;
+        uint64_t reserved5 : 1;
     uint64_t reserved4 : 1;
     uint64_t reserved3 : 1;
     uint64_t reserved2 : 1;
-    uint64_t pb_ackdead_fw_wr : 1;
+        uint64_t axisnd_rsverr : 1;
     uint64_t axsnd_rsverr : 1;
-    uint64_t axsnd_rsvto : 1;
-    uint64_t axsnd_dlo_rtyto : 1;
-    uint64_t axsnd_dhi_rtyto : 1;
+        uint64_t axiflow_err : 1;
     uint64_t axflow_err : 1;
-    uint64_t axrcv_rsvdata_to : 1;
-    uint64_t axrcv_dlo_to : 1;
-    uint64_t axrcv_dlo_err : 1;
+        uint64_t axipush_wrerr : 1;
     uint64_t axpush_wrerr : 1;
     uint64_t oci_bad_reg_addr : 1;
-    uint64_t illegal_cache_op : 1;
     uint64_t internal_err : 1;
     uint64_t bcde_oci_daterr : 1;
-    uint64_t bcde_ce : 1;
-    uint64_t bcde_ue_err : 1;
-    uint64_t bcde_sue_err : 1;
-    uint64_t bcde_rddatato_err : 1;
-    uint64_t bcde_pb_adrerr : 1;
-    uint64_t bcde_pb_ack_dead : 1;
     uint64_t bcde_setup_err : 1;
     uint64_t bcue_oci_daterr : 1;
-    uint64_t bcue_pb_adrerr : 1;
-    uint64_t bcue_pb_ack_dead : 1;
     uint64_t bcue_setup_err : 1;
-    uint64_t pb_operto : 1;
-    uint64_t pb_ackdead_fw_rd : 1;
-    uint64_t pb_badcresp : 1;
-    uint64_t pb_wradrerr_fw : 1;
-    uint64_t pb_parity_err : 1;
-    uint64_t pb_unexpdata : 1;
-    uint64_t pb_unexpcresp : 1;
     uint64_t reserved1 : 1;
     uint64_t oci_wrpar_err : 1;
     uint64_t oci_slave_init : 1;
-    uint64_t pb_ce_fw : 1;
-    uint64_t pb_ue_fw : 1;
-    uint64_t pb_sue_fw : 1;
-    uint64_t pb_rddatato_fw : 1;
-    uint64_t pb_rdadrerr_fw : 1;
     uint64_t oci_apar_err : 1;
 #endif // _BIG_ENDIAN
     } fields;
@@ -1064,10 +1325,12 @@ typedef union pba_fir_and {
 
 
 
-typedef union pba_fir_or {
+typedef union pba_fir_or
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -1076,102 +1339,51 @@ typedef union pba_fir_or {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t oci_apar_err : 1;
-    uint64_t pb_rdadrerr_fw : 1;
-    uint64_t pb_rddatato_fw : 1;
-    uint64_t pb_sue_fw : 1;
-    uint64_t pb_ue_fw : 1;
-    uint64_t pb_ce_fw : 1;
     uint64_t oci_slave_init : 1;
     uint64_t oci_wrpar_err : 1;
     uint64_t reserved1 : 1;
-    uint64_t pb_unexpcresp : 1;
-    uint64_t pb_unexpdata : 1;
-    uint64_t pb_parity_err : 1;
-    uint64_t pb_wradrerr_fw : 1;
-    uint64_t pb_badcresp : 1;
-    uint64_t pb_ackdead_fw_rd : 1;
-    uint64_t pb_operto : 1;
     uint64_t bcue_setup_err : 1;
-    uint64_t bcue_pb_ack_dead : 1;
-    uint64_t bcue_pb_adrerr : 1;
     uint64_t bcue_oci_daterr : 1;
     uint64_t bcde_setup_err : 1;
-    uint64_t bcde_pb_ack_dead : 1;
-    uint64_t bcde_pb_adrerr : 1;
-    uint64_t bcde_rddatato_err : 1;
-    uint64_t bcde_sue_err : 1;
-    uint64_t bcde_ue_err : 1;
-    uint64_t bcde_ce : 1;
     uint64_t bcde_oci_daterr : 1;
     uint64_t internal_err : 1;
-    uint64_t illegal_cache_op : 1;
     uint64_t oci_bad_reg_addr : 1;
     uint64_t axpush_wrerr : 1;
-    uint64_t axrcv_dlo_err : 1;
-    uint64_t axrcv_dlo_to : 1;
-    uint64_t axrcv_rsvdata_to : 1;
+        uint64_t axipush_wrerr : 1;
     uint64_t axflow_err : 1;
-    uint64_t axsnd_dhi_rtyto : 1;
-    uint64_t axsnd_dlo_rtyto : 1;
-    uint64_t axsnd_rsvto : 1;
+        uint64_t axiflow_err : 1;
     uint64_t axsnd_rsverr : 1;
-    uint64_t pb_ackdead_fw_wr : 1;
+        uint64_t axisnd_rsverr : 1;
     uint64_t reserved2 : 1;
     uint64_t reserved3 : 1;
     uint64_t reserved4 : 1;
-    uint64_t fir_parity_err2 : 1;
-    uint64_t fir_parity_err : 1;
-    uint64_t reserved5 : 18;
+        uint64_t reserved5 : 1;
+        uint64_t reserved6 : 44;
 #else
-    uint64_t reserved5 : 18;
-    uint64_t fir_parity_err : 1;
-    uint64_t fir_parity_err2 : 1;
+        uint64_t reserved6 : 44;
+        uint64_t reserved5 : 1;
     uint64_t reserved4 : 1;
     uint64_t reserved3 : 1;
     uint64_t reserved2 : 1;
-    uint64_t pb_ackdead_fw_wr : 1;
+        uint64_t axisnd_rsverr : 1;
     uint64_t axsnd_rsverr : 1;
-    uint64_t axsnd_rsvto : 1;
-    uint64_t axsnd_dlo_rtyto : 1;
-    uint64_t axsnd_dhi_rtyto : 1;
+        uint64_t axiflow_err : 1;
     uint64_t axflow_err : 1;
-    uint64_t axrcv_rsvdata_to : 1;
-    uint64_t axrcv_dlo_to : 1;
-    uint64_t axrcv_dlo_err : 1;
+        uint64_t axipush_wrerr : 1;
     uint64_t axpush_wrerr : 1;
     uint64_t oci_bad_reg_addr : 1;
-    uint64_t illegal_cache_op : 1;
     uint64_t internal_err : 1;
     uint64_t bcde_oci_daterr : 1;
-    uint64_t bcde_ce : 1;
-    uint64_t bcde_ue_err : 1;
-    uint64_t bcde_sue_err : 1;
-    uint64_t bcde_rddatato_err : 1;
-    uint64_t bcde_pb_adrerr : 1;
-    uint64_t bcde_pb_ack_dead : 1;
     uint64_t bcde_setup_err : 1;
     uint64_t bcue_oci_daterr : 1;
-    uint64_t bcue_pb_adrerr : 1;
-    uint64_t bcue_pb_ack_dead : 1;
     uint64_t bcue_setup_err : 1;
-    uint64_t pb_operto : 1;
-    uint64_t pb_ackdead_fw_rd : 1;
-    uint64_t pb_badcresp : 1;
-    uint64_t pb_wradrerr_fw : 1;
-    uint64_t pb_parity_err : 1;
-    uint64_t pb_unexpdata : 1;
-    uint64_t pb_unexpcresp : 1;
     uint64_t reserved1 : 1;
     uint64_t oci_wrpar_err : 1;
     uint64_t oci_slave_init : 1;
-    uint64_t pb_ce_fw : 1;
-    uint64_t pb_ue_fw : 1;
-    uint64_t pb_sue_fw : 1;
-    uint64_t pb_rddatato_fw : 1;
-    uint64_t pb_rdadrerr_fw : 1;
     uint64_t oci_apar_err : 1;
 #endif // _BIG_ENDIAN
     } fields;
@@ -1179,10 +1391,12 @@ typedef union pba_fir_or {
 
 
 
-typedef union pba_firmask {
+typedef union pba_firmask
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -1191,98 +1405,45 @@ typedef union pba_firmask {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t oci_apar_err_mask : 1;
-    uint64_t pb_rdadrerr_fw_mask : 1;
-    uint64_t pb_rddatato_fw_mask : 1;
-    uint64_t pb_sue_fw_mask : 1;
-    uint64_t pb_ue_fw_mask : 1;
-    uint64_t pb_ce_fw_mask : 1;
     uint64_t oci_slave_init_mask : 1;
     uint64_t oci_wrpar_err_mask : 1;
     uint64_t reserved1 : 1;
-    uint64_t pb_unexpcresp_mask : 1;
-    uint64_t pb_unexpdata_mask : 1;
-    uint64_t pb_parity_err_mask : 1;
-    uint64_t pb_wradrerr_fw_mask : 1;
-    uint64_t pb_badcresp_mask : 1;
-    uint64_t pb_ackdead_fw_rd_mask : 1;
-    uint64_t pb_operto_mask : 1;
     uint64_t bcue_setup_err_mask : 1;
-    uint64_t bcue_pb_ack_dead_mask : 1;
-    uint64_t bcue_pb_adrerr_mask : 1;
     uint64_t bcue_oci_daterr_mask : 1;
     uint64_t bcde_setup_err_mask : 1;
-    uint64_t bcde_pb_ack_dead_mask : 1;
-    uint64_t bcde_pb_adrerr_mask : 1;
-    uint64_t bcde_rddatato_err_mask : 1;
-    uint64_t bcde_sue_err_mask : 1;
-    uint64_t bcde_ue_err_mask : 1;
-    uint64_t bcde_ce_mask : 1;
     uint64_t bcde_oci_daterr_mask : 1;
-    uint64_t internal_err_mask : 1;
-    uint64_t illegal_cache_op_mask : 1;
+        uint64_t internals_err_mask : 1;
     uint64_t oci_bad_reg_addr_mask : 1;
     uint64_t axpush_wrerr_mask : 1;
-    uint64_t axrcv_dlo_err_mask : 1;
-    uint64_t axrcv_dlo_to_mask : 1;
-    uint64_t axrcv_rsvdata_to_mask : 1;
+        uint64_t axipush_wrerr_mask : 1;
     uint64_t axflow_err_mask : 1;
-    uint64_t axsnd_dhi_rtyto_mask : 1;
-    uint64_t axsnd_dlo_rtyto_mask : 1;
-    uint64_t axsnd_rsvto_mask : 1;
+        uint64_t axiflow_err_mask : 1;
     uint64_t axsnd_rsverr_mask : 1;
-    uint64_t pb_ackdead_fw_wr_mask : 1;
-    uint64_t reserved2 : 3;
-    uint64_t fir_parity_err2_mask : 1;
-    uint64_t fir_parity_err_mask : 1;
-    uint64_t reserved3 : 18;
+        uint64_t axisnd_rsverr_mask : 1;
+        uint64_t reserved_mask : 4;
+        uint64_t reserved2 : 44;
 #else
-    uint64_t reserved3 : 18;
-    uint64_t fir_parity_err_mask : 1;
-    uint64_t fir_parity_err2_mask : 1;
-    uint64_t reserved2 : 3;
-    uint64_t pb_ackdead_fw_wr_mask : 1;
+        uint64_t reserved2 : 44;
+        uint64_t reserved_mask : 4;
+        uint64_t axisnd_rsverr_mask : 1;
     uint64_t axsnd_rsverr_mask : 1;
-    uint64_t axsnd_rsvto_mask : 1;
-    uint64_t axsnd_dlo_rtyto_mask : 1;
-    uint64_t axsnd_dhi_rtyto_mask : 1;
+        uint64_t axiflow_err_mask : 1;
     uint64_t axflow_err_mask : 1;
-    uint64_t axrcv_rsvdata_to_mask : 1;
-    uint64_t axrcv_dlo_to_mask : 1;
-    uint64_t axrcv_dlo_err_mask : 1;
+        uint64_t axipush_wrerr_mask : 1;
     uint64_t axpush_wrerr_mask : 1;
     uint64_t oci_bad_reg_addr_mask : 1;
-    uint64_t illegal_cache_op_mask : 1;
-    uint64_t internal_err_mask : 1;
+        uint64_t internals_err_mask : 1;
     uint64_t bcde_oci_daterr_mask : 1;
-    uint64_t bcde_ce_mask : 1;
-    uint64_t bcde_ue_err_mask : 1;
-    uint64_t bcde_sue_err_mask : 1;
-    uint64_t bcde_rddatato_err_mask : 1;
-    uint64_t bcde_pb_adrerr_mask : 1;
-    uint64_t bcde_pb_ack_dead_mask : 1;
     uint64_t bcde_setup_err_mask : 1;
     uint64_t bcue_oci_daterr_mask : 1;
-    uint64_t bcue_pb_adrerr_mask : 1;
-    uint64_t bcue_pb_ack_dead_mask : 1;
     uint64_t bcue_setup_err_mask : 1;
-    uint64_t pb_operto_mask : 1;
-    uint64_t pb_ackdead_fw_rd_mask : 1;
-    uint64_t pb_badcresp_mask : 1;
-    uint64_t pb_wradrerr_fw_mask : 1;
-    uint64_t pb_parity_err_mask : 1;
-    uint64_t pb_unexpdata_mask : 1;
-    uint64_t pb_unexpcresp_mask : 1;
     uint64_t reserved1 : 1;
     uint64_t oci_wrpar_err_mask : 1;
     uint64_t oci_slave_init_mask : 1;
-    uint64_t pb_ce_fw_mask : 1;
-    uint64_t pb_ue_fw_mask : 1;
-    uint64_t pb_sue_fw_mask : 1;
-    uint64_t pb_rddatato_fw_mask : 1;
-    uint64_t pb_rdadrerr_fw_mask : 1;
     uint64_t oci_apar_err_mask : 1;
 #endif // _BIG_ENDIAN
     } fields;
@@ -1290,10 +1451,12 @@ typedef union pba_firmask {
 
 
 
-typedef union pba_firmask_and {
+typedef union pba_firmask_and
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -1302,98 +1465,45 @@ typedef union pba_firmask_and {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t oci_apar_err_mask : 1;
-    uint64_t pb_rdadrerr_fw_mask : 1;
-    uint64_t pb_rddatato_fw_mask : 1;
-    uint64_t pb_sue_fw_mask : 1;
-    uint64_t pb_ue_fw_mask : 1;
-    uint64_t pb_ce_fw_mask : 1;
     uint64_t oci_slave_init_mask : 1;
     uint64_t oci_wrpar_err_mask : 1;
     uint64_t reserved1 : 1;
-    uint64_t pb_unexpcresp_mask : 1;
-    uint64_t pb_unexpdata_mask : 1;
-    uint64_t pb_parity_err_mask : 1;
-    uint64_t pb_wradrerr_fw_mask : 1;
-    uint64_t pb_badcresp_mask : 1;
-    uint64_t pb_ackdead_fw_rd_mask : 1;
-    uint64_t pb_operto_mask : 1;
     uint64_t bcue_setup_err_mask : 1;
-    uint64_t bcue_pb_ack_dead_mask : 1;
-    uint64_t bcue_pb_adrerr_mask : 1;
     uint64_t bcue_oci_daterr_mask : 1;
     uint64_t bcde_setup_err_mask : 1;
-    uint64_t bcde_pb_ack_dead_mask : 1;
-    uint64_t bcde_pb_adrerr_mask : 1;
-    uint64_t bcde_rddatato_err_mask : 1;
-    uint64_t bcde_sue_err_mask : 1;
-    uint64_t bcde_ue_err_mask : 1;
-    uint64_t bcde_ce_mask : 1;
     uint64_t bcde_oci_daterr_mask : 1;
-    uint64_t internal_err_mask : 1;
-    uint64_t illegal_cache_op_mask : 1;
+        uint64_t internals_err_mask : 1;
     uint64_t oci_bad_reg_addr_mask : 1;
     uint64_t axpush_wrerr_mask : 1;
-    uint64_t axrcv_dlo_err_mask : 1;
-    uint64_t axrcv_dlo_to_mask : 1;
-    uint64_t axrcv_rsvdata_to_mask : 1;
+        uint64_t axipush_wrerr_mask : 1;
     uint64_t axflow_err_mask : 1;
-    uint64_t axsnd_dhi_rtyto_mask : 1;
-    uint64_t axsnd_dlo_rtyto_mask : 1;
-    uint64_t axsnd_rsvto_mask : 1;
+        uint64_t axiflow_err_mask : 1;
     uint64_t axsnd_rsverr_mask : 1;
-    uint64_t pb_ackdead_fw_wr_mask : 1;
-    uint64_t reserved2 : 3;
-    uint64_t fir_parity_err2_mask : 1;
-    uint64_t fir_parity_err_mask : 1;
-    uint64_t reserved3 : 18;
+        uint64_t axisnd_rsverr_mask : 1;
+        uint64_t reserved_mask : 4;
+        uint64_t reserved2 : 44;
 #else
-    uint64_t reserved3 : 18;
-    uint64_t fir_parity_err_mask : 1;
-    uint64_t fir_parity_err2_mask : 1;
-    uint64_t reserved2 : 3;
-    uint64_t pb_ackdead_fw_wr_mask : 1;
+        uint64_t reserved2 : 44;
+        uint64_t reserved_mask : 4;
+        uint64_t axisnd_rsverr_mask : 1;
     uint64_t axsnd_rsverr_mask : 1;
-    uint64_t axsnd_rsvto_mask : 1;
-    uint64_t axsnd_dlo_rtyto_mask : 1;
-    uint64_t axsnd_dhi_rtyto_mask : 1;
+        uint64_t axiflow_err_mask : 1;
     uint64_t axflow_err_mask : 1;
-    uint64_t axrcv_rsvdata_to_mask : 1;
-    uint64_t axrcv_dlo_to_mask : 1;
-    uint64_t axrcv_dlo_err_mask : 1;
+        uint64_t axipush_wrerr_mask : 1;
     uint64_t axpush_wrerr_mask : 1;
     uint64_t oci_bad_reg_addr_mask : 1;
-    uint64_t illegal_cache_op_mask : 1;
-    uint64_t internal_err_mask : 1;
+        uint64_t internals_err_mask : 1;
     uint64_t bcde_oci_daterr_mask : 1;
-    uint64_t bcde_ce_mask : 1;
-    uint64_t bcde_ue_err_mask : 1;
-    uint64_t bcde_sue_err_mask : 1;
-    uint64_t bcde_rddatato_err_mask : 1;
-    uint64_t bcde_pb_adrerr_mask : 1;
-    uint64_t bcde_pb_ack_dead_mask : 1;
     uint64_t bcde_setup_err_mask : 1;
     uint64_t bcue_oci_daterr_mask : 1;
-    uint64_t bcue_pb_adrerr_mask : 1;
-    uint64_t bcue_pb_ack_dead_mask : 1;
     uint64_t bcue_setup_err_mask : 1;
-    uint64_t pb_operto_mask : 1;
-    uint64_t pb_ackdead_fw_rd_mask : 1;
-    uint64_t pb_badcresp_mask : 1;
-    uint64_t pb_wradrerr_fw_mask : 1;
-    uint64_t pb_parity_err_mask : 1;
-    uint64_t pb_unexpdata_mask : 1;
-    uint64_t pb_unexpcresp_mask : 1;
     uint64_t reserved1 : 1;
     uint64_t oci_wrpar_err_mask : 1;
     uint64_t oci_slave_init_mask : 1;
-    uint64_t pb_ce_fw_mask : 1;
-    uint64_t pb_ue_fw_mask : 1;
-    uint64_t pb_sue_fw_mask : 1;
-    uint64_t pb_rddatato_fw_mask : 1;
-    uint64_t pb_rdadrerr_fw_mask : 1;
     uint64_t oci_apar_err_mask : 1;
 #endif // _BIG_ENDIAN
     } fields;
@@ -1401,10 +1511,12 @@ typedef union pba_firmask_and {
 
 
 
-typedef union pba_firmask_or {
+typedef union pba_firmask_or
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -1413,98 +1525,45 @@ typedef union pba_firmask_or {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t oci_apar_err_mask : 1;
-    uint64_t pb_rdadrerr_fw_mask : 1;
-    uint64_t pb_rddatato_fw_mask : 1;
-    uint64_t pb_sue_fw_mask : 1;
-    uint64_t pb_ue_fw_mask : 1;
-    uint64_t pb_ce_fw_mask : 1;
     uint64_t oci_slave_init_mask : 1;
     uint64_t oci_wrpar_err_mask : 1;
     uint64_t reserved1 : 1;
-    uint64_t pb_unexpcresp_mask : 1;
-    uint64_t pb_unexpdata_mask : 1;
-    uint64_t pb_parity_err_mask : 1;
-    uint64_t pb_wradrerr_fw_mask : 1;
-    uint64_t pb_badcresp_mask : 1;
-    uint64_t pb_ackdead_fw_rd_mask : 1;
-    uint64_t pb_operto_mask : 1;
     uint64_t bcue_setup_err_mask : 1;
-    uint64_t bcue_pb_ack_dead_mask : 1;
-    uint64_t bcue_pb_adrerr_mask : 1;
     uint64_t bcue_oci_daterr_mask : 1;
     uint64_t bcde_setup_err_mask : 1;
-    uint64_t bcde_pb_ack_dead_mask : 1;
-    uint64_t bcde_pb_adrerr_mask : 1;
-    uint64_t bcde_rddatato_err_mask : 1;
-    uint64_t bcde_sue_err_mask : 1;
-    uint64_t bcde_ue_err_mask : 1;
-    uint64_t bcde_ce_mask : 1;
     uint64_t bcde_oci_daterr_mask : 1;
-    uint64_t internal_err_mask : 1;
-    uint64_t illegal_cache_op_mask : 1;
+        uint64_t internals_err_mask : 1;
     uint64_t oci_bad_reg_addr_mask : 1;
     uint64_t axpush_wrerr_mask : 1;
-    uint64_t axrcv_dlo_err_mask : 1;
-    uint64_t axrcv_dlo_to_mask : 1;
-    uint64_t axrcv_rsvdata_to_mask : 1;
+        uint64_t axipush_wrerr_mask : 1;
     uint64_t axflow_err_mask : 1;
-    uint64_t axsnd_dhi_rtyto_mask : 1;
-    uint64_t axsnd_dlo_rtyto_mask : 1;
-    uint64_t axsnd_rsvto_mask : 1;
+        uint64_t axiflow_err_mask : 1;
     uint64_t axsnd_rsverr_mask : 1;
-    uint64_t pb_ackdead_fw_wr_mask : 1;
-    uint64_t reserved2 : 3;
-    uint64_t fir_parity_err2_mask : 1;
-    uint64_t fir_parity_err_mask : 1;
-    uint64_t reserved3 : 18;
+        uint64_t axisnd_rsverr_mask : 1;
+        uint64_t reserved_mask : 4;
+        uint64_t reserved2 : 44;
 #else
-    uint64_t reserved3 : 18;
-    uint64_t fir_parity_err_mask : 1;
-    uint64_t fir_parity_err2_mask : 1;
-    uint64_t reserved2 : 3;
-    uint64_t pb_ackdead_fw_wr_mask : 1;
+        uint64_t reserved2 : 44;
+        uint64_t reserved_mask : 4;
+        uint64_t axisnd_rsverr_mask : 1;
     uint64_t axsnd_rsverr_mask : 1;
-    uint64_t axsnd_rsvto_mask : 1;
-    uint64_t axsnd_dlo_rtyto_mask : 1;
-    uint64_t axsnd_dhi_rtyto_mask : 1;
+        uint64_t axiflow_err_mask : 1;
     uint64_t axflow_err_mask : 1;
-    uint64_t axrcv_rsvdata_to_mask : 1;
-    uint64_t axrcv_dlo_to_mask : 1;
-    uint64_t axrcv_dlo_err_mask : 1;
+        uint64_t axipush_wrerr_mask : 1;
     uint64_t axpush_wrerr_mask : 1;
     uint64_t oci_bad_reg_addr_mask : 1;
-    uint64_t illegal_cache_op_mask : 1;
-    uint64_t internal_err_mask : 1;
+        uint64_t internals_err_mask : 1;
     uint64_t bcde_oci_daterr_mask : 1;
-    uint64_t bcde_ce_mask : 1;
-    uint64_t bcde_ue_err_mask : 1;
-    uint64_t bcde_sue_err_mask : 1;
-    uint64_t bcde_rddatato_err_mask : 1;
-    uint64_t bcde_pb_adrerr_mask : 1;
-    uint64_t bcde_pb_ack_dead_mask : 1;
     uint64_t bcde_setup_err_mask : 1;
     uint64_t bcue_oci_daterr_mask : 1;
-    uint64_t bcue_pb_adrerr_mask : 1;
-    uint64_t bcue_pb_ack_dead_mask : 1;
     uint64_t bcue_setup_err_mask : 1;
-    uint64_t pb_operto_mask : 1;
-    uint64_t pb_ackdead_fw_rd_mask : 1;
-    uint64_t pb_badcresp_mask : 1;
-    uint64_t pb_wradrerr_fw_mask : 1;
-    uint64_t pb_parity_err_mask : 1;
-    uint64_t pb_unexpdata_mask : 1;
-    uint64_t pb_unexpcresp_mask : 1;
     uint64_t reserved1 : 1;
     uint64_t oci_wrpar_err_mask : 1;
     uint64_t oci_slave_init_mask : 1;
-    uint64_t pb_ce_fw_mask : 1;
-    uint64_t pb_ue_fw_mask : 1;
-    uint64_t pb_sue_fw_mask : 1;
-    uint64_t pb_rddatato_fw_mask : 1;
-    uint64_t pb_rdadrerr_fw_mask : 1;
     uint64_t oci_apar_err_mask : 1;
 #endif // _BIG_ENDIAN
     } fields;
@@ -1512,10 +1571,12 @@ typedef union pba_firmask_or {
 
 
 
-typedef union pba_firact0 {
+typedef union pba_firact0
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -1524,23 +1585,26 @@ typedef union pba_firact0 {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t fir_action0 : 46;
-    uint64_t reserved1 : 18;
+        uint64_t fir_action0 : 20;
+        uint64_t reserved1 : 44;
 #else
-    uint64_t reserved1 : 18;
-    uint64_t fir_action0 : 46;
+        uint64_t reserved1 : 44;
+        uint64_t fir_action0 : 20;
 #endif // _BIG_ENDIAN
     } fields;
 } pba_firact0_t;
 
 
 
-typedef union pba_firact1 {
+typedef union pba_firact1
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -1549,23 +1613,26 @@ typedef union pba_firact1 {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t fir_action1 : 46;
-    uint64_t reserved1 : 18;
+        uint64_t fir_action1 : 20;
+        uint64_t reserved1 : 44;
 #else
-    uint64_t reserved1 : 18;
-    uint64_t fir_action1 : 46;
+        uint64_t reserved1 : 44;
+        uint64_t fir_action1 : 20;
 #endif // _BIG_ENDIAN
     } fields;
 } pba_firact1_t;
 
 
 
-typedef union pba_occact {
+typedef union pba_occact
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -1574,23 +1641,26 @@ typedef union pba_occact {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t occ_action_set : 44;
-    uint64_t reserved1 : 20;
+        uint64_t occ_action_set : 20;
+        uint64_t reserved1 : 44;
 #else
-    uint64_t reserved1 : 20;
-    uint64_t occ_action_set : 44;
+        uint64_t reserved1 : 44;
+        uint64_t occ_action_set : 20;
 #endif // _BIG_ENDIAN
     } fields;
 } pba_occact_t;
 
 
 
-typedef union pba_cfg {
+typedef union pba_ocfg
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -1599,79 +1669,42 @@ typedef union pba_cfg {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t pbreq_slvfw_max_priority : 1;
-    uint64_t pbreq_exit_on_hang : 1;
-    uint64_t pbreq_bce_max_priority : 1;
-    uint64_t pbreq_exit_on_hang_pbax : 1;
-    uint64_t pbreq_data_hang_div : 5;
-    uint64_t pbreq_oper_hang_div : 5;
-    uint64_t pbreq_drop_priority_mask : 6;
-    uint64_t pbreq_exit_hang_div : 4;
     uint64_t chsw_hang_on_adrerror : 1;
     uint64_t chsw_dis_ociabuspar_check : 1;
     uint64_t chsw_dis_ocibepar_check : 1;
     uint64_t chsw_hang_on_derror : 1;
-    uint64_t reserved1 : 1;
     uint64_t chsw_dis_write_match_rearb : 1;
     uint64_t chsw_dis_ocidatapar_gen : 1;
     uint64_t chsw_dis_ocidatapar_check : 1;
-    uint64_t chsw_dis_oper_hang : 1;
-    uint64_t chsw_dis_data_hang : 1;
-    uint64_t chsw_dis_ecc_check : 1;
-    uint64_t chsw_dis_retry_backoff : 1;
-    uint64_t chsw_exit_on_invalid_cresp : 1;
-    uint64_t reserved2 : 1;
-    uint64_t chsw_dis_group_scope : 1;
-    uint64_t chsw_dis_rtag_parity_chk : 1;
-    uint64_t chsw_dis_pb_parity_chk : 1;
-    uint64_t chsw_skip_group_scope : 1;
-    uint64_t chsw_use_pr_dma_inj : 1;
-    uint64_t chsw_use_cl_dma_inj : 1;
-    uint64_t reserved3 : 4;
-    uint64_t reserved4 : 16;
+        uint64_t chsw_use_topology_id_scope : 1;
+        uint64_t reserved1 : 8;
+        uint64_t reserved2 : 48;
 #else
-    uint64_t reserved4 : 16;
-    uint64_t reserved3 : 4;
-    uint64_t chsw_use_cl_dma_inj : 1;
-    uint64_t chsw_use_pr_dma_inj : 1;
-    uint64_t chsw_skip_group_scope : 1;
-    uint64_t chsw_dis_pb_parity_chk : 1;
-    uint64_t chsw_dis_rtag_parity_chk : 1;
-    uint64_t chsw_dis_group_scope : 1;
-    uint64_t reserved2 : 1;
-    uint64_t chsw_exit_on_invalid_cresp : 1;
-    uint64_t chsw_dis_retry_backoff : 1;
-    uint64_t chsw_dis_ecc_check : 1;
-    uint64_t chsw_dis_data_hang : 1;
-    uint64_t chsw_dis_oper_hang : 1;
+        uint64_t reserved2 : 48;
+        uint64_t reserved1 : 8;
+        uint64_t chsw_use_topology_id_scope : 1;
     uint64_t chsw_dis_ocidatapar_check : 1;
     uint64_t chsw_dis_ocidatapar_gen : 1;
     uint64_t chsw_dis_write_match_rearb : 1;
-    uint64_t reserved1 : 1;
     uint64_t chsw_hang_on_derror : 1;
     uint64_t chsw_dis_ocibepar_check : 1;
     uint64_t chsw_dis_ociabuspar_check : 1;
     uint64_t chsw_hang_on_adrerror : 1;
-    uint64_t pbreq_exit_hang_div : 4;
-    uint64_t pbreq_drop_priority_mask : 6;
-    uint64_t pbreq_oper_hang_div : 5;
-    uint64_t pbreq_data_hang_div : 5;
-    uint64_t pbreq_exit_on_hang_pbax : 1;
-    uint64_t pbreq_bce_max_priority : 1;
-    uint64_t pbreq_exit_on_hang : 1;
-    uint64_t pbreq_slvfw_max_priority : 1;
 #endif // _BIG_ENDIAN
     } fields;
-} pba_cfg_t;
+} pba_ocfg_t;
 
 
 
-typedef union pba_errrpt0 {
+typedef union pba_errrpt0
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -1680,35 +1713,24 @@ typedef union pba_errrpt0 {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t cerr_pb_rddatato_fw : 6;
-    uint64_t cerr_pb_rdadrerr_fw : 6;
-    uint64_t cerr_pb_wradrerr_fw : 4;
-    uint64_t cerr_pb_ackdead_fw_rd : 6;
-    uint64_t cerr_pb_ackdead_fw_wr : 2;
-    uint64_t cerr_pb_unexpcresp : 11;
-    uint64_t cerr_pb_unexpdata : 6;
-    uint64_t reserved1 : 23;
+        uint64_t reserved1 : 64;
 #else
-    uint64_t reserved1 : 23;
-    uint64_t cerr_pb_unexpdata : 6;
-    uint64_t cerr_pb_unexpcresp : 11;
-    uint64_t cerr_pb_ackdead_fw_wr : 2;
-    uint64_t cerr_pb_ackdead_fw_rd : 6;
-    uint64_t cerr_pb_wradrerr_fw : 4;
-    uint64_t cerr_pb_rdadrerr_fw : 6;
-    uint64_t cerr_pb_rddatato_fw : 6;
+        uint64_t reserved1 : 64;
 #endif // _BIG_ENDIAN
     } fields;
 } pba_errrpt0_t;
 
 
 
-typedef union pba_errrpt1 {
+typedef union pba_errrpt1
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -1717,33 +1739,32 @@ typedef union pba_errrpt1 {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t cerr_pb_badcresp : 12;
-    uint64_t cerr_pb_operto : 12;
     uint64_t reserved1 : 6;
     uint64_t cerr_bcde_setup_err : 2;
     uint64_t cerr_bcue_setup_err : 2;
     uint64_t cerr_bcue_oci_dataerr : 2;
-    uint64_t reserved2 : 28;
+        uint64_t reserved2 : 52;
 #else
-    uint64_t reserved2 : 28;
+        uint64_t reserved2 : 52;
     uint64_t cerr_bcue_oci_dataerr : 2;
     uint64_t cerr_bcue_setup_err : 2;
     uint64_t cerr_bcde_setup_err : 2;
     uint64_t reserved1 : 6;
-    uint64_t cerr_pb_operto : 12;
-    uint64_t cerr_pb_badcresp : 12;
 #endif // _BIG_ENDIAN
     } fields;
 } pba_errrpt1_t;
 
 
 
-typedef union pba_errrpt2 {
+typedef union pba_errrpt2
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -1752,28 +1773,19 @@ typedef union pba_errrpt2 {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t cerr_slv_internal_err : 8;
     uint64_t cerr_bcde_internal_err : 4;
     uint64_t cerr_bcue_internal_err : 4;
-    uint64_t cerr_bar_parity_err : 1;
-    uint64_t cerr_scomtb_err : 1;
-    uint64_t cerr_spare : 2;
-    uint64_t cerr_pbdout_parity_err : 1;
-    uint64_t cerr_pb_parity_err : 3;
-    uint64_t cerr_axflow_err : 5;
+        uint64_t cerr_axflow_err : 3;
     uint64_t cerr_axpush_wrerr : 2;
-    uint64_t reserved1 : 33;
+        uint64_t reserved1 : 43;
 #else
-    uint64_t reserved1 : 33;
+        uint64_t reserved1 : 43;
     uint64_t cerr_axpush_wrerr : 2;
-    uint64_t cerr_axflow_err : 5;
-    uint64_t cerr_pb_parity_err : 3;
-    uint64_t cerr_pbdout_parity_err : 1;
-    uint64_t cerr_spare : 2;
-    uint64_t cerr_scomtb_err : 1;
-    uint64_t cerr_bar_parity_err : 1;
+        uint64_t cerr_axflow_err : 3;
     uint64_t cerr_bcue_internal_err : 4;
     uint64_t cerr_bcde_internal_err : 4;
     uint64_t cerr_slv_internal_err : 8;
@@ -1783,10 +1795,12 @@ typedef union pba_errrpt2 {
 
 
 
-typedef union pba_rbufvaln {
+typedef union pba_rbufvaln
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -1795,7 +1809,8 @@ typedef union pba_rbufvaln {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t rd_slvnum : 2;
     uint64_t cur_rd_addr : 23;
@@ -1826,10 +1841,12 @@ typedef union pba_rbufvaln {
 
 
 
-typedef union pba_wbufvaln {
+typedef union pba_wbufvaln
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -1838,7 +1855,8 @@ typedef union pba_wbufvaln {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t wr_slvnum : 2;
     uint64_t start_wr_addr : 30;
@@ -1861,10 +1879,12 @@ typedef union pba_wbufvaln {
 
 
 
-typedef union pba_barn {
+typedef union pba_barn
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -1873,7 +1893,8 @@ typedef union pba_barn {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t cmd_scope : 3;
     uint64_t reserved1 : 1;
@@ -1894,10 +1915,12 @@ typedef union pba_barn {
 
 
 
-typedef union pba_barmskn {
+typedef union pba_barmskn
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -1906,7 +1929,8 @@ typedef union pba_barmskn {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t reserved1 : 23;
     uint64_t mask : 21;
@@ -1918,6 +1942,50 @@ typedef union pba_barmskn {
 #endif // _BIG_ENDIAN
     } fields;
 } pba_barmskn_t;
+
+
+
+typedef union pba_pbtxtn
+{
+
+    uint64_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t high_order;
+        uint32_t low_order;
+#else
+        uint32_t low_order;
+        uint32_t high_order;
+#endif // _BIG_ENDIAN
+    } words;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint64_t entry_valid : 8;
+        uint64_t entry0 : 4;
+        uint64_t entry1 : 4;
+        uint64_t entry2 : 4;
+        uint64_t entry3 : 4;
+        uint64_t entry4 : 4;
+        uint64_t entry5 : 4;
+        uint64_t entry6 : 4;
+        uint64_t entry7 : 4;
+        uint64_t reserved1 : 24;
+#else
+        uint64_t reserved1 : 24;
+        uint64_t entry7 : 4;
+        uint64_t entry6 : 4;
+        uint64_t entry5 : 4;
+        uint64_t entry4 : 4;
+        uint64_t entry3 : 4;
+        uint64_t entry2 : 4;
+        uint64_t entry1 : 4;
+        uint64_t entry0 : 4;
+        uint64_t entry_valid : 8;
+#endif // _BIG_ENDIAN
+    } fields;
+} pba_pbtxtn_t;
 
 
 #endif // __ASSEMBLER__

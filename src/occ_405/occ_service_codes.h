@@ -266,14 +266,14 @@ enum occExtReasonCode
     ERC_WOF_INVALID_VDD_VDN                     = 0x0202,
     ERC_WOF_PGPE_WOF_DISABLED                   = 0x0204,
     ERC_WOF_PSTATE_PROTOCOL_OFF                 = 0x0205,
-    ERC_WOF_VFRT_REQ_TIMEOUT                    = 0x0206,
+    ERC_WOF_VRT_REQ_TIMEOUT                     = 0x0206,
     ERC_WOF_CONTROL_REQ_TIMEOUT                 = 0x0207,
     ERC_WOF_STATE_CHANGE                        = 0x0208,
     ERC_WOF_MODE_NO_SUPPORT_MASK                = 0x020A,
     ERC_WOF_DIVIDE_BY_ZERO_VDD                  = 0x020B,
-    ERC_WOF_VFRT_REQ_FAILURE                    = 0x020C,
+    ERC_WOF_VRT_REQ_FAILURE                     = 0x020C,
     ERC_WOF_CONTROL_REQ_FAILURE                 = 0x020D,
-    ERC_WOF_VFRT_ALIGNMENT_ERROR                = 0x020E,
+    ERC_WOF_VRT_ALIGNMENT_ERROR                 = 0x020E,
     ERC_WOF_UTURBO_IS_ZERO                      = 0x0210,
     ERC_WOF_OCC_WOF_DISABLED                    = 0x0211,
     ERC_WOF_OPPB_WOF_DISABLED                   = 0x0212,
@@ -305,6 +305,7 @@ enum occModuleId
     READ_PGPE_HEADER                =  MAIN_COMP_ID | 0x12,
     READ_PPMR_HEADER                =  MAIN_COMP_ID | 0x13,
     READ_OPPB_PARAMS                =  MAIN_COMP_ID | 0x14,
+    READ_GPPB_HEADER                =  MAIN_COMP_ID | 0x15,
 };
 
 #endif /* #ifndef _OCC_SERVICE_CODES_H_ */

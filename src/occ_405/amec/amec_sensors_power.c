@@ -46,7 +46,7 @@
 #include <cmdh_snapshot.h>
 #include "amec_oversub.h"
 #include "avsbus.h"
-#include <p9_pstates_occ.h>
+#include <pstates_occ.H>
 #include <wof.h>
 /******************************************************************************/
 /* Globals                                                                    */
@@ -75,7 +75,7 @@ extern bool    G_gpu_monitoring_allowed;
 extern uint8_t G_occ_interrupt_type;
 extern PWR_READING_TYPE  G_pwr_reading_type;
 extern bool    G_apss_present;
-extern OCCPstateParmBlock G_oppb;
+extern OCCPstateParmBlock_t G_oppb;
 extern task_t G_task_table[TASK_END];
 
 extern uint16_t G_configured_mbas;

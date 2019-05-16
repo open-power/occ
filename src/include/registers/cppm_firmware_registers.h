@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -31,11 +31,11 @@
 // *** WARNING *** - This file is generated automatically, do not edit.
 
 #ifndef SIXTYFOUR_BIT_CONSTANT
-#ifdef __ASSEMBLER__
-#define SIXTYFOUR_BIT_CONSTANT(x) x
-#else
-#define SIXTYFOUR_BIT_CONSTANT(x) x##ull
-#endif
+    #ifdef __ASSEMBLER__
+        #define SIXTYFOUR_BIT_CONSTANT(x) x
+    #else
+        #define SIXTYFOUR_BIT_CONSTANT(x) x##ull
+    #endif
 #endif
 
 #ifndef __ASSEMBLER__
@@ -45,10 +45,12 @@
 
 
 
-typedef union cppm_cpmmr {
+typedef union cppm_cpmmr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -57,13 +59,15 @@ typedef union cppm_cpmmr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t ppm_write_disable : 1;
     uint64_t ppm_write_override : 1;
-    uint64_t reserved0 : 7;
+        uint64_t reserved1 : 7;
     uint64_t fused_core_mode : 1;
-    uint64_t reserved1 : 2;
+        uint64_t stop_exit_type_sel : 1;
+        uint64_t block_intr_inputs : 1;
     uint64_t cme_err_notify_dis : 1;
     uint64_t wkup_notify_select : 1;
     uint64_t enable_pece : 1;
@@ -75,9 +79,10 @@ typedef union cppm_cpmmr {
     uint64_t enable_pece : 1;
     uint64_t wkup_notify_select : 1;
     uint64_t cme_err_notify_dis : 1;
-    uint64_t reserved1 : 2;
+        uint64_t block_intr_inputs : 1;
+        uint64_t stop_exit_type_sel : 1;
     uint64_t fused_core_mode : 1;
-    uint64_t reserved0 : 7;
+        uint64_t reserved1 : 7;
     uint64_t ppm_write_override : 1;
     uint64_t ppm_write_disable : 1;
 #endif // _BIG_ENDIAN
@@ -86,10 +91,12 @@ typedef union cppm_cpmmr {
 
 
 
-typedef union cppm_cpmmr_clr {
+typedef union cppm_cpmmr_clr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -98,11 +105,15 @@ typedef union cppm_cpmmr_clr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t ppm_write_disable : 1;
     uint64_t ppm_write_override : 1;
-    uint64_t reserved1 : 10;
+        uint64_t reserved1 : 7;
+        uint64_t fused_core_mode : 1;
+        uint64_t stop_exit_type_sel : 1;
+        uint64_t block_intr_inputs : 1;
     uint64_t cme_err_notify_dis : 1;
     uint64_t wkup_notify_select : 1;
     uint64_t enable_pece : 1;
@@ -114,7 +125,10 @@ typedef union cppm_cpmmr_clr {
     uint64_t enable_pece : 1;
     uint64_t wkup_notify_select : 1;
     uint64_t cme_err_notify_dis : 1;
-    uint64_t reserved1 : 10;
+        uint64_t block_intr_inputs : 1;
+        uint64_t stop_exit_type_sel : 1;
+        uint64_t fused_core_mode : 1;
+        uint64_t reserved1 : 7;
     uint64_t ppm_write_override : 1;
     uint64_t ppm_write_disable : 1;
 #endif // _BIG_ENDIAN
@@ -123,10 +137,12 @@ typedef union cppm_cpmmr_clr {
 
 
 
-typedef union cppm_cpmmr_or {
+typedef union cppm_cpmmr_or
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -135,11 +151,15 @@ typedef union cppm_cpmmr_or {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t ppm_write_disable : 1;
     uint64_t ppm_write_override : 1;
-    uint64_t reserved1 : 10;
+        uint64_t reserved1 : 7;
+        uint64_t fused_core_mode : 1;
+        uint64_t stop_exit_type_sel : 1;
+        uint64_t block_intr_inputs : 1;
     uint64_t cme_err_notify_dis : 1;
     uint64_t wkup_notify_select : 1;
     uint64_t enable_pece : 1;
@@ -151,7 +171,10 @@ typedef union cppm_cpmmr_or {
     uint64_t enable_pece : 1;
     uint64_t wkup_notify_select : 1;
     uint64_t cme_err_notify_dis : 1;
-    uint64_t reserved1 : 10;
+        uint64_t block_intr_inputs : 1;
+        uint64_t stop_exit_type_sel : 1;
+        uint64_t fused_core_mode : 1;
+        uint64_t reserved1 : 7;
     uint64_t ppm_write_override : 1;
     uint64_t ppm_write_disable : 1;
 #endif // _BIG_ENDIAN
@@ -160,10 +183,12 @@ typedef union cppm_cpmmr_or {
 
 
 
-typedef union cppm_perrsum {
+typedef union cppm_perrsum
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -172,7 +197,8 @@ typedef union cppm_perrsum {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t cppm_error : 1;
     uint64_t reserved1 : 63;
@@ -185,10 +211,12 @@ typedef union cppm_perrsum {
 
 
 
-typedef union cppm_err {
+typedef union cppm_err
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -197,23 +225,28 @@ typedef union cppm_err {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t pcb_interrupt_protocol_err : 1;
     uint64_t special_wkup_protocol_err : 1;
+        uint64_t special_wkup_done_protocol_err : 1;
+        uint64_t pfet_seq_program_err : 1;
     uint64_t clk_sync_err : 1;
-    uint64_t reserved_3 : 1;
     uint64_t pece_intr_disabled : 1;
     uint64_t deconfigured_intr : 1;
-    uint64_t reserved_6_71 : 2;
-    uint64_t reserved2 : 56;
+        uint64_t reserved1 : 1;
+        uint64_t reserved_8_112 : 4;
+        uint64_t reserved3 : 52;
 #else
-    uint64_t reserved2 : 56;
-    uint64_t reserved_6_71 : 2;
+        uint64_t reserved3 : 52;
+        uint64_t reserved_8_112 : 4;
+        uint64_t reserved1 : 1;
     uint64_t deconfigured_intr : 1;
     uint64_t pece_intr_disabled : 1;
-    uint64_t reserved_3 : 1;
     uint64_t clk_sync_err : 1;
+        uint64_t pfet_seq_program_err : 1;
+        uint64_t special_wkup_done_protocol_err : 1;
     uint64_t special_wkup_protocol_err : 1;
     uint64_t pcb_interrupt_protocol_err : 1;
 #endif // _BIG_ENDIAN
@@ -222,10 +255,12 @@ typedef union cppm_err {
 
 
 
-typedef union cppm_errmsk {
+typedef union cppm_errmsk
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -234,23 +269,26 @@ typedef union cppm_errmsk {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
-    uint64_t reserved1 : 8;
-    uint64_t reserved2 : 56;
+        uint64_t reserved1 : 12;
+        uint64_t reserved2 : 52;
 #else
-    uint64_t reserved2 : 56;
-    uint64_t reserved1 : 8;
+        uint64_t reserved2 : 52;
+        uint64_t reserved1 : 12;
 #endif // _BIG_ENDIAN
     } fields;
 } cppm_errmsk_t;
 
 
 
-typedef union cppm_nc0indir {
+typedef union cppm_nc0indir
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -259,7 +297,8 @@ typedef union cppm_nc0indir {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t ncn_indirect : 32;
     uint64_t reserved1 : 32;
@@ -272,10 +311,12 @@ typedef union cppm_nc0indir {
 
 
 
-typedef union cppm_nc0indir_clr {
+typedef union cppm_nc0indir_clr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -284,7 +325,8 @@ typedef union cppm_nc0indir_clr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t ncn_indirect : 32;
     uint64_t reserved1 : 32;
@@ -297,10 +339,12 @@ typedef union cppm_nc0indir_clr {
 
 
 
-typedef union cppm_nc0indir_or {
+typedef union cppm_nc0indir_or
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -309,7 +353,8 @@ typedef union cppm_nc0indir_or {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t ncn_indirect : 32;
     uint64_t reserved1 : 32;
@@ -322,10 +367,12 @@ typedef union cppm_nc0indir_or {
 
 
 
-typedef union cppm_nc1indir {
+typedef union cppm_nc1indir
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -334,7 +381,8 @@ typedef union cppm_nc1indir {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t ncn_indirect : 32;
     uint64_t reserved1 : 32;
@@ -347,10 +395,12 @@ typedef union cppm_nc1indir {
 
 
 
-typedef union cppm_nc1indir_clr {
+typedef union cppm_nc1indir_clr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -359,7 +409,8 @@ typedef union cppm_nc1indir_clr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t ncn_indirect : 32;
     uint64_t reserved1 : 32;
@@ -372,10 +423,12 @@ typedef union cppm_nc1indir_clr {
 
 
 
-typedef union cppm_nc1indir_or {
+typedef union cppm_nc1indir_or
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -384,7 +437,8 @@ typedef union cppm_nc1indir_or {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t ncn_indirect : 32;
     uint64_t reserved1 : 32;
@@ -397,10 +451,12 @@ typedef union cppm_nc1indir_or {
 
 
 
-typedef union cppm_csar {
+typedef union cppm_csar
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -409,7 +465,8 @@ typedef union cppm_csar {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t scratch_atomic_data : 32;
     uint64_t reserved1 : 32;
@@ -422,10 +479,12 @@ typedef union cppm_csar {
 
 
 
-typedef union cppm_csar_clr {
+typedef union cppm_csar_clr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -434,7 +493,8 @@ typedef union cppm_csar_clr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t scratch_atomic_data : 32;
     uint64_t reserved1 : 32;
@@ -447,10 +507,12 @@ typedef union cppm_csar_clr {
 
 
 
-typedef union cppm_csar_or {
+typedef union cppm_csar_or
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -459,7 +521,8 @@ typedef union cppm_csar_or {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t scratch_atomic_data : 32;
     uint64_t reserved1 : 32;
@@ -472,10 +535,12 @@ typedef union cppm_csar_or {
 
 
 
-typedef union cppm_caccr {
+typedef union cppm_caccr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -484,7 +549,8 @@ typedef union cppm_caccr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t clk_sb_strength : 4;
     uint64_t clk_sb_spare : 1;
@@ -513,10 +579,12 @@ typedef union cppm_caccr {
 
 
 
-typedef union cppm_caccr_clr {
+typedef union cppm_caccr_clr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -525,7 +593,8 @@ typedef union cppm_caccr_clr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t clk_sb_strength : 4;
     uint64_t clk_sb_spare : 1;
@@ -554,10 +623,12 @@ typedef union cppm_caccr_clr {
 
 
 
-typedef union cppm_caccr_or {
+typedef union cppm_caccr_or
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -566,7 +637,8 @@ typedef union cppm_caccr_or {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t clk_sb_strength : 4;
     uint64_t clk_sb_spare : 1;
@@ -595,10 +667,12 @@ typedef union cppm_caccr_or {
 
 
 
-typedef union cppm_cacsr {
+typedef union cppm_cacsr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -607,7 +681,8 @@ typedef union cppm_cacsr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t actual_clk_sb_strength : 4;
     uint64_t actual_clk_sb_spare : 1;
@@ -632,10 +707,12 @@ typedef union cppm_cacsr {
 
 
 
-typedef union cppm_cmedb0 {
+typedef union cppm_cmedb0
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -644,7 +721,8 @@ typedef union cppm_cmedb0 {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t cme_message_number0 : 8;
     uint64_t cme_message_hi : 56;
@@ -657,10 +735,12 @@ typedef union cppm_cmedb0 {
 
 
 
-typedef union cppm_cmedb0_clr {
+typedef union cppm_cmedb0_clr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -669,7 +749,8 @@ typedef union cppm_cmedb0_clr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t cme_message_number0 : 8;
     uint64_t cme_message_hi : 56;
@@ -682,10 +763,12 @@ typedef union cppm_cmedb0_clr {
 
 
 
-typedef union cppm_cmedb0_or {
+typedef union cppm_cmedb0_or
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -694,7 +777,8 @@ typedef union cppm_cmedb0_or {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t cme_message_number0 : 8;
     uint64_t cme_message_hi : 56;
@@ -707,10 +791,12 @@ typedef union cppm_cmedb0_or {
 
 
 
-typedef union cppm_cmedb1 {
+typedef union cppm_cmedb1
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -719,7 +805,8 @@ typedef union cppm_cmedb1 {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t cme_message_numbern : 8;
     uint64_t reserved1 : 56;
@@ -732,10 +819,12 @@ typedef union cppm_cmedb1 {
 
 
 
-typedef union cppm_cmedb1_clr {
+typedef union cppm_cmedb1_clr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -744,7 +833,8 @@ typedef union cppm_cmedb1_clr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t cme_message_numbern : 8;
     uint64_t reserved1 : 56;
@@ -757,10 +847,12 @@ typedef union cppm_cmedb1_clr {
 
 
 
-typedef union cppm_cmedb1_or {
+typedef union cppm_cmedb1_or
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -769,7 +861,8 @@ typedef union cppm_cmedb1_or {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t cme_message_numbern : 8;
     uint64_t reserved1 : 56;
@@ -782,10 +875,12 @@ typedef union cppm_cmedb1_or {
 
 
 
-typedef union cppm_cmedb2 {
+typedef union cppm_cmedb2
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -794,7 +889,8 @@ typedef union cppm_cmedb2 {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t cme_message_numbern : 8;
     uint64_t reserved1 : 56;
@@ -807,10 +903,12 @@ typedef union cppm_cmedb2 {
 
 
 
-typedef union cppm_cmedb2_clr {
+typedef union cppm_cmedb2_clr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -819,7 +917,8 @@ typedef union cppm_cmedb2_clr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t cme_message_numbern : 8;
     uint64_t reserved1 : 56;
@@ -832,10 +931,12 @@ typedef union cppm_cmedb2_clr {
 
 
 
-typedef union cppm_cmedb2_or {
+typedef union cppm_cmedb2_or
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -844,7 +945,8 @@ typedef union cppm_cmedb2_or {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t cme_message_numbern : 8;
     uint64_t reserved1 : 56;
@@ -857,10 +959,12 @@ typedef union cppm_cmedb2_or {
 
 
 
-typedef union cppm_cmedb3 {
+typedef union cppm_cmedb3
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -869,7 +973,8 @@ typedef union cppm_cmedb3 {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t cme_message_numbern : 8;
     uint64_t reserved1 : 56;
@@ -882,10 +987,12 @@ typedef union cppm_cmedb3 {
 
 
 
-typedef union cppm_cmedb3_clr {
+typedef union cppm_cmedb3_clr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -894,7 +1001,8 @@ typedef union cppm_cmedb3_clr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t cme_message_numbern : 8;
     uint64_t reserved1 : 56;
@@ -907,10 +1015,12 @@ typedef union cppm_cmedb3_clr {
 
 
 
-typedef union cppm_cmedb3_or {
+typedef union cppm_cmedb3_or
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -919,7 +1029,8 @@ typedef union cppm_cmedb3_or {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t cme_message_numbern : 8;
     uint64_t reserved1 : 56;
@@ -932,10 +1043,12 @@ typedef union cppm_cmedb3_or {
 
 
 
-typedef union cppm_cmedata {
+typedef union cppm_cmedata
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -944,7 +1057,8 @@ typedef union cppm_cmedata {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t data : 32;
     uint64_t reserved1 : 32;
@@ -957,10 +1071,12 @@ typedef union cppm_cmedata {
 
 
 
-typedef union cppm_cmedata_clr {
+typedef union cppm_cmedata_clr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -969,7 +1085,8 @@ typedef union cppm_cmedata_clr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t data : 32;
     uint64_t reserved1 : 32;
@@ -982,10 +1099,12 @@ typedef union cppm_cmedata_clr {
 
 
 
-typedef union cppm_cmedata_or {
+typedef union cppm_cmedata_or
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -994,7 +1113,8 @@ typedef union cppm_cmedata_or {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t data : 32;
     uint64_t reserved1 : 32;
@@ -1007,10 +1127,12 @@ typedef union cppm_cmedata_or {
 
 
 
-typedef union cppm_cmemsg {
+typedef union cppm_cmemsg
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -1019,7 +1141,8 @@ typedef union cppm_cmemsg {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t cme_message : 64;
 #else
@@ -1030,10 +1153,12 @@ typedef union cppm_cmemsg {
 
 
 
-typedef union cppm_cisr {
+typedef union cppm_ciir
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -1042,7 +1167,40 @@ typedef union cppm_cisr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint64_t reserved1 : 28;
+        uint64_t msgsnd_intr_inject : 4;
+        uint64_t reserved2 : 28;
+        uint64_t msgsndu_intr_inject : 4;
+#else
+        uint64_t msgsndu_intr_inject : 4;
+        uint64_t reserved2 : 28;
+        uint64_t msgsnd_intr_inject : 4;
+        uint64_t reserved1 : 28;
+#endif // _BIG_ENDIAN
+    } fields;
+} cppm_ciir_t;
+
+
+
+typedef union cppm_cisr
+{
+
+    uint64_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t high_order;
+        uint32_t low_order;
+#else
+        uint32_t low_order;
+        uint32_t high_order;
+#endif // _BIG_ENDIAN
+    } words;
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t hyp_intr_present : 4;
     uint64_t os_intr_present : 4;
@@ -1056,9 +1214,15 @@ typedef union cppm_cisr {
     uint64_t malf_alert_present : 1;
     uint64_t malf_alert_requested : 1;
     uint64_t cme_special_wkup_done : 1;
-    uint64_t reserved1 : 28;
+        uint64_t msgsndu_intr_present : 4;
+        uint64_t msgsndu_intr_requested : 4;
+        uint64_t msgsndu_intr_sample : 4;
+        uint64_t reserved1 : 16;
 #else
-    uint64_t reserved1 : 28;
+        uint64_t reserved1 : 16;
+        uint64_t msgsndu_intr_sample : 4;
+        uint64_t msgsndu_intr_requested : 4;
+        uint64_t msgsndu_intr_present : 4;
     uint64_t cme_special_wkup_done : 1;
     uint64_t malf_alert_requested : 1;
     uint64_t malf_alert_present : 1;
@@ -1077,10 +1241,12 @@ typedef union cppm_cisr {
 
 
 
-typedef union cppm_peces {
+typedef union cppm_peces
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -1089,7 +1255,8 @@ typedef union cppm_peces {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t pece_t0 : 6;
     uint64_t reserved1 : 2;
@@ -1100,11 +1267,11 @@ typedef union cppm_peces {
     uint64_t pece_t3 : 6;
     uint64_t reserved4 : 2;
     uint64_t use_pece : 4;
-    uint64_t fused_core_mode : 1;
+        uint64_t spare : 1;
     uint64_t reserved5 : 27;
 #else
     uint64_t reserved5 : 27;
-    uint64_t fused_core_mode : 1;
+        uint64_t spare : 1;
     uint64_t use_pece : 4;
     uint64_t reserved4 : 2;
     uint64_t pece_t3 : 6;
@@ -1120,10 +1287,12 @@ typedef union cppm_peces {
 
 
 
-typedef union cppm_civrmlcr {
+typedef union cppm_civrmlcr
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -1132,7 +1301,8 @@ typedef union cppm_civrmlcr {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t ivrm_local_control : 1;
     uint64_t reserved_1_2 : 2;
@@ -1151,10 +1321,12 @@ typedef union cppm_civrmlcr {
 
 
 
-typedef union cppm_ippmcmd {
+typedef union cppm_ippmcmd
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -1163,7 +1335,8 @@ typedef union cppm_ippmcmd {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t qppm_reg : 8;
     uint64_t qppm_rnw : 1;
@@ -1180,10 +1353,12 @@ typedef union cppm_ippmcmd {
 
 
 
-typedef union cppm_ippmstat {
+typedef union cppm_ippmstat
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -1192,7 +1367,8 @@ typedef union cppm_ippmstat {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t qppm_ongoing : 1;
     uint64_t qppm_status : 2;
@@ -1207,10 +1383,12 @@ typedef union cppm_ippmstat {
 
 
 
-typedef union cppm_ippmwdata {
+typedef union cppm_ippmwdata
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -1219,7 +1397,8 @@ typedef union cppm_ippmwdata {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t qppm_wdata : 64;
 #else
@@ -1230,10 +1409,12 @@ typedef union cppm_ippmwdata {
 
 
 
-typedef union cppm_ippmrdata {
+typedef union cppm_ippmrdata
+{
 
     uint64_t value;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
         uint32_t high_order;
         uint32_t low_order;
@@ -1242,7 +1423,8 @@ typedef union cppm_ippmrdata {
         uint32_t high_order;
 #endif // _BIG_ENDIAN
     } words;
-    struct {
+    struct
+    {
 #ifdef _BIG_ENDIAN
     uint64_t qppm_rdata : 64;
 #else

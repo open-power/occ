@@ -27,12 +27,17 @@
 #include "pk.h"
 #include "ppe42_msr.h"
 #include "occhw_pba_common.h"
-#include "p9a_misc_scom_addresses.h"
-#include "p9a_firmware_registers.h"
+//#include "p9a_misc_scom_addresses.h"
+//#include "p9a_firmware_registers.h"
+#include "mcs_firmware_registers.h"
+#include "pba_firmware_registers.h"
+#include "pba_firmware_constants.h"
 #include "ocmb_register_addresses.h"
 #include "ocmb_firmware_registers.h"
 #include "ocmb_mem_data.h"
 
+// TODO - RTC 213672 - MISSING P9A REGS
+#if 0
 const uint32_t AXONE_MCFGPR[OCCHW_N_MEMBUF] =
 {
     P9A_MI_0_MCFGPR0,
@@ -52,6 +57,7 @@ const uint32_t AXONE_MCSYNC[OCCHW_N_MEMBUF/2] =
     P9A_MI_2_MCSYNC,
     P9A_MI_3_MCSYNC
 };
+#endif
 
 // This table was taken from ekb p9a_omi_setup_bars.C
 const int NUM_EXT_MASKS = 20;
@@ -368,6 +374,8 @@ int ocmb_check_sensor_cache_enabled(MemBufConfiguration_t * i_config,
 int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
 {
     int rc = 0;
+// TODO - RTC 213672 - MISSING REGS/STRUCTURES (pb_mode_t, P9A_PU_NMMU_MMCQ_PB_MODE_REG, etc)
+#if 0
     int i = 0;
     int l_rule = 0;
     int l_ext_addr_mask = 0;
@@ -617,6 +625,12 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
     o_config->configRc = rc;
 
     mtmsr(orig_msr);
+#else
+    rc = MEMBUF_DATA_SETUP_ERROR;
+    o_config->configRc = rc;
+    o_config->configRc = MEMBUF_NOT_CONFIGURED;
+    o_config->membuf_type = MEMTYPE_OCMB;
+#endif
 
     return rc;
 }

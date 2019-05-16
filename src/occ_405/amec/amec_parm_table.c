@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -140,9 +140,9 @@ amec_parm_t g_amec_parm_list[] = {
 
     // Begin WOF parameters
     AMEC_PARM_UINT8(PARM_WOF_HDR_VERSION, "wof_hdr_ver", &g_amec_sys.wof.version),
-    AMEC_PARM_UINT16(PARM_VFRT_BLOCK_SIZE, "vfrt_blck_sz", &g_amec_sys.wof.vfrt_block_size),
-    AMEC_PARM_UINT16(PARM_VFRT_BLOCK_HEADER_SZ, "vfrtBlckHdrSz", &g_amec_sys.wof.vfrt_blck_hdr_sz),
-    AMEC_PARM_UINT16(PARM_VFRT_DATA_SIZE , "vfrt_data_size", &g_amec_sys.wof.vfrt_data_size ),
+    AMEC_PARM_UINT16(PARM_VRT_BLOCK_SIZE, "vrt_blck_sz", &g_amec_sys.wof.vrt_block_size),
+    AMEC_PARM_UINT16(PARM_VRT_BLOCK_HEADER_SZ, "vrtBlckHdrSz", &g_amec_sys.wof.vrt_blck_hdr_sz),
+    AMEC_PARM_UINT16(PARM_VRT_DATA_SIZE , "vrt_data_size", &g_amec_sys.wof.vrt_data_size ),
     AMEC_PARM_UINT8(PARM_ACTIVE_QUADS_SIZE , "actv_quads_size", &g_amec_sys.wof.active_quads_size ),
     AMEC_PARM_UINT8(PARM_CORE_COUNT, "core_count", &g_amec_sys.wof.core_count),
     AMEC_PARM_UINT16(PARM_VDN_START , "vdn_start", &g_amec_sys.wof.vdn_start ),
@@ -213,10 +213,10 @@ amec_parm_t g_amec_parm_list[] = {
     AMEC_PARM_UINT8(PARM_NUM_ACTIVE_QUADS, "numActiveQuads", &g_amec_sys.wof.num_active_quads),
     AMEC_PARM_UINT32(PARM_CURR_PING_PONG_BUF, "currPingPongBuf", &g_amec_sys.wof.curr_ping_pong_buf),
     AMEC_PARM_UINT32(PARM_NEXT_PING_PONG_BUF, "nextPingPongBuf", &g_amec_sys.wof.next_ping_pong_buf),
-    AMEC_PARM_UINT32(PARM_CURR_VFRT_MAIN_MEM_ADDR, "vfrtMainMemAddr", &g_amec_sys.wof.curr_vfrt_main_mem_addr),
-    AMEC_PARM_UINT32(PARM_NEXT_VFRT_MAIN_MEM_ADDR, "nxtVfrtMMAddr", &g_amec_sys.wof.next_vfrt_main_mem_addr),
-    AMEC_PARM_UINT32(PARM_VFRT_TBLS_MAIN_MEM_ADDR, "vfrtTblsMMAddr", &g_amec_sys.wof.vfrt_tbls_main_mem_addr),
-    AMEC_PARM_UINT32(PARM_VFRT_TBLS_LEN, "vfrt_tbls_len", &g_amec_sys.wof.vfrt_tbls_len),
+    AMEC_PARM_UINT32(PARM_CURR_VRT_MAIN_MEM_ADDR, "vrtMainMemAddr", &g_amec_sys.wof.curr_vrt_main_mem_addr),
+    AMEC_PARM_UINT32(PARM_NEXT_VRT_MAIN_MEM_ADDR, "nxtVrtMMAddr", &g_amec_sys.wof.next_vrt_main_mem_addr),
+    AMEC_PARM_UINT32(PARM_VRT_TBLS_MAIN_MEM_ADDR, "vrtTblsMMAddr", &g_amec_sys.wof.vrt_tbls_main_mem_addr),
+    AMEC_PARM_UINT32(PARM_VRT_TBLS_LEN, "vrt_tbls_len", &g_amec_sys.wof.vrt_tbls_len),
     AMEC_PARM_UINT8(PARM_WOF_INIT_STATE, "wof_init_state", &g_amec_sys.wof.wof_init_state),
     AMEC_PARM_UINT32(PARM_QUAD_STATE_0_ADDR, "quadSt0Addr", &g_amec_sys.wof.quad_state_0_addr),
     AMEC_PARM_UINT32(PARM_QUAD_STATE_1_ADDR, "quadSt1Addr", &g_amec_sys.wof.quad_state_1_addr),
@@ -226,15 +226,15 @@ amec_parm_t g_amec_parm_list[] = {
     AMEC_PARM_UINT32(PARM_PSTATE_TBL_SRAM_ADDR, "PstatesSramAddr", &g_amec_sys.wof.pstate_tbl_sram_addr),
     AMEC_PARM_UINT32(PARM_GPE_REQ_RC, "gpeReqRc", &g_amec_sys.wof.gpe_req_rc),
     AMEC_PARM_UINT32(PARM_CONTROL_IPC_RC, "ctrlIpcRc", &g_amec_sys.wof.control_ipc_rc),
-    AMEC_PARM_UINT8(PARM_VFRT_CALLBACK_ERR, "vfrtCallbackErr", &g_amec_sys.wof.vfrt_callback_error),
+    AMEC_PARM_UINT8(PARM_VRT_CALLBACK_ERR, "vrtCallbackErr", &g_amec_sys.wof.vrt_callback_error),
     AMEC_PARM_UINT8(PARM_PGPE_WOF_OFF, "pgpeWofOff", &g_amec_sys.wof.pgpe_wof_off),
-    AMEC_PARM_UINT32(PARM_VFRT_MM_OFFSET, "vfrt_mm_offset", &g_amec_sys.wof.vfrt_mm_offset),
-    AMEC_PARM_UINT8(PARM_VFRT_REQ_RC, "wof_vfrt_req_rc", &g_amec_sys.wof.wof_vfrt_req_rc ),
+    AMEC_PARM_UINT32(PARM_VRT_MM_OFFSET, "vrt_mm_offset", &g_amec_sys.wof.vrt_mm_offset),
+    AMEC_PARM_UINT8(PARM_VRT_REQ_RC, "wof_vrt_req_rc", &g_amec_sys.wof.wof_vrt_req_rc ),
     AMEC_PARM_UINT32(PARM_VDD_RATIO_VOLT, "vddRatioVolt", &g_amec_sys.wof.c_ratio_vdd_volt),
     AMEC_PARM_UINT32(PARM_VDD_RATIO_FREQ, "vddRatioFreq", &g_amec_sys.wof.c_ratio_vdd_freq),
     AMEC_PARM_UINT32(PARM_VDN_RATIO_VOLT, "vdnRatioVolt", &g_amec_sys.wof.c_ratio_vdn_volt),
     AMEC_PARM_UINT32(PARM_VDN_RATIO_FREQ, "vdnRatioFreq", &g_amec_sys.wof.c_ratio_vdn_freq),
-    AMEC_PARM_UINT8(PARM_VFRT_STATE,"vfrtState", &g_amec_sys.wof.vfrt_state),
+    AMEC_PARM_UINT8(PARM_VRT_STATE,"vrtState", &g_amec_sys.wof.vrt_state),
     AMEC_PARM_UINT32(PARM_CORES_OFF_B4,"Allcoresoffb4", &g_amec_sys.wof.all_cores_off_before),
     AMEC_PARM_UINT8(PARM_GOOD_QUADS_PER_SORT, "QuadsPerSort", &g_amec_sys.wof.good_quads_per_sort),
     AMEC_PARM_UINT8(PARM_NORMAL_CORES_PER_SORT, "CoresPerSort", &g_amec_sys.wof.good_normal_cores_per_sort),
