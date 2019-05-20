@@ -1157,6 +1157,8 @@ void dbug_proc_data_dump(const cmdh_fsp_cmd_t * i_cmd_ptr,
 void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
                     cmdh_fsp_rsp_t * o_rsp_ptr)
 {
+    errlHndl_t l_err = NULL;
+
     // Sub Command for debug is always first byte of data
     uint8_t l_sub_cmd = i_cmd_ptr->data[0];
 
@@ -1220,6 +1222,27 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
         case DBUG_DUMP_RAW_AD:
              dbug_apss_dump(i_cmd_ptr, o_rsp_ptr);
              break;
+
+        case DBUG_INJECT_PGPE_ERRL:
+            TRAC_ERR("cmdh_dbug_cmd: Creating PGPE Error Log");
+            l_err = createPgpeErrl(CMDH_DBUG_MID,            //modId
+                                   PGPE_FAILURE,             //reasoncode
+                                   OCC_NO_EXTENDED_RC,       //Extended reason code
+                                   ERRL_SEV_UNRECOVERABLE,   //Severity
+                                   0xff,                     //userdata1
+                                   0xff);                    //userdata2
+
+            if (INVALID_ERR_HNDL == l_err)
+            {
+                TRAC_ERR("cmdh_dbug_cmd: Failed to create PGPE Error Log");
+                G_rsp_status = ERRL_RC_INTERNAL_FAIL;
+            }
+            else
+            {
+                // Commit Error log
+                commitErrl(&l_err);
+            }
+            break;
 
         case DBUG_INJECT_ERRL:
             dbug_err_inject(i_cmd_ptr, o_rsp_ptr);

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -72,7 +72,7 @@ typedef enum
 //  free = 0x10,
 //  free = 0x11,
     DBUG_TRIGGER_EPOW       = 0x12,
-//  free = 0x13
+    DBUG_INJECT_PGPE_ERRL   = 0x13,
     DBUG_INJECT_ERRL        = 0x14,
     DBUG_DIMM_INJECT        = 0x15,
 //  free  = 0x16

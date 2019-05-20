@@ -39,17 +39,20 @@ static const uint32_t ERRL_SLOT_SHIFT = 0x80000000;
 // Used for defaulting handle to invalid
 static const uint32_t INVALID_ERR = 0xFFFFFFFF;
 
-// Max size of non call home data logs (2048 bytes)
-#define MAX_ERRL_ENTRY_SZ 0x800
+// Max size of non call home data logs (2128 bytes)
+#define MAX_ERRL_ENTRY_SZ 0x850
 
 // Max size of call home data log (3072 bytes)
 #define MAX_ERRL_CALL_HOME_SZ 0xC00
 
-// Max size of callouts
+// Max size of an OCC detected PGPE error log (3616 bytes)
+#define MAX_ERRL_PGPE_ENTRY_SZ 0xE20
+
+// Max number of callouts
 #define ERRL_MAX_CALLOUTS 6
 
 // Max number of error logs
-#define ERRL_MAX_SLOTS 9
+#define ERRL_MAX_SLOTS 8
 
 // Used to default a old/bad error handle
 #define INVALID_ERR_HNDL (errlHndl_t)INVALID_ERR
@@ -57,20 +60,23 @@ static const uint32_t INVALID_ERR = 0xFFFFFFFF;
 // USED to determine the number of all trace buffer types. Now have (INF/IMP/ERR)
 #define NUM_OF_TRACE_TYPE 3
 
-// maximum size of PGPE debug data will be added for ERRL_USR_DTL_PGPE_PK_TRACE
-#define MAX_PGPE_DBUG_DATA 0x300
+// maximum size of PGPE debug data will be added for ERRL_USR_DTL_PGPE_PK_TRACE when PGPE error slot available
+#define MAX_PGPE_DBUG_DATA 0x860
+// maximum size of PGPE debug data will be added for ERRL_USR_DTL_PGPE_PK_TRACE when PGPE error slot not available
+#define MAX_PGPE_DBUG_DATA_NO_SLOT 0x300
 
 // These bits are used to acquire a slot number.  When used with the global
-// slot bit mask, we are able to get 7 slots for predictive/unrecoverable errors,
-// 1 slot for informational logs, and 1 slot for call home data log
+// slot bit mask, we are able to get 5 slots for predictive/unrecoverable errors,
+// 1 slot for an OCC detected PGPE error, 1 slot for informational logs,
+// and 1 slot for call home data log
 /* Slot Masks */
 typedef enum
 {
     ERRL_SLOT_MASK_DEFAULT        = 0xFFFFFFFF,
-    ERRL_SLOT_MASK_INFORMATIONAL  = 0xFEFFFFFF,
-    ERRL_SLOT_MASK_PREDICTIVE     = 0x01FFFFFF,
-    ERRL_SLOT_MASK_UNRECOVERABLE  = 0x01FFFFFF,
-    ERRL_SLOT_MASK_CALL_HOME_DATA = 0xFF7FFFFF,
+    ERRL_SLOT_MASK_INFORMATIONAL  = 0xFDFFFFFF,
+    ERRL_SLOT_MASK_OCC_ERROR      = 0x07FFFFFF,
+    ERRL_SLOT_MASK_CALL_HOME_DATA = 0xFEFFFFFF,
+    ERRL_SLOT_MASK_PGPE_ERROR     = 0xFBFFFFFF,
 } ERRL_SLOT_MASK;
 
 // These are the possible sources that an error log can be coming from
@@ -87,10 +93,11 @@ typedef enum
 /* Error Severity */
 typedef enum
 {
-    ERRL_SEV_INFORMATIONAL  = 0x00,
-    ERRL_SEV_PREDICTIVE     = 0x01,
-    ERRL_SEV_UNRECOVERABLE  = 0x02,
-    ERRL_SEV_CALLHOME_DATA  = 0x03,
+    ERRL_SEV_INFORMATIONAL  = 0x00,  // Used by TMGT
+    ERRL_SEV_PREDICTIVE     = 0x01,  // Used by TMGT
+    ERRL_SEV_UNRECOVERABLE  = 0x02,  // Used by TMGT
+    ERRL_SEV_CALLHOME_DATA  = 0x03,  // internal OCC use. Not used by TMGT
+    ERRL_SEV_PGPE_ERROR     = 0x04,  // internal OCC use. Not used by TMGT
 } ERRL_SEVERITY;
 
 // These are the possible actions that an error log can have.
@@ -263,8 +270,8 @@ struct ErrlEntry
         };
         uint8_t word;
     } iv_actions;
-    // Reserved for extended reason code for uniquely identifying error if needed
-    uint16_t            iv_reserved;
+    // Maximum size for the whole error log including all user details
+    uint16_t            iv_maxSize;
     uint16_t            iv_extendedRC;
     // Log Callout Number
     uint8_t             iv_numCallouts;
@@ -356,8 +363,7 @@ extern uint8_t      G_errslot2[MAX_ERRL_ENTRY_SZ];
 extern uint8_t      G_errslot3[MAX_ERRL_ENTRY_SZ];
 extern uint8_t      G_errslot4[MAX_ERRL_ENTRY_SZ];
 extern uint8_t      G_errslot5[MAX_ERRL_ENTRY_SZ];
-extern uint8_t      G_errslot6[MAX_ERRL_ENTRY_SZ];
-extern uint8_t      G_errslot7[MAX_ERRL_ENTRY_SZ];
+extern uint8_t      G_pgpeslot[MAX_ERRL_PGPE_ENTRY_SZ];
 extern uint8_t      G_infoslot[MAX_ERRL_ENTRY_SZ];
 extern uint8_t      G_callslot[MAX_ERRL_CALL_HOME_SZ];
 
@@ -403,7 +409,6 @@ void commitErrl( errlHndl_t * io_err );
 errlHndl_t deleteErrl( errlHndl_t * io_err);
 
 /* Add Callout to Error Log */
-// @jh001c
 void addCalloutToErrl(
             errlHndl_t io_err,
             const ERRL_CALLOUT_TYPE i_type,
