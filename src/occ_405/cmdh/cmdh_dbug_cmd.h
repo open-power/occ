@@ -128,9 +128,9 @@ typedef struct __attribute__ ((packed))
     uint16_t   location;
 }cmdh_dbug_get_sensor_query_t;
 
-// Max number of sensors that can be returned with cmdh_dbug_get_ame_sensor command
+// Max number of sensors that can be returned with cmdh_dbug_get_ame_sensor command (subtract 2 bytes for num_sensors)
+#define CMDH_DBUG_MAX_NUM_SENSORS  ((CMDH_FSP_RSP_DATA_SIZE-2) / sizeof(cmdh_dbug_sensor_list_t))
 
-#define CMDH_DBUG_MAX_NUM_SENSORS  50
 // Size of standard response header (5 bytes) plus checksum (2 bytes)
 #define CMDH_DBUG_FSP_RESP_LEN     7
 
@@ -140,8 +140,6 @@ typedef struct __attribute__ ((packed))
     struct                  cmdh_fsp_rsp_header;
     uint16_t                num_sensors;
     cmdh_dbug_sensor_list_t sensor[CMDH_DBUG_MAX_NUM_SENSORS];
-    uint8_t                 filler;
-    uint16_t                checksum;
 }cmdh_dbug_get_sensor_resp_t;
 
 /**
