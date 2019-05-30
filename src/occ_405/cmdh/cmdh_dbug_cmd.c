@@ -248,9 +248,8 @@ void cmdh_dbug_get_ame_sensor (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
     }while(0);
 
-    // Populate the response data header
-    l_resp_data_length = sizeof(cmdh_dbug_get_sensor_resp_t) -
-        CMDH_DBUG_FSP_RESP_LEN;
+    // Populate the response data header (with actual number of sensors collected)
+    l_resp_data_length = sizeof(l_num_of_sensors) + (l_num_of_sensors * sizeof(cmdh_dbug_sensor_list_t));
     G_rsp_status = l_rc;
     o_rsp_ptr->data_length[0] = ((uint8_t *)&l_resp_data_length)[0];
     o_rsp_ptr->data_length[1] = ((uint8_t *)&l_resp_data_length)[1];

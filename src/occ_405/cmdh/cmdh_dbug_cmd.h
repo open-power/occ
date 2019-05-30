@@ -128,13 +128,11 @@ typedef struct __attribute__ ((packed))
     uint16_t   location;
 }cmdh_dbug_get_sensor_query_t;
 
-// Max number of sensors that can be returned with cmdh_dbug_get_ame_sensor command
+// Max number of sensors that can be returned with cmdh_dbug_get_ame_sensor command (subtract 2 bytes for num_sensors)
+#define CMDH_DBUG_MAX_NUM_SENSORS  ((CMDH_FSP_RSP_DATA_SIZE-2) / sizeof(cmdh_dbug_sensor_list_t))
 
 // Size of standard response header plus checksum
 #define CMDH_DBUG_FSP_RESP_LEN     (CMDH_FSP_SEQ_CMD_RC_SIZE + CMDH_FSP_DATALEN_SIZE + CMDH_FSP_CHECKSUM_SIZE)
-
-#define CMDH_DBUG_MAX_SENSOR_SPACE   (CMDH_FSP_RSP_DATA_SIZE - 2/*num_sensors*/)
-#define CMDH_DBUG_MAX_NUM_SENSORS    ((unsigned int)CMDH_DBUG_MAX_SENSOR_SPACE / sizeof(cmdh_dbug_sensor_list_t))
 
 // Used by OCC firmware to respond "cmdh_dbug_get_ame_sensor" debug command
 typedef struct __attribute__ ((packed))
