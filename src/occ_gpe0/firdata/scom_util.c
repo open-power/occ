@@ -297,6 +297,48 @@ int32_t translate_addr( SCOM_Trgt_t i_trgt, uint64_t i_addr, uint64_t * o_addr )
             set_ring(P9A_MC_OMIC0_PPE_RING_ID + (l_chip_unit_num % 3), o_addr);
         }
     }
+    else if ( i_trgt.type == TRGT_NPU )
+    {
+        // NPU0 and NPU1 exist on the N3 chiplet, NPU2 exists on the N1 chiplet instead
+        uint8_t l_chiplet_id = ( 2 == l_chip_unit_num ) ? N1_CHIPLET_ID : N3_CHIPLET_ID ;
+        set_chiplet_id( l_chiplet_id, o_addr );
+        uint8_t l_sat_id = get_sat_id( i_addr );
+
+        // Covers the following addresses:
+        // NPU0: 05011000 to 050113FF
+        // NPU1: 05011400 to 050117FF
+        // NPU2: 03011C00 to 03011FFF
+        if ( N3_NPU_0_RING_ID == l_ring )
+        {
+            // NPU0/NPU1
+            if ( N3_CHIPLET_ID == l_chiplet_id )
+            {
+                set_ring( N3_NPU_0_RING_ID + l_chip_unit_num, o_addr );
+            }
+            // NPU2
+            else if ( N1_CHIPLET_ID == l_chiplet_id )
+            {
+                set_ring( P9A_NPU_2_RING_ID, o_addr );
+            }
+        }
+        // Covers the following addresses:
+        // NPU0: 05013C00 to 05013C8F
+        // NPU1: 05013CC0 to 05013D4F
+        // NPU2: 03012000 to 0301208F
+        else if ( P9A_NPU_0_FIR_RING_ID == l_ring )
+        {
+            // NPU0/NPU1
+            if ( N3_CHIPLET_ID == l_chiplet_id )
+            {
+                set_sat_id( l_sat_id + (3 * l_chip_unit_num), o_addr );
+            }
+            // NPU2
+            else if ( N1_CHIPLET_ID == l_chiplet_id )
+            {
+                set_ring( P9A_NPU_2_FIR_RING_ID, o_addr );
+            }
+        }
+    }
     else
     {
         TRAC_ERR( FUNC"unsupported unit type %d", i_trgt.type );
