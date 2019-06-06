@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -1526,8 +1526,24 @@ void calculate_ceff_ratio_vdd( void )
  */
 void calculate_AC_currents( void )
 {
-    g_wof->iac_vdd = g_wof->curvdd_sensor - g_wof->idc_vdd;
-    g_wof->iac_vdn = g_wof->curvdn_sensor - g_wof->idc_vdn;
+    // avoid negative AC currents
+    if(g_wof->curvdd_sensor > g_wof->idc_vdd)
+    {
+       g_wof->iac_vdd = g_wof->curvdd_sensor - g_wof->idc_vdd;
+    }
+    else
+    {
+       g_wof->iac_vdd = 0;
+    }
+
+    if(g_wof->curvdn_sensor > g_wof->idc_vdn)
+    {
+       g_wof->iac_vdn = g_wof->curvdn_sensor - g_wof->idc_vdn;
+    }
+    else
+    {
+       g_wof->iac_vdn = 0;
+    }
 }
 
 /**
