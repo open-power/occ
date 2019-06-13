@@ -303,6 +303,7 @@ int32_t translate_addr( SCOM_Trgt_t i_trgt, uint64_t i_addr, uint64_t * o_addr )
         uint8_t l_chiplet_id = ( 2 == l_chip_unit_num ) ? N1_CHIPLET_ID : N3_CHIPLET_ID ;
         set_chiplet_id( l_chiplet_id, o_addr );
         uint8_t l_sat_id = get_sat_id( i_addr );
+        uint8_t l_ring = get_ring(i_addr) & 0xF;
 
         // Covers the following addresses:
         // NPU0: 05011000 to 050113FF

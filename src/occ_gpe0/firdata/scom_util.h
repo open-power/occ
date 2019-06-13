@@ -89,6 +89,14 @@ typedef enum
     P9A_MC_USTL_CHAN3_SAT_ID = 0xB,   ///< USTL registers channel 3
 } p9a_mc_sat_id_t;
 
+typedef enum
+{
+    N3_NPU_0_RING_ID      = 0x5,
+    P9A_NPU_2_RING_ID     = 0x7,
+    P9A_NPU_2_FIR_RING_ID = 0x8,
+    P9A_NPU_0_FIR_RING_ID = 0xF,
+} p9a_npu_ring_id_t;
+
 /** @brief  Performs a hardware scom on a regular register.
  *  @param  i_trgt The SCOM target.
  *  @param  i_addr 32-bit SCOM address.
