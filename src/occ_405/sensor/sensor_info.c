@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -353,25 +353,11 @@ const sensor_info_t G_sensor_info[]   =
   SENS_MEMC_ENTRY_SET(           MWRM, "GBs\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM,   AMEEFP_EVERY_8TH_TICK_HZ, AMEFP(128, -5) ),
   SENS_MEMC_ENTRY_SET(         MEMSPM,   "%\0",   AMEC_SENSOR_TYPE_UTIL,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM,   AMEEFP_EVERY_8TH_TICK_HZ, AMEFP(  1, -1) ),
   SENS_MEMC_ENTRY_SET(     MEMSPSTATM,   "%\0",   AMEC_SENSOR_TYPE_UTIL,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM,   AMEEFP_EVERY_8TH_TICK_HZ, AMEFP(  1, -1) ),
-  SENS_MEMC_ENTRY_SET(          MIRCM, "eps\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM,   AMEEFP_EVERY_8TH_TICK_HZ, AMEFP(  1, 0) ),
-  SENS_MEMC_ENTRY_SET(          MLP2M, "eps\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM,   AMEEFP_EVERY_8TH_TICK_HZ, AMEFP(  1, 0) ),
   SENS_DIMM_ENTRY_SET(       TEMPDIMM,   "C\0",   AMEC_SENSOR_TYPE_TEMP,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_128TH_TICK_HZ, AMEFP(  1, 0) ),
   SENS_MEMC_ENTRY_SET(    TEMPDIMMAXM,   "C\0",   AMEC_SENSOR_TYPE_TEMP,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM,   AMEEFP_EVERY_8TH_TICK_HZ, AMEFP(  1, 0) ),
   SENS_MEMC_ENTRY_SET(     LOCDIMMAXM, "loc\0",   AMEC_SENSOR_TYPE_TEMP,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM,   AMEEFP_EVERY_8TH_TICK_HZ, AMEFP(  1, 0) ),
   SENSOR_INFO_T_ENTRY(    MEMPWRTHROT,   "#\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM,       AMEEFP_EVERY_TICK_HZ, AMEFP(  1, 0) ),
   SENSOR_INFO_T_ENTRY(     MEMOTTHROT,   "#\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM,  AMEEFP_EVERY_64TH_TICK_HZ, AMEFP(  1, 0) ),
-
-  /* ==CentaurSensors==    NameString  Units                     Type              Location             Number                Freq            ScaleFactor   */
-  SEN_CENTR_ENTRY_SET(           MACM, "rps\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ,   AMEFP(  1, 0)  ),
-  SEN_CENTR_ENTRY_SET(           MPUM, "rps\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ,   AMEFP(  1, 0)  ),
-  SEN_CENTR_ENTRY_SET(          MIRBM, "eps\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ,   AMEFP(  1, 0)  ),
-  SEN_CENTR_ENTRY_SET(          MIRLM, "eps\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ,   AMEFP(  1, 0)  ),
-  SEN_CENTR_ENTRY_SET(          MIRMM, "eps\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ,   AMEFP(  1, 0)  ),
-  SEN_CENTR_ENTRY_SET(          MIRHM, "eps\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ,   AMEFP(  1, 0)  ),
-  SEN_CENTR_ENTRY_SET(           MTSM, "cnt\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ,   AMEFP(  1, 0)  ),
-  SEN_CENTR_ENTRY_SET(          M4RDM, "GBs\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ,   AMEFP(  128, -5)  ),
-  SEN_CENTR_ENTRY_SET(          M4WRM, "GBs\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ,   AMEFP(  128, -5)  ),
-
 
   /* ==MemSummarySensors== NameString  Units                     Type              Location             Number                Freq            ScaleFactor   */
   SENSOR_INFO_T_ENTRY(       TEMPCENT,   "C\0",   AMEC_SENSOR_TYPE_TEMP,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM,   AMEEFP_EVERY_8TH_TICK_HZ, AMEFP(  1, 0)  ),

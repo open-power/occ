@@ -173,31 +173,12 @@ typedef union
 typedef struct
 {
   // Sensors
-  sensor_t mac2ms;
-  sensor_t mpu2ms;
-  sensor_t mirb2ms;
-  sensor_t mirl2ms;
-  sensor_t mirm2ms;
-  sensor_t mirh2ms;
-  sensor_t mts2ms;
-  sensor_t m4rd2ms;
-  sensor_t m4wr2ms;
-
   amec_chpair_perf_counter_t perf;
 
   // The most recent throttle value sent to this MBA
   // This is used to only send values to the centaur when it changes.
   amec_cent_mem_speed_t last_mem_speed_sent;
 } amec_portpair_t;
-
-typedef struct
-{
-  uint32_t intreq_highlatency_accum;
-  uint32_t lp2exit_accum;
-
-  uint16_t mirc2ms;
-  uint16_t mlp2_2ms;
-} amec_centaur_perf_counter_t;
 
 #define FRU_SENSOR_STATUS_STALLED       0x01
 #define FRU_SENSOR_STATUS_ERROR         0x02
@@ -244,8 +225,6 @@ typedef struct
 
   // Sensor ID for reporting temperature to BMC and FSP
   uint32_t  temp_sid;
-
-  amec_centaur_perf_counter_t perf;
 
 } amec_centaur_t;
 

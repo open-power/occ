@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -401,24 +401,11 @@ const sensor_ptr_t G_amec_sensor_list[] =
   MEMCONTROL_SENSOR_PTRS(MWRM,          &g_amec_sys.proc[0].memctl, mwr),
   MEMCONTROL_SENSOR_PTRS(MEMSPM,        &g_amec_sys.proc[0].memctl, memsp),
   MEMCONTROL_SENSOR_PTRS(MEMSPSTATM,    &g_amec_sys.proc[0].memctl, memspstat),
-  MEMCONTROL_SENSOR_PTRS(MIRCM,         &g_amec_sys.proc[0].memctl, centaur.mirc2ms),
-  MEMCONTROL_SENSOR_PTRS(MLP2M,         &g_amec_sys.proc[0].memctl, centaur.mlp2ms),
   DIMM_SENSOR_PTRS(TEMPDIMM,            &g_amec_sys.proc[0],        tempdimm),
   MEMCONTROL_SENSOR_PTRS(TEMPDIMMAXM,   &g_amec_sys.proc[0].memctl, centaur.tempdimmax),
   MEMCONTROL_SENSOR_PTRS(LOCDIMMAXM,    &g_amec_sys.proc[0].memctl, centaur.locdimmax),
   SENSOR_PTR(MEMPWRTHROT,               &g_amec_sys.proc[0].mempwrthrot),
   SENSOR_PTR(MEMOTTHROT,                &g_amec_sys.proc[0].memotthrot),
-
-  PORTPAIR_SENSOR_PTRS(MACM,        &g_amec_sys.proc[0].memctl, centaur.portpair, mac2ms),
-  PORTPAIR_SENSOR_PTRS(MPUM,        &g_amec_sys.proc[0].memctl, centaur.portpair, mpu2ms),
-  PORTPAIR_SENSOR_PTRS(MIRBM,       &g_amec_sys.proc[0].memctl, centaur.portpair, mirb2ms),
-  PORTPAIR_SENSOR_PTRS(MIRLM,       &g_amec_sys.proc[0].memctl, centaur.portpair, mirl2ms),
-  PORTPAIR_SENSOR_PTRS(MIRMM,       &g_amec_sys.proc[0].memctl, centaur.portpair, mirm2ms),
-  PORTPAIR_SENSOR_PTRS(MIRHM,       &g_amec_sys.proc[0].memctl, centaur.portpair, mirh2ms),
-  PORTPAIR_SENSOR_PTRS(MTSM,        &g_amec_sys.proc[0].memctl, centaur.portpair, mts2ms),
-  PORTPAIR_SENSOR_PTRS(M4RDM,       &g_amec_sys.proc[0].memctl, centaur.portpair, m4rd2ms),
-  PORTPAIR_SENSOR_PTRS(M4WRM,       &g_amec_sys.proc[0].memctl, centaur.portpair, m4wr2ms),
-
 
   SENSOR_PTR(TEMPCENT,              &g_amec_sys.proc[0].temp2mscent),
   SENSOR_PTR(TEMPDIMMTHRM,          &g_amec_sys.proc[0].tempdimmthrm),
@@ -580,8 +567,6 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   MEMCONTROL_MINI_SENSOR_PTRS(MWRM, &G_dcom_slv_outbox_tx.mwr),
   MEMCONTROL_MINI_SENSOR_PTRS_NULL(MEMSPM),
   MEMCONTROL_MINI_SENSOR_PTRS_NULL(MEMSPSTATM),
-  MEMCONTROL_MINI_SENSOR_PTRS_NULL(MIRCM),
-  MEMCONTROL_MINI_SENSOR_PTRS_NULL(MLP2M),
 
   MINI_SENSOR_PTR( TEMPDIMM00,     NULL),
   MINI_SENSOR_PTR( TEMPDIMM01,     NULL),
@@ -605,16 +590,6 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
 
   MINI_SENSOR_PTR( MEMPWRTHROT,  NULL),
   MINI_SENSOR_PTR( MEMOTTHROT,   NULL),
-
-  PORTPAIR_MINI_SENSOR_PTRS_NULL(MACM),
-  PORTPAIR_MINI_SENSOR_PTRS_NULL(MPUM),
-  PORTPAIR_MINI_SENSOR_PTRS_NULL(MIRBM),
-  PORTPAIR_MINI_SENSOR_PTRS_NULL(MIRLM),
-  PORTPAIR_MINI_SENSOR_PTRS_NULL(MIRMM),
-  PORTPAIR_MINI_SENSOR_PTRS_NULL(MIRHM),
-  PORTPAIR_MINI_SENSOR_PTRS_NULL(MTSM),
-  PORTPAIR_MINI_SENSOR_PTRS_NULL(M4RDM),
-  PORTPAIR_MINI_SENSOR_PTRS_NULL(M4WRM),
 
   MINI_SENSOR_PTR( TEMPCENT,        &G_dcom_slv_outbox_tx.temp2mscent),
   MINI_SENSOR_PTR( TEMPDIMMTHRM,    &G_dcom_slv_outbox_tx.tempdimmthrm),

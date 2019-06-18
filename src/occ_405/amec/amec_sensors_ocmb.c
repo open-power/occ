@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_405/amec/amec_sensors_centaur.c $                     */
+/* $Source: src/occ_405/amec/amec_sensors_ocmb.c $                        */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -502,115 +502,6 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
     // Go after second MC performance counter (power ups and activations)
     tempu = l_sensor_cache->mba_act;
     templ = l_sensor_cache->mba_powerups;
-
-    // ----------------------------------------------------------------
-    // Sensor:  MPUMx (0.01 Mrps) Memory power-up requests per sec
-    // ----------------------------------------------------------------
-    // Extract power up count
-    temp32new = (templ); // left shift into top 20 bits of 32 bits
-
-    // For DD1.0, we only have 1 channel field that we use; DD2.0 we need to add another channel
-    temp32 = g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.pwrup_cnt_accum;
-    temp32 = amec_diff_adjust_for_overflow(temp32new, temp32);
-    g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.pwrup_cnt_accum = temp32new;  // Save latest accumulator away for next time
-    tempreg=(uint16_t)(temp32>>12);   // Select upper 20 bits
-    g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.pwrup_cnt=(uint16_t)tempreg;
-    sensor_update(AMECSENSOR_PORTPAIR_PTR(mpu2ms,i_membuf,0), tempreg);
-
-    // -------------------------------------------------------------------
-    // Sensor:  MACMx (0.01 Mrps)  Memory activation requests per sec
-    // -------------------------------------------------------------------
-    // Extract activation count
-    temp32 = templ;
-    temp32 += tempu;
-
-    temp32new = (temp32);   // left shift into top 20 bits of 32 bits
-    // For DD1.0, we only have 1 channel field that we use; DD2.0 we need to add another channel
-    temp32 = g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.act_cnt_accum;
-    temp32 = amec_diff_adjust_for_overflow(temp32new, temp32);
-    g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.act_cnt_accum = temp32new;  // Save latest accumulator away for next time
-    tempreg=(uint16_t)(temp32>>12);   // Select lower 16 of 20 bits
-    g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.act_cnt=(uint16_t)tempreg;
-    sensor_update(AMECSENSOR_PORTPAIR_PTR(mac2ms,i_membuf,0), tempreg);
-
-    // --------------------------------------------------------------------------
-    // Sensor:  MTS (count) Last received Timestamp (frame count) from Centaur
-    // --------------------------------------------------------------------------
-    // Extract framecount (clock is 266.6666666MHz * 0.032 / 4096)=2083.
-    temp32new = l_sensor_cache->frame_count;
-
-    temp32 = g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.fr2_cnt_accum;
-    temp32 = amec_diff_adjust_for_overflow(temp32new, temp32);
-    g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.fr2_cnt_accum = temp32new;  // Save latest accumulator away for next time
-    tempreg=(uint16_t)(temp32>>12);   // Select upper 20 bits
-
-    g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.fr2_cnt=(uint16_t)tempreg;
-    sensor_update(AMECSENSOR_PORTPAIR_PTR(mts2ms,i_membuf,0), tempreg);
-
-    // ------------------------------------------------------------------------------
-    // Sensor:  MIRB  (0.01 Mevents/s) Memory Inter-request arrival idle intervals
-    // ------------------------------------------------------------------------------
-    temp32new = l_sensor_cache->mba_arr_cnt_base;
-    temp32 = g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.intreq_base_accum;
-    temp32 = amec_diff_adjust_for_overflow(temp32new, temp32);
-    g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.intreq_base_accum = temp32new;  // Save latest accumulator away for next time
-
-    // Read every 8 ms....to convert to 0.01 Mrps = ((8ms read * 125)/10000)
-    tempreg = ((temp32*125)/10000);
-    g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.mirb2ms = tempreg;
-    sensor_update(AMECSENSOR_PORTPAIR_PTR(mirb2ms,i_membuf,0), tempreg);
-
-    // --------------------------------------------------------------------------------------------------------
-    // Sensor:  MIRL  (0.01 Mevents/s) Memory Inter-request arrival idle intervals longer than low threshold
-    // --------------------------------------------------------------------------------------------------------
-    temp32new = l_sensor_cache->mba_arr_cnt_low;
-    temp32 = g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.intreq_low_accum;
-    temp32 = amec_diff_adjust_for_overflow(temp32new, temp32);
-    g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.intreq_low_accum = temp32new;  // Save latest accumulator away for next time
-
-    // Read every 8 ms....to convert to 0.01 Mrps = ((8ms read * 125)/10000)
-    tempreg = ((temp32*125)/10000);
-    g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.mirl2ms = tempreg;
-    sensor_update(AMECSENSOR_PORTPAIR_PTR(mirl2ms,i_membuf,0), tempreg);
-
-    // -----------------------------------------------------------------------------------------------------------
-    // Sensor:  MIRM  (0.01 Mevents/s) Memory Inter-request arrival idle intervals longer than medium threshold
-    // -----------------------------------------------------------------------------------------------------------
-    temp32new = l_sensor_cache->mba_arr_cnt_med;
-    temp32 = g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.intreq_med_accum;
-    temp32 = amec_diff_adjust_for_overflow(temp32new, temp32);
-    g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.intreq_med_accum = temp32new;  // Save latest accumulator away for next time
-
-    // Read every 8 ms....to convert to 0.01 Mrps = ((8ms read * 125)/10000)
-    tempreg = ((temp32*125)/10000);
-    g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.mirm2ms = tempreg;
-    sensor_update(AMECSENSOR_PORTPAIR_PTR(mirm2ms,i_membuf,0), tempreg);
-
-    // ---------------------------------------------------------------------------------------------------------
-    // Sensor:  MIRH  (0.01 Mevents/s) Memory Inter-request arrival idle intervals longer than high threshold
-    // ---------------------------------------------------------------------------------------------------------
-    temp32new = l_sensor_cache->mba_arr_cnt_high;
-    temp32 = g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.intreq_high_accum;
-    temp32 = amec_diff_adjust_for_overflow(temp32new, temp32);
-    g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.intreq_high_accum = temp32new;  // Save latest accumulator away for next time
-
-    // Read every 8 ms....to convert to 0.01 Mrps = ((8ms read * 125)/10000)
-    tempreg = ((temp32*125)/10000);
-    g_amec->proc[0].memctl[i_membuf].centaur.portpair[0].perf.mirh2ms = tempreg;
-    sensor_update(AMECSENSOR_PORTPAIR_PTR(mirh2ms,i_membuf,0), tempreg);
-
-    // ----------------------------------------------------
-    // Sensor:  MLP2   (events/s) Number of LP2 exits
-    // ----------------------------------------------------
-    temp32new = l_sensor_cache->self_timed_refresh;
-    temp32 = g_amec->proc[0].memctl[i_membuf].centaur.perf.lp2exit_accum;
-    temp32 = amec_diff_adjust_for_overflow(temp32new, temp32);
-    g_amec->proc[0].memctl[i_membuf].centaur.perf.lp2exit_accum = temp32new;  // Save latest accumulator away for next time
-
-    // Read every 8 ms....to convert to 0.01 Mrps = ((8ms read * 125)/10000)
-    tempreg = ((temp32*125)/10000);
-    g_amec->proc[0].memctl[i_membuf].centaur.perf.mlp2_2ms = tempreg;
-    sensor_update((&(g_amec->proc[0].memctl[i_membuf].centaur.mlp2ms)), tempreg);
 
     // ------------------------------------------------------------
     // Sensor:  MRDMx (0.01 Mrps) Memory read requests per sec
