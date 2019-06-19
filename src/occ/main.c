@@ -834,8 +834,12 @@ void Main_thread_routine(void *private)
             // FIR collection
             if (OCC_IS_FIR_MASTER() && pnor_access_allowed())
             {
+                // Disabling watchdog gives the procedure enough time to
+                // collect and write FIR data.
+                DISABLE_WDOG;
                 fir_data_collect();
                 L_fir_collection_completed = TRUE;
+                ENABLE_WDOG;
             }
 
             G_fir_collection_required = FALSE;
