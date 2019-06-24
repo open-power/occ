@@ -42,7 +42,7 @@ extern gpe_shared_data_t G_shared_gpe_data;
  * @post G_membufConfiguration populated
  * @post G_present_centaurs populated
  * @post G_dimm_present_sensors
- * @post G_membuf_data_task populated
+ * @post G_ocmb_data_task populated
  * @post GPE request to call for recover created ?
  * @post GPE request to call for throttle conttrol created
  * @note HW Deadman timer enabled and set to max value
@@ -109,7 +109,7 @@ void ocmb_init(void)
         G_membuf_data_parms.data = 0;
 
         rc = gpe_request_create(
-                &G_membuf_data_task.gpe_req,     //gpe_req for the task
+                &G_ocmb_data_task.gpe_req,       //gpe_req for the task
                 &G_async_gpe_queue1,              //queue
                 IPC_ST_MEMBUF_DATA_FUNCID,        //Function ID
                 &G_membuf_data_parms,            //parm for the task
@@ -120,7 +120,7 @@ void ocmb_init(void)
         if( rc )
         {
             TRAC_ERR("ocmb_init: gpe_request_create failed for "
-                     "G_membuf_data_task.gpe_req. rc = 0x%08x", rc);
+                     "G_ocmb_data_task.gpe_req. rc = 0x%08x", rc);
             break;
         }
 

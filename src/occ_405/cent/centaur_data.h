@@ -121,6 +121,7 @@ typedef struct membuf_data_task membuf_data_task_t;
 
 //Global centaur structures used for task data pointers
 extern membuf_data_task_t G_membuf_data_task;
+extern membuf_data_task_t G_ocmb_data_task;
 
 //Global is bitmask of centaurs
 extern uint32_t G_present_centaurs;

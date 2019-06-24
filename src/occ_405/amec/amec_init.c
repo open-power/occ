@@ -267,6 +267,21 @@ void amec_init_gamec_struct(void)
   g_amec->thermalcent.Pgain = 30000;
   g_amec->thermalcent.speed_request = AMEC_MEMORY_MAX_STEP;
 
+  // Initialize thermal controller based on temperature sensor covering both mem ctrl and DIMM
+  g_amec->thermalmcdimm.setpoint = 850; //In 0.1 degrees C -> 850 = 85.0 C
+  g_amec->thermalmcdimm.Pgain = 30000;
+  g_amec->thermalmcdimm.speed_request = AMEC_MEMORY_MAX_STEP;
+
+  // Initialize thermal controller based on PMIC temperatures
+  g_amec->thermalpmic.setpoint = 850; //In 0.1 degrees C -> 850 = 85.0 C
+  g_amec->thermalpmic.Pgain = 30000;
+  g_amec->thermalpmic.speed_request = AMEC_MEMORY_MAX_STEP;
+
+  // Initialize thermal controller based on external mem controller temperatures
+  g_amec->thermalmcext.setpoint = 850; //In 0.1 degrees C -> 850 = 85.0 C
+  g_amec->thermalmcext.Pgain = 30000;
+  g_amec->thermalmcext.speed_request = AMEC_MEMORY_MAX_STEP;
+
   // Initialize component power caps
   g_amec->pcap.active_proc_pcap = 0;
   g_amec->pcap.active_mem_level = 0;

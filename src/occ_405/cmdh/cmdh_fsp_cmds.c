@@ -205,8 +205,11 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
     }
 
     //If memory is being throttled due to OverTemp or due to Failure to read sensors set mthrot_due_to_ot bit.
-    if (((g_amec->mem_throttle_reason == AMEC_MEM_VOTING_REASON_DIMM) ||
-         (g_amec->mem_throttle_reason == AMEC_MEM_VOTING_REASON_CENT)))
+    if ( (g_amec->mem_throttle_reason == AMEC_MEM_VOTING_REASON_DIMM) ||
+         (g_amec->mem_throttle_reason == AMEC_MEM_VOTING_REASON_CENT) ||
+         (g_amec->mem_throttle_reason == AMEC_MEM_VOTING_REASON_MCDIMM) ||
+         (g_amec->mem_throttle_reason == AMEC_MEM_VOTING_REASON_PMIC) ||
+         (g_amec->mem_throttle_reason == AMEC_MEM_VOTING_REASON_MC_EXT) )
     {
         l_poll_rsp->ext_status.mthrot_due_to_ot = 1;
     }
@@ -384,7 +387,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
                 //Add entry for centaurs.
                 uint32_t l_temp_sid = g_amec->proc[0].memctl[l_cent].centaur.temp_sid;
                 l_tempSensorList[l_sensorHeader.count].id = l_temp_sid;
-                l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_CENTAUR;
+                l_tempSensorList[l_sensorHeader.count].fru_type = g_amec->proc[0].memctl[l_cent].centaur.centaur_hottest.temp_fru_type;
                 if (G_cent_timeout_logged_bitmap & (CENTAUR0_PRESENT_MASK >> l_cent))
                 {
                     l_tempSensorList[l_sensorHeader.count].value = 0xFF;
@@ -414,7 +417,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
                     if (l_temp_sid != 0)
                     {
                         l_tempSensorList[l_sensorHeader.count].id = l_temp_sid;
-                        l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_DIMM;
+                        l_tempSensorList[l_sensorHeader.count].fru_type = g_amec->proc[0].memctl[l_cent].centaur.dimm_temps[l_dimm].temp_fru_type;
                         //If a dimm timed out long enough, we should return 0xFFFF for that sensor.
                         if (G_dimm_temp_expired_bitmap.bytes[l_cent] & (DIMM_SENSOR0 >> l_dimm))
                         {

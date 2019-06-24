@@ -2104,13 +2104,6 @@ errlHndl_t data_store_thrm_thresholds(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 G_data_cnfg->thrm_thresh.data[l_frutype].max_read_timeout =
                     l_cmd_ptr->data[i].max_read_timeout;
 
-                // VRM OT status is no longer supported since the OCC supports reading Vdd temperature
-                // Trace if VRM OT status FRU type is received and just ignore it
-                if(l_frutype == DATA_FRU_VRM_OT_STATUS)
-                {
-                    CMDH_TRAC_IMP("data_store_thrm_thresholds: Received deprecated VRM OT STATUS type will be ignored");
-                }
-
                 // Useful trace for debugging
                 //CMDH_TRAC_INFO("data_store_thrm_thresholds: FRU_type[0x%.2X] T_control[%u] DVFS[%u] Error[%u]",
                 //          G_data_cnfg->thrm_thresh.data[l_frutype].fru_type,
@@ -2352,11 +2345,14 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
                         if (IS_OCM_MEM_TYPE(l_data_set->memory_type))
                         {
-                            // Get the physical location from type
-                            l_membuf_num &= OCMB_TYPE_LOCATION_MASK;
                             if (G_sysConfigData.mem_type != MEM_TYPE_OCM)
                             {
                                 l_type_mismatch = TRUE;
+                            }
+                            else
+                            {
+                                // Get the physical location from type
+                                l_membuf_num &= OCMB_TYPE_LOCATION_MASK;
                             }
                         }
                         else if (G_sysConfigData.mem_type != MEM_TYPE_CUMULUS)
@@ -2383,13 +2379,34 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                             // Store the temperature sensor ID
                             g_amec->proc[0].memctl[l_membuf_num].centaur.temp_sid = l_data_set->temp_sensor_id;
 
-                            if (G_sysConfigData.mem_type == MEM_TYPE_OCM)
+                            // Specific handling for OCMB vs Centaur
+                            if(G_sysConfigData.mem_type == MEM_TYPE_OCM)
                             {
-                                // Both OCMB and Centaur code use this global to idicate which MBs
-                                // are present, but Centaur sets this up later in centaur_init()
-                                G_present_centaurs |= (CENTAUR0_PRESENT_MASK >> l_membuf_num);
-                            }
+                               // Both OCMB and Centaur code use this global to idicate which MBs
+                               // are present, but Centaur sets this up later in centaur_init()
+                               G_present_centaurs |= (CENTAUR0_PRESENT_MASK >> l_membuf_num);
 
+                               // Store the temperature sensor fru type
+                               // The internal sensor is either for internal memctrl ("centaur" fru type)
+                               // or it is not being used due to hw bug
+                               if( (l_data_set->dimm_info2 == DATA_FRU_CENTAUR) ||
+                                   (l_data_set->dimm_info2 == DATA_FRU_NOT_USED) )
+                               {
+                                   g_amec->proc[0].memctl[l_membuf_num].centaur.centaur_hottest.temp_fru_type = l_data_set->dimm_info2;
+                               }
+                               else
+                               {
+                                   // not a valid fru type for the internal sensor, trace and don't use it
+                                   CMDH_TRAC_ERR("data_store_mem_cfg: Got invalid fru type[0x%02X] for mem buf[%d]",
+                                                 l_data_set->dimm_info2, l_membuf_num);
+                                   g_amec->proc[0].memctl[l_membuf_num].centaur.centaur_hottest.temp_fru_type = DATA_FRU_NOT_USED;
+                               }
+                            }
+                            else // centaur
+                            {
+                               // must be type centaur
+                               g_amec->proc[0].memctl[l_membuf_num].centaur.centaur_hottest.temp_fru_type = DATA_FRU_CENTAUR;
+                            }
                             l_num_mem_bufs++;
                         }
                         else // individual DIMM
@@ -2401,6 +2418,48 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                             g_amec->proc[0].memctl[l_membuf_num].centaur.dimm_temps[l_dimm_num].temp_sid =
                                 l_data_set->temp_sensor_id;
 
+                            // Store the temperature sensor fru type
+                            if(G_sysConfigData.mem_type == MEM_TYPE_OCM)
+                            {
+                               // The 2 external temp sensors may be used for non-dimm fru type i.e. PMIC, mem controller...
+                               // this fru type is coming from attributes setup by HWP during IPL and then read by (H)TMGT
+                               if(l_data_set->dimm_info2 == DATA_FRU_DIMM)
+                               {
+                                   g_amec->proc[0].memctl[l_membuf_num].centaur.dimm_temps[l_dimm_num].temp_fru_type = DATA_FRU_DIMM;
+                                   g_amec->proc[0].memctl[l_membuf_num].centaur.dimm_temps[l_dimm_num].dts_type_mask = OCM_DTS_TYPE_DIMM_MASK;
+                               }
+                               else if(l_data_set->dimm_info2 == DATA_FRU_MEMCTRL_DRAM)
+                               {
+                                   g_amec->proc[0].memctl[l_membuf_num].centaur.dimm_temps[l_dimm_num].temp_fru_type = DATA_FRU_MEMCTRL_DRAM;
+                                   g_amec->proc[0].memctl[l_membuf_num].centaur.dimm_temps[l_dimm_num].dts_type_mask = OCM_DTS_TYPE_MEMCTRL_DRAM_MASK;
+                               }
+                               else if(l_data_set->dimm_info2 == DATA_FRU_PMIC)
+                               {
+                                   g_amec->proc[0].memctl[l_membuf_num].centaur.dimm_temps[l_dimm_num].temp_fru_type = DATA_FRU_PMIC;
+                                   g_amec->proc[0].memctl[l_membuf_num].centaur.dimm_temps[l_dimm_num].dts_type_mask = OCM_DTS_TYPE_PMIC_MASK;
+                               }
+                               else if(l_data_set->dimm_info2 == DATA_FRU_MEMCTRL_EXT)
+                               {
+                                   g_amec->proc[0].memctl[l_membuf_num].centaur.dimm_temps[l_dimm_num].temp_fru_type = DATA_FRU_MEMCTRL_EXT;
+                                   g_amec->proc[0].memctl[l_membuf_num].centaur.dimm_temps[l_dimm_num].dts_type_mask = OCM_DTS_TYPE_MEMCTRL_EXT_MASK;
+                               }
+                               else // sensor not used
+                               {
+                                   g_amec->proc[0].memctl[l_membuf_num].centaur.dimm_temps[l_dimm_num].temp_fru_type = DATA_FRU_NOT_USED;
+                                   g_amec->proc[0].memctl[l_membuf_num].centaur.dimm_temps[l_dimm_num].dts_type_mask = 0;
+                                   if (l_data_set->dimm_info2 != DATA_FRU_NOT_USED)
+                                   {
+                                      // not a valid fru type
+                                      CMDH_TRAC_ERR("data_store_mem_cfg: Got invalid fru type[0x%02X] for mem buf[%d] dimm[%d]",
+                                                    l_data_set->dimm_info2, l_membuf_num, l_dimm_num);
+                                   }
+                               }
+                            }
+                            else // centaur
+                            {
+                               // must be type DIMM
+                               g_amec->proc[0].memctl[l_membuf_num].centaur.dimm_temps[l_dimm_num].temp_fru_type = DATA_FRU_DIMM;
+                            }
                             l_num_dimms++;
                         }
                     } // end CENTAUR/OCMB

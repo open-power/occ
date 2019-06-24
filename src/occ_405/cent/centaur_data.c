@@ -104,8 +104,8 @@ extern gpe_shared_data_t G_shared_gpe_data;
 //   MemDataMcs  mcs;  // not used
 //   MemDataSensorCache scache;
 //   } MemData;
-//Global array of centaur data buffers
-GPE_BUFFER(CentaurMemData G_centaur_data[NUM_CENTAUR_DATA_BUFF +
+//Global array of centaur data buffers common with OCMB
+GPE_BUFFER(CentaurMemData G_centaur_data[MAX_NUM_MEM_CONTROLLERS +
                                   NUM_CENTAUR_DOUBLE_BUF +
                                   NUM_CENTAUR_DATA_EMPTY_BUF]);
 
@@ -118,18 +118,19 @@ GPE_BUFFER(MemBufScomParms_t G_cent_scom_gpe_parms);
 //scom command list entry
 GPE_BUFFER(scomList_t G_cent_scom_list_entry[NUM_CENT_OPS]);
 
-//buffer for storing output from running IPC_ST_MEMBUF_SCOM()
+//buffer for storing output from running IPC_ST_MEMBUF_SCOM() Centaur only
 GPE_BUFFER(uint64_t G_cent_scom_data[MAX_NUM_CENTAURS]) = {0};
 
 // parms for call to IPC_ST_MEMBUF_INIT_FUNCID
 GPE_BUFFER(MemBufConfigParms_t G_gpe_centaur_config_args);
 
 GPE_BUFFER(MemBufConfiguration_t G_membufConfiguration);
-//Global array of centaur data pointers
-CentaurMemData * G_centaur_data_ptrs[MAX_NUM_CENTAURS] = { &G_centaur_data[0],
-   &G_centaur_data[1], &G_centaur_data[2], &G_centaur_data[3],
-   &G_centaur_data[4], &G_centaur_data[5], &G_centaur_data[6],
-   &G_centaur_data[7]};
+//Global array of centaur data pointers common with OCMB need to use max mem ctrl to cover max OCMB
+CentaurMemData * G_centaur_data_ptrs[MAX_NUM_MEM_CONTROLLERS] =
+ { &G_centaur_data[0],  &G_centaur_data[1],  &G_centaur_data[2],  &G_centaur_data[3],
+   &G_centaur_data[4],  &G_centaur_data[5],  &G_centaur_data[6],  &G_centaur_data[7],
+   &G_centaur_data[8],  &G_centaur_data[9],  &G_centaur_data[10], &G_centaur_data[11],
+   &G_centaur_data[12], &G_centaur_data[13], &G_centaur_data[14], &G_centaur_data[15] };
 
 //Global structures for gpe get mem data parms
 GPE_BUFFER(MemBufGetMemDataParms_t G_membuf_data_parms);
@@ -144,6 +145,15 @@ membuf_data_task_t G_membuf_data_task = {
     .end_membuf = 7,
     .prev_membuf = 7,
     .membuf_data_ptr = &G_centaur_data[MAX_NUM_CENTAURS]
+};
+
+//OCMB structures used for task data pointers.
+membuf_data_task_t G_ocmb_data_task = {
+    .start_membuf = 0,
+    .current_membuf = 0,
+    .end_membuf = 15,
+    .prev_membuf = 15,
+    .membuf_data_ptr = &G_centaur_data[MAX_NUM_OCMBS]
 };
 
 
@@ -600,9 +610,17 @@ void centaur_data( void )
     membuf_data_task_t * l_centaur_data_ptr = &G_membuf_data_task;
     MemBufGetMemDataParms_t  * l_parms =
         (MemBufGetMemDataParms_t *)(l_centaur_data_ptr->gpe_req.cmd_data);
+    uint8_t       l_empty_buf_idx = MAX_NUM_CENTAURS + 1;  // array index for empty buffer
     static bool   L_gpe_scheduled = FALSE;
     static bool   L_gpe_error_logged = FALSE;
     static bool   L_gpe_had_1_tick = FALSE;
+
+    // local inits are for Centaur, need to change some that are different for OCM
+    if(G_sysConfigData.mem_type == MEM_TYPE_OCM)
+    {
+        l_centaur_data_ptr = &G_ocmb_data_task;
+        l_empty_buf_idx = MAX_NUM_OCMBS + 1;
+    }
 
     do
     {
@@ -806,7 +824,7 @@ void centaur_data( void )
         // (this is very handy for debug...)
         if( !CENTAUR_PRESENT(l_centaur_data_ptr->current_membuf))
         {
-            G_centaur_data_ptrs[l_centaur_data_ptr->current_membuf] = &G_centaur_data[9];
+            G_centaur_data_ptrs[l_centaur_data_ptr->current_membuf] = &G_centaur_data[l_empty_buf_idx];
         }
 
         //Update current centaur
@@ -1266,7 +1284,7 @@ void centaur_init( void )
 //
 // Description: Returns a pointer to the most up-to-date centaur data for
 //              the centaur associated with the specified OCC centaur id.
-//              Returns NULL for centaur ID outside the range of 0 to 7.
+//              Returns NULL for mem buf ID outside range.
 //
 // End Function Specification
 CentaurMemData * cent_get_centaur_data_ptr( const uint8_t i_occ_centaur_id )
@@ -1274,14 +1292,21 @@ CentaurMemData * cent_get_centaur_data_ptr( const uint8_t i_occ_centaur_id )
     //The caller needs to send in a valid OCC centaur id. Since type is uchar
     //so there is no need to check for case less than 0.
     //If centaur id is invalid then returns NULL.
-    if( i_occ_centaur_id < MAX_NUM_CENTAURS )
+    if( (G_sysConfigData.mem_type == MEM_TYPE_CUMULUS) &&
+        (i_occ_centaur_id < MAX_NUM_CENTAURS) )
+    {
+        //Returns a pointer to the most up-to-date centaur data.
+        return G_centaur_data_ptrs[i_occ_centaur_id];
+    }
+    else if( (G_sysConfigData.mem_type == MEM_TYPE_OCM) &&
+             (i_occ_centaur_id < MAX_NUM_OCMBS) )
     {
         //Returns a pointer to the most up-to-date centaur data.
         return G_centaur_data_ptrs[i_occ_centaur_id];
     }
     else
     {
-        //Core id outside the range
+        //Mem buf id outside the range
         TRAC_ERR("cent_get_centaur_data_ptr: Invalid OCC centaur id [0x%x]", i_occ_centaur_id);
         return( NULL );
     }

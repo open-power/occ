@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -266,6 +266,96 @@ errlHndl_t AMEC_data_write_thrm_thresholds(const OCC_MODE i_mode)
         g_amec->thermaldimm.temp_timeout = l_frudata[DATA_FRU_DIMM].max_read_timeout;
 
         TRAC_INFO("AMEC_data_write_thrm_thresholds: DIMM setpoints - DVFS: %u, Error: %u",
+                  l_dvfs_temp, l_error);
+
+        // Store the Memctrl+DIMM thermal data
+        if (!l_pm_limits)
+        {
+            // use normal thresholds for Nominal or OPAL
+            l_dvfs_temp = l_frudata[DATA_FRU_MEMCTRL_DRAM].dvfs;
+            l_error = l_frudata[DATA_FRU_MEMCTRL_DRAM].error;
+        }
+        else
+        {
+            l_dvfs_temp = l_frudata[DATA_FRU_MEMCTRL_DRAM].pm_dvfs;
+            if(i_mode == OCC_MODE_TURBO)
+            {
+                //Need to log an error if we throttle in static turbo mode (for mfg)
+                l_error = l_dvfs_temp;
+            }
+            else
+            {
+                l_error = l_frudata[DATA_FRU_MEMCTRL_DRAM].pm_error;
+            }
+        }
+        // Store the DVFS thermal setpoint in 0.1 degrees C
+        g_amec->thermalmcdimm.setpoint = l_dvfs_temp * 10;
+        // Store the error temperature for OT detection
+        g_amec->thermalmcdimm.ot_error = l_error;
+        // Store the temperature timeout value
+        g_amec->thermalmcdimm.temp_timeout = l_frudata[DATA_FRU_DIMM].max_read_timeout;
+
+        TRAC_INFO("AMEC_data_write_thrm_thresholds: MC+DIMM setpoints - DVFS: %u, Error: %u",
+                  l_dvfs_temp, l_error);
+
+        // Store the PMIC thermal data
+        if (!l_pm_limits)
+        {
+            // use normal thresholds for Nominal or OPAL
+            l_dvfs_temp = l_frudata[DATA_FRU_PMIC].dvfs;
+            l_error = l_frudata[DATA_FRU_PMIC].error;
+        }
+        else
+        {
+            l_dvfs_temp = l_frudata[DATA_FRU_PMIC].pm_dvfs;
+            if(i_mode == OCC_MODE_TURBO)
+            {
+                //Need to log an error if we throttle in static turbo mode (for mfg)
+                l_error = l_dvfs_temp;
+            }
+            else
+            {
+                l_error = l_frudata[DATA_FRU_PMIC].pm_error;
+            }
+        }
+        // Store the DVFS thermal setpoint in 0.1 degrees C
+        g_amec->thermalpmic.setpoint = l_dvfs_temp * 10;
+        // Store the error temperature for OT detection
+        g_amec->thermalpmic.ot_error = l_error;
+        // Store the temperature timeout value
+        g_amec->thermalpmic.temp_timeout = l_frudata[DATA_FRU_PMIC].max_read_timeout;
+
+        TRAC_INFO("AMEC_data_write_thrm_thresholds: PMIC setpoints - DVFS: %u, Error: %u",
+                  l_dvfs_temp, l_error);
+
+        // Store the external mem ctrl thermal data
+        if (!l_pm_limits)
+        {
+            // use normal thresholds for Nominal or OPAL
+            l_dvfs_temp = l_frudata[DATA_FRU_MEMCTRL_EXT].dvfs;
+            l_error = l_frudata[DATA_FRU_MEMCTRL_EXT].error;
+        }
+        else
+        {
+            l_dvfs_temp = l_frudata[DATA_FRU_MEMCTRL_EXT].pm_dvfs;
+            if(i_mode == OCC_MODE_TURBO)
+            {
+                //Need to log an error if we throttle in static turbo mode (for mfg)
+                l_error = l_dvfs_temp;
+            }
+            else
+            {
+                l_error = l_frudata[DATA_FRU_MEMCTRL_EXT].pm_error;
+            }
+        }
+        // Store the DVFS thermal setpoint in 0.1 degrees C
+        g_amec->thermalmcext.setpoint = l_dvfs_temp * 10;
+        // Store the error temperature for OT detection
+        g_amec->thermalmcext.ot_error = l_error;
+        // Store the temperature timeout value
+        g_amec->thermalmcext.temp_timeout = l_frudata[DATA_FRU_MEMCTRL_EXT].max_read_timeout;
+
+        TRAC_INFO("AMEC_data_write_thrm_thresholds: External MC setpoints - DVFS: %u, Error: %u",
                   l_dvfs_temp, l_error);
 
         // Store the VRM Vdd thermal data

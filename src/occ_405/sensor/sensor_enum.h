@@ -511,6 +511,9 @@ enum e_gsid
     // ------------------------------------------------------
     TEMPCENT,
     TEMPDIMMTHRM,
+    TEMPMCDIMMTHRM,
+    TEMPPMICTHRM,
+    TEMPMCEXTTHRM,
 
     // ------------------------------------------------------
     // GPU Sensors

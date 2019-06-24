@@ -385,6 +385,9 @@ const sensor_ptr_t G_amec_sensor_list[] =
 
   SENSOR_PTR(TEMPCENT,              &g_amec_sys.proc[0].tempcent),
   SENSOR_PTR(TEMPDIMMTHRM,          &g_amec_sys.proc[0].tempdimmthrm),
+  SENSOR_PTR(TEMPMCDIMMTHRM,        &g_amec_sys.proc[0].tempmcdimmthrm),
+  SENSOR_PTR(TEMPPMICTHRM,          &g_amec_sys.proc[0].temppmicthrm),
+  SENSOR_PTR(TEMPMCEXTTHRM,         &g_amec_sys.proc[0].tempmcextthrm),
 
   // ------------------------------------------------------
   // GPU Sensors
@@ -558,6 +561,9 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
 
   MINI_SENSOR_PTR( TEMPCENT,        &G_dcom_slv_outbox_tx.tempcent),
   MINI_SENSOR_PTR( TEMPDIMMTHRM,    &G_dcom_slv_outbox_tx.tempdimmthrm),
+  MINI_SENSOR_PTR( TEMPMCDIMMTHRM,  NULL), // $todo RTC: 213569 add 3 new summary sensors to call home
+  MINI_SENSOR_PTR( TEMPPMICTHRM,    NULL),
+  MINI_SENSOR_PTR( TEMPMCEXTTHRM,   NULL),
 
   // ------------------------------------------------------
   // GPU Sensors

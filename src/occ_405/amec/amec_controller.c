@@ -36,6 +36,8 @@
 //*************************************************************************
 extern dimm_sensor_flags_t G_dimm_temp_expired_bitmap;
 extern uint16_t G_cent_temp_expired_bitmap;
+extern uint8_t G_ocm_dts_type_expired_bitmap;
+
 //*************************************************************************
 // Macros
 //*************************************************************************
@@ -246,8 +248,8 @@ void amec_controller_vrm_vdd_thermal()
 // Description: This function implements the Proportional Controller for the
 //              DIMM thermal control. Although it doesn't return any
 //              results, it populates the thermal vote in the field
-//              g_amec->thermaldimm.speed_request.
-//
+//              g_amec->thermaldimm.speed_request, g_amec->thermalmcdimm.speed_request,
+//              g_amec->thermalpmic.speed_request and g_amec->thermalmcext.speed_request,
 // Task Flags:
 //
 // End Function Specification
@@ -256,82 +258,197 @@ void amec_controller_dimm_thermal()
     /*------------------------------------------------------------------------*/
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
+    uint8_t                       i = 0;
+    uint8_t                       l_max_dimm_types = 0;
+    const uint16_t                l_dimm_types[4] = {DATA_FRU_DIMM,
+                                                     DATA_FRU_MEMCTRL_DRAM,
+                                                     DATA_FRU_PMIC,
+                                                     DATA_FRU_MEMCTRL_EXT};
     uint16_t                      l_thermal_winner = 0;
     uint16_t                      l_residue = 0;
     uint16_t                      l_old_residue = 0;
+    uint16_t                      l_throttle_temp = 0;
+    uint16_t                      l_Pgain = 0;
+    uint16_t                    * l_speed_request = NULL;
+    uint16_t                    * l_total_res = NULL;
     int16_t                       l_error = 0;
     int16_t                       l_mem_speed = 0;
     int16_t                       l_throttle_chg = 0;
     int32_t                       l_throttle = 0;
     sensor_t                    * l_sensor = NULL;
+    bool                          l_timeout = false;
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    // Get TEMPDIMMTHRM sensor value
-    l_sensor = getSensorByGsid(TEMPDIMMTHRM);
-
-    if(G_dimm_temp_expired_bitmap.dw[0] ||
-       G_dimm_temp_expired_bitmap.dw[1])
+    // loop for the number of different fru types the "dimm" sensors can be
+    // to determine memory throttle based on each type
+    if(MEM_TYPE_OCM == G_sysConfigData.mem_type)
     {
-       //we were not able to read one or more dimm temperatures.
-       //Assume temperature is at the setpoint plus 1 degree C.
-       l_thermal_winner = g_amec->thermaldimm.setpoint + 10;
+       // all 4 types are possible:
+       l_max_dimm_types = 4;
     }
     else
     {
-        // Use the highest temperature of all DIMMs in 0.1 degrees C
-        l_thermal_winner = l_sensor->sample * 10;
+       // can only be the one DATA_FRU_DIMM type which must be listed first in l_dimm_types
+       l_max_dimm_types = 1;
     }
 
-    // Check if there is an error
-    if (g_amec->thermaldimm.setpoint == l_thermal_winner)
-        return;
-
-    // Calculate the thermal control error
-    l_error = g_amec->thermaldimm.setpoint - l_thermal_winner;
-
-    // Proportional Controller for the thermal control loop based on DIMM
-    // temperatures
-    l_throttle = (int32_t) l_error * g_amec->thermaldimm.Pgain;
-    l_residue = (uint16_t) l_throttle;
-    l_throttle_chg = (int16_t) (l_throttle >> 16);
-
-    if ((int16_t) l_throttle_chg > AMEC_MEMORY_SPEED_CHANGE_LIMIT)
+    for(i= 0; i < l_max_dimm_types; i++)
     {
-        l_throttle_chg = AMEC_MEMORY_SPEED_CHANGE_LIMIT;
-    }
-    else
-    {
-        if ((int16_t) l_throttle_chg < (-AMEC_MEMORY_SPEED_CHANGE_LIMIT))
-        {
-            l_throttle_chg = -AMEC_MEMORY_SPEED_CHANGE_LIMIT;
-        }
-    }
+       l_timeout = false;  // default this type did not timeout
 
-    // Calculate the new thermal speed request for DIMMs
-    l_mem_speed = g_amec->thermaldimm.speed_request +
-        (int16_t) l_throttle_chg * AMEC_MEMORY_STEP_SIZE;
+       // setup vars specific for type being processed
+       if(l_dimm_types[i] == DATA_FRU_DIMM)
+       {
+           // use control values for DATA_FRU_DIMM type
+           l_throttle_temp = g_amec->thermaldimm.setpoint;
+           l_Pgain = g_amec->thermaldimm.Pgain;
+           l_speed_request = &g_amec->thermaldimm.speed_request;
+           l_total_res = &g_amec->thermaldimm.total_res;
 
-    // Proceed with residue summation to correctly follow set-point
-    l_old_residue = g_amec->thermaldimm.total_res;
-    g_amec->thermaldimm.total_res += l_residue;
-    if (g_amec->thermaldimm.total_res < l_old_residue)
-    {
-        l_mem_speed += AMEC_MEMORY_STEP_SIZE;
-    }
+           // Get the highest DIMM temperature in 0.1 degrees C
+           l_sensor = getSensorByGsid(TEMPDIMMTHRM);
+           l_thermal_winner = l_sensor->sample * 10;
 
-    // Enforce actuator saturation limits
-    if (l_mem_speed > AMEC_MEMORY_MAX_STEP)
-        l_mem_speed = AMEC_MEMORY_MAX_STEP;
-    if (l_mem_speed < AMEC_MEMORY_MIN_STEP)
-        l_mem_speed = AMEC_MEMORY_MIN_STEP;
+           // check for time out
+           if(G_dimm_temp_expired_bitmap.dw[0] || G_dimm_temp_expired_bitmap.dw[1])
+           {
+              if(MEM_TYPE_OCM != G_sysConfigData.mem_type)
+              {
+                 // non-OCM can only have DIMM type so timeout must be for DIMM
+                 l_timeout = true;
+              }
+              else if(G_ocm_dts_type_expired_bitmap & OCM_DTS_TYPE_DIMM_MASK) // MEM_TYPE_OCM
+              {
+                 l_timeout = true;
+              }
+           }
+       } // end if DATA_FRU_DIMM
+       else if(l_dimm_types[i] == DATA_FRU_MEMCTRL_DRAM)
+       {
+           // use control values for DATA_FRU_MEMCTRL_DRAM type
+           l_throttle_temp = g_amec->thermalmcdimm.setpoint;
+           l_Pgain = g_amec->thermalmcdimm.Pgain;
+           l_speed_request = &g_amec->thermalmcdimm.speed_request;
+           l_total_res = &g_amec->thermalmcdimm.total_res;
 
-    // Generate the new thermal speed request
-    g_amec->thermaldimm.speed_request = (uint16_t) l_mem_speed;
+           // Get the highest Memctrl+DRAM temperature in 0.1 degrees C
+           l_sensor = getSensorByGsid(TEMPMCDIMMTHRM);
+           l_thermal_winner = l_sensor->sample * 10;
 
-    // Update the Memory OT Throttle Sensor
-    if(g_amec->thermaldimm.speed_request < AMEC_MEMORY_MAX_STEP)
+           // check if this type timed out
+           if(G_ocm_dts_type_expired_bitmap & OCM_DTS_TYPE_MEMCTRL_DRAM_MASK)
+           {
+              l_timeout = true;
+           }
+       }
+       else if(l_dimm_types[i] == DATA_FRU_PMIC)
+       {
+           // use control values for DATA_FRU_PMIC type
+           l_throttle_temp = g_amec->thermalpmic.setpoint;
+           l_Pgain = g_amec->thermalpmic.Pgain;
+           l_speed_request = &g_amec->thermalpmic.speed_request;
+           l_total_res = &g_amec->thermalpmic.total_res;
+
+           // Get the highest PMIC temperature in 0.1 degrees C
+           l_sensor = getSensorByGsid(TEMPPMICTHRM);
+           l_thermal_winner = l_sensor->sample * 10;
+
+           // check if this type timed out
+           if(G_ocm_dts_type_expired_bitmap & OCM_DTS_TYPE_PMIC_MASK)
+           {
+              l_timeout = true;
+           }
+       }
+       else if(l_dimm_types[i] == DATA_FRU_MEMCTRL_EXT)
+       {
+           // use control values for DATA_FRU_MEMCTRL_EXT type
+           l_throttle_temp = g_amec->thermalmcext.setpoint;
+           l_Pgain = g_amec->thermalmcext.Pgain;
+           l_speed_request = &g_amec->thermalmcext.speed_request;
+           l_total_res = &g_amec->thermalmcext.total_res;
+
+           // Get the highest external mem controller temperature in 0.1 degrees C
+           l_sensor = getSensorByGsid(TEMPMCEXTTHRM);
+           l_thermal_winner = l_sensor->sample * 10;
+
+           // check if this type timed out
+           if(G_ocm_dts_type_expired_bitmap & OCM_DTS_TYPE_MEMCTRL_EXT_MASK)
+           {
+              l_timeout = true;
+           }
+       }
+       else
+       {
+           // should never happen -- code bug
+           TRAC_ERR("amec_controller_dimm_thermal: Invalid DIMM sensor type[0x%02X] at idx[%d]",
+                    l_dimm_types[i],
+                    i);
+           continue;
+       }
+
+       // start common code for all types to determine throttle level
+       // Adjust the temperature if there was a time out reading this sensor fru type
+       if(l_timeout)
+       {
+          //Assume temperature is at the throttle temp plus 1 degree C.
+          l_thermal_winner = l_throttle_temp + 10;
+       }
+
+       // Check if this type is being used and the temp differs from the throttle point
+       if( (!l_thermal_winner) || (l_throttle_temp == l_thermal_winner) )
+           continue;
+
+       // Calculate the thermal control error
+       l_error = l_throttle_temp - l_thermal_winner;
+
+       // Proportional Controller for the thermal control loop based on memory temperatures
+       l_throttle = (int32_t) l_error * l_Pgain;
+       l_residue = (uint16_t) l_throttle;
+       l_throttle_chg = (int16_t) (l_throttle >> 16);
+
+       if ((int16_t) l_throttle_chg > AMEC_MEMORY_SPEED_CHANGE_LIMIT)
+       {
+           l_throttle_chg = AMEC_MEMORY_SPEED_CHANGE_LIMIT;
+       }
+       else
+       {
+           if ((int16_t) l_throttle_chg < (-AMEC_MEMORY_SPEED_CHANGE_LIMIT))
+           {
+               l_throttle_chg = -AMEC_MEMORY_SPEED_CHANGE_LIMIT;
+           }
+       }
+
+       // Calculate the new thermal speed request
+       l_mem_speed = *l_speed_request +
+           (int16_t) l_throttle_chg * AMEC_MEMORY_STEP_SIZE;
+
+       // Proceed with residue summation to correctly follow set-point
+       l_old_residue = *l_total_res;
+       *l_total_res += l_residue;
+       if (*l_total_res < l_old_residue)
+       {
+           l_mem_speed += AMEC_MEMORY_STEP_SIZE;
+       }
+
+       // Enforce actuator saturation limits
+       if (l_mem_speed > AMEC_MEMORY_MAX_STEP)
+           l_mem_speed = AMEC_MEMORY_MAX_STEP;
+       if (l_mem_speed < AMEC_MEMORY_MIN_STEP)
+           l_mem_speed = AMEC_MEMORY_MIN_STEP;
+
+       // Save the new thermal speed request for this memory sensor type
+       *l_speed_request = (uint16_t) l_mem_speed;
+
+    } // end for loop processing each memory sensor type
+
+    // Done processing all types now determine if any of them are driving throttling
+    // and update the Memory OT Throttle Sensor
+    if( (g_amec->thermaldimm.speed_request < AMEC_MEMORY_MAX_STEP) ||
+        (g_amec->thermalmcdimm.speed_request < AMEC_MEMORY_MAX_STEP) ||
+        (g_amec->thermalpmic.speed_request < AMEC_MEMORY_MAX_STEP) ||
+        (g_amec->thermalmcext.speed_request < AMEC_MEMORY_MAX_STEP) )
     {
        // Memory speed is less than max indicate throttle due to OT
        sensor_update(AMECSENSOR_PTR(MEMOTTHROT), 1);
@@ -340,7 +457,6 @@ void amec_controller_dimm_thermal()
     {
        sensor_update(AMECSENSOR_PTR(MEMOTTHROT), 0);
     }
-
 }
 
 

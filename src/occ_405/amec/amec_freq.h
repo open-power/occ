@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -100,6 +100,9 @@ typedef enum
     AMEC_MEM_VOTING_REASON_CENT     = 0x01,
     AMEC_MEM_VOTING_REASON_DIMM     = 0x02,
     AMEC_MEM_VOTING_REASON_SLEW     = 0x03,
+    AMEC_MEM_VOTING_REASON_MCDIMM   = 0x04,
+    AMEC_MEM_VOTING_REASON_PMIC     = 0x05,
+    AMEC_MEM_VOTING_REASON_MC_EXT   = 0x06,
 }amec_mem_voting_reason_t;
 
 // This is memory throttle reason code encoded in OPAL dynamic data
