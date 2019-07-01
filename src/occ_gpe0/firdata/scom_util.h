@@ -91,7 +91,8 @@ typedef enum
 
 typedef enum
 {
-    N3_NPU_0_RING_ID      = 0x5,
+    N3_NPU_0_RING_ID      = 0x4,
+    N3_NPU_1_RING_ID      = 0x5,
     P9A_NPU_2_RING_ID     = 0x7,
     P9A_NPU_2_FIR_RING_ID = 0x8,
     P9A_NPU_0_FIR_RING_ID = 0xF,
