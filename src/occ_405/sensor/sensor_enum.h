@@ -60,15 +60,6 @@ enum e_gsid
     AMESSdur6,         // Combined duration of the AMEC Master & Slave 6
     AMESSdur7,         // Combined duration of the AMEC Master & Slave 7
 
-    PROBE250US0,       // Internal Sensor for debug via AMESTER
-    PROBE250US1,       // Internal Sensor for debug via AMESTER
-    PROBE250US2,       // Internal Sensor for debug via AMESTER
-    PROBE250US3,       // Internal Sensor for debug via AMESTER
-    PROBE250US4,       // Internal Sensor for debug via AMESTER
-    PROBE250US5,       // Internal Sensor for debug via AMESTER
-    PROBE250US6,       // Internal Sensor for debug via AMESTER
-    PROBE250US7,       // Internal Sensor for debug via AMESTER
-
     GPEtickdur0,       // Duration on the GPE0 Engine
     GPEtickdur1,       // Duration on the GPE1 Engine
     RTLtickdur,        // Duration on the RTL tick interrupt
@@ -77,9 +68,6 @@ enum e_gsid
     // System Sensors
     // ------------------------------------------------------
     PWRSYS,            // System DC Power (from APSS)
-    PWRFAN,            // Fan Power (from APSS)
-    PWRIO,             // IO Subsystem Power (from APSS)
-    PWRSTORE,          // Storage Subsys Power (from APSS)
     PWRGPU,            // GPU Subsystem Power (from APSS) e.g. Nvidia GPU
     PWRAPSSCH0,        // These PWRAPSSCH sensors are used to report the power
     PWRAPSSCH1,        // provided by each of the 16 APSS channels.
@@ -149,31 +137,6 @@ enum e_gsid
     // ------------------------------------------------------
     // Core Sensors
     // ------------------------------------------------------
-
-    FREQREQC0,   // requested frequency
-    FREQREQC1,
-    FREQREQC2,
-    FREQREQC3,
-    FREQREQC4,
-    FREQREQC5,
-    FREQREQC6,
-    FREQREQC7,
-    FREQREQC8,
-    FREQREQC9,
-    FREQREQC10,
-    FREQREQC11,
-    FREQREQC12,
-    FREQREQC13,
-    FREQREQC14,
-    FREQREQC15,
-    FREQREQC16,
-    FREQREQC17,
-    FREQREQC18,
-    FREQREQC19,
-    FREQREQC20,
-    FREQREQC21,
-    FREQREQC22,
-    FREQREQC23,
 
     FREQAC0,     // actual frequency
     FREQAC1,

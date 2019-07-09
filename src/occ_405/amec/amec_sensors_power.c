@@ -328,19 +328,6 @@ bool amec_update_apss_sensors(void)
             // Convert Other Raw Misc Power from APSS into sensors
             // ----------------------------------------------------
 
-            // Fans: Add up all Fan channels
-            temp32  = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.fans[0]);
-            temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.fans[1]);
-            temp32  = ROUND_POWER(temp32  * l_bulk_voltage);
-            sensor_update( AMECSENSOR_PTR(PWRFAN), (uint16_t)temp32);
-
-            // I/O: Add up all I/O channels
-            temp32  = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.io[0]);
-            temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.io[1]);
-            temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.io[2]);
-            temp32 = ROUND_POWER(temp32  * l_bulk_voltage);
-            sensor_update( AMECSENSOR_PTR(PWRIO), (uint16_t)temp32);
-
             // Memory: Add up all channels for the same processor.
             temp32 = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.memory[l_proc][0]);
             temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.memory[l_proc][1]);
@@ -363,12 +350,6 @@ bool amec_update_apss_sensors(void)
                 l_temp += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.memory[l_idx][3]);
                 g_amec->mem_snr_pwr[l_idx] = ROUND_POWER(l_temp  * l_bulk_voltage);
             }
-
-            // Storage/Media
-            temp32  = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.storage_media[0]);
-            temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.storage_media[1]);
-            temp32  = ROUND_POWER(temp32  * l_bulk_voltage);
-            sensor_update( AMECSENSOR_PTR(PWRSTORE), (uint16_t)temp32);
 
             // Save total GPU adapter for this proc
             if (l_proc < MAX_GPU_DOMAINS)

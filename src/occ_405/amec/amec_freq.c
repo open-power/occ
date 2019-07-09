@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -525,10 +525,6 @@ void amec_slv_proc_voting_box(void)
                 G_non_dps_power_limited = FALSE;
             }
 
-            // Update the sensor telling us what the requested frequency is
-            sensor_update( AMECSENSOR_ARRAY_PTR(FREQREQC0,k),
-                    (uint16_t) g_amec->proc[0].core[k].f_request);
-
 #if DEBUG_PROC_VOTING_BOX
             /// This trace that can be used to debug the voting
             /// box and control loops.  It will trace the reason why a
@@ -960,10 +956,7 @@ void amec_slv_check_perf(void)
                 TRAC_ERR("SnrBulkPwr %d > Sys Pcap %d ",l_snrBulkPwr,
                          G_sysConfigData.pcap.system_pcap );
 
-                TRAC_ERR("SnrFanPwr %d, SnrIOPwr %d, SnrStoragePwr %d, SnrGpuPrw %d ",
-                        AMECSENSOR_PTR(PWRFAN)->sample,
-                        AMECSENSOR_PTR(PWRIO)->sample,
-                        AMECSENSOR_PTR(PWRSTORE)->sample,
+                TRAC_ERR("SnrGpuPrw %d ",
                         AMECSENSOR_PTR(PWRGPU)->sample );
 
                 TRAC_ERR("SnrProcPwr 0 %d, SnrProcPwr 1 %d, SnrProcPwr 2 %d, SnrProcPwr 3 %d",

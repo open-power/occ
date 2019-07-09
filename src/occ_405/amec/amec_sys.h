@@ -54,9 +54,6 @@
 //*************************************************************************
 // Defines/Enums
 //*************************************************************************
-// This is an arbitrary number of FW probes for use internally.
-#define NUM_AMEC_FW_PROBES  8
-
 // Number of States in the AMEC State Machine (= AMEC_SMH_STATES_PER_LVL)
 #define NUM_AMEC_SMH_STATES AMEC_SMH_STATES_PER_LVL
 
@@ -79,7 +76,6 @@ typedef struct
   sensor_t amessdur[NUM_AMEC_SMH_STATES];
   sensor_t gpetickdur[NUM_GPE_ENGINES];
   sensor_t prcdupdatedur;
-  sensor_t probe250us[NUM_AMEC_FW_PROBES];
   sensor_t voltvddsense;
   sensor_t voltvdnsense;
 
@@ -88,36 +84,6 @@ typedef struct
   uint8_t  dps_no_update_flag;
 
 } amec_fw_t;
-
-//-------------------------------------------------------------
-// Fan Sub-structure
-//-------------------------------------------------------------
-typedef struct
-{
-  // Sensors
-  sensor_t pwr250usfan;
-
-} amec_fans_t;
-
-//-------------------------------------------------------------
-// IO Sub-structure
-//-------------------------------------------------------------
-typedef struct
-{
-  // Sensors
-  sensor_t pwr250usio;
-
-} amec_io_t;
-
-//-------------------------------------------------------------
-// Storage Sub-structure
-//-------------------------------------------------------------
-typedef struct
-{
-  // Sensors
-  sensor_t pwr250usstore;
-
-} amec_store_t;
 
 //-------------------------------------------------------------
 // Proc Sub-structure
@@ -264,7 +230,6 @@ typedef struct
   //-----------------------------------
   // Sensors
   //-----------------------------------
-  sensor_t freq250us;
   sensor_t freqa;
   sensor_t ips4ms;
   sensor_t mcpifd4ms;
@@ -633,14 +598,6 @@ typedef struct
   // Physical Structure
   //
   //---------------------------------------------------------
-  // IO Data
-  amec_io_t     io;
-
-  // Storage Data
-  amec_store_t  storage;
-
-  // Fan Data
-  amec_fans_t   fan;
 
   // Overall System Data
   amec_systemwide_t    sys;
@@ -705,7 +662,6 @@ typedef struct
 
   // 32 bit counter of 250usec ticks
   uint32_t      r_cnt;
-  void          * ptr_probe250us[NUM_AMEC_FW_PROBES];       // array holding ptrs to data that is read by probe250us sensors
   // 32-bit ptr to streaming buffer which contains 16 bit elements
   uint16_t      *ptr_stream_buffer;
   // 32-bit index for next write into streaming buffer
@@ -736,13 +692,8 @@ typedef struct
   uint16_t      cent_l4_ipl_state[MAX_NUM_CENTAURS];
   // input from OCC master to signal a desire to power down the L4s (!=0)
   uint8_t       l4_powerdown_requestm;
-  // indicates which of the L4 Centaurs is being monitored by probe.
-  uint16_t      probe_l4_centaur;
   // holds the sum of all the memory power sensors (32msec)
   uint16_t      total_memory_power;
-  uint16_t  probetemp[NUM_AMEC_FW_PROBES];                  // array holding temporary probe data
-  uint8_t       size_probe250us[NUM_AMEC_FW_PROBES];        // size of object pointed at by each probe (1 byte, 2 bytes, or 4 bytes)
-  uint8_t       index_probe250us[NUM_AMEC_FW_PROBES];       // index offset to read object pointed to by each probe (only valid for size > 2)
 
 } amec_sys_t;
 

@@ -276,7 +276,7 @@ static uint8_t amester_get_sensor_info( uint8_t* o_resp, uint16_t* io_resp_lengt
                     break;
                 }
 
-                if( (MEM_TYPE_NIMBUS == G_sysConfigData.mem_type) &&
+                if( (MEM_TYPE_CUMULUS != G_sysConfigData.mem_type) &&
                      ( ((i_sensor >= MRDM0) &&
                         (i_sensor <= MRDM7)) ||
                        ((i_sensor >= MWRM0) &&
@@ -319,7 +319,7 @@ static uint8_t amester_get_sensor_info( uint8_t* o_resp, uint16_t* io_resp_lengt
                 *((uint32_t *)dest) = l_sensorInfo.sensor.freq;
                 dest+= 4;
 
-                if( (MEM_TYPE_NIMBUS == G_sysConfigData.mem_type) &&
+                if( (MEM_TYPE_CUMULUS != G_sysConfigData.mem_type) &&
                      ( ((i_sensor >= MRDM0) &&
                         (i_sensor <= MRDM7)) ||
                        ((i_sensor >= MWRM0) &&
@@ -708,7 +708,6 @@ uint8_t amester_manual_throttle( const IPMIMsg_t * i_msg,
     uint8_t  l_rc,temp1,temp2;
     uint16_t i,j,cc,idx,temp16;
     uint32_t temp32a;
-    uint32_t *temp32;
     /*------------------------------------------------------------------------*/
     /* Code                                                                   */
     /*------------------------------------------------------------------------*/
@@ -718,38 +717,6 @@ uint8_t amester_manual_throttle( const IPMIMsg_t * i_msg,
         case 0x07:    // Write individual AME parameters
             switch (i_msg->au8CmdData_ptr[1])
             {
-
-                case 20:    // parameter 20: Set Probe Parameters
-                {
-                        if (i_msg->au8CmdData_ptr[2]> (NUM_AMEC_FW_PROBES-1))
-                        {
-                            o_resp[0]=i_msg->au8CmdData_ptr[2];
-                            *io_resp_length=1;
-                            l_rc=COMPCODE_PARAM_OUT_OF_RANGE;
-                            break;
-                        }
-                        if (i_msg->au8CmdData_ptr[3] < 1)
-                        {
-                            o_resp[0]=i_msg->au8CmdData_ptr[2];
-                            *io_resp_length=1;
-                            l_rc=COMPCODE_PARAM_OUT_OF_RANGE;
-                            break;
-                        }
-
-                        temp32a=((uint32_t)i_msg->au8CmdData_ptr[4]<<24)+((uint32_t)i_msg->au8CmdData_ptr[5]<<16);
-                        temp32a=temp32a+((uint32_t)i_msg->au8CmdData_ptr[6]<<8)+((uint32_t)i_msg->au8CmdData_ptr[7]);
-                        temp32=(uint32_t*)temp32a;
-
-                        g_amec->ptr_probe250us[i_msg->au8CmdData_ptr[2]]=temp32;
-                        g_amec->size_probe250us[i_msg->au8CmdData_ptr[2]]=i_msg->au8CmdData_ptr[3];
-                        g_amec->index_probe250us[i_msg->au8CmdData_ptr[2]]=0;   // Reset index
-
-                        o_resp[0]=i_msg->au8CmdData_ptr[2];     // Return probe #
-                        *io_resp_length=1;
-                        l_rc = COMPCODE_NORMAL;
-                        break;
-                    };
-
                 case 29:   // parameter 29: Control vector recording modes and stream rates.
                 {
                     g_amec->stream_vector_rate=255; // First step is to set an invalid rate so no recording done at all
@@ -786,28 +753,6 @@ uint8_t amester_manual_throttle( const IPMIMsg_t * i_msg,
                     *io_resp_length = 4;
                     l_rc = COMPCODE_NORMAL;
                     break;
-
-               case 20:    // parameter 20: Read Probe Parameters
-                    {
-                        if (i_msg->au8CmdData_ptr[2]> (NUM_AMEC_FW_PROBES-1))
-                        {
-                            o_resp[0]=i_msg->au8CmdData_ptr[2];
-                            *io_resp_length=1;
-                            l_rc=COMPCODE_PARAM_OUT_OF_RANGE;
-                            break;
-                        }
-                        o_resp[1]=g_amec->size_probe250us[i_msg->au8CmdData_ptr[2]];   // Return size of object read by probe in bytes
-                        temp32=g_amec->ptr_probe250us[i_msg->au8CmdData_ptr[2]];       // Get copy of 32 bit probe ptr
-                        temp32a=(uint32_t)temp32;
-                        o_resp[5]=(uint8_t)temp32a;
-                        o_resp[4]=(uint8_t)((uint32_t)temp32a>>8);
-                        o_resp[3]=(uint8_t)((uint32_t)temp32a>>16);
-                        o_resp[2]=(uint8_t)((uint32_t)temp32a>>24);
-                        o_resp[0]=i_msg->au8CmdData_ptr[2];     // Return probe #
-                        *io_resp_length=6;
-                        l_rc=COMPCODE_NORMAL;
-                        break;
-                    };
 
                 case 29:   // parameter 29: Stream recording control parameters
                     o_resp[0]=(uint8_t)(g_amec->stream_vector_mode);
