@@ -41,7 +41,7 @@
 #define PBA_HOST_OCC_CFG 0x0000000002000000ull;
 
 
-const uint32_t MCFGPR[OCCHW_N_MEMBUF] =
+const uint32_t MCFGPR[OCCHW_N_MC_CHANNEL] =
 {
     MCS_0_MCRSVDE,
     MCS_0_MCRSVDF,
@@ -53,7 +53,7 @@ const uint32_t MCFGPR[OCCHW_N_MEMBUF] =
     MCS_3_MCRSVDF
 };
 
-const uint32_t MCSYNC[OCCHW_N_MEMBUF/2] =
+const uint32_t MCSYNC[OCCHW_N_MC_PORT] =
 {
     MCS_0_MCSYNC,
     MCS_1_MCSYNC,
@@ -61,7 +61,7 @@ const uint32_t MCSYNC[OCCHW_N_MEMBUF/2] =
     MCS_3_MCSYNC
 };
 
-const uint32_t MCCHIFIR[OCCHW_N_MEMBUF] =
+const uint32_t MCCHIFIR[OCCHW_N_MC_CHANNEL] =
 {
     MCP_CHAN0_CHI_FIR,
     MCP_CHAN1_CHI_FIR,
@@ -73,7 +73,7 @@ const uint32_t MCCHIFIR[OCCHW_N_MEMBUF] =
     MCP_CHAN7_CHI_FIR
 };
 
-const uint32_t MCMCICFG1Q[OCCHW_N_MEMBUF] =
+const uint32_t MCMCICFG1Q[OCCHW_N_MC_CHANNEL] =
 {
     MCP_CHAN0_CHI_MCICFG1Q,
     MCP_CHAN1_CHI_MCICFG1Q,
@@ -229,7 +229,7 @@ int gpe_centaur_configuration_create(MemBufConfiguration_t* o_config)
         // hardware,  as well as for our VBU models where some of the "valid"
         // MCS are not in the simulation models.
 
-        for (i = 0; i < OCCHW_N_MEMBUF; ++i)
+        for (i = 0; i < OCCHW_N_CENT; ++i)
         {
             // check for channel checkstop
             rc = check_centaur_channel_chkstp(i);
@@ -278,7 +278,7 @@ int gpe_centaur_configuration_create(MemBufConfiguration_t* o_config)
         }
 
         // Find the designated sync
-        for (i = 0; i < (OCCHW_N_MEMBUF/2); ++i)
+        for (i = 0; i < (OCCHW_N_MC_PORT); ++i)
         {
             uint64_t mcsync;
             rc = getscom_abs(MCSYNC[i], &mcsync);
@@ -619,7 +619,7 @@ int get_centaur_sensorcache(MemBufConfiguration_t* i_config,
 
     if(i_parms->collect != -1)
     {
-        if((i_parms->collect >= OCCHW_N_MEMBUF) ||
+        if((i_parms->collect >= OCCHW_N_CENT) ||
            (0 == (CHIP_CONFIG_MEMBUF(i_parms->collect) & (i_config->config))))
         {
             rc = MEMBUF_GET_MEM_DATA_COLLECT_INVALID;
@@ -662,7 +662,7 @@ int get_centaur_sensorcache(MemBufConfiguration_t* i_config,
     if(i_parms->update != -1)
     {
         int update_rc = 0;
-        if((i_parms->update >= OCCHW_N_MEMBUF) ||
+        if((i_parms->update >= OCCHW_N_CENT) ||
            (0 == (CHIP_CONFIG_MEMBUF(i_parms->update) & (i_config->config))))
         {
             update_rc = MEMBUF_GET_MEM_DATA_UPDATE_INVALID;

@@ -226,6 +226,7 @@ int membuf_get_scom_vector(MemBufConfiguration_t* i_config,
     int access_rc = 0;
     int pba_rc = 0;
     int instance = 0;
+    int max_mb = OCCHW_N_MEMBUF;
     uint64_t pba_slvctln_save;
 
     pbaslvctl_reset(&(i_config->scomParms));
@@ -234,7 +235,12 @@ int membuf_get_scom_vector(MemBufConfiguration_t* i_config,
     // clear SIB errors in MSR
     mtmsr((mfmsr() & ~(MSR_SIBRC | MSR_SIBRCA)));
 
-    for(instance = 0; instance < OCCHW_N_MEMBUF; ++instance)
+    if(i_config->membuf_type == MEMTYPE_CENTAUR)
+    {
+        max_mb = OCCHW_N_CENT;
+    }
+
+    for(instance = 0; instance < max_mb; ++instance)
     {
         if( CHIP_CONFIG_MEMBUF(instance) & (i_config->config))
         {
@@ -332,12 +338,18 @@ int membuf_put_scom_all(MemBufConfiguration_t* i_config,
     int pba_rc = 0;
     int access_rc = 0;
     int instance = 0;
+    int max_mb = OCCHW_N_MEMBUF;
     uint64_t pba_slvctln_save;
 
     pbaslvctl_reset(&(i_config->scomParms));
     pba_slvctln_save = pbaslvctl_setup(&(i_config->scomParms));
 
-    for(instance = 0; instance < OCCHW_N_MEMBUF; ++instance)
+    if(i_config->membuf_type == MEMTYPE_CENTAUR)
+    {
+        max_mb = OCCHW_N_CENT;
+    }
+
+    for(instance = 0; instance < max_mb; ++instance)
     {
         if( CHIP_CONFIG_MEMBUF(instance) & (i_config->config))
         {
@@ -473,12 +485,18 @@ int membuf_scom_rmw_all(MemBufConfiguration_t* i_config,
     int pba_rc = 0;
     int access_rc = 0;
     int instance = 0;
+    int max_mb = OCCHW_N_MEMBUF;
     uint64_t pba_slvctln_save;
 
     pbaslvctl_reset(&(i_config->scomParms));
     pba_slvctln_save = pbaslvctl_setup(&(i_config->scomParms));
 
-    for(instance = 0; (instance < OCCHW_N_MEMBUF); ++instance)
+    if(i_config->membuf_type == MEMTYPE_CENTAUR)
+    {
+        max_mb = OCCHW_N_CENT;
+    }
+
+    for(instance = 0; (instance < max_mb); ++instance)
     {
         if( CHIP_CONFIG_MEMBUF(instance) & (i_config->config))
         {

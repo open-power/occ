@@ -33,7 +33,7 @@
 #include "ocmb_firmware_registers.h"
 #include "ocmb_mem_data.h"
 
-const uint32_t AXONE_MCFGPR[OCCHW_N_MEMBUF] =
+const uint32_t AXONE_MCFGPR[OCCHW_N_MC_CHANNEL] =
 {
     P9A_MI_0_MCFGPR0,
     P9A_MI_0_MCFGPR1,
@@ -45,7 +45,7 @@ const uint32_t AXONE_MCFGPR[OCCHW_N_MEMBUF] =
     P9A_MI_3_MCFGPR1
 };
 
-const uint32_t AXONE_MCSYNC[OCCHW_N_MEMBUF/2] =
+const uint32_t AXONE_MCSYNC[OCCHW_N_MC_PORT] =
 {
     P9A_MI_0_MCSYNC,
     P9A_MI_1_MCSYNC,
@@ -162,6 +162,8 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
     mtmsr((orig_msr & ~(MSR_SIBRC | MSR_SIBRCA)) | MSR_SEM | MSR_IS1 | MSR_IS2 );
     sync();
 
+    uint32_t l_config = o_config->config; // Save
+    //Clear MemBufConfiguration
     for(i = 0; i < sizeof(MemBufConfiguration_t) / 8; ++i)
     {
         *ptr++ = 0ull;
@@ -169,6 +171,7 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
 
     o_config->configRc = MEMBUF_NOT_CONFIGURED;
     o_config->membuf_type = MEMTYPE_OCMB;
+    o_config->config = l_config;
 
     do
     {
@@ -230,7 +233,7 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
         }
 
         // Find all configured MEMBUFs
-        for (i = 0; i < OCCHW_N_MEMBUF; ++i)
+        for (i = 0; i < OCCHW_N_MC_CHANNEL; ++i)
         {
             uint64_t l_pba_addr = 0;
             uint32_t l_mmio_bar = 0;
@@ -279,19 +282,21 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
             //  to bits [8:38] of the Power Bus addresss
             l_pba_addr >>= 8;
 
-            if((i % 2) != 0)
-            {
-                l_pba_addr |= OCMB_IB_BAR_B_BIT;
-            }
-
             PK_TRACE("MMIO Base Address: 0x%08x%08x on ocmb %d",
                      (uint32_t)(l_pba_addr >> 32),
                      (uint32_t)(l_pba_addr),
                      i);
 
-            o_config->baseAddress[i] = l_pba_addr;
-            // Add this membuf to the configuration
-            o_config->config |= (CHIP_CONFIG_MCS(i) | CHIP_CONFIG_MEMBUF(i));
+            // If channel is configured then subchannelA must always have an MB.
+            // MB on subchannelB is optional - check config passed in from HTMGT
+            o_config->baseAddress[2*i] = l_pba_addr;
+            if(o_config->config & CHIP_CONFIG_MEMBUF((2*i)+1))
+            {
+                o_config->baseAddress[(2*i)+1] = l_pba_addr | OCMB_IB_BAR_B_BIT;
+            }
+
+            // Add this MC Channel
+            o_config->config |= (CHIP_CONFIG_MCS(i));
         }
 
         if( rc )
@@ -302,7 +307,7 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
         // Find the designated sync.
         // Find the register that HWPs used to sync the throttle n/m values
         // accross all membufs. Only one register should be setup.
-        for (i = 0; i < (OCCHW_N_MEMBUF/2); ++i)
+        for (i = 0; i < (OCCHW_N_MC_PORT); ++i)
         {
             uint64_t mcsync;
             rc = getscom_abs(AXONE_MCSYNC[i], &mcsync);
@@ -342,22 +347,13 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
 
         if(!rc)
         {
-            for(i = 0; i < OCCHW_N_MEMBUF; ++i)
-            {
-                if( CHIP_CONFIG_MEMBUF(i) & (o_config->config))
-                {
-                    // Attempt to reset any SCACHE FIR errors
-                    // and insure the SCACHE is enabled
-                    check_and_reset_mmio_fir(o_config, i);
-                    ocmb_check_sensor_cache_enabled(o_config,i);
-                }
-            }
-
             // Find out which DTS are present
+            // Note: The MB sensor cache supports three DTS readings, but
+            // what they will represent has not yet been decided 
             OcmbMemData escache;
             MemBufGetMemDataParms_t l_parms;
 
-            l_parms.update = -1;
+            l_parms.update = -1; //NONE
             l_parms.data = (uint64_t *)(&escache);
 
             for(i = 0; i < OCCHW_N_MEMBUF; ++i)
@@ -371,7 +367,11 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
                         PK_TRACE("gpe_ocmb_configuration_create failed to"
                                  " get sensorcache for MEMBUF %d, rc = %d.",
                                  i, rc);
-                          continue; // Thermal sensors not available.
+
+                        // Remove this OCMB from the configuration
+                        o_config->config &= ~(CHIP_CONFIG_MEMBUF(i));
+
+                        continue; // Thermal sensors not available.
                     }
 
                     if(escache.status.fields.ubdts0_present)

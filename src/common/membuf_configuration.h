@@ -32,7 +32,10 @@
 #include "gpe_pba_parms.h"
 #include "centaur_firmware_registers.h"
 
-#define OCCHW_N_MEMBUF           8
+#define OCCHW_N_MEMBUF           16
+#define OCCHW_N_CENT              8
+#define OCCHW_N_MC_CHANNEL        8
+#define OCCHW_N_MC_PORT           4
 
 #define MEMTYPE_CENTAUR          1
 #define MEMTYPE_OCMB             2
@@ -71,7 +74,7 @@ typedef struct
     //  and module_id.
     //  (Not used on OCMB)
     ///
-    uint64_t deviceId[OCCHW_N_MEMBUF];
+    uint64_t deviceId[OCCHW_N_CENT];
 
     /// Designated sync scom address
     /// \note One and Only one of the MCS units can be targeted with SYNC
@@ -97,17 +100,15 @@ typedef struct
     /// A GpePbaParms parameter block for inband scom.
     GpePbaParms scomParms;
 
+    // Digital Thermal Sensor configuration bitmap.
+    // use CONFIG_UBDTS0(n) CONFIG_MEMDTS0(n) CONFIG_MEMDTS1(n) to set/test
+    uint64_t dts_config;
+
     /// A "chip configuration" bit mask denoting valid memory buffer.
     ///
     /// It shoud always be true that a bit denoting a configured memory buffer
     //  is associated with a non-0 \a baseAddress and vice-versa.
     uint32_t config;
-
-    // Digital Thermal Sensor configuration bitmap.
-    // use CONFIG_UBDTS0(n) CONFIG_MEMDTS0(n) CONFIG_MEMDTS1(n) to set/test
-    uint32_t dts_config;
-
-    uint32_t reserved;          // Keep structure size multiple of 8
 
     /// The final return code from gpe_*_configuration_create().
     /// @see MemBufConfigurationCreateRc
@@ -218,22 +219,26 @@ typedef enum
 #define PBA_SLAVE_MEMBUF 2
 
 // These are used to setup MemBufConfiguration.config field
-#define CHIP_CONFIG_MCS_BASE 16
+// [0:7] Mainstore Controller Channel is configured.
+// [16:31] Memory Buffer chip is configured.
+#define CHIP_CONFIG_MCS_BASE 0
 #define CHIP_CONFIG_MCS(n) \
     ((0x80000000ul >> CHIP_CONFIG_MCS_BASE) >> (n))
 
-#define CHIP_CONFIG_MEMBUF_BASE 24
+#define CHIP_CONFIG_MEMBUF_BASE 16
 #define CHIP_CONFIG_MEMBUF(n) \
     ((0x80000000ul >> CHIP_CONFIG_MEMBUF_BASE) >> (n))
 
+
+// These are used to setup the MemBufConfiguration.dts_config
 #define CONFIG_UBDTS0(n) \
-    (0x80000000ul >> (4*n))
+    (0x8000000000000000ull >> (4*n))
 
 #define CONFIG_MEMDTS0(n) \
-    (0x40000000ul >> (4*n))
+    (0x4000000000000000ull >> (4*n))
 
 #define CONFIG_MEMDTS1(n) \
-    (0x20000000ul >> (4*n))
+    (0x2000000000000000ull >> (4*n))
 
 #endif
 

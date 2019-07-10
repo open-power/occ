@@ -57,39 +57,42 @@ void ocmb_init(void)
     {
         TRAC_INFO("ocmb_init: Initializing Memory Data Controller");
         // Create configuration data use G_membufConfiguration
+        G_membufConfiguration.config = 0;
+
+        for(membuf_idx = 0; membuf_idx<MAX_NUM_OCMBS; ++membuf_idx)
+        {
+            if(CENTAUR_PRESENT(membuf_idx)) //based on HTMGT config cmd
+            {
+                G_membufConfiguration.config |= CHIP_CONFIG_MEMBUF(membuf_idx);
+            }
+        }
+
         rc = membuf_configuration_create(&G_membufConfiguration);
         if( rc )
         {
             break;
         }
 
-        // Configure OCC_405 global membuf present and sensor enabled flags
-        G_present_centaurs = 0;
         for(membuf_idx=0; membuf_idx<MAX_NUM_OCMBS; ++membuf_idx)
         {
-            // Check if this membuf is even possible to be present
-            if( CENTAUR_BY_MASK(membuf_idx) )
+            if( G_membufConfiguration.baseAddress[membuf_idx] )
             {
-                if( G_membufConfiguration.baseAddress[membuf_idx] )
+                // A valid inband Bar Address was found, check which DTS are
+                // enabled.
+                if(G_membufConfiguration.dts_config & CONFIG_MEMDTS0(membuf_idx))
                 {
-                    // A valid inband Bar Address was found
-                    G_present_centaurs |= (CENTAUR0_PRESENT_MASK >> membuf_idx);
-
-                    if(G_membufConfiguration.dts_config & CONFIG_MEMDTS0(membuf_idx))
-                    {
-                        G_dimm_enabled_sensors.bytes[membuf_idx] = DIMM_SENSOR0;
-                    }
-                    if(G_membufConfiguration.dts_config & CONFIG_MEMDTS1(membuf_idx))
-                    {
-                        G_dimm_enabled_sensors.bytes[membuf_idx] = (DIMM_SENSOR0 >> 1);
-                    }
-                    TRAC_INFO("ocmb_init: Membuf[%d] Found.",
-                              membuf_idx);
+                    G_dimm_enabled_sensors.bytes[membuf_idx] = DIMM_SENSOR0;
                 }
+                if(G_membufConfiguration.dts_config & CONFIG_MEMDTS1(membuf_idx))
+                {
+                    G_dimm_enabled_sensors.bytes[membuf_idx] = (DIMM_SENSOR0 >> 1);
+                }
+                TRAC_INFO("ocmb_init: Membuf[%d] Found.",
+                          membuf_idx);
             }
         }
 
-        TRAC_IMP("ocmb_init: G_present_centaurs = 0x%08x", G_present_centaurs);
+        TRAC_IMP("ocmb_init: G_present_OCMBs = 0x%08x", G_present_centaurs);
 
         G_dimm_present_sensors = G_dimm_enabled_sensors;
 

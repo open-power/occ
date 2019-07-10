@@ -2383,6 +2383,13 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                             // Store the temperature sensor ID
                             g_amec->proc[0].memctl[l_membuf_num].centaur.temp_sid = l_data_set->temp_sensor_id;
 
+                            if (G_sysConfigData.mem_type == MEM_TYPE_OCM)
+                            {
+                                // Both OCMB and Centaur code use this global to idicate which MBs
+                                // are present, but Centaur sets this up later in centaur_init()
+                                G_present_centaurs |= (CENTAUR0_PRESENT_MASK >> l_membuf_num);
+                            }
+
                             l_num_mem_bufs++;
                         }
                         else // individual DIMM
