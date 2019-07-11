@@ -519,6 +519,7 @@ enum e_gsid
     CEFFVDNRATIO,
     VRATIO,
     OCS_ADDR,
+    CEFFVDDRATIOADJ,
 
     // ------------------------------------------------------
     // END of Sensor List (this must be last entry)

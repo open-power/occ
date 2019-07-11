@@ -356,6 +356,7 @@ const sensor_ptr_t G_amec_sensor_list[] =
   SENSOR_PTR( CEFFVDNRATIO,         &g_amec_sys.wof_sensors.ceff_ratio_vdn_sensor),
   SENSOR_PTR( VRATIO,               &g_amec_sys.wof_sensors.v_ratio_sensor),
   SENSOR_PTR( OCS_ADDR,             &g_amec_sys.wof_sensors.ocs_addr_sensor),
+  SENSOR_PTR( CEFFVDDRATIOADJ,      &g_amec_sys.wof_sensors.ceff_ratio_vdd_adj_sensor),
 };
 STATIC_ASSERT(   (NUMBER_OF_SENSORS_IN_LIST != (sizeof(G_amec_sensor_list)/sizeof(sensor_ptr_t)))   );
 STATIC_ASSERT(   (MAX_AMEC_SENSORS < (sizeof(G_amec_sensor_list)/sizeof(sensor_ptr_t)))   );
@@ -523,10 +524,11 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   // ------------------------------------------------------
   // WOF Sensors
   // ------------------------------------------------------
-  SENSOR_PTR( CEFFVDDRATIO,   NULL),
-  SENSOR_PTR( CEFFVDNRATIO,   NULL),
-  SENSOR_PTR( VRATIO,         NULL),
-  SENSOR_PTR( OCS_ADDR,       NULL),
+  MINI_SENSOR_PTR( CEFFVDDRATIO,   NULL),
+  MINI_SENSOR_PTR( CEFFVDNRATIO,   NULL),
+  MINI_SENSOR_PTR( VRATIO,         NULL),
+  MINI_SENSOR_PTR( OCS_ADDR,       NULL),
+  MINI_SENSOR_PTR( CEFFVDDRATIOADJ, NULL),
 };
 STATIC_ASSERT(   (NUMBER_OF_SENSORS_IN_LIST != (sizeof(G_amec_mini_sensor_list)/sizeof(uint16_t *)))   );
 STATIC_ASSERT(   (MAX_AMEC_SENSORS < (sizeof(G_amec_mini_sensor_list)/sizeof(uint16_t *)))   );
