@@ -2285,6 +2285,8 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                 // Store the temperature sensor ID
                                 g_amec->proc[0].memctl[l_membuf_num].membuf.temp_sid = l_data_set->temp_sensor_id;
 
+                                G_present_membufs |= MEMBUF0_PRESENT_MASK >> l_membuf_num;
+
                                 l_num_mem_bufs++;
                             }
                             else // individual DIMM

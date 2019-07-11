@@ -28,7 +28,6 @@
 #include "ipc_structs.h"
 #include "membuf_structs.h"
 
-
 // Which GPE controls the PBASLAVE
 #define OCI_MASTER_ID_GPE1 1
 
@@ -36,6 +35,19 @@
 #define INBAND_ACCESS_READ 1
 #define INBAND_ACCESS_WRITE 2
 
+#define MI_0_MCFGPR0    0x0c010c0c
+#define MI_0_MCFGPR1    0x0c010c0d
+#define MI_1_MCFGPR0    0x0d010c0c
+#define MI_1_MCFGPR1    0x0d010c0d
+#define MI_2_MCFGPR0    0x0e010c0c
+#define MI_2_MCFGPR1    0x0e010c0d
+#define MI_3_MCFGPR0    0x0f010c0c
+#define MI_3_MCFGPR1    0x0f010c0d
+
+#define MI_0_MCSYNC     0x0c010c15
+#define MI_1_MCSYNC     0x0d010c15
+#define MI_2_MCSYNC     0x0e010c15
+#define MI_3_MCSYNC     0x0f010c15
 
 extern uint32_t g_inband_access_state;
 

@@ -25,34 +25,15 @@
 #if !defined(__MCS_FIRWARE_REGISTERS_H__)
 #define __MCS_FIRWARE_REGISTERS_H__
 
-typedef union mcfgpr
+typedef union
 {
     uint64_t value;
     struct
     {
-#ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
-#else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct
-    {
-#ifdef _BIG_ENDIAN
-        uint64_t mcfgprq_valid : 1;
-        uint64_t reserved0 : 2;
-        uint64_t disable_extended_bar : 1 ; // low = P9 mode
-        uint64_t mcfgprq_base_address : 31;
-        uint64_t _reserved0 : 29;
-#else
-        uint64_t _reserved0 : 29;
-        uint64_t mcfgprq_base_address : 31;
-        uint64_t disable_extended_bar : 1 ; // low = p9 mode
-        uint64_t reserved0 : 2;
-        uint64_t mcfgprq_valid : 1;
-#endif // _BIG_ENDIAN
+        uint64_t cfg_valid              :  1;
+        uint64_t mmio_valid             :  1;
+        uint64_t cfg_group_base_addr    : 31;
+        uint64_t mmio_group_base_addr   : 31;
     } fields;
 } mcfgpr_t;
 

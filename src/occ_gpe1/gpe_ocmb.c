@@ -27,8 +27,6 @@
 #include "pk.h"
 #include "ppe42_msr.h"
 #include "occhw_pba_common.h"
-//#include "p9a_misc_scom_addresses.h"
-//#include "p9a_firmware_registers.h"
 #include "mcs_firmware_registers.h"
 #include "pba_firmware_registers.h"
 #include "pba_firmware_constants.h"
@@ -36,29 +34,27 @@
 #include "ocmb_firmware_registers.h"
 #include "ocmb_mem_data.h"
 
-// TODO - RTC 213672 - MISSING P9A REGS
-#if 0
-const uint32_t AXONE_MCFGPR[OCCHW_N_MEMBUF] =
+const uint32_t MI_MCFGPR[OCCHW_N_MC_CHANNEL] =
 {
-    P9A_MI_0_MCFGPR0,
-    P9A_MI_0_MCFGPR1,
-    P9A_MI_1_MCFGPR0,
-    P9A_MI_1_MCFGPR1,
-    P9A_MI_2_MCFGPR0,
-    P9A_MI_2_MCFGPR1,
-    P9A_MI_3_MCFGPR0,
-    P9A_MI_3_MCFGPR1
+    MI_0_MCFGPR0,
+    MI_0_MCFGPR1,
+    MI_1_MCFGPR0,
+    MI_1_MCFGPR1,
+    MI_2_MCFGPR0,
+    MI_2_MCFGPR1,
+    MI_3_MCFGPR0,
+    MI_3_MCFGPR1
 };
 
-const uint32_t AXONE_MCSYNC[OCCHW_N_MEMBUF/2] =
+const uint32_t MI_MCSYNC[OCCHW_N_MC_PORT] =
 {
-    P9A_MI_0_MCSYNC,
-    P9A_MI_1_MCSYNC,
-    P9A_MI_2_MCSYNC,
-    P9A_MI_3_MCSYNC
+    MI_0_MCSYNC,
+    MI_1_MCSYNC,
+    MI_2_MCSYNC,
+    MI_3_MCSYNC
 };
-#endif
 
+#if 0 // TODO RTC 213672  Is this valid for P10?
 // This table was taken from ekb p9a_omi_setup_bars.C
 const int NUM_EXT_MASKS = 20;
 const uint8_t EXT_MASK_REORDER[][9] =   // Workbook table 7
@@ -85,6 +81,7 @@ const uint8_t EXT_MASK_REORDER[][9] =   // Workbook table 7
     { 0xF6, 15, 20, 21, 14, 19, 18, 17, 16  },
     { 0xF7, 15, 20, 14, 21, 19, 18, 17, 16  }
 };
+#endif
 
 int inband_scom_setup(MemBufConfiguration_t* i_config,
                             uint32_t i_membuf_instance,
@@ -374,14 +371,14 @@ int ocmb_check_sensor_cache_enabled(MemBufConfiguration_t * i_config,
 int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
 {
     int rc = 0;
-// TODO - RTC 213672 - MISSING REGS/STRUCTURES (pb_mode_t, P9A_PU_NMMU_MMCQ_PB_MODE_REG, etc)
-#if 0
     int i = 0;
-    int l_rule = 0;
-    int l_ext_addr_mask = 0;
     int designated_sync = -1;
     mcfgpr_t mcfgpr;
+#if 0 //TODO RTC 213672 Swizzle Needed?
     pb_mode_t pb_mode;
+    int l_rule = 0;
+    int l_ext_addr_mask = 0;
+#endif
     uint64_t*   ptr = (uint64_t*)o_config;
 
     // Prevent unwanted interrupts from scom errors
@@ -390,6 +387,7 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
     mtmsr((orig_msr & ~(MSR_SIBRC | MSR_SIBRCA)) | MSR_SEM | MSR_IS1 | MSR_IS2 );
     sync();
 
+    uint32_t l_config = o_config->config;
     for(i = 0; i < sizeof(MemBufConfiguration_t) / 8; ++i)
     {
         *ptr++ = 0ull;
@@ -397,6 +395,7 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
 
     o_config->configRc = MEMBUF_NOT_CONFIGURED;
     o_config->membuf_type = MEMTYPE_OCMB;
+    o_config->config = l_config;
 
     do
     {
@@ -427,6 +426,7 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
 
         // On Ocmb the mmio bar value has been swizzled
         // Need to un-swizzle
+#if 0   // TODO RTC 213672  Is P10 Swizzled?
         rc = getscom_abs(P9A_PU_NMMU_MMCQ_PB_MODE_REG, &(pb_mode.value));
         if( rc )
         {
@@ -456,14 +456,15 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
             rc = MEMBUF_PMODE_DATA_MISMATCH;
             break;
         }
+#endif
 
         // Find all configured MEMBUFs
-        for (i = 0; i < OCCHW_N_MEMBUF; ++i)
+        for (i = 0; i < OCCHW_N_MC_CHANNEL; ++i)
         {
             uint64_t l_pba_addr = 0;
             uint32_t l_mmio_bar = 0;
 
-            rc = getscom_abs(AXONE_MCFGPR[i], &(mcfgpr.value));
+            rc = getscom_abs(MI_MCFGPR[i], &(mcfgpr.value));
 
             if( rc )
             {
@@ -480,6 +481,7 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
                 (uint32_t)(mcfgpr.fields.mmio_group_base_addr) << 1;
             PK_TRACE("Ocmb[%d] MMIO Bar: %08x", i, l_mmio_bar);
 
+#if 0       // TODO RTC 213672  Is P10 Swizzled
             // The mmio bar has been swizzled,  It needs to be unswizzled.
             // Make this easy for PPE 32 bit arch.
 
@@ -500,26 +502,20 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
             }
             l_mmio_bar &= 0xfc03ffff;  //mask off bits 6-13
             l_mmio_bar |= (l_reordered << 8);
-
+#endif
             l_pba_addr = (uint64_t)(l_mmio_bar) << 32;
 
             // The 31-bit base-address (inband scom BAR) corresponds
             //  to bits [8:38] of the Power Bus addresss
             l_pba_addr >>= 8;
 
-            if((i % 2) != 0)
+            o_config->baseAddress[2*i] = l_pba_addr;
+            if(o_config->config & CHIP_CONFIG_MEMBUF((2*i)+1))
             {
-                l_pba_addr |= OCMB_IB_BAR_B_BIT;
+                o_config->baseAddress[(2*i)+1] = l_pba_addr | OCMB_IB_BAR_B_BIT;
             }
-
-            PK_TRACE("MMIO Base Address: 0x%08x%08x on ocmb %d",
-                     (uint32_t)(l_pba_addr >> 32),
-                     (uint32_t)(l_pba_addr),
-                     i);
-
-            o_config->baseAddress[i] = l_pba_addr;
-            // Add this membuf to the configuration
-            o_config->config |= (CHIP_CONFIG_MCS(i) | CHIP_CONFIG_MEMBUF(i));
+            // Add this MC channel to the configuration
+            o_config->config |= CHIP_CONFIG_MCS(i);
         }
 
         if( rc )
@@ -530,10 +526,10 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
         // Find the designated sync.
         // Find the register that HWPs used to sync the throttle n/m values
         // accross all membufs. Only one register should be setup.
-        for (i = 0; i < (OCCHW_N_MEMBUF/2); ++i)
+        for (i = 0; i < (OCCHW_N_MC_PORT); ++i)
         {
             uint64_t mcsync;
-            rc = getscom_abs(AXONE_MCSYNC[i], &mcsync);
+            rc = getscom_abs(MI_MCSYNC[i], &mcsync);
             if (rc)
             {
                 PK_TRACE("getscom failed on MCSYNC, rc = %d. The first configured "
@@ -555,7 +551,7 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
         }
         else
         {
-            o_config->mcSyncAddr = AXONE_MCSYNC[designated_sync];
+            o_config->mcSyncAddr = MI_MCSYNC[designated_sync];
         }
 
         if(o_config->config != 0)
@@ -570,28 +566,18 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
 
         if(!rc)
         {
-            for(i = 0; i < OCCHW_N_MEMBUF; ++i)
-            {
-                if( CHIP_CONFIG_MEMBUF(i) & (o_config->config))
-                {
-                    // Attempt to reset any SCACHE FIR errors
-                    // and insure the SCACHE is enabled
-                    check_and_reset_mmio_fir(o_config, i);
-                    ocmb_check_sensor_cache_enabled(o_config,i);
-                }
-            }
-
             // Find out which DTS are present
             OcmbMemData escache;
             MemBufGetMemDataParms_t l_parms;
 
-            l_parms.update = -1;
+            l_parms.update = -1;  // NONE
             l_parms.data = (uint64_t *)(&escache);
 
             for(i = 0; i < OCCHW_N_MEMBUF; ++i)
             {
                 if( CHIP_CONFIG_MEMBUF(i) & (o_config->config))
                 {
+                    // Collect sensor cache data for this instance.
                     l_parms.collect = i;
                     rc = get_ocmb_sensorcache(o_config, &l_parms);
                     if( rc )
@@ -599,7 +585,11 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
                         PK_TRACE("gpe_ocmb_configuration_create failed to"
                                  " get sensorcache for MEMBUF %d, rc = %d.",
                                  i, rc);
-                          continue; // Thermal sensors not available.
+
+                        // Take this membuf out of the config
+                        o_config->config &= ~(CHIP_CONFIG_MEMBUF(i));
+
+                        continue; // Thermal sensors not available.
                     }
 
                     if(escache.status.fields.ubdts0_present)
@@ -625,12 +615,6 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
     o_config->configRc = rc;
 
     mtmsr(orig_msr);
-#else
-    rc = MEMBUF_DATA_SETUP_ERROR;
-    o_config->configRc = rc;
-    o_config->configRc = MEMBUF_NOT_CONFIGURED;
-    o_config->membuf_type = MEMTYPE_OCMB;
-#endif
 
     return rc;
 }

@@ -41,7 +41,7 @@
 //   MemDataSensorCache scache;
 //   } MemData;
 //Global array of membuf data buffers
-GPE_BUFFER(OcmbMemData G_membuf_data[MAX_NUM_MEM_CONTROLLERS + NUM_DATA_EMPTY_BUF]);
+GPE_BUFFER(OcmbMemData G_membuf_data[MAX_NUM_OCMBS + NUM_DATA_EMPTY_BUF]);
 
 // parms for call to IPC_ST_MEMBUF_INIT_FUNCID
 GPE_BUFFER(MemBufConfigParms_t G_gpe_membuf_config_args);
@@ -49,7 +49,7 @@ GPE_BUFFER(MemBufConfigParms_t G_gpe_membuf_config_args);
 
 GPE_BUFFER(MemBufConfiguration_t G_membufConfiguration);
 //Global array of membuf data pointers
-OcmbMemData * G_membuf_data_ptrs[MAX_NUM_MEM_CONTROLLERS] =
+OcmbMemData * G_membuf_data_ptrs[MAX_NUM_OCMBS] =
   { &G_membuf_data[0],  &G_membuf_data[1],  &G_membuf_data[2],  &G_membuf_data[3],
     &G_membuf_data[4],  &G_membuf_data[5],  &G_membuf_data[6],  &G_membuf_data[7],
     &G_membuf_data[8],  &G_membuf_data[9],  &G_membuf_data[10], &G_membuf_data[11],
@@ -80,9 +80,9 @@ typedef struct membuf_data_task membuf_data_task_t;
 membuf_data_task_t G_membuf_data_task = {
     .start_membuf = 0,
     .current_membuf = 0,
-    .end_membuf = MAX_NUM_MEM_CONTROLLERS - 1,
-    .prev_membuf = MAX_NUM_MEM_CONTROLLERS - 1,
-    .membuf_data_ptr = &G_membuf_data[MAX_NUM_MEM_CONTROLLERS]
+    .end_membuf = MAX_NUM_OCMBS - 1,
+    .prev_membuf = MAX_NUM_OCMBS - 1,
+    .membuf_data_ptr = &G_membuf_data[MAX_NUM_OCMBS]
 };
 
 dimm_sensor_flags_t G_dimm_enabled_sensors = {{0}};
@@ -150,35 +150,37 @@ void ocmb_init(void)
     {
         TRAC_INFO("ocmb_init: Initializing Memory Data Controller");
         // Create configuration data use G_membufConfiguration
+        G_membufConfiguration.config = 0;
+
+        for(membuf_idx = 0; membuf_idx<MAX_NUM_OCMBS; ++membuf_idx)
+        {
+            if(MEMBUF_PRESENT(membuf_idx)) //based on HTMGT config cmd
+            {
+                G_membufConfiguration.config |= CHIP_CONFIG_MEMBUF(membuf_idx);
+            }
+        }
+
         rc = membuf_configuration_create(&G_membufConfiguration);
         if( rc )
         {
             break;
         }
 
-        // Configure OCC_405 global membuf present and sensor enabled flags
-        G_present_membufs = 0;
-        for(membuf_idx=0; membuf_idx<MAX_NUM_MEM_CONTROLLERS; ++membuf_idx)
+        for(membuf_idx=0; membuf_idx<MAX_NUM_OCMBS; ++membuf_idx)
         {
-            // Check if this membuf is even possible to be present
-            if( MEMBUF_BY_MASK(membuf_idx) )
+            if( G_membufConfiguration.baseAddress[membuf_idx] )
             {
-                if( G_membufConfiguration.baseAddress[membuf_idx] )
+                // A valid inband Bar value was found, check for enabled DTS
+                if(G_membufConfiguration.dts_config & CONFIG_MEMDTS0(membuf_idx))
                 {
-                    // A valid inband Bar Address was found
-                    G_present_membufs |= (MEMBUF0_PRESENT_MASK >> membuf_idx);
-
-                    if(G_membufConfiguration.dts_config & CONFIG_MEMDTS0(membuf_idx))
-                    {
-                        G_dimm_enabled_sensors.bytes[membuf_idx] = DIMM_SENSOR0;
-                    }
-                    if(G_membufConfiguration.dts_config & CONFIG_MEMDTS1(membuf_idx))
-                    {
-                        G_dimm_enabled_sensors.bytes[membuf_idx] = (DIMM_SENSOR0 >> 1);
-                    }
-                    TRAC_INFO("ocmb_init: Membuf[%d] Found.",
-                              membuf_idx);
+                    G_dimm_enabled_sensors.bytes[membuf_idx] |= DIMM_SENSOR0;
                 }
+                if(G_membufConfiguration.dts_config & CONFIG_MEMDTS1(membuf_idx))
+                {
+                    G_dimm_enabled_sensors.bytes[membuf_idx] |= (DIMM_SENSOR0 >> 1);
+                }
+                TRAC_INFO("ocmb_init: Membuf[%d] Found.",
+                          membuf_idx);
             }
         }
 
@@ -272,7 +274,7 @@ OcmbMemData * get_membuf_data_ptr(const uint8_t i_occ_membuf_id)
     //The caller needs to send in a valid OCC membuf id. Since type is uchar
     //so there is no need to check for case less than 0.
     //If membuf id is invalid then returns NULL.
-    if( i_occ_membuf_id < MAX_NUM_MEM_CONTROLLERS )
+    if( i_occ_membuf_id < MAX_NUM_OCMBS )
     {
         //Returns a pointer to the most up-to-date membuf data.
         return G_membuf_data_ptrs[i_occ_membuf_id];
@@ -565,7 +567,7 @@ void ocmb_data( void )
         // (this is very handy for debug...)
         if( !MEMBUF_PRESENT(l_membuf_data_ptr->current_membuf))
         {
-            G_membuf_data_ptrs[l_membuf_data_ptr->current_membuf] = &G_membuf_data[MAX_NUM_MEM_CONTROLLERS];
+            G_membuf_data_ptrs[l_membuf_data_ptr->current_membuf] = &G_membuf_data[MAX_NUM_OCMBS];
         }
 
         //Update current membuf
