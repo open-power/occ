@@ -48,22 +48,22 @@ extern bool G_log_gpe1_error;
 //*************************************************************************/
 
 // Have we already called out the dimm for overtemp (bitmap of dimms)?
-dimm_sensor_flags_t G_dimm_overtemp_logged_bitmap = {0};
+dimm_sensor_flags_t G_dimm_overtemp_logged_bitmap = {{0}};
 
 // Have we already called out the dimm for timeout (bitmap of dimms)?
-dimm_sensor_flags_t G_dimm_timeout_logged_bitmap = {0};
+dimm_sensor_flags_t G_dimm_timeout_logged_bitmap = {{0}};
 
 // Are any dimms currently in the timedout state (bitmap of dimm)?
-dimm_sensor_flags_t G_dimm_temp_expired_bitmap = {0};
+dimm_sensor_flags_t G_dimm_temp_expired_bitmap = {{0}};
 
 // Have we already called out the centaur for timeout (bitmap of centaurs)?
-uint8_t G_cent_timeout_logged_bitmap = 0;
+uint16_t G_cent_timeout_logged_bitmap = 0;
 
 // Have we already called out the centaur for overtemp (bitmap of centaurs)?
-uint8_t G_cent_overtemp_logged_bitmap = 0;
+uint16_t G_cent_overtemp_logged_bitmap = 0;
 
-// Are any dimms currently in the timedout state (bitmap of centaurs)?
-uint8_t G_cent_temp_expired_bitmap = 0;
+// Are any mem controllers currently in the timedout state (bitmap of centaurs)?
+uint16_t G_cent_temp_expired_bitmap = 0;
 
 // Array to store the update tag of each core's temperature sensor
 uint32_t G_core_temp_update_tag[MAX_NUM_CORES] = {0};
@@ -113,8 +113,8 @@ uint64_t amec_mem_get_huid(uint8_t i_cent, uint8_t i_dimm)
 //that the dimm should be marked.
 void amec_mem_mark_logged(uint8_t i_cent,
                           uint8_t i_dimm,
-                          uint8_t* i_clog_bitmap,
-                          uint8_t* i_dlog_bitmap)
+                          uint16_t* i_clog_bitmap,
+                          uint8_t*  i_dlog_bitmap)
 {
     if(i_dimm == 0xff)
     {
@@ -158,6 +158,11 @@ void amec_health_check_dimm_temp()
         l_max_port = NUM_DIMM_PORTS;
         l_max_dimm_per_port = NUM_DIMMS_PER_I2CPORT;
     }
+    else if(G_sysConfigData.mem_type == MEM_TYPE_OCM)
+    {
+        l_max_port = MAX_NUM_OCMBS;
+        l_max_dimm_per_port = NUM_DIMMS_PER_OCMB;
+    }
     else // MEM_TYPE_CUMULUS
     {
         l_max_port = MAX_NUM_CENTAURS;
@@ -166,7 +171,8 @@ void amec_health_check_dimm_temp()
 
     // Check to see if any dimms have reached the error temperature that
     // haven't been called out already
-    if(G_dimm_overtemp_bitmap.bigword == G_dimm_overtemp_logged_bitmap.bigword)
+    if( (G_dimm_overtemp_bitmap.dw[0] == G_dimm_overtemp_logged_bitmap.dw[0]) &&
+        (G_dimm_overtemp_bitmap.dw[1] == G_dimm_overtemp_logged_bitmap.dw[1]) )
     {
         return;
     }
@@ -282,7 +288,7 @@ void amec_health_check_dimm_temp()
  */
 void amec_health_check_dimm_timeout()
 {
-    static dimm_sensor_flags_t L_temp_update_bitmap_prev = {0};
+    static dimm_sensor_flags_t L_temp_update_bitmap_prev = {{0}};
     dimm_sensor_flags_t l_need_inc, l_need_clr, l_temp_update_bitmap;
     uint8_t l_dimm, l_port;
     fru_temp_t* l_fru;
@@ -300,33 +306,47 @@ void amec_health_check_dimm_timeout()
         //3) sensor is enabled and updated and was updated on previous check (do nothing)
 
         //Grab snapshot of G_dimm_temp_updated_bitmap and clear it
-        l_temp_update_bitmap.bigword = G_dimm_temp_updated_bitmap.bigword;
-        G_dimm_temp_updated_bitmap.bigword = 0;
+        l_temp_update_bitmap.dw[0] = G_dimm_temp_updated_bitmap.dw[0];
+        l_temp_update_bitmap.dw[1] = G_dimm_temp_updated_bitmap.dw[1];
+        G_dimm_temp_updated_bitmap.dw[0] = 0;
+        G_dimm_temp_updated_bitmap.dw[1] = 0;
 
         //check if we need to increment any timers (haven't been updated in the last second)
-        l_need_inc.bigword = G_dimm_enabled_sensors.bigword & ~l_temp_update_bitmap.bigword;
+        l_need_inc.dw[0] = G_dimm_enabled_sensors.dw[0] & ~l_temp_update_bitmap.dw[0];
+        l_need_inc.dw[1] = G_dimm_enabled_sensors.dw[1] & ~l_temp_update_bitmap.dw[1];
 
         //check if we need to clear any timers (updated now but not updated previously)
-        l_need_clr.bigword = l_temp_update_bitmap.bigword & ~L_temp_update_bitmap_prev.bigword;
+        l_need_clr.dw[0] = l_temp_update_bitmap.dw[0] & ~L_temp_update_bitmap_prev.dw[0];
+        l_need_clr.dw[1] = l_temp_update_bitmap.dw[1] & ~L_temp_update_bitmap_prev.dw[1];
 
         //save off the previous bitmap of updated sensors for next time
-        L_temp_update_bitmap_prev.bigword = l_temp_update_bitmap.bigword;
+        L_temp_update_bitmap_prev.dw[0] = l_temp_update_bitmap.dw[0];
+        L_temp_update_bitmap_prev.dw[1] = l_temp_update_bitmap.dw[1];
 
         //only go further if we actually have work to do here.
-        if(!l_need_inc.bigword && !l_need_clr.bigword)
+        if(!l_need_inc.dw[0] && !l_need_inc.dw[1] &&
+           !l_need_clr.dw[0] && !l_need_clr.dw[1])
         {
             //nothing to do
             break;
         }
 
-        uint8_t l_max_port; // #ports in nimbus/#centaurs in cumulus
+        uint8_t l_max_port; // #ports in nimbus/#mem buffs in cumulus/OCM
+        uint8_t l_max_dimm_per_port; // per port in nimbus/per mem buff in cumulus/OCM
         if(G_sysConfigData.mem_type == MEM_TYPE_NIMBUS)
         {
             l_max_port = NUM_DIMM_PORTS;
+            l_max_dimm_per_port = NUM_DIMMS_PER_I2CPORT;
+        }
+        else if(G_sysConfigData.mem_type == MEM_TYPE_OCM)
+        {
+            l_max_port = MAX_NUM_OCMBS;
+            l_max_dimm_per_port = NUM_DIMMS_PER_OCMB;
         }
         else // MEM_TYPE_CUMULUS
         {
             l_max_port = MAX_NUM_CENTAURS;
+            l_max_dimm_per_port = NUM_DIMMS_PER_CENTAUR;
         }
         //iterate across all ports incrementing dimm sensor timers as needed
         for(l_port = 0; l_port < l_max_port; l_port++)
@@ -345,7 +365,7 @@ void amec_health_check_dimm_timeout()
             }
 
             //There's at least one dimm requiring an increment, find the dimm
-            for(l_dimm = 0; l_dimm < NUM_DIMMS_PER_CENTAUR; l_dimm++)
+            for(l_dimm = 0; l_dimm < l_max_dimm_per_port; l_dimm++)
             {
                 //not this one, check if we need to clear the dimm timeout and go to the next one
                 if(!(l_need_inc.bytes[l_port] & (DIMM_SENSOR0 >> l_dimm)))
@@ -467,13 +487,13 @@ void amec_health_check_dimm_timeout()
         }
 
         //skip clearing if no dimms need it
-        if(!l_need_clr.bigword)
+        if( (!l_need_clr.dw[0]) && (!l_need_clr.dw[1]) )
         {
             break;
         }
 
         //iterate across all centaurs/ports clearing dimm sensor timers as needed
-        for(l_port = 0; l_port < MAX_NUM_CENTAURS; l_port++)
+        for(l_port = 0; l_port < l_max_port; l_port++)
         {
 
             if(!l_need_clr.bytes[l_port])
@@ -482,7 +502,7 @@ void amec_health_check_dimm_timeout()
             }
 
             //iterate over all dimms
-            for(l_dimm = 0; l_dimm < NUM_DIMMS_PER_CENTAUR; l_dimm++)
+            for(l_dimm = 0; l_dimm < l_max_dimm_per_port; l_dimm++)
             {
                 //not this one, go to next one
                 if(!(l_need_clr.bytes[l_port] & (DIMM_SENSOR0 >> l_dimm)))
@@ -531,9 +551,9 @@ void amec_health_check_cent_temp()
     /*------------------------------------------------------------------------*/
     uint16_t                    l_ot_error, l_cur_temp, l_max_temp;
     sensor_t                    *l_sensor;
-    uint32_t                    l_cent;
+    uint32_t                    l_cent, l_max_mem_buf;
     uint32_t                    l_callouts_count = 0;
-    uint8_t                     l_new_callouts;
+    uint16_t                    l_new_callouts;
     uint64_t                    l_huid;
     errlHndl_t                  l_err = NULL;
 
@@ -560,7 +580,15 @@ void amec_health_check_cent_temp()
              l_new_callouts);
 
     //find the centaur(s) that need to be called out
-    for(l_cent = 0; l_cent < MAX_NUM_CENTAURS; l_cent++)
+    if(G_sysConfigData.mem_type == MEM_TYPE_OCM)
+    {
+        l_max_mem_buf = MAX_NUM_OCMBS;
+    }
+    else // MEM_TYPE_CUMULUS
+    {
+        l_max_mem_buf = MAX_NUM_CENTAURS;
+    }
+    for(l_cent = 0; l_cent < l_max_mem_buf; l_cent++)
     {
         if(!(l_new_callouts & (CENTAUR0_PRESENT_MASK >> l_cent)))
         {
@@ -640,9 +668,9 @@ void amec_health_check_cent_temp()
  */
 void amec_health_check_cent_timeout()
 {
-    static uint8_t L_temp_update_bitmap_prev = 0;
-    uint8_t l_need_inc, l_need_clr, l_temp_update_bitmap;
-    uint8_t l_cent;
+    static uint16_t L_temp_update_bitmap_prev = 0;
+    uint16_t l_need_inc, l_need_clr, l_temp_update_bitmap;
+    uint16_t l_cent;
     fru_temp_t* l_fru;
     errlHndl_t  l_err = NULL;
     uint32_t    l_callouts_count = 0;

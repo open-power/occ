@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -65,7 +65,7 @@ void ocmb_init(void)
 
         // Configure OCC_405 global membuf present and sensor enabled flags
         G_present_centaurs = 0;
-        for(membuf_idx=0; membuf_idx<MAX_NUM_CENTAURS; ++membuf_idx)
+        for(membuf_idx=0; membuf_idx<MAX_NUM_OCMBS; ++membuf_idx)
         {
             // Check if this membuf is even possible to be present
             if( CENTAUR_BY_MASK(membuf_idx) )
@@ -93,9 +93,11 @@ void ocmb_init(void)
 
         G_dimm_present_sensors = G_dimm_enabled_sensors;
 
-        TRAC_IMP("bitmap of present dimm temperature sensors: 0x%08X%08X",
-                 G_dimm_enabled_sensors.words[0],
-                 G_dimm_enabled_sensors.words[1]);
+        TRAC_IMP("bitmap of present dimm temperature sensors: 0x%08X%08X%08X%08X",
+                 (uint32_t)(G_dimm_enabled_sensors.dw[0]>>32),
+                 (uint32_t)G_dimm_enabled_sensors.dw[0],
+                 (uint32_t)(G_dimm_enabled_sensors.dw[1]>>32),
+                 (uint32_t)G_dimm_enabled_sensors.dw[1]);
 
         // Setup the GPE request to do sensor data collection
         G_membuf_data_parms.error.ffdc = 0;

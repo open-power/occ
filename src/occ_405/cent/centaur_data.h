@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/cent/centaur_data.h $                                 */
+/* $Source: src/occ_405/cent/centaur_data.h $                             */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -45,12 +45,11 @@
 // Defines/Enums
 //*************************************************************************
 
-// Mask that is used by procedure to specify which centaurs are present
-#define ALL_CENTAURS_MASK          0x000000ff
-#define ALL_CENTAURS_MASK_GPE      0x000000ff00000000ull
+// Mask that is used by procedure to specify which centaurs/OCMBs are present
+// common with OCM, must account for max of 16 OCMBs
+#define ALL_CENTAURS_MASK          0x0000ffff
 // Centaur0, used by OCC
-#define CENTAUR0_PRESENT_MASK      0x00000080ul
-#define CENTAUR0_PRESENT_MASK_GPE  0x0000008000000000ull
+#define CENTAUR0_PRESENT_MASK      0x00008000ul
 
 // Used for specifing buffer allocations
 #define NUM_CENTAUR_DATA_BUFF       MAX_NUM_CENTAURS
@@ -91,10 +90,6 @@ enum eOccCentaurs
 //Returns the bitmask for the passed in Centaur (uint32_t)
 #define CENTAUR_BY_MASK(occ_cent_id) \
          ((CENTAUR0_PRESENT_MASK >> occ_cent_id) & ALL_CENTAURS_MASK)
-
-//Returns the bitmask for the passed in Centaur (uint64_t)
-#define CENTAUR_BY_MASK_GPE(occ_cent_id) \
-         (((uint64_t) CENTAUR0_PRESENT_MASK_GPE >> occ_cent_id) & ALL_CENTAURS_MASK_GPE)
 
 #define DIMM_SENSOR0 0x80
 
@@ -147,13 +142,13 @@ extern dimm_sensor_flags_t G_dimm_temp_updated_bitmap;
 extern dimm_sensor_flags_t G_dimm_timeout_logged_bitmap;
 
 //global bitmap flagging the centaurs which we already calledout due to timeout (bitmap of centaurs)
-extern uint8_t G_cent_timeout_logged_bitmap;
+extern uint16_t G_cent_timeout_logged_bitmap;
 
 //global bitmap of centaurs that have ever gone over the error temperature
-extern uint8_t G_cent_overtemp_bitmap;
+extern uint16_t G_cent_overtemp_bitmap;
 
 //global bitmap of centaur temperatures that have been updated
-extern uint8_t G_cent_temp_updated_bitmap;
+extern uint16_t G_cent_temp_updated_bitmap;
 
 //bitmap of configured MBA's (2 per centaur, lsb is centaur0/mba0)
 extern uint16_t G_configured_mbas;

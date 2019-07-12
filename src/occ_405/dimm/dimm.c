@@ -756,7 +756,7 @@ void task_dimm_sm(struct task *i_self)
     if (!L_dimms_enabled)
     {
         L_dimms_enabled = true;
-        TRAC_INFO("task_dimm_sm: DIMM temp collection is being started (0x%08X)", G_dimm_present_sensors.words[0]);
+        TRAC_INFO("task_dimm_sm: DIMM temp collection is being started (0x%08X)", (uint32_t)(G_dimm_present_sensors.dw[0] >> 32));
         G_dimm_enabled_sensors = G_dimm_present_sensors;
     }
 

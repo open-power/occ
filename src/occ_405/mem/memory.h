@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -48,14 +48,13 @@ typedef struct
     uint16_t min_n_per_mba;      //from config data
 } memory_throttle_t;
 
-// 64 bits encoding different bit fields corresponding to dimms
-// either on centaurs or on I2C ports, up to 8 dimms on 8 centaurs/ports
+// 128 bits encoding different bit fields corresponding to dimms
+// either on centaurs or on I2C ports
 typedef union
 {
-    uint64_t bigword;
-    uint32_t words[2];
-    uint8_t  bytes[8];
-}dimm_sensor_flags_t;
+    uint64_t dw[2];
+    uint8_t  bytes[16];
+} dimm_sensor_flags_t;
 
 
 //Memory data collect structures used for task data pointers

@@ -50,8 +50,8 @@
 /******************************************************************************/
 extern dimm_sensor_flags_t G_dimm_overtemp_bitmap;
 extern dimm_sensor_flags_t G_dimm_temp_updated_bitmap;
-extern uint8_t             G_cent_overtemp_bitmap;
-extern uint8_t             G_cent_temp_updated_bitmap;
+extern uint16_t             G_cent_overtemp_bitmap;
+extern uint16_t             G_cent_temp_updated_bitmap;
 extern uint8_t      G_centaur_needs_recovery;
 extern uint64_t G_inject_dimm;
 extern uint32_t G_inject_dimm_trace[MAX_NUM_OCMBS][NUM_DIMMS_PER_OCMB];
@@ -337,7 +337,7 @@ void amec_update_ocmb_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_membuf
         }
         else
         {
-            //don't allow temp to change more than is reasonable for 2ms
+            //don't allow temp to change more than is reasonable since last read
             if(l_sens_temp > (l_prev_temp + MAX_MEM_TEMP_CHANGE))
             {
                 l_dts = l_prev_temp + MAX_MEM_TEMP_CHANGE;
@@ -365,7 +365,7 @@ void amec_update_ocmb_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_membuf
             }
 
             //Notify thermal thread that temperature has been updated
-            G_cent_temp_updated_bitmap |= CENTAUR0_PRESENT_MASK >> i_membuf;
+            G_cent_temp_updated_bitmap |= (CENTAUR0_PRESENT_MASK >> i_membuf);
 
             //clear error flags
             l_fru->flags &= FRU_TEMP_FAST_CHANGE;
@@ -434,7 +434,7 @@ void amec_update_ocmb_temp_sensors(void)
             l_hot_dimm = g_amec->proc[0].memctl[k].centaur.tempdimmax.sample;
         }
     }
-    sensor_update(&g_amec->proc[0].temp2mscent,l_hot_mb);
+    sensor_update(&g_amec->proc[0].tempcent,l_hot_mb);
     AMEC_DBG("HotMembuf=%d\n",l_hot_mb);
 
     sensor_update(&g_amec->proc[0].tempdimmthrm,l_hot_dimm);

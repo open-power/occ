@@ -469,7 +469,7 @@ typedef struct
   vectorSensor_t util_vector;
 
   // Memory Summary Sensors
-  sensor_t temp2mscent;
+  sensor_t tempcent;
   sensor_t tempdimmthrm;
   sensor_t mempwrthrot;
   sensor_t memotthrot;

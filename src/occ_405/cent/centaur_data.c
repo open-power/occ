@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -147,8 +147,8 @@ membuf_data_task_t G_membuf_data_task = {
 };
 
 
-dimm_sensor_flags_t G_dimm_enabled_sensors = {0};
-dimm_sensor_flags_t G_dimm_present_sensors = {0};
+dimm_sensor_flags_t G_dimm_enabled_sensors = {{0}};
+dimm_sensor_flags_t G_dimm_present_sensors = {{0}};
 
 //AMEC needs to know when data for a centaur has been collected.
 uint32_t G_updated_centaur_mask = 0;
@@ -209,8 +209,8 @@ void cent_chan_checkstop(uint32_t i_cent)
                  G_present_centaurs);
 
         TRAC_IMP("Updated bitmap of enabled dimm temperature sensors: 0x%08X %08X",
-                 G_dimm_enabled_sensors.words[0],
-                 G_dimm_enabled_sensors.words[1]);
+                 (uint32_t)(G_dimm_enabled_sensors.dw[0]>> 32),
+                 (uint32_t)G_dimm_enabled_sensors.dw[0]);
     }
 }
 
@@ -977,8 +977,8 @@ int cent_get_enabled_sensors()
         G_dimm_present_sensors = G_dimm_enabled_sensors;
 
         TRAC_IMP("bitmap of enabled dimm temperature sensors: 0x%08X %08X",
-                 G_dimm_enabled_sensors.words[0],
-                 G_dimm_enabled_sensors.words[1]);
+                 (uint32_t)(G_dimm_enabled_sensors.dw[0]>>32),
+                 (uint32_t)G_dimm_enabled_sensors.dw[0]);
     }while(0);
     return l_rc;
 }

@@ -48,10 +48,10 @@
 /******************************************************************************/
 /* Globals                                                                    */
 /******************************************************************************/
-dimm_sensor_flags_t G_dimm_overtemp_bitmap = {0};
-dimm_sensor_flags_t G_dimm_temp_updated_bitmap = {0};
-uint8_t             G_cent_overtemp_bitmap = 0;
-uint8_t             G_cent_temp_updated_bitmap = 0;
+dimm_sensor_flags_t G_dimm_overtemp_bitmap = {{0}};
+dimm_sensor_flags_t G_dimm_temp_updated_bitmap = {{0}};
+uint16_t             G_cent_overtemp_bitmap = 0;
+uint16_t             G_cent_temp_updated_bitmap = 0;
 extern uint8_t      G_centaur_needs_recovery;
 extern uint8_t      G_centaur_nest_lfir6;
 extern uint64_t G_inject_dimm;
@@ -441,7 +441,7 @@ void amec_update_centaur_temp_sensors(void)
         }
     }
 
-    sensor_update(&g_amec->proc[0].temp2mscent,l_hot_centaur);
+    sensor_update(&g_amec->proc[0].tempcent,l_hot_centaur);
     sensor_update(&g_amec->proc[0].tempdimmthrm,l_hot_dimm);
     AMEC_DBG("HotCentaur=[%d]  HotDimm=[%d]",l_hot_centaur, l_hot_dimm);
 }

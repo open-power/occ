@@ -137,7 +137,6 @@ enum e_gsid
     // ------------------------------------------------------
     // Core Sensors
     // ------------------------------------------------------
-
     FREQAC0,     // actual frequency
     FREQAC1,
     FREQAC2,
@@ -424,6 +423,10 @@ enum e_gsid
     MRDM5,
     MRDM6,
     MRDM7,
+    MRDM8,
+    MRDM9,
+    MRDM10,
+    MRDM11,
 
     MWRM0,
     MWRM1,
@@ -433,6 +436,10 @@ enum e_gsid
     MWRM5,
     MWRM6,
     MWRM7,
+    MWRM8,
+    MWRM9,
+    MWRM10,
+    MWRM11,
 
     MEMSPM0,
     MEMSPM1,
@@ -442,6 +449,10 @@ enum e_gsid
     MEMSPM5,
     MEMSPM6,
     MEMSPM7,
+    MEMSPM8,
+    MEMSPM9,
+    MEMSPM10,
+    MEMSPM11,
 
     MEMSPSTATM0,
     MEMSPSTATM1,
@@ -451,6 +462,10 @@ enum e_gsid
     MEMSPSTATM5,
     MEMSPSTATM6,
     MEMSPSTATM7,
+    MEMSPSTATM8,
+    MEMSPSTATM9,
+    MEMSPSTATM10,
+    MEMSPSTATM11,
 
     // Individual DIMM temperatures (NIMBUS)
     TEMPDIMM00,
@@ -492,7 +507,7 @@ enum e_gsid
     MEMOTTHROT,
 
     // ------------------------------------------------------
-    // Centaur Sensors - 8 MemC/Proc - 1 Cent/MemC - 2 PP/Cent
+    // Centaur/Memory Controller Sensors
     // ------------------------------------------------------
     TEMPCENT,
     TEMPDIMMTHRM,

@@ -76,10 +76,11 @@ extern amec_sys_t g_amec_sys;
   [SENSOR_W_NUM(sensor, 4)] = ptrbase[ 4].ptrmember, \
   [SENSOR_W_NUM(sensor, 5)] = ptrbase[ 5].ptrmember
 
-
-// Will define a set of "memory controller sensor pointers" by passing in
-// base sensor nameand ptr to [0] entry of array of 8 memcontroller sensors
-#define MEMCONTROL_SENSOR_PTRS(sensor,ptrbase,ptrmember) \
+// Will define a set of "Centaur memory controller sensor pointers" by passing in
+// base sensor name and ptr to [0] entry of array of 8 Centaur memcontroller sensors
+// this should only be used for data that is specific to Centaur. Any mem controller
+// data that is common between Centaur and Open CAPI should use MEMCONTROL_SENSOR_PTRS
+#define MEMCONTROL_CENT_SENSOR_PTRS(sensor,ptrbase,ptrmember) \
   [SENSOR_W_NUM(sensor, 0)] = ptrbase[0].ptrmember, \
   [SENSOR_W_NUM(sensor, 1)] = ptrbase[1].ptrmember, \
   [SENSOR_W_NUM(sensor, 2)] = ptrbase[2].ptrmember, \
@@ -90,7 +91,27 @@ extern amec_sys_t g_amec_sys;
   [SENSOR_W_NUM(sensor, 7)] = ptrbase[7].ptrmember
 
 // Will define a set of "memory controller sensor pointers" by passing in
-// base sensor nameand ptr to [0] entry of array of 8 memcontroller sensors
+// base sensor name and ptr to [0] entry of array of 12 memcontroller sensors
+// This is for common Centaur and OCM mem controller data Centaur really only needs 8
+// Hw for OCM supports upto 16 but we will only make sensors for 12 to save SRAM
+// 12 is the known max being used for P9' code does support 16 if a system is made
+// using more than 12 then the data for the last 4 MCs won't be exposed in sensors
+#define MEMCONTROL_SENSOR_PTRS(sensor,ptrbase,ptrmember) \
+  [SENSOR_W_NUM(sensor, 0)] = ptrbase[ 0].ptrmember, \
+  [SENSOR_W_NUM(sensor, 1)] = ptrbase[ 1].ptrmember, \
+  [SENSOR_W_NUM(sensor, 2)] = ptrbase[ 2].ptrmember, \
+  [SENSOR_W_NUM(sensor, 3)] = ptrbase[ 3].ptrmember, \
+  [SENSOR_W_NUM(sensor, 4)] = ptrbase[ 4].ptrmember, \
+  [SENSOR_W_NUM(sensor, 5)] = ptrbase[ 5].ptrmember, \
+  [SENSOR_W_NUM(sensor, 6)] = ptrbase[ 6].ptrmember, \
+  [SENSOR_W_NUM(sensor, 7)] = ptrbase[ 7].ptrmember, \
+  [SENSOR_W_NUM(sensor, 8)] = ptrbase[ 8].ptrmember, \
+  [SENSOR_W_NUM(sensor, 9)] = ptrbase[ 9].ptrmember, \
+  [SENSOR_W_NUM(sensor,10)] = ptrbase[10].ptrmember, \
+  [SENSOR_W_NUM(sensor,11)] = ptrbase[11].ptrmember
+
+// Will define a set of "DIMM sensor pointers" by passing in
+// base sensor name and ptr to [0] entry of array of 16 DIMM sensors
 #define DIMM_SENSOR_PTRS(sensor,ptrbase,ptrmember) \
   [SENSOR_W_NUM(sensor, 00)] = ptrbase.ptrmember[ 0], \
   [SENSOR_W_NUM(sensor, 01)] = ptrbase.ptrmember[ 1], \
@@ -187,9 +208,9 @@ extern amec_sys_t g_amec_sys;
   [SENSOR_W_NUM(sensor, 4)] = NULL, \
   [SENSOR_W_NUM(sensor, 5)] = NULL
 
-// Will define a set of "memory controller mini sensor ptrs" by passing in
-// base sensor nameand ptr to [0] entry of array of 8 memcontroller sensors
-#define MEMCONTROL_MINI_SENSOR_PTRS(sensor,ptr) \
+// Will define a set of "Centaur specific memc mini sensor ptrs" by passing in
+// base sensor name and ptr to [0] entry of array of 8 Centaur sensors
+#define MEMCONTROL_CENT_MINI_SENSOR_PTRS(sensor,ptr) \
   [SENSOR_W_NUM(sensor, 0)] = ptr[ 0], \
   [SENSOR_W_NUM(sensor, 1)] = ptr[ 1], \
   [SENSOR_W_NUM(sensor, 2)] = ptr[ 2], \
@@ -198,6 +219,34 @@ extern amec_sys_t g_amec_sys;
   [SENSOR_W_NUM(sensor, 5)] = ptr[ 5], \
   [SENSOR_W_NUM(sensor, 6)] = ptr[ 6], \
   [SENSOR_W_NUM(sensor, 7)] = ptr[ 7]
+
+// Will define a set of "Centaur specific memc mini-sensor pointers" as NULL, since not
+// every sensor must have a mini-sensor.
+#define MEMCONTROL_CENT_MINI_SENSOR_PTRS_NULL(sensor) \
+  [SENSOR_W_NUM(sensor, 0)] = NULL, \
+  [SENSOR_W_NUM(sensor, 1)] = NULL, \
+  [SENSOR_W_NUM(sensor, 2)] = NULL, \
+  [SENSOR_W_NUM(sensor, 3)] = NULL, \
+  [SENSOR_W_NUM(sensor, 4)] = NULL, \
+  [SENSOR_W_NUM(sensor, 5)] = NULL, \
+  [SENSOR_W_NUM(sensor, 6)] = NULL, \
+  [SENSOR_W_NUM(sensor, 7)] = NULL
+
+// Will define a set of "memory controller mini sensor ptrs" by passing in
+// base sensor name and ptr to [0] entry of array of 12 memcontroller sensors
+#define MEMCONTROL_MINI_SENSOR_PTRS(sensor,ptr) \
+  [SENSOR_W_NUM(sensor, 0)] = ptr[ 0], \
+  [SENSOR_W_NUM(sensor, 1)] = ptr[ 1], \
+  [SENSOR_W_NUM(sensor, 2)] = ptr[ 2], \
+  [SENSOR_W_NUM(sensor, 3)] = ptr[ 3], \
+  [SENSOR_W_NUM(sensor, 4)] = ptr[ 4], \
+  [SENSOR_W_NUM(sensor, 5)] = ptr[ 5], \
+  [SENSOR_W_NUM(sensor, 6)] = ptr[ 6], \
+  [SENSOR_W_NUM(sensor, 7)] = ptr[ 7], \
+  [SENSOR_W_NUM(sensor, 8)] = ptr[ 8], \
+  [SENSOR_W_NUM(sensor, 9)] = ptr[ 9], \
+  [SENSOR_W_NUM(sensor,10)] = ptr[10], \
+  [SENSOR_W_NUM(sensor,11)] = ptr[11]
 
 // Will define a set of "memc mini-sensor pointers" as NULL, since not
 // every sensor must have a mini-sensor.
@@ -209,7 +258,11 @@ extern amec_sys_t g_amec_sys;
   [SENSOR_W_NUM(sensor, 4)] = NULL, \
   [SENSOR_W_NUM(sensor, 5)] = NULL, \
   [SENSOR_W_NUM(sensor, 6)] = NULL, \
-  [SENSOR_W_NUM(sensor, 7)] = NULL
+  [SENSOR_W_NUM(sensor, 7)] = NULL, \
+  [SENSOR_W_NUM(sensor, 8)] = NULL, \
+  [SENSOR_W_NUM(sensor, 9)] = NULL, \
+  [SENSOR_W_NUM(sensor,10)] = NULL, \
+  [SENSOR_W_NUM(sensor,11)] = NULL
 
 //****************************************************************************
 // Sensor Pointer Table
@@ -325,12 +378,12 @@ const sensor_ptr_t G_amec_sensor_list[] =
   MEMCONTROL_SENSOR_PTRS(MEMSPM,        &g_amec_sys.proc[0].memctl, memsp),
   MEMCONTROL_SENSOR_PTRS(MEMSPSTATM,    &g_amec_sys.proc[0].memctl, memspstat),
   DIMM_SENSOR_PTRS(TEMPDIMM,            &g_amec_sys.proc[0],        tempdimm),
-  MEMCONTROL_SENSOR_PTRS(TEMPDIMMAXM,   &g_amec_sys.proc[0].memctl, centaur.tempdimmax),
-  MEMCONTROL_SENSOR_PTRS(LOCDIMMAXM,    &g_amec_sys.proc[0].memctl, centaur.locdimmax),
+  MEMCONTROL_CENT_SENSOR_PTRS(TEMPDIMMAXM,   &g_amec_sys.proc[0].memctl, centaur.tempdimmax),
+  MEMCONTROL_CENT_SENSOR_PTRS(LOCDIMMAXM,    &g_amec_sys.proc[0].memctl, centaur.locdimmax),
   SENSOR_PTR(MEMPWRTHROT,               &g_amec_sys.proc[0].mempwrthrot),
   SENSOR_PTR(MEMOTTHROT,                &g_amec_sys.proc[0].memotthrot),
 
-  SENSOR_PTR(TEMPCENT,              &g_amec_sys.proc[0].temp2mscent),
+  SENSOR_PTR(TEMPCENT,              &g_amec_sys.proc[0].tempcent),
   SENSOR_PTR(TEMPDIMMTHRM,          &g_amec_sys.proc[0].tempdimmthrm),
 
   // ------------------------------------------------------
@@ -497,13 +550,13 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   MINI_SENSOR_PTR( TEMPDIMM14,     NULL),
   MINI_SENSOR_PTR( TEMPDIMM15,     NULL),
 
-  MEMCONTROL_MINI_SENSOR_PTRS_NULL(TEMPDIMMAXM),
-  MEMCONTROL_MINI_SENSOR_PTRS_NULL(LOCDIMMAXM),
+  MEMCONTROL_CENT_MINI_SENSOR_PTRS_NULL(TEMPDIMMAXM),
+  MEMCONTROL_CENT_MINI_SENSOR_PTRS_NULL(LOCDIMMAXM),
 
   MINI_SENSOR_PTR( MEMPWRTHROT,  NULL),
   MINI_SENSOR_PTR( MEMOTTHROT,   NULL),
 
-  MINI_SENSOR_PTR( TEMPCENT,        &G_dcom_slv_outbox_tx.temp2mscent),
+  MINI_SENSOR_PTR( TEMPCENT,        &G_dcom_slv_outbox_tx.tempcent),
   MINI_SENSOR_PTR( TEMPDIMMTHRM,    &G_dcom_slv_outbox_tx.tempdimmthrm),
 
   // ------------------------------------------------------

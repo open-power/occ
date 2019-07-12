@@ -142,7 +142,7 @@
   [SENSOR_W_NUM(sensor_name,23)] = {.name = SENSOR_STRING(sensor_name ## 23),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}
 
-// This will create a set of 8 sensor entries into the sensor list table.
+// This will create a set of 12 sensor entries into the sensor list table.
 // (one for each memc...)  The base name of the sensor enum must be passed
 // and this macro will take care of the paste & stringify operations.
 #define SENS_MEMC_ENTRY_SET(sensor_name, units, type, location, number, frequency, scaleFactor)  \
@@ -161,6 +161,14 @@
   [SENSOR_W_NUM(sensor_name,6)] = {.name = SENSOR_STRING(sensor_name ## 6),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
   [SENSOR_W_NUM(sensor_name,7)] = {.name = SENSOR_STRING(sensor_name ## 7),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
+  [SENSOR_W_NUM(sensor_name,8)] = {.name = SENSOR_STRING(sensor_name ## 8),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
+  [SENSOR_W_NUM(sensor_name,9)] = {.name = SENSOR_STRING(sensor_name ## 9),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
+  [SENSOR_W_NUM(sensor_name,10)] = {.name = SENSOR_STRING(sensor_name ## 10),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
+  [SENSOR_W_NUM(sensor_name,11)] = {.name = SENSOR_STRING(sensor_name ## 11),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}
 
 // This will create a set of 16 sensor entries into the sensor list table.
@@ -200,6 +208,28 @@
   [SENSOR_W_NUM(sensor_name,15)] = {.name = SENSOR_STRING(sensor_name ## 15),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}
 
+// This will create a set of 8 sensor entries into the sensor list table.
+// (one for each centaur...)  The base name of the sensor enum must be passed
+// and this macro will take care of the paste & stringify operations.
+// this should only be used for data that is specific to Centaur. Any mem controller
+// data that is common between Centaur and Open CAPI should use SENS_MEMC_ENTRY_SET
+#define SEN_CENT_ENTRY_SET(sensor_name, units, type, location, number, frequency, scaleFactor)  \
+  [SENSOR_W_NUM(sensor_name,0)] = {.name = SENSOR_STRING(sensor_name ## 0),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
+  [SENSOR_W_NUM(sensor_name,1)] = {.name = SENSOR_STRING(sensor_name ## 1),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
+  [SENSOR_W_NUM(sensor_name,2)] = {.name = SENSOR_STRING(sensor_name ## 2),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
+  [SENSOR_W_NUM(sensor_name,3)] = {.name = SENSOR_STRING(sensor_name ## 3),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
+  [SENSOR_W_NUM(sensor_name,4)] = {.name = SENSOR_STRING(sensor_name ## 4),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
+  [SENSOR_W_NUM(sensor_name,5)] = {.name = SENSOR_STRING(sensor_name ## 5),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
+  [SENSOR_W_NUM(sensor_name,6)] = {.name = SENSOR_STRING(sensor_name ## 6),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
+  [SENSOR_W_NUM(sensor_name,7)] = {.name = SENSOR_STRING(sensor_name ## 7),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}
 
 // This table takes care of the ordering of the sensors (by GSID) and all parameters needed for AMEC or AMESTER.  The order
 // that is in the table below doesn't matter because we use designated initializers.
@@ -298,8 +328,8 @@ const sensor_info_t G_sensor_info[]   =
   SENS_MEMC_ENTRY_SET(         MEMSPM,   "%\0",   AMEC_SENSOR_TYPE_UTIL,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM,   AMEEFP_EVERY_8TH_TICK_HZ, AMEFP(  1, -1) ),
   SENS_MEMC_ENTRY_SET(     MEMSPSTATM,   "%\0",   AMEC_SENSOR_TYPE_UTIL,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM,   AMEEFP_EVERY_8TH_TICK_HZ, AMEFP(  1, -1) ),
   SENS_DIMM_ENTRY_SET(       TEMPDIMM,   "C\0",   AMEC_SENSOR_TYPE_TEMP,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_128TH_TICK_HZ, AMEFP(  1, 0) ),
-  SENS_MEMC_ENTRY_SET(    TEMPDIMMAXM,   "C\0",   AMEC_SENSOR_TYPE_TEMP,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM,   AMEEFP_EVERY_8TH_TICK_HZ, AMEFP(  1, 0) ),
-  SENS_MEMC_ENTRY_SET(     LOCDIMMAXM, "loc\0",   AMEC_SENSOR_TYPE_TEMP,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM,   AMEEFP_EVERY_8TH_TICK_HZ, AMEFP(  1, 0) ),
+  SEN_CENT_ENTRY_SET(    TEMPDIMMAXM,   "C\0",   AMEC_SENSOR_TYPE_TEMP,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM,   AMEEFP_EVERY_8TH_TICK_HZ, AMEFP(  1, 0) ),
+  SEN_CENT_ENTRY_SET(     LOCDIMMAXM, "loc\0",   AMEC_SENSOR_TYPE_TEMP,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM,   AMEEFP_EVERY_8TH_TICK_HZ, AMEFP(  1, 0) ),
   SENSOR_INFO_T_ENTRY(    MEMPWRTHROT,   "#\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM,       AMEEFP_EVERY_TICK_HZ, AMEFP(  1, 0) ),
   SENSOR_INFO_T_ENTRY(     MEMOTTHROT,   "#\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM,  AMEEFP_EVERY_64TH_TICK_HZ, AMEFP(  1, 0) ),
 

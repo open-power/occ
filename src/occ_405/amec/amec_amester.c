@@ -278,9 +278,9 @@ static uint8_t amester_get_sensor_info( uint8_t* o_resp, uint16_t* io_resp_lengt
 
                 if( (MEM_TYPE_CUMULUS != G_sysConfigData.mem_type) &&
                      ( ((i_sensor >= MRDM0) &&
-                        (i_sensor <= MRDM7)) ||
+                        (i_sensor <= MRDM11)) ||
                        ((i_sensor >= MWRM0) &&
-                        (i_sensor <= MWRM7)) ) )
+                        (i_sensor <= MWRM11)) ) )
                 {
                     *((uint32_t *)o_resp) = AMEFP(64, -5);
                 }

@@ -131,7 +131,11 @@
     MAIN_MEM_SENSOR(gsid_prefix##4 , smf_mode, master_only) , \
     MAIN_MEM_SENSOR(gsid_prefix##5 , smf_mode, master_only) , \
     MAIN_MEM_SENSOR(gsid_prefix##6 , smf_mode, master_only) , \
-    MAIN_MEM_SENSOR(gsid_prefix##7 , smf_mode, master_only)
+    MAIN_MEM_SENSOR(gsid_prefix##7 , smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##8 , smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##9 , smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##10, smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##11, smf_mode, master_only)
 
 /**
  * Macro to build main_mem_sensor_t instances for all APSS channels.
@@ -933,9 +937,9 @@ void mm_sensors_init_names_entry(const main_mem_sensor_t * i_mm_sensor,
     // Set entry struct field values
     memcpy(o_entry->name,  l_sensor_info->name,         MAX_SENSOR_NAME_SZ);
     memcpy(o_entry->units, l_sensor_info->sensor.units, MAX_SENSOR_UNIT_SZ);
-    if( (MEM_TYPE_NIMBUS == G_sysConfigData.mem_type) &&
-        ( ((l_gsid >= MRDM0) && (l_gsid <= MRDM7)) ||
-          ((l_gsid >= MWRM0) && (l_gsid <= MWRM7)) ) )
+    if( (MEM_TYPE_CUMULUS != G_sysConfigData.mem_type) &&
+        ( ((l_gsid >= MRDM0) && (l_gsid <= MRDM11)) ||
+          ((l_gsid >= MWRM0) && (l_gsid <= MWRM11)) ) )
     {
         o_entry->scale_factor         = AMEFP(64, -5);
     }

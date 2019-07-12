@@ -796,8 +796,8 @@ void amec_slv_mem_voting_box(void)
                        l_reason,
                        l_vote,
                        G_cent_temp_expired_bitmap,
-                       G_dimm_temp_expired_bitmap.words[0],
-                       G_dimm_temp_expired_bitmap.words[1]);
+                       (uint32_t)(G_dimm_temp_expired_bitmap.dw[0] >> 32),
+                       (uint32_t)G_dimm_temp_expired_bitmap.dw[0]);
         }
     }
     else

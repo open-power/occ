@@ -267,7 +267,7 @@ extern bool G_main_mem_sensors_initialized;
  */
 extern bool G_smf_mode;
 
-extern main_mem_sensor_t G_main_mem_sensors[337];
+extern main_mem_sensor_t G_main_mem_sensors[353];
 
 /**
  * Number of main memory sensors (in G_main_mem_sensors).

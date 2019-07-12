@@ -44,9 +44,10 @@
 #define MAX_THREADS_PER_CORE     4
 #define MAX_NUM_CHIP_MODULES     4
 #define MAX_NUM_POWER_SUPPLIES   4
-#define MAX_NUM_MEM_CONTROLLERS  8
+#define MAX_NUM_MEM_CONTROLLERS  16
+#define MAX_NUM_CHOM_MEM_CTRL    8  // to save SRAM, limit call home (only Swift has more than 8 possible)
 #define MAX_NUM_CENTAURS         8
-#define MAX_NUM_OCMBS            8
+#define MAX_NUM_OCMBS            16
 #define NUM_PROC_VRMS            2
 #define MAX_GPU_PRES_SIGNALS     6
 #define GPU_PRES_SIGN_PER_OCC    3

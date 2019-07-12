@@ -499,7 +499,7 @@ void amec_slv_common_tasks_post(void)
 void amec_slv_state_0(void)
 {
   AMEC_DBG("\tAMEC Slave State 0\n");
-
+  static uint8_t L_membuf_addr = 0; // used to handle reading 16 OCMBs one per slave state over 8 slave states
   //-------------------------------------------------------
   // Update Centaur sensors (for this tick)
   //-------------------------------------------------------
@@ -509,7 +509,11 @@ void amec_slv_state_0(void)
   }
   else if(MEM_TYPE_OCM == G_sysConfigData.mem_type)
   {
-      amec_update_ocmb_sensors(CENTAUR_0);
+      amec_update_ocmb_sensors(CENTAUR_0+L_membuf_addr);
+      if(L_membuf_addr)
+          L_membuf_addr = 0;
+      else
+          L_membuf_addr = 8;
   }
 
   //-------------------------------------------------------
@@ -539,6 +543,8 @@ void amec_slv_state_0(void)
 void amec_slv_state_1(void)
 {
     AMEC_DBG("\tAMEC Slave State 1\n");
+    static uint8_t L_membuf_addr = 0; // used to handle reading 16 OCMBs one per slave state over 8 slave states
+
     if(MEM_TYPE_CUMULUS == G_sysConfigData.mem_type)
     {
         //-------------------------------------------------------
@@ -553,8 +559,15 @@ void amec_slv_state_1(void)
     }
     else if(MEM_TYPE_OCM == G_sysConfigData.mem_type)
     {
-        amec_update_ocmb_sensors(CENTAUR_1);
-        amec_update_ocmb_temp_sensors();
+        amec_update_ocmb_sensors(CENTAUR_1+L_membuf_addr);
+        if(L_membuf_addr)
+            L_membuf_addr = 0;
+        else
+        {
+            L_membuf_addr = 8;
+            // update Proc level sensors
+            amec_update_ocmb_temp_sensors();
+        }
     }
 }
 
@@ -569,6 +582,7 @@ void amec_slv_state_1(void)
 void amec_slv_state_2(void)
 {
   AMEC_DBG("\tAMEC Slave State 2\n");
+  static uint8_t L_membuf_addr = 0; // used to handle reading 16 OCMBs one per slave state over 8 slave states
 
   //-------------------------------------------------------
   // Update Centaur sensors (for this tick)
@@ -579,7 +593,11 @@ void amec_slv_state_2(void)
   }
   else if(MEM_TYPE_OCM == G_sysConfigData.mem_type)
   {
-      amec_update_ocmb_sensors(CENTAUR_2);
+      amec_update_ocmb_sensors(CENTAUR_2+L_membuf_addr);
+      if(L_membuf_addr)
+          L_membuf_addr = 0;
+      else
+          L_membuf_addr = 8;
   }
 
   // Call VRM Vdd thermal controller
@@ -599,6 +617,7 @@ void amec_slv_state_2(void)
 void amec_slv_state_3(void)
 {
   AMEC_DBG("\tAMEC Slave State 3\n");
+  static uint8_t L_membuf_addr = 0; // used to handle reading 16 OCMBs one per slave state over 8 slave states
 
   //-------------------------------------------------------
   // Update Centaur sensors (for this tick)
@@ -609,7 +628,11 @@ void amec_slv_state_3(void)
   }
   else if(MEM_TYPE_OCM == G_sysConfigData.mem_type)
   {
-      amec_update_ocmb_sensors(CENTAUR_3);
+      amec_update_ocmb_sensors(CENTAUR_3+L_membuf_addr);
+      if(L_membuf_addr)
+          L_membuf_addr = 0;
+      else
+          L_membuf_addr = 8;
   }
 }
 
@@ -626,6 +649,7 @@ void amec_slv_state_3(void)
 void amec_slv_state_4(void)
 {
   AMEC_DBG("\tAMEC Slave State 4\n");
+  static uint8_t L_membuf_addr = 0; // used to handle reading 16 OCMBs one per slave state over 8 slave states
 
   //-------------------------------------------------------
   // Update Centaur sensors (for this tick)
@@ -636,7 +660,11 @@ void amec_slv_state_4(void)
   }
   else if(MEM_TYPE_OCM == G_sysConfigData.mem_type)
   {
-      amec_update_ocmb_sensors(CENTAUR_4);
+      amec_update_ocmb_sensors(CENTAUR_4+L_membuf_addr);
+      if(L_membuf_addr)
+          L_membuf_addr = 0;
+      else
+          L_membuf_addr = 8;
   }
 
   //-------------------------------------------------------
@@ -663,6 +691,7 @@ void amec_slv_state_4(void)
 void amec_slv_state_5(void)
 {
   AMEC_DBG("\tAMEC Slave State 5\n");
+  static uint8_t L_membuf_addr = 0; // used to handle reading 16 OCMBs one per slave state over 8 slave states
 
   //-------------------------------------------------------
   // Update Centaur sensors (for this tick)
@@ -673,7 +702,11 @@ void amec_slv_state_5(void)
   }
   else if(MEM_TYPE_OCM == G_sysConfigData.mem_type)
   {
-      amec_update_ocmb_sensors(CENTAUR_5);
+      amec_update_ocmb_sensors(CENTAUR_5+L_membuf_addr);
+      if(L_membuf_addr)
+          L_membuf_addr = 0;
+      else
+          L_membuf_addr = 8;
   }
 
   //-------------------------------------------------------
@@ -696,6 +729,7 @@ void amec_slv_state_5(void)
 void amec_slv_state_6(void)
 {
   AMEC_DBG("\tAMEC Slave State 6\n");
+  static uint8_t L_membuf_addr = 0; // used to handle reading 16 OCMBs one per slave state over 8 slave states
 
   //-------------------------------------------------------
   // Update Centaur sensors (for this tick)
@@ -706,7 +740,11 @@ void amec_slv_state_6(void)
   }
   else if(MEM_TYPE_OCM == G_sysConfigData.mem_type)
   {
-      amec_update_ocmb_sensors(CENTAUR_6);
+      amec_update_ocmb_sensors(CENTAUR_6+L_membuf_addr);
+      if(L_membuf_addr)
+          L_membuf_addr = 0;
+      else
+          L_membuf_addr = 8;
   }
 }
 
@@ -721,6 +759,7 @@ void amec_slv_state_6(void)
 void amec_slv_state_7(void)
 {
   AMEC_DBG("\tAMEC Slave State 7\n");
+  static uint8_t L_membuf_addr = 0; // used to handle reading 16 OCMBs one per slave state over 8 slave states
 
   //-------------------------------------------------------
   // Update Centaur sensors (for this tick)
@@ -731,7 +770,11 @@ void amec_slv_state_7(void)
   }
   else if(MEM_TYPE_OCM == G_sysConfigData.mem_type)
   {
-      amec_update_ocmb_sensors(CENTAUR_7);
+      amec_update_ocmb_sensors(CENTAUR_7+L_membuf_addr);
+      if(L_membuf_addr)
+          L_membuf_addr = 0;
+      else
+          L_membuf_addr = 8;
   }
 }
 
