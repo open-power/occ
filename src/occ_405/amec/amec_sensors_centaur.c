@@ -71,7 +71,7 @@ void amec_perfcount_getmc( CentaurMemData * i_sensor_cache, uint8_t i_centaur);
 
 // Function Specification
 //
-// Name: amec_update_dimm_dts_sensors
+// Name: amec_update_centaur_sensors
 //
 // Description: Updates sensors that have data grabbed by the fast core data
 // task.
@@ -116,6 +116,7 @@ void amec_update_dimm_dts_sensors(CentaurMemData * i_sensor_cache, uint8_t i_cen
     uint32_t l_sens_status;
     int32_t  l_dimm_temp, l_prev_temp;
     static uint8_t L_ran_once[MAX_NUM_CENTAURS] = {FALSE};
+    static bool    L_ot_traced[MAX_NUM_CENTAURS][NUM_DIMMS_PER_CENTAUR] = {{false}};
 
     // Harvest thermal data for all dimms
     for(k=0; k < NUM_DIMMS_PER_CENTAUR; k++)
@@ -236,7 +237,17 @@ void amec_update_dimm_dts_sensors(CentaurMemData * i_sensor_cache, uint8_t i_cen
         if(l_dts[k] >= g_amec->thermaldimm.ot_error)
         {
             //Set a bit so that this dimm can be called out by the thermal thread
-            G_dimm_overtemp_bitmap.bytes[i_centaur] |= 1 << k;
+            G_dimm_overtemp_bitmap.bytes[i_centaur] |= (DIMM_SENSOR0 >> k);
+            // trace first time OT per DIMM
+            if( !L_ot_traced[i_centaur][k] )
+            {
+               TRAC_ERR("amec_update_dimm_dts_sensors: centaur[%d] DIMM[%d] reached error temp[%d]. current[%d]",
+                        i_centaur,
+                        k,
+                        g_amec->thermaldimm.ot_error,
+                        l_dts[k]);
+               L_ot_traced[i_centaur][k] = true;
+            }
         }
     }
 

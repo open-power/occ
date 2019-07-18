@@ -71,7 +71,7 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache, uint8_t i_membuf);
 
 // Function Specification
 //
-// Name: amec_update_ocmb_dimm_dts_sensors
+// Name: amec_update_ocmb_sensors
 //
 // Description: Updates sensors that have data grabbed by the fast core data
 // task.
@@ -119,6 +119,7 @@ void amec_update_ocmb_dimm_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_m
     uint32_t l_hottest_dimm_loc = NUM_DIMMS_PER_OCMB;
     int32_t  l_dimm_temp, l_prev_temp;
     static uint8_t L_ran_once[MAX_NUM_OCMBS] = {FALSE};
+    static bool    L_ot_traced[MAX_NUM_OCMBS][NUM_DIMMS_PER_OCMB] = {{false}};
 
     // Harvest thermal data for all dimms
     for(k=0; k < NUM_DIMMS_PER_OCMB; k++)
@@ -253,7 +254,17 @@ void amec_update_ocmb_dimm_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_m
         if(l_dts[k] >= g_amec->thermaldimm.ot_error)
         {
             //Set a bit so that this dimm can be called out by the thermal thread
-            G_dimm_overtemp_bitmap.bytes[i_membuf] |= 1 << k;
+            G_dimm_overtemp_bitmap.bytes[i_membuf] |= (DIMM_SENSOR0 >> k);
+            // trace first time OT per DIMM
+            if( !L_ot_traced[i_membuf][k] )
+            {
+               TRAC_ERR("amec_update_ocmb_dimm_dts_sensors: Mem Buf[%d] DIMM[%d] reached error temp[%d]. current[%d]",
+                        i_membuf,
+                        k,
+                        g_amec->thermaldimm.ot_error,
+                        l_dts[k]);
+               L_ot_traced[i_membuf][k] = true;
+            }
         }
     }
 

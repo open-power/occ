@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -623,6 +623,7 @@ void process_dimm_temp()
     const uint8_t port = G_dimm_sm_args.i2cPort;
     const uint8_t dimm = G_dimm_sm_args.dimm;
     uint8_t l_dimm_temp = G_dimm_sm_args.temp;
+    static bool L_ot_traced[NUM_DIMM_PORTS][NUM_DIMMS_PER_I2CPORT] = {{false}};
 
 #define MIN_VALID_DIMM_TEMP 1
 #define MAX_VALID_DIMM_TEMP 125 //according to Mike Pardiek
@@ -687,7 +688,18 @@ void process_dimm_temp()
     if (l_dimm_temp >= g_amec->thermaldimm.ot_error)
     {
         //Set a bit so that this dimm can be called out by the thermal thread
-        G_dimm_overtemp_bitmap.bytes[port] |= DIMM_SENSOR0 >> dimm;
+        G_dimm_overtemp_bitmap.bytes[port] |= (DIMM_SENSOR0 >> dimm);
+
+        // trace first time OT per DIMM
+        if( !L_ot_traced[port][dimm] )
+        {
+           TRAC_ERR("process_dimm_temp: port[%d] DIMM[%d] reached error temp[%d]. current[%d]",
+                     port,
+                     dimm,
+                     g_amec->thermaldimm.ot_error,
+                     l_dimm_temp);
+           L_ot_traced[port][dimm] = true;
+        }
     }
 
     l_fru->cur_temp = l_dimm_temp;

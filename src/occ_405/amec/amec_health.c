@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -142,11 +142,12 @@ void amec_mem_mark_logged(uint8_t i_cent,
  */
 void amec_health_check_dimm_temp()
 {
-    uint16_t                    l_ot_error, l_cur_temp, l_max_temp;
+    uint16_t                    l_ot_error, l_max_temp;
     sensor_t                    *l_sensor;
     uint8_t                     l_dimm;
     uint8_t                     l_port;
-    uint8_t                     l_max_port; // #ports in nimbus/#centaurs in cumulus
+    uint8_t                     l_max_port; // #ports in nimbus/#mem buf in cumulus/OCM
+    uint8_t                     l_max_dimm_per_port; // per port in nimbus/per mem buf in cumulus/OCM
     uint32_t                    l_callouts_count = 0;
     uint8_t                     l_new_callouts;
     uint64_t                    l_huid;
@@ -155,10 +156,12 @@ void amec_health_check_dimm_temp()
     if(G_sysConfigData.mem_type == MEM_TYPE_NIMBUS)
     {
         l_max_port = NUM_DIMM_PORTS;
+        l_max_dimm_per_port = NUM_DIMMS_PER_I2CPORT;
     }
     else // MEM_TYPE_CUMULUS
     {
         l_max_port = MAX_NUM_CENTAURS;
+        l_max_dimm_per_port = NUM_DIMMS_PER_CENTAUR;
     }
 
     // Check to see if any dimms have reached the error temperature that
@@ -170,7 +173,6 @@ void amec_health_check_dimm_temp()
 
     l_ot_error = g_amec->thermaldimm.ot_error;
     l_sensor = getSensorByGsid(TEMPDIMMTHRM);
-    l_cur_temp = l_sensor->sample;
     l_max_temp = l_sensor->sample_max;
 
     //iterate over all dimms
@@ -186,14 +188,15 @@ void amec_health_check_dimm_temp()
             continue;
         }
 
-        TRAC_ERR("amec_health_check_dimm_temp: DIMM reached error temp[%d]. current[%d], hist_max[%d], port[%d]",
-                 l_ot_error,
-                 l_cur_temp,
-                 l_max_temp,
-                 l_port);
+        // if the previous port had errors commit it so this port gets new error log
+        if(l_err)
+        {
+           commitErrl(&l_err);
+           l_callouts_count = 0;
+        }
 
         //find the dimm(s) that need to be called out for this port
-        for(l_dimm = 0; l_dimm < NUM_DIMMS_PER_CENTAUR; l_dimm++)
+        for(l_dimm = 0; l_dimm < l_max_dimm_per_port; l_dimm++)
         {
             if (!(l_new_callouts & (DIMM_SENSOR0 >> l_dimm)))
             {
@@ -206,15 +209,19 @@ void amec_health_check_dimm_temp()
                                  l_dimm,
                                  &G_cent_overtemp_logged_bitmap,
                                  &G_dimm_overtemp_logged_bitmap.bytes[l_port]);
-            TRAC_ERR("amec_health_check_dimm_temp: DIMM%04X overtemp - %dC",
+            TRAC_ERR("amec_health_check_dimm_temp: DIMM%04X being called out for overtemp - %dC",
                      (l_port<<8)|l_dimm, l_fru->cur_temp);
 
-            // Create single elog with up to MAX_CALLOUTS
+            // Create single elog with up to MAX_CALLOUTS for this port
             if(l_callouts_count < ERRL_MAX_CALLOUTS)
             {
                 //If we don't have an error log for the callout, create one
                 if(!l_err)
                 {
+                    TRAC_ERR("amec_health_check_dimm_temp: Creating log for port[%d] OT bitmap[0x%02X] logged bitmap[0x%02X]",
+                             l_port,
+                             G_dimm_overtemp_bitmap.bytes[l_port],
+                             G_dimm_overtemp_logged_bitmap.bytes[l_port]);
                     /* @
                      * @errortype
                      * @moduleid    AMEC_HEALTH_CHECK_DIMM_TEMP
