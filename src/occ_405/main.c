@@ -555,9 +555,14 @@ bool read_pgpe_header(void)
             const uint32_t hcode_elog_table_addr = G_pgpe_header.shared_sram_addr + HCODE_ELOG_TABLE_SRAM_OFFSET;
             hcode_error_table_t hcode_etable;
             hcode_etable.dw0.value = in64(hcode_elog_table_addr);
-            if (HCODE_ELOG_TABLE_MAGIC_NUMBER == hcode_etable.dw0.fields.magic_word)
+            if (HCODE_ELOG_TABLE_MAGIC_WORD == hcode_etable.dw0.fields.magic_word)
             {
                 G_hcode_elog_table_slots = hcode_etable.dw0.fields.total_log_slots;
+                if (G_hcode_elog_table_slots > MAX_HCODE_ELOG_ENTRIES)
+                {
+                    MAIN_TRAC_ERR("read_pgpe_header: HCODE elog slots (%d) > MAX (%d)", G_hcode_elog_table_slots, MAX_HCODE_ELOG_ENTRIES);
+                    G_hcode_elog_table_slots = MAX_HCODE_ELOG_ENTRIES;
+                }
                 G_hcode_elog_table = (hcode_elog_entry_t*)(hcode_elog_table_addr + 8);
             }
             else
