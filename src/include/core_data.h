@@ -34,8 +34,8 @@
 #include <stdint.h>
 #include <eq_config.h>
 
-#define PC_OCC_SPRC             0x00010482
-#define PC_OCC_SPRD             0x00010483
+#define PC_OCC_SPRC             0x00020410
+#define PC_OCC_SPRD             0x00020411
 #define TOD_VALUE_REG           0x00040020
 #define STOP_STATE_HIST_OCC_REG 0x000F0112 // TODO RTC 213673 Exist on P10?
 
